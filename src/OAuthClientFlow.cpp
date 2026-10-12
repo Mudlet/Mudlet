@@ -32,6 +32,8 @@
 
 #include <vector>
 
+using namespace std::chrono_literals;
+
 namespace {
 QString base64Url(const QByteArray& bytes)
 {
@@ -139,7 +141,7 @@ void OAuthClientFlow::start(const QUrl& discoveryUrl, const QString& clientId, c
     connect(&mTimeoutTimer, &QTimer::timeout, this, [this]() {
         fail(qsl("timed out waiting for the browser sign-in to complete"));
     });
-    mTimeoutTimer.start(std::chrono::minutes(5));
+    mTimeoutTimer.start(5min);
 
     QNetworkRequest request(discoveryUrl);
     request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);

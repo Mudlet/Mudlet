@@ -52,6 +52,8 @@
 
 #include "GroupedTest.h"
 
+using namespace std::chrono_literals;
+
 class CsiCursorForwardTest : public QObject
 {
     Q_OBJECT
@@ -85,14 +87,14 @@ private:
         QByteArray data = payload;
         data.append("\r\n");
         mpHost->mTelnet.loopbackTest(data);
-        QTest::qWait(50);
+        QTest::qWait(50ms);
     }
 
     // The buffer's last line is the empty one waiting for the next output, so
     // look for the line the payload actually landed on
     QString injectedLine() const
     {
-        TBuffer& buffer = mpHost->mpConsole->buffer;
+        TBuffer& buffer = mpHost->mainConsoleView()->buffer;
         for (int line = buffer.getLastLineNumber(); line >= 0; --line) {
             const QString& text = buffer.lineBuffer.at(line);
             if (text.startsWith(qsl("AB"))) {
@@ -137,7 +139,7 @@ private slots:
             QFAIL("No active host available for the test.");
         }
         QSignalSpy connected(&(mpHost->mTelnet), &cTelnet::signal_connected);
-        if (!connected.wait(3000)) {
+        if (!connected.wait(3s)) {
             QFAIL("Could not connect with the host.");
         }
     }
@@ -158,8 +160,8 @@ private slots:
     void init()
     {
         QVERIFY(mpHost);
-        QVERIFY(mpHost->mpConsole);
-        mpHost->mpConsole->buffer.clear();
+        QVERIFY(mpHost->mainConsoleView());
+        mpHost->mainConsoleView()->buffer.clear();
     }
 
     void test_cursorForwardInsertsSpaces_data()

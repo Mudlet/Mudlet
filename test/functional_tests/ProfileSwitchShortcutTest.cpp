@@ -89,10 +89,10 @@ private:
 
     TCommandLine* commandLine() const
     {
-        if (!mpHost || !mpHost->mpConsole) {
+        if (!mpHost || !mpHost->mainConsoleView()) {
             return nullptr;
         }
-        return mpHost->mpConsole->mpCommandLine;
+        return mpHost->mainConsoleView()->mpCommandLine;
     }
 
     // QShortcutMap offers the key as an ignored ShortcutOverride and only runs
@@ -413,7 +413,7 @@ private:
         }
 
         QSignalSpy connectionSpy(&(host->mTelnet), &cTelnet::signal_connected);
-        if (!connectionSpy.wait(2000)) {
+        if (!connectionSpy.wait(2s)) {
             QFAIL("Could not connect with the host.");
         }
     }

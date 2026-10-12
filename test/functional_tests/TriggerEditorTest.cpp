@@ -72,7 +72,7 @@ private:
     }
 
     QSignalSpy spy2(&(mpHost->mTelnet), &cTelnet::signal_connected);
-    if (mpHost->mTelnet.getConnectionState() != QAbstractSocket::ConnectedState && !spy2.wait(8000)) {
+    if (mpHost->mTelnet.getConnectionState() != QAbstractSocket::ConnectedState && !spy2.wait(8s)) {
       QFAIL("Could not connect with the host.");
     }
   }
@@ -212,6 +212,21 @@ private slots:
     QTest::keyClick(&edit, Qt::Key_V, Qt::ControlModifier);
 
     QCOMPARE(edit.toPlainText(), qsl("^first pattern$"));
+  }
+
+  // A clipboard of nothing but line breaks has no first line to keep (#10337)
+  void test_pastingOnlyLineBreaksIntoAPatternInsertsNothing() {
+    SingleLineTextEdit edit;
+    edit.setPlainText(qsl("^pattern$"));
+    edit.moveCursor(QTextCursor::End);
+
+    QClipboard *clipboard = QGuiApplication::clipboard();
+    QVERIFY(clipboard);
+    clipboard->setText(qsl("\r\n\n\r\n"));
+
+    QTest::keyClick(&edit, Qt::Key_V, Qt::ControlModifier);
+
+    QCOMPARE(edit.toPlainText(), qsl("^pattern$"));
   }
 
   // The deselect on focus-out exists so a pattern line does not keep showing a

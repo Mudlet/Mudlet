@@ -71,9 +71,8 @@ TKey::~TKey()
 
 void TKey::setName(const QString& name)
 {
-    if (!isTemporary()) {
-        mpHost->getKeyUnit()->mLookupTable.remove(mName, this);
-    }
+    // killKey() trusts this table to hold only current names of live keys
+    mpHost->getKeyUnit()->mLookupTable.remove(mName, this);
     mName = name;
     mpHost->getKeyUnit()->mLookupTable.insert(name, this);
 }
@@ -130,6 +129,26 @@ const TKey* TKey::firstMatch(const Qt::Key key, const Qt::KeyboardModifiers modi
     for (auto* childKeyNode : *mpMyChildrenList) {
         auto* childKey = static_cast<TKey*>(childKeyNode);
         if (const TKey* match = childKey->firstMatch(key, modifier)) {
+            return match;
+        }
+    }
+
+    return nullptr;
+}
+
+const TKey* TKey::firstBinding(const Qt::Key key, const Qt::KeyboardModifiers modifier) const
+{
+    if (!mpMyChildrenList) {
+        return nullptr;
+    }
+
+    if (!isFolder() && (mKeyCode == key) && (mKeyModifier == modifier)) {
+        return this;
+    }
+
+    for (auto* childKeyNode : *mpMyChildrenList) {
+        auto* childKey = static_cast<TKey*>(childKeyNode);
+        if (const TKey* match = childKey->firstBinding(key, modifier)) {
             return match;
         }
     }

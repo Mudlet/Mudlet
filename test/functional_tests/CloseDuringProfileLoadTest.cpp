@@ -38,6 +38,8 @@
 #include <QTimer>
 #include <QtTest/QtTest>
 
+using namespace std::chrono_literals;
+
 class CloseDuringProfileLoadTest : public QObject
 {
     Q_OBJECT
@@ -63,7 +65,7 @@ private:
     {
         mCloseAskedFor = false;
         mCloseRefused = false;
-        QTimer::singleShot(0, mWindow, [this]() {
+        QTimer::singleShot(0ms, mWindow, [this]() {
             mCloseAskedFor = true;
             // close() reports false only when its QCloseEvent was ignored
             mCloseRefused = !mWindow->close();
@@ -80,7 +82,7 @@ private:
 
         // The held close happens on its own once the load returns; the window
         // is WA_DeleteOnClose, so it goes on a deferred delete once accepted
-        QTRY_VERIFY2_WITH_TIMEOUT(mWindow.isNull(), "the close asked for during the load never happened", 30000);
+        QTRY_VERIFY2_WITH_TIMEOUT(mWindow.isNull(), "the close asked for during the load never happened", 30s);
         QVERIFY2(host.isNull(), "the window closed but left the profile loaded");
     }
 

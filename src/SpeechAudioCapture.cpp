@@ -26,6 +26,8 @@
 #include <QMediaDevices>
 #include <QtMath>
 
+using namespace std::chrono_literals;
+
 // Human-readable description of a QAudio::Error, for messages a player sees.
 // Each of these is substituted into "Audio input error occurred: %1", so they
 // read as the tail of that sentence rather than as standalone messages.
@@ -136,7 +138,7 @@ bool SpeechAudioCapture::start()
     // The timeout clock starts at start(), so a session opened into silence
     // still times out rather than waiting forever for a first word
     mSinceVoiced.start();
-    mPollTimer.start(50);
+    mPollTimer.start(50ms);
     return true;
 }
 

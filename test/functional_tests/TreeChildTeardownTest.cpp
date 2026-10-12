@@ -58,6 +58,8 @@
 
 #include "GroupedTest.h"
 
+using namespace std::chrono_literals;
+
 // A child that records, as its destruction begins, whether its parent is still a whole ParentType.
 // The parent is kept as a Tree<ParentType>* taken while it was alive, so reading its dynamic type
 // later is well defined even when only its Tree part is left.
@@ -282,7 +284,7 @@ private:
         }
 
         QSignalSpy spy2(&(host->mTelnet), &cTelnet::signal_connected);
-        if (!spy2.wait(2000)) {
+        if (!spy2.wait(2s)) {
             QFAIL("Could not connect with the host.");
         }
     }

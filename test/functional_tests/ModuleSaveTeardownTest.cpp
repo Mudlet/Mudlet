@@ -367,7 +367,7 @@ private slots:
         QVERIFY2(mpHost, "No active host after profile creation");
         QVERIFY2(installSyncedModule(), "The fixture module could not be installed");
         // installing a module owes the profile a save; let it come and go
-        QTRY_VERIFY_WITH_TIMEOUT(!mpHost->hasPendingProfileSave(), 5000);
+        QTRY_VERIFY_WITH_TIMEOUT(!mpHost->hasPendingProfileSave(), 5s);
         mpHost->waitForProfileSave();
     }
 

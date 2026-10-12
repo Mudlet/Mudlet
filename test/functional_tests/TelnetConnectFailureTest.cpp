@@ -73,10 +73,10 @@ public:
         QElapsedTimer waited;
         waited.start();
         while (!mServer.listen(QHostAddress::LocalHost, mPort)) {
-            if (waited.hasExpired(5000)) {
+            if (waited.durationElapsed() > 5s) {
                 return false;
             }
-            QTest::qWait(100);
+            QTest::qWait(100ms);
         }
         return true;
     }
@@ -195,7 +195,7 @@ private slots:
                          [&]() {
                              return mpServer->connectionCount() > 1;
                          },
-                         8000),
+                         8s),
                  "the profile did not connect to the stub a second time");
 
         QVERIFY2(waitForTextInBuffer(host, qsl("connection made")), "a connection that was made put nothing on screen, so this test cannot see connection messages at all");
@@ -255,7 +255,7 @@ private slots:
                          [&]() {
                              return mpServer->connectionCount() > connectionsBefore;
                          },
-                         30000),
+                         30s),
                  "the profile never tried the game again, so reconnecting automatically is a single attempt");
     }
 
@@ -280,7 +280,7 @@ private slots:
                          [&]() {
                              return host->mTelnet.getConnectionState() == QAbstractSocket::UnconnectedState;
                          },
-                         20000),
+                         20s),
                  "the profile was still trying to connect long after the disconnect");
         QTest::qWait(3s);
 
@@ -347,7 +347,7 @@ private slots:
                          [&]() {
                              return countLines(host, qsl("Socket got disconnected")) > disconnectsBefore;
                          },
-                         20000),
+                         20s),
                  "the failed handshake was not reported by the disconnection path");
         QTest::qWait(1s);
         QVERIFY2(!bufferContains(host, qsl("Unable to connect")), "a failed handshake was reported as a failure to connect as well");
@@ -402,7 +402,7 @@ private:
                 [&]() {
                     return !disconnected.isEmpty();
                 },
-                8000);
+                8s);
     }
 
     // Events are only visible to a script, so one is asked to count every event it hears. Counted
@@ -432,14 +432,14 @@ private:
                 [&]() {
                     return recordedEventCount(host, event) > 0;
                 },
-                8000);
+                8s);
     }
 
     // Case-insensitively, because the message for a connection that was made reads "Open
     // connection made" or "Connection made" depending on whether the build can do TLS.
     bool bufferContains(Host* host, const QString& text)
     {
-        TBuffer& buffer = host->mpConsole->buffer;
+        TBuffer& buffer = host->mainConsoleView()->buffer;
         for (int i = 0; i <= buffer.getLastLineNumber(); ++i) {
             if (buffer.line(i).contains(text, Qt::CaseInsensitive)) {
                 return true;
@@ -451,7 +451,7 @@ private:
     int countLines(Host* host, const QString& text)
     {
         int found = 0;
-        TBuffer& buffer = host->mpConsole->buffer;
+        TBuffer& buffer = host->mainConsoleView()->buffer;
         for (int i = 0; i <= buffer.getLastLineNumber(); ++i) {
             if (buffer.line(i).contains(text, Qt::CaseInsensitive)) {
                 ++found;
@@ -462,7 +462,7 @@ private:
 
     QString lineContaining(Host* host, const QString& text)
     {
-        TBuffer& buffer = host->mpConsole->buffer;
+        TBuffer& buffer = host->mainConsoleView()->buffer;
         for (int i = 0; i <= buffer.getLastLineNumber(); ++i) {
             if (buffer.line(i).contains(text, Qt::CaseInsensitive)) {
                 return buffer.line(i);
@@ -477,7 +477,7 @@ private:
                 [&]() {
                     return bufferContains(host, text);
                 },
-                20000);
+                20s);
     }
 
     // Mirrors the helper the other functional tests use.
@@ -490,7 +490,7 @@ private:
             return nullptr;
         }
         QSignalSpy connected(&(host->mTelnet), &cTelnet::signal_connected);
-        if (!connected.wait(3000)) {
+        if (!connected.wait(3s)) {
             qWarning("could not connect to the stub");
             return nullptr;
         }

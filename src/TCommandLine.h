@@ -25,6 +25,7 @@
  ***************************************************************************/
 
 
+#include "enums.h"
 #include "utils.h"
 
 #include <QPlainTextEdit>
@@ -32,11 +33,10 @@
 #include <QString>
 #include <QStringList>
 #include <QStringDecoder>
-#include <QToolButton>
-#include <QResizeEvent>
 
 class Host;
 class KeyUnit;
+class QMimeData;
 class TConsole;
 
 class TCommandLine : public QPlainTextEdit //QLineEdit
@@ -49,17 +49,8 @@ class TCommandLine : public QPlainTextEdit //QLineEdit
     };
 
 public:
-    enum CommandLineTypeFlag {
-        UnknownType = 0x0,     // Should not be encountered but left as a trap value
-        MainCommandLine = 0x1, // One per profile
-        SubCommandLine = 0x2,  // Overlaid on top of TMainConsole or TConsole instance, should be uniquely named in pool of SubCommandLine/SubConsole/UserWindow/Buffers AND Labels
-        ConsoleCommandLine = 0x4,  // Integrated in TConsoles other than those derived into a TMainConsole
-    };
-
-    Q_DECLARE_FLAGS(CommandLineType, CommandLineTypeFlag)
-
     Q_DISABLE_COPY(TCommandLine)
-    explicit TCommandLine(Host*, const QString&, CommandLineType type = UnknownType, TConsole* pConsole = nullptr, QWidget* parent = nullptr);
+    explicit TCommandLine(Host*, const QString&, enums::CommandLineType type = enums::UnknownCommandLine, TConsole* pConsole = nullptr, QWidget* parent = nullptr);
     void focusInEvent(QFocusEvent*) override;
     void focusOutEvent(QFocusEvent*) override;
     void hideEvent(QHideEvent*) override;
@@ -68,7 +59,7 @@ public:
     void setAction(const int);
     void resetAction();
     void releaseFunc(const int, const int);
-    CommandLineType getType() const { return mType; }
+    enums::CommandLineType getType() const { return mType; }
     void addSuggestion(const QString&);
     void removeSuggestion(const QString&);
     void clearSuggestions();
@@ -77,7 +68,12 @@ public:
     void clearBlacklist();
     void adjustHeight();
     TConsole* console() const;
-    void setEchoSuppression(bool suppress);
+    // Whether everything on the line was typed or pasted by the player, starting
+    // from an empty or wholly selected line. A recalled, left-selected or
+    // script-written command is not.
+    bool playerTypedLine() const { return mPlayerTypedLine; }
+    // So the hidden-input box can make the same claims
+    bool claimsShortcutOverride(const QKeyEvent*) const;
 
     int mActionFunction = 0;
     QPalette mRegularPalette;
@@ -109,6 +105,8 @@ private:
     void mousePressEvent(QMouseEvent*) override;
     void mouseReleaseEvent(QMouseEvent*) override;
     void handleAutoCompletion();
+    void insertFromMimeData(const QMimeData*) override;
+    void slot_contentsChange();
     void spellCheck();
     void fillSpellCheckList(QMouseEvent*, QMenu*);
     void handleTabCompletion(bool);
@@ -120,14 +118,10 @@ private:
     void spellCheckWord(QTextCursor& c);
     bool handleCtrlTabChange(QKeyEvent* key, int tabNumber);
     void restoreHistory();
-    void paintEvent(QPaintEvent* event) override;
-    void resizeEvent(QResizeEvent* event) override;
     int heightForRows(const int) const;
-    void updatePasswordToggleButton();
-    void positionPasswordToggleButton();
 
     QPointer<Host> mpHost;
-    CommandLineType mType = UnknownType;
+    enums::CommandLineType mType = enums::UnknownCommandLine;
     KeyUnit* mpKeyUnit = nullptr;
     QPointer<TConsole> mpConsole;
     QString mLastCompletion;
@@ -143,46 +137,49 @@ private:
     QPoint mPopupPosition;
     QString mSpellCheckedWord;
     bool mSpellChecking = false;
-    int mSystemDictionarySuggestionsCount = 0;
-    int mUserDictionarySuggestionsCount = 0;
-    char** mpSystemSuggestionsList = nullptr;
-    char** mpUserSuggestionsList = nullptr;
     QSet<QString> commandLineSuggestions;
     QSet<QString> tabCompleteBlacklist;
     // The file used to store the command history between sessions:
     QString mBackingFileName;
 
-    // Track echo suppression state
-    bool mIsEchoSuppressed = false;
-    // Track password visibility state when echo is suppressed
-    bool mPasswordVisible = false;
-    // Button to toggle password visibility
-    QToolButton* mpPasswordToggleButton = nullptr;
-    // Store text that was in the command line before echo suppression started
-    // This allows us to restore user input after password prompts complete
-    QString mTextToRestoreAfterEchoSuppression;
-    // Track whether the preserved text was originally selected (for auto-clear OFF)
-    bool mRestoredTextShouldBeSelected = false;
-    // Track whether user typed anything during echo suppression mode
-    bool mUserTypedDuringEchoSuppression = false;
+    // Never raised around anything that can run Lua
+    bool mUserEditInProgress = false;
+    bool mEditStartedOnBlankLine = false;
+    bool mPlayerTypedLine = false;
+    QString mLastPlainText;
 
-private slots:
-    void slot_togglePasswordVisibility();
+    class UserEditScope
+    {
+    public:
+        explicit UserEditScope(TCommandLine& line);
+        ~UserEditScope();
+        Q_DISABLE_COPY(UserEditScope)
+
+    private:
+        TCommandLine& mLine;
+    };
 };
 
-Q_DECLARE_OPERATORS_FOR_FLAGS(TCommandLine::CommandLineType)
-
 #if !defined(QT_NO_DEBUG)
-inline QDebug& operator<<(QDebug& debug, const TCommandLine::CommandLineType& type)
+inline QDebug& operator<<(QDebug& debug, const enums::CommandLineType& type)
 {
     QString text;
     QDebugStateSaver saver(debug);
     switch (type) {
-    case TCommandLine::UnknownType:        text = qsl("Unknown"); break;
-    case TCommandLine::SubCommandLine:     text = qsl("SubCommandLine"); break;
-    case TCommandLine::ConsoleCommandLine: text = qsl("ConsoleCommandLine"); break;
-    case TCommandLine::MainCommandLine:    text = qsl("MainCommandLine"); break;
-    default:                               text = qsl("Non-coded Type");
+    case enums::UnknownCommandLine:
+        text = qsl("Unknown");
+        break;
+    case enums::SubCommandLine:
+        text = qsl("SubCommandLine");
+        break;
+    case enums::ConsoleCommandLine:
+        text = qsl("ConsoleCommandLine");
+        break;
+    case enums::MainCommandLine:
+        text = qsl("MainCommandLine");
+        break;
+    default:
+        text = qsl("Non-coded Type");
     }
     debug.nospace() << text;
     return debug;

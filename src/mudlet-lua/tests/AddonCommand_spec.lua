@@ -252,6 +252,42 @@ describe("addon commands", function()
         "the refusal quotes the binding's id as though it were a name: " .. tostring(why))
     end)
 
+    -- enableKey() does not look for commands, and scripts commonly switch groups
+    -- of bindings on and off, so a switched off binding still holds its key
+    it("refuses one a switched off key binding has", function()
+      local key = tempKey(mudlet.keymodifier.Alt, mudlet.key.F7, [[echo("bound")]])
+      disableKey(tostring(key))
+
+      local id = place{name = "DisabledKeyClashSpec", shortcut = "Alt+F7"}
+      killKey(tostring(key))
+      -- so the binding, and nothing else holding Alt+F7, was the reason
+      local afterKill, why = place{name = "DisabledKeyClashSpecAfterKill", shortcut = "Alt+F7"}
+
+      assert.is_nil(id, "a command took the key of a switched off binding, which then never fires once switched on")
+      assert.is_number(afterKill, "the key was refused for some other reason: " .. tostring(why))
+    end)
+
+    it("refuses one a binding in a switched off group has, and names it", function()
+      permGroup("SpecDisabledKeyGroup", "key")
+      permKey("SpecDisabledKeyGroupChild", "SpecDisabledKeyGroup", mudlet.keymodifier.Alt, mudlet.key.F5, [[echo("bound")]])
+      disableKey("SpecDisabledKeyGroup")
+
+      local id, why = place{name = "DisabledGroupKeyClashSpec", shortcut = "Alt+F5"}
+
+      assert.is_nil(id, "a command took the key of a binding whose group was switched off")
+      assert.is_truthy(why:find("SpecDisabledKeyGroupChild", 1, true),
+        "the refusal does not name the key binding holding the key: " .. tostring(why))
+    end)
+
+    -- A killed binding lingers until the key unit next tidies up, but can never fire again
+    it("hands out the key of a killed binding", function()
+      local key = tempKey(mudlet.keymodifier.Alt, mudlet.key.F6, [[echo("bound")]])
+      killKey(tostring(key))
+
+      local id, why = place{name = "KilledKeySpec", shortcut = "Alt+F6"}
+      assert.is_number(id, "a killed binding still held its key: " .. tostring(why))
+    end)
+
     -- The other direction - a binding made over a command's key - is warned
     -- about rather than refused, since the binding is the player's own item.
     -- That warning is shown in the editor rather than on the main screen, so

@@ -46,6 +46,8 @@
 
 #include "GroupedTest.h"
 
+using namespace std::chrono_literals;
+
 class ConnectionDialogInitialSelectionTest : public QObject
 {
     Q_OBJECT
@@ -146,7 +148,7 @@ private slots:
                 []() {
                     return mudlet::self()->mpConnectionDialog && mudlet::self()->mpConnectionDialog->isVisible();
                 },
-                5000));
+                5s));
     }
 
     void cleanupTestCase()

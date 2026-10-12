@@ -49,6 +49,8 @@
 
 #include "GroupedTest.h"
 
+using namespace std::chrono_literals;
+
 namespace {
 const int scmFirstRoomId = 1;
 const int scmSecondRoomId = 2;
@@ -102,7 +104,7 @@ private slots:
         }
 
         QSignalSpy connectionSpy(&(mpHost->mTelnet), &cTelnet::signal_connected);
-        if (!connectionSpy.wait(2000)) {
+        if (!connectionSpy.wait(2s)) {
             QFAIL("Could not connect with the host.");
         }
 

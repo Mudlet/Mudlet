@@ -24,7 +24,7 @@
  * action rather than merely one of its actions. Without that the button falls
  * back to its own bare "Discord" text with no icon and swallows clicks.
  *
- * The last two cases cover the other half: each detached window owns its own copy
+ * The last three cases cover the other half: each detached window owns its own copy
  * of the Discord actions, so an update that only refreshes the main window's pair
  * leaves the detached button showing the name the game had at detach time.
  *
@@ -51,6 +51,8 @@
 #include "mudlet.h"
 
 #include "GroupedTest.h"
+
+using namespace std::chrono_literals;
 
 // Stands in for the web browser: openWebPage() ends in QDesktopServices::openUrl(),
 // which would otherwise launch one on the test machine
@@ -223,6 +225,24 @@ private slots:
         QCOMPARE(pButton->text(), qsl("Avalon"));
     }
 
+    // The invite a game announces later takes the same path: with one of its own
+    // the game's button sits beside a separate Mudlet chat button
+    void test_theMudletChatButtonFollowsALaterInvite()
+    {
+        Host* pHost = HostManager::self()->getHost(mSecondHostname);
+        QVERIFY(pHost);
+        pHost->setDiscordInviteURL(QString());
+        mudlet::self()->updateDiscordNamedIcon();
+        QAction* pMudletChat = mudletChatAction();
+        QVERIFY(pMudletChat);
+        QVERIFY2(!pMudletChat->isVisible(), "SETUP: the Mudlet chat button shows with no invite, so the assertion below cannot fail");
+
+        pHost->processDiscordGMCP(qsl("External.Discord.Info"), qsl(R"({"inviteurl":"%1"})").arg(mInviteUrl));
+
+        QCOMPARE(pHost->getDiscordInviteURL(), mInviteUrl);
+        QVERIFY2(pMudletChat->isVisible(), "the game's invite did not bring up the separate Mudlet chat button");
+    }
+
     // The same refresh reached from Lua, which a detached profile's own scripts use
     void test_theButtonFollowsSetDiscordGameUrl()
     {
@@ -304,7 +324,7 @@ private:
         }
 
         QSignalSpy connectionSpy(&(host->mTelnet), &cTelnet::signal_connected);
-        if (!connectionSpy.wait(2000)) {
+        if (!connectionSpy.wait(2s)) {
             QFAIL("Could not connect with the host.");
         }
     }

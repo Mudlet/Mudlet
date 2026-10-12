@@ -76,6 +76,8 @@
 #define BENCH_BUILD_ASAN 0
 #endif
 
+using namespace std::chrono_literals;
+
 // Prototype of the per-vertex arrays A* could keep between searches. A map
 // over one of them records each write, so the next search puts the defaults
 // back for just those rather than for every room on the map - which is the
@@ -232,7 +234,7 @@ private slots:
         Host* host = TestProfile::create(mHostname, mLocalhost, QString::number(mPort));
         QVERIFY(host);
         QSignalSpy connected(&(host->mTelnet), &cTelnet::signal_connected);
-        QVERIFY2(connected.wait(3000), "could not connect to the stub");
+        QVERIFY2(connected.wait(3s), "could not connect to the stub");
 
         host->showHideOrCreateMapper(false);
         QVERIFY(host->mpMap);

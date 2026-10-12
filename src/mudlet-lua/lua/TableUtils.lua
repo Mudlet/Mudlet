@@ -194,20 +194,23 @@ end
 -- container, which holds it back again, so the descent has to remember where it
 -- has been or it never ends. The set is kept out of table._contains' own
 -- signature, which ignores anything past the value to look for.
+-- The set is only made on the first descent, so searching a flat list - the
+-- usual case - allocates nothing.
 local function containsValue(t, value, seen)
-  if seen[t] then
-    return false
-  end
-  seen[t] = true
-
   for k, v in pairs(t) do
     if v == value then
       return true
     elseif k == value then
       return true
     elseif type(v) == "table" then
-      if containsValue(v, value, seen) then
-        return true
+      if not seen then
+        seen = { [t] = true }
+      end
+      if not seen[v] then
+        seen[v] = true
+        if containsValue(v, value, seen) then
+          return true
+        end
       end
     end
   end
@@ -220,10 +223,15 @@ function table._contains(t, value)
     return nil, "first parameter passed isn't a table"
   end
 
-  return containsValue(t, value, {})
+  return containsValue(t, value, nil)
 end
 
 function table.contains(tbl, ...)
+  -- one value to look for is the usual call, and needs no table built for it
+  if select("#", ...) == 1 then
+    local item = ...
+    return item ~= nil and table._contains(tbl, item) and true or false
+  end
   for _,item in ipairs({...}) do
     if table._contains(tbl, item) then return true end
   end
@@ -249,6 +257,10 @@ function table.collect(tbl, func)
   return matches
 end
 
+-- debug.getmetatable, as getmetatable returns a __metatable field instead of
+-- the metatable whose __eq == would use; without it, compare one by one
+local getRawMetatable = debug and debug.getmetatable
+
 --- Checks each item in a table against a provided function and returns a table of items
 --- for which the function returns true. Unlike table.collect it ignores keys and returns 
 --- a table which is guaranteed to be traversable using ipairs()
@@ -261,13 +273,45 @@ function table.n_collect(tbl, func)
   local func_type = type(func)
   assert(func_type == "function", string.format("table.n_collect: bad argument #2 type (function to run against each item in tbl as function expected, got %s)", func_type))
   local matches = {}
+  -- A value is kept unless it == one already kept. Strings, booleans and
+  -- numbers other than NaN are == exactly when they are the same table key,
+  -- so a set finds their duplicates without rescanning `matches`. Tables,
+  -- functions and userdata can only == one another, and until one with an
+  -- __eq metamethod turns up, == between them is identity, so the same set
+  -- works for them too. From then on they are compared one by one, in the
+  -- same order, but only against each other. NaN equals nothing and is
+  -- always kept.
+  local seen = {}
+  local others
+  local compareOthers = not getRawMetatable
   for key,value in pairs(tbl) do
-    -- table.contains matches keys and nested values too, so a value equal to
-    -- an index already in `matches` looked like a duplicate. table.index_of
-    -- compares by value over ipairs, which is the semantics a list of unique
-    -- values needs, and is what the sibling table.n_matches already uses.
-    if func(value) == true and not table.index_of(matches, value) then
-      table.insert(matches, value)
+    if func(value) == true then
+      local valueType = type(value)
+      if valueType == "string" or valueType == "boolean" or (valueType == "number" and value == value) then
+        if not seen[value] then
+          seen[value] = true
+          matches[#matches + 1] = value
+        end
+      elseif valueType == "number" then
+        matches[#matches + 1] = value
+      else
+        others = others or {}
+        if not compareOthers then
+          local metatable = getRawMetatable(value)
+          compareOthers = metatable ~= nil and rawget(metatable, "__eq") ~= nil
+        end
+        local kept
+        if compareOthers then
+          kept = table.index_of(others, value)
+        else
+          kept = seen[value]
+        end
+        if not kept then
+          seen[value] = true
+          others[#others + 1] = value
+          matches[#matches + 1] = value
+        end
+      end
     end
   end
   return matches
@@ -317,13 +361,21 @@ function table.n_matches(tbl, ...)
   assert(tbl_type == "table", string.format("table.n_matches: bad argument #1 type (table to check using string.match as table expected, got %s)", tbl_type))
   local patterns = {...}
   local matches = {}
+  -- only strings and numbers are kept, and those are == exactly when they are
+  -- the same table key, except NaN, which equals nothing and is always kept
+  local seen = {}
   for index,pattern in ipairs(patterns) do
     local ptype = type(pattern)
     assert(ptype == "string", string.format("table.n_matches: bad argument #%d type (pattern to check as string expected, got %s)", index+1, ptype))
     for key,value in pairs(tbl) do
       local valueType = type(value)
-      if (valueType == "string" or valueType == "number") and string.match(value, pattern) and not table.index_of(matches, value) then
-        table.insert(matches, value)
+      if (valueType == "string" or valueType == "number") and string.match(value, pattern) then
+        if value ~= value then
+          matches[#matches + 1] = value
+        elseif not seen[value] then
+          seen[value] = true
+          matches[#matches + 1] = value
+        end
       end
     end
   end
@@ -499,6 +551,39 @@ end
 
 
 
+-- _comp() matches these types by raw ==, which a table key reproduces, so only tables
+-- and userdata (which may have __eq) need comparing one by one. NaN equals nothing and
+-- cannot be a key, so it is left out.
+local hashable = { string = true, number = true, boolean = true, ["function"] = true, thread = true }
+
+local function indexValues(set)
+  local plain, others = {}, {}
+  for _, val in pairs(set) do
+    if hashable[type(val)] then
+      if val == val then
+        plain[val] = true
+      end
+    else
+      others[#others + 1] = val
+    end
+  end
+  return plain, others
+end
+
+local function holdsValue(plain, others, val)
+  if hashable[type(val)] then
+    return plain[val] == true
+  end
+  for i = 1, #others do
+    if _comp(val, others[i]) then
+      return true
+    end
+  end
+  return false
+end
+
+
+
 --- Table Intersection.
 ---
 --- @return Returns a numerically indexed table that is the intersection of the provided tables.
@@ -515,12 +600,14 @@ function table.n_intersection(...)
   local function intersect(set1, set2)
     local intersection_keys = {}
     local result = {}
+    local plain, others
     for _, val1 in pairs(set1) do
-      for _, val2 in pairs(set2) do
-        if _comp(val1, val2) and not intersection_keys[val1] then
-          table.insert(result, val1)
-          intersection_keys[val1] = true
-        end
+      if not plain then
+        plain, others = indexValues(set2)
+      end
+      if not intersection_keys[val1] and holdsValue(plain, others, val1) then
+        table.insert(result, val1)
+        intersection_keys[val1] = true
       end
     end
     return result
@@ -573,15 +660,13 @@ function table.n_complement(set1, set2)
   end
 
   local complement = {}
+  local plain, others
 
   for _, val1 in pairs(set1) do
-    local insert = true
-    for _, val2 in pairs(set2) do
-      if _comp(val1, val2) then
-        insert = false
-      end
+    if not plain then
+      plain, others = indexValues(set2)
     end
-    if insert then
+    if not holdsValue(plain, others, val1) then
       table.insert(complement, val1)
     end
   end

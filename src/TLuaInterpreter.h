@@ -61,6 +61,7 @@ extern "C" {
 #include <vector>
 #include <memory>
 #include <optional>
+#include <utility>
 
 class Host;
 class TAction;
@@ -100,12 +101,12 @@ public:
     void initIndenterGlobals();
     lua_State* getLuaGlobalState();
 
-    bool call(const QString& function, const QString& mName, const bool muteDebugOutput = false);
+    bool call(const QString& function, const QString& mName, const bool muteDebugOutput = false, const bool aliasScript = false);
     std::pair<bool, bool> callReturnBool(const QString& function, const QString& mName);
     bool callMulti(const QString& function, const QString& mName);
     std::pair<bool, bool> callMultiReturnBool(const QString& function, const QString& mName);
     bool callConditionFunction(std::string& function, const QString& mName);
-    bool call_luafunction(void* pT, const QString& itemName = QString());
+    bool call_luafunction(void* pT, const QString& itemName = QString(), const bool aliasScript = false);
     void delete_luafunction(void* pT);
     void delete_luafunction(const QString& name);
     std::pair<bool, bool> callLuaFunctionReturnBool(void* pT, const QString& itemName = QString());
@@ -143,9 +144,39 @@ public:
     void setMultiCaptureGroups(std::list<std::list<std::string>>&& captureList, std::list<std::list<int>>&& posList, QVector<NameGroupMatches>&& nameMatches);
     void takeBackMultiCaptureGroups(std::list<std::list<std::string>>& captureList, std::list<std::list<int>>& posList);
     void adjustCaptureGroups(int x, int a);
+    void adjustCaptureGroupsForReplace(int x, int replacedLength, const QString& replacement);
     void clearCaptureGroups();
-    int pushNestedDispatchState();
+    bool buildingCaptureTables();
+    int pushNestedDispatchState(const bool parkCommand);
     void popNestedDispatchState(const int depth);
+    // While an alias pass runs, for settleCommandAfterAliasPass(): the "command"
+    // the pass ends with unless a script changes it, and the value the last
+    // restore put back
+    struct PassCommandState
+    {
+        int passCommandRef = LUA_NOREF;
+        int restoredCommandRef = LUA_NOREF;
+    };
+    void setExpandedCommand(const QString&);
+    void settleCommandAfterAliasPass();
+    // expandAlias() gives "command" back only to an alias script, so every way into
+    // a script says whether it is one
+    class ScriptCallerScope
+    {
+    public:
+        ScriptCallerScope(TLuaInterpreter& lua, const bool aliasScript)
+        : mLua(lua)
+        , mWasAliasScript(std::exchange(lua.mRunningAliasScript, aliasScript))
+        {
+        }
+        ~ScriptCallerScope() { mLua.mRunningAliasScript = mWasAliasScript; }
+        ScriptCallerScope(const ScriptCallerScope&) = delete;
+        ScriptCallerScope& operator=(const ScriptCallerScope&) = delete;
+
+    private:
+        TLuaInterpreter& mLua;
+        const bool mWasAliasScript;
+    };
     bool callEventHandler(const QString& function, const TEvent& pE);
     bool callCmdLineAction(const int func, QString);
     bool callAnonymousFunction(const int func, QString name);
@@ -682,6 +713,9 @@ public:
     static int addMapMenu(lua_State*);
     static int removeMapMenu(lua_State*);
     static int getMapMenus(lua_State*);
+    static int hideMapMenuItem(lua_State*);
+    static int showMapMenuItem(lua_State*);
+    static int getHiddenMapMenuItems(lua_State*);
     static int getMudletVersion(lua_State*);
     static int openWebPage(lua_State*);
     static int getAllRoomEntrances(lua_State*);
@@ -841,12 +875,21 @@ public:
     void freeLuaRegistryIndex(int index);
     int duplicateLuaRegistryIndex(int index);
     void freeAllInLuaRegistry(TEvent);
+    // For C++ that runs a nested event loop for this profile outside a Lua call,
+    // so pumpingEvents() holds off a reset or close until it returns.
+    void enterNestedEventLoop() { ++mEventPumpDepth; }
+    void leaveNestedEventLoop() { --mEventPumpDepth; }
 
     // Called from Host::raiseEvent(), to unblock a waitForEvent() on that event.
     void captureEventForWaits(const TEvent&);
-    // Lets callers refuse anything that would lua_close() the state the pump is
-    // running Lua on. Always false outside MUDLET_TEST_MODE.
+    // Lets callers refuse anything that would lua_close() the state, or delete the
+    // console, under a nested event loop: the test-mode pump, or a profile's close.
     bool pumpingEvents() const { return !mPendingEventWaits.isEmpty() || mEventPumpDepth > 0; }
+    // True while a function runs on the profile's state - including one parked
+    // in a nested event loop that a C API it called is spinning, from which
+    // nothing may lua_close() the state. Coroutines count too: C++ never
+    // lua_resume()s one, so coroutine.resume() is on this stack meanwhile.
+    bool luaOnStack() const;
 
     inline static const QMap<Qt::MouseButton, QString> csmMouseButtons = {
             {Qt::NoButton, qsl("NoButton")},           {Qt::LeftButton, qsl("LeftButton")},       {Qt::RightButton, qsl("RightButton")},     {Qt::MiddleButton, qsl("MidButton")},
@@ -896,6 +939,7 @@ private:
     static int warnArgumentChoice(lua_State*, const char* functionName, const QString& argumentName, const QStringList& accepted, const QString& value);
     static int setLabelCallback(lua_State*, const char* funcName);
     static int movieFunc(lua_State*, const char* funcName);
+    static int setMapMenuItemHidden(lua_State*, const char* functionName, const bool hidden);
     static std::pair<bool, QString> discordApiEnabled(lua_State*, bool writeAccess = false);
     static void setRequestDefaults(const QUrl& url, QNetworkRequest& request);
     static int performHttpRequest(lua_State*, const char* functionName, const int pos, QNetworkAccessManager::Operation operation, const char* verb);
@@ -944,9 +988,8 @@ private:
     bool reportInvalidLuaCodeParam(lua_State* L, const char* functionName, const int index);
     QByteArray encodeBytes(const char*);
     // What a dispatch does about "multimatches": only a multiline trigger's
-    // script is handed one of its own, and callMultiReturnBool() leaves the
-    // named captures out
-    enum class MultimatchesSource { Untouched, Captures, CapturesWithoutNames };
+    // script is handed one of its own
+    enum class MultimatchesSource { Untouched, Captures };
     void setMatches(lua_State*, const MultimatchesSource source = MultimatchesSource::Untouched);
     void deferDispatchGlobals(lua_State*, const MultimatchesSource source, const bool setsMatches);
     bool lazyGlobalsUsable(lua_State*);
@@ -957,7 +1000,7 @@ private:
     void pushUnusedSpareMultimatches(lua_State*);
     void pushMatchesTable(lua_State*);
     void pushEmptyMatchesTable(lua_State*);
-    void pushMultimatchesTable(lua_State*, const bool withNames);
+    void pushMultimatchesTable(lua_State*);
     void pushPendingMultimatches(lua_State*);
     void pushUtf8String(lua_State*, const QString&);
     void materialisePendingCaptures(lua_State*);
@@ -973,6 +1016,7 @@ private:
     void setupLanguageData();
     QString readScriptFile(const QString& path) const;
     void handleHttpOK(QNetworkReply*);
+    void stopSpawnedProcesses();
 #if defined(Q_OS_WINDOWS)
     void loadUtf8Filenames();
 #endif
@@ -1010,13 +1054,14 @@ private:
     QVector<QPair<QString, QString>> mCapturedNameGroups;
     QMap<QString, QPair<int, int>> mCapturedNameGroupsPosList;
     QVector<QVector<QPair<QString, QString>>> mMultiCaptureNameGroups;
+    int mCaptureBuildDepth = 0;
     // Most scripts never read "matches" or "multimatches", so lazyGlobalsIndex()
     // builds them on first read. "matches" is left out only while a capture
     // scope is open, as clearCaptureGroups() puts it back; "multimatches" is
     // left out between dispatches too - see mSpareMultimatchesRef.
     bool mCaptureScopeOpen = false;
     bool mMatchesPending = false;
-    enum class PendingMultimatches { None, Spare, Captures, CapturesWithoutNames };
+    enum class PendingMultimatches { None, Spare, Captures };
     PendingMultimatches mMultimatchesPending = PendingMultimatches::None;
     int mEmptyMatchesRef = LUA_NOREF;
     // The empty table "multimatches" stands for between dispatches, left out of
@@ -1069,7 +1114,7 @@ private:
     int mIndexHandlerRef = LUA_NOREF;
     int mNewindexHandlerRef = LUA_NOREF;
     // expandAlias() overwrites "command" and the captures; the caller's are saved here (one entry per
-    // nesting level) and restored when the pass returns.
+    // nesting level) and restored when the pass returns - "command" only for an alias script.
     struct NestedDispatchState
     {
         std::vector<std::string> captureGroupList;
@@ -1085,7 +1130,14 @@ private:
         bool captureScopeOpen = false;
     };
     std::vector<NestedDispatchState> mNestedDispatchStates;
+    bool mRunningAliasScript = false;
+    PassCommandState mPassCommand;
     void releaseNestedDispatchState(NestedDispatchState&);
+    // Registry references to how callEventHandler() finds each handler, by
+    // handler name: the name itself, read raw from the globals, or else the
+    // compiled "return <name>" chunk. They belong to pGlobalLua, so are
+    // dropped whenever it is replaced.
+    QHash<QString, int> mEventHandlerLookupRefs;
     QMap<QNetworkReply*, QString> downloadMap;
 
     // A waitForEvent() call in progress. mArgsRef is a Lua registry reference,
@@ -1103,6 +1155,8 @@ private:
     int createEventArgsTableRef(const TEvent&);
 
     lua_State* pGlobalLua = nullptr;
+    // Set while pGlobalLua's finalizers run, which is after stopSpawnedProcesses()
+    bool mClosingGlobalLua = false;
     std::unique_ptr<lua_State, lua_state_deleter> pIndenterState;
     QPointer<Host> mpHost;
     QString hostName;

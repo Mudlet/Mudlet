@@ -47,6 +47,8 @@
 
 #include "GroupedTest.h"
 
+using namespace std::chrono_literals;
+
 // Accepts the IRC client's connection and can script the server side of it.
 // IrcConnection parses and filters whatever arrives whatever state it is in, so
 // no registration handshake is needed to make it act on a JOIN or a KICK.
@@ -125,7 +127,7 @@ private:
                     [this, connectionsBefore]() {
                         return mpIrcServer->connectionCount() > connectionsBefore;
                     },
-                    5000)) {
+                    5s)) {
             return nullptr;
         }
         return mpHost->mpDlgIRC;
@@ -157,7 +159,7 @@ private:
                 [this, client, needle]() {
                     return shownText(client).contains(needle);
                 },
-                5000);
+                5s);
     }
 
     bool waitForBufferCount(dlgIRC* client, int count)
@@ -166,7 +168,7 @@ private:
                 [this, client, count]() {
                     return bufferCount(client) == count;
                 },
-                5000);
+                5s);
     }
 
     // Our own JOIN is what makes communi create the channel's buffer, and it is
@@ -208,7 +210,7 @@ private slots:
             delete mpHost->mpDlgIRC;
             // ~dlgIRC() sends a QUIT and drops the socket, which the stub has to
             // notice before the next test looks for a connection of its own
-            QTest::qWait(100);
+            QTest::qWait(100ms);
         }
     }
 

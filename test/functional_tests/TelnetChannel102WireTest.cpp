@@ -83,7 +83,7 @@ private:
                 [this, &marker]() {
                     return mpServer->received().contains(marker);
                 },
-                10000);
+                10s);
         if (!arrived) {
             QTest::qFail("the telnet marker never came back, so the capture is worthless", __FILE__, __LINE__);
             return {};

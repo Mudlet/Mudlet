@@ -32,6 +32,8 @@
 
 #include "GroupedTest.h"
 
+using namespace std::chrono_literals;
+
 // The Package Manager removes every package the user selected in one go, and
 // an uninstall can be refused for two quite different reasons: a profile save
 // is running, or the package is not installed any more. Only the first is
@@ -84,7 +86,7 @@ private slots:
     {
         if (auto* self = mudlet::self()) {
             if (auto* host = self->getActiveHost()) {
-                QTest::qWait(50);
+                QTest::qWait(50ms);
                 host->waitForProfileSave();
             }
         }
@@ -182,7 +184,7 @@ private:
             return nullptr;
         }
         QSignalSpy connected(&(host->mTelnet), &cTelnet::signal_connected);
-        if (!connected.wait(2000)) {
+        if (!connected.wait(2s)) {
             return nullptr;
         }
         return mudlet::self()->getActiveHost();

@@ -38,6 +38,8 @@
 
 #include "GroupedTest.h"
 
+using namespace std::chrono_literals;
+
 // A button group nested inside another button group is the only thing that
 // reaches TEasyButtonBar::fillMenu() and TToolBar::addActionToMenu(), and no
 // fixture in the tree built one, so the drop-down menus those two make were
@@ -132,7 +134,7 @@ private:
             QFAIL("No active host available for the test.");
         }
         QSignalSpy connected(&(host->mTelnet), &cTelnet::signal_connected);
-        if (!connected.wait(2000)) {
+        if (!connected.wait(2s)) {
             QFAIL("Could not connect with the host.");
         }
     }
@@ -324,7 +326,7 @@ private slots:
         auto* group = buildNestedGroup(host, 0);
         host->getActionUnit()->updateAllToolbars();
 
-        auto* console = host->mpConsole.data();
+        auto* console = host->mainConsoleView();
         auto* bar = console->actionEasyButtonBar(actionNamed(host, qsl("menuTestToolbar")));
         QVERIFY(bar);
         QCOMPARE(console->actionEasyButtonBar(group), bar);
@@ -341,7 +343,7 @@ private slots:
         auto* group = buildNestedGroup(host, 4);
         host->getActionUnit()->updateAllToolbars();
 
-        auto* console = host->mpConsole.data();
+        auto* console = host->mainConsoleView();
         auto* toolBar = console->actionToolBar(actionNamed(host, qsl("menuTestToolbar")));
         QVERIFY(toolBar);
         QCOMPARE(console->actionToolBar(group), toolBar);
@@ -417,7 +419,7 @@ private slots:
     {
         if (auto* self = mudlet::self()) {
             if (auto* host = self->getActiveHost()) {
-                QTest::qWait(50);
+                QTest::qWait(50ms);
                 host->waitForProfileSave();
             }
         }

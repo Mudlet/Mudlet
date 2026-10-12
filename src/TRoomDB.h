@@ -72,6 +72,7 @@ public:
     const QHash<int, TRoom*>& getRoomMap() const { return rooms; }
     const QMap<int, TArea*>& getAreaMap() const { return areas; }
     QList<int> getRoomIDList();
+    int lowestFreeRoomId(int minimumId);
     bool hasRoom(int id) const { return rooms.contains(id); }
     QList<int> getAreaIDList();
     const QMap<int, QString>& getAreaNamesMap() const { return areaNamesMap; }
@@ -112,6 +113,7 @@ private:
     TRoomDB() = default;
 
     int createNewAreaID();
+    void roomIdFreed(int id);
     void deleteDisplacedArea(int, TArea*);
     bool __removeRoom(int id);
     void setAreaRooms(int, const QSet<int>&); // Used by XMLImport to fix rooms data after import
@@ -136,6 +138,8 @@ private:
     // createNewAreaID()'s definition for why that trade is intentional, and
     // for the explicit-ID paths that bypass this hint entirely.
     int mNextAreaIdHint = 1;
+    // Every room ID below this is in use; lowered whenever a room ID is freed
+    int mLowestFreeRoomIdHint = 1;
     TMap* mpMap;
     QSet<int>* mpTempRoomDeletionSet{nullptr}; // Used during bulk room deletion
     // Flag to prevent expensive individual cleanup during bulk destruction

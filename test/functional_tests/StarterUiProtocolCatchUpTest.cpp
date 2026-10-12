@@ -49,6 +49,8 @@
 
 #include "GroupedTest.h"
 
+using namespace std::chrono_literals;
+
 class StarterUiProtocolCatchUpTest : public QObject
 {
     Q_OBJECT
@@ -157,7 +159,7 @@ private slots:
                          [host]() {
                              return !std::get<2>(host->mTelnet.getConnectionInfo());
                          },
-                         3000),
+                         3s),
                  "the connection to the stub never went down, so this says nothing about a disconnected profile");
 
         QVERIFY(installTheStarterUi(host));
@@ -179,7 +181,7 @@ private:
             return nullptr;
         }
         QSignalSpy connected(&(host->mTelnet), &cTelnet::signal_connected);
-        if (!connected.wait(3000)) {
+        if (!connected.wait(3s)) {
             QTest::qFail("Could not connect to the stub.", __FILE__, __LINE__);
             return nullptr;
         }
