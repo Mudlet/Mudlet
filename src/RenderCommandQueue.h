@@ -58,6 +58,7 @@ public:
 
     // Get queue statistics
     size_t getCommandCount() const;
+    const std::vector<std::unique_ptr<RenderCommand>>& commands() const { return mCommands; }
     void printStatistics() const;
 
 private:

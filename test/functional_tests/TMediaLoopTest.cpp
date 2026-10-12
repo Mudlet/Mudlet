@@ -27,6 +27,7 @@
 
 #include <chrono>
 
+#include "MediaBackendTestHelper.h"
 #include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
@@ -42,25 +43,6 @@
 #include "GroupedTest.h"
 
 using namespace std::chrono_literals;
-
-// A skip is how these tests stay honest on a backend that cannot stage what they need. It is
-// also how the whole file could go green everywhere and mean nothing, if a CI image lost its
-// codecs or swapped its default backend - macOS already skips most of them by design, so a
-// second platform quietly joining it would look no different. Runners known to carry a backend
-// that can demonstrate everything here set MUDLET_MEDIA_TESTS_REQUIRE_PLAYBACK, which turns
-// every capability skip into a failure and makes that loss a red build instead of silence.
-#define SKIP_OR_FAIL_WITHOUT(reason)                                                                                                                                                                   \
-    do {                                                                                                                                                                                               \
-        const QString incapable = (reason);                                                                                                                                                            \
-        if (!incapable.isEmpty()) {                                                                                                                                                                    \
-            if (qEnvironmentVariableIsSet("MUDLET_MEDIA_TESTS_REQUIRE_PLAYBACK")) {                                                                                                                    \
-                QFAIL(qPrintable(qsl("MUDLET_MEDIA_TESTS_REQUIRE_PLAYBACK is set for this runner, so a backend that cannot do this is a failure and "                                                  \
-                                     "not a skip: %1")                                                                                                                                                 \
-                                         .arg(incapable)));                                                                                                                                            \
-            }                                                                                                                                                                                          \
-            QSKIP(qPrintable(incapable));                                                                                                                                                              \
-        }                                                                                                                                                                                              \
-    } while (false)
 
 /*
  * Regression guard for "Client.Media loops=-1 plays once" (issue #9566): the deferred media
@@ -931,33 +913,7 @@ private:
         file.write(QByteArray("not a WAV file, and not decodable as anything else"));
         file.close();
 
-        QMediaPlayer probe;
-        auto* output = new QAudioOutput(&probe);
-        output->setMuted(true);
-        probe.setAudioOutput(output);
-
-        bool sawError = false;
-        connect(&probe, &QMediaPlayer::errorOccurred, this, [&](QMediaPlayer::Error error, const QString&) {
-            if (error != QMediaPlayer::NoError) {
-                sawError = true;
-            }
-        });
-
-        probe.setSource(QUrl::fromLocalFile(path));
-        probe.play();
-
-        const bool reported = QTest::qWaitFor(
-                [&]() {
-                    return sawError;
-                },
-                QDeadlineTimer(10s));
-        probe.stop();
-
-        if (!reported) {
-            mNoLoadErrorReason = qsl("This Qt Multimedia backend does not report an error for an undecodable file within 10s, so there is no failure for TMedia to act on. Backend: \"%1\", final "
-                                     "media status: %2.")
-                                         .arg(QString::fromLocal8Bit(qgetenv("QT_MEDIA_BACKEND")), QString::number(static_cast<int>(probe.mediaStatus())));
-        }
+        mNoLoadErrorReason = undecodableFileUnreportedReason(path);
     }
 
     TMediaData clipData(const QString& fileName) const
@@ -1063,10 +1019,7 @@ private:
     }
 
     // Utility function
-    void deleteProfileDirectory(const QString& profileName)
-    {
-        TestProfile::removeProfileDirectory(profileName);
-    }
+    void deleteProfileDirectory(const QString& profileName) { TestProfile::removeProfileDirectory(profileName); }
 };
 
 #include "TMediaLoopTest.moc"
