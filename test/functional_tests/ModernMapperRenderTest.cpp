@@ -746,6 +746,107 @@ private slots:
         QVERIFY2(tooSmall.isEmpty(), "IDs too small to read were drawn");
         QVERIFY2(symbolsWithoutIds, "rooms whose IDs are too small to read show no symbols");
     }
+
+    // Two areas' symbols together overflow the terminal style's glyph atlas, so each switch starts it again;
+    // every room must still be drawn from the cell holding its own character, in a texture drawn with it there
+    void test_terminalGlyphsComeFromTheirOwnAtlasCellsWithoutGL()
+    {
+        constexpr int kRoomsPerArea = 150;
+        constexpr int kColumns = 15;
+        map()->mapClear();
+        QHash<int, QHash<QPair<int, int>, QString>> expected;
+        QList<int> areaIds;
+        for (const char16_t base : {u'\x4E00', u'\xAC00'}) {
+            const int areaId = map()->mpRoomDB->addArea(qsl("Atlas Area %1").arg(areaIds.size()));
+            QVERIFY(areaId > 0);
+            for (int i = 0; i < kRoomsPerArea; ++i) {
+                const int roomId = 1000 * (areaIds.size() + 1) + i;
+                const int x = i % kColumns - kColumns / 2;
+                const int y = i / kColumns - kRoomsPerArea / kColumns / 2;
+                QVERIFY(addRoomAt(roomId, areaId, x, y, 0));
+                const QString symbol(QChar(static_cast<char16_t>(base + i)));
+                map()->mpRoomDB->getRoom(roomId)->mSymbol = symbol;
+                expected[areaId].insert({x, y}, symbol);
+            }
+            areaIds.append(areaId);
+        }
+        // No player's room here, so that no cell is drawn in reverse video
+        map()->mRoomIdHash[map()->mProfileName] = 0;
+        const QFont savedFont = map()->mMapSymbolFont;
+        const auto restore = qScopeGuard([this, savedFont]() {
+            map()->mMapSymbolFont = savedFont;
+            mpHost->setMapStyle(qsl("tiles"));
+        });
+        QVERIFY(mpHost->setMapStyle(qsl("terminal")));
+
+        ModernGLWidget widget(map(), mpHost);
+        // The atlas's cells as each of its textures was drawn, which is what the texture shows
+        QHash<GLuint, QStringList> atlasTextures;
+        GLuint lastTexture = 0;
+        widget.mLabelTextureCache.useTextureStandIn(
+                [&widget, &atlasTextures, &lastTexture](const QImage& image) {
+                    ++lastTexture;
+                    if (image.size() == QSize(1024, 1024)) {
+                        atlasTextures.insert(lastTexture, widget.mGlyphAtlasCells);
+                    }
+                    return lastTexture;
+                },
+                [](GLuint) {});
+        widget.resize(800, 600);
+        widget.mCameraController.setViewportSize(widget.width(), widget.height());
+
+        // The atlas texture the area was drawn with, or 0 where a room was drawn from another's cell
+        const auto drawnFromOwnCells = [&](const int areaId) -> GLuint {
+            widget.setViewCenter(areaId, 0, 0, 0);
+            widget.frameRooms(30.0);
+            widget.mCameraController.setTopView();
+            widget.updateMatrices();
+            widget.mRenderCommandQueue.clear();
+            widget.renderRooms();
+            GLuint atlas = 0;
+            int glyphs = 0;
+            for (const auto& command : widget.mRenderCommandQueue.commands()) {
+                const auto* textured = dynamic_cast<const RenderTexturedTrianglesCommand*>(command.get());
+                if (!textured || !atlasTextures.contains(textured->geometry().textureId)) {
+                    continue;
+                }
+                const GeometryData& batch = textured->geometry();
+                atlas = batch.textureId;
+                const QStringList& cells = atlasTextures.value(atlas);
+                for (qsizetype quad = 0; quad * 18 + 8 < batch.vertices.size() && quad * 12 + 5 < batch.textureCoords.size(); ++quad) {
+                    // Each quad's first vertex is its bottom-left corner and its third its top-right; the atlas's rows run
+                    // up the texture, as its image is uploaded upside down
+                    const float* corner = batch.vertices.constData() + quad * 18;
+                    const float* texture = batch.textureCoords.constData() + quad * 12;
+                    const QPair<int, int> place{qRound((corner[0] + corner[6]) / 2.0f), qRound((corner[1] + corner[7]) / 2.0f)};
+                    const int cell = (15 - static_cast<int>((texture[1] + texture[5]) / 2.0f * 16.0f)) * 16 + static_cast<int>((texture[0] + texture[2]) / 2.0f * 16.0f);
+                    const QString symbol = expected.value(areaId).value(place);
+                    if (symbol.isEmpty() || cell >= cells.size() || cells.at(cell) != symbol || widget.mGlyphAtlasIndex.value(symbol, -1) != cell) {
+                        qWarning() << "the room at" << place << "shows" << cells.value(cell) << "for" << symbol;
+                        return 0;
+                    }
+                    ++glyphs;
+                }
+            }
+            if (glyphs != kRoomsPerArea) {
+                qWarning() << glyphs << "glyphs drawn for" << kRoomsPerArea << "rooms";
+                return 0;
+            }
+            return atlas;
+        };
+
+        const GLuint first = drawnFromOwnCells(areaIds.at(0));
+        QVERIFY2(first, "the first area is drawn from the wrong cells");
+        QVERIFY2(drawnFromOwnCells(areaIds.at(1)), "the second area is drawn from the first area's cells");
+        const GLuint back = drawnFromOwnCells(areaIds.at(0));
+        QVERIFY2(back, "back in the first area, it is drawn from the second area's cells");
+        QVERIFY(back != first);
+
+        map()->mMapSymbolFont.setItalic(!map()->mMapSymbolFont.italic());
+        const GLuint restyled = drawnFromOwnCells(areaIds.at(0));
+        QVERIFY2(restyled, "in another font, the area is drawn from the wrong cells");
+        QVERIFY2(restyled != back, "the atlas was not drawn again in the new font");
+    }
 };
 
 #include "ModernMapperRenderTest.moc"
