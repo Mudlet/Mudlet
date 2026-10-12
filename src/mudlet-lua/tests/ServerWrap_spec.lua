@@ -174,6 +174,25 @@ describe("Tests undoing the game's own line wrapping", function()
     assert.is_true(bufferHasLine(segment1), "held full-width line was not flushed after the game went quiet")
   end)
 
+  it("runs the flushed line's triggers in trigger context, and only them", function()
+    -- only in trigger context does insertText() shift the capture groups
+    local selected
+    local id = tempRegexTrigger("^(x+) (alpha)$", function()
+      insertText("<<")
+      selectCaptureGroup(3)
+      selected = getSelection()
+      deselect()
+    end)
+    feed(segment1 .. "\r\n")
+    settle()
+    killTrigger(id)
+    assert.are.equal("alpha", selected, "insertText() in a trigger on the flushed line did not move the capture groups along")
+
+    -- only outside it does an echo's newline start a line
+    echo("after\nthe flush\n")
+    assert.is_true(bufferHasLine("the flush"), "an echo outside any trigger was still written as if into a trigger's line")
+  end)
+
   it("ends a paragraph at a blank line", function()
     feedAndSettle(segment1 .. "\r\n\r\n" .. segment2 .. "\r\n")
 

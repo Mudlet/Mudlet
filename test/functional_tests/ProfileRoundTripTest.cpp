@@ -36,6 +36,7 @@
 
 #include <QRegularExpression>
 #include <QTemporaryDir>
+#include <QTemporaryFile>
 
 #include <functional>
 
@@ -61,7 +62,18 @@
 #include "dlgConnectionProfiles.h"
 #include "mudlet.h"
 
+#ifdef INCLUDE_MCPSERVER
+#include "TLuaInterpreter.h"
+#include "TMCPLuaBridge.h"
+#include "TMCPServer.h"
+
+#include <QHttpHeaders>
+#include <QJsonArray>
+#endif
+
 #include "GroupedTest.h"
+
+using namespace std::chrono_literals;
 
 namespace {
 template <typename T>
@@ -103,12 +115,17 @@ private:
     Host* mpSource = nullptr;
     Host* mpTarget = nullptr;
     Host* mpLegacyTarget = nullptr;
+    // Taken just before the running stopwatch is started, so the time it has
+    // on it once read back has an upper bound as well as a lower one. Wall
+    // clock, as the stopwatch itself is, so a clock change moves both alike.
+    qint64 mStopWatchStartedMSecs = 0;
     const QString mSourceName = qsl("ProfileRoundTrip-Test");
     const QString mTargetName = qsl("ProfileRoundTripTarget-Test");
     const QString mLegacyTargetName = qsl("ProfileRoundTripLegacyTarget-Test");
     QString mPort; // assigned the stub's actual ephemeral port in initTestCase()
     const QString mLocalhost = qsl("localhost");
     QTemporaryDir mSaveDir;
+    QString mSavedXmlPath;
     QString mExportedXml; // raw text of the saved profile XML, for format assertions
 
     // Expected item totals, kept explicit so an "everything got lost and both
@@ -122,6 +139,10 @@ private:
     // A map info contributor name no Mudlet default can collide with - a fresh
     // profile is given "Short", and a legacy map "Full".
     inline static const QString scmContributorName = qsl("ProfileRoundTripContributor");
+    inline static const QString scmExperiment = qsl("experiment.render-in-out-exits");
+    inline static const QString scmRunningStopWatch = qsl("ProfileRoundTrip running");
+    inline static const QString scmStoppedStopWatch = qsl("ProfileRoundTrip stopped");
+    static constexpr qint64 scmStopWatchMilliSeconds = 90'061'001;
 
     // An address of the target profile's own, so that keeping it can be told
     // apart from blanking it.
@@ -455,7 +476,7 @@ private:
         }
 
         QSignalSpy spy2(&(host->mTelnet), &cTelnet::signal_connected);
-        if (host->mTelnet.getConnectionState() != QAbstractSocket::ConnectedState && !spy2.wait(8000)) {
+        if (host->mTelnet.getConnectionState() != QAbstractSocket::ConnectedState && !spy2.wait(8s)) {
             QFAIL("Could not connect with the host.");
         }
     }
@@ -520,9 +541,29 @@ private slots:
         mpSource->setSearchOptions(enums::EditorSearchOptionCaseSensitive | enums::EditorSearchOptionWholeWord);
         mpSource->setShowIdsInEditor(true);
         mpSource->mMapInfoContributors.insert(scmContributorName);
+        // Every one of these is off its default, and the legacy copy below
+        // moves each enumerated one to a second value, so both reads count.
+        mpSource->mCaretShortcut = Host::CaretShortcut::Tab;
+        mpSource->mBlankLineBehaviour = Host::BlankLineBehaviour::Hide;
+        mpSource->setControlCharacterMode(ControlCharacterMode::Picture);
+        mpSource->setWideAmbiguousEAsianGlyphs(Qt::Checked);
+        mpSource->setLargeAreaExitArrows(true);
+        const auto [experimentSet, experimentError] = mpSource->setExperimentEnabled(scmExperiment, true);
+        QVERIFY2(experimentSet, qPrintable(experimentError));
+
+        const int runningWatch = mpSource->createStopWatch(scmRunningStopWatch).first;
+        const int stoppedWatch = mpSource->createStopWatch(scmStoppedStopWatch).first;
+        QVERIFY(runningWatch > 0 && stoppedWatch > 0);
+        QVERIFY(mpSource->makeStopWatchPersistent(runningWatch, true));
+        QVERIFY(mpSource->makeStopWatchPersistent(stoppedWatch, true));
+        QVERIFY(mpSource->adjustStopWatch(runningWatch, scmStopWatchMilliSeconds));
+        mStopWatchStartedMSecs = QDateTime::currentMSecsSinceEpoch();
+        QVERIFY(mpSource->startStopWatch(runningWatch).first);
+        QVERIFY(mpSource->adjustStopWatch(stoppedWatch, scmStopWatchMilliSeconds));
 
         auto [saved, xmlPath, saveError] = mpSource->saveProfile(mSaveDir.path(), qsl("roundtrip"));
         QVERIFY2(saved, qPrintable(saveError));
+        mSavedXmlPath = xmlPath;
         mpSource->waitForProfileSave();
         QVERIFY2(QFileInfo::exists(xmlPath), qPrintable(qsl("profile XML was not written to %1").arg(xmlPath)));
 
@@ -564,6 +605,15 @@ private slots:
         QCOMPARE(legacyXml.count(qsl("<mMapInfoContributors>")), 1);
         const QString legacyContainer = QRegularExpression(qsl(R"(<mMapInfoContributors>[\s\S]*</mMapInfoContributors>)")).match(legacyXml).captured();
         QVERIFY2(legacyContainer.contains(qsl("<mapInfoContributor>%1</mapInfoContributor>").arg(scmContributorName)), "failed to put this test's map info contributor back into the old container");
+
+        for (const auto& [from, to] : {std::pair{qsl("caretShortcut=\"Tab\""), qsl("caretShortcut=\"CtrlTab\"")},
+                                       std::pair{qsl("blankLineBehaviour=\"Hide\""), qsl("blankLineBehaviour=\"ReplaceWithSpace\"")},
+                                       std::pair{qsl("ControlCharacterHandling=\"1\""), qsl("ControlCharacterHandling=\"2\"")},
+                                       std::pair{qsl("AmbigousWidthGlyphsToBeWide=\"yes\""), qsl("AmbigousWidthGlyphsToBeWide=\"no\"")},
+                                       std::pair{qsl("Large2DMapAreaExitArrows=\"yes\""), qsl("Large2DMapAreaExitArrows=\"no\"")}}) {
+            QVERIFY2(legacyXml.count(from) == 1, qPrintable(qsl("the export does not hold %1 exactly once").arg(from)));
+            legacyXml.replace(from, to);
+        }
 
         QTemporaryDir legacyDir;
         QVERIFY(legacyDir.isValid());
@@ -752,6 +802,50 @@ private slots:
         QCOMPARE(mpTarget->mBackupPort, mpSource->getPort());
     }
 
+    // Each enumerated setting is written as a name and read back by that name,
+    // so a renamed enumerator loses the setting silently:
+    void test_hostSettingsRoundTrip()
+    {
+        QCOMPARE(mpTarget->mCaretShortcut, Host::CaretShortcut::Tab);
+        QCOMPARE(mpTarget->mBlankLineBehaviour, Host::BlankLineBehaviour::Hide);
+        QCOMPARE(mpTarget->getControlCharacterMode(), ControlCharacterMode::Picture);
+        QCOMPARE(mpTarget->getWideAmbiguousEAsianGlyphsControlState(), Qt::Checked);
+        QVERIFY(mpTarget->getLargeAreaExitArrows());
+        QVERIFY(mpTarget->experimentEnabled(scmExperiment));
+
+        QCOMPARE(mpLegacyTarget->mCaretShortcut, Host::CaretShortcut::CtrlTab);
+        QCOMPARE(mpLegacyTarget->mBlankLineBehaviour, Host::BlankLineBehaviour::ReplaceWithSpace);
+        QCOMPARE(mpLegacyTarget->getControlCharacterMode(), ControlCharacterMode::OEM);
+        QCOMPARE(mpLegacyTarget->getWideAmbiguousEAsianGlyphsControlState(), Qt::Unchecked);
+        QVERIFY(!mpLegacyTarget->getLargeAreaExitArrows());
+    }
+
+    // A persistent stopwatch comes back under its own name, still running or
+    // still stopped, and without losing the time it had.
+    void test_persistentStopWatchesRoundTrip()
+    {
+        stopWatch* running = nullptr;
+        stopWatch* stopped = nullptr;
+        for (const int id : mpTarget->getStopWatchIds()) {
+            stopWatch* watch = mpTarget->getStopWatch(id);
+            if (watch->name() == scmRunningStopWatch) {
+                running = watch;
+            } else if (watch->name() == scmStoppedStopWatch) {
+                stopped = watch;
+            }
+        }
+        QVERIFY2(running, "the running stopwatch was not read back");
+        QVERIFY2(stopped, "the stopped stopwatch was not read back");
+        QVERIFY(running->persistent());
+        QVERIFY(running->running());
+        const qint64 elapsed = running->getElapsedMilliSeconds();
+        const qint64 sinceStarted = QDateTime::currentMSecsSinceEpoch() - mStopWatchStartedMSecs;
+        QVERIFY2(elapsed >= scmStopWatchMilliSeconds && elapsed <= scmStopWatchMilliSeconds + sinceStarted, qPrintable(qsl("%1 ms on the running stopwatch").arg(elapsed)));
+        QVERIFY(stopped->persistent());
+        QVERIFY(!stopped->running());
+        QCOMPARE(stopped->getElapsedMilliSeconds(), scmStopWatchMilliSeconds);
+    }
+
     // The imported scripts registered their event handlers in the fresh Host:
     void test_scriptEventHandlersRegisteredAfterImport()
     {
@@ -760,6 +854,87 @@ private slots:
         QVERIFY(mpTarget->mEventHandlerMap.contains(qsl("日本語イベント")));
         QVERIFY(mpTarget->mEventHandlerMap.contains(qsl("emojiEvent🎉")));
     }
+
+#ifdef INCLUDE_MCPSERVER
+    void test_theMcpServerIsNotAProfileSetting()
+    {
+        // There is one MCP server for the whole application and it runs arbitrary Lua, so
+        // its switch lives in the application settings rather than in a profile. That is
+        // load-bearing: readHost() runs for the <Host> element of an installed package as
+        // well as for the profile's own file, so a profile attribute would let any
+        // downloaded .mpackage open a code execution endpoint without ever asking.
+        QVERIFY(!mudlet::self()->mcpEnabled());
+
+        QFile savedXml(mSavedXmlPath);
+        QVERIFY2(savedXml.open(QFile::ReadOnly), qPrintable(savedXml.errorString()));
+        const QByteArray savedProfile = savedXml.readAll();
+        QVERIFY2(!savedProfile.contains("mEnableMCP"), "the saved profile carries an MCP switch");
+        QVERIFY2(!savedProfile.contains("mMCPServerPort"), "the saved profile carries an MCP port");
+
+        const QByteArray packageXml = "<?xml version=\"1.0\"?><MudletPackage version=\"1.001\"><HostPackage>"
+                                      "<Host mEnableMCP=\"yes\" mMCPServerPort=\"11299\"></Host>"
+                                      "</HostPackage></MudletPackage>";
+
+        QTemporaryFile packageFile;
+        QVERIFY(packageFile.open());
+        QCOMPARE(packageFile.write(packageXml), static_cast<qint64>(packageXml.size()));
+        packageFile.close();
+
+        QFile file(packageFile.fileName());
+        QVERIFY2(file.open(QFile::ReadOnly | QFile::Text), qPrintable(file.errorString()));
+        XMLimport importer(mpTarget);
+        auto [imported, importError] = importer.importPackage(&file, qsl("hostilePackage"));
+        QVERIFY2(imported, qPrintable(importError));
+
+        QVERIFY2(!mudlet::self()->mcpEnabled(), "an installed package switched the MCP server on");
+        QVERIFY2(mudlet::self()->mcpEndpoint().isEmpty(), "an installed package started the MCP server");
+    }
+
+    void test_aToolCallRunsInTheProfileItNames()
+    {
+        // The unit tests reach handleMessage() without a profile, so this is the only place
+        // a tools/call can be taken all the way through to an interpreter and back.
+        TMCPServer mcpServer;
+
+        QJsonObject meta;
+        meta[QString::fromLatin1(TMCPServer::META_PROTOCOL_VERSION)] = QString::fromLatin1(TMCPServer::MCP_PROTOCOL_VERSION);
+        meta[QString::fromLatin1(TMCPServer::META_CLIENT_CAPABILITIES)] = QJsonObject();
+
+        QJsonObject arguments;
+        arguments[qsl("code")] = qsl("mcpProbe = 'ran here' return 6 * 7");
+        arguments[qsl("profile")] = mTargetName;
+
+        QJsonObject params;
+        params[qsl("name")] = QString::fromLatin1(TMCPLuaBridge::MCP_LUA_TOOL);
+        params[qsl("arguments")] = arguments;
+        params[qsl("_meta")] = meta;
+
+        QJsonObject message;
+        message[qsl("jsonrpc")] = qsl("2.0");
+        message[qsl("id")] = 1;
+        message[qsl("method")] = qsl("tools/call");
+        message[qsl("params")] = params;
+
+        QHttpHeaders headers;
+        headers.append("MCP-Protocol-Version", QString::fromLatin1(TMCPServer::MCP_PROTOCOL_VERSION));
+        headers.append("Mcp-Method", qsl("tools/call"));
+        headers.append("Mcp-Name", QString::fromLatin1(TMCPLuaBridge::MCP_LUA_TOOL));
+        headers.append("Authorization", qsl("Bearer %1").arg(mcpServer.authToken()).toUtf8());
+
+        const MCPReply reply = mcpServer.handleMessage(QJsonDocument(message).toJson(QJsonDocument::Compact), headers);
+        const QJsonObject result = reply.body.value(qsl("result")).toObject();
+        const QString text = result.value(qsl("content")).toArray().first().toObject().value(qsl("text")).toString();
+
+        QVERIFY2(result.value(qsl("isError")).toBool() == false, qPrintable(text));
+        QCOMPARE(text, qsl("42"));
+
+        // ...and it ran in the profile the call named, not in the foreground one.
+        const MCPToolResult onTarget = TMCPLuaBridge::runLua(mpTarget->getLuaInterpreter()->getLuaGlobalState(), qsl("return mcpProbe"));
+        QCOMPARE(onTarget.text, qsl("ran here"));
+        const MCPToolResult onSource = TMCPLuaBridge::runLua(mpSource->getLuaInterpreter()->getLuaGlobalState(), qsl("return mcpProbe"));
+        QVERIFY2(onSource.text != qsl("ran here"), qPrintable(onSource.text));
+    }
+#endif
 };
 
 #include "ProfileRoundTripTest.moc"

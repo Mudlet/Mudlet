@@ -34,8 +34,14 @@
 //    pixmap. Only what is drawn is at stake: hit-testing reads
 //    TChar::linkIndex() out of the buffer, so a stale pixmap cannot leave a
 //    dead link clickable.
+//  - TConsoleModelNotifier::linkCharactersChanged, which the buffer emits once
+//    it has restyled a link's characters, reaches TConsole::repaintPanes().
+//    Cut it and the restyled text stays off screen until something else
+//    repaints. Its sibling spoilerRevealed only schedules a QWidget::update()
+//    of the console, which leaves nothing an observer can read and is not
+//    gated: other widgets repaint the console often enough to hide its loss.
 //
-// Both are read through a second observer attached to the same signal after the
+// All are read through a second observer attached to the same signal after the
 // production connect. Qt delivers to receivers in connection order, so what the
 // observer sees is the state the production consumer has just left behind, with
 // no event loop in between for anything else to interfere in.
@@ -53,6 +59,7 @@
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
 #include "TBuffer.h"
+#include "TConsoleModel.h"
 #include "THyperlinkVisibilityManager.h"
 #include "TLuaInterpreter.h"
 #include "TMainConsole.h"
@@ -264,6 +271,30 @@ private slots:
         assertReading(seen, qsl("disconnected"), 2, TabConnectionIndicator::Disconnected);
     }
 
+    // A style sheet a script sets reaches the tab bar only through
+    // TAppFrontend::setAppStyleSheet()'s tab bar refresh: TTabBar installs its
+    // own style, so Qt's StyleChange broadcast skips it and it keeps tab sizes
+    // laid out against the previous style.
+    void test_aScriptsAppStyleSheetReachesTheTabBar()
+    {
+        Host* host = startProfile();
+        QVERIFY(host);
+        TTabBar* tabBar = mudlet::self()->mpTabBar;
+        QVERIFY(tabBar);
+        const int index = tabBar->tabIndex(mHostname);
+        QVERIFY2(index >= 0, "the profile got no tab of its own, so there is no tab size to assert on");
+        auto restoreStyleSheet = qScopeGuard([host]() {
+            host->getLuaInterpreter()->compileAndExecuteScript(qsl("setAppStyleSheet('')"));
+        });
+
+        for (const int minimumWidth : {tabBar->tabRect(index).width() + 150, tabBar->tabRect(index).width() + 300}) {
+            const QString script = qsl("setAppStyleSheet[[QTabBar::tab { min-width: %1px; }]]").arg(minimumWidth);
+            QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(script), qPrintable(script));
+            QVERIFY2(tabBar->tabRect(index).width() >= minimumWidth,
+                     qPrintable(qsl("the tab is %1px wide after a style sheet asking for at least %2px").arg(tabBar->tabRect(index).width()).arg(minimumWidth)));
+        }
+    }
+
     // The repaint half of the OSC 8 visibility seam. TBufferOSC_spec.lua drives
     // the same delayed reveal but reads back only the line text, which
     // performReveal() restores before it emits, so the whole spec suite stays
@@ -274,7 +305,7 @@ private slots:
         QVERIFY(host);
         host->mEnableOSC8Hyperlinks = true;
 
-        TMainConsole* console = host->mpConsole;
+        TMainConsole* console = host->mainConsoleView();
         QVERIFY(console);
         QVERIFY(console->mUpperPane);
         QVERIFY(console->mLowerPane);
@@ -301,7 +332,7 @@ private slots:
                              lineNumber = lineHolding(console, qsl("OSCSEAM1"));
                              return lineNumber >= 0;
                          },
-                         8000),
+                         8s),
                  "the line carrying the link never reached the buffer");
         // Concealment keeps the character count identical so buffer indices stay
         // valid, which is why the text is replaced space for space.
@@ -343,14 +374,213 @@ private slots:
                              console->mLowerPane->mForceUpdate = false;
                              return false;
                          },
-                         12000),
+                         12s),
                  "the hyperlink never changed visibility, so nothing here was exercised");
         QCOMPARE(console->buffer.lineBuffer.at(lineNumber), qsl("OSCSEAM1(HIDDENWORD)OSCSEAM1"));
         QVERIFY2(upperForced, "the upper pane was not forced to redraw for a hyperlink that had just been revealed");
         QVERIFY2(lowerForced, "the lower pane was not forced to redraw for a hyperlink that had just been revealed");
     }
 
+    // As with visibility above, mForceUpdate is what proves the panes were
+    // forced to redraw the restyled lines rather than reuse their cached pixmap.
+    void test_restylingALinksCharactersRepaintsThePanes()
+    {
+        Host* host = startProfile();
+        QVERIFY(host);
+        TMainConsole* console = host->mainConsoleView();
+        QVERIFY(console);
+        const int linkId = feedSpoilerLink(host, qsl("OSCPAINT1"));
+        QVERIFY2(linkId > 0, "no spoiler link reached the buffer");
+
+        console->mUpperPane->mForceUpdate = false;
+        console->mLowerPane->mForceUpdate = false;
+        bool observed = false;
+        bool upperForced = false;
+        bool lowerForced = false;
+        QObject observerContext;
+        connect(&console->model().mNotifier, &TConsoleModelNotifier::linkCharactersChanged, &observerContext, [&]() {
+            observed = true;
+            upperForced = console->mUpperPane->mForceUpdate;
+            lowerForced = console->mLowerPane->mForceUpdate;
+        });
+
+        console->buffer.updateLinkCharacters(linkId);
+        QVERIFY2(observed, "restyling the link's characters raised no notification");
+        QVERIFY2(upperForced, "the upper pane was not forced to redraw for a link whose characters had just been restyled");
+        QVERIFY2(lowerForced, "the lower pane was not forced to redraw for a link whose characters had just been restyled");
+    }
+
+    // The repaint half of restyling a selection by name. The console's model
+    // rewrites the characters and its view is only told which lines to redraw.
+    // ConsoleSelectionByName_spec.lua reads the restyled characters back from
+    // the buffer, which stays right with this wire cut or pointed at the wrong
+    // console.
+    void test_restylingANamedSelectionRedrawsThatConsolesLines()
+    {
+        Host* host = startProfile();
+        QVERIFY(host);
+        TMainConsole* console = host->mainConsoleView();
+        QVERIFY(console);
+        QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(qsl("createMiniConsole('seamMini', 0, 0, 300, 200)\n"
+                                                                        "echo('seamMini', 'first\\nsecond\\nthird\\n')\n"
+                                                                        "moveCursor('seamMini', 0, 1)\n"
+                                                                        "selectString('seamMini', 'second', 1)\n")),
+                 "the mini console could not be set up");
+        TConsole* mini = console->subConsoleWidget(qsl("seamMini"));
+        QVERIFY(mini);
+        const int selectedLine = mini->model().P_begin.y();
+        QVERIFY2(selectedLine > 0 && mini->model().P_end.x() > mini->model().P_begin.x(), "nothing below the first line was selected, so a redraw of line 0 would pass");
+
+        const QStringList restyles{qsl("setBold('seamMini', true)"), qsl("setFgColor('seamMini', 1, 2, 3)"), qsl("setBgColor('seamMini', 4, 5, 6)")};
+        for (const QString& restyle : restyles) {
+            for (TTextEdit* pane : {mini->mUpperPane, mini->mLowerPane, console->mUpperPane, console->mLowerPane}) {
+                pane->mDirtyFirstLine = -1;
+                pane->mDirtyLastLine = -1;
+            }
+            QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(restyle), qPrintable(restyle));
+            QVERIFY2(mini->mUpperPane->mDirtyFirstLine == selectedLine && mini->mUpperPane->mDirtyLastLine == selectedLine,
+                     qPrintable(qsl("%1 did not mark the selected line for the mini console's upper pane to redraw").arg(restyle)));
+            QVERIFY2(mini->mLowerPane->mDirtyFirstLine == selectedLine && mini->mLowerPane->mDirtyLastLine == selectedLine,
+                     qPrintable(qsl("%1 did not mark the selected line for the mini console's lower pane to redraw").arg(restyle)));
+            QVERIFY2(console->mUpperPane->mDirtyFirstLine < 0 && console->mLowerPane->mDirtyFirstLine < 0, qPrintable(qsl("%1 redrew the main console, which it did not change").arg(restyle)));
+        }
+
+        // The redraw goes to the named console's own view, so it must not hang on the main console having one
+        for (TTextEdit* pane : {mini->mUpperPane, mini->mLowerPane}) {
+            pane->mDirtyFirstLine = -1;
+            pane->mDirtyLastLine = -1;
+        }
+        const QPointer<TMainConsole> mainView = host->mainConsoleView();
+        host->setMainConsoleView(nullptr);
+        const bool restyled = host->getLuaInterpreter()->compileAndExecuteScript(qsl("setBold('seamMini', false)"));
+        host->setMainConsoleView(mainView);
+        QVERIFY(restyled);
+        QVERIFY2(mini->mUpperPane->mDirtyFirstLine == selectedLine && mini->mLowerPane->mDirtyFirstLine == selectedLine, "restyling a mini console redrew it only while the main console had a view");
+    }
+
+    void test_writingIntoANamedConsolesLineRedrawsThatLine()
+    {
+        Host* host = startProfile();
+        QVERIFY(host);
+        TMainConsole* console = host->mainConsoleView();
+        QVERIFY(console);
+        QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(qsl("createMiniConsole('seamWrite', 0, 0, 300, 200)\n"
+                                                                        "echo('seamWrite', 'first\\nsecond\\nthird\\n')\n"
+                                                                        "moveCursor('seamWrite', 2, 1)\n"
+                                                                        "selectString('seamWrite', 'second', 1)\n")),
+                 "the mini console could not be set up");
+        TConsole* mini = console->subConsoleWidget(qsl("seamWrite"));
+        QVERIFY(mini);
+        const int line = mini->model().mUserCursor.y();
+        QVERIFY2(line > 0 && mini->model().P_begin.y() == line, "the cursor and selection are not both below the first line, so a redraw of line 0 would pass");
+
+        const QStringList writes{qsl("setLink('seamWrite', 'cmd', 'hint')"), qsl("insertText('seamWrite', 'X')"), qsl("insertLink('seamWrite', 'Y', 'cmd', 'hint')")};
+        for (const QString& write : writes) {
+            for (TTextEdit* pane : {mini->mUpperPane, mini->mLowerPane, console->mUpperPane, console->mLowerPane}) {
+                pane->mDirtyFirstLine = -1;
+                pane->mDirtyLastLine = -1;
+            }
+            QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(write), qPrintable(write));
+            QVERIFY2(mini->mUpperPane->mDirtyFirstLine == line && mini->mUpperPane->mDirtyLastLine == line,
+                     qPrintable(qsl("%1 did not mark the line it changed for the mini console's upper pane to redraw").arg(write)));
+            QVERIFY2(mini->mLowerPane->mDirtyFirstLine == line && mini->mLowerPane->mDirtyLastLine == line,
+                     qPrintable(qsl("%1 did not mark the line it changed for the mini console's lower pane to redraw").arg(write)));
+            QVERIFY2(console->mUpperPane->mDirtyFirstLine < 0 && console->mLowerPane->mDirtyFirstLine < 0, qPrintable(qsl("%1 redrew the main console, which it did not change").arg(write)));
+        }
+        QCOMPARE(mini->model().buffer.line(line), qsl("seYXcond"));
+    }
+
+    // A view keeps what it last painted of a line until told the line changed,
+    // so without this the cut text stayed on screen
+    void test_cuttingFromTheMainConsoleRedrawsThatLine()
+    {
+        Host* host = startProfile();
+        QVERIFY(host);
+        TMainConsole* console = host->mainConsoleView();
+        QVERIFY(console);
+        QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(qsl("echo('first\\nkeep seamCut keep\\nthird\\n')\n")), "the main console could not be written to");
+        int line = -1;
+        for (int i = console->buffer.size() - 1; i >= 0; --i) {
+            if (console->buffer.line(i).contains(qsl("seamCut"))) {
+                line = i;
+                break;
+            }
+        }
+        QVERIFY2(line > 0, "the line to cut from is not below the first line, so a redraw of line 0 would pass");
+        QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(qsl("moveCursor('main', 0, %1)\nselectString('seamCut', 1)\n").arg(line)), "the text to cut could not be selected");
+        for (TTextEdit* pane : {console->mUpperPane, console->mLowerPane}) {
+            pane->mDirtyFirstLine = -1;
+            pane->mDirtyLastLine = -1;
+        }
+
+        QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(qsl("cut()")), "cut() failed");
+
+        QCOMPARE(console->buffer.line(line), qsl("keep  keep"));
+        QVERIFY2(console->mUpperPane->mDirtyFirstLine == line && console->mUpperPane->mDirtyLastLine == line, "cut() did not mark the line it changed for the upper pane to redraw");
+        QVERIFY2(console->mLowerPane->mDirtyFirstLine == line && console->mLowerPane->mDirtyLastLine == line, "cut() did not mark the line it changed for the lower pane to redraw");
+    }
+
+    void test_replacingOnTheMainConsoleRedrawsThatLine()
+    {
+        Host* host = startProfile();
+        QVERIFY(host);
+        TMainConsole* console = host->mainConsoleView();
+        QVERIFY(console);
+        QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(qsl("echo('first\\nkeep seamOld keep\\nthird\\n')\n")), "the main console could not be written to");
+        int line = -1;
+        for (int i = console->buffer.size() - 1; i >= 0; --i) {
+            if (console->buffer.line(i).contains(qsl("seamOld"))) {
+                line = i;
+                break;
+            }
+        }
+        QVERIFY2(line > 0, "the line to replace in is not below the first line, so a redraw of line 0 would pass");
+        QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(qsl("moveCursor('main', 0, %1)\nselectString('seamOld', 1)\n").arg(line)), "the text to replace could not be selected");
+        for (TTextEdit* pane : {console->mUpperPane, console->mLowerPane}) {
+            pane->mDirtyFirstLine = -1;
+            pane->mDirtyLastLine = -1;
+        }
+
+        QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(qsl("replace('NEW')")), "replace() failed");
+
+        QCOMPARE(console->buffer.line(line), qsl("keep NEW keep"));
+        QVERIFY2(console->mUpperPane->mDirtyFirstLine == line && console->mUpperPane->mDirtyLastLine == line, "replace() did not mark the line it changed for the upper pane to redraw");
+        QVERIFY2(console->mLowerPane->mDirtyFirstLine == line && console->mLowerPane->mDirtyLastLine == line, "replace() did not mark the line it changed for the lower pane to redraw");
+    }
+
 private:
+    // Answers the link's index, or 0 when the link never landed.
+    int feedSpoilerLink(Host* host, const QString& marker)
+    {
+        host->mEnableOSC8Hyperlinks = true;
+        // See test_aHyperlinkVisibilityChangeForcesBothPanesToRedraw on why
+        // these are real escape bytes.
+        const QString esc = QString(QChar(0x1B));
+        const QString stringTerminator = esc + QLatin1Char('\\');
+        const QString link = qsl("%1]8;;send:osc8paint?config={\"spoiler\":true}%2SECRETWORD%1]8;;%2").arg(esc, stringTerminator);
+        const QString feed = qsl("feedTriggers([==[%1(%2)%1\n]==])").arg(marker, link);
+        if (!host->getLuaInterpreter()->compileAndExecuteScript(feed)) {
+            return 0;
+        }
+        TMainConsole* console = host->mainConsoleView();
+        int lineNumber = -1;
+        const bool landed = QTest::qWaitFor(
+                [&]() {
+                    lineNumber = lineHolding(console, marker);
+                    return lineNumber >= 0;
+                },
+                8s);
+        if (!landed) {
+            return 0;
+        }
+        for (const auto& character : console->buffer.buffer.at(lineNumber)) {
+            if (character.linkIndex() > 0) {
+                return character.linkIndex();
+            }
+        }
+        return 0;
+    }
+
     static QString describe(const TabConnectionIndicator state)
     {
         switch (state) {
@@ -386,7 +616,7 @@ private:
                 [&]() {
                     return readingIndex(seen, name, occurrence) >= 0;
                 },
-                8000);
+                8s);
     }
 
     // A QVERIFY2 here returns from this helper rather than from the test slot,
@@ -424,7 +654,7 @@ private:
             return nullptr;
         }
         QSignalSpy connected(&host->mTelnet, &cTelnet::signal_connected);
-        if (host->mTelnet.getConnectionState() != QAbstractSocket::ConnectedState && !connected.wait(8000)) {
+        if (host->mTelnet.getConnectionState() != QAbstractSocket::ConnectedState && !connected.wait(8s)) {
             qWarning("could not connect to the stub");
             return nullptr;
         }

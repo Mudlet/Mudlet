@@ -31,6 +31,15 @@
 
 TForkedProcess::~TForkedProcess()
 {
+    // Ending a child that is still running emits finished() and can flush the
+    // last of its output: neither may call back into Lua from here or queue
+    // this for slot_purge() to delete a second time
+    disconnect(this, nullptr, mpInterpreter, nullptr);
+    disconnect(this, nullptr, this, nullptr);
+    if (state() != QProcess::NotRunning) {
+        kill();
+        waitForFinished();
+    }
     if (callBackFunctionRef != -1) {
         luaL_unref(mpInterpreter->pGlobalLua, LUA_REGISTRYINDEX, callBackFunctionRef);
     }
@@ -41,7 +50,7 @@ TForkedProcess::~TForkedProcess()
 // strand both this QProcess and every argument the caller still holds, so
 // checking the arguments and reporting a failed start are startProcess()'s job
 TForkedProcess::TForkedProcess(TLuaInterpreter* pInterpreter, const QString& program, const QStringList& arguments, const int callBackReference)
-: QProcess()
+: QProcess(pInterpreter)
 , callBackFunctionRef(callBackReference)
 , mpInterpreter(pInterpreter)
 {
@@ -68,6 +77,7 @@ void TForkedProcess::slot_receivedData()
     while (canReadLine()) {
         QByteArray line = readLine();
         // Call lua function by stored Reference
+        const TLuaInterpreter::ScriptCallerScope callerScope(*mpInterpreter, false);
         lua_rawgeti(mpInterpreter->pGlobalLua, LUA_REGISTRYINDEX, callBackFunctionRef);
         lua_pushstring(mpInterpreter->pGlobalLua, line.data());
         lua_pcall(mpInterpreter->pGlobalLua, 1, 0, 0);

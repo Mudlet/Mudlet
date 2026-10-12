@@ -30,7 +30,9 @@
 #include "MudletInstanceCoordinator.h"
 #include "TConsole.h"
 #include "TLuaInterpreter.h"
+#include "TMainConsole.h"
 #include "TMxpFrameManager.h"
+#include "TMxpFrameWidgets.h"
 #include "TTextEdit.h"
 #include "TelnetServerStub.h"
 #include "ctelnet.h"
@@ -67,11 +69,7 @@ private:
     // payloads carry double quotes, hence the Lua long bracket
     void feed(const QString& data) { runLua(qsl("feedTriggers([[%1]] .. \"\\n\")").arg(data)); }
 
-    TConsole* frameConsole() const
-    {
-        const TMxpFrame* frame = mpHost->mMxpFrameManager.getFrame(mFrameName);
-        return frame ? frame->console : nullptr;
-    }
+    TConsole* frameConsole() const { return mpHost->mainConsoleView()->mxpFrameWidgets().frameConsole(mFrameName); }
 
     // The frame, created and filled. Returns its console, or nullptr with the
     // failure already registered.
@@ -189,7 +187,7 @@ private slots:
         }
 
         QSignalSpy spy2(&(mpHost->mTelnet), &cTelnet::signal_connected);
-        if (!spy2.wait(2000)) {
+        if (!spy2.wait(2s)) {
             QFAIL("Could not connect with the host.");
         }
 
@@ -214,7 +212,7 @@ private slots:
     void init()
     {
         QVERIFY(mpHost);
-        QVERIFY(mpHost->mpConsole);
+        QVERIFY(mpHost->mainConsoleView());
         // the tags come in through feedTriggers, so the processor is forced
         // on: that is what locks secure mode, which negotiating MXP with a
         // server would not do

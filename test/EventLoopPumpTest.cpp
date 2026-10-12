@@ -24,6 +24,8 @@
 
 #include "EventLoopPump.h"
 
+using namespace std::chrono_literals;
+
 /*
  * The macOS CI legs are what make pumpingFromInsideATimerCallback() worth
  * having: that is the position a nested QEventLoop::exec() stops seeing Qt
@@ -70,7 +72,7 @@ void EventLoopPumpTest::makesOnePassForAZeroTimeout()
 void EventLoopPumpTest::stopsAsSoonAsTheConditionHolds()
 {
     bool done = false;
-    QTimer::singleShot(50, this, [&done]() {
+    QTimer::singleShot(50ms, this, [&done]() {
         done = true;
     });
 
@@ -106,7 +108,7 @@ void EventLoopPumpTest::stopsWithoutPumpingWhenTheConditionAlreadyHolds()
 void EventLoopPumpTest::deliversATimerThatComesDueWhilePumping()
 {
     bool fired = false;
-    QTimer::singleShot(40, this, [&fired]() {
+    QTimer::singleShot(40ms, this, [&fired]() {
         fired = true;
     });
 
@@ -122,8 +124,8 @@ void EventLoopPumpTest::pumpingFromInsideATimerCallback()
     bool firedDuringPump = false;
     bool outerDone = false;
 
-    QTimer::singleShot(0, this, [&]() {
-        QTimer::singleShot(40, this, [&innerFired]() {
+    QTimer::singleShot(0ms, this, [&]() {
+        QTimer::singleShot(40ms, this, [&innerFired]() {
             innerFired = true;
         });
         QVERIFY(!EventLoopPump::pumpFor(300));

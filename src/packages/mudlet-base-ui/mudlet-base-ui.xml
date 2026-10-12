@@ -800,6 +800,13 @@ local chatPatterns = {
   { regex = [=[^\(([\w -]{1,18})\)[:\s]]=], tagged = true },
   { regex = [=[^&lt; ?([\w -]{1,18}) ?\|]=], tagged = true },
 }
+-- every chat shape is anchored at the start of the line, so their alternation
+-- is only ever tried there: one cheap call that rules out most lines for all
+local chatAlternatives = {}
+for _, pattern in ipairs(chatPatterns) do
+  chatAlternatives[#chatAlternatives + 1] = "(?:" .. pattern.regex .. ")"
+end
+local anyChatShape = table.concat(chatAlternatives, "|")
 
 local chatTabs = {
   { key = "all", label = "All" },
@@ -1014,8 +1021,9 @@ local function scoreRow(stat, pair)
 end
 -- a vital label sitting right after a table border is a score cell wherever
 -- the row itself starts ("| Race: Undead Atavian | Health: 4252/4252 |")
+local scoreCellLead = [=[(?i)[|│┃║]]=]
 local function scoreCell(stat, pair)
-  return [=[(?i)[|│┃║]\s*]=] .. scoreLabels[stat] .. pairLeadIn .. pair
+  return scoreCellLead .. [=[\s*]=] .. scoreLabels[stat] .. pairLeadIn .. pair
 end
 -- no anchor at all: only trusted inside the short window after a "score"
 -- command actually went to the game (see BaseUI.noteCommandSent) - which is
@@ -1059,110 +1067,116 @@ local anyVitalsLabel = table.concat({
 }, "|")
 BaseUI.vitalsPrefilter = [=[(?i)(?&lt;![a-z])(?:]=] .. anyVitalsLabel .. [=[)(?:\s*points?)?(?![a-z])]=]
 
+-- a literal each shape cannot match without, as found in the lowercased line:
+-- four plain searches tell which shapes a line could match, and most lines that
+-- get past the prefilter on a label alone ("the orc hits you") hold none of them
+local needsSlash, needsParen, needsOf, needsPercent = "/", "(", "of", "%"
+local needsBit = { [needsSlash] = 1, [needsParen] = 2, [needsOf] = 4, [needsPercent] = 8 }
+
 local vitalsLinePatterns = {
   -- self-sufficient prompt shapes: cur/max with the label after the numbers
-  { stat = "hp", kind = "curmax", gated = true,
+  { stat = "hp", kind = "curmax", needs = needsSlash, gated = true,
     regex = [=[(?i)]=] .. numberFirstGuard .. [=[(\d+)\s*/\s*(\d+)\s*(?:]=] .. promptLabels.hp .. [=[)\b]=] },
-  { stat = "mp", kind = "curmax", gated = true,
+  { stat = "mp", kind = "curmax", needs = needsSlash, gated = true,
     regex = [=[(?i)]=] .. numberFirstGuard .. [=[(\d+)\s*/\s*(\d+)\s*(?:]=] .. promptLabels.mp .. [=[|m)\b]=] },
-  { stat = "mv", kind = "curmax", gated = true,
+  { stat = "mv", kind = "curmax", needs = needsSlash, gated = true,
     regex = [=[(?i)]=] .. numberFirstGuard .. [=[(\d+)\s*/\s*(\d+)\s*(?:]=] .. promptLabels.mv .. [=[)\b]=] },
-  { stat = "xp", kind = "curmax", gated = true,
+  { stat = "xp", kind = "curmax", needs = needsSlash, gated = true,
     regex = [=[(?i)]=] .. numberFirstGuard .. [=[(\d+)\s*/\s*(\d+)\s*(?:]=] .. promptLabels.xp .. [=[)\b]=] },
   -- self-sufficient prompt shapes: cur/max with the label first. The
   -- explicit-separator form is trusted anywhere; the separator-less form
   -- needs the digit lookbehinds so "523/600 hp ..." cannot have its own
   -- trailing label re-read as the start of a new reading
-  { stat = "hp", kind = "curmax", gated = true,
+  { stat = "hp", kind = "curmax", needs = needsSlash, gated = true,
     regex = [=[(?i)(?&lt;!%)\b(?:]=] .. promptLabels.hp .. [=[)[:=]\s*(\d+)\s*/\s*(\d+)]=] },
-  { stat = "hp", kind = "curmax", gated = true,
+  { stat = "hp", kind = "curmax", needs = needsSlash, gated = true,
     regex = [=[(?i)]=] .. labelFirstGuard .. [=[\b(?:]=] .. promptLabels.hp .. [=[)\s*(\d+)\s*/\s*(\d+)]=] },
-  { stat = "mp", kind = "curmax", gated = true,
+  { stat = "mp", kind = "curmax", needs = needsSlash, gated = true,
     regex = [=[(?i)(?&lt;!%)\b(?:]=] .. promptLabels.mp .. [=[)[:=]\s*(\d+)\s*/\s*(\d+)]=] },
-  { stat = "mp", kind = "curmax", gated = true,
+  { stat = "mp", kind = "curmax", needs = needsSlash, gated = true,
     regex = [=[(?i)]=] .. labelFirstGuard .. [=[\b(?:]=] .. promptLabels.mp .. [=[)\s*(\d+)\s*/\s*(\d+)]=] },
-  { stat = "mv", kind = "curmax", gated = true,
+  { stat = "mv", kind = "curmax", needs = needsSlash, gated = true,
     regex = [=[(?i)(?&lt;!%)\b(?:]=] .. promptLabels.mv .. [=[)[:=]\s*(\d+)\s*/\s*(\d+)]=] },
-  { stat = "mv", kind = "curmax", gated = true,
+  { stat = "mv", kind = "curmax", needs = needsSlash, gated = true,
     regex = [=[(?i)]=] .. labelFirstGuard .. [=[\b(?:]=] .. promptLabels.mv .. [=[)\s*(\d+)\s*/\s*(\d+)]=] },
-  { stat = "xp", kind = "curmax", gated = true,
+  { stat = "xp", kind = "curmax", needs = needsSlash, gated = true,
     regex = [=[(?i)(?&lt;!%)\b(?:]=] .. promptLabels.xp .. [=[)[:=]\s*(\d+)\s*/\s*(\d+)]=] },
-  { stat = "xp", kind = "curmax", gated = true,
+  { stat = "xp", kind = "curmax", needs = needsSlash, gated = true,
     regex = [=[(?i)]=] .. labelFirstGuard .. [=[\b(?:]=] .. promptLabels.xp .. [=[)\s*(\d+)\s*/\s*(\d+)]=] },
   -- labelled percentages need no maximum at all
-  { stat = "hp", kind = "percent", gated = true,
+  { stat = "hp", kind = "percent", needs = needsPercent, gated = true,
     regex = [=[(?i)]=] .. numberFirstGuard .. [=[(\d+)%\s*(?:]=] .. coreLabels.hp .. [=[)\b]=] },
-  { stat = "hp", kind = "percent", gated = true,
+  { stat = "hp", kind = "percent", needs = needsPercent, gated = true,
     regex = [=[(?i)(?&lt;!%)\b(?:]=] .. coreLabels.hp .. [=[)[:=]\s*(\d+)%]=] },
-  { stat = "hp", kind = "percent", gated = true,
+  { stat = "hp", kind = "percent", needs = needsPercent, gated = true,
     regex = [=[(?i)]=] .. labelFirstGuard .. [=[\b(?:]=] .. coreLabels.hp .. [=[)\s*(\d+)%]=] },
-  { stat = "mp", kind = "percent", gated = true,
+  { stat = "mp", kind = "percent", needs = needsPercent, gated = true,
     regex = [=[(?i)]=] .. numberFirstGuard .. [=[(\d+)%\s*(?:]=] .. coreLabels.mp .. [=[|m)\b]=] },
-  { stat = "mp", kind = "percent", gated = true,
+  { stat = "mp", kind = "percent", needs = needsPercent, gated = true,
     regex = [=[(?i)(?&lt;!%)\b(?:]=] .. coreLabels.mp .. [=[)[:=]\s*(\d+)%]=] },
-  { stat = "mp", kind = "percent", gated = true,
+  { stat = "mp", kind = "percent", needs = needsPercent, gated = true,
     regex = [=[(?i)]=] .. labelFirstGuard .. [=[\b(?:]=] .. coreLabels.mp .. [=[)\s*(\d+)%]=] },
   -- score-screen shapes, all trusted on first sight. A single labelled row,
   -- with or without a separator, possibly behind table borders:
   -- "Health : 523/600", "| Hit Points 3,600/3,600 |"
-  { stat = "hp", kind = "curmax",
+  { stat = "hp", kind = "curmax", needs = needsSlash,
     regex = [=[(?i)^[^\w\r\n]{0,12}]=] .. scoreLabels.hp .. [=[\s*[:=\]]*\s*]=] .. slashPair },
-  { stat = "mp", kind = "curmax",
+  { stat = "mp", kind = "curmax", needs = needsSlash,
     regex = [=[(?i)^[^\w\r\n]{0,12}]=] .. scoreLabels.mp .. [=[\s*[:=\]]*\s*]=] .. slashPair },
-  { stat = "mv", kind = "curmax",
+  { stat = "mv", kind = "curmax", needs = needsSlash,
     regex = [=[(?i)^[^\w\r\n]{0,12}]=] .. scoreLabels.mv .. [=[\s*[:=\]]*\s*]=] .. slashPair },
-  { stat = "xp", kind = "curmax",
+  { stat = "xp", kind = "curmax", needs = needsSlash,
     regex = [=[(?i)^[^\w\r\n]{0,12}]=] .. scoreLabels.xp .. [=[\s*[:=\]]*\s*]=] .. slashPair },
   -- score-table rows read their labels anywhere on the line (the anchor in
   -- scoreRow decides what counts as a row): "Health: 3600/3600  Mana:
   -- 3400/3400" (IRE), "| Level: 201 ... Hit Points: 500/500 |" (Aardwolf),
   -- "Hp: 143 (167) Gp: 240 (240)" (LPMud/Discworld)
-  { stat = "hp", kind = "curmax", regex = scoreRow("hp", slashPair) },
-  { stat = "mp", kind = "curmax", regex = scoreRow("mp", slashPair) },
-  { stat = "mv", kind = "curmax", regex = scoreRow("mv", slashPair) },
-  { stat = "xp", kind = "curmax", regex = scoreRow("xp", slashPair) },
-  { stat = "hp", kind = "curmax", regex = scoreRow("hp", parenPair) },
-  { stat = "mp", kind = "curmax", regex = scoreRow("mp", parenPair) },
-  { stat = "mv", kind = "curmax", regex = scoreRow("mv", parenPair) },
-  { stat = "hp", kind = "curmax", regex = scoreRow("hp", ofPair) },
-  { stat = "mp", kind = "curmax", regex = scoreRow("mp", ofPair) },
-  { stat = "mv", kind = "curmax", regex = scoreRow("mv", ofPair) },
+  { stat = "hp", kind = "curmax", needs = needsSlash, regex = scoreRow("hp", slashPair), prefix = scoreRowAnchor },
+  { stat = "mp", kind = "curmax", needs = needsSlash, regex = scoreRow("mp", slashPair), prefix = scoreRowAnchor },
+  { stat = "mv", kind = "curmax", needs = needsSlash, regex = scoreRow("mv", slashPair), prefix = scoreRowAnchor },
+  { stat = "xp", kind = "curmax", needs = needsSlash, regex = scoreRow("xp", slashPair), prefix = scoreRowAnchor },
+  { stat = "hp", kind = "curmax", needs = needsParen, regex = scoreRow("hp", parenPair), prefix = scoreRowAnchor },
+  { stat = "mp", kind = "curmax", needs = needsParen, regex = scoreRow("mp", parenPair), prefix = scoreRowAnchor },
+  { stat = "mv", kind = "curmax", needs = needsParen, regex = scoreRow("mv", parenPair), prefix = scoreRowAnchor },
+  { stat = "hp", kind = "curmax", needs = needsOf, regex = scoreRow("hp", ofPair), prefix = scoreRowAnchor },
+  { stat = "mp", kind = "curmax", needs = needsOf, regex = scoreRow("mp", ofPair), prefix = scoreRowAnchor },
+  { stat = "mv", kind = "curmax", needs = needsOf, regex = scoreRow("mv", ofPair), prefix = scoreRowAnchor },
   -- bordered cells (IRE, Aardwolf): the label follows a "|" mid-line
-  { stat = "hp", kind = "curmax", regex = scoreCell("hp", slashPair) },
-  { stat = "mp", kind = "curmax", regex = scoreCell("mp", slashPair) },
-  { stat = "mv", kind = "curmax", regex = scoreCell("mv", slashPair) },
-  { stat = "xp", kind = "curmax", regex = scoreCell("xp", slashPair) },
-  { stat = "hp", kind = "curmax", regex = scoreCell("hp", parenPair) },
-  { stat = "mp", kind = "curmax", regex = scoreCell("mp", parenPair) },
-  { stat = "mv", kind = "curmax", regex = scoreCell("mv", parenPair) },
-  { stat = "hp", kind = "curmax", regex = scoreCell("hp", ofPair) },
-  { stat = "mp", kind = "curmax", regex = scoreCell("mp", ofPair) },
-  { stat = "mv", kind = "curmax", regex = scoreCell("mv", ofPair) },
+  { stat = "hp", kind = "curmax", needs = needsSlash, regex = scoreCell("hp", slashPair), prefix = scoreCellLead },
+  { stat = "mp", kind = "curmax", needs = needsSlash, regex = scoreCell("mp", slashPair), prefix = scoreCellLead },
+  { stat = "mv", kind = "curmax", needs = needsSlash, regex = scoreCell("mv", slashPair), prefix = scoreCellLead },
+  { stat = "xp", kind = "curmax", needs = needsSlash, regex = scoreCell("xp", slashPair), prefix = scoreCellLead },
+  { stat = "hp", kind = "curmax", needs = needsParen, regex = scoreCell("hp", parenPair), prefix = scoreCellLead },
+  { stat = "mp", kind = "curmax", needs = needsParen, regex = scoreCell("mp", parenPair), prefix = scoreCellLead },
+  { stat = "mv", kind = "curmax", needs = needsParen, regex = scoreCell("mv", parenPair), prefix = scoreCellLead },
+  { stat = "hp", kind = "curmax", needs = needsOf, regex = scoreCell("hp", ofPair), prefix = scoreCellLead },
+  { stat = "mp", kind = "curmax", needs = needsOf, regex = scoreCell("mp", ofPair), prefix = scoreCellLead },
+  { stat = "mv", kind = "curmax", needs = needsOf, regex = scoreCell("mv", ofPair), prefix = scoreCellLead },
   -- Diku/Merc/ROM and Circle/tbaMUD score sentences: "You have 100/100
   -- hit, 90/90 mana, and 100/100 movement points." (Diku and Circle write
   -- "100(100)" instead of "100/100")
-  { stat = "hp", kind = "curmax", regex = scoreSentence("hp", slashPair) },
-  { stat = "mp", kind = "curmax", regex = scoreSentence("mp", slashPair) },
-  { stat = "mv", kind = "curmax", regex = scoreSentence("mv", slashPair) },
-  { stat = "hp", kind = "curmax", regex = scoreSentence("hp", parenPair) },
-  { stat = "mp", kind = "curmax", regex = scoreSentence("mp", parenPair) },
-  { stat = "mv", kind = "curmax", regex = scoreSentence("mv", parenPair) },
-  { stat = "hp", kind = "curmax",
+  { stat = "hp", kind = "curmax", needs = needsSlash, regex = scoreSentence("hp", slashPair), prefix = youHave },
+  { stat = "mp", kind = "curmax", needs = needsSlash, regex = scoreSentence("mp", slashPair), prefix = youHave },
+  { stat = "mv", kind = "curmax", needs = needsSlash, regex = scoreSentence("mv", slashPair), prefix = youHave },
+  { stat = "hp", kind = "curmax", needs = needsParen, regex = scoreSentence("hp", parenPair), prefix = youHave },
+  { stat = "mp", kind = "curmax", needs = needsParen, regex = scoreSentence("mp", parenPair), prefix = youHave },
+  { stat = "mv", kind = "curmax", needs = needsParen, regex = scoreSentence("mv", parenPair), prefix = youHave },
+  { stat = "hp", kind = "curmax", needs = needsSlash,
     regex = [=[(?i)]=] .. slashPair .. [=[\s*hit points\b]=] },
   -- LPMud 2.4.5 writes current, label, then the max: "50 hit points(50)."
-  { stat = "hp", kind = "curmax",
+  { stat = "hp", kind = "curmax", needs = needsParen,
     regex = [=[(?i)\b]=] .. scoreNumber .. [=[\s*hit\s*points?\s*\(\s*]=] .. scoreNumber .. [=[\s*\)]=] },
   -- anchorless labelled pairs, only live inside the post-"score" window
-  { stat = "hp", kind = "curmax", windowed = true, regex = scoreWindowed("hp", slashPair) },
-  { stat = "mp", kind = "curmax", windowed = true, regex = scoreWindowed("mp", slashPair) },
-  { stat = "mv", kind = "curmax", windowed = true, regex = scoreWindowed("mv", slashPair) },
-  { stat = "xp", kind = "curmax", windowed = true, regex = scoreWindowed("xp", slashPair) },
-  { stat = "hp", kind = "curmax", windowed = true, regex = scoreWindowed("hp", parenPair) },
-  { stat = "mp", kind = "curmax", windowed = true, regex = scoreWindowed("mp", parenPair) },
-  { stat = "mv", kind = "curmax", windowed = true, regex = scoreWindowed("mv", parenPair) },
-  { stat = "hp", kind = "curmax", windowed = true, regex = scoreWindowed("hp", ofPair) },
-  { stat = "mp", kind = "curmax", windowed = true, regex = scoreWindowed("mp", ofPair) },
-  { stat = "mv", kind = "curmax", windowed = true, regex = scoreWindowed("mv", ofPair) },
+  { stat = "hp", kind = "curmax", needs = needsSlash, windowed = true, regex = scoreWindowed("hp", slashPair) },
+  { stat = "mp", kind = "curmax", needs = needsSlash, windowed = true, regex = scoreWindowed("mp", slashPair) },
+  { stat = "mv", kind = "curmax", needs = needsSlash, windowed = true, regex = scoreWindowed("mv", slashPair) },
+  { stat = "xp", kind = "curmax", needs = needsSlash, windowed = true, regex = scoreWindowed("xp", slashPair) },
+  { stat = "hp", kind = "curmax", needs = needsParen, windowed = true, regex = scoreWindowed("hp", parenPair) },
+  { stat = "mp", kind = "curmax", needs = needsParen, windowed = true, regex = scoreWindowed("mp", parenPair) },
+  { stat = "mv", kind = "curmax", needs = needsParen, windowed = true, regex = scoreWindowed("mv", parenPair) },
+  { stat = "hp", kind = "curmax", needs = needsOf, windowed = true, regex = scoreWindowed("hp", ofPair) },
+  { stat = "mp", kind = "curmax", needs = needsOf, windowed = true, regex = scoreWindowed("mp", ofPair) },
+  { stat = "mv", kind = "curmax", needs = needsOf, windowed = true, regex = scoreWindowed("mv", ofPair) },
   -- current-only prompt shapes; the lookarounds keep them off cur/max and
   -- percentage lines, which belong to the shapes above
   { stat = "hp", kind = "bare", gated = true,
@@ -1178,11 +1192,16 @@ local vitalsLinePatterns = {
 }
 
 -- rex.match given a pattern STRING compiles it afresh on every call, and a line
--- reaching this layer is tested against up to 77 shapes. Never pass .regex to
+-- reaching this layer is tested against dozens of shapes. Never pass .regex to
 -- rex.match directly.
 local compiledPattern = setmetatable({}, {
   __index = function(cache, regex)
     local ok, compiled = pcall(rex.new, regex)
+    -- matched against most lines, so JIT-compiled where the rex_pcre2 in use
+    -- can; the matches are the same either way, only found faster
+    if ok then
+      pcall(function() compiled:jit_compile() end)
+    end
     if not ok then
       -- keep the string so rex.match still raises on it rather than the shape
       -- vanishing; the error is only precise here, not once per line
@@ -1195,9 +1214,43 @@ local compiledPattern = setmetatable({}, {
   end,
 })
 
--- for the test suite: how many shapes parseVitalsLine walks
+-- for the test suite: how many shapes the vitals scan walks
 function BaseUI.vitalsShapeCount()
   return #vitalsLinePatterns
+end
+
+-- for the test suite: the vitals scan skips a shape whose prefix misses, which
+-- is only sound while the prefix is where the shape's own regex starts
+function BaseUI.prefixesLeadTheirShapes()
+  for _, pattern in ipairs(vitalsLinePatterns) do
+    if pattern.prefix and pattern.regex:sub(1, #pattern.prefix) ~= pattern.prefix then
+      return false
+    end
+  end
+  return true
+end
+
+-- for the test suite: the shapes a full walk finds in a line, without the memo
+function BaseUI.vitalsShapesMatching(text)
+  local indices = {}
+  for index, pattern in ipairs(vitalsLinePatterns) do
+    if rex.match(text, compiledPattern[pattern.regex]) then
+      indices[#indices + 1] = index
+    end
+  end
+  return indices
+end
+
+-- for the test suite: the vitals scan never tries a shape on a line without
+-- the literal it needs, which is only sound while no such line can match it
+function BaseUI.needsHoldOn(text)
+  for _, pattern in ipairs(vitalsLinePatterns) do
+    if pattern.needs and not text:lower():find(pattern.needs, 1, true)
+       and rex.match(text, compiledPattern[pattern.regex]) then
+      return false
+    end
+  end
+  return true
 end
 
 -- for the test suite: the shapes chatLikeLine() walks, so a corpus can be held
@@ -1215,17 +1268,21 @@ end
 function BaseUI.shapesArePrecompiled()
   for _, list in ipairs({ chatPatterns, vitalsLinePatterns }) do
     for _, pattern in ipairs(list) do
-      if type(compiledPattern[pattern.regex]) ~= "userdata" then
+      if type(compiledPattern[pattern.regex]) ~= "userdata"
+         or (pattern.prefix and type(compiledPattern[pattern.prefix]) ~= "userdata") then
         return false
       end
     end
   end
-  return true
+  return type(compiledPattern[anyChatShape]) == "userdata"
 end
 
 -- lines the chat layer would route are never harvested for vitals - a tell
 -- saying "I am on 100/120 hp" is conversation, not a prompt
 function BaseUI.chatLikeLine(text)
+  if not rex.find(text, compiledPattern[anyChatShape]) then
+    return false
+  end
   for _, pattern in ipairs(chatPatterns) do
     local capture = rex.match(text, compiledPattern[pattern.regex])
     if capture then
@@ -1247,7 +1304,8 @@ local function parseVitalsNumber(text)
   if not text then
     return nil
   end
-  return tonumber((text:gsub(",", "")))
+  -- most numbers have no separator, which gsub would copy all the same
+  return tonumber(text) or tonumber((text:gsub(",", "")))
 end
 
 -- readings above this are ids, timestamps or garbage, never vitals
@@ -1255,51 +1313,184 @@ local maxSaneVital = 1e10
 -- overhealing exists, so current may exceed max - but not tenfold
 local maxOverhealFactor = 10
 
+-- the shapes a line holding the literals in mask could match, in table order
+-- so the readings keep it. Walking every shape and skipping most cost more in
+-- table lookups than the skipped regexes did; there are only 32 lists
+local candidateShapes = {}
+local function candidateShapesFor(mask, skipWindowed)
+  local key = skipWindowed and mask + 16 or mask
+  local shapes = candidateShapes[key]
+  if not shapes then
+    shapes = {}
+    for index, pattern in ipairs(vitalsLinePatterns) do
+      local bit = pattern.needs and needsBit[pattern.needs]
+      if (not bit or mask % (bit * 2) &gt;= bit) and not (skipWindowed and pattern.windowed) then
+        shapes[#shapes + 1] = index
+      end
+    end
+    candidateShapes[key] = shapes
+  end
+  return shapes
+end
+
+local function readShape(index, pattern, visit, state, first, second)
+  local kind = pattern.kind
+  if kind == "curmax" then
+    local current, max = parseVitalsNumber(first), parseVitalsNumber(second)
+    if current and max and max &gt; 0 and max &lt; maxSaneVital
+       and current &lt;= max * maxOverhealFactor then
+      visit(state, index, pattern, current, max, nil)
+    end
+  elseif kind == "percent" then
+    local percent = tonumber(first)
+    if percent and percent &lt;= 100 then
+      visit(state, index, pattern, nil, nil, percent)
+    end
+  elseif kind == "bare" then
+    local current = tonumber(first)
+    if current and current &lt; maxSaneVital then
+      visit(state, index, pattern, current, nil, nil)
+    end
+  end
+end
+
+-- a literal digit, a backreference or a condition on a group lets a regex tell
+-- digits apart, and the memo below is only sound while none can. The braces of
+-- a \x or \o escape name a character, which may be a digit, not a count
+local function shapesTreatDigitsAlike(patterns)
+  for _, pattern in ipairs(patterns or vitalsLinePatterns) do
+    for _, regex in ipairs({ pattern.regex, pattern.prefix or "" }) do
+      if regex:find("\\[xo]{") then
+        return false
+      end
+      regex = regex:gsub("{%d*,?%d*}", "")
+      if regex:find("%d") or regex:find("\\[kg]") or regex:find("(?P=", 1, true) or regex:find("(?(", 1, true) then
+        return false
+      end
+    end
+  end
+  return true
+end
+BaseUI.shapesTreatDigitsAlike = shapesTreatDigitsAlike
+local memoIsSound = shapesTreatDigitsAlike()
+
+-- a line with its digits read as 0 -&gt; the shapes that matched it, in order:
+-- prompts and combat lines repeat with only their numbers changing
+local matchedShapes, matchedShapesWithoutWindowed = {}, {}
+local matchedShapeBytes = 0
+local noShapes = {}
+
+-- calls visit(state, index, pattern, current, max, percent) for each reading
+-- in one plain-text line, in shape order; chat-shaped lines have none.
+-- Nonsense readings - a max of zero, a wildly overhealed current, absurd
+-- magnitudes - are dropped here so a score-screen misread can never paint a
+-- broken gauge. skipWindowed leaves out the windowed shapes, for a caller that
+-- would only throw their readings away. A visitor rather than a list because
+-- most prompts read several shapes, and the tables cost more than the regexes
+local function scanVitalsLine(text, skipWindowed, visit, state)
+  if type(text) ~= "string" or BaseUI.chatLikeLine(text) then
+    return
+  end
+  local skeleton, known, matched
+  if memoIsSound then
+    skeleton = text:gsub("%d", "0")
+    known = skipWindowed and matchedShapesWithoutWindowed or matchedShapes
+    matched = known[skeleton]
+    if matched then
+      for _, index in ipairs(matched) do
+        local pattern = vitalsLinePatterns[index]
+        local first, second = rex.match(text, compiledPattern[pattern.regex])
+        if first then
+          readShape(index, pattern, visit, state, first, second)
+        end
+      end
+      return
+    end
+  end
+  local lowered = text:lower()
+  local mask = 0
+  for literal, bit in pairs(needsBit) do
+    if lowered:find(literal, 1, true) then
+      mask = mask + bit
+    end
+  end
+  -- a shape's prefix is the start of its own regex, so a line the prefix
+  -- misses cannot match the shape, and one match answers for every shape
+  -- sharing it
+  local prefixMatched
+  for _, index in ipairs(candidateShapesFor(mask, skipWindowed)) do
+    local pattern = vitalsLinePatterns[index]
+    local prefix = pattern.prefix
+    local live = true
+    if prefix then
+      prefixMatched = prefixMatched or {}
+      live = prefixMatched[prefix]
+      if live == nil then
+        live = rex.match(text, compiledPattern[prefix]) ~= nil
+        prefixMatched[prefix] = live
+      end
+    end
+    local first, second
+    if live then
+      first, second = rex.match(text, compiledPattern[pattern.regex])
+    end
+    if first then
+      matched = matched or {}
+      matched[#matched + 1] = index
+      readShape(index, pattern, visit, state, first, second)
+    end
+  end
+  if skeleton then
+    if matchedShapeBytes &gt;= 100000 then
+      matchedShapes, matchedShapesWithoutWindowed, matchedShapeBytes = {}, {}, 0
+      known = skipWindowed and matchedShapesWithoutWindowed or matchedShapes
+    end
+    matchedShapeBytes = matchedShapeBytes + #skeleton
+    known[skeleton] = matched or noShapes
+  end
+end
+
+local function addReading(readings, index, pattern, current, max, percent)
+  readings[#readings + 1] = {
+    stat = pattern.stat, kind = pattern.kind, current = current, max = max, percent = percent,
+    pattern = index, gated = pattern.gated, windowed = pattern.windowed,
+  }
+end
+
 -- pure so the test suite can drive it: turns one plain-text line into a list
 -- of { stat, kind, current, max, percent, pattern, gated, windowed }
 -- readings (kind "bare" means a current with no maximum; gated rows need
 -- the recurrence gate in BaseUI.onVitalsLine before they may drive a gauge,
--- windowed rows the post-"score" window). Chat-shaped lines yield nothing.
--- Nonsense readings - a max of zero, a wildly overhealed current, absurd
--- magnitudes - are dropped here so a score-screen misread can never paint a
--- broken gauge.
-function BaseUI.parseVitalsLine(text)
+-- windowed rows the post-"score" window); see scanVitalsLine for the rest
+function BaseUI.parseVitalsLine(text, skipWindowed)
   local readings = {}
-  if type(text) ~= "string" or BaseUI.chatLikeLine(text) then
-    return readings
-  end
-  for index, pattern in ipairs(vitalsLinePatterns) do
-    local first, second = rex.match(text, compiledPattern[pattern.regex])
-    local reading
-    if pattern.kind == "curmax" and first then
-      local current, max = parseVitalsNumber(first), parseVitalsNumber(second)
-      if current and max and max &gt; 0 and max &lt; maxSaneVital
-         and current &lt;= max * maxOverhealFactor then
-        reading = { stat = pattern.stat, kind = pattern.kind, current = current, max = max }
-      end
-    elseif pattern.kind == "percent" and first then
-      local percent = tonumber(first)
-      if percent and percent &lt;= 100 then
-        reading = { stat = pattern.stat, kind = pattern.kind, percent = percent }
-      end
-    elseif pattern.kind == "bare" and first then
-      local current = tonumber(first)
-      if current and current &lt; maxSaneVital then
-        reading = { stat = pattern.stat, kind = pattern.kind, current = current }
-      end
-    end
-    if reading then
-      reading.pattern = index
-      reading.gated = pattern.gated
-      reading.windowed = pattern.windowed
-      table.insert(readings, reading)
-    end
-  end
+  scanVitalsLine(text, skipWindowed, addReading, readings)
   return readings
 end
 
 function BaseUI.scoreWindowOpen()
   return BaseUI.scoreWindowUntil ~= nil and getEpoch() &lt; BaseUI.scoreWindowUntil
+end
+
+-- scanVitalsLine visitor for onVitalsLine: a line's readings merged per stat.
+-- Windowed shapes are only scanned while the score window is open
+local function mergeReading(updates, index, pattern, current, max, percent)
+  if pattern.gated and not pattern.windowed then
+    local seen = (BaseUI.shapeSightings[index] or 0) + 1
+    BaseUI.shapeSightings[index] = seen
+    if seen &lt; 3 then
+      return
+    end
+  end
+  if pattern.kind == "bare" then
+    BaseUI.maybeRequestScore()
+  end
+  local stat = pattern.stat
+  local update = updates[stat] or {}
+  update.current = current or update.current
+  update.max = max or update.max
+  update.percent = percent or update.percent
+  updates[stat] = update
 end
 
 -- lastChatLine keeps a line the chat layer routed out of the vitals layer; the
@@ -1313,26 +1504,7 @@ function BaseUI.onVitalsLine()
   BaseUI.lastVitalsLine = lineNumber
   local updates = {}
   local windowOpen = BaseUI.scoreWindowOpen()
-  for _, reading in ipairs(BaseUI.parseVitalsLine(line)) do
-    local live = true
-    if reading.windowed then
-      live = windowOpen
-    elseif reading.gated then
-      local seen = (BaseUI.shapeSightings[reading.pattern] or 0) + 1
-      BaseUI.shapeSightings[reading.pattern] = seen
-      live = seen &gt;= 3
-    end
-    if live then
-      if reading.kind == "bare" then
-        BaseUI.maybeRequestScore()
-      end
-      local update = updates[reading.stat] or {}
-      update.current = reading.current or update.current
-      update.max = reading.max or update.max
-      update.percent = reading.percent or update.percent
-      updates[reading.stat] = update
-    end
-  end
+  scanVitalsLine(line, not windowOpen, mergeReading, updates)
   if next(updates) then
     BaseUI.applyVitals("prompt", updates)
     -- building the dock resizes the main window, which can renumber lines;

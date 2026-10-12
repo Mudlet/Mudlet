@@ -23,20 +23,42 @@
 
 #include <QMap>
 #include <QMultiMap>
+#include <QStringList>
 
-class QString;
 
-
+// The fonts Mudlet and its profiles' packages add to the application's font
+// database. Owned by HostManager, so a profile reaches it through self() even
+// with no main window.
 class FontManager
 {
 public:
+    Q_DISABLE_COPY_MOVE(FontManager)
+    FontManager();
+    ~FontManager();
+
+    // Null outside HostManager's lifetime
+    static FontManager* self() { return smpSelf; }
+    // Every family the font database knows, including those added here
+    static QStringList availableFonts();
+    // For a query that resolves a family, as the bundled ones are only added on first use with no main window
+    static void ensureFontsAdded();
+
     void addFonts();
     void loadFont(const QString& filePath, const QString& profileName, const QString& belongsTo = "main");
     bool fontAlreadyLoaded(const QString& filePath, const QString& profileName);
+    // -1 for a file that failed to load as well as for one never loaded, which fontAlreadyLoaded() tells apart
+    int loadedFontId(const QString& filePath, const QString& profileName) const;
     void unloadFonts(const QString& profileName, const QString& belongsTo);
     void addEmojiFont();
 
 private:
+    inline static FontManager* smpSelf = nullptr;
+    // For the process rather than the instance: the font database is the
+    // process's, and outlives every FontManager that adds to it
+    inline static bool smFontsAdded = false;
+
+    void addFontsOnFirstUse();
+
     void loadFonts(const QString& folder);
     void rememberFont(const QString& filePath, int fontID, const QString& profileName, const QString& belongsTo);
 

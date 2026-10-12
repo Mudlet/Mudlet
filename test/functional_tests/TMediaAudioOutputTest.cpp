@@ -27,6 +27,8 @@
 
 #include "GroupedTest.h"
 
+using namespace std::chrono_literals;
+
 // TMediaPlayer::refreshAudioOutput() is what a playing player goes through when the system's
 // audio output device changes - TMedia::refreshAudioDevices() skips the stopped ones. There is
 // no Lua entry point to it, mudlet calls refreshAudioDevices() off QMediaDevices'
@@ -66,7 +68,7 @@ private slots:
             // point tells the two apart.
             QVERIFY2(!displaced.isNull(), "The displaced audio output was deleted outright instead of being handed to deleteLater().");
 
-            QTest::qWait(1); // runs the deleteLater() the displaced output was handed to
+            QTest::qWait(1ms); // runs the deleteLater() the displaced output was handed to
             QVERIFY2(displaced.isNull(), "The displaced audio output was never deleted, so every device change leaves one behind.");
         }
 

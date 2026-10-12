@@ -24,6 +24,7 @@
 #include "dlgRoomProperties.h"
 #include "Host.h"
 #include "TMap.h"
+#include "TRoom.h"
 #include "TRoomDB.h"
 
 #include <QColorDialog>
@@ -52,13 +53,8 @@ dlgRoomProperties::dlgRoomProperties(Host* pHost, QWidget* pParentWidget)
     setAttribute(Qt::WA_DeleteOnClose);
 }
 
-void dlgRoomProperties::init(QHash<QString, int> usedNames,
-                             QHash<int, int>& pColors,
-                             QHash<QString, int>& pSymbols,
-                             QHash<int, int>& pWeights,
-                             QHash<bool, int> lockStatus,
-                             int hiddenRoomCount,
-                             QSet<TRoom*>& pRooms)
+void dlgRoomProperties::init(
+        QHash<QString, int> usedNames, QHash<int, int>& pColors, QHash<QString, int>& pSymbols, QHash<int, int>& pWeights, QHash<bool, int> lockStatus, int hiddenRoomCount, const QSet<int>& roomIds)
 {
     // Configure name display
     if (usedNames.size() > 1) {
@@ -74,12 +70,21 @@ void dlgRoomProperties::init(QHash<QString, int> usedNames,
 
     // Configure symbols display
     mpSymbols = pSymbols;
-    mpRooms = pRooms;
+    mRoomIds = roomIds;
 
     // Store original border values for live preview restoration on cancel
-    for (TRoom* room : std::as_const(mpRooms)) {
-        mOriginalBorderColors[room] = room->mBorderColor;
-        mOriginalBorderThicknesses[room] = room->mBorderThickness;
+    TRoom* pFirstRoom = nullptr;
+    for (const int roomId : std::as_const(mRoomIds)) {
+        TRoom* room = mpHost->mpMap->mpRoomDB->getRoom(roomId);
+        if (!room) {
+            continue;
+        }
+        if (!pFirstRoom) {
+            pFirstRoom = room;
+        }
+        mRoomSerials[roomId] = room->serial();
+        mOriginalBorderColors[roomId] = room->mBorderColor;
+        mOriginalBorderThicknesses[roomId] = room->mBorderThickness;
     }
 
     if (mpSymbols.isEmpty()) {
@@ -111,9 +116,10 @@ void dlgRoomProperties::init(QHash<QString, int> usedNames,
     initSymbolInstructions();
 
     // Configure icon display
-    auto pFirstRoom = *(pRooms.begin());
-    selectedSymbolColor = pFirstRoom->mSymbolColor;
-    if (pColors.size() == 1) {
+    if (pFirstRoom) {
+        selectedSymbolColor = pFirstRoom->mSymbolColor;
+    }
+    if (pFirstRoom && pColors.size() == 1) {
         mRoomColor = mpHost->mpMap->getColor(pFirstRoom->getId());
         mRoomColorNumber = pColors.constBegin().key();
     } else {
@@ -158,14 +164,14 @@ void dlgRoomProperties::init(QHash<QString, int> usedNames,
     initLockInstructions();
 
     // Configure hidden display
-    if (hiddenRoomCount && hiddenRoomCount < mpRooms.size()) {
+    if (hiddenRoomCount && hiddenRoomCount < mRoomIds.size()) {
         // Some rooms are hidden
         checkBox_hidden->setTristate(true);
         checkBox_hidden->setCheckState(Qt::PartiallyChecked);
     } else {
         // Either none or all of them are hidden
         checkBox_hidden->setTristate(false);
-        checkBox_hidden->setChecked(hiddenRoomCount == mpRooms.size());
+        checkBox_hidden->setChecked(hiddenRoomCount == mRoomIds.size());
     }
     initHiddenInstructions(hiddenRoomCount);
 
@@ -190,15 +196,13 @@ void dlgRoomProperties::init(QHash<QString, int> usedNames,
 void dlgRoomProperties::initLockInstructions()
 {
     //: room properties dialog, text will be shown at a checkbox, where you can set/unset a number of room's lock.
-    const QString instructions = tr("Lock %n room(s), so it/they will never be used for speedwalking",
-                                    nullptr,
-                                    mpRooms.size());
+    const QString instructions = tr("Lock %n room(s), so it/they will never be used for speedwalking", nullptr, mRoomIds.size());
     checkBox_locked->setText(instructions);
 }
 
 void dlgRoomProperties::initHiddenInstructions(const int hiddenRoomCount)
 {
-    if (hiddenRoomCount && hiddenRoomCount < mpRooms.size()) {
+    if (hiddenRoomCount && hiddenRoomCount < mRoomIds.size()) {
         checkBox_hidden->setText(
                 /*: room properties dialog, setting text for checkbox, where you can
  set/unset a number of room's hidden status. More than one room is being
@@ -206,17 +210,13 @@ void dlgRoomProperties::initHiddenInstructions(const int hiddenRoomCount)
  checkbox also has an partially checked state to be used to leave them all
  unchanged. A second translatable sentance indicating the number of currently
  hidden rooms will be inserted as %1.*/
-                tr("Hide all %n room(s).%1",
-                   nullptr,
-                   mpRooms.size())
+                tr("Hide all %n room(s).%1", nullptr, mRoomIds.size())
                         /*: room properties dialog, additional sentance inserted into setting text for checkbox,
  when some (%n) but not all of the rooms are hidden. Ensure that, if the locale uses
  spaces between words, that one is present at the beginning or end so that the
  text is correctly spaced when it is inserted into the primary text.*/
-                        .arg(tr(" %n room(s) are currently hidden.",
-                             nullptr,
-                             hiddenRoomCount)));
-/*: Tooltip to give additional information for the checkbox to control the
+                        .arg(tr(" %n room(s) are currently hidden.", nullptr, hiddenRoomCount)));
+        /*: Tooltip to give additional information for the checkbox to control the
  state of being hidden when the selection includes multiple rooms and they
  are not all in the same state.*/
         checkBox_hidden->setToolTip(utils::richText(tr("Leave as partially checked to not change the state of the selected rooms.")));
@@ -226,9 +226,7 @@ void dlgRoomProperties::initHiddenInstructions(const int hiddenRoomCount)
     /*: room properties dialog, setting text for checkbox, where you can
  set/unset the hidden status of one or more rooms where %n is the total number
  of rooms and all of them are currently hidden or shown.*/
-    checkBox_hidden->setText(tr("Hide (all) %n room(s).",
-                                nullptr,
-                                mpRooms.size()));
+    checkBox_hidden->setText(tr("Hide (all) %n room(s).", nullptr, mRoomIds.size()));
     checkBox_hidden->setToolTip(QString());
 }
 
@@ -246,7 +244,7 @@ void dlgRoomProperties::initWeightInstructions()
                           "This will be used for calculating the best path. The minimum and default is 1.",
                           // Intentional comment to separate arguments!
                           "%n is the total number of rooms involved.",
-                          mpRooms.size());
+                          mRoomIds.size());
     } else {
         instructions = tr("To change the room weight for all of the %n selected room(s), please choose:\n"
                           " • an existing room weight from the list below (sorted by most commonly used first)\n"
@@ -255,7 +253,7 @@ void dlgRoomProperties::initWeightInstructions()
                           "This is for when applying a new room weight to one or more rooms "
                           "and some have different weights at present. "
                           "%n is the total number of rooms involved.",
-                          mpRooms.size());
+                          mRoomIds.size());
     }
     label_weightInstructions->setText(instructions);
     label_weightInstructions->setWordWrap(true);
@@ -275,7 +273,7 @@ void dlgRoomProperties::initSymbolInstructions()
         instructions = tr("Enter one or more characters to set a new symbol for %n room(s).  Clear to unset.",
                           // Intentional comment to separate arguments!
                           "%n is the total number of rooms involved.",
-                          mpRooms.size());
+                          mRoomIds.size());
     } else {
         //: room properties dialog, setting symbols
         instructions = tr("To set the symbol for all %n room(s), please choose:\n"
@@ -286,7 +284,7 @@ void dlgRoomProperties::initSymbolInstructions()
                           "This is for when applying a new room symbol to one or more rooms "
                           "and some have different symbols or no symbol at present. "
                           "%n is the total number of rooms involved.",
-                          mpRooms.size());
+                          mRoomIds.size());
     }
     label_symbolInstructions->setText(instructions);
     label_symbolInstructions->setWordWrap(true);
@@ -453,7 +451,7 @@ void dlgRoomProperties::accept()
                             newBorderColor,
                             changeBorderThickness,
                             newBorderThickness,
-                            mpRooms);
+                            liveRoomIds());
 }
 
 
@@ -612,14 +610,20 @@ void dlgRoomProperties::slot_openRoomColorSelector()
     connect(listWidget, &QListWidget::itemDoubleClicked, dialog, &QDialog::accept);
     connect(listWidget, &QListWidget::itemClicked, this, &dlgRoomProperties::slot_selectRoomColor);
     listWidget->setContextMenuPolicy(Qt::CustomContextMenu);
-    connect(listWidget, &QListWidget::customContextMenuRequested, this, [=, this]() {
+    connect(listWidget, &QListWidget::customContextMenuRequested, this, [=, this](const QPoint& pos) {
+        // A right-click on empty space leaves the current item as it was, so
+        // only the color under the cursor is offered for deletion
+        QListWidgetItem* clickedItem = listWidget->itemAt(pos);
+        if (!clickedItem) {
+            return;
+        }
         QMenu menu;
         //: This action deletes a color from the list of all room colors
         menu.addAction(tr("Delete room color"), this, [=, this]() {
-            auto selectedItem = listWidget->takeItem(listWidget->currentRow());
-            auto color = selectedItem->text();
+            const int colorNumber = clickedItem->text().toInt();
+            delete clickedItem;
 
-            mpHost->mpMap->mCustomEnvColors.remove(color.toInt());
+            mpHost->mpMap->mCustomEnvColors.remove(colorNumber);
             repaint();
             mpHost->mpMap->setUnsaved(__func__);
         });
@@ -740,10 +744,36 @@ void dlgRoomProperties::slot_borderThicknessChanged(int value)
     emitBorderPreview();
 }
 
+// The dialog is not modal, so a script may have deleted any of these rooms,
+// or replaced one with a new room under the same id, while it was open
+TRoom* dlgRoomProperties::liveRoom(const int roomId) const
+{
+    TRoom* room = mpHost->mpMap->mpRoomDB->getRoom(roomId);
+    if (!room || !mRoomSerials.contains(roomId) || room->serial() != mRoomSerials.value(roomId)) {
+        return nullptr;
+    }
+    return room;
+}
+
+QSet<int> dlgRoomProperties::liveRoomIds() const
+{
+    QSet<int> result;
+    for (const int roomId : std::as_const(mRoomIds)) {
+        if (liveRoom(roomId)) {
+            result.insert(roomId);
+        }
+    }
+    return result;
+}
+
 void dlgRoomProperties::emitBorderPreview()
 {
     // Apply current border settings directly to rooms for live preview
-    for (TRoom* room : std::as_const(mpRooms)) {
+    for (const int roomId : std::as_const(mRoomIds)) {
+        TRoom* room = liveRoom(roomId);
+        if (!room) {
+            continue;
+        }
         if (mBorderColorWasChanged) {
             room->mBorderColor = selectedBorderColor;
         }
@@ -751,20 +781,24 @@ void dlgRoomProperties::emitBorderPreview()
             room->mBorderThickness = mBorderThickness;
         }
     }
-    emit signal_preview_border(mpRooms);
+    emit signal_preview_border(mRoomIds);
 }
 
 void dlgRoomProperties::restoreOriginalBorders()
 {
-    for (TRoom* room : std::as_const(mpRooms)) {
-        room->mBorderColor = mOriginalBorderColors.value(room);
-        room->mBorderThickness = mOriginalBorderThicknesses.value(room);
+    for (const int roomId : std::as_const(mRoomIds)) {
+        TRoom* room = liveRoom(roomId);
+        if (!room) {
+            continue;
+        }
+        room->mBorderColor = mOriginalBorderColors.value(roomId);
+        room->mBorderThickness = mOriginalBorderThicknesses.value(roomId);
     }
 }
 
 void dlgRoomProperties::reject()
 {
     restoreOriginalBorders();
-    emit signal_preview_border(mpRooms);
+    emit signal_preview_border(mRoomIds);
     QDialog::reject();
 }

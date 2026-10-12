@@ -18,6 +18,7 @@
  ***************************************************************************/
 
 #include <QClipboard>
+#include <QScopeGuard>
 #include <QFileInfo>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
@@ -68,10 +69,10 @@ private:
     TTextEdit* upperPane() const
     {
         auto host = mudlet::self()->getActiveHost();
-        if (!host || !host->mpConsole) {
+        if (!host || !host->mainConsoleView()) {
             return nullptr;
         }
-        return host->mpConsole->mUpperPane;
+        return host->mainConsoleView()->mUpperPane;
     }
 
     void sendMouse(QWidget* w, QEvent::Type type, Qt::MouseButton button, Qt::MouseButtons buttons, const QPointF& localPos)
@@ -173,6 +174,34 @@ private:
     // with its selection still on has the two swapped over.
     static bool invertedImage(const QImage& image, const QColor& backgroundColour) { return backgroundPixels(image, backgroundColour) * 2 < image.width() * image.height(); }
 
+    // Every C0 control that can reach the buffer - LF cannot, it ends the line
+    // - and DEL, which is the other character the glyph tables replace.
+    static QList<char16_t> controlCharacters()
+    {
+        QList<char16_t> result;
+        for (char16_t c = 0; c < 0x20; ++c) {
+            if (c != '\n') {
+                result.append(c);
+            }
+        }
+        result.append(0x7F);
+        return result;
+    }
+
+    // Both the screen and "Copy as image" draw a line from layoutLine(), so what
+    // it lays out for a control character is what either of them shows.
+    static QString glyphsLaidOut(TTextEdit* pane, int line, std::vector<TTextEdit::GraphemeRun>& layout)
+    {
+        pane->layoutLine(line, 0, pane->timeStampCharStyle(), layout);
+        QString glyphs;
+        for (const auto& run : layout) {
+            if (run.style) {
+                glyphs.append(run.grapheme);
+            }
+        }
+        return glyphs;
+    }
+
     // Mimics TBuffer::shrinkBuffer() dropping the oldest lines once the buffer
     // reaches its size limit, which shifts every remaining line's index down.
     void shrinkBuffer(TBuffer& buffer, int lines)
@@ -182,6 +211,7 @@ private:
             buffer.lineBuffer.pop_front();
             buffer.promptBuffer.pop_front();
             buffer.timeBuffer.pop_front();
+            buffer.wrapGapBuffer.pop_front();
             buffer.buffer.pop_front();
             buffer.mCursorY--;
         }
@@ -250,7 +280,7 @@ private slots:
     {
         TTextEdit* pane = preparePane();
         QVERIFY2(pane, "Could not prepare a console");
-        auto console = mudlet::self()->getActiveHost()->mpConsole;
+        QPointer<TMainConsole> console = mudlet::self()->getActiveHost()->mainConsoleView();
         QVERIFY(!console->showTimeStamps());
 
         copyAsImage(pane);
@@ -335,6 +365,85 @@ private slots:
         QVERIFY2(!blankImage(image, pane->mBgColor), "The copied image is entirely background, no text was drawn into it");
     }
 
+    void test_controlCharactersAreDrawnAsTheGlyphsTheProfileChose_data()
+    {
+        QTest::addColumn<int>("mode");
+        QTest::addColumn<QString>("expectedGlyphs");
+        QTest::addColumn<bool>("tabAdvancesToATabStop");
+
+        // The Unicode "Control Pictures" block puts each C0 control at
+        // U+2400 plus its value, and DEL at U+2421
+        QString pictures;
+        for (const char16_t c : controlCharacters()) {
+            pictures.append(QChar(c == 0x7F ? 0x2421 : 0x2400 + c));
+        }
+        // Code page 437, as the IBM PC's OEM font drew these bytes
+        // with NUL drawn as a space
+        const QString oem = QString::fromUtf16(u" ☺☻♥♦♣♠•◘○♂♀♪♫☼"
+                                               u"►◄↕‼¶§▬↨↑↓→←∟↔▲▼⌂");
+        QCOMPARE(oem.size(), controlCharacters().size());
+
+        // A tab still moves on to the next tab stop under its picture, whereas
+        // the OEM font drew it as a single-cell circle
+        QTest::newRow("picture") << static_cast<int>(ControlCharacterMode::Picture) << pictures << true;
+        QTest::newRow("oem") << static_cast<int>(ControlCharacterMode::OEM) << oem << false;
+    }
+
+    void test_controlCharactersAreDrawnAsTheGlyphsTheProfileChose()
+    {
+        QFETCH(int, mode);
+        QFETCH(QString, expectedGlyphs);
+        QFETCH(bool, tabAdvancesToATabStop);
+
+        TTextEdit* pane = preparePane();
+        QVERIFY2(pane, "Could not prepare a console");
+        Host* host = mudlet::self()->getActiveHost();
+        TMainConsole* console = host->mainConsoleView();
+        QVERIFY(!console->showTimeStamps());
+        QCOMPARE(host->getControlCharacterMode(), ControlCharacterMode::AsIs);
+        auto restoreMode = qScopeGuard([host] {
+            host->setControlCharacterMode(ControlCharacterMode::AsIs);
+        });
+
+        // The printable prefix moves the tab off a tab stop, so a tab that
+        // always took a whole stop's width would land in the wrong place
+        const QString prefix = qsl("abc");
+        QString text = prefix;
+        for (const char16_t c : controlCharacters()) {
+            text.append(QChar(c));
+        }
+        console->print(text + QChar::LineFeed);
+        const int line = console->buffer.getLastLineNumber() - 1;
+        QCOMPARE(console->buffer.line(line), text);
+        const int tabPosition = static_cast<int>(text.indexOf(QChar::Tabulation));
+        QVERIFY2(tabPosition % pane->mTabStopwidth != 0, "the tab starts on a tab stop, so its width cannot tell a stop's width from the rest of one");
+
+        // As is, a control character takes no room and draws nothing, except the tab
+        std::vector<TTextEdit::GraphemeRun> layout;
+        QCOMPARE(glyphsLaidOut(pane, line, layout), prefix + QChar(QChar::Tabulation));
+
+        host->setControlCharacterMode(static_cast<ControlCharacterMode>(mode));
+        QCOMPARE(glyphsLaidOut(pane, line, layout), prefix + expectedGlyphs);
+        QCOMPARE(static_cast<int>(layout.size()), static_cast<int>(text.size()));
+
+        // Every replacement glyph takes one cell; the tab either runs on to the
+        // next tab stop or, like the OEM font's circle, takes one cell too
+        int cell = 0;
+        for (int i = 0; i < static_cast<int>(layout.size()); ++i) {
+            const int cells = (i == tabPosition && tabAdvancesToATabStop) ? pane->mTabStopwidth - cell % pane->mTabStopwidth : 1;
+            const QRect& rect = layout.at(i).textRect;
+            QVERIFY2(rect.left() == cell * pane->mFontWidth && rect.width() == cells * pane->mFontWidth,
+                     qPrintable(qsl("character %1 (U+%2) was laid out at x=%3, %4px wide, rather than in cell %5, %6 cells wide")
+                                        .arg(i)
+                                        .arg(static_cast<int>(text.at(i).unicode()), 4, 16, QLatin1Char('0'))
+                                        .arg(rect.left())
+                                        .arg(rect.width())
+                                        .arg(cell)
+                                        .arg(cells)));
+            cell += cells;
+        }
+    }
+
     void test_repeatedCopyKeepsWorking()
     {
         TTextEdit* pane = prepareSelectedPane(QPointF(60, 60));
@@ -384,7 +493,7 @@ private slots:
         QVERIFY2(pane, "Could not prepare a console");
         // with timestamps on, a blank line is still 13 characters wide, which is
         // not the zero width case this covers
-        QVERIFY(!mudlet::self()->getActiveHost()->mpConsole->showTimeStamps());
+        QVERIFY(!mudlet::self()->getActiveHost()->mainConsoleView()->showTimeStamps());
 
         const int blankLine = firstBlankLine();
         QVERIFY2(blankLine >= 0, "The console has no blank line to select");
@@ -409,10 +518,11 @@ private slots:
         TTextEdit* pane = preparePane();
         QVERIFY2(pane, "Could not prepare a console");
         // TConsole::clear() leaves an empty line behind, so empty it by hand
-        auto& buffer = mudlet::self()->getActiveHost()->mpConsole->buffer;
+        auto& buffer = mudlet::self()->getActiveHost()->mainConsoleView()->buffer;
         buffer.lineBuffer.clear();
         buffer.timeBuffer.clear();
         buffer.promptBuffer.clear();
+        buffer.wrapGapBuffer.clear();
         buffer.buffer.clear();
         buffer.mCursorY = 0;
 
@@ -434,7 +544,7 @@ private slots:
         TTextEdit* pane = prepareSelectedPane(QPointF(60, 60));
         QVERIFY2(pane, "Could not prepare a console with a selection");
 
-        mudlet::self()->getActiveHost()->mpConsole->TConsole::clear();
+        mudlet::self()->getActiveHost()->mainConsoleView()->TConsole::clear();
         QVERIFY2(pane->mSelectedRegion.isEmpty(), "Clearing the console left a selection behind pointing at lines that are gone");
 
         copyAsImage(pane);
@@ -449,7 +559,7 @@ private slots:
     {
         TTextEdit* pane = preparePane();
         QVERIFY2(pane, "Could not prepare a console");
-        auto& buffer = mudlet::self()->getActiveHost()->mpConsole->buffer;
+        auto& buffer = mudlet::self()->getActiveHost()->mainConsoleView()->buffer;
 
         dragSelection(pane, QPointF(60, 3 * pane->mFontHeight));
         QVERIFY2(!pane->mSelectedRegion.isEmpty(), "The drag failed to create a selection");
@@ -477,7 +587,7 @@ private slots:
     {
         TTextEdit* pane = preparePane();
         QVERIFY2(pane, "Could not prepare a console");
-        auto console = mudlet::self()->getActiveHost()->mpConsole;
+        QPointer<TMainConsole> console = mudlet::self()->getActiveHost()->mainConsoleView();
         const int lastLine = console->buffer.getLastLineNumber();
 
         // beyond the buffer and beyond any batch-delete adjustment, i.e. gone
@@ -513,13 +623,13 @@ private:
     bool startProfile(const QString& hostname, const QString& address, const QString& port)
     {
         auto host = TestProfile::create(hostname, address, port);
-        if (!host || !host->mpConsole) {
+        if (!host || !host->mainConsoleView()) {
             qWarning() << "No active host available for the test.";
             return false;
         }
 
         QSignalSpy spy2(&(host->mTelnet), &cTelnet::signal_connected);
-        if (!spy2.wait(2000)) {
+        if (!spy2.wait(2s)) {
             qWarning() << "Could not connect with the host.";
             return false;
         }
@@ -528,7 +638,7 @@ private:
 
     int firstBlankLine() const
     {
-        auto console = mudlet::self()->getActiveHost()->mpConsole;
+        QPointer<TMainConsole> console = mudlet::self()->getActiveHost()->mainConsoleView();
         for (int i = 0; i <= console->buffer.getLastLineNumber(); ++i) {
             if (console->buffer.lineBuffer.at(i).isEmpty()) {
                 return i;
@@ -539,7 +649,7 @@ private:
 
     bool waitForTextInBuffer(const QString& text, int timeoutMs = 5000)
     {
-        auto console = mudlet::self()->getActiveHost()->mpConsole;
+        QPointer<TMainConsole> console = mudlet::self()->getActiveHost()->mainConsoleView();
         return QTest::qWaitFor(
                 [&]() {
                     for (int i = 0; i <= console->buffer.getLastLineNumber(); ++i) {

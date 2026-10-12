@@ -382,6 +382,48 @@ void TTabBar::removeTab(const QString& tabName)
     }
 }
 
+void TTabBar::markActivity(const QString& tabName, const bool isLowerPriorityChange)
+{
+    const int index = tabIndex(tabName);
+    if (count() < 2 || index < 0) {
+        return;
+    }
+    if (!isLowerPriorityChange) {
+        if (tabBold(index) && !tabItalic(index)) {
+            return;
+        }
+        setTabBold(index, true);
+        setTabItalic(index, false);
+    } else {
+        // A lower priority, local change must not replace the indication of a
+        // higher priority remote one:
+        if (tabBold(index) || tabItalic(index)) {
+            return;
+        }
+        setTabItalic(index, true);
+    }
+    relayoutTab(index);
+}
+
+void TTabBar::clearActivity(const int index)
+{
+    if (!tabBold(index) && !tabItalic(index) && !tabUnderline(index)) {
+        return;
+    }
+    setTabBold(index, false);
+    setTabItalic(index, false);
+    setTabUnderline(index, false);
+    relayoutTab(index);
+}
+
+void TTabBar::relayoutTab(const int index)
+{
+    // QTabBar caches each tab's size and only asks tabSizeHint() again from its
+    // private refresh(), which setTabText() triggers - without it a tab whose
+    // font just became wider would clip its text:
+    setTabText(index, tabText(index));
+}
+
 QStringList TTabBar::tabNames() const
 {
     QStringList results;

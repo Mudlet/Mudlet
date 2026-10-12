@@ -32,6 +32,7 @@
 #include <QtTest/QtTest>
 
 #include "Host.h"
+#include "HostDialogs.h"
 #include "MudletInstanceCoordinator.h"
 #include "MudletApp.h"
 #include "PortableModeTestHelper.h"
@@ -43,6 +44,8 @@
 #include "mudlet.h"
 
 #include "GroupedTest.h"
+
+using namespace std::chrono_literals;
 
 class EditorReshowTest : public QObject
 {
@@ -84,7 +87,7 @@ private slots:
         mpHost = TestProfile::create(mProfileName, mLocalhost, mPort);
         QVERIFY2(mpHost, "no active host after creating the profile");
         QSignalSpy connected(&(mpHost->mTelnet), &cTelnet::signal_connected);
-        QVERIFY2(connected.wait(2000), "could not connect the profile to the stub server");
+        QVERIFY2(connected.wait(2s), "could not connect the profile to the stub server");
     }
 
     void cleanupTestCase()
@@ -106,7 +109,7 @@ private slots:
     // un-maximized the next time the user toggled to it.
     void test_theEditorComesBackMaximized()
     {
-        dlgTriggerEditor* pEditor = mpHost->mpEditorDialog;
+        dlgTriggerEditor* pEditor = HostDialogs::of(mpHost).mpEditorDialog;
         QVERIFY2(pEditor, "the profile has no editor to show");
 
         mudlet::self()->slot_showTriggerDialog();
@@ -124,20 +127,20 @@ private slots:
         QVERIFY2(pEditor->isMaximized(), "the editor came back un-maximized");
     }
 
-    // PR #7337: the editor entry points dereferenced Host::mpEditorDialog
+    // PR #7337: the editor entry points dereferenced the profile's editor
     // without checking it; they now build an editor when the profile has none.
     void test_theErrorsMenuItemRebuildsAMissingEditor()
     {
-        QVERIFY(mpHost->mpEditorDialog);
-        delete mpHost->mpEditorDialog.data();
-        QVERIFY2(mpHost->mpEditorDialog.isNull(), "the profile is still holding an editor, so nothing here has to be rebuilt");
+        QVERIFY(HostDialogs::of(mpHost).mpEditorDialog);
+        delete HostDialogs::of(mpHost).mpEditorDialog.data();
+        QVERIFY2(HostDialogs::of(mpHost).mpEditorDialog.isNull(), "the profile is still holding an editor, so nothing here has to be rebuilt");
         QVERIFY2(mudlet::self()->dactionShowErrors->isEnabled(), "the Errors menu item is disabled, so triggering it proves nothing");
 
         mudlet::self()->dactionShowErrors->trigger();
 
-        QVERIFY2(!mpHost->mpEditorDialog.isNull(), "the Errors menu item left the profile with no editor to show the errors in");
-        QVERIFY(mpHost->mpEditorDialog->mpErrorConsole);
-        QVERIFY2(mpHost->mpEditorDialog->mpErrorConsole->isVisible(), "the rebuilt editor did not open on the error console");
+        QVERIFY2(!HostDialogs::of(mpHost).mpEditorDialog.isNull(), "the Errors menu item left the profile with no editor to show the errors in");
+        QVERIFY(HostDialogs::of(mpHost).mpEditorDialog->mpErrorConsole);
+        QVERIFY2(HostDialogs::of(mpHost).mpEditorDialog->mpErrorConsole->isVisible(), "the rebuilt editor did not open on the error console");
     }
 };
 

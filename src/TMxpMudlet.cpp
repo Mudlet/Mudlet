@@ -74,12 +74,12 @@ void TMxpMudlet::popColor(QList<QColor>& stack)
 
 int TMxpMudlet::setLink(const QStringList& links, const QStringList& hints)
 {
-    return getLinkStore().addLinks(links, hints, mpHost);
+    return mpHost->mainConsoleModel().buffer.addLinkToStore(links, hints);
 }
 
 int TMxpMudlet::setLink(const QStringList& links, const QStringList& hints, const QString& expireName)
 {
-    return getLinkStore().addLinks(links, hints, mpHost, QVector<int>(), expireName);
+    return mpHost->mainConsoleModel().buffer.addLinkToStore(links, hints, QVector<int>(), expireName);
 }
 
 void TMxpMudlet::expireLinks(const QString& expireName)
@@ -118,7 +118,7 @@ TMxpTagHandlerResult TMxpMudlet::tagHandled(MxpTag* tag, TMxpTagHandlerResult re
             for (const auto& attrName : startTag->getAttributesNames()) {
                 event.attrs[attrName] = startTag->getAttributeValue(attrName);
             }
-            event.actions = getLinkStore().getCurrentLinks();
+            event.linkId = getLinkStore().getCurrentLinkID();
             event.caption.clear();
             mPendingSendEvents.push(event);
         }
@@ -158,9 +158,8 @@ void TMxpMudlet::setCaptionForSendEvent(const QString& caption)
     if (!mPendingSendEvents.isEmpty()) {
         TMxpEvent event = mPendingSendEvents.pop();
         event.caption = caption;
-        for (QString& act : event.actions) {
-            act.replace(PLACEHOLDER_TEXT, caption, Qt::CaseInsensitive);
-        }
+        // The handler has already quoted the wrapped text into these
+        event.actions = getLinkStore().getLinksConst(event.linkId);
         for (auto it = event.attrs.begin(); it != event.attrs.end(); ++it) {
             it.value().replace(PLACEHOLDER_TEXT, caption, Qt::CaseInsensitive);
         }

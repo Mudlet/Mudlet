@@ -60,6 +60,8 @@
 
 #include "GroupedTest.h"
 
+using namespace std::chrono_literals;
+
 class MirrorToStdOutTest : public QObject
 {
     Q_OBJECT
@@ -123,7 +125,7 @@ private:
         // cases are about is what is on the line, so the separator comes off
         // here rather than being asserted on. Nothing else can leave a carriage
         // return at the end of one: cTelnet strips those the game sends and
-        // TConsole::echo() those a script sends.
+        // TConsoleModel::echo() those a script sends.
         for (QString& line : lines) {
             if (line.endsWith(QChar::CarriageReturn)) {
                 line.chop(1);
@@ -157,7 +159,7 @@ private:
     // promises: one copied line per line shown.
     QStringList shownLines() const
     {
-        QStringList lines = mpHost->mpConsole->buffer.lineBuffer;
+        QStringList lines = mpHost->mainConsoleView()->buffer.lineBuffer;
         if (!lines.isEmpty() && lines.constLast().isEmpty()) {
             lines.removeLast();
         }
@@ -190,7 +192,7 @@ private:
     {
         startCapture();
         const bool succeeded = mpHost->getLuaInterpreter()->compileAndExecuteScript(script);
-        QTest::qWait(50);
+        QTest::qWait(50ms);
         stopCapture();
         return succeeded;
     }
@@ -228,7 +230,7 @@ private slots:
             QFAIL("No active host available for the test.");
         }
         QSignalSpy connected(&(mpHost->mTelnet), &cTelnet::signal_connected);
-        if (!connected.wait(3000)) {
+        if (!connected.wait(3s)) {
             QFAIL("Could not connect with the host.");
         }
 
@@ -237,19 +239,19 @@ private slots:
         // middle of a case and be counted as a line that case fed.
         if (!QTest::qWaitFor(
                     [this]() {
-                        return mpHost->mpConsole->buffer.lineBuffer.contains(mWelcomeMessage);
+                        return mpHost->mainConsoleView()->buffer.lineBuffer.contains(mWelcomeMessage);
                     },
-                    5000)) {
+                    5s)) {
             QFAIL("The server stub's welcome message never reached the console.");
         }
 
-        mSavedMirrorToStdOut = mudlet::smMirrorToStdOut;
+        mSavedMirrorToStdOut = MudletApp::smMirrorToStdOut;
         mSavedPostingTimeout = mpHost->mTelnet.getPostingTimeout();
     }
 
     void cleanupTestCase()
     {
-        mudlet::smMirrorToStdOut = mSavedMirrorToStdOut;
+        MudletApp::smMirrorToStdOut = mSavedMirrorToStdOut;
         if (mpHost) {
             mpHost->mTelnet.setPostingTimeout(mSavedPostingTimeout);
         }
@@ -267,20 +269,20 @@ private slots:
     void init()
     {
         QVERIFY(mpHost);
-        QVERIFY(mpHost->mpConsole);
+        QVERIFY(mpHost->mainConsoleView());
         // Settle with the option off: a posting timer the previous case armed
         // has to be allowed to fire before anything is collected for this one,
         // and cTelnet only picks the shortened timeout up once it has.
-        mudlet::smMirrorToStdOut = false;
+        MudletApp::smMirrorToStdOut = false;
         mpHost->mTelnet.setPostingTimeout(csmPostingTimeoutMs);
-        QTest::qWait(350);
+        QTest::qWait(350ms);
         mpHost->mBlankLineBehaviour = Host::BlankLineBehaviour::Show;
-        mpHost->mpConsole->buffer.clear();
+        mpHost->mainConsoleView()->buffer.clear();
         mCapturedOutput.clear();
-        mudlet::smMirrorToStdOut = true;
+        MudletApp::smMirrorToStdOut = true;
     }
 
-    void cleanup() { mudlet::smMirrorToStdOut = false; }
+    void cleanup() { MudletApp::smMirrorToStdOut = false; }
 
     void test_gameTextIsMirrored()
     {
@@ -418,6 +420,19 @@ private slots:
         QCOMPARE(mirroredLines(), shownLines());
     }
 
+    // A game line lands below a line the print path left unfinished, so the
+    // unfinished one is written out first, and client output after the game
+    // line follows it.
+    void test_anUnfinishedEchoIsMirroredAheadOfTheGameLineAfterIt()
+    {
+        QVERIFY(runLua(qsl("echo(\"left unfinished\")")));
+        feedLineFromServer("game line below it");
+        QVERIFY(runLua(qsl("echo(\"after the game line\\n\")")));
+
+        QCOMPARE(mirroredLines(), QStringList({qsl("left unfinished"), qsl("game line below it"), qsl("after the game line")}));
+        QCOMPARE(mirroredLines(), shownLines());
+    }
+
     // Console names come from Lua, which takes any string at all. A line feed
     // in one would split the record it prefixes over two lines and leave a
     // reader unable to say which console the second half came from.
@@ -440,7 +455,7 @@ private slots:
 
     void test_nothingIsMirroredWithoutTheOption()
     {
-        mudlet::smMirrorToStdOut = false;
+        MudletApp::smMirrorToStdOut = false;
 
         feedLineFromServer("this run was not asked for");
         QVERIFY(runLua(qsl("print(\"neither was this\")")));
@@ -450,7 +465,7 @@ private slots:
 
         // ... and the feed itself was alive throughout, so the two counts above
         // are the option being off rather than nothing having been fed.
-        mudlet::smMirrorToStdOut = true;
+        MudletApp::smMirrorToStdOut = true;
         feedLineFromServer("this run was asked for");
 
         QCOMPARE(timesMirrored(qsl("this run was asked for")), 1);

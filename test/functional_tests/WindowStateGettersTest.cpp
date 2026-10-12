@@ -37,6 +37,7 @@
 #include "HostManager.h"
 #include "MudletInstanceCoordinator.h"
 #include "TMainConsole.h"
+#include "TTextEdit.h"
 #include "TelnetServerStub.h"
 #include "ctelnet.h"
 #include "dlgConnectionProfiles.h"
@@ -105,7 +106,7 @@ private slots:
         }
         mpBackgroundHost = HostManager::self()->getHost(mBackgroundHostname);
         QVERIFY(mpBackgroundHost);
-        QVERIFY(mpBackgroundHost->mpConsole);
+        QVERIFY(mpBackgroundHost->mainConsoleView());
 
         startProfile(mFrontHostname);
         if (QTest::currentTestFailed()) {
@@ -113,9 +114,9 @@ private slots:
         }
         mpFrontHost = HostManager::self()->getHost(mFrontHostname);
         QVERIFY(mpFrontHost);
-        QVERIFY(mpFrontHost->mpConsole);
+        QVERIFY(mpFrontHost->mainConsoleView());
 
-        QVERIFY2(mpBackgroundHost->mpConsole->isHidden(), "opening a second profile did not background the first one, so there is nothing to test here");
+        QVERIFY2(mpBackgroundHost->mainConsoleView()->isHidden(), "opening a second profile did not background the first one, so there is nothing to test here");
     }
 
     void cleanupTestCase()
@@ -152,6 +153,22 @@ private slots:
         assertVisibility(mpBackgroundHost, mLabelName, true, qsl("a label shown again on a backgrounded profile"));
     }
 
+    // A backgrounded profile's widgets are all invisible, so setWindow() moving a label into one
+    // shows it without the ShowToParent that would report it
+    void test_backgroundProfileFollowsALabelOutOfAHiddenScrollBox()
+    {
+        const QString scrollBox = qsl("wsgHiddenScrollBox");
+        const QString label = qsl("wsgMovedLabel");
+        mpBackgroundHost->getLuaInterpreter()->compileAndExecuteScript(qsl("createScrollBox('%1', 0, 300, 100, 50)\n"
+                                                                           "createLabel('%1', '%2', 0, 0, 40, 20, 1)\n"
+                                                                           "hideWindow('%1')")
+                                                                               .arg(scrollBox, label));
+        assertVisibility(mpBackgroundHost, label, false, qsl("a label in a hidden scroll box"));
+
+        mpBackgroundHost->getLuaInterpreter()->compileAndExecuteScript(qsl("setWindow('main', '%1', 0, 0, false)").arg(label));
+        assertVisibility(mpBackgroundHost, label, true, qsl("a label moved out of a hidden scroll box without being shown"));
+    }
+
     void test_frontProfileReportsEveryElementTypeAsVisible()
     {
         buildElements(mpFrontHost);
@@ -170,7 +187,7 @@ private slots:
             const auto geometry = mpFrontHost->windowGeometry(name);
             QVERIFY2(geometry.has_value(), qPrintable(qsl("getWindowGeometry(\"%1\") did not recognise the main window").arg(name)));
             QCOMPARE(geometry->topLeft(), QPoint(0, 0));
-            QCOMPARE(geometry->size(), mpFrontHost->mpConsole->getMainWindowSize());
+            QCOMPARE(geometry->size(), mpFrontHost->mainConsoleView()->getMainWindowSize());
             QVERIFY2(geometry->width() > 0 && geometry->height() > 0, qPrintable(qsl("the main window reported an empty geometry: %1x%2").arg(geometry->width()).arg(geometry->height())));
 
             assertVisibility(mpFrontHost, name, true, qsl("the front profile's main window"));
@@ -181,14 +198,133 @@ private slots:
     {
         assertVisibility(mpBackgroundHost, qsl("main"), true, qsl("a backgrounded profile's main window"));
 
-        // getMainWindowSize() falls back to a cached size while the console is hidden
+        // A hidden console is measured by the container it will be shown in
         const auto geometry = mpBackgroundHost->windowGeometry(qsl("main"));
         QVERIFY(geometry.has_value());
         QVERIFY2(geometry->width() > 0 && geometry->height() > 0,
                  qPrintable(qsl("a backgrounded profile's main window reported an empty geometry: %1x%2").arg(geometry->width()).arg(geometry->height())));
     }
 
+    // A backgrounded profile's console is hidden, so getMainWindowSize() measures the container it
+    // will be shown in, which resizes with the application window while the console gets no event.
+    void test_backgroundProfileFollowsTheApplicationWindowResizing()
+    {
+        const QSize before = mpBackgroundHost->mainWindowSize().value_or(QSize());
+        const QSize windowSize = mudlet::self()->size();
+        mudlet::self()->resize(windowSize + QSize(-120, -80));
+        QTest::qWait(50);
+
+        const QSize after = mpBackgroundHost->mainWindowSize().value_or(QSize());
+        const QSize measured = mpBackgroundHost->mainConsoleView()->getMainWindowSize();
+        mudlet::self()->resize(windowSize);
+        QTest::qWait(50);
+        QVERIFY2(after != before, "resizing the application window did not change a backgrounded profile's main window size");
+        QCOMPARE(after, measured);
+    }
+
+    // A detached window's background tab is hidden at its full size, so its command line growing is
+    // laid out with no event to report it, just before Lua's resize handlers ask for the size.
+    void test_hiddenConsoleFollowsItsCommandLineGrowing()
+    {
+        TMainConsole* pConsole = mpFrontHost->mainConsoleView();
+        pConsole->hide();
+        const int hiddenWidth = pConsole->width();
+        const QSize before = pConsole->getMainWindowSize();
+
+        mpFrontHost->getLuaInterpreter()->compileAndExecuteScript(qsl("printCmdLine('main', 'one\\ntwo\\nthree\\nfour')"));
+        const QSize grown = mpFrontHost->mainWindowSize().value_or(QSize());
+        const QSize measured = pConsole->getMainWindowSize();
+        mpFrontHost->getLuaInterpreter()->compileAndExecuteScript(qsl("clearCmdLine('main')"));
+        pConsole->show();
+        QTest::qWait(50);
+
+        QVERIFY2(hiddenWidth > 0, "hiding the console took its width, so there is nothing to test here");
+        QVERIFY2(measured.height() < before.height(), "the command line did not grow, so there is nothing to test here");
+        QCOMPARE(grown, measured);
+    }
+
+    // A style sheet's minimum size resizes a hidden command line with no Resize event.
+    void test_hiddenConsoleFollowsItsCommandLineStyleSheet()
+    {
+        TMainConsole* pConsole = mpFrontHost->mainConsoleView();
+        pConsole->hide();
+        const QSize before = pConsole->getMainWindowSize();
+
+        mpFrontHost->getLuaInterpreter()->compileAndExecuteScript(qsl("setCmdLineStyleSheet('main', 'QPlainTextEdit { min-height: 120px; }')"));
+        const QSize styled = mpFrontHost->mainWindowSize().value_or(QSize());
+        const QSize measured = pConsole->getMainWindowSize();
+        mpFrontHost->getLuaInterpreter()->compileAndExecuteScript(qsl("setCmdLineStyleSheet('main', '')"));
+        pConsole->show();
+        QTest::qWait(50);
+
+        QVERIFY2(measured.height() < before.height(), "the style sheet did not grow the command line, so there is nothing to test here");
+        QCOMPARE(styled, measured);
+    }
+
+    void test_gridSizesFollowTheApplicationWindowResizing()
+    {
+        const QSize windowSize = mudlet::self()->size();
+        const QSize before = mpFrontHost->windowGridSize(qsl("main")).value_or(QSize());
+        mudlet::self()->resize(windowSize + QSize(-120, -80));
+        QTest::qWait(50);
+        const QSize after = mpFrontHost->windowGridSize(qsl("main")).value_or(QSize());
+        const QString shrunk = gridSizeMismatches();
+        mudlet::self()->resize(windowSize);
+        QTest::qWait(50);
+
+        QVERIFY2(after != before, "resizing the application window did not change the front profile's grid");
+        QVERIFY2(shrunk.isEmpty(), qPrintable(shrunk));
+        const QString restored = gridSizeMismatches();
+        QVERIFY2(restored.isEmpty(), qPrintable(restored));
+    }
+
+    void test_backgroundGridFollowsAFontSizeChange()
+    {
+        const QSize before = mpBackgroundHost->windowGridSize(mConsoleName).value_or(QSize());
+        mpBackgroundHost->getLuaInterpreter()->compileAndExecuteScript(
+                qsl("wsgFontSizes = {getFontSize('main'), getFontSize('%1')} setFontSize('main', 20) setMiniConsoleFontSize('%1', 20)").arg(mConsoleName));
+        const QSize after = mpBackgroundHost->windowGridSize(mConsoleName).value_or(QSize());
+        const QString enlarged = gridSizeMismatches();
+        mpBackgroundHost->getLuaInterpreter()->compileAndExecuteScript(qsl("setFontSize('main', wsgFontSizes[1]) setMiniConsoleFontSize('%1', wsgFontSizes[2])").arg(mConsoleName));
+        QTest::qWait(50);
+
+        QVERIFY2(after != before, "a bigger font did not change the miniconsole's grid");
+        QVERIFY2(enlarged.isEmpty(), qPrintable(enlarged));
+        const QString restored = gridSizeMismatches();
+        QVERIFY2(restored.isEmpty(), qPrintable(restored));
+    }
+
+    void test_bufferGridMatchesItsPane()
+    {
+        const QString buffer = qsl("wsgBuffer");
+        mpFrontHost->getLuaInterpreter()->compileAndExecuteScript(qsl("createBuffer('%1')").arg(buffer));
+        const TConsole* pConsole = mpFrontHost->mainConsoleView()->subConsoleWidget(buffer);
+        QVERIFY(pConsole);
+        QCOMPARE(mpFrontHost->windowGridSize(buffer).value_or(QSize()), QSize(pConsole->mUpperPane->getColumnCount(), pConsole->mUpperPane->getRowCount()));
+    }
+
 private:
+    // Each profile's main console, miniconsole and user window whose model grid disagrees with its upper pane, as failure text
+    QString gridSizeMismatches() const
+    {
+        QStringList mismatches;
+        for (Host* pHost : {mpBackgroundHost, mpFrontHost}) {
+            for (const QString& name : {qsl("main"), mConsoleName, mUserWindowName}) {
+                TConsole* pConsole = name == qsl("main") ? pHost->mainConsoleView() : pHost->mainConsoleView()->subConsoleWidget(name);
+                if (!pConsole) {
+                    mismatches << qsl("%1 has no '%2'").arg(pHost->getName(), name);
+                    continue;
+                }
+                const QSize live(pConsole->mUpperPane->getColumnCount(), pConsole->mUpperPane->getRowCount());
+                const QSize model = pHost->windowGridSize(name).value_or(QSize());
+                if (model != live) {
+                    mismatches << qsl("%1 '%2' answers %3x%4 but is %5x%6").arg(pHost->getName(), name).arg(model.width()).arg(model.height()).arg(live.width()).arg(live.height());
+                }
+            }
+        }
+        return mismatches.join(qsl("; "));
+    }
+
     QStringList elementNames() const { return {mLabelName, mConsoleName, mScrollBoxName, mCmdLineName, mTextEditName, mUserWindowName, mChildLabelName}; }
 
     // built through the Lua API so each profile's own interpreter creates them
@@ -221,7 +357,7 @@ private:
         }
 
         QSignalSpy connectionSpy(&(host->mTelnet), &cTelnet::signal_connected);
-        if (!connectionSpy.wait(2000)) {
+        if (!connectionSpy.wait(2s)) {
             QFAIL("Could not connect with the host.");
         }
     }

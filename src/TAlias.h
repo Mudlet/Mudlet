@@ -56,7 +56,6 @@ public:
     void compileRegex();
     QString getName() const { return mName; }
     void setName(const QString& name);
-    void compile();
     bool compileScript();
     void execute();
     QString getScript() const { return mScript; }
@@ -66,13 +65,12 @@ public:
     void setCommand(const QString& command) { mCommand = command; }
     QString getCommand() const { return mCommand; }
     QString packageName(TAlias* pAlias);
-    QString moduleName(TAlias* pAlias);
     bool checkIfNew();
     void unmarkAsNew();
 
 
 
-    bool match(const QString& toMatch);
+    bool match(const QByteArray& haystack);
     bool registerAlias();
 
     TAlias() = default;
@@ -82,6 +80,7 @@ public:
     QString mRegexCode;
     QSharedPointer<pcre2_code> mpRegex;
     QSharedPointer<pcre2_match_data> mpMatchData;
+    bool mRegexJitCompiled = false;
     QString mScript;
     QPointer<Host> mpHost;
     bool mModuleMember = false;

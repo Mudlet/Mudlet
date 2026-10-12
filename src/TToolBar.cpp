@@ -28,6 +28,7 @@
 #include "TAction.h"
 #include "TConsole.h"
 #include "TFlipButton.h"
+#include "TMainConsole.h"
 #include "mudlet.h"
 
 #include <QIcon>
@@ -63,10 +64,10 @@ TToolBar::TToolBar(Host* pHost, TAction* pA, const QString& name, QWidget* pW)
 void TToolBar::resizeEvent(QResizeEvent* e)
 {
     Q_UNUSED(e)
-    if (mpHost.isNull()) {
+    if (mpHost.isNull() || !mpHost->mainConsoleView()) {
         return;
     }
-    mpHost->setToolbarLayoutUpdated(this);
+    mpHost->mainConsoleView()->setToolBarLayoutChanged(this);
 }
 
 void TToolBar::setName(const QString& name)
@@ -85,7 +86,9 @@ void TToolBar::moveEvent(QMoveEvent* e)
         return;
     }
 
-    mpHost->setToolbarLayoutUpdated(this);
+    if (mpHost->mainConsoleView()) {
+        mpHost->mainConsoleView()->setToolBarLayoutChanged(this);
+    }
 
     if (mRecordMove) {
         mpTAction->mPosX = e->pos().x();
@@ -207,10 +210,7 @@ void TToolBar::addActionButtons(TAction* pAction)
             pTFlipButton->setMenu(pNewMenu);
         }
 
-        if (pTAction->mpFButton) {
-            pTAction->mpFButton->deleteLater();
-        }
-        pTAction->mpFButton = pTFlipButton;
+        mpHost->mainConsoleView()->replaceActionButton(pTAction, pTFlipButton);
 
         // Moved to be AFTER the pTAction->mIsFolder test as I think we ought to
         // add the button to the toolbar AFTER any menu (children) items have
@@ -225,20 +225,15 @@ void TToolBar::addActionButtons(TAction* pAction)
 // item to which the sub-menu is added.
 void TToolBar::addActionToMenu(TAction* pAction, QMenu* pMenu)
 {
-    pAction->mpToolBar = this;
+    mpHost->mainConsoleView()->setActionToolBar(pAction, this);
     auto pEAction = new EAction(pAction->mpHost, QIcon(pAction->getIcon()), pAction->getName(), pAction->mID);
     pEAction->setCheckable(pAction->isPushDownButton());
     pEAction->setStatusTip(pAction->getName());
-    if (pAction->mpEAction) {
-        pAction->mpEAction->deleteLater();
-    }
-    pAction->mpEAction = pEAction;
+    mpHost->mainConsoleView()->replaceActionMenuEntry(pAction, pEAction);
     pMenu->addAction(pEAction);
 
     if (pAction->isFolder()) {
-        // The use of mudlet::self() here meant that the QMenu was not destroyed
-        // until the mudlet instance is at the end of the application!
-        // Changed to use the toolbar
+        // Deleted along with its entry, see deleteMenuEntryLater() in TMainConsole.cpp
         auto pNewMenu = new QMenu(this);
         pNewMenu->setStyleSheet(pAction->css);
         pEAction->setMenu(pNewMenu);
@@ -305,11 +300,11 @@ void TToolBar::slot_pressed(const bool isChecked)
 
     if (pA->isPushDownButton()) {
         pA->mButtonState = isChecked;
-        mpHost->mpConsole->mButtonState = (pA->mButtonState ? 2 : 1); // Was using 1 and 0 but that was wrong
+        mpHost->mainConsoleView()->mButtonState = (pA->mButtonState ? 2 : 1); // Was using 1 and 0 but that was wrong
     } else {
         pA->mButtonState = false;
-        pB->setChecked(false);               // This does NOT invoke the clicked()!
-        mpHost->mpConsole->mButtonState = 1; // Was effectively 0 but that is wrong
+        pB->setChecked(false);                       // This does NOT invoke the clicked()!
+        mpHost->mainConsoleView()->mButtonState = 1; // Was effectively 0 but that is wrong
     }
 
     pA->execute();
@@ -317,6 +312,12 @@ void TToolBar::slot_pressed(const bool isChecked)
 
 void TToolBar::clear()
 {
+    // A folder button's menu is parented to this toolbar, so it would outlive the button
+    for (auto* pButton : mpWidget->findChildren<QPushButton*>(Qt::FindDirectChildrenOnly)) {
+        if (QMenu* pMenu = pButton->menu()) {
+            pMenu->deleteLater();
+        }
+    }
     auto pW = new QWidget(this);
     setWidget(pW);
     mpWidget->deleteLater();

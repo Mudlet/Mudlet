@@ -493,6 +493,58 @@ describe("Tests telnet subnegotiation handling", function()
   end)
 end)
 
+describe("Tests MCCP decompression", function()
+  local function bigEndian32(value)
+    return string.char(math.floor(value / 16777216) % 256, math.floor(value / 65536) % 256, math.floor(value / 256) % 256, value % 256)
+  end
+
+  local function adler32(data)
+    local a, b = 1, 0
+    for i = 1, #data do
+      a = (a + data:byte(i)) % 65521
+      b = (b + a) % 65521
+    end
+    return b * 65536 + a
+  end
+
+  -- a zlib stream of one stored (uncompressed) deflate block, so no zlib is
+  -- needed here to build one
+  local function zlibStored(data)
+    local length = #data
+    local inverse = 65535 - length
+    return "\120\1\1" .. string.char(length % 256, math.floor(length / 256), inverse % 256, math.floor(inverse / 256)) .. data .. bigEndian32(adler32(data))
+  end
+
+  -- once the outer stream ends, its decompressed bytes are scanned for telnet
+  -- sequences, and inflating a second stream found there back into the same
+  -- buffer overlapped source and destination (#10662)
+  local function feedNestedStream(option, start)
+    local nested = "AAAAAAAA" .. start .. zlibStored(string.rep("B", 1000)) .. "\r\n"
+    local stream = "\255\251" .. option .. start .. zlibStored(nested) .. "MCCP_AFTER_NESTED\r\n"
+    -- feedTelnet() stops at a NUL and reads <...> as the name of a telnet code
+    assert.is_nil(stream:find("[%z<>]"), "the crafted stream carries a byte feedTelnet() would not pass through")
+    finally(function() feedTelnet("\255\252" .. option) end)
+    local mark = getLastLineNumber("main")
+
+    local ok, msg = feedTelnet(stream)
+    assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
+
+    local displayed = table.concat(getLines("main", mark, getLastLineNumber("main") + 1))
+    assert.is_truthy(displayed:find("AAAAAAAA", 1, true), "the decompressed text before the nested start sequence was lost")
+    assert.is_truthy(displayed:find("MCCP_AFTER_NESTED", 1, true), "the plain text after the compressed stream was lost")
+  end
+
+  it("does not restart MCCP2 compression from inside data it has just decompressed", function()
+    feedNestedStream("\86", "\255\250\86\255\240")
+  end)
+
+  -- the MCCP1 start sequence has no IAC before its SE, so it has to be skipped
+  -- whole or the telnet parser is left inside a subnegotiation
+  it("does not restart MCCP1 compression from inside data it has just decompressed", function()
+    feedNestedStream("\85", "\255\250\85\251\240")
+  end)
+end)
+
 describe("Tests MSDP subnegotiation handling", function()
   -- MSDP forbids only NUL, IAC and its own six markers inside a value, so every
   -- other control code is legal payload the game means to send. Mudlet turns the
@@ -1004,9 +1056,11 @@ describe("Tests the Client.GUI package offer", function()
     return shownSince(mark, "Downloading and installing package '" .. packageName .. "'")
   end
 
-  local function offerRawTelnetGui(packageName, version)
+  -- sends a Client.GUI message carrying this payload, and waits out any
+  -- download it started for the named package
+  local function offerGui(payload, packageName)
     local mark = getLastLineNumber("main")
-    local ok, msg = feedTelnet("<T_IAC><T_SB><O_GMCP>Client.GUI " .. version .. "\n" .. offerUrl(packageName) .. "<T_IAC><T_SE>")
+    local ok, msg = feedTelnet("<T_IAC><T_SB><O_GMCP>Client.GUI " .. payload .. "<T_IAC><T_SE>")
     assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
     if downloadStarted(mark, packageName) then
       -- the download the offer started is this test's to finish: the next offer
@@ -1024,6 +1078,10 @@ describe("Tests the Client.GUI package offer", function()
       assert.is_true(drained, "the download of '" .. packageName .. "' has not finished, so it will land in a later test: " .. displayedSince(mark))
     end
     return mark
+  end
+
+  local function offerRawTelnetGui(packageName, version)
+    return offerGui(version .. "\n" .. offerUrl(packageName), packageName)
   end
 
   it("acts on a Client.GUI offer sent as raw telnet rather than JSON (#7704)", function()
@@ -1044,6 +1102,64 @@ describe("Tests the Client.GUI package offer", function()
     -- gmcp.Client.GUI stays nil either way, because parseJSON creates the parent
     -- table before it fails on the payload - only the parent tells the two apart
     assert.is_nil(gmcp.Client, "the raw telnet offer was pushed into the gmcp table")
+  end)
+
+  it("acts on a JSON Client.GUI offer whose version is a number", function()
+    local previousClient = gmcp.Client
+    finally(function() gmcp.Client = previousClient end)
+    local mark = offerGui('{"version": 39, "url": "' .. offerUrl("RegressNumericGui") .. '"}', "RegressNumericGui")
+    assert.is_truthy(downloadStarted(mark, "RegressNumericGui"), "an offer numbering its version was not acted on: " .. displayedSince(mark))
+  end)
+
+  it("ignores a Client.GUI offer that is missing its version or its URL", function()
+    local previousClient = gmcp.Client
+    finally(function() gmcp.Client = previousClient end)
+    local mark = offerGui('{"url": "' .. offerUrl("RegressNoVersionGui") .. '"}', "RegressNoVersionGui")
+    offerGui('{"version": "5"}', "RegressNoUrlGui")
+    -- and the raw telnet form, with a version but no URL line, or the other way round
+    offerGui("5", "RegressRawNoUrlGui")
+    offerGui("\n" .. offerUrl("RegressRawNoVersionGui"), "RegressRawNoVersionGui")
+    assert.is_falsy(shownSince(mark, "Downloading and installing package"), "an incomplete offer was acted on: " .. displayedSince(mark))
+
+    -- the same offer made complete, so the silence above is about what was missing
+    mark = offerGui('{"version": "5", "url": "' .. offerUrl("RegressCompleteGui") .. '"}', "RegressCompleteGui")
+    assert.is_truthy(downloadStarted(mark, "RegressCompleteGui"), "a complete offer was not acted on either: " .. displayedSince(mark))
+  end)
+
+  -- a game with an interface of its own can decline the built-in starter UI,
+  -- which Mudlet passes on as the event an installed interface raises
+  it("raises sysServerGuiInstalled when the game declines the starter UI", function()
+    local previousClient = gmcp.Client
+    -- the starter UI stands aside on that event and saves it in its settings,
+    -- which are not this spec's to change
+    local standAside = BaseUI and BaseUI.standAside
+    local seen = {}
+    local handler
+    finally(function()
+      if handler then
+        killAnonymousEventHandler(handler)
+      end
+      gmcp.Client = previousClient
+      if standAside then
+        BaseUI.standAside = standAside
+      end
+    end)
+    if standAside then
+      BaseUI.standAside = function() end
+    end
+    handler = registerAnonymousEventHandler("sysServerGuiInstalled", function(_, packageName)
+      -- the gmcp table is already up to date by the time the event is raised
+      seen[#seen + 1] = {packageName, gmcp.Client and gmcp.Client.GUI and gmcp.Client.GUI.baseui}
+    end)
+
+    for _, keep in ipairs({'{"baseui": true}', '{"baseui": "no"}', '{"other": false}'}) do
+      offerGui(keep, "nothing")
+    end
+    assert.same({}, seen, "a game keeping the starter UI was taken to be declining it")
+
+    offerGui('{"baseui": false}', "nothing")
+    offerGui('{"baseui": " False "}', "nothing")
+    assert.same({{nil, false}, {nil, " False "}}, seen)
   end)
 end)
 
@@ -1330,6 +1446,104 @@ describe("Tests telnet option negotiation", function()
 
     assert.same({"sysProtocolDisabled:MXP"}, protocolEventsFrom("<T_IAC><T_DONT><O_MXP>"))
   end)
+
+  it("drops each protocol again when the server withdraws it with WONT", function()
+    for _, option in ipairs(options) do
+      local token, protocol = option[1], option[2]
+      assert.same({"sysProtocolEnabled:" .. protocol}, protocolEventsFrom("<T_IAC><T_WILL>" .. token))
+      assert.same({"sysProtocolDisabled:" .. protocol}, protocolEventsFrom("<T_IAC><T_WONT>" .. token))
+    end
+  end)
+
+  it("stops acting on MSP and channel 102 once the server withdraws them with WONT", function()
+    feed("<T_IAC><T_WILL><O_MSP>")
+    assert.is_true(receiveMSP("!!SOUND(Off)"), "MSP messages were refused while the server had MSP enabled")
+    feed("<T_IAC><T_WONT><O_MSP>")
+    assert.is_nil(receiveMSP("!!SOUND(Off)"), "MSP messages were still accepted after the server's WONT")
+
+    feed("<T_IAC><T_WILL><O_AARDWULF>")
+    assert.is_true(sendTelnetChannel102("ab"), "the channel stayed shut while the server had it enabled")
+    feed("<T_IAC><T_WONT><O_AARDWULF>")
+    assert.is_nil(sendTelnetChannel102("ab"), "the channel stayed open after the server's WONT")
+  end)
+
+  -- A player can switch a protocol off while the game has it up. The next
+  -- offer, either way round, has to take it down rather than leave it running.
+  local switchable = {
+    {"<O_GMCP>", "GMCP", "enableGMCP"},
+    {"<O_MSSP>", "MSSP", "enableMSSP"},
+    {"<O_MSDP>", "MSDP", "enableMSDP"},
+    {"<O_MSP>", "MSP", "enableMSP"},
+    {"<O_MXP>", "MXP", "enableMXP"},
+    {"<O_NENV>", "NEW_ENVIRON", "enableNEWENVIRON"},
+    {"<O_CHARS>", "CHARSET", "enableCHARSET"},
+  }
+
+  for _, command in ipairs({{"WILL", "<T_WILL>"}, {"DO", "<T_DO>"}}) do
+    local name, token = command[1], command[2]
+    it("takes a protocol down on " .. name .. " once the profile has it switched off", function()
+      local originals = {}
+      for _, option in ipairs(switchable) do
+        originals[option[3]] = getConfig(option[3])
+      end
+      finally(function()
+        for key, value in pairs(originals) do
+          setConfig(key, value)
+        end
+      end)
+
+      for _, option in ipairs(switchable) do
+        local offer, protocol, key = "<T_IAC>" .. token .. option[1], option[2], option[3]
+        setConfig(key, true)
+        assert.same({"sysProtocolEnabled:" .. protocol}, protocolEventsFrom(offer))
+        setConfig(key, false)
+        assert.same({"sysProtocolDisabled:" .. protocol}, protocolEventsFrom(offer), protocol .. " was left up")
+        -- and only the once, as it is no longer up to be taken down
+        assert.same({}, protocolEventsFrom(offer), protocol .. " was taken down twice")
+      end
+    end)
+  end
+
+  -- ATCP is the protocol GMCP replaced, so it is only taken up while the
+  -- profile has GMCP switched off
+  it("takes up ATCP only while the profile has GMCP switched off", function()
+    local original = getConfig("enableGMCP")
+    finally(function()
+      feed("<T_IAC><T_DONT><O_ATCP>")
+      setConfig("enableGMCP", original)
+    end)
+
+    setConfig("enableGMCP", true)
+    assert.same({}, protocolEventsFrom("<T_IAC><T_DO><O_ATCP>"))
+    assert.same({}, protocolEventsFrom("<T_IAC><T_WILL><O_ATCP>"))
+
+    setConfig("enableGMCP", false)
+    assert.same({"sysProtocolEnabled:ATCP"}, protocolEventsFrom("<T_IAC><T_DO><O_ATCP>"))
+    assert.same({"sysProtocolDisabled:ATCP"}, protocolEventsFrom("<T_IAC><T_WONT><O_ATCP>"))
+    assert.same({"sysProtocolEnabled:ATCP"}, protocolEventsFrom("<T_IAC><T_WILL><O_ATCP>"))
+    assert.same({"sysProtocolDisabled:ATCP"}, protocolEventsFrom("<T_IAC><T_DONT><O_ATCP>"))
+
+    -- switching GMCP back on takes an ATCP that is still up down on the next offer
+    for _, offer in ipairs({"<T_IAC><T_DO><O_ATCP>", "<T_IAC><T_WILL><O_ATCP>"}) do
+      setConfig("enableGMCP", false)
+      assert.same({"sysProtocolEnabled:ATCP"}, protocolEventsFrom(offer))
+      setConfig("enableGMCP", true)
+      assert.same({"sysProtocolDisabled:ATCP"}, protocolEventsFrom(offer))
+    end
+  end)
+
+  -- a subnegotiation that runs straight into the next command has lost its
+  -- IAC SE, and both halves are acted on rather than one swallowing the other
+  -- (#4385)
+  it("recovers a subnegotiation that runs into the next command without its IAC SE", function()
+    finally(function() gmcp.SpecNoSE = nil end)
+    assert.is_nil(gmcp.SpecNoSE)
+    local mark = getLastLineNumber("main")
+    local events = protocolEventsFrom("<T_IAC><T_SB><O_GMCP>SpecNoSE.Vitals {\"hp\": 7}<T_IAC><T_DO><O_MSSP>NOSEAFTER\r\n")
+    assert.same({hp = 7}, gmcp.SpecNoSE and gmcp.SpecNoSE.Vitals)
+    assert.same({"sysProtocolEnabled:MSSP"}, events, "the command that cut the subnegotiation short was lost")
+    assert.same({"NOSEAFTER"}, getLines("main", mark, getLastLineNumber("main")))
+  end)
 end)
 
 describe("Tests MCCP compressed streams", function()
@@ -1353,24 +1567,147 @@ describe("Tests MCCP compressed streams", function()
   -- zlib.compress("MCCPDECOMPRESSEDOK MCCPDECOMPRESSEDOK MCCPDECOMPRESSEDOK\r\n"),
   -- as the bytes a server would put on the wire after the start sequence
   local COMPRESSED = "\120\218\243\117\118\14\112\113\117\246\247\13\8\114\13\14\118\117\241\247\86\240\37\70\136\151\11\0\228\236\16\9"
+  -- zlib.compress("MCCPSECONDSTREAMOK MCCPSECONDSTREAMOK\r\n")
+  local COMPRESSED_SECOND = "\120\156\243\117\118\14\8\118\117\246\247\115\9\14\9\114\117\244\245\247\86\240\197\16\226\229\2\0\223\154\10\194"
+  -- zlib.compress("MCCPVERSIONONEOK MCCPVERSIONONEOK\r\n")
+  local COMPRESSED_V1 = "\120\156\243\117\118\14\8\115\13\10\246\244\247\243\247\115\245\247\86\240\69\19\224\229\2\0\183\122\9\194"
 
-  -- neither the end of a stream nor a broken one clears the WILL, so without this
-  -- every later spec's IAC SB is still a candidate MCCP start sequence
+  -- the end of a stream does not clear the WILL, so without this every later
+  -- spec's IAC SB is still a candidate MCCP start sequence
   after_each(function()
     feed("<T_IAC><T_WONT><O_MCCP2>")
+    feed("<T_IAC><T_WONT><O_MCCP>")
   end)
 
-  -- Both of these end their stream, and ending one leaks the zlib inflate state
-  -- for good (#10410), which turns the leak detection half of the Linux CI job
-  -- red. The fixture above and the helpers are kept so that un-parking them is
-  -- a one line change once that is fixed.
-
   it("shows the text a server sends once it switches to MCCP v2", function()
-    pending("running a compressed stream to its end leaks the inflate state (#10410)")
+    local mark = getLastLineNumber("main")
+    feed("<T_IAC><T_WILL><O_MCCP2>")
+    feed("<T_IAC><T_SB><O_MCCP2><T_IAC><T_SE>" .. escaped(COMPRESSED) .. "MCCPPLAINAFTEREND\r\n")
+    local shown = linesSince(mark)
+    assert.is_truthy(shown:find("MCCPDECOMPRESSEDOK MCCPDECOMPRESSEDOK MCCPDECOMPRESSEDOK", 1, true), shown)
+    -- the stream ended inside that read, so what follows it is plain text again
+    assert.is_truthy(shown:find("MCCPPLAINAFTEREND", 1, true), shown)
   end)
 
   it("warns and falls back to plain text when the compressed stream is broken", function()
-    pending("a failed inflate leaks the inflate state the same way (#10410)")
+    local mark = getLastLineNumber("main")
+    feed("<T_IAC><T_WILL><O_MCCP2>")
+    feed("<T_IAC><T_SB><O_MCCP2><T_IAC><T_SE>MCCPNOTCOMPRESSED\r\n")
+    local shown = linesSince(mark)
+    assert.is_truthy(shown:find("MCCP decompression error", 1, true), shown)
+    -- the text was never compressed, so none of it may go missing into the
+    -- stream header zlib tried to read out of it
+    assert.is_truthy(shown:find("MCCPNOTCOMPRESSED", 1, true), shown)
+    feed("MCCPPLAINAFTERBROKEN\r\n")
+    shown = linesSince(mark)
+    assert.is_truthy(shown:find("MCCPPLAINAFTERBROKEN", 1, true), shown)
+  end)
+
+  -- the end of a stream arms a fresh inflate state for the next one, and a
+  -- second start sequence used to allocate over it, leaking it (#10410) - only
+  -- the leak detection half of the Linux CI job can see that
+  it("decompresses a second stream once the first has ended", function()
+    local mark = getLastLineNumber("main")
+    feed("<T_IAC><T_WILL><O_MCCP2>")
+    feed("<T_IAC><T_SB><O_MCCP2><T_IAC><T_SE>" .. escaped(COMPRESSED))
+
+    -- this time the stream arrives in a read of its own after the start sequence
+    feed("MCCPSECONDSTART\r\n<T_IAC><T_SB><O_MCCP2><T_IAC><T_SE>")
+    feed(escaped(COMPRESSED_SECOND))
+    local shown = linesSince(mark)
+    local first = shown:find("MCCPDECOMPRESSEDOK MCCPDECOMPRESSEDOK MCCPDECOMPRESSEDOK", 1, true)
+    local between = shown:find("MCCPSECONDSTART", 1, true)
+    local second = shown:find("MCCPSECONDSTREAMOK MCCPSECONDSTREAMOK", 1, true)
+    assert.is_truthy(first and between and second and first < between and between < second, shown)
+  end)
+
+  it("warns when a stream that started in an earlier read turns out to be broken", function()
+    local mark = getLastLineNumber("main")
+    feed("<T_IAC><T_WILL><O_MCCP2>")
+    feed("<T_IAC><T_SB><O_MCCP2><T_IAC><T_SE>")
+    feed("MCCPLATERBROKEN\r\n")
+    local shown = linesSince(mark)
+    assert.is_truthy(shown:find("MCCP decompression error", 1, true), shown)
+    assert.is_truthy(shown:find("MCCPLATERBROKEN", 1, true), shown)
+  end)
+
+  it("shows all of a text that arrives instead of a stream split across reads", function()
+    local mark = getLastLineNumber("main")
+    feed("<T_IAC><T_WILL><O_MCCP2>")
+    -- zlib takes the first byte on its own as half of a stream header
+    feed("<T_IAC><T_SB><O_MCCP2><T_IAC><T_SE>M")
+    feed("CCPSPLIT\r\n")
+    local shown = linesSince(mark)
+    assert.is_truthy(shown:find("MCCP decompression error", 1, true), shown)
+    -- once, and whole: the byte zlib held back must not be lost or shown twice
+    local _, occurrences = shown:gsub("%f[%w]MCCPSPLIT", "")
+    assert.equals(1, occurrences, shown)
+  end)
+
+  -- zlib reports a header asking for a preset dictionary without counting the
+  -- six bytes it read for it, so those have to be kept track of another way
+  it("shows all of a text that begins like a stream wanting a dictionary", function()
+    local mark = getLastLineNumber("main")
+    feed("<T_IAC><T_WILL><O_MCCP2>")
+    feed("<T_IAC><T_SB><O_MCCP2><T_IAC><T_SE>8nMCCPDICT\r\n")
+    local shown = linesSince(mark)
+    assert.is_truthy(shown:find("MCCP decompression error", 1, true), shown)
+    assert.is_truthy(shown:find("8nMCCPDICT", 1, true), shown)
+  end)
+
+  -- a broken stream is refused on the wire, so a start sequence the game sends
+  -- after that is not the start of a stream until it offers MCCP again
+  it("stops decompressing after a broken stream until the game offers MCCP again", function()
+    feed("<T_IAC><T_WILL><O_MCCP2>")
+    feed("<T_IAC><T_SB><O_MCCP2><T_IAC><T_SE>MCCPNOTCOMPRESSED\r\n")
+
+    local mark = getLastLineNumber("main")
+    feed("<T_IAC><T_SB><O_MCCP2><T_IAC><T_SE>" .. escaped(COMPRESSED) .. "\r\n")
+    local shown = linesSince(mark)
+    assert.is_falsy(shown:find("MCCPDECOMPRESSEDOK", 1, true), "a refused stream was decompressed: " .. shown)
+
+    mark = getLastLineNumber("main")
+    feed("<T_IAC><T_WILL><O_MCCP2>")
+    feed("<T_IAC><T_SB><O_MCCP2><T_IAC><T_SE>" .. escaped(COMPRESSED))
+    shown = linesSince(mark)
+    assert.is_truthy(shown:find("MCCPDECOMPRESSEDOK MCCPDECOMPRESSEDOK MCCPDECOMPRESSEDOK", 1, true), "offering MCCP again did not bring it back: " .. shown)
+  end)
+
+  it("shows the text a server sends once it switches to MCCP v1", function()
+    local mark = getLastLineNumber("main")
+    feed("<T_IAC><T_WILL><O_MCCP>")
+    -- v1's start sequence is IAC SB COMPRESS WILL SE, not terminated by an IAC
+    feed("<T_IAC><T_SB><O_MCCP><T_WILL><T_SE>" .. escaped(COMPRESSED_V1) .. "MCCPV1PLAINAFTER\r\n")
+    local shown = linesSince(mark)
+    assert.is_truthy(shown:find("MCCPVERSIONONEOK MCCPVERSIONONEOK", 1, true), shown)
+    assert.is_truthy(shown:find("MCCPV1PLAINAFTER", 1, true), shown)
+  end)
+
+  -- One read that inflates past the decompression bomb cap cannot be followed
+  -- to the end, and the part it drops leaves the stream unreadable, so the
+  -- stream has to be refused there rather than fed whatever comes next.
+  it("refuses a stream that inflates past the cap in one read", function()
+    -- zlib.compress(string.rep("\0", 1000000) .. "MCCPTAILOFBOMB\r\n", 9): NULs
+    -- are not displayed, so the cap is reached without drawing ~1 MB of text.
+    -- It has to inflate to more than scmMaxDecompressionRecursion * BUFFER_SIZE
+    -- (8 * 100000 bytes in ctelnet), or raising either leaves the cap unreached.
+    local bomb = "\120\218\237\193\209\9\0\16\20\0\64\223\202\80\40\165\188\248\176\255\44\6\113\119\41\1"
+      .. string.rep("\0", 968)
+      .. "\191\138\222\207\173\115\237\209\118\180\146\31\105\128\4\26"
+    local mark = getLastLineNumber("main")
+    feed("<T_IAC><T_WILL><O_MCCP2>")
+    feed("<T_IAC><T_SB><O_MCCP2><T_IAC><T_SE>" .. escaped(bomb))
+    -- what a game sends once it has seen the DONT
+    feed("MCCPPLAINAFTERCAP\r\n")
+    local shown = linesSince(mark)
+    assert.is_truthy(shown:find("Too much compressed data to process at once", 1, true), shown)
+    assert.is_falsy(shown:find("MCCP decompression error", 1, true), "the plain text was fed to the dropped stream: " .. shown)
+    assert.is_truthy(shown:find("MCCPPLAINAFTERCAP", 1, true), shown)
+
+    feed("<T_IAC><T_WILL><O_MCCP2>")
+    feed("<T_IAC><T_SB><O_MCCP2><T_IAC><T_SE>" .. escaped(COMPRESSED))
+    shown = linesSince(mark)
+    assert.is_truthy(shown:find("MCCPDECOMPRESSEDOK MCCPDECOMPRESSEDOK MCCPDECOMPRESSEDOK", 1, true), "offering MCCP again did not bring it back: " .. shown)
   end)
 end)
 
@@ -1478,6 +1815,16 @@ describe("Tests CHARSET negotiation", function()
     assert.equals("UTF-8", getServerEncoding(), "a request was acted on after CHARSET was turned off")
     feed("<T_IAC><T_DO><O_CHARS>")
   end)
+
+  it("ignores a request once the server has said it WONT do CHARSET", function()
+    feed("<T_IAC><T_WONT><O_CHARS>")
+    request("CP437")
+    assert.equals("UTF-8", getServerEncoding(), "a request was acted on after the server's WONT")
+
+    feed("<T_IAC><T_DO><O_CHARS>")
+    request("CP437")
+    assert.equals("CP437", getServerEncoding(), "offering CHARSET again did not bring it back")
+  end)
 end)
 
 describe("Tests the encodings Mudlet carries its own tables for", function()
@@ -1548,6 +1895,14 @@ describe("Tests the encodings Mudlet carries its own tables for", function()
       assert.is_true(setServerEncoding(encoding))
       assert.equals(expected, msspValueOf(string.char(0xE3)), "byte 0xE3 came back wrong under " .. encoding)
     end
+  end)
+
+  -- ASCII is held as no encoding at all, and an out-of-band message is then
+  -- read as UTF-8, so a game that sends UTF-8 anyway still gets its text through
+  it("reads an out-of-band message as UTF-8 while the game encoding is ASCII", function()
+    assert.is_true(setServerEncoding("ASCII"))
+    assert.equals("ASCII", getServerEncoding())
+    assert.equals("π", msspValueOf("\207\128"))
   end)
 
   it("sends a character the encoding has and refuses one it does not", function()

@@ -29,6 +29,8 @@ struct TMxpEvent
     QMap<QString, QString> attrs;
     QStringList actions;
     QString caption;
+    // the link a <SEND> made, whose actions are only final at its closing tag
+    int linkId = 0;
 };
 
 #endif //MUDLET_TMXPEVENT_H

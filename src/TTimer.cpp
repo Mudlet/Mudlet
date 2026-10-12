@@ -87,15 +87,16 @@ TTimer::~TTimer()
         // During shutdown (mpHost is null), delete immediately
         delete mpQTimer;
     }
+
+    deleteChildren();
 }
 
 void TTimer::setName(const QString& name)
 {
-    // temp timers do not need to check for names referring to multiple
-    // timer objects as names=ID -> much faster tempTimer creation
-    if (!isTemporary()) {
-        mpHost->getTimerUnit()->mLookupTable.remove(mName, this);
-    }
+    // Temporary timers are renamed too (a package's from its id to the name it
+    // was saved with), and killTimer() trusts this table to hold only current
+    // names of live timers:
+    mpHost->getTimerUnit()->mLookupTable.remove(mName, this);
     mName = name;
     // Merely for information if needed later:
     mpQTimer->setObjectName(qsl("timer(Host:%1)(TTimerId:%2)").arg(mpHost->getName(), name));
@@ -160,22 +161,6 @@ void TTimer::start()
 void TTimer::stop()
 {
     mpQTimer->stop();
-}
-
-void TTimer::compile()
-{
-    if (mNeedsToBeCompiled) {
-        if (!compileScript()) {
-            if (TDebug::wants(TDebug::Category::Error)) {
-                TDebug(Qt::white, Qt::red, TDebug::Category::Error, mName) << "ERROR: Lua compile error. compiling script of timer:" << mName << "\n" >> mpHost;
-            }
-            mOK_code = false;
-        }
-    }
-    for (auto* timerNode : *mpMyChildrenList) {
-        auto* timer = static_cast<TTimer*>(timerNode);
-        timer->compile();
-    }
 }
 
 void TTimer::compileAll()
@@ -402,41 +387,6 @@ void TTimer::disableTimer()
 }
 
 
-void TTimer::enableTimer(const QString& name)
-{
-    if (mName == name) {
-        if (canBeUnlocked()) {
-            if (activate()) {
-                mpQTimer->start();
-            } else {
-                deactivate();
-                mpQTimer->stop();
-            }
-        }
-    }
-
-    if (!isOffsetTimer()) {
-        for (auto* timerNode : *mpMyChildrenList) {
-            auto* timer = static_cast<TTimer*>(timerNode);
-            timer->enableTimer(timer->getName());
-        }
-    }
-}
-
-void TTimer::disableTimer(const QString& name)
-{
-    if (mName == name) {
-        deactivate();
-        mpQTimer->stop();
-    }
-
-    for (auto* timerNode : *mpMyChildrenList) {
-        auto* timer = static_cast<TTimer*>(timerNode);
-        timer->disableTimer(timer->getName());
-    }
-}
-
-
 void TTimer::killTimer()
 {
     deactivate();
@@ -466,23 +416,6 @@ QString TTimer::packageName(TTimer* pTimer)
 
     if (pTimer->getParent()) {
         return packageName(pTimer->getParent());
-    }
-
-    return QString();
-}
-
-QString TTimer::moduleName(TTimer* pTimer)
-{
-    if (!pTimer) {
-        return QString();
-    }
-
-    if (!pTimer->mPackageName.isEmpty()) {
-        return mpHost->mInstalledModules.contains(pTimer->mPackageName) ? pTimer->mPackageName : QString();
-    }
-
-    if (pTimer->getParent()) {
-        return moduleName(pTimer->getParent());
     }
 
     return QString();

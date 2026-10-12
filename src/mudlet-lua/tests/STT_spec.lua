@@ -331,7 +331,7 @@ describe("stt bridge", function()
     it("refuses a sensitivity it does not have", function()
       local ok, err = stt.setSensitivity("immediately")
       assert.is_nil(ok, "an unknown sensitivity should be refused, not guessed at")
-      assert.is_string(err)
+      assert.are.equal('sensitivity must be "short", "default" or "long", got "immediately"', err)
     end)
 
     -- toggle() is the one entry point a keybinding is usually wired to, so its

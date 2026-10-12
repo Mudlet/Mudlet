@@ -24,6 +24,7 @@
 #include "Host.h"
 #include "mudlet.h"
 #include "TConsole.h"
+#include "TMainConsole.h"
 
 TDockWidget::TDockWidget(Host* pH, const QString& consoleName)
 : QDockWidget()
@@ -41,6 +42,15 @@ void TDockWidget::setTConsole(TConsole* pC)
     mpConsole = pC;
     setWidget(pC);
     pC->mpDockWidget = this;
+}
+
+// A qproperty-windowTitle in a style sheet sets the title without going through setUserWindowTitle()
+bool TDockWidget::event(QEvent* event)
+{
+    if (event->type() == QEvent::WindowTitleChange && mpHost) {
+        mpHost->windowRegistry().setUserWindowTitle(mWidgetConsoleName, windowTitle());
+    }
+    return QDockWidget::event(event);
 }
 
 void TDockWidget::closeEvent(QCloseEvent* event)
@@ -73,27 +83,25 @@ void TDockWidget::moveEvent(QMoveEvent* event)
 
 void TDockWidget::setVisible(bool visible)
 {
-    if (!mpHost || !mpHost->mpConsole) {
+    auto pC = (mpHost && mpHost->mainConsoleView()) ? mpHost->mainConsoleView()->subConsoleWidget(mWidgetConsoleName) : nullptr;
+    if (!pC) {
         // During shutdown / profile closure TDockWidgets will get a hide event
         // as part of the underlying Qt class's built in handling of a close
         // event as the base class QDockWidget::setVisible(bool) method is being
         // overridden - at this point it seems there is not a Main Console left
-        // to be used to look some stuff up in - so in that case - just hide
-        // this widget and bail out:
+        // to be used to look some stuff up in. deleteMiniConsole() likewise lets
+        // go of the console before it takes the dock down. So in either case
+        // just hide this widget and bail out:
         if (!visible) {
             QWidget::setVisible(false);
         }
-        return;
-    }
-    auto pC = mpHost->mpConsole->subConsoleWidget(mWidgetConsoleName);
-    if (!pC) {
         return;
     }
     //do not change the ->show() order! Otherwise, it will automatically minimize the floating/dock window(!!)
     if (visible) {
         pC->show();
         QWidget::setVisible(true);
-        mpHost->mpConsole->showWindow(mWidgetConsoleName);
+        mpHost->mainConsoleView()->showWindow(mWidgetConsoleName);
     } else {
         QWidget::setVisible(false);
     }

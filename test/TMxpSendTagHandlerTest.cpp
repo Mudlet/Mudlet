@@ -16,6 +16,33 @@ private:
   }
 
 private slots:
+  // Game text between two SENDs is not part of either
+  void testTextOutsideSendIsNotCaptured() {
+    TMxpStubContext ctx;
+    TMxpStubClient stub;
+
+    MxpStartTag startTag("SEND");
+    MxpEndTag endTag("SEND");
+
+    TMxpSendTagHandler sendTagHandler;
+    TMxpTagHandler &tagHandler = sendTagHandler;
+
+    tagHandler.handleTag(ctx, stub, &startTag);
+    tagHandler.handleContent("north");
+    tagHandler.handleTag(ctx, stub, &endTag);
+    QCOMPARE(sendTagHandler.currentCaption(), qsl("north"));
+
+    tagHandler.handleContent("plain game text");
+    tagHandler.handleTag(ctx, stub, &endTag);
+    QCOMPARE(sendTagHandler.currentCaption(), QString());
+
+    MxpStartTag selfClosing("SEND", {MxpTagAttribute("look")}, true);
+    tagHandler.handleTag(ctx, stub, &selfClosing);
+    tagHandler.handleContent("plain game text");
+    tagHandler.handleTag(ctx, stub, &endTag);
+    QCOMPARE(sendTagHandler.currentCaption(), QString());
+  }
+
   void testSendHrefUTF8FromMxpProcessor() {
     // issue #4368
     TMxpStubClient stub;
@@ -28,7 +55,7 @@ private slots:
     }
 
     QCOMPARE(stub.mHrefs.size(), 1);
-    QCOMPARE(stub.mHrefs[0], "send([[áéíóúñ]])");
+    QCOMPARE(stub.mHrefs[0], "send([[\náéíóúñ]])");
 
     QCOMPARE(stub.mHints.size(), 1);
     QCOMPARE(stub.mHints[0], "áéíóúñ");
@@ -49,7 +76,7 @@ private slots:
     }
 
     QCOMPARE(stub.mHrefs.size(), 1);
-    QCOMPARE(stub.mHrefs[0], "send([[señor]])");
+    QCOMPARE(stub.mHrefs[0], "send([[\nseñor]])");
   }
 
   // With no encoding negotiated yet (empty session encoding) attribute values
@@ -66,7 +93,7 @@ private slots:
     }
 
     QCOMPARE(stub.mHrefs.size(), 1);
-    QCOMPARE(stub.mHrefs[0], "send([[áéíóúñ]])");
+    QCOMPARE(stub.mHrefs[0], "send([[\náéíóúñ]])");
   }
 
   void testSendHrefUTF8() {
@@ -83,7 +110,7 @@ private slots:
     }
 
     QCOMPARE(stub.mHrefs.size(), 1);
-    QCOMPARE(stub.mHrefs[0], "send([[áéíóúñ]])");
+    QCOMPARE(stub.mHrefs[0], "send([[\náéíóúñ]])");
 
     QCOMPARE(stub.mHints.size(), 1);
     QCOMPARE(stub.mHints[0], "áéíóúñ");
@@ -106,7 +133,7 @@ private slots:
     tagHandler.handleTag(ctx, stub, endTag->asEndTag());
 
     QCOMPARE(stub.mHrefs.size(), 1);
-    QCOMPARE(stub.mHrefs[0], "printCmdLine([[tell Zugg ]])");
+    QCOMPARE(stub.mHrefs[0], "printCmdLine([[\ntell Zugg ]])");
 
     QCOMPARE(stub.mHints.size(), 1);
     QCOMPARE(stub.mHints[0], "tell Zugg ");
@@ -128,7 +155,7 @@ private slots:
     tagHandler.handleTag(ctx, stub, &endTag);
 
     QCOMPARE(stub.mHrefs.size(), 1);
-    QCOMPARE(stub.mHrefs[0], "send([[north]])");
+    QCOMPARE(stub.mHrefs[0], "send([[\nnorth]])");
 
     QCOMPARE(stub.mHints.size(), 1);
     QCOMPARE(stub.mHints[0], "north");
@@ -151,7 +178,7 @@ private slots:
     tagHandler.handleTag(ctx, stub, endTag->asEndTag());
 
     QCOMPARE(stub.mHrefs.size(), 1);
-    QCOMPARE(stub.mHrefs[0], "printCmdLine([[north]])");
+    QCOMPARE(stub.mHrefs[0], "printCmdLine([[\nnorth]])");
 
     QCOMPARE(stub.mHints.size(), 1);
     QCOMPARE(stub.mHints[0], "north");
@@ -170,7 +197,7 @@ private slots:
     }
 
     QCOMPARE(stub.mHrefs.size(), 1);
-    QCOMPARE(stub.mHrefs[0], "send([[push button]])");
+    QCOMPARE(stub.mHrefs[0], "send([[\npush button]])");
 
     QCOMPARE(stub.mHints.size(), 1);
     QCOMPARE(stub.mHints[0], "push button");
@@ -194,7 +221,7 @@ private slots:
     tagHandler.handleTag(ctx, stub, endTag->asEndTag());
 
     QCOMPARE(stub.mHrefs.size(), 1);
-    QCOMPARE(stub.mHrefs[0], "send([[say I am Gandalf]])");
+    QCOMPARE(stub.mHrefs[0], "send([[\nsay I am Gandalf]])");
 
     QCOMPARE(stub.mHints.size(), 1);
     QCOMPARE(stub.mHints[0], "say I am Gandalf");
@@ -226,8 +253,8 @@ private slots:
     tagHandler.handleTag(ctx, stub, endTag->asEndTag());
 
     QCOMPARE(stub.mHrefs.size(), 2);
-    QCOMPARE(stub.mHrefs[0], "send([[look]])");
-    QCOMPARE(stub.mHrefs[1], "send([[say hello]])");
+    QCOMPARE(stub.mHrefs[0], "send([[\nlook]])");
+    QCOMPARE(stub.mHrefs[1], "send([[\nsay hello]])");
 
     QCOMPARE(stub.mHints.size(), 2);
     QCOMPARE(stub.mHints[0], "LOOK AROUND");
@@ -243,9 +270,9 @@ private slots:
     tagHandler.handleTag(ctx, stub, endTag->asEndTag());
 
     QCOMPARE(stub.mHrefs.size(), 3);
-    QCOMPARE(stub.mHrefs[0], "send([[who]])");
-    QCOMPARE(stub.mHrefs[1], "send([[look]])");
-    QCOMPARE(stub.mHrefs[2], "send([[say hello]])");
+    QCOMPARE(stub.mHrefs[0], "send([[\nwho]])");
+    QCOMPARE(stub.mHrefs[1], "send([[\nlook]])");
+    QCOMPARE(stub.mHrefs[2], "send([[\nsay hello]])");
 
     QCOMPARE(stub.mHints.size(), 3);
     QCOMPARE(stub.mHints[0], "WHO IS ONLINE?");
@@ -264,11 +291,11 @@ private slots:
     tagHandler.handleTag(ctx, stub, endTag->asEndTag());
 
     QCOMPARE(stub.mHrefs.size(), 5);
-    QCOMPARE(stub.mHrefs[0], "send([[who]])");
-    QCOMPARE(stub.mHrefs[1], "send([[look]])");
-    QCOMPARE(stub.mHrefs[2], "send([[say hello]])");
-    QCOMPARE(stub.mHrefs[3], "send([[knock at door]])");
-    QCOMPARE(stub.mHrefs[4], "send([[break door]])");
+    QCOMPARE(stub.mHrefs[0], "send([[\nwho]])");
+    QCOMPARE(stub.mHrefs[1], "send([[\nlook]])");
+    QCOMPARE(stub.mHrefs[2], "send([[\nsay hello]])");
+    QCOMPARE(stub.mHrefs[3], "send([[\nknock at door]])");
+    QCOMPARE(stub.mHrefs[4], "send([[\nbreak door]])");
 
     QCOMPARE(stub.mHints.size(), 5);
     QCOMPARE(stub.mHints[0], "WHO IS ONLINE?");
@@ -298,8 +325,8 @@ private slots:
     tagHandler.handleTag(ctx, stub, endTag->asEndTag());
 
     QCOMPARE(stub.mHrefs.size(), 2);
-    QCOMPARE(stub.mHrefs[0], "send([[PROBE SUSPENDERS30901]])");
-    QCOMPARE(stub.mHrefs[1], "send([[BUY SUSPENDERS30901]])");
+    QCOMPARE(stub.mHrefs[0], "send([[\nPROBE SUSPENDERS30901]])");
+    QCOMPARE(stub.mHrefs[1], "send([[\nBUY SUSPENDERS30901]])");
 
     QCOMPARE(stub.mHints.size(), 2);
     QCOMPARE(stub.mHints[0], "PROBE SUSPENDERS30901");
@@ -326,7 +353,7 @@ private slots:
     tagHandler.handleTag(ctx, stub, endTag->asEndTag());
 
     QCOMPARE(stub.mHrefs.size(), 1);
-    QCOMPARE(stub.mHrefs[0], "send([[east]])");
+    QCOMPARE(stub.mHrefs[0], "send([[\neast]])");
 
     QCOMPARE(stub.mHints.size(), 1);
     QCOMPARE(stub.mHints[0], "east"); // Should be "east", not "HREF"
@@ -350,7 +377,7 @@ private slots:
     tagHandler.handleTag(ctx, stub, endTag->asEndTag());
 
     QCOMPARE(stub.mHrefs.size(), 1);
-    QCOMPARE(stub.mHrefs[0], "send([[west]])");
+    QCOMPARE(stub.mHrefs[0], "send([[\nwest]])");
 
     QCOMPARE(stub.mHints.size(), 1);
     QCOMPARE(stub.mHints[0], "west"); // Should be "west"

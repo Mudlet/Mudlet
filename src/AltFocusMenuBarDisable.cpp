@@ -20,6 +20,8 @@
 
 #include "AltFocusMenuBarDisable.h"
 
+#include <QScopedValueRollback>
+
 AltFocusMenuBarDisable::AltFocusMenuBarDisable()
 {
     setObjectName(baseStyle()->objectName());
@@ -40,4 +42,26 @@ int AltFocusMenuBarDisable::styleHint(StyleHint styleHint, const QStyleOption* o
     }
 
     return QProxyStyle::styleHint(styleHint, opt, widget, returnData);
+}
+
+void AltFocusMenuBarDisable::drawControl(ControlElement element, const QStyleOption* option, QPainter* painter, const QWidget* widget) const
+{
+    if (element == CE_DockWidgetTitle && !baseStyle()->name().compare(QLatin1String("fusion"), Qt::CaseInsensitive)) {
+        const QScopedValueRollback measuring(mMeasuringDockTitle, true);
+        QProxyStyle::drawControl(element, option, painter, widget);
+        return;
+    }
+    QProxyStyle::drawControl(element, option, painter, widget);
+}
+
+QIcon AltFocusMenuBarDisable::standardIcon(StandardPixmap standardIcon, const QStyleOption* option, const QWidget* widget) const
+{
+    if (!mMeasuringDockTitle || (standardIcon != SP_TitleBarCloseButton && standardIcon != SP_TitleBarNormalButton)) {
+        return QProxyStyle::standardIcon(standardIcon, option, widget);
+    }
+    QIcon& kept = standardIcon == SP_TitleBarCloseButton ? mDockTitleCloseIcon : mDockTitleNormalIcon;
+    if (kept.isNull()) {
+        kept = QProxyStyle::standardIcon(standardIcon, option, widget);
+    }
+    return kept;
 }

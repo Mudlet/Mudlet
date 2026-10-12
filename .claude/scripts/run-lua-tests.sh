@@ -12,6 +12,10 @@
 # mudlet-lua/lua/utf8_filenames.lua), still comes from whoever built it. Needs
 # the rocks and apt packages that .claude/hooks/session-start.sh installs.
 #
+# MUDLET_LUA_TESTS_TIMEOUT caps the Mudlet run in seconds (default 900). A run
+# the cap cuts short exits 124; otherwise the exit code is 0 when every spec
+# passed and non-zero when any failed.
+#
 # Safe to run concurrently (e.g. one run per worktree): every fixture binds an
 # ephemeral port handed over through this run's private temp directory, only
 # this run's fixture processes are cleaned up, and the profile tree lives in a
@@ -20,6 +24,8 @@ set -euo pipefail
 
 WS="$(cd "$(dirname "$0")/../.." && pwd)"
 BINARY="${1:-$WS/build-linux-debug-nosan/src/mudlet}"
+TIMEOUT="${MUDLET_LUA_TESTS_TIMEOUT:-900}"
+[[ "$TIMEOUT" =~ ^[1-9][0-9]*$ ]] || { echo "MUDLET_LUA_TESTS_TIMEOUT must be a whole number of seconds, not '$TIMEOUT'"; exit 1; }
 TMP="$(mktemp -d /tmp/mudlet-luatests-XXXX)"
 
 [ -x "$BINARY" ] || { echo "no mudlet binary at $BINARY - build first"; exit 1; }
@@ -173,8 +179,17 @@ export MUDLET_TEST_EXPECTED_LUA_PATH="$(readlink -f "$WS/src/mudlet-lua/lua")"
 
 cd "$WS"
 rc=0
-timeout 360 xvfb-run --auto-servernum "$BINARY" --profile "Mudlet self-test" --mirror --offline 2>&1 \
-  | tee "$TMP/run.log" || rc=$?
+started=$SECONDS
+timeout -k 10 "$TIMEOUT" xvfb-run --auto-servernum "$BINARY" --profile "Mudlet self-test" --mirror --offline 2>&1 \
+  | tee "$TMP/run.log" || { status=("${PIPESTATUS[@]}"); rc=${status[0]}; [ "$rc" -ne 0 ] || rc=${status[1]}; }
+# Mudlet's status comes first: under pipefail a failing tee (e.g. a full /tmp) would
+# otherwise replace a timeout's 124 with its own 1.
+# 137 is the -k escalation, but also any other SIGKILL (e.g. the OOM killer),
+# so only the elapsed time can say which it was.
+timed_out=false
+if [ "$rc" -eq 124 ] || { [ "$rc" -eq 137 ] && [ $((SECONDS - started)) -ge "$TIMEOUT" ]; }; then
+  timed_out=true
+fi
 
 # loadGlobal() walks on to its next candidate when one fails to run, so a syntax
 # error anywhere in this worktree's mudlet-lua silently hands the whole library
@@ -188,6 +203,16 @@ if grep -q "^TLuaInterpreter::loadGlobal() loading" "$TMP/run.log"; then
   echo "binary's own copy - the result above is meaningless. The failure was:"
   grep "^TLuaInterpreter::loadGlobal() loading" "$TMP/run.log"
   rc=1
+fi
+
+# Checked before the marker: busted writes it at the first failing spec, so a
+# run cut short after one would otherwise read as an ordinary failing run.
+if [ "$timed_out" = true ]; then
+  # the killed run usually stops mid-line
+  echo
+  echo "Mudlet was killed by the ${TIMEOUT}s timeout before the suite finished - results are incomplete."
+  echo "Set MUDLET_LUA_TESTS_TIMEOUT to allow it longer."
+  exit 124
 fi
 
 if [ -e "$MUDLET_TEST_FAILURE_MARKER" ]; then

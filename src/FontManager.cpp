@@ -29,8 +29,43 @@
 #include <QDesktopServices>
 #include <QFontDatabase>
 
+static QStringList fontFileFilters()
+{
+    return {qsl("*.ttf"), qsl("*.otf")};
+}
+
+FontManager::FontManager()
+{
+    if (smpSelf) {
+        qWarning() << "FontManager::FontManager() WARNING - a FontManager already exists, so self() keeps pointing at that one.";
+        return;
+    }
+    smpSelf = this;
+}
+
+FontManager::~FontManager()
+{
+    if (smpSelf == this) {
+        smpSelf = nullptr;
+    }
+}
+
+QStringList FontManager::availableFonts()
+{
+    ensureFontsAdded();
+    return QFontDatabase::families(QFontDatabase::Any);
+}
+
+void FontManager::ensureFontsAdded()
+{
+    if (!smFontsAdded && smpSelf) {
+        smpSelf->addFontsOnFirstUse();
+    }
+}
+
 void FontManager::addFonts()
 {
+    smFontsAdded = true;
     const QDir dir(MudletApp::getMudletPath(enums::mainFontsPath));
 
     if (!dir.exists()) {
@@ -46,14 +81,34 @@ void FontManager::addFonts()
     }
 }
 
+// For when mudlet::init() has not loaded the fonts folder, as with no main
+// window. The executable also copies each bundled font missing from that folder
+// out of the resources first (copyFont() in main.cpp); nothing does so here, so
+// those are loaded from the resources instead.
+void FontManager::addFontsOnFirstUse()
+{
+    addFonts();
+
+    const QString folder = MudletApp::getMudletPath(enums::mainFontsPath);
+    const QDir resources(qsl(":/fonts"));
+    for (const QString& bundle : resources.entryList(QDir::Dirs | QDir::NoDotAndDotDot)) {
+        const QDir resourceBundle(resources.filePath(bundle));
+        for (const QString& fontFile : resourceBundle.entryList(fontFileFilters(), QDir::Files)) {
+            if (!QFileInfo::exists(qsl("%1/%2/%3").arg(folder, bundle, fontFile))) {
+                loadFont(resourceBundle.filePath(fontFile), QString());
+            }
+        }
+    }
+
+    addEmojiFont();
+}
+
 // loads all of the fonts in the given folder
 void FontManager::loadFonts(const QString& folder)
 {
     // Check what happens with this: "Adding application fonts on Unix/X11 platforms without fontconfig is currently not supported."
-    QStringList filters;
-    filters << qsl("*.ttf") << qsl("*.otf");
     QDir dir = folder;
-    dir.setNameFilters(filters);
+    dir.setNameFilters(fontFileFilters());
 
     for (auto fontFile : dir.entryList(QDir::Files | QDir::Readable | QDir::NoDotAndDotDot)) {
         const QString fontFilePathName = qsl("%1/%2").arg(dir.absolutePath(), fontFile);
@@ -92,6 +147,12 @@ bool FontManager::fontAlreadyLoaded(const QString& filePath, const QString& prof
     // loading a font file with the same filename are tracked independently.
     const QString key = profileName.isEmpty() ? filePath : qsl("%1/%2").arg(profileName, filePath);
     return loadedFontPaths.contains(key);
+}
+
+int FontManager::loadedFontId(const QString& filePath, const QString& profileName) const
+{
+    const QString key = profileName.isEmpty() ? filePath : qsl("%1/%2").arg(profileName, filePath);
+    return loadedFontPaths.value(key, -1);
 }
 
 void FontManager::rememberFont(const QString& filePath, int fontID, const QString& profileName, const QString& belongsTo)

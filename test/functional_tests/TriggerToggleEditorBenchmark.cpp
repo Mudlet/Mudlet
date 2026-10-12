@@ -25,6 +25,7 @@
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
+#include "HostDialogs.h"
 #include "MudletInstanceCoordinator.h"
 #include "TLuaInterpreter.h"
 #include "TelnetServerStub.h"
@@ -313,19 +314,19 @@ private slots:
         mpHost = TestProfile::create(mProfileName, mLocalhost, QString::number(mpServer->serverPort()));
         QVERIFY2(mpHost, "No active host available for the test.");
         QSignalSpy connectedSpy(&(mpHost->mTelnet), &cTelnet::signal_connected);
-        QVERIFY2(connectedSpy.wait(2000), "Could not connect with the host.");
+        QVERIFY2(connectedSpy.wait(2s), "Could not connect with the host.");
 
         mudlet::self()->slot_showScriptDialog();
         QTest::qWait(100ms);
-        mpEditor = mpHost->mpEditorDialog;
+        mpEditor = HostDialogs::of(mpHost).mpEditorDialog;
         QVERIFY2(mpEditor, "the editor dialog was not created");
     }
 
     void cleanupTestCase()
     {
         if (mpHost) {
-            if (auto* pEditor = mpHost->mpEditorDialog.data()) {
-                mpHost->mpEditorDialog = nullptr;
+            if (auto* pEditor = HostDialogs::of(mpHost).mpEditorDialog.data()) {
+                HostDialogs::of(mpHost).mpEditorDialog = nullptr;
                 delete pEditor;
             }
         }

@@ -29,42 +29,25 @@
 
 #include "TLuaInterpreter.h"
 
-#include "EAction.h"
 #include "Host.h"
 #include "TAlias.h"
 #include "TArea.h"
-#include "TCommandLine.h"
-#include "TConsole.h"
 #include "TDebug.h"
 #include "TEvent.h"
-#include "TFlipButton.h"
 #include "TForkedProcess.h"
-#include "TLabel.h"
 #include "TMap.h"
 #include "TMapLabel.h"
 #include "TMedia.h"
 #include "TRoomDB.h"
-#include "TTabBar.h"
-#include "TTextEdit.h"
 #include "TTimer.h"
 #include "discord.h"
-#include "dlgComposer.h"
-#include "dlgIRC.h"
-#include "dlgMapper.h"
-#include "dlgModuleManager.h"
-#include "dlgTriggerEditor.h"
 #include "mapInfoContributorManager.h"
-#include "mudlet.h"
-#if defined(INCLUDE_3DMAPPER)
-#include "glwidget_integration.h"
-#endif
 
 #include <limits>
 #include <math.h>
 
 #include <QCollator>
 #include <QCoreApplication>
-#include <QDesktopServices>
 #include <QFileInfo>
 #include <QMovie>
 #include <QVector>
@@ -346,14 +329,13 @@ int TLuaInterpreter::setDiscordGameUrl(lua_State* L)
     // what it displays on the button. It is not part of rich presence, so it
     // does not have the API enabled check that those Discord functions need
     // in order to respect privacy.
-    mudlet* pMudlet = mudlet::self();
     auto& host = getHostFromLua(L);
     const int args = lua_gettop(L);
 
     if (!args) { // no args, blank the invite URL and game name
         host.setDiscordInviteURL(QString());
         host.setDiscordGameName(QString());
-        pMudlet->updateDiscordNamedIcon();
+        emit host.signal_discordGameChanged();
         lua_pushboolean(L, true);
         return 1;
     }
@@ -375,7 +357,7 @@ int TLuaInterpreter::setDiscordGameUrl(lua_State* L)
     } else {
         host.setDiscordGameName(QString());
     }
-    pMudlet->updateDiscordNamedIcon();
+    emit host.signal_discordGameChanged();
     lua_pushboolean(L, true);
     return 1;
 }

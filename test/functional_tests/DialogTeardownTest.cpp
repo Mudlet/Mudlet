@@ -51,6 +51,7 @@
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
+#include "HostDialogs.h"
 #include "MudletInstanceCoordinator.h"
 #include "TelnetServerStub.h"
 #include "TriggerUnit.h"
@@ -235,7 +236,7 @@ private slots:
     {
         mudlet::self()->showOptionsDialog(qsl("tab_chat"), mpHost);
         QTest::qWait(100ms);
-        auto* preferences = mpHost->mpDlgProfilePreferences.data();
+        auto* preferences = HostDialogs::of(mpHost).mpDlgProfilePreferences.data();
         QVERIFY2(preferences, "Preferences dialog was not created");
 
         const QString chatNameBefore = mpHost->getMMCPChatName();
@@ -244,7 +245,7 @@ private slots:
         focusWithText(preferences->lineEdit_mmcpChatName, typedChatName);
 
         delete preferences;
-        QVERIFY2(mpHost->mpDlgProfilePreferences.isNull(), "Preferences dialog should have been destroyed");
+        QVERIFY2(HostDialogs::of(mpHost).mpDlgProfilePreferences.isNull(), "Preferences dialog should have been destroyed");
         QCOMPARE(mpHost->getMMCPChatName(), chatNameBefore);
     }
 
@@ -257,7 +258,7 @@ private slots:
     {
         mudlet::self()->showOptionsDialog(qsl("tab_chat"), mpHost);
         QTest::qWait(100ms);
-        auto* preferences = mpHost->mpDlgProfilePreferences.data();
+        auto* preferences = HostDialogs::of(mpHost).mpDlgProfilePreferences.data();
         QVERIFY2(preferences, "Preferences dialog was not created");
 
         // A failed assertion returns from here, and every other case in this
@@ -297,7 +298,7 @@ private slots:
 
         mudlet::self()->showOptionsDialog(qsl("tab_specialOptions"), mpHost);
         QTest::qWait(100ms);
-        auto* preferences = mpHost->mpDlgProfilePreferences.data();
+        auto* preferences = HostDialogs::of(mpHost).mpDlgProfilePreferences.data();
         QVERIFY2(preferences, "Preferences dialog was not created");
 
 #if defined(INCLUDE_UPDATER)
@@ -321,7 +322,7 @@ private slots:
 #endif
 
         delete preferences;
-        QVERIFY2(mpHost->mpDlgProfilePreferences.isNull(), "Preferences dialog should have been destroyed");
+        QVERIFY2(HostDialogs::of(mpHost).mpDlgProfilePreferences.isNull(), "Preferences dialog should have been destroyed");
     }
 
     // ...and through the editor, where the item name field is connected to
@@ -331,7 +332,7 @@ private slots:
     {
         mudlet::self()->slot_showScriptDialog();
         QTest::qWait(100ms);
-        auto* editor = mpHost->mpEditorDialog.data();
+        auto* editor = HostDialogs::of(mpHost).mpEditorDialog.data();
         QVERIFY2(editor, "Editor was not created");
 
         // the item fields only appear once an item is being edited
@@ -348,7 +349,7 @@ private slots:
         focusWithText(nameField, typedName);
 
         delete editor;
-        QVERIFY2(mpHost->mpEditorDialog.isNull(), "Editor should have been destroyed");
+        QVERIFY2(HostDialogs::of(mpHost).mpEditorDialog.isNull(), "Editor should have been destroyed");
         // slot_saveProperty_TriggerName() renames the trigger itself, so the item
         // shows whether it ran while the editor was being destroyed
         QVERIFY2(!mpHost->getTriggerUnit()->findTrigger(typedName), "Being destroyed made the editor rename the trigger");
@@ -359,14 +360,14 @@ private slots:
     {
         mudlet::self()->showOptionsDialog(qsl("tab_general"), mpHost);
         QTest::qWait(100ms);
-        auto* first = mpHost->mpDlgProfilePreferences.data();
+        auto* first = HostDialogs::of(mpHost).mpDlgProfilePreferences.data();
         QVERIFY2(first, "Preferences dialog was not created");
         delete first;
-        QVERIFY2(mpHost->mpDlgProfilePreferences.isNull(), "Preferences dialog should have been destroyed");
+        QVERIFY2(HostDialogs::of(mpHost).mpDlgProfilePreferences.isNull(), "Preferences dialog should have been destroyed");
 
         mudlet::self()->showOptionsDialog(qsl("tab_general"), mpHost);
         QTest::qWait(100ms);
-        auto* preferences = mpHost->mpDlgProfilePreferences.data();
+        auto* preferences = HostDialogs::of(mpHost).mpDlgProfilePreferences.data();
         QVERIFY2(preferences, "Preferences dialog was not recreated");
 
         auto* gmcpCheckBox = preferences->findChild<QCheckBox*>(qsl("checkBox_enableGMCP"));

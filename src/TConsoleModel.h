@@ -21,19 +21,120 @@
  ***************************************************************************/
 
 #include "TBuffer.h"
+#include "TConsoleModelNotifier.h"
 #include "THyperlinkCompactManager.h"
 #include "THyperlinkSelectionManager.h"
 #include "THyperlinkVisibilityManager.h"
 
 #include <QColor>
 #include <QFile>
+#include <QFont>
+#include <QMetaType>
+#include <QPair>
 #include <QPoint>
 #include <QPointer>
+#include <QSize>
 #include <QString>
 #include <QStringList>
 #include <QTextStream>
 
+#include <optional>
+#include <tuple>
+
 class Host;
+
+// This contains the details of a font that we might want to maintain a record
+// of, independently of a QFont instance:
+struct TFontAttributes
+{
+    explicit TFontAttributes(const bool isAntiAliased = false)
+    : mStyleStrategy(isAntiAliased ? static_cast<QFont::StyleStrategy>(QFont::PreferAntialias | QFont::PreferQuality) : static_cast<QFont::StyleStrategy>(QFont::NoAntialias | QFont::PreferQuality))
+    {
+    }
+
+    explicit TFontAttributes(const QFont& font)
+    {
+        mName = font.family();
+        mPointSize = font.pointSize();
+        mStyleHint = font.styleHint();
+        mStyleStrategy = font.styleStrategy();
+        mFixedPitch = font.fixedPitch();
+        mKerning = font.kerning();
+        mWeight = font.weight();
+        mUnderline = font.underline();
+        mOverline = font.overline();
+        mStrikeout = font.strikeOut();
+        mItalic = font.italic();
+        // Although we had a setter for this we never used it:
+        // mLetterSpacing = font.letterSpacing();
+        // mSpacingType = font.SpacingType();
+    }
+
+    // Since C++20 the comparison operators can also be default coded by the
+    // compiler:
+    bool operator==(const TFontAttributes& other) const = default;
+    bool operator!=(const TFontAttributes& other) const = default;
+
+    TFontAttributes(const TFontAttributes& other) = default;
+    TFontAttributes& operator=(const TFontAttributes& other) = default;
+
+    QFont makeFont() const
+    {
+        QFont font = QFont(mName, mPointSize, mWeight, mItalic);
+        font.setFixedPitch(mFixedPitch);
+        font.setStyleHint(mStyleHint, mStyleStrategy);
+        font.setKerning(mKerning);
+        font.setUnderline(mUnderline);
+        font.setOverline(mOverline);
+        font.setStrikeOut(mStrikeout);
+
+        return font;
+    }
+
+    void setAntiAliasOption(const bool isAntiAliased)
+    {
+        mStyleStrategy =
+                isAntiAliased ? static_cast<QFont::StyleStrategy>(QFont::PreferAntialias | QFont::PreferQuality) : static_cast<QFont::StyleStrategy>(QFont::NoAntialias | QFont::PreferQuality);
+    }
+
+    // enums to consider:
+    // Not used: QFont::Capitalization mCapitalization; // { MixedCase, AllUppercase, AllLowercase, SmallCaps, Capitalize }
+    // Not used: QFont::HintingPreference mHintingPreference; // { PreferDefaultHinting, PreferNoHinting, PreferVerticalHinting, PreferFullHinting }
+    // Not used: QFont::SpacingType mSpacingType; // { PercentageSpacing, AbsoluteSpacing }
+    // Not used: QFont::Stretch mStretch; // { AnyStretch, UltraCondensed, ExtraCondensed, Condensed, SemiCondensed, …, UltraExpanded }
+    // Not used: QFont::Style mStyle; // { StyleNormal, StyleItalic, StyleOblique }
+    // Combined and used with next: QFont::StyleHint mStyleHint; // { AnyStyle, SansSerif, Helvetica, Serif, Times, …, System }
+    // Combined and used with prior: QFont::StyleStrategy mStyleStrategy; // { PreferDefault, PreferBitmap, PreferDevice, PreferOutline, ForceOutline, …, PreferQuality }
+    // Used: QFont::Weight mWeight; // { Thin, ExtraLight, Light, Normal, Medium, …, Black }
+
+    QString mName = qsl("Bitstream Vera Sans Mono");
+    int mPointSize = 14;
+    // Actually this is combined with the next one - but doesn't work on X11
+    // anyway - and since we don't specify it in the TConsole case this means
+    // the QFont::AnyStyle is used for other Desktop environments:
+    QFont::StyleHint mStyleHint = QFont::AnyStyle;
+    // We use either: (QFont::NoAntialias | QFont::PreferQuality) for all
+    // TConsoles but the main one can be set to (QFont::PreferAntialias |
+    // QFont::PreferQuality) instead - see constructor:
+    QFont::StyleStrategy mStyleStrategy = static_cast<QFont::StyleStrategy>(QFont::NoAntialias | QFont::PreferQuality);
+    // qreal mLetterSpacing = 0.0;
+    // QFont::SpacingType mSpacingType = QFont::AbsoluteSpacing;
+    // We use but don't set "Line Spacing" - so don't worry about it.
+    QFont::Weight mWeight = QFont::Normal;
+    bool mFixedPitch = true; // We always set this
+    bool mKerning = false;   // We haven't been resetting this but we ought to
+    // we don't set these on "base" fonts for TConsole's but we can set them for
+    // bits of text:
+    bool mUnderline = false;
+    bool mOverline = false;
+    bool mStrikeout = false;
+    bool mItalic = false;
+};
+
+enum class ControlCharacterMode { AsIs = 0x0, Picture = 0x1, OEM = 0x2 };
+
+// Needed so it can be handled as a QVariant
+Q_DECLARE_METATYPE(ControlCharacterMode)
 
 // The per-console data model: the slice of former TConsole state that the
 // telnet -> trigger pipeline drives without needing a widget. That is the text
@@ -71,18 +172,99 @@ struct TConsoleModel
     // model and returns for any other.
     void toggleLogging(bool isMessageEnabled);
     void reportFailedLogStart(const QString& path, const QString& reason);
+    // Each flush is a write() to the OS, so lines logged in one pass of the
+    // event loop are flushed together once it returns, rather than one by one.
+    void scheduleLogFlush();
+    // The cursor scripts read and write through: moveCursor() leaves it where it was for a line
+    // outside the buffer, and moveCursorEnd() puts it on the last character of the last line.
+    bool moveCursor(int x, int y);
+    void moveCursorEnd();
+    void deleteLineAtCursor();
+    // Leaves the one empty line a cleared buffer holds, with the cursor on it. A selection is kept, now
+    // no longer valid, so replace() does not take it for no selection at all.
+    void clear();
 
-    // Half-open: lines(n, n) is empty. Not const because TBuffer::line() returns a mutable QString&.
-    QStringList lines(int from, int to);
+    // Half-open: lines(n, n) is empty. Lines outside the buffer are left out.
+    QStringList lines(int from, int to) const;
 
-    // Colorizer triggers: select a run of the current line, paint it, restore the format. Needs no view;
-    // the painting calls return whether the buffer changed, the view's cue to repaint. They write
-    // mFormatCurrent and the selected run, not mFgColor/mBgColor below (the profile's colours).
+    // Selecting a run of the cursor's line, painting it and restoring the format, for colorizer triggers
+    // and scripts. Needs no view; the painting calls return whether the buffer changed, the view's cue to
+    // repaint the selected lines. They write mFormatCurrent and the selected run, not mFgColor/mBgColor
+    // below (the profile's colours).
     void deselect();
     bool selectSection(int from, int to);
+    void selectCurrentLine();
+    // Selects the numOfMatch-th match of text on the cursor's line and returns where it starts, or
+    // deselects and returns -1 when there is none.
+    int selectString(const QString& text, int numOfMatch);
+    // Whether the selection is still valid, its text (else why not), its start and its length. The text
+    // is read from the cursor's line, not the selection's, at the selection's columns.
+    std::tuple<bool, QString, int, int> selection();
+    // The selected character's format, or the cursor's with no selection; first is 2 when there is none.
+    QPair<quint8, TChar> textAttributes() const;
+    // The character the selection starts on, or nullptr when that is off the buffer. With no selection
+    // that is the buffer's first character: unlike textAttributes(), this does not fall back to the cursor.
+    const TChar* selectionStartChar() const;
     void resetFormat();
     bool setSelectionFgColor(const QColor& newColor);
     bool setSelectionBgColor(const QColor& newColor);
+    bool setSelectionDisplayAttributes(TChar::AttributeFlags attributes, bool enabled);
+    // Makes the selected run a link, taking over the commands' Lua registry references.
+    bool setLink(const QStringList& commands, const QStringList& hints, const QVector<int>& luaReferences);
+
+    // Client output, appended at the end of the buffer and copied to --mirror. The view showing the
+    // model brings the new lines into view (TConsole::showNewLines()).
+    void print(const QString& msg);
+    // timeStampOverride keeps the arrival time for held-back content being replayed.
+    void print(const QString& msg, const QColor& fgColor, const QColor& bgColor, const QString& timeStampOverride = QString());
+    void printSystemMessage(const QString& msg);
+
+    // What printCommand() did to the buffer, which decides what the view repaints.
+    struct CommandEcho
+    {
+        enum class Kind {
+            // Nothing written, or written while triggers run, which is left to the repaint of the
+            // text they run on.
+            None,
+            NewLines,
+            // Appended to the prompt it answers, which now wraps over rows [firstLine, lastLine).
+            PromptLine
+        };
+        Kind kind = Kind::None;
+        int firstLine = 0;
+        int lastLine = 0;
+    };
+    // Echoes a command the player sent. msg is changed to what was written, line feeds included,
+    // which Host::send() then splits and sends.
+    CommandEcho printCommand(QString& msg);
+
+    // For --mirror: copies text to stdout prefixed with the profile and console names. Text may be a
+    // line fragment, so what follows the last line feed is held until one arrives.
+    void mirrorToStdOut(const QString& text);
+    // For a complete line: TBuffer::commitLineData() passes it as sent, before triggers can gag or rewrite it.
+    void mirrorLineToStdOut(const QString& line);
+    // What a write at mUserCursor leaves the view to do: show the lines it
+    // appended, or repaint firstLine..lastLine, which it changed in place.
+    struct WriteResult
+    {
+        bool appended = false;
+        int firstLine = -1;
+        int lastLine = -1;
+    };
+    // echoLink() appends; the inserts go in at mUserCursor, text in
+    // mFormatCurrent. While triggers run over this console's line, a write
+    // there shifts their capture groups to match.
+    void echoLink(const QString& text, QStringList& commands, QStringList& hints, bool useCurrentFormat, const QVector<int>& luaReferences);
+    WriteResult insertLink(const QString& text, QStringList& commands, QStringList& hints, bool useCurrentFormat, const QVector<int>& luaReferences);
+    WriteResult insertText(const QString& text);
+    // A script's echo(), marked as echoed text, with its carriage returns dropped from text. While
+    // triggers run over this console's line it goes onto that line, which is shown once they are
+    // done; otherwise it is appended, and this answers true for the view to show the new lines.
+    bool echo(QString& text);
+    // Puts text in place of the selected run.
+    void replace(const QString& text);
+    // The WCAG contrast ratio, which link colours here and TConsole's scroll bar are both chosen by.
+    static double contrastRatio(const QColor& first, const QColor& second);
 
     // No 'm' prefix on purpose: TConsole::buffer aliases this one by reference and has to keep its name for the rest of the codebase, so the two match.
     TBuffer buffer;
@@ -107,14 +289,85 @@ struct TConsoleModel
     // The format text is written into the buffer with.
     TChar mFormatCurrent;
     bool mIsPromptLine = false;
+    // Set while triggers run on incoming text, so that script writes treat the
+    // matched line as still open - see the branches on it here, in TConsole and
+    // TBuffer::addLink(). Only ever raised on the main console's model.
+    bool mTriggerEngineMode = false;
+    // The colours printCommand() and printSystemMessage() write in. On the main console's model
+    // the command pair is the profile's, which Host keeps it in step with.
+    QColor mCommandFgColor = QColor(213, 195, 0);
+    QColor mCommandBgColor = QColorConstants::Black;
+    QColor mSystemMessageFgColor = QColorConstants::Red;
+    // Transparent so a system message blends into the console's real background
+    // instead of an opaque bar; TTextEdit's selection swap and TBuffer's HTML
+    // export both resolve alpha-0 against getConsoleBgColor() so the text stays
+    // visible when selected and the same colour is kept in copied/exported HTML.
+    QColor mSystemMessageBgColor = QColorConstants::Transparent;
     // Last pressed toolbar button's state for getButtonState(): 1 = up, 2 = down (0 invalid); a plain button
     // resets it to 1.
     int mButtonState = 1;
+    // Whether the view draws each line's timestamp in a gutter to its left. NAWS
+    // leaves the gutter out of the width it reports, so this has to be readable
+    // with no view.
+    bool mShowTimeStamps = false;
 
-    // The OSC 8 hyperlink managers. Concealing and revealing rewrite this
-    // model's buffer, so they run with or without a view; repainting afterwards
-    // is the view's job. Registering a link is not view-free yet - TBuffer
-    // reaches the manager through its own console back-pointer.
+    // The width and indents wrapLine() rewraps a line to. The buffer keeps its
+    // own copy, which wraps text as it arrives, so always set them through
+    // these setters to keep the two the same.
+    void setWrapAt(int pos)
+    {
+        mWrapAt = pos;
+        buffer.setWrapAt(pos);
+    }
+    void setIndentCount(int count)
+    {
+        mIndentCount = count;
+        buffer.setWrapIndent(count);
+    }
+    void setHangingIndentCount(int count)
+    {
+        mHangingIndentCount = count;
+        buffer.setWrapHangingIndent(count);
+    }
+    int mWrapAt = 100;
+    int mIndentCount = 0;
+    int mHangingIndentCount = 0;
+    // The upper pane's columns and rows, kept current by TTextEdit::reportGridSize().
+    QSize mGridSize;
+    // The upper pane's TTextEdit::mCursorY, which it copies out of the buffer as it repaints.
+    int mUpperPaneCursorY = 0;
+    // The line the null view has this console scrolled back to, none while it follows new lines; a real
+    // view keeps that in its upper pane. clear() follows again, as TConsole::clearSplit() does.
+    std::optional<int> mScrolledBackTo;
+    // The upper pane's font, which TTextEdit copies out as it changes, a style sheet's included.
+    QFont mUpperPaneFont;
+    bool mScrollingEnabled = true;
+    // What enableScrollBar()/disableScrollBar() last asked for rather than QWidget::isVisible(): a profile
+    // that is not the front tab has its whole console hidden, which would make every background profile
+    // report its scroll bar as gone.
+    bool mScrollBarEnabled = true;
+    QColor mBorderColor = QColorConstants::Black;
+    void wrapLine(int line) { buffer.wrapLine(line, mWrapAt, mIndentCount, mHangingIndentCount); }
+
+    // The name scripts know this console by. Only the main console, user
+    // windows, miniconsoles and buffers can be addressed by scripts, so only
+    // they tell scripts when their line indexes shift.
+    QString mConsoleName;
+    // Names the console's --mirror records, with mConsoleName.
+    QString mProfileName;
+    // --mirror text not yet ended by a line feed.
+    QString mMirrorPendingLine;
+    bool mScriptAddressable = false;
+    // The line on which the current search result has been found, or the next
+    // one is to start (currently only for the main console). An index into the
+    // buffer, so it moves with the buffer's lines.
+    int mCurrentSearchResult = 0;
+
+    TConsoleModelNotifier mNotifier;
+
+    // The OSC 8 hyperlink managers. Registering, concealing and revealing a
+    // link are all model work, so they run with or without a view; repainting
+    // afterwards is the view's job.
     //
     // Declared after the buffer so that the manager which writes into it is
     // destroyed first - keep it that way if a field is ever added between them.
@@ -131,6 +384,7 @@ struct TConsoleModel
     QString mLogFileName;
     QTextStream mLogStream;
     bool mLogToLogFile = false;
+    bool mLogFlushPending = false;
     // Path and reason of a failed start, for a caller with no console to read the report off.
     QString mLogStartFailure;
 };

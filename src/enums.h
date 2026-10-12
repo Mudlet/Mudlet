@@ -53,6 +53,14 @@ public:
     enum BufferSearchOption { BufferSearchOptionNone = 0x0, BufferSearchOptionCaseSensitive = 0x1 };
     Q_DECLARE_FLAGS(BufferSearchOptions, BufferSearchOption)
 
+    enum CommandLineTypeFlag {
+        UnknownCommandLine = 0x0, // Should not be encountered but left as a trap value
+        MainCommandLine = 0x1,    // One per profile
+        SubCommandLine = 0x2,     // Overlaid on top of TMainConsole or TConsole instance, should be uniquely named in pool of SubCommandLine/SubConsole/UserWindow/Buffers AND Labels
+        ConsoleCommandLine = 0x4, // Integrated in TConsoles other than those derived into a TMainConsole
+    };
+    Q_DECLARE_FLAGS(CommandLineType, CommandLineTypeFlag)
+
     enum class PackageModuleType {
         Package = 0,         // Regular package installation
         ModuleFromUI = 1,    // First-time module installation via UI
@@ -148,5 +156,6 @@ public:
 Q_DECLARE_OPERATORS_FOR_FLAGS(enums::controlsVisibility)
 Q_DECLARE_OPERATORS_FOR_FLAGS(enums::EditorSearchOptions)
 Q_DECLARE_OPERATORS_FOR_FLAGS(enums::BufferSearchOptions)
+Q_DECLARE_OPERATORS_FOR_FLAGS(enums::CommandLineType)
 
 #endif //ENUMS_H

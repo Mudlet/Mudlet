@@ -25,6 +25,7 @@
 
 #include "mudlet.h"
 #include "MudletApp.h"
+#include "TMainConsole.h"
 
 #include <QFileDialog>
 #include <QMessageBox>
@@ -49,8 +50,14 @@ dlgModuleManager::dlgModuleManager(QWidget* parent, Host* pHost)
     connect(helpButton, &QAbstractButton::clicked, this, &dlgModuleManager::slot_helpModule);
     connect(moduleTable, &QTableWidget::itemClicked, this, &dlgModuleManager::slot_moduleClicked);
     connect(moduleTable, &QTableWidget::itemChanged, this, &dlgModuleManager::slot_moduleChanged);
-    connect(mpHost->mpConsole, &QWidget::destroyed, this, &dlgModuleManager::close);
+    connect(mpHost->mainConsoleView(), &QWidget::destroyed, this, &dlgModuleManager::close);
     connect(mpHost, &Host::signal_packageListChanged, this, &dlgModuleManager::layoutModules);
+    connect(mpHost, &Host::signal_moduleListChangedByScript, this, [this]() {
+        if (moduleTable->isVisible()) {
+            layoutModules();
+        }
+    });
+    connect(mpHost, &Host::signal_moduleSyncChangedByScript, this, &dlgModuleManager::showModuleSync);
     setWindowTitle(tr("Module Manager - %1").arg(mpHost->getName()));
     setAttribute(Qt::WA_DeleteOnClose);
 }
@@ -123,6 +130,21 @@ void dlgModuleManager::layoutModules()
         }
     }
     moduleTable->resizeColumnsToContents();
+}
+
+void dlgModuleManager::showModuleSync(const QString& module, const bool sync)
+{
+    for (int row = 0; row < moduleTable->rowCount(); ++row) {
+        if (auto* nameItem = moduleTable->item(row, 0); !nameItem || nameItem->text() != module) {
+            continue;
+        }
+        if (auto* checkItem = moduleTable->item(row, 2)) {
+            // The host already has the new flag; letting itemChanged through would copy the row's stale priority back
+            const QSignalBlocker blocker(moduleTable);
+            checkItem->setCheckState(sync ? Qt::Checked : Qt::Unchecked);
+        }
+        return;
+    }
 }
 
 void dlgModuleManager::slot_installModule()

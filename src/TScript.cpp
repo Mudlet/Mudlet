@@ -51,13 +51,14 @@ TScript::TScript(const QString& name, Host* pHost)
 
 TScript::~TScript()
 {
-    if (!mpHost) {
-        return;
+    if (mpHost) {
+        for (const auto& handler : std::as_const(mEventHandlerList)) {
+            mpHost->unregisterEventHandler(handler, this);
+        }
+        mpHost->getScriptUnit()->unregisterScript(this);
     }
-    for (const auto& handler : std::as_const(mEventHandlerList)) {
-        mpHost->unregisterEventHandler(handler, this);
-    }
-    mpHost->getScriptUnit()->unregisterScript(this);
+
+    deleteChildren();
 }
 
 
@@ -149,8 +150,18 @@ bool TScript::compileScript(bool saveLoadingError)
         pUnit->endProcessing();
     });
 
+    const QString chunkName = qsl("Script: %1").arg(getName());
+    const TScript* pRoot = this;
+    while (pRoot->getParent()) {
+        pRoot = pRoot->getParent();
+    }
+    // Restored rather than cleared: the body can install a package, and that
+    // package's scripts run their own bodies inside this one
+    const Host::RunningScript outer = std::exchange(mpHost->mRunningScript, {chunkName, pRoot->mPackageName});
     QString error;
-    if (mpHost->mLuaInterpreter.compile(mScript, error, QString("Script: ") + getName())) {
+    const bool compiled = mpHost->mLuaInterpreter.compile(mScript, error, chunkName);
+    mpHost->mRunningScript = outer;
+    if (compiled) {
         mNeedsToBeCompiled = false;
         mOK_code = true;
         if (mpHost->mResetProfile) {

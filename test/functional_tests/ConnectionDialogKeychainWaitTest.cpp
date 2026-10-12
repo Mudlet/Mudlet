@@ -82,7 +82,7 @@ private slots:
                 []() {
                     return mudlet::self()->mpConnectionDialog && mudlet::self()->mpConnectionDialog->isVisible();
                 },
-                5000));
+                5s));
     }
 
     void cleanupTestCase()
@@ -108,8 +108,9 @@ private slots:
     }
 
     // A read that timed out can still be answered afterwards, and by then the load it was holding
-    // up has run without it: that second answer may fill an empty password field and nothing else.
-    void test_aLateKeychainAnswerTouchesNothingButAnEmptyPasswordField()
+    // up has run without it: that second answer may fill the password field and nothing else, and
+    // not even that over a password the user typed.
+    void test_aLateKeychainAnswerTouchesNothingButAnUntypedPasswordField()
     {
         // A dialog of its own: completing the queued load at the end closes whichever dialog it
         // runs on, and the shared one is what the case below needs. Never shown, so no keychain
@@ -128,6 +129,8 @@ private slots:
         {
             const QSignalBlocker blocker(dlg->character_password_entry);
             dlg->character_password_entry->setText(qsl("typed-while-waiting"));
+            // what typing it, rather than a store's answer, leaves behind
+            dlg->character_password_entry->setModified(true);
         }
 
         dlg->mKeychainOperationProfile = mProfileName;
@@ -171,6 +174,74 @@ private slots:
         dlg->passwordArrivedLate(mProfileName, true, qsl("from-the-keychain"), QString());
 
         QCOMPARE(dlg->character_password_entry->text(), qsl("from-the-keychain"));
+        dlg->deleteLater();
+    }
+
+    // At the deadline the lookup answers with the encrypted file's copy when it has one, and a
+    // keychain write leaves that copy as it was: the keychain's late answer is the newer password.
+    void test_aLateKeychainAnswerReplacesTheFilesCopyInTheField()
+    {
+        auto* dlg = new dlgConnectionProfiles(mudlet::self());
+        {
+            const QSignalBlocker blocker(dlg->listWidget_profiles);
+            auto* profileItem = new QListWidgetItem(mProfileName, dlg->listWidget_profiles);
+            profileItem->setData(dlgConnectionProfiles::csmNameRole, mProfileName);
+            dlg->listWidget_profiles->setCurrentItem(profileItem);
+        }
+
+        dlg->mKeychainOperationProfile = mProfileName;
+        dlg->passwordRetrieved(mProfileName, true, qsl("older-file-secret"), QString());
+        QCOMPARE(dlg->character_password_entry->text(), qsl("older-file-secret"));
+
+        dlg->passwordArrivedLate(mProfileName, true, qsl("newer-keychain-secret"), QString());
+
+        QCOMPARE(dlg->character_password_entry->text(), qsl("newer-keychain-secret"));
+        dlg->deleteLater();
+    }
+
+    // Where a portable profile's password actually lives. Since #3121 (2019) the
+    // dialog has written it to the profile's own "password" data file, and
+    // Host::loadPassword still reads it from there - but #7956 replaced the
+    // dialog's read of that file with a read of QSettings, the pre-2019 location,
+    // in both the portable branch and the keychain-came-back-empty fallback. The
+    // password still worked at connect time, so the only symptom was a field that
+    // was always blank for the people who keep passwords out of the keychain.
+    void test_aPortablePasswordInTheProfileFileReachesTheField()
+    {
+        const QString profile = qsl("ConnDialogPortable-Test");
+        QVERIFY(QDir().mkpath(MudletApp::getMudletPath(enums::profileHomePath, profile)));
+        QVERIFY2(MudletApp::writeProfileData(profile, qsl("password"), qsl("portable-secret")).first, "could not seed the profile's password file");
+
+        auto* dlg = new dlgConnectionProfiles(mudlet::self());
+        {
+            const QSignalBlocker blocker(dlg->listWidget_profiles);
+            auto* profileItem = new QListWidgetItem(profile, dlg->listWidget_profiles);
+            profileItem->setData(dlgConnectionProfiles::csmNameRole, profile);
+            dlg->listWidget_profiles->setCurrentItem(profileItem);
+        }
+        QVERIFY2(dlg->character_password_entry->text().isEmpty(), "a fresh dialog's password field is not empty, so this test cannot cover the load");
+
+        dlg->loadPasswordFromSettings(profile);
+
+        QCOMPARE(dlg->character_password_entry->text(), qsl("portable-secret"));
+        dlg->deleteLater();
+    }
+
+    // The pre-2019 location is still a real one - a profile last written by a Mudlet
+    // old enough to keep passwords in mudlet.ini has nothing in its profile
+    // directory - so it stays as the fallback rather than being replaced.
+    void test_aPasswordLeftInTheOldSettingsIsStillFound()
+    {
+        const QString profile = qsl("ConnDialogSettingsOnly-Test");
+        auto& settings = *MudletApp::getQSettings();
+        settings.beginGroup(qsl("profiles/%1").arg(profile));
+        settings.setValue(qsl("password"), qsl("from-the-ini"));
+        settings.endGroup();
+
+        auto* dlg = new dlgConnectionProfiles(mudlet::self());
+        dlg->loadPasswordFromSettings(profile);
+
+        QCOMPARE(dlg->character_password_entry->text(), qsl("from-the-ini"));
         dlg->deleteLater();
     }
 
