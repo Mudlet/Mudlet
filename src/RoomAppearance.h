@@ -35,7 +35,7 @@ class TRoom;
 // two draw a room from the same colours, symbol and rings.
 namespace RoomAppearance {
 
-// What a room shows, worked out once whichever view or style draws it
+// What a room shows, worked out once for whichever 3D map style draws it
 struct Look
 {
     QColor color;
