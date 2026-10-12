@@ -45,7 +45,7 @@ class SplitCharacterFormatTest : public QObject
     TelnetServerStub* mpServer = nullptr;
     Host* mpHost = nullptr;
 
-    TBuffer& buffer() const { return mpHost->mpConsole->buffer; }
+    TBuffer& buffer() const { return mpHost->mainConsoleView()->buffer; }
 
     void feed(const QByteArray& bytes, const bool fromServer = true)
     {
@@ -91,7 +91,7 @@ private slots:
         QVERIFY(mpServer->isListening());
         mpHost = TestProfile::create(qsl("Test-SplitCharacterFormat"), qsl("localhost"), QString::number(mpServer->serverPort()));
         QVERIFY(mpHost);
-        QVERIFY(mpHost->mpConsole);
+        QVERIFY(mpHost->mainConsoleView());
     }
 
     void cleanupTestCase()
@@ -344,7 +344,7 @@ private slots:
         styling.hoverStyle.isStrikeOut = true;
         styling.hoverStyle.isUnderlined = true;
         styling.hoverStyle.underlineStyle = Mudlet::HyperlinkStyling::UnderlineDotted;
-        mpHost->mpConsole->getLinkStore().setStyling(link, styling);
+        mpHost->mainConsoleView()->getLinkStore().setStyling(link, styling);
         buffer().setLinkState(link, Mudlet::HyperlinkStyling::StateHover);
         buffer().updateLinkCharacters(link);
         const TChar styled = buffer().buffer.at(line).front();
@@ -443,7 +443,7 @@ private slots:
 
     void paintsEachHalfInItsOwnColours()
     {
-        auto* pane = mpHost->mpConsole->mUpperPane;
+        auto* pane = mpHost->mainConsoleView()->mUpperPane;
         const TChar& character = splitCharacterOnNewLine();
         TTextEdit::LineLayout layout;
         QCOMPARE(pane->layoutGrapheme(layout, QPoint(0, 0), qsl("中"), 0, -1, character), 2);
