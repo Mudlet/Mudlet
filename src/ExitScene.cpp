@@ -292,8 +292,9 @@ void Builder::door(const TRoom& room, const QString& key, const QVector3D& from,
     // Worked out flat along the line, as the 2D map does, then stood on it
     const QVector3D along = line / length;
     if (mOptions.glyphs) {
-        // In the cell next to the room, as a roguelike puts a door in a room's wall
-        glyph(from + along * qMin(0.5f, length), along, QLatin1Char('+'), ExitAppearance::doorColor(status), level);
+        // In the line's first cell from the room, as glyphRun() steps along it, as a roguelike puts a door in a room's wall
+        const qint64 cells = qRound64(2.0 * qMax(std::abs(line.x()), std::abs(line.y())));
+        glyph(cells > 0 ? from + line / static_cast<float>(cells) : to, along, QLatin1Char('+'), ExitAppearance::doorColor(status), level);
         return;
     }
     const QVector3D side = sideways(along);
