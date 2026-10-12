@@ -36,7 +36,10 @@ struct MapStyle
         // Each room in its environment's color, as on the 2D map
         Environment,
         // A drafting sheet: rooms filled with the style's background, only faintly tinted by their environment's color, and drawn in its ink
-        Ink
+        Ink,
+        // A text screen: each room's character in its environment's color, lifted where that would vanish into the
+        // dark background, as a terminal shows its black as dark gray
+        Terminal
     };
 
     enum class Shape {
@@ -62,7 +65,10 @@ struct MapStyle
 
     enum class Glyphs {
         // The room's own symbol, drawn on its top
-        RoomSymbols
+        RoomSymbols,
+        // No blocks: every room is a character on a grid of character cells half rooms' spacing across, as
+        // RoomAppearance::terminalGlyph() picks, and its exits are rows of line characters in the cells between
+        Terminal
     };
 
     enum class PostEffect { NoPostEffects = 0x0 };
@@ -94,6 +100,8 @@ struct MapStyle
     Doors doors = Doors::Strokes;
     // A faint plate under each level's rooms, which tints the background behind rooms filled with it
     bool floorPlates = true;
+    // A line along the view's foot naming the area and the player's room, as a terminal's status line
+    bool statusLine = false;
 
     QString displayName() const;
     QColor roomColor(const QColor& environmentColor) const;

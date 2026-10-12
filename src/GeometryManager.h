@@ -166,12 +166,20 @@ public:
 
     // Appends a square lying flat on the map, centered on center, its texture's top turned toward the top of the
     // screen so that it is never upside down or mirrored; cameraRight and cameraUp as for a billboard
-    static void appendGroundQuad(GeometryData& batch, const QVector3D& center, float size, const QVector3D& cameraRight, const QVector3D& cameraUp, const QVector4D& color);
+    // textureRect is the part of the texture drawn, in texture coordinates: its y() is the lower edge
+    static void appendGroundQuad(GeometryData& batch,
+                                 const QVector3D& center,
+                                 float size,
+                                 const QVector3D& cameraRight,
+                                 const QVector3D& cameraUp,
+                                 const QVector4D& color,
+                                 const QRectF& textureRect = QRectF(0.0, 0.0, 1.0, 1.0));
     // The unit vectors on the map's plane that appendGroundQuad() turns a texture's right and top toward
     static std::pair<QVector3D, QVector3D> groundAxes(const QVector3D& cameraRight, const QVector3D& cameraUp);
     // Appends a textured parallelogram: the texture's bottom-left at origin, its bottom edge along across
-    // and its left edge along upward
-    static void appendQuad(GeometryData& batch, const QVector3D& origin, const QVector3D& across, const QVector3D& upward, const QVector4D& color);
+    // and its left edge along upward; textureRect as for appendGroundQuad()
+    static void
+    appendQuad(GeometryData& batch, const QVector3D& origin, const QVector3D& across, const QVector3D& upward, const QVector4D& color, const QRectF& textureRect = QRectF(0.0, 0.0, 1.0, 1.0));
     // Appends a map label lying flat with its top-left corner at topLeft; turned, it is rotated half
     // around in place, so that it reads upright while the top of the screen faces south
     static void appendLabelQuad(GeometryData& batch, const QVector3D& topLeft, float width, float height, bool turned, const QVector4D& color);

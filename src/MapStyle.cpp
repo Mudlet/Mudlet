@@ -50,6 +50,20 @@ QList<MapStyle> registeredStyles()
     blueprint.floorPlates = false;
     styles.append(blueprint);
 
+    MapStyle terminal;
+    terminal.id = qsl("terminal");
+    terminal.palette = MapStyle::Palette::Terminal;
+    terminal.lit = false;
+    terminal.background = QColor(Qt::black);
+    // The ANSI palette's white, which a terminal draws its plain text in, so the rooms' colors stand out from the lines
+    terminal.ink = QColor(170, 170, 170);
+    terminal.labelFontFamily = qsl("Bitstream Vera Sans Mono");
+    terminal.exitWidthFactor = 0.5f;
+    terminal.floorPlates = false;
+    terminal.glyphs = MapStyle::Glyphs::Terminal;
+    terminal.statusLine = true;
+    styles.append(terminal);
+
     return styles;
 }
 } // namespace
@@ -63,6 +77,10 @@ QString MapStyle::displayName() const
     if (id == qsl("blueprint")) {
         //: Name of the 3D map style that draws rooms as thin white outlines on a deep blue drafting sheet, chosen in the Mapper preferences
         return QCoreApplication::translate("MapStyle", "Blueprint");
+    }
+    if (id == qsl("terminal")) {
+        //: Name of the 3D map style that draws rooms and exits as colored text characters on a black screen, as roguelike games do, chosen in the Mapper preferences
+        return QCoreApplication::translate("MapStyle", "Terminal");
     }
     return id;
 }
@@ -81,6 +99,12 @@ QColor MapStyle::roomColor(const QColor& environmentColor) const
                                 paper.blueF() + (environmentColor.blueF() - paper.blueF()) * tint,
                                 environmentColor.alphaF());
     }
+    case Palette::Terminal:
+        // No darker than dim text on a terminal, so that a room in black or navy does not vanish into the screen
+        if (environmentColor.lightness() < 96) {
+            return QColor::fromHsl(environmentColor.hslHue(), environmentColor.hslSaturation(), 96, environmentColor.alpha());
+        }
+        return environmentColor;
     }
     return environmentColor;
 }
@@ -90,6 +114,10 @@ QColor MapStyle::symbolColor(const QColor& roomSymbolColor, const QColor& drawnR
     // The automatic choice is made against the environment's color, which the ink palette barely fills a room with
     if (palette == Palette::Ink && ink.isValid() && !roomSymbolColor.isValid()) {
         return ink;
+    }
+    // A character is drawn in the room's color rather than on it
+    if (palette == Palette::Terminal) {
+        return roomSymbolColor.isValid() ? roomSymbolColor : drawnRoomColor;
     }
     return RoomAppearance::symbolColor(roomSymbolColor, drawnRoomColor);
 }
@@ -101,6 +129,9 @@ QColor MapStyle::exitColor(const QColor& profileExitColor) const
 
 QColor MapStyle::roomIdColor(const QColor& drawnRoomColor) const
 {
+    if (palette == Palette::Terminal) {
+        return drawnRoomColor;
+    }
     return palette == Palette::Ink && ink.isValid() ? ink : ExitAppearance::contrastColor(drawnRoomColor);
 }
 
