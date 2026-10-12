@@ -248,6 +248,38 @@ RenderInstancedCubesCommand::RenderInstancedCubesCommand(const QVector<CubeInsta
 {
 }
 
+RenderInstancedCubesCommand::RenderInstancedCubesCommand(std::shared_ptr<RetainedInstances> retained,
+                                                         const QList<InstanceRun>& runs,
+                                                         const QVector<CubeInstanceData>& extras,
+                                                         const QMatrix4x4& projectionMatrix,
+                                                         const QMatrix4x4& viewMatrix,
+                                                         const QMatrix4x4& modelMatrix,
+                                                         const Shading shading,
+                                                         const GeometryManager::InstanceShape shape)
+: mGathered(false)
+, mRetained(std::move(retained))
+, mRuns(runs)
+, mExtras(extras)
+, mProjectionMatrix(projectionMatrix)
+, mViewMatrix(viewMatrix)
+, mModelMatrix(modelMatrix)
+, mShading(shading)
+, mShape(shape)
+{
+}
+
+const QVector<CubeInstanceData>& RenderInstancedCubesCommand::instances() const
+{
+    if (!mGathered) {
+        mGathered = true;
+        for (const InstanceRun& run : mRuns) {
+            mInstances.append(mRetained->instances.mid(run.first, run.count));
+        }
+        mInstances.append(mExtras);
+    }
+    return mInstances;
+}
+
 void RenderInstancedCubesCommand::execute(QOpenGLFunctions* gl,
                                           QOpenGLShaderProgram* shader,
                                           GeometryManager* geometryManager,
@@ -262,7 +294,7 @@ void RenderInstancedCubesCommand::execute(QOpenGLFunctions* gl,
     Q_UNUSED(gl)
     Q_UNUSED(texCoordBuffer)
 
-    if (mInstances.isEmpty()) {
+    if (mRetained ? mRuns.isEmpty() && mExtras.isEmpty() : mInstances.isEmpty()) {
         return;
     }
 
@@ -282,7 +314,10 @@ void RenderInstancedCubesCommand::execute(QOpenGLFunctions* gl,
         shader->setUniformValue("uDisableLighting", true);
     }
 
-    geometryManager->renderInstancedCubes(mInstances, vao, vertexBuffer, colorBuffer, normalBuffer, indexBuffer, resourceManager, GL_TRIANGLES, mShape);
+    if (mRetained) {
+        geometryManager->renderInstancedRuns(*mRetained, mRuns, vao, vertexBuffer, colorBuffer, normalBuffer, indexBuffer, resourceManager, GL_TRIANGLES, mShape);
+    }
+    geometryManager->renderInstancedCubes(mRetained ? mExtras : mInstances, vao, vertexBuffer, colorBuffer, normalBuffer, indexBuffer, resourceManager, GL_TRIANGLES, mShape);
 
     if (unlit) {
         shader->setUniformValue("uDisableLighting", false);
