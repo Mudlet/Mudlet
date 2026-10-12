@@ -12,6 +12,15 @@ import zlib
 
 TIMESTAMP = (2026, 9, 25, 0, 0, 0)
 
+# unzip() reads 1 MiB at a time; a pattern that never lines up with a chunk
+# shows a chunk lost or repeated, and deflates to almost nothing
+LARGE_SIZE = 1024 * 1024 * 2 + 3
+LARGE_DATA = (bytes(i * 7 % 251 for i in range(251)) * (LARGE_SIZE // 251 + 1))[:LARGE_SIZE]
+
+# a 255-byte name, the longest most file systems allow, leaves no room for a
+# temporary file's suffix
+LONG_NAME = "n" * 251 + ".txt"
+
 FIXTURES = {
     # names that resolve outside the destination, next to ones that stay inside
     "unzip-escape.zip": [
@@ -37,6 +46,15 @@ FIXTURES = {
     "unzip-collide.zip": [
         ("data.bin.unzip-partial", b"an entry of its own\n"),
         ("data.bin", b"data\n"),
+        ("data.txt.unzip-partial/", None),
+        ("data.txt", b"text\n"),
+    ],
+    # an entry larger than one read
+    "unzip-large.zip": [
+        ("large.bin", LARGE_DATA),
+    ],
+    "unzip-long-name.zip": [
+        (LONG_NAME, b"long\n"),
     ],
 }
 

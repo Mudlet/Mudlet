@@ -44,6 +44,18 @@ function unzip( what, dest )
     return nil, message
   end
 
+  -- Checked once here, or every entry would fail without saying why. Windows'
+  -- stat refuses a trailing separator, except on a bare root such as "/" or "C:\".
+  local folder = dest:match( "^(.-)[/\\]*$" )
+  if folder == "" or folder:find( "^%a:$" ) then
+    folder = dest
+  end
+  if lfs.attributes( folder, "mode" ) ~= "directory" then
+    local message = "unzip: the destination folder " .. dest .. " does not exist"
+    cecho( "<red>ERROR: " .. message .. "\n" )
+    return nil, message
+  end
+
   local z, err = zip.open( what )
 
   if not z then
@@ -168,16 +180,21 @@ function unzip( what, dest )
     return madeDirs[path]
   end
 
-  -- A name beside path for a temporary file. One left by an interrupted run is
-  -- cleared, but never one this archive has just extracted.
-  local extracted = {}
+  -- A name beside path for a temporary file that is not in use. Nothing already
+  -- there is cleared: it may be an entry, or a file an earlier failed run kept.
   local function temporaryName( path, suffix )
-    local candidate, attempt = path .. suffix, 1
-    while extracted[candidate] do
-      attempt = attempt + 1
-      candidate = path .. suffix .. attempt
+    local folder, base = path:match( "^(.-)([^/\\]*)$" )
+    -- Most file systems cap a name at 255 bytes, which the suffix and a counter
+    -- could push past; a cut never leaves part of a UTF-8 character behind.
+    if #base + #suffix + 3 > 255 then
+      base = base:sub( 1, 255 - #suffix - 3 ):gsub( "[\192-\255][\128-\191]*$", "" )
     end
-    os.remove( candidate )
+    local stem = folder .. base .. suffix
+    local candidate, attempt = stem, 1
+    while lfs.symlinkattributes( candidate, "mode" ) do
+      attempt = attempt + 1
+      candidate = stem .. attempt
+    end
     return candidate
   end
 
@@ -219,7 +236,6 @@ function unzip( what, dest )
       os.remove( partial )
       return nil, renameErr
     end
-    extracted[path] = true
     return true
   end
 

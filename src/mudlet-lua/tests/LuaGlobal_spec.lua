@@ -262,14 +262,52 @@ describe("Tests LuaGlobal.lua functions", function()
       assert.equals(2, echoedCount("destination folder"))
     end)
 
-    it("Should clear a temporary file an interrupted extraction left behind", function()
+    it("Should report a destination that does not exist once", function()
+      local missing = root .. "/dest/missing/"
+      local result, err = unzip(archiveDirectory .. "/unzip-empty.zip", missing)
+      assert.is_nil(result)
+      assert.is_truthy(err:find(missing, 1, true), err)
+      assert.is_nil(err:find("\n", 1, true), err)
+      assert.equals(1, #echoed)
+      assert.is_nil(lfs.attributes(missing))
+    end)
+
+    it("Should leave alone a file already named like its temporary file", function()
       local leftover = io.open(dest .. "config.lua.unzip-partial", "wb")
       leftover:write("half written\n")
       leftover:close()
       local result = unzip(archiveDirectory .. "/unzip-empty.zip", dest)
-      assert.is_nil(lfs.attributes(dest .. "config.lua.unzip-partial"))
+      assert.equals("half written\n", contents(dest .. "config.lua.unzip-partial"))
       assert.equals("x\n", contents(dest .. "config.lua"))
       assert.is_true(result, table.concat(echoed))
+    end)
+
+    it("Should extract an entry larger than one read whole", function()
+      local size = 1024 * 1024 * 2 + 3
+      local unit = {}
+      for i = 0, 250 do
+        unit[#unit + 1] = string.char(i * 7 % 251)
+      end
+      local expected = string.rep(table.concat(unit), math.floor(size / 251) + 1):sub(1, size)
+      local result = unzip(archiveDirectory .. "/unzip-large.zip", dest)
+      local data = contents(dest .. "large.bin")
+      assert.equals(size, data and #data)
+      assert.is_true(data == expected, "large.bin differs from the archived entry")
+      assert.is_true(result, table.concat(echoed))
+    end)
+
+    it("Should extract an entry whose name is as long as a file system allows", function()
+      if package.config:sub(1, 1) == "\\" then
+        pending("the spec's folder plus a 255-byte name passes Windows' path limit")
+        return
+      end
+      local name = string.rep("n", 251) .. ".txt"
+      local result = unzip(archiveDirectory .. "/unzip-long-name.zip", dest)
+      assert.equals("long\n", contents(dest .. name))
+      assert.is_true(result, table.concat(echoed))
+      -- and again, now that there is a file to replace
+      assert.is_true(unzip(archiveDirectory .. "/unzip-long-name.zip", dest), table.concat(echoed))
+      assert.equals("long\n", contents(dest .. name))
     end)
 
     it("Should replace files from an earlier extraction", function()
@@ -360,12 +398,32 @@ describe("Tests LuaGlobal.lua functions", function()
         assert.is_nil(result)
         assert.is_string(err)
       end)
+
+      it("Should not remove the file an earlier run kept when it replaces again", function()
+        blockReplacement = true
+        blockRestore = true
+        unzip(archiveDirectory .. "/unzip-empty.zip", dest)
+        blockReplacement = false
+        blockRestore = false
+        local newer = io.open(dest .. "config.lua", "wb")
+        newer:write("newer\n")
+        newer:close()
+        local ok, result = pcall(unzip, archiveDirectory .. "/unzip-empty.zip", dest)
+        os.rename = realRename
+        assert.is_true(ok, tostring(result))
+        assert.equals("original\n", contents(dest .. "config.lua.unzip-old"))
+        assert.equals("x\n", contents(dest .. "config.lua"))
+        assert.same({ "config.lua", "config.lua.unzip-old", "resources", "unzip-spec-empty-top.txt" }, names())
+        assert.is_true(result, table.concat(echoed))
+      end)
     end)
 
     it("Should not let the temporary file of one entry replace another entry", function()
       local result = unzip(archiveDirectory .. "/unzip-collide.zip", dest)
       assert.equals("an entry of its own\n", contents(dest .. "data.bin.unzip-partial"))
       assert.equals("data\n", contents(dest .. "data.bin"))
+      assert.equals("directory", lfs.attributes(dest .. "data.txt.unzip-partial", "mode"))
+      assert.equals("text\n", contents(dest .. "data.txt"))
       assert.is_true(result, table.concat(echoed))
     end)
 
