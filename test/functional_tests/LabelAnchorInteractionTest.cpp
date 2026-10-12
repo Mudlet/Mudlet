@@ -65,7 +65,7 @@ private:
     QTemporaryDir mConfigDir;
     QByteArray mSavedXdgConfigHome;
 
-    TLabel* label() const { return mpHost->mpConsole->labelWidget(mLabelName); }
+    TLabel* label() const { return mpHost->mainConsoleView()->labelWidget(mLabelName); }
 
     // Read back through the return value rather than getLuaString(), which reports
     // an absolute stack slot and so only answers correctly for the first call in a
@@ -166,8 +166,8 @@ private slots:
 
     void cleanupTestCase()
     {
-        if (mpHost && mpHost->mpConsole) {
-            mpHost->mpConsole->deleteLabel(mLabelName);
+        if (mpHost && mpHost->mainConsoleView()) {
+            mpHost->deleteLabel(mLabelName);
         }
         delete mpServer;
         mpServer = nullptr;
@@ -339,10 +339,10 @@ private slots:
         const QString name = qsl("rightClickForwardLabel");
         auto [created, createMessage] = mpHost->createLabel(qsl("main"), name, 50, 100, 200, 50, true, false);
         QVERIFY2(created, qPrintable(createMessage));
-        TLabel* pLabel = mpHost->mpConsole->labelWidget(name);
+        TLabel* pLabel = mpHost->mainConsoleView()->labelWidget(name);
         QVERIFY(pLabel);
         pLabel->show();
-        TTextEdit* pPane = mpHost->mpConsole->mUpperPane;
+        TTextEdit* pPane = mpHost->mainConsoleView()->mUpperPane;
         QVERIFY2(pPane->rect().contains(pPane->mapFromGlobal(pLabel->mapToGlobal(pLabel->rect().center()))), "the label is not over the console's text, so there is no menu to reach");
         QVERIFY2(!QApplication::activePopupWidget(), "a popup was already open before this case right-clicked");
 
@@ -351,7 +351,7 @@ private slots:
         QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("setLabelClickCallback('%1', function() end)").arg(name)));
         const auto [unexpectedParent, unexpectedMenu] = rightClickLabel(pLabel);
         Q_UNUSED(unexpectedMenu)
-        mpHost->mpConsole->deleteLabel(name);
+        mpHost->mainConsoleView()->deleteLabel(name);
 
         QVERIFY2(menuParent == pPane && consoleMenu, "a right-click on a label with no callbacks did not open the console's context menu");
         QVERIFY2(!unexpectedParent, "the console's menu opened over a label whose own click callback answers right-clicks");
@@ -364,17 +364,17 @@ private slots:
         const QString mini = qsl("rightClickUnderLabelMini");
         const QString name = qsl("rightClickOverMiniLabel");
         QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("createMiniConsole('%1', 40, 90, 300, 120)").arg(mini)));
-        TConsole* pMini = mpHost->mpConsole->subConsoleWidget(mini);
+        TConsole* pMini = mpHost->mainConsoleView()->subConsoleWidget(mini);
         QVERIFY(pMini);
         auto [created, createMessage] = mpHost->createLabel(qsl("main"), name, 50, 100, 200, 50, true, false);
         QVERIFY2(created, qPrintable(createMessage));
-        TLabel* pLabel = mpHost->mpConsole->labelWidget(name);
+        TLabel* pLabel = mpHost->mainConsoleView()->labelWidget(name);
         QVERIFY(pLabel);
         pLabel->show();
         pLabel->raise();
 
         const auto [menuParent, consoleMenu] = rightClickLabel(pLabel);
-        mpHost->mpConsole->deleteLabel(name);
+        mpHost->mainConsoleView()->deleteLabel(name);
         QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("hideWindow('%1')").arg(mini)));
 
         QVERIFY2(menuParent == pMini->mUpperPane && consoleMenu, "a right-click on a label over a miniconsole did not open that miniconsole's menu");
@@ -390,18 +390,18 @@ private slots:
         QVERIFY2(lowerCreated, qPrintable(lowerMessage));
         auto [upperCreated, upperMessage] = mpHost->createLabel(qsl("main"), upper, 50, 100, 200, 50, true, false);
         QVERIFY2(upperCreated, qPrintable(upperMessage));
-        TLabel* pLower = mpHost->mpConsole->labelWidget(lower);
-        TLabel* pUpper = mpHost->mpConsole->labelWidget(upper);
+        TLabel* pLower = mpHost->mainConsoleView()->labelWidget(lower);
+        TLabel* pUpper = mpHost->mainConsoleView()->labelWidget(upper);
         QVERIFY(pLower && pUpper);
         pLower->show();
         pUpper->show();
         pUpper->raise();
-        TTextEdit* pPane = mpHost->mpConsole->mUpperPane;
+        TTextEdit* pPane = mpHost->mainConsoleView()->mUpperPane;
         QVERIFY2(pLower->geometry().contains(pUpper->geometry().center()), "the labels do not overlap, so the lower one is never what the upper one covers");
 
         const auto [menuParent, consoleMenu] = rightClickLabel(pUpper);
-        mpHost->mpConsole->deleteLabel(upper);
-        mpHost->mpConsole->deleteLabel(lower);
+        mpHost->mainConsoleView()->deleteLabel(upper);
+        mpHost->mainConsoleView()->deleteLabel(lower);
 
         QVERIFY2(menuParent == pPane && consoleMenu, "a right-click on a label stacked over another without callbacks did not open the console's context menu");
     }
@@ -416,15 +416,15 @@ private slots:
         QTest::qWait(100ms);
         auto [created, createMessage] = mpHost->createLabel(qsl("main"), name, 50, 100, 200, 50, true, false);
         QVERIFY2(created, qPrintable(createMessage));
-        TLabel* pLabel = mpHost->mpConsole->labelWidget(name);
+        TLabel* pLabel = mpHost->mainConsoleView()->labelWidget(name);
         QVERIFY(pLabel);
         pLabel->show();
 
         const auto [menuParent, consoleMenu] = rightClickLabel(pLabel);
-        mpHost->mpConsole->deleteLabel(name);
-        mpHost->mpConsole->buffer.clear();
+        mpHost->mainConsoleView()->deleteLabel(name);
+        mpHost->mainConsoleView()->buffer.clear();
 
-        QVERIFY2(menuParent == mpHost->mpConsole->mUpperPane, "a right-click on a label over a link opened no menu from the console");
+        QVERIFY2(menuParent == mpHost->mainConsoleView()->mUpperPane, "a right-click on a label over a link opened no menu from the console");
         QVERIFY2(consoleMenu, "a right-click on a label offered the commands of the link it hides");
     }
 };
