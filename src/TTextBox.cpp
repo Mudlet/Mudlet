@@ -22,6 +22,7 @@
 #include "Host.h"
 #include "utils.h"
 
+#include <QEvent>
 #include <QTextOption>
 
 TTextBox::TTextBox(Host* pHost, const QString& name, QWidget* parent)
@@ -36,4 +37,12 @@ TTextBox::TTextBox(Host* pHost, const QString& name, QWidget* parent)
     palette.setColor(QPalette::Text, mpHost->mCommandLineFgColor);
     palette.setColor(QPalette::Base, mpHost->mCommandLineBgColor);
     setPalette(palette);
+}
+
+void TTextBox::changeEvent(QEvent* event)
+{
+    QPlainTextEdit::changeEvent(event);
+    if (event->type() == QEvent::FontChange) {
+        emit fontChanged();
+    }
 }
