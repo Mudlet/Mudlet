@@ -50,6 +50,7 @@
 #include "TLuaInterpreter.h"
 #include "TMainConsole.h"
 #include "TMap.h"
+#include "TRoom.h"
 #include "TRoomDB.h"
 #include "TUiTour.h"
 #include "TelnetServerStub.h"
@@ -71,6 +72,32 @@ extern "C" {
 #include "GroupedTest.h"
 
 using namespace std::chrono_literals;
+
+namespace {
+// What a sysMapWindowMousePressEvent handler calls to take the press's release from the view: in a dialog it opens,
+// which blocks the view's window, or in a popup
+QWindow* gpPressedWindow = nullptr;
+QPoint gReleaseAt;
+QMenu* gpPopup = nullptr;
+QPoint gPopupAt;
+
+int releaseInADialog(lua_State*)
+{
+    QDialog dialog;
+    QTimer::singleShot(0, &dialog, [&dialog]() {
+        QTest::mouseRelease(gpPressedWindow, Qt::LeftButton, Qt::NoModifier, gReleaseAt);
+        dialog.reject();
+    });
+    dialog.exec();
+    return 0;
+}
+
+int openAPopup(lua_State*)
+{
+    gpPopup->popup(gPopupAt);
+    return 0;
+}
+} // namespace
 
 class Map3DViewInteractionTest : public QObject
 {
@@ -187,7 +214,7 @@ private:
         return rows;
     }
 
-    // The 3D view on the player's area, looking straight down with north up, nothing selected
+    // The 3D view on the player's area in viewing mode, looking straight down with north up, nothing selected
     ModernGLWidget* viewAtThePlayer() const
     {
         dlgMapper* pMapper = map()->mapper();
@@ -205,6 +232,8 @@ private:
         p2dMap->mMapCenterY = 0.0;
         p2dMap->mMapCenterZ = 0;
         p2dMap->mMultiSelectionSet.clear();
+        // Edit in 2D switches to editing mode, which a test using it can leave on
+        p2dMap->mMapViewOnly = true;
         pMapper->show3DView(true);
         auto* pModern = qobject_cast<ModernGLWidget*>(pMapper->glWidget);
         if (!pModern) {
@@ -231,6 +260,32 @@ private:
     }
 
     QSet<int> selection() const { return map()->mapper()->mp2dMap->mMultiSelectionSet; }
+
+    // Sent rather than QTest::mouseMove(), which the offscreen platform does not deliver without a button down
+    static void hoverAt(ModernGLWidget* pModern, const QPoint& position)
+    {
+        QMouseEvent move(QEvent::MouseMove, position, pModern->mapToGlobal(position), Qt::NoButton, Qt::NoButton, Qt::NoModifier);
+        QCoreApplication::sendEvent(pModern, &move);
+    }
+
+    // Looks straight down with north up from wherever puts the east room under the compass
+    bool showTheEastRoomUnderTheCompass(ModernGLWidget* pModern) const
+    {
+        const QPoint compass = pModern->compassRect().center();
+        // Centers are whole rooms, so the zoom varies too until one lands under the compass
+        for (int step = 0; step <= 20; ++step) {
+            pModern->setCameraPosition(1.0f + 0.1f * step, CameraController::scmMinTilt, CameraController::scmNorthUpAzimuth);
+            for (int x = -15; x <= 15; ++x) {
+                for (int y = -15; y <= 15; ++y) {
+                    pModern->syncView(mPlayerAreaId, x, y, 0, kPlayerRoomId);
+                    if (pModern->roomAt(compass) == kEastRoomId) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
 
     static QMenu* openMenu(ModernGLWidget* pModern)
     {
@@ -414,6 +469,7 @@ private slots:
         QVERIFY2(menu, "right-clicking a room in the 3D view opened no menu");
         QStringList texts = actionTexts(menu);
         QVERIFY2(texts.value(0) == qsl("Edit in 2D"), qPrintable(texts.join(qsl(", "))));
+        QVERIFY2(texts.value(1) == qsl("Fit area"), qPrintable(texts.join(qsl(", "))));
         QVERIFY2(texts.contains(qsl("Configure room...")), qPrintable(texts.join(qsl(", "))));
         QVERIFY2(texts.contains(qsl("Set player location")), qPrintable(texts.join(qsl(", "))));
         // These need a pointer on the 2D map itself
@@ -1047,6 +1103,269 @@ private slots:
         QTest::keyClick(pModern, Qt::Key_X, Qt::NoModifier);
         QCOMPARE(commandLine->toPlainText(), qsl("x"));
         commandLine->clear();
+    }
+
+    void test_hoveringRaisesTheRoomUnderThePointer()
+    {
+        ModernGLWidget* pModern = viewAtThePlayer();
+        QVERIFY(pModern);
+        hoverAt(pModern, pixelOfRoom(pModern, kEastRoomId));
+        QCOMPARE(pModern->hoveredRoomId(), kEastRoomId);
+        hoverAt(pModern, QPoint(pModern->width() / 2, 2));
+        QCOMPARE(pModern->hoveredRoomId(), 0);
+    }
+
+    // Seen at a slant, the raised room's top stands out past where the room is when not raised
+    void test_theRaisedRoomIsPickedWhereItIsDrawn()
+    {
+        ModernGLWidget* pModern = viewAtThePlayer();
+        QVERIFY(pModern);
+        pModern->setCameraPosition(0.3f, 70.0f, CameraController::scmNorthUpAzimuth);
+        hoverAt(pModern, pixelOfRoom(pModern, kPlayerRoomId));
+        QCOMPARE(pModern->hoveredRoomId(), kPlayerRoomId);
+        // Just inside the far edge of the raised top: a room is half a unit wide, raised by its height of a sixteenth
+        const std::optional<QPointF> farEdge = pModern->mCameraController.pixelForPoint(QVector3D(0.0f, 0.24f, 0.09f));
+        QVERIFY(farEdge);
+        hoverAt(pModern, farEdge->toPoint());
+        QCOMPARE(pModern->hoveredRoomId(), kPlayerRoomId);
+    }
+
+    // F frames the whole area, however the camera is tilted and turned
+    void test_fitAreaShowsEveryRoom()
+    {
+        ModernGLWidget* pModern = viewAtThePlayer();
+        QVERIFY(pModern);
+        pModern->setCameraPosition(CameraController::scmMinDistance, 60.0f, CameraController::scmNorthUpAzimuth + 30.0f);
+        QVERIFY2(pixelOfRoom(pModern, kEastRoomId).x() < 0, "the east room is on screen before fitting");
+        QVERIFY(focusFromTheKeyboard(pModern));
+
+        QTest::keyClick(pModern, Qt::Key_F);
+        QCOMPARE(pModern->viewCenter(), QVector3D(1.0f, 0.0f, 0.0f));
+        QVERIFY(!pModern->followingPlayer());
+        QTRY_VERIFY2(pixelOfRoom(pModern, kEastRoomId).x() >= 0 && pixelOfRoom(pModern, kPlayerRoomId).x() >= 0, "a room is off screen after fitting");
+
+        // Not merely zoomed out: the rooms fill much of the view
+        pModern->setCameraPosition(1.0f, CameraController::scmMinTilt, CameraController::scmNorthUpAzimuth);
+        pModern->fitArea();
+        QTRY_VERIFY(pixelOfRoom(pModern, kEastRoomId).x() - pixelOfRoom(pModern, kPlayerRoomId).x() > pModern->width() / 3);
+    }
+
+    void test_fitAreaShowsTheLevelsAboveAndBelow_data()
+    {
+        QTest::addColumn<int>("level");
+        QTest::addColumn<float>("tilt");
+        QTest::addColumn<float>("turn");
+        QTest::newRow("a room six levels up, tilted") << 6 << 60.0f << 30.0f;
+        QTest::newRow("a room six levels down, tilted") << -6 << 60.0f << 30.0f;
+        // Taller than the area is wide, so the top floors come near the camera
+        QTest::newRow("a tower thirty levels up, from above") << 30 << CameraController::scmMinTilt << 0.0f;
+        QTest::newRow("a tower thirty levels down, from above") << -30 << CameraController::scmMinTilt << 0.0f;
+    }
+
+    void test_fitAreaShowsTheLevelsAboveAndBelow()
+    {
+        QFETCH(int, level);
+        QFETCH(float, tilt);
+        QFETCH(float, turn);
+        ModernGLWidget* pModern = viewAtThePlayer();
+        QVERIFY(pModern);
+        constexpr int otherLevelRoomId = 3;
+        QVERIFY(addRoomAt(otherLevelRoomId, mPlayerAreaId, 1, 0) && map()->setRoomCoordinates(otherLevelRoomId, 1, 0, level));
+        auto removeOtherLevelRoom = qScopeGuard([this]() {
+            map()->mpRoomDB->removeRoom(otherLevelRoomId);
+        });
+        pModern->slot_showAllLevels();
+        pModern->setCameraPosition(CameraController::scmMinDistance, tilt, CameraController::scmNorthUpAzimuth + turn);
+
+        pModern->fitArea();
+        QTRY_VERIFY(!pModern->mCameraSmoothAnimating);
+        pModern->updateMatrices();
+        const float halfWidth = pModern->width() / 2.0f;
+        const float halfHeight = pModern->height() / 2.0f;
+        float reach = 0.0f;
+        for (const int roomId : {kPlayerRoomId, kEastRoomId, otherLevelRoomId}) {
+            const TRoom* pRoom = map()->mpRoomDB->getRoom(roomId);
+            // The room's cell on the grid, which the fit leaves a margin around
+            for (const QPointF& corner : {QPointF(-0.5, -0.5), QPointF(0.5, -0.5), QPointF(-0.5, 0.5), QPointF(0.5, 0.5)}) {
+                const QVector3D point(pRoom->x() + corner.x(), pRoom->y() + corner.y(), pRoom->z());
+                const std::optional<QPointF> pixel = pModern->mCameraController.pixelForPoint(point);
+                QVERIFY2(pixel, qPrintable(qsl("room %1 is behind the camera after fitting").arg(roomId)));
+                const float across = std::max(std::abs(static_cast<float>(pixel->x()) - halfWidth) / halfWidth, std::abs(static_cast<float>(pixel->y()) - halfHeight) / halfHeight);
+                QVERIFY2(across <= 1.0f, qPrintable(qsl("room %1 is off screen after fitting, %2 of the way to the edge").arg(roomId).arg(across)));
+                reach = std::max(reach, across);
+            }
+        }
+        // Not merely zoomed out: what is fitted fills much of the view
+        QVERIFY2(reach > 0.8f, qPrintable(qsl("the rooms reach only %1 of the way to the edge").arg(reach)));
+    }
+
+    // The 3D view can be docked smaller than the compass with its margin
+    void test_aViewTooSmallForTheCompassHasNone()
+    {
+        ModernGLWidget* pModern = viewAtThePlayer();
+        QVERIFY(pModern);
+        const QSize size = pModern->size();
+        pModern->resize(pModern->minimumSizeHint());
+        const QRect compass = pModern->compassRect();
+        pModern->resize(size);
+        QVERIFY2(compass.isEmpty(),
+                 qPrintable(qsl("a compass of %1x%2 in a view of %3x%4").arg(compass.width()).arg(compass.height()).arg(pModern->minimumSizeHint().width()).arg(pModern->minimumSizeHint().height())));
+    }
+
+    // With mouse tracking on, moves keep coming after a release that went to another window or a menu
+    void test_aPanWhoseReleaseWentElsewhereStops()
+    {
+        ModernGLWidget* pModern = viewAtThePlayer();
+        QVERIFY(pModern);
+        QVERIFY(!pModern->editingMap());
+        const QPoint start(pModern->width() / 4, pModern->height() / 4);
+        QCOMPARE(pModern->roomAt(start), 0);
+        QMouseEvent press(QEvent::MouseButtonPress, start, pModern->mapToGlobal(start), Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+        QCoreApplication::sendEvent(pModern, &press);
+        const QVector3D before = pModern->mCameraController.getTarget();
+        hoverAt(pModern, start + QPoint(120, 80));
+        const QVector3D after = pModern->mCameraController.getTarget();
+        const bool panning = pModern->mPanMode;
+        QMouseEvent release(QEvent::MouseButtonRelease, start, pModern->mapToGlobal(start), Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+        QCoreApplication::sendEvent(pModern, &release);
+        QCOMPARE(after, before);
+        QVERIFY(!panning);
+    }
+
+    // The pointer then often comes back by way of the level buttons, which a pan left on would undo
+    void test_aPanThatLostItsReleaseEndsWhenThePointerLeaves()
+    {
+        ModernGLWidget* pModern = viewAtThePlayer();
+        QVERIFY(pModern);
+        const QPoint start(pModern->width() / 4, pModern->height() / 4);
+        QCOMPARE(pModern->roomAt(start), 0);
+        QCOMPARE(runLua(qsl("selectedOnPresses = {}\n"
+                            "pressHandler = registerAnonymousEventHandler('sysMapWindowMousePressEvent', function()\n"
+                            "  selectedOnPresses[#selectedOnPresses + 1] = 0\n"
+                            "end)")),
+                 QString());
+        const auto restore = qScopeGuard([this]() {
+            runLua(qsl("killAnonymousEventHandler(pressHandler)"));
+        });
+        // Sent to the view alone, so the application sees no button down, as once a popup has taken the release
+        QMouseEvent press(QEvent::MouseButtonPress, start, pModern->mapToGlobal(start), Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+        QCoreApplication::sendEvent(pModern, &press);
+        QCOMPARE(QGuiApplication::mouseButtons(), Qt::NoButton);
+        QEvent leave(QEvent::Leave);
+        QCoreApplication::sendEvent(pModern, &leave);
+        // Announced, as the press would have been on its release
+        QTRY_COMPARE(pressesSeenByScript(), 1);
+        const int level = static_cast<int>(pModern->viewCenter().z());
+        pModern->slot_shiftZup();
+        hoverAt(pModern, start);
+        QCOMPARE(static_cast<int>(pModern->viewCenter().z()), level + 1);
+    }
+
+    // A dialog a press handler opens takes the release, and the view hears of neither it nor a Leave
+    void test_aPressWhoseHandlerTakesTheReleaseIsOver()
+    {
+        ModernGLWidget* pModern = viewAtThePlayer();
+        QVERIFY(pModern);
+        gpPressedWindow = pModern->window()->windowHandle();
+        QVERIFY(gpPressedWindow);
+        gReleaseAt = pModern->mapTo(pModern->window(), pixelOfRoom(pModern, kPlayerRoomId));
+        lua_register(mpHost->getLuaInterpreter()->getLuaGlobalState(), "releaseInADialog", releaseInADialog);
+        QCOMPARE(runLua(qsl("pressHandler = registerAnonymousEventHandler('sysMapWindowMousePressEvent', releaseInADialog)")), QString());
+        const auto restore = qScopeGuard([this]() {
+            runLua(qsl("killAnonymousEventHandler(pressHandler)"));
+        });
+        // Through the window, so the application knows the button is down until the release
+        QTest::mousePress(gpPressedWindow, Qt::LeftButton, Qt::NoModifier, gReleaseAt);
+        QCOMPARE(QGuiApplication::mouseButtons(), Qt::NoButton);
+        QCOMPARE(selection(), QSet<int>{kPlayerRoomId});
+        QVERIFY2(!pModern->mPanMode, "the press goes on panning after its release went to the dialog");
+    }
+
+    // A popup a press handler opens takes the rest of the press, and no Leave reaches the view while it is open
+    void test_aPressWhoseHandlerOpensAPopupIsOver()
+    {
+        ModernGLWidget* pModern = viewAtThePlayer();
+        QVERIFY(pModern);
+        QMenu menu;
+        menu.addAction(qsl("one"));
+        gpPopup = &menu;
+        const QPoint room = pixelOfRoom(pModern, kPlayerRoomId);
+        gPopupAt = pModern->mapToGlobal(room + QPoint(5, 5));
+        lua_register(mpHost->getLuaInterpreter()->getLuaGlobalState(), "openAPopup", openAPopup);
+        QCOMPARE(runLua(qsl("pressHandler = registerAnonymousEventHandler('sysMapWindowMousePressEvent', openAPopup)")), QString());
+        const auto restore = qScopeGuard([this]() {
+            runLua(qsl("killAnonymousEventHandler(pressHandler)"));
+        });
+        QWindow* pWindow = pModern->window()->windowHandle();
+        QVERIFY(pWindow);
+        const QPoint inWindow = pModern->mapTo(pModern->window(), room);
+        QTest::mousePress(pWindow, Qt::LeftButton, Qt::NoModifier, inWindow);
+        const auto release = qScopeGuard([pWindow, inWindow, &menu]() {
+            QTest::mouseRelease(pWindow, Qt::LeftButton, Qt::NoModifier, inWindow);
+            menu.close();
+        });
+        if (QApplication::activePopupWidget() != &menu) {
+            QSKIP("popups do not open on this platform");
+        }
+        QVERIFY2(!pModern->mPanMode, "the press goes on panning under the popup");
+    }
+
+    // As on platforms that send Leave while a drag holds the mouse
+    void test_aLeaveWhileTheButtonIsHeldKeepsThePanGoing()
+    {
+        ModernGLWidget* pModern = viewAtThePlayer();
+        QVERIFY(pModern);
+        QWindow* pWindow = pModern->window()->windowHandle();
+        QVERIFY(pWindow);
+        const QPoint start(pModern->width() / 4, pModern->height() / 4);
+        QCOMPARE(pModern->roomAt(start), 0);
+        const QPoint inWindow = pModern->mapTo(pModern->window(), start);
+        // Through the window, so the application knows the button is down
+        QTest::mousePress(pWindow, Qt::LeftButton, Qt::NoModifier, inWindow);
+        const auto release = qScopeGuard([pWindow, inWindow]() {
+            QTest::mouseRelease(pWindow, Qt::LeftButton, Qt::NoModifier, inWindow);
+        });
+        QCOMPARE(QGuiApplication::mouseButtons(), Qt::LeftButton);
+        QVERIFY(pModern->mPanMode);
+        QEvent leave(QEvent::Leave);
+        QCoreApplication::sendEvent(pModern, &leave);
+        QVERIFY2(pModern->mPanMode, "the pan ended while the button was still held");
+    }
+
+    void test_clickingTheCompassTurnsTheViewNorthUp()
+    {
+        ModernGLWidget* pModern = viewAtThePlayer();
+        QVERIFY(pModern);
+        QSignalSpy cameraControls(pModern, &ModernGLWidget::cameraControlsChanged);
+        pModern->setCameraPosition(1.0f, 50.0f, CameraController::scmNorthUpAzimuth + 40.0f);
+        pModern->shiftCamera(0.0f, 0.0f, 25.0f);
+        const QVariantList turned = cameraControls.last();
+        QVERIFY(turned.at(3).toInt() != 0 && turned.at(2).toInt() != 0);
+        const QRect compass = pModern->compassRect();
+        QVERIFY(pModern->rect().contains(compass));
+
+        QTest::mouseClick(pModern, Qt::LeftButton, Qt::NoModifier, compass.center());
+        QCOMPARE(cameraControls.last().at(3).toInt(), 0);
+        QCOMPARE(cameraControls.last().at(2).toInt(), 0);
+        QCOMPARE(cameraControls.last().at(1), turned.at(1));
+
+        // Nor does it pick the room drawn under it
+        QVERIFY2(showTheEastRoomUnderTheCompass(pModern), "no view puts the east room under the compass");
+        QTest::mouseClick(pModern, Qt::LeftButton, Qt::NoModifier, pModern->compassRect().center());
+        QVERIFY(selection().isEmpty());
+    }
+
+    // A double click on the compass is two clicks on it, not a speedwalk to the room drawn under it
+    void test_doubleClickingTheCompassDoesNotSpeedwalk()
+    {
+        ModernGLWidget* pModern = viewAtThePlayer();
+        QVERIFY(pModern);
+        QVERIFY2(showTheEastRoomUnderTheCompass(pModern), "no view puts the east room under the compass");
+        const QPoint compass = pModern->compassRect().center();
+        map()->mTargetID = 0;
+        QMouseEvent doubleClick(QEvent::MouseButtonDblClick, compass, pModern->mapToGlobal(compass), Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+        QCoreApplication::sendEvent(pModern, &doubleClick);
+        QCOMPARE(map()->mTargetID, 0);
     }
 
     // A floating map is a window of its own, so focusing the command line alone leaves the keys typed next here

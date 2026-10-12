@@ -20,11 +20,13 @@
 #include "GeometryManager.h"
 #include "ResourceManager.h"
 
+#include <QColor>
 #include <QDebug>
 #include <QFile>
 #include <QHash>
 #include <QImage>
 
+#include <algorithm>
 #include <cmath>
 #include <limits>
 
@@ -418,6 +420,41 @@ QList<qsizetype> GeometryManager::declutteredRects(const QList<QRectF>& rects, c
         }
     }
     return kept;
+}
+
+GeometryManager::LevelFade GeometryManager::levelFade(const int levelsAbove, const bool moreTransparent)
+{
+    const int distance = std::abs(levelsAbove);
+    LevelFade fade;
+    if (distance == 0) {
+        return fade;
+    }
+    if (moreTransparent) {
+        fade.towardBackground = distance == 1 ? 0.5f : (distance == 2 ? 0.8f : 0.95f);
+        return fade;
+    }
+    if (levelsAbove > 0) {
+        // Above the viewed level, so see-through enough not to hide it
+        fade.towardBackground = std::min(0.8f, 0.35f + 0.15f * static_cast<float>(distance - 1));
+        fade.opacity = std::max(0.1f, 0.35f - 0.1f * static_cast<float>(distance - 1));
+    } else {
+        fade.towardBackground = std::min(0.75f, 0.3f * static_cast<float>(distance));
+    }
+    return fade;
+}
+
+QVector4D GeometryManager::fadedColor(const QColor& color, const LevelFade& fade, const QColor& background)
+{
+    const float keep = 1.0f - fade.towardBackground;
+    const auto mixed = [&](const float own, const float back) {
+        return own * keep + back * fade.towardBackground;
+    };
+    return QVector4D(mixed(color.redF(), background.redF()), mixed(color.greenF(), background.greenF()), mixed(color.blueF(), background.blueF()), color.alphaF() * fade.opacity);
+}
+
+QVector4D GeometryManager::fadedDecalTint(const LevelFade& fade)
+{
+    return QVector4D(1.0f, 1.0f, 1.0f, (1.0f - fade.towardBackground) * fade.opacity);
 }
 
 QMatrix4x4 GeometryManager::barTransform(const QVector3D& from, const QVector3D& to, const float width, const float height)

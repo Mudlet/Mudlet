@@ -340,6 +340,18 @@ void GLStateCommand::execute(QOpenGLFunctions* gl,
         gl->glDisable(GL_POLYGON_OFFSET_FILL);
         gl->glPolygonOffset(0.0f, 0.0f);
         break;
+    case ENABLE_COLOR_WRITE:
+        gl->glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+        break;
+    case DISABLE_COLOR_WRITE:
+        gl->glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+        break;
+    case DEPTH_FUNC_LEQUAL:
+        gl->glDepthFunc(GL_LEQUAL);
+        break;
+    case DEPTH_FUNC_LESS:
+        gl->glDepthFunc(GL_LESS);
+        break;
     }
 }
 

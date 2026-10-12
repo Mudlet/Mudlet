@@ -133,6 +133,14 @@ float CameraController::distanceToShow(float rooms, float aspectRatio)
     return qBound(scmMinDistance, rooms / 2.0f / (halfHeightPerUnit * shorterSide), scmMaxDistance);
 }
 
+float CameraController::distanceToFit(float width, float height, float aspectRatio)
+{
+    const float aspect = aspectRatio > 0.0f ? aspectRatio : 1.0f;
+    const float halfHeightPerUnit = 10.0f * std::tan(qDegreesToRadians(scmFieldOfView / 2.0f));
+    const float fitted = qMax(height / 2.0f / halfHeightPerUnit, width / 2.0f / (halfHeightPerUnit * aspect));
+    return qBound(scmMinDistance, fitted * 1.1f, scmMaxDistance);
+}
+
 void CameraController::setViewportSize(int width, int height)
 {
     mViewportWidth = width;

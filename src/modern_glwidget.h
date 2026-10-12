@@ -33,6 +33,7 @@
 
 #include <QElapsedTimer>
 #include <QHash>
+#include <QMap>
 #include <QMatrix4x4>
 #include <QVector3D>
 #include <QQuaternion>
@@ -58,6 +59,7 @@
 class Host;
 class QFontMetricsF;
 class QLabel;
+class QPainter;
 class T2DMap;
 class TCommandLine;
 class TMap;
@@ -68,6 +70,7 @@ class ModernGLWidget : public QOpenGLWidget, protected QOpenGLFunctions
 {
     Q_OBJECT
     friend class ModernRoomTextureTest;
+    friend class Map3DViewInteractionTest;
 
 public:
     Q_DISABLE_COPY(ModernGLWidget)
@@ -105,6 +108,12 @@ public:
     // The rooms on show drawn wholly inside this rectangle of the view, on the level in the middle of
     // the view or, with allLevels, on any level shown
     QSet<int> roomsInRectangle(const QRect& rectangle, bool allLevels);
+    // The room drawn raised and outlined, as the one under the pointer, or 0
+    int hoveredRoomId() const { return mHoveredRoomId; }
+    // Centers and zooms the view to show all the area's rooms on the levels shown
+    void fitArea();
+    // Where the compass is drawn, which turns the view north up when clicked; empty while the camera is fixed or the view is too small for it
+    QRect compassRect() const;
 
     QSize minimumSizeHint() const override;
     QSize sizeHint() const override;
@@ -159,6 +168,7 @@ protected:
     void mouseReleaseEvent(QMouseEvent* event) override;
     void mouseDoubleClickEvent(QMouseEvent* event) override;
     void keyPressEvent(QKeyEvent* event) override;
+    void leaveEvent(QEvent* event) override;
     void focusInEvent(QFocusEvent* event) override;
     void focusOutEvent(QFocusEvent* event) override;
     void showEvent(QShowEvent* event) override;
@@ -293,13 +303,38 @@ private:
         float roll = 0.0f;
     };
     QHash<int, SavedCamera> mSavedCameras;
+    // The room drawn raised, or to be at the next frame; roomAt() picks it where it rests or is raised
+    int mHoveredRoomId = 0;
+    QPoint mPointerPosition;
+    bool mPointerInView = false;
+    Qt::MouseButtons mPointerButtons;
+    // The exit lines and arrowheads of see-through levels, made by renderConnections() for renderRooms()
+    // to draw with their levels' rooms, lowest level first
+    struct LevelExits
+    {
+        QVector<CubeInstanceData> bars;
+        QVector<float> vertices;
+        QVector<float> colors;
+    };
+    QMap<int, LevelExits> mSeeThroughExits;
 
     // Private methods for modern OpenGL
     void updateMatrices();
     void renderRooms();
     void renderConnections();
     // Map labels lie flat at their place on the map; those shown on top over the rooms, the others under the exits
-    void renderLabels(bool onTop);
+    // What a frame draws, in order, into the render command queue
+    void queueScene();
+    // The labels of the levels from lowestLevel to highestLevel, either beneath the rooms or on top of them
+    void renderLabels(bool onTop, int lowestLevel, int highestLevel);
+    // A column of light over the player's room, seen faintly through anything in front of it
+    void renderPlayerBeacon();
+    void paintCompass(QPainter& painter);
+    void turnNorthUp();
+    void setHoveredRoom(int roomId);
+    // Worked out afresh, as the view can move under a pointer that stays still
+    int roomUnderPointer();
+    void endPan();
     void renderCube(float x, float y, float z, float size, float r, float g, float b, float a);
     void renderText(const QString& text, float x, float y);
     void setupBuffers();
@@ -337,7 +372,11 @@ private:
     void holdView();
     void showContextMenu(const QPoint& position);
     void raiseMousePressEvent();
+    // Raised with the press still on, which ends here if a script handling it takes the release
+    void raiseMousePressEventMidPress();
     void raisePendingMousePressEvent();
+    // Ends the press whose release went elsewhere, as its release would have, but selects nothing
+    void endLostPress();
     TCommandLine* commandLine() const;
     QString roomToolTip(int roomId) const;
     GLuint selectionTexture();

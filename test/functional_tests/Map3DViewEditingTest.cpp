@@ -70,6 +70,22 @@ extern "C" {
 
 using namespace std::chrono_literals;
 
+// Counts the repaints asked of a window, which come even where the 3D view has no GL context to paint with
+class UpdateRequestCounter : public QObject
+{
+public:
+    int mRequests = 0;
+
+protected:
+    bool eventFilter(QObject* watched, QEvent* event) override
+    {
+        if (event->type() == QEvent::UpdateRequest) {
+            ++mRequests;
+        }
+        return QObject::eventFilter(watched, event);
+    }
+};
+
 class Map3DViewEditingTest : public QObject
 {
     Q_OBJECT
@@ -634,7 +650,6 @@ private slots:
         QVERIFY(spacing > 20);
 
         sendMouse(pModern, QEvent::MouseButtonPress, east, Qt::LeftButton);
-        // Qt passes on moves with no button held only to a view that tracks the mouse, which this one does not
         sendMouse(pModern, QEvent::MouseMove, east + QPoint(spacing * 2, 0), Qt::MiddleButton);
         QCOMPARE(roomPlace(kEastRoomId), QVector3D(2, 0, 0));
 
@@ -642,6 +657,40 @@ private slots:
         const QPoint emptySpace(player.x() + spacing / 2, player.y() + spacing);
         drag(pModern, emptySpace, emptySpace + QPoint(spacing * 2, 0), Qt::AltModifier);
         QCOMPARE(roomPlace(kEastRoomId), QVector3D(2, 0, 0));
+    }
+
+    // A right-click in the middle of a room drag ends it, and the left button still held does not pan the view
+    void test_aRightClickMidDragLeavesTheViewAndRoomsAlone()
+    {
+        ModernGLWidget* pModern = viewAtThePlayer(true);
+        QVERIFY(pModern);
+        const QPoint player = pixelOfRoom(pModern, kPlayerRoomId);
+        const QPoint east = pixelOfRoom(pModern, kEastRoomId);
+        const int spacing = east.x() - player.x();
+        QVERIFY(spacing > 20);
+        const QVector3D center = pModern->viewCenter();
+
+        sendMouse(pModern, QEvent::MouseButtonPress, east, Qt::LeftButton);
+        QMouseEvent rightPress(QEvent::MouseButtonPress, QPointF(east), pModern->mapToGlobal(QPointF(east)), Qt::RightButton, Qt::LeftButton | Qt::RightButton, Qt::NoModifier);
+        QCoreApplication::sendEvent(pModern, &rightPress);
+        QPoint point = east;
+        for (int step = 0; step < 12; ++step) {
+            point += QPoint(spacing / 4, 0);
+            sendMouse(pModern, QEvent::MouseMove, point, Qt::LeftButton | Qt::RightButton);
+        }
+        QMouseEvent rightRelease(QEvent::MouseButtonRelease, QPointF(point), pModern->mapToGlobal(QPointF(point)), Qt::RightButton, Qt::LeftButton, Qt::NoModifier);
+        QCoreApplication::sendEvent(pModern, &rightRelease);
+        if (QMenu* menu = openMenu(pModern)) {
+            menu->close();
+        }
+        for (int step = 0; step < 4; ++step) {
+            point += QPoint(spacing / 4, 0);
+            sendMouse(pModern, QEvent::MouseMove, point, Qt::LeftButton);
+        }
+        sendMouse(pModern, QEvent::MouseButtonRelease, point, Qt::NoButton);
+
+        QCOMPARE(pModern->viewCenter(), center);
+        verifyRoomsInPlace();
     }
 
     // Only a press on the room itself picks it up; one beside a room seen small, far off, draws a rectangle
@@ -803,6 +852,50 @@ private slots:
         QCOMPARE(qobject_cast<ModernGLWidget*>(map()->mapper()->glWidget), pModern);
         sendMouse(pModern, QEvent::MouseMove, east + QPoint(spacing, spacing), Qt::LeftButton);
         QCOMPARE(roomPlace(kEastRoomId), QVector3D(2, -2, 0));
+    }
+
+    // A drag whose release went to a popup is over once the pointer leaves with nothing held: its moves are
+    // announced, and moves with the button held, once the pointer is back, move nothing
+    void test_aDragThatLostItsReleaseIsOverWhenThePointerLeaves()
+    {
+        ModernGLWidget* pModern = viewAtThePlayer(true);
+        QVERIFY(pModern);
+        const QPoint east = pixelOfRoom(pModern, kEastRoomId);
+        const int spacing = east.x() - pixelOfRoom(pModern, kPlayerRoomId).x();
+        QVERIFY(spacing > 20);
+
+        QSignalSpy areaChanged(map(), &TMap::signal_areaChanged);
+        sendMouse(pModern, QEvent::MouseButtonPress, east, Qt::LeftButton);
+        sendMouse(pModern, QEvent::MouseMove, east + QPoint(0, spacing), Qt::LeftButton);
+        QCOMPARE(roomPlace(kEastRoomId), QVector3D(2, -2, 0));
+        // Sent to the view alone, so the application sees no button down
+        QCOMPARE(QGuiApplication::mouseButtons(), Qt::NoButton);
+        QEvent leave(QEvent::Leave);
+        QCoreApplication::sendEvent(pModern, &leave);
+        QTRY_VERIFY2(areaChanged.contains(QVariantList{mPlayerAreaId}), "the other views were not told the area changed");
+        sendMouse(pModern, QEvent::MouseMove, east + QPoint(spacing, spacing), Qt::LeftButton);
+        QCOMPARE(roomPlace(kEastRoomId), QVector3D(2, -2, 0));
+    }
+
+    // A selection rectangle whose release went to a popup goes from the screen once the pointer leaves
+    void test_aRectangleThatLostItsReleaseIsClearedWhenThePointerLeaves()
+    {
+        ModernGLWidget* pModern = viewAtThePlayer(true);
+        QVERIFY(pModern);
+        const QPoint player = pixelOfRoom(pModern, kPlayerRoomId);
+        const int spacing = pixelOfRoom(pModern, kEastRoomId).x() - player.x();
+        QVERIFY(spacing > 20);
+        const QPoint emptySpace(player.x() + spacing / 2, player.y() + spacing);
+        sendMouse(pModern, QEvent::MouseButtonPress, emptySpace, Qt::LeftButton);
+        sendMouse(pModern, QEvent::MouseMove, emptySpace + QPoint(spacing, spacing), Qt::LeftButton);
+        QTest::qWait(50);
+
+        UpdateRequestCounter repaints;
+        pModern->window()->installEventFilter(&repaints);
+        QEvent leave(QEvent::Leave);
+        QCoreApplication::sendEvent(pModern, &leave);
+        QTRY_VERIFY2(repaints.mRequests > 0, "the view was not drawn again without the selection rectangle");
+        pModern->window()->removeEventFilter(&repaints);
     }
 
     // The mapper's view goes after the player only once the rooms being dragged are down

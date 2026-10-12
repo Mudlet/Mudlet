@@ -45,6 +45,9 @@ QGradientStops highlightStops(const QColor& highlightColor, const QColor& highli
 // For a radial gradient over playerRoomRadius()
 QGradientStops playerRoomStops(int style, quint8 innerDiameterPercentage, const QColor& innerColor, const QColor& outerColor);
 
+// The color of the column of light over the player's room in the 3D view, in the ring's style
+QColor playerBeaconColor(int style, const QColor& outerColor);
+
 // Fills the player's room under the ring when the strong highlight is on
 QColor strongHighlightFillColor();
 

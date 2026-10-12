@@ -41,6 +41,10 @@ constexpr qreal scmDoorRoomSpan = 2.0;
 constexpr int scmDiscSides = 16;
 // Qt's dash stroker's limit, QDashStroker::repetitionLimit()
 constexpr qreal scmMaxDashRepetitions = 10000.0;
+// How far a shaft for an up or down exit rises or drops from its room, in levels
+constexpr float scmShaftLength = 0.35f;
+// The part of a one-way exit's shaft, at its tip, in the one-way arrow's color
+constexpr float scmShaftTip = 0.3f;
 
 bool onCompass(const int direction)
 {
@@ -403,6 +407,22 @@ void Builder::addRoom(const int roomId, const TRoom& room)
 
         if (inOrOut && mOptions.inOutStubs) {
             bar(center, center + (destination - center) / 4.0f, mWidth, mHeight, exitColor, level);
+            continue;
+        }
+
+        // Stairs that do not lead straight up or down would be long slanting lines that read as exits on the
+        // map, so each room with one shows a short shaft of its own instead
+        const float rise = destination.z() - center.z();
+        const bool upOrDown = (exit.direction == DIR_UP && rise > 0.0f) || (exit.direction == DIR_DOWN && rise < 0.0f);
+        if (upOrDown && (exit.pDestination->x() != room.x() || exit.pDestination->y() != room.y())) {
+            const QVector3D shaftEnd = center + QVector3D(0.0f, 0.0f, std::copysign(scmShaftLength, rise));
+            if (!exit.oneWay) {
+                bar(center, shaftEnd, mWidth, mHeight, exitColor, level);
+                continue;
+            }
+            const QVector3D tipStart = shaftEnd + (center - shaftEnd) * scmShaftTip;
+            bar(center, tipStart, mWidth, mHeight, exitColor, level);
+            bar(tipStart, shaftEnd, mWidth, mHeight, ExitAppearance::oneWayArrowColor(), level);
             continue;
         }
 
