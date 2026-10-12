@@ -955,15 +955,20 @@ std::pair<bool, QString> TNullConsoleFrontend::deleteScrollBox(const QString& na
     return {true, QString()};
 }
 
+bool TNullConsoleFrontend::within(const ScrollBox* container, const ScrollBox* box)
+{
+    for (; container; container = container->box.get()) {
+        if (container == box) {
+            return true;
+        }
+    }
+    return false;
+}
+
 void TNullConsoleFrontend::removeScrollBoxContents(const ScrollBox* box)
 {
     const auto inside = [box](const ScrollBox* container) {
-        for (; container; container = container->box.get()) {
-            if (container == box) {
-                return true;
-            }
-        }
-        return false;
+        return within(container, box);
     };
     QStringList contents;
     for (const auto& [name, label] : mLabels) {
@@ -1323,35 +1328,103 @@ bool TNullConsoleFrontend::moveLabel(const QString& name, const int x, const int
     return true;
 }
 
-// QWidget::setParent() hides the widget, so it only shows again when asked
+// QWidget::setParent(QWidget*) returns at once for the parent a widget already has; otherwise it hides
+// the widget, which then only shows again when asked
 bool TNullConsoleFrontend::reparentLabel(const QString& windowname, const QString& name, const int x, const int y, const bool show)
 {
     const auto it = mLabels.find(name);
-    // Left to a view: moved into or out of a scroll box, or to a name a box shares with a user window,
-    // the label would have the box as its parent, which a label here does not record
-    if (it == mLabels.end() || it->second.box || mScrollBoxes.contains(windowname)) {
+    if (it == mLabels.end()) {
         return false;
     }
-    const QString userWindow = userWindowOrMain(windowname);
-    // QWidget::setParent() restyles a label it moves, and leaves one it doesn't alone
-    if (Label& label = it->second; userWindow != label.userWindow) {
-        const QFont before = label.pModel->mFont;
+    // TMainConsole::parentWidgetFor() takes a scroll box before a user window
+    auto [userWindow, box] = containerFor(windowname, true);
+    Label& label = it->second;
+    const bool moved = userWindow != label.userWindow || box != label.box;
+    // QWidget::setParent() restyles a label it moves
+    if (moved) {
         label.userWindow = userWindow;
-        if (label.styled) {
-            polishLabel(label);
-        } else {
-            QFont local = label.pModel->mFont;
-            local.setResolveMask(label.fontMask);
-            label.pModel->mFont = local.resolve(naturalLabelFont(label));
-        }
-        if (label.textLabel && label.pModel->mFont != before) {
-            label.sizeHint.reset();
-        }
+        label.box = std::move(box);
+        inheritLabelFont(label, true);
     }
-    it->second.pModel->mGeometry.moveTo(x, y);
-    it->second.shown = show;
+    label.pModel->mGeometry.moveTo(x, y);
+    label.shown = show || (!moved && label.shown);
     reportWindowVisibility(name);
     return true;
+}
+
+// A label whose parent changed, or whose parent's parent did: a styled one keeps its font unless it
+// is the one restyled, and any other takes its new parent's for what it does not set itself
+void TNullConsoleFrontend::inheritLabelFont(Label& label, const bool restyle)
+{
+    const QFont before = label.pModel->mFont;
+    if (!label.styled) {
+        QFont local = label.pModel->mFont;
+        local.setResolveMask(label.fontMask);
+        label.pModel->mFont = local.resolve(naturalLabelFont(label));
+    } else if (restyle) {
+        polishLabel(label);
+    }
+    if (label.textLabel && label.pModel->mFont != before) {
+        label.sizeHint.reset();
+    }
+}
+
+std::pair<bool, QString> TNullConsoleFrontend::reparentWindow(const QString& windowname, const QString& name, const int x, const int y, const bool show)
+{
+    TWindowRegistry& registry = mpHost->windowRegistry();
+    auto [userWindow, box] = containerFor(windowname, true);
+    if (const auto it = mSubConsoles.find(name); it != mSubConsoles.end()) {
+        // A buffer is a top-level widget until then, whose size QWidget::show() may then change
+        if (registry.subConsoleKind(name) != TWindowRegistry::SubConsoleKind::MiniConsole) {
+            return noView();
+        }
+        const bool moved = userWindow != it->second.userWindow || box != it->second.box;
+        it->second.userWindow = userWindow;
+        it->second.box = std::move(box);
+        it->second.shown = show || (!moved && it->second.shown);
+        moveSubConsole(name, x, y);
+        reportWindowVisibility(name);
+        return {true, QString()};
+    }
+    const auto it = mScrollBoxes.find(name);
+    if (it == mScrollBoxes.end()) {
+        if (registry.hasSubConsole(name) || registry.hasPlainWindow(name)) {
+            return noView();
+        }
+        return {false, qsl("element '%1' not found").arg(name)};
+    }
+    if (within(box.get(), it->second.get())) {
+        return {false, qsl("element '%1' cannot be moved into itself or into one of its own children").arg(name)};
+    }
+    const bool moved = userWindow != it->second->userWindow || box != it->second->box;
+    it->second->userWindow = userWindow;
+    it->second->box = std::move(box);
+    it->second->shown = show || (!moved && it->second->shown);
+    moveScrollBoxContents(it->second.get());
+    movePlainWindow(name, x, y);
+    reportVisibility();
+    return {true, QString()};
+}
+
+// What a moved scroll box holds goes with it into its user window
+void TNullConsoleFrontend::moveScrollBoxContents(const ScrollBox* box)
+{
+    for (auto& [name, label] : mLabels) {
+        if (within(label.box.get(), box) && label.userWindow != box->userWindow) {
+            label.userWindow = box->userWindow;
+            inheritLabelFont(label, false);
+        }
+    }
+    for (auto& [name, subConsole] : mSubConsoles) {
+        if (within(subConsole.box.get(), box)) {
+            subConsole.userWindow = box->userWindow;
+        }
+    }
+    for (auto& [name, inner] : mScrollBoxes) {
+        if (within(inner->box.get(), box)) {
+            inner->userWindow = box->userWindow;
+        }
+    }
 }
 
 bool TNullConsoleFrontend::setLabelBackgroundColor(const QString& name, const QColor& color)
