@@ -40,6 +40,7 @@
 #include <QtMath>
 
 #include <algorithm>
+#include <climits>
 #include <tuple>
 
 namespace {
@@ -96,19 +97,28 @@ bool knownPseudoState(const QString& name)
     return known.contains(name, Qt::CaseInsensitive);
 }
 
-// The specificity QCss::StyleSelector::matchRule() weighs a selector by that matches a TLabel at rest - enabled and
-// active, as QStyleSheetStyle::updateStyleSheetFont() asks - or nothing. A combinator or an attribute
-// selector other than a class is not matched.
-std::optional<uint> labelSelectorSpecificity(const QStringView selector, const QString& objectName)
+// The specificity QCss::StyleSelector::matchRule() weighs a selector by that matches a widget of these classes, most
+// derived first, in the pseudo-states held, or nothing. A combinator or an attribute selector other than a class is
+// not matched.
+std::optional<uint> selectorSpecificity(const QStringView selector, const QStringList& classNames, const QString& objectName, const QStringList& heldStates)
 {
-    static const QStringList classNames{qsl("TLabel"), qsl("QLabel"), qsl("QFrame"), qsl("QWidget"), qsl("QObject")};
     qsizetype at = 0;
+    // QCss takes a backslash as escaping the character after it, and reads no hex escape
     const auto ident = [&selector, &at]() {
-        const qsizetype start = at;
-        while (at < selector.size() && (selector.at(at).isLetterOrNumber() || selector.at(at) == u'_' || selector.at(at) == u'-' || selector.at(at).unicode() >= 0x80)) {
-            ++at;
+        QString name;
+        while (at < selector.size()) {
+            const QChar next = selector.at(at);
+            if (next == u'\\' && at + 1 < selector.size()) {
+                name += selector.at(at + 1);
+                at += 2;
+            } else if (next.isLetterOrNumber() || next == u'_' || next == u'-' || next.unicode() >= 0x80) {
+                name += next;
+                ++at;
+            } else {
+                break;
+            }
         }
-        return selector.mid(start, at - start).toString();
+        return name;
     };
     QString element;
     if (at < selector.size() && selector.at(at) == u'*') {
@@ -165,11 +175,11 @@ std::optional<uint> labelSelectorSpecificity(const QStringView selector, const Q
             statesHold = true;
             break;
         }
-        const bool atRest = !name.compare(qsl("enabled"), Qt::CaseInsensitive) || !name.compare(qsl("active"), Qt::CaseInsensitive);
-        if (negated && atRest) {
+        const bool held = heldStates.contains(name, Qt::CaseInsensitive);
+        if (negated && held) {
             return std::nullopt;
         }
-        if (!negated && !atRest) {
+        if (!negated && !held) {
             statesHold = false;
         }
     }
@@ -200,10 +210,10 @@ qsizetype indexOutsideQuotes(const QString& text, const QChar wanted, qsizetype 
     return -1;
 }
 
-// The declarations of a label's own sheet that reach the label at rest, in the order QStyleSheetStyle
+// The declarations of a widget's own sheet that reach it in the pseudo-states held, in the order QStyleSheetStyle
 // applies them. A sheet that is not a list of rules is QStyleSheetStyle's "* { sheet }"; @-rules apply
 // to no widget.
-QString labelSheetDeclarations(const QString& sheet, const QString& objectName)
+QString sheetDeclarations(const QString& sheet, const QStringList& classNames, const QString& objectName, const QStringList& heldStates)
 {
     QString text = sheet;
     for (qsizetype open = indexOutsideQuotes(text, u'/', 0); open >= 0; open = indexOutsideQuotes(text, u'/', open + 1)) {
@@ -246,7 +256,7 @@ QString labelSheetDeclarations(const QString& sheet, const QString& objectName)
         }
         const QString declarations = text.mid(open + 1, close - open - 1);
         for (const QString& selector : text.mid(at, open - at).split(u',')) {
-            if (const auto specificity = labelSelectorSpecificity(QStringView(selector).trimmed(), objectName)) {
+            if (const auto specificity = selectorSpecificity(QStringView(selector).trimmed(), classNames, objectName, heldStates)) {
                 weighted.append({order + *specificity * 0x100, declarations});
             }
         }
@@ -280,19 +290,64 @@ int sheetLength(const QString& value, const QFont& font)
     } else if (number.endsWith(u'%')) {
         number.chop(1);
     }
-    return qRound(scale.value_or(1) * number.toDouble());
+    // lengthValueFromData()'s bounds, as qRound() is undefined outside int
+    return qRound(qBound(double(INT_MIN) + 0.1, scale.value_or(1) * number.toDouble(), double(INT_MAX)));
 }
 
-// The widths QStyleSheetStyle's SE_ShapedFrameContents takes off each side of a label, as top, right, bottom
-// and left: its margin, border and padding. A border whose style is none has no width.
-std::array<int, 4> sheetFrame(const QString& declarations, const QFont& font)
+// QRect and QSize add in int, which wraps past INT_MAX, and QWidget then holds a size it is given to 0 to QWIDGETSIZE_MAX
+int wrapped(const qint64 sum)
 {
+    return static_cast<int>(static_cast<quint32>(sum));
+}
+
+QSize wrappedSum(const QSize& size, const QSize& other)
+{
+    return QSize(wrapped(qint64{size.width()} + other.width()), wrapped(qint64{size.height()} + other.height()));
+}
+
+// The width and height a frame of top, right, bottom and left widths adds
+QSize frameExtent(const std::array<int, 4>& frame)
+{
+    return QSize(wrapped(qint64{frame[1]} + frame[3]), wrapped(qint64{frame[0]} + frame[2]));
+}
+
+// What QStyleSheetStyle sizes a widget by from its sheet's declarations
+struct SheetGeometry
+{
+    // The widths SE_ShapedFrameContents takes off each side, as top, right, bottom and left
+    std::array<int, 4> frame{};
+    // QStyleSheetStyle::setGeometry()'s
+    QSize minimum{0, 0};
+    QSize maximum{maximumWidgetSize, maximumWidgetSize};
+};
+
+// The font QCss::ValueExtractor measures em and ex in: the application's, as the sheet sets it
+QFont sheetLengthFont(const QString& declarations)
+{
+    const std::optional<QFont> font = styleSheetFont(declarations);
+    return font ? font->resolve(QFont()) : QFont();
+}
+
+// A widget's margin, border and padding, and its size limits. An edge's border style starts as native,
+// which keeps a width it is given and otherwise takes the base style's, unless a border radius is set.
+SheetGeometry sheetGeometry(const QString& declarations, const QFont& font, const int nativeFrameWidth)
+{
+    enum class Style { Native, None, Drawn };
     static const QStringList edges{qsl("top"), qsl("right"), qsl("bottom"), qsl("left")};
     static const QStringList borderStyles = qsl("dotted dashed solid double dot-dash dot-dot-dash groove ridge inset outset").split(u' ');
     std::array<int, 4> margins{};
     std::array<int, 4> paddings{};
     std::array<int, 4> borders{};
-    std::array<bool, 4> borderless{true, true, true, true};
+    std::array<Style, 4> styles{Style::Native, Style::Native, Style::Native, Style::Native};
+    bool box = false;
+    bool radius = false;
+    // QWidget's own size and limits, where -1 is one the sheet does not set
+    int width = -1;
+    int height = -1;
+    int minimumWidth = -1;
+    int minimumHeight = -1;
+    int maximumWidth = -1;
+    int maximumHeight = -1;
     // QCss::ValueExtractor::lengthValues() and Declaration::styleValues(): one to four values, which CSS repeats
     const auto spread = [](const QStringList& values, auto&& read, auto& sides) {
         static constexpr int source[4][4] = {{0, 0, 0, 0}, {0, 1, 0, 1}, {0, 1, 2, 1}, {0, 1, 2, 3}};
@@ -305,8 +360,11 @@ std::array<int, 4> sheetFrame(const QString& declarations, const QFont& font)
         return sheetLength(value, font);
     };
     // An unknown style keeps the width, as only none takes it away
-    const auto none = [](const QString& value) {
-        return value.isEmpty() || !value.compare(qsl("none"), Qt::CaseInsensitive);
+    const auto style = [](const QString& value) {
+        if (value.isEmpty() || !value.compare(qsl("none"), Qt::CaseInsensitive)) {
+            return Style::None;
+        }
+        return value.compare(qsl("native"), Qt::CaseInsensitive) ? Style::Drawn : Style::Native;
     };
     const auto numeric = [](const QString& value) {
         const QStringView digits = QStringView(value).sliced(value.startsWith(u'-') || value.startsWith(u'+') ? 1 : 0);
@@ -316,12 +374,12 @@ std::array<int, 4> sheetFrame(const QString& declarations, const QFont& font)
     const auto shorthand = [&](const QStringList& values, const int edge) {
         qsizetype at = 0;
         borders[edge] = 0;
-        borderless[edge] = true;
+        styles[edge] = Style::None;
         if (at < values.size() && numeric(values.at(at))) {
             borders[edge] = length(values.at(at++));
         }
-        if (at < values.size() && (none(values.at(at)) || borderStyles.contains(values.at(at), Qt::CaseInsensitive))) {
-            borderless[edge] = none(values.at(at));
+        if (at < values.size() && (style(values.at(at)) != Style::Drawn || borderStyles.contains(values.at(at), Qt::CaseInsensitive))) {
+            styles[edge] = style(values.at(at));
         }
     };
     qsizetype at = 0;
@@ -336,45 +394,98 @@ std::array<int, 4> sheetFrame(const QString& declarations, const QFont& font)
         if (colon < 0) {
             continue;
         }
-        const QStringList name = declaration.left(colon).trimmed().toLower().split(u'-');
+        const QString property = declaration.left(colon).trimmed().toLower();
+        const QStringList name = property.split(u'-');
         QString value = declaration.mid(colon + 1);
         // QCss::Parser::testPrio(): a trailing "! important", in any case, marks the declaration and is no value
         if (const qsizetype bang = value.lastIndexOf(u'!'); bang >= 0 && !QStringView(value).sliced(bang + 1).trimmed().compare(u"important", Qt::CaseInsensitive)) {
             value.truncate(bang);
         }
         const QStringList values = value.simplified().split(u' ', Qt::SkipEmptyParts);
+        const int first = values.isEmpty() ? 0 : length(values.first());
         const qsizetype edge = name.size() > 1 ? edges.indexOf(name.at(1)) : -1;
         const bool padding = name.first() == qsl("padding");
-        if (padding || name.first() == qsl("margin")) {
+        if (property == qsl("width")) {
+            width = first;
+        } else if (property == qsl("height")) {
+            height = first;
+        } else if (property == qsl("min-width")) {
+            minimumWidth = first;
+        } else if (property == qsl("min-height")) {
+            minimumHeight = first;
+        } else if (property == qsl("max-width")) {
+            maximumWidth = first;
+        } else if (property == qsl("max-height")) {
+            maximumHeight = first;
+        } else if (padding || name.first() == qsl("margin")) {
             auto& sides = padding ? paddings : margins;
             if (name.size() == 1) {
                 spread(values, length, sides);
+                box = true;
             } else if (name.size() == 2 && edge >= 0) {
-                sides[edge] = values.isEmpty() ? 0 : length(values.first());
+                sides[edge] = first;
+                box = true;
             }
         } else if (name.first() == qsl("border")) {
-            if (name.size() == 1) {
+            if (name.last() == qsl("radius")) {
+                radius = true;
+            } else if (name.size() == 1) {
                 shorthand(values, 0);
                 borders.fill(borders[0]);
-                borderless.fill(borderless[0]);
+                styles.fill(styles[0]);
             } else if (name.size() == 2 && name.at(1) == qsl("width")) {
                 spread(values, length, borders);
             } else if (name.size() == 2 && name.at(1) == qsl("style")) {
-                spread(values, none, borderless);
+                spread(values, style, styles);
             } else if (name.size() == 2 && edge >= 0) {
                 shorthand(values, edge);
             } else if (name.size() == 3 && edge >= 0 && name.at(2) == qsl("width")) {
-                borders[edge] = values.isEmpty() ? 0 : length(values.first());
+                borders[edge] = first;
             } else if (name.size() == 3 && edge >= 0 && name.at(2) == qsl("style")) {
-                borderless[edge] = values.size() != 1 || none(values.first());
+                styles[edge] = values.size() == 1 ? style(values.first()) : Style::None;
             }
         }
     }
-    std::array<int, 4> frame{};
+    // QRenderRule::fixupBorder()
     for (int i = 0; i < 4; ++i) {
-        frame[i] = margins[i] + (borderless[i] ? 0 : borders[i]) + paddings[i];
+        if (styles[i] == Style::Native && radius) {
+            styles[i] = Style::None;
+        }
+        if (styles[i] == Style::None) {
+            borders[i] = 0;
+        } else if (styles[i] == Style::Native && !borders[i]) {
+            borders[i] = nativeFrameWidth;
+        }
     }
-    return frame;
+    SheetGeometry geometry;
+    std::array<int, 4> widths{};
+    for (int i = 0; i < 4; ++i) {
+        widths[i] = wrapped(qint64{margins[i]} + borders[i] + paddings[i]);
+    }
+    // The base style frames a native border, and a label has no frame of its own
+    if (box || styles[0] != Style::Native) {
+        geometry.frame = widths;
+    }
+    // QRenderRule::boxSize(), which answers -1 for a negative size, and QWidget, which takes that as 0
+    const auto boxed = [](const int size, const int edges) {
+        return size < 0 ? 0 : std::clamp(wrapped(qint64{size} + edges), 0, maximumWidgetSize);
+    };
+    const QSize extent = frameExtent(widths);
+    const int across = extent.width();
+    const int down = extent.height();
+    if (minimumWidth != -1) {
+        geometry.minimum.setWidth(boxed(std::max(width, minimumWidth), across));
+    }
+    if (minimumHeight != -1) {
+        geometry.minimum.setHeight(boxed(std::max(height, minimumHeight), down));
+    }
+    if (maximumWidth != -1) {
+        geometry.maximum.setWidth(boxed(std::min(width == -1 ? maximumWidgetSize : width, maximumWidth), across));
+    }
+    if (maximumHeight != -1) {
+        geometry.maximum.setHeight(boxed(std::min(height == -1 ? maximumWidgetSize : height, maximumHeight), down));
+    }
+    return geometry;
 }
 
 // QStyleSheetStyle::updateStyleSheetFont()
@@ -397,10 +508,10 @@ void applySheetFont(QFont& font, uint& mask, const std::optional<QFont>& sheetFo
 // QLabel::sizeHint() for a label with no margin, indent or word wrap, as TLabel's are, inside the frame its sheet gives it
 QSize labelSizeHint(const QFont& font, const QString& text, const bool textLabel, const std::array<int, 4>& frame)
 {
-    const QSize frameSize(frame[1] + frame[3], frame[0] + frame[2]);
+    const QSize frameSize = frameExtent(frame);
     const QFontMetrics metrics(font);
     if (!textLabel) {
-        return QSize(metrics.averageCharWidth(), metrics.lineSpacing()) + frameSize;
+        return wrappedSum(QSize(metrics.averageCharWidth(), metrics.lineSpacing()), frameSize);
     }
     // QLabelPrivate::sizeForWidth(): a framed label with no indent of its own is indented by an x
     const int indent = *std::max_element(frame.begin(), frame.end()) ? std::max(metrics.horizontalAdvance(u'x'), 0) : 0;
@@ -416,7 +527,7 @@ QSize labelSizeHint(const QFont& font, const QString& text, const bool textLabel
     document.rootFrame()->setFrameFormat(frameFormat);
     document.setTextWidth(-1);
     const QSizeF size = document.size();
-    return QSize(qCeil(size.width()) + indent, qCeil(size.height())) + frameSize;
+    return wrappedSum(QSize(qCeil(size.width()) + indent, qCeil(size.height())), frameSize);
 }
 
 } // namespace
@@ -604,22 +715,24 @@ std::optional<QSize> TNullConsoleFrontend::getLabelSizeHint(const QString& name)
         return std::nullopt;
     }
     const Label& label = it->second;
-    const QSize frameSize(label.frame[1] + label.frame[3], label.frame[0] + label.frame[2]);
+    const QSize frameSize = frameExtent(label.frame);
+    // QLabelPrivate::sizeForWidth() answers at least the minimum size, where TLabel's SVG size does not
+    const QSize minimum = label.limits.minimum;
     // QLabel measures the movie's current image, re-reading it only as the movie resizes
     if (label.showsMovie && !label.movie->currentPixmap().isNull()) {
-        return label.movie->currentPixmap().deviceIndependentSize().toSize() + frameSize;
+        return wrappedSum(label.movie->currentPixmap().deviceIndependentSize().toSize(), frameSize).expandedTo(minimum);
     }
     if (label.pixmapSize) {
-        return *label.pixmapSize + frameSize;
+        return wrappedSum(*label.pixmapSize, frameSize).expandedTo(minimum);
     }
     // TLabel::sizeHint() answers an SVG's own size only when nothing else shows
     if (label.svgSize && !label.svgSize->isEmpty() && !label.showsMovie && QTextDocumentFragment::fromHtml(label.pModel->mText).toPlainText().trimmed().isEmpty()) {
-        return *label.svgSize + frameSize;
+        return wrappedSum(*label.svgSize, frameSize);
     }
     if (!label.sizeHint) {
         label.sizeHint = labelSizeHint(label.pModel->mFont, label.pModel->mText, label.textLabel, label.frame);
     }
-    return label.sizeHint;
+    return label.sizeHint->expandedTo(minimum);
 }
 
 // A styled widget's font resolves against the application's, not its parent's
@@ -668,6 +781,7 @@ void TNullConsoleFrontend::restyleLabel(Label& label, const QString& sheet)
     if (sheet.isEmpty()) {
         label.sheetFont.reset();
         label.frame.fill(0);
+        label.limits = SizeLimits();
         // Clearing a sheet hands back the saved font and forgets it
         if (label.styled) {
             if (label.savedFont) {
@@ -678,12 +792,18 @@ void TNullConsoleFrontend::restyleLabel(Label& label, const QString& sheet)
             label.sizeHint.reset();
         }
     } else {
-        const QString declarations = labelSheetDeclarations(sheet, qsl("label_%1_%2").arg(mpHost->getName(), model.mName));
+        static const QStringList classNames{qsl("TLabel"), qsl("QLabel"), qsl("QFrame"), qsl("QWidget"), qsl("QObject")};
+        const QString objectName = qsl("label_%1_%2").arg(mpHost->getName(), model.mName);
+        // QStyleSheetStyle::updateStyleSheetFont() asks for the enabled and active states, setGeometry() only for enabled
+        const QString declarations = sheetDeclarations(sheet, classNames, objectName, {qsl("enabled"), qsl("active")});
+        const QString enabledDeclarations = sheetDeclarations(sheet, classNames, objectName, {qsl("enabled")});
         label.sheetFont = styleSheetFont(declarations);
-        // QCss::ValueExtractor measures em and ex in the application's font as the sheet sets it
-        label.frame = sheetFrame(declarations, label.sheetFont ? label.sheetFont->resolve(QFont()) : QFont());
+        label.frame = sheetGeometry(declarations, sheetLengthFont(declarations), 0).frame;
+        const SheetGeometry geometry = sheetGeometry(enabledDeclarations, sheetLengthFont(enabledDeclarations), 0);
+        label.limits = {geometry.minimum, geometry.maximum};
         label.styled = true;
         polishLabel(label);
+        setLabelSize(label, label.limits.bounded(model.mGeometry.size()));
     }
     if (label.textLabel && model.mFont != before) {
         label.sizeHint.reset();
@@ -1090,7 +1210,7 @@ bool TNullConsoleFrontend::resizePlainWindow(const QString& name, const int widt
     QRect geometry = registry.plainWindowGeometry(name).value_or(QRect());
     // QWidget::resize() bounds a size only for a widget not yet created or with size limits, and a
     // scroll box is created once made and has no limits, where a command line or text box has them
-    geometry.setSize(box ? QSize(width, height) : widgetSize(width, height));
+    geometry.setSize(box ? QSize(width, height) : window->limits.bounded(widgetSize(width, height)));
     registry.setPlainWindowGeometry(name, geometry);
     if (window) {
         window->geometry = geometry;
@@ -1333,6 +1453,43 @@ bool TNullConsoleFrontend::setTextBoxFont(const QString& name, const QFont& font
     return true;
 }
 
+bool TNullConsoleFrontend::setTextBoxReadOnly(const QString& name, const bool readOnly)
+{
+    const auto it = mTextBoxes.find(name);
+    if (it == mTextBoxes.end()) {
+        return false;
+    }
+    it->second.readOnly = readOnly;
+    return true;
+}
+
+bool TNullConsoleFrontend::setTextBoxStyleSheet(const QString& name, const QString& styleSheet)
+{
+    const auto it = mTextBoxes.find(name);
+    if (it == mTextBoxes.end()) {
+        return false;
+    }
+    it->second.styleSheet = styleSheet;
+    restyleTextBox(name, it->second);
+    return true;
+}
+
+// Only the sheet's size limits, which QStyleSheetStyle::setGeometry() sets for the enabled state and
+// whether the text edit is read-only
+void TNullConsoleFrontend::restyleTextBox(const QString& name, PlainWindow& textBox)
+{
+    static const QStringList classNames{qsl("TTextBox"), qsl("QPlainTextEdit"), qsl("QAbstractScrollArea"), qsl("QFrame"), qsl("QWidget"), qsl("QObject")};
+    const QString declarations =
+            sheetDeclarations(textBox.styleSheet, classNames, qsl("textEdit_%1_%2").arg(mpHost->getName(), name), {qsl("enabled"), textBox.readOnly ? qsl("read-only") : qsl("editable")});
+    // QFusionStyle's PM_DefaultFrameWidth, which a native border takes
+    const SheetGeometry geometry = sheetGeometry(declarations, sheetLengthFont(declarations), 1);
+    textBox.limits = {geometry.minimum, geometry.maximum};
+    textBox.geometry.setSize(textBox.limits.bounded(textBox.geometry.size()));
+    if (!mScrollBoxes.contains(name) && plainWindow(name) == &textBox) {
+        mpHost->windowRegistry().setPlainWindowGeometry(name, textBox.geometry);
+    }
+}
+
 std::pair<bool, QString> TNullConsoleFrontend::setLabelStyleSheet(const QString& name, const QString& stylesheet)
 {
     if (name.isEmpty()) {
@@ -1433,10 +1590,14 @@ bool TNullConsoleFrontend::resizeLabel(const QString& name, const int width, con
     if (it == mLabels.end()) {
         return false;
     }
-    Label& label = it->second;
-    const QSize size = widgetSize(width, height);
+    setLabelSize(it->second, it->second.limits.bounded(widgetSize(width, height)));
+    return true;
+}
+
+void TNullConsoleFrontend::setLabelSize(Label& label, const QSize& size)
+{
     if (size == label.pModel->mGeometry.size()) {
-        return true;
+        return;
     }
     label.pModel->mGeometry.setSize(size);
     // QWidget holds a hidden widget's resize event, and so TLabel::resized, back until it shows
@@ -1445,7 +1606,6 @@ bool TNullConsoleFrontend::resizeLabel(const QString& name, const int width, con
     } else if (label.movieFollowsSize) {
         label.movie->setScaledSize(size);
     }
-    return true;
 }
 
 void TNullConsoleFrontend::setLabelVisible(Label& label, const bool visible)
@@ -1697,6 +1857,10 @@ std::pair<bool, QString> TNullConsoleFrontend::reparentWindow(const QString& win
             window->userWindow = userWindow;
             window->box = std::move(box);
             window->shown = show || (!moved && window->shown);
+            // QWidget::setParent() restyles a text edit it moves, in its read-only state now
+            if (const auto textBox = mTextBoxes.find(name); moved && textBox != mTextBoxes.end() && &textBox->second == window) {
+                restyleTextBox(name, textBox->second);
+            }
             movePlainWindow(name, x, y);
             reportWindowVisibility(name);
             return {true, QString()};

@@ -173,10 +173,10 @@ public:
     std::pair<bool, QString> deleteTextBox(const QString& name) override;
     bool setTextBoxText(const QString& name, const QString& text) override;
     bool clearTextBox(const QString& name) override { return setTextBoxText(name, QString()); }
+    bool setTextBoxReadOnly(const QString& name, bool readOnly) override;
     // What these set changes nothing a Lua call reads back
-    bool setTextBoxReadOnly(const QString& name, bool) override { return mTextBoxes.contains(name); }
     bool setTextBoxPlaceholder(const QString& name, const QString&) override { return mTextBoxes.contains(name); }
-    bool setTextBoxStyleSheet(const QString& name, const QString&) override { return mTextBoxes.contains(name); }
+    bool setTextBoxStyleSheet(const QString& name, const QString& styleSheet) override;
     bool setTextBoxTabMovesFocus(const QString& name, bool) override { return mTextBoxes.contains(name); }
     bool setTextBoxFont(const QString& name, const QFont& font) override;
     void createBuffer(const QString& name) override;
@@ -286,6 +286,15 @@ public:
 private:
     friend class TNullMxpFrameFrontend;
 
+    // QWidget's minimumSize() and maximumSize(), which QStyleSheetStyle::setGeometry() sets from a sheet
+    struct SizeLimits
+    {
+        QSize minimum{0, 0};
+        // QWIDGETSIZE_MAX
+        QSize maximum{(1 << 24) - 1, (1 << 24) - 1};
+        // As QWidget::resize() bounds a size, the minimum winning
+        QSize bounded(const QSize& size) const { return size.boundedTo(maximum).expandedTo(minimum); }
+    };
     // A scroll box takes the font of the user window it is in, as does a label inside it with no style
     // sheet, but not a new label, whose background colour is a sheet, nor a mini console, which has its
     // own. Deleting it takes what it holds out of the registry once deferred deletes run, as
@@ -310,6 +319,10 @@ private:
         QRect geometry;
         // A command line's TCommandLine::mActionFunction, a Lua registry index
         int action = 0;
+        SizeLimits limits;
+        // A text box's QPlainTextEdit::isReadOnly() and own sheet, which its limits depend on
+        bool readOnly = false;
+        QString styleSheet;
     };
     struct SubConsole
     {
@@ -332,8 +345,9 @@ private:
         std::optional<QFont> savedFont;
         // The font properties the label's own sheet declares, if it declares any
         std::optional<QFont> sheetFont;
-        // The margin, border and padding widths its sheet gives it, as top, right, bottom and left
+        // The widths SE_ShapedFrameContents takes off each side under its sheet, as top, right, bottom and left
         std::array<int, 4> frame{};
+        SizeLimits limits;
         // Qt::WA_StyleSheet
         bool styled = false;
         // TLabel::mPaletteSetSinceStyled
@@ -356,6 +370,8 @@ private:
     };
     QMovie* shownMovie(const QString& name) const;
     void setLabelVisible(Label& label, bool visible);
+    void setLabelSize(Label& label, const QSize& size);
+    void restyleTextBox(const QString& name, PlainWindow& textBox);
     void clearLabelContents(Label& label);
 
     TConsoleModel& addSubConsole(const QString& name, TWindowRegistry::SubConsoleKind kind, const QString& windowname);
