@@ -20,11 +20,15 @@
 
 #include "TMxpFrameManager.h"
 #include "Host.h"
-#include "TMainConsole.h"
-#include "TMxpFrameWidgets.h"
+#include "TConsoleFrontend.h"
+#include "TConsoleModel.h"
+#include "TMxpFrameFrontend.h"
+#include "TPrintSink.h"
 
 #include <QDebug>
 #include <QFontMetrics>
+#include <algorithm>
+#include <cmath>
 #include <optional>
 
 namespace {
@@ -177,7 +181,7 @@ bool TMxpFrameManager::closeFrame(const QString& name)
 
     // Special handling for frames that are tabs in a parent frame
     if (frame->parentFrame) {
-        TMxpFrameWidgets* widgets = frameWidgets();
+        TMxpFrameFrontend* widgets = frameWidgets();
         if (widgets && widgets->removeFromParentTabs(name, frame->parentFrame->name)) {
             // Remove from hierarchy
             removeFrameFromHierarchy(frame);
@@ -702,8 +706,12 @@ QSize TMxpFrameManager::calculateFrameSize(const QString& spec, const QSize& con
             return QSize(0, 0);
         }
 
-        // Get font metrics from main console
-        QFont font = mpHost->getDisplayFont();
+        // A frame draws in the consoles' default family at the main font's size
+        // (TMxpFrameWidgets), not in the main font, which may be proportional
+        TFontAttributes frameFont(mpHost->fontsAntiAlias());
+        const int pointSize = mpHost->getDisplayFont().pointSize();
+        frameFont.mPointSize = pointSize > 0 ? pointSize : 12;
+        const QFont font = frameFont.makeFont();
         QFontMetrics fm(font);
 
         if (isHeight) {
@@ -712,9 +720,10 @@ QSize TMxpFrameManager::calculateFrameSize(const QString& spec, const QSize& con
             int result = chars * fm.height();
             return QSize(0, result);
         }
-        // Use horizontalAdvance('W') instead of averageCharWidth() for consistency
-        // with Host::calcFontSize() which uses this for more accurate character width
-        int result = chars * fm.horizontalAdvance(QChar('W'));
+        // TTextEdit draws whole-pixel cells but getColumnCount() divides by the
+        // fractional average, so the wider of the two holds that many of either
+        const qreal cellWidth = std::max<qreal>(fm.averageCharWidth(), QFontMetricsF(font).averageCharWidth());
+        const int result = static_cast<int>(std::ceil(chars * cellWidth));
         return QSize(result, 0);
     }
 
@@ -830,7 +839,7 @@ std::optional<QRect> TMxpFrameManager::nestingArea(const TMxpFrame& frame) const
     case TMxpFrame::Shown::Window: {
         // deleteMiniConsole() can take the window away without the frame closing
         const auto* widgets = frameWidgets();
-        if (!widgets || !widgets->frameWidget(frame.name)) {
+        if (!widgets || !widgets->hasFrameWidget(frame.name)) {
             return std::nullopt;
         }
         return frame.geometry;
@@ -846,19 +855,12 @@ std::optional<QRect> TMxpFrameManager::nestingArea(const TMxpFrame& frame) const
     return std::nullopt;
 }
 
-TMxpFrameWidgets* TMxpFrameManager::frameWidgets()
+TMxpFrameFrontend* TMxpFrameManager::frameWidgets()
 {
-    if (!mpHost || !mpHost->mpConsole) {
-        return nullptr;
-    }
-    return &mpHost->mpConsole->mxpFrameWidgets();
+    return mpHost ? &mpHost->consoleFrontend()->mxpFrames() : nullptr;
 }
 
-const TMxpFrameWidgets* TMxpFrameManager::frameWidgets() const
+const TMxpFrameFrontend* TMxpFrameManager::frameWidgets() const
 {
-    if (!mpHost || !mpHost->mpConsole) {
-        return nullptr;
-    }
-    const TMainConsole* console = mpHost->mpConsole;
-    return &console->mxpFrameWidgets();
+    return mpHost ? &mpHost->consoleFrontend()->mxpFrames() : nullptr;
 }
