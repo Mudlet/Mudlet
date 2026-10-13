@@ -17,10 +17,16 @@ local function installServerPackage()
     return
   end
 
-  if semver(installedVersion) &lt; semver(repoVersion) then
+  -- repoVersion is nil when the listing has no MedUI
+  if repoVersion and semver(installedVersion) &lt; semver(repoVersion) then
     mpkg.upgrade(meduiPackage)
   end
 end
+
+-- An uninstall leaves this script's timers running, and a reinstall runs it again
+MedBootstrap = MedBootstrap or {}
+MedBootstrap.run = (MedBootstrap.run or 0) + 1
+local run = MedBootstrap.run
 
 -- mpkg.install() gives up without retrying while the package listing is still
 -- downloading. Not mpkg.ready(): that starts another download each time it is false
@@ -28,22 +34,26 @@ local function installWhenMpkgReady(triesLeft)
   if mpkg and mpkg.packages and mpkg.packages.packages then
     installServerPackage()
   elseif triesLeft &gt; 0 then
+    -- the preinstall list can put the bundled mpkg after this package
+    if triesLeft == 11 and getPackageInfo("mpkg", "version") == "" then
+      installPackage("https://github.com/Mudlet/mudlet-package-repository/raw/refs/heads/main/packages/mpkg.mpackage")
+    end
+    -- mpkg retries a failed listing download only every 12 hours
+    if mpkg and (triesLeft == 8 or triesLeft == 4) then
+      mpkg.updatePackageList(true)
+    end
     tempTimer(5, function()
-      -- the timer outlives an uninstall of this package
-      if table.contains(getPackages(), "MedBootstrap") then
+      if run == MedBootstrap.run and table.contains(getPackages(), "MedBootstrap") then
         installWhenMpkgReady(triesLeft - 1)
       end
     end)
+  elseif table.contains(getPackages(), meduiPackage) then
+    return
+  elseif not mpkg then
+    cecho("\n&lt;orange&gt;MedBootstrap: mpkg could not be installed, so MedUI is not installed yet. It will be tried again the next time this profile is opened.&lt;reset&gt;\n")
   else
     cecho("\n&lt;orange&gt;MedBootstrap: the package listing did not arrive, so MedUI is not installed yet. It will be tried again the next time this profile is opened.&lt;reset&gt;\n")
   end
-end
-
--- install mpkg if not already
-local mpkgVersion = getPackageInfo("mpkg", "version")
-
-if mpkgVersion == "" then
-  installPackage("https://github.com/Mudlet/mudlet-package-repository/raw/refs/heads/main/packages/mpkg.mpackage")
 end
 
 installWhenMpkgReady(12)</script>
