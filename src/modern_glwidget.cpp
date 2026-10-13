@@ -2445,8 +2445,9 @@ void ModernGLWidget::refreshAtlas()
 
 float ModernGLWidget::atlasLevel() const
 {
-    // At the rooms' bottoms, as the grid is
-    return static_cast<float>(mMapCenterZ) - 1.0f / scale / zFlattening;
+    // At the rooms' bottoms, as the grid is; a flight shows its destination level at once, but the camera climbs to it
+    const float level = mFlight ? mCurrentAnimationZ : static_cast<float>(mMapCenterZ);
+    return level - 1.0f / scale / zFlattening;
 }
 
 QMatrix4x4 ModernGLWidget::atlasModelMatrix() const
