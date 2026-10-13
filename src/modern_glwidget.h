@@ -555,7 +555,7 @@ private:
     // The shading of the exits not brushed on as strokes
     RenderCommand::Shading exitShading() const;
     // How far below where ExitScene puts them exits are drawn, so that a model's paths lie on the ground
-    float exitSink() const;
+    float exitSink(const ExitScene::Options&) const;
     void zoomBySteps(float steps);
     void panByRooms(int right, int up);
     void selectRoom(int roomId, Qt::KeyboardModifiers modifiers);
