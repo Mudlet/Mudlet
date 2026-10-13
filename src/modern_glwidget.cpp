@@ -27,6 +27,7 @@
 #include "ExitAppearance.h"
 #include "ExitScene.h"
 #include "Host.h"
+#include "MapSearchPanel.h"
 #include "RoomAppearance.h"
 #include "RoomContextMenuHandler.h"
 #include "T2DMap.h"
@@ -56,6 +57,7 @@
 #include <QPainter>
 #include <QPainterPath>
 #include <QPolygonF>
+#include <QShortcut>
 #include <QKeyEvent>
 #include <QSurfaceFormat>
 #include <QToolTip>
@@ -70,6 +72,12 @@
 #include <utility>
 
 using namespace std::chrono_literals;
+
+namespace {
+// How long a room the search went to is marked, the last part of that fading out
+constexpr qint64 scmSearchMarkMilliseconds = 3500;
+constexpr qint64 scmSearchMarkFadeMilliseconds = 1000;
+} // namespace
 
 ModernGLWidget::ModernGLWidget(TMap* pMap, Host* pHost, QWidget* parent)
 : QOpenGLWidget(parent)
@@ -103,6 +111,18 @@ ModernGLWidget::ModernGLWidget(TMap* pMap, Host* pHost, QWidget* parent)
     mRouteRefreshTimer = new QTimer(this);
     mRouteRefreshTimer->setSingleShot(true);
     connect(mRouteRefreshTimer, &QTimer::timeout, this, &ModernGLWidget::refreshRoute);
+    mSearchMarkTimer = new QTimer(this);
+    mSearchMarkTimer->setInterval(33ms);
+    connect(mSearchMarkTimer, &QTimer::timeout, this, [this]() {
+        if (mSearchMarkTime.elapsed() >= scmSearchMarkMilliseconds) {
+            mSearchMarkTimer->stop();
+            mSearchMarkedRoomId = 0;
+        }
+        update();
+    });
+    mpSearchShortcut = new QShortcut(QKeySequence::Find, this, this, &ModernGLWidget::openSearch);
+    // Only over the view, so that elsewhere Ctrl+F still searches the console
+    mpSearchShortcut->setEnabled(false);
 
     // A click takes focus only so that a floating view can pass typed keys on to the command line; focus from
     // Tab also lets the view pan and zoom with keys
@@ -174,6 +194,7 @@ void ModernGLWidget::showEvent(QShowEvent* event)
 
 void ModernGLWidget::hideEvent(QHideEvent* event)
 {
+    mpSearchShortcut->setEnabled(false);
     endEditGesture();
     saveCamera();
     // The release, if any, now goes elsewhere
@@ -370,6 +391,10 @@ bool ModernGLWidget::event(QEvent* event)
     }
     // The keys go on to the command line, so it must also win the shortcuts it wins with focus of its own
     if (event->type() == QEvent::ShortcutOverride) {
+        if (static_cast<QKeyEvent*>(event)->matches(QKeySequence::Find)) {
+            event->accept();
+            return true;
+        }
         TCommandLine* pCommandLine = commandLine();
         if (pCommandLine && pCommandLine->claimsShortcutOverride(static_cast<QKeyEvent*>(event))) {
             event->accept();
@@ -420,6 +445,7 @@ void ModernGLWidget::resizeEvent(QResizeEvent* event)
             mFrameWhenShown = false;
         }
     }
+    placeSearchPanel();
     if (contextCreationFailed()) {
         QWidget::resizeEvent(event);
         return;
@@ -2654,13 +2680,7 @@ void ModernGLWidget::flyToArea(const int areaId, const int landingRoomId)
         const QPointF shift = (pFrom ? pFrom->offset : QPointF()) - pTo->offset;
         flight.from = QVector3D(target.x() + static_cast<float>(shift.x()), target.y() + static_cast<float>(shift.y()), target.z());
         flight.to = QVector3D(static_cast<float>(pTo->landing.x()), static_cast<float>(pTo->landing.y()), static_cast<float>(pTo->landingLevel));
-        const auto saved = mSavedCameras.constFind(areaId);
-        if (saved != mSavedCameras.cend()) {
-            flight.toDistance = saved->distance;
-        } else {
-            const float aspectRatio = height() > 0 ? static_cast<float>(width()) / static_cast<float>(height()) : 1.0f;
-            flight.toDistance = CameraController::distanceToShow(static_cast<float>(mpMap->mpRoomDB->get2DMapZoom(areaId)), aspectRatio);
-        }
+        flight.toDistance = arrivalDistance(areaId);
     }
     if (pLanding) {
         flight.to = QVector3D(static_cast<float>(pLanding->x()), static_cast<float>(pLanding->y()), static_cast<float>(pLanding->z()));
@@ -2710,6 +2730,229 @@ void ModernGLWidget::startFlight(const int areaId, const Flight& flight)
     mCameraAnimationTimer->start();
     emit areaFlownInto(areaId);
     update();
+}
+
+float ModernGLWidget::arrivalDistance(const int areaId) const
+{
+    const auto saved = mSavedCameras.constFind(areaId);
+    if (saved != mSavedCameras.cend()) {
+        return saved->distance;
+    }
+    const float aspectRatio = height() > 0 ? static_cast<float>(width()) / static_cast<float>(height()) : 1.0f;
+    return CameraController::distanceToShow(static_cast<float>(mpMap->mpRoomDB->get2DMapZoom(areaId)), aspectRatio);
+}
+
+void ModernGLWidget::flyToPoint(const int areaId, const QVector3D& point, const float distance)
+{
+    refreshAtlas();
+    const MapAtlas::Area* pFrom = mAtlas.area(mAID);
+    const MapAtlas::Area* pTo = mAtlas.area(areaId);
+    const QVector3D target = mCameraController.getTarget();
+    Flight flight;
+    flight.to = point;
+    flight.fromDistance = mCameraController.getScale();
+    flight.toDistance = std::min(flight.fromDistance, distance);
+    if (areaId == mAID) {
+        flight.from = target;
+    } else if (pFrom && pTo) {
+        // From the same place in the world, in the new area's coordinates, as flyToArea() starts
+        const QPointF shift = pFrom->offset - pTo->offset;
+        flight.from = QVector3D(target.x() + static_cast<float>(shift.x()), target.y() + static_cast<float>(shift.y()), target.z());
+    } else {
+        flight.from = point;
+    }
+    saveCamera();
+    startFlight(areaId, flight);
+}
+
+void ModernGLWidget::openSearch()
+{
+    if (!mpSearchPanel) {
+        mpSearchPanel = new MapSearchPanel(this);
+        connect(mpSearchPanel, &MapSearchPanel::queryChanged, this, &ModernGLWidget::runSearch);
+        connect(mpSearchPanel, &MapSearchPanel::resultChosen, this, &ModernGLWidget::chooseSearchResult);
+        connect(mpSearchPanel, &MapSearchPanel::contextMenuRequested, this, &ModernGLWidget::showSearchResultMenu);
+        connect(mpSearchPanel, &MapSearchPanel::closed, this, [this]() {
+            setFocus(Qt::OtherFocusReason);
+        });
+    }
+    // The map, or the area shown, may have changed since it was last open
+    runSearch();
+    mpSearchPanel->open();
+}
+
+void ModernGLWidget::runSearch()
+{
+    if (!mpSearchPanel || !mpMap) {
+        return;
+    }
+    mSearch.refresh(*mpMap);
+    qsizetype total = 0;
+    mSearchResults = mSearch.find(mpSearchPanel->text(), mAID, mpSearchPanel->labelsIncluded(), MapSearch::scmMaxResults, &total);
+    QStringList lines;
+    lines.reserve(mSearchResults.size());
+    for (const MapSearch::Result& result : mSearchResults) {
+        lines.append(searchResultLine(result));
+    }
+    QString summary;
+    if (!mpSearchPanel->text().trimmed().isEmpty() && !total) {
+        //: Shown under the search box over the 3D map when no room, area or label matches what was typed
+        summary = tr("Nothing found");
+    } else if (total > mSearchResults.size()) {
+        //: Shown under the search box over the 3D map when more places match than are listed; %1 is how many are listed and %n how many were found
+        summary = tr("The best %1 of %n place(s) found", nullptr, static_cast<int>(total)).arg(mSearchResults.size());
+    }
+    mpSearchPanel->setResults(lines, summary);
+    placeSearchPanel();
+}
+
+QString ModernGLWidget::searchResultLine(const MapSearch::Result& result) const
+{
+    switch (result.kind) {
+    case MapSearch::Kind::Area:
+        //: A place found by the search over the 3D map that is an area; %1 is its name
+        return tr("%1 (area)").arg(result.name);
+    case MapSearch::Kind::Label:
+        //: A place found by the search over the 3D map that is a map label; %1 is its text and %2 the area it is in
+        return tr("Label \"%1\" in %2").arg(result.name, areaName(result.areaId));
+    case MapSearch::Kind::Room:
+        break;
+    }
+    if (result.name.isEmpty()) {
+        //: A room found by the search over the 3D map, by its number, that has no name; %1 is its number and %2 the area it is in
+        return tr("Room %1 in %2").arg(QString::number(result.id), areaName(result.areaId));
+    }
+    //: A room found by the search over the 3D map; %1 is its name, %2 the area it is in and %3 its number
+    return tr("%1 in %2 (room %3)").arg(result.name, areaName(result.areaId), QString::number(result.id));
+}
+
+void ModernGLWidget::placeSearchPanel()
+{
+    if (!mpSearchPanel) {
+        return;
+    }
+    constexpr int margin = 8;
+    const int panelWidth = std::max(0, std::min(420, width() - 2 * margin));
+    const int panelHeight = std::max(0, std::min(mpSearchPanel->sizeHint().height(), height() * 2 / 3));
+    mpSearchPanel->setGeometry(width() - margin - panelWidth, margin, panelWidth, panelHeight);
+}
+
+void ModernGLWidget::chooseSearchResult(const int row, const bool planRoute)
+{
+    if (row < 0 || row >= mSearchResults.size() || !mpMap) {
+        return;
+    }
+    MapSearch::Result result = mSearchResults.at(row);
+    if (mSearch.stale(*mpMap)) {
+        // Found again, so a place since taken off the map is not gone to
+        runSearch();
+        const auto same = std::find_if(mSearchResults.cbegin(), mSearchResults.cend(), [&result](const MapSearch::Result& found) {
+            return found.kind == result.kind && found.id == result.id && found.areaId == result.areaId;
+        });
+        if (same == mSearchResults.cend()) {
+            return;
+        }
+        result = *same;
+    }
+    if (!planRoute) {
+        goToSearchResult(result);
+    } else if (result.kind == MapSearch::Kind::Room) {
+        planRouteToRoom(result.id);
+    } else if (result.kind == MapSearch::Kind::Area) {
+        planRouteToArea(result.id);
+    }
+}
+
+void ModernGLWidget::showSearchResultMenu(const int row, const QPoint& globalPosition)
+{
+    if (row < 0 || row >= mSearchResults.size()) {
+        return;
+    }
+    auto* menu = new QMenu(this);
+    menu->setAttribute(Qt::WA_DeleteOnClose);
+    //: Context menu item on a place found by the search over the 3D map: flies the view there
+    connect(menu->addAction(tr("Go there")), &QAction::triggered, this, [this, row]() {
+        chooseSearchResult(row, false);
+    });
+    if (mSearchResults.at(row).kind != MapSearch::Kind::Label) {
+        //: Context menu item on a room or area found by the search over the 3D map: shows the route from the player's room to it, at every zoom
+        connect(menu->addAction(tr("Plan route here")), &QAction::triggered, this, [this, row]() {
+            chooseSearchResult(row, true);
+        });
+    }
+    menu->popup(globalPosition);
+}
+
+void ModernGLWidget::goToSearchResult(const MapSearch::Result& result)
+{
+    if (!mpMap || !mpMap->mpRoomDB) {
+        return;
+    }
+    switch (result.kind) {
+    case MapSearch::Kind::Area:
+        flyToArea(result.id);
+        return;
+    case MapSearch::Kind::Room:
+        if (const TRoom* pRoom = mpMap->mpRoomDB->getRoom(result.id)) {
+            const int areaId = pRoom->getArea();
+            flyToPoint(areaId, QVector3D(static_cast<float>(pRoom->x()), static_cast<float>(pRoom->y()), static_cast<float>(pRoom->z())), arrivalDistance(areaId));
+            mSearchMarkedRoomId = result.id;
+            mSearchMarkTime.start();
+            mSearchMarkTimer->start();
+        }
+        return;
+    case MapSearch::Kind::Label:
+        if (const TArea* pArea = mpMap->mpRoomDB->getArea(result.areaId); pArea && pArea->mMapLabels.contains(result.id)) {
+            const TMapLabel& label = pArea->mMapLabels[result.id];
+            // pos is its top-left corner
+            const QVector3D middle(static_cast<float>(label.pos.x() + std::abs(label.size.width()) / 2.0),
+                                   static_cast<float>(label.pos.y() - std::abs(label.size.height()) / 2.0),
+                                   static_cast<float>(GeometryManager::labelLevel(label.pos.z()).value_or(qRound(label.pos.z()))));
+            flyToPoint(result.areaId, middle, arrivalDistance(result.areaId));
+        }
+        return;
+    }
+}
+
+void ModernGLWidget::queueSearchMark()
+{
+    if (!mSearchMarkedRoomId || !mpMap || !mpMap->mpRoomDB || !mpHost) {
+        return;
+    }
+    const TRoom* pRoom = mpMap->mpRoomDB->getRoom(mSearchMarkedRoomId);
+    const qint64 elapsed = mSearchMarkTime.elapsed();
+    if (!pRoom || pRoom->getArea() != mAID || pRoom->isHidden() || !levelShown(pRoom->z()) || elapsed >= scmSearchMarkMilliseconds) {
+        return;
+    }
+    const float fade = std::min(1.0f, static_cast<float>(scmSearchMarkMilliseconds - elapsed) / static_cast<float>(scmSearchMarkFadeMilliseconds));
+    const float roomSize = 2.0f / scale;
+    const float roomHeight = roomSize / zFlattening;
+    const float thickness = roomHeight / 3.0f;
+    const float lineWidth = roomSize * 0.18f;
+    const float haloWidth = roomSize * 0.12f;
+    // A square around the room, breathing in and out so that it catches the eye
+    const float pulse = 0.5f + 0.5f * std::sin(static_cast<float>(elapsed) / 1000.0f * 2.0f * std::numbers::pi_v<float> * 1.25f);
+    const float reach = roomSize * (0.75f + 0.25f * pulse);
+    const float lift = mSearchMarkedRoomId == mHoveredRoomId ? roomHeight : 0.0f;
+    const QVector3D at(static_cast<float>(pRoom->x()), static_cast<float>(pRoom->y()), static_cast<float>(pRoom->z()) + lift + roomHeight / 2.0f + thickness / 2.0f);
+    const QColor color = mpHost->mLightCyan_2;
+    const QColor halo = routeHaloColor();
+    const std::array<QVector3D, 4> corners{at + QVector3D(-reach, -reach, 0.0f), at + QVector3D(reach, -reach, 0.0f), at + QVector3D(reach, reach, 0.0f), at + QVector3D(-reach, reach, 0.0f)};
+    QVector<CubeInstanceData> haloBars;
+    QVector<CubeInstanceData> markBars;
+    for (int side = 0; side < 4; ++side) {
+        const QVector3D along = (corners[(side + 1) % 4] - corners[side]).normalized() * (lineWidth / 2.0f);
+        const QVector3D from = corners[side] - along;
+        const QVector3D to = corners[(side + 1) % 4] + along;
+        haloBars.append(CubeInstanceData(GeometryManager::barTransform(from, to, lineWidth + haloWidth, thickness), halo.redF(), halo.greenF(), halo.blueF(), fade));
+        markBars.append(CubeInstanceData(GeometryManager::barTransform(from, to, lineWidth, thickness), color.redF(), color.greenF(), color.blueF(), fade));
+    }
+    mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::DISABLE_DEPTH_WRITE));
+    for (const QVector<CubeInstanceData>* bars : {&haloBars, &markBars}) {
+        mRenderCommandQueue.addCommand(std::make_unique<RenderInstancedCubesCommand>(
+                *bars, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix(), RenderCommand::Shading::Unlit));
+    }
+    mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::ENABLE_DEPTH_WRITE));
 }
 
 void ModernGLWidget::stopFlight()
@@ -3486,6 +3729,11 @@ void ModernGLWidget::showContextMenu(const QPoint& position)
     }
     menu->insertAction(firstAction, editIn2D);
     menu->insertAction(firstAction, fitAreaAction);
+    //: 3D map view context menu item: opens a search box that finds rooms, areas and labels in every area of the map
+    auto* searchAction = new QAction(tr("Search the map..."), menu);
+    searchAction->setShortcut(QKeySequence::Find);
+    connect(searchAction, &QAction::triggered, this, &ModernGLWidget::openSearch);
+    menu->insertAction(firstAction, searchAction);
     if (mpMap->mpRoomDB && !mpMap->mpRoomDB->isEmpty()) {
         // Not to where the player is, which would only drop the route planned already
         const int playerRoomId = mpMap->mRoomIdHash.value(mpMap->mProfileName);
@@ -3522,8 +3770,15 @@ void ModernGLWidget::showContextMenu(const QPoint& position)
     menu->popup(mapToGlobal(position));
 }
 
+void ModernGLWidget::enterEvent(QEnterEvent* event)
+{
+    mpSearchShortcut->setEnabled(true);
+    QOpenGLWidget::enterEvent(event);
+}
+
 void ModernGLWidget::leaveEvent(QEvent* event)
 {
+    mpSearchShortcut->setEnabled(false);
     // A press still on here with no button down lost its release to wherever the grab went, such as a popup; a
     // Leave while the button is held, mid-drag, must not end the drag
     if (QGuiApplication::mouseButtons() == Qt::NoButton) {
@@ -3756,12 +4011,19 @@ constexpr float scmKeyTurnDegrees = 15.0f;
 
 void ModernGLWidget::keyPressEvent(QKeyEvent* event)
 {
+    if (event->matches(QKeySequence::Find)) {
+        openSearch();
+        return;
+    }
     // A modifier pressed on its own waits for the key it goes with, such as Shift+Tab or the Shift for +; handed on
-    // first, it would take focus to the command line ahead of that key
+    // first, it would take focus to the command line ahead of that key. Control waits even after a click, or Ctrl+F
+    // would search the console rather than the map
+    if (event->key() == Qt::Key_Control) {
+        return;
+    }
     if (mKeysNavigate) {
         switch (event->key()) {
         case Qt::Key_Shift:
-        case Qt::Key_Control:
         case Qt::Key_Alt:
         case Qt::Key_AltGr:
         case Qt::Key_Meta:
@@ -3922,6 +4184,7 @@ void ModernGLWidget::queueScene()
         renderLabels(false, std::numeric_limits<int>::lowest(), std::numeric_limits<int>::max());
         renderRooms();
         queueRouteInRooms();
+        queueSearchMark();
         renderPlayerBeacon();
     }
     if (mZoomWeights.footprint > 0.0f) {
