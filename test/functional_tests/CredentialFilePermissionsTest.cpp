@@ -176,6 +176,10 @@ private slots:
         QVERIFY(mConfigDir.isValid());
         mSavedXdgConfigHome = qgetenv("XDG_CONFIG_HOME");
         qputenv("XDG_CONFIG_HOME", mConfigDir.path().toUtf8());
+        // MudletApp's paths only follow XDG_CONFIG_HOME once it holds a profiles/ folder; until then
+        // a ~/.config/mudlet that Mudlet has used wins, and the plain-text case would write there
+        QVERIFY(QDir().mkpath(qsl("%1/mudlet/profiles").arg(mConfigDir.path())));
+        QVERIFY2(MudletApp::getMudletPath(enums::profilesPath).startsWith(mConfigDir.path()), "MudletApp is not using the redirected config root");
 
         // The log cases read a qDebug() line, which a rule in the environment would filter
         // out before it ever reached them
@@ -297,6 +301,8 @@ private slots:
 #endif
         const QString item = qsl("password");
         const QString path = MudletApp::getMudletPath(enums::profileDataItemPath, mProfile, item);
+        // A replacement takes the mode of the file it replaces, so one left owner-only would pass on its own
+        QVERIFY2(!QFileInfo::exists(path), "this case started on a config root an earlier run left behind, so it would prove nothing");
         QVERIFY(MudletApp::writeProfileData(mProfile, item, mPassword).first);
         QVERIFY2(!reachableByOthers(path), "saving the profile's password left a file other accounts on this machine can read");
 
