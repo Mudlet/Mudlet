@@ -1287,6 +1287,8 @@ local oldgetConfig = getConfig
 -- This list contains all configuration options that are available in both getConfig and setConfig
 -- NOTE: Some options like "showMapInfo", "hideMapInfo" are setConfig-only write operations
 -- Some options like "logDirectory", "specialForceMXPProcessorOn" are getConfig-only read operations  
+-- Left out on purpose: "ircNickName" (with no nick stored it reads as a new random one, and writing it
+-- back also replaces the app-wide nick) and "ircPassword" (it would show up in every dump of the table)
 local configOptions = {
   "advertiseScreenReader",
   "ambiguousEAsianWidthCharacters",
@@ -1300,6 +1302,7 @@ local configOptions = {
   "controlCharacterHandling",
   "editorAutoComplete",
   "enableBlinkText",
+  "enableCHARSET",
   "enableClosedCaption",
   "enableGMCP",
   "enableMNES",
@@ -1309,10 +1312,15 @@ local configOptions = {
   "enableMTTS",
   "enableMXP",
   "enableNAWS",
+  "enableNEWENVIRON",
   "f3SearchEnabled",
   "fixUnnecessaryLinebreaks",
   "forceNewEnvironNegotiationOff",
   "inputLineStrictUnixEndings",
+  "ircChannels",
+  "ircHostName",
+  "ircHostPort",
+  "ircHostSecure",
   "lazyCaptureGlobals",
   "logDirectory",                    -- read-only in getConfig
   "logInHTML",
