@@ -591,13 +591,17 @@ void CredentialManager::retrievePassword(
                 if (!lookup->stages[index].fromFile) {
                     continue;
                 }
-                if (QString password = retrieveCredentialFromFile(lookup->profileName, lookup->key); !password.isEmpty()) {
+                bool unreadable = false;
+                if (QString password = retrieveCredentialFromFile(lookup->profileName, lookup->key, &unreadable); !password.isEmpty()) {
                     finishLookup(lookup, std::move(password), QString(), ReadOutcome::Found);
                     return;
                 }
+                lookup->fileUnreadable = lookup->fileUnreadable || unreadable;
                 break;
             }
-            finishLookup(lookup, QString(), qsl("Operation timed out"), ReadOutcome::TimedOut);
+            // Still a timeout when the file is unreadable: the read given up on may yet answer with the password
+            const QString error = lookup->fileUnreadable ? unreadableFileError(lookup->profileName) : qsl("Operation timed out");
+            finishLookup(lookup, QString(), error, ReadOutcome::TimedOut);
         });
         deadline->start(mOperationTimeoutMs);
 
@@ -609,8 +613,8 @@ void CredentialManager::retrievePassword(
         bool success = !password.isEmpty();
 
         if (callback) {
-            // Empty password is normal for first-time profiles - not an error. Move the buffer so the
-            // receiver takes sole ownership and can scrub the secret in place.
+            // Nothing stored is normal for first-time profiles, so only an unreadable file is reported as
+            // one. Move the buffer so the receiver takes sole ownership and can scrub the secret in place.
             const ReadOutcome outcome = success ? ReadOutcome::Found : (unreadable ? ReadOutcome::Unreadable : ReadOutcome::NothingStored);
             const QString error = success ? QString() : (unreadable ? unreadableFileError(profileName) : qsl("No password stored in encrypted file storage"));
             callback(outcome == ReadOutcome::Found, std::move(password), error, outcome);
@@ -747,10 +751,12 @@ void CredentialManager::runLookupStage(const LookupPtr& lookup, std::size_t inde
         // A store that refused a read - keychain or file - may still hold the password, so say so rather
         // than reporting that nothing is stored.
         QString error = qsl("No stored credentials found for profile %1").arg(lookup->profileName);
-        if (!lookup->keychainError.isEmpty()) {
-            error = qsl("Could not read the keychain: %1").arg(lookup->keychainError);
-        } else if (lookup->fileUnreadable) {
+        // The file first: the keychain's failure was logged when it happened, and an unreadable file is
+        // the one the player can put right, by typing the password again
+        if (lookup->fileUnreadable) {
             error = unreadableFileError(lookup->profileName);
+        } else if (!lookup->keychainError.isEmpty()) {
+            error = qsl("Could not read the keychain: %1").arg(lookup->keychainError);
         }
         const bool absent = lookup->keychainError.isEmpty() && !lookup->fileUnreadable;
         finishLookup(lookup, QString(), error, absent ? ReadOutcome::NothingStored : ReadOutcome::Unreadable);
@@ -1556,7 +1562,7 @@ bool CredentialManager::storeCredentialToFile(const QString& profileName, const 
 
 /*static*/ QString CredentialManager::unreadableFileError(const QString& profileName)
 {
-    return qsl("The saved password for profile %1 could not be decrypted").arg(profileName);
+    return qsl("The saved password for profile %1 could not be read").arg(profileName);
 }
 
 QString CredentialManager::retrieveCredentialFromFile(const QString& profileName, const QString& key, bool* unreadable)
