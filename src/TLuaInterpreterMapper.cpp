@@ -762,7 +762,7 @@ int TLuaInterpreter::centerview(lua_State* L)
 
     host.mpMap->mRoomIdHash[host.getName()] = roomId;
     host.mpMap->mNewMove = true;
-    host.mpMap->updateArea(pR->getArea());
+    host.mpMap->updatePlayerArea(pR->getArea());
     host.mpMap->requestPlayerAreaShown();
     lua_pushboolean(L, true);
     return 1;

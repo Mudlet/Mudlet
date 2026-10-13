@@ -547,6 +547,25 @@ private slots:
         widget.mPointerInView = false;
     }
 
+    void test_thePlayerMovingLeavesTheRoomsAsTheyWereMadeWithoutGL()
+    {
+        const int areaId = addOrdinaryMap();
+        ModernGLWidget widget(map(), mpHost);
+        queueFrame(widget, areaId, 1.5f);
+        const auto* keptRooms = widget.mScene.instances(RetainedMapScene::Layer::Rooms)->instances.constData();
+        const int roomId = map()->mpRoomDB->getArea(areaId)->getRoomsByPosition(2, 0, 0).value(0);
+        QVERIFY(roomId);
+        QVERIFY(roomId != map()->mRoomIdHash.value(map()->mProfileName));
+
+        // As centerview() and a game's room number do
+        map()->mRoomIdHash[map()->mProfileName] = roomId;
+        map()->updatePlayerArea(areaId);
+        QCoreApplication::processEvents();
+        queueFrame(widget, areaId, 1.5f);
+        QVERIFY2(widget.mScene.instances(RetainedMapScene::Layer::Rooms)->instances.constData() == keptRooms, "the player moving made the rooms again");
+        QVERIFY2(!roomColorAt(widget, 2, 0).isNull(), "the player's new room is not drawn just once");
+    }
+
     void test_aChangedRoomIsAllThatIsUploadedAgain()
     {
         if (!glAvailable()) {

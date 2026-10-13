@@ -105,10 +105,8 @@ ModernGLWidget::ModernGLWidget(TMap* pMap, Host* pHost, QWidget* parent)
     setMouseTracking(true);
     loadSavedCameras();
     if (mpMap) {
-        connect(mpMap, &TMap::signal_areaChanged, this, [this]() {
-            ++mAreaChanges;
-            update();
-        });
+        // Whatever area it names: one announcement can stand for several, the first of them named
+        connect(mpMap, &TMap::signal_areaChanged, this, qOverload<>(&ModernGLWidget::update));
     }
 }
 
@@ -1598,7 +1596,7 @@ ModernGLWidget::SceneInputs ModernGLWidget::sceneInputs() const
         inputs.roomsVersion = pArea->getRoomsVersion();
         inputs.gridMode = pArea->gridMode;
     }
-    inputs.areaChanges = mAreaChanges;
+    inputs.appearanceRevision = mpMap->appearanceRevision();
     inputs.centerZ = mMapCenterZ;
     inputs.levelsAbove = mShowTopLevels;
     inputs.levelsBelow = mShowBottomLevels;

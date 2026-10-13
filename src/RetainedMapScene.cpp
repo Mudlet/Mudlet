@@ -101,13 +101,14 @@ int RetainedMapScene::pendingTile(const int level, const QPointF& anchor)
 
 void RetainedMapScene::clear()
 {
+    // Assigned rather than cleared, as clear() would keep what a huge area took for as long as the view is open
     for (auto& pending : mPendingInstances) {
-        pending.clear();
+        pending = {};
     }
-    mPendingTriangles.clear();
-    mPendingRooms.clear();
-    mPendingTileKeys.clear();
-    mPendingTiles.clear();
+    mPendingTriangles = {};
+    mPendingRooms = {};
+    mPendingTileKeys = {};
+    mPendingTiles = {};
 }
 
 void RetainedMapScene::addRoom(const Room& room)
