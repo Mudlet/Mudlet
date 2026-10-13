@@ -3016,6 +3016,16 @@ void mudlet::slot_closeProfileRequested(int tab)
         return;
     }
 
+    if (pH->waitingForProfileSave()) {
+        QTimer::singleShot(50ms, this, [this, name, pClosingHost = QPointer<Host>(pH)]() {
+            const int retryTab = mpTabBar->tabIndex(name);
+            if (retryTab >= 0 && mHostManager.getHost(name) == pClosingHost) {
+                slot_closeProfileRequested(retryTab);
+            }
+        });
+        return;
+    }
+
     if (closeHeldOffByEventPump(pH)) {
         return;
     }
@@ -3038,7 +3048,8 @@ void mudlet::slot_closeProfileRequested(int tab)
 
 // Closing a profile destroys the lua_State the pump is still executing on.
 // closeMudlet() waits for the pump instead, as refusing would cancel a shutdown
-// nobody would retry.
+// nobody would retry. A Host::waitForProfileSave() is not one of these: it ends
+// on its own, so the callers retry a close asked for during it.
 bool mudlet::closeHeldOffByEventPump(Host* pHost) const
 {
     if (!pHost->getLuaInterpreter()->pumpingEvents()) {
@@ -3052,6 +3063,15 @@ void mudlet::slot_closeProfileByName(const QString& profileName)
 {
     Host* pH = mHostManager.getHost(profileName);
     if (!pH) {
+        return;
+    }
+
+    if (pH->waitingForProfileSave()) {
+        QTimer::singleShot(50ms, this, [this, profileName, pClosingHost = QPointer<Host>(pH)]() {
+            if (mHostManager.getHost(profileName) == pClosingHost) {
+                slot_closeProfileByName(profileName);
+            }
+        });
         return;
     }
 
@@ -4491,6 +4511,18 @@ void mudlet::closeEvent(QCloseEvent* event)
         mCloseRequestedDuringProfileLoad = true;
         event->ignore();
         return;
+    }
+
+    for (auto pHost : mHostManager) {
+        // Its caller still uses the profile once the wait returns, and the
+        // wait ends on its own, so ask again then
+        if (pHost->waitingForProfileSave()) {
+            event->ignore();
+            QTimer::singleShot(50ms, this, [this]() {
+                close();
+            });
+            return;
+        }
     }
 
     for (auto pHost : mHostManager) {
@@ -8361,7 +8393,7 @@ void mudlet::armForceClose()
         // right back in it. Retrying terminates: the pump is capped at 30s, and a
         // profile's close ends once its save question is answered.
         for (auto pHost : mHostManager) {
-            if (pHost->getLuaInterpreter()->pumpingEvents()) {
+            if (pHost->getLuaInterpreter()->pumpingEvents() || pHost->waitingForProfileSave()) {
                 qWarning() << "mudlet::armForceClose() - a nested event loop is running, waiting for it to finish";
                 QTimer::singleShot(50ms, this, [this]() {
                     mForceClosePending = false;
@@ -8601,7 +8633,7 @@ void mudlet::closeHostOfClosedDetachedWindow(const QString& profileName)
         return;
     }
 
-    if (closeHeldOffByEventPump(pHost)) {
+    if (pHost->waitingForProfileSave() || closeHeldOffByEventPump(pHost)) {
         QTimer::singleShot(50ms, this, [this, profileName]() {
             closeHostOfClosedDetachedWindow(profileName);
         });

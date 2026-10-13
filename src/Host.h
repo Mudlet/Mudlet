@@ -1146,7 +1146,6 @@ public:
     QSet<QChar> mDoubleClickIgnore;
     bool mEnableTextAnalyzer = false;
     bool mWritingHostAndModules = false;
-    int mProfileSaveWaitDepth = 0;
     // Set from profile preferences, if the timer interval is less
     // than this then the normal reoccuring debug output of the entire command
     // and script for any timer with a timeout LESS than this is NOT shown
@@ -1391,6 +1390,8 @@ private:
     // and the save then reads freed members - closeChildren() and ~Host() stop
     // this one instead (#9653).
     QTimer mDeferredSaveTimer;
+    // A counter, not a flag: a timer in one wait's pump can start another
+    int mProfileSaveWaitDepth = 0;
 
     QFile mErrorLogFile;
 

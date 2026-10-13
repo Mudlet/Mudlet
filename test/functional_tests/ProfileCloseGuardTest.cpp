@@ -32,6 +32,7 @@
  */
 
 #include <QApplication>
+#include <QCloseEvent>
 #include <QDir>
 #include <QElapsedTimer>
 #include <QMessageBox>
@@ -72,6 +73,24 @@ private:
     const QString mLocalhost = qsl("localhost");
 
     bool profileIsStillOpen() const { return HostManager::self()->getHost(mProfileName) != nullptr; }
+
+    // Holds the profile's save running for 300ms and waits for it; true if the wait ran a timer
+    bool holdASaveAndWaitForIt(Host* pHost)
+    {
+        QObject scope;
+        bool pumped = false;
+        pHost->mWritingHostAndModules = true;
+        QTimer::singleShot(10ms, &scope, [&pumped]() {
+            pumped = true;
+        });
+        QTimer::singleShot(300ms, &scope, [host = QPointer<Host>(pHost)]() {
+            if (host) {
+                host->mWritingHostAndModules = false;
+            }
+        });
+        pHost->waitForProfileSave();
+        return pumped;
+    }
 
 private slots:
     void initTestCase()
@@ -238,15 +257,9 @@ private slots:
         mudlet::self()->slot_closeProfileByName(otherProfileName);
         QVERIFY2(other, "the profile was closed inside the call that asked for it");
 
-        // A save that still says it is running until well after the posted close has come round
-        other->mWritingHostAndModules = true;
-        QTimer::singleShot(300ms, this, [other]() {
-            if (other) {
-                other->mWritingHostAndModules = false;
-            }
-        });
-        other->waitForProfileSave();
+        const bool pumped = holdASaveAndWaitForIt(other);
 
+        QVERIFY2(pumped, "the wait did not run the event loop, so the posted close never reached the guard");
         QVERIFY2(other, "the profile was destroyed while its save was still being waited for");
         QVERIFY2(QTest::qWaitFor(
                          [otherProfileName]() {
@@ -257,29 +270,97 @@ private slots:
         QVERIFY(profileIsStillOpen());
     }
 
-    // The save wait's caller (a package uninstall, say) goes on using the units and the Lua
-    // state once it returns, so a reset or close asked for during the wait is held off
-    void test_aResetOrCloseAskedForDuringASaveWaitIsHeldOff()
+    // A wait started from a timer in another wait's pump ends first; the outer one's caller still
+    // uses the profile, so a close asked for between the two ends still waits for the outer one.
+    void test_aCloseBetweenTheEndsOfTwoNestedSaveWaitsWaitsForTheOuterOne()
     {
-        bool asked = false;
-        bool resetStarted = false;
-        bool closeHeldOff = false;
-        mpHost->mWritingHostAndModules = true;
-        QTimer::singleShot(50ms, this, [&]() {
-            asked = true;
-            resetStarted = mpHost->resetProfile_phase1();
-            closeHeldOff = mudlet::self()->closeHeldOffByEventPump(mpHost);
+        const QString otherProfileName = qsl("ProfileCloseGuard-NestedWait-Profile");
+        const auto removeOtherProfile = qScopeGuard([otherProfileName]() {
+            QDir(MudletApp::getMudletPath(enums::profileHomePath, otherProfileName)).removeRecursively();
         });
-        QTimer::singleShot(300ms, this, [host = QPointer<Host>(mpHost)]() {
-            if (host) {
-                host->mWritingHostAndModules = false;
-            }
-        });
-        mpHost->waitForProfileSave();
+        QDir(MudletApp::getMudletPath(enums::profileHomePath, otherProfileName)).removeRecursively();
+        const QPointer<Host> other(TestProfile::create(otherProfileName, mLocalhost, mPort));
+        QVERIFY2(other, "no active host after creating the second profile");
 
-        QVERIFY2(asked, "the wait ended before the reset and close were asked for");
-        QVERIFY2(!resetStarted, "a profile reset was started while a save was being waited for");
-        QVERIFY2(closeHeldOff, "a close of the profile was not held off while a save was being waited for");
+        QObject scope;
+        bool innerWaitReturned = false;
+        bool aliveBetweenTheEnds = false;
+        QTimer::singleShot(50ms, &scope, [&]() {
+            other->waitForProfileSave();
+            innerWaitReturned = true;
+            mudlet::self()->slot_closeProfileByName(otherProfileName);
+            QTest::qWait(200ms);
+            aliveBetweenTheEnds = !other.isNull();
+        });
+        holdASaveAndWaitForIt(other);
+
+        QVERIFY2(innerWaitReturned, "the outer wait ended before the inner one was started");
+        QVERIFY2(aliveBetweenTheEnds && other, "the profile was destroyed while the outer save wait was still running");
+        QVERIFY2(QTest::qWaitFor(
+                         [otherProfileName]() {
+                             return HostManager::self()->getHost(otherProfileName) == nullptr;
+                         },
+                         10s),
+                 "the close never went through once the outer wait was over");
+        QVERIFY(profileIsStillOpen());
+    }
+
+    // The wait ends on its own, so a close of the profile asked for during it (here the Lua
+    // closeProfile(), which has already answered true) goes through once it is over
+    void test_aCloseAskedForDuringASaveWaitGoesThroughOnceTheWaitIsOver()
+    {
+        const QString otherProfileName = qsl("ProfileCloseGuard-CloseInWait-Profile");
+        const auto removeOtherProfile = qScopeGuard([otherProfileName]() {
+            QDir(MudletApp::getMudletPath(enums::profileHomePath, otherProfileName)).removeRecursively();
+        });
+        QDir(MudletApp::getMudletPath(enums::profileHomePath, otherProfileName)).removeRecursively();
+        const QPointer<Host> other(TestProfile::create(otherProfileName, mLocalhost, mPort));
+        QVERIFY2(other, "no active host after creating the second profile");
+
+        QObject scope;
+        bool asked = false;
+        bool closeAccepted = false;
+        QTimer::singleShot(50ms, &scope, [&]() {
+            asked = true;
+            closeAccepted = other->getLuaInterpreter()->compileAndExecuteScript(qsl("assert(closeProfile() == true)"));
+        });
+        holdASaveAndWaitForIt(other);
+
+        QVERIFY2(asked, "the wait ended before the close was asked for");
+        QVERIFY2(closeAccepted, "closeProfile() did not answer true");
+        QVERIFY2(other && !other->isClosingDown(), "the close began while a save was being waited for");
+        QVERIFY2(QTest::qWaitFor(
+                         [otherProfileName]() {
+                             return HostManager::self()->getHost(otherProfileName) == nullptr;
+                         },
+                         10s),
+                 "the close asked for during the wait never went through once it was over");
+        QVERIFY(profileIsStillOpen());
+    }
+
+    // Likewise a reset: the Lua resetProfile() during the wait answers true, and the reset runs
+    // once the wait is over rather than under its caller
+    void test_aResetAskedForDuringASaveWaitRunsOnceTheWaitIsOver()
+    {
+        QSignalSpy resetting(mpHost, &Host::signal_profileResetting);
+        QObject scope;
+        bool asked = false;
+        bool resetAccepted = false;
+        QTimer::singleShot(50ms, &scope, [&]() {
+            asked = true;
+            resetAccepted = mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("assert(resetProfile() == true)"));
+        });
+        holdASaveAndWaitForIt(mpHost);
+
+        QVERIFY2(asked, "the wait ended before the reset was asked for");
+        QVERIFY2(resetAccepted, "resetProfile() did not answer true");
+        QVERIFY2(resetting.isEmpty(), "the reset ran while a save was being waited for");
+        QVERIFY2(QTest::qWaitFor(
+                         [&resetting]() {
+                             return !resetting.isEmpty();
+                         },
+                         10s),
+                 "the reset asked for during the wait never ran once it was over");
         QVERIFY(profileIsStillOpen());
     }
 
@@ -288,14 +369,9 @@ private slots:
     {
         QSignalSpy resetting(mpHost, &Host::signal_profileResetting);
         QVERIFY(mpHost->resetProfile_phase1());
-        mpHost->mWritingHostAndModules = true;
-        QTimer::singleShot(300ms, this, [host = QPointer<Host>(mpHost)]() {
-            if (host) {
-                host->mWritingHostAndModules = false;
-            }
-        });
-        mpHost->waitForProfileSave();
+        const bool pumped = holdASaveAndWaitForIt(mpHost);
 
+        QVERIFY2(pumped, "the wait did not run the event loop, so the queued reset never reached the guard");
         QVERIFY2(resetting.isEmpty(), "the reset ran while a save was being waited for");
         QVERIFY2(QTest::qWaitFor(
                          [&resetting]() {
@@ -304,6 +380,49 @@ private slots:
                          10s),
                  "the reset never ran once the wait was over");
         QVERIFY(profileIsStillOpen());
+    }
+
+    // An application close (the window manager's, say) during the wait is asked again once the
+    // wait is over: the profile's save question coming up shows it was, and cancelling it keeps
+    // the profile for the test after this one
+    void test_anApplicationCloseDuringASaveWaitIsAskedAgainOnceTheWaitIsOver()
+    {
+        mpHost->mFORCE_SAVE_ON_EXIT = false;
+        const auto restoreForcedSave = qScopeGuard([this]() {
+            mpHost->mFORCE_SAVE_ON_EXIT = true;
+        });
+        QObject scope;
+        bool asked = false;
+        bool acceptedDuringTheWait = true;
+        QTimer::singleShot(50ms, &scope, [&]() {
+            asked = true;
+            QCloseEvent close;
+            QCoreApplication::sendEvent(mudlet::self(), &close);
+            acceptedDuringTheWait = close.isAccepted();
+        });
+        holdASaveAndWaitForIt(mpHost);
+
+        QVERIFY2(asked, "the wait ended before the application close was asked for");
+        QVERIFY2(!acceptedDuringTheWait, "the application closed while a save was being waited for");
+        bool questionSeen = false;
+        QTimer driver;
+        driver.setInterval(10ms);
+        connect(&driver, &QTimer::timeout, &scope, [&]() {
+            if (auto* question = qobject_cast<QMessageBox*>(QApplication::activeModalWidget())) {
+                questionSeen = true;
+                driver.stop();
+                question->button(QMessageBox::Cancel)->click();
+            }
+        });
+        driver.start();
+        QVERIFY2(QTest::qWaitFor(
+                         [&questionSeen]() {
+                             return questionSeen;
+                         },
+                         5s),
+                 "the application close asked for during the wait was never asked again once it was over");
+        QTest::qWait(100ms);
+        QVERIFY2(profileIsStillOpen(), "the profile closed although its save question was cancelled");
     }
 
     // PR #7461: the close used to run inside the keystroke that asked for it, so

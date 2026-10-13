@@ -1593,11 +1593,10 @@ void Host::waitForProfileSave()
         return;
     }
 
+    // Not a nested event loop for pumpingEvents(), whose guards refuse a reset or a tab close
+    // outright: this wait ends on its own, so those only have to wait for it.
     ++mProfileSaveWaitDepth;
-    // A nested event loop too, so that the guards on a reset or close of this profile hold those off
-    mLuaInterpreter.enterNestedEventLoop();
     const auto waitDepthGuard = qScopeGuard([this] {
-        mLuaInterpreter.leaveNestedEventLoop();
         --mProfileSaveWaitDepth;
     });
 
@@ -1609,8 +1608,8 @@ void Host::waitForProfileSave()
     constexpr auto notificationTimeout = 30s;
     QElapsedTimer waitedForNotification;
     // A QEventLoop's processEvents() rather than QCoreApplication's only for its "did anything
-    // happen" answer - nothing is exec()ed here. No user input either: this runs on the
-    // way out of a profile, and all it is here to deliver is that notification.
+    // happen" answer - nothing is exec()ed here. No user input either: all it is here to
+    // deliver is that notification.
     QEventLoop pump;
     while (currentlySavingProfile()) {
         // Every pass rather than once up front: a save that starts while this is
@@ -4138,8 +4137,9 @@ void Host::runUninstallsDeferredByAnInstall(const QList<DeferredUninstall>& defe
         waitForProfileSave();
     }
 
-    // Closing, already or via the pump above. The script was told these removals were happening, so name
-    // what is left behind rather than let it silently return next session.
+    // Closing already: a close asked for during the wait above waits for it to end. The script was told
+    // these removals were happening, so name what is left behind rather than let it silently return next
+    // session.
     if (isClosingDown()) {
         qWarning() << "Host::runUninstallsDeferredByAnInstall() WARNING - the profile is closing down, so" << names(deferred)
                    << "were left installed although their own install scripts asked for them to be removed.";
