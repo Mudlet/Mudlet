@@ -171,9 +171,9 @@ QColor MapStyle::playerRoomColor() const
     return QColor(Qt::red);
 }
 
-QColor MapStyle::ringColor(const QColor& environmentColor) const
+QColor MapStyle::ringColor(const QColor& environmentColor, const QColor& profileBackground) const
 {
-    return ExitAppearance::standOutColor(environmentColor, background.isValid() ? background : QColor(Qt::black));
+    return ExitAppearance::standOutColor(environmentColor, backgroundColor(profileBackground));
 }
 
 QColor MapStyle::backgroundColor(const QColor& profileBackground) const

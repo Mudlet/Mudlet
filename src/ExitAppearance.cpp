@@ -72,9 +72,6 @@ QColor standOutColor(const QColor& color, const QColor& background)
     // Brightness rises with lightness, so a binary search finds the nearest lightness that stands out
     int near = color.lightness();
     int far = darken ? 0 : 255;
-    if (!standsOut(far)) {
-        return atLightness(far);
-    }
     while (qAbs(far - near) > 1) {
         const int middle = (near + far) / 2;
         (standsOut(middle) ? far : near) = middle;

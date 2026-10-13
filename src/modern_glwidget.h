@@ -421,7 +421,7 @@ private:
     // A flag on a pole, its foot at the bottom left of the texture, reading text
     GLuint flagTexture(const QString& text, const QColor& color, const QColor& poleColor);
     // The label's image with a halo around it, made again only when the label or the halo changes
-    const HaloedLabel& haloedLabel(int labelId, const QPixmap& pixmap, const QColor& halo);
+    const HaloedLabel& haloedLabel(int labelId, const QPixmap& pixmap, const QColor& halo, int backgroundAlpha);
     // The cell of the glyph atlas holding text, added if there is room, else -1; with add false, -1 for any not in it
     qsizetype glyphAtlasCell(const QString& text, bool add = true);
     // Every cell's text in white on clear, to be tinted as drawn, in one texture; 0 if it could not be made
