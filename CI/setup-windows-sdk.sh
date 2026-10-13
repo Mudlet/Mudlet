@@ -112,6 +112,8 @@ while true; do
     "${MINGW_PACKAGE_PREFIX}-qt6-translations" \
     "${MINGW_PACKAGE_PREFIX}-qt6-tools" \
     "${MINGW_PACKAGE_PREFIX}-qt6-5compat" \
+    "${MINGW_PACKAGE_PREFIX}-qt6-websockets" \
+    "${MINGW_PACKAGE_PREFIX}-qt6-httpserver" \
     "${MINGW_PACKAGE_PREFIX}-angleproject" \
     "${MINGW_PACKAGE_PREFIX}-qtkeychain-qt6" \
     git \
