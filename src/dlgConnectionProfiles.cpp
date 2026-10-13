@@ -3038,10 +3038,12 @@ void dlgConnectionProfiles::passwordRetrieved(const QString& profileName, bool s
         }
     }
 
-    // A Connect waiting on this read stops here, so the warning stays up and the password can be typed
-    if (passwordUnreadable) {
+    // A Connect waiting on this read stops here, so the warning stays up and the password can be typed.
+    // Offline sends no password, so its load goes ahead.
+    const bool offlineLoadQueued = mPendingProfileLoad == profileName && !mPendingConnect;
+    if (passwordUnreadable && !offlineLoadQueued) {
         abandonPendingProfileLoad();
-        //: Shown in the connection dialog when a password was saved for the profile but its file could not be decrypted, for example because it is damaged
+        //: Shown in the connection dialog when a password was saved for the profile but its file could not be opened or decrypted, for example because it is damaged
         showNotification(tr("The saved password for this profile could not be read. Please enter it again."), notificationAreaIconLabelWarning);
         return;
     }

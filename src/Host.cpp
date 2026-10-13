@@ -5207,6 +5207,13 @@ void Host::securedPasswordAnswered(bool success, const QString& password, const 
         SecureStringUtils::secureStringClear(passwordCopy);
     } else if (!success && !errorMessage.isEmpty()) {
         qDebug() << "Host::loadSecuredPassword() - Failed to retrieve password:" << errorMessage;
+        if (errorMessage == CredentialManager::unreadableFileError(getName())) {
+            // Queued: read from the file, this answers inside the constructor, before the console is there to show it
+            QTimer::singleShot(0ms, this, [this]() {
+                //: Shown in a profile's main console when it opens and the password saved for it is in a file that could not be opened or decrypted, for example because it is damaged
+                postMessage(tr("[ WARN ]  - The saved password for this profile could not be read, so it cannot be sent to the game. Enter it again in the connection dialog."));
+            });
+        }
     }
     // A refused or empty keychain must not go on holding the hidden-input box back
     mTelnet.setAutoLoginPending(hasAutoLoginCredentials() && mTelnet.autoLoginTimersRunning());
