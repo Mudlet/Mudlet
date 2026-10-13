@@ -82,10 +82,8 @@ constexpr std::chrono::milliseconds AUTO_LOGIN_LATE_PASSWORD_WINDOW = 5min;
 
 static std::chrono::milliseconds autoLoginDelay(const QString& iniKey, const int fallback)
 {
-    // Null until mudlet::setupConfig() runs, which a profile made with no main window never waits for
-    const QSettings* settings = MudletApp::getQSettings();
     bool parsed = false;
-    const int raw = settings ? settings->value(iniKey, fallback).toInt(&parsed) : fallback;
+    const int raw = MudletApp::getQSettings()->value(iniKey, fallback).toInt(&parsed);
     return std::chrono::milliseconds(qBound(0, parsed ? raw : fallback, AUTO_LOGIN_MAX_DELAY_MS));
 }
 
