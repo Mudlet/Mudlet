@@ -474,6 +474,52 @@ private slots:
         }
     }
 
+    void test_doorSwingsClearTheirRoom_data()
+    {
+        QTest::addColumn<int>("eastward");
+        QTest::addColumn<int>("northward");
+        QTest::addColumn<bool>("round");
+        QTest::newRow("east, square") << 1 << 0 << false;
+        QTest::newRow("northeast, square") << 1 << 1 << false;
+        QTest::newRow("northeast, round") << 1 << 1 << true;
+        QTest::newRow("southeast, square, further") << 2 << -2 << false;
+    }
+
+    // A room hides whatever of a door is inside it, which on a diagonal from a square room is further out
+    void test_doorSwingsClearTheirRoom()
+    {
+        QFETCH(int, eastward);
+        QFETCH(int, northward);
+        QFETCH(bool, round);
+        TRoom* pFrom = addRoomAt(1, mAreaId, 0, 0);
+        TRoom* pTo = addRoomAt(2, mAreaId, eastward, northward);
+        QVERIFY(pFrom && pTo);
+        const int direction = northward == 0 ? DIR_EAST : (northward > 0 ? DIR_NORTHEAST : DIR_SOUTHEAST);
+        pFrom->setExit(2, direction);
+        pTo->setExit(1, TMap::scmReverseDirections.value(direction));
+        pFrom->setDoor(TRoom::dirCodeToShortString(direction), 3);
+        ExitScene::Options swings = options();
+        swings.doorSwings = true;
+        swings.roomSize = 0.5f;
+        swings.roundRooms = round;
+        const float half = swings.roomSize / 2.0f;
+        const auto inside = [half, round](const QVector3D& point) {
+            return round ? std::hypot(point.x(), point.y()) < half : qMax(std::abs(point.x()), std::abs(point.y())) < half;
+        };
+
+        int doorSegments = 0;
+        for (const ExitScene::Segment& segment : build(swings).segments) {
+            if (segment.color == mExitColor) {
+                continue;
+            }
+            ++doorSegments;
+            for (const QVector3D& point : {segment.from, segment.to, (segment.from + segment.to) / 2.0f}) {
+                QVERIFY2(!inside(point), qPrintable(qsl("the door reaches (%1, %2), inside its room").arg(point.x()).arg(point.y())));
+            }
+        }
+        QCOMPARE(doorSegments, 10);
+    }
+
     void test_doorSwingsOfEachStatusDiffer()
     {
         TRoom* pWest = addRoomAt(1, mAreaId, 0, 0);
@@ -575,6 +621,39 @@ private slots:
         QVERIFY2(!trianglesIn(scene, blueLine).isEmpty(), "the stub's dot is not in its room's color");
     }
 
+    // Stairs that are shafts and in/out stubs between rooms of one environment are in its line, as straight stairs are
+    void test_environmentLinesColorShaftsAndStubs()
+    {
+        const QColor red(200, 30, 30);
+        map()->mCustomEnvColors[301] = red;
+        auto restore = qScopeGuard([this] {
+            map()->mCustomEnvColors.remove(301);
+        });
+        TRoom* pLow = addRoomAt(1, mAreaId, 0, 0, 0);
+        TRoom* pHigh = addRoomAt(2, mAreaId, 3, 2, 1);
+        TRoom* pOneWay = addRoomAt(3, mAreaId, 6, 0, 1);
+        TRoom* pInside = addRoomAt(4, mAreaId, 0, 4, 0);
+        QVERIFY(pLow && pHigh && pOneWay && pInside);
+        for (TRoom* pRoom : {pLow, pHigh, pOneWay, pInside}) {
+            pRoom->environment = 301;
+        }
+        pLow->setExit(2, DIR_UP);
+        pHigh->setExit(1, DIR_DOWN);
+        pOneWay->setExit(1, DIR_DOWN);
+        pLow->setExit(4, DIR_IN);
+        pInside->setExit(1, DIR_OUT);
+        ExitScene::Options lines = options();
+        lines.environmentLines = true;
+        lines.inOutStubs = true;
+
+        const ExitScene::Scene scene = build(lines);
+        const QColor redLine = ExitAppearance::standOutColor(red, lines.background);
+
+        QCOMPARE(segmentsIn(scene, mExitColor).size(), 0);
+        QCOMPARE(segmentsIn(scene, redLine).size(), 5);
+        QCOMPARE(segmentsIn(scene, ExitAppearance::oneWayArrowColor()).size(), 1);
+    }
+
     void test_environmentLinesAreOffUnlessAsked()
     {
         map()->mCustomEnvColors[301] = QColor(200, 30, 30);
@@ -652,6 +731,22 @@ private slots:
                 QCOMPARE(glyph.color, mExitColor);
             }
         }
+    }
+
+    // A room misplaced far along its exit's line must not make a character for every cell of it, which froze the view
+    void test_aGlyphLineTooLongIsDrawnAsABar()
+    {
+        TRoom* pWest = addRoomAt(1, mAreaId, 0, 0);
+        TRoom* pEast = addRoomAt(2, mAreaId, 1000000, 0);
+        QVERIFY(pWest && pEast);
+        pWest->setExit(2, DIR_EAST);
+        pEast->setExit(1, DIR_WEST);
+        ExitScene::Options glyphOptions = options();
+        glyphOptions.glyphs = true;
+
+        const ExitScene::Scene scene = build(glyphOptions);
+        QVERIFY2(scene.glyphs.size() < 10000, qPrintable(qsl("%1 characters for one line").arg(scene.glyphs.size())));
+        QVERIFY2(!segmentsIn(scene, mExitColor).isEmpty(), "the line is not drawn at all");
     }
 
     void test_glyphDoorStaysOnASlantedLine()
