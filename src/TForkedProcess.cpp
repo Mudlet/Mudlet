@@ -76,25 +76,15 @@ void TForkedProcess::slot_receivedData()
 {
     lua_State* L = mpInterpreter->pGlobalLua;
     while (canReadLine()) {
-        QByteArray line = readLine();
-        const int callerStackTop = lua_gettop(L);
+        // Checked before the line is read, so a line that cannot be handed over stays buffered
         if (!lua_checkstack(L, 2)) {
+            std::string e = "not enough Lua stack space to call it with the process's next line of output";
+            mpInterpreter->logError(e, qsl("spawn() callback"), qsl("anonymous Lua function"));
             return;
         }
-        // Call lua function by stored Reference
-        const TLuaInterpreter::ScriptCallerScope callerScope(*mpInterpreter, false);
         lua_rawgeti(L, LUA_REGISTRYINDEX, callBackFunctionRef);
-        lua_pushstring(L, line.data());
-        if (lua_pcall(L, 1, 0, 0)) {
-            std::string e = "Lua error:";
-            if (lua_isstring(L, -1)) {
-                e += lua_tostring(L, -1);
-            } else {
-                e.append("error object is a ").append(luaL_typename(L, -1)).append(" value");
-            }
-            mpInterpreter->logError(e, qsl("spawn() callback"), qsl("no debug data available"));
-        }
-        lua_settop(L, callerStackTop);
+        lua_pushstring(L, readLine().constData());
+        mpInterpreter->callReference(L, qsl("spawn() callback"), 1);
     }
 }
 

@@ -5699,6 +5699,8 @@ bool TLuaInterpreter::callReference(lua_State* L, QString name, int parameters)
         std::string err = "";
         if (lua_isstring(L, -1)) {
             err += lua_tostring(L, -1);
+        } else {
+            err.append("error object is a ").append(luaL_typename(L, -1)).append(" value");
         }
         logError(err, name, qsl("anonymous Lua function"));
         if (TDebug::wants(TDebug::Category::Error)) {
