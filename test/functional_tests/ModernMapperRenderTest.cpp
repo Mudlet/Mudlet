@@ -1542,9 +1542,9 @@ private slots:
         // A room reaches a third of a unit from its middle; the light comes from the north-west
         const int middle = topAt(2.0f, 0.0f).lightness();
         const int lit = topAt(2.0f - 0.31f, 0.31f).lightness();
-        const int far = topAt(2.0f + 0.31f, -0.31f).lightness();
-        QVERIFY2(lit > far + 20, qPrintable(qsl("a room's top is %1 light toward the light and %2 away from it").arg(lit).arg(far)));
-        QVERIFY2(middle > far, "a room's top is darker in its middle than its shaded edge");
+        const int shaded = topAt(2.0f + 0.31f, -0.31f).lightness();
+        QVERIFY2(lit > shaded + 20, qPrintable(qsl("a room's top is %1 light toward the light and %2 away from it").arg(lit).arg(shaded)));
+        QVERIFY2(middle > shaded, "a room's top is darker in its middle than its shaded edge");
 
         const int shadow = groundAt(2.4f, -0.4f).lightness();
         const int open = groundAt(1.6f, 0.4f).lightness();
