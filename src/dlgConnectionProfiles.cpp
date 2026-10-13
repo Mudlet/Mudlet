@@ -967,6 +967,9 @@ void dlgConnectionProfiles::continueProfileSave(QListWidgetItem* pItem, const QS
 {
     const QString currentProfileEditName = pItem->data(csmNameRole).toString();
     setItemName(pItem, newProfileName);
+    if (mDeferredPasswordLoadProfile == currentProfileEditName) {
+        mDeferredPasswordLoadProfile = newProfileName;
+    }
 
     const QDir currentPath(MudletApp::getMudletPath(enums::profileHomePath, currentProfileEditName));
     const QDir dir;
@@ -2967,19 +2970,25 @@ void dlgConnectionProfiles::slot_loadPasswordAsync()
         if (mKeychainOperationProfile != profile_name) {
             qDebug() << "dlgConnectionProfiles: Deferring the password load for" << profile_name << "until the one for" << mKeychainOperationProfile << "has answered";
             mDeferredPasswordLoadProfile = profile_name;
+        } else if (!mDeferredPasswordLoadProfile.isEmpty()) {
+            qDebug() << "dlgConnectionProfiles: Dropping the deferred password load for" << mDeferredPasswordLoadProfile << "as" << profile_name << "was picked again";
+            mDeferredPasswordLoadProfile.clear();
         }
         return;
     }
 
-    // Check if this dialog is still valid and the profile is still selected
-    if (listWidget_profiles->currentItem() == nullptr) {
-        return;
+    if (mDeferredPasswordLoadProfile == profile_name) {
+        mDeferredPasswordLoadProfile.clear();
     }
 
-    const QString currentProfileName = listWidget_profiles->currentItem()->data(csmNameRole).toString();
-
+    // Check if this dialog is still valid and the profile is still selected
+    const QString currentProfileName = listWidget_profiles->currentItem() ? listWidget_profiles->currentItem()->data(csmNameRole).toString() : QString();
     if (currentProfileName != profile_name) {
-        // Selection has changed, ignore this async load
+        qDebug() << "dlgConnectionProfiles: Dropping the password load for" << profile_name << "as the selection has changed";
+        // A Connect waiting on this load would otherwise wait for good
+        if (mPendingProfileLoad == profile_name) {
+            abandonPendingProfileLoad();
+        }
         return;
     }
 
@@ -3017,8 +3026,9 @@ void dlgConnectionProfiles::passwordRetrieved(const QString& profileName, bool s
     // Clear the operation flag first
     mKeychainOperationProfile.clear();
 
-    // The selection is checked again when the load runs
-    const QString deferred = std::exchange(mDeferredPasswordLoadProfile, QString());
+    // Left set until the load runs, so a Connect in between still waits for it; the selection is
+    // checked again then
+    const QString deferred = mDeferredPasswordLoadProfile;
     if (!deferred.isEmpty()) {
         schedulePasswordLoad(deferred);
     }
@@ -3026,17 +3036,25 @@ void dlgConnectionProfiles::passwordRetrieved(const QString& profileName, bool s
     // Check if profile selection has changed while we were waiting
     if (profileStillSelected) {
         if (success) {
-            // A deferred load can answer long after the profile was picked: what was typed since is the player's
-            const bool typedInMeantime = character_password_entry->isModified() && !character_password_entry->text().isEmpty();
-            // Temporarily block textChanged signal to avoid triggering save on programmatic setText
-            if (!typedInMeantime) {
-                const QSignalBlocker blocker(character_password_entry);
-                character_password_entry->setText(password);
-            }
+            // A read can answer long after the profile was picked, behind a keychain prompt or queued
+            // behind another profile's read: whatever the player typed or erased since is theirs
+            if (character_password_entry->isModified()) {
+                qDebug() << "dlgConnectionProfiles: Keeping the password field as edited while the saved password for" << profileName << "was being read";
+            } else {
+                // Temporarily block textChanged signal to avoid triggering save on programmatic setText
+                {
+                    const QSignalBlocker blocker(character_password_entry);
+                    character_password_entry->setText(password);
+                }
 
-            // Any lookup stage (keychain formats or the encrypted file) may have answered, and each logs
-            // where it found the password, so this line names no source.
-            qDebug() << "dlgConnectionProfiles: Successfully loaded the saved password for" << profileName;
+                if (password.isEmpty()) {
+                    qDebug() << "dlgConnectionProfiles: Keychain returned empty password for" << profileName;
+                } else {
+                    // Any lookup stage (keychain formats or the encrypted file) may have answered, and each logs
+                    // where it found the password, so this line names no source.
+                    qDebug() << "dlgConnectionProfiles: Successfully loaded the saved password for" << profileName;
+                }
+            }
         } else {
             // Fallback to QSettings only if credential retrieval failed, and only into an empty
             // field: one the keychain answered late for an earlier read has the password already
