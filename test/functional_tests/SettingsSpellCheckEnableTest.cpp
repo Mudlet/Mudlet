@@ -34,6 +34,7 @@
 
 #include <QCheckBox>
 #include <QComboBox>
+#include <QPlainTextEdit>
 #include <QSignalSpy>
 
 #include "PortableModeTestHelper.h"
@@ -45,6 +46,7 @@
 #include "TMainConsole.h"
 #include "MudletInstanceCoordinator.h"
 #include "TelnetServerStub.h"
+#include "dlgComposer.h"
 #include "dlgProfilePreferences.h"
 #include "mudlet.h"
 
@@ -53,18 +55,17 @@
 using namespace std::chrono_literals;
 
 // Not the starting dictionary, so that reading it can only be down to the
-// change made below. Hunspell_create() hands back a handle whether or not the
-// files exist, so the load is logged on every platform.
+// change made below.
 static const QString scmDictionary = qsl("en_GB");
 
-// loadSystemSpellDictionary() logs every read it makes, which is the only way to
-// see one without asking for the handle - and asking for it would make the read.
+// loadSystemDictionary() logs every read it makes - as "loaded", or as "is not
+// available" where the files are not installed - which is the only way to see
+// one without asking for the handle, and asking for it would make the read.
 static QtMessageHandler previousMessageHandler = nullptr;
 static int dictionaryReads = 0;
 
 static void countDictionaryReads(QtMsgType type, const QMessageLogContext& context, const QString& message)
 {
-    // A dictionary that is not on this machine is still looked for, which is the read asked for
     if (message.contains(qsl("System Hunspell dictionary \"%1\" loaded").arg(scmDictionary)) || message.contains(qsl("the Hunspell dictionary \"%1\" is not available").arg(scmDictionary))) {
         ++dictionaryReads;
     }
@@ -84,6 +85,7 @@ private:
     Host* mpHost = nullptr;
     dlgProfilePreferences* mpPreferences = nullptr;
     const QString mProfileName = qsl("SettingsSpellCheckEnable-Test");
+    QString mStartingDictionary;
     const QString mLocalhost = qsl("localhost");
     QString mPort; // the stub's actual ephemeral port
 
@@ -114,6 +116,7 @@ private slots:
         previousMessageHandler = qInstallMessageHandler(countDictionaryReads);
         mpHost = TestProfile::create(mProfileName, mLocalhost, mPort);
         QVERIFY2(mpHost, "No active host after profile creation");
+        mStartingDictionary = mpHost->getSpellDic();
     }
 
     void cleanupTestCase()
@@ -219,7 +222,7 @@ private slots:
     }
 
     // Until its files are all there the preferences show the dictionary as not available, and
-    // picking it there again once they are retries it, as nothing else would (#10153)
+    // picking it there again once they are retries it
     void test_aMissingDictionaryIsShownAsSuchAndRetriedWhenPickedAgain()
     {
         const QString dictionary = qsl("mudlet_retried_dictionary");
@@ -239,6 +242,10 @@ private slots:
         QVERIFY2(!mpHost->spellChecker().systemHandle(), "a dictionary with no word list was loaded, and would mark every word as misspelt");
         const QString shown = mpHost->mainConsoleView()->buffer.lineBuffer.join(QChar::Space).simplified();
         QVERIFY2(shown.contains(qsl("[ WARN ]")) && shown.contains(dictionary), qPrintable(qsl("the player was not told the dictionary is missing; the console holds: %1").arg(shown)));
+        // Asked for again with every word checked
+        mpHost->spellChecker().systemHandle();
+        mpHost->spellChecker().systemHandle();
+        QCOMPARE(warningsShownFor(dictionary), 1);
 
         delete mpPreferences;
         mpPreferences = new dlgProfilePreferences(mudlet::self(), mpHost);
@@ -249,6 +256,159 @@ private slots:
         QVERIFY(writeFile(wordsPath, "1\nkalamazoo\n"));
         emit pDictionaries->activated(pDictionaries->currentIndex());
         QVERIFY2(mpHost->spellChecker().systemHandle(), "picking the dictionary again once its files were there did not retry it");
+        QCOMPARE(pDictionaries->currentText(), qsl("%1 - not recognised").arg(dictionary));
+    }
+
+    // The folder listed is the one the profile's dictionary would be in, which for one that is
+    // nowhere is a fallback that need hold no dictionaries at all
+    void test_aMissingDictionaryLeavesTheOthersToPickFrom()
+    {
+        const QString dictionary = qsl("mudlet_dictionary_found_nowhere");
+        const QString fallbackFolder = MudletApp::getMudletPath(enums::hunspellDictionaryPath, dictionary);
+        const QString siblingFolder = qsl("%1/../src/").arg(QCoreApplication::applicationDirPath());
+        const QString affixPath = qsl("%1%2.aff").arg(siblingFolder, mStartingDictionary);
+        const QString wordsPath = qsl("%1%2.dic").arg(siblingFolder, mStartingDictionary);
+        bool wroteStartingDictionary = false;
+        bool madeSiblingFolder = false;
+        const auto cleanup = qScopeGuard([&]() {
+            if (wroteStartingDictionary) {
+                QFile::remove(affixPath);
+                QFile::remove(wordsPath);
+            }
+            if (madeSiblingFolder) {
+                QDir().rmdir(siblingFolder);
+            }
+            mpHost->setSpellDic(scmDictionary);
+        });
+#if !defined(Q_OS_MACOS)
+        // Looked in ahead of the fallback everywhere but macOS, which keeps every dictionary in one folder
+        if (MudletApp::getMudletPath(enums::hunspellDictionaryPath, mStartingDictionary) == fallbackFolder) {
+            madeSiblingFolder = !QDir(siblingFolder).exists();
+            QVERIFY(QDir().mkpath(siblingFolder));
+            wroteStartingDictionary = true;
+            QVERIFY(writeFile(affixPath, "SET UTF-8\n"));
+            QVERIFY(writeFile(wordsPath, "1\nthe\n"));
+        }
+#endif
+        if (MudletApp::getMudletPath(enums::hunspellDictionaryPath, mStartingDictionary) == fallbackFolder) {
+            QSKIP("the starting dictionary is looked for in the same folder as one that is nowhere");
+        }
+
+        mpHost->setSpellDic(dictionary);
+        delete mpPreferences;
+        mpPreferences = new dlgProfilePreferences(mudlet::self(), mpHost);
+        QComboBox* pDictionaries = mpPreferences->comboBox_dictionary;
+        QVERIFY2(pDictionaries->isEnabled() && pDictionaries->findData(mStartingDictionary) >= 0,
+                 qPrintable(qsl("the preferences offered no other dictionary to pick, although \"%1\" is installed").arg(mStartingDictionary)));
+        QCOMPARE(pDictionaries->currentText(), qsl("%1 - not available").arg(dictionary));
+    }
+
+    void test_aDictionaryInstalledSinceIsReadWhenThePreferencesOpen()
+    {
+        const QString dictionary = qsl("mudlet_installed_later");
+        const QString folder = MudletApp::getMudletPath(enums::hunspellDictionaryPath, dictionary);
+        QVERIFY(QDir().mkpath(folder));
+        const QString affixPath = qsl("%1%2.aff").arg(folder, dictionary);
+        const QString wordsPath = qsl("%1%2.dic").arg(folder, dictionary);
+        const auto cleanup = qScopeGuard([this, affixPath, wordsPath]() {
+            QFile::remove(affixPath);
+            QFile::remove(wordsPath);
+            mpHost->setSpellDic(scmDictionary);
+        });
+
+        mpHost->setSpellDic(dictionary);
+        QVERIFY(!mpHost->spellChecker().systemHandle());
+        QVERIFY(writeFile(affixPath, "SET UTF-8\n"));
+        QVERIFY(writeFile(wordsPath, "1\nkalamazoo\n"));
+
+        delete mpPreferences;
+        mpPreferences = new dlgProfilePreferences(mudlet::self(), mpHost);
+        QCOMPARE(mpPreferences->comboBox_dictionary->currentText(), qsl("%1 - not recognised").arg(dictionary));
+        QVERIFY2(mpHost->spellChecker().systemHandle(), "the preferences listed the dictionary as there while it was still not read, so nothing was spell-checked");
+    }
+
+    // Names ending in "med" are left out of the list, as supplements to another dictionary
+    void test_aDictionaryThatLoadsIsNotShownAsMissing()
+    {
+        const QString dictionary = qsl("mudlet_listedmed");
+        const QString folder = MudletApp::getMudletPath(enums::hunspellDictionaryPath, dictionary);
+        QVERIFY(QDir().mkpath(folder));
+        const QString affixPath = qsl("%1%2.aff").arg(folder, dictionary);
+        const QString wordsPath = qsl("%1%2.dic").arg(folder, dictionary);
+        const auto cleanup = qScopeGuard([this, affixPath, wordsPath]() {
+            QFile::remove(affixPath);
+            QFile::remove(wordsPath);
+            mpHost->setSpellDic(scmDictionary);
+        });
+        QVERIFY(writeFile(affixPath, "SET UTF-8\n"));
+        QVERIFY(writeFile(wordsPath, "1\nkalamazoo\n"));
+
+        mpHost->setSpellDic(dictionary);
+        QVERIFY(mpHost->spellChecker().systemHandle());
+        delete mpPreferences;
+        mpPreferences = new dlgProfilePreferences(mudlet::self(), mpHost);
+        QCOMPARE(mpPreferences->comboBox_dictionary->currentText(), qsl("%1 - not recognised").arg(dictionary));
+    }
+
+    // Hunspell_create() reads an empty word list as a dictionary of no words
+    void test_anEmptyWordListIsNotLoaded()
+    {
+        const QString dictionary = qsl("mudlet_empty_word_list");
+        const QString folder = MudletApp::getMudletPath(enums::hunspellDictionaryPath, dictionary);
+        QVERIFY(QDir().mkpath(folder));
+        const QString affixPath = qsl("%1%2.aff").arg(folder, dictionary);
+        const QString wordsPath = qsl("%1%2.dic").arg(folder, dictionary);
+        const auto cleanup = qScopeGuard([this, affixPath, wordsPath]() {
+            QFile::remove(affixPath);
+            QFile::remove(wordsPath);
+            mpHost->setSpellDic(scmDictionary);
+        });
+        QVERIFY(writeFile(affixPath, "SET UTF-8\n"));
+        QVERIFY(writeFile(wordsPath, QByteArray()));
+
+        mpHost->setSpellDic(dictionary);
+        QVERIFY2(!mpHost->spellChecker().systemHandle(), "an empty word list was loaded, and would mark every word as misspelt");
+        QCOMPARE(warningsShownFor(dictionary), 1);
+    }
+
+    // Nothing is marked against a dictionary that is not there, which includes the marks made against the one before
+    void test_aMissingDictionaryLeavesNoMarksBehind()
+    {
+        const QString dictionary = qsl("mudlet_marking_dictionary");
+        const QString folder = MudletApp::getMudletPath(enums::hunspellDictionaryPath, dictionary);
+        QVERIFY(QDir().mkpath(folder));
+        const QString affixPath = qsl("%1%2.aff").arg(folder, dictionary);
+        const QString wordsPath = qsl("%1%2.dic").arg(folder, dictionary);
+        TCommandLine* pCommandLine = mpHost->mainConsoleView()->mpCommandLine;
+        QVERIFY(pCommandLine);
+        auto* pComposer = new dlgComposer(mpHost);
+        const auto cleanup = qScopeGuard([this, affixPath, wordsPath, pCommandLine, pComposer]() {
+            delete pComposer;
+            pCommandLine->clear();
+            QFile::remove(affixPath);
+            QFile::remove(wordsPath);
+            mpHost->setSpellDic(scmDictionary);
+        });
+        QVERIFY(writeFile(affixPath, "SET UTF-8\n"));
+        QVERIFY(writeFile(wordsPath, "1\nthe\n"));
+        QVERIFY(mpHost->getEnableSpellCheck());
+
+        mpHost->setSpellDic(dictionary);
+        pCommandLine->setPlainText(qsl("helo wrld "));
+        pCommandLine->recheckWholeLine();
+        pComposer->init(qsl("composer"), qsl("helo wrld"));
+        pComposer->show();
+        QVERIFY(QTest::qWaitForWindowExposed(pComposer));
+        QVERIFY2(marked(pCommandLine->document(), qsl("helo")) && marked(pComposer->edit->document(), qsl("helo")), "the dictionary written here marked nothing, so this proves nothing");
+
+        mpHost->setSpellDic(qsl("mudlet_no_such_dictionary"));
+        QVERIFY2(!marked(pCommandLine->document(), qsl("helo")), "the input line kept the marks of the dictionary before");
+        // The composer checks a word as it is typed after
+        QTextCursor cursor = pComposer->edit->textCursor();
+        cursor.setPosition(4);
+        pComposer->edit->setTextCursor(cursor);
+        QTest::keyClick(pComposer->edit, Qt::Key_Space);
+        QVERIFY2(!marked(pComposer->edit->document(), qsl("helo")), "the composer kept the mark of the dictionary before on a word checked again");
     }
 
 private:
@@ -258,10 +418,22 @@ private:
         return file.open(QIODevice::WriteOnly) && file.write(contents) == contents.size();
     }
 
-    static bool marked(TCommandLine* pCommandLine, const QString& word)
+    int warningsShownFor(const QString& dictionary) const
     {
-        const QTextCursor found = pCommandLine->document()->find(word);
-        QTextCursor at(pCommandLine->document());
+        const QString warning = qsl("The spell-check dictionary \"%1\"").arg(dictionary);
+        int count = 0;
+        for (const auto& line : mpHost->mainConsoleView()->buffer.lineBuffer) {
+            count += line.count(warning);
+        }
+        return count;
+    }
+
+    static bool marked(TCommandLine* pCommandLine, const QString& word) { return marked(pCommandLine->document(), word); }
+
+    static bool marked(QTextDocument* pDocument, const QString& word)
+    {
+        const QTextCursor found = pDocument->find(word);
+        QTextCursor at(pDocument);
         at.setPosition(found.selectionStart() + 1);
         return !found.isNull() && at.charFormat().underlineStyle() == QTextCharFormat::SpellCheckUnderline;
     }

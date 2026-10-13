@@ -251,6 +251,7 @@ public:
     void setEnableSpellCheck(const bool enable);
     bool getEnableSpellCheck() const { return mEnableSpellCheck; }
     QString getSpellDic() const;
+    static QString startingSpellDic();
     TSpellChecker& spellChecker() { return mSpellChecker; }
     void setUserDictionaryOptions(const bool useDictionary, const bool useShared);
     void getUserDictionaryOptions(bool& useDictionary, bool& useShared)

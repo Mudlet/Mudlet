@@ -3920,8 +3920,10 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     // Unfortunately OpenBSD does not ship a dictionary for THAT language which
     // prevents us using it to find any system ones
     const QString& currentDictionary = pHost->getSpellDic();
-    // Also settles MudletApp::usingMudletDictionaries(), read below
-    const QString path = MudletApp::getMudletPath(enums::hunspellDictionaryPath, currentDictionary);
+    const bool currentDictionaryFound = TSpellChecker::systemDictionaryFound(currentDictionary);
+    // Also settles MudletApp::usingMudletDictionaries(), read below. A dictionary that is nowhere is
+    // given a fallback folder that need hold no others, so list where the starting one would be instead.
+    const QString path = MudletApp::getMudletPath(enums::hunspellDictionaryPath, currentDictionaryFound ? currentDictionary : Host::startingSpellDic());
     // Tweak the label for the provided spelling dictionaries depending on where
     // they come from:
     if (MudletApp::usingMudletDictionaries()) {
@@ -3959,11 +3961,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
                 continue;
             }
 
-            auto key = entries.at(i).toLower();
-            key.replace(QLatin1String("-"), QLatin1String("_"));
-
-            QString displayText = mudlet::self()->mDictionaryLanguageCodeMap.contains(key) ? mudlet::self()->mDictionaryLanguageCodeMap.value(key) : tr("%1 - not recognised").arg(entries.at(i));
-            translatedNameToEntriesMap.insert(displayText, i);
+            translatedNameToEntriesMap.insert(dictionaryDisplayName(entries.at(i)), i);
         }
 
         QMapIterator<QString, int> itTranslatedName(translatedNameToEntriesMap);
@@ -3988,11 +3986,11 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
             }
         }
 
-        // Shown rather than left to fall back to the first entry, which reads as
-        // the profile's choice and would be saved as it
+        // Shown rather than left to fall back to the first entry, which would read as the profile's choice.
+        // Unlisted need not mean missing: "med" names are left out, and the file system may ignore case.
         if (currentIndex < 0 && !currentDictionary.isEmpty()) {
             //: %1 is the code of the spell-check dictionary the profile uses, such as "de_DE", when no dictionary file of that name is on this computer
-            comboBox_dictionary->addItem(tr("%1 - not available").arg(currentDictionary), currentDictionary);
+            comboBox_dictionary->addItem(currentDictionaryFound ? dictionaryDisplayName(currentDictionary) : tr("%1 - not available").arg(currentDictionary), currentDictionary);
             currentIndex = comboBox_dictionary->count() - 1;
         }
 
@@ -4004,6 +4002,10 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         comboBox_dictionary->setToolTip(utils::richText(tr("No Hunspell dictionary files found, spell-checking will not be available.")));
     }
     comboBox_dictionary->blockSignals(false);
+    // Installed since it was looked for, the dictionary is read now rather than shown as there while checking nothing
+    if (currentDictionaryFound && pHost->spellChecker().systemDictionaryMissing()) {
+        pHost->setSpellDic(currentDictionary);
+    }
 
     if (!pHost->getMmpMapLocation().isEmpty()) {
         groupBox_downloadMapOptions->setVisible(true);
@@ -9064,13 +9066,25 @@ void dlgProfilePreferences::cancelShortcutCaptures()
     }
 }
 
-// The apply only sees a change of index, so this is how the dictionary on show, one that
-// could not be found, is retried once its files are there
-void dlgProfilePreferences::slot_dictionaryPicked()
+// A missing dictionary picked again, once installed, is no change of entry for the apply to see,
+// so this is what retries it
+void dlgProfilePreferences::slot_dictionaryPicked(const int index)
 {
-    if (mpHost && comboBox_dictionary->currentIndex() >= 0) {
-        mpHost->setSpellDic(comboBox_dictionary->currentData().toString());
+    if (!mpHost) {
+        return;
     }
+    const QString dictionary = comboBox_dictionary->itemData(index).toString();
+    mpHost->setSpellDic(dictionary);
+    if (TSpellChecker::systemDictionaryFound(dictionary)) {
+        comboBox_dictionary->setItemText(index, dictionaryDisplayName(dictionary));
+    }
+}
+
+QString dlgProfilePreferences::dictionaryDisplayName(const QString& dictionary)
+{
+    auto key = dictionary.toLower();
+    key.replace(QLatin1String("-"), QLatin1String("_"));
+    return mudlet::self()->mDictionaryLanguageCodeMap.value(key, tr("%1 - not recognised").arg(dictionary));
 }
 
 void dlgProfilePreferences::slot_displayFontChanged()

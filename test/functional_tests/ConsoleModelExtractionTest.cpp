@@ -1540,8 +1540,8 @@ private slots:
         // rather than of the handle, so a dictionary that is there but loads no
         // words is a failure and not a skip.
         const QString startingDictionary = host->getSpellDic();
-        const QString affixPath = qsl("%1%2.aff").arg(MudletApp::getMudletPath(enums::hunspellDictionaryPath, startingDictionary), startingDictionary);
-        if (!QFileInfo::exists(affixPath)) {
+        const QString folder = MudletApp::getMudletPath(enums::hunspellDictionaryPath, startingDictionary);
+        if (!QFileInfo::exists(qsl("%1%2.aff").arg(folder, startingDictionary)) || !QFileInfo::exists(qsl("%1%2.dic").arg(folder, startingDictionary))) {
             QSKIP(qPrintable(qsl("no \"%1\" dictionary is installed here, so a reload cannot be told apart from a failed load").arg(startingDictionary)));
         }
 
@@ -2648,14 +2648,14 @@ local function expectTrue(name, ...)
 end
 
 -- The system dictionary arms answer for real on a machine that has en_US
--- installed and refuse by naming the missing dictionaries on one that does not.
+-- installed and refuse by naming the missing dictionary on one that does not.
 -- Either is a working view-less profile; a refusal about a missing window is not.
 local function expectAnswerOrNoDictionary(name, wanted, ...)
     local first, second = ...
     if type(first) == wanted then
         return
     end
-    if first == nil and type(second) == 'string' and second:find('no main dictionaries', 1, true) then
+    if first == nil and type(second) == 'string' and (second:find('no main dictionaries', 1, true) or second:find('dictionary this profile uses is not available', 1, true)) then
         return
     end
     table.insert(noViewSpellProblems, name .. ' returned ' .. tostring(first) .. ' (' .. tostring(second) .. ')')

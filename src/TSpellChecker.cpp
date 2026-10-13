@@ -251,16 +251,14 @@ void TSpellChecker::loadSystemDictionary()
     sanitizeUtf8Path(spell_dic);
 #endif
 
-    // Hunspell_create() cannot fail: given files that are not there it hands back
-    // an empty dictionary, which marks every word as misspelt
-    if (!QFileInfo::exists(spell_aff) || !QFileInfo::exists(spell_dic)) {
+    if (!dictionaryFileUsable(spell_aff) || !dictionaryFileUsable(spell_dic)) {
         mSystemDictionaryMissing = true;
         qWarning().noquote().nospace() << "TSpellChecker::loadSystemDictionary() WARNING - the Hunspell dictionary \"" << mSystemDictionary << "\" is not available, as \"" << spell_aff << "\" and \""
-                                       << spell_dic << "\" are not both there.";
+                                       << spell_dic << "\" are not both there to be read.";
         //: %1 is the name of the spell-check dictionary the profile uses, such as "de_DE"
         mpHost->postMessage(QCoreApplication::translate("TSpellChecker",
                                                         "[ WARN ]  - The spell-check dictionary \"%1\" that this profile uses is not available on this computer, "
-                                                        "so nothing will be spell-checked until another one is picked in the preferences.")
+                                                        "so nothing will be spell-checked until it is installed, or another one is picked, in the preferences.")
                                     .arg(mSystemDictionary));
         return;
     }
@@ -271,6 +269,20 @@ void TSpellChecker::loadSystemDictionary()
         qDebug().noquote().nospace() << "TSpellChecker::loadSystemDictionary() INFO - System Hunspell dictionary \"" << mSystemDictionary << "\" loaded for profile, it uses a \""
                                      << Hunspell_get_dic_encoding(mpHunspell_system) << "\" encoding...";
     }
+}
+
+// Hunspell_create() cannot fail: given files that are not there, or that are
+// empty, it hands back an empty dictionary, which marks every word as misspelt
+bool TSpellChecker::dictionaryFileUsable(const QString& path)
+{
+    const QFileInfo file(path);
+    return file.isFile() && file.isReadable() && file.size() > 0;
+}
+
+bool TSpellChecker::systemDictionaryFound(const QString& name)
+{
+    const QString path = MudletApp::getMudletPath(enums::hunspellDictionaryPath, name);
+    return dictionaryFileUsable(qsl("%1%2.aff").arg(path, name)) && dictionaryFileUsable(qsl("%1%2.dic").arg(path, name));
 }
 
 // NOTE: Host::setUserDictionaryOptions() forces the user dictionary on, so the

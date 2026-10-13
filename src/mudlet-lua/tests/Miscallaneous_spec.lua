@@ -1618,7 +1618,7 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         it("answers from the system dictionary, or says it has none", function()
           local known, err = spellCheckWord("hello")
           if known == nil then
-            assert.is_true(contains(err, "no main dictionaries found"), tostring(err))
+            assert.is_true(contains(err, "no main dictionaries found") or contains(err, "dictionary this profile uses is not available"), tostring(err))
             return
           end
           assert.is_boolean(known)
@@ -1649,7 +1649,7 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         it("returns a table from the system dictionary, or says it has none", function()
           local suggestions, err = spellSuggestWord("helo")
           if suggestions == nil then
-            assert.is_true(contains(err, "no main dictionaries found"), tostring(err))
+            assert.is_true(contains(err, "no main dictionaries found") or contains(err, "dictionary this profile uses is not available"), tostring(err))
             return
           end
           assert.is_table(suggestions)
