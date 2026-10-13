@@ -26,12 +26,14 @@
 #include "FontManager.h"
 #include "Host.h"
 #include "MudletMedia.h"
+#include "discord.h"
 
 #include <QDebug>
 
 HostManager::HostManager()
 : mpMedia(std::make_unique<MudletMedia>())
 , mpFonts(std::make_unique<FontManager>())
+, mpDiscord(std::make_unique<Discord>())
 {
     // self() callers trust there is only one; a second would repoint the accessor, then null it on
     // destruction while the first is still in use.
