@@ -44,7 +44,6 @@
 #include <QCommandLineOption>
 #include <QPainter>
 #include <QTextLayout>
-#include <algorithm>
 #include <iostream>
 #include <memory>
 #include <vector>
@@ -489,29 +488,58 @@ int main(int argc, char* argv[])
     // would find an 'h' in -stylesheet or a 'v' in -reverse.
     parser.setSingleDashWordOptionMode(QCommandLineParser::ParseAsLongOptions);
     bool commandLineReadOk = parser.parse(commandLineArguments);
-    // An unknown word spelled only with Mudlet's no-value short flags is a group of them (-qv, -fh): no Qt
-    // option is spelled with those letters alone, so it is split up and the list read again.
-    const auto spelledWithGroupableFlags = [](const QString& name) {
-        return name.size() > 1 && std::all_of(name.cbegin(), name.cend(), [](const QChar flag) {
-                   return qsl("hvsfmq").contains(flag);
-               });
+    // An unknown bare word spelled as a compacted group of Mudlet's short options (-qv, -vp Name) is split
+    // and the list read again, so it answers as it would with a display. A group starts with a no-value
+    // letter and -p/-o ends it, taking the rest of the word or else the next one, unless that is an option
+    // (-sp --version stays whole). No undeclared Qt 6.9 option (-display, -platform, -session, -visual...)
+    // is spelled as a group. Keep both letter sets in step with the options above. Known gap: -hx stays
+    // whole, as it looks like -visual, so it still needs a display.
+    const QString noValueLetters{qsl("hvsfmq")};
+    const QString valueLetters{qsl("po")};
+    const auto spelledAsFlagGroup = [&noValueLetters, &valueLetters](const QString& name) {
+        if (name.size() < 2) {
+            return false;
+        }
+        for (const QChar letter : name) {
+            if (valueLetters.contains(letter)) {
+                return letter != name.front();
+            }
+            if (!noValueLetters.contains(letter)) {
+                return false;
+            }
+        }
+        return true;
     };
     QStringList flagGroups;
     for (const QString& unknownName : parser.unknownOptionNames()) {
         const QString word = qsl("-%1").arg(unknownName);
-        if (spelledWithGroupableFlags(unknownName) && commandLineArguments.contains(word)) {
+        // --qv and -qv=x report the same unknown name, but only the bare single-dash spelling is a group
+        if (spelledAsFlagGroup(unknownName) && commandLineArguments.contains(word)) {
             flagGroups << word;
         }
     }
     if (!flagGroups.isEmpty()) {
         QStringList splitArguments;
-        for (const QString& argument : std::as_const(commandLineArguments)) {
+        for (qsizetype i = 0; i < commandLineArguments.size(); ++i) {
+            const QString& argument = commandLineArguments.at(i);
             if (!flagGroups.contains(argument)) {
                 splitArguments << argument;
                 continue;
             }
-            for (const QChar flag : QStringView(argument).mid(1)) {
-                splitArguments << qsl("-%1").arg(flag);
+            qsizetype valueLetterAt = 1;
+            while (valueLetterAt < argument.size() && !valueLetters.contains(argument.at(valueLetterAt))) {
+                ++valueLetterAt;
+            }
+            const bool takesNextWord = valueLetterAt == argument.size() - 1;
+            if (takesNextWord && i + 1 < commandLineArguments.size() && commandLineArguments.at(i + 1).startsWith(QLatin1Char('-'))) {
+                splitArguments << argument;
+                continue;
+            }
+            for (qsizetype j = 1; j <= valueLetterAt && j < argument.size(); ++j) {
+                splitArguments << qsl("-%1").arg(argument.at(j));
+            }
+            if (valueLetterAt + 1 < argument.size()) {
+                splitArguments << argument.sliced(valueLetterAt + 1);
             }
         }
         commandLineReadOk = parser.parse(splitArguments);

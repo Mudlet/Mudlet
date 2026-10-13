@@ -226,12 +226,28 @@ private slots:
         QTest::newRow("-so --version") << QStringList{qsl("-so"), qsl("--version")} << bogusPlatformPlugin() << QString() << versionMarker << helpMarker;
         QTest::newRow("-mp -h") << QStringList{qsl("-mp"), qsl("-h")} << bogusPlatformPlugin() << QString() << helpMarker << versionMarker;
 
-        // -h and -v grouped with Mudlet's other no-value short options are the
-        // same run as given alone, and the group is not an unknown option
-        QTest::newRow("-qv, no display") << QStringList{qsl("-qv")} << QString() << QString() << versionMarker << QStringList{qsl("Report bugs to"), qsl("Warning:")};
-        QTest::newRow("-qv, no platform plugin") << QStringList{qsl("-qv")} << bogusPlatformPlugin() << QString() << versionMarker << helpMarker;
-        QTest::newRow("-fh, no platform plugin") << QStringList{qsl("-fh")} << bogusPlatformPlugin() << QString() << helpMarker << versionMarker;
-        QTest::newRow("-smv, no platform plugin") << QStringList{qsl("-smv")} << bogusPlatformPlugin() << QString() << versionMarker << helpMarker;
+        // -h and -v grouped with Mudlet's other short options are the same run
+        // as given alone, and the group is not an unknown option
+        const QStringList versionOnly{qsl("Report bugs to"), qsl("Warning:")};
+        const QStringList helpOnly{qsl("GPLv3"), qsl("Warning:")};
+        QTest::newRow("-qv, no display") << QStringList{qsl("-qv")} << QString() << QString() << versionMarker << versionOnly;
+        QTest::newRow("-qv, no platform plugin") << QStringList{qsl("-qv")} << bogusPlatformPlugin() << QString() << versionMarker << versionOnly;
+        QTest::newRow("-fh, no platform plugin") << QStringList{qsl("-fh")} << bogusPlatformPlugin() << QString() << helpMarker << helpOnly;
+        QTest::newRow("-smv, no platform plugin") << QStringList{qsl("-smv")} << bogusPlatformPlugin() << QString() << versionMarker << versionOnly;
+        // Help beats version inside one group too
+        QTest::newRow("-vh, no platform plugin") << QStringList{qsl("-vh")} << bogusPlatformPlugin() << QString() << helpMarker << helpOnly;
+        QTest::newRow("-hv, no platform plugin") << QStringList{qsl("-hv")} << bogusPlatformPlugin() << QString() << helpMarker << helpOnly;
+        // A group may end in -p or -o, whose value is the rest of the word or
+        // else the word after it, so long as that is not an option (-sp --version)
+        QTest::newRow("-vp MyProfile") << QStringList{qsl("-vp"), qsl("MyProfile")} << bogusPlatformPlugin() << QString() << versionMarker << versionOnly;
+        QTest::newRow("-vpMyProfile") << QStringList{qsl("-vpMyProfile")} << bogusPlatformPlugin() << QString() << versionMarker << versionOnly;
+        QTest::newRow("-ho Game") << QStringList{qsl("-ho"), qsl("Game")} << bogusPlatformPlugin() << QString() << helpMarker << helpOnly;
+        QTest::newRow("-fvo Game") << QStringList{qsl("-fvo"), qsl("Game")} << bogusPlatformPlugin() << QString() << versionMarker << versionOnly;
+        // The other words keep their meaning when a group is split
+        QTest::newRow("--bogus -qv") << QStringList{qsl("--bogus"), qsl("-qv")} << bogusPlatformPlugin() << QString() << QStringList{qsl("GPLv3"), qsl("Warning: Unknown option 'bogus'")}
+                                     << helpMarker;
+        QTest::newRow("-stylesheet, then -qv") << QStringList{qsl("-stylesheet"), qsl("headless-version-test.qss"), qsl("-qv")} << bogusPlatformPlugin() << QString() << versionMarker << versionOnly;
+        QTest::newRow("-reverse -fh") << QStringList{qsl("-reverse"), qsl("-fh")} << bogusPlatformPlugin() << QString() << helpMarker << helpOnly;
 
         // Qt's own options are still in the list such a run is read from, so
         // they must neither be compacted into a letter that means something to
