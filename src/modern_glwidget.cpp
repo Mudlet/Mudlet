@@ -1664,7 +1664,7 @@ void ModernGLWidget::refreshScene()
             }
             for (const ExitScene::Triangle& triangle : exits.triangles) {
                 const QVector4D tint = faded(triangle.color, triangle.level);
-                mScene.addTriangle(tint.w() < 1.0f, triangle.level, triangle.a, triangle.b, triangle.c, tint);
+                mScene.addTriangle(tint.w() < 1.0f, triangle.level, triangle.a, triangle.b, triangle.c, tint, triangle.distant);
             }
 
             const float roomSize = 2.0f / scale;

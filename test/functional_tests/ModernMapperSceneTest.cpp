@@ -432,6 +432,44 @@ private slots:
         mpHost->mMapperShowRoomBorders = savedBorders;
     }
 
+    void test_largeAreaExitArrowsShowOnRoomsTooSmallToSeeWithoutGL()
+    {
+        map()->mapClear();
+        addGridArea(qsl("Tiny"), 1, 64, 64, 1, 0);
+        const int areaId = map()->mpRoomDB->getRoom(1)->getArea();
+        const int otherAreaId = map()->mpRoomDB->addArea(qsl("Elsewhere"));
+        const int elsewhere = 64 * 64 + 1;
+        map()->addRoom(elsewhere);
+        map()->setRoomArea(elsewhere, otherAreaId);
+        map()->setRoomCoordinates(elsewhere, 40, 0, 0);
+        // The east edge's middle room
+        map()->setExit(1 + 32 * 64 + 63, elsewhere, DIR_EAST);
+        map()->mRoomIdHash[map()->mProfileName] = 0;
+        const bool savedLargeArrows = mpHost->getLargeAreaExitArrows();
+        mpHost->setLargeAreaExitArrows(true);
+        ModernGLWidget widget(map(), mpHost);
+        const auto triangleVertices = [&widget]() {
+            qsizetype count = 0;
+            for (const auto& command : widget.mRenderCommandQueue.commands()) {
+                // Above the level, where arrowheads lie on the exit lines, rather than its floor under the rooms
+                if (const auto* triangles = dynamic_cast<const RenderTrianglesCommand*>(command.get())) {
+                    for (qsizetype z = 2; z < triangles->vertices().size(); z += 3) {
+                        count += triangles->vertices().at(z) > 0.0f ? 1 : 0;
+                    }
+                }
+            }
+            return count;
+        };
+
+        queueFrame(widget, areaId, 100.0f);
+        const float roomPixels = 0.5f / widget.mCameraController.worldUnitsPerPixel(QVector3D(0.0f, 0.0f, 0.0f));
+        QVERIFY2(roomPixels < widget.mDetailPixels, qPrintable(qsl("rooms %1 pixels across are not too small to see").arg(roomPixels)));
+        QCOMPARE(texturedCommands(widget), 0);
+        mpHost->setLargeAreaExitArrows(savedLargeArrows);
+        // The arrowhead and its outline, two triangles
+        QVERIFY2(triangleVertices() >= 2 * 3, "the large area exit arrowhead is left off when zoomed out, which is what the setting is for");
+    }
+
     void test_aRoomJustOutOfViewIsJudgedNearOrFarAsTheViewMovesWithoutGL()
     {
         RetainedMapScene scene;
