@@ -231,19 +231,28 @@ private slots:
         QVERIFY(pHost->getLuaInterpreter()->compileAndExecuteScript(qsl("openUserWindow('qaKeyboardWindow') enableCommandLine('qaKeyboardWindow')")));
         TConsole* pUserWindow = pHost->mainConsoleView()->subConsoleWidget(qsl("qaKeyboardWindow"));
         QVERIFY(pUserWindow && pUserWindow->mpCommandLine);
-        pHost->mainConsoleView()->recordActiveCommandLine(pUserWindow->mpCommandLine);
+        const QPointer<TCommandLine> pUserCommandLine = pUserWindow->mpCommandLine.data();
+        auto restore = qScopeGuard([pHost, pUserCommandLine]() {
+            pHost->getLuaInterpreter()->compileAndExecuteScript(qsl("hideWindow('qaKeyboardWindow')"));
+            pHost->mainConsoleView()->forgetCommandLine(pUserCommandLine);
+            pHost->mainConsoleView()->recordActiveCommandLine(pHost->mainConsoleView()->mpCommandLine);
+        });
+        pHost->mainConsoleView()->recordActiveCommandLine(pUserCommandLine);
         mudlet::self()->mpTabBar->setFocus(Qt::MouseFocusReason);
 
         mpDetachedWindow = detachSecondProfile();
         QVERIFY(mpDetachedWindow);
-        QVERIFY2(pUserWindow->mpCommandLine->window() != mpDetachedWindow.data(), "the user window moved with its profile, so this case no longer covers a command line left behind");
+        QVERIFY2(pUserCommandLine->window() != mpDetachedWindow.data(), "the user window moved with its profile, so this case no longer covers a command line left behind");
         QTest::qWait(200ms);
-        const bool userWindowHadTheKeyboard = QApplication::focusWidget() == pUserWindow->mpCommandLine.data();
-        QWidget* pActiveWindow = QApplication::activeWindow();
-        pHost->mainConsoleView()->recordActiveCommandLine(pHost->mainConsoleView()->mpCommandLine);
-        QVERIFY(pHost->getLuaInterpreter()->compileAndExecuteScript(qsl("hideWindow('qaKeyboardWindow')")));
-        QVERIFY2(!userWindowHadTheKeyboard, "the keyboard went to the user window's command line, left behind in the main window");
-        QCOMPARE(pActiveWindow, mpDetachedWindow.data());
+        QVERIFY2(QApplication::focusWidget() != pUserCommandLine.data(), "the keyboard went to the user window's command line, left behind in the main window");
+        QCOMPARE(QApplication::activeWindow(), mpDetachedWindow.data());
+        QCOMPARE(QApplication::focusWidget(), static_cast<QWidget*>(pHost->mainConsoleView()->mpCommandLine.data()));
+
+        // As a toolbar button or a click on a console does: the command line given
+        // the keyboard has to be the one on record from now on
+        pHost->setFocusOnHostActiveCommandLine();
+        QTest::qWait(200ms);
+        QCOMPARE(QApplication::activeWindow(), mpDetachedWindow.data());
         QCOMPARE(QApplication::focusWidget(), static_cast<QWidget*>(pHost->mainConsoleView()->mpCommandLine.data()));
     }
 
