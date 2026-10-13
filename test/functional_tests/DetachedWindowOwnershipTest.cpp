@@ -256,6 +256,33 @@ private slots:
         QCOMPARE(QApplication::focusWidget(), static_cast<QWidget*>(pHost->mainConsoleView()->mpCommandLine.data()));
     }
 
+    // A command line made in the profile's own console moves with it, so when it
+    // was the last one used it keeps the keyboard
+    void test_aCommandLineThatMovedWithItsProfileKeepsTheKeyboard()
+    {
+        QVERIFY(mpDetachedWindow);
+        Host* pHost = HostManager::self()->getHost(mSecondHostname);
+        QVERIFY(pHost && pHost->mainConsoleView());
+        reattachAndWait(mSecondHostname);
+        QTest::qWait(200ms);
+        QVERIFY(pHost->getLuaInterpreter()->compileAndExecuteScript(qsl("createCommandLine('qaKeyboardLine', 0, 0, 200, 30)")));
+        const QPointer<TCommandLine> pSubCommandLine = pHost->mainConsoleView()->subCommandLineWidget(qsl("qaKeyboardLine"));
+        QVERIFY(pSubCommandLine);
+        auto restore = qScopeGuard([pHost, pSubCommandLine]() {
+            pHost->getLuaInterpreter()->compileAndExecuteScript(qsl("disableCommandLine('qaKeyboardLine')"));
+            pHost->mainConsoleView()->forgetCommandLine(pSubCommandLine);
+            pHost->mainConsoleView()->recordActiveCommandLine(pHost->mainConsoleView()->mpCommandLine);
+        });
+        pHost->mainConsoleView()->recordActiveCommandLine(pSubCommandLine);
+        mudlet::self()->mpTabBar->setFocus(Qt::MouseFocusReason);
+
+        mpDetachedWindow = detachSecondProfile();
+        QVERIFY(mpDetachedWindow);
+        QVERIFY2(pSubCommandLine->window() == mpDetachedWindow.data(), "the profile's own command line did not move with it, so this case no longer covers one that did");
+        QTest::qWait(200ms);
+        QCOMPARE(QApplication::focusWidget(), static_cast<QWidget*>(pSubCommandLine.data()));
+    }
+
     void test_reattachingDestroysTheDetachedWindow()
     {
         QPointer<TDetachedWindow> pWindow = mpDetachedWindow;
