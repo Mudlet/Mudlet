@@ -2699,8 +2699,8 @@ void ModernGLWidget::renderConnections()
         }
     }
     if (!bars.isEmpty()) {
-        mRenderCommandQueue.addCommand(std::make_unique<RenderInstancedCubesCommand>(
-                bars, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix(), exitShading()));
+        mRenderCommandQueue.addCommand(
+                std::make_unique<RenderInstancedCubesCommand>(bars, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix(), exitShading()));
     }
     if (!strokes.isEmpty()) {
         mRenderCommandQueue.addCommand(std::make_unique<RenderInstancedCubesCommand>(
