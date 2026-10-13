@@ -364,10 +364,11 @@ bool sgrDigits(const QStringView parameter, int& value)
     return true;
 }
 
-// Maximum length for a CSI sequence's parameter string before aborting - a
-// valid one is only a handful of bytes, so this only trips on a malformed or
-// hostile sequence that never sends a final byte (defense against a server
-// growing mIncompleteSequenceBytes without bound across packets)
+// Maximum length of the bytes ahead of a CSI sequence's final byte before
+// aborting - a valid one is only a handful of bytes, so this only trips on a
+// malformed or hostile sequence, such as one that never sends a final byte
+// (defense against a server growing mIncompleteSequenceBytes without bound
+// across packets)
 constexpr size_t MAX_CSI_SEQUENCE_LENGTH = 4096;
 // Inline room for any SGR parameter string a game actually sends, avoiding the heap:
 constexpr qsizetype SGR_INLINE_CHARS = 64;
@@ -1476,14 +1477,14 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
         }
 
         if (mGotCSI) {
-            // Lookahead over the parameter string - see cParameter and cParameterPrivateIntroducer.
+            // Lookahead over the parameter string - see csiParameterByte() and csiPrivateIntroducerByte().
             size_t const spanStart = localBufferPosition;
             size_t spanEnd = spanStart;
             while (spanEnd < localBufferLength && csiParameterByte(localBuffer[spanEnd])) {
                 ++spanEnd;
             }
-            // A sequence with intermediate bytes runs on to its final byte, even when a malformed one has
-            // parameter bytes after them, or that tail would reach the screen as game text:
+            // Then over any intermediate bytes, and the parameter bytes a malformed sequence has after them,
+            // or that tail would reach the screen as game text:
             size_t const parametersEnd = spanEnd;
             while (spanEnd < localBufferLength && (csiIntermediateByte(localBuffer[spanEnd]) || csiParameterByte(localBuffer[spanEnd]))) {
                 ++spanEnd;
@@ -1491,13 +1492,12 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
             bool const hasIntermediateBytes = spanEnd != parametersEnd;
 
             if (spanEnd - spanStart >= MAX_CSI_SEQUENCE_LENGTH) {
-                // The parameter string is far longer than any valid CSI (which
-                // is only a handful of bytes): discard it instead of buffering
-                // it without bound while waiting for a final byte that a hostile
-                // server may never send.
-                qWarning().noquote().nospace() << "TBuffer::translateToPlainText(...) WARNING - CSI sequence exceeded " << MAX_CSI_SEQUENCE_LENGTH
-                                               << " bytes without a final byte, discarding it to recover.";
-                // As below, the byte that stopped the scan is only the sequence's own when it is a final byte
+                // The sequence is far longer than any valid CSI (which is only
+                // a handful of bytes): discard it, along with its final byte if
+                // that is what stopped the scan, instead of buffering it without
+                // bound while waiting for a final byte that a hostile server may
+                // never send.
+                qWarning().noquote().nospace() << "TBuffer::translateToPlainText(...) WARNING - CSI sequence reached " << MAX_CSI_SEQUENCE_LENGTH << " bytes, discarding it to recover.";
                 localBufferPosition += spanEnd - spanStart + (spanEnd < localBufferLength && csiFinalByte(localBuffer[spanEnd]) ? 1 : 0);
                 mGotCSI = false;
                 if (Q_UNLIKELY(mPendingLead)) {
@@ -1528,8 +1528,9 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
                 flushPendingLead();
             }
 
-            // Only a final byte belongs to the sequence: the newline, escape or lead byte that cut one short
-            // is left to be read, or eating it would join two lines, drop the next sequence or break a character
+            // Only a final byte belongs to the sequence: any other byte that cut one short, such as a newline,
+            // an escape or a character's lead byte, is left to be read, or eating it would join two lines, drop
+            // the next sequence or break a character
             const bool hasFinalByte = csiFinalByte(localBuffer[spanEnd]);
 
             // Only now that a complete sequence is in hand, test whether the
@@ -1550,12 +1551,9 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
                 continue;
             }
 
-            // Now we can take a peek at what the next character is, it could
-            // be an optional (and we are not expecting this) "intermediate
-            // byte" which is space or one of "!"#$%&'()*+,-./" or a "final
-            // byte" which is what determines what on earth the CSI is for, it
-            // should be in the (ASCII) range '@' to '~' and the end of that
-            // range 'p' to '~' is for "private" or "experimental" use.
+            // The final byte, in the (ASCII) range '@' to '~', is what
+            // determines what on earth the CSI is for; the end of that range,
+            // 'p' to '~', is for "private" or "experimental" use.
 
             if (hasIntermediateBytes && hasFinalByte) {
                 // We do not handle any sequences with intermediate bytes, so
@@ -1574,7 +1572,7 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
 #if defined(DEBUG_SGR_PROCESSING)
                     qDebug().nospace().noquote() << "    Consider the SGR sequence: \"" << localBuffer.substr(spanStart, spanEnd - spanStart).c_str() << "\"";
 #endif
-                    // Only non-private cParameter bytes get here, each a single UTF-16 unit, so no QString is needed:
+                    // Only non-private parameter bytes get here, each a single UTF-16 unit, so no QString is needed:
                     QVarLengthArray<char16_t, SGR_INLINE_CHARS> sgrChars(spanEnd - spanStart);
                     for (size_t i = spanStart; i < spanEnd; ++i) {
                         sgrChars[i - spanStart] = static_cast<unsigned char>(localBuffer[i]);

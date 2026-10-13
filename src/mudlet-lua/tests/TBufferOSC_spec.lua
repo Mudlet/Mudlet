@@ -378,6 +378,26 @@ describe("Tests TBuffer OSC sequence handling", function()
       assert.equals("CSINOFIN3)", findRecentLine("CSINOFIN3"))
     end)
 
+    it("should not swallow the character that ends a sequence with no final byte", function()
+      assert.is_true(feedTriggers("CSINOFIN4(\027[1\195\169)CSINOFIN4\n"))
+      assert.equals("CSINOFIN4(\195\169)CSINOFIN4", findRecentLine("CSINOFIN4"))
+    end)
+
+    -- A private sequence is skipped on a path of its own, which has to take its
+    -- intermediate and final bytes too, and leave the byte that cuts it short.
+    it("should consume a private sequence with an intermediate byte", function()
+      assert.is_true(feedTriggers("CSIPRIV4(\027[?5$pX)CSIPRIV4\n"))
+      assert.equals("CSIPRIV4(X)CSIPRIV4", findRecentLine("CSIPRIV4"))
+    end)
+
+    it("should leave the byte that cuts a private sequence short", function()
+      assert.is_true(feedTriggers("CSIPRIV5(\027[?25\nCSIPRIV6)\n"))
+      assert.equals("CSIPRIV5(", findRecentLine("CSIPRIV5"))
+      assert.equals("CSIPRIV6)", findRecentLine("CSIPRIV6"))
+      assert.is_true(feedTriggers("CSIPRIV7(\027[?25\195\169)CSIPRIV7\n"))
+      assert.equals("CSIPRIV7(\195\169)CSIPRIV7", findRecentLine("CSIPRIV7"))
+    end)
+
     -- Consuming a reserved byte puts it in front of the SGR decoder, so a
     -- parameter it has made unreadable must change nothing rather than be
     -- read as far as it parses or fall back to colour zero.
@@ -425,6 +445,16 @@ describe("Tests TBuffer OSC sequence handling", function()
       end
     end)
 
+    -- Without its intermediate byte the sequence would be an SGR or a cursor
+    -- movement, so none of it may take effect.
+    it("should not act on a sequence with an intermediate byte", function()
+      assert.is_true(feedTriggers("CSIACT1(\027[0;37mplain\027[1;31 mafter\027[0m)CSIACT1\n"))
+      assert.equals("CSIACT1(plainafter)CSIACT1", findRecentLine("CSIACT1"))
+      assert.are.same(foregroundOf("CSIACT1", "plain"), foregroundOf("CSIACT1", "after"))
+      assert.is_true(feedTriggers("CSIACT2(AB\027[5 CCD)CSIACT2\n"))
+      assert.equals("CSIACT2(ABCD)CSIACT2", findRecentLine("CSIACT2"))
+    end)
+
     -- The rest of a sequence the last local feed cut short is read along with
     -- the bytes held from it, not as a sequence of its own.
     it("should not act on the rest of a sequence with an intermediate byte split between local feeds", function()
@@ -451,7 +481,8 @@ describe("Tests TBuffer OSC sequence handling", function()
     end)
 
     -- Only a final byte belongs to the sequence: the line ending or character
-    -- that cuts one short is still read as text.
+    -- that cuts one short is still read as text. A scan that stops at the
+    -- intermediate byte passes these too: they guard the scan that goes past it.
     it("should leave the byte that cuts a sequence with an intermediate byte short", function()
       assert.is_true(feedTriggers("CSIINT8(\027[1 \nCSIINT9)\n"))
       assert.equals("CSIINT8(", findRecentLine("CSIINT8"))
@@ -466,7 +497,7 @@ describe("Tests TBuffer OSC sequence handling", function()
       assert.equals("CSIINTD(\195\169)CSIINTD", findRecentLine("CSIINTD"))
     end)
 
-    -- MAX_CSI_SEQUENCE_LENGTH in TBuffer.cpp: past it the parameter string is
+    -- MAX_CSI_SEQUENCE_LENGTH in TBuffer.cpp: past it the sequence is
     -- thrown away rather than buffered without bound while a server that never
     -- sends a final byte keeps feeding parameter bytes.
     local lengthCap = 4096
@@ -480,8 +511,8 @@ describe("Tests TBuffer OSC sequence handling", function()
     end
 
     -- The two lengths either side of the cap, rather than a comfortable margin
-    -- on each side: the check is ">= MAX_CSI_SEQUENCE_LENGTH" on the parameter
-    -- string alone, and only these two tell that apart from a ">".
+    -- on each side: the check is ">= MAX_CSI_SEQUENCE_LENGTH" on the bytes ahead
+    -- of the final byte, and only these two tell that apart from a ">".
     it("should still act on a parameter string one byte under the length cap", function()
       assert.is_true(feedTriggers("\027[0mCSICAP1(\027[" .. paddedGreen(lengthCap - 1) .. "mgreen\027[0m)CSICAP1\n"))
       assert.equals("CSICAP1(green)CSICAP1", findRecentLine("CSICAP1"))
@@ -502,6 +533,7 @@ describe("Tests TBuffer OSC sequence handling", function()
       for i, filler in ipairs({"1", " "}) do
         local before, after = ("CSICAPCUT%dA"):format(i), ("CSICAPCUT%dB"):format(i)
         assert.is_true(feedTriggers(before .. "(\027[" .. string.rep(filler, lengthCap) .. "\n" .. after .. ")\n"))
+        assert.equals(before .. "(", findRecentLine(before))
         assert.equals(after .. ")", findRecentLine(after))
       end
     end)
