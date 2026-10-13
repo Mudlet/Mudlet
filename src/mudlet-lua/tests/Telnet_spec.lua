@@ -1444,6 +1444,10 @@ describe("Tests telnet option negotiation", function()
     feed("\27[1z<SEND href=\"x\">MXPSUBNEGSECURE</SEND>\r\n")
     assert.same({"MXPSUBNEGSECURE"}, getLines("main", mark, getLastLineNumber("main")))
 
+    mark = getLastLineNumber("main")
+    feed("<B>MXPSUBNEGAFTER</B><SEND href=\"x\">N</SEND>\r\n")
+    assert.same({"MXPSUBNEGAFTER<SEND href=\"x\">N</SEND>"}, getLines("main", mark, getLastLineNumber("main")))
+
     assert.same({"sysProtocolDisabled:MXP"}, protocolEventsFrom("<T_IAC><T_DONT><O_MXP>"))
   end)
 

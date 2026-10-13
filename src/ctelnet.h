@@ -479,6 +479,7 @@ private:
 
     void trackKaVirNegotiation(unsigned char option);
     void autoEnableMXPProcessor();
+    void switchMxpOn();
     void autoEnableTTYPEVersion();
     QByteArray encodingForCharacterSet(const QByteArray& characterSet) const;
 

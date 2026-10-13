@@ -238,7 +238,7 @@ describe("Tests the MXP line modes a game switches between", function()
     return table.concat(getLines("main", mark, getLastLineNumber("main")), "|")
   end
 
-  local function boldAt(word)
+  local function formatAt(word)
     local lineNumber = getLastLineNumber("main")
     for n = lineNumber, math.max(0, lineNumber - 10), -1 do
       local line = getLines("main", n, n + 1)[1]
@@ -248,10 +248,14 @@ describe("Tests the MXP line modes a game switches between", function()
         selectSection("main", at - 1, 1)
         local format = getTextFormat("main")
         deselect("main")
-        return format.bold
+        return format
       end
     end
     error("no line holds " .. word)
+  end
+
+  local function boldAt(word)
+    return formatAt(word).bold
   end
 
   setup(function()
@@ -290,14 +294,61 @@ describe("Tests the MXP line modes a game switches between", function()
     assert.is_false(boldAt("MXPPARSERESETPLAIN"))
   end)
 
-  -- open is the default mode the MXP spec starts on, and the subnegotiation
-  -- some games send to turn MXP on must not lock every line against tags. The
-  -- second line is the game #8915 was for, which locks lines itself.
   it("leaves the default mode open after the MXP subnegotiation", function()
     finally(function() feed("\27[5z\r\n") end)
     feed("<T_IAC><T_SB><O_MXP><T_IAC><T_SE>")
     assert.equals("MXPSUBNEGOPEN <lt>", displayed("<B>MXPSUBNEGOPEN</B> &lt;lt&gt;\r\n"))
-    assert.equals("Type MXPSUBNEGSEND to start", displayed("Type \27[4z<SEND HREF=\"x\">\27[7zMXPSUBNEGSEND\27[4z</SEND>\27[7z to start\r\n"))
+    assert.is_true(boldAt("MXPSUBNEGOPEN"))
+  end)
+
+  it("keeps a mode the game locked in when it repeats the MXP subnegotiation", function()
+    finally(function() feed("\27[5z\r\n") end)
+    feed("\27[6z\r\n")
+    feed("<T_IAC><T_SB><O_MXP><T_IAC><T_SE>")
+    assert.equals("MXPSUBNEGSECURE", displayed("<SEND href=\"x\">MXPSUBNEGSECURE</SEND>\r\n"))
+
+    feed("\27[7z\r\n")
+    feed("<T_IAC><T_SB><O_MXP><T_IAC><T_SE>")
+    assert.equals("<B>MXPSUBNEGLOCKED</B>", displayed("<B>MXPSUBNEGLOCKED</B>\r\n"))
+  end)
+
+  it("starts MXP in open mode again after it was turned off, whatever mode was locked in", function()
+    finally(function()
+      feed("<T_IAC><T_DO><O_MXP>")
+      feed("\27[5z\r\n")
+    end)
+    feed("\27[7z\r\n")
+    feed("<T_IAC><T_DONT><O_MXP>")
+    feed("<T_IAC><T_DO><O_MXP>")
+    assert.equals("MXPRENEGOTIATED", displayed("<B>MXPRENEGOTIATED</B>\r\n"))
+
+    feed("\27[7z\r\n")
+    feed("<T_IAC><T_DONT><O_MXP>")
+    feed("<T_IAC><T_SB><O_MXP><T_IAC><T_SE>")
+    assert.equals("MXPRESUBNEGOTIATED", displayed("<B>MXPRESUBNEGOTIATED</B>\r\n"))
+  end)
+
+  it("keeps the secure default of Force MXP through the MXP negotiation", function()
+    finally(function()
+      setConfig("specialForceMXPProcessorOn", false)
+      feed("<T_IAC><T_DO><O_MXP>")
+      feed("\27[5z\r\n")
+    end)
+    feed("<T_IAC><T_DONT><O_MXP>")
+    setConfig("specialForceMXPProcessorOn", true)
+    feed("<T_IAC><T_DO><O_MXP>")
+    feed("<T_IAC><T_SB><O_MXP><T_IAC><T_SE>")
+    assert.equals("MXPFORCEDSECURE", displayed("<SEND href=\"x\">MXPFORCEDSECURE</SEND>\r\n"))
+  end)
+
+  it("makes a link from a temp secure tag on a line the game keeps locked", function()
+    finally(function() feed("\27[5z\r\n") end)
+    feed("<T_IAC><T_SB><O_MXP><T_IAC><T_SE>")
+    assert.equals("Type MXPTEMPLINK to start", displayed("Type \27[4z<SEND HREF=\"x\">\27[7zMXPTEMPLINK\27[4z</SEND>\27[7z to start\r\n"))
+    -- a link is underlined, and the text either side of it is not
+    assert.is_true(formatAt("MXPTEMPLINK").underline)
+    assert.is_false(formatAt("Type").underline)
+    assert.is_false(formatAt("to start").underline)
   end)
 
   it("ignores a mode switch that carries no number", function()
