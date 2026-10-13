@@ -550,6 +550,8 @@ private:
     void flyToPoint(int areaId, const QVector3D& point, float distance);
     void runSearch();
     void chooseSearchResult(int row, bool planRoute);
+    // A room or area still on the map, and not where the player already is
+    bool routableSearchResult(const MapSearch::Result& result) const;
     void showSearchResultMenu(int row, const QPoint& globalPosition);
     QString searchResultLine(const MapSearch::Result& result) const;
     void placeSearchPanel();

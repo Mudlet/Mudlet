@@ -1697,6 +1697,18 @@ private slots:
         search.refresh(*map());
         QVERIFY(search.find(qsl("Cellar"), 0, true).isEmpty());
 
+        // Hidden rooms are not given away
+        map()->mpRoomDB->getRoom(9)->name = qsl("Secret Cellar");
+        map()->mpRoomDB->getRoom(9)->setHidden(true);
+        search.refresh(*map());
+        QVERIFY(search.find(qsl("Cellar"), 0, true).isEmpty());
+        QVERIFY(search.find(qsl("9"), 0, true).isEmpty());
+        map()->mpRoomDB->getRoom(9)->setHidden(false);
+        search.refresh(*map());
+        QCOMPARE(search.find(qsl("Cellar"), 0, true).value(0).id, 9);
+        map()->mpRoomDB->getRoom(9)->name.clear();
+        map()->setUnsaved(__func__);
+
         // Spaces count once, wherever they are
         map()->mpRoomDB->getRoom(8)->name = qsl(" Wine  Cellar ");
         map()->setUnsaved(__func__);
@@ -1804,6 +1816,12 @@ private slots:
         QCoreApplication::sendEvent(widget.mpSearchPanel->mpEdit, &plan);
         QCOMPARE(widget.route().destinationRoomId(), 3);
         QCOMPARE(widget.mAID, eastId);
+        // Not to the player's own room, which would only drop that route
+        map()->mpRoomDB->getRoom(1)->name = qsl("Lantern Room");
+        map()->setUnsaved(__func__);
+        widget.mpSearchPanel->mpEdit->setText(qsl("lantern"));
+        widget.chooseSearchResult(0, true);
+        QCOMPARE(widget.route().destinationRoomId(), 3);
 
         // An area is flown into, back where the view shows its rooms
         widget.mpSearchPanel->mpEdit->setText(qsl("westmarch"));
