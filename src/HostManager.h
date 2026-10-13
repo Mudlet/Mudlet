@@ -28,7 +28,11 @@
 #include <QString>
 #include <QSharedPointer>
 
+#include <memory>
+
+class FontManager;
 class Host;
+class MudletMedia;
 class TEvent;
 typedef QMap<QString, QSharedPointer<Host>> HostMap;
 
@@ -57,8 +61,14 @@ public:
     // members are torn down; null outside that.
     static HostManager* self() { return smpSelf; }
 
+    MudletMedia& media() { return *mpMedia; }
+    FontManager& fonts() { return *mpFonts; }
+
     Host* getHost(const QString& hostname);
     bool addHost(const QString& name, const QString& port, const QString& login, const QString& pass);
+    // Loads and starts a saved profile with no window: what the GUI's load gives, less the default
+    // packages a new profile gets. Null when that profile is already open.
+    Host* openProfile(const QString& name, bool connect);
     int getHostCount();
     void deleteHost(const QString&);
     void postIrcMessage(const QString&, const QString&, const QString&);
@@ -73,6 +83,11 @@ public:
 private:
     inline static HostManager* smpSelf = nullptr;
 
+    // Every profile obeys these switches, so whatever owns the profiles owns them too, and with no main
+    // window a profile still has real ones. Before mHostPool, so they outlive the profiles that reach them.
+    std::unique_ptr<MudletMedia> mpMedia;
+    // Before mHostPool too, as the profiles reach it through FontManager::self()
+    std::unique_ptr<FontManager> mpFonts;
     HostMap mHostPool;
 };
 
