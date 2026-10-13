@@ -7443,17 +7443,25 @@ void dlgTriggerEditor::moveVariableRowToSortedPlace(QTreeWidgetItem* pItem, TVar
         return;
     }
     VarUnit* varUnit = mpHost->getLuaInterface()->getVarUnit();
+    auto siblingVariable = [&](const int index) -> TVar* {
+        QTreeWidgetItem* pSiblingItem = pParentItem->child(index);
+        TVar* pSibling = treeWidget_variables->variableForRow(varUnit, pSiblingItem);
+        return pSibling ? pSibling : treeWidget_variables->newVariableForRow(varUnit, pSiblingItem);
+    };
     const int from = pParentItem->indexOfChild(pItem);
+    // Every row switch saves the row left behind, so one already in order stays put without
+    // a walk over its siblings, and is not moved past a sibling that sorts alike ("1", "01")
+    TVar* pPrevious = from > 0 ? siblingVariable(from - 1) : nullptr;
+    TVar* pNext = from + 1 < pParentItem->childCount() ? siblingVariable(from + 1) : nullptr;
+    if ((!pPrevious || !TVarLessThan(pVariable, pPrevious)) && (!pNext || !TVarLessThan(pNext, pVariable))) {
+        return;
+    }
     int to = pParentItem->childCount() - 1;
     for (int i = 0; i < pParentItem->childCount(); ++i) {
         if (i == from) {
             continue;
         }
-        QTreeWidgetItem* pSiblingItem = pParentItem->child(i);
-        TVar* pSibling = treeWidget_variables->variableForRow(varUnit, pSiblingItem);
-        if (!pSibling) {
-            pSibling = treeWidget_variables->newVariableForRow(varUnit, pSiblingItem);
-        }
+        TVar* pSibling = siblingVariable(i);
         if (pSibling && TVarLessThan(pVariable, pSibling)) {
             to = i > from ? i - 1 : i;
             break;

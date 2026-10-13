@@ -808,6 +808,30 @@ private slots:
         mpEditor->repopulateVars();
     }
 
+    // Names such as "1" and "01" sort alike, so a row saved on the way past one
+    // of them is already in its place beside the other
+    void test_clickingPastRowsThatSortAlikeLeavesThemInPlace()
+    {
+        execLua(qsl("alikeHolder = {['01'] = 'x', ['1'] = 'y', b = 'b'}"));
+        mpEditor->repopulateVars();
+
+        QTreeWidgetItem* pHolder = findVariableItem({qsl("alikeHolder")});
+        QVERIFY2(pHolder, "the Variables view did not show the table holding the rows to click through");
+        pHolder->setExpanded(true);
+        const QStringList shown = rowNames(pHolder);
+        QCOMPARE(shown.size(), 3);
+
+        selectVariable(pHolder->child(0));
+        selectVariable(pHolder->child(1));
+        QCOMPARE(rowNames(pHolder), shown);
+        selectVariable(pHolder->child(2));
+        QCOMPARE(rowNames(pHolder), shown);
+
+        mpEditor->mpCurrentVarItem = nullptr;
+        execLua(qsl("alikeHolder = nil"));
+        mpEditor->repopulateVars();
+    }
+
 private:
     static QStringList rowNames(const QTreeWidgetItem* pParent)
     {
