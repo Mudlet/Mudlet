@@ -50,6 +50,9 @@ struct Options
     bool doorSwings = false;
     // Exit lines between rooms on one level, their stubs and doors drawn as Glyphs, as MapStyle::Glyphs::Terminal says
     bool glyphs = false;
+    // A room's width, in rooms' spacing, and whether it is round, so that a door swing clears its room
+    float roomSize = 0.0f;
+    bool roundRooms = false;
     // Only where area exits can be clicked, with nothing to draw, for picking without the cost of the whole scene
     bool areaExitsOnly = false;
     QColor exitColor;

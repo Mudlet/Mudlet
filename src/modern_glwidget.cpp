@@ -1865,6 +1865,8 @@ ExitScene::Options ModernGLWidget::exitSceneOptions() const
     options.exitColor = style.exitColor(mpHost->mFgColor_2);
     options.doorSwings = style.doors == MapStyle::Doors::Swings;
     options.glyphs = style.glyphs == MapStyle::Glyphs::Terminal;
+    options.roomSize = roomSize;
+    options.roundRooms = style.roundRooms(mpHost->mBubbleMode);
     options.background = backgroundColor();
     return options;
 }
