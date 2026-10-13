@@ -4623,6 +4623,468 @@ headlessMapWidget = ok and "ok" or tostring(err)
         HostManager::self()->deleteHost(hostname);
     }
 
+    // The answers are those of the same Lua chunks run in the GUI self-test profile, which pumpEvents() lets paint
+    void test_headlessMapViewContract()
+    {
+        // Each chunk runs between these, as it did in the GUI
+        const QString prelude = qsl(R"lua(
+headlessMapView = "not run"
+local ok, err = pcall(function()
+  local function described(called, ...)
+    if not called then
+      return "raised:" .. tostring((...))
+    end
+    local count = select("#", ...)
+    local values = {}
+    for i = 1, count do
+      values[i] = tostring((select(i, ...)))
+    end
+    return "[" .. count .. "]" .. table.concat(values, ":")
+  end
+  local answers = {}
+  local function step(label, f, ...)
+    answers[#answers + 1] = label .. "=" .. described(pcall(f, ...))
+  end
+  -- Long enough for the GUI to lay out and paint a map it has just shown
+  local function settle() pumpEvents(300) end
+  local area = addAreaName("Headless Map View Area")
+  local other = addAreaName("Headless Map View Other")
+  local names = {[area] = "area", [other] = "other"}
+  local function named(id) return names[tonumber(id)] or tostring(id) end
+  local changes = {}
+  function headlessMapViewAreaChanged(_, shown, previous)
+    changes[#changes + 1] = named(shown) .. "<" .. named(previous)
+  end
+  local areaHandler = registerAnonymousEventHandler("sysMapAreaChanged", "headlessMapViewAreaChanged")
+  local function areaChanges()
+    local text = table.concat(changes, ",")
+    changes = {}
+    return text
+  end
+  local function room(areaId)
+    local id = createRoomID()
+    addRoom(id)
+    setRoomArea(id, areaId)
+    setRoomCoordinates(id, 0, 0, 0)
+    return id
+  end
+  local near = room(area)
+  local far = room(other)
+)lua");
+        const QString epilogue = qsl(R"lua(
+  killAnonymousEventHandler(areaHandler)
+  headlessMapViewAnswers = table.concat(answers, "\n")
+end)
+headlessMapView = ok and "ok" or tostring(err)
+)lua");
+        Host* host = nullptr;
+        QString hostname;
+        int chunks = 0;
+        // Each on a profile of its own; the answers that differ from the GUI's come back
+        const auto mismatches = [&](const QString& chunk, const QStringList& answers) {
+            if (host) {
+                HostManager::self()->deleteHost(hostname);
+            }
+            hostname = qsl("Test-Headless-Host-Map-View-%1").arg(++chunks);
+            host = HostManager::self()->addHost(hostname, QString(), QString(), QString()) ? HostManager::self()->getHost(hostname) : nullptr;
+            if (!host) {
+                return QStringList{qsl("the profile could not be made")};
+            }
+            host->getLuaInterpreter()->loadGlobal();
+            // With no view, pumpEvents() takes Mudlet for shutting down and pumps nothing. The null view paints on short
+            // chains of zero timers, each link a pass, so passes rather than time deliver them however slow a pass is
+            lua_register(host->getLuaInterpreter()->getLuaGlobalState(), "pumpEvents", [](lua_State*) -> int {
+                for (int pass = 0; pass < 10; ++pass) {
+                    QCoreApplication::processEvents();
+                }
+                return 0;
+            });
+            if (!host->getLuaInterpreter()->compileAndExecuteScript(prelude + chunk + epilogue) || luaGlobalString(host, "headlessMapView") != qsl("ok")) {
+                return QStringList{qsl("the chunk did not run: %1").arg(luaGlobalString(host, "headlessMapView"))};
+            }
+            const QStringList actual = luaGlobalString(host, "headlessMapViewAnswers").split(QLatin1Char('\n'));
+            QStringList different;
+            for (qsizetype i = 0; i < std::max(actual.size(), answers.size()); ++i) {
+                if (actual.value(i) != answers.value(i)) {
+                    different << qsl("%1, not %2").arg(actual.value(i), answers.value(i));
+                }
+            }
+            return different;
+        };
+
+        // The map widget's 2D map: the area it shows, its zoom and sysMapAreaChanged, before and after it paints
+        QStringList answers1{qsl("zoom.none=[2]nil:no active mapper"),
+                             qsl("setZoom.none=[2]nil:no active mapper"),
+                             qsl("open=[1]true"),
+                             qsl("centerview=[1]true"),
+                             qsl("zoom.open=[1]20"),
+                             qsl("setZoom.open=[2]nil:number 0 is not a valid areaID"),
+                             qsl("changes.open=[1]"),
+                             qsl("changes.painted=[1]area<-2"),
+                             qsl("zoom.painted=[1]20"),
+                             qsl("setZoom.painted=[1]true"),
+                             qsl("zoom.set=[1]5"),
+                             qsl("zoomArea.set=[1]5"),
+                             qsl("zoomOther.set=[1]20"),
+                             qsl("setZoom.small=[2]nil:zoom 1 is invalid, it must be at least 3"),
+                             qsl("setZoom.nan=[2]nil:zoom nan is invalid, it must be a finite number"),
+                             qsl("setZoom.noArea=[2]nil:number 9999 is not a valid areaID"),
+                             qsl("setZoom.other=[1]true"),
+                             qsl("zoom.other=[1]5"),
+                             qsl("centerview.far=[1]true"),
+                             qsl("zoom.far=[1]5"),
+                             qsl("changes.far=[1]other<area"),
+                             qsl("zoom.far.painted=[1]8"),
+                             qsl("changes.again=[1]"),
+                             qsl("close=[1]true"),
+                             qsl("centerview.closed=[1]true"),
+                             qsl("changes.closed=[1]"),
+                             qsl("zoom.closed=[1]8"),
+                             qsl("setZoom.closed=[1]true"),
+                             qsl("zoomOther.closed=[1]9"),
+                             qsl("reopen=[1]true"),
+                             qsl("zoom.reopen=[1]9"),
+                             qsl("changes.reopen=[1]area<other"),
+                             qsl("zoom.reopen.painted=[1]5"),
+                             qsl("move=[1]true"),
+                             qsl("changes.moved=[1]"),
+                             qsl("zoom.moved=[1]5"),
+                             qsl("centerview.moved=[1]true"),
+                             qsl("changes.recentred=[1]other<area"),
+                             qsl("zoom.recentred=[1]9"),
+                             qsl("moveBack=[1]true"),
+                             qsl("centerview.back=[1]true"),
+                             qsl("changes.back=[1]area<other"),
+                             qsl("save=[1]true"),
+                             qsl("centerview.far2=[1]true"),
+                             qsl("changes.far2=[1]other<area"),
+                             qsl("zoom.far2=[1]9"),
+                             qsl("load=[1]true"),
+                             qsl("zoom.load=[1]9"),
+                             qsl("changes.load=[1]area<other"),
+                             qsl("zoom.load.painted=[1]5"),
+                             qsl("saveJson=[1]true"),
+                             qsl("centerview.far3=[1]true"),
+                             qsl("changes.far3=[1]other<area"),
+                             qsl("loadJson=[1]true"),
+                             qsl("zoom.loadJson=[1]9"),
+                             qsl("changes.loadJson=[1]area<other"),
+                             qsl("zoom.loadJson.painted=[1]5"),
+                             qsl("centerview.far4=[1]true"),
+                             qsl("changes.far4=[1]other<area"),
+                             qsl("close.json=[1]true"),
+                             qsl("loadJson.closed=[1]true"),
+                             qsl("changes.loadJson.closed=[1]"),
+                             qsl("title.loadJson.closed=[2]nil:no floating/dockable type map window found"),
+                             qsl("reopen.json=[1]true"),
+                             qsl("changes.reopen.json=[1]area<other"),
+                             qsl("delete=[1]true"),
+                             qsl("changes.delete=[1]other<area"),
+                             qsl("zoom.delete=[1]9"),
+                             qsl("deleteArea=[1]true"),
+                             qsl("changes.deleteArea=[1]"),
+                             qsl("zoom.deleteArea=[1]20"),
+                             qsl("setZoom.deleteArea=[2]nil:number <other> is not a valid areaID")};
+#if !defined(INCLUDE_3DMAPPER)
+        // Without the 3D mapper, dlgMapper::setMapZoom() hands T2DMap an area of 0, which its refusal names
+        answers1.last() = qsl("setZoom.deleteArea=[2]nil:number 0 is not a valid areaID");
+#endif
+        const QStringList different1 = mismatches(qsl(R"lua(
+  step("zoom.none", getMapZoom)
+  step("setZoom.none", setMapZoom, 7)
+  step("open", openMapWidget)
+  step("centerview", centerview, near)
+  step("zoom.open", getMapZoom)
+  step("setZoom.open", setMapZoom, 5)
+  step("changes.open", areaChanges)
+  settle()
+  step("changes.painted", areaChanges)
+  step("zoom.painted", getMapZoom)
+  step("setZoom.painted", setMapZoom, 5)
+  step("zoom.set", getMapZoom)
+  step("zoomArea.set", getMapZoom, area)
+  step("zoomOther.set", getMapZoom, other)
+  step("setZoom.small", setMapZoom, 1)
+  step("setZoom.nan", setMapZoom, 0/0)
+  step("setZoom.noArea", setMapZoom, 4, 9999)
+  step("setZoom.other", setMapZoom, 8, other)
+  step("zoom.other", getMapZoom)
+  step("centerview.far", centerview, far)
+  step("zoom.far", getMapZoom)
+  settle()
+  step("changes.far", areaChanges)
+  step("zoom.far.painted", getMapZoom)
+  settle()
+  step("changes.again", areaChanges)
+  step("close", closeMapWidget)
+  step("centerview.closed", centerview, near)
+  settle()
+  step("changes.closed", areaChanges)
+  step("zoom.closed", getMapZoom)
+  step("setZoom.closed", setMapZoom, 9)
+  step("zoomOther.closed", getMapZoom, other)
+  step("reopen", openMapWidget)
+  step("zoom.reopen", getMapZoom)
+  settle()
+  step("changes.reopen", areaChanges)
+  step("zoom.reopen.painted", getMapZoom)
+  -- A paint leaves the area alone while the player stays in the same room, until a centring is asked for
+  step("move", setRoomArea, near, other)
+  updateMap()
+  settle()
+  step("changes.moved", areaChanges)
+  step("zoom.moved", getMapZoom)
+  step("centerview.moved", centerview, near)
+  settle()
+  step("changes.recentred", areaChanges)
+  step("zoom.recentred", getMapZoom)
+  step("moveBack", setRoomArea, near, area)
+  step("centerview.back", centerview, near)
+  settle()
+  step("changes.back", areaChanges)
+  local path = getMudletHomeDir() .. "/headless map view.dat"
+  step("save", saveMap, path)
+  step("centerview.far2", centerview, far)
+  settle()
+  step("changes.far2", areaChanges)
+  step("zoom.far2", getMapZoom)
+  step("load", loadMap, path)
+  step("zoom.load", getMapZoom)
+  settle()
+  step("changes.load", areaChanges)
+  step("zoom.load.painted", getMapZoom)
+  local jsonPath = getMudletHomeDir() .. "/headless map view.json"
+  step("saveJson", saveJsonMap, jsonPath)
+  step("centerview.far3", centerview, far)
+  settle()
+  step("changes.far3", areaChanges)
+  step("loadJson", loadJsonMap, jsonPath)
+  step("zoom.loadJson", getMapZoom)
+  settle()
+  step("changes.loadJson", areaChanges)
+  step("zoom.loadJson.painted", getMapZoom)
+  -- A map load asks the mapper to show itself, which does not open a closed map widget
+  step("centerview.far4", centerview, far)
+  settle()
+  step("changes.far4", areaChanges)
+  step("close.json", closeMapWidget)
+  step("loadJson.closed", loadJsonMap, jsonPath)
+  settle()
+  step("changes.loadJson.closed", areaChanges)
+  step("title.loadJson.closed", getMapWindowTitle)
+  step("reopen.json", openMapWidget)
+  settle()
+  step("changes.reopen.json", areaChanges)
+  step("delete", deleteRoom, near)
+  settle()
+  step("changes.delete", areaChanges)
+  step("zoom.delete", getMapZoom)
+  step("deleteArea", deleteArea, other)
+  settle()
+  step("changes.deleteArea", areaChanges)
+  step("zoom.deleteArea", getMapZoom)
+  step("setZoom.deleteArea", function()
+    local zoomed, message = setMapZoom(6)
+    return zoomed, (tostring(message):gsub(other, "<other>"))
+  end)
+  -- Left pending as this profile goes, which must not keep the next profile's map from hearing its own
+  updateMap()
+)lua"),
+                                                  answers1);
+        QVERIFY2(different1.isEmpty(), qPrintable(different1.join(QChar::LineFeed)));
+
+        // An embedded mapper taking over a hidden map widget starts again, as the GUI's new dlgMapper does
+        QStringList answers2{qsl("open=[1]true"),
+                             qsl("centerview=[1]true"),
+                             qsl("changes.open=[1]other<-2"),
+                             qsl("zoom.open=[1]20"),
+                             qsl("close=[1]true"),
+                             qsl("embedded=[1]true"),
+                             qsl("zoom.embedded=[1]20"),
+                             qsl("setZoom.embedded=[2]nil:number 0 is not a valid areaID"),
+                             qsl("changes.embedded=[1]other<-2"),
+                             qsl("zoom.embedded.painted=[1]20"),
+                             qsl("setZoom.embedded.painted=[1]true"),
+                             qsl("zoomOther.embedded=[1]6"),
+                             qsl("centerview.near=[1]true"),
+                             qsl("embedded.again=[1]true"),
+                             qsl("changes.near=[1]area<other"),
+                             qsl("zoom.near=[1]20"),
+                             qsl("perspective=[2]nil:the modern 3D map view is not showing"),
+                             qsl("setPerspective=[2]nil:the modern 3D map view is not showing"),
+                             qsl("hide=[1]true"),
+                             qsl("centerview.hidden=[1]true"),
+                             qsl("changes.hidden=[1]"),
+                             qsl("zoom.hidden=[1]20"),
+                             qsl("show=[1]true"),
+                             qsl("changes.shown=[1]other<area"),
+                             qsl("zoom.shown=[1]6"),
+                             qsl("moveToBox=[1]true"),
+                             qsl("centerview.box=[1]true"),
+                             qsl("changes.box=[1]"),
+                             qsl("showBox=[1]true"),
+                             qsl("changes.boxShown=[1]area<other"),
+                             qsl("zoom.boxShown=[1]20"),
+                             qsl("moveHidden=[1]true"),
+                             qsl("centerview.moveHidden=[1]true"),
+                             qsl("changes.moveHidden=[1]"),
+                             qsl("embedded.reshown=[1]true"),
+                             qsl("changes.reshown=[1]other<area"),
+                             qsl("zoom.reshown=[1]6"),
+                             qsl("stay=[1]true"),
+                             qsl("centerview.stay=[1]true"),
+                             qsl("changes.stay=[1]area<other"),
+                             qsl("intoBox=[1]true"),
+                             qsl("boxIntoWindow=[1]true"),
+                             qsl("centerview.boxHidden=[1]true"),
+                             qsl("changes.boxHidden=[1]"),
+                             qsl("changes.boxWindowShown=[1]other<area"),
+                             qsl("saveJson.far=[1]true"),
+                             qsl("centerview.near.json=[1]true"),
+                             qsl("changes.near.json=[1]area<other"),
+                             qsl("saveJson.near=[1]true"),
+                             qsl("hideByMove=[1]true"),
+                             qsl("loadJson.hiddenByMove=[1]true"),
+                             qsl("changes.loadJson.hiddenByMove=[1]other<area"),
+                             qsl("loadJson.windowHidden=[1]true"),
+                             qsl("changes.loadJson.windowHidden=[1]"),
+                             qsl("changes.windowShownAgain=[1]area<other"),
+                             qsl("centerview.far.dat=[1]true"),
+                             qsl("changes.far.dat=[1]other<area"),
+                             qsl("saveDat=[1]true"),
+                             qsl("centerview.near.dat=[1]true"),
+                             qsl("changes.near.dat=[1]area<other"),
+                             qsl("hideByMove.dat=[1]true"),
+                             qsl("loadDat.hiddenByMove=[1]true"),
+                             qsl("changes.loadDat.hiddenByMove=[1]other<area"),
+                             qsl("hideByMove.failed=[1]true"),
+                             qsl("loadMissing.hiddenByMove=[1]false"),
+                             qsl("rooms.failed=[2]true:true"),
+                             qsl("centerview.again=[1]true"),
+                             qsl("painted.loadMissing.hiddenByMove=[1]1")};
+#if !defined(INCLUDE_3DMAPPER)
+        answers2.removeIf([](const QString& answer) {
+            return answer.startsWith(QLatin1String("perspective=")) || answer.startsWith(QLatin1String("setPerspective="));
+        });
+#endif
+        const QStringList different2 = mismatches(qsl(R"lua(
+  step("open", openMapWidget)
+  step("centerview", centerview, far)
+  settle()
+  step("changes.open", areaChanges)
+  step("zoom.open", getMapZoom)
+  step("close", closeMapWidget)
+  -- Only once the map widget is closed: a user window docked beside it kept the GUI's map from painting
+  openUserWindow("headlessMapViewWindow")
+  step("embedded", createMapper, "headlessMapViewWindow", 0, 0, 400, 300)
+  step("zoom.embedded", getMapZoom)
+  step("setZoom.embedded", setMapZoom, 5)
+  settle()
+  step("changes.embedded", areaChanges)
+  step("zoom.embedded.painted", getMapZoom)
+  step("setZoom.embedded.painted", setMapZoom, 6)
+  step("zoomOther.embedded", getMapZoom, other)
+  step("centerview.near", centerview, near)
+  step("embedded.again", createMapper, "headlessMapViewWindow", 0, 0, 400, 300)
+  settle()
+  step("changes.near", areaChanges)
+  step("zoom.near", getMapZoom)
+  -- The GUI's mapper shows its 2D map, so its 3D camera cannot move; without the 3D mapper there are no such calls
+  if shiftMapPerspective then
+    step("perspective", shiftMapPerspective, 10, 20, 30)
+    step("setPerspective", setMapPerspective, 500, 10, 20)
+  end
+  step("hide", hideWindow, "headlessMapViewWindow")
+  step("centerview.hidden", centerview, far)
+  settle()
+  step("changes.hidden", areaChanges)
+  step("zoom.hidden", getMapZoom)
+  step("show", showWindow, "headlessMapViewWindow")
+  settle()
+  step("changes.shown", areaChanges)
+  step("zoom.shown", getMapZoom)
+  createScrollBox("headlessMapViewBox", 0, 0, 400, 300)
+  hideWindow("headlessMapViewBox")
+  step("moveToBox", setWindow, "headlessMapViewBox", "mapper", 0, 0, true)
+  step("centerview.box", centerview, near)
+  settle()
+  step("changes.box", areaChanges)
+  step("showBox", showWindow, "headlessMapViewBox")
+  settle()
+  step("changes.boxShown", areaChanges)
+  step("zoom.boxShown", getMapZoom)
+  openUserWindow("headlessMapViewOther")
+  step("moveHidden", setWindow, "headlessMapViewOther", "mapper", 0, 0, false)
+  step("centerview.moveHidden", centerview, far)
+  settle()
+  step("changes.moveHidden", areaChanges)
+  step("embedded.reshown", createMapper, "headlessMapViewWindow", 0, 0, 400, 300)
+  settle()
+  step("changes.reshown", areaChanges)
+  step("zoom.reshown", getMapZoom)
+  step("stay", setWindow, "headlessMapViewOther", "mapper", 0, 0, false)
+  step("centerview.stay", centerview, near)
+  settle()
+  step("changes.stay", areaChanges)
+  step("intoBox", setWindow, "headlessMapViewBox", "mapper", 0, 0, true)
+  step("boxIntoWindow", setWindow, "headlessMapViewOther", "headlessMapViewBox", 0, 0, true)
+  hideWindow("headlessMapViewOther")
+  step("centerview.boxHidden", centerview, far)
+  settle()
+  step("changes.boxHidden", areaChanges)
+  showWindow("headlessMapViewOther")
+  settle()
+  step("changes.boxWindowShown", areaChanges)
+  -- A map load asks the mapper to show itself: one that setWindow() hid shows, one in a hidden window does not
+  local farJson = getMudletHomeDir() .. "/headless map view far.json"
+  local nearJson = getMudletHomeDir() .. "/headless map view near.json"
+  step("saveJson.far", saveJsonMap, farJson)
+  step("centerview.near.json", centerview, near)
+  settle()
+  step("changes.near.json", areaChanges)
+  step("saveJson.near", saveJsonMap, nearJson)
+  step("hideByMove", setWindow, "headlessMapViewWindow", "mapper", 0, 0, false)
+  step("loadJson.hiddenByMove", loadJsonMap, farJson)
+  settle()
+  step("changes.loadJson.hiddenByMove", areaChanges)
+  hideWindow("headlessMapViewWindow")
+  step("loadJson.windowHidden", loadJsonMap, nearJson)
+  settle()
+  step("changes.loadJson.windowHidden", areaChanges)
+  showWindow("headlessMapViewWindow")
+  settle()
+  step("changes.windowShownAgain", areaChanges)
+  -- So does a binary map load, and one that fails, which keeps the map it had
+  local datPath = getMudletHomeDir() .. "/headless map view far.dat"
+  step("centerview.far.dat", centerview, far)
+  settle()
+  step("changes.far.dat", areaChanges)
+  step("saveDat", saveMap, datPath)
+  step("centerview.near.dat", centerview, near)
+  settle()
+  step("changes.near.dat", areaChanges)
+  step("hideByMove.dat", setWindow, "headlessMapViewOther", "mapper", 0, 0, false)
+  step("loadDat.hiddenByMove", loadMap, datPath)
+  settle()
+  step("changes.loadDat.hiddenByMove", areaChanges)
+  step("hideByMove.failed", setWindow, "headlessMapViewWindow", "mapper", 0, 0, false)
+  step("loadMissing.hiddenByMove", loadMap, getMudletHomeDir() .. "/no such map.dat")
+  step("rooms.failed", function() return roomExists(near), roomExists(far) end)
+  local again = room(addAreaName("Headless Map View Again"))
+  step("centerview.again", centerview, again)
+  settle()
+  step("painted.loadMissing.hiddenByMove", function()
+    local painted = #changes
+    changes = {}
+    return painted
+  end)
+)lua"),
+                                                  answers2);
+        QVERIFY2(different2.isEmpty(), qPrintable(different2.join(QChar::LineFeed)));
+        QVERIFY2(QApplication::topLevelWidgets().isEmpty(), "Using the map view created a widget.");
+        HostManager::self()->deleteHost(hostname);
+    }
+
     // The answers are those of the same Lua run in the GUI self-test profile, but for the last ones,
     // which a spec cannot wait for: a text edit in a deleted scroll box goes with it
     void test_headlessTextEditContract()
