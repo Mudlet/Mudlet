@@ -248,10 +248,14 @@ public:
         DISABLE_COLOR_WRITE,
         // Passes what is as near as what is already drawn, to color exactly what a depth-only pass laid down
         DEPTH_FUNC_LEQUAL,
-        DEPTH_FUNC_LESS
+        DEPTH_FUNC_LESS,
+        // Blends what follows by the command's opacity instead of its own alpha, so that a layer made of opaque
+        // pieces fades as one
+        BLEND_BY_OPACITY,
+        BLEND_BY_SOURCE_ALPHA
     };
 
-    explicit GLStateCommand(StateType stateType);
+    explicit GLStateCommand(StateType stateType, float opacity = 1.0f);
 
     void execute(QOpenGLFunctions* gl,
                 QOpenGLShaderProgram* shader,
@@ -266,9 +270,11 @@ public:
 
     const char* getCommandName() const override { return "GLState"; }
     StateType stateType() const { return mStateType; }
+    float opacity() const { return mOpacity; }
 
 private:
     StateType mStateType;
+    float mOpacity = 1.0f;
 };
 
 // Command to render a map label as a textured billboard

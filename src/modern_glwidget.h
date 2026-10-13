@@ -49,6 +49,7 @@
 
 #include "GeometryManager.h"
 #include "LabelTextureCache.h"
+#include "MapAtlas.h"
 #include "RenderCommandQueue.h"
 #include "ResourceManager.h"
 #include "RetainedMapScene.h"
@@ -130,6 +131,11 @@ public:
     void fitArea();
     // Where the compass is drawn, which turns the view north up when clicked; empty while the camera is fixed or the view is too small for it
     QRect compassRect() const;
+    // The area drawn as a footprint or a node of the world graph under this point of the view, while zoomed out
+    // far enough for a click to pick areas rather than rooms, or 0
+    int areaAt(const QPoint& position);
+    // Moves the view into the area, from where the area is drawn in the world around the one shown now, zooming in on it
+    void flyToArea(int areaId);
 
     QSize minimumSizeHint() const override;
     QSize sizeHint() const override;
@@ -366,6 +372,41 @@ private:
         bool operator==(const SceneInputs&) const = default;
     };
     std::optional<SceneInputs> mSceneInputs;
+    // Everything the atlas of areas was made from; it does not depend on the area shown, which only moves it
+    struct AtlasInputs
+    {
+        quint64 mapRevision = 0;
+        quint64 appearanceRevision = 0;
+        quint64 exitsRevision = 0;
+        unsigned int mapGeneration = 0;
+        size_t roomsVersions = 0;
+        QString layout;
+        QColor foreground;
+        std::array<QColor, 16> hostColors;
+        QMap<int, int> envColors;
+        QMap<int, QColor> customEnvColors;
+        bool operator==(const AtlasInputs&) const = default;
+    };
+    std::optional<AtlasInputs> mAtlasInputs;
+    MapAtlas mAtlas;
+    // What the last frame queued showed of the rooms, the areas' footprints and the world graph
+    MapAtlas::Weights mZoomWeights;
+    struct AtlasLabel
+    {
+        QString text;
+        QRectF rect;
+        bool shownArea = false;
+    };
+    // A view flying into an area: it glides across the map, then zooms in, in the new area's coordinates
+    struct Flight
+    {
+        QVector3D from;
+        QVector3D to;
+        float fromDistance = 1.0f;
+        float toDistance = 1.0f;
+        qreal progress = 0.0;
+    };
+    std::optional<Flight> mFlight;
     RetainedMapScene mScene;
     int mSceneMaxRoomId = 0;
     // Rooms whose blocks are drawn narrower than this many pixels, in tiles of the scene so far away, are drawn
@@ -382,6 +423,22 @@ private:
     SceneInputs sceneInputs() const;
     // Makes the kept scene again if anything it was made from changed, then sees what of it this frame shows
     void refreshScene();
+    // How many pixels apart neighboring rooms are, where the camera looks
+    float roomPixels() const;
+    // How much this view, as of the last updateMatrices(), shows of the rooms, the footprints and the world graph
+    MapAtlas::Weights zoomWeights();
+    void refreshAtlas();
+    // Where the atlas lies: the plane the camera looks at, under its rooms
+    float atlasLevel() const;
+    // Places the world so that the area shown sits on its own rooms
+    QMatrix4x4 atlasModelMatrix() const;
+    void queueAtlas(const MapAtlas::Weights& weights);
+    // The area names to draw over the view, largest areas first, none overlapping another
+    QList<AtlasLabel> atlasLabels(const MapAtlas::Weights& weights);
+    void paintAtlasLabels(QPainter& painter);
+    // Ends a flight into an area where it got to
+    void stopFlight();
+    void flightTick();
     // The blocks drawn for a room: its border, its outline, then the room itself, each with the layer it is drawn in
     void addRoomCubes(const TRoom& room, bool hovered, bool solidRed, const std::function<void(RetainedMapScene::Layer, const CubeInstanceData&)>& add) const;
     // The 2D map's grid, at the viewed level's room bottoms, writing no depth
