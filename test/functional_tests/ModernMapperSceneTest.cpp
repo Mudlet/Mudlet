@@ -47,7 +47,6 @@
 #include <QListWidget>
 #include <QOpenGLContext>
 #include <QPainter>
-#include <QShortcut>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
@@ -1770,7 +1769,8 @@ private slots:
         queueFrame(widget, westId, 1.5f);
         QVERIFY(!widget.mpSearchPanel);
 
-        // Ctrl+F on the view opens the search
+        // Ctrl+F on the view, with its keys its own, opens the search
+        widget.mKeysNavigate = true;
         QKeyEvent find(QEvent::KeyPress, Qt::Key_F, Qt::ControlModifier);
         widget.keyPressEvent(&find);
         QVERIFY(widget.mpSearchPanel);
@@ -1866,15 +1866,6 @@ private slots:
         QCoreApplication::sendEvent(widget.mpSearchPanel->mpEdit, &escape);
         QVERIFY(widget.mpSearchPanel->isHidden());
 
-        // Ctrl+F is the view's only while the pointer is over it, the console's elsewhere
-        QVERIFY(!widget.mpSearchShortcut->isEnabled());
-        QEnterEvent pointerIn(QPointF(10.0, 10.0), QPointF(10.0, 10.0), QPointF(10.0, 10.0));
-        widget.enterEvent(&pointerIn);
-        QVERIFY(widget.mpSearchShortcut->isEnabled());
-        QCOMPARE(widget.mpSearchShortcut->key(), QKeySequence(QKeySequence::Find));
-        QEvent pointerOut(QEvent::Leave);
-        widget.leaveEvent(&pointerOut);
-        QVERIFY(!widget.mpSearchShortcut->isEnabled());
         map()->mRoomIdHash[map()->mProfileName] = 0;
     }
 
