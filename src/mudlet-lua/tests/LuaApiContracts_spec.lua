@@ -322,7 +322,7 @@ end)
 -- error console, a script's own logging, a scraper reading either - work a line
 -- at a time, so a newline inside one hides everything after it. The rest of the
 -- API keeps a bad-argument refusal to the single line that names what was
--- wanted and what arrived; these two feeding functions are the pair that did not.
+-- wanted and what arrived.
 describe("Tests the shape of the feeding functions' bad-argument errors", function()
 
   local feeders = {
@@ -347,9 +347,7 @@ describe("Tests the shape of the feeding functions' bad-argument errors", functi
   end
 end)
 
--- The same one-line rule, for the refusals elsewhere in the API that were also
--- written as two literals with a newline between them (#10806)
-describe("Tests the shape of the other once two-line Lua errors", function()
+describe("Tests that the other bad-argument refusals stay on one line", function()
 
   local cases = {
     {label = "deleteArea", call = function() return deleteArea({}) end,
@@ -386,8 +384,49 @@ describe("Tests the shape of the other once two-line Lua errors", function()
     finally(function() deleteRoom(id) end)
     local ok, err = pcall(setRoomArea, id, {})
     assert.is_false(ok)
+    assert.is_string(err)
     assert.is_false(contains(err, "\n"), "split over more than one line: " .. tostring(err))
-    assert.is_true(contains(err, "setRoomArea: bad argument #2 type (areaID as number or area name as string expected, got table!)"), tostring(err))
+    local expected = "setRoomArea: bad argument #2 type (areaID as number or area name as string expected, got table!)"
+    assert.is_true(contains(err, expected), "expected " .. expected .. " - got: " .. tostring(err))
+  end)
+
+  it("loadMap's missing map file is reported on one line", function()
+    local ok, err = loadMap("/no/such/mudletSpecOneLine.xml")
+    assert.is_nil(ok)
+    assert.is_string(err)
+    assert.is_false(contains(err, "\n"), "split over more than one line: " .. tostring(err))
+    local expected = 'loadMap: bad argument #1 value (filename used: "/no/such/mudletSpecOneLine.xml" was not found).'
+    assert.is_true(contains(err, expected), "expected " .. expected .. " - got: " .. tostring(err))
+  end)
+end)
+
+describe("Tests that raiseEvent lets go of what it was handed when it refuses", function()
+
+  local function registryEntryCount()
+    local count = 0
+    for _ in pairs(debug.getregistry()) do
+      count = count + 1
+    end
+    return count
+  end
+
+  -- The arguments are taken from the last one down, so a bad argument below a
+  -- table and a function is only reached after both have been anchored.
+  it("keeps nothing in the registry when an earlier argument is refused", function()
+    local function refuse()
+      return pcall(raiseEvent, "mudletSpecRefusedEvent", coroutine.create(function() end), {}, function() end)
+    end
+    -- a warm-up refusal: the registry's free list is created by the first release
+    refuse()
+    collectgarbage()
+    local before = registryEntryCount()
+    for _ = 1, 20 do
+      local ok, err = refuse()
+      assert.is_false(ok)
+      assert.is_true(contains(err, "raiseEvent: bad argument #2 type"), tostring(err))
+    end
+    collectgarbage()
+    assert.are.equal(before, registryEntryCount())
   end)
 end)
 

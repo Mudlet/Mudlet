@@ -1467,9 +1467,26 @@ int TLuaInterpreter::raiseEvent(lua_State* L)
 {
     Host& host = getHostFromLua(L);
 
+    const int n = lua_gettop(L);
+    // every argument is vetted before any is taken: lua_error() longjmps past the
+    // TEvent's destructor and leaves the registry refs already taken unreleased
+    for (int i = 1; i <= n; ++i) {
+        switch (lua_type(L, i)) {
+        case LUA_TNUMBER:
+        case LUA_TSTRING:
+        case LUA_TBOOLEAN:
+        case LUA_TNIL:
+        case LUA_TTABLE:
+        case LUA_TFUNCTION:
+            break;
+        default:
+            lua_pushfstring(L, "raiseEvent: bad argument #%d type (string, number, boolean, table, function, or nil expected, got a %s!)", i, luaL_typename(L, i));
+            return lua_error(L);
+        }
+    }
+
     TEvent event{};
 
-    const int n = lua_gettop(L);
     // We go from the top of the stack down, because luaL_ref will
     // only reference the object at the top of the stack
     for (int i = n; i >= 1; i--) {
@@ -1505,8 +1522,7 @@ int TLuaInterpreter::raiseEvent(lua_State* L)
             // luaL_ref pops the object, so we don't have to
             break;
         default:
-            lua_pushfstring(L, "raiseEvent: bad argument #%d type (string, number, boolean, table, function, or nil expected, got a %s!)", i, luaL_typename(L, -1));
-            return lua_error(L);
+            Q_UNREACHABLE();
         }
     }
 
