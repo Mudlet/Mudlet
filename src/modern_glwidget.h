@@ -57,18 +57,24 @@
 #include "ShaderManager.h"
 #include "CameraController.h"
 
+#include <memory>
 #include <optional>
 
 class Host;
 class QFontMetricsF;
 class QLabel;
+class QOpenGLFramebufferObject;
 class QPainter;
 class T2DMap;
+class TArea;
 class TCommandLine;
 class TMap;
 class TRoom;
 struct MapInfoProperties;
 struct MapStyle;
+namespace DioramaKit {
+struct Piece;
+}
 namespace ExitScene {
 struct Glyph;
 struct Options;
@@ -212,6 +218,12 @@ private:
     QOpenGLBuffer mIndexBuffer;
     QOpenGLBuffer mTexCoordBuffer;
     QOpenGLVertexArrayObject mVAO;
+    // The diorama's tilt-shift blur: the frame is copied out of the view's framebuffer, which may be multisampled and
+    // so cannot be read as a texture, then blurred back into it
+    std::unique_ptr<QOpenGLFramebufferObject> mTiltShiftScene;
+    std::unique_ptr<QOpenGLShaderProgram> mTiltShiftProgram;
+    QOpenGLVertexArrayObject mTiltShiftVAO;
+    bool mTiltShiftFailed = false;
 
     // Geometry management
     GeometryManager mGeometryManager;
@@ -413,8 +425,11 @@ private:
     void paintStatusLine(QPainter& painter);
     void turnNorthUp();
     void setHoveredRoom(int roomId);
+    void applyTiltShift();
     // Worked out afresh, as the view can move under a pointer that stays still
     int roomUnderPointer();
+    // What the diorama style builds each of the area's shown rooms as
+    QHash<int, DioramaKit::Piece> dioramaPieces(const TArea& area) const;
     void endPan();
     void renderCube(float x, float y, float z, float size, float r, float g, float b, float a);
     void renderText(const QString& text, float x, float y);

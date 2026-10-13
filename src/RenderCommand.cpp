@@ -40,7 +40,8 @@ int inkMode(const RenderCommand::Shading shading)
     case RenderCommand::Shading::ModelBlock:
     case RenderCommand::Shading::ModelPath:
     case RenderCommand::Shading::ModelShadow:
-    case RenderCommand::Shading::Felt:
+    case RenderCommand::Shading::ModelWater:
+    case RenderCommand::Shading::Sky:
         return 0;
     }
     return 0;
@@ -56,8 +57,10 @@ int modelMode(const RenderCommand::Shading shading)
         return 2;
     case RenderCommand::Shading::ModelShadow:
         return 3;
-    case RenderCommand::Shading::Felt:
+    case RenderCommand::Shading::Sky:
         return 4;
+    case RenderCommand::Shading::ModelWater:
+        return 5;
     case RenderCommand::Shading::Lit:
     case RenderCommand::Shading::Unlit:
     case RenderCommand::Shading::Wireframe:
@@ -203,7 +206,7 @@ void RenderTrianglesCommand::execute(QOpenGLFunctions* gl,
     QMatrix3x3 normalMatrix = mModelMatrix.normalMatrix();
     shader->setUniformValue("uNormalMatrix", normalMatrix);
 
-    const bool unlit = mShading == Shading::Unlit || mShading == Shading::Paper || mShading == Shading::Felt;
+    const bool unlit = mShading == Shading::Unlit || mShading == Shading::Paper || mShading == Shading::Sky;
     if (unlit) {
         shader->setUniformValue("uDisableLighting", true);
     }
@@ -360,6 +363,7 @@ void RenderInstancedCubesCommand::execute(QOpenGLFunctions* gl,
     if (model) {
         shader->setUniformValue("uModelShading", model);
         shader->setUniformValue("uModelRound", mShape == GeometryManager::InstanceShape::Cylinder);
+        shader->setUniformValue("uModelBevel", mShape == GeometryManager::InstanceShape::Box || mShape == GeometryManager::InstanceShape::Cylinder);
     }
 
     geometryManager->renderInstancedCubes(mInstances, vao, vertexBuffer, colorBuffer, normalBuffer, indexBuffer, resourceManager, GL_TRIANGLES, mShape);
@@ -445,6 +449,9 @@ void GLStateCommand::execute(QOpenGLFunctions* gl,
         break;
     case DEPTH_FUNC_LESS:
         gl->glDepthFunc(GL_LESS);
+        break;
+    case DEPTH_FUNC_GREATER:
+        gl->glDepthFunc(GL_GREATER);
         break;
     case ADDITIVE_BLEND:
         gl->glBlendFunc(GL_SRC_ALPHA, GL_ONE);

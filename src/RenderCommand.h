@@ -40,8 +40,9 @@ public:
     // Unlit draws its colors as given, as the 2D map does; lit shades them by the light; wireframe draws an
     // instanced shape's edges unlit, as glowing lines. Only instanced shapes support it and the unlit ink ones, and
     // only plain triangles, given in clip space, support Paper. A model's block, path and the soft shadow on the ground
-    // under either are shaded by the shader's own light, and only instanced shapes support them; Felt is as Paper
-    enum class Shading { Lit, Unlit, Wireframe, InkBlot, InkStroke, Seal, Paper, ModelBlock, ModelPath, ModelShadow, Felt };
+    // under either, and a model's glossy water, are shaded by the shader's own light, and only instanced shapes support
+    // them; Sky is as Paper
+    enum class Shading { Lit, Unlit, Wireframe, InkBlot, InkStroke, Seal, Paper, ModelBlock, ModelPath, ModelShadow, ModelWater, Sky };
 
     virtual ~RenderCommand() = default;
     virtual void execute(QOpenGLFunctions* gl,
@@ -237,6 +238,8 @@ public:
         // Passes what is as near as what is already drawn, to color exactly what a depth-only pass laid down
         DEPTH_FUNC_LEQUAL,
         DEPTH_FUNC_LESS,
+        // Passes only what something already drawn hides, to show a piece through what stands in front of it
+        DEPTH_FUNC_GREATER,
         // Adds what follows onto what is drawn, so overlapping glowing lines brighten rather than cover each other
         ADDITIVE_BLEND,
         ALPHA_BLEND

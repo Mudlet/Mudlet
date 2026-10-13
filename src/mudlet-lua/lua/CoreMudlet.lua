@@ -1191,6 +1191,48 @@ if false then
 
 
 
+  --- Names the kit the 3D map's diorama style builds an environment's rooms as. Without one, the kit is
+  --- guessed from the environment's color: blue is water, green forest, grey, brown and tan road, and any
+  --- other color a building. The kits are saved with the map.
+  ---
+  --- @param environmentID the environment, as setRoomEnv() takes it
+  --- @param kitName one of "plain", "water", "road", "forest" or "building"; nil or "" goes back to guessing
+  --- @return true, or nil and an error message for a kit name it does not know
+  ---
+  --- @usage Show the lava environment as water, and forget that the swamp environment was named
+  ---   <pre>
+  ---   setMapEnvironmentKit(301, "water")
+  ---   setMapEnvironmentKit(302, nil)
+  ---   </pre>
+  ---
+  --- @see getMapEnvironmentKit, getMapEnvironmentKits
+  function setMapEnvironmentKit(environmentID, kitName)
+  end
+
+
+
+  --- The kit the 3D map's diorama style builds an environment's rooms as.
+  ---
+  --- @param environmentID the environment, as setRoomEnv() takes it
+  --- @return the kit's name, and true when setMapEnvironmentKit() named it or false when it is guessed
+  ---   from the environment's color
+  ---
+  --- @see setMapEnvironmentKit, getMapEnvironmentKits
+  function getMapEnvironmentKit(environmentID)
+  end
+
+
+
+  --- The kits setMapEnvironmentKit() has named, leaving out those guessed from environments' colors.
+  ---
+  --- @return a table of kit names keyed by environment ID
+  ---
+  --- @see setMapEnvironmentKit, getMapEnvironmentKit
+  function getMapEnvironmentKits()
+  end
+
+
+
   --- Wrap line lineNumber of mini console (window) windowName. This function will interpret \n characters,
   --- apply word wrap and display the new lines on the screen. This function may be necessary if you use
   --- deleteLine() and thus erase the entire current line in the buffer, but you want to do some further

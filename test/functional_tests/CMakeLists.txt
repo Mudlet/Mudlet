@@ -238,6 +238,7 @@ set(MAP_GROUP_TEST_SOURCES
     MapAreaImageExportTest.cpp
     MapRoundTripTest.cpp
     MapSymbolFontTest.cpp
+    DioramaKitTest.cpp
     RoomAppearanceTest.cpp
     RoomExitsDeletedEditItemTest.cpp
 )

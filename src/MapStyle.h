@@ -98,7 +98,8 @@ struct MapStyle
         Pulse,
         // The player's room stamped in playerRoomColor() as a seal on a painting, with a frame cut into it
         Seal,
-        // A game token in playerRoomColor() standing on the player's room, which keeps its own color
+        // A game's pawn in playerRoomColor(), a foot, a body and a ball for a head, standing on the player's room,
+        // which keeps its own color
         Token
     };
 
@@ -116,8 +117,11 @@ struct MapStyle
         Scanlines = 0x1,
         // The background drawn as paper, with a faint grain that stays put on the screen
         PaperGrain = 0x2,
-        // The background drawn as the felt of a tabletop, darker toward the view's edges
-        Felt = 0x4
+        // The background a pale sky, light blue at the top of the view fading to a warm haze at its foot
+        Sky = 0x4,
+        // A tilt-shift photograph's shallow focus: sharp in a band across the view through the player, blurring
+        // toward the view's top and foot, so that the map looks like a model seen up close
+        TiltShift = 0x8
     };
     Q_DECLARE_FLAGS(PostEffects, PostEffect)
 
@@ -155,6 +159,9 @@ struct MapStyle
     bool environmentLines = false;
     // The fewest exits that make a room an interchange, as Edges::StationRings draws one; 0 for none
     int interchangeExits = 0;
+    // Each room built as DioramaKit picks for its environment, a room with rooms straight above it a building of
+    // that many storeys, all standing on a wooden board under the viewed level
+    bool environmentKits = false;
     // Room names and map labels drawn with a rim of the background around them, so that lines under them do not
     // run through the text
     bool labelHalos = false;
