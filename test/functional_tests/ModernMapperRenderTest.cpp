@@ -1100,6 +1100,7 @@ private slots:
         mudlet::self()->setDrawUpperLowerLevels(true);
         map()->mpRoomDB->getRoom(kPlayerRoomId)->setExit(kEastRoomId, DIR_EAST);
         map()->mpRoomDB->getRoom(kEastRoomId)->setExit(kPlayerRoomId, DIR_WEST);
+        map()->mpRoomDB->getRoom(kPlayerRoomId)->setDoor(qsl("e"), 2);
         ModernGLWidget widget(map(), mpHost);
         // The player's beacon, a column standing on the player's room
         const auto beaconQueued = [&widget]() {
@@ -1136,6 +1137,20 @@ private slots:
             }
             return false;
         };
+        const auto doorBars = [&widget](const RenderCommand::Shading shading) {
+            const QColor door = ExitAppearance::doorColor(2);
+            int found = 0;
+            for (const auto& command : widget.mRenderCommandQueue.commands()) {
+                if (const auto* cubes = dynamic_cast<const RenderInstancedCubesCommand*>(command.get()); cubes && cubes->shading() == shading) {
+                    for (const CubeInstanceData& cube : cubes->instances()) {
+                        if (qAbs(cube.color[0] - door.redF()) < 1e-3f && qAbs(cube.color[1] - door.greenF()) < 1e-3f && qAbs(cube.color[2] - door.blueF()) < 1e-3f) {
+                            ++found;
+                        }
+                    }
+                }
+            }
+            return found;
+        };
 
         queueFrame(widget, areaId);
         QVERIFY2(beaconQueued(), "tiles raised no beacon, so its absence proves nothing");
@@ -1159,13 +1174,16 @@ private slots:
         QCOMPARE(paper, firstDrawn);
 
         QCOMPARE(atPlace(RenderCommand::Shading::Seal, QPointF(0.0, 0.0)).size(), 1);
-        // Each with its border's blot under it
-        QVERIFY2(atPlace(RenderCommand::Shading::InkBlot, QPointF(0.0, 0.0)).size() + 1 == atPlace(RenderCommand::Shading::InkBlot, QPointF(2.0, 0.0)).size(),
-                 "the player's room was blotted as well as sealed");
+        QVERIFY2(atPlace(RenderCommand::Shading::InkBlot, QPointF(2.0, 0.0)).size() > 1, "the room has no border's blot, so none under the seal proves nothing");
+        // Nor its border, which would show through the frame cut in the seal
+        QVERIFY2(atPlace(RenderCommand::Shading::InkBlot, QPointF(0.0, 0.0)).isEmpty(), "the player's room was blotted under its seal");
         QVERIFY2(atPlace(RenderCommand::Shading::Seal, QPointF(2.0, 0.0)).isEmpty(), "another room was sealed");
         QVERIFY2(!atPlace(RenderCommand::Shading::InkBlot, QPointF(2.0, 0.0)).isEmpty(), "a room is not a blot");
         QVERIFY2(atPlace(RenderCommand::Shading::Unlit, QPointF(2.0, 0.0)).isEmpty() && atPlace(RenderCommand::Shading::Lit, QPointF(2.0, 0.0)).isEmpty(), "a room was drawn as a block");
         QVERIFY2(strokeBetweenRooms(), "the exit between the rooms is not a brush stroke");
+        // A door's bar tapered would be a wedge on one side of the line
+        QVERIFY2(doorBars(RenderCommand::Shading::Unlit) > 0, "the door's bars were not drawn plain");
+        QCOMPARE(doorBars(RenderCommand::Shading::InkStroke), 0);
         QVERIFY2(!beaconQueued(), "a beacon stands on the seal");
 
         // Ink thinned toward the paper, the same as with no level colors

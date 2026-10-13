@@ -379,6 +379,8 @@ private:
     struct LevelExits
     {
         QVector<CubeInstanceData> bars;
+        // Those the inkwash style brushes on, tapered
+        QVector<CubeInstanceData> strokes;
         QVector<float> vertices;
         QVector<float> colors;
     };
@@ -456,6 +458,7 @@ private:
     // The style's background, else the profile's mapper background color
     QColor backgroundColor() const;
     ExitScene::Options exitSceneOptions() const;
+    // The shading of the exits not brushed on as strokes
     RenderCommand::Shading exitShading() const;
     // How far below where ExitScene puts them exits are drawn, so that a model's paths lie on the ground
     float exitSink() const;

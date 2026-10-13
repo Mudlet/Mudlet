@@ -72,6 +72,8 @@ struct Segment
     float height = 0.0f;
     QColor color;
     int level = 0;
+    // A whole exit line out of its room, that a brush may taper; not a door, a dash or a piece of a custom line
+    bool stroke = false;
 };
 
 // A flat filled triangle

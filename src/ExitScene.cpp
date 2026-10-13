@@ -95,7 +95,7 @@ private:
     bool hasOneWayExitTo(const TRoom& from, int fromId, const TRoom& to, int toId) const;
     int nearerLevel(int a, int b) const;
     float top(float z) const { return z + mHeight / 2.0f; }
-    void bar(const QVector3D& from, const QVector3D& to, float width, float height, const QColor& color, int level);
+    void bar(const QVector3D& from, const QVector3D& to, float width, float height, const QColor& color, int level, bool stroke = false);
     // phase carries the pattern on from one piece of a line to the next
     void dashedBar(const QVector3D& from, const QVector3D& to, const QList<qreal>& dashes, qreal& phase, const QColor& color, int level);
     void triangle(const QVector3D& a, const QVector3D& b, const QVector3D& c, const QColor& color, int level);
@@ -154,12 +154,12 @@ int Builder::nearerLevel(const int a, const int b) const
     return qMin(a, b);
 }
 
-void Builder::bar(const QVector3D& from, const QVector3D& to, const float width, const float height, const QColor& color, const int level)
+void Builder::bar(const QVector3D& from, const QVector3D& to, const float width, const float height, const QColor& color, const int level, const bool stroke)
 {
     if ((to - from).lengthSquared() < 1e-10f) {
         return;
     }
-    mScene.segments.append({from, to, width, height, color, level});
+    mScene.segments.append({from, to, width, height, color, level, stroke});
 }
 
 void Builder::dashedBar(const QVector3D& from, const QVector3D& to, const QList<qreal>& dashes, qreal& phase, const QColor& color, const int level)
@@ -464,7 +464,7 @@ void Builder::addRoom(const int roomId, const TRoom& room)
                 continue;
             }
             const QColor stubColor = lineColor(room, nullptr);
-            bar(center, end, mWidth, mHeight, stubColor, level);
+            bar(center, end, mWidth, mHeight, stubColor, level, true);
             disc(QVector3D(end.x(), end.y(), top(rz)), 0.1f, stubColor, level);
         }
     }
@@ -527,7 +527,7 @@ void Builder::addRoom(const int roomId, const TRoom& room)
         }
 
         if (inOrOut && mOptions.inOutStubs) {
-            bar(center, center + (destination - center) / 4.0f, mWidth, mHeight, exitColor, level);
+            bar(center, center + (destination - center) / 4.0f, mWidth, mHeight, exitColor, level, true);
             continue;
         }
 
@@ -538,7 +538,7 @@ void Builder::addRoom(const int roomId, const TRoom& room)
         if (upOrDown && (exit.pDestination->x() != room.x() || exit.pDestination->y() != room.y())) {
             const QVector3D shaftEnd = center + QVector3D(0.0f, 0.0f, std::copysign(scmShaftLength, rise));
             if (!exit.oneWay) {
-                bar(center, shaftEnd, mWidth, mHeight, exitColor, level);
+                bar(center, shaftEnd, mWidth, mHeight, exitColor, level, true);
                 continue;
             }
             const QVector3D tipStart = shaftEnd + (center - shaftEnd) * scmShaftTip;
@@ -564,7 +564,7 @@ void Builder::addRoom(const int roomId, const TRoom& room)
             if (mOptions.glyphs && rise == 0.0f) {
                 glyphRun(center, destination, exitColor, lineLevel);
             } else {
-                bar(center, destination, mWidth, mHeight, lineColor(room, exit.pDestination), lineLevel);
+                bar(center, destination, mWidth, mHeight, lineColor(room, exit.pDestination), lineLevel, true);
             }
             continue;
         }
