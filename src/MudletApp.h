@@ -208,7 +208,8 @@ private:
     // running Mudlet: the language follows the preferences dialog through
     // mudlet::setInterfaceLanguage()
     friend class mudlet;
-    // Only so that a pool can call settleConfigRoot() when there is no main window
+    // So that a pool with no main window can call settleConfigRoot() and take the
+    // password preference from Mudlet.ini, as the main window would
     friend class HostManager;
     // Resolving the root once is the point, so the only way to test it is to be
     // able to forget the answer - which setConfigPath(QString()) does
@@ -217,6 +218,8 @@ private:
     friend class FeedChecksumRaceTest;
     // A fresh scratch config reads as a first launch, which never shows callouts
     friend class FeatureCalloutTest;
+    // Sets the password preference as Mudlet.ini would, with no main window and no pool
+    friend class CredentialManagerKeychainTest;
     // Discards any settings store built under the previous root - and with it any
     // pointer a caller cached, so this must not run once init() has handed the
     // store to the Updater. portable says whether the root came from a
