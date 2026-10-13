@@ -797,8 +797,10 @@ constexpr float scmInterchangeRing = 0.3f;
 constexpr float scmPlayerGlow = 0.3f;
 // Glowing exits are thin enough to be all edge: at full strength their front and back faces add up to white
 constexpr float scmGlowingExitStrength = 0.5f;
-// How strongly ink washes around the room hovered over
+// How strongly ink washes around the room hovered over, and how far: a blot's rim falls well inside its shape, so the
+// wash must reach further than an outline for any of it to show past the room's own blot
 constexpr float scmHoverWash = 0.35f;
+constexpr float scmHoverWashReach = 0.4f;
 // The diamond over the player's room in a style with a pulse: how high its foot is over the room and how wide it is, as parts of
 // the room's width, how many times its half width each of its halves is tall, and its lines' widths in pixels and opacities
 constexpr float scmDiamondRise = 0.6f;
@@ -1643,7 +1645,8 @@ void ModernGLWidget::renderRooms()
             roomOutlines[pR->z()].append({rx, ry, top, half, width, 0.0f, GeometryManager::fadedColor(ringColor, fade, fadeTarget)});
         } else if (hovered && !terminal && !wireframes) {
             // Taller than a border, so that it shows over one; in ink, a wash around the room rather than a darker blot
-            outlineInstances.append(outline(roomSize * scmHoverOutline, QVector4D(contrast.redF(), contrast.greenF(), contrast.blueF(), inkBlots ? scmHoverWash : 1.0f), 0.75f));
+            outlineInstances.append(
+                    outline(roomSize * (inkBlots ? scmHoverWashReach : scmHoverOutline), QVector4D(contrast.redF(), contrast.greenF(), contrast.blueF(), inkBlots ? scmHoverWash : 1.0f), 0.75f));
         } else if (!inkBlots && !bordered && !pArea->gridMode && look.onViewedLevel() && !seeThrough) {
             // Halfway from the room's color to the one that stands out on the background, or for a base to the background itself
             const QColor rimTarget = style.edges == MapStyle::Edges::ViewedLevelBase ? background : contrast;
