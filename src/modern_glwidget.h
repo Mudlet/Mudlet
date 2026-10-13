@@ -95,6 +95,8 @@ public:
     void syncView(int areaId, int x, int y, int z, int roomId);
     void followPlayer();
     bool followingPlayer() const;
+    // The room sizes, and whether the view is opaque, from the profile's style
+    void applyStyle();
     int shownAreaId() const { return mAID; }
     int areaShownNext() const;
     QVector3D viewCenter() const { return QVector3D(mMapCenterX, mMapCenterY, mMapCenterZ); }
@@ -331,10 +333,11 @@ private:
     int mPreviousRID = 0;                // Track previous room ID to detect changes
     // Apart from mPreviousRID, which a view moved by hand or a second map window stops following
     int mPulsedRoomId = 0;
-    // The pulse the hologram style sends out from the player's room when the player moves: how long since it began,
-    // invalid when none is under way, and what repaints the view while it spreads
+    // The pulse the hologram style sends out from the player's room when the player moves: when it began on
+    // mPulseReference, none when none is under way, and what repaints the view while it spreads
     static constexpr qint64 scmPulseMilliseconds = 1200;
-    QElapsedTimer mPulseClock;
+    QElapsedTimer mPulseReference;
+    std::optional<qint64> mPulseStartedAt;
     QTimer* mPulseTimer = nullptr;
     bool mFramePending = true;
     // Set by a zoom or a change of area while hidden: the shown area is framed at its stored zoom, read then so a later
@@ -452,9 +455,8 @@ private:
     // What rooms and exits on level z recede toward: the mapper's upper or lower level color, or the background
     QColor levelFadeTarget(int z) const;
     const MapStyle& mapStyle() const;
-    // The room sizes, and whether the view is opaque, from the profile's style
-    void applyStyle();
     void applyStyleGeometry();
+    void stopPulse();
     // The style's background, else the profile's mapper background color
     QColor backgroundColor() const;
     ExitScene::Options exitSceneOptions() const;

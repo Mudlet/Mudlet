@@ -103,12 +103,12 @@ ModernGLWidget::ModernGLWidget(TMap* pMap, Host* pHost, QWidget* parent)
     connect(mCameraAnimationTimer, &QTimer::timeout, this, &ModernGLWidget::onCameraAnimationTick);
     mEasingCurve.setType(QEasingCurve::OutQuart); // Natural deceleration
 
+    mPulseReference.start();
     mPulseTimer = new QTimer(this);
     mPulseTimer->setInterval(33ms);
     connect(mPulseTimer, &QTimer::timeout, this, [this]() {
-        if (!mPulseClock.isValid() || mPulseClock.elapsed() > scmPulseMilliseconds) {
-            mPulseTimer->stop();
-            mPulseClock.invalidate();
+        if (!mPulseStartedAt || mPulseReference.elapsed() - *mPulseStartedAt > scmPulseMilliseconds) {
+            stopPulse();
         }
         update();
     });
@@ -647,7 +647,7 @@ void ModernGLWidget::paintGL()
         mPulsedRoomId = playerRoomId;
         // Not from a room in another area, where it would only repaint for nothing
         if (const TRoom* pPlayerRoom = mpMap->mpRoomDB->getRoom(playerRoomId); pPlayerRoom && pPlayerRoom->getArea() == mAID && mapStyle().playerMarker == MapStyle::PlayerMarker::Pulse) {
-            mPulseClock.start();
+            mPulseStartedAt = mPulseReference.elapsed();
             mPulseTimer->start();
         }
     }
@@ -873,6 +873,18 @@ QString exitMarkerKey(const TRoom& room)
         }
     }
     return key;
+}
+
+// What a room's terminal character cannot show, as it shows plain stairs: an in or out exit, or a door on one of these
+bool terminalMarkersNeeded(const TRoom& room)
+{
+    for (const int direction : {DIR_UP, DIR_DOWN, DIR_IN, DIR_OUT}) {
+        const bool exit = room.getExit(direction) > 0 || room.exitStubs.contains(direction);
+        if (exit && (direction == DIR_IN || direction == DIR_OUT || room.doors.value(TRoom::dirCodeToShortString(direction)) > 0)) {
+            return true;
+        }
+    }
+    return false;
 }
 
 // Lines drawn flat on rooms' tops, as triangles
@@ -1289,7 +1301,7 @@ void ModernGLWidget::renderRooms()
     const bool seal = style.playerMarker == MapStyle::PlayerMarker::Seal;
     const bool token = style.playerMarker == MapStyle::PlayerMarker::Token;
     // How far the player's pulse has spread, from 0 to 1, or less than 0 for none
-    const float pulseSpread = pulse && mPulseClock.isValid() ? qMin(static_cast<float>(mPulseClock.elapsed()) / static_cast<float>(scmPulseMilliseconds), 1.0f) : -1.0f;
+    const float pulseSpread = pulse && mPulseStartedAt ? qMin(static_cast<float>(mPulseReference.elapsed() - *mPulseStartedAt) / static_cast<float>(scmPulseMilliseconds), 1.0f) : -1.0f;
 
     const bool moreTransparent = mpHost->experimentEnabled(qsl("experiment.rendering.more-transparent"));
     const bool playerIcon = mpHost->experimentEnabled(qsl("experiment.3d-player-icon"));
@@ -1475,6 +1487,8 @@ void ModernGLWidget::renderRooms()
         QVector4D reverseColor;
         bool hovered = false;
         RoomDecals* decals = nullptr;
+        // For a symbol, the character the room would have without it
+        QString plain;
     };
     QList<TerminalCell> terminalCells;
     // The cells rooms are in, as doubled map coordinates, and their levels: no exit's character goes over one
@@ -1667,6 +1681,10 @@ void ModernGLWidget::renderRooms()
             if (look.playerRoom) {
                 cell.color = GeometryManager::fadedColor(roomColor, fade, fadeTarget);
                 cell.reverseColor = GeometryManager::fadedColor(ExitAppearance::contrastColor(roomColor), fade, fadeTarget);
+            } else if (!showId && !look.symbol.isEmpty()) {
+                RoomAppearance::Look plainLook = look;
+                plainLook.symbol.clear();
+                cell.plain = RoomAppearance::terminalGlyph(*pR, plainLook, pArea->gridMode);
             }
             terminalCells.append(cell);
             roomCells.insert({{qRound64(pR->x() * 2.0), qRound64(pR->y() * 2.0)}, pR->z()});
@@ -1715,8 +1733,8 @@ void ModernGLWidget::renderRooms()
             roomNames.append({center, RoomAppearance::nameColor(pR->userData.value(ROOM_UI_NAMECOLOR), background), pR->name, decalTint, &decals});
         }
 
-        // With no fill, a marker is drawn over what is behind the room
-        if (const GLuint texture = terminal ? 0 : exitMarkerTexture(*pR, wireframes ? background : roomColor)) {
+        // A terminal's room is only its character, and a wireframe has no fill, so their markers stand out from the background instead
+        if (const GLuint texture = terminal ? (terminalMarkersNeeded(*pR) ? exitMarkerTexture(*pR, background) : 0) : exitMarkerTexture(*pR, wireframes ? background : roomColor)) {
             GeometryData& batch = decals.markers[texture];
             batch.textureId = texture;
             GeometryManager::appendGroundQuad(batch, roomTop, roomSize, screenRight, screenUp, decalTint);
@@ -1875,7 +1893,12 @@ void ModernGLWidget::renderRooms()
                 }
                 const QVector4D textColor = cell.reverse ? cell.reverseColor : cell.color;
                 if (!cell.id) {
-                    appendGlyph(batch, texture, cell.center, glyphAtlasCell(cell.text, false), scmGlyphSize, textColor);
+                    qsizetype atlasCell = glyphAtlasCell(cell.text, false);
+                    // A view of more symbols than the atlas holds shows the rest as plain rooms, rather than as nothing
+                    if (atlasCell < 0 && !cell.plain.isEmpty()) {
+                        atlasCell = glyphAtlasCell(cell.plain, false);
+                    }
+                    appendGlyph(batch, texture, cell.center, atlasCell, scmGlyphSize, textColor);
                     continue;
                 }
                 // Narrowed so that the whole ID is no wider than one character, however many digits it has
@@ -2212,6 +2235,8 @@ ExitScene::Options ModernGLWidget::exitSceneOptions() const
     options.doorBars = style.doors == MapStyle::Doors::Bars;
     options.environmentLines = style.environmentLines;
     options.glyphs = style.glyphs == MapStyle::Glyphs::Terminal;
+    options.roomSize = roomSize;
+    options.roundRooms = style.roundRooms(mpHost->mBubbleMode);
     options.background = backgroundColor();
     return options;
 }
@@ -2258,10 +2283,22 @@ void ModernGLWidget::applyStyleGeometry()
     zFlattening = style.roomFlattening;
 }
 
+void ModernGLWidget::stopPulse()
+{
+    // The constructor applies the style before it makes the timer
+    if (mPulseTimer) {
+        mPulseTimer->stop();
+    }
+    mPulseStartedAt.reset();
+}
+
 void ModernGLWidget::applyStyle()
 {
     // Before any repaint, as picking a room reads them too
     applyStyleGeometry();
+    if (mapStyle().playerMarker != MapStyle::PlayerMarker::Pulse) {
+        stopPulse();
+    }
     // Only an opaque view may tell Qt that it paints over everything behind it
     const bool translucent = backgroundColor().alpha() < 255;
     setAttribute(Qt::WA_OpaquePaintEvent, !translucent);
