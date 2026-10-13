@@ -2258,10 +2258,21 @@ describe("Tests the timer API", function()
         "the reason should be the Lua error, got: " .. tostring(message))
       assert.is_falsy(message:find("0.125", 1, true),
         "the delay must not be reported as the Lua error, got: " .. tostring(message))
-      -- plain text for Lua, not the editor's rich text (#10931)
+      -- plain text for Lua, not the editor's rich text
       assert.is_truthy(message:find([[[string "Timer:]], 1, true), "the chunk name should be quoted as Lua quotes it, got: " .. message)
       assert.is_falsy(message:find("&quot;", 1, true), "the reason was HTML escaped: " .. message)
       assert.is_falsy(message:find("<b>", 1, true), "the reason was wrapped in rich text markup: " .. message)
+    end)
+
+    it("permTimer gives the reason a body does not compile as plain text", function()
+      -- "..." parses on its own, so only the compile of the timer's wrapping function rejects it
+      local ok, err = pcall(permTimer, "W2aPermTimerNoCompile", "", 30, [[print(...)]])
+      assert.is_false(ok, "a body that does not compile must not create a timer")
+      err = tostring(err)
+      assert.is_truthy(err:find([[[string "Timer: W2aPermTimerNoCompile"]], 1, true), "the chunk name should be quoted as Lua quotes it, got: " .. err)
+      assert.is_truthy(err:find("outside a vararg function", 1, true), "the reason should be the Lua error, got: " .. err)
+      assert.is_falsy(err:find("&quot;", 1, true), "the reason was HTML escaped: " .. err)
+      assert.is_falsy(err:find("<b>", 1, true), "the reason was wrapped in rich text markup: " .. err)
     end)
 
     it("errors for a negative delay", function()
@@ -2908,8 +2919,6 @@ describe("Tests the script API", function()
         "permScript should report the Lua error, got: " .. tostring(err))
     end)
 
-    -- the reason goes to Lua, so it is the plain text and not the editor's rich
-    -- text, and a body that raises as it runs has not got a syntax error (#10930, #10931)
     it("reports a body that raises as plain text, and not as a syntax error", function()
       local ok, err = pcall(makeScript, "W2aScriptRaisesPlain", "", [[error("w2a \"quoted\" <b>boom</b>")]])
       assert.is_false(ok, "a body that raises must not create a script")
@@ -2918,6 +2927,13 @@ describe("Tests the script API", function()
       assert.is_falsy(err:find("&quot;", 1, true), "the reason was HTML escaped: " .. err)
       assert.is_falsy(err:find("reason: <b>", 1, true), "the reason was wrapped in rich text markup: " .. err)
       assert.is_falsy(err:find("syntax error", 1, true), "a body that parsed was reported as a syntax error: " .. err)
+    end)
+
+    it("gives back a raised message that is itself escaped markup as it was raised", function()
+      local ok, err = pcall(makeScript, "W2aScriptRaisesEntities", "", [[error("w2a &lt;b&gt; &amp;quot; & done")]])
+      assert.is_false(ok, "a body that raises must not create a script")
+      err = tostring(err)
+      assert.is_truthy(err:find([[w2a &lt;b&gt; &amp;quot; & done]], 1, true), "the raised text should come back unchanged, got: " .. err)
     end)
 
     it("reports the type when the body raises something other than a string", function()
@@ -3066,7 +3082,7 @@ describe("Tests the script API", function()
         "setScript should report the Lua error, got: " .. tostring(err))
     end)
 
-    it("reports a body that raises as plain text (#10931)", function()
+    it("reports a body that raises as plain text, and not as a syntax error", function()
       local body = [[local w2aPlain = 1]]
       local _, position = makeScript("W2aScriptSetPlain", "", body)
       local ok, err = pcall(setScript, "W2aScriptSetPlain", [[error("w2a \"set\" boom")]], position)
@@ -3075,6 +3091,7 @@ describe("Tests the script API", function()
       assert.is_truthy(err:find([[w2a "set" boom]], 1, true), "the reason should be the Lua error as Lua raised it, got: " .. err)
       assert.is_falsy(err:find("&quot;", 1, true), "the reason was HTML escaped: " .. err)
       assert.is_falsy(err:find("<b>", 1, true), "the reason was wrapped in rich text markup: " .. err)
+      assert.is_falsy(err:find("syntax error", 1, true), "a body that parsed was reported as a syntax error: " .. err)
     end)
 
     it("sets the script at the requested position when several share a name", function()

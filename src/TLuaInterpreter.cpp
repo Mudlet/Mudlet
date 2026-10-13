@@ -3468,10 +3468,8 @@ bool TLuaInterpreter::compile(const QString& code, QString& errorMsg, const QStr
 }
 
 // No documentation available in wiki - internal function
-// Undoes the rich-text markup compile() adds (kept in step by hand), for text that goes
-// to Lua or a console line rather than the editor. Unescaped in reverse order, ampersand
-// last, so a script whose own text says "&amp;lt;b&amp;gt;" comes back as itself rather
-// than as markup.
+// Undoes compile()'s rich-text markup (kept in step by hand). The tags go first and "&amp;" is
+// decoded last, or a script whose own text says "&lt;b&gt;" would come back as "<b>".
 QString TLuaInterpreter::compileErrorAsPlainText(const QString& error)
 {
     QString plainText = error;

@@ -2761,7 +2761,7 @@ describe("Tests installing a package whose Lua does not work", function()
     assert.is_true(contains(installReason, '[string "Script: ' .. name .. ' script"]'), tostring(installReason))
   end)
 
-  -- the trigger's body does not parse, the script's parses and then raises (#10930)
+  -- the trigger's body does not parse, the script's parses and then raises
   it("tells a syntax error from an error raised as the body ran", function()
     local function reasonFor(item)
       local label = name .. " " .. item .. ": "
