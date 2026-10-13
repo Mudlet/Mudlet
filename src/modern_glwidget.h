@@ -348,6 +348,8 @@ private:
     QEasingCurve mEasingCurve;
     bool mCameraSmoothAnimating = false; // Dedicated flag for smooth camera animation
     int mPreviousRID = 0;                // Track previous room ID to detect changes
+    // Apart from mPreviousRID, which a view moved by hand or a second map window stops following
+    int mPulsedRoomId = 0;
     // The pulse the hologram style sends out from the player's room when the player moves: how long since it began,
     // invalid when none is under way, and what repaints the view while it spreads
     static constexpr qint64 scmPulseMilliseconds = 1200;

@@ -30,6 +30,7 @@
  */
 
 #include <algorithm>
+#include <cmath>
 #include <memory>
 #include <numbers>
 
@@ -1556,9 +1557,10 @@ private slots:
         qint64 light = 0;
         int darkRows = 0;
         int lightRows = 0;
+        const float period = qMax(3.0f, std::round(3.0f * static_cast<float>(widget.devicePixelRatioF())));
         for (int row = from; row <= to; ++row) {
-            // A scanline is every third row counted up from the bottom, as GL counts them
-            if ((frame.height() - 1 - row) % 3 == 0) {
+            // A scanline is the first third of each period counted up from the bottom, through the pixel's center, as GL counts them
+            if (std::fmod(static_cast<float>(frame.height() - 1 - row) + 0.5f, period) < period / 3.0f) {
                 dark += brightness(QPoint(edge.x(), row));
                 ++darkRows;
             } else {
@@ -1573,10 +1575,17 @@ private slots:
         widget.grabFramebuffer();
         QVERIFY2(widget.mPulseClock.isValid() && widget.mPulseTimer->isActive(), "a move did not start a pulse");
 
-        QVERIFY(mpHost->setMapStyle(qsl("tiles")));
+        widget.setSecondaryView(true);
         widget.mPulseClock.invalidate();
         widget.mPulseTimer->stop();
         map()->mRoomIdHash[map()->mProfileName] = kPlayerRoomId;
+        widget.grabFramebuffer();
+        QVERIFY2(widget.mPulseClock.isValid() && widget.mPulseTimer->isActive(), "a move seen in a second map window did not start a pulse");
+
+        QVERIFY(mpHost->setMapStyle(qsl("tiles")));
+        widget.mPulseClock.invalidate();
+        widget.mPulseTimer->stop();
+        map()->mRoomIdHash[map()->mProfileName] = kEastRoomId;
         widget.grabFramebuffer();
         QVERIFY2(!widget.mPulseClock.isValid() && !widget.mPulseTimer->isActive(), "a move in tiles started a pulse");
     }
