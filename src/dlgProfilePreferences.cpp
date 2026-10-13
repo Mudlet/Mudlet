@@ -5703,7 +5703,10 @@ void dlgProfilePreferences::slot_setMapBgColor()
 #if defined(INCLUDE_3DMAPPER)
         if (pHost->mpMap->mapper()->glWidget) {
             QOpenGLWidget* map = pHost->mpMap->mapper()->glWidget;
-            if (pHost->mBgColor_2.alpha() < 255) {
+            if (auto* modernMap = qobject_cast<ModernGLWidget*>(map)) {
+                // Its style may paint its own background, whatever the profile's is
+                modernMap->applyStyle();
+            } else if (pHost->mBgColor_2.alpha() < 255) {
                 map->setAttribute(Qt::WA_OpaquePaintEvent, false);
                 map->setAttribute(Qt::WA_AlwaysStackOnTop, true);
             } else {
