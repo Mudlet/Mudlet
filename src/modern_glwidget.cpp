@@ -753,6 +753,8 @@ constexpr float scmFlagSize = 0.9f;
 constexpr float scmFlagPole = 0.08f;
 // A label halo's reach past the text, as a part of the text's height
 constexpr qreal scmLabelHalo = 0.12;
+// A map label's halo's greatest reach, in texels
+constexpr int scmMaxLabelHalo = 16;
 
 // A text texture's halo's width in texels, on each side
 int textHaloWidth(const QFontMetricsF& metrics, const bool haloed)
@@ -1097,7 +1099,7 @@ const ModernGLWidget::HaloedLabel& ModernGLWidget::haloedLabel(const int labelId
         return haloed;
     }
     const QImage source = pixmap.toImage().convertToFormat(QImage::Format_ARGB32_Premultiplied);
-    const int reach = qMax(2, qRound(source.height() * scmLabelHalo / 2.0));
+    const int reach = qBound(2, qRound(source.height() * scmLabelHalo / 2.0), scmMaxLabelHalo);
     // The label's shape in the halo's color, stamped all round it
     QImage shape = source;
     {
@@ -1106,27 +1108,23 @@ const ModernGLWidget::HaloedLabel& ModernGLWidget::haloedLabel(const int labelId
         painter.fillRect(shape.rect(), halo);
     }
     // Every point within reach of the shape, without a gap however fine the shape: widened across one texel at a
-    // time, each width kept, then each row of the disc taking the width it needs
+    // time, and each row of the disc drawn once the shape is as wide as that row needs
     QImage widened(source.width() + 2 * reach, source.height() + 2 * reach, QImage::Format_ARGB32_Premultiplied);
     widened.fill(Qt::transparent);
-    QList<QImage> widths;
-    widths.reserve(reach + 1);
-    {
-        QPainter painter(&widened);
-        painter.drawImage(QPoint(reach, reach), shape);
-        widths.append(widened.copy());
-        for (int width = 1; width <= reach; ++width) {
-            painter.drawImage(QPoint(reach - width, reach), shape);
-            painter.drawImage(QPoint(reach + width, reach), shape);
-            widths.append(widened.copy());
-        }
-    }
     QImage image(widened.size(), QImage::Format_ARGB32_Premultiplied);
     image.fill(Qt::transparent);
     QPainter painter(&image);
-    for (int row = -reach; row <= reach; ++row) {
-        const auto width = static_cast<qsizetype>(std::floor(std::sqrt(static_cast<double>(reach * reach - row * row))));
-        painter.drawImage(QPoint(0, row), widths.at(width));
+    for (int width = 0; width <= reach; ++width) {
+        {
+            QPainter widener(&widened);
+            widener.drawImage(QPoint(reach - width, reach), shape);
+            widener.drawImage(QPoint(reach + width, reach), shape);
+        }
+        for (int row = -reach; row <= reach; ++row) {
+            if (static_cast<int>(std::floor(std::sqrt(static_cast<double>(reach * reach - row * row)))) == width) {
+                painter.drawImage(QPoint(0, row), widened);
+            }
+        }
     }
     painter.drawImage(QPoint(reach, reach), source);
     painter.end();
@@ -1474,11 +1472,10 @@ void ModernGLWidget::renderRooms()
         const auto outlinePixel = [&]() {
             return std::exp2(std::ceil(std::log2(mCameraController.worldUnitsPerPixel(QVector3D(rx, ry, top))) * 4.0f) / 4.0f);
         };
-        // An outline stands in for a border: a room's own border color and thickness show, but not the profile's border
-        // color, which every room has and would drown the outlines
+        // An outline stands in for a border, as a block around a room with no fill would hide it: a room's own border
+        // color and thickness show, but not the profile's border color, which every room has and would drown the outlines
         const float thickness = pR->mBorderThickness > 0 ? static_cast<float>(pR->mBorderThickness) * borderUnit : 0.0f;
         if (inkOutlines) {
-            // As a block around a room with no fill would hide it
             const QColor lineColor = pR->mBorderColor.isValid() ? pR->mBorderColor : ink;
             const float pixel = outlinePixel();
             const float lineWidth = qMax(static_cast<float>(roomSize * scmInkOutline), pixel);
@@ -3758,7 +3755,8 @@ void ModernGLWidget::renderLabels(const bool onTop, const int lowestLevel, const
         // Halo and all, as wide as the label is with it
         QPointF margin;
         GLuint textureId = 0;
-        if (halo.isValid() && !label.pix.isNull()) {
+        // Only around text, which lines would otherwise run through: a picture would grow a band over what is round it
+        if (halo.isValid() && !label.text.isEmpty() && !label.pix.isNull()) {
             const HaloedLabel& haloed = haloedLabel(it.key(), label.pix, halo);
             margin = haloed.margin;
             textureId = mLabelTextureCache.getTexture(mAID, it.key(), haloed.pixmap);

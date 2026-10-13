@@ -824,6 +824,39 @@ private slots:
         QCOMPARE(image.pixelColor(center + QPoint(reach - 1, 0)), halo);
     }
 
+    // A picture label is left as it is, while text has a halo, so that lines do not run through its letters
+    void test_onlyTextLabelsHaveHalosWithoutGL()
+    {
+        const int areaId = addArea();
+        QVERIFY(areaId > 0);
+        const auto restore = qScopeGuard([this]() {
+            mpHost->setMapStyle(qsl("tiles"));
+        });
+        TMapLabel text;
+        text.text = qsl("Old Keep");
+        text.pos = QVector3D(0.0f, 1.0f, 0.0f);
+        text.size = QSizeF(2.0, 0.5);
+        text.pix = QPixmap(80, 20);
+        text.pix.fill(Qt::black);
+        TMapLabel picture = text;
+        picture.text.clear();
+        picture.pos = QVector3D(2.0f, 1.0f, 0.0f);
+        picture.pix = QPixmap(2000, 2000);
+        picture.pix.fill(Qt::black);
+        map()->mpRoomDB->getArea(areaId)->mMapLabels.insert(1, text);
+        map()->mpRoomDB->getArea(areaId)->mMapLabels.insert(2, picture);
+        QVERIFY(mpHost->setMapStyle(qsl("transit")));
+        ModernGLWidget widget(map(), mpHost);
+
+        queueFrame(widget, areaId);
+        const QList<std::pair<int, int>> haloed = widget.mHaloedLabels.keys();
+        QVERIFY(mpHost->setMapStyle(qsl("tiles")));
+        queueFrame(widget, areaId);
+
+        QCOMPARE(haloed, (QList<std::pair<int, int>>{{areaId, 1}}));
+        QVERIFY2(widget.mHaloedLabels.isEmpty(), "halos were kept once no style showed them");
+    }
+
     // As names are: where IDs overlap one is kept, the viewed level's as only it has IDs on the 2D map,
     // and none so small as to be unreadable. As on the 2D map, a room whose ID is left out shows its symbol
     void test_roomIdsAreDeclutteredWithoutGL()
