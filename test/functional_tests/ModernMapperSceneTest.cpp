@@ -1479,6 +1479,35 @@ private slots:
         }
     }
 
+    void test_aNeighboursExitOverAnEmptySquareIsDrawnWholeWithoutGL()
+    {
+        const ThreeAreas areas = addThreeAreas();
+        // A one-way exit from the middle area's middle room over the empty square at 1,0, drawn at 6,0
+        map()->mpRoomDB->removeRoom(areas.middleFirst + 13);
+        map()->setExit(areas.middleFirst + 12, areas.middleFirst + 14, DIR_EAST);
+        mpHost->mMapperStitchAreas = true;
+        ModernGLWidget widget(map(), mpHost);
+        queueFrame(widget, areas.west, 2.0f);
+        const auto overTheGap = [](const float x, const float y) {
+            return x > 5.5f && x < 6.5f && std::abs(y) < 0.5f;
+        };
+        const QVector<CubeInstanceData>& bars = widget.mStitchScene.instances(RetainedMapScene::Layer::ExitBars)->instances;
+        QVERIFY2(std::any_of(bars.cbegin(),
+                             bars.cend(),
+                             [&](const CubeInstanceData& bar) {
+                                 return overTheGap(bar.transform.column(3).x(), bar.transform.column(3).y());
+                             }),
+                 "the exit's dots over the empty square are not drawn");
+        QVector<float> vertices;
+        QVector<float> colors;
+        widget.mStitchScene.appendTriangles(false, std::nullopt, vertices, colors);
+        bool arrow = false;
+        for (qsizetype i = 0; i + 2 < vertices.size(); i += 3) {
+            arrow = arrow || overTheGap(vertices.at(i), vertices.at(i + 1));
+        }
+        QVERIFY2(arrow, "the exit's one-way arrow over the empty square is not drawn");
+    }
+
     void test_aClickOnANeighboursRoomGoesIntoItsAreaWithoutGL()
     {
         const ThreeAreas areas = addThreeAreas();
