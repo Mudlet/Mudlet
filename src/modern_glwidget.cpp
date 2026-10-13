@@ -2413,10 +2413,12 @@ void ModernGLWidget::renderConnections()
     mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::ENABLE_DEPTH_TEST));
 
     const QVector3D sink(0.0f, 0.0f, exitSink(options));
+    const float roomHeight = 2.0f / scale / zFlattening;
     // A flat or slanting line lies on the ground. An upright one, as a shaft or a custom line's last piece to another
-    // level is, starts there but keeps its other end, or a model's block would all but swallow a shaft
-    const auto sunk = [&sink](const QVector3D& point, const int level, const bool upright) {
-        return !upright || std::abs(point.z() - static_cast<float>(level)) < 1e-4f ? point - sink : point;
+    // level is, starts there but rises out of the block, or the block would all but swallow a shaft. Its dashes are
+    // already cut, so it is pressed down evenly over the block's height: each keeps over half its length and their order
+    const auto sunk = [&sink, roomHeight](const QVector3D& point, const int level, const bool upright) {
+        return upright ? point - sink * qMax(0.0f, 1.0f - std::abs(point.z() - static_cast<float>(level)) / roomHeight) : point - sink;
     };
     const bool inkBlots = style.edges == MapStyle::Edges::InkBlots;
     QVector<CubeInstanceData> bars;
