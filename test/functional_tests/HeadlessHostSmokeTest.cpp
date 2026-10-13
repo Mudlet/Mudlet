@@ -4468,6 +4468,469 @@ headlessMainCmdLine = ok and "ok" or tostring(err)
         HostManager::self()->deleteHost(hostname);
     }
 
+    // The answers are those of the same Lua chunks run in the GUI self-test profile, with the profile's name taken out
+    void test_headlessMapWidgetContract()
+    {
+        // Each chunk runs between these, as it did in the GUI
+        const QString prelude = qsl(R"lua(
+headlessMapWidget = "not run"
+local ok, err = pcall(function()
+  local profile = getProfileName():gsub("%p", "%%%0")
+  local function described(called, ...)
+    if not called then
+      return "raised:" .. tostring((...))
+    end
+    local count = select("#", ...)
+    local values = {}
+    for i = 1, count do
+      values[i] = tostring((select(i, ...))):gsub(profile, "<profile>")
+    end
+    return "[" .. count .. "]" .. table.concat(values, ":")
+  end
+  local answers = {}
+  local function step(label, f, ...)
+    answers[#answers + 1] = label .. "=" .. described(pcall(f, ...))
+  end
+  local function count(f, ...)
+    return select("#", f(...))
+  end
+  mapWidgetOpenEvents = 0
+  function headlessMapWidgetOpened() mapWidgetOpenEvents = mapWidgetOpenEvents + 1 end
+  local handler = registerAnonymousEventHandler("mapOpenEvent", "headlessMapWidgetOpened")
+  local function events() return mapWidgetOpenEvents end
+  local function playerRoom()
+    local path = getMudletHomeDir() .. "/player room.json"
+    saveJsonMap(path)
+    local file = io.open(path)
+    local text = file:read("*a")
+    file:close()
+    return text:match([["playerRoomColors"%s*:%s*(%b[])]]):gsub("%s", ""), text:match([["playerRoomStyle"%s*:%s*(%d+)]])
+  end
+)lua");
+        const QString epilogue = qsl(R"lua(
+  killAnonymousEventHandler(handler)
+  headlessMapWidgetAnswers = table.concat(answers, "\n")
+end)
+headlessMapWidget = ok and "ok" or tostring(err)
+)lua");
+        Host* host = nullptr;
+        QString hostname;
+        int chunks = 0;
+        // Each on a profile of its own, so none finds a map another saved; the answers that differ from the GUI's come back
+        const auto mismatches = [&](const QString& chunk, const QStringList& answers) {
+            if (host) {
+                HostManager::self()->deleteHost(hostname);
+            }
+            hostname = qsl("Test-Headless-Host-Map-Widget-%1").arg(++chunks);
+            host = HostManager::self()->addHost(hostname, QString(), QString(), QString()) ? HostManager::self()->getHost(hostname) : nullptr;
+            if (!host) {
+                return QStringList{qsl("the profile could not be made")};
+            }
+            // For moveMapWidget() and resizeMapWidget(), which GUIUtils.lua builds on openMapWidget()
+            host->getLuaInterpreter()->loadGlobal();
+            if (!host->getLuaInterpreter()->compileAndExecuteScript(prelude + chunk + epilogue) || luaGlobalString(host, "headlessMapWidget") != qsl("ok")) {
+                return QStringList{qsl("the chunk did not run: %1").arg(luaGlobalString(host, "headlessMapWidget"))};
+            }
+            const QStringList actual = luaGlobalString(host, "headlessMapWidgetAnswers").split(QLatin1Char('\n'));
+            QStringList different;
+            for (qsizetype i = 0; i < std::max(actual.size(), answers.size()); ++i) {
+                if (actual.value(i) != answers.value(i)) {
+                    different << qsl("%1, not %2").arg(actual.value(i), answers.value(i));
+                }
+            }
+            return different;
+        };
+
+        const QStringList answers1{qsl("rooms.start=[1]0"),
+                                   qsl("save=[1]true"),
+                                   qsl("rooms.saved=[1]0"),
+                                   qsl("title.none=[2]nil:no floating/dockable type map window found"),
+                                   qsl("setTitle.none=[2]nil:no floating/dockable type map window found"),
+                                   qsl("geometry.none=[2]nil:no floating/dockable type map window found"),
+                                   qsl("close.none=[2]nil:no map widget found to close"),
+                                   qsl("setWindow.none=[2]nil:element 'mapper' not found"),
+                                   qsl("raise.none=[1]false"),
+                                   qsl("embedded.noWindow=[2]false:window 'noSuchWindow' not found"),
+                                   qsl("embedded.scrollBox=[2]false:window 'mwBox' not found"),
+                                   qsl("embedded.miniConsole=[2]false:window 'mwMini' not found"),
+                                   qsl("open.badType=raised:openMapWidget: bad argument #1 type (area as string expected, got boolean!)"),
+                                   qsl("events.none=[1]0"),
+                                   qsl("open.bogus=[2]nil:docking option \"bogus\" not available. available docking options are \"t\" top, \"b\" bottom, \"r\" right, \"l\" left and \"f\" floating"),
+                                   qsl("events.bogus=[1]1"),
+                                   qsl("room.open=[1]Saved room"),
+                                   qsl("title.bogus=[1]Map - <profile>"),
+                                   qsl("open=[1]true"),
+                                   qsl("events.open=[1]1"),
+                                   qsl("title=[1]Map - <profile>"),
+                                   qsl("setTitle=[1]true"),
+                                   qsl("title.set=[1]Custom map"),
+                                   qsl("setTitle.none=[1]true"),
+                                   qsl("title.reset=[1]Map - <profile>"),
+                                   qsl("setTitle.again=[1]true"),
+                                   qsl("setTitle.empty=[1]true"),
+                                   qsl("title.empty=[1]Map - <profile>"),
+                                   qsl("geometry.docked.count=[1]4"),
+                                   qsl("float=[1]true"),
+                                   qsl("geometry.float=[4]10:20:400:300"),
+                                   qsl("move.type=[1]function"),
+                                   qsl("move=[0]"),
+                                   qsl("geometry.move=[4]30:40:400:300"),
+                                   qsl("resize=[0]"),
+                                   qsl("geometry.resize=[4]30:40:500:350"),
+                                   qsl("float.F=[1]true"),
+                                   qsl("geometry.F=[4]30:40:500:350"),
+                                   qsl("float.floating=[1]true"),
+                                   qsl("float.noChange=[1]true"),
+                                   qsl("geometry.noChange=[4]30:40:500:350"),
+                                   qsl("float.posOnly=[1]true"),
+                                   qsl("geometry.posOnly=[4]50:60:500:350"),
+                                   qsl("float.halfSize=[1]true"),
+                                   qsl("geometry.halfSize=[4]70:80:500:350"),
+                                   qsl("float.halfPos=[1]true"),
+                                   qsl("geometry.halfPos=[4]70:80:450:250"),
+                                   qsl("float.xOnly=[1]true"),
+                                   qsl("geometry.xOnly=[4]70:80:450:250"),
+                                   qsl("float.widthOnly=[1]true"),
+                                   qsl("geometry.widthOnly=[4]70:80:450:250"),
+                                   qsl("dock.r=[1]true"),
+                                   qsl("geometry.dock.r.count=[1]4"),
+                                   qsl("dock.Right=[1]true"),
+                                   qsl("geometry.dock.Right.count=[1]4"),
+                                   qsl("dock.l=[1]true"),
+                                   qsl("geometry.dock.l.count=[1]4"),
+                                   qsl("dock.left=[1]true"),
+                                   qsl("geometry.dock.left.count=[1]4"),
+                                   qsl("dock.t=[1]true"),
+                                   qsl("geometry.dock.t.count=[1]4"),
+                                   qsl("dock.top=[1]true"),
+                                   qsl("geometry.dock.top.count=[1]4"),
+                                   qsl("dock.b=[1]true"),
+                                   qsl("geometry.dock.b.count=[1]4"),
+                                   qsl("dock.bottom=[1]true"),
+                                   qsl("geometry.dock.bottom.count=[1]4"),
+                                   qsl("dock.bad=[2]nil:docking option \"middle\" not available. available docking options are \"t\" top, \"b\" bottom, \"r\" right, \"l\" left and \"f\" floating"),
+                                   qsl("float.again=[1]true"),
+                                   qsl("geometry.again=[4]15:25:410:310"),
+                                   qsl("setWindow.mapper=[2]nil:element 'mapper' is the map in a floating/dockable window and may not be moved"),
+                                   qsl("setWindow.into=[2]nil:window 'mapper' is the map in a floating/dockable window and may not receive other elements"),
+                                   qsl("raise=[1]false"),
+                                   qsl("lower=[1]false"),
+                                   qsl("embedded.overShown=[2]false:cannot create mapper. Do you already use a map window?"),
+                                   qsl("events.overShown=[1]1"),
+                                   qsl("close=[1]true"),
+                                   qsl("close.again=[2]nil:map widget already closed"),
+                                   qsl("title.closed=[2]nil:no floating/dockable type map window found"),
+                                   qsl("setTitle.closed=[2]nil:no floating/dockable type map window found"),
+                                   qsl("geometry.closed=[2]nil:no floating/dockable type map window found"),
+                                   qsl("setWindow.closed=[2]nil:element 'mapper' is the map in a floating/dockable window and may not be moved"),
+                                   qsl("reopen=[1]true"),
+                                   qsl("events.reopen=[1]1"),
+                                   qsl("title.reopen=[1]Kept"),
+                                   qsl("geometry.reopen=[4]15:25:410:310"),
+                                   qsl("close.reopen=[1]true"),
+                                   qsl("reopen.bogus=[2]nil:docking option \"bogus\" not available. available docking options are \"t\" top, \"b\" bottom, \"r\" right, \"l\" left and \"f\" floating"),
+                                   qsl("title.reopenBogus=[1]Kept"),
+                                   qsl("close.reopenBogus=[1]true"),
+                                   qsl("reopen.float=[1]true"),
+                                   qsl("geometry.reopenFloat=[4]5:6:420:320"),
+                                   qsl("close.reopenFloat=[1]true"),
+                                   qsl("embedded=[1]true"),
+                                   qsl("events.embedded=[1]2"),
+                                   qsl("room.embedded=[1]Saved room"),
+                                   qsl("close.embedded=[2]nil:no map widget found to close"),
+                                   qsl("open.embedded=[2]nil:cannot create map widget. Do you already use an embedded mapper?"),
+                                   qsl("open.embedded.float=[2]nil:cannot create map widget. Do you already use an embedded mapper?"),
+                                   qsl("title.embedded=[2]nil:no floating/dockable type map window found"),
+                                   qsl("setTitle.embedded=[2]nil:no floating/dockable type map window found"),
+                                   qsl("geometry.embedded=[2]nil:no floating/dockable type map window found"),
+                                   qsl("setWindow.embedded=[1]true"),
+                                   qsl("raise.embedded=[1]true"),
+                                   qsl("lower.embedded=[1]true"),
+                                   qsl("embedded.again=[1]true"),
+                                   qsl("embedded.noWindow.again=[2]false:window 'noSuchWindow' not found"),
+                                   qsl("embedded.userWindow=[1]true"),
+                                   qsl("embedded.scrollBox.again=[2]false:window 'mwBox' not found"),
+                                   qsl("setWindow.embedded.userWindow=[1]true"),
+                                   qsl("setWindow.embedded.box=[1]true"),
+                                   qsl("raise.embedded.upper=[1]true"),
+                                   qsl("visible.embedded=[2]nil:window \"mapper\" not found"),
+                                   qsl("windowGeometry.embedded=[2]nil:window \"mapper\" not found"),
+                                   qsl("events.again=[1]2"),
+                                   qsl("load.embedded=[1]false"),
+                                   qsl("events.load.embedded=[1]2"),
+                                   qsl("title.load.embedded=[2]nil:no floating/dockable type map window found"),
+                                   qsl("close.load.embedded=[2]nil:no map widget found to close")};
+        const QStringList different1 = mismatches(qsl(R"lua(
+  createLabel("mwLabel", 0, 0, 10, 10, 1)
+  openUserWindow("mwWindow")
+  createScrollBox("mwBox", 0, 0, 50, 50)
+  createMiniConsole("mwMini", 0, 0, 50, 50)
+  local function roomCount()
+    local rooms = 0
+    for _ in pairs(getRooms()) do rooms = rooms + 1 end
+    return rooms
+  end
+  step("rooms.start", roomCount)
+  local savedRoom = createRoomID()
+  addRoom(savedRoom)
+  setRoomName(savedRoom, "Saved room")
+  step("save", saveMap)
+  deleteRoom(savedRoom)
+  step("rooms.saved", roomCount)
+
+  step("title.none", getMapWindowTitle)
+  step("setTitle.none", setMapWindowTitle, "Never")
+  step("geometry.none", getMapWidgetGeometry)
+  step("close.none", closeMapWidget)
+  step("setWindow.none", setWindow, "main", "mapper", 0, 0, true)
+  step("raise.none", raiseWindow, "mapper")
+  step("embedded.noWindow", createMapper, "noSuchWindow", 0, 0, 10, 10)
+  step("embedded.scrollBox", createMapper, "mwBox", 0, 0, 10, 10)
+  step("embedded.miniConsole", createMapper, "mwMini", 0, 0, 10, 10)
+  step("open.badType", openMapWidget, true)
+  step("events.none", events)
+
+  step("open.bogus", openMapWidget, "bogus")
+  step("events.bogus", events)
+  step("room.open", getRoomName, savedRoom)
+  step("title.bogus", getMapWindowTitle)
+  step("open", openMapWidget)
+  step("events.open", events)
+  step("title", getMapWindowTitle)
+  step("setTitle", setMapWindowTitle, "Custom map")
+  step("title.set", getMapWindowTitle)
+  step("setTitle.none", setMapWindowTitle)
+  step("title.reset", getMapWindowTitle)
+  step("setTitle.again", setMapWindowTitle, "Second")
+  step("setTitle.empty", setMapWindowTitle, "")
+  step("title.empty", getMapWindowTitle)
+  step("geometry.docked.count", count, getMapWidgetGeometry)
+
+  step("float", openMapWidget, 10, 20, 400, 300)
+  step("geometry.float", getMapWidgetGeometry)
+  step("move.type", type, moveMapWidget)
+  step("move", moveMapWidget, 30, 40)
+  step("geometry.move", getMapWidgetGeometry)
+  step("resize", resizeMapWidget, 500, 350)
+  step("geometry.resize", getMapWidgetGeometry)
+  step("float.F", openMapWidget, "F")
+  step("geometry.F", getMapWidgetGeometry)
+  step("float.floating", openMapWidget, "floating")
+  step("float.noChange", openMapWidget, -1, -1, -1, -1)
+  step("geometry.noChange", getMapWidgetGeometry)
+  step("float.posOnly", openMapWidget, 50, 60)
+  step("geometry.posOnly", getMapWidgetGeometry)
+  step("float.halfSize", openMapWidget, 70, 80, -1, 200)
+  step("geometry.halfSize", getMapWidgetGeometry)
+  step("float.halfPos", openMapWidget, -1, 90, 450, 250)
+  step("geometry.halfPos", getMapWidgetGeometry)
+  step("float.xOnly", openMapWidget, 35, -1)
+  step("geometry.xOnly", getMapWidgetGeometry)
+  step("float.widthOnly", openMapWidget, -1, -1, 300, -1)
+  step("geometry.widthOnly", getMapWidgetGeometry)
+  for _, area in ipairs({"r", "Right", "l", "left", "t", "top", "b", "bottom"}) do
+    step("dock." .. area, openMapWidget, area)
+    step("geometry.dock." .. area .. ".count", count, getMapWidgetGeometry)
+  end
+  step("dock.bad", openMapWidget, "middle")
+  step("float.again", openMapWidget, 15, 25, 410, 310)
+  step("geometry.again", getMapWidgetGeometry)
+  step("setWindow.mapper", setWindow, "main", "mapper", 0, 0, true)
+  step("setWindow.into", setWindow, "mapper", "mwLabel", 0, 0, true)
+  step("raise", raiseWindow, "mapper")
+  step("lower", lowerWindow, "mapper")
+  step("embedded.overShown", createMapper, 0, 0, 300, 300)
+  step("events.overShown", events)
+  setMapWindowTitle("Kept")
+
+  step("close", closeMapWidget)
+  step("close.again", closeMapWidget)
+  step("title.closed", getMapWindowTitle)
+  step("setTitle.closed", setMapWindowTitle, "Closed")
+  step("geometry.closed", getMapWidgetGeometry)
+  step("setWindow.closed", setWindow, "main", "mapper", 0, 0, true)
+  step("reopen", openMapWidget)
+  step("events.reopen", events)
+  step("title.reopen", getMapWindowTitle)
+  step("geometry.reopen", getMapWidgetGeometry)
+  step("close.reopen", closeMapWidget)
+  step("reopen.bogus", openMapWidget, "bogus")
+  step("title.reopenBogus", getMapWindowTitle)
+  step("close.reopenBogus", closeMapWidget)
+  step("reopen.float", openMapWidget, 5, 6, 420, 320)
+  step("geometry.reopenFloat", getMapWidgetGeometry)
+  step("close.reopenFloat", closeMapWidget)
+
+  deleteRoom(savedRoom)
+  step("embedded", createMapper, 0, 0, 300, 300)
+  step("events.embedded", events)
+  step("room.embedded", getRoomName, savedRoom)
+  step("close.embedded", closeMapWidget)
+  step("open.embedded", openMapWidget)
+  step("open.embedded.float", openMapWidget, 1, 2, 300, 300)
+  step("title.embedded", getMapWindowTitle)
+  step("setTitle.embedded", setMapWindowTitle, "Embedded")
+  step("geometry.embedded", getMapWidgetGeometry)
+  step("setWindow.embedded", setWindow, "main", "mapper", 0, 0, true)
+  step("raise.embedded", raiseWindow, "mapper")
+  step("lower.embedded", lowerWindow, "mapper")
+  step("embedded.again", createMapper, "main", 10, 10, 200, 200)
+  step("embedded.noWindow.again", createMapper, "noSuchWindow", 0, 0, 10, 10)
+  step("embedded.userWindow", createMapper, "mwWindow", 0, 0, 10, 10)
+  step("embedded.scrollBox.again", createMapper, "mwBox", 0, 0, 10, 10)
+  step("setWindow.embedded.userWindow", setWindow, "mwWindow", "mapper", 0, 0, true)
+  step("setWindow.embedded.box", setWindow, "mwBox", "MAPPER", 0, 0, false)
+  step("raise.embedded.upper", raiseWindow, "Mapper")
+  step("visible.embedded", windowVisible, "mapper")
+  step("windowGeometry.embedded", getWindowGeometry, "mapper")
+  step("events.again", events)
+  step("load.embedded", loadMap, getMudletHomeDir() .. "/no such map.dat")
+  step("events.load.embedded", events)
+  step("title.load.embedded", getMapWindowTitle)
+  step("close.load.embedded", closeMapWidget)
+
+  deleteLabel("mwLabel")
+  deleteScrollBox("mwBox")
+)lua"),
+                                                  answers1);
+        QVERIFY2(different1.isEmpty(), qPrintable(different1.join(QChar::LineFeed)));
+        // Lua hands createMapper() the main window as "", but the view takes "main" in any case too, as TMainConsole does
+        QVERIFY(host->consoleFrontend()->createMapper(qsl("MAIN"), 0, 0, 10, 10).first);
+        // The chunk moved the mapper into the scroll box it then deleted, which takes the mapper with it once deferred
+        // deletes run, as TMainConsole::deleteScrollBox() does its dlgMapper. A spec cannot wait for those.
+        QVERIFY(host->consoleFrontend()->raiseWindow(qsl("mapper")));
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+        QVERIFY(!host->consoleFrontend()->raiseWindow(qsl("mapper")));
+        QVERIFY(host->openMapWidget(QString(), -1, -1, -1, -1).first);
+
+        // A map load makes the map widget when there is no mapper, as the GUI's does
+        const QStringList answers2{qsl("title.none=[2]nil:no floating/dockable type map window found"),
+                                   qsl("load=[1]false"),
+                                   qsl("events.load=[1]1"),
+                                   qsl("title.load=[1]Map - <profile>"),
+                                   qsl("geometry.load.count=[1]4"),
+                                   qsl("load.again=[1]false"),
+                                   qsl("events.again=[1]1"),
+                                   qsl("float=[1]true"),
+                                   qsl("close=[1]true"),
+                                   qsl("load.closed=[1]false"),
+                                   qsl("events.closed=[1]1"),
+                                   qsl("title.closed=[2]nil:no floating/dockable type map window found"),
+                                   qsl("close.closed=[2]nil:map widget already closed"),
+                                   qsl("reopen=[1]true"),
+                                   qsl("events.reopen=[1]1"),
+                                   qsl("geometry.reopen=[4]10:20:400:300")};
+        const QStringList different2 = mismatches(qsl(R"lua(
+  local missing = getMudletHomeDir() .. "/no such map.dat"
+  step("title.none", getMapWindowTitle)
+  step("load", loadMap, missing)
+  step("events.load", events)
+  step("title.load", getMapWindowTitle)
+  step("geometry.load.count", count, getMapWidgetGeometry)
+  step("load.again", loadMap, missing)
+  step("events.again", events)
+  step("float", openMapWidget, 10, 20, 400, 300)
+  step("close", closeMapWidget)
+  step("load.closed", loadMap, missing)
+  step("events.closed", events)
+  step("title.closed", getMapWindowTitle)
+  step("close.closed", closeMapWidget)
+  step("reopen", openMapWidget)
+  step("events.reopen", events)
+  step("geometry.reopen", getMapWidgetGeometry)
+
+)lua"),
+                                                  answers2);
+        QVERIFY2(different2.isEmpty(), qPrintable(different2.join(QChar::LineFeed)));
+        // Not a GUI answer, which comes from the layout: with none to dock it into, the model gives it the main window's
+        // size, as it does a docked user window
+        const QRect mainWindow(QPoint(0, 0), host->mainWindowSize().value_or(QSize()));
+        QVERIFY(!mainWindow.isEmpty());
+        QVERIFY(host->openMapWidget(qsl("r"), -1, -1, -1, -1).first);
+        QCOMPARE(host->mapWidgetGeometry(), std::optional<QRect>(mainWindow));
+
+        // A map widget made with a map loaded keeps that map, as the GUI's does
+        const QStringList answers3{qsl("save=[1]true"),
+                                   qsl("open=[1]true"),
+                                   qsl("events.open=[1]1"),
+                                   qsl("room.saved=[1]false"),
+                                   qsl("room.kept=[1]Kept room"),
+                                   qsl("playerRoom.open=[2][{\"color24RGB\":[255,0,0]},{\"color24RGB\":[255,255,255]}]:0")};
+        const QStringList different3 = mismatches(qsl(R"lua(
+  local saved = createRoomID()
+  addRoom(saved)
+  setRoomName(saved, "Saved room")
+  step("save", saveMap)
+  deleteRoom(saved)
+  local kept = saved + 1
+  addRoom(kept)
+  setRoomName(kept, "Kept room")
+  step("open", openMapWidget)
+  step("events.open", events)
+  step("room.saved", roomExists, saved)
+  step("room.kept", getRoomName, kept)
+  step("playerRoom.open", playerRoom)
+
+)lua"),
+                                                  answers3);
+        QVERIFY2(different3.isEmpty(), qPrintable(different3.join(QChar::LineFeed)));
+        // Made docked, it starts at that size too
+        QCOMPARE(host->mapWidgetGeometry(), std::optional<QRect>(QRect(QPoint(0, 0), host->mainWindowSize().value_or(QSize()))));
+
+        // An XML map import makes the map widget when there is no mapper, as the GUI's does
+        const QStringList answers4{qsl("title.none=[2]nil:no floating/dockable type map window found"),
+                                   qsl("import=[1]true"),
+                                   qsl("events.import=[1]1"),
+                                   qsl("title.import=[1]Map - <profile>"),
+                                   qsl("room.import=[1]Headless Xml Room"),
+                                   qsl("import.again=[1]true"),
+                                   qsl("events.again=[1]1")};
+        const QStringList different4 = mismatches(qsl(R"lua(
+  local path = getMudletHomeDir() .. "/headless.xml"
+  local file = io.open(path, "w")
+  file:write([[<?xml version="1.0" encoding="UTF-8"?>
+<map>
+ <areas>
+  <area id="1" name="Headless Xml Area"/>
+ </areas>
+ <rooms>
+  <room id="3" area="1" title="Headless Xml Room" environment="2">
+   <coord x="0" y="0" z="0"/>
+  </room>
+ </rooms>
+</map>
+]])
+  file:close()
+  step("title.none", getMapWindowTitle)
+  step("import", loadMap, path)
+  step("events.import", events)
+  step("title.import", getMapWindowTitle)
+  step("room.import", getRoomName, 3)
+  step("import.again", loadMap, path)
+  step("events.again", events)
+)lua"),
+                                                  answers4);
+        QVERIFY2(different4.isEmpty(), qPrintable(different4.join(QChar::LineFeed)));
+
+        // An embedded mapper also takes the profile's player room style, as the GUI's does
+        const QStringList answers5{qsl("embedded=[1]true"), qsl("playerRoom.embedded=[2][{\"color24RGB\":[255,0,0]},{\"color24RGB\":[255,255,255]}]:0"), qsl("raise.embedded=[1]true")};
+        const QStringList different5 = mismatches(qsl(R"lua(
+  openUserWindow("mwMapperWindow")
+  step("embedded", createMapper, "mwMapperWindow", 0, 0, 10, 10)
+  step("playerRoom.embedded", playerRoom)
+  step("raise.embedded", raiseWindow, "mapper")
+)lua"),
+                                                  answers5);
+        QVERIFY2(different5.isEmpty(), qPrintable(different5.join(QChar::LineFeed)));
+        // A reset takes the user window, and the mapper in it, as TMainConsole::resetMainConsole() takes its dock
+        QTRY_VERIFY(!host->currentlySavingProfile());
+        QVERIFY2(host->resetProfile_phase1(), "The profile reset did not start.");
+        QTRY_VERIFY(!host->profileResetInProgress());
+        QVERIFY(!host->consoleFrontend()->raiseWindow(qsl("mapper")));
+        QVERIFY2(QApplication::topLevelWidgets().isEmpty(), "Using the map widget created a widget.");
+        HostManager::self()->deleteHost(hostname);
+    }
+
     // The answers are those of the same Lua run in the GUI self-test profile, but for the last ones,
     // which a spec cannot wait for: a text edit in a deleted scroll box goes with it
     void test_headlessTextEditContract()
@@ -7567,6 +8030,8 @@ headlessLabelMain = ok and "ok" or tostring(err)
         QVERIFY(binaryFile.open(QIODevice::WriteOnly));
         binaryFile.write(binaryMapOf(host, 7));
         binaryFile.close();
+        host->registerAnonymousEventHandler(qsl("mapOpenEvent"), qsl("onHeadlessMapLoadOpened"));
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("headlessMapLoadOpens = 0; function onHeadlessMapLoadOpened() headlessMapLoadOpens = headlessMapLoadOpens + 1 end")));
 
         const QString script = qsl("headlessMapDir = [[%1]]\n").arg(mapDir.path()) + qsl(R"lua(
 headlessMapLoad = 'not run'
@@ -7587,7 +8052,11 @@ headlessMapLoad = ok and 'ok' or tostring(err)
 
         QVERIFY2(ran, "The Lua chunk did not run.");
         QCOMPARE(luaGlobalString(host, "headlessMapLoad"), qsl("ok"));
+        // As in the GUI, the first load made the map widget, which the later ones then load into
+        QCOMPARE(luaGlobalString(host, "headlessMapLoadOpens"), qsl("1"));
+        QCOMPARE(host->getMapperTitle(), std::optional<QString>(qsl("Map - %1").arg(hostname)));
         QVERIFY2(QApplication::topLevelWidgets().isEmpty(), "Loading a map created a widget.");
+        HostManager::self()->deleteHost(hostname);
     }
     // As the GUI answers once loadMap has made its mapper; with no main window the model is the open map
     void test_playerRoomAndJsonMapWithNoMainWindow()

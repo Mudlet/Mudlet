@@ -709,13 +709,15 @@ nullViewItemAfter = tostring(removeCommandLineMenuEvent("main", "nullViewItem"))
 
         QPointer<TMainConsole> console = host->mainConsoleView();
         QVERIFY2(console, "The active host has no main console.");
-        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("assert(createLabel('nullViewLabel', 0, 0, 10, 10, 1))")));
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("assert(createLabel('nullViewLabel', 0, 0, 10, 10, 1)); openUserWindow('nullViewViewWindow'); assert(openMapWidget())")));
 
         host->setMainConsoleView(nullptr);
         const bool ran = host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
             local results = {}
             for _, call in ipairs({
+                function() return createMapper("nullViewViewWindow", 0, 0, 100, 100) end,
                 function() return createMapper(0, 0, 100, 100) end,
+                function() return createMapper("nullViewViewWindow", 0, 0, 100, 100) end,
                 function() return getLabelSizeHint("nullViewLabel") end,
                 function() return startMovie("nullViewLabel") end,
                 function() return clearCmdLine("main") end,
@@ -743,6 +745,8 @@ nullViewItemAfter = tostring(removeCommandLineMenuEvent("main", "nullViewItem"))
         lua_pop(L, 1);
         QCOMPARE(results,
                  qsl("false:the profile has no main window"
+                     "|true:nil"
+                     "|true:nil"
                      "|nil:label 'nullViewLabel' does not exist"
                      "|nil:label \"nullViewLabel\" not found"
                      "|nil:nil"
@@ -755,6 +759,22 @@ nullViewItemAfter = tostring(removeCommandLineMenuEvent("main", "nullViewItem"))
                      "|true:nil"
                      "|nil:the profile has no main window"
                      "|nil:the profile has no main window"));
+
+        // The null view's mapper and map widget go as the view takes the profile back, and the view's own map
+        // widget, still drawing the map, counts for nothing while the view is detached
+        host->setMainConsoleView(nullptr);
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+            local path = getMudletHomeDir() .. "/null view map.dat"
+            nullViewMapStates = tostring(raiseWindow("mapper")) .. "|" .. tostring(saveMap(path)) .. "|" .. tostring(loadMap(path))
+                .. "|" .. tostring(openMapWidget())
+        )lua")));
+        host->setMainConsoleView(console);
+        host->setMainConsoleView(nullptr);
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("nullViewMapStates = nullViewMapStates .. '|' .. select(2, closeMapWidget())")));
+        host->setMainConsoleView(console);
+        lua_getglobal(L, "nullViewMapStates");
+        QCOMPARE(QString::fromUtf8(lua_tostring(L, -1)), qsl("false|true|true|true|no map widget found to close"));
+        lua_pop(L, 1);
     }
 
     // The mapping-script reminder used to be a QDialog built inside Host; it is
@@ -1006,6 +1026,67 @@ nullViewItemAfter = tostring(removeCommandLineMenuEvent("main", "nullViewItem"))
         // WA_DeleteOnClose) and then, from its destructor, the dock.
         QTest::qWait(500ms);
         QVERIFY2(dock.isNull(), "Closing the profile must destroy the map dock the console owns.");
+    }
+
+    // Once a closing profile's console has gone, its map calls answer from the null view, as its other window calls
+    // do, without reading the saved map back in. They leave the map files alone, and the stopped profile hears no event.
+    void test_mapCallsWhileTheProfileCloses()
+    {
+        startProfile(mHostname, mLocalhost, mPort);
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+            assert(openMapWidget())
+            closingRoom = createRoomID()
+            addRoom(closingRoom)
+            closingMapFile = getMudletHomeDir() .. "/closing map.dat"
+            assert(saveMap(closingMapFile))
+        )lua")));
+        const auto mapFiles = [host]() {
+            QStringList files;
+            const QDir mapsDir(MudletApp::getMudletPath(enums::profileMapsPath, host->getName()));
+            for (const QFileInfo& info : mapsDir.entryInfoList(QDir::Files, QDir::Name)) {
+                files << qsl("%1 %2 %3").arg(info.fileName(), QString::number(info.size()), info.lastModified().toString(Qt::ISODateWithMs));
+            }
+            return files;
+        };
+
+        // As test_mapDockDestroyedOnProfileClose() closes it. A forced close saves the map, room and all.
+        host->forceClose();
+        QVERIFY2(host->requestClose(), "Closing the profile was refused.");
+        QTRY_VERIFY_WITH_TIMEOUT(!host->mainConsoleView(), 5000);
+        QVERIFY(host->isClosingDown());
+        const QStringList filesBefore = mapFiles();
+        QVERIFY2(!filesBefore.isEmpty(), "SETUP: the close saved no map, so a restore could not be seen.");
+
+        host->registerAnonymousEventHandler(qsl("mapOpenEvent"), qsl("onClosingMapOpened"));
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+            closingMapOpens = 0
+            function onClosingMapOpened() closingMapOpens = closingMapOpens + 1 end
+            local answers = {}
+            local function add(first, second) answers[#answers + 1] = tostring(first) .. ":" .. tostring(second) end
+            deleteRoom(closingRoom)
+            assert(next(getRooms()) == nil, "SETUP: the map still has rooms, so no restore would be tried")
+            add(openMapWidget())
+            add(roomExists(closingRoom))
+            add(getMapWindowTitle() == "Map - " .. getProfileName())
+            add(closeMapWidget())
+            add(createMapper(0, 0, 10, 10))
+            add(roomExists(closingRoom))
+            add(raiseWindow("mapper"))
+            add(openUserWindow("closingWindow"))
+            add(loadMap(closingMapFile))
+            add(roomExists(closingRoom))
+            add(closingMapOpens)
+            closingMapAnswers = table.concat(answers, "|")
+        )lua")));
+        lua_State* L = host->getLuaInterpreter()->getLuaGlobalState();
+        lua_getglobal(L, "closingMapAnswers");
+        const QString answers = QString::fromUtf8(lua_tostring(L, -1));
+        lua_pop(L, 1);
+        QCOMPARE(answers, qsl("true:nil|false:nil|true:nil|true:nil|true:nil|false:nil|true:nil|true:nil|true:nil|true:nil|0:nil"));
+        QCOMPARE(mapFiles(), filesBefore);
     }
 
     // Host::setProfileStyleSheet() no longer restyles the editor, the
