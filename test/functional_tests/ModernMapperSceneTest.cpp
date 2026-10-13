@@ -1751,6 +1751,18 @@ private slots:
         map()->mpRoomDB->getRoom(9)->setHidden(false);
         search.refresh(*map());
         QCOMPARE(search.find(qsl("Cellar"), 0, true).value(0).id, 9);
+        // Nor an area all of whose rooms are hidden, which would be flown to only to show nothing
+        const int hiddenAreaId = map()->mpRoomDB->getRoom(1)->getArea();
+        const QString hiddenAreaName = map()->mpRoomDB->getAreaNamesMap().value(hiddenAreaId);
+        QVERIFY(!search.find(hiddenAreaName, 0, true).isEmpty());
+        for (const int roomId : map()->mpRoomDB->getArea(hiddenAreaId)->getAreaRooms()) {
+            map()->mpRoomDB->getRoom(roomId)->setHidden(true);
+        }
+        search.refresh(*map());
+        QVERIFY(search.find(hiddenAreaName, 0, true).isEmpty());
+        for (const int roomId : map()->mpRoomDB->getArea(hiddenAreaId)->getAreaRooms()) {
+            map()->mpRoomDB->getRoom(roomId)->setHidden(false);
+        }
         map()->mpRoomDB->getRoom(9)->name.clear();
         map()->setUnsaved(__func__);
 
@@ -1824,6 +1836,10 @@ private slots:
         QMouseEvent press(QEvent::MouseButtonPress, QPointF(2.0, 2.0), QPointF(2.0, 2.0), Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
         QCoreApplication::sendEvent(widget.mpSearchPanel, &press);
         QCOMPARE(pressesToView.count, 0);
+        EventCounter tooltipsToView(&widget, QEvent::ToolTip);
+        QHelpEvent tooltip(QEvent::ToolTip, QPoint(2, 2), widget.mapToGlobal(QPoint(2, 2)));
+        QCoreApplication::sendEvent(widget.mpSearchPanel->mpList->viewport(), &tooltip);
+        QCOMPARE(tooltipsToView.count, 0);
 
         // Enter flies to the first, in the other area, and the area lists follow
         QKeyEvent enter(QEvent::KeyPress, Qt::Key_Return, Qt::NoModifier);
@@ -1868,12 +1884,17 @@ private slots:
         widget.chooseSearchResult(0, true);
         QCOMPARE(widget.route().destinationRoomId(), 3);
 
-        // An area is flown into, back where the view shows its rooms
+        // An area is flown into, back where the view shows its rooms, and the room found before is no longer marked
+        widget.mpSearchPanel->mpEdit->setText(qsl("lighthouse"));
+        widget.chooseSearchResult(0, false);
+        QCOMPARE(widget.mSearchMarkedRoomId, target);
+        finishFlight(widget);
         widget.mpSearchPanel->mpEdit->setText(qsl("westmarch"));
         QCOMPARE(widget.mSearchResults.value(0).kind, MapSearch::Kind::Area);
         widget.chooseSearchResult(0, false);
         QCOMPARE(widget.mAID, westId);
-        QCOMPARE(flownInto.size(), 2);
+        QCOMPARE(widget.mSearchMarkedRoomId, 0);
+        QCOMPARE(flownInto.size(), 3);
         finishFlight(widget);
 
         // A room taken off the map since it was found is not gone to

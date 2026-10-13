@@ -24,6 +24,8 @@
 #include "TRoom.h"
 #include "TRoomDB.h"
 
+#include <QSet>
+
 #include <algorithm>
 
 MapSearch::Inputs MapSearch::inputsOf(const TMap& map)
@@ -65,24 +67,25 @@ bool MapSearch::refresh(const TMap& map)
     mInputs = inputsOf(map);
     const TRoomDB& roomDB = *map.mpRoomDB;
     mEntries.reserve(roomDB.getRoomMap().size() + roomDB.getAreaNamesMap().size());
-    const QMap<int, QString>& areaNames = roomDB.getAreaNamesMap();
-    for (auto it = areaNames.cbegin(); it != areaNames.cend(); ++it) {
-        // Only an area with rooms has a place to fly to
-        const TArea* pArea = roomDB.getAreaMap().value(it.key());
-        const QString name = it.value().simplified();
-        if (pArea && !pArea->getAreaRooms().isEmpty() && !name.isEmpty()) {
-            mEntries.append({Kind::Area, it.key(), it.key(), name.toCaseFolded(), name});
-        }
-    }
+    // Only an area with a room to show has a place to fly to
+    QSet<int> areasShown;
     const QHash<int, TRoom*>& rooms = roomDB.getRoomMap();
     for (auto it = rooms.cbegin(); it != rooms.cend(); ++it) {
         const TRoom* pRoom = it.value();
         if (pRoom->isHidden()) {
             continue;
         }
+        areasShown.insert(pRoom->getArea());
         // Unnamed rooms are kept too, to be found by their ID
         const QString name = pRoom->name.simplified();
         mEntries.append({Kind::Room, it.key(), pRoom->getArea(), name.toCaseFolded(), name});
+    }
+    const QMap<int, QString>& areaNames = roomDB.getAreaNamesMap();
+    for (auto it = areaNames.cbegin(); it != areaNames.cend(); ++it) {
+        const QString name = it.value().simplified();
+        if (areasShown.contains(it.key()) && roomDB.getAreaMap().contains(it.key()) && !name.isEmpty()) {
+            mEntries.append({Kind::Area, it.key(), it.key(), name.toCaseFolded(), name});
+        }
     }
     const QMap<int, TArea*>& areas = roomDB.getAreaMap();
     for (auto it = areas.cbegin(); it != areas.cend(); ++it) {
