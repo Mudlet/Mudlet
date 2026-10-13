@@ -4890,7 +4890,7 @@ describe("Tests saveJsonMap and loadJsonMap", function()
     end
 
     -- getMapLabel() reports neither the outline nor the font, so they are
-    -- read from what a second export makes of the imported labels (#10680)
+    -- read from what a second export makes of the imported labels
     it("puts a map label's outline colour back, and no font on a label that had none", function()
       deleteMap()
       local area = addAreaName("MapperSpecJsonLabelOutlineArea")
@@ -4911,25 +4911,15 @@ describe("Tests saveJsonMap and loadJsonMap", function()
       assert.is_nil(after[fontlessId].font)
     end)
 
-    it("takes a label's outline colour and font from the area user data of a file that has them only there", function()
-      deleteMap()
-      local area = addAreaName("MapperSpecJsonLabelFallbackArea")
-      roomA = createRoomID(); addRoom(roomA); setRoomArea(roomA, area)
-      local labelId = createMapLabel(area, "Fallback", 0, 0, 0, 255, 255, 255, 0, 0, 0,
-                                     30.0, 12, true, false, "", 255, 50, false)
+    local function rewriteExportedArea(area, edit)
       assert.is_true(saveJsonMap(jsonPath))
       local file = assert(io.open(jsonPath, "r"))
       local document = yajl.to_value(file:read("*a"))
       file:close()
       for _, exportedArea in ipairs(document.areas) do
         if exportedArea.id == area then
-          for _, label in ipairs(exportedArea.labels) do
-            label.outlineColor = nil
-            label.font = nil
-          end
           exportedArea.userData = exportedArea.userData or {}
-          exportedArea.userData["system.labelOutlineColor_" .. labelId] = "0|128|255|255"
-          exportedArea.userData["system.labelFont_" .. labelId] = "Bitstream Vera Sans|12|400|0"
+          edit(exportedArea)
         end
       end
       file = assert(io.open(jsonPath, "w"))
@@ -4937,12 +4927,48 @@ describe("Tests saveJsonMap and loadJsonMap", function()
       file:close()
       deleteMap()
       assert.is_true(loadJsonMap(jsonPath))
+    end
+
+    it("takes a label's outline colour from the area user data of a file that has it only there", function()
+      deleteMap()
+      local area = addAreaName("MapperSpecJsonLabelFallbackArea")
+      roomA = createRoomID(); addRoom(roomA); setRoomArea(roomA, area)
+      local labelId = createMapLabel(area, "Fallback", 0, 0, 0, 255, 255, 255, 0, 0, 0,
+                                     30.0, 12, true, false, "", 255, 50, false)
+      -- an older Mudlet's export after a binary save: outline colours only in
+      -- the area user data, beside a font key left over from a deleted label
+      rewriteExportedArea(area, function(exportedArea)
+        for _, label in ipairs(exportedArea.labels) do
+          label.outlineColor = nil
+        end
+        exportedArea.userData["system.labelOutlineColor_" .. labelId] = "0|128|255|255"
+        exportedArea.userData["system.labelFont_" .. labelId] = "Bitstream Vera Sans|12|400|0"
+      end)
 
       local after = exportedLabels(area)
       assert.are.same({0, 128, 255}, after[labelId].outlineColor.color24RGB)
-      assert.are.equal("Bitstream Vera Sans", after[labelId].font.family)
+      -- every writer leaves "font" out exactly when the label has none, so a
+      -- font key beside such a label belonged to an earlier one with its id
+      assert.is_nil(after[labelId].font)
       assert.is_nil(getAllAreaUserData(area)["system.labelOutlineColor_" .. labelId])
       assert.is_nil(getAllAreaUserData(area)["system.labelFont_" .. labelId])
+    end)
+
+    it("takes a label's outline colour from the area user data when the file's own is unreadable", function()
+      deleteMap()
+      local area = addAreaName("MapperSpecJsonLabelBadOutlineArea")
+      roomA = createRoomID(); addRoom(roomA); setRoomArea(roomA, area)
+      local labelId = createMapLabel(area, "Unreadable", 0, 0, 0, 255, 255, 255, 0, 0, 0,
+                                     30.0, 12, true, false, "Bitstream Vera Sans", 255, 50, false, 0, 128, 255)
+      rewriteExportedArea(area, function(exportedArea)
+        for _, label in ipairs(exportedArea.labels) do
+          label.outlineColor = {color24RGB = {255, 255}}
+        end
+        exportedArea.userData["system.labelOutlineColor_" .. labelId] = "255|0|0|255"
+      end)
+
+      assert.are.same({255, 0, 0}, exportedLabels(area)[labelId].outlineColor.color24RGB)
+      assert.is_nil(getAllAreaUserData(area)["system.labelOutlineColor_" .. labelId])
     end)
 
     it("does not give a deleted label's font to a later label given its id", function()

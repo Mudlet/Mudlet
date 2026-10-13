@@ -885,6 +885,8 @@ std::pair<int, QString> TArea::readJsonArea(const QJsonArray& array, const int a
     if (areaObj.contains(QLatin1String("labels")) && areaObj.value(QLatin1String("labels")).isArray()) {
         readJsonLabels(areaObj);
     }
+    // only once the labels have taken the outline colors an older export left here
+    dropFileOnlyUserData(mUserData);
     return {id, name};
 }
 
@@ -938,8 +940,6 @@ void TArea::readJsonUserData(const QJsonObject& obj)
             mUserData.insert(key, obj.value(key).toString());
         }
     }
-    // a JSON label keeps its font in its own fields and nothing reads these
-    dropFileOnlyUserData(mUserData);
 }
 
 void TArea::writeJsonLabels(QJsonObject& obj) const
@@ -1091,13 +1091,12 @@ void TArea::readJsonLabel(const QJsonObject& labelObj)
 
     label.noScaling = !labelObj.value(QLatin1String("scaledels")).toBool(true);
 
-    if (labelObj.value(QLatin1String("outlineColor")).isObject()) {
-        const QColor outlineColor = TMap::readJsonColor(labelObj.value(QLatin1String("outlineColor")).toObject());
-        if (outlineColor.isValid()) {
-            label.outlineColor = outlineColor;
-        }
+    const QColor outlineColor = TMap::readJsonColor(labelObj.value(QLatin1String("outlineColor")).toObject());
+    if (outlineColor.isValid()) {
+        label.outlineColor = outlineColor;
     } else {
-        // A file exported after a binary save had put the binary format's copy in the area's user data
+        // Older Mudlet wrote no outline field, but its exports after a binary
+        // save carried the binary format's copy in the area's user data
         TMap::restoreLabelOutlineColorFromUserData(label, labelId, mUserData);
     }
 
@@ -1109,9 +1108,9 @@ void TArea::readJsonLabel(const QJsonObject& labelObj)
                            fontObj.value(QLatin1String("italic")).toBool());
     } else {
         // A default QFont has the application's family, which would give the
-        // label a font it never had - the writer leaves the key out for none
+        // label a font it never had. A font key in the area's user data is not
+        // this label's: a save writes one exactly when it writes "font" too.
         label.font = QFont(QString());
-        TMap::restoreLabelFontFromUserData(label, labelId, mUserData);
     }
 
     mMapLabels.insert(labelId, label);
