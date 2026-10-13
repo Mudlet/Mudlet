@@ -225,22 +225,23 @@ private:
 #endif
 };
 
-// Qt reports a format error in Mudlet.ini only to the first QSettings that parses it, which on most
-// platforms is applyHighDpiRoundingPolicyFromConfig()'s, so what that one heard is kept for the
-// command line text
-static QSettings::Status earlySettingsStatus = QSettings::NoError;
-
 QTranslator* loadTranslationsForCommandLine(const bool printAndExitRun)
 {
     // Not MudletApp::getQSettings(): it stays null until setupConfig(), which a --help or --version run never
     // reaches. Same file and format as setupConfig() opens - keep the spellings in step.
     QSettings settings(qsl("%1/Mudlet.ini").arg(MudletApp::getMudletPath(enums::mainPath)), QSettings::IniFormat);
     MudletApp::noteEarlySettingsStatus(settings);
-    const QSettings::Status settingsStatus = settings.status() != QSettings::NoError ? settings.status() : earlySettingsStatus;
+    // By name: only the first reader to parse a file is told of a format error, and the reader before this
+    // one, applyHighDpiRoundingPolicyFromConfig()'s, finds its root from argv[0] so it can have parsed another file
+    const QSettings::Status settingsStatus = MudletApp::earlySettingsStatus(settings.fileName());
     // Other runs have getQSettings() report this, which a print-and-exit run never calls
-    if (printAndExitRun && settingsStatus != QSettings::NoError) {
-        qWarning().nospace().noquote() << "loadTranslationsForCommandLine() WARNING - \"" << settings.fileName() << "\" is "
-                                       << (settingsStatus == QSettings::FormatError ? "not valid INI" : "not readable") << ", so any interface language set in it is not used for this text.";
+    if (printAndExitRun && settingsStatus == QSettings::FormatError) {
+        // Qt keeps every key it could parse, so a language set there may still be in use
+        qWarning().nospace().noquote() << "loadTranslationsForCommandLine() WARNING - \"" << settings.fileName()
+                                       << "\" is not valid INI, so an interface language set in it may have been read wrongly or not at all.";
+    } else if (printAndExitRun && settingsStatus != QSettings::NoError) {
+        qWarning().nospace().noquote() << "loadTranslationsForCommandLine() WARNING - \"" << settings.fileName()
+                                       << "\" is not readable, so any interface language set in it is not used for this text.";
     }
     auto interfaceLanguage = settings.value(QLatin1String("interfaceLanguage")).toString();
     auto userLocale = interfaceLanguage.isEmpty() ? QLocale::system() : QLocale(interfaceLanguage);
@@ -261,7 +262,8 @@ QTranslator* loadTranslationsForCommandLine(const bool printAndExitRun)
     // it:
     const bool isOk = pMudletTranslator->load(userLocale, qsl("mudlet"), QString("_"), qsl(":/lang"), qsl(".qm"));
     if (!isOk) {
-        if (!interfaceLanguage.isEmpty()) {
+        // Only a print-and-exit run prints the text this is about
+        if (printAndExitRun && !interfaceLanguage.isEmpty()) {
             qWarning().nospace().noquote() << "loadTranslationsForCommandLine() WARNING - no translation could be loaded for the interface language \"" << interfaceLanguage
                                            << "\", so the command line text is in English.";
         }
@@ -331,7 +333,6 @@ static void applyHighDpiRoundingPolicyFromConfig(int argc, char* argv[])
 
     const QSettings settings(iniPath, QSettings::IniFormat);
     MudletApp::noteEarlySettingsStatus(settings);
-    earlySettingsStatus = settings.status();
     const QString value = settings.value(qsl("highDpiScaleFactorRoundingPolicy")).toString();
     if (value.isEmpty()) {
         return;

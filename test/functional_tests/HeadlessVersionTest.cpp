@@ -89,7 +89,7 @@ private:
         return QFileInfo::exists(qsl("%1/portable.txt").arg(QFileInfo(appBinary()).absolutePath())) || QFileInfo::exists(qsl("%1/.config/mudlet/portable.txt").arg(QDir::homePath()));
     }
 
-    static QProcessEnvironment childEnvironment(const QTemporaryDir& sandbox, const QString& platformPlugin)
+    static QProcessEnvironment childEnvironment(const QTemporaryDir& sandbox, const QString& platformPlugin, const QString& systemLocale)
     {
         QProcessEnvironment environment = QProcessEnvironment::systemEnvironment();
         // ctest sets QT_QPA_PLATFORM=offscreen for every functional test and the
@@ -104,8 +104,11 @@ private:
         // in English. The C locale also makes loadTranslationsForCommandLine()
         // return early, rather than the rows depending on which catalogues this
         // build ships.
-        environment.insert(qsl("LC_ALL"), qsl("C"));
-        environment.insert(qsl("LANG"), qsl("C"));
+        environment.insert(qsl("LC_ALL"), systemLocale);
+        environment.insert(qsl("LANG"), systemLocale);
+        // Set, it stops applyHighDpiRoundingPolicyFromConfig() reading Mudlet.ini,
+        // and so changes which reader is first to parse it and hear of its errors
+        environment.remove(qsl("QT_SCALE_FACTOR_ROUNDING_POLICY"));
         // A root of its own per run, so the child reads none of the developer's
         // profiles and leaves nothing behind.
         environment.insert(qsl("XDG_CONFIG_HOME"), qsl("%1/config").arg(sandbox.path()));
@@ -117,12 +120,16 @@ private:
     }
 
     // Reports rather than asserts: a QVERIFY2 in a helper returns from the
-    // helper only, which would let a failing row carry on into its later checks
+    // helper only, which would let a failing row carry on into its later checks.
     // An unreadable settings file is a directory in its place, as a test run as
-    // root reads a file whatever its permissions say. Raw settings contents are written as they are,
-    // for a file QSettings cannot parse.
-    static RunOutcome
-    runChild(const QStringList& arguments, const QString& platformPlugin, const QString& settingsLanguage, const bool settingsUnreadable = false, const QByteArray& settingsContents = QByteArray())
+    // root reads a file whatever its permissions say. Raw settings contents are
+    // written byte for byte, for a file QSettings itself would never write.
+    static RunOutcome runChild(const QStringList& arguments,
+                               const QString& platformPlugin,
+                               const QString& settingsLanguage,
+                               const bool settingsUnreadable = false,
+                               const QByteArray& settingsContents = QByteArray(),
+                               const QString& systemLocale = qsl("C"))
     {
         RunOutcome outcome;
 
@@ -159,7 +166,7 @@ private:
         }
 
         QProcess mudlet;
-        mudlet.setProcessEnvironment(childEnvironment(sandbox, platformPlugin));
+        mudlet.setProcessEnvironment(childEnvironment(sandbox, platformPlugin, systemLocale));
         mudlet.setProgram(appBinary());
         mudlet.setArguments(arguments);
         mudlet.start();
@@ -279,23 +286,29 @@ private slots:
     void languageProblemsAreReported_data()
     {
         QTest::addColumn<QStringList>("arguments");
-        // Empty leaves the sandbox without a settings file at all
         QTest::addColumn<QString>("settingsLanguage");
         QTest::addColumn<bool>("settingsUnreadable");
-        // Written as they are when not empty
         QTest::addColumn<QByteArray>("settingsContents");
+        QTest::addColumn<QString>("systemLocale");
         QTest::addColumn<QStringList>("errorMustContain");
         QTest::addColumn<QStringList>("errorMustNotContain");
 
-        QTest::newRow("--help, settings ask for a language with no translation")
-                << QStringList{qsl("--help")} << qsl("sw_KE") << false << QByteArray() << QStringList{qsl("\"sw_KE\"")} << QStringList();
-        QTest::newRow("--help, settings ask for no locale at all") << QStringList{qsl("--help")} << qsl("xx-not-a-locale") << false << QByteArray() << QStringList{qsl("\"xx-not-a-locale\"")}
-                                                                   << QStringList();
-        QTest::newRow("--help, settings file unreadable") << QStringList{qsl("--help")} << QString() << true << QByteArray() << QStringList{qsl("Mudlet.ini\" is not readable")} << QStringList();
-        // A broken section header is caught as the file is opened
-        QTest::newRow("--help, settings file not valid INI") << QStringList{qsl("--help")} << QString() << false << QByteArray("[General]\ninterfaceLanguage=de_DE\n[Broken\n")
-                                                             << QStringList{qsl("Mudlet.ini\" is not valid INI")} << QStringList();
-        QTest::newRow("--help, settings ask for German") << QStringList{qsl("--help")} << qsl("de_DE") << false << QByteArray() << QStringList() << QStringList{qsl("WARNING")};
+        const QStringList help{qsl("--help")};
+        const QByteArray notIni("[General]\ninterfaceLanguage=de_DE\n[Broken\n");
+
+        QTest::newRow("--help, settings ask for a language with no translation") << help << qsl("sw_KE") << false << QByteArray() << qsl("C") << QStringList{qsl("\"sw_KE\"")} << QStringList();
+        QTest::newRow("--help, settings ask for no locale at all") << help << qsl("xx-not-a-locale") << false << QByteArray() << qsl("C") << QStringList{qsl("\"xx-not-a-locale\"")} << QStringList();
+        QTest::newRow("--help, settings file unreadable") << help << QString() << true << QByteArray() << qsl("C") << QStringList{qsl("Mudlet.ini\" is not readable")} << QStringList();
+        // Qt keeps the keys it could parse, so the German asked for here may
+        // still be applied, and the warning must not say otherwise
+        QTest::newRow("--help, settings file not valid INI") << help << QString() << false << notIni << qsl("C") << QStringList{qsl("Mudlet.ini\" is not valid INI")}
+                                                             << QStringList{qsl("is not used")};
+        QTest::newRow("--version, settings file not valid INI") << QStringList{qsl("--version")} << QString() << false << notIni << qsl("C") << QStringList{qsl("Mudlet.ini\" is not valid INI")}
+                                                                << QStringList();
+        // A language nobody set is not worth a warning, even when the system's
+        // has no translation
+        QTest::newRow("--help, system locale with no translation") << help << QString() << false << QByteArray() << qsl("sw_KE.UTF-8") << QStringList() << QStringList{qsl("WARNING")};
+        QTest::newRow("--help, settings ask for German") << help << qsl("de_DE") << false << QByteArray() << qsl("C") << QStringList() << QStringList{qsl("WARNING")};
     }
 
     void languageProblemsAreReported()
@@ -304,6 +317,7 @@ private slots:
         QFETCH(QString, settingsLanguage);
         QFETCH(bool, settingsUnreadable);
         QFETCH(QByteArray, settingsContents);
+        QFETCH(QString, systemLocale);
         QFETCH(QStringList, errorMustContain);
         QFETCH(QStringList, errorMustNotContain);
 
@@ -312,11 +326,12 @@ private slots:
             QSKIP("a portable.txt would send the child at the real config instead of the sandbox");
         }
 
-        const RunOutcome outcome = runChild(arguments, bogusPlatformPlugin(), settingsLanguage, settingsUnreadable, settingsContents);
+        const RunOutcome outcome = runChild(arguments, bogusPlatformPlugin(), settingsLanguage, settingsUnreadable, settingsContents, systemLocale);
         const QString where = arguments.join(QChar::Space);
         QVERIFY2(outcome.processFailure.isEmpty(), qPrintable(qsl("mudlet %1: %2").arg(where, outcome.processFailure)));
 
         const QString diagnostics = qsl("%1, stdout:\n%2\nstderr:\n%3").arg(where, outcome.standardOutput, outcome.standardError);
+        QVERIFY2(!outcome.standardError.contains(qsl("QGuiApplication")), qPrintable(qsl("main() reached GUI code with no QApplication; %1").arg(diagnostics)));
         QVERIFY2(outcome.exitStatus == QProcess::NormalExit && outcome.exitCode == 0, qPrintable(qsl("mudlet %1 did not exit cleanly; %2").arg(where, diagnostics)));
 
         for (const QString& expected : errorMustContain) {
