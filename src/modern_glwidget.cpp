@@ -2917,7 +2917,7 @@ void ModernGLWidget::goToSearchResult(const MapSearch::Result& result)
         }
         return;
     case MapSearch::Kind::Room:
-        if (const TRoom* pRoom = mpMap->mpRoomDB->getRoom(result.id)) {
+        if (const TRoom* pRoom = mpMap->mpRoomDB->getRoom(result.id); pRoom && !pRoom->isHidden()) {
             const int areaId = pRoom->getArea();
             flyToPoint(areaId, QVector3D(static_cast<float>(pRoom->x()), static_cast<float>(pRoom->y()), static_cast<float>(pRoom->z())), arrivalDistance(areaId));
             mSearchMarkedRoomId = result.id;

@@ -1901,6 +1901,15 @@ private slots:
         QCOMPARE(flownInto.size(), 3);
         finishFlight(widget);
 
+        // Nor one hidden since
+        widget.mpSearchPanel->mpEdit->setText(qsl("lighthouse"));
+        map()->mpRoomDB->getRoom(target)->setHidden(true);
+        widget.chooseSearchResult(0, false);
+        QCOMPARE(widget.mAID, westId);
+        QVERIFY(!widget.mFlight);
+        map()->mpRoomDB->getRoom(target)->setHidden(false);
+        widget.mpSearchPanel->mpEdit->clear();
+
         // A room taken off the map since it was found is not gone to
         widget.mpSearchPanel->mpEdit->setText(qsl("lighthouse"));
         map()->mpRoomDB->removeRoom(target);
@@ -1913,6 +1922,10 @@ private slots:
         // Escape closes it
         QKeyEvent escape(QEvent::KeyPress, Qt::Key_Escape, Qt::NoModifier);
         QCoreApplication::sendEvent(widget.mpSearchPanel->mpEdit, &escape);
+        QVERIFY(widget.mpSearchPanel->isHidden());
+        // Wherever in the panel the focus is
+        widget.openSearch();
+        QCoreApplication::sendEvent(widget.mpSearchPanel->mpLabels, &escape);
         QVERIFY(widget.mpSearchPanel->isHidden());
 
         map()->mRoomIdHash[map()->mProfileName] = 0;

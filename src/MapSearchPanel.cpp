@@ -81,7 +81,8 @@ MapSearchPanel::MapSearchPanel(QWidget* parent)
     connect(mpEdit, &QLineEdit::textChanged, this, &MapSearchPanel::queryChanged);
     connect(mpLabels, &QCheckBox::toggled, this, &MapSearchPanel::queryChanged);
     connect(closeButton, &QToolButton::clicked, this, &MapSearchPanel::dismiss);
-    connect(mpList, &QListWidget::itemActivated, this, [this]() {
+    // Clicked, not activated, which most styles keep for a double click
+    connect(mpList, &QListWidget::itemClicked, this, [this]() {
         emit resultChosen(mpList->currentRow(), false);
     });
     connect(mpList, &QListWidget::customContextMenuRequested, this, [this](const QPoint& position) {
@@ -133,6 +134,10 @@ void MapSearchPanel::setResults(const QStringList& lines, const QString& summary
 
 void MapSearchPanel::keyPressEvent(QKeyEvent* event)
 {
+    // From the checkbox or the close button, which leave it to the panel
+    if (event->key() == Qt::Key_Escape) {
+        dismiss();
+    }
     // A key the box leaves, such as Shift on its own, would go on up to the map, which hands keys to the command line
     event->accept();
 }
