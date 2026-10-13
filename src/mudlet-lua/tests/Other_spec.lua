@@ -1288,8 +1288,6 @@ describe("Tests Other.lua functions", function()
     end)
 
     it("round-trips the 2D map room symbol font", function()
-      -- Unlike the other map keys these do not need an open mapper, because the
-      -- settings live on the map object rather than the mapper widget.
       local original = getConfig("mapSymbolFont")
       assert.is_string(original)
       snapshot("mapSymbolFont")
@@ -1568,7 +1566,7 @@ describe("Tests Other.lua functions", function()
     end)
 
     it("refuses a mapRoomSize below 1", function()
-      assert.is_true(openMapWidget(), "mapRoomSize cannot be set without the map widget")
+      assert.is_true(openMapWidget(), "could not open the map widget")
       snapshot("mapRoomSize")
       finally(function() restore("mapRoomSize") end)
       assert.is_true(setConfig("mapRoomSize", 7))
@@ -1600,7 +1598,7 @@ describe("Tests Other.lua functions", function()
     -- 12.5 for a 4, and getConfig() answers that - so setConfig() has to take it
     -- back as it is for a script restoring the settings it changed.
     it("round-trips a mapExitSize that is not a whole number", function()
-      assert.is_true(openMapWidget(), "mapExitSize cannot be set without the map widget")
+      assert.is_true(openMapWidget(), "could not open the map widget")
       snapshot("mapExitSize")
       finally(function() restore("mapExitSize") end)
       assert.is_true(setConfig("mapExitSize", 12.5))
@@ -1615,7 +1613,7 @@ describe("Tests Other.lua functions", function()
     -- preferences, so a value that is not a finite number of at least 1 must
     -- never reach it.
     it("rejects a mapExitSize that is not a finite number of at least 1", function()
-      assert.is_true(openMapWidget(), "mapExitSize cannot be set without the map widget")
+      assert.is_true(openMapWidget(), "could not open the map widget")
       snapshot("mapExitSize")
       finally(function() restore("mapExitSize") end)
       assert.is_true(setConfig("mapExitSize", 10))
