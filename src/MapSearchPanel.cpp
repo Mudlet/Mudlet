@@ -49,7 +49,7 @@ MapSearchPanel::MapSearchPanel(QWidget* parent)
     mpEdit->setPlaceholderText(tr("Find a room, area or label"));
     //: Tooltip of the search box over the 3D map
     mpEdit->setToolTip(tr("<p>Searches every area of the map for room names, area names, room numbers and map labels.</p>"
-                          "<p>Enter flies to the place chosen, Ctrl+Enter plans a route there, Escape closes the search.</p>"));
+                          "<p>Enter flies to the place chosen, Ctrl+Enter plans a route to a room or area, Escape closes the search.</p>"));
     mpEdit->setClearButtonEnabled(true);
     //: Checkbox by the search box over the 3D map: whether map labels are searched too
     mpLabels = new QCheckBox(tr("Labels"), this);
@@ -129,7 +129,6 @@ void MapSearchPanel::setResults(const QStringList& lines, const QString& summary
     mpList->setVisible(!lines.isEmpty());
     mpSummary->setText(summary);
     mpSummary->setVisible(!summary.isEmpty());
-    adjustSize();
 }
 
 void MapSearchPanel::keyPressEvent(QKeyEvent* event)

@@ -77,6 +77,9 @@ bool MapSearch::refresh(const TMap& map)
     const QHash<int, TRoom*>& rooms = roomDB.getRoomMap();
     for (auto it = rooms.cbegin(); it != rooms.cend(); ++it) {
         const TRoom* pRoom = it.value();
+        if (pRoom->isHidden()) {
+            continue;
+        }
         // Unnamed rooms are kept too, to be found by their ID
         const QString name = pRoom->name.simplified();
         mEntries.append({Kind::Room, it.key(), pRoom->getArea(), name.toCaseFolded(), name});

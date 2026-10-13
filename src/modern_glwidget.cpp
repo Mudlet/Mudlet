@@ -114,7 +114,8 @@ ModernGLWidget::ModernGLWidget(TMap* pMap, Host* pHost, QWidget* parent)
     mSearchMarkTimer = new QTimer(this);
     mSearchMarkTimer->setInterval(33ms);
     connect(mSearchMarkTimer, &QTimer::timeout, this, [this]() {
-        if (mSearchMarkTime.elapsed() >= scmSearchMarkMilliseconds) {
+        const TRoom* pRoom = mpMap && mpMap->mpRoomDB ? mpMap->mpRoomDB->getRoom(mSearchMarkedRoomId) : nullptr;
+        if (mSearchMarkTime.elapsed() >= scmSearchMarkMilliseconds || !pRoom || pRoom->getArea() != mAID) {
             mSearchMarkTimer->stop();
             mSearchMarkedRoomId = 0;
         }
@@ -2843,25 +2844,39 @@ void ModernGLWidget::chooseSearchResult(const int row, const bool planRoute)
     if (row < 0 || row >= mSearchResults.size() || !mpMap) {
         return;
     }
-    MapSearch::Result result = mSearchResults.at(row);
-    if (mSearch.stale(*mpMap)) {
-        // Found again, so a place since taken off the map is not gone to
-        runSearch();
-        const auto same = std::find_if(mSearchResults.cbegin(), mSearchResults.cend(), [&result](const MapSearch::Result& found) {
-            return found.kind == result.kind && found.id == result.id && found.areaId == result.areaId;
-        });
-        if (same == mSearchResults.cend()) {
-            return;
-        }
-        result = *same;
-    }
+    // A copy, as the list may be made again below
+    const MapSearch::Result result = mSearchResults.at(row);
     if (!planRoute) {
         goToSearchResult(result);
-    } else if (result.kind == MapSearch::Kind::Room) {
-        planRouteToRoom(result.id);
-    } else if (result.kind == MapSearch::Kind::Area) {
-        planRouteToArea(result.id);
+    } else if (routableSearchResult(result)) {
+        if (result.kind == MapSearch::Kind::Room) {
+            planRouteToRoom(result.id);
+        } else {
+            planRouteToArea(result.id);
+        }
     }
+    // Places taken off the map since it was listed go from the list too
+    if (mSearch.stale(*mpMap)) {
+        runSearch();
+    }
+}
+
+bool ModernGLWidget::routableSearchResult(const MapSearch::Result& result) const
+{
+    if (!mpMap || !mpMap->mpRoomDB) {
+        return false;
+    }
+    // Not to where the player is, which would only drop the route planned already, as the view's own menu does
+    const TRoom* pPlayerRoom = mpMap->mpRoomDB->getRoom(mpMap->mRoomIdHash.value(mpMap->mProfileName));
+    switch (result.kind) {
+    case MapSearch::Kind::Room:
+        return mpMap->mpRoomDB->getRoom(result.id) && (!pPlayerRoom || pPlayerRoom->getId() != result.id);
+    case MapSearch::Kind::Area:
+        return mpMap->mpRoomDB->getArea(result.id) && (!pPlayerRoom || pPlayerRoom->getArea() != result.id);
+    case MapSearch::Kind::Label:
+        break;
+    }
+    return false;
 }
 
 void ModernGLWidget::showSearchResultMenu(const int row, const QPoint& globalPosition)
@@ -2875,7 +2890,7 @@ void ModernGLWidget::showSearchResultMenu(const int row, const QPoint& globalPos
     connect(menu->addAction(tr("Go there")), &QAction::triggered, this, [this, row]() {
         chooseSearchResult(row, false);
     });
-    if (mSearchResults.at(row).kind != MapSearch::Kind::Label) {
+    if (routableSearchResult(mSearchResults.at(row))) {
         //: Context menu item on a room or area found by the search over the 3D map: shows the route from the player's room to it, at every zoom
         connect(menu->addAction(tr("Plan route here")), &QAction::triggered, this, [this, row]() {
             chooseSearchResult(row, true);
@@ -2891,7 +2906,9 @@ void ModernGLWidget::goToSearchResult(const MapSearch::Result& result)
     }
     switch (result.kind) {
     case MapSearch::Kind::Area:
-        flyToArea(result.id);
+        if (mpMap->mpRoomDB->getArea(result.id)) {
+            flyToArea(result.id);
+        }
         return;
     case MapSearch::Kind::Room:
         if (const TRoom* pRoom = mpMap->mpRoomDB->getRoom(result.id)) {
@@ -2908,7 +2925,7 @@ void ModernGLWidget::goToSearchResult(const MapSearch::Result& result)
             // pos is its top-left corner
             const QVector3D middle(static_cast<float>(label.pos.x() + std::abs(label.size.width()) / 2.0),
                                    static_cast<float>(label.pos.y() - std::abs(label.size.height()) / 2.0),
-                                   static_cast<float>(GeometryManager::labelLevel(label.pos.z()).value_or(qRound(label.pos.z()))));
+                                   static_cast<float>(GeometryManager::labelLevel(label.pos.z()).value_or(0)));
             flyToPoint(result.areaId, middle, arrivalDistance(result.areaId));
         }
         return;
