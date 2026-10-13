@@ -2562,8 +2562,10 @@ private slots:
         }
         QVERIFY2(path, "the exit between the rooms is not a path");
 
-        // The shaft up from the room below, one-way and so in two pieces, rises from where it did, clear of the block's top
+        // The shaft up from the room below, one-way and so in two pieces, starts on the ground as the paths do but rises
+        // from where it did, clear of the block's top
         float shaftTop = std::numeric_limits<float>::lowest();
+        float shaftFoot = std::numeric_limits<float>::max();
         for (const auto& command : commands) {
             if (const auto* cubes = dynamic_cast<const RenderInstancedCubesCommand*>(command.get()); cubes && cubes->shading() == RenderCommand::Shading::ModelPath) {
                 for (const CubeInstanceData& cube : cubes->instances()) {
@@ -2571,11 +2573,13 @@ private slots:
                     const float halfLength = cube.transform.column(0).z();
                     if (qAbs(center.x()) < 1e-4f && qAbs(center.y() - 2.0f) < 1e-4f && halfLength > 0.01f) {
                         shaftTop = qMax(shaftTop, center.z() + halfLength);
+                        shaftFoot = qMin(shaftFoot, center.z() - halfLength);
                     }
                 }
             }
         }
         QVERIFY2(shaftTop > -1.0f + roomHeight / 2.0f + 0.1f, qPrintable(qsl("the shaft only reaches %1").arg(shaftTop)));
+        QVERIFY2(shaftFoot < -1.0f - roomHeight / 4.0f, qPrintable(qsl("the shaft starts at %1, off the ground").arg(shaftFoot)));
     }
 
     // Looking down: the felt is fuzzy, a room's top is lighter on the edge toward the light than on the far one, the
