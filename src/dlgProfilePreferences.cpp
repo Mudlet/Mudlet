@@ -5109,7 +5109,11 @@ void dlgProfilePreferences::loadEditorTab()
     script_preview_combobox->setMaxVisibleItems(20);
     script_preview_combobox->setDuplicatesEnabled(true);
 
-    theme_download_label->hide();
+    // Once fetched, the label reports how that went for as long as the dialog is open, and this runs again
+    // every time the dialog is reactivated
+    if (!mEditorThemesChecked) {
+        theme_download_label->hide();
+    }
 
     checkBox_autocompleteLuaCode->setChecked(pHost->mEditorAutoComplete);
     checkBox_showBidi->setChecked(pHost->getEditorShowBidi());
@@ -7323,9 +7327,6 @@ void dlgProfilePreferences::maybeDownloadEditorThemes()
         return;
     }
 
-    // An earlier attempt may have left its failure on the label
-    //: Shown under the editor theme list in the preferences while the latest themes are being downloaded
-    theme_download_label->setText(tr("Updating themes from colorsublime.github.io..."));
     theme_download_label->show();
 
     auto manager = new QNetworkAccessManager(this);
@@ -7344,12 +7345,15 @@ void dlgProfilePreferences::maybeDownloadEditorThemes()
     pHost->updateProxySettings(manager);
     QNetworkReply* getReply = manager->get(request);
 
-    // Left on show until the next attempt: the themes listed are then not the latest
-    auto failThemeUpdate = [this](const QString& reason) {
-        qWarning() << "dlgProfilePreferences: could not update the editor themes:" << reason;
-        //: Shown under the editor theme list in the preferences; %1 is why the download failed, either a network error or "the downloaded themes could not be unpacked"
+    // Not put away on a timer: the themes listed stay out of date for as long as the dialog is open
+    auto failThemeUpdate = [this](const QString& reason, const QString& loggedReason = QString()) {
+        qWarning() << "dlgProfilePreferences: could not update the editor themes:" << (loggedReason.isEmpty() ? reason : loggedReason);
+        //: Shown under the editor theme list in the preferences; %1 is why the update failed: a network or file system error from the system, or "the downloaded themes could not be unpacked"
         theme_download_label->setText(tr("Could not update themes: %1").arg(reason));
-        theme_download_label->show();
+        // A profile closed mid-fetch has greyed this page out and put the label away
+        if (mpHost) {
+            theme_download_label->show();
+        }
     };
 
     connect(getReply, &QNetworkReply::errorOccurred, this, [=, this](QNetworkReply::NetworkError) {
@@ -7368,6 +7372,7 @@ void dlgProfilePreferences::maybeDownloadEditorThemes()
                         }
 
                         const QByteArray downloadedArchive = reply->readAll();
+                        const QUrl fetchedUrl = reply->url();
                         reply->deleteLater();
 
                         tempThemesArchive = new QTemporaryFile(this);
@@ -7376,7 +7381,9 @@ void dlgProfilePreferences::maybeDownloadEditorThemes()
                             tempThemesArchive->deleteLater();
                             return;
                         }
-                        if (tempThemesArchive->write(downloadedArchive) != downloadedArchive.size()) {
+                        // The tail of the archive is only buffered by write(), and close() cannot report it failing to
+                        // reach the disk. A short write leaves Qt no reason to give until the rest is tried again.
+                        if (tempThemesArchive->write(downloadedArchive) != downloadedArchive.size() || !(tempThemesArchive->flush() || tempThemesArchive->flush())) {
                             failThemeUpdate(tempThemesArchive->errorString());
                             tempThemesArchive->deleteLater();
                             return;
@@ -7400,8 +7407,11 @@ void dlgProfilePreferences::maybeDownloadEditorThemes()
 
                                 emit signal_themeUpdateCompleted();
                             } else {
+                                // PreferCache would otherwise hand the same unusable download to every later dialog
+                                diskCache->remove(fetchedUrl);
                                 //: Shown after "Could not update themes: " when the downloaded editor themes could not be unpacked
-                                failThemeUpdate(tr("the downloaded themes could not be unpacked"));
+                                const char* const unpackFailure = QT_TR_NOOP("the downloaded themes could not be unpacked");
+                                failThemeUpdate(tr(unpackFailure), QString::fromLatin1(unpackFailure));
                             }
 
                             tempThemesArchive->deleteLater();

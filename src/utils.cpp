@@ -82,6 +82,8 @@ bool utils::unzip(const QString& archivePath, const QString& destination, const 
         const QString folderToCreate = qsl("%1%2").arg(destination, itPath.value());
         if (!tmpDir.exists(folderToCreate)) {
             if (!tmpDir.mkpath(folderToCreate)) {
+                qWarning().noquote().nospace() << "utils::unzip(\"" << archivePath << "\", \"" << destination << "\", \"" << tmpDir.absolutePath() << "\") WARNING - could not create the folder \""
+                                               << folderToCreate << "\"";
                 zip_close(archive);
                 return false;
             }
@@ -109,6 +111,8 @@ bool utils::unzip(const QString& archivePath, const QString& destination, const 
             QFile fd(qsl("%1%2").arg(destination, entryInArchive));
 
             if (!fd.open(QIODevice::ReadWrite | QIODevice::Truncate)) {
+                qWarning().noquote().nospace() << "utils::unzip(\"" << archivePath << "\", \"" << destination << "\", \"" << tmpDir.absolutePath() << "\") WARNING - could not create \""
+                                               << fd.fileName() << "\", error: \"" << fd.errorString() << "\"";
                 zip_fclose(zf);
                 zip_close(archive);
                 return false;
@@ -129,6 +133,8 @@ bool utils::unzip(const QString& archivePath, const QString& destination, const 
                 }
 
                 if (fd.write(buf, len) == -1) {
+                    qWarning().noquote().nospace() << "utils::unzip(\"" << archivePath << "\", \"" << destination << "\", \"" << tmpDir.absolutePath() << "\") WARNING - could not write \""
+                                                   << fd.fileName() << "\", error: \"" << fd.errorString() << "\"";
                     fd.close();
                     zip_fclose(zf);
                     zip_close(archive);
