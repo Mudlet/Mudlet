@@ -7486,15 +7486,14 @@ void dlgTriggerEditor::moveVariableRowToSortedPlace(QTreeWidgetItem* pItem, TVar
             pendingItems.append(pEntry->child(i));
         }
     }
-    // Taking the current row would otherwise re-enter the selection slots,
-    // which save whatever row they then find current
+    // Taking the row out and putting the selection back both emit
+    // itemSelectionChanged, whose slot would refill the form in the middle of this save
     const QSignalBlocker blocker(treeWidget_variables);
     pParentItem->takeChild(from);
     pParentItem->insertChild(to, pItem);
     for (QTreeWidgetItem* pExpandedItem : std::as_const(expandedItems)) {
         pExpandedItem->setExpanded(true);
     }
-    // NoUpdate: a plain setCurrentItem() would also select only that row
     if (pCurrentItem && treeWidget_variables->currentItem() != pCurrentItem) {
         treeWidget_variables->setCurrentItem(pCurrentItem, 0, QItemSelectionModel::NoUpdate);
     }
