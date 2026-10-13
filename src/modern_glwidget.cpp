@@ -2859,7 +2859,7 @@ void ModernGLWidget::queueRouteInRooms()
         const TRoom* pR = mpMap->mpRoomDB->getRoom(roomId);
         if (!pR || pR->getArea() != mAID || pR->isHidden() || !levelShown(pR->z())) {
             // On into a neighboring area, as far as its rooms are drawn past this one's edge
-            if (const MapStitch::Room* pStitched = mStitch.areaId() == mAID ? mStitch.room(roomId) : nullptr) {
+            if (const MapStitch::Room* pStitched = stitchedRoom(roomId)) {
                 return pStitched->at + QVector3D(0.0f, 0.0f, lift + roomHeight / 2.0f + thickness / 2.0f);
             }
             return std::nullopt;
@@ -3254,7 +3254,7 @@ void ModernGLWidget::mousePressEvent(QMouseEvent* event)
         // or exit preview, which goes there on the release
         const bool plain = event->modifiers() == Qt::NoModifier;
         const int roomId = plain && portalAt(mPressPosition) < 0 ? roomPickedAt(mPressPosition, true, false, true) : 0;
-        if (roomId && !mStitch.room(roomId)) {
+        if (roomId && !stitchedRoom(roomId)) {
             selectRoom(roomId, event->modifiers());
         } else {
             mClickPending = true;
@@ -3400,7 +3400,7 @@ void ModernGLWidget::mouseReleaseEvent(QMouseEvent* event)
         } else if (portal >= 0) {
             const MapStitch::Portal& through = mStitch.portals().at(portal);
             flyToArea(through.toAreaId, through.toRoomId);
-        } else if (const int roomId = roomPickedAt(position, true, false, plain); mStitch.room(roomId)) {
+        } else if (const int roomId = roomPickedAt(position, true, false, plain); stitchedRoom(roomId)) {
             enterStitchedRoom(roomId);
         } else {
             selectRoom(roomId, event->modifiers());
@@ -3428,6 +3428,11 @@ void ModernGLWidget::mouseDoubleClickEvent(QMouseEvent* event)
         QOpenGLWidget::mouseDoubleClickEvent(event);
         return;
     }
+    // The first click of the two already flew to where the preview leads
+    if (portalAt(event->position().toPoint()) >= 0) {
+        event->accept();
+        return;
+    }
     if (const int roomId = destinationAt(event->position().toPoint())) {
         mp2DMap->initiateSpeedWalk(mpMap->mRoomIdHash.value(mpMap->mProfileName), roomId);
         update();
@@ -3444,7 +3449,7 @@ void ModernGLWidget::showContextMenu(const QPoint& position)
     // editing, as the 2D map shows this area; it can be gone to, or planned a route to
     const qsizetype portal = portalAt(position);
     const int pickedId = portal >= 0 ? 0 : roomPickedAt(position, true, false, true);
-    const bool elsewhere = portal >= 0 || mStitch.room(pickedId);
+    const bool elsewhere = portal >= 0 || stitchedRoom(pickedId);
     const int roomId = elsewhere ? 0 : pickedId;
     const int elsewhereRoomId = portal >= 0 ? mStitch.portals().at(portal).toRoomId : (elsewhere ? pickedId : 0);
     const TRoom* pElsewhere = elsewhereRoomId ? mpMap->mpRoomDB->getRoom(elsewhereRoomId) : nullptr;
@@ -3467,7 +3472,7 @@ void ModernGLWidget::showContextMenu(const QPoint& position)
         //: 3D map view context menu item, on a room of a neighboring area or a preview of one: moves the view into that area, at that room; %1 is the area's name
         auto* goThere = new QAction(tr("Go to %1").arg(areaName(elsewhereAreaId)), menu);
         connect(goThere, &QAction::triggered, this, [this, elsewhereRoomId, elsewhereAreaId]() {
-            if (mStitch.room(elsewhereRoomId)) {
+            if (stitchedRoom(elsewhereRoomId)) {
                 enterStitchedRoom(elsewhereRoomId);
             } else {
                 flyToArea(elsewhereAreaId, elsewhereRoomId);
@@ -4164,6 +4169,11 @@ QVector3D mapStep(const int direction)
 }
 } // namespace
 
+const MapStitch::Room* ModernGLWidget::stitchedRoom(const int roomId) const
+{
+    return mStitch.areaId() == mAID ? mStitch.room(roomId) : nullptr;
+}
+
 void ModernGLWidget::refreshStitch()
 {
     const TArea* pArea = mpHost && mpHost->mMapperStitchAreas && mpMap && mpMap->mpRoomDB ? mpMap->mpRoomDB->getArea(mAID) : nullptr;
@@ -4237,7 +4247,7 @@ void ModernGLWidget::refreshStitch()
         if (const TArea* pNeighbourArea = mpMap->mpRoomDB->getArea(neighbour.areaId)) {
             for (const int roomId : pNeighbourArea->getAreaRooms()) {
                 const TRoom* pRoom = mpMap->mpRoomDB->getRoom(roomId);
-                if (pRoom && pRoom->z() + neighbour.offset.z == mMapCenterZ) {
+                if (pRoom && !pRoom->isHidden() && pRoom->z() + neighbour.offset.z == mMapCenterZ) {
                     const QPoint at = square(static_cast<float>(pRoom->x() + neighbour.offset.x), static_cast<float>(pRoom->y() + neighbour.offset.y));
                     if (!near.contains(at)) {
                         left.insert(at);
@@ -4316,7 +4326,7 @@ void ModernGLWidget::queueStitchedAreas()
     QSet<int> hovered;
     QVector<CubeInstanceData> hoveredRoom;
     QVector<CubeInstanceData> hoveredOutline;
-    if (const MapStitch::Room* pHovered = mStitch.room(mHoveredRoomId)) {
+    if (const MapStitch::Room* pHovered = stitchedRoom(mHoveredRoomId)) {
         // Raised and outlined as a room of the area shown is
         hovered.insert(pHovered->id);
         const float roomSize = 2.0f / scale;
@@ -4388,7 +4398,7 @@ void ModernGLWidget::enterStitchedRoom(const int roomId)
     if (!pR) {
         return;
     }
-    const MapStitch::Room* pStitched = mStitch.areaId() == mAID ? mStitch.room(roomId) : nullptr;
+    const MapStitch::Room* pStitched = stitchedRoom(roomId);
     const MapStitch::Neighbour* pNeighbour = pStitched ? mStitch.neighbour(pStitched->areaId) : nullptr;
     if (!pNeighbour) {
         flyToArea(pR->getArea(), roomId);

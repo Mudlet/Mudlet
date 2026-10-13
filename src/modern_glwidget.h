@@ -514,6 +514,8 @@ private:
     void paintRouteStatus(QPainter& painter);
     // Places the neighboring areas again if the area, the level or the map changed, or clears them if not to be shown
     void refreshStitch();
+    // The room drawn past this area's edge with this id, if the stitch is of the area shown
+    const MapStitch::Room* stitchedRoom(int roomId) const;
     void queueStitchedAreas();
     // The portals this frame shows, none overlapping another
     QList<PortalCard> portalCards();

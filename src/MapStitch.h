@@ -57,7 +57,7 @@ public:
 
     enum class Placement {
         Stitched,
-        // Joined only by exits with no compass direction to place it by: up, down, in, out or special exits
+        // Joined only by up or down exits, which have no compass direction to place it by
         NoCompassLinks,
         Overlaps
     };
@@ -114,7 +114,7 @@ public:
     int areaId() const { return mAreaId; }
     int level() const { return mLevel; }
     int spacing() const { return mSpacing; }
-    // Every area joined to this one by an exit either way, most links first
+    // Every area joined to this one by a compass, up or down exit either way, most links first
     const QList<Neighbour>& neighbours() const { return mNeighbours; }
     const Neighbour* neighbour(int areaId) const;
     // The rooms of the neighbors placed, on the viewed level and near its rooms
