@@ -1545,6 +1545,39 @@ private slots:
         }
     }
 
+    // Looking at the level under the player's, whose room is then see-through: the token's shadow is drawn over the
+    // room's top, not before it, or the room's paint would blend over the shadow
+    void test_dioramaLaysTheTokenShadowOverASeeThroughRoom()
+    {
+        const int areaId = addArea();
+        QVERIFY(areaId > 0);
+        const auto restore = qScopeGuard([this]() {
+            mpHost->setMapStyle(qsl("tiles"));
+        });
+        QVERIFY(mpHost->setMapStyle(qsl("diorama")));
+        ModernGLWidget widget(map(), mpHost);
+        queueFrame(widget, areaId, -1);
+        const auto& commands = widget.mRenderCommandQueue.commands();
+        qsizetype playerBlock = -1;
+        qsizetype tokenShadow = -1;
+        for (qsizetype index = 0; index < static_cast<qsizetype>(commands.size()); ++index) {
+            const auto* cubes = dynamic_cast<const RenderInstancedCubesCommand*>(commands.at(index).get());
+            if (!cubes) {
+                continue;
+            }
+            if (cubes->shading() == RenderCommand::Shading::ModelBlock && cubes->shape() != GeometryManager::InstanceShape::Cylinder && !roomInstances(*cubes, QPointF(0.0, 0.0)).isEmpty()) {
+                QVERIFY2(cubes->instances().first().color[3] < 1.0f, "the player's room is not see-through from the level below");
+                playerBlock = index;
+            }
+            if (cubes->shading() == RenderCommand::Shading::ModelShadow && cubes->shape() == GeometryManager::InstanceShape::Cylinder) {
+                tokenShadow = index;
+            }
+        }
+        QVERIFY2(playerBlock >= 0, "the player's room is not drawn");
+        QVERIFY2(tokenShadow >= 0, "the token casts no shadow");
+        QVERIFY2(tokenShadow > playerBlock, qPrintable(qsl("the token's shadow is command %1, before the player's room at %2").arg(tokenShadow).arg(playerBlock)));
+    }
+
     // Looking down: the felt is fuzzy, a room's top is lighter on the edge toward the light than on the far one, the
     // ground just south-east of a room is in its shadow, the token shows red, and nothing changes between frames
     void test_dioramaShadesBlocksUnderSoftLight()

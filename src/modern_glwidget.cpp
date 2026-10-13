@@ -2092,14 +2092,6 @@ void ModernGLWidget::renderRooms()
                                                                                          RenderCommand::Shading::ModelShadow,
                                                                                          roomShape));
         }
-        if (seeThrough != seeThroughLevels.cend() && !seeThrough->tokenShadows.isEmpty()) {
-            mRenderCommandQueue.addCommand(std::make_unique<RenderInstancedCubesCommand>(seeThrough->tokenShadows,
-                                                                                         mCameraController.getProjectionMatrix(),
-                                                                                         mCameraController.getViewMatrix(),
-                                                                                         mCameraController.getModelMatrix(),
-                                                                                         RenderCommand::Shading::ModelShadow,
-                                                                                         GeometryManager::InstanceShape::Cylinder));
-        }
         if (const auto exits = mSeeThroughExits.constFind(level); exits != mSeeThroughExits.cend()) {
             if (wireframes) {
                 mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::ADDITIVE_BLEND));
@@ -2137,6 +2129,15 @@ void ModernGLWidget::renderRooms()
                 mRenderCommandQueue.addCommand(std::make_unique<RenderInstancedCubesCommand>(
                         seeThrough->cubes, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix(), roomShading, roomShape));
                 mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::DEPTH_FUNC_LESS));
+            }
+            // On the player's room's top, after it as a see-through room's paint would blend over the shadow
+            if (!seeThrough->tokenShadows.isEmpty()) {
+                mRenderCommandQueue.addCommand(std::make_unique<RenderInstancedCubesCommand>(seeThrough->tokenShadows,
+                                                                                             mCameraController.getProjectionMatrix(),
+                                                                                             mCameraController.getViewMatrix(),
+                                                                                             mCameraController.getModelMatrix(),
+                                                                                             RenderCommand::Shading::ModelShadow,
+                                                                                             GeometryManager::InstanceShape::Cylinder));
             }
             if (!seeThrough->wires.isEmpty()) {
                 mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::ADDITIVE_BLEND));
