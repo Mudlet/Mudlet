@@ -1096,6 +1096,69 @@ private slots:
         QVERIFY(!widget.route().hasDestination());
     }
 
+    void test_editsToTheMapWaitBeforeTheRouteRebuildsThePathGraphWithoutGL()
+    {
+        const ThreeAreas areas = addThreeAreas();
+        ModernGLWidget widget(map(), mpHost);
+        widget.planRouteToRoom(areas.eastFirst + 24);
+        QVERIFY(widget.mRouteGraphBuilt.isValid());
+        QVERIFY(!map()->mMapGraphNeedsUpdate);
+        widget.mRouteRefreshTimer->stop();
+        const auto queueScene = [&widget]() {
+            widget.updateMatrices();
+            widget.mRenderCommandQueue.clear();
+            widget.queueScene();
+        };
+
+        // A move alone is found again straight away
+        map()->mRoomIdHash[map()->mProfileName] = areas.westFirst + 1;
+        queueScene();
+        QVERIFY(widget.mRouteRefreshTimer->isActive());
+        QCOMPARE(widget.mRouteRefreshTimer->interval(), 0);
+        widget.mRouteRefreshTimer->stop();
+        widget.refreshRoute();
+
+        // An exit added, as a mapping script does on each move, waits at least a second after the graph was built
+        map()->setExit(areas.westFirst + 1, areas.westFirst + 7, DIR_NORTHEAST);
+        queueScene();
+        QVERIFY(widget.mRouteRefreshTimer->isActive());
+        QVERIFY2(widget.mRouteRefreshTimer->interval() > 500, "an edit to the exits rebuilt the path graph straight away");
+        const int remaining = widget.mRouteRefreshTimer->remainingTime();
+
+        // Further edits leave that wait as it is, rather than putting the route off for as long as they come
+        map()->setExit(areas.westFirst + 7, areas.westFirst + 1, DIR_SOUTHWEST);
+        queueScene();
+        QVERIFY(widget.mRouteRefreshTimer->remainingTime() <= remaining);
+
+        // Built long enough ago, the graph is built again straight away
+        widget.mRouteRefreshTimer->stop();
+        widget.mRouteGraphBuilt.invalidate();
+        queueScene();
+        QCOMPARE(widget.mRouteRefreshTimer->interval(), 0);
+        widget.mRouteRefreshTimer->stop();
+        widget.refreshRoute();
+        QVERIFY(!map()->mMapGraphNeedsUpdate);
+        QVERIFY(widget.mRouteGraphBuilt.isValid());
+        QCOMPARE(widget.route().status(), MapRoute::Status::Found);
+    }
+
+    void test_aRouteIsDroppedWhenAMapIsImportedWithoutGL()
+    {
+        const ThreeAreas areas = addThreeAreas();
+        QTemporaryDir directory;
+        QVERIFY(directory.isValid());
+        const QString file = directory.filePath(qsl("map.json"));
+        QVERIFY(map()->writeJsonMapFile(file).first);
+        // Imported twice, as a map only ever imported over has the same generation as the map it replaces
+        QVERIFY(map()->readJsonMapFile(file).first);
+        ModernGLWidget widget(map(), mpHost);
+        QVERIFY(widget.planRouteToRoom(areas.eastFirst).isEmpty());
+        QCOMPARE(widget.route().status(), MapRoute::Status::Found);
+        QVERIFY(map()->readJsonMapFile(file).first);
+        widget.refreshRoute();
+        QVERIFY(!widget.route().hasDestination());
+    }
+
     void test_aPlaceThatCannotBeReachedIsReportedWithoutGL()
     {
         const ThreeAreas areas = addThreeAreas();
@@ -1322,6 +1385,30 @@ private slots:
         }
         std::printf("METRIC edit_frame_ms %.2f\n", static_cast<double>(edit.nsecsElapsed()) / 1.0e6 / frames);
         std::printf("METRIC edit_frame_cpu_ms %.2f\n", (processCpuMs() - editCpuBefore) / frames);
+
+        // Mapping: as a mapping script does on each move, a room is added east of the metropolis, joined to the last
+        // and the player moved into it, then the frame is drawn and its events run
+        widget.mCameraController.setDefaultView();
+        widget.setCameraDistance(8.0f);
+        int mappedFrom = 1 + (141 + 70) * 141 + 140;
+        QElapsedTimer mapping;
+        const double mappingCpuBefore = processCpuMs();
+        mapping.start();
+        for (int frame = 0; frame < frames; ++frame) {
+            const int roomId = 500000 + frame;
+            map()->addRoom(roomId);
+            map()->setRoomArea(roomId, areaId);
+            map()->setRoomCoordinates(roomId, 71 + frame, 0, 0);
+            map()->setExit(mappedFrom, roomId, DIR_EAST);
+            map()->setExit(roomId, mappedFrom, DIR_WEST);
+            map()->setUnsaved(__func__);
+            map()->mRoomIdHash[map()->mProfileName] = roomId;
+            mappedFrom = roomId;
+            widget.grabFramebuffer();
+            QCoreApplication::processEvents();
+        }
+        std::printf("METRIC mapping_frame_ms %.2f\n", static_cast<double>(mapping.nsecsElapsed()) / 1.0e6 / frames);
+        std::printf("METRIC mapping_frame_cpu_ms %.2f\n", (processCpuMs() - mappingCpuBefore) / frames);
 
         std::printf("METRIC rss_end_mib %.1f\n", memoryMiB("VmRSS"));
         std::printf("METRIC rss_peak_mib %.1f\n", memoryMiB("VmHWM"));

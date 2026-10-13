@@ -3851,6 +3851,7 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
     qDebug().nospace().noquote() << "TMap::readJsonMapFile(...) INFO - parsed a file (version: " << formatVersion << ") containing " << mProgressDialogRoomsCount << " rooms.";
 
     // This is it - the point at which the new map gets activated:
+    pNewRoomDB->succeed(*mpRoomDB);
     mpRoomDB = std::move(pNewRoomDB);
     ++mMapRevision;
     // User data is merged rather than replaced, so a layout left from the previous map would place this one's areas.

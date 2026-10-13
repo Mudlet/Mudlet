@@ -2698,7 +2698,7 @@ void ModernGLWidget::clearRoute()
 QString ModernGLWidget::reportRoute()
 {
     if (mpMap) {
-        mRoute.refresh(*mpMap);
+        findRoute();
     }
     QString message;
     switch (mRoute.status()) {
@@ -2736,9 +2736,35 @@ QString ModernGLWidget::reportRoute()
     return message;
 }
 
+void ModernGLWidget::scheduleRouteRefresh()
+{
+    if (!mpMap->mMapGraphNeedsUpdate || !mRouteGraphBuilt.isValid()) {
+        mRouteRefreshTimer->start(0ms);
+    } else if (!mRouteRefreshTimer->isActive()) {
+        // Rebuilding the path graph takes seconds on a large map, and a mapping script edits the map on every move,
+        // so the next rebuild waits five times as long as the last took
+        const qint64 intervalMs = std::max<qint64>(1000, 5 * mRouteGraphBuildMs);
+        const qint64 waitMs = std::max<qint64>(0, intervalMs - mRouteGraphBuilt.elapsed());
+        mRouteRefreshTimer->start(std::chrono::milliseconds(waitMs));
+    }
+}
+
+bool ModernGLWidget::findRoute()
+{
+    const bool graphNeedsUpdate = mpMap->mMapGraphNeedsUpdate;
+    QElapsedTimer finding;
+    finding.start();
+    const bool changed = mRoute.refresh(*mpMap);
+    if (graphNeedsUpdate && !mpMap->mMapGraphNeedsUpdate) {
+        mRouteGraphBuildMs = finding.elapsed();
+        mRouteGraphBuilt.start();
+    }
+    return changed;
+}
+
 void ModernGLWidget::refreshRoute()
 {
-    if (!mpMap || !mRoute.refresh(*mpMap)) {
+    if (!mpMap || !findRoute()) {
         return;
     }
     if (mRoute.status() == MapRoute::Status::Arrived || mRoute.status() == MapRoute::Status::NoSuchDestination) {
@@ -3789,7 +3815,7 @@ void ModernGLWidget::slot_resetPlayerIcon()
 void ModernGLWidget::queueScene()
 {
     if (mpMap && mRoute.stale(*mpMap)) {
-        mRouteRefreshTimer->start(0ms);
+        scheduleRouteRefresh();
     }
     mZoomWeights = zoomWeights();
     if (mZoomWeights.roomsShown()) {
