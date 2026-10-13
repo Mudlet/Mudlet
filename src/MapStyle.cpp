@@ -166,6 +166,22 @@ QList<MapStyle> registeredStyles()
     transit.infoTextColor = QColor(35, 35, 40);
     styles.append(transit);
 
+    MapStyle hologram;
+    hologram.id = qsl("hologram");
+    hologram.palette = MapStyle::Palette::Light;
+    // Blocks tall enough that their sides show as a box of light, rather than as one line under the top
+    hologram.roomFlattening = 3.0f;
+    hologram.edges = MapStyle::Edges::GlowingWireframes;
+    hologram.lit = false;
+    hologram.background = QColor(3, 9, 18);
+    hologram.ink = QColor(70, 225, 255);
+    hologram.gridColor = QColor(70, 200, 255, 26);
+    hologram.labelFontFamily = qsl("Bitstream Vera Sans Mono");
+    hologram.postEffects = MapStyle::PostEffect::Scanlines;
+    hologram.floorPlates = false;
+    hologram.playerMarker = MapStyle::PlayerMarker::Pulse;
+    styles.append(hologram);
+
     return styles;
 }
 } // namespace
@@ -187,6 +203,10 @@ QString MapStyle::displayName() const
     if (id == qsl("transit")) {
         //: Name of the 3D map style that draws rooms as stations and exits as colored lines, as a metro or subway map does, chosen in the Mapper preferences
         return QCoreApplication::translate("MapStyle", "Transit");
+    }
+    if (id == qsl("hologram")) {
+        //: Name of the 3D map style that draws rooms and exits as glowing lines of light that every level shows through, as a science fiction hologram does, chosen in the Mapper preferences
+        return QCoreApplication::translate("MapStyle", "Hologram");
     }
     return id;
 }
@@ -221,6 +241,21 @@ QColor MapStyle::roomColor(const QColor& environmentColor) const
         const QColor hsl = environmentColor.toHsl();
         return QColor::fromHslF(std::max(hsl.hslHueF(), 0.0f), hsl.hslSaturationF() * 0.7f, 0.25f + hsl.lightnessF() * 0.6f, hsl.alphaF());
     }
+    case Palette::Light: {
+        // Enough of the environment's color to tell areas apart, not so much that the map stops reading as one projection
+        constexpr float tint = 0.3f;
+        // Light that dim would barely show over the background
+        constexpr int dimmest = 150;
+        const QColor light = ink.isValid() ? ink : QColor(Qt::cyan);
+        QColor color = QColor::fromRgbF(light.redF() + (environmentColor.redF() - light.redF()) * tint,
+                                        light.greenF() + (environmentColor.greenF() - light.greenF()) * tint,
+                                        light.blueF() + (environmentColor.blueF() - light.blueF()) * tint,
+                                        environmentColor.alphaF());
+        if (color.lightness() < dimmest) {
+            color = QColor::fromHsl(color.hslHue(), color.hslSaturation(), dimmest, color.alpha());
+        }
+        return color;
+    }
     }
     return environmentColor;
 }
@@ -231,8 +266,9 @@ QColor MapStyle::symbolColor(const QColor& roomSymbolColor, const QColor& drawnR
     if (palette == Palette::Ink && ink.isValid() && !roomSymbolColor.isValid()) {
         return ink;
     }
-    // A character is drawn in the room's color rather than on it, and lifted as a room's is, so that it shows on the dark screen
-    if (palette == Palette::Terminal) {
+    // A character is drawn in the room's color rather than on it, and lifted as a room's is, so that it shows on the dark screen;
+    // light has no fill to draw a symbol on either
+    if (palette == Palette::Terminal || palette == Palette::Light) {
         return roomSymbolColor.isValid() ? roomColor(roomSymbolColor) : drawnRoomColor;
     }
     return RoomAppearance::symbolColor(roomSymbolColor, drawnRoomColor);
@@ -245,7 +281,7 @@ QColor MapStyle::exitColor(const QColor& profileExitColor) const
 
 QColor MapStyle::roomIdColor(const QColor& drawnRoomColor) const
 {
-    if (palette == Palette::Terminal) {
+    if (palette == Palette::Terminal || palette == Palette::Light) {
         return drawnRoomColor;
     }
     return palette == Palette::Ink && ink.isValid() ? ink : ExitAppearance::contrastColor(drawnRoomColor);
@@ -256,6 +292,10 @@ QColor MapStyle::playerRoomColor() const
     if (palette == Palette::Ink) {
         // Red would sink into the blue of a drafting sheet
         return QColor(255, 190, 60);
+    }
+    if (palette == Palette::Light) {
+        // The brightest light on the map, nearly white, as the rest of the map is the style's ink
+        return QColor(225, 255, 255);
     }
     return QColor(Qt::red);
 }

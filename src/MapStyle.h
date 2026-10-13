@@ -72,7 +72,10 @@ struct MapStyle
         Stations,
         // Each room in its environment's color, softened toward a lit pastel: less saturated, and kept from the
         // darkest and lightest
-        Soft
+        Soft,
+        // Projected light: every room in the style's ink, tinted a little toward its environment's color and kept bright
+        // enough to glow on the dark background
+        Light
     };
 
     enum class Shape {
@@ -93,7 +96,10 @@ struct MapStyle
         StationRings,
         // A base around each room on the viewed level, halfway from the room's color to the background, so the
         // room reads as a block with shaded sides
-        ViewedLevelBase
+        ViewedLevelBase,
+        // A hologram: no fill, every edge of each room's block and of each exit's bar a glowing line, all added onto what
+        // is behind rather than covering it, so that rooms and levels show through each other
+        GlowingWireframes
     };
 
     enum class Doors {
@@ -111,7 +117,9 @@ struct MapStyle
         Ring,
         // A bullseye on the player's room, and beside it a pill in the style's ink reading "YOU" on a leader to it,
         // as on a map at a station's entrance
-        Pill
+        Pill,
+        // The player's room drawn in playerRoomColor(), sending out a ring of light each time the player arrives
+        Pulse
     };
 
     enum class Glyphs {
@@ -122,7 +130,11 @@ struct MapStyle
         Terminal
     };
 
-    enum class PostEffect { NoPostEffects = 0x0 };
+    enum class PostEffect {
+        NoPostEffects = 0x0,
+        // Every few rows of pixels of what is drawn on the map dimmed, as on a projected image
+        Scanlines = 0x1
+    };
     Q_DECLARE_FLAGS(PostEffects, PostEffect)
 
     QString id;

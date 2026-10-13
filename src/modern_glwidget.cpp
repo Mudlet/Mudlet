@@ -105,6 +105,16 @@ ModernGLWidget::ModernGLWidget(TMap* pMap, Host* pHost, QWidget* parent)
     connect(mCameraAnimationTimer, &QTimer::timeout, this, &ModernGLWidget::onCameraAnimationTick);
     mEasingCurve.setType(QEasingCurve::OutQuart); // Natural deceleration
 
+    mPulseTimer = new QTimer(this);
+    mPulseTimer->setInterval(33ms);
+    connect(mPulseTimer, &QTimer::timeout, this, [this]() {
+        if (!mPulseClock.isValid() || mPulseClock.elapsed() > scmPulseMilliseconds) {
+            mPulseTimer->stop();
+            mPulseClock.invalidate();
+        }
+        update();
+    });
+
     // A click takes focus only so that a floating view can pass typed keys on to the command line; focus from
     // Tab also lets the view pan and zoom with keys
     setFocusPolicy(Qt::StrongFocus);
@@ -198,6 +208,8 @@ constexpr QLatin1StringView scmSavedCamerasItem{"3dmapper_cameras"};
 constexpr float scmFogStart = 1.3f;
 constexpr float scmFogEnd = 4.0f;
 constexpr float scmFogMax = 0.6f;
+// How much darker every third row of pixels is, for styles with scanlines
+constexpr float scmScanlineDarkening = 0.3f;
 } // namespace
 
 void ModernGLWidget::saveCamera()
@@ -631,6 +643,10 @@ void ModernGLWidget::paintGL()
         } else if (mRID != mPreviousRID || mMapCenterX != pRID->x() || mMapCenterY != pRID->y() || mMapCenterZ != pRID->z()) {
             startSmoothTransition(targetAID, pRID->x(), pRID->y(), pRID->z());
         }
+        if (mRID != mPreviousRID && mapStyle().playerMarker == MapStyle::PlayerMarker::Pulse) {
+            mPulseClock.start();
+            mPulseTimer->start();
+        }
         mPreviousRID = mRID;
     }
 
@@ -685,6 +701,12 @@ void ModernGLWidget::paintGL()
     shaderProgram->setUniformValue("uFogStart", distance * scmFogStart);
     shaderProgram->setUniformValue("uFogEnd", distance * scmFogEnd);
     shaderProgram->setUniformValue("uFogMax", scmFogMax);
+    // In device pixels, as the shader measures its lines and rows in them
+    const auto devicePixels = static_cast<float>(devicePixelRatioF());
+    shaderProgram->setUniformValue("uWireWidth", 1.5f * devicePixels);
+    shaderProgram->setUniformValue("uWireGlow", 5.0f * devicePixels);
+    shaderProgram->setUniformValue("uScanlines", mapStyle().postEffects.testFlag(MapStyle::PostEffect::Scanlines) ? scmScanlineDarkening : 0.0f);
+    shaderProgram->setUniformValue("uScanlinePeriod", qMax(3.0f, std::round(3.0f * devicePixels)));
 
     queueScene();
 
@@ -760,6 +782,10 @@ constexpr float scmHoverOutline = 0.14f;
 constexpr qreal scmInkDash = 0.12;
 // An interchange's ring's width, as a part of its width
 constexpr float scmInterchangeRing = 0.3f;
+// How strongly the hologram style's player room is lit through, on top of its edges
+constexpr float scmPlayerGlow = 0.3f;
+// Glowing exits are thin enough to be all edge: at full strength their front and back faces add up to white
+constexpr float scmGlowingExitStrength = 0.5f;
 // A level platform's stations: how far apart, how large, and how many at most before the rest are counted
 constexpr qreal scmPlatformStationGap = 20.0;
 constexpr qreal scmPlatformStationRadius = 5.0;
@@ -1267,6 +1293,10 @@ void ModernGLWidget::renderRooms()
     const QColor contrast = ExitAppearance::contrastColor(background);
     const RenderCommand::Shading roomShading = style.lit ? RenderCommand::Shading::Lit : RenderCommand::Shading::Unlit;
     const bool terminal = style.glyphs == MapStyle::Glyphs::Terminal;
+    const bool wireframes = style.edges == MapStyle::Edges::GlowingWireframes;
+    const bool pulse = style.playerMarker == MapStyle::PlayerMarker::Pulse;
+    // How far the player's pulse has spread, from 0 to 1, or less than 0 for none
+    const float pulseSpread = pulse && mPulseClock.isValid() ? qMin(static_cast<float>(mPulseClock.elapsed()) / static_cast<float>(scmPulseMilliseconds), 1.0f) : -1.0f;
     const bool groundGlyphs = terminal && style.groundGlyphs;
     const QHash<int, EnvironmentKit::Kit> namedKits = groundGlyphs ? EnvironmentKit::stored(mpMap->mUserData) : QHash<int, EnvironmentKit::Kit>();
     const QFont groundFont = groundGlyphs ? terminalGlyphFont(style) : QFont();
@@ -1396,7 +1426,7 @@ void ModernGLWidget::renderRooms()
             return MapDecals::bullseye(bullseyeColor, scmRoomTextureSize);
         });
     }
-    if (!terminal && !playerPill && pArea->getAreaRooms().contains(playerRoomId)) {
+    if (!terminal && !playerPill && !pulse && pArea->getAreaRooms().contains(playerRoomId)) {
         // The strong highlight is the original style over a translucent red room
         const int style = mpHost->mMapStrongHighlight ? 0 : mpMap->mPlayerRoomStyle;
         const bool themed = mapStyle().themesPlayerMarker(mpMap->mPlayerRoomStyle, mpHost->mMapStrongHighlight);
@@ -1438,6 +1468,10 @@ void ModernGLWidget::renderRooms()
     struct SeeThroughLevel
     {
         QVector<CubeInstanceData> cubes;
+        // Drawn as glowing edges, added onto what is under them
+        QVector<CubeInstanceData> wires;
+        // Filled with light, added onto what is under them before the edges
+        QVector<CubeInstanceData> glows;
         RoomDecals decals;
     };
     QMap<int, SeeThroughLevel> seeThroughLevels;
@@ -1526,7 +1560,7 @@ void ModernGLWidget::renderRooms()
             roomTint = QVector4D(playerColor.redF(), playerColor.greenF(), playerColor.blueF(), 1.0f);
         }
         // Outlined, a room off the viewed level has no fill, so its level's decals go with the see-through ones
-        const bool unfilled = terminal || (inkOutlines && !look.onViewedLevel() && !(look.playerRoom && !playerRoomTexture));
+        const bool unfilled = terminal || wireframes || (inkOutlines && !look.onViewedLevel() && !(look.playerRoom && !playerRoomTexture));
         const bool seeThrough = roomTint.w() < 1.0f || unfilled;
         QVector<CubeInstanceData>& instances = seeThrough ? seeThroughLevels[pR->z()].cubes : roomInstances;
         RoomDecals& decals = seeThrough ? seeThroughLevels[pR->z()].decals : opaqueDecals[pR->z()];
@@ -1574,7 +1608,7 @@ void ModernGLWidget::renderRooms()
             // Just inside the station's edge, unless a thick border reaches past it
             const float half = roomSize / 2.0f - ring / 2.0f + (width - ring) / 2.0f;
             roomOutlines[pR->z()].append({rx, ry, top, half, width, 0.0f, GeometryManager::fadedColor(ringColor, fade, fadeTarget)});
-        } else if (hovered && !terminal) {
+        } else if (hovered && !terminal && !wireframes) {
             // Taller than a border, so that it shows over one
             outlineInstances.append(outline(roomSize * scmHoverOutline, QVector4D(contrast.redF(), contrast.greenF(), contrast.blueF(), 1.0f), 0.75f));
         } else if (!bordered && !pArea->gridMode && look.onViewedLevel() && !seeThrough) {
@@ -1582,7 +1616,7 @@ void ModernGLWidget::renderRooms()
             const QColor rimTarget = style.edges == MapStyle::Edges::ViewedLevelBase ? background : contrast;
             outlineInstances.append(outline(roomSize * scmLevelOutline, GeometryManager::fadedColor(roomColor, {0.5f, 1.0f}, rimTarget)));
         }
-        if (bordered && !inkOutlines && !stationRings && !terminal) {
+        if (bordered && !inkOutlines && !stationRings && !terminal && !wireframes) {
             const float borderWidth = (pR->mBorderThickness > 0 ? pR->mBorderThickness : 1) * borderUnit;
             const QColor borderColor = pR->mBorderColor.isValid() ? pR->mBorderColor : style.roomBorderColor(mpHost->mRoomBorderColor, roomColor, background);
             const QVector4D borderTint = GeometryManager::fadedColor(borderColor, fade, fadeTarget);
@@ -1594,6 +1628,24 @@ void ModernGLWidget::renderRooms()
         transform.scale(1.0f / scale, 1.0f / scale, 1.0f / scale / zFlattening);
         if (!unfilled) {
             instances.append(CubeInstanceData(transform, roomTint.x(), roomTint.y(), roomTint.z(), roomTint.w()));
+        }
+        if (wireframes) {
+            QVector4D wireTint = pR->mBorderColor.isValid() && !look.playerRoom ? GeometryManager::fadedColor(pR->mBorderColor, fade, fadeTarget) : roomTint;
+            if (hovered) {
+                wireTint = QVector4D(wireTint.toVector3D() * 0.5f + QVector3D(0.5f, 0.5f, 0.5f), 1.0f);
+            }
+            QVector<CubeInstanceData>& wires = seeThroughLevels[pR->z()].wires;
+            wires.append(CubeInstanceData(transform, wireTint.x(), wireTint.y(), wireTint.z(), wireTint.w()));
+            if (look.playerRoom) {
+                seeThroughLevels[pR->z()].glows.append(CubeInstanceData(transform, wireTint.x(), wireTint.y(), wireTint.z(), scmPlayerGlow));
+            }
+            if (look.playerRoom && pulseSpread >= 0.0f && pulseSpread < 1.0f) {
+                const float spread = 1.0f + 1.5f * pulseSpread;
+                QMatrix4x4 pulseTransform;
+                pulseTransform.translate(rx, ry, rz);
+                pulseTransform.scale(spread / scale, spread / scale, 1.0f / scale / zFlattening);
+                wires.append(CubeInstanceData(pulseTransform, wireTint.x(), wireTint.y(), wireTint.z(), 0.9f * (1.0f - pulseSpread) * (1.0f - pulseSpread)));
+            }
         }
 
         const QVector3D roomTop(rx, ry, rz + roomHeight / 2.0f);
@@ -1697,8 +1749,8 @@ void ModernGLWidget::renderRooms()
             roomNames.append({center, style.roomNameColorFor(pR->userData.value(ROOM_UI_NAMECOLOR), background), pR->name, decalTint, &decals});
         }
 
-        // A terminal's room is only its character, so its markers stand out from the background instead
-        if (const GLuint texture = !terminal ? exitMarkerTexture(*pR, roomColor) : (terminalMarkersNeeded(*pR) ? exitMarkerTexture(*pR, background) : 0)) {
+        // A terminal's room is only its character, and a wireframe has no fill, so their markers stand out from the background instead
+        if (const GLuint texture = terminal ? (terminalMarkersNeeded(*pR) ? exitMarkerTexture(*pR, background) : 0) : exitMarkerTexture(*pR, wireframes ? background : roomColor)) {
             GeometryData& batch = decals.markers[texture];
             batch.textureId = texture;
             GeometryManager::appendGroundQuad(batch, roomTop, roomSize, screenRight, screenUp, decalTint);
@@ -2069,9 +2121,13 @@ void ModernGLWidget::renderRooms()
         }
         queuePlate(level);
         if (const auto exits = mSeeThroughExits.constFind(level); exits != mSeeThroughExits.cend()) {
+            if (wireframes) {
+                mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::ADDITIVE_BLEND));
+            }
             if (!exits->bars.isEmpty()) {
+                const RenderCommand::Shading shading = wireframes ? RenderCommand::Shading::Wireframe : RenderCommand::Shading::Unlit;
                 mRenderCommandQueue.addCommand(std::make_unique<RenderInstancedCubesCommand>(
-                        exits->bars, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix(), RenderCommand::Shading::Unlit));
+                        exits->bars, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix(), shading));
             }
             if (!exits->vertices.isEmpty()) {
                 // Arrowheads and dots lie on the lines' tops
@@ -2079,6 +2135,9 @@ void ModernGLWidget::renderRooms()
                 mRenderCommandQueue.addCommand(std::make_unique<RenderTrianglesCommand>(
                         exits->vertices, exits->colors, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix(), RenderCommand::Shading::Unlit));
                 mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::DISABLE_POLYGON_OFFSET));
+            }
+            if (wireframes) {
+                mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::ALPHA_BLEND));
             }
         }
         const auto seeThrough = seeThroughLevels.constFind(level);
@@ -2096,6 +2155,24 @@ void ModernGLWidget::renderRooms()
                 mRenderCommandQueue.addCommand(std::make_unique<RenderInstancedCubesCommand>(
                         seeThrough->cubes, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix(), roomShading, roomShape));
                 mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::DEPTH_FUNC_LESS));
+            }
+            if (!seeThrough->wires.isEmpty()) {
+                mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::ADDITIVE_BLEND));
+                if (!seeThrough->glows.isEmpty()) {
+                    mRenderCommandQueue.addCommand(std::make_unique<RenderInstancedCubesCommand>(seeThrough->glows,
+                                                                                                 mCameraController.getProjectionMatrix(),
+                                                                                                 mCameraController.getViewMatrix(),
+                                                                                                 mCameraController.getModelMatrix(),
+                                                                                                 RenderCommand::Shading::Unlit,
+                                                                                                 roomShape));
+                }
+                mRenderCommandQueue.addCommand(std::make_unique<RenderInstancedCubesCommand>(seeThrough->wires,
+                                                                                             mCameraController.getProjectionMatrix(),
+                                                                                             mCameraController.getViewMatrix(),
+                                                                                             mCameraController.getModelMatrix(),
+                                                                                             RenderCommand::Shading::Wireframe,
+                                                                                             roomShape));
+                mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::ALPHA_BLEND));
             }
         }
         if (const auto lines = mInkOutlines.constFind(level); lines != mInkOutlines.cend()) {
@@ -2297,8 +2374,14 @@ void ModernGLWidget::renderConnections()
     }
 
     const bool moreTransparent = mpHost->experimentEnabled(qsl("experiment.rendering.more-transparent"));
+    // Glowing exits are added onto what is under them with their level's rooms, as they would cover it drawn solid
+    const bool glowing = mapStyle().edges == MapStyle::Edges::GlowingWireframes;
     const auto faded = [&](const QColor& color, const int level) {
-        return GeometryManager::fadedColor(color, GeometryManager::levelFade(level - mMapCenterZ, moreTransparent), levelFadeTarget(level));
+        QVector4D tint = GeometryManager::fadedColor(color, GeometryManager::levelFade(level - mMapCenterZ, moreTransparent), levelFadeTarget(level));
+        if (glowing) {
+            tint.setW(tint.w() * scmGlowingExitStrength);
+        }
+        return tint;
     };
 
     mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::ENABLE_DEPTH_TEST));
@@ -2309,7 +2392,7 @@ void ModernGLWidget::renderConnections()
         const QVector4D tint = faded(segment.color, segment.level);
         const CubeInstanceData bar(GeometryManager::barTransform(segment.from, segment.to, segment.width, segment.height), tint.x(), tint.y(), tint.z(), tint.w());
         // Not drawn into the depth buffer, or it would cut its shape out of the levels below drawn after it
-        (tint.w() < 1.0f ? mSeeThroughExits[segment.level].bars : bars).append(bar);
+        (glowing || tint.w() < 1.0f ? mSeeThroughExits[segment.level].bars : bars).append(bar);
     }
     if (!bars.isEmpty()) {
         mRenderCommandQueue.addCommand(std::make_unique<RenderInstancedCubesCommand>(
@@ -2322,7 +2405,7 @@ void ModernGLWidget::renderConnections()
     colors.reserve(scene.triangles.size() * 12);
     for (const ExitScene::Triangle& triangle : scene.triangles) {
         const QVector4D tint = faded(triangle.color, triangle.level);
-        LevelExits* seeThrough = tint.w() < 1.0f ? &mSeeThroughExits[triangle.level] : nullptr;
+        LevelExits* seeThrough = glowing || tint.w() < 1.0f ? &mSeeThroughExits[triangle.level] : nullptr;
         for (const QVector3D& corner : {triangle.a, triangle.b, triangle.c}) {
             (seeThrough ? seeThrough->vertices : vertices) << corner.x() << corner.y() << corner.z();
             (seeThrough ? seeThrough->colors : colors) << tint.x() << tint.y() << tint.z() << tint.w();
@@ -4389,7 +4472,8 @@ void ModernGLWidget::renderPlayerBeacon()
     if (!mapStyle().playerBeacon && mapStyle().themesPlayerMarker(mpMap->mPlayerRoomStyle, mpHost->mMapStrongHighlight)) {
         return;
     }
-    const QColor color = playerMarkerColor();
+    const bool glowing = mapStyle().edges == MapStyle::Edges::GlowingWireframes;
+    const QColor color = glowing ? mapStyle().playerRoomColor() : playerMarkerColor();
     const float roomSize = 2.0f / scale;
     const float roomHeight = roomSize / zFlattening;
     const float width = roomSize * 0.3f;
@@ -4408,12 +4492,18 @@ void ModernGLWidget::renderPlayerBeacon()
         return bars;
     };
     mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::DISABLE_DEPTH_WRITE));
+    if (glowing) {
+        mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::ADDITIVE_BLEND));
+    }
     mRenderCommandQueue.addCommand(std::make_unique<RenderInstancedCubesCommand>(
             column(0.8f), mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix(), RenderCommand::Shading::Unlit));
     // Again, faintly, through whatever hides it: the floors above, most often
     mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::DISABLE_DEPTH_TEST));
     mRenderCommandQueue.addCommand(std::make_unique<RenderInstancedCubesCommand>(
             column(0.3f), mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix(), RenderCommand::Shading::Unlit));
+    if (glowing) {
+        mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::ALPHA_BLEND));
+    }
     mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::ENABLE_DEPTH_TEST));
     mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::ENABLE_DEPTH_WRITE));
 }
