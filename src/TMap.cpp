@@ -4083,13 +4083,19 @@ void TMap::updateArea(int areaId)
 
 void TMap::updatePlayerArea(int areaId)
 {
-    if (!mAreaUpdatePending) {
-        mAreaUpdatePending = true;
-        QTimer::singleShot(0ms, this, [this, areaId]() {
-            mAreaUpdatePending = false;
-            emit signal_areaChanged(areaId);
-        });
+    if (mPendingAreaId) {
+        // One announcement stands for all made before it goes out, so it names every area if they differ
+        if (*mPendingAreaId != areaId) {
+            mPendingAreaId = -1;
+        }
+        return;
     }
+    mPendingAreaId = areaId;
+    QTimer::singleShot(0ms, this, [this]() {
+        const int pendingAreaId = mPendingAreaId.value_or(-1);
+        mPendingAreaId.reset();
+        emit signal_areaChanged(pendingAreaId);
+    });
 }
 
 QColor TMap::getColor(int id)
