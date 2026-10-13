@@ -67,6 +67,8 @@ class CredentialManager : public QObject
     friend class CredentialManagerKeychainTest;
     // Stalls the keychain behind a profile's own password lookup
     friend class TelnetLatePasswordTest;
+    // Reads the storage preference with no main window
+    friend class HeadlessHostSmokeTest;
 
 public:
     explicit CredentialManager(QObject* parent = nullptr);
@@ -241,10 +243,9 @@ private:
     static void forgetStoreRefusal();
 
     // Whether the player asked for passwords to be kept in the profile rather than in secure
-    // storage. Empty when there is nothing to ask - a unit test with no mudlet instance - so the
-    // caller keeps its own default.
-    static std::optional<bool> profileStoragePreferred();
-    // Test-only: stands in for that preference where there is no mudlet to read it from.
+    // storage.
+    static bool profileStoragePreferred();
+    // Test-only: stands in for that preference.
     static std::optional<bool>& profileStorageOverrideForTesting();
     // Whether the preference alone is what keeps this manager off the keychain, so a copy stored
     // there before the player chose the profile may remain. Never for a portable install or a test

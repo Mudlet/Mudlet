@@ -116,6 +116,7 @@ set(PROFILE_GROUP_TEST_SOURCES
     ForceCloseTest.cpp
     ProfileCloseGuardTest.cpp
     MissingDisplayFontTest.cpp
+    MudletIniLateSettingsTest.cpp
     PortableRootNoticeTest.cpp
     ProfileDataWriteTest.cpp
     ProfileDeletionSafetyTest.cpp
