@@ -2492,8 +2492,9 @@ void ModernGLWidget::refreshAtlas()
 
 float ModernGLWidget::atlasLevel() const
 {
-    // At the rooms' bottoms, as the grid is
-    return static_cast<float>(mMapCenterZ) - 1.0f / scale / zFlattening;
+    // At the rooms' bottoms, as the grid is; a flight shows its destination level at once, but the camera climbs to it
+    const float level = mFlight ? mCurrentAnimationZ : static_cast<float>(mMapCenterZ);
+    return level - 1.0f / scale / zFlattening;
 }
 
 QMatrix4x4 ModernGLWidget::atlasModelMatrix() const
@@ -4505,6 +4506,7 @@ void ModernGLWidget::refreshStitch()
         return QPoint(static_cast<int>(std::lround(x / static_cast<float>(spacing))), static_cast<int>(std::lround(y / static_cast<float>(spacing))));
     };
     QHash<int, QSet<QPoint>> nearRooms;
+    QSet<int> keptRooms;
     for (const MapStitch::Room& room : mStitch.rooms()) {
         QMatrix4x4 transform;
         transform.translate(room.at);
@@ -4517,6 +4519,7 @@ void ModernGLWidget::refreshStitch()
         sceneRoom.decalReach = roomSize;
         mStitchScene.addRoom(sceneRoom);
         nearRooms[room.areaId].insert(square(room.at.x(), room.at.y()));
+        keptRooms.insert(room.id);
     }
     QSet<QPoint> shownCells;
     for (const int roomId : pArea->getAreaRooms()) {
@@ -4530,7 +4533,7 @@ void ModernGLWidget::refreshStitch()
         if (neighbour.placement != MapStitch::Placement::Stitched || found == nearRooms.cend()) {
             continue;
         }
-        const QSet<QPoint>& near = *found;
+        const QSet<QPoint>& keptCells = *found;
         const QVector3D shift = neighbour.offset.vector();
         // The cells of the shown area's own rooms too, so a neighbor's arrows back into it are left to the area's own
         QSet<QPoint> left = shownCells;
@@ -4539,20 +4542,21 @@ void ModernGLWidget::refreshStitch()
                 const TRoom* pRoom = mpMap->mpRoomDB->getRoom(roomId);
                 if (pRoom && !pRoom->isHidden() && pRoom->z() + neighbour.offset.z == mMapCenterZ) {
                     const QPoint at = square(static_cast<float>(pRoom->x() + neighbour.offset.x), static_cast<float>(pRoom->y() + neighbour.offset.y));
-                    if (!near.contains(at)) {
+                    if (!keptCells.contains(at)) {
                         left.insert(at);
                     }
                 }
             }
         }
-        const auto nearOnly = [&](std::initializer_list<QVector3D> points) {
-            bool touches = false;
+        // An exit between two kept rooms is kept whole, though its middle crosses empty cells
+        const auto nearOnly = [&](std::initializer_list<QVector3D> points, const int roomId, const int toRoomId) {
+            bool touches = keptRooms.contains(roomId) && keptRooms.contains(toRoomId);
             for (const QVector3D& point : points) {
                 const QPoint at = square(point.x(), point.y());
                 if (left.contains(at)) {
                     return false;
                 }
-                touches = touches || near.contains(at);
+                touches = touches || keptCells.contains(at);
             }
             return touches;
         };
@@ -4565,7 +4569,7 @@ void ModernGLWidget::refreshStitch()
         for (const ExitScene::Segment& segment : exits.segments) {
             const QVector3D from = segment.from + shift;
             const QVector3D to = segment.to + shift;
-            if (!nearOnly({from, to})) {
+            if (!nearOnly({from, to}, segment.roomId, segment.toRoomId)) {
                 continue;
             }
             const QVector4D tint = stitchedTint(segment.color, background);
@@ -4576,7 +4580,7 @@ void ModernGLWidget::refreshStitch()
             const QVector3D a = triangle.a + shift;
             const QVector3D b = triangle.b + shift;
             const QVector3D c = triangle.c + shift;
-            if (nearOnly({a, b, c})) {
+            if (nearOnly({a, b, c}, triangle.roomId, triangle.toRoomId)) {
                 mStitchScene.addTriangle(false, mMapCenterZ, a, b, c, stitchedTint(triangle.color, background), triangle.distant);
             }
         }

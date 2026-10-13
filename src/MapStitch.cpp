@@ -361,7 +361,7 @@ void MapStitch::build(const TMap& map, const int areaId, const int level, const 
             const PreviewIndex& index = previewIndex(portal.toAreaId);
             const int column = floorDiv(pTo->x(), index.reach + 1);
             const int row = floorDiv(pTo->y(), index.reach + 1);
-            QList<std::pair<std::pair<int, int>, PreviewRoom>> near;
+            QList<std::pair<std::pair<int, int>, PreviewRoom>> closeBy;
             for (int dy = -1; dy <= 1; ++dy) {
                 for (int dx = -1; dx <= 1; ++dx) {
                     for (const int nearId : index.squares.value({column + dx, row + dy, pTo->z()})) {
@@ -371,15 +371,15 @@ void MapStitch::build(const TMap& map, const int areaId, const int level, const 
                             continue;
                         }
                         const QPointF at(static_cast<qreal>(pNear->x() - pTo->x()) / index.spacing, static_cast<qreal>(pNear->y() - pTo->y()) / index.spacing);
-                        near.append({{distance, nearId}, {at, environmentColor(pNear->environment), nearId == toRoomId}});
+                        closeBy.append({{distance, nearId}, {at, environmentColor(pNear->environment), nearId == toRoomId}});
                     }
                 }
             }
-            std::sort(near.begin(), near.end(), [](const auto& a, const auto& b) {
+            std::sort(closeBy.begin(), closeBy.end(), [](const auto& a, const auto& b) {
                 return a.first < b.first;
             });
-            for (qsizetype i = 0; i < near.size() && i < scmPreviewRooms; ++i) {
-                portal.preview.append(near.at(i).second);
+            for (qsizetype i = 0; i < closeBy.size() && i < scmPreviewRooms; ++i) {
+                portal.preview.append(closeBy.at(i).second);
             }
             mPortals.append(portal);
         }

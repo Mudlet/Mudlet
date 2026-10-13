@@ -662,9 +662,9 @@ private slots:
 
         // Close by, about 50 pixels wide, just past the view's left edge, near enough for its text to reach in
         scene.cull(view(QVector3D(9.5f, 0.0f, 10.0f), QVector3D(9.5f, 0.0f, 0.0f)));
-        const QList<RetainedMapScene::DecalRoom> near = scene.decalRooms(100.0, 0.0f, 0.0f, {}, {});
-        QCOMPARE(near.size(), 1);
-        QVERIFY2(near.first().detailed, "a room just out of view but close by is judged by the view it is now in, not the last one that showed it");
+        const QList<RetainedMapScene::DecalRoom> nearRooms = scene.decalRooms(100.0, 0.0f, 0.0f, {}, {});
+        QCOMPARE(nearRooms.size(), 1);
+        QVERIFY2(nearRooms.first().detailed, "a room just out of view but close by is judged by the view it is now in, not the last one that showed it");
     }
 
     void test_roomsAreMadeAgainOnlyOnceTheMapSaysItChangedWithoutGL()
@@ -799,27 +799,27 @@ private slots:
 
     void test_zoomLevelsComeInAsRoomsShrinkWithoutGL()
     {
-        const auto near = [](const float a, const float b) {
+        const auto roughly = [](const float a, const float b) {
             return qAbs(a - b) < 1e-5f;
         };
         const float farOut = MapAtlas::scmFootprintsOnlyDistance;
         MapAtlas::Weights weights = MapAtlas::weightsFor(MapAtlas::scmRoomsAlonePixels, 100.0f, farOut);
-        QVERIFY(near(weights.footprint, 0.0f) && near(weights.world, 0.0f));
+        QVERIFY(roughly(weights.footprint, 0.0f) && roughly(weights.world, 0.0f));
         QVERIFY(weights.roomsShown() && !weights.areasPicked());
         weights = MapAtlas::weightsFor((MapAtlas::scmRoomsAlonePixels + MapAtlas::scmFootprintsOnlyPixels) / 2.0f, 100.0f, farOut);
-        QVERIFY2(near(weights.footprint, 0.5f), qPrintable(qsl("half way the footprints are %1 in").arg(weights.footprint)));
+        QVERIFY2(roughly(weights.footprint, 0.5f), qPrintable(qsl("half way the footprints are %1 in").arg(weights.footprint)));
         QVERIFY(weights.roomsShown() && weights.areasPicked());
         weights = MapAtlas::weightsFor(MapAtlas::scmFootprintsOnlyPixels, MapAtlas::scmWorldFromPixels, farOut);
-        QVERIFY(near(weights.footprint, 1.0f) && near(weights.world, 0.0f));
+        QVERIFY(roughly(weights.footprint, 1.0f) && roughly(weights.world, 0.0f));
         QVERIFY(!weights.roomsShown() && weights.areasPicked() && !weights.nodesPicked());
         weights = MapAtlas::weightsFor(0.1f, MapAtlas::scmWorldOnlyPixels, farOut);
-        QVERIFY(near(weights.footprint, 1.0f) && near(weights.world, 1.0f));
+        QVERIFY(roughly(weights.footprint, 1.0f) && roughly(weights.world, 1.0f));
         QVERIFY(weights.nodesPicked());
         // However small the rooms, as far as the camera could go before the atlas they show alone
         weights = MapAtlas::weightsFor(0.1f, 100.0f, CameraController::scmMaxDistance);
-        QVERIFY(near(weights.footprint, 0.0f));
+        QVERIFY(roughly(weights.footprint, 0.0f));
         weights = MapAtlas::weightsFor(0.1f, 100.0f, (MapAtlas::scmRoomsAloneDistance + MapAtlas::scmFootprintsOnlyDistance) / 2.0f);
-        QVERIFY2(near(weights.footprint, 0.5f), qPrintable(qsl("half way out the footprints are %1 in").arg(weights.footprint)));
+        QVERIFY2(roughly(weights.footprint, 0.5f), qPrintable(qsl("half way out the footprints are %1 in").arg(weights.footprint)));
         float lastFootprint = 0.0f;
         float lastWorld = 0.0f;
         for (float roomPixels = 4.0f; roomPixels > 0.05f; roomPixels *= 0.9f) {
@@ -1243,6 +1243,26 @@ private slots:
         QVERIFY(!widget.route().hasDestination());
     }
 
+    void test_aRouteToAnAreaWeighsEntrancesBeyondTheRangeOfAnIntWithoutGL()
+    {
+        map()->mapClear();
+        map()->mUserData.remove(TAreaGraph::cLayoutUserDataKey);
+        addGridArea(qsl("Westmarch"), 1, 3, 1, 1, 0);
+        addGridArea(qsl("Highvale"), 10, 2, 1, 1, 0);
+        QVERIFY(map()->setExit(10, -1, DIR_EAST));
+        QVERIFY(map()->setExit(11, -1, DIR_WEST));
+        // From the middle room: east through two rooms each weighted two billion, or west through two of weight one
+        QVERIFY(map()->setExit(3, 10, DIR_NORTH));
+        QVERIFY(map()->setExit(1, 11, DIR_NORTH));
+        map()->mpRoomDB->getRoom(3)->setWeight(2000000000);
+        map()->mpRoomDB->getRoom(10)->setWeight(2000000000);
+        map()->mRoomIdHash[map()->mProfileName] = 2;
+        ModernGLWidget widget(map(), mpHost);
+        QCOMPARE(widget.planRouteToArea(map()->mpRoomDB->getRoom(10)->getArea()), QString());
+        QCOMPARE(widget.route().endRoomId(), 11);
+        QCOMPARE(widget.route().totalWeight(), 2);
+    }
+
     void test_aPlaceThatCannotBeReachedIsReportedWithoutGL()
     {
         const ThreeAreas areas = addThreeAreas();
@@ -1499,6 +1519,35 @@ private slots:
             const float x = bar.transform.column(3).x();
             QVERIFY2(x > 3.0f && x < 19.0f, qPrintable(qsl("an exit bar at x %1").arg(x)));
         }
+    }
+
+    void test_aNeighboursExitOverAnEmptySquareIsDrawnWholeWithoutGL()
+    {
+        const ThreeAreas areas = addThreeAreas();
+        // A one-way exit from the middle area's middle room over the empty square at 1,0, drawn at 6,0
+        map()->mpRoomDB->removeRoom(areas.middleFirst + 13);
+        map()->setExit(areas.middleFirst + 12, areas.middleFirst + 14, DIR_EAST);
+        mpHost->mMapperStitchAreas = true;
+        ModernGLWidget widget(map(), mpHost);
+        queueFrame(widget, areas.west, 2.0f);
+        const auto overTheGap = [](const float x, const float y) {
+            return x > 5.5f && x < 6.5f && std::abs(y) < 0.5f;
+        };
+        const QVector<CubeInstanceData>& bars = widget.mStitchScene.instances(RetainedMapScene::Layer::ExitBars)->instances;
+        QVERIFY2(std::any_of(bars.cbegin(),
+                             bars.cend(),
+                             [&](const CubeInstanceData& bar) {
+                                 return overTheGap(bar.transform.column(3).x(), bar.transform.column(3).y());
+                             }),
+                 "the exit's dots over the empty square are not drawn");
+        QVector<float> vertices;
+        QVector<float> colors;
+        widget.mStitchScene.appendTriangles(false, std::nullopt, vertices, colors);
+        bool arrow = false;
+        for (qsizetype i = 0; i + 2 < vertices.size(); i += 3) {
+            arrow = arrow || overTheGap(vertices.at(i), vertices.at(i + 1));
+        }
+        QVERIFY2(arrow, "the exit's one-way arrow over the empty square is not drawn");
     }
 
     void test_aClickOnANeighboursRoomGoesIntoItsAreaWithoutGL()
@@ -1896,6 +1945,38 @@ private slots:
             std::printf("METRIC search_query_ms{%s} %.2f (%lld found)\n", qPrintable(query), static_cast<double>(timer.nsecsElapsed()) / 1.0e6 / runs, static_cast<long long>(total));
         }
         std::fflush(stdout);
+    }
+
+    void test_theWorldStaysPutAsAFlightToAnotherLevelSetsOffWithoutGL()
+    {
+        map()->mapClear();
+        map()->mUserData.remove(TAreaGraph::cLayoutUserDataKey);
+        const int next = addGridArea(qsl("Westmarch"), 1, 20, 20, 1, 0);
+        addGridArea(qsl("Highvale"), next, 20, 20, 1, 40);
+        map()->setExit(1, next, DIR_EAST);
+        const int westId = map()->mpRoomDB->getRoom(1)->getArea();
+        const int eastId = map()->mpRoomDB->getRoom(next)->getArea();
+        map()->mRoomIdHash[map()->mProfileName] = 0;
+        map()->areaGraph()->refresh();
+        QVERIFY(map()->areaGraph()->setPosition(westId, QPointF(0.0, 0.0)));
+        QVERIFY(map()->areaGraph()->setPosition(eastId, QPointF(0.0, 150.0)));
+        ModernGLWidget widget(map(), mpHost);
+        queueFrame(widget, westId, 800.0f, false);
+        const QPoint before = pixelOfArea(widget, eastId);
+        QVERIFY(QRect(0, 0, widget.width(), widget.height()).contains(before));
+
+        widget.flyToArea(eastId);
+        widget.updateMatrices();
+        const QPoint after = pixelOfArea(widget, eastId);
+        QVERIFY2((after - before).manhattanLength() <= 1,
+                 qPrintable(qsl("the area flown to jumped from %1,%2 to %3,%4 as the flight set off").arg(before.x()).arg(before.y()).arg(after.x()).arg(after.y())));
+
+        for (int tick = 0; tick < 1000 && widget.mCameraSmoothAnimating; ++tick) {
+            widget.onCameraAnimationTick();
+        }
+        QCOMPARE(widget.mCameraController.getTarget().z(), 40.0f);
+        widget.updateMatrices();
+        QVERIFY2(QRect(0, 0, widget.width(), widget.height()).contains(pixelOfArea(widget, eastId)), "the area flown to is not in view once landed");
     }
 
     void benchmark_hugeMap()

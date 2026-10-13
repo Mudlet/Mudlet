@@ -74,7 +74,7 @@ public:
     const QList<int>& rooms() const { return mRooms; }
     // The room the route ends in, which for an area is the nearest of its rooms that can be reached
     int endRoomId() const { return mRooms.isEmpty() ? 0 : mRooms.last(); }
-    int totalWeight() const { return mTotalWeight; }
+    qint64 totalWeight() const { return mTotalWeight; }
     int steps() const { return mRooms.isEmpty() ? 0 : static_cast<int>(mRooms.size()) - 1; }
     const QList<AreaRun>& areaRuns() const { return mAreaRuns; }
     // The steps the route takes in each area, over all its runs there
@@ -97,15 +97,15 @@ private:
     };
     Inputs inputsOf(const TMap& map) const;
     // The map's findPath(), but leaving its last path as it was for the speedwalk or script that asked for it
-    static bool search(TMap& map, int from, int to, QList<int>& rooms, int& weight);
-    void setResult(Status status, TRoomDB* roomDB = nullptr, const QList<int>& rooms = {}, int weight = 0);
+    static bool search(TMap& map, int from, int to, QList<int>& rooms, qint64& weight);
+    void setResult(Status status, TRoomDB* roomDB = nullptr, const QList<int>& rooms = {}, qint64 weight = 0);
 
     int mDestinationRoomId = 0;
     int mDestinationAreaId = 0;
     std::optional<Inputs> mInputs;
     Status mStatus = Status::NoDestination;
     QList<int> mRooms;
-    int mTotalWeight = 0;
+    qint64 mTotalWeight = 0;
     QList<AreaRun> mAreaRuns;
     QHash<int, int> mStepsByArea;
 };
