@@ -27,8 +27,10 @@
 #include <QListWidget>
 #include <QPlainTextEdit>
 #include <QRegularExpression>
+#include <QSignalSpy>
 #include <QTemporaryDir>
 
+#include "CredentialManager.h"
 #include "MudletApp.h"
 #include "MudletInstanceCoordinator.h"
 #include "dlgConnectionProfiles.h"
@@ -180,6 +182,24 @@ private slots:
         QVERIFY2(!ok, "writing over a directory was reported as a success");
         QVERIFY2(!reason.isEmpty(), "a failed open gave no reason");
         QVERIFY(QDir().rmdir(MudletApp::getMudletPath(enums::profileDataItemPath, mProfile, item)));
+    }
+
+    // Moving a password out of secure storage must not delete it there when it could not be saved here
+    void test_aPasswordThatCannotBeMigratedStaysInSecureStorage()
+    {
+        const QString profile = qsl("ProfileDataWriteMigrate");
+        QVERIFY(QDir().mkpath(MudletApp::getMudletPath(enums::profileDataItemPath, profile, qsl("password"))));
+        startMudlet();
+        QVERIFY(CredentialManager::storeCredential(profile, qsl("character"), qsl("secret")));
+
+        QSignalSpy migrated(mudlet::self(), &mudlet::signal_passwordsMigratedToProfiles);
+        expectWriteWarning(qsl("password"));
+        QVERIFY(mudlet::self()->migratePasswordsToProfileStorage());
+        // the migration also asks the keychain for an older copy of each password
+        QVERIFY(migrated.count() || migrated.wait(10000));
+
+        QCOMPARE(CredentialManager::retrieveCredential(profile, qsl("character")), qsl("secret"));
+        QVERIFY(QDir().rmdir(MudletApp::getMudletPath(enums::profileDataItemPath, profile, qsl("password"))));
     }
 
     void test_aDetailTheConnectionDialogCannotSaveIsShownThere()
