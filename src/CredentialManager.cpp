@@ -21,7 +21,6 @@
 #include "CredentialManager.h"
 #include "MudletApp.h"
 #include "SecureStringUtils.h"
-#include "TAppFrontend.h"
 #include "utils.h"
 
 #include <QCoreApplication>
@@ -314,22 +313,14 @@ bool CredentialManager::isOperationValid() const
     return override;
 }
 
-/*static*/ std::optional<bool> CredentialManager::profileStoragePreferred()
+/*static*/ bool CredentialManager::profileStoragePreferred()
 {
-    if (const std::optional<bool>& override = profileStorageOverrideForTesting(); override.has_value()) {
-        return override;
-    }
-    // No main window in a unit test, and nothing to read the preference from - the caller's own default
-    // stands, which keeps this the keychain as it was
-    if (!TAppFrontend::hasView()) {
-        return std::nullopt;
-    }
-    return !MudletApp::storingPasswordsSecurely();
+    return profileStorageOverrideForTesting().value_or(!MudletApp::storingPasswordsSecurely());
 }
 
 bool CredentialManager::keychainMayHoldAnEarlierCopy() const
 {
-    return profileStoragePreferred().value_or(false) && !isPortableModeActive() && !SecureStringUtils::isTestEnvironment();
+    return profileStoragePreferred() && !isPortableModeActive() && !SecureStringUtils::isTestEnvironment();
 }
 
 bool CredentialManager::isPortableModeActive() const
@@ -362,7 +353,7 @@ bool CredentialManager::shouldUseKeychain(const QString& profileName) const
     // through here, the Char.Login reconnect token above all, went to the keychain whatever it said.
     // On a desktop keychain that meant prompts for a store the player had asked Mudlet not to use
     // (#11029).
-    if (profileStoragePreferred().value_or(false)) {
+    if (profileStoragePreferred()) {
         qDebug() << "CredentialManager: Using this profile's encrypted credential file (Preferences -> Store passwords in names the profile)";
         return false;
     }

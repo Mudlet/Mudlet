@@ -27,10 +27,13 @@
 #include "Host.h"
 #include "MudletApp.h"
 #include "MudletMedia.h"
+#include "TMap.h"
 #include "TSpeechBridge.h"
 #include "discord.h"
+#include "utils.h"
 
 #include <QDebug>
+#include <QSettings>
 
 HostManager::HostManager(const ConfigRoot configRoot)
 : mpMedia(std::make_unique<MudletMedia>())
@@ -41,6 +44,8 @@ HostManager::HostManager(const ConfigRoot configRoot)
     // Settling again would delete the settings store under whoever holds it
     if (configRoot == ConfigRoot::settledHere && !MudletApp::configRootSettled()) {
         MudletApp::settleConfigRoot();
+        // Once per process: where the main window settles the root, its readLateSettings() reads them instead
+        readSettings(*MudletApp::getQSettings());
     }
     // self() callers trust there is only one; a second would repoint the accessor, then null it on
     // destruction while the first is still in use.
@@ -66,6 +71,14 @@ HostManager::~HostManager()
     if (smpSelf == this) {
         smpSelf = nullptr;
     }
+}
+
+void HostManager::readSettings(const QSettings& settings)
+{
+    mpMedia->setApiMuted(settings.value(qsl("enableMuteAPI"), false).toBool());
+    mpMedia->setGameMuted(settings.value(qsl("enableMuteGame"), false).toBool());
+    TMap::smShowMapAuditErrors = settings.value(qsl("reportMapIssuesToConsole"), false).toBool();
+    MudletApp::setStorePasswordsSecurely(settings.value(qsl("storePasswordsSecurely"), true).toBool());
 }
 
 void HostManager::deleteHost(const QString& hostname)

@@ -34,6 +34,7 @@ class Discord;
 class FontManager;
 class Host;
 class MudletMedia;
+class QSettings;
 class TEvent;
 class TSpeechBridge;
 typedef QMap<QString, QSharedPointer<Host>> HostMap;
@@ -87,6 +88,13 @@ public:
     QList<QSharedPointer<Host>> hostList() const { return mHostPool.values(); }
 
 private:
+    // The GUI's call, from mudlet::readLateSettings()
+    friend class mudlet;
+
+    // The Mudlet.ini values that profiles act on but that no profile reads for itself. Once per
+    // process, before any profile, as reading them again would undo what has changed since.
+    void readSettings(const QSettings&);
+
     inline static HostManager* smpSelf = nullptr;
 
     // Every profile obeys these switches, so whatever owns the profiles owns them too, and with no main
