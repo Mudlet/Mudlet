@@ -80,10 +80,10 @@ qreal distanceToSegment(const QPointF& point, const QPointF& a, const QPointF& b
 }
 } // namespace
 
-MapAtlas::Weights MapAtlas::weightsFor(const float roomPixels, const float areaPixels)
+MapAtlas::Weights MapAtlas::weightsFor(const float roomPixels, const float areaPixels, const float distance)
 {
     Weights weights;
-    weights.footprint = 1.0f - smoothStep(scmFootprintsOnlyPixels, scmRoomsAlonePixels, roomPixels);
+    weights.footprint = std::min(1.0f - smoothStep(scmFootprintsOnlyPixels, scmRoomsAlonePixels, roomPixels), smoothStep(scmRoomsAloneDistance, scmFootprintsOnlyDistance, distance));
     weights.world = 1.0f - smoothStep(scmWorldOnlyPixels, scmWorldFromPixels, areaPixels);
     return weights;
 }

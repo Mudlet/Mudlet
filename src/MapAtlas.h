@@ -76,12 +76,16 @@ public:
     // Pixels between neighboring rooms: above the first the rooms show alone, by the second they are footprints
     static constexpr float scmRoomsAlonePixels = 2.5f;
     static constexpr float scmFootprintsOnlyPixels = 1.25f;
+    // Camera distances: up to the first the rooms show alone however small, so every view the mapper could
+    // show before it could be pulled back any further looks as it did; by the second they are footprints
+    static constexpr float scmRoomsAloneDistance = 100.0f;
+    static constexpr float scmFootprintsOnlyDistance = 200.0f;
     // Pixels across the radius of a typical area: below the first the world graph comes in, by the second it is all there is
-    static constexpr float scmWorldFromPixels = 12.0f;
-    static constexpr float scmWorldOnlyPixels = 6.0f;
+    static constexpr float scmWorldFromPixels = 8.0f;
+    static constexpr float scmWorldOnlyPixels = 4.0f;
 
     // roomPixels is how many pixels apart neighboring rooms are; areaPixels how many a typical area's radius spans
-    static Weights weightsFor(float roomPixels, float areaPixels);
+    static Weights weightsFor(float roomPixels, float areaPixels, float distance);
     // The convex hull, counterclockwise, without repeated or collinear points
     static QPolygonF hull(QList<QPointF> points);
 

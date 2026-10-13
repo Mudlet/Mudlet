@@ -381,6 +381,13 @@ void TMapView::show3DView(const bool show)
         view->setCompanion2DMap(mp2dMap);
         view->hide();
         static_cast<QVBoxLayout*>(layout())->insertWidget(0, view);
+        // Only the list follows: switching the 2D map now would recenter this view and end the flight
+        connect(view, &ModernGLWidget::areaFlownInto, this, [this](const int areaId) {
+            const int index = mpAreaComboBox->findText(mpMap ? mpMap->mpRoomDB->getAreaNamesMap().value(areaId) : QString());
+            if (index != -1) {
+                mpAreaComboBox->setCurrentIndex(index);
+            }
+        });
         connect(view, &ModernGLWidget::editIn2DRequested, this, [this, view](const int roomId) {
             if (const TRoom* pRoom = mpMap ? mpMap->mpRoomDB->getRoom(roomId) : nullptr) {
                 view->syncView(pRoom->getArea(), pRoom->x(), pRoom->y(), pRoom->z(), mp2dMap->getCenterRoomId());
