@@ -2055,19 +2055,28 @@ void dlgTriggerEditor::slot_itemSelectedInSearchResults(QTreeWidgetItem* pItem)
                     // layout for the trigger just selected has not settled yet
                     const int row = pItem->data(0, PatternOrLineRole).toInt();
                     const int position = pItem->data(0, PositionRole).toInt();
-                    QTimer::singleShot(0ms, this, [this, row, position]() {
+                    QTimer::singleShot(0ms, this, [this, idSearch, row, position]() {
+                        // Another item can be selected before this runs, and its rows are not the result's
+                        if (mCurrentView != EditorViewType::cmTriggerView || !mpCurrentTriggerItem || mpCurrentTriggerItem->data(0, IdRole).toInt() != idSearch || row >= mVisiblePatternCount) {
+                            return;
+                        }
                         dlgTriggerPatternEdit* pTriggerPattern = mTriggerPatternEdit.value(row, nullptr);
                         if (!pTriggerPattern) {
                             return;
                         }
                         mpScrollArea->ensureWidgetVisible(pTriggerPattern);
-                        if (pTriggerPattern->singleLineTextEdit_pattern->isVisible()) {
-                            // If is a colour trigger the singleLineTextEdit_pattern is not shown
-                            pTriggerPattern->singleLineTextEdit_pattern->setFocus();
-                            QTextCursor cursor = pTriggerPattern->singleLineTextEdit_pattern->textCursor();
-                            cursor.setPosition(position);
-                            pTriggerPattern->singleLineTextEdit_pattern->setTextCursor(cursor);
+                        auto* pEdit = pTriggerPattern->singleLineTextEdit_pattern;
+                        if (!pEdit->isVisible()) {
+                            // Colour, prompt and line spacer patterns have no text to put the caret in
+                            if (QWidget* pTarget = firstFocusablePatternWidget(pTriggerPattern)) {
+                                pTarget->setFocus(Qt::OtherFocusReason);
+                            }
+                            return;
                         }
+                        pEdit->setFocus(Qt::OtherFocusReason);
+                        QTextCursor cursor = pEdit->textCursor();
+                        cursor.setPosition(position);
+                        pEdit->setTextCursor(cursor);
                     });
                     break;
                 }
@@ -2344,16 +2353,6 @@ void dlgTriggerEditor::slot_itemSelectedInSearchResults(QTreeWidgetItem* pItem)
                     mpKeysMainArea->lineEdit_key_name->setFocus(Qt::OtherFocusReason);
                     mpKeysMainArea->lineEdit_key_name->setCursorPosition(pItem->data(0, PositionRole).toInt());
                     break;
-                case SearchResultIsPattern: {
-                    dlgTriggerPatternEdit* pTriggerPattern = mTriggerPatternEdit.at(pItem->data(0, PatternOrLineRole).toInt());
-                    mpScrollArea->ensureWidgetVisible(pTriggerPattern);
-                    if (pTriggerPattern->singleLineTextEdit_pattern->isVisible()) {
-                        // If is a colour trigger the singleLineTextEdit_pattern is not shown
-                        pTriggerPattern->singleLineTextEdit_pattern->setFocus();
-                        pTriggerPattern->singleLineTextEdit_pattern->textCursor().setPosition(pItem->data(0, PositionRole).toInt());
-                    }
-                    break;
-                }
                 case SearchResultIsCommand:
                     mpKeysMainArea->lineEdit_key_command->setFocus(Qt::OtherFocusReason);
                     mpKeysMainArea->lineEdit_key_command->setCursorPosition(pItem->data(0, PositionRole).toInt());

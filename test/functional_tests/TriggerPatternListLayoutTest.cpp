@@ -30,9 +30,11 @@
  * Run with: ctest -R TriggerPatternListLayoutTest -V
  */
 
+#include <QScopeGuard>
 #include <QScrollArea>
 #include <QScrollBar>
 #include <QTemporaryDir>
+#include <QTreeWidgetItemIterator>
 #include <QtTest/QtTest>
 
 #include "MudletInstanceCoordinator.h"
@@ -66,6 +68,7 @@ private:
     const QString mThreePatternTrigger = qsl("qaThreePatterns");
     const QString mNinePatternTrigger = qsl("qaNinePatterns");
     const QString mNinthPattern = qsl("qaNinthPattern");
+    const QString mColourPatternTrigger = qsl("qaColourNinth");
 
     void deleteProfileDirectory(const QString& profileName)
     {
@@ -94,6 +97,20 @@ private:
         pNine->setRegexCodeList(patterns, kinds);
         pNine->setScript(qsl("echo(\"hi\")\n"));
         QVERIFY(pNine->registerTrigger());
+
+        patterns.clear();
+        kinds.clear();
+        for (int i = 1; i <= 8; ++i) {
+            patterns << qsl("c%1").arg(i);
+            kinds << REGEX_PERL;
+        }
+        patterns << TTrigger::createColorPatternText(1, TTrigger::scmIgnored);
+        kinds << REGEX_COLOR_PATTERN;
+        auto* pColour = new TTrigger(nullptr, mpHost);
+        pColour->setName(mColourPatternTrigger);
+        pColour->setRegexCodeList(patterns, kinds);
+        pColour->setScript(qsl("echo(\"hi\")\n"));
+        QVERIFY(pColour->registerTrigger());
     }
 
     QTreeWidgetItem* triggerItem(const QString& name) const
@@ -145,6 +162,42 @@ private:
         return top >= 0 && top + pRow->height() <= viewport->height();
     }
 
+    // By trigger and row, so a match in some other item cannot stand in for it
+    QTreeWidgetItem* patternSearchResult(const QString& term, const QString& triggerName, const int row)
+    {
+        mpEditor->comboBox_searchTerms->clear();
+        mpEditor->comboBox_searchTerms->addItem(term);
+        mpEditor->slot_searchMudletItems(0);
+        for (QTreeWidgetItemIterator it(mpEditor->treeWidget_searchResults); *it; ++it) {
+            QTreeWidgetItem* pResult = *it;
+            if (pResult->data(0, dlgTriggerEditor::TypeRole).toInt() == dlgTriggerEditor::SearchResultIsPattern && pResult->data(0, dlgTriggerEditor::NameRole).toString() == triggerName
+                && pResult->data(0, dlgTriggerEditor::PatternOrLineRole).toInt() == row) {
+                return pResult;
+            }
+        }
+        return nullptr;
+    }
+
+    void clearSearch()
+    {
+        mpEditor->treeWidget_searchResults->clear();
+        mpEditor->comboBox_searchTerms->clear();
+    }
+
+    // A 0ms timer queued now fires after any the editor queued before it
+    bool runQueuedTimers()
+    {
+        bool ran = false;
+        QTimer::singleShot(0ms, mpEditor, [&ran]() {
+            ran = true;
+        });
+        return QTest::qWaitFor(
+                [&ran]() {
+                    return ran;
+                },
+                1s);
+    }
+
 private slots:
     void initTestCase()
     {
@@ -188,7 +241,7 @@ private slots:
         // does when a package is installed
         mpEditor->doCleanReset();
         QVERIFY2(QTest::qWaitFor([this]() {
-                     return triggerItem(mThreePatternTrigger) != nullptr && triggerItem(mNinePatternTrigger) != nullptr;
+                     return triggerItem(mThreePatternTrigger) != nullptr && triggerItem(mNinePatternTrigger) != nullptr && triggerItem(mColourPatternTrigger) != nullptr;
                  }),
                  "the editor never rebuilt its trees around the triggers this test planted");
 
@@ -233,49 +286,93 @@ private slots:
         QCoreApplication::processEvents();
     }
 
-    // A search result for a pattern below the fold has to bring that pattern
-    // into view. First of the cases: a row that has never been laid out is the
-    // one the jump has no position for until the layout has run.
+    // A search result for a pattern has to bring that pattern into view, with
+    // the caret where the match is. Below the fold, then above it, so scrolling
+    // to one end of the list cannot pass for going to the row.
     void test_aPatternSearchResultScrollsToThatPattern()
     {
+        const auto cleanup = qScopeGuard([this]() {
+            clearSearch();
+            selectTrigger(mThreePatternTrigger);
+        });
         QVERIFY2(selectTrigger(mThreePatternTrigger), "could not select the three pattern trigger");
-        auto* pSearchTerms = mpEditor->comboBox_searchTerms;
-        pSearchTerms->clear();
-        // Matched past the pattern's start, where the caret would not be anyway
-        pSearchTerms->addItem(mNinthPattern.mid(2));
-        mpEditor->slot_searchMudletItems(0);
 
-        QTreeWidgetItem* pResult = nullptr;
-        auto* pResults = mpEditor->treeWidget_searchResults;
-        for (int i = 0; !pResult && i < pResults->topLevelItemCount(); ++i) {
-            QTreeWidgetItem* pTop = pResults->topLevelItem(i);
-            if (pTop->data(0, dlgTriggerEditor::TypeRole).toInt() == dlgTriggerEditor::SearchResultIsPattern) {
-                pResult = pTop;
-            }
-            for (int j = 0; !pResult && j < pTop->childCount(); ++j) {
-                if (pTop->child(j)->data(0, dlgTriggerEditor::TypeRole).toInt() == dlgTriggerEditor::SearchResultIsPattern) {
-                    pResult = pTop->child(j);
-                }
-            }
+        struct Jump
+        {
+            QString term;
+            int row;
+            int caret;
+        };
+        // Matched past each pattern's start, where the caret would not be anyway
+        const QList<Jump> jumps{{mNinthPattern.mid(2), 8, 2}, {qsl("2"), 1, 1}};
+        for (const auto& jump : jumps) {
+            QTreeWidgetItem* pResult = patternSearchResult(jump.term, mNinePatternTrigger, jump.row);
+            QVERIFY2(pResult, qPrintable(qsl("searching for \"%1\" found no result for pattern %2 of the nine pattern trigger").arg(jump.term, QString::number(jump.row + 1))));
+
+            mpEditor->slot_itemSelectedInSearchResults(pResult);
+            auto* pCurrent = mpEditor->treeWidget_triggers->currentItem();
+            QVERIFY2(pCurrent, "choosing the search result selected no trigger");
+            QCOMPARE(pCurrent->text(0), mNinePatternTrigger);
+            auto* pRow = mpEditor->mTriggerPatternEdit.at(jump.row);
+            // Until the layout has run the row still reports the place it had
+            // before it was shown, which can read as in view
+            QCoreApplication::processEvents();
+            QVERIFY2(QTest::qWaitFor(
+                             [this, pRow]() {
+                                 return rowIsFullyVisible(pRow);
+                             },
+                             1s),
+                     qPrintable(qsl("pattern %1 should be in view after its search result was chosen, but the list is scrolled to %2 of %3")
+                                        .arg(QString::number(jump.row + 1),
+                                             QString::number(mpEditor->mpScrollArea->verticalScrollBar()->value()),
+                                             QString::number(mpEditor->mpScrollArea->verticalScrollBar()->maximum()))));
+            QCOMPARE(QApplication::focusWidget(), pRow->singleLineTextEdit_pattern);
+            QCOMPARE(pRow->singleLineTextEdit_pattern->textCursor().position(), jump.caret);
         }
-        QVERIFY2(pResult, "searching for the ninth pattern found no pattern result");
+    }
+
+    // A colour pattern has no text to put the caret in, so its jump focuses
+    // the first of its buttons instead
+    void test_aColourPatternSearchResultFocusesThatPattern()
+    {
+        const auto cleanup = qScopeGuard([this]() {
+            clearSearch();
+            selectTrigger(mThreePatternTrigger);
+        });
+        QVERIFY2(selectTrigger(mThreePatternTrigger), "could not select the three pattern trigger");
+        QTreeWidgetItem* pResult = patternSearchResult(qsl("ANSI_COLORS"), mColourPatternTrigger, 8);
+        QVERIFY2(pResult, "searching for the colour pattern found no result for it");
 
         mpEditor->slot_itemSelectedInSearchResults(pResult);
-        QCOMPARE(mpEditor->treeWidget_triggers->currentItem()->text(0), mNinePatternTrigger);
-        auto* pNinthRow = mpEditor->mTriggerPatternEdit.at(8);
-        // Until the layout has run the row still reports the place it had
-        // before it was shown, which can read as in view
-        QCoreApplication::processEvents();
-        QVERIFY2(QTest::qWaitFor(
-                         [this, pNinthRow]() {
-                             return rowIsFullyVisible(pNinthRow);
-                         },
-                         1s),
-                 qPrintable(qsl("the ninth pattern should be in view after its search result was chosen, but the list is scrolled to %1 of %2")
-                                    .arg(QString::number(mpEditor->mpScrollArea->verticalScrollBar()->value()), QString::number(mpEditor->mpScrollArea->verticalScrollBar()->maximum()))));
-        QCOMPARE(pNinthRow->singleLineTextEdit_pattern->textCursor().position(), 2);
-        mpEditor->treeWidget_searchResults->clear();
-        QVERIFY(selectTrigger(mThreePatternTrigger));
+        auto* pRow = mpEditor->mTriggerPatternEdit.at(8);
+        QVERIFY(runQueuedTimers());
+        QVERIFY2(rowIsFullyVisible(pRow), "the colour pattern should be in view after its search result was chosen");
+        QCOMPARE(QApplication::focusWidget(), pRow->pushButton_fgColor);
+    }
+
+    // The jump to a pattern runs a moment after the result is chosen, and by
+    // then another trigger can be showing. Its rows are not the result's, so
+    // the jump must leave them alone: "gamma" matches "ma" past the end of
+    // "p3", the nine pattern trigger's third pattern.
+    void test_aPatternSearchResultLeavesATriggerChosenBeforeItsJumpAlone()
+    {
+        const auto cleanup = qScopeGuard([this]() {
+            clearSearch();
+            selectTrigger(mThreePatternTrigger);
+        });
+        QVERIFY2(selectTrigger(mThreePatternTrigger), "could not select the three pattern trigger");
+        QTreeWidgetItem* pResult = patternSearchResult(qsl("ma"), mThreePatternTrigger, 2);
+        QVERIFY2(pResult, "searching for \"ma\" found no result for the three pattern trigger's \"gamma\"");
+        mpEditor->treeWidget_searchResults->setFocus();
+        QTest::failOnWarning(QRegularExpression(qsl("out of range")));
+
+        mpEditor->slot_itemSelectedInSearchResults(pResult);
+        auto* pNine = triggerItem(mNinePatternTrigger);
+        mpEditor->treeWidget_triggers->setCurrentItem(pNine);
+        mpEditor->slot_triggerSelected(pNine);
+        QVERIFY(runQueuedTimers());
+        QVERIFY2(QApplication::focusWidget() != mpEditor->mTriggerPatternEdit.at(2)->singleLineTextEdit_pattern,
+                 "the jump for a pattern of the three pattern trigger focused a pattern of the nine pattern trigger");
     }
 
     // A three pattern trigger draws four rows: its patterns and the blank one
