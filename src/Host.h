@@ -670,6 +670,9 @@ public:
     bool moveWindow(const QString& name, int, int);
     std::pair<bool, QString> setWindow(const QString& windowname, const QString& name, int x1, int y1, bool show);
     std::pair<bool, QString> openMapWidget(const QString& area, int x, int y, int width, int height);
+    // Loads and shows the profile's last saved map for a mapper being made, embedded or the map widget; false, doing
+    // nothing, when a map is loaded or the profile is closing with its view gone.
+    bool loadMapForNewMapper(bool embedded);
     std::pair<bool, QString> closeMapWidget();
     std::optional<QRect> mapWidgetGeometry() const;
     void refreshColours();
@@ -1323,6 +1326,7 @@ private:
     void thankForUsingPTB();
     void toggleMapperVisibility();
     void createMapper(const bool);
+    bool hasMapper() const;
     void removePackageInfo(const QString& packageName, const bool);
     // A removal uninstallPackage() held over because the package was still being
     // read in when it was asked for.

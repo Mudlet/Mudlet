@@ -209,7 +209,7 @@ public:
     bool resizePlainWindow(const QString& name, int width, int height) override;
     bool movePlainWindow(const QString& name, int x, int y) override;
     // No Lua call reads the stacking order back, so these only answer whether the window exists
-    bool raiseWindow(const QString& name) override { return holdsWindow(name); }
+    bool raiseWindow(const QString& name) override { return holdsWindow(name) || namesEmbeddedMapper(name); }
     bool lowerWindow(const QString& name) override { return raiseWindow(name); }
     std::pair<bool, QString> reparentWindow(const QString& windowname, const QString& name, int x, int y, bool show) override;
     bool setWindowScrollBarVisible(const QString& name, bool visible) override;
@@ -239,15 +239,19 @@ public:
     bool setSubConsoleCommandBackgroundColor(const QString& name, const QColor& color) override;
     bool setSubConsoleCommandForegroundColor(const QString& name, const QColor& color) override;
     void changeSubConsoleColors(const QString&) override {}
-    std::pair<bool, QString> createMapper(const QString&, int, int, int, int) override { return noView(); }
-    void createMapperDock(const QString&, const QString&) override {}
-    void showNewMapperDock() override {}
-    std::pair<bool, QString> placeMapWidget(const QString&, int, int, int, int) override { return noView(); }
-    bool mapWidgetCreated() const override { return false; }
-    bool setMapWidgetTitle(const QString&) override { return false; }
-    std::optional<QString> mapWidgetTitle() const override { return std::nullopt; }
-    std::optional<QRect> mapWidgetGeometry() const override { return std::nullopt; }
-    bool hideMapWidget() override { return false; }
+    // The embedded mapper's position, size and visibility are not kept, as no Lua call reads them back
+    std::pair<bool, QString> createMapper(const QString& windowname, int, int, int, int) override;
+    void createMapperDock(const QString& title, const QString&) override;
+    // TMainConsole docks a new map widget on the right; the saved window layout it then restores is not modelled
+    void showNewMapperDock() override { placeMapWidget(qsl("r"), -1, -1, -1, -1); }
+    std::pair<bool, QString> placeMapWidget(const QString& area, int x, int y, int width, int height) override;
+    bool mapWidgetCreated() const override { return mMapWidget.has_value(); }
+    bool setMapWidgetTitle(const QString& title) override;
+    std::optional<QString> mapWidgetTitle() const override;
+    std::optional<QRect> mapWidgetGeometry() const override;
+    bool hideMapWidget() override;
+    // A map widget or an embedded mapper, either of which a real view would draw the map in
+    bool hasMapper() const { return mMapWidget || mpEmbeddedMapper; }
     void restoreOwnMapper() override {}
     void showLoadedMap() override {}
     void showMapAfterFailedLoad() override {}
@@ -400,6 +404,15 @@ private:
         // TLabel::mpSvgRenderer's default size, as an SVG background image paints under the content
         std::optional<QSize> svgSize;
     };
+    struct MapWidget
+    {
+        QString title;
+        QRect geometry;
+        bool shown = false;
+    };
+    // TMainConsole::raiseWindow(), lowerWindow() and reparentWindow() take "mapper" in any case for it
+    bool namesEmbeddedMapper(const QString& name) const { return mpEmbeddedMapper && !name.compare(QLatin1String("mapper"), Qt::CaseInsensitive); }
+    void copyPlayerRoomStyleToMap();
     QMovie* shownMovie(const QString& name) const;
     void setLabelVisible(Label& label, bool visible);
     void setLabelSize(Label& label, const QSize& size);
@@ -464,6 +477,9 @@ private:
     std::unique_ptr<QObject> mpMainHolder = std::make_unique<QObject>();
     // TMxpFrameWidgets' container widget of each frame, which holds the frame's console until a script moves it
     std::map<QString, QPointer<QObject>> mFrameHolders;
+    std::optional<MapWidget> mMapWidget;
+    // The dlgMapper createMapper() makes, a child of what holds it, so it goes with the window it is in
+    QPointer<QObject> mpEmbeddedMapper;
 };
 
 #endif // MUDLET_TNULLCONSOLEFRONTEND_H
