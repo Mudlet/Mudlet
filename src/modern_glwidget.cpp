@@ -1106,7 +1106,12 @@ void ModernGLWidget::renderRooms()
     const QSet<int> emptySelection;
     const QSet<int>& selection = mp2DMap ? mp2DMap->mMultiSelectionSet : emptySelection;
     const GLuint selectionTextureId = selection.isEmpty() ? 0 : selectionTexture(round);
+    const int hoveredBefore = mHoveredRoomId;
     mHoveredRoomId = roomUnderPointer();
+    // The rooms drawn past the area's edge were queued before this, with the hover as it was
+    if (mHoveredRoomId != hoveredBefore && (stitchedRoom(hoveredBefore) || stitchedRoom(mHoveredRoomId))) {
+        update();
+    }
 
     // The kept scene draws every room as it was made; these are drawn apart, as they change from frame to frame
     QSet<int> drawnApart;
@@ -4193,6 +4198,9 @@ void ModernGLWidget::refreshStitch()
     inputs.exitsRevision = mpMap->mpRoomDB->exitsRevision();
     inputs.mapGeneration = mpMap->mpRoomDB->mapGeneration();
     for (const TArea* pEachArea : mpMap->mpRoomDB->getAreaMap()) {
+        if (!pEachArea) {
+            continue;
+        }
         inputs.roomsVersions = inputs.roomsVersions * 31 + pEachArea->getRoomsVersion();
     }
     inputs.scale = scale;
@@ -4235,6 +4243,13 @@ void ModernGLWidget::refreshStitch()
         mStitchScene.addRoom(sceneRoom);
         nearRooms[room.areaId].insert(square(room.at.x(), room.at.y()));
     }
+    QSet<QPoint> shownCells;
+    for (const int roomId : pArea->getAreaRooms()) {
+        const TRoom* pRoom = mpMap->mpRoomDB->getRoom(roomId);
+        if (pRoom && pRoom->z() == mMapCenterZ) {
+            shownCells.insert(square(static_cast<float>(pRoom->x()), static_cast<float>(pRoom->y())));
+        }
+    }
     for (const MapStitch::Neighbour& neighbour : mStitch.neighbours()) {
         const auto found = nearRooms.constFind(neighbour.areaId);
         if (neighbour.placement != MapStitch::Placement::Stitched || found == nearRooms.cend()) {
@@ -4242,7 +4257,8 @@ void ModernGLWidget::refreshStitch()
         }
         const QSet<QPoint>& near = *found;
         const QVector3D shift = neighbour.offset.vector();
-        QSet<QPoint> left;
+        // The cells of the shown area's own rooms too, so a neighbor's arrows back into it are left to the area's own
+        QSet<QPoint> left = shownCells;
         if (const TArea* pNeighbourArea = mpMap->mpRoomDB->getArea(neighbour.areaId)) {
             for (const int roomId : pNeighbourArea->getAreaRooms()) {
                 const TRoom* pRoom = mpMap->mpRoomDB->getRoom(roomId);

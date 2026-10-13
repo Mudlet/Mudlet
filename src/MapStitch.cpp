@@ -108,12 +108,12 @@ int MapStitch::spacingOf(const TMap& map, const int areaId)
     }
     QList<int> lengths;
     for (const int roomId : pArea->getAreaRooms()) {
-        const TRoom* pRoom = map.mpRoomDB->getRoom(roomId);
+        const TRoom* pRoom = shownRoom(map, roomId);
         if (!pRoom) {
             continue;
         }
         for (const int direction : scmCompassDirections) {
-            const TRoom* pTo = map.mpRoomDB->getRoom(pRoom->getExit(direction));
+            const TRoom* pTo = shownRoom(map, pRoom->getExit(direction));
             if (!pTo || pTo->getArea() != areaId || pTo->z() != pRoom->z()) {
                 continue;
             }
