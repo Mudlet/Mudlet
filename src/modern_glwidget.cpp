@@ -647,7 +647,8 @@ void ModernGLWidget::paintGL()
     }
     if (const int playerRoomId = mpMap->mRoomIdHash.value(mpMap->mProfileName); playerRoomId != mPulsedRoomId) {
         mPulsedRoomId = playerRoomId;
-        if (mapStyle().playerMarker == MapStyle::PlayerMarker::Pulse) {
+        // Not from a room in another area, where it would only repaint for nothing
+        if (const TRoom* pPlayerRoom = mpMap->mpRoomDB->getRoom(playerRoomId); pPlayerRoom && pPlayerRoom->getArea() == mAID && mapStyle().playerMarker == MapStyle::PlayerMarker::Pulse) {
             mPulseClock.start();
             mPulseTimer->start();
         }
@@ -1633,7 +1634,7 @@ void ModernGLWidget::renderRooms()
             instances.append(CubeInstanceData(transform, roomTint.x(), roomTint.y(), roomTint.z(), roomTint.w()));
         }
         if (wireframes) {
-            QVector4D wireTint = look.playerRoom ? roomTint : GeometryManager::fadedColor(style.wireColor(pR->mBorderColor, roomColor), fade, fadeTarget);
+            QVector4D wireTint = look.playerRoom ? roomTint : GeometryManager::fadedColor(style.wireColor(bordered ? pR->mBorderColor : QColor(), roomColor), fade, fadeTarget);
             if (hovered) {
                 wireTint = QVector4D(wireTint.toVector3D() * 0.5f + QVector3D(0.5f, 0.5f, 0.5f), wireTint.w());
             }
