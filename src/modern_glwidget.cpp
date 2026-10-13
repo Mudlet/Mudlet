@@ -209,7 +209,9 @@ void ModernGLWidget::saveCamera()
         return;
     }
     const QVector3D position = mCameraController.getPosition();
-    const SavedCamera camera{mCameraController.getScale(), position.y(), position.z(), mCameraController.getRoll()};
+    // Pulled back to the world it shows no rooms, which is no way to come back to an area
+    const float distance = std::min(mCameraController.getScale(), CameraController::scmMaxDistance);
+    const SavedCamera camera{distance, position.y(), position.z(), mCameraController.getRoll()};
     const auto it = mSavedCameras.constFind(mAID);
     if (it != mSavedCameras.cend() && it->distance == camera.distance && it->tilt == camera.tilt && it->azimuth == camera.azimuth && it->roll == camera.roll) {
         return;
@@ -2018,6 +2020,7 @@ void ModernGLWidget::slot_topView()
 
 void ModernGLWidget::slot_setScale(int value)
 {
+    stopFlight();
     mCameraController.setScale(distanceForScaleSlider(value));
     mFrameWhenShown = false;
     update();
@@ -2597,7 +2600,7 @@ void ModernGLWidget::flyToArea(const int areaId)
     flight.to = QVector3D(static_cast<float>(pTo->landing.x()), static_cast<float>(pTo->landing.y()), static_cast<float>(pTo->landingLevel));
     flight.fromDistance = mCameraController.getScale();
     const auto saved = mSavedCameras.constFind(areaId);
-    if (saved != mSavedCameras.cend() && saved->distance <= CameraController::scmMaxDistance) {
+    if (saved != mSavedCameras.cend()) {
         flight.toDistance = saved->distance;
     } else {
         const float aspectRatio = height() > 0 ? static_cast<float>(width()) / static_cast<float>(height()) : 1.0f;
@@ -2843,8 +2846,8 @@ void ModernGLWidget::mousePressEvent(QMouseEvent* event)
     mClickPending = false;
     // A release that went elsewhere, such as to a menu opened mid-drag, must not leave the last drag running
     endEditGesture();
-    stopFlight();
     if (event->button() == Qt::LeftButton && compassRect().contains(mPressPosition)) {
+        stopFlight();
         turnNorthUp();
         return;
     }
@@ -2853,7 +2856,12 @@ void ModernGLWidget::mousePressEvent(QMouseEvent* event)
     const bool pickingAreas = zoomWeights().areasPicked();
     // As on the 2D map in editing mode: a drag from a room moves the selection and one from empty space,
     // or with Ctrl or Shift, draws a selection rectangle; Alt keeps the viewing mode's drags to pan and orbit
-    if (event->button() == Qt::LeftButton && editingMap() && !event->modifiers().testFlag(Qt::AltModifier) && !pickingAreas) {
+    const bool editPress = event->button() == Qt::LeftButton && editingMap() && !event->modifiers().testFlag(Qt::AltModifier) && !pickingAreas;
+    // An edit press stops a flight itself, after picking what was under the pointer before the stop snapped the view
+    if (!editPress) {
+        stopFlight();
+    }
+    if (editPress) {
         // Picked before a glide stops, as stopping it snaps the view to whole grid steps away from what was seen.
         // Only a room right under the pointer is picked up, so a drag beside rooms seen small draws a rectangle
         const int roomId = roomPickedAt(mPressPosition, false);

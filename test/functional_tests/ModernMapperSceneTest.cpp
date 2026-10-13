@@ -870,6 +870,28 @@ private slots:
         QVERIFY(widget.roomAt(QPoint(400, 300)));
     }
 
+    void test_theWorldViewIsNotKeptAsAnAreasCameraWithoutGL()
+    {
+        const auto [westId, eastId] = addTwoAreas();
+        ModernGLWidget widget(map(), mpHost);
+        queueFrame(widget, westId, 200.0f);
+        QVERIFY(widget.mZoomWeights.nodesPicked());
+        widget.mFramePending = false;
+        widget.jumpTo(eastId, 0, 0, 0);
+        QVERIFY(widget.mSavedCameras.contains(westId));
+        QVERIFY2(widget.mSavedCameras.value(westId).distance <= CameraController::scmMaxDistance, "coming back to the area would show the world, not its rooms");
+
+        // The zoom slider is not overridden by a flight still under way
+        widget.setCameraDistance(200.0f);
+        widget.flyToArea(westId);
+        QVERIFY(widget.mFlight);
+        widget.slot_setScale(50);
+        QVERIFY(!widget.mFlight);
+        const float sliderScale = widget.mCameraController.getScale();
+        widget.onCameraAnimationTick();
+        QCOMPARE(widget.mCameraController.getScale(), sliderScale);
+    }
+
     void benchmark_hugeMap()
     {
         if (qEnvironmentVariableIsEmpty("MUDLET_BENCH_3D")) {
