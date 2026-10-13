@@ -211,6 +211,18 @@ QString MapStyle::displayName() const
     return id;
 }
 
+namespace {
+// Light that dim would barely show over the background
+QColor liftedLight(const QColor& color)
+{
+    constexpr int dimmest = 150;
+    if (color.lightness() < dimmest) {
+        return QColor::fromHsl(color.hslHue(), color.hslSaturation(), dimmest, color.alpha());
+    }
+    return color;
+}
+} // namespace
+
 QColor MapStyle::roomColor(const QColor& environmentColor) const
 {
     switch (palette) {
@@ -244,17 +256,12 @@ QColor MapStyle::roomColor(const QColor& environmentColor) const
     case Palette::Light: {
         // Enough of the environment's color to tell areas apart, not so much that the map stops reading as one projection
         constexpr float tint = 0.3f;
-        // Light that dim would barely show over the background
-        constexpr int dimmest = 150;
         const QColor light = ink.isValid() ? ink : QColor(Qt::cyan);
         QColor color = QColor::fromRgbF(light.redF() + (environmentColor.redF() - light.redF()) * tint,
                                         light.greenF() + (environmentColor.greenF() - light.greenF()) * tint,
                                         light.blueF() + (environmentColor.blueF() - light.blueF()) * tint,
                                         environmentColor.alphaF());
-        if (color.lightness() < dimmest) {
-            color = QColor::fromHsl(color.hslHue(), color.hslSaturation(), dimmest, color.alpha());
-        }
-        return color;
+        return liftedLight(color);
     }
     }
     return environmentColor;
@@ -285,6 +292,17 @@ QColor MapStyle::roomIdColor(const QColor& drawnRoomColor) const
         return drawnRoomColor;
     }
     return palette == Palette::Ink && ink.isValid() ? ink : ExitAppearance::contrastColor(drawnRoomColor);
+}
+
+QColor MapStyle::wireColor(const QColor& roomBorderColor, const QColor& drawnRoomColor) const
+{
+    // Added onto the background, a dark or clear border would leave nothing of the room to see
+    if (!roomBorderColor.isValid() || roomBorderColor.alpha() == 0) {
+        return drawnRoomColor;
+    }
+    QColor color = liftedLight(roomBorderColor);
+    color.setAlpha(drawnRoomColor.alpha());
+    return color;
 }
 
 QColor MapStyle::playerRoomColor() const

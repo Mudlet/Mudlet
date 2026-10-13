@@ -1406,6 +1406,8 @@ private slots:
             mpHost->setMapStyle(qsl("tiles"));
         });
         map()->mpRoomDB->getRoom(kPlayerRoomId)->setExit(kEastRoomId, DIR_EAST);
+        // Added onto the background as it is, black would leave nothing of the room
+        map()->mpRoomDB->getRoom(kEastRoomId)->mBorderColor = QColor(Qt::black);
         QVERIFY(mpHost->setMapStyle(qsl("hologram")));
         ModernGLWidget widget(map(), mpHost);
         queueFrame(widget, areaId);
@@ -1448,6 +1450,8 @@ private slots:
             return (cube.color[0] + cube.color[1] + cube.color[2]) * cube.color[3];
         };
         QVERIFY2(brightness(player.first()) > brightness(east.first()), "the player's room is no brighter than another");
+        const QColor eastWire = QColor::fromRgbF(east.first().color[0], east.first().color[1], east.first().color[2]);
+        QVERIFY2(eastWire.lightness() >= 150, qPrintable(qsl("a room with a black border glows only %1 bright").arg(eastWire.lightness())));
         const bool exitWired = std::any_of(wires.cbegin(), wires.cend(), [](const RenderInstancedCubesCommand* cubes) {
             return std::any_of(cubes->instances().cbegin(), cubes->instances().cend(), [](const CubeInstanceData& cube) {
                 return qAbs(cube.transform.column(3).x() - 1.0f) < 0.3f && qAbs(cube.transform.column(3).y()) < 1e-4f;

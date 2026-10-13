@@ -1630,9 +1630,9 @@ void ModernGLWidget::renderRooms()
             instances.append(CubeInstanceData(transform, roomTint.x(), roomTint.y(), roomTint.z(), roomTint.w()));
         }
         if (wireframes) {
-            QVector4D wireTint = pR->mBorderColor.isValid() && !look.playerRoom ? GeometryManager::fadedColor(pR->mBorderColor, fade, fadeTarget) : roomTint;
+            QVector4D wireTint = look.playerRoom ? roomTint : GeometryManager::fadedColor(style.wireColor(pR->mBorderColor, roomColor), fade, fadeTarget);
             if (hovered) {
-                wireTint = QVector4D(wireTint.toVector3D() * 0.5f + QVector3D(0.5f, 0.5f, 0.5f), 1.0f);
+                wireTint = QVector4D(wireTint.toVector3D() * 0.5f + QVector3D(0.5f, 0.5f, 0.5f), wireTint.w());
             }
             QVector<CubeInstanceData>& wires = seeThroughLevels[pR->z()].wires;
             wires.append(CubeInstanceData(transform, wireTint.x(), wireTint.y(), wireTint.z(), wireTint.w()));
@@ -2377,11 +2377,7 @@ void ModernGLWidget::renderConnections()
     // Glowing exits are added onto what is under them with their level's rooms, as they would cover it drawn solid
     const bool glowing = mapStyle().edges == MapStyle::Edges::GlowingWireframes;
     const auto faded = [&](const QColor& color, const int level) {
-        QVector4D tint = GeometryManager::fadedColor(color, GeometryManager::levelFade(level - mMapCenterZ, moreTransparent), levelFadeTarget(level));
-        if (glowing) {
-            tint.setW(tint.w() * scmGlowingExitStrength);
-        }
-        return tint;
+        return GeometryManager::fadedColor(color, GeometryManager::levelFade(level - mMapCenterZ, moreTransparent), levelFadeTarget(level));
     };
 
     mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::ENABLE_DEPTH_TEST));
@@ -2389,7 +2385,10 @@ void ModernGLWidget::renderConnections()
     QVector<CubeInstanceData> bars;
     bars.reserve(scene.segments.size());
     for (const ExitScene::Segment& segment : scene.segments) {
-        const QVector4D tint = faded(segment.color, segment.level);
+        QVector4D tint = faded(segment.color, segment.level);
+        if (glowing) {
+            tint.setW(tint.w() * scmGlowingExitStrength);
+        }
         const CubeInstanceData bar(GeometryManager::barTransform(segment.from, segment.to, segment.width, segment.height), tint.x(), tint.y(), tint.z(), tint.w());
         // Not drawn into the depth buffer, or it would cut its shape out of the levels below drawn after it
         (glowing || tint.w() < 1.0f ? mSeeThroughExits[segment.level].bars : bars).append(bar);
