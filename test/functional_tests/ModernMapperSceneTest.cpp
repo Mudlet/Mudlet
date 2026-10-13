@@ -500,9 +500,9 @@ private slots:
 
         // Close by, about 50 pixels wide, just past the view's left edge, near enough for its text to reach in
         scene.cull(view(QVector3D(9.5f, 0.0f, 10.0f), QVector3D(9.5f, 0.0f, 0.0f)));
-        const QList<RetainedMapScene::DecalRoom> near = scene.decalRooms(100.0, 0.0f, 0.0f, {}, {});
-        QCOMPARE(near.size(), 1);
-        QVERIFY2(near.first().detailed, "a room just out of view but close by is judged by the view it is now in, not the last one that showed it");
+        const QList<RetainedMapScene::DecalRoom> nearRooms = scene.decalRooms(100.0, 0.0f, 0.0f, {}, {});
+        QCOMPARE(nearRooms.size(), 1);
+        QVERIFY2(nearRooms.first().detailed, "a room just out of view but close by is judged by the view it is now in, not the last one that showed it");
     }
 
     void test_roomsAreMadeAgainOnlyOnceTheMapSaysItChangedWithoutGL()
