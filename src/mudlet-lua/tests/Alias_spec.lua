@@ -574,9 +574,8 @@ describe("Alias processing", function()
         end)
 
         -- An alias's command field goes through the alias pass before its
-        -- script runs, and that pass sets "command" and empties the captures
-        -- whether or not anything matches
-        it("gives an alias whose command expands into another alias its own state back (#10797)", function()
+        -- script runs, and that pass empties the captures
+        it("gives an alias whose command expands into another alias its own matches back (#10797)", function()
             if not os.getenv("MUDLET_TEST_MODE") then
                 pending("uninstalling the fixture needs pumpEvents(), which does nothing outside MUDLET_TEST_MODE")
                 return
@@ -624,13 +623,6 @@ AliasCommandNestsSpec.match = matches[2]</script>
 			<packageName></packageName>
 			<regex>^command_nests_outer (\w+)$</regex>
 		</Alias>
-		<Alias isActive="yes" isFolder="no">
-			<name>command_nests_unmatched</name>
-			<script>AliasCommandNestsSpec.unmatchedCommand = command</script>
-			<command>command_nests_nowhere rat</command>
-			<packageName></packageName>
-			<regex>^command_nests_unmatched (\w+)$</regex>
-		</Alias>
 	</AliasPackage>
 </MudletPackage>
 ]])
@@ -644,23 +636,15 @@ AliasCommandNestsSpec.match = matches[2]</script>
                 pumpEvents(50)
             end
             assert.are.equal(1, exists("command_nests_outer", "alias"), "the alias package was not installed")
-            -- made after the install, so that it is walked after the package's alias
-            ids[#ids + 1] = tempAlias([[^command_nests_outer (\w+)$]], function()
-                seen.siblingCommand = command
-            end)
 
             expandAlias("command_nests_outer thing", false)
 
             assert.are.equal("deeper", seen.innerMatch, "the alias's command should have reached the inner alias")
             assert.are.equal("command_nests_inner deeper", seen.innerCommand, "the inner alias should see the command it matched")
-            assert.are.equal("command_nests_outer thing", seen.command, "the alias's script was left holding its own command's expansion")
+            -- "command" is left as the last command expanded, as for any command field
+            assert.are.equal("command_nests_inner deeper", seen.command, "the alias's script should see the last command expanded")
             assert.are.equal("command_nests_outer thing", seen.fullMatch, "matches[1] was emptied by the alias's own command")
             assert.are.equal("thing", seen.match, "the alias's capture was emptied by its own command")
-            assert.are.equal("command_nests_outer thing", seen.siblingCommand, "an alias walked after it was left the inner command")
-
-            expandAlias("command_nests_unmatched thing", false)
-
-            assert.are.equal("command_nests_unmatched thing", seen.unmatchedCommand, "a command that matched no alias still replaced the alias's own")
         end)
 
         -- multimatches goes the same way as matches, which only a multiline

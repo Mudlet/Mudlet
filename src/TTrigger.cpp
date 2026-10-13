@@ -2253,9 +2253,9 @@ void TTrigger::execute()
         mpHost->mpMedia->playMedia(mediaData);
     }
     if (!mCommand.isEmpty()) {
-        // Sending runs a whole alias pass, which sets "command" and empties the
-        // captures before this trigger's script has read them
-        const int dispatchDepth = mpLua->pushNestedDispatchState(true);
+        // Sending runs a whole alias pass, which empties the captures before this
+        // trigger's script has read them; "command" is left as that pass sets it
+        const int dispatchDepth = mpLua->pushNestedDispatchState(false);
         mpHost->send(mCommand);
         if (dispatchDepth >= 0) {
             mpLua->popNestedDispatchState(dispatchDepth);

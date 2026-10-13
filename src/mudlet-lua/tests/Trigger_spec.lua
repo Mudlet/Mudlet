@@ -3431,9 +3431,8 @@ describe("Trigger processing", function()
         end)
 
         -- The command is sent through the alias pass before the script runs
-        it("keeps its own matches and command when its command expands into an alias", function()
+        it("keeps its own matches when its command expands into an alias", function()
             withTrigger("command and script", function(cleanup)
-                _G.command = "tkcmdscript typed"
                 local aliasId = tempAlias([[^tkcmdscript inner (\w+)$]], function()
                     _G.TriggerKindsSpec.commandScriptInner = {command = command, match = matches[2]}
                 end)
@@ -3446,7 +3445,7 @@ describe("Trigger processing", function()
                 local seen = _G.TriggerKindsSpec.commandScript or {}
                 assert.are.equal("tkcmdscript goblin", seen.fullMatch, "matches[1] was emptied by the trigger's own command")
                 assert.are.equal("goblin", seen.match, "the trigger's capture was emptied by its own command")
-                assert.are.equal("tkcmdscript typed", seen.command, "the trigger's script was left holding its command's expansion")
+                assert.are.equal("tkcmdscript inner deeper", seen.command, "the trigger's script should see the last command expanded")
             end)
         end)
 
