@@ -2933,7 +2933,8 @@ describe("Tests the script API", function()
       local ok, err = pcall(makeScript, "W2aScriptRaisesEntities", "", [[error("w2a &lt;b&gt; &amp;quot; & done")]])
       assert.is_false(ok, "a body that raises must not create a script")
       err = tostring(err)
-      assert.is_truthy(err:find([[w2a &lt;b&gt; &amp;quot; & done]], 1, true), "the raised text should come back unchanged, got: " .. err)
+      -- anchored on the line number, as the message also quotes the code itself
+      assert.is_truthy(err:find([[:1: w2a &lt;b&gt; &amp;quot; & done]], 1, true), "the raised text should come back unchanged, got: " .. err)
     end)
 
     it("reports the type when the body raises something other than a string", function()
