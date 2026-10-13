@@ -67,7 +67,7 @@ bool MapRoute::stale(const TMap& map) const
     return hasDestination() && (!mInputs || *mInputs != inputsOf(map));
 }
 
-bool MapRoute::search(TMap& map, const int from, const int to, QList<int>& rooms, int& weight)
+bool MapRoute::search(TMap& map, const int from, const int to, QList<int>& rooms, qint64& weight)
 {
     const QList<int> pathList = map.mPathList;
     const QList<QString> dirList = map.mDirList;
@@ -136,10 +136,10 @@ bool MapRoute::refresh(TMap& map)
             std::sort(targets.begin(), targets.end());
         }
         QList<int> bestRooms;
-        int bestWeight = 0;
+        qint64 bestWeight = 0;
         for (const int target : std::as_const(targets)) {
             QList<int> rooms;
-            int weight = 0;
+            qint64 weight = 0;
             if (!search(map, playerRoomId, target, rooms, weight)) {
                 continue;
             }
@@ -159,7 +159,7 @@ bool MapRoute::refresh(TMap& map)
     return true;
 }
 
-void MapRoute::setResult(const Status status, TRoomDB* roomDB, const QList<int>& rooms, const int weight)
+void MapRoute::setResult(const Status status, TRoomDB* roomDB, const QList<int>& rooms, const qint64 weight)
 {
     mStatus = status;
     mRooms = status == Status::Found ? rooms : QList<int>();

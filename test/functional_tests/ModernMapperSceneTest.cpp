@@ -1155,6 +1155,26 @@ private slots:
         QVERIFY(!widget.route().hasDestination());
     }
 
+    void test_aRouteToAnAreaWeighsEntrancesBeyondTheRangeOfAnIntWithoutGL()
+    {
+        map()->mapClear();
+        map()->mUserData.remove(TAreaGraph::cLayoutUserDataKey);
+        addGridArea(qsl("Westmarch"), 1, 3, 1, 1, 0);
+        addGridArea(qsl("Highvale"), 10, 2, 1, 1, 0);
+        QVERIFY(map()->setExit(10, -1, DIR_EAST));
+        QVERIFY(map()->setExit(11, -1, DIR_WEST));
+        // From the middle room: east through two rooms each weighted two billion, or west through two of weight one
+        QVERIFY(map()->setExit(3, 10, DIR_NORTH));
+        QVERIFY(map()->setExit(1, 11, DIR_NORTH));
+        map()->mpRoomDB->getRoom(3)->setWeight(2000000000);
+        map()->mpRoomDB->getRoom(10)->setWeight(2000000000);
+        map()->mRoomIdHash[map()->mProfileName] = 2;
+        ModernGLWidget widget(map(), mpHost);
+        QCOMPARE(widget.planRouteToArea(map()->mpRoomDB->getRoom(10)->getArea()), QString());
+        QCOMPARE(widget.route().endRoomId(), 11);
+        QCOMPARE(widget.route().totalWeight(), 2);
+    }
+
     void test_aPlaceThatCannotBeReachedIsReportedWithoutGL()
     {
         const ThreeAreas areas = addThreeAreas();
