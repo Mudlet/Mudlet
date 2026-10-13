@@ -150,6 +150,10 @@ void TMap::restoreLabelFontFromUserData(TMapLabel& label, int labelId, QMap<QStr
         } else {
             qWarning("TMap: Failed to parse font data for label %d, expected 4 parts but got %lld", labelId, fontParts.size());
         }
+    } else if (userData.contains(qsl("system.labelOutlineColor_%1").arg(labelId))) {
+        // A file that keeps outline colors writes a font for every label with
+        // one, so this label had none, and a default QFont would invent one
+        label.font = QFont(QString());
     }
 }
 

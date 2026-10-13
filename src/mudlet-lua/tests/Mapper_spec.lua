@@ -4971,6 +4971,25 @@ describe("Tests saveJsonMap and loadJsonMap", function()
       assert.is_nil(getAllAreaUserData(area)["system.labelOutlineColor_" .. labelId])
     end)
 
+    it("keeps a label without a font fontless through a binary save and load", function()
+      local binaryPath = getMudletHomeDir() .. "/mapper_spec_label_fontless.dat"
+      finally(function() os.remove(binaryPath) end)
+      deleteMap()
+      local area = addAreaName("MapperSpecBinaryFontlessLabelArea")
+      roomA = createRoomID(); addRoom(roomA); setRoomArea(roomA, area)
+      local fontedId = createMapLabel(area, "Fonted", 0, 0, 0, 255, 255, 255, 0, 0, 0,
+                                      30.0, 12, true, false, "Bitstream Vera Sans", 255, 50, false)
+      local fontlessId = createMapLabel(area, "Fontless", 1, 1, 0, 255, 255, 255, 0, 0, 0,
+                                        30.0, 12, true, false, "", 255, 50, false)
+      assert.is_true(saveMap(binaryPath))
+      deleteMap()
+      assert.is_true(loadMap(binaryPath))
+
+      local after = exportedLabels(area)
+      assert.are.equal("Bitstream Vera Sans", after[fontedId].font.family)
+      assert.is_nil(after[fontlessId].font)
+    end)
+
     it("does not give a deleted label's font to a later label given its id", function()
       local binaryPath = getMudletHomeDir() .. "/mapper_spec_label_reused_id.dat"
       finally(function() os.remove(binaryPath) end)
