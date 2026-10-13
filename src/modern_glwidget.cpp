@@ -2111,7 +2111,8 @@ ExitScene::Options ModernGLWidget::exitSceneOptions() const
 
 QColor ModernGLWidget::levelFadeTarget(const int z) const
 {
-    if (!mudlet::self() || !mudlet::self()->drawUpperLowerLevels()) {
+    // Added onto what is under it, light faded toward a level's color would glow in that color rather than dim
+    if (!mudlet::self() || !mudlet::self()->drawUpperLowerLevels() || mapStyle().edges == MapStyle::Edges::GlowingWireframes) {
         return backgroundColor();
     }
     return GeometryManager::levelFadeTarget(z - mMapCenterZ, backgroundColor(), mpHost->mUpperLevelColor, mpHost->mLowerLevelColor);
