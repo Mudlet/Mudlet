@@ -3932,20 +3932,39 @@ describe("Tests saveMap and loadMap", function()
       assertMapRestored()
     end)
 
-    -- TMap::serialize() writes each area's fallback zoom and its labels' fonts
-    -- and outline colours as area user data. They belong in the file only: the
-    -- map autosave makes this same save at any moment, so whatever it leaves in
-    -- the live map is what scripts read back.
-    it("leaves an area's user data as it was before the save", function()
-      deleteMap()
-      local area = addAreaName("MapperSpecSaveAreaDataArea")
-      roomA = createRoomID(); addRoom(roomA); setRoomArea(roomA, area)
+    -- the save writes the zoom and a named label font into the file's copy of
+    -- the area user data only, so a save that wrote the live data loses both
+    it("brings an area's zoom and a label's font back from the file", function()
+      local jsonPath = getMudletHomeDir() .. "/mapper_spec_label_font.json"
+      finally(function() os.remove(jsonPath) end)
+      local area = buildMap()
       assert.is_true(setAreaUserData(area, "climate", "temperate"))
-      assert.is_true(createMapLabel(area, "MapperSpecSaveAreaDataLabel", 0, 0, 0, 255, 255, 255, 0, 0, 0) >= 0)
+      assert.is_true(setMapZoom(13, area))
+      assert.is_true(createMapLabel(area, "Font Label", 0, 0, 0, 255, 255, 255, 0, 0, 0,
+                                    30.0, 12, true, true, "DejaVu Sans", 255, 50, false) >= 0)
 
-      assert.is_true(saveMap(savePath))
-
+      assert.is_true(saveMap(savePath, 20))
       assert.are.same({climate = "temperate"}, getAllAreaUserData(area))
+      deleteMap()
+      assert.is_true(loadMap(savePath))
+      area = getAreaTable()["MapperSpecSaveArea"]
+
+      assert.are.equal(13, getMapZoom(area))
+      assert.are.same({climate = "temperate"}, getAllAreaUserData(area))
+      -- no Lua getter reads a label's font back, but the JSON export writes it
+      assert.is_true(saveJsonMap(jsonPath))
+      local file = assert(io.open(jsonPath, "r"))
+      local exported = json_to_value(file:read("*a"))
+      file:close()
+      local font
+      for _, exportedArea in ipairs(exported.areas) do
+        for _, label in ipairs(exportedArea.labels or {}) do
+          if label.text == "Font Label" then
+            font = label.font
+          end
+        end
+      end
+      assert.are.equal("DejaVu Sans", font and font.family)
     end)
 
     it("saves into the profile's own map folder when given no path", function()
