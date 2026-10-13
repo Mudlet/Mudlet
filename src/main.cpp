@@ -463,9 +463,10 @@ int main(int argc, char* argv[])
 
     // A print-and-exit run is parsed before an application object strips Qt's own options, so this parser
     // meets them. They are declared here, hidden, so that `mudlet -platform offscreen --version` answers
-    // rather than calling one of them unknown. Keep in step with QGuiApplication, QApplication and the xcb
-    // platform plugin.
-    for (const QString& inheritedName : {qsl("dograb"), qsl("nograb"), qsl("reverse"), qsl("sync"), qsl("testability"), qsl("widgetcount")}) {
+    // rather than calling one of them unknown. Keep in step with the options QCoreApplication, QGuiApplication
+    // and QApplication strip, and with the help text below - which documents --sync, although Qt 6 no longer
+    // reads it.
+    for (const QString& inheritedName : {qsl("dograb"), qsl("nograb"), qsl("qdebug"), qsl("qdevel"), qsl("reverse"), qsl("sync"), qsl("testability"), qsl("widgetcount")}) {
         QCommandLineOption inheritedOption(inheritedName);
         inheritedOption.setFlags(QCommandLineOption::HiddenFromHelp);
         parser.addOption(inheritedOption);
@@ -480,13 +481,7 @@ int main(int argc, char* argv[])
                                          qsl("qwindowgeometry"),
                                          qsl("qwindowicon"),
                                          qsl("qwindowtitle"),
-                                         qsl("session"),
-                                         qsl("display"),
-                                         qsl("geometry"),
-                                         qsl("icon"),
-                                         qsl("name"),
-                                         qsl("title"),
-                                         qsl("visual")}) {
+                                         qsl("session")}) {
         QCommandLineOption inheritedOption(inheritedName, QString(), inheritedName);
         inheritedOption.setFlags(QCommandLineOption::HiddenFromHelp);
         parser.addOption(inheritedOption);
@@ -505,7 +500,17 @@ int main(int argc, char* argv[])
     // would find an 'h' in -stylesheet or a 'v' in -reverse. Known gap: -h/-v in a compacted group (-qv,
     // -fh) isn't seen here, so such a run builds a QApplication and still needs a display.
     parser.setSingleDashWordOptionMode(QCommandLineParser::ParseAsLongOptions);
-    const bool commandLineReadOk = parser.parse(commandLineArguments);
+    bool commandLineReadOk = parser.parse(commandLineArguments);
+    // Qt strips these only when xcb is the platform, so elsewhere a GUI run must still call them unknown
+    // rather than take the word after one as its value: only a print-and-exit run declares them.
+    if (parser.isSet(showHelp) || parser.isSet(showVersion)) {
+        for (const QString& xcbName : {qsl("display"), qsl("geometry"), qsl("icon"), qsl("name"), qsl("title"), qsl("visual")}) {
+            QCommandLineOption xcbOption(xcbName, QString(), xcbName);
+            xcbOption.setFlags(QCommandLineOption::HiddenFromHelp);
+            parser.addOption(xcbOption);
+        }
+        commandLineReadOk = parser.parse(commandLineArguments);
+    }
     const bool printAndExitOption = parser.isSet(showHelp) || parser.isSet(showVersion);
 
 #if !defined(Q_OS_MACOS)
@@ -605,6 +610,8 @@ int main(int argc, char* argv[])
         // but on standard error, out of the --version text a script reads, and still
         // allow program to start when launched by installer.
         // --squirrel-firstrun for example is given for launch at end of install process.
+        //: Printed on standard error before a command line Mudlet only partly understood is acted on; %1 is
+        //: the parser's own, untranslated, account of what it did not understand. Keep the trailing newline.
         std::cerr << QCoreApplication::translate("main", "Warning: %1\n").arg(parser.errorText()).toStdString();
     }
 
@@ -642,6 +649,10 @@ int main(int argc, char* argv[])
         texts << appendLF.arg(QCoreApplication::translate("main",
                                                           "There are other inherited options that arise from the Qt Libraries which are\n"
                                                           "less likely to be useful for normal use of this application:"));
+        //: Follows the line introducing the Qt options in the --help text; the option names are not translated
+        texts << appendLF.arg(QCoreApplication::translate("main",
+                                                          "Qt also reads these with a single dash, as in -reverse, and has others not\n"
+                                                          "listed here, such as -platform, -session and -qwindowgeometry."));
         // From documentation and from http://qt-project.org/doc/qt-5/qapplication.html:
         texts << appendLF.arg(QCoreApplication::translate("main",
                                                           "       --dograb                     ignore any implicit or explicit -nograb.\n"
