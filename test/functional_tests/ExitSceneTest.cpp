@@ -643,6 +643,39 @@ private slots:
         QVERIFY2(!trianglesIn(scene, blueLine).isEmpty(), "the stub's dot is not in its room's color");
     }
 
+    // Stairs that are shafts and in/out stubs between rooms of one environment are in its line, as straight stairs are
+    void test_environmentLinesColorShaftsAndStubs()
+    {
+        const QColor red(200, 30, 30);
+        map()->mCustomEnvColors[301] = red;
+        auto restore = qScopeGuard([this] {
+            map()->mCustomEnvColors.remove(301);
+        });
+        TRoom* pLow = addRoomAt(1, mAreaId, 0, 0, 0);
+        TRoom* pHigh = addRoomAt(2, mAreaId, 3, 2, 1);
+        TRoom* pOneWay = addRoomAt(3, mAreaId, 6, 0, 1);
+        TRoom* pInside = addRoomAt(4, mAreaId, 0, 4, 0);
+        QVERIFY(pLow && pHigh && pOneWay && pInside);
+        for (TRoom* pRoom : {pLow, pHigh, pOneWay, pInside}) {
+            pRoom->environment = 301;
+        }
+        pLow->setExit(2, DIR_UP);
+        pHigh->setExit(1, DIR_DOWN);
+        pOneWay->setExit(1, DIR_DOWN);
+        pLow->setExit(4, DIR_IN);
+        pInside->setExit(1, DIR_OUT);
+        ExitScene::Options lines = options();
+        lines.environmentLines = true;
+        lines.inOutStubs = true;
+
+        const ExitScene::Scene scene = build(lines);
+        const QColor redLine = ExitAppearance::standOutColor(red, lines.background);
+
+        QCOMPARE(segmentsIn(scene, mExitColor).size(), 0);
+        QCOMPARE(segmentsIn(scene, redLine).size(), 5);
+        QCOMPARE(segmentsIn(scene, ExitAppearance::oneWayArrowColor()).size(), 1);
+    }
+
     void test_environmentLinesAreOffUnlessAsked()
     {
         map()->mCustomEnvColors[301] = QColor(200, 30, 30);
