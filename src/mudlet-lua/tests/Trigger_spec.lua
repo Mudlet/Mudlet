@@ -2144,32 +2144,30 @@ describe("Trigger processing", function()
 
     describe("patterns that fail to compile", function()
 
-        -- an item that could never match is refused, and the refusal says why
+        local function triggerCount()
+            return getProfileStats().triggers.total
+        end
+
         it("refuses a perl pattern that fails to compile", function()
-            _G.TrigBadPattern = {good = 0}
-            local goodId = tempRegexTrigger([[^bad_pattern_line$]], [==[_G.TrigBadPattern.good = _G.TrigBadPattern.good + 1]==])
-            finally(function()
-                killTrigger(goodId)
-                _G.TrigBadPattern = nil
-            end)
-
-            local badId, message = tempRegexTrigger([[^bad_pattern_line($]], [==[_G.TrigBadPattern.bad = true]==])
+            local before = triggerCount()
+            local badId, message = tempRegexTrigger([[^bad_pattern_line($]], [==[]==])
             assert.is_nil(badId, "an uncompilable pattern should not make a trigger")
-            assert.is_truthy(tostring(message):find("failed to compile", 1, true), "the refusal should say why, got: " .. tostring(message))
-
-            feedTriggers("bad_pattern_line\n")
-
-            assert.are.equal(1, _G.TrigBadPattern.good, "the control trigger shows the line does reach the trigger engine")
+            assert.are.equal([[regex pattern "^bad_pattern_line($" failed to compile at offset 19: missing closing parenthesis]], message)
+            assert.are.equal(before, triggerCount(), "nothing should have been created")
         end)
 
         it("refuses a perl pattern that fails to compile from tempRegexTrigger given a function", function()
+            local before = triggerCount()
             local badId, message = tempRegexTrigger([[(unclosed]], function() end)
             assert.is_nil(badId)
             assert.is_string(message)
+            assert.are.equal(before, triggerCount(), "nothing should have been created")
         end)
 
         it("refuses a perl pattern that fails to compile from permRegexTrigger", function()
             local name = "SpecBadPatternPermTrigger"
+            -- a permanent trigger cannot be killed, so one made by a regression is at least kept quiet
+            finally(function() disableTrigger(name) end)
             local before = exists(name, "trigger")
             local badId, message = permRegexTrigger(name, "", {[[^fine$]], [[^bad_pattern_perm($]]}, [==[]==])
             assert.is_nil(badId)
@@ -2177,7 +2175,46 @@ describe("Trigger processing", function()
             assert.are.equal(before, exists(name, "trigger"), "nothing should have been created")
         end)
 
-        -- a package can still bring in an item like that, which must stay silent
+        -- TTrigger drops every newline from a pattern before compiling it
+        it("judges a pattern with a newline in it as the trigger will compile it", function()
+            _G.TrigBadPattern = {fires = 0}
+            local goodId
+            finally(function()
+                if goodId then
+                    killTrigger(goodId)
+                end
+                disableTrigger("SpecNewlinePermTrigger")
+                _G.TrigBadPattern = nil
+            end)
+
+            local before = triggerCount()
+            assert.is_nil(tempRegexTrigger("[\n]", [==[]==]), "\"[\\n]\" compiles as \"[]\", which does not compile")
+            assert.is_nil(tempRegexTrigger("abc\\\n", [==[]==]), "a backslash left at the end does not compile")
+            assert.is_nil(permRegexTrigger("SpecNewlinePermTrigger", "", {"[\n]"}, [==[]==]))
+            assert.are.equal(before, triggerCount(), "nothing should have been created")
+
+            local message
+            goodId, message = tempRegexTrigger("^(?\n:newline_dropped_line)$", [==[_G.TrigBadPattern.fires = _G.TrigBadPattern.fires + 1]==])
+            assert.is_number(goodId, "a pattern that compiles once its newline is dropped should be accepted, got: " .. tostring(message))
+            feedTriggers("newline_dropped_line\n")
+            assert.are.equal(1, _G.TrigBadPattern.fires)
+        end)
+
+        it("accepts a perl pattern that needs UTF-8 mode", function()
+            _G.TrigBadPattern = {fires = 0}
+            local id, message = tempRegexTrigger([[^\x{263A} utf_pattern_line$]], [==[_G.TrigBadPattern.fires = _G.TrigBadPattern.fires + 1]==])
+            finally(function()
+                if id then
+                    killTrigger(id)
+                end
+                _G.TrigBadPattern = nil
+            end)
+            assert.is_number(id, "got: " .. tostring(message))
+            feedTriggers("\226\152\186 utf_pattern_line\n")
+            assert.are.equal(1, _G.TrigBadPattern.fires)
+        end)
+
+        -- installing a package does not go through the creators' check
         it("does not fire a trigger from a package whose perl pattern failed to compile", function()
             if not os.getenv("MUDLET_TEST_MODE") then
                 pending("uninstalling the fixture needs pumpEvents(), which does nothing outside MUDLET_TEST_MODE")
@@ -2189,20 +2226,11 @@ describe("Trigger processing", function()
             finally(function()
                 killTrigger(goodId)
                 _G.TrigBadPattern = nil
-                -- uninstallPackage() refuses while the profile save the install
-                -- started is still running
-                local removed = false
-                for _ = 1, 100 do
-                    if uninstallPackage("trigger-bad-pattern") == true then
-                        removed = true
-                        break
-                    end
-                    pumpEvents(50)
-                end
+                local removed, reason = removePackage("trigger-bad-pattern")
                 os.remove(path)
-                pumpEvents(200)
-                assert.is_true(removed, "could not uninstall the trigger-bad-pattern package")
+                assert.is_true(removed, "could not uninstall the trigger-bad-pattern package: " .. tostring(reason))
             end)
+            assert.is_true(removePackage("trigger-bad-pattern"), "a trigger-bad-pattern package left by an earlier run could not be removed")
             local file = assert(io.open(path, "w"))
             file:write([[<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE MudletPackage>
@@ -2240,10 +2268,9 @@ describe("Trigger processing", function()
 </MudletPackage>
 ]])
             file:close()
-            installPackage(path)
-            pumpEvents(100)
-
-            assert.is_true(exists("bad_pattern_package_trigger", "trigger") > 0, "the package should have brought the trigger in")
+            assert.is_true(installPackage(path))
+            -- an install made while a profile save runs waits for it to finish
+            assert.is_true(waitUntil(function() return exists("bad_pattern_package_trigger", "trigger") > 0 end, 5000), "the package should have brought the trigger in")
             feedTriggers("bad_pattern_package\n")
 
             assert.are.equal(1, _G.TrigBadPattern.good, "the control trigger shows the line does reach the trigger engine")
@@ -2262,6 +2289,8 @@ describe("Trigger processing", function()
             local badId, message = tempComplexRegexTrigger("SpecBadPatternComplex", [[^complex_bad($]], code, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
             assert.is_nil(badId)
             assert.is_string(message)
+            badId = tempComplexRegexTrigger("SpecBadPatternComplex", "[\n]", code, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+            assert.is_nil(badId, "\"[\\n]\" compiles as \"[]\", which does not compile")
 
             feedTriggers("complex_good_line\n")
             assert.are.equal(1, _G.TrigBadPattern.fires, "a refused pattern must not cost the trigger the patterns it already had")

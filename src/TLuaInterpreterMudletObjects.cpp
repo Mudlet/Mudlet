@@ -123,8 +123,8 @@ static std::pair<bool, qint64> stopWatchAdjustmentAsMilliSeconds(const double ad
     return {true, static_cast<qint64>(milliSeconds)};
 }
 
-// Compiled as TTrigger and TAlias compile it, so the creators can refuse a pattern that
-// would leave an item which never matches - a temporary one has no editor row to say why
+// Lets the creators refuse a pattern that would make an item which never matches; the
+// flags must stay those of TAlias::compileRegex() and TTrigger::setRegexCodeList()
 static QString perlRegexCompileError(const QString& pattern)
 {
     int errorCode = 0;
@@ -138,6 +138,12 @@ static QString perlRegexCompileError(const QString& pattern)
     PCRE2_UCHAR errorBuffer[256];
     pcre2_get_error_message(errorCode, errorBuffer, sizeof(errorBuffer));
     return qsl("regex pattern \"%1\" failed to compile at offset %2: %3").arg(pattern, QString::number(errorOffset), QString::fromUtf8(reinterpret_cast<const char*>(errorBuffer)));
+}
+
+// TTrigger::setRegexCodeList() removes every newline before it compiles a pattern
+static QString triggerRegexCompileError(QString pattern)
+{
+    return perlRegexCompileError(pattern.remove(QLatin1Char('\n')));
 }
 
 #define WINDOW_NAME(ARG_L, ARG_pos)                                                                                                                                                                    \
@@ -1201,7 +1207,7 @@ int TLuaInterpreter::permRegexTrigger(lua_State* L)
             lua_pop(L, 1);
         }
         for (const QString& pattern : regList) {
-            if (const QString error = perlRegexCompileError(pattern); !error.isEmpty()) {
+            if (const QString error = triggerRegexCompileError(pattern); !error.isEmpty()) {
                 return warnArgumentValue(L, __func__, error);
             }
         }
@@ -2623,7 +2629,7 @@ int TLuaInterpreter::tempComplexRegexTrigger(lua_State* L)
     }
     // Before the trigger of that name is replaced, so a refusal costs it nothing
     if (!colorTrigger) {
-        if (const QString error = perlRegexCompileError(pattern); !error.isEmpty()) {
+        if (const QString error = triggerRegexCompileError(pattern); !error.isEmpty()) {
             return warnArgumentValue(L, __func__, error);
         }
     }
@@ -2920,7 +2926,7 @@ int TLuaInterpreter::tempRegexTrigger(lua_State* L)
     }
 
     const QString regexPattern{lua_tostring(L, 1)};
-    if (const QString error = perlRegexCompileError(regexPattern); !error.isEmpty()) {
+    if (const QString error = triggerRegexCompileError(regexPattern); !error.isEmpty()) {
         return warnArgumentValue(L, __func__, error);
     }
     if (lua_isstring(L, 2)) {

@@ -1582,26 +1582,35 @@ describe("Alias processing", function()
             assert.are.equal("", _G.AliasSpec.digits, "a group that matched nothing is still a capture")
         end)
 
-        -- an alias that could never match is refused, and the refusal says why
         it("refuses a pattern that fails to compile", function()
-            _G.AliasSpec = {good = 0}
-            local goodId = tempAlias([[^bad_alias_pattern$]], [==[_G.AliasSpec.good = _G.AliasSpec.good + 1]==])
-            finally(function() killAlias(goodId) end)
-
-            local badId, message = tempAlias([[^bad_alias_pattern($]], [==[_G.AliasSpec.bad = true]==])
+            local before = getProfileStats().aliases.total
+            local badId, message = tempAlias([[^bad_alias_pattern($]], [==[]==])
             assert.is_nil(badId, "an uncompilable pattern should not make an alias")
-            assert.is_truthy(tostring(message):find("failed to compile", 1, true), "the refusal should say why, got: " .. tostring(message))
+            assert.are.equal([[regex pattern "^bad_alias_pattern($" failed to compile at offset 20: missing closing parenthesis]], message)
             badId, message = tempAlias([[(unclosed]], function() end)
             assert.is_nil(badId, "nor should it when the alias would run a function")
             assert.is_string(message)
+            assert.are.equal(before, getProfileStats().aliases.total, "nothing should have been created")
+        end)
 
-            expandAlias("bad_alias_pattern", false)
-
-            assert.are.equal(1, _G.AliasSpec.good, "the control alias shows the command does reach the alias engine")
+        it("accepts a pattern that needs UTF-8 mode", function()
+            _G.AliasSpec = {fires = 0}
+            local id, message = tempAlias([[^\x{263A}_utf_alias$]], [==[_G.AliasSpec.fires = _G.AliasSpec.fires + 1]==])
+            finally(function()
+                if id then
+                    killAlias(id)
+                end
+                _G.AliasSpec = nil
+            end)
+            assert.is_number(id, "got: " .. tostring(message))
+            expandAlias("\226\152\186_utf_alias", false)
+            assert.are.equal(1, _G.AliasSpec.fires)
         end)
 
         it("refuses a pattern that fails to compile from permAlias", function()
             local name = "SpecBadPatternPermAlias"
+            -- a permanent alias cannot be killed, so one made by a regression is at least kept quiet
+            finally(function() disableAlias(name) end)
             local before = exists(name, "alias")
             local badId, message = permAlias(name, "", [[^bad_alias_perm($]], [==[]==])
             assert.is_nil(badId)
@@ -1609,7 +1618,7 @@ describe("Alias processing", function()
             assert.are.equal(before, exists(name, "alias"), "nothing should have been created")
         end)
 
-        -- a package can still bring in an item like that, which must stay silent
+        -- installing a package does not go through the creators' check
         it("does not fire an alias from a package whose pattern failed to compile", function()
             if not os.getenv("MUDLET_TEST_MODE") then
                 pending("uninstalling the fixture needs pumpEvents(), which does nothing outside MUDLET_TEST_MODE")
@@ -1658,10 +1667,17 @@ describe("Alias processing", function()
 </MudletPackage>
 ]])
             file:close()
-            installPackage(path)
-            pumpEvents(100)
-
-            assert.is_true(exists("bad_pattern_package_alias", "alias") > 0, "the package should have brought the alias in")
+            assert.is_true(installPackage(path))
+            -- an install made while a profile save runs waits for it to finish
+            local installed = false
+            for _ = 1, 100 do
+                installed = exists("bad_pattern_package_alias", "alias") > 0
+                if installed then
+                    break
+                end
+                pumpEvents(50)
+            end
+            assert.is_true(installed, "the package should have brought the alias in")
             expandAlias("bad_alias_package", false)
 
             assert.are.equal(1, _G.AliasSpec.good, "the control alias shows the command does reach the alias engine")
