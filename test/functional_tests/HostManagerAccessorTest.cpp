@@ -62,6 +62,8 @@ private slots:
         HostManager first;
         QCOMPARE(HostManager::self(), &first);
         {
+            QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("a MudletMedia already exists")));
+            QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("a FontManager already exists")));
             QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("a HostManager already exists")));
             HostManager second;
             QCOMPARE(HostManager::self(), &first);

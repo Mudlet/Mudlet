@@ -119,7 +119,7 @@ private:
         if (!host) {
             return nullptr;
         }
-        TMainConsole* console = host->mpConsole;
+        TMainConsole* console = host->mainConsoleView();
 
         // Room for the longest fixture line, so that what the assertions below
         // count as one line cannot be wrapped into two:
