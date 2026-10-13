@@ -162,7 +162,7 @@ private slots:
 
         mpHost = TestProfile::create(mHostname, mLocalhost, mPort);
         QVERIFY2(mpHost, "the test profile did not load");
-        QVERIFY2(mpHost->mpConsole, "the profile loaded without a main console, so none of the video seam exists");
+        QVERIFY2(mpHost->mainConsoleView(), "the profile loaded without a main console, so none of the video seam exists");
         QVERIFY2(mpHost->mpMedia, "the profile loaded without a TMedia, so there is no emitter");
         QVERIFY2(writeClip(setupFailure), qPrintable(setupFailure));
     }
@@ -349,7 +349,7 @@ private:
             QTest::qFail(qPrintable(message), __FILE__, __LINE__);
             return false;
         }
-        pLabel = mpHost->mpConsole->labelWidget(name);
+        pLabel = mpHost->mainConsoleView()->labelWidget(name);
         if (!pLabel) {
             QTest::qFail(qPrintable(qsl("createLabel() reported success but no label called '%1' is in the console's label map").arg(name)), __FILE__, __LINE__);
             return false;
