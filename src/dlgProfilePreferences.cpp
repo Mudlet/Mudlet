@@ -3876,6 +3876,8 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     checkBox_antiAlias->setChecked(pHost->fontsAntiAlias());
 
     connect(fontComboBox_displayFont, &QFontComboBox::currentFontChanged, this, &dlgProfilePreferences::slot_displayFontChanged, Qt::UniqueConnection);
+    // currentFontChanged is not emitted when the family already shown is picked again
+    connect(fontComboBox_displayFont, &QComboBox::activated, this, &dlgProfilePreferences::slot_displayFontChanged, Qt::UniqueConnection);
     connect(spinBox_displayFontSize, qOverload<int>(&QSpinBox::valueChanged), this, &dlgProfilePreferences::slot_displayFontSizeChanged, Qt::UniqueConnection);
     connect(checkBox_antiAlias, &QCheckBox::clicked, this, &dlgProfilePreferences::slot_displayFontAliasingChanged, Qt::UniqueConnection);
 
@@ -4496,7 +4498,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
                         break;
                     default: {
                     } // There are a significant number of other errors
-                        // that are not handled here!
+                    // that are not handled here!
                     }
                 }
             }
@@ -4840,6 +4842,7 @@ void dlgProfilePreferences::disconnectHostRelatedControls()
     // arguments to get the wanted wild-card behaviour for them:
 
     disconnect(fontComboBox_displayFont, &QFontComboBox::currentFontChanged, nullptr, nullptr);
+    disconnect(fontComboBox_displayFont, &QComboBox::activated, nullptr, nullptr);
     disconnect(spinBox_displayFontSize, qOverload<int>(&QSpinBox::valueChanged), nullptr, nullptr);
     disconnect(checkBox_antiAlias, &QCheckBox::clicked, nullptr, nullptr);
 
@@ -8999,7 +9002,12 @@ bool dlgProfilePreferences::updateDisplayFont(const Host::DisplayFontChange chan
                                                              : static_cast<QFont::StyleStrategy>(QFont::NoAntialias | QFont::PreferQuality));
 
     if (TFontAttributes(mpHost->getDisplayFont()) == TFontAttributes(displayFont)) {
-        // No change!
+        // Nothing changes on screen, but a pick still has to reach the Host: re-picking
+        // the family standing in for a missing font settles for it. Every pick of a new
+        // family lands here as well, as activated follows currentFontChanged
+        if (change == Host::DisplayFontChange::UserChoice) {
+            mpHost->setDisplayFont(displayFont, change);
+        }
         return false;
     }
 
@@ -9069,7 +9077,8 @@ void dlgProfilePreferences::slot_displayFontChanged()
     if (mpHost.isNull() || (!shownBefore.isEmpty() && !mpHost->resolveFontFamily(shownBefore).available)) {
         return;
     }
-    // Past that, only a pick out of the list changes it, so the family really is the user's choice
+    // Past that, only a pick out of the list gets here (currentFontChanged and activated both land
+    // here, so a second run for the same font must change nothing), so the family really is the user's choice
     if (updateDisplayFont(Host::DisplayFontChange::UserChoice)) {
         mpHost->mTelnet.sendInfoNewEnvironValue(qsl("FONT"));
     }
