@@ -201,16 +201,16 @@ private slots:
     }
 
     // The player carries on typing straight after the drag, so the profile they
-    // dragged out has to have the keyboard in its new window (#10754)
+    // dragged out has to have the keyboard in its new window
     void test_theDetachedProfilesCommandLineHasTheKeyboard()
     {
         QVERIFY(mpDetachedWindow);
         Host* pHost = HostManager::self()->getHost(mSecondHostname);
         QVERIFY(pHost && pHost->mainConsoleView());
-        // A drag starts with a press on the tab bar, which takes the keyboard there,
-        // and left alone the new window hands it to its own tab bar
         reattachAndWait(mSecondHostname);
         QTest::qWait(200ms); // the reattach's own deferred focus changes
+        // Away from the command line, so that only the detach can hand it the keyboard:
+        // left alone, the new window gives it to its own tab bar
         mudlet::self()->mpTabBar->setFocus(Qt::MouseFocusReason);
         mpDetachedWindow = detachSecondProfile();
         QVERIFY(mpDetachedWindow);
@@ -219,8 +219,8 @@ private slots:
         QCOMPARE(QApplication::focusWidget(), static_cast<QWidget*>(pHost->mainConsoleView()->mpCommandLine.data()));
     }
 
-    // A user window stays docked in the main window when its profile is detached,
-    // so the command line last used in one cannot be the one given the keyboard
+    // A user window is not moved with its profile, docked or floating, so the
+    // command line last used in one cannot be the one given the keyboard
     void test_theDetachedProfilesCommandLineHasTheKeyboardAfterAUserWindowsWasUsed()
     {
         QVERIFY(mpDetachedWindow);
