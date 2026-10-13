@@ -38,8 +38,9 @@ class RenderCommand
 {
 public:
     // Unlit draws its colors as given, as the 2D map does; lit shades them by the light; wireframe draws an
-    // instanced shape's edges unlit, as glowing lines, and only instanced shapes support it
-    enum class Shading { Lit, Unlit, Wireframe };
+    // instanced shape's edges unlit, as glowing lines, and only instanced shapes support it; outline is
+    // wireframe without its faint fill across the faces
+    enum class Shading { Lit, Unlit, Wireframe, Outline };
 
     virtual ~RenderCommand() = default;
     virtual void execute(QOpenGLFunctions* gl,
@@ -268,7 +269,7 @@ public:
                       GLuint textureId,
                       const QVector3D& cameraRight,
                       const QVector3D& cameraUp,
-                      bool highlight,
+                      const QVector4D& tint,
                       const QMatrix4x4& projectionMatrix,
                       const QMatrix4x4& viewMatrix,
                       const QMatrix4x4& modelMatrix);
@@ -292,7 +293,8 @@ private:
     GLuint mTextureId;
     QVector3D mCameraRight;
     QVector3D mCameraUp;
-    bool mHighlight;
+    // Multiplies the label's colors
+    QVector4D mTint;
     QMatrix4x4 mProjectionMatrix;
     QMatrix4x4 mViewMatrix;
     QMatrix4x4 mModelMatrix;

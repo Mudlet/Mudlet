@@ -1374,27 +1374,39 @@ private slots:
     }
 
     // Hologram draws glowing edges tinted by the environment, with scanlines, and pulses from the player's room
-    void test_hologramGlowsInItsInk()
+    // Each environment glows in its own hue, and only a gray one, which has none, in the ink
+    void test_hologramGlowsInEachEnvironmentsHue()
     {
         const MapStyle* hologram = MapStyle::find(qsl("hologram"));
         QVERIFY(hologram);
         const QColor ink = hologram->ink;
         QVERIFY(ink.isValid());
-        const QColor environment(200, 40, 40, 200);
-        const QColor room = hologram->roomColor(environment);
-        QVERIFY2(difference(room, ink) < difference(room, environment), "a room's edges are nearer its environment's color than the ink's");
-        QVERIFY2(room != hologram->roomColor(QColor(40, 200, 40, 200)), "a room's environment does not show at all");
-        QCOMPARE(room.alpha(), environment.alpha());
+        const QColor red(200, 40, 40, 200);
+        const QColor green(40, 200, 40, 200);
+        const QColor room = hologram->roomColor(red);
+        const QColor other = hologram->roomColor(green);
+        QVERIFY2(qAbs(room.hslHue() - red.hslHue()) <= 2, qPrintable(qsl("a red environment glows at hue %1").arg(room.hslHue())));
+        QVERIFY2(qAbs(other.hslHue() - green.hslHue()) <= 2, qPrintable(qsl("a green environment glows at hue %1").arg(other.hslHue())));
+        QVERIFY2(room.hslSaturation() > 200, "a room's environment is washed out");
+        QCOMPARE(room.alpha(), red.alpha());
+        const QColor gray = hologram->roomColor(QColor(128, 128, 128));
+        QVERIFY2(qAbs(gray.hslHue() - ink.hslHue()) <= 2, "a gray environment does not glow in the ink");
         QVERIFY2(hologram->roomColor(QColor(Qt::black)).lightness() >= 150, "a dark environment's edges do not glow");
+        QVERIFY2(room.lightness() >= 150, "a room's edges do not glow");
         QCOMPARE(hologram->edges, MapStyle::Edges::GlowingWireframes);
         QCOMPARE(hologram->playerMarker, MapStyle::PlayerMarker::Pulse);
         QVERIFY(hologram->postEffects.testFlag(MapStyle::PostEffect::Scanlines));
+        QVERIFY(hologram->postEffects.testFlag(MapStyle::PostEffect::Bloom));
+        QVERIFY(hologram->labelTint.isValid());
+        QVERIFY(hologram->scannerOverlay);
         QVERIFY(!hologram->floorPlates);
         QVERIFY(!hologram->lit);
         QVERIFY(hologram->background.lightness() < 30);
         const MapStyle* tiles = MapStyle::find(qsl("tiles"));
         QVERIFY(tiles);
         QCOMPARE(tiles->postEffects, MapStyle::PostEffects(MapStyle::PostEffect::NoPostEffects));
+        QVERIFY(!tiles->labelTint.isValid());
+        QVERIFY(!tiles->scannerOverlay);
     }
 
     // Every room, on every level, is drawn as glowing edges added onto what is under it, with no fill to hide the
@@ -1477,6 +1489,131 @@ private slots:
         for (int channel = 0; channel < 4; ++channel) {
             QVERIFY2(qFuzzyCompare(lower.first().color[channel], plainLower.first().color[channel]), "the level below took on the lower level's color");
         }
+    }
+
+    // The player is marked by a diamond of glowing lines over their room, in the player's color, not a column
+    void test_hologramMarksThePlayerWithADiamondWithoutGL()
+    {
+        const int areaId = addArea();
+        QVERIFY(areaId > 0);
+        const auto restore = qScopeGuard([this]() {
+            mpHost->setMapStyle(qsl("tiles"));
+        });
+        QVERIFY(mpHost->setMapStyle(qsl("hologram")));
+        const MapStyle& hologram = mpHost->mapStylePreset();
+        const QColor color = hologram.playerRoomColor();
+        ModernGLWidget widget(map(), mpHost);
+        queueFrame(widget, areaId);
+
+        QList<CubeInstanceData> lines;
+        float highest = 0.0f;
+        for (const auto& command : widget.mRenderCommandQueue.commands()) {
+            const auto* cubes = dynamic_cast<const RenderInstancedCubesCommand*>(command.get());
+            if (!cubes || cubes->shading() != RenderCommand::Shading::Unlit) {
+                continue;
+            }
+            for (const CubeInstanceData& cube : cubes->instances()) {
+                const QVector4D center = cube.transform.column(3);
+                if (qAbs(center.x()) < 0.5f && qAbs(center.y()) < 0.5f && center.z() > kRoomHeight / 2.0f && qAbs(cube.color[0] - color.redF()) < 1e-4f && qAbs(cube.color[1] - color.greenF()) < 1e-4f
+                    && qAbs(cube.color[2] - color.blueF()) < 1e-4f) {
+                    lines.append(cube);
+                    highest = qMax(highest, center.z());
+                }
+            }
+        }
+        // Its twelve edges and the stem down to the room, each a core and a glow
+        QCOMPARE(lines.size(), 26);
+        QVERIFY2(highest < 1.0f, "the diamond rises out of sight like the column");
+        const bool wide = std::any_of(lines.cbegin(), lines.cend(), [](const CubeInstanceData& cube) {
+            return qAbs(cube.transform.column(3).x()) > 0.1f || qAbs(cube.transform.column(3).y()) > 0.1f;
+        });
+        QVERIFY2(wide, "the marker has no corners off its middle, as a diamond does");
+    }
+
+    // A highlighted room is ringed by glowing circles, not covered by the 2D map's disc
+    void test_hologramRingsHighlightedRoomsWithoutGL()
+    {
+        const int areaId = addArea();
+        QVERIFY(areaId > 0);
+        TRoom* east = map()->mpRoomDB->getRoom(kEastRoomId);
+        const auto restore = qScopeGuard([this, east]() {
+            mpHost->setMapStyle(qsl("tiles"));
+            east->highlight = false;
+        });
+        east->highlight = true;
+        east->highlightColor = QColor(255, 0, 0);
+        east->highlightColor2 = QColor(0, 255, 0);
+        east->highlightRadius = 1.0f;
+        QVERIFY(mpHost->setMapStyle(qsl("hologram")));
+        ModernGLWidget widget(map(), mpHost);
+        const auto rings = [&widget]() {
+            QList<CubeInstanceData> found;
+            for (const auto& command : widget.mRenderCommandQueue.commands()) {
+                if (const auto* cubes = dynamic_cast<const RenderInstancedCubesCommand*>(command.get());
+                    cubes && cubes->shading() == RenderCommand::Shading::Outline && cubes->shape() == GeometryManager::InstanceShape::Cylinder) {
+                    found.append(cubes->instances());
+                }
+            }
+            return found;
+        };
+        queueFrame(widget, areaId);
+        const QList<CubeInstanceData> ringed = rings();
+        QCOMPARE(ringed.size(), 2);
+        float roomWidth = 0.0f;
+        for (const auto& command : widget.mRenderCommandQueue.commands()) {
+            if (const auto* cubes = dynamic_cast<const RenderInstancedCubesCommand*>(command.get()); cubes && cubes->shading() == RenderCommand::Shading::Wireframe) {
+                for (const CubeInstanceData& cube : roomInstances(*cubes, QPointF(2.0, 0.0))) {
+                    roomWidth = cube.transform.column(0).toVector3D().length();
+                }
+            }
+        }
+        QVERIFY(roomWidth > 0.0f);
+        for (const CubeInstanceData& ring : ringed) {
+            QVERIFY2(qAbs(ring.transform.column(3).x() - 2.0f) < 1e-4f && qAbs(ring.transform.column(3).y()) < 1e-4f, "a ring is not around the highlighted room");
+            QVERIFY2(ring.transform.column(0).toVector3D().length() > roomWidth, "a ring is no wider than the room it is around");
+            QVERIFY2(ring.color[0] > ring.color[1] && ring.color[0] > ring.color[2], "a ring is not in the highlight's color");
+        }
+
+        east->highlight = false;
+        queueFrame(widget, areaId);
+        QVERIFY2(rings().isEmpty(), "a room no longer highlighted is still ringed");
+    }
+
+    // A map label is drawn dimmer and tinted toward the ink, so that it does not outshine the rooms
+    void test_hologramDimsLabelsWithoutGL()
+    {
+        const int areaId = addArea();
+        QVERIFY(areaId > 0);
+        const auto restore = qScopeGuard([this, areaId]() {
+            mpHost->setMapStyle(qsl("tiles"));
+            map()->mpRoomDB->getArea(areaId)->mMapLabels.clear();
+        });
+        TMapLabel text;
+        text.text = qsl("Old Keep");
+        text.pos = QVector3D(0.0f, 1.0f, 0.0f);
+        text.size = QSizeF(2.0, 0.5);
+        text.pix = QPixmap(80, 20);
+        text.pix.fill(Qt::white);
+        map()->mpRoomDB->getArea(areaId)->mMapLabels.insert(1, text);
+        ModernGLWidget widget(map(), mpHost);
+        // The tint of the first of the label's corners
+        const auto labelTint = [&widget]() {
+            for (const auto& command : widget.mRenderCommandQueue.commands()) {
+                if (const auto* triangles = dynamic_cast<const RenderTexturedTrianglesCommand*>(command.get()); triangles && triangles->geometry().colors.size() >= 4) {
+                    const QVector<float>& colors = triangles->geometry().colors;
+                    return QVector4D(colors.at(0), colors.at(1), colors.at(2), colors.at(3));
+                }
+            }
+            return QVector4D();
+        };
+        queueFrame(widget, areaId);
+        const QVector4D plain = labelTint();
+        QVERIFY(mpHost->setMapStyle(qsl("hologram")));
+        queueFrame(widget, areaId);
+        const QVector4D tinted = labelTint();
+        QVERIFY2(plain.w() > 0.0f && tinted.w() > 0.0f, "the label was not drawn");
+        QVERIFY2(tinted.w() < plain.w(), "the label is no dimmer");
+        QVERIFY2(tinted.z() > tinted.x(), "the label is not tinted toward the ink");
     }
 
     // Each room's ID is drawn, though hologram tints every room its own color
@@ -1634,6 +1771,39 @@ private slots:
         map()->mRoomIdHash[map()->mProfileName] = kEastRoomId;
         widget.grabFramebuffer();
         QVERIFY2(!widget.mPulseStartedAt.has_value() && !widget.mPulseTimer->isActive(), "a move in tiles started a pulse");
+    }
+
+    // Bloom spreads a soft glow a few pixels out past a room's edge, onto background nothing is drawn on
+    void test_hologramGlowsPastTheEdges()
+    {
+        if (!glAvailable()) {
+            QSKIP("no OpenGL context on this platform");
+        }
+        QVERIFY(addArea() > 0);
+        const auto restore = qScopeGuard([this]() {
+            mpHost->setMapStyle(qsl("tiles"));
+        });
+        QVERIFY(mpHost->setMapStyle(qsl("hologram")));
+        ModernGLWidget widget(map(), mpHost);
+        lookDown(widget);
+        if (!widget.isValid()) {
+            QSKIP("no OpenGL context on this platform");
+        }
+        const float top = kRoomHeight / 2.0f;
+        const QImage frame = widget.grabFramebuffer();
+        const auto brightness = [&widget, &frame](const QVector3D& point) {
+            const std::optional<QPointF> pixel = widget.mCameraController.pixelForPoint(point);
+            if (!pixel) {
+                return -1;
+            }
+            const QColor color = frame.pixelColor((*pixel * widget.devicePixelRatioF()).toPoint());
+            return color.red() + color.green() + color.blue();
+        };
+        // The east room's east edge is at 2.25; about seven pixels out of it, and well clear of it, between grid lines
+        const int halo = brightness(QVector3D(2.32f, 0.15f, top));
+        const int clear = brightness(QVector3D(2.65f, 0.15f, top));
+        QVERIFY(halo >= 0 && clear >= 0);
+        QVERIFY2(halo > clear + 20, qPrintable(qsl("just past a room's edge is %1 bright, and clear of it %2").arg(halo).arg(clear)));
     }
 
     // However fine the label's ink, its halo covers everything within reach of it, and nothing past

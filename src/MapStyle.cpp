@@ -177,9 +177,11 @@ QList<MapStyle> registeredStyles()
     hologram.ink = QColor(70, 225, 255);
     hologram.gridColor = QColor(70, 200, 255, 26);
     hologram.labelFontFamily = qsl("Bitstream Vera Sans Mono");
-    hologram.postEffects = MapStyle::PostEffect::Scanlines;
+    hologram.postEffects = MapStyle::PostEffect::Scanlines | MapStyle::PostEffect::Bloom;
     hologram.floorPlates = false;
     hologram.playerMarker = MapStyle::PlayerMarker::Pulse;
+    hologram.labelTint = QColor(127, 227, 255, 160);
+    hologram.scannerOverlay = true;
     styles.append(hologram);
 
     return styles;
@@ -254,14 +256,17 @@ QColor MapStyle::roomColor(const QColor& environmentColor) const
         return QColor::fromHslF(std::max(hsl.hslHueF(), 0.0f), hsl.hslSaturationF() * 0.7f, 0.25f + hsl.lightnessF() * 0.6f, hsl.alphaF());
     }
     case Palette::Light: {
-        // Enough of the environment's color to tell areas apart, not so much that the map stops reading as one projection
-        constexpr float tint = 0.3f;
-        const QColor light = ink.isValid() ? ink : QColor(Qt::cyan);
-        QColor color = QColor::fromRgbF(light.redF() + (environmentColor.redF() - light.redF()) * tint,
-                                        light.greenF() + (environmentColor.greenF() - light.greenF()) * tint,
-                                        light.blueF() + (environmentColor.blueF() - light.blueF()) * tint,
-                                        environmentColor.alphaF());
-        return liftedLight(color);
+        // Saturated and in a narrow band of lightness, so that areas read apart by hue alone and none glows much
+        // brighter than the rest
+        constexpr int grayest = 40;
+        constexpr int dimmest = 150;
+        constexpr int brightest = 185;
+        if (environmentColor.hslSaturation() < grayest || environmentColor.hslHue() < 0) {
+            QColor light = ink.isValid() ? ink : QColor(Qt::cyan);
+            light.setAlpha(environmentColor.alpha());
+            return liftedLight(light);
+        }
+        return QColor::fromHsl(environmentColor.hslHue(), 255, std::clamp(environmentColor.lightness(), dimmest, brightest), environmentColor.alpha());
     }
     }
     return environmentColor;
@@ -316,8 +321,8 @@ QColor MapStyle::playerRoomColor() const
         return QColor(255, 190, 60);
     }
     if (palette == Palette::Light) {
-        // The brightest light on the map, nearly white, as the rest of the map is the style's ink
-        return QColor(225, 255, 255);
+        // Apart from the ink's cyan and the greens and blues most areas are drawn in
+        return QColor(255, 79, 216);
     }
     return QColor(Qt::red);
 }
