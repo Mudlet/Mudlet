@@ -314,12 +314,8 @@ describe("Tests TBuffer OSC sequence handling", function()
       assert.equals("CSIPRIV3()CSIPRIV3", findRecentLine("CSIPRIV3"))
     end)
 
-    -- Two feedTriggers() calls cannot express a packet split: a local feed keeps
-    -- its own mGotCSI latch between calls but drops the incomplete bytes, since
-    -- the carry is gated on isFromServer. So the latch swallows the "l" rather
-    -- than "?25" surviving. This still fails without the fix - the "25l" leaks -
-    -- but it does not guard the private branch's ordering against the
-    -- incomplete-packet check, which needs a real split from the socket.
+    -- A local feed that ends inside a CSI hands its bytes on to the next one, as
+    -- a packet split does, so the "?25" and the "l" make up one private sequence.
     it("should not leak a private sequence whose bytes arrive across two local feeds", function()
       assert.is_true(feedTriggers("CSISPLIT1(\027[?25"))
       assert.is_true(feedTriggers("l)CSISPLIT1\n"))
@@ -406,8 +402,7 @@ describe("Tests TBuffer OSC sequence handling", function()
     end)
 
     -- The intermediate byte is the last byte of the data, so the final byte
-    -- arrives with the next feed and is the "Y" - as two feedTriggers() calls
-    -- cannot carry the bytes, the latch alone has to swallow it, see CSISPLIT1.
+    -- arrives with the next feed and is the "Y", see CSISPLIT1.
     it("should consume an intermediate byte that is the last byte of the data", function()
       assert.is_true(feedTriggers("CSIINT2(\027[1 "))
       assert.is_true(feedTriggers("Y)CSIINT2\n"))
@@ -428,6 +423,31 @@ describe("Tests TBuffer OSC sequence handling", function()
         assert.is_true(feedTriggers(case[1] .. "\n"))
         assert.equals(case[2], findRecentLine(case[2]:match("^(CSIINT%d)")))
       end
+    end)
+
+    -- The rest of a sequence the last local feed cut short is read along with
+    -- the bytes held from it, not as a sequence of its own.
+    it("should not act on the rest of a sequence with an intermediate byte split between local feeds", function()
+      assert.is_true(feedTriggers("CSIACT3(\027[0;37mplain\027[38;5;-"))
+      assert.is_true(feedTriggers("1mafter\027[0m)CSIACT3\n"))
+      assert.equals("CSIACT3(plainafter)CSIACT3", findRecentLine("CSIACT3"))
+      assert.are.same(foregroundOf("CSIACT3", "plain"), foregroundOf("CSIACT3", "after"))
+    end)
+
+    it("should apply an SGR sequence split between local feeds", function()
+      assert.is_true(feedTriggers("CSIACT4(\027[0;3"))
+      assert.is_true(feedTriggers("2mgreen\027[0m)CSIACT4\n"))
+      assert.equals("CSIACT4(green)CSIACT4", findRecentLine("CSIACT4"))
+      assert.is_true(feedTriggers("\027[0mCSIACT5(\027[0;32mgreen\027[0m)CSIACT5\n"))
+      assert.are.same(foregroundOf("CSIACT5", "green"), foregroundOf("CSIACT4", "green"))
+      -- an OSC split between local feeds leaves nothing behind for a CSI to pick up
+      assert.is_true(feedTriggers("CSIACT6(\027]0;title"))
+      assert.is_true(feedTriggers("\7)CSIACT6\n"))
+      assert.equals("CSIACT6()CSIACT6", findRecentLine("CSIACT6"))
+      assert.is_true(feedTriggers("CSIACT7(\027["))
+      assert.is_true(feedTriggers("0;32mgreen\027[0m)CSIACT7\n"))
+      assert.equals("CSIACT7(green)CSIACT7", findRecentLine("CSIACT7"))
+      assert.are.same(foregroundOf("CSIACT5", "green"), foregroundOf("CSIACT7", "green"))
     end)
 
     -- Only a final byte belongs to the sequence: the line ending or character

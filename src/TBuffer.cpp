@@ -1316,11 +1316,15 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
         mLocalPendingLead = 0;
     }
 
-    if (isFromServer && !mIncompleteSequenceBytes.empty()) {
+    if (!mIncompleteSequenceBytes.empty()) {
+        // A local feed carries only a CSI's bytes over to the next one: without them the rest of the
+        // sequence would be read as one of its own, and nothing continues what an OSC leaves behind
+        if (isFromServer || mGotCSI) {
 #if defined(DEBUG_SGR_PROCESSING) || defined(DEBUG_OSC_PROCESSING) || defined(DEBUG_UTF8_PROCESSING) || defined(DEBUG_GB_PROCESSING) || defined(DEBUG_BIG5_PROCESSING)
-        qDebug() << "TBuffer::translateToPlainText(...) Prepending residual bytes onto incoming data!";
+            qDebug() << "TBuffer::translateToPlainText(...) Prepending residual bytes onto incoming data!";
 #endif
-        localBuffer.insert(0, mIncompleteSequenceBytes);
+            localBuffer.insert(0, mIncompleteSequenceBytes);
+        }
         mIncompleteSequenceBytes.clear();
     }
 
