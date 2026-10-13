@@ -1403,9 +1403,12 @@ private slots:
     {
         const int areaId = addArea();
         QVERIFY(areaId > 0);
-        const auto restore = qScopeGuard([this]() {
+        const bool savedLevels = mudlet::self()->drawUpperLowerLevels();
+        const auto restore = qScopeGuard([this, savedLevels]() {
             mpHost->setMapStyle(qsl("tiles"));
+            mudlet::self()->setDrawUpperLowerLevels(savedLevels);
         });
+        mudlet::self()->setDrawUpperLowerLevels(true);
         map()->mpRoomDB->getRoom(kPlayerRoomId)->setExit(kEastRoomId, DIR_EAST);
         // Added onto the background as it is, black would leave nothing of the room
         map()->mpRoomDB->getRoom(kEastRoomId)->mBorderColor = QColor(Qt::black);
@@ -1446,7 +1449,8 @@ private slots:
         const QList<CubeInstanceData> east = wireAt(QPointF(2.0, 0.0));
         QCOMPARE(player.size(), 1);
         QCOMPARE(east.size(), 1);
-        QVERIFY2(wireAt(QPointF(0.0, 2.0)).size() == 1, "the room on the level below has no edges");
+        const QList<CubeInstanceData> lower = wireAt(QPointF(0.0, 2.0));
+        QVERIFY2(lower.size() == 1, "the room on the level below has no edges");
         const auto brightness = [](const CubeInstanceData& cube) {
             return (cube.color[0] + cube.color[1] + cube.color[2]) * cube.color[3];
         };
@@ -1459,6 +1463,20 @@ private slots:
             });
         });
         QVERIFY2(exitWired, "the exit between the rooms does not glow");
+
+        // Dimmed toward the dark background as with no level colors, not mixed toward the lower level's gray, which would glow gray
+        mudlet::self()->setDrawUpperLowerLevels(false);
+        queueFrame(widget, areaId);
+        QList<CubeInstanceData> plainLower;
+        for (const auto& command : widget.mRenderCommandQueue.commands()) {
+            if (const auto* cubes = dynamic_cast<const RenderInstancedCubesCommand*>(command.get()); cubes && cubes->shading() == RenderCommand::Shading::Wireframe) {
+                plainLower.append(roomInstances(*cubes, QPointF(0.0, 2.0)));
+            }
+        }
+        QCOMPARE(plainLower.size(), 1);
+        for (int channel = 0; channel < 4; ++channel) {
+            QVERIFY2(qFuzzyCompare(lower.first().color[channel], plainLower.first().color[channel]), "the level below took on the lower level's color");
+        }
     }
 
     // A move sends a pulse out from the player's room, wider and fainter as it spreads, and only in hologram
