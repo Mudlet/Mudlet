@@ -86,7 +86,7 @@ describe("Tests elements created into a named parent window", function()
     it("refuses to create a map, which can only go in a user window", function()
       local ok, message = createMapper("pwcNoSuchWindow", 0, 0, 300, 300)
 
-      assert.is_nil(ok)
+      assert.is_false(ok)
       assert.are.equal("window 'pwcNoSuchWindow' not found", message)
     end)
 

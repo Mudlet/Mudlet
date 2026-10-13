@@ -577,7 +577,7 @@ nullViewActionKept = next(nullViewActions) ~= nil
         const QString results = QString::fromUtf8(lua_tostring(L, -1));
         lua_pop(L, 1);
         QCOMPARE(results,
-                 qsl("nil:the profile has no main window"
+                 qsl("false:the profile has no main window"
                      "|nil:label 'nullViewLabel' does not exist"
                      "|nil:label \"nullViewLabel\" not found"
                      "|nil:command line \"main\" not found"

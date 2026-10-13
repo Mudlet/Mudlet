@@ -1210,7 +1210,7 @@ int TLuaInterpreter::createMapper(lua_State* L)
 
     const Host& host = getHostFromLua(L);
     if (auto [success, message] = host.consoleFrontend()->createMapper(windowName, x, y, width, height); !success) {
-        return warnArgumentValue(L, __func__, message);
+        return warnArgumentValue(L, __func__, message, true);
     }
 
     lua_pushboolean(L, true);
