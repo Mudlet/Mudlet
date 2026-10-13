@@ -26,6 +26,9 @@ out vec4 vertexColor;
 out vec2 texCoord;
 // How far in front of the camera, for the fog
 out float eyeDepth;
+// The untransformed template vertex, so a wireframe can find the shape's edges
+out vec3 localPosition;
+out vec3 localNormal;
 
 void main()
 {
@@ -53,6 +56,8 @@ void main()
     
     // Pass texture coordinates to fragment shader
     texCoord = aTexCoord;
+    localPosition = aPos;
+    localNormal = aNormal;
     
     gl_Position = uMVP * finalPos;
     eyeDepth = gl_Position.w;

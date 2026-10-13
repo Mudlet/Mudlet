@@ -2,6 +2,8 @@
 in vec4 vertexColor;
 in vec2 texCoord;
 in float eyeDepth;
+in vec3 localPosition;
+in vec3 localNormal;
 out vec4 FragColor;
 
 uniform bool uUseTexture = false;
@@ -21,6 +23,17 @@ uniform vec3 uFogColor = vec3(0.0, 0.0, 0.0);
 uniform float uFogStart = 0.0;
 uniform float uFogEnd = 0.0;
 uniform float uFogMax = 0.0;
+
+// Draws only the edges of the [-1,1] cube or cylinder template, as a line uWireWidth pixels wide with a glow falling off
+// over uWireGlow pixels and a faint uWireFill across the faces
+uniform bool uWireframe = false;
+uniform bool uWireRound = false;
+uniform float uWireWidth = 1.5;
+uniform float uWireGlow = 5.0;
+uniform float uWireFill = 0.06;
+// Darkens every uScanlinePeriod-th row of pixels by uScanlines
+uniform float uScanlines = 0.0;
+uniform float uScanlinePeriod = 3.0;
 
 void main()
 {
@@ -99,11 +112,28 @@ void main()
         // Simple texture rendering
         vec4 textureColor = texture(uTexture, texCoord);
         FragColor = textureColor * vertexColor;
+    } else if (uWireframe) {
+        float edge;
+        if (uWireRound) {
+            edge = abs(localNormal.z) > 0.5 ? 1.0 - length(localPosition.xy) : 1.0 - abs(localPosition.z);
+        } else {
+            // A face's own axis is pushed out of reach so only the two axes along the face make edges
+            vec3 inward = 1.0 - abs(localPosition) + step(0.5, abs(localNormal)) * 2.0;
+            edge = min(min(inward.x, inward.y), inward.z);
+        }
+        float pixels = edge / max(fwidth(edge), 1e-6);
+        float line = clamp(uWireWidth + 0.5 - pixels, 0.0, 1.0);
+        float glow = exp(-pixels / uWireGlow);
+        float light = min(max(line, 0.6 * glow) + uWireFill, 1.0);
+        FragColor = vec4(mix(vertexColor.rgb, vec3(1.0), 0.45 * line), vertexColor.a * light);
     } else {
         FragColor = vertexColor;
     }
     if (uFogEnd > uFogStart) {
         float fog = clamp((eyeDepth - uFogStart) / (uFogEnd - uFogStart), 0.0, 1.0) * uFogMax;
         FragColor.rgb = mix(FragColor.rgb, uFogColor, fog);
+    }
+    if (uScanlines > 0.0 && mod(gl_FragCoord.y, uScanlinePeriod) < 1.0) {
+        FragColor.rgb *= 1.0 - uScanlines;
     }
 }

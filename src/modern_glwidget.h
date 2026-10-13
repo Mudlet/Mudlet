@@ -329,6 +329,11 @@ private:
     QEasingCurve mEasingCurve;
     bool mCameraSmoothAnimating = false; // Dedicated flag for smooth camera animation
     int mPreviousRID = 0;                // Track previous room ID to detect changes
+    // The pulse the hologram style sends out from the player's room when the player moves: how long since it began,
+    // invalid when none is under way, and what repaints the view while it spreads
+    static constexpr qint64 scmPulseMilliseconds = 1200;
+    QElapsedTimer mPulseClock;
+    QTimer* mPulseTimer = nullptr;
     bool mFramePending = true;
     // Set by a zoom or a change of area while hidden: the shown area is framed at its stored zoom, read then so a later
     // 2D zoom counts, for the size the view is first seen at, unless a camera distance is set first

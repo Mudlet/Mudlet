@@ -685,11 +685,14 @@ private slots:
         const QStringList blueprint = frame();
         QVERIFY(mpHost->setMapStyle(qsl("transit")));
         const QStringList transit = frame();
+        QVERIFY(mpHost->setMapStyle(qsl("hologram")));
+        const QStringList hologram = frame();
         QVERIFY(mpHost->setMapStyle(qsl("tiles")));
         const QStringList after = frame();
 
         QVERIFY(before != blueprint);
         QVERIFY(before != transit);
+        QVERIFY(before != hologram);
         QCOMPARE(after, before);
     }
 
@@ -808,6 +811,211 @@ private slots:
         for (const auto& outline : level->outlines) {
             QVERIFY2(outline.half - outline.width / 2.0f >= -1e-6f, qPrintable(qsl("a ring of width %1 around %2 turned inside out").arg(outline.width).arg(outline.half)));
         }
+    }
+
+    // Hologram draws glowing edges tinted by the environment, with scanlines, and pulses from the player's room
+    void test_hologramGlowsInItsInk()
+    {
+        const MapStyle* hologram = MapStyle::find(qsl("hologram"));
+        QVERIFY(hologram);
+        const QColor ink = hologram->ink;
+        QVERIFY(ink.isValid());
+        const QColor environment(200, 40, 40, 200);
+        const QColor room = hologram->roomColor(environment);
+        QVERIFY2(difference(room, ink) < difference(room, environment), "a room's edges are nearer its environment's color than the ink's");
+        QVERIFY2(room != hologram->roomColor(QColor(40, 200, 40, 200)), "a room's environment does not show at all");
+        QCOMPARE(room.alpha(), environment.alpha());
+        QVERIFY2(hologram->roomColor(QColor(Qt::black)).lightness() >= 150, "a dark environment's edges do not glow");
+        QCOMPARE(hologram->edges, MapStyle::Edges::GlowingWireframes);
+        QCOMPARE(hologram->playerMarker, MapStyle::PlayerMarker::Pulse);
+        QVERIFY(hologram->postEffects.testFlag(MapStyle::PostEffect::Scanlines));
+        QVERIFY(!hologram->floorPlates);
+        QVERIFY(!hologram->lit);
+        QVERIFY(hologram->background.lightness() < 30);
+        const MapStyle* tiles = MapStyle::find(qsl("tiles"));
+        QVERIFY(tiles);
+        QCOMPARE(tiles->postEffects, MapStyle::PostEffects(MapStyle::PostEffect::NoPostEffects));
+    }
+
+    // Every room, on every level, is drawn as glowing edges added onto what is under it, with no fill to hide the
+    // levels behind it, and the player's room brightest
+    void test_hologramAddsGlowingEdgesWithoutGL()
+    {
+        const int areaId = addArea();
+        QVERIFY(areaId > 0);
+        const auto restore = qScopeGuard([this]() {
+            mpHost->setMapStyle(qsl("tiles"));
+        });
+        map()->mpRoomDB->getRoom(kPlayerRoomId)->setExit(kEastRoomId, DIR_EAST);
+        QVERIFY(mpHost->setMapStyle(qsl("hologram")));
+        ModernGLWidget widget(map(), mpHost);
+        queueFrame(widget, areaId);
+
+        bool additive = false;
+        int additiveSections = 0;
+        QList<const RenderInstancedCubesCommand*> wires;
+        for (const auto& command : widget.mRenderCommandQueue.commands()) {
+            if (const auto* state = dynamic_cast<const GLStateCommand*>(command.get())) {
+                if (state->stateType() == GLStateCommand::ADDITIVE_BLEND) {
+                    QVERIFY2(!additive, "additive blending was turned on twice");
+                    additive = true;
+                    ++additiveSections;
+                } else if (state->stateType() == GLStateCommand::ALPHA_BLEND) {
+                    additive = false;
+                }
+            } else if (const auto* cubes = dynamic_cast<const RenderInstancedCubesCommand*>(command.get())) {
+                QVERIFY2(additive, "blocks were drawn over what is under them rather than added onto it");
+                if (cubes->shading() == RenderCommand::Shading::Wireframe) {
+                    wires.append(cubes);
+                }
+            }
+        }
+        QVERIFY2(!additive, "additive blending was left on");
+        QVERIFY(additiveSections > 0);
+
+        const auto wireAt = [&wires](const QPointF& place) {
+            QList<CubeInstanceData> found;
+            for (const RenderInstancedCubesCommand* cubes : std::as_const(wires)) {
+                found.append(roomInstances(*cubes, place));
+            }
+            return found;
+        };
+        const QList<CubeInstanceData> player = wireAt(QPointF(0.0, 0.0));
+        const QList<CubeInstanceData> east = wireAt(QPointF(2.0, 0.0));
+        QCOMPARE(player.size(), 1);
+        QCOMPARE(east.size(), 1);
+        QVERIFY2(wireAt(QPointF(0.0, 2.0)).size() == 1, "the room on the level below has no edges");
+        const auto brightness = [](const CubeInstanceData& cube) {
+            return (cube.color[0] + cube.color[1] + cube.color[2]) * cube.color[3];
+        };
+        QVERIFY2(brightness(player.first()) > brightness(east.first()), "the player's room is no brighter than another");
+        const bool exitWired = std::any_of(wires.cbegin(), wires.cend(), [](const RenderInstancedCubesCommand* cubes) {
+            return std::any_of(cubes->instances().cbegin(), cubes->instances().cend(), [](const CubeInstanceData& cube) {
+                return qAbs(cube.transform.column(3).x() - 1.0f) < 0.3f && qAbs(cube.transform.column(3).y()) < 1e-4f;
+            });
+        });
+        QVERIFY2(exitWired, "the exit between the rooms does not glow");
+    }
+
+    // A move sends a pulse out from the player's room, wider and fainter as it spreads, and only in hologram
+    void test_hologramPulsesFromThePlayersRoomWithoutGL()
+    {
+        const int areaId = addArea();
+        QVERIFY(areaId > 0);
+        const auto restore = qScopeGuard([this]() {
+            mpHost->setMapStyle(qsl("tiles"));
+        });
+        ModernGLWidget widget(map(), mpHost);
+        // The glowing edges at the player's room wider than the room
+        const auto pulses = [&widget]() {
+            QList<CubeInstanceData> found;
+            float roomWidth = std::numeric_limits<float>::max();
+            QList<CubeInstanceData> atPlayer;
+            for (const auto& command : widget.mRenderCommandQueue.commands()) {
+                if (const auto* cubes = dynamic_cast<const RenderInstancedCubesCommand*>(command.get()); cubes && cubes->shading() == RenderCommand::Shading::Wireframe) {
+                    for (const CubeInstanceData& cube : roomInstances(*cubes, QPointF(0.0, 0.0))) {
+                        roomWidth = qMin(roomWidth, cube.transform.column(0).toVector3D().length());
+                        atPlayer.append(cube);
+                    }
+                }
+            }
+            for (const CubeInstanceData& cube : std::as_const(atPlayer)) {
+                if (cube.transform.column(0).toVector3D().length() > roomWidth * 1.1f) {
+                    found.append(cube);
+                }
+            }
+            return found;
+        };
+
+        widget.mPulseClock.start();
+        QTest::qSleep(300);
+        queueFrame(widget, areaId);
+        QVERIFY2(pulses().isEmpty(), "tiles sent out a pulse");
+
+        QVERIFY(mpHost->setMapStyle(qsl("hologram")));
+        queueFrame(widget, areaId);
+        const QList<CubeInstanceData> early = pulses();
+        QCOMPARE(early.size(), 1);
+        QTest::qSleep(400);
+        queueFrame(widget, areaId);
+        const QList<CubeInstanceData> later = pulses();
+        QCOMPARE(later.size(), 1);
+        QVERIFY2(later.first().transform.column(0).toVector3D().length() > early.first().transform.column(0).toVector3D().length(), "the pulse did not spread");
+        QVERIFY2(later.first().color[3] < early.first().color[3], "the pulse did not fade as it spread");
+
+        widget.mPulseClock.invalidate();
+        queueFrame(widget, areaId);
+        QVERIFY2(pulses().isEmpty(), "a pulse was drawn with none under way");
+    }
+
+    // A room's edge glows over its middle, every third row of pixels is darker, and a move starts a pulse
+    void test_hologramGlowsAtTheEdgesWithScanlines()
+    {
+        if (!glAvailable()) {
+            QSKIP("no OpenGL context on this platform");
+        }
+        QVERIFY(addArea() > 0);
+        const auto restore = qScopeGuard([this]() {
+            mpHost->setMapStyle(qsl("tiles"));
+            map()->mRoomIdHash[map()->mProfileName] = kPlayerRoomId;
+        });
+        QVERIFY(mpHost->setMapStyle(qsl("hologram")));
+        ModernGLWidget widget(map(), mpHost);
+        lookDown(widget);
+        if (!widget.isValid()) {
+            QSKIP("no OpenGL context on this platform");
+        }
+        const float top = kRoomHeight / 2.0f;
+        const QImage frame = widget.grabFramebuffer();
+        const auto pixelAt = [&widget](const QVector3D& point) {
+            const std::optional<QPointF> pixel = widget.mCameraController.pixelForPoint(point);
+            return pixel ? pixel->toPoint() : QPoint(-1, -1);
+        };
+        const auto brightness = [&frame](const QPoint& pixel) {
+            const QColor color = frame.pixelColor(pixel);
+            return color.red() + color.green() + color.blue();
+        };
+        // Over three rows, so that a scanline does not decide it
+        const auto brightest = [&](const QPoint& pixel) {
+            return qMax(brightness(pixel), qMax(brightness(pixel + QPoint(0, 1)), brightness(pixel + QPoint(0, 2))));
+        };
+        // Just inside the east room's east edge, and in its middle
+        const QPoint edge = pixelAt(QVector3D(2.24f, 0.0f, top));
+        const QPoint middle = pixelAt(QVector3D(2.0f, 0.0f, top));
+        QVERIFY(frame.rect().contains(edge) && frame.rect().contains(middle));
+        QVERIFY2(brightest(edge) > brightest(middle) + 150, qPrintable(qsl("a room's edge is %1 bright and its middle %2").arg(brightest(edge)).arg(brightest(middle))));
+
+        // Down the edge, the rows a scanline darkens against the others
+        const int from = pixelAt(QVector3D(2.24f, 0.15f, top)).y();
+        const int to = pixelAt(QVector3D(2.24f, -0.15f, top)).y();
+        QVERIFY(to - from > 12);
+        qint64 dark = 0;
+        qint64 light = 0;
+        int darkRows = 0;
+        int lightRows = 0;
+        for (int row = from; row <= to; ++row) {
+            // A scanline is every third row counted up from the bottom, as GL counts them
+            if ((frame.height() - 1 - row) % 3 == 0) {
+                dark += brightness(QPoint(edge.x(), row));
+                ++darkRows;
+            } else {
+                light += brightness(QPoint(edge.x(), row));
+                ++lightRows;
+            }
+        }
+        QVERIFY2(dark * lightRows * 100 < light * darkRows * 85, qPrintable(qsl("scanlines average %1 bright and the rows between them %2").arg(dark / darkRows).arg(light / lightRows)));
+
+        widget.mPulseClock.invalidate();
+        map()->mRoomIdHash[map()->mProfileName] = kEastRoomId;
+        widget.grabFramebuffer();
+        QVERIFY2(widget.mPulseClock.isValid() && widget.mPulseTimer->isActive(), "a move did not start a pulse");
+
+        QVERIFY(mpHost->setMapStyle(qsl("tiles")));
+        widget.mPulseClock.invalidate();
+        widget.mPulseTimer->stop();
+        map()->mRoomIdHash[map()->mProfileName] = kPlayerRoomId;
+        widget.grabFramebuffer();
+        QVERIFY2(!widget.mPulseClock.isValid() && !widget.mPulseTimer->isActive(), "a move in tiles started a pulse");
     }
 
     // However fine the label's ink, its halo covers everything within reach of it, and nothing past

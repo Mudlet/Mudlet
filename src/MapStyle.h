@@ -41,7 +41,10 @@ struct MapStyle
         // dark background, as a terminal shows its black as dark gray
         Terminal,
         // A metro map: every room filled white as a station is, its environment's color going to the ring around it
-        Stations
+        Stations,
+        // Projected light: every room in the style's ink, tinted a little toward its environment's color and kept bright
+        // enough to glow on the dark background
+        Light
     };
 
     enum class Shape {
@@ -59,7 +62,10 @@ struct MapStyle
         InkOutlines,
         // A metro map's station: a ring just inside each room's edge in ringColor(), and a heavier one in the style's ink
         // around an interchange, a room with interchangeExits or more exits
-        StationRings
+        StationRings,
+        // A hologram: no fill, every edge of each room's block and of each exit's bar a glowing line, all added onto what
+        // is behind rather than covering it, so that rooms and levels show through each other
+        GlowingWireframes
     };
 
     enum class Doors {
@@ -76,7 +82,9 @@ struct MapStyle
         // The profile's ring around the player's room, and a column of light over it
         Ring,
         // A flag standing on the player's room reading "YOU", as on a map at a station's entrance
-        Flag
+        Flag,
+        // The player's room drawn in playerRoomColor(), sending out a ring of light each time the player arrives
+        Pulse
     };
 
     enum class Glyphs {
@@ -87,7 +95,11 @@ struct MapStyle
         Terminal
     };
 
-    enum class PostEffect { NoPostEffects = 0x0 };
+    enum class PostEffect {
+        NoPostEffects = 0x0,
+        // Every few rows of pixels of what is drawn on the map dimmed, as on a projected image
+        Scanlines = 0x1
+    };
     Q_DECLARE_FLAGS(PostEffects, PostEffect)
 
     QString id;

@@ -277,15 +277,23 @@ void RenderInstancedCubesCommand::execute(QOpenGLFunctions* gl,
     QMatrix3x3 normalMatrix = mModelMatrix.normalMatrix();
     shader->setUniformValue("uNormalMatrix", normalMatrix);
 
-    const bool unlit = mShading == Shading::Unlit;
+    const bool unlit = mShading != Shading::Lit;
+    const bool wireframe = mShading == Shading::Wireframe;
     if (unlit) {
         shader->setUniformValue("uDisableLighting", true);
+    }
+    if (wireframe) {
+        shader->setUniformValue("uWireframe", true);
+        shader->setUniformValue("uWireRound", mShape == GeometryManager::InstanceShape::Cylinder);
     }
 
     geometryManager->renderInstancedCubes(mInstances, vao, vertexBuffer, colorBuffer, normalBuffer, indexBuffer, resourceManager, GL_TRIANGLES, mShape);
 
     if (unlit) {
         shader->setUniformValue("uDisableLighting", false);
+    }
+    if (wireframe) {
+        shader->setUniformValue("uWireframe", false);
     }
 }
 
@@ -356,6 +364,12 @@ void GLStateCommand::execute(QOpenGLFunctions* gl,
         break;
     case DEPTH_FUNC_LESS:
         gl->glDepthFunc(GL_LESS);
+        break;
+    case ADDITIVE_BLEND:
+        gl->glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+        break;
+    case ALPHA_BLEND:
+        gl->glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
         break;
     }
 }
