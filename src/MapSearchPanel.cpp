@@ -137,6 +137,17 @@ void MapSearchPanel::keyPressEvent(QKeyEvent* event)
     event->accept();
 }
 
+bool MapSearchPanel::event(QEvent* event)
+{
+    if (event->type() == QEvent::ToolTip) {
+        // Or a tooltip none of the panel's widgets has would be the map's, for whatever lies under the panel
+        QFrame::event(event);
+        event->accept();
+        return true;
+    }
+    return QFrame::event(event);
+}
+
 void MapSearchPanel::dismiss()
 {
     hide();

@@ -178,6 +178,8 @@ QSize ModernGLWidget::sizeHint() const
 void ModernGLWidget::showEvent(QShowEvent* event)
 {
     QOpenGLWidget::showEvent(event);
+    // No enterEvent comes when the view is shown under a pointer already there
+    mpSearchShortcut->setEnabled(underMouse());
     // Qt creates the context once the widget is laid out; if that failed, initializeGL never runs to say so
     QTimer::singleShot(0, this, [this]() {
         if (!isVisible()) {
@@ -396,8 +398,10 @@ bool ModernGLWidget::event(QEvent* event)
             event->accept();
             return true;
         }
+        // Keys typed into the search box stay there
+        const bool searching = mpSearchPanel && mpSearchPanel->isAncestorOf(QApplication::focusWidget());
         TCommandLine* pCommandLine = commandLine();
-        if (pCommandLine && pCommandLine->claimsShortcutOverride(static_cast<QKeyEvent*>(event))) {
+        if (!searching && pCommandLine && pCommandLine->claimsShortcutOverride(static_cast<QKeyEvent*>(event))) {
             event->accept();
             return true;
         }
@@ -2900,6 +2904,8 @@ void ModernGLWidget::showSearchResultMenu(const int row, const QPoint& globalPos
 
 void ModernGLWidget::goToSearchResult(const MapSearch::Result& result)
 {
+    mSearchMarkedRoomId = 0;
+    mSearchMarkTimer->stop();
     if (!mpMap || !mpMap->mpRoomDB) {
         return;
     }

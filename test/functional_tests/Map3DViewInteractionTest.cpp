@@ -934,6 +934,19 @@ private slots:
         other.ignore();
         QCoreApplication::sendEvent(pModern, &other);
         QVERIFY(!other.isAccepted());
+
+        // Typing into the map's search box, the box keeps them
+        QVERIFY(activate(pModern->window()));
+        pModern->openSearch();
+        auto* pSearchBox = pModern->findChild<QLineEdit*>();
+        QVERIFY(pSearchBox);
+        QTRY_VERIFY(pSearchBox->hasFocus());
+        QKeyEvent searching(QEvent::ShortcutOverride, Qt::Key_Tab, Qt::ControlModifier);
+        searching.ignore();
+        QCoreApplication::sendEvent(pSearchBox, &searching);
+        QVERIFY(!searching.isAccepted());
+        QTest::keyClick(pSearchBox, Qt::Key_Escape);
+        QVERIFY(!pSearchBox->isVisible());
     }
 
     // Hiding the focused view hands focus on to the next widget in its window, which in a floating map is one of
