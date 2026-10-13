@@ -43,6 +43,7 @@
 
 #include "EnvironmentKit.h"
 #include "ExitAppearance.h"
+#include "ExitScene.h"
 #include "GeometryManager.h"
 #include "Host.h"
 #include "HostManager.h"
@@ -2597,6 +2598,56 @@ private slots:
             }
         }
         QVERIFY2(slant, "the exit to the room below has no line");
+    }
+
+    // A dotted custom line west to a room on the level below ends in a piece straight down, split into dots before they
+    // are laid on the ground: each dot keeps most of its length, so none is lost and the line stays joined up
+    void test_dioramaKeepsADottedLineToAnotherLevelWhole()
+    {
+        const int areaId = addArea();
+        QVERIFY(areaId > 0);
+        constexpr int kWestLowerRoomId = 4;
+        QVERIFY(addRoomAt(kWestLowerRoomId, areaId, -2, 0, -1));
+        const auto restore = qScopeGuard([this, lineSize = mpHost->mLineSize]() {
+            mpHost->mLineSize = lineSize;
+            mpHost->setMapStyle(qsl("tiles"));
+        });
+        mpHost->mLineSize = 18.0;
+        TRoom* pPlayerRoom = map()->mpRoomDB->getRoom(kPlayerRoomId);
+        pPlayerRoom->setExit(kWestLowerRoomId, DIR_WEST);
+        pPlayerRoom->customLines.insert(qsl("w"), {QPointF(-2.0, 0.0)});
+        pPlayerRoom->customLinesColor.insert(qsl("w"), QColor(Qt::cyan));
+        pPlayerRoom->customLinesStyle.insert(qsl("w"), Qt::DotLine);
+        QVERIFY(mpHost->setMapStyle(qsl("diorama")));
+        ModernGLWidget widget(map(), mpHost);
+        queueFrame(widget, areaId);
+
+        const auto atShaft = [](const QVector3D& point) {
+            return qAbs(point.x() + 2.0f) < 1e-4f && qAbs(point.y()) < 1e-4f;
+        };
+        QList<float> drawn;
+        for (const ExitScene::Segment& segment : ExitScene::build(*map(), *mpHost, widget.exitSceneOptions()).segments) {
+            if (atShaft(segment.from) && atShaft(segment.to)) {
+                drawn.append((segment.to - segment.from).length());
+            }
+        }
+        QVERIFY2(drawn.size() >= 2, qPrintable(qsl("the piece down is in %1 dots").arg(drawn.size())));
+
+        QList<float> queued;
+        for (const auto& command : widget.mRenderCommandQueue.commands()) {
+            if (const auto* cubes = dynamic_cast<const RenderInstancedCubesCommand*>(command.get()); cubes && cubes->shading() == RenderCommand::Shading::ModelPath) {
+                for (const CubeInstanceData& cube : cubes->instances()) {
+                    const QVector4D axis = cube.transform.column(0);
+                    if (atShaft(cube.transform.column(3).toVector3D()) && qAbs(axis.x()) < 1e-4f && qAbs(axis.y()) < 1e-4f) {
+                        queued.append(2.0f * qAbs(axis.z()));
+                    }
+                }
+            }
+        }
+        QCOMPARE(queued.size(), drawn.size());
+        for (qsizetype i = 0; i < drawn.size(); ++i) {
+            QVERIFY2(queued.at(i) > drawn.at(i) / 2.0f, qPrintable(qsl("a dot %1 long is laid %2 long").arg(drawn.at(i)).arg(queued.at(i))));
+        }
     }
 
     // Looking down: the felt is fuzzy, a room's top is lighter on the edge toward the light than on the far one, the
