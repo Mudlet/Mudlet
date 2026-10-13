@@ -1080,8 +1080,9 @@ private:
     bool mGlobalsHandlersLinger = false;
     int mIndexHandlerRef = LUA_NOREF;
     int mNewindexHandlerRef = LUA_NOREF;
-    // expandAlias() overwrites "command" and the captures; the caller's are saved here (one entry per
-    // nesting level) and restored when the pass returns.
+    // A nested alias pass - from expandAlias(), or an alias's or trigger's command field - overwrites
+    // "command" and the captures; the caller's are saved here (one entry per nesting level) and
+    // restored when the pass returns.
     struct NestedDispatchState
     {
         std::vector<std::string> captureGroupList;
