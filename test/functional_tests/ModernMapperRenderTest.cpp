@@ -859,9 +859,10 @@ private slots:
         QVERIFY(transit);
         const QColor environment(200, 40, 40, 200);
         QCOMPARE(transit->roomColor(environment), QColor(255, 255, 255, 200));
-        QCOMPARE(transit->ringColor(environment), environment);
+        QCOMPARE(transit->ringColor(environment, mpHost->mBgColor_2), environment);
         const QColor pale(250, 245, 200);
-        QVERIFY2(ExitAppearance::brightness(transit->background) - ExitAppearance::brightness(transit->ringColor(pale)) >= 75, "a pale environment's ring does not stand out on the paper");
+        QVERIFY2(ExitAppearance::brightness(transit->background) - ExitAppearance::brightness(transit->ringColor(pale, mpHost->mBgColor_2)) >= 75,
+                 "a pale environment's ring does not stand out on the paper");
         QVERIFY(transit->roundRooms(false));
         QVERIFY(!transit->lit);
         QCOMPARE(transit->doors, MapStyle::Doors::Bars);
@@ -940,10 +941,32 @@ private slots:
 
         QVERIFY2(!tilesFlag, "tiles flagged the player's room");
         QVERIFY2(flagDrawn(), "transit did not flag the player's room");
-        QVERIFY2(colorQueued(transit->ringColor(red)), "the station is not ringed in its environment's color");
+        QVERIFY2(colorQueued(transit->ringColor(red, mpHost->mBgColor_2)), "the station is not ringed in its environment's color");
         QVERIFY2(colorQueued(transit->ink), "the interchange is not ringed in ink");
         QVERIFY(roomWidth(kEastRoomId) > 0.0f);
         QCOMPARE(roomWidth(kPlayerRoomId), roomWidth(kEastRoomId));
+    }
+
+    // Zoomed out until a pixel is wider than a station, its ring fills it rather than turning inside out
+    void test_transitRingsHoldTogetherFarOutWithoutGL()
+    {
+        const int areaId = addArea();
+        QVERIFY(areaId > 0);
+        const auto restore = qScopeGuard([this]() {
+            mpHost->setMapStyle(qsl("tiles"));
+        });
+        QVERIFY(mpHost->setMapStyle(qsl("transit")));
+        ModernGLWidget widget(map(), mpHost);
+        queueFrame(widget, areaId);
+        widget.mCameraController.setScale(CameraController::scmMaxDistance);
+        widget.updateMatrices();
+        widget.renderRooms();
+
+        const auto level = widget.mInkOutlines.constFind(0);
+        QVERIFY(level != widget.mInkOutlines.cend() && !level->outlines.isEmpty());
+        for (const auto& outline : level->outlines) {
+            QVERIFY2(outline.half - outline.width / 2.0f >= -1e-6f, qPrintable(qsl("a ring of width %1 around %2 turned inside out").arg(outline.width).arg(outline.half)));
+        }
     }
 
     // However fine the label's ink, its halo covers everything within reach of it, and nothing past
@@ -957,7 +980,7 @@ private slots:
         dot.setPixelColor(100, 100, QColor(Qt::black));
         const QColor halo(245, 243, 236);
 
-        const auto& haloed = widget.haloedLabel(1, QPixmap::fromImage(dot), halo);
+        const auto& haloed = widget.haloedLabel(1, QPixmap::fromImage(dot), halo, 0);
         const QImage image = haloed.pixmap.toImage();
         const int reach = qRound(haloed.margin.y() * dot.height());
         QVERIFY(reach >= 3);
@@ -983,7 +1006,67 @@ private slots:
         QCOMPARE(image.pixelColor(center + QPoint(reach - 1, 0)), halo);
     }
 
-    // A picture label is left as it is, while text has a halo, so that lines do not run through its letters
+    // On a translucent box the halo rims the letters, rather than growing a band all round the box
+    void test_labelHaloRimsTheLettersNotTheirBox()
+    {
+        const int areaId = addArea();
+        QVERIFY(areaId > 0);
+        ModernGLWidget widget(map(), mpHost);
+        constexpr int boxAlpha = 50;
+        QImage box(200, 200, QImage::Format_ARGB32_Premultiplied);
+        box.fill(QColor(0, 0, 0, boxAlpha));
+        box.setPixelColor(100, 100, QColor(Qt::white));
+        const QColor halo(245, 243, 236);
+
+        const auto& haloed = widget.haloedLabel(1, QPixmap::fromImage(box), halo, boxAlpha);
+        const QImage image = haloed.pixmap.toImage();
+        const int reach = qRound(haloed.margin.y() * box.height());
+        QVERIFY(reach >= 3);
+        const QPoint center(100 + reach, 100 + reach);
+
+        QCOMPARE(image.pixelColor(0, 0).alpha(), 0);
+        QCOMPARE(image.pixelColor(center.x(), 0).alpha(), 0);
+        QCOMPARE(image.pixelColor(center + QPoint(reach - 1, 0)).alpha(), 255);
+        QCOMPARE(image.pixelColor(center), QColor(Qt::white));
+    }
+
+    // Halos of labels no longer on the map, or in another area, are let go even where the area shown has no labels
+    void test_haloesOfLabelsGoneAreLetGoWithoutGL()
+    {
+        const int areaId = addArea();
+        QVERIFY(areaId > 0);
+        const int bareAreaId = map()->mpRoomDB->addArea(qsl("Bare Area"));
+        QVERIFY(bareAreaId > 0);
+        const auto restore = qScopeGuard([this]() {
+            mpHost->setMapStyle(qsl("tiles"));
+        });
+        TMapLabel label;
+        label.text = qsl("Old Keep");
+        label.pos = QVector3D(0.0f, 1.0f, 0.0f);
+        label.size = QSizeF(2.0, 0.5);
+        label.bgColor = QColor(0, 0, 0, 50);
+        label.pix = QPixmap(80, 20);
+        label.pix.fill(Qt::black);
+        TArea* pArea = map()->mpRoomDB->getArea(areaId);
+        pArea->mMapLabels.insert(1, label);
+        pArea->mMapLabels.insert(2, label);
+        QVERIFY(mpHost->setMapStyle(qsl("transit")));
+        ModernGLWidget widget(map(), mpHost);
+
+        queueFrame(widget, areaId);
+        const qsizetype both = widget.mHaloedLabels.size();
+        pArea->mMapLabels.remove(2);
+        queueFrame(widget, areaId);
+        const QList<std::pair<int, int>> kept = widget.mHaloedLabels.keys();
+        queueFrame(widget, bareAreaId);
+
+        QCOMPARE(both, 2);
+        QCOMPARE(kept, (QList<std::pair<int, int>>{{areaId, 1}}));
+        QVERIFY2(widget.mHaloedLabels.isEmpty(), "the halos of another area were kept where the area shown has no labels");
+    }
+
+    // A picture label, or text on an opaque box, is left as it is, while other text has a halo, so that lines do not
+    // run through its letters
     void test_onlyTextLabelsHaveHalosWithoutGL()
     {
         const int areaId = addArea();
@@ -995,6 +1078,7 @@ private slots:
         text.text = qsl("Old Keep");
         text.pos = QVector3D(0.0f, 1.0f, 0.0f);
         text.size = QSizeF(2.0, 0.5);
+        text.bgColor = QColor(0, 0, 0, 50);
         text.pix = QPixmap(80, 20);
         text.pix.fill(Qt::black);
         TMapLabel picture = text;
@@ -1002,8 +1086,12 @@ private slots:
         picture.pos = QVector3D(2.0f, 1.0f, 0.0f);
         picture.pix = QPixmap(2000, 2000);
         picture.pix.fill(Qt::black);
+        TMapLabel boxed = text;
+        boxed.pos = QVector3D(4.0f, 1.0f, 0.0f);
+        boxed.bgColor = QColor(Qt::gray);
         map()->mpRoomDB->getArea(areaId)->mMapLabels.insert(1, text);
         map()->mpRoomDB->getArea(areaId)->mMapLabels.insert(2, picture);
+        map()->mpRoomDB->getArea(areaId)->mMapLabels.insert(3, boxed);
         QVERIFY(mpHost->setMapStyle(qsl("transit")));
         ModernGLWidget widget(map(), mpHost);
 

@@ -1130,7 +1130,7 @@ GLuint ModernGLWidget::flagTexture(const QString& text, const QColor& color, con
     return addRoomTexture(key, image);
 }
 
-const ModernGLWidget::HaloedLabel& ModernGLWidget::haloedLabel(const int labelId, const QPixmap& pixmap, const QColor& halo)
+const ModernGLWidget::HaloedLabel& ModernGLWidget::haloedLabel(const int labelId, const QPixmap& pixmap, const QColor& halo, const int backgroundAlpha)
 {
     HaloedLabel& haloed = mHaloedLabels[{mAID, labelId}];
     if (haloed.sourceKey == pixmap.cacheKey() && haloed.halo == halo.rgba() && !haloed.pixmap.isNull()) {
@@ -1138,12 +1138,16 @@ const ModernGLWidget::HaloedLabel& ModernGLWidget::haloedLabel(const int labelId
     }
     const QImage source = pixmap.toImage().convertToFormat(QImage::Format_ARGB32_Premultiplied);
     const int reach = qBound(2, qRound(source.height() * scmLabelHalo / 2.0), scmMaxLabelHalo);
-    // The label's shape in the halo's color, stamped all round it
-    QImage shape = source;
-    {
-        QPainter painter(&shape);
-        painter.setCompositionMode(QPainter::CompositionMode_SourceIn);
-        painter.fillRect(shape.rect(), halo);
+    // The letters' shape in the halo's color, stamped all round them: only what is more opaque than the label's
+    // background, so that the box behind the letters grows no band over what is round it
+    QImage shape(source.size(), QImage::Format_ARGB32_Premultiplied);
+    for (int y = 0; y < source.height(); ++y) {
+        const auto* in = reinterpret_cast<const QRgb*>(source.constScanLine(y));
+        auto* out = reinterpret_cast<QRgb*>(shape.scanLine(y));
+        for (int x = 0; x < source.width(); ++x) {
+            const int alpha = qAlpha(in[x]);
+            out[x] = alpha > backgroundAlpha ? qPremultiply(qRgba(halo.red(), halo.green(), halo.blue(), (alpha - backgroundAlpha) * 255 / (255 - backgroundAlpha))) : 0;
+        }
     }
     // Every point within reach of the shape, without a gap however fine the shape: widened across one texel at a
     // time, and each row of the disc drawn once the shape is as wide as that row needs
@@ -1589,11 +1593,12 @@ void ModernGLWidget::renderRooms()
             if (!pR->mBorderColor.isValid() && !interchange) {
                 auto found = ringColors.find(look.color.rgba());
                 if (found == ringColors.end()) {
-                    found = ringColors.insert(look.color.rgba(), style.ringColor(look.color));
+                    found = ringColors.insert(look.color.rgba(), style.ringColor(look.color, mpHost->mBgColor_2));
                 }
                 ringColor = *found;
             }
-            const float ring = qMax(roomSize * (interchange ? scmInterchangeRing : scmStationRing) * (hovered ? 1.6f : 1.0f), outlinePixel());
+            // No wider than half the station, so that far out it fills the station rather than turning inside out
+            const float ring = qMin(qMax(roomSize * (interchange ? scmInterchangeRing : scmStationRing) * (hovered ? 1.6f : 1.0f), outlinePixel()), roomSize / 2.0f);
             const float width = qMax(ring, thickness);
             // Just inside the station's edge, unless a thick border reaches past it
             const float half = roomSize / 2.0f - ring / 2.0f + (width - ring) / 2.0f;
@@ -4110,6 +4115,14 @@ void ModernGLWidget::renderLabels(const bool onTop, const int lowestLevel, const
     }
 
     TArea* pArea = mpMap->mpRoomDB->getArea(mAID);
+    const QColor halo = mapStyle().labelHalos ? backgroundColor() : QColor();
+    if (!halo.isValid()) {
+        mHaloedLabels.clear();
+    } else {
+        mHaloedLabels.removeIf([this, pArea](const auto& entry) {
+            return entry.key().first != mAID || !pArea || !pArea->mMapLabels.contains(entry.key().second);
+        });
+    }
     if (!pArea || pArea->mMapLabels.isEmpty()) {
         return;
     }
@@ -4127,15 +4140,6 @@ void ModernGLWidget::renderLabels(const bool onTop, const int lowestLevel, const
     const QVector3D screenUp = mCameraController.screenUp();
     // Turned around while the top of the screen faces south, so that it never reads upside down
     const bool turned = GeometryManager::groundAxes(screenRight, screenUp).second.y() < 0.0f;
-    const QColor halo = mapStyle().labelHalos ? backgroundColor() : QColor();
-    if (!halo.isValid()) {
-        mHaloedLabels.clear();
-    } else {
-        mHaloedLabels.removeIf([this](const auto& entry) {
-            return entry.key().first != mAID;
-        });
-    }
-
     // Those on top are queued by renderRooms(), which has turned depth writes off by then
     if (onTop) {
         mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::ENABLE_POLYGON_OFFSET));
@@ -4163,9 +4167,10 @@ void ModernGLWidget::renderLabels(const bool onTop, const int lowestLevel, const
         // Halo and all, as wide as the label is with it
         QPointF margin;
         GLuint textureId = 0;
-        // Only around text, which lines would otherwise run through: a picture would grow a band over what is round it
-        if (halo.isValid() && !label.text.isEmpty() && !pixmap.isNull()) {
-            const HaloedLabel& haloed = haloedLabel(it.key(), pixmap, halo);
+        // Only around text, which lines would otherwise run through: a picture would grow a band over what is round it,
+        // and an opaque box already hides them
+        if (halo.isValid() && !label.text.isEmpty() && label.bgColor.alpha() < 255 && !pixmap.isNull()) {
+            const HaloedLabel& haloed = haloedLabel(it.key(), pixmap, halo, label.bgColor.alpha());
             margin = haloed.margin;
             textureId = mLabelTextureCache.getTexture(mAID, it.key(), haloed.pixmap);
         } else {

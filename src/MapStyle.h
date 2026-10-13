@@ -249,8 +249,8 @@ struct MapStyle
     QColor roomIdColor(const QColor& drawnRoomColor) const;
     // The player's room, where its marker could not be made
     QColor playerRoomColor() const;
-    // A ring or a line in an environment's color, made darker or lighter where it would not stand out on the background
-    QColor ringColor(const QColor& environmentColor) const;
+    // A ring or a line in an environment's color, made darker or lighter where it would not stand out on backgroundColor()
+    QColor ringColor(const QColor& environmentColor, const QColor& profileBackground) const;
 
     static QString defaultId();
     // In the order the preferences list them
