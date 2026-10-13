@@ -419,6 +419,8 @@ private:
     MapRoute mRoute;
     // Finds a stale route soon after a frame saw it was, outside painting, as finding it can run a script
     QTimer* mRouteRefreshTimer = nullptr;
+    QElapsedTimer mRouteGraphBuilt;
+    qint64 mRouteGraphBuildMs = 0;
     RetainedMapScene mScene;
     int mSceneMaxRoomId = 0;
     // Rooms whose blocks are drawn narrower than this many pixels, in tiles of the scene so far away, are drawn
@@ -453,6 +455,8 @@ private:
     void flightTick();
     // Finds the route again if the player moved or the map changed since it was found
     void refreshRoute();
+    void scheduleRouteRefresh();
+    bool findRoute();
     QString reportRoute();
     // The name of the room or area the route goes to
     QString routeDestinationName() const;
