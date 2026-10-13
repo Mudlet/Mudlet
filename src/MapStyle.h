@@ -42,8 +42,8 @@ struct MapStyle
         Terminal,
         // A metro map: every room filled white as a station is, its environment's color going to the ring around it
         Stations,
-        // Projected light: every room in the style's ink, tinted a little toward its environment's color and kept bright
-        // enough to glow on the dark background
+        // Projected light: every room glowing in its environment's hue, at full strength and kept bright enough to
+        // glow on the dark background; a gray environment glows in the style's ink
         Light,
         // Ink on paper: every room in a dark ink keeping a little of its environment's hue, so areas still tell apart
         Wash,
@@ -69,7 +69,8 @@ struct MapStyle
         // around an interchange, a room with interchangeExits or more exits
         StationRings,
         // A hologram: no fill, every edge of each room's block and of each exit's bar a glowing line, all added onto what
-        // is behind rather than covering it, so that rooms and levels show through each other
+        // is behind rather than covering it, so that rooms and levels show through each other; a highlighted room is
+        // circled by two glowing rings in its highlight color
         GlowingWireframes,
         // An ink painting: no rim, each room's top a blot of ink with soft, uneven edges and each exit a brush stroke
         // thinning toward its end, uneven in a way each takes from where it stands so that it holds still
@@ -94,7 +95,8 @@ struct MapStyle
         Ring,
         // A flag standing on the player's room reading "YOU", as on a map at a station's entrance
         Flag,
-        // The player's room drawn in playerRoomColor(), sending out a ring of light each time the player arrives
+        // The player's room drawn in playerRoomColor(), with a diamond of light in that color hovering over it and
+        // sending out a ring of light each time the player arrives
         Pulse,
         // The player's room stamped in playerRoomColor() as a seal on a painting, with a frame cut into it
         Seal,
@@ -121,7 +123,9 @@ struct MapStyle
         Sky = 0x4,
         // A tilt-shift photograph's shallow focus: sharp in a band across the view through the player, blurring
         // toward the view's top and foot, so that the map looks like a model seen up close
-        TiltShift = 0x8
+        TiltShift = 0x8,
+        // The brightest of what is drawn blurred and added back, so that lines of light glow softly
+        Bloom = 0x10
     };
     Q_DECLARE_FLAGS(PostEffects, PostEffect)
 
@@ -165,6 +169,10 @@ struct MapStyle
     // Room names and map labels drawn with a rim of the background around them, so that lines under them do not
     // run through the text
     bool labelHalos = false;
+    // Room names and map labels multiplied by this color, to sit back in the scene; invalid for their own colors
+    QColor labelTint;
+    // Brackets in the view's corners and, in its top left, the area's name, levels and rooms, as on a scanner's display
+    bool scannerOverlay = false;
 
     QString displayName() const;
     QColor roomColor(const QColor& environmentColor) const;

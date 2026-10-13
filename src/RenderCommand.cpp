@@ -37,6 +37,7 @@ int inkMode(const RenderCommand::Shading shading)
     case RenderCommand::Shading::Lit:
     case RenderCommand::Shading::Unlit:
     case RenderCommand::Shading::Wireframe:
+    case RenderCommand::Shading::Outline:
     case RenderCommand::Shading::ModelBlock:
     case RenderCommand::Shading::ModelPath:
     case RenderCommand::Shading::ModelShadow:
@@ -64,6 +65,7 @@ int modelMode(const RenderCommand::Shading shading)
     case RenderCommand::Shading::Lit:
     case RenderCommand::Shading::Unlit:
     case RenderCommand::Shading::Wireframe:
+    case RenderCommand::Shading::Outline:
     case RenderCommand::Shading::InkBlot:
     case RenderCommand::Shading::InkStroke:
     case RenderCommand::Shading::Seal:
@@ -72,6 +74,9 @@ int modelMode(const RenderCommand::Shading shading)
     }
     return 0;
 }
+
+// How much of a wireframe's color fills its faces, between the edges
+constexpr float scmWireFill = 0.06f;
 } // namespace
 
 RenderCubeCommand::RenderCubeCommand(
@@ -345,7 +350,7 @@ void RenderInstancedCubesCommand::execute(QOpenGLFunctions* gl,
     shader->setUniformValue("uNormalMatrix", normalMatrix);
 
     const bool unlit = mShading != Shading::Lit;
-    const bool wireframe = mShading == Shading::Wireframe;
+    const bool wireframe = mShading == Shading::Wireframe || mShading == Shading::Outline;
     if (unlit) {
         shader->setUniformValue("uDisableLighting", true);
     }
@@ -353,6 +358,7 @@ void RenderInstancedCubesCommand::execute(QOpenGLFunctions* gl,
         shader->setUniformValue("uWireframe", true);
         shader->setUniformValue("uWireRound", mShape == GeometryManager::InstanceShape::Cylinder);
         shader->setUniformValue("uWireSides", static_cast<float>(GeometryManager::scmCylinderSegments));
+        shader->setUniformValue("uWireFill", mShading == Shading::Outline ? 0.0f : scmWireFill);
     }
     const int ink = inkMode(mShading);
     if (ink) {
@@ -462,34 +468,43 @@ void GLStateCommand::execute(QOpenGLFunctions* gl,
     }
 }
 
-RenderLabelCommand::RenderLabelCommand(float centerX, float centerY, float centerZ,
-                                       float width, float height,
+RenderLabelCommand::RenderLabelCommand(float centerX,
+                                       float centerY,
+                                       float centerZ,
+                                       float width,
+                                       float height,
                                        GLuint textureId,
                                        const QVector3D& cameraRight,
                                        const QVector3D& cameraUp,
-                                       bool highlight,
+                                       const QVector4D& tint,
                                        const QMatrix4x4& projectionMatrix,
                                        const QMatrix4x4& viewMatrix,
                                        const QMatrix4x4& modelMatrix)
-    : mCenterX(centerX), mCenterY(centerY), mCenterZ(centerZ)
-    , mWidth(width), mHeight(height)
-    , mTextureId(textureId)
-    , mCameraRight(cameraRight), mCameraUp(cameraUp)
-    , mHighlight(highlight)
-    , mProjectionMatrix(projectionMatrix), mViewMatrix(viewMatrix), mModelMatrix(modelMatrix)
+: mCenterX(centerX)
+, mCenterY(centerY)
+, mCenterZ(centerZ)
+, mWidth(width)
+, mHeight(height)
+, mTextureId(textureId)
+, mCameraRight(cameraRight)
+, mCameraUp(cameraUp)
+, mTint(tint)
+, mProjectionMatrix(projectionMatrix)
+, mViewMatrix(viewMatrix)
+, mModelMatrix(modelMatrix)
 {
 }
 
 void RenderLabelCommand::execute(QOpenGLFunctions* gl,
-                                QOpenGLShaderProgram* shader,
-                                GeometryManager* geometryManager,
-                                ResourceManager* resourceManager,
-                                QOpenGLVertexArrayObject& vao,
-                                QOpenGLBuffer& vertexBuffer,
-                                QOpenGLBuffer& colorBuffer,
-                                QOpenGLBuffer& normalBuffer,
-                                QOpenGLBuffer& indexBuffer,
-                                QOpenGLBuffer& texCoordBuffer)
+                                 QOpenGLShaderProgram* shader,
+                                 GeometryManager* geometryManager,
+                                 ResourceManager* resourceManager,
+                                 QOpenGLVertexArrayObject& vao,
+                                 QOpenGLBuffer& vertexBuffer,
+                                 QOpenGLBuffer& colorBuffer,
+                                 QOpenGLBuffer& normalBuffer,
+                                 QOpenGLBuffer& indexBuffer,
+                                 QOpenGLBuffer& texCoordBuffer)
 {
     Q_UNUSED(gl)
 
@@ -498,24 +513,15 @@ void RenderLabelCommand::execute(QOpenGLFunctions* gl,
     }
 
     // Generate billboard geometry
-    GeometryData labelGeometry = geometryManager->generateBillboardGeometry(
-        mCenterX, mCenterY, mCenterZ,
-        mWidth, mHeight,
-        mCameraRight, mCameraUp,
-        mTextureId);
+    GeometryData labelGeometry = geometryManager->generateBillboardGeometry(mCenterX, mCenterY, mCenterZ, mWidth, mHeight, mCameraRight, mCameraUp, mTextureId);
 
     if (labelGeometry.isEmpty()) {
         return;
     }
 
-    // If highlighted, modify colors to add orange overlay
-    if (mHighlight) {
-        for (int i = 0; i < labelGeometry.colors.size(); i += 4) {
-            // Mix with orange (1.0, 0.5, 0.0)
-            labelGeometry.colors[i] = 1.0f;     // R
-            labelGeometry.colors[i + 1] = 0.65f; // G
-            labelGeometry.colors[i + 2] = 0.0f;  // B
-            // Keep alpha
+    for (int i = 0; i < labelGeometry.colors.size(); i += 4) {
+        for (int channel = 0; channel < 4; ++channel) {
+            labelGeometry.colors[i + channel] *= mTint[channel];
         }
     }
 

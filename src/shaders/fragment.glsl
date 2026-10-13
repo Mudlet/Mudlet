@@ -31,7 +31,7 @@ uniform bool uWireRound = false;
 uniform float uWireSides = 24.0;
 uniform float uWireWidth = 1.5;
 uniform float uWireGlow = 5.0;
-uniform float uWireFill = 0.06;
+uniform float uWireFill;
 // Darkens every uScanlinePeriod-th row of pixels by uScanlines
 uniform float uScanlines = 0.0;
 uniform float uScanlinePeriod = 3.0;
