@@ -439,6 +439,16 @@ add_grouped_test_binary(functional_package_tests ${PACKAGE_GROUP_TEST_SOURCES})
 add_grouped_test_binary(functional_settings_tests ${SETTINGS_GROUP_TEST_SOURCES})
 add_grouped_test_binary(functional_starterui_tests ${STARTERUI_GROUP_TEST_SOURCES})
 add_grouped_test_binary(functional_teardown_tests ${TEARDOWN_GROUP_TEST_SOURCES})
+# HeadlessHostSmokeTest is not given the Discord library, as most headless embedders
+# will not have one; its Discord cases run again with the bundled one, given it below
+add_test(NAME HeadlessHostSmokeTestWithDiscordLibrary
+    COMMAND $<TARGET_FILE:functional_teardown_tests> HeadlessHostSmokeTest
+        test_gameReachesDiscordOverGmcpWithNoMainWindow
+        test_aSecondPoolLeavesNoDiscordDataBehind
+        test_aSecondPoolForgetsDiscordDataAfterEveryExitEvent
+        test_deleteHostForgetsDiscordDataOfAProfileReopenedUnderItsExitHandler
+        test_aSecondPoolForgetsDiscordDataOfAProfileReopenedUnderItsExitHandler)
+list(APPEND allFunctionalTestNames HeadlessHostSmokeTestWithDiscordLibrary)
 add_grouped_test_binary(functional_media_tests ${MEDIA_GROUP_TEST_SOURCES})
 
 # On macOS the app reads its dictionaries from the bundle's Resources folder,
@@ -772,7 +782,8 @@ set_tests_properties(CopyAsImageTest MainConsoleSelectionTest OpaqueConsolePaint
 set_tests_properties(TDiscordModeTest PROPERTIES TIMEOUT 300)
 
 # Let TDiscordModeTest find the bundled discord-rpc library so the Lua API
-# permission gating tests can run (they skip when it is unavailable)
+# permission gating tests can run (they skip when it is unavailable), and
+# HeadlessHostSmokeTestWithDiscordLibrary drive Discord with it and no main window
 if(WIN32)
     set(DISCORD_RPC_PATH_VARIABLE "PATH")
 elseif(APPLE)
@@ -780,8 +791,13 @@ elseif(APPLE)
 else()
     set(DISCORD_RPC_PATH_VARIABLE "LD_LIBRARY_PATH")
 endif()
-set_property(TEST TDiscordModeTest APPEND PROPERTY
+set_property(TEST TDiscordModeTest HeadlessHostSmokeTestWithDiscordLibrary APPEND PROPERTY
     ENVIRONMENT_MODIFICATION "${DISCORD_RPC_PATH_VARIABLE}=path_list_prepend:${CMAKE_SOURCE_DIR}/3rdparty/discord/rpc/lib")
+# Each says which way it runs: the one with the library is skipped where it cannot
+# load, and the one without warns where a library is found anyway
+set_property(TEST HeadlessHostSmokeTest APPEND PROPERTY ENVIRONMENT "MUDLET_TEST_DISCORD_LIBRARY=absent")
+set_property(TEST HeadlessHostSmokeTestWithDiscordLibrary APPEND PROPERTY ENVIRONMENT "MUDLET_TEST_DISCORD_LIBRARY=present")
+set_tests_properties(HeadlessHostSmokeTestWithDiscordLibrary PROPERTIES SKIP_REGULAR_EXPRESSION "SKIP   : HeadlessHostSmokeTest::initTestCase")
 # Report-only: what a Lua enableTrigger()/disableTrigger() call costs on a large
 # trigger tree with the script editor closed and open. Never registered with
 # ctest; run it directly and read the METRIC lines.

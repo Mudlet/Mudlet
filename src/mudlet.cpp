@@ -73,6 +73,7 @@
 #include "dlgPackageManager.h"
 #include "dlgProfilePreferences.h"
 #include "dlgTriggerEditor.h"
+#include "discord.h"
 #include "edbee/edbee.h"
 #include "widgetutils.h"
 
@@ -1465,8 +1466,9 @@ mudlet::mudlet()
     // Queued, so a tab change before the event loop first runs - while a test or startup is still
     // building profiles - does not reach Discord, which also only starts polling then.
     QTimer::singleShot(0ms, this, [this]() {
-        if (mDiscord.libraryLoaded()) {
-            connect(this, &mudlet::signal_tabChanged, &mDiscord, &Discord::UpdatePresence);
+        auto* discord = Discord::self();
+        if (discord && discord->libraryLoaded()) {
+            connect(this, &mudlet::signal_tabChanged, discord, &Discord::UpdatePresence);
         }
     });
     // Initialisation happens later in setupConfig() and init()
@@ -3437,7 +3439,6 @@ void mudlet::closeHost(const QString& name)
 
     mpTabBar->removeTab(name);
     // PLACEMARKER: Host destruction (1) - from all sources
-    mDiscord.resetData(pH);
     int hostCount = mHostManager.getHostCount();
     emit signal_hostDestroyed(pH, --hostCount);
     // This is what kills the Host instance:
