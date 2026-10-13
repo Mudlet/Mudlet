@@ -92,11 +92,14 @@ RetainedMapScene::RetainedMapScene()
 int RetainedMapScene::pendingTile(const int level, const QPointF& anchor)
 {
     const TileKey key{level, static_cast<int>(std::floor(anchor.y() / scmTileSize)), static_cast<int>(std::floor(anchor.x() / scmTileSize))};
-    const auto [found, inserted] = mPendingTiles.tryEmplace(key, static_cast<int>(mPendingTileKeys.size()));
-    if (inserted) {
-        mPendingTileKeys.append(key);
+    // Not tryEmplace(), which needs Qt 6.9
+    if (const auto found = mPendingTiles.constFind(key); found != mPendingTiles.cend()) {
+        return found.value();
     }
-    return found.value();
+    const int tile = static_cast<int>(mPendingTileKeys.size());
+    mPendingTiles.insert(key, tile);
+    mPendingTileKeys.append(key);
+    return tile;
 }
 
 void RetainedMapScene::clear()
@@ -121,10 +124,10 @@ void RetainedMapScene::addInstance(const Layer layer, const int roomId, const in
     mPendingInstances[static_cast<int>(layer)].append({pendingTile(level, anchor), roomId, instance});
 }
 
-void RetainedMapScene::addTriangle(const bool seeThrough, const int level, const QVector3D& a, const QVector3D& b, const QVector3D& c, const QVector4D& tint)
+void RetainedMapScene::addTriangle(const bool seeThrough, const int level, const QVector3D& a, const QVector3D& b, const QVector3D& c, const QVector4D& tint, const bool distant)
 {
     const QVector3D middle = (a + b + c) / 3.0f;
-    mPendingTriangles.append({pendingTile(level, middle.toPointF()), seeThrough, {a, b, c}, tint});
+    mPendingTriangles.append({pendingTile(level, middle.toPointF()), seeThrough, distant, {a, b, c}, tint});
 }
 
 void RetainedMapScene::finish()
@@ -229,15 +232,19 @@ void RetainedMapScene::finish()
         QVector<float>& vertices = mTriangleVertices[part];
         QVector<float>& colors = mTriangleColors[part];
         QVector<int>& triangleTiles = mTriangleTiles[part];
+        QVector<bool>& distant = mTriangleDistant[part];
         vertices.clear();
         colors.clear();
         triangleTiles.clear();
+        distant.clear();
         vertices.reserve(triangles.size() * 9);
         colors.reserve(triangles.size() * 12);
         triangleTiles.reserve(triangles.size());
+        distant.reserve(triangles.size());
         for (const qsizetype index : std::as_const(order)) {
             const PendingTriangle& triangle = mPendingTriangles.at(triangles.at(index));
             triangleTiles.append(tiles.at(index));
+            distant.append(triangle.distant);
             Tile& tile = mTiles[tiles.at(index)];
             for (const QVector3D& corner : triangle.corners) {
                 vertices << corner.x() << corner.y() << corner.z();
@@ -459,13 +466,24 @@ void RetainedMapScene::appendTriangles(const bool seeThrough, const std::optiona
             appendSpan(colors, mTriangleColors.at(part), first * 12, count * 12);
         }
     };
+    const QVector<bool>& distant = mTriangleDistant.at(part);
+    const auto appendDistant = [&](const qsizetype first, const qsizetype end) {
+        qsizetype runStart = first;
+        for (qsizetype index = first; index < end; ++index) {
+            if (!distant.at(index)) {
+                append(runStart, index - runStart);
+                runStart = index + 1;
+            }
+        }
+        append(runStart, end - runStart);
+    };
     if (seeThrough) {
         const QVector<int>& tiles = mTriangleTiles.at(part);
         const auto [first, end] = levelSpan(tiles, level);
         qsizetype runStart = first;
         for (qsizetype index = first; index < end; ++index) {
             const Tile& tile = mTiles.at(tiles.at(index));
-            if (!tile.drawn || !tile.detailed) {
+            if (!tile.drawn || (!tile.detailed && !distant.at(index))) {
                 append(runStart, index - runStart);
                 runStart = index + 1;
             }
@@ -474,8 +492,13 @@ void RetainedMapScene::appendTriangles(const bool seeThrough, const std::optiona
         return;
     }
     for (const Tile& tile : mTiles) {
-        if (tile.drawn && tile.detailed && (!level || tile.level == *level)) {
+        if (!tile.drawn || (level && tile.level != *level)) {
+            continue;
+        }
+        if (tile.detailed) {
             append(tile.firstTriangle.at(part), tile.endTriangle.at(part) - tile.firstTriangle.at(part));
+        } else {
+            appendDistant(tile.firstTriangle.at(part), tile.endTriangle.at(part));
         }
     }
 }

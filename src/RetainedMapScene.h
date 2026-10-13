@@ -89,7 +89,7 @@ public:
     void clear();
     void addRoom(const Room& room);
     void addInstance(Layer layer, int roomId, int level, const QPointF& anchor, const CubeInstanceData& instance);
-    void addTriangle(bool seeThrough, int level, const QVector3D& a, const QVector3D& b, const QVector3D& c, const QVector4D& tint);
+    void addTriangle(bool seeThrough, int level, const QVector3D& a, const QVector3D& b, const QVector3D& c, const QVector4D& tint, bool distant = false);
     // Files what was added in its tiles and marks what differs from before for upload
     void finish();
 
@@ -154,6 +154,7 @@ private:
     {
         int tile = 0;
         bool seeThrough = false;
+        bool distant = false;
         std::array<QVector3D, 3> corners;
         QVector4D tint;
     };
@@ -185,6 +186,8 @@ private:
     std::array<QVector<float>, 2> mTriangleVertices;
     std::array<QVector<float>, 2> mTriangleColors;
     std::array<QVector<int>, 2> mTriangleTiles;
+    // Drawn even in tiles too far away for detail
+    std::array<QVector<bool>, 2> mTriangleDistant;
     QMap<int, QRectF> mLevelExtents;
     QList<int> mSeeThroughExitLevels;
     View mView;
