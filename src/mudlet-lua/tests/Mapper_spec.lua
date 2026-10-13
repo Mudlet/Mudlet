@@ -3745,37 +3745,6 @@ describe("Tests saveMap and loadMap", function()
       assert.has_error(function() loadMap({}) end)
     end)
 
-    it("returns false for a binary map file that is not there", function()
-      assert.is_false(loadMap(mapDirectory .. "/nosuchmapfile.dat"))
-    end)
-
-    -- A binary map file opens with its format version as a four byte big endian
-    -- int, which is all these two files carry: the reader gives up on the
-    -- version alone and never reaches the rest.
-    local function writeBinaryMapVersion(path, version)
-      local file = assert(io.open(path, "wb"))
-      file:write(string.char(0, 0, math.floor(version / 256), version % 256))
-      file:close()
-    end
-
-    it("refuses a binary map file whose format version makes no sense", function()
-      local path = getMudletHomeDir() .. "/mapper_spec_bogus_version.dat"
-      finally(function() os.remove(path) end)
-      writeBinaryMapVersion(path, 0)
-
-      assert.is_false(loadMap(path))
-    end)
-
-    it("refuses a binary map file written by a newer Mudlet", function()
-      local path = getMudletHomeDir() .. "/mapper_spec_future_version.dat"
-      finally(function() os.remove(path) end)
-      -- inside the 1 to 127 range that passes for a version, but beyond the
-      -- highest format this Mudlet knows how to read
-      writeBinaryMapVersion(path, 127)
-
-      assert.is_false(loadMap(path))
-    end)
-
     local function keeperMap(areaName)
       deleteMap()
       local area = addAreaName(areaName)
@@ -3797,6 +3766,75 @@ describe("Tests saveMap and loadMap", function()
       assert.are.equal(area, getRoomArea(rooms[#rooms]))
       assert.are.equal("room number " .. #rooms, getRoomName(rooms[#rooms]))
     end
+
+    local function readFile(path)
+      local file = assert(io.open(path, "rb"))
+      local data = file:read("*a")
+      file:close()
+      return data
+    end
+
+    local function writeFile(path, data)
+      local file = assert(io.open(path, "wb"))
+      file:write(data)
+      file:close()
+    end
+
+    -- The profile's own map files, and those of earlier specs, go aside for
+    -- the length of a spec that needs every file in the folder to be its own
+    local function onlyTheseMapFiles()
+      local aside = getMudletHomeDir() .. "/mapper_spec_map_aside"
+      lfs.mkdir(aside)
+      local moved = {}
+      for entry in lfs.dir(mapDirectory) do
+        if lfs.attributes(mapDirectory .. "/" .. entry, "mode") == "file" then
+          assert(os.rename(mapDirectory .. "/" .. entry, aside .. "/" .. entry))
+          moved[#moved + 1] = entry
+        end
+      end
+      return function()
+        for _, entry in ipairs(moved) do
+          os.rename(aside .. "/" .. entry, mapDirectory .. "/" .. entry)
+        end
+        lfs.rmdir(aside)
+      end
+    end
+
+    it("returns false for a binary map file that is not there, keeping the loaded map", function()
+      local rooms, area = keeperMap("MapperSpecMissingFileKeepArea")
+
+      assert.is_false(loadMap(mapDirectory .. "/nosuchmapfile.dat"))
+
+      assertKept(rooms, area, "room number 1")
+    end)
+
+    -- A binary map file opens with its format version as a four byte big endian
+    -- int, which is all the files written by this carry: the reader gives up on
+    -- the version alone and never reaches the rest.
+    local function writeBinaryMapVersion(path, version)
+      writeFile(path, string.char(0, 0, math.floor(version / 256), version % 256))
+    end
+
+    it("refuses a binary map file whose format version makes no sense", function()
+      local path = getMudletHomeDir() .. "/mapper_spec_bogus_version.dat"
+      finally(function() os.remove(path) end)
+      writeBinaryMapVersion(path, 0)
+
+      assert.is_false(loadMap(path))
+    end)
+
+    it("refuses a binary map file written by a newer Mudlet, keeping the loaded map", function()
+      local path = getMudletHomeDir() .. "/mapper_spec_future_version.dat"
+      finally(function() os.remove(path) end)
+      local rooms, area = keeperMap("MapperSpecFutureVersionKeepArea")
+      -- inside the 1 to 127 range that passes for a version, but beyond the
+      -- highest format this Mudlet knows how to read
+      writeBinaryMapVersion(path, 127)
+
+      assert.is_false(loadMap(path))
+
+      assertKept(rooms, area, "room number 1")
+    end)
 
     it("keeps the loaded map when a binary map file cannot be read (#10394)", function()
       local path = getMudletHomeDir() .. "/mapper_spec_unreadable.dat"
@@ -3824,19 +3862,21 @@ describe("Tests saveMap and loadMap", function()
 
     it("falls back to the next newest map file when the newest is cut short", function()
       local olderPath = mapDirectory .. "/mapper_spec_older_whole.dat"
+      local newerPath = getMudletHomeDir() .. "/mapper_spec_newer_whole.dat"
       local newestPath = mapDirectory .. "/mapper_spec_newest_cut_short.dat"
       finally(function()
         os.remove(olderPath)
+        os.remove(newerPath)
         os.remove(newestPath)
       end)
       local rooms, area = keeperMap("MapperSpecNewestCutShortArea")
       assert.is_true(saveMap(olderPath))
-      local file = assert(io.open(olderPath, "rb"))
-      local data = file:read("*a")
-      file:close()
-      file = assert(io.open(newestPath, "wb"))
-      file:write(data:sub(1, #data - 3))
-      file:close()
+      -- the newest file is of a map of its own, so that reading what there is
+      -- of it cannot pass for the older one
+      setRoomName(rooms[1], "Only In The Newest File")
+      assert.is_true(saveMap(newerPath))
+      local data = readFile(newerPath)
+      writeFile(newestPath, data:sub(1, #data - 3))
       -- ahead of any other file in the folder, the cut one first
       assert.is_true(lfs.touch(olderPath, os.time() + 60, os.time() + 60))
       assert.is_true(lfs.touch(newestPath, os.time() + 120, os.time() + 120))
@@ -3875,9 +3915,7 @@ describe("Tests saveMap and loadMap", function()
       local rooms, area = keeperMap("MapperSpecOlderJsonArea")
       setMapUserData("mapper.spec.in.the.file", "from the file")
       assert.is_true(saveJsonMap(olderPath))
-      local file = assert(io.open(newestPath, "w"))
-      file:write("{ this is not JSON")
-      file:close()
+      writeFile(newestPath, "{ this is not JSON")
       assert.is_true(lfs.touch(olderPath, os.time() + 60, os.time() + 60))
       assert.is_true(lfs.touch(newestPath, os.time() + 120, os.time() + 120))
       clearMapUserData()
@@ -3890,6 +3928,24 @@ describe("Tests saveMap and loadMap", function()
       assert.is_nil(getMapUserData("mapper.spec.only.in.the.loaded.map"))
     end)
 
+    it("keeps the map user data when the only map file is a JSON one that will not parse", function()
+      local brokenPath = mapDirectory .. "/mapper_spec_only_broken.json"
+      local putBack = onlyTheseMapFiles()
+      finally(function()
+        os.remove(brokenPath)
+        putBack()
+      end)
+      local rooms, area = keeperMap("MapperSpecOnlyBrokenJsonArea")
+      clearMapUserData()
+      setMapUserData("mapper.spec.in.the.loaded.map", "from the loaded map")
+      writeFile(brokenPath, "{ this is not JSON")
+
+      assert.is_false(loadMap())
+
+      assertKept(rooms, area, "room number 1")
+      assert.are.equal("from the loaded map", getMapUserData("mapper.spec.in.the.loaded.map"))
+    end)
+
     it("refuses a binary map file cut short, keeping the loaded map", function()
       local wholePath = getMudletHomeDir() .. "/mapper_spec_whole.dat"
       local cutPath = getMudletHomeDir() .. "/mapper_spec_cut_short.dat"
@@ -3898,22 +3954,100 @@ describe("Tests saveMap and loadMap", function()
         os.remove(cutPath)
       end)
       local rooms, area = keeperMap("MapperSpecCutShortKeepArea")
+      clearMapUserData()
+      setMapUserData("mapper.spec.key", "in the file")
       assert.is_true(saveMap(wholePath))
-      local file = assert(io.open(wholePath, "rb"))
-      local data = file:read("*a")
-      file:close()
+      local data = readFile(wholePath)
       -- so that only the map from before the load can pass, not the file's
       setRoomName(rooms[1], "Only In The Loaded Map")
+      setMapUserData("mapper.spec.key", "only in the loaded map")
+      setCustomEnvColor(300, 10, 20, 30, 255)
+      centerview(rooms[5])
 
       -- one cut inside the header, one inside the last room
       for _, length in ipairs({40, #data - 3}) do
-        file = assert(io.open(cutPath, "wb"))
-        file:write(data:sub(1, length))
-        file:close()
+        writeFile(cutPath, data:sub(1, length))
 
         assert.is_false(loadMap(cutPath), "cut to " .. length .. " bytes")
         assertKept(rooms, area, "Only In The Loaded Map")
+        assert.are.equal("only in the loaded map", getMapUserData("mapper.spec.key"))
+        assert.are.same({10, 20, 30, 255}, getCustomEnvColorTable()[300])
+        assert.are.equal(rooms[5], getPlayerRoom())
       end
+    end)
+
+    -- #10678: a format version below 4 reads the rest of the file as rooms
+    it("refuses a binary map file whose format version was changed to 3, keeping the loaded map", function()
+      local wholePath = getMudletHomeDir() .. "/mapper_spec_whole.dat"
+      local patchedPath = getMudletHomeDir() .. "/mapper_spec_version_three.dat"
+      finally(function()
+        os.remove(wholePath)
+        os.remove(patchedPath)
+      end)
+      local rooms, area = keeperMap("MapperSpecVersionThreeKeepArea")
+      assert.is_true(saveMap(wholePath))
+      setRoomName(rooms[1], "Only In The Loaded Map")
+      writeFile(patchedPath, string.char(0, 0, 0, 3) .. readFile(wholePath):sub(5))
+
+      assert.is_false(loadMap(patchedPath))
+
+      assertKept(rooms, area, "Only In The Loaded Map")
+    end)
+
+    -- A JSON export pumps the event loop as it goes, which runs timers - and
+    -- whatever they load - in the middle of it
+    local function loadDuringJsonExport(load)
+      local exportPath = getMudletHomeDir() .. "/mapper_spec_export_under_load.json"
+      local loadResult = "never ran"
+      tempTimer(0, function()
+        if loadResult == "never ran" then
+          loadResult = load()
+        end
+      end)
+      local exported, message = saveJsonMap(exportPath)
+      os.remove(exportPath)
+      return exported, message, loadResult
+    end
+
+    it("lets a JSON export finish past a binary map file it refused", function()
+      local wholePath = getMudletHomeDir() .. "/mapper_spec_whole.dat"
+      local cutPath = getMudletHomeDir() .. "/mapper_spec_cut_short.dat"
+      finally(function()
+        os.remove(wholePath)
+        os.remove(cutPath)
+      end)
+      local rooms, area = keeperMap("MapperSpecExportPastRefusedArea")
+      assert.is_true(saveMap(wholePath))
+      local data = readFile(wholePath)
+      writeFile(cutPath, data:sub(1, #data - 3))
+
+      local exported, message, loaded = loadDuringJsonExport(function() return loadMap(cutPath) end)
+
+      assert.is_false(loaded)
+      assert.is_true(exported, message)
+      assertKept(rooms, area, "room number 1")
+    end)
+
+    it("does not fall back past a newest JSON map file refused because a JSON export is running", function()
+      local olderPath = mapDirectory .. "/mapper_spec_older_whole.dat"
+      local newestPath = mapDirectory .. "/mapper_spec_newest_while_exporting.json"
+      finally(function()
+        os.remove(olderPath)
+        os.remove(newestPath)
+      end)
+      local rooms, area = keeperMap("MapperSpecNewestJsonWhileExportingArea")
+      setRoomName(rooms[1], "Only In The Older File")
+      assert.is_true(saveMap(olderPath))
+      assert.is_true(saveJsonMap(newestPath))
+      assert.is_true(lfs.touch(olderPath, os.time() + 60, os.time() + 60))
+      assert.is_true(lfs.touch(newestPath, os.time() + 120, os.time() + 120))
+      setRoomName(rooms[1], "room number 1")
+
+      local exported, message, loaded = loadDuringJsonExport(function() return loadMap() end)
+
+      assert.is_false(loaded)
+      assert.is_true(exported, message)
+      assertKept(rooms, area, "room number 1")
     end)
 
     it("returns nil and a message naming the missing XML file", function()
@@ -4653,6 +4787,19 @@ describe("Tests saveJsonMap and loadJsonMap", function()
       assert.is_false(roomExists(roomA))
       assert.is_true(loadJsonMap(jsonPath))
     end
+
+    it("replaces the map user data with the file's, as it does the rest of the map", function()
+      buildMap()
+      clearMapUserData()
+      setMapUserData("mapper.spec.in.the.file", "from the file")
+      assert.is_true(saveJsonMap(jsonPath))
+      setMapUserData("mapper.spec.only.in.the.loaded.map", "from the loaded map")
+
+      assert.is_true(loadJsonMap(jsonPath))
+
+      assert.are.equal("from the file", getMapUserData("mapper.spec.in.the.file"))
+      assert.is_nil(getMapUserData("mapper.spec.only.in.the.loaded.map"))
+    end)
 
     it("puts every kind of room data back exactly as it was saved", function()
       buildMap()

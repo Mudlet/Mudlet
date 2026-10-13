@@ -57,6 +57,7 @@
 #include "PortableModeTestHelper.h"
 #include "Host.h"
 #include "HostManager.h"
+#include "MudletApp.h"
 #include "MudletInstanceCoordinator.h"
 #include "TArea.h"
 #include "TMap.h"
@@ -110,6 +111,41 @@ private:
             return nullptr;
         }
         return hostManager->getHost(name);
+    }
+
+    static bool setModified(const QString& path, const QDateTime& when)
+    {
+        QFile file(path);
+        return file.open(QIODevice::ReadWrite) && file.setFileTime(when, QFileDevice::FileModificationTime);
+    }
+
+    // A map folder with a binary map that loads behind newer files that do
+    // not: the JSON one from initTestCase(), or ones a newer Mudlet wrote
+    bool fillMapFolder(const QString& profileName, const QStringList& tooNewFiles = {})
+    {
+        const QString folder = MudletApp::getMudletPath(enums::profileMapsPath, profileName);
+        Host* pSource = HostManager::self()->getHost(mSourceName);
+        const QDateTime now = QDateTime::currentDateTime();
+        if (!QDir().mkpath(folder) || !pSource || !pSource->saveMapFile(qsl("%1/older.dat").arg(folder)) || !setModified(qsl("%1/older.dat").arg(folder), now.addSecs(-600))) {
+            return false;
+        }
+        if (tooNewFiles.isEmpty()) {
+            return QFile::copy(mMapFile, qsl("%1/newest.json").arg(folder)) && setModified(qsl("%1/newest.json").arg(folder), now.addSecs(-60));
+        }
+        // A format version beyond any this Mudlet reads, so each is refused on its first four bytes
+        int age = 60;
+        for (const QString& fileName : tooNewFiles) {
+            QFile file(qsl("%1/%2").arg(folder, fileName));
+            if (!file.open(QIODevice::WriteOnly) || file.write(QByteArray::fromHex("0000007f")) != 4) {
+                return false;
+            }
+            file.close();
+            if (!setModified(file.fileName(), now.addSecs(-age))) {
+                return false;
+            }
+            age += 60;
+        }
+        return true;
     }
 
     // Runs the event loop until the profile is gone. The close is deferred
@@ -229,6 +265,71 @@ private slots:
         QCOMPARE(writeMessage, qsl("aborted by user"));
         QVERIFY2(waitForProfileToClose(mExportTargetName), "the deferred close never completed once the export had unwound");
         QVERIFY2(mapWatch.isNull(), "the TMap outlived the profile it belongs to");
+    }
+
+    // With no file named, as at profile start, restore() falls back to an
+    // older map file when the newest does not load. A JSON one the user
+    // aborted, or a closing profile stopped, is not damaged, and an older map
+    // is not what either asked for.
+    void test_stoppingTheNewestJsonMapDoesNotFallBack_data()
+    {
+        QTest::addColumn<QString>("how");
+        QTest::newRow("abort") << qsl("abort");
+        QTest::newRow("close") << qsl("close");
+    }
+
+    void test_stoppingTheNewestJsonMapDoesNotFallBack()
+    {
+        QFETCH(QString, how);
+        const QString name = qsl("MapFallbackStopped-%1-Test").arg(how);
+        Host* pTarget = addProfile(name);
+        QVERIFY2(pTarget, "failed to create the target Host");
+        QVERIFY2(fillMapFolder(name), "failed to write the profile's map files");
+        TMap* pMap = pTarget->mpMap.data();
+
+        bool stopped = false;
+        const QMetaObject::Connection stopOnProgress = connect(pMap, &TMap::signal_mapProgressSetValue, pMap, [&]() {
+            if (stopped) {
+                return;
+            }
+            stopped = true;
+            if (how == qsl("abort")) {
+                // What the progress dialog's Abort button runs
+                pMap->slot_mapProgressDialogCancelled();
+            } else {
+                mudlet::self()->slot_closeProfileByName(name);
+            }
+        });
+        const bool loaded = pMap->restore(QString());
+        disconnect(stopOnProgress);
+
+        QVERIFY2(stopped, "the JSON load never announced any progress, so it was never stopped");
+        QVERIFY2(!loaded, "restore() reported loading a map after the newest map file was stopped");
+        QVERIFY2(pMap->mpRoomDB->isEmpty(), "restore() went on to load the older map file after the newest one was stopped");
+        if (how == qsl("close")) {
+            QVERIFY2(waitForProfileToClose(name), "the deferred close never completed once restore() had unwound");
+        }
+    }
+
+    // A close that lands between two map files that would not load stops
+    // restore() trying the rest, rather than holding the close up until it has
+    void test_closingTheProfileStopsTheFallbackBetweenFiles()
+    {
+        const QString name = qsl("MapFallbackClosed-Test");
+        Host* pTarget = addProfile(name);
+        QVERIFY2(pTarget, "failed to create the target Host");
+        QVERIFY2(fillMapFolder(name, {qsl("new1.dat"), qsl("new2.dat"), qsl("new3.dat")}), "failed to write the profile's map files");
+        TMap* pMap = pTarget->mpMap.data();
+
+        // Delivered by the processEvents() restore() runs after the first file fails
+        QTimer::singleShot(0, pMap, [name]() {
+            mudlet::self()->slot_closeProfileByName(name);
+        });
+        const bool loaded = pMap->restore(QString());
+
+        QVERIFY2(!loaded, "restore() went on to load the older map file after the profile was asked to close");
+        QVERIFY2(pMap->mpRoomDB->isEmpty(), "restore() went on to load the older map file after the profile was asked to close");
+        QVERIFY2(waitForProfileToClose(name), "the deferred close never completed once restore() had unwound");
     }
 
     void test_deletingAnAreaDuringAJsonExportStopsIt_data()
