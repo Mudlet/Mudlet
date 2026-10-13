@@ -128,6 +128,12 @@ void TTreeWidget::mousePressEvent(QMouseEvent* event)
         QRect rect = QRect(header()->sectionViewportPosition(0) + itemIndentation, vrect.y(), style()->pixelMetric(QStyle::PM_IndicatorWidth), vrect.height());
         if (rect.contains(event->pos())) {
             mClickedItem = indexClicked;
+            // Kept from the view when the release does the ticking: selecting the
+            // row saves the one left, whose move into its sorted place can slide
+            // another row under the cursor before the release arrives
+            if (indexClicked.row() != 0) {
+                return;
+            }
             QTreeWidget::mousePressEvent(event);
             return;
         }

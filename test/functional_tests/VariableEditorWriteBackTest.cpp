@@ -54,6 +54,7 @@
 #include "mudlet.h"
 
 #include <QDropEvent>
+#include <QHeaderView>
 #include <QMimeData>
 #include <QTreeWidget>
 
@@ -829,6 +830,51 @@ private slots:
 
         mpEditor->mpCurrentVarItem = nullptr;
         execLua(qsl("alikeHolder = nil"));
+        mpEditor->repopulateVars();
+    }
+
+    // A press that selected the row being ticked would save the row left, and
+    // that one's move into place slides a different row under the cursor
+    void test_tickingARowWhileARenameIsPendingTicksThatRow()
+    {
+        // the view ignores presses while it animates an expansion
+        const bool wasAnimated = mpVariablesTree->isAnimated();
+        mpVariablesTree->setAnimated(false);
+        execLua(qsl("tickHolder = {b = 'b', c = 'c', d = 'd'}"));
+        mpEditor->repopulateVars();
+        VarUnit* pVarUnit = mpHost->getLuaInterface()->getVarUnit();
+        pVarUnit->savedVars.clear();
+
+        QTreeWidgetItem* pHolder = findVariableItem({qsl("tickHolder")});
+        QVERIFY2(pHolder, "the Variables view did not show the table holding the row to tick");
+        pHolder->setExpanded(true);
+        QTreeWidgetItem* pB = findVariableItem({qsl("tickHolder"), qsl("b")});
+        QTreeWidgetItem* pC = findVariableItem({qsl("tickHolder"), qsl("c")});
+        QTreeWidgetItem* pD = findVariableItem({qsl("tickHolder"), qsl("d")});
+        QVERIFY(pB && pC && pD);
+        selectVariable(pD);
+        mpEditor->mpVarsMainArea->lineEdit_var_name->setText(qsl("a0"));
+
+        mpVariablesTree->scrollToItem(pC);
+        auto* pView = static_cast<QTreeView*>(mpVariablesTree);
+        const QRect rowRect = pView->visualRect(mpVariablesTree->indexFromItem(pC));
+        const int indentation = rowRect.x() - pView->visualRect(pView->rootIndex()).x();
+        const QRect tickArea(pView->header()->sectionViewportPosition(0) + indentation, rowRect.y(), pView->style()->pixelMetric(QStyle::PM_IndicatorWidth), rowRect.height());
+        // A corner of the area the tree ticks on, not the middle of the box,
+        // where the item delegate takes the press before the view selects
+        const QPoint corner(tickArea.left() + 1, tickArea.top() + 2);
+        QCOMPARE(mpVariablesTree->itemAt(corner), pC);
+        QTest::mousePress(mpVariablesTree->viewport(), Qt::LeftButton, {}, corner);
+        QTest::mouseRelease(mpVariablesTree->viewport(), Qt::LeftButton, {}, corner);
+
+        QCOMPARE(pC->checkState(0), Qt::Checked);
+        QCOMPARE(pB->checkState(0), Qt::Unchecked);
+        QVERIFY2(pVarUnit->savedVars.contains(qsl("tickHolder.c")), "the row ticked was not enrolled for saving");
+
+        mpVariablesTree->setAnimated(wasAnimated);
+        mpEditor->mpCurrentVarItem = nullptr;
+        pVarUnit->savedVars.clear();
+        execLua(qsl("tickHolder = nil"));
         mpEditor->repopulateVars();
     }
 
