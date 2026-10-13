@@ -234,8 +234,12 @@ QColor MapStyle::exitColor(const QColor& profileExitColor) const
 
 QColor MapStyle::roomIdColor(const QColor& drawnRoomColor) const
 {
-    if (palette == Palette::Terminal || palette == Palette::Light) {
+    if (palette == Palette::Terminal) {
         return drawnRoomColor;
+    }
+    // One color for every room, as each color an ID is drawn in needs its own digits made
+    if (palette == Palette::Light) {
+        return ink.isValid() ? ink : QColor(Qt::cyan);
     }
     return palette == Palette::Ink && ink.isValid() ? ink : ExitAppearance::contrastColor(drawnRoomColor);
 }

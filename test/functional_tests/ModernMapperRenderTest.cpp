@@ -923,6 +923,24 @@ private slots:
         }
     }
 
+    // Each room's ID is drawn, though hologram tints every room its own color
+    void test_hologramShowsRoomIdsWithoutGL()
+    {
+        const int areaId = addArea();
+        QVERIFY(areaId > 0);
+        const bool savedIds = mpHost->mShowRoomID;
+        const auto restore = qScopeGuard([this, savedIds]() {
+            mpHost->setMapStyle(qsl("tiles"));
+            mpHost->mShowRoomID = savedIds;
+        });
+        mpHost->mShowRoomID = true;
+        map()->mpRoomDB->getRoom(kEastRoomId)->environment = 5;
+        QVERIFY(mpHost->setMapStyle(qsl("hologram")));
+        ModernGLWidget widget(map(), mpHost);
+        queueFrame(widget, areaId);
+        QVERIFY2(widget.mRoomIdsDrawn.contains(kEastRoomId), "the room's ID was not drawn");
+    }
+
     // A move sends a pulse out from the player's room, wider and fainter as it spreads, and only in hologram
     void test_hologramPulsesFromThePlayersRoomWithoutGL()
     {
@@ -953,25 +971,36 @@ private slots:
             return found;
         };
 
-        widget.mPulseClock.start();
-        QTest::qSleep(300);
+        // Set as if begun that long ago, so that only one frame's queueing passes in real time
+        const auto pulseBegan = [&widget](const qint64 ago) {
+            widget.mPulseStartedAt = widget.mPulseReference.elapsed() - ago;
+        };
+        pulseBegan(300);
         queueFrame(widget, areaId);
         QVERIFY2(pulses().isEmpty(), "tiles sent out a pulse");
 
         QVERIFY(mpHost->setMapStyle(qsl("hologram")));
+        pulseBegan(100);
         queueFrame(widget, areaId);
         const QList<CubeInstanceData> early = pulses();
         QCOMPARE(early.size(), 1);
-        QTest::qSleep(400);
+        pulseBegan(500);
         queueFrame(widget, areaId);
         const QList<CubeInstanceData> later = pulses();
         QCOMPARE(later.size(), 1);
         QVERIFY2(later.first().transform.column(0).toVector3D().length() > early.first().transform.column(0).toVector3D().length(), "the pulse did not spread");
         QVERIFY2(later.first().color[3] < early.first().color[3], "the pulse did not fade as it spread");
 
-        widget.mPulseClock.invalidate();
+        widget.mPulseStartedAt.reset();
         queueFrame(widget, areaId);
         QVERIFY2(pulses().isEmpty(), "a pulse was drawn with none under way");
+
+        // Nor left repainting once the style is one without it
+        pulseBegan(100);
+        widget.mPulseTimer->start();
+        QVERIFY(mpHost->setMapStyle(qsl("tiles")));
+        widget.applyStyle();
+        QVERIFY2(!widget.mPulseTimer->isActive() && !widget.mPulseStartedAt.has_value(), "a pulse kept going after a change to a style without one");
     }
 
     // A room's edge glows over its middle, every third row of pixels is darker, and a move starts a pulse
@@ -995,7 +1024,8 @@ private slots:
         const QImage frame = widget.grabFramebuffer();
         const auto pixelAt = [&widget](const QVector3D& point) {
             const std::optional<QPointF> pixel = widget.mCameraController.pixelForPoint(point);
-            return pixel ? pixel->toPoint() : QPoint(-1, -1);
+            // The camera's pixels are the widget's, the framebuffer's the device's
+            return pixel ? (*pixel * widget.devicePixelRatioF()).toPoint() : QPoint(-1, -1);
         };
         const auto brightness = [&frame](const QPoint& pixel) {
             const QColor color = frame.pixelColor(pixel);
@@ -1032,24 +1062,22 @@ private slots:
         }
         QVERIFY2(dark * lightRows * 100 < light * darkRows * 85, qPrintable(qsl("scanlines average %1 bright and the rows between them %2").arg(dark / darkRows).arg(light / lightRows)));
 
-        widget.mPulseClock.invalidate();
+        widget.mPulseStartedAt.reset();
         map()->mRoomIdHash[map()->mProfileName] = kEastRoomId;
         widget.grabFramebuffer();
-        QVERIFY2(widget.mPulseClock.isValid() && widget.mPulseTimer->isActive(), "a move did not start a pulse");
+        QVERIFY2(widget.mPulseStartedAt.has_value() && widget.mPulseTimer->isActive(), "a move did not start a pulse");
 
         widget.setSecondaryView(true);
-        widget.mPulseClock.invalidate();
-        widget.mPulseTimer->stop();
+        widget.stopPulse();
         map()->mRoomIdHash[map()->mProfileName] = kPlayerRoomId;
         widget.grabFramebuffer();
-        QVERIFY2(widget.mPulseClock.isValid() && widget.mPulseTimer->isActive(), "a move seen in a second map window did not start a pulse");
+        QVERIFY2(widget.mPulseStartedAt.has_value() && widget.mPulseTimer->isActive(), "a move seen in a second map window did not start a pulse");
 
         QVERIFY(mpHost->setMapStyle(qsl("tiles")));
-        widget.mPulseClock.invalidate();
-        widget.mPulseTimer->stop();
+        widget.stopPulse();
         map()->mRoomIdHash[map()->mProfileName] = kEastRoomId;
         widget.grabFramebuffer();
-        QVERIFY2(!widget.mPulseClock.isValid() && !widget.mPulseTimer->isActive(), "a move in tiles started a pulse");
+        QVERIFY2(!widget.mPulseStartedAt.has_value() && !widget.mPulseTimer->isActive(), "a move in tiles started a pulse");
     }
 
     // Ink wash keeps an environment's hue, enough to tell areas apart, in an ink dark on light paper, and seals the player's room
@@ -1576,6 +1604,84 @@ private slots:
         const GLuint restyled = drawnFromOwnCells(areaIds.at(0));
         QVERIFY2(restyled, "in another font, the area is drawn from the wrong cells");
         QVERIFY2(restyled != back, "the atlas was not drawn again in the new font");
+    }
+
+    // A view of more symbols than the atlas holds still shows every room, the rest as plain rooms
+    void test_terminalSymbolsPastTheAtlasShowAsPlainRoomsWithoutGL()
+    {
+        constexpr int kRooms = 200;
+        constexpr int kColumns = 20;
+        map()->mapClear();
+        const int areaId = map()->mpRoomDB->addArea(qsl("Crowded Area"));
+        QVERIFY(areaId > 0);
+        for (int i = 0; i < kRooms; ++i) {
+            QVERIFY(addRoomAt(1000 + i, areaId, i % kColumns - kColumns / 2, i / kColumns - kRooms / kColumns / 2, 0));
+            map()->mpRoomDB->getRoom(1000 + i)->mSymbol = QString(QChar(static_cast<char16_t>(0x4E00 + i)));
+        }
+        map()->mRoomIdHash[map()->mProfileName] = 0;
+        const auto restore = qScopeGuard([this]() {
+            mpHost->setMapStyle(qsl("tiles"));
+        });
+        QVERIFY(mpHost->setMapStyle(qsl("terminal")));
+
+        ModernGLWidget widget(map(), mpHost);
+        QSet<GLuint> atlasTextures;
+        GLuint lastTexture = 0;
+        widget.mLabelTextureCache.useTextureStandIn(
+                [&atlasTextures, &lastTexture](const QImage& image) {
+                    if (image.size() == QSize(1024, 1024)) {
+                        atlasTextures.insert(lastTexture + 1);
+                    }
+                    return ++lastTexture;
+                },
+                [](GLuint) {});
+        widget.resize(800, 600);
+        widget.mCameraController.setViewportSize(widget.width(), widget.height());
+        widget.setViewCenter(areaId, 0, 0, 0);
+        widget.frameRooms(30.0);
+        widget.mCameraController.setTopView();
+        widget.updateMatrices();
+        widget.mRenderCommandQueue.clear();
+        widget.renderRooms();
+
+        qsizetype glyphs = 0;
+        for (const auto& command : widget.mRenderCommandQueue.commands()) {
+            if (const auto* textured = dynamic_cast<const RenderTexturedTrianglesCommand*>(command.get()); textured && atlasTextures.contains(textured->geometry().textureId)) {
+                glyphs += textured->geometry().vertices.size() / 18;
+            }
+        }
+        QCOMPARE(glyphs, kRooms);
+        QVERIFY(widget.mGlyphAtlasIndex.contains(qsl("#")));
+    }
+
+    // A terminal's room shows plain stairs in its character, but not an in or out exit or a door, which its markers show
+    void test_terminalMarksOnlyWhatItsCharacterCannotShowWithoutGL()
+    {
+        constexpr int kStairsRoomId = 4;
+        constexpr int kInRoomId = 5;
+        constexpr int kDoorRoomId = 6;
+        const int areaId = addArea();
+        QVERIFY(areaId > 0);
+        QVERIFY(addRoomAt(kStairsRoomId, areaId, 4, 0, 0) && addRoomAt(kInRoomId, areaId, 6, 0, 0) && addRoomAt(kDoorRoomId, areaId, 8, 0, 0));
+        map()->mpRoomDB->getRoom(kStairsRoomId)->setExit(kLowerRoomId, DIR_DOWN);
+        map()->mpRoomDB->getRoom(kInRoomId)->setExit(kPlayerRoomId, DIR_IN);
+        map()->mpRoomDB->getRoom(kDoorRoomId)->setExit(kLowerRoomId, DIR_DOWN);
+        map()->mpRoomDB->getRoom(kDoorRoomId)->setDoor(qsl("down"), 3);
+        const auto restore = qScopeGuard([this]() {
+            mpHost->setMapStyle(qsl("tiles"));
+        });
+        QVERIFY(mpHost->setMapStyle(qsl("terminal")));
+        ModernGLWidget widget(map(), mpHost);
+        queueFrame(widget, areaId);
+        QStringList markers;
+        for (const QString& key : std::as_const(widget.mRoomTexturesInUse)) {
+            if (key.startsWith(qsl("markers|"))) {
+                markers.append(key.section(QLatin1Char('|'), 2));
+            }
+        }
+        markers.sort();
+        // Up, down, in and out, each followed by its door where there is an exit: the in exit and the locked door's stairs
+        QCOMPARE(markers, (QStringList{qsl("00200"), qsl("02300")}));
     }
 };
 
