@@ -114,18 +114,19 @@ public slots:
     void slot_showSaveWarningMenu();
     void slot_saveErrorChanged(bool hasError);
 
-    static void paintMapInfo(const QElapsedTimer& renderTimer,
-                             QPainter& painter,
-                             Host* pHost,
-                             TMap* pMap,
-                             int roomID,
-                             int displayAreaId,
-                             int selectionSize,
-                             QColor& infoColor,
-                             int xOffset,
-                             int yOffset,
-                             int widgetWidth,
-                             int fontHeight);
+    // Returns how far down the info reaches, or yOffset if none was painted
+    static int paintMapInfo(const QElapsedTimer& renderTimer,
+                            QPainter& painter,
+                            Host* pHost,
+                            TMap* pMap,
+                            int roomID,
+                            int displayAreaId,
+                            int selectionSize,
+                            QColor& infoColor,
+                            int xOffset,
+                            int yOffset,
+                            int widgetWidth,
+                            int fontHeight);
     static int paintMapInfoContributor(QPainter& painter, int xOffset, int yOffset, const MapInfoProperties& properties, QColor bgColor, int fontHeight, int widgetWidth);
 
 protected:
