@@ -53,6 +53,7 @@
 #include "RetainedMapScene.h"
 #include "RoomAppearance.h"
 #include "TArea.h"
+#include "TAreaGraph.h"
 #include "TMap.h"
 #include "TMapLabel.h"
 #include "TRoom.h"
@@ -341,6 +342,43 @@ private:
         return count;
     }
 
+    // Two areas of 20 by 20 rooms, joined by an exit; returns their IDs
+    std::pair<int, int> addTwoAreas() const
+    {
+        map()->mapClear();
+        map()->mUserData.remove(TAreaGraph::cLayoutUserDataKey);
+        const int next = addGridArea(qsl("Westmarch"), 1, 20, 20, 1, 0);
+        addGridArea(qsl("Eastvale"), next, 20, 20, 1, 0);
+        map()->setExit(1, next, DIR_EAST);
+        map()->mRoomIdHash[map()->mProfileName] = 0;
+        return {map()->mpRoomDB->getRoom(1)->getArea(), map()->mpRoomDB->getRoom(next)->getArea()};
+    }
+
+    // The opacities of the layers the atlas queued, in order
+    static QList<float> atlasLayerOpacities(const ModernGLWidget& widget)
+    {
+        QList<float> opacities;
+        for (const auto& command : widget.mRenderCommandQueue.commands()) {
+            if (const auto* state = dynamic_cast<const GLStateCommand*>(command.get()); state && state->stateType() == GLStateCommand::BLEND_BY_OPACITY) {
+                opacities.append(state->opacity());
+            }
+        }
+        return opacities;
+    }
+
+    // Where the middle of an area of the atlas is in the view
+    static QPoint pixelOfArea(ModernGLWidget& widget, const int areaId, const QPointF& fromMiddle = QPointF())
+    {
+        const MapAtlas::Area* pArea = widget.mAtlas.area(areaId);
+        const MapAtlas::Area* pShown = widget.mAtlas.area(widget.mAID);
+        if (!pArea || !pShown) {
+            return QPoint(-1, -1);
+        }
+        const QPointF local = pArea->center + fromMiddle - pShown->offset;
+        const std::optional<QPointF> pixel = widget.mCameraController.pixelForPoint(QVector3D(static_cast<float>(local.x()), static_cast<float>(local.y()), widget.atlasLevel()));
+        return pixel ? pixel->toPoint() : QPoint(-1, -1);
+    }
+
 private slots:
     void initTestCase()
     {
@@ -419,7 +457,7 @@ private slots:
         QVERIFY2(texturedCommands(widget) > 0, "near rooms show their symbols and exit markers");
         QVERIFY2(!drawnCubes(widget, levelOutline).isEmpty(), "near rooms are outlined");
 
-        queueFrame(widget, areaId, 100.0f);
+        queueFrame(widget, areaId, 20.0f);
         const float roomPixels = 0.5f / widget.mCameraController.worldUnitsPerPixel(QVector3D(0.0f, 0.0f, 0.0f));
         QVERIFY2(roomPixels < widget.mDetailPixels, qPrintable(qsl("rooms %1 pixels across are not too small to see").arg(roomPixels)));
         QCOMPARE(drawnRooms(widget).size(), 64 * 64);
@@ -457,7 +495,7 @@ private slots:
             return count;
         };
 
-        queueFrame(widget, areaId, 100.0f);
+        queueFrame(widget, areaId, 20.0f);
         const float roomPixels = 0.5f / widget.mCameraController.worldUnitsPerPixel(QVector3D(0.0f, 0.0f, 0.0f));
         QVERIFY2(roomPixels < widget.mDetailPixels, qPrintable(qsl("rooms %1 pixels across are not too small to see").arg(roomPixels)));
         QCOMPARE(texturedCommands(widget), 0);
@@ -631,6 +669,203 @@ private slots:
         widget.mRenderCommandQueue.clear();
     }
 
+    void test_zoomLevelsComeInAsRoomsShrinkWithoutGL()
+    {
+        const auto near = [](const float a, const float b) {
+            return qAbs(a - b) < 1e-5f;
+        };
+        MapAtlas::Weights weights = MapAtlas::weightsFor(MapAtlas::scmRoomsAlonePixels, 100.0f);
+        QVERIFY(near(weights.footprint, 0.0f) && near(weights.world, 0.0f));
+        QVERIFY(weights.roomsShown() && !weights.areasPicked());
+        weights = MapAtlas::weightsFor((MapAtlas::scmRoomsAlonePixels + MapAtlas::scmFootprintsOnlyPixels) / 2.0f, 100.0f);
+        QVERIFY2(near(weights.footprint, 0.5f), qPrintable(qsl("half way the footprints are %1 in").arg(weights.footprint)));
+        QVERIFY(weights.roomsShown() && weights.areasPicked());
+        weights = MapAtlas::weightsFor(MapAtlas::scmFootprintsOnlyPixels, MapAtlas::scmWorldFromPixels);
+        QVERIFY(near(weights.footprint, 1.0f) && near(weights.world, 0.0f));
+        QVERIFY(!weights.roomsShown() && weights.areasPicked() && !weights.nodesPicked());
+        weights = MapAtlas::weightsFor(0.1f, MapAtlas::scmWorldOnlyPixels);
+        QVERIFY(near(weights.footprint, 1.0f) && near(weights.world, 1.0f));
+        QVERIFY(weights.nodesPicked());
+        float lastFootprint = 0.0f;
+        float lastWorld = 0.0f;
+        for (float roomPixels = 4.0f; roomPixels > 0.05f; roomPixels *= 0.9f) {
+            weights = MapAtlas::weightsFor(roomPixels, roomPixels * 10.0f);
+            QVERIFY2(weights.footprint >= lastFootprint && weights.world >= lastWorld, "zooming out took a level back out");
+            lastFootprint = weights.footprint;
+            lastWorld = weights.world;
+        }
+
+        const auto [westId, eastId] = addTwoAreas();
+        ModernGLWidget widget(map(), mpHost);
+        // The 2D map's usual framing, and as far out as the rooms show alone, at 600 pixels high
+        for (const float distance : {1.5f, 20.0f}) {
+            queueFrame(widget, westId, distance);
+            QVERIFY2(atlasLayerOpacities(widget).isEmpty(), qPrintable(qsl("the atlas is drawn at distance %1").arg(distance)));
+            QVERIFY(!drawnRooms(widget).isEmpty());
+        }
+        QVERIFY2(!map()->mUserData.contains(TAreaGraph::cLayoutUserDataKey), "the area graph was laid out, and the map changed, without zooming out to it");
+        QVERIFY(widget.mAtlas.areas().isEmpty());
+
+        // Fading in over the rooms
+        queueFrame(widget, westId, 30.0f);
+        QList<float> opacities = atlasLayerOpacities(widget);
+        QVERIFY(!drawnRooms(widget).isEmpty());
+        QVERIFY2(opacities.size() == 1 && opacities.first() > 0.0f && opacities.first() < 1.0f, qPrintable(qsl("%1 layers queued").arg(opacities.size())));
+        QCOMPARE(widget.mAtlas.areas().size(), 2);
+
+        queueFrame(widget, westId, 45.0f);
+        QVERIFY(drawnRooms(widget).isEmpty());
+        QCOMPARE(atlasLayerOpacities(widget), QList<float>{1.0f});
+
+        // The world graph and the ring around the area shown, without the footprints
+        queueFrame(widget, westId, 200.0f);
+        QCOMPARE(atlasLayerOpacities(widget), (QList<float>{1.0f, 1.0f}));
+        const auto* world = [&widget]() -> const RenderTrianglesCommand* {
+            for (const auto& command : widget.mRenderCommandQueue.commands()) {
+                if (const auto* triangles = dynamic_cast<const RenderTrianglesCommand*>(command.get())) {
+                    return triangles;
+                }
+            }
+            return nullptr;
+        }();
+        QVERIFY(world);
+        QCOMPARE(world->vertices().size(), widget.mAtlas.worldVertices().size());
+        QVERIFY(widget.mAtlas.area(eastId));
+    }
+
+    void test_anAreaFootprintCoversItsRoomsWithoutGL()
+    {
+        QCOMPARE(MapAtlas::hull({QPointF(0, 0), QPointF(1, 0), QPointF(2, 0), QPointF(0, 1), QPointF(1, 1), QPointF(2, 1), QPointF(0, 2), QPointF(1, 2), QPointF(2, 2), QPointF(2, 2)}),
+                 QPolygonF({QPointF(0, 0), QPointF(2, 0), QPointF(2, 2), QPointF(0, 2)}));
+
+        map()->mapClear();
+        map()->mUserData.remove(TAreaGraph::cLayoutUserDataKey);
+        const int areaId = map()->mpRoomDB->addArea(qsl("Ell"));
+        // An L: three along the bottom, then two up the left side
+        const QList<QPoint> places{{0, 0}, {1, 0}, {2, 0}, {0, 1}, {0, 2}};
+        for (int i = 0; i < places.size(); ++i) {
+            const int id = i + 1;
+            map()->addRoom(id);
+            map()->setRoomArea(id, areaId);
+            map()->setRoomCoordinates(id, places.at(i).x(), places.at(i).y(), 0);
+            map()->mpRoomDB->getRoom(id)->environment = id <= 3 ? 300 : 301;
+        }
+        map()->areaGraph()->refresh();
+        MapAtlas atlas;
+        atlas.build(
+                *map(),
+                [](const int environment) {
+                    return environment == 300 ? QColor(10, 200, 30) : QColor(200, 10, 30);
+                },
+                QColor(Qt::white));
+        const MapAtlas::Area* pArea = atlas.area(areaId);
+        QVERIFY(pArea);
+        QCOMPARE(pArea->roomCount, 5);
+        QCOMPARE(pArea->color, QColor(10, 200, 30));
+        QCOMPARE(pArea->name, qsl("Ell"));
+        QCOMPARE(pArea->offset, pArea->center - QPointF(1.0, 1.0));
+        // Cut across the inside of the L, over the corners of the rooms' cells
+        QCOMPARE(pArea->footprint.translated(-pArea->offset), QPolygonF({QPointF(-0.5, -0.5), QPointF(2.5, -0.5), QPointF(2.5, 0.5), QPointF(0.5, 2.5), QPointF(-0.5, 2.5)}));
+        // Of the two rooms nearest the middle, the lower ID
+        QCOMPARE(pArea->landingRoomId, 2);
+        QCOMPARE(pArea->landing, QPoint(1, 0));
+        // A fan of three triangles, of seven floats a corner
+        QCOMPARE(atlas.footprintVertices().size(), 3 * 3 * 3);
+        QCOMPARE(atlas.footprintColors().size(), 3 * 3 * 4);
+        QCOMPARE(atlas.footprintColors().at(1), QColor(10, 200, 30).greenF());
+    }
+
+    void test_areasArePlacedByTheStoredLayoutOrElseLaidOutWithoutGL()
+    {
+        const auto [westId, eastId] = addTwoAreas();
+        ModernGLWidget widget(map(), mpHost);
+        widget.refreshAtlas();
+        const MapAtlas::Area* pWest = widget.mAtlas.area(westId);
+        const MapAtlas::Area* pEast = widget.mAtlas.area(eastId);
+        QVERIFY(pWest && pEast);
+        QVERIFY2(QLineF(pWest->center, pEast->center).length() >= pWest->radius + pEast->radius, "two areas laid out on each other");
+        const QPointF westCenter = pWest->center;
+        const QPointF eastCenter = pEast->center;
+
+        // Laid out the same way again
+        map()->mUserData.remove(TAreaGraph::cLayoutUserDataKey);
+        widget.refreshAtlas();
+        QCOMPARE(widget.mAtlas.area(westId)->center, westCenter);
+        QCOMPARE(widget.mAtlas.area(eastId)->center, eastCenter);
+
+        map()->mUserData[TAreaGraph::cLayoutUserDataKey] = qsl(R"({"areas":{"%1":{"x":-300,"y":40,"pinned":true}}})").arg(westId);
+        widget.refreshAtlas();
+        QCOMPARE(widget.mAtlas.area(westId)->center, QPointF(-300.0, 40.0));
+        // Rooms run from -10 to 9 each way, so the middle of the area is at -0.5, -0.5
+        QCOMPARE(widget.mAtlas.area(westId)->offset, QPointF(-299.5, 40.5));
+
+        QVERIFY(map()->areaGraph()->setPosition(eastId, QPointF(500.0, -500.0)));
+        widget.refreshAtlas();
+        QCOMPARE(widget.mAtlas.area(eastId)->center, QPointF(500.0, -500.0));
+        QCOMPARE(widget.mAtlas.area(westId)->center, QPointF(-300.0, 40.0));
+    }
+
+    void test_aClickFliesIntoTheAreaUnderItWithoutGL()
+    {
+        const auto [westId, eastId] = addTwoAreas();
+        // The east area straight up the view from the west one, far enough for both names to show
+        map()->areaGraph()->refresh();
+        QVERIFY(map()->areaGraph()->setPosition(westId, QPointF(0.0, 0.0)));
+        QVERIFY(map()->areaGraph()->setPosition(eastId, QPointF(0.0, 150.0)));
+        ModernGLWidget widget(map(), mpHost);
+        queueFrame(widget, westId, 1.5f);
+        QVERIFY2(widget.roomAt(QPoint(400, 300)), "no room in the middle of the view");
+        QCOMPARE(widget.areaAt(QPoint(400, 300)), 0);
+
+        queueFrame(widget, westId, 45.0f);
+        const MapAtlas::Area* pWest = widget.mAtlas.area(westId);
+        const MapAtlas::Area* pEast = widget.mAtlas.area(eastId);
+        QVERIFY(pWest && pEast);
+        QCOMPARE(widget.areaAt(pixelOfArea(widget, westId)), westId);
+        QCOMPARE(widget.areaAt(pixelOfArea(widget, eastId)), eastId);
+        QCOMPARE(widget.roomAt(pixelOfArea(widget, westId)), 0);
+        QCOMPARE(widget.roomPickedAt(pixelOfArea(widget, westId)), 0);
+        // Out the far side of the west area from the east one, where there is nothing
+        const QPointF away = (pWest->center - pEast->center) / QLineF(pWest->center, pEast->center).length();
+        QCOMPARE(widget.areaAt(pixelOfArea(widget, westId, away * (pWest->radius + 40.0))), 0);
+        const QList<ModernGLWidget::AtlasLabel> labels = widget.atlasLabels(widget.mZoomWeights);
+        QCOMPARE(labels.size(), 2);
+        QCOMPARE(labels.first().text, qsl("Westmarch"));
+        QVERIFY(labels.first().shownArea && !labels.last().shownArea);
+
+        // A node is picked a few pixels off its rim, but not well clear of it
+        queueFrame(widget, westId, 200.0f);
+        QVERIFY(widget.mZoomWeights.nodesPicked());
+        const float unitsPerPixel = widget.mCameraController.worldUnitsPerPixel(widget.mCameraController.getTarget());
+        QCOMPARE(widget.areaAt(pixelOfArea(widget, eastId, -away * (pEast->radius + 3.0f * unitsPerPixel))), eastId);
+        QCOMPARE(widget.areaAt(pixelOfArea(widget, eastId, -away * (pEast->radius + 20.0f * unitsPerPixel))), 0);
+
+        const QVector3D targetBefore = widget.mCameraController.getTarget();
+        const QPointF westOffset = pWest->offset;
+        const QPointF eastOffset = pEast->offset;
+        const QPoint eastLanding = pEast->landing;
+        widget.flyToArea(widget.areaAt(pixelOfArea(widget, eastId)));
+        QCOMPARE(widget.mAID, eastId);
+        QVERIFY(widget.mFlight);
+        // The same place in the world, in the east area's coordinates, so the view does not jump
+        const QVector3D targetAfter = widget.mCameraController.getTarget();
+        QVERIFY2(QLineF(QPointF(targetAfter.x(), targetAfter.y()) + eastOffset, QPointF(targetBefore.x(), targetBefore.y()) + westOffset).length() < 1e-3, "the view jumped as the flight began");
+        float lastScale = widget.mCameraController.getScale();
+        for (int tick = 0; tick < 1000 && widget.mFlight; ++tick) {
+            widget.onCameraAnimationTick();
+            QVERIFY2(widget.mCameraController.getScale() <= lastScale, "the flight zoomed out");
+            lastScale = widget.mCameraController.getScale();
+        }
+        QVERIFY(!widget.mFlight);
+        QVERIFY(!widget.mCameraSmoothAnimating);
+        QCOMPARE(widget.mCameraController.getTarget(), QVector3D(eastLanding.x(), eastLanding.y(), 0.0f));
+        QCOMPARE(QPoint(widget.mMapCenterX, widget.mMapCenterY), eastLanding);
+        QCOMPARE(widget.mCameraController.getScale(), CameraController::distanceToShow(static_cast<float>(map()->mpRoomDB->get2DMapZoom(eastId)), 800.0f / 600.0f));
+        widget.updateMatrices();
+        QVERIFY(!widget.zoomWeights().areasPicked());
+        QVERIFY(widget.roomAt(QPoint(400, 300)));
+    }
+
     void benchmark_hugeMap()
     {
         if (qEnvironmentVariableIsEmpty("MUDLET_BENCH_3D")) {
@@ -662,8 +897,9 @@ private slots:
             float distance;
             bool topView;
         };
-        // close is about the 2D map's default zoom; far shows the whole of the viewed level and more
-        const QList<Scenario> scenarios{{"close", 1.0f, false}, {"mid", 8.0f, false}, {"far", 40.0f, false}, {"far_top", 40.0f, true}};
+        // close is about the 2D map's default zoom; far shows the whole of the viewed level and more; areas and
+        // world are zoomed out to the areas' footprints and to the world graph
+        const QList<Scenario> scenarios{{"close", 1.0f, false}, {"mid", 8.0f, false}, {"far", 40.0f, false}, {"far_top", 40.0f, true}, {"areas", 60.0f, false}, {"world", 800.0f, false}};
         const int frames = qEnvironmentVariableIntValue("MUDLET_BENCH_3D_FRAMES_PER_SCENARIO") > 0 ? qEnvironmentVariableIntValue("MUDLET_BENCH_3D_FRAMES_PER_SCENARIO") : 20;
         for (const Scenario& scenario : scenarios) {
             if (scenario.topView) {
@@ -812,6 +1048,8 @@ private slots:
             widget.mShiftMode = true;
             widget.jumpTo(areaId, 0, 0, 0);
             views(widget, qsl("huge"), {1.0f, 3.0f});
+            // Zoomed out to the areas' footprints and to the world graph
+            views(widget, qsl("huge-atlas"), {60.0f, 800.0f});
         }
         mpHost->mShowRoomID = savedIds;
         mpHost->mBubbleMode = savedBubbles;
