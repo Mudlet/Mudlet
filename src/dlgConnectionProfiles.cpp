@@ -673,9 +673,14 @@ void dlgConnectionProfiles::slot_updatePassword(const QString& pass)
             writeSecurePassword(profileName, pass);
         }
     } else {
+        // Recorded process-wide, so an earlier failure is cleared before this save is asked about
+        SecureStringUtils::takeUnprotectedSecretPath();
         auto result = MudletApp::writeProfileData(profileName, qsl("password"), pass);
         if (!result.first) {
             qWarning().noquote().nospace() << "dlgConnectionProfiles::slot_updatePassword() ERROR - failed to save password for profile \"" << profileName << "\": " << result.second;
+        } else if (!SecureStringUtils::takeUnprotectedSecretPath().isEmpty()) {
+            //: Shown in the connection dialog when a password was saved but its file could not be made unreadable to other users of the computer. %1 is a profile name.
+            showNotification(tr("The password for '%1' was saved, but other accounts on this computer can still read it.").arg(profileName), notificationAreaIconLabelWarning);
         }
     }
 }
