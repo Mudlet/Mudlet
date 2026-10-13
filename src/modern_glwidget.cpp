@@ -1656,7 +1656,8 @@ void ModernGLWidget::renderRooms()
             const QColor rimTarget = style.edges == MapStyle::Edges::ViewedLevelBase ? background : contrast;
             outlineInstances.append(outline(roomSize * scmLevelOutline, GeometryManager::fadedColor(roomColor, {0.5f, 1.0f}, rimTarget)));
         }
-        if (bordered && !inkOutlines && !stationRings && !terminal && !wireframes) {
+        // A seal stands in for the room's border as for its fill: the paper is to show through the frame cut in it
+        if (bordered && !inkOutlines && !stationRings && !terminal && !wireframes && !(seal && look.playerRoom)) {
             const float borderWidth = (pR->mBorderThickness > 0 ? pR->mBorderThickness : 1) * borderUnit;
             const QColor borderColor = pR->mBorderColor.isValid() ? pR->mBorderColor : style.roomBorderColor(mpHost->mRoomBorderColor, roomColor, background);
             const QVector4D borderTint = GeometryManager::fadedColor(borderColor, fade, fadeTarget);
@@ -2170,9 +2171,13 @@ void ModernGLWidget::renderRooms()
                 mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::ADDITIVE_BLEND));
             }
             if (!exits->bars.isEmpty()) {
-                const RenderCommand::Shading shading = wireframes ? RenderCommand::Shading::Wireframe : (inkBlots ? RenderCommand::Shading::InkStroke : RenderCommand::Shading::Unlit);
+                const RenderCommand::Shading shading = wireframes ? RenderCommand::Shading::Wireframe : RenderCommand::Shading::Unlit;
                 mRenderCommandQueue.addCommand(std::make_unique<RenderInstancedCubesCommand>(
                         exits->bars, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix(), shading));
+            }
+            if (!exits->strokes.isEmpty()) {
+                mRenderCommandQueue.addCommand(std::make_unique<RenderInstancedCubesCommand>(
+                        exits->strokes, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix(), RenderCommand::Shading::InkStroke));
             }
             if (!exits->vertices.isEmpty()) {
                 // Arrowheads and dots lie on the lines' tops
@@ -2461,7 +2466,9 @@ void ModernGLWidget::renderConnections()
 
     mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::ENABLE_DEPTH_TEST));
 
+    const bool inkBlots = style.edges == MapStyle::Edges::InkBlots;
     QVector<CubeInstanceData> bars;
+    QVector<CubeInstanceData> strokes;
     bars.reserve(scene.segments.size());
     for (const ExitScene::Segment& segment : scene.segments) {
         QVector4D tint = faded(segment.color, segment.level);
@@ -2470,12 +2477,21 @@ void ModernGLWidget::renderConnections()
         }
         const CubeInstanceData bar(GeometryManager::barTransform(segment.from, segment.to, segment.width, segment.height), tint.x(), tint.y(), tint.z(), tint.w());
         // Not drawn into the depth buffer, or it would cut its shape out of the levels below drawn after it
-        (glowing || tint.w() < 1.0f ? mSeeThroughExits[segment.level].bars : bars).append(bar);
+        const bool seeThrough = glowing || tint.w() < 1.0f;
+        // Only a whole line tapers well: a door, a dash or a custom line's piece would thin out at one end
+        if (inkBlots && segment.stroke) {
+            (seeThrough ? mSeeThroughExits[segment.level].strokes : strokes).append(bar);
+        } else {
+            (seeThrough ? mSeeThroughExits[segment.level].bars : bars).append(bar);
+        }
     }
     if (!bars.isEmpty()) {
-        const RenderCommand::Shading shading = style.edges == MapStyle::Edges::InkBlots ? RenderCommand::Shading::InkStroke : RenderCommand::Shading::Unlit;
-        mRenderCommandQueue.addCommand(
-                std::make_unique<RenderInstancedCubesCommand>(bars, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix(), shading));
+        mRenderCommandQueue.addCommand(std::make_unique<RenderInstancedCubesCommand>(
+                bars, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix(), RenderCommand::Shading::Unlit));
+    }
+    if (!strokes.isEmpty()) {
+        mRenderCommandQueue.addCommand(std::make_unique<RenderInstancedCubesCommand>(
+                strokes, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix(), RenderCommand::Shading::InkStroke));
     }
 
     QVector<float> vertices;
