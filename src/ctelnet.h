@@ -467,6 +467,8 @@ private:
     void sendCurrentNAWS();
     void readPendingSocketData();
     bool readSocketDataOnce();
+    void drainBeforeDisconnection();
+    void finishDisconnection();
     QString parseGUIVersionFromJSON(const QJsonObject& json);
     QString parseGUIUrlFromJSON(const QJsonObject& json);
     bool parseGUIBaseUiDeclinedFromJSON(const QJsonObject& json);
@@ -639,6 +641,12 @@ private:
     // Inhibit mAutoReconnect from taking effect for one connection cycle,
     // either because the user wanted to disconnect or an SSL/TLS error occurred:
     bool mDontReconnect = false;
+    // Set by disconnectIt() and abortConnection(): what the game sent after that
+    // is not wanted. Unlike mDontReconnect, nothing else sets it while connected.
+    bool mDisconnectRequested = false;
+    // Set while what the game sent before closing is still being taken in, one
+    // read per event-loop turn; the disconnect is finished once it is all in.
+    bool mDisconnectionPending = false;
     bool mAutoReconnect = false;
     QStringList messageStack;
     // True if THIS profile is playing a replay, does not know about any OTHER
