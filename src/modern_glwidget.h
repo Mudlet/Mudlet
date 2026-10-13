@@ -94,6 +94,8 @@ public:
     void syncView(int areaId, int x, int y, int z, int roomId);
     void followPlayer();
     bool followingPlayer() const;
+    // The room sizes, and whether the view is opaque, from the profile's style
+    void applyStyle();
     int shownAreaId() const { return mAID; }
     int areaShownNext() const;
     QVector3D viewCenter() const { return QVector3D(mMapCenterX, mMapCenterY, mMapCenterZ); }
@@ -426,8 +428,6 @@ private:
     // What rooms and exits on level z recede toward: the mapper's upper or lower level color, or the background
     QColor levelFadeTarget(int z) const;
     const MapStyle& mapStyle() const;
-    // The room sizes, and whether the view is opaque, from the profile's style
-    void applyStyle();
     void applyStyleGeometry();
     // The style's background, else the profile's mapper background color
     QColor backgroundColor() const;
