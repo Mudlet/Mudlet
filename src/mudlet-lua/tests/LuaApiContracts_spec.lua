@@ -395,8 +395,9 @@ describe("Tests that the other bad-argument refusals stay on one line", function
     assert.is_nil(ok)
     assert.is_string(err)
     assert.is_false(contains(err, "\n"), "split over more than one line: " .. tostring(err))
-    local expected = 'loadMap: bad argument #1 value (filename used: "/no/such/mudletSpecOneLine.xml" was not found).'
-    assert.is_true(contains(err, expected), "expected " .. expected .. " - got: " .. tostring(err))
+    -- Windows reports the path made absolute, with a drive letter in front
+    local pattern = 'loadMap: bad argument #1 value %(filename used: "%a?:?/no/such/mudletSpecOneLine%.xml" was not found%)%.'
+    assert.is_truthy(err:find(pattern), "expected a match for " .. pattern .. " - got: " .. tostring(err))
   end)
 end)
 
