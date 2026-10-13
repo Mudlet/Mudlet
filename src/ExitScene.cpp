@@ -541,7 +541,7 @@ void Builder::addRoom(const int roomId, const TRoom& room)
         }
 
         if (inOrOut && mOptions.inOutStubs) {
-            bar(center, center + (destination - center) / 4.0f, mWidth, mHeight, exitColor, level);
+            bar(center, center + (destination - center) / 4.0f, mWidth, mHeight, lineColor(room, exit.pDestination), level);
             continue;
         }
 
@@ -552,11 +552,11 @@ void Builder::addRoom(const int roomId, const TRoom& room)
         if (upOrDown && (exit.pDestination->x() != room.x() || exit.pDestination->y() != room.y())) {
             const QVector3D shaftEnd = center + QVector3D(0.0f, 0.0f, std::copysign(scmShaftLength, rise));
             if (!exit.oneWay) {
-                bar(center, shaftEnd, mWidth, mHeight, exitColor, level);
+                bar(center, shaftEnd, mWidth, mHeight, lineColor(room, exit.pDestination), level);
                 continue;
             }
             const QVector3D tipStart = shaftEnd + (center - shaftEnd) * scmShaftTip;
-            bar(center, tipStart, mWidth, mHeight, exitColor, level);
+            bar(center, tipStart, mWidth, mHeight, lineColor(room, exit.pDestination), level);
             bar(tipStart, shaftEnd, mWidth, mHeight, ExitAppearance::oneWayArrowColor(), level);
             continue;
         }
