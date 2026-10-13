@@ -797,7 +797,7 @@ constexpr float scmModelShadowLift = 0.002f;
 // The game token's foot, body and head, each a radius and a height in halves of a room's width, from the bottom up
 constexpr std::array<std::pair<float, float>, 3> scmTokenPieces{{{0.5f, 0.14f}, {0.24f, 0.7f}, {0.32f, 0.28f}}};
 // The token's shadow on the room's top, in halves of a room's width
-constexpr float scmTokenShadowReach = 0.85f;
+constexpr float scmTokenShadowReach = 0.7f;
 // A label halo's reach past the text, as a part of the text's height
 constexpr qreal scmLabelHalo = 0.12;
 // A map label's halo's greatest reach, in texels
@@ -1625,7 +1625,7 @@ void ModernGLWidget::renderRooms()
                     base += height * half;
                 }
                 QMatrix4x4 tokenShadow;
-                const float tokenOffset = 0.3f * (base - top);
+                const float tokenOffset = 0.15f * (base - top);
                 tokenShadow.translate(rx + tokenOffset, ry - tokenOffset, top + scmModelShadowLift);
                 tokenShadow.scale(scmTokenShadowReach * half, scmTokenShadowReach * half, scmModelShadowLift);
                 seeThroughLevels[pR->z()].tokenShadows.append(CubeInstanceData(tokenShadow, scmModelShadowColor.x(), scmModelShadowColor.y(), scmModelShadowColor.z(), scmModelShadowStrength));
@@ -2011,7 +2011,8 @@ void ModernGLWidget::renderRooms()
             return;
         }
         const QVector4D tint = GeometryManager::fadedColor(plateColor, GeometryManager::levelFade(level - mMapCenterZ, moreTransparent), levelFadeTarget(level));
-        const float plateZ = static_cast<float>(level) - roomHeight;
+        // Under a model's blocks, where they stand
+        const float plateZ = static_cast<float>(level) - (modelBlocks ? roomHeight / 2.0f : roomHeight);
         QVector<float> vertices;
         QVector<float> colors;
         for (const QPointF& corner : {extent->topLeft(), extent->topRight(), extent->bottomRight(), extent->topLeft(), extent->bottomRight(), extent->bottomLeft()}) {
@@ -2230,13 +2231,13 @@ RenderCommand::Shading ModernGLWidget::exitShading() const
     return RenderCommand::Shading::Unlit;
 }
 
-float ModernGLWidget::exitSink() const
+float ModernGLWidget::exitSink(const ExitScene::Options& options) const
 {
     if (mapStyle().edges != MapStyle::Edges::ModelBlocks) {
         return 0.0f;
     }
     // From the middle of the room's height, where ExitScene centers a line, to the ground, less half the line's height
-    return (2.0f / scale / zFlattening - exitSceneOptions().lineHeight) / 2.0f;
+    return (2.0f / scale / zFlattening - options.lineHeight) / 2.0f;
 }
 
 QColor ModernGLWidget::levelFadeTarget(const int z) const
@@ -2388,7 +2389,8 @@ void ModernGLWidget::renderConnections()
         return;
     }
 
-    const ExitScene::Scene scene = ExitScene::build(*mpMap, *mpHost, exitSceneOptions());
+    const ExitScene::Options options = exitSceneOptions();
+    const ExitScene::Scene scene = ExitScene::build(*mpMap, *mpHost, options);
     if (scene.solidDashRoomId && !mSolidDashWarned) {
         mSolidDashWarned = true;
         qWarning().nospace() << "ModernGLWidget: room " << scene.solidDashRoomId
@@ -2410,7 +2412,7 @@ void ModernGLWidget::renderConnections()
 
     mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::ENABLE_DEPTH_TEST));
 
-    const QVector3D sink(0.0f, 0.0f, exitSink());
+    const QVector3D sink(0.0f, 0.0f, exitSink(options));
     const bool inkBlots = style.edges == MapStyle::Edges::InkBlots;
     QVector<CubeInstanceData> bars;
     QVector<CubeInstanceData> strokes;
@@ -2420,7 +2422,9 @@ void ModernGLWidget::renderConnections()
         if (glowing) {
             tint.setW(tint.w() * scmGlowingExitStrength);
         }
-        const CubeInstanceData bar(GeometryManager::barTransform(segment.from - sink, segment.to - sink, segment.width, segment.height), tint.x(), tint.y(), tint.z(), tint.w());
+        // A shaft up or down stays where it rises from, or a model's block would all but swallow it
+        const QVector3D drop = segment.from.toVector2D() == segment.to.toVector2D() ? QVector3D() : sink;
+        const CubeInstanceData bar(GeometryManager::barTransform(segment.from - drop, segment.to - drop, segment.width, segment.height), tint.x(), tint.y(), tint.z(), tint.w());
         // Not drawn into the depth buffer, or it would cut its shape out of the levels below drawn after it
         const bool seeThrough = glowing || tint.w() < 1.0f;
         // Only a whole line tapers well: a door, a dash or a custom line's piece would thin out at one end
@@ -3033,7 +3037,7 @@ int ModernGLWidget::areaExitAt(const QPoint& position)
     options.levelsAbove = 0;
     options.levelsBelow = 0;
     // Where the arrow is drawn
-    const QVector3D sink(0.0f, 0.0f, exitSink());
+    const QVector3D sink(0.0f, 0.0f, exitSink(options));
     for (const ExitScene::AreaExit& areaExit : ExitScene::build(*mpMap, *mpHost, options).areaExits) {
         const std::optional<QPointF> from = mCameraController.pixelForPoint(areaExit.from - sink);
         const std::optional<QPointF> to = mCameraController.pixelForPoint(areaExit.to - sink);
