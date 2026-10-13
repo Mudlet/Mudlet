@@ -72,7 +72,7 @@ public:
     //   }
     const QUndoCommand* getLastExecutedCommand() const;
 
-    // A save that changes nothing pushes nothing, yet still finishes a newly added item
+    // Called after every save, including one that pushed nothing because nothing changed
     void finishAddingItem(EditorViewTypes::EditorViewType viewType, int itemID);
 
 signals:

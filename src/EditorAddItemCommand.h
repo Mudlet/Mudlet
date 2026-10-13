@@ -38,7 +38,7 @@ public:
     void remapItemID(int oldID, int newID) override;
     int id() const override;
     bool mergeWith(const QUndoCommand* other) override;
-    // Called on the item's first save, changed or not; const as QUndoStack only hands out const commands
+    // Marks this add finished if the save was of its item; const as QUndoStack only hands out const commands
     void finishAdding(EditorViewType viewType, int itemID) const;
 
     // Check if item ID changed during redo (when item was recreated)
