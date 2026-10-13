@@ -1255,14 +1255,10 @@ describe("Tests Other.lua functions", function()
       for key, value in pairs(getConfig()) do
         if type(value) == "boolean" and not skipInGenericLoop[key] then
           snapshot(key)
-          local ok = setConfig(key, not value)
-          if ok then
-            assert.equals(not value, getConfig(key), "round-trip failed for boolean config key: " .. key)
-            settable = settable + 1
-          else
-            -- not settable in this environment; the getter still returns a boolean
-            assert.is_boolean(getConfig(key), "expected boolean for config key: " .. key)
-          end
+          local ok, err = setConfig(key, not value)
+          assert.is_true(ok, "setConfig refused boolean config key " .. key .. ": " .. tostring(err))
+          assert.equals(not value, getConfig(key), "round-trip failed for boolean config key: " .. key)
+          settable = settable + 1
           restore(key)
         end
       end

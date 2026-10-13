@@ -91,19 +91,20 @@ describe("Tests setConfig for the map keys in a profile without a mapper", funct
 
   -- stored for the mapper made later to open in; a build without the 3D
   -- mapper does not know the key at all
-  it("stores show3dMapView until there is a mapper", function()
-    local original = getConfig("show3dMapView")
-    local ok, err = setConfig("show3dMapView", true)
-    if err == "'show3dMapView' isn't a valid configuration option" then
-      return
-    end
-    -- put back, or the mapper a later spec opens would come up in a mode the profile did not ask for
-    finally(function()
-      setConfig("show3dMapView", original)
+  if setMapPerspective == nil then
+    pending("show3dMapView needs a Mudlet built with the 3D mapper")
+  else
+    it("stores show3dMapView until there is a mapper", function()
+      local original = getConfig("show3dMapView")
+      -- put back, or the mapper a later spec opens would come up in a mode the profile did not ask for
+      finally(function()
+        setConfig("show3dMapView", original)
+      end)
+      local ok, err = setConfig("show3dMapView", true)
+      assert.is_true(ok, tostring(err))
+      assert.is_true(getConfig("show3dMapView"))
+      assert.is_true(setConfig("show3dMapView", false))
+      assert.is_false(getConfig("show3dMapView"))
     end)
-    assert.is_true(ok, tostring(err))
-    assert.is_true(getConfig("show3dMapView"))
-    assert.is_true(setConfig("show3dMapView", false))
-    assert.is_false(getConfig("show3dMapView"))
-  end)
+  end
 end)
