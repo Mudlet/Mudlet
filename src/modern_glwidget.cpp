@@ -104,10 +104,6 @@ ModernGLWidget::ModernGLWidget(TMap* pMap, Host* pHost, QWidget* parent)
     // For the room under the pointer to rise
     setMouseTracking(true);
     loadSavedCameras();
-    if (mpMap) {
-        // Whatever area it names: one announcement can stand for several, the first of them named
-        connect(mpMap, &TMap::signal_areaChanged, this, qOverload<>(&ModernGLWidget::update));
-    }
 }
 
 ModernGLWidget::~ModernGLWidget()
