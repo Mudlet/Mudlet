@@ -93,12 +93,8 @@ private:
         return probe.create();
     }
 
-    static double processCpuMs()
-    {
-        timespec now{};
-        clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &now);
-        return static_cast<double>(now.tv_sec) * 1000.0 + static_cast<double>(now.tv_nsec) / 1.0e6;
-    }
+    // CPU time of every thread, not wall time; clock_gettime() is missing on Windows, where std::clock() counts wall time instead
+    static double processCpuMs() { return static_cast<double>(std::clock()) * 1000.0 / CLOCKS_PER_SEC; }
 
     // VmRSS or VmHWM from /proc, in MiB
     static double memoryMiB(const QByteArray& field)
