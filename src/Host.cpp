@@ -2139,14 +2139,11 @@ void Host::send(QString cmd, bool wantPrint, bool dontExpandAliases)
             continue;
         }
 
-        // Only a send consumes a denyCurrentSend(), so one raised by an alias that
-        // sent nothing would swallow the player's next command. Only a deny raised
-        // during this pass is spent: one raised before it (a sysDataSendRequest
-        // handler that expands an alias) is left to the send it was meant for
-        const bool allowedBeforeAliases = mAllowToSendCommand;
         if (!mAliasUnit.processDataStream(command)) {
             mTelnet.sendData(command, true, true);
-        } else if (allowedBeforeAliases) {
+        } else if (!mTelnet.dispatchingSendRequest()) {
+            // A deny left by an alias that sent nothing would swallow the next command; inside a
+            // sysDataSendRequest handler it is meant for the command that handler was given
             mAllowToSendCommand = true;
         }
     }
