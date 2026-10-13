@@ -582,6 +582,8 @@ private:
     QString mLocalMapFileName;
     int mExpectedFileSize = 0;
     bool mImportRunning = false;
+    // Per map: one shared by all stays set once a map goes with its update pending, silencing every other map
+    bool mAreaUpdatePending = false;
 
     // Engine-side mirror of the frontend-owned dialog, which the engine can't
     // read back. mMapProgressStandalone also serves as the "import/export already

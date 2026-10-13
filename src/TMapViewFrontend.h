@@ -27,7 +27,7 @@
 #include <utility>
 
 // What core code asks of the mapper drawing a profile's map. dlgMapper implements it; core code
-// reaches it through TMap::mapViewFrontend().
+// reaches it through TMap::mapViewFrontend(), or Host::mapViewFrontend() for one the null view stands in for.
 class TMapViewFrontend
 {
 public:

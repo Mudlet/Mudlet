@@ -4059,11 +4059,10 @@ void TMap::announceMapperSettingChanged(const MapperSetting setting)
 
 void TMap::updateArea(int areaId)
 {
-    static bool debounce;
-    if (!debounce) {
-        debounce = true;
+    if (!mAreaUpdatePending) {
+        mAreaUpdatePending = true;
         QTimer::singleShot(0ms, this, [this, areaId]() {
-            debounce = false;
+            mAreaUpdatePending = false;
             emit signal_areaChanged(areaId);
         });
     }
