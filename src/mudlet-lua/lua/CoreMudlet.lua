@@ -258,8 +258,11 @@ if false then
   --- to each alias it runs in "command", unless an earlier one of those aliases has set another command since, or its
   --- Command field or a script other than an alias that it set off has expanded or set one.
   ---
+  --- @param command text to process as if it was typed at the command line
+  --- @param echo optional boolean: false keeps the command from being shown; leaving it out or passing nil shows it
+  ---
   --- @see send
-  function expandAlias(command, print=1)
+  function expandAlias(command, echo)
   end
 
 
