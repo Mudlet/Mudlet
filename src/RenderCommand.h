@@ -38,8 +38,11 @@ class RenderCommand
 {
 public:
     // Unlit draws its colors as given, as the 2D map does; lit shades them by the light; wireframe draws an
-    // instanced shape's edges unlit, as glowing lines, and only instanced shapes support it
-    enum class Shading { Lit, Unlit, Wireframe };
+    // instanced shape's edges unlit, as glowing lines, and only instanced shapes support it. The ink ones are
+    // unlit too, and only instanced shapes support them: a blot of ink on a room's top, a brush stroke along an
+    // exit's bar thinning toward its end, and a seal's stamp. Paper draws triangles given in clip space, as the
+    // grain of the paper behind the map, and only plain triangles support it
+    enum class Shading { Lit, Unlit, Wireframe, InkBlot, InkStroke, Seal, Paper };
 
     virtual ~RenderCommand() = default;
     virtual void execute(QOpenGLFunctions* gl,
@@ -138,6 +141,7 @@ public:
     const QVector<float>& vertices() const { return mVertices; }
     // Four per vertex: r, g, b, a
     const QVector<float>& colors() const { return mColors; }
+    Shading shading() const { return mShading; }
 
 private:
     QVector<float> mVertices;

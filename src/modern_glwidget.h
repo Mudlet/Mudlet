@@ -393,6 +393,8 @@ private:
     void updateMatrices();
     void renderRooms();
     void renderConnections();
+    // The paper behind the map, for a style drawn on paper
+    void queuePaper();
     // The 2D map's grid, at the viewed level's room bottoms, writing no depth
     void queueGrid();
     // Map labels lie flat at their place on the map; those shown on top over the rooms, the others under the exits

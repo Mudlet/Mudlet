@@ -781,6 +781,8 @@ constexpr float scmFlagPole = 0.08f;
 constexpr float scmPlayerGlow = 0.3f;
 // Glowing exits are thin enough to be all edge: at full strength their front and back faces add up to white
 constexpr float scmGlowingExitStrength = 0.5f;
+// How strongly ink washes around the room hovered over
+constexpr float scmHoverWash = 0.35f;
 // A label halo's reach past the text, as a part of the text's height
 constexpr qreal scmLabelHalo = 0.12;
 // A map label's halo's greatest reach, in texels
@@ -1258,10 +1260,12 @@ void ModernGLWidget::renderRooms()
     const MapStyle& style = mapStyle();
     const QColor background = backgroundColor();
     const QColor contrast = ExitAppearance::contrastColor(background);
-    const RenderCommand::Shading roomShading = style.lit ? RenderCommand::Shading::Lit : RenderCommand::Shading::Unlit;
+    const bool inkBlots = style.edges == MapStyle::Edges::InkBlots;
+    const RenderCommand::Shading roomShading = inkBlots ? RenderCommand::Shading::InkBlot : (style.lit ? RenderCommand::Shading::Lit : RenderCommand::Shading::Unlit);
     const bool terminal = style.glyphs == MapStyle::Glyphs::Terminal;
     const bool wireframes = style.edges == MapStyle::Edges::GlowingWireframes;
     const bool pulse = style.playerMarker == MapStyle::PlayerMarker::Pulse;
+    const bool seal = style.playerMarker == MapStyle::PlayerMarker::Seal;
     // How far the player's pulse has spread, from 0 to 1, or less than 0 for none
     const float pulseSpread = pulse && mPulseClock.isValid() ? qMin(static_cast<float>(mPulseClock.elapsed()) / static_cast<float>(scmPulseMilliseconds), 1.0f) : -1.0f;
 
@@ -1388,7 +1392,7 @@ void ModernGLWidget::renderRooms()
     }
     // Where the flag stands, drawn after everything else
     std::optional<QVector3D> playerFlagFoot;
-    if (!terminal && !playerFlag && !pulse && pArea->getAreaRooms().contains(playerRoomId)) {
+    if (!terminal && !playerFlag && !pulse && !seal && pArea->getAreaRooms().contains(playerRoomId)) {
         // The strong highlight is the original style over a translucent red room
         const int style = mpHost->mMapStrongHighlight ? 0 : mpMap->mPlayerRoomStyle;
         const QString key = qsl("player|%1|%2|%3|%4")
@@ -1404,6 +1408,8 @@ void ModernGLWidget::renderRooms()
     }
 
     QVector<CubeInstanceData> roomInstances;
+    // The player's room, stamped over the others
+    QVector<CubeInstanceData> sealInstances;
     QVector<CubeInstanceData> borderInstances;
     QVector<CubeInstanceData> outlineInstances;
     const bool inkOutlines = style.edges == MapStyle::Edges::InkOutlines;
@@ -1542,8 +1548,8 @@ void ModernGLWidget::renderRooms()
             const float half = roomSize / 2.0f - ring / 2.0f + (width - ring) / 2.0f;
             roomOutlines[pR->z()].append({rx, ry, top, half, width, 0.0f, GeometryManager::fadedColor(ringColor, fade, fadeTarget)});
         } else if (hovered && !terminal && !wireframes) {
-            // Taller than a border, so that it shows over one
-            outlineInstances.append(outline(roomSize * scmHoverOutline, QVector4D(contrast.redF(), contrast.greenF(), contrast.blueF(), 1.0f), 0.75f));
+            // Taller than a border, so that it shows over one; in ink, a wash around the room rather than a darker blot
+            outlineInstances.append(outline(roomSize * scmHoverOutline, QVector4D(contrast.redF(), contrast.greenF(), contrast.blueF(), inkBlots ? scmHoverWash : 1.0f), 0.75f));
         } else if (style.edges == MapStyle::Edges::ViewedLevelRim && !bordered && !pArea->gridMode && look.onViewedLevel() && !seeThrough) {
             // Halfway from the room's color to the one that stands out on the background, so the viewed level's rooms stand apart from the rest
             outlineInstances.append(outline(roomSize * scmLevelOutline, GeometryManager::fadedColor(roomColor, {0.5f, 1.0f}, contrast)));
@@ -1559,7 +1565,7 @@ void ModernGLWidget::renderRooms()
         transform.translate(rx, ry, rz);
         transform.scale(1.0f / scale, 1.0f / scale, 1.0f / scale / zFlattening);
         if (!unfilled) {
-            instances.append(CubeInstanceData(transform, roomTint.x(), roomTint.y(), roomTint.z(), roomTint.w()));
+            (seal && look.playerRoom ? sealInstances : instances).append(CubeInstanceData(transform, roomTint.x(), roomTint.y(), roomTint.z(), roomTint.w()));
         }
         if (wireframes) {
             QVector4D wireTint = look.playerRoom ? roomTint : GeometryManager::fadedColor(style.wireColor(bordered ? pR->mBorderColor : QColor(), roomColor), fade, fadeTarget);
@@ -1881,12 +1887,17 @@ void ModernGLWidget::renderRooms()
                 borderInstances, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix(), roomShading, roomShape));
     }
     if (!outlineInstances.isEmpty()) {
+        const RenderCommand::Shading outlineShading = inkBlots ? RenderCommand::Shading::InkBlot : RenderCommand::Shading::Unlit;
         mRenderCommandQueue.addCommand(std::make_unique<RenderInstancedCubesCommand>(
-                outlineInstances, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix(), RenderCommand::Shading::Unlit, roomShape));
+                outlineInstances, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix(), outlineShading, roomShape));
     }
     if (!roomInstances.isEmpty()) {
         mRenderCommandQueue.addCommand(std::make_unique<RenderInstancedCubesCommand>(
                 roomInstances, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix(), roomShading, roomShape));
+    }
+    if (!sealInstances.isEmpty()) {
+        mRenderCommandQueue.addCommand(std::make_unique<RenderInstancedCubesCommand>(
+                sealInstances, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix(), RenderCommand::Shading::Seal, roomShape));
     }
 
     // In the 2D map's order: outside grid mode a highlight is drawn over the symbol, in grid mode under it;
@@ -2003,7 +2014,7 @@ void ModernGLWidget::renderRooms()
                 mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::ADDITIVE_BLEND));
             }
             if (!exits->bars.isEmpty()) {
-                const RenderCommand::Shading shading = wireframes ? RenderCommand::Shading::Wireframe : RenderCommand::Shading::Unlit;
+                const RenderCommand::Shading shading = wireframes ? RenderCommand::Shading::Wireframe : (inkBlots ? RenderCommand::Shading::InkStroke : RenderCommand::Shading::Unlit);
                 mRenderCommandQueue.addCommand(std::make_unique<RenderInstancedCubesCommand>(
                         exits->bars, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix(), shading));
             }
@@ -2112,8 +2123,9 @@ ExitScene::Options ModernGLWidget::exitSceneOptions() const
 
 QColor ModernGLWidget::levelFadeTarget(const int z) const
 {
-    // Added onto what is under it, light faded toward a level's color would glow in that color rather than dim
-    if (!mudlet::self() || !mudlet::self()->drawUpperLowerLevels() || mapStyle().edges == MapStyle::Edges::GlowingWireframes) {
+    // Added onto what is under it, light faded toward a level's color would glow in that color rather than dim; and ink
+    // thinned with water pales toward the paper rather than taking on a color
+    if (!mudlet::self() || !mudlet::self()->drawUpperLowerLevels() || mapStyle().edges == MapStyle::Edges::GlowingWireframes || mapStyle().palette == MapStyle::Palette::Wash) {
         return backgroundColor();
     }
     return GeometryManager::levelFadeTarget(z - mMapCenterZ, backgroundColor(), mpHost->mUpperLevelColor, mpHost->mLowerLevelColor);
@@ -2147,6 +2159,24 @@ const MapStyle& ModernGLWidget::mapStyle() const
 QColor ModernGLWidget::backgroundColor() const
 {
     return mapStyle().backgroundColor(mpHost->mBgColor_2);
+}
+
+void ModernGLWidget::queuePaper()
+{
+    if (!mapStyle().postEffects.testFlag(MapStyle::PostEffect::PaperGrain)) {
+        return;
+    }
+    // Over the whole view, given in clip space, behind everything
+    const QColor paper = backgroundColor();
+    QVector<float> vertices;
+    QVector<float> colors;
+    for (const QPointF& corner : {QPointF(-1.0, -1.0), QPointF(1.0, -1.0), QPointF(1.0, 1.0), QPointF(-1.0, -1.0), QPointF(1.0, 1.0), QPointF(-1.0, 1.0)}) {
+        vertices << static_cast<float>(corner.x()) << static_cast<float>(corner.y()) << 0.0f;
+        colors << paper.redF() << paper.greenF() << paper.blueF() << paper.alphaF();
+    }
+    mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::DISABLE_DEPTH_TEST));
+    mRenderCommandQueue.addCommand(std::make_unique<RenderTrianglesCommand>(vertices, colors, QMatrix4x4(), QMatrix4x4(), QMatrix4x4(), RenderCommand::Shading::Paper));
+    mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::ENABLE_DEPTH_TEST));
 }
 
 void ModernGLWidget::queueGrid()
@@ -2272,8 +2302,9 @@ void ModernGLWidget::renderConnections()
         (glowing || tint.w() < 1.0f ? mSeeThroughExits[segment.level].bars : bars).append(bar);
     }
     if (!bars.isEmpty()) {
-        mRenderCommandQueue.addCommand(std::make_unique<RenderInstancedCubesCommand>(
-                bars, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix(), RenderCommand::Shading::Unlit));
+        const RenderCommand::Shading shading = style.edges == MapStyle::Edges::InkBlots ? RenderCommand::Shading::InkStroke : RenderCommand::Shading::Unlit;
+        mRenderCommandQueue.addCommand(
+                std::make_unique<RenderInstancedCubesCommand>(bars, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix(), shading));
     }
 
     QVector<float> vertices;
@@ -3555,8 +3586,9 @@ void ModernGLWidget::paintCompass(QPainter& painter)
 
 void ModernGLWidget::renderPlayerBeacon()
 {
-    // A text screen has no depth to raise a column in: its @ is the player; and a flag marks the player in its stead
-    if (!mpMap || !mpMap->mpRoomDB || !mpHost || mapStyle().glyphs == MapStyle::Glyphs::Terminal || mapStyle().playerMarker == MapStyle::PlayerMarker::Flag) {
+    // A text screen has no depth to raise a column in: its @ is the player; and a flag or a seal marks the player in its stead
+    if (!mpMap || !mpMap->mpRoomDB || !mpHost || mapStyle().glyphs == MapStyle::Glyphs::Terminal || mapStyle().playerMarker == MapStyle::PlayerMarker::Flag
+        || mapStyle().playerMarker == MapStyle::PlayerMarker::Seal) {
         return;
     }
     const TRoom* pR = mpMap->mpRoomDB->getRoom(mpMap->mRoomIdHash.value(mpMap->mProfileName));
@@ -3798,6 +3830,7 @@ void ModernGLWidget::slot_resetPlayerIcon()
 
 void ModernGLWidget::queueScene()
 {
+    queuePaper();
     // First, as on the 2D map, where the other levels, the labels and everything else paint over it
     queueGrid();
     renderConnections();

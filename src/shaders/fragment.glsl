@@ -35,6 +35,53 @@ uniform float uWireFill = 0.06;
 // Darkens every uScanlinePeriod-th row of pixels by uScanlines
 uniform float uScanlines = 0.0;
 uniform float uScanlinePeriod = 3.0;
+// The inkwash style's brushwork: 1 a room's top as a blot of ink, 2 an exit's bar as a stroke thinning toward its end,
+// 3 the player's room as a seal's stamp, 4 the paper behind the map. Unevenness comes from where an instance stands
+// and the paper's grain from the pixel's place, never from time, so nothing shimmers from one frame to the next
+uniform int uInk = 0;
+uniform bool uInkRound = false;
+flat in vec3 instanceOrigin;
+
+// pcg3d, a hash that gives the same on every GPU
+uint inkHash(uvec3 v)
+{
+    v = v * 1664525u + 1013904223u;
+    v.x += v.y * v.z;
+    v.y += v.z * v.x;
+    v.z += v.x * v.y;
+    v ^= v >> 16u;
+    v.x += v.y * v.z;
+    v.y += v.z * v.x;
+    v.z += v.x * v.y;
+    return v.x ^ v.y ^ v.z;
+}
+
+float inkRandom(ivec2 cell, uint seed)
+{
+    return float(inkHash(uvec3(uvec2(cell), seed)) & 0xffffu) / 65535.0;
+}
+
+// Smooth noise from 0 to 1, changing over about a unit of p
+float inkNoise(vec2 p, uint seed)
+{
+    vec2 cell = floor(p);
+    vec2 f = p - cell;
+    f = f * f * (3.0 - 2.0 * f);
+    ivec2 i = ivec2(cell);
+    return mix(mix(inkRandom(i, seed), inkRandom(i + ivec2(1, 0), seed), f.x), mix(inkRandom(i + ivec2(0, 1), seed), inkRandom(i + ivec2(1, 1), seed), f.x), f.y);
+}
+
+uint inkSeed()
+{
+    // A room stands on whole map units, raised a little while hovered; a bar's middle can fall between them
+    return inkHash(uvec3(ivec3(ivec2(round(instanceOrigin.xy * 4.0)), int(round(instanceOrigin.z)))));
+}
+
+// The paper's own unevenness, a little under 1, by the pixel
+float paperGrain()
+{
+    return 0.94 + 0.06 * inkRandom(ivec2(gl_FragCoord.xy), 7u);
+}
 
 void main()
 {
@@ -134,10 +181,80 @@ void main()
         float glow = exp(-pixels / uWireGlow);
         float light = min(max(line, 0.6 * glow) + uWireFill, 1.0);
         FragColor = vec4(mix(vertexColor.rgb, vec3(1.0), 0.45 * line), vertexColor.a * light);
+    } else if (uInk == 1 || uInk == 3) {
+        // Brushed onto the paper, a room has only its top
+        if (localNormal.z < 0.5) {
+            discard;
+        }
+        bool seal = uInk == 3;
+        uint seed = inkSeed();
+        vec2 p = localPosition.xy;
+        // How far inside the shape, in halves of the room's width: a square's corners rounded as a brush leaves them
+        float inside;
+        if (uInkRound) {
+            inside = 1.0 - length(p);
+        } else {
+            float corner = seal ? 0.08 : 0.35;
+            vec2 q = abs(p) - vec2(1.0 - corner);
+            inside = corner - length(max(q, 0.0)) - min(max(q.x, q.y), 0.0);
+        }
+        // The rim wanders in and out, slowly round the blot and finely as the brush's hairs leave it, never past the
+        // shape, which is all there is to draw on
+        float wander = seal ? 0.03 : 0.3;
+        vec2 around = p / max(length(p), 1e-4);
+        float rim = (inkNoise(around * 2.2 + 4.0, seed) - 0.5) * wander + (inkNoise(around * 7.0 + 9.0, seed + 1u) - 0.5) * wander * 0.5;
+        float edge = inside - 0.5 * wander - 0.04 - rim;
+        // Ink thinned for another level spreads further into the paper
+        float feather = max(mix(0.35, seal ? 0.04 : 0.1, vertexColor.a), 1.5 * fwidth(inside));
+        float cover = smoothstep(0.0, feather, edge);
+        vec3 color = vertexColor.rgb;
+        float alpha;
+        if (seal) {
+            // A frame cut into the stamp, where the paper shows, and the paste pressed on unevenly
+            float cut = smoothstep(0.12, 0.15, edge) * (1.0 - smoothstep(0.22, 0.25, edge));
+            alpha = cover * (1.0 - 0.85 * cut) * (0.85 + 0.15 * inkNoise(p * 7.0, seed + 3u));
+        } else {
+            // Ink pools darker at the edge of a wash, and lies unevenly inside it
+            float pool = 1.0 - smoothstep(0.0, 0.3, edge);
+            color *= 1.0 - 0.3 * pool;
+            alpha = cover * mix(0.8 + 0.2 * inkNoise(p * 2.5 + 2.0, seed + 2u), 1.0, pool);
+        }
+        alpha *= paperGrain() * vertexColor.a;
+        if (alpha < 0.004) {
+            discard;
+        }
+        FragColor = vec4(color, alpha);
+    } else if (uInk == 2) {
+        if (localNormal.z < 0.5) {
+            discard;
+        }
+        uint seed = inkSeed();
+        // From 0 where the stroke starts to 1 where the brush lifts
+        float along = localPosition.x * 0.5 + 0.5;
+        float reach = 0.9 - 0.55 * smoothstep(0.1, 0.95, along) + (inkNoise(vec2(along * 5.0, 0.5), seed) - 0.5) * 0.2;
+        float feather = max(0.12, 1.5 * fwidth(localPosition.y));
+        float cover = smoothstep(0.0, feather, reach - abs(localPosition.y));
+        // Running dry toward its end, the brush leaves streaks along the stroke
+        float streaks = smoothstep(0.2, 0.55, inkNoise(vec2(along * 2.0, localPosition.y * 4.0), seed + 1u));
+        float alpha = cover * mix(1.0, streaks, 0.7 * along * along) * paperGrain() * vertexColor.a;
+        if (alpha < 0.004) {
+            discard;
+        }
+        FragColor = vec4(vertexColor.rgb, alpha);
+    } else if (uInk == 4) {
+        vec2 at = gl_FragCoord.xy;
+        float cloud = inkNoise(at / 120.0, 12u);
+        // Rice paper's long fibres, laid two slanting ways so that they cross as no grid would
+        vec2 one = mat2(0.8, 0.6, -0.6, 0.8) * at;
+        vec2 two = mat2(0.5, -0.87, 0.87, 0.5) * at;
+        float fibres = max(inkNoise(vec2(one.x / 2.5, one.y / 55.0), 13u), inkNoise(vec2(two.x / 2.5, two.y / 70.0), 14u));
+        float shade = paperGrain() + 0.025 - 0.05 * cloud - 0.03 * smoothstep(0.85, 0.98, fibres);
+        FragColor = vec4(vertexColor.rgb * shade, vertexColor.a);
     } else {
         FragColor = vertexColor;
     }
-    if (uFogEnd > uFogStart) {
+    // The paper is the background the fog fades toward already
+    if (uFogEnd > uFogStart && uInk != 4) {
         float fog = clamp((eyeDepth - uFogStart) / (uFogEnd - uFogStart), 0.0, 1.0) * uFogMax;
         FragColor.rgb = mix(FragColor.rgb, uFogColor, fog);
     }

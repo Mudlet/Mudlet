@@ -101,6 +101,23 @@ QList<MapStyle> registeredStyles()
     hologram.playerMarker = MapStyle::PlayerMarker::Pulse;
     styles.append(hologram);
 
+    MapStyle inkwash;
+    inkwash.id = qsl("inkwash");
+    inkwash.palette = MapStyle::Palette::Wash;
+    // Flat, as brushed onto the paper rather than standing on it
+    inkwash.roomFlattening = 32.0f;
+    inkwash.edges = MapStyle::Edges::InkBlots;
+    inkwash.lit = false;
+    inkwash.background = QColor(241, 234, 218);
+    inkwash.ink = QColor(38, 34, 32);
+    inkwash.labelFontFamily = qsl("Bitstream Vera Serif");
+    // Wide enough for a stroke to show it thinning
+    inkwash.exitWidthFactor = 3.0f;
+    inkwash.postEffects = MapStyle::PostEffect::PaperGrain;
+    inkwash.floorPlates = false;
+    inkwash.playerMarker = MapStyle::PlayerMarker::Seal;
+    styles.append(inkwash);
+
     return styles;
 }
 } // namespace
@@ -126,6 +143,10 @@ QString MapStyle::displayName() const
     if (id == qsl("hologram")) {
         //: Name of the 3D map style that draws rooms and exits as glowing lines of light that every level shows through, as a science fiction hologram does, chosen in the Mapper preferences
         return QCoreApplication::translate("MapStyle", "Hologram");
+    }
+    if (id == qsl("inkwash")) {
+        //: Name of the 3D map style that draws rooms as blots and exits as brush strokes of ink on paper, as an East Asian ink wash painting does, chosen in the Mapper preferences
+        return QCoreApplication::translate("MapStyle", "Ink wash");
     }
     return id;
 }
@@ -173,6 +194,20 @@ QColor MapStyle::roomColor(const QColor& environmentColor) const
                                         light.blueF() + (environmentColor.blueF() - light.blueF()) * tint,
                                         environmentColor.alphaF());
         return liftedLight(color);
+    }
+    case Palette::Wash: {
+        // However bright the color ground into it, ink stays dark: the environment's hue is kept, enough to tell areas
+        // apart, but not its strength or brightness
+        const QColor sumi = ink.isValid() ? ink : QColor(Qt::black);
+        const float hue = environmentColor.hslHueF();
+        const float saturation = hue < 0.0f ? 0.0f : environmentColor.hslSaturationF() * 0.5f;
+        const float lightness = 0.2f + 0.3f * environmentColor.lightnessF();
+        const QColor wash = QColor::fromHslF(qMax(hue, 0.0f), saturation, lightness);
+        constexpr float toSumi = 0.15f;
+        return QColor::fromRgbF(wash.redF() + (sumi.redF() - wash.redF()) * toSumi,
+                                wash.greenF() + (sumi.greenF() - wash.greenF()) * toSumi,
+                                wash.blueF() + (sumi.blueF() - wash.blueF()) * toSumi,
+                                environmentColor.alphaF());
     }
     }
     return environmentColor;
@@ -225,6 +260,10 @@ QColor MapStyle::playerRoomColor() const
     if (palette == Palette::Light) {
         // The brightest light on the map, nearly white, as the rest of the map is the style's ink
         return QColor(225, 255, 255);
+    }
+    if (palette == Palette::Wash) {
+        // A seal's paste, a muted vermilion, the one color on an ink painting
+        return QColor(190, 66, 46);
     }
     return QColor(Qt::red);
 }
