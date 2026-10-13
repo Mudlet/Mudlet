@@ -225,17 +225,17 @@ void main()
         }
         FragColor = vec4(color, alpha);
     } else if (uInk == 2) {
-        if (localNormal.z < 0.5) {
-            discard;
-        }
         uint seed = inkSeed();
         // From 0 where the stroke starts to 1 where the brush lifts
         float along = localPosition.x * 0.5 + 0.5;
+        // Across the stroke on whichever face shows: a bar standing upright, as an up or down exit's, turns its top
+        // to the side and shows only its end from above
+        float across = abs(localNormal.z) > 0.5 ? localPosition.y : (abs(localNormal.y) > 0.5 ? localPosition.z : max(abs(localPosition.y), abs(localPosition.z)));
         float reach = 0.9 - 0.55 * smoothstep(0.1, 0.95, along) + (inkNoise(vec2(along * 5.0, 0.5), seed) - 0.5) * 0.2;
-        float feather = max(0.12, 1.5 * fwidth(localPosition.y));
-        float cover = smoothstep(0.0, feather, reach - abs(localPosition.y));
+        float feather = max(0.12, 1.5 * fwidth(across));
+        float cover = smoothstep(0.0, feather, reach - abs(across));
         // Running dry toward its end, the brush leaves streaks along the stroke
-        float streaks = smoothstep(0.2, 0.55, inkNoise(vec2(along * 2.0, localPosition.y * 4.0), seed + 1u));
+        float streaks = smoothstep(0.2, 0.55, inkNoise(vec2(along * 2.0, across * 4.0), seed + 1u));
         float alpha = cover * mix(1.0, streaks, 0.7 * along * along) * paperGrain() * vertexColor.a;
         if (alpha < 0.004) {
             discard;

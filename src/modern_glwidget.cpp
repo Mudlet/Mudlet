@@ -781,8 +781,10 @@ constexpr float scmFlagPole = 0.08f;
 constexpr float scmPlayerGlow = 0.3f;
 // Glowing exits are thin enough to be all edge: at full strength their front and back faces add up to white
 constexpr float scmGlowingExitStrength = 0.5f;
-// How strongly ink washes around the room hovered over
+// How strongly ink washes around the room hovered over, and how far: a blot's rim falls well inside its shape, so the
+// wash must reach further than an outline for any of it to show past the room's own blot
 constexpr float scmHoverWash = 0.35f;
+constexpr float scmHoverWashReach = 0.4f;
 // A label halo's reach past the text, as a part of the text's height
 constexpr qreal scmLabelHalo = 0.12;
 // A map label's halo's greatest reach, in texels
@@ -1549,7 +1551,8 @@ void ModernGLWidget::renderRooms()
             roomOutlines[pR->z()].append({rx, ry, top, half, width, 0.0f, GeometryManager::fadedColor(ringColor, fade, fadeTarget)});
         } else if (hovered && !terminal && !wireframes) {
             // Taller than a border, so that it shows over one; in ink, a wash around the room rather than a darker blot
-            outlineInstances.append(outline(roomSize * scmHoverOutline, QVector4D(contrast.redF(), contrast.greenF(), contrast.blueF(), inkBlots ? scmHoverWash : 1.0f), 0.75f));
+            outlineInstances.append(
+                    outline(roomSize * (inkBlots ? scmHoverWashReach : scmHoverOutline), QVector4D(contrast.redF(), contrast.greenF(), contrast.blueF(), inkBlots ? scmHoverWash : 1.0f), 0.75f));
         } else if (style.edges == MapStyle::Edges::ViewedLevelRim && !bordered && !pArea->gridMode && look.onViewedLevel() && !seeThrough) {
             // Halfway from the room's color to the one that stands out on the background, so the viewed level's rooms stand apart from the rest
             outlineInstances.append(outline(roomSize * scmLevelOutline, GeometryManager::fadedColor(roomColor, {0.5f, 1.0f}, contrast)));

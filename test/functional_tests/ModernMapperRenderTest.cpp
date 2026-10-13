@@ -1195,6 +1195,8 @@ private slots:
         QVERIFY(addRoomAt(kWestRoomId, map()->mpRoomDB->getRoom(kPlayerRoomId)->getArea(), -2, 0, 0));
         QVERIFY(addRoomAt(kSouthWestRoomId, map()->mpRoomDB->getRoom(kPlayerRoomId)->getArea(), -2, -2, 0));
         map()->mpRoomDB->getRoom(kPlayerRoomId)->setExit(kEastRoomId, DIR_EAST);
+        // Both ways, as a one-way exit is dotted
+        map()->mpRoomDB->getRoom(kEastRoomId)->setExit(kPlayerRoomId, DIR_WEST);
         // No borders: every room alike but for where it stands
         const bool savedBorders = mpHost->mMapperShowRoomBorders;
         const auto restoreBorders = qScopeGuard([this, savedBorders]() {
@@ -1251,17 +1253,18 @@ private slots:
         QVERIFY2(inked > 100, qPrintable(qsl("the room's blot covers only %1 points").arg(inked)));
         QVERIFY2(unlike >= 40, qPrintable(qsl("two rooms' blots differ at only %1 points").arg(unlike)));
 
-        // Across the stroke from the player's room east, at its start and near its end
+        // Across the stroke from the player's room east, at its start and near its end: any ink at all, so that the dry
+        // brush's streaks toward the end do not pass for its thinning
         const auto widthAt = [&](const float x) {
             int dark = 0;
             for (int j = -40; j <= 40; ++j) {
-                dark += lightnessAt(x, static_cast<float>(j) * 0.002f) < 170 ? 1 : 0;
+                dark += lightnessAt(x, static_cast<float>(j) * 0.002f) < 200 ? 1 : 0;
             }
             return dark;
         };
         const int start = widthAt(0.45f);
         const int end = widthAt(1.55f);
-        QVERIFY2(start > 0 && end >= 0 && start > end, qPrintable(qsl("the stroke is %1 wide at its start and %2 near its end").arg(start).arg(end)));
+        QVERIFY2(end > 0 && start > end + end / 2, qPrintable(qsl("the stroke is %1 wide at its start and %2 near its end").arg(start).arg(end)));
     }
 
     // However fine the label's ink, its halo covers everything within reach of it, and nothing past
