@@ -2442,6 +2442,8 @@ private slots:
         map()->mpRoomDB->getRoom(kEastRoomId)->setExit(kPlayerRoomId, DIR_WEST);
         // Up to a room that is not straight above, so drawn as a shaft
         map()->mpRoomDB->getRoom(kLowerRoomId)->setExit(kEastRoomId, DIR_UP);
+        map()->mpRoomDB->getRoom(kPlayerRoomId)->setExit(kLowerRoomId, DIR_NORTH);
+        map()->mpRoomDB->getRoom(kLowerRoomId)->setExit(kPlayerRoomId, DIR_SOUTH);
         ModernGLWidget widget(map(), mpHost);
         const auto& commands = widget.mRenderCommandQueue.commands();
         // Anything but a model's own shapes standing above the player's room: the beacon
@@ -2580,6 +2582,21 @@ private slots:
         }
         QVERIFY2(shaftTop > -1.0f + roomHeight / 2.0f + 0.1f, qPrintable(qsl("the shaft only reaches %1").arg(shaftTop)));
         QVERIFY2(shaftFoot < -1.0f - roomHeight / 4.0f, qPrintable(qsl("the shaft starts at %1, off the ground").arg(shaftFoot)));
+
+        // The line slanting down north to the room below lies on the ground all along, as the flat ones do
+        bool slant = false;
+        for (const auto& command : commands) {
+            if (const auto* cubes = dynamic_cast<const RenderInstancedCubesCommand*>(command.get()); cubes && cubes->shading() == RenderCommand::Shading::ModelPath) {
+                for (const CubeInstanceData& cube : cubes->instances()) {
+                    const QVector4D center = cube.transform.column(3);
+                    if (qAbs(center.x()) < 1e-4f && center.y() > 0.3f && center.y() < 1.7f) {
+                        QVERIFY2(center.z() < -center.y() / 2.0f - roomHeight / 4.0f, qPrintable(qsl("the slanting line is at %1 where it is %2 north").arg(center.z()).arg(center.y())));
+                        slant = true;
+                    }
+                }
+            }
+        }
+        QVERIFY2(slant, "the exit to the room below has no line");
     }
 
     // Looking down: the felt is fuzzy, a room's top is lighter on the edge toward the light than on the far one, the

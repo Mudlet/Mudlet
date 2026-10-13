@@ -2681,13 +2681,10 @@ void ModernGLWidget::renderConnections()
     mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::ENABLE_DEPTH_TEST));
 
     const QVector3D sink(0.0f, 0.0f, exitSink(options));
-    // A flat line lies on the ground. One that rises or falls, as a shaft, a stair or a custom line's last piece to
-    // another level does, starts there but keeps its other end, or a model's block would all but swallow a shaft
-    const auto sunk = [&sink](const QVector3D& point, const int level, const bool flat) {
-        return flat || std::abs(point.z() - static_cast<float>(level)) < 1e-4f ? point - sink : point;
-    };
-    const auto flat = [](const float a, const float b) {
-        return std::abs(a - b) < 1e-3f;
+    // A flat or slanting line lies on the ground. An upright one, as a shaft or a custom line's last piece to another
+    // level is, starts there but keeps its other end, or a model's block would all but swallow a shaft
+    const auto sunk = [&sink](const QVector3D& point, const int level, const bool upright) {
+        return !upright || std::abs(point.z() - static_cast<float>(level)) < 1e-4f ? point - sink : point;
     };
     const bool inkLozenges = style.edges == MapStyle::Edges::InkLozenges;
     QVector<CubeInstanceData> bars;
@@ -2698,9 +2695,12 @@ void ModernGLWidget::renderConnections()
         if (glowing) {
             tint.setW(tint.w() * scmGlowingExitStrength);
         }
-        const bool lying = flat(segment.from.z(), segment.to.z());
-        const CubeInstanceData bar(
-                GeometryManager::barTransform(sunk(segment.from, segment.level, lying), sunk(segment.to, segment.level, lying), segment.width, segment.height), tint.x(), tint.y(), tint.z(), tint.w());
+        const bool upright = (segment.to - segment.from).toVector2D().lengthSquared() < 1e-8f;
+        const CubeInstanceData bar(GeometryManager::barTransform(sunk(segment.from, segment.level, upright), sunk(segment.to, segment.level, upright), segment.width, segment.height),
+                                   tint.x(),
+                                   tint.y(),
+                                   tint.z(),
+                                   tint.w());
         // Not drawn into the depth buffer, or it would cut its shape out of the levels below drawn after it
         const bool seeThrough = glowing || tint.w() < 1.0f;
         // Only a whole line tapers well: a door, a dash or a custom line's piece would thin out at one end
@@ -2727,7 +2727,8 @@ void ModernGLWidget::renderConnections()
         const QVector4D tint = faded(triangle.color, triangle.level);
         LevelExits* seeThrough = glowing || tint.w() < 1.0f ? &mSeeThroughExits[triangle.level] : nullptr;
         // An upright arrowhead, as on a line straight up, stays with the line's middle, which is not sunk
-        const QVector3D drop = flat(triangle.a.z(), triangle.b.z()) && flat(triangle.a.z(), triangle.c.z()) ? sink : QVector3D();
+        const QVector3D normal = QVector3D::crossProduct(triangle.b - triangle.a, triangle.c - triangle.a);
+        const QVector3D drop = std::abs(normal.z()) < 0.01f * normal.length() ? QVector3D() : sink;
         for (const QVector3D& corner : {triangle.a - drop, triangle.b - drop, triangle.c - drop}) {
             (seeThrough ? seeThrough->vertices : vertices) << corner.x() << corner.y() << corner.z();
             (seeThrough ? seeThrough->colors : colors) << tint.x() << tint.y() << tint.z() << tint.w();
