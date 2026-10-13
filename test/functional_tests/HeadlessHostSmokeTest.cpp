@@ -2441,9 +2441,9 @@ end
         QCOMPARE(luaGlobalString(host, "headlessCommandLine"), qsl("ok"));
         const QStringList answers{qsl("create=[1]true"),
                                   qsl("created:type=[1]commandline,geometry=[4]10:20:200:30,visible=[1]true"),
-                                  qsl("createAgain=[2]nil:couldn't create commandLine"),
-                                  qsl("createEmpty=[2]nil:a commandLine cannot have an empty string as its name"),
-                                  qsl("createInMissing=[2]nil:window 'clNoSuch' not found"),
+                                  qsl("createAgain=[2]false:couldn't create commandLine"),
+                                  qsl("createEmpty=[2]false:a commandLine cannot have an empty string as its name"),
+                                  qsl("createInMissing=[2]false:window 'clNoSuch' not found"),
                                   qsl("lost:type=[2]nil:'clLost' is not a known label, any type of console, command line, text edit, nor scroll box,geometry=[2]nil:window \"clLost\" not "
                                       "found,visible=[2]nil:window \"clLost\" not found"),
                                   qsl("createInMain=[1]true"),
@@ -2852,9 +2852,9 @@ end
         QCOMPARE(luaGlobalString(host, "headlessTextEdit"), qsl("ok"));
         const QStringList answers{qsl("create=[1]true"),
                                   qsl("created:type=[1]textedit,geometry=[4]10:20:200:100,visible=[1]true"),
-                                  qsl("createAgain=[2]nil:couldn't create text edit"),
-                                  qsl("createEmpty=[2]nil:a text edit cannot have an empty string as its name"),
-                                  qsl("createInMissing=[2]nil:window 'teNoSuch' not found"),
+                                  qsl("createAgain=[2]false:couldn't create text edit"),
+                                  qsl("createEmpty=[2]false:a text edit cannot have an empty string as its name"),
+                                  qsl("createInMissing=[2]false:window 'teNoSuch' not found"),
                                   qsl("lost:type=[2]nil:'teLost' is not a known label, any type of console, command line, text edit, nor scroll box,geometry=[2]nil:window \"teLost\" not "
                                       "found,visible=[2]nil:window \"teLost\" not found"),
                                   qsl("createInMain=[1]true"),
