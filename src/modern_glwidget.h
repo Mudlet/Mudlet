@@ -50,6 +50,7 @@
 #include <QTimer>
 #include <QEasingCurve>
 
+#include "BloomPass.h"
 #include "GeometryManager.h"
 #include "LabelTextureCache.h"
 #include "RenderCommandQueue.h"
@@ -227,6 +228,7 @@ private:
 
     // Label texture cache
     LabelTextureCache mLabelTextureCache;
+    BloomPass mBloom;
     // Room textures this frame has used so far, which making room for another must keep
     QSet<QString> mRoomTexturesInUse;
     // The text in each cell of the terminal style's glyph atlas, in order, and how many of them and in which font
@@ -409,8 +411,12 @@ private:
     void renderLabels(bool onTop, int lowestLevel, int highestLevel);
     // A column of light over the player's room, seen faintly through anything in front of it
     void renderPlayerBeacon();
+    // A style with a pulse's marker: an outlined diamond of light hovering over the player's room, on a stem from its top
+    void renderPlayerDiamond(const QVector3D& roomTop, float roomSize);
     void paintCompass(QPainter& painter);
     void paintStatusLine(QPainter& painter);
+    // A style with a scanner overlay's corner brackets and readout, the readout starting top pixels down
+    void paintScannerOverlay(QPainter& painter, int top);
     void turnNorthUp();
     void setHoveredRoom(int roomId);
     // Worked out afresh, as the view can move under a pointer that stays still
