@@ -588,6 +588,22 @@ private slots:
         }
     }
 
+    // A room misplaced far along its exit's line must not make a character for every cell of it, which froze the view
+    void test_aGlyphLineTooLongIsDrawnAsABar()
+    {
+        TRoom* pWest = addRoomAt(1, mAreaId, 0, 0);
+        TRoom* pEast = addRoomAt(2, mAreaId, 1000000, 0);
+        QVERIFY(pWest && pEast);
+        pWest->setExit(2, DIR_EAST);
+        pEast->setExit(1, DIR_WEST);
+        ExitScene::Options glyphOptions = options();
+        glyphOptions.glyphs = true;
+
+        const ExitScene::Scene scene = build(glyphOptions);
+        QVERIFY2(scene.glyphs.size() < 10000, qPrintable(qsl("%1 characters for one line").arg(scene.glyphs.size())));
+        QVERIFY2(!segmentsIn(scene, mExitColor).isEmpty(), "the line is not drawn at all");
+    }
+
     void test_glyphDoorStaysOnASlantedLine()
     {
         TRoom* pWest = addRoomAt(1, mAreaId, 0, 0);

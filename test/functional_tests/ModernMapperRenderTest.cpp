@@ -847,6 +847,84 @@ private slots:
         QVERIFY2(restyled, "in another font, the area is drawn from the wrong cells");
         QVERIFY2(restyled != back, "the atlas was not drawn again in the new font");
     }
+
+    // A view of more symbols than the atlas holds still shows every room, the rest as plain rooms
+    void test_terminalSymbolsPastTheAtlasShowAsPlainRoomsWithoutGL()
+    {
+        constexpr int kRooms = 200;
+        constexpr int kColumns = 20;
+        map()->mapClear();
+        const int areaId = map()->mpRoomDB->addArea(qsl("Crowded Area"));
+        QVERIFY(areaId > 0);
+        for (int i = 0; i < kRooms; ++i) {
+            QVERIFY(addRoomAt(1000 + i, areaId, i % kColumns - kColumns / 2, i / kColumns - kRooms / kColumns / 2, 0));
+            map()->mpRoomDB->getRoom(1000 + i)->mSymbol = QString(QChar(static_cast<char16_t>(0x4E00 + i)));
+        }
+        map()->mRoomIdHash[map()->mProfileName] = 0;
+        const auto restore = qScopeGuard([this]() {
+            mpHost->setMapStyle(qsl("tiles"));
+        });
+        QVERIFY(mpHost->setMapStyle(qsl("terminal")));
+
+        ModernGLWidget widget(map(), mpHost);
+        QSet<GLuint> atlasTextures;
+        GLuint lastTexture = 0;
+        widget.mLabelTextureCache.useTextureStandIn(
+                [&atlasTextures, &lastTexture](const QImage& image) {
+                    if (image.size() == QSize(1024, 1024)) {
+                        atlasTextures.insert(lastTexture + 1);
+                    }
+                    return ++lastTexture;
+                },
+                [](GLuint) {});
+        widget.resize(800, 600);
+        widget.mCameraController.setViewportSize(widget.width(), widget.height());
+        widget.setViewCenter(areaId, 0, 0, 0);
+        widget.frameRooms(30.0);
+        widget.mCameraController.setTopView();
+        widget.updateMatrices();
+        widget.mRenderCommandQueue.clear();
+        widget.renderRooms();
+
+        qsizetype glyphs = 0;
+        for (const auto& command : widget.mRenderCommandQueue.commands()) {
+            if (const auto* textured = dynamic_cast<const RenderTexturedTrianglesCommand*>(command.get()); textured && atlasTextures.contains(textured->geometry().textureId)) {
+                glyphs += textured->geometry().vertices.size() / 18;
+            }
+        }
+        QCOMPARE(glyphs, kRooms);
+        QVERIFY(widget.mGlyphAtlasIndex.contains(qsl("#")));
+    }
+
+    // A terminal's room shows plain stairs in its character, but not an in or out exit or a door, which its markers show
+    void test_terminalMarksOnlyWhatItsCharacterCannotShowWithoutGL()
+    {
+        constexpr int kStairsRoomId = 4;
+        constexpr int kInRoomId = 5;
+        constexpr int kDoorRoomId = 6;
+        const int areaId = addArea();
+        QVERIFY(areaId > 0);
+        QVERIFY(addRoomAt(kStairsRoomId, areaId, 4, 0, 0) && addRoomAt(kInRoomId, areaId, 6, 0, 0) && addRoomAt(kDoorRoomId, areaId, 8, 0, 0));
+        map()->mpRoomDB->getRoom(kStairsRoomId)->setExit(kLowerRoomId, DIR_DOWN);
+        map()->mpRoomDB->getRoom(kInRoomId)->setExit(kPlayerRoomId, DIR_IN);
+        map()->mpRoomDB->getRoom(kDoorRoomId)->setExit(kLowerRoomId, DIR_DOWN);
+        map()->mpRoomDB->getRoom(kDoorRoomId)->setDoor(qsl("down"), 3);
+        const auto restore = qScopeGuard([this]() {
+            mpHost->setMapStyle(qsl("tiles"));
+        });
+        QVERIFY(mpHost->setMapStyle(qsl("terminal")));
+        ModernGLWidget widget(map(), mpHost);
+        queueFrame(widget, areaId);
+        QStringList markers;
+        for (const QString& key : std::as_const(widget.mRoomTexturesInUse)) {
+            if (key.startsWith(qsl("markers|"))) {
+                markers.append(key.section(QLatin1Char('|'), 2));
+            }
+        }
+        markers.sort();
+        // Up, down, in and out, each followed by its door where there is an exit: the in exit and the locked door's stairs
+        QCOMPARE(markers, (QStringList{qsl("00200"), qsl("02300")}));
+    }
 };
 
 #include "ModernMapperRenderTest.moc"
