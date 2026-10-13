@@ -30,6 +30,7 @@
 #include "TAction.h"
 #include "TAlias.h"
 #include "TKey.h"
+#include "TLuaInterpreter.h"
 #include "TMap.h"
 #include "TRoomDB.h"
 #include "TRoom.h"
