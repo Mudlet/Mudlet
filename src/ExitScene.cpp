@@ -44,6 +44,9 @@ constexpr qreal scmDoorSwingWidth = 0.3;
 constexpr int scmDiscSides = 16;
 // Qt's dash stroker's limit, QDashStroker::repetitionLimit()
 constexpr qreal scmMaxDashRepetitions = 10000.0;
+// The most characters a glyph line is drawn with; a longer one is drawn as a bar, as one line of a misplaced room
+// could otherwise make millions of characters every frame
+constexpr qint64 scmMaxGlyphRun = 2048;
 // How far a shaft for an up or down exit rises or drops from its room, in levels
 constexpr float scmShaftLength = 0.35f;
 // The part of a one-way exit's shaft, at its tip, in the one-way arrow's color
@@ -100,8 +103,9 @@ private:
     void doorSwing(int status, const QVector3D& from, const QVector3D& along, const QVector3D& side, float length, float height, int level);
     void customLine(const TRoom& room, const QString& key, const QList<QPointF>& points);
     void glyph(const QVector3D& at, const QVector3D& along, QChar character, const QColor& color, int level);
-    // A line's characters in the cells between its ends, which its rooms are drawn in
-    void glyphRun(const QVector3D& from, const QVector3D& to, const QColor& color, int level);
+    // A line's characters in the cells between its ends, which its rooms are drawn in; false, drawing nothing, for
+    // a line too long to draw so
+    bool glyphRun(const QVector3D& from, const QVector3D& to, const QColor& color, int level);
 
     const TMap& mMap;
     const Host& mHost;
@@ -215,17 +219,21 @@ void Builder::glyph(const QVector3D& at, const QVector3D& along, const QChar cha
     mScene.glyphs.append(placed);
 }
 
-void Builder::glyphRun(const QVector3D& from, const QVector3D& to, const QColor& color, const int level)
+bool Builder::glyphRun(const QVector3D& from, const QVector3D& to, const QColor& color, const int level)
 {
     const QVector3D line = to - from;
     const qint64 cells = qRound64(2.0 * qMax(std::abs(line.x()), std::abs(line.y())));
+    if (cells > scmMaxGlyphRun) {
+        return false;
+    }
     if (cells < 2) {
-        return;
+        return true;
     }
     const QVector3D along = line.normalized();
     for (qint64 cell = 1; cell < cells; ++cell) {
         glyph(from + line * (static_cast<float>(cell) / static_cast<float>(cells)), along, QChar(), color, level);
     }
+    return true;
 }
 
 void Builder::triangle(const QVector3D& a, const QVector3D& b, const QVector3D& c, const QColor& color, const int level)
@@ -542,17 +550,13 @@ void Builder::addRoom(const int roomId, const TRoom& room)
                 dashedBar(center, destination, ExitAppearance::visibleDashes(Qt::DashLine), phase, exitColor, lineLevel);
                 continue;
             }
-            if (mOptions.glyphs && rise == 0.0f) {
-                glyphRun(center, destination, exitColor, lineLevel);
-            } else {
+            if (!mOptions.glyphs || rise != 0.0f || !glyphRun(center, destination, exitColor, lineLevel)) {
                 bar(center, destination, mWidth, mHeight, exitColor, lineLevel);
             }
             continue;
         }
 
-        if (mOptions.glyphs && rise == 0.0f) {
-            glyphRun(center, destination, exitColor, lineLevel);
-        } else {
+        if (!mOptions.glyphs || rise != 0.0f || !glyphRun(center, destination, exitColor, lineLevel)) {
             qreal phase = 0.0;
             dashedBar(center, destination, ExitAppearance::visibleDashes(Qt::DotLine), phase, exitColor, lineLevel);
         }
