@@ -241,12 +241,20 @@ QList<MapStyle> registeredStyles()
     diorama.roomScale = 3.0f;
     diorama.roomFlattening = 2.0f;
     diorama.edges = MapStyle::Edges::ModelBlocks;
-    diorama.background = QColor(56, 72, 64);
-    // The paths' sand
-    diorama.ink = QColor(212, 192, 152);
+    // Between the sky's blue and its warm haze, for what fades into it
+    diorama.background = QColor(222, 230, 228);
+    // The paths' trodden earth, darker than the board they cross
+    diorama.ink = QColor(168, 146, 110);
     diorama.exitWidthFactor = 2.0f;
-    diorama.postEffects = MapStyle::PostEffect::Felt;
+    diorama.postEffects = MapStyle::PostEffect::Sky | MapStyle::PostEffect::TiltShift;
+    // The board is the floor
+    diorama.floorPlates = false;
+    diorama.environmentKits = true;
     diorama.playerMarker = MapStyle::PlayerMarker::Token;
+    // A warm glow on the board round the room, in the script's color, and in lamplight where it gave none
+    diorama.highlightShape = MapStyle::HighlightShape::Glow;
+    diorama.highlightColor = QColor(255, 214, 79);
+    diorama.highlightScale = 1.7f;
     styles.append(diorama);
 
     return styles;

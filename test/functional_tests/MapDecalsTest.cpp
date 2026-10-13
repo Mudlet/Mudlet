@@ -480,6 +480,19 @@ private slots:
         QCOMPARE(rings, 2);
     }
 
+    void test_dioramaGlowsAColorlessRoomInLamplightAndAScriptsColorWins()
+    {
+        const MapStyle& diorama = *MapStyle::find(qsl("diorama"));
+        QCOMPARE(diorama.highlightShape, MapStyle::HighlightShape::Glow);
+        QVERIFY(MapDecals::highlightOnGround(diorama.highlightShape));
+        const QColor lamplight = diorama.highlightColorFor(QColor());
+        QVERIFY(lamplight.isValid());
+        QVERIFY(lamplight.hue() >= 40 && lamplight.hue() <= 55);
+        const QColor blue(0, 0, 255);
+        QCOMPARE(diorama.highlightColorFor(blue, blue), blue);
+        QCOMPARE(diorama.highlightColorFor(QColor(255, 0, 0, 0), blue), blue);
+    }
+
     void test_inkwashWashesAreSoftEdgedAndDifferPerVariant()
     {
         constexpr int size = 128;

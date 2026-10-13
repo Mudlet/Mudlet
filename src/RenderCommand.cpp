@@ -46,7 +46,8 @@ int inkMode(const RenderCommand::Shading shading)
     case RenderCommand::Shading::ModelBlock:
     case RenderCommand::Shading::ModelPath:
     case RenderCommand::Shading::ModelShadow:
-    case RenderCommand::Shading::Felt:
+    case RenderCommand::Shading::ModelWater:
+    case RenderCommand::Shading::Sky:
         return 0;
     }
     return 0;
@@ -62,8 +63,10 @@ int modelMode(const RenderCommand::Shading shading)
         return 2;
     case RenderCommand::Shading::ModelShadow:
         return 3;
-    case RenderCommand::Shading::Felt:
+    case RenderCommand::Shading::Sky:
         return 4;
+    case RenderCommand::Shading::ModelWater:
+        return 5;
     case RenderCommand::Shading::Lit:
     case RenderCommand::Shading::Unlit:
     case RenderCommand::Shading::Wireframe:
@@ -215,7 +218,7 @@ void RenderTrianglesCommand::execute(QOpenGLFunctions* gl,
     QMatrix3x3 normalMatrix = mModelMatrix.normalMatrix();
     shader->setUniformValue("uNormalMatrix", normalMatrix);
 
-    const bool unlit = mShading == Shading::Unlit || mShading == Shading::Paper || mShading == Shading::Felt;
+    const bool unlit = mShading == Shading::Unlit || mShading == Shading::Paper || mShading == Shading::Sky;
     if (unlit) {
         shader->setUniformValue("uDisableLighting", true);
     }
@@ -373,6 +376,7 @@ void RenderInstancedCubesCommand::execute(QOpenGLFunctions* gl,
     if (model) {
         shader->setUniformValue("uModelShading", model);
         shader->setUniformValue("uModelRound", mShape == GeometryManager::InstanceShape::Cylinder);
+        shader->setUniformValue("uModelBevel", mShape == GeometryManager::InstanceShape::Box || mShape == GeometryManager::InstanceShape::Cylinder);
     }
 
     geometryManager->renderInstancedCubes(mInstances, vao, vertexBuffer, colorBuffer, normalBuffer, indexBuffer, resourceManager, GL_TRIANGLES, mShape);
@@ -459,6 +463,9 @@ void GLStateCommand::execute(QOpenGLFunctions* gl,
     case DEPTH_FUNC_LESS:
         gl->glDepthFunc(GL_LESS);
         break;
+    case DEPTH_FUNC_GREATER:
+        gl->glDepthFunc(GL_GREATER);
+        break;
     case ADDITIVE_BLEND:
         gl->glBlendFunc(GL_SRC_ALPHA, GL_ONE);
         break;
@@ -468,8 +475,11 @@ void GLStateCommand::execute(QOpenGLFunctions* gl,
     }
 }
 
-RenderLabelCommand::RenderLabelCommand(float centerX, float centerY, float centerZ,
-                                       float width, float height,
+RenderLabelCommand::RenderLabelCommand(float centerX,
+                                       float centerY,
+                                       float centerZ,
+                                       float width,
+                                       float height,
                                        GLuint textureId,
                                        const QVector3D& cameraRight,
                                        const QVector3D& cameraUp,
@@ -477,25 +487,31 @@ RenderLabelCommand::RenderLabelCommand(float centerX, float centerY, float cente
                                        const QMatrix4x4& projectionMatrix,
                                        const QMatrix4x4& viewMatrix,
                                        const QMatrix4x4& modelMatrix)
-    : mCenterX(centerX), mCenterY(centerY), mCenterZ(centerZ)
-    , mWidth(width), mHeight(height)
-    , mTextureId(textureId)
-    , mCameraRight(cameraRight), mCameraUp(cameraUp)
-    , mTint(tint)
-    , mProjectionMatrix(projectionMatrix), mViewMatrix(viewMatrix), mModelMatrix(modelMatrix)
+: mCenterX(centerX)
+, mCenterY(centerY)
+, mCenterZ(centerZ)
+, mWidth(width)
+, mHeight(height)
+, mTextureId(textureId)
+, mCameraRight(cameraRight)
+, mCameraUp(cameraUp)
+, mTint(tint)
+, mProjectionMatrix(projectionMatrix)
+, mViewMatrix(viewMatrix)
+, mModelMatrix(modelMatrix)
 {
 }
 
 void RenderLabelCommand::execute(QOpenGLFunctions* gl,
-                                QOpenGLShaderProgram* shader,
-                                GeometryManager* geometryManager,
-                                ResourceManager* resourceManager,
-                                QOpenGLVertexArrayObject& vao,
-                                QOpenGLBuffer& vertexBuffer,
-                                QOpenGLBuffer& colorBuffer,
-                                QOpenGLBuffer& normalBuffer,
-                                QOpenGLBuffer& indexBuffer,
-                                QOpenGLBuffer& texCoordBuffer)
+                                 QOpenGLShaderProgram* shader,
+                                 GeometryManager* geometryManager,
+                                 ResourceManager* resourceManager,
+                                 QOpenGLVertexArrayObject& vao,
+                                 QOpenGLBuffer& vertexBuffer,
+                                 QOpenGLBuffer& colorBuffer,
+                                 QOpenGLBuffer& normalBuffer,
+                                 QOpenGLBuffer& indexBuffer,
+                                 QOpenGLBuffer& texCoordBuffer)
 {
     Q_UNUSED(gl)
 
@@ -504,11 +520,7 @@ void RenderLabelCommand::execute(QOpenGLFunctions* gl,
     }
 
     // Generate billboard geometry
-    GeometryData labelGeometry = geometryManager->generateBillboardGeometry(
-        mCenterX, mCenterY, mCenterZ,
-        mWidth, mHeight,
-        mCameraRight, mCameraUp,
-        mTextureId);
+    GeometryData labelGeometry = geometryManager->generateBillboardGeometry(mCenterX, mCenterY, mCenterZ, mWidth, mHeight, mCameraRight, mCameraUp, mTextureId);
 
     if (labelGeometry.isEmpty()) {
         return;

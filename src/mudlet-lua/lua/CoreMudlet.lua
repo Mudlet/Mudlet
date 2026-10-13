@@ -1199,9 +1199,10 @@ if false then
 
 
 
-  --- Names the kind of ground an environment is, for use by 3D map styles that draw terrain; none of the styles
-  --- built in draw it yet. Without one, the kind is guessed from the environment's color: blue is water, green
-  --- forest, grey, brown and tan road, and any other color a building. The kits are saved with the map.
+  --- Names the kind of ground an environment is, for the 3D map styles that draw terrain: diorama builds the
+  --- environment's rooms as it, and terminal and ink wash mark them by it. Without one, the kind is guessed from
+  --- the environment's color: blue is water, green forest, grey, brown and tan road, and any other color a
+  --- building. The kits are saved with the map.
   ---
   --- @param environmentID the environment, as setRoomEnv() takes it
   --- @param kitName one of "plain", "water", "road", "forest" or "building"; nil or "" goes back to guessing
