@@ -595,7 +595,8 @@ QPair<bool, QString> MudletApp::writeProfileData(const QString& profile, const Q
 
     const bool holdsSecret = profileDataItemHoldsSecret(item);
     if (holdsSecret) {
-        // On the temporary file, before the secret is in it: commit() renames it into place
+        // On the temporary file, before the secret is in it: commit() renames it into place, and a
+        // replaced file's mode would otherwise carry over. A refusal is reported after commit()
         file.setPermissions(QFileDevice::ReadOwner | QFileDevice::WriteOwner);
     }
 
@@ -618,8 +619,8 @@ QPair<bool, QString> MudletApp::writeProfileData(const QString& profile, const Q
     }
 
     if (holdsSecret) {
-        // Reads the permissions back, and warns when the file system would not keep them
-        SecureStringUtils::restrictFileToOwner(file.fileName());
+        // Only checked: narrowing it here would come after it was already in place, readable
+        SecureStringUtils::confirmFileIsOwnerOnly(file.fileName());
     }
 
     return qMakePair(true, QString());
