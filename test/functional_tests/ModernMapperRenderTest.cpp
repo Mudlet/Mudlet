@@ -940,6 +940,8 @@ private slots:
         const QStringList hologram = frame();
         QVERIFY(mpHost->setMapStyle(qsl("inkwash")));
         const QStringList inkwash = frame();
+        QVERIFY(mpHost->setMapStyle(qsl("diorama")));
+        const QStringList diorama = frame();
         QVERIFY(mpHost->setMapStyle(qsl("tiles")));
         const QStringList after = frame();
 
@@ -947,6 +949,7 @@ private slots:
         QVERIFY(before != transit);
         QVERIFY(before != hologram);
         QVERIFY(before != inkwash);
+        QVERIFY(before != diorama);
         QCOMPARE(after, before);
     }
 
@@ -2388,6 +2391,234 @@ private slots:
         const int start = widthAt(0.45f);
         const int end = widthAt(1.55f);
         QVERIFY2(end > 0 && start > end + end / 2, qPrintable(qsl("the stroke is %1 wide at its start and %2 near its end").arg(start).arg(end)));
+    }
+
+    // A painted miniature: each room keeps its environment's hue, a little desaturated and kept from the darkest and
+    // lightest, on a dark green felt, with the player a red token
+    void test_dioramaPaintsMiniatures()
+    {
+        const MapStyle* diorama = MapStyle::find(qsl("diorama"));
+        QVERIFY(diorama);
+        const QColor red = diorama->roomColor(QColor(230, 40, 40, 200));
+        const QColor green = diorama->roomColor(QColor(40, 230, 40));
+        const QColor blue = diorama->roomColor(QColor(40, 40, 230));
+        const QColor black = diorama->roomColor(QColor(Qt::black));
+        const QColor white = diorama->roomColor(QColor(Qt::white));
+        QCOMPARE(red.alpha(), 200);
+        QVERIFY2(qAbs(red.hue() - 0) < 15 || qAbs(red.hue() - 360) < 15, "a red room lost its hue");
+        QVERIFY2(qAbs(green.hue() - 120) < 15, "a green room lost its hue");
+        QVERIFY2(qAbs(blue.hue() - 240) < 15, "a blue room lost its hue");
+        for (const QColor& room : {red, green, blue}) {
+            QVERIFY2(room.saturation() < 170 && room.saturation() > 90, qPrintable(qsl("a bright room is %1 saturated").arg(room.saturation())));
+        }
+        QVERIFY2(black.lightness() >= 60, qPrintable(qsl("a black room is %1 light, too dark to shade").arg(black.lightness())));
+        QVERIFY2(white.lightness() <= 215, qPrintable(qsl("a white room is %1 light, too light to shade").arg(white.lightness())));
+        // Warmed, as model paints are
+        QVERIFY2(white.red() > white.blue() + 8, "a white room is not warmed");
+        QVERIFY2(difference(red, green) >= 60 && difference(green, blue) >= 60 && difference(blue, red) >= 60, "areas' rooms cannot be told apart");
+        QVERIFY2(diorama->background.green() > diorama->background.red() && diorama->background.lightness() < 90, "the felt is not a dark green");
+        const QColor token = diorama->playerRoomColor();
+        QVERIFY2(token.red() > token.green() + 100 && token.red() > token.blue() + 100, "the token is not red");
+        QCOMPARE(diorama->edges, MapStyle::Edges::ModelBlocks);
+        QCOMPARE(diorama->playerMarker, MapStyle::PlayerMarker::Token);
+        QVERIFY(diorama->postEffects.testFlag(MapStyle::PostEffect::Felt));
+        QVERIFY(!diorama->postEffects.testFlag(MapStyle::PostEffect::PaperGrain));
+        QVERIFY(diorama->lit);
+        const MapStyle* inkwash = MapStyle::find(qsl("inkwash"));
+        QVERIFY(inkwash);
+        QVERIFY(!inkwash->postEffects.testFlag(MapStyle::PostEffect::Felt));
+    }
+
+    // Felt laid under everything, each room a block with a soft shadow on the ground beside it, the player's room
+    // keeping its own color with a token standing on it and no beacon, and the exits low paths on the ground
+    void test_dioramaBuildsATabletopModelWithoutGL()
+    {
+        const int areaId = addArea();
+        QVERIFY(areaId > 0);
+        const auto restore = qScopeGuard([this]() {
+            mpHost->setMapStyle(qsl("tiles"));
+        });
+        map()->mpRoomDB->getRoom(kPlayerRoomId)->setExit(kEastRoomId, DIR_EAST);
+        map()->mpRoomDB->getRoom(kEastRoomId)->setExit(kPlayerRoomId, DIR_WEST);
+        ModernGLWidget widget(map(), mpHost);
+        const auto& commands = widget.mRenderCommandQueue.commands();
+        // Anything but a model's own shapes standing above the player's room: the beacon
+        const auto beaconQueued = [&commands]() {
+            for (const auto& command : commands) {
+                if (const auto* cubes = dynamic_cast<const RenderInstancedCubesCommand*>(command.get()); cubes && cubes->shading() != RenderCommand::Shading::ModelBlock) {
+                    for (const CubeInstanceData& cube : cubes->instances()) {
+                        const QVector4D center = cube.transform.column(3);
+                        if (qAbs(center.x()) < 1e-4f && qAbs(center.y()) < 1e-4f && center.z() > kRoomHeight) {
+                            return true;
+                        }
+                    }
+                }
+            }
+            return false;
+        };
+        const auto atPlace = [&commands](const RenderCommand::Shading shading, const QPointF& place) {
+            QList<CubeInstanceData> found;
+            for (const auto& command : commands) {
+                if (const auto* cubes = dynamic_cast<const RenderInstancedCubesCommand*>(command.get()); cubes && cubes->shading() == shading) {
+                    found.append(roomInstances(*cubes, place));
+                }
+            }
+            return found;
+        };
+        const auto lastIndexOf = [&commands](const RenderCommand::Shading shading) {
+            qsizetype last = -1;
+            for (qsizetype index = 0; index < static_cast<qsizetype>(commands.size()); ++index) {
+                if (const auto* cubes = dynamic_cast<const RenderInstancedCubesCommand*>(commands.at(index).get()); cubes && cubes->shading() == shading) {
+                    last = index;
+                }
+            }
+            return last;
+        };
+
+        queueFrame(widget, areaId);
+        QVERIFY2(beaconQueued(), "tiles raised no beacon, so its absence proves nothing");
+
+        QVERIFY(mpHost->setMapStyle(qsl("diorama")));
+        queueFrame(widget, areaId);
+        qsizetype felt = -1;
+        qsizetype firstDrawn = -1;
+        for (qsizetype index = 0; index < static_cast<qsizetype>(commands.size()); ++index) {
+            const auto* triangles = dynamic_cast<const RenderTrianglesCommand*>(commands.at(index).get());
+            if (triangles && triangles->shading() == RenderCommand::Shading::Felt) {
+                QVERIFY2(felt < 0, "the felt was laid twice");
+                felt = index;
+            }
+            QVERIFY2(!triangles || triangles->shading() != RenderCommand::Shading::Paper, "the felt is drawn as paper");
+            if (firstDrawn < 0 && (triangles || dynamic_cast<const RenderInstancedCubesCommand*>(commands.at(index).get()))) {
+                firstDrawn = index;
+            }
+        }
+        QVERIFY2(felt >= 0, "no felt was laid");
+        QCOMPARE(felt, firstDrawn);
+
+        // As renderRooms sizes it: 2 / scale (3) / zFlattening (2)
+        constexpr float roomHeight = 2.0f / 3.0f / 2.0f;
+        const QList<CubeInstanceData> east = atPlace(RenderCommand::Shading::ModelBlock, QPointF(2.0, 0.0));
+        QVERIFY2(!east.isEmpty(), "a room is not a block");
+        QVERIFY2(atPlace(RenderCommand::Shading::Lit, QPointF(2.0, 0.0)).isEmpty() && atPlace(RenderCommand::Shading::Unlit, QPointF(2.0, 0.0)).isEmpty(), "a room was drawn as a tile");
+        const QList<CubeInstanceData> player = atPlace(RenderCommand::Shading::ModelBlock, QPointF(0.0, 0.0));
+        QVERIFY(!player.isEmpty());
+        const QColor tokenColor = MapStyle::find(qsl("diorama"))->playerRoomColor();
+        for (const CubeInstanceData& block : player) {
+            QVERIFY2(!qFuzzyCompare(block.color[0], static_cast<float>(tokenColor.redF())) || !qFuzzyCompare(block.color[1], static_cast<float>(tokenColor.greenF())),
+                     "the player's room was painted in the token's color");
+        }
+
+        // Toward the south-east, on the ground the room stands on, under where the block itself stands
+        const auto shadowBeside = [&commands, roomHeight](const QPointF& place) {
+            for (const auto& command : commands) {
+                if (const auto* cubes = dynamic_cast<const RenderInstancedCubesCommand*>(command.get()); cubes && cubes->shading() == RenderCommand::Shading::ModelShadow) {
+                    for (const CubeInstanceData& cube : cubes->instances()) {
+                        const QVector4D center = cube.transform.column(3);
+                        if (center.x() > place.x() + 0.01 && center.x() < place.x() + 0.5 && center.y() < place.y() - 0.01 && center.y() > place.y() - 0.5
+                            && qAbs(center.z() + roomHeight / 2.0f) < 0.01f && cube.color[3] > 0.3f && cube.transform.column(0).toVector3D().length() > 1.0f / 3.0f) {
+                            return true;
+                        }
+                    }
+                }
+            }
+            return false;
+        };
+        QVERIFY2(shadowBeside(QPointF(2.0, 0.0)), "a room casts no shadow");
+        QVERIFY2(shadowBeside(QPointF(0.0, 0.0)), "the player's room casts no shadow");
+        QVERIFY2(lastIndexOf(RenderCommand::Shading::ModelShadow) > lastIndexOf(RenderCommand::Shading::ModelBlock), "the shadows are drawn before the blocks that hide them");
+
+        // A token of round pieces in the player's color standing on the player's room's top, and nowhere else
+        int pieces = 0;
+        for (const auto& command : commands) {
+            if (const auto* cubes = dynamic_cast<const RenderInstancedCubesCommand*>(command.get());
+                cubes && cubes->shading() == RenderCommand::Shading::ModelBlock && cubes->shape() == GeometryManager::InstanceShape::Cylinder) {
+                for (const CubeInstanceData& cube : cubes->instances()) {
+                    const QVector4D center = cube.transform.column(3);
+                    QVERIFY2(qAbs(center.x()) < 1e-4f && qAbs(center.y()) < 1e-4f, "a token stands off the player's room");
+                    QVERIFY2(center.z() > roomHeight / 2.0f, "a token's piece is sunk in the room");
+                    QVERIFY(qFuzzyCompare(cube.color[0], static_cast<float>(tokenColor.redF())));
+                    ++pieces;
+                }
+            }
+        }
+        QVERIFY2(pieces >= 2, qPrintable(qsl("the token has %1 pieces").arg(pieces)));
+        QVERIFY2(!beaconQueued(), "a beacon stands over the token");
+
+        // The path east from the player's room lies on the ground, not halfway up the blocks
+        bool path = false;
+        for (const auto& command : commands) {
+            if (const auto* cubes = dynamic_cast<const RenderInstancedCubesCommand*>(command.get()); cubes && cubes->shading() == RenderCommand::Shading::ModelPath) {
+                for (const CubeInstanceData& cube : cubes->instances()) {
+                    const QVector4D center = cube.transform.column(3);
+                    if (qAbs(center.x() - 1.0f) < 0.3f && qAbs(center.y()) < 1e-4f) {
+                        QVERIFY2(center.z() < -roomHeight / 4.0f && center.z() > -roomHeight / 2.0f, qPrintable(qsl("the path's middle is at %1").arg(center.z())));
+                        path = true;
+                    }
+                }
+            }
+        }
+        QVERIFY2(path, "the exit between the rooms is not a path");
+    }
+
+    // Looking down: the felt is fuzzy, a room's top is lighter on the edge toward the light than on the far one, the
+    // ground just south-east of a room is in its shadow, the token shows red, and nothing changes between frames
+    void test_dioramaShadesBlocksUnderSoftLight()
+    {
+        if (!glAvailable()) {
+            QSKIP("no OpenGL context on this platform");
+        }
+        QVERIFY(addArea() > 0);
+        const auto restore = qScopeGuard([this]() {
+            mpHost->setMapStyle(qsl("tiles"));
+        });
+        // No borders: nothing around a room but its shadow
+        const bool savedBorders = mpHost->mMapperShowRoomBorders;
+        const auto restoreBorders = qScopeGuard([this, savedBorders]() {
+            mpHost->mMapperShowRoomBorders = savedBorders;
+        });
+        mpHost->mMapperShowRoomBorders = false;
+        QVERIFY(mpHost->setMapStyle(qsl("diorama")));
+        ModernGLWidget widget(map(), mpHost);
+        lookDown(widget);
+        if (!widget.isValid()) {
+            QSKIP("no OpenGL context on this platform");
+        }
+        const QImage frame = widget.grabFramebuffer();
+        QCOMPARE(widget.grabFramebuffer(), frame);
+        constexpr float roomHeight = 2.0f / 3.0f / 2.0f;
+        const auto pixelAt = [&widget](const float x, const float y, const float z) {
+            const std::optional<QPointF> pixel = widget.mCameraController.pixelForPoint(QVector3D(x, y, z));
+            return pixel ? pixel->toPoint() : QPoint(-1, -1);
+        };
+        const auto topAt = [&](const float x, const float y) {
+            return frame.pixelColor(pixelAt(x, y, roomHeight / 2.0f));
+        };
+        const auto groundAt = [&](const float x, const float y) {
+            return frame.pixelColor(pixelAt(x, y, -roomHeight / 2.0f));
+        };
+
+        QSet<QRgb> fuzz;
+        const QPoint feltPixel = pixelAt(1.0f, -1.2f, -roomHeight / 2.0f);
+        QVERIFY(frame.rect().contains(feltPixel + QPoint(15, 0)));
+        for (int dx = 0; dx < 16; ++dx) {
+            fuzz.insert(frame.pixel(feltPixel + QPoint(dx, 0)));
+        }
+        QVERIFY2(fuzz.size() >= 4, "the felt has no fuzz");
+
+        // A room reaches a third of a unit from its middle; the light comes from the north-west
+        const int middle = topAt(2.0f, 0.0f).lightness();
+        const int lit = topAt(2.0f - 0.31f, 0.31f).lightness();
+        const int far = topAt(2.0f + 0.31f, -0.31f).lightness();
+        QVERIFY2(lit > far + 20, qPrintable(qsl("a room's top is %1 light toward the light and %2 away from it").arg(lit).arg(far)));
+        QVERIFY2(middle > far, "a room's top is darker in its middle than its shaded edge");
+
+        const int shadow = groundAt(2.4f, -0.4f).lightness();
+        const int open = groundAt(1.6f, 0.4f).lightness();
+        QVERIFY2(open > shadow + 10, qPrintable(qsl("the ground is %1 light in a room's shadow and %2 out of it").arg(shadow).arg(open)));
+
+        const QColor token = frame.pixelColor(pixelAt(0.0f, 0.0f, roomHeight));
+        QVERIFY2(token.red() > token.green() + 60 && token.red() > token.blue() + 60, "no red token stands on the player's room");
     }
 
     // Bloom spreads a soft glow a few pixels out past a room's edge, onto background nothing is drawn on

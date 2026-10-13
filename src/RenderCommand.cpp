@@ -43,6 +43,37 @@ int inkMode(const RenderCommand::Shading shading)
     case RenderCommand::Shading::Lit:
     case RenderCommand::Shading::Unlit:
     case RenderCommand::Shading::Wireframe:
+    case RenderCommand::Shading::ModelBlock:
+    case RenderCommand::Shading::ModelPath:
+    case RenderCommand::Shading::ModelShadow:
+    case RenderCommand::Shading::Felt:
+        return 0;
+    }
+    return 0;
+}
+
+// The shader's uModelShading for a shading, 0 for none of the model ones
+int modelMode(const RenderCommand::Shading shading)
+{
+    switch (shading) {
+    case RenderCommand::Shading::ModelBlock:
+        return 1;
+    case RenderCommand::Shading::ModelPath:
+        return 2;
+    case RenderCommand::Shading::ModelShadow:
+        return 3;
+    case RenderCommand::Shading::Felt:
+        return 4;
+    case RenderCommand::Shading::Lit:
+    case RenderCommand::Shading::Unlit:
+    case RenderCommand::Shading::Wireframe:
+    case RenderCommand::Shading::InkBlot:
+    case RenderCommand::Shading::InkStroke:
+    case RenderCommand::Shading::Seal:
+    case RenderCommand::Shading::Paper:
+    case RenderCommand::Shading::InkLozenge:
+    case RenderCommand::Shading::InkHatched:
+    case RenderCommand::Shading::InkDashed:
         return 0;
     }
     return 0;
@@ -184,13 +215,17 @@ void RenderTrianglesCommand::execute(QOpenGLFunctions* gl,
     QMatrix3x3 normalMatrix = mModelMatrix.normalMatrix();
     shader->setUniformValue("uNormalMatrix", normalMatrix);
 
-    const bool unlit = mShading == Shading::Unlit || mShading == Shading::Paper;
+    const bool unlit = mShading == Shading::Unlit || mShading == Shading::Paper || mShading == Shading::Felt;
     if (unlit) {
         shader->setUniformValue("uDisableLighting", true);
     }
     const int ink = inkMode(mShading);
     if (ink) {
         shader->setUniformValue("uInk", ink);
+    }
+    const int model = modelMode(mShading);
+    if (model) {
+        shader->setUniformValue("uModelShading", model);
     }
 
     geometryManager->renderGeometry(triangleGeometry, vao, vertexBuffer, colorBuffer, normalBuffer, indexBuffer, resourceManager, GL_TRIANGLES);
@@ -200,6 +235,9 @@ void RenderTrianglesCommand::execute(QOpenGLFunctions* gl,
     }
     if (ink) {
         shader->setUniformValue("uInk", 0);
+    }
+    if (model) {
+        shader->setUniformValue("uModelShading", 0);
     }
 }
 
@@ -331,6 +369,11 @@ void RenderInstancedCubesCommand::execute(QOpenGLFunctions* gl,
         shader->setUniformValue("uInk", ink);
         shader->setUniformValue("uInkRound", mShape == GeometryManager::InstanceShape::Cylinder);
     }
+    const int model = modelMode(mShading);
+    if (model) {
+        shader->setUniformValue("uModelShading", model);
+        shader->setUniformValue("uModelRound", mShape == GeometryManager::InstanceShape::Cylinder);
+    }
 
     geometryManager->renderInstancedCubes(mInstances, vao, vertexBuffer, colorBuffer, normalBuffer, indexBuffer, resourceManager, GL_TRIANGLES, mShape);
 
@@ -342,6 +385,9 @@ void RenderInstancedCubesCommand::execute(QOpenGLFunctions* gl,
     }
     if (ink) {
         shader->setUniformValue("uInk", 0);
+    }
+    if (model) {
+        shader->setUniformValue("uModelShading", 0);
     }
 }
 

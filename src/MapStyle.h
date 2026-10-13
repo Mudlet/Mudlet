@@ -78,7 +78,10 @@ struct MapStyle
         Light,
         // Watercolor on paper: every room the paper lightly washed with its environment's hue, so that the ink line
         // around it and what is drawn on it read; the hue kept, so areas still tell apart
-        Wash
+        Wash,
+        // A painted miniature: each room in its environment's color, a little desaturated, kept from the darkest and
+        // lightest, and warmed, as model paints are
+        Painted
     };
 
     enum class Shape {
@@ -106,7 +109,10 @@ struct MapStyle
         // An ink sketch: each room's top a pale lozenge in a wobbly ink line, hatched on the levels above the viewed one
         // and only dashed on those below, and each exit a brush stroke thinning toward its end, each uneven in a way it
         // takes from where it stands so that it holds still
-        InkLozenges
+        InkLozenges,
+        // A tabletop model: no rim, each room a block shaded under soft light from above with its top's edges rounded
+        // off, darkening where it meets the ground and casting a soft shadow there, and each exit a low path on the ground
+        ModelBlocks
     };
 
     enum class Doors {
@@ -129,7 +135,9 @@ struct MapStyle
         // sending out a ring of light each time the player arrives
         Pulse,
         // The player's room stamped in playerRoomColor() as a seal on a painting, with a frame cut into it
-        Seal
+        Seal,
+        // A game token in playerRoomColor() standing on the player's room, which keeps its own color
+        Token
     };
 
     enum class Compass {
@@ -156,7 +164,9 @@ struct MapStyle
         // The brightest of what is drawn blurred and added back, so that lines of light glow softly
         Bloom = 0x4,
         // The view darkened a little toward its edges and corners, as an old sheet is
-        Vignette = 0x8
+        Vignette = 0x8,
+        // The background drawn as the felt of a tabletop, darker toward the view's edges
+        Felt = 0x10
     };
     Q_DECLARE_FLAGS(PostEffects, PostEffect)
 
