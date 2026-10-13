@@ -177,6 +177,8 @@ signals:
     void cameraControlsChanged(int scale, int tilt, int roll, int azimuth);
     // The user asked to see this room on the 2D map, or this view's center when roomId is 0
     void editIn2DRequested(int roomId);
+    // A click on the world flew this view into another area, which the 2D map has not been switched to
+    void areaFlownInto(int areaId);
 
 private slots:
     void onCameraAnimationTick();

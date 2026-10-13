@@ -1806,6 +1806,7 @@ int ModernGLWidget::areaShownNext() const
 
 void ModernGLWidget::setCameraDistance(float r)
 {
+    stopFlight();
     mCameraController.setScale(r);
     mDistanceRequested = true;
     mFrameWhenShown = false;
@@ -1815,6 +1816,7 @@ void ModernGLWidget::setCameraDistance(float r)
 
 void ModernGLWidget::setCameraPosition(float r, float theta, float phi)
 {
+    stopFlight();
     mCameraController.setPosition(r, theta, phi);
     mDistanceRequested = true;
     // Set for the area on view, so it is that area's camera now even before a paint
@@ -2392,16 +2394,18 @@ float ModernGLWidget::roomPixels() const
 
 MapAtlas::Weights ModernGLWidget::zoomWeights()
 {
+    static_assert(MapAtlas::scmRoomsAloneDistance >= CameraController::scmMaxDistance);
     const float pixels = roomPixels();
+    const float distance = mCameraController.getScale();
     // Not made until first needed, as laying out the area graph can store its positions in the map
-    if (pixels >= MapAtlas::scmRoomsAlonePixels) {
+    if (pixels >= MapAtlas::scmRoomsAlonePixels || distance <= MapAtlas::scmRoomsAloneDistance) {
         return {};
     }
     refreshAtlas();
     if (mAtlas.areas().isEmpty()) {
         return {};
     }
-    return MapAtlas::weightsFor(pixels, pixels * mAtlas.typicalRadius());
+    return MapAtlas::weightsFor(pixels, pixels * mAtlas.typicalRadius(), distance);
 }
 
 void ModernGLWidget::refreshAtlas()
@@ -2626,6 +2630,7 @@ void ModernGLWidget::flyToArea(const int areaId)
     mFlight = flight;
     mCameraSmoothAnimating = true;
     mCameraAnimationTimer->start();
+    emit areaFlownInto(areaId);
     update();
 }
 
@@ -3607,6 +3612,8 @@ void ModernGLWidget::renderLabels(const bool onTop, const int lowestLevel, const
 
 void ModernGLWidget::startSmoothTransition(int targetAID, int targetX, int targetY, int targetZ)
 {
+    // Glides on from wherever a flight got to, as the flight would otherwise keep the camera
+    mFlight.reset();
     // Set up animation parameters
     mTargetAID = targetAID;
     mTargetMapCenterX = static_cast<float>(targetX);

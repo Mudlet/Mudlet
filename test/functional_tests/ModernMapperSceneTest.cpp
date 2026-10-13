@@ -343,12 +343,12 @@ private:
     }
 
     // Two areas of 20 by 20 rooms, joined by an exit; returns their IDs
-    std::pair<int, int> addTwoAreas() const
+    std::pair<int, int> addTwoAreas(const int side = 20) const
     {
         map()->mapClear();
         map()->mUserData.remove(TAreaGraph::cLayoutUserDataKey);
-        const int next = addGridArea(qsl("Westmarch"), 1, 20, 20, 1, 0);
-        addGridArea(qsl("Eastvale"), next, 20, 20, 1, 0);
+        const int next = addGridArea(qsl("Westmarch"), 1, side, side, 1, 0);
+        addGridArea(qsl("Eastvale"), next, side, side, 1, 0);
         map()->setExit(1, next, DIR_EAST);
         map()->mRoomIdHash[map()->mProfileName] = 0;
         return {map()->mpRoomDB->getRoom(1)->getArea(), map()->mpRoomDB->getRoom(next)->getArea()};
@@ -457,7 +457,7 @@ private slots:
         QVERIFY2(texturedCommands(widget) > 0, "near rooms show their symbols and exit markers");
         QVERIFY2(!drawnCubes(widget, levelOutline).isEmpty(), "near rooms are outlined");
 
-        queueFrame(widget, areaId, 20.0f);
+        queueFrame(widget, areaId, 100.0f);
         const float roomPixels = 0.5f / widget.mCameraController.worldUnitsPerPixel(QVector3D(0.0f, 0.0f, 0.0f));
         QVERIFY2(roomPixels < widget.mDetailPixels, qPrintable(qsl("rooms %1 pixels across are not too small to see").arg(roomPixels)));
         QCOMPARE(drawnRooms(widget).size(), 64 * 64);
@@ -495,7 +495,7 @@ private slots:
             return count;
         };
 
-        queueFrame(widget, areaId, 20.0f);
+        queueFrame(widget, areaId, 100.0f);
         const float roomPixels = 0.5f / widget.mCameraController.worldUnitsPerPixel(QVector3D(0.0f, 0.0f, 0.0f));
         QVERIFY2(roomPixels < widget.mDetailPixels, qPrintable(qsl("rooms %1 pixels across are not too small to see").arg(roomPixels)));
         QCOMPARE(texturedCommands(widget), 0);
@@ -674,31 +674,37 @@ private slots:
         const auto near = [](const float a, const float b) {
             return qAbs(a - b) < 1e-5f;
         };
-        MapAtlas::Weights weights = MapAtlas::weightsFor(MapAtlas::scmRoomsAlonePixels, 100.0f);
+        const float farOut = MapAtlas::scmFootprintsOnlyDistance;
+        MapAtlas::Weights weights = MapAtlas::weightsFor(MapAtlas::scmRoomsAlonePixels, 100.0f, farOut);
         QVERIFY(near(weights.footprint, 0.0f) && near(weights.world, 0.0f));
         QVERIFY(weights.roomsShown() && !weights.areasPicked());
-        weights = MapAtlas::weightsFor((MapAtlas::scmRoomsAlonePixels + MapAtlas::scmFootprintsOnlyPixels) / 2.0f, 100.0f);
+        weights = MapAtlas::weightsFor((MapAtlas::scmRoomsAlonePixels + MapAtlas::scmFootprintsOnlyPixels) / 2.0f, 100.0f, farOut);
         QVERIFY2(near(weights.footprint, 0.5f), qPrintable(qsl("half way the footprints are %1 in").arg(weights.footprint)));
         QVERIFY(weights.roomsShown() && weights.areasPicked());
-        weights = MapAtlas::weightsFor(MapAtlas::scmFootprintsOnlyPixels, MapAtlas::scmWorldFromPixels);
+        weights = MapAtlas::weightsFor(MapAtlas::scmFootprintsOnlyPixels, MapAtlas::scmWorldFromPixels, farOut);
         QVERIFY(near(weights.footprint, 1.0f) && near(weights.world, 0.0f));
         QVERIFY(!weights.roomsShown() && weights.areasPicked() && !weights.nodesPicked());
-        weights = MapAtlas::weightsFor(0.1f, MapAtlas::scmWorldOnlyPixels);
+        weights = MapAtlas::weightsFor(0.1f, MapAtlas::scmWorldOnlyPixels, farOut);
         QVERIFY(near(weights.footprint, 1.0f) && near(weights.world, 1.0f));
         QVERIFY(weights.nodesPicked());
+        // However small the rooms, as far as the camera could go before the atlas they show alone
+        weights = MapAtlas::weightsFor(0.1f, 100.0f, CameraController::scmMaxDistance);
+        QVERIFY(near(weights.footprint, 0.0f));
+        weights = MapAtlas::weightsFor(0.1f, 100.0f, (MapAtlas::scmRoomsAloneDistance + MapAtlas::scmFootprintsOnlyDistance) / 2.0f);
+        QVERIFY2(near(weights.footprint, 0.5f), qPrintable(qsl("half way out the footprints are %1 in").arg(weights.footprint)));
         float lastFootprint = 0.0f;
         float lastWorld = 0.0f;
         for (float roomPixels = 4.0f; roomPixels > 0.05f; roomPixels *= 0.9f) {
-            weights = MapAtlas::weightsFor(roomPixels, roomPixels * 10.0f);
+            weights = MapAtlas::weightsFor(roomPixels, roomPixels * 10.0f, 100.0f / roomPixels);
             QVERIFY2(weights.footprint >= lastFootprint && weights.world >= lastWorld, "zooming out took a level back out");
             lastFootprint = weights.footprint;
             lastWorld = weights.world;
         }
 
-        const auto [westId, eastId] = addTwoAreas();
+        const auto [westId, eastId] = addTwoAreas(60);
         ModernGLWidget widget(map(), mpHost);
-        // The 2D map's usual framing, and as far out as the rooms show alone, at 600 pixels high
-        for (const float distance : {1.5f, 20.0f}) {
+        // The 2D map's usual framing, and as far out as the zoom slider goes, at 600 pixels high
+        for (const float distance : {1.5f, 20.0f, CameraController::scmMaxDistance}) {
             queueFrame(widget, westId, distance);
             QVERIFY2(atlasLayerOpacities(widget).isEmpty(), qPrintable(qsl("the atlas is drawn at distance %1").arg(distance)));
             QVERIFY(!drawnRooms(widget).isEmpty());
@@ -707,18 +713,18 @@ private slots:
         QVERIFY(widget.mAtlas.areas().isEmpty());
 
         // Fading in over the rooms
-        queueFrame(widget, westId, 30.0f);
+        queueFrame(widget, westId, 150.0f);
         QList<float> opacities = atlasLayerOpacities(widget);
         QVERIFY(!drawnRooms(widget).isEmpty());
         QVERIFY2(opacities.size() == 1 && opacities.first() > 0.0f && opacities.first() < 1.0f, qPrintable(qsl("%1 layers queued").arg(opacities.size())));
         QCOMPARE(widget.mAtlas.areas().size(), 2);
 
-        queueFrame(widget, westId, 45.0f);
+        queueFrame(widget, westId, 200.0f);
         QVERIFY(drawnRooms(widget).isEmpty());
         QCOMPARE(atlasLayerOpacities(widget), QList<float>{1.0f});
 
         // The world graph and the ring around the area shown, without the footprints
-        queueFrame(widget, westId, 200.0f);
+        queueFrame(widget, westId, 800.0f);
         QCOMPARE(atlasLayerOpacities(widget), (QList<float>{1.0f, 1.0f}));
         const auto* world = [&widget]() -> const RenderTrianglesCommand* {
             for (const auto& command : widget.mRenderCommandQueue.commands()) {
@@ -807,7 +813,7 @@ private slots:
 
     void test_aClickFliesIntoTheAreaUnderItWithoutGL()
     {
-        const auto [westId, eastId] = addTwoAreas();
+        const auto [westId, eastId] = addTwoAreas(60);
         // The east area straight up the view from the west one, far enough for both names to show
         map()->areaGraph()->refresh();
         QVERIFY(map()->areaGraph()->setPosition(westId, QPointF(0.0, 0.0)));
@@ -817,7 +823,7 @@ private slots:
         QVERIFY2(widget.roomAt(QPoint(400, 300)), "no room in the middle of the view");
         QCOMPARE(widget.areaAt(QPoint(400, 300)), 0);
 
-        queueFrame(widget, westId, 45.0f);
+        queueFrame(widget, westId, 200.0f);
         const MapAtlas::Area* pWest = widget.mAtlas.area(westId);
         const MapAtlas::Area* pEast = widget.mAtlas.area(eastId);
         QVERIFY(pWest && pEast);
@@ -834,7 +840,7 @@ private slots:
         QVERIFY(labels.first().shownArea && !labels.last().shownArea);
 
         // A node is picked a few pixels off its rim, but not well clear of it
-        queueFrame(widget, westId, 200.0f);
+        queueFrame(widget, westId, 800.0f);
         QVERIFY(widget.mZoomWeights.nodesPicked());
         const float unitsPerPixel = widget.mCameraController.worldUnitsPerPixel(widget.mCameraController.getTarget());
         QCOMPARE(widget.areaAt(pixelOfArea(widget, eastId, -away * (pEast->radius + 3.0f * unitsPerPixel))), eastId);
@@ -870,15 +876,18 @@ private slots:
     {
         const auto [westId, eastId] = addTwoAreas();
         ModernGLWidget widget(map(), mpHost);
-        queueFrame(widget, westId, 200.0f);
+        queueFrame(widget, westId, 800.0f);
         QVERIFY(widget.mZoomWeights.nodesPicked());
         widget.mFramePending = false;
         widget.jumpTo(eastId, 0, 0, 0);
         QVERIFY(widget.mSavedCameras.contains(westId));
         QVERIFY2(widget.mSavedCameras.value(westId).distance <= CameraController::scmMaxDistance, "coming back to the area would show the world, not its rooms");
+        widget.jumpTo(westId, 0, 0, 0);
+        widget.updateMatrices();
+        QCOMPARE(widget.zoomWeights().footprint, 0.0f);
 
         // The zoom slider is not overridden by a flight still under way
-        widget.setCameraDistance(200.0f);
+        widget.setCameraDistance(800.0f);
         widget.flyToArea(westId);
         QVERIFY(widget.mFlight);
         widget.slot_setScale(50);
@@ -886,6 +895,32 @@ private slots:
         const float sliderScale = widget.mCameraController.getScale();
         widget.onCameraAnimationTick();
         QCOMPARE(widget.mCameraController.getScale(), sliderScale);
+    }
+
+    void test_aFlightGivesWayToOtherCameraMovesWithoutGL()
+    {
+        const auto [westId, eastId] = addTwoAreas();
+        ModernGLWidget widget(map(), mpHost);
+        const auto settle = [&widget] {
+            for (int tick = 0; tick < 1000 && widget.mCameraSmoothAnimating; ++tick) {
+                widget.onCameraAnimationTick();
+            }
+        };
+        queueFrame(widget, westId, 800.0f);
+        widget.flyToArea(eastId);
+        widget.onCameraAnimationTick();
+        // As set3DViewCameraPosition() would
+        widget.setCameraDistance(30.0f);
+        settle();
+        QCOMPARE(widget.mCameraController.getScale(), 30.0f);
+
+        // As centerview() or the arrow keys would
+        widget.setCameraDistance(800.0f);
+        widget.flyToArea(westId);
+        widget.onCameraAnimationTick();
+        widget.setViewCenter(westId, 2, 3, 0);
+        settle();
+        QCOMPARE(widget.mCameraController.getTarget(), QVector3D(2.0f, 3.0f, 0.0f));
     }
 
     void benchmark_hugeMap()
@@ -921,7 +956,7 @@ private slots:
         };
         // close is about the 2D map's default zoom; far shows the whole of the viewed level and more; areas and
         // world are zoomed out to the areas' footprints and to the world graph
-        const QList<Scenario> scenarios{{"close", 1.0f, false}, {"mid", 8.0f, false}, {"far", 40.0f, false}, {"far_top", 40.0f, true}, {"areas", 60.0f, false}, {"world", 800.0f, false}};
+        const QList<Scenario> scenarios{{"close", 1.0f, false}, {"mid", 8.0f, false}, {"far", 40.0f, false}, {"far_top", 40.0f, true}, {"areas", 200.0f, false}, {"world", 800.0f, false}};
         const int frames = qEnvironmentVariableIntValue("MUDLET_BENCH_3D_FRAMES_PER_SCENARIO") > 0 ? qEnvironmentVariableIntValue("MUDLET_BENCH_3D_FRAMES_PER_SCENARIO") : 20;
         for (const Scenario& scenario : scenarios) {
             if (scenario.topView) {
@@ -1071,7 +1106,7 @@ private slots:
             widget.jumpTo(areaId, 0, 0, 0);
             views(widget, qsl("huge"), {1.0f, 3.0f});
             // Zoomed out to the areas' footprints and to the world graph
-            views(widget, qsl("huge-atlas"), {60.0f, 800.0f});
+            views(widget, qsl("huge-atlas"), {200.0f, 800.0f});
         }
         mpHost->mShowRoomID = savedIds;
         mpHost->mBubbleMode = savedBubbles;
