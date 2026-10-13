@@ -256,7 +256,7 @@ void MapStitch::build(const TMap& map, const int areaId, const int level, const 
             }
         }
         neighbour.collisions = static_cast<int>(landing.size());
-        if (static_cast<qsizetype>(neighbour.collisions) * scmOverlapShare > pNeighbourArea->getAreaRooms().size()) {
+        if (static_cast<qsizetype>(neighbour.collisions) * scmOverlapShare > landing.size() + cells.size()) {
             neighbour.placement = Placement::Overlaps;
             continue;
         }

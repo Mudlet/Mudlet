@@ -1280,11 +1280,13 @@ private slots:
             return bar.color == tintOf(routeColor);
         }));
         // Only on the rooms on the way that are drawn: the west area's, from its southwest corner to the way out in
-        // the middle of its east side, then the middle area's drawn beside it, along its middle row
+        // the middle of its east side, then the middle area's rooms drawn beside it, along its middle row
         const float edge = side / 2 + 0.7f;
         for (const DrawnCube& bar : bars) {
             const bool inWest = bar.center.x() < edge && bar.center.y() > -edge && bar.center.y() < 0.7f;
-            const bool inMiddle = bar.center.x() > edge - 1.0f && bar.center.x() < edge + side && std::abs(bar.center.y()) < 0.7f;
+            const bool inMiddle = std::abs(bar.center.y()) < 0.7f && std::any_of(widget.mStitch.rooms().cbegin(), widget.mStitch.rooms().cend(), [&](const MapStitch::Room& room) {
+                                      return std::abs(room.at.x() - bar.center.x()) <= 0.6f && std::abs(room.at.y() - bar.center.y()) <= 0.6f;
+                                  });
             QVERIFY2(inWest || inMiddle, qPrintable(qsl("a bar at %1, %2").arg(bar.center.x()).arg(bar.center.y())));
         }
         QVERIFY(std::any_of(bars.cbegin(), bars.cend(), [&](const DrawnCube& bar) {
