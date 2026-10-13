@@ -62,6 +62,9 @@ struct Segment
     float height = 0.0f;
     QColor color;
     int level = 0;
+    // The room drawing it and, for an exit's line, the room it leads to; 0 if none
+    int roomId = 0;
+    int toRoomId = 0;
 };
 
 // A flat filled triangle
@@ -74,6 +77,8 @@ struct Triangle
     int level = 0;
     // Sized to stay readable when the rooms are too small to see, so drawn at any distance
     bool distant = false;
+    int roomId = 0;
+    int toRoomId = 0;
 };
 
 // An area exit's arrow, from its room's center to its tip, for clicking through to destinationId
