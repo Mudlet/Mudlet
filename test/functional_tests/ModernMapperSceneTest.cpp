@@ -1361,6 +1361,12 @@ private slots:
         queueFrame(widget, areas.west, 2.0f);
         const QList<DrawnCube> rooms = drawnRooms(widget);
         QCOMPARE(rooms.size(), 50);
+        // The middle area's arrow back west is left to the west area's own arrow east, drawn over the same gap
+        const QVector<CubeInstanceData>& stitchedBars = widget.mStitchScene.instances(RetainedMapScene::Layer::ExitBars)->instances;
+        QVERIFY(!stitchedBars.isEmpty());
+        for (const CubeInstanceData& bar : stitchedBars) {
+            QVERIFY2(bar.transform.column(3).x() > 2.9f, qPrintable(qsl("an exit bar at x %1").arg(bar.transform.column(3).x())));
+        }
         // Muted toward the background, so the area shown stands out from those around it
         const QVector4D plain = tintOf(RoomAppearance::environmentColor(*map(), *mpHost, map()->mpRoomDB->getRoom(areas.middleFirst + 10)->environment));
         bool mutedWayIn = false;
