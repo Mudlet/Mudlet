@@ -44,16 +44,13 @@ class QUrl;
 // the build suffix are settled once and remembered; everything else recomputes on
 // every call.
 //
-// The settings store is the one service that is main-window-only today, and
-// deliberately so: getQSettings() stays null until mudlet::setupConfig() has
-// settled the root. The two resolve the root the same way - setupConfig()
-// validates nothing getMudletPath() does not - so this is about ordering, not
-// about one answer being better than the other. setupConfig() is what reports a
-// rejected portable.txt to the user, and no Mudlet.ini may be opened before that
-// has had its chance: a root resolved on first use can be replaced afterwards,
-// but a store opened under one hands out a pointer the Updater keeps for the
-// life of the process. Settling the root without a main window is for libmudlet
-// (#8681) to add, not for a caller here to work around.
+// The settings store waits for the config root to be settled: getQSettings()
+// stays null until settleConfigRoot() has run. That reports a refused portable.txt,
+// and no Mudlet.ini may be opened before it has had its chance: a root resolved on
+// first use can be replaced afterwards, but a store opened under one hands out a
+// pointer the Updater keeps for the life of the process. The main window settles
+// it in mudlet::setupConfig(), once it is built and can put that report on screen;
+// any other HostManager settles it as it is made, unless it is settled already.
 class MudletApp
 {
 public:
@@ -116,7 +113,10 @@ public:
     // inference is what hides profiles, so assume the strongest content instead.
     static bool configDirHoldsProfiles(const QString& dir);
 
-    // Resolves the root on first use and caches it. setConfigPath() replaces it (that is how setupConfig()
+    // Whether a root is installed, which getQSettings() needs: settleConfigRoot() has run, or a test put one in
+    static bool configRootSettled();
+
+    // Resolves the root on first use and caches it. setConfigPath() replaces it (that is how settleConfigRoot()
     // installs the validated root); an empty path forgets it instead.
     static QString getMudletPath(enums::mudletPathType mode, const QString& extra1 = QString(), const QString& extra2 = QString());
 
@@ -144,8 +144,10 @@ public:
 
     // The persistent application settings in Mudlet.ini under the config root, or
     // nullptr until the root has been settled - see the note on the class above.
-    // Callers that can run before mudlet::setupConfig() have to check; the rest
-    // run long after startup and dereference it directly.
+    // Callers that can run before settleConfigRoot() have to check. A profile is
+    // made only after it - by a HostManager, or once mudlet::setupConfig() has run -
+    // which Host's constructor asserts, so anything a profile reaches can
+    // dereference it.
     static QSettings* getQSettings();
     // For a QSettings that reads Mudlet.ini before getQSettings() exists. Qt hands
     // a file parsed moments ago to the next QSettings without parsing it again,
@@ -199,11 +201,12 @@ public:
     static void setNetworkRequestDefaults(const QUrl& url, QNetworkRequest& request);
 
 private:
-    // Only the main window moves the config root, the language or the
-    // preferences below in a running Mudlet: setupConfig() installs the root it
-    // has settled, and the language follows the preferences dialog through
+    // Only the main window moves the language or the preferences below in a
+    // running Mudlet: the language follows the preferences dialog through
     // mudlet::setInterfaceLanguage()
     friend class mudlet;
+    // Only so that a pool can call settleConfigRoot() when there is no main window
+    friend class HostManager;
     // Resolving the root once is the point, so the only way to test it is to be
     // able to forget the answer - which setConfigPath(QString()) does
     friend class ConfigDirOverrideTest;
@@ -216,6 +219,9 @@ private:
     // store to the Updater. portable says whether the root came from a
     // portable.txt that was honoured.
     static void setConfigPath(const QString& path, bool portable = false);
+    // Resolves the config root, logs what the resolution found - a refused portable.txt included - and
+    // installs it through setConfigPath(), after which getQSettings() opens the Mudlet.ini under it.
+    static ConfigDirResolution settleConfigRoot();
     static void setInterfaceLanguage(const QString& language);
     static void setStorePasswordsSecurely(bool);
     static void setFirstLaunch(bool);

@@ -114,9 +114,8 @@ int knobOr(const char* envName, const QString& iniKey, const int fallback, const
         }
         return value;
     }
-    // Null until mudlet::setupConfig() has settled the config root, so an early pool or a harness runs on the defaults
     QSettings* settings = MudletApp::getQSettings();
-    if (settings && settings->contains(iniKey)) {
+    if (settings->contains(iniKey)) {
         bool parsed = false;
         const int value = settings->value(iniKey).toInt(&parsed);
         if (!parsed || value < minimum) {
