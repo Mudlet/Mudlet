@@ -18,10 +18,8 @@
  ***************************************************************************/
 
 /*
- * tempComplexRegexTrigger()'s eleventh argument names a sound file to play on
- * every fire. Whether a trigger is a sound trigger leaves nothing a script can
- * read back - a fire with no file only logs a warning - so it is checked here
- * on the trigger itself (#10654).
+ * A sound trigger's fire with no file to play shows only in Mudlet's log, which
+ * a spec cannot read, so these watch the log for TMedia trying to fetch one.
  *
  * Run with: ctest -R TriggerSoundArgumentTest -V
  */
@@ -41,8 +39,6 @@
 #include "mudlet.h"
 
 #include "GroupedTest.h"
-
-using namespace std::chrono_literals;
 
 class TriggerSoundArgumentTest : public QObject
 {
@@ -103,9 +99,33 @@ private slots:
         TTrigger* pTrigger = mpHost->getTriggerUnit()->findTrigger(qsl("soundArgumentEmpty"));
         QVERIFY(pTrigger);
         QVERIFY2(!pTrigger->mSoundTrigger, "an empty sound file name should mean no sound, as a number or nil does");
+        QTest::failOnWarning(scmMediaFetchWarning);
+        feedLine(qsl("sound argument empty"));
     }
 
-    // The control: a real name still makes a sound trigger
+    void test_blankSoundFileMakesNoSoundTrigger()
+    {
+        QVERIFY(mpHost->mLuaInterpreter.compileAndExecuteScript(qsl(R"(tempComplexRegexTrigger("soundArgumentBlank", "^sound argument blank$", function() end, 0, 0, 0, 0, 0, 0, 0, "  ", 0, 0))")));
+        TTrigger* pTrigger = mpHost->getTriggerUnit()->findTrigger(qsl("soundArgumentBlank"));
+        QVERIFY(pTrigger);
+        QVERIFY2(!pTrigger->mSoundTrigger, "a sound file name of only spaces should mean no sound");
+        QTest::failOnWarning(scmMediaFetchWarning);
+        feedLine(qsl("sound argument blank"));
+    }
+
+    // The state a ticked sound box with an empty file field leaves, from the
+    // trigger editor or a package
+    void test_soundTriggerWithNoFilePlaysNothing()
+    {
+        QVERIFY(mpHost->mLuaInterpreter.compileAndExecuteScript(qsl(R"(tempComplexRegexTrigger("soundFlagNoFile", "^sound flag no file$", function() end, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0))")));
+        TTrigger* pTrigger = mpHost->getTriggerUnit()->findTrigger(qsl("soundFlagNoFile"));
+        QVERIFY(pTrigger);
+        pTrigger->mSoundTrigger = true;
+        pTrigger->setSound(QString());
+        QTest::failOnWarning(scmMediaFetchWarning);
+        feedLine(qsl("sound flag no file"));
+    }
+
     void test_namedSoundFileMakesASoundTrigger()
     {
         QVERIFY(mpHost->mLuaInterpreter.compileAndExecuteScript(
@@ -113,7 +133,17 @@ private slots:
         TTrigger* pTrigger = mpHost->getTriggerUnit()->findTrigger(qsl("soundArgumentNamed"));
         QVERIFY(pTrigger);
         QVERIFY(pTrigger->mSoundTrigger);
+        QCOMPARE(pTrigger->mSoundFile, qsl("ding.wav"));
+        // ding.wav is not in the profile's media directory, so playing it has
+        // TMedia look for it online - which is what proves the fire played it
+        QTest::ignoreMessage(QtWarningMsg, scmMediaFetchWarning);
+        feedLine(qsl("sound argument named"));
     }
+
+private:
+    inline static const QRegularExpression scmMediaFetchWarning{qsl(R"(TMedia::isValidUrl\(\) WARNING)")};
+
+    void feedLine(const QString& line) { QVERIFY(mpHost->mLuaInterpreter.compileAndExecuteScript(qsl(R"(feedTriggers("%1\n"))").arg(line))); }
 };
 
 #include "TriggerSoundArgumentTest.moc"

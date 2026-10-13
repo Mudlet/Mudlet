@@ -2622,7 +2622,7 @@ int TLuaInterpreter::tempComplexRegexTrigger(lua_State* L)
     if (lua_type(L, 11) == LUA_TSTRING) {
         soundFile = lua_tostring(L, 11);
     }
-    const bool playSound = !soundFile.isEmpty();
+    const bool playSound = !soundFile.trimmed().isEmpty();
 
     QStringList patterns;
     QList<int> propertyList;
