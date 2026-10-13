@@ -5810,8 +5810,8 @@ void cTelnet::slot_socketReadyToBeRead()
     readPendingSocketData();
 }
 
-// Requeues itself for what is left after one BUFFER_SIZE read: readyRead() fires only on fresh bytes,
-// so the rest of a burst would sit unseen until the server sent again. Not drained via
+// Requeues itself for what is left after one BUFFER_SIZE read, or deferred by a drain: readyRead()
+// fires only on fresh bytes, so the rest of a burst would sit unseen until the server sent again. Not drained via
 // slot_socketReadyToBeRead(): the leftovers predate any command a trigger has since sent, so treating
 // them as that command's reply would report a latency of nearly nothing.
 void cTelnet::readPendingSocketData()
@@ -5884,17 +5884,18 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
     if (mDecompressionRecursionDepth > scmMaxDecompressionRecursion) {
         qWarning() << "cTelnet::processSocketData(...) WARNING - recursion depth exceeded, dropping remaining data";
         if (mNeedDecompression) {
-            // What is dropped here is the rest of the compressed stream, and
-            // zlib cannot pick a stream up again past a gap, so whatever the
-            // game compresses next would come out as garbage or not at all.
-            // Refuse the stream so the game falls back to plain text instead.
-            //: Shown when one read from the game inflates to more than can be processed safely (e.g. a decompression bomb) while MCCP compression is on.
+            // A drain defers its input rather than going this deep, so this is
+            // processing nested inside one, such as a feedTelnet() from a trigger
+            // at its deepest level. zlib cannot pick a stream up again past what
+            // is dropped here, so refuse the stream and have the game fall back
+            // to plain text.
+            //: Shown when data is processed nested too deeply to do safely (e.g. feedTelnet() called from a trigger while a large compressed read is being shown) while MCCP compression is on.
             postMessage(tr("[ WARN  ]  - Too much compressed data to process at once, some was lost - compression disabled.\n"
                            "If the display looks garbled, please reconnect to the game."));
             refuseCompressedStream();
             return;
         }
-        //: Shown when too much data expands out of one compressed read (e.g. a decompression bomb) to process safely.
+        //: Shown when data is processed nested too deeply to do safely (e.g. feedTelnet() called from a trigger while a large compressed read is being shown).
         postMessage(tr("[ WARN  ]  - Too much data to process at once, some may have been lost."));
         return;
     }
@@ -6203,7 +6204,8 @@ Some data loss is likely - please mention this problem to the game admins.)",
     // reconnect makes this leftover the dropped connection's, same as the bytes
     // the loop above stopped at.
     if (remainingData && remainingAmount > 0 && !(mDeferredReconnect && !loopbackTesting)) {
-        // the leftover arrived in the same read, so it has no wait of its own
+        // the leftover arrived in the same read, so it has no wait of its own;
+        // a part deferred below is recorded with the wait for its turn
         if (recordingThisRead) {
             mRecordLastChunkMSecTimeOffset = static_cast<qint32>(mRecordingChunkTimer.elapsed());
         }
@@ -6212,7 +6214,8 @@ Some data loss is likely - please mention this problem to the game admins.)",
             return;
         }
         // Another level would be refused, and losing the rest of a compressed
-        // stream garbles everything after it, so leave it for the next read:
+        // stream garbles everything after it, so leave it for the next
+        // event-loop turn (loopbackTest() takes it in straight away)
         mDeferredInput.append(remainingData, remainingAmount);
     }
 
