@@ -255,7 +255,8 @@ void main()
         FragColor = vec4(vertexColor.rgb * shade, vertexColor.a);
     } else if (uModelShading == 1 || uModelShading == 2) {
         vec3 normal = normalize(surfaceNormal);
-        bool top = localNormal.z > 0.5;
+        // A path standing upright, as an up or down exit's, turns its template's top to the side
+        bool top = uModelShading == 1 ? localNormal.z > 0.5 : normal.z > 0.5;
         if (uModelShading == 1) {
             if (top) {
                 // Leaning outward over the last part of the way to the rim, as a rounded edge does
@@ -282,7 +283,7 @@ void main()
         float diffuse = max(dot(normal, normalize(cModelLight)), 0.0);
         float light = 0.42 + 0.22 * (0.5 + 0.5 * normal.z) + 0.45 * diffuse;
         // Darker toward the ground, where little light reaches between the blocks
-        if (!top && localNormal.z > -0.5) {
+        if (uModelShading == 1 && !top && localNormal.z > -0.5) {
             light *= mix(0.6, 1.0, smoothstep(-1.0, 0.6, localPosition.z));
         }
         FragColor = vec4(vertexColor.rgb * light * vec3(1.03, 1.0, 0.95), vertexColor.a);
