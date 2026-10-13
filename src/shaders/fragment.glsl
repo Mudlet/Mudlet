@@ -28,6 +28,7 @@ uniform float uFogMax = 0.0;
 // over uWireGlow pixels and a faint uWireFill across the faces
 uniform bool uWireframe = false;
 uniform bool uWireRound = false;
+uniform float uWireSides = 24.0;
 uniform float uWireWidth = 1.5;
 uniform float uWireGlow = 5.0;
 uniform float uWireFill = 0.06;
@@ -115,7 +116,14 @@ void main()
     } else if (uWireframe) {
         float edge;
         if (uWireRound) {
-            edge = abs(localNormal.z) > 0.5 ? 1.0 - length(localPosition.xy) : 1.0 - abs(localPosition.z);
+            if (abs(localNormal.z) > 0.5) {
+                // To the cap's nearest side: a circle's radius would leave the middle of each side short of the rim, zoomed in
+                float side = 6.2831853 / uWireSides;
+                float middle = (floor(atan(localPosition.y, localPosition.x) / side) + 0.5) * side;
+                edge = 1.0 - dot(localPosition.xy, vec2(cos(middle), sin(middle))) / cos(side * 0.5);
+            } else {
+                edge = 1.0 - abs(localPosition.z);
+            }
         } else {
             // A face's own axis is pushed out of reach so only the two axes along the face make edges
             vec3 inward = 1.0 - abs(localPosition) + step(0.5, abs(localNormal)) * 2.0;

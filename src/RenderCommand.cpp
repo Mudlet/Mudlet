@@ -285,6 +285,7 @@ void RenderInstancedCubesCommand::execute(QOpenGLFunctions* gl,
     if (wireframe) {
         shader->setUniformValue("uWireframe", true);
         shader->setUniformValue("uWireRound", mShape == GeometryManager::InstanceShape::Cylinder);
+        shader->setUniformValue("uWireSides", static_cast<float>(GeometryManager::scmCylinderSegments));
     }
 
     geometryManager->renderInstancedCubes(mInstances, vao, vertexBuffer, colorBuffer, normalBuffer, indexBuffer, resourceManager, GL_TRIANGLES, mShape);
