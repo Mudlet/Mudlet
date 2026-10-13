@@ -606,6 +606,7 @@ void TNullConsoleFrontend::dropWindows()
     mMainCommandLine.menuItems.clear();
     // The view has its own map widget, if any. An embedded mapper went with the main window's stand-in.
     mMapWidget.reset();
+    mpEmbeddedMapperBox.reset();
 }
 
 void TNullConsoleFrontend::makeMainCommandLine(const bool savesHistory)
@@ -1122,7 +1123,13 @@ std::pair<bool, QString> TNullConsoleFrontend::createMapper(const QString& windo
     }
     mMapWidget.reset();
     if (!mpEmbeddedMapper) {
-        mpEmbeddedMapper = new QObject(holderFor(windowname, nullptr));
+        mpEmbeddedMapper = new TNullMapView(mpHost, holderFor(windowname, nullptr));
+        mEmbeddedMapperWindow = userWindowOrMain(windowname);
+        mpEmbeddedMapperBox.reset();
+        // dlgMapper shows itself when a map load asks it to
+        QObject::connect(mpHost->mpMap.data(), &TMap::signal_mapperShowRequested, mpEmbeddedMapper, [this]() {
+            showEmbeddedMapper();
+        });
         copyPlayerRoomStyleToMap();
         mpHost->loadMapForNewMapper(true);
         TEvent mapOpenEvent{};
@@ -1130,13 +1137,28 @@ std::pair<bool, QString> TNullConsoleFrontend::createMapper(const QString& windo
         mapOpenEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         mpHost->raiseEvent(mapOpenEvent);
     }
+    showEmbeddedMapper();
     return {true, QString()};
 }
 
 void TNullConsoleFrontend::createMapperDock(const QString& title, const QString&)
 {
-    mMapWidget = MapWidget{title, QRect(), false};
+    mMapWidget = MapWidget{title, QRect(), false, std::make_unique<TNullMapView>(mpHost)};
     copyPlayerRoomStyleToMap();
+}
+
+// As a map load or a script shows the dlgMapper, which leaves a hidden window holding it hidden
+void TNullConsoleFrontend::showEmbeddedMapper()
+{
+    mEmbeddedMapperShown = true;
+    reportEmbeddedMapperVisibility();
+}
+
+void TNullConsoleFrontend::reportEmbeddedMapperVisibility()
+{
+    if (mpEmbeddedMapper) {
+        mpEmbeddedMapper->setShown(mEmbeddedMapperShown && shownWithin(mEmbeddedMapperWindow, mpEmbeddedMapperBox.get()));
+    }
 }
 
 // As TMainConsole does as it makes a dlgMapper, for the map to have the profile's player room style
@@ -1156,6 +1178,7 @@ std::pair<bool, QString> TNullConsoleFrontend::placeMapWidget(const QString& are
 
     // Shown before the area is checked, as TMainConsole::placeMapWidget() does
     mMapWidget->shown = true;
+    mMapWidget->pView->setShown(true);
     if (area.isEmpty()) {
         return {true, QString()};
     }
@@ -1208,6 +1231,7 @@ bool TNullConsoleFrontend::hideMapWidget()
         return false;
     }
     mMapWidget->shown = false;
+    mMapWidget->pView->setShown(false);
     return true;
 }
 
@@ -1303,6 +1327,7 @@ void TNullConsoleFrontend::reportVisibility()
     for (const auto& [name, box] : mScrollBoxes) {
         registry.setPlainWindowVisible(name, box->shown && shownWithin(box->userWindow, box->box.get()));
     }
+    reportEmbeddedMapperVisibility();
 }
 
 bool TNullConsoleFrontend::createScrollBox(const QString& windowname, const QString& name, const int x, const int y, const int width, const int height)
@@ -2285,6 +2310,11 @@ std::pair<bool, QString> TNullConsoleFrontend::reparentWindow(const QString& win
         }
         if (namesEmbeddedMapper(name)) {
             mpEmbeddedMapper->setParent(holderFor(userWindow, box.get()));
+            const bool moved = userWindow != mEmbeddedMapperWindow || box != mpEmbeddedMapperBox;
+            mEmbeddedMapperShown = show || (!moved && mEmbeddedMapperShown);
+            mEmbeddedMapperWindow = userWindow;
+            mpEmbeddedMapperBox = std::move(box);
+            reportEmbeddedMapperVisibility();
             return {true, QString()};
         }
         return {false, qsl("element '%1' not found").arg(name)};
@@ -2333,6 +2363,9 @@ void TNullConsoleFrontend::moveScrollBoxContents(const ScrollBox* box)
         if (within(textBox.box.get(), box)) {
             textBox.userWindow = box->userWindow;
         }
+    }
+    if (within(mpEmbeddedMapperBox.get(), box)) {
+        mEmbeddedMapperWindow = box->userWindow;
     }
 }
 

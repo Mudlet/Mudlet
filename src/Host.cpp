@@ -2703,6 +2703,16 @@ bool Host::mapOpen() const
     return mpMap && (mpMap->mapViewFrontend() || !hasConsoleView());
 }
 
+TMapViewFrontend* Host::mapViewFrontend() const
+{
+    if (!hasConsoleView()) {
+        if (TMapViewFrontend* pView = mpNullConsoleFrontend->mapView()) {
+            return pView;
+        }
+    }
+    return mpMap->mapViewFrontend();
+}
+
 void Host::setF3SearchEnabled(const bool enabled)
 {
     mF3SearchEnabled = enabled;

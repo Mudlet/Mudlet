@@ -159,6 +159,7 @@ set(mudlet_SRCS
     TMxpVersionTagHandler.cpp
     TNullAppFrontend.cpp
     TNullConsoleFrontend.cpp
+    TNullMapView.cpp
     TriggerMatchPool.cpp
     TriggerUnit.cpp
     TTriggerPrescan.cpp
@@ -471,6 +472,7 @@ set(mudlet_HDRS
     TMxpVersionTagHandler.h
     TNullAppFrontend.h
     TNullConsoleFrontend.h
+    TNullMapView.h
     TPrintSink.h
     Tree.h
     TriggerMatchPool.h

@@ -85,6 +85,7 @@ class TMainConsole;
 struct TConsoleModel;
 struct MapStyle;
 class TMap;
+class TMapViewFrontend;
 class MMCPServer;
 class dlgIRC;
 class TIrcClient;
@@ -373,8 +374,10 @@ public:
     TConsoleFrontend* consoleFrontend() const;
     bool hasConsoleView() const;
     // Whether scripts see the map as open: once a mapper shows it, or always with no console view,
-    // where no mapper can be made and the model is the whole map.
+    // where the model is the whole map.
     bool mapOpen() const;
+    // The mapper whose 2D map scripts ask about; with no console view, the one the null view has recorded
+    TMapViewFrontend* mapViewFrontend() const;
     void setMainConsoleView(TMainConsole* view);
     // Keeps TMainConsole's translation context, so the existing translations still apply.
     static QString loggingAnnouncementText(const bool isLogging, const QString& logFileName);
