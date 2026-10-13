@@ -47,6 +47,9 @@ struct Options
     bool largeAreaExitArrows = false;
     // Doors drawn as a plan's door swing, as MapStyle::Doors::Swings says, rather than the 2D map's strokes
     bool doorSwings = false;
+    // A room's width, in rooms' spacing, and whether it is round, so that a door swing clears its room
+    float roomSize = 0.0f;
+    bool roundRooms = false;
     // Only where area exits can be clicked, with nothing to draw, for picking without the cost of the whole scene
     bool areaExitsOnly = false;
     QColor exitColor;

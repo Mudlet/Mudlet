@@ -38,9 +38,8 @@ namespace {
 constexpr int scmDirections[] = {DIR_NORTH, DIR_NORTHEAST, DIR_EAST, DIR_SOUTHEAST, DIR_SOUTH, DIR_SOUTHWEST, DIR_WEST, DIR_NORTHWEST, DIR_UP, DIR_DOWN, DIR_IN, DIR_OUT};
 // The 2D map's door glyphs are sized by a room's spacing across plus its spacing down
 constexpr qreal scmDoorRoomSpan = 2.0;
-// A door swing's opening, and how far along its exit line from the room's center, in rooms' spacing
+// A door swing's widest opening, in rooms' spacing
 constexpr qreal scmDoorSwingWidth = 0.3;
-constexpr qreal scmDoorSwingInset = 0.28;
 constexpr int scmDiscSides = 16;
 // Qt's dash stroker's limit, QDashStroker::repetitionLimit()
 constexpr qreal scmMaxDashRepetitions = 10000.0;
@@ -276,10 +275,17 @@ void Builder::doorSwing(const int status, const QVector3D& from, const QVector3D
     const auto place = [&](const QPointF& point) {
         return from + along * static_cast<float>(point.x()) + side * static_cast<float>(point.y());
     };
-    // Just past a room's edge on a line from its center, and about as wide as a room
-    // Within the exit's half, so that it does not meet the swing of a door drawn from the other end
-    const qreal opening = qMin(scmDoorSwingWidth, length * 0.4);
-    const qreal jamb = qMin(scmDoorSwingInset, length * 0.5);
+    // Clear of the room, whose edge is further out on a diagonal from a square room, as the room hides whatever of
+    // the door is inside it. About as wide as a room, but within the exit's half, so that it does not meet the
+    // swing of a door drawn from the other end
+    const qreal across = qMax(std::abs(along.x()), std::abs(along.y()));
+    const qreal edge = mOptions.roundRooms || across < 1e-3 ? mOptions.roomSize / 2.0 : mOptions.roomSize / 2.0 / across;
+    const qreal start = edge + mWidth * 1.5;
+    const qreal space = length - start;
+    // Rooms so close that there is no room for a door between them still get one, over them
+    const qreal opening = space > 0.0 ? qMin(scmDoorSwingWidth, space * 0.6) : qMin(scmDoorSwingWidth, length * 0.4);
+    // So that a locked door's bolt, which reaches a quarter of the opening back toward the room, starts clear of it
+    const qreal jamb = space > 0.0 ? start + opening / 4.0 : length * 0.5;
     const QPointF hinge(jamb, -opening / 2.0);
     // Halfway to the ink, so the status still shows without the plan turning gaudy
     const QColor statusColor = ExitAppearance::doorColor(status);
