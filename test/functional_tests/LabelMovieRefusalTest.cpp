@@ -184,7 +184,7 @@ private slots:
         // is not one also reports, so this only holds the line
         QCOMPARE(pLabel->mpMovie->state(), QMovie::Running);
 
-        mpHost->mainConsoleView()->deleteLabel(mLabelName);
+        mpHost->deleteLabel(mLabelName);
     }
 };
 

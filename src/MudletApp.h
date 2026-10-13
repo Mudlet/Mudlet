@@ -31,10 +31,10 @@
 #include "enums.h"
 
 #include <QPair>
+#include <QSettings>
 #include <QString>
 
 class QNetworkRequest;
-class QSettings;
 class QUrl;
 
 // The application-wide services that need no main window: where Mudlet keeps
@@ -150,6 +150,8 @@ public:
     // and only the one that parsed it hears of a format error, so getQSettings()
     // would otherwise never report one.
     static void noteEarlySettingsStatus(const QSettings&);
+    // What noteEarlySettingsStatus() last heard of that file, or NoError
+    static QSettings::Status earlySettingsStatus(const QString& fileName);
 
     // Whether the config root in force actually came from a portable.txt. False
     // when a marker was present but named a root that had to be refused, which is
@@ -205,6 +207,8 @@ private:
     friend class ConfigDirOverrideTest;
     // Points the root at a scratch directory to seed the updater's version marker
     friend class FeedChecksumRaceTest;
+    // A fresh scratch config reads as a first launch, which never shows callouts
+    friend class FeatureCalloutTest;
     // Discards any settings store built under the previous root - and with it any
     // pointer a caller cached, so this must not run once init() has handed the
     // store to the Updater. portable says whether the root came from a

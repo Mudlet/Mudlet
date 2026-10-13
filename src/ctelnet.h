@@ -280,6 +280,10 @@ public:
     // a decompression bomb.
     inline static const int scmMaxDecompressionRecursion = 8;
     void cancelLoginTimers();
+    // A flag rather than a timer query, so every transition makes the Host
+    // recompute its hidden-input policy
+    bool autoLoginPending() const { return mAutoLoginPending; }
+    bool autoLoginTimersRunning() const;
     // Called when a password turns up after the auto-login already reached the password step -
     // a keychain read the user only answered by then. Sends it only while the game is provably
     // still waiting at that prompt, see the definition.
@@ -380,6 +384,8 @@ private:
     // character-at-a-time detection timer and flags, which have no public face,
     // and fires those timers early rather than waiting them out.
     friend class TelnetPasswordMaskTimeoutTest;
+    friend class PasswordEntryPolicyTest;
+    friend class PasswordEntryTest;
 
     // Host calls reset(), not cTelnet's constructor: it clears Host members declared after
     // cTelnet, which don't exist yet while cTelnet is constructed.
@@ -459,12 +465,15 @@ private:
 
 private slots:
     void slot_networkLatencyBeat();
+    void slot_replaySpeedChanged();
     void slot_passwordMaskTimeout();
 
 private:
 #if !defined(QT_NO_SSL)
     void promptTlsConnectionAvailable();
 #endif
+    void armReplayChunkTimer();
+    void stopReplayChunkTimer();
     void sendNAWS(int width, int height);
     void sendCurrentNAWS();
     void readPendingSocketData();
@@ -601,6 +610,8 @@ private:
 
     QTimer* mTimerLogin = nullptr;
     QTimer* mTimerPass = nullptr;
+    bool mAutoLoginPending = false;
+    void setAutoLoginPending(const bool pending);
     // Set when the auto-login reached the password step with no password in hand, which is where
     // an unanswered keychain prompt leaves it. It is the record of the game sitting at its
     // password prompt that sendOutstandingAutoLoginPassword() needs to decide whether a password
@@ -645,8 +656,12 @@ private:
     // A chunk is in ctelnet.cpp's global buffer but not yet parsed. Defensive: stops resumeReplay()
     // re-arming when a pause AND resume land inside one chunk's processing via a nested event loop.
     bool mReplayChunkPending = false;
-    // The gap scaled by replay speed, or what was left of it when paused mid-wait.
-    int mReplayChunkDelay = 0;
+    // What is left of the recorded gap before the pending chunk, in the recording's own
+    // milliseconds: a wait scaled to one speed and rescaled to another loses to truncation.
+    qint64 mReplayChunkOwedMsec = 0;
+    // The speed the running wait was armed at, and when.
+    int mReplayChunkSpeed = 1;
+    QElapsedTimer mReplayChunkArmedAt;
     // Not QTimer::singleShot, so pausing can stop it and keep the remaining time.
     QTimer* mpReplayChunkTimer = nullptr;
     // Used to disable the TConsole ending messages if run from lua:
