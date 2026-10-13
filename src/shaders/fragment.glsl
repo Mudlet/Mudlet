@@ -133,7 +133,7 @@ void main()
         float fog = clamp((eyeDepth - uFogStart) / (uFogEnd - uFogStart), 0.0, 1.0) * uFogMax;
         FragColor.rgb = mix(FragColor.rgb, uFogColor, fog);
     }
-    if (uScanlines > 0.0 && mod(gl_FragCoord.y, uScanlinePeriod) < 1.0) {
+    if (uScanlines > 0.0 && mod(gl_FragCoord.y, uScanlinePeriod) < uScanlinePeriod / 3.0) {
         FragColor.rgb *= 1.0 - uScanlines;
     }
 }
