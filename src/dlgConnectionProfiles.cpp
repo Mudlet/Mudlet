@@ -1354,22 +1354,16 @@ QString dlgConnectionProfiles::readProfileData(const QString& profile, const QSt
 // write before there is one is quietly dropped.
 QPair<bool, QString> dlgConnectionProfiles::writeProfileData(const QString& profile, const QString& item, const QString& what)
 {
-    QSaveFile file(MudletApp::getMudletPath(enums::profileDataItemPath, profile, item));
-    if (!file.open(QIODevice::WriteOnly | QIODevice::Unbuffered)) {
-        return {false, file.errorString()};
+    if (!QDir(MudletApp::getMudletPath(enums::profileHomePath, profile)).exists()) {
+        return {false, qsl("there is no folder for the %1 profile").arg(profile)};
     }
 
-    QDataStream ofs(&file);
-    ofs.setVersion(QDataStream::Qt_5_12);
-    ofs << what;
-    // A short write - a full disk - leaves no error on the file, only on the stream; and commit() would
-    // rename the truncated file into place
-    if (ofs.status() != QDataStream::Ok || file.error() != QFileDevice::NoError || !file.commit()) {
-        const QString reason = file.error() == QFileDevice::NoError ? qsl("could not write all of the %1 data").arg(item) : file.errorString();
-        qWarning().noquote().nospace() << "dlgConnectionProfiles::writeProfileData(...) ERROR - writing profile: \"" << profile << "\", item: \"" << item << "\", reason: \"" << reason << "\".";
-        return {false, reason};
+    const auto result = MudletApp::writeProfileData(profile, item, what);
+    if (!result.first) {
+        //: Shown in the connection dialog when a change to a profile's details could not be saved; %1 is the profile name, %2 the reason, e.g. "No space left on device"
+        showNotification(tr("Could not save this change to %1: %2").arg(profile, result.second), notificationAreaIconLabelError);
     }
-    return {true, QString()};
+    return result;
 }
 
 QString dlgConnectionProfiles::getDescription(const QString& profile_name) const
@@ -1983,7 +1977,7 @@ void dlgConnectionProfiles::slot_setCustomIcon()
     lastDir = QFileInfo(imageLocation).absolutePath();
     settings.setValue("lastFileDialogLocation", lastDir);
 
-    const bool success = mudlet::self()->setProfileIcon(profileName, imageLocation).first;
+    const bool success = MudletApp::setProfileIcon(profileName, imageLocation).first;
     if (!success) {
         return;
     }
@@ -2021,7 +2015,7 @@ void dlgConnectionProfiles::slot_resetCustomIcon()
         return;
     }
 
-    const bool success = mudlet::self()->resetProfileIcon(profileName).first;
+    const bool success = MudletApp::resetProfileIcon(profileName).first;
     if (!success) {
         return;
     }
@@ -2973,7 +2967,7 @@ void dlgConnectionProfiles::slot_loadPasswordAsync()
         credManager->retrievePassword(
                 profile_name,
                 "character",
-                [this, credManager, profile_name](bool success, const QString& retrievedPassword, const QString& errorMessage, bool) {
+                [this, credManager, profile_name](bool success, const QString& retrievedPassword, const QString& errorMessage, CredentialManager::ReadOutcome) {
                     passwordRetrieved(profile_name, success, retrievedPassword, errorMessage);
 
                     credManager->deleteLater();
