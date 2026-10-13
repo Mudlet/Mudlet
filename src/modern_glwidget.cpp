@@ -1645,8 +1645,12 @@ void ModernGLWidget::renderRooms()
             roomOutlines[pR->z()].append({rx, ry, top, half, width, 0.0f, GeometryManager::fadedColor(ringColor, fade, fadeTarget)});
         } else if (hovered && !terminal && !wireframes) {
             // Taller than a border, so that it shows over one; in ink, a wash around the room rather than a darker blot
-            outlineInstances.append(
-                    outline(roomSize * (inkBlots ? scmHoverWashReach : scmHoverOutline), QVector4D(contrast.redF(), contrast.greenF(), contrast.blueF(), inkBlots ? scmHoverWash : 1.0f), 0.75f));
+            // Mixed toward the paper rather than see-through, as it is drawn with the opaque rooms and would hide the levels below
+            const QColor hoverColor = inkBlots ? QColor::fromRgbF(background.redF() + (contrast.redF() - background.redF()) * scmHoverWash,
+                                                                  background.greenF() + (contrast.greenF() - background.greenF()) * scmHoverWash,
+                                                                  background.blueF() + (contrast.blueF() - background.blueF()) * scmHoverWash)
+                                               : contrast;
+            outlineInstances.append(outline(roomSize * (inkBlots ? scmHoverWashReach : scmHoverOutline), QVector4D(hoverColor.redF(), hoverColor.greenF(), hoverColor.blueF(), 1.0f), 0.75f));
         } else if (!inkBlots && !bordered && !pArea->gridMode && look.onViewedLevel() && !seeThrough) {
             // Halfway from the room's color to the one that stands out on the background, or for a base to the background itself
             const QColor rimTarget = style.edges == MapStyle::Edges::ViewedLevelBase ? background : contrast;
