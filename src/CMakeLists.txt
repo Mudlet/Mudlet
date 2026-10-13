@@ -1007,11 +1007,10 @@ target_link_libraries(${LIB_MUDLET_APP_TARGET} PUBLIC
     ${QT_APP_LIBS}
     ${LIB_MUDLET_TARGET})
 
-# qt-tags-widget's own CMakeLists builds a library with install() rules, so its
-# one source is compiled in here instead of adding that project.
-target_include_directories(${LIB_MUDLET_APP_TARGET}
-  PUBLIC ${CMAKE_SOURCE_DIR}/3rdparty/qt-tags-widget/include
-  PRIVATE ${CMAKE_SOURCE_DIR}/3rdparty/qt-tags-widget/include/QTagEdit)
+# qt-tags-widget is listed in mudlet_app_SRCS/HDRS, not add_subdirectory()'d, as its own
+# project has install() rules; a file upstream adds or renames has to be listed there too.
+set_property(SOURCE ../3rdparty/qt-tags-widget/src/qtagedit.cpp APPEND PROPERTY
+  INCLUDE_DIRECTORIES ${CMAKE_CURRENT_SOURCE_DIR}/../3rdparty/qt-tags-widget/include/QTagEdit)
 
 # main() stays out of the libraries: a test that links them brings its own, and
 # the linker can pull main.cpp's object in for any inline function it defines.
