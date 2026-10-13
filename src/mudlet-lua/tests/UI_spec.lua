@@ -8622,7 +8622,9 @@ describe("Tests the gui-drop package's image drops", function()
   end)
 
   it("keeps saving the drops after one whose file name has a quote in it", function()
-    local ok, err = drop(imageAt("plain", 'guiDrop "spec" quoted.png'))
+    -- Windows does not allow a double quote in a file name
+    local quotedName = getOS() == "windows" and "guiDrop 'spec' quoted.png" or 'guiDrop "spec" quoted.png'
+    local ok, err = drop(imageAt("plain", quotedName))
     assert.is_true(ok, tostring(err))
     ok, err = drop(imageAt("plain", "guiDropSpecAfterQuote.png"))
     assert.is_true(ok, tostring(err))
