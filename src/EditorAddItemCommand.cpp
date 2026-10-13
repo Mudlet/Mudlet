@@ -642,17 +642,24 @@ int EditorAddItemCommand::id() const
     return EditorModifyPropertyCommand::CommandId;
 }
 
-// The editor only finishes a new item on its first save, so the edits up to and including that
+// The editor finishes adding an item at its first save, so the edits up to and including that
 // save are part of adding it. Undo snapshots the item as it then stands, so absorbing them loses nothing.
 bool EditorAddItemCommand::mergeWith(const QUndoCommand* other)
 {
-    // Once taken, the snapshot is what redo restores, and it would not hold the edit
-    if (mAddFinished || !mItemSnapshot.isEmpty()) {
+    if (mAddFinished) {
         return false;
     }
 
     const auto* pModify = dynamic_cast<const EditorModifyPropertyCommand*>(other);
-    return pModify && pModify->mViewType == mViewType && pModify->mItemID == mItemID;
+    if (!pModify || pModify->mViewType != mViewType || pModify->mItemID != mItemID) {
+        return false;
+    }
+
+    // A snapshot an earlier undo took would not hold this edit, so the next undo has to take a new one
+    mItemSnapshot.clear();
+    mItemName = pModify->mItemName;
+    setText(generateText(mViewType, mItemName, mIsFolder));
+    return true;
 }
 
 void EditorAddItemCommand::finishAdding(EditorViewType viewType, int itemID) const

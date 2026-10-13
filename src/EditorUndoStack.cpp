@@ -168,11 +168,12 @@ void EditorUndoStack::pushCommand(QUndoCommand* cmd)
 
 void EditorUndoStack::finishAddingItem(EditorViewTypes::EditorViewType viewType, int itemID)
 {
-    if (index() == 0) {
-        return;
-    }
-    if (const auto* pAdd = dynamic_cast<const EditorAddItemCommand*>(command(index() - 1))) {
-        pAdd->finishAdding(viewType, itemID);
+    // Not just the top command: a toggle or a move made before the first save sits above the add,
+    // and undoing it later would bring an unfinished add back to the top
+    for (int i = index() - 1; i >= 0; --i) {
+        if (const auto* pAdd = dynamic_cast<const EditorAddItemCommand*>(command(i))) {
+            pAdd->finishAdding(viewType, itemID);
+        }
     }
 }
 

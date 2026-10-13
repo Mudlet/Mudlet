@@ -45,8 +45,11 @@
 #include "TriggerUnit.h"
 #include "TelnetServerStub.h"
 #include "ctelnet.h"
+#include "dlgActionMainArea.h"
+#include "dlgAliasMainArea.h"
 #include "dlgKeysMainArea.h"
 #include "dlgScriptsMainArea.h"
+#include "dlgTimersMainArea.h"
 #include "dlgTriggersMainArea.h"
 #include "dlgTriggerEditor.h"
 #include "mudlet.h"
@@ -150,8 +153,8 @@ private slots:
         QCOMPARE(mpEditor->mCurrentView, EditorViewType::cmTriggerView);
     }
 
-    // The first save finishes a new item, switching it on even when nothing was
-    // typed, so it belongs to the add: one undo has to take the item away (#10774).
+    // A new item's first save belongs to adding it, so one undo has to take the
+    // item away (#10774).
     void test_oneUndoTakesBackAnItemAddedAndSaved()
     {
         const QString newTrigger = dlgTriggerEditor::tr("New trigger");
@@ -159,7 +162,7 @@ private slots:
         mpEditor->treeWidget_triggers->setCurrentItem(mpEditor->mpTriggerBaseItem);
         const auto existing = mpHost->getTriggerUnit()->findItems(newTrigger, true, true);
         const int before = static_cast<int>(existing.size());
-        const int commandsBefore = mpEditor->mpUndoStack->count();
+        const int commandsBefore = mpEditor->mpUndoStack->index();
 
         mpEditor->slot_addNewItem();
         QTreeWidgetItem* pItem = mpEditor->treeWidget_triggers->currentItem();
@@ -172,7 +175,7 @@ private slots:
         const QString asSaved = exportTriggerToXML(pTrigger, SnapshotScope::ItemOnly);
 
         QCOMPARE(static_cast<int>(mpHost->getTriggerUnit()->findItems(newTrigger, true, true).size()), before + 1);
-        QCOMPARE(mpEditor->mpUndoStack->count(), commandsBefore + 1);
+        QCOMPARE(mpEditor->mpUndoStack->index(), commandsBefore + 1);
 
         mpEditor->mpUndoStack->undo();
         QCOMPARE(static_cast<int>(mpHost->getTriggerUnit()->findItems(newTrigger, true, true).size()), before);
@@ -221,6 +224,139 @@ private slots:
 
         mpEditor->mpUndoStack->undo();
         QCOMPARE(static_cast<int>(mpHost->getScriptUnit()->findItems(newScript).size()), before);
+    }
+
+    // Each view's save has to finish its new item, or every later save merges into
+    // the add and one undo takes the whole item away
+    void test_aNewItemsSecondSaveIsUndoneOnItsOwn_data()
+    {
+        QTest::addColumn<int>("view");
+        QTest::newRow("trigger") << static_cast<int>(EditorViewType::cmTriggerView);
+        QTest::newRow("timer") << static_cast<int>(EditorViewType::cmTimerView);
+        QTest::newRow("alias") << static_cast<int>(EditorViewType::cmAliasView);
+        QTest::newRow("script") << static_cast<int>(EditorViewType::cmScriptView);
+        QTest::newRow("key") << static_cast<int>(EditorViewType::cmKeysView);
+        QTest::newRow("button") << static_cast<int>(EditorViewType::cmActionView);
+    }
+
+    void test_aNewItemsSecondSaveIsUndoneOnItsOwn()
+    {
+        QFETCH(int, view);
+        QTreeWidget* pTree = nullptr;
+        QTreeWidgetItem* pBase = nullptr;
+        QLineEdit* pName = nullptr;
+        switch (static_cast<EditorViewType>(view)) {
+        case EditorViewType::cmTriggerView:
+            mpEditor->slot_showTriggers();
+            pTree = mpEditor->treeWidget_triggers;
+            pBase = mpEditor->mpTriggerBaseItem;
+            pName = mpEditor->mpTriggersMainArea->lineEdit_trigger_name;
+            break;
+        case EditorViewType::cmTimerView:
+            mpEditor->slot_showTimers();
+            pTree = mpEditor->treeWidget_timers;
+            pBase = mpEditor->mpTimerBaseItem;
+            pName = mpEditor->mpTimersMainArea->lineEdit_timer_name;
+            break;
+        case EditorViewType::cmAliasView:
+            mpEditor->slot_showAliases();
+            pTree = mpEditor->treeWidget_aliases;
+            pBase = mpEditor->mpAliasBaseItem;
+            pName = mpEditor->mpAliasMainArea->lineEdit_alias_name;
+            break;
+        case EditorViewType::cmScriptView:
+            mpEditor->slot_showScripts();
+            pTree = mpEditor->treeWidget_scripts;
+            pBase = mpEditor->mpScriptsBaseItem;
+            pName = mpEditor->mpScriptsMainArea->lineEdit_script_name;
+            break;
+        case EditorViewType::cmKeysView:
+            mpEditor->slot_showKeys();
+            pTree = mpEditor->treeWidget_keys;
+            pBase = mpEditor->mpKeyBaseItem;
+            pName = mpEditor->mpKeysMainArea->lineEdit_key_name;
+            break;
+        case EditorViewType::cmActionView:
+            mpEditor->slot_showActions();
+            pTree = mpEditor->treeWidget_actions;
+            pBase = mpEditor->mpActionBaseItem;
+            pName = mpEditor->mpActionsMainArea->lineEdit_action_name;
+            break;
+        default:
+            QFAIL("no such view");
+        }
+        const QString firstName = qsl("qaFirstSave%1").arg(view);
+        const QString secondName = qsl("qaSecondSave%1").arg(view);
+        pTree->setCurrentItem(pBase);
+        mpEditor->slot_addNewItem();
+        pName->setText(firstName);
+        mpEditor->slot_saveEdits();
+        QVERIFY2(mpEditor->mpUndoStack->undoText().contains(firstName), qPrintable(qsl("the undo step for the new item is called \"%1\"").arg(mpEditor->mpUndoStack->undoText())));
+
+        pName->setText(secondName);
+        mpEditor->slot_saveEdits();
+        QCOMPARE(countNamedInTree(pTree, secondName), 1);
+
+        mpEditor->mpUndoStack->undo();
+        QVERIFY2(countNamedInTree(pTree, firstName) == 1, "one undo of a second save took away the whole new item");
+        mpEditor->mpUndoStack->undo();
+        QCOMPARE(countNamedInTree(pTree, firstName), 0);
+    }
+
+    // Switching a new trigger off before saving it puts a step between the add
+    // and its first save; undoing back past both must still leave the add finished
+    void test_aSaveAfterUndoingBackToAnAddThatWasSavedIsUndoneOnItsOwn()
+    {
+        mpEditor->slot_showTriggers();
+        mpEditor->treeWidget_triggers->setCurrentItem(mpEditor->mpTriggerBaseItem);
+        mpEditor->slot_addNewItem();
+        QTreeWidgetItem* pItem = mpEditor->treeWidget_triggers->currentItem();
+        QVERIFY2(pItem, "adding a trigger left nothing selected to save");
+        const int triggerID = pItem->data(0, Qt::UserRole).toInt();
+        mpEditor->activeToggle_trigger();
+        mpEditor->mpTriggersMainArea->lineEdit_trigger_command->setText(qsl("qaSavedAfterAToggle"));
+        mpEditor->slot_saveEdits();
+        mpEditor->mpUndoStack->undo();
+        mpEditor->mpUndoStack->undo();
+        QVERIFY2(mpHost->getTriggerUnit()->getTrigger(triggerID), "undoing the save and the toggle took away the trigger as well");
+
+        mpEditor->mpTriggersMainArea->lineEdit_trigger_command->setText(qsl("qaSavedAfterTheUndos"));
+        mpEditor->slot_saveEdits();
+        mpEditor->mpUndoStack->undo();
+        QVERIFY2(mpHost->getTriggerUnit()->getTrigger(triggerID), "one undo of a later save took away the whole trigger");
+    }
+
+    // Redo brings an unsaved new item back from a snapshot, and its first save
+    // after that still belongs to adding it
+    void test_oneUndoTakesBackAnItemRedoneAndThenSaved()
+    {
+        const QString command = qsl("qaSavedAfterARedo");
+        mpEditor->slot_showTriggers();
+        mpEditor->treeWidget_triggers->setCurrentItem(mpEditor->mpTriggerBaseItem);
+        mpEditor->slot_addNewItem();
+        QVERIFY2(mpEditor->treeWidget_triggers->currentItem(), "adding a trigger left nothing selected");
+        const int addedID = mpEditor->treeWidget_triggers->currentItem()->data(0, Qt::UserRole).toInt();
+        const int commandsBefore = mpEditor->mpUndoStack->index();
+        mpEditor->mpUndoStack->undo();
+        mpEditor->mpUndoStack->redo();
+        QTreeWidgetItem* pItem = mpEditor->treeWidget_triggers->currentItem();
+        QVERIFY2(pItem && pItem->data(0, Qt::UserRole).toInt() != addedID, "redo did not select the trigger it brought back");
+        const int redoneID = pItem->data(0, Qt::UserRole).toInt();
+
+        mpEditor->mpTriggersMainArea->lineEdit_trigger_command->setText(command);
+        mpEditor->slot_saveEdits();
+        QCOMPARE(mpEditor->mpUndoStack->index(), commandsBefore);
+
+        mpEditor->mpUndoStack->undo();
+        QVERIFY2(!mpHost->getTriggerUnit()->getTrigger(redoneID), "one undo left the redone trigger in place");
+
+        // redo has to bring back the save as well, not the snapshot the first undo took
+        mpEditor->mpUndoStack->redo();
+        pItem = mpEditor->treeWidget_triggers->currentItem();
+        QVERIFY(pItem);
+        TTrigger* pTrigger = mpHost->getTriggerUnit()->getTrigger(pItem->data(0, Qt::UserRole).toInt());
+        QVERIFY(pTrigger);
+        QCOMPARE(pTrigger->getCommand(), command);
     }
 
     // A key made in the editor is only switched on by its first save, and that
