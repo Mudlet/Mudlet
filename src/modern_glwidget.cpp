@@ -4246,7 +4246,7 @@ void ModernGLWidget::refreshStitch()
     QSet<QPoint> shownCells;
     for (const int roomId : pArea->getAreaRooms()) {
         const TRoom* pRoom = mpMap->mpRoomDB->getRoom(roomId);
-        if (pRoom && pRoom->z() == mMapCenterZ) {
+        if (pRoom && !pRoom->isHidden() && pRoom->z() == mMapCenterZ) {
             shownCells.insert(square(static_cast<float>(pRoom->x()), static_cast<float>(pRoom->y())));
         }
     }
