@@ -920,6 +920,24 @@ private slots:
         }
     }
 
+    // Each room's ID is drawn, though hologram tints every room its own color
+    void test_hologramShowsRoomIdsWithoutGL()
+    {
+        const int areaId = addArea();
+        QVERIFY(areaId > 0);
+        const bool savedIds = mpHost->mShowRoomID;
+        const auto restore = qScopeGuard([this, savedIds]() {
+            mpHost->setMapStyle(qsl("tiles"));
+            mpHost->mShowRoomID = savedIds;
+        });
+        mpHost->mShowRoomID = true;
+        map()->mpRoomDB->getRoom(kEastRoomId)->environment = 5;
+        QVERIFY(mpHost->setMapStyle(qsl("hologram")));
+        ModernGLWidget widget(map(), mpHost);
+        queueFrame(widget, areaId);
+        QVERIFY2(widget.mRoomIdsDrawn.contains(kEastRoomId), "the room's ID was not drawn");
+    }
+
     // A move sends a pulse out from the player's room, wider and fainter as it spreads, and only in hologram
     void test_hologramPulsesFromThePlayersRoomWithoutGL()
     {
@@ -950,25 +968,36 @@ private slots:
             return found;
         };
 
-        widget.mPulseClock.start();
-        QTest::qSleep(300);
+        // Set as if begun that long ago, so that only one frame's queueing passes in real time
+        const auto pulseBegan = [&widget](const qint64 ago) {
+            widget.mPulseStartedAt = widget.mPulseReference.elapsed() - ago;
+        };
+        pulseBegan(300);
         queueFrame(widget, areaId);
         QVERIFY2(pulses().isEmpty(), "tiles sent out a pulse");
 
         QVERIFY(mpHost->setMapStyle(qsl("hologram")));
+        pulseBegan(100);
         queueFrame(widget, areaId);
         const QList<CubeInstanceData> early = pulses();
         QCOMPARE(early.size(), 1);
-        QTest::qSleep(400);
+        pulseBegan(500);
         queueFrame(widget, areaId);
         const QList<CubeInstanceData> later = pulses();
         QCOMPARE(later.size(), 1);
         QVERIFY2(later.first().transform.column(0).toVector3D().length() > early.first().transform.column(0).toVector3D().length(), "the pulse did not spread");
         QVERIFY2(later.first().color[3] < early.first().color[3], "the pulse did not fade as it spread");
 
-        widget.mPulseClock.invalidate();
+        widget.mPulseStartedAt.reset();
         queueFrame(widget, areaId);
         QVERIFY2(pulses().isEmpty(), "a pulse was drawn with none under way");
+
+        // Nor left repainting once the style is one without it
+        pulseBegan(100);
+        widget.mPulseTimer->start();
+        QVERIFY(mpHost->setMapStyle(qsl("tiles")));
+        widget.applyStyle();
+        QVERIFY2(!widget.mPulseTimer->isActive() && !widget.mPulseStartedAt.has_value(), "a pulse kept going after a change to a style without one");
     }
 
     // A room's edge glows over its middle, every third row of pixels is darker, and a move starts a pulse
@@ -992,7 +1021,8 @@ private slots:
         const QImage frame = widget.grabFramebuffer();
         const auto pixelAt = [&widget](const QVector3D& point) {
             const std::optional<QPointF> pixel = widget.mCameraController.pixelForPoint(point);
-            return pixel ? pixel->toPoint() : QPoint(-1, -1);
+            // The camera's pixels are the widget's, the framebuffer's the device's
+            return pixel ? (*pixel * widget.devicePixelRatioF()).toPoint() : QPoint(-1, -1);
         };
         const auto brightness = [&frame](const QPoint& pixel) {
             const QColor color = frame.pixelColor(pixel);
@@ -1029,24 +1059,22 @@ private slots:
         }
         QVERIFY2(dark * lightRows * 100 < light * darkRows * 85, qPrintable(qsl("scanlines average %1 bright and the rows between them %2").arg(dark / darkRows).arg(light / lightRows)));
 
-        widget.mPulseClock.invalidate();
+        widget.mPulseStartedAt.reset();
         map()->mRoomIdHash[map()->mProfileName] = kEastRoomId;
         widget.grabFramebuffer();
-        QVERIFY2(widget.mPulseClock.isValid() && widget.mPulseTimer->isActive(), "a move did not start a pulse");
+        QVERIFY2(widget.mPulseStartedAt.has_value() && widget.mPulseTimer->isActive(), "a move did not start a pulse");
 
         widget.setSecondaryView(true);
-        widget.mPulseClock.invalidate();
-        widget.mPulseTimer->stop();
+        widget.stopPulse();
         map()->mRoomIdHash[map()->mProfileName] = kPlayerRoomId;
         widget.grabFramebuffer();
-        QVERIFY2(widget.mPulseClock.isValid() && widget.mPulseTimer->isActive(), "a move seen in a second map window did not start a pulse");
+        QVERIFY2(widget.mPulseStartedAt.has_value() && widget.mPulseTimer->isActive(), "a move seen in a second map window did not start a pulse");
 
         QVERIFY(mpHost->setMapStyle(qsl("tiles")));
-        widget.mPulseClock.invalidate();
-        widget.mPulseTimer->stop();
+        widget.stopPulse();
         map()->mRoomIdHash[map()->mProfileName] = kEastRoomId;
         widget.grabFramebuffer();
-        QVERIFY2(!widget.mPulseClock.isValid() && !widget.mPulseTimer->isActive(), "a move in tiles started a pulse");
+        QVERIFY2(!widget.mPulseStartedAt.has_value() && !widget.mPulseTimer->isActive(), "a move in tiles started a pulse");
     }
 
     // However fine the label's ink, its halo covers everything within reach of it, and nothing past
