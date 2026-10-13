@@ -341,7 +341,7 @@ private:
         quint64 mapRevision = 0;
         quint64 exitsRevision = 0;
         quint32 roomsVersion = 0;
-        quint64 areaChanges = 0;
+        quint64 appearanceRevision = 0;
         int centerZ = 0;
         int levelsAbove = 0;
         int levelsBelow = 0;
@@ -367,8 +367,6 @@ private:
     };
     std::optional<SceneInputs> mSceneInputs;
     RetainedMapScene mScene;
-    // Bumped by every change to an area the map announces, such as a room highlighted, which the map's revision misses
-    quint64 mAreaChanges = 0;
     int mSceneMaxRoomId = 0;
     // Rooms whose blocks are drawn narrower than this many pixels, in tiles of the scene so far away, are drawn
     // without what is on them; such marks would be a pixel or less across

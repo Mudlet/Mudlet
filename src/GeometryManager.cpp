@@ -1216,9 +1216,8 @@ void GeometryManager::renderInstancedRuns(RetainedInstances& retained,
         retained.resized = false;
         retained.changedFrom = retained.changedTo = 0;
     } else if (retained.changedFrom < retained.changedTo) {
-        retained.buffer.write(static_cast<int>(retained.changedFrom * stride),
-                              retained.instances.constData() + retained.changedFrom,
-                              static_cast<int>((retained.changedTo - retained.changedFrom) * stride));
+        retained.buffer.write(
+                static_cast<int>(retained.changedFrom * stride), retained.instances.constData() + retained.changedFrom, static_cast<int>((retained.changedTo - retained.changedFrom) * stride));
         retained.changedFrom = retained.changedTo = 0;
     }
 

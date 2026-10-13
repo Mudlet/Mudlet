@@ -4077,6 +4077,12 @@ void TMap::announceMapperSettingChanged(const MapperSetting setting)
 
 void TMap::updateArea(int areaId)
 {
+    ++mAppearanceRevision;
+    updatePlayerArea(areaId);
+}
+
+void TMap::updatePlayerArea(int areaId)
+{
     if (!mAreaUpdatePending) {
         mAreaUpdatePending = true;
         QTimer::singleShot(0ms, this, [this, areaId]() {

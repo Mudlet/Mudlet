@@ -4551,7 +4551,7 @@ void T2DMap::slot_setPlayerLocation()
         manualSetEvent.mArgumentList.append(QString::number(_newRoomId));
         manualSetEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
         mpHost->raiseEvent(manualSetEvent);
-        mpMap->updateArea(areaId);
+        mpMap->updatePlayerArea(areaId);
     }
 }
 
