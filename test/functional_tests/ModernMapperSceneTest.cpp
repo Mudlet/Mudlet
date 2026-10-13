@@ -671,27 +671,27 @@ private slots:
 
     void test_zoomLevelsComeInAsRoomsShrinkWithoutGL()
     {
-        const auto near = [](const float a, const float b) {
+        const auto roughly = [](const float a, const float b) {
             return qAbs(a - b) < 1e-5f;
         };
         const float farOut = MapAtlas::scmFootprintsOnlyDistance;
         MapAtlas::Weights weights = MapAtlas::weightsFor(MapAtlas::scmRoomsAlonePixels, 100.0f, farOut);
-        QVERIFY(near(weights.footprint, 0.0f) && near(weights.world, 0.0f));
+        QVERIFY(roughly(weights.footprint, 0.0f) && roughly(weights.world, 0.0f));
         QVERIFY(weights.roomsShown() && !weights.areasPicked());
         weights = MapAtlas::weightsFor((MapAtlas::scmRoomsAlonePixels + MapAtlas::scmFootprintsOnlyPixels) / 2.0f, 100.0f, farOut);
-        QVERIFY2(near(weights.footprint, 0.5f), qPrintable(qsl("half way the footprints are %1 in").arg(weights.footprint)));
+        QVERIFY2(roughly(weights.footprint, 0.5f), qPrintable(qsl("half way the footprints are %1 in").arg(weights.footprint)));
         QVERIFY(weights.roomsShown() && weights.areasPicked());
         weights = MapAtlas::weightsFor(MapAtlas::scmFootprintsOnlyPixels, MapAtlas::scmWorldFromPixels, farOut);
-        QVERIFY(near(weights.footprint, 1.0f) && near(weights.world, 0.0f));
+        QVERIFY(roughly(weights.footprint, 1.0f) && roughly(weights.world, 0.0f));
         QVERIFY(!weights.roomsShown() && weights.areasPicked() && !weights.nodesPicked());
         weights = MapAtlas::weightsFor(0.1f, MapAtlas::scmWorldOnlyPixels, farOut);
-        QVERIFY(near(weights.footprint, 1.0f) && near(weights.world, 1.0f));
+        QVERIFY(roughly(weights.footprint, 1.0f) && roughly(weights.world, 1.0f));
         QVERIFY(weights.nodesPicked());
         // However small the rooms, as far as the camera could go before the atlas they show alone
         weights = MapAtlas::weightsFor(0.1f, 100.0f, CameraController::scmMaxDistance);
-        QVERIFY(near(weights.footprint, 0.0f));
+        QVERIFY(roughly(weights.footprint, 0.0f));
         weights = MapAtlas::weightsFor(0.1f, 100.0f, (MapAtlas::scmRoomsAloneDistance + MapAtlas::scmFootprintsOnlyDistance) / 2.0f);
-        QVERIFY2(near(weights.footprint, 0.5f), qPrintable(qsl("half way out the footprints are %1 in").arg(weights.footprint)));
+        QVERIFY2(roughly(weights.footprint, 0.5f), qPrintable(qsl("half way out the footprints are %1 in").arg(weights.footprint)));
         float lastFootprint = 0.0f;
         float lastWorld = 0.0f;
         for (float roomPixels = 4.0f; roomPixels > 0.05f; roomPixels *= 0.9f) {
@@ -930,6 +930,38 @@ private slots:
         widget.setViewCenter(westId, 2, 3, 0);
         settle();
         QCOMPARE(widget.mCameraController.getTarget(), QVector3D(2.0f, 3.0f, 0.0f));
+    }
+
+    void test_theWorldStaysPutAsAFlightToAnotherLevelSetsOffWithoutGL()
+    {
+        map()->mapClear();
+        map()->mUserData.remove(TAreaGraph::cLayoutUserDataKey);
+        const int next = addGridArea(qsl("Westmarch"), 1, 20, 20, 1, 0);
+        addGridArea(qsl("Highvale"), next, 20, 20, 1, 40);
+        map()->setExit(1, next, DIR_EAST);
+        const int westId = map()->mpRoomDB->getRoom(1)->getArea();
+        const int eastId = map()->mpRoomDB->getRoom(next)->getArea();
+        map()->mRoomIdHash[map()->mProfileName] = 0;
+        map()->areaGraph()->refresh();
+        QVERIFY(map()->areaGraph()->setPosition(westId, QPointF(0.0, 0.0)));
+        QVERIFY(map()->areaGraph()->setPosition(eastId, QPointF(0.0, 150.0)));
+        ModernGLWidget widget(map(), mpHost);
+        queueFrame(widget, westId, 800.0f, false);
+        const QPoint before = pixelOfArea(widget, eastId);
+        QVERIFY(QRect(0, 0, widget.width(), widget.height()).contains(before));
+
+        widget.flyToArea(eastId);
+        widget.updateMatrices();
+        const QPoint after = pixelOfArea(widget, eastId);
+        QVERIFY2((after - before).manhattanLength() <= 1,
+                 qPrintable(qsl("the area flown to jumped from %1,%2 to %3,%4 as the flight set off").arg(before.x()).arg(before.y()).arg(after.x()).arg(after.y())));
+
+        for (int tick = 0; tick < 1000 && widget.mCameraSmoothAnimating; ++tick) {
+            widget.onCameraAnimationTick();
+        }
+        QCOMPARE(widget.mCameraController.getTarget().z(), 40.0f);
+        widget.updateMatrices();
+        QVERIFY2(QRect(0, 0, widget.width(), widget.height()).contains(pixelOfArea(widget, eastId)), "the area flown to is not in view once landed");
     }
 
     void benchmark_hugeMap()
