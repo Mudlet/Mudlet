@@ -1122,6 +1122,10 @@ void cTelnet::slot_socketDisconnected()
         return;
     }
 
+    // A drain's deferred input was read before the connection closed, and no
+    // later read will come to take it in
+    while (!mDeferredInput.isEmpty() && mpSocket && !mpHost->isClosingDown() && !mDeferredReconnect && readSocketDataOnce()) {
+    }
     postData();
     // A line held back for server-wrap undoing is complete now that the
     // connection is gone - commit it, in trigger context as for any other
