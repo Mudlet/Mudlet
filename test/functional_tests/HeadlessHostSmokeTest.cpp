@@ -49,10 +49,12 @@
 #include <chrono>
 #include <memory>
 
+#include "CredentialManager.h"
 #include "FontManager.h"
 #include "Host.h"
 #include "HostManager.h"
 #include "MudletApp.h"
+#include "MudletMedia.h"
 #include "PortableModeTestHelper.h"
 #include "SpeechRecognizer.h"
 #include "SpeechRecognizerFactory.h"
@@ -62,6 +64,7 @@
 #include "TLabelModel.h"
 #include "TLuaInterpreter.h"
 #include "TMap.h"
+#include "TRoom.h"
 #include "TRoomDB.h"
 #include "TSpeechBridge.h"
 #include "TriggerMatchPool.h"
@@ -254,7 +257,11 @@ private slots:
                           "autoLoginUsernameDelay=%2\n"
                           "autoLoginPasswordDelay=%3\n"
                           "triggerMatchThreads=%4\n"
-                          "triggerMatchThreshold=%5\n")
+                          "triggerMatchThreshold=%5\n"
+                          "enableMuteAPI=true\n"
+                          "enableMuteGame=true\n"
+                          "reportMapIssuesToConsole=true\n"
+                          "storePasswordsSecurely=false\n")
                               .arg(scmAutosaveMinutes)
                               .arg(scmUsernameDelayMs)
                               .arg(scmPasswordDelayMs)
@@ -283,8 +290,22 @@ private slots:
 
     void cleanupTestCase()
     {
+        const auto restoreXdg = qScopeGuard([this]() {
+            mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);
+        });
+        if (!mpHostManager) {
+            return;
+        }
+        // Mudlet.ini is read by the first pool alone, so a pool made once it has gone starts from its mutes:
+        // the one as read, the other as changed since
+        const bool apiMuted = mudletIniWritten();
+        const bool gameMuted = !mudletIniWritten();
+        QCOMPARE(mpHostManager->media().apiMuted(), apiMuted);
+        mpHostManager->media().setGameMuted(gameMuted);
         mpHostManager.reset();
-        mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);
+        HostManager nextPool;
+        QCOMPARE(nextPool.media().apiMuted(), apiMuted);
+        QCOMPARE(nextPool.media().gameMuted(), gameMuted);
     }
 
     void test_profileRunsLuaAndTriggersWithNoMainWindow()
@@ -4987,13 +5008,23 @@ headlessDiscord = ok and 'ok' or tostring(err)
         QVERIFY2(settings, "No settings store exists with no main window.");
         QCOMPARE(settings->fileName(), qsl("%1/mudlet/Mudlet.ini").arg(mConfigDir.path()));
         const bool fromIni = mudletIniWritten();
-        const QStringList keys{
-                qsl("autosaveIntervalMinutes"), qsl("mapCenterSmallAreas"), qsl("autoLoginUsernameDelay"), qsl("autoLoginPasswordDelay"), qsl("triggerMatchThreads"), qsl("triggerMatchThreshold")};
+        const QStringList keys{qsl("autosaveIntervalMinutes"),
+                               qsl("mapCenterSmallAreas"),
+                               qsl("autoLoginUsernameDelay"),
+                               qsl("autoLoginPasswordDelay"),
+                               qsl("triggerMatchThreads"),
+                               qsl("triggerMatchThreshold"),
+                               qsl("enableMuteAPI"),
+                               qsl("enableMuteGame"),
+                               qsl("reportMapIssuesToConsole"),
+                               qsl("storePasswordsSecurely")};
         for (const QString& key : keys) {
             QVERIFY2(settings->contains(key) == fromIni, qPrintable(key));
         }
 
         const QString hostname = qsl("Test-Headless-Host-Mudlet-Ini");
+        // Where a profile keeps its password when Mudlet.ini says not to use secure storage
+        QVERIFY(MudletApp::writeProfileData(hostname, qsl("password"), qsl("inistored")).first);
         QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
         Host* host = HostManager::self()->getHost(hostname);
         QVERIFY2(host, "The profile is not in the pool.");
@@ -5001,6 +5032,35 @@ headlessDiscord = ok and 'ok' or tostring(err)
             HostManager::self()->deleteHost(hostname);
         });
         QCOMPARE(host->mMapperCenterSmallAreas, fromIni);
+        QCOMPARE(MudletApp::storingPasswordsSecurely(), !fromIni);
+        QCOMPARE(CredentialManager::profileStoragePreferred(), fromIni);
+        QCOMPARE(host->getPass(), fromIni ? qsl("inistored") : QString());
+
+        QCOMPARE(HostManager::self()->media().apiMuted(), fromIni);
+        QCOMPARE(HostManager::self()->media().gameMuted(), fromIni);
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("iniMutes = tostring(getConfig('muteMediaAPI')) .. ' ' .. tostring(getConfig('muteMediaGame'))")));
+        QCOMPARE(luaGlobalString(host, "iniMutes"), fromIni ? qsl("true true") : qsl("false false"));
+
+        // An exit to a room that is not there is reported on the console only when Mudlet.ini asks for it
+        constexpr int missingRoomId = 4242;
+        TMap* map = host->mpMap.data();
+        QVERIFY(map->addRoom(1));
+        map->mpRoomDB->getRoom(1)->setUp(missingRoomId);
+        map->audit();
+        QVERIFY2(mainBufferHolds(host, qsl("Map audit starting")), "The audit never reached the main console model.");
+        QCOMPARE(mainBufferHolds(host, qsl("to: %1 but that room does not exist").arg(missingRoomId)), fromIni);
+        QVERIFY2(map->mpRoomDB->getRoom(1)->getUp() == -1, "The audit did not find the missing room.");
+
+        // A second pool leaves them alone, as reading them again would undo a change made since
+        {
+            const auto restore = qScopeGuard([fromIni]() {
+                TMap::smShowMapAuditErrors = fromIni;
+            });
+            TMap::smShowMapAuditErrors = !fromIni;
+            const HostManager secondPool;
+            QCOMPARE(TMap::smShowMapAuditErrors, !fromIni);
+        }
+
         // The map autosave is a timer the profile starts on itself
         const std::chrono::minutes autosave(fromIni ? scmAutosaveMinutes : 2);
         const auto timers = QAbstractEventDispatcher::instance()->timersForObject(host);
