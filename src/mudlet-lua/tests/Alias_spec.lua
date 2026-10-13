@@ -451,15 +451,14 @@ describe("Alias processing", function()
             assert.are.equal("thing", seen.afterMatch, "the trigger's capture was emptied by the nested expansion")
         end)
 
-        -- feedTriggers() nests the same way, only with a trigger pass inside the alias (#10796)
-        it("gives an alias that feeds the triggers back its matches and command", function()
+        -- feedTriggers() nests the same way, only with a trigger pass inside the alias
+        it("gives an alias that feeds the triggers back its matches", function()
             local seen = {}
             local triggerId = tempRegexTrigger([[^alias_feeds_trigger (\w+)$]], function()
                 seen.triggerMatch = matches[2]
             end)
             local aliasId = tempAlias([[^alias_feeds_outer (\w+)$]], function()
                 feedTriggers("\nalias_feeds_trigger deeper\n")
-                seen.command = command
                 seen.afterFullMatch = matches[1]
                 seen.afterMatch = matches[2]
             end)
@@ -471,9 +470,25 @@ describe("Alias processing", function()
             expandAlias("alias_feeds_outer thing", false)
 
             assert.are.equal("deeper", seen.triggerMatch, "the fed line should have fired the trigger")
-            assert.are.equal("alias_feeds_outer thing", seen.command)
             assert.are.equal("alias_feeds_outer thing", seen.afterFullMatch, "matches[1] was emptied by the nested feed")
             assert.are.equal("thing", seen.afterMatch, "the alias's capture was emptied by the nested feed")
+        end)
+
+        it("leaves an alias that feeds the triggers the command a fed trigger's script set", function()
+            local seen = {}
+            local triggerId = tempTrigger("alias_feeds_command", [==[command = "set by the trigger"]==])
+            local aliasId = tempAlias([[^alias_feeds_command_outer$]], function()
+                feedTriggers("\nalias_feeds_command\n")
+                seen.command = rawget(_G, "command")
+            end)
+            finally(function()
+                killAlias(aliasId)
+                killTrigger(triggerId)
+            end)
+
+            expandAlias("alias_feeds_command_outer", false)
+
+            assert.are.equal("set by the trigger", seen.command, "a trigger pass does not set command, so what its script put there should stay")
         end)
 
         -- "command" is set before any pattern is tried, so the commonest shape of

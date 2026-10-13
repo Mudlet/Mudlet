@@ -1225,14 +1225,12 @@ int TLuaInterpreter::feedTriggers(lua_State* L)
         dataIsUtf8Encoded = getVerifiedBool(L, __func__, 2, "Utf8Encoded", true);
     }
     const QByteArray data{lua_tostring(L, 1)};
-    // Fed from a trigger or alias, the text runs a whole trigger pass inside
-    // that script; park its matches and command so they are still there when
-    // the pass returns. Fed from anywhere else there is nothing to park, and
-    // the captures a pass leaves behind are what the next script is handed.
+    // During a trigger or alias pass this runs a whole trigger pass inside the calling script, so park
+    // its captures for it. Not "command": a trigger pass never sets it, but a script it runs may.
     TLuaInterpreter* pL = host.getLuaInterpreter();
     const bool nested = triggerUnit->processingDepth() > 0 || host.getAliasUnit()->processingDepth() > 0;
     auto feed = [L, &host, triggerUnit, pL, nested](std::string& text) {
-        const int dispatchDepth = nested ? pL->pushNestedDispatchState(true) : -1;
+        const int dispatchDepth = nested ? pL->pushNestedDispatchState(false) : -1;
         host.printOnDisplay(text, false);
         if (dispatchDepth >= 0) {
             pL->popNestedDispatchState(dispatchDepth);
