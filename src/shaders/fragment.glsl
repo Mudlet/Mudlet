@@ -35,9 +35,8 @@ uniform float uWireFill = 0.06;
 // Darkens every uScanlinePeriod-th row of pixels by uScanlines
 uniform float uScanlines = 0.0;
 uniform float uScanlinePeriod = 3.0;
-// The inkwash style's brushwork: 1 a room's top as a blot of ink, 2 an exit's bar as a stroke thinning toward its end,
-// 3 the player's room as a seal's stamp, 4 the paper behind the map. Unevenness comes from where an instance stands
-// and the paper's grain from the pixel's place, never from time, so nothing shimmers from one frame to the next
+// Inkwash: 1 a blot, 2 a stroke, 3 a seal, 4 the paper. Uneven by where an instance stands or by the pixel, never by
+// time, so nothing shimmers
 uniform int uInk = 0;
 uniform bool uInkRound = false;
 flat in vec3 instanceOrigin;
@@ -182,10 +181,6 @@ void main()
         float light = min(max(line, 0.6 * glow) + uWireFill, 1.0);
         FragColor = vec4(mix(vertexColor.rgb, vec3(1.0), 0.45 * line), vertexColor.a * light);
     } else if (uInk == 1 || uInk == 3) {
-        // Brushed onto the paper, a room has only its top
-        if (localNormal.z < 0.5) {
-            discard;
-        }
         bool seal = uInk == 3;
         uint seed = inkSeed();
         vec2 p = localPosition.xy;
@@ -220,7 +215,8 @@ void main()
             alpha = cover * mix(0.8 + 0.2 * inkNoise(p * 2.5 + 2.0, seed + 2u), 1.0, pool);
         }
         alpha *= paperGrain() * vertexColor.a;
-        if (alpha < 0.004) {
+        // Brushed onto the paper, a room has only its top; left until after fwidth(), which a discard before it would upset
+        if (localNormal.z < 0.5 || alpha < 0.004) {
             discard;
         }
         FragColor = vec4(color, alpha);
