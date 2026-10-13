@@ -1320,6 +1320,32 @@ private slots:
     // too, and must not settle for the stand-in. Once they have, the font on show
     // is exactly what the dialog would send, so a re-pick changes nothing at all
     // and still has to settle.
+    void test_untickingAntiAliasInThePreferencesStaysUnticked()
+    {
+        const QString profileName = qsl("MissingDisplayFont-AntiAliasToggle-Test");
+        QVERIFY2(writeProfileSave(profileName, Host::scmDefaultFontFamily), "could not write the test profile save");
+
+        Host* pHost = mudlet::self()->loadProfile(profileName, false);
+        QVERIFY(pHost);
+        QVERIFY2(pHost->mLoadedOk, "the test profile save could not be loaded");
+        mudlet::self()->slot_connectionDialogueFinished(profileName, false);
+        QVERIFY2(pHost->mainConsoleView(), "the profile came up without a main console");
+
+        auto pPreferences = std::make_unique<dlgProfilePreferences>(mudlet::self(), pHost);
+        pPreferences->show();
+        QVERIFY(QTest::qWaitForWindowExposed(pPreferences.get()));
+        QCheckBox* pAntiAlias = pPreferences->checkBox_antiAlias;
+        QVERIFY2(pAntiAlias->isChecked(), "the profile should start with anti-aliasing on");
+
+        pAntiAlias->click();
+        QVERIFY2(pHost->getDisplayFont().styleStrategy() & QFont::NoAntialias, "unticking did not reach the font on show");
+        QVERIFY2(!pAntiAlias->isChecked(), "the checkbox went back to ticked while the text is drawn without anti-aliasing");
+
+        pPreferences->spinBox_displayFontSize->setValue(pPreferences->spinBox_displayFontSize->value() + 1);
+        QVERIFY2(pHost->getDisplayFont().styleStrategy() & QFont::NoAntialias, "a size change put anti-aliasing back on");
+        QVERIFY(!pAntiAlias->isChecked());
+    }
+
     void test_rePickingTheStandInAfterAdjustingItInThePreferencesSettlesForIt()
     {
         const QString profileName = qsl("MissingDisplayFont-PreferencesAdjust-Test");

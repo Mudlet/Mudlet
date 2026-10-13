@@ -9106,7 +9106,8 @@ void dlgProfilePreferences::slot_hostDisplayFontChanged(const QFont& font)
         fontComboBox_displayFont->setCurrentFont(font);
         spinBox_displayFontSize->setMaximum(std::max(font.pointSize(), spinBox_displayFontSize->maximum()));
         spinBox_displayFontSize->setValue(std::max(1, font.pointSize()));
-        checkBox_antiAlias->setChecked(mpHost->fontsAntiAlias());
+        // Not fontsAntiAlias(): that flag is only written when the dialog closes, so it would undo a toggle made here
+        checkBox_antiAlias->setChecked(!(font.styleStrategy() & QFont::NoAntialias));
     }
     rememberDisplayFontFamilyShown();
     // Not the user's edits, so they must not keep refreshFromSettings() from re-reading the rest -
