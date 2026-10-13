@@ -22,6 +22,7 @@
 #include "Host.h"
 #include "TEvent.h"
 #include "TLabelModel.h"
+#include "TMap.h"
 
 #include <QCoreApplication>
 #include <QFontMetrics>
@@ -603,6 +604,8 @@ void TNullConsoleFrontend::dropWindows()
     mFrameHolders.clear();
     // The view's TCommandLine has its own menu items, which go with it
     mMainCommandLine.menuItems.clear();
+    // The view has its own map widget, if any. An embedded mapper went with the main window's stand-in.
+    mMapWidget.reset();
 }
 
 void TNullConsoleFrontend::makeMainCommandLine(const bool savesHistory)
@@ -1100,6 +1103,111 @@ void TNullConsoleFrontend::setProfileStyleSheet(const QString& styleSheet)
     for (const auto& [name, subConsole] : mSubConsoles) {
         registry.setUserWindowStyleSheet(name, styleSheet);
     }
+}
+
+std::pair<bool, QString> TNullConsoleFrontend::createMapper(const QString& windowname, int, int, int, int)
+{
+    // As TMainConsole::createMapper(), which only takes a user window: not a scroll box
+    const bool wantsMainConsole = windowname.isEmpty() || !windowname.compare(QLatin1String("main"), Qt::CaseInsensitive);
+    if (!wantsMainConsole && !mpHost->windowRegistry().hasDockWidget(windowname)) {
+        return {false, qsl("window '%1' not found").arg(windowname)};
+    }
+    if (mMapWidget && mMapWidget->shown) {
+        return {false, qsl("cannot create mapper. Do you already use a map window?")};
+    }
+    if (!mpEmbeddedMapper && !ownsContainer(windowname)) {
+        // A detached view's user window, which only that view could make a mapper in
+        return noView();
+    }
+    mMapWidget.reset();
+    if (!mpEmbeddedMapper) {
+        mpEmbeddedMapper = new QObject(holderFor(windowname, nullptr));
+        copyPlayerRoomStyleToMap();
+        mpHost->loadMapForNewMapper(true);
+        TEvent mapOpenEvent{};
+        mapOpenEvent.mArgumentList.append(QLatin1String("mapOpenEvent"));
+        mapOpenEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        mpHost->raiseEvent(mapOpenEvent);
+    }
+    return {true, QString()};
+}
+
+void TNullConsoleFrontend::createMapperDock(const QString& title, const QString&)
+{
+    mMapWidget = MapWidget{title, QRect(), false};
+    copyPlayerRoomStyleToMap();
+}
+
+// As TMainConsole does as it makes a dlgMapper, for the map to have the profile's player room style
+void TNullConsoleFrontend::copyPlayerRoomStyleToMap()
+{
+    TMap* pMap = mpHost->mpMap.data();
+    mpHost->getPlayerRoomStyleDetails(
+            pMap->mPlayerRoomStyle, pMap->mPlayerRoomOuterDiameterPercentage, pMap->mPlayerRoomInnerDiameterPercentage, pMap->mPlayerRoomOuterColor, pMap->mPlayerRoomInnerColor);
+}
+
+
+std::pair<bool, QString> TNullConsoleFrontend::placeMapWidget(const QString& area, const int x, const int y, const int width, const int height)
+{
+    if (!mMapWidget) {
+        return {false, qsl("cannot create map widget. Do you already use an embedded mapper?")};
+    }
+
+    // Shown before the area is checked, as TMainConsole::placeMapWidget() does
+    mMapWidget->shown = true;
+    if (area.isEmpty()) {
+        return {true, QString()};
+    }
+    if (area == QLatin1String("f") || area == QLatin1String("floating")) {
+        if (x != -1 && y != -1) {
+            mMapWidget->geometry.moveTo(x, y);
+        }
+        if (width != -1 && height != -1) {
+            mMapWidget->geometry.setSize(widgetSize(width, height));
+        }
+        return {true, QString()};
+    }
+    static const QStringList dockAreas{qsl("r"), qsl("right"), qsl("l"), qsl("left"), qsl("t"), qsl("top"), qsl("b"), qsl("bottom")};
+    if (dockAreas.contains(area)) {
+        // There is no layout to dock it into, so it takes the main window's size, as a docked user window does
+        mMapWidget->geometry = QRect(QPoint(0, 0), mpHost->mainWindowSize().value_or(QSize()));
+        return {true, QString()};
+    }
+    return {false, qsl(R"(docking option "%1" not available. available docking options are "t" top, "b" bottom, "r" right, "l" left and "f" floating)").arg(area)};
+}
+
+bool TNullConsoleFrontend::setMapWidgetTitle(const QString& title)
+{
+    if (!mMapWidget || !mMapWidget->shown) {
+        return false;
+    }
+    mMapWidget->title = title;
+    return true;
+}
+
+std::optional<QString> TNullConsoleFrontend::mapWidgetTitle() const
+{
+    if (!mMapWidget || !mMapWidget->shown) {
+        return std::nullopt;
+    }
+    return mMapWidget->title;
+}
+
+std::optional<QRect> TNullConsoleFrontend::mapWidgetGeometry() const
+{
+    if (!mMapWidget || !mMapWidget->shown) {
+        return std::nullopt;
+    }
+    return mMapWidget->geometry;
+}
+
+bool TNullConsoleFrontend::hideMapWidget()
+{
+    if (!mMapWidget || !mMapWidget->shown) {
+        return false;
+    }
+    mMapWidget->shown = false;
+    return true;
 }
 
 TLabelModel* TNullConsoleFrontend::labelModel(const QString& name) const
@@ -2170,6 +2278,10 @@ std::pair<bool, QString> TNullConsoleFrontend::reparentWindow(const QString& win
         }
         if (registry.hasSubConsole(name) || registry.hasPlainWindow(name)) {
             return noView();
+        }
+        if (namesEmbeddedMapper(name)) {
+            mpEmbeddedMapper->setParent(holderFor(userWindow, box.get()));
+            return {true, QString()};
         }
         return {false, qsl("element '%1' not found").arg(name)};
     }
