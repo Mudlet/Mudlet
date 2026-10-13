@@ -1901,6 +1901,7 @@ void ModernGLWidget::applyMapZoom(const qreal zoom, const int areaId)
         }
         return;
     }
+    stopFlight();
     frameRooms(zoom);
     mFrameWhenShown = !isVisible();
     mDistanceRequested = false;

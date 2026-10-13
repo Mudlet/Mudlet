@@ -918,6 +918,15 @@ private slots:
         settle();
         QCOMPARE(widget.mCameraController.getScale(), 30.0f);
 
+        // As setMapZoom() would
+        widget.setCameraDistance(800.0f);
+        widget.flyToArea(westId);
+        widget.onCameraAnimationTick();
+        widget.applyMapZoom(13.0, westId);
+        const float framedScale = widget.mCameraController.getScale();
+        settle();
+        QCOMPARE(widget.mCameraController.getScale(), framedScale);
+
         // As centerview() or the arrow keys would
         widget.setCameraDistance(800.0f);
         widget.flyToArea(westId);
