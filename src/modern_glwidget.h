@@ -379,6 +379,8 @@ private:
     struct LevelExits
     {
         QVector<CubeInstanceData> bars;
+        // Those the inkwash style brushes on, tapered
+        QVector<CubeInstanceData> strokes;
         QVector<float> vertices;
         QVector<float> colors;
     };

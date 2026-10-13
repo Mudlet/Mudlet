@@ -354,6 +354,39 @@ private slots:
         QCOMPARE(scene.solidDashRoomId, 1);
     }
 
+    void test_onlyWholeExitLinesAreStrokes()
+    {
+        const QColor cyan(Qt::cyan);
+        TRoom* pWest = addRoomAt(1, mAreaId, 0, 0);
+        TRoom* pEast = addRoomAt(2, mAreaId, 1, 0);
+        QVERIFY(pWest && pEast && addRoomAt(3, mAreaId, 0, 1) && addRoomAt(4, mAreaId, 1, 2));
+        pWest->setExit(2, DIR_EAST);
+        pEast->setExit(1, DIR_WEST);
+        pWest->setDoor(qsl("e"), 2);
+        pWest->setExit(3, DIR_NORTH);
+        pWest->setExitStub(DIR_SOUTH, true);
+        pEast->setExit(4, DIR_NORTH);
+        pEast->customLines.insert(qsl("n"), {QPointF(1.5, 1.0), QPointF(1.0, 2.0)});
+        pEast->customLinesColor.insert(qsl("n"), cyan);
+        pEast->customLinesStyle.insert(qsl("n"), Qt::SolidLine);
+
+        const ExitScene::Scene scene = build();
+        int strokes = 0;
+        for (const ExitScene::Segment& line : segmentsIn(scene, mExitColor)) {
+            const bool whole = joins(line, QVector2D(0, 0), QVector2D(1, 0)) || joins(line, QVector2D(0, 0), QVector2D(0, -0.5f));
+            QVERIFY2(line.stroke == whole, qPrintable(qsl("the line from (%1, %2) to (%3, %4)").arg(line.from.x()).arg(line.from.y()).arg(line.to.x()).arg(line.to.y())));
+            strokes += line.stroke ? 1 : 0;
+        }
+        QCOMPARE(strokes, 2);
+        const QList<ExitScene::Segment> door = segmentsIn(scene, ExitAppearance::doorColor(2));
+        QVERIFY(!door.isEmpty());
+        const QList<ExitScene::Segment> custom = segmentsIn(scene, cyan);
+        QVERIFY(custom.size() > 1);
+        for (const ExitScene::Segment& piece : door + custom) {
+            QVERIFY2(!piece.stroke, "a door or a piece of a custom line would taper as a stroke");
+        }
+    }
+
     void test_oneWayExitIsDottedWithAnArrowInTheMiddle()
     {
         TRoom* pWest = addRoomAt(1, mAreaId, 0, 0);
