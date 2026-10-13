@@ -25,18 +25,23 @@
 
 #include "FontManager.h"
 #include "Host.h"
+#include "MudletApp.h"
 #include "MudletMedia.h"
 #include "TSpeechBridge.h"
 #include "discord.h"
 
 #include <QDebug>
 
-HostManager::HostManager()
+HostManager::HostManager(const ConfigRoot configRoot)
 : mpMedia(std::make_unique<MudletMedia>())
 , mpFonts(std::make_unique<FontManager>())
 , mpDiscord(std::make_unique<Discord>())
 , mpSpeechBridge(std::make_unique<TSpeechBridge>())
 {
+    // Settling again would delete the settings store under whoever holds it
+    if (configRoot == ConfigRoot::settledHere && !MudletApp::configRootSettled()) {
+        MudletApp::settleConfigRoot();
+    }
     // self() callers trust there is only one; a second would repoint the accessor, then null it on
     // destruction while the first is still in use.
     if (smpSelf) {
