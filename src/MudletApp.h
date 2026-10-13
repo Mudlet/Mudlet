@@ -31,10 +31,10 @@
 #include "enums.h"
 
 #include <QPair>
+#include <QSettings>
 #include <QString>
 
 class QNetworkRequest;
-class QSettings;
 class QUrl;
 
 // The application-wide services that need no main window: where Mudlet keeps
@@ -150,6 +150,8 @@ public:
     // and only the one that parsed it hears of a format error, so getQSettings()
     // would otherwise never report one.
     static void noteEarlySettingsStatus(const QSettings&);
+    // What noteEarlySettingsStatus() last heard of that file, or NoError
+    static QSettings::Status earlySettingsStatus(const QString& fileName);
 
     // Whether the config root in force actually came from a portable.txt. False
     // when a marker was present but named a root that had to be refused, which is

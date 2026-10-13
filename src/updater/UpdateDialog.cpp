@@ -39,6 +39,8 @@
 #include <QTextBrowser>
 #include <QToolButton>
 
+#include <utility>
+
 namespace dblsqd {
 
 /*!
@@ -643,8 +645,10 @@ void UpdateDialog::startUpdate()
         QApplication::quit();
     } else {
         qWarning() << "Failed to open update file:" << mUpdateFilePath << "exists:" << QFile::exists(mUpdateFilePath);
+        //: Title for the warning dialog shown when the downloaded update could not be started
+        const QString errorTitle = tr("Update Error");
         //: Error shown when the downloaded update file cannot be opened for installation. %1 is the file path.
-        handleDownloadError(tr("Could not open the downloaded update. You can try opening it manually:\n%1").arg(mUpdateFilePath));
+        reportError(errorTitle, tr("Could not open the downloaded update. You can try opening it manually:\n%1").arg(mUpdateFilePath));
     }
 }
 
@@ -658,8 +662,12 @@ void UpdateDialog::handleFeedReady()
     mFeedLoadFailed = false;
     mUpdates = mFeed->getUpdates(dblsqd::Release::getCurrentRelease());
     mReleases = mFeed->getReleases();
-    if (!mUpdates.isEmpty()) {
-        mLatestRelease = mUpdates.first();
+    mLatestRelease = mUpdates.isEmpty() ? Release() : mUpdates.first();
+    // An install the user asked for answers the offer it was made on, so it
+    // only carries over into this check while its download is still running
+    if (!mFeed->isDownloading()) {
+        mAccepted = false;
+        mAcceptedInstallButton = nullptr;
     }
 
     if (mType == ManualChangelog) {
@@ -674,7 +682,21 @@ void UpdateDialog::handleFeedReady()
     mUpdateFilePath = settingsValue(qsl("updateFilePath"), "", mSettings).toString();
     if (!mUpdateFilePath.isEmpty() && QFile::exists(mUpdateFilePath)) {
         QString updateFileVersion = settingsValue(qsl("updateFileVersion"), "", mSettings).toString();
-        if (updateFileVersion != mLatestRelease.getVersion() || updateFileVersion == QApplication::applicationVersion()) {
+        const QString offeredVersion = mLatestRelease.getVersion();
+        bool superseded = !offeredVersion.isEmpty() && updateFileVersion != offeredVersion;
+        if (offeredVersion.isEmpty()) {
+            // Nothing offered may only mean the release awaits its checksums, but an installer the
+            // running version has passed is never offered again. The feed's entry dates a test build
+            Release fileRelease(updateFileVersion);
+            for (const auto& release : std::as_const(mReleases)) {
+                if (release.getVersion().compare(updateFileVersion, Qt::CaseInsensitive) == 0) {
+                    fileRelease = release;
+                    break;
+                }
+            }
+            superseded = !(Release::getCurrentRelease() < fileRelease);
+        }
+        if (superseded || updateFileVersion == QApplication::applicationVersion()) {
             if (!QFile::remove(mUpdateFilePath)) {
                 qWarning() << "Failed to remove stale update file:" << mUpdateFilePath;
             }
@@ -727,13 +749,19 @@ void UpdateDialog::handleDownloadFinished()
     mIsDownloadFinished = true;
     mUpdateFilePath = filePath;
     setSettingsValue(qsl("updateFilePath"), mUpdateFilePath, mSettings);
-    setSettingsValue(qsl("updateFileVersion"), mLatestRelease.getVersion(), mSettings);
+    // Asked of the Feed: a check that answered during the download has replaced
+    // mLatestRelease with whatever it offers
+    setSettingsValue(qsl("updateFileVersion"), mFeed->getCurrentDownload().getVersion(), mSettings);
 
     if (mAccepted) {
-        if (mAcceptedInstallButton == nullptr) {
+        // Answered by this download, so no later one may act on it again
+        QAbstractButton* const acceptedButton = mAcceptedInstallButton;
+        mAccepted = false;
+        mAcceptedInstallButton = nullptr;
+        if (acceptedButton == nullptr) {
             startUpdate();
         } else {
-            emit installButtonClicked(mAcceptedInstallButton, mUpdateFilePath);
+            emit installButtonClicked(acceptedButton, mUpdateFilePath);
         }
 
     } else {
@@ -746,7 +774,18 @@ void UpdateDialog::handleDownloadError(const QString& message)
     //: Title for the download error warning dialog
     const QString errorTitle = tr("Download Error");
     //: Message shown in the download error warning dialog, followed by the specific error details
-    QMessageBox::warning(this, errorTitle, tr("There was an error while downloading the update.") + qsl("\n\n") + message);
+    reportError(errorTitle, tr("There was an error while downloading the update.") + qsl("\n\n") + message);
+}
+
+void UpdateDialog::reportError(const QString& title, const QString& text)
+{
+    // Before the box: its event loop can run a later download to the end
+    mAccepted = false;
+    mAcceptedInstallButton = nullptr;
+    // startDownload() disabled them, and otherwise only a later download that
+    // succeeds would let the user try again
+    disableButtons(false);
+    QMessageBox::warning(this, title, text);
     done(QDialog::Rejected);
 }
 
