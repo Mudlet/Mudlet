@@ -1038,6 +1038,7 @@ void TMap::initGraph()
 
     mGraphBuildInProgress = false;
     mMapGraphNeedsUpdate = false;
+    ++mPathGraphRevision;
     qDebug() << "TMap::initGraph() INFO: built graph with:" << locations.size() << "(" << roomCount << ") locations(roomCount), and discarded" << unUsableRoomSet.count()
              << "other NOT usable rooms and found:" << edgeCount << "distinct, usable edges in:" << _time.nsecsElapsed() * 1.0e-6 << "ms.";
 }

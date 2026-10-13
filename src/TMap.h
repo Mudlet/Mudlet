@@ -328,6 +328,8 @@ public:
     quint64 mapRevision() const { return mMapRevision; }
     // Bumped by updateArea(), for changes such as a room highlighted that mapRevision() misses
     quint64 appearanceRevision() const { return mAppearanceRevision; }
+    // Bumped by initGraph(), as room locks and exit weights change what findPath() finds without bumping mapRevision()
+    quint64 pathGraphRevision() const { return mPathGraphRevision; }
     // Call TAreaGraph::refresh() before reading it.
     TAreaGraph* areaGraph() const { return mpAreaGraph.get(); }
     void setSaveError(bool state);
@@ -568,6 +570,7 @@ private:
     bool mGraphBuildInProgress = false;
     quint64 mMapRevision = 0;
     quint64 mAppearanceRevision = 0;
+    quint64 mPathGraphRevision = 0;
     // Per map, not per process, or one profile's pending update swallows another's
     std::optional<int> mPendingAreaId;
     std::unique_ptr<TAreaGraph> mpAreaGraph;
