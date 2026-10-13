@@ -35,6 +35,7 @@ class FontManager;
 class Host;
 class MudletMedia;
 class TEvent;
+class TSpeechBridge;
 typedef QMap<QString, QSharedPointer<Host>> HostMap;
 
 class HostManager
@@ -91,6 +92,8 @@ private:
     std::unique_ptr<FontManager> mpFonts;
     // Before mHostPool too, as the profiles reach it through Discord::self(); a second pool's goes unused
     std::unique_ptr<Discord> mpDiscord;
+    // Before mHostPool too, as the profiles reach it through TSpeechBridge::instance(); a second pool's goes unused
+    std::unique_ptr<TSpeechBridge> mpSpeechBridge;
     HostMap mHostPool;
 };
 

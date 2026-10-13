@@ -26,6 +26,8 @@
 #include <QFontMetrics>
 #include <QFontMetricsF>
 #include <QImage>
+#include <QPointer>
+#include <QScopeGuard>
 #include <QSvgRenderer>
 #include <QTemporaryDir>
 #include <QWidget>
@@ -46,6 +48,8 @@
 #include "HostManager.h"
 #include "MudletApp.h"
 #include "PortableModeTestHelper.h"
+#include "SpeechRecognizer.h"
+#include "SpeechRecognizerFactory.h"
 #include "TAppFrontend.h"
 #include "TConsoleModel.h"
 #include "TLabel.h"
@@ -53,10 +57,55 @@
 #include "TLuaInterpreter.h"
 #include "TMap.h"
 #include "TRoomDB.h"
+#include "TSpeechBridge.h"
 #include "XMLimport.h"
 #include "discord.h"
 
 #include "GroupedTest.h"
+
+// A stand-in engine, so a session can be started and ended with no speech library installed
+class HeadlessStandInRecognizer : public SpeechRecognizer
+{
+    Q_OBJECT
+
+public:
+    explicit HeadlessStandInRecognizer(QObject* parent = nullptr)
+    : SpeechRecognizer(parent)
+    {
+    }
+
+    bool initialize(const QString& modelPath) override
+    {
+        mModelPath = modelPath;
+        setState(State::Ready);
+        return true;
+    }
+    QString currentLanguage() const override { return qsl("en"); }
+    bool setLanguage(const QString&) override { return true; }
+    QString backendName() const override { return qsl("HeadlessStandIn"); }
+    QString backendVersion() const override { return qsl("1.0"); }
+    Sensitivity sensitivity() const override { return Sensitivity::Default; }
+    QString modelPath() const override { return mModelPath; }
+    Capabilities capabilities() const override { return mCapabilities; }
+    // Changed without saying so, as a library being swapped underneath an engine does
+    void setBiasing(const bool biasing) { mCapabilities.biasing = biasing; }
+    // A fault the engine reports itself, as sherpa's model rebuild can
+    bool setSensitivity(Sensitivity) override
+    {
+        emit errorOccurred(qsl("the stand-in could not change its sensitivity"));
+        return false;
+    }
+
+protected:
+    void doStartListening() override { setState(State::Listening); }
+    void doStopListening() override { setState(State::Ready); }
+    void doCancel() override { setState(State::Ready); }
+
+private:
+    QString mModelPath;
+    // Biasing with no vocabulary of its own, so stt.setVocabulary() makes the base class report a fault
+    Capabilities mCapabilities{.biasing = true, .sensitivityTuning = true};
+};
 
 // A profile made without ever starting the main window, so it only has the null
 // console view: its Lua, triggers and main console model have to work regardless.
@@ -138,6 +187,35 @@ private:
         map->serialize(out);
         map->mapClear();
         return serialized;
+    }
+
+    // As the stt.* bindings count one, the built-in macOS engine included
+    static bool speechEngineAvailable()
+    {
+        return SpeechRecognizerFactory::backendAvailable(SpeechRecognizerFactory::Backend::Auto) || SpeechRecognizerFactory::backendAvailable(SpeechRecognizerFactory::Backend::Platform);
+    }
+
+    static HeadlessStandInRecognizer* standInEngine() { return TSpeechBridge::instance() ? qobject_cast<HeadlessStandInRecognizer*>(TSpeechBridge::instance()->speechRecognizer()) : nullptr; }
+
+    // Named, as the bridge keeps an engine it has for Auto and for its own backend; loaded, as with no
+    // engine library on macOS each stt.start() builds another (see SpeechAcrossProfilesTest)
+    static bool installHeadlessStandInEngine()
+    {
+        if (!TSpeechBridge::instance()) {
+            return false;
+        }
+        SpeechRecognizerFactory::setFactoryOverride([](QObject* parent) -> SpeechRecognizer* {
+            auto* engine = new HeadlessStandInRecognizer(parent);
+            engine->initialize(QString());
+            return engine;
+        });
+        for (const auto backend : {SpeechRecognizerFactory::Backend::Sherpa, SpeechRecognizerFactory::Backend::Vosk}) {
+            TSpeechBridge::instance()->initSpeechRecognition(backend);
+            if (standInEngine()) {
+                return true;
+            }
+        }
+        return false;
     }
 
 private slots:
@@ -4622,6 +4700,200 @@ headlessDiscord = ok and 'ok' or tostring(err)
 
         pool.reset();
         QCOMPARE(sDetailAtTeardown, QString());
+    }
+
+    // As STT_spec.lua's refusals in the GUI: each is returned and raised as sysSTTError on the calling profile,
+    // which alternates, so a refusal sent to whoever called last would land on the other
+    void test_speechToTextRefusesAsTheGuiDoesWithNoMainWindow()
+    {
+        QVERIFY2(!TAppFrontend::hasView(), "A main window exists, so this run is not headless.");
+        QVERIFY2(TSpeechBridge::instance(), "The profile pool has no speech bridge.");
+
+        const QStringList hostnames{qsl("Test-Headless-Host-Speech-Refusals-A"), qsl("Test-Headless-Host-Speech-Refusals-B")};
+        const auto closeProfiles = qScopeGuard([&hostnames]() {
+            for (const QString& hostname : hostnames) {
+                if (HostManager::self()->hostLoaded(hostname)) {
+                    HostManager::self()->deleteHost(hostname);
+                }
+            }
+        });
+        QList<Host*> hosts;
+        for (const QString& hostname : hostnames) {
+            QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+            Host* host = HostManager::self()->getHost(hostname);
+            QVERIFY2(host, "The profile is not in the pool.");
+            host->registerAnonymousEventHandler(qsl("sysSTTError"), qsl("onHeadlessSttError"));
+            QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("headlessSttErrors = {} function onHeadlessSttError(_, message) headlessSttErrors[#headlessSttErrors + 1] = message end")));
+            hosts << host;
+        }
+        // Only with no engine is every one of these refused, so only then is every binding's caller checked
+        const bool noEngine = !TSpeechBridge::instance()->speechRecognizer() && !speechEngineAvailable();
+        const QList<QPair<QString, bool>> calls{{qsl("stt.init('/nonexistent/headless/model')"), true},
+                                                {qsl("stt.start()"), true},
+                                                {qsl("stt.toggle()"), true},
+                                                {qsl("stt.setSilenceTimeout(1000)"), true},
+                                                {qsl("stt.setSensitivity('short')"), true},
+                                                {qsl("stt.setVocabulary({'north'})"), true},
+                                                {qsl("stt.stop()"), false},
+                                                {qsl("stt.cancel()"), false},
+                                                {qsl("stt.close()"), false},
+                                                {qsl("stt.reloadLibrary()"), true},
+                                                {qsl("stt.unloadLibrary()"), false},
+                                                {qsl("stt.start()"), true},
+                                                {qsl("stt.reloadLibrary()"), true}};
+        for (int i = 0; i < calls.size(); ++i) {
+            Host* caller = hosts.at(i % 2);
+            Host* other = hosts.at((i + 1) % 2);
+            const QString& call = calls.at(i).first;
+            for (Host* host : hosts) {
+                QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("headlessSttErrors = {}")));
+            }
+            QVERIFY(caller->getLuaInterpreter()->compileAndExecuteScript(qsl("local ok, why = %1 headlessSttRefusal = (not ok and type(why) == 'string') and why or ''").arg(call)));
+            const QString refusal = luaGlobalString(caller, "headlessSttRefusal");
+            for (Host* host : hosts) {
+                QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("headlessSttRaised = table.concat(headlessSttErrors, '\\n')")));
+            }
+            QVERIFY2(luaGlobalString(other, "headlessSttRaised").isEmpty(), qPrintable(qsl("%1 raised its refusal on the other profile").arg(call)));
+            // An engine, if there is one, answers some refusals without raising them and raises faults of its own
+            if (noEngine) {
+                QVERIFY2(refusal.isEmpty() != calls.at(i).second, qPrintable(qsl("%1 answered \"%2\"").arg(call, refusal)));
+                QCOMPARE(luaGlobalString(caller, "headlessSttRaised"), refusal);
+            }
+        }
+    }
+
+    // Another profile's call, made from inside this one's by a handler, must not take this one's refusal
+    void test_aRefusalReachesItsCallerPastANestedCallWithNoMainWindow()
+    {
+        QVERIFY2(!TAppFrontend::hasView(), "A main window exists, so this run is not headless.");
+        if (speechEngineAvailable()) {
+            QSKIP("A speech engine is available here, so stt.reloadLibrary() is not refused");
+        }
+        const auto restoreFactory = qScopeGuard([]() {
+            SpeechRecognizerFactory::setFactoryOverride(nullptr);
+        });
+        QVERIFY2(installHeadlessStandInEngine(), "The stand-in engine was not installed.");
+        const QStringList hostnames{qsl("Test-Headless-Host-Speech-Nested-A"), qsl("Test-Headless-Host-Speech-Nested-B")};
+        const auto closeProfiles = qScopeGuard([&hostnames]() {
+            for (const QString& hostname : hostnames) {
+                if (HostManager::self()->hostLoaded(hostname)) {
+                    HostManager::self()->deleteHost(hostname);
+                }
+            }
+        });
+        QList<Host*> hosts;
+        for (const QString& hostname : hostnames) {
+            QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+            Host* host = HostManager::self()->getHost(hostname);
+            QVERIFY2(host, "The profile is not in the pool.");
+            host->registerAnonymousEventHandler(qsl("sysSTTError"), qsl("onHeadlessSttError"));
+            host->registerAnonymousEventHandler(qsl("sysSTTCapabilitiesChanged"), qsl("onHeadlessSttCapabilities"));
+            QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(
+                    qsl("headlessSttErrors = 0 function onHeadlessSttError() headlessSttErrors = headlessSttErrors + 1 end function onHeadlessSttCapabilities() end")));
+            hosts << host;
+        }
+        // B reacts to a capability change with a call that makes it the last caller and raises nothing here
+        QVERIFY(hosts.at(1)->getLuaInterpreter()->compileAndExecuteScript(qsl("headlessSttNested = 0 function onHeadlessSttCapabilities() headlessSttNested = headlessSttNested + 1 stt.close() end")));
+        standInEngine()->releaseResources();
+        standInEngine()->setBiasing(false);
+
+        QVERIFY(hosts.at(0)->getLuaInterpreter()->compileAndExecuteScript(qsl("headlessSttReloaded = tostring(stt.reloadLibrary())")));
+        QCOMPARE(luaGlobalString(hosts.at(0), "headlessSttReloaded"), qsl("false"));
+        QCOMPARE(luaGlobalString(hosts.at(0), "headlessSttErrors"), qsl("1"));
+        QCOMPARE(luaGlobalString(hosts.at(1), "headlessSttErrors"), qsl("0"));
+        QCOMPARE(luaGlobalString(hosts.at(1), "headlessSttNested"), qsl("1"));
+    }
+
+    // As loading a model, then closing a tab and the last profile, do in SpeechAcrossProfilesTest
+    void test_speechToTextListensAndClosesWithNoMainWindow()
+    {
+        QVERIFY2(!TAppFrontend::hasView(), "A main window exists, so this run is not headless.");
+        const auto restoreFactory = qScopeGuard([]() {
+            SpeechRecognizerFactory::setFactoryOverride(nullptr);
+        });
+        QVERIFY2(installHeadlessStandInEngine(), "The stand-in engine was not installed.");
+        TSpeechBridge* bridge = TSpeechBridge::instance();
+
+        const QString closedHostname = qsl("Test-Headless-Host-Speech-Closed");
+        const QString lastHostname = qsl("Test-Headless-Host-Speech-Last");
+        QVERIFY2(HostManager::self()->addHost(closedHostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        QVERIFY2(HostManager::self()->addHost(lastHostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        const auto closeProfiles = qScopeGuard([&closedHostname, &lastHostname]() {
+            for (const QString& hostname : {closedHostname, lastHostname}) {
+                if (HostManager::self()->hostLoaded(hostname)) {
+                    HostManager::self()->deleteHost(hostname);
+                }
+            }
+        });
+        Host* closed = HostManager::self()->getHost(closedHostname);
+        Host* last = HostManager::self()->getHost(lastHostname);
+        QVERIFY2(closed && last, "The profiles are not in the pool.");
+        // Kept outside the profiles' Lua, which goes with them
+        static QStringList sEvents;
+        sEvents.clear();
+        for (Host* host : {closed, last}) {
+            lua_register(host->getLuaInterpreter()->getLuaGlobalState(), "recordSttEvent", [](lua_State* L) -> int {
+                const QString event = QString::fromUtf8(lua_tostring(L, 1));
+                sEvents << qsl("%1:%2").arg(getHostFromLua(L).getName(), event == qsl("sysSTTError") ? event : QString::fromUtf8(lua_tostring(L, 2)));
+                return 0;
+            });
+            host->registerAnonymousEventHandler(qsl("sysSTTStateChanged"), qsl("recordSttEvent"));
+            host->registerAnonymousEventHandler(qsl("sysSTTError"), qsl("recordSttEvent"));
+        }
+
+        // Nobody holds the microphone, so what the engine says during each of these goes only to the profile
+        // that made the call, which alternates
+        const QList<QPair<Host*, QString>> calls{{closed, qsl("stt.setVocabulary({'north'})")},
+                                                 {last, qsl("stt.setSensitivity('short')")},
+                                                 {closed, qsl("stt.close()")},
+                                                 {last, qsl("stt.init([[%1]])").arg(mConfigDir.path())},
+                                                 {closed, qsl("assert(stt.start())")}};
+        for (const auto& [host, call] : calls) {
+            QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(call), qPrintable(call));
+        }
+        QCOMPARE(bridge->microphoneOwner(), closed);
+        QCOMPARE(sEvents,
+                 QStringList({qsl("%1:sysSTTError").arg(closedHostname),
+                              qsl("%1:sysSTTError").arg(lastHostname),
+                              qsl("%1:uninitialized").arg(closedHostname),
+                              qsl("%1:ready").arg(lastHostname),
+                              qsl("%1:listening").arg(closedHostname)}));
+
+        // As a package that listens all the time does, which the GUI's closing profile, its scripts stopped, never gets to
+        QVERIFY(closed->getLuaInterpreter()->compileAndExecuteScript(qsl("function onSpeechReady(_, state) if state == 'ready' then stt.start() end end")));
+        closed->registerAnonymousEventHandler(qsl("sysSTTStateChanged"), qsl("onSpeechReady"));
+        sEvents.clear();
+        HostManager::self()->deleteHost(closedHostname);
+        QVERIFY2(!standInEngine()->listening(), "Closing the profile holding the microphone left its session running.");
+        QCOMPARE(bridge->microphoneOwner(), nullptr);
+        QVERIFY2(standInEngine()->initialized(), "The engine was released while a profile was still open.");
+        QCOMPARE(sEvents, QStringList());
+
+        // Only closing the last profile releases the engine. This one closes itself from its exit handler,
+        // as the reopen tests do, so it is still alive when the release comes, and must not be told of it.
+        lua_register(last->getLuaInterpreter()->getLuaGlobalState(), "dropProfile", [](lua_State* L) -> int {
+            HostManager::self()->deleteHost(QString::fromUtf8(lua_tostring(L, 1)));
+            return 0;
+        });
+        last->registerAnonymousEventHandler(qsl("sysExitEvent"), qsl("onSpeechLastExit"));
+        QVERIFY(last->getLuaInterpreter()->compileAndExecuteScript(qsl("function onSpeechLastExit() dropProfile(getProfileName()) end headlessSttStarted = tostring(stt.start())")));
+        QCOMPARE(luaGlobalString(last, "headlessSttStarted"), qsl("true"));
+        // Earlier tests' profiles, a few rounds over in case one's exit handler opens another
+        for (int round = 0; round < 3 && HostManager::self()->getHostCount() > 1; ++round) {
+            for (const auto& pHost : HostManager::self()->hostList()) {
+                if (pHost->getName() != lastHostname) {
+                    HostManager::self()->deleteHost(pHost->getName());
+                }
+            }
+        }
+        QVERIFY2(HostManager::self()->getHostCount() == 1, "An earlier test left a profile that will not close, so this one cannot be the last.");
+        sEvents.clear();
+        const QPointer<SpeechRecognizer> engine = standInEngine();
+        HostManager::self()->deleteHost(lastHostname);
+        QCOMPARE(HostManager::self()->getHostCount(), 0);
+        QVERIFY2(engine, "The engine was destroyed rather than released.");
+        QVERIFY2(!engine->initialized(), "The engine kept its resources after the last profile closed.");
+        QCOMPARE(sEvents, QStringList());
     }
 
     void test_heldLineCommitsBeforeDisconnectWithNoMainWindow()
