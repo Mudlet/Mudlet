@@ -961,17 +961,22 @@ describe("Trigger processing", function()
             assert.has_error(function() feedTriggers({}) end)
         end)
 
-        -- The fed text runs a whole trigger pass inside the calling script
-        it("gives the calling trigger back its matches after a nested feed (#10796)", function()
+        it("gives the calling trigger back its own captures after a nested feed (#10796)", function()
             local seen = {}
             local inner = tempRegexTrigger([[^nested_feed_inner (\w+)$]], function()
                 seen.innerMatch = matches[2]
             end)
-            local outer = tempRegexTrigger([[^nested_feed_outer (\w+)$]], function()
-                seen.beforeMatch = matches[2]
+            local outer = tempRegexTrigger([[^nested_feed_outer (?<who>\w+)$]], function()
+                matches.note = "mine"
+                local before = matches
                 feedTriggers("\nnested_feed_inner deeper\n")
+                seen.sameTable = rawequal(before, matches)
+                seen.note = matches.note
                 seen.afterFullMatch = matches[1]
-                seen.afterMatch = matches[2]
+                seen.named = matches.who
+                seen.selectedByNumber = selectCaptureGroup(2)
+                seen.selectedByName = selectCaptureGroup("who")
+                seen.selection = getSelection()
             end)
             finally(function()
                 killTrigger(inner)
@@ -980,10 +985,35 @@ describe("Trigger processing", function()
 
             feedTriggers("\nnested_feed_outer thing\n")
 
-            assert.are.equal("thing", seen.beforeMatch)
             assert.are.equal("deeper", seen.innerMatch, "the inner trigger should see its own capture")
+            assert.is_true(seen.sameTable, "the calling trigger was handed another matches table")
+            assert.are.equal("mine", seen.note, "what the calling trigger put into its matches was lost")
             assert.are.equal("nested_feed_outer thing", seen.afterFullMatch, "matches[1] was emptied by the nested feed")
-            assert.are.equal("thing", seen.afterMatch, "the calling trigger's capture was emptied by the nested feed")
+            assert.are.equal("thing", seen.named, "the named capture was emptied by the nested feed")
+            assert.are_not.equal(-1, seen.selectedByNumber, "selectCaptureGroup() lost the capture to the nested feed")
+            assert.are_not.equal(-1, seen.selectedByName, "selectCaptureGroup() lost the named capture to the nested feed")
+            assert.are.equal("thing", seen.selection)
+        end)
+
+        it("gives a multiline trigger back its multimatches after a nested feed (#10796)", function()
+            _G.NestedFeedMultiSpec = {}
+            local inner = tempRegexTrigger([[^nested_feed_multi_inner (\w+)$]], function() end)
+            local code = [==[
+                feedTriggers("\nnested_feed_multi_inner deeper\n")
+                _G.NestedFeedMultiSpec.after = multimatches[1] and multimatches[2] and multimatches[1][2] .. "," .. multimatches[2][2]
+            ]==]
+            tempComplexRegexTrigger("SpecNestedFeedMulti", [[^nfm one (\w+)$]], code, 1, 0, 0, 0, 0, 0, 0, 0, 0, 3)
+            tempComplexRegexTrigger("SpecNestedFeedMulti", [[^nfm two (\w+)$]], code, 1, 0, 0, 0, 0, 0, 0, 0, 0, 3)
+            finally(function()
+                killTrigger("SpecNestedFeedMulti")
+                killTrigger(inner)
+                _G.NestedFeedMultiSpec = nil
+            end)
+
+            feedTriggers("nfm one aaa\n")
+            feedTriggers("nfm two bbb\n")
+
+            assert.are.equal("aaa,bbb", _G.NestedFeedMultiSpec.after, "multimatches was emptied by the nested feed")
         end)
 
         it("stops a trigger that feeds itself more than one matching line", function()
