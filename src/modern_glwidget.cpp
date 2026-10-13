@@ -57,7 +57,6 @@
 #include <QPainter>
 #include <QPainterPath>
 #include <QPolygonF>
-#include <QShortcut>
 #include <QKeyEvent>
 #include <QSurfaceFormat>
 #include <QToolTip>
@@ -121,9 +120,6 @@ ModernGLWidget::ModernGLWidget(TMap* pMap, Host* pHost, QWidget* parent)
         }
         update();
     });
-    mpSearchShortcut = new QShortcut(QKeySequence::Find, this, this, &ModernGLWidget::openSearch);
-    // Only over the view, so that elsewhere Ctrl+F still searches the console
-    mpSearchShortcut->setEnabled(false);
 
     // A click takes focus only so that a floating view can pass typed keys on to the command line; focus from
     // Tab also lets the view pan and zoom with keys
@@ -178,8 +174,6 @@ QSize ModernGLWidget::sizeHint() const
 void ModernGLWidget::showEvent(QShowEvent* event)
 {
     QOpenGLWidget::showEvent(event);
-    // No enterEvent comes when the view is shown under a pointer already there
-    mpSearchShortcut->setEnabled(underMouse());
     // Qt creates the context once the widget is laid out; if that failed, initializeGL never runs to say so
     QTimer::singleShot(0, this, [this]() {
         if (!isVisible()) {
@@ -197,7 +191,6 @@ void ModernGLWidget::showEvent(QShowEvent* event)
 
 void ModernGLWidget::hideEvent(QHideEvent* event)
 {
-    mpSearchShortcut->setEnabled(false);
     endEditGesture();
     saveCamera();
     // The release, if any, now goes elsewhere
@@ -394,7 +387,7 @@ bool ModernGLWidget::event(QEvent* event)
     }
     // The keys go on to the command line, so it must also win the shortcuts it wins with focus of its own
     if (event->type() == QEvent::ShortcutOverride) {
-        if (static_cast<QKeyEvent*>(event)->matches(QKeySequence::Find)) {
+        if (searchKeyed(static_cast<QKeyEvent*>(event))) {
             event->accept();
             return true;
         }
@@ -2903,6 +2896,13 @@ void ModernGLWidget::showSearchResultMenu(const int row, const QPoint& globalPos
     menu->popup(globalPosition);
 }
 
+// Only with the keys the view's own, from Tab: after a click they go on to the command line, whose Ctrl+F searches
+// the console, and a Key the profile binds to it runs instead wherever the keys are
+bool ModernGLWidget::searchKeyed(const QKeyEvent* event) const
+{
+    return mKeysNavigate && event->matches(QKeySequence::Find) && !(mpHost && mpHost->getKeyUnit()->wouldMatch(static_cast<Qt::Key>(event->key()), event->modifiers()));
+}
+
 void ModernGLWidget::goToSearchResult(const MapSearch::Result& result)
 {
     mSearchMarkedRoomId = 0;
@@ -3755,7 +3755,6 @@ void ModernGLWidget::showContextMenu(const QPoint& position)
     menu->insertAction(firstAction, fitAreaAction);
     //: 3D map view context menu item: opens a search box that finds rooms, areas and labels in every area of the map
     auto* searchAction = new QAction(tr("Search the map..."), menu);
-    searchAction->setShortcut(QKeySequence::Find);
     connect(searchAction, &QAction::triggered, this, &ModernGLWidget::openSearch);
     menu->insertAction(firstAction, searchAction);
     if (mpMap->mpRoomDB && !mpMap->mpRoomDB->isEmpty()) {
@@ -3794,15 +3793,8 @@ void ModernGLWidget::showContextMenu(const QPoint& position)
     menu->popup(mapToGlobal(position));
 }
 
-void ModernGLWidget::enterEvent(QEnterEvent* event)
-{
-    mpSearchShortcut->setEnabled(true);
-    QOpenGLWidget::enterEvent(event);
-}
-
 void ModernGLWidget::leaveEvent(QEvent* event)
 {
-    mpSearchShortcut->setEnabled(false);
     // A press still on here with no button down lost its release to wherever the grab went, such as a popup; a
     // Leave while the button is held, mid-drag, must not end the drag
     if (QGuiApplication::mouseButtons() == Qt::NoButton) {
@@ -4035,19 +4027,16 @@ constexpr float scmKeyTurnDegrees = 15.0f;
 
 void ModernGLWidget::keyPressEvent(QKeyEvent* event)
 {
-    if (event->matches(QKeySequence::Find)) {
+    if (searchKeyed(event)) {
         openSearch();
         return;
     }
     // A modifier pressed on its own waits for the key it goes with, such as Shift+Tab or the Shift for +; handed on
-    // first, it would take focus to the command line ahead of that key. Control waits even after a click, or Ctrl+F
-    // would search the console rather than the map
-    if (event->key() == Qt::Key_Control) {
-        return;
-    }
+    // first, it would take focus to the command line ahead of that key
     if (mKeysNavigate) {
         switch (event->key()) {
         case Qt::Key_Shift:
+        case Qt::Key_Control:
         case Qt::Key_Alt:
         case Qt::Key_AltGr:
         case Qt::Key_Meta:

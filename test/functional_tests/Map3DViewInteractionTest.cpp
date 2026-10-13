@@ -949,6 +949,47 @@ private slots:
         QVERIFY(!pSearchBox->isVisible());
     }
 
+    // Ctrl+F is the console's after a click, which leaves the keys to the command line, and a Key bound to it wins
+    // even with the view's own keys from Tab
+    void test_ctrlFSearchesTheMapOnlyWithTheViewsOwnKeys()
+    {
+        ModernGLWidget* pModern = viewAtThePlayer();
+        QVERIFY(pModern);
+        const auto searchShown = [pModern]() {
+            const auto* pSearchBox = pModern->findChild<QLineEdit*>();
+            return pSearchBox && pSearchBox->isVisible();
+        };
+        QLineEdit* pConsoleSearch = mpHost->mainConsoleView()->mpBufferSearchBox;
+        const auto refocus = qScopeGuard([this]() {
+            mpHost->mainConsoleView()->mpCommandLine->setFocus(Qt::OtherFocusReason);
+        });
+        QVERIFY(activate(pModern->window()));
+        QTest::mouseClick(pModern, Qt::LeftButton, Qt::NoModifier, pixelOfRoom(pModern, kPlayerRoomId));
+        QTRY_VERIFY(pModern->hasFocus());
+        QTest::keyClick(static_cast<QWidget*>(nullptr), Qt::Key_F, Qt::ControlModifier);
+        QCoreApplication::processEvents();
+        QVERIFY(!searchShown());
+        QTRY_VERIFY2(pConsoleSearch->hasFocus(), qPrintable(QDebug::toString(QApplication::focusWidget())));
+
+        QVERIFY(focusFromTheKeyboard(pModern));
+        QTest::keyClick(static_cast<QWidget*>(nullptr), Qt::Key_F, Qt::ControlModifier);
+        QVERIFY(searchShown());
+        QTest::keyClick(static_cast<QWidget*>(nullptr), Qt::Key_Escape);
+        QVERIFY(!searchShown());
+
+        QCOMPARE(runLua(qsl("findKeyRan = 0\n"
+                            "findKey = tempKey(mudlet.keymodifier.Control, mudlet.key.F, function() findKeyRan = findKeyRan + 1 end)")),
+                 QString());
+        const auto restore = qScopeGuard([this]() {
+            runLua(qsl("killKey(findKey)"));
+        });
+        QVERIFY(focusFromTheKeyboard(pModern));
+        QTest::keyClick(static_cast<QWidget*>(nullptr), Qt::Key_F, Qt::ControlModifier);
+        QCoreApplication::processEvents();
+        QVERIFY(!searchShown());
+        QCOMPARE(luaGlobalNumber("findKeyRan"), 1);
+    }
+
     // Hiding the focused view hands focus on to the next widget in its window, which in a floating map is one of
     // its buttons; "Edit in 2D" must leave the keys typed next to the command line, as the 2D map does
     void test_editIn2DLeavesTheKeysToTheCommandLine()

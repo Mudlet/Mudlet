@@ -68,7 +68,6 @@ class MapSearchPanel;
 class QFontMetricsF;
 class QLabel;
 class QPainter;
-class QShortcut;
 class T2DMap;
 class TCommandLine;
 class TMap;
@@ -213,7 +212,6 @@ protected:
     void mouseReleaseEvent(QMouseEvent* event) override;
     void mouseDoubleClickEvent(QMouseEvent* event) override;
     void keyPressEvent(QKeyEvent* event) override;
-    void enterEvent(QEnterEvent* event) override;
     void leaveEvent(QEvent* event) override;
     void focusInEvent(QFocusEvent* event) override;
     void focusOutEvent(QFocusEvent* event) override;
@@ -472,8 +470,6 @@ private:
     qint64 mRouteGraphBuildMs = 0;
     MapSearch mSearch;
     MapSearchPanel* mpSearchPanel = nullptr;
-    // Ctrl+F over the view, where the click that brought the pointer there has given the command line focus
-    QShortcut* mpSearchShortcut = nullptr;
     QList<MapSearch::Result> mSearchResults;
     // The room a search went to, marked until the time is up
     int mSearchMarkedRoomId = 0;
@@ -548,6 +544,7 @@ private:
     float arrivalDistance(int areaId) const;
     // A flight to this point of the area, from wherever the view is now, coming no further out than distance
     void flyToPoint(int areaId, const QVector3D& point, float distance);
+    bool searchKeyed(const QKeyEvent* event) const;
     void runSearch();
     void chooseSearchResult(int row, bool planRoute);
     // A room or area still on the map, and not where the player already is
