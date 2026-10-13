@@ -387,7 +387,7 @@ void TAlias::execute()
         // Sending runs a whole alias pass, which sets "command" and empties the
         // captures even when nothing matches; this alias's script and the
         // aliases after it in this pass need theirs back
-        const int dispatchDepth = mpHost->mLuaInterpreter.pushNestedDispatchState();
+        const int dispatchDepth = mpHost->mLuaInterpreter.pushNestedDispatchState(true);
         mpHost->send(mCommand);
         if (dispatchDepth >= 0) {
             mpHost->mLuaInterpreter.popNestedDispatchState(dispatchDepth);
@@ -400,7 +400,7 @@ void TAlias::execute()
     }
 
     if (mRegisteredAnonymousLuaFunction) {
-        mpHost->mLuaInterpreter.call_luafunction(this, mName);
+        mpHost->mLuaInterpreter.call_luafunction(this, mName, true);
         return;
     }
 
@@ -408,7 +408,7 @@ void TAlias::execute()
         return;
     }
 
-    mpHost->mLuaInterpreter.call(mFuncName, mName);
+    mpHost->mLuaInterpreter.call(mFuncName, mName, false, true);
 }
 
 QString TAlias::packageName(TAlias* pAlias)
