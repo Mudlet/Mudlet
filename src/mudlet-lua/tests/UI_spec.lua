@@ -8434,9 +8434,8 @@ describe("openUserWindow docking areas", function()
   end)
 end)
 
--- gui-drop installs into fresh profiles, the self-test one included. Its drop
--- handler is called directly with the arguments TConsole::dropEvent() raises
--- sysDropEvent with.
+-- gui-drop installs into fresh profiles, the self-test one included. Its drop handler
+-- is called with the arguments TConsole::dropEvent() raises sysDropEvent with.
 describe("Tests the gui-drop package's image drops", function()
   if not (type(GUIDropManager) == "table" and type(GUIDropManager.ImageDrop) == "function") then
     it("needs the gui-drop package installed", function()
@@ -8462,20 +8461,47 @@ describe("Tests the gui-drop package's image drops", function()
     return files
   end
 
-  -- a copy of the fixture under this name, in a folder of this name
-  local function imageAt(folder, fileName)
+  local function readFile(path)
+    local file = io.open(path, "rb")
+    assert.is_not_nil(file, "could not read " .. path)
+    local contents = file:read("*a")
+    file:close()
+    return contents
+  end
+
+  -- a different image that still loads: a PNG reader stops at its end marker
+  local otherImage = readFile(fixtureImage) .. "guiDropSpec"
+
+  -- copies the fixture, or other contents, into scratchDirectory, which after_each removes
+  local function imageAt(folder, fileName, contents)
     local directory = scratchDirectory .. "/" .. folder
     lfs.mkdir(scratchDirectory)
     lfs.mkdir(directory)
     local path = directory .. "/" .. fileName
-    local source = io.open(fixtureImage, "rb")
-    assert.is_not_nil(source, "could not read the fixture " .. fixtureImage)
     local destination = io.open(path, "wb")
-    destination:write(source:read("*a"))
+    assert.is_not_nil(destination, "could not write " .. path)
+    destination:write(contents or readFile(fixtureImage))
     destination:close()
-    source:close()
     scratchFiles[#scratchFiles + 1] = { directory, path }
     return path
+  end
+
+  local function drop(path, console)
+    return pcall(GUIDropManager.ImageDrop, "sysDropEvent", path, "png", 10, 10, console or "main")
+  end
+
+  -- takes an image out of this session the way a restart would, leaving the stored script
+  local function forget(key)
+    local image = GUIDropImages[key]
+    image:delete()
+    Adjustable.Container.all[image.name] = nil
+    local index = table.index_of(Adjustable.Container.all_windows, image.name)
+    if index then
+      table.remove(Adjustable.Container.all_windows, index)
+    end
+    os.remove(getMudletHomeDir() .. "/AdjustableContainer/" .. image.name .. ".lua")
+    GUIDropImages[key] = nil
+    GUIDropImages[key .. "Label"] = nil
   end
 
   before_each(function()
@@ -8488,15 +8514,18 @@ describe("Tests the gui-drop package's image drops", function()
 
   after_each(function()
     for key, window in pairs(GUIDropImages) do
+      if not imagesBefore[key] and window.type == "adjustablecontainer" then
+        forget(key)
+      end
+    end
+    for key in pairs(GUIDropImages) do
       if not imagesBefore[key] then
-        window:hide()
-        Adjustable.Container.all[window.name] = nil
-        local index = table.index_of(Adjustable.Container.all_windows, window.name)
-        if index then
-          table.remove(Adjustable.Container.all_windows, index)
-        end
-        os.remove(getMudletHomeDir() .. "/AdjustableContainer/" .. window.name .. ".lua")
         GUIDropImages[key] = nil
+      end
+    end
+    for key in pairs(GUIDropManager.unrestored) do
+      if not imagesBefore[key] then
+        GUIDropManager.unrestored[key] = nil
       end
     end
     for entry in pairs(listFiles(dropDirectory)) do
@@ -8514,7 +8543,7 @@ describe("Tests the gui-drop package's image drops", function()
       userWindow = nil
     end
     -- takes the spec's drops back out of the profile's GUIDropManager script
-    pcall(GUIDropManager.createDropManager)
+    GUIDropManager.createDropManager()
   end)
 
   -- what brings the drops back on the next start: the GUIDropManager script,
@@ -8523,35 +8552,97 @@ describe("Tests the gui-drop package's image drops", function()
     return getScript("GUIDropManager", 2) or ""
   end
 
+  local function stores(key)
+    return storedScript():find(("GUIDropManager.restore(%q"):format(key), 1, true) ~= nil
+  end
+
+  -- the parent the stored script gives an image dropped into a user window
+  local function storedParent(key)
+    return loadstring("return " .. GUIDropImages[key].containervar)()
+  end
+
   it("keeps an image dropped into a user window, and the drops after it", function()
     userWindow = Geyser.UserWindow:new({name = "guiDropSpecWindow", x = 10, y = 10, width = 200, height = 150})
-    local ok, err = pcall(GUIDropManager.ImageDrop, "sysDropEvent", imageAt("plain", "guiDropSpecWindowPic.png"), "png", 10, 10, "guiDropSpecWindow")
+    local ok, err = drop(imageAt("plain", "guiDropSpecWindowPic.png"), "guiDropSpecWindow")
     assert.is_true(ok, tostring(err))
     assert.is_not_nil(GUIDropImages.guiDropSpecWindowPic)
-    ok, err = pcall(GUIDropManager.ImageDrop, "sysDropEvent", imageAt("plain", "guiDropSpecMainPic.png"), "png", 10, 10, "main")
+    ok, err = drop(imageAt("plain", "guiDropSpecMainPic.png"))
     assert.is_true(ok, tostring(err))
-    assert.is_truthy(storedScript():find("GUIDropImages.guiDropSpecWindowPic = ", 1, true))
-    assert.is_truthy(storedScript():find("GUIDropImages.guiDropSpecMainPic = ", 1, true))
+    assert.is_true(stores("guiDropSpecWindowPic"))
+    assert.is_true(stores("guiDropSpecMainPic"))
+    assert.are.equal(userWindow, storedParent("guiDropSpecWindowPic"))
   end)
 
   it("keeps an image dropped into a user window that a script holds under any key", function()
     userWindow = Geyser.UserWindow:new({name = "guiDropSpecWindow", x = 10, y = 10, width = 200, height = 150})
-    _G.guiDropSpecWindows = {["chat window"] = userWindow, ["end"] = userWindow, [true] = {}}
+    _G.guiDropSpecWindows = {userWindow, ["2chat"] = userWindow, ["chat window"] = userWindow, ["end"] = userWindow, [true] = {}}
     finally(function() _G.guiDropSpecWindows = nil end)
-    local ok, err = pcall(GUIDropManager.ImageDrop, "sysDropEvent", imageAt("plain", "guiDropSpecHeldPic.png"), "png", 10, 10, "guiDropSpecWindow")
+    local ok, err = drop(imageAt("plain", "guiDropSpecHeldPic.png"), "guiDropSpecWindow")
     assert.is_true(ok, tostring(err))
-    assert.is_truthy(storedScript():find("GUIDropImages.guiDropSpecHeldPic = ", 1, true))
+    assert.is_true(stores("guiDropSpecHeldPic"))
+    assert.are.equal(userWindow, storedParent("guiDropSpecHeldPic"))
   end)
 
   it("keeps an image dropped into a user window whose name has a space in it", function()
     userWindow = Geyser.UserWindow:new({name = "guiDrop spec window", x = 10, y = 10, width = 200, height = 150})
-    local ok, err = pcall(GUIDropManager.ImageDrop, "sysDropEvent", imageAt("plain", "guiDropSpecSpacedPic.png"), "png", 10, 10, "guiDrop spec window")
+    local ok, err = drop(imageAt("plain", "guiDropSpecSpacedPic.png"), "guiDrop spec window")
     assert.is_true(ok, tostring(err))
-    assert.is_truthy(storedScript():find("GUIDropImages.guiDropSpecSpacedPic = ", 1, true))
+    assert.is_true(stores("guiDropSpecSpacedPic"))
+    assert.are.equal(userWindow, storedParent("guiDropSpecSpacedPic"))
+  end)
+
+  it("finds a user window under a global whose name ends in container", function()
+    userWindow = Geyser.UserWindow:new({name = "guiDropSpecWindow", x = 10, y = 10, width = 200, height = 150})
+    _G.guiDropSpecChatcontainer = userWindow
+    finally(function() _G.guiDropSpecChatcontainer = nil end)
+    assert.are.equal("guiDropSpecChatcontainer", GUIDropManager.getKeyFrom(userWindow, ".container"))
+  end)
+
+  it("brings back the other images when a user window is not open at the next start", function()
+    userWindow = Geyser.UserWindow:new({name = "guiDrop spec window", x = 10, y = 10, width = 200, height = 150})
+    assert.is_true((drop(imageAt("plain", "guiDropSpecBefore.png"))))
+    assert.is_true((drop(imageAt("plain", "guiDropSpecAway.png"), "guiDrop spec window")))
+    assert.is_true((drop(imageAt("plain", "guiDropSpecAfter.png"))))
+    local script = storedScript()
+    for _, key in ipairs({"guiDropSpecBefore", "guiDropSpecAway", "guiDropSpecAfter"}) do
+      forget(key)
+    end
+    userWindow:delete()
+    userWindow = nil
+
+    assert(loadstring(script))()
+
+    assert.is_not_nil(GUIDropImages.guiDropSpecBeforeLabel)
+    assert.is_not_nil(GUIDropImages.guiDropSpecAfterLabel)
+    assert.is_nil(GUIDropImages.guiDropSpecAway)
+    GUIDropManager.createDropManager()
+    assert.is_true(stores("guiDropSpecAway"))
+    assert.is_true(stores("guiDropSpecBefore"))
+    assert.is_true(stores("guiDropSpecAfter"))
+  end)
+
+  it("keeps saving the drops after one whose file name has a quote in it", function()
+    local ok, err = drop(imageAt("plain", 'guiDrop "spec" quoted.png'))
+    assert.is_true(ok, tostring(err))
+    ok, err = drop(imageAt("plain", "guiDropSpecAfterQuote.png"))
+    assert.is_true(ok, tostring(err))
+    assert.is_true(stores("guiDropspecquoted"))
+    assert.is_true(stores("guiDropSpecAfterQuote"))
+  end)
+
+  it("keeps saving the other drops when one image cannot be saved", function()
+    assert.is_true((drop(imageAt("plain", "guiDropSpecBroken.png"))))
+    local label = GUIDropImages.guiDropSpecBrokenLabel
+    local parent = label.container
+    label.container = {}
+    local ok, err = drop(imageAt("plain", "guiDropSpecUnbroken.png"))
+    label.container = parent
+    assert.is_true(ok, tostring(err))
+    assert.is_true(stores("guiDropSpecUnbroken"))
   end)
 
   it("converts a dropped image to a label without it coming back as a container", function()
-    local ok, err = pcall(GUIDropManager.ImageDrop, "sysDropEvent", imageAt("plain", "guiDropSpecConverted.png"), "png", 10, 10, "main")
+    local ok, err = drop(imageAt("plain", "guiDropSpecConverted.png"))
     assert.is_true(ok, tostring(err))
     local image = GUIDropImages.guiDropSpecConverted
     image:setDropImg()
@@ -8560,7 +8651,16 @@ describe("Tests the gui-drop package's image drops", function()
     assert.are.equal("file", lfs.attributes(saveFile, "mode"), "SETUP: the container was not saved")
     local label = GUIDropImages.guiDropSpecConvertedLabel
     finally(function()
-      label:hide()
+      if label then
+        label:delete()
+      end
+      -- convertToLabel only hides the container it takes out of GUIDropImages
+      image:delete()
+      -- the GUIDropLabels script the conversion ran made this global label
+      if _G.guiDropSpecConverted then
+        _G.guiDropSpecConverted:delete()
+        _G.guiDropSpecConverted = nil
+      end
       setScript("GUIDropLabels", "--GUIDropLabels Script")
     end)
 
@@ -8571,7 +8671,7 @@ describe("Tests the gui-drop package's image drops", function()
   end)
 
   it("loads the saved images from the loadAll menu item", function()
-    local ok, err = pcall(GUIDropManager.ImageDrop, "sysDropEvent", imageAt("plain", "guiDropSpecLoaded.png"), "png", 10, 10, "main")
+    local ok, err = drop(imageAt("plain", "guiDropSpecLoaded.png"))
     assert.is_true(ok, tostring(err))
     local image = GUIDropImages.guiDropSpecLoaded
     image:setDropImg()
@@ -8589,17 +8689,58 @@ describe("Tests the gui-drop package's image drops", function()
   end)
 
   it("ignores a drop onto a console that is not a user window", function()
-    local ok, err = pcall(GUIDropManager.ImageDrop, "sysDropEvent", imageAt("plain", "guiDropSpecNowhere.png"), "png", 10, 10, "guiDropSpecNoSuchConsole")
+    local ok, err = drop(imageAt("plain", "guiDropSpecNowhere.png"), "guiDropSpecNoSuchConsole")
     assert.is_true(ok, tostring(err))
     assert.is_nil(GUIDropImages.guiDropSpecNowhere)
     assert.is_nil(lfs.attributes(dropDirectory .. "/guiDropSpecNowhere.png"))
   end)
 
   it("names the image after its file, not a dotted folder it is in", function()
-    local ok, err = pcall(GUIDropManager.ImageDrop, "sysDropEvent", imageAt("guiDrop.spec", "guiDropSpecShot.png"), "png", 10, 10, "main")
+    local ok, err = drop(imageAt("guiDrop.spec", "guiDropSpecShot.png"))
     assert.is_true(ok, tostring(err))
     assert.is_not_nil(GUIDropImages.guiDropSpecShot)
     assert.is_nil(GUIDropImages.guiDrop)
     assert.are.equal("file", lfs.attributes(dropDirectory .. "/guiDropSpecShot.png", "mode"))
+  end)
+
+  it("copies a file with dots or nothing before its extension under its own name", function()
+    assert.is_true((drop(imageAt("plain", "guiDropSpec.multi.dot.png"))))
+    assert.is_true((drop(imageAt("plain", ".png"))))
+    assert.are.equal("file", lfs.attributes(dropDirectory .. "/guiDropSpec.multi.dot.png", "mode"))
+    assert.are.equal("file", lfs.attributes(dropDirectory .. "/.png", "mode"))
+  end)
+
+  it("keeps a backslash in a file name that is not on Windows", function()
+    if getOS() == "windows" then
+      pending("a backslash cannot be part of a file name on Windows")
+      return
+    end
+    assert.is_true((drop(imageAt("plain", "guiDropSpecSlashed.png"))))
+    assert.is_true((drop(imageAt("plain", "x\\guiDropSpecSlashed.png", otherImage))))
+    assert.are.equal(otherImage, readFile(dropDirectory .. "/x\\guiDropSpecSlashed.png"))
+  end)
+
+  it("shows the second of two images with the same file name from different folders", function()
+    assert.is_true((drop(imageAt("one", "guiDropSpecSame.png"))))
+    assert.is_true((drop(imageAt("two", "guiDropSpecSame.png", otherImage))))
+    local second = GUIDropImages.guiDropSpecSame1Label
+    assert.are.equal(otherImage, readFile(dropDirectory .. "/" .. second.imgName))
+    assert.are.equal(readFile(fixtureImage), readFile(dropDirectory .. "/guiDropSpecSame.png"))
+  end)
+
+  it("says why when it cannot copy the image into the profile", function()
+    local moved = dropDirectory .. ".guiDropSpec"
+    lfs.mkdir(dropDirectory)
+    assert.is_true(os.rename(dropDirectory, moved))
+    local blocker = io.open(dropDirectory, "w")
+    blocker:write("not a folder")
+    blocker:close()
+    finally(function()
+      os.remove(dropDirectory)
+      os.rename(moved, dropDirectory)
+    end)
+    local ok, err = drop(imageAt("plain", "guiDropSpecBlocked.png"))
+    assert.is_false(ok)
+    assert.truthy(tostring(err):find("could not copy the image", 1, true), tostring(err))
   end)
 end)

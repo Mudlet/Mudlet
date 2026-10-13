@@ -3718,41 +3718,115 @@ end)
 describe("Tests uninstalling the gui-drop package", function()
   local name = "gui-drop"
   local archive = ":/packages/gui-drop/gui-drop.mpackage"
+  local dropDirectory = getMudletHomeDir() .. "/GUIDropImages"
+
+  -- drops an image the way TConsole::dropEvent() does, answering the copy it made in the profile
+  local function dropByEvent(fileName)
+    lfs.mkdir(scratchDirectory)
+    local path = scratchDirectory .. "/" .. fileName
+    copyFile(specDirectory .. "/fixtures/images/solid-magenta-4x4.png", path)
+    defer(function()
+      local key = fileName:match("^(.*)%.png$")
+      if GUIDropImages and GUIDropImages[key] then
+        GUIDropImages[key]:delete()
+        GUIDropImages[key] = nil
+        GUIDropImages[key .. "Label"] = nil
+        GUIDropManager.createDropManager()
+      end
+      os.remove(path)
+      os.remove(dropDirectory .. "/" .. fileName)
+      lfs.rmdir(scratchDirectory)
+    end)
+    raiseEvent("sysDropEvent", path, "png", 10, 10, "main")
+    return dropDirectory .. "/" .. fileName
+  end
+
+  local function hideTimersPerAdd()
+    local hidden = Adjustable.Container:new({name = "packageSpecHidden", x = 0, y = 0, width = 50, height = 50, autoLoad = false, autoSave = false})
+    hidden:hide()
+    local timers = 0
+    local tempTimer = _G.tempTimer
+    _G.tempTimer = function(...)
+      timers = timers + 1
+      return tempTimer(...)
+    end
+    local ok, err = pcall(hidden.add, hidden, Geyser.Label:new({name = "packageSpecHiddenChild", x = 0, y = 0, width = 10, height = 10}))
+    _G.tempTimer = tempTimer
+    hidden:delete()
+    Adjustable.Container.all[hidden.name] = nil
+    local index = table.index_of(Adjustable.Container.all_windows, hidden.name)
+    if index then
+      table.remove(Adjustable.Container.all_windows, index)
+    end
+    assert.is_true(ok, tostring(err))
+    return timers
+  end
 
   it("stops taking dropped images but keeps the ones already dropped working", function()
     if not packageInstalled(name) then
       pending("gui-drop is not installed in this profile")
       return
     end
-    local droppedCopy = getMudletHomeDir() .. "/GUIDropImages/packageSpecAfterUninstall.png"
-    local keptCopy = getMudletHomeDir() .. "/GUIDropImages/packageSpecKept.png"
     defer(function()
-      os.remove(droppedCopy)
-      os.remove(keptCopy)
       installUntilConfirmed(installPackage, archive, function() return packageInstalled(name) end, name)
     end)
-    defer(function()
-      os.remove(scratchDirectory .. "/packageSpecAfterUninstall.png")
-      os.remove(scratchDirectory .. "/packageSpecKept.png")
-      lfs.rmdir(scratchDirectory)
-    end)
-    lfs.mkdir(scratchDirectory)
-    local kept = scratchDirectory .. "/packageSpecKept.png"
-    copyFile(specDirectory .. "/fixtures/images/solid-magenta-4x4.png", kept)
-    local image = scratchDirectory .. "/packageSpecAfterUninstall.png"
-    copyFile(specDirectory .. "/fixtures/images/solid-magenta-4x4.png", image)
-    GUIDropManager.ImageDrop("sysDropEvent", kept, "png", 10, 10, "main")
+    -- uninstalling some other package must leave the drops working
+    installFixturePackage(minimalPackage)
+    removeFixturePackage(minimalPackage)
+    assert.is_true(fileExists(dropByEvent("packageSpecKept.png")), "a dropped image was not copied into the profile")
+    dropByEvent("packageSpecStored.png")
     local keptImage = GUIDropImages.packageSpecKept
-    assert.is_not_nil(keptImage, "SETUP: the image was not dropped")
     keptImage:setDropImg()
 
     removeFixturePackage(name)
-    raiseEvent("sysDropEvent", image, "png", 10, 10, "main")
 
-    assert.is_false(fileExists(droppedCopy), "the uninstalled package still copied a dropped image into the profile")
+    assert.is_false(fileExists(dropByEvent("packageSpecAfterUninstall.png")), "the uninstalled package still copied a dropped image into the profile")
     local ok, err = pcall(keptImage.customItems.deleteImage[2], keptImage)
     assert.is_true(ok, tostring(err))
     assert.is_nil(GUIDropImages.packageSpecKept)
+    -- the next start runs the GUIDropManager script, which still holds packageSpecStored, without the package
+    local stored = assert(loadstring(getScript("GUIDropManager", 2)))
+    local manager, images, setDropImg = _G.GUIDropManager, _G.GUIDropImages, Adjustable.Container.setDropImg
+    _G.GUIDropManager, _G.GUIDropImages, Adjustable.Container.setDropImg = nil, nil, nil
+    ok, err = pcall(stored)
+    _G.GUIDropManager, _G.GUIDropImages, Adjustable.Container.setDropImg = manager, images, setDropImg
+    assert.is_true(ok, tostring(err))
+  end)
+
+  it("stops taking dropped images when it was installed as a module", function()
+    if not packageInstalled(name) then
+      pending("gui-drop is not installed in this profile")
+      return
+    end
+    local path = scratchDirectory .. "/gui-drop.mpackage"
+    defer(function()
+      removeFixtureModule(name)
+      installUntilConfirmed(installPackage, archive, function() return packageInstalled(name) end, name)
+    end)
+    removeFixturePackage(name)
+    lfs.mkdir(scratchDirectory)
+    copyFile(specDirectory .. "/../../packages/gui-drop/gui-drop.mpackage", path)
+    installUntilConfirmed(installModule, path, function() return moduleInstalled(name) end, "gui-drop as a module")
+
+    removeFixtureModule(name)
+
+    assert.is_false(fileExists(dropByEvent("packageSpecAfterModule.png")), "the uninstalled module still copied a dropped image into the profile")
+  end)
+
+  it("does not wrap Adjustable.Container.add again when it is reinstalled", function()
+    if not packageInstalled(name) then
+      pending("gui-drop is not installed in this profile")
+      return
+    end
+    defer(function()
+      installUntilConfirmed(installPackage, archive, function() return packageInstalled(name) end, name)
+    end)
+    local timers = hideTimersPerAdd()
+
+    removeFixturePackage(name)
+    installUntilConfirmed(installPackage, archive, function() return packageInstalled(name) end, name)
+
+    assert.are.equal(timers, hideTimersPerAdd())
   end)
 end)
 

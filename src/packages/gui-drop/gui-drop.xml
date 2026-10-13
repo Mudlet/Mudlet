@@ -10,14 +10,18 @@
 			<name>workaround for add</name>
 			<packageName></packageName>
 			<script>-- Once Geyser.add2 is in this is not needed anymore
-local addwrapper = Adjustable.Container.add
-function Adjustable.Container:add(window, cons)
-  addwrapper(self, window, cons)
-  if self.hidden then
-    tempTimer(0, function() self:hide() end)
-  end
-  if self.auto_hidden then
-    tempTimer(0, function() self:hide(true) end)
+-- the script runs again on every reinstall, and a second wrap would hide twice per add
+if not Adjustable.Container.guiDropAddWrapped then
+  Adjustable.Container.guiDropAddWrapped = true
+  local addwrapper = Adjustable.Container.add
+  function Adjustable.Container:add(window, cons)
+    addwrapper(self, window, cons)
+    if self.hidden then
+      tempTimer(0, function() self:hide() end)
+    end
+    if self.auto_hidden then
+      tempTimer(0, function() self:hide(true) end)
+    end
   end
 end</script>
 			<eventHandlerList />
@@ -27,61 +31,98 @@ end</script>
 			<packageName></packageName>
 			<script>GUIDropManager = GUIDropManager or {}
 GUIDropImages = GUIDropImages or {}
+GUIDropManager.unrestored = GUIDropManager.unrestored or {}
+
+-- each image is restored on its own, and one that cannot be (its user window is not
+-- open yet) is kept for the next save rather than dropped from the GUIDropManager script
+function GUIDropManager.restore(name, chunk)
+    local restoreImage, err = loadstring(chunk, "GUIDropManager: " .. name)
+    local ok = false
+    if restoreImage then
+        ok, err = pcall(restoreImage)
+    end
+    if ok then
+        GUIDropManager.unrestored[name] = nil
+    else
+        GUIDropManager.unrestored[name] = chunk
+        debugc("gui-drop could not bring back the image " .. name .. ": " .. tostring(err))
+    end
+end
+
 function GUIDropManager.createDropManager()
-    GUIDropManager.script = "--GUIDropManager\n"
-    
     local labelscript = [[%s = %s or Geyser.Label:new({name = "%s", x="%s", y="%s", width="%s", height="%s"%s}, %s)
-    %s:setStyleSheet("border-image: url(%s);")
-    %s.imgName = "%s"
-    %s:setDropImg()
-    
-    ]]
+%s:setStyleSheet("border-image: url(" .. getMudletHomeDir() .. "/GUIDropImages/" .. %q .. ");")
+%s.imgName = %q
+%s:setDropImg()
+]]
     local containerscript = [[%s = %s or Adjustable.Container:new({name = "%s", x = "%s", y = "%s", width = "%s", height = "%s", lockStyle = "full", padding = 0, noLimit = true%s%s}%s)
-    
-    ]]
-    local function createFname(imgName)
-        return [["..getMudletHomeDir().."/GUIDropImages/]].. imgName
-    end
-    for k,v in pairs(GUIDropImages) do
-        
-        if v.type == "adjustablecontainer" then
-            local container = ""
-            local containervar = ""
-            local locked = ""
-            if v.windowname ~= "main" then
-                container = v.containervar or GUIDropManager.getKeyFrom(v.container, ".container")
-                if not container then
-                    -- a user window's name can hold spaces, so it is quoted
-                    container = string.format("Geyser.windowList[%q].windowList[%q]", v.windowname.."Container", v.windowname)
-                end
-                containervar = ", containervar = "..string.format("%q", container)
-                v.containervar = container
-                container = ", "..container
+]]
+    local function imageScript(key, v)
+        local container = ""
+        local containervar = ""
+        local locked = ""
+        if v.windowname ~= "main" then
+            container = v.containervar or GUIDropManager.getKeyFrom(v.container, ".container")
+            if not container then
+                -- quoted, as a window's name need not be a Lua identifier ("chat window", "end")
+                container = string.format("Geyser.windowList[%q].windowList[%q]", v.windowname.."Container", v.windowname)
             end
-            if v.locked then
-                locked = ", locked = true"
-            end
-            GUIDropManager.script = GUIDropManager.script..string.format(containerscript, v.name, v.name, v.name, v.x, v.y, v.width, v.height, locked, containervar, container)
+            containervar = ", containervar = "..string.format("%q", container)
+            v.containervar = container
+            -- with no window, Adjustable.Container:new would put the image on the main window instead
+            container = string.format(", assert(%s, %q)", container, "its user window is not open")
         end
-        
-    end
-    
-    
-    for k,v in pairs(GUIDropImages) do    
-        if v.type == "label" then
-            v.fname = v.fname or createFname(v.imgName)
+        if v.locked then
+            locked = ", locked = true"
+        end
+        local chunk = string.format(containerscript, v.name, v.name, v.name, v.x, v.y, v.width, v.height, locked, containervar, container)
+        local label = GUIDropImages[key.."Label"]
+        if label then
             local clickthrough = ""
-            if v.clickthrough then
+            if label.clickthrough then
                 clickthrough = ", clickthrough = true"
             end
-            GUIDropManager.script = GUIDropManager.script..string.format(labelscript, v.name, v.name, v.name, v.x, v.y, v.width, v.height, clickthrough, v.container.container.name, v.name, v.fname, v.name, v.imgName, v.container.container.name)
-        end    
+            local parent = label.container.container.name
+            chunk = chunk..string.format(labelscript, label.name, label.name, label.name, label.x, label.y, label.width, label.height, clickthrough, parent, label.name, label.imgName, label.name, label.imgName, parent)
+        end
+        assert(loadstring(chunk))
+        return chunk
     end
-    
-    if not setScript("GUIDropManager", GUIDropManager.script, 2) then
-        display(setScript("GUIDropManager", GUIDropManager.script, 2))
+    local function longString(text)
+        local level = ""
+        while text:find("]"..level.."]", 1, true) do
+            level = level.."="
+        end
+        return "["..level.."[\n"..text.."]"..level.."]"
     end
-    
+
+    local entries = {}
+    for key, v in pairs(GUIDropImages) do
+        if v.type == "adjustablecontainer" then
+            local ok, chunk = pcall(imageScript, key, v)
+            if ok then
+                entries[key] = chunk
+            else
+                echo("\ngui-drop could not save the image "..key..": "..tostring(chunk).."\n")
+            end
+        end
+    end
+    for key, chunk in pairs(GUIDropManager.unrestored) do
+        if not GUIDropImages[key] then
+            entries[key] = chunk
+        end
+    end
+
+    -- without the package (uninstalled), the images have nothing to be restored with
+    local script = {"--GUIDropManager", "if not GUIDropManager then return end"}
+    for key, chunk in pairs(entries) do
+        script[#script + 1] = string.format("GUIDropManager.restore(%q, %s)", key, longString(chunk))
+    end
+    GUIDropManager.script = table.concat(script, "\n").."\n"
+    local ok, err = pcall(setScript, "GUIDropManager", GUIDropManager.script, 2)
+    if not ok then
+        echo("\ngui-drop could not save the GUIDropManager script: "..tostring(err).."\n")
+    end
 end</script>
 			<eventHandlerList />
 		</Script>
@@ -115,7 +156,7 @@ end</script>
                     end
                 end
             end
-            if v == value and not string.find(k, exclude) then
+            if v == value and not string.find(k, exclude, 1, true) then
                 return k
             end
         end
@@ -173,20 +214,43 @@ end</script>
     
     posx = math.max(0, posx - (image_width/10))
     posy = math.max(0, posy - (image_height/10))
-    local baseName = fname:match("([^/\\]+)$")
-    local imgName = baseName:match("(.+)%.[^.]+$") or baseName
+    -- sysDropEvent paths use "/" even on Windows, and elsewhere a backslash can be part of a file name
+    local baseName = fname:match("([^/]+)$")
+    local imgName = baseName:match("^(.*)%.[^.]*$") or baseName
     
-    if not (io.exists(getMudletHomeDir() .. "/GUIDropImages/")) then
-        lfs.mkdir(getMudletHomeDir() .. "/GUIDropImages/")
+    local dropDirectory = getMudletHomeDir() .. "/GUIDropImages/"
+    if not (io.exists(dropDirectory)) then
+        lfs.mkdir(dropDirectory)
     end
     
     --copy file to my profile location
-    local imgLocation = getMudletHomeDir() .. "/GUIDropImages/".. imgName.. ".".. suffix
-    local infile = io.open(fname, "rb")
+    local infile, readError = io.open(fname, "rb")
+    if not infile then
+        error("gui-drop could not read the dropped image: " .. tostring(readError))
+    end
+    local instr = infile:read("*a")
+    infile:close()
+    -- a different image with the same file name (from another folder) gets a copy of its own
+    local copyName = imgName
+    local copies = 0
+    while io.exists(dropDirectory .. copyName .. "." .. suffix) do
+        local existing = io.open(dropDirectory .. copyName .. "." .. suffix, "rb")
+        local same = existing and existing:read("*a") == instr
+        if existing then
+            existing:close()
+        end
+        if same then
+            break
+        end
+        copies = copies + 1
+        copyName = imgName .. copies
+    end
+    local imgLocation = dropDirectory .. copyName .. "." .. suffix
     if not (io.exists(imgLocation)) then 
-        local instr = infile:read("*ab")
-        infile:close()
-        local outfile = io.open(imgLocation, "wb")
+        local outfile, writeError = io.open(imgLocation, "wb")
+        if not outfile then
+            error("gui-drop could not copy the image into " .. dropDirectory .. ": " .. tostring(writeError))
+        end
         outfile:write(instr)
         outfile:close()
     end
@@ -206,8 +270,8 @@ end</script>
     end
 
     --Check if image exists already and create new containername by adding +1 to the name
-    if GUIDropImages[containername] or _G[containername] then 
-        while GUIDropImages[containername] or _G[containername] do
+    if GUIDropImages[containername] or _G[containername] or GUIDropManager.unrestored[containername] then 
+        while GUIDropImages[containername] or _G[containername] or GUIDropManager.unrestored[containername] do
             counter = containername:match("%d+$")
             if counter ~= nil then     
                 containername = containername:sub(1,-(string.len(counter)+1))
@@ -227,8 +291,7 @@ end</script>
     GUIDropImages[containername]:setPercent(true, true)
     GUIDropImages[labelname] = Geyser.Label:new({name = "GUIDropImages."..labelname, x=0, y=0, width="100%", height="100%", clickthrough = true}, GUIDropImages[containername])
     
-    GUIDropImages[labelname].fname = [["..getMudletHomeDir().."/GUIDropImages/]].. imgName .. ".".. suffix
-    GUIDropImages[labelname].imgName = imgName .. ".".. suffix
+    GUIDropImages[labelname].imgName = copyName .. ".".. suffix
     GUIDropManager.createDropScript()
 end
 if GUIDropManager.dropHandler then
@@ -239,9 +302,9 @@ GUIDropManager.dropHandler = registerAnonymousEventHandler("sysDropEvent", "GUID
 if GUIDropManager.uninstallHandler then
     killAnonymousEventHandler(GUIDropManager.uninstallHandler)
 end
--- GUIDropManager and GUIDropImages are kept: the images already dropped, their
--- menu items and the GUIDropManager script the drops wrote all refer to them
-GUIDropManager.uninstallHandler = registerAnonymousEventHandler("sysUninstallPackage", function(_, packageName)
+-- GUIDropManager and GUIDropImages are kept: the images already dropped and their
+-- menu items use them until the profile closes
+GUIDropManager.uninstallHandler = registerAnonymousEventHandler("sysUninstall", function(_, packageName)
     if packageName ~= "gui-drop" then
         return
     end
@@ -256,6 +319,7 @@ end)</script>
 			<name>AdjustableContainer Additions</name>
 			<packageName></packageName>
 			<script>local function deleteImage(s) 
+    GUIDropManager.unrestored[string.gsub(s.name,"GUIDropImages%.","")] = nil
     GUIDropImages[string.gsub(s.name,"GUIDropImages%.","")] = nil  
     GUIDropImages[string.gsub(s.name.."Label", "GUIDropImages%.","")] = nil
     table.remove(Adjustable.Container.all_windows, table.index_of(Adjustable.Container.all_windows, s.name))
@@ -268,7 +332,7 @@ end
 
 local function convertToLabel(s)
     local labelscript = [[%s = %s or Geyser.Label:new({name = "%s", x="%s", y="%s", width="%s", height="%s"}%s)
-    %s:setStyleSheet("border-image: url(%s);")
+    %s:setStyleSheet("border-image: url(" .. getMudletHomeDir() .. "/GUIDropImages/" .. %q .. ");")
     ]]
     local container = GUIDropImages[string.gsub(s.name,"GUIDropImages%.","")]
     local labelname = string.gsub(s.name.."Label", "GUIDropImages%.","")
@@ -294,11 +358,12 @@ local function convertToLabel(s)
     
     local label = GUIDropImages[string.gsub(s.name.."Label", "GUIDropImages%.","")]
     labelname = labelname:sub(1,-6)
-    labelscript = string.format(labelscript, labelname, labelname, labelname, label.x, label.y, label.width, label.height, container.containervar, labelname, [["..getMudletHomeDir().."/GUIDropImages/]].. label.imgName)
+    labelscript = string.format(labelscript, labelname, labelname, labelname, label.x, label.y, label.width, label.height, container.containervar, labelname, label.imgName)
     
     appendScript("GUIDropLabels", labelscript)
     
     GUIDropImages[string.gsub(s.name,"GUIDropImages%.","")]:hide()
+    GUIDropManager.unrestored[string.gsub(s.name,"GUIDropImages%.","")] = nil
     GUIDropImages[string.gsub(s.name,"GUIDropImages%.","")] = nil
     GUIDropImages[string.gsub(s.name.."Label", "GUIDropImages%.","")] = nil
     table.remove(Adjustable.Container.all_windows, table.index_of(Adjustable.Container.all_windows, s.name))

@@ -12,7 +12,7 @@ are copied to %user-profile/GUIDropImages/
 
 ### Usage
 
-Just drop an image file into the main window.  It will be converted into a label inside an AdjustableContainer.
+Just drop an image file into the main window or a user window.  It will be converted into a label inside an AdjustableContainer.
 ]]
 version = [[1.4]]
 created = "2025-01-19T13:10:54+04:00"
