@@ -1684,7 +1684,7 @@ describe("Tests MCCP compressed streams", function()
   end)
 
   -- One read can inflate to more than the drain works through in one go: the
-  -- rest has to be shown too, with the stream still readable after it
+  -- rest has to be shown too, and what the game sends after it
   it("shows all of a stream that inflates past the depth of one drain", function()
     -- zlib.compress(string.rep("\0", 1000000) .. "MCCPTAILOFBOMB\r\n", 9): NULs
     -- are not displayed, so the depth is reached without drawing ~1 MB of text.

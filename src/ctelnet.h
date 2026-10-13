@@ -36,7 +36,6 @@
 #include <QHostAddress>
 #include <QHostInfo>
 #include <QPointer>
-#include <QScopeGuard>
 #include <QStringList>
 #if defined(QT_NO_SSL)
 #include <QTcpSocket>
@@ -269,8 +268,8 @@ public:
     // while draining data left over after a decompression pass (compressed input that did not fit in one
     // output buffer, or plain data following the compressed stream). Each level
     // inflates at most one output buffer; what is left at the deepest level waits
-    // in mDeferredInput, so a decompression bomb is worked through
-    // ~scmMaxDecompressionRecursion * BUFFER_SIZE at a time.
+    // in mDeferredInput, so a socket's decompression bomb is worked through
+    // ~scmMaxDecompressionRecursion * BUFFER_SIZE per event-loop turn.
     inline static const int scmMaxDecompressionRecursion = 8;
     void cancelLoginTimers();
     // A flag rather than a timer query, so every transition makes the Host
@@ -369,8 +368,8 @@ private:
 
     // Needs to call processSocketData() with a buffer it laid out itself, which
     // the public loopbackTest() cannot express - see issue #1065 - and to seed
-    // mDecompressionRecursionDepth so the over-limit refusal can be reached
-    // without a real decompression bomb.
+    // mDecompressionRecursionDepth so the over-limit refusal, which a drain
+    // never reaches itself, can be tested.
     friend class cTelnetBufferTest;
 
     // Reads the password-mode safety timer, the connection clock and the
@@ -547,7 +546,7 @@ private:
     // Whether mUninflatedInput still holds every byte the stream has taken
     bool mUninflatedInputComplete = true;
     // Re-entry depth of processSocketData() while draining leftover
-    // (de)compressed data; bounds stack use and decompression-bomb output.
+    // (de)compressed data; bounds stack use.
     int mDecompressionRecursionDepth = 0;
     // Input left over once a drain reached scmMaxDecompressionRecursion, processed
     // ahead of anything read after it
