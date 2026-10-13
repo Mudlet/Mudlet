@@ -38,6 +38,7 @@
 #include <QSignalSpy>
 #include <QTemporaryDir>
 #include <QLineEdit>
+#include <QListWidget>
 #include <QToolTip>
 #include <QtMath>
 #include <QtTest/QtTest>
@@ -947,6 +948,34 @@ private slots:
         QVERIFY(!searching.isAccepted());
         QTest::keyClick(pSearchBox, Qt::Key_Escape);
         QVERIFY(!pSearchBox->isVisible());
+    }
+
+    void test_aSingleClickOnASearchResultFliesThere()
+    {
+        ModernGLWidget* pModern = viewAtThePlayer();
+        QVERIFY(pModern);
+        const auto refocus = qScopeGuard([this]() {
+            mpHost->mainConsoleView()->mpCommandLine->setFocus(Qt::OtherFocusReason);
+        });
+        QVERIFY(activate(pModern->window()));
+        pModern->openSearch();
+        auto* pSearchBox = pModern->findChild<QLineEdit*>();
+        QVERIFY(pSearchBox);
+        int otherRoomId = 0;
+        for (const int roomId : map()->mpRoomDB->getRoomIDList()) {
+            if (roomId != kPlayerRoomId && map()->mpRoomDB->getRoom(roomId)->getArea() == pModern->mAID) {
+                otherRoomId = roomId;
+                break;
+            }
+        }
+        QVERIFY(otherRoomId);
+        pSearchBox->setText(QString::number(otherRoomId));
+        auto* pList = pModern->findChild<QListWidget*>();
+        QVERIFY(pList);
+        QTRY_VERIFY(pList->isVisible() && pList->count() > 0);
+        QTest::mouseClick(pList->viewport(), Qt::LeftButton, Qt::NoModifier, pList->visualItemRect(pList->item(0)).center());
+        QVERIFY2(pModern->mFlight, "a single click on a place found did not fly there");
+        QTest::keyClick(pSearchBox, Qt::Key_Escape);
     }
 
     // Ctrl+F is the console's after a click, which leaves the keys to the command line, and a Key bound to it wins
