@@ -39,9 +39,8 @@ namespace {
 constexpr int scmDirections[] = {DIR_NORTH, DIR_NORTHEAST, DIR_EAST, DIR_SOUTHEAST, DIR_SOUTH, DIR_SOUTHWEST, DIR_WEST, DIR_NORTHWEST, DIR_UP, DIR_DOWN, DIR_IN, DIR_OUT};
 // The 2D map's door glyphs are sized by a room's spacing across plus its spacing down
 constexpr qreal scmDoorRoomSpan = 2.0;
-// A door swing's opening, and how far along its exit line from the room's center, in rooms' spacing
+// A door swing's widest opening, in rooms' spacing
 constexpr qreal scmDoorSwingWidth = 0.3;
-constexpr qreal scmDoorSwingInset = 0.28;
 // A door bar's distance along its exit line from the room's center, in rooms' spacing, and its length across the line
 // and width along it, in lines' widths
 constexpr float scmDoorBarInset = 0.32f;
@@ -50,6 +49,9 @@ constexpr float scmDoorBarWidth = 0.5f;
 constexpr int scmDiscSides = 16;
 // Qt's dash stroker's limit, QDashStroker::repetitionLimit()
 constexpr qreal scmMaxDashRepetitions = 10000.0;
+// The most characters a glyph line is drawn with; a longer one is drawn as a bar, as one line of a misplaced room
+// could otherwise make millions of characters every frame
+constexpr qint64 scmMaxGlyphRun = 2048;
 // How far a shaft for an up or down exit rises or drops from its room, in levels
 constexpr float scmShaftLength = 0.35f;
 // The part of a one-way exit's shaft, at its tip, in the one-way arrow's color
@@ -108,8 +110,9 @@ private:
     // The color of a line from room to pOther, or of a stub without pOther
     QColor lineColor(const TRoom& room, const TRoom* pOther);
     void glyph(const QVector3D& at, const QVector3D& along, QChar character, const QColor& color, int level);
-    // A line's characters in the cells between its ends, which its rooms are drawn in
-    void glyphRun(const QVector3D& from, const QVector3D& to, const QColor& color, int level);
+    // A line's characters in the cells between its ends, which its rooms are drawn in; false, drawing nothing, for
+    // a line too long to draw so
+    bool glyphRun(const QVector3D& from, const QVector3D& to, const QColor& color, int level);
 
     const TMap& mMap;
     const Host& mHost;
@@ -225,17 +228,21 @@ void Builder::glyph(const QVector3D& at, const QVector3D& along, const QChar cha
     mScene.glyphs.append(placed);
 }
 
-void Builder::glyphRun(const QVector3D& from, const QVector3D& to, const QColor& color, const int level)
+bool Builder::glyphRun(const QVector3D& from, const QVector3D& to, const QColor& color, const int level)
 {
     const QVector3D line = to - from;
     const qint64 cells = qRound64(2.0 * qMax(std::abs(line.x()), std::abs(line.y())));
+    if (cells > scmMaxGlyphRun) {
+        return false;
+    }
     if (cells < 2) {
-        return;
+        return true;
     }
     const QVector3D along = line.normalized();
     for (qint64 cell = 1; cell < cells; ++cell) {
         glyph(from + line * (static_cast<float>(cell) / static_cast<float>(cells)), along, QChar(), color, level);
     }
+    return true;
 }
 
 void Builder::triangle(const QVector3D& a, const QVector3D& b, const QVector3D& c, const QColor& color, const int level)
@@ -335,10 +342,17 @@ void Builder::doorSwing(const int status, const QVector3D& from, const QVector3D
     const auto place = [&](const QPointF& point) {
         return from + along * static_cast<float>(point.x()) + side * static_cast<float>(point.y());
     };
-    // Just past a room's edge on a line from its center, and about as wide as a room
-    // Within the exit's half, so that it does not meet the swing of a door drawn from the other end
-    const qreal opening = qMin(scmDoorSwingWidth, length * 0.4);
-    const qreal jamb = qMin(scmDoorSwingInset, length * 0.5);
+    // Clear of the room, whose edge is further out on a diagonal from a square room, as the room hides whatever of
+    // the door is inside it. About as wide as a room, but within the exit's half, so that it does not meet the
+    // swing of a door drawn from the other end
+    const qreal across = qMax(std::abs(along.x()), std::abs(along.y()));
+    const qreal edge = mOptions.roundRooms || across < 1e-3 ? mOptions.roomSize / 2.0 : mOptions.roomSize / 2.0 / across;
+    const qreal start = edge + mWidth * 1.5;
+    const qreal space = length - start;
+    // Rooms so close that there is no room for a door between them still get one, over them
+    const qreal opening = space > 0.0 ? qMin(scmDoorSwingWidth, space * 0.6) : qMin(scmDoorSwingWidth, length * 0.4);
+    // So that a locked door's bolt, which reaches a quarter of the opening back toward the room, starts clear of it
+    const qreal jamb = space > 0.0 ? start + opening / 4.0 : length * 0.5;
     const QPointF hinge(jamb, -opening / 2.0);
     // Halfway to the ink, so the status still shows without the plan turning gaudy
     const QColor statusColor = ExitAppearance::doorColor(status);
@@ -561,17 +575,13 @@ void Builder::addRoom(const int roomId, const TRoom& room)
             if (otherEndDraws && exit.destinationId < roomId) {
                 continue;
             }
-            if (mOptions.glyphs && rise == 0.0f) {
-                glyphRun(center, destination, exitColor, lineLevel);
-            } else {
+            if (!mOptions.glyphs || rise != 0.0f || !glyphRun(center, destination, exitColor, lineLevel)) {
                 bar(center, destination, mWidth, mHeight, lineColor(room, exit.pDestination), lineLevel);
             }
             continue;
         }
 
-        if (mOptions.glyphs && rise == 0.0f) {
-            glyphRun(center, destination, exitColor, lineLevel);
-        } else {
+        if (!mOptions.glyphs || rise != 0.0f || !glyphRun(center, destination, exitColor, lineLevel)) {
             qreal phase = 0.0;
             dashedBar(center, destination, ExitAppearance::visibleDashes(Qt::DotLine), phase, lineColor(room, exit.pDestination), lineLevel);
         }

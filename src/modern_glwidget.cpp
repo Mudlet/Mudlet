@@ -828,6 +828,18 @@ QString exitMarkerKey(const TRoom& room)
     return key;
 }
 
+// What a room's terminal character cannot show, as it shows plain stairs: an in or out exit, or a door on one of these
+bool terminalMarkersNeeded(const TRoom& room)
+{
+    for (const int direction : {DIR_UP, DIR_DOWN, DIR_IN, DIR_OUT}) {
+        const bool exit = room.getExit(direction) > 0 || room.exitStubs.contains(direction);
+        if (exit && (direction == DIR_IN || direction == DIR_OUT || room.doors.value(TRoom::dirCodeToShortString(direction)) > 0)) {
+            return true;
+        }
+    }
+    return false;
+}
+
 // Lines drawn flat on rooms' tops, as triangles
 struct FlatLines
 {
@@ -1404,6 +1416,8 @@ void ModernGLWidget::renderRooms()
         QVector4D reverseColor;
         bool hovered = false;
         RoomDecals* decals = nullptr;
+        // For a symbol, the character the room would have without it
+        QString plain;
     };
     QList<TerminalCell> terminalCells;
     // The cells rooms are in, as doubled map coordinates, and their levels: no exit's character goes over one
@@ -1541,6 +1555,10 @@ void ModernGLWidget::renderRooms()
             if (look.playerRoom) {
                 cell.color = GeometryManager::fadedColor(roomColor, fade, fadeTarget);
                 cell.reverseColor = GeometryManager::fadedColor(ExitAppearance::contrastColor(roomColor), fade, fadeTarget);
+            } else if (!showId && !look.symbol.isEmpty()) {
+                RoomAppearance::Look plainLook = look;
+                plainLook.symbol.clear();
+                cell.plain = RoomAppearance::terminalGlyph(*pR, plainLook, pArea->gridMode);
             }
             terminalCells.append(cell);
             roomCells.insert({{qRound64(pR->x() * 2.0), qRound64(pR->y() * 2.0)}, pR->z()});
@@ -1589,7 +1607,8 @@ void ModernGLWidget::renderRooms()
             roomNames.append({center, RoomAppearance::nameColor(pR->userData.value(ROOM_UI_NAMECOLOR), background), pR->name, decalTint, &decals});
         }
 
-        if (const GLuint texture = terminal ? 0 : exitMarkerTexture(*pR, roomColor)) {
+        // A terminal's room is only its character, so its markers stand out from the background instead
+        if (const GLuint texture = !terminal ? exitMarkerTexture(*pR, roomColor) : (terminalMarkersNeeded(*pR) ? exitMarkerTexture(*pR, background) : 0)) {
             GeometryData& batch = decals.markers[texture];
             batch.textureId = texture;
             GeometryManager::appendGroundQuad(batch, roomTop, roomSize, screenRight, screenUp, decalTint);
@@ -1748,7 +1767,12 @@ void ModernGLWidget::renderRooms()
                 }
                 const QVector4D textColor = cell.reverse ? cell.reverseColor : cell.color;
                 if (!cell.id) {
-                    appendGlyph(batch, texture, cell.center, glyphAtlasCell(cell.text, false), scmGlyphSize, textColor);
+                    qsizetype atlasCell = glyphAtlasCell(cell.text, false);
+                    // A view of more symbols than the atlas holds shows the rest as plain rooms, rather than as nothing
+                    if (atlasCell < 0 && !cell.plain.isEmpty()) {
+                        atlasCell = glyphAtlasCell(cell.plain, false);
+                    }
+                    appendGlyph(batch, texture, cell.center, atlasCell, scmGlyphSize, textColor);
                     continue;
                 }
                 // Narrowed so that the whole ID is no wider than one character, however many digits it has
@@ -2024,6 +2048,8 @@ ExitScene::Options ModernGLWidget::exitSceneOptions() const
     options.doorBars = style.doors == MapStyle::Doors::Bars;
     options.environmentLines = style.environmentLines;
     options.glyphs = style.glyphs == MapStyle::Glyphs::Terminal;
+    options.roomSize = roomSize;
+    options.roundRooms = style.roundRooms(mpHost->mBubbleMode);
     options.background = backgroundColor();
     return options;
 }
