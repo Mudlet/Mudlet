@@ -110,8 +110,21 @@ public:
     const QVector<float>& worldColors() const { return mWorldColors; }
     // A ring around the area's node, as the one the view is in is marked
     void appendRing(int areaId, const QColor& color, QVector<float>& vertices, QVector<float>& colors) const;
+    // A ring around the area's node from inner to outer times its radius
+    void appendRing(int areaId, float inner, float outer, const QColor& color, QVector<float>& vertices, QVector<float>& colors) const;
+    // How wide the world graph draws the link between two areas
+    float linkWidth(int fromAreaId, int toAreaId) const;
+    // A band from the rim of one area's node to the rim of the other's, as their link is drawn, or nothing if the nodes overlap
+    void appendLink(int fromAreaId, int toAreaId, float width, const QColor& color, QVector<float>& vertices, QVector<float>& colors) const;
+    // A band of this width along the area's footprint
+    void appendOutline(int areaId, float width, const QColor& color, QVector<float>& vertices, QVector<float>& colors) const;
+    // A band of this width from one point of the world to another, with a square end at each point
+    static void appendBand(const QPointF& from, const QPointF& to, float width, const QColor& color, QVector<float>& vertices, QVector<float>& colors);
 
 private:
+    static float linkWidth(const Area& from, const Area& to);
+    static void appendLink(const Area& from, const Area& to, float width, const QColor& color, QVector<float>& vertices, QVector<float>& colors);
+
     QList<Area> mAreas;
     QHash<int, qsizetype> mAreaIndex;
     float mTypicalRadius = 0.0f;
