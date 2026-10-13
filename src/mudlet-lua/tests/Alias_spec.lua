@@ -376,8 +376,14 @@ describe("Alias processing", function()
         end)
 
         it("echoes the command for a nil echo flag just as it does with none (#10749)", function()
+            -- "always" and "never" ignore the echo flag, so the spec needs the mode that honours it
+            local savedEchoMode = getConfig("showSentText", true)
+            setConfig("showSentText", "script")
+            finally(function() setConfig("showSentText", savedEchoMode) end)
+
             local function echoed(...)
-                local mark = getLastLineNumber("main")
+                -- an echo after a prompt line is appended to that line, the one before the last
+                local mark = math.max(0, getLastLineNumber("main") - 1)
                 expandAlias(...)
                 return table.concat(getLines("main", mark, getLastLineNumber("main") + 1), "")
             end
@@ -385,7 +391,13 @@ describe("Alias processing", function()
             -- checked first: on a profile that never echoes commands both would be silent
             assert.is_truthy(echoed("expand_alias_echo_absent"):find("expand_alias_echo_absent", 1, true), "this profile does not echo commands, so the spec cannot tell the two apart")
             assert.is_truthy(echoed("expand_alias_echo_nil", nil):find("expand_alias_echo_nil", 1, true), "a nil echo flag suppressed the echo")
+            assert.is_truthy(echoed("expand_alias_echo_true", true):find("expand_alias_echo_true", 1, true), "an explicit true suppressed the echo")
             assert.is_falsy(echoed("expand_alias_echo_false", false):find("expand_alias_echo_false", 1, true), "an explicit false should still suppress the echo")
+        end)
+
+        it("still refuses an echo flag that is neither a boolean nor nil", function()
+            assert.has_error(function() expandAlias("expand_alias_echo_string", "yes") end, "expandAlias: bad argument #2 type (echo as boolean is optional, got string!)")
+            assert.has_error(function() expandAlias("expand_alias_echo_number", 1) end, "expandAlias: bad argument #2 type (echo as boolean is optional, got number!)")
         end)
 
     end)
