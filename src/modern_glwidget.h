@@ -393,8 +393,8 @@ private:
     void updateMatrices();
     void renderRooms();
     void renderConnections();
-    // The paper behind the map, for a style drawn on paper
-    void queuePaper();
+    // The paper or the felt behind the map, for a style drawn on either
+    void queueBackdrop();
     // The 2D map's grid, at the viewed level's room bottoms, writing no depth
     void queueGrid();
     // Map labels lie flat at their place on the map; those shown on top over the rooms, the others under the exits
@@ -456,6 +456,9 @@ private:
     // The style's background, else the profile's mapper background color
     QColor backgroundColor() const;
     ExitScene::Options exitSceneOptions() const;
+    RenderCommand::Shading exitShading() const;
+    // How far below where ExitScene puts them exits are drawn, so that a model's paths lie on the ground
+    float exitSink() const;
     void zoomBySteps(float steps);
     void panByRooms(int right, int up);
     void selectRoom(int roomId, Qt::KeyboardModifiers modifiers);

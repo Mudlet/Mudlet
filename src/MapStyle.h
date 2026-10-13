@@ -46,7 +46,10 @@ struct MapStyle
         // enough to glow on the dark background
         Light,
         // Ink on paper: every room in a dark ink keeping a little of its environment's hue, so areas still tell apart
-        Wash
+        Wash,
+        // A painted miniature: each room in its environment's color, a little desaturated, kept from the darkest and
+        // lightest, and warmed, as model paints are
+        Painted
     };
 
     enum class Shape {
@@ -70,7 +73,10 @@ struct MapStyle
         GlowingWireframes,
         // An ink painting: no rim, each room's top a blot of ink with soft, uneven edges and each exit a brush stroke
         // thinning toward its end, uneven in a way each takes from where it stands so that it holds still
-        InkBlots
+        InkBlots,
+        // A tabletop model: no rim, each room a block shaded under soft light from above with its top's edges rounded
+        // off, darkening where it meets the ground and casting a soft shadow there, and each exit a low path on the ground
+        ModelBlocks
     };
 
     enum class Doors {
@@ -91,7 +97,9 @@ struct MapStyle
         // The player's room drawn in playerRoomColor(), sending out a ring of light each time the player arrives
         Pulse,
         // The player's room stamped in playerRoomColor() as a seal on a painting, with a frame cut into it
-        Seal
+        Seal,
+        // A game token in playerRoomColor() standing on the player's room, which keeps its own color
+        Token
     };
 
     enum class Glyphs {
@@ -107,7 +115,9 @@ struct MapStyle
         // Every few rows of pixels of what is drawn on the map dimmed, as on a projected image
         Scanlines = 0x1,
         // The background drawn as paper, with a faint grain that stays put on the screen
-        PaperGrain = 0x2
+        PaperGrain = 0x2,
+        // The background drawn as the felt of a tabletop, darker toward the view's edges
+        Felt = 0x4
     };
     Q_DECLARE_FLAGS(PostEffects, PostEffect)
 

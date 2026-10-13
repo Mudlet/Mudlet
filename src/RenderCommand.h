@@ -39,8 +39,9 @@ class RenderCommand
 public:
     // Unlit draws its colors as given, as the 2D map does; lit shades them by the light; wireframe draws an
     // instanced shape's edges unlit, as glowing lines. Only instanced shapes support it and the unlit ink ones, and
-    // only plain triangles, given in clip space, support Paper
-    enum class Shading { Lit, Unlit, Wireframe, InkBlot, InkStroke, Seal, Paper };
+    // only plain triangles, given in clip space, support Paper. A model's block, path and the soft shadow on the ground
+    // under either are shaded by the shader's own light, and only instanced shapes support them; Felt is as Paper
+    enum class Shading { Lit, Unlit, Wireframe, InkBlot, InkStroke, Seal, Paper, ModelBlock, ModelPath, ModelShadow, Felt };
 
     virtual ~RenderCommand() = default;
     virtual void execute(QOpenGLFunctions* gl,
