@@ -75,7 +75,9 @@ struct MapStyle
         Soft,
         // Projected light: every room glowing in its environment's hue, at full strength and kept bright enough to
         // glow on the dark background; a gray environment glows in the style's ink
-        Light
+        Light,
+        // Ink on paper: every room in a dark ink keeping a little of its environment's hue, so areas still tell apart
+        Wash
     };
 
     enum class Shape {
@@ -99,7 +101,10 @@ struct MapStyle
         ViewedLevelBase,
         // A hologram: no fill, every edge of each room's block and of each exit's bar a glowing line, all added onto what
         // is behind rather than covering it, so that rooms and levels show through each other
-        GlowingWireframes
+        GlowingWireframes,
+        // An ink painting: no rim, each room's top a blot of ink with soft, uneven edges and each exit a brush stroke
+        // thinning toward its end, uneven in a way each takes from where it stands so that it holds still
+        InkBlots
     };
 
     enum class Doors {
@@ -120,7 +125,9 @@ struct MapStyle
         Pill,
         // The player's room drawn in playerRoomColor(), with a diamond of light in that color hovering over it and
         // sending out a ring of light each time the player arrives
-        Pulse
+        Pulse,
+        // The player's room stamped in playerRoomColor() as a seal on a painting, with a frame cut into it
+        Seal
     };
 
     enum class Glyphs {
@@ -135,8 +142,10 @@ struct MapStyle
         NoPostEffects = 0x0,
         // Every few rows of pixels of what is drawn on the map dimmed, as on a projected image
         Scanlines = 0x1,
+        // The background drawn as paper, with a faint grain that stays put on the screen
+        PaperGrain = 0x2,
         // The brightest of what is drawn blurred and added back, so that lines of light glow softly
-        Bloom = 0x2
+        Bloom = 0x4
     };
     Q_DECLARE_FLAGS(PostEffects, PostEffect)
 

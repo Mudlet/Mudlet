@@ -886,12 +886,15 @@ private slots:
         const QStringList transit = frame();
         QVERIFY(mpHost->setMapStyle(qsl("hologram")));
         const QStringList hologram = frame();
+        QVERIFY(mpHost->setMapStyle(qsl("inkwash")));
+        const QStringList inkwash = frame();
         QVERIFY(mpHost->setMapStyle(qsl("tiles")));
         const QStringList after = frame();
 
         QVERIFY(before != blueprint);
         QVERIFY(before != transit);
         QVERIFY(before != hologram);
+        QVERIFY(before != inkwash);
         QCOMPARE(after, before);
     }
 
@@ -1837,6 +1840,218 @@ private slots:
         map()->mRoomIdHash[map()->mProfileName] = kEastRoomId;
         widget.grabFramebuffer();
         QVERIFY2(!widget.mPulseStartedAt.has_value() && !widget.mPulseTimer->isActive(), "a move in tiles started a pulse");
+    }
+
+    // Ink wash keeps an environment's hue, enough to tell areas apart, in an ink dark on light paper, and seals the player's room
+    void test_inkwashWashesInInk()
+    {
+        const MapStyle* inkwash = MapStyle::find(qsl("inkwash"));
+        QVERIFY(inkwash);
+        const QColor red = inkwash->roomColor(QColor(230, 40, 40, 200));
+        const QColor green = inkwash->roomColor(QColor(40, 230, 40, 200));
+        const QColor blue = inkwash->roomColor(QColor(40, 40, 230, 200));
+        const QColor white = inkwash->roomColor(QColor(Qt::white));
+        QCOMPARE(red.alpha(), 200);
+        for (const QColor& room : {red, green, blue, white}) {
+            QVERIFY2(room.lightness() <= 140, qPrintable(qsl("a room's ink is %1 light").arg(room.lightness())));
+            QVERIFY2(inkwash->background.lightness() - room.lightness() >= 90, "a room does not stand out on the paper");
+        }
+        QVERIFY2(red.saturation() < 230 && red.saturation() > 40, qPrintable(qsl("a bright red room's ink is %1 saturated").arg(red.saturation())));
+        QVERIFY2(qAbs(red.hue() - 0) < 15 || qAbs(red.hue() - 360) < 15, "a red room's ink lost its hue");
+        QVERIFY2(qAbs(green.hue() - 120) < 15, "a green room's ink lost its hue");
+        QVERIFY2(qAbs(blue.hue() - 240) < 15, "a blue room's ink lost its hue");
+        QVERIFY2(difference(red, green) >= 40 && difference(green, blue) >= 40 && difference(blue, red) >= 40, "areas' rooms cannot be told apart");
+        QVERIFY(inkwash->background.lightness() >= 200);
+        const QColor seal = inkwash->playerRoomColor();
+        QVERIFY2(seal.red() > seal.green() + 80 && seal.red() > seal.blue() + 80 && seal != QColor(Qt::red), "the seal is not a muted vermilion");
+        QCOMPARE(inkwash->edges, MapStyle::Edges::InkBlots);
+        QCOMPARE(inkwash->playerMarker, MapStyle::PlayerMarker::Seal);
+        QVERIFY(inkwash->postEffects.testFlag(MapStyle::PostEffect::PaperGrain));
+        QVERIFY(!inkwash->lit);
+        const MapStyle* hologram = MapStyle::find(qsl("hologram"));
+        QVERIFY(hologram);
+        QVERIFY(!hologram->postEffects.testFlag(MapStyle::PostEffect::PaperGrain));
+    }
+
+    // Paper laid under everything, rooms as blots, exits as strokes, the player's room as a seal with no beacon, and the
+    // other levels pale toward the paper rather than taking on the level colors
+    void test_inkwashBrushesOnPaperWithoutGL()
+    {
+        const int areaId = addArea();
+        QVERIFY(areaId > 0);
+        const bool savedLevels = mudlet::self()->drawUpperLowerLevels();
+        const auto restore = qScopeGuard([this, savedLevels]() {
+            mpHost->setMapStyle(qsl("tiles"));
+            mudlet::self()->setDrawUpperLowerLevels(savedLevels);
+        });
+        mudlet::self()->setDrawUpperLowerLevels(true);
+        map()->mpRoomDB->getRoom(kPlayerRoomId)->setExit(kEastRoomId, DIR_EAST);
+        map()->mpRoomDB->getRoom(kEastRoomId)->setExit(kPlayerRoomId, DIR_WEST);
+        ModernGLWidget widget(map(), mpHost);
+        // The player's beacon, a column standing on the player's room
+        const auto beaconQueued = [&widget]() {
+            for (const auto& command : widget.mRenderCommandQueue.commands()) {
+                if (const auto* cubes = dynamic_cast<const RenderInstancedCubesCommand*>(command.get())) {
+                    for (const CubeInstanceData& cube : cubes->instances()) {
+                        const QVector4D center = cube.transform.column(3);
+                        if (qAbs(center.x()) < 1e-4f && qAbs(center.y()) < 1e-4f && center.z() > kRoomHeight) {
+                            return true;
+                        }
+                    }
+                }
+            }
+            return false;
+        };
+        const auto atPlace = [&widget](const RenderCommand::Shading shading, const QPointF& place) {
+            QList<CubeInstanceData> found;
+            for (const auto& command : widget.mRenderCommandQueue.commands()) {
+                if (const auto* cubes = dynamic_cast<const RenderInstancedCubesCommand*>(command.get()); cubes && cubes->shading() == shading) {
+                    found.append(roomInstances(*cubes, place));
+                }
+            }
+            return found;
+        };
+        const auto strokeBetweenRooms = [&widget]() {
+            for (const auto& command : widget.mRenderCommandQueue.commands()) {
+                if (const auto* cubes = dynamic_cast<const RenderInstancedCubesCommand*>(command.get()); cubes && cubes->shading() == RenderCommand::Shading::InkStroke) {
+                    for (const CubeInstanceData& cube : cubes->instances()) {
+                        if (qAbs(cube.transform.column(3).x() - 1.0f) < 0.3f && qAbs(cube.transform.column(3).y()) < 1e-4f) {
+                            return true;
+                        }
+                    }
+                }
+            }
+            return false;
+        };
+
+        queueFrame(widget, areaId);
+        QVERIFY2(beaconQueued(), "tiles raised no beacon, so its absence proves nothing");
+
+        QVERIFY(mpHost->setMapStyle(qsl("inkwash")));
+        queueFrame(widget, areaId);
+        const auto& commands = widget.mRenderCommandQueue.commands();
+        qsizetype paper = -1;
+        qsizetype firstDrawn = -1;
+        for (qsizetype index = 0; index < static_cast<qsizetype>(commands.size()); ++index) {
+            const auto* triangles = dynamic_cast<const RenderTrianglesCommand*>(commands.at(index).get());
+            if (triangles && triangles->shading() == RenderCommand::Shading::Paper) {
+                QVERIFY2(paper < 0, "the paper was laid twice");
+                paper = index;
+            }
+            if (firstDrawn < 0 && (triangles || dynamic_cast<const RenderInstancedCubesCommand*>(commands.at(index).get()))) {
+                firstDrawn = index;
+            }
+        }
+        QVERIFY2(paper >= 0, "no paper was laid");
+        QCOMPARE(paper, firstDrawn);
+
+        QCOMPARE(atPlace(RenderCommand::Shading::Seal, QPointF(0.0, 0.0)).size(), 1);
+        // Each with its border's blot under it
+        QVERIFY2(atPlace(RenderCommand::Shading::InkBlot, QPointF(0.0, 0.0)).size() + 1 == atPlace(RenderCommand::Shading::InkBlot, QPointF(2.0, 0.0)).size(),
+                 "the player's room was blotted as well as sealed");
+        QVERIFY2(atPlace(RenderCommand::Shading::Seal, QPointF(2.0, 0.0)).isEmpty(), "another room was sealed");
+        QVERIFY2(!atPlace(RenderCommand::Shading::InkBlot, QPointF(2.0, 0.0)).isEmpty(), "a room is not a blot");
+        QVERIFY2(atPlace(RenderCommand::Shading::Unlit, QPointF(2.0, 0.0)).isEmpty() && atPlace(RenderCommand::Shading::Lit, QPointF(2.0, 0.0)).isEmpty(), "a room was drawn as a block");
+        QVERIFY2(strokeBetweenRooms(), "the exit between the rooms is not a brush stroke");
+        QVERIFY2(!beaconQueued(), "a beacon stands on the seal");
+
+        // Ink thinned toward the paper, the same as with no level colors
+        const QList<CubeInstanceData> lower = atPlace(RenderCommand::Shading::InkBlot, QPointF(0.0, 2.0));
+        QVERIFY(!lower.isEmpty());
+        mudlet::self()->setDrawUpperLowerLevels(false);
+        queueFrame(widget, areaId);
+        const QList<CubeInstanceData> plainLower = atPlace(RenderCommand::Shading::InkBlot, QPointF(0.0, 2.0));
+        QCOMPARE(plainLower.size(), lower.size());
+        for (qsizetype i = 0; i < lower.size(); ++i) {
+            for (int channel = 0; channel < 4; ++channel) {
+                QVERIFY2(qFuzzyCompare(lower.at(i).color[channel], plainLower.at(i).color[channel]), "the level below took on the lower level's color");
+            }
+        }
+    }
+
+    // On the paper, a room is a dark blot, its corners rounded and its edge uneven in a way of its own, the player's
+    // room is vermilion, and an exit thins along its length; and nothing changes from one frame to the next
+    void test_inkwashBlotsUnevenlyOnPaper()
+    {
+        if (!glAvailable()) {
+            QSKIP("no OpenGL context on this platform");
+        }
+        QVERIFY(addArea() > 0);
+        constexpr int kWestRoomId = 4;
+        constexpr int kSouthWestRoomId = 5;
+        const auto restore = qScopeGuard([this]() {
+            mpHost->setMapStyle(qsl("tiles"));
+        });
+        QVERIFY(addRoomAt(kWestRoomId, map()->mpRoomDB->getRoom(kPlayerRoomId)->getArea(), -2, 0, 0));
+        QVERIFY(addRoomAt(kSouthWestRoomId, map()->mpRoomDB->getRoom(kPlayerRoomId)->getArea(), -2, -2, 0));
+        map()->mpRoomDB->getRoom(kPlayerRoomId)->setExit(kEastRoomId, DIR_EAST);
+        // No borders: every room alike but for where it stands
+        const bool savedBorders = mpHost->mMapperShowRoomBorders;
+        const auto restoreBorders = qScopeGuard([this, savedBorders]() {
+            mpHost->mMapperShowRoomBorders = savedBorders;
+        });
+        mpHost->mMapperShowRoomBorders = false;
+        QVERIFY(mpHost->setMapStyle(qsl("inkwash")));
+        ModernGLWidget widget(map(), mpHost);
+        lookDown(widget);
+        if (!widget.isValid()) {
+            QSKIP("no OpenGL context on this platform");
+        }
+        const QImage frame = widget.grabFramebuffer();
+        QCOMPARE(widget.grabFramebuffer(), frame);
+        const auto pixelAt = [&widget](const float x, const float y) {
+            const std::optional<QPointF> pixel = widget.mCameraController.pixelForPoint(QVector3D(x, y, kRoomHeight / 2.0f));
+            return pixel ? pixel->toPoint() : QPoint(-1, -1);
+        };
+        const auto lightnessAt = [&](const float x, const float y) {
+            return frame.pixelColor(pixelAt(x, y)).lightness();
+        };
+        const QColor paper = MapStyle::find(qsl("inkwash"))->background;
+
+        QVERIFY2(lightnessAt(2.0f, 0.0f) <= 120, qPrintable(qsl("a room's middle is %1 light").arg(lightnessAt(2.0f, 0.0f))));
+        QVERIFY2(qAbs(lightnessAt(3.0f, 1.0f) - paper.lightness()) <= 25, qPrintable(qsl("the paper is %1 light").arg(lightnessAt(3.0f, 1.0f))));
+        // A room is a quarter of a unit across either way from its middle; a square would be dark at its corner
+        QVERIFY2(lightnessAt(2.23f, 0.23f) > lightnessAt(2.0f, 0.0f) + 60, qPrintable(qsl("a room's corner is %1 light").arg(lightnessAt(2.23f, 0.23f))));
+
+        // Not a flat color, but grain
+        QSet<QRgb> grain;
+        const QPoint paperPixel = pixelAt(3.0f, 1.0f);
+        for (int dx = 0; dx < 16; ++dx) {
+            grain.insert(frame.pixel(paperPixel + QPoint(dx, 0)));
+        }
+        QVERIFY2(grain.size() >= 4, "the paper has no grain");
+
+        const QColor seal = frame.pixelColor(pixelAt(0.0f, 0.0f));
+        QVERIFY2(seal.red() > seal.green() + 50 && seal.red() > seal.blue() + 50, "the player's room is not sealed in vermilion");
+
+        // Two rooms' blots, with no exit over either, at the same places around each: far apart in places, not merely by
+        // the paper's grain
+        int inked = 0;
+        int unlike = 0;
+        for (int i = -14; i <= 14; ++i) {
+            for (int j = -14; j <= 14; ++j) {
+                const float dx = static_cast<float>(i) * 0.02f;
+                const float dy = static_cast<float>(j) * 0.02f;
+                const int west = lightnessAt(-2.0f + dx, 0.0f + dy);
+                const int southWest = lightnessAt(-2.0f + dx, -2.0f + dy);
+                inked += west < 150 ? 1 : 0;
+                unlike += qAbs(west - southWest) > 60 ? 1 : 0;
+            }
+        }
+        QVERIFY2(inked > 100, qPrintable(qsl("the room's blot covers only %1 points").arg(inked)));
+        QVERIFY2(unlike >= 40, qPrintable(qsl("two rooms' blots differ at only %1 points").arg(unlike)));
+
+        // Across the stroke from the player's room east, at its start and near its end
+        const auto widthAt = [&](const float x) {
+            int dark = 0;
+            for (int j = -40; j <= 40; ++j) {
+                dark += lightnessAt(x, static_cast<float>(j) * 0.002f) < 170 ? 1 : 0;
+            }
+            return dark;
+        };
+        const int start = widthAt(0.45f);
+        const int end = widthAt(1.55f);
+        QVERIFY2(start > 0 && end >= 0 && start > end, qPrintable(qsl("the stroke is %1 wide at its start and %2 near its end").arg(start).arg(end)));
     }
 
     // Bloom spreads a soft glow a few pixels out past a room's edge, onto background nothing is drawn on

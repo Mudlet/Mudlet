@@ -22,6 +22,26 @@
 #include <QDebug>
 
 namespace {
+// The shader's uInk for a shading, 0 for none of the ink ones
+int inkMode(const RenderCommand::Shading shading)
+{
+    switch (shading) {
+    case RenderCommand::Shading::InkBlot:
+        return 1;
+    case RenderCommand::Shading::InkStroke:
+        return 2;
+    case RenderCommand::Shading::Seal:
+        return 3;
+    case RenderCommand::Shading::Paper:
+        return 4;
+    case RenderCommand::Shading::Lit:
+    case RenderCommand::Shading::Unlit:
+    case RenderCommand::Shading::Wireframe:
+        return 0;
+    }
+    return 0;
+}
+
 // How much of a wireframe's color fills its faces, between the edges
 constexpr float scmWireFill = 0.06f;
 } // namespace
@@ -158,15 +178,22 @@ void RenderTrianglesCommand::execute(QOpenGLFunctions* gl,
     QMatrix3x3 normalMatrix = mModelMatrix.normalMatrix();
     shader->setUniformValue("uNormalMatrix", normalMatrix);
 
-    const bool unlit = mShading == Shading::Unlit;
+    const bool unlit = mShading == Shading::Unlit || mShading == Shading::Paper;
     if (unlit) {
         shader->setUniformValue("uDisableLighting", true);
+    }
+    const int ink = inkMode(mShading);
+    if (ink) {
+        shader->setUniformValue("uInk", ink);
     }
 
     geometryManager->renderGeometry(triangleGeometry, vao, vertexBuffer, colorBuffer, normalBuffer, indexBuffer, resourceManager, GL_TRIANGLES);
 
     if (unlit) {
         shader->setUniformValue("uDisableLighting", false);
+    }
+    if (ink) {
+        shader->setUniformValue("uInk", 0);
     }
 }
 
@@ -293,6 +320,11 @@ void RenderInstancedCubesCommand::execute(QOpenGLFunctions* gl,
         shader->setUniformValue("uWireSides", static_cast<float>(GeometryManager::scmCylinderSegments));
         shader->setUniformValue("uWireFill", scmWireFill);
     }
+    const int ink = inkMode(mShading);
+    if (ink) {
+        shader->setUniformValue("uInk", ink);
+        shader->setUniformValue("uInkRound", mShape == GeometryManager::InstanceShape::Cylinder);
+    }
 
     geometryManager->renderInstancedCubes(mInstances, vao, vertexBuffer, colorBuffer, normalBuffer, indexBuffer, resourceManager, GL_TRIANGLES, mShape);
 
@@ -301,6 +333,9 @@ void RenderInstancedCubesCommand::execute(QOpenGLFunctions* gl,
     }
     if (wireframe) {
         shader->setUniformValue("uWireframe", false);
+    }
+    if (ink) {
+        shader->setUniformValue("uInk", 0);
     }
 }
 
