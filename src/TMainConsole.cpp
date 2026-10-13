@@ -463,6 +463,13 @@ void Host::setMainConsoleView(TMainConsole* view)
     if (view) {
         mpNullConsoleFrontend->dropWindows();
         mExitEventOwed = false;
+        // What scripts set on the main command line with no view was never the view's
+        mWindowRegistry.setMainCommandLineText(view->mpCommandLine->toPlainText());
+        mWindowRegistry.setMainCommandLineStyleSheet(view->mpCommandLine->styleSheet());
+        mWindowRegistry.setMainCommandLineSavesHistory(view->mpCommandLine->mSaveCommands);
+        mpNullConsoleFrontend->followView(view);
+    } else if (mpConsole) {
+        mpNullConsoleFrontend->resumeMainCommandLine();
     }
     mpConsole = view;
     mpConsoleFrontend = view;

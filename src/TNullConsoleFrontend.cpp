@@ -601,6 +601,31 @@ void TNullConsoleFrontend::dropWindows()
     dropModels();
     mpMainHolder = std::make_unique<QObject>();
     mFrameHolders.clear();
+    // The view's TCommandLine has its own menu items, which go with it
+    mMainCommandLine.menuItems.clear();
+}
+
+void TNullConsoleFrontend::makeMainCommandLine(const bool savesHistory)
+{
+    mpHost->windowRegistry().setMainCommandLineSavesHistory(savesHistory);
+    resumeMainCommandLine();
+}
+
+// Through the main window's stand-in, which the next view to attach replaces, and ~Host() with it
+void TNullConsoleFrontend::followView(QObject* view)
+{
+    QObject::connect(view, &QObject::destroyed, mpMainHolder.get(), [this]() {
+        resumeMainCommandLine();
+    });
+}
+
+void TNullConsoleFrontend::resumeMainCommandLine()
+{
+    // A view detached by setMainConsoleView(nullptr) asks for this again as it goes
+    if (!mMainCommandLine.writer) {
+        // The key a command line named "main" writes is the main command line's
+        mMainCommandLine.writer = makeHistoryWriter(mpMainHolder.get(), qsl("main"), *mpHost->windowRegistry().commandLineSavesHistory(QString()));
+    }
 }
 
 // As TMainConsole::resetMainConsole() deletes the widgets later, which leaves a command line a console's own one
@@ -1488,11 +1513,24 @@ void TNullConsoleFrontend::republishPlainWindow(const QString& name)
     }
 }
 
-// Not the main command line, which TMainConsole::commandLineNamed() takes these names for: that is a
-// view's, as the registry's record of its text is
+// As TMainConsole::commandLineNamed() takes them
+static bool mainCommandLine(const QString& name)
+{
+    return name.isEmpty() || name == QLatin1String("main");
+}
+
 bool TNullConsoleFrontend::ownsCommandLine(const QString& name) const
 {
-    return !name.isEmpty() && name != QLatin1String("main") && mCommandLines.contains(name);
+    return mainCommandLine(name) || mCommandLines.contains(name);
+}
+
+TNullConsoleFrontend::PlainWindow* TNullConsoleFrontend::commandLineNamed(const QString& name)
+{
+    if (mainCommandLine(name)) {
+        return &mMainCommandLine;
+    }
+    const auto it = mCommandLines.find(name);
+    return it == mCommandLines.end() ? nullptr : &it->second;
 }
 
 // What QPlainTextEdit::toPlainText() gives back, which turns line breaks into newlines and
@@ -1509,7 +1547,12 @@ bool TNullConsoleFrontend::replaceCommandLineText(const QString& name, const QSt
     if (!ownsCommandLine(name)) {
         return false;
     }
-    mpHost->windowRegistry().setCommandLineText(name, plainText(text));
+    if (!mainCommandLine(name)) {
+        mpHost->windowRegistry().setCommandLineText(name, plainText(text));
+    } else if (!mpHost->passwordEntryWanted()) {
+        // TMainConsole writes to the hidden-input box over it while the game asks for one
+        mpHost->windowRegistry().setMainCommandLineText(plainText(text));
+    }
     return true;
 }
 
@@ -1523,38 +1566,46 @@ bool TNullConsoleFrontend::appendCommandLineText(const QString& name, const QStr
 
 bool TNullConsoleFrontend::addCommandLineMenuItem(const QString& name, const QString& label, const QString& eventName)
 {
-    if (!ownsCommandLine(name)) {
+    PlainWindow* pCommandLine = commandLineNamed(name);
+    if (!pCommandLine) {
         return false;
     }
-    mCommandLines.at(name).menuItems.insert_or_assign(label, eventName);
+    pCommandLine->menuItems.insert_or_assign(label, eventName);
     return true;
 }
 
 std::optional<bool> TNullConsoleFrontend::removeCommandLineMenuItem(const QString& name, const QString& label)
 {
-    if (!ownsCommandLine(name)) {
+    PlainWindow* pCommandLine = commandLineNamed(name);
+    if (!pCommandLine) {
         return std::nullopt;
     }
-    return mCommandLines.at(name).menuItems.erase(label) != 0;
+    return pCommandLine->menuItems.erase(label) != 0;
 }
 
 bool TNullConsoleFrontend::setCommandLineSavesHistory(const QString& name, const bool savesHistory)
 {
-    if (!ownsCommandLine(name)) {
+    PlainWindow* pCommandLine = commandLineNamed(name);
+    if (!pCommandLine) {
         return false;
     }
-    if (const PlainWindow& commandLine = mCommandLines.at(name); commandLine.writer) {
-        commandLine.writer->savesHistory = savesHistory;
+    if (pCommandLine->writer) {
+        pCommandLine->writer->savesHistory = savesHistory;
     }
-    mpHost->windowRegistry().setCommandLineSavesHistory(name, savesHistory);
+    if (pCommandLine == &mMainCommandLine) {
+        mpHost->windowRegistry().setMainCommandLineSavesHistory(savesHistory);
+    } else {
+        mpHost->windowRegistry().setCommandLineSavesHistory(name, savesHistory);
+    }
     return true;
 }
 
 std::pair<bool, QString> TNullConsoleFrontend::setCmdLineStyleSheet(const QString& name, const QString& styleSheet)
 {
-    // The main command line is a view's
-    if (name.isEmpty() || name == QLatin1String("main")) {
-        return noView();
+    // The main window's layout sizes the main command line, which is not modelled, so its sheet sets no limits here
+    if (mainCommandLine(name)) {
+        mpHost->windowRegistry().setMainCommandLineStyleSheet(styleSheet);
+        return {true, QString()};
     }
     const auto it = mCommandLines.find(name);
     if (it == mCommandLines.end()) {
@@ -1608,7 +1659,7 @@ bool TNullConsoleFrontend::setWindowCommandLineVisible(const QString& name, cons
 // Unlike showWindow(), this finds the command line when a scroll box has the same name
 bool TNullConsoleFrontend::setCommandLineVisible(const QString& name, const bool visible)
 {
-    if (!ownsCommandLine(name)) {
+    if (!mCommandLines.contains(name)) {
         return false;
     }
     mCommandLines.at(name).shown = visible;

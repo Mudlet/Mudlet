@@ -353,8 +353,7 @@ private slots:
         const bool layoutCommitted = host->commitLayoutUpdates();
         host->printToMainConsole(qsl("null view probe line\n"));
         const bool printed = host->mainConsoleModel().buffer.lineBuffer.join(QChar::LineFeed).contains(qsl("null view probe line"));
-        const bool luaAnswered =
-                host->getLuaInterpreter()->compileAndExecuteScript(qsl("local ok, msg = clearCmdLine('main') assert(ok == nil and msg) assert(raiseWindow('nullViewProbe') == false)"));
+        const bool luaAnswered = host->getLuaInterpreter()->compileAndExecuteScript(qsl("assert(raiseWindow('nullViewProbe') == false)"));
         host->setMainConsoleView(console);
 
         QVERIFY(labelStillRegistered);
@@ -634,6 +633,58 @@ nullViewActionKept = next(nullViewActions) ~= nil
         console->deleteCommandLine(qsl("realViewHistoryLine"));
     }
 
+    // What scripts set on the main command line while the profile had no view never reached the view's. While
+    // detached the null view's setting is the one a save writes, after the view's own TCommandLine has written.
+    void test_viewTakingTheProfileBackAnswersForItsMainCommandLine()
+    {
+        startProfile(mHostname, mLocalhost, mPort);
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QPointer<TMainConsole> console = host->mainConsoleView();
+        QVERIFY2(console, "The active host has no main console.");
+        const QString key = qsl("CommandLines/SaveHistory/main");
+
+        host->setMainConsoleView(nullptr);
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+printCmdLine("null view text")
+setCmdLineStyleSheet("color: red;")
+setSaveCommandHistory(false)
+addCommandLineMenuEvent("main", "nullViewItem", "nullViewEvent")
+nullViewMainLine = getCmdLine() .. "|" .. getCmdLineStyleSheet() .. "|" .. tostring(getSaveCommandHistory())
+)lua")));
+        host->writeProfileIniData(key, qsl("true"));
+        QTRY_VERIFY(!host->currentlySavingProfile());
+        QVERIFY(std::get<0>(host->saveProfile()));
+        const QString detachedSaved = host->readProfileIniData(key);
+        QTRY_VERIFY(!host->currentlySavingProfile());
+
+        host->setMainConsoleView(console);
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+viewMainLine = getCmdLine() .. "|" .. getCmdLineStyleSheet() .. "|" .. tostring(getSaveCommandHistory())
+)lua")));
+        // The null view's menu item was never the view's, and does not come back once the view has gone
+        host->setMainConsoleView(nullptr);
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+nullViewItemAfter = tostring(removeCommandLineMenuEvent("main", "nullViewItem"))
+)lua")));
+        host->setMainConsoleView(console);
+
+        lua_State* L = host->getLuaInterpreter()->getLuaGlobalState();
+        lua_getglobal(L, "nullViewMainLine");
+        const QString nullViewMainLine = QString::fromUtf8(lua_tostring(L, -1));
+        lua_getglobal(L, "viewMainLine");
+        const QString viewMainLine = QString::fromUtf8(lua_tostring(L, -1));
+        lua_getglobal(L, "nullViewItemAfter");
+        const QString nullViewItemAfter = QString::fromUtf8(lua_tostring(L, -1));
+        lua_pop(L, 3);
+        QCOMPARE(nullViewMainLine, qsl("null view text|color: red;|false"));
+        QCOMPARE(detachedSaved, qsl("false"));
+        const TCommandLine* pCommandLine = console->mpCommandLine;
+        QCOMPARE(viewMainLine, qsl("%1|%2|%3").arg(pCommandLine->toPlainText(), pCommandLine->styleSheet(), pCommandLine->mSaveCommands ? qsl("true") : qsl("false")));
+        QCOMPARE(viewMainLine, qsl("||true"));
+        QCOMPARE(nullViewItemAfter, qsl("nil"));
+    }
+
     // What scripts are told while the profile has no view. The label is made first, so that its answers
     // come from the missing view rather than a missing label.
     void test_luaCallsWithNoConsoleSayWhy()
@@ -680,8 +731,8 @@ nullViewActionKept = next(nullViewActions) ~= nil
                  qsl("false:the profile has no main window"
                      "|nil:label 'nullViewLabel' does not exist"
                      "|nil:label \"nullViewLabel\" not found"
-                     "|nil:command line \"main\" not found"
-                     "|nil:command line \"main\" not found"
+                     "|nil:nil"
+                     "|nil:cannot remove 'nullViewItem', menu item does not exist"
                      "|nil:command line \"nullViewCommandLine\" not found"
                      "|nil:text edit name 'nullViewTextEdit' not found"
                      "|true:nil"
