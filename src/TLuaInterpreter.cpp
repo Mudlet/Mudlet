@@ -3439,14 +3439,15 @@ bool TLuaInterpreter::compile(const QString& code, QString& errorMsg, const QStr
     const int callerStackTop = lua_gettop(L);
 
     const QByteArray utf8Code = code.toUtf8();
-    const bool loaded = !luaL_loadbuffer(L, utf8Code.constData(), utf8Code.size(), name.toUtf8().constData());
-    const bool error = !loaded || lua_pcall(L, 0, 0, 0);
+    const int loadStatus = luaL_loadbuffer(L, utf8Code.constData(), utf8Code.size(), name.toUtf8().constData());
+    const bool error = loadStatus != 0 || lua_pcall(L, 0, 0, 0);
 
     if (error) {
         // The error object is on the top of the stack. Absolute slot 1 - which
         // this used to read - is the calling C function's first argument, which
         // is how a failure came to be reported as the script's own name.
-        std::string e = loaded ? "Lua error:" : "Lua syntax error:";
+        // A load can also fail for want of memory, which is no syntax error
+        std::string e = loadStatus == LUA_ERRSYNTAX ? "Lua syntax error:" : "Lua error:";
         if (lua_isstring(L, -1)) {
             e.append(lua_tostring(L, -1));
         } else {
