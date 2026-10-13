@@ -298,8 +298,6 @@ describe("Console edges", function()
       assert.are.equal("couldn't create text edit", err)
     end)
 
-    -- these two answer false rather than the nil the others give, which is the
-    -- API as it stands - change the API, not just this test
     it("an empty name to delete a miniconsole or a label", function()
       local ok, err = deleteMiniConsole("")
       assert.is_false(ok)
