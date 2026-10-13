@@ -640,11 +640,14 @@ void ModernGLWidget::paintGL()
         } else if (mRID != mPreviousRID || mMapCenterX != pRID->x() || mMapCenterY != pRID->y() || mMapCenterZ != pRID->z()) {
             startSmoothTransition(targetAID, pRID->x(), pRID->y(), pRID->z());
         }
-        if (mRID != mPreviousRID && mapStyle().playerMarker == MapStyle::PlayerMarker::Pulse) {
+        mPreviousRID = mRID;
+    }
+    if (const int playerRoomId = mpMap->mRoomIdHash.value(mpMap->mProfileName); playerRoomId != mPulsedRoomId) {
+        mPulsedRoomId = playerRoomId;
+        if (mapStyle().playerMarker == MapStyle::PlayerMarker::Pulse) {
             mPulseClock.start();
             mPulseTimer->start();
         }
-        mPreviousRID = mRID;
     }
 
     TArea* pArea = mpMap->mpRoomDB->getArea(mAID);
@@ -2247,8 +2250,10 @@ void ModernGLWidget::renderConnections()
     const bool moreTransparent = mpHost->experimentEnabled(qsl("experiment.rendering.more-transparent"));
     // Glowing exits are added onto what is under them with their level's rooms, as they would cover it drawn solid
     const bool glowing = mapStyle().edges == MapStyle::Edges::GlowingWireframes;
+    const MapStyle& style = mapStyle();
     const auto faded = [&](const QColor& color, const int level) {
-        return GeometryManager::fadedColor(color, GeometryManager::levelFade(level - mMapCenterZ, moreTransparent), levelFadeTarget(level));
+        // A custom line's own color, added onto the dark background, could leave nothing to see
+        return GeometryManager::fadedColor(glowing ? style.wireColor(color, color) : color, GeometryManager::levelFade(level - mMapCenterZ, moreTransparent), levelFadeTarget(level));
     };
 
     mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::ENABLE_DEPTH_TEST));
@@ -3581,12 +3586,14 @@ void ModernGLWidget::renderPlayerBeacon()
     }
     mRenderCommandQueue.addCommand(std::make_unique<RenderInstancedCubesCommand>(
             column(0.8f), mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix(), RenderCommand::Shading::Unlit));
-    // Again, faintly, through whatever hides it: the floors above, most often
-    mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::DISABLE_DEPTH_TEST));
-    mRenderCommandQueue.addCommand(std::make_unique<RenderInstancedCubesCommand>(
-            column(0.3f), mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix(), RenderCommand::Shading::Unlit));
     if (glowing) {
+        // Nothing glowing writes depth to hide the column, and a second one added on would only wash it out
         mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::ALPHA_BLEND));
+    } else {
+        // Again, faintly, through whatever hides it: the floors above, most often
+        mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::DISABLE_DEPTH_TEST));
+        mRenderCommandQueue.addCommand(std::make_unique<RenderInstancedCubesCommand>(
+                column(0.3f), mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix(), RenderCommand::Shading::Unlit));
     }
     mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::ENABLE_DEPTH_TEST));
     mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::ENABLE_DEPTH_WRITE));
