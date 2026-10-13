@@ -33,6 +33,8 @@
  *     rooms in five areas over several levels, at several zooms;
  *   MUDLET_BENCH_3D_FRAMES=<dir> saves frames of an ordinary map and of the big
  *     one as PNGs, so two builds' frames can be compared pixel for pixel.
+ * MUDLET_BENCH_3D_STITCH=0 turns neighboring areas off for both, and
+ * MUDLET_BENCH_3D_LINKS=1 joins the big map's first suburb beside its metropolis.
  */
 
 #include <ctime>
@@ -174,6 +176,12 @@ private:
         }
         // From the middle of the metropolis to the first suburb
         map()->setExit(1 + (141 + 70) * 141 + 70, nextId, DIR_NORTHEAST);
+        if (!qEnvironmentVariableIsEmpty("MUDLET_BENCH_3D_LINKS")) {
+            // Its whole east side on the middle level east into the first suburb's west side, which places it beside
+            for (int y = -35; y <= 35; ++y) {
+                map()->setExit(1 + (141 + y + 70) * 141 + 140, nextId + (y + 35) * 71, DIR_EAST);
+            }
+        }
         map()->mRoomIdHash[map()->mProfileName] = 1 + (141 + 70) * 141 + 70;
         return map()->mpRoomDB->getRoom(1)->getArea();
     }
@@ -422,6 +430,40 @@ private:
 
     // The route's bars over the rooms, which are a quarter as tall as a room
     static QList<DrawnCube> drawnRoute(const ModernGLWidget& widget) { return drawnCubes(widget, 1.0f / 128.0f); }
+
+    // MUDLET_BENCH_3D_STITCH=0 turns stitching off for the report-only cases, to compare with a build without it
+    void applyBenchStitching() const { mpHost->mMapperStitchAreas = qEnvironmentVariable("MUDLET_BENCH_3D_STITCH") != qsl("0"); }
+
+    // As queueFrame(), centered on a place in the area rather than on 0,0
+    static void queueFrameAt(ModernGLWidget& widget, const int areaId, const float distance, const QPoint& center)
+    {
+        queueFrame(widget, areaId, distance);
+        widget.jumpTo(areaId, center.x(), center.y(), 0);
+        widget.updateMatrices();
+        widget.mRenderCommandQueue.clear();
+        widget.queueScene();
+    }
+
+    static QPoint pixelOf(ModernGLWidget& widget, const QVector3D& point)
+    {
+        const std::optional<QPointF> pixel = widget.mCameraController.pixelForPoint(point);
+        return pixel ? pixel->toPoint() : QPoint(-1, -1);
+    }
+
+    static void finishFlight(ModernGLWidget& widget)
+    {
+        for (int tick = 0; tick < 1000 && widget.mFlight; ++tick) {
+            widget.onCameraAnimationTick();
+        }
+    }
+
+    static void clickAt(ModernGLWidget& widget, const QPoint& position)
+    {
+        // A plain press over a neighboring area waits for its release, see mousePressEvent()
+        widget.mClickPending = true;
+        QMouseEvent release(QEvent::MouseButtonRelease, QPointF(position), widget.mapToGlobal(QPointF(position)), Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+        widget.mouseReleaseEvent(&release);
+    }
 
 private slots:
     void initTestCase()
@@ -1237,11 +1279,17 @@ private slots:
         QVERIFY(std::any_of(bars.cbegin(), bars.cend(), [&](const DrawnCube& bar) {
             return bar.color == tintOf(routeColor);
         }));
-        // Only on the west area's rooms on the way, from its southwest corner to the way out in the middle of its east side
+        // Only on the rooms on the way that are drawn: the west area's, from its southwest corner to the way out in
+        // the middle of its east side, then the middle area's drawn beside it, along its middle row
         const float edge = side / 2 + 0.7f;
         for (const DrawnCube& bar : bars) {
-            QVERIFY2(bar.center.x() < edge && bar.center.y() > -edge && bar.center.y() < 0.7f, qPrintable(qsl("a bar at %1, %2").arg(bar.center.x()).arg(bar.center.y())));
+            const bool inWest = bar.center.x() < edge && bar.center.y() > -edge && bar.center.y() < 0.7f;
+            const bool inMiddle = bar.center.x() > edge - 1.0f && bar.center.x() < edge + side && std::abs(bar.center.y()) < 0.7f;
+            QVERIFY2(inWest || inMiddle, qPrintable(qsl("a bar at %1, %2").arg(bar.center.x()).arg(bar.center.y())));
         }
+        QVERIFY(std::any_of(bars.cbegin(), bars.cend(), [&](const DrawnCube& bar) {
+            return bar.center.x() > edge;
+        }));
         QCOMPARE(drawnRooms(widget).size(), roomsWithout);
 
         bool sawFootprints = false;
@@ -1266,6 +1314,244 @@ private slots:
         }
     }
 
+    void test_aNeighbouringAreaIsPlacedWhereTheExitsBetweenThemSayWithoutGL()
+    {
+        const ThreeAreas areas = addThreeAreas();
+        MapStitch stitch;
+        stitch.build(*map(), areas.west, 0, [](int) {
+            return QColor(Qt::gray);
+        });
+        QCOMPARE(stitch.spacing(), 1);
+        // The east area is joined only to the middle one, so is not beside the west one
+        QCOMPARE(stitch.neighbours().size(), 1);
+        const MapStitch::Neighbour* pMiddle = stitch.neighbour(areas.middle);
+        QVERIFY(pMiddle);
+        QCOMPARE(pMiddle->placement, MapStitch::Placement::Stitched);
+        // The way east from the middle of its east side, at 2,0, comes into the middle area at -2,0
+        QCOMPARE(pMiddle->offset, (MapStitch::Offset{5, 0, 0}));
+        QCOMPARE(pMiddle->links, 2);
+        QCOMPARE(pMiddle->agreeing, 2);
+        QCOMPARE(pMiddle->collisions, 0);
+        QCOMPARE(stitch.rooms().size(), 25);
+        QVERIFY(stitch.portals().isEmpty());
+        const MapStitch::Room* pWayIn = stitch.room(areas.middleFirst + 10);
+        QVERIFY(pWayIn);
+        QCOMPARE(pWayIn->at, QVector3D(3.0f, 0.0f, 0.0f));
+
+        mpHost->mMapperStitchAreas = true;
+        ModernGLWidget widget(map(), mpHost);
+        queueFrame(widget, areas.west, 2.0f);
+        const QList<DrawnCube> rooms = drawnRooms(widget);
+        QCOMPARE(rooms.size(), 50);
+        // Muted toward the background, so the area shown stands out from those around it
+        const QVector4D plain = tintOf(RoomAppearance::environmentColor(*map(), *mpHost, map()->mpRoomDB->getRoom(areas.middleFirst + 10)->environment));
+        bool mutedWayIn = false;
+        for (const DrawnCube& room : rooms) {
+            if (qFuzzyCompare(room.center.x(), 3.0f) && qFuzzyIsNull(room.center.y())) {
+                mutedWayIn = room.color != plain && room.color.toVector3D().length() < plain.toVector3D().length();
+            }
+        }
+        QVERIFY2(mutedWayIn, "the middle area's way in is not drawn beside the west area, muted");
+
+        // A route goes on into the rooms drawn beside the area
+        QVERIFY(widget.planRouteToRoom(areas.middleFirst + 12).isEmpty());
+        widget.mRenderCommandQueue.clear();
+        widget.queueScene();
+        const QList<DrawnCube> route = drawnRoute(widget);
+        QVERIFY(std::any_of(route.cbegin(), route.cend(), [](const DrawnCube& bar) {
+            return bar.center.x() > 3.5f;
+        }));
+        widget.clearRoute();
+    }
+
+    void test_linksThatDisagreeAreSettledTheSameWayEachTimeWithoutGL()
+    {
+        // Most votes win; a tie goes to the smallest move, then the lowest x
+        QCOMPARE(MapStitch::chooseOffset({{5, 0, 0}, {5, -3, 0}, {5, 0, 0}}), (MapStitch::Offset{5, 0, 0}));
+        QCOMPARE(MapStitch::chooseOffset({{5, -3, 0}, {5, 0, 0}}), (MapStitch::Offset{5, 0, 0}));
+        QCOMPARE(MapStitch::chooseOffset({{3, 0, 0}, {0, 3, 0}}), (MapStitch::Offset{0, 3, 0}));
+        QCOMPARE(MapStitch::chooseOffset({{0, 3, 0}, {3, 0, 0}}), (MapStitch::Offset{0, 3, 0}));
+        int agreeing = 0;
+        MapStitch::chooseOffset({{1, 1, 0}, {2, 2, 0}, {2, 2, 0}}, &agreeing);
+        QCOMPARE(agreeing, 2);
+
+        const ThreeAreas areas = addThreeAreas();
+        // A third way east, from the west area's southeast corner, that puts the middle area three rooms further south
+        map()->setExit(areas.westFirst + 4, areas.middleFirst + 15, DIR_EAST);
+        MapStitch stitch;
+        stitch.build(*map(), areas.west, 0, [](int) {
+            return QColor(Qt::gray);
+        });
+        const MapStitch::Neighbour* pMiddle = stitch.neighbour(areas.middle);
+        QVERIFY(pMiddle);
+        QCOMPARE(pMiddle->offset, (MapStitch::Offset{5, 0, 0}));
+        QCOMPARE(pMiddle->links, 3);
+        QCOMPARE(pMiddle->agreeing, 2);
+        // The exit the area is not placed by leads nowhere near where it is drawn, so it shows a preview
+        QCOMPARE(stitch.portals().size(), 1);
+        QCOMPARE(stitch.portals().first().fromRoomId, areas.westFirst + 4);
+        QCOMPARE(stitch.portals().first().toAreaId, areas.middle);
+    }
+
+    void test_aNeighbourThatWouldLieOverTheAreaIsNotPlacedWithoutGL()
+    {
+        // The way east from the west area's corner comes into the east area's same corner, one room on
+        const auto [westId, eastId] = addTwoAreas(20);
+        MapStitch stitch;
+        stitch.build(*map(), westId, 0, [](int) {
+            return QColor(Qt::gray);
+        });
+        const MapStitch::Neighbour* pEast = stitch.neighbour(eastId);
+        QVERIFY(pEast);
+        QCOMPARE(pEast->offset, (MapStitch::Offset{1, 0, 0}));
+        QCOMPARE(pEast->collisions, 19 * 20);
+        QCOMPARE(pEast->placement, MapStitch::Placement::Overlaps);
+        QVERIFY(stitch.rooms().isEmpty());
+        QCOMPARE(stitch.portals().size(), 1);
+        const MapStitch::Portal& portal = stitch.portals().first();
+        QCOMPARE(portal.fromRoomId, 1);
+        QCOMPARE(portal.direction, DIR_EAST);
+        QCOMPARE(portal.toAreaId, eastId);
+        // The rooms within three of the way in, nearest first
+        QCOMPARE(portal.preview.size(), 16);
+        QVERIFY(portal.preview.first().target);
+        QCOMPARE(portal.preview.first().at, QPointF());
+    }
+
+    void test_onlyTheNeighboursRoomsNearTheAreaAreKeptWithoutGL()
+    {
+        map()->mapClear();
+        map()->mUserData.remove(TAreaGraph::cLayoutUserDataKey);
+        const int longFirst = addGridArea(qsl("Westmarch"), 1, 5, 5, 1, 0);
+        addGridArea(qsl("Long Road"), longFirst, 100, 1, 1, 0);
+        // East from 2,0 into the road's west end at -50,0, so the road runs out to 102,0
+        map()->setExit(1 + 14, longFirst, DIR_EAST);
+        const int westId = map()->mpRoomDB->getRoom(1)->getArea();
+        const int roadId = map()->mpRoomDB->getRoom(longFirst)->getArea();
+        MapStitch stitch;
+        stitch.build(*map(), westId, 0, [](int) {
+            return QColor(Qt::gray);
+        });
+        QCOMPARE(stitch.neighbour(roadId)->offset, (MapStitch::Offset{53, 0, 0}));
+        // Within the squares of ten rooms holding the area's rooms and those around them: up to x 19
+        QCOMPARE(stitch.rooms().size(), 17);
+        for (const MapStitch::Room& room : stitch.rooms()) {
+            QVERIFY(room.at.x() >= 3.0f && room.at.x() < 20.0f);
+        }
+
+        // Nor do the road's exits run on past its last room drawn
+        mpHost->mMapperStitchAreas = true;
+        ModernGLWidget widget(map(), mpHost);
+        queueFrame(widget, westId, 2.0f);
+        const QVector<CubeInstanceData>& bars = widget.mStitchScene.instances(RetainedMapScene::Layer::ExitBars)->instances;
+        QVERIFY(!bars.isEmpty());
+        for (const CubeInstanceData& bar : bars) {
+            const float x = bar.transform.column(3).x();
+            QVERIFY2(x > 3.0f && x < 19.0f, qPrintable(qsl("an exit bar at x %1").arg(x)));
+        }
+    }
+
+    void test_aClickOnANeighboursRoomGoesIntoItsAreaWithoutGL()
+    {
+        const ThreeAreas areas = addThreeAreas();
+        mpHost->mMapperStitchAreas = true;
+        ModernGLWidget widget(map(), mpHost);
+        queueFrame(widget, areas.west, 2.0f);
+        const int wayIn = areas.middleFirst + 10;
+        const QPoint pixel = pixelOf(widget, QVector3D(3.0f, 0.0f, 0.0f));
+        QCOMPARE(widget.stitchedRoomAt(pixel), wayIn);
+        QCOMPARE(widget.roomPickedAt(pixel, true, false, true), wayIn);
+        // Where it was always picked, the area's own rooms win
+        QCOMPARE(widget.roomPickedAt(pixel), 0);
+        QCOMPARE(widget.roomPickedAt(pixelOf(widget, QVector3D(2.0f, 0.0f, 0.0f)), true, false, true), areas.westFirst + 14);
+        QCOMPARE(widget.destinationAt(pixel), wayIn);
+
+        const QVector3D before = widget.mCameraController.getTarget();
+        const float scaleBefore = widget.mCameraController.getScale();
+        clickAt(widget, pixel);
+        QCOMPARE(widget.mAID, areas.middle);
+        QVERIFY(widget.mFlight);
+        // The same place, in the middle area's coordinates, so the view does not jump
+        QCOMPARE(widget.mCameraController.getTarget(), before - QVector3D(5.0f, 0.0f, 0.0f));
+        finishFlight(widget);
+        QCOMPARE(widget.mCameraController.getTarget(), QVector3D(-2.0f, 0.0f, 0.0f));
+        QCOMPARE(QPoint(widget.mMapCenterX, widget.mMapCenterY), QPoint(-2, 0));
+        QCOMPARE(widget.mCameraController.getScale(), scaleBefore);
+    }
+
+    void test_anExitIntoAnAreaThatCannotBePlacedShowsAPreviewWithoutGL()
+    {
+        const auto [westId, eastId] = addTwoAreas(20);
+        mpHost->mMapperStitchAreas = true;
+        ModernGLWidget widget(map(), mpHost);
+        queueFrameAt(widget, westId, 2.0f, QPoint(-8, -8));
+        QVERIFY(widget.roomPixels() >= 10.0f);
+        const QList<ModernGLWidget::PortalCard> cards = widget.portalCards();
+        QCOMPARE(cards.size(), 1);
+        const ModernGLWidget::PortalCard& card = cards.first();
+        QCOMPARE(card.name, qsl("Eastvale"));
+        // Out along the exit, east of where its arrow ends
+        const float arrow = mpHost->getLargeAreaExitArrows() ? 2.0f : 1.0f;
+        const QPoint tip = pixelOf(widget, QVector3D(-10.0f + arrow, -10.0f, 0.0f));
+        QCOMPARE(card.anchor.toPoint(), tip);
+        QVERIFY(card.rect.left() > tip.x());
+        QCOMPARE(widget.portalAt(card.rect.center().toPoint()), card.portal);
+        QCOMPARE(widget.portalAt(QPoint(card.rect.left() - 5, card.rect.top() - 5)), -1);
+        QVERIFY(widget.portalToolTip(card.portal).contains(qsl("Eastvale")));
+        // Pointing at it does not raise the room under it
+        widget.mPointerInView = true;
+        widget.mPointerPosition = card.rect.center().toPoint();
+        QCOMPARE(widget.roomUnderPointer(), 0);
+        widget.mPointerInView = false;
+
+        // Not drawn while the rooms are too small to read it by
+        queueFrameAt(widget, westId, 60.0f, QPoint(-8, -8));
+        QVERIFY(widget.portalCards().isEmpty());
+
+        queueFrameAt(widget, westId, 2.0f, QPoint(-8, -8));
+        const int wayIn = widget.mStitch.portals().at(card.portal).toRoomId;
+        const float scaleBefore = widget.mCameraController.getScale();
+        clickAt(widget, card.rect.center().toPoint());
+        QCOMPARE(widget.mAID, eastId);
+        QVERIFY(widget.mFlight);
+        finishFlight(widget);
+        const TRoom* pWayIn = map()->mpRoomDB->getRoom(wayIn);
+        QCOMPARE(widget.mCameraController.getTarget(), QVector3D(pWayIn->x(), pWayIn->y(), 0.0f));
+        QCOMPARE(widget.mCameraController.getScale(), scaleBefore);
+    }
+
+    void test_stitchingTurnedOffLeavesTheViewAsItWasWithoutGL()
+    {
+        const ThreeAreas areas = addThreeAreas();
+        ModernGLWidget widget(map(), mpHost);
+        mpHost->mMapperStitchAreas = false;
+        queueFrame(widget, areas.west, 2.0f);
+        QCOMPARE(drawnRooms(widget).size(), 25);
+        QCOMPARE(widget.stitchedRoomAt(pixelOf(widget, QVector3D(3.0f, 0.0f, 0.0f))), 0);
+        const qsizetype commandsOff = widget.mRenderCommandQueue.commands().size();
+
+        mpHost->mMapperStitchAreas = true;
+        queueFrame(widget, areas.west, 2.0f);
+        QCOMPARE(drawnRooms(widget).size(), 50);
+        QVERIFY(widget.mRenderCommandQueue.commands().size() > commandsOff);
+
+        // Nor does an area with no exits to others change for it
+        map()->mapClear();
+        addGridArea(qsl("Island"), 1, 5, 5, 1, 0);
+        const int islandId = map()->mpRoomDB->getRoom(1)->getArea();
+        queueFrame(widget, islandId, 2.0f);
+        const qsizetype commandsOn = widget.mRenderCommandQueue.commands().size();
+        mpHost->mMapperStitchAreas = false;
+        queueFrame(widget, islandId, 2.0f);
+        QCOMPARE(widget.mRenderCommandQueue.commands().size(), commandsOn);
+
+        // And no previews either
+        addTwoAreas(20);
+        queueFrameAt(widget, map()->mpRoomDB->getRoom(1)->getArea(), 2.0f, QPoint(-8, -8));
+        QVERIFY(widget.portalCards().isEmpty());
+        mpHost->mMapperStitchAreas = true;
+    }
+
     void benchmark_hugeMap()
     {
         if (qEnvironmentVariableIsEmpty("MUDLET_BENCH_3D")) {
@@ -1277,6 +1563,7 @@ private slots:
         QElapsedTimer generation;
         generation.start();
         mpHost->mMapInfoContributors.clear();
+        applyBenchStitching();
         const int areaId = addHugeMap();
         std::printf("METRIC map_rooms %d\n", static_cast<int>(map()->mpRoomDB->size()));
         std::printf("METRIC map_generation_ms %lld\n", generation.elapsed());
@@ -1427,6 +1714,7 @@ private slots:
         QVERIFY(QDir().mkpath(directory));
         // In a debug build the map info would show each frame's render time
         mpHost->mMapInfoContributors.clear();
+        applyBenchStitching();
         const bool savedIds = mpHost->mShowRoomID;
         const bool savedBubbles = mpHost->mBubbleMode;
         const bool savedGrid = mpHost->mMapperShowGrid;
