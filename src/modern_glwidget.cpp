@@ -105,12 +105,12 @@ ModernGLWidget::ModernGLWidget(TMap* pMap, Host* pHost, QWidget* parent)
     connect(mCameraAnimationTimer, &QTimer::timeout, this, &ModernGLWidget::onCameraAnimationTick);
     mEasingCurve.setType(QEasingCurve::OutQuart); // Natural deceleration
 
+    mPulseReference.start();
     mPulseTimer = new QTimer(this);
     mPulseTimer->setInterval(33ms);
     connect(mPulseTimer, &QTimer::timeout, this, [this]() {
-        if (!mPulseClock.isValid() || mPulseClock.elapsed() > scmPulseMilliseconds) {
-            mPulseTimer->stop();
-            mPulseClock.invalidate();
+        if (!mPulseStartedAt || mPulseReference.elapsed() - *mPulseStartedAt > scmPulseMilliseconds) {
+            stopPulse();
         }
         update();
     });
@@ -649,7 +649,7 @@ void ModernGLWidget::paintGL()
         mPulsedRoomId = playerRoomId;
         // Not from a room in another area, where it would only repaint for nothing
         if (const TRoom* pPlayerRoom = mpMap->mpRoomDB->getRoom(playerRoomId); pPlayerRoom && pPlayerRoom->getArea() == mAID && mapStyle().playerMarker == MapStyle::PlayerMarker::Pulse) {
-            mPulseClock.start();
+            mPulseStartedAt = mPulseReference.elapsed();
             mPulseTimer->start();
         }
     }
@@ -1300,7 +1300,7 @@ void ModernGLWidget::renderRooms()
     const bool wireframes = style.edges == MapStyle::Edges::GlowingWireframes;
     const bool pulse = style.playerMarker == MapStyle::PlayerMarker::Pulse;
     // How far the player's pulse has spread, from 0 to 1, or less than 0 for none
-    const float pulseSpread = pulse && mPulseClock.isValid() ? qMin(static_cast<float>(mPulseClock.elapsed()) / static_cast<float>(scmPulseMilliseconds), 1.0f) : -1.0f;
+    const float pulseSpread = pulse && mPulseStartedAt ? qMin(static_cast<float>(mPulseReference.elapsed() - *mPulseStartedAt) / static_cast<float>(scmPulseMilliseconds), 1.0f) : -1.0f;
     const bool groundGlyphs = terminal && style.groundGlyphs;
     const QHash<int, EnvironmentKit::Kit> namedKits = groundGlyphs ? EnvironmentKit::stored(mpMap->mUserData) : QHash<int, EnvironmentKit::Kit>();
     const QFont groundFont = groundGlyphs ? terminalGlyphFont(style) : QFont();
@@ -2246,10 +2246,22 @@ void ModernGLWidget::applyStyleGeometry()
     zFlattening = style.roomFlattening;
 }
 
+void ModernGLWidget::stopPulse()
+{
+    // The constructor applies the style before it makes the timer
+    if (mPulseTimer) {
+        mPulseTimer->stop();
+    }
+    mPulseStartedAt.reset();
+}
+
 void ModernGLWidget::applyStyle()
 {
     // Before any repaint, as picking a room reads them too
     applyStyleGeometry();
+    if (mapStyle().playerMarker != MapStyle::PlayerMarker::Pulse) {
+        stopPulse();
+    }
     // Only an opaque view may tell Qt that it paints over everything behind it
     const bool translucent = backgroundColor().alpha() < 255;
     setAttribute(Qt::WA_OpaquePaintEvent, !translucent);

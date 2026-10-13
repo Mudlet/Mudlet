@@ -350,10 +350,11 @@ private:
     int mPreviousRID = 0;                // Track previous room ID to detect changes
     // Apart from mPreviousRID, which a view moved by hand or a second map window stops following
     int mPulsedRoomId = 0;
-    // The pulse the hologram style sends out from the player's room when the player moves: how long since it began,
-    // invalid when none is under way, and what repaints the view while it spreads
+    // The pulse the hologram style sends out from the player's room when the player moves: when it began on
+    // mPulseReference, none when none is under way, and what repaints the view while it spreads
     static constexpr qint64 scmPulseMilliseconds = 1200;
-    QElapsedTimer mPulseClock;
+    QElapsedTimer mPulseReference;
+    std::optional<qint64> mPulseStartedAt;
     QTimer* mPulseTimer = nullptr;
     bool mFramePending = true;
     // Set by a zoom or a change of area while hidden: the shown area is framed at its stored zoom, read then so a later
@@ -529,6 +530,7 @@ private:
     QColor levelFadeTarget(int z) const;
     const MapStyle& mapStyle() const;
     void applyStyleGeometry();
+    void stopPulse();
     // The style's background, else the profile's mapper background color
     QColor backgroundColor() const;
     // Of the beacon over the player's room, and of the style's thin ring around it
