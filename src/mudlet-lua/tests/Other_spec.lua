@@ -1436,6 +1436,22 @@ describe("Tests Other.lua functions", function()
         restore("mapExitSize")
       end)
 
+      -- closeMapWidget() only hides the mapper, and it reopens in the mode it
+      -- had. Hidden, the 3D view is never painted, so no GL context is made.
+      if setMapPerspective == nil then
+        pending("show3dMapView needs a Mudlet built with the 3D mapper")
+      else
+        it("reads back show3dMapView while the mapper is hidden", function()
+          local original = getConfig("show3dMapView")
+          assert.is_true(closeMapWidget())
+          finally(function() setConfig("show3dMapView", original) end)
+          assert.is_true(setConfig("show3dMapView", true))
+          assert.is_true(getConfig("show3dMapView"), "the hidden mapper will reopen in 3D")
+          assert.is_true(setConfig("show3dMapView", false))
+          assert.is_false(getConfig("show3dMapView"))
+        end)
+      end
+
       it("shows and hides a map info contributor by name", function()
         local name = "mudletSpecConfigMapInfo"
         assert.is_true(registerMapInfo(name, function() return "" end))

@@ -9679,11 +9679,7 @@ int TLuaInterpreter::getConfig(lua_State* L)
             {qsl("show3dMapView"),
              [&]() {
 #if defined(INCLUDE_3DMAPPER)
-                 if (host.mpMap && host.mpMap->mpMapper) {
-                     auto widget = host.mpMap->mpMapper->glWidget;
-                     lua_pushboolean(L, (widget && widget->isVisible()));
-                     return;
-                 }
+                 // Not the 3D widget's visibility: a mapper hidden by closeMapWidget() reopens in this mode
                  lua_pushboolean(L, host.mShow3DView);
 #else
                  lua_pushboolean(L, false);
