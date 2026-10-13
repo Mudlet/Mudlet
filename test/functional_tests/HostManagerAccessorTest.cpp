@@ -32,6 +32,7 @@
 #include "GroupedTest.h"
 #include "Host.h"
 #include "HostManager.h"
+#include "MudletApp.h"
 #include "MudletInstanceCoordinator.h"
 #include "PortableModeTestHelper.h"
 #include "SpeechRecognizer.h"
@@ -42,9 +43,12 @@
 #include "mudlet.h"
 
 #include <QDir>
+#include <QFile>
 #include <QMetaEnum>
+#include <QPointer>
 #include <QRegularExpression>
 #include <QScopeGuard>
+#include <QSettings>
 #include <QTemporaryDir>
 
 #include <memory>
@@ -80,9 +84,17 @@ class HostManagerAccessorTest : public QObject
 {
     Q_OBJECT
 
+    // Every pool made here settles the config root, which then stays for the process
+    QTemporaryDir mConfigDir;
+    QByteArray mSavedXdg;
+
     // What the listening profile's scripts and the engine are told from the start on
     inline static QStringList smScriptStates;
     inline static QStringList smEngineStates;
+    // Whether a settings store existed as the refused portable.txt was reported
+    inline static bool smReported = false;
+    inline static bool smStoreExistedWhenReported = false;
+    inline static QtMessageHandler smPreviousHandler = nullptr;
 
     // Model loaded, as with no engine library on macOS each stt.start() builds another
     static auto installStandInFactory()
@@ -119,9 +131,75 @@ class HostManagerAccessorTest : public QObject
     }
 
 private slots:
+    void initTestCase()
+    {
+        if (portableMarkerPresent()) {
+            QSKIP("portable.txt present - it takes precedence over XDG_CONFIG_HOME, so the config dir cannot be redirected");
+        }
+        QVERIFY(mConfigDir.isValid());
+        QVERIFY(QDir().mkpath(qsl("%1/mudlet/profiles").arg(mConfigDir.path())));
+        mSavedXdg = qgetenv("XDG_CONFIG_HOME");
+        qputenv("XDG_CONFIG_HOME", mConfigDir.path().toUtf8());
+    }
+
+    void cleanupTestCase() { mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg); }
+
+    // First, as the first pool settles the root. With no window to show it on, the log is where a refused
+    // portable.txt is reported, and as in the GUI that comes before any Mudlet.ini is opened.
+    void aPoolWithNoMainWindowReportsARefusedPortableMarkerBeforeOpeningMudletIni()
+    {
+#ifdef Q_OS_WIN
+        QSKIP("QDir::homePath() does not follow HOME on Windows");
+#endif
+        QVERIFY2(!MudletApp::configRootSettled(), "something in this process settled the config root before the first pool");
+        QTemporaryDir home;
+        QVERIFY(home.isValid());
+        const QString legacyDir = qsl("%1/.config/mudlet").arg(home.path());
+        QVERIFY(QDir().mkpath(legacyDir));
+        // Empty, which only beside the executable means "./portable"
+        QFile marker(qsl("%1/portable.txt").arg(legacyDir));
+        QVERIFY(marker.open(QIODevice::WriteOnly));
+        marker.close();
+        const QString root = qsl("%1/mudlet").arg(mConfigDir.path());
+        QFile ini(qsl("%1/Mudlet.ini").arg(root));
+        QVERIFY(ini.open(QIODevice::WriteOnly | QIODevice::Text));
+        ini.write("[General]\nmapCenterSmallAreas=true\n");
+        ini.close();
+
+        const QByteArray savedHome = qgetenv("HOME");
+        qputenv("HOME", home.path().toUtf8());
+        smReported = false;
+        smStoreExistedWhenReported = false;
+        smPreviousHandler = qInstallMessageHandler([](QtMsgType type, const QMessageLogContext& context, const QString& message) {
+            if (message.contains(qsl("names no data directory, so"))) {
+                smReported = true;
+                smStoreExistedWhenReported = MudletApp::getQSettings() != nullptr;
+            }
+            smPreviousHandler(type, context, message);
+        });
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("portable.txt names no data directory\\.$")));
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("names no data directory, so \"%1\" is in use").arg(QRegularExpression::escape(root))));
+        {
+            HostManager pool;
+            qInstallMessageHandler(smPreviousHandler);
+            savedHome.isNull() ? qunsetenv("HOME") : qputenv("HOME", savedHome);
+
+            QVERIFY2(smReported, "the refused portable.txt was never reported");
+            QVERIFY2(!smStoreExistedWhenReported, "Mudlet.ini was opened before the refused portable.txt was reported");
+            QVERIFY(MudletApp::configRootSettled());
+            QVERIFY(!MudletApp::portableRootInUse());
+            QCOMPARE(MudletApp::getMudletPath(enums::mainPath), root);
+            QVERIFY2(MudletApp::getQSettings(), "a pool with no main window left the settings store unopened");
+            QCOMPARE(MudletApp::getQSettings()->fileName(), qsl("%1/Mudlet.ini").arg(root));
+            QVERIFY(MudletApp::getQSettings()->value(qsl("mapCenterSmallAreas")).toBool());
+        }
+        // The pool that settled the root is gone; the root and its store stay for the next
+        QVERIFY(MudletApp::configRootSettled());
+    }
+
     void theAccessorFollowsTheOneManagersLifetime()
     {
-        QVERIFY2(!HostManager::self(), "nothing in this process should have built a HostManager yet");
+        QVERIFY2(!HostManager::self(), "an earlier test left its HostManager behind");
         {
             HostManager manager;
             QCOMPARE(HostManager::self(), &manager);
@@ -137,6 +215,10 @@ private slots:
         QVERIFY(firstDiscord);
         TSpeechBridge* const firstSpeechBridge = TSpeechBridge::instance();
         QVERIFY(firstSpeechBridge);
+        // Settling the root again would delete the store under whoever holds it, as the GUI's Updater does.
+        // Guarded, as a store rebuilt at the freed address would compare equal.
+        const QPointer<QSettings> store = MudletApp::getQSettings();
+        QVERIFY(store);
         {
             QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("a MudletMedia already exists")));
             QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("a FontManager already exists")));
@@ -147,6 +229,7 @@ private slots:
             QCOMPARE(HostManager::self(), &first);
             QCOMPARE(Discord::self(), firstDiscord);
             QCOMPARE(TSpeechBridge::instance(), firstSpeechBridge);
+            QVERIFY2(store && MudletApp::getQSettings() == store, "a second pool settled the config root again, deleting the first pool's settings store");
         }
         QCOMPARE(HostManager::self(), &first);
         QCOMPARE(Discord::self(), firstDiscord);
@@ -156,17 +239,6 @@ private slots:
     // As an embedder's quit does with no main window: the bridge goes with this pool
     void aPoolGoingEndsItsProfilesSpeech()
     {
-        if (portableMarkerPresent()) {
-            QSKIP("portable.txt present - it takes precedence over XDG_CONFIG_HOME, so the config dir cannot be redirected");
-        }
-        QTemporaryDir configDir;
-        QVERIFY(configDir.isValid());
-        QVERIFY(QDir().mkpath(qsl("%1/mudlet/profiles").arg(configDir.path())));
-        const QByteArray savedXdg = qgetenv("XDG_CONFIG_HOME");
-        qputenv("XDG_CONFIG_HOME", configDir.path().toUtf8());
-        const auto restoreXdg = qScopeGuard([&savedXdg]() {
-            savedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", savedXdg);
-        });
         const auto restoreFactory = installStandInFactory();
         {
             HostManager pool;
@@ -182,15 +254,6 @@ private slots:
     // HostManager the rest of the process would otherwise have to work around.
     void theProfilesGoAwayWhileTheAccessorStillAnswers()
     {
-        if (portableMarkerPresent()) {
-            QSKIP("portable.txt present - it takes precedence over XDG_CONFIG_HOME, so the config dir cannot be redirected");
-        }
-        QTemporaryDir configDir;
-        QVERIFY(configDir.isValid());
-        QVERIFY(QDir().mkpath(qsl("%1/mudlet/profiles").arg(configDir.path())));
-        const QByteArray savedXdg = qgetenv("XDG_CONFIG_HOME");
-        qputenv("XDG_CONFIG_HOME", configDir.path().toUtf8());
-
         mudlet::start();
         mudlet::self()->setupConfig();
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>(qsl("MudletInstanceCoordinator")));
@@ -233,8 +296,6 @@ private slots:
         // HostManager member is destroyed after that, so this is also the point
         // where mudlet::self() has already gone
         delete mudlet::self();
-
-        savedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", savedXdg);
 
         QVERIFY2(profileWasDestroyed, "the profile outlived the manager that held it, so this says nothing about the order");
         QVERIFY2(accessorAnsweredDuringTeardown, "the accessor was cleared before the profile pool it describes was emptied");

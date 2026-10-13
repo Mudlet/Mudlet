@@ -1453,6 +1453,7 @@ void mudlet::applyToolBarStyleToAddonCommands()
 
 mudlet::mudlet()
 : QMainWindow()
+, mHostManager(HostManager::ConfigRoot::leftToMainWindow)
 {
     // Stateless, reaching the GUI through mudlet::self() and the debug area
     // statics, so one serves every mudlet instance and is never uninstalled:
@@ -2162,37 +2163,12 @@ void mudlet::init()
 
 void mudlet::setupConfig()
 {
-    const auto resolution = MudletApp::resolveConfigRoot(MudletApp::executableDir());
-    const QString confPath = resolution.path;
+    const auto resolution = MudletApp::settleConfigRoot();
+    // Carried until main() can put it on screen once the connection dialog is up.
     // A resolution that goes through retires an earlier complaint, or the notice
-    // would name a portable.txt that no longer governs anything
-    mRejectedPortableMarker.clear();
-    mRejectedPortableRoot.clear();
-    if (resolution.portableRootRejected) {
-        // Carry on at the location the resolver fell back to; main() puts this
-        // on screen once the connection dialog is up
-        mRejectedPortableMarker = resolution.portableMarker;
-        mRejectedPortableRoot = resolution.rejectedRoot;
-        if (mRejectedPortableRoot.isEmpty()) {
-            qWarning().nospace().noquote() << "mudlet::setupConfig() WARN - \"" << mRejectedPortableMarker << "\" names no data directory, so \"" << confPath << "\" is in use.";
-        } else {
-            qWarning().nospace().noquote() << "mudlet::setupConfig() WARN - \"" << mRejectedPortableMarker << "\" names the data directory \"" << mRejectedPortableRoot
-                                           << "\", which Mudlet cannot use, so \"" << confPath
-                                           << "\" is in use instead. Profiles kept where the marker points will not be listed until it is corrected.";
-        }
-    }
-    if (resolution.migrationPending) {
-        qInfo().nospace() << "mudlet::setupConfig() INFO: XDG_CONFIG_HOME is set but $XDG_CONFIG_HOME/mudlet holds no profiles, so the existing " << confPath
-                          << " is still in use. Move its contents into $XDG_CONFIG_HOME/mudlet to migrate.";
-    }
-    if (!resolution.shadowedProfilesPath.isEmpty()) {
-        qWarning().nospace() << "mudlet::setupConfig() WARN: using $XDG_CONFIG_HOME/mudlet (" << confPath << ") because it holds profiles, but " << resolution.shadowedProfilesPath
-                             << " holds profiles as well and they will not be listed. Unset XDG_CONFIG_HOME to use that directory instead.";
-    }
-    qDebug() << "mudlet::setupConfig() INFO:" << "using config dir:" << confPath;
-    // Discards any settings store built under the previous root, so setupConfig()
-    // must not run again once init() has created the Updater, which keeps using it
-    MudletApp::setConfigPath(confPath, resolution.portable && !resolution.portableRootRejected);
+    // would name a portable.txt that no longer governs anything.
+    mRejectedPortableMarker = resolution.portableRootRejected ? resolution.portableMarker : QString();
+    mRejectedPortableRoot = resolution.portableRootRejected ? resolution.rejectedRoot : QString();
 }
 
 // The only thing on screen telling the user that the profiles they are about to
