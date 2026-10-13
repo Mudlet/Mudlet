@@ -1,5 +1,16 @@
 describe("Alias processing", function()
 
+    -- installPackage() answers true but holds the install over while a profile save runs
+    local function waitForPackage(name)
+        for _ = 1, 100 do
+            if table.contains(getPackages(), name) then
+                return true
+            end
+            pumpEvents(50)
+        end
+        return false
+    end
+
     -- TAlias's match-all loop is unconditional and steps on after an empty match,
     -- so on a command holding a multi-byte character it must step past the whole
     -- character: landing inside one has ended the loop, dropping every capture
@@ -200,6 +211,7 @@ describe("Alias processing", function()
 ]])
             file:close()
             assert.is_true(installPackage(path))
+            assert.is_true(waitForPackage("alias-runaway-command"), "the runaway alias package was not installed")
 
             local mark = getLastLineNumber("main")
             expandAlias("runaway_command", false)
@@ -905,6 +917,7 @@ describe("Alias processing", function()
                 file:write(xml)
                 file:close()
                 assert.is_true(installPackage(specPackagePath(name)))
+                assert.is_true(waitForPackage(name), "the " .. name .. " package was not installed")
             end
 
             -- A trigger for "command_field_trigger" whose Command field is "command_field_sent"
