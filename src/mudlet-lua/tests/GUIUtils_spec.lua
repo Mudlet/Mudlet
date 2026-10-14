@@ -1775,6 +1775,12 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       assert.equals("FF0000", RGB2Hex(1/0, 0, 0))
       assert.equals("000000", RGB2Hex(0/0, 0, 0))
     end)
+
+    it("Should say which component is missing or not a number", function()
+      assert.error_matches(function() RGB2Hex(255, 0) end, "RGB2Hex: bad argument #3 type %(number expected, got nil!%)")
+      assert.error_matches(function() RGB2Hex(1, "x", 3) end, "RGB2Hex: bad argument #2 type %(number expected, got string!%)")
+      assert.equals("0A0B0C", RGB2Hex("10", "11", "12"))
+    end)
   end)
 
   describe("Tests the functionality of getRGB", function()

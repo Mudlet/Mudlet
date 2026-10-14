@@ -440,6 +440,13 @@ local function clampColorComponent(value)
   return math.min(255, math.max(0, math.floor(value)))
 end
 
+local function rgb2HexComponent(value, position)
+  if not tonumber(value) then
+    error(string.format("RGB2Hex: bad argument #%d type (number expected, got %s!)", position, type(value)), 3)
+  end
+  return PadHexNum(string.format("%X", clampColorComponent(value)))
+end
+
 --- Converts an RGB value into an HTML compliant(label usable) HEX number.
 --- This function is colorNames aware and can take any defined global color as its first argument.
 --- Components are rounded down and clamped to 0-255.
@@ -461,9 +468,7 @@ function RGB2Hex(red, green, blue)
     l_Red, l_Green, l_Blue = red, green, blue
   end
 
-  return PadHexNum(string.format("%X", clampColorComponent(l_Red))) ..
-  PadHexNum(string.format("%X", clampColorComponent(l_Green))) ..
-  PadHexNum(string.format("%X", clampColorComponent(l_Blue)))
+  return rgb2HexComponent(l_Red, 1) .. rgb2HexComponent(l_Green, 2) .. rgb2HexComponent(l_Blue, 3)
 end
 
 
