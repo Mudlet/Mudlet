@@ -2676,11 +2676,8 @@ end
 local setLabelCursorLayer = setLabelCursor
 function setLabelCursor(labelname, cursorShape)
   if type(cursorShape) == "string" then
-    local shape = mudlet.cursor[cursorShape]
-    if not shape then
-      return nil, string.format("cursor shape '%s' not found. see https://doc.qt.io/qt-5/qt.html#CursorShape-enum", cursorShape)
-    end
-    cursorShape = shape
+    -- a name not in mudlet.cursor goes on as a string, for the C++ layer to refuse once it has checked the label
+    cursorShape = mudlet.cursor[cursorShape] or cursorShape
   end
   return setLabelCursorLayer(labelname, cursorShape)
 end

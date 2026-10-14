@@ -3631,9 +3631,18 @@ int TLuaInterpreter::setLabelCursor(lua_State* L)
     if (!checkStringArg(L, __func__, 1, "label name")) {
         return lua_error(L);
     }
-    const int labelCursor = getVerifiedInt(L, __func__, 2, "cursortype");
     const QString labelName{lua_tostring(L, 1)};
     const Host& host = getHostFromLua(L);
+    int labelCursor = -2;
+    // The Lua wrapper turns every name in mudlet.cursor into its number, so a name still here is one it does not know.
+    // For a missing label it falls through as -2, a shape no frontend takes, so the label is refused first as with a number.
+    if (lua_type(L, 2) == LUA_TSTRING) {
+        if (host.windowType(labelName) == qsl("label")) {
+            return warnArgumentValue(L, __func__, qsl("cursor shape '%1' not found. see https://wiki.mudlet.org/w/CursorShapes").arg(lua_tostring(L, 2)));
+        }
+    } else {
+        labelCursor = getVerifiedInt(L, __func__, 2, "cursortype");
+    }
 
     if (auto [success, message] = host.consoleFrontend()->setLabelCursor(labelName, labelCursor); !success) {
         return warnArgumentValue(L, __func__, message);
