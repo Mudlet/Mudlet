@@ -155,10 +155,10 @@ private slots:
         pMap->mapClear();
         const int areaId = pMap->mpRoomDB->addArea(qsl("Crowded Area"));
         for (int id = 1; id <= 600; ++id) {
-            if (!(pMap->addRoom(id) && pMap->setRoomArea(id, areaId) && pMap->setRoomCoordinates(id, id % 25, id / 25, 0))) {
+            if (!(pMap->addRoom(id) && pMap->setRoomArea(id, areaId) && pMap->setRoomCoordinates(id, id % 25 * 2, id / 25, 0))) {
                 return 0;
             }
-            // Short, so that every name fits its room and none is decluttered away
+            // Short, and two rooms apart across, so that every name fits and none is decluttered away
             pMap->mpRoomDB->getRoom(id)->name = qsl("R%1").arg(id);
         }
         // A font of the map's own keeps names at their full size, whatever a map style would shrink them to,
@@ -198,11 +198,11 @@ private slots:
                     return ++lastTexture;
                 },
                 [](GLuint) {});
-        widget.setViewCenter(areaId, 12, 12, 0);
+        widget.setViewCenter(areaId, 24, 12, 0);
         // Never shown, so nothing sizes it: big enough for every name to be legible, with the whole area in view
-        widget.resize(1200, 1200);
+        widget.resize(1600, 1600);
         widget.mCameraController.setViewportSize(widget.width(), widget.height());
-        widget.frameRooms(26.0);
+        widget.frameRooms(52.0);
         // As paintGL() does first: names are placed through the camera's matrices
         widget.updateMatrices();
 
