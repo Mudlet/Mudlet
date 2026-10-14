@@ -3705,10 +3705,13 @@ describe("Tests db:create on underscored keys that are not sheet options", funct
       people = {name = "", _indexes = {"name"}},
       places = {"name", _uniqe = {"name"}},
     })
-    assert.are.equal(
-      'db:create - people - "_indexes" is not a sheet option (those are _index, _unique and _violations): it is ignored.\n'..
-      'db:create - places - "_uniqe" is not a sheet option (those are _index, _unique and _violations): it is ignored.',
-      warnings)
+    -- db:create warns sheet by sheet in pairs() order, which the spec must not rely on
+    local _, lines = warnings:gsub("is not a sheet option", "")
+    assert.are.equal(2, lines)
+    assert.is_truthy(string.find(warnings,
+      'db:create - people - "_indexes" is not a sheet option (those are _index, _unique and _violations): it is ignored.', 1, true))
+    assert.is_truthy(string.find(warnings,
+      'db:create - places - "_uniqe" is not a sheet option (those are _index, _unique and _violations): it is ignored.', 1, true))
     assert.is_true(db:add(mydb.places, {name = "Lancre"}))
     assert.is_true(db:add(mydb.places, {name = "Lancre"}))
     assert.are.equal(2, #db:fetch(mydb.places))
