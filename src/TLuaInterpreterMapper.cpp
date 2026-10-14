@@ -1166,7 +1166,7 @@ int TLuaInterpreter::createMapImageLabel(lua_State* L)
     const bool showOnTop = getVerifiedBool(L, __func__, 9, "showOnTop");
     bool temporary = false;
     if (args > 9) {
-        temporary = getVerifiedBool(L, __func__, 10, "showOnTop", true);
+        temporary = getVerifiedBool(L, __func__, 10, "temporary", true);
     }
 
     const Host& host = getHostFromLua(L);
