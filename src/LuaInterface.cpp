@@ -28,6 +28,7 @@
 
 #include <csetjmp>
 #include <limits>
+#include <optional>
 
 extern "C" {
 #if defined(INCLUDE_VERSIONED_LUA_HEADERS)
@@ -94,6 +95,32 @@ std::pair<bool, QString> LuaInterface::validMove(TVar* pNewParent) const
     return {true, QString()};
 }
 
+// toDouble() reads "nan", "inf" and "-inf", but none of the other ways printf
+// spells NaN or infinity: "-nan" (glibc), "-nan(ind)" and "nan(snan)" (UCRT),
+// "-1.#IND", "1.#QNAN" and "1.#INF" (msvcrt). Lua writes numbers with printf,
+// so a saved number or number key holds whichever the saving platform uses.
+static std::optional<lua_Number> numberFromText(const QString& text)
+{
+    bool ok = false;
+    const double number = text.toDouble(&ok);
+    if (ok) {
+        return number;
+    }
+    const QString spelling = text.trimmed();
+    static const QStringList nanSpellings{
+            qsl("-nan"), qsl("nan(ind)"), qsl("-nan(ind)"), qsl("nan(snan)"), qsl("-nan(snan)"), qsl("1.#QNAN"), qsl("-1.#QNAN"), qsl("1.#IND"), qsl("-1.#IND"), qsl("1.#SNAN"), qsl("-1.#SNAN")};
+    if (nanSpellings.contains(spelling, Qt::CaseInsensitive)) {
+        return std::numeric_limits<lua_Number>::quiet_NaN();
+    }
+    if (spelling.compare(qsl("1.#INF"), Qt::CaseInsensitive) == 0) {
+        return std::numeric_limits<lua_Number>::infinity();
+    }
+    if (spelling.compare(qsl("-1.#INF"), Qt::CaseInsensitive) == 0) {
+        return -std::numeric_limits<lua_Number>::infinity();
+    }
+    return std::nullopt;
+}
+
 bool LuaInterface::loadKey(lua_State* L, TVar* var)
 {
     if (setjmp(buf) == 0) {
@@ -102,7 +129,7 @@ bool LuaInterface::loadKey(lua_State* L, TVar* var)
             lua_rawgeti(L, LUA_REGISTRYINDEX, var->getName().toInt());
         } else {
             if (keyType == LUA_TNUMBER) {
-                lua_pushnumber(L, var->getName().toDouble());
+                lua_pushnumber(L, numberFromText(var->getName()).value_or(0));
             } else if (keyType == LUA_TTABLE) {
             } else if (keyType == LUA_TBOOLEAN) {
                 lua_pushboolean(L, var->getName().toLower() == "true" ? 1 : 0);
@@ -344,7 +371,7 @@ bool LuaInterface::pushKey(TVar* var, const QString& name, const int keyType)
         return true;
     }
     if (keyType == LUA_TNUMBER) {
-        lua_pushnumber(mL, name.toDouble());
+        lua_pushnumber(mL, numberFromText(name).value_or(0));
         return true;
     }
     if (keyType == LUA_TBOOLEAN) {
@@ -389,29 +416,6 @@ bool LuaInterface::pushOwningTable(const QList<TVar*>& vars)
     return lua_istable(mL, -1);
 }
 
-// toDouble() reads "nan", "inf" and "-inf", but not the "-nan" glibc's printf
-// gives 0/0, MSVC's "-nan(ind)" or the "1.#INF" family of msvcrt, all of which
-// earlier saves hold (#10722).
-static lua_Number numberFromText(const QString& text)
-{
-    bool ok = false;
-    const double number = text.toDouble(&ok);
-    if (ok) {
-        return number;
-    }
-    static const QStringList nanSpellings{qsl("-nan"), qsl("nan(ind)"), qsl("-nan(ind)"), qsl("1.#QNAN"), qsl("-1.#QNAN"), qsl("1.#IND"), qsl("-1.#IND")};
-    if (nanSpellings.contains(text, Qt::CaseInsensitive)) {
-        return std::numeric_limits<lua_Number>::quiet_NaN();
-    }
-    if (text.compare(qsl("1.#INF"), Qt::CaseInsensitive) == 0) {
-        return std::numeric_limits<lua_Number>::infinity();
-    }
-    if (text.compare(qsl("-1.#INF"), Qt::CaseInsensitive) == 0) {
-        return -std::numeric_limits<lua_Number>::infinity();
-    }
-    return number;
-}
-
 // Writes a variable's value into Lua. Through the C API, because generating Lua
 // source to do it put the value and the keys into that source as text, which a
 // value holding "]]" or a key holding a quote does not survive: the chunk failed
@@ -439,9 +443,14 @@ bool LuaInterface::setValue(TVar* var)
             lua_pushlstring(mL, value.constData(), value.length());
             break;
         }
-        case LUA_TNUMBER:
-            lua_pushnumber(mL, numberFromText(var->getValue()));
+        case LUA_TNUMBER: {
+            const std::optional<lua_Number> number = numberFromText(var->getValue());
+            if (!number) {
+                qWarning().noquote().nospace() << "LuaInterface::setValue(...) WARNING - \"" << var->getValue() << "\" is not a number, so \"" << var->getName() << "\" is being set to 0.";
+            }
+            lua_pushnumber(mL, number.value_or(0));
             break;
+        }
         case LUA_TBOOLEAN:
             lua_pushboolean(mL, var->getValue().toLower() == QLatin1String("true") ? 1 : 0);
             break;
@@ -651,7 +660,7 @@ QString LuaInterface::getValue(TVar* var)
         if (firstVariable->getKeyType() == LUA_TSTRING) {
             lua_getglobal(mL, (firstVariable->getName()).toUtf8().constData());
         } else if (firstVariable->getKeyType() == LUA_TNUMBER) {
-            lua_pushnumber(mL, firstVariable->getName().toDouble());
+            lua_pushnumber(mL, numberFromText(firstVariable->getName()).value_or(0));
             lua_gettable(mL, LUA_GLOBALSINDEX);
         } else if (firstVariable->getKeyType() == LUA_TBOOLEAN) {
             lua_pushboolean(mL, firstVariable->getName().toLower() == "true" ? 1 : 0);
