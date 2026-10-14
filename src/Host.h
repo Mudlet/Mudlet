@@ -1089,11 +1089,13 @@ public:
     QColor mBgColor_2{QColorConstants::Black};
     QColor mLowerLevelColor{QColorConstants::DarkGray};
     QColor mUpperLevelColor{QColorConstants::White};
-    QColor mRoomBorderColor{QColorConstants::LightGray};
+    static constexpr QColor scmDefaultRoomBorderColor{QColorConstants::LightGray};
+    QColor mRoomBorderColor{scmDefaultRoomBorderColor};
     QColor mRoomCollisionBorderColor{QColorConstants::Yellow};
     QColor mMapGridColor{QColor(211, 211, 211, 64)};
 
-    QColor mMapInfoBg = QColor(150, 150, 150, 120);
+    static constexpr QColor scmDefaultMapInfoBg{150, 150, 150, 120};
+    QColor mMapInfoBg = scmDefaultMapInfoBg;
     bool mMapStrongHighlight = false;
     QStringList mGMCP_merge_table_keys;
     QStringList mInstalledPackages;

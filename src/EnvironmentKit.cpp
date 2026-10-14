@@ -24,6 +24,7 @@
 #include "utils.h"
 
 #include <QColor>
+#include <QDebug>
 #include <QJsonDocument>
 #include <QJsonObject>
 
@@ -108,36 +109,75 @@ QString userDataKey()
     return qsl("system.mapStyle.environmentKits");
 }
 
+namespace {
+// Empty when nothing is saved, and nothing when what is saved is not a JSON object
+std::optional<QJsonObject> storedObject(const QMap<QString, QString>& mapUserData)
+{
+    const auto found = mapUserData.constFind(userDataKey());
+    if (found == mapUserData.cend()) {
+        return QJsonObject();
+    }
+    const QJsonDocument document = QJsonDocument::fromJson(found->toUtf8());
+    if (!document.isObject()) {
+        return std::nullopt;
+    }
+    return document.object();
+}
+
+void warnOnce(const QString& saved)
+{
+    // Read for every environment on every repaint, so only a change in what is saved is worth repeating
+    static QString lastWarned;
+    if (saved == lastWarned) {
+        return;
+    }
+    lastWarned = saved;
+    qWarning().noquote() << "EnvironmentKit: ignoring what cannot be read in the map user data" << userDataKey() << ":" << saved;
+}
+} // namespace
+
 QHash<int, Kit> stored(const QMap<QString, QString>& mapUserData)
 {
     QHash<int, Kit> kits;
-    const auto found = mapUserData.constFind(userDataKey());
-    if (found == mapUserData.cend()) {
+    const std::optional<QJsonObject> object = storedObject(mapUserData);
+    if (!object) {
+        warnOnce(mapUserData.value(userDataKey()));
         return kits;
     }
-    const QJsonObject object = QJsonDocument::fromJson(found->toUtf8()).object();
-    for (const QString& key : object.keys()) {
+    bool skipped = false;
+    for (const QString& key : object->keys()) {
         bool number = false;
         const int environmentId = key.toInt(&number);
-        const std::optional<Kit> kit = fromName(object.value(key).toString());
+        const std::optional<Kit> kit = fromName(object->value(key).toString());
         if (number && kit) {
             kits.insert(environmentId, *kit);
+        } else {
+            skipped = true;
         }
+    }
+    if (skipped) {
+        warnOnce(mapUserData.value(userDataKey()));
     }
     return kits;
 }
 
-void store(QMap<QString, QString>& mapUserData, const QHash<int, Kit>& kits)
+bool store(QMap<QString, QString>& mapUserData, const int environmentId, const std::optional<Kit> kit)
 {
-    if (kits.isEmpty()) {
+    std::optional<QJsonObject> object = storedObject(mapUserData);
+    if (!object) {
+        return false;
+    }
+    if (kit) {
+        object->insert(QString::number(environmentId), name(*kit));
+    } else {
+        object->remove(QString::number(environmentId));
+    }
+    if (object->isEmpty()) {
         mapUserData.remove(userDataKey());
-        return;
+    } else {
+        mapUserData.insert(userDataKey(), QString::fromUtf8(QJsonDocument(*object).toJson(QJsonDocument::Compact)));
     }
-    QJsonObject object;
-    for (const auto& [environmentId, kit] : kits.asKeyValueRange()) {
-        object.insert(QString::number(environmentId), name(kit));
-    }
-    mapUserData.insert(userDataKey(), QString::fromUtf8(QJsonDocument(object).toJson(QJsonDocument::Compact)));
+    return true;
 }
 
 std::pair<Kit, bool> forEnvironment(const TMap& map, const Host& host, const int environmentId)

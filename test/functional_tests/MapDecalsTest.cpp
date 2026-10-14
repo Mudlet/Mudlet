@@ -26,6 +26,7 @@
 
 #include <QImage>
 
+#include "Host.h"
 #include "MapDecals.h"
 #include "MapStyle.h"
 #include "TMapLabel.h"
@@ -111,10 +112,29 @@ private slots:
 
     void test_infoBackgroundIsThemedOnlyWhereTheProfileKeepsTheDefault()
     {
-        const QColor profileDefault(150, 150, 150, 120);
+        const QColor profileDefault = Host::scmDefaultMapInfoBg;
         QCOMPARE(tiles().infoBackgroundColor(profileDefault), tiles().infoBackground);
         QCOMPARE(tiles().infoBackgroundColor(QColor(0, 80, 0, 200)), QColor(0, 80, 0, 200));
         QCOMPARE(MapStyle().infoBackgroundColor(profileDefault), profileDefault);
+    }
+
+    void test_roomNamesAreQuieterButKeepAColorGivenThem()
+    {
+        const QColor background(16, 22, 32);
+        QCOMPARE(tiles().roomNameColorFor(QString(), background), tiles().roomNameColor);
+        QVERIFY(tiles().roomNameColor.alpha() < 255);
+        QVERIFY(tiles().roomNameScale < 1.0f);
+        QCOMPARE(tiles().roomNameColorFor(qsl("#ff8000"), background), QColor(255, 128, 0));
+        QCOMPARE(MapStyle().roomNameColorFor(QString(), background), QColor(Qt::white));
+    }
+
+    void test_defaultRoomBordersBecomeTheBlocksBase()
+    {
+        const QColor room(200, 100, 40);
+        const QColor background(0, 20, 40);
+        QCOMPARE(tiles().roomBorderColor(Host::scmDefaultRoomBorderColor, room, background).rgb(), QColor(100, 60, 40).rgb());
+        QCOMPARE(tiles().roomBorderColor(QColor(Qt::yellow), room, background), QColor(Qt::yellow));
+        QCOMPARE(MapStyle().roomBorderColor(Host::scmDefaultRoomBorderColor, room, background), Host::scmDefaultRoomBorderColor);
     }
 
     void test_glowFadesOutFromTheMiddle()
@@ -124,7 +144,7 @@ private slots:
         QVERIFY(alphaAt(image, scmSize / 2, scmSize / 8) < alphaAt(image, scmSize / 2, scmSize / 3));
         QCOMPARE(alphaAt(image, 0, 0), 0);
         QCOMPARE(QColor(image.pixel(scmSize / 2, scmSize / 2)).hue(), 0);
-        QVERIFY(MapDecals::highlightOnGround(MapStyle::HighlightShape::Halo));
+        QVERIFY(MapDecals::highlightOnGround(MapStyle::HighlightShape::Glow));
     }
 
     void test_ringShapesAreClearInTheMiddle_data()

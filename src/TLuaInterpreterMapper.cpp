@@ -4051,15 +4051,16 @@ int TLuaInterpreter::setMapEnvironmentKit(lua_State* L)
         kitName = getVerifiedString(L, __func__, 2, "kit name", true).trimmed().toLower();
     }
     Host& host = getHostFromLua(L);
-    QHash<int, EnvironmentKit::Kit> kits = EnvironmentKit::stored(host.mpMap->mUserData);
-    if (kitName.isEmpty()) {
-        kits.remove(environmentId);
-    } else if (const std::optional<EnvironmentKit::Kit> kit = EnvironmentKit::fromName(kitName)) {
-        kits.insert(environmentId, *kit);
-    } else {
-        return warnArgumentValue(L, __func__, qsl("kit name '%1' is not one of: %2").arg(kitName, EnvironmentKit::names().join(qsl(", "))));
+    std::optional<EnvironmentKit::Kit> kit;
+    if (!kitName.isEmpty()) {
+        kit = EnvironmentKit::fromName(kitName);
+        if (!kit) {
+            return warnArgumentValue(L, __func__, qsl("kit name '%1' is not one of: %2").arg(kitName, EnvironmentKit::names().join(qsl(", "))));
+        }
     }
-    EnvironmentKit::store(host.mpMap->mUserData, kits);
+    if (!EnvironmentKit::store(host.mpMap->mUserData, environmentId, kit)) {
+        return warnArgumentValue(L, __func__, qsl("the map user data '%1' is not a JSON object, so is left alone; fix or remove it first").arg(EnvironmentKit::userDataKey()));
+    }
     host.mpMap->setUnsaved(__func__);
     host.mpMap->updateArea(-1);
     lua_pushboolean(L, true);

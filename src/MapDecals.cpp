@@ -120,8 +120,8 @@ bool highlightOnGround(const MapStyle::HighlightShape shape)
 {
     switch (shape) {
     case MapStyle::HighlightShape::Halo:
-        return true;
     case MapStyle::HighlightShape::Glow:
+        return true;
     case MapStyle::HighlightShape::Disc:
     case MapStyle::HighlightShape::DashedEllipse:
     case MapStyle::HighlightShape::DoubleEllipse:

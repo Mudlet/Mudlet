@@ -38,6 +38,7 @@
 #include <QEvent>
 #include <QFileDialog>
 #include <QFileInfo>
+#include <QFontMetrics>
 #include <QFrame>
 #include <QLabel>
 #include <QListWidget>
@@ -1164,6 +1165,7 @@ void dlgMapper::paintMapInfo(const QElapsedTimer& renderTimer,
     QFont font = pHost->getDisplayFont();
     if (!fontFamily.isEmpty()) {
         font.setFamily(fontFamily);
+        fontHeight = QFontMetrics(font).height();
     }
     painter.setFont(font);
 

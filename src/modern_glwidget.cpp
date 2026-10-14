@@ -1032,15 +1032,17 @@ void ModernGLWidget::renderRooms()
 
     const bool showRoomNames = mpMap->getRoomNamesShown() && !pArea->gridMode;
     QFont nameFont = style.labelFont(mpMap->mMapSymbolFont);
+    bool namesGivenFont = false;
     if (showRoomNames) {
         if (QFont font; font.fromString(mpMap->mUserData.value(ROOM_UI_NAMEFONT))) {
             nameFont = font;
+            namesGivenFont = true;
         }
         nameFont.setItalic(false);
         nameFont.setUnderline(false);
         nameFont.setOverline(false);
         nameFont.setStrikeOut(false);
-        nameFont.setBold(true);
+        nameFont.setBold(namesGivenFont || !style.roomNameColor.isValid());
         nameFont.setStyleStrategy(QFont::StyleStrategy(QFont::PreferNoShaping | QFont::PreferAntialias | QFont::PreferOutline));
         nameFont.setPointSizeF(scmTextTexelsPerRoom / 2.0);
     }
@@ -1054,6 +1056,7 @@ void ModernGLWidget::renderRooms()
     };
     QList<RoomName> roomNames;
     const float textTexel = roomSize / scmTextTexelsPerRoom;
+    const float nameTexel = textTexel * (namesGivenFont ? 1.0f : style.roomNameScale);
     struct RoomIdText
     {
         int roomId = 0;
@@ -1197,13 +1200,14 @@ void ModernGLWidget::renderRooms()
         if (hovered) {
             // Taller than a border, so that it shows over one
             outlineInstances.append(outline(roomSize * scmHoverOutline, QVector4D(contrast.redF(), contrast.greenF(), contrast.blueF(), 1.0f), 0.75f));
-        } else if (style.edges == MapStyle::Edges::ViewedLevelRim && !bordered && !pArea->gridMode && look.onViewedLevel() && !seeThrough) {
-            // Halfway from the room's color to the one that stands out on the background, so the viewed level's rooms stand apart from the rest
-            outlineInstances.append(outline(roomSize * scmLevelOutline, GeometryManager::fadedColor(roomColor, {0.5f, 1.0f}, contrast)));
+        } else if (!bordered && !pArea->gridMode && look.onViewedLevel() && !seeThrough) {
+            // Halfway from the room's color to the one that stands out on the background, or for a base to the background itself
+            const QColor rimTarget = style.edges == MapStyle::Edges::ViewedLevelBase ? background : contrast;
+            outlineInstances.append(outline(roomSize * scmLevelOutline, GeometryManager::fadedColor(roomColor, {0.5f, 1.0f}, rimTarget)));
         }
         if (bordered) {
             const float borderWidth = (pR->mBorderThickness > 0 ? pR->mBorderThickness : 1) * borderUnit;
-            const QColor borderColor = pR->mBorderColor.isValid() ? pR->mBorderColor : mpHost->mRoomBorderColor;
+            const QColor borderColor = pR->mBorderColor.isValid() ? pR->mBorderColor : style.roomBorderColor(mpHost->mRoomBorderColor, roomColor, background);
             const QVector4D borderTint = GeometryManager::fadedColor(borderColor, fade, fadeTarget);
             (borderTint.w() < 1.0f ? seeThroughLevels[pR->z()].cubes : borderInstances).append(outline(borderWidth, borderTint));
         }
@@ -1281,7 +1285,7 @@ void ModernGLWidget::renderRooms()
             // One room's size below the room on screen, then moved by its offset along the map, in rooms' spacing, y downward
             const QPointF offset = RoomAppearance::nameOffset(pR->userData.value(ROOM_UI_NAMEPOS));
             const QVector3D center = roomTop - groundUp * roomSize + QVector3D(static_cast<float>(offset.x()), -static_cast<float>(offset.y()), 0.0f);
-            roomNames.append({center, RoomAppearance::nameColor(pR->userData.value(ROOM_UI_NAMECOLOR), background), pR->name, decalTint, &decals});
+            roomNames.append({center, style.roomNameColorFor(pR->userData.value(ROOM_UI_NAMECOLOR), background), pR->name, decalTint, &decals});
         }
 
         if (const GLuint texture = exitMarkerTexture(*pR, roomColor)) {
@@ -1395,8 +1399,8 @@ void ModernGLWidget::renderRooms()
         nameRects.reserve(roomNames.size());
         for (const RoomName& roomName : std::as_const(roomNames)) {
             const QSizeF size(qMax(1, qCeil(nameMetrics.horizontalAdvance(roomName.name))), qMax(1, qCeil(nameMetrics.height())));
-            const QVector3D across = groundRight * static_cast<float>(size.width() * textTexel);
-            const QVector3D upward = groundUp * static_cast<float>(size.height() * textTexel);
+            const QVector3D across = groundRight * static_cast<float>(size.width() * nameTexel);
+            const QVector3D upward = groundUp * static_cast<float>(size.height() * nameTexel);
             nameRects.append(screenRect(roomName.center - across / 2.0f - upward / 2.0f, across, upward));
         }
         for (const qsizetype index : GeometryManager::declutteredRects(nameRects, scmMinimumTextPixels)) {
@@ -1404,8 +1408,8 @@ void ModernGLWidget::renderRooms()
             QSize size;
             const QString key = qsl("name|%1|%2|%3").arg(roomName.color.name(QColor::HexArgb), nameFontKey, roomName.name);
             if (const GLuint texture = textTexture(key, roomName.name, nameFont, nameMetrics, roomName.color, size)) {
-                const QVector3D across = groundRight * (size.width() * textTexel);
-                const QVector3D upward = groundUp * (size.height() * textTexel);
+                const QVector3D across = groundRight * (size.width() * nameTexel);
+                const QVector3D upward = groundUp * (size.height() * nameTexel);
                 GeometryData& batch = roomName.decals->text[texture];
                 batch.textureId = texture;
                 GeometryManager::appendQuad(batch, roomName.center - across / 2.0f - upward / 2.0f, across, upward, roomName.tint);
@@ -3174,8 +3178,8 @@ void ModernGLWidget::renderLabels(const bool onTop, const int lowestLevel, const
     if (!pArea || pArea->mMapLabels.isEmpty()) {
         return;
     }
-    // Labels deleted, and those of other areas, go once there are more drawn again than the area has
-    if (mThemedLabels.size() > pArea->mMapLabels.size()) {
+    // Other areas' are kept for going back to them; those and deleted labels go once there are many more than this area has
+    if (mThemedLabels.size() > std::max<qsizetype>(scmThemedLabelsKept, 2 * pArea->mMapLabels.size())) {
         mThemedLabels.removeIf([this, pArea](const auto& entry) {
             return entry.key().first != mAID || !pArea->mMapLabels.contains(entry.key().second);
         });

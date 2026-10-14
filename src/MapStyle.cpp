@@ -19,6 +19,8 @@
 
 #include "MapStyle.h"
 
+#include "Host.h"
+#include "RoomAppearance.h"
 #include "utils.h"
 
 #include <QCoreApplication>
@@ -34,7 +36,9 @@ QList<MapStyle> registeredStyles()
     MapStyle tiles;
     tiles.id = qsl("tiles");
     tiles.palette = MapStyle::Palette::Soft;
-    tiles.roomFlattening = 5.0f;
+    tiles.roomScale = 3.2f;
+    tiles.edges = MapStyle::Edges::ViewedLevelBase;
+    tiles.roomFlattening = 2.5f;
     tiles.defaultBackground = QColor(16, 22, 32);
     tiles.highlightShape = MapStyle::HighlightShape::Glow;
     tiles.highlightScale = 1.8f;
@@ -44,6 +48,8 @@ QList<MapStyle> registeredStyles()
     tiles.mapLabelColor = QColor(150, 190, 225);
     tiles.mapLabelHalo = QColor(16, 22, 32, 200);
     tiles.mapLabelMaxHeight = 0.9f;
+    tiles.roomNameColor = QColor(185, 205, 225, 230);
+    tiles.roomNameScale = 0.6f;
     tiles.compassFace = QColor(18, 26, 38, 210);
     tiles.compassRim = QColor(110, 140, 170);
     tiles.compassNeedle = QColor(235, 96, 80);
@@ -100,12 +106,26 @@ bool MapStyle::themesPlayerMarker(const int profilePlayerRoomStyle, const bool s
 
 QColor MapStyle::infoBackgroundColor(const QColor& profileInfoBackground) const
 {
-    // Host's default for mMapInfoBg
-    static const QColor profileDefault(150, 150, 150, 120);
-    if (infoBackground.isValid() && profileInfoBackground == profileDefault) {
+    if (infoBackground.isValid() && profileInfoBackground == Host::scmDefaultMapInfoBg) {
         return infoBackground;
     }
     return profileInfoBackground;
+}
+
+QColor MapStyle::roomBorderColor(const QColor& profileBorder, const QColor& roomColor, const QColor& background) const
+{
+    if (edges != Edges::ViewedLevelBase || profileBorder != Host::scmDefaultRoomBorderColor) {
+        return profileBorder;
+    }
+    return QColor::fromRgbF((roomColor.redF() + background.redF()) / 2.0f, (roomColor.greenF() + background.greenF()) / 2.0f, (roomColor.blueF() + background.blueF()) / 2.0f, roomColor.alphaF());
+}
+
+QColor MapStyle::roomNameColorFor(const QString& roomColorData, const QColor& background) const
+{
+    if (roomNameColor.isValid() && !QColor(roomColorData).isValid()) {
+        return roomNameColor;
+    }
+    return RoomAppearance::nameColor(roomColorData, background);
 }
 
 bool MapStyle::roundRooms(const bool profileRoundRooms) const
