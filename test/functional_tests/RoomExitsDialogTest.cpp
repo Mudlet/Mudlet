@@ -454,14 +454,115 @@ private slots:
 
         clearByTyping(pDlg->n);
         QVERIFY(!pDlg->noroute_n->isEnabled());
+        QVERIFY(pDlg->button_save->isEnabled());
+        pDlg->button_save->click();
+
+        QCOMPARE(subject()->getExit(DIR_NORTH), -1);
+        QVERIFY(!subject()->hasExitLock(DIR_NORTH));
+        QVERIFY(subject()->setExit(scmSpareRoom, DIR_NORTH));
+        QVERIFY2(!subject()->hasExitLock(DIR_NORTH), "the deleted exit's lock came back on the next exit put there");
+    }
+
+    void namingNoRoomDeletesTheExitAndItsSpeedwalkLock()
+    {
+        buildMap();
+        auto* pDlg = openDialogOn(scmSubjectRoom);
+        QVERIFY(pDlg->noroute_n->isChecked());
+
+        clearByTyping(pDlg->n);
+        QTest::keyClicks(pDlg->n, QString::number(scmNoSuchRoom));
+        QVERIFY(pDlg->button_save->isEnabled());
         pDlg->button_save->click();
 
         QCOMPARE(subject()->getExit(DIR_NORTH), -1);
         QVERIFY(!subject()->hasExitLock(DIR_NORTH));
     }
 
-    // The roomID is checked on every keystroke, so retyping it passes through
-    // text that names no room on the way to the new one.
+    void lockingAStubKeepsTheLock()
+    {
+        buildMap();
+        auto* pDlg = openDialogOn(scmSubjectRoom);
+        QVERIFY(pDlg->stub_e->isChecked());
+        QVERIFY(pDlg->noroute_e->isEnabled());
+        QVERIFY(!pDlg->noroute_e->isChecked());
+
+        pDlg->noroute_e->click();
+        QVERIFY(pDlg->button_save->isEnabled());
+        pDlg->button_save->click();
+
+        QVERIFY(subject()->hasExitStub(DIR_EAST));
+        QVERIFY2(subject()->hasExitLock(DIR_EAST), "the lock ticked on a stub was not saved");
+    }
+
+    void aStoredStubLockSurvivesAnUnrelatedSave()
+    {
+        buildMap();
+        subject()->setExitLock(DIR_EAST, true);
+        auto* pDlg = openDialogOn(scmSubjectRoom);
+        QVERIFY(pDlg->noroute_e->isChecked());
+
+        pDlg->noroute_n->click();
+        QVERIFY(pDlg->button_save->isEnabled());
+        pDlg->button_save->click();
+
+        QVERIFY(subject()->hasExitStub(DIR_EAST));
+        QVERIFY2(subject()->hasExitLock(DIR_EAST), "saving another direction dropped the stub's lock");
+    }
+
+    // Each direction's box is wired to its lock by hand, twelve times over
+    void eachNoRouteBoxLocksOnlyItsOwnDirection()
+    {
+        const QList<QPair<int, QString>> directions{{DIR_NORTHWEST, qsl("nw")},
+                                                    {DIR_NORTH, qsl("n")},
+                                                    {DIR_NORTHEAST, qsl("ne")},
+                                                    {DIR_UP, qsl("up")},
+                                                    {DIR_WEST, qsl("w")},
+                                                    {DIR_EAST, qsl("e")},
+                                                    {DIR_DOWN, qsl("down")},
+                                                    {DIR_SOUTHWEST, qsl("sw")},
+                                                    {DIR_SOUTH, qsl("s")},
+                                                    {DIR_SOUTHEAST, qsl("se")},
+                                                    {DIR_IN, qsl("in")},
+                                                    {DIR_OUT, qsl("out")}};
+        for (const auto& [direction, name] : directions) {
+            buildMap();
+            subject()->setExitLock(DIR_NORTH, false);
+            subject()->setExitStub(DIR_EAST, false);
+            QVERIFY(subject()->setExit(scmSpareRoom, direction));
+            delete mpDialog.data();
+            auto* pDlg = openDialogOn(scmSubjectRoom);
+            auto* pNoRoute = pDlg->findChild<QCheckBox*>(qsl("noroute_%1").arg(name));
+            QVERIFY2(pNoRoute, qPrintable(name));
+            QVERIFY2(pNoRoute->isEnabled() && !pNoRoute->isChecked(), qPrintable(name));
+
+            pNoRoute->click();
+            QVERIFY2(pDlg->button_save->isEnabled(), qPrintable(name));
+            pDlg->button_save->click();
+
+            for (const auto& [other, otherName] : directions) {
+                QVERIFY2(subject()->hasExitLock(other) == (other == direction),
+                         qPrintable(qsl("ticked %1, %2 locked: %3").arg(name, otherName, subject()->hasExitLock(other) ? qsl("yes") : qsl("no"))));
+            }
+        }
+    }
+
+    void aDownDoorTypeArmsSave()
+    {
+        buildMap();
+        QVERIFY(subject()->setExit(scmSpareRoom, DIR_DOWN));
+        auto* pDlg = openDialogOn(scmSubjectRoom);
+        QVERIFY(!pDlg->button_save->isEnabled());
+
+        pDlg->doortype_locked_down->click();
+        QVERIFY2(pDlg->button_save->isEnabled(), "choosing a door type for the down exit did not arm Save");
+        pDlg->button_save->click();
+
+        QCOMPARE(subject()->getDoor(qsl("down")), 3);
+    }
+
+    // Guards against clearing the box when it greys out: the roomID is checked
+    // on every keystroke, so retyping it passes through text that names no room
+    // on the way to the new one.
     void retypingALockedExitKeepsItsSpeedwalkLock()
     {
         buildMap();
