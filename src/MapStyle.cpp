@@ -24,6 +24,8 @@
 #include <QCoreApplication>
 #include <QFont>
 
+#include <algorithm>
+
 namespace {
 QList<MapStyle> registeredStyles()
 {
@@ -31,6 +33,24 @@ QList<MapStyle> registeredStyles()
 
     MapStyle tiles;
     tiles.id = qsl("tiles");
+    tiles.palette = MapStyle::Palette::Soft;
+    tiles.roomFlattening = 5.0f;
+    tiles.defaultBackground = QColor(16, 22, 32);
+    tiles.highlightShape = MapStyle::HighlightShape::Glow;
+    tiles.highlightScale = 1.8f;
+    tiles.playerRing = MapStyle::PlayerRing::Thin;
+    tiles.playerColor = QColor(255, 208, 90);
+    tiles.themedMapLabels = true;
+    tiles.mapLabelColor = QColor(150, 190, 225);
+    tiles.mapLabelHalo = QColor(16, 22, 32, 200);
+    tiles.mapLabelMaxHeight = 0.9f;
+    tiles.compassFace = QColor(18, 26, 38, 210);
+    tiles.compassRim = QColor(110, 140, 170);
+    tiles.compassNeedle = QColor(235, 96, 80);
+    tiles.infoBackground = QColor(18, 26, 38, 190);
+    tiles.infoTextColor = QColor(215, 225, 235);
+    tiles.shadedBlocks = true;
+    tiles.dashedStairs = true;
     styles.append(tiles);
 
     return styles;
@@ -51,13 +71,41 @@ QColor MapStyle::roomColor(const QColor& environmentColor) const
     switch (palette) {
     case Palette::Environment:
         return environmentColor;
+    case Palette::Soft: {
+        const QColor hsl = environmentColor.toHsl();
+        return QColor::fromHslF(std::max(hsl.hslHueF(), 0.0f), hsl.hslSaturationF() * 0.7f, 0.25f + hsl.lightnessF() * 0.6f, hsl.alphaF());
+    }
     }
     return environmentColor;
 }
 
 QColor MapStyle::backgroundColor(const QColor& profileBackground) const
 {
-    return background.isValid() ? background : profileBackground;
+    if (background.isValid()) {
+        return background;
+    }
+    if (defaultBackground.isValid() && profileBackground == QColor(Qt::black)) {
+        return defaultBackground;
+    }
+    return profileBackground;
+}
+
+bool MapStyle::themesPlayerMarker(const int profilePlayerRoomStyle, const bool strongHighlight) const
+{
+    if (profilePlayerRoomStyle != 0 || strongHighlight) {
+        return false;
+    }
+    return playerRing != PlayerRing::Profile || playerColor.isValid();
+}
+
+QColor MapStyle::infoBackgroundColor(const QColor& profileInfoBackground) const
+{
+    // Host's default for mMapInfoBg
+    static const QColor profileDefault(150, 150, 150, 120);
+    if (infoBackground.isValid() && profileInfoBackground == profileDefault) {
+        return infoBackground;
+    }
+    return profileInfoBackground;
 }
 
 bool MapStyle::roundRooms(const bool profileRoundRooms) const
