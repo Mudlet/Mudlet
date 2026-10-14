@@ -4451,6 +4451,20 @@ describe("Tests db:create on schemas sqlite refuses or reads differently", funct
     assert.is_true(added)
   end)
 
+  it("drops an unused column whose name sqlite needs quoted", function()
+    local mydb = createCollectingWarnings({people = {name = "", ["my col"] = "", order = ""}})
+    assert.is_true(db:add(mydb.people, {name = "Bob", ["my col"] = db:Null(), order = db:Null()}))
+
+    local ok, err = pcall(createCollectingWarnings, {people = {name = ""}})
+    assert.is_true(ok, err)
+    local added, msg = collectingWarnings(function() return db:add(mydb.people, {name = "Ann", order = "x"}) end)
+    assert.is_nil(added)
+    assert.is_truthy(string.find(msg, "no column named order", 1, true))
+    local rows = db:fetch(mydb.people)
+    assert.are.equal(1, #rows)
+    assert.are.equal("Bob", rows[1].name)
+  end)
+
   it("reports an index it could not create, and carries on", function()
     local mydb = createCollectingWarnings({people = {name = ""}})
     -- a table already holding the name db:_index_name gives the index makes sqlite refuse it

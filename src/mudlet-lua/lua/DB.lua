@@ -1304,12 +1304,13 @@ function db:_migrate(db_name, s_name, force)
       --check if any of the redundant columns are non-empty
       local max_redundant = {}
       for i, v in ipairs(redundant_columns) do
-        max_redundant[i] = string.format([[max(%s) AS %s]], v, v)
+        max_redundant[i] = string.format([[max("%s") AS "%s"]], v, v)
       end
       local sql_check_blank = [[SELECT %s from %s;]]
       local sql = sql_check_blank:format(table.concat(max_redundant, ", "), s_name)
       db:echo_sql(sql)
-      local blank_cur = conn:execute(sql)
+      local blank_cur, blank_err = conn:execute(sql)
+      assert(blank_cur, blank_err)
       local blank_results = blank_cur:fetch({}, "a")
       blank_cur:close()
       local not_blank = {}
