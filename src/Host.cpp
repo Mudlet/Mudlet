@@ -1565,11 +1565,15 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
 }
 
 // For callers with nowhere to show a failure, such as the editor's autosave; on a close only the warning outlives
-// the console. A save turned away because one is running, or because the profile never loaded, is not a failure.
+// the console. A save turned away because one is running, or because the profile never loaded, is only logged.
 void Host::saveProfileReportingFailure(const QString& saveName)
 {
-    if (auto [ok, filename, error] = saveProfile(QString(), saveName); !ok && !filename.isEmpty() && mLoadedOk && !mIsProfileLoadingSequence) {
-        qWarning().noquote().nospace() << "Host::saveProfileReportingFailure() WARNING - could not save the profile to \"" << filename << "\": " << error;
+    auto [ok, filename, error] = saveProfile(QString(), saveName);
+    if (ok) {
+        return;
+    }
+    qWarning().noquote().nospace() << "Host::saveProfileReportingFailure() WARNING - could not save the profile to \"" << filename << "\": " << error;
+    if (!filename.isEmpty() && mLoadedOk && !mIsProfileLoadingSequence) {
         //: %1 is the file the profile was being saved to, %2 is the reason it could not be
         postMessage(tr("[ ERROR ] - The profile could not be saved to \"%1\": %2").arg(filename, error));
     }
