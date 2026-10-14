@@ -295,7 +295,8 @@ end
 -- This is very useful to see where a container actually is if you've
 -- forgotten its details or as an alert function to notify the user.
 -- @param time Time in seconds to flash for, default is 1.0s.
--- @param[opt=true] onHidden Optional, pass false to use it as an alert function that doesn't flash hidden containers.
+-- @param[opt=true] onHidden Flash even while this container or one of its parents is hidden.
+-- Pass false to skip the flash then, e.g. to use it as an alert.
 function Geyser.Container:flash (time, onHidden)
   local time = time or 1.0
 
