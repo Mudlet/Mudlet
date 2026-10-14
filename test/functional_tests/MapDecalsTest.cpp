@@ -150,6 +150,7 @@ private slots:
         QCOMPARE(alphaAt(image, 0, 0), 0);
         QCOMPARE(QColor(image.pixel(scmSize / 2, scmSize / 2)).hue(), 0);
         QVERIFY(MapDecals::highlightOnGround(MapStyle::HighlightShape::Glow));
+        QVERIFY(MapDecals::highlightOnGround(MapStyle::HighlightShape::Rings));
     }
 
     void test_ringShapesAreClearInTheMiddle_data()
@@ -219,6 +220,17 @@ private slots:
         QVERIFY(!style.highlightColorFor(QColor()).isValid());
         style.highlightColor = QColor(255, 255, 85);
         QCOMPARE(style.highlightColorFor(QColor()), QColor(255, 255, 85));
+    }
+
+    void test_aClearHighlightColorGivesWayToItsCenterColor()
+    {
+        const MapStyle style = tiles();
+        const QColor blue(0, 0, 255);
+        const QColor clearRed(255, 0, 0, 0);
+        QCOMPARE(style.highlightColorFor(clearRed, blue), blue);
+        QCOMPARE(style.highlightColorFor(blue, clearRed), blue);
+        QCOMPARE(style.highlightColorFor(blue, QColor(255, 0, 0)), blue);
+        QCOMPARE(style.highlightColorFor(clearRed, QColor(0, 0, 255, 0)), clearRed);
     }
 
     void test_thinPlayerRingIsClearInside()

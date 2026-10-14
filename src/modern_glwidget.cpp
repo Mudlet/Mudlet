@@ -1734,7 +1734,7 @@ void ModernGLWidget::renderRooms()
             // The highlight fills the cell, so the character goes in reverse video on it
             const bool cellHighlighted = look.highlighted && MapDecals::highlightFillsRoom(style.highlightShape);
             if (cellHighlighted) {
-                textColor = ExitAppearance::contrastColor(style.highlightColorFor(look.highlightColor));
+                textColor = ExitAppearance::contrastColor(style.highlightColorFor(look.highlightColor, look.highlightCenterColor));
             }
             TerminalCell cell{currentRoomId, text, showId, roomTop, GeometryManager::fadedColor(textColor, fade, fadeTarget), look.playerRoom, {}, hovered, &decals};
             if (look.playerRoom) {
@@ -1779,7 +1779,7 @@ void ModernGLWidget::renderRooms()
         if (look.highlighted) {
             const MapStyle::HighlightShape shape = style.highlightShape;
             const bool disc = shape == MapStyle::HighlightShape::Disc;
-            const QColor color = style.highlightColorFor(look.highlightColor);
+            const QColor color = disc ? style.highlightColorFor(look.highlightColor) : style.highlightColorFor(look.highlightColor, look.highlightCenterColor);
             const QColor centerColor = disc ? look.highlightCenterColor : color;
             const QString key = qsl("highlight|%1|%2|%3|%4").arg(QString::number(static_cast<int>(shape)), color.name(QColor::HexArgb), centerColor.name(QColor::HexArgb), QString::number(round));
             if (const GLuint texture = imageTexture(key, [shape, color, centerColor, round] {
@@ -3892,8 +3892,11 @@ void ModernGLWidget::paintScannerOverlay(QPainter& painter, const int top)
     if (!pArea) {
         return;
     }
+    const QColor panel = mapStyle().infoBackgroundColor(mpHost->mMapInfoBg);
+    // A profile's own info box color may be light, where the style's glowing ink would not read
+    const bool ownPanel = panel.isValid() && panel == mpHost->mMapInfoBg && panel.alpha() > 127;
     const QColor ink = mapStyle().ink.isValid() ? mapStyle().ink : ExitAppearance::contrastColor(backgroundColor());
-    const QColor text = ink.lighter(115);
+    const QColor text = ownPanel ? ExitAppearance::contrastColor(panel) : ink.lighter(115);
     QColor dimText = text;
     dimText.setAlphaF(0.65f);
     QColor bracket = text;
@@ -3930,7 +3933,7 @@ void ModernGLWidget::paintScannerOverlay(QPainter& painter, const int top)
             Qt::ElideRight,
             textWidth);
     // So that it reads over a crowded map
-    if (const QColor panel = mapStyle().infoBackgroundColor(mpHost->mMapInfoBg); panel.isValid()) {
+    if (panel.isValid()) {
         constexpr int pad = 4;
         const int panelWidth = std::max(metrics.horizontalAdvance(scan), metrics.horizontalAdvance(levels)) + 2 * pad;
         const int panelHeight = 2 * metrics.lineSpacing() + 4 + 2 * pad;
