@@ -524,16 +524,11 @@ void TTreeWidget::addVariableRows(VarUnit* pVarUnit, QTreeWidgetItem* pParent, T
     pParent->addChildren(cList);
 }
 
-TTreeWidget::~TTreeWidget()
-{
-    qDeleteAll(mNewVariableForRow);
-}
+TTreeWidget::~TTreeWidget() = default;
 
-// An unsaved new variable is in no table yet, so its row's entry is the only owner it has
 void TTreeWidget::clearVariableRows()
 {
     mVariableForRow.clear();
-    qDeleteAll(mNewVariableForRow);
     mNewVariableForRow.clear();
 }
 
@@ -550,7 +545,6 @@ void TTreeWidget::adoptVariableTree(VarUnit* pVarUnit)
         return;
     }
     mVariableForRow.clear();
-    qDeleteAll(mNewVariableForRow);
     mNewVariableForRow.clear();
     mVariablesGeneration = pVarUnit->treeGeneration();
 }
@@ -562,7 +556,11 @@ TVar* TTreeWidget::variableForRow(VarUnit* pVarUnit, QTreeWidgetItem* pItem) con
 
 TVar* TTreeWidget::newVariableForRow(VarUnit* pVarUnit, QTreeWidgetItem* pItem) const
 {
-    return rowsStandForCurrentVariables(pVarUnit) ? mNewVariableForRow.value(pItem) : nullptr;
+    if (!rowsStandForCurrentVariables(pVarUnit)) {
+        return nullptr;
+    }
+    const auto it = mNewVariableForRow.find(pItem);
+    return it == mNewVariableForRow.end() ? nullptr : it->second.get();
 }
 
 void TTreeWidget::setVariableForRow(VarUnit* pVarUnit, QTreeWidgetItem* pItem, TVar* pVariable)
@@ -574,18 +572,23 @@ void TTreeWidget::setVariableForRow(VarUnit* pVarUnit, QTreeWidgetItem* pItem, T
 void TTreeWidget::setNewVariableForRow(VarUnit* pVarUnit, QTreeWidgetItem* pItem, TVar* pVariable)
 {
     adoptVariableTree(pVarUnit);
-    mNewVariableForRow.insert(pItem, pVariable);
+    mNewVariableForRow.insert_or_assign(pItem, std::unique_ptr<TVar>(pVariable));
 }
 
 void TTreeWidget::forgetRow(QTreeWidgetItem* pItem)
 {
     mVariableForRow.remove(pItem);
-    delete mNewVariableForRow.take(pItem);
+    mNewVariableForRow.erase(pItem);
 }
 
 void TTreeWidget::forgetNewVariableForRow(QTreeWidgetItem* pItem)
 {
-    mNewVariableForRow.remove(pItem);
+    const auto it = mNewVariableForRow.find(pItem);
+    if (it == mNewVariableForRow.end()) {
+        return;
+    }
+    static_cast<void>(it->second.release());
+    mNewVariableForRow.erase(it);
 }
 
 // The same question VarUnit::shouldSave() answers for a variable, asked of the

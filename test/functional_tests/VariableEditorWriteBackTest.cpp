@@ -624,6 +624,54 @@ private slots:
         mpEditor->repopulateVars();
     }
 
+    // A variable added but not yet saved belongs to no table, so its row is all
+    // that owns it. These only fail under LeakSanitizer, which the ASan CI build
+    // runs this test with (#10579).
+    void test_anUnsavedNewVariableIsFreedWhenTheViewIsRebuilt()
+    {
+        mpEditor->repopulateVars();
+        VarUnit* pVarUnit = mpHost->getLuaInterface()->getVarUnit();
+        auto* pItem = new QTreeWidgetItem(mpEditor->mpVarBaseItem, QStringList{qsl("unsavedNewVariable")});
+        mpEditor->treeWidget_variables->setNewVariableForRow(pVarUnit, pItem, new TVar(pVarUnit->getBase()));
+        QVERIFY(mpEditor->treeWidget_variables->newVariableForRow(pVarUnit, pItem));
+
+        mpEditor->repopulateVars();
+    }
+
+    void test_anUnsavedNewVariableInADeletedTableIsFreed()
+    {
+        execLua(qsl("unsavedNewVariableHolder = {existing = 'existing value'}"));
+        mpEditor->repopulateVars();
+        VarUnit* pVarUnit = mpHost->getLuaInterface()->getVarUnit();
+        QTreeWidgetItem* pHolder = findVariableItem({qsl("unsavedNewVariableHolder")});
+        QVERIFY2(pHolder, "the Variables view did not show the table to add into");
+        TVar* pHolderVar = mpEditor->treeWidget_variables->variableForRow(pVarUnit, pHolder);
+        QVERIFY2(pHolderVar, "the Variables view has no variable behind the table's row");
+        auto* pChild = new QTreeWidgetItem(pHolder, QStringList{qsl("unsavedNewMember")});
+        mpEditor->treeWidget_variables->setNewVariableForRow(pVarUnit, pChild, new TVar(pHolderVar));
+
+        mpEditor->mpCurrentVarItem = nullptr;
+        mpVariablesTree->clearSelection();
+        pHolder->setSelected(true);
+        mpEditor->delete_variable();
+        QCOMPARE(luaTypeOf(qsl("unsavedNewVariableHolder")), qsl("nil"));
+
+        mpEditor->repopulateVars();
+    }
+
+    void test_aReplacedUnsavedNewVariableIsFreed()
+    {
+        mpEditor->repopulateVars();
+        VarUnit* pVarUnit = mpHost->getLuaInterface()->getVarUnit();
+        auto* pItem = new QTreeWidgetItem(mpEditor->mpVarBaseItem, QStringList{qsl("replacedNewVariable")});
+        mpEditor->treeWidget_variables->setNewVariableForRow(pVarUnit, pItem, new TVar(pVarUnit->getBase()));
+        auto* pReplacement = new TVar(pVarUnit->getBase());
+        mpEditor->treeWidget_variables->setNewVariableForRow(pVarUnit, pItem, pReplacement);
+        QCOMPARE(mpEditor->treeWidget_variables->newVariableForRow(pVarUnit, pItem), pReplacement);
+
+        mpEditor->repopulateVars();
+    }
+
 private:
     QString keyTypeShown() const { return mpEditor->mpVarsMainArea->comboBox_variable_key_type->currentText(); }
 
