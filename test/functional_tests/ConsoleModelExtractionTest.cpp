@@ -810,7 +810,9 @@ private slots:
         TBuffer& buffer = host->mainConsoleModel().buffer;
         host->mUndoServerWrap = true;
         host->mUndoServerWrapWidth = 80;
-        auto restoreWrap = qScopeGuard([host]() { host->mUndoServerWrap = false; });
+        auto restoreWrap = qScopeGuard([host]() {
+            host->mUndoServerWrap = false;
+        });
 
         // 70 characters, inside the join band for a wrap column of 80
         const QString heldLine = QString(64, QChar('x')) + qsl(" alpha");
@@ -1719,9 +1721,9 @@ expectRefusal('disableCommandLine', disableCommandLine('noViewCl'))
 expectRefusal('getCmdLineStyleSheet', getCmdLineStyleSheet())
 expectRefusal('setCmdLineStyleSheet', setCmdLineStyleSheet(''))
 expectRefusal('getMousePosition', getMousePosition())
--- the main console is the character grid NAWS reports, and a name with no user window takes its size
+-- the main console is the character grid NAWS reports, and a name with no user window is refused
 expectValue('getMainWindowSize', 'number', type(getMainWindowSize()))
-expectValue('getUserWindowSize', getMainWindowSize(), getUserWindowSize('noViewUw'))
+expectRefusal('getUserWindowSize', getUserWindowSize('noViewUw'))
 expectRefusal('getUserWindowTitle', getUserWindowTitle('noViewUw'))
 expectRefusal('setUserWindowTitle', setUserWindowTitle('noViewUw', 't'))
 expectRefusal('getUserWindowStyleSheet', getUserWindowStyleSheet('noViewUw'))
