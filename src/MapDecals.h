@@ -45,8 +45,15 @@ QImage registrationMark(const QColor& color, int size);
 QList<qreal> spreadCallouts(const QList<qreal>& wanted, qreal spacing, qreal top, qreal bottom);
 // Which of levels to call out beside the shown one: at most most of them, nearest it first, listed top to bottom
 QList<int> calloutLevels(const QList<int>& levels, int shownLevel, int most);
-// A level's callout: its name, as L1 or B1, and how many rooms it has
+// A level's name, as L1 or B1
+QString levelName(int level);
+// A level's callout: its name and how many rooms it has
 QString levelCallout(int level, int rooms);
+// Where to put count platforms, listed top to bottom, stacked spacing apart up from the anchor where spacing is
+// negative, else down from it: each on the anchor's side, and between top and bottom where they fit there
+QList<qreal> stackPlatforms(int count, qreal anchor, qreal spacing, qreal top, qreal bottom);
+// The mark MapStyle::PlayerMarker::Pill draws on the player's room: a white disc, a ring and a dot, size texels across
+QImage bullseye(const QColor& color, int size);
 // The title block's second line, for the shown level of an area with these levels, lowest first
 QString titleLevelLine(int shownLevel, const QList<int>& areaLevels);
 
@@ -62,5 +69,7 @@ QImage blockShadow(bool round, int size);
 // defaults for them, in place of the label's own picture and the same size: a null image when the style leaves labels
 // as they are, or the label is a picture
 QImage themedLabel(const TMapLabel& label, const MapStyle& style);
+// Whether themedLabel() keeps the box behind the label, which it does only for a box given a hue on purpose
+bool keepsLabelBox(const TMapLabel& label);
 
 } // namespace MapDecals
