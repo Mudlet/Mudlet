@@ -1801,7 +1801,8 @@ void TTextEdit::highlightSelection()
     }
 
     if (QAccessible::isActive()) {
-        QAccessibleTextSelectionEvent event(this, offsetForPosition(mPA.y(), mPA.x()), selectionEndOffset());
+        const int startOffset = offsetForPosition(mPA.y(), mPA.x());
+        QAccessibleTextSelectionEvent event(this, startOffset, std::max(startOffset, selectionEndOffset()));
         QAccessible::updateAccessibility(&event);
     }
 }
@@ -2662,8 +2663,12 @@ void TTextEdit::slot_copySelectionToClipboardImage()
         // still finds the characters that are about to be drawn.
         const int shift = mpBuffer->mBatchDeleteSize;
         if (mPA.y() - shift >= 0 && mPB.y() - shift <= lastBufferLine) {
+            const bool takesNewline = mPB == mPBTakingNewline;
             mPA.ry() -= shift;
             mPB.ry() -= shift;
+            if (takesNewline) {
+                mPBTakingNewline = mPB;
+            }
         } else {
             // The selected lines are gone for good, so copy the visible area
             // rather than whatever has since taken their place in the buffer.
@@ -2735,6 +2740,8 @@ void TTextEdit::slot_copySelectionToClipboardImage()
         return;
     }
 
+    // unHighlight() forgets that the selection takes in a newline, but the same selection is put back below
+    const QPoint takingNewline = mPBTakingNewline;
     if (copyingSelection) {
         // deselect to prevent inverted colours in image
         unHighlight();
@@ -2744,6 +2751,7 @@ void TTextEdit::slot_copySelectionToClipboardImage()
     auto result = drawTextForClipboard(painter, rect, lineOffset);
 
     if (copyingSelection) {
+        mPBTakingNewline = takingNewline;
         highlightSelection();
     }
     // the pixmap cannot be read back while a painter is still active on it
@@ -2855,8 +2863,12 @@ QString TTextEdit::getSelectedText(const QChar& newlineChar, const bool showTime
     // mPB QPoint where selection ended
     // try to prevent crash if buffer is batch deleted
     if (mPA.y() > mpBuffer->lineBuffer.size() - 1 || mPB.y() > mpBuffer->lineBuffer.size() - 1) {
+        const bool takesNewline = mPB == mPBTakingNewline;
         mPA.ry() -= mpBuffer->mBatchDeleteSize;
         mPB.ry() -= mpBuffer->mBatchDeleteSize;
+        if (takesNewline) {
+            mPBTakingNewline = mPB;
+        }
     }
     qsizetype startLine = std::max(0, mPA.y());
     qsizetype endLine = std::min<qsizetype>(mPB.y(), (mpBuffer->lineBuffer.size() - 1));
@@ -2911,6 +2923,9 @@ QString TTextEdit::getSelectedText(const QChar& newlineChar, const bool showTime
             }
         }
         text.append(line);
+    }
+    if (mPB == mPBTakingNewline && !mpBuffer->wrapsFromPreviousLine(static_cast<int>(endLine) + 1)) {
+        text.append(newlineChar);
     }
     return text;
 }
@@ -4804,8 +4819,9 @@ int TTextEdit::offsetForPosition(int line, int column) const
     return ret;
 }
 
-// mPB is the last selected cell, and the end offset the first one not selected; a whole-line
-// selection leaves mPB one past the line already, which highlightSelection() allows for too
+// mPB is the last selected cell and the end offset the first one not selected. A whole-line
+// selection leaves mPB on the newline cell (x == line length), which counts as selected only
+// when mPBTakingNewline says the selection takes the newline in.
 int TTextEdit::selectionEndOffset() const
 {
     const int line = mPB.y();

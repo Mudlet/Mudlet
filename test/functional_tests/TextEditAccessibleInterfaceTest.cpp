@@ -37,6 +37,7 @@
 // prints.
 
 #include <QAccessible>
+#include <QClipboard>
 #include <QFileInfo>
 #include <QFontDatabase>
 #include <QFontInfo>
@@ -110,14 +111,43 @@ private:
         return pInterface ? pInterface->textInterface() : nullptr;
     }
 
-    // Three clicks inside the double-click interval select a whole line
+    // Where the character at an offset is drawn, in the pane's own coordinates
+    QPoint pointOfOffset(const int offset) const
+    {
+        QAccessibleTextInterface* ti = textInterface();
+        return ti ? pane()->mapFromGlobal(ti->characterRect(offset).center()) : QPoint();
+    }
+
+    // TTextEdit counts a click within 300ms of the last one as the next of a
+    // double- or triple-click, so the wait keeps an earlier case's clicks out of it
+    void clickRepeatedly(const QPoint& where, const int clicks) const
+    {
+        QTest::qWait(350ms);
+        for (int click = 0; click < clicks; ++click) {
+            QTest::mouseClick(pane(), Qt::LeftButton, Qt::NoModifier, where);
+        }
+    }
+
     void tripleClickLine(const int line) const
     {
         const int fontHeight = pane()->fontMetrics().height();
-        const QPoint where(pane()->fontMetrics().averageCharWidth() * 2, (line - pane()->imageTopLine()) * fontHeight + fontHeight / 2);
-        for (int click = 0; click < 3; ++click) {
-            QTest::mouseClick(pane(), Qt::LeftButton, Qt::NoModifier, where);
-        }
+        clickRepeatedly(QPoint(pane()->fontMetrics().averageCharWidth() * 2, (line - pane()->imageTopLine()) * fontHeight + fontHeight / 2), 3);
+    }
+
+    QString selectedText() const
+    {
+        QAccessibleTextInterface* ti = textInterface();
+        int start = -1;
+        int end = -1;
+        ti->selection(0, &start, &end);
+        return ti->text(start, end);
+    }
+
+    QString copiedText() const
+    {
+        QGuiApplication::clipboard()->clear();
+        pane()->slot_copySelectionToClipboard();
+        return QGuiApplication::clipboard()->text();
     }
 
     bool lineIsOnScreen(const int line) const { return line >= pane()->imageTopLine() && line < pane()->imageTopLine() + pane()->getScreenHeight(); }
@@ -499,7 +529,7 @@ private slots:
     // which is what a screen reader reads out when it announces a selection.
     // addSelection() stores the last selected cell in mPB, so selection() has
     // to report one past it, or a one-character selection comes back as an
-    // empty range while selectionCount() still says there is one (#10411).
+    // empty range while selectionCount() still says there is one.
     void test_theReportedSelectionRoundTripsThroughTheTextItSelected()
     {
         QAccessibleTextInterface* ti = textInterface();
@@ -536,9 +566,72 @@ private slots:
         int reportedEnd = -1;
 
         tripleClickLine(line);
+        QVERIFY2(ti->selectionCount() == 1, "the three clicks selected nothing, so they were not taken as a triple-click");
         ti->selection(0, &reportedStart, &reportedEnd);
 
         QCOMPARE(ti->text(reportedStart, reportedEnd), mSecondMarker);
+    }
+
+    // The selections a player makes with the mouse, which store their last
+    // character in mPB just as addSelection() does
+    void test_aMouseSelectionIsReportedWhole()
+    {
+        QAccessibleTextInterface* ti = textInterface();
+        QVERIFY(ti);
+        const int line = lineOf(mSecondMarker);
+        QVERIFY2(lineIsOnScreen(line), "the line being selected is off screen, so no selection region could be built for it");
+        const int lineStart = offsetOfLine(line);
+        // "line two" runs from column 11 to 18
+        const QPoint dragFrom = pointOfOffset(lineStart + 11);
+        const QPoint dragTo = pointOfOffset(lineStart + 18);
+
+        QTest::qWait(350ms);
+        QTest::mousePress(pane(), Qt::LeftButton, Qt::NoModifier, dragFrom);
+        QMouseEvent move(QEvent::MouseMove, QPointF(dragTo), pane()->mapToGlobal(QPointF(dragTo)), Qt::NoButton, Qt::LeftButton, Qt::NoModifier);
+        QApplication::sendEvent(pane(), &move);
+        QTest::mouseRelease(pane(), Qt::LeftButton, Qt::NoModifier, dragTo);
+        QCOMPARE(selectedText(), qsl("line two"));
+
+        ti->removeSelection(0);
+        clickRepeatedly(pointOfOffset(lineStart + 3), 2);
+        QCOMPARE(selectedText(), qsl("accessible"));
+    }
+
+    // A double-click on a space or a triple-click on an empty line highlights a
+    // cell but selects no text, and a range with no text in it is no selection
+    void test_aSelectionWithNoTextInItIsNoSelection()
+    {
+        QAccessibleTextInterface* ti = textInterface();
+        QVERIFY(ti);
+        const int line = lineOf(mSecondMarker);
+        QVERIFY2(lineIsOnScreen(line), "the line being clicked is off screen");
+        const int spaceOffset = offsetOfLine(line) + mSecondMarker.indexOf(QChar::Space);
+        if (!lines().at(lines().size() - 2).isEmpty()) {
+            mpHost->mainConsoleView()->print(qsl("\n"));
+            QTest::qWait(50ms);
+        }
+        const int emptyLine = lines().size() - 2;
+        QVERIFY2(lines().at(emptyLine).isEmpty() && lineIsOnScreen(emptyLine), "no empty line is showing");
+        int reportedStart = -1;
+        int reportedEnd = -1;
+
+        clickRepeatedly(pointOfOffset(spaceOffset), 2);
+        ti->selection(0, &reportedStart, &reportedEnd);
+        QCOMPARE(ti->selectionCount(), 0);
+        QCOMPARE(reportedStart, 0);
+        QCOMPARE(reportedEnd, 0);
+
+        ti->removeSelection(0);
+        tripleClickLine(emptyLine);
+        QCOMPARE(ti->selectionCount(), 0);
+
+        for (const int offset : {0, offsetOfLine(line) + 3}) {
+            ti->removeSelection(0);
+            ti->addSelection(offset, offset);
+            ti->selection(0, &reportedStart, &reportedEnd);
+            QCOMPARE(ti->selectionCount(), 0);
+            QCOMPARE(reportedEnd, reportedStart);
+        }
     }
 
     // A range that takes in a newline leaves mPB where a whole-line selection
@@ -563,6 +656,41 @@ private slots:
         ti->selection(0, &reportedStart, &reportedEnd);
         QCOMPARE(ti->text(reportedStart, reportedEnd), mSecondMarker + QChar::LineFeed);
         ti->removeSelection(0);
+    }
+
+    // Copying a selection that takes in a newline copies the newline too, and
+    // copying it as an image, which takes the highlight off while it draws,
+    // leaves the newline in the selection
+    void test_aSelectionTakingInANewlineKeepsItWhenCopied()
+    {
+        QAccessibleTextInterface* ti = textInterface();
+        QVERIFY(ti);
+        const int line = lineOf(mSecondMarker);
+        QVERIFY2(lineIsOnScreen(line), "the line being selected is off screen, so no selection region could be built for it");
+        const int newline = offsetOfLine(line) + mSecondMarker.length();
+
+        ti->addSelection(offsetOfLine(line), newline + 1);
+        QCOMPARE(copiedText(), mSecondMarker + QChar::LineFeed);
+
+        QVERIFY(QMetaObject::invokeMethod(pane(), "slot_copySelectionToClipboardImage"));
+        QCOMPARE(selectedText(), mSecondMarker + QChar::LineFeed);
+    }
+
+    // A whole-line selection leaves mPB where a range taking in the newline
+    // did, so the newline must not carry over to a triple-click after one
+    void test_aWholeLineSelectionAfterANewlineSelectionLeavesTheNewlineOut()
+    {
+        QAccessibleTextInterface* ti = textInterface();
+        QVERIFY(ti);
+        const int line = lineOf(mSecondMarker);
+        QVERIFY2(lineIsOnScreen(line), "the line being selected is off screen, so no selection region could be built for it");
+        const int newline = offsetOfLine(line) + mSecondMarker.length();
+
+        ti->addSelection(newline, newline + 1);
+        QCOMPARE(selectedText(), QString(QChar::LineFeed));
+        tripleClickLine(line);
+
+        QCOMPARE(selectedText(), mSecondMarker);
     }
 
     // setSelection is addSelection under another name, and both refuse an index
@@ -775,6 +903,45 @@ private slots:
             QCOMPARE(ti->textAfterOffset(offset, QAccessible::NoBoundary, &start, &end), all.mid(offset));
             QCOMPARE(ti->textBeforeOffset(offset, QAccessible::NoBoundary, &start, &end), all.left(offset));
         }
+    }
+
+    // Last, as it trims the buffer: the lines going off the front leave the
+    // selection on indexes the buffer has moved on from until a copy catches
+    // it up, and catching up must keep the newline it took in
+    void test_aSelectionTakingInANewlineKeepsItWhenTheBufferIsTrimmed()
+    {
+        QAccessibleTextInterface* ti = textInterface();
+        QVERIFY(ti);
+        TBuffer& buffer = mpHost->mainConsoleView()->buffer;
+        const int savedLimit = buffer.mLinesLimit;
+        const int savedBatch = buffer.mBatchDeleteSize;
+        const QString marker = qsl("accessible line to trim past");
+        mpHost->mainConsoleView()->print(marker + QChar::LineFeed);
+        QTest::qWait(50ms);
+        const int line = lineOf(marker);
+        QVERIFY2(lineIsOnScreen(line), "the line being selected is off screen, so no selection region could be built for it");
+        ti->addSelection(offsetOfLine(line), offsetOfLine(line) + marker.length() + 1);
+        QCOMPARE(selectedText(), marker + QChar::LineFeed);
+
+        constexpr int batch = 50;
+        buffer.setBufferSize(static_cast<int>(buffer.buffer.size()) + 2, batch);
+        for (int i = 0; i < 5; ++i) {
+            mpHost->mainConsoleView()->print(qsl("trimming %1\n").arg(i));
+        }
+        const bool trimmed = lineOf(marker) == line - batch;
+        int reportedStart = -1;
+        int reportedEnd = -1;
+        ti->selection(0, &reportedStart, &reportedEnd);
+        const int countBeforeCopy = ti->selectionCount();
+        const QString copied = copiedText();
+        const QString selectedAfterCopy = selectedText();
+        buffer.setBufferSize(savedLimit, savedBatch);
+
+        QVERIFY2(trimmed, "the buffer was not trimmed by a whole batch, so nothing here was tested");
+        QVERIFY2(reportedEnd <= ti->characterCount(), "the selection on the lines that moved was reported past the end of the text");
+        QCOMPARE(countBeforeCopy, 0);
+        QCOMPARE(copied, marker + QChar::LineFeed);
+        QCOMPARE(selectedAfterCopy, marker + QChar::LineFeed);
     }
 };
 

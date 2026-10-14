@@ -123,6 +123,11 @@ void TAccessibleTextEdit::selection(int selectionIndex, int* startOffset, int* e
 
     *startOffset = offsetForPosition(edit->mPA.y(), edit->mPA.x());
     *endOffset = edit->selectionEndOffset();
+    // A double-click on a space, a triple-click on an empty line, or a selection left on
+    // lines the buffer has since trimmed highlights a cell but selects no text
+    if (*endOffset <= *startOffset || *endOffset > characterCount()) {
+        *startOffset = *endOffset = 0;
+    }
 }
 
 /*
@@ -130,7 +135,10 @@ void TAccessibleTextEdit::selection(int selectionIndex, int* startOffset, int* e
  */
 int TAccessibleTextEdit::selectionCount() const
 {
-    return textEdit()->mSelectedRegion != QRegion(0, 0, 0, 0);
+    int startOffset = 0;
+    int endOffset = 0;
+    selection(0, &startOffset, &endOffset);
+    return endOffset > startOffset;
 }
 
 /*
@@ -151,6 +159,12 @@ void TAccessibleTextEdit::addSelection(int startOffset, int endOffset)
 
     if (startOffset > endOffset) {
         std::swap(startOffset, endOffset);
+    }
+
+    // mPB holds the last selected cell, which an empty range does not have
+    if (startOffset == endOffset) {
+        removeSelection(0);
+        return;
     }
 
     TTextEdit* edit = textEdit();

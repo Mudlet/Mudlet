@@ -304,8 +304,9 @@ private:
     QPoint mPA;
     // bottom-right point of the selection
     QPoint mPB;
-    // Where an accessibility client's range that took in a newline left mPB, which a
-    // whole-line selection, newline left out, leaves at the same place
+    // Equal to mPB while the selection includes the newline after mPB's line: an
+    // accessibility range ending there leaves mPB where a whole-line selection without
+    // the newline does. (-1, -1) otherwise; unHighlight() resets it.
     QPoint mPBTakingNewline{-1, -1};
     TBuffer* mpBuffer;
     // Needs to be a QPointer as is used in a couple of lambda functions:
