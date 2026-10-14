@@ -3493,9 +3493,8 @@ describe("Tests route weights and extreme coordinates on a scratch area", functi
     assert.are.same({6442450941, "2147483647,2147483647,2147483647"}, weigh(ids[1], ids[4]))
   end)
 
-  -- Overflows only a UBSan build reports: the y coordinate is negated for the
-  -- area's span index and the route search subtracts coordinates. What the span
-  -- index files is checked by MapCoordinateLimitTest, as no Lua function reads it.
+  -- Negating y for the area's span index overflows here; only a UBSan build
+  -- reports that, so MapCoordinateLimitTest checks where the index files the room.
   it("moves and routes to a room at the most negative coordinate an int holds", function()
     local r1, r2 = room(0, 0), room(1, 1)
     setExit(r1, r2, "north")
@@ -3505,6 +3504,22 @@ describe("Tests route weights and extreme coordinates on a scratch area", functi
     assert.is_true(setRoomCoordinates(r1, -2147483648, 0, 0))
     assert.is_true(getPath(r2, r1))
     assert.are.same({"s"}, speedWalkDir)
+  end)
+
+  -- Subtracted as an int, INT_MIN - INT_MAX wraps to 1: the far room a would look
+  -- a step from the goal and the search would settle for the weight 20 route.
+  it("routes by weight between rooms an int's whole range apart", function()
+    local start, a, b, goal = room(1, 0), room(0, 2147483647), room(0, 0), room(0, -2147483648)
+    setExit(start, a, "north")
+    setExit(a, goal, "east")
+    setExit(start, b, "west")
+    setExit(b, goal, "south")
+    setExitWeight(start, "north", 10)
+    setExitWeight(a, "east", 10)
+    setExitWeight(start, "west", 1)
+    setExitWeight(b, "south", 1)
+    local ok, weight = getPath(start, goal)
+    assert.are.same({true, 2, {"w", "s"}}, {ok, weight, speedWalkDir})
   end)
 end)
 
