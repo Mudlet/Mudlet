@@ -73,6 +73,18 @@ XMLimport::XMLimport(Host* pH)
 {
 }
 
+// Only once the item is read, as its <script> and <regex> can come before its <name>
+void XMLimport::recordItemErrors(const QString& itemName, const QStringList& errors)
+{
+    if (errors.isEmpty()) {
+        return;
+    }
+    for (const QString& error : errors) {
+        mItemsWithErrors.append(qsl("%1: %2").arg(itemName, error));
+    }
+    mItemsWithErrorNames.append(itemName);
+}
+
 std::pair<bool, QString> XMLimport::importPackage(QFile* pfile, QString packName, int moduleFlag, QString* pVersionString)
 {
     mPackageName = packName;
@@ -1424,7 +1436,7 @@ int XMLimport::readTrigger(TTrigger* pParent)
     pT->mSoundTrigger = attributes().value(qsl("isSoundTrigger")) == YES;
     pT->mColorTrigger = attributes().value(qsl("isColorTrigger")) == YES;
 
-    bool scriptFailedToCompile = false;
+    QStringList itemErrors;
     // Is this a "TriggerGroup" or a "Trigger"
     const QString what = name().toString();
     while (!atEnd()) {
@@ -1440,9 +1452,7 @@ int XMLimport::readTrigger(TTrigger* pParent)
                 const QString tempScript = readScriptElement();
                 if (!pT->setScript(tempScript)) {
                     qDebug().nospace() << "XMLimport::readTrigger(...): ERROR: can not compile trigger's lua code for: " << pT->getName();
-                    mItemsWithErrors.append(qsl("%1: %2").arg(pT->getName(), compileErrorAsPlainText(pT->getError())));
-                    mItemsWithErrorNames.append(pT->getName());
-                    scriptFailedToCompile = true;
+                    itemErrors.append(compileErrorAsPlainText(pT->getError()));
                 }
             } else if (name() == qsl("packageName")) {
                 pT->mPackageName = readElementText();
@@ -1497,19 +1507,14 @@ int XMLimport::readTrigger(TTrigger* pParent)
         }
     }
 
-    // A trigger with no patterns at all is a legitimate group, not a broken one
+    // Taken before the call, which clears mPatterns: a trigger with none is refused, but one kept
+    // only for its script is not broken
     const bool hasPatterns = !pT->mPatterns.isEmpty();
-    if (!pT->setRegexCodeList(pT->mPatterns, pT->mPatternKinds)) {
-        qDebug().nospace() << "XMLimport::readTrigger(...): ERROR: can not "
-                              "initialize pattern list for trigger: "
-                           << pT->getName();
-        if (hasPatterns) {
-            mItemsWithErrors.append(qsl("%1: %2").arg(pT->getName(), compileErrorAsPlainText(pT->getError())));
-            if (!scriptFailedToCompile) {
-                mItemsWithErrorNames.append(pT->getName());
-            }
-        }
+    if (!pT->setRegexCodeList(pT->mPatterns, pT->mPatternKinds) && hasPatterns) {
+        qDebug().nospace() << "XMLimport::readTrigger(...): ERROR: can not compile pattern list for trigger: " << pT->getName();
+        itemErrors.append(compileErrorAsPlainText(pT->getError()));
     }
+    recordItemErrors(pT->getName(), itemErrors);
 
     return pT->getID();
 }
@@ -1626,9 +1631,7 @@ int XMLimport::readAlias(TAlias* pParent)
         pT->mModuleMember = true;
     }
 
-    bool scriptFailedToCompile = false;
-    bool patternFailedToCompile = false;
-    QString patternError;
+    QStringList itemErrors;
     const QString what = name().toString();
     while (!atEnd()) {
         readNext();
@@ -1645,17 +1648,16 @@ int XMLimport::readAlias(TAlias* pParent)
                 const QString tempScript = readScriptElement();
                 if (!pT->setScript(tempScript)) {
                     qDebug().nospace() << "XMLimport::readAlias(...): ERROR: can not compile alias's lua code for: " << pT->getName();
-                    mItemsWithErrors.append(qsl("%1: %2").arg(pT->getName(), compileErrorAsPlainText(pT->getError())));
-                    mItemsWithErrorNames.append(pT->getName());
-                    scriptFailedToCompile = true;
+                    itemErrors.append(compileErrorAsPlainText(pT->getError()));
                 }
             } else if (name() == qsl("command")) {
                 pT->mCommand = readElementText();
             } else if (name() == qsl("regex")) {
                 pT->setRegexCode(readElementText());
-                // Kept now, as a script that fails to compile later replaces the error
-                patternFailedToCompile = !pT->mOK_init;
-                patternError = patternFailedToCompile ? compileErrorAsPlainText(pT->getError()) : QString();
+                // Taken here, as a later <script> that fails replaces getError()
+                if (!pT->mOK_init) {
+                    itemErrors.append(compileErrorAsPlainText(pT->getError()));
+                }
             } else if (name() == qsl("AliasGroup") || name() == qsl("Alias")) {
                 readAlias(pT);
             } else {
@@ -1664,13 +1666,7 @@ int XMLimport::readAlias(TAlias* pParent)
         }
     }
 
-    // Once the alias is read, as its <regex> can come before its <name>
-    if (patternFailedToCompile) {
-        mItemsWithErrors.append(qsl("%1: %2").arg(pT->getName(), patternError));
-        if (!scriptFailedToCompile) {
-            mItemsWithErrorNames.append(pT->getName());
-        }
-    }
+    recordItemErrors(pT->getName(), itemErrors);
 
     return pT->getID();
 }

@@ -3322,6 +3322,15 @@ describe("Tests installing a package whose trigger pattern does not compile", fu
     return reason
   end
 
+  -- the item names in the reason, in order, from its "<name>: <error>; " entries
+  local function namesIn(reason)
+    local names = {}
+    for entry in (tostring(reason) .. "; "):gmatch("(.-); ") do
+      names[#names + 1] = entry:match("^(.-): ")
+    end
+    return names
+  end
+
   it("installs it and names the trigger in the reason installPackage() hands back", function()
     -- a trigger kept only for its script has no patterns either, and is just as legitimate
     local reason = install(trigger(name .. " group", {isFolder = true, children = trigger(name .. " placeholder", {})
@@ -3347,6 +3356,23 @@ describe("Tests installing a package whose trigger pattern does not compile", fu
     assert.is_true(contains(reason, name .. ' no colour: '), "a colour pattern with no colours was not reported: " .. tostring(reason))
     assert.is_true(contains(reason, '"ANSI_COLORS_F{300}_B{IGNORE}"'), "a colour pattern with no colour Mudlet knows was not reported: " .. tostring(reason))
     assert.is_nil(tostring(reason):find("<%/?[bi]>"), "the reason carries the editor's markup: " .. tostring(reason))
+  end)
+
+  it("reports both the script and the pattern of a trigger where both fail, together", function()
+    local reason = install(trigger(name .. " group", {isFolder = true, script = "if then", patterns = {{"*(group", perl}},
+                                                      children = trigger(name .. " child", {script = "if then", patterns = {{"fine", 0}}})}))
+
+    local names = namesIn(reason)
+    local groupEntries = {}
+    for index, entryName in ipairs(names) do
+      if entryName == name .. " group" then
+        groupEntries[#groupEntries + 1] = index
+      end
+    end
+    assert.equals(2, #groupEntries, "the group's script and pattern were not both reported: " .. tostring(reason))
+    assert.equals(groupEntries[1] + 1, groupEntries[2], "the group's errors were split up: " .. tostring(reason))
+    assert.is_true(contains(reason, '"*(group"'), tostring(reason))
+    assert.is_true(listContains(names, name .. " child"), tostring(reason))
   end)
 end)
 
@@ -3399,6 +3425,40 @@ describe("Tests installing a package whose alias pattern does not compile", func
 
     assert.is_true(ok)
     assert.is_true(contains(reason, name .. " alias: "), "the broken pattern was not reported under the alias's name: " .. tostring(reason))
+  end)
+
+  it("reports both the script and the pattern of an alias where both fail, under its name", function()
+    local name = "mudlet-spec-broken-alias-pattern-and-script"
+    local xml = getMudletHomeDir() .. "/" .. name .. ".xml"
+    defer(function()
+      removeFixturePackage(name)
+      os.remove(xml)
+    end)
+    writePackageXml(xml, table.concat({
+      '<AliasPackage>',
+      '<Alias isActive="yes" isFolder="no">',
+      '<name>' .. name .. ' regex first</name><packageName></packageName><command></command>',
+      '<regex>^(first</regex><script>if then</script>',
+      '</Alias>',
+      '<Alias isActive="yes" isFolder="no">',
+      '<script>if then</script><regex>^(second</regex><command></command>',
+      '<name>' .. name .. ' name last</name><packageName></packageName>',
+      '</Alias>',
+      '</AliasPackage>',
+    }, "\n"))
+
+    local ok, reason = installUntilConfirmed(installPackage, xml, function() return packageInstalled(name) end, "the package " .. name)
+
+    assert.is_true(ok)
+    local function entriesFor(aliasName)
+      local _, count = tostring(reason):gsub((aliasName .. ": "):gsub("%p", "%%%0"), "")
+      return count
+    end
+    local _, scriptErrors = tostring(reason):gsub("near 'then'", "")
+    assert.equals(2, scriptErrors, "a script error was reported more or less than once: " .. tostring(reason))
+    assert.equals(2, entriesFor(name .. " regex first"), "a pattern error was lost to the script error after it: " .. tostring(reason))
+    assert.equals(2, entriesFor(name .. " name last"), "the alias whose name comes last was not named for both its errors: " .. tostring(reason))
+    assert.is_nil(("; " .. tostring(reason)):find("; : "), "an error was reported without the alias's name: " .. tostring(reason))
   end)
 end)
 
