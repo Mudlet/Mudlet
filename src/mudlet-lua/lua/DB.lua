@@ -795,7 +795,8 @@ end
 -- and table-level constraints (e.g., UNIQUE("col1", "col2") ON CONFLICT FAIL), each of
 -- which may come without its ON CONFLICT clause (e.g., "col1" TEXT UNIQUE).
 -- This allows us to detect when constraint definitions have changed without being affected by
--- column additions/removals.
+-- column additions/removals, but not which column a column-level UNIQUE sits on: unique_targets
+-- below reads that.
 function db:_extract_table_constraints(sql)
   if not sql or sql == "" then
     return ""
@@ -1074,8 +1075,8 @@ function db:_migrate(db_name, s_name, force)
     -- At this point we know that the sheet already exists, but we are concerned if the current
     -- definition includes columns which may be added.
 
-    -- Check if the table-level constraints have changed (e.g., _violations option changed)
-    -- by comparing only the UNIQUE constraint definitions, not the column list
+    -- Check if the UNIQUE constraints have changed (e.g., _violations option changed, or a
+    -- _unique entry moved to another column), leaving aside columns that are only added
     local expected_sql = db:_build_create_table_sql(schema, s_name)
     local get_actual_sql = "SELECT sql FROM sqlite_master " ..
                            "WHERE type = 'table' AND name = '" .. s_name .. "'"
@@ -1094,7 +1095,7 @@ function db:_migrate(db_name, s_name, force)
         local expected_constraints = db:_extract_table_constraints(expected_sql)
         local actual_constraints = db:_extract_table_constraints(actual_sql)
 
-        -- both: the fingerprint carries ON CONFLICT but not which column a single-column UNIQUE is on
+        -- both: the fingerprint carries ON CONFLICT but not which column a column-level UNIQUE is on
         if expected_constraints ~= actual_constraints or not same_unique_targets(expected_sql, actual_sql) then
           table_constraints_changed = true
           -- a skipped _unique entry is likely a typo, and once fixed its rule can't be restored over

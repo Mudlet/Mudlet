@@ -4191,16 +4191,12 @@ describe("Tests db:create with _unique naming unknown columns", function()
   end)
 
   it("keeps a constraint a later db:create moves to another column", function()
-    -- both are column-level UNIQUEs, which the sheet's SQL carries without naming
-    -- the column they sit on: counting them would read the move as no change and
-    -- let the rule the sheet enforces today go
+    -- both are column-level UNIQUEs: counting them without the column each sits on
+    -- would read the move as no change and let the rule the sheet enforces today go
     local mydb = createCollectingWarnings({people = {name = "", city = "", _unique = "name"}})
     assert.is_true(db:add(mydb.people, {name = "Ada", city = "London"}))
     assert.is_nil(db:add(mydb.people, {name = "Ada", city = "Paris"}))
 
-    -- the compound entry is what makes the sheet's SQL differ at all: two
-    -- column-level UNIQUEs on their own compare equal whichever column they sit on,
-    -- so the rule would survive by accident rather than by being kept
     local moved = createCollectingWarnings({people = {name = "", city = "",
       _unique = {"city", {"name", "city"}, "nmae"}}})
     assert.is_nil(db:add(moved.people, {name = "Ada", city = "Berlin"}))
