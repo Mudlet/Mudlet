@@ -4132,20 +4132,9 @@ void TMainConsole::closeEvent(QCloseEvent* event)
 
     if (mpHost->mFORCE_SAVE_ON_EXIT || mpHost->isClosingForced()) {
         mudlet::self()->saveWindowLayout();
-        mpHost->modulesToWrite.clear();
-        // A save still running would turn this one away, and it may predate the session's last changes
-        mpHost->waitForProfileSave();
-        mpHost->saveProfileReportingFailure();
-        // Other profiles can keep Mudlet running long after this one closes
-        mudlet::self()->writeSettings();
-
-        if (mpHost->mpMap && mpHost->mpMap->mpRoomDB) {
-            // There is a map loaded - but it *could* have no rooms at all!
-            if (!mpHost->saveMapFile(QString())) {
-                qWarning() << "TMainConsole::closeEvent(...) WARNING - forced close map save failed";
-            }
+        if (!mpHost->saveForClose()) {
+            qWarning() << "TMainConsole::closeEvent(...) WARNING - forced close map save failed";
         }
-        mpHost->waitForProfileSave();
         mEnableClose = true;
         event->accept();
         return;
