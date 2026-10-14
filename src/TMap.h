@@ -85,12 +85,13 @@ signals:
     void signal_areaChanged(int areaId);
     void signal_mmpMapLocationChanged();
     void signal_mapSymbolFontChanged();
+    // Reaches every 2D map showing this map, the mapper's and each secondary view's
+    void signal_roomDeleted(int roomId);
 
     // Cues for the mapper drawing this map (mpMapper); the symbol cache one
     // also reaches every secondary map view. With no mapper nothing listens.
     void signal_mapperColoursChanged();
     void signal_mapCleared();
-    void signal_roomDeleted(int roomId);
     void signal_mapLabelsChanged();
     void signal_mapLoaded(bool showPlayerArea);
     void signal_mapperShowRequested();

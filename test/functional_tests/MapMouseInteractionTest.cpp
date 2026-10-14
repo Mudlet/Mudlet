@@ -968,8 +968,7 @@ private slots:
         QCOMPARE(mp2dMap->mMultiSelectionSet, expected);
     }
 
-    // A deleted room left in the selection is still reported by
-    // getMapSelection() and still acted on by the context menu.
+    // Whatever is done to the selection afterwards must not reach a room that is gone.
     void test_deletingASelectedRoomDropsItFromTheSelection()
     {
         buildMap();
@@ -987,9 +986,9 @@ private slots:
         QVERIFY2(remaining.contains(mp2dMap->getCenterSelectedRoomId()), "the selection's centre is still the deleted room");
     }
 
-    // A shift-drag rebuilds the selection on each move from the rooms selected
-    // at its press, and a ctrl-drag from the rooms it toggles, so a room a
-    // script deletes mid-drag must leave those too or the next move brings it back.
+    // A shift- or ctrl-drag rebuilds the selection on each move from the rooms
+    // selected at its press, so a room a script deletes mid-drag must leave
+    // those too or the next move brings it back.
     void test_aRoomDeletedMidDragIsNotBroughtBackByTheDrag()
     {
         buildMap();
