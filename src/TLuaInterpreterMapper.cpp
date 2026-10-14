@@ -293,7 +293,7 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
 
     //args: id_from, id_to, direction, style, line color, arrow (bool)
     int id_to = 0;
-    int r = 255;
+    int r = 0;
     int g = 0;
     int b = 0;
     Qt::PenStyle line_style(Qt::SolidLine);
@@ -439,44 +439,38 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
         lua_pushfstring(L, "addCustomLine: bad argument #5 type (RGB color components as a table expected, got %s!)", luaL_typename(L, 5));
         return lua_error(L);
     }
-    lua_pushnil(L);
-    int tind = 0;
-    while (lua_next(L, 5) != 0) {
-        if (++tind <= 3) {
-            if (lua_type(L, -1) != LUA_TNUMBER) {
-                lua_pushfstring(L,
-                                "addCustomLine: bad argument #5 table item #%d type (%s color component as a number between 0 and 255 expected, got %s!)",
-                                tind,
-                                (tind == 1 ? "red" : (tind == 2 ? "green" : "blue")),
-                                luaL_typename(L, -1));
-                return lua_error(L);
-            }
-
-            qint64 const component = lua_tointeger(L, -1);
-            if (component < 0 || component > 255) {
-                return warnArgumentValue(L,
-                                         __func__,
-                                         qsl("%1 color component in the table of the fifth argument is %2 which is out of the valid range (0 to 255)")
-                                                 .arg((tind == 1 ? "red" : (tind == 2 ? "green" : "blue")), QString::number(component)));
-            }
-            switch (tind) {
-            case 1:
-                r = static_cast<int>(component);
-                break;
-            case 2:
-                g = static_cast<int>(component);
-                break;
-            case 3:
-                b = static_cast<int>(component);
-                break;
-            default:
-                Q_UNREACHABLE();
-            }
+    // Read by index: lua_next() visits keys in no defined order and counts any extra keys too
+    for (int tind = 1; tind <= 3; ++tind) {
+        const char* const componentName = (tind == 1 ? "red" : (tind == 2 ? "green" : "blue"));
+        lua_rawgeti(L, 5, tind);
+        if (lua_isnil(L, -1)) {
+            return warnArgumentValue(
+                    L, __func__, qsl("the color table in the fifth argument has no %1 color component (item #%2) but red, green and blue are all needed").arg(componentName, QString::number(tind)));
         }
+        if (lua_type(L, -1) != LUA_TNUMBER) {
+            lua_pushfstring(L, "addCustomLine: bad argument #5 table item #%d type (%s color component as a number between 0 and 255 expected, got %s!)", tind, componentName, luaL_typename(L, -1));
+            return lua_error(L);
+        }
+
+        qint64 const component = lua_tointeger(L, -1);
         lua_pop(L, 1);
-    }
-    if (tind < 3) {
-        return warnArgumentValue(L, __func__, qsl("the color table in the fifth argument has %1 component(s) but red, green and blue are all needed").arg(tind));
+        if (component < 0 || component > 255) {
+            return warnArgumentValue(
+                    L, __func__, qsl("%1 color component in the table of the fifth argument is %2 which is out of the valid range (0 to 255)").arg(componentName, QString::number(component)));
+        }
+        switch (tind) {
+        case 1:
+            r = static_cast<int>(component);
+            break;
+        case 2:
+            g = static_cast<int>(component);
+            break;
+        case 3:
+            b = static_cast<int>(component);
+            break;
+        default:
+            Q_UNREACHABLE();
+        }
     }
 
     const bool arrow = getVerifiedBool(L, __func__, 6, "end with arrow");

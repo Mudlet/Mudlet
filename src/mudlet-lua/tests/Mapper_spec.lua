@@ -306,43 +306,6 @@ describe("Tests per-room border functions", function()
 
 end)
 
--- What these specs create goes in an area of their own, which after_each deletes.
-describe("Tests addCustomLine colour refusals on a scratch area", function()
-  local areaName = "MapperSpecCustomLineColours"
-  local area
-
-  local function room(x, y, z)
-    local id = createRoomID()
-    addRoom(id)
-    setRoomArea(id, area)
-    setRoomCoordinates(id, x, y, z or 0)
-    return id
-  end
-
-  setup(function()
-    assert.is_true(openMapWidget())
-  end)
-
-  before_each(function()
-    area = addAreaName(areaName)
-  end)
-
-  after_each(function()
-    deleteArea(areaName)
-  end)
-
-  it("addCustomLine refuses a colour table with fewer than three components", function()
-    local from, to = room(0, 0), room(0, 1)
-    setExit(from, to, "north")
-    for _, colour in ipairs({{}, {12}, {0, 255}}) do
-      local ok, err = addCustomLine(from, to, "n", "solid line", colour, false)
-      assert.is_nil(ok)
-      assert.are.equal(("the color table in the fifth argument has %d component(s) but red, green and blue are all needed"):format(#colour), err)
-    end
-    assert.is_nil(getCustomLines1(from)["n"])
-  end)
-end)
-
 describe("Tests addRoom", function()
 
   it("should return true when the room is created", function()
@@ -1873,6 +1836,30 @@ describe("Tests mapper functions against a shared fixture", function()
       local ok, err = addCustomLine(rSandA, {{2, 2, 0}}, "e", "solid line", {256, 0, 0}, false)
       assert.is_nil(ok)
       assert.is_string(err)
+    end)
+
+    it("addCustomLine refuses a colour table missing its red, green or blue entry", function()
+      local cases = {
+        {{}, "red", 1},
+        {{12}, "green", 2},
+        {{0, 255}, "blue", 3},
+        {{0, 255, alpha = 128}, "blue", 3},
+        {{[1] = 0, [2] = 255, [5] = 9}, "blue", 3},
+        {{255, nil, 0, 7}, "green", 2},
+        {{r = 255, g = 128, b = 0}, "red", 1},
+      }
+      for _, case in ipairs(cases) do
+        local ok, err = addCustomLine(rSandA, {{2, 2, 0}}, "e", "solid line", case[1], false)
+        assert.is_nil(ok)
+        assert.are.equal(("the color table in the fifth argument has no %s color component (item #%d) but red, green and blue are all needed"):format(case[2], case[3]), err)
+      end
+      assert.is_nil(getCustomLines1(rSandA)["e"])
+    end)
+
+    it("addCustomLine takes the first three entries of a longer colour table as red, green and blue", function()
+      assert.is_true(addCustomLine(rSandA, {{2, 2, 0}}, "e", "solid line", {10, 20, 30, 128}, false))
+      assert.are.same({10, 20, 30}, getCustomLines1(rSandA)["e"]["attributes"]["color"])
+      assert.is_true(removeCustomLine(rSandA, "e"))
     end)
 
     it("addCustomLine hard-errors when the second argument is neither number nor table", function()
