@@ -276,18 +276,32 @@ private slots:
         QVERIFY2(luaHolds(qsl("anchorReleases == 1")), "the label's release callback did not fire");
     }
 
+    void cleanup()
+    {
+        if (mpHost) {
+            mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("anchorSchemeRan, anchorColon, anchorColonText = nil\n"
+                                                                     "javascript, JAVASCRIPT, ftp, file, steam, about, magnet, data, mailto, tel, SMS = nil\n"));
+        }
+    }
+
     void test_aLinkOfANonLuaSchemeIsNotRun_data()
     {
         QTest::addColumn<QString>("link");
 
         QTest::newRow("javascript") << qsl("javascript:void(0)");
         QTest::newRow("upper-case JAVASCRIPT") << qsl("JAVASCRIPT:void(0)");
-        QTest::newRow("mailto") << qsl("mailto:send()");
-        QTest::newRow("tel") << qsl("tel:send()");
-        QTest::newRow("sms") << qsl("sms:send()");
+        QTest::newRow("javascript after a space") << qsl(" javascript:void(0)");
+        QTest::newRow("ftp") << qsl("ftp://host/x");
+        QTest::newRow("file") << qsl("file:///tmp/x");
+        QTest::newRow("steam") << qsl("steam://run/1");
+        QTest::newRow("about") << qsl("about:blank");
+        QTest::newRow("magnet") << qsl("magnet:?xt=urn:btih:abc");
+        QTest::newRow("data") << qsl("data:text/plain,hi");
+        QTest::newRow("mailto") << qsl("mailto:someone@example.com");
+        QTest::newRow("tel") << qsl("tel:+15551234");
     }
 
-    // Each link is also valid Lua, calling a method of a global named for its scheme, which sets a sentinel if run
+    // Each scheme is also a global whose every method sets a sentinel, so a link run as Lua after all is seen
     void test_aLinkOfANonLuaSchemeIsNotRun()
     {
         QFETCH(QString, link);
@@ -296,19 +310,24 @@ private slots:
         label()->setText(qsl("<a href=\"%1\">go</a>").arg(link));
         mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("anchorSchemeRan = false\n"
                                                                  "local ran = function() anchorSchemeRan = true end\n"
-                                                                 "javascript = {void = ran}\n"
-                                                                 "JAVASCRIPT = javascript\n"
-                                                                 "mailto = {send = ran}\n"
-                                                                 "tel = mailto\n"
-                                                                 "sms = mailto\n"));
+                                                                 "local scheme = setmetatable({}, {__index = function() return ran end})\n"
+                                                                 "javascript, JAVASCRIPT, ftp, file, steam = scheme, scheme, scheme, scheme, scheme\n"
+                                                                 "about, magnet, data, mailto, tel = scheme, scheme, scheme, scheme, scheme\n"));
         QVERIFY2(centreIsOnTheLabel(), "the point this case clicks is outside the label, so it would miss the link");
 
+        QStringList errorsConsole;
+        auto collect = connect(mpHost, &Host::signal_errorConsolePrint, this, [&errorsConsole](const QString& text) {
+            errorsConsole << text;
+        });
         QSignalSpy activated(label(), &QLabel::linkActivated);
         QTest::mouseClick(label(), Qt::LeftButton, Qt::NoModifier, linkCentre());
+        disconnect(collect);
 
         QCOMPARE(activated.count(), 1);
         QVERIFY2(luaHolds(qsl("anchorSchemeRan == false")), "the link was run as Lua");
-        mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("javascript, JAVASCRIPT, mailto, tel, sms = nil, nil, nil, nil, nil"));
+        const QString printed = errorsConsole.join(QString());
+        QVERIFY2(!printed.contains(qsl("[ERROR:]")), qPrintable(qsl("the link was reported as a Lua error: %1").arg(printed)));
+        QVERIFY2(printed.contains(link), qPrintable(qsl("nothing in the Errors console names the ignored link: \"%1\"").arg(printed)));
     }
 
     void test_aLuaCommandLinkWithAColonRuns_data()
@@ -319,6 +338,11 @@ private slots:
         QTest::newRow("method call") << qsl("anchorColon:go()") << qsl("anchorColon.ran == 1");
         QTest::newRow("colon in a string") << qsl("anchorColonText = 'at 12:00'") << qsl("anchorColonText == 'at 12:00'");
         QTest::newRow("URL-like string") << qsl("anchorColonText = 'at://home'") << qsl("anchorColonText == 'at://home'");
+        QTest::newRow("method of a table named tel") << qsl("tel:go()") << qsl("anchorColon.ran == 1");
+        QTest::newRow("method of a table named SMS") << qsl("SMS:go()") << qsl("anchorColon.ran == 1");
+        QTest::newRow("method of a table named data") << qsl("data:go()") << qsl("anchorColon.ran == 1");
+        QTest::newRow("method of a field") << qsl("anchorColon.inner:go()") << qsl("anchorColon.ran == 1");
+        QTest::newRow("method call with a string argument") << qsl("anchorColon:go 'x'") << qsl("anchorColon.ran == 1");
     }
 
     void test_aLuaCommandLinkWithAColonRuns()
@@ -330,6 +354,7 @@ private slots:
         label()->setText(qsl("<a href=\"%1\">go</a>").arg(command));
         mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("anchorColon = {ran = 0}\n"
                                                                  "function anchorColon:go() self.ran = self.ran + 1 end\n"
+                                                                 "anchorColon.inner, tel, SMS, data = anchorColon, anchorColon, anchorColon, anchorColon\n"
                                                                  "anchorColonText = nil\n"));
         QVERIFY2(centreIsOnTheLabel(), "the point this case clicks is outside the label, so it would miss the link");
 

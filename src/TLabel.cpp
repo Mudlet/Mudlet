@@ -575,12 +575,14 @@ void TLabel::slot_linkActivated(const QString& link)
         }
     }
 
-    // Check for custom schemes by looking for the colon separator
-    const int colonPos = link.indexOf(':');
+    // Check for custom schemes by looking for the colon separator; a browser
+    // also drops the whitespace around an href before reading its scheme
+    const QString href = link.trimmed();
+    const int colonPos = href.indexOf(':');
 
     if (colonPos > 0) {
-        const QString scheme = link.left(colonPos).toLower(); // RFC 3986: schemes are case-insensitive
-        const QString payload = link.mid(colonPos + 1);       // Everything after the colon
+        const QString scheme = href.left(colonPos).toLower(); // RFC 3986: schemes are case-insensitive
+        const QString payload = href.mid(colonPos + 1);       // Everything after the colon
 
         // Handle custom Mudlet URL schemes for Lua commands
         if (scheme == qsl("send")) {
@@ -606,16 +608,18 @@ void TLabel::slot_linkActivated(const QString& link)
         }
 
         if (scheme == qsl("http") || scheme == qsl("https")) {
-            QDesktopServices::openUrl(QUrl(link));
+            QDesktopServices::openUrl(QUrl(href));
             return;
         }
 
-        // A URL of a scheme Mudlet does not handle is ignored rather than run as Lua. Anything else with
-        // a colon in it - obj:method(), send("at 12:00") - is Lua, which has no "//" after a name and colon.
-        // These schemes take no "//", and are not names a script gives its objects.
-        static const QRegularExpression schemeName(qsl("^[A-Za-z][A-Za-z0-9+.-]*$"));
-        static const QSet<QString> schemesWithoutAuthority{qsl("mailto"), qsl("tel"), qsl("sms"), qsl("javascript")};
-        if ((payload.startsWith(qsl("//")) && schemeName.match(scheme).hasMatch()) || schemesWithoutAuthority.contains(scheme)) {
+        // After a scheme-shaped prefix only a Lua method call - tel:go(), pkg.ui:show "x" - is Lua;
+        // ftp://host, mailto:a@b.c or about:blank are URLs that Lua would only report as syntax errors.
+        static const QRegularExpression schemeName(qsl("^[a-z][a-z0-9+.-]*$"));
+        static const QRegularExpression methodCall(qsl("^[A-Za-z_][A-Za-z0-9_]*\\s*[(\"'{[]"));
+        if (scheme == qsl("javascript") || (schemeName.match(scheme).hasMatch() && !methodCall.match(payload).hasMatch())) {
+            //: Printed in the Errors console when a link in a label is clicked but neither handled nor run; %1 is the link, %2 its scheme
+            const QString note = tr("[LINK:] The label link \"%1\" was not run: %2: is not a scheme Mudlet handles, and the link is not a Lua command.").arg(link, scheme);
+            emit mpHost->signal_errorConsolePrint(note + QChar::LineFeed, QColor(255, 128, 0), QColor(Qt::black));
             return;
         }
     }
