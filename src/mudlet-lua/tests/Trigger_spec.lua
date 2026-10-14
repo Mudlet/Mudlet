@@ -2849,8 +2849,8 @@ describe("Trigger processing", function()
             assert.is_true(disableTrigger(name), "the permanent trigger must still be reachable by name")
         end)
 
-        -- a killed item lingers until the next line, a timer flush or the periodic
-        -- purge frees it, and exists() and findItems() must not count it meanwhile
+        -- a killed item lingers until a deferred cleanup frees it, up to a minute later
+        -- on an idle profile, and exists() and findItems() must not count it meanwhile
         it("does not count a killed temporary item as existing while it waits to be freed", function()
             local trigger = tempTrigger("killed_exists_spec", function() end)
             local alias = tempAlias("^killed_exists_spec$", function() end)

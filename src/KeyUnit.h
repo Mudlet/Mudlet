@@ -91,8 +91,8 @@ public:
     QSet<TKey*> mCleanupSet;
     QList<TKey*> uninstallList;
     bool hasPendingDeletes() const { return !mCleanupSet.isEmpty() || !uninstallList.isEmpty(); }
-    // Killed or uninstalled, itself or through an ancestor, but still in the lookup tables: doCleanup() runs only
-    // on the next line, timer flush or temp purge, so on an idle profile that can be a minute away
+    // Killed or uninstalled, itself or through an ancestor, but still in the lookup tables until doCleanup(),
+    // which an idle profile may not run for up to a minute
     bool pendingDeletion(TKey* pItem) const;
     // Past behaviour is to only process the first key binding that matches,
     // ignoring any duplicates - but changing that behaviour unconditionally

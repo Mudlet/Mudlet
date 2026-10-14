@@ -150,8 +150,8 @@ public:
 
     QList<TTrigger*> uninstallList;
     bool hasPendingDeletes() const { return !mCleanupSet.isEmpty() || !uninstallList.isEmpty(); }
-    // Killed or uninstalled, itself or through an ancestor, but still in the lookup tables: doCleanup() runs only
-    // on the next line, timer flush or temp purge, so on an idle profile that can be a minute away
+    // Killed or uninstalled, itself or through an ancestor, but still in the lookup tables until doCleanup(),
+    // which an idle profile may not run for up to a minute
     bool pendingDeletion(TTrigger* pItem) const;
 
 private:
