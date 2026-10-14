@@ -283,6 +283,16 @@ describe("HTTP and download functions validate arguments before issuing a reques
       assert.is_true(contains(err, "file url names host 'example.invalid'"), tostring(err))
     end)
 
+    it("is refused by downloadFile for a file url whose path names a share", function()
+      local target = getMudletHomeDir() .. "/busted-refused-share.txt"
+      finally(function() os.remove(target) end)
+      for _, url in ipairs({"file:////example.invalid/share/x", "file:///%5C%5Cexample.invalid%5Cshare%5Cx", "file://localhost//example.invalid/share/x"}) do
+        local ok, err = downloadFile(target, url)
+        assert.is_nil(ok, url)
+        assert.is_true(contains(err, "file url names a network path"), url .. " gave: " .. tostring(err))
+      end
+    end)
+
     it("still lets downloadFile copy a local file", function()
       if not os.getenv("MUDLET_TEST_MODE") then
         pending("waiting for the copy needs pumpEvents(), which is refused outside MUDLET_TEST_MODE")

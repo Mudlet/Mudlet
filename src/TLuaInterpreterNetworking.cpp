@@ -131,6 +131,11 @@ int TLuaInterpreter::downloadFile(lua_State* L)
     if (url.isLocalFile() && !url.host().isEmpty() && url.host().compare(qsl("localhost"), Qt::CaseInsensitive)) {
         return warnArgumentValue(L, __func__, qsl("url is invalid, reason: file url names host '%1', only local files are allowed").arg(url.host()));
     }
+    // With no host the path can still name a share: on Windows file:////host/share opens a UNC path
+    // path(), not toLocalFile(): the latter puts an allowed localhost back in front as //localhost
+    if (const QString path = url.path(QUrl::FullyDecoded); url.isLocalFile() && QString(path).replace(QLatin1Char('\\'), QLatin1Char('/')).startsWith(qsl("//"))) {
+        return warnArgumentValue(L, __func__, qsl("url is invalid, reason: file url names a network path '%1', only local files are allowed").arg(path));
+    }
 
     QNetworkRequest request = QNetworkRequest(url);
     MudletApp::setNetworkRequestDefaults(url, request);
