@@ -115,13 +115,13 @@ private:
         return path;
     }
 
-    static int consoleMark(Host* host) { return host->mpConsole->buffer.getLastLineNumber(); }
+    static int consoleMark(Host* host) { return host->mainConsoleView()->buffer.getLastLineNumber(); }
 
     static QString consoleTextSince(Host* host, const int mark)
     {
         QString text;
-        for (int i = mark; i <= host->mpConsole->buffer.getLastLineNumber(); ++i) {
-            text.append(host->mpConsole->buffer.line(i)).append(QChar::Space);
+        for (int i = mark; i <= host->mainConsoleView()->buffer.getLastLineNumber(); ++i) {
+            text.append(host->mainConsoleView()->buffer.line(i)).append(QChar::Space);
         }
         return text.simplified();
     }
