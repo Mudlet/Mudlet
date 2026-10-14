@@ -1250,6 +1250,7 @@ std::pair<bool, QString> Host::reloadModule(const QString& syncModuleName, const
     }
     QString failure;
     QString itemErrors;
+    bool installedUnderAnotherName = false;
     QMap<QString, QStringList> installedModules = mInstalledModules;
     QMapIterator<QString, QStringList> moduleIterator(installedModules);
     while (moduleIterator.hasNext()) {
@@ -1273,6 +1274,7 @@ std::pair<bool, QString> Host::reloadModule(const QString& syncModuleName, const
                 failure = qsl("module '%1' could not be loaded from '%2'").arg(moduleName, fileName);
             } else {
                 itemErrors = reason;
+                installedUnderAnotherName = uninstalled && !mInstalledModules.contains(moduleName);
             }
         }
     }
@@ -1281,6 +1283,11 @@ std::pair<bool, QString> Host::reloadModule(const QString& syncModuleName, const
     moduleIterator.toFront();
     while (moduleIterator.hasNext()) {
         moduleIterator.next();
+        // Putting the old name back would list a module with nothing in it beside the one now holding its archive
+        if (installedUnderAnotherName && moduleIterator.key() == syncModuleName) {
+            removePackageInfo(syncModuleName, true);
+            continue;
+        }
         const QStringList entry = installedModules[moduleIterator.key()];
         mInstalledModules[moduleIterator.key()] = entry;
     }

@@ -1699,7 +1699,8 @@ describe("Tests installing one name as both a package and a module", function()
 
   -- The archive a module was installed from can be replaced by one whose
   -- config.lua names it differently, and what it holds then goes in under that
-  -- name: the reload worked, even though no module of the old name was loaded.
+  -- name: the reload worked, and the old name, which holds nothing any more, is
+  -- no longer listed beside the module that now has its archive.
   it("answers true when it reloads a module from an archive that now installs under another name", function()
     lfs.mkdir(scratchDirectory)
     local path = scratchDirectory .. "/mudlet-spec-renamer.mpackage"
@@ -1720,6 +1721,7 @@ describe("Tests installing one name as both a package and a module", function()
     assert.is_true(ok, tostring(err))
     assert.is_true(moduleInstalled(renamedTo), "the archive's module was not installed")
     assert.equals(1, exists(renamedTo .. " alias", "alias"), "the archive's items were not installed")
+    assert.is_false(moduleInstalled("mudlet-spec-renamer"), "the old name is still listed, with nothing in it")
   end)
 
   -- The folder an install is staged in is taken away again on every way out, so
