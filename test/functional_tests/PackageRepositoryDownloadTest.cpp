@@ -703,6 +703,7 @@ private slots:
         const QString heading = manager->label_packageName->text();
         QVERIFY2(!heading.isEmpty() && (heading == qsl("vanished-package") || manager->label_packageName->toolTip() == qsl("vanished-package")),
                  qPrintable(qsl("The heading did not name the selected package, it read \"%1\" with tooltip \"%2\"").arg(heading, manager->label_packageName->toolTip())));
+        QVERIFY2(!manager->label_icon->pixmap().isNull(), "No icon was shown for a package the index does not list");
         QVERIFY2(manager->pushButton_website->isHidden(), "The website button was offered for a package the index does not list");
         QVERIFY2(manager->pushButton_report->isHidden(), "The report button was offered for a package the index does not list");
         QVERIFY2(requests.iconRequests().isEmpty(), qPrintable(qsl("An icon was requested for a package the index does not list: %1").arg(requests.iconRequests().join(qsl(", ")))));
@@ -736,10 +737,18 @@ private slots:
         QTRY_VERIFY_WITH_TIMEOUT(settle() && manager.isNull(), 15s);
     }
 
+    void test_exploreIsListedOnceTheIndexLands_10948_data()
+    {
+        QTest::addColumn<QString>("searchText");
+        QTest::newRow("unfiltered") << QString();
+        QTest::newRow("searched while waiting") << qsl("arrives");
+    }
+
     // With no index on disk the constructor downloads one; Explore opened before it lands has to say why
     // it is empty, and list the packages once it has landed rather than wait for the view to be switched.
     void test_exploreIsListedOnceTheIndexLands_10948()
     {
+        QFETCH(QString, searchText);
         mpProxy->setAnswer(StubProxy::Answer::Refuse);
         QFile::remove(qsl("%1/mpkg.packages.json").arg(profileHome()));
 
@@ -748,11 +757,14 @@ private slots:
         QCOMPARE(manager->packageList->count(), 0);
         const QString shown = manager->packageDescription->toPlainText();
         QVERIFY2(shown.contains(qsl("not available")), qPrintable(qsl("Explore had no index to list and did not say so, the details pane held: \"%1\"").arg(shown)));
+        manager->lineEdit_searchBar->setText(searchText);
 
         // The refused download writes nothing, so what its handler reads is this
         QVERIFY(writeRepositoryIndex({repositoryEntry(qsl("arrives-later"), qsl("arrives-later.mpackage"))}));
         QTRY_VERIFY2_WITH_TIMEOUT(settle() && manager->packageList->findItems(qsl("arrives-later"), Qt::MatchExactly).size() == 1, "The downloaded index was not listed in Explore", 15s);
         QVERIFY2(manager->pushButton_explore->isChecked(), "Listing the downloaded index left the Explore view");
+        const QString shownAfter = manager->packageDescription->toPlainText();
+        QVERIFY2(!shownAfter.contains(qsl("not available")), qPrintable(qsl("The index was listed but the details pane still said it was not available: \"%1\"").arg(shownAfter)));
 
         manager->close();
         QTRY_VERIFY_WITH_TIMEOUT(settle() && manager.isNull(), 15s);
@@ -779,7 +791,10 @@ private slots:
         const QString shown = manager->packageDescription->toPlainText();
         QVERIFY2(shown.contains(qsl("detail-less-package")) && shown.contains(qsl("without any details")),
                  qPrintable(qsl("The details pane did not say the package has no details, it held: \"%1\"").arg(shown)));
-        QVERIFY2(!manager->label_packageName->text().isEmpty(), "The heading did not name the selected package");
+        const QString heading = manager->label_packageName->text();
+        QVERIFY2(!heading.isEmpty() && (heading == qsl("detail-less-package") || manager->label_packageName->toolTip() == qsl("detail-less-package")),
+                 qPrintable(qsl("The heading did not name the selected package, it read \"%1\" with tooltip \"%2\"").arg(heading, manager->label_packageName->toolTip())));
+        QVERIFY2(!manager->label_icon->pixmap().isNull(), "No icon was shown for an installed package with no details");
 
         manager->close();
         QTRY_VERIFY_WITH_TIMEOUT(settle() && manager.isNull(), 15s);

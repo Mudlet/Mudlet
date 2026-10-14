@@ -192,11 +192,12 @@ void dlgPackageManager::downloadRepositoryIndex()
         reply->deleteLater();
         file->deleteLater();
         manager->deleteLater();
-        const bool indexRead = readPackageRepositoryFile();
-        populatePackagesWithUpdates();
-        updateUpdatesBadge();
-        // Explore and Updates are listed from the index, so what is on show predates this one
-        if (indexRead && mCurrentView != NavigationView::Installed) {
+        // A successful read refreshes the updates list and badge itself
+        if (!readPackageRepositoryFile()) {
+            populatePackagesWithUpdates();
+            updateUpdatesBadge();
+        } else if (mCurrentView != NavigationView::Installed) {
+            // Explore and Updates are listed from the index, so what is on show predates this one
             slot_setPackageList();
         }
     });
@@ -593,6 +594,7 @@ void dlgPackageManager::slot_itemChanged(QListWidgetItem* pItem)
         if (packageInfo.isEmpty()) {
             mPackageName = packageName;
             elidePackageName();
+            label_icon->setPixmap(QPixmap(qsl(":/icons/package-manager.png")).scaled(96, 96, Qt::KeepAspectRatio, Qt::SmoothTransformation));
             //: Package manager - shown in the details pane for an installed package that came with no details, such as a plain .xml package. %1 is the package name
             packageDescription->setPlainText(tr("'%1' was installed without any details to show: it has no title, author, version or description.").arg(packageName));
             return;
@@ -863,6 +865,7 @@ void dlgPackageManager::slot_setPackageList()
     }
 
     if (!lineEdit_searchBar->text().isEmpty()) {
+        clearPackageDetails();
         slot_searchTextChanged(lineEdit_searchBar->text());
         return;
     }
@@ -1011,6 +1014,7 @@ void dlgPackageManager::showMissingFromIndex(const QString& packageName)
     qWarning() << "dlgPackageManager::showMissingFromIndex() WARNING - package not found in the repository index:" << packageName;
     mPackageName = packageName;
     elidePackageName();
+    label_icon->setPixmap(QPixmap(qsl(":/icons/package-manager.png")).scaled(96, 96, Qt::KeepAspectRatio, Qt::SmoothTransformation));
     //: Package manager - shown in the details pane when the selected package is not in the downloaded package index. %1 is the package name
     packageDescription->setPlainText(tr("The details of '%1' could not be found in the package index. It may have been renamed or removed; try reopening the package manager.").arg(packageName));
 }
