@@ -727,8 +727,9 @@ end
 -- attach is only possible if the container is located near the border
 -- @param border possible border values are "top", "bottom", "right", "left", in any case
 -- @return true, or nil and an error message for any other border, or if the container is minimized
--- or too far from that border to attach; a refused attach changes nothing, and a hidden container
--- takes the border when shown
+-- or too far from that border to attach; a refused attach changes nothing, unless a
+-- sysWindowResizeEvent handler moves the container away while it leaves its old border, and a
+-- hidden container takes the border when shown
 function Adjustable.Container:attachToBorder(border)
     -- the registry and adjustBorder() both work in lower case
     border = type(border) == "string" and border:lower()
@@ -767,7 +768,7 @@ function Adjustable.Container:attachToBorder(border)
     self.attached = border
     self:adjustBorder()
     closeAllLevels(self.rCLabel)
-    -- adjustBorder() detaches a container that is minimized or out of reach of the border
+    -- the detaches above raise sysWindowResizeEvent, whose handlers may have moved this container away
     if self.attached ~= border then
         return nil, refused
     end
