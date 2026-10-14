@@ -3509,7 +3509,7 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       end)
 
       it("Should say the main command line's action cannot be changed, rather than that it is not there", function()
-        local refusal = "the main command line's action cannot be changed, it always sends its text to the game"
+        local refusal = "the main command line's action cannot be changed, use an alias to act on what is typed there"
         local ok, err = setCmdLineAction("main", function() end)
         assert.is_nil(ok)
         assert.are.equal(refusal, err)

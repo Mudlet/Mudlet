@@ -75,8 +75,8 @@ static const char* bad_label_value = "label \"%s\" not found";
 // A Host outlives its main console (closing the window destroys the view while Lua keeps running),
 // so widget-only queries report this rather than dereference what is gone.
 static const char* no_main_window_value = "the profile has no main window";
-// TCommandLine always sends the main command line's text to the game
-static const char* main_cmdline_action_value = "the main command line's action cannot be changed, it always sends its text to the game";
+// TCommandLine::enterCommand() hands the main command line's text to Host::send(), which runs aliases, never to an action
+static const char* main_cmdline_action_value = "the main command line's action cannot be changed, use an alias to act on what is typed there";
 
 // No documentation available in wiki - internal function
 static bool isMain(const QString& name)
@@ -88,6 +88,34 @@ static bool isMain(const QString& name)
         return true;
     }
     return false;
+}
+
+// Only sub-consoles and labels have a background colour of their own; these widgets take theirs from a stylesheet.
+// One name can belong to several of them at once, so each one is named. Empty when the name is none of them.
+static QString backgroundColorRefusal(const Host& host, const QString& name, const bool reading)
+{
+    const TWindowRegistry& registry = host.windowRegistry();
+    QStringList kinds;
+    QStringList setters;
+    if (registry.hasScrollBox(name)) {
+        kinds << qsl("a scroll box");
+        setters << qsl("setProfileStyleSheet()");
+    }
+    if (registry.hasTextBox(name)) {
+        kinds << qsl("a text edit");
+        setters << qsl("setTextEditStyleSheet()");
+    }
+    if (registry.hasCommandLine(name)) {
+        kinds << qsl("a command line");
+        setters << qsl("setCmdLineStyleSheet()");
+    }
+    if (kinds.isEmpty()) {
+        return {};
+    }
+    if (reading) {
+        return qsl("'%1' is %2, whose background color cannot be read back").arg(name, kinds.join(qsl(" and ")));
+    }
+    return qsl("'%1' is %2, use %3 to set its background").arg(name, kinds.join(qsl(" and ")), setters.join(qsl(" or ")));
 }
 
 // Mudlet's own colour names live in the Lua "color_table" global as {r, g, b};
@@ -1336,6 +1364,8 @@ int TLuaInterpreter::getBackgroundColor(lua_State* L)
         color = host.mainConsoleModel().mBgColor;
     } else if (auto optionalColor = host.getBackgroundColor(windowName)) {
         color = optionalColor.value();
+    } else if (const QString refusal = backgroundColorRefusal(host, windowName, true); !refusal.isEmpty()) {
+        return warnArgumentValue(L, __func__, refusal);
     } else {
         return warnArgumentValue(L, __func__, qsl("window '%1' does not exist").arg(windowName));
     }
@@ -2571,6 +2601,9 @@ int TLuaInterpreter::resetCmdLineAction(lua_State* L)
         lua_pushboolean(L, true);
         return 1;
     }
+    if (!host.hasConsoleView()) {
+        return warnArgumentValue(L, __func__, no_main_window_value);
+    }
     if (isMain(name)) {
         return warnArgumentValue(L, __func__, main_cmdline_action_value);
     }
@@ -2890,15 +2923,11 @@ int TLuaInterpreter::setBackgroundColor(lua_State* L)
     if (isMain(windowName)) {
         host.setProfileBackgroundColor(QColor(r, g, b, alpha));
     } else if (!host.setBackgroundColor(windowName, r, g, b, alpha)) {
-        const auto kind = host.windowType(windowName);
-        if (kind == qsl("commandline")) {
-            return warnArgumentValue(L, __func__, qsl("'%1' is a command line, use setCmdLineStyleSheet() to set its background").arg(windowName));
+        if (!host.hasConsoleView()) {
+            return warnArgumentValue(L, __func__, no_main_window_value);
         }
-        if (kind == qsl("textedit")) {
-            return warnArgumentValue(L, __func__, qsl("'%1' is a text edit, use setTextEditStyleSheet() to set its background").arg(windowName));
-        }
-        if (kind == qsl("scrollbox")) {
-            return warnArgumentValue(L, __func__, qsl("'%1' is a scroll box, which has no background color of its own").arg(windowName));
+        if (const QString refusal = backgroundColorRefusal(host, windowName, false); !refusal.isEmpty()) {
+            return warnArgumentValue(L, __func__, refusal);
         }
         return warnArgumentValue(L, __func__, qsl("window/label '%1' not found").arg(windowName));
     }
@@ -3232,6 +3261,9 @@ int TLuaInterpreter::setCmdLineAction(lua_State* L)
 
     if (!host.setCmdLineAction(name, func)) {
         luaL_unref(L, LUA_REGISTRYINDEX, func);
+        if (!host.hasConsoleView()) {
+            return warnArgumentValue(L, __func__, no_main_window_value);
+        }
         if (isMain(name)) {
             return warnArgumentValue(L, __func__, main_cmdline_action_value);
         }
