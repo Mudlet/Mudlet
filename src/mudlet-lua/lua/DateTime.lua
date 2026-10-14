@@ -154,6 +154,12 @@ function datetime:parse(source, format, as_epoch)
 end
 
 
+--- Splits a count of seconds into zero-padded hours, minutes and seconds, dropping any fraction of a second.
+--- Hours keep counting past 24. A negative count carries its minus sign once, on the hours ("-00" under an
+--- hour), while the minutes and seconds stay unsigned, so read the sign from the hours string, not tonumber().
+--- @param seconds the count of seconds, as a number or a string holding one
+--- @param bool if true, cecho the result instead of returning it
+--- @return hours, minutes and seconds as strings
 function shms(seconds, bool)
   seconds = tonumber(seconds)
   assert(type(seconds) == "number", "Assertion failed for function 'shms' - Please supply a valid number.")
