@@ -124,8 +124,8 @@
            </property>
            <item>
             <widget class="QTextBrowser" name="ircBrowser">
-             <property name="openExternalLinks">
-              <bool>true</bool>
+             <property name="openLinks">
+              <bool>false</bool>
              </property>
             </widget>
            </item>

@@ -101,7 +101,7 @@ private:
     // True if any line in the main console buffer contains the given substring
     bool bufferContains(const QString& text) const
     {
-        TMainConsole* console = mpHost->mpConsole;
+        TMainConsole* console = mpHost->mainConsoleView();
         for (int i = 0; i <= console->buffer.getLastLineNumber(); ++i) {
             if (console->buffer.line(i).contains(text)) {
                 return true;
@@ -140,7 +140,7 @@ private:
     QStringList linesContaining(const QString& text) const
     {
         QStringList lines;
-        TMainConsole* console = mpHost->mpConsole;
+        TMainConsole* console = mpHost->mainConsoleView();
         for (int i = 0; i <= console->buffer.getLastLineNumber(); ++i) {
             if (console->buffer.line(i).contains(text)) {
                 lines << console->buffer.line(i);
@@ -273,8 +273,8 @@ private slots:
     void init()
     {
         QVERIFY(mpHost);
-        QVERIFY(mpHost->mpConsole);
-        mpHost->mpConsole->buffer.clear();
+        QVERIFY(mpHost->mainConsoleView());
+        mpHost->mainConsoleView()->buffer.clear();
         // A leaked recursion level is permanent for the profile and eventually
         // turns processSocketData() into a silent no-op, which would make the
         // "nothing was written" assertions below pass for the wrong reason.
@@ -400,8 +400,8 @@ private slots:
     // took, including the one that refuses the read outright. That refusal is the
     // only exit no other test here reaches, and a level leaked there would be
     // permanent for the profile: once enough have piled up the connection stops
-    // accepting data altogether. Seeding the counter reaches the refusal without
-    // needing a real decompression bomb to recurse.
+    // accepting data altogether. Seeding the counter reaches the refusal, which
+    // otherwise takes processing nested inside the deepest level of a drain.
     //
     // Whether the refusal happened is read off the caller's buffer rather than
     // the warning text: the refusal returns before the NUL terminator is written,
@@ -451,6 +451,41 @@ private slots:
                                             .arg(wasRefused ? qsl("dropped") : qsl("processed"))));
             }
         }
+    }
+
+    // The refusal at the cap with a compressed stream running: zlib cannot pick
+    // a stream up past what was dropped, so the stream has to be refused, and
+    // the game offering MCCP again has to bring compression back
+    void aReadRefusedAtTheCapEndsTheCompressedStream()
+    {
+        cTelnet& telnet = mpHost->mTelnet;
+        const auto depthRestoreGuard = qScopeGuard([&telnet] {
+            telnet.mDecompressionRecursionDepth = 0;
+        });
+        QByteArray offer("\xFF\xFB\x56\xFF\xFA\x56\xFF\xF0", 8);
+        telnet.loopbackTest(offer);
+        QVERIFY(telnet.mNeedDecompression);
+
+        QByteArray refused = qCompress(QByteArray("\r\nMCCPREFUSEDATTHECAP\r\n"), 9).mid(4);
+        const int refusedSize = static_cast<int>(refused.size());
+        refused.append(scmTerminatorSlot);
+        telnet.mDecompressionRecursionDepth = cTelnet::scmMaxDecompressionRecursion;
+        telnet.processSocketData(refused.data(), refusedSize, true);
+        telnet.mDecompressionRecursionDepth = 0;
+
+        QVERIFY2(!telnet.mNeedDecompression, "the compressed stream went on past a read of it that was dropped");
+        QVERIFY(!telnet.mMCCP_version_2);
+        QVERIFY(!telnet.hisOptionState.test(OPT_COMPRESS2));
+
+        QByteArray offeredAgain = offer + qCompress(QByteArray("\r\nMCCPOFFEREDAGAIN\r\n"), 9).mid(4);
+        telnet.loopbackTest(offeredAgain);
+        QVERIFY2(QTest::qWaitFor(
+                         [this]() {
+                             return bufferContains(qsl("MCCPOFFEREDAGAIN"));
+                         },
+                         QDeadlineTimer(5s)),
+                 "offering MCCP again did not bring compression back");
+        QVERIFY(!bufferContains(qsl("MCCPREFUSEDATTHECAP")));
     }
 
     // Windows builds give the main thread 1 MB of stack, and a compressed read
