@@ -1117,6 +1117,7 @@ end
 -- what getLabelFormat() last read out of each label's stylesheet, by label name, kept
 -- with the stylesheet it was read from so a changed one is read afresh
 local labelStyleSheetFormats = {}
+local labelDeletedHandler
 
 local function parseLabelStyleSheet(stylesheet)
   local parsed = {
@@ -1179,18 +1180,25 @@ function getLabelFormat(win)
   assert(win, "getLabelFormat: requires at least one argument")
   local winType = type(win)
   assert(winType == "string" or winType == "number", "getLabelFormat: bad argument #1 type (label as string expected, got " .. winType .. "!)")
+  -- registered here rather than at load, as this file loads before Other.lua lets
+  -- registerAnonymousEventHandler take a function
+  labelDeletedHandler = labelDeletedHandler or registerAnonymousEventHandler("sysLabelDeleted", function(_, name)
+    labelStyleSheetFormats[name] = nil
+  end)
+  -- keyed by the name as a string, which is how sysLabelDeleted names it
+  local key = tostring(win)
   local stylesheet, err = getLabelStyleSheet(win)
   if not stylesheet then
-    labelStyleSheetFormats[win] = nil
+    labelStyleSheetFormats[key] = nil
     return nil, err
   end
-  local cached = labelStyleSheetFormats[win]
+  local cached = labelStyleSheetFormats[key]
   local parsed
   if cached and cached.stylesheet == stylesheet then
     parsed = cached.parsed
   else
     parsed = parseLabelStyleSheet(stylesheet)
-    labelStyleSheetFormats[win] = { stylesheet = stylesheet, parsed = parsed }
+    labelStyleSheetFormats[key] = { stylesheet = stylesheet, parsed = parsed }
   end
   -- a new table every call, as callers are free to change the one they get
   return {
