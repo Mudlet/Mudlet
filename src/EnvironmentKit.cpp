@@ -189,4 +189,12 @@ std::pair<Kit, bool> forEnvironment(const TMap& map, const Host& host, const int
     return {guess(RoomAppearance::environmentColor(map, host, environmentId)), false};
 }
 
+Kit forEnvironment(const QHash<int, Kit>& named, const int environmentId, const QColor& environmentColor)
+{
+    if (const auto found = named.constFind(environmentId); found != named.cend()) {
+        return *found;
+    }
+    return guess(environmentColor);
+}
+
 } // namespace EnvironmentKit

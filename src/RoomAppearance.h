@@ -19,10 +19,14 @@
 
 #pragma once
 
+#include "EnvironmentKit.h"
+
 #include <QBrush>
 #include <QColor>
 #include <QPointF>
 #include <QString>
+
+#include <optional>
 
 class Host;
 class QFont;
@@ -60,8 +64,12 @@ Look look(const TMap& map, const Host& host, const TRoom& room, int playerRoomId
 QColor environmentColor(const TMap& map, const Host& host, int environmentId);
 
 // The character a map drawn as a text screen shows for a room, roguelike fashion: @ for the player, the room's
-// own symbol, < > or X for stairs up, down or both, else # (. for an area in grid mode, which is open ground)
-QString terminalGlyph(const TRoom& room, const Look& look, bool gridMode);
+// own symbol, < > or X for stairs up, down or both, else its ground's character where one is given, or #
+// (. for an area in grid mode, which is open ground)
+QString terminalGlyph(const TRoom& room, const Look& look, bool gridMode, std::optional<EnvironmentKit::Kit> ground = std::nullopt);
+// The roguelike character for a kind of ground: " grass, ≈ water, # road, ♣ forest, ■ building; plain open ground
+// in an area in grid mode is .
+QString groundGlyph(EnvironmentKit::Kit ground, bool gridMode);
 
 // The line character - | / or \ that reads as a line running at degrees, counterclockwise from rightward
 QChar terminalLineGlyph(qreal degrees);

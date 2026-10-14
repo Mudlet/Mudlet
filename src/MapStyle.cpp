@@ -107,7 +107,22 @@ QList<MapStyle> registeredStyles()
     terminal.exitWidthFactor = 0.5f;
     terminal.floorPlates = false;
     terminal.glyphs = MapStyle::Glyphs::Terminal;
+    terminal.groundGlyphs = true;
+    // A text screen's selection: the cell filled, its character in reverse video
+    terminal.highlightShape = MapStyle::HighlightShape::Cell;
+    terminal.highlightColor = QColor(255, 255, 85);
     terminal.statusLine = true;
+    terminal.themedMapLabels = true;
+    terminal.mapLabelColor = QColor(170, 170, 170);
+    terminal.mapLabelHalo = QColor(0, 0, 0, 220);
+    terminal.mapLabelMaxHeight = 0.6f;
+    terminal.roomNameColor = QColor(170, 170, 170, 220);
+    terminal.roomNameScale = 0.6f;
+    terminal.compassFace = QColor(0, 0, 0, 220);
+    terminal.compassRim = QColor(170, 170, 170);
+    terminal.compassNeedle = QColor(255, 85, 85);
+    terminal.infoBackground = QColor(24, 24, 24, 220);
+    terminal.infoTextColor = QColor(170, 170, 170);
     styles.append(terminal);
 
     return styles;

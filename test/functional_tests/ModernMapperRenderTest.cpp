@@ -759,6 +759,40 @@ private slots:
 
     // Two areas' symbols together overflow the terminal style's glyph atlas, so each switch starts it again;
     // every room must still be drawn from the cell holding its own character, in a texture drawn with it there
+    void test_terminalStatusLineListsTheWaysOutWithoutGL()
+    {
+        const int areaId = addArea();
+        QVERIFY(areaId > 0);
+        constexpr int kTowerId = 4;
+        QVERIFY(addRoomAt(kTowerId, areaId, 0, 0, 1));
+        map()->mpRoomDB->getRoom(kTowerId)->name = qsl("tower");
+        TRoom* pPlayerRoom = map()->mpRoomDB->getRoom(kPlayerRoomId);
+        pPlayerRoom->setExit(kEastRoomId, DIR_EAST);
+        pPlayerRoom->setExit(kTowerId, DIR_UP);
+        pPlayerRoom->setExit(kLowerRoomId, DIR_DOWN);
+        const auto restore = qScopeGuard([this]() {
+            mpHost->setMapStyle(qsl("tiles"));
+        });
+        QVERIFY(mpHost->setMapStyle(qsl("terminal")));
+
+        ModernGLWidget widget(map(), mpHost);
+        widget.setViewCenter(areaId, 0, 0, 0);
+        QString line;
+        QHash<QString, QColor> colors;
+        for (const ModernGLWidget::StatusLinePart& part : widget.statusLineParts()) {
+            line += part.text;
+            colors.insert(part.text.trimmed(), part.color);
+        }
+        QVERIFY2(line.startsWith(qsl("[Render Area]")), qPrintable(line));
+        QVERIFY2(line.contains(qsl("(0,0,0)")), qPrintable(line));
+        QVERIFY2(line.contains(qsl("exits: e ")), qPrintable(line));
+        // The stairs are named by where they lead, or by its ID where that has no name
+        QVERIFY2(line.contains(qsl("< tower")), qPrintable(line));
+        QVERIFY2(line.contains(qsl("> %1").arg(kLowerRoomId)), qPrintable(line));
+        QCOMPARE(colors.value(qsl("Render Area")), mpHost->mLightCyan_2);
+        QCOMPARE(colors.value(qsl("e")), mpHost->mLightWhite_2);
+    }
+
     void test_terminalGlyphsComeFromTheirOwnAtlasCellsWithoutGL()
     {
         constexpr int kRoomsPerArea = 150;
@@ -830,6 +864,10 @@ private slots:
                     const float* texture = batch.textureCoords.constData() + quad * 12;
                     const QPair<int, int> place{qRound((corner[0] + corner[6]) / 2.0f), qRound((corner[1] + corner[7]) / 2.0f)};
                     const int cell = (15 - static_cast<int>((texture[1] + texture[5]) / 2.0f * 16.0f)) * 16 + static_cast<int>((texture[0] + texture[2]) / 2.0f * 16.0f);
+                    // A symbol's underline is drawn from the atlas's solid block
+                    if (cell == 0) {
+                        continue;
+                    }
                     const QString symbol = expected.value(areaId).value(place);
                     if (symbol.isEmpty() || cell >= cells.size() || cells.at(cell) != symbol || widget.mGlyphAtlasIndex.value(symbol, -1) != cell) {
                         qWarning() << "the room at" << place << "shows" << cells.value(cell) << "for" << symbol;
@@ -898,12 +936,22 @@ private slots:
 
         qsizetype glyphs = 0;
         for (const auto& command : widget.mRenderCommandQueue.commands()) {
-            if (const auto* textured = dynamic_cast<const RenderTexturedTrianglesCommand*>(command.get()); textured && atlasTextures.contains(textured->geometry().textureId)) {
-                glyphs += textured->geometry().vertices.size() / 18;
+            const auto* textured = dynamic_cast<const RenderTexturedTrianglesCommand*>(command.get());
+            if (!textured || !atlasTextures.contains(textured->geometry().textureId)) {
+                continue;
+            }
+            const GeometryData& batch = textured->geometry();
+            for (qsizetype quad = 0; quad * 12 + 5 < batch.textureCoords.size(); ++quad) {
+                const float* texture = batch.textureCoords.constData() + quad * 12;
+                // Not a symbol's underline, drawn from the atlas's solid block in its first cell
+                if ((15 - static_cast<int>((texture[1] + texture[5]) / 2.0f * 16.0f)) * 16 + static_cast<int>((texture[0] + texture[2]) / 2.0f * 16.0f) != 0) {
+                    ++glyphs;
+                }
             }
         }
         QCOMPARE(glyphs, kRooms);
-        QVERIFY(widget.mGlyphAtlasIndex.contains(qsl("#")));
+        // These rooms have the default environment, red, which is guessed to be a building's
+        QVERIFY(widget.mGlyphAtlasIndex.contains(RoomAppearance::groundGlyph(EnvironmentKit::Kit::Building, false)));
     }
 
     // A terminal's room shows plain stairs in its character, but not an in or out exit or a door, which its markers show

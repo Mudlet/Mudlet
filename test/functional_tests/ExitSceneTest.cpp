@@ -695,6 +695,25 @@ private slots:
         QCOMPARE(RoomAppearance::terminalGlyph(*pRoom, look, false), qsl("@"));
     }
 
+    void test_terminalGlyphShowsTheGroundUnlessThereIsMoreToSay()
+    {
+        TRoom* pRoom = addRoomAt(1, mAreaId, 0, 0);
+        TRoom* pAbove = addRoomAt(2, mAreaId, 0, 0, 1);
+        QVERIFY(pRoom && pAbove);
+        RoomAppearance::Look look;
+        QCOMPARE(RoomAppearance::terminalGlyph(*pRoom, look, false, EnvironmentKit::Kit::Water), QString(QChar(0x2248)));
+        QCOMPARE(RoomAppearance::terminalGlyph(*pRoom, look, false, EnvironmentKit::Kit::Forest), QString(QChar(0x2663)));
+        QCOMPARE(RoomAppearance::terminalGlyph(*pRoom, look, false, EnvironmentKit::Kit::Building), QString(QChar(0x25A0)));
+        QCOMPARE(RoomAppearance::terminalGlyph(*pRoom, look, false, EnvironmentKit::Kit::Road), qsl("#"));
+        QCOMPARE(RoomAppearance::terminalGlyph(*pRoom, look, false, EnvironmentKit::Kit::Plain), qsl("\""));
+        QCOMPARE(RoomAppearance::terminalGlyph(*pRoom, look, true, EnvironmentKit::Kit::Plain), qsl("."));
+        QCOMPARE(RoomAppearance::terminalGlyph(*pRoom, look, true, EnvironmentKit::Kit::Water), QString(QChar(0x2248)));
+        pRoom->setExit(2, DIR_UP);
+        QCOMPARE(RoomAppearance::terminalGlyph(*pRoom, look, false, EnvironmentKit::Kit::Water), qsl("<"));
+        look.symbol = qsl("$");
+        QCOMPARE(RoomAppearance::terminalGlyph(*pRoom, look, false, EnvironmentKit::Kit::Water), qsl("$"));
+    }
+
     void test_areaExitPointsOutOfTheArea_data()
     {
         QTest::addColumn<bool>("large");

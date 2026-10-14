@@ -400,6 +400,13 @@ private:
     // A column of light over the player's room, seen faintly through anything in front of it
     void renderPlayerBeacon();
     void paintCompass(QPainter& painter);
+    // A run of the status line's text in one color
+    struct StatusLinePart
+    {
+        QString text;
+        QColor color;
+    };
+    QList<StatusLinePart> statusLineParts() const;
     void paintStatusLine(QPainter& painter);
     // The style's lettering at the size of the text drawn over the view
     QFont sheetFont() const;

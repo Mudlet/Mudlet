@@ -50,7 +50,24 @@ Look look(const TMap& map, const Host& host, const TRoom& room, const int player
     return result;
 }
 
-QString terminalGlyph(const TRoom& room, const Look& look, const bool gridMode)
+QString groundGlyph(const EnvironmentKit::Kit ground, const bool gridMode)
+{
+    switch (ground) {
+    case EnvironmentKit::Kit::Plain:
+        return gridMode ? qsl(".") : qsl("\"");
+    case EnvironmentKit::Kit::Water:
+        return QString(QChar(0x2248));
+    case EnvironmentKit::Kit::Road:
+        return qsl("#");
+    case EnvironmentKit::Kit::Forest:
+        return QString(QChar(0x2663));
+    case EnvironmentKit::Kit::Building:
+        return QString(QChar(0x25A0));
+    }
+    return qsl("#");
+}
+
+QString terminalGlyph(const TRoom& room, const Look& look, const bool gridMode, const std::optional<EnvironmentKit::Kit> ground)
 {
     if (look.playerRoom) {
         return qsl("@");
@@ -69,6 +86,9 @@ QString terminalGlyph(const TRoom& room, const Look& look, const bool gridMode)
     }
     if (down) {
         return qsl(">");
+    }
+    if (ground) {
+        return groundGlyph(*ground, gridMode);
     }
     return gridMode ? qsl(".") : qsl("#");
 }
