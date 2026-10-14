@@ -1216,41 +1216,71 @@ function installPackage(target)
   return oldInstallPackage(target)
 end
 
---- Installs package from url
--- @param url
+local packageDownloadsPending = {}
+
+--- Downloads a package into the profile folder, then installs it and removes the download.
+-- @param file the name the download is saved under in the profile folder
+-- @param url where to download the package from
+-- @return true once the download is queued (the install follows when it finishes),
+-- or nil and the reason when the download was not started
 function installPackageFromUrl(file, url)
   local destination = string.format("%s/%s", getMudletHomeDir(), file)
   mudlet.Locale = mudlet.Locale or loadTranslations("Mudlet")
+
+  local function warn(text)
+    decho('<0,150,190>' .. mudlet.Locale.prefixWarn.message)
+    -- echo, as decho would take a tag such as <b> in the reason as formatting
+    setFgColor(190, 150, 0)
+    echo(text .. '\n')
+    resetFormat()
+  end
+
+  -- a second download would overwrite the same file, and both installs would claim the first to finish
+  if packageDownloadsPending[destination] then
+    local refusal = string.format(mudlet.Locale.packageDownloadPending.message, file)
+    warn(refusal)
+    return nil, refusal
+  end
 
   -- queued first: a download that never starts would leave the handlers below armed for good,
   -- and its events only arrive once this script has returned
   local queued, refusal = downloadFile(destination, url)
   if not queued then
-    local warnPrefix = mudlet.Locale.prefixWarn.message
-    decho('<0,150,190>' .. warnPrefix .. '<190,150,0>' .. tostring(refusal) .. '\n')
-    return
+    refusal = tostring(refusal)
+    warn(string.format(mudlet.Locale.packageDownloadRefused.message, url, refusal))
+    return nil, refusal
   end
+  packageDownloadsPending[destination] = true
 
   local doneHandler, errorHandler
-
-  -- both are one-shot handlers, which a true return keeps armed through other downloads
-  doneHandler = registerAnonymousEventHandler("sysDownloadDone", function(_, saveTo)
-    if saveTo ~= destination then return true end
+  local function disarm()
+    killAnonymousEventHandler(doneHandler)
     killAnonymousEventHandler(errorHandler)
-    verbosePackageInstall(destination)
+    packageDownloadsPending[destination] = nil
+  end
+
+  doneHandler = registerAnonymousEventHandler("sysDownloadDone", function(_, saveTo)
+    if saveTo ~= destination then return end
+    -- before installing, so an install that raises cannot leave this waiting for the next download
+    disarm()
+    local ok, err = pcall(verbosePackageInstall, destination)
     os.remove(destination)
-  end, true)
+    if not ok then
+      error(err, 0)
+    end
+  end)
 
   errorHandler = registerAnonymousEventHandler("sysDownloadError", function(_, errorFound, saveTo)
-    if saveTo ~= destination then return true end
-    killAnonymousEventHandler(doneHandler)
+    if saveTo ~= destination then return end
+    disarm()
     local warnPrefix = mudlet.Locale.prefixWarn.message
     decho('<0,150,190>' .. warnPrefix .. '<190,150,0>' .. errorFound .. '\n')
-  end, true)
+  end)
 
   local infoMessage = mudlet.Locale.packageDownloading.message
   local infoPrefix = mudlet.Locale.prefixInfo.message
     decho('<0,150,190>' ..infoPrefix .. '<190,100,50>' .. string.format(infoMessage, url) .. '\n')
+  return true
 end
 
 --- Installs packages which are dropped on MainConsole or UserWindow
