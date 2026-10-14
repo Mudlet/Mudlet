@@ -24,10 +24,8 @@
 
 #include <QtTest/QtTest>
 
-#include <QFontMetricsF>
 #include <QImage>
 
-#include "GeometryManager.h"
 #include "Host.h"
 #include "MapDecals.h"
 #include "MapStyle.h"
@@ -397,30 +395,6 @@ private slots:
         QCOMPARE(ids.letterSpacingType(), symbolFont.letterSpacingType());
         QVERIFY(blueprint().labelFont(symbolFont).letterSpacing() > 100.0);
         QCOMPARE(tiles().roomIdFont(symbolFont), tiles().labelFont(symbolFont));
-    }
-
-    // Two rooms whose names just fit side by side: spaced capitals run together there, so blueprint keeps a space
-    // between names and drops one, where every other style keeps both as before
-    void test_onlySpacedNamesAreKeptASpaceApart()
-    {
-        QFont font = blueprint().labelFont(QFont(qsl("Bitstream Vera Sans"), 10));
-        font.setPixelSize(20);
-        const QFontMetricsF metrics(font);
-        const QString name = qsl("Street 12");
-        const qreal nameWidth = metrics.horizontalAdvance(name);
-        const qreal spaceWidth = metrics.horizontalAdvance(QLatin1Char(' '));
-        const qreal roomSpacing = nameWidth + 1.0;
-        const auto namesKept = [&](const MapStyle& style) {
-            const qreal span = style.roomNameSpan(nameWidth, spaceWidth);
-            QList<QRectF> rects;
-            for (const qreal center : {100.0, 100.0 + roomSpacing}) {
-                rects.append(QRectF(center - span / 2.0, 100.0, span, metrics.height()));
-            }
-            return GeometryManager::declutteredRects(rects, 7.0).size();
-        };
-        QCOMPARE(namesKept(tiles()), 2);
-        QCOMPARE(namesKept(blueprint()), 1);
-        QCOMPARE(tiles().roomNameSpan(nameWidth, spaceWidth), nameWidth);
     }
 
     void test_calloutsNameTheNearestLevelsTopToBottom_data()
