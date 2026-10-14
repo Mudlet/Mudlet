@@ -2162,4 +2162,17 @@ describe("Tests Geyser.Label nests and menus inside a Geyser.ScrollBox", functio
     parent:displayNest()
     assert.is_true(windowVisible(child.name))
   end)
+
+  -- every refusal is a warning in the Central Debug Console
+  it("does not ask getUserWindowSize about the scroll box", function()
+    local label = Geyser.Label:new({name = "glsbAskMenu", x = 10, y = 10, width = 100, height = 30}, scrollBox)
+    label:createRightClickMenu({MenuItems = {"First"}})
+    local parent = Geyser.Label:new({name = "glsbAskNest", x = 10, y = 50, width = 50, height = 20}, scrollBox)
+    parent:addChild({name = "glsbAskNestChild", width = 50, height = 20, layoutDir = "RV"}, scrollBox)
+    local sizeSpy = spy.on(_G, "getUserWindowSize")
+    finally(function() sizeSpy:revert() end)
+    label:onRightClick({button = "RightButton", buttons = {"RightButton"}, x = 1, y = 1, globalX = 1, globalY = 1})
+    parent:displayNest()
+    assert.spy(sizeSpy).was_not_called()
+  end)
 end)

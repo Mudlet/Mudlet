@@ -117,10 +117,9 @@ describe("Sub-console geometry", function()
       -- for the rest of the session, leaving a window docked next to it no height.
       assert.is_true(openUserWindow(deletedName, false, true, "left"), "the first user window did not open")
       pumpEvents(100)
-      local _, deletedHeight = getUserWindowSize(deletedName)
+      local deletedWidth, deletedHeight = getUserWindowSize(deletedName)
+      assert.is_number(deletedWidth, "the first user window has no dock of its own")
       assert.is_true(deletedHeight > 0, "the first user window came up with no height, so there is nothing to compare with")
-      -- a console with no dock of its own would have the main window's height
-      assert.are_not.equal(select(2, getMainWindowSize()), deletedHeight, "the first user window has no dock of its own")
       deleteMiniConsole(deletedName)
       -- the dock's deferred delete cannot run inside a pump, so it is still alive
       -- when the next window is docked
@@ -137,6 +136,7 @@ describe("Sub-console geometry", function()
     it("refuses a name no user window has", function()
       local unknown = uniqueName("sgNoSuchUserWindow")
       assert.are.same({nil, ("user window name '%s' not found"):format(unknown)}, {getUserWindowSize(unknown)})
+      assert.are.same({nil, "user window name '42' not found"}, {getUserWindowSize(42)})
       local miniConsole = uniqueName("sgMiniConsole")
       finally(function() deleteMiniConsole(miniConsole) end)
       assert.is_true(createMiniConsole(miniConsole, 0, 0, 100, 50))

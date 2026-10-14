@@ -824,19 +824,27 @@ function doNestScroll(label)
   bscroll.nestParent:displayNest()
 end
 
+-- the size a label's nest or right click menu is fitted into: its user window's,
+-- else the main window's. Inside a scroll box windowname is the scroll box's,
+-- which getUserWindowSize refuses with a warning in the Central Debug Console
+local function labelWindowSize(windowname)
+  local parentWindow = Geyser.parentWindows and Geyser.parentWindows[windowname]
+  if windowname ~= "main" and not (parentWindow and parentWindow.type == "scrollBox") then
+    local width, height = getUserWindowSize(windowname)
+    if width then
+      return width, height
+    end
+  end
+  return getMainWindowSize()
+end
+
 --- Displays the nested elements within label, and orients them
 -- appropriately
 -- @param label The name of the label to use
 function Geyser.Label:displayNest()
   local maxDim = {}
   local flyMap = { R = { 1, 0 }, L = { -1, 0 }, T = { 0, -1 }, B = { 0, 1 } }
-  if self.windowname ~= "main" then
-    maxDim["H"], maxDim["V"] = getUserWindowSize(self.windowname)
-  end
-  -- inside a scroll box windowname is the scroll box's, which is no user window
-  if not maxDim["H"] then
-    maxDim["H"], maxDim["V"] = getMainWindowSize()
-  end
+  maxDim["H"], maxDim["V"] = labelWindowSize(self.windowname)
   local parent = self
   --build a list of the labels we can use until we hit the max
   local nestedLabels = {}
@@ -1425,8 +1433,7 @@ end
 function Geyser.Label:onRightClick(event)
   closeAllLevels(self.rightClickMenu)
   if event.button == "RightButton" then
-    -- inside a scroll box windowname is the scroll box's, which is no user window
-    local winw = getUserWindowSize(self.windowname) or getMainWindowSize()
+    local winw = labelWindowSize(self.windowname)
     local mousepos = self:get_x() + event.x
     local maxdiff = tonumber(self.rightClickMenu.MenuWidth)
     local diff = winw - mousepos

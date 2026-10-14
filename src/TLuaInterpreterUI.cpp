@@ -1958,8 +1958,8 @@ int TLuaInterpreter::getUserWindowSize(lua_State* L)
     if (!host.mpConsole) {
         return warnArgumentValue(L, __func__, no_main_window_value);
     }
-    // an omitted name means the main window, as for every window function, and
-    // "main" is matched as the creators match it, ignoring case
+    // an omitted name means the main window, as does "main" in any case (as
+    // createMiniConsole() takes it) unless a user window has that very name
     if (!windowName.isEmpty() && windowName.compare(qsl("main"), Qt::CaseInsensitive) && !host.windowRegistry().hasDockWidget(windowName)) {
         return warnArgumentValue(L, __func__, qsl("user window name '%1' not found").arg(windowName));
     }

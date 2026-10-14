@@ -649,7 +649,8 @@ describe("Tests functionality of Geyser.UserWindow", function()
     it("takes its dock widget with it, so nothing stale answers for the name", function()
       local mainWidth = getMainWindowSize()
       local userWindow = track(Geyser.UserWindow:new({name = "guwReopen", x = 10, y = 20, width = 200, height = 150}))
-      assert.is_true(getUserWindowSize("guwReopen") < mainWidth, "a user window that reports the main window's size has no dock of its own")
+      assert.is_number(getUserWindowSize("guwReopen"), "the user window has no dock of its own")
+      assert.is_true(getUserWindowSize("guwReopen") < mainWidth)
 
       userWindow:delete()
       assert.is_nil(windowType("guwReopen"))
@@ -660,13 +661,13 @@ describe("Tests functionality of Geyser.UserWindow", function()
 
       track(Geyser.UserWindow:new({name = "guwReopen", x = 10, y = 20, width = 200, height = 150}))
       assert.are.equal("userwindow", windowType("guwReopen"))
-      assert.is_true(getUserWindowSize("guwReopen") < mainWidth, "the reopened window has no dock of its own")
+      assert.is_number(getUserWindowSize("guwReopen"), "the reopened window has no dock of its own")
+      assert.is_true(getUserWindowSize("guwReopen") < mainWidth)
     end)
   end)
 
   -- Geyser.Container:new makes the "<name>Container" root container for a user
-  -- window. An orphaned one is not inert: its get_width/get_height ask
-  -- getUserWindowSize for a window that is gone in every layout pass.
+  -- window, which measures the window by its name.
   describe("Geyser.UserWindow root container cleanup", function()
     it("removes the root container it created", function()
       local trackedWindows = #Geyser.windows
@@ -701,6 +702,33 @@ describe("Tests functionality of Geyser.UserWindow", function()
       assert.has_no.errors(function() root:reposition() end)
       root:delete()
       assert.is_nil(Geyser.windowList.guwRootSharedContainer)
+    end)
+
+    -- getUserWindowSize refuses the name of the window that is gone, and every
+    -- refusal is a warning in the Central Debug Console
+    it("does not ask about the deleted user window in a layout pass", function()
+      local userWindow = track(Geyser.UserWindow:new({name = "guwRootAsks", x = 10, y = 20, width = 200, height = 150}))
+      local root = userWindow.container
+      track(Geyser.Label:new({name = "guwRootAsksLodger", x = 0, y = 0, width = 20, height = 20}, root))
+      track(root)
+      userWindow:delete()
+      local sizeSpy = spy.on(_G, "getUserWindowSize")
+      finally(function() sizeSpy:revert() end)
+      root:reposition()
+      assert.are.equal(0, root:get_width())
+      assert.are.equal(0, root:get_height())
+      assert.spy(sizeSpy).was_not_called()
+    end)
+
+    it("leaves an Adjustable.Container in it as it was when asked for percentages", function()
+      local userWindow = track(Geyser.UserWindow:new({name = "guwRootAdj", x = 10, y = 20, width = 200, height = 150}))
+      local root = userWindow.container
+      local adjustable = track(Adjustable.Container:new({name = "guwRootAdjustable", x = 0, y = 0, width = 100, height = 100, autoLoad = false, autoSave = false}, root))
+      track(root)
+      userWindow:delete()
+      local x, y, width, height = adjustable.x, adjustable.y, adjustable.width, adjustable.height
+      assert.has_no.errors(function() adjustable:setPercent(true, true) end)
+      assert.are.same({x, y, width, height}, {adjustable.x, adjustable.y, adjustable.width, adjustable.height})
     end)
 
     -- a user window moved out of the root container Geyser made for it still

@@ -1327,6 +1327,10 @@ function Adjustable.Container:setPercent (size_as_percent, position_as_percent)
         x,y = x-self.container.get_x(),y-self.container.get_y()
         winw, winh = self.container.get_width(), self.container.get_height()
     end
+    -- such as the root container of a deleted user window: nothing to be a share of
+    if winw == 0 or winh == 0 then
+        return
+    end
     x, y, w, h = make_percent(x/winw), make_percent(y/winh), make_percent(w/winw), make_percent(h/winh)
     if size_as_percent then self:resize(w,h) end
     if position_as_percent then self:move(x,y) end
