@@ -17,13 +17,8 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-/*
- * Deleting a map label has to mark the map unsaved and tell the 2D map to
- * repaint for every real label, including an image label at 0,0,0, which has
- * no text and black colours - the same fields a default-constructed label has.
- * Neither is visible from Lua, so this is a functional test rather than a spec,
- * and so is the LuaWarning line a menu event refusal writes to the debug console.
- */
+// isUnsaved(), signal_mapLabelsChanged and the debug console's LuaWarning lines
+// cannot be seen from Lua, so these checks are a functional test, not a spec
 
 #include <QImage>
 #include <QSignalSpy>
