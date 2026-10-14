@@ -6989,6 +6989,23 @@ describe("Main window size and saved layout", function()
       assert.is_true(saveWindowLayout())
     end)
 
+    it("saveWindowLayout returns false when the layout file cannot be opened, and saves again once it can", function()
+      local layoutFile = layoutFiles[1]
+      os.remove(layoutFile)
+      -- a directory in its place makes the open fail even for root, which a
+      -- read-only directory does not
+      assert.is_true(lfs.mkdir(layoutFile))
+      finally(function()
+        lfs.rmdir(layoutFile)
+      end)
+      assert.is_false(saveWindowLayout())
+      assert.equals("directory", lfs.attributes(layoutFile, "mode"))
+
+      assert.is_true(lfs.rmdir(layoutFile))
+      assert.is_true(saveWindowLayout())
+      assert.equals("file", lfs.attributes(layoutFile, "mode"))
+    end)
+
     it("loadWindowLayout reads back a layout that was saved", function()
       assert.is_true(saveWindowLayout())
       assert.is_true(loadWindowLayout())
