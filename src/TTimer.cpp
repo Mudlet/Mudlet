@@ -314,7 +314,7 @@ void TTimer::enableTimer(int id)
 {
     if (mID == id) {
         if (canBeUnlocked()) {
-            if (activate() || keepArmedWithBrokenScript()) {
+            if (activate()) {
                 // Not just script timers: Lua-function tempTimers and command-only timers must also
                 // restart after the emergency stop (#10751)
                 if (hasPayload()) {
@@ -337,9 +337,8 @@ void TTimer::enableTimer(int id)
     }
 }
 
-// For a timer that is switched on but whose script did not compile: it stays armed, as it
-// would be had nothing switched it off (the emergency stop does), so that fixing the script
-// brings it back
+// Only for the resume, on a timer the emergency stop disarmed: Tree refuses to activate one
+// whose script does not compile, and leaving it disarmed would outlast fixing the script
 bool TTimer::keepArmedWithBrokenScript()
 {
     if (!mOK_init || mOK_code) {
@@ -350,7 +349,11 @@ bool TTimer::keepArmedWithBrokenScript()
     Tree<TTimer>::activate();
     mOK_code = false;
     if (TDebug::wants(TDebug::Category::Error)) {
-        TDebug(Qt::white, Qt::red, TDebug::Category::Error, mName) << "ERROR: timer" << mName << "cannot run until its script compiles:" << TLuaInterpreter::compileErrorAsPlainText(getError()) << "\n"
+        //: Central Debug Console line on resuming from the emergency stop; %1 is the timer's name, %2 the Lua compile error
+        TDebug(Qt::white,
+               Qt::red,
+               TDebug::Category::Error,
+               mName) << QObject::tr("ERROR: timer \"%1\" cannot run until its script compiles: %2\n").arg(mName, TLuaInterpreter::compileErrorAsPlainText(getError()))
                 >> mpHost;
     }
     return true;
@@ -376,7 +379,7 @@ void TTimer::disableTimer(int id)
 void TTimer::enableTimer()
 {
     if (canBeUnlocked()) {
-        if (activate() || keepArmedWithBrokenScript()) {
+        if (activate()) {
             // An offset timer is armed by its parent firing, via enableTimer(int); starting a
             // command-only one here would give it a schedule of its own, so it keeps the script-only test
             const bool startable = isOffsetTimer() ? (!mScript.isEmpty() || mRegisteredAnonymousLuaFunction) : hasPayload();

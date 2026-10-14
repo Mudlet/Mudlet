@@ -27,9 +27,9 @@
  * - a tempTimer() created from a Lua function has no script string, since its
  *   callback lives in the Lua registry, and the resume used to leave the QTimer
  *   of one stopped for the rest of the session (#10751)
- * - a timer whose script does not compile is still armed, and the resume used
- *   to switch it off for good, so fixing the script no longer brought it back
- *   (#10794)
+ * - a timer whose script does not compile is left armed, so that fixing the
+ *   script brings it back; the resume re-arms one the stop disarmed, and
+ *   nothing that was already stopped (#10794)
  * - the resume must not restart a timer that is only waiting to be freed,
  *   whether it was killed or is a spent one-shot (#9887). A killed timer keeps
  *   shouldBeActive() true, so nothing in the activation path alone stops the
@@ -50,6 +50,7 @@
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
 #include "MudletApp.h"
+#include "TDebug.h"
 #include "TLuaInterpreter.h"
 #include "TTimer.h"
 #include "TelnetServerStub.h"
@@ -61,6 +62,40 @@
 #include "GroupedTest.h"
 
 using namespace std::chrono_literals;
+
+namespace {
+// Switches the Central Debug Console's output on for one case and keeps its lines
+class DebugLineRecorder : public TDebug::Sink
+{
+public:
+    DebugLineRecorder()
+    : mpPreviousSink(TDebug::sink())
+    , mPreviousCategories(TDebug::enabledCategories())
+    , mPreviousDebugMode(TDebug::smDebugMode)
+    {
+        TDebug::setSink(this);
+        TDebug::setEnabledCategories(TDebug::csmAllCategories);
+        TDebug::smDebugMode = true;
+    }
+
+    ~DebugLineRecorder()
+    {
+        TDebug::smDebugMode = mPreviousDebugMode;
+        TDebug::setEnabledCategories(mPreviousCategories);
+        TDebug::setSink(mpPreviousSink);
+    }
+
+    void printDebugLine(const QString& text, const QColor&, const QColor&, const QString&) override { mLines << text; }
+
+    QStringList linesContaining(const QString& text) const { return mLines.filter(text); }
+
+private:
+    QStringList mLines;
+    TDebug::Sink* mpPreviousSink;
+    TDebug::Categories mPreviousCategories;
+    bool mPreviousDebugMode;
+};
+} // namespace
 
 class EmergencyStopResumeTest : public QObject
 {
@@ -85,6 +120,10 @@ private:
     // well inside it
     static constexpr double scmOffsetParentSeconds = 1.0;
     static constexpr double scmOffsetChildSeconds = 0.2;
+
+    // Short enough for a case to watch a repaired script run, and long enough
+    // that the case's own steps between two ticks never take it
+    static constexpr double scmBrokenScriptSeconds = 1.0;
 
     // The one timer here with a real interval, cleared once it has been killed.
     // A case that fails part way through would otherwise leave it ticking
@@ -499,19 +538,19 @@ private slots:
         QVERIFY2(!unit->getTimer(id)->isActive(), "a timer the user disabled must stay off across a stop and resume");
     }
 
-    // #10794: a timer whose script stops compiling stays armed, so fixing the
-    // script brings it back, and the resume has to leave it so rather than
-    // switch it off for the rest of the session
+    // A script that stops compiling leaves its timer armed, so the resume puts
+    // the QTimer back, says why it cannot run yet, and the repaired script runs
     void test_timerWithBrokenScriptRecoversAfterResume()
     {
         auto* unit = mpHost->getTimerUnit();
         const QString name = qsl("emergency stop broken script timer");
-        auto [id, message] = mpHost->mLuaInterpreter.startPermTimer(name, QString(), scmTimerSeconds, qsl("brokenScriptTicks = 1"));
+        auto [id, message] = mpHost->mLuaInterpreter.startPermTimer(name, QString(), scmBrokenScriptSeconds, qsl("brokenScriptTicks = 1"));
         QVERIFY2(id > 0, qPrintable(message));
         mRunningTimerNames << name;
         QVERIFY(unit->enableTimer(name));
         auto* pTimer = unit->getTimer(id);
         QVERIFY(pTimer);
+        QVERIFY(mpHost->mLuaInterpreter.compileAndExecuteScript(qsl("brokenScriptTicks = 0")));
 
         QVERIFY2(!pTimer->setScript(qsl("this is not lua ((")), "the broken script should not have compiled");
         QVERIFY2(unit->remainingTime(id) > 0, "a script that stops compiling leaves its timer armed");
@@ -519,12 +558,80 @@ private slots:
         mpHost->stopAllTriggers();
         QCOMPARE(unit->remainingTime(id), -1);
 
-        mpHost->reenableAllTriggers();
+        {
+            DebugLineRecorder debug;
+            mpHost->reenableAllTriggers();
+            const QStringList reports = debug.linesContaining(qsl("cannot run until its script compiles"));
+            QCOMPARE(reports.size(), 1);
+            QVERIFY2(reports.first().contains(name) && reports.first().contains(qsl("'=' expected")), qPrintable(reports.first()));
+        }
         QVERIFY2(unit->remainingTime(id) > 0, "the resume must put back the armed timer the emergency stop found");
 
         QVERIFY(pTimer->setScript(qsl("brokenScriptTicks = 2")));
         QVERIFY2(pTimer->isActive(), "fixing the script should have brought the timer back");
-        QVERIFY(unit->remainingTime(id) > 0);
+        QTRY_COMPARE_WITH_TIMEOUT(readGlobalInt(qsl("brokenScriptTicks")), 2, 5s);
+    }
+
+    // What the stop found already stopped is left so: here a broken timer saved
+    // through the editor (whose save stops it) and one whose time was cleared
+    // during the stop. Re-arming either would also report it as resumed.
+    void test_resumeRearmsOnlyBrokenTimersTheStopDisarmed()
+    {
+        auto* unit = mpHost->getTimerUnit();
+        const QString savedName = qsl("emergency stop broken timer saved in the editor");
+        auto [savedId, savedMessage] = mpHost->mLuaInterpreter.startPermTimer(savedName, QString(), scmTimerSeconds, qsl("x = 1"));
+        QVERIFY2(savedId > 0, qPrintable(savedMessage));
+        const QString clearedName = qsl("emergency stop broken timer with its time cleared");
+        auto [clearedId, clearedMessage] = mpHost->mLuaInterpreter.startPermTimer(clearedName, QString(), scmTimerSeconds, qsl("x = 1"));
+        QVERIFY2(clearedId > 0, qPrintable(clearedMessage));
+        mRunningTimerNames << savedName << clearedName;
+        QVERIFY(unit->enableTimer(savedName));
+        QVERIFY(unit->enableTimer(clearedName));
+        auto* pSaved = unit->getTimer(savedId);
+        auto* pCleared = unit->getTimer(clearedId);
+
+        // dlgTriggerEditor::saveTimer()'s order
+        pSaved->setTime(pSaved->getTime());
+        QVERIFY(!pSaved->setScript(qsl("this is not lua ((")));
+        pSaved->validateTime();
+        QVERIFY(!pSaved->setIsActive(true));
+        QCOMPARE(unit->remainingTime(savedId), -1);
+
+        QVERIFY(!pCleared->setScript(qsl("this is not lua ((")));
+        QVERIFY(unit->remainingTime(clearedId) > 0);
+
+        DebugLineRecorder debug;
+        mpHost->stopAllTriggers();
+        pCleared->setTime(QTime(0, 0));
+        mpHost->reenableAllTriggers();
+        QCOMPARE(unit->remainingTime(savedId), -1);
+        QCOMPARE(unit->remainingTime(clearedId), -1);
+        QVERIFY2(debug.linesContaining(qsl("cannot run until its script compiles")).isEmpty(), qPrintable(debug.linesContaining(qsl("cannot run")).join(QChar::LineFeed)));
+    }
+
+    // An offset timer is enabled every time its parent fires, which is not a
+    // resume: a broken one stays stopped and unreported however long it runs
+    void test_brokenOffsetTimerIsLeftAloneByItsParent()
+    {
+        auto* unit = mpHost->getTimerUnit();
+        const QString parentName = qsl("emergency stop parent of a broken offset timer");
+        const QString childName = qsl("emergency stop broken offset timer");
+        auto [parentId, parentMessage] = mpHost->mLuaInterpreter.startPermTimer(parentName, QString(), 0.05, qsl("brokenOffsetParentTicks = (brokenOffsetParentTicks or 0) + 1"));
+        QVERIFY2(parentId > 0, qPrintable(parentMessage));
+        auto [childId, childMessage] = mpHost->mLuaInterpreter.startPermTimer(childName, parentName, 0.01, qsl("x = 1"));
+        QVERIFY2(childId > 0, qPrintable(childMessage));
+        mRunningTimerNames << childName << parentName;
+        auto* pChild = unit->getTimer(childId);
+        QVERIFY(pChild->isOffsetTimer());
+        QVERIFY(!pChild->setScript(qsl("this is not lua ((")));
+        QVERIFY(unit->enableTimer(childName));
+        QVERIFY(mpHost->mLuaInterpreter.compileAndExecuteScript(qsl("brokenOffsetParentTicks = 0")));
+
+        DebugLineRecorder debug;
+        QVERIFY(unit->enableTimer(parentName));
+        QTRY_VERIFY_WITH_TIMEOUT(readGlobalInt(qsl("brokenOffsetParentTicks")) >= 3, 5s);
+        QVERIFY2(debug.linesContaining(qsl("cannot run until its script compiles")).isEmpty(), qPrintable(debug.linesContaining(qsl("cannot run")).join(QChar::LineFeed)));
+        QCOMPARE(unit->remainingTime(childId), -1);
     }
 
 private:
