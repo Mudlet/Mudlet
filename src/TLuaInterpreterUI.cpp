@@ -3102,18 +3102,22 @@ int TLuaInterpreter::setBorderSizes(lua_State* L)
 {
     static const std::array<std::array<const char*, 4>, 4> argumentNames{
             {{"new size"}, {"new height", "new width"}, {"new top size", "new width", "new bottom size"}, {"new top size", "new right size", "new bottom size", "new left size"}}};
-    const int numberOfArguments = std::min(lua_gettop(L), 4);
+    const int numberOfArguments = qMin(lua_gettop(L), 4);
     if (!numberOfArguments) {
         lua_pushboolean(L, true);
         return 1;
     }
+    // All types first: a bad type must raise even when an earlier size is out of range
+    std::array<double, 4> requested{};
+    for (int i = 0; i < numberOfArguments; ++i) {
+        requested[i] = getVerifiedDouble(L, __func__, i + 1, argumentNames[numberOfArguments - 1][i]);
+    }
     std::array<int, 4> sizes{};
     for (int i = 0; i < numberOfArguments; ++i) {
-        const double size = getVerifiedDouble(L, __func__, i + 1, argumentNames[numberOfArguments - 1][i]);
-        if (!validBorderSize(size)) {
-            return warnArgumentValue(L, __func__, badBorderSizeMessage(size, i + 1));
+        if (!validBorderSize(requested[i])) {
+            return warnArgumentValue(L, __func__, badBorderSizeMessage(requested[i], i + 1));
         }
-        sizes[i] = static_cast<int>(size);
+        sizes[i] = static_cast<int>(requested[i]);
     }
     QMargins borders;
     switch (numberOfArguments) {

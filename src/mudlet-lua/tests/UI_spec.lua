@@ -4826,6 +4826,17 @@ describe("Window and label state", function()
       assert.is_truthy(err:find("setBorderTop: bad argument #1 type", 1, true))
     end)
 
+    it("setBorderSizes hard-errors on a non-number even after an out of range argument", function()
+      setBorderSizes(6, 6, 6, 6)
+      local ok, err = pcall(setBorderSizes, 2000000, "abc")
+      assert.is_false(ok)
+      assert.is_truthy(tostring(err):find("setBorderSizes: bad argument #2 type", 1, true))
+      ok, err = pcall(setBorderSizes, 1, 2000000, {}, 3)
+      assert.is_false(ok)
+      assert.is_truthy(tostring(err):find("setBorderSizes: bad argument #3 type", 1, true))
+      assert.are.same({top = 6, right = 6, bottom = 6, left = 6}, getBorderSizes())
+    end)
+
     it("every border setter refuses a size beyond the Profile Preferences range and leaves the borders alone", function()
       -- the console takes opposite borders off its own size, so an unbounded one overflows int there
       setBorderSizes(6, 6, 6, 6)
