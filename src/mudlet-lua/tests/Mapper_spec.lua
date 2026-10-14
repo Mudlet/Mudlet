@@ -1966,11 +1966,6 @@ describe("Tests mapper functions against a shared fixture", function()
       local missing = getMudletHomeDir() .. "/nonexistent.png"
       local garbage = getMudletHomeDir() .. "/mapper_spec_garbage.png"
       local empty = getMudletHomeDir() .. "/mapper_spec_empty.png"
-      os.remove(missing)
-      local file = assert(io.open(garbage, "w"))
-      file:write("not an image")
-      file:close()
-      assert(io.open(empty, "w")):close()
       local labelsBefore = getMapLabels(areaAlpha)
       finally(function()
         for id in pairs(getMapLabels(areaAlpha)) do
@@ -1981,6 +1976,11 @@ describe("Tests mapper functions against a shared fixture", function()
         os.remove(garbage)
         os.remove(empty)
       end)
+      os.remove(missing)
+      local file = assert(io.open(garbage, "w"))
+      file:write("not an image")
+      file:close()
+      assert(io.open(empty, "w")):close()
       for _, path in ipairs({missing, garbage, empty}) do
         local id, err = createMapImageLabel(areaAlpha, path, 0, 0, 0, 10, 10, 30.0, true)
         assert.is_nil(id, path)
@@ -3328,10 +3328,16 @@ describe("Tests mapper functions against a shared fixture", function()
       return written, removeAll
     end
 
-    -- Joined without separators because a long path wraps across console lines
-    local function mainConsoleCount(text, fromLine)
-      local last = getLastLineNumber("main")
-      local recent = table.concat(getLines("main", fromLine or math.max(0, last - 20), last + 1), "")
+    -- Joined without separators because a long path wraps across console lines.
+    -- Counted after a marker line, not from a line number: a full buffer drops
+    -- lines from its top, which renumbers the rest.
+    local function mainConsoleCountAfter(marker, text)
+      local lines = table.concat(getLines("main", 0, getLastLineNumber("main") + 1), "")
+      local markerAt = lines:find(marker, 1, true)
+      if not markerAt then
+        return 0
+      end
+      local recent = lines:sub(markerAt + #marker)
       local count, from = 0, 1
       while true do
         local at = recent:find(text, from, true)
@@ -3409,18 +3415,19 @@ describe("Tests mapper functions against a shared fixture", function()
       finally(removeAll)
       local badPath = exportPath("mapper_spec_no_such_dir/unsaved.png")
       assert.is_false(io.exists(exportPath("mapper_spec_no_such_dir")), "the spec needs a directory nothing has made")
-      -- From here on, not the last few lines: the generic mapper prints its help
-      -- on a timer after the map opens, which can push the report out of them
-      local firstLine = getLastLineNumber("main")
+      -- Not the last few lines: the generic mapper prints its help on a timer
+      -- after the map opens, which can push the report out of them
+      local marker = "mapper spec failed-save marker " .. tostring({})
+      echo("main", marker .. "\n")
       assert.is_true(exportAreaImage(areaAlpha, badPath))
       assert.is_true(exportAreaImage(areaAlpha, exportPath("mapper_spec_export_ok.png")))
       assert.is_true(waitUntil(written, 5000))
-      assert.is_true(waitUntil(function() return mainConsoleCount("Failed to save image to ", firstLine) > 0 end, 5000))
+      assert.is_true(waitUntil(function() return mainConsoleCountAfter(marker, "Failed to save image to ") > 0 end, 5000))
       -- Best effort: gives the good export time to report as well, before
       -- checking that only the bad one did
       pumpEvents(500)
-      assert.are.equal(1, mainConsoleCount("Failed to save image to ", firstLine))
-      assert.are.equal(1, mainConsoleCount("Failed to save image to " .. badPath, firstLine))
+      assert.are.equal(1, mainConsoleCountAfter(marker, "Failed to save image to "))
+      assert.are.equal(1, mainConsoleCountAfter(marker, "Failed to save image to " .. badPath))
     end)
 
     -- The first two exports are the control: with nothing changed they must match,
@@ -4831,7 +4838,7 @@ describe("Tests saveJsonMap and loadJsonMap", function()
       blank:close()
       finally(function() os.remove(blankPath) end)
       local blankId = assert(createMapImageLabel(area, blankPath, 0, 0, 3, 4, 5, 10.0, true))
-      local labelId = createMapImageLabel(area, imagePath, 1, 2, 3, 4, 5, 10.0, true)
+      local labelId = assert(createMapImageLabel(area, imagePath, 1, 2, 3, 4, 5, 10.0, true))
       assert.is_true(labelId >= 0)
       local before = getMapLabel(area, labelId)
       assert.are_not.equal(getMapLabel(area, blankId).Pixmap, before.Pixmap)
