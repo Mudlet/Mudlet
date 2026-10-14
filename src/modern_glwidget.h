@@ -421,6 +421,8 @@ private:
     void queuePaper();
     // The 2D map's grid, at the viewed level's room bottoms, writing no depth
     void queueGrid();
+    // MapStyle::washReach's washes under the viewed level's rooms, writing no depth, under the exits and labels
+    void queueWashes();
     // Map labels lie flat at their place on the map; those shown on top over the rooms, the others under the exits
     // What a frame draws, in order, into the render command queue
     void queueScene();
@@ -431,6 +433,9 @@ private:
     // A style with a pulse's marker: an outlined diamond of light hovering over the player's room, on a stem from its top
     void renderPlayerDiamond(const QVector3D& roomTop, float roomSize);
     void paintCompass(QPainter& painter);
+    void paintScaleBar(QPainter& painter);
+    void paintVignette(QPainter& painter);
+    void paintPlayerNote(QPainter& painter);
     // A run of the status line's text in one color
     struct StatusLinePart
     {

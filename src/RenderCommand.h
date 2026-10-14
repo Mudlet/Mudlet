@@ -38,21 +38,22 @@ class RenderCommand
 {
 public:
     // Unlit draws its colors as given, as the 2D map does; lit shades them by the light; wireframe draws an
-    // instanced shape's edges unlit, as glowing lines. Only instanced shapes support it and the unlit ink ones, and
-    // only plain triangles, given in clip space, support Paper
-    enum class Shading { Lit, Unlit, Wireframe, InkBlot, InkStroke, Seal, Paper };
+    // instanced shape's edges unlit, as glowing lines, and only instanced shapes support it and the unlit ink ones,
+    // and only plain triangles, given in clip space, support Paper. An ink lozenge is the viewed level's room, a
+    // hatched one a room above it and a dashed one a room below
+    enum class Shading { Lit, Unlit, Wireframe, InkBlot, InkStroke, Seal, Paper, InkLozenge, InkHatched, InkDashed };
 
     virtual ~RenderCommand() = default;
     virtual void execute(QOpenGLFunctions* gl,
-                        QOpenGLShaderProgram* shader,
-                        GeometryManager* geometryManager,
-                        ResourceManager* resourceManager,
-                        QOpenGLVertexArrayObject& vao,
-                        QOpenGLBuffer& vertexBuffer,
-                        QOpenGLBuffer& colorBuffer,
-                        QOpenGLBuffer& normalBuffer,
-                        QOpenGLBuffer& indexBuffer,
-                        QOpenGLBuffer& texCoordBuffer) = 0;
+                         QOpenGLShaderProgram* shader,
+                         GeometryManager* geometryManager,
+                         ResourceManager* resourceManager,
+                         QOpenGLVertexArrayObject& vao,
+                         QOpenGLBuffer& vertexBuffer,
+                         QOpenGLBuffer& colorBuffer,
+                         QOpenGLBuffer& normalBuffer,
+                         QOpenGLBuffer& indexBuffer,
+                         QOpenGLBuffer& texCoordBuffer) = 0;
 
     virtual const char* getCommandName() const = 0;
 };
@@ -61,19 +62,18 @@ public:
 class RenderCubeCommand : public RenderCommand
 {
 public:
-    RenderCubeCommand(float x, float y, float z, float size, float r, float g, float b, float a,
-                     const QMatrix4x4& projectionMatrix, const QMatrix4x4& viewMatrix, const QMatrix4x4& modelMatrix);
+    RenderCubeCommand(float x, float y, float z, float size, float r, float g, float b, float a, const QMatrix4x4& projectionMatrix, const QMatrix4x4& viewMatrix, const QMatrix4x4& modelMatrix);
 
     void execute(QOpenGLFunctions* gl,
-                QOpenGLShaderProgram* shader,
-                GeometryManager* geometryManager,
-                ResourceManager* resourceManager,
-                QOpenGLVertexArrayObject& vao,
-                QOpenGLBuffer& vertexBuffer,
-                QOpenGLBuffer& colorBuffer,
-                QOpenGLBuffer& normalBuffer,
-                QOpenGLBuffer& indexBuffer,
-                QOpenGLBuffer& texCoordBuffer) override;
+                 QOpenGLShaderProgram* shader,
+                 GeometryManager* geometryManager,
+                 ResourceManager* resourceManager,
+                 QOpenGLVertexArrayObject& vao,
+                 QOpenGLBuffer& vertexBuffer,
+                 QOpenGLBuffer& colorBuffer,
+                 QOpenGLBuffer& normalBuffer,
+                 QOpenGLBuffer& indexBuffer,
+                 QOpenGLBuffer& texCoordBuffer) override;
 
     const char* getCommandName() const override { return "RenderCube"; }
 
@@ -89,19 +89,18 @@ private:
 class RenderLinesCommand : public RenderCommand
 {
 public:
-    RenderLinesCommand(const QVector<float>& vertices, const QVector<float>& colors,
-                      const QMatrix4x4& projectionMatrix, const QMatrix4x4& viewMatrix, const QMatrix4x4& modelMatrix);
+    RenderLinesCommand(const QVector<float>& vertices, const QVector<float>& colors, const QMatrix4x4& projectionMatrix, const QMatrix4x4& viewMatrix, const QMatrix4x4& modelMatrix);
 
     void execute(QOpenGLFunctions* gl,
-                QOpenGLShaderProgram* shader,
-                GeometryManager* geometryManager,
-                ResourceManager* resourceManager,
-                QOpenGLVertexArrayObject& vao,
-                QOpenGLBuffer& vertexBuffer,
-                QOpenGLBuffer& colorBuffer,
-                QOpenGLBuffer& normalBuffer,
-                QOpenGLBuffer& indexBuffer,
-                QOpenGLBuffer& texCoordBuffer) override;
+                 QOpenGLShaderProgram* shader,
+                 GeometryManager* geometryManager,
+                 ResourceManager* resourceManager,
+                 QOpenGLVertexArrayObject& vao,
+                 QOpenGLBuffer& vertexBuffer,
+                 QOpenGLBuffer& colorBuffer,
+                 QOpenGLBuffer& normalBuffer,
+                 QOpenGLBuffer& indexBuffer,
+                 QOpenGLBuffer& texCoordBuffer) override;
 
     const char* getCommandName() const override { return "RenderLines"; }
 
@@ -125,15 +124,15 @@ public:
                            Shading shading = Shading::Lit);
 
     void execute(QOpenGLFunctions* gl,
-                QOpenGLShaderProgram* shader,
-                GeometryManager* geometryManager,
-                ResourceManager* resourceManager,
-                QOpenGLVertexArrayObject& vao,
-                QOpenGLBuffer& vertexBuffer,
-                QOpenGLBuffer& colorBuffer,
-                QOpenGLBuffer& normalBuffer,
-                QOpenGLBuffer& indexBuffer,
-                QOpenGLBuffer& texCoordBuffer) override;
+                 QOpenGLShaderProgram* shader,
+                 GeometryManager* geometryManager,
+                 ResourceManager* resourceManager,
+                 QOpenGLVertexArrayObject& vao,
+                 QOpenGLBuffer& vertexBuffer,
+                 QOpenGLBuffer& colorBuffer,
+                 QOpenGLBuffer& normalBuffer,
+                 QOpenGLBuffer& indexBuffer,
+                 QOpenGLBuffer& texCoordBuffer) override;
 
     const char* getCommandName() const override { return "RenderTriangles"; }
     const QVector<float>& vertices() const { return mVertices; }
@@ -153,21 +152,19 @@ private:
 class RenderTexturedTrianglesCommand : public RenderCommand
 {
 public:
-    RenderTexturedTrianglesCommand(const GeometryData& geometry,
-                                  const QMatrix4x4& projectionMatrix, const QMatrix4x4& viewMatrix, const QMatrix4x4& modelMatrix,
-                                  Shading shading = Shading::Lit);
-    
+    RenderTexturedTrianglesCommand(const GeometryData& geometry, const QMatrix4x4& projectionMatrix, const QMatrix4x4& viewMatrix, const QMatrix4x4& modelMatrix, Shading shading = Shading::Lit);
+
     void execute(QOpenGLFunctions* gl,
-                QOpenGLShaderProgram* shader,
-                GeometryManager* geometryManager,
-                ResourceManager* resourceManager,
-                QOpenGLVertexArrayObject& vao,
-                QOpenGLBuffer& vertexBuffer,
-                QOpenGLBuffer& colorBuffer,
-                QOpenGLBuffer& normalBuffer,
-                QOpenGLBuffer& indexBuffer,
-                QOpenGLBuffer& texCoordBuffer) override;
-                
+                 QOpenGLShaderProgram* shader,
+                 GeometryManager* geometryManager,
+                 ResourceManager* resourceManager,
+                 QOpenGLVertexArrayObject& vao,
+                 QOpenGLBuffer& vertexBuffer,
+                 QOpenGLBuffer& colorBuffer,
+                 QOpenGLBuffer& normalBuffer,
+                 QOpenGLBuffer& indexBuffer,
+                 QOpenGLBuffer& texCoordBuffer) override;
+
     const char* getCommandName() const override { return "RenderTexturedTriangles"; }
     const GeometryData& geometry() const { return mGeometry; }
 
@@ -191,15 +188,15 @@ public:
                                 GeometryManager::InstanceShape shape = GeometryManager::InstanceShape::Box);
 
     void execute(QOpenGLFunctions* gl,
-                QOpenGLShaderProgram* shader,
-                GeometryManager* geometryManager,
-                ResourceManager* resourceManager,
-                QOpenGLVertexArrayObject& vao,
-                QOpenGLBuffer& vertexBuffer,
-                QOpenGLBuffer& colorBuffer,
-                QOpenGLBuffer& normalBuffer,
-                QOpenGLBuffer& indexBuffer,
-                QOpenGLBuffer& texCoordBuffer) override;
+                 QOpenGLShaderProgram* shader,
+                 GeometryManager* geometryManager,
+                 ResourceManager* resourceManager,
+                 QOpenGLVertexArrayObject& vao,
+                 QOpenGLBuffer& vertexBuffer,
+                 QOpenGLBuffer& colorBuffer,
+                 QOpenGLBuffer& normalBuffer,
+                 QOpenGLBuffer& indexBuffer,
+                 QOpenGLBuffer& texCoordBuffer) override;
 
     const char* getCommandName() const override { return "RenderInstancedCubes"; }
     const QVector<CubeInstanceData>& instances() const { return mInstances; }
@@ -244,15 +241,15 @@ public:
     explicit GLStateCommand(StateType stateType);
 
     void execute(QOpenGLFunctions* gl,
-                QOpenGLShaderProgram* shader,
-                GeometryManager* geometryManager,
-                ResourceManager* resourceManager,
-                QOpenGLVertexArrayObject& vao,
-                QOpenGLBuffer& vertexBuffer,
-                QOpenGLBuffer& colorBuffer,
-                QOpenGLBuffer& normalBuffer,
-                QOpenGLBuffer& indexBuffer,
-                QOpenGLBuffer& texCoordBuffer) override;
+                 QOpenGLShaderProgram* shader,
+                 GeometryManager* geometryManager,
+                 ResourceManager* resourceManager,
+                 QOpenGLVertexArrayObject& vao,
+                 QOpenGLBuffer& vertexBuffer,
+                 QOpenGLBuffer& colorBuffer,
+                 QOpenGLBuffer& normalBuffer,
+                 QOpenGLBuffer& indexBuffer,
+                 QOpenGLBuffer& texCoordBuffer) override;
 
     const char* getCommandName() const override { return "GLState"; }
     StateType stateType() const { return mStateType; }
@@ -265,26 +262,29 @@ private:
 class RenderLabelCommand : public RenderCommand
 {
 public:
-    RenderLabelCommand(float centerX, float centerY, float centerZ,
-                      float width, float height,
-                      GLuint textureId,
-                      const QVector3D& cameraRight,
-                      const QVector3D& cameraUp,
-                      const QVector4D& tint,
-                      const QMatrix4x4& projectionMatrix,
-                      const QMatrix4x4& viewMatrix,
-                      const QMatrix4x4& modelMatrix);
+    RenderLabelCommand(float centerX,
+                       float centerY,
+                       float centerZ,
+                       float width,
+                       float height,
+                       GLuint textureId,
+                       const QVector3D& cameraRight,
+                       const QVector3D& cameraUp,
+                       const QVector4D& tint,
+                       const QMatrix4x4& projectionMatrix,
+                       const QMatrix4x4& viewMatrix,
+                       const QMatrix4x4& modelMatrix);
 
     void execute(QOpenGLFunctions* gl,
-                QOpenGLShaderProgram* shader,
-                GeometryManager* geometryManager,
-                ResourceManager* resourceManager,
-                QOpenGLVertexArrayObject& vao,
-                QOpenGLBuffer& vertexBuffer,
-                QOpenGLBuffer& colorBuffer,
-                QOpenGLBuffer& normalBuffer,
-                QOpenGLBuffer& indexBuffer,
-                QOpenGLBuffer& texCoordBuffer) override;
+                 QOpenGLShaderProgram* shader,
+                 GeometryManager* geometryManager,
+                 ResourceManager* resourceManager,
+                 QOpenGLVertexArrayObject& vao,
+                 QOpenGLBuffer& vertexBuffer,
+                 QOpenGLBuffer& colorBuffer,
+                 QOpenGLBuffer& normalBuffer,
+                 QOpenGLBuffer& indexBuffer,
+                 QOpenGLBuffer& texCoordBuffer) override;
 
     const char* getCommandName() const override { return "RenderLabel"; }
 

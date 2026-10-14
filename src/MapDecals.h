@@ -20,6 +20,7 @@
 #pragma once
 
 #include "MapStyle.h"
+#include "EnvironmentKit.h"
 
 #include <QGradient>
 #include <QImage>
@@ -64,6 +65,19 @@ QGradientStops thinPlayerRingStops(const QColor& color);
 QImage blockSheen(bool round, int size);
 // Soft, darkest under its middle and fading out toward its edges
 QImage blockShadow(bool round, int size);
+
+// A watercolor wash, white so that it takes the color it is drawn in: clear at its edges, and pooling a little darker
+// just inside them as watercolor dries, along an edge that wanders differently for each of scmWashVariants variants
+constexpr int scmWashVariants = 4;
+QImage wash(int variant, int size);
+// Whether MapStyle::environmentMarks draws on a room of this kind of ground
+bool environmentMarked(EnvironmentKit::Kit kit);
+// What MapStyle::environmentMarks draws on a room of a kind of ground, in ink, size texels across: a null image for
+// a kind it leaves bare
+QImage environmentMark(EnvironmentKit::Kit kit, const QColor& ink, int size);
+// How many rooms a scale bar spans, so that it is a round number of at least two and, where one fits, between shortest
+// and longest pixels long, given how many pixels a room's spacing is; 0 where none would be shorter than longest
+int scaleBarRooms(qreal pixelsPerRoom, qreal shortest, qreal longest);
 
 // The label drawn again in the style's font and color, without the box behind it, where the label keeps the
 // defaults for them, in place of the label's own picture and the same size: a null image when the style leaves labels
