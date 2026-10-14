@@ -810,7 +810,9 @@ private slots:
         TBuffer& buffer = host->mainConsoleModel().buffer;
         host->mUndoServerWrap = true;
         host->mUndoServerWrapWidth = 80;
-        auto restoreWrap = qScopeGuard([host]() { host->mUndoServerWrap = false; });
+        auto restoreWrap = qScopeGuard([host]() {
+            host->mUndoServerWrap = false;
+        });
 
         // 70 characters, inside the join band for a wrap column of 80
         const QString heldLine = QString(64, QChar('x')) + qsl(" alpha");
@@ -1853,7 +1855,7 @@ noViewReport = table.concat(noViewProblems, '; ')
         runLua(host,
                qsl("noViewSubEcho = {echo('noViewEchoMini', 'NoViewSubEcho one\\nNoViewSubEcho open')}\n"
                    "noViewSubEchoAnswers = #noViewSubEcho .. tostring(noViewSubEcho[1]) .. select('#', echoUserWindow('noViewEchoMini', ', closed\\n'))\n"));
-        QCOMPARE(luaGlobalString(host, "noViewSubEchoAnswers"), qsl("1true0"));
+        QCOMPARE(luaGlobalString(host, "noViewSubEchoAnswers"), qsl("1true1"));
         QCOMPARE(model.buffer.line(0), qsl("NoViewSubEcho one"));
         QCOMPARE(model.buffer.line(1), qsl("NoViewSubEcho open, closed"));
         QCOMPARE(model.buffer.buffer.at(1).at(0).foreground(), foreground);
@@ -2945,6 +2947,53 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         QCOMPARE(model->P_end, QPoint());
         QCOMPARE(model->mFormatCurrent.foreground(), QColor(10, 11, 12));
         QCOMPARE(model->mFormatCurrent.background(), QColor(7, 8, 9));
+    }
+
+    // With no view the window functions still refuse a window that does not exist by name.
+    void test_windowFunctionsRefuseWithNoView()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
+        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+        destroyTheView(host);
+        const int line = appendModelLine(model->buffer, qsl("noview wrap me"));
+
+        runLua(host,
+               qsl(R"LUA(
+noViewWindowProblems = {}
+local notFound = 'window "nosuchwindow" not found'
+local labelNotFound = "label name 'nosuchwindow' not found"
+
+local function expectValues(name, expected, ...)
+    local got = {...}
+    for i = 1, math.max(#expected, select('#', ...)) do
+        if got[i] ~= expected[i] then
+            table.insert(noViewWindowProblems, name .. ' answered ' .. tostring(got[i]) .. ' rather than ' .. tostring(expected[i]) .. ' at ' .. i)
+        end
+    end
+end
+
+local width, height = calcFontSize('main')
+if type(width) ~= 'number' or type(height) ~= 'number' then
+    table.insert(noViewWindowProblems, 'calcFontSize of the main console answered ' .. tostring(width) .. ', ' .. tostring(height))
+end
+expectValues('calcFontSize of a missing window', {nil, notFound}, calcFontSize('nosuchwindow'))
+expectValues('hideWindow', {nil, notFound}, hideWindow('nosuchwindow'))
+expectValues('moveWindow', {nil, notFound}, moveWindow('nosuchwindow', 1, 1))
+expectValues('resizeWindow', {nil, notFound}, resizeWindow('nosuchwindow', 1, 1))
+expectValues('enableClickthrough', {nil, labelNotFound}, enableClickthrough('nosuchwindow'))
+expectValues('disableClickthrough', {nil, labelNotFound}, disableClickthrough('nosuchwindow'))
+expectValues('wrapLine of a missing window', {nil, notFound}, wrapLine('nosuchwindow', 0))
+expectValues('wrapLine of the main console', {true}, wrapLine('main', %1))
+expectValues('getBgColor of a missing window', {nil, notFound}, getBgColor('nosuchwindow'))
+
+noViewWindowReport = table.concat(noViewWindowProblems, '; ')
+)LUA")
+                       .arg(line));
+
+        QCOMPARE(luaGlobalString(host, "noViewWindowReport"), QString());
     }
 
     // The main console's background is the model's, so a script can still read

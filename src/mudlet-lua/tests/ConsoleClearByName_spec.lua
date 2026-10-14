@@ -78,10 +78,10 @@ describe("Tests that clearWindow() finds its console by name", function()
     end)
 
     local kinds = {
-      {"label", function() return createLabel(otherName, 0, 0, 50, 20, 1) end},
-      {"scroll box", function() return createScrollBox(otherName, 0, 0, 50, 20) end},
-      {"text edit", function() return createTextEdit("main", otherName, 0, 0, 50, 20) end},
-      {"command line", function() return createCommandLine(otherName, 0, 0, 50, 20) end},
+      {"label", function() return createLabel(otherName, 0, 0, 50, 20, 1) end, "label"},
+      {"scroll box", function() return createScrollBox(otherName, 0, 0, 50, 20) end, "scrollbox"},
+      {"text edit", function() return createTextEdit("main", otherName, 0, 0, 50, 20) end, "textedit"},
+      {"command line", function() return createCommandLine(otherName, 0, 0, 50, 20) end, "commandline"},
     }
 
     for _, kind in ipairs(kinds) do
@@ -89,7 +89,8 @@ describe("Tests that clearWindow() finds its console by name", function()
         assert.is_true(kind[2]())
         local mainLast = getLastLineNumber("main")
         local siblingLast = getLastLineNumber(sibling)
-        assert.are.same({nil, ('window "%s" not found'):format(otherName)}, {clearWindow(otherName)})
+        local refusal = ('window "%s" is of type "%s", which this function cannot use'):format(otherName, kind[3])
+        assert.are.same({nil, refusal}, {clearWindow(otherName)})
         assert.are.equal(mainLast, getLastLineNumber("main"))
         assert.are.equal(siblingLast, getLastLineNumber(sibling))
       end)

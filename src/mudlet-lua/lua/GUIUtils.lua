@@ -1526,13 +1526,10 @@ function xEcho(style, func, ...)
     end
     local reset = getLabelFormat(win)
     local result = processedEchoToHTML(t, reset)
-    echo(win, result)
+    return echo(win, result)
   else
     local reset, resetError = resetFormat(win)
     if not reset then
-      if func == "insertText" then
-        return nil, "window does not exist"
-      end
       return nil, resetError
     end
     local t = _Echos.Process(str, style)
@@ -1582,6 +1579,7 @@ function xEcho(style, func, ...)
       end
     end
     resetFormat(win)
+    return true
   end
 end
 
