@@ -806,10 +806,6 @@ constexpr float scmDiamondLinePixels = 1.6f;
 constexpr float scmDiamondGlowPixels = 5.0f;
 constexpr float scmDiamondGlow = 0.18f;
 constexpr float scmDiamondStemOpacity = 0.5f;
-// The rings around a glowing style's highlighted room, across, as multiples of the room's width, and how tall, as a part of its height
-constexpr float scmHighlightInnerRing = 1.3f;
-constexpr float scmHighlightOuterRing = 1.7f;
-constexpr float scmHighlightRingHeight = 0.05f;
 // A level platform's stations: how far apart, how large, and how many at most before the rest are counted
 constexpr qreal scmPlatformStationGap = 20.0;
 constexpr qreal scmPlatformStationRadius = 5.0;
@@ -1503,8 +1499,6 @@ void ModernGLWidget::renderRooms()
         QVector<CubeInstanceData> wires;
         // Filled with light, added onto what is under them before the edges
         QVector<CubeInstanceData> glows;
-        // Flat round edges around highlighted rooms
-        QVector<CubeInstanceData> rings;
         RoomDecals decals;
     };
     QMap<int, SeeThroughLevel> seeThroughLevels;
@@ -1738,15 +1732,7 @@ void ModernGLWidget::renderRooms()
             }
         }
 
-        if (look.highlighted && wireframes) {
-            const QVector4D ringTint = GeometryManager::fadedColor(style.wireColor(look.highlightColor, roomColor), fade, fadeTarget);
-            for (const float across : {scmHighlightInnerRing, scmHighlightOuterRing}) {
-                QMatrix4x4 ringTransform;
-                ringTransform.translate(rx, ry, rz - roomHeight / 2.0f);
-                ringTransform.scale(across / scale, across / scale, scmHighlightRingHeight / scale / zFlattening);
-                seeThroughLevels[pR->z()].rings.append(CubeInstanceData(ringTransform, ringTint.x(), ringTint.y(), ringTint.z(), ringTint.w()));
-            }
-        } else if (look.highlighted) {
+        if (look.highlighted) {
             const MapStyle::HighlightShape shape = style.highlightShape;
             const bool disc = shape == MapStyle::HighlightShape::Disc;
             const QColor color = disc ? style.highlightColorFor(look.highlightColor) : style.highlightColorFor(look.highlightColor, look.highlightCenterColor);
@@ -2213,14 +2199,6 @@ void ModernGLWidget::renderRooms()
                                                                                              mCameraController.getModelMatrix(),
                                                                                              RenderCommand::Shading::Wireframe,
                                                                                              roomShape));
-                if (!seeThrough->rings.isEmpty()) {
-                    mRenderCommandQueue.addCommand(std::make_unique<RenderInstancedCubesCommand>(seeThrough->rings,
-                                                                                                 mCameraController.getProjectionMatrix(),
-                                                                                                 mCameraController.getViewMatrix(),
-                                                                                                 mCameraController.getModelMatrix(),
-                                                                                                 RenderCommand::Shading::Outline,
-                                                                                                 GeometryManager::InstanceShape::Cylinder));
-                }
                 mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::ALPHA_BLEND));
             }
         }
@@ -3805,15 +3783,25 @@ void ModernGLWidget::paintScannerOverlay(QPainter& painter, const int top)
     const int textWidth = width() - 2 * left;
     int baseline = top + margin + 12;
     const QString areaName = mpMap->mpRoomDB->getAreaNamesMap().value(mAID);
-    painter.setPen(text);
     //: The 3D map's readout in the Hologram style, styled as a scanner's display, naming the area shown, which follows; keep it short
-    painter.drawText(left, baseline, metrics.elidedText(tr("SCAN // %1").arg(areaName.toUpper()), Qt::ElideRight, textWidth));
+    const QString scan = metrics.elidedText(tr("SCAN // %1").arg(areaName.toUpper()), Qt::ElideRight, textWidth);
+    //: The 3D map's readout in the Hologram style, below the area's name: the level being viewed (%1), the area's lowest and highest levels (%2 and %3, as -1 and +3) and how many rooms it has
+    const QString levels = metrics.elidedText(
+            tr("Z %1   LEVELS %2 … %3   %n ROOMS", nullptr, static_cast<int>(pArea->getAreaRooms().size())).arg(signedLevel(mMapCenterZ), signedLevel(pArea->min_z), signedLevel(pArea->max_z)),
+            Qt::ElideRight,
+            textWidth);
+    // So that it reads over a crowded map, where the style has a background for the room info box
+    if (const QColor panel = mapStyle().infoBackgroundColor(mpHost->mMapInfoBg); panel.isValid() && panel != mpHost->mMapInfoBg) {
+        constexpr int pad = 4;
+        const int panelWidth = std::max(metrics.horizontalAdvance(scan), metrics.horizontalAdvance(levels)) + 2 * pad;
+        const int panelHeight = 2 * metrics.lineSpacing() + 4 + 2 * pad;
+        painter.fillRect(QRect(left - pad, baseline - metrics.ascent() - pad, panelWidth, panelHeight), panel);
+    }
+    painter.setPen(text);
+    painter.drawText(left, baseline, scan);
     baseline += metrics.lineSpacing() + 4;
     painter.setPen(dimText);
-    //: The 3D map's readout in the Hologram style, below the area's name: the level being viewed (%1), the area's lowest and highest levels (%2 and %3, as -1 and +3) and how many rooms it has
-    const QString levels =
-            tr("Z %1   LEVELS %2 … %3   %n ROOMS", nullptr, static_cast<int>(pArea->getAreaRooms().size())).arg(signedLevel(mMapCenterZ), signedLevel(pArea->min_z), signedLevel(pArea->max_z));
-    painter.drawText(left, baseline, metrics.elidedText(levels, Qt::ElideRight, textWidth));
+    painter.drawText(left, baseline, levels);
     painter.restore();
 }
 
