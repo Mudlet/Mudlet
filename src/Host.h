@@ -496,7 +496,9 @@ public:
     // mDeferredSaveTimer.
     bool hasPendingProfileSave() const { return mDeferredSaveTimer.isActive(); }
     void processDiscordGMCP(const QString& packageMessage, const QString& data);
-    void waitForProfileSave();
+    // A script waits with onlyTheSavesOwnEvents: nothing but the save's own completion is delivered, so
+    // no timer, incoming line or other script runs nested inside the one that is waiting
+    void waitForProfileSave(bool onlyTheSavesOwnEvents = false);
     void clearDiscordData();
     void processDiscordMSDP(const QString& variable, QString value);
     void setDiscordMode(DiscordMode mode);

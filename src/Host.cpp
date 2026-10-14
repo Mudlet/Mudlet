@@ -1588,7 +1588,7 @@ bool Host::currentlySavingProfile()
     return (mWritingHostAndModules || !writers.empty());
 }
 
-void Host::waitForProfileSave()
+void Host::waitForProfileSave(const bool onlyTheSavesOwnEvents)
 {
     if (!currentlySavingProfile()) {
         return;
@@ -1602,8 +1602,8 @@ void Host::waitForProfileSave()
     constexpr auto notificationTimeout = 30s;
     QElapsedTimer waitedForNotification;
     // A QEventLoop's processEvents() rather than QCoreApplication's only for its "did anything
-    // happen" answer - nothing is exec()ed here. No user input either: this runs on the
-    // way out of a profile, and all it is here to deliver is that notification.
+    // happen" answer - nothing is exec()ed here. No user input either: all it is here to
+    // deliver is that notification.
     QEventLoop pump;
     while (currentlySavingProfile()) {
         // Every pass rather than once up front: a save that starts while this is
@@ -1619,7 +1619,13 @@ void Host::waitForProfileSave()
         if (!waitedForNotification.isValid()) {
             waitedForNotification.start();
         }
-        if (!pump.processEvents(QEventLoop::ExcludeUserInputEvents)) {
+        if (onlyTheSavesOwnEvents) {
+            // Every write's end reaches the main thread as a QFutureWatcher's posted FutureCallOut
+            QCoreApplication::sendPostedEvents(nullptr, QEvent::FutureCallOut);
+            if (currentlySavingProfile()) {
+                QThread::sleep(1ms);
+            }
+        } else if (!pump.processEvents(QEventLoop::ExcludeUserInputEvents)) {
             QThread::sleep(1ms);
         }
         if (waitedForNotification.durationElapsed() > notificationTimeout) {

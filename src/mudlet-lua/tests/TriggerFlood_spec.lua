@@ -282,12 +282,7 @@ describe("trigger matching under a flood", function()
         end
 
         local function waitForProfileSaveToPass()
-            for _ = 1, 100 do
-                if installPackage("") == nil then
-                    return
-                end
-                pumpEvents(50)
-            end
+            installPackage("")
         end
 
         local function removePackage()

@@ -10,29 +10,17 @@ describe("Trigger processing", function()
     end
 
     -- Both of the package fixtures below are installed at run time, and while a
-    -- profile save is running an uninstall is refused outright and an install is
-    -- postponed, so both are asked again until they take. A postponed install
-    -- answers even a path it would otherwise refuse with a bare true, which is
-    -- how a spec can tell a save is still going - at the price of one console
-    -- error line per probe when the save ends and the empty path is retried.
+    -- profile save is running an uninstall is refused outright, so it is asked
+    -- again until it takes. An install from a script waits a running save out
+    -- before it answers, and gives up only on one still going after 30s, which is
+    -- how a spec waits for a save to be over.
     local function packageInstalled(packageName)
         return contains(getPackages(), packageName)
     end
 
-    local function waitUntil(condition, milliseconds)
-        local waited = 0
-        while waited < milliseconds do
-            if condition() then
-                return true
-            end
-            pumpEvents(50)
-            waited = waited + 50
-        end
-        return condition() and true or false
-    end
-
     local function waitForProfileSaveToPass()
-        return waitUntil(function() return installPackage("") == nil end, 5000)
+        local _, err = installPackage("")
+        return not tostring(err):find("still in progress", 1, true)
     end
 
     -- The self-test profile is kept between runs, so a package under a fixture's

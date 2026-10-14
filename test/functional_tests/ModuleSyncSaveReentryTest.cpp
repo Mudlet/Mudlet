@@ -22,7 +22,8 @@
  * other profiles that have them, and so runs those profiles' module scripts while
  * this profile's save still reads as running. One that raises a global event
  * reaches this profile's handlers there, and a script install from one of those
- * must not wait for that save, which cannot finish until the install returns.
+ * cannot wait for that save, which cannot finish until the install returns: it is
+ * put off until the save is done instead.
  * No spec reaches this: only the editor's Save and Import ask for a save that
  * syncs modules.
  *
@@ -132,6 +133,58 @@ private:
         return pHost->mModulesLoadedOk.contains(mModuleName);
     }
 
+    QString writeArchive(const QString& name, const QByteArray& content)
+    {
+        const QString path = mModuleDir.filePath(name);
+        QFile file(path);
+        if (!file.open(QFile::WriteOnly | QFile::Truncate) || file.write(content) != content.size()) {
+            return QString();
+        }
+        return path;
+    }
+
+    QString writePackage(const QString& name)
+    {
+        return writeArchive(qsl("%1.xml").arg(name),
+                            "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE MudletPackage>\n<MudletPackage version=\"1.001\">\n<ScriptPackage>\n"
+                            "<Script isActive=\"yes\" isFolder=\"no\">\n<name>reentry package script</name>\n<packageName></packageName>\n<script></script>\n"
+                            "<eventHandlerList/>\n</Script>\n</ScriptPackage>\n</MudletPackage>\n");
+    }
+
+    // Saves with module sync, so the other profile's module raises the event the given Lua answers, and
+    // hands back how long the save took to finish
+    qint64 saveReachingBackWith(const QString& install, const QString& path)
+    {
+        const QString registered = runLua(mpSavingHost,
+                                          qsl(R"(
+mudletTestNestedInstall = nil
+registerAnonymousEventHandler("mudletTestModuleReloaded", function()
+  local ok, err = %1([[%2]])
+  mudletTestNestedInstall = tostring(ok) .. "|" .. tostring(err)
+end, true)
+)")
+                                                  .arg(install, path));
+        if (!registered.isNull()) {
+            qWarning().noquote() << "registering the handler failed:" << registered;
+            return -1;
+        }
+        QElapsedTimer elapsed;
+        elapsed.start();
+        auto [ok, filename, error] = mpSavingHost->saveProfile(QString(), QString(), true);
+        if (!ok) {
+            qWarning().noquote() << "the save was refused:" << error;
+            return -1;
+        }
+        mpSavingHost->waitForProfileSave();
+        return elapsed.elapsed();
+    }
+
+    QString mainConsoleText()
+    {
+        runLua(mpSavingHost, qsl("mudletTestConsoleText = table.concat(getLines('main', 0, getLastLineNumber('main') + 1), '\\n')"));
+        return luaGlobalString(mpSavingHost, qsl("mudletTestConsoleText"));
+    }
+
     static bool settle(Host* pHost)
     {
         // installing a module owes the profile a save; let it come and go
@@ -212,29 +265,70 @@ private slots:
         mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);
     }
 
-    void test_aScriptInstallReachedFromTheModuleSyncDoesNotWaitForTheSave()
+    void test_aScriptInstallReachedFromTheModuleSyncIsPutOffUntilTheSaveIsDone()
     {
-        QVERIFY(runLua(mpSavingHost, qsl(R"(
-mudletTestNestedInstall = nil
-registerAnonymousEventHandler("mudletTestModuleReloaded", function()
-  local ok, err = installPackage("")
-  mudletTestNestedInstall = tostring(ok) .. "|" .. tostring(err)
-end, true)
-)"))
-                        .isNull());
+        const QString packageName = qsl("module-sync-reentry-package");
+        const QString path = writePackage(packageName);
+        QVERIFY(!path.isEmpty());
 
-        QElapsedTimer elapsed;
-        elapsed.start();
-        auto [ok, filename, error] = mpSavingHost->saveProfile(QString(), QString(), true);
-        QVERIFY2(ok, qPrintable(error));
-        mpSavingHost->waitForProfileSave();
-        const auto took = elapsed.elapsed();
+        const auto took = saveReachingBackWith(qsl("installPackage"), path);
+        QVERIFY(took >= 0);
 
         const QString answer = luaGlobalString(mpSavingHost, qsl("mudletTestNestedInstall"));
         QVERIFY2(!answer.isEmpty(), "the other profile's module was not reloaded, so no install was reached from the save");
+        QCOMPARE(answer, qsl("true|nil"));
         QVERIFY2(took < 10000, qPrintable(qsl("the save took %1 ms to finish: the install inside it waited for it").arg(took)));
-        QVERIFY2(answer.contains(qsl("profile save is still in progress")), qPrintable(answer));
-        QVERIFY(!mpSavingHost->currentlySavingProfile());
+        QVERIFY(QTest::qWaitFor(
+                [this, &packageName]() {
+                    return mpSavingHost->mInstalledPackages.contains(packageName);
+                },
+                5s));
+        QVERIFY(settle(mpSavingHost));
+        QVERIFY(mpSavingHost->uninstallPackage(packageName, enums::PackageModuleType::Package));
+        QVERIFY(settle(mpSavingHost));
+    }
+
+    void test_aScriptModuleInstallReachedFromTheModuleSyncIsPutOffUntilTheSaveIsDone()
+    {
+        const QString nestedModule = qsl("module-sync-reentry-nested");
+        const QString path = writePackage(nestedModule);
+        QVERIFY(!path.isEmpty());
+
+        const auto took = saveReachingBackWith(qsl("installModule"), path);
+        QVERIFY(took >= 0);
+
+        const QString answer = luaGlobalString(mpSavingHost, qsl("mudletTestNestedInstall"));
+        QVERIFY2(!answer.isEmpty(), "the other profile's module was not reloaded, so no install was reached from the save");
+        QCOMPARE(answer, qsl("true|nil"));
+        QVERIFY2(took < 10000, qPrintable(qsl("the save took %1 ms to finish: the install inside it waited for it").arg(took)));
+        QVERIFY(QTest::qWaitFor(
+                [this, &nestedModule]() {
+                    return mpSavingHost->mInstalledModules.contains(nestedModule);
+                },
+                5s));
+        QVERIFY(settle(mpSavingHost));
+        QVERIFY(mpSavingHost->uninstallPackage(nestedModule, enums::PackageModuleType::ModuleFromScript));
+        QVERIFY(settle(mpSavingHost));
+    }
+
+    void test_aPutOffScriptInstallThatFailsSaysSoOnTheConsole()
+    {
+        // The script was answered true before the install was tried, so the console is all that can tell it
+        const QString path = writeArchive(qsl("module-sync-reentry-notazip.mpackage"), "not a zip archive");
+        QVERIFY(!path.isEmpty());
+
+        const auto took = saveReachingBackWith(qsl("installPackage"), path);
+        QVERIFY(took >= 0);
+
+        QCOMPARE(luaGlobalString(mpSavingHost, qsl("mudletTestNestedInstall")), qsl("true|nil"));
+        QVERIFY2(QTest::qWaitFor(
+                         [this]() {
+                             return mainConsoleText().contains(qsl("Package install failed"));
+                         },
+                         5s),
+                 qPrintable(mainConsoleText()));
+        QVERIFY(mainConsoleText().contains(qsl("could not unzip package")));
+        QVERIFY(settle(mpSavingHost));
     }
 };
 
