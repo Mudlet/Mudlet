@@ -265,8 +265,8 @@ local function db_no_connection_message(action, db_name, expected)
 end
 
 
--- sqlite reads a statement as a C string, so a NUL cuts it short. A db:exp() goes in through its
--- __tostring, which hands back the text as given: a number for db:exp(0)
+-- sqlite reads a statement as a C string, so a NUL cuts it short. A db:exp() goes in as its
+-- _expression (db:add and a query read it through __tostring), which is a number for db:exp(0)
 local function holds_nul(value)
   if type(value) == "table" then value = tostring(value) end
   return type(value) == "string" and value:find("\0", 1, true) ~= nil
@@ -2030,6 +2030,8 @@ end
 --- obtained by db:fetch. Its primary purpose is that if you do a db:fetch, then change the value of a field
 --- or tow, you can save back that table.
 ---
+--- It raises an error, and writes nothing, when a value it would write holds a NUL byte (\0).
+---
 --- @usage This obtains a database reference, and queries the friends sheet for someone named Bob. As this
 ---   returns a table array containing only one item, it assigns that one item to the local variable named bob.
 ---   We then change the notes on Bob, and pass it into db:update() to save the changes back.
@@ -2084,6 +2086,7 @@ end
 --- Meaning, you can change all of the last_read fields in the sheet to a certain value, or possibly only
 --- the last_read fields which are in a certain city. The query argument can be any value which is appropriate
 --- for db:fetch, even nil which will change the value for the specified column for EVERY row in the sheet.
+--- It raises an error, and writes nothing, when the value or the query holds a NUL byte (\0).
 ---
 --- For example, consider a situation in which you are tracking how many times you find a certain
 --- type of egg during Easter. You start by setting up your database and adding an Eggs sheet, and

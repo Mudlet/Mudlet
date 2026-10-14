@@ -2897,8 +2897,12 @@ describe("Tests db:add, db:update and db:set on a NUL byte", function()
       local row = db:fetch(mydb.items, db:eq(mydb.items.tag, "plain"))[1]
       echoed = 0
       row.payload = "c\0d"
-      assert.is_false(pcall(db.update, db, mydb.items, row))
-      assert.is_false(pcall(db.set, db, mydb.items.payload, "x\0y", db:eq(mydb.items.tag, "plain")))
+      local ok, err = pcall(db.update, db, mydb.items, row)
+      assert.is_false(ok)
+      assert.is_truthy(string.find(err, "holds a NUL byte", 1, true))
+      ok, err = pcall(db.set, db, mydb.items.payload, "x\0y", db:eq(mydb.items.tag, "plain"))
+      assert.is_false(ok)
+      assert.is_truthy(string.find(err, "holds a NUL byte", 1, true))
       assert.are.equal(0, echoed)
     end)
   end)
