@@ -10,12 +10,15 @@ Geyser.ScrollBox = Geyser.Window:new({
 })
 
 -- Internal function: children are laid out inside the box's own widget, so from
--- its origin and at the whole pixel size the widget got, not its fractional one
-local function frameChildren(box, width, height)
+-- its origin and at the whole pixel size the widget gets, not its fractional one.
+-- The size still follows the box's constraints, which a parent HBox or VBox reads
+-- and rewrites before it repositions the box.
+local function frameChildren(box)
+    local own = {get_x = box.get_x, get_y = box.get_y, get_width = box.get_width, get_height = box.get_height}
     box.get_x = function() return 0 end
     box.get_y = function() return 0 end
-    box.get_width = function() return width end
-    box.get_height = function() return height end
+    box.get_width = function() return select(3, Geyser.Container.pixel_geometry(own)) end
+    box.get_height = function() return select(4, Geyser.Container.pixel_geometry(own)) end
 end
 
 -- Overridden reposition for special coordination handling
@@ -24,7 +27,7 @@ function Geyser.ScrollBox:reposition(skipChildren)
     local x, y, width, height = self:pixel_geometry()
     moveWindow(self.name, x, y)
     resizeWindow(self.name, width, height)
-    frameChildren(self, width, height)
+    frameChildren(self)
       -- deal with all children of this container
     if not skipChildren then
         for k, v in pairs(self.windowList) do
@@ -80,7 +83,7 @@ function Geyser.ScrollBox:new (cons, container)
     Geyser.parentWindows[me.name] = me
 
     --ScrollBox needs special coordinate handling for the children in it
-    frameChildren(me, width, height)
+    frameChildren(me)
     
     -- if me.stylesheet then 
     --     me:setStyleSheet()
