@@ -128,6 +128,14 @@ QColor MapStyle::roomNameColorFor(const QString& roomColorData, const QColor& ba
     return RoomAppearance::nameColor(roomColorData, background);
 }
 
+QColor MapStyle::highlightColorFor(const QColor& roomHighlightColor) const
+{
+    if (!roomHighlightColor.isValid() && highlightColor.isValid()) {
+        return highlightColor;
+    }
+    return roomHighlightColor;
+}
+
 bool MapStyle::roundRooms(const bool profileRoundRooms) const
 {
     switch (shape) {
