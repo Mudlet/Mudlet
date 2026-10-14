@@ -3173,14 +3173,12 @@ describe("Tests exporting the profile to a file with saveProfile", function()
     assert.is_true(ok, tostring(path))
     assert.is_true(contains(path, folder .. "/"), tostring(path))
     assert.is_true(waitUntil(function() return fileExists(path) end, 5000), "nothing was written to " .. tostring(path))
+    assert.is_true(waitForProfileSaveToPass(), "the profile save never finished")
+    assert.is_false(containsWrapped(textFrom(mark), "could not be saved"), textFrom(mark))
   end)
 
-  -- Only opening the file is tried before the call answers; the write itself
-  -- runs afterwards on a pool thread, so a folder that goes away in between can
-  -- only be reported on the console. The writer keeps its temporary file in the
-  -- folder until the very end, so moving the folder away at any point before
-  -- then makes the write fail, and a large export keeps the writer busy long
-  -- past the move.
+  -- The write runs on a pool thread after the call answers, and its temporary file stays in the folder
+  -- until the end, so moving the folder away during a large export makes that write fail.
   it("says so on the console when the write fails after the call has answered", function()
     local bulk = "mudlet-spec-bulky"
     local bulkXml = scratchDirectory .. "/" .. bulk .. ".xml"
