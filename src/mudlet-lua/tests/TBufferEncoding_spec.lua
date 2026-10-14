@@ -997,7 +997,7 @@ describe("Tests a character whose bytes are split by the posting timeout", funct
 
     -- A prompt followed by a title the game has not finished sending: the
     -- marker has to show the prompt during the pause, as it does ahead of a
-    -- split colour sequence - see issue #10897
+    -- split colour sequence
     local mark = getLastLineNumber("main")
     feed("split:HP:100 > \27]0;title")
     beQuiet()
@@ -1024,6 +1024,31 @@ describe("Tests a character whose bytes are split by the posting timeout", funct
     beQuiet()
     assert.same({"split:HP:100 > "}, duringPause, "the prompt was not shown during the pause")
     assert.same({"split:HP:100 > ", ":end"}, shownSince(mark))
+  end)
+
+  it("fires a prompt trigger once, at the pause, wherever in the command the marker lands", function()
+    if timerUnavailable() then return end
+    using("UTF-8")
+
+    -- Right after the introducer only the OSC latch carries the sequence over
+    -- the commit; a held ESC has to stay the start of its String Terminator
+    local fires = 0
+    local id = tempRegexTrigger("^split:HP > $", function() fires = fires + 1 end)
+    finally(function() killTrigger(id) end)
+    for _, pieces in ipairs({{"\27]", "0;title\27\\"}, {"\27]0;title\27", "\\"}, {"\27]0;title", "\7"}}) do
+      fires = 0
+      local mark = getLastLineNumber("main")
+      feed("split:HP > " .. pieces[1])
+      beQuiet()
+      local duringPause, firesAtPause = shownSince(mark), fires
+      feed(pieces[2] .. ":end\n")
+      beQuiet()
+      local after = pieces[2]:gsub("\27", "ESC"):gsub("\7", "BEL")
+      assert.same({"split:HP > "}, duringPause, "the prompt was not shown during the pause, before " .. after)
+      assert.equals(1, firesAtPause, "the prompt trigger did not fire at the pause, before " .. after)
+      assert.same({"split:HP > ", ":end"}, shownSince(mark), "before " .. after)
+      assert.equals(1, fires, "the prompt trigger fired again, before " .. after)
+    end
   end)
 
   -- A link written concealed shows whether its settings were decoded: only a
