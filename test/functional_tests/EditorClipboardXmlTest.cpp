@@ -26,10 +26,13 @@
  */
 
 #include <QClipboard>
+#include <QScopeGuard>
+#include <QSignalBlocker>
 #include <QTemporaryDir>
 #include <QTreeWidget>
 #include <QtTest/QtTest>
 #include <chrono>
+#include <functional>
 
 #include "ActionUnit.h"
 #include "AliasUnit.h"
@@ -208,6 +211,37 @@ private:
         mpHost->getActionUnit()->registerAction(pAction);
     }
 
+    int countBoxesOpenedBy(const std::function<void()>& action, QStringList* pTitles = nullptr)
+    {
+        int boxesOpened = 0;
+        // closes any box that does open, so a failure does not hang the run
+        QTimer closer;
+        connect(&closer, &QTimer::timeout, &closer, [&boxesOpened, pTitles]() {
+            if (QWidget* pModal = QApplication::activeModalWidget()) {
+                ++boxesOpened;
+                if (pTitles) {
+                    *pTitles << pModal->windowTitle();
+                }
+                pModal->close();
+            }
+        });
+        closer.start(20ms);
+        action();
+        closer.stop();
+        return boxesOpened;
+    }
+
+    QAction* copyActionOf(QTreeWidget* tree) const
+    {
+        const QList<QAction*> actions = tree->actions();
+        for (QAction* pAction : actions) {
+            if (pAction->shortcut() == QKeySequence(QKeySequence::Copy)) {
+                return pAction;
+            }
+        }
+        return nullptr;
+    }
+
 private slots:
     void initTestCase()
     {
@@ -300,9 +334,6 @@ private slots:
         QVERIFY2(clipboard.contains(itemName), "the copied XML does not name the item that was copied");
     }
 
-    // Copy with nothing to copy is a no-op, as it is anywhere else: a modal box
-    // here freezes the editor until it is dismissed (#10778). The timer closes
-    // any box that does open, so a failure does not hang the run.
     void test_copyWithNothingSelectedOpensNoMessageBox_data() { test_copyPutsTheItemsOwnXmlOnTheClipboard_data(); }
 
     void test_copyWithNothingSelectedOpensNoMessageBox()
@@ -312,35 +343,79 @@ private slots:
         showView(viewType);
         QTreeWidget* tree = treeFor(viewType);
         QVERIFY(tree);
+        QAction* pCopy = copyActionOf(tree);
+        QVERIFY2(pCopy, "the tree offers no Copy action");
 
         // a row standing for an item that is gone is the other way to have nothing to copy
-        auto* pStaleItem = new QTreeWidgetItem(tree, QStringList{qsl("qaClipStaleRow")});
+        auto* pStaleItem = new QTreeWidgetItem(QStringList{qsl("qaClipStaleRow")});
         pStaleItem->setData(0, Qt::UserRole, -1);
+        // Signals blocked: selecting the row would make it the editor's current item, left dangling once it is deleted
+        const QSignalBlocker blockTreeSignals(tree);
+        tree->addTopLevelItem(pStaleItem);
+        const auto removeStaleItem = qScopeGuard([pStaleItem]() {
+            delete pStaleItem;
+        });
 
         for (const bool withStaleRow : {false, true}) {
             tree->clearSelection();
-            if (withStaleRow) {
-                pStaleItem->setSelected(true);
-            }
+            pStaleItem->setSelected(withStaleRow);
             const QString untouched = qsl("qaClipUntouched");
             QApplication::clipboard()->setText(untouched);
 
-            int boxesOpened = 0;
-            QTimer closer;
-            connect(&closer, &QTimer::timeout, &closer, [&boxesOpened]() {
-                if (QWidget* pModal = QApplication::activeModalWidget()) {
-                    ++boxesOpened;
-                    pModal->close();
-                }
+            const int boxesOpened = countBoxesOpenedBy([pCopy]() {
+                pCopy->trigger();
             });
-            closer.start(20ms);
-            mpEditor->slot_copyXml();
-            closer.stop();
 
             QVERIFY2(boxesOpened == 0, withStaleRow ? "copying a row whose item is gone opened a message box" : "copying with nothing selected opened a message box");
             QCOMPARE(QApplication::clipboard()->text(), untouched);
         }
-        delete pStaleItem;
+    }
+
+    void test_exportWithNothingSelectedStillWarns_data() { test_copyPutsTheItemsOwnXmlOnTheClipboard_data(); }
+
+    // Unlike Copy, Export was asked for a file, so it says why none was written
+    void test_exportWithNothingSelectedStillWarns()
+    {
+        QFETCH(int, view);
+        const auto viewType = static_cast<EditorViewType>(view);
+        showView(viewType);
+        QTreeWidget* tree = treeFor(viewType);
+        QVERIFY(tree);
+        tree->clearSelection();
+        tree->setCurrentItem(nullptr);
+        const QString fileName = mConfigDir.filePath(qsl("qaExportNothing.xml"));
+
+        QStringList titles;
+        const int boxesOpened = countBoxesOpenedBy(
+                [this, viewType, &fileName]() {
+                    switch (viewType) {
+                    case EditorViewType::cmTriggerView:
+                        mpEditor->exportTrigger(fileName);
+                        break;
+                    case EditorViewType::cmTimerView:
+                        mpEditor->exportTimer(fileName);
+                        break;
+                    case EditorViewType::cmAliasView:
+                        mpEditor->exportAlias(fileName);
+                        break;
+                    case EditorViewType::cmScriptView:
+                        mpEditor->exportScript(fileName);
+                        break;
+                    case EditorViewType::cmActionView:
+                        mpEditor->exportAction(fileName);
+                        break;
+                    case EditorViewType::cmKeysView:
+                        mpEditor->exportKey(fileName);
+                        break;
+                    default:
+                        break;
+                    }
+                },
+                &titles);
+
+        QCOMPARE(boxesOpened, 1);
+        QCOMPARE(titles, QStringList{qsl("Export Package:")});
+        QVERIFY2(!QFile::exists(fileName), "exporting with nothing selected wrote a file");
     }
 
     void test_pastingACopiedItemAddsASecondOne_data() { test_copyPutsTheItemsOwnXmlOnTheClipboard_data(); }
