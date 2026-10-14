@@ -42,6 +42,11 @@ Geyser.ScrollBox.parent = Geyser.Window
 function Geyser.ScrollBox:new (cons, container)
     cons = cons or {}
     cons.type = cons.type or "scrollBox"
+    local taken = mudlet.nameTakenByOtherKind(cons.name, "scrollbox")
+    if taken then
+        printError(string.format("Geyser.ScrollBox '%s' was not created: %s", cons.name, taken), false, false)
+        return nil, taken
+    end
     
     -- Call parent's constructor
     local me = self.parent:new(cons, container)
@@ -52,13 +57,9 @@ function Geyser.ScrollBox:new (cons, container)
     self.__index = self
     
     local ok, err = createScrollBox(me.windowname, me.name, me:get_x(), me:get_y(), me:get_width(), me:get_height())
-    -- the object is returned and registered as a parent window unless another kind of element holds the name, so report a failed creation
-    if not mudlet.elementCreated(me.windowname, me.name, ok, err) then
+    -- the object is returned and registered as a parent window either way, so report a failed creation
+    if not mudlet.elementCreated(me.windowname, me.name, ok, err, "scrollbox") then
         printError(string.format("Geyser.ScrollBox '%s' was not created: %s", me.name, err or "unknown error"), false, false)
-        if mudlet.elementNameTaken(me.name, err) then
-            me.container:remove(me)
-            return nil, err
-        end
     end
 
     -- Geyser.Container:new() settles the hidden constraint before there is a widget to hide, so the hide is made good here
@@ -93,6 +94,5 @@ end
 function Geyser.ScrollBox:new2 (cons, container)
     cons = cons or {}
     cons.useAdd2 = true
-    local me = self:new(cons, container)
-    return me
+    return self:new(cons, container)
 end

@@ -597,42 +597,56 @@ end
 --- Answers whether a create...() call left the element the caller asked for in place.
 -- The native creators refuse a parent window they cannot resolve before they ever look at the
 -- element's name, so an element that already exists under that name is no proof that the call
--- did what was asked - the parent window's own refusal is what tells the two apart, as does the
--- refusal of a name that another kind of element holds. Any other refusal on a parent window that
--- does resolve is the "call it again to move or resize it" idiom, which is not worth a word.
+-- did what was asked - the parent window's own refusal is what tells the two apart, as does
+-- another kind of element holding the name. Any other refusal on a parent window that does
+-- resolve is a call over a name the creator's own kind holds, which some creators answer by
+-- moving or resizing that element and others by leaving it as it was, and is not worth a word.
 -- @param windowName the parent window name given to the creator
 -- @param name the element's name
 -- @param ok the creator's first return value
 -- @param err the creator's second return value
-function mudlet.elementCreated(windowName, name, ok, err)
+-- @param[opt] kind the kind the creator makes, as mudlet.nameTakenByOtherKind takes it
+function mudlet.elementCreated(windowName, name, ok, err, kind)
   if ok then
     return true
   end
   if err == string.format("window '%s' not found", windowName) then
     return false
   end
-  if mudlet.elementNameTaken(name, err) then
+  if kind and mudlet.nameTakenByOtherKind(name, kind) then
     return false
   end
   return windowType(name) ~= nil
 end
 
---- Answers whether a create...() call was refused because another kind of element holds the name.
--- Whatever the caller goes on to do with that name - hide it, echo into it, style it - lands on
--- that other element, so a caller that gets this refusal has to stop there.
+--- Answers whether another kind of element holds a name, which a creator of this kind refuses.
+-- A label cannot share its name with any other element, and the other kinds cannot share theirs
+-- with a label. Geyser asks before it adds the element to its container, because adding it moves,
+-- resizes and shows whatever window the name reaches.
 -- @param name the element's name
--- @param err the creator's second return value
-function mudlet.elementNameTaken(name, err)
-  for _, taken in ipairs({
-    "label with the name '%s' already exists",
-    "a miniconsole/userwindow with the name '%s' already exists",
-    "a scroll box, command line or text edit with the name '%s' already exists",
-  }) do
-    if err == string.format(taken, name) then
-      return true
-    end
+-- @param kind "label", or the kind of element being made otherwise
+-- @return the refusal the native creator gives for that name, or nil when the name is free to use
+function mudlet.nameTakenByOtherKind(name, kind)
+  if type(name) ~= "string" then
+    return nil
   end
-  return false
+  local held = windowType(name)
+  if not held or held == "main" then
+    return nil
+  end
+  if kind == "label" then
+    if held == "label" then
+      return nil
+    end
+    if held == "miniconsole" or held == "userwindow" or held == "buffer" then
+      return string.format("a miniconsole/userwindow with the name '%s' already exists", name)
+    end
+    return string.format("a scroll box, command line or text edit with the name '%s' already exists", name)
+  end
+  if held == "label" then
+    return string.format("label with the name '%s' already exists", name)
+  end
+  return nil
 end
 
 
@@ -664,7 +678,7 @@ function createConsole(windowName, consoleName, fontSize, charsPerLine, numberOf
   assert(type(Xpos) == 'number', 'createConsole: invalid type for Xpos (expected number, got '..type(Xpos)..'!)')
   assert(type(Ypos) == 'number', 'createConsole: invalid type for Ypos (expected number, got '..type(Ypos)..'!)')
   local ok, err = createMiniConsole(windowName, consoleName, 0, 0, 1, 1)
-  if not mudlet.elementCreated(windowName, consoleName, ok, err) then
+  if not mudlet.elementCreated(windowName, consoleName, ok, err, "miniconsole") then
     printError(string.format("createConsole: '%s' was not created: %s", consoleName, err or "unknown error"), false, false)
     return false, err
   end

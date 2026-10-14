@@ -1074,6 +1074,11 @@ function Geyser.Label:new (cons, container)
   cons.type = cons.type or "label"
   cons.nestParent = cons.nestParent or nil
   cons.format = cons.format or ""
+  local taken = mudlet.nameTakenByOtherKind(cons.name, "label")
+  if taken then
+    printError(string.format("Geyser.Label '%s' was not created: %s", cons.name, taken), false, false)
+    return nil, taken
+  end
 
   -- Call parent's constructor
   local me = self.parent:new(cons, container)
@@ -1093,12 +1098,8 @@ function Geyser.Label:new (cons, container)
     ok, err = createLabel(me.windowname, me.name, me:get_x(), me:get_y(),
       me:get_width(), me:get_height(), me.fillBg)
   end
-  if not mudlet.elementCreated(me.windowname, me.name, ok, err) then
+  if not mudlet.elementCreated(me.windowname, me.name, ok, err, "label") then
     printError(string.format("Geyser.Label '%s' was not created: %s", me.name, err or "unknown error"), false, false)
-    if mudlet.elementNameTaken(me.name, err) then
-      me.container:remove(me)
-      return nil, err
-    end
   end
 -- Geyser.Container:new() settles the hidden constraint before there is a widget to hide, so the hide is made good here
   if me.hidden or me.auto_hidden then
@@ -1232,8 +1233,7 @@ end
 function Geyser.Label:new2 (cons, container)
   cons = cons or {}
   cons.useAdd2 = true
-  local me = self:new(cons, container)
-  return me
+  return self:new(cons, container)
 end
 
 --- internal function that adds the "More..." scrollbars
@@ -1292,7 +1292,10 @@ function Geyser.Label:addChild(cons, container)
     flyDir = "L"
     layoutDir = "V"
   end
-  local me = Geyser.Label:new(cons, container)
+  local me, taken = Geyser.Label:new(cons, container)
+  if not me then
+    return nil, taken
+  end
   --this is our parent
   me.nestParent = self
   me:setOnEnter("doNestEnter", me)

@@ -356,8 +356,10 @@ describe("Console edges", function()
       assert.spy(printErrorSpy).was.called(2)
     end)
 
+    -- the holders start hidden and elsewhere, so a refused element that moved, resized or showed
+    -- them on its way into its container would show here
     it("a Geyser element refused a name leaves the element that holds it alone", function()
-      local textEdit, console = name("TextEditTakenGeyser"), name("ConsoleTakenGeyser")
+      local textEdit, console, label = name("TextEditTakenGeyser"), name("ConsoleTakenGeyser"), name("LabelHeldGeyser")
       local printErrorSpy = spy.on(_G, "printError")
       local made = {}
       finally(function()
@@ -369,25 +371,104 @@ describe("Console edges", function()
         deleteMiniConsole(console)
         deleteLabel(textEdit)
         deleteLabel(console)
+        deleteMiniConsole(label)
+        deleteLabel(label)
       end)
       assert.is_true(createTextEdit(textEdit, 0, 0, 100, 20))
       assert.is_true(createMiniConsole(console, 0, 30, 100, 50))
+      assert.is_true(createLabel(label, 0, 90, 100, 20, 1))
       for _, entry in ipairs({
-        {textEdit, "a scroll box, command line or text edit with the name '%s' already exists"},
-        {console, "a miniconsole/userwindow with the name '%s' already exists"},
+        {textEdit, Geyser.Label, "a scroll box, command line or text edit with the name '%s' already exists"},
+        {console, Geyser.Label, "a miniconsole/userwindow with the name '%s' already exists"},
+        {label, Geyser.MiniConsole, "label with the name '%s' already exists"},
       }) do
-        local label, err = Geyser.Label:new({name = entry[1], hidden = true, message = "from the label"})
-        if label then
-          made[#made + 1] = label
+        hideWindow(entry[1])
+        local geometry = {getWindowGeometry(entry[1])}
+        local element, err = entry[2]:new({name = entry[1], x = 300, y = 300, width = 40, height = 15, message = "from the label"})
+        if element then
+          made[#made + 1] = element
         end
-        assert.is_nil(label)
-        assert.are.equal(entry[2]:format(entry[1]), err)
+        assert.is_nil(element)
+        assert.are.equal(entry[3]:format(entry[1]), err)
         assert.is_nil(Geyser.windowList[entry[1]])
-        assert.is_true(windowVisible(entry[1]))
+        assert.is_false(windowVisible(entry[1]))
+        assert.are.same(geometry, {getWindowGeometry(entry[1])})
       end
       assert.are.equal("textedit", windowType(textEdit))
       assert.are.equal("", getCurrentLine(console))
-      assert.spy(printErrorSpy).was.called(2)
+      assert.spy(printErrorSpy).was.called(3)
+    end)
+
+    it("a Geyser element refused a name leaves the Geyser element that holds it in Geyser", function()
+      local held = name("HeldByGeyser")
+      spy.on(_G, "printError")
+      local label, console
+      finally(function()
+        _G.printError:revert()
+        if console then
+          Geyser:remove(console)
+        end
+        if label then
+          label:hide()
+          Geyser:remove(label)
+        end
+        deleteLabel(held)
+      end)
+      label = Geyser.Label:new({name = held, x = 0, y = 0, width = 50, height = 20})
+      console = Geyser.MiniConsole:new({name = held, x = 0, y = 30, width = 50, height = 20})
+      assert.is_nil(console)
+      assert.are.equal(label, Geyser.windowList[held])
+      assert.is_truthy(table.contains(Geyser.windows, held))
+    end)
+
+    it("a name a label already has, from the other Geyser elements", function()
+      local scrollBox, commandLine, textEdit = name("LabelForScrollBox"), name("LabelForCommandLine"), name("LabelForTextEdit")
+      local printErrorSpy = spy.on(_G, "printError")
+      finally(function()
+        _G.printError:revert()
+        deleteLabel(scrollBox)
+        deleteLabel(commandLine)
+        deleteLabel(textEdit)
+      end)
+      for _, entry in ipairs({{scrollBox, Geyser.ScrollBox}, {commandLine, Geyser.CommandLine}, {textEdit, Geyser.TextEdit}}) do
+        assert.is_true(createLabel(entry[1], 0, 0, 10, 10, 1))
+        local element, err = entry[2]:new({name = entry[1], x = 0, y = 0, width = 10, height = 10})
+        assert.is_nil(element)
+        assert.are.equal(("label with the name '%s' already exists"):format(entry[1]), err)
+        assert.is_nil(Geyser.windowList[entry[1]])
+        assert.is_nil((Geyser.parentWindows or {})[entry[1]])
+        assert.are.equal("label", windowType(entry[1]))
+      end
+      assert.spy(printErrorSpy).was.called(3)
+    end)
+
+    it("a name another kind holds, from new2() and the elements made of labels", function()
+      local console = name("ConsoleForLabels")
+      spy.on(_G, "printError")
+      local parent
+      finally(function()
+        _G.printError:revert()
+        if parent then
+          parent:hide()
+          Geyser:remove(parent)
+        end
+        for _, suffix in ipairs({"", "_text", "adjLabel"}) do
+          deleteMiniConsole(console .. suffix)
+        end
+      end)
+      local taken = "a miniconsole/userwindow with the name '%s' already exists"
+      for _, suffix in ipairs({"", "_text", "adjLabel"}) do
+        assert.is_true(createMiniConsole(console .. suffix, 0, 0, 10, 10))
+      end
+      assert.are.same({nil, taken:format(console)}, {Geyser.Label:new2({name = console})})
+      assert.are.same({nil, taken:format(console)}, {Geyser.Button:new({name = console})})
+      assert.are.same({nil, taken:format(console .. "_text")}, {Geyser.Gauge:new({name = console, x = 0, y = 0, width = 100, height = 20})})
+      assert.is_nil(Geyser.windowList[console])
+      assert.are.same({nil, taken:format(console .. "adjLabel")},
+        {Adjustable.Container:new({name = console, x = 0, y = 0, width = 100, height = 100, autoLoad = false, autoSave = false})})
+      assert.is_nil(Geyser.windowList[console])
+      parent = Geyser.Label:new({name = name("ParentOfChild"), x = 0, y = 0, width = 50, height = 20})
+      assert.are.same({nil, taken:format(console)}, {parent:addChild({name = console, width = 50, height = 20})})
     end)
 
     -- these two answer false rather than the nil the others give, which is the
