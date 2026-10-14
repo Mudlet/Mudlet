@@ -664,6 +664,20 @@ void cTelnet::cacheHostSettings()
 
 void cTelnet::connectIt(const QString& address, int port)
 {
+    if (mDisconnectionPending) {
+        if (mDecompressionRecursionDepth > 0) {
+            // A trigger on the last words of the connection that ended: tearing
+            // it down from inside their read would reset the parse it is in
+            QTimer::singleShot(0ms, this, [this, address, port]() {
+                connectIt(address, port);
+            });
+            return;
+        }
+        // Finished as a reconnect on a live connection would end it, without the rest of what it sent
+        mDisconnectionPending = false;
+        finishDisconnection();
+    }
+
     // Set early - before the recursion-on-busy-socket block below - so the
     // QCoreApplication::processEvents() call there cannot leave the indicator
     // briefly showing Disconnected during a reconnect.
@@ -769,6 +783,7 @@ void cTelnet::reconnect()
 void cTelnet::disconnectIt()
 {
     mDontReconnect = true;
+    mDisconnectRequested = true;
     mLookingUpHost = false;
     mTimerFailedConnectionRetry->stop();
     mFailedConnectionCount = 0;
@@ -790,6 +805,7 @@ void cTelnet::abortConnection()
     // lingering until the (asynchronous) disconnect signal arrives.
     mLookingUpHost = false;
     mDontReconnect = true;
+    mDisconnectRequested = true;
     mTimerFailedConnectionRetry->stop();
     mFailedConnectionCount = 0;
     abandonHostLookup();
@@ -1046,6 +1062,7 @@ void cTelnet::slot_socketConnected()
     // Disconnect pressed while there was nothing to disconnect, it would inhibit the automatic
     // reconnect after this connection ends and blame that ending on the user.
     mDontReconnect = false;
+    mDisconnectRequested = false;
 
     // Which socket is this? Once we know, set mpSocket to point at it and
     // disable the other one from doing anything more
@@ -1111,16 +1128,55 @@ void cTelnet::slot_socketDisconnected()
     // Ahead of the shutdown check below, since the reset() that would otherwise
     // do it is past that return and a beat has no connection left to time
     abandonNetworkLatencyMeasurement();
-    TEvent event{};
-#if !defined(QT_NO_SSL)
-    bool sslerr = false;
-#endif
 
     // Check if Host is closing down or null/invalid
     if (!mpHost || mpHost->isClosingDown()) {
         qDebug() << "cTelnet::slot_socketDisconnected() - Aborting due to Host shutdown in progress or null Host";
         return;
     }
+
+    // The socket still holds what the game sent before it closed - often its
+    // last words, such as a quit message - and no readyRead() will come for it.
+    // Not after a Disconnect, when it is not wanted; an abort() leaves nothing.
+    if (!mDisconnectRequested && !mDeferredReconnect && mpSocket && (!mDeferredInput.isEmpty() || mpSocket->bytesAvailable() > 0)) {
+        mDisconnectionPending = true;
+        QMetaObject::invokeMethod(this, &cTelnet::drainBeforeDisconnection, Qt::QueuedConnection);
+        return;
+    }
+    finishDisconnection();
+}
+
+// A read per event-loop turn, as readPendingSocketData() takes a burst, so a
+// large one does not hold up every other profile and the display until it is in
+void cTelnet::drainBeforeDisconnection()
+{
+    if (!mDisconnectionPending || !mpHost || mpHost->isClosingDown()) {
+        return;
+    }
+    // A trigger is running a nested event loop: a read now would land in the
+    // middle of the one it is part of
+    if (mDecompressionRecursionDepth > 0) {
+        QTimer::singleShot(10ms, this, &cTelnet::drainBeforeDisconnection);
+        return;
+    }
+    if (!mDisconnectRequested && !mDeferredReconnect && mpSocket && readSocketDataOnce()) {
+        QMetaObject::invokeMethod(this, &cTelnet::drainBeforeDisconnection, Qt::QueuedConnection);
+        return;
+    }
+    mDisconnectionPending = false;
+    finishDisconnection();
+}
+
+void cTelnet::finishDisconnection()
+{
+    // Rechecked, as a trigger on the last words may have closed the profile
+    if (!mpHost || mpHost->isClosingDown()) {
+        return;
+    }
+    TEvent event{};
+#if !defined(QT_NO_SSL)
+    bool sslerr = false;
+#endif
 
     // A drain's deferred input was read before the connection closed, and no
     // later read will come to take it in
@@ -1308,6 +1364,7 @@ void cTelnet::slot_socketDisconnected()
         connectIt(mHostUrl, mHostPort);
     }
     mDontReconnect = false;
+    mDisconnectRequested = false;
 }
 
 #if !defined(QT_NO_SSL)

@@ -38,6 +38,7 @@ class TelnetServerStub : public QTcpServer
     QByteArray mPendingData;
     bool mHadClient = false;
     QByteArray mReceived;
+    QByteArray mReceivedSoFar;
     QVector<QSize> mNawsUpdates;
 
 public:
@@ -56,6 +57,8 @@ public:
     // bytes like IAC GA to be included:
     void sendRaw(const QByteArray& data);
     bool clientConnected() const { return !mpClient.isNull(); }
+    // Everything the clients have sent, across connections
+    const QByteArray& receivedSoFar() const { return mReceivedSoFar; }
     // Closes the connection gracefully, once everything sent has gone out
     void closeClient()
     {
