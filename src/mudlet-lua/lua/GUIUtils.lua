@@ -1179,6 +1179,7 @@ function getLabelFormat(win)
   assert(win, "getLabelFormat: requires at least one argument")
   local stylesheet, err = getLabelStyleSheet(win)
   if not stylesheet then
+    labelStyleSheetFormats[win] = nil
     return nil, err
   end
   local cached = labelStyleSheetFormats[win]
