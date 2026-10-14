@@ -377,21 +377,31 @@ local lua_reserved_words = {
 
 
 -- NOT LUADOC
--- A sheet first met in a db:create whose migration was refused has no older entry to go back to,
--- so it keeps the new one with the columns the table still has added back as text, which is all
--- db:fetch needs to read them
+-- Fits a sheet's entry to the table a refused migration left: db:fetch raises over an undeclared column
 local function with_columns_on_disk(conn, s_name, entry)
-  local cur = conn:execute("SELECT * FROM " .. s_name .. " LIMIT 0")
+  local sql = "SELECT * FROM " .. s_name .. " LIMIT 0"
+  db:echo_sql(sql)
+  local cur, err = conn:execute(sql)
   if type(cur) ~= "userdata" then
+    if not tostring(err):find("no such table", 1, true) then
+      printError("db:create - " .. s_name .. " - could not read back the columns this sheet has after its " ..
+        "migration was refused, so reading it may fail: " .. tostring(err), true, false)
+    end
     return entry
   end
 
+  local columns = {}
   for _, column in ipairs(cur:getcolnames() or {}) do
-    if column ~= "_row_id" and entry.columns[column] == nil then
-      entry.columns[column] = ""
+    if column ~= "_row_id" then
+      local declared = entry.columns[column]
+      if declared == nil then
+        declared = ""
+      end
+      columns[column] = declared
     end
   end
   cur:close()
+  entry.columns = columns
 
   return entry
 end
@@ -417,6 +427,10 @@ end
 --- Note when weighing that up that printError is a quiet channel: it reaches the editor's Errors
 --- tab, which is hidden until the user opens it, and the main console only when they have turned
 --- on echoing Lua errors. <br/><br/>
+---
+--- When db:create refuses a migration, such as dropping a column that still holds data without force,
+--- it raises, and every sheet not migrated by then keeps the columns its table still has, so db:fetch
+--- reads them as before. <br/><br/>
 ---
 --- The database will be called Database_<sanitized database name>.db and will be stored in the
 --- Mudlet configuration directory. <br/><br/>
@@ -792,24 +806,27 @@ function db:create(db_name, sheets, force)
   local conn = db.__conn[db_name]
   local migrated = {}
   for sheet_name, _ in pairs(sheets) do
-    -- a savepoint rather than a rollback of everything: after db:_begin() the caller's own writes are
-    -- pending on this connection too, and a refused migration must not take them with it
-    conn:execute("SAVEPOINT db_create_migrate")
+    -- a savepoint: after db:_begin() the caller's own pending writes must survive a refusal
+    db:echo_sql("SAVEPOINT db_create_migrate")
+    local saved = conn:execute("SAVEPOINT db_create_migrate")
     local ok, err = pcall(db._migrate, db, db_name, sheet_name, force)
     if not ok then
-      -- undone, or the next write commits what the refused migration left half done; the refused
-      -- sheet and the ones not reached yet keep their old entries, as db:fetch raises over any column
-      -- the schema has stopped describing
-      if conn:execute("ROLLBACK TO db_create_migrate") then
-        conn:execute("RELEASE db_create_migrate")
-      else
-        -- _migrate commits before rebuilding a sheet, which releases the savepoint, so all that is
-        -- pending now is the migration's own
-        conn:rollback()
+      -- roll the refusal back, or the next write commits what it left half done; without the savepoint
+      -- that would take the caller's writes with it, so those statements are left pending instead
+      if saved then
+        db:echo_sql("ROLLBACK TO db_create_migrate")
+        if conn:execute("ROLLBACK TO db_create_migrate") then
+          db:echo_sql("RELEASE db_create_migrate")
+          conn:execute("RELEASE db_create_migrate")
+        else
+          -- _migrate committed, which ended the savepoint and the caller's transaction with it
+          db:echo_sql("ROLLBACK")
+          conn:rollback()
+        end
       end
       for name in pairs(sheets) do
         if not migrated[name] then
-          schema[name] = previous[name] or with_columns_on_disk(conn, name, schema[name])
+          schema[name] = with_columns_on_disk(conn, name, previous[name] or schema[name])
         end
       end
       for name, entry in pairs(previous) do

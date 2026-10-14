@@ -4467,60 +4467,101 @@ describe("Tests db:create refusing a migration", function()
   local dbName = "refusedmigrationtestingonly"
   local dbFile = getMudletHomeDir() .. "/Database_" .. dbName .. ".db"
 
-  local function collectingWarnings(fn)
+  local function createWithoutWarnings(sheets)
     local collected = {}
     -- through _G: a spec file's globals are its own
     local originalPrintError = _G.printError
     _G.printError = function(msg) collected[#collected + 1] = msg end
     finally(function() _G.printError = originalPrintError end)
 
-    local result = fn()
+    local result = db:create(dbName, sheets)
     _G.printError = originalPrintError
-    return result, table.concat(collected, "\n")
+    assert.are.equal("", table.concat(collected, "\n"))
+    return result
   end
 
-  local function createCollectingWarnings(sheets)
-    return collectingWarnings(function() return db:create(dbName, sheets) end)
+  local function columnsOnDisk(sheetName)
+    local cur = db.__conn[dbName]:execute("SELECT * FROM " .. sheetName .. " LIMIT 0")
+    local names = {}
+    for _, name in ipairs(cur:getcolnames()) do
+      if name ~= "_row_id" then
+        names[#names + 1] = name
+      end
+    end
+    cur:close()
+    table.sort(names)
+    return table.concat(names, ",")
   end
 
   after_each(function()
+    local conn = db.__conn[dbName]
     if not pcall(function() db:close(dbName) end) then
+      pcall(function() conn:close() end)
       db.__conn[dbName] = nil
     end
+    db.__schema[dbName] = nil
     os.remove(dbFile)
   end)
 
-  it("keeps reading a sheet after refusing to migrate it", function()
-    local mydb = createCollectingWarnings({people = {name = "", city = ""}, places = {name = ""}})
-    db:add(mydb.people, {name = "Bob", city = "Lancre"})
+  it("keeps what the sheets migrated before the refusal gained, and the old columns of the rest", function()
+    local initial = {}
+    for _, sheetName in ipairs({"people", "places", "things"}) do
+      initial[sheetName] = {name = "", city = ""}
+    end
+    local mydb = createWithoutWarnings(initial)
+    for sheetName in pairs(initial) do
+      db:add(mydb[sheetName], {name = "Bob", city = "Lancre"})
+    end
 
-    local ok, err = pcall(db.create, db, dbName, {people = {name = ""}, places = {name = "", region = ""}})
+    local sheets = {}
+    for sheetName in pairs(initial) do
+      sheets[sheetName] = {name = "", city = "", seen = db:Timestamp(nil)}
+    end
+    local order = {}
+    for sheetName in pairs(sheets) do
+      order[#order + 1] = sheetName
+    end
+    -- the middle one in db:create's own order refuses, so one sheet migrates first and one is never reached
+    local first, refused, unreached = order[1], order[2], order[3]
+    sheets[refused] = {name = "", seen = db:Timestamp(nil)}
+
+    local ok, err = pcall(db.create, db, dbName, sheets)
     assert.is_false(ok)
     assert.is_truthy(string.find(err, "data present in undefined columns: city", 1, true))
 
-    local rows = db:fetch(mydb.people)
-    assert.are.equal(1, #rows)
-    assert.are.equal("Lancre", rows[1].city)
-    assert.is_true(db:add(mydb.people, {name = "Nanny", city = "Lancre"}))
-    assert.are.equal(2, #db:fetch(mydb.people))
-    -- a sheet migrated before the refusal keeps what it gained, whichever order they ran in
-    if db.__schema[dbName].places.columns.region then
-      assert.is_true(db:add(mydb.places, {name = "Lancre", region = "Ramtops"}))
-      assert.are.equal("Ramtops", db:fetch(mydb.places)[1].region)
-    else
-      assert.is_true(db:add(mydb.places, {name = "Lancre"}))
-      assert.are.equal(1, #db:fetch(mydb.places))
+    assert.are.equal("city,name,seen", columnsOnDisk(first))
+    assert.is_true(db:add(mydb[first], {name = "Nanny", city = "Lancre", seen = db:Timestamp(1700000000)}))
+    assert.are.equal(1700000000, db:fetch(mydb[first], db:eq(mydb[first].name, "Nanny"))[1].seen._timestamp)
+
+    for _, sheetName in ipairs({refused, unreached}) do
+      assert.are.equal("city,name", columnsOnDisk(sheetName))
+      local rows = db:fetch(mydb[sheetName])
+      assert.are.equal(1, #rows)
+      assert.are.equal("Lancre", rows[1].city)
+      assert.is_true(db:add(mydb[sheetName], {name = "Nanny", city = "Lancre"}))
+      assert.are.equal(2, #db:fetch(mydb[sheetName]))
     end
   end)
 
+  it("keeps reading a sheet the refused db:create does not mention", function()
+    local mydb = createWithoutWarnings({people = {name = "", city = ""}, places = {name = ""}})
+    db:add(mydb.people, {name = "Bob", city = "Lancre"})
+    db:add(mydb.places, {name = "Lancre"})
+
+    assert.is_false(pcall(db.create, db, dbName, {people = {name = ""}}))
+
+    assert.are.equal("Lancre", db:fetch(mydb.places)[1].name)
+    assert.are.equal("Lancre", db:fetch(mydb.people)[1].city)
+  end)
+
   it("keeps reading a sheet after refusing to migrate it in the session's first create", function()
-    local mydb = createCollectingWarnings({people = {name = "", city = ""}, places = {name = ""}})
+    local mydb = createWithoutWarnings({people = {name = "", city = ""}, places = {name = ""}})
     db:add(mydb.people, {name = "Bob", city = "Lancre"})
     db:add(mydb.places, {name = "Lancre"})
     db:close(dbName)
     db.__schema[dbName] = nil
 
-    local ok, err = pcall(db.create, db, dbName, {people = {name = ""}, places = {name = ""}})
+    local ok, err = pcall(db.create, db, dbName, {people = {name = "", town = ""}, places = {name = ""}})
     assert.is_false(ok)
     assert.is_truthy(string.find(err, "data present in undefined columns: city", 1, true))
 
@@ -4530,10 +4571,42 @@ describe("Tests db:create refusing a migration", function()
     assert.are.equal("Lancre", rows[1].city)
     assert.is_true(db:add(mydb.people, {name = "Nanny", city = "Lancre"}))
     assert.are.equal(1, #db:fetch(mydb.places))
+    -- the refused rename never reached the table, so the sheet does not offer it either
+    assert.are.equal("city,name", columnsOnDisk("people"))
+    assert.has_error(function() return mydb.people.town end)
+  end)
+
+  it("reports a sheet whose columns it cannot read back after a refusal", function()
+    local mydb = createWithoutWarnings({people = {name = "", city = ""}})
+    db:add(mydb.people, {name = "Bob", city = "Lancre"})
+    db.__schema[dbName] = nil
+
+    local conn = db.__conn[dbName]
+    db.__conn[dbName] = setmetatable({}, {__index = function(_, method)
+      return function(_, sql, ...)
+        if method == "execute" and sql == "SELECT * FROM people LIMIT 0" then
+          return nil, "refused for the test"
+        end
+        return conn[method](conn, sql, ...)
+      end
+    end})
+    local collected = {}
+    local originalPrintError = _G.printError
+    _G.printError = function(msg) collected[#collected + 1] = msg end
+    finally(function()
+      db.__conn[dbName] = conn
+      _G.printError = originalPrintError
+    end)
+
+    assert.is_false(pcall(db.create, db, dbName, {people = {name = ""}}))
+
+    db.__conn[dbName] = conn
+    _G.printError = originalPrintError
+    assert.is_truthy(string.find(table.concat(collected, "\n"), "refused for the test", 1, true))
   end)
 
   it("does not leave a refused migration's statements for the next write to commit", function()
-    local mydb = createCollectingWarnings({people = {name = ""}})
+    local mydb = createWithoutWarnings({people = {name = ""}})
     db:add(mydb.people, {name = "Bob"})
     -- a name db:create would never make, so pruning it fails after the new column was added
     local conn = db.__conn[dbName]
@@ -4544,16 +4617,42 @@ describe("Tests db:create refusing a migration", function()
 
     assert.is_true(db:add(mydb.people, {name = "Nanny"}))
     assert.are.equal(2, #db:fetch(mydb.people))
+    assert.are.equal("name", columnsOnDisk("people"))
   end)
 
   it("keeps the writes a transaction has pending when it refuses a migration", function()
-    local mydb = db:create(dbName, {people = {name = "", city = ""}})
+    local mydb = createWithoutWarnings({people = {name = "", city = ""}})
     db:add(mydb.people, {name = "Bob", city = "Lancre"})
     assert.is_true(mydb:_begin())
     db:add(mydb.people, {name = "Nanny", city = "Lancre"})
 
     assert.is_false(pcall(db.create, db, dbName, {people = {name = ""}}))
 
+    assert.is_true(mydb:_commit())
+    mydb:_end()
+    assert.are.equal(2, #db:fetch(mydb.people))
+  end)
+
+  it("keeps the writes a transaction has pending when it cannot set its savepoint", function()
+    local mydb = createWithoutWarnings({people = {name = "", city = ""}})
+    db:add(mydb.people, {name = "Bob", city = "Lancre"})
+    assert.is_true(mydb:_begin())
+    db:add(mydb.people, {name = "Nanny", city = "Lancre"})
+
+    local conn = db.__conn[dbName]
+    db.__conn[dbName] = setmetatable({}, {__index = function(_, method)
+      return function(_, sql, ...)
+        if method == "execute" and sql == "SAVEPOINT db_create_migrate" then
+          return nil, "refused for the test"
+        end
+        return conn[method](conn, sql, ...)
+      end
+    end})
+    finally(function() db.__conn[dbName] = conn end)
+
+    assert.is_false(pcall(db.create, db, dbName, {people = {name = ""}}))
+
+    db.__conn[dbName] = conn
     assert.is_true(mydb:_commit())
     mydb:_end()
     assert.are.equal(2, #db:fetch(mydb.people))
