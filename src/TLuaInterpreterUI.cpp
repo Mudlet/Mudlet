@@ -88,17 +88,15 @@ static bool isMain(const QString& name)
     return false;
 }
 
-// The console subtracts opposite borders from its own size, so an unbounded one
-// overflows int; QWIDGETSIZE_MAX is already more than any widget can be.
-// Sizes are read as doubles because getVerifiedInt() raises on one beyond int.
+// Read as a double: getVerifiedInt() raises on a size beyond int before it can be refused
 static bool validBorderSize(const double size)
 {
-    return size >= 0 && size <= QWIDGETSIZE_MAX;
+    return size >= -Host::scmMaxBorderSize && size <= Host::scmMaxBorderSize;
 }
 
-static QString badBorderSizeMessage(const double size)
+static QString badBorderSizeMessage(const double size, const int argument = 1)
 {
-    return qsl("border size %1 is out of range, it must be between 0 and %2").arg(size, 0, 'g', 14).arg(QWIDGETSIZE_MAX);
+    return qsl("border size %1 (argument #%2) is out of range, it must be between %3 and %4").arg(size, 0, 'g', 14).arg(argument).arg(-Host::scmMaxBorderSize).arg(Host::scmMaxBorderSize);
 }
 
 // Mudlet's own colour names live in the Lua "color_table" global as {r, g, b};
@@ -3102,46 +3100,37 @@ int TLuaInterpreter::setBorderRight(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setBorderSizes
 int TLuaInterpreter::setBorderSizes(lua_State* L)
 {
-    Host& host = getHostFromLua(L);
-    const int numberOfArguments = lua_gettop(L);
-    QMarginsF borders;
-    switch (numberOfArguments) {
-    case 0:
+    static const std::array<std::array<const char*, 4>, 4> argumentNames{
+            {{"new size"}, {"new height", "new width"}, {"new top size", "new width", "new bottom size"}, {"new top size", "new right size", "new bottom size", "new left size"}}};
+    const int numberOfArguments = std::min(lua_gettop(L), 4);
+    if (!numberOfArguments) {
         lua_pushboolean(L, true);
         return 1;
-    case 1: {
-        auto value = getVerifiedDouble(L, __func__, 1, "new size");
-        borders = {value, value, value, value};
-        break;
     }
-    case 2: {
-        auto height = getVerifiedDouble(L, __func__, 1, "new height");
-        auto width = getVerifiedDouble(L, __func__, 2, "new width");
-        borders = {width, height, width, height};
-        break;
-    }
-    case 3: {
-        auto top = getVerifiedDouble(L, __func__, 1, "new top size");
-        auto width = getVerifiedDouble(L, __func__, 2, "new width");
-        auto bottom = getVerifiedDouble(L, __func__, 3, "new bottom size");
-        borders = {width, top, width, bottom};
-        break;
-    }
-    default: {
-        auto top = getVerifiedDouble(L, __func__, 1, "new top size");
-        auto right = getVerifiedDouble(L, __func__, 2, "new right size");
-        auto bottom = getVerifiedDouble(L, __func__, 3, "new bottom size");
-        auto left = getVerifiedDouble(L, __func__, 4, "new left size");
-        borders = {left, top, right, bottom};
-        break;
-    }
-    }
-    for (const double size : {borders.top(), borders.right(), borders.bottom(), borders.left()}) {
+    std::array<int, 4> sizes{};
+    for (int i = 0; i < numberOfArguments; ++i) {
+        const double size = getVerifiedDouble(L, __func__, i + 1, argumentNames[numberOfArguments - 1][i]);
         if (!validBorderSize(size)) {
-            return warnArgumentValue(L, __func__, badBorderSizeMessage(size));
+            return warnArgumentValue(L, __func__, badBorderSizeMessage(size, i + 1));
         }
+        sizes[i] = static_cast<int>(size);
     }
-    host.setUserBorders({static_cast<int>(borders.left()), static_cast<int>(borders.top()), static_cast<int>(borders.right()), static_cast<int>(borders.bottom())});
+    QMargins borders;
+    switch (numberOfArguments) {
+    case 1:
+        borders = {sizes[0], sizes[0], sizes[0], sizes[0]};
+        break;
+    case 2:
+        borders = {sizes[1], sizes[0], sizes[1], sizes[0]};
+        break;
+    case 3:
+        borders = {sizes[1], sizes[0], sizes[1], sizes[2]};
+        break;
+    default:
+        borders = {sizes[3], sizes[0], sizes[1], sizes[2]};
+        break;
+    }
+    getHostFromLua(L).setUserBorders(borders);
     lua_pushboolean(L, true);
     return 1;
 }

@@ -751,6 +751,9 @@ public:
     void setFocusOnHostActiveCommandLine();
     QMargins borders() const { return mBorders; }
     QMargins userBorders() const { return mUserBorders; }
+    // The console takes opposite borders off its own size, so they must not overflow
+    // int there; also the range the Profile Preferences border spin boxes offer.
+    static constexpr int scmMaxBorderSize = 1'000'000;
     void setUserBorders(const QMargins);
     void setMxpBorders(const QMargins);
     void loadMap();
