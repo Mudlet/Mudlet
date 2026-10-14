@@ -346,6 +346,10 @@ describe("Tests room function refusals on a scratch area", function()
     return id
   end
 
+  setup(function()
+    assert.is_true(openMapWidget())
+  end)
+
   before_each(function()
     area = addAreaName(areaName)
   end)
@@ -394,7 +398,30 @@ describe("Tests room function refusals on a scratch area", function()
     assert.is_false(hasExitLock(id, "north"))
   end)
 
+  it("hasExitLock and lockExit take the direction spellings setExit takes", function()
+    local id = room(0, 0)
+    setExit(id, room(0, 1), "North")
+    setExit(id, room(1, 0), "in")
+    setExit(id, room(-1, 0), "out")
+    for _, direction in ipairs({"North", "N", "NORTH"}) do
+      assert.is_true(lockExit(id, direction, true), direction)
+      assert.is_true(hasExitLock(id, direction), direction)
+      assert.is_true(lockExit(id, direction, false), direction)
+      assert.is_false(hasExitLock(id, direction), direction)
+    end
+    for _, pair in ipairs({{"i", "in"}, {"O", "out"}}) do
+      assert.is_true(lockExit(id, pair[1], true), pair[1])
+      assert.is_true(hasExitLock(id, pair[2]), pair[1])
+    end
+  end)
+
   it("getRoomWeight and getRoomHidden with no roomID say the player has no room", function()
+    local playerRoom = getPlayerRoom()
+    finally(function()
+      if playerRoom then
+        centerview(playerRoom)
+      end
+    end)
     local id = room(0, 0)
     assert.is_true(centerview(id))
     assert.is_true(deleteRoom(id))
