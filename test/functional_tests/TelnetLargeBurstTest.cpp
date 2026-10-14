@@ -89,6 +89,61 @@ private:
         return false;
     }
 
+    // NULs are not displayed, and a run of them compresses to almost nothing, so
+    // the first KB or so of this inflates past the depth one drain goes to: the
+    // drain defers whatever size of reads the stream arrives in. 100000 is
+    // BUFFER_SIZE in ctelnet.cpp.
+    static QByteArray compressedBurst(const QByteArray& text)
+    {
+        const QByteArray leadIn((cTelnet::scmMaxDecompressionRecursion + 1) * 100000, '\0');
+        // qCompress() prefixes the zlib stream with the source length
+        return qCompress(leadIn + "\r\n" + text, 9).mid(4);
+    }
+
+    // The WILL in a read of its own, so Mudlet's answer to it is on the wire
+    // before anything that follows
+    void negotiateMccp()
+    {
+        mpServer->sendRaw(QByteArray("\xFF\xFB\x56", 3));
+        QElapsedTimer timer;
+        timer.start();
+        while (timer.durationElapsed() < 500ms) {
+            QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
+        }
+    }
+
+    bool bufferContains(const QString& text) const
+    {
+        TBuffer& buffer = mpHost->mainConsoleView()->buffer;
+        for (int i = 0, last = buffer.getLastLineNumber(); i <= last; ++i) {
+            if (buffer.line(i).contains(text)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // The number of the first burst line not where it should be (missing,
+    // repeated or out of order), or -1 once all lineCount of them are in the
+    // buffer once each and in order
+    int firstBurstLineOutOfPlace(const int lineCount) const
+    {
+        TBuffer& buffer = mpHost->mainConsoleView()->buffer;
+        const QString marker = qsl("BURSTLINE ");
+        int expected = 0;
+        for (int i = 0, last = buffer.getLastLineNumber(); i <= last; ++i) {
+            const QString& line = buffer.line(i);
+            if (!line.startsWith(marker)) {
+                continue;
+            }
+            if (line.mid(marker.size(), 6).toInt() != expected) {
+                return expected;
+            }
+            ++expected;
+        }
+        return expected == lineCount ? -1 : expected;
+    }
+
 private slots:
     void initTestCase()
     {
@@ -166,6 +221,80 @@ private slots:
                                 "readyRead() only fires on fresh bytes.")
                                     .arg(mpHost->mainConsoleView()->buffer.getLastLineNumber())
                                     .arg(lineCount)));
+    }
+
+    // One compressed read that inflates to more than the drain goes deep in one
+    // go: every line of it has to arrive, once each and in order
+    void aCompressedReadInflatingPastTheDrainDepthIsShownInFull()
+    {
+        // well under one read of compressed data
+        constexpr int lineCount = 20000;
+        mpHost->mainConsoleView()->buffer.clear();
+
+        const QByteArray compressed = compressedBurst(burstOf(lineCount) + "MCCP BURST END\r\n");
+        QVERIFY(compressed.size() < 100000);
+        mpServer->sendRaw(QByteArray("\xFF\xFB\x56\xFF\xFA\x56\xFF\xF0", 8) + compressed);
+
+        QElapsedTimer timer;
+        timer.start();
+        while (timer.durationElapsed() < 15s && !tailContains(qsl("MCCP BURST END"))) {
+            QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
+        }
+        QVERIFY2(tailContains(qsl("MCCP BURST END")),
+                 qPrintable(qsl("the compressed burst stopped part-way through, at buffer line %1 of %2.").arg(mpHost->mainConsoleView()->buffer.getLastLineNumber()).arg(lineCount)));
+        const int outOfPlace = firstBurstLineOutOfPlace(lineCount);
+        QVERIFY2(outOfPlace < 0, qPrintable(qsl("burst line %1 is missing, repeated or out of order.").arg(outOfPlace)));
+    }
+
+    // More compressed data than one read takes: what a drain deferred has to go
+    // into zlib ahead of the rest of the stream still waiting in the socket
+    void deferredInputIsProcessedAheadOfLaterReads()
+    {
+        constexpr int lineCount = 60000;
+        mpHost->mainConsoleView()->buffer.clear();
+
+        const QByteArray compressed = compressedBurst(burstOf(lineCount) + "DEFERRED BURST END\r\n");
+        QVERIFY(compressed.size() > 100000);
+        mpServer->sendRaw(QByteArray("\xFF\xFB\x56\xFF\xFA\x56\xFF\xF0", 8) + compressed);
+
+        QElapsedTimer timer;
+        timer.start();
+        while (timer.durationElapsed() < 30s && !tailContains(qsl("DEFERRED BURST END"))) {
+            QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
+        }
+        QVERIFY2(tailContains(qsl("DEFERRED BURST END")),
+                 qPrintable(qsl("the compressed burst stopped part-way through, at buffer line %1 of %2.").arg(mpHost->mainConsoleView()->buffer.getLastLineNumber()).arg(lineCount)));
+        const int outOfPlace = firstBurstLineOutOfPlace(lineCount);
+        QVERIFY2(outOfPlace < 0, qPrintable(qsl("burst line %1 is missing, repeated or out of order.").arg(outOfPlace)));
+    }
+
+    // Closes the connection, so it has to stay the last test.
+    // The game closing straight after a burst: what a drain deferred was read
+    // before the close, so it has to be shown even though no read follows it
+    void aBurstTheGameClosesAfterIsShownInFull()
+    {
+        constexpr int lineCount = 10000;
+        mpHost->mainConsoleView()->buffer.clear();
+
+        // Some fifty drains' worth from one read, so the close is seen while
+        // most of it is still deferred
+        const QByteArray leadIn(50 * cTelnet::scmMaxDecompressionRecursion * 100000, '\0');
+        const QByteArray compressed = qCompress(leadIn + "\r\n" + burstOf(lineCount) + "BURST BEFORE CLOSE END\r\n", 9).mid(4);
+        QVERIFY(compressed.size() < 100000);
+        negotiateMccp();
+        mpServer->sendRaw(QByteArray("\xFF\xFA\x56\xFF\xF0", 5) + compressed);
+        mpServer->closeClient();
+
+        QElapsedTimer timer;
+        timer.start();
+        while (timer.durationElapsed() < 15s && mpHost->mTelnet.getConnectionState() != QAbstractSocket::UnconnectedState) {
+            QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
+        }
+        QCOMPARE(mpHost->mTelnet.getConnectionState(), QAbstractSocket::UnconnectedState);
+        QVERIFY2(bufferContains(qsl("BURST BEFORE CLOSE END")),
+                 qPrintable(qsl("the burst stopped part-way through when the game closed, at burst line %1 of %2.").arg(firstBurstLineOutOfPlace(lineCount)).arg(lineCount)));
+        const int outOfPlace = firstBurstLineOutOfPlace(lineCount);
+        QVERIFY2(outOfPlace < 0, qPrintable(qsl("burst line %1 is missing, repeated or out of order.").arg(outOfPlace)));
     }
 };
 

@@ -63,6 +63,7 @@
 #include <QSslError>
 #include <QtGlobal>
 
+#include <array>
 #include <memory>
 
 using namespace std::chrono_literals;
@@ -269,6 +270,7 @@ void cTelnet::reset()
     abandonNetworkLatencyMeasurement();
     command = "";
     mMudData = "";
+    mDeferredInput.clear();
 
     mServerRequestedSGA = false;
     mCharacterModeDetected = false;
@@ -1120,6 +1122,10 @@ void cTelnet::slot_socketDisconnected()
         return;
     }
 
+    // A drain's deferred input was read before the connection closed, and no
+    // later read will come to take it in
+    while (!mDeferredInput.isEmpty() && mpSocket && !mpHost->isClosingDown() && !mDeferredReconnect && readSocketDataOnce()) {
+    }
     postData();
     // A line held back for server-wrap undoing is complete now that the
     // connection is gone - commit it, in trigger context as for any other
@@ -5834,8 +5840,8 @@ void cTelnet::slot_socketReadyToBeRead()
     readPendingSocketData();
 }
 
-// Requeues itself for what is left after one BUFFER_SIZE read: readyRead() fires only on fresh bytes,
-// so the rest of a burst would sit unseen until the server sent again. Not drained via
+// Requeues itself for what is left after one BUFFER_SIZE read, or deferred by a drain: readyRead()
+// fires only on fresh bytes, so the rest of a burst would sit unseen until the server sent again. Not drained via
 // slot_socketReadyToBeRead(): the leftovers predate any command a trigger has since sent, so treating
 // them as that command's reply would report a latency of nearly nothing.
 void cTelnet::readPendingSocketData()
@@ -5844,18 +5850,50 @@ void cTelnet::readPendingSocketData()
         return;
     }
 
-    // TODO: https://github.com/Mudlet/Mudlet/issues/5780 (2 of 7) - investigate switching from using `char[]` to `std::array<char>`
-    char in_buffer[BUFFER_SIZE + 10];
+    if (readSocketDataOnce()) {
+        QMetaObject::invokeMethod(this, &cTelnet::readPendingSocketData, Qt::QueuedConnection);
+    }
+}
 
-    int amount = mpSocket->read(in_buffer, BUFFER_SIZE);
-    processSocketData(in_buffer, amount);
+// Processes one read's worth and answers whether more is waiting.
+bool cTelnet::readSocketDataOnce()
+{
+    int amount = 0;
+    if (!mDeferredInput.isEmpty()) {
+        QByteArray deferred;
+        deferred.swap(mDeferredInput);
+        amount = static_cast<int>(deferred.size());
+        processSocketData(deferred.data(), amount);
+    } else if (mpSocket) {
+        std::array<char, BUFFER_SIZE + 10> in_buffer;
+
+        amount = static_cast<int>(mpSocket->read(in_buffer.data(), BUFFER_SIZE));
+        processSocketData(in_buffer.data(), amount);
+    }
 
     // amount > 0 as well as bytesAvailable(): a read that yields nothing while the
     // socket still reports bytes would otherwise requeue forever, spinning a core
     // for as long as the connection stayed in that state.
-    if (amount > 0 && mpSocket && mpSocket->bytesAvailable() > 0) {
-        QMetaObject::invokeMethod(this, &cTelnet::readPendingSocketData, Qt::QueuedConnection);
+    return amount > 0 && (!mDeferredInput.isEmpty() || (mpSocket && mpSocket->bytesAvailable() > 0));
+}
+
+void cTelnet::loopbackTest(QByteArray& data)
+{
+    ++mLoopbackProcessingDepth;
+    const auto loopbackGuard = qScopeGuard([this] {
+        --mLoopbackProcessingDepth;
+    });
+    // A connection's leftover input is not this feed's to process
+    QByteArray connectionInput;
+    connectionInput.swap(mDeferredInput);
+    processSocketData(data.data(), static_cast<int>(data.size()), true);
+    // There is no later read for fed data to wait for
+    while (!mDeferredInput.isEmpty()) {
+        QByteArray deferred;
+        deferred.swap(mDeferredInput);
+        processSocketData(deferred.data(), static_cast<int>(deferred.size()), true);
     }
+    mDeferredInput.swap(connectionInput);
 }
 
 void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopbackTesting)
@@ -5876,17 +5914,18 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
     if (mDecompressionRecursionDepth > scmMaxDecompressionRecursion) {
         qWarning() << "cTelnet::processSocketData(...) WARNING - recursion depth exceeded, dropping remaining data";
         if (mNeedDecompression) {
-            // What is dropped here is the rest of the compressed stream, and
-            // zlib cannot pick a stream up again past a gap, so whatever the
-            // game compresses next would come out as garbage or not at all.
-            // Refuse the stream so the game falls back to plain text instead.
-            //: Shown when one read from the game inflates to more than can be processed safely (e.g. a decompression bomb) while MCCP compression is on.
+            // A drain defers its input rather than going this deep, so this is
+            // processing nested inside one, such as a feedTelnet() from a trigger
+            // at its deepest level. zlib cannot pick a stream up again past what
+            // is dropped here, so refuse the stream and have the game fall back
+            // to plain text.
+            //: Shown when data is processed nested too deeply to do safely (e.g. feedTelnet() called from a trigger while a large compressed read is being shown) while MCCP compression is on.
             postMessage(tr("[ WARN  ]  - Too much compressed data to process at once, some was lost - compression disabled.\n"
                            "If the display looks garbled, please reconnect to the game."));
             refuseCompressedStream();
             return;
         }
-        //: Shown when too much data expands out of one compressed read (e.g. a decompression bomb) to process safely.
+        //: Shown when data is processed nested too deeply to do safely (e.g. feedTelnet() called from a trigger while a large compressed read is being shown).
         postMessage(tr("[ WARN  ]  - Too much data to process at once, some may have been lost."));
         return;
     }
@@ -5931,7 +5970,6 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
         // out of compression on stream end or a broken stream. Anything it did
         // not consume - more compressed data, or plain data past the stream -
         // must still be processed, so queue it (see the re-entry at the end).
-        // The recursion cap bounds this if a pass ever makes no progress.
         if (amount > 0) {
             remainingData = in_buffer;
             remainingAmount = amount;
@@ -6196,12 +6234,19 @@ Some data loss is likely - please mention this problem to the game admins.)",
     // reconnect makes this leftover the dropped connection's, same as the bytes
     // the loop above stopped at.
     if (remainingData && remainingAmount > 0 && !(mDeferredReconnect && !loopbackTesting)) {
-        // the leftover arrived in the same read, so it has no wait of its own
+        // the leftover arrived in the same read, so it has no wait of its own;
+        // a part deferred below is recorded with the wait for its turn
         if (recordingThisRead) {
             mRecordLastChunkMSecTimeOffset = static_cast<qint32>(mRecordingChunkTimer.elapsed());
         }
-        processSocketData(remainingData, remainingAmount, loopbackTesting);
-        return;
+        if (mDecompressionRecursionDepth < scmMaxDecompressionRecursion) {
+            processSocketData(remainingData, remainingAmount, loopbackTesting);
+            return;
+        }
+        // Another level would be refused, and losing the rest of a compressed
+        // stream garbles everything after it, so leave it for the next
+        // event-loop turn (loopbackTest() takes it in straight away)
+        mDeferredInput.append(remainingData, remainingAmount);
     }
 
     if (mpHost) {
