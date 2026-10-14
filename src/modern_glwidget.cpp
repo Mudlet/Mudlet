@@ -1247,7 +1247,7 @@ void ModernGLWidget::renderRooms()
         if (look.highlighted) {
             const MapStyle::HighlightShape shape = style.highlightShape;
             const bool disc = shape == MapStyle::HighlightShape::Disc;
-            const QColor color = style.highlightColorFor(look.highlightColor);
+            const QColor color = disc ? style.highlightColorFor(look.highlightColor) : style.highlightColorFor(look.highlightColor, look.highlightCenterColor);
             const QColor centerColor = disc ? look.highlightCenterColor : color;
             const QString key = qsl("highlight|%1|%2|%3|%4").arg(QString::number(static_cast<int>(shape)), color.name(QColor::HexArgb), centerColor.name(QColor::HexArgb), QString::number(round));
             if (const GLuint texture = imageTexture(key, [shape, color, centerColor, round] {
