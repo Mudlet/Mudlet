@@ -649,14 +649,18 @@ bool Host::closeWithNoView()
 
 bool Host::deletionMustWait()
 {
-    const bool mapOperationRunning = mpMap && mpMap->mapOperationInProgress();
-    if (mapOperationRunning) {
+    if (mpMap && mpMap->mapOperationInProgress()) {
         if (!mpMap->mapOperationAbortRequested()) {
             qDebug().nospace().noquote() << "Host::deletionMustWait() INFO - a map operation of \"" << getName() << "\" is still running, so the profile will be deleted once it has stopped.";
         }
         mpMap->requestMapOperationAbort();
     }
-    return mapOperationRunning || mLuaInterpreter.pumpingEvents() || mLuaInterpreter.luaOnStack() || waitingForProfileSave();
+    return deletionWouldWait();
+}
+
+bool Host::deletionWouldWait() const
+{
+    return (mpMap && mpMap->mapOperationInProgress()) || mLuaInterpreter.pumpingEvents() || mLuaInterpreter.luaOnStack() || waitingForProfileSave();
 }
 
 bool Host::saveForClose()
