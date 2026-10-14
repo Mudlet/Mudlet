@@ -44,6 +44,7 @@
 #include <QMouseEvent>
 #include <QPixmap>
 #include <QPushButton>
+#include <QScopeGuard>
 #include <QSignalSpy>
 #include <QTemporaryDir>
 #include <QTimer>
@@ -1102,6 +1103,10 @@ private slots:
         showMapper(false);
         const auto [viewId, error] = mpHost->createMapView(mAreaId);
         QVERIFY2(viewId > 0, qPrintable(error));
+        const int openedViewId = viewId;
+        const auto closeTheView = qScopeGuard([this, openedViewId] {
+            mpHost->closeMapView(openedViewId);
+        });
         T2DMap* pViewMap = map()->getViewManager()->getView(viewId)->get2DMap();
         pViewMap->mMultiSelectionSet = QSet<int>{kNorthWestRoomId, kNorthRoomId, kWestRoomId, kPlayerRoomId};
         pViewMap->mMultiSelectionHighlightRoomId = kWestRoomId;
@@ -1111,7 +1116,6 @@ private slots:
         const QSet<int> remaining{kNorthWestRoomId, kNorthRoomId, kPlayerRoomId};
         QCOMPARE(pViewMap->mMultiSelectionSet, remaining);
         QVERIFY2(remaining.contains(pViewMap->mMultiSelectionHighlightRoomId), "the view's highlight is still the deleted room");
-        mpHost->closeMapView(viewId);
     }
 
     // Room ids are reused, so a line left in progress would go on in another room.
