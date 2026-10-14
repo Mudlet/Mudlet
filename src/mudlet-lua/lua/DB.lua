@@ -278,12 +278,12 @@ local VALIDATION_OPTIONS = {
 ---@return string msg
 function db:_validate_validations(validations)
   if type(validations) ~= "string" then
-    return false, "_validations must be a string. Received "..type(validations)
+    return false, "_violations must be a string. Received "..type(validations)
   elseif table.contains(VALIDATION_OPTIONS, validations) then
     return true, ""
   end
 
-  return false, '_validations must be one of: {"ABORT", "FAIL", "IGNORE", "REPLACE", "ROLLBACK"}.  Received: '..validations
+  return false, '_violations must be one of: {"ABORT", "FAIL", "IGNORE", "REPLACE", "ROLLBACK"}.  Received: '..validations
 end
 
 
