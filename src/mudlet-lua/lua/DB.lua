@@ -1407,6 +1407,18 @@ function db:_build_create_table_sql(schema, s_name)
 end
 
 
+-- The sorted, comma-joined column names of an index's column list, as it is
+-- stored or as db:_sql_columns renders it: a sort direction is not a column.
+local function index_columns_key(column_list)
+  local cols = {}
+  for col in normalize_sql(column_list):gmatch('"([^"]+)"') do
+    cols[#cols + 1] = col
+  end
+  table.sort(cols)
+  return table.concat(cols, ",")
+end
+
+
 -- Conditionally drops orphaned indexes.
 function db:_drop_orphaned_indexes(conn, s_name, schema)
   local cur, err;
@@ -1468,29 +1480,18 @@ function db:_drop_orphaned_indexes(conn, s_name, schema)
   local index_strs = {}
 
   for i, index in ipairs(schema.options._index) do
-    if type(index) == "table" then
-      local t = {}
-      for j, col_name in ipairs(index) do
-        t[j] = col_name:lower()
-      end
-      table.sort(t);
-      index_strs[i] = table.concat(t, ',')
-    else
-      index_strs[i] = index:lower()
-    end
+    index_strs[i] = index_columns_key(db:_sql_columns(index))
   end
 
-  local cols         = {}
   local index_match  = ""
   local is_dangling  = true;
   local cols_str     = ""
   local unique_match = ""
 
   while row do
-    cols = {}
     sql = normalize_sql(row.sql)
-    index_match  = sql:match("create%s+index%s+idx[%w_]+%s+on%s+[%w_]+%s+%((.+)%)")
-    unique_match = sql:match("create%s+unique%s+index%s+idx[%w_]+%s+on%s+[%w_]+%s+%((.+)%)")
+    index_match  = sql:match("create%s+index%s+idx%S+%s+on%s+%S+%s+%((.+)%)")
+    unique_match = sql:match("create%s+unique%s+index%s+idx%S+%s+on%s+%S+%s+%((.+)%)")
 
     -- matched unique index.  Mudlet doesn't make these anymore, so it should be removed.
     if unique_match then
@@ -1500,12 +1501,7 @@ function db:_drop_orphaned_indexes(conn, s_name, schema)
         )
 
     elseif index_match then
-      cols = {}
-      for col in index_match:gmatch('"([^"]+)"') do
-        table.insert(cols, col)
-      end
-      table.sort(cols)
-      cols_str = table.concat(cols, ',')
+      cols_str = index_columns_key(index_match)
 
       is_dangling = true
 

@@ -3841,9 +3841,7 @@ describe("Tests db:create with a single column name as _index", function()
 
   it("warns about the _row_id no sheet definition names either", function()
     -- the sheet is given one, but no definition declares it: it is not there to
-    -- index on the db:create that makes the sheet, and db:_drop_orphaned_indexes
-    -- cannot match the leading underscore, so an index on it was dropped and
-    -- made again on every db:create after that
+    -- index on the db:create that makes the sheet
     local mydb, warnings = createCollectingWarnings({people = {name = "", city = "", _index = "_row_id"}})
     assert.is_table(mydb)
     assert.is_truthy(string.find(warnings, '_index names "_row_id"', 1, true))
@@ -3893,24 +3891,64 @@ describe("Tests db:create keeping indexes on underscored column names", function
     return names
   end
 
+  -- the DROP INDEX statements a db:create runs; through pcall rather than
+  -- finally, as busted keeps only the last finally an it registers
+  local function dropsOnCreate(sheets)
+    local drops = {}
+    local originalEchoSql = db.echo_sql
+    db.echo_sql = function(_, sql)
+      if string.find(sql, "DROP INDEX", 1, true) then
+        drops[#drops + 1] = sql
+      end
+    end
+    local ok, result = pcall(db.create, db, dbName, sheets)
+    db.echo_sql = originalEchoSql
+    assert(ok, result)
+    assert.is_table(result)
+    return drops
+  end
+
+  local function createWithoutWarnings(sheets)
+    local mydb, warnings = createCollectingWarnings(sheets)
+    assert.is_table(mydb)
+    assert.are.equal("", warnings)
+  end
+
   it("leaves an index on a column with an underscore in its name alone on the next create", function()
     local sheets = {people = {home_city = "", name = "", _index = {"home_city", {"name", "home_city"}}}}
     local expected = {"idx_people_c_home_city", "idx_people_c_name_home_city"}
-    createCollectingWarnings(sheets)
+    createWithoutWarnings(sheets)
     assert.are.same(expected, indexNames("people"))
 
-    local statements = {}
-    local originalEchoSql = db.echo_sql
-    db.echo_sql = function(_, sql) statements[#statements + 1] = sql end
-    -- busted keeps only the last finally, so this create must not register one of its own
-    finally(function() db.echo_sql = originalEchoSql end)
-    db:create(dbName, sheets)
-    db.echo_sql = originalEchoSql
-
-    for _, sql in ipairs(statements) do
-      assert.is_falsy(string.find(sql, "DROP INDEX", 1, true), sql)
-    end
+    assert.are.same({}, dropsOnCreate(sheets))
     assert.are.same(expected, indexNames("people"))
+  end)
+
+  it("drops an index on an underscored column once the sheet no longer asks for it", function()
+    createWithoutWarnings({people = {home_city = "", name = "", _index = {"name", {"name", "home_city"}}}})
+
+    assert.are.same({"DROP INDEX IF EXISTS idx_people_c_name_home_city;"},
+      dropsOnCreate({people = {home_city = "", name = "", _index = {"name"}}}))
+    assert.are.same({"idx_people_c_name"}, indexNames("people"))
+  end)
+
+  it("keeps and drops an index on a column named with letters outside ASCII the same way", function()
+    local sheets = {people = {["città"] = "", other = "", _index = {"città"}}}
+    createWithoutWarnings(sheets)
+    assert.are.same({}, dropsOnCreate(sheets))
+
+    assert.are.same({"DROP INDEX IF EXISTS idx_people_c_città;"},
+      dropsOnCreate({people = {["città"] = "", other = "", _index = {"other"}}}))
+    assert.are.same({"idx_people_c_other"}, indexNames("people"))
+  end)
+
+  it("leaves a compound index whose second column is named desc alone on the next create", function()
+    -- db:_sql_columns renders {"name", "desc"} as "name" desc, a sort direction
+    local sheets = {people = {name = "", desc = "", _index = {{"name", "desc"}}}}
+    createWithoutWarnings(sheets)
+    assert.are.same({"idx_people_c_name_desc"}, indexNames("people"))
+
+    assert.are.same({}, dropsOnCreate(sheets))
   end)
 end)
 
