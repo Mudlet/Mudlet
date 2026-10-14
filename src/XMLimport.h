@@ -93,7 +93,7 @@ private:
     void readHelpPackage();
 
     void readUnknownElement(const QString&);
-    void recordItemErrors(const QString& itemName, const QStringList& errors);
+    void recordItemErrors(const QString& itemName, const QStringList& errors, qsizetype errorsAt, qsizetype namesAt);
 
     void readHost(Host*);
     bool readHostColorElement(Host*, QStringView elementName);

@@ -3374,6 +3374,14 @@ describe("Tests installing a package whose trigger pattern does not compile", fu
     assert.is_true(contains(reason, '*(group'), tostring(reason))
     assert.is_true(listContains(names, name .. " child"), tostring(reason))
   end)
+
+  it("lists a group before the triggers in it, as the editor does", function()
+    local reason = install(trigger(name .. " group", {isFolder = true, script = "if then",
+                                                      children = trigger(name .. " child", {script = "if then", patterns = {{"*(child", perl}}})}))
+
+    local names = namesIn(reason)
+    assert.same({name .. " group", name .. " child", name .. " child"}, names, "the errors are not in document order: " .. tostring(reason))
+  end)
 end)
 
 describe("Tests installing a package whose alias pattern does not compile", function()
@@ -3459,6 +3467,34 @@ describe("Tests installing a package whose alias pattern does not compile", func
     assert.equals(2, entriesFor(name .. " regex first"), "a pattern error was lost to the script error after it: " .. tostring(reason))
     assert.equals(2, entriesFor(name .. " name last"), "the alias whose name comes last was not named for both its errors: " .. tostring(reason))
     assert.is_nil(("; " .. tostring(reason)):find("; : "), "an error was reported without the alias's name: " .. tostring(reason))
+  end)
+
+  it("lists a group before the aliases in it, as the editor does", function()
+    local name = "mudlet-spec-broken-alias-group"
+    local xml = getMudletHomeDir() .. "/" .. name .. ".xml"
+    defer(function()
+      removeFixturePackage(name)
+      os.remove(xml)
+    end)
+    writePackageXml(xml, table.concat({
+      '<AliasPackage>',
+      '<AliasGroup isActive="yes" isFolder="yes">',
+      '<name>' .. name .. ' group</name><packageName></packageName><script>if then</script><command></command><regex></regex>',
+      '<Alias isActive="yes" isFolder="no">',
+      '<name>' .. name .. ' child</name><packageName></packageName><script>if then</script><command></command><regex>^(child</regex>',
+      '</Alias>',
+      '</AliasGroup>',
+      '</AliasPackage>',
+    }, "\n"))
+
+    local ok, reason = installUntilConfirmed(installPackage, xml, function() return packageInstalled(name) end, "the package " .. name)
+
+    assert.is_true(ok)
+    local names = {}
+    for entry in (tostring(reason) .. "; "):gmatch("(.-); ") do
+      names[#names + 1] = entry:match("^(.-): ")
+    end
+    assert.same({name .. " group", name .. " child", name .. " child"}, names, "the errors are not in document order: " .. tostring(reason))
   end)
 end)
 

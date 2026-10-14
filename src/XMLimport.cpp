@@ -73,16 +73,18 @@ XMLimport::XMLimport(Host* pH)
 {
 }
 
-// Only once the item is read, as its <script> and <regex> can come before its <name>
-void XMLimport::recordItemErrors(const QString& itemName, const QStringList& errors)
+// Called once the item is read, as its <script> and <regex> can come before its <name>, so its
+// children are recorded first: inserting at the sizes taken before them keeps document order
+void XMLimport::recordItemErrors(const QString& itemName, const QStringList& errors, const qsizetype errorsAt, const qsizetype namesAt)
 {
     if (errors.isEmpty()) {
         return;
     }
+    qsizetype at = errorsAt;
     for (const QString& error : errors) {
-        mItemsWithErrors.append(qsl("%1: %2").arg(itemName, error));
+        mItemsWithErrors.insert(at++, qsl("%1: %2").arg(itemName, error));
     }
-    mItemsWithErrorNames.append(itemName);
+    mItemsWithErrorNames.insert(namesAt, itemName);
 }
 
 std::pair<bool, QString> XMLimport::importPackage(QFile* pfile, QString packName, int moduleFlag, QString* pVersionString)
@@ -1437,6 +1439,8 @@ int XMLimport::readTrigger(TTrigger* pParent)
     pT->mColorTrigger = attributes().value(qsl("isColorTrigger")) == YES;
 
     QStringList itemErrors;
+    const qsizetype errorsAt = mItemsWithErrors.size();
+    const qsizetype namesAt = mItemsWithErrorNames.size();
     // Is this a "TriggerGroup" or a "Trigger"
     const QString what = name().toString();
     while (!atEnd()) {
@@ -1514,7 +1518,7 @@ int XMLimport::readTrigger(TTrigger* pParent)
         qDebug().nospace() << "XMLimport::readTrigger(...): ERROR: can not compile pattern list for trigger: " << pT->getName();
         itemErrors.append(compileErrorAsPlainText(pT->getError()));
     }
-    recordItemErrors(pT->getName(), itemErrors);
+    recordItemErrors(pT->getName(), itemErrors, errorsAt, namesAt);
 
     return pT->getID();
 }
@@ -1632,6 +1636,8 @@ int XMLimport::readAlias(TAlias* pParent)
     }
 
     QStringList itemErrors;
+    const qsizetype errorsAt = mItemsWithErrors.size();
+    const qsizetype namesAt = mItemsWithErrorNames.size();
     const QString what = name().toString();
     while (!atEnd()) {
         readNext();
@@ -1666,7 +1672,7 @@ int XMLimport::readAlias(TAlias* pParent)
         }
     }
 
-    recordItemErrors(pT->getName(), itemErrors);
+    recordItemErrors(pT->getName(), itemErrors, errorsAt, namesAt);
 
     return pT->getID();
 }
