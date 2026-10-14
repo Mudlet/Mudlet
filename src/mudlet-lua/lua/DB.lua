@@ -393,10 +393,13 @@ local lua_reserved_words = {
 --- with no sign of it. A fault that would cost the sheet a column therefore stays fatal, and its
 --- message names the key so the fix is obvious. A value whose shape no sheet can be built from is
 --- refused as well, whatever it holds: a malformed _index, _unique or _violations leaves nothing to
---- skip and nothing to build from. The exception is a column sqlite itself refuses to add to a sheet
---- that already holds rows, as it does one with a db:Timestamp("CURRENT_TIMESTAMP") default: that is
---- reported through printError on every call and the sheet goes on without the column, so give a
---- column added to an existing sheet a constant default. <br/><br/>
+--- skip and nothing to build from. The exceptions are the statements sqlite itself refuses. A sheet
+--- it will not create, such as one whose name holds a space, is reported through printError and
+--- left out: db:create still returns a handle holding it, and every later call on that sheet fails.
+--- A column it will not add to an existing sheet, as with a db:Timestamp("CURRENT_TIMESTAMP")
+--- default once the sheet holds rows (with sqlite older than 3.32, even an empty one), is reported
+--- on every call and the sheet goes on without it, so give a column added to an existing sheet a
+--- constant default. <br/><br/>
 ---
 --- Note when weighing that up that printError is a quiet channel: it reaches the editor's Errors
 --- tab, which is hidden until the user opens it, and the main console only when they have turned
