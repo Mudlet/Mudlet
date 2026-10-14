@@ -720,6 +720,10 @@ private slots:
         QVERIFY2(RoomAppearance::onEnvironmentLine(*map(), *pOther), "a one-way exit into the room does not put it on a line");
         pOther->setHidden(true);
         QVERIFY2(!RoomAppearance::onEnvironmentLine(*map(), *pRoom), "a line to a hidden room counts");
+        pOther->setHidden(false);
+        pRoom->customLines.insert(qsl("e"), {QPointF(0.5, 0.5), QPointF(1.0, 0.0)});
+        QVERIFY2(!RoomAppearance::onEnvironmentLine(*map(), *pRoom), "an exit drawn as a custom line counts as a line of its environment");
+        QVERIFY2(!RoomAppearance::onEnvironmentLine(*map(), *pOther), "an entrance drawn as a custom line counts as a line of its environment");
     }
 
     void test_environmentLinesAreOffUnlessAsked()

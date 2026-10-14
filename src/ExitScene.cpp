@@ -495,14 +495,11 @@ void Builder::addRoom(const int roomId, const TRoom& room)
     };
     QList<Exit> exits;
     for (const int direction : scmDirections) {
+        const TRoom* pDestination = RoomAppearance::drawnExit(mMap, room, direction);
+        if (!pDestination || (mOptions.areaExitsOnly && pDestination->getArea() == mOptions.areaId)) {
+            continue;
+        }
         const int destinationId = room.getExit(direction);
-        if (destinationId <= 0 || room.customLines.contains(TRoom::dirCodeToShortString(direction))) {
-            continue;
-        }
-        const TRoom* pDestination = mMap.mpRoomDB->getRoom(destinationId);
-        if (!pDestination || pDestination->isHidden() || (mOptions.areaExitsOnly && pDestination->getArea() == mOptions.areaId)) {
-            continue;
-        }
         const bool oneWay = pDestination->getExit(TMap::scmReverseDirections.value(direction)) != roomId;
         exits.append({direction, pDestination, destinationId, oneWay});
     }
