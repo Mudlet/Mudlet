@@ -789,7 +789,7 @@ function Adjustable.Container:lockContainer(lockNr, lockStyle)
 
     self.lockStyle = lockStyle
 
-    if self.minimized == false then
+    if self.minimized ~= true then
         self.lockStyles[lockStyle][2](self)
         self.exitLabel:hide()
         self.minimizeLabel:hide()
@@ -802,7 +802,7 @@ end
 -- @param customItem the item clicked at
 function Adjustable.Container:customMenu(customItem)
     closeAllLevels(self.rCLabel)
-    if self.minimized == false then
+    if self.minimized ~= true then
         self.customItems[customItem][2](self)
     end
 end
@@ -851,10 +851,10 @@ end
 -- internal function: onClick minimize event
 function Adjustable.Container:onClickMin()
     closeAllLevels(self.rCLabel)
-    if self.minimized == false then
-        self:minimize()
-    else
+    if self.minimized == true then
         self:restore()
+    else
+        self:minimize()
     end
 end
 
@@ -1129,7 +1129,7 @@ function Adjustable.Container:load(slot, dir)
         local fullHeight = self.minimized == true and self.origh or self.height
         self:move(mytable.x, mytable.y)
         self:resize(mytable.width, mytable.height)
-        self.minimized = mytable.minimized
+        self.minimized = mytable.minimized == true
 
         if mytable.locked == true then self:lockContainer()  else self:unlockContainer() end
 

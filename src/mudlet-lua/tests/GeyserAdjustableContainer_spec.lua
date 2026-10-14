@@ -347,6 +347,18 @@ describe("Tests functionality of Adjustable.Container", function()
       assert.are.equal(200, geometry("gasContaineradjLabel").height)
     end)
 
+    it("minimizes from its button and locks when its minimized flag is truthy but not true", function()
+      container.minimized = 1
+      container:onClickMin()
+      assert.is_true(container.minimized)
+      assert.are.equal(tonumber(container.buttonsize) + 10, geometry("gasContaineradjLabel").height)
+      container:onClickMin()
+      assert.are.equal(200, geometry("gasContaineradjLabel").height)
+      container.minimized = 1
+      container:lockContainer()
+      assert.is_true(container.locked)
+    end)
+
     it("titles itself after its name again after resetTitle", function()
       container:setTitle("My Title", "red", "c")
       container:resetTitle()
@@ -2316,8 +2328,12 @@ describe("Tests Adjustable.Container borders, persistence and menu items", funct
       container:minimize()
       container:save(nil, scratchDir)
       container:delete()
+      local saved = {}
+      table.load(scratchDir .. "gapSavedMinimized.lua", saved)
+      assert.are.equal("200px", saved.origh)
 
-      local reloaded = make("gapSavedMinimized", {height = 200})
+      -- reloaded at another height, so only the saved origh can give back 200
+      local reloaded = make("gapSavedMinimized", {height = 300})
       reloaded:load(nil, scratchDir)
       reloaded:restore()
       assert.are.equal(200, reloaded:get_height())
