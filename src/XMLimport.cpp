@@ -49,14 +49,18 @@
 
 #include <memory>
 
-// Undoes the rich-text markup TLuaInterpreter::compile() adds (kept in step by hand), for the
-// console line and installPackage()'s reason. Unescaped in reverse order, ampersand last, so a
-// script whose own text says "&amp;lt;b&amp;gt;" comes back as itself rather than as markup.
+// Undoes the rich-text markup TLuaInterpreter::compile(), TTrigger::setRegexCodeList() and
+// TAlias::setRegexCode() add (kept in step by hand), for installPackage()'s reason. Unescaped in
+// reverse order, ampersand last, so a script whose own text says "&amp;lt;b&amp;gt;" comes back as
+// itself rather than as markup.
 static QString compileErrorAsPlainText(const QString& error)
 {
     QString plainText = error;
     plainText.remove(qsl("<b>"));
     plainText.remove(qsl("</b>"));
+    plainText.remove(qsl("<i>"));
+    plainText.remove(qsl("</i>"));
+    plainText.replace(qsl("<br>"), qsl(" "));
     plainText.replace(qsl("&quot;"), qsl("\""));
     plainText.replace(qsl("&lt;"), qsl("<"));
     plainText.replace(qsl("&gt;"), qsl(">"));

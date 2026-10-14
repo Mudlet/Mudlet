@@ -3288,42 +3288,65 @@ end)
 describe("Tests installing a package whose trigger pattern does not compile", function()
   local name = "mudlet-spec-broken-pattern"
   local xml = getMudletHomeDir() .. "/" .. name .. ".xml"
+  local perl, luaCode, colour = 1, 4, 6
 
-  local function trigger(itemName, isFolder, patterns)
+  -- patterns is a list of {pattern, kind}
+  local function trigger(itemName, options)
     local strings, kinds = {}, {}
-    for _, pattern in ipairs(patterns) do
-      strings[#strings + 1] = '<string>' .. pattern .. '</string>'
-      kinds[#kinds + 1] = '<integer>1</integer>'
+    for _, pattern in ipairs(options.patterns or {}) do
+      strings[#strings + 1] = '<string>' .. pattern[1] .. '</string>'
+      kinds[#kinds + 1] = '<integer>' .. pattern[2] .. '</integer>'
     end
+    local tag = options.isFolder and 'TriggerGroup' or 'Trigger'
     return table.concat({
-      '<' .. (isFolder and 'TriggerGroup' or 'Trigger') .. ' isActive="yes" isFolder="' .. (isFolder and 'yes' or 'no') .. '" isTempTrigger="no" isMultiline="no"',
-      '         isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no">',
-      '<name>' .. itemName .. '</name><script></script>',
+      '<' .. tag .. ' isActive="yes" isFolder="' .. (options.isFolder and 'yes' or 'no') .. '" isTempTrigger="no" isMultiline="no"',
+      '         isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="' .. (options.isColor and 'yes' or 'no') .. '">',
+      '<name>' .. itemName .. '</name><script>' .. (options.script or '') .. '</script>',
       '<triggerType>0</triggerType><conditonLineDelta>0</conditonLineDelta><mStayOpen>0</mStayOpen>',
       '<mCommand></mCommand><packageName></packageName>',
       '<regexCodeList>' .. table.concat(strings) .. '</regexCodeList>',
       '<regexCodePropertyList>' .. table.concat(kinds) .. '</regexCodePropertyList>',
-      '</' .. (isFolder and 'TriggerGroup' or 'Trigger') .. '>',
+      options.children or '',
+      '</' .. tag .. '>',
     }, "\n")
   end
 
-  it("installs it and names the trigger in the reason installPackage() hands back", function()
+  local function install(body)
     defer(function()
       removeFixturePackage(name)
       os.remove(xml)
     end)
-    -- a trigger kept only for its script has no patterns either, and is just as legitimate
-    writePackageXml(xml, '<TriggerPackage>\n' .. trigger(name .. " group", true, {}) .. '\n' .. trigger(name .. " placeholder", false, {}) .. '\n'
-                         .. trigger(name .. " trigger", false, {"*(unclosed"}) .. '\n</TriggerPackage>')
-
+    writePackageXml(xml, '<TriggerPackage>\n' .. body .. '\n</TriggerPackage>')
     local ok, reason = installUntilConfirmed(installPackage, xml, function() return packageInstalled(name) end, "the package " .. name)
-
     assert.is_true(ok)
+    return reason
+  end
+
+  it("installs it and names the trigger in the reason installPackage() hands back", function()
+    -- a trigger kept only for its script has no patterns either, and is just as legitimate
+    local reason = install(trigger(name .. " group", {isFolder = true, children = trigger(name .. " placeholder", {})
+                                                                           .. trigger(name .. " trigger", {patterns = {{"*(unclosed", perl}}})}))
+
     assert.equals(1, exists(name .. " trigger", "trigger"), "the broken trigger was not kept for fixing in the editor")
     assert.is_true(contains(reason, name .. " trigger: "), "the broken pattern was not reported: " .. tostring(reason))
-    assert.is_true(contains(reason, "failed to compile"), tostring(reason))
-    assert.is_false(contains(reason, name .. " group"), "a group with no patterns was reported as broken: " .. tostring(reason))
+    assert.is_true(contains(reason, '"*(unclosed"'), "the pattern that failed was not named: " .. tostring(reason))
+    assert.is_false(contains(reason, name .. " group"), "the group was blamed for its child's pattern: " .. tostring(reason))
     assert.is_false(contains(reason, name .. " placeholder"), "a trigger with no patterns was reported as broken: " .. tostring(reason))
+  end)
+
+  it("names every pattern that does not compile, of each kind, as plain text", function()
+    local reason = install(trigger(name .. " perl", {patterns = {{"*(first", perl}, {"fine", perl}, {"*(third", perl}}}) .. '\n'
+                           .. trigger(name .. " lua", {patterns = {{"if then", luaCode}}}) .. '\n'
+                           .. trigger(name .. " no colour", {isColor = true, patterns = {{"ANSI_COLORS_F{IGNORE}_B{IGNORE}", colour}}}) .. '\n'
+                           .. trigger(name .. " unknown colour", {isColor = true, patterns = {{"ANSI_COLORS_F{300}_B{IGNORE}", colour}}}))
+
+    assert.is_true(contains(reason, '"*(first"'), "only the last broken pattern was reported: " .. tostring(reason))
+    assert.is_true(contains(reason, '"*(third"'), tostring(reason))
+    assert.is_true(contains(reason, name .. ' lua: '), "a Lua condition that does not compile was not reported: " .. tostring(reason))
+    assert.is_true(contains(reason, '"if then"'), tostring(reason))
+    assert.is_true(contains(reason, name .. ' no colour: '), "a colour pattern with no colours was not reported: " .. tostring(reason))
+    assert.is_true(contains(reason, '"ANSI_COLORS_F{300}_B{IGNORE}"'), "a colour pattern with no colour Mudlet knows was not reported: " .. tostring(reason))
+    assert.is_nil(tostring(reason):find("<%/?[bi]>"), "the reason carries the editor's markup: " .. tostring(reason))
   end)
 end)
 

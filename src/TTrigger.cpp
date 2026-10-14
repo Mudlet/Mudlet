@@ -618,6 +618,8 @@ bool TTrigger::setRegexCodeList(QStringList patterns, QList<int> patternKinds, b
     }
 
     bool state = true;
+    // Every failing pattern is reported, not only the last
+    QStringList patternErrors;
 
     if (existingTrigger) {
         for (int i = 0; i < patterns.size(); i++) {
@@ -675,9 +677,9 @@ bool TTrigger::setRegexCodeList(QStringList patterns, QList<int> patternKinds, b
                         TDebug(Qt::white, Qt::red, TDebug::Category::Error, mName) << "REGEX ERROR: failed to compile, reason:\n" << error << "\n" >> mpHost;
                         TDebug(Qt::red, Qt::gray, TDebug::Category::Error, mName) << TDebug::csmContinue << R"(in: ")" << regexp.constData() << "\"\n" >> mpHost;
                     }
-                    setError(qsl("<b>%1</b>")
-                                     .arg(tr(R"(Error: in item %1, perl regex "%2" failed to compile, reason: "%3".)")
-                                                  .arg(QString::number(i + 1), QString(regexp.constData()).toHtmlEscaped(), QString(error).toHtmlEscaped())));
+                    patternErrors.append(qsl("<b>%1</b>")
+                                                 .arg(tr(R"(Error: in item %1, perl regex "%2" failed to compile, reason: "%3".)")
+                                                              .arg(QString::number(i + 1), QString(regexp.constData()).toHtmlEscaped(), QString(error).toHtmlEscaped())));
                     state = false;
                 } else {
                     // A (*NO_JIT) pattern compiles "successfully" to no JIT code, and pcre2_jit_match() then fails every subject
@@ -700,8 +702,9 @@ bool TTrigger::setRegexCodeList(QStringList patterns, QList<int> patternKinds, b
                 const QString code = qsl("function %1() %2\nend").arg(funcName.c_str(), patterns[i]);
                 QString error;
                 if (!mpLua->compile(code, error, QString::fromStdString(funcName))) {
-                    setError(qsl("<b>%1</b>")
-                                     .arg(tr(R"(Error: in item %1, lua function "%2" failed to compile, reason: "%3".)").arg(QString::number(i + 1), patterns.at(i).toHtmlEscaped(), QString(error))));
+                    patternErrors.append(
+                            qsl("<b>%1</b>")
+                                    .arg(tr(R"(Error: in item %1, lua function "%2" failed to compile, reason: "%3".)").arg(QString::number(i + 1), patterns.at(i).toHtmlEscaped(), QString(error))));
                     state = false;
                     if (TDebug::wants(TDebug::Category::Error)) {
                         TDebug(Qt::white, Qt::red, TDebug::Category::Error, mName) << "LUA ERROR: failed to compile, reason:\n" << error << "\n" >> mpHost;
@@ -719,9 +722,9 @@ bool TTrigger::setRegexCodeList(QStringList patterns, QList<int> patternKinds, b
                 TTrigger::decodeColorPatternText(patterns.at(i), textAnsiFg, textAnsiBg);
 
                 if (textAnsiBg == scmIgnored && textAnsiFg == scmIgnored) {
-                    setError(qsl("<b>%1</b>")
-                                     .arg(tr("Error: in item %1, no colors to match were set - at least <i>one</i> of the foreground or background must not be <i>ignored</i>.")
-                                                  .arg(QString::number(i + 1))));
+                    patternErrors.append(qsl("<b>%1</b>")
+                                                 .arg(tr("Error: in item %1, no colors to match were set - at least <i>one</i> of the foreground or background must not be <i>ignored</i>.")
+                                                              .arg(QString::number(i + 1))));
                     state = false;
                     mColorPatternList.emplace_back(nullptr);
                     continue;
@@ -730,6 +733,9 @@ bool TTrigger::setRegexCodeList(QStringList patterns, QList<int> patternKinds, b
                 // The setupColorTrigger(...) method will push_back the created
                 // TColorTable instance if it is successful:
                 if (!setupColorTrigger(textAnsiFg, textAnsiBg)) {
+                    //: %1 is the number of the pattern in the trigger's list, %2 is the color pattern as saved
+                    patternErrors.append(
+                            qsl("<b>%1</b>").arg(tr(R"(Error: in item %1, color pattern "%2" names no color that can be matched.)").arg(QString::number(i + 1), patterns.at(i).toHtmlEscaped())));
                     mColorPatternList.emplace_back(nullptr);
                     state = false;
                     continue;
@@ -740,6 +746,9 @@ bool TTrigger::setRegexCodeList(QStringList patterns, QList<int> patternKinds, b
         }
     }
 
+    if (!state) {
+        setError(patternErrors.join(qsl("<br>")));
+    }
     mOK_init = state;
     rebuildPrescanGrams();
     return state;
