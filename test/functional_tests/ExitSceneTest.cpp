@@ -32,6 +32,7 @@
 #include <QFileInfo>
 #include <QImage>
 #include <QPainter>
+#include <QScopeGuard>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
@@ -712,6 +713,20 @@ private slots:
         QCOMPARE(RoomAppearance::terminalGlyph(*pRoom, look, false, EnvironmentKit::Kit::Water), qsl("<"));
         look.symbol = qsl("$");
         QCOMPARE(RoomAppearance::terminalGlyph(*pRoom, look, false, EnvironmentKit::Kit::Water), qsl("$"));
+    }
+
+    // A map that never defined an environment draws it in the default red, which is no kind of ground
+    void test_onlyADefinedEnvironmentHasAGround()
+    {
+        constexpr int kEnvironment = 9999;
+        const QColor blue(50, 90, 200);
+        const auto restore = qScopeGuard([this, kEnvironment]() {
+            map()->mCustomEnvColors.remove(kEnvironment);
+        });
+        QVERIFY(!EnvironmentKit::forDefinedEnvironment({}, *map(), kEnvironment, blue));
+        QCOMPARE(EnvironmentKit::forDefinedEnvironment({{kEnvironment, EnvironmentKit::Kit::Forest}}, *map(), kEnvironment, blue), EnvironmentKit::Kit::Forest);
+        map()->mCustomEnvColors[kEnvironment] = blue;
+        QCOMPARE(EnvironmentKit::forDefinedEnvironment({}, *map(), kEnvironment, blue), EnvironmentKit::Kit::Water);
     }
 
     void test_areaExitPointsOutOfTheArea_data()
