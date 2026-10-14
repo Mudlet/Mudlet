@@ -1032,9 +1032,9 @@ end)
 describe("Tests the Client.GUI package offer", function()
 
   -- A game may send Client.GUI as JSON, or as the raw telnet form of a version
-  -- and a URL on two lines. Either way the offer only has to reach the
-  -- downloader, so the URL is one nothing answers: the harness's fixture server
-  -- 404s it when it started one, a closed port refuses it when it did not.
+  -- and a URL on two lines. Most offers here only have to reach the
+  -- downloader, so offerUrl() is one nothing answers: the harness's fixture
+  -- server 404s it when it started one, a closed port refuses it when it did not.
   local httpPort = os.getenv("MUDLET_TEST_HTTP_PORT")
 
   local function offerUrl(packageName)
@@ -1126,21 +1126,42 @@ describe("Tests the Client.GUI package offer", function()
     assert.is_truthy(downloadStarted(mark, "RegressCompleteGui"), "a complete offer was not acted on either: " .. displayedSince(mark))
   end)
 
-  it("installs nothing from a Client.GUI download that came back empty", function()
-    local name = "mudlet-spec-emptygui"
-    local source = getMudletHomeDir() .. "/mudlet-spec-emptygui-source"
+  local minimalGuiPackage = '<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE MudletPackage><MudletPackage version="1.001"></MudletPackage>'
+  local servedGuiCleanups = {}
+
+  -- busted keeps one finally() per test, so every offerServedGui() of a test is
+  -- undone by this one, last first
+  local function cleanUpServedGuis()
+    for index = #servedGuiCleanups, 1, -1 do
+      servedGuiCleanups[index]()
+      servedGuiCleanups[index] = nil
+    end
+  end
+
+  -- serves content as name.xml from a file: URL, offers it as the game's
+  -- interface at this version and waits for the download to be settled one way
+  -- or the other. The test passes cleanUpServedGuis to finally() first
+  local function offerServedGui(name, content, version)
+    local source = getMudletHomeDir() .. "/mudlet-spec-servedgui-source"
     local served = source .. "/" .. name .. ".xml"
     local downloaded = getMudletHomeDir() .. "/" .. name .. ".xml"
     local previousClient = gmcp.Client
     -- the starter UI stands aside on sysServerGuiInstalled and saves that in its
     -- settings, which are not this spec's to change
     local standAside = BaseUI and BaseUI.standAside
-    local seen = {}
-    local handler = registerAnonymousEventHandler("sysServerGuiInstalled", function(_, packageName)
-      seen[#seen + 1] = packageName
-    end)
-    finally(function()
-      killAnonymousEventHandler(handler)
+    local result = {guis = {}, installs = {}, downloaded = downloaded}
+    local handlers = {
+      registerAnonymousEventHandler("sysServerGuiInstalled", function(_, packageName)
+        result.guis[#result.guis + 1] = packageName
+      end),
+      registerAnonymousEventHandler("sysInstallPackage", function(_, packageName)
+        result.installs[#result.installs + 1] = packageName
+      end),
+    }
+    servedGuiCleanups[#servedGuiCleanups + 1] = function()
+      for _, handler in ipairs(handlers) do
+        killAnonymousEventHandler(handler)
+      end
       gmcp.Client = previousClient
       if standAside then
         BaseUI.standAside = standAside
@@ -1154,13 +1175,16 @@ describe("Tests the Client.GUI package offer", function()
       os.remove(downloaded)
       os.remove(served)
       lfs.rmdir(source)
-    end)
+    end
     if standAside then
       BaseUI.standAside = function() end
     end
-    lfs.mkdir(source)
+    if lfs.attributes(source, "mode") ~= "directory" then
+      assert(lfs.mkdir(source))
+    end
     local file = io.open(served, "wb")
     assert.is_not_nil(file, "could not write " .. served)
+    file:write(content)
     file:close()
     local path = served:gsub("\\", "/"):gsub("[%%#%?%s]", function(character) return string.format("%%%02X", character:byte()) end)
     -- A Windows path starts with its drive letter, which Qt would read as the URL's host
@@ -1170,21 +1194,45 @@ describe("Tests the Client.GUI package offer", function()
     local url = "file://" .. path
 
     local mark = getLastLineNumber("main")
-    local ok, msg = feedTelnet('<T_IAC><T_SB><O_GMCP>Client.GUI {"version": "1", "url": "' .. url .. '"}<T_IAC><T_SE>')
+    result.mark = mark
+    local ok, msg = feedTelnet('<T_IAC><T_SB><O_GMCP>Client.GUI {"version": "' .. (version or "1") .. '", "url": "' .. url .. '"}<T_IAC><T_SE>')
     assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
     assert.is_truthy(downloadStarted(mark, name), "the offer never reached the downloader: " .. displayedSince(mark))
-    for _ = 1, 100 do
-      if shownSince(mark, "was empty") or #seen > 0 then
+    for _ = 1, 300 do
+      if #result.guis > 0 or shownSince(mark, "was empty") or shownSince(mark, "Package download failed") or shownSince(mark, "Failed to load package") then
         break
       end
-      pumpEvents(50)
+      local pumped, why = pumpEvents(50)
+      assert.is_true(pumped, "pumpEvents could not run the event loop: " .. tostring(why))
     end
+    return result
+  end
+
+  it("installs nothing from a Client.GUI download that came back empty", function()
+    local name = "mudlet-spec-emptygui"
+    finally(cleanUpServedGuis)
+    local result = offerServedGui(name, "")
 
     -- the URL is shown decoded, so only its end is matched
-    assert.is_truthy(shownSince(mark, "/" .. name .. ".xml' was empty"), displayedSince(mark))
-    assert.same({}, seen, "an empty download was announced as the game's interface")
+    assert.is_truthy(shownSince(result.mark, "/" .. name .. ".xml' was empty"), displayedSince(result.mark))
+    assert.same({}, result.guis, "an empty download was announced as the game's interface")
+    assert.same({}, result.installs, "an empty download was announced as an installed package")
     assert.is_false(table.contains(getPackages(), name), "an empty download was registered as a package")
-    assert.is_nil(lfs.attributes(downloaded), "an empty download was written into the profile")
+    assert.is_nil(lfs.attributes(result.downloaded), "an empty download was written into the profile")
+  end)
+
+  -- the progress dialog closing on completion must not cancel the download it
+  -- tracked: a file: reply is emptied by that, and looked like an empty package
+  it("installs a Client.GUI package downloaded from a file URL", function()
+    local name = "mudlet-spec-servedgui"
+    finally(cleanUpServedGuis)
+    local result = offerServedGui(name, minimalGuiPackage)
+
+    assert.same({name}, result.guis, "the downloaded interface was not announced: " .. displayedSince(result.mark))
+    assert.same({name}, result.installs, displayedSince(result.mark))
+    assert.is_true(table.contains(getPackages(), name), "the downloaded interface was not registered")
+    assert.is_falsy(shownSince(result.mark, "was empty"), displayedSince(result.mark))
+    assert.is_true((lfs.attributes(result.downloaded, "size") or 0) > 0, "the package was saved into the profile without its contents")
   end)
 
   -- a game with an interface of its own can decline the built-in starter UI,

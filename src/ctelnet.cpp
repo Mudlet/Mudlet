@@ -2124,7 +2124,9 @@ void cTelnet::slot_setDownloadProgress(qint64 got, qint64 tot)
 
 void cTelnet::slot_cancelPackageDownload()
 {
-    if (mpPackageDownloadReply) {
+    // Closing the progress dialog when the download finishes emits canceled() too,
+    // and aborting a finished file: reply closes it before its data is read
+    if (mpPackageDownloadReply && !mpPackageDownloadReply->isFinished()) {
         mpPackageDownloadReply->abort();
     }
 }
