@@ -5679,7 +5679,7 @@ void Host::hideMudletsVariables()
 
 bool Host::createBuffer(const QString& name)
 {
-    if (mWindowRegistry.hasSubConsole(name)) {
+    if (mWindowRegistry.hasSubConsole(name) || mWindowRegistry.hasLabel(name)) {
         return false;
     }
     consoleFrontend()->createBuffer(name);

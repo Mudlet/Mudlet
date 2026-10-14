@@ -1415,6 +1415,10 @@ void TMainConsole::deleteMiniConsole(const QString& name)
     auto pConsole = deregisterSubConsole(name);
     if (pConsole) {
         mpHost->windowRegistry().forgetUserWindowSize(name);
+        // Its command line is registered under its name and would hold that name until the deferred delete
+        if (pConsole->mpCommandLine) {
+            deregisterSubCommandLine(pConsole->mpCommandLine);
+        }
 
         // A UserWindow's TConsole lives *inside* a TDockWidget. Deleting only the
         // console (as for an ordinary miniconsole) leaves the dock orphaned in
