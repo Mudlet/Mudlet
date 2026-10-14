@@ -1299,8 +1299,10 @@ private slots:
         QVERIFY(areaId > 0);
         QVERIFY(mpHost->mapStylePreset().highlightShape != MapStyle::HighlightShape::Disc);
         TRoom* pEast = map()->mpRoomDB->getRoom(kEastRoomId);
-        const auto restore = qScopeGuard([pEast]() {
+        const auto restore = qScopeGuard([this, pEast]() {
             pEast->highlight = false;
+            pEast->mSymbol.clear();
+            mpHost->setMapStyle(qsl("tiles"));
         });
         pEast->highlight = true;
         pEast->highlightRadius = 1.0f;
@@ -1323,6 +1325,17 @@ private slots:
         pEast->highlightColor = blue;
         pEast->highlightColor2 = QColor(255, 0, 0, 0);
         QCOMPARE(drawnColors(), QStringList{blue.name(QColor::HexArgb)});
+
+        // The terminal's cell is filled in the center color, so its character contrasts with that
+        const QColor navy(0, 0, 160);
+        pEast->highlightColor = QColor(255, 255, 85, 0);
+        pEast->highlightColor2 = navy;
+        pEast->mSymbol = qsl("$");
+        QVERIFY(mpHost->setMapStyle(qsl("terminal")));
+        ModernGLWidget widget(map(), mpHost);
+        const DrawnGlyph symbol = glyphAt(terminalGlyphs(widget, areaId), QPointF(2, 0));
+        QCOMPARE(symbol.text, qsl("$"));
+        QCOMPARE(symbol.color.rgb(), ExitAppearance::contrastColor(navy).rgb());
     }
 };
 
