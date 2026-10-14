@@ -1904,6 +1904,21 @@ describe("Tests Geyser.Label right click menus", function()
       assert.are.same({"First", "Fourth", "Second", "Third"}, menuOrder())
     end)
 
+    it("refuses an index it cannot use without adding the item", function()
+      local ok, message = label:addMenuLabel("Fourth", nil, 99)
+      assert.is_false(ok)
+      assert.are.equal("addMenuLabel: index 99 out of range (1-4)", message)
+      ok, message = label:addMenuLabel("Fourth", nil, "2")
+      assert.is_false(ok)
+      assert.are.equal("addMenuLabel: index must be a whole number, got 2 (string)", message)
+      assert.are.same({"First", "Second", "Third"}, menuOrder())
+      assert.are.same({"First", "Second", "Third"}, label.rightClickMenu.MenuItems)
+      assert.is_nil(label:findMenuElement("Fourth"))
+      -- the slot after the last item is one the new item can take
+      assert.is_true(label:addMenuLabel("Fourth", nil, 4))
+      assert.are.same({"First", "Second", "Third", "Fourth"}, menuOrder())
+    end)
+
     -- the names of the labels a call to addMenuLabel handed a stylesheet to; the
     -- global is swapped in _G because this file runs in an environment of its own
     local function labelsStyledBy(menuLabel, ...)
@@ -2043,6 +2058,25 @@ describe("Tests Geyser.Label right click menus", function()
       assert.has_error(function() label:changeMenuIndex("Third", 0) end, "changeMenuIndex: index 0 out of range (1-3)")
       assert.are.same({"First", "Second", "Third"}, menuOrder())
       assert.are.same({"First", "Second", "Third"}, label.rightClickMenu.MenuItems)
+    end)
+
+    it("raises for a negative index", function()
+      assert.has_error(function() label:changeMenuIndex("Third", -1) end, "changeMenuIndex: index -1 out of range (1-3)")
+    end)
+
+    it("says an index has to be a whole number rather than calling it out of range", function()
+      assert.has_error(function() label:changeMenuIndex("Third", "2") end, "changeMenuIndex: index must be a whole number, got 2 (string)")
+      assert.has_error(function() label:changeMenuIndex("Third", 1.5) end, "changeMenuIndex: index must be a whole number, got 1.5 (number)")
+      assert.are.same({"First", "Second", "Third"}, menuOrder())
+    end)
+
+    it("takes the range from the item's own level of a nested menu", function()
+      local other = Geyser.Label:new({name = "glmIndexNest", x = 0, y = 0, width = 100, height = 30})
+      other:createRightClickMenu({MenuItems = {"First", {"Sub1", "Sub2"}, "Second", "Third"}})
+      assert.has_error(function() other:changeMenuIndex("First.Sub1", 5) end, "changeMenuIndex: index 5 out of range (1-2)")
+      assert.has_error(function() other:changeMenuIndex("First", 99) end, "changeMenuIndex: index 99 out of range (1-3)")
+      other:changeMenuIndex("First.Sub2", 1)
+      assert.are.same({"First", {"Sub2", "Sub1"}, "Second", "Third"}, other.rightClickMenu.MenuItems)
     end)
   end)
 
