@@ -278,9 +278,11 @@ describe("Tests functionality of Geyser.UserWindow", function()
         local half = math.floor(usableWidth / 2 + 0.5)
         return {x = half, y = 0, width = usableWidth - half, height = usableHeight}
       end
+      local firstWidth = getUserWindowSize("guwHolder")
       assert.are.same(expected(), geometry("guwLabel"))
       -- one of the two widths leaves an odd usable width, whatever the window frame
-      userWindow:resize(301, nil)
+      userWindow:resize(301, 200)
+      assert.are.equal(firstWidth + 1, getUserWindowSize("guwHolder"))
       assert.are.same(expected(), geometry("guwLabel"))
       assert.is_true(windowVisible("guwLabel"))
     end)
