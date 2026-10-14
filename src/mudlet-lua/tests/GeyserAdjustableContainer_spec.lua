@@ -569,6 +569,48 @@ describe("Tests functionality of Adjustable.Container", function()
       assert.are.equal(borderBefore, getBorderLeft())
     end)
 
+    it("offers no border to attach to for a container in a user window", function()
+      local userWindow = Geyser.UserWindow:new({name = "gasAttachMenuUserWindow", x = 0, y = 0, width = 300, height = 300})
+      local inWindow = Adjustable.Container:new({
+        name = "gasAttachMenuInUserWindow",
+        x = 0, y = 0, width = 150, height = 100,
+        autoLoad = false,
+        autoSave = false,
+      }, userWindow)
+      finally(function()
+        inWindow:delete()
+        local root = Geyser.windowList.gasAttachMenuUserWindowContainer
+        if root then
+          root:delete()
+        end
+      end)
+      assert.are.same({}, inWindow:validAttachPositions())
+
+      inWindow:onEnterAtt()
+
+      assert.are.equal(0, #inWindow.attLabel.nestedLabels)
+    end)
+
+    it("lets go of the main window's border when moved into a user window", function()
+      local container = make("gasAttachMovedToUserWindow", 150)
+      local userWindow = Geyser.UserWindow:new({name = "gasAttachMovedUserWindow", x = 0, y = 0, width = 300, height = 300})
+      finally(function()
+        -- back out first, so that after_each deletes it rather than the root taking it along
+        container:changeContainer(Geyser)
+        local root = Geyser.windowList.gasAttachMovedUserWindowContainer
+        if root then
+          root:delete()
+        end
+      end)
+      assert.is_true(container:attachToBorder("left"))
+
+      container:changeContainer(userWindow)
+
+      assert.is_falsy(container.attached)
+      assert.is_nil(Adjustable.Container.Attached.left.gasAttachMovedToUserWindow)
+      assert.are.equal(borderBefore, getBorderLeft())
+    end)
+
     it("keeps its border when a move to another one is refused", function()
       local container = make("gasAttachKeep", 200)
       assert.is_true(container:attachToBorder("left"))

@@ -335,6 +335,9 @@ function Adjustable.Container:changeContainer(container)
     if self.container ~= windowRoot(self) then
         self.draggedOut = false
     end
+    if self.attached then
+        self:adjustBorder()
+    end
     return result, err
 end
 
@@ -439,8 +442,12 @@ function Adjustable.Container:onMove (label, event)
     end
 end
 
--- internal function to check which valid attach position the container is at
+-- internal function to check which valid attach position the container is at; there is none
+-- outside the main window, as user windows have no borders to reserve
 function Adjustable.Container:validAttachPositions()
+    if self.windowname ~= "main" then
+        return {}
+    end
     local winw, winh = getMainWindowSize()
     local found_positions = {}
     if  (winh*0.8)-self.get_height()<= self.get_y()  then  found_positions[#found_positions+1] = "bottom" end
