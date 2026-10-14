@@ -398,6 +398,15 @@ QColor MapStyle::highlightColorFor(const QColor& roomHighlightColor) const
     return roomHighlightColor;
 }
 
+QColor MapStyle::highlightColorFor(const QColor& roomHighlightColor, const QColor& roomHighlightCenterColor) const
+{
+    constexpr int faintest = 64;
+    if (roomHighlightColor.isValid() && roomHighlightColor.alpha() < faintest && roomHighlightCenterColor.isValid() && roomHighlightCenterColor.alpha() > roomHighlightColor.alpha()) {
+        return highlightColorFor(roomHighlightCenterColor);
+    }
+    return highlightColorFor(roomHighlightColor);
+}
+
 bool MapStyle::roundRooms(const bool profileRoundRooms) const
 {
     switch (shape) {
