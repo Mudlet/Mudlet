@@ -61,6 +61,7 @@
 #include <QToolTip>
 #include <QVBoxLayout>
 #include <algorithm>
+#include <array>
 #include <chrono>
 #include <cmath>
 #include <limits>
@@ -704,12 +705,14 @@ void ModernGLWidget::paintGL()
     if (infoBackground != mpHost->mMapInfoBg && style.infoTextColor.isValid()) {
         infoColor = style.infoTextColor;
     }
-    dlgMapper::paintMapInfo(mFrameTimer, painter, mpHost, mpMap, mRID, mAID, 0, infoColor, 10, 10, width(), mFontHeight, infoBackground, style.labelFontFamily);
+    const int infoBottom = dlgMapper::paintMapInfo(mFrameTimer, painter, mpHost, mpMap, mRID, mAID, 0, infoColor, 10, 10, width(), mFontHeight, infoBackground, style.labelFontFamily);
 
     if (mRectangleSelecting) {
         painter.fillRect(mSelectionRectangle, QColor(190, 190, 190, 60));
     }
     paintCompass(painter);
+    const QRect titleBlock = paintTitleBlock(painter, *pArea);
+    paintLevelCallouts(painter, *pArea, infoBottom, titleBlock);
 
     painter.end();
 }
@@ -1162,9 +1165,15 @@ void ModernGLWidget::renderRooms()
     if (pArea->getAreaRooms().contains(playerRoomId)) {
         // The strong highlight is the original style over a translucent red room
         const int style = mpHost->mMapStrongHighlight ? 0 : mpMap->mPlayerRoomStyle;
-        if (mapStyle().themesPlayerMarker(mpMap->mPlayerRoomStyle, mpHost->mMapStrongHighlight) && mapStyle().playerRing == MapStyle::PlayerRing::Thin) {
+        const bool themed = mapStyle().themesPlayerMarker(mpMap->mPlayerRoomStyle, mpHost->mMapStrongHighlight);
+        if (themed && mapStyle().playerRing == MapStyle::PlayerRing::Thin) {
             const QColor ringColor = playerMarkerColor();
             playerRoomTexture = discTexture(qsl("playerThin|%1").arg(ringColor.name(QColor::HexArgb)), MapDecals::thinPlayerRingStops(ringColor));
+        } else if (themed && mapStyle().playerRing == MapStyle::PlayerRing::Crosshair) {
+            const QColor markColor = playerMarkerColor();
+            playerRoomTexture = imageTexture(qsl("playerCrosshair|%1").arg(markColor.name(QColor::HexArgb)), [markColor] {
+                return MapDecals::registrationMark(markColor, scmRoomTextureSize);
+            });
         } else {
             const QString key = qsl("player|%1|%2|%3|%4")
                                         .arg(QString::number(style),
@@ -1489,7 +1498,8 @@ void ModernGLWidget::renderRooms()
         QList<QRectF> nameRects;
         nameRects.reserve(roomNames.size());
         for (const RoomName& roomName : std::as_const(roomNames)) {
-            const QSizeF size(qMax(1, qCeil(nameMetrics.horizontalAdvance(roomName.name))), qMax(1, qCeil(nameMetrics.height())));
+            // A space wider than the name, so that names kept side by side do not run into each other
+            const QSizeF size(qMax(1, qCeil(nameMetrics.horizontalAdvance(roomName.name + QLatin1Char(' ')))), qMax(1, qCeil(nameMetrics.height())));
             const QVector3D across = groundRight * static_cast<float>(size.width() * nameTexel);
             const QVector3D upward = groundUp * static_cast<float>(size.height() * nameTexel);
             nameRects.append(screenRect(roomName.center - across / 2.0f - upward / 2.0f, across, upward));
@@ -3101,6 +3111,187 @@ void ModernGLWidget::paintCompass(QPainter& painter)
     painter.restore();
 }
 
+QFont ModernGLWidget::sheetFont() const
+{
+    QFont font = mapStyle().labelFont(mpMap->mMapSymbolFont);
+    font.setBold(false);
+    font.setItalic(false);
+    font.setPixelSize(12);
+    return font;
+}
+
+QRect ModernGLWidget::paintTitleBlock(QPainter& painter, const TArea& area)
+{
+    const MapStyle& style = mapStyle();
+    if (!style.titleBlock) {
+        return QRect();
+    }
+    const QFont font = sheetFont();
+    const QFontMetrics metrics(font);
+    constexpr int padding = 8;
+    constexpr int margin = 12;
+    const int sheet = area.zLevels.indexOf(mMapCenterZ);
+    const QString levelLine =
+            sheet < 0
+                    //: The second line of the title block that the blueprint style of the 3D map draws in a corner, as on a technical drawing: the level shown. The style sets it in capitals
+                    ? tr("Level %1").arg(mMapCenterZ)
+                    //: The second line of the title block that the blueprint style of the 3D map draws in a corner, as on a technical drawing: the level shown, which of the area's levels it is counted from the lowest, and how many levels the area has. The style sets it in capitals
+                    : tr("Level %1 · sheet %2 of %3").arg(QString::number(mMapCenterZ), QString::number(sheet + 1), QString::number(area.zLevels.size()));
+    const QRect compass = compassRect();
+    const int right = compass.isEmpty() ? width() - margin : compass.left() - margin;
+    const int rowHeight = metrics.height() + padding;
+    const int widest = right - margin;
+    const QString areaName = metrics.elidedText(mpMap->mpRoomDB->getAreaNamesMap().value(mAID), Qt::ElideRight, widest - 2 * padding);
+    const int blockWidth = qMax(metrics.horizontalAdvance(areaName), metrics.horizontalAdvance(levelLine)) + 2 * padding;
+    // A view too small to spare the room for it has none
+    if (blockWidth > widest || 2 * rowHeight > height() / 3) {
+        return QRect();
+    }
+    const QRect block(right - blockWidth, height() - margin - 2 * rowHeight, blockWidth, 2 * rowHeight);
+    const QColor ink = style.exitColor(mpHost->mFgColor_2);
+    QColor paper = backgroundColor();
+    paper.setAlpha(220);
+    painter.save();
+    painter.setFont(font);
+    painter.setPen(QPen(ink, 1.0));
+    painter.setBrush(paper);
+    painter.drawRect(block);
+    painter.drawLine(block.left(), block.top() + rowHeight, block.right(), block.top() + rowHeight);
+    const QRect nameRow(block.left() + padding, block.top(), block.width() - 2 * padding, rowHeight);
+    painter.drawText(nameRow, Qt::AlignLeft | Qt::AlignVCenter, areaName);
+    painter.drawText(nameRow.translated(0, rowHeight), Qt::AlignLeft | Qt::AlignVCenter, levelLine);
+    painter.restore();
+    return block;
+}
+
+void ModernGLWidget::paintLevelCallouts(QPainter& painter, const TArea& area, const int top, const QRect& titleBlock)
+{
+    const MapStyle& style = mapStyle();
+    if (!style.levelCallouts || cameraFixedByGridMode()) {
+        return;
+    }
+    // A level's rooms furthest toward each corner of the map, one of which is the furthest right on screen
+    struct Level
+    {
+        std::array<QPointF, 4> corners;
+        int rooms = 0;
+    };
+    QMap<int, Level> levels;
+    for (const int roomId : area.getAreaRooms()) {
+        const TRoom* pR = mpMap->mpRoomDB->getRoom(roomId);
+        if (!pR || pR->isHidden() || !levelShown(pR->z())) {
+            continue;
+        }
+        const QPointF at(pR->x(), pR->y());
+        Level& level = levels[pR->z()];
+        if (!level.rooms) {
+            level.corners.fill(at);
+        }
+        const auto further = [&at](QPointF& corner, const qreal dx, const qreal dy) {
+            if (at.x() * dx + at.y() * dy > corner.x() * dx + corner.y() * dy) {
+                corner = at;
+            }
+        };
+        further(level.corners[0], 1.0, 1.0);
+        further(level.corners[1], 1.0, -1.0);
+        further(level.corners[2], -1.0, 1.0);
+        further(level.corners[3], -1.0, -1.0);
+        ++level.rooms;
+    }
+    const QRectF view = QRectF(rect()).adjusted(0.0, top, 0.0, 0.0);
+    const auto rightmostInView = [this, &view](const Level& level, const int z) {
+        std::optional<QPointF> rightmost;
+        for (const QPointF& corner : level.corners) {
+            const std::optional<QPointF> pixel = mCameraController.pixelForPoint(QVector3D(static_cast<float>(corner.x()), static_cast<float>(corner.y()), static_cast<float>(z)));
+            if (pixel && view.contains(*pixel) && (!rightmost || pixel->x() > rightmost->x())) {
+                rightmost = pixel;
+            }
+        }
+        return rightmost;
+    };
+    // The callouts stand clear of the level shown, where they can
+    qreal rightmost = 0.0;
+    if (const auto viewed = levels.constFind(mMapCenterZ); viewed != levels.cend()) {
+        if (const std::optional<QPointF> edge = rightmostInView(*viewed, mMapCenterZ)) {
+            rightmost = edge->x();
+        }
+        levels.erase(viewed);
+    }
+    // Only the levels nearest the one shown, where there are too many to name each
+    constexpr int mostCallouts = 8;
+    QList<int> named = levels.keys();
+    std::stable_sort(named.begin(), named.end(), [this](const int a, const int b) {
+        return std::abs(a - mMapCenterZ) < std::abs(b - mMapCenterZ);
+    });
+    if (named.size() > mostCallouts) {
+        named.resize(mostCallouts);
+    }
+    // Stacked as the levels are, whichever way the view faces
+    std::sort(named.begin(), named.end(), [](const int a, const int b) {
+        return a > b;
+    });
+
+    QList<QPointF> anchors;
+    QStringList texts;
+    for (const int z : std::as_const(named)) {
+        const Level& level = levels.value(z);
+        const std::optional<QPointF> anchor = rightmostInView(level, z);
+        if (!anchor) {
+            continue;
+        }
+        anchors.append(*anchor);
+        const QString name = z < 0
+                                     //: A level below ground, named in a callout by the blueprint style of the 3D map, as B1 for the first basement
+                                     ? tr("B%1").arg(-z)
+                                     //: A level at or above ground, named in a callout by the blueprint style of the 3D map, as L1 for the first floor up
+                                     : tr("L%1").arg(z);
+        texts.append(qsl("%1 · %2").arg(name, QString::number(level.rooms)));
+    }
+    if (anchors.isEmpty()) {
+        return;
+    }
+
+    const QFont font = sheetFont();
+    const QFontMetrics metrics(font);
+    constexpr int margin = 12;
+    constexpr int gap = 28;
+    int widestText = 0;
+    QList<qreal> wanted;
+    for (int i = 0; i < anchors.size(); ++i) {
+        widestText = qMax(widestText, metrics.horizontalAdvance(texts.at(i)));
+        rightmost = qMax(rightmost, anchors.at(i).x());
+        wanted.append(anchors.at(i).y());
+    }
+    const qreal textLeft = qMin(rightmost + gap, static_cast<qreal>(width() - margin - widestText));
+    const qreal lineHeight = metrics.height() + 4;
+    const qreal bottom = (titleBlock.isEmpty() ? (compassRect().isEmpty() ? height() : compassRect().top()) : titleBlock.top()) - margin - lineHeight / 2.0;
+    const QList<qreal> placed = MapDecals::spreadCallouts(wanted, lineHeight, top + margin + lineHeight / 2.0, bottom);
+
+    const QColor ink = style.exitColor(mpHost->mFgColor_2);
+    QColor leader = ink;
+    leader.setAlpha(170);
+    QColor paper = backgroundColor();
+    paper.setAlpha(200);
+    painter.save();
+    painter.setRenderHint(QPainter::Antialiasing);
+    painter.setFont(font);
+    for (int i = 0; i < anchors.size(); ++i) {
+        const QPointF end(textLeft - 6.0, placed.at(i));
+        // Dashed, so that a leader running over the map does not read as an exit
+        painter.setPen(QPen(leader, 1.0, Qt::DashLine));
+        painter.drawLine(anchors.at(i), end);
+        painter.setPen(Qt::NoPen);
+        painter.setBrush(ink);
+        painter.drawEllipse(anchors.at(i), 2.5, 2.5);
+        const QRectF textRect(textLeft - 2.0, placed.at(i) - lineHeight / 2.0, metrics.horizontalAdvance(texts.at(i)) + 4.0, lineHeight);
+        painter.setBrush(paper);
+        painter.drawRect(textRect);
+        painter.setPen(ink);
+        painter.drawText(textRect, Qt::AlignCenter, texts.at(i));
+    }
+    painter.restore();
+}
+
 void ModernGLWidget::renderPlayerBeacon()
 {
     if (!mpMap || !mpMap->mpRoomDB || !mpHost) {
@@ -3108,6 +3299,9 @@ void ModernGLWidget::renderPlayerBeacon()
     }
     const TRoom* pR = mpMap->mpRoomDB->getRoom(mpMap->mRoomIdHash.value(mpMap->mProfileName));
     if (!pR || pR->getArea() != mAID || pR->isHidden() || !levelShown(pR->z())) {
+        return;
+    }
+    if (!mapStyle().playerBeacon) {
         return;
     }
     const QColor color = playerMarkerColor();

@@ -59,6 +59,11 @@ const MapStyle& tiles()
     return *MapStyle::find(qsl("tiles"));
 }
 
+const MapStyle& blueprint()
+{
+    return *MapStyle::find(qsl("blueprint"));
+}
+
 TMapLabel textLabel(const QColor& fg, const QColor& bg)
 {
     TMapLabel label;
@@ -264,6 +269,65 @@ private slots:
         QVERIFY2(cappedText.height() <= 0.25 * label.pix.height() + 2, qPrintable(qsl("%1 pixels tall").arg(cappedText.height())));
         QVERIFY(cappedText.height() < fullText.height());
         QVERIFY2(qAbs(cappedText.center().x() - fullText.center().x()) <= 3, "the text stays centered where the label was put");
+    }
+
+    void test_registrationMarkCrossesItsRingAndRunsPastIt()
+    {
+        const QImage mark = MapDecals::registrationMark(QColor(255, 112, 90), scmSize);
+        const int middle = scmSize / 2;
+        QVERIFY2(alphaAt(mark, middle, middle) > 150, "a dot marks the middle");
+        QVERIFY2(alphaAt(mark, 3, middle) > 100 && alphaAt(mark, middle, scmSize - 4) > 100, "the cross runs on past the ring");
+        const int diagonal = qRound(0.52 * middle * M_SQRT1_2);
+        QVERIFY2(alphaAt(mark, middle + diagonal, middle - diagonal) > 60, "the ring shows between the arms");
+        QCOMPARE(alphaAt(mark, 4, 4), 0);
+        QCOMPARE(alphaAt(mark, middle - 6, middle - 6), 0);
+    }
+
+    void test_calloutsAreSpreadApartInOrderAndKeptInView()
+    {
+        const QList<qreal> placed = MapDecals::spreadCallouts({50.0, 100.0, 100.0, 90.0, 400.0}, 20.0, 0.0, 1000.0);
+        QCOMPARE(placed, (QList<qreal>{50.0, 100.0, 120.0, 140.0, 400.0}));
+
+        const QList<qreal> squeezed = MapDecals::spreadCallouts({190.0, 195.0, 199.0}, 20.0, 0.0, 200.0);
+        QCOMPARE(squeezed.at(2), 200.0);
+        QCOMPARE(squeezed.at(1), 180.0);
+        QCOMPARE(squeezed.at(0), 160.0);
+
+        const QList<qreal> lifted = MapDecals::spreadCallouts({-30.0}, 20.0, 10.0, 200.0);
+        QCOMPARE(lifted.at(0), 10.0);
+        QVERIFY(MapDecals::spreadCallouts({}, 20.0, 0.0, 100.0).isEmpty());
+    }
+
+    void test_blueprintLettersInSpacedCapitals()
+    {
+        const QFont font = blueprint().labelFont(QFont(qsl("Bitstream Vera Sans"), 10));
+        QCOMPARE(font.family(), blueprint().labelFontFamily);
+        QCOMPARE(font.capitalization(), QFont::AllUppercase);
+        QVERIFY(font.letterSpacing() > 100.0);
+        QCOMPARE(font.letterSpacingType(), QFont::PercentageSpacing);
+        const QFont plain = MapStyle().labelFont(QFont(qsl("Bitstream Vera Sans"), 10));
+        QCOMPARE(plain.capitalization(), QFont::MixedCase);
+        QCOMPARE(plain.letterSpacing(), 0.0);
+    }
+
+    void test_blueprintMarksThePlayerWithACrosshairAndNoBeacon()
+    {
+        QCOMPARE(blueprint().playerRing, MapStyle::PlayerRing::Crosshair);
+        QVERIFY(blueprint().themesPlayerMarker(0, false));
+        QVERIFY(!blueprint().playerBeacon);
+        QVERIFY(tiles().playerBeacon);
+        QCOMPARE(blueprint().highlightShape, MapStyle::HighlightShape::DashedEllipse);
+        QVERIFY(blueprint().titleBlock && blueprint().levelCallouts);
+        QVERIFY(!tiles().titleBlock && !tiles().levelCallouts);
+    }
+
+    void test_blueprintTintsRoomsByTheirEnvironment()
+    {
+        const QColor sheet = blueprint().background;
+        const QColor forest = blueprint().roomColor(QColor(40, 160, 60));
+        // A third of the way from the sheet to the environment's color, enough to tell areas apart at a glance
+        QVERIFY2(forest.green() - sheet.green() > 25, qPrintable(qsl("green %1 on a sheet of %2").arg(forest.green()).arg(sheet.green())));
+        QVERIFY(forest.blue() < sheet.blue());
     }
 };
 

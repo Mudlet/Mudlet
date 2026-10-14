@@ -39,6 +39,7 @@
 #include "GeometryManager.h"
 #include "Host.h"
 #include "HostManager.h"
+#include "MapStyle.h"
 #include "MudletApp.h"
 #include "MudletInstanceCoordinator.h"
 #include "RenderCommand.h"
@@ -269,6 +270,13 @@ private slots:
         widget.queueScene();
     }
 
+    // As renderRooms sizes the default style's rooms
+    static float roomHeight()
+    {
+        const MapStyle* tiles = MapStyle::find(qsl("tiles"));
+        return 2.0f / tiles->roomScale / tiles->roomFlattening;
+    }
+
     static bool allZ(const QVector<float>& vertices, const std::function<bool(float)>& test)
     {
         if (vertices.isEmpty()) {
@@ -437,7 +445,7 @@ private slots:
         ModernGLWidget widget(mpHost->mpMap.data(), mpHost);
         queueLayeredFrame(widget, areaId);
 
-        const float plateZ = -2.0f / 4.0f / 8.0f;
+        const float plateZ = -roomHeight();
         qsizetype index = 0;
         qsizetype plate = -1;
         qsizetype firstDecal = -1;
@@ -470,7 +478,7 @@ private slots:
         ModernGLWidget widget(mpHost->mpMap.data(), mpHost);
         queueLayeredFrame(widget, areaId, 1);
 
-        const float plateZ = 1.0f - 2.0f / 4.0f / 8.0f;
+        const float plateZ = 1.0f - roomHeight();
         qsizetype index = 0;
         qsizetype plate = -1;
         for (const auto& command : widget.mRenderCommandQueue.commands()) {
@@ -507,7 +515,7 @@ private slots:
         ModernGLWidget widget(mpHost->mpMap.data(), mpHost);
         queueLayeredFrame(widget, areaId);
 
-        const float labelZ = static_cast<float>(labelLevel) + 1.0f / 4.0f / 8.0f;
+        const float labelZ = static_cast<float>(labelLevel) + roomHeight() / 2.0f;
         GLDrawState draw;
         qsizetype index = 0;
         qsizetype label = -1;
@@ -542,7 +550,7 @@ private slots:
         ModernGLWidget widget(mpHost->mpMap.data(), mpHost);
         queueLayeredFrame(widget, areaId);
 
-        const float labelZ = 1.0f / 4.0f / 8.0f;
+        const float labelZ = roomHeight() / 2.0f;
         qsizetype index = 0;
         qsizetype label = -1;
         for (const auto& command : widget.mRenderCommandQueue.commands()) {

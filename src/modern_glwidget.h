@@ -63,6 +63,7 @@ class QFontMetricsF;
 class QLabel;
 class QPainter;
 class T2DMap;
+class TArea;
 class TCommandLine;
 class TMap;
 class TMapLabel;
@@ -388,6 +389,12 @@ private:
     // A column of light over the player's room, seen faintly through anything in front of it
     void renderPlayerBeacon();
     void paintCompass(QPainter& painter);
+    // The style's lettering at the size of the text drawn over the view
+    QFont sheetFont() const;
+    // Where it was drawn, or an empty rectangle where the style draws none or the view has no room for it
+    QRect paintTitleBlock(QPainter& painter, const TArea& area);
+    // Below top, and above the title block
+    void paintLevelCallouts(QPainter& painter, const TArea& area, int top, const QRect& titleBlock);
     void turnNorthUp();
     void setHoveredRoom(int roomId);
     // Worked out afresh, as the view can move under a pointer that stays still

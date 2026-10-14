@@ -137,6 +137,47 @@ bool highlightFillsRoom(const MapStyle::HighlightShape shape)
     return shape == MapStyle::HighlightShape::Cell;
 }
 
+QImage registrationMark(const QColor& color, const int size)
+{
+    QImage image = clearImage(QSize(size, size), color);
+    QPainter painter(&image);
+    painter.setRenderHint(QPainter::Antialiasing);
+    const qreal half = size / 2.0;
+    const QPointF center(half, half);
+    const qreal width = size * 0.035;
+    ring(painter, center, half * 0.52, color, width);
+    painter.setPen(QPen(color, width, Qt::SolidLine, Qt::FlatCap));
+    const qreal reach = half * 0.95;
+    painter.drawLine(QPointF(half - reach, half), QPointF(half + reach, half));
+    painter.drawLine(QPointF(half, half - reach), QPointF(half, half + reach));
+    painter.setPen(Qt::NoPen);
+    painter.setBrush(color);
+    painter.drawEllipse(center, width * 1.2, width * 1.2);
+    painter.end();
+    return image;
+}
+
+QList<qreal> spreadCallouts(const QList<qreal>& wanted, const qreal spacing, const qreal top, const qreal bottom)
+{
+    QList<qreal> placed = wanted;
+    if (placed.isEmpty()) {
+        return placed;
+    }
+    // Downward from the top, then back up from the bottom, so that none overlaps and all stay between top and bottom
+    // where they fit there
+    qreal next = top;
+    for (qreal& at : placed) {
+        at = std::max(at, next);
+        next = at + spacing;
+    }
+    qreal last = bottom;
+    for (auto it = placed.rbegin(); it != placed.rend(); ++it) {
+        *it = std::min(*it, last);
+        last = *it - spacing;
+    }
+    return placed;
+}
+
 QGradientStops thinPlayerRingStops(const QColor& color)
 {
     return {{0.0, withAlpha(color, 0)}, {0.78, withAlpha(color, 0)}, {0.83, withAlpha(color, 255)}, {0.93, withAlpha(color, 255)}, {1.0, withAlpha(color, 0)}};
@@ -192,6 +233,7 @@ QImage themedLabel(const TMapLabel& label, const MapStyle& style)
     QFont font = label.font;
     if (font.family().isEmpty() && !style.labelFontFamily.isEmpty()) {
         font.setFamily(style.labelFontFamily);
+        style.letter(font);
     }
     const bool ownTextColor = !neutral(label.fgColor) || !style.mapLabelColor.isValid();
     const QColor textColor = ownTextColor ? label.fgColor : withAlpha(style.mapLabelColor, label.fgColor.alpha());

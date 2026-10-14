@@ -69,8 +69,12 @@ private:
     static constexpr int kPlayerRoomId = 1;
     static constexpr int kEastRoomId = 2;
     static constexpr int kLowerRoomId = 3;
-    // As renderRooms sizes it: 2 / scale (4) / zFlattening (8)
-    static constexpr float kRoomHeight = 2.0f / 4.0f / 8.0f;
+    // As renderRooms sizes the default style's rooms
+    static float roomHeight()
+    {
+        const MapStyle* tiles = MapStyle::find(qsl("tiles"));
+        return 2.0f / tiles->roomScale / tiles->roomFlattening;
+    }
 
     static bool portableMarkerPresent()
     {
@@ -237,7 +241,7 @@ private slots:
         QVERIFY2(widget.failureMessage().isEmpty(), qPrintable(widget.failureMessage()));
         mpHost->mMapGridColor = QColor(Qt::white);
         mpHost->mMapGridLineSize = 5.0;
-        const QVector3D onALine(1.0f, 1.5f, -kRoomHeight / 2.0f);
+        const QVector3D onALine(1.0f, 1.5f, -roomHeight() / 2.0f);
 
         mpHost->mMapperShowGrid = false;
         const QColor hidden = colorAt(widget, onALine);
@@ -260,15 +264,18 @@ private slots:
         if (!widget.isValid()) {
             QSKIP("no OpenGL context on this platform");
         }
-        const QVector3D corner(2.22f, 0.22f, kRoomHeight / 2.0f);
-        const QVector3D empty(2.4f, 0.4f, kRoomHeight / 2.0f);
+        const float halfRoom = 1.0f / MapStyle::find(qsl("tiles"))->roomScale;
+        // The corner away from the view's middle, which sees the block's other sides, and from its shadow to the south east
+        const QVector3D corner(2.0f + halfRoom * 0.9f, halfRoom * 0.9f, roomHeight() / 2.0f);
+        // Between the rooms, on the level's floor
+        const QVector3D empty(1.0f, halfRoom * 0.9f, roomHeight() / 2.0f);
 
         mpHost->mBubbleMode = false;
         const QColor square = colorAt(widget, corner);
         const QColor squareEmpty = colorAt(widget, empty);
         mpHost->mBubbleMode = true;
         const QColor round = colorAt(widget, corner);
-        const QColor middle = colorAt(widget, QVector3D(2.0f, 0.0f, kRoomHeight / 2.0f));
+        const QColor middle = colorAt(widget, QVector3D(2.0f, 0.0f, roomHeight() / 2.0f));
         mpHost->mBubbleMode = false;
         QVERIFY(square.isValid() && squareEmpty.isValid() && round.isValid() && middle.isValid());
         QVERIFY2(difference(square, squareEmpty) > 60, qPrintable(qsl("a square room's corner is %1, beside it %2").arg(square.name(), squareEmpty.name())));
@@ -291,7 +298,7 @@ private slots:
         const QColor savedLower = mpHost->mLowerLevelColor;
         const bool savedShown = mudlet::self()->drawUpperLowerLevels();
         mpHost->mLowerLevelColor = QColor(Qt::red);
-        const QVector3D lowerRoom(0.0f, 2.0f, -1.0f + kRoomHeight / 2.0f);
+        const QVector3D lowerRoom(0.0f, 2.0f, -1.0f + roomHeight() / 2.0f);
 
         mudlet::self()->setDrawUpperLowerLevels(false);
         const QColor plain = colorAt(widget, lowerRoom);
@@ -343,7 +350,7 @@ private slots:
                 const auto* triangles = static_cast<const RenderTrianglesCommand*>(command);
                 gridAtTheRoomsBottoms = !triangles->vertices().isEmpty();
                 for (qsizetype i = 2; i < triangles->vertices().size(); i += 3) {
-                    gridAtTheRoomsBottoms = gridAtTheRoomsBottoms && qFuzzyCompare(triangles->vertices().at(i), -kRoomHeight / 2.0f);
+                    gridAtTheRoomsBottoms = gridAtTheRoomsBottoms && qFuzzyCompare(triangles->vertices().at(i), -roomHeight() / 2.0f);
                 }
                 const auto* before = index > 0 ? dynamic_cast<const GLStateCommand*>(commands.at(index - 1).get()) : nullptr;
                 const auto* after = index + 1 < static_cast<qsizetype>(commands.size()) ? dynamic_cast<const GLStateCommand*>(commands.at(index + 1).get()) : nullptr;
@@ -466,7 +473,7 @@ private slots:
         const bool savedShown = mudlet::self()->drawUpperLowerLevels();
         mpHost->mLowerLevelColor = QColor(255, 0, 0, 64);
         ModernGLWidget widget(map(), mpHost);
-        const float floorZ = -1.0f - kRoomHeight;
+        const float floorZ = -1.0f - roomHeight();
         const auto redness = [&widget, floorZ]() {
             float room = std::numeric_limits<float>::lowest();
             float floor = std::numeric_limits<float>::lowest();
@@ -507,14 +514,16 @@ private slots:
         QVERIFY2(coloredFloor > plainFloor + 0.002f, qPrintable(qsl("the floor below is %1 red with the levels' colors and %2 without").arg(coloredFloor).arg(plainFloor)));
     }
 
-    // Tiles draws the profile's own colors, as it did before there were other styles to pick
+    // Tiles keeps the profile's own colors, softened but not swapped for a palette of its own
     void test_tilesTakesTheProfilesColors()
     {
         const MapStyle* tiles = MapStyle::find(qsl("tiles"));
         QVERIFY(tiles);
         const QColor environment(10, 200, 30, 128);
         const QColor profileColor(1, 2, 3, 4);
-        QCOMPARE(tiles->roomColor(environment), environment);
+        QCOMPARE(tiles->palette, MapStyle::Palette::Soft);
+        QCOMPARE(tiles->roomColor(environment).alpha(), environment.alpha());
+        QVERIFY(qAbs(tiles->roomColor(environment).hueF() - environment.hueF()) < 0.02f);
         QCOMPARE(tiles->backgroundColor(profileColor), profileColor);
         QCOMPARE(tiles->exitColor(profileColor), profileColor);
         QCOMPARE(tiles->symbolColor(QColor(), environment), RoomAppearance::symbolColor(QColor(), environment));
