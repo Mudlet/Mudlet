@@ -13352,7 +13352,8 @@ void dlgTriggerEditor::slot_profileSaveAsAction()
     mSavingAs = false;
     if (!ok && !error.isEmpty()) {
         //: %1 is the reason the profile could not be saved, such as an error from the operating system
-        QMessageBox::critical(this, tr("Couldn't save profile"), tr("Sorry, couldn't save your profile - got the following error: %1").arg(error));
+        const QString message = tr("Sorry, couldn't save your profile - got the following error: %1").arg(error);
+        QMessageBox::critical(this, tr("Couldn't save profile"), message);
     }
 }
 
