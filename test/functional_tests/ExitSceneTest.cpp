@@ -702,7 +702,7 @@ private slots:
         QCOMPARE(segmentsIn(scene, mExitColor).size(), 0);
     }
 
-    // A station is on a line of its own environment only where an exit on its level leads to a room of it
+    // A station is on a line of its own environment only where an exit on its level joins it to a room of it that shows
     void test_onEnvironmentLineTakesOnlyALevelExitToItsOwnEnvironment()
     {
         TRoom* pRoom = addRoomAt(1, mAreaId, 0, 0, 0);
@@ -717,7 +717,9 @@ private slots:
         QVERIFY(!RoomAppearance::onEnvironmentLine(*map(), *pRoom));
         pOther->environment = 301;
         QVERIFY(RoomAppearance::onEnvironmentLine(*map(), *pRoom));
-        QVERIFY2(!RoomAppearance::onEnvironmentLine(*map(), *pOther), "a room with no exits of its own is on a line");
+        QVERIFY2(RoomAppearance::onEnvironmentLine(*map(), *pOther), "a one-way exit into the room does not put it on a line");
+        pOther->setHidden(true);
+        QVERIFY2(!RoomAppearance::onEnvironmentLine(*map(), *pRoom), "a line to a hidden room counts");
     }
 
     void test_environmentLinesAreOffUnlessAsked()

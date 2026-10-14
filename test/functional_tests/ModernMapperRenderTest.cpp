@@ -35,6 +35,7 @@
 
 #include <QFileInfo>
 #include <QOpenGLContext>
+#include <QPainter>
 #include <QScopeGuard>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
@@ -1014,6 +1015,16 @@ private slots:
         QCOMPARE(below.platforms.at(0).label, qsl("B1"));
         QVERIFY2(!below.stair.has_value(), "a shaft falls from a stair the level does not have");
         QVERIFY(QRectF(widget.rect()).contains(below.platforms.at(0).pill));
+
+        // A player on another level is pointed out on that level's platform
+        map()->mRoomIdHash[map()->mProfileName] = kTowerId;
+        QImage overlay(widget.size(), QImage::Format_ARGB32_Premultiplied);
+        overlay.fill(Qt::transparent);
+        QPainter painter(&overlay);
+        widget.paintPlayerPill(painter, 0, widget.levelPlatforms(*pArea, 0));
+        painter.end();
+        map()->mRoomIdHash[map()->mProfileName] = kPlayerRoomId;
+        QVERIFY2(overlay.pixelColor(above.platforms.at(1).station(0).toPoint()).alpha() == 255, "the player's level's platform is not marked");
     }
 
     // The legend keys the lines of the viewed level by their kind of ground, with gray for those joining two
