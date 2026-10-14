@@ -1267,7 +1267,8 @@ std::pair<bool, QString> Host::reloadModule(const QString& syncModuleName, const
             if (auto [installed, reason] = installPackage(fileName, enums::PackageModuleType::ModuleSync); !installed) {
                 // A refused uninstall left the module's items in place
                 failure = uninstalled ? qsl("%1, so the module is now empty").arg(reason) : reason;
-                // installPackage() is silent for a module sync. Only once, as a sync from another profile repeats it.
+                // installPackage() is silent for a module sync, and a sync from another profile has no script to
+                // answer. Only when this one emptied a loaded module: that sync repeats on every save there.
                 if (!syncingFromHost.isEmpty() && uninstalled && loadedBefore) {
                     //: %1 is the name of the module, %2 is the reason it could not be installed again
                     postMessage(tr("[ WARN ]  - Module \"%1\" could not be reloaded and is now empty: %2").arg(moduleName, reason));
