@@ -3817,6 +3817,8 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
     }
 
     mCustomEnvColors.swap(customEnvColors);
+    // 257 to 272 belong to the profile, whatever the file says, as the binary loader also treats them
+    restore16ColorSet();
     mEnvColors.swap(envColors);
     mIsOnlyMapSymbolFontToBeUsed = isOnlyMapSymbolFontToBeUsed;
     QFont mapSymbolFont;
