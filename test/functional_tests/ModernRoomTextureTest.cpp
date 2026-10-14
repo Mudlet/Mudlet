@@ -160,6 +160,9 @@ private slots:
             // Short, so that every name fits its room and none is decluttered away
             pMap->mpRoomDB->getRoom(id)->name = qsl("R%1").arg(id);
         }
+        // A font of the map's own keeps names at their full size, whatever a map style would shrink them to,
+        // and in a font that ships with Mudlet rather than the platform's
+        pMap->mUserData.insert(ROOM_UI_NAMEFONT, QFont(Host::scmDefaultFontFamily).toString());
         mpHost->mShowRoomID = true;
         pMap->setRoomNamesShown(true);
         pMap->mRoomIdHash[pMap->mProfileName] = 312;
@@ -196,7 +199,7 @@ private slots:
                 [](GLuint) {});
         widget.setViewCenter(areaId, 12, 12, 0);
         // Never shown, so nothing sizes it: big enough for every name to be legible, with the whole area in view
-        widget.resize(1600, 1600);
+        widget.resize(1200, 1200);
         widget.mCameraController.setViewportSize(widget.width(), widget.height());
         widget.frameRooms(26.0);
         // As paintGL() does first: names are placed through the camera's matrices
