@@ -514,7 +514,7 @@ private:
 
     bool mIsSelectionSorting = true;
     bool mIsSelectionSortByNames = false;
-    bool mSelectionWidgetPruneQueued = false;
+    QSet<int> mRoomsToDropFromSelectionWidget;
 
     // Used to keep track of if sorting the multiple
     // room listing/selection widget, and by what,

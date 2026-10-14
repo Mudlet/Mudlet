@@ -4086,6 +4086,8 @@ void T2DMap::updateSelectionWidget()
         mIsSelectionSorting = mMultiSelectionListWidget.isSortingEnabled();
         mIsSelectionSortByNames = (mMultiSelectionListWidget.sortColumn() == 1);
         mMultiSelectionListWidget.clear();
+        // The rows are rebuilt from mMultiSelectionSet, which deleted rooms have already left
+        mRoomsToDropFromSelectionWidget.clear();
         // Do NOT sort while inserting items!
         mMultiSelectionListWidget.setSortingEnabled(false);
         QSetIterator<int> itRoom = mMultiSelectionSet;
@@ -6317,10 +6319,13 @@ void T2DMap::forgetDeletedRoom(const int roomId)
         mHelpMsg.clear();
         update();
     }
-    // Queued so that deleting many rooms walks the list once, not once per room
-    if (!mSelectionWidgetPruneQueued && mMultiSelectionListWidget.topLevelItemCount() > 0) {
-        mSelectionWidgetPruneQueued = true;
-        QTimer::singleShot(0, this, &T2DMap::pruneDeletedRoomsFromSelectionWidget);
+    // Queued so that deleting many rooms walks the list once, not once per room.
+    // A hidden list is rebuilt before it is shown again.
+    if (!mMultiSelectionListWidget.isHidden() && mMultiSelectionListWidget.topLevelItemCount() > 0) {
+        if (mRoomsToDropFromSelectionWidget.isEmpty()) {
+            QTimer::singleShot(0, this, &T2DMap::pruneDeletedRoomsFromSelectionWidget);
+        }
+        mRoomsToDropFromSelectionWidget.insert(roomId);
     }
     if (!mMultiSelectionSet.remove(roomId)) {
         return;
@@ -6342,18 +6347,35 @@ void T2DMap::forgetDeletedRoom(const int roomId)
 
 void T2DMap::pruneDeletedRoomsFromSelectionWidget()
 {
-    mSelectionWidgetPruneQueued = false;
+    // By id, not by getRoom(): a script may already have made a new room with a deleted one's id
+    const QSet<int> deletedRoomIds = mRoomsToDropFromSelectionWidget;
+    mRoomsToDropFromSelectionWidget.clear();
+    bool rowsRemoved = false;
     // Removing a selected row would otherwise rebuild mMultiSelectionSet from the rows left
     mMultiSelectionListWidget.blockSignals(true);
     for (int row = mMultiSelectionListWidget.topLevelItemCount() - 1; row >= 0; --row) {
-        if (!mpMap->mpRoomDB->getRoom(mMultiSelectionListWidget.topLevelItem(row)->text(0).toInt())) {
+        if (deletedRoomIds.contains(mMultiSelectionListWidget.topLevelItem(row)->text(0).toInt())) {
             delete mMultiSelectionListWidget.takeTopLevelItem(row);
+            rowsRemoved = true;
         }
     }
     mMultiSelectionListWidget.blockSignals(false);
     if (mMultiSelectionListWidget.topLevelItemCount() < 2) {
         hideSelectionWidget();
+        return;
     }
+    if (!rowsRemoved) {
+        return;
+    }
+    mIsSelectionUsingNames = false;
+    for (int row = 0; row < mMultiSelectionListWidget.topLevelItemCount(); ++row) {
+        if (!mMultiSelectionListWidget.topLevelItem(row)->text(1).isEmpty()) {
+            mIsSelectionUsingNames = true;
+            break;
+        }
+    }
+    mMultiSelectionListWidget.setColumnHidden(1, !mIsSelectionUsingNames);
+    resizeMultiSelectionWidget();
 }
 
 void T2DMap::hideSelectionWidget()

@@ -1108,6 +1108,62 @@ private slots:
         QVERIFY2(map()->mpRoomDB->getRoom(kEastRoomId)->customLines.isEmpty(), "the click drew a line in the new room");
     }
 
+    // Room ids are reused, so a room a script makes after deleting a listed one
+    // may get its id, and must not get its row as well.
+    void test_aRoomGivenADeletedListedRoomsIdIsNotListed()
+    {
+        buildMap();
+        showMapper(false);
+        dragFromTo(pointUnitsFromCentre(-1.5, 1.5), pointUnitsFromCentre(0.5, -0.5));
+
+        QVERIFY(runLua(qsl("deleteRoom(%1); addRoom(%1); setRoomArea(%1, %2); setRoomCoordinates(%1, 5, 5, 0)").arg(kNorthWestRoomId).arg(mAreaId)));
+        QCoreApplication::processEvents();
+
+        const QSet<int> remaining{kNorthRoomId, kWestRoomId, kPlayerRoomId};
+        QCOMPARE(listedRoomIds(), remaining);
+        for (QTreeWidgetItem* item : listedRooms()) {
+            item->setSelected(item->text(0).toInt() == kPlayerRoomId);
+        }
+        for (QTreeWidgetItem* item : listedRooms()) {
+            item->setSelected(true);
+        }
+        QCOMPARE(mp2dMap->mMultiSelectionSet, remaining);
+    }
+
+    void test_theListFitsTheRoomsLeftAfterADeletion()
+    {
+        buildMap();
+        showMapper(false);
+        dragFromTo(pointUnitsFromCentre(-1.5, 1.5), pointUnitsFromCentre(1.5, 0.5));
+        const int threeRowsHigh = mp2dMap->mMultiSelectionListWidget.height();
+        QVERIFY(runLua(qsl("setRoomName(%1, 'a'); setRoomName(%2, 'b')").arg(kNorthWestRoomId).arg(kNorthRoomId)));
+        dragFromTo(pointUnitsFromCentre(-1.5, 1.5), pointUnitsFromCentre(1.5, -1.5));
+        QVERIFY(mp2dMap->mMultiSelectionListWidget.height() > threeRowsHigh);
+        QVERIFY(!mp2dMap->mMultiSelectionListWidget.isColumnHidden(1));
+
+        QVERIFY(runLua(qsl("for _, id in ipairs({1, 2, 3, 4, 6, 7}) do deleteRoom(id) end")));
+        QCoreApplication::processEvents();
+
+        QCOMPARE(listedRoomIds(), (QSet<int>{kPlayerRoomId, kSouthRoomId, 9}));
+        QCOMPARE(mp2dMap->mMultiSelectionListWidget.height(), threeRowsHigh);
+        QVERIFY2(mp2dMap->mMultiSelectionListWidget.isColumnHidden(1), "the name column is still shown with no named room left");
+    }
+
+    // A hidden list is rebuilt before it is shown again, so it is not worth walking
+    void test_deletingARoomLeavesAHiddenListAlone()
+    {
+        buildMap();
+        showMapper(false);
+        dragFromTo(pointUnitsFromCentre(-1.5, 1.5), pointUnitsFromCentre(0.5, -0.5));
+        dragFromTo(pointUnitsFromCentre(0.6, -0.6), pointUnitsFromCentre(1.4, -1.4));
+        QVERIFY(mp2dMap->mMultiSelectionListWidget.isHidden());
+        QVERIFY(mp2dMap->mMultiSelectionListWidget.topLevelItemCount() > 0);
+
+        QVERIFY(runLua(qsl("deleteRoom(%1)").arg(kNorthEastRoomId)));
+
+        QVERIFY2(mp2dMap->mRoomsToDropFromSelectionWidget.isEmpty(), "a walk of the hidden list was queued");
+    }
+
     // The list of selected rooms is rebuilt when the box takes in different
     // rooms, not on every move of the mouse, which on a big selection costs
     // more than the time between two moves.
