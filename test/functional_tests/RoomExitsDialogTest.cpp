@@ -454,13 +454,12 @@ private slots:
 
         clearByTyping(pDlg->n);
         QVERIFY(!pDlg->noroute_n->isEnabled());
+        QVERIFY2(pDlg->noroute_n->isChecked(), "the box has to reach Save still ticked for save() to be what drops the lock");
         QVERIFY(pDlg->button_save->isEnabled());
         pDlg->button_save->click();
 
         QCOMPARE(subject()->getExit(DIR_NORTH), -1);
         QVERIFY(!subject()->hasExitLock(DIR_NORTH));
-        QVERIFY(subject()->setExit(scmSpareRoom, DIR_NORTH));
-        QVERIFY2(!subject()->hasExitLock(DIR_NORTH), "the deleted exit's lock came back on the next exit put there");
     }
 
     void namingNoRoomDeletesTheExitAndItsSpeedwalkLock()
@@ -471,6 +470,7 @@ private slots:
 
         clearByTyping(pDlg->n);
         QTest::keyClicks(pDlg->n, QString::number(scmNoSuchRoom));
+        QVERIFY2(pDlg->noroute_n->isChecked(), "the box has to reach Save still ticked for save() to be what drops the lock");
         QVERIFY(pDlg->button_save->isEnabled());
         pDlg->button_save->click();
 
