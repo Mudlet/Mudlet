@@ -188,9 +188,8 @@ local function writePackageXml(path, body, version)
   file:close()
 end
 
--- Writes a zip archive of empty, stored files under the given names. Empty entries need no
--- checksum, so this can be done here, and it can store names that no zip tool would - one
--- that climbs out of the folder it is unpacked into, say.
+-- Writes a zip archive of empty, stored files under the given names, which Lua can do unaided
+-- because the CRC-32 of nothing is 0.
 local function writeArchiveOfEmptyFiles(path, entries)
   local function le(value, bytes)
     local out = {}
@@ -425,8 +424,9 @@ describe("Tests the functionality of installPackage", function()
     -- no package XML in it, so the install is refused once it has been unpacked
     writeArchiveOfEmptyFiles(archive, {"mudlet-spec-stray.txt"})
 
-    installUntilRefused(installPackage, archive)
+    local reason = installUntilRefused(installPackage, archive)
 
+    assert.is_true(contains(reason, "no package found"), tostring(reason))
     assert.is_false(packageInstalled(name))
     assert.is_true(fileExists(occupant), "the refused install deleted a folder that was in the profile before it ran")
     assert.is_false(fileExists(stray), "the refused install left its files in a folder that was in the profile before it ran")
@@ -460,41 +460,38 @@ describe("Tests the functionality of installPackage", function()
     assert.is_true(ok, tostring(err))
     assert.is_true(packageInstalled(minimalPackage))
     assert.equals(1, exists(minimalPackage .. " alias", "alias"))
-    assert.is_true(fileExists(leftover .. "/" .. minimalPackage .. ".xml"), "the package was not unpacked into its folder")
+    assert.are_not.equal("not the package's XML, which the archive's own copy replaces", readFile(staleXml), "the archive's XML did not replace the stale one")
     assert.is_true(fileExists(oldFile), "the install took away a file of the folder it installed over")
     assert.is_false(aStagingFolderIsLeftFor(minimalPackage), "the install left the folder it unpacked into")
   end)
 
   it("leaves alone a folder called after the package with .mudlet-installing on the end", function()
-    -- a name a package can have, beside a leftover folder that makes the archive unpack aside
-    local leftover = getMudletHomeDir() .. "/" .. minimalPackage
-    local lookalike = leftover .. ".mudlet-installing"
+    -- a name a package can have, and the one an archive clashing with the other kind's folder used to be unpacked
+    -- into, after deleting whatever was there
+    local lookalike = getMudletHomeDir() .. "/" .. minimalPackage .. ".mudlet-installing"
     local kept = lookalike .. "/please-do-not-delete-me.txt"
-    lfs.mkdir(leftover)
     lfs.mkdir(lookalike)
     local file = io.open(kept, "w")
     assert.is_not_nil(file, "could not write to " .. kept)
     file:write("this folder is not the install's to delete")
     file:close()
     defer(function()
-      removeFixturePackage(minimalPackage)
       os.remove(kept)
       lfs.rmdir(lookalike)
-      lfs.rmdir(leftover)
     end)
+    withFixtureModule(minimalPackage)
 
-    local ok, err = installUntilConfirmed(installPackage, fixtureDirectory .. "/" .. minimalPackage .. ".mpackage",
-                                          function() return packageInstalled(minimalPackage) end, "the fixture package over its leftover folder")
+    local reason = installUntilRefused(installPackage, fixtureDirectory .. "/" .. minimalPackage .. ".mpackage")
 
-    assert.is_true(ok, tostring(err))
+    assert.is_true(contains(reason, "already installed"), tostring(reason))
     assert.is_true(fileExists(kept), "the install deleted a folder it did not make")
   end)
 
   it("leaves a folder that was already in the profile alone when the unpacking fails", function()
-    -- the archive's own file name decides where it unpacks, so an archive named
+    -- the archive's own file name decides where it unpacks, so it can be named
     -- after a folder the profile already has - "map", "log", or anything else
-    -- the user put there - unpacks straight into it. A failure that then cleans
-    -- up after itself must only take away a folder it made itself.
+    -- the user put there. A failure that then cleans up after itself must only
+    -- take away a folder it made itself.
     local standIn = getMudletHomeDir() .. "/mudlet-spec-notazip"
     local occupant = standIn .. "/please-do-not-delete-me.txt"
     lfs.mkdir(standIn)
@@ -1721,8 +1718,9 @@ describe("Tests installing one name as both a package and a module", function()
     installUntilConfirmed(installPackage, squatter, function() return packageInstalled("mudlet-spec-renamer") end,
                           "a package under the renaming archive's file name")
 
-    -- only a name the other half already holds is staged, which is why the
-    -- package above has to be installed first for this folder to be in the way
+    -- the name a clashing archive was once unpacked into, which was reused - or
+    -- deleted - by whatever install came next; the package above is what makes
+    -- the module below clash and unpack beside it
     local leftOver = getMudletHomeDir() .. "/mudlet-spec-renamer.mudlet-installing"
     lfs.mkdir(leftOver)
     defer(function()
@@ -1761,6 +1759,7 @@ describe("Tests installing one name as both a package and a module", function()
                           "the renaming fixture as a module past a leftover staging folder")
 
     assert.equals(0, exists("mudlet-spec-leftover alias", "alias"), "the leftover staging folder's items were installed under the module's name")
+    assert.is_true(fileExists(leftOver .. "/mudlet-spec-leftover.xml"), "the install deleted a folder it did not make")
   end)
 
   it("refuses a module whose config.lua renames it onto an installed module", function()
