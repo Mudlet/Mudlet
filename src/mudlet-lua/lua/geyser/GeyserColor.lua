@@ -40,6 +40,11 @@ end
 
 local parse
 
+-- %02x of an out of range component is more than two digits
+local function hexByte(value)
+  return math.min(255, math.max(0, math.floor(value)))
+end
+
 --- Converts color to 3 hex values as a string, no alpha, css style
 -- @return The color formatted as a hex string, as accepted by html/css
 function Geyser.Color.hex (r, g, b)
@@ -49,30 +54,34 @@ function Geyser.Color.hex (r, g, b)
   if known then
     local hex = known[5]
     if not hex then
-      hex = string.format("#%02x%02x%02x", known[1], known[2], known[3])
+      hex = string.format("#%02x%02x%02x", hexByte(known[1]), hexByte(known[2]), hexByte(known[3]))
       known[5] = hex
     end
     return hex
   end
-  return string.format("#%02x%02x%02x", Geyser.Color.parse(r, g, b))
+  local red, green, blue = Geyser.Color.parse(r, g, b)
+  return string.format("#%02x%02x%02x", hexByte(red), hexByte(green), hexByte(blue))
 end
 
 --- Converts color to 4 hex values as a string, with alpha, css style
 -- @return The color formatted as a hex string, as accepted by html/css
 function Geyser.Color.hexa (r, g, b, a)
-  return string.format("#%02x%02x%02x%02x", Geyser.Color.parse(r, g, b, a))
+  local red, green, blue, alpha = Geyser.Color.parse(r, g, b, a)
+  return string.format("#%02x%02x%02x%02x", hexByte(red), hexByte(green), hexByte(blue), hexByte(alpha))
 end
 
 --- Converts color to 3 hex values as a string, no alpha, hecho style
 -- @return The color formatted as a hex string, as accepted by hecho
 function Geyser.Color.hhex (r, g, b)
-  return string.format("|c%02x%02x%02x", Geyser.Color.parse(r, g, b))
+  local red, green, blue = Geyser.Color.parse(r, g, b)
+  return string.format("|c%02x%02x%02x", hexByte(red), hexByte(green), hexByte(blue))
 end
 
 --- Converts color to 4 hex values as a string, with alpha, hecho style
 -- @return The color formatted as a hex string, as accepted by hecho
 function Geyser.Color.hhexa (r, g, b, a)
-  return string.format("|c%02x%02x%02x%02x", Geyser.Color.parse(r, g, b, a))
+  local red, green, blue, alpha = Geyser.Color.parse(r, g, b, a)
+  return string.format("|c%02x%02x%02x%02x", hexByte(red), hexByte(green), hexByte(blue), hexByte(alpha))
 end
 
 --- Converts color to 3 decimal values as a string, no alpha, decho style
