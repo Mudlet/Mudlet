@@ -1315,7 +1315,9 @@ function db:_migrate(db_name, s_name, force)
       local sql = sql_check_blank:format(table.concat(max_redundant, ", "), s_name)
       db:echo_sql(sql)
       local blank_cur, blank_err = conn:execute(sql)
-      assert(blank_cur, blank_err)
+      if not blank_cur then
+        error("db:create - "..s_name.." - could not check the unused columns for data: "..tostring(blank_err).."\n"..sql)
+      end
       local blank_results = blank_cur:fetch({}, "a")
       blank_cur:close()
       local not_blank = {}

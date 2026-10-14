@@ -4466,6 +4466,19 @@ describe("Tests db:create on schemas sqlite refuses or reads differently", funct
     assert.are.equal("Bob", rows[1].name)
   end)
 
+  it("names the sheet and the query when it cannot read an unused column", function()
+    createCollectingWarnings({people = {name = ""}})
+    -- a name holding a double quote is one the redundant-column check cannot spell
+    local conn = db.__conn[dbName]
+    assert.is_truthy(conn:execute([[ALTER TABLE people ADD COLUMN "a""b" TEXT]]))
+    conn:commit()
+
+    local ok, err = pcall(createCollectingWarnings, {people = {name = ""}})
+    assert.is_false(ok)
+    assert.is_truthy(string.find(err, "db:create - people - could not check the unused columns for data: ", 1, true), err)
+    assert.is_truthy(string.find(err, "SELECT max(", 1, true), err)
+  end)
+
   it("reports an index it could not create, and carries on", function()
     local mydb = createCollectingWarnings({people = {name = ""}})
     -- a table already holding the name db:_index_name gives the index makes sqlite refuse it
