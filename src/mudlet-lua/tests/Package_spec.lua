@@ -1226,6 +1226,38 @@ describe("Tests what a package that uninstalls itself mid-pass can still see", f
     assert.are.same({0, 0, 0}, _G.mudletSpecMidpassSeen, "exists, findItems and isActive for the script queued for removal")
   end)
 
+  it("stops counting its own alias and timer once its alias has asked for the uninstall", function()
+    local name = "mudlet-spec-midpass-alias"
+    local alias, timer = "mudlet-spec midpass alias", "mudlet-spec midpass timer"
+    local function seen(item, itemType)
+      return ('exists("%s", "%s"), #findItems("%s", "%s"), isActive("%s", "%s")'):format(item, itemType, item, itemType, item, itemType)
+    end
+    -- only an uninstall from within the unit's own pass is deferred, so the alias asks for it
+    withScratchPackage(name, table.concat({
+      '<AliasPackage><Alias isActive="yes" isFolder="no"><name>' .. alias .. '</name><packageName></packageName>',
+      "<script>" .. table.concat({
+        'mudletSpecMidpassRemoved = uninstallPackage("' .. name .. '")',
+        'if mudletSpecMidpassRemoved then',
+        '  mudletSpecMidpassSeen = {' .. seen(alias, "alias") .. ', ' .. seen(timer, "timer") .. '}',
+        'end'}, "\n") .. "</script>",
+      "<command></command><regex>^mudlet_spec_midpass_alias$</regex></Alias></AliasPackage>",
+      '<TimerPackage><Timer isActive="yes" isFolder="no" isTempTimer="no" isOffsetTimer="no"><name>' .. timer .. '</name>',
+      "<packageName></packageName><script></script><command></command><time>00:10:00.000</time></Timer></TimerPackage>",
+    }, "\n"))
+    defer(function()
+      _G.mudletSpecMidpassRemoved, _G.mudletSpecMidpassSeen = nil, nil
+    end)
+    assert.are.same({1, 1, 1, 1}, {exists(alias, "alias"), #findItems(alias, "alias"), exists(timer, "timer"), #findItems(timer, "timer")},
+      "the package's alias and timer before the uninstall")
+
+    assert.is_true(waitUntil(function()
+      assert.is_true(waitForProfileSaveToPass(), "a profile save was still running after 5s")
+      expandAlias("mudlet_spec_midpass_alias", false)
+      return _G.mudletSpecMidpassRemoved == true
+    end, 8000), "the package's alias could not uninstall it")
+    assert.are.same({0, 0, 0, 0, 0, 0}, _G.mudletSpecMidpassSeen, "exists, findItems and isActive for the alias and timer queued for removal")
+  end)
+
   it("does not kill a temporary trigger group its package has just queued for removal", function()
     local name = "mudlet-spec-midpass-tempgroup"
     local group = "mudlet-spec midpass temporary group"
