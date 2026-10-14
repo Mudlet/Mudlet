@@ -109,7 +109,7 @@ end
 
 -- NOT LUADOC
 -- The column_spec is either a string or an indexed table. This function returns either "column" or
--- "column1", "column2" for use in the column specification of INSERT.
+-- "column1", "column2" for use in a column list such as an index's or an ORDER BY.
 function db:_sql_columns(value)
   local col_chunks = {}
   local colstr = ''
@@ -118,14 +118,8 @@ function db:_sql_columns(value)
   if t == "table" then
     for _, v in ipairs(value) do
       assert(type(v) == "string", "Column names must be strings, not " .. type(v) .. ".")
-      -- see https://www.sqlite.org/syntaxdiagrams.html#ordering-term: a sort
-      -- direction belongs to the column in front of it, so one that leads the
-      -- list can only be a column of that name
-      if col_chunks[1] and (v:lower() == "desc" or v:lower() == "asc") then
-        col_chunks[#col_chunks] = col_chunks[#col_chunks] .. " " .. v
-      else
-        col_chunks[#col_chunks + 1] = '"' .. v:lower() .. '"'
-      end
+      -- desc and asc too: a sheet may have a column of either name
+      col_chunks[#col_chunks + 1] = '"' .. v:lower() .. '"'
     end
 
     colstr = table.concat(col_chunks, ',')
@@ -720,8 +714,6 @@ function db:create(db_name, sheets, force)
               table.insert(warnings, "db:create - "..sheet_name.." - _index names \"_row_id\", which is the "..
                 "key every sheet is given rather than one of its own columns: that index is skipped.")
             elseif unknown_column:lower() == "asc" or unknown_column:lower() == "desc" then
-              -- db:_sql_columns would build the ordering term, but
-              -- db:_index_valid refuses it, so the index was never made
               table.insert(warnings, "db:create - "..sheet_name.." - _index names \""..unknown_column..
                 "\", and an index takes column names only, not a sort direction: that index is skipped.")
             else
@@ -1736,12 +1728,10 @@ function db:fetch(sheet, query, order_by, descending)
   end
 
   if order_by then
-    -- built here rather than by db:_sql_columns, which reads a column called desc or asc
-    -- as the sort direction of the one before it
     local o = {}
     for _, v in ipairs(order_by) do
       assert(v.name, "You must pass field instances (as obtained from yourdb.yoursheet.yourfield) to sort.")
-      o[#o + 1] = '"' .. v.name:lower() .. '"' .. (descending and " DESC" or "")
+      o[#o + 1] = db:_sql_columns({v.name}) .. (descending and " DESC" or "")
     end
 
     sql = sql .. " ORDER BY " .. table.concat(o, ",")

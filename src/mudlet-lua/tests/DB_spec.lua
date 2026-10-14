@@ -2804,25 +2804,9 @@ describe("Tests db:echo_sql", function()
   end)
 end)
 
-describe("Tests db:fetch sorting by a column called desc", function()
+describe("Tests db:fetch sorting by a column called desc or asc", function()
   local dbName = "sortdesctestingonly"
   local dbFile = getMudletHomeDir() .. "/Database_" .. dbName .. ".db"
-
-  local function collectingWarnings(fn)
-    local collected = {}
-    -- through _G: a spec file's globals are its own
-    local originalPrintError = _G.printError
-    _G.printError = function(msg) collected[#collected + 1] = msg end
-    finally(function() _G.printError = originalPrintError end)
-
-    local result = fn()
-    _G.printError = originalPrintError
-    return result, table.concat(collected, "\n")
-  end
-
-  local function createCollectingWarnings(sheets)
-    return collectingWarnings(function() return db:create(dbName, sheets) end)
-  end
 
   after_each(function()
     if not pcall(function() db:close(dbName) end) then
@@ -2831,20 +2815,46 @@ describe("Tests db:fetch sorting by a column called desc", function()
     os.remove(dbFile)
   end)
 
-  it("sorts by a column called desc rather than reading it as a sort direction", function()
-    local mydb = createCollectingWarnings({notes = {name = "", desc = ""}})
-    db:add(mydb.notes, {name = "a", desc = "2"}, {name = "a", desc = "1"}, {name = "b", desc = "0"})
+  local function createSheet()
+    local collected = {}
+    -- through _G: a spec file's globals are its own
+    local originalPrintError = _G.printError
+    _G.printError = function(msg) collected[#collected + 1] = msg end
+    finally(function() _G.printError = originalPrintError end)
 
-    local function order(rows)
-      local seen = {}
-      for _, row in ipairs(rows) do
-        seen[#seen + 1] = row.name .. "/" .. row.desc
-      end
-      return table.concat(seen, ",")
+    local mydb = db:create(dbName, {notes = {name = "", desc = "", Asc = ""}})
+    _G.printError = originalPrintError
+    assert.are.equal("", table.concat(collected, "\n"))
+    db:add(mydb.notes, {name = "a", desc = "2", Asc = "2"}, {name = "a", desc = "1", Asc = "1"},
+      {name = "b", desc = "0", Asc = "0"})
+    return mydb
+  end
+
+  local function order(rows, column)
+    local seen = {}
+    for _, row in ipairs(rows) do
+      seen[#seen + 1] = row.name .. "/" .. row[column]
     end
+    return table.concat(seen, ",")
+  end
 
-    assert.are.equal("a/1,a/2,b/0", order(db:fetch(mydb.notes, nil, {mydb.notes.name, mydb.notes.desc})))
-    assert.are.equal("b/0,a/2,a/1", order(db:fetch(mydb.notes, nil, {mydb.notes.name, mydb.notes.desc}, true)))
+  it("sorts by a column called desc rather than reading it as a sort direction", function()
+    local mydb = createSheet()
+    assert.are.equal("a/1,a/2,b/0", order(db:fetch(mydb.notes, nil, {mydb.notes.name, mydb.notes.desc}), "desc"))
+    assert.are.equal("b/0,a/2,a/1", order(db:fetch(mydb.notes, nil, {mydb.notes.name, mydb.notes.desc}, true), "desc"))
+  end)
+
+  it("sorts by a column called asc, whatever its case", function()
+    local mydb = createSheet()
+    assert.are.equal("a/1,a/2,b/0", order(db:fetch(mydb.notes, nil, {mydb.notes.name, mydb.notes.Asc}), "Asc"))
+    assert.are.equal("b/0,a/2,a/1", order(db:fetch(mydb.notes, nil, {mydb.notes.name, mydb.notes.Asc}, true), "Asc"))
+  end)
+
+  it("refuses a field name that is not a string", function()
+    local mydb = createSheet()
+    local ok, err = pcall(db.fetch, db, mydb.notes, nil, {{name = 5}})
+    assert.is_false(ok)
+    assert.is_truthy(string.find(err, "Column names must be strings, not number", 1, true))
   end)
 end)
 
@@ -2967,11 +2977,10 @@ describe("Tests db's internal SQL helpers", function()
       assert.are.equal('"name","city"', db:_sql_columns({"name", "City"}))
     end)
 
-    it("attaches a sort direction to the column before it instead of quoting it", function()
-      -- db:fetch appends "DESC" as its own list entry, so it must not come out
-      -- as a column name of its own
-      assert.are.equal('"name" DESC', db:_sql_columns({"name", "DESC"}))
-      assert.are.equal('"name" asc,"city" desc', db:_sql_columns({"name", "asc", "city", "desc"}))
+    it("quotes a column called desc or asc as the column name it is", function()
+      -- a sheet is allowed a column of either name, and an index takes no sort direction
+      assert.are.equal('"name","desc"', db:_sql_columns({"name", "DESC"}))
+      assert.are.equal('"name","asc","city","desc"', db:_sql_columns({"name", "asc", "city", "desc"}))
     end)
 
     it("refuses anything that is not a string or a table", function()
@@ -2986,9 +2995,7 @@ describe("Tests db's internal SQL helpers", function()
       assert.is_truthy(string.find(err, "Column names must be strings, not number", 1, true))
     end)
 
-    it("quotes a leading sort direction as the column name it has to be", function()
-      -- there is no column in front of it to attach it to, and a sheet is
-      -- allowed a column called desc
+    it("quotes a leading desc or asc as a column name too", function()
       assert.are.equal('"desc"', db:_sql_columns({"desc"}))
       assert.are.equal('"asc","name"', db:_sql_columns({"asc", "name"}))
     end)
@@ -3715,6 +3722,18 @@ describe("Tests db:create with a single column name as _index", function()
     return names
   end
 
+  local function indexColumns(indexName)
+    local cursor = db.__conn[dbName]:execute("PRAGMA index_info(" .. indexName .. ")")
+    local columns = {}
+    local row = cursor:fetch({}, "a")
+    while row do
+      columns[tonumber(row.seqno) + 1] = row.name
+      row = cursor:fetch({}, "a")
+    end
+    cursor:close()
+    return columns
+  end
+
   after_each(function()
     -- a db:create that raises part way through - which is exactly what this
     -- block guards against - leaves a cursor open, and closing then raises as
@@ -3868,19 +3887,31 @@ describe("Tests db:create with a single column name as _index", function()
   end)
 
   it("warns about a sort direction where a column name belongs", function()
-    -- db:_sql_columns would render "name" desc, but db:_index_valid refuses the
-    -- entry, so an index with a sort direction has never been created: saying so
-    -- beats leaving the sheet with no index and no complaint
+    -- an index with a sort direction has never been created: saying so beats
+    -- leaving the sheet with no index and no complaint
     local mydb, warnings = createCollectingWarnings({people = {name = "", city = "", _index = {{"name", "desc"}}}})
     assert.is_table(mydb)
     assert.is_truthy(string.find(warnings, "an index takes column names only, not a sort direction", 1, true))
     assert.are.same({}, indexNames("people"))
 
-    -- a sheet that really has a column of that name is not warned about; what
-    -- db:_sql_columns then makes of it is that function's business
+    -- a sheet that really has a column of that name is not warned about, and
+    -- gets the compound index it asked for
     local other, otherWarnings = createCollectingWarnings({people = {name = "", desc = "", _index = {{"name", "desc"}}}})
     assert.is_table(other)
     assert.are.equal("", otherWarnings)
+    assert.are.same({"name", "desc"}, indexColumns(db:_index_name("people", {"name", "desc"})))
+
+    createCollectingWarnings({people = {name = "", asc = "", _index = {{"name", "asc"}}}})
+    assert.are.same({"name", "asc"}, indexColumns(db:_index_name("people", {"name", "asc"})))
+  end)
+
+  it("rebuilds the one-column index an older Mudlet made for a column called desc", function()
+    db:create(dbName, {people = {name = "", desc = ""}})
+    db.__conn[dbName]:execute('CREATE INDEX ' .. db:_index_name("people", {"name", "desc"}) .. ' ON people ("name" desc)')
+    db:close(dbName)
+
+    db:create(dbName, {people = {name = "", desc = "", _index = {{"name", "desc"}}}})
+    assert.are.same({"name", "desc"}, indexColumns(db:_index_name("people", {"name", "desc"})))
   end)
 
   it("warns about the _row_id no sheet definition names either", function()
