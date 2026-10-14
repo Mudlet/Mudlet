@@ -1213,7 +1213,7 @@ end
 -- internal function to delete the labels of a right click menu and of all its submenus.
 -- Menu labels are created as top level Geyser objects rather than as children of
 -- the menu they belong to. Geyser.Label:type_delete deletes them when the
--- container's cascade reaches the menu; this is the fallback for any it left.
+-- container's cascade reaches the menu, so this normally finds none left.
 -- @param menu the menu label whose MenuLabels are to be deleted
 local function deleteMenuLabels(menu)
     if not menu or not menu.MenuLabels then

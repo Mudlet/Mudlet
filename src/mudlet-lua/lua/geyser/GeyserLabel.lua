@@ -776,18 +776,20 @@ function closeNestChildren(label)
   local nLabels = label.nestedLabels
   if nLabels then
     for i, v in pairs(nLabels) do
-      v:hide()
-      -- a Geyser.Label's hide() closes its own nest, an override of hide() may not
-      if v.nestedLabels and v.hide ~= Geyser.Label.hide then
-        closeNestChildren(v)
-      end
-      if Geyser.Label.scrollV[v.nestParent] then
-        Geyser.Label.scrollV[v.nestParent][1]:hide()
-        Geyser.Label.scrollV[v.nestParent][2]:hide()
-      end
-      if Geyser.Label.scrollH[v.nestParent] then
-        Geyser.Label.scrollH[v.nestParent][1]:hide()
-        Geyser.Label.scrollH[v.nestParent][2]:hide()
+      if type(v) == "table" and v.hide then
+        v:hide()
+        -- a Geyser.Label's hide() closes its own nest, an override of hide() may not
+        if v.nestedLabels and v.hide ~= Geyser.Label.hide then
+          closeNestChildren(v)
+        end
+        if Geyser.Label.scrollV[v.nestParent] then
+          Geyser.Label.scrollV[v.nestParent][1]:hide()
+          Geyser.Label.scrollV[v.nestParent][2]:hide()
+        end
+        if Geyser.Label.scrollH[v.nestParent] then
+          Geyser.Label.scrollH[v.nestParent][1]:hide()
+          Geyser.Label.scrollH[v.nestParent][2]:hide()
+        end
       end
     end
   end
@@ -1245,6 +1247,12 @@ end
 -- nested labels that were hidden along with it.
 -- @param auto true when the label is shown because its container was shown
 function Geyser.Label:show(auto)
+  -- the nest parent's container may still be hidden when this label's own one comes
+  -- back; showing the parent again brings this label back with it
+  local parent = self.nestParent
+  if auto and parent and (parent.hidden or parent.auto_hidden) then
+    return false
+  end
   if Geyser.Container.show(self, auto) == false then
     return false
   end
@@ -1260,10 +1268,48 @@ local function stillRegistered(label)
     and label.container.windowList[label.name] == label
 end
 
+-- internal function: forgets the "More..." scroll labels a nest keeps in scrolls
+-- (Geyser.Label.scrollV or scrollH) and deletes the ones still registered
+local function deleteScrollLabels(scrolls, owner)
+  local scrollLabels = scrolls[owner]
+  if scrollLabels then
+    scrolls[owner] = nil
+    for _, scrollLabel in ipairs(scrollLabels) do
+      if stillRegistered(scrollLabel) then
+        scrollLabel:delete()
+      end
+    end
+  end
+end
+
+-- internal function: takes a deleted item out of its menu's MenuItems, so that the
+-- next rebuild does not bring it back as a new label without its action or style
+local function forgetMenuItem(menu, item)
+  local items = menu.MenuItems
+  local at = type(items) == "table" and table.index_of(items, item.menuName)
+  if not at then
+    return
+  end
+  table.remove(items, at)
+  if type(items[at]) == "table" then
+    table.remove(items, at)
+  end
+  -- changeMenuIndex goes by these without rebuilding the menu first
+  for i, name in ipairs(items) do
+    if type(name) == "string" and menu.MenuLabels[name] then
+      menu.MenuLabels[name].tblIndex = i
+    end
+  end
+  for i, label in ipairs(menu.nestedLabels) do
+    label.index = i
+  end
+end
+
 --- Deletes the label using the C++ deleteLabel function, along with its nested
 -- labels, its own "More..." scroll labels and its right click menu items.
--- Nested labels sit in the container addChild was given, the Geyser root by
--- default, so the cascading delete of this label's container may not reach them.
+-- Nested labels sit in the container addChild was given (by default this label's
+-- user window, or the Geyser root for a label in the main window), so the
+-- cascading delete of this label's container may not reach them.
 function Geyser.Label:type_delete()
   local parent = self.nestParent
   local siblings = parent and parent.nestedLabels
@@ -1281,17 +1327,32 @@ function Geyser.Label:type_delete()
     if found then
       parent.nestedLabels = kept
     end
-    -- the menu rebuilds an item it has no label for, in its place
-    if parent.MenuLabels and not self.ignore and parent.MenuLabels[self.menuName] == self then
+    if parent.MenuLabels and parent.MenuLabels[self.menuName] == self then
       parent.MenuLabels[self.menuName] = nil
+      forgetMenuItem(parent, self)
+    end
+  end
+  -- a scroll label deleted on its own, or by the cascade of the container it was
+  -- made in, must not stay cached: the nest would reuse it, and hiding or showing
+  -- the nest parent would act on whichever label has its name now
+  for _, scrolls in ipairs({Geyser.Label.scrollV, Geyser.Label.scrollH}) do
+    local pair = parent and scrolls[parent]
+    if pair and (pair[1] == self or pair[2] == self) then
+      deleteScrollLabels(scrolls, parent)
     end
   end
   if self.nestedLabels then
     local nested = self.nestedLabels
     self.nestedLabels = {}
     -- a menu item can leave nestedLabels and still be a label of this menu: a
-    -- hidden one, or an attach label Adjustable.Container:onEnterAtt left out
-    for _, item in pairs(self.MenuLabels or {}) do
+    -- hidden one, or an attach label Adjustable.Container:onEnterAtt left out.
+    -- Emptied first so that its items, going with the whole menu, leave the
+    -- MenuItems list the script handed in as it was.
+    local menuLabels = self.MenuLabels
+    if menuLabels then
+      self.MenuLabels = {}
+    end
+    for _, item in pairs(menuLabels or {}) do
       nested[#nested + 1] = item
     end
     for _, child in pairs(nested) do
@@ -1300,17 +1361,8 @@ function Geyser.Label:type_delete()
       end
     end
   end
-  for _, scrolls in ipairs({Geyser.Label.scrollV, Geyser.Label.scrollH}) do
-    local scrollLabels = scrolls[self]
-    if scrollLabels then
-      scrolls[self] = nil
-      for _, scrollLabel in ipairs(scrollLabels) do
-        if stillRegistered(scrollLabel) then
-          scrollLabel:delete()
-        end
-      end
-    end
-  end
+  deleteScrollLabels(Geyser.Label.scrollV, self)
+  deleteScrollLabels(Geyser.Label.scrollH, self)
   deleteLabel(self.name)
 end
 
@@ -1483,11 +1535,15 @@ function Geyser.Label:createMenuItems(restyle, MenuItems, configLabel, myMenu, d
   local index = 1
 
   for i = 1, #MenuItems do
-    if type(MenuItems[i]) == "string" and not MenuItems[i].ignore then
+    if type(MenuItems[i]) == "string" then
       addElement(self, MenuItems[i], configLabel, myMenu, depth, index, restyle)
-      myMenu.MenuLabels[MenuItems[i]].index = index
-      myMenu.MenuLabels[MenuItems[i]].tblIndex = i
-      index = index + 1
+      local item = myMenu.MenuLabels[MenuItems[i]]
+      item.index = index
+      item.tblIndex = i
+      -- a hidden item is out of nestedLabels, so the items after it move up
+      if not item.ignore then
+        index = index + 1
+      end
     end
     --Ignore all children if parent is hidden
     if type(MenuItems[i]) == "table" and not MenuItems[i - 1].ignore then
