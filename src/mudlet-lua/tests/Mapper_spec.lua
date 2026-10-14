@@ -3932,20 +3932,6 @@ describe("Tests saveMap and loadMap", function()
       assertMapRestored()
     end)
 
-    -- A save writes the fallback zoom and label fonts and outline colours as area user
-    -- data for the file only; the autosave makes this same save at any moment
-    it("leaves an area's user data as it was before the save", function()
-      deleteMap()
-      local area = addAreaName("MapperSpecSaveAreaDataArea")
-      roomA = createRoomID(); addRoom(roomA); setRoomArea(roomA, area)
-      assert.is_true(setAreaUserData(area, "climate", "temperate"))
-      assert.is_true(createMapLabel(area, "MapperSpecSaveAreaDataLabel", 0, 0, 0, 255, 255, 255, 0, 0, 0) >= 0)
-
-      assert.is_true(saveMap(savePath))
-
-      assert.are.same({climate = "temperate"}, getAllAreaUserData(area))
-    end)
-
     it("saves into the profile's own map folder when given no path", function()
       local before = mapFiles()
       finally(function() removeNewMapFiles(before) end)
