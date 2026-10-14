@@ -234,20 +234,22 @@ QPair<quint8, TChar> TConsoleModel::textAttributes() const
 {
     int x = P_begin.x();
     int y = P_begin.y();
+    quint8 missing = 2;
 
     // Fallback to cursor position if no selection is active
     if (P_begin == P_end) {
         x = mUserCursor.x();
         y = mUserCursor.y();
+        missing = 1;
     }
 
     if (y < 0 || x < 0 || y >= static_cast<int>(buffer.buffer.size())) {
-        return qMakePair(2, TChar());
+        return qMakePair(missing, TChar());
     }
 
     const auto& line = buffer.buffer.at(y);
     if (x >= static_cast<int>(line.size())) {
-        return qMakePair(2, TChar());
+        return qMakePair(missing, TChar());
     }
 
     return qMakePair(0, line.at(x));

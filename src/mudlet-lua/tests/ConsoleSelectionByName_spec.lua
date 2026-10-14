@@ -184,6 +184,19 @@ describe("Tests that the selection and format functions find their console by na
           moveCursor(window, 0, 2)
           assert.is_false(getTextFormat(window).bold)
         end)
+
+        it("names that console in getTextFormat()'s refusals", function()
+          assert.is_true(moveCursor(window, 19, 0))
+          local ok, err = getTextFormat(window)
+          assert.is_nil(ok)
+          assert.are.equal(("no character under cursor or selection in window '%s'"):format(window), err)
+
+          assert.are.equal(12, selectString(window, "charlie", 1))
+          replace(window, "")
+          ok, err = getTextFormat(window)
+          assert.is_nil(ok)
+          assert.are.equal(("current selection invalid in window '%s'"):format(window), err)
+        end)
       end)
     end
   end)
@@ -259,9 +272,24 @@ describe("Tests that the selection and format functions find their console by na
       end)
     end
 
-    it("names the main console in getTextFormat()'s refusal however it was named", function()
+    it("names the main console in getTextFormat()'s refusals however it was named", function()
       local line = markerLine()
-      moveCursor("main", -1, line)
+      local lineEnd = #marker + 12
+      deselect("main")
+      assert.is_true(moveCursor("main", lineEnd - 1, line))
+      assert.is_table(getTextFormat("main"))
+      -- the end of a line is a cursor position with no character under it
+      assert.is_true(moveCursor("main", lineEnd, line))
+      for _, args in ipairs({{}, {""}, {"main"}}) do
+        local ok, err = getTextFormat(unpack(args))
+        assert.is_nil(ok)
+        assert.are.equal("no character under cursor or selection in window 'main'", err)
+      end
+
+      -- replacing the selected text leaves the selection past the end of its line
+      assert.is_true(moveCursor("main", 0, line))
+      assert.are.equal(#marker + 7, selectString("main", "bravo", 1))
+      replace("main", "")
       for _, args in ipairs({{}, {""}, {"main"}}) do
         local ok, err = getTextFormat(unpack(args))
         assert.is_nil(ok)

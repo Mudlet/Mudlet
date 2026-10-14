@@ -200,7 +200,8 @@ struct TConsoleModel
     // Whether the selection is still valid, its text (else why not), its start and its length. The text
     // is read from the cursor's line, not the selection's, at the selection's columns.
     std::tuple<bool, QString, int, int> selection();
-    // The selected character's format, or the cursor's with no selection; first is 2 when there is none.
+    // The selected character's format, or the cursor's with no selection; first is 2 when the selection is
+    // off its line, 1 when there is no selection and no character under the cursor.
     QPair<quint8, TChar> textAttributes() const;
     // The character the selection starts on, or nullptr when that is off the buffer. With no selection
     // that is the buffer's first character: unlike textAttributes(), this does not fall back to the cursor.
