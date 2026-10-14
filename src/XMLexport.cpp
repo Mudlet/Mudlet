@@ -379,15 +379,16 @@ bool XMLexport::saveXmlDocToFile(const QString& fileName, const pugi::xml_docume
 {
     QSaveFile file(fileName);
 
-    auto printErrorMessage = [&](const QString& reason) {
-        qDebug().noquote().nospace() << "XMLexport::saveXmlDocToFile(\"" << fileName << "\") ERROR - failed to save package, reason: " << reason << ".";
+    // The reason goes on to a translated console line, so the stage stays in the log
+    auto printErrorMessage = [&](const QString& reason, const char* stage = "save package") {
+        qDebug().noquote().nospace() << "XMLexport::saveXmlDocToFile(\"" << fileName << "\") ERROR - failed to " << stage << ", reason: " << reason << ".";
         if (errorString) {
             *errorString = reason;
         }
     };
 
     if (!file.open(QIODevice::WriteOnly)) {
-        printErrorMessage(file.errorString().prepend("failed to open file, "));
+        printErrorMessage(file.errorString(), "open file");
         return false;
     }
 
