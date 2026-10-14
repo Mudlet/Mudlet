@@ -699,7 +699,10 @@ private slots:
         const QString shown = manager->packageDescription->toPlainText();
         QVERIFY2(shown.contains(qsl("vanished-package")) && shown.contains(qsl("could not be found in the package index")),
                  qPrintable(qsl("The details pane did not explain that the package is missing from the index, it held: \"%1\"").arg(shown)));
-        QVERIFY2(manager->label_packageName->text().startsWith(qsl("van")), "The heading did not name the selected package");
+        // The dialog is never shown, so the heading is elided to a default-sized label at whatever width the system font gives
+        const QString heading = manager->label_packageName->text();
+        QVERIFY2(!heading.isEmpty() && (heading == qsl("vanished-package") || manager->label_packageName->toolTip() == qsl("vanished-package")),
+                 qPrintable(qsl("The heading did not name the selected package, it read \"%1\" with tooltip \"%2\"").arg(heading, manager->label_packageName->toolTip())));
         QVERIFY2(manager->pushButton_website->isHidden(), "The website button was offered for a package the index does not list");
         QVERIFY2(manager->pushButton_report->isHidden(), "The report button was offered for a package the index does not list");
         QVERIFY2(requests.iconRequests().isEmpty(), qPrintable(qsl("An icon was requested for a package the index does not list: %1").arg(requests.iconRequests().join(qsl(", ")))));
