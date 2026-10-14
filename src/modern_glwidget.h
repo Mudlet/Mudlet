@@ -58,6 +58,7 @@
 #include "ShaderManager.h"
 #include "CameraController.h"
 
+#include <functional>
 #include <optional>
 
 class Host;
@@ -65,8 +66,10 @@ class QFontMetricsF;
 class QLabel;
 class QPainter;
 class T2DMap;
+class TArea;
 class TCommandLine;
 class TMap;
+class TMapLabel;
 class TRoom;
 struct MapInfoProperties;
 struct MapStyle;
@@ -237,6 +240,9 @@ private:
     QHash<QString, qsizetype> mGlyphAtlasIndex;
     qsizetype mGlyphAtlasDrawnCells = 0;
     QString mGlyphAtlasFontKey;
+    // Whether the glyph font, by its key, shows each ground's character, which a font without one would draw as a box
+    QString mGroundGlyphsFontKey;
+    QHash<QString, bool> mGroundGlyphShown;
     // A room's ink outline, by everything it is made from
     struct InkOutline
     {
@@ -272,6 +278,17 @@ private:
     };
     QHash<std::pair<int, int>, HaloedLabel> mHaloedLabels;
     bool mRoomTextureLimitWarned = false;
+    // A map label drawn again in the map style's font and color, by area and label ID
+    struct ThemedLabel
+    {
+        // The label's own picture and the style it was drawn again from
+        qint64 sourceKey = 0;
+        QString styleId;
+        // Null where the style leaves the label as it is
+        QPixmap pixmap;
+    };
+    QHash<std::pair<int, int>, ThemedLabel> mThemedLabels;
+    static constexpr qsizetype scmThemedLabelsKept = 256;
     bool mSolidDashWarned = false;
 
     // Host reference
@@ -410,9 +427,61 @@ private:
     // A style with a pulse's marker: an outlined diamond of light hovering over the player's room, on a stem from its top
     void renderPlayerDiamond(const QVector3D& roomTop, float roomSize);
     void paintCompass(QPainter& painter);
+    // A run of the status line's text in one color
+    struct StatusLinePart
+    {
+        QString text;
+        QColor color;
+    };
+    QList<StatusLinePart> statusLineParts() const;
     void paintStatusLine(QPainter& painter);
     // A style with a scanner overlay's corner brackets and readout, the readout starting top pixels down
     void paintScannerOverlay(QPainter& painter, int top);
+    // The style's lettering at the size of the text drawn over the view
+    QFont sheetFont() const;
+    // Where it was drawn, below top, or an empty rectangle where the style draws none or the view has no room for it
+    QRect paintTitleBlock(QPainter& painter, const TArea& area, int top);
+    // Below top, and above the title block
+    void paintLevelCallouts(QPainter& painter, const TArea& area, int top, const QRect& titleBlock);
+    // A row of the line legend: a line's kind of ground in the color of its most used line, or a door's status
+    struct LegendEntry
+    {
+        QString text;
+        QColor color;
+        // 1 to 3 for a door's entry, drawn as a bar in color across a line; 0 for a line's
+        int doorStatus = 0;
+    };
+    // For the lines and doors on the viewed level, the most used ground first; empty where the style draws no legend
+    QList<LegendEntry> lineLegend(const TArea& area) const;
+    // Below top, where the view has room for it
+    void paintLineLegend(QPainter& painter, const TArea& area, int top);
+    struct LevelPlatform
+    {
+        int level = 0;
+        int rooms = 0;
+        // The level's name, and the name of the room the stair reaches on it where it has one
+        QString label;
+        // The line through its stations, in the color of its most used environment
+        QColor lineColor;
+        QRectF pill;
+        // How many stations it shows, and the width of the count of those it leaves out
+        int stations = 0;
+        qreal moreWidth = 0.0;
+        QPointF station(int index) const;
+    };
+    // Platforms on one side of the viewed level, listed top to bottom, on a shaft rising or falling from the stair
+    // that reaches them, if the view shows one
+    struct PlatformShaft
+    {
+        std::optional<QPointF> stair;
+        qreal x = 0.0;
+        QList<LevelPlatform> platforms;
+    };
+    // Above and below the viewed level, below top; empty where the style has no platforms
+    std::pair<PlatformShaft, PlatformShaft> levelPlatforms(const TArea& area, int top) const;
+    void paintLevelPlatforms(QPainter& painter, const std::pair<PlatformShaft, PlatformShaft>& shafts);
+    // On the player's station, or the first station of the platform of the level the player is on
+    void paintPlayerPill(QPainter& painter, int top, const std::pair<PlatformShaft, PlatformShaft>& shafts);
     void turnNorthUp();
     void setHoveredRoom(int roomId);
     // Worked out afresh, as the view can move under a pointer that stays still
@@ -430,18 +499,22 @@ private:
     GLuint cachedRoomTexture(const QString& key);
     bool roomForAnotherTexture(const QString& key);
     GLuint addRoomTexture(const QString& key, const QImage& image);
+    // makeImage is only called when the texture is not already made
+    GLuint imageTexture(const QString& key, const std::function<QImage()>& makeImage);
+    // nullptr where the map style leaves the label as it is
+    const QPixmap* themedLabel(int labelId, const TMapLabel& label, const MapStyle& style);
     // The 2D map's up/down/in/out markers for the room, or 0 when it has none
     GLuint exitMarkerTexture(const TRoom& room, const QColor& roomColor);
     // Text on a clear background, with a rim of halo around it if that is valid; size is set to the texture's size in pixels
     GLuint textTexture(const QString& key, const QString& text, const QFont& font, const QFontMetricsF& metrics, const QColor& color, QSize& size, const QColor& halo = QColor());
-    // A flag on a pole, its foot at the bottom left of the texture, reading text
-    GLuint flagTexture(const QString& text, const QColor& color, const QColor& poleColor);
     // The label's image with a halo around it, made again only when the label or the halo changes
     const HaloedLabel& haloedLabel(int labelId, const QPixmap& pixmap, const QColor& halo, int backgroundAlpha);
     // The cell of the glyph atlas holding text, added if there is room, else -1; with add false, -1 for any not in it
     qsizetype glyphAtlasCell(const QString& text, bool add = true);
     // Every cell's text in white on clear, to be tinted as drawn, in one texture; 0 if it could not be made
     GLuint glyphAtlasTexture(const QFont& font);
+    QFont terminalGlyphFont(const MapStyle& style) const;
+    bool groundGlyphShown(const QFont& font, const QString& glyph);
     void reportContextCreationFailure();
     bool contextCreationFailed() const;
     void startSmoothTransition(int targetAID, int targetX, int targetY, int targetZ);
@@ -453,6 +526,9 @@ private:
     void setOrientationKeepingRoll(float theta, float phi);
     // Turns the camera around the view's center, by degrees of azimuth
     void turnCamera(float degrees);
+    // Within the levels shown above and below the viewed one
+    bool levelInRange(int z) const;
+    // Drawn in place: in range, and the viewed level where the style puts the others on platforms
     bool levelShown(int z) const;
     // What rooms and exits on level z recede toward: the mapper's upper or lower level color, or the background
     QColor levelFadeTarget(int z) const;
@@ -461,6 +537,8 @@ private:
     void stopPulse();
     // The style's background, else the profile's mapper background color
     QColor backgroundColor() const;
+    // Of the beacon over the player's room, and of the style's thin ring around it
+    QColor playerMarkerColor() const;
     ExitScene::Options exitSceneOptions() const;
     void zoomBySteps(float steps);
     void panByRooms(int right, int up);

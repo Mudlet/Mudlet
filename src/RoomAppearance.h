@@ -19,10 +19,14 @@
 
 #pragma once
 
+#include "EnvironmentKit.h"
+
 #include <QBrush>
 #include <QColor>
 #include <QPointF>
 #include <QString>
+
+#include <optional>
 
 class Host;
 class QFont;
@@ -58,16 +62,28 @@ struct Look
 Look look(const TMap& map, const Host& host, const TRoom& room, int playerRoomId, int viewedLevel);
 
 QColor environmentColor(const TMap& map, const Host& host, int environmentId);
+// Whether the map gives the environment a color, rather than it being drawn in the default ANSI red
+bool environmentDefined(const TMap& map, int environmentId);
 
 // The character a map drawn as a text screen shows for a room, roguelike fashion: @ for the player, the room's
-// own symbol, < > or X for stairs up, down or both, else # (. for an area in grid mode, which is open ground)
-QString terminalGlyph(const TRoom& room, const Look& look, bool gridMode);
+// own symbol, < > or X for stairs up, down or both, else its ground's character where one is given, or #
+// (. for an area in grid mode, which is open ground)
+QString terminalGlyph(const TRoom& room, const Look& look, bool gridMode, std::optional<EnvironmentKit::Kit> ground = std::nullopt, bool asciiGround = false);
+// The roguelike character for a kind of ground: " grass, ≈ water, # road, ♣ forest, ■ building; plain open ground
+// in an area in grid mode is .
+// in an area in grid mode is .; in ASCII, for a font without those, ~ water, * forest and = building
+QString groundGlyph(EnvironmentKit::Kit ground, bool gridMode, bool ascii = false);
+// Whether the font, or one the system falls back on, has a glyph for every character of the text
+bool fontShows(const QFont& font, const QString& text);
 
 // The line character - | / or \ that reads as a line running at degrees, counterclockwise from rightward
 QChar terminalLineGlyph(qreal degrees);
 
 // The room's exits in every direction and its special exits, wherever they lead; stubs are not exits
 int exitCount(const TRoom& room);
+// Whether an exit on the room's own level leads to a room of the same environment, which draws the line between
+// them in its color where the style colors lines by environment
+bool onEnvironmentLine(const TMap& map, const TRoom& room);
 
 // roomSymbolColor is the room's own, which is invalid unless one was set
 QColor symbolColor(const QColor& roomSymbolColor, const QColor& roomColor);

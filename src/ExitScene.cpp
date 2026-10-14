@@ -443,8 +443,11 @@ void Builder::customLine(const TRoom& room, const QString& key, const QList<QPoi
 
 QColor Builder::lineColor(const TRoom& room, const TRoom* pOther)
 {
-    if (!mOptions.environmentLines || (pOther && pOther->environment != room.environment)) {
+    if (!mOptions.environmentLines) {
         return mOptions.exitColor;
+    }
+    if (pOther && pOther->environment != room.environment) {
+        return mOptions.mixedLineColor.isValid() ? mOptions.mixedLineColor : mOptions.exitColor;
     }
     if (const auto found = mEnvironmentLineColors.constFind(room.environment); found != mEnvironmentLineColors.cend()) {
         return *found;
@@ -573,6 +576,11 @@ void Builder::addRoom(const int roomId, const TRoom& room)
             // A one-way exit of its own to this room has the other end draw a dotted line instead
             const bool otherEndDraws = drawsExits(exit.pDestination) && !exit.pDestination->customLines.contains(reverseKey) && !hasOneWayExitTo(*exit.pDestination, exit.destinationId, room, roomId);
             if (otherEndDraws && exit.destinationId < roomId) {
+                continue;
+            }
+            if (upOrDown && mOptions.dashedStairs) {
+                qreal phase = 0.0;
+                dashedBar(center, destination, ExitAppearance::visibleDashes(Qt::DashLine), phase, exitColor, lineLevel);
                 continue;
             }
             if (!mOptions.glyphs || rise != 0.0f || !glyphRun(center, destination, exitColor, lineLevel)) {

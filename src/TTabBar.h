@@ -175,7 +175,9 @@ private:
 
     // Drag and drop functionality
     QPoint mDragStartPos;
-    int mDragIndex = -1;
+    // The profile, not its index: Qt reorders the bar while the tab is dragged,
+    // and a profile can open or close before the drag ends
+    QString mDragTabName;
     bool mDetachEnabled = true;
     static const int DETACH_DISTANCE_THRESHOLD = 80;
     qint64 mDragStartTime = 0;
@@ -187,6 +189,7 @@ private slots:
 protected:
     void mousePressEvent(QMouseEvent* event) override;
     void mouseMoveEvent(QMouseEvent* event) override;
+    void mouseReleaseEvent(QMouseEvent* event) override;
     void dragEnterEvent(QDragEnterEvent* event) override;
     void dragMoveEvent(QDragMoveEvent* event) override;
     void dropEvent(QDropEvent* event) override;

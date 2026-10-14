@@ -30,11 +30,13 @@
 
 #include <QColor>
 #include <QFile>
+#include <QFontMetricsF>
 #include <QRegularExpression>
 #include <QVector2D>
 
 #include "GeometryManager.h"
 #include "LabelTextureCache.h"
+#include "MapStyle.h"
 
 #include "GroupedTest.h"
 
@@ -236,6 +238,32 @@ private slots:
         QCOMPARE(GeometryManager::declutteredRects(rects, 7.0), (QList<qsizetype>{0, 2, 5, 7}));
         QCOMPARE(GeometryManager::declutteredRects(rects, 2.0), (QList<qsizetype>{0, 2, 3, 5, 7}));
         QVERIFY(GeometryManager::declutteredRects({}, 7.0).isEmpty());
+    }
+
+    // Two rooms whose names just fit side by side: spaced capitals run together there, so blueprint keeps a space
+    // between names and drops one, where every other style keeps both as before
+    void test_onlySpacedNamesAreKeptASpaceApart()
+    {
+        const MapStyle& tiles = *MapStyle::find(qsl("tiles"));
+        const MapStyle& blueprint = *MapStyle::find(qsl("blueprint"));
+        QFont font = blueprint.labelFont(QFont(qsl("Bitstream Vera Sans"), 10));
+        font.setPixelSize(20);
+        const QFontMetricsF metrics(font);
+        const QString name = qsl("Street 12");
+        const qreal nameWidth = metrics.horizontalAdvance(name);
+        const qreal spaceWidth = metrics.horizontalAdvance(QLatin1Char(' '));
+        const qreal roomSpacing = nameWidth + 1.0;
+        const auto namesKept = [&](const MapStyle& style) {
+            const qreal span = style.roomNameSpan(nameWidth, spaceWidth);
+            QList<QRectF> rects;
+            for (const qreal center : {100.0, 100.0 + roomSpacing}) {
+                rects.append(QRectF(center - span / 2.0, 100.0, span, metrics.height()));
+            }
+            return GeometryManager::declutteredRects(rects, 7.0).size();
+        };
+        QCOMPARE(namesKept(tiles), 2);
+        QCOMPARE(namesKept(blueprint), 1);
+        QCOMPARE(tiles.roomNameSpan(nameWidth, spaceWidth), nameWidth);
     }
 
     // Levels below the viewed one fade toward the background, further the further down; those above turn see-through
