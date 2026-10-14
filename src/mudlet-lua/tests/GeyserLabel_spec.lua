@@ -1690,6 +1690,73 @@ describe("Tests Geyser.Label font, link style and tooltip", function()
       assert.are.equal(own, getLabelText("glfLink"))
     end)
 
+    it("styles over a link's own style and gives it back on resetLinkStyle", function()
+      local own = [[<a href="plain()" style="color: #00ffff;">go</a>]]
+      echo("glfLink", own)
+      setLinkStyle("glfLink", "#00ffff", "#ff00ff", false)
+      assert.are.equal([[<a href="plain()" style="color: #00ffff; text-decoration: none;">go</a>]], getLabelText("glfLink"))
+      resetLinkStyle("glfLink")
+      assert.are.equal(own, getLabelText("glfLink"))
+    end)
+
+    it("replaces a link's own style without leaving a space behind", function()
+      setLinkStyle("glfLink", "#00ffff", "#ff00ff")
+      echo("glfLink", [[<a href="a()" style="font-weight:bold">x</a>]])
+      assert.are.equal([[<a href="a()" style="color: #00ffff;">x</a>]], getLabelText("glfLink"))
+    end)
+
+    it("keeps a link color the script wrote itself on a link the label did not style", function()
+      setLinkStyle("glfLink", "#00ffff", "#ff00ff")
+      echo("glfLink", [[<a href="a()">x</a>]])
+      local own = [[<a href="b()" style="color: #00ffff;">y</a>]]
+      echo("glfLink", own)
+      resetLinkStyle("glfLink")
+      assert.are.equal(own, getLabelText("glfLink"))
+    end)
+
+    it("keeps a link color the script wrote itself after a picture took the place of the text", function()
+      local png = getMudletHomeDir() .. "/glfLink_spec.png"
+      local file = io.open(png, "wb")
+      file:write("\137\80\78\71\13\10\26\10\0\0\0\13\73\72\68\82\0\0\0\1\0\0\0\1\8\2\0\0\0\144\119\83\222\0\0\0\12\73\68\65\84\120\156\99\248\207\192\0\0\3\1\1\0\201\254\146\239\0\0\0\0\73\69\78\68\174\66\96\130")
+      file:close()
+      finally(function() os.remove(png) end)
+      setLinkStyle("glfLink", "#00ffff", "")
+      echo("glfLink", [[<a href="a()">a</a>]])
+      assert.is_true(setBackgroundImage("glfLink", png))
+      resetLinkStyle("glfLink")
+      local own = [[<a href="b()" style="color: #00ffff;">b</a>]]
+      echo("glfLink", own)
+      assert.are.equal(own, getLabelText("glfLink"))
+    end)
+
+    it("does not take a data-style attribute for the link's style", function()
+      setLinkStyle("glfLink", "#00ffff", "")
+      echo("glfLink", [[<a href="x()" data-style="big">x</a>]])
+      assert.are.equal([[<a href="x()" style="color: #00ffff;" data-style="big">x</a>]], getLabelText("glfLink"))
+      echo("glfLink", [[<a href="a()">a</a>]])
+      local own = [[<a href="x()" data-style="color: #00ffff;">x</a>]]
+      echo("glfLink", own)
+      resetLinkStyle("glfLink")
+      assert.are.equal(own, getLabelText("glfLink"))
+    end)
+
+    it("gives a link split by whitespace back as it was written", function()
+      setLinkStyle("glfLink", "#00ffff", "#ff00ff")
+      echo("glfLink", "<a\nhref='x()'>go</a>")
+      echo("glfLink", getLabelText("glfLink"))
+      resetLinkStyle("glfLink")
+      assert.are.equal("<a\nhref='x()'>go</a>", getLabelText("glfLink"))
+    end)
+
+    it("does not let a quote in a link color write attributes into the links", function()
+      echo("glfLink", [[<a href="a()">a</a>]])
+      setLinkStyle("glfLink", 'red" x="', "")
+      assert.is_falsy(getLabelText("glfLink"):find([[" x="]], 1, true))
+      echo("glfLink", getLabelText("glfLink"))
+      resetLinkStyle("glfLink")
+      assert.are.equal([[<a href="a()">a</a>]], getLabelText("glfLink"))
+    end)
+
     pending("Geyser.Label:setLinkStyle reporting whether the styling reached the label - the three wrappers discard the nil and error message their global answers with, and Mudlet has no link style getter")
   end)
 

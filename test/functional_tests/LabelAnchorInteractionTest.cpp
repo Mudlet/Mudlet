@@ -305,6 +305,23 @@ private slots:
         QCOMPARE(label()->textInteractionFlags(), Qt::LinksAccessibleByMouse | Qt::LinksAccessibleByKeyboard);
     }
 
+    void test_aStyledLinkHoldingQuotesRunsItsCommand()
+    {
+        label()->setLinkStyle(qsl("#00ffff"), qsl("#ff00ff"), true);
+        auto restore = qScopeGuard([this]() {
+            label()->resetLinkStyle();
+        });
+        label()->setText(qsl("<a href=\"anchorQuoted('x')\">gogogo</a>"));
+        QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("anchorQuotedArg = nil\nfunction anchorQuoted(arg) anchorQuotedArg = arg end\n")));
+        QVERIFY2(centreIsOnTheLabel(), "the point this case clicks is outside the label, so it would miss the link");
+
+        QSignalSpy activated(label(), &QLabel::linkActivated);
+        QTest::mouseClick(label(), Qt::LeftButton, Qt::NoModifier, linkCentre());
+        QCOMPARE(activated.count(), 1);
+        QCOMPARE(activated.first().first().toString(), qsl("anchorQuoted('x')"));
+        QVERIFY2(luaHolds(qsl("anchorQuotedArg == 'x'")), "the link's Lua command did not run with its argument");
+    }
+
     void test_aClickOnALinkStillReachesTheLabelsOwnCallbacks()
     {
         label()->resetLinkStyle();

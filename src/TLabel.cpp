@@ -548,7 +548,7 @@ void TLabel::resetLinkStyle()
     mLinkVisitedColor.clear();
     mLinkUnderline = true;
 
-    // the styles setText() wrote into the anchors would otherwise stay
+    // the styles written into the anchors would otherwise stay
     reapplyLinkStyle();
     update();
 }

@@ -22,6 +22,7 @@
 
 #include <QColor>
 #include <QFont>
+#include <QList>
 #include <QPointer>
 #include <QRect>
 #include <QSet>
@@ -113,10 +114,16 @@ private:
     QString withoutInjectedLinkStyles(const QString& text) const;
     QString styleLinks(const QString& text);
 
-    // what setText() was given, before the link styling was written into its anchors
+    struct StyledAnchor
+    {
+        QString styled;
+        QString original;
+    };
+
+    // the text the last styling pass started from, with the anchor tags it rewrote put back
     QString mUnstyledText;
-    // the style attribute values the last styling pass wrote into the anchors
-    QSet<QString> mInjectedLinkStyles;
+    // each anchor tag the last styling pass wrote and the one it replaced, in the order of the text
+    QList<StyledAnchor> mStyledAnchors;
 };
 
 #endif // MUDLET_TLABELMODEL_H
