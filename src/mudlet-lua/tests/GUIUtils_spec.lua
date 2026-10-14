@@ -1781,6 +1781,12 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       assert.error_matches(function() RGB2Hex(1, "x", 3) end, "RGB2Hex: bad argument #2 type %(number expected, got string!%)")
       assert.equals("0A0B0C", RGB2Hex("10", "11", "12"))
     end)
+
+    it("Should name the component a colour name lacks rather than an argument position", function()
+      color_table.rgb2HexSpecIncomplete = {255, 0}
+      finally(function() color_table.rgb2HexSpecIncomplete = nil end)
+      assert.error_matches(function() RGB2Hex("rgb2HexSpecIncomplete") end, 'RGB2Hex: colour "rgb2HexSpecIncomplete" has a bad blue component %(number expected, got nil!%)')
+    end)
   end)
 
   describe("Tests the functionality of getRGB", function()

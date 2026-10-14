@@ -440,8 +440,14 @@ local function clampColorComponent(value)
   return math.min(255, math.max(0, math.floor(value)))
 end
 
-local function rgb2HexComponent(value, position)
+local rgbComponentNames = {"red", "green", "blue"}
+
+-- from a colour name the position is not an argument the caller passed, so name the component
+local function rgb2HexComponent(value, position, colorName)
   if not tonumber(value) then
+    if colorName then
+      error(string.format("RGB2Hex: colour %q has a bad %s component (number expected, got %s!)", tostring(colorName), rgbComponentNames[position], type(value)), 3)
+    end
     error(string.format("RGB2Hex: bad argument #%d type (number expected, got %s!)", position, type(value)), 3)
   end
   return PadHexNum(string.format("%X", clampColorComponent(value)))
@@ -461,14 +467,16 @@ end
 function RGB2Hex(red, green, blue)
   assert(red, "RGB2Hex: require at least one argument (color_name or r,g,b)!")
   local l_Red, l_Green, l_Blue = 0, 0, 0
+  local colorName
   if green == nil then
     -- Not an RGB but a "color" instead!
+    colorName = red
     l_Red, l_Green, l_Blue = getRGB(red)
   else -- Nope, true color here
     l_Red, l_Green, l_Blue = red, green, blue
   end
 
-  return rgb2HexComponent(l_Red, 1) .. rgb2HexComponent(l_Green, 2) .. rgb2HexComponent(l_Blue, 3)
+  return rgb2HexComponent(l_Red, 1, colorName) .. rgb2HexComponent(l_Green, 2, colorName) .. rgb2HexComponent(l_Blue, 3, colorName)
 end
 
 
