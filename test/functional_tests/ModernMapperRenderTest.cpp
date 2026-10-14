@@ -796,6 +796,39 @@ private slots:
         QVERIFY2(tooSmall.isEmpty(), "IDs too small to read were drawn");
         QVERIFY2(symbolsWithoutIds, "rooms whose IDs are too small to read show no symbols");
     }
+
+    // A script may fade a 2D highlight out from its center with a clear outer color, which a one-color shape would draw unseen
+    void test_aClearHighlightColorGivesWayToItsCenterColorWithoutGL()
+    {
+        const int areaId = addArea();
+        QVERIFY(areaId > 0);
+        QVERIFY(mpHost->mapStylePreset().highlightShape != MapStyle::HighlightShape::Disc);
+        TRoom* pEast = map()->mpRoomDB->getRoom(kEastRoomId);
+        const auto restore = qScopeGuard([pEast]() {
+            pEast->highlight = false;
+        });
+        pEast->highlight = true;
+        pEast->highlightRadius = 1.0f;
+        const QColor blue(0, 0, 255);
+        pEast->highlightColor = QColor(255, 0, 0, 0);
+        pEast->highlightColor2 = blue;
+        const auto drawnColors = [this, areaId]() {
+            ModernGLWidget widget(map(), mpHost);
+            queueFrame(widget, areaId);
+            QStringList colors;
+            for (const QString& key : std::as_const(widget.mRoomTexturesInUse)) {
+                if (key.startsWith(qsl("highlight|"))) {
+                    colors.append(key.section(QLatin1Char('|'), 2, 2));
+                }
+            }
+            return colors;
+        };
+        QCOMPARE(drawnColors(), QStringList{blue.name(QColor::HexArgb)});
+
+        pEast->highlightColor = blue;
+        pEast->highlightColor2 = QColor(255, 0, 0, 0);
+        QCOMPARE(drawnColors(), QStringList{blue.name(QColor::HexArgb)});
+    }
 };
 
 #include "ModernMapperRenderTest.moc"
