@@ -3586,6 +3586,7 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         const QFileInfoList entries = _dir.entryInfoList(_filterList, QDir::Files);
         bool registeredFromArchive = false;
         bool anItemWasRead = false;
+        QStringList packageFileErrors;
         for (auto& entry : entries) {
             file2.setFileName(entry.absoluteFilePath());
             if (!file2.open(QFile::ReadOnly | QFile::Text)) {
@@ -3616,21 +3617,26 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
                     qWarning() << "Host::installPackage() WARNING - failed to load module" << packageName << ":" << errorMsg;
                     postMessage(tr("[ WARN ]  - Failed to load module \"%1\": %2").arg(packageName, errorMsg));
                 }
-            } else if (!success && !anItemWasRead) {
-                file2.close();
-                takeBackAPackageNothingWasReadFrom(packageName);
-                takeBackWhatTheManifestOverwrote();
-                discardTheFolderThisInstallMade();
-                return fail(nothingCouldBeReadReason(packageName, errorMsg));
             } else if (!success) {
-                // Only modules were ever asked whether their contents loaded, so a
-                // package whose XML is corrupt was registered, left in the profile
-                // and never mentioned - the silence this whole change is about
-                qWarning() << "Host::installPackage() WARNING - failed to load package" << packageName << ":" << errorMsg;
-                //: %1 is the package name, %2 is the reason its contents could not be read
-                postMessage(tr("[ WARN ]  - Failed to load package \"%1\": %2").arg(packageName, errorMsg));
+                packageFileErrors << errorMsg;
             }
             file2.close();
+        }
+        // Decided once every file has been tried: they are read in the order of their names, so a stray file
+        // that cannot be read would otherwise turn the package away or not depending on what it is called.
+        if (!packageFileErrors.isEmpty() && !anItemWasRead) {
+            takeBackAPackageNothingWasReadFrom(packageName);
+            takeBackWhatTheManifestOverwrote();
+            if (!discardTheFolderThisInstallMade()) {
+                qWarning() << "Host::installPackage() WARNING - refused" << fileName << "as package" << packageName << "but leaving" << _dir.absolutePath() << "alone: this install did not make it";
+            }
+            return fail(nothingCouldBeReadReason(packageName, packageFileErrors.constFirst()));
+        }
+        // What was read out of its files is already running, so the package stays installed
+        for (const QString& errorMsg : std::as_const(packageFileErrors)) {
+            qWarning() << "Host::installPackage() WARNING - failed to load package" << packageName << ":" << errorMsg;
+            //: %1 is the package name, %2 is the reason its contents could not be read
+            postMessage(tr("[ WARN ]  - Failed to load package \"%1\": %2").arg(packageName, errorMsg));
         }
 
         // Registering the package is this loop's job, so an archive that holds no
