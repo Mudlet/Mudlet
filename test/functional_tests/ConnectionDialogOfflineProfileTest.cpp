@@ -102,6 +102,31 @@ private slots:
         delete mudlet::self();
     }
 
+    void test_copyingSettingsOnlyKeepsACarriageReturn()
+    {
+        QVERIFY2(dialog(), "No connection dialog to test against");
+        const QString source = qsl("CarriageReturn-ConnDialogOffline");
+        const QString copy = qsl("CarriageReturnCopy-ConnDialogOffline");
+        const QDir sourceDir(MudletApp::getMudletPath(enums::profileXmlFilesPath, source));
+        QVERIFY(sourceDir.mkpath(sourceDir.absolutePath()));
+        QFile saved(sourceDir.absoluteFilePath(qsl("2026-01-01#00-00-00.xml")));
+        QVERIFY(saved.open(QFile::WriteOnly));
+        saved.write("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE MudletPackage>\n<MudletPackage version=\"1.001\">\n"
+                    "<HostPackage><Host><mCommandSeparator>a&#13;b</mCommandSeparator></Host></HostPackage>\n</MudletPackage>\n");
+        saved.close();
+
+        dialog()->copyProfileSettingsOnly(source, copy);
+
+        QFile copied(QDir(MudletApp::getMudletPath(enums::profileXmlFilesPath, copy)).absoluteFilePath(qsl("Copied profile (settings only).xml")));
+        QVERIFY2(copied.open(QFile::ReadOnly), qPrintable(copied.fileName()));
+        const QByteArray contents = copied.readAll();
+        const qsizetype start = contents.indexOf("<mCommandSeparator>");
+        QVERIFY2(start >= 0, contents.constData());
+        const QByteArray element = contents.mid(start, contents.indexOf("</mCommandSeparator>") - start);
+        QVERIFY2(!element.contains('\r'), qPrintable(qsl("raw CR in the copy: %1").arg(QString::fromLatin1(element.toHex(' ')))));
+        QVERIFY2(element.contains("a&#13;b"), element.constData());
+    }
+
     void test_offlineIsOfferedForAProfileWithNoServerAddress()
     {
         QVERIFY2(dialog(), "No connection dialog to test against");
