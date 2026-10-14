@@ -146,38 +146,38 @@ const QString& key_in = qsl("in");
 const QString& key_out = qsl("out");
 
 namespace {
-// The room an XY-plane exit leads to, with the fixed first segment of its custom line, in map units.
-std::optional<std::pair<int, QPointF>> xyExitFor(const TRoom& room, const QString& key)
+// The room an XY-plane exit leads to, or 0 for any other exit.
+int xyExitFor(const TRoom& room, const QString& key)
 {
     if (key == key_n) {
-        return std::pair{room.getNorth(), QPointF(0.0, 0.5)};
+        return room.getNorth();
     }
     if (key == key_ne) {
-        return std::pair{room.getNortheast(), QPointF(0.5, 0.5)};
+        return room.getNortheast();
     }
     if (key == key_e) {
-        return std::pair{room.getEast(), QPointF(0.5, 0.0)};
+        return room.getEast();
     }
     if (key == key_se) {
-        return std::pair{room.getSoutheast(), QPointF(0.5, -0.5)};
+        return room.getSoutheast();
     }
     if (key == key_s) {
-        return std::pair{room.getSouth(), QPointF(0.0, -0.5)};
+        return room.getSouth();
     }
     if (key == key_sw) {
-        return std::pair{room.getSouthwest(), QPointF(-0.5, -0.5)};
+        return room.getSouthwest();
     }
     if (key == key_w) {
-        return std::pair{room.getWest(), QPointF(-0.5, 0.0)};
+        return room.getWest();
     }
     if (key == key_nw) {
-        return std::pair{room.getNorthwest(), QPointF(-0.5, 0.5)};
+        return room.getNorthwest();
     }
-    return std::nullopt;
+    return 0;
 }
 
-// Whether owner has a custom line for an exit to other that runs straight to its centre, along the
-// plain line between the two rooms, so a plain line there would only cover it or show through its gaps.
+// Whether owner has a custom line for an exit to other that runs straight to its centre, so a plain line between them
+// would cover it, show through its gaps or run beside it. The line's fixed first half-room segment may leave that line.
 bool customLineRunsStraightTo(const TRoom& owner, const TRoom& other)
 {
     if (owner.customLines.empty()) {
@@ -195,13 +195,8 @@ bool customLineRunsStraightTo(const TRoom& owner, const TRoom& other)
         const qreal fraction = std::clamp(QPointF::dotProduct(point - from, along) / lengthSquared, 0.0, 1.0);
         return QLineF(point, from + along * fraction).length() <= tolerance;
     };
-    for (auto it = owner.customLines.cbegin(), end = owner.customLines.cend(); it != end; ++it) {
-        const QList<QPointF>& points = it.value();
-        if (points.isEmpty() || QLineF(points.last(), to).length() > tolerance) {
-            continue;
-        }
-        const auto exit = xyExitFor(owner, it.key());
-        if (!exit || exit->first != other.getId() || !onThePlainLine(from + exit->second)) {
+    for (const auto& [key, points] : owner.customLines.asKeyValueRange()) {
+        if (points.isEmpty() || QLineF(points.last(), to).length() > tolerance || xyExitFor(owner, key) != other.getId()) {
             continue;
         }
         if (std::all_of(points.cbegin(), points.cend(), onThePlainLine)) {
@@ -3308,7 +3303,8 @@ void T2DMap::paintRoomExits(QPainter& painter,
                && (static_cast<float>(widgetHeight) > miny || static_cast<float>(widgetHeight) > maxy);
     };
 
-    // The rooms whose custom lines this view paints, wherever they are: roomsToPaint holds all of them.
+    // Every room with custom lines on this level, wherever it is; roomsToPaint holds them all, and the
+    // loop below paints those that are not hidden and whose lines reach the widget.
     const QSet<int>& customLineRooms = pArea->getCustomLineRoomsForZ(zLevel);
     for (const int _id : std::as_const(roomsToPaint)) {
         TRoom* room = mpMap->mpRoomDB->getRoom(_id);

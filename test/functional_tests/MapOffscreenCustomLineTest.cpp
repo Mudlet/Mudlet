@@ -136,8 +136,18 @@ private:
 
     static bool drawnOn(const QColor& pixel) { return pixel != QColor(Qt::black); }
 
-    // A locked door is drawn in ExitAppearance::doorColor(3), a dark red nothing else near an exit is.
+    // A locked door is drawn in ExitAppearance::doorColor(3), a dark red; so is a room with no environment, so
+    // the door tests paint their rooms with paintRoomsBlue().
     static bool doorColoured(const QColor& pixel) { return pixel.red() > 60 && pixel.green() * 3 < pixel.red() && pixel.blue() * 3 < pixel.red(); }
+
+    void paintRoomsBlue(const QList<int>& roomIds) const
+    {
+        constexpr int blueEnvironment = 300;
+        map()->mCustomEnvColors[blueEnvironment] = QColor(Qt::blue);
+        for (const int roomId : roomIds) {
+            map()->mpRoomDB->getRoom(roomId)->environment = blueEnvironment;
+        }
+    }
 
     // A rendered frame with the mapping it was drawn with, which can change from one frame to the next.
     struct Frame
@@ -596,6 +606,7 @@ private slots:
         TRoom* pDoorRoom = pRoomDB->getRoom(doorRoomId);
         TRoom* pCustomRoom = pRoomDB->getRoom(customRoomId);
         QVERIFY(pDoorRoom->setDoor(qsl("e"), 3));
+        paintRoomsBlue({kPlayerRoomId, doorRoomId, customRoomId});
 
         T2DMap* p2dMap = showAreaAtTheOrigin(areaId);
         QVERIFY(p2dMap);
@@ -607,7 +618,7 @@ private slots:
         QCOMPARE(p2dMap->getAreaId(), areaId);
         QVERIFY(withLine.pixelsPerUnit > 10.0);
 
-        // The door sits most of the way along the near half of the exit, clear of both room squares.
+        // The door sits on the near half of the exit.
         const int reach = qRound(0.6 * withLine.pixelsPerUnit);
         const int doorWithout = withoutLine.countAlong(doorAt, doorAt + QPointF(2, 0), 0.25, 0.6, reach, doorColoured);
         const int doorWith = withLine.countAlong(doorAt, doorAt + QPointF(2, 0), 0.25, 0.6, reach, doorColoured);
@@ -637,6 +648,7 @@ private slots:
         const QPoint doorAt(-8, 1);
         QVERIFY(addTwoWayPair(doorRoomId, customRoomId, areaId, doorAt, DIR_EAST, DIR_WEST));
         QVERIFY(pRoomDB->getRoom(doorRoomId)->setDoor(qsl("e"), 3));
+        paintRoomsBlue({kPlayerRoomId, doorRoomId, customRoomId});
         setCustomLine(pRoomDB->getRoom(customRoomId), qsl("w"), {QPointF(doorAt) + QPointF(2, -3), QPointF(doorAt) + QPointF(0, -3), QPointF(doorAt)});
 
         T2DMap* p2dMap = showAreaAtTheOrigin(areaId);
@@ -657,8 +669,65 @@ private slots:
                                     .arg(frame.savedFor(qsl("bent")))));
     }
 
+    // A straight custom line between rooms off a compass bearing leaves its first half-room segment off the plain
+    // line, which then only runs beside it.
+    void test_aStraightCustomLineOffACompassBearingHasNoPlainLineBesideIt()
+    {
+        TMap* pMap = map();
+        TRoomDB* pRoomDB = pMap->mpRoomDB.get();
+        pMap->mapClear();
+
+        const int areaId = pRoomDB->addArea(qsl("Off Bearing Area"));
+        QVERIFY(areaId > 0);
+        QVERIFY(addRoomAt(kPlayerRoomId, areaId, 0, 0));
+        struct Pair
+        {
+            int customId;
+            int plainId;
+            QPoint from;
+            QPoint to;
+            int reverse;
+        };
+        QList<Pair> pairs;
+        int nextId = 3501;
+        for (int y = -9; y <= 1; y += 5) {
+            for (int x = -14; x <= 6; x += 5) {
+                const bool eastward = ((x + y) / 5) % 2 == 0;
+                const Pair pair{nextId, nextId + 1, QPoint(x, y), QPoint(x + (eastward ? 3 : 2), y + 1), eastward ? DIR_WEST : DIR_SOUTHWEST};
+                nextId += 2;
+                QVERIFY(addRoomAt(pair.customId, areaId, pair.from.x(), pair.from.y()));
+                QVERIFY(addRoomAt(pair.plainId, areaId, pair.to.x(), pair.to.y()));
+                QVERIFY(pRoomDB->getRoom(pair.customId)->setExit(pair.plainId, eastward ? DIR_EAST : DIR_NORTHEAST));
+                setCustomLine(pRoomDB->getRoom(pair.customId), eastward ? qsl("e") : qsl("ne"), {QPointF(pair.to)});
+                pairs << pair;
+            }
+        }
+
+        T2DMap* p2dMap = showAreaAtTheOrigin(areaId);
+        QVERIFY(p2dMap);
+        const Frame withoutReturn = renderMapFrame(p2dMap);
+        for (const Pair& pair : std::as_const(pairs)) {
+            QVERIFY(pRoomDB->getRoom(pair.plainId)->setExit(pair.customId, pair.reverse));
+        }
+        const Frame withReturn = renderMapFrame(p2dMap);
+        QCOMPARE(p2dMap->getAreaId(), areaId);
+        QVERIFY(withReturn.pixelsPerUnit > 10.0);
+
+        for (const Pair& pair : std::as_const(pairs)) {
+            const int plainWithout = withoutReturn.countAlong(pair.from, pair.to, 0.2, 0.8, 2, plainLineColoured);
+            const int plainWith = withReturn.countAlong(pair.from, pair.to, 0.2, 0.8, 2, plainLineColoured);
+            QVERIFY2(plainWith - plainWithout <= 3,
+                     qPrintable(qsl("room %1 drew its plain exit back beside room %2's straight custom line (%3 plain line pixels, %4 without that exit). %5")
+                                        .arg(pair.plainId)
+                                        .arg(pair.customId)
+                                        .arg(plainWith)
+                                        .arg(plainWithout)
+                                        .arg(withReturn.savedFor(qsl("offbearing")))));
+        }
+    }
+
     // A custom line back that stops short of this room leaves the rest of the way to the plain line,
-    // also when another custom line of that room crosses the widget while this one does not.
+    // also when it stops off the widget and another custom line of that room crosses the widget.
     void test_aCustomLineBackThatStopsShortLeavesThePlainExit()
     {
         TMap* pMap = map();
@@ -692,14 +761,12 @@ private slots:
 
         const int nearPixels = frame.countAlong(QPointF(-12, 2), QPointF(-2, 2), 0.1, 0.8, 1, plainLineColoured);
         const int offWidgetPixels = frame.countAlong(QPointF(8, -6), QPointF(13, -6), 0.2, 1.0, 1, plainLineColoured);
-        QVERIFY2(nearPixels > 20,
-                 qPrintable(qsl("room 3301 drew no exit east, though the custom line back stops a room short of it (%1 pixels). %2").arg(nearPixels).arg(frame.savedFor(qsl("short")))));
+        QVERIFY2(nearPixels > 20, qPrintable(qsl("room 3301 drew no exit east, though the custom line back stops short of it (%1 pixels). %2").arg(nearPixels).arg(frame.savedFor(qsl("short")))));
         QVERIFY2(offWidgetPixels > 20,
                  qPrintable(qsl("room 3303 drew no exit east to a room whose line back is off the widget (%1 pixels). %2").arg(offWidgetPixels).arg(frame.savedFor(qsl("short")))));
     }
 
-    // The room at the other end is culled when its custom line never comes near the widget, so that line
-    // is not painted and cannot stand in for the plain exit from a room that is on screen.
+    // A custom line back that ends off the widget, short of a room on screen, leaves that room its plain exit.
     void test_aPlainExitStaysWhereTheCustomLineBackIsOffTheWidget()
     {
         TMap* pMap = map();
@@ -728,7 +795,7 @@ private slots:
         const Frame withLine = renderMapFrame(p2dMap);
         QCOMPARE(p2dMap->getAreaId(), areaId);
         QVERIFY(withLine.pixelsPerUnit > 10.0);
-        QVERIFY2(withLine.at(QPointF(18, 4)).x() > kWidgetWidth, "the custom line back reaches the widget, so it would rightly stand in for the plain exit");
+        QVERIFY2(withLine.at(QPointF(18, 4)).x() > kWidgetWidth, "the custom line back ends on the widget");
         QVERIFY2(withLine.at(plainAt + QPointF(5, 0)).x() < kWidgetWidth, "the stretch of plain exit this counts is not on the widget");
 
         const int drawnWithout = withoutLine.countAlong(plainAt + QPointF(1, 0), plainAt + QPointF(5, 0), 0.0, 1.0, 3, drawnOn);
@@ -743,8 +810,8 @@ private slots:
         }
     }
 
-    // A one-way exit keeps its arrowed line, even where the other room has a custom line on the
-    // exit that would lead back, if only that exit did not go somewhere else.
+    // A one-way exit keeps its arrowed line, even where the other room has a custom line straight back,
+    // and a custom line straight back stands in only for the exit it is drawn for.
     void test_aOneWayExitKeepsItsLineWhereTheOtherRoomsCustomLineLeadsElsewhere()
     {
         TMap* pMap = map();
@@ -760,6 +827,18 @@ private slots:
         TRoom* pOtherEnd = pRoomDB->getRoom(3402);
         QVERIFY(pRoomDB->getRoom(3401)->setExit(3402, DIR_EAST));
         QVERIFY(pOtherEnd->setExit(3403, DIR_WEST));
+        // One way north-east, while the line back is for an exit that does lead to room 3411
+        QVERIFY(addRoomAt(3411, areaId, -8, -2));
+        QVERIFY(addRoomAt(3412, areaId, -4, -2));
+        QVERIFY(pRoomDB->getRoom(3411)->setExit(3412, DIR_NORTHEAST));
+        QVERIFY(pRoomDB->getRoom(3412)->setExit(3411, DIR_WEST));
+        // Two way north-east and south-west, while the line back is for an exit to room 3423
+        QVERIFY(addRoomAt(3421, areaId, -8, -6));
+        QVERIFY(addRoomAt(3422, areaId, -4, -6));
+        QVERIFY(addRoomAt(3423, areaId, -4, -9));
+        QVERIFY(pRoomDB->getRoom(3421)->setExit(3422, DIR_NORTHEAST));
+        QVERIFY(pRoomDB->getRoom(3422)->setExit(3421, DIR_SOUTHWEST));
+        QVERIFY(pRoomDB->getRoom(3422)->setExit(3423, DIR_WEST));
 
         T2DMap* p2dMap = showAreaAtTheOrigin(areaId);
         QVERIFY(p2dMap);
@@ -768,6 +847,8 @@ private slots:
         // Running straight back to room 3401, though the exit it is for leads to room 3403; drawn with no
         // pen, so all the frame can show is room 3401's own line
         setCustomLine(pOtherEnd, qsl("w"), {QPointF(-8, 2)}, Qt::NoPen);
+        setCustomLine(pRoomDB->getRoom(3412), qsl("w"), {QPointF(-8, -2)}, Qt::NoPen);
+        setCustomLine(pRoomDB->getRoom(3422), qsl("w"), {QPointF(-8, -6)}, Qt::NoPen);
         const Frame withLine = renderMapFrame(p2dMap);
         QCOMPARE(p2dMap->getAreaId(), areaId);
         QVERIFY(withLine.pixelsPerUnit > 10.0);
@@ -779,6 +860,14 @@ private slots:
                  qPrintable(qsl("room 3401 lost its one-way exit east to room 3402's custom line to room 3403 (%1 pixels drawn, %2 without it). %3")
                                     .arg(drawnWith)
                                     .arg(drawnWithout)
+                                    .arg(withLine.savedFor(qsl("oneway")))));
+        const int oneWayPixels = withLine.countAlong(QPointF(-8, -2), QPointF(-4, -2), 0.15, 0.85, 3, plainLineColoured);
+        QVERIFY2(oneWayPixels > 10,
+                 qPrintable(qsl("room 3411 lost its one-way exit north-east to room 3412's custom line straight back (%1 pixels). %2").arg(oneWayPixels).arg(withLine.savedFor(qsl("oneway")))));
+        const int otherExitPixels = withLine.countAlong(QPointF(-8, -6), QPointF(-4, -6), 0.15, 0.85, 3, plainLineColoured);
+        QVERIFY2(otherExitPixels > 10,
+                 qPrintable(qsl("rooms 3421 and 3422 lost their exit to a custom line drawn for room 3422's exit to room 3423 (%1 pixels). %2")
+                                    .arg(otherExitPixels)
                                     .arg(withLine.savedFor(qsl("oneway")))));
     }
 
