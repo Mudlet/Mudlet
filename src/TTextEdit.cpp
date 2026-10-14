@@ -3189,7 +3189,6 @@ void TTextEdit::showContextMenu(const QPoint& globalPosition)
         popup->addAction(clearErrorConsole);
     }
 
-    // Add user actions
     if (mpHost) {
         QMapIterator<QString, QStringList> it(mpHost->mConsoleActions);
 

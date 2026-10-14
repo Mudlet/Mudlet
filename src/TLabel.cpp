@@ -165,16 +165,16 @@ void TLabel::mouseReleaseEvent(QMouseEvent* event)
     }
 }
 
-// The console builds its context menu in its text pane, which is the label's sibling rather
-// than an ancestor, so an ignored right-click would never reach it
+// The console builds its context menu in its text pane, which the label covers but is not
+// inside, so an ignored right-click, offered only to the label's ancestors, never reaches it
 bool TLabel::forwardRightClickToConsole(QMouseEvent* event)
 {
     QWidget* pParent = parentWidget();
     if (!pParent) {
         return false;
     }
-    // This label, and any other without callbacks stacked under it, is left out of the hit
-    // test for a moment, so that it finds what they cover
+    // This label, and any other without a click or release callback stacked under it, is left
+    // out of the hit test for a moment, so that it finds what they cover
     const QPoint where = pParent->mapFromGlobal(event->globalPosition().toPoint());
     QList<TLabel*> skipped;
     QWidget* pHit = nullptr;
