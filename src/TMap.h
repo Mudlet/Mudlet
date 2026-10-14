@@ -87,7 +87,8 @@ signals:
     void signal_mapSymbolFontChanged();
 
     // Cues for the mapper drawing this map (mpMapper); the colour and symbol
-    // cache ones also reach every secondary map view.
+    // cache ones also reach every secondary map view, and with the 3D mapper
+    // built in so do the repaint and mapper-setting ones.
     void signal_mapperColoursChanged();
     void signal_mapCleared();
     void signal_mapLabelsChanged();
