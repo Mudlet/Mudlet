@@ -575,6 +575,11 @@ void Builder::addRoom(const int roomId, const TRoom& room)
             if (otherEndDraws && exit.destinationId < roomId) {
                 continue;
             }
+            if (upOrDown && mOptions.dashedStairs) {
+                qreal phase = 0.0;
+                dashedBar(center, destination, ExitAppearance::visibleDashes(Qt::DashLine), phase, exitColor, lineLevel);
+                continue;
+            }
             if (!mOptions.glyphs || rise != 0.0f || !glyphRun(center, destination, exitColor, lineLevel)) {
                 bar(center, destination, mWidth, mHeight, lineColor(room, exit.pDestination), lineLevel);
             }

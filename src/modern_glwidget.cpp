@@ -25,8 +25,10 @@
 #include "modern_glwidget.h"
 
 #include "ExitAppearance.h"
+#include "EnvironmentKit.h"
 #include "ExitScene.h"
 #include "Host.h"
+#include "MapDecals.h"
 #include "MapStyle.h"
 #include "RoomAppearance.h"
 #include "RoomContextMenuHandler.h"
@@ -691,6 +693,7 @@ void ModernGLWidget::paintGL()
     shaderProgram->release();
 
     QPainter painter(this);
+    const MapStyle& style = mapStyle();
 
     // Draw map info using contributor manager
     QColor infoColor;
@@ -699,13 +702,19 @@ void ModernGLWidget::paintGL()
     } else {
         infoColor = QColor(Qt::white);
     }
-    dlgMapper::paintMapInfo(mFrameTimer, painter, mpHost, mpMap, mRID, mAID, 0, infoColor, 10, 10, width(), mFontHeight);
+    const QColor infoBackground = style.infoBackgroundColor(mpHost->mMapInfoBg);
+    if (infoBackground != mpHost->mMapInfoBg && style.infoTextColor.isValid()) {
+        infoColor = style.infoTextColor;
+    }
+    const int infoBottom = dlgMapper::paintMapInfo(mFrameTimer, painter, mpHost, mpMap, mRID, mAID, 0, infoColor, 10, 10, width(), mFontHeight, infoBackground, style.labelFontFamily);
 
     if (mRectangleSelecting) {
         painter.fillRect(mSelectionRectangle, QColor(190, 190, 190, 60));
     }
     paintStatusLine(painter);
     paintCompass(painter);
+    const QRect titleBlock = paintTitleBlock(painter, *pArea, infoBottom);
+    paintLevelCallouts(painter, *pArea, infoBottom, titleBlock);
 
     painter.end();
 }
@@ -767,8 +776,8 @@ constexpr float scmFloorPlateOpacity = 0.07f;
 // The terminal style's glyph atlas: cells of this many texels, this many to a side
 constexpr int scmGlyphCellTexels = 64;
 constexpr int scmGlyphAtlasColumns = 16;
-// The block and the printable ASCII characters, which the atlas always holds first
-constexpr qsizetype scmGlyphAtlasPreloaded = 1 + (u'~' - u'!' + 1);
+// The block, the printable ASCII characters and the three ground characters past them, which the atlas always holds first
+constexpr qsizetype scmGlyphAtlasPreloaded = 1 + (u'~' - u'!' + 1) + 3;
 // Clear around a character in its atlas cell, so that the smaller mipmaps of a cell do not take in its neighbors
 constexpr int scmGlyphCellInset = scmGlyphCellTexels / 16;
 // A character cell's side on the map: half rooms' spacing, so that an exit's line has a cell between two rooms side by side
@@ -779,6 +788,9 @@ constexpr float scmGlyphSize = scmGlyphCell * 1.25f;
 const QString scmGlyphBlock = QString(QChar(0x2588));
 // How opaque the cell under the pointer is lit, as a terminal's selection shows
 constexpr float scmGlyphHoverOpacity = 0.35f;
+// A symbol's underline across and down its cell, as a part of the cell
+constexpr float scmGlyphUnderlineWidth = 0.7f;
+constexpr float scmGlyphUnderlineHeight = 0.1f;
 
 // A cell of the glyph atlas, in texture coordinates; filled, only the part inside its inset, where the block is drawn
 QRectF glyphAtlasRect(const qsizetype cell, const bool filled = false)
@@ -796,6 +808,10 @@ QRectF glyphAtlasRect(const qsizetype cell, const bool filled = false)
 // What is drawn on the tops of a set of rooms; each map is keyed by texture, so each is one draw call however many rooms share it
 struct RoomDecals
 {
+    // On the ground the rooms stand on, which the rooms hide where they stand
+    GeometryData shadows;
+    QHash<GLuint, GeometryData> ground;
+    GeometryData sheen;
     GeometryData selection;
     QHash<GLuint, GeometryData> symbols;
     QHash<GLuint, GeometryData> highlights;
@@ -970,6 +986,17 @@ GLuint ModernGLWidget::discTexture(const QString& key, const QGradientStops& sto
     painter.drawEllipse(center, radius, radius);
     painter.end();
     return addRoomTexture(key, image);
+}
+
+GLuint ModernGLWidget::imageTexture(const QString& key, const std::function<QImage()>& makeImage)
+{
+    if (const GLuint texture = cachedRoomTexture(key)) {
+        return texture;
+    }
+    if (mLabelTextureCache.imageTextureFailed(key) || !roomForAnotherTexture(key)) {
+        return 0;
+    }
+    return addRoomTexture(key, makeImage());
 }
 
 GLuint ModernGLWidget::squareTexture(const QColor& color)
@@ -1160,10 +1187,17 @@ qsizetype ModernGLWidget::glyphAtlasCell(const QString& text, const bool add)
         for (char16_t character = u'!'; character <= u'~'; ++character) {
             preloaded.append(QString(QChar(character)));
         }
+        // So that a room past a full atlas still shows its ground
+        for (const QString& kitName : EnvironmentKit::names()) {
+            if (const QString ground = RoomAppearance::groundGlyph(*EnvironmentKit::fromName(kitName), false); !preloaded.contains(ground)) {
+                preloaded.append(ground);
+            }
+        }
         for (const QString& cellText : preloaded) {
             mGlyphAtlasIndex.insert(cellText, mGlyphAtlasCells.size());
             mGlyphAtlasCells.append(cellText);
         }
+        Q_ASSERT(mGlyphAtlasCells.size() == scmGlyphAtlasPreloaded);
     }
     if (const auto found = mGlyphAtlasIndex.constFind(text); found != mGlyphAtlasIndex.cend()) {
         return *found;
@@ -1242,6 +1276,8 @@ void ModernGLWidget::renderRooms()
     const QColor contrast = ExitAppearance::contrastColor(background);
     const RenderCommand::Shading roomShading = style.lit ? RenderCommand::Shading::Lit : RenderCommand::Shading::Unlit;
     const bool terminal = style.glyphs == MapStyle::Glyphs::Terminal;
+    const bool groundGlyphs = terminal && style.groundGlyphs;
+    const QHash<int, EnvironmentKit::Kit> namedKits = groundGlyphs ? EnvironmentKit::stored(mpMap->mUserData) : QHash<int, EnvironmentKit::Kit>();
 
     const bool moreTransparent = mpHost->experimentEnabled(qsl("experiment.rendering.more-transparent"));
     const bool playerIcon = mpHost->experimentEnabled(qsl("experiment.3d-player-icon"));
@@ -1261,7 +1297,7 @@ void ModernGLWidget::renderRooms()
     // The terminal style writes a room's ID in its cell with its other characters
     const bool showRoomIds = mpHost->mShowRoomID && !terminal;
     const bool terminalIds = mpHost->mShowRoomID && terminal;
-    QFont idFont = style.labelFont(mpMap->mMapSymbolFont);
+    QFont idFont = style.roomIdFont(mpMap->mMapSymbolFont);
     float idTexel = 0.0f;
     QString idFontKey;
     std::optional<QFontMetricsF> idMetrics;
@@ -1301,15 +1337,17 @@ void ModernGLWidget::renderRooms()
 
     const bool showRoomNames = mpMap->getRoomNamesShown() && !pArea->gridMode;
     QFont nameFont = style.labelFont(mpMap->mMapSymbolFont);
+    bool namesGivenFont = false;
     if (showRoomNames) {
         if (QFont font; font.fromString(mpMap->mUserData.value(ROOM_UI_NAMEFONT))) {
             nameFont = font;
+            namesGivenFont = true;
         }
         nameFont.setItalic(false);
         nameFont.setUnderline(false);
         nameFont.setOverline(false);
         nameFont.setStrikeOut(false);
-        nameFont.setBold(true);
+        nameFont.setBold(namesGivenFont || !style.roomNameColor.isValid());
         nameFont.setStyleStrategy(QFont::StyleStrategy(QFont::PreferNoShaping | QFont::PreferAntialias | QFont::PreferOutline));
         nameFont.setPointSizeF(scmTextTexelsPerRoom / 2.0);
     }
@@ -1323,6 +1361,7 @@ void ModernGLWidget::renderRooms()
     };
     QList<RoomName> roomNames;
     const float textTexel = roomSize / scmTextTexelsPerRoom;
+    const float nameTexel = textTexel * (namesGivenFont ? 1.0f : style.roomNameScale);
     struct RoomIdText
     {
         int roomId = 0;
@@ -1369,12 +1408,23 @@ void ModernGLWidget::renderRooms()
     if (!terminal && !playerFlag && pArea->getAreaRooms().contains(playerRoomId)) {
         // The strong highlight is the original style over a translucent red room
         const int style = mpHost->mMapStrongHighlight ? 0 : mpMap->mPlayerRoomStyle;
-        const QString key = qsl("player|%1|%2|%3|%4")
-                                    .arg(QString::number(style),
-                                         QString::number(mpMap->mPlayerRoomInnerDiameterPercentage),
-                                         mpMap->mPlayerRoomInnerColor.name(QColor::HexArgb),
-                                         mpMap->mPlayerRoomOuterColor.name(QColor::HexArgb));
-        playerRoomTexture = discTexture(key, RoomAppearance::playerRoomStops(style, mpMap->mPlayerRoomInnerDiameterPercentage, mpMap->mPlayerRoomInnerColor, mpMap->mPlayerRoomOuterColor));
+        const bool themed = mapStyle().themesPlayerMarker(mpMap->mPlayerRoomStyle, mpHost->mMapStrongHighlight);
+        if (themed && mapStyle().playerRing == MapStyle::PlayerRing::Thin) {
+            const QColor ringColor = playerMarkerColor();
+            playerRoomTexture = discTexture(qsl("playerThin|%1").arg(ringColor.name(QColor::HexArgb)), MapDecals::thinPlayerRingStops(ringColor));
+        } else if (themed && mapStyle().playerRing == MapStyle::PlayerRing::Crosshair) {
+            const QColor markColor = playerMarkerColor();
+            playerRoomTexture = imageTexture(qsl("playerCrosshair|%1").arg(markColor.name(QColor::HexArgb)), [markColor] {
+                return MapDecals::registrationMark(markColor, scmRoomTextureSize);
+            });
+        } else {
+            const QString key = qsl("player|%1|%2|%3|%4")
+                                        .arg(QString::number(style),
+                                             QString::number(mpMap->mPlayerRoomInnerDiameterPercentage),
+                                             mpMap->mPlayerRoomInnerColor.name(QColor::HexArgb),
+                                             mpMap->mPlayerRoomOuterColor.name(QColor::HexArgb));
+            playerRoomTexture = discTexture(key, RoomAppearance::playerRoomStops(style, mpMap->mPlayerRoomInnerDiameterPercentage, mpMap->mPlayerRoomInnerColor, mpMap->mPlayerRoomOuterColor));
+        }
         if (mpHost->mMapStrongHighlight) {
             const QColor fill = RoomAppearance::strongHighlightFillColor();
             playerRoomFillTexture = round ? discTexture(qsl("disc|%1").arg(fill.name(QColor::HexArgb)), {{0.0, fill}, {1.0, fill}}) : squareTexture(fill);
@@ -1418,6 +1468,8 @@ void ModernGLWidget::renderRooms()
         RoomDecals* decals = nullptr;
         // For a symbol, the character the room would have without it
         QString plain;
+        // A line under the character in this color; no alpha for none
+        QVector4D underline;
     };
     QList<TerminalCell> terminalCells;
     // The cells rooms are in, as doubled map coordinates, and their levels: no exit's character goes over one
@@ -1425,6 +1477,20 @@ void ModernGLWidget::renderRooms()
     const QSet<int> emptySelection;
     const QSet<int>& selection = mp2DMap ? mp2DMap->mMultiSelectionSet : emptySelection;
     const GLuint selectionTextureId = selection.isEmpty() ? 0 : selectionTexture(round);
+    GLuint sheenTexture = 0;
+    GLuint shadowTexture = 0;
+    if (style.shadedBlocks) {
+        sheenTexture = imageTexture(qsl("sheen|%1").arg(round), [round] {
+            return MapDecals::blockSheen(round, scmRoomTextureSize);
+        });
+        shadowTexture = imageTexture(qsl("shadow|%1").arg(round), [round] {
+            return MapDecals::blockShadow(round, scmRoomTextureSize);
+        });
+    }
+    // A decal lying flat on the map, its image's first row to the north whichever way the view faces
+    const auto appendMapQuad = [](GeometryData& batch, const QVector3D& center, const float size, const QVector4D& tint) {
+        GeometryManager::appendQuad(batch, center - QVector3D(size / 2.0f, size / 2.0f, 0.0f), QVector3D(size, 0.0f, 0.0f), QVector3D(0.0f, size, 0.0f), tint);
+    };
     mHoveredRoomId = roomUnderPointer();
 
     QSetIterator<int> itRoom(pArea->getAreaRooms());
@@ -1520,13 +1586,14 @@ void ModernGLWidget::renderRooms()
         } else if (hovered && !terminal) {
             // Taller than a border, so that it shows over one
             outlineInstances.append(outline(roomSize * scmHoverOutline, QVector4D(contrast.redF(), contrast.greenF(), contrast.blueF(), 1.0f), 0.75f));
-        } else if (style.edges == MapStyle::Edges::ViewedLevelRim && !bordered && !pArea->gridMode && look.onViewedLevel() && !seeThrough) {
-            // Halfway from the room's color to the one that stands out on the background, so the viewed level's rooms stand apart from the rest
-            outlineInstances.append(outline(roomSize * scmLevelOutline, GeometryManager::fadedColor(roomColor, {0.5f, 1.0f}, contrast)));
+        } else if (!bordered && !pArea->gridMode && look.onViewedLevel() && !seeThrough) {
+            // Halfway from the room's color to the one that stands out on the background, or for a base to the background itself
+            const QColor rimTarget = style.edges == MapStyle::Edges::ViewedLevelBase ? background : contrast;
+            outlineInstances.append(outline(roomSize * scmLevelOutline, GeometryManager::fadedColor(roomColor, {0.5f, 1.0f}, rimTarget)));
         }
         if (bordered && !inkOutlines && !stationRings && !terminal) {
             const float borderWidth = (pR->mBorderThickness > 0 ? pR->mBorderThickness : 1) * borderUnit;
-            const QColor borderColor = pR->mBorderColor.isValid() ? pR->mBorderColor : mpHost->mRoomBorderColor;
+            const QColor borderColor = pR->mBorderColor.isValid() ? pR->mBorderColor : style.roomBorderColor(mpHost->mRoomBorderColor, roomColor, background);
             const QVector4D borderTint = GeometryManager::fadedColor(borderColor, fade, fadeTarget);
             (borderTint.w() < 1.0f ? seeThroughLevels[pR->z()].cubes : borderInstances).append(outline(borderWidth, borderTint));
         }
@@ -1539,7 +1606,17 @@ void ModernGLWidget::renderRooms()
         }
 
         const QVector3D roomTop(rx, ry, rz + roomHeight / 2.0f);
+        const QVector3D roomFoot(rx, ry, static_cast<float>(pR->z()) - roomHeight / 2.0f);
         const QVector4D decalTint = GeometryManager::fadedDecalTint(fade);
+
+        if (sheenTexture) {
+            decals.sheen.textureId = sheenTexture;
+            appendMapQuad(decals.sheen, roomTop, roomSize, decalTint);
+        }
+        if (shadowTexture) {
+            decals.shadows.textureId = shadowTexture;
+            appendMapQuad(decals.shadows, roomFoot + QVector3D(roomSize * 0.3f, -roomSize * 0.3f, 0.0f), roomSize * 1.5f, decalTint);
+        }
 
         if (selectionTextureId && selection.contains(currentRoomId)) {
             decals.selection.textureId = selectionTextureId;
@@ -1549,16 +1626,29 @@ void ModernGLWidget::renderRooms()
         if (terminal) {
             // Only the viewed level's IDs, as on the 2D map: another level's, in the same cell, would run into them
             const bool showId = terminalIds && look.onViewedLevel();
-            const QString text = showId ? QString::number(currentRoomId) : RoomAppearance::terminalGlyph(*pR, look, pArea->gridMode);
-            const QColor textColor = !showId && !look.symbol.isEmpty() ? style.symbolColor(look.symbolColor, roomColor) : style.roomIdColor(roomColor);
+            std::optional<EnvironmentKit::Kit> ground;
+            if (groundGlyphs) {
+                ground = EnvironmentKit::forDefinedEnvironment(namedKits, *mpMap, pR->environment, look.color);
+            }
+            const QString text = showId ? QString::number(currentRoomId) : RoomAppearance::terminalGlyph(*pR, look, pArea->gridMode, ground);
+            const bool symbol = !showId && !look.symbol.isEmpty();
+            QColor textColor = symbol ? style.symbolColor(look.symbolColor, roomColor) : style.roomIdColor(roomColor);
+            // The highlight fills the cell, so the character goes in reverse video on it
+            const bool cellHighlighted = look.highlighted && MapDecals::highlightFillsRoom(style.highlightShape);
+            if (cellHighlighted) {
+                textColor = background;
+            }
             TerminalCell cell{currentRoomId, text, showId, roomTop, GeometryManager::fadedColor(textColor, fade, fadeTarget), look.playerRoom, {}, hovered, &decals};
             if (look.playerRoom) {
                 cell.color = GeometryManager::fadedColor(roomColor, fade, fadeTarget);
                 cell.reverseColor = GeometryManager::fadedColor(ExitAppearance::contrastColor(roomColor), fade, fadeTarget);
-            } else if (!showId && !look.symbol.isEmpty()) {
+            } else if (symbol) {
                 RoomAppearance::Look plainLook = look;
                 plainLook.symbol.clear();
-                cell.plain = RoomAppearance::terminalGlyph(*pR, plainLook, pArea->gridMode);
+                cell.plain = RoomAppearance::terminalGlyph(*pR, plainLook, pArea->gridMode, ground);
+                if (groundGlyphs) {
+                    cell.underline = GeometryManager::fadedColor(cellHighlighted ? textColor : roomColor, fade, fadeTarget);
+                }
             }
             terminalCells.append(cell);
             roomCells.insert({{qRound64(pR->x() * 2.0), qRound64(pR->y() * 2.0)}, pR->z()});
@@ -1572,12 +1662,20 @@ void ModernGLWidget::renderRooms()
         }
 
         if (look.highlighted) {
-            const QString key = qsl("highlight|%1|%2").arg(look.highlightColor.name(QColor::HexArgb), look.highlightCenterColor.name(QColor::HexArgb));
-            if (const GLuint texture = discTexture(key, RoomAppearance::highlightStops(look.highlightColor, look.highlightCenterColor))) {
-                GeometryData& batch = decals.highlights[texture];
+            const MapStyle::HighlightShape shape = style.highlightShape;
+            const bool disc = shape == MapStyle::HighlightShape::Disc;
+            const QColor color = style.highlightColor.isValid() && !disc ? style.highlightColor : look.highlightColor;
+            const QColor centerColor = disc ? look.highlightCenterColor : color;
+            const QString key = qsl("highlight|%1|%2|%3|%4").arg(QString::number(static_cast<int>(shape)), color.name(QColor::HexArgb), centerColor.name(QColor::HexArgb), QString::number(round));
+            if (const GLuint texture = imageTexture(key, [shape, color, centerColor, round] {
+                    return MapDecals::highlight(shape, color, centerColor, round, scmRoomTextureSize);
+                })) {
+                const bool onGround = MapDecals::highlightOnGround(shape);
+                GeometryData& batch = (onGround ? decals.ground : decals.highlights)[texture];
                 batch.textureId = texture;
                 // highlightRadius is in rooms' spacing, which is one unit here
-                GeometryManager::appendGroundQuad(batch, roomTop, look.highlightRadius, screenRight, screenUp, decalTint);
+                const float size = MapDecals::highlightFillsRoom(shape) ? roomSize : look.highlightRadius * style.highlightScale;
+                appendMapQuad(batch, onGround ? roomFoot : roomTop, size, decalTint);
             }
         }
 
@@ -1604,7 +1702,7 @@ void ModernGLWidget::renderRooms()
             // One room's size below the room on screen, then moved by its offset along the map, in rooms' spacing, y downward
             const QPointF offset = RoomAppearance::nameOffset(pR->userData.value(ROOM_UI_NAMEPOS));
             const QVector3D center = roomTop - groundUp * roomSize + QVector3D(static_cast<float>(offset.x()), -static_cast<float>(offset.y()), 0.0f);
-            roomNames.append({center, RoomAppearance::nameColor(pR->userData.value(ROOM_UI_NAMECOLOR), background), pR->name, decalTint, &decals});
+            roomNames.append({center, style.roomNameColorFor(pR->userData.value(ROOM_UI_NAMECOLOR), background), pR->name, decalTint, &decals});
         }
 
         // A terminal's room is only its character, so its markers stand out from the background instead
@@ -1768,11 +1866,21 @@ void ModernGLWidget::renderRooms()
                 const QVector4D textColor = cell.reverse ? cell.reverseColor : cell.color;
                 if (!cell.id) {
                     qsizetype atlasCell = glyphAtlasCell(cell.text, false);
+                    const bool symbolShown = atlasCell >= 0;
                     // A view of more symbols than the atlas holds shows the rest as plain rooms, rather than as nothing
                     if (atlasCell < 0 && !cell.plain.isEmpty()) {
                         atlasCell = glyphAtlasCell(cell.plain, false);
                     }
                     appendGlyph(batch, texture, cell.center, atlasCell, scmGlyphSize, textColor);
+                    if (symbolShown && cell.underline.w() > 0.0f && blockCell >= 0) {
+                        const QVector3D corner = cell.center - groundRight * (scmGlyphCell * scmGlyphUnderlineWidth / 2.0f) - groundUp * (scmGlyphCell / 2.0f);
+                        GeometryManager::appendQuad(batch,
+                                                    corner,
+                                                    groundRight * (scmGlyphCell * scmGlyphUnderlineWidth),
+                                                    groundUp * (scmGlyphCell * scmGlyphUnderlineHeight),
+                                                    cell.underline,
+                                                    glyphAtlasRect(blockCell, true));
+                    }
                     continue;
                 }
                 // Narrowed so that the whole ID is no wider than one character, however many digits it has
@@ -1818,12 +1926,14 @@ void ModernGLWidget::renderRooms()
         const QColor nameHalo = style.labelHalos ? background : QColor();
         // A halo covers what it overlaps as the text does
         const int nameHaloWidth = textHaloWidth(nameMetrics, nameHalo.isValid());
+        const qreal spaceWidth = nameMetrics.horizontalAdvance(QLatin1Char(' '));
         QList<QRectF> nameRects;
         nameRects.reserve(roomNames.size());
         for (const RoomName& roomName : std::as_const(roomNames)) {
-            const QSizeF size(qMax(1, qCeil(nameMetrics.horizontalAdvance(roomName.name))) + 2 * nameHaloWidth, qMax(1, qCeil(nameMetrics.height())) + 2 * nameHaloWidth);
-            const QVector3D across = groundRight * static_cast<float>(size.width() * textTexel);
-            const QVector3D upward = groundUp * static_cast<float>(size.height() * textTexel);
+            const QSizeF size(qMax(1, qCeil(style.roomNameSpan(nameMetrics.horizontalAdvance(roomName.name), spaceWidth))) + 2 * nameHaloWidth,
+                              qMax(1, qCeil(nameMetrics.height())) + 2 * nameHaloWidth);
+            const QVector3D across = groundRight * static_cast<float>(size.width() * nameTexel);
+            const QVector3D upward = groundUp * static_cast<float>(size.height() * nameTexel);
             nameRects.append(screenRect(roomName.center - across / 2.0f - upward / 2.0f, across, upward));
         }
         for (const qsizetype index : GeometryManager::declutteredRects(nameRects, scmMinimumTextPixels)) {
@@ -1834,8 +1944,8 @@ void ModernGLWidget::renderRooms()
                 key.append(qsl("|halo|%1").arg(nameHalo.name(QColor::HexArgb)));
             }
             if (const GLuint texture = textTexture(key, roomName.name, nameFont, nameMetrics, roomName.color, size, nameHalo)) {
-                const QVector3D across = groundRight * (size.width() * textTexel);
-                const QVector3D upward = groundUp * (size.height() * textTexel);
+                const QVector3D across = groundRight * (size.width() * nameTexel);
+                const QVector3D upward = groundUp * (size.height() * nameTexel);
                 GeometryData& batch = roomName.decals->text[texture];
                 batch.textureId = texture;
                 GeometryManager::appendQuad(batch, roomName.center - across / 2.0f - upward / 2.0f, across, upward, roomName.tint);
@@ -1867,6 +1977,11 @@ void ModernGLWidget::renderRooms()
                         batch, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix(), RenderCommand::Shading::Unlit));
             }
         };
+        queue(decals.shadows);
+        for (const GeometryData& batch : decals.ground) {
+            queue(batch);
+        }
+        queue(decals.sheen);
         // The selection shades the room itself, as the 2D map's does, so it is under everything drawn on it
         queue(decals.selection);
         const QHash<GLuint, GeometryData>& lower = pArea->gridMode ? decals.highlights : decals.symbols;
@@ -2050,6 +2165,7 @@ ExitScene::Options ModernGLWidget::exitSceneOptions() const
     options.glyphs = style.glyphs == MapStyle::Glyphs::Terminal;
     options.roomSize = roomSize;
     options.roundRooms = style.roundRooms(mpHost->mBubbleMode);
+    options.dashedStairs = style.dashedStairs;
     options.background = backgroundColor();
     return options;
 }
@@ -2090,6 +2206,15 @@ const MapStyle& ModernGLWidget::mapStyle() const
 QColor ModernGLWidget::backgroundColor() const
 {
     return mapStyle().backgroundColor(mpHost->mBgColor_2);
+}
+
+QColor ModernGLWidget::playerMarkerColor() const
+{
+    const MapStyle& style = mapStyle();
+    if (style.playerColor.isValid() && style.themesPlayerMarker(mpMap->mPlayerRoomStyle, mpHost->mMapStrongHighlight)) {
+        return style.playerColor;
+    }
+    return RoomAppearance::playerBeaconColor(mpHost->mMapStrongHighlight ? 0 : mpMap->mPlayerRoomStyle, mpMap->mPlayerRoomOuterColor);
 }
 
 void ModernGLWidget::queueGrid()
@@ -3413,33 +3538,94 @@ QRect ModernGLWidget::statusLineRect() const
     return QRect(0, height() - lineHeight, width(), lineHeight);
 }
 
-void ModernGLWidget::paintStatusLine(QPainter& painter)
+QList<ModernGLWidget::StatusLinePart> ModernGLWidget::statusLineParts() const
 {
-    const QRect area = statusLineRect();
-    if (area.isEmpty() || !mpMap || !mpMap->mpRoomDB) {
-        return;
+    QList<StatusLinePart> parts;
+    if (!mpMap || !mpMap->mpRoomDB || !mpHost) {
+        return parts;
     }
-    QStringList parts;
+    const MapStyle& style = mapStyle();
+    const QColor dim = style.ink.isValid() ? style.ink : ExitAppearance::contrastColor(backgroundColor());
+    // Lifted as the rooms are, so that a profile's dark ANSI colors still show on the dark band
+    const QColor bright = style.roomColor(mpHost->mLightWhite_2);
     if (const QString areaName = mpMap->mpRoomDB->getAreaNamesMap().value(mAID); !areaName.isEmpty()) {
-        parts.append(areaName);
+        parts.append({qsl("["), dim});
+        parts.append({areaName, style.roomColor(mpHost->mLightCyan_2)});
+        parts.append({qsl("]  "), dim});
     }
     const int playerRoomId = mpMap->mRoomIdHash.value(mpMap->mProfileName);
     if (const TRoom* pR = mpMap->mpRoomDB->getRoom(playerRoomId); pR && pR->getArea() == mAID) {
-        //: The terminal map style's status line: where the player (shown as @ on the map) is - room ID, then its x, y and z coordinates
-        parts.append(tr("@ room %1 at %2,%3,%4").arg(QString::number(playerRoomId), QString::number(pR->x()), QString::number(pR->y()), QString::number(pR->z())));
+        parts.append({qsl("@ %1 ").arg(playerRoomId), bright});
+        parts.append({qsl("(%1,%2,%3)  ").arg(QString::number(pR->x()), QString::number(pR->y()), QString::number(pR->z())), dim});
+        QStringList exits;
+        for (const int direction : {DIR_NORTH, DIR_NORTHEAST, DIR_EAST, DIR_SOUTHEAST, DIR_SOUTH, DIR_SOUTHWEST, DIR_WEST, DIR_NORTHWEST, DIR_IN, DIR_OUT}) {
+            if (pR->getExit(direction) > 0) {
+                exits.append(TRoom::dirCodeToShortString(direction));
+            }
+        }
+        const QMap<QString, int>& specialExits = pR->getSpecialExits();
+        for (auto it = specialExits.cbegin(); it != specialExits.cend(); ++it) {
+            if (it.value() > 0) {
+                // Quoted where it has spaces, so its words do not read as exits of their own
+                exits.append(it.key().contains(QLatin1Char(' ')) ? qsl("\"%1\"").arg(it.key()) : it.key());
+            }
+        }
+        if (!exits.isEmpty()) {
+            //: The terminal map style's status line, before the list of directions (n e s w...) out of the player's room
+            parts.append({tr("exits:") + QLatin1Char(' '), dim});
+            parts.append({exits.join(QLatin1Char(' ')) + qsl("  "), bright});
+        }
+        // As the map shows a staircase up < and down >, each with where it leads
+        for (const auto& [direction, stair] : {std::pair{DIR_UP, QLatin1Char('<')}, std::pair{DIR_DOWN, QLatin1Char('>')}}) {
+            const int destinationId = pR->getExit(direction);
+            if (destinationId <= 0) {
+                continue;
+            }
+            const TRoom* pDestination = mpMap->mpRoomDB->getRoom(destinationId);
+            parts.append({QString(stair) + QLatin1Char(' '), bright});
+            parts.append({(pDestination && !pDestination->name.isEmpty() ? pDestination->name : QString::number(destinationId)) + qsl("  "), dim});
+        }
     }
     if (const TRoom* pR = mpMap->mpRoomDB->getRoom(mHoveredRoomId); pR && mHoveredRoomId != playerRoomId) {
         //: The terminal map style's status line: the room under the mouse pointer - its ID, then its name if it has one
-        parts.append(tr("cursor: room %1 %2").arg(QString::number(mHoveredRoomId), pR->name).trimmed());
+        parts.append({tr("cursor: room %1 %2").arg(QString::number(mHoveredRoomId), pR->name).trimmed() + QLatin1Char(' '), dim});
     }
-    // Reverse video, as a terminal program draws its status line
+    return parts;
+}
+
+void ModernGLWidget::paintStatusLine(QPainter& painter)
+{
+    const QRect area = statusLineRect();
+    if (area.isEmpty()) {
+        return;
+    }
+    const QList<StatusLinePart> parts = statusLineParts();
     const QColor ink = mapStyle().ink.isValid() ? mapStyle().ink : ExitAppearance::contrastColor(backgroundColor());
+    // A shade lighter than the screen, as a terminal program's status bar
+    const QColor screen = backgroundColor();
+    const QColor band =
+            QColor::fromRgbF(screen.redF() + (ink.redF() - screen.redF()) * 0.15f, screen.greenF() + (ink.greenF() - screen.greenF()) * 0.15f, screen.blueF() + (ink.blueF() - screen.blueF()) * 0.15f);
     painter.save();
-    painter.fillRect(area, ink);
-    painter.setPen(backgroundColor());
+    painter.fillRect(area, band);
     painter.setFont(statusLineFont(mapStyle()));
-    const QString text = parts.join(qsl(" | "));
-    painter.drawText(area.adjusted(6, 0, -6, 0), Qt::AlignLeft | Qt::AlignVCenter, QFontMetrics(painter.font()).elidedText(text, Qt::ElideRight, area.width() - 12));
+    const QFontMetrics metrics(painter.font());
+    const QRect text = area.adjusted(8, 0, -8, 0);
+    int x = text.left();
+    for (const StatusLinePart& part : parts) {
+        const int room = text.right() - x;
+        const QString shown = metrics.elidedText(part.text, Qt::ElideRight, room);
+        painter.setPen(part.color);
+        painter.drawText(QRect(x, text.top(), room, text.height()), Qt::AlignLeft | Qt::AlignVCenter, shown);
+        x += metrics.horizontalAdvance(shown);
+        if (shown != part.text) {
+            break;
+        }
+    }
+    // A terminal's cursor, waiting at the end of the line
+    const int cursorWidth = metrics.horizontalAdvance(QLatin1Char('M'));
+    if (x + cursorWidth <= text.right()) {
+        painter.fillRect(QRect(x, text.top() + 3, cursorWidth, text.height() - 6), mapStyle().roomColor(mpHost->mLightGreen_2));
+    }
     painter.restore();
 }
 
@@ -3467,14 +3653,19 @@ void ModernGLWidget::paintCompass(QPainter& painter)
     }
     const qreal angle = QLineF(QPointF(), QPointF(0.0, -1.0)).angleTo(north);
 
+    const MapStyle& style = mapStyle();
     const QColor contrast = ExitAppearance::contrastColor(backgroundColor());
     QColor face = backgroundColor();
     face.setAlpha(200);
+    if (style.compassFace.isValid()) {
+        face = style.compassFace;
+    }
+    const QColor rim = style.compassRim.isValid() ? style.compassRim : contrast;
     painter.save();
     painter.setRenderHint(QPainter::Antialiasing);
     painter.translate(QRectF(area).center());
     const qreal radius = area.width() / 2.0;
-    painter.setPen(QPen(contrast, 1.5));
+    painter.setPen(QPen(rim, 1.5));
     painter.setBrush(face);
     painter.drawEllipse(QPointF(), radius, radius);
     // QLineF angles run counterclockwise, QPainter's rotation clockwise
@@ -3482,10 +3673,169 @@ void ModernGLWidget::paintCompass(QPainter& painter)
     const qreal needle = radius * 0.7;
     const qreal halfWidth = radius * 0.22;
     painter.setPen(Qt::NoPen);
-    painter.setBrush(QColor(220, 40, 40));
+    painter.setBrush(style.compassNeedle.isValid() ? style.compassNeedle : QColor(220, 40, 40));
     painter.drawPolygon(QPolygonF({QPointF(0.0, -needle), QPointF(halfWidth, 0.0), QPointF(-halfWidth, 0.0)}));
-    painter.setBrush(contrast);
+    painter.setBrush(rim);
     painter.drawPolygon(QPolygonF({QPointF(0.0, needle), QPointF(halfWidth, 0.0), QPointF(-halfWidth, 0.0)}));
+    painter.restore();
+}
+
+QFont ModernGLWidget::sheetFont() const
+{
+    QFont font = mapStyle().labelFont(mpMap->mMapSymbolFont);
+    font.setBold(false);
+    font.setItalic(false);
+    font.setPixelSize(12);
+    return font;
+}
+
+QRect ModernGLWidget::paintTitleBlock(QPainter& painter, const TArea& area, const int top)
+{
+    const MapStyle& style = mapStyle();
+    if (!style.titleBlock) {
+        return QRect();
+    }
+    const QFont font = sheetFont();
+    const QFontMetrics metrics(font);
+    constexpr int padding = 8;
+    constexpr int margin = 12;
+    const QString levelLine = MapDecals::titleLevelLine(mMapCenterZ, area.zLevels);
+    const QRect compass = compassRect();
+    const int right = compass.isEmpty() ? width() - margin : compass.left() - margin;
+    const int rowHeight = metrics.height() + padding;
+    const int widest = right - margin;
+    const QString areaName = metrics.elidedText(mpMap->mpRoomDB->getAreaNamesMap().value(mAID), Qt::ElideRight, widest - 2 * padding);
+    const int blockWidth = qMax(metrics.horizontalAdvance(areaName), metrics.horizontalAdvance(levelLine)) + 2 * padding;
+    // A view too small to spare the room for it has none
+    const QRect block(right - blockWidth, height() - margin - 2 * rowHeight, blockWidth, 2 * rowHeight);
+    if (blockWidth > widest || 2 * rowHeight > height() / 3 || block.top() < top) {
+        return QRect();
+    }
+    const QColor ink = style.exitColor(mpHost->mFgColor_2);
+    QColor paper = backgroundColor();
+    paper.setAlpha(220);
+    painter.save();
+    painter.setFont(font);
+    painter.setPen(QPen(ink, 1.0));
+    painter.setBrush(paper);
+    painter.drawRect(block);
+    painter.drawLine(block.left(), block.top() + rowHeight, block.right(), block.top() + rowHeight);
+    const QRect nameRow(block.left() + padding, block.top(), block.width() - 2 * padding, rowHeight);
+    painter.drawText(nameRow, Qt::AlignLeft | Qt::AlignVCenter, areaName);
+    painter.drawText(nameRow.translated(0, rowHeight), Qt::AlignLeft | Qt::AlignVCenter, levelLine);
+    painter.restore();
+    return block;
+}
+
+void ModernGLWidget::paintLevelCallouts(QPainter& painter, const TArea& area, const int top, const QRect& titleBlock)
+{
+    const MapStyle& style = mapStyle();
+    if (!style.levelCallouts || cameraFixedByGridMode()) {
+        return;
+    }
+    const QRectF view = QRectF(rect()).adjusted(0.0, top, 0.0, 0.0);
+    const QRect compass = compassRect();
+    const QMatrix4x4 toClip = mCameraController.getProjectionMatrix() * mCameraController.getViewMatrix() * mCameraController.getModelMatrix();
+    // Each shown level's room furthest right on screen, among those not under what is painted over the map
+    struct Level
+    {
+        std::optional<QPointF> rightmost;
+        int rooms = 0;
+    };
+    QMap<int, Level> levels;
+    for (const int roomId : area.getAreaRooms()) {
+        const TRoom* pR = mpMap->mpRoomDB->getRoom(roomId);
+        if (!pR || pR->isHidden() || !levelShown(pR->z())) {
+            continue;
+        }
+        Level& level = levels[pR->z()];
+        ++level.rooms;
+        const QVector4D clip = toClip * QVector4D(static_cast<float>(pR->x()), static_cast<float>(pR->y()), static_cast<float>(pR->z()), 1.0f);
+        if (clip.w() <= 0.0f) {
+            continue;
+        }
+        const QPointF pixel((clip.x() / clip.w() + 1.0f) / 2.0f * static_cast<float>(width()), (1.0f - clip.y() / clip.w()) / 2.0f * static_cast<float>(height()));
+        if ((!level.rightmost || pixel.x() > level.rightmost->x()) && view.contains(pixel) && !QRectF(compass).contains(pixel) && !QRectF(titleBlock).contains(pixel)) {
+            level.rightmost = pixel;
+        }
+    }
+    // The callouts stand clear of the level shown, where they can
+    qreal rightmost = 0.0;
+    if (const auto viewed = levels.constFind(mMapCenterZ); viewed != levels.cend()) {
+        if (viewed->rightmost) {
+            rightmost = viewed->rightmost->x();
+        }
+        levels.erase(viewed);
+    }
+    QList<int> pointedAt;
+    for (auto level = levels.cbegin(); level != levels.cend(); ++level) {
+        if (level->rightmost) {
+            pointedAt.append(level.key());
+        }
+    }
+    if (pointedAt.isEmpty()) {
+        return;
+    }
+
+    const QFont font = sheetFont();
+    const QFontMetrics metrics(font);
+    constexpr int margin = 12;
+    constexpr int gap = 28;
+    const qreal lineHeight = metrics.height() + 4;
+    const qreal highest = top + margin + lineHeight / 2.0;
+    const qreal lowest = (titleBlock.isEmpty() ? (compass.isEmpty() ? height() : compass.top()) : titleBlock.top()) - margin - lineHeight / 2.0;
+    // As many as the view has room for, and no more than can be told apart, the furthest from the shown level left out
+    constexpr int mostCallouts = 8;
+    const int fit = lowest < highest ? 0 : static_cast<int>((lowest - highest) / lineHeight) + 1;
+    const QList<int> named = MapDecals::calloutLevels(pointedAt, mMapCenterZ, qMin(mostCallouts, fit));
+    if (named.isEmpty()) {
+        return;
+    }
+
+    struct Callout
+    {
+        QPointF anchor;
+        QString text;
+    };
+    QList<Callout> callouts;
+    int widestText = 0;
+    QList<qreal> wanted;
+    for (const int z : named) {
+        const Level& level = levels.value(z);
+        callouts.append({*level.rightmost, MapDecals::levelCallout(z, level.rooms)});
+        widestText = qMax(widestText, metrics.horizontalAdvance(callouts.constLast().text));
+        rightmost = qMax(rightmost, level.rightmost->x());
+        wanted.append(level.rightmost->y());
+    }
+    const qreal textLeft = qMin(rightmost + gap, static_cast<qreal>(width() - margin - widestText));
+    const QList<qreal> placed = MapDecals::spreadCallouts(wanted, lineHeight, highest, lowest);
+
+    const QColor ink = style.exitColor(mpHost->mFgColor_2);
+    QColor leader = ink;
+    leader.setAlpha(170);
+    QColor paper = backgroundColor();
+    paper.setAlpha(200);
+    painter.save();
+    painter.setRenderHint(QPainter::Antialiasing);
+    painter.setFont(font);
+    for (qsizetype i = 0; i < callouts.size(); ++i) {
+        const Callout& callout = callouts.at(i);
+        const QPointF end(textLeft - 6.0, placed.at(i));
+        // Dashed, so that a leader running over the map does not read as an exit. None from a room the callouts,
+        // pushed against the view's edge, already stand over
+        if (callout.anchor.x() < end.x()) {
+            painter.setPen(QPen(leader, 1.0, Qt::DashLine));
+            painter.drawLine(callout.anchor, end);
+        }
+        painter.setPen(Qt::NoPen);
+        painter.setBrush(ink);
+        painter.drawEllipse(callout.anchor, 2.5, 2.5);
+        const QRectF textRect(textLeft - 2.0, end.y() - lineHeight / 2.0, metrics.horizontalAdvance(callout.text) + 4.0, lineHeight);
+        painter.setBrush(paper);
+        painter.drawRect(textRect);
+        painter.setPen(ink);
+        painter.drawText(textRect, Qt::AlignCenter, callout.text);
+    }
     painter.restore();
 }
 
@@ -3499,7 +3849,11 @@ void ModernGLWidget::renderPlayerBeacon()
     if (!pR || pR->getArea() != mAID || pR->isHidden() || !levelShown(pR->z())) {
         return;
     }
-    const QColor color = RoomAppearance::playerBeaconColor(mpHost->mMapStrongHighlight ? 0 : mpMap->mPlayerRoomStyle, mpMap->mPlayerRoomOuterColor);
+    // Kept where the profile's own marker is drawn in place of the style's
+    if (!mapStyle().playerBeacon && mapStyle().themesPlayerMarker(mpMap->mPlayerRoomStyle, mpHost->mMapStrongHighlight)) {
+        return;
+    }
+    const QColor color = playerMarkerColor();
     const float roomSize = 2.0f / scale;
     const float roomHeight = roomSize / zFlattening;
     const float width = roomSize * 0.3f;
@@ -3753,9 +4107,16 @@ void ModernGLWidget::renderLabels(const bool onTop, const int lowestLevel, const
     if (!pArea || pArea->mMapLabels.isEmpty()) {
         return;
     }
+    // Other areas' are kept for going back to them; those and deleted labels go once there are many more than this area has
+    if (mThemedLabels.size() > std::max<qsizetype>(scmThemedLabelsKept, 2 * pArea->mMapLabels.size())) {
+        mThemedLabels.removeIf([this, pArea](const auto& entry) {
+            return entry.key().first != mAID || !pArea->mMapLabels.contains(entry.key().second);
+        });
+    }
 
     const float roomHeight = 2.0f / scale / zFlattening;
     const bool moreTransparent = mpHost->experimentEnabled(qsl("experiment.rendering.more-transparent"));
+    const MapStyle& style = mapStyle();
     const QVector3D screenRight = mCameraController.screenRight();
     const QVector3D screenUp = mCameraController.screenUp();
     // Turned around while the top of the screen faces south, so that it never reads upside down
@@ -3782,17 +4143,19 @@ void ModernGLWidget::renderLabels(const bool onTop, const int lowestLevel, const
             continue;
         }
 
+        const QPixmap* themed = themedLabel(it.key(), label, style);
+        const QPixmap& pixmap = themed ? *themed : label.pix;
         // Halo and all, as wide as the label is with it
         QPointF margin;
         GLuint textureId = 0;
         // Only around text, which lines would otherwise run through: a picture would grow a band over what is round it,
-        // and an opaque box already hides them
-        if (halo.isValid() && !label.text.isEmpty() && label.bgColor.alpha() < 255 && !label.pix.isNull()) {
+        // and an opaque box already hides them. A themed label brings its own halo
+        if (!themed && halo.isValid() && !label.text.isEmpty() && label.bgColor.alpha() < 255) {
             const HaloedLabel& haloed = haloedLabel(it.key(), label.pix, halo, label.bgColor.alpha());
             margin = haloed.margin;
             textureId = mLabelTextureCache.getTexture(mAID, it.key(), haloed.pixmap);
         } else {
-            textureId = mLabelTextureCache.getTexture(mAID, it.key(), label.pix);
+            textureId = mLabelTextureCache.getTexture(mAID, it.key(), pixmap);
         }
         if (textureId == 0) {
             continue;
@@ -3806,7 +4169,7 @@ void ModernGLWidget::renderLabels(const bool onTop, const int lowestLevel, const
             // Its own size in pixels whatever the zoom, as on the 2D map, so it faces the screen
             const QVector3D corner(x, y, z);
             const float worldPerPixel = mCameraController.worldUnitsPerPixel(corner);
-            const QSizeF pixels = label.pix.deviceIndependentSize();
+            const QSizeF pixels = pixmap.deviceIndependentSize();
             const auto labelWidth = static_cast<float>(pixels.width()) * worldPerPixel;
             const auto labelHeight = static_cast<float>(pixels.height()) * worldPerPixel;
             const QVector3D center = corner + screenRight * (labelWidth / 2.0f) - screenUp * (labelHeight / 2.0f);
@@ -3854,6 +4217,22 @@ void ModernGLWidget::renderLabels(const bool onTop, const int lowestLevel, const
     } else {
         mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::ENABLE_DEPTH_WRITE));
     }
+}
+
+const QPixmap* ModernGLWidget::themedLabel(const int labelId, const TMapLabel& label, const MapStyle& style)
+{
+    if (!style.themedMapLabels) {
+        mThemedLabels.clear();
+        return nullptr;
+    }
+    ThemedLabel& themed = mThemedLabels[{mAID, labelId}];
+    if (themed.sourceKey != label.pix.cacheKey() || themed.styleId != style.id) {
+        const QImage image = MapDecals::themedLabel(label, style);
+        themed.sourceKey = label.pix.cacheKey();
+        themed.styleId = style.id;
+        themed.pixmap = image.isNull() ? QPixmap() : QPixmap::fromImage(image);
+    }
+    return themed.pixmap.isNull() ? nullptr : &themed.pixmap;
 }
 
 void ModernGLWidget::startSmoothTransition(int targetAID, int targetX, int targetY, int targetZ)

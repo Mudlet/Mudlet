@@ -710,6 +710,9 @@ public:
     static int addMapEvent(lua_State*);
     static int removeMapEvent(lua_State*);
     static int getMapEvents(lua_State*);
+    static int getMapEnvironmentKit(lua_State*);
+    static int getMapEnvironmentKits(lua_State*);
+    static int setMapEnvironmentKit(lua_State*);
     static int addMapMenu(lua_State*);
     static int removeMapMenu(lua_State*);
     static int getMapMenus(lua_State*);

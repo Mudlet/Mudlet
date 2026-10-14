@@ -69,8 +69,12 @@ private:
     static constexpr int kPlayerRoomId = 1;
     static constexpr int kEastRoomId = 2;
     static constexpr int kLowerRoomId = 3;
-    // As renderRooms sizes it: 2 / scale (4) / zFlattening (8)
-    static constexpr float kRoomHeight = 2.0f / 4.0f / 8.0f;
+    // As renderRooms sizes the default style's rooms
+    static float roomHeight()
+    {
+        const MapStyle* tiles = MapStyle::find(qsl("tiles"));
+        return 2.0f / tiles->roomScale / tiles->roomFlattening;
+    }
 
     static bool portableMarkerPresent()
     {
@@ -237,7 +241,7 @@ private slots:
         QVERIFY2(widget.failureMessage().isEmpty(), qPrintable(widget.failureMessage()));
         mpHost->mMapGridColor = QColor(Qt::white);
         mpHost->mMapGridLineSize = 5.0;
-        const QVector3D onALine(1.0f, 1.5f, -kRoomHeight / 2.0f);
+        const QVector3D onALine(1.0f, 1.5f, -roomHeight() / 2.0f);
 
         mpHost->mMapperShowGrid = false;
         const QColor hidden = colorAt(widget, onALine);
@@ -260,15 +264,18 @@ private slots:
         if (!widget.isValid()) {
             QSKIP("no OpenGL context on this platform");
         }
-        const QVector3D corner(2.22f, 0.22f, kRoomHeight / 2.0f);
-        const QVector3D empty(2.4f, 0.4f, kRoomHeight / 2.0f);
+        const float halfRoom = 1.0f / MapStyle::find(qsl("tiles"))->roomScale;
+        // The corner away from the view's middle, which sees the block's other sides, and from its shadow to the south east
+        const QVector3D corner(2.0f + halfRoom * 0.9f, halfRoom * 0.9f, roomHeight() / 2.0f);
+        // Between the rooms, on the level's floor
+        const QVector3D empty(1.0f, halfRoom * 0.9f, roomHeight() / 2.0f);
 
         mpHost->mBubbleMode = false;
         const QColor square = colorAt(widget, corner);
         const QColor squareEmpty = colorAt(widget, empty);
         mpHost->mBubbleMode = true;
         const QColor round = colorAt(widget, corner);
-        const QColor middle = colorAt(widget, QVector3D(2.0f, 0.0f, kRoomHeight / 2.0f));
+        const QColor middle = colorAt(widget, QVector3D(2.0f, 0.0f, roomHeight() / 2.0f));
         mpHost->mBubbleMode = false;
         QVERIFY(square.isValid() && squareEmpty.isValid() && round.isValid() && middle.isValid());
         QVERIFY2(difference(square, squareEmpty) > 60, qPrintable(qsl("a square room's corner is %1, beside it %2").arg(square.name(), squareEmpty.name())));
@@ -291,7 +298,7 @@ private slots:
         const QColor savedLower = mpHost->mLowerLevelColor;
         const bool savedShown = mudlet::self()->drawUpperLowerLevels();
         mpHost->mLowerLevelColor = QColor(Qt::red);
-        const QVector3D lowerRoom(0.0f, 2.0f, -1.0f + kRoomHeight / 2.0f);
+        const QVector3D lowerRoom(0.0f, 2.0f, -1.0f + roomHeight() / 2.0f);
 
         mudlet::self()->setDrawUpperLowerLevels(false);
         const QColor plain = colorAt(widget, lowerRoom);
@@ -343,7 +350,7 @@ private slots:
                 const auto* triangles = static_cast<const RenderTrianglesCommand*>(command);
                 gridAtTheRoomsBottoms = !triangles->vertices().isEmpty();
                 for (qsizetype i = 2; i < triangles->vertices().size(); i += 3) {
-                    gridAtTheRoomsBottoms = gridAtTheRoomsBottoms && qFuzzyCompare(triangles->vertices().at(i), -kRoomHeight / 2.0f);
+                    gridAtTheRoomsBottoms = gridAtTheRoomsBottoms && qFuzzyCompare(triangles->vertices().at(i), -roomHeight() / 2.0f);
                 }
                 const auto* before = index > 0 ? dynamic_cast<const GLStateCommand*>(commands.at(index - 1).get()) : nullptr;
                 const auto* after = index + 1 < static_cast<qsizetype>(commands.size()) ? dynamic_cast<const GLStateCommand*>(commands.at(index + 1).get()) : nullptr;
@@ -466,7 +473,7 @@ private slots:
         const bool savedShown = mudlet::self()->drawUpperLowerLevels();
         mpHost->mLowerLevelColor = QColor(255, 0, 0, 64);
         ModernGLWidget widget(map(), mpHost);
-        const float floorZ = -1.0f - kRoomHeight;
+        const float floorZ = -1.0f - roomHeight();
         const auto redness = [&widget, floorZ]() {
             float room = std::numeric_limits<float>::lowest();
             float floor = std::numeric_limits<float>::lowest();
@@ -497,23 +504,26 @@ private slots:
         mudlet::self()->setDrawUpperLowerLevels(savedShown);
         mpHost->mLowerLevelColor = savedLower;
 
-        QCOMPARE(plainTarget, mpHost->mBgColor_2);
-        QCOMPARE(lowerTarget, GeometryManager::levelFadeTarget(-1, mpHost->mBgColor_2, mpHost->mUpperLevelColor, QColor(255, 0, 0, 64)));
-        QCOMPARE(upperTarget, GeometryManager::levelFadeTarget(1, mpHost->mBgColor_2, mpHost->mUpperLevelColor, QColor(255, 0, 0, 64)));
-        QCOMPARE(viewedTarget, mpHost->mBgColor_2);
+        const QColor background = mpHost->mapStylePreset().backgroundColor(mpHost->mBgColor_2);
+        QCOMPARE(plainTarget, background);
+        QCOMPARE(lowerTarget, GeometryManager::levelFadeTarget(-1, background, mpHost->mUpperLevelColor, QColor(255, 0, 0, 64)));
+        QCOMPARE(upperTarget, GeometryManager::levelFadeTarget(1, background, mpHost->mUpperLevelColor, QColor(255, 0, 0, 64)));
+        QCOMPARE(viewedTarget, background);
         QVERIFY2(plainRoom > std::numeric_limits<float>::lowest() && plainFloor > std::numeric_limits<float>::lowest(), "the room or floor below was not drawn");
         QVERIFY2(coloredRoom > plainRoom + 0.02f, qPrintable(qsl("the room below is %1 red with the levels' colors and %2 without").arg(coloredRoom).arg(plainRoom)));
         QVERIFY2(coloredFloor > plainFloor + 0.002f, qPrintable(qsl("the floor below is %1 red with the levels' colors and %2 without").arg(coloredFloor).arg(plainFloor)));
     }
 
-    // Tiles draws the profile's own colors, as it did before there were other styles to pick
+    // Tiles keeps the profile's own colors, softened but not swapped for a palette of its own
     void test_tilesTakesTheProfilesColors()
     {
         const MapStyle* tiles = MapStyle::find(qsl("tiles"));
         QVERIFY(tiles);
         const QColor environment(10, 200, 30, 128);
         const QColor profileColor(1, 2, 3, 4);
-        QCOMPARE(tiles->roomColor(environment), environment);
+        QCOMPARE(tiles->palette, MapStyle::Palette::Soft);
+        QCOMPARE(tiles->roomColor(environment).alpha(), environment.alpha());
+        QVERIFY(qAbs(tiles->roomColor(environment).hueF() - environment.hueF()) < 0.02f);
         QCOMPARE(tiles->backgroundColor(profileColor), profileColor);
         QCOMPARE(tiles->exitColor(profileColor), profileColor);
         QCOMPARE(tiles->symbolColor(QColor(), environment), RoomAppearance::symbolColor(QColor(), environment));
@@ -582,6 +592,46 @@ private slots:
         QVERIFY2(!tilesInkIds, "tiles drew room IDs in the blueprint ink");
         QVERIFY2(blueprintOutlines >= 0, "blueprint queued no outlines in its ink");
         QVERIFY2(blueprintInkIds, "blueprint drew room IDs in another color than its ink");
+    }
+
+    // Blueprint's crosshair takes the place of the beacon, but where the profile's own marker is drawn instead the
+    // beacon still helps find the player
+    void test_blueprintDropsTheBeaconOnlyForItsOwnMarker()
+    {
+        const int areaId = addArea();
+        QVERIFY(areaId > 0);
+        const int savedRoomStyle = map()->mPlayerRoomStyle;
+        const bool savedStrong = mpHost->mMapStrongHighlight;
+        const auto restore = qScopeGuard([this, savedRoomStyle, savedStrong]() {
+            mpHost->setMapStyle(qsl("tiles"));
+            map()->mPlayerRoomStyle = savedRoomStyle;
+            mpHost->mMapStrongHighlight = savedStrong;
+        });
+        map()->mPlayerRoomStyle = 0;
+        mpHost->mMapStrongHighlight = false;
+        ModernGLWidget widget(map(), mpHost);
+        queueFrame(widget, areaId);
+        const auto beaconCommands = [&widget]() {
+            widget.mRenderCommandQueue.clear();
+            widget.renderPlayerBeacon();
+            return std::count_if(widget.mRenderCommandQueue.commands().cbegin(), widget.mRenderCommandQueue.commands().cend(), [](const auto& command) {
+                return dynamic_cast<const RenderInstancedCubesCommand*>(command.get()) != nullptr;
+            });
+        };
+
+        const auto tilesBeacon = beaconCommands();
+        QVERIFY(mpHost->setMapStyle(qsl("blueprint")));
+        const auto blueprintBeacon = beaconCommands();
+        map()->mPlayerRoomStyle = 1;
+        const auto profileMarkerBeacon = beaconCommands();
+        map()->mPlayerRoomStyle = 0;
+        mpHost->mMapStrongHighlight = true;
+        const auto strongHighlightBeacon = beaconCommands();
+
+        QVERIFY2(tilesBeacon > 0, "tiles queued no beacon");
+        QCOMPARE(blueprintBeacon, 0);
+        QVERIFY2(profileMarkerBeacon > 0, "blueprint dropped the beacon though the profile's own player marker is drawn");
+        QVERIFY2(strongHighlightBeacon > 0, "blueprint dropped the beacon though the profile's strong highlight is drawn");
     }
 
     // Outlines are kept from frame to frame, and pieced together from the ones that did not change, so after
@@ -1002,6 +1052,41 @@ private slots:
         QVERIFY2(symbolsWithoutIds, "rooms whose IDs are too small to read show no symbols");
     }
 
+    void test_terminalStatusLineListsTheWaysOutWithoutGL()
+    {
+        const int areaId = addArea();
+        QVERIFY(areaId > 0);
+        constexpr int kTowerId = 4;
+        QVERIFY(addRoomAt(kTowerId, areaId, 0, 0, 1));
+        map()->mpRoomDB->getRoom(kTowerId)->name = qsl("tower");
+        TRoom* pPlayerRoom = map()->mpRoomDB->getRoom(kPlayerRoomId);
+        pPlayerRoom->setExit(kEastRoomId, DIR_EAST);
+        pPlayerRoom->setExit(kTowerId, DIR_UP);
+        pPlayerRoom->setExit(kLowerRoomId, DIR_DOWN);
+        pPlayerRoom->setSpecialExit(kEastRoomId, qsl("enter portal"));
+        const auto restore = qScopeGuard([this]() {
+            mpHost->setMapStyle(qsl("tiles"));
+        });
+        QVERIFY(mpHost->setMapStyle(qsl("terminal")));
+
+        ModernGLWidget widget(map(), mpHost);
+        widget.setViewCenter(areaId, 0, 0, 0);
+        QString line;
+        QHash<QString, QColor> colors;
+        for (const ModernGLWidget::StatusLinePart& part : widget.statusLineParts()) {
+            line += part.text;
+            colors.insert(part.text.trimmed(), part.color);
+        }
+        QVERIFY2(line.startsWith(qsl("[Render Area]")), qPrintable(line));
+        QVERIFY2(line.contains(qsl("(0,0,0)")), qPrintable(line));
+        QVERIFY2(line.contains(qsl("exits: e \"enter portal\" ")), qPrintable(line));
+        // The stairs are named by where they lead, or by its ID where that has no name
+        QVERIFY2(line.contains(qsl("< tower")), qPrintable(line));
+        QVERIFY2(line.contains(qsl("> %1").arg(kLowerRoomId)), qPrintable(line));
+        QCOMPARE(colors.value(qsl("Render Area")), mpHost->mLightCyan_2);
+        QCOMPARE(colors.value(qsl("e \"enter portal\"")), mpHost->mLightWhite_2);
+    }
+
     // Two areas' symbols together overflow the terminal style's glyph atlas, so each switch starts it again;
     // every room must still be drawn from the cell holding its own character, in a texture drawn with it there
     void test_terminalGlyphsComeFromTheirOwnAtlasCellsWithoutGL()
@@ -1075,6 +1160,10 @@ private slots:
                     const float* texture = batch.textureCoords.constData() + quad * 12;
                     const QPair<int, int> place{qRound((corner[0] + corner[6]) / 2.0f), qRound((corner[1] + corner[7]) / 2.0f)};
                     const int cell = (15 - static_cast<int>((texture[1] + texture[5]) / 2.0f * 16.0f)) * 16 + static_cast<int>((texture[0] + texture[2]) / 2.0f * 16.0f);
+                    // A symbol's underline is drawn from the atlas's solid block
+                    if (cell == 0) {
+                        continue;
+                    }
                     const QString symbol = expected.value(areaId).value(place);
                     if (symbol.isEmpty() || cell >= cells.size() || cells.at(cell) != symbol || widget.mGlyphAtlasIndex.value(symbol, -1) != cell) {
                         qWarning() << "the room at" << place << "shows" << cells.value(cell) << "for" << symbol;
@@ -1143,11 +1232,21 @@ private slots:
 
         qsizetype glyphs = 0;
         for (const auto& command : widget.mRenderCommandQueue.commands()) {
-            if (const auto* textured = dynamic_cast<const RenderTexturedTrianglesCommand*>(command.get()); textured && atlasTextures.contains(textured->geometry().textureId)) {
-                glyphs += textured->geometry().vertices.size() / 18;
+            const auto* textured = dynamic_cast<const RenderTexturedTrianglesCommand*>(command.get());
+            if (!textured || !atlasTextures.contains(textured->geometry().textureId)) {
+                continue;
+            }
+            const GeometryData& batch = textured->geometry();
+            for (qsizetype quad = 0; quad * 12 + 5 < batch.textureCoords.size(); ++quad) {
+                const float* texture = batch.textureCoords.constData() + quad * 12;
+                // Not a symbol's underline, drawn from the atlas's solid block in its first cell
+                if ((15 - static_cast<int>((texture[1] + texture[5]) / 2.0f * 16.0f)) * 16 + static_cast<int>((texture[0] + texture[2]) / 2.0f * 16.0f) != 0) {
+                    ++glyphs;
+                }
             }
         }
         QCOMPARE(glyphs, kRooms);
+        // These rooms' environment is not one the map defines, so they show no ground
         QVERIFY(widget.mGlyphAtlasIndex.contains(qsl("#")));
     }
 
