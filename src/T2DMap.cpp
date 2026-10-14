@@ -6911,7 +6911,7 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
                 addExitAndCheckOneWay("sw", room->getSouthwest());
             }
 
-            // Draw regular exit lines to destination rooms (same as paintRoomExits logic)
+            // Draw regular exit lines to destination rooms, leaving out those a straight custom line already draws
             for (const int exitRoomId : roomExitList) {
                 if (exitRoomId <= 0)
                     continue;
@@ -6987,11 +6987,11 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
                         QPen oneWayPen = pen;
                         oneWayPen.setStyle(Qt::DashLine);
                         painter.setPen(oneWayPen);
-                    } else {
+                        painter.drawLine(exitLine);
+                    } else if (!customLineRunsStraightTo(*room, *exitRoom) && !(exitRoom->z() == exportZLevel && customLineRunsStraightTo(*exitRoom, *room))) {
                         painter.setPen(pen);
+                        painter.drawLine(exitLine);
                     }
-
-                    painter.drawLine(exitLine);
 
                 } else {
                     // Area exit: draw directional stub with arrow (like original paintRoomExits)

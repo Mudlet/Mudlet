@@ -36,6 +36,7 @@
 #include <QComboBox>
 #include <QDialog>
 #include <QFileInfo>
+#include <QFutureWatcher>
 #include <QPixmap>
 #include <QSignalSpy>
 #include <QTemporaryDir>
@@ -779,6 +780,80 @@ private slots:
                                     .arg(drawnWith)
                                     .arg(drawnWithout)
                                     .arg(withLine.savedFor(qsl("oneway")))));
+    }
+
+    // exportAreaToImage() draws exits with its own copy of the mapper's code, so it needs the same care.
+    void test_anExportedAreaImageShowsNoPlainLineUnderACustomLine()
+    {
+        TMap* pMap = map();
+        TRoomDB* pRoomDB = pMap->mpRoomDB.get();
+        pMap->mapClear();
+
+        const int areaId = pRoomDB->addArea(qsl("Export Area"));
+        QVERIFY(areaId > 0);
+        QVERIFY(addRoomAt(kPlayerRoomId, areaId, 0, 0));
+        QList<QPair<int, int>> pairs;
+        int nextId = 1000;
+        for (int y = -6; y <= 6; y += 3) {
+            for (int x = -12; x <= 8; x += 5) {
+                const int westId = nextId++;
+                const int eastId = nextId++;
+                QVERIFY(addTwoWayPair(westId, eastId, areaId, QPoint(x, y), DIR_EAST, DIR_WEST));
+                setCustomLine(pRoomDB->getRoom(westId), qsl("e"), {QPointF(x + 2, y)}, Qt::DotLine);
+                pairs << qMakePair(westId, eastId);
+            }
+        }
+        T2DMap* p2dMap = showAreaAtTheOrigin(areaId);
+        QVERIFY(p2dMap);
+
+        const auto plainPixelsInExport = [&](const QString& name) {
+            const QString filePath = qsl("%1/%2.png").arg(mConfigDir.path(), name);
+            const auto [exported, message] = p2dMap->exportAreaToImage(areaId, filePath, 0, 1.0);
+            if (!exported) {
+                qWarning().noquote() << "exportAreaToImage() failed:" << message;
+                return -1;
+            }
+            QImage image;
+            // The file is written by a QtConcurrent task, and the widget must outlive it
+            if (!QTest::qWaitFor(
+                        [&]() {
+                            return image.load(filePath);
+                        },
+                        10000)
+                || !QTest::qWaitFor(
+                        [&]() {
+                            return p2dMap->findChildren<QFutureWatcherBase*>(QString(), Qt::FindDirectChildrenOnly).isEmpty();
+                        },
+                        10000)) {
+                qWarning().noquote() << "the exported image" << filePath << "could not be read back";
+                return -1;
+            }
+            int count = 0;
+            for (int y = 0; y < image.height(); ++y) {
+                for (int x = 0; x < image.width(); ++x) {
+                    if (plainLineColoured(image.pixelColor(x, y))) {
+                        ++count;
+                    }
+                }
+            }
+            return count;
+        };
+
+        for (const auto& [westId, eastId] : std::as_const(pairs)) {
+            pRoomDB->getRoom(eastId)->setExit(-1, DIR_WEST);
+        }
+        const int withoutReturnExits = plainPixelsInExport(qsl("export-one-way"));
+        QVERIFY(withoutReturnExits >= 0);
+        for (const auto& [westId, eastId] : std::as_const(pairs)) {
+            QVERIFY(pRoomDB->getRoom(eastId)->setExit(westId, DIR_WEST));
+        }
+        const int withReturnExits = plainPixelsInExport(qsl("export-two-way"));
+        QVERIFY(withReturnExits >= 0);
+        QVERIFY2(withReturnExits - withoutReturnExits <= pairs.size(),
+                 qPrintable(qsl("the exported image drew plain return exits along the custom lines (%1 plain line pixels with them, %2 without). The image is at %3/export-two-way.png")
+                                    .arg(withReturnExits)
+                                    .arg(withoutReturnExits)
+                                    .arg(mConfigDir.path())));
     }
 
     // The index has to follow the room, or the line goes missing the first time
