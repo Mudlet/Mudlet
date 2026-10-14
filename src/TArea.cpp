@@ -903,11 +903,14 @@ std::pair<int, QString> TArea::readJsonArea(const QJsonArray& array, const int a
 void TArea::writeJsonUserData(QJsonObject& obj) const
 {
     QJsonObject userDataObj;
-    if (mUserData.isEmpty()) {
+    // A binary save replaces a script's value under these keys, so an import must not read it back as the zoom
+    QMap<QString, QString> userData{mUserData};
+    dropFileOnlyUserData(userData);
+    if (userData.isEmpty()) {
         // Skip creating a user data array if it will be empty:
         return;
     }
-    QMapIterator<QString, QString> itDataItem(mUserData);
+    QMapIterator<QString, QString> itDataItem(userData);
     while (itDataItem.hasNext()) {
         itDataItem.next();
         const QJsonValue userDataValue{itDataItem.value()};

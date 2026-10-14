@@ -4892,6 +4892,17 @@ describe("Tests saveJsonMap and loadJsonMap", function()
       end
     end)
 
+    it("keeps an area's default zoom over a script's legacy fallback key, as a binary save does", function()
+      deleteMap()
+      local area = addAreaName("MapperSpecJsonZoomScriptKey")
+      roomA = createRoomID(); addRoom(roomA); setRoomArea(roomA, area)
+      assert.is_true(setAreaUserData(area, "system.fallback_map2DZoom", "50"))
+
+      roundTrip()
+
+      assert.are.equal(20, getMapZoom(area))
+    end)
+
     describe("an area's 2D map zoom in an edited JSON file", function()
       local editedPath = getMudletHomeDir() .. "/mapper_spec_zoom_edited.json"
 
@@ -4937,6 +4948,11 @@ describe("Tests saveJsonMap and loadJsonMap", function()
         local area = importWithZoom(', "userData": {"system.fallback_map2DZoom": "33"}')
         assert.are.equal(33, getMapZoom(area))
         assert.is_nil(getAllAreaUserData(area)["system.fallback_map2DZoom"])
+      end)
+
+      it("is the zoom2D member when the file also holds the legacy fallback key", function()
+        local area = importWithZoom(', "zoom2D": 44, "userData": {"system.fallback_map2DZoom": "33"}')
+        assert.are.equal(44, getMapZoom(area))
       end)
     end)
   end)
