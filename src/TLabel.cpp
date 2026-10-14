@@ -100,9 +100,10 @@ void TLabel::setText(const QString& text)
 
 void TLabel::showLinkStyledText(const QString& text)
 {
-    const bool hasAnchor = TLabelModel::containsAnchorTag(text);
+    // a click-through label passes the mouse on, so its links stay out of reach of the keyboard too
+    const bool linksReachable = TLabelModel::containsAnchorTag(text) && !testAttribute(Qt::WA_TransparentForMouseEvents);
 
-    setTextInteractionFlags(hasAnchor ? scmLinkInteraction : Qt::TextInteractionFlags(Qt::NoTextInteraction));
+    setTextInteractionFlags(linksReachable ? scmLinkInteraction : Qt::TextInteractionFlags(Qt::NoTextInteraction));
 
     stopMovie();
     QLabel::setText(text);

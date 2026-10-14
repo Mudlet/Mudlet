@@ -26,6 +26,7 @@
  */
 
 #include <QContextMenuEvent>
+#include <QScopeGuard>
 #include <QSignalSpy>
 #include <QtTest/QtTest>
 #include <QTextDocument>
@@ -276,6 +277,32 @@ private slots:
                  qsl("<a href=\"anchorVisitedOne()\" style=\"color: #00ffff;\">gogogogogogogo</a>"
                      "<a href=\"anchorVisitedTwo()\" style=\"color: #00ffff;\">x</a>"));
         label()->resetLinkStyle();
+    }
+
+    void test_aLinkStyleLeavesAClickThroughLabelsLinksOutOfReach()
+    {
+        label()->resetLinkStyle();
+        label()->setText(qsl("<a href=\"anchorThrough()\">go</a>"));
+        label()->setClickThrough(true);
+        auto restore = qScopeGuard([this]() {
+            label()->setClickThrough(false);
+            label()->resetLinkStyle();
+        });
+        QCOMPARE(label()->textInteractionFlags(), Qt::TextInteractionFlags(Qt::NoTextInteraction));
+
+        label()->setLinkStyle(qsl("#00ffff"), qsl("#ff00ff"), true);
+        QCOMPARE(label()->textInteractionFlags(), Qt::TextInteractionFlags(Qt::NoTextInteraction));
+        QCOMPARE(label()->focusPolicy(), Qt::NoFocus);
+        label()->clearVisitedLinks();
+        QCOMPARE(label()->textInteractionFlags(), Qt::TextInteractionFlags(Qt::NoTextInteraction));
+        label()->resetLinkStyle();
+        QCOMPARE(label()->textInteractionFlags(), Qt::TextInteractionFlags(Qt::NoTextInteraction));
+        label()->setText(qsl("<a href=\"anchorThrough()\">again</a>"));
+        QCOMPARE(label()->textInteractionFlags(), Qt::TextInteractionFlags(Qt::NoTextInteraction));
+        QCOMPARE(label()->focusPolicy(), Qt::NoFocus);
+
+        label()->setClickThrough(false);
+        QCOMPARE(label()->textInteractionFlags(), Qt::LinksAccessibleByMouse | Qt::LinksAccessibleByKeyboard);
     }
 
     void test_aClickOnALinkStillReachesTheLabelsOwnCallbacks()
