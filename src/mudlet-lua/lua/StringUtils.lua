@@ -6,21 +6,16 @@
 
 
 --- Documentation: https://wiki.mudlet.org/w/Manual:String_Functions#string.cut
+--- maxLen counts UTF-8 characters (code points), not bytes.
 function string:cut(maxLen)
-  -- generate-changelog.lua loads this file in plain Lua with an empty utf8 table
-  local characters = utf8.len and utf8.sub and utf8.len(self)
-  if characters then
-    if characters > maxLen then
-      return utf8.sub(self, 1, maxLen)
-    end
+  if string.len(self) <= maxLen then
     return self
   end
-
-  if string.len(self) > maxLen then
-    return string.sub(self, 1, maxLen)
-  else
-    return self
+  -- plain Lua has no utf8.sub: generate-changelog.lua runs this file outside Mudlet
+  if utf8 and utf8.sub then
+    return utf8.sub(self, 1, maxLen)
   end
+  return string.sub(self, 1, maxLen)
 end
 
 

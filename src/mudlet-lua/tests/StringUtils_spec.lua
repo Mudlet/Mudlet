@@ -30,10 +30,21 @@ describe("Tests StringUtils.lua functions", function()
       assert.equals("hé", ("héllo"):cut(2))
       assert.equals("héllo", ("héllo"):cut(5))
       assert.equals("日本", ("日本語"):cut(2))
+      assert.equals("日本語", ("日本語"):cut(6))
     end)
 
-    it("should cut by bytes when the string is not valid UTF-8", function()
+    it("should keep valid multi-byte characters whole in a string that is not valid UTF-8", function()
       assert.equals("a\255", ("a\255bc"):cut(2))
+      assert.equals("\255é", ("\255é"):cut(2))
+      assert.equals("hé", ("héllo\255"):cut(2))
+      assert.equals("é", ("é\255x"):cut(1))
+    end)
+
+    it("should cut by bytes when no utf8 library is loaded", function()
+      local savedUtf8 = _G.utf8
+      finally(function() _G.utf8 = savedUtf8 end)
+      _G.utf8 = nil
+      assert.equals("ab", ("abc"):cut(2))
     end)
   end)
 
