@@ -2726,8 +2726,10 @@ local function setActionCallback(callbackFunc, funcName, name, func, ...)
   local nr = arg.n + 1
   arg.n = arg.n + 1
   if type(func) == "string" then
-    -- named after the user's text, so errors don't quote the "return ...(...)" wrapper around it
-    local compiled, compileError = loadstring("return "..func.."(...)", func)
+    -- chunk named after the user's text so the error is labelled with it rather than the
+    -- "return ...(...)" wrapper; Lua reads a leading "=" or "@" as a literal or file name
+    local chunkName = func:find("^[=@]") and string.format('=[string "%s"]', func) or func
+    local compiled, compileError = loadstring("return "..func.."(...)", chunkName)
     assert(compiled, string.format('<%s: bad argument #2 value (%s)>', funcName, tostring(compileError)))
     func = compiled
   end
