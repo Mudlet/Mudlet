@@ -172,9 +172,9 @@ void dlgPackageManager::downloadRepositoryIndex()
             if (!doc.isObject() || !doc.object().value(qsl("packages")).isArray()) {
                 qWarning() << "dlgPackageManager::downloadRepositoryIndex() ERROR - the download is not a package index, discarding it";
             } else {
-                // Opened only once a whole index is in hand, so a failed, refused or abandoned refresh never
-                // touches the previous one. The fallback writes in place when the profile directory cannot
-                // take the temporary file, as a plain QFile always did.
+                // Opened only once a whole index is in hand, so a failed, refused or abandoned download never
+                // touches the previous one. On Unix, a profile directory that cannot take the temporary file
+                // falls back to rewriting the index in place, which a write failing partway leaves truncated.
                 QSaveFile file(outputPath);
                 file.setDirectWriteFallback(true);
                 if (!file.open(QIODevice::WriteOnly) || file.write(data) != data.size() || !file.commit()) {

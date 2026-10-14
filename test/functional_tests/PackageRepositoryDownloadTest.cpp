@@ -21,8 +21,8 @@
  * Covers the bookkeeping behind "Install" in the package manager's Explore
  * view - dlgPackageManager::slot_installPackageFromRepository(), which downloads
  * every selected package and then installs the batch once the last one has
- * landed - and the repository index refresh it starts when a selection is not
- * in the cached index, dlgPackageManager::downloadRepositoryIndex().
+ * landed - and the repository index refresh it starts when a selection cannot
+ * be resolved from the cached index, dlgPackageManager::downloadRepositoryIndex().
  *
  * Nothing but that button starts one, so there is no Lua entry point and the
  * busted suite cannot reach any of it. What decides when the batch is finished
