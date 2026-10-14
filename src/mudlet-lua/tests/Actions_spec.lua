@@ -163,10 +163,10 @@ describe("Packaged toolbar layouts", function()
     return table.contains(getPackages(), packageName)
   end
 
-  -- see UI_spec's "Toolbar buttons": installPackage() gives a running profile
-  -- save away by postponing even the empty path it would otherwise refuse
+  -- see UI_spec's "Toolbar buttons"
   local function waitForProfileSaveToPass()
-    return waitUntil(function() return installPackage("") == nil end, 5000)
+    local _, err = installPackage("")
+    return not tostring(err):find("still in progress", 1, true)
   end
 
   -- a vertical bar at the side can leave the main window taller once it is
@@ -184,7 +184,7 @@ describe("Packaged toolbar layouts", function()
   setup(function()
     windowWidth, windowHeight = getMainWindowSize()
     writeSpecFile(packageFile, packageXml())
-    assert.is_true(waitForProfileSaveToPass(), "a profile save was already running, so this install would be postponed")
+    assert.is_true(waitForProfileSaveToPass(), "a profile save never finished")
     installAnswer, installReason = installPackage(packageFile)
     assert.is_true(installAnswer, "could not install " .. packageFile)
     assert.is_true(waitUntil(packageIsInstalled, 5000), packageName .. " did not turn up in getPackages()")
