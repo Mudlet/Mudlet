@@ -338,12 +338,17 @@ end
 describe("Tests the functionality of installPackage", function()
   it("raises a Lua error when called with no arguments", function()
     assertArgError(function() installPackage() end, "installPackage: bad argument #1 type")
+    assertArgError(function() installPackage() end, "got nil!")
   end)
 
-  it("raises the same argument error for a table as its siblings do", function()
+  it("raises the same argument error for a table or boolean as its siblings do", function()
     -- the Lua wrapper that lets installPackage() take a URL must not try to
-    -- read a URL out of something that is not a string
+    -- read a URL out of something that is not a string, and must pass on
+    -- what it was given so the error names the right type
     assertArgError(function() installPackage({}) end, "installPackage: bad argument #1 type")
+    assertArgError(function() installPackage({}) end, "got table!")
+    assertArgError(function() installPackage(true) end, "installPackage: bad argument #1 type")
+    assertArgError(function() installPackage(true) end, "got boolean!")
   end)
 
   it("returns nil+msg when given an empty path", function()
