@@ -797,8 +797,6 @@ private slots:
         QVERIFY2(symbolsWithoutIds, "rooms whose IDs are too small to read show no symbols");
     }
 
-    // Two areas' symbols together overflow the terminal style's glyph atlas, so each switch starts it again;
-    // every room must still be drawn from the cell holding its own character, in a texture drawn with it there
     void test_terminalStatusLineListsTheWaysOutWithoutGL()
     {
         const int areaId = addArea();
@@ -810,6 +808,7 @@ private slots:
         pPlayerRoom->setExit(kEastRoomId, DIR_EAST);
         pPlayerRoom->setExit(kTowerId, DIR_UP);
         pPlayerRoom->setExit(kLowerRoomId, DIR_DOWN);
+        pPlayerRoom->setSpecialExit(kEastRoomId, qsl("enter portal"));
         const auto restore = qScopeGuard([this]() {
             mpHost->setMapStyle(qsl("tiles"));
         });
@@ -825,14 +824,16 @@ private slots:
         }
         QVERIFY2(line.startsWith(qsl("[Render Area]")), qPrintable(line));
         QVERIFY2(line.contains(qsl("(0,0,0)")), qPrintable(line));
-        QVERIFY2(line.contains(qsl("exits: e ")), qPrintable(line));
+        QVERIFY2(line.contains(qsl("exits: e \"enter portal\" ")), qPrintable(line));
         // The stairs are named by where they lead, or by its ID where that has no name
         QVERIFY2(line.contains(qsl("< tower")), qPrintable(line));
         QVERIFY2(line.contains(qsl("> %1").arg(kLowerRoomId)), qPrintable(line));
         QCOMPARE(colors.value(qsl("Render Area")), mpHost->mLightCyan_2);
-        QCOMPARE(colors.value(qsl("e")), mpHost->mLightWhite_2);
+        QCOMPARE(colors.value(qsl("e \"enter portal\"")), mpHost->mLightWhite_2);
     }
 
+    // Two areas' symbols together overflow the terminal style's glyph atlas, so each switch starts it again;
+    // every room must still be drawn from the cell holding its own character, in a texture drawn with it there
     void test_terminalGlyphsComeFromTheirOwnAtlasCellsWithoutGL()
     {
         constexpr int kRoomsPerArea = 150;
@@ -990,8 +991,8 @@ private slots:
             }
         }
         QCOMPARE(glyphs, kRooms);
-        // These rooms have the default environment, red, which is guessed to be a building's
-        QVERIFY(widget.mGlyphAtlasIndex.contains(RoomAppearance::groundGlyph(EnvironmentKit::Kit::Building, false)));
+        // These rooms' environment is not one the map defines, so they show no ground
+        QVERIFY(widget.mGlyphAtlasIndex.contains(qsl("#")));
     }
 
     // A terminal's room shows plain stairs in its character, but not an in or out exit or a door, which its markers show

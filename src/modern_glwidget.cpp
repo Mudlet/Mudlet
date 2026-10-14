@@ -1491,13 +1491,14 @@ void ModernGLWidget::renderRooms()
             const bool showId = terminalIds && look.onViewedLevel();
             std::optional<EnvironmentKit::Kit> ground;
             if (groundGlyphs) {
-                ground = EnvironmentKit::forEnvironment(namedKits, pR->environment, look.color);
+                ground = EnvironmentKit::forDefinedEnvironment(namedKits, *mpMap, pR->environment, look.color);
             }
             const QString text = showId ? QString::number(currentRoomId) : RoomAppearance::terminalGlyph(*pR, look, pArea->gridMode, ground);
             const bool symbol = !showId && !look.symbol.isEmpty();
             QColor textColor = symbol ? style.symbolColor(look.symbolColor, roomColor) : style.roomIdColor(roomColor);
             // The highlight fills the cell, so the character goes in reverse video on it
-            if (look.highlighted && MapDecals::highlightFillsRoom(style.highlightShape)) {
+            const bool cellHighlighted = look.highlighted && MapDecals::highlightFillsRoom(style.highlightShape);
+            if (cellHighlighted) {
                 textColor = background;
             }
             TerminalCell cell{currentRoomId, text, showId, roomTop, GeometryManager::fadedColor(textColor, fade, fadeTarget), look.playerRoom, {}, hovered, &decals};
@@ -1509,7 +1510,7 @@ void ModernGLWidget::renderRooms()
                 plainLook.symbol.clear();
                 cell.plain = RoomAppearance::terminalGlyph(*pR, plainLook, pArea->gridMode, ground);
                 if (groundGlyphs) {
-                    cell.underline = GeometryManager::fadedColor(roomColor, fade, fadeTarget);
+                    cell.underline = GeometryManager::fadedColor(cellHighlighted ? textColor : roomColor, fade, fadeTarget);
                 }
             }
             terminalCells.append(cell);
@@ -3383,11 +3384,13 @@ QList<ModernGLWidget::StatusLinePart> ModernGLWidget::statusLineParts() const
     if (!mpMap || !mpMap->mpRoomDB || !mpHost) {
         return parts;
     }
-    const QColor dim = mapStyle().ink.isValid() ? mapStyle().ink : ExitAppearance::contrastColor(backgroundColor());
-    const QColor bright = mpHost->mLightWhite_2;
+    const MapStyle& style = mapStyle();
+    const QColor dim = style.ink.isValid() ? style.ink : ExitAppearance::contrastColor(backgroundColor());
+    // Lifted as the rooms are, so that a profile's dark ANSI colors still show on the dark band
+    const QColor bright = style.roomColor(mpHost->mLightWhite_2);
     if (const QString areaName = mpMap->mpRoomDB->getAreaNamesMap().value(mAID); !areaName.isEmpty()) {
         parts.append({qsl("["), dim});
-        parts.append({areaName, mpHost->mLightCyan_2});
+        parts.append({areaName, style.roomColor(mpHost->mLightCyan_2)});
         parts.append({qsl("]  "), dim});
     }
     const int playerRoomId = mpMap->mRoomIdHash.value(mpMap->mProfileName);
@@ -3400,7 +3403,13 @@ QList<ModernGLWidget::StatusLinePart> ModernGLWidget::statusLineParts() const
                 exits.append(TRoom::dirCodeToShortString(direction));
             }
         }
-        exits.append(pR->getSpecialExits().keys());
+        const QMap<QString, int>& specialExits = pR->getSpecialExits();
+        for (auto it = specialExits.cbegin(); it != specialExits.cend(); ++it) {
+            if (it.value() > 0) {
+                // Quoted where it has spaces, so its words do not read as exits of their own
+                exits.append(it.key().contains(QLatin1Char(' ')) ? qsl("\"%1\"").arg(it.key()) : it.key());
+            }
+        }
         if (!exits.isEmpty()) {
             //: The terminal map style's status line, before the list of directions (n e s w...) out of the player's room
             parts.append({tr("exits:") + QLatin1Char(' '), dim});
@@ -3455,7 +3464,7 @@ void ModernGLWidget::paintStatusLine(QPainter& painter)
     // A terminal's cursor, waiting at the end of the line
     const int cursorWidth = metrics.horizontalAdvance(QLatin1Char('M'));
     if (x + cursorWidth <= text.right()) {
-        painter.fillRect(QRect(x, text.top() + 3, cursorWidth, text.height() - 6), mpHost->mLightGreen_2);
+        painter.fillRect(QRect(x, text.top() + 3, cursorWidth, text.height() - 6), mapStyle().roomColor(mpHost->mLightGreen_2));
     }
     painter.restore();
 }
