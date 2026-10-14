@@ -265,18 +265,23 @@ local function db_no_connection_message(action, db_name, expected)
 end
 
 
--- string.format's %s stops at a NUL, and so does sqlite reading a statement, so a value holding
--- one cuts the statement short and leaves it to fail on whatever was left of it. tostring, as a
--- db:exp() is a table whose text goes into the statement as it is
+-- sqlite reads a statement as a C string, so a NUL cuts it short. A db:exp() goes in through its
+-- __tostring, which hands back the text as given: a number for db:exp(0)
+local function holds_nul(value)
+  if type(value) == "table" then value = tostring(value) end
+  return type(value) == "string" and value:find("\0", 1, true) ~= nil
+end
+
 local function nul_byte_message(action, values, query)
   local holding
   for key, value in pairs(values) do
-    if tostring(value):find("\0", 1, true) then
+    -- db:add drops a _row_id before it builds the statement
+    if key ~= "_row_id" and holds_nul(value) then
       holding = "the value for \""..tostring(key).."\""
       break
     end
   end
-  if not holding and query and tostring(query):find("\0", 1, true) then
+  if not holding and query and holds_nul(query) then
     holding = "the query"
   end
 
@@ -1612,6 +1617,7 @@ end
 --- @return boolean result true when the rows went in, nil when the insert failed. A
 ---   multi-row call stops at the first row the database refuses, so earlier rows of
 ---   that same call are left in the transaction uncommitted rather than rolled back.
+---   A value holding a NUL byte refuses the whole call before any of its rows is sent.
 --- @return string message Why the insert failed, absent when it did not.
 function db:add(sheet, ...)
   local db_name = sheet._db_name
@@ -2060,11 +2066,12 @@ function db:update(sheet, tbl)
   sql_chunks[#sql_chunks + 1] = table.concat(set_chunks, ",")
   sql_chunks[#sql_chunks + 1] = "WHERE _row_id = " .. tbl._row_id
 
-  local sql = table.concat(sql_chunks, " ")
-  db:echo_sql(sql)
   -- only the columns written: a fetched row may carry fields of the script's own
   local nul_msg = nul_byte_message("update "..s_name, written)
   if nul_msg then error(nul_msg, 2) end
+
+  local sql = table.concat(sql_chunks, " ")
+  db:echo_sql(sql)
   assert(conn:execute(sql))
   if db.__autocommit[db_name] then
     conn:commit()
@@ -2122,6 +2129,9 @@ function db:set(field, value, query)
   local conn = db.__conn[db_name]
   if not conn then error(db_no_connection_message("set a field in", db_name, A_FIELD), 2) end
 
+  local nul_msg = nul_byte_message("set a field in "..s_name, {[field.name] = value}, query)
+  if nul_msg then error(nul_msg, 2) end
+
   local sql_update = [[UPDATE %s SET "%s" = %s]]
   if query then
     sql_update = sql_update .. [[ WHERE %s]]
@@ -2135,8 +2145,6 @@ function db:set(field, value, query)
   )
 
   db:echo_sql(sql)
-  local nul_msg = nul_byte_message("set a field in "..s_name, {[field.name] = value}, query)
-  if nul_msg then error(nul_msg, 2) end
   assert(conn:execute(sql))
   if db.__autocommit[db_name] then
     conn:commit()
