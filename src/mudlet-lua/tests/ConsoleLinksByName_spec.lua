@@ -339,6 +339,29 @@ describe("Tests that the link and text functions find their console by name", fu
           assertFreeListWhole()
         end)
 
+        it("refuses to link a selection that covers no text, keeping no function", function()
+          echo(window, "abc\n")
+          -- empty, once at the line's end and once inside it
+          for _, from in ipairs({3, 1}) do
+            for _, entry in ipairs({
+              {"no text is selected - cannot create link", function(fn) return setLink(window, fn, "hint") end},
+              {"no text is selected - cannot create popup", function(fn) return setPopup(window, {fn, "cmd"}, {"one", "two"}) end},
+            }) do
+              local refusal, call = entry[1], entry[2]
+              local function selectNothing(fn)
+                assert.is_true(selectSection(window, from, 0))
+                return call(fn)
+              end
+              assert.are.same({nil, refusal}, {selectNothing(function() end)})
+              assert.is_false(keptAfter(selectNothing))
+              assert.are.equal(0, registryGrowthOver(function()
+                selectNothing(function() end)
+              end))
+            end
+          end
+          assertFreeListWhole()
+        end)
+
         it("refuses to insert a link where the cursor is outside the text, keeping no function", function()
           local places = {
             function()
@@ -369,6 +392,36 @@ describe("Tests that the link and text functions find their console by name", fu
               end))
             end
           end
+          assertFreeListWhole()
+        end)
+
+        it("inserts a coloured link that starts with a tag, keeping its function only while its text is shown", function()
+          for _, call in ipairs({
+            function(fn) return cinsertLink(window, "<red>X", fn, "hint") end,
+            function(fn) return cinsertPopup(window, "<red>X", {fn}, {"hint"}) end,
+          }) do
+            local function insertThenClear(fn)
+              echo(window, "hello\n")
+              moveCursor(window, 1, 0)
+              call(fn)
+              assert.are.equal("hXello", lineOf(0))
+              clearWindow(window)
+            end
+            assert.is_false(keptAfter(insertThenClear))
+          end
+          -- each coloured run is an insert of its own, so the empty run before the tag must not become one
+          local insertLinkWas = _G.insertLink
+          local texts = {}
+          _G.insertLink = function(name, text, ...)
+            texts[#texts + 1] = text
+            return insertLinkWas(name, text, ...)
+          end
+          echo(window, "hello\n")
+          moveCursor(window, 1, 0)
+          local ok, err = pcall(cinsertLink, window, "<red>A<blue>B", "cmd", "hint")
+          _G.insertLink = insertLinkWas
+          assert.is_true(ok, err)
+          assert.are.same({"A", "B"}, texts)
           assertFreeListWhole()
         end)
       end)
@@ -413,6 +466,12 @@ describe("Tests that the link and text functions find their console by name", fu
       assert.is_true(selectString(marker .. "-link", 1) > -1)
       assert.are.same({true}, {setLink("cmd", "hint")})
       assert.are.same({true}, {setPopup({"cmd"}, {"hint"})})
+    end)
+
+    it("refuses to link no selection on the main console", function()
+      deselect("main")
+      assert.are.same({nil, "no text is selected - cannot create link"}, {setLink("cmd", "hint")})
+      assert.are.same({nil, "no text is selected - cannot create popup"}, {setPopup({"cmd"}, {"hint"})})
     end)
 
     -- Text put into the line a trigger is running over moves every capture
