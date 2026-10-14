@@ -1149,7 +1149,8 @@ function verbosePackageInstall(fileName)
   -- That is all for installing, now to announce the result to the user:
   mudlet.Locale = mudlet.Locale or loadTranslations("Mudlet")
   if ok and reason and reason ~= "" then
-    -- installPackage() asks for a quiet install, so nothing else puts the reason on the console
+    -- A quiet install keeps a broken item's error off the console, so it is shown here; a file that did not
+    -- load in full was already warned of, and is named again as a reason the package is not all working
     local partialText = mudlet.Locale.packageInstallPartial.message
     partialText = string.format(partialText, packageName, reason)
     local warnPrefix = mudlet.Locale.prefixWarn.message

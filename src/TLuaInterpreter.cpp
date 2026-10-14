@@ -2804,12 +2804,8 @@ int TLuaInterpreter::getEpoch(lua_State* L)
 }
 
 
-// An install that went through, with or without something to own up to: the
-// install did succeed, so the answer stays true rather than nil plus a message,
-// and what did not work - a part whose Lua failed, or a file of it that stopped
-// part-way - rides along as a second value only when there is one - the way
-// setConfig()'s successWithWarning() reports a setting that was made with a
-// consequence a script has no other way of learning about.
+// The install did succeed, so the answer stays true; what did not work (a part whose Lua failed, or a file
+// that did not load in full) is a second value only when there is one, as with setConfig()'s successWithWarning().
 static int pushInstallSucceeded(lua_State* L, const QString& warning)
 {
     lua_pushboolean(L, true);

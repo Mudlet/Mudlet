@@ -3390,7 +3390,7 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
     // Filled per XML file by the archive branch, reported once both branches are done.
     QStringList itemsWithErrors;
     QStringList itemsWithErrorNames;
-    // Why a file of it stopped part-way, one entry per file, for the return value and install events
+    // Each file of it that did not load in full, with the reason, for the return value and install events
     QStringList loadErrors;
     // Asked of the reader, not the units: items another install filed under the name are not this one's
     bool anythingWasRead = false;
@@ -3613,10 +3613,11 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
                 } else {
                     qWarning() << "Host::installPackage() WARNING - failed to load module" << packageName << ":" << errorMsg;
                     postMessage(tr("[ WARN ]  - Failed to load module \"%1\": %2").arg(packageName, errorMsg));
-                    loadErrors << errorMsg;
+                    loadErrors << qsl("%1/%2: %3").arg(packageName, entry.fileName(), errorMsg);
                 }
             } else if (!success) {
                 packageFileErrors << errorMsg;
+                loadErrors << qsl("%1/%2: %3").arg(packageName, entry.fileName(), errorMsg);
             } else {
                 aPackageFileWasReadWhole = true;
             }
@@ -3639,7 +3640,6 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
             //: %1 is the package name, %2 is the reason its contents could not be read
             postMessage(tr("[ WARN ]  - Failed to load package \"%1\": %2").arg(packageName, errorMsg));
         }
-        loadErrors << packageFileErrors;
 
         // Registering the package is this loop's job, so an archive that holds no
         // package XML that could be read is not installed anywhere: it would be
@@ -3689,7 +3689,7 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
             } else {
                 qWarning() << "Host::installPackage() WARNING - failed to load module" << packageName << ":" << errorMsg;
                 postMessage(tr("[ WARN ]  - Failed to load module \"%1\": %2").arg(packageName, errorMsg));
-                loadErrors << errorMsg;
+                loadErrors << qsl("%1: %2").arg(packageName, errorMsg);
             }
         } else if (!success && !anythingWasRead) {
             file2.close();
@@ -3699,7 +3699,7 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
             qWarning() << "Host::installPackage() WARNING - failed to load package" << packageName << ":" << errorMsg;
             //: %1 is the package name, %2 is the reason its contents could not be read
             postMessage(tr("[ WARN ]  - Failed to load package \"%1\": %2").arg(packageName, errorMsg));
-            loadErrors << errorMsg;
+            loadErrors << qsl("%1: %2").arg(packageName, errorMsg);
         }
         file2.close();
     }
@@ -3747,9 +3747,7 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
     if (!itemErrors.isEmpty()) {
         allErrors << itemErrors;
     }
-    for (const QString& loadError : std::as_const(loadErrors)) {
-        allErrors << qsl("%1: %2").arg(packageName, loadError);
-    }
+    allErrors << loadErrors;
     const QString eventErrors = allErrors.join(qsl("; "));
     // An install undone before its events went out is not announced, as its errors are stale by then. A
     // ModuleSync removal is half of a reload that puts the same module straight back, so it does not count.

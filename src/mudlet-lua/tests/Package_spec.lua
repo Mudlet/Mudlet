@@ -2012,14 +2012,21 @@ describe("Tests installing an archive whose package XML cannot be read", functio
   -- unreadable one turns the package away must not depend on what it is called
   it("installs an archive whose unreadable stray file is read before its package file", function()
     local name = "mudlet-spec-straynotes"
+    local installEvents = collectEventsForSpec("sysInstall")
     defer(function() removeFixturePackage(name) end)
     assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
 
     local mark = getLastLineNumber("main")
-    installFixturePackage(name)
+    local ok, reason = installUntilConfirmed(installPackage, fixtureDirectory .. "/" .. name .. ".mpackage",
+                                             function() return packageInstalled(name) end, "the package with a stray file")
 
     assert.equals(1, exists(name .. " alias", "alias"), "the package file beside the stray one was not read")
     assert.is_true(containsWrapped(textFrom(mark), 'Failed to load package "' .. name .. '"'), textFrom(mark))
+    -- named by the file, so a script can tell the stray one from the package file
+    assert.is_true(ok)
+    assert.equals(name .. "/a-notes.xml: Start tag expected.", reason)
+    assert.is_true(waitUntil(function() return #installEvents > 0 end, 2000), "the install events never came")
+    assert.equals(reason, installEvents[1][2])
   end)
 
   it("tells the script and the install events that a package's XML stopped part-way", function()
@@ -2033,7 +2040,7 @@ describe("Tests installing an archive whose package XML cannot be read", functio
     assert.equals(1, exists(name .. " alias", "alias"), "SETUP: the fixture no longer imports items before its XML breaks")
 
     assert.is_true(ok)
-    assert.equals(name .. ": Premature end of document.", reason)
+    assert.equals(name .. "/" .. name .. ".xml: Premature end of document.", reason)
     assert.is_true(waitUntil(function() return #installEvents > 0 and #packageEvents > 0 end, 2000),
                    "the install events never came")
     assert.equals(reason, installEvents[1][2])
@@ -2074,6 +2081,8 @@ describe("Tests installing an archive whose package XML cannot be read", functio
   it("keeps a package XML that broke after setting a variable", function()
     local name = "mudlet-spec-cutaftervariable"
     local xml = getMudletHomeDir() .. "/" .. name .. ".xml"
+    local installEvents = collectEventsForSpec("sysInstall")
+    local packageEvents = collectEventsForSpec("sysInstallPackage")
     defer(function()
       removeFixturePackage(name)
       os.remove(xml)
@@ -2093,9 +2102,15 @@ describe("Tests installing an archive whose package XML cannot be read", functio
     file:close()
     mudletSpecCutAfterVariable = nil
 
-    installUntilConfirmed(installPackage, xml, function() return packageInstalled(name) end, "the package XML cut off after its variable")
+    local ok, reason = installUntilConfirmed(installPackage, xml, function() return packageInstalled(name) end, "the package XML cut off after its variable")
 
     assert.equals(5, mudletSpecCutAfterVariable)
+    assert.is_true(ok)
+    assert.equals(name .. ": Premature end of document.", reason)
+    assert.is_true(waitUntil(function() return #installEvents > 0 and #packageEvents > 0 end, 2000),
+                   "the install events never came")
+    assert.equals(reason, installEvents[1][2])
+    assert.equals(reason, packageEvents[1][3])
   end)
 end)
 
@@ -3880,7 +3895,7 @@ describe("Tests installing a module whose XML cannot be read", function()
     assert.equals(1, exists(name .. " alias", "alias"), "SETUP: the fixture no longer imports items before its XML breaks")
     assert.is_true(ok)
     -- the reader's own message, as an item of the same name whose Lua failed would also give "<name>: "
-    assert.is_true(contains(reason, name .. ": Premature end of document."), tostring(reason))
+    assert.is_true(contains(reason, name .. "/" .. name .. ".xml: Premature end of document."), tostring(reason))
 
     assert.is_true(waitUntil(function() return #installEvents > 0 and #moduleEvents > 0 end, 2000),
                    "the install events never came for a module whose items are running")
@@ -3933,8 +3948,9 @@ describe("Tests installing a module whose XML cannot be read", function()
     assert.equals(1, exists(name .. " alias b", "alias"), "SETUP: the second file no longer imports its alias")
 
     assert.is_true(ok)
-    assert.is_true(contains(reason, name .. ": Premature end of document."), tostring(reason))
-    assert.is_true(contains(reason, name .. ": Opening and ending tag mismatch."), tostring(reason))
+    -- each named by its file, as both carry the module's name
+    assert.is_true(contains(reason, name .. "/a.xml: Premature end of document."), tostring(reason))
+    assert.is_true(contains(reason, name .. "/b.xml: Opening and ending tag mismatch."), tostring(reason))
     assert.is_true(waitUntil(function() return #installEvents > 0 end, 2000), "the module was never announced")
     assert.equals(reason, installEvents[1][2])
   end)
@@ -3980,7 +3996,7 @@ describe("Tests installing a module whose XML cannot be read", function()
     reloadModuleUntil(name, function() return #syncEvents > 0 end)
 
     assert.equals(name, syncEvents[1][1])
-    assert.equals(name .. ": Premature end of document.", syncEvents[1][3])
+    assert.equals(name .. "/" .. name .. ".xml: Premature end of document.", syncEvents[1][3])
   end)
 
   it("announces only the latest of a module installed, uninstalled and installed again before its events", function()
