@@ -1468,10 +1468,6 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
         return {false, QString(), qsl("a save is already in progress")};
     }
 
-    if (const QString reason = whyAFileCannotBeSavedTo(filename_xml); !reason.isEmpty()) {
-        return {false, filename_xml, reason};
-    }
-
     if (saveFolder.isEmpty() && saveName.isEmpty()) {
         // This is likely to be the save as the profile is closed
         qDebug().noquote().nospace() << "Host::saveProfile(...) INFO - called with no saveFolder or saveName arguments for profile '" << mHostName
@@ -1482,6 +1478,11 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
     if (mpProfileIni && mpProfileIni->status() == QSettings::AccessError) {
         qWarning().nospace().noquote()
                 << "Host::saveProfile(...) ERROR - the profile's \"profile.ini\" file could not be written, the command lines' history settings and the notepad's window state may be lost.";
+    }
+
+    // After the histories: they are not written to this file, so they are saved even when it cannot be
+    if (const QString reason = whyAFileCannotBeSavedTo(filename_xml); !reason.isEmpty()) {
+        return {false, filename_xml, reason};
     }
 
     auto writer = std::make_shared<XMLexport>(this);
@@ -3003,9 +3004,7 @@ void Host::slot_saveProfileAfterPackageChange()
     // and are still registered. Flush them now, at depth 0, before saving so
     // the save below does not serialize the just-uninstalled scripts back in:
     mScriptUnit.doCleanup();
-    if (auto [ok, filename, error] = saveProfile(); !ok) {
-        qWarning() << qsl("Host::slot_saveProfileAfterPackageChange() WARNING - couldn't save '%1' to '%2' because: %3").arg(getName(), filename, error);
-    }
+    saveProfileReportingFailure();
 }
 
 void Host::registerEventHandler(const QString& name, TScript* pScript)
