@@ -99,10 +99,15 @@ describe("Tests that the font functions find their console by name", function()
 
     it("reaches the font and the font size of a label", function()
       assert.is_true(createLabel(otherName, 0, 0, 50, 20, 1))
+      local fresh = getFontSize(otherName)
+      assert.is_true(type(fresh) == "number" and fresh > 0, ("a new label answered %s"):format(tostring(fresh)))
+      assert.is_true(setFont(otherName, families[1]))
       assert.are.same({true}, {setFontSize(otherName, 17)})
       assert.are.same({17}, {getFontSize(otherName)})
-      assert.is_true(setFont(otherName, families[1]))
+      -- each keeps what the other set
       assert.are.equal(families[1], getFont(otherName))
+      assert.is_true(setFont(otherName, families[2]))
+      assert.are.equal(families[2], getFont(otherName))
       assert.are.same({17}, {getFontSize(otherName)})
     end)
 
