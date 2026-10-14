@@ -26,6 +26,7 @@
 #include <QCoreApplication>
 #include <QFontMetricsF>
 #include <QPainter>
+#include <QPainterPath>
 #include <QtMath>
 
 #include <algorithm>
@@ -380,6 +381,108 @@ QImage themedLabel(const TMapLabel& label, const MapStyle& style)
     painter.end();
     image.setDevicePixelRatio(label.pix.devicePixelRatio());
     return image;
+}
+
+namespace {
+// Smooth noise round a circle, from 0 to 1, the same for every variant's seed on every machine
+qreal loopNoise(const qreal turn, const int seed, const int bumps)
+{
+    const auto random = [seed](const int cell) {
+        quint32 v = static_cast<quint32>(cell) * 747796405u + static_cast<quint32>(seed) * 2891336453u + 1u;
+        v = ((v >> ((v >> 28u) + 4u)) ^ v) * 277803737u;
+        return static_cast<qreal>(((v >> 22u) ^ v) & 0xffffu) / 65535.0;
+    };
+    const qreal at = turn * bumps;
+    const int cell = static_cast<int>(std::floor(at));
+    qreal f = at - cell;
+    f = f * f * (3.0 - 2.0 * f);
+    return random(cell % bumps) * (1.0 - f) + random((cell + 1) % bumps) * f;
+}
+} // namespace
+
+QImage wash(const int variant, const int size)
+{
+    QImage image = clearImage(QSize(size, size), Qt::white);
+    const qreal half = size / 2.0;
+    for (int y = 0; y < size; ++y) {
+        auto* line = reinterpret_cast<QRgb*>(image.scanLine(y));
+        for (int x = 0; x < size; ++x) {
+            const qreal dx = (x + 0.5 - half) / half;
+            const qreal dy = (y + 0.5 - half) / half;
+            const qreal distance = std::hypot(dx, dy);
+            const qreal turn = (std::atan2(dy, dx) + M_PI) / (2.0 * M_PI);
+            const qreal reach = 0.72 + 0.16 * loopNoise(turn, variant, 5) + 0.07 * loopNoise(turn, variant + 17, 13);
+            if (distance >= reach) {
+                continue;
+            }
+            const qreal depth = (reach - distance) / reach;
+            // Faint toward the middle, and darker in a rim just inside the edge, where the paint dried
+            const qreal body = 0.55 + 0.45 * std::min(1.0, depth / 0.25);
+            const qreal pooled = std::exp(-std::pow((depth - 0.06) / 0.06, 2.0)) * 0.35;
+            const qreal soft = std::min(1.0, depth / 0.05);
+            const int alpha = std::clamp(qRound(255.0 * soft * std::min(1.0, 0.55 * body + pooled)), 0, 255);
+            line[x] = qRgba(255, 255, 255, alpha);
+        }
+    }
+    return image;
+}
+
+bool environmentMarked(const EnvironmentKit::Kit kit)
+{
+    return kit == EnvironmentKit::Kit::Forest || kit == EnvironmentKit::Kit::Water;
+}
+
+QImage environmentMark(const EnvironmentKit::Kit kit, const QColor& ink, const int size)
+{
+    if (!environmentMarked(kit)) {
+        return QImage();
+    }
+    QImage image = clearImage(QSize(size, size), ink);
+    QPainter painter(&image);
+    painter.setRenderHint(QPainter::Antialiasing);
+    const qreal unit = size / 16.0;
+    QPen pen(ink, unit * 0.7, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin);
+    painter.setPen(pen);
+    if (kit == EnvironmentKit::Kit::Forest) {
+        // Two trees, a crown on a trunk, the second a little behind
+        for (const QPointF& foot : {QPointF(6.0, 12.0), QPointF(10.5, 10.5)}) {
+            const QPointF base = foot * unit;
+            painter.setBrush(withAlpha(ink, 70));
+            painter.drawLine(base, base - QPointF(0.0, 2.5 * unit));
+            painter.drawEllipse(base - QPointF(0.0, 4.5 * unit), 2.3 * unit, 2.3 * unit);
+        }
+    } else {
+        // Two short waves, one under the other and set off from it
+        painter.setBrush(Qt::NoBrush);
+        for (const QPointF& start : {QPointF(3.0, 7.0), QPointF(5.0, 10.5)}) {
+            QPainterPath wave(start * unit);
+            const QPointF at = start * unit;
+            wave.cubicTo(at + QPointF(1.5, -1.5) * unit, at + QPointF(2.5, -1.5) * unit, at + QPointF(4.0, 0.0) * unit);
+            wave.cubicTo(at + QPointF(5.5, 1.5) * unit, at + QPointF(6.5, 1.5) * unit, at + QPointF(8.0, 0.0) * unit);
+            painter.drawPath(wave);
+        }
+    }
+    painter.end();
+    return image;
+}
+
+int scaleBarRooms(const qreal pixelsPerRoom, const qreal shortest, const qreal longest)
+{
+    if (!(pixelsPerRoom > 0.0)) {
+        return 0;
+    }
+    int chosen = 0;
+    for (const int rooms : {2, 5, 10, 20, 50, 100, 200, 500, 1000}) {
+        const qreal length = rooms * pixelsPerRoom;
+        if (length > longest) {
+            break;
+        }
+        chosen = rooms;
+        if (length >= shortest) {
+            break;
+        }
+    }
+    return chosen;
 }
 
 } // namespace MapDecals

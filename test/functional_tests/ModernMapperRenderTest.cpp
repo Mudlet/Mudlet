@@ -1762,7 +1762,7 @@ private slots:
         QVERIFY(inkwash->background.lightness() >= 200);
         const QColor seal = inkwash->playerRoomColor();
         QVERIFY2(seal.red() > seal.green() + 80 && seal.red() > seal.blue() + 80 && seal != QColor(Qt::red), "the seal is not a muted vermilion");
-        QCOMPARE(inkwash->edges, MapStyle::Edges::InkBlots);
+        QCOMPARE(inkwash->edges, MapStyle::Edges::InkLozenges);
         QCOMPARE(inkwash->playerMarker, MapStyle::PlayerMarker::Seal);
         QVERIFY(inkwash->postEffects.testFlag(MapStyle::PostEffect::PaperGrain));
         QVERIFY(!inkwash->lit);
