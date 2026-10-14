@@ -69,10 +69,31 @@ QList<MapStyle> registeredStyles()
     blueprint.background = QColor(18, 60, 110);
     blueprint.ink = QColor(225, 242, 255);
     blueprint.gridColor = QColor(150, 200, 255, 38);
-    blueprint.labelFontFamily = qsl("Bitstream Vera Sans");
+    blueprint.inkTint = 0.32f;
+    blueprint.labelFontFamily = qsl("Bitstream Vera Sans Mono");
+    blueprint.labelLetterSpacing = 112.0;
+    blueprint.labelCapitals = true;
     blueprint.exitWidthFactor = 0.5f;
     blueprint.doors = MapStyle::Doors::Swings;
     blueprint.floorPlates = false;
+    blueprint.highlightShape = MapStyle::HighlightShape::DashedEllipse;
+    blueprint.highlightScale = 1.3f;
+    blueprint.playerRing = MapStyle::PlayerRing::Crosshair;
+    blueprint.playerColor = QColor(255, 112, 90);
+    blueprint.playerBeacon = false;
+    blueprint.themedMapLabels = true;
+    blueprint.mapLabelColor = QColor(225, 242, 255);
+    blueprint.mapLabelHalo = QColor(18, 60, 110, 210);
+    blueprint.mapLabelMaxHeight = 0.6f;
+    blueprint.roomNameColor = QColor(210, 232, 252, 235);
+    blueprint.roomNameScale = 0.6f;
+    blueprint.compassFace = QColor(18, 60, 110, 220);
+    blueprint.compassRim = QColor(225, 242, 255);
+    blueprint.compassNeedle = QColor(255, 112, 90);
+    blueprint.infoBackground = QColor(14, 48, 90, 210);
+    blueprint.infoTextColor = QColor(225, 242, 255);
+    blueprint.titleBlock = true;
+    blueprint.levelCallouts = true;
     styles.append(blueprint);
 
     return styles;
@@ -98,8 +119,7 @@ QColor MapStyle::roomColor(const QColor& environmentColor) const
     case Palette::Environment:
         return environmentColor;
     case Palette::Ink: {
-        // Enough of the environment's color to tell areas of the plan apart, not so much that the ink stops standing out
-        constexpr float tint = 0.18f;
+        const float tint = inkTint;
         const QColor paper = background.isValid() ? background : QColor(Qt::black);
         return QColor::fromRgbF(paper.redF() + (environmentColor.redF() - paper.redF()) * tint,
                                 paper.greenF() + (environmentColor.greenF() - paper.greenF()) * tint,
@@ -216,8 +236,19 @@ QFont MapStyle::labelFont(const QFont& mapSymbolFont) const
     QFont font = mapSymbolFont;
     if (!labelFontFamily.isEmpty()) {
         font.setFamily(labelFontFamily);
+        letter(font);
     }
     return font;
+}
+
+void MapStyle::letter(QFont& font) const
+{
+    if (labelLetterSpacing != 100.0) {
+        font.setLetterSpacing(QFont::PercentageSpacing, labelLetterSpacing);
+    }
+    if (labelCapitals) {
+        font.setCapitalization(QFont::AllUppercase);
+    }
 }
 
 QString MapStyle::defaultId()

@@ -55,7 +55,9 @@ struct MapStyle
         // That marker
         Profile,
         // A thin ring in playerColor
-        Thin
+        Thin,
+        // A registration mark in playerColor: a thin ring crossed by two lines that run on past it
+        Crosshair
     };
 
     enum class Palette {
@@ -154,6 +156,17 @@ struct MapStyle
     Glyphs glyphs = Glyphs::RoomSymbols;
     // The Ink palette's lines and text; invalid for the profile's exit color
     QColor ink;
+    // How much of its environment's color the Ink palette fills a room with, from none to all of it
+    float inkTint = 0.18f;
+    // A column rising from the player's room
+    bool playerBeacon = true;
+    // The style's lettering: its spacing as a percentage of the font's usual, and whether it is set in capitals
+    qreal labelLetterSpacing = 100.0;
+    bool labelCapitals = false;
+    // A drafting sheet's title block in a corner of the view: the area's name, and which of its levels is shown
+    bool titleBlock = false;
+    // Each other level shown named, with its count of rooms, beside it at the end of a leader line
+    bool levelCallouts = false;
     // Invalid to draw the profile's grid, when it shows one; else the style's own, always shown, with its lines
     // between the rooms and every fifth one stronger
     QColor gridColor;
@@ -180,6 +193,8 @@ struct MapStyle
     QColor backgroundColor(const QColor& profileBackground) const;
     bool roundRooms(bool profileRoundRooms) const;
     QFont labelFont(const QFont& mapSymbolFont) const;
+    // Sets the style's lettering on a font that has its family
+    void letter(QFont& font) const;
     // roomSymbolColor is the room's own, invalid unless one was set; drawnRoomColor is roomColor()'s
     QColor symbolColor(const QColor& roomSymbolColor, const QColor& drawnRoomColor) const;
     QColor exitColor(const QColor& profileExitColor) const;

@@ -38,6 +38,12 @@ bool highlightOnGround(MapStyle::HighlightShape shape);
 // Fills the room's own square or circle, whatever highlight radius the room was given
 bool highlightFillsRoom(MapStyle::HighlightShape shape);
 
+// The mark MapStyle::PlayerRing::Crosshair draws over the player's room, size texels across
+QImage registrationMark(const QColor& color, int size);
+// Where to put callouts, listed top to bottom, that each want to be at a height, so that they stay in that order at
+// least spacing apart and, where they fit, between top and bottom
+QList<qreal> spreadCallouts(const QList<qreal>& wanted, qreal spacing, qreal top, qreal bottom);
+
 // The ring MapStyle::PlayerRing::Thin draws around the player's room
 QGradientStops thinPlayerRingStops(const QColor& color);
 
