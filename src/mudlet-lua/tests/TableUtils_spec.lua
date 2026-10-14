@@ -1271,6 +1271,49 @@ describe("Tests TableUtils.lua functions", function()
       assert.equals(30000, node.index)
     end)
 
+    it("should copy a chain without a cycle too long to copy by recursing", function()
+      local head = { index = 1 }
+      local tail = head
+      for i = 2, 30000 do
+        tail.next = { index = i }
+        tail = tail.next
+      end
+
+      local copy = table.deepcopy(head)
+
+      local node, count = copy, 1
+      while node.next do
+        node, count = node.next, count + 1
+      end
+      assert.equals(30000, count)
+      assert.equals(30000, node.index)
+    end)
+
+    it("should set the metatable after the fields, so a read-only __newindex never fires", function()
+      local mt = { __newindex = function() error("read-only") end }
+      local original = setmetatable({}, mt)
+      rawset(original, "a", 1)
+      rawset(original, "child", setmetatable({}, mt))
+      rawset(original.child, "parent", original)
+
+      local copy = table.deepcopy(original)
+
+      assert.equals(1, rawget(copy, "a"))
+      assert.equals(copy, rawget(copy.child, "parent"))
+      assert.equals(mt, getmetatable(copy.child))
+    end)
+
+    it("should copy a table after a script removes the debug library", function()
+      local saved = _G.debug
+      _G.debug = nil
+      local ok, result = pcall(table.deepcopy, setmetatable({ inner = { value = 1 } }, { __index = { z = 9 } }))
+      _G.debug = saved
+
+      assert.is_true(ok, tostring(result))
+      assert.equals(1, result.inner.value)
+      assert.equals(9, result.z)
+    end)
+
     it("should copy a table with a protected metatable", function()
       local mt = { __index = function() return 1 end, __metatable = "locked" }
       local copy = table.deepcopy(setmetatable({}, mt))
@@ -1278,7 +1321,7 @@ describe("Tests TableUtils.lua functions", function()
       assert.equals("locked", getmetatable(copy))
     end)
 
-    it("should still copy a table shared without a cycle once for each place it is reached", function()
+    it("should copy a table shared without a cycle once for each place it is reached", function()
       local shared = { value = 1 }
       local copy = table.deepcopy({ first = shared, second = shared })
       assert.are_not.equal(shared, copy.first)

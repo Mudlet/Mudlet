@@ -729,16 +729,18 @@ local function reachesItself(root)
   return false
 end
 
--- With a cycle, copying per path would copy the cycle again for every way into it, which grows
--- exponentially, so each table is copied once. Without one, a table reached twice keeps getting
--- two copies, as callers that edit one of them independently expect.
+-- held here so a script that later removes debug cannot break table.deepcopy
+local metatableOf = getRawMetatable or getmetatable
+
+-- A cycle copied once per path is copied again for every way into it, exponentially, so each
+-- table in it gets one copy; acyclic input gets one per reference, as callers edit them apart.
 local function deepcopy(root, oncePerTable)
   local rootCopy = {}
   local copies = oncePerTable and { [root] = rootCopy }
-  local pending = { root, rootCopy }
-  while #pending > 0 do
-    local res = table.remove(pending)
-    local t = table.remove(pending)
+  local pending, count = { root, rootCopy }, 2
+  while count > 0 do
+    local t, res = pending[count - 1], pending[count]
+    pending[count - 1], pending[count], count = nil, nil, count - 2
     for k, v in pairs(t) do
       if type(v) == 'table' then
         local copy = copies and copies[v]
@@ -747,29 +749,35 @@ local function deepcopy(root, oncePerTable)
           if copies then
             copies[v] = copy
           end
-          pending[#pending + 1] = v
-          pending[#pending + 1] = copy
+          pending[count + 1], pending[count + 2], count = v, copy, count + 2
         end
         v = copy
       end
       res[k] = v
     end
-    -- after the fields, so a __newindex in it never sees them; debug's, as getmetatable returns
-    -- a protected metatable's __metatable field instead of the metatable
-    setmetatable(res, debug.getmetatable(t))
+    -- after the fields, so a __newindex in it never sees them
+    setmetatable(res, metatableOf(t))
   end
   return rootCopy
 end
 
 -- returns a deep copy of the table with the metatable intact. Credit to Steve Donovan of Penlight.
--- Keys are not copied. A table with a cycle (t.parent.child == t) is copied with the same shape:
--- every table in it gets one copy, so references that met at one table still do. Without a cycle,
--- a table referenced from two places gets a separate copy for each.
+-- Keys are not copied. If any table reachable from t reaches itself (t.parent.child == t, or a
+-- cache.self == cache anywhere inside), every table gets one copy, so references that met at one
+-- table still do. Otherwise a table referenced from two places gets a separate copy for each.
 function table.deepcopy(t)
   if type(t) ~= 'table' then
     return t
   end
-  return deepcopy(t, reachesItself(t))
+  -- the flat tables most callers pass need neither walk
+  local copy = {}
+  for k, v in pairs(t) do
+    if type(v) == 'table' then
+      return deepcopy(t, reachesItself(t))
+    end
+    copy[k] = v
+  end
+  return setmetatable(copy, metatableOf(t))
 end
 
 -- Table keys
