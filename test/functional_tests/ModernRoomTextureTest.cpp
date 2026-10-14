@@ -196,7 +196,7 @@ private slots:
                 [](GLuint) {});
         widget.setViewCenter(areaId, 12, 12, 0);
         // Never shown, so nothing sizes it: big enough for every name to be legible, with the whole area in view
-        widget.resize(1200, 1200);
+        widget.resize(1600, 1600);
         widget.mCameraController.setViewportSize(widget.width(), widget.height());
         widget.frameRooms(26.0);
         // As paintGL() does first: names are placed through the camera's matrices

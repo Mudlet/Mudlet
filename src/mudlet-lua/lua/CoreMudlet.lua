@@ -1199,13 +1199,14 @@ if false then
 
 
 
-  --- Names the kind of ground an environment is, which the 3D map's styles that draw rooms by kind go by. Without one,
-  --- the kind is guessed from the environment's color: blue is water, green forest, grey, brown and tan road, and any
-  --- other color a building. The kits are saved with the map.
+  --- Names the kind of ground an environment is, for use by 3D map styles that draw terrain; none of the styles
+  --- built in draw it yet. Without one, the kind is guessed from the environment's color: blue is water, green
+  --- forest, grey, brown and tan road, and any other color a building. The kits are saved with the map.
   ---
   --- @param environmentID the environment, as setRoomEnv() takes it
   --- @param kitName one of "plain", "water", "road", "forest" or "building"; nil or "" goes back to guessing
-  --- @return true, or nil and an error message for a kit name it does not know
+  --- @return true, or nil and an error message for a kit name it does not know, or when the kits saved in the
+  ---   map user data "system.mapStyle.environmentKits" are not a JSON object, which it leaves alone
   ---
   --- @usage Show the lava environment as water, and forget that the swamp environment was named
   ---   <pre>
@@ -1219,7 +1220,7 @@ if false then
 
 
 
-  --- The kind of ground an environment is, which the 3D map's styles that draw rooms by kind go by.
+  --- The kind of ground an environment is, for use by 3D map styles that draw terrain.
   ---
   --- @param environmentID the environment, as setRoomEnv() takes it
   --- @return the kit's name, and true when setMapEnvironmentKit() named it or false when it is guessed
@@ -1231,7 +1232,8 @@ if false then
 
 
 
-  --- The kits setMapEnvironmentKit() has named, leaving out those guessed from environments' colors.
+  --- The kits setMapEnvironmentKit() has named, leaving out those guessed from environments' colors and any saved
+  --- entry that cannot be read.
   ---
   --- @return a table of kit names keyed by environment ID
   ---

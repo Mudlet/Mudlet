@@ -5424,7 +5424,7 @@ void dlgProfilePreferences::slot_resetMapColors()
     pHost->mBgColor_2 = QColorConstants::Black;
     pHost->mLowerLevelColor = QColorConstants::DarkGray;
     pHost->mUpperLevelColor = QColorConstants::White;
-    pHost->mRoomBorderColor = QColorConstants::LightGray;
+    pHost->mRoomBorderColor = Host::scmDefaultRoomBorderColor;
     pHost->mRoomCollisionBorderColor = QColorConstants::Yellow;
     pHost->mBlack_2 = QColorConstants::Black;
     pHost->mLightBlack_2 = QColorConstants::DarkGray;
@@ -5442,7 +5442,7 @@ void dlgProfilePreferences::slot_resetMapColors()
     pHost->mLightMagenta_2 = QColorConstants::Magenta;
     pHost->mWhite_2 = QColorConstants::LightGray;
     pHost->mLightWhite_2 = QColorConstants::White;
-    pHost->mMapInfoBg = QColor(150, 150, 150, 120);
+    pHost->mMapInfoBg = Host::scmDefaultMapInfoBg;
     pHost->mMapGridColor = QColor(211, 211, 211, 64);
 
     // This aplies the above colors to the buttons on display:

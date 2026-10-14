@@ -7,6 +7,7 @@ describe("Tests setMapEnvironmentKit, getMapEnvironmentKit and getMapEnvironment
   local userDataKey = "system.mapStyle.environmentKits"
   -- custom environments well clear of the 16 colours every map has
   local blue, green, grey, tan, red, nearBlack, nearWhite = 9310, 9311, 9312, 9313, 9314, 9315, 9316
+  local brightOrange, darkBrown = 9317, 9318
 
   setup(function()
     os.remove(backupPath)
@@ -32,12 +33,16 @@ describe("Tests setMapEnvironmentKit, getMapEnvironmentKit and getMapEnvironment
     setCustomEnvColor(red, 190, 70, 50)
     setCustomEnvColor(nearBlack, 12, 10, 20)
     setCustomEnvColor(nearWhite, 245, 245, 250)
+    setCustomEnvColor(brightOrange, 230, 130, 20)
+    setCustomEnvColor(darkBrown, 100, 60, 30)
   end)
 
   it("guesses a kit from an environment's colour until one is named", function()
     local guesses = {
       [blue] = "water", [green] = "forest", [grey] = "road", [tan] = "road",
       [red] = "building", [nearBlack] = "road", [nearWhite] = "building",
+      -- either side of the line between a painted building and a brown road
+      [brightOrange] = "building", [darkBrown] = "road",
     }
     for environment, expected in pairs(guesses) do
       local kit, named = getMapEnvironmentKit(environment)
@@ -99,5 +104,32 @@ describe("Tests setMapEnvironmentKit, getMapEnvironmentKit and getMapEnvironment
     assert.is_true(loadMap(savePath))
     assert.are.same({[grey] = "water", [-1] = "forest"}, getMapEnvironmentKits())
     assert.are.same({"water", true}, {getMapEnvironmentKit(grey)})
+  end)
+
+  it("leaves out saved entries it cannot read, and keeps them when another is set", function()
+    setMapUserData(userDataKey, '{"12":"water","x":"road","13":"castle"}')
+    assert.are.same({[12] = "water"}, getMapEnvironmentKits())
+    assert.are.same({"water", true}, {getMapEnvironmentKit(12)})
+    assert.are.same({"road", false}, {getMapEnvironmentKit(grey)})
+
+    assert.is_true(setMapEnvironmentKit(14, "road"))
+    assert.are.same({[12] = "water", [14] = "road"}, getMapEnvironmentKits())
+    assert.are.same({["12"] = "water", ["x"] = "road", ["13"] = "castle", ["14"] = "road"},
+      yajl.to_value(getMapUserData(userDataKey)))
+
+    assert.is_true(setMapEnvironmentKit(12, nil))
+    assert.are.same({["x"] = "road", ["13"] = "castle", ["14"] = "road"}, yajl.to_value(getMapUserData(userDataKey)))
+  end)
+
+  it("reads saved kits that are not JSON as none, and will not overwrite them", function()
+    setMapUserData(userDataKey, "not json")
+    assert.are.same({}, getMapEnvironmentKits())
+    assert.are.same({"water", false}, {getMapEnvironmentKit(blue)})
+
+    local ok, message = setMapEnvironmentKit(14, "road")
+    assert.is_nil(ok)
+    assert.truthy(message:find(userDataKey, 1, true))
+    assert.are.equal("not json", getMapUserData(userDataKey))
+    assert.are.same({}, getMapEnvironmentKits())
   end)
 end)

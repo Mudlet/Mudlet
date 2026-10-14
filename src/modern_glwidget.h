@@ -234,6 +234,7 @@ private:
         QPixmap pixmap;
     };
     QHash<std::pair<int, int>, ThemedLabel> mThemedLabels;
+    static constexpr qsizetype scmThemedLabelsKept = 256;
     bool mSolidDashWarned = false;
 
     // Host reference

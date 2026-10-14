@@ -73,7 +73,10 @@ struct MapStyle
 
     enum class Edges {
         // A rim around each room on the viewed level, so that level stands apart from the others
-        ViewedLevelRim
+        ViewedLevelRim,
+        // A base around each room on the viewed level, halfway from the room's color to the background, so the
+        // room reads as a block with shaded sides
+        ViewedLevelBase
     };
 
     enum class Glyphs {
@@ -117,6 +120,10 @@ struct MapStyle
     QColor mapLabelHalo;
     // In rooms' spacing; 0 for no limit
     float mapLabelMaxHeight = 0.0f;
+    // Room names, as quieter annotations: their color where the room was given none of its own, invalid for the
+    // color that stands out on the background, and their size against the usual where the map was given no font
+    QColor roomNameColor;
+    float roomNameScale = 1.0f;
     // Invalid for the background, the color that stands out on it, and red
     QColor compassFace;
     QColor compassRim;
@@ -138,6 +145,10 @@ struct MapStyle
     bool themesPlayerMarker(int profilePlayerRoomStyle, bool strongHighlight) const;
     // The info box's background, given the profile's
     QColor infoBackgroundColor(const QColor& profileInfoBackground) const;
+    // A room's border, given the profile's, where the room was given none of its own
+    QColor roomBorderColor(const QColor& profileBorder, const QColor& roomColor, const QColor& background) const;
+    // A room's name color, given the color it was given as user data
+    QColor roomNameColorFor(const QString& roomColorData, const QColor& background) const;
     QColor roomColor(const QColor& environmentColor) const;
     QColor backgroundColor(const QColor& profileBackground) const;
     bool roundRooms(bool profileRoundRooms) const;

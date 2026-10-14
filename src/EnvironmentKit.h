@@ -48,10 +48,11 @@ Kit guess(const QColor& environmentColor);
 
 // The map user data key the kits a game set are saved under, as a JSON object of environment ID to kit name
 QString userDataKey();
-// Those set in the map's user data; an entry that cannot be read is left out
+// Those set in the map's user data; an entry that cannot be read is left out, with a warning the first time
 QHash<int, Kit> stored(const QMap<QString, QString>& mapUserData);
-// Saves kits in the map's user data, removing the key when there are none
-void store(QMap<QString, QString>& mapUserData, const QHash<int, Kit>& kits);
+// Sets or, with no kit, clears one environment's kit, keeping every other entry as it was, even one that cannot be
+// read. Refuses, returning false, when what is saved is not a JSON object, rather than overwrite it
+bool store(QMap<QString, QString>& mapUserData, int environmentId, std::optional<Kit> kit);
 
 // The kit for an environment, and whether the map names it rather than it being guessed from the environment's color
 std::pair<Kit, bool> forEnvironment(const TMap& map, const Host& host, int environmentId);
