@@ -29,7 +29,8 @@
 --              pixels, use the get_width() method. Default is "300px".
 --              get_x() and get_width() can be fractional: a widget's edges
 --              are rounded to the nearest pixel, so it spans from
---              round(get_x()) to round(get_x() + get_width()).
+--              round(get_x()) to round(get_x() + get_width()). A floating
+--              UserWindow is the exception: its position and size are truncated.
 -- @field height The height of this window, possibly relative to the window's
 --               container. This is not a number, but a constraint
 --               specification. To find out the numeric height in terms of
@@ -106,15 +107,16 @@ function Geyser.Container:calculate_dynamic_window_size()
   return ret_size
 end
 
--- Internal function: this window's x, y, width and height in whole pixels. Each
--- edge is rounded to the nearest pixel and the size is the distance between them,
--- so windows whose edges meet at a fraction of a pixel, such as the children of an
--- HBox, still tile. A neighbour computes the same edge by another sum, which can
--- land a hair either side of a half pixel, so the tolerance rounds both alike.
+-- A neighbour computes the same edge by another sum, which can land a hair either
+-- side of a half pixel, so the tolerance rounds both alike.
 local function roundEdge(value)
   return math.floor(value + 0.5 + 1e-6)
 end
 
+-- Internal function: this window's x, y, width and height in whole pixels. Each
+-- edge is rounded to the nearest pixel and the size is the distance between them,
+-- so windows whose edges meet at a fraction of a pixel, such as the children of an
+-- HBox, still tile.
 function Geyser.Container:pixel_geometry()
   local x, y = self:get_x(), self:get_y()
   local left, top = roundEdge(x), roundEdge(y)
