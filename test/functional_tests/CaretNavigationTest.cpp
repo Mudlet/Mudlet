@@ -97,9 +97,9 @@ private:
         return QFileInfo::exists(qsl("%1/portable.txt").arg(QCoreApplication::applicationDirPath())) || QFileInfo::exists(qsl("%1/.config/mudlet/portable.txt").arg(QDir::homePath()));
     }
 
-    TTextEdit* pane() const { return mpHost->mpConsole->mUpperPane; }
+    TTextEdit* pane() const { return mpHost->mainConsoleView()->mUpperPane; }
 
-    TBuffer& consoleBuffer() const { return mpHost->mpConsole->buffer; }
+    TBuffer& consoleBuffer() const { return mpHost->mainConsoleView()->buffer; }
 
     static void press(TTextEdit* pPane, const Qt::Key key, const Qt::KeyboardModifiers modifiers = Qt::NoModifier) { QTest::keyClick(pPane, key, modifiers); }
 
@@ -195,9 +195,9 @@ private slots:
 
         // More lines than fit on the screen, so paging has somewhere to go
         for (int line = 0; line < 100; ++line) {
-            mpHost->mpConsole->print(qsl("caret filler %1\n").arg(line));
+            mpHost->mainConsoleView()->print(qsl("caret filler %1\n").arg(line));
         }
-        mpHost->mpConsole->print(qsl("%1\n%2\n%3\n").arg(mLongLine, mShortLine, mLastLine));
+        mpHost->mainConsoleView()->print(qsl("%1\n%2\n%3\n").arg(mLongLine, mShortLine, mLastLine));
         // Two links on one line, with a plain character between them, so
         // stepping between links has to land on each one's first column
         QVERIFY(runLua(qsl("caretLinkOne = ''\n"
@@ -220,7 +220,7 @@ private slots:
             QTest::qWait(200ms);
         }
         QVERIFY2(settledLength == consoleBuffer().lineBuffer.length(), "the profile's start-up output never stopped arriving");
-        mpHost->mpConsole->print(qsl("%1\n").arg(mLatestLine));
+        mpHost->mainConsoleView()->print(qsl("%1\n").arg(mLatestLine));
 
         mLongLineNumber = consoleBuffer().lineBuffer.indexOf(mLongLine);
         mShortLineNumber = consoleBuffer().lineBuffer.indexOf(mShortLine);
@@ -452,7 +452,7 @@ private slots:
     // character is delivered to the command line rather than dropped.
     void test_aPrintableKeyHandsTheCharacterToTheCommandLine()
     {
-        TCommandLine* pCommandLine = mpHost->mpConsole->mpCommandLine;
+        TCommandLine* pCommandLine = mpHost->mainConsoleView()->mpCommandLine;
         QVERIFY(pCommandLine);
         pCommandLine->clear();
         pane()->setCaretPosition(mLongLineNumber, 0);
@@ -469,7 +469,7 @@ private slots:
     // ...but a key that cannot start a command stays with the caret.
     void test_aCaretKeyIsNotSentToTheCommandLine()
     {
-        TCommandLine* pCommandLine = mpHost->mpConsole->mpCommandLine;
+        TCommandLine* pCommandLine = mpHost->mainConsoleView()->mpCommandLine;
         QVERIFY(pCommandLine);
         pCommandLine->clear();
         pane()->setCaretPosition(mLongLineNumber, 4);
@@ -531,7 +531,7 @@ private slots:
         QCOMPARE(pane()->mCaretLine, mLastLineNumber);
         QCOMPARE(pane()->mCaretColumn, 0);
         QVERIFY2(!mpHost->caretEnabled(), "a printable key left caret mode on");
-        mpHost->mpConsole->mpCommandLine->clear();
+        mpHost->mainConsoleView()->mpCommandLine->clear();
         drainDeferredFocusChange();
     }
 
@@ -656,7 +656,7 @@ private slots:
     void test_caretKeysOnAConsoleEmptiedByDeleteLine()
     {
         QVERIFY(runLua(qsl("createMiniConsole('caretEmptied', 0, 0, 300, 100)\nclearWindow('caretEmptied')\ndeleteLine('caretEmptied')")));
-        TConsole* pMini = mpHost->mpConsole->subConsoleWidget(qsl("caretEmptied"));
+        TConsole* pMini = mpHost->mainConsoleView()->subConsoleWidget(qsl("caretEmptied"));
         QVERIFY(pMini);
         QVERIFY(pMini->buffer.lineBuffer.isEmpty());
         TTextEdit* pMiniPane = pMini->mUpperPane;
@@ -675,7 +675,7 @@ private slots:
     void test_caretKeysAfterDeleteLineShortensTheBufferPastTheCaret()
     {
         QVERIFY(runLua(qsl("createMiniConsole('caretShortened', 0, 0, 300, 100)\nfor i = 1, 10 do echo('caretShortened', 'line ' .. i .. '\\n') end")));
-        TConsole* pMini = mpHost->mpConsole->subConsoleWidget(qsl("caretShortened"));
+        TConsole* pMini = mpHost->mainConsoleView()->subConsoleWidget(qsl("caretShortened"));
         QVERIFY(pMini);
         TTextEdit* pMiniPane = pMini->mUpperPane;
         pMiniPane->setCaretPosition(9, 2);
@@ -698,7 +698,7 @@ private slots:
     void test_ctrlEndOnAConsoleLeftWithOnlyItsTrailingLine()
     {
         QVERIFY(runLua(qsl("createMiniConsole('caretTrailing', 0, 0, 300, 100)\necho('caretTrailing', 'only\\n')\nmoveCursor('caretTrailing', 0, 0)\ndeleteLine('caretTrailing')")));
-        TConsole* pMini = mpHost->mpConsole->subConsoleWidget(qsl("caretTrailing"));
+        TConsole* pMini = mpHost->mainConsoleView()->subConsoleWidget(qsl("caretTrailing"));
         QVERIFY(pMini);
         QCOMPARE(pMini->buffer.lineBuffer, QStringList({QString()}));
         TTextEdit* pMiniPane = pMini->mUpperPane;
@@ -714,7 +714,7 @@ private slots:
     void test_extendingAShiftSelectionAcrossAClearedWindow()
     {
         QVERIFY(runLua(qsl("createMiniConsole('caretShiftCleared', 0, 0, 300, 100)\nfor i = 1, 10 do echo('caretShiftCleared', 'line ' .. i .. '\\n') end")));
-        TConsole* pMini = mpHost->mpConsole->subConsoleWidget(qsl("caretShiftCleared"));
+        TConsole* pMini = mpHost->mainConsoleView()->subConsoleWidget(qsl("caretShiftCleared"));
         QVERIFY(pMini);
         TTextEdit* pMiniPane = pMini->mUpperPane;
         pMiniPane->setCaretPosition(5, 2);
@@ -738,7 +738,7 @@ private slots:
     void test_theCaretKeysStayInsideABufferClearedUnderTheCaret()
     {
         for (int line = 0; line < 5; ++line) {
-            mpHost->mpConsole->print(qsl("clear filler %1\n").arg(line));
+            mpHost->mainConsoleView()->print(qsl("clear filler %1\n").arg(line));
         }
         const int line = static_cast<int>(consoleBuffer().lineBuffer.length()) - 2;
         QVERIFY(line >= 2);
