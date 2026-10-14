@@ -973,6 +973,30 @@ private slots:
         QVERIFY2(onSource.text != qsl("ran here"), qPrintable(onSource.text));
     }
 #endif
+
+    // Last, as a package's bare <Host> resets every profile setting it leaves out. A mapper already
+    // on screen only repaints on signal_areaChanged, so without one it keeps the old colours (#10679)
+    void test_aHostPackageRepaintsTheMapWithItsAnsiColors_10679()
+    {
+        const QByteArray packageXml = "<?xml version=\"1.0\"?><MudletPackage version=\"1.001\"><HostPackage>"
+                                      "<Host><mRed2>#00ff00</mRed2></Host>"
+                                      "</HostPackage></MudletPackage>";
+        QTemporaryFile packageFile;
+        QVERIFY(packageFile.open());
+        QCOMPARE(packageFile.write(packageXml), static_cast<qint64>(packageXml.size()));
+        packageFile.close();
+
+        QCoreApplication::processEvents();
+        QSignalSpy areaChanged(mpTarget->mpMap.data(), &TMap::signal_areaChanged);
+        QFile file(packageFile.fileName());
+        QVERIFY2(file.open(QFile::ReadOnly | QFile::Text), qPrintable(file.errorString()));
+        XMLimport importer(mpTarget);
+        auto [imported, importError] = importer.importPackage(&file, qsl("ansiMapColorPackage"));
+        QVERIFY2(imported, qPrintable(importError));
+
+        QCOMPARE(mpTarget->mpMap->mCustomEnvColors.value(257), QColor(0, 255, 0));
+        QVERIFY2(areaChanged.count() || areaChanged.wait(1000), "the map was never told to repaint with the package's colours");
+    }
 };
 
 #include "ProfileRoundTripTest.moc"
