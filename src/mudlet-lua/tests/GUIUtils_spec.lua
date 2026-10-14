@@ -1771,7 +1771,9 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
 
     it("Should clamp an out of range component to 0-255", function()
       assert.equals("FF0000", RGB2Hex(300, -5, 0))
-      assert.equals("FF7F00", RGB2Hex(255.9, 127.5, -0.5))
+      assert.equals("FFFF00", RGB2Hex(255.5, 256, 0))
+      assert.equals("FF0000", RGB2Hex(1/0, 0, 0))
+      assert.equals("000000", RGB2Hex(0/0, 0, 0))
     end)
   end)
 
