@@ -450,6 +450,10 @@ private:
         // The line through its stations, in the color of its most used environment
         QColor lineColor;
         QRectF pill;
+        // How many stations it shows, and the width of the count of those it leaves out
+        int stations = 0;
+        qreal moreWidth = 0.0;
+        QPointF station(int index) const;
     };
     // Platforms on one side of the viewed level, listed top to bottom, on a shaft rising or falling from the stair
     // that reaches them, if the view shows one
@@ -461,8 +465,9 @@ private:
     };
     // Above and below the viewed level, below top; empty where the style has no platforms
     std::pair<PlatformShaft, PlatformShaft> levelPlatforms(const TArea& area, int top) const;
-    void paintLevelPlatforms(QPainter& painter, const TArea& area, int top);
-    void paintPlayerPill(QPainter& painter, int top);
+    void paintLevelPlatforms(QPainter& painter, const std::pair<PlatformShaft, PlatformShaft>& shafts);
+    // On the player's station, or the first station of the platform of the level the player is on
+    void paintPlayerPill(QPainter& painter, int top, const std::pair<PlatformShaft, PlatformShaft>& shafts);
     void turnNorthUp();
     void setHoveredRoom(int roomId);
     // Worked out afresh, as the view can move under a pointer that stays still

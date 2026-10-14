@@ -717,8 +717,9 @@ void ModernGLWidget::paintGL()
     const QRect titleBlock = paintTitleBlock(painter, *pArea, infoBottom);
     paintLevelCallouts(painter, *pArea, infoBottom, titleBlock);
     paintLineLegend(painter, *pArea, infoBottom);
-    paintLevelPlatforms(painter, *pArea, infoBottom);
-    paintPlayerPill(painter, infoBottom);
+    const std::pair<PlatformShaft, PlatformShaft> shafts = levelPlatforms(*pArea, infoBottom);
+    paintLevelPlatforms(painter, shafts);
+    paintPlayerPill(painter, infoBottom, shafts);
 
     painter.end();
 }
@@ -758,8 +759,12 @@ constexpr float scmHoverOutline = 0.14f;
 // An ink outline's width, and its dashes' length off the viewed level, as a part of a room's width
 constexpr float scmInkOutline = 0.035f;
 constexpr qreal scmInkDash = 0.12;
-// A station's ring's width and an interchange's, as a part of its width
+// An interchange's ring's width, as a part of its width
 constexpr float scmInterchangeRing = 0.3f;
+// A level platform's stations: how far apart, how large, and how many at most before the rest are counted
+constexpr qreal scmPlatformStationGap = 20.0;
+constexpr qreal scmPlatformStationRadius = 5.0;
+constexpr int scmPlatformStations = 3;
 // A label halo's reach past the text, as a part of the text's height
 constexpr qreal scmLabelHalo = 0.12;
 // A map label's halo's greatest reach, in texels
@@ -4075,8 +4080,6 @@ std::pair<ModernGLWidget::PlatformShaft, ModernGLWidget::PlatformShaft> ModernGL
     constexpr int margin = 12;
     constexpr int pillHeight = 26;
     constexpr int spacing = 38;
-    constexpr int stationGap = 20;
-    constexpr int mostStations = 3;
     constexpr int mostPlatforms = 8;
     const QList<int> named = MapDecals::calloutLevels(levels.keys(), mMapCenterZ, mostPlatforms);
     const qreal highest = top + margin + pillHeight / 2.0;
@@ -4094,7 +4097,8 @@ std::pair<ModernGLWidget::PlatformShaft, ModernGLWidget::PlatformShaft> ModernGL
         if (side.isEmpty()) {
             continue;
         }
-        if (stair.roomId) {
+        // A stair with no room past it for a platform is left out, so that none is drawn behind its stair
+        if (stair.roomId && (above ? stair.pixel.y() - highest : lowest - stair.pixel.y()) >= spacing / 2.0) {
             shaft.stair = stair.pixel;
         }
         const qreal stairY = shaft.stair ? shaft.stair->y() : (highest + lowest) / 2.0;
@@ -4128,12 +4132,11 @@ std::pair<ModernGLWidget::PlatformShaft, ModernGLWidget::PlatformShaft> ModernGL
                 }
             }
             platform.lineColor = style.ringColor(RoomAppearance::environmentColor(*mpMap, *mpHost, environment), mpHost->mBgColor_2);
-            const int stations = qMin(level.rooms, mostStations);
-            int pillWidth = 2 * pillHeight + (stations - 1) * stationGap;
-            if (level.rooms > mostStations) {
-                pillWidth += metrics.horizontalAdvance(qsl("+%1").arg(level.rooms - mostStations)) + 6;
+            platform.stations = qMin(level.rooms, scmPlatformStations);
+            if (level.rooms > scmPlatformStations) {
+                platform.moreWidth = metrics.horizontalAdvance(qsl("+%1").arg(level.rooms - scmPlatformStations)) + 6.0;
             }
-            widestPill = qMax(widestPill, pillWidth);
+            widestPill = qMax(widestPill, qCeil(2 * pillHeight + (platform.stations - 1) * scmPlatformStationGap + platform.moreWidth));
             widestLabel = qMax(widestLabel, metrics.horizontalAdvance(platform.label));
             shaft.platforms.append(platform);
         }
@@ -4156,7 +4159,7 @@ std::pair<ModernGLWidget::PlatformShaft, ModernGLWidget::PlatformShaft> ModernGL
                 }
             }
             const qreal beyond = above ? clear - 4.0 + spacing / 2.0 : clear + 4.0 - spacing / 2.0;
-            if ((above ? beyond - highest : lowest - beyond) >= count * spacing - spacing / 2.0) {
+            if ((above ? beyond - highest : lowest - beyond) >= count * spacing) {
                 anchor = beyond;
             }
         }
@@ -4168,9 +4171,15 @@ std::pair<ModernGLWidget::PlatformShaft, ModernGLWidget::PlatformShaft> ModernGL
     return shafts;
 }
 
-void ModernGLWidget::paintLevelPlatforms(QPainter& painter, const TArea& area, const int top)
+QPointF ModernGLWidget::LevelPlatform::station(const int index) const
 {
-    const auto [above, below] = levelPlatforms(area, top);
+    const qreal firstX = pill.center().x() - moreWidth / 2.0 - (stations - 1) * scmPlatformStationGap / 2.0;
+    return {firstX + index * scmPlatformStationGap, pill.center().y()};
+}
+
+void ModernGLWidget::paintLevelPlatforms(QPainter& painter, const std::pair<PlatformShaft, PlatformShaft>& shafts)
+{
+    const auto& [above, below] = shafts;
     if (above.platforms.isEmpty() && below.platforms.isEmpty()) {
         return;
     }
@@ -4179,9 +4188,6 @@ void ModernGLWidget::paintLevelPlatforms(QPainter& painter, const TArea& area, c
     QFont font = sheetFont();
     font.setBold(true);
     const QFontMetrics metrics(font);
-    constexpr int stationGap = 20;
-    constexpr int mostStations = 3;
-    constexpr qreal stationRadius = 5.0;
     QColor paper = backgroundColor();
     paper.setAlpha(245);
     painter.save();
@@ -4208,23 +4214,20 @@ void ModernGLWidget::paintLevelPlatforms(QPainter& painter, const TArea& area, c
             painter.setPen(QPen(QColor(200, 200, 200), 1.5));
             painter.setBrush(Qt::white);
             painter.drawRoundedRect(pill, pill.height() / 2.0, pill.height() / 2.0);
-            const int stations = qMin(platform.rooms, mostStations);
-            const QString more = platform.rooms > mostStations ? qsl("+%1").arg(platform.rooms - mostStations) : QString();
-            const qreal moreWidth = more.isEmpty() ? 0.0 : metrics.horizontalAdvance(more) + 6.0;
-            const qreal firstX = pill.center().x() - moreWidth / 2.0 - (stations - 1) * stationGap / 2.0;
-            const qreal y = pill.center().y();
-            if (stations > 1) {
+            if (platform.stations > 1) {
                 painter.setPen(QPen(platform.lineColor, 4.0, Qt::SolidLine, Qt::RoundCap));
-                painter.drawLine(QPointF(firstX, y), QPointF(firstX + (stations - 1) * stationGap, y));
+                painter.drawLine(platform.station(0), platform.station(platform.stations - 1));
             }
             painter.setPen(QPen(ink, 2.0));
             painter.setBrush(Qt::white);
-            for (int i = 0; i < stations; ++i) {
-                painter.drawEllipse(QPointF(firstX + i * stationGap, y), stationRadius, stationRadius);
+            for (int i = 0; i < platform.stations; ++i) {
+                painter.drawEllipse(platform.station(i), scmPlatformStationRadius, scmPlatformStationRadius);
             }
-            if (!more.isEmpty()) {
+            if (platform.moreWidth > 0.0) {
                 painter.setPen(QColor(120, 120, 120));
-                painter.drawText(QRectF(pill.right() - pill.height() / 2.0 - moreWidth, pill.top(), moreWidth, pill.height()), Qt::AlignRight | Qt::AlignVCenter, more);
+                painter.drawText(QRectF(pill.right() - pill.height() / 2.0 - platform.moreWidth, pill.top(), platform.moreWidth, pill.height()),
+                                 Qt::AlignRight | Qt::AlignVCenter,
+                                 qsl("+%1").arg(platform.rooms - platform.stations));
             }
             const qreal labelWidth = metrics.horizontalAdvance(platform.label) + 1.0;
             const QRectF labelRect(pill.left() - 8.0 - labelWidth, pill.top(), labelWidth, pill.height());
@@ -4238,37 +4241,64 @@ void ModernGLWidget::paintLevelPlatforms(QPainter& painter, const TArea& area, c
     painter.restore();
 }
 
-void ModernGLWidget::paintPlayerPill(QPainter& painter, const int top)
+void ModernGLWidget::paintPlayerPill(QPainter& painter, const int top, const std::pair<PlatformShaft, PlatformShaft>& shafts)
 {
     if (mapStyle().playerMarker != MapStyle::PlayerMarker::Pill || !mpMap || !mpMap->mpRoomDB) {
         return;
     }
     const TRoom* pR = mpMap->mpRoomDB->getRoom(mpMap->mRoomIdHash.value(mpMap->mProfileName));
-    if (!pR || pR->getArea() != mAID || pR->isHidden() || !levelShown(pR->z())) {
+    if (!pR || pR->getArea() != mAID || pR->isHidden()) {
         return;
     }
-    const float roomSize = 2.0f / scale;
-    const QVector3D roomTop(static_cast<float>(pR->x()), static_cast<float>(pR->y()), static_cast<float>(pR->z()) + roomSize / zFlattening / 2.0f);
-    const std::optional<QPointF> station = mCameraController.pixelForPoint(roomTop);
-    const std::optional<QPointF> rim = mCameraController.pixelForPoint(roomTop + mCameraController.screenRight() * (roomSize / 2.0f));
-    if (!station || !rim || !QRectF(rect()).contains(*station)) {
+    std::optional<QPointF> station;
+    qreal radius = scmPlatformStationRadius;
+    if (levelShown(pR->z())) {
+        const float roomSize = 2.0f / scale;
+        const QVector3D roomTop(static_cast<float>(pR->x()), static_cast<float>(pR->y()), static_cast<float>(pR->z()) + roomSize / zFlattening / 2.0f);
+        station = mCameraController.pixelForPoint(roomTop);
+        const std::optional<QPointF> rim = mCameraController.pixelForPoint(roomTop + mCameraController.screenRight() * (roomSize / 2.0f));
+        if (!station || !rim) {
+            return;
+        }
+        radius = QLineF(*station, *rim).length();
+    } else {
+        for (const PlatformShaft* shaft : {&shafts.first, &shafts.second}) {
+            for (const LevelPlatform& platform : shaft->platforms) {
+                if (platform.level == pR->z() && platform.stations > 0) {
+                    station = platform.station(0);
+                }
+            }
+        }
+    }
+    if (!station || !QRectF(rect()).contains(*station)) {
         return;
     }
-    const qreal radius = QLineF(*station, *rim).length();
     QFont font = sheetFont();
     font.setBold(true);
     const QFontMetrics metrics(font);
     //: Written on the pill that points out the player's room on the 3D map in the transit style, as "you are here" on a metro map; keep it to a few letters
     const QString text = tr("YOU");
     const QSizeF size(metrics.horizontalAdvance(text) + 16.0, metrics.height() + 6.0);
+    const qreal lowestX = size.width() / 2.0 + 4.0;
+    const qreal highestX = width() - size.width() / 2.0 - 4.0;
+    const qreal lowestY = top + size.height() / 2.0 + 4.0;
+    const qreal highestY = height() - size.height() / 2.0 - 4.0;
+    if (highestX < lowestX || highestY < lowestY) {
+        return;
+    }
     // Up and to the left of the station, as far again as the station is wide, and kept in the view
     QPointF center = *station - QPointF(radius + 14.0 + size.width() / 2.0, radius + 12.0 + size.height() / 2.0);
-    center.setX(std::clamp(center.x(), size.width() / 2.0 + 4.0, width() - size.width() / 2.0 - 4.0));
-    center.setY(std::clamp(center.y(), top + size.height() / 2.0 + 4.0, height() - size.height() / 2.0 - 4.0));
+    center.setX(std::clamp(center.x(), lowestX, highestX));
+    center.setY(std::clamp(center.y(), lowestY, highestY));
     const QRectF pill(center - QPointF(size.width() / 2.0, size.height() / 2.0), size);
     const QColor ink = mapStyle().exitColor(mpHost->mFgColor_2);
     painter.save();
     painter.setRenderHint(QPainter::Antialiasing);
+    if (!levelShown(pR->z())) {
+        painter.setPen(Qt::NoPen);
+        painter.setBrush(ink);
+        painter.drawEllipse(*station, radius * 0.5, radius * 0.5);
+    }
     const QLineF toStation(center, *station);
     if (toStation.length() > radius + 2.0) {
         painter.setPen(QPen(ink, 2.0, Qt::SolidLine, Qt::RoundCap));

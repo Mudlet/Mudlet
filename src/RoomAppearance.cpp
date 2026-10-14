@@ -152,13 +152,28 @@ int exitCount(const TRoom& room)
 
 bool onEnvironmentLine(const TMap& map, const TRoom& room)
 {
+    const auto sameLine = [&room](const TRoom* pOther) {
+        return pOther && !pOther->isHidden() && pOther->environment == room.environment && pOther->z() == room.z() && pOther->getArea() == room.getArea();
+    };
+    const auto leadsTo = [](const TRoom& from, const int to) {
+        for (int direction = DIR_NORTH; direction <= DIR_SOUTHWEST; ++direction) {
+            if (from.getExit(direction) == to) {
+                return true;
+            }
+        }
+        return false;
+    };
     for (int direction = DIR_NORTH; direction <= DIR_SOUTHWEST; ++direction) {
         const int destination = room.getExit(direction);
-        if (destination <= 0) {
-            continue;
+        if (destination > 0 && sameLine(map.mpRoomDB->getRoom(destination))) {
+            return true;
         }
-        const TRoom* pOther = map.mpRoomDB->getRoom(destination);
-        if (pOther && pOther->environment == room.environment && pOther->z() == room.z() && pOther->getArea() == room.getArea()) {
+    }
+    // A one-way exit into the room draws a line to it as well
+    const QMultiHash<int, int>& entrances = map.mpRoomDB->getEntranceHash();
+    for (auto it = entrances.constFind(room.getId()); it != entrances.cend() && it.key() == room.getId(); ++it) {
+        const TRoom* pFrom = map.mpRoomDB->getRoom(it.value());
+        if (sameLine(pFrom) && leadsTo(*pFrom, room.getId())) {
             return true;
         }
     }
