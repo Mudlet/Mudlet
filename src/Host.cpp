@@ -1981,7 +1981,6 @@ bool Host::substituteMissingDisplayFont()
     return true;
 }
 
-// Now returns the total weight of the path
 qint64 Host::assemblePath()
 {
     qint64 totalWeight = 0;
