@@ -4305,6 +4305,18 @@ describe("Tests db:create moving a single-column UNIQUE", function()
     assert.is_nil(added)
     assert.is_truthy(string.find(warnings, "UNIQUE constraint failed: people.name", 1, true))
   end)
+
+  it("keeps the values of a column whose name holds the sheet's", function()
+    local mydb = createCollectingWarnings({people = {people_id = 0, name = "", city = "", _unique = {"name"}}})
+    assert.is_true(db:add(mydb.people, {people_id = 7, name = "Bob", city = "Lancre"}))
+
+    mydb = createCollectingWarnings({people = {people_id = 0, name = "", city = "", _unique = {"city"}}})
+
+    local rows = db:fetch(mydb.people)
+    assert.are.equal(1, #rows)
+    assert.are.equal(7, rows[1].people_id)
+    assert.is_true(db:add(mydb.people, {people_id = 8, name = "Bob", city = "Ankh-Morpork"}))
+  end)
 end)
 
 -- A sheet may be given as a list of its column names instead of a table of

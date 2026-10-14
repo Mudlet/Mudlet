@@ -1185,13 +1185,10 @@ function db:_migrate(db_name, s_name, force)
         local original_count, og_count_err = count_rows(conn, s_name);
         assert(original_count, og_count_err);
 
-        -- Create temporary backup table, recreate main table, copy data
-        local create_tmp = row.sql:gsub(s_name, s_name .. "_bak")
-        create_tmp = create_tmp:gsub("TABLE", "TEMPORARY TABLE")
-
+        -- the backup copies the data rather than renaming the sheet in its CREATE TABLE, which renames
+        -- a column such as people_id too, and sqlite reads an unknown "people_id" as a string literal
         local sql_chunks = {}
-        sql_chunks[#sql_chunks + 1] = create_tmp .. ";"
-        sql_chunks[#sql_chunks + 1] = "INSERT INTO " .. s_name .. "_bak SELECT * FROM " .. s_name .. ";"
+        sql_chunks[#sql_chunks + 1] = "CREATE TEMPORARY TABLE " .. s_name .. "_bak AS SELECT * FROM " .. s_name .. ";"
         sql_chunks[#sql_chunks + 1] = "DROP TABLE " .. s_name .. ";"
 
         local new_create_sql = db:_build_create_table_sql(schema, s_name)
