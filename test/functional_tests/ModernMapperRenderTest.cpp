@@ -1567,9 +1567,81 @@ private slots:
         QCOMPARE(ringed.size(), 1);
         QCOMPARE(ringed.constFirst().section(QLatin1Char('|'), 2, 2), blue.name(QColor::HexArgb));
 
+        // On the ground under the room, centered on it and reaching past it
+        const GLuint texture = widget.mLabelTextureCache.imageTexture(ringed.constFirst());
+        QVERIFY(texture);
+        const float foot = -roomHeight(qsl("hologram")) / 2.0f;
+        const float roomWidth = 2.0f / hologram.roomScale;
+        int quads = 0;
+        for (const auto& command : widget.mRenderCommandQueue.commands()) {
+            const auto* textured = dynamic_cast<const RenderTexturedTrianglesCommand*>(command.get());
+            if (!textured || textured->geometry().textureId != texture) {
+                continue;
+            }
+            const QVector<float>& vertices = textured->geometry().vertices;
+            QCOMPARE(vertices.size(), 18);
+            float least = vertices.at(0);
+            float most = vertices.at(0);
+            float middle = 0.0f;
+            for (qsizetype vertex = 0; vertex < vertices.size(); vertex += 3) {
+                QVERIFY2(qAbs(vertices.at(vertex + 2) - foot) < 1e-4f, qPrintable(qsl("the ring is at height %1, the room's foot at %2").arg(vertices.at(vertex + 2)).arg(foot)));
+                least = std::min(least, vertices.at(vertex));
+                most = std::max(most, vertices.at(vertex));
+                middle += vertices.at(vertex + 1);
+            }
+            QVERIFY2(qAbs((least + most) / 2.0f - 2.0f) < 1e-4f && qAbs(middle / 6.0f) < 1e-4f, "the ring is not centered on its room");
+            QVERIFY2(most - least > roomWidth, qPrintable(qsl("the ring is %1 across and its room %2").arg(most - least).arg(roomWidth)));
+            ++quads;
+        }
+        QCOMPARE(quads, 1);
+
         east->highlight = false;
         queueFrame(widget, areaId);
         QVERIFY2(ringKeys().isEmpty(), "a room no longer highlighted is still ringed");
+    }
+
+    // The readout has a panel behind it to read over a crowded map, in the profile's own info box color when it has one
+    void test_hologramReadoutReadsOnItsPanelWithoutGL()
+    {
+        const int areaId = addArea();
+        QVERIFY(areaId > 0);
+        const auto restore = qScopeGuard([this]() {
+            mpHost->setMapStyle(qsl("tiles"));
+            mpHost->mMapInfoBg = Host::scmDefaultMapInfoBg;
+        });
+        QVERIFY(mpHost->setMapStyle(qsl("hologram")));
+        ModernGLWidget widget(map(), mpHost);
+        widget.setViewCenter(areaId, 0, 0, 0);
+        widget.resize(800, 600);
+        const auto paintReadout = [&widget]() {
+            QImage image(widget.size(), QImage::Format_ARGB32);
+            image.fill(Qt::black);
+            QPainter painter(&image);
+            widget.paintScannerOverlay(painter, 0);
+            return image;
+        };
+        // Where the panel's top left corner and the first line's text fall, at the readout's 12px margin and 11px font
+        const QPoint panelCorner(17, 14);
+        const QRect firstLine(20, 16, 80, 9);
+        const auto extremeLightness = [](const QImage& image, const QRect& area, const bool darkest) {
+            int found = darkest ? 255 : 0;
+            for (int y = area.top(); y <= area.bottom(); ++y) {
+                for (int x = area.left(); x <= area.right(); ++x) {
+                    const int lightness = QColor(image.pixel(x, y)).lightness();
+                    found = darkest ? std::min(found, lightness) : std::max(found, lightness);
+                }
+            }
+            return found;
+        };
+
+        const QImage themed = paintReadout();
+        QVERIFY2(QColor(themed.pixel(panelCorner)) != QColor(Qt::black), "the readout has no panel behind it");
+        QVERIFY2(extremeLightness(themed, firstLine, false) > 150, "the readout's text does not stand out from its dark panel");
+
+        mpHost->mMapInfoBg = QColor(Qt::white);
+        const QImage own = paintReadout();
+        QCOMPARE(QColor(own.pixel(panelCorner)), QColor(Qt::white));
+        QVERIFY2(extremeLightness(own, firstLine, true) < 100, "the readout's text does not stand out from a light panel");
     }
 
     // A map label is drawn dimmer and tinted toward the ink, so that it does not outshine the rooms
