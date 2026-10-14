@@ -2549,6 +2549,7 @@ describe("Tests reading the ways a save spells NaN and infinity", function()
     msvcrtNegativeSignallingNan = "-1.#SNAN",
     upperCaseNan = "-NAN",
     mixedCaseNan = "1.#qnan",
+    paddedNan = " -nan ",
   }
 
   setup(function()
@@ -2564,6 +2565,7 @@ describe("Tests reading the ways a save spells NaN and infinity", function()
       variable("thisBuildsNegativeInfinity", tostring(-math.huge)),
       variable("msvcrtInfinity", "1.#INF"),
       variable("msvcrtNegativeInfinity", "-1.#INF"),
+      variable("paddedInfinity", "1.#INF "),
       variable("notANumber", "banana"),
       '</VariableGroup>',
       -- a number key goes through the same text, so msvcrt's infinities must
@@ -2613,6 +2615,7 @@ describe("Tests reading the ways a save spells NaN and infinity", function()
     assert.equals(-math.huge, mudletSpecSavedNumber.thisBuildsNegativeInfinity)
     assert.equals(math.huge, mudletSpecSavedNumber.msvcrtInfinity)
     assert.equals(-math.huge, mudletSpecSavedNumber.msvcrtNegativeInfinity)
+    assert.equals(math.huge, mudletSpecSavedNumber.paddedInfinity)
   end)
 
   it("does not take other text that holds nan for a NaN", function()

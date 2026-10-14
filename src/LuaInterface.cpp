@@ -95,10 +95,8 @@ std::pair<bool, QString> LuaInterface::validMove(TVar* pNewParent) const
     return {true, QString()};
 }
 
-// toDouble() reads "nan", "inf" and "-inf", but none of the other ways printf
-// spells NaN or infinity: "-nan" (glibc), "-nan(ind)" and "nan(snan)" (UCRT),
-// "-1.#IND", "1.#QNAN" and "1.#INF" (msvcrt). Lua writes numbers with printf,
-// so a saved number or number key holds whichever the saving platform uses.
+// Lua saves numbers with printf, so a save holds whichever NaN/infinity spelling its platform uses;
+// toDouble() reads only "nan", "inf" and "-inf", not glibc's "-nan", UCRT's "-nan(ind)" or msvcrt's "1.#INF".
 static std::optional<lua_Number> numberFromText(const QString& text)
 {
     bool ok = false;
@@ -436,6 +434,9 @@ bool LuaInterface::setValue(TVar* var)
             qWarning().noquote().nospace() << "LuaInterface::setValue(...) WARNING - could not reach \"" << var->getName() << "\" to write to it.";
             lua_settop(mL, stackTop);
             return false;
+        }
+        if (var->getKeyType() == LUA_TNUMBER && !var->isReference() && !numberFromText(var->getName())) {
+            qWarning().noquote().nospace() << "LuaInterface::setValue(...) WARNING - the key \"" << var->getName() << "\" is not a number, so it is being written as the key 0.";
         }
         switch (var->getValueType()) {
         case LUA_TSTRING: {
