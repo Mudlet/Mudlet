@@ -729,6 +729,63 @@ private slots:
         QCOMPARE(EnvironmentKit::forDefinedEnvironment({}, *map(), kEnvironment, blue), EnvironmentKit::Kit::Water);
     }
 
+    // An environment mapped onto a color the map does not have is drawn in the default red, like an undefined one
+    void test_anEnvironmentMappedOntoNoColorHasNoGround()
+    {
+        constexpr int kEnvironment = 9998;
+        constexpr int kMissing = 9997;
+        const QColor blue(50, 90, 200);
+        const auto restore = qScopeGuard([this, kEnvironment]() {
+            map()->mEnvColors.remove(kEnvironment);
+        });
+        map()->mEnvColors[kEnvironment] = kMissing;
+        QVERIFY(!map()->mCustomEnvColors.contains(kMissing));
+        QVERIFY(!RoomAppearance::environmentDefined(*map(), kEnvironment));
+        QVERIFY(!EnvironmentKit::forDefinedEnvironment({}, *map(), kEnvironment, blue));
+        QCOMPARE(RoomAppearance::environmentColor(*map(), *mpHost, kEnvironment), mpHost->mRed_2);
+        map()->mEnvColors[kEnvironment] = 4;
+        QVERIFY(RoomAppearance::environmentDefined(*map(), kEnvironment));
+        QCOMPARE(RoomAppearance::environmentColor(*map(), *mpHost, kEnvironment), mpHost->mBlue_2);
+        QCOMPARE(EnvironmentKit::forDefinedEnvironment({}, *map(), kEnvironment, blue), EnvironmentKit::Kit::Water);
+    }
+
+    // Two profiles' maps with different unreadable kits, read in turn on every repaint, warn once each
+    void test_unreadableKitsWarnOnceForEachSavedValue()
+    {
+        QMap<QString, QString> first{{EnvironmentKit::userDataKey(), qsl("{\"1\": \"lava\"}")}};
+        QMap<QString, QString> second{{EnvironmentKit::userDataKey(), qsl("not json")}};
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("EnvironmentKit: .*lava")));
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("EnvironmentKit: .*not json")));
+        QTest::failOnWarning(QRegularExpression(qsl("EnvironmentKit: ")));
+        for (int frame = 0; frame < 3; ++frame) {
+            QVERIFY(EnvironmentKit::stored(first).isEmpty());
+            QVERIFY(EnvironmentKit::stored(second).isEmpty());
+        }
+    }
+
+    void test_groundFallsBackToAsciiForAFontWithoutIt()
+    {
+        QCOMPARE(RoomAppearance::groundGlyph(EnvironmentKit::Kit::Water, false, true), qsl("~"));
+        QCOMPARE(RoomAppearance::groundGlyph(EnvironmentKit::Kit::Forest, false, true), qsl("*"));
+        QCOMPARE(RoomAppearance::groundGlyph(EnvironmentKit::Kit::Building, false, true), qsl("="));
+        QCOMPARE(RoomAppearance::groundGlyph(EnvironmentKit::Kit::Road, false, true), qsl("#"));
+        QCOMPARE(RoomAppearance::groundGlyph(EnvironmentKit::Kit::Plain, true, true), qsl("."));
+        for (const QString& kitName : EnvironmentKit::names()) {
+            const QString ascii = RoomAppearance::groundGlyph(*EnvironmentKit::fromName(kitName), false, true);
+            QVERIFY2(ascii.size() == 1 && ascii.at(0).unicode() >= u'!' && ascii.at(0).unicode() <= u'~', qPrintable(ascii));
+        }
+        TRoom* pRoom = addRoomAt(1, mAreaId, 0, 0);
+        QVERIFY(pRoom);
+        const RoomAppearance::Look look;
+        QCOMPARE(RoomAppearance::terminalGlyph(*pRoom, look, false, EnvironmentKit::Kit::Forest, true), qsl("*"));
+
+        const QFont font(qsl("Bitstream Vera Sans Mono"));
+        QVERIFY(RoomAppearance::fontShows(font, qsl("#")));
+        // A noncharacter, which no font draws
+        QVERIFY(!RoomAppearance::fontShows(font, QString(QChar(0xFFFF))));
+        QVERIFY(!RoomAppearance::fontShows(font, QString()));
+    }
+
     void test_areaExitPointsOutOfTheArea_data()
     {
         QTest::addColumn<bool>("large");
