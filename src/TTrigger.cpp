@@ -618,7 +618,7 @@ bool TTrigger::setRegexCodeList(QStringList patterns, QList<int> patternKinds, b
     }
 
     bool state = true;
-    // Every failing pattern is reported, not only the last
+    // Collected, as setError() replaces the previous error
     QStringList patternErrors;
 
     if (existingTrigger) {
