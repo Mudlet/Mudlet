@@ -3906,6 +3906,22 @@ describe("Tests saveMap and loadMap", function()
       assert.are.equal(3, getRoomBorderThickness(room))
     end)
 
+    it("refuses a script's own value for a room border key, which a save would replace", function()
+      deleteMap()
+      local area = addAreaName("MapperSpecRoomBorderKeyArea")
+      local room = createRoomID(); addRoom(room); setRoomArea(room, area)
+      assert.is_true(setRoomBorderThickness(room, 3))
+
+      for _, key in ipairs({"room.ui_borderColor", "room.ui_borderThickness"}) do
+        local ok, err = setRoomUserData(room, key, "9")
+        assert.is_nil(ok)
+        assert.is_truthy(err:find(key, 1, true))
+      end
+
+      assert.are.same({}, getAllRoomUserData(room))
+      assert.are.equal(3, getRoomBorderThickness(room))
+    end)
+
     it("lists each entrance into a room once after a reload", function()
       buildMap()
       assert.are.same({roomA}, getAllRoomEntrances(roomB))
