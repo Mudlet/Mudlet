@@ -3390,9 +3390,9 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
     // Filled per XML file by the archive branch, reported once both branches are done.
     QStringList itemsWithErrors;
     QStringList itemsWithErrorNames;
-    // A package file that broke before a single item could be read out of it would be listed, and saved into
-    // the profile, with nothing in it. As nothing of it ran, taking it back leaves nothing behind. One that
-    // got as far as an item stays installed and is warned about, as its items are running.
+    // A package file that broke before anything could be read out of it would be listed, and saved into the
+    // profile, with nothing in it. As nothing of it was applied, taking it back leaves nothing behind. One that
+    // got as far as an item, a variable or a setting stays installed and is warned about, as that is in use.
     auto takeBackAPackageNothingWasReadFrom = [this](const QString& packageName) {
         mInstalledPackages.removeAll(packageName);
         // A file from a later Mudlet is turned away after the empty folders for its items were made
@@ -3585,7 +3585,7 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         _filterList << qsl("*.xml") << qsl("*.trigger");
         const QFileInfoList entries = _dir.entryInfoList(_filterList, QDir::Files);
         bool registeredFromArchive = false;
-        bool anItemWasRead = false;
+        bool anythingWasRead = false;
         QStringList packageFileErrors;
         for (auto& entry : entries) {
             file2.setFileName(entry.absoluteFilePath());
@@ -3607,7 +3607,7 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
             mPackagesBeingInstalled.push(packageName);
             auto [success, errorMsg] = reader.importPackage(&file2, packageName, static_cast<int>(thing));
             mPackagesBeingInstalled.pop();
-            anItemWasRead = anItemWasRead || reader.readAnItem();
+            anythingWasRead = anythingWasRead || reader.readAnything();
             itemsWithErrors << reader.itemsWithErrors();
             itemsWithErrorNames << reader.itemsWithErrorNames();
             if (thing != enums::PackageModuleType::Package) {
@@ -3624,7 +3624,7 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         }
         // Decided once every file has been tried: they are read in the order of their names, so a stray file
         // that cannot be read would otherwise turn the package away or not depending on what it is called.
-        if (!packageFileErrors.isEmpty() && !anItemWasRead) {
+        if (!packageFileErrors.isEmpty() && !anythingWasRead) {
             takeBackAPackageNothingWasReadFrom(packageName);
             takeBackWhatTheManifestOverwrote();
             if (!discardTheFolderThisInstallMade()) {
@@ -3687,7 +3687,7 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
                 qWarning() << "Host::installPackage() WARNING - failed to load module" << packageName << ":" << errorMsg;
                 postMessage(tr("[ WARN ]  - Failed to load module \"%1\": %2").arg(packageName, errorMsg));
             }
-        } else if (!success && !reader.readAnItem()) {
+        } else if (!success && !reader.readAnything()) {
             file2.close();
             takeBackAPackageNothingWasReadFrom(packageName);
             return fail(nothingCouldBeReadReason(packageName, errorMsg));

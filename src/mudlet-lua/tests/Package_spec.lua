@@ -2021,6 +2021,34 @@ describe("Tests installing an archive whose package XML cannot be read", functio
     assert.equals(1, exists(name .. " alias", "alias"), "the package file beside the stray one was not read")
     assert.is_true(containsWrapped(textFrom(mark), 'Failed to load package "' .. name .. '"'), textFrom(mark))
   end)
+
+  -- A variable is set as it is read, and refusing the package would not unset it
+  it("keeps a package XML that broke after setting a variable", function()
+    local name = "mudlet-spec-cutaftervariable"
+    local xml = getMudletHomeDir() .. "/" .. name .. ".xml"
+    defer(function()
+      removeFixturePackage(name)
+      os.remove(xml)
+      mudletSpecCutAfterVariable = nil
+    end)
+    local file = io.open(xml, "wb")
+    assert.is_not_nil(file, "could not write " .. xml)
+    file:write(table.concat({
+      '<?xml version="1.0" encoding="UTF-8"?>',
+      '<!DOCTYPE MudletPackage>',
+      '<MudletPackage version="1.001">',
+      '<VariablePackage>',
+      '<Variable><name>mudletSpecCutAfterVariable</name><keyType>4</keyType><value>5</value><valueType>3</valueType></Variable>',
+      '</VariablePackage>',
+      '<AliasPack',
+    }, "\n"))
+    file:close()
+    mudletSpecCutAfterVariable = nil
+
+    installUntilConfirmed(installPackage, xml, function() return packageInstalled(name) end, "the package XML cut off after its variable")
+
+    assert.equals(5, mudletSpecCutAfterVariable)
+  end)
 end)
 
 describe("Tests installing an archive whose config.lua will not run", function()

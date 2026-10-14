@@ -310,6 +310,7 @@ void XMLimport::readVariable(TVar* pParent)
                 var->setValue(value, valueType);
                 vu->addSavedVar(var);
                 lI->setValue(var);
+                gotOtherContent = true;
                 continue;
             } else if (name() == qsl("VariableGroup") || name() == qsl("Variable")) { // NOLINT(readability-else-after-return)
                 readVariable(var);
@@ -337,6 +338,7 @@ void XMLimport::readHiddenVariables()
             if (name() == qsl("name")) {
                 const QString var = readElementText();
                 vu->addHidden(var);
+                gotOtherContent = true;
                 continue;
             }
         }
@@ -702,6 +704,7 @@ void XMLimport::readHelpPackage()
             if (name() == qsl("helpURL")) {
                 const QString contents = readElementText();
                 mpHost->moduleHelp[mPackageName].insert("helpURL", contents);
+                gotOtherContent = true;
             }
         }
     }
@@ -747,6 +750,7 @@ void XMLimport::readHostPackage()
         }
         if (isStartElement()) {
             if (name() == qsl("Host")) {
+                gotOtherContent = true;
                 readHost(mpHost);
             } else {
                 readUnknownElement(qsl("HostPackage"));
