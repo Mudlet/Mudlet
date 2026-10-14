@@ -391,8 +391,8 @@ private:
     void paintCompass(QPainter& painter);
     // The style's lettering at the size of the text drawn over the view
     QFont sheetFont() const;
-    // Where it was drawn, or an empty rectangle where the style draws none or the view has no room for it
-    QRect paintTitleBlock(QPainter& painter, const TArea& area);
+    // Where it was drawn, below top, or an empty rectangle where the style draws none or the view has no room for it
+    QRect paintTitleBlock(QPainter& painter, const TArea& area, int top);
     // Below top, and above the title block
     void paintLevelCallouts(QPainter& painter, const TArea& area, int top, const QRect& titleBlock);
     void turnNorthUp();
