@@ -24,8 +24,10 @@
 
 #include <QtTest/QtTest>
 
+#include <QFontMetricsF>
 #include <QImage>
 
+#include "GeometryManager.h"
 #include "Host.h"
 #include "MapDecals.h"
 #include "MapStyle.h"
@@ -321,13 +323,93 @@ private slots:
         QVERIFY(!tiles().titleBlock && !tiles().levelCallouts);
     }
 
+    // A pale wash of the environment's color over the sheet, however dark the color
     void test_blueprintTintsRoomsByTheirEnvironment()
     {
         const QColor sheet = blueprint().background;
         const QColor forest = blueprint().roomColor(QColor(40, 160, 60));
-        // A third of the way from the sheet to the environment's color, enough to tell areas apart at a glance
-        QVERIFY2(forest.green() - sheet.green() > 25, qPrintable(qsl("green %1 on a sheet of %2").arg(forest.green()).arg(sheet.green())));
-        QVERIFY(forest.blue() < sheet.blue());
+        QVERIFY2(forest.green() - sheet.green() > 40, qPrintable(qsl("green %1 on a sheet of %2").arg(forest.green()).arg(sheet.green())));
+        QVERIFY(forest.green() - sheet.green() > forest.red() - sheet.red() && forest.green() - sheet.green() > forest.blue() - sheet.blue());
+        const QColor cellar = blueprint().roomColor(QColor(50, 10, 70));
+        QVERIFY2(cellar.lightness() - sheet.lightness() > 40, qPrintable(qsl("a dark room's lightness is %1 on a sheet of %2").arg(cellar.lightness()).arg(sheet.lightness())));
+        QVERIFY2(cellar.red() - sheet.red() > 30, qPrintable(qsl("a purple room's red is %1 on a sheet of %2").arg(cellar.red()).arg(sheet.red())));
+        QCOMPARE(blueprint().roomColor(QColor(40, 160, 60, 100)).alpha(), 100);
+    }
+
+    void test_blueprintHighlightsInItsInk()
+    {
+        QCOMPARE(blueprint().highlightColor.rgb(), blueprint().ink.rgb());
+        QVERIFY(!tiles().highlightColor.isValid());
+    }
+
+    // Each digit is a texture of its own, drawn side by side, so spacing would leave gaps inside the number
+    void test_blueprintRoomIdsAreNotLetterSpaced()
+    {
+        const QFont symbolFont(qsl("Bitstream Vera Sans"), 10);
+        const QFont ids = blueprint().roomIdFont(symbolFont);
+        QCOMPARE(ids.family(), blueprint().labelFontFamily);
+        QCOMPARE(ids.letterSpacing(), symbolFont.letterSpacing());
+        QCOMPARE(ids.letterSpacingType(), symbolFont.letterSpacingType());
+        QVERIFY(blueprint().labelFont(symbolFont).letterSpacing() > 100.0);
+        QCOMPARE(tiles().roomIdFont(symbolFont), tiles().labelFont(symbolFont));
+    }
+
+    // Two rooms whose names just fit side by side: spaced capitals run together there, so blueprint keeps a space
+    // between names and drops one, where every other style keeps both as before
+    void test_onlySpacedNamesAreKeptASpaceApart()
+    {
+        QFont font = blueprint().labelFont(QFont(qsl("Bitstream Vera Sans"), 10));
+        font.setPixelSize(20);
+        const QFontMetricsF metrics(font);
+        const QString name = qsl("Street 12");
+        const qreal nameWidth = metrics.horizontalAdvance(name);
+        const qreal spaceWidth = metrics.horizontalAdvance(QLatin1Char(' '));
+        const qreal roomSpacing = nameWidth + 1.0;
+        const auto namesKept = [&](const MapStyle& style) {
+            const qreal span = style.roomNameSpan(nameWidth, spaceWidth);
+            QList<QRectF> rects;
+            for (const qreal center : {100.0, 100.0 + roomSpacing}) {
+                rects.append(QRectF(center - span / 2.0, 100.0, span, metrics.height()));
+            }
+            return GeometryManager::declutteredRects(rects, 7.0).size();
+        };
+        QCOMPARE(namesKept(tiles()), 2);
+        QCOMPARE(namesKept(blueprint()), 1);
+        QCOMPARE(tiles().roomNameSpan(nameWidth, spaceWidth), nameWidth);
+    }
+
+    void test_calloutsNameTheNearestLevelsTopToBottom_data()
+    {
+        QTest::addColumn<QList<int>>("levels");
+        QTest::addColumn<int>("shown");
+        QTest::addColumn<int>("most");
+        QTest::addColumn<QList<int>>("named");
+        QTest::newRow("all fit") << QList<int>{-1, 0, 1, 2} << 0 << 8 << QList<int>{2, 1, -1};
+        QTest::newRow("the shown level is never named") << QList<int>{0} << 0 << 8 << QList<int>{};
+        QTest::newRow("the furthest left out") << QList<int>{-4, -3, -2, -1, 0, 1, 2, 3} << 0 << 4 << QList<int>{2, 1, -1, -2};
+        QTest::newRow("of two as near, the one above") << QList<int>{-1, 0, 1} << 0 << 1 << QList<int>{1};
+        QTest::newRow("from a shown level up high") << QList<int>{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10} << 9 << 8 << QList<int>{10, 8, 7, 6, 5, 4, 3, 2};
+        QTest::newRow("no room for any") << QList<int>{1, 2} << 0 << 0 << QList<int>{};
+        QTest::newRow("unsorted, with repeats") << QList<int>{3, -2, 3, 1} << 0 << 8 << QList<int>{3, 1, -2};
+    }
+
+    void test_calloutsNameTheNearestLevelsTopToBottom()
+    {
+        QFETCH(QList<int>, levels);
+        QFETCH(int, shown);
+        QFETCH(int, most);
+        QFETCH(QList<int>, named);
+        QCOMPARE(MapDecals::calloutLevels(levels, shown, most), named);
+    }
+
+    void test_calloutsAndTitleNameLevels()
+    {
+        QCOMPARE(MapDecals::levelCallout(1, 16), qsl("L1 · 16"));
+        QCOMPARE(MapDecals::levelCallout(0, 3), qsl("L0 · 3"));
+        QCOMPARE(MapDecals::levelCallout(-2, 6), qsl("B2 · 6"));
+        QCOMPARE(MapDecals::titleLevelLine(0, {-1, 0, 1}), qsl("Level 0 · sheet 2 of 3"));
+        QCOMPARE(MapDecals::titleLevelLine(-1, {-1, 0, 1}), qsl("Level -1 · sheet 1 of 3"));
+        QCOMPARE(MapDecals::titleLevelLine(5, {-1, 0, 1}), qsl("Level 5"));
     }
 };
 

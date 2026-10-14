@@ -62,7 +62,6 @@
 #include <QToolTip>
 #include <QVBoxLayout>
 #include <algorithm>
-#include <array>
 #include <chrono>
 #include <cmath>
 #include <limits>
@@ -1191,9 +1190,7 @@ void ModernGLWidget::renderRooms()
     // The terminal style writes a room's ID in its cell with its other characters
     const bool showRoomIds = mpHost->mShowRoomID && !terminal;
     const bool terminalIds = mpHost->mShowRoomID && terminal;
-    QFont idFont = style.labelFont(mpMap->mMapSymbolFont);
-    // Each digit is a texture of its own, which spacing would leave a gap after
-    idFont.setLetterSpacing(QFont::PercentageSpacing, 100.0);
+    QFont idFont = style.roomIdFont(mpMap->mMapSymbolFont);
     float idTexel = 0.0f;
     QString idFontKey;
     std::optional<QFontMetricsF> idMetrics;
@@ -1785,12 +1782,11 @@ void ModernGLWidget::renderRooms()
         std::stable_sort(roomNames.begin(), roomNames.end(), [&viewModel](const RoomName& a, const RoomName& b) {
             return viewModel.map(a.center).z() > viewModel.map(b.center).z();
         });
-        // A space wider than the name, so that names kept side by side do not run into each other
-        const qreal nameGap = nameMetrics.horizontalAdvance(QLatin1Char(' '));
+        const qreal spaceWidth = nameMetrics.horizontalAdvance(QLatin1Char(' '));
         QList<QRectF> nameRects;
         nameRects.reserve(roomNames.size());
         for (const RoomName& roomName : std::as_const(roomNames)) {
-            const QSizeF size(qMax(1, qCeil(nameMetrics.horizontalAdvance(roomName.name) + nameGap)), qMax(1, qCeil(nameMetrics.height())));
+            const QSizeF size(qMax(1, qCeil(style.roomNameSpan(nameMetrics.horizontalAdvance(roomName.name), spaceWidth))), qMax(1, qCeil(nameMetrics.height())));
             const QVector3D across = groundRight * static_cast<float>(size.width() * nameTexel);
             const QVector3D upward = groundUp * static_cast<float>(size.height() * nameTexel);
             nameRects.append(screenRect(roomName.center - across / 2.0f - upward / 2.0f, across, upward));
@@ -3534,13 +3530,7 @@ QRect ModernGLWidget::paintTitleBlock(QPainter& painter, const TArea& area, cons
     const QFontMetrics metrics(font);
     constexpr int padding = 8;
     constexpr int margin = 12;
-    const int sheet = area.zLevels.indexOf(mMapCenterZ);
-    const QString levelLine =
-            sheet < 0
-                    //: The second line of the title block that the blueprint style of the 3D map draws in a corner, as on a technical drawing: the level shown. The style sets it in capitals
-                    ? tr("Level %1").arg(mMapCenterZ)
-                    //: The second line of the title block that the blueprint style of the 3D map draws in a corner, as on a technical drawing: the level shown, which of the area's levels it is counted from the lowest, and how many levels the area has. The style sets it in capitals
-                    : tr("Level %1 · sheet %2 of %3").arg(QString::number(mMapCenterZ), QString::number(sheet + 1), QString::number(area.zLevels.size()));
+    const QString levelLine = MapDecals::titleLevelLine(mMapCenterZ, area.zLevels);
     const QRect compass = compassRect();
     const int right = compass.isEmpty() ? width() - margin : compass.left() - margin;
     const int rowHeight = metrics.height() + padding;
@@ -3549,7 +3539,7 @@ QRect ModernGLWidget::paintTitleBlock(QPainter& painter, const TArea& area, cons
     const int blockWidth = qMax(metrics.horizontalAdvance(areaName), metrics.horizontalAdvance(levelLine)) + 2 * padding;
     // A view too small to spare the room for it has none
     const QRect block(right - blockWidth, height() - margin - 2 * rowHeight, blockWidth, 2 * rowHeight);
-    if (blockWidth > widest || 2 * rowHeight > height() / 3 || block.top() < top + margin) {
+    if (blockWidth > widest || 2 * rowHeight > height() / 3 || block.top() < top) {
         return QRect();
     }
     const QColor ink = style.exitColor(mpHost->mFgColor_2);
@@ -3574,10 +3564,13 @@ void ModernGLWidget::paintLevelCallouts(QPainter& painter, const TArea& area, co
     if (!style.levelCallouts || cameraFixedByGridMode()) {
         return;
     }
-    // A level's rooms furthest toward each side and corner of the map, one of which is the furthest right on screen
+    const QRectF view = QRectF(rect()).adjusted(0.0, top, 0.0, 0.0);
+    const QRect compass = compassRect();
+    const QMatrix4x4 toClip = mCameraController.getProjectionMatrix() * mCameraController.getViewMatrix() * mCameraController.getModelMatrix();
+    // Each shown level's room furthest right on screen, among those not under what is painted over the map
     struct Level
     {
-        std::array<QPointF, 8> extremes;
+        std::optional<QPointF> rightmost;
         int rooms = 0;
     };
     QMap<int, Level> levels;
@@ -3586,79 +3579,32 @@ void ModernGLWidget::paintLevelCallouts(QPainter& painter, const TArea& area, co
         if (!pR || pR->isHidden() || !levelShown(pR->z())) {
             continue;
         }
-        const QPointF at(pR->x(), pR->y());
         Level& level = levels[pR->z()];
-        if (!level.rooms) {
-            level.extremes.fill(at);
-        }
-        static constexpr std::array<std::pair<qreal, qreal>, 8> directions{{{1.0, 0.0}, {-1.0, 0.0}, {0.0, 1.0}, {0.0, -1.0}, {1.0, 1.0}, {1.0, -1.0}, {-1.0, 1.0}, {-1.0, -1.0}}};
-        for (std::size_t i = 0; i < directions.size(); ++i) {
-            const auto [dx, dy] = directions.at(i);
-            QPointF& extreme = level.extremes.at(i);
-            if (at.x() * dx + at.y() * dy > extreme.x() * dx + extreme.y() * dy) {
-                extreme = at;
-            }
-        }
         ++level.rooms;
-    }
-    const QRectF view = QRectF(rect()).adjusted(0.0, top, 0.0, 0.0);
-    const QRect compass = compassRect();
-    // Not under what is painted over the map, where no one sees the room pointed at
-    const auto seen = [&view, &compass, &titleBlock](const QPointF& pixel) {
-        return view.contains(pixel) && !QRectF(compass).contains(pixel) && !QRectF(titleBlock).contains(pixel);
-    };
-    const auto rightmostInView = [this, &seen](const Level& level, const int z) {
-        std::optional<QPointF> rightmost;
-        for (const QPointF& extreme : level.extremes) {
-            const std::optional<QPointF> pixel = mCameraController.pixelForPoint(QVector3D(static_cast<float>(extreme.x()), static_cast<float>(extreme.y()), static_cast<float>(z)));
-            if (pixel && seen(*pixel) && (!rightmost || pixel->x() > rightmost->x())) {
-                rightmost = pixel;
-            }
+        const QVector4D clip = toClip * QVector4D(static_cast<float>(pR->x()), static_cast<float>(pR->y()), static_cast<float>(pR->z()), 1.0f);
+        if (clip.w() <= 0.0f) {
+            continue;
         }
-        return rightmost;
-    };
+        const QPointF pixel((clip.x() / clip.w() + 1.0f) / 2.0f * static_cast<float>(width()), (1.0f - clip.y() / clip.w()) / 2.0f * static_cast<float>(height()));
+        if ((!level.rightmost || pixel.x() > level.rightmost->x()) && view.contains(pixel) && !QRectF(compass).contains(pixel) && !QRectF(titleBlock).contains(pixel)) {
+            level.rightmost = pixel;
+        }
+    }
     // The callouts stand clear of the level shown, where they can
     qreal rightmost = 0.0;
     if (const auto viewed = levels.constFind(mMapCenterZ); viewed != levels.cend()) {
-        if (const std::optional<QPointF> edge = rightmostInView(*viewed, mMapCenterZ)) {
-            rightmost = edge->x();
+        if (viewed->rightmost) {
+            rightmost = viewed->rightmost->x();
         }
         levels.erase(viewed);
     }
-    // Only the levels nearest the one shown, where there are too many to name each
-    constexpr int mostCallouts = 8;
-    QList<int> named = levels.keys();
-    std::stable_sort(named.begin(), named.end(), [this](const int a, const int b) {
-        return std::abs(a - mMapCenterZ) < std::abs(b - mMapCenterZ);
-    });
-    if (named.size() > mostCallouts) {
-        named.resize(mostCallouts);
-    }
-    // Stacked as the levels are, whichever way the view faces
-    std::sort(named.begin(), named.end(), [](const int a, const int b) {
-        return a > b;
-    });
-
-    struct Callout
-    {
-        QPointF anchor;
-        QString text;
-    };
-    QList<Callout> callouts;
-    for (const int z : std::as_const(named)) {
-        const Level& level = levels.value(z);
-        const std::optional<QPointF> anchor = rightmostInView(level, z);
-        if (!anchor) {
-            continue;
+    QList<int> pointedAt;
+    for (auto level = levels.cbegin(); level != levels.cend(); ++level) {
+        if (level->rightmost) {
+            pointedAt.append(level.key());
         }
-        const QString name = z < 0
-                                     //: A level below ground, named in a callout by the blueprint style of the 3D map, as B1 for the first basement
-                                     ? tr("B%1").arg(-z)
-                                     //: A level at or above ground, named in a callout by the blueprint style of the 3D map, as L1 for the first floor up
-                                     : tr("L%1").arg(z);
-        callouts.append({*anchor, qsl("%1 · %2").arg(name, QString::number(level.rooms))});
     }
-    if (callouts.isEmpty()) {
+    if (pointedAt.isEmpty()) {
         return;
     }
 
@@ -3666,17 +3612,33 @@ void ModernGLWidget::paintLevelCallouts(QPainter& painter, const TArea& area, co
     const QFontMetrics metrics(font);
     constexpr int margin = 12;
     constexpr int gap = 28;
-    int widestText = 0;
-    QList<qreal> wanted;
-    for (const Callout& callout : std::as_const(callouts)) {
-        widestText = qMax(widestText, metrics.horizontalAdvance(callout.text));
-        rightmost = qMax(rightmost, callout.anchor.x());
-        wanted.append(callout.anchor.y());
-    }
-    const qreal textLeft = qMin(rightmost + gap, static_cast<qreal>(width() - margin - widestText));
     const qreal lineHeight = metrics.height() + 4;
     const qreal highest = top + margin + lineHeight / 2.0;
     const qreal lowest = (titleBlock.isEmpty() ? (compass.isEmpty() ? height() : compass.top()) : titleBlock.top()) - margin - lineHeight / 2.0;
+    // As many as the view has room for, and no more than can be told apart, the furthest from the shown level left out
+    constexpr int mostCallouts = 8;
+    const int fit = lowest < highest ? 0 : static_cast<int>((lowest - highest) / lineHeight) + 1;
+    const QList<int> named = MapDecals::calloutLevels(pointedAt, mMapCenterZ, qMin(mostCallouts, fit));
+    if (named.isEmpty()) {
+        return;
+    }
+
+    struct Callout
+    {
+        QPointF anchor;
+        QString text;
+    };
+    QList<Callout> callouts;
+    int widestText = 0;
+    QList<qreal> wanted;
+    for (const int z : named) {
+        const Level& level = levels.value(z);
+        callouts.append({*level.rightmost, MapDecals::levelCallout(z, level.rooms)});
+        widestText = qMax(widestText, metrics.horizontalAdvance(callouts.constLast().text));
+        rightmost = qMax(rightmost, level.rightmost->x());
+        wanted.append(level.rightmost->y());
+    }
+    const qreal textLeft = qMin(rightmost + gap, static_cast<qreal>(width() - margin - widestText));
     const QList<qreal> placed = MapDecals::spreadCallouts(wanted, lineHeight, highest, lowest);
 
     const QColor ink = style.exitColor(mpHost->mFgColor_2);
@@ -3689,18 +3651,17 @@ void ModernGLWidget::paintLevelCallouts(QPainter& painter, const TArea& area, co
     painter.setFont(font);
     for (qsizetype i = 0; i < callouts.size(); ++i) {
         const Callout& callout = callouts.at(i);
-        const qreal y = placed.at(i);
-        // Those a view too short for them all pushes up past its top are left out
-        if (y < highest) {
-            continue;
+        const QPointF end(textLeft - 6.0, placed.at(i));
+        // Dashed, so that a leader running over the map does not read as an exit. None from a room the callouts,
+        // pushed against the view's edge, already stand over
+        if (callout.anchor.x() < end.x()) {
+            painter.setPen(QPen(leader, 1.0, Qt::DashLine));
+            painter.drawLine(callout.anchor, end);
         }
-        // Dashed, so that a leader running over the map does not read as an exit
-        painter.setPen(QPen(leader, 1.0, Qt::DashLine));
-        painter.drawLine(callout.anchor, QPointF(textLeft - 6.0, y));
         painter.setPen(Qt::NoPen);
         painter.setBrush(ink);
         painter.drawEllipse(callout.anchor, 2.5, 2.5);
-        const QRectF textRect(textLeft - 2.0, y - lineHeight / 2.0, metrics.horizontalAdvance(callout.text) + 4.0, lineHeight);
+        const QRectF textRect(textLeft - 2.0, end.y() - lineHeight / 2.0, metrics.horizontalAdvance(callout.text) + 4.0, lineHeight);
         painter.setBrush(paper);
         painter.drawRect(textRect);
         painter.setPen(ink);

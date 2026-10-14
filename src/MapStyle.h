@@ -167,11 +167,16 @@ struct MapStyle
     QColor ink;
     // How much of its environment's color the Ink palette fills a room with, from none to all of it
     float inkTint = 0.18f;
+    // The least lightness the Ink palette lifts an environment's color to before tinting with it, so that dark
+    // environments still read as pale washes of their color on the sheet
+    float inkLightness = 0.0f;
     // A column rising from the player's room
     bool playerBeacon = true;
     // The style's lettering: its spacing as a percentage of the font's usual, and whether it is set in capitals
     qreal labelLetterSpacing = 100.0;
     bool labelCapitals = false;
+    // Room names side by side are kept only this many spaces apart, which spaced capitals need not to run together
+    qreal roomNameGap = 0.0;
     // A drafting sheet's title block in a corner of the view: the area's name, and which of its levels is shown
     bool titleBlock = false;
     // Each other level shown named, with its count of rooms, beside it at the end of a leader line
@@ -203,6 +208,10 @@ struct MapStyle
     QFont labelFont(const QFont& mapSymbolFont) const;
     // Sets the style's lettering on a font that has its family
     void letter(QFont& font) const;
+    // Room IDs are drawn a digit at a time, which letter spacing would leave a gap after
+    QFont roomIdFont(const QFont& mapSymbolFont) const;
+    // How wide a room name is kept clear, given how wide it and a space are drawn
+    qreal roomNameSpan(qreal nameWidth, qreal spaceWidth) const;
     // roomSymbolColor is the room's own, invalid unless one was set; drawnRoomColor is roomColor()'s
     QColor symbolColor(const QColor& roomSymbolColor, const QColor& drawnRoomColor) const;
     QColor exitColor(const QColor& profileExitColor) const;
