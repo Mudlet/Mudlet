@@ -339,7 +339,8 @@ end
 ---
 --- Notes: <br/>
 ---  Functions, userdata and coroutines are not saved, whether as a key or as a value <br/>
----  The Lua libraries and _G are not saved, wherever they are reached <br/>
+---  The standard Lua libraries and _G are not saved, wherever they are reached; other library tables,
+---  such as lfs or utf8, are saved without their functions <br/>
 ---  References are saved <br/>
 ---
 --- @return true, or nil and an error message if the file could not be written. It raises an error,
@@ -386,8 +387,8 @@ local libraryNames = {
   coroutine = true, _G = true, _VERSION = true, table = true
 }
 
--- and these tables wherever they are reached: their functions are not saved, so all that would
--- come back is an empty table, or for _G a copy of every global
+-- and these tables wherever they are reached: without their functions, what would come back is an
+-- empty table, a partial copy of package, or for _G a copy of every global
 local libraryTables = {
   [_G] = true, [string] = true, [table] = true, [math] = true, [os] = true, [io] = true,
   [debug] = true, [coroutine] = true, [package] = true
