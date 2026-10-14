@@ -36,6 +36,7 @@
 #include <QtTest/QtTest>
 
 #include <chrono>
+#include <memory>
 
 #include "ActionUnit.h"
 #include "AliasUnit.h"
@@ -131,6 +132,7 @@ private:
     QListWidget* addedFiles() const { return mpExporter->findChild<QListWidget*>(qsl("listWidget_addedFiles")); }
     QLineEdit* nameField() const { return lineEditNamed(qsl("lineEdit_packageName")); }
     QString selectionTitle() const { return mpExporter->findChild<QGroupBox*>(qsl("groupBox_exportSelection"))->title(); }
+    static QString countedTitle(int items) { return dlgPackageExporter::tr("Select what to export (%n item(s))", nullptr, items); }
 
     // The Export button carries the ApplyRole so that pressing it does not close
     // the dialog, which is also how it is told apart from Close and Cancel.
@@ -1327,12 +1329,72 @@ private slots:
         openExporter();
         QVERIFY(checkItem(triggersTop(), qsl("exporter early-closed count")));
 
+        const QString expected = countedTitle(1);
         QVERIFY2(QTest::qWaitFor(
-                         [this]() {
-                             return selectionTitle().contains(QChar('1'));
+                         [this, expected]() {
+                             return selectionTitle() == expected;
                          },
                          2s),
                  qPrintable(qsl("The title never took the count, and said: \"%1\"").arg(selectionTitle())));
+    }
+
+    // Each dialog has its own pending recount, so one profile's exporter
+    // counting must not hold back another's checked in the same pass.
+    void test_twoOpenExportersEachKeepTheirOwnCount_10442()
+    {
+        makeTrigger(qsl("exporter twin count"), nullptr);
+        openExporter();
+        auto other = std::make_unique<dlgPackageExporter>(nullptr, mpHost);
+        auto* otherTree = other->findChild<QTreeWidget*>(qsl("treeWidget_exportSelection"));
+        auto* otherBox = other->findChild<QGroupBox*>(qsl("groupBox_exportSelection"));
+        QVERIFY(otherTree && otherBox);
+
+        QVERIFY(checkItem(triggersTop(), qsl("exporter twin count")));
+        QVERIFY(checkItem(otherTree->topLevelItem(0), qsl("exporter twin count")));
+
+        const QString expected = countedTitle(1);
+        QVERIFY2(QTest::qWaitFor(
+                         [this, expected, otherBox]() {
+                             return selectionTitle() == expected && otherBox->title() == expected;
+                         },
+                         2s),
+                 qPrintable(qsl("The titles said \"%1\" and \"%2\"").arg(selectionTitle(), otherBox->title())));
+    }
+
+    // Checking a folder changes every item under it, and those changes are
+    // folded into one recount rather than a tree walk for each of them.
+    void test_checkingAFolderRecountsOnce()
+    {
+        auto* folder = makeTrigger(qsl("exporter recount group"), nullptr, true);
+        makeTrigger(qsl("exporter recount one"), folder);
+        makeTrigger(qsl("exporter recount two"), folder);
+        makeTrigger(qsl("exporter recount three"), folder);
+        openExporter();
+
+        // The recount is a zero timer, which Qt posts to the dialog as a queued call
+        class QueuedCallCounter : public QObject
+        {
+        public:
+            int mCount = 0;
+            bool eventFilter(QObject*, QEvent* event) override
+            {
+                if (event->type() == QEvent::MetaCall) {
+                    ++mCount;
+                }
+                return false;
+            }
+        } counter;
+        mpExporter->installEventFilter(&counter);
+        itemNamed(triggersTop(), qsl("exporter recount group"))->setCheckState(0, Qt::Checked);
+        const QString expected = countedTitle(4);
+        QVERIFY2(QTest::qWaitFor(
+                         [this, expected]() {
+                             return selectionTitle() == expected;
+                         },
+                         2s),
+                 qPrintable(qsl("The title never took the count, and said: \"%1\"").arg(selectionTitle())));
+        mpExporter->removeEventFilter(&counter);
+        QVERIFY2(counter.mCount <= 1, qPrintable(qsl("checking one folder queued %1 recounts").arg(counter.mCount)));
     }
 };
 
