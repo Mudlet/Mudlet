@@ -2939,6 +2939,20 @@ describe("Tests Adjustable.Container borders, persistence and menu items", funct
       assert.are.equal(0, getBorderTop())
     end)
 
+    it("lets go of its border when shown out of reach of it", function()
+      local container = make("gapHiddenMovedAway", {width = 150})
+      container:attachToBorder("left")
+      container:hide()
+      container:move("60%", nil)
+
+      container:show()
+
+      assert.is_false(container.attached)
+      assert.is_nil(container.hiddenAttached)
+      assert.is_nil(container.resizeHandlerID)
+      assert.are.equal(0, getBorderLeft())
+    end)
+
     it("reserves nothing for a container deleted while hidden", function()
       local container = make("gapDeletedHidden", {width = 600, height = 120})
       container:attachToBorder("top")

@@ -1116,9 +1116,14 @@ end
 function Adjustable.Container:show(auto)
     Geyser.Container.show(self, auto)
     closeAllLevels(self.rCLabel)
-    if self.hiddenAttached and not (self.hidden or self.auto_hidden) and self:attachToBorder(self.hiddenAttached) then
-        -- resizeBorder() only lays the connected containers out again when the window itself changes size
-        self:adjustConnectedContainers()
+    if self.hiddenAttached and not (self.hidden or self.auto_hidden) then
+        if self:attachToBorder(self.hiddenAttached) then
+            -- resizeBorder() only lays the connected containers out again when the window itself changes size
+            self:adjustConnectedContainers()
+        else
+            -- a refused attach changes nothing, so the border is let go of here as adjustBorder() would
+            self:detach()
+        end
     end
 end
 
