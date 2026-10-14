@@ -668,6 +668,15 @@ end
 
 
 
+-- Cursor, selection and section positions count UTF-16 code units, in which a
+-- character beyond the BMP (a four byte UTF-8 sequence, e.g. an emoji) takes two
+local utf8Char = "[%z\1-\127\194-\244][\128-\191]*"
+
+local function utf16Units(char)
+  return char:byte() >= 240 and 2 or 1
+end
+
+
 --- Replaces all occurrences of what in the current line with <i>with</i>.
 ---
 --- @usage This will replace all occurrences of John with the word Doe.
@@ -2572,21 +2581,14 @@ local function copy2color(name,win,str,inst)
     -- happens when you try to use copy2decho() on an empty line
     return ""
   end
-  -- selectString() and selectSection() count UTF-16 code units, in which a
-  -- character beyond the BMP (a four byte UTF-8 sequence, e.g. an emoji) takes two
-  local utf8Char = "[%z\1-\127\194-\244][\128-\191]*"
-  local function units(char)
-    return char:byte() >= 240 and 2 or 1
-  end
   local start = selectString(win, str, inst)
-  local len = 0
-  for strChar in str:gmatch(utf8Char) do
-    len = len + units(strChar)
-  end
   if start < 0 then
     -- happens when the text is not on the current line, which is all selectString() searches
     return ""
   end
+  -- the selection's length is in the same UTF-16 units as start, and is what Qt made
+  -- of str, so it also holds for a number or for bytes that are not valid UTF-8
+  local _, _, len = getSelection(win)
   local style, endspan, r, g, b, rb, gb, bb, cr, cg, cb, crb, cgb, cbb, char
   local selectSection, getFgColor, getBgColor = selectSection, getFgColor, getBgColor
   local conversions = {
@@ -2607,8 +2609,8 @@ local function copy2color(name,win,str,inst)
     style = "%s<%d,%d,%d:%d,%d,%d>%s"
     endspan = "<r>"
   end
-  -- utf8.sub() and growing the result a character at a time both rescan from the
-  -- start of the line, which made long lines quadratic
+  -- walk the line once, tracking the UTF-16 offset: utf8.sub() would index by
+  -- character instead, and rescans the line from its start on every call
   local pieces = {}
   local offset, stop = 0, start + len
   for lineChar in line:gmatch(utf8Char) do
@@ -2628,7 +2630,7 @@ local function copy2color(name,win,str,inst)
 
       char = lineChar
       if name == "copy2html" then
-        char = conversions[char] or char -- replace HTML entities (if they are in the table)
+        char = conversions[char] or char
       end
 
       if r ~= cr or g ~= cg or b ~= cb or rb ~= crb or gb ~= cgb or bb ~= cbb then
@@ -2638,7 +2640,7 @@ local function copy2color(name,win,str,inst)
         pieces[#pieces + 1] = char
       end
     end
-    offset = offset + units(lineChar)
+    offset = offset + utf16Units(lineChar)
   end
   pieces[#pieces + 1] = endspan
   return table.concat(pieces)

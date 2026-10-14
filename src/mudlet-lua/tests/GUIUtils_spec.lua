@@ -539,6 +539,58 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
 
       it("Should copy the whole line", function()
         assert.equals("<0,255,0:0,0,0>😀abc<r><255,0,0:0,0,0>😀de<r>", copy2decho(windowName))
+        assert.equals("<span style='color: rgb(0,255,0);background: rgb(0,0,0);'>😀abc</span><span style='color: rgb(255,0,0);background: rgb(0,0,0);'>😀de</span>", copy2html(windowName))
+      end)
+
+      it("Should copy a match that starts with one", function()
+        assert.equals("<255,0,0:0,0,0>😀de<r>", copy2decho(windowName, "😀de"))
+      end)
+
+      it("Should copy a later instance of a match that follows one", function()
+        clearWindow(windowName)
+        decho(windowName, "<0,255,0:0,0,0>ab<255,0,0:0,0,0>😀ab\n")
+        moveCursor(windowName, 0, 0)
+        assert.equals("<255,0,0:0,0,0>ab<r>", copy2decho(windowName, "ab", 2))
+      end)
+
+      it("Should copy from the main window", function()
+        decho("main", "\n<0,255,0:0,0,0>😀abc<255,0,0:0,0,0>😀de")
+        moveCursor("main", 0, getLastLineNumber("main"))
+        assert.equals("<0,255,0:0,0,0>abc<r>", copy2decho("abc"))
+        assert.equals("<0,255,0:0,0,0>😀abc<r><255,0,0:0,0,0>😀de<r>", copy2decho())
+        moveCursorEnd("main")
+      end)
+    end)
+
+    describe("given text that is not a plain UTF-8 string", function()
+      local windowName = "guiUtilsCopyDechoNotString"
+
+      setup(function()
+        createBuffer(windowName)
+      end)
+
+      teardown(function()
+        deleteMiniConsole(windowName)
+      end)
+
+      local function showLine(text)
+        clearWindow(windowName)
+        decho(windowName, "<0,255,0:0,0,0>" .. text .. "\n")
+        moveCursor(windowName, 0, 0)
+      end
+
+      it("Should copy a number the way selectString() finds it", function()
+        showLine("HP 42")
+        assert.equals("<0,255,0:0,0,0>42<r>", copy2decho(windowName, 42))
+        assert.equals("", copy2decho(windowName, 7))
+      end)
+
+      -- selectString() decodes a malformed byte to U+FFFD, as the line already holds it
+      it("Should copy all of what selectString() matched for malformed UTF-8", function()
+        showLine("a\239\191\189bc")
+        assert.equals("<0,255,0:0,0,0>\239\191\189bc<r>", copy2decho(windowName, "\128bc"))
+        showLine("\239\191\189x")
+        assert.equals("<0,255,0:0,0,0>\239\191\189<r>", copy2decho(windowName, "\240"))
       end)
     end)
   end)
