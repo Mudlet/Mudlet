@@ -3056,11 +3056,30 @@ describe("Tests Adjustable.Container borders, persistence and menu items", funct
       assert.are.equal(0, getBorderLeft())
     end)
 
+    it("keeps the border it gave back when an attach to another one is refused while hidden", function()
+      local container = make("gapHiddenRefused", {width = 150})
+      container:attachToBorder("left")
+      container:hide()
+      local handler = container.resizeHandlerID
+
+      assert.is_nil((container:attachToBorder("right")))
+      assert.are.equal("left", container.hiddenAttached)
+      assert.are.equal(handler, container.resizeHandlerID)
+
+      container:show()
+      assert.are.equal("left", container.attached)
+      assert.are.equal(container.borderSize, getBorderLeft())
+    end)
+
     it("reserves nothing for a container deleted while hidden", function()
       local container = make("gapDeletedHidden", {width = 600, height = 120})
       container:attachToBorder("top")
       container:hide()
+      local handler = container.resizeHandlerID
       container:delete()
+      assert.is_nil(container.hiddenAttached)
+      assert.is_nil(container.resizeHandlerID)
+      assert.is_false(killAnonymousEventHandler(handler) == true)
 
       container:show()
 
