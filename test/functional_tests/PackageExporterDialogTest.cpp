@@ -519,7 +519,7 @@ private slots:
         QCOMPARE(groupItem->childCount(), 2);
 
         const QString emptyTitle = selectionTitle();
-        QVERIFY2(!emptyTitle.contains(QChar('3')), "the title already showed the count this test is about to produce");
+        QVERIFY2(emptyTitle != countedTitle(3), "the title already showed the count this test is about to produce");
         QCOMPARE(groupItem->child(0)->checkState(0), Qt::Unchecked);
         QCOMPARE(groupItem->child(1)->checkState(0), Qt::Unchecked);
 
@@ -536,7 +536,7 @@ private slots:
         QCOMPARE(itemNamed(triggersTop(), qsl("exporter loner"))->checkState(0), Qt::Unchecked);
         // three: the folder and both of its children, so counting only the
         // leaves or only the folder would each give a different answer
-        QVERIFY2(selectionTitle().contains(QChar('3')), qPrintable(qsl("The title has to count all three checked items, but said: \"%1\"").arg(selectionTitle())));
+        QCOMPARE(selectionTitle(), countedTitle(3));
     }
 
     // Right-clicking an item is the way to take a folder without its contents,
@@ -1338,8 +1338,8 @@ private slots:
                  qPrintable(qsl("The title never took the count, and said: \"%1\"").arg(selectionTitle())));
     }
 
-    // Each dialog has its own pending recount, so one profile's exporter
-    // counting must not hold back another's checked in the same pass.
+    // Each dialog has its own pending recount, so one exporter's pending
+    // recount must not hold back another dialog's checked in the same pass.
     void test_twoOpenExportersEachKeepTheirOwnCount_10442()
     {
         makeTrigger(qsl("exporter twin count"), nullptr);
@@ -1371,7 +1371,8 @@ private slots:
         makeTrigger(qsl("exporter recount three"), folder);
         openExporter();
 
-        // The recount is a zero timer, which Qt posts to the dialog as a queued call
+        // The recount is a zero timer, which Qt posts to the dialog as a queued
+        // call; a recount delivered any other way would count 0 here, so expect 1
         class QueuedCallCounter : public QObject
         {
         public:
@@ -1394,7 +1395,7 @@ private slots:
                          2s),
                  qPrintable(qsl("The title never took the count, and said: \"%1\"").arg(selectionTitle())));
         mpExporter->removeEventFilter(&counter);
-        QVERIFY2(counter.mCount <= 1, qPrintable(qsl("checking one folder queued %1 recounts").arg(counter.mCount)));
+        QVERIFY2(counter.mCount == 1, qPrintable(qsl("checking one folder queued %1 recounts to the dialog").arg(counter.mCount)));
     }
 };
 
