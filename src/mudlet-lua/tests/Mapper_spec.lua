@@ -3548,7 +3548,6 @@ describe("Tests deleteMap", function()
   end)
 end)
 
--- What these specs create goes in an area of their own, which after_each deletes.
 describe("Tests getCollisionLocationsInArea on a scratch area", function()
   local areaName = "MapperSpecCollisions"
   local area
@@ -3566,7 +3565,7 @@ describe("Tests getCollisionLocationsInArea on a scratch area", function()
   end)
 
   before_each(function()
-    area = addAreaName(areaName)
+    area = assert(addAreaName(areaName))
   end)
 
   after_each(function()
@@ -3581,7 +3580,15 @@ describe("Tests getCollisionLocationsInArea on a scratch area", function()
     room(5, 2, 0)
     -- y comes before -2,1 and 5,1 but x comes after, so sorting by x before y would fail
     room(9, 0, 0); room(9, 0, 0)
-    assert.are.same({{9, 0, 0}, {-2, 1, 0}, {5, 1, 0}, {0, 0, 3}}, getCollisionLocationsInArea(area))
+    -- stacked over 5,2,0 and next to it in (z, y, x) order: a check that skipped z would report it
+    room(5, 2, 1)
+    -- enough x in one row that hash order all but never comes out ascending
+    for _, x in ipairs({7, -3, 12, 0, 100, -50, 4, 33}) do room(x, 0, 2); room(x, 0, 2) end
+    assert.are.same({
+      {9, 0, 0}, {-2, 1, 0}, {5, 1, 0},
+      {-50, 0, 2}, {-3, 0, 2}, {0, 0, 2}, {4, 0, 2}, {7, 0, 2}, {12, 0, 2}, {33, 0, 2}, {100, 0, 2},
+      {0, 0, 3}
+    }, getCollisionLocationsInArea(area))
   end)
 end)
 
