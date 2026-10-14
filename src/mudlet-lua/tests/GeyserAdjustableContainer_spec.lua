@@ -2449,13 +2449,64 @@ describe("Tests Adjustable.Container borders, persistence and menu items", funct
       assert.is_false(container.locked)
     end)
 
-    it("refuses a style that was added without a function", function()
+    it("newLockStyle refuses a style without a function and adds no menu item for it", function()
       local container = make("gapLockNoFunction")
-      container:newLockStyle("gapEmptyStyle")
-      local ok, message = container:lockContainer("gapEmptyStyle")
+      local styleCount = #container.lockStyles
+      local ok, message = container:newLockStyle("gapEmptyStyle")
+      assert.is_nil(ok)
+      assert.is_truthy(message:find('"gapEmptyStyle" needs a function', 1, true))
+      assert.are.equal(styleCount, #container.lockStyles)
+      assert.is_nil(container.adjLabel:findMenuElement("lockStylesLabel.gapEmptyStyle"))
+      ok, message = container:lockContainer("gapEmptyStyle")
       assert.is_nil(ok)
       assert.is_truthy(message:find('unknown lock style "gapEmptyStyle"', 1, true))
       assert.is_false(container.locked)
+    end)
+
+    it("locks with a style whose function is a callable table", function()
+      local container = make("gapLockCallable")
+      local ran = 0
+      container:newLockStyle("gapCallableStyle", setmetatable({}, {__call = function() ran = ran + 1 end}))
+      assert.is_true(container:lockContainer("gapCallableStyle"))
+      assert.are.equal(1, ran)
+      assert.is_true(container.locked)
+    end)
+
+    it("locks with the style its number names", function()
+      local container = make("gapLockNumber")
+      assert.is_true(container:lockContainer(3))
+      assert.are.equal(container.lockStyles[3][1], container.lockStyle)
+      assert.is_true(container.locked)
+    end)
+
+    -- a label's click callback gets Mudlet's mouse event table as its last argument
+    it("ignores a mouse event as its first argument and locks with its current style", function()
+      local container = make("gapLockClickEvent")
+      container.lockStyle = "border"
+      local event = {button = "LeftButton", buttons = {"LeftButton"}, x = 5, y = 5, globalX = 5, globalY = 5}
+      assert.is_true(container:lockContainer(event))
+      assert.are.equal("border", container.lockStyle)
+      assert.is_true(container.locked)
+      container:unlockContainer()
+      assert.is_true(container:lockContainer(false, "full"))
+      assert.are.equal("full", container.lockStyle)
+    end)
+
+    it("refuses an unknown style given as the second argument", function()
+      local container = make("gapLockUnknownSecond")
+      local ok, message = container:lockContainer(nil, "bogus")
+      assert.is_nil(ok)
+      assert.is_truthy(message:find('unknown lock style "bogus"', 1, true))
+      assert.is_false(container.locked)
+    end)
+
+    it("keeps its lock and its style when it refuses a style", function()
+      local container = make("gapLockKeep")
+      assert.is_true(container:lockContainer("border"))
+      assert.is_nil(container:lockContainer("bordr"))
+      assert.is_nil(container:lockContainer(99))
+      assert.is_true(container.locked)
+      assert.are.equal("border", container.lockStyle)
     end)
 
     it("falls back to the standard style when its remembered one no longer exists", function()
@@ -2473,6 +2524,39 @@ describe("Tests Adjustable.Container borders, persistence and menu items", funct
       assert.is_nil(ok)
       assert.is_truthy(message:find("a minimized container cannot be locked", 1, true))
       assert.is_false(container.locked)
+      assert.is_nil(container:lockContainer("full"))
+      assert.are.equal("standard", container.lockStyle)
+    end)
+
+    it("uses a remembered style once newLockStyle adds it, and saves it until then", function()
+      local container = make("gapLockLater")
+      container.lockStyle = "gapLaterStyle"
+      assert.is_true(container:lockContainer())
+      assert.are.equal("standard", container.lockStyle)
+      container:save(nil, scratchDir)
+      local saved = {}
+      table.load(scratchDir .. "gapLockLater.lua", saved)
+      assert.are.equal("gapLaterStyle", saved.lockStyle)
+
+      local ran = 0
+      container:newLockStyle("gapLaterStyle", function() ran = ran + 1 end)
+      assert.are.equal(1, ran)
+      assert.are.equal("gapLaterStyle", container.lockStyle)
+      assert.is_true(container.locked)
+    end)
+
+    it("loads a layout saved locked and minimized as locked and minimized", function()
+      local container = make("gapLockMinimizedSaved")
+      assert.is_true(container:lockContainer("border"))
+      container:minimize()
+      container:save(nil, scratchDir)
+      container:unlockContainer()
+      container:restore()
+
+      container:load(nil, scratchDir)
+      assert.is_true(container.minimized)
+      assert.is_true(container.locked)
+      assert.are.equal("border", container.lockStyle)
     end)
 
     it("newLockStyle adds a style and a menu item for it", function()

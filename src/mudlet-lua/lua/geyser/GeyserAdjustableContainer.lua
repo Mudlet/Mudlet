@@ -760,17 +760,26 @@ function Adjustable.Container:createContainers()
     },self)
 end
 
+local function callable(func)
+    if type(func) == "function" then
+        return true
+    end
+    local mt = getmetatable(func)
+    return type(mt) == "table" and mt.__call ~= nil
+end
+
 local function usableLockStyle(self, name)
     local style = type(name) == "string" and self.lockStyles[name]
-    return style and type(style[2]) == "function"
+    return style and callable(style[2]) or false
 end
 
 --- locks your adjustable container
 --lock means that your container is no longer moveable/resizable by mouse. 
 --You can also choose different lockStyles which changes the border or container style. 
---if no lockStyle is added "standard" style will be used 
--- @param lockNr the number of the lockStyle [optional]
--- @param lockStyle the lockstyle used to lock the container, 
+--if no lockStyle is given the container's current lockStyle is used, or "standard" if that one does not exist (yet)
+-- @param lockNr the number or the name of the lockStyle [optional]; anything else, such as the
+-- mouse event of a click callback, is ignored
+-- @param lockStyle the lockstyle used to lock the container, only used when lockNr is not given;
 -- the lockStyle is the behaviour/mode of the locked state.
 -- integrated lockStyles are "standard", "border", "full" and "light" (default "standard")
 -- standard:    This is the default lockstyle, with a small margin on top to keep the right click menu usable.
@@ -782,36 +791,43 @@ end
 function Adjustable.Container:lockContainer(lockNr, lockStyle)
     closeAllLevels(self.rCLabel)
 
-    if type(lockNr) == "number" then
-      if not self.lockStyles[lockNr] then
-        return nil, string.format("lockContainer: there is no lock style number %s", lockNr)
-      end
-      lockStyle = self.lockStyles[lockNr][1]
-    elseif lockNr ~= nil then
+    if type(lockNr) == "number" or type(lockNr) == "string" then
       lockStyle = lockNr
+    end
+    if type(lockStyle) == "number" then
+      if not self.lockStyles[lockStyle] then
+        return nil, string.format("lockContainer: there is no lock style number %s", lockStyle)
+      end
+      lockStyle = self.lockStyles[lockStyle][1]
     end
 
     if lockStyle ~= nil and not usableLockStyle(self, lockStyle) then
       return nil, string.format("lockContainer: unknown lock style \"%s\"", tostring(lockStyle))
     end
 
-    -- only an explicit style is refused: a saved layout may name a style this session never defined
-    lockStyle = lockStyle or self.lockStyle
-    if not usableLockStyle(self, lockStyle) then
-      lockStyle = "standard"
+    if self.minimized ~= false then
+      return nil, "lockContainer: a minimized container cannot be locked"
+    end
+
+    if lockStyle then
+      self.pendingLockStyle = nil
+    else
+      lockStyle = self.lockStyle
+      -- a saved layout or the constructor may name a style the script only adds later with
+      -- newLockStyle, so it is kept for that and for save() instead of being refused
+      if not usableLockStyle(self, lockStyle) then
+        self.pendingLockStyle = lockStyle
+        lockStyle = "standard"
+      end
     end
 
     self.lockStyle = lockStyle
-
-    if self.minimized == false then
-        self.lockStyles[lockStyle][2](self)
-        self.exitLabel:hide()
-        self.minimizeLabel:hide()
-        self.locked = true
-        self:adjustBorder()
-        return true
-    end
-    return nil, "lockContainer: a minimized container cannot be locked"
+    self.lockStyles[lockStyle][2](self)
+    self.exitLabel:hide()
+    self.minimizeLabel:hide()
+    self.locked = true
+    self:adjustBorder()
+    return true
 end
 
 -- internal function to handle the custom Items onClick event
@@ -1071,7 +1087,7 @@ function Adjustable.Container:save(slot, dir)
     mytable.origh= self.origh
     mytable.locked = self.locked
     mytable.attached = self.attached
-    mytable.lockStyle = self.lockStyle
+    mytable.lockStyle = self.pendingLockStyle or self.lockStyle
     mytable.padding = self.padding
     mytable.attachedMargin = self.attachedMargin
     mytable.hidden = self.hidden
@@ -1137,6 +1153,7 @@ function Adjustable.Container:load(slot, dir)
     end
 
     self.lockStyle = mytable.lockStyle or self.lockStyle
+    self.pendingLockStyle = nil
     self.padding = mytable.padding or self.padding
     self.attachedMargin = mytable.attachedMargin or self.attachedMargin
 
@@ -1144,9 +1161,10 @@ function Adjustable.Container:load(slot, dir)
     if mytable.x then
         self:move(mytable.x, mytable.y)
         self:resize(mytable.width, mytable.height)
-        self.minimized = mytable.minimized
-
+        -- lockContainer refuses a minimized container, so lock it before minimizing it again
+        self.minimized = false
         if mytable.locked == true then self:lockContainer()  else self:unlockContainer() end
+        self.minimized = mytable.minimized
 
         if self.minimized == true then self.Inside:hide() self:resize(nil, self.buttonsize + 10) else self.Inside:show() end
         self.origh = mytable.origh
@@ -1389,14 +1407,25 @@ end
 --- creates a new Lockstyle
 -- @param name Name of the menu item/lockstyle
 -- @param func function of the new lockstyle
+-- @return nil and an error message when func is not a function
 function Adjustable.Container:newLockStyle(name, func)
     if self.lockStyles[name] then
         return
+    end
+    if not callable(func) then
+        return nil, string.format("newLockStyle: lock style \"%s\" needs a function, got %s", tostring(name), type(func))
     end
     self.lockStyles[#self.lockStyles + 1] = {name, func}
     self.lockStyles[name] = self.lockStyles[#self.lockStyles]
     if self.lockStylesLabel then
         createMenus(self, "lockStylesLabel", name, "Adjustable.Container.lockContainer")
+    end
+    if name == self.pendingLockStyle then
+        self.pendingLockStyle = nil
+        self.lockStyle = name
+        if self.locked then
+            self:lockContainer(name)
+        end
     end
 end
 
