@@ -3901,13 +3901,17 @@ describe("Tests db:create with a single column name as _index", function()
     assert.are.equal("", otherWarnings)
     assert.are.same({"name", "desc"}, indexColumns(db:_index_name("people", {"name", "desc"})))
 
-    createCollectingWarnings({people = {name = "", asc = "", _index = {{"name", "asc"}}}})
+    local _, ascWarnings = createCollectingWarnings({people = {name = "", asc = "", _index = {{"name", "asc"}}}})
+    assert.are.equal("", ascWarnings)
     assert.are.same({"name", "asc"}, indexColumns(db:_index_name("people", {"name", "asc"})))
   end)
 
   it("rebuilds the one-column index an older Mudlet made for a column called desc", function()
     db:create(dbName, {people = {name = "", desc = ""}})
     db.__conn[dbName]:execute('CREATE INDEX ' .. db:_index_name("people", {"name", "desc"}) .. ' ON people ("name" desc)')
+    -- db:create turns autocommit off, and db:close would roll the index back
+    db.__conn[dbName]:commit()
+    assert.are.same({"name"}, indexColumns(db:_index_name("people", {"name", "desc"})))
     db:close(dbName)
 
     db:create(dbName, {people = {name = "", desc = "", _index = {{"name", "desc"}}}})
