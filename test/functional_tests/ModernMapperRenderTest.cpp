@@ -836,7 +836,10 @@ private slots:
         QVERIFY(transit->roundRooms(false));
         QVERIFY(!transit->lit);
         QCOMPARE(transit->doors, MapStyle::Doors::Bars);
-        QCOMPARE(transit->playerMarker, MapStyle::PlayerMarker::Flag);
+        QCOMPARE(transit->playerMarker, MapStyle::PlayerMarker::Pill);
+        QCOMPARE(transit->highlightShape, MapStyle::HighlightShape::Halo);
+        QVERIFY(transit->levelPlatforms && transit->lineLegend && transit->inkRimsOnLines);
+        QVERIFY(transit->mixedLineColor.isValid());
         QVERIFY(transit->environmentLines);
         QVERIFY(transit->labelHalos);
         QVERIFY(transit->interchangeExits > 0);
@@ -846,11 +849,13 @@ private slots:
         QVERIFY(!tiles->environmentLines);
         QVERIFY(!tiles->labelHalos);
         QCOMPARE(tiles->interchangeExits, 0);
+        QVERIFY(!tiles->levelPlatforms && !tiles->lineLegend && !tiles->inkRimsOnLines);
     }
 
     // A station is ringed in its environment's color, and an interchange in ink but no larger, as clicks and
-    // the selection take a room's size; and the player's room has a flag rather than the profile's marker
-    void test_transitRingsStationsAndFlagsThePlayerWithoutGL()
+    // the selection take a room's size; the player's room has a bullseye rather than the profile's marker; and a station
+    // on a line of its own environment is ringed in ink, as the line shows the environment
+    void test_transitRingsStationsAndMarksThePlayerWithoutGL()
     {
         const int areaId = addArea();
         QVERIFY(areaId > 0);
@@ -881,9 +886,9 @@ private slots:
             }
             return false;
         };
-        const auto flagDrawn = [&widget]() {
+        const auto bullseyeDrawn = [&widget]() {
             return std::any_of(widget.mRoomTexturesInUse.cbegin(), widget.mRoomTexturesInUse.cend(), [](const QString& key) {
-                return key.startsWith(qsl("flag|"));
+                return key.startsWith(qsl("bullseye|"));
             });
         };
         // A room's fill, the widest cube standing at its place, as its exits' bars stand between rooms
@@ -904,17 +909,124 @@ private slots:
         };
 
         queueFrame(widget, areaId);
-        const bool tilesFlag = flagDrawn();
+        const bool tilesBullseye = bullseyeDrawn();
         QVERIFY(mpHost->setMapStyle(qsl("transit")));
         const MapStyle* transit = MapStyle::find(qsl("transit"));
         queueFrame(widget, areaId);
+        const bool ringedInRed = colorQueued(transit->ringColor(red, mpHost->mBgColor_2));
+        const bool interchangeInInk = colorQueued(transit->ink);
+        const bool transitBullseye = bullseyeDrawn();
+        const float playerWidth = roomWidth(kPlayerRoomId);
+        const float eastWidth = roomWidth(kEastRoomId);
+        const auto eastRing = [this, &widget]() {
+            const TRoom* pEast = map()->mpRoomDB->getRoom(kEastRoomId);
+            for (const auto& outline : widget.mInkOutlines.value(0).outlines) {
+                if (qAbs(outline.x - pEast->x()) < 1e-4f && qAbs(outline.y - pEast->y()) < 1e-4f) {
+                    return QColor::fromRgbF(outline.color.x(), outline.color.y(), outline.color.z());
+                }
+            }
+            return QColor();
+        };
+        const QColor apart = eastRing();
+        pPlayerRoom->environment = 301;
+        map()->mpRoomDB->getRoom(kEastRoomId)->setExit(kPlayerRoomId, DIR_WEST);
+        queueFrame(widget, areaId);
+        const QColor onLine = eastRing();
 
-        QVERIFY2(!tilesFlag, "tiles flagged the player's room");
-        QVERIFY2(flagDrawn(), "transit did not flag the player's room");
-        QVERIFY2(colorQueued(transit->ringColor(red, mpHost->mBgColor_2)), "the station is not ringed in its environment's color");
-        QVERIFY2(colorQueued(transit->ink), "the interchange is not ringed in ink");
-        QVERIFY(roomWidth(kEastRoomId) > 0.0f);
-        QCOMPARE(roomWidth(kPlayerRoomId), roomWidth(kEastRoomId));
+        QVERIFY2(!tilesBullseye, "tiles put a bullseye on the player's room");
+        QVERIFY2(transitBullseye, "transit did not put a bullseye on the player's room");
+        QVERIFY2(ringedInRed, "the station is not ringed in its environment's color");
+        QVERIFY2(interchangeInInk, "the interchange is not ringed in ink");
+        const auto alike = [](const QColor& a, const QColor& b) {
+            return a.isValid() && qAbs(a.red() - b.red()) <= 1 && qAbs(a.green() - b.green()) <= 1 && qAbs(a.blue() - b.blue()) <= 1;
+        };
+        QVERIFY2(alike(apart, transit->ringColor(red, mpHost->mBgColor_2)), "a station apart from its environment's lines is not ringed in its color");
+        QVERIFY2(alike(onLine, transit->ink), "a station on a line of its own environment is not ringed in ink");
+        QVERIFY(eastWidth > 0.0f);
+        QCOMPARE(playerWidth, eastWidth);
+    }
+
+    // In transit other levels are not drawn in place but as platforms, the nearest by the stair that reaches them, each
+    // named by the room the stair reaches there
+    void test_transitShowsOtherLevelsAsPlatformsWithoutGL()
+    {
+        constexpr int kTowerId = 40;
+        constexpr int kBelfryId = 41;
+        const int areaId = addArea();
+        QVERIFY(areaId > 0);
+        const auto restore = qScopeGuard([this]() {
+            mpHost->setMapStyle(qsl("tiles"));
+        });
+        QVERIFY(addRoomAt(kTowerId, areaId, 0, 0, 1) && addRoomAt(kBelfryId, areaId, 0, 0, 2));
+        map()->mpRoomDB->getRoom(kTowerId)->name = qsl("tower");
+        map()->mpRoomDB->getRoom(kBelfryId)->name = qsl("belfry");
+        map()->mpRoomDB->getRoom(kPlayerRoomId)->setExit(kTowerId, DIR_UP);
+        map()->mpRoomDB->getRoom(kTowerId)->setExit(kBelfryId, DIR_UP);
+        ModernGLWidget widget(map(), mpHost);
+        TArea* pArea = map()->mpRoomDB->getArea(areaId);
+
+        queueFrame(widget, areaId);
+        const bool tilesShowsAbove = widget.levelShown(1);
+        const bool tilesPlatforms = !widget.levelPlatforms(*pArea, 0).first.platforms.isEmpty();
+        QVERIFY(mpHost->setMapStyle(qsl("transit")));
+        queueFrame(widget, areaId);
+        const auto [above, below] = widget.levelPlatforms(*pArea, 0);
+
+        QVERIFY(tilesShowsAbove && !tilesPlatforms);
+        QVERIFY2(!widget.levelShown(1) && widget.levelInRange(1) && widget.levelShown(0), "transit drew another level in place");
+        QCOMPARE(above.platforms.size(), 2);
+        QCOMPARE(above.platforms.at(0).label, qsl("L2 belfry"));
+        QCOMPARE(above.platforms.at(1).label, qsl("L1 tower"));
+        QVERIFY2(above.stair.has_value(), "the shaft does not rise from the stair");
+        QVERIFY2(above.platforms.at(0).pill.bottom() < above.platforms.at(1).pill.top(), "the platforms overlap or are out of order");
+        QVERIFY2(above.platforms.at(1).pill.bottom() < above.stair->y(), "the nearest platform is not above the stair");
+        QCOMPARE(below.platforms.size(), 1);
+        QCOMPARE(below.platforms.at(0).label, qsl("B1"));
+        QVERIFY2(!below.stair.has_value(), "a shaft falls from a stair the level does not have");
+        QVERIFY(QRectF(widget.rect()).contains(below.platforms.at(0).pill));
+    }
+
+    // The legend keys the lines of the viewed level by their kind of ground, with gray for those joining two
+    // environments, and the doors on them
+    void test_transitLegendKeysTheViewedLevelsLinesWithoutGL()
+    {
+        const int areaId = addArea();
+        QVERIFY(areaId > 0);
+        map()->mCustomEnvColors[301] = QColor(30, 60, 220);
+        const auto restore = qScopeGuard([this]() {
+            mpHost->setMapStyle(qsl("tiles"));
+            map()->mCustomEnvColors.remove(301);
+        });
+        TRoom* pPlayerRoom = map()->mpRoomDB->getRoom(kPlayerRoomId);
+        TRoom* pEastRoom = map()->mpRoomDB->getRoom(kEastRoomId);
+        pPlayerRoom->setExit(kEastRoomId, DIR_EAST);
+        pEastRoom->setExit(kPlayerRoomId, DIR_WEST);
+        pPlayerRoom->setDoor(qsl("e"), 3);
+        ModernGLWidget widget(map(), mpHost);
+        TArea* pArea = map()->mpRoomDB->getArea(areaId);
+        const auto texts = [&widget, pArea]() {
+            QStringList found;
+            for (const auto& entry : widget.lineLegend(*pArea)) {
+                found.append(entry.text);
+            }
+            return found;
+        };
+
+        queueFrame(widget, areaId);
+        const QStringList tilesLegend = texts();
+        QVERIFY(mpHost->setMapStyle(qsl("transit")));
+        pPlayerRoom->environment = 301;
+        queueFrame(widget, areaId);
+        const QStringList mixed = texts();
+        pEastRoom->environment = 301;
+        queueFrame(widget, areaId);
+        const QList<ModernGLWidget::LegendEntry> same = widget.lineLegend(*pArea);
+
+        QVERIFY(tilesLegend.isEmpty());
+        QCOMPARE(mixed, (QStringList{qsl("mixed"), qsl("locked door")}));
+        QCOMPARE(same.size(), 2);
+        QCOMPARE(same.at(0).text, qsl("water"));
+        QCOMPARE(same.at(1).doorStatus, 3);
     }
 
     // Zoomed out until a pixel is wider than a station, its ring fills it rather than turning inside out
@@ -1058,7 +1170,7 @@ private slots:
         picture.pix.fill(Qt::black);
         TMapLabel boxed = text;
         boxed.pos = QVector3D(4.0f, 1.0f, 0.0f);
-        boxed.bgColor = QColor(Qt::gray);
+        boxed.bgColor = QColor(Qt::darkBlue);
         map()->mpRoomDB->getArea(areaId)->mMapLabels.insert(1, text);
         map()->mpRoomDB->getArea(areaId)->mMapLabels.insert(2, picture);
         map()->mpRoomDB->getArea(areaId)->mMapLabels.insert(3, boxed);
