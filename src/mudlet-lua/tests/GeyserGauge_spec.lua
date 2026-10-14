@@ -360,10 +360,12 @@ describe("Tests functionality of Geyser.Gauge", function()
       assert.are.same({x = 5, y = 5, width = 48, height = 90}, geometry("ggsTurn_front"))
       gauge.orientation = "vertical"
       gauge:setValue(25)
-      assert.are.same({x = 5, y = 73, width = 190, height = 23}, geometry("ggsTurn_front"))
+      -- 72.5 down to 95, where the bottom margin starts
+      assert.are.same({x = 5, y = 73, width = 190, height = 22}, geometry("ggsTurn_front"))
       gauge.orientation = "goofy"
       gauge:setValue(25)
-      assert.are.same({x = 148, y = 5, width = 48, height = 90}, geometry("ggsTurn_front"))
+      -- 147.5 across to 195, where the right margin starts
+      assert.are.same({x = 148, y = 5, width = 47, height = 90}, geometry("ggsTurn_front"))
       gauge.orientation = "batty"
       gauge:setValue(25)
       assert.are.same({x = 5, y = 5, width = 190, height = 23}, geometry("ggsTurn_front"))
@@ -403,6 +405,43 @@ describe("Tests functionality of Geyser.Gauge", function()
       local gauge = track(Geyser.Gauge:new({name = "ggsBatty", x = 0, y = 0, width = 100, height = 200, orientation = "batty"}))
       gauge:setValue(25)
       assert.are.same({x = 0, y = 0, width = 100, height = 50}, geometry("ggsBatty_front"))
+    end)
+
+    -- the middle third of a 100px box runs from 33.33 to 66.67, whose edges round
+    -- to a 34px back, which a full front has to cover to the pixel
+    for _, orientation in ipairs({"horizontal", "vertical", "goofy", "batty"}) do
+      it("covers the whole back when a " .. orientation .. " gauge sits at a fractional position", function()
+        local box = track(Geyser.HBox:new({name = "ggsThirds", x = 0, y = 0, width = 100, height = 100}))
+        local gauges = {}
+        for index = 1, 3 do
+          gauges[index] = Geyser.Gauge:new({name = "ggsThird" .. index, orientation = orientation}, box)
+        end
+        gauges[2]:setValue(100)
+        assert.are.same({x = 33, y = 0, width = 34, height = 100}, geometry("ggsThird2_back"))
+        assert.are.same(geometry("ggsThird2_back"), geometry("ggsThird2_front"))
+        gauges[2]:setValue(50)
+        gauges[2]:setValue(100)
+        assert.are.same(geometry("ggsThird2_back"), geometry("ggsThird2_front"))
+      end)
+    end
+
+    it("covers the whole back of a gauge stacked at a fractional height", function()
+      local box = track(Geyser.VBox:new({name = "ggsRows", x = 0, y = 0, width = 100, height = 100}))
+      local gauges = {}
+      for index = 1, 3 do
+        gauges[index] = Geyser.Gauge:new({name = "ggsRow" .. index}, box)
+      end
+      gauges[2]:setValue(100)
+      assert.are.same({x = 0, y = 33, width = 100, height = 34}, geometry("ggsRow2_back"))
+      assert.are.same(geometry("ggsRow2_back"), geometry("ggsRow2_front"))
+    end)
+
+    it("keeps a full front inside its back when the gauge ends on a half pixel", function()
+      local box = track(Geyser.HBox:new({name = "ggsHalves", x = 0, y = 0, width = 301, height = 20}))
+      Geyser.Gauge:new({name = "ggsHalf1"}, box)
+      local second = Geyser.Gauge:new({name = "ggsHalf2"}, box)
+      second:setValue(100)
+      assert.are.same(geometry("ggsHalf2_back"), geometry("ggsHalf2_front"))
     end)
   end)
 
@@ -535,8 +574,9 @@ describe("Tests functionality of Geyser.Gauge", function()
     it("reads a length written without a leading digit", function()
       local gauge = track(Geyser.Gauge:new({name = "ggsLeadingDot", x = 0, y = 0, width = 200, height = 100}))
       gauge:setStyleSheet("margin: .5px;", "margin: .5px;")
-      -- .5px used to match the "5px" inside it and inset the gauge tenfold; half
-      -- a pixel each side moves both edges in by half a pixel, which rounds up
+      -- .5px, not the "5px" inside it: each edge moves in half a pixel and a half
+      -- rounds up, so the front is inset a pixel at the top left and flush at the
+      -- bottom right
       assert.are.same({x = 1, y = 1, width = 199, height = 99}, geometry("ggsLeadingDot_front"))
     end)
 

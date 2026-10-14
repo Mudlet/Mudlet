@@ -215,7 +215,9 @@ end
 -- gauge's fill table rather than closing over its numbers, so that a new value
 -- costs a layout pass and not a fresh set of constraints. Only the back label's
 -- spacing is compensated for: Qt lays the front label's own border and padding
--- outside its content area, and setStyleSheet strips its margins.
+-- outside its content area, and setStyleSheet strips its margins. The lengths
+-- stay fractional: rounding them here as well as at the edges would leave a
+-- full front a pixel off the back it covers.
 local function setFrontConstraints(gauge)
   local fill = gauge.frontFill
   local front = gauge.front
@@ -227,35 +229,35 @@ local function setFrontConstraints(gauge)
     front.x = function() return fill.left end
     front.y = function() return fill.top end
     front.width = function()
-      return math.floor((gauge.back.get_width() - fill.left - fill.right) * (fill.value / 100) + 0.5)
+      return (gauge.back.get_width() - fill.left - fill.right) * (fill.value / 100)
     end
-    front.height = function() return math.floor(gauge.back.get_height() - fill.top - fill.bottom + 0.5) end
+    front.height = function() return gauge.back.get_height() - fill.top - fill.bottom end
   elseif orientation == "vertical" then
     -- bottom to top, so an emptier gauge starts further down
     front.x = function() return fill.left end
     front.y = function()
-      return fill.top + math.floor((gauge.back.get_height() - fill.top - fill.bottom) * (1 - fill.value / 100) + 0.5)
+      return fill.top + (gauge.back.get_height() - fill.top - fill.bottom) * (1 - fill.value / 100)
     end
-    front.width = function() return math.floor(gauge.back.get_width() - fill.left - fill.right + 0.5) end
+    front.width = function() return gauge.back.get_width() - fill.left - fill.right end
     front.height = function()
-      return math.floor((gauge.back.get_height() - fill.top - fill.bottom) * (fill.value / 100) + 0.5)
+      return (gauge.back.get_height() - fill.top - fill.bottom) * (fill.value / 100)
     end
   elseif orientation == "goofy" then
     -- right to left, so an emptier gauge starts further right
     front.x = function()
-      return fill.left + math.floor((gauge.back.get_width() - fill.left - fill.right) * (1 - fill.value / 100) + 0.5)
+      return fill.left + (gauge.back.get_width() - fill.left - fill.right) * (1 - fill.value / 100)
     end
     front.y = function() return fill.top end
     front.width = function()
-      return math.floor((gauge.back.get_width() - fill.left - fill.right) * (fill.value / 100) + 0.5)
+      return (gauge.back.get_width() - fill.left - fill.right) * (fill.value / 100)
     end
-    front.height = function() return math.floor(gauge.back.get_height() - fill.top - fill.bottom + 0.5) end
+    front.height = function() return gauge.back.get_height() - fill.top - fill.bottom end
   else -- batty (top to bottom), and anything the gauge cannot make sense of
     front.x = function() return fill.left end
     front.y = function() return fill.top end
-    front.width = function() return math.floor(gauge.back.get_width() - fill.left - fill.right + 0.5) end
+    front.width = function() return gauge.back.get_width() - fill.left - fill.right end
     front.height = function()
-      return math.floor((gauge.back.get_height() - fill.top - fill.bottom) * (fill.value / 100) + 0.5)
+      return (gauge.back.get_height() - fill.top - fill.bottom) * (fill.value / 100)
     end
   end
 
