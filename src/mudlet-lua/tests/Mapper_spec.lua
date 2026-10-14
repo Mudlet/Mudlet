@@ -3329,9 +3329,9 @@ describe("Tests mapper functions against a shared fixture", function()
     end
 
     -- Joined without separators because a long path wraps across console lines
-    local function mainConsoleCount(text)
+    local function mainConsoleCount(text, fromLine)
       local last = getLastLineNumber("main")
-      local recent = table.concat(getLines("main", math.max(0, last - 20), last + 1), "")
+      local recent = table.concat(getLines("main", fromLine or math.max(0, last - 20), last + 1), "")
       local count, from = 0, 1
       while true do
         local at = recent:find(text, from, true)
@@ -3409,15 +3409,18 @@ describe("Tests mapper functions against a shared fixture", function()
       finally(removeAll)
       local badPath = exportPath("mapper_spec_no_such_dir/unsaved.png")
       assert.is_false(io.exists(exportPath("mapper_spec_no_such_dir")), "the spec needs a directory nothing has made")
+      -- From here on, not the last few lines: the generic mapper prints its help
+      -- on a timer after the map opens, which can push the report out of them
+      local firstLine = getLastLineNumber("main")
       assert.is_true(exportAreaImage(areaAlpha, badPath))
       assert.is_true(exportAreaImage(areaAlpha, exportPath("mapper_spec_export_ok.png")))
       assert.is_true(waitUntil(written, 5000))
-      assert.is_true(waitUntil(function() return mainConsoleCount("Failed to save image to ") > 0 end, 5000))
+      assert.is_true(waitUntil(function() return mainConsoleCount("Failed to save image to ", firstLine) > 0 end, 5000))
       -- Best effort: gives the good export time to report as well, before
       -- checking that only the bad one did
       pumpEvents(500)
-      assert.are.equal(1, mainConsoleCount("Failed to save image to "))
-      assert.are.equal(1, mainConsoleCount("Failed to save image to " .. badPath))
+      assert.are.equal(1, mainConsoleCount("Failed to save image to ", firstLine))
+      assert.are.equal(1, mainConsoleCount("Failed to save image to " .. badPath, firstLine))
     end)
 
     -- The first two exports are the control: with nothing changed they must match,
