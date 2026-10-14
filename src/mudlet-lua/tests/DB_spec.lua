@@ -4348,6 +4348,69 @@ describe("Tests db:create moving a single-column UNIQUE", function()
     cursor:close()
     assert.are.equal(tableDefinition, row.sql)
   end)
+
+  local function tableSql()
+    local cursor = db.__conn[dbName]:execute("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'people'")
+    local row = cursor:fetch({}, "a")
+    cursor:close()
+    return row.sql
+  end
+
+  local function createFromTable(tableDefinition)
+    if not db.__conn[dbName] then
+      createCollectingWarnings({people = {name = "", city = ""}})
+    end
+    db.__conn[dbName]:execute("DROP TABLE people")
+    db.__conn[dbName]:execute(tableDefinition)
+  end
+
+  it("leaves alone a sheet whose table quotes a column name in a way it can't read", function()
+    local tableDefinition = "CREATE TABLE people (_row_id INTEGER PRIMARY KEY AUTOINCREMENT, " ..
+      "'name' TEXT UNIQUE ON CONFLICT FAIL CHECK(length(name) < 10), city TEXT)"
+    createFromTable(tableDefinition)
+
+    createCollectingWarnings({people = {name = "", city = "", _unique = {"name"}}})
+
+    assert.are.equal(tableDefinition, tableSql())
+  end)
+
+  it("leaves alone a sheet whose table brackets a name holding a comma or the word unique", function()
+    for _, tableDefinition in ipairs({
+      "CREATE TABLE people (_row_id INTEGER PRIMARY KEY AUTOINCREMENT, " ..
+        "[home, city] TEXT UNIQUE ON CONFLICT FAIL CHECK(length([home, city]) < 10), name TEXT)",
+      "CREATE TABLE people (_row_id INTEGER PRIMARY KEY AUTOINCREMENT, " ..
+        "`home, city` TEXT UNIQUE ON CONFLICT FAIL CHECK(length(`home, city`) < 10), name TEXT)",
+    }) do
+      createFromTable(tableDefinition)
+      createCollectingWarnings({people = {["home, city"] = "", name = "", _unique = {"home, city"}}})
+      assert.are.equal(tableDefinition, tableSql())
+    end
+
+    for _, tableDefinition in ipairs({
+      "CREATE TABLE people (_row_id INTEGER PRIMARY KEY AUTOINCREMENT, [is unique] TEXT CHECK(length([is unique]) < 10), name TEXT)",
+      "CREATE TABLE people (_row_id INTEGER PRIMARY KEY AUTOINCREMENT, `is unique` TEXT CHECK(length(`is unique`) < 10), name TEXT)",
+    }) do
+      createFromTable(tableDefinition)
+      createCollectingWarnings({people = {["is unique"] = "", name = ""}})
+      assert.are.equal(tableDefinition, tableSql())
+    end
+  end)
+
+  it("moves a UNIQUE on a sheet whose table brackets or backquotes its column names", function()
+    for _, quotes in ipairs({{"[", "]"}, {"`", "`"}}) do
+      local open, close = quotes[1], quotes[2]
+      createFromTable("CREATE TABLE people (_row_id INTEGER PRIMARY KEY AUTOINCREMENT, " ..
+        open .. "name" .. close .. " TEXT UNIQUE ON CONFLICT FAIL, " .. open .. "city" .. close .. " TEXT)")
+      local mydb = createCollectingWarnings({people = {name = "", city = "", _unique = {"name"}}})
+      assert.is_true(db:add(mydb.people, {name = "Bob", city = "Lancre"}))
+
+      mydb = createCollectingWarnings({people = {name = "", city = "", _unique = {"city"}}})
+
+      assert.is_true(db:add(mydb.people, {name = "Bob", city = "Ankh-Morpork"}))
+      local added = collectingWarnings(function() return db:add(mydb.people, {name = "Nanny", city = "Lancre"}) end)
+      assert.is_nil(added)
+    end
+  end)
 end)
 
 -- A sheet may be given as a list of its column names instead of a table of

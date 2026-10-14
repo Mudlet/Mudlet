@@ -789,6 +789,29 @@ local function normalize_sql(sql)
 end
 
 
+local closing_quote = { ['"'] = '"', ["'"] = "'", ["`"] = "`", ["["] = "]" }
+
+-- Blanks every "quoted", 'quoted', [bracketed] and `backquoted` part, as a name or a default may hold
+-- a comma, a bracket or the word unique. One pass from the left: a part may hold another kind of quote.
+-- Same-length blanks keep every offset lined up with the text itself.
+local function blank_quoted(text)
+  local pieces, position = {}, 1
+  while true do
+    local start = text:find("[\"'`%[]", position)
+    local stop = start and text:find(closing_quote[text:sub(start, start)], start + 1, true)
+    if not stop then
+      break
+    end
+    pieces[#pieces + 1] = text:sub(position, start - 1)
+    pieces[#pieces + 1] = (" "):rep(stop - start + 1)
+    position = stop + 1
+  end
+  pieces[#pieces + 1] = text:sub(position)
+
+  return table.concat(pieces)
+end
+
+
 -- NOT LUADOC
 -- Extracts UNIQUE constraints from a CREATE TABLE statement.
 -- This includes both column-level constraints (e.g., "col1" TEXT UNIQUE ON CONFLICT REPLACE)
@@ -813,14 +836,8 @@ function db:_extract_table_constraints(sql)
 
   local constraints = {}
 
-  -- A column name and a default value are both quoted, and either can hold the
-  -- word, so the search runs over a copy with the quoted parts blanked out.
-  -- Same-length blanks keep every offset lined up with the content itself.
-  local function blank(quoted)
-    return (" "):rep(#quoted)
-  end
-  local searchable = content:gsub('"[^"]*"', blank)
-  searchable = searchable:gsub("'[^']*'", blank)
+  -- a column name and a default can both hold the word
+  local searchable = blank_quoted(content)
 
   -- Each UNIQUE is picked up with the column list it may carry, then with the
   -- ON CONFLICT clause it may carry. Both parts are optional: SQLite defaults
@@ -892,9 +909,8 @@ local function split_on_commas(text, searchable)
 end
 
 
--- Bare, [bracketed] and `backquoted` names are read too: a table this module didn't write may use
--- them, and reading them as empty would make all its UNIQUEs look alike. Other forms do come back
--- empty, which no expected CREATE TABLE holds, so that sheet is left alone rather than losing a rule.
+-- Bare, [bracketed] and `backquoted` names are read too, as a table this module didn't write may use
+-- them. Other forms come back empty, which unique_targets reports as unreadable.
 local function leading_column_name(text)
   local trimmed = text:match("^%s*(.-)%s*$")
 
@@ -913,12 +929,7 @@ local function unique_targets(sql)
     return counts, unreadable
   end
 
-  -- quoted names and defaults may hold a comma, a bracket or "unique", so scan a copy with them
-  -- blanked; same-length blanks keep offsets lined up
-  local function blank(quoted)
-    return (" "):rep(#quoted)
-  end
-  local searchable = content:gsub('"[^"]*"', blank):gsub("'[^']*'", blank)
+  local searchable = blank_quoted(content)
 
   for _, part in ipairs(split_on_commas(content, searchable)) do
     local text, scan = part.text, part.scan
