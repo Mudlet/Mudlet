@@ -4657,6 +4657,30 @@ describe("Tests db:create refusing a migration", function()
     mydb:_end()
     assert.are.equal(2, #db:fetch(mydb.people))
   end)
+
+  it("does not leave a refused migration's statements for the next write to commit when it cannot set its savepoint", function()
+    local mydb = createWithoutWarnings({people = {name = ""}})
+    db:add(mydb.people, {name = "Bob"})
+    local conn = db.__conn[dbName]
+    assert.is_truthy(conn:execute('CREATE INDEX "odd index" ON people(name)'))
+    conn:commit()
+
+    db.__conn[dbName] = setmetatable({}, {__index = function(_, method)
+      return function(_, sql, ...)
+        if method == "execute" and sql == "SAVEPOINT db_create_migrate" then
+          return nil, "refused for the test"
+        end
+        return conn[method](conn, sql, ...)
+      end
+    end})
+    finally(function() db.__conn[dbName] = conn end)
+
+    assert.is_false(pcall(db.create, db, dbName, {people = {name = "", city = ""}}))
+
+    db.__conn[dbName] = conn
+    assert.is_true(db:add(mydb.people, {name = "Nanny"}))
+    assert.are.equal("name", columnsOnDisk("people"))
+  end)
 end)
 
 describe("luasql's __tostring", function()

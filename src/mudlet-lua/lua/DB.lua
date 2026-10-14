@@ -811,8 +811,8 @@ function db:create(db_name, sheets, force)
     local saved = conn:execute("SAVEPOINT db_create_migrate")
     local ok, err = pcall(db._migrate, db, db_name, sheet_name, force)
     if not ok then
-      -- roll the refusal back, or the next write commits what it left half done; without the savepoint
-      -- that would take the caller's writes with it, so those statements are left pending instead
+      -- roll the refusal back, or the next write commits what it left half done; inside db:_begin() with
+      -- no savepoint that would take the caller's writes with it, so there they are left pending instead
       if saved then
         db:echo_sql("ROLLBACK TO db_create_migrate")
         if conn:execute("ROLLBACK TO db_create_migrate") then
@@ -823,6 +823,9 @@ function db:create(db_name, sheets, force)
           db:echo_sql("ROLLBACK")
           conn:rollback()
         end
+      elseif db.__autocommit[db_name] then
+        db:echo_sql("ROLLBACK")
+        conn:rollback()
       end
       for name in pairs(sheets) do
         if not migrated[name] then
