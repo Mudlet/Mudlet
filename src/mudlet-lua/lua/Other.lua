@@ -351,9 +351,12 @@ end
 --- Original code written by CHILLCODE™ on https://board.ptokax.ch, distributed under the same terms as Lua itself. <br/><br/>
 ---
 --- Notes: <br/>
----  Functions, userdata and threads are not saved, as keys or as values <br/>
+---  Functions, userdata and coroutines are not saved, whether as a key or as a value <br/>
+---  The Lua libraries and _G are not saved, wherever they are reached <br/>
 ---  References are saved <br/>
 ---
+--- @return true, or nil and an error message if the file could not be written. It raises an error,
+---   leaving the file as it was, when t is not a table.
 --- @usage Saves the given table into the given file.
 ---   <pre>
 ---   table.save(file, table)
@@ -368,8 +371,8 @@ function table.save( sfile, t )
   local tables = {}
   table.insert( tables, t )
   local lookup = { [t] = 1 }
-  -- written to the file only once the whole table is serialised, so a failure part way through
-  -- cannot leave the previous contents truncated
+  -- serialised in full before the file is opened, so an error while serialising leaves the previous
+  -- contents in place; a write that fails, such as on a full disk, still loses them
   local chunks = {}
   local buffer = { write = function(_, text) chunks[#chunks + 1] = text end }
   buffer:write( "return {" )
@@ -389,21 +392,32 @@ end
 
 
 
--- the standard library tables are left out when saving _G itself, not when a data table
--- merely has a member of the same name
+-- these names are left out when saving _G itself, not when a data table merely has a member of
+-- the same name
 local libraryNames = {
   string = true, xpcall = true, package = true, os = true, io = true, math = true, debug = true,
   coroutine = true, _G = true, _VERSION = true, table = true
 }
 
--- tostring() gives inf, -inf and nan, which are not Lua literals, and only 14 significant digits
+-- and these tables wherever they are reached: their functions are not saved, so all that would
+-- come back is an empty table, or for _G a copy of every global
+local libraryTables = {
+  [_G] = true, [string] = true, [table] = true, [math] = true, [os] = true, [io] = true,
+  [debug] = true, [coroutine] = true, [package] = true
+}
+
+-- tostring() gives inf, -inf and nan, which are not Lua literals, and only 14 significant digits.
+-- A chunk keeps 0 and -0 in one constant slot, whichever comes first, so -0 is negated from a
+-- string at load time and the infinities have no 0 in them: (1/0) after a -0 loads as -inf
 local function numberLiteral(n)
   if n ~= n then
     return "(0/0)"
   elseif n == math.huge then
-    return "(1/0)"
+    return "1e999"
   elseif n == -math.huge then
-    return "(-1/0)"
+    return "-1e999"
+  elseif n == 0 and 1 / n < 0 then
+    return '(-"0")'
   end
   local short = tostring( n )
   if tonumber( short ) == n then
@@ -434,7 +448,7 @@ function table.pickle( t, file, tables, lookup )
     -- functions, userdata and threads have no literal to be written as, as a key or as a value
     local index = type( i ) == "table" or literal( i )
     local value = type( v ) == "table" or literal( v )
-    if index and value and not (rawequal( t, _G ) and libraryNames[i]) then
+    if index and value and not (libraryTables[i] or libraryTables[v] or (rawequal( t, _G ) and libraryNames[i])) then
       -- handle index
       if type( i ) == "table" then
         if not lookup[i] then

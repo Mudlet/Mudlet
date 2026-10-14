@@ -2174,12 +2174,13 @@ describe("Tests Other.lua functions", function()
 
     it("should leave the file as it was when joining what it serialised fails", function()
       table.save(path, { keep = "the previous save" })
-      local realConcat = table.concat
-      finally(function() table.concat = realConcat end)
-      table.concat = function() error("not enough memory") end
+      local realPickle = table.pickle
+      finally(function() table.pickle = realPickle end)
+      -- a chunk table.concat cannot join
+      table.pickle = function(_, file) file:write({}) end
 
       assert.has_error(function() table.save(path, { keep = "never written" }) end)
-      table.concat = realConcat
+      table.pickle = realPickle
 
       local loaded = {}
       table.load(path, loaded)
@@ -2195,6 +2196,27 @@ describe("Tests Other.lua functions", function()
       assert.equals(-math.huge, loaded.neginf)
       assert.is_true(loaded.nan ~= loaded.nan)
       assert.equals(1, loaded.keep)
+    end)
+
+    it("should keep the sign of zero and of the infinities, whichever is written first", function()
+      -- built at run time: a -0 literal would share this function's constant slot for 0
+      local negativeZero, zero = tonumber("-0"), tonumber("0")
+      local loaded = {}
+
+      table.save(path, { negativeZero, math.huge, -math.huge, zero })
+      table.load(path, loaded)
+      assert.is_true(1 / loaded[1] < 0)
+      assert.equals(math.huge, loaded[2])
+      assert.equals(-math.huge, loaded[3])
+      assert.is_true(1 / loaded[4] > 0)
+
+      loaded = {}
+      table.save(path, { zero, negativeZero, [math.huge] = "inf key", [-math.huge] = "negative inf key" })
+      table.load(path, loaded)
+      assert.is_true(1 / loaded[1] > 0)
+      assert.is_true(1 / loaded[2] < 0)
+      assert.equals("inf key", loaded[math.huge])
+      assert.equals("negative inf key", loaded[-math.huge])
     end)
 
     it("should keep members named after a Lua library, at any depth", function()
@@ -2217,8 +2239,18 @@ describe("Tests Other.lua functions", function()
       table.load(path, loaded)
 
       assert.equals("saved from _G", loaded.tableSaveSpecMarker)
-      assert.is_nil(loaded.string)
-      assert.is_nil(loaded.math)
+      for _, name in ipairs({ "string", "table", "math", "os", "io", "debug", "coroutine", "package", "_G",
+        "_VERSION", "xpcall" }) do
+        assert.is_nil(loaded[name], name)
+      end
+    end)
+
+    it("should leave out a Lua library or _G reached from a data table", function()
+      assert.is_true(table.save(path, { helpers = { text = string, env = _G }, keep = 1 }))
+      local loaded = {}
+      table.load(path, loaded)
+
+      assert.same({ helpers = {}, keep = 1 }, loaded)
     end)
 
     it("should refuse to save without a table, and write nothing", function()
@@ -2226,13 +2258,28 @@ describe("Tests Other.lua functions", function()
       assert.is_false(io.exists(path))
     end)
 
-    it("should report a write that fails", function()
+    it("should report a write or a close that fails", function()
       if not io.exists("/dev/full") then
+        pending("needs /dev/full")
         return
       end
-      local ok, msg = table.save("/dev/full", { keep = string.rep("x", 10000) })
-      assert.is_nil(ok)
-      assert.is_string(msg)
+      -- more than the stdio buffer holds fails in the write, a few bytes only when closing
+      for _, payload in ipairs({ string.rep("x", 10000), "x" }) do
+        local ok, msg = table.save("/dev/full", { keep = payload })
+        assert.is_nil(ok)
+        assert.is_string(msg)
+      end
+    end)
+
+    it("should leave out coroutine and userdata keys and values", function()
+      local co = coroutine.create(function() end)
+      local original = { co = co, out = io.stdout, [co] = "a coroutine key", [io.stdout] = "a userdata key", keep = 1 }
+
+      assert.is_true(table.save(path, original))
+      local loaded = {}
+      table.load(path, loaded)
+
+      assert.same({ keep = 1 }, loaded)
     end)
 
     it("should keep fractional numeric keys apart from the integer ones and keep every digit", function()
@@ -2265,6 +2312,36 @@ describe("Tests Other.lua functions", function()
       table.load(path, loaded)
 
       assert.same(original, loaded)
+    end)
+  end)
+
+  describe("Tests saveVars", function()
+    it("should report whether it could write the store", function()
+      local store = getMudletHomeDir() .. "/SavedVariables.lua"
+      local backup = store .. ".saveVars-spec"
+      local hadStore = io.exists(store)
+      if hadStore then
+        assert(os.rename(store, backup))
+      end
+      local savedTable = _G._saveTable
+      finally(function()
+        lfs.rmdir(store)
+        os.remove(store)
+        if hadStore then
+          os.rename(backup, store)
+        end
+        _G._saveTable = savedTable
+      end)
+      _G._saveTable = {}
+
+      -- a directory in its place: unlike a read-only file, that cannot be opened by root either
+      lfs.mkdir(store)
+      local ok, msg = saveVars()
+      assert.is_nil(ok)
+      assert.is_string(msg)
+
+      lfs.rmdir(store)
+      assert.is_true(saveVars())
     end)
   end)
 
