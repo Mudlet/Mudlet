@@ -51,6 +51,7 @@ local function hexByte(value, component, caller)
 end
 
 --- Converts color to 3 hex values as a string, no alpha, css style
+-- Components are rounded down and clamped to 0-255.
 -- @return The color formatted as a hex string, as accepted by html/css
 function Geyser.Color.hex (r, g, b)
   -- the caches are what parse() made of the string, so not for a parse()
@@ -69,6 +70,7 @@ function Geyser.Color.hex (r, g, b)
 end
 
 --- Converts color to 4 hex values as a string, with alpha, css style
+-- Components are rounded down and clamped to 0-255.
 -- @return The color formatted as a hex string, as accepted by html/css
 function Geyser.Color.hexa (r, g, b, a)
   local red, green, blue, alpha = Geyser.Color.parse(r, g, b, a)
@@ -76,6 +78,7 @@ function Geyser.Color.hexa (r, g, b, a)
 end
 
 --- Converts color to 3 hex values as a string, no alpha, hecho style
+-- Components are rounded down and clamped to 0-255.
 -- @return The color formatted as a hex string, as accepted by hecho
 function Geyser.Color.hhex (r, g, b)
   local red, green, blue = Geyser.Color.parse(r, g, b)
@@ -83,6 +86,7 @@ function Geyser.Color.hhex (r, g, b)
 end
 
 --- Converts color to 4 hex values as a string, with alpha, hecho style
+-- Components are rounded down and clamped to 0-255.
 -- @return The color formatted as a hex string, as accepted by hecho
 function Geyser.Color.hhexa (r, g, b, a)
   local red, green, blue, alpha = Geyser.Color.parse(r, g, b, a)

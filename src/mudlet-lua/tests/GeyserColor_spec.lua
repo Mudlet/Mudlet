@@ -200,12 +200,12 @@ describe("Tests functionality of Geyser.Color", function()
       assert.are.equal("|cff0000", Geyser.Color.hhex(999, 0, 0))
       assert.are.equal("#ff0000ff", Geyser.Color.hexa(300, 0, 0, 999))
       assert.are.equal("|cff000000", Geyser.Color.hhexa(300, 0, 0, -1))
+      assert.are.equal("#7f0000", Geyser.Color.hex(127.9, 0, 0))
       color_table.geyserColorSpecOverRange = {300, -5, 0}
+      finally(function() color_table.geyserColorSpecOverRange = nil end)
       -- asked twice, as the second answer comes from what the first remembered
-      local first, second = Geyser.Color.hex("geyserColorSpecOverRange"), Geyser.Color.hex("geyserColorSpecOverRange")
-      color_table.geyserColorSpecOverRange = nil
-      assert.are.equal("#ff0000", first)
-      assert.are.equal("#ff0000", second)
+      assert.are.equal("#ff0000", Geyser.Color.hex("geyserColorSpecOverRange"))
+      assert.are.equal("#ff0000", Geyser.Color.hex("geyserColorSpecOverRange"))
     end)
 
     it("says which component is missing or not a number", function()

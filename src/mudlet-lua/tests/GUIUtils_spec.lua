@@ -1774,6 +1774,7 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       assert.equals("FFFF00", RGB2Hex(255.5, 256, 0))
       assert.equals("FF0000", RGB2Hex(1/0, 0, 0))
       assert.equals("000000", RGB2Hex(0/0, 0, 0))
+      assert.equals("7F0000", RGB2Hex(127.9, 0, 0))
     end)
 
     it("Should say which component is missing or not a number", function()
