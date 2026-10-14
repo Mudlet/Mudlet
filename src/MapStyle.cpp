@@ -181,6 +181,22 @@ QList<MapStyle> registeredStyles()
     hologram.playerMarker = MapStyle::PlayerMarker::Pulse;
     hologram.labelTint = QColor(127, 227, 255, 160);
     hologram.scannerOverlay = true;
+    hologram.highlightShape = MapStyle::HighlightShape::Rings;
+    hologram.highlightColor = QColor(255, 214, 90);
+    hologram.labelLetterSpacing = 108.0;
+    hologram.labelCapitals = true;
+    hologram.roomNameGap = 1.0;
+    hologram.themedMapLabels = true;
+    hologram.mapLabelColor = QColor(Qt::white);
+    hologram.mapLabelHalo = QColor(3, 9, 18, 200);
+    hologram.mapLabelMaxHeight = 0.6f;
+    hologram.roomNameColor = QColor(Qt::white);
+    hologram.roomNameScale = 0.75f;
+    hologram.compassFace = QColor(3, 9, 18, 200);
+    hologram.compassRim = QColor(70, 225, 255);
+    hologram.compassNeedle = QColor(255, 79, 216);
+    hologram.infoBackground = QColor(6, 22, 38, 200);
+    hologram.infoTextColor = QColor(127, 227, 255);
     styles.append(hologram);
 
     return styles;

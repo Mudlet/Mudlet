@@ -46,7 +46,7 @@ struct MapStyle
         Halo,
         // The room's own square or circle filled, as a text screen's cursor fills its cell
         Cell,
-        // Two bright rings with a faint glow between them
+        // Two bright rings with a faint glow between them, on the ground round the room
         Rings
     };
 

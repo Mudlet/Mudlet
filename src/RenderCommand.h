@@ -38,9 +38,8 @@ class RenderCommand
 {
 public:
     // Unlit draws its colors as given, as the 2D map does; lit shades them by the light; wireframe draws an
-    // instanced shape's edges unlit, as glowing lines, and only instanced shapes support it; outline is
-    // wireframe without its faint fill across the faces
-    enum class Shading { Lit, Unlit, Wireframe, Outline };
+    // instanced shape's edges unlit, as glowing lines, and only instanced shapes support it
+    enum class Shading { Lit, Unlit, Wireframe };
 
     virtual ~RenderCommand() = default;
     virtual void execute(QOpenGLFunctions* gl,

@@ -46,6 +46,7 @@
 #include "GeometryManager.h"
 #include "Host.h"
 #include "HostManager.h"
+#include "MapDecals.h"
 #include "MapStyle.h"
 #include "MudletApp.h"
 #include "MudletInstanceCoordinator.h"
@@ -73,11 +74,11 @@ private:
     static constexpr int kPlayerRoomId = 1;
     static constexpr int kEastRoomId = 2;
     static constexpr int kLowerRoomId = 3;
-    // As renderRooms sizes the default style's rooms
-    static float roomHeight()
+    // As renderRooms sizes a style's rooms, the default style's unless named
+    static float roomHeight(const QString& styleId = qsl("tiles"))
     {
-        const MapStyle* tiles = MapStyle::find(qsl("tiles"));
-        return 2.0f / tiles->roomScale / tiles->roomFlattening;
+        const MapStyle* style = MapStyle::find(styleId);
+        return 2.0f / style->roomScale / style->roomFlattening;
     }
 
     static bool portableMarkerPresent()
@@ -1092,6 +1093,8 @@ private slots:
         QVERIFY(hologram->postEffects.testFlag(MapStyle::PostEffect::Bloom));
         QVERIFY(hologram->labelTint.isValid());
         QVERIFY(hologram->scannerOverlay);
+        QVERIFY(hologram->themedMapLabels);
+        QVERIFY(hologram->compassNeedle.isValid() && hologram->infoBackground.isValid() && hologram->infoTextColor.isValid());
         QVERIFY(!hologram->floorPlates);
         QVERIFY(!hologram->lit);
         QVERIFY(hologram->background.lightness() < 30);
@@ -1207,8 +1210,8 @@ private slots:
             }
             for (const CubeInstanceData& cube : cubes->instances()) {
                 const QVector4D center = cube.transform.column(3);
-                if (qAbs(center.x()) < 0.5f && qAbs(center.y()) < 0.5f && center.z() > kRoomHeight / 2.0f && qAbs(cube.color[0] - color.redF()) < 1e-4f && qAbs(cube.color[1] - color.greenF()) < 1e-4f
-                    && qAbs(cube.color[2] - color.blueF()) < 1e-4f) {
+                if (qAbs(center.x()) < 0.5f && qAbs(center.y()) < 0.5f && center.z() > roomHeight(qsl("hologram")) / 2.0f && qAbs(cube.color[0] - color.redF()) < 1e-4f
+                    && qAbs(cube.color[1] - color.greenF()) < 1e-4f && qAbs(cube.color[2] - color.blueF()) < 1e-4f) {
                     lines.append(cube);
                     highest = qMax(highest, center.z());
                 }
@@ -1223,7 +1226,7 @@ private slots:
         QVERIFY2(wide, "the marker has no corners off its middle, as a diamond does");
     }
 
-    // A highlighted room is ringed by glowing circles, not covered by the 2D map's disc
+    // A highlighted room is ringed on the ground in the script's color, not covered by the 2D map's disc
     void test_hologramRingsHighlightedRoomsWithoutGL()
     {
         const int areaId = addArea();
@@ -1233,43 +1236,33 @@ private slots:
             mpHost->setMapStyle(qsl("tiles"));
             east->highlight = false;
         });
+        const QColor blue(0, 0, 255);
         east->highlight = true;
-        east->highlightColor = QColor(255, 0, 0);
+        east->highlightColor = blue;
         east->highlightColor2 = QColor(0, 255, 0);
         east->highlightRadius = 1.0f;
         QVERIFY(mpHost->setMapStyle(qsl("hologram")));
+        const MapStyle& hologram = mpHost->mapStylePreset();
+        QCOMPARE(hologram.highlightShape, MapStyle::HighlightShape::Rings);
+        QVERIFY(MapDecals::highlightOnGround(hologram.highlightShape));
         ModernGLWidget widget(map(), mpHost);
-        const auto rings = [&widget]() {
-            QList<CubeInstanceData> found;
-            for (const auto& command : widget.mRenderCommandQueue.commands()) {
-                if (const auto* cubes = dynamic_cast<const RenderInstancedCubesCommand*>(command.get());
-                    cubes && cubes->shading() == RenderCommand::Shading::Outline && cubes->shape() == GeometryManager::InstanceShape::Cylinder) {
-                    found.append(cubes->instances());
+        const auto ringKeys = [&widget]() {
+            QStringList found;
+            for (const QString& key : std::as_const(widget.mRoomTexturesInUse)) {
+                if (key.startsWith(qsl("highlight|%1|").arg(static_cast<int>(MapStyle::HighlightShape::Rings)))) {
+                    found.append(key);
                 }
             }
             return found;
         };
         queueFrame(widget, areaId);
-        const QList<CubeInstanceData> ringed = rings();
-        QCOMPARE(ringed.size(), 2);
-        float roomWidth = 0.0f;
-        for (const auto& command : widget.mRenderCommandQueue.commands()) {
-            if (const auto* cubes = dynamic_cast<const RenderInstancedCubesCommand*>(command.get()); cubes && cubes->shading() == RenderCommand::Shading::Wireframe) {
-                for (const CubeInstanceData& cube : roomInstances(*cubes, QPointF(2.0, 0.0))) {
-                    roomWidth = cube.transform.column(0).toVector3D().length();
-                }
-            }
-        }
-        QVERIFY(roomWidth > 0.0f);
-        for (const CubeInstanceData& ring : ringed) {
-            QVERIFY2(qAbs(ring.transform.column(3).x() - 2.0f) < 1e-4f && qAbs(ring.transform.column(3).y()) < 1e-4f, "a ring is not around the highlighted room");
-            QVERIFY2(ring.transform.column(0).toVector3D().length() > roomWidth, "a ring is no wider than the room it is around");
-            QVERIFY2(ring.color[0] > ring.color[1] && ring.color[0] > ring.color[2], "a ring is not in the highlight's color");
-        }
+        const QStringList ringed = ringKeys();
+        QCOMPARE(ringed.size(), 1);
+        QCOMPARE(ringed.constFirst().section(QLatin1Char('|'), 2, 2), blue.name(QColor::HexArgb));
 
         east->highlight = false;
         queueFrame(widget, areaId);
-        QVERIFY2(rings().isEmpty(), "a room no longer highlighted is still ringed");
+        QVERIFY2(ringKeys().isEmpty(), "a room no longer highlighted is still ringed");
     }
 
     // A map label is drawn dimmer and tinted toward the ink, so that it does not outshine the rooms
@@ -1406,7 +1399,7 @@ private slots:
         if (!widget.isValid()) {
             QSKIP("no OpenGL context on this platform");
         }
-        const float top = kRoomHeight / 2.0f;
+        const float top = roomHeight(qsl("hologram")) / 2.0f;
         const QImage frame = widget.grabFramebuffer();
         const auto pixelAt = [&widget](const QVector3D& point) {
             const std::optional<QPointF> pixel = widget.mCameraController.pixelForPoint(point);
@@ -1482,7 +1475,7 @@ private slots:
         if (!widget.isValid()) {
             QSKIP("no OpenGL context on this platform");
         }
-        const float top = kRoomHeight / 2.0f;
+        const float top = roomHeight(qsl("hologram")) / 2.0f;
         const QImage frame = widget.grabFramebuffer();
         const auto brightness = [&widget, &frame](const QVector3D& point) {
             const std::optional<QPointF> pixel = widget.mCameraController.pixelForPoint(point);
@@ -1845,7 +1838,7 @@ private slots:
         for (const QColor& scriptColor : {QColor(0, 0, 160), QColor(255, 255, 85)}) {
             pEast->highlightColor = scriptColor;
             pEast->highlightColor2 = scriptColor;
-            for (const QString& styleId : {qsl("tiles"), qsl("blueprint"), qsl("terminal")}) {
+            for (const QString& styleId : {qsl("tiles"), qsl("blueprint"), qsl("hologram"), qsl("terminal")}) {
                 QVERIFY(mpHost->setMapStyle(styleId));
                 ModernGLWidget widget(map(), mpHost);
                 queueFrame(widget, areaId);

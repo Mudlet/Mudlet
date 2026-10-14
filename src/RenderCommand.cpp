@@ -283,7 +283,7 @@ void RenderInstancedCubesCommand::execute(QOpenGLFunctions* gl,
     shader->setUniformValue("uNormalMatrix", normalMatrix);
 
     const bool unlit = mShading != Shading::Lit;
-    const bool wireframe = mShading == Shading::Wireframe || mShading == Shading::Outline;
+    const bool wireframe = mShading == Shading::Wireframe;
     if (unlit) {
         shader->setUniformValue("uDisableLighting", true);
     }
@@ -291,7 +291,7 @@ void RenderInstancedCubesCommand::execute(QOpenGLFunctions* gl,
         shader->setUniformValue("uWireframe", true);
         shader->setUniformValue("uWireRound", mShape == GeometryManager::InstanceShape::Cylinder);
         shader->setUniformValue("uWireSides", static_cast<float>(GeometryManager::scmCylinderSegments));
-        shader->setUniformValue("uWireFill", mShading == Shading::Outline ? 0.0f : scmWireFill);
+        shader->setUniformValue("uWireFill", scmWireFill);
     }
 
     geometryManager->renderInstancedCubes(mInstances, vao, vertexBuffer, colorBuffer, normalBuffer, indexBuffer, resourceManager, GL_TRIANGLES, mShape);
