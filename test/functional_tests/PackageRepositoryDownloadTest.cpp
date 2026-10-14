@@ -56,6 +56,8 @@
 #include <QMessageBox>
 #include <QNetworkAccessManager>
 #include <QNetworkProxy>
+#include <QNetworkProxyFactory>
+#include <QRegularExpression>
 #include <QPointer>
 #include <QProgressDialog>
 #include <QTcpServer>
@@ -236,6 +238,54 @@ private:
     bool mSawStacking = false;
     bool mProgressGoneWhileBoxUp = false;
     QStringList mSeen;
+};
+
+// Records the URL of every request any network manager makes, whoever owns the manager, while still
+// pointing them all at the stub proxy - a count of managers would miss one that is shared or unparented
+class RequestRecorder
+{
+public:
+    RequestRecorder()
+    : mProxy(QNetworkProxy::applicationProxy())
+    {
+        // Owned, and deleted when replaced, by Qt
+        QNetworkProxyFactory::setApplicationProxyFactory(new Forwarder(this));
+    }
+
+    ~RequestRecorder() { QNetworkProxy::setApplicationProxy(mProxy); }
+
+    QStringList iconRequests() const
+    {
+        QStringList icons;
+        for (const QString& url : mUrls) {
+            if (url.startsWith(qsl("https://github.com/Mudlet/mudlet-package-repository/raw/refs/heads/main/")) && !url.contains(qsl("/packages/"))) {
+                icons << url;
+            }
+        }
+        return icons;
+    }
+
+private:
+    class Forwarder : public QNetworkProxyFactory
+    {
+    public:
+        explicit Forwarder(RequestRecorder* recorder)
+        : mpRecorder(recorder)
+        {
+        }
+
+        QList<QNetworkProxy> queryProxy(const QNetworkProxyQuery& query) override
+        {
+            mpRecorder->mUrls << query.url().toString();
+            return {mpRecorder->mProxy};
+        }
+
+    private:
+        RequestRecorder* mpRecorder;
+    };
+
+    QNetworkProxy mProxy;
+    QStringList mUrls;
 };
 
 class PackageRepositoryDownloadTest : public QObject
@@ -627,9 +677,7 @@ private slots:
         QTest::newRow("Updates") << true;
     }
 
-    // A row can outlive the index entry it was made from, and choosing it then
-    // has to say why there is nothing to show rather than leave the pane blank,
-    // or offer links and an icon for a package the index cannot name.
+    // Planted: every index read relists the view, so no real refresh leaves a row like this behind
     void test_aPackageMissingFromTheIndexSaysSo_10948()
     {
         QFETCH(bool, inUpdates);
@@ -643,18 +691,98 @@ private slots:
         manager->packageList->addItem(qsl("vanished-package"));
         const auto rows = manager->packageList->findItems(qsl("vanished-package"), Qt::MatchExactly);
         QCOMPARE(rows.size(), 1);
-        const qsizetype requestsBefore = manager->findChildren<QNetworkAccessManager*>().size();
+        RequestRecorder requests;
 
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("package not found in the repository index: \"vanished-package\"")));
         manager->packageList->setCurrentItem(rows.constFirst());
 
         const QString shown = manager->packageDescription->toPlainText();
-        QVERIFY2(shown.contains(qsl("vanished-package")), qPrintable(qsl("The details pane did not say what became of the package, it held: \"%1\"").arg(shown)));
+        QVERIFY2(shown.contains(qsl("vanished-package")) && shown.contains(qsl("could not be found in the package index")),
+                 qPrintable(qsl("The details pane did not explain that the package is missing from the index, it held: \"%1\"").arg(shown)));
+        QVERIFY2(manager->label_packageName->text().startsWith(qsl("van")), "The heading did not name the selected package");
         QVERIFY2(manager->pushButton_website->isHidden(), "The website button was offered for a package the index does not list");
         QVERIFY2(manager->pushButton_report->isHidden(), "The report button was offered for a package the index does not list");
-        QVERIFY2(manager->findChildren<QNetworkAccessManager*>().size() == requestsBefore, "An icon was requested for a package the index does not list");
+        QVERIFY2(requests.iconRequests().isEmpty(), qPrintable(qsl("An icon was requested for a package the index does not list: %1").arg(requests.iconRequests().join(qsl(", ")))));
 
         manager->close();
         QTRY_VERIFY_WITH_TIMEOUT(settle() && manager.isNull(), 15s);
+    }
+
+    // The positive control for the case above: what it expects to be withheld is offered for a listed package
+    void test_aListedPackageOffersItsLinksAndIcon()
+    {
+        mpProxy->setAnswer(StubProxy::Answer::Refuse);
+        QJsonObject entry = repositoryEntry(qsl("listed-package"), qsl("listed-package.mpackage"));
+        entry.insert(qsl("icon"), qsl("icons/listed-package.png"));
+
+        QPointer<dlgPackageManager> manager = openManagerListing({entry, repositoryEntry(qsl("other-package"), qsl("other-package.mpackage"))});
+        QVERIFY(manager);
+        const auto rows = manager->packageList->findItems(qsl("other-package"), Qt::MatchExactly);
+        QCOMPARE(rows.size(), 1);
+        manager->packageList->setCurrentItem(rows.constFirst());
+        RequestRecorder requests;
+
+        manager->packageList->setCurrentItem(manager->packageList->findItems(qsl("listed-package"), Qt::MatchExactly).constFirst());
+
+        QVERIFY2(manager->packageDescription->toPlainText().contains(qsl("exists only in this test")), "The listed package's description was not shown");
+        QVERIFY2(!manager->pushButton_website->isHidden(), "The website button was not offered for a listed package");
+        QVERIFY2(!manager->pushButton_report->isHidden(), "The report button was not offered for a listed package");
+        QCOMPARE(requests.iconRequests(), QStringList{qsl("https://github.com/Mudlet/mudlet-package-repository/raw/refs/heads/main/icons/listed-package.png")});
+
+        manager->close();
+        QTRY_VERIFY_WITH_TIMEOUT(settle() && manager.isNull(), 15s);
+    }
+
+    // With no index on disk the constructor downloads one; Explore opened before it lands has to say why
+    // it is empty, and list the packages once it has landed rather than wait for the view to be switched.
+    void test_exploreIsListedOnceTheIndexLands_10948()
+    {
+        mpProxy->setAnswer(StubProxy::Answer::Refuse);
+        QFile::remove(qsl("%1/mpkg.packages.json").arg(profileHome()));
+
+        QPointer<dlgPackageManager> manager = new dlgPackageManager(nullptr, mpHost);
+        manager->pushButton_explore->click();
+        QCOMPARE(manager->packageList->count(), 0);
+        const QString shown = manager->packageDescription->toPlainText();
+        QVERIFY2(shown.contains(qsl("not available")), qPrintable(qsl("Explore had no index to list and did not say so, the details pane held: \"%1\"").arg(shown)));
+
+        // The refused download writes nothing, so what its handler reads is this
+        QVERIFY(writeRepositoryIndex({repositoryEntry(qsl("arrives-later"), qsl("arrives-later.mpackage"))}));
+        QTRY_VERIFY2_WITH_TIMEOUT(settle() && manager->packageList->findItems(qsl("arrives-later"), Qt::MatchExactly).size() == 1, "The downloaded index was not listed in Explore", 15s);
+        QVERIFY2(manager->pushButton_explore->isChecked(), "Listing the downloaded index left the Explore view");
+
+        manager->close();
+        QTRY_VERIFY_WITH_TIMEOUT(settle() && manager.isNull(), 15s);
+    }
+
+    // A plain .xml package comes with no title, author, version or description to show
+    void test_anInstalledPackageWithNoDetailsSaysSo()
+    {
+        const QString xmlPath = qsl("%1/detail-less-package.xml").arg(mConfigDir.path());
+        QFile xml(xmlPath);
+        QVERIFY(xml.open(QIODevice::WriteOnly));
+        QVERIFY(xml.write("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE MudletPackage>\n<MudletPackage version=\"1.001\">\n<TriggerPackage/>\n</MudletPackage>\n") > 0);
+        xml.close();
+        QVERIFY(mpHost->installPackage(xmlPath, enums::PackageModuleType::Package).first);
+        QVERIFY2(!mpHost->mPackageInfo.contains(qsl("detail-less-package")), "The package under test came with details after all");
+
+        QPointer<dlgPackageManager> manager = openManagerListing({});
+        QVERIFY(manager);
+        manager->pushButton_installed->click();
+        const auto rows = manager->packageList->findItems(qsl("detail-less-package"), Qt::MatchExactly);
+        QCOMPARE(rows.size(), 1);
+        manager->packageList->setCurrentItem(rows.constFirst());
+
+        const QString shown = manager->packageDescription->toPlainText();
+        QVERIFY2(shown.contains(qsl("detail-less-package")) && shown.contains(qsl("without any details")),
+                 qPrintable(qsl("The details pane did not say the package has no details, it held: \"%1\"").arg(shown)));
+        QVERIFY2(!manager->label_packageName->text().isEmpty(), "The heading did not name the selected package");
+
+        manager->close();
+        QTRY_VERIFY_WITH_TIMEOUT(settle() && manager.isNull(), 15s);
+        // The install saved the profile, and a removal is refused while a save is still running
+        mpHost->waitForProfileSave();
+        QVERIFY(mpHost->uninstallPackage(qsl("detail-less-package"), enums::PackageModuleType::Package));
     }
 };
 

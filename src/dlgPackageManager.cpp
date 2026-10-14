@@ -192,9 +192,13 @@ void dlgPackageManager::downloadRepositoryIndex()
         reply->deleteLater();
         file->deleteLater();
         manager->deleteLater();
-        readPackageRepositoryFile();
+        const bool indexRead = readPackageRepositoryFile();
         populatePackagesWithUpdates();
         updateUpdatesBadge();
+        // Explore and Updates are listed from the index, so what is on show predates this one
+        if (indexRead && mCurrentView != NavigationView::Installed) {
+            slot_setPackageList();
+        }
     });
 }
 
@@ -587,7 +591,10 @@ void dlgPackageManager::slot_itemChanged(QListWidgetItem* pItem)
     if (mCurrentView == NavigationView::Installed) {
         auto packageInfo{mpHost->mPackageInfo.value(packageName)};
         if (packageInfo.isEmpty()) {
-            packageDescription->clear();
+            mPackageName = packageName;
+            elidePackageName();
+            //: Package manager - shown in the details pane for an installed package that came with no details, such as a plain .xml package. %1 is the package name
+            packageDescription->setPlainText(tr("'%1' was installed without any details to show: it has no title, author, version or description.").arg(packageName));
             return;
         }
 
@@ -885,6 +892,9 @@ void dlgPackageManager::slot_setPackageList()
         }
     } else if (mCurrentView == NavigationView::Explore) {
         if (!readPackageRepositoryFile()) {
+            //: Package manager - shown in the details pane of the Explore view when the list of packages in the repository has not been downloaded or cannot be read
+            packageDescription->setPlainText(tr(
+                    "The list of packages in the repository is not available: it is still downloading, or the download failed. If it does not appear here, reopen the package manager to try again."));
             return;
         }
         for (const QJsonValue& packageVal : std::as_const(repositoryPackages)) {
@@ -995,10 +1005,12 @@ void dlgPackageManager::showImportStatus(const QString& message)
     QTimer::singleShot(4s, label_importStatus, &QWidget::hide);
 }
 
-// A row whose package the index no longer lists: the list predates the index it is checked against
+// Every index read relists Explore and Updates, so no row should get here; a blank pane would read as a broken dialog
 void dlgPackageManager::showMissingFromIndex(const QString& packageName)
 {
     qWarning() << "dlgPackageManager::showMissingFromIndex() WARNING - package not found in the repository index:" << packageName;
+    mPackageName = packageName;
+    elidePackageName();
     //: Package manager - shown in the details pane when the selected package is not in the downloaded package index. %1 is the package name
     packageDescription->setPlainText(tr("The details of '%1' could not be found in the package index. It may have been renamed or removed; try reopening the package manager.").arg(packageName));
 }
