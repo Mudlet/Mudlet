@@ -3839,20 +3839,29 @@ QList<ModernGLWidget::LegendEntry> ModernGLWidget::lineLegend(const TArea& area)
         if (!pR || pR->isHidden() || pR->z() != mMapCenterZ) {
             continue;
         }
+        // Doors as ExitScene draws them, on the room's drawn compass exits and stubs
+        const auto door = [pR, &doors](const int direction) {
+            const int status = pR->doors.value(TRoom::dirCodeToShortString(direction));
+            if (status > 0 && status < static_cast<int>(doors.size())) {
+                doors[status] = true;
+            }
+        };
         for (int direction = DIR_NORTH; direction <= DIR_SOUTHWEST; ++direction) {
-            const TRoom* pTo = mpMap->mpRoomDB->getRoom(pR->getExit(direction));
-            if (!pTo || pTo->getArea() != mAID || pTo->z() != mMapCenterZ) {
+            if (pR->exitStubs.contains(direction)) {
+                door(direction);
+            }
+            const TRoom* pTo = RoomAppearance::drawnExit(*mpMap, *pR, direction);
+            if (!pTo) {
+                continue;
+            }
+            door(direction);
+            if (pTo->getArea() != mAID || pTo->z() != mMapCenterZ) {
                 continue;
             }
             if (pTo->environment == pR->environment) {
                 ++lines[pR->environment];
             } else {
                 mixed = true;
-            }
-        }
-        for (const int status : pR->doors) {
-            if (status > 0 && status < static_cast<int>(doors.size())) {
-                doors[status] = true;
             }
         }
     }
@@ -3939,28 +3948,59 @@ QList<ModernGLWidget::LegendEntry> ModernGLWidget::lineLegend(const TArea& area)
     return entries;
 }
 
+namespace {
+constexpr int scmLegendMargin = 12;
+constexpr int scmLegendPadding = 8;
+constexpr int scmLegendSwatch = 24;
+
+int widestText(const QStringList& texts, const QFontMetrics& metrics)
+{
+    int widest = 0;
+    for (const QString& text : texts) {
+        widest = qMax(widest, metrics.horizontalAdvance(text));
+    }
+    return widest;
+}
+} // namespace
+
+QRect ModernGLWidget::lineLegendRect(const TArea& area, const int top) const
+{
+    return lineLegendRect(lineLegend(area), top);
+}
+
+QRect ModernGLWidget::lineLegendRect(const QList<LegendEntry>& entries, const int top) const
+{
+    QStringList texts;
+    for (const LegendEntry& entry : entries) {
+        texts.append(entry.text);
+    }
+    if (texts.isEmpty()) {
+        return QRect();
+    }
+    const QFontMetrics metrics(sheetFont());
+    const int rowHeight = metrics.height() + 4;
+    const QRect box(scmLegendMargin, top + scmLegendMargin, 3 * scmLegendPadding + scmLegendSwatch + widestText(texts, metrics), 2 * scmLegendPadding + rowHeight * static_cast<int>(texts.size()));
+    // A view too small to spare the room for it has none
+    if (box.right() > width() / 2 || box.bottom() > height() - scmLegendMargin) {
+        return QRect();
+    }
+    return box;
+}
+
 void ModernGLWidget::paintLineLegend(QPainter& painter, const TArea& area, const int top)
 {
     const QList<LegendEntry> entries = lineLegend(area);
-    if (entries.isEmpty()) {
+    const QRect box = lineLegendRect(entries, top);
+    if (box.isEmpty()) {
         return;
     }
     const MapStyle& style = mapStyle();
     const QFont font = sheetFont();
     const QFontMetrics metrics(font);
-    constexpr int margin = 12;
-    constexpr int padding = 8;
-    constexpr int swatch = 24;
+    constexpr int padding = scmLegendPadding;
+    constexpr int swatch = scmLegendSwatch;
     const int rowHeight = metrics.height() + 4;
-    int widest = 0;
-    for (const LegendEntry& entry : entries) {
-        widest = qMax(widest, metrics.horizontalAdvance(entry.text));
-    }
-    const QRect box(margin, top + margin, 2 * padding + swatch + padding + widest, 2 * padding + rowHeight * static_cast<int>(entries.size()));
-    // A view too small to spare the room for it has none
-    if (box.right() > width() / 2 || box.bottom() > height() - margin) {
-        return;
-    }
+    const int widest = box.width() - 3 * padding - swatch;
     const QColor ink = style.exitColor(mpHost->mFgColor_2);
     const QColor mixedLine = style.mixedLineColor.isValid() ? style.mixedLineColor : ink;
     QColor paper = backgroundColor();
@@ -4015,11 +4055,15 @@ std::pair<ModernGLWidget::PlatformShaft, ModernGLWidget::PlatformShaft> ModernGL
     const QRectF view = QRectF(rect()).adjusted(0.0, top, 0.0, 0.0);
     const float roomSize = 2.0f / scale;
     const float roomHeight = roomSize / zFlattening;
+    // The player's level has a platform even past the levels shown, as nothing else would show where the player is
+    const TRoom* pPlayerRoom = mpMap->mpRoomDB->getRoom(mpMap->mRoomIdHash.value(mpMap->mProfileName));
+    const std::optional<int> playerLevel =
+            pPlayerRoom && pPlayerRoom->getArea() == mAID && !pPlayerRoom->isHidden() && pPlayerRoom->z() != mMapCenterZ ? std::optional<int>(pPlayerRoom->z()) : std::nullopt;
     // The viewed level's stations in the view, as circles on the screen, for the platforms to stand clear of
     QList<QRectF> stations;
     for (const int roomId : area.getAreaRooms()) {
         const TRoom* pR = mpMap->mpRoomDB->getRoom(roomId);
-        if (!pR || pR->isHidden() || !levelInRange(pR->z())) {
+        if (!pR || pR->isHidden() || (!levelInRange(pR->z()) && pR->z() != playerLevel)) {
             continue;
         }
         if (pR->z() != mMapCenterZ) {
@@ -4081,9 +4125,20 @@ std::pair<ModernGLWidget::PlatformShaft, ModernGLWidget::PlatformShaft> ModernGL
     constexpr int pillHeight = 26;
     constexpr int spacing = 38;
     constexpr int mostPlatforms = 8;
-    const QList<int> named = MapDecals::calloutLevels(levels.keys(), mMapCenterZ, mostPlatforms);
+    QList<int> named = MapDecals::calloutLevels(levels.keys(), mMapCenterZ, mostPlatforms);
+    if (playerLevel && !named.contains(*playerLevel)) {
+        // In place of the farthest; named runs from the highest level down
+        if (std::abs(named.constFirst() - mMapCenterZ) > std::abs(named.constLast() - mMapCenterZ)) {
+            named.removeFirst();
+        } else {
+            named.removeLast();
+        }
+        named.append(*playerLevel);
+        std::sort(named.begin(), named.end(), std::greater<int>());
+    }
     const qreal highest = top + margin + pillHeight / 2.0;
-    const qreal lowest = (compassRect().isEmpty() ? height() : compassRect().top()) - margin - pillHeight / 2.0;
+    const qreal lowest = (compassRect().isEmpty() ? height() - statusLineRect().height() : compassRect().top()) - margin - pillHeight / 2.0;
+    const QRectF legend = lineLegendRect(area, top);
 
     for (const bool above : {true, false}) {
         PlatformShaft& shaft = above ? shafts.first : shafts.second;
@@ -4102,14 +4157,14 @@ std::pair<ModernGLWidget::PlatformShaft, ModernGLWidget::PlatformShaft> ModernGL
             shaft.stair = stair.pixel;
         }
         const qreal stairY = shaft.stair ? shaft.stair->y() : (highest + lowest) / 2.0;
-        // As many as fit on their side of the stair, the farthest left out
+        // As many as fit on their side of the stair, the farthest left out but for the player's
         const int fit = qMax(1, static_cast<int>(((above ? stairY - highest : lowest - stairY) - spacing / 2.0) / spacing) + 1);
         while (side.size() > fit) {
-            if (above) {
-                side.removeFirst();
-            } else {
-                side.removeLast();
+            qsizetype farthest = above ? 0 : side.size() - 1;
+            if (side.at(farthest) == playerLevel) {
+                farthest += above ? 1 : -1;
             }
+            side.removeAt(farthest);
         }
         const QHash<int, QString> names = shaft.stair ? reached(stair.roomId, above ? DIR_UP : DIR_DOWN) : QHash<int, QString>();
         int widestLabel = 0;
@@ -4164,6 +4219,14 @@ std::pair<ModernGLWidget::PlatformShaft, ModernGLWidget::PlatformShaft> ModernGL
             }
         }
         const QList<qreal> placed = MapDecals::stackPlatforms(static_cast<int>(shaft.platforms.size()), anchor, above ? -spacing : spacing, highest, lowest);
+        // Moved right of the legend where a platform or its name would lie over it, and the view has the room
+        const qreal labelReach = 8.0 + widestLabel + 5.0;
+        const bool overLegend = std::any_of(placed.cbegin(), placed.cend(), [&](const qreal y) {
+            return QRectF(shaft.x - widestPill / 2.0 - labelReach, y - pillHeight / 2.0, widestPill + labelReach, pillHeight).intersects(legend);
+        });
+        if (const qreal pastLegend = legend.right() + margin + labelReach + widestPill / 2.0; overLegend && pastLegend <= rightmost) {
+            shaft.x = qMax(shaft.x, pastLegend);
+        }
         for (qsizetype i = 0; i < shaft.platforms.size(); ++i) {
             shaft.platforms[i].pill = QRectF(shaft.x - widestPill / 2.0, placed.at(i) - pillHeight / 2.0, widestPill, pillHeight);
         }

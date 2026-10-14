@@ -150,22 +150,26 @@ int exitCount(const TRoom& room)
     return count;
 }
 
+const TRoom* drawnExit(const TMap& map, const TRoom& room, const int direction)
+{
+    const int destination = room.getExit(direction);
+    if (destination <= 0 || room.customLines.contains(TRoom::dirCodeToShortString(direction))) {
+        return nullptr;
+    }
+    const TRoom* pDestination = map.mpRoomDB->getRoom(destination);
+    return pDestination && !pDestination->isHidden() ? pDestination : nullptr;
+}
+
 bool onEnvironmentLine(const TMap& map, const TRoom& room)
 {
-    const auto sameLine = [&room](const TRoom* pOther) {
-        return pOther && !pOther->isHidden() && pOther->environment == room.environment && pOther->z() == room.z() && pOther->getArea() == room.getArea();
-    };
-    const auto leadsTo = [](const TRoom& from, const int to) {
-        for (int direction = DIR_NORTH; direction <= DIR_SOUTHWEST; ++direction) {
-            if (from.getExit(direction) == to) {
-                return true;
-            }
-        }
+    if (room.isHidden()) {
         return false;
+    }
+    const auto sameLine = [&room](const TRoom* pOther) {
+        return pOther && pOther->environment == room.environment && pOther->z() == room.z() && pOther->getArea() == room.getArea();
     };
     for (int direction = DIR_NORTH; direction <= DIR_SOUTHWEST; ++direction) {
-        const int destination = room.getExit(direction);
-        if (destination > 0 && sameLine(map.mpRoomDB->getRoom(destination))) {
+        if (sameLine(drawnExit(map, room, direction))) {
             return true;
         }
     }
@@ -173,8 +177,13 @@ bool onEnvironmentLine(const TMap& map, const TRoom& room)
     const QMultiHash<int, int>& entrances = map.mpRoomDB->getEntranceHash();
     for (auto it = entrances.constFind(room.getId()); it != entrances.cend() && it.key() == room.getId(); ++it) {
         const TRoom* pFrom = map.mpRoomDB->getRoom(it.value());
-        if (sameLine(pFrom) && leadsTo(*pFrom, room.getId())) {
-            return true;
+        if (!pFrom || pFrom->isHidden() || !sameLine(pFrom)) {
+            continue;
+        }
+        for (int direction = DIR_NORTH; direction <= DIR_SOUTHWEST; ++direction) {
+            if (const TRoom* pTo = drawnExit(map, *pFrom, direction); pTo && pTo->getId() == room.getId()) {
+                return true;
+            }
         }
     }
     return false;
