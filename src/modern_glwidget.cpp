@@ -3791,8 +3791,8 @@ void ModernGLWidget::paintScannerOverlay(QPainter& painter, const int top)
             tr("Z %1   LEVELS %2 … %3   %n ROOMS", nullptr, static_cast<int>(pArea->getAreaRooms().size())).arg(signedLevel(mMapCenterZ), signedLevel(pArea->min_z), signedLevel(pArea->max_z)),
             Qt::ElideRight,
             textWidth);
-    // So that it reads over a crowded map, where the style has a background for the room info box
-    if (const QColor panel = mapStyle().infoBackgroundColor(mpHost->mMapInfoBg); panel.isValid() && panel != mpHost->mMapInfoBg) {
+    // So that it reads over a crowded map
+    if (const QColor panel = mapStyle().infoBackgroundColor(mpHost->mMapInfoBg); panel.isValid()) {
         constexpr int pad = 4;
         const int panelWidth = std::max(metrics.horizontalAdvance(scan), metrics.horizontalAdvance(levels)) + 2 * pad;
         const int panelHeight = 2 * metrics.lineSpacing() + 4 + 2 * pad;
