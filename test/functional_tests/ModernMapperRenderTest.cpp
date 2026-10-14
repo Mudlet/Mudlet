@@ -594,6 +594,46 @@ private slots:
         QVERIFY2(blueprintInkIds, "blueprint drew room IDs in another color than its ink");
     }
 
+    // Blueprint's crosshair takes the place of the beacon, but where the profile's own marker is drawn instead the
+    // beacon still helps find the player
+    void test_blueprintDropsTheBeaconOnlyForItsOwnMarker()
+    {
+        const int areaId = addArea();
+        QVERIFY(areaId > 0);
+        const int savedRoomStyle = map()->mPlayerRoomStyle;
+        const bool savedStrong = mpHost->mMapStrongHighlight;
+        const auto restore = qScopeGuard([this, savedRoomStyle, savedStrong]() {
+            mpHost->setMapStyle(qsl("tiles"));
+            map()->mPlayerRoomStyle = savedRoomStyle;
+            mpHost->mMapStrongHighlight = savedStrong;
+        });
+        map()->mPlayerRoomStyle = 0;
+        mpHost->mMapStrongHighlight = false;
+        ModernGLWidget widget(map(), mpHost);
+        queueFrame(widget, areaId);
+        const auto beaconCommands = [&widget]() {
+            widget.mRenderCommandQueue.clear();
+            widget.renderPlayerBeacon();
+            return std::count_if(widget.mRenderCommandQueue.commands().cbegin(), widget.mRenderCommandQueue.commands().cend(), [](const auto& command) {
+                return dynamic_cast<const RenderInstancedCubesCommand*>(command.get()) != nullptr;
+            });
+        };
+
+        const auto tilesBeacon = beaconCommands();
+        QVERIFY(mpHost->setMapStyle(qsl("blueprint")));
+        const auto blueprintBeacon = beaconCommands();
+        map()->mPlayerRoomStyle = 1;
+        const auto profileMarkerBeacon = beaconCommands();
+        map()->mPlayerRoomStyle = 0;
+        mpHost->mMapStrongHighlight = true;
+        const auto strongHighlightBeacon = beaconCommands();
+
+        QVERIFY2(tilesBeacon > 0, "tiles queued no beacon");
+        QCOMPARE(blueprintBeacon, 0);
+        QVERIFY2(profileMarkerBeacon > 0, "blueprint dropped the beacon though the profile's own player marker is drawn");
+        QVERIFY2(strongHighlightBeacon > 0, "blueprint dropped the beacon though the profile's strong highlight is drawn");
+    }
+
     // Outlines are kept from frame to frame, and pieced together from the ones that did not change, so after
     // each change they must be just what a widget with nothing kept makes
     void test_inkOutlinesFollowTheirRoomsWithoutGL()
