@@ -3851,7 +3851,14 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
             continue;
         }
         // TRoomDB::addArea() refuses a blank name, which would lose the area's user data and labels
-        const QString name = (id == -1 && pNewRoomDB->getAreaNamesMap().key(mDefaultAreaName, -1) == -1) ? mDefaultAreaName : pNewRoomDB->unusedUnnamedAreaName();
+        bool defaultAreaNameFree = false;
+        if (id == -1) {
+            // The new TRoomDB's own placeholder -1 already holds the default name, so only another id taking it counts
+            QList<int> idsWithDefaultAreaName = pNewRoomDB->getAreaNamesMap().keys(mDefaultAreaName);
+            idsWithDefaultAreaName.removeAll(-1);
+            defaultAreaNameFree = idsWithDefaultAreaName.isEmpty();
+        }
+        const QString name = defaultAreaNameFree ? mDefaultAreaName : pNewRoomDB->unusedUnnamedAreaName();
         //: Shown when an area in a JSON map file has an empty name. %1 is the area's id, %2 the name it is given instead.
         const QString warnMsg = tr(R"([ WARN ]  - The area with id %1 has no name in the map file, so it has been called "%2".)").arg(QString::number(id), name);
         appendErrorMsgWithNoLf(warnMsg, false);

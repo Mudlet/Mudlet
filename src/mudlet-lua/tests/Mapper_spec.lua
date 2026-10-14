@@ -5187,6 +5187,30 @@ describe("Tests saveJsonMap and loadJsonMap", function()
       assert.are.equal(-1, getAreaTable()[defaultAreaName])
     end)
 
+    it("does not give the default area a name another area in the file has when its own is empty", function()
+      buildMap()
+      local area = getRoomArea(roomA)
+      local defaultAreaName = getAreaTableSwap()[-1]
+      local unnamedAreaName
+      reimportWith(function(document)
+        unnamedAreaName = document.anonymousAreaName
+        local found = false
+        for _, exportedArea in ipairs(document.areas) do
+          if exportedArea.id == -1 then
+            exportedArea.name = ""
+            found = true
+          elseif exportedArea.id == area then
+            exportedArea.name = document.defaultAreaName
+          end
+        end
+        assert.is_true(found, "the export has no default area to blank")
+      end)
+
+      local names = getAreaTableSwap()
+      assert.are.equal(defaultAreaName, names[area])
+      assert.are.equal(unnamedAreaName, names[-1]:sub(1, #unnamedAreaName))
+    end)
+
     it("keeps the default area's name when the file does not give one", function()
       buildMap()
       local defaultAreaName = getAreaTableSwap()[-1]
