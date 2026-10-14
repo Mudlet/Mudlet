@@ -3025,16 +3025,18 @@ int TLuaInterpreter::setModuleInfo(lua_State* L)
         return lua_error(L);
     }
     const QString moduleName{lua_tostring(L, 1)};
-    // An entry for a name nothing is installed as would be answered by getModuleInfo() and never removed
+    // A module being read in is listed already, so its own scripts can still describe it
     if (!host.mInstalledModules.contains(moduleName)) {
         return warnArgumentValue(L, __func__, qsl("module '%1' not found").arg(moduleName));
     }
     const QString info{lua_tostring(L, 2)};
-    // The name the module is installed under: changing the detail would rename nothing
-    if (info == QLatin1String("mpackage")) {
+    const QString value{lua_tostring(L, 3)};
+    // The installed name stays accepted: it is what a module without a config.lua lacks, and what
+    // replaces a name config.lua wrote with an ending that the install trimmed off
+    if (info == qsl("mpackage") && value != moduleName) {
         return warnArgumentValue(L, __func__, qsl("'mpackage' is the name module '%1' is installed under and cannot be changed").arg(moduleName));
     }
-    host.mModuleInfo[moduleName][info] = QString{lua_tostring(L, 3)};
+    host.mModuleInfo[moduleName][info] = value;
     lua_pushboolean(L, true);
     return 1;
 }
@@ -3052,11 +3054,13 @@ int TLuaInterpreter::setPackageInfo(lua_State* L)
         return warnArgumentValue(L, __func__, qsl("package '%1' not found").arg(packageName));
     }
     const QString info{lua_tostring(L, 2)};
-    // The name the package is installed under: changing the detail would rename nothing
-    if (info == QLatin1String("mpackage")) {
+    const QString value{lua_tostring(L, 3)};
+    // The installed name stays accepted: it is what a package without a config.lua lacks, and what
+    // replaces a name config.lua wrote with an ending that the install trimmed off
+    if (info == qsl("mpackage") && value != packageName) {
         return warnArgumentValue(L, __func__, qsl("'mpackage' is the name package '%1' is installed under and cannot be changed").arg(packageName));
     }
-    host.mPackageInfo[packageName][info] = QString{lua_tostring(L, 3)};
+    host.mPackageInfo[packageName][info] = value;
     lua_pushboolean(L, true);
     return 1;
 }

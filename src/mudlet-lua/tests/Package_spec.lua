@@ -676,7 +676,7 @@ describe("Tests the package info accessors", function()
       local ghost = "mudlet-spec-not-installed"
       local ok, err = setPackageInfo(ghost, "title", "I am not here")
       assert.is_nil(ok)
-      assert.is_true(contains(err, "not found"), tostring(err))
+      assert.is_true(contains(err, "'" .. ghost .. "' not found"), tostring(err))
       assert.same({}, getPackageInfo(ghost), "the details were filed for a package that is not installed")
     end)
 
@@ -686,6 +686,21 @@ describe("Tests the package info accessors", function()
       assert.is_true(contains(err, "cannot be changed"), tostring(err))
       assert.equals(minimalPackage, getPackageInfo(minimalPackage, "mpackage"))
       assert.is_true(packageInstalled(minimalPackage))
+    end)
+
+    it("accepts the name the package is installed under for a package with no config.lua", function()
+      local name = "mudlet-spec-noconfig"
+      withFixturePackage(name)
+      assert.is_true(setPackageInfo(name, "mpackage", name))
+      assert.equals(name, getPackageInfo(name, "mpackage"))
+    end)
+
+    it("accepts the name the package is installed under in place of the one its config.lua wrote", function()
+      local name = "mudlet-spec-dotted"
+      withFixturePackage(name)
+      assert.equals(name .. ".xml", getPackageInfo(name, "mpackage"), "SETUP: the fixture's config.lua no longer writes a name the install trims")
+      assert.is_true(setPackageInfo(name, "mpackage", name))
+      assert.equals(name, getPackageInfo(name, "mpackage"))
     end)
 
     it("lets a package's own script describe it while the package is being read in", function()
@@ -848,7 +863,7 @@ describe("Tests the module accessors", function()
       local ghost = "mudlet-spec-not-installed"
       local ok, err = setModuleInfo(ghost, "title", "I am not here")
       assert.is_nil(ok)
-      assert.is_true(contains(err, "not found"), tostring(err))
+      assert.is_true(contains(err, "'" .. ghost .. "' not found"), tostring(err))
       assert.same({}, getModuleInfo(ghost), "the details were filed for a module that is not installed")
     end)
 
@@ -858,6 +873,13 @@ describe("Tests the module accessors", function()
       assert.is_true(contains(err, "cannot be changed"), tostring(err))
       assert.equals(moduleName, getModuleInfo(moduleName, "mpackage"))
       assert.is_true(moduleInstalled(moduleName))
+    end)
+
+    it("accepts the name the module is installed under for a module with no config.lua", function()
+      local name = "mudlet-spec-noconfig"
+      withFixtureModule(name)
+      assert.is_true(setModuleInfo(name, "mpackage", name))
+      assert.equals(name, getModuleInfo(name, "mpackage"))
     end)
 
     it("lets a module's own script describe it while the module is being read in", function()
