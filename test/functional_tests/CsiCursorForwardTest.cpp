@@ -94,7 +94,7 @@ private:
     // look for the line the payload actually landed on
     QString injectedLine() const
     {
-        TBuffer& buffer = mpHost->mpConsole->buffer;
+        TBuffer& buffer = mpHost->mainConsoleView()->buffer;
         for (int line = buffer.getLastLineNumber(); line >= 0; --line) {
             const QString& text = buffer.lineBuffer.at(line);
             if (text.startsWith(qsl("AB"))) {
@@ -160,8 +160,8 @@ private slots:
     void init()
     {
         QVERIFY(mpHost);
-        QVERIFY(mpHost->mpConsole);
-        mpHost->mpConsole->buffer.clear();
+        QVERIFY(mpHost->mainConsoleView());
+        mpHost->mainConsoleView()->buffer.clear();
     }
 
     void test_cursorForwardInsertsSpaces_data()
