@@ -1590,17 +1590,6 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
         // carries it, so none may appear in formats which store the value
         // directly in the stream:
         QMap<QString, QString> userData{pR->userData};
-        // Border properties are stored in userData (not binary stream) to avoid map bloat
-        if (pR->mBorderColor.isValid()) {
-            userData.insert(ROOM_UI_BORDERCOLOR, pR->mBorderColor.name(QColor::HexArgb));
-        } else {
-            userData.remove(ROOM_UI_BORDERCOLOR);
-        }
-        if (pR->mBorderThickness > 0) {
-            userData.insert(ROOM_UI_BORDERTHICKNESS, QString::number(pR->mBorderThickness));
-        } else {
-            userData.remove(ROOM_UI_BORDERTHICKNESS);
-        }
         if (mSaveVersion < 21) {
             if (pR->hidden) {
                 userData.insert(QLatin1String("system.fallback_hidden"), QLatin1String("true"));
@@ -1611,6 +1600,17 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
         }
         if (mSaveVersion < 19 && !pR->mSymbol.isEmpty()) {
             userData.insert(QLatin1String("system.fallback_symbol"), pR->mSymbol);
+        }
+        // Border properties are stored in userData (not binary stream) to avoid map bloat, in every format
+        if (pR->mBorderColor.isValid()) {
+            userData.insert(ROOM_UI_BORDERCOLOR, pR->mBorderColor.name(QColor::HexArgb));
+        } else {
+            userData.remove(ROOM_UI_BORDERCOLOR);
+        }
+        if (pR->mBorderThickness > 0) {
+            userData.insert(ROOM_UI_BORDERTHICKNESS, QString::number(pR->mBorderThickness));
+        } else {
+            userData.remove(ROOM_UI_BORDERTHICKNESS);
         }
         ofs << userData;
         if (mSaveVersion >= 20) {
