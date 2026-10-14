@@ -776,8 +776,11 @@ function closeNestChildren(label)
   local nLabels = label.nestedLabels
   if nLabels then
     for i, v in pairs(nLabels) do
-      -- a Geyser.Label's hide() closes its own nest
       v:hide()
+      -- a Geyser.Label's hide() closes its own nest, an override of hide() may not
+      if v.nestedLabels and v.hide ~= Geyser.Label.hide then
+        closeNestChildren(v)
+      end
       if Geyser.Label.scrollV[v.nestParent] then
         Geyser.Label.scrollV[v.nestParent][1]:hide()
         Geyser.Label.scrollV[v.nestParent][2]:hide()
@@ -1210,12 +1213,44 @@ function Geyser.Label:new (cons, container)
   return me
 end
 
---- Hides the label, along with any of its nested labels that are flown out
+-- internal function: hides or shows a label's nested labels and its "More..."
+-- scroll labels along with the label itself, when its container hides or shows it
+local function cascadeToNest(label, method)
+  for _, v in pairs(label.nestedLabels or {}) do
+    if type(v) == "table" and v[method] then
+      v[method](v, true)
+    end
+  end
+  for _, scrolls in ipairs({Geyser.Label.scrollV, Geyser.Label.scrollH}) do
+    if scrolls[label] then
+      scrolls[label][1][method](scrolls[label][1], true)
+      scrolls[label][2][method](scrolls[label][2], true)
+    end
+  end
+end
+
+--- Hides the label and closes its open nest. Hidden because its container was,
+-- the nest is hidden along with it instead, and comes back when the container is shown.
+-- @param auto true when the label is hidden because its container was hidden
 function Geyser.Label:hide(auto)
-  if self.nestedLabels then
+  if auto then
+    cascadeToNest(self, "hide")
+  elseif self.nestedLabels then
     closeNestChildren(self)
   end
   Geyser.Container.hide(self, auto)
+end
+
+--- Shows the label. Shown because its container was, it also brings back the
+-- nested labels that were hidden along with it.
+-- @param auto true when the label is shown because its container was shown
+function Geyser.Label:show(auto)
+  if Geyser.Container.show(self, auto) == false then
+    return false
+  end
+  if auto then
+    cascadeToNest(self, "show")
+  end
 end
 
 --- Deletes the label using the C++ deleteLabel function, along with its nested
