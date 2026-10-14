@@ -227,6 +227,7 @@ end
 
 -- internal function to handle the onRelease event of main Adjustable.Container Label
 --- raises an event "AdjustableContainerRepositionFinish", passed values (name, width, height, x, y)
+--- (width, height, x and y are the whole pixels the container's widget was placed at)
 -- @param label the main Adjustable.Container Label
 -- @param event the onRelease event and its information
 function Adjustable.Container:onRelease (label, event)
@@ -234,13 +235,14 @@ function Adjustable.Container:onRelease (label, event)
         if label.cursorShape == "ClosedHand" then
             label:setCursor("OpenHand")
         end
+        local x, y, width, height = self:pixel_geometry()
         raiseEvent(
           "AdjustableContainerRepositionFinish",
           self.name,
-          self.get_width(),
-          self.get_height(),
-          self.get_x(),
-          self.get_y()
+          width,
+          height,
+          x,
+          y
         )
         adjustInfo = {}
     end

@@ -814,25 +814,38 @@ describe("Tests the Adjustable.Container mouse handlers", function()
       assert.are.equal(x + width + container.attachedMargin, getBorderLeft())
     end)
 
-    -- the only script-visible surface of the reordering, and the suite asserted
-    -- nothing about it before: every other reposition spec watches the Finish
-    -- event, which a mouse move does not raise
-    it("reports the pixels its widget was placed at in AdjustableContainerReposition", function()
-      local reported
+    it("reports the pixels its widget was placed at in both reposition events", function()
+      local reported, finished
       local handler = registerAnonymousEventHandler("AdjustableContainerReposition",
         function(_, name, width, height, x, y)
           if name == container.name then
             reported = {x = x, y = y, width = width, height = height}
           end
         end)
-      finally(function() killAnonymousEventHandler(handler) end)
+      local finishHandler = registerAnonymousEventHandler("AdjustableContainerRepositionFinish",
+        function(_, name, width, height, x, y)
+          if name == container.name then
+            finished = {x = x, y = y, width = width, height = height}
+          end
+        end)
+      finally(function()
+        killAnonymousEventHandler(handler)
+        killAnonymousEventHandler(finishHandler)
+      end)
       container:move("33.4px", "10.4px")
       container:resize("33.4px", "50.6px")
       local x, y, width, height = getWindowGeometry(container.name .. "adjLabel")
-      assert.are.same({x = 33, y = 10, width = 34, height = 51}, {x = x, y = y, width = width, height = height})
-      assert.are.same({x = x, y = y, width = width, height = height}, reported)
+      local widget = {x = x, y = y, width = width, height = height}
+      assert.are.same({x = 33, y = 10, width = 34, height = 51}, widget)
+      assert.are.same(widget, reported)
+      container:onClick(container.adjLabel, mouseEvent("LeftButton", 10, 10))
+      container:onRelease(container.adjLabel, mouseEvent("LeftButton", 10, 10))
+      assert.are.same(widget, finished)
     end)
 
+    -- the only script-visible surface of the reordering, and the suite asserted
+    -- nothing about it before: every other spec of a drag watches the Finish
+    -- event, which a mouse move does not raise
     it("raises AdjustableContainerReposition while the drag is in progress", function()
       local seen = {}
       local handler = registerAnonymousEventHandler("AdjustableContainerReposition",
