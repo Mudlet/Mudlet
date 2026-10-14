@@ -546,10 +546,9 @@ private slots:
 
         T2DMap* p2dMap = showAreaAtTheOrigin(areaId);
         QVERIFY(p2dMap);
-        // Nothing else in the frame is magenta, nor is the custom line.
-        p2dMap->mLockedDoorColor = QColor(255, 0, 255);
+        // A locked door is drawn in ExitAppearance::doorColor(3), a dark red nothing else on this stretch is.
         const auto doorColoured = [](const QColor& pixel) {
-            return pixel.red() > 60 && pixel.blue() > 60 && qAbs(pixel.red() - pixel.blue()) < 40 && pixel.green() * 2 < pixel.red();
+            return pixel.red() > 60 && pixel.green() * 3 < pixel.red() && pixel.blue() * 3 < pixel.red();
         };
 
         removeCustomLine(pCustomRoom, qsl("w"));
