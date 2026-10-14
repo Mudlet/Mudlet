@@ -421,6 +421,10 @@ describe("Tests functionality of Adjustable.Container", function()
       assert.is_nil(Adjustable.Container.Attached.left.gasAttachName)
       assert.is_nil(Adjustable.Container.Attached.left.gasDetachName)
       assert.is_nil(Adjustable.Container.Attached.left.gasDetachFresh)
+      assert.is_nil(Adjustable.Container.Attached.left.gasAttachKeep)
+      assert.is_nil(Adjustable.Container.Attached.left.gasAttachKeepName)
+      assert.is_nil(Adjustable.Container.Attached.left.gasAttachKeepBad)
+      assert.is_nil(Adjustable.Container.Attached.left.gasAttachCaseNew)
     end)
 
     it("reserves a border while attached and gives it back on detach", function()
@@ -431,6 +435,7 @@ describe("Tests functionality of Adjustable.Container", function()
       assert.are.equal(container, Adjustable.Container.Attached.left.gasAttachPlain)
       container:detach()
       assert.is_false(container.attached)
+      assert.is_nil(container.resizeHandlerID)
       assert.is_nil(Adjustable.Container.Attached.left.gasAttachPlain)
       assert.are.equal(0, getBorderLeft())
     end)
@@ -474,6 +479,7 @@ describe("Tests functionality of Adjustable.Container", function()
       local container = make("gasAttachCase", 200)
       assert.is_true(container:attachToBorder("Left"))
       assert.are.equal("left", container.attached)
+      assert.is_number(container.resizeHandlerID)
       assert.are.equal(container, Adjustable.Container.Attached.left.gasAttachCase)
       assert.is_true(getBorderLeft() > 0)
       assert.are.equal(container.borderSize, getBorderLeft())
@@ -485,7 +491,7 @@ describe("Tests functionality of Adjustable.Container", function()
       local ok, message = far:attachToBorder("right")
       assert.is_nil(ok)
       assert.is_truthy(message:find("too far from the right border", 1, true))
-      assert.is_false(far.attached)
+      assert.is_falsy(far.attached)
       assert.is_nil(far.resizeHandlerID)
 
       local minimized = make("gasAttachMinimized", 100)
@@ -493,7 +499,8 @@ describe("Tests functionality of Adjustable.Container", function()
       ok, message = minimized:attachToBorder("left")
       assert.is_nil(ok)
       assert.is_truthy(message:find("minimized or too far", 1, true))
-      assert.is_false(minimized.attached)
+      assert.is_falsy(minimized.attached)
+      assert.is_nil(minimized.resizeHandlerID)
       assert.is_nil(Adjustable.Container.Attached.left.gasAttachMinimized)
     end)
 
@@ -560,6 +567,70 @@ describe("Tests functionality of Adjustable.Container", function()
       assert.is_truthy(message:find("main window", 1, true))
       assert.is_falsy(inWindow.attached)
       assert.are.equal(borderBefore, getBorderLeft())
+    end)
+
+    it("keeps its border when a move to another one is refused", function()
+      local container = make("gasAttachKeep", 200)
+      assert.is_true(container:attachToBorder("left"))
+      local reserved, handler = getBorderLeft(), container.resizeHandlerID
+      -- a border a script set, which nothing attached to the right has any claim on
+      local rightBefore = getBorderRight()
+      setBorderRight(37)
+      finally(function() setBorderRight(rightBefore) end)
+
+      local ok, message = container:attachToBorder("right")
+
+      assert.is_nil(ok)
+      assert.is_truthy(message:find("too far from the right border", 1, true))
+      assert.are.equal("left", container.attached)
+      assert.are.equal(container, Adjustable.Container.Attached.left.gasAttachKeep)
+      assert.are.equal(handler, container.resizeHandlerID)
+      assert.are.equal(reserved, getBorderLeft())
+      assert.are.equal(37, getBorderRight())
+    end)
+
+    it("leaves a same named container attached when its own attach is refused", function()
+      local minimized = make("gasAttachKeepName", 200)
+      local live = make("gasAttachKeepName", 200)
+      assert.is_true(live:attachToBorder("left"))
+      local reserved = getBorderLeft()
+      minimized:minimize()
+
+      assert.is_nil((minimized:attachToBorder("left")))
+
+      assert.are.equal("left", live.attached)
+      assert.are.equal(live, Adjustable.Container.Attached.left.gasAttachKeepName)
+      assert.are.equal(reserved, getBorderLeft())
+    end)
+
+    it("stays attached when asked for a border that does not exist", function()
+      local container = make("gasAttachKeepBad", 200)
+      assert.is_true(container:attachToBorder("left"))
+      local reserved = getBorderLeft()
+      for _, border in ipairs({"middle", 5}) do
+        local ok, message = container:attachToBorder(border)
+        assert.is_nil(ok)
+        assert.is_truthy(message:find('"top", "bottom", "left" or "right" expected', 1, true))
+      end
+      assert.is_nil((container:attachToBorder(nil)))
+      assert.are.equal("left", container.attached)
+      assert.are.equal(container, Adjustable.Container.Attached.left.gasAttachKeepBad)
+      assert.are.equal(reserved, getBorderLeft())
+    end)
+
+    it("attaches to a border named in any case when created", function()
+      local container = Adjustable.Container:new({
+        name = "gasAttachCaseNew",
+        x = 0, y = 0, width = 200, height = 100,
+        attached = "Left",
+        autoLoad = false,
+        autoSave = false,
+      })
+      containers[#containers + 1] = container
+      assert.are.equal("left", container.attached)
+      assert.is_number(container.resizeHandlerID)
+      assert.are.equal(container, Adjustable.Container.Attached.left.gasAttachCaseNew)
+      assert.are.equal(container.borderSize, getBorderLeft())
     end)
 
     it("refuses a border that does not exist and stays detached", function()
@@ -2173,6 +2244,24 @@ describe("Tests Adjustable.Container borders, persistence and menu items", funct
       assert.is_true(follower:connectToBorder("Left"))
       assert.is_true(follower.connectedToBorder.left)
       assert.is_nil(follower.connectedToBorder.Left)
+      assert.is_true(anchor.connectedToBorder.left)
+      assert.are.equal(anchor, follower.connectedContainers[anchor.name])
+      assert.is_true(anchor.connectedContainers[follower.name])
+    end)
+
+    it("refuses a border that does not exist", function()
+      local anchor = make("gapBadAnchor", {width = 150})
+      local follower = make("gapBadFollower", {width = 150, y = 200})
+      anchor:attachToBorder("left")
+      follower:attachToBorder("left")
+      for _, border in ipairs({"middle", 5}) do
+        local ok, message = follower:connectToBorder(border)
+        assert.is_nil(ok)
+        assert.is_truthy(message:find('"top", "bottom", "left" or "right" expected', 1, true))
+      end
+      assert.is_nil((follower:connectToBorder(nil)))
+      assert.is_nil(follower.connectedToBorder)
+      assert.is_nil(anchor.connectedContainers)
     end)
 
     it("disconnect is safe on a container that was never connected", function()
@@ -2343,6 +2432,24 @@ describe("Tests Adjustable.Container borders, persistence and menu items", funct
       container:move(300, 400)
       container:load("nosuchslot", scratchDir)
       assert.are.equal(20, container:get_x())
+    end)
+
+    it("lower cases a border connection saved in mixed case", function()
+      local anchor = make("gapSavedCaseAnchor", {width = 150})
+      local follower = make("gapSavedCaseFollower", {width = 150, y = 200})
+      anchor:attachToBorder("left")
+      follower:attachToBorder("left")
+      follower:connectToBorder("left")
+      follower:save(nil, scratchDir)
+      local file = scratchDir .. "gapSavedCaseFollower.lua"
+      local saved = {}
+      table.load(file, saved)
+      saved.connectedToBorder = {Left = true}
+      table.save(file, saved)
+
+      follower:load(nil, scratchDir)
+
+      assert.are.same({left = true}, follower.connectedToBorder)
     end)
 
     it("says so rather than raising when there is nothing to load", function()

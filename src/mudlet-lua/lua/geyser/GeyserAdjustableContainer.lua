@@ -608,8 +608,9 @@ function Adjustable.Container:adjustConnectedContainers()
 end
 
 --- connect your container to a border
--- @param border main border ("top", "bottom", "left", "right")
--- @return true, or nil and an error message if the border does not exist or there is nothing to connect to
+-- @param border main border ("top", "bottom", "left", "right"), in any case
+-- @return true, or nil and an error message if the border does not exist, the container is not attached
+-- to a border, or nothing is attached to the border to connect to
 function Adjustable.Container:connectToBorder(border)
     border = type(border) == "string" and border:lower()
     if not oppositeBorder[border] then
@@ -726,7 +727,8 @@ end
 -- attach is only possible if the container is located near the border
 -- @param border possible border values are "top", "bottom", "right", "left", in any case
 -- @return true, or nil and an error message for any other border, or if the container is minimized
--- or too far from that border to attach; a hidden container takes the border when shown
+-- or too far from that border to attach; a refused attach changes nothing, and a hidden container
+-- takes the border when shown
 function Adjustable.Container:attachToBorder(border)
     -- the registry and adjustBorder() both work in lower case
     border = type(border) == "string" and border:lower()
@@ -740,13 +742,14 @@ function Adjustable.Container:attachToBorder(border)
         return nil, "attachToBorder: only a container in the main window can attach to its borders"
     end
     local refused = string.format("attachToBorder: the container is minimized or too far from the %s border to attach", border)
+    -- adjustBorder()'s own test, made before this container or a namesake is taken off its border
+    if self.minimized or not table.contains(self:validAttachPositions(), border) then
+        closeAllLevels(self.rCLabel)
+        return nil, refused
+    end
     if self.attached then self:detach() end
     -- a hidden container reserves nothing, so it takes the border when shown
     if self.hidden or self.auto_hidden then
-        if self.minimized or not table.contains(self:validAttachPositions(), border) then
-            self:detach()
-            return nil, refused
-        end
         self.hiddenAttached = border
         return true
     end
@@ -787,10 +790,8 @@ function Adjustable.Container:detach()
     self.borderSize = nil
     -- unhooked first: handing the border back raises an event we would answer by re-reserving
     self.attached = false
-    if self.resizeHandlerID then
-        killAnonymousEventHandler(self.resizeHandlerID)
-        self.resizeHandlerID = nil
-    end
+    if self.resizeHandlerID then killAnonymousEventHandler(self.resizeHandlerID) end
+    self.resizeHandlerID = nil
     self:resetBorder(where)
 end
 
@@ -1256,8 +1257,13 @@ function Adjustable.Container:load(slot, dir)
     self:adjustBorder()
 
     self.connectedContainers = mytable.connectedContainers or self.connectedContainers
-    self.connectedToBorder = mytable.connectedToBorder or self.connectedToBorder
-    if self.connectedToBorder then
+    local connectedToBorder = mytable.connectedToBorder or self.connectedToBorder
+    if connectedToBorder then
+        -- a layout saved before border names were lower cased can hold "Left"
+        self.connectedToBorder = {}
+        for k, v in pairs(connectedToBorder) do
+            self.connectedToBorder[type(k) == "string" and k:lower() or k] = v
+        end
         for k in pairs(self.connectedToBorder) do
             self:connectToBorder(k)
         end
