@@ -1141,7 +1141,7 @@ describe("Tests the functionality of reloadModule", function()
 
       assert.is_true(waitForProfileSaveToPass(), "the profile save never finished")
       pumpEvents(200)
-      assert.is_true(containsWrapped(textFrom(mark), 'Module "' .. moduleName .. '" could not be reloaded: could not unzip package'), textFrom(mark))
+      assert.is_true(containsWrapped(textFrom(mark), 'Module "' .. moduleName .. '" could not be reloaded: could not unzip package, so the module is now empty'), textFrom(mark))
     end)
 
     it("returns why when the module's XML could not be imported", function()
