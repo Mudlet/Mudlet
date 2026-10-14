@@ -5016,6 +5016,27 @@ describe("Tests saveJsonMap and loadJsonMap", function()
                       getAllAreaUserData(area))
     end)
 
+    it("keeps a label's own outline color over a script's key for it, as a binary save does", function()
+      deleteMap()
+      local area = addAreaName("MapperSpecJsonScriptOutlineKeyArea")
+      roomA = createRoomID(); addRoom(roomA); setRoomArea(roomA, area)
+      local labelId = createMapLabel(area, "Label", 0, 0, 0, 255, 255, 255, 0, 0, 0,
+                                     30.0, 12, true, false, "Bitstream Vera Sans", 255, 50, false)
+      local outlineKey = "system.labelOutlineColor_" .. labelId
+      assert.is_true(setAreaUserData(area, outlineKey, "255|0|0|255"))
+
+      roundTrip()
+
+      assert.are.same({}, getAllAreaUserData(area))
+      local datPath = mapDirectory .. "/mapper_spec_json_script_outline.dat"
+      finally(function() os.remove(datPath) end)
+      assert.is_true(saveMap(datPath))
+      local file = assert(io.open(datPath, "rb"))
+      local data = file:read("*a")
+      file:close()
+      assert.is_nil(data:find(("255|0|0|255"):gsub(".", "\0%0"), 1, true))
+    end)
+
     -- TMap::readJsonColor returns QColor(red, green, blue) for a colour array of
     -- either three or four values, so the alpha the exporter wrote as
     -- "color32RGBA" never reaches the QColor and comes back as 255. Every colour

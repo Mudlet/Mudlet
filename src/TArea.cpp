@@ -889,8 +889,8 @@ std::pair<int, QString> TArea::readJsonArea(const QJsonArray& array, const int a
     if (areaObj.contains(QLatin1String("labels")) && areaObj.value(QLatin1String("labels")).isArray()) {
         readJsonLabels(areaObj);
     }
-    // A JSON label has no field for its outline color, so such a fallback is the
-    // only copy of it, while its font is in its own fields
+    // A JSON label has no field for its outline color, so in an older export its
+    // system.labelOutlineColor_<id> key is the only copy of it; its font has its own fields
     for (auto&& [labelId, label] : mMapLabels.asKeyValueRange()) {
         restoreLabelOutlineColorFromUserData(label, labelId, mUserData);
     }
@@ -901,11 +901,14 @@ std::pair<int, QString> TArea::readJsonArea(const QJsonArray& array, const int a
 void TArea::writeJsonUserData(QJsonObject& obj) const
 {
     QJsonObject userDataObj;
-    if (mUserData.isEmpty()) {
+    // A binary save replaces a script's value under these keys, so an import must not apply it to a label
+    QMap<QString, QString> userData{mUserData};
+    dropFileOnlyUserData(userData);
+    if (userData.isEmpty()) {
         // Skip creating a user data array if it will be empty:
         return;
     }
-    QMapIterator<QString, QString> itDataItem(mUserData);
+    QMapIterator<QString, QString> itDataItem(userData);
     while (itDataItem.hasNext()) {
         itDataItem.next();
         const QJsonValue userDataValue{itDataItem.value()};
