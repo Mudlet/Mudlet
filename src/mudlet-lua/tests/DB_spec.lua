@@ -4411,6 +4411,44 @@ describe("Tests db:create moving a single-column UNIQUE", function()
       assert.is_nil(added)
     end
   end)
+
+  it("names only the cause that applies when the column it now names holds duplicates", function()
+    local mydb = createCollectingWarnings({people = {name = "", city = "", region = "", _unique = {"region"}}})
+    assert.is_true(db:add(mydb.people, {name = "Bob", city = "Lancre", region = "a"}))
+    assert.is_true(db:add(mydb.people, {name = "Bob", city = "Lancre", region = "b"}))
+
+    local ok, err = pcall(createCollectingWarnings, {people = {name = "", city = "", region = "", _unique = {"city"}}})
+    assert.is_false(ok)
+    assert.is_nil(string.find(err, "added by this db:create", 1, true))
+
+    ok, err = pcall(createCollectingWarnings, {people = {name = "", city = "", region = "", _unique = {{"name", "city"}}}})
+    assert.is_false(ok)
+    assert.is_truthy(string.find(err, "people.name, people.city to be unique together", 1, true))
+
+    ok, err = pcall(createCollectingWarnings, {people = {name = "", city = "", region = "", kingdom = "Lancre", _unique = {"kingdom"}}})
+    assert.is_false(ok)
+    assert.is_truthy(string.find(err, "people.kingdom is added by this db:create, so every row takes its default", 1, true))
+  end)
+
+  it("drops the rows a move would clash on only when given force, under IGNORE and REPLACE", function()
+    for _, violations in ipairs({"IGNORE", "REPLACE"}) do
+      local mydb = createCollectingWarnings({people = {name = "", city = "", _unique = {"name"}, _violations = violations}})
+      assert.is_true(db:add(mydb.people, {name = "Bob", city = "Lancre"}))
+      assert.is_true(db:add(mydb.people, {name = "Nanny", city = "Lancre"}))
+      local moved = {people = {name = "", city = "", _unique = {"city"}, _violations = violations}}
+
+      local ok, err = pcall(createCollectingWarnings, moved)
+      assert.is_false(ok)
+      assert.is_truthy(string.find(err, "1 rows would be lost with new constraints", 1, true))
+      assert.are.equal(2, #db:fetch(mydb.people))
+
+      mydb = collectingWarnings(function() return db:create(dbName, moved, true) end)
+      assert.are.equal(1, #db:fetch(mydb.people))
+
+      db:close(dbName)
+      os.remove(dbFile)
+    end
+  end)
 end)
 
 -- A sheet may be given as a list of its column names instead of a table of

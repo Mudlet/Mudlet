@@ -460,9 +460,12 @@ local lua_reserved_words = {
 ---   loses the sheet nothing is applied as usual, and one that also drops a column
 ---   does lose the rule, since removing a column is a rebuild in its own right.
 ---   Moving a _unique entry onto columns whose rows hold the same value more than
----   once cannot be applied, and neither can making a column this db:create adds
----   unique while the sheet has more than one row, as each row takes its default:
----   db:create then raises an error and leaves that sheet as it was.
+---   once cannot be applied as it stands, and neither can making a column this
+---   db:create adds unique while the sheet has more than one row, as each row takes
+---   its default. db:create then raises an error and leaves that sheet as it was.
+---   With _violations = "IGNORE" or "REPLACE" the error is about the rows the move
+---   would lose, as all but one of the rows sharing a value would go: given force,
+---   db:create applies the move and deletes those rows.
 ---   Naming _row_id in a _unique entry written as a list is warned about but kept,
 ---   since a sheet's _row_id is unique on its own and the constraint is therefore
 ---   one that can never refuse a row.
@@ -1216,11 +1219,20 @@ function db:_migrate(db_name, s_name, force)
         if not ret then
           conn:rollback()
           local unique_columns = i == copy_back_chunk and tostring(str):match("UNIQUE constraint failed: (.+)$")
-        if unique_columns then
+          if unique_columns then
+            local columns, added = {}, nil
+            for column in (unique_columns .. ", "):gmatch("(.-), ") do
+              columns[#columns + 1] = column
+              local name = column:sub(#s_name + 2)
+              if not added and schema.columns[name] ~= nil and current_columns[name] == nil then
+                added = column
+              end
+            end
             -- level 3: the script's call to db:create
-            error("db:create - " .. s_name .. " - _unique now asks for " .. unique_columns .. " to be unique, " ..
-              "but the sheet's rows hold the same value there more than once (a column this db:create adds " ..
-              "takes its default in every row), so the sheet is left as it was.", 3)
+            error("db:create - " .. s_name .. " - _unique now asks for " .. unique_columns .. " to be unique" ..
+              (#columns > 1 and " together" or "") .. ", but the sheet's rows hold the same value there more " ..
+              "than once" .. (added and " (" .. added .. " is added by this db:create, so every row takes its " ..
+              "default)" or "") .. ", so the sheet is left as it was.", 3)
           end
           error("Migration failed at chunk " .. i .. ": " .. tostring(str))
         end
