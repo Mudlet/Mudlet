@@ -2299,6 +2299,36 @@ describe("Tests Other.lua functions", function()
     end)
   end)
 
+  describe("Tests saveVars", function()
+    it("should report whether it could write the store", function()
+      local store = getMudletHomeDir() .. "/SavedVariables.lua"
+      local backup = store .. ".saveVars-spec"
+      local hadStore = io.exists(store)
+      if hadStore then
+        assert(os.rename(store, backup))
+      end
+      local savedTable = _G._saveTable
+      finally(function()
+        lfs.rmdir(store)
+        os.remove(store)
+        if hadStore then
+          os.rename(backup, store)
+        end
+        _G._saveTable = savedTable
+      end)
+      _G._saveTable = {}
+
+      -- a directory in its place: unlike a read-only file, that cannot be opened by root either
+      lfs.mkdir(store)
+      local ok, msg = saveVars()
+      assert.is_nil(ok)
+      assert.is_string(msg)
+
+      lfs.rmdir(store)
+      assert.is_true(saveVars())
+    end)
+  end)
+
     --[[
     TODO:
       remember()

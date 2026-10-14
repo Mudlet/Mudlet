@@ -313,6 +313,7 @@ end
 
 --- This function should primarily be used by Mudlet. It saves the contents of _saveTable into a file for persistence.
 ---
+--- @return true, or nil and an error message if the file could not be written
 --- @see loadVars
 function saveVars()
   local _sep = ""
@@ -325,7 +326,7 @@ function saveVars()
   for k, _ in pairs(_saveTable) do
     remember(k)
   end
-  table.save(l_SettingsFile, _saveTable)
+  return table.save(l_SettingsFile, _saveTable)
 end
 
 
