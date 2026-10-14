@@ -676,6 +676,50 @@ private slots:
         QCOMPARE(segmentsIn(scene, ExitAppearance::oneWayArrowColor()).size(), 1);
     }
 
+    void test_linesJoiningTwoEnvironmentsTakeTheMixedColorWhereGiven()
+    {
+        map()->mCustomEnvColors[301] = QColor(200, 30, 30);
+        map()->mCustomEnvColors[302] = QColor(30, 60, 220);
+        auto restore = qScopeGuard([this] {
+            map()->mCustomEnvColors.remove(301);
+            map()->mCustomEnvColors.remove(302);
+        });
+        TRoom* pWest = addRoomAt(1, mAreaId, 0, 0);
+        TRoom* pEast = addRoomAt(2, mAreaId, 1, 0);
+        QVERIFY(pWest && pEast);
+        pWest->environment = 301;
+        pEast->environment = 302;
+        pWest->setExit(2, DIR_EAST);
+        pEast->setExit(1, DIR_WEST);
+        ExitScene::Options lines = options();
+        lines.environmentLines = true;
+        const QColor gray(178, 178, 178);
+        lines.mixedLineColor = gray;
+
+        const ExitScene::Scene scene = build(lines);
+
+        QCOMPARE(segmentsIn(scene, gray).size(), 1);
+        QCOMPARE(segmentsIn(scene, mExitColor).size(), 0);
+    }
+
+    // A station is on a line of its own environment only where an exit on its level leads to a room of it
+    void test_onEnvironmentLineTakesOnlyALevelExitToItsOwnEnvironment()
+    {
+        TRoom* pRoom = addRoomAt(1, mAreaId, 0, 0, 0);
+        TRoom* pOther = addRoomAt(2, mAreaId, 1, 0, 0);
+        TRoom* pAbove = addRoomAt(3, mAreaId, 0, 0, 1);
+        QVERIFY(pRoom && pOther && pAbove);
+        pRoom->environment = 301;
+        pOther->environment = 302;
+        pAbove->environment = 301;
+        pRoom->setExit(3, DIR_UP);
+        pRoom->setExit(2, DIR_EAST);
+        QVERIFY(!RoomAppearance::onEnvironmentLine(*map(), *pRoom));
+        pOther->environment = 301;
+        QVERIFY(RoomAppearance::onEnvironmentLine(*map(), *pRoom));
+        QVERIFY2(!RoomAppearance::onEnvironmentLine(*map(), *pOther), "a room with no exits of its own is on a line");
+    }
+
     void test_environmentLinesAreOffUnlessAsked()
     {
         map()->mCustomEnvColors[301] = QColor(200, 30, 30);
