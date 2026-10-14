@@ -27,7 +27,8 @@
 
 // The application shell core code sees while there is no main window: before it is made, after it
 // has gone, and in a run with no GUI. Queries have no value, actions fail or do nothing, and a
-// file or folder dialog answers as if the player cancelled it.
+// file or folder dialog answers as if the player cancelled it. Profiles are the exception: they
+// open and close through HostManager::self(), and quitting ends the application's exec().
 class TNullAppFrontend : public TAppFrontend
 {
 public:
@@ -37,7 +38,7 @@ public:
     void showConnectionDialog() override {}
     void handleTelnetUri(const QString&) override {}
     void setCompactInputLineChecked(Host*, bool) override {}
-    void armForceClose() override {}
+    void armForceClose() override;
     bool openWebPage(const QString&) override { return false; }
     void showNotification(const QString&, const QString&, std::optional<int>) override {}
     bool drawUpperLowerLevels() const override { return mDrawUpperLowerLevels; }
@@ -54,8 +55,8 @@ public:
     bool loadWindowLayout() override { return false; }
     bool saveWindowLayoutForScript() override { return false; }
     bool quitting() const override { return false; }
-    bool openProfile(const QString&, bool) override { return false; }
-    bool requestProfileTabClose(const QString&) override { return false; }
+    bool openProfile(const QString& profileName, bool connect) override;
+    bool requestProfileClose(const QString& profileName) override;
     void processEventLoopHack() override {}
     QObject* openComposer(Host*, const QString&, const QString&) override { return nullptr; }
     void closeComposer(QObject*) override {}

@@ -2203,6 +2203,17 @@ describe("Tests the timer API", function()
     return name
   end
 
+  -- installPackage() answers true but holds the install over while a profile save runs
+  local function waitForPackage(name)
+    for _ = 1, 100 do
+      if table.contains(getPackages(), name) then
+        return true
+      end
+      pumpEvents(50)
+    end
+    return false
+  end
+
   -- Returns once `seconds` of real time have passed, by waiting for an event
   -- raised from a real timer. Lua runs to completion between event loop turns, so
   -- the timer cannot have fired before the wait below is in place. Each call gets
@@ -2413,6 +2424,7 @@ describe("Tests the timer API", function()
 ]])
         file:close()
         assert.is_true(installPackage(path))
+        assert.is_true(waitForPackage(packageName), "the " .. packageName .. " package was not installed")
         return path
       end
 
@@ -2751,6 +2763,7 @@ describe("Tests the timer API", function()
 ]])
       file:close()
       assert.is_true(installPackage(path))
+      assert.is_true(waitForPackage("w2a-zero-timer"), "the zero timer package was not installed")
 
       -- the sibling shows that a package's timers do get switched on as they arrive
       assert.equals(1, isActive("W2aLiveFromPackage", "timer"))
