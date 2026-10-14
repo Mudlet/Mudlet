@@ -659,8 +659,12 @@ bool Host::loadProfileSave(const QString& saveFileName)
     return preInstallPackages;
 }
 
+static void removeTheStagingFoldersInstallsLeftBehind(Host&);
+
 void Host::startProfileScripts()
 {
+    removeTheStagingFoldersInstallsLeftBehind(*this);
+
     // enable script compilation (which is off by default)
     mBlockScriptCompile = false;
     // This uses the external LuaGlobal.lua file to load all the other external
@@ -3189,10 +3193,10 @@ static QString stagingFolderPrefix(const QString& packageName)
 
 static constexpr int scmStagingFolderSuffixLength = 6;
 
-// A folder of its own to unpack an archive into beside the profile's package folders. The name is made
-// unpredictable, so it can never be a folder some package already owns. Ends in a separator, as
-// utils::unzip() expects. Not QTemporaryDir: it makes the folder 0700 on Unix, and this one is renamed
-// into place as the package's own.
+// A folder of its own to unpack an archive into beside the profile's package folders. Only a folder mkdir()
+// makes afresh is taken, so it is never one some package already owns; the random suffix just keeps the
+// tries few. Ends in a separator, as utils::unzip() expects. Not QTemporaryDir: it makes the folder 0700 on
+// Unix, and this one is renamed into place as the package's own.
 static QString aFreshFolderToUnpackInto(const QString& profileHome, const QString& packageName)
 {
     static const QLatin1String characters("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789");
@@ -3208,6 +3212,23 @@ static QString aFreshFolderToUnpackInto(const QString& profileHome, const QStrin
         }
     }
     return QString();
+}
+
+// Every way out of an install removes its staging folder, so one still here as the profile loads was stranded by
+// an install Mudlet was killed during. Not swept by installs: the unpacking dialog runs the event loop, so an
+// install can start while another one is still unpacking into a staging folder of the same name.
+static void removeTheStagingFoldersInstallsLeftBehind(Host& host)
+{
+    static const QRegularExpression stagingFolderName(qsl("^.+%1[A-Za-z0-9]{%2}$").arg(QRegularExpression::escape(stagingFolderPrefix(QString())), QString::number(scmStagingFolderSuffixLength)));
+    const QString home = MudletApp::getMudletPath(enums::profileHomePath, host.getName());
+    const QStringList entries = QDir(home).entryList(QDir::Dirs | QDir::NoDotAndDotDot | QDir::Hidden);
+    for (const QString& entry : entries) {
+        // A name a package can have too, so one listed as a package or module is left be
+        if (stagingFolderName.match(entry).hasMatch() && !host.mInstalledPackages.contains(entry) && !host.mInstalledModules.contains(entry)) {
+            const QString leftOver = qsl("%1/%2").arg(home, entry);
+            host.removeDir(leftOver, leftOver);
+        }
+    }
 }
 
 std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::PackageModuleType thing, bool quiet)
@@ -3445,17 +3466,6 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         // rename below would carry it off - on a sync too. Such an archive unpacks beside it, moving in once its
         // manifest's name proves free.
         const bool unpackAside = !crossKindRefusalOnTheFileName.isEmpty() || theProfileKeepsItsOwnDataIn(packageName);
-        if (unpackAside) {
-            // Every way out of an install removes its staging folder, so one still here was stranded by an install
-            // that never finished, such as one Mudlet was killed during. One listed as a package or module is left be.
-            const QString prefix = stagingFolderPrefix(packageName);
-            for (const QString& entry : QDir(_home).entryList(QDir::Dirs | QDir::NoDotAndDotDot | QDir::Hidden)) {
-                if (entry.size() == prefix.size() + scmStagingFolderSuffixLength && entry.startsWith(prefix) && !mInstalledPackages.contains(entry) && !mInstalledModules.contains(entry)) {
-                    const QString leftOver = qsl("%1/%2").arg(_home, entry);
-                    removeDir(leftOver, leftOver);
-                }
-            }
-        }
         const QString _dest = !unpackAside ? MudletApp::getMudletPath(enums::profilePackagePath, getName(), packageName) : aFreshFolderToUnpackInto(_home, packageName);
         if (_dest.isEmpty()) {
             return fail(qsl("could not create destination folder"));
@@ -3549,7 +3559,9 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         // needed, and a package let in first would share the folder from then on - uninstallPackage() leaves it
         // be, so the package could never be installed again, and purgeMediaCache() would empty it.
         if (refuseTheProfilesOwnFolders && theProfileKeepsItsOwnDataIn(packageName)) {
-            if (packageName != sanitizePackageName(fileName)) {
+            // Renaming the archive only helps when the name came from its file name and not its config.lua
+            const QString manifest = _dir.absoluteFilePath(qsl("config.lua"));
+            if (QFileInfo::exists(manifest) && !getPackageConfig(manifest, thing != enums::PackageModuleType::Package).isEmpty()) {
                 //: %1 is the name the package's config.lua asks to be installed under, which is also the name of a folder Mudlet keeps the profile's own files in, such as its maps or logs
                 return refuseTheRenamedInstall(tr("The config.lua of this package asks to be installed as \"%1\", but the profile keeps its own files in the folder of that name.").arg(packageName));
             }
@@ -3617,6 +3629,12 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
             } else {
                 // Going on reads the folder in the way, so the one just unpacked would be orphaned
                 discardTheFolderThisInstallMade();
+                // Only a module an older Mudlet let in under the name of a profile folder gets here with that name.
+                // Its files have always been unpacked straight into that folder, so that is where it is brought up
+                // to date - left alone, it would never take up a newer archive.
+                if (theProfileKeepsItsOwnDataIn(packageName) && !utils::unzip(actualFileName, newpath + QLatin1Char('/'), _tmpDir)) {
+                    qWarning() << "Host::installPackage() WARNING - could not unpack" << actualFileName << "over the files of" << packageName << "in" << newpath;
+                }
             }
         }
         _dir = QDir(newpath);

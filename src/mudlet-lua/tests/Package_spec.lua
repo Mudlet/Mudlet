@@ -1599,7 +1599,7 @@ describe("Tests installing one name as both a package and a module", function()
                           "a package under the renaming archive's file name")
 
     -- the module below is only staged because the package above holds its file
-    -- name, and this is the name its staging folder would once have had
+    -- name; its staging folder gets a random suffix, so one without is no install's
     local leftOver = getMudletHomeDir() .. "/mudlet-spec-renamer.mudlet-installing"
     lfs.mkdir(leftOver)
     defer(function()
@@ -3052,6 +3052,8 @@ describe("Tests installing an archive named after one of the profile's own folde
     local reason = installUntilRefused(installPackage, archive)
 
     assert.is_true(contains(reason, "keeps its own files"), tostring(reason))
+    -- renaming the file would not help, as the name comes from config.lua
+    assert.is_true(contains(reason, "config.lua"), tostring(reason))
     assert.is_true(fileExists(precious), "the refused install touched the profile's media files")
     assert.is_false(fileExists(media .. "/config.lua"), "the archive was unpacked into the profile's media folder")
     assert.is_false(fileExists(media .. "/mudlet-spec-claimsmedia.xml"), "the archive was unpacked into the profile's media folder")
@@ -3126,27 +3128,81 @@ describe("Tests installing an archive named after one of the profile's own folde
     end)
   end
 
-  -- An install Mudlet was killed during never got to remove its staging folder
-  it("clears out a staging folder an interrupted install of the same name left behind", function()
-    local leftOver = home .. "/log.mudlet-installing-Zz9Zz9"
-    local archive = scratchDirectory .. "/log.mpackage"
-    lfs.mkdir(leftOver)
+  -- The unpacking dialog of a large archive runs the event loop, so another
+  -- install can start while one is still unpacking into its staging folder.
+  it("leaves the staging folder of an install still unpacking to it when another install of that name starts", function()
+    if package.config:sub(1, 1) == "\\" then
+      pending("builds its archive with the zip command")
+      return
+    end
+    local renamed = "mudlet-spec-reentrant"
+    local big = scratchDirectory .. "/big"
+    local small = scratchDirectory .. "/small"
+    local bigArchive = big .. "/log.mpackage"
+    local smallArchive = small .. "/log.mpackage"
     lfs.mkdir(scratchDirectory)
+    lfs.mkdir(big)
+    lfs.mkdir(small)
     defer(function()
-      removeFixturePackage("log")
-      emptyAndRemove(leftOver)
-      os.remove(archive)
+      removeFixturePackage("mudlet-spec-renamed")
+      removeFixtureModule(renamed, "log")
+      for _, file in ipairs({big .. "/config.lua", big .. "/" .. renamed .. ".xml", big .. "/padding.bin", bigArchive, smallArchive}) do
+        os.remove(file)
+      end
+      lfs.rmdir(big)
+      lfs.rmdir(small)
       lfs.rmdir(scratchDirectory)
     end)
-    local file = io.open(leftOver .. "/mudlet-spec-noconfig.xml", "wb")
-    assert.is_not_nil(file, "could not write into " .. leftOver)
-    file:write("half unpacked")
-    file:close()
-    copyFile(fixtureDirectory .. "/mudlet-spec-noconfig.mpackage", archive)
+    local function write(path, contents)
+      local file = io.open(path, "wb")
+      assert.is_not_nil(file, "could not write " .. path)
+      file:write(contents)
+      file:close()
+    end
+    write(big .. "/config.lua", "mpackage = [[" .. renamed .. "]]\n")
+    write(big .. "/" .. renamed .. ".xml", [[<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE MudletPackage>
+<MudletPackage version="1.001">
+	<AliasPackage>
+		<Alias isActive="yes" isFolder="no">
+			<name>mudlet-spec-reentrant alias</name>
+			<script></script>
+			<command></command>
+			<packageName></packageName>
+			<regex>^mudlet-spec-reentrant$</regex>
+		</Alias>
+	</AliasPackage>
+</MudletPackage>
+]])
+    -- big enough for an unpacking dialog, which only a sync of the module puts up
+    write(big .. "/padding.bin", string.rep("x", 26 * 1024 * 1024))
+    local zipped = os.execute("cd '" .. big .. "' && zip -q -0 log.mpackage config.lua " .. renamed .. ".xml padding.bin")
+    if zipped ~= 0 and zipped ~= true then
+      pending("the zip command is not available")
+      return
+    end
+    copyFile(fixtureDirectory .. "/mudlet-spec-renamer.mpackage", smallArchive)
+    installUntilConfirmed(installModule, bigArchive, function() return moduleInstalled(renamed) end, "the large module from an archive called log")
 
-    installUntilRefused(installPackage, archive)
+    local stagingFoldersWhileUnpacking
+    tempTimer(0, function()
+      stagingFoldersWhileUnpacking = {}
+      for entry in lfs.dir(home) do
+        if entry:find("mudlet-installing", 1, true) then
+          stagingFoldersWhileUnpacking[#stagingFoldersWhileUnpacking + 1] = entry
+        end
+      end
+      installPackage(smallArchive)
+    end)
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running after 5s, so the sync would be postponed")
+    reloadModule(renamed)
 
-    assert.is_false(fileExists(leftOver), "the staging folder an interrupted install left behind is still in the profile")
+    assert.is_not_nil(stagingFoldersWhileUnpacking, "SETUP: the other install did not start while the module was unpacking")
+    assert.equals(1, #stagingFoldersWhileUnpacking, "SETUP: the module's sync did not unpack into a staging folder")
+    assert.is_true(waitUntil(function() return packageInstalled("mudlet-spec-renamed") end, 5000), "the install started during the sync never landed")
+    assert.is_true(moduleInstalled(renamed), "the sync lost the module")
+    assert.equals(1, exists("mudlet-spec-reentrant alias", "alias"), "the sync lost the module's items to the other install")
+    assertNoStagingFolderLeft()
   end)
 
   -- A module is reinstalled from its archive on every sync, and the sync is let

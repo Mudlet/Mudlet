@@ -126,8 +126,8 @@ private slots:
     void test_aNameFromTheSaveThatStepsOutOfTheProfileDeletesNothing_data()
     {
         QTest::addColumn<QString>("packageName");
-        // Without uninstallPackage()'s own check only the first row fails today, as removeDir() happens to give
-        // up early on the other three paths; they guard the day it no longer does.
+        // Without uninstallPackage()'s step-out check only the first row fails, as removeDir() gives up early on
+        // ".." and "."; those two guard the day it no longer does. A nameless package never gets that far.
         QTest::newRow("a sibling of the profile") << qsl("../%1").arg(mSiblingName);
         QTest::newRow("the folder of every profile") << qsl("..");
         QTest::newRow("the profile itself") << qsl(".");

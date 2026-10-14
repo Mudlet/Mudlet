@@ -588,6 +588,57 @@ private slots:
         QVERIFY2(QFile::exists(downloadedFile), "The module's sync deleted the profile's downloaded media");
     }
 
+    // A module an older Mudlet let in under the name of one of the profile's folders, with no config.lua to rename
+    // it, has always been unpacked straight into that folder. Its syncs have to go on updating it there, or it
+    // never takes up a newer archive again.
+    void test_aModuleSyncUnderAProfileFolderNameTakesUpTheNewerArchive()
+    {
+        QTemporaryDir archiveDir;
+        QVERIFY(archiveDir.isValid());
+        const QString sharedName = qsl("log");
+        const QString archivePath = qsl("%1/%2.mpackage").arg(archiveDir.path(), sharedName);
+        auto moduleXml = [](const QString& aliasName) {
+            return qsl("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE MudletPackage>\n<MudletPackage version=\"1.001\">\n"
+                       "<AliasPackage><Alias isActive=\"yes\" isFolder=\"no\"><name>%1</name><script></script><command></command>"
+                       "<packageName></packageName><regex>^%1$</regex></Alias></AliasPackage>\n</MudletPackage>\n")
+                    .arg(aliasName)
+                    .toUtf8();
+        };
+        QVERIFY2(writeArchive(archivePath, qsl("%1.xml").arg(sharedName), moduleXml(qsl("legacy-module-v1"))), "Could not write the module archive");
+
+        mpHost->waitForProfileSave();
+        QVERIFY2(QDir().mkpath(profileFilePath(sharedName)), "SETUP: could not make the profile's log folder");
+        const QString profilesOwnFile = profileFilePath(qsl("%1/the-profiles-own.txt").arg(sharedName));
+        QFile ownFile(profilesOwnFile);
+        QVERIFY2(ownFile.open(QIODevice::WriteOnly), "SETUP: could not write into the profile's log folder");
+        ownFile.write("the profile's, not the module's");
+        ownFile.close();
+        // Where the older Mudlet unpacked the module
+        QFile unpacked(profileFilePath(qsl("%1/%1.xml").arg(sharedName)));
+        QVERIFY2(unpacked.open(QIODevice::WriteOnly), "SETUP: could not write the module's XML into the profile's log folder");
+        unpacked.write(moduleXml(qsl("legacy-module-v1")));
+        unpacked.close();
+        mpHost->mIsProfileLoadingSequence = true;
+        auto [installed, message] = mpHost->installPackage(archivePath, enums::PackageModuleType::ModuleFromUI, true);
+        mpHost->mIsProfileLoadingSequence = false;
+        QVERIFY2(installed, qPrintable(message));
+        QVERIFY2(mpHost->getAliasUnit()->findFirstAlias(qsl("legacy-module-v1")), "SETUP: the module's alias was not installed");
+
+        QVERIFY2(writeArchive(archivePath, qsl("%1.xml").arg(sharedName), moduleXml(qsl("legacy-module-v2"))), "Could not write the newer module archive");
+        mpHost->waitForProfileSave();
+        mpHost->reloadModule(sharedName);
+
+        QVERIFY2(mpHost->mInstalledModules.contains(sharedName), "The sync lost the module");
+        QVERIFY2(mpHost->getAliasUnit()->findFirstAlias(qsl("legacy-module-v2")), "The sync did not take up the module's newer archive");
+        QVERIFY2(!mpHost->getAliasUnit()->findFirstAlias(qsl("legacy-module-v1")), "The sync put back what the module held before");
+        QVERIFY2(QFile::exists(profilesOwnFile), "The module's sync deleted the profile's own files");
+
+        mpHost->waitForProfileSave();
+        QVERIFY2(mpHost->uninstallPackage(sharedName, enums::PackageModuleType::ModuleFromScript), "The module could not be uninstalled");
+        QFile::remove(profileFilePath(qsl("%1/%1.xml").arg(sharedName)));
+        QFile::remove(profilesOwnFile);
+    }
+
     void test_deferredSaveDoesNotOutliveTheProfile()
     {
         const QString packageName = qsl("uninstall-save-teardown");
