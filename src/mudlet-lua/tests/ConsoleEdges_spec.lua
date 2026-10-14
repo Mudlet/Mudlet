@@ -432,12 +432,16 @@ describe("Console edges", function()
       end)
       for _, entry in ipairs({{scrollBox, Geyser.ScrollBox}, {commandLine, Geyser.CommandLine}, {textEdit, Geyser.TextEdit}}) do
         assert.is_true(createLabel(entry[1], 0, 0, 10, 10, 1))
-        local element, err = entry[2]:new({name = entry[1], x = 0, y = 0, width = 10, height = 10})
+        hideWindow(entry[1])
+        local geometry = {getWindowGeometry(entry[1])}
+        local element, err = entry[2]:new({name = entry[1], x = 300, y = 300, width = 40, height = 15})
         assert.is_nil(element)
         assert.are.equal(("label with the name '%s' already exists"):format(entry[1]), err)
         assert.is_nil(Geyser.windowList[entry[1]])
         assert.is_nil((Geyser.parentWindows or {})[entry[1]])
         assert.are.equal("label", windowType(entry[1]))
+        assert.is_false(windowVisible(entry[1]))
+        assert.are.same(geometry, {getWindowGeometry(entry[1])})
       end
       assert.spy(printErrorSpy).was.called(3)
     end)
@@ -451,6 +455,7 @@ describe("Console edges", function()
         if parent then
           parent:hide()
           Geyser:remove(parent)
+          deleteLabel(parent.name)
         end
         for _, suffix in ipairs({"", "_text", "adjLabel"}) do
           deleteMiniConsole(console .. suffix)
