@@ -58,7 +58,7 @@ function Geyser.TextEdit:new (cons, container)
   cons = cons or {}
   cons.type = cons.type or "textEdit"
 
-  local taken = mudlet.nameTakenByOtherKind(cons.name, "textedit")
+  local taken = mudlet.nameTakenByOtherKind(cons.name, "textedit", cons.windowname or (container or Geyser).windowname)
   if taken then
     printError(string.format("Geyser.TextEdit '%s' was not created: %s", cons.name, taken), false, false)
     return nil, taken

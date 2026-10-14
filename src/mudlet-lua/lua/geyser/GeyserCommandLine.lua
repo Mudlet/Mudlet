@@ -72,7 +72,7 @@ end
 function Geyser.CommandLine:new (cons, container)
   cons = cons or {}
   cons.type = cons.type or "commandLine"
-  local taken = mudlet.nameTakenByOtherKind(cons.name, "commandline")
+  local taken = mudlet.nameTakenByOtherKind(cons.name, "commandline", cons.windowname or (container or Geyser).windowname)
   if taken then
     printError(string.format("Geyser.CommandLine '%s' was not created: %s", cons.name, taken), false, false)
     return nil, taken

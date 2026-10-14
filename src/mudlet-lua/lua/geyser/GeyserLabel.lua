@@ -1074,7 +1074,7 @@ function Geyser.Label:new (cons, container)
   cons.type = cons.type or "label"
   cons.nestParent = cons.nestParent or nil
   cons.format = cons.format or ""
-  local taken = mudlet.nameTakenByOtherKind(cons.name, "label")
+  local taken = mudlet.nameTakenByOtherKind(cons.name, "label", cons.windowname or (container or Geyser).windowname)
   if taken then
     printError(string.format("Geyser.Label '%s' was not created: %s", cons.name, taken), false, false)
     return nil, taken
@@ -1365,6 +1365,9 @@ local function addElement(self, name, configLabel, myMenu, depth, index, restyle
     nestable = true,
   }
 )
+if not myMenu.MenuLabels[name] then
+  return false
+end
 -- ensure Labels are on the same parent window
 if self.windowname ~= myMenu.MenuLabels[name].windowname then
   if self.windowname == "main" then
@@ -1386,6 +1389,7 @@ if not myMenu.MenuLabels[name].stylesheet then
   MenuStyle = MenuStyle or configLabel.MenuStyleMode[string.lower(Style)]
   myMenu.MenuLabels[name]:setStyleSheet(MenuStyle)
 end
+return true
 end
 
 -- internal function to create the right click Menu Labels
@@ -1400,14 +1404,15 @@ function Geyser.Label:createMenuItems(restyle, MenuItems, configLabel, myMenu, d
   local index = 1
 
   for i = 1, #MenuItems do
-    if type(MenuItems[i]) == "string" and not MenuItems[i].ignore then
-      addElement(self, MenuItems[i], configLabel, myMenu, depth, index, restyle)
+    -- an item another kind of element holds the name of is left out, Geyser.Label:new having said why
+    if type(MenuItems[i]) == "string" and not MenuItems[i].ignore
+      and addElement(self, MenuItems[i], configLabel, myMenu, depth, index, restyle) then
       myMenu.MenuLabels[MenuItems[i]].index = index
       myMenu.MenuLabels[MenuItems[i]].tblIndex = i
       index = index + 1
     end
     --Ignore all children if parent is hidden
-    if type(MenuItems[i]) == "table" and not MenuItems[i - 1].ignore then
+    if type(MenuItems[i]) == "table" and not MenuItems[i - 1].ignore and myMenu.MenuLabels[MenuItems[i - 1]] then
       myMenu.MenuLabels[MenuItems[i - 1]]:createMenuItems(restyle, MenuItems[i], configLabel, myMenu.MenuLabels[MenuItems[i - 1]], depth + 1)
       myMenu.MenuLabels[MenuItems[i - 1]].isParent = true
     end

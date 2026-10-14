@@ -520,7 +520,7 @@ function Geyser.Gauge:new (cons, container)
   -- the gauge's labels are made only once the gauge is in its container, too late to stop there
   if cons.name then
     for _, suffix in ipairs({"_back", "_front", "_text"}) do
-      local taken = mudlet.nameTakenByOtherKind(cons.name .. suffix, "label")
+      local taken = mudlet.nameTakenByOtherKind(cons.name .. suffix, "label", cons.windowname or (container or Geyser).windowname)
       if taken then
         printError(string.format("Geyser.Gauge '%s' was not created: %s", cons.name, taken), false, false)
         return nil, taken

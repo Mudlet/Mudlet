@@ -1454,7 +1454,7 @@ function Adjustable.Container:new(cons,container)
     -- its labels are made only once it is in its container, too late to stop there
     if cons.name then
         for _, suffix in ipairs({"adjLabel", "exitLabel", "minimizeLabel"}) do
-            local taken = mudlet.nameTakenByOtherKind(cons.name .. suffix, "label")
+            local taken = mudlet.nameTakenByOtherKind(cons.name .. suffix, "label", cons.windowname or (container or Geyser).windowname)
             if taken then
                 printError(string.format("Adjustable.Container '%s' was not created: %s", cons.name, taken), false, false)
                 return nil, taken

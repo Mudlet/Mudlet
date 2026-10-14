@@ -42,7 +42,7 @@ Geyser.ScrollBox.parent = Geyser.Window
 function Geyser.ScrollBox:new (cons, container)
     cons = cons or {}
     cons.type = cons.type or "scrollBox"
-    local taken = mudlet.nameTakenByOtherKind(cons.name, "scrollbox")
+    local taken = mudlet.nameTakenByOtherKind(cons.name, "scrollbox", cons.windowname or (container or Geyser).windowname)
     if taken then
         printError(string.format("Geyser.ScrollBox '%s' was not created: %s", cons.name, taken), false, false)
         return nil, taken

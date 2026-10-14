@@ -597,10 +597,10 @@ end
 --- Answers whether a create...() call left the element the caller asked for in place.
 -- The native creators refuse a parent window they cannot resolve before they ever look at the
 -- element's name, so an element that already exists under that name is no proof that the call
--- did what was asked - the parent window's own refusal is what tells the two apart, as does
--- another kind of element holding the name. Any other refusal on a parent window that does
--- resolve is a call over a name the creator's own kind holds, which some creators answer by
--- moving or resizing that element and others by leaving it as it was, and is not worth a word.
+-- did what was asked - the parent window's own refusal is what tells the two apart, as does,
+-- when kind is given, another kind of element holding the name. Any other refusal counts as in
+-- place when an element holds the name: a call over a name the creator's own kind holds, which
+-- some creators answer by moving or resizing that element and others by leaving it as it was.
 -- @param windowName the parent window name given to the creator
 -- @param name the element's name
 -- @param ok the creator's first return value
@@ -625,8 +625,9 @@ end
 -- resizes and shows whatever window the name reaches.
 -- @param name the element's name
 -- @param kind "label", or the kind of element being made otherwise
--- @return the refusal the native creator gives for that name, or nil when the name is free to use
-function mudlet.nameTakenByOtherKind(name, kind)
+-- @param[opt] windowName the parent window the element is to go in, which the native creator checks first
+-- @return the refusal the native creator gives, or nil when the name is free to use
+function mudlet.nameTakenByOtherKind(name, kind, windowName)
   if type(name) ~= "string" then
     return nil
   end
@@ -634,19 +635,28 @@ function mudlet.nameTakenByOtherKind(name, kind)
   if not held or held == "main" then
     return nil
   end
+  local taken
   if kind == "label" then
     if held == "label" then
       return nil
     end
     if held == "miniconsole" or held == "userwindow" or held == "buffer" then
-      return string.format("a miniconsole/userwindow with the name '%s' already exists", name)
+      taken = string.format("a miniconsole/userwindow with the name '%s' already exists", name)
+    else
+      taken = string.format("a scroll box, command line or text edit with the name '%s' already exists", name)
     end
-    return string.format("a scroll box, command line or text edit with the name '%s' already exists", name)
+  elseif held == "label" then
+    taken = string.format("label with the name '%s' already exists", name)
+  else
+    return nil
   end
-  if held == "label" then
-    return string.format("label with the name '%s' already exists", name)
+  if type(windowName) == "string" and windowName ~= "" and windowName:lower() ~= "main" then
+    local parent = windowType(windowName)
+    if parent ~= "userwindow" and parent ~= "scrollbox" then
+      return string.format("window '%s' not found", windowName)
+    end
   end
-  return nil
+  return taken
 end
 
 
