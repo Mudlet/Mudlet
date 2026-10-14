@@ -1191,76 +1191,59 @@ function db:_migrate(db_name, s_name, force)
       end
       local fields_sql = table.concat(fields, ", ")
 
-      -- Get the current CREATE TABLE statement to use for the backup
-      local get_create = "SELECT sql FROM sqlite_master " ..
-                        "WHERE type = 'table' AND name = '" .. s_name .. "'"
-      db:echo_sql(get_create)
-      local create_cur, create_err = conn:execute(get_create)
-      assert(create_cur, create_err)
+      local original_count, og_count_err = count_rows(conn, s_name);
+      assert(original_count, og_count_err);
 
-      if type(create_cur) ~= "number" then
-        local row = create_cur:fetch({}, "a")
-        create_cur:close()
+      -- the backup copies the data rather than renaming the sheet in its CREATE TABLE, which renames
+      -- a column such as people_id too, and sqlite reads an unknown "people_id" as a string literal
+      local sql_chunks = {}
+      sql_chunks[#sql_chunks + 1] = "CREATE TEMPORARY TABLE " .. s_name .. "_bak AS SELECT * FROM " .. s_name .. ";"
+      sql_chunks[#sql_chunks + 1] = "DROP TABLE " .. s_name .. ";"
 
-        -- Ensure we got a result
-        if not row or not row.sql then
-          error("Unable to fetch CREATE TABLE statement for table: " .. s_name)
-        end
+      local new_create_sql = db:_build_create_table_sql(schema, s_name)
 
-        local original_count, og_count_err = count_rows(conn, s_name);
-        assert(original_count, og_count_err);
+      sql_chunks[#sql_chunks + 1] = new_create_sql .. ";"
+      -- named on both sides: the new table also has the columns this create adds, which take their default
+      sql_chunks[#sql_chunks + 1] =
+        string.format("INSERT INTO %s (%s) SELECT %s FROM %s_bak;", s_name, fields_sql, fields_sql, s_name)
+      local copy_back_chunk = #sql_chunks
+      sql_chunks[#sql_chunks + 1] = "DROP TABLE " .. s_name .. "_bak;"
 
-        -- the backup copies the data rather than renaming the sheet in its CREATE TABLE, which renames
-        -- a column such as people_id too, and sqlite reads an unknown "people_id" as a string literal
-        local sql_chunks = {}
-        sql_chunks[#sql_chunks + 1] = "CREATE TEMPORARY TABLE " .. s_name .. "_bak AS SELECT * FROM " .. s_name .. ";"
-        sql_chunks[#sql_chunks + 1] = "DROP TABLE " .. s_name .. ";"
+      for i, sql in ipairs(sql_chunks) do
+        db:echo_sql(sql)
+        local ret, str = conn:execute(sql)
 
-        local new_create_sql = db:_build_create_table_sql(schema, s_name)
-
-        sql_chunks[#sql_chunks + 1] = new_create_sql .. ";"
-        -- named on both sides: the new table also has the columns this create adds, which take their default
-        sql_chunks[#sql_chunks + 1] =
-          string.format("INSERT INTO %s (%s) SELECT %s FROM %s_bak;", s_name, fields_sql, fields_sql, s_name)
-        local copy_back_chunk = #sql_chunks
-        sql_chunks[#sql_chunks + 1] = "DROP TABLE " .. s_name .. "_bak;"
-
-        for i, sql in ipairs(sql_chunks) do
-          db:echo_sql(sql)
-          local ret, str = conn:execute(sql)
-
-          if not ret then
-            conn:rollback()
-            local unique_columns = i == copy_back_chunk and tostring(str):match("UNIQUE constraint failed: (.+)$")
-            if unique_columns then
-              -- level 3: the script's call to db:create
-              error("db:create - " .. s_name .. " - _unique now asks for " .. unique_columns .. " to be unique, " ..
-                "but the sheet's rows hold the same value there more than once (a column this db:create adds " ..
-                "takes its default in every row), so the sheet is left as it was.", 3)
-            end
-            error("Migration failed at chunk " .. i .. ": " .. tostring(str))
-          end
-        end
-
-        local migrated_count, migrated_count_err = count_rows(conn, s_name)
-        if migrated_count_err then
+        if not ret then
           conn:rollback()
-          error(migrated_count_err);
+          local unique_columns = i == copy_back_chunk and tostring(str):match("UNIQUE constraint failed: (.+)$")
+        if unique_columns then
+            -- level 3: the script's call to db:create
+            error("db:create - " .. s_name .. " - _unique now asks for " .. unique_columns .. " to be unique, " ..
+              "but the sheet's rows hold the same value there more than once (a column this db:create adds " ..
+              "takes its default in every row), so the sheet is left as it was.", 3)
+          end
+          error("Migration failed at chunk " .. i .. ": " .. tostring(str))
         end
-
-        if (original_count ~= migrated_count and not force) then
-            conn:rollback()
-            error(
-               "db:_migrate halted for ".. s_name .." during constraint migrations due to data loss."
-               .."\n\t".. (original_count - migrated_count) .." rows would be lost with new constraints."
-               .."\nUse force option to migrate anyway."
-            )
-        end
-
-        -- Commit the migration transaction
-        db:echo_sql("COMMIT")
-        conn:commit()
       end
+
+      local migrated_count, migrated_count_err = count_rows(conn, s_name)
+      if migrated_count_err then
+        conn:rollback()
+        error(migrated_count_err);
+      end
+
+      if (original_count ~= migrated_count and not force) then
+          conn:rollback()
+          error(
+             "db:_migrate halted for ".. s_name .." during constraint migrations due to data loss."
+             .."\n\t".. (original_count - migrated_count) .." rows would be lost with new constraints."
+             .."\nUse force option to migrate anyway."
+          )
+      end
+
+      -- Commit the migration transaction
+      db:echo_sql("COMMIT")
+      conn:commit()
     else
       -- also reached when the rebuild was held back to keep a uniqueness rule
       local missing = {}
