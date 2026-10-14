@@ -221,6 +221,17 @@ private slots:
         QCOMPARE(style.highlightColorFor(QColor()), QColor(255, 255, 85));
     }
 
+    void test_aClearHighlightColorGivesWayToItsCenterColor()
+    {
+        const MapStyle style = tiles();
+        const QColor blue(0, 0, 255);
+        const QColor clearRed(255, 0, 0, 0);
+        QCOMPARE(style.highlightColorFor(clearRed, blue), blue);
+        QCOMPARE(style.highlightColorFor(blue, clearRed), blue);
+        QCOMPARE(style.highlightColorFor(blue, QColor(255, 0, 0)), blue);
+        QCOMPARE(style.highlightColorFor(clearRed, QColor(0, 0, 255, 0)), clearRed);
+    }
+
     void test_thinPlayerRingIsClearInside()
     {
         const QGradientStops stops = MapDecals::thinPlayerRingStops(QColor(255, 208, 90));

@@ -204,6 +204,8 @@ struct MapStyle
     QColor roomNameColorFor(const QString& roomColorData, const QColor& background) const;
     // A highlighted room's highlight color, given the one it was highlighted in
     QColor highlightColorFor(const QColor& roomHighlightColor) const;
+    // For a shape drawn in one color: a script fading the 2D disc out to a clear outer color is shown in its center color
+    QColor highlightColorFor(const QColor& roomHighlightColor, const QColor& roomHighlightCenterColor) const;
     QColor roomColor(const QColor& environmentColor) const;
     QColor backgroundColor(const QColor& profileBackground) const;
     bool roundRooms(bool profileRoundRooms) const;
