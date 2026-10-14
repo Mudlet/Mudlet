@@ -3224,9 +3224,8 @@ describe("Tests a module round trip through the XML writer and reader", function
   end)
 end)
 
--- Installing a package with a VariablePackage marks what it holds as saved, so
--- a profile save sends a string out through the writer, and installing what was
--- written brings it back in through the reader, as the next profile load would.
+-- A package's VariablePackage is saved with the profile, and installing what the save
+-- wrote reads it back in the way the next profile load would.
 describe("Tests a carriage return in a saved string through a profile save", function()
   local name = "mudlet-spec-saved-carriage-return"
   local reloadedName = name .. "-reloaded"
@@ -3273,6 +3272,42 @@ describe("Tests a carriage return in a saved string through a profile save", fun
     assert.equals("a\rb", reloaded.loneCarriageReturn)
     assert.equals("a\r\nb", reloaded.carriageReturnLineFeed)
     assert.is_false(contains(written, "\r"), "the save wrote a raw carriage return, which reads back as a line ending")
+  end)
+end)
+
+-- A profile saved before carriage returns were written as &#13;, or a package made
+-- elsewhere, holds them raw: XML reads each line ending in one as a line feed.
+describe("Tests a raw carriage return in a package file", function()
+  local name = "mudlet-spec-raw-carriage-return"
+  local xml = getMudletHomeDir() .. "/" .. name .. ".xml"
+
+  setup(function()
+    writePackageXml(xml, table.concat({
+      '<ScriptPackage>',
+      '<Script isActive="no" isFolder="no"><name>mudletSpecRawCarriageReturn</name><packageName></packageName>',
+      '<script>echo("a")\recho("b")\r\necho("c")</script><eventHandlerList/></Script>',
+      '</ScriptPackage>',
+      '<VariablePackage>',
+      '<VariableGroup><name>mudletSpecRawCarriageReturn</name><keyType>4</keyType><value></value><valueType>5</valueType>',
+      '<Variable><name>loneCarriageReturn</name><keyType>4</keyType><value>a\rb</value><valueType>4</valueType></Variable>',
+      '<Variable><name>carriageReturnLineFeed</name><keyType>4</keyType><value>a\r\nb</value><valueType>4</valueType></Variable>',
+      '</VariableGroup>',
+      '</VariablePackage>',
+    }, "\n"))
+    installUntilConfirmed(installPackage, xml, function() return packageInstalled(name) end, "the package " .. name)
+  end)
+
+  teardown(function()
+    _G.mudletSpecRawCarriageReturn = nil
+    removeFixturePackage(name)
+    os.remove(xml)
+  end)
+
+  it("reads a lone carriage return as a line feed rather than dropping it", function()
+    assert.equals('echo("a")\necho("b")\necho("c")', getScript("mudletSpecRawCarriageReturn"))
+    assert.is_table(mudletSpecRawCarriageReturn, "the package did not create mudletSpecRawCarriageReturn")
+    assert.equals("a\nb", mudletSpecRawCarriageReturn.loneCarriageReturn)
+    assert.equals("a\nb", mudletSpecRawCarriageReturn.carriageReturnLineFeed)
   end)
 end)
 

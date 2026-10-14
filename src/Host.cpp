@@ -623,7 +623,8 @@ bool Host::loadProfileSave(const QString& saveFileName)
         mMapInfoContributors.insert(qsl("Short"));
     } else {
         QFile file(qsl("%1%2").arg(folder, saveFileName.isEmpty() ? entries.at(0) : saveFileName));
-        if (!file.open(QFile::ReadOnly | QFile::Text)) {
+        // Not QFile::Text: on read it deletes every carriage return, where the XML reader turns a raw one into a line feed
+        if (!file.open(QFile::ReadOnly)) {
             mProfileLoadError = QCoreApplication::translate("mudlet", "Could not open profile file: %1").arg(file.errorString());
             qWarning() << "mudlet: failed to open profile file for reading:" << file.fileName() << file.errorString();
         }
@@ -3564,7 +3565,7 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         bool registeredFromArchive = false;
         for (auto& entry : entries) {
             file2.setFileName(entry.absoluteFilePath());
-            if (!file2.open(QFile::ReadOnly | QFile::Text)) {
+            if (!file2.open(QFile::ReadOnly)) {
                 qWarning() << "Host: failed to open file for reading:" << entry.absoluteFilePath() << file2.errorString();
                 continue;
             }
@@ -3625,7 +3626,7 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         }
     } else {
         file2.setFileName(fileName);
-        if (!file2.open(QFile::ReadOnly | QFile::Text)) {
+        if (!file2.open(QFile::ReadOnly)) {
             return fail(qsl("could not open the package file: %1").arg(file2.errorString()));
         }
         XMLimport reader(this);
