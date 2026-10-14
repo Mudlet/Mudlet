@@ -386,6 +386,7 @@ describe("Tests functionality of Adjustable.Container", function()
   describe("Tests the functionality of Adjustable.Container:attachToBorder/detach", function()
     local containers
     local borderBefore
+    local otherBordersBefore
 
     local function make(name, width)
       local container = Adjustable.Container:new({
@@ -401,6 +402,7 @@ describe("Tests functionality of Adjustable.Container", function()
     before_each(function()
       containers = {}
       borderBefore = getBorderLeft()
+      otherBordersBefore = {top = getBorderTop(), right = getBorderRight(), bottom = getBorderBottom()}
     end)
 
     -- Deliberately same named containers share their children's names too, so
@@ -417,6 +419,9 @@ describe("Tests functionality of Adjustable.Container", function()
       end
       containers = {}
       setBorderLeft(borderBefore)
+      setBorderTop(otherBordersBefore.top)
+      setBorderRight(otherBordersBefore.right)
+      setBorderBottom(otherBordersBefore.bottom)
       assert.is_nil(Adjustable.Container.Attached.left.gasAttachPlain)
       assert.is_nil(Adjustable.Container.Attached.left.gasAttachName)
       assert.is_nil(Adjustable.Container.Attached.left.gasDetachName)
@@ -438,9 +443,6 @@ describe("Tests functionality of Adjustable.Container", function()
     }) do
       it("reserves the " .. case.where .. " border up to the widget's rounded edge", function()
         local getter = _G["getBorder" .. string.title(case.where)]
-        local setter = _G["setBorder" .. string.title(case.where)]
-        local before = getter()
-        finally(function() setter(before) end)
         local cons = case.cons()
         cons.name = "gasAttachHalf" .. case.where
         cons.attachedMargin = 0
