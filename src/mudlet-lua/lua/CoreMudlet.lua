@@ -454,8 +454,12 @@ if false then
 
 
 
-  --- Inserts text at the cursor position of the main console, exactly like insertText(). The markup is
-  --- inserted verbatim: HTML is not interpreted.
+  --- Inserts text at the cursor position of the main console, like insertText() without a window name.
+  --- The markup is inserted verbatim: HTML is not interpreted. Unlike insertText() it takes no window
+  --- name (a first argument such as "myMiniConsole" is inserted into the main console as text and any
+  --- further arguments are ignored) and it returns nothing.
+  ---
+  --- @param text the text to insert
   ---
   --- @see insertText
   function insertHTML(text)
