@@ -24,7 +24,6 @@
 #include "Host.h"
 #include "MudletApp.h"
 #include "TDebug.h"
-#include "mudlet.h"
 
 #include <QCoreApplication>
 #include <QDateTime>
@@ -119,6 +118,7 @@ void TConsoleModel::clear()
     // --mirror's pending line went with the buffer.
     mMirrorPendingLine.clear();
     mUserCursor = QPoint();
+    mScrolledBackTo.reset();
     // Past the line left, so isPrompt() sees that the line a trigger runs for went too, even when it was line 0
     if (mTriggerEngineMode) {
         mEngineCursor = buffer.size();
@@ -351,7 +351,7 @@ void writeMirrorLine(const QString& line)
         return;
     }
 
-    mudlet::smMirrorToStdOut = false;
+    MudletApp::smMirrorToStdOut = false;
     qWarning().nospace() << "--mirror: could not write to standard output (" << std::strerror(errno) << "), nothing more will be copied to it";
 }
 
@@ -371,7 +371,7 @@ QString mirrorPrefix(const QString& profileName, const QString& consoleName)
 
 void TConsoleModel::mirrorToStdOut(const QString& text)
 {
-    if (Q_LIKELY(!mudlet::smMirrorToStdOut)) {
+    if (Q_LIKELY(!MudletApp::smMirrorToStdOut)) {
         return;
     }
 
@@ -389,7 +389,7 @@ void TConsoleModel::mirrorToStdOut(const QString& text)
 
 void TConsoleModel::mirrorLineToStdOut(const QString& line)
 {
-    if (Q_LIKELY(!mudlet::smMirrorToStdOut)) {
+    if (Q_LIKELY(!MudletApp::smMirrorToStdOut)) {
         return;
     }
 
