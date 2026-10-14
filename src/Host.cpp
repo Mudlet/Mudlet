@@ -3778,6 +3778,8 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
                 if (!marker.open(QIODevice::WriteOnly)) {
                     qWarning() << "Host::installPackage() WARNING - could not mark" << _dir.absolutePath() << "as being unpacked into";
                 }
+                // Windows cannot delete a file that is still open, and a refusal below removes this folder
+                marker.close();
                 movedIntoTheFolderInTheWay = true;
                 if (!moveTheArchiveInto(_dir.absolutePath(), QDir(theFolderNamedAfterTheFile).absolutePath(), QDir(replacedFolder).absolutePath(), archiveEntriesMovedIn)) {
                     putTheFolderInTheWayBack();
