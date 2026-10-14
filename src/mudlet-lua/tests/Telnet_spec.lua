@@ -1240,7 +1240,7 @@ describe("Tests the Client.GUI package offer", function()
   end)
 
   -- the progress dialog closing on completion must not cancel the download it
-  -- tracked: a file: reply is emptied by that, and looked like an empty package
+  -- tracked: aborting a finished file: reply empties it
   it("installs a Client.GUI package downloaded from a file URL", function()
     local name = "mudlet-spec-servedgui"
     finally(cleanUpServedGuis)
@@ -1251,6 +1251,18 @@ describe("Tests the Client.GUI package offer", function()
     assert.is_true(table.contains(getPackages(), name), "the downloaded interface was not registered")
     assert.is_falsy(shownSince(result.mark, "was empty"), displayedSince(result.mark))
     assert.is_true((lfs.attributes(result.downloaded, "size") or 0) > 0, "the package was saved into the profile without its contents")
+  end)
+
+  -- the recorded version is the installed copy's, so offering that version again
+  -- has nothing to do, where anything else would reinstall it at every login
+  it("leaves an installed Client.GUI package alone when it is offered at the same version", function()
+    local name = "mudlet-spec-currentgui"
+    finally(cleanUpServedGuis)
+    assert.same({name}, offerServedGui(name, minimalGuiPackage, "10660").guis)
+
+    local mark = offerGui('{"version": "10660", "url": "' .. offerUrl(name) .. '"}', name)
+    assert.is_falsy(shownSince(mark, "Upgrading the GUI"), displayedSince(mark))
+    assert.is_falsy(downloadStarted(mark, name), displayedSince(mark))
   end)
 
   -- the version recorded for an interface that has since been uninstalled
