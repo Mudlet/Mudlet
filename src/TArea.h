@@ -135,7 +135,7 @@ public:
     QMap<int, QMap<int, QMultiMap<int, int>>> koordinatenSystem();
     int createLabelId() const;
     void writeJsonArea(QJsonArray&) const;
-    std::pair<int, QString> readJsonArea(const QJsonArray&, const int);
+    std::pair<int, QString> readJsonArea(const QJsonArray&, const int, QStringList& droppedRoomWarnings);
     QList<int> getPermanentLabelIds() const;
     bool hasPermanentLabels() const;
     qreal get2DMapZoom() const { return mLast2DMapZoom; }

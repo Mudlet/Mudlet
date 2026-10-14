@@ -1444,11 +1444,11 @@ bool TRoomDB::restoreSingleRoom(int i, TRoom* pT)
     }
 
     // addRoom() refuses an id that is already taken and takes no ownership when
-    // it does, so this room has to go here or it leaks - restoring onto a map
-    // that still holds rooms is the case that reaches this. TRoom::restore()
-    // has already put the colliding id on it, and ~TRoom() would use that id to
-    // remove the room legitimately holding it, so unhook it first - the same
-    // dance deleteDisplacedArea() does for an area.
+    // it does, so this room has to go here or it leaks - a file holding the same
+    // id twice, or restoring onto a map that still holds rooms, reaches this.
+    // TRoom::restore() or readJsonRoom() has already put the colliding id on it,
+    // and ~TRoom() would use that id to remove the room legitimately holding it,
+    // so unhook it first - the same dance deleteDisplacedArea() does for an area.
     pT->mpRoomDB = nullptr;
     delete pT;
     return false;
