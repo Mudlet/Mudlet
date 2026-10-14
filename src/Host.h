@@ -535,6 +535,8 @@ public:
     std::pair<QString, QFont::Weight> parseFontNameAndStyle(const QString& fontName) const;
     // The monospaced font Mudlet bundles and falls back to when a wanted one is missing:
     inline static const QString scmDefaultFontFamily = qsl("Bitstream Vera Sans Mono");
+    // Far past any screen, and far short of the 65536px (49152pt at 96 DPI) where Qt drops the font's family
+    static constexpr int scmMaxFontSize = 1000;
     struct FontFamilyResolution
     {
         QString family;       // family to actually use
