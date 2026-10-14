@@ -163,7 +163,7 @@ end
 --- @return hours, minutes and seconds as strings
 function shms(seconds, bool)
   seconds = tonumber(seconds)
-  -- past 2^53 a double stops holding whole seconds and %d overflows; NaN and infinities fail the comparison too
+  -- past 2^53 a double stops holding whole seconds; NaN and infinities fail the comparison too
   assert(type(seconds) == "number" and math.abs(seconds) < 2^53, "Assertion failed for function 'shms' - Please supply a valid number.")
 
   local s = seconds
@@ -171,7 +171,8 @@ function shms(seconds, bool)
   local sign = (s < 0 and magnitude > 0) and "-" or ""
   local ss = string.format("%02d", magnitude % 60)
   local mm = string.format("%02d", math.floor(magnitude / 60) % 60)
-  local hh = sign .. string.format("%02d", math.floor(magnitude / (60 * 60)))
+  -- %d casts to a C long, which is 32 bits on Windows, so hours past 2^31 would wrap there
+  local hh = sign .. string.format("%02.0f", math.floor(magnitude / (60 * 60)))
 
   if bool then
     cecho("<green>" .. s .. " <grey>seconds converts to: <green>" .. hh .. "<white>h,<green> " .. mm .. "<white>m <grey>and<green> " .. ss .. "<white>s.")
