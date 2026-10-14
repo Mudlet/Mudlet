@@ -200,6 +200,24 @@ describe("Tests DateTime.lua functions", function()
       pinToday(2028, 9, 10)
       assert.are.same({2028, 2, 29, 8, 0, 0}, dateOf(datetime:parse("02-29 08:00", "^%m-%d %H:%M$", true)))
     end)
+
+    it("applies the century rule for 29 February with as_epoch", function()
+      pinToday(2100, 9, 10)
+      assert.is_nil(datetime:parse("02-29 08:00", "^%m-%d %H:%M$", true))
+    end)
+
+    it("accepts 29 February with as_epoch in a year divisible by 400", function()
+      pinToday(2000, 9, 10)
+      assert.are.same({2000, 2, 29, 8, 0, 0}, dateOf(datetime:parse("02-29 08:00", "^%m-%d %H:%M$", true)))
+    end)
+
+    it("rolls an out-of-range time on a defaulted date over as it does on a full date", function()
+      pinToday(2026, 5, 10)
+      assert.are.same({2026, 5, 11, 0, 0, 0}, dateOf(datetime:parse("24:00", "^%H:%M$", true)))
+      assert.are.same(dateOf(datetime:parse("2026-05-10 23:75", "^%Y-%m-%d %H:%M$", true)),
+        dateOf(datetime:parse("23:75", "^%H:%M$", true)))
+      assert.are.same({2026, 5, 16, 1, 0, 0}, dateOf(datetime:parse("15 25:00", "^%d %H:%M$", true)))
+    end)
   end)
 
   describe("Tests datetime:parse round-trips with string formatting", function()
