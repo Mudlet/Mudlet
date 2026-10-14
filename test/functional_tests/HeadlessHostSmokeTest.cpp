@@ -418,7 +418,7 @@ local ok, err = pcall(function()
   end
   assert(setFont("gridMini", family) == true, "setFont did not answer true for the miniconsole")
   assert(setFont("gridMini", family) == true, "setFont did not answer true for an unchanged family")
-  assert(getUserWindowSize("gridMini") == nil, "a miniconsole has a user window size of its own")
+  assert(getUserWindowSize("gridMini") == nil, "a miniconsole has a user window size")
   local missing, missingMsg = setFontSize("noSuchGridWindow", 10)
   assert(missing == nil and type(missingMsg) == "string", "setFontSize on a missing window did not answer nil and a message")
 

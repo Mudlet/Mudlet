@@ -1719,7 +1719,7 @@ expectRefusal('disableCommandLine', disableCommandLine('noViewCl'))
 expectRefusal('getCmdLineStyleSheet', getCmdLineStyleSheet())
 expectRefusal('setCmdLineStyleSheet', setCmdLineStyleSheet(''))
 expectRefusal('getMousePosition', getMousePosition())
--- the main console is the character grid NAWS reports, and a name with no user window is refused
+-- the main console is the character grid NAWS reports; a name with no user window has no size of its own
 expectValue('getMainWindowSize', 'number', type(getMainWindowSize()))
 expectRefusal('getUserWindowSize', getUserWindowSize('noViewUw'))
 expectRefusal('getUserWindowTitle', getUserWindowTitle('noViewUw'))
