@@ -249,6 +249,9 @@ int TLuaInterpreter::deleteMapLabel(lua_State* L)
 {
     const int area = getVerifiedInt(L, __func__, 1, "areaID");
     const int labelID = getVerifiedInt(L, __func__, 2, "labelID");
+    if (labelID < 0) {
+        return warnArgumentValue(L, __func__, qsl("labelID %1 is invalid, it must be zero or greater").arg(labelID));
+    }
     Host& host = getHostFromLua(L);
     const TArea* pA = host.mpMap->mpRoomDB->getArea(area);
     if (!pA) {
