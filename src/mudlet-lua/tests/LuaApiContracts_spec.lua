@@ -619,6 +619,13 @@ describe("Tests that the window functions refuse a window that does not exist", 
     assert.are.same({nil, labelNotFound}, {enableClickthrough(unknown)})
     assert.are.same({nil, labelNotFound}, {disableClickthrough(unknown)})
   end)
+
+  it("hideWindow, moveWindow and resizeWindow name the main console as one they cannot use", function()
+    local refusal = 'window "main" is of type "main", which this function cannot use'
+    assert.are.same({nil, refusal}, {hideWindow("main")})
+    assert.are.same({nil, refusal}, {moveWindow("main", 1, 1)})
+    assert.are.same({nil, refusal}, {resizeWindow("main", 800, 600)})
+  end)
 end)
 
 describe("Tests that gagLine works on the window it is given", function()
@@ -636,7 +643,7 @@ describe("Tests that gagLine works on the window it is given", function()
     local last = getLastLineNumber("main")
     local line = getCurrentLine("main")
 
-    assert.are.same({}, {gagLine(window)})
+    assert.are.same({true}, {gagLine(window)})
 
     assert.are.same({"second in the window"}, getLines(window, 0, 1))
     assert.are.equal(last, getLastLineNumber("main"))
@@ -685,6 +692,9 @@ describe("Tests that the window functions answer true for a window that exists",
     {"moveWindow", function() return moveWindow(window, 1, 1) end},
     {"resizeWindow", function() return resizeWindow(window, 200, 100) end},
     {"hideWindow", function() return hideWindow(window) end},
+    {"setFgColor", function() return setFgColor(window, 255, 0, 0) end},
+    {"setHexFgColor", function() return setHexFgColor(window, "FF0000") end},
+    {"setHexBgColor", function() return setHexBgColor(window, "FF0000") end},
     {"enableClickthrough", function() return enableClickthrough(label) end},
     {"disableClickthrough", function() return disableClickthrough(label) end},
   }
@@ -695,9 +705,13 @@ describe("Tests that the window functions answer true for a window that exists",
     end)
   end
 
-  it("setHexFgColor and setHexBgColor answer what setFgColor and setBgColor do", function()
-    assert.are.same({setFgColor(window, 255, 0, 0)}, {setHexFgColor(window, "FF0000")})
-    assert.are.same({setBgColor(window, 255, 0, 0)}, {setHexBgColor(window, "FF0000")})
+  it("replace and replaceLine answer true", function()
+    echo(window, "\nspecContracts replace me")
+    assert.is_true(moveCursor(window, 0, getLastLineNumber(window)))
+    assert.is_true(selectString(window, "replace", 1) > -1)
+    assert.are.same({true}, {replace(window, "swapped")})
+    assert.are.same({true}, {replaceLine(window, "whole line")})
+    assert.are.equal("whole line", getCurrentLine(window))
   end)
 
   it("clearWindow answers nothing, so clearing from the command line prints nothing", function()

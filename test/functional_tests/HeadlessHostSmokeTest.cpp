@@ -605,7 +605,7 @@ headlessContract = ok and "ok" or tostring(err)
         QCOMPARE(luaGlobalString(host, "contractGrid"), qsl("%1,%2").arg(host->mScreenWidth).arg(host->mScreenHeight));
         QCOMPARE(luaGlobalString(host, "contractTimeStamps"), qsl("false"));
         // Taken from the same Lua run in the GUI self-test profile: what a real view answers for a name it
-        // has no window for, where a few calls have always answered nothing or false rather than nil and a message
+        // has no window for, where showWindow answers false rather than nil and a message
         const QStringList missingAnswers{qsl("echo=[2]nil:msg"),
                                          qsl("moveWindow=[2]nil:msg"),
                                          qsl("resizeWindow=[2]nil:msg"),

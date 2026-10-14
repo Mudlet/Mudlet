@@ -1971,7 +1971,7 @@ noViewCursor = table.concat(results, '|')
 )LUA")
                        .arg(first));
 
-        const QString expected = qsl("true|%1|4|NoViewCursor second|false|%1|%2|%2|0|NoViewCursor third|%3|0|%3").arg(first + 1).arg(first + 3).arg(first + 2);
+        const QString expected = qsl("true|%1|4|NoViewCursor second|false|%1|%2|%2|1|NoViewCursor third|%3|0|%3").arg(first + 1).arg(first + 3).arg(first + 2);
         QCOMPARE(luaGlobalString(host, "noViewCursor"), expected);
         QCOMPARE(model->mUserCursor, QPoint(0, first + 2));
         QCOMPARE(model->buffer.line(first + 1), qsl("NoViewCursor third"));
@@ -2903,7 +2903,7 @@ expectValues('deselect', {true}, deselect())
 expectValues('selectString', {7}, selectString('alpha', 1))
 expectValues('setBold', {true}, setBold(true))
 expectValues('setUnderline', {true}, setUnderline(true))
-expectValues('setFgColor', {}, setFgColor(1, 2, 3))
+expectValues('setFgColor', {true}, setFgColor(1, 2, 3))
 expectValues('setBgColor', {true}, setBgColor(4, 5, 6))
 local format = getTextFormat()
 if type(format) ~= 'table' then

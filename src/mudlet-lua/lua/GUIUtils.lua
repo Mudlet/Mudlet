@@ -663,7 +663,7 @@ end
 
 --- Function will gag the whole line. <b>Use deleteLine() instead.</b>
 --- @param window optional name of the window to gag the line in, the main console if not given
---- @return what deleteLine() answers: nil and an error message for a window that does not exist
+--- @return what deleteLine() answers: true, or nil and an error message for a window that does not exist
 function gagLine(window)
   if window then
     return deleteLine(window)
@@ -2331,7 +2331,7 @@ end
 --- Form of setFgColor that accepts a hex color string instead of decimal values
 --- @param windowName Optional name of the window to use the function on
 --- @param colorString hex string for the color to use
---- @return what setFgColor() answers: nil and an error message for a window that does not exist
+--- @return what setFgColor() answers: true, or nil and an error message for a window that does not exist
 function setHexFgColor(windowName, colorString)
   assert(type(windowName) == 'string', 'setHexFgColor: bad argument #1 type (expected string, got '..type(windowName)..'!)')
 

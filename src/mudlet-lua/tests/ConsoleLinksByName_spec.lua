@@ -274,11 +274,11 @@ describe("Tests that the link and text functions find their console by name", fu
           assert.are.equal("Hello-popup--link-!World", lineOf(0))
         end)
 
-        it("replaces that console's selection and answers nothing", function()
+        it("replaces that console's selection and answers true", function()
           echo(window, "replace me\n")
           moveCursor(window, 0, 0)
           assert.are.equal(8, selectString(window, "me", 1))
-          assert.are.equal(0, select("#", rawReplace(window, "you")))
+          assert.are.same({true}, {rawReplace(window, "you")})
           assert.are.equal("replace you", lineOf(0))
         end)
 

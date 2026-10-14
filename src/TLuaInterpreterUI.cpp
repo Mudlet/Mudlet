@@ -413,8 +413,8 @@ int TLuaInterpreter::clearUserWindow(lua_State* L)
     if (!host.clearWindow(windowName)) {
         return windowNotFoundOrUnsupported(L, host, windowName);
     }
-    // Unlike the other window functions, nothing on success: run from the command
-    // line, a "true" would land on the screen this has just cleared.
+    // Nothing on success: run from the command line, a "true" would land on the
+    // screen this has just cleared.
     return 0;
 }
 
@@ -933,7 +933,8 @@ int TLuaInterpreter::deleteLine(lua_State* L)
         return windowNotFound(L, windowName);
     }
     pModel->deleteLineAtCursor();
-    return 0;
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#deselect
@@ -2069,7 +2070,7 @@ int TLuaInterpreter::hideWindow(lua_State* L)
 
     Host& host = getHostFromLua(L);
     if (!host.hideWindow(text)) {
-        return windowNotFound(L, text);
+        return windowNotFoundOrUnsupported(L, host, text);
     }
     lua_pushboolean(L, true);
     return 1;
@@ -2427,7 +2428,7 @@ int TLuaInterpreter::moveWindow(lua_State* L)
     const QString text{lua_tostring(L, 1)};
     Host& host = getHostFromLua(L);
     if (!host.moveWindow(text, static_cast<int>(x1), static_cast<int>(y1))) {
-        return windowNotFound(L, text);
+        return windowNotFoundOrUnsupported(L, host, text);
     }
     lua_pushboolean(L, true);
     return 1;
@@ -2580,7 +2581,8 @@ int TLuaInterpreter::replace(lua_State* L)
     if (!host.replaceWindowText(consoleName, text)) {
         return windowNotFound(L, consoleName);
     }
-    return 0;
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#resetCmdLineAction
@@ -2658,7 +2660,7 @@ int TLuaInterpreter::resizeWindow(lua_State* L)
     const QString text{lua_tostring(L, 1)};
     Host& host = getHostFromLua(L);
     if (!host.resizeWindow(text, static_cast<int>(x1), static_cast<int>(y1))) {
-        return windowNotFound(L, text);
+        return windowNotFoundOrUnsupported(L, host, text);
     }
     lua_pushboolean(L, true);
     return 1;
@@ -3180,7 +3182,8 @@ int TLuaInterpreter::setFgColor(lua_State* L)
     if (!getHostFromLua(L).setWindowFgColor(consoleName, QColor(luaRed, luaGreen, luaBlue))) {
         return windowNotFound(L, consoleName);
     }
-    return 0;
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setButtonStyleSheet
