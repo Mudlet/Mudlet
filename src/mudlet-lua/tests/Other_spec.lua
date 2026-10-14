@@ -2238,8 +2238,18 @@ describe("Tests Other.lua functions", function()
       table.load(path, loaded)
 
       assert.equals("saved from _G", loaded.tableSaveSpecMarker)
-      assert.is_nil(loaded.string)
-      assert.is_nil(loaded.math)
+      for _, name in ipairs({ "string", "table", "math", "os", "io", "debug", "coroutine", "package", "_G",
+        "_VERSION", "xpcall" }) do
+        assert.is_nil(loaded[name], name)
+      end
+    end)
+
+    it("should leave out a Lua library or _G reached from a data table", function()
+      assert.is_true(table.save(path, { helpers = { text = string, env = _G }, keep = 1 }))
+      local loaded = {}
+      table.load(path, loaded)
+
+      assert.same({ helpers = {}, keep = 1 }, loaded)
     end)
 
     it("should refuse to save without a table, and write nothing", function()

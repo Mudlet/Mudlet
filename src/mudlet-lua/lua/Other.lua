@@ -376,11 +376,18 @@ end
 
 
 
--- the standard library tables are left out when saving _G itself, not when a data table
--- merely has a member of the same name
+-- these names are left out when saving _G itself, not when a data table merely has a member of
+-- the same name
 local libraryNames = {
   string = true, xpcall = true, package = true, os = true, io = true, math = true, debug = true,
   coroutine = true, _G = true, _VERSION = true, table = true
+}
+
+-- and these tables wherever they are reached: their functions are not saved, so all that would
+-- come back is an empty table, or for _G a copy of every global
+local libraryTables = {
+  [_G] = true, [string] = true, [table] = true, [math] = true, [os] = true, [io] = true,
+  [debug] = true, [coroutine] = true, [package] = true
 }
 
 -- tostring() gives inf, -inf and nan, which are not Lua literals, and only 14 significant digits.
@@ -425,7 +432,7 @@ function table.pickle( t, file, tables, lookup )
     -- functions, userdata and threads have no literal to be written as, as a key or as a value
     local index = type( i ) == "table" or literal( i )
     local value = type( v ) == "table" or literal( v )
-    if index and value and not (rawequal( t, _G ) and libraryNames[i]) then
+    if index and value and not (libraryTables[i] or libraryTables[v] or (rawequal( t, _G ) and libraryNames[i])) then
       -- handle index
       if type( i ) == "table" then
         if not lookup[i] then
