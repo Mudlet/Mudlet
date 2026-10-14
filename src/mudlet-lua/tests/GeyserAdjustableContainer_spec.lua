@@ -488,7 +488,6 @@ describe("Tests functionality of Adjustable.Container", function()
       assert.is_false(far.attached)
       assert.is_nil(far.resizeHandlerID)
 
-      -- a hidden one is not refused: it takes the border when shown
       local minimized = make("gasAttachMinimized", 100)
       minimized:minimize()
       ok, message = minimized:attachToBorder("left")
@@ -496,6 +495,71 @@ describe("Tests functionality of Adjustable.Container", function()
       assert.is_truthy(message:find("minimized or too far", 1, true))
       assert.is_false(minimized.attached)
       assert.is_nil(Adjustable.Container.Attached.left.gasAttachMinimized)
+    end)
+
+    it("lets a hidden container take the border once it is shown", function()
+      local container = make("gasAttachHidden", 150)
+      container:hide()
+      assert.is_true(container:attachToBorder("left"))
+      assert.are.equal(borderBefore, getBorderLeft())
+      assert.is_nil(Adjustable.Container.Attached.left.gasAttachHidden)
+      container:show()
+      assert.are.equal("left", container.attached)
+      assert.are.equal(container.borderSize, getBorderLeft())
+    end)
+
+    it("refuses a hidden container that could not take the border when shown", function()
+      local far = make("gasAttachHiddenFar", 100)
+      far:move("60%", nil)
+      far:hide()
+      local ok, message = far:attachToBorder("left")
+      assert.is_nil(ok)
+      assert.is_truthy(message:find("too far from the left border", 1, true))
+      assert.is_nil(far.hiddenAttached)
+
+      local minimized = make("gasAttachHiddenMinimized", 100)
+      minimized:minimize()
+      minimized:hide()
+      ok, message = minimized:attachToBorder("left")
+      assert.is_nil(ok)
+      assert.is_truthy(message:find("minimized", 1, true))
+      assert.is_nil(minimized.hiddenAttached)
+    end)
+
+    it("refuses a container that has been deleted", function()
+      local container = make("gasAttachDeleted", 150)
+      container:delete()
+      local ok, message = container:attachToBorder("left")
+      assert.is_nil(ok)
+      assert.is_truthy(message:find("deleted", 1, true))
+      assert.is_falsy(container.attached)
+      assert.is_nil(Adjustable.Container.Attached.left.gasAttachDeleted)
+      assert.are.equal(borderBefore, getBorderLeft())
+    end)
+
+    it("refuses a container in a user window, whose borders are not the main window's", function()
+      local userWindow = Geyser.UserWindow:new({name = "gasAttachUserWindow", x = 0, y = 0, width = 300, height = 300})
+      local inWindow = Adjustable.Container:new({
+        name = "gasAttachInUserWindow",
+        x = 0, y = 0, width = 150, height = 100,
+        autoLoad = false,
+        autoSave = false,
+      }, userWindow)
+      finally(function()
+        if inWindow.attached then
+          inWindow:detach()
+        end
+        inWindow:delete()
+        local root = Geyser.windowList.gasAttachUserWindowContainer
+        if root then
+          root:delete()
+        end
+      end)
+      local ok, message = inWindow:attachToBorder("left")
+      assert.is_nil(ok)
+      assert.is_truthy(message:find("main window", 1, true))
+      assert.is_falsy(inWindow.attached)
+      assert.are.equal(borderBefore, getBorderLeft())
     end)
 
     it("refuses a border that does not exist and stays detached", function()
@@ -1715,9 +1779,10 @@ describe("Tests Adjustable.Container borders, persistence and menu items", funct
       assert.is_false(minimized.attached)
       assert.are.equal(0, getBorderLeft())
 
+      -- Geyser's own hide, as Adjustable's gives the border back by itself
       local hidden = make("gapHidden", {width = 100})
       hidden:attachToBorder("left")
-      hidden:hide()
+      Geyser.Container.hide(hidden)
       hidden:adjustBorder()
       assert.is_false(hidden.attached)
       assert.are.equal(0, getBorderLeft())
@@ -1942,7 +2007,7 @@ describe("Tests Adjustable.Container borders, persistence and menu items", funct
       assert.are.equal(wantedBottom(short), getBorderBottom())
     end)
 
-    -- hide() on its own leaves a container attached, so the first border written
+    -- Geyser's own hide leaves a container attached, so the first border written
     -- here dispatches a resize event into a handler that detaches it: the facing
     -- border has to be measured after that, or it reserves room for something that
     -- is no longer there and the console is left with no rows after all
@@ -1950,7 +2015,7 @@ describe("Tests Adjustable.Container borders, persistence and menu items", funct
       local _, winh = getMainWindowSize()
       local short, tall = oppositePair("gapNested")
       short:attachToBorder("bottom")
-      short:hide()
+      Geyser.Container.hide(short)
 
       tall:attachToBorder("top")
 
@@ -2765,6 +2830,93 @@ describe("Tests Adjustable.Container borders, persistence and menu items", funct
       assert.are.same({"left"}, borders)
       assert.are.equal("left", container.attached)
       assert.are.equal(0, getBorderTop())
+    end)
+
+    it("reserves nothing for a container deleted while hidden", function()
+      local container = make("gapDeletedHidden", {width = 600, height = 120})
+      container:attachToBorder("top")
+      container:hide()
+      container:delete()
+
+      container:show()
+
+      assert.are.equal(0, getBorderTop())
+      assert.is_nil(Adjustable.Container.Attached.top and Adjustable.Container.Attached.top.gapDeletedHidden)
+    end)
+
+    it("connects to a border whose only container is hidden", function()
+      local anchor = make("gapHiddenOnlyAnchor", {width = 150, height = 400})
+      local top = make("gapHiddenOnlyTop", {width = 500, height = 100})
+      anchor:attachToBorder("left")
+      top:attachToBorder("top")
+      anchor:hide()
+
+      assert.is_true(top:connectToBorder("left"))
+      anchor:show()
+
+      assert.is_true(anchor.connectedContainers[top.name])
+      assert.are.equal(anchor:get_x() + anchor:get_width(), top:get_x())
+    end)
+
+    it("is followed once shown by a container that connected while it was hidden", function()
+      local anchor = make("gapHiddenLateAnchor", {width = 150, height = 200})
+      local follower = make("gapHiddenLateFollower", {width = 150, y = 250, height = 200})
+      anchor:attachToBorder("left")
+      follower:attachToBorder("left")
+      anchor:hide()
+
+      follower:connectToBorder("left")
+      anchor:show()
+      anchor:resize(250, nil)
+
+      assert.are.equal(250, follower:get_width())
+    end)
+
+    it("keeps the size it was given while hidden and hands it to the containers connected to it", function()
+      local anchor = make("gapHiddenResizeAnchor", {width = 150, height = 200})
+      local follower = make("gapHiddenResizeFollower", {width = 150, y = 250, height = 200})
+      anchor:attachToBorder("left")
+      follower:attachToBorder("left")
+      follower:connectToBorder("left")
+
+      anchor:hide()
+      anchor:resize(250, nil)
+      anchor:show()
+
+      assert.are.equal(250, anchor:get_width())
+      assert.are.equal(250, follower:get_width())
+    end)
+
+    it("still leads the containers connected to it after being hidden and shown", function()
+      local anchor = make("gapHiddenLeadAnchor", {width = 150, height = 200})
+      local follower = make("gapHiddenLeadFollower", {width = 150, y = 250, height = 200})
+      anchor:attachToBorder("left")
+      follower:attachToBorder("left")
+      follower:connectToBorder("left")
+
+      anchor:hide()
+      anchor:show()
+      anchor:resize(320, nil)
+
+      assert.are.equal(320, anchor:get_width())
+      assert.are.equal(320, follower:get_width())
+    end)
+
+    it("lets a container on another border close up the gap while the one it follows is hidden", function()
+      local left = make("gapGapLeft", {width = 150, height = 400})
+      local top = make("gapGapTop", {x = 150, width = 500, height = 100})
+      left:attachToBorder("left")
+      top:attachToBorder("top")
+      top:connectToBorder("left")
+      local farEdge = top:get_x() + top:get_width()
+
+      left:hide()
+      assert.are.equal(0, top:get_x())
+      assert.are.equal(farEdge, top:get_x() + top:get_width())
+
+      left:show()
+      assert.are.equal(left:get_x() + left:get_width(), top:get_x())
+      assert.are.equal(farEdge, top:get_x() + top:get_width())
     end)
   end)
 
