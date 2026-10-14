@@ -76,6 +76,9 @@ QChar terminalLineGlyph(qreal degrees);
 
 // The room's exits in every direction and its special exits, wherever they lead; stubs are not exits
 int exitCount(const TRoom& room);
+// Whether an exit on the room's own level leads to a room of the same environment, which draws the line between
+// them in its color where the style colors lines by environment
+bool onEnvironmentLine(const TMap& map, const TRoom& room);
 
 // roomSymbolColor is the room's own, which is invalid unless one was set
 QColor symbolColor(const QColor& roomSymbolColor, const QColor& roomColor);

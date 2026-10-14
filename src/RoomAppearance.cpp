@@ -23,6 +23,7 @@
 #include "Host.h"
 #include "TMap.h"
 #include "TRoom.h"
+#include "TRoomDB.h"
 #include "utils.h"
 
 #include <QFontMetrics>
@@ -126,6 +127,21 @@ int exitCount(const TRoom& room)
         }
     }
     return count;
+}
+
+bool onEnvironmentLine(const TMap& map, const TRoom& room)
+{
+    for (int direction = DIR_NORTH; direction <= DIR_SOUTHWEST; ++direction) {
+        const int destination = room.getExit(direction);
+        if (destination <= 0) {
+            continue;
+        }
+        const TRoom* pOther = map.mpRoomDB->getRoom(destination);
+        if (pOther && pOther->environment == room.environment && pOther->z() == room.z() && pOther->getArea() == room.getArea()) {
+            return true;
+        }
+    }
+    return false;
 }
 
 QColor environmentColor(const TMap& map, const Host& host, int env)

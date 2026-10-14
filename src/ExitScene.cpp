@@ -443,8 +443,11 @@ void Builder::customLine(const TRoom& room, const QString& key, const QList<QPoi
 
 QColor Builder::lineColor(const TRoom& room, const TRoom* pOther)
 {
-    if (!mOptions.environmentLines || (pOther && pOther->environment != room.environment)) {
+    if (!mOptions.environmentLines) {
         return mOptions.exitColor;
+    }
+    if (pOther && pOther->environment != room.environment) {
+        return mOptions.mixedLineColor.isValid() ? mOptions.mixedLineColor : mOptions.exitColor;
     }
     if (const auto found = mEnvironmentLineColors.constFind(room.environment); found != mEnvironmentLineColors.cend()) {
         return *found;

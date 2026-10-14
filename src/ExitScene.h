@@ -53,6 +53,8 @@ struct Options
     // Lines between rooms of one environment, and stubs, drawn in its color made to stand out on background, as
     // MapStyle::environmentLines says, rather than in exitColor
     bool environmentLines = false;
+    // With environmentLines, the color of a line between rooms of two environments; invalid for exitColor
+    QColor mixedLineColor;
     // Exit lines between rooms on one level, their stubs and doors drawn as Glyphs, as MapStyle::Glyphs::Terminal says
     bool glyphs = false;
     // A room's width, in rooms' spacing, and whether it is round, so that a door swing clears its room

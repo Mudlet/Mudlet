@@ -143,10 +143,26 @@ QList<MapStyle> registeredStyles()
     transit.exitWidthFactor = 3.0f;
     transit.doors = MapStyle::Doors::Bars;
     transit.floorPlates = false;
-    transit.playerMarker = MapStyle::PlayerMarker::Flag;
+    transit.playerMarker = MapStyle::PlayerMarker::Pill;
     transit.environmentLines = true;
+    transit.mixedLineColor = QColor(178, 178, 178);
+    transit.inkRimsOnLines = true;
+    transit.stationRing = 0.13f;
     transit.interchangeExits = 5;
     transit.labelHalos = true;
+    transit.levelPlatforms = true;
+    transit.lineLegend = true;
+    transit.highlightShape = MapStyle::HighlightShape::Halo;
+    transit.highlightColor = QColor(250, 196, 40);
+    transit.highlightScale = 1.1f;
+    transit.themedMapLabels = true;
+    transit.mapLabelColor = QColor(35, 35, 40);
+    transit.mapLabelMaxHeight = 0.8f;
+    transit.compassFace = QColor(255, 255, 255, 220);
+    transit.compassRim = QColor(35, 35, 40);
+    transit.compassNeedle = QColor(214, 48, 39);
+    transit.infoBackground = QColor(255, 255, 255, 220);
+    transit.infoTextColor = QColor(35, 35, 40);
     styles.append(transit);
 
     return styles;
