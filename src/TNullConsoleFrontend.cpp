@@ -291,7 +291,7 @@ int sheetLength(const QString& value, const QFont& font)
         number.chop(1);
     }
     // lengthValueFromData()'s bounds, as qRound() is undefined outside int
-    return qRound(qBound(double(INT_MIN) + 0.1, scale.value_or(1) * number.toDouble(), double(INT_MAX)));
+    return qRound(qBound(static_cast<double>(INT_MIN) + 0.1, scale.value_or(1) * number.toDouble(), static_cast<double>(INT_MAX)));
 }
 
 // QRect and QSize add in int, which wraps past INT_MAX, and QWidget then holds a size it is given to 0 to QWIDGETSIZE_MAX
