@@ -1743,6 +1743,10 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       assert.has_error(function() RGB2Hex() end)
     end)
 
+    it("Should error naming the colour when given an unknown colour name", function()
+      assert.error_matches(function() RGB2Hex("notacolour") end, 'unknown color name "notacolour"', 1, true)
+    end)
+
     it("Should produce six hex digits for every component below sixteen", function()
       assert.equals("0A0B0C", RGB2Hex(10, 11, 12))
       assert.equals("0A0A0A", RGB2Hex(10, 10, 10))
@@ -1788,7 +1792,16 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
     end)
 
     it("Should error for a colour name that does not exist, naming the colour", function()
-      assert.error_matches(function() getRGB("definitelyNotAColour") end, 'unknown color name "definitelyNotAColour"', 1, true)
+      assert.error_matches(function() getRGB("definitelyNotAColour") end, 'getRGB: bad argument #1 value (unknown color name "definitelyNotAColour")', 1, true)
+      assert.error_matches(function() getRGB("") end, 'getRGB: bad argument #1 value (unknown color name "")', 1, true)
+    end)
+
+    it("Should blame the caller's line, not GUIUtils.lua, for a bad argument", function()
+      for _, badArgument in ipairs({"definitelyNotAColour", 42}) do
+        local ok, err = pcall(function() getRGB(badArgument) end)
+        assert.is_false(ok)
+        assert.is_nil(err:find("GUIUtils.lua:", 1, true))
+      end
     end)
   end)
 

@@ -465,15 +465,21 @@ end
 
 --- Get RGB component from color name.
 ---
+--- Raises an error if colorName is not a string, or is not a key of color_table (see showColors).
+---
 --- @usage Following will display "0.255.0" on your screen.
 ---   <pre>
 ---   local red, green, blue = getRGB("green")
 ---   echo(red .. "." .. green .. "." .. blue )
 ---   </pre>
 function getRGB(colorName)
-  assert(type(colorName) == 'string', 'getRGB: bad argument #1 type (expected string, got '..type(colorName)..'!)')
+  if type(colorName) ~= 'string' then
+    error('getRGB: bad argument #1 type (expected string, got '..type(colorName)..'!)', 2)
+  end
   local color = color_table[colorName]
-  assert(color, 'getRGB: bad argument #1 value (unknown color name "'..colorName..'")')
+  if not color then
+    error('getRGB: bad argument #1 value (unknown color name "'..colorName..'")', 2)
+  end
   return color[1], color[2], color[3]
 end
 
