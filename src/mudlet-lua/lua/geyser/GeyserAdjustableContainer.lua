@@ -643,12 +643,11 @@ function Adjustable.Container:connectToBorder(border)
     if not oppositeBorder[border] then
         return nil, "connectToBorder: bad argument #1 value (\"top\", \"bottom\", \"left\" or \"right\" expected)"
     end
-    -- a hidden container connects through the border it takes back when shown
     local attached = self.attached or self.hiddenAttached
     if not attached then
         return nil, "connectToBorder: the container is not attached to a border"
     end
-    -- a hidden container is off the registry but takes the border back when shown
+    -- a hidden container is off the registry but takes its border back when shown, so it counts too
     local onBorder = {}
     for k, v in pairs(Adjustable.Container.Attached[border] or {}) do
         onBorder[k] = v
@@ -757,10 +756,10 @@ end
 --- attaches your container to the given border
 -- attach is only possible if the container is located near the border
 -- @param border possible border values are "top", "bottom", "right", "left", in any case
--- @return true, or nil and an error message for any other border, or if the container is minimized
--- or too far from that border to attach; a refused attach changes nothing, unless a
--- sysWindowResizeEvent handler moves the container away while it leaves its old border, and a
--- hidden container takes the border when shown
+-- @return true, or nil and an error message for any other border, if the container has been deleted
+-- or is not in the main window, or if it is minimized or too far from that border to attach; a refused
+-- attach changes nothing, unless a sysWindowResizeEvent handler moves the container away while it
+-- leaves its old border, and a hidden container takes the border when shown
 function Adjustable.Container:attachToBorder(border)
     -- the registry and adjustBorder() both work in lower case
     border = type(border) == "string" and border:lower()
@@ -1110,6 +1109,7 @@ end
 
 --- hides the container. One attached to a border gives the border back while hidden:
 -- its attached field reads false and its hiddenAttached field names the border, which show() takes back
+-- if the container can still attach to it
 -- @param auto true when a parent container is hiding it [optional]
 function Adjustable.Container:hide(auto)
     local attached = self.attached
@@ -1126,7 +1126,8 @@ function Adjustable.Container:hide(auto)
 end
 
 --- shows the container, closing its right click menu, and attaches it again to the border it
--- gave back when it was hidden (its hiddenAttached field)
+-- gave back when it was hidden (its hiddenAttached field); if it can no longer attach there, for
+-- example because it was moved out of reach, it lets go of that border for good
 -- @param auto true when a parent container is showing it [optional]
 function Adjustable.Container:show(auto)
     Geyser.Container.show(self, auto)
