@@ -869,10 +869,12 @@ describe("Trigger processing", function()
                     _G.wrapAboveMatches = nil
                 end)
 
+                local wrappedAbove
                 local wrapper = tempRegexTrigger("^WRAPABOVE$", function()
                     edit[2]()
                     setWindowWrap("main", 20)
                     wrapLine("main", getLineNumber() - 1)
+                    wrappedAbove = getLines(getLineNumber() - 1, getLineNumber() + 1)
                     edit[3]()
                 end)
                 local colorTrigger = tempAnsiColorTrigger(1, -1,
@@ -883,6 +885,7 @@ describe("Trigger processing", function()
                 killTrigger(wrapper)
                 killTrigger(colorTrigger)
 
+                assert.are.same({"gggggggggg ", "hhhhhhhhhh "}, wrappedAbove)
                 for _, matched in ipairs(_G.wrapAboveMatches) do
                     assert.are.equal("WRAP", matched, "only the red text the game sent should be matched as red")
                 end
