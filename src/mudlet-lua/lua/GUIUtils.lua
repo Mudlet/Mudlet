@@ -662,6 +662,8 @@ end
 
 
 --- Function will gag the whole line. <b>Use deleteLine() instead.</b>
+--- @param window optional name of the window to gag the line in, the main console if not given
+--- @return what deleteLine() answers: nil and an error message for a window that does not exist
 function gagLine(window)
   if window then
     return deleteLine(window)
@@ -1463,6 +1465,7 @@ end
 --- @param func name of the function to write with: echo, insertText, echoLink, insertLink, echoPopup or insertPopup
 --- @param win windowName optional
 --- @param str text with embedded color information
+--- @return true, or nil and an error message if the window does not exist or a label is asked for anything but echo
 ---
 --- @see cecho
 --- @see decho
@@ -2328,6 +2331,7 @@ end
 --- Form of setFgColor that accepts a hex color string instead of decimal values
 --- @param windowName Optional name of the window to use the function on
 --- @param colorString hex string for the color to use
+--- @return what setFgColor() answers: nil and an error message for a window that does not exist
 function setHexFgColor(windowName, colorString)
   assert(type(windowName) == 'string', 'setHexFgColor: bad argument #1 type (expected string, got '..type(windowName)..'!)')
 
@@ -2357,6 +2361,7 @@ end
 --- Form of setBgColor that accepts a hex color string instead of decimal values
 --- @param windowName Optional name of the window to use the function on
 --- @param colorString hex string for the color to use
+--- @return what setBgColor() answers: true, or nil and an error message for a window that does not exist
 function setHexBgColor(windowName, colorString)
   assert(type(windowName) == 'string', 'setHexBgColor: bad argument #1 type (expected string, got '..type(windowName)..'!)')
 
