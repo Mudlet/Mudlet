@@ -6419,7 +6419,11 @@ do
 
   function setRoomIDbyHash(roomNumber, hash, ...)
     local results = pack(original.setRoomIDbyHash(roomNumber, hash, ...))
-    if getRoomIDbyHash(hash) == tonumber(roomNumber) then
+    -- older Mudlets return nothing here, even for a room that does not exist,
+    -- so reading the binding back is all that can be done there
+    local applied = results[1]
+    if results.n == 0 then applied = getRoomIDbyHash(hash) == tonumber(roomNumber) end
+    if applied then
       service.submit({ type = "set-room-hash", roomNumber = tonumber(roomNumber), hash = hash })
     end
     return unpackResults(results)
