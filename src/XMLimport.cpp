@@ -712,7 +712,7 @@ void XMLimport::readHelpPackage()
             if (name() == qsl("helpURL")) {
                 const QString contents = readElementText();
                 mpHost->moduleHelp[mPackageName].insert("helpURL", contents);
-                gotOtherContent = true;
+                gotOtherContent = gotOtherContent || !contents.isEmpty();
             }
         }
     }
