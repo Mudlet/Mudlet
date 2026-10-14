@@ -226,8 +226,7 @@ describe("Tests functionality of Geyser.CommandLine", function()
 
   describe("Geyser.CommandLine error paths", function()
     it("raises on a constraint it cannot parse, leaving no widget behind", function()
-      -- the object is registered before its constraints are resolved, so the
-      -- failed attempt has to be swept out of the root window list by hand
+      -- swept only if a regression left the refused element registered
       finally(function()
         local zombie = Geyser.windowList.gclBadConstraint
         if zombie then
@@ -239,6 +238,7 @@ describe("Tests functionality of Geyser.CommandLine", function()
       end)
       assert.is_false(ok)
       assert.is_truthy(tostring(message):find("element 'gclBadConstraint' has an invalid width constraint", 1, true))
+      assert.is_nil(Geyser.windowList.gclBadConstraint)
       assert.is_nil(windowType("gclBadConstraint"))
     end)
 

@@ -212,8 +212,7 @@ describe("Tests functionality of Geyser.Container", function()
     end)
 
     it("raises an error on a constraint it cannot parse", function()
-      -- the object is registered before its constraints are resolved, so the
-      -- failed attempt has to be swept out of the root window list by hand
+      -- swept only if a regression left the refused element registered
       finally(function()
         local zombie = Geyser.windowList.gcsBadConstraint
         if zombie then
@@ -225,20 +224,76 @@ describe("Tests functionality of Geyser.Container", function()
       end)
       assert.is_false(ok)
       assert.is_truthy(tostring(message):find("element 'gcsBadConstraint' has an invalid width constraint", 1, true))
+      assert.is_nil(Geyser.windowList.gcsBadConstraint)
       assert.is_nil(getWindowGeometry("gcsBadConstraint"))
     end)
 
     it("names the element, dimension and value of every constraint it cannot parse", function()
-      for index, value in ipairs({"nonsense", "", "50 %", "50%%", {}}) do
-        local name = "gcsBadConstraint" .. index
-        local ok, message = pcall(function()
-          return Geyser.Container:new({name = name, x = 0, y = 0, width = 20, height = value})
-        end)
-        assert.is_false(ok)
-        local expected = string.format("element '%s' has an invalid height constraint %q", name, tostring(value))
-        assert.is_truthy(tostring(message):find(expected, 1, true), tostring(message))
-        assert.is_nil(Geyser.windowList[name], "the element it refused is still registered")
+      local names = {}
+      finally(function()
+        for _, name in ipairs(names) do
+          if Geyser.windowList[name] then
+            Geyser.windowList[name]:delete()
+          end
+        end
+      end)
+      -- a value that is not text is shown by its type, so true is told apart from "true"
+      local cases = {
+        {"nonsense", '"nonsense"'}, {"", '""'}, {"50 %", '"50 %"'}, {"50%%", '"50%%"'}, {"true", '"true"'},
+        {{}, "(table)"}, {true, "(boolean)"}, {0 / 0, tostring(0 / 0)}, {math.huge, tostring(math.huge)},
+        {-math.huge, tostring(-math.huge)},
+      }
+      for _, dimension in ipairs({"x", "y", "width", "height"}) do
+        for index, case in ipairs(cases) do
+          local name = "gcsBadConstraint" .. dimension .. index
+          names[#names + 1] = name
+          local cons = {name = name, x = 0, y = 0, width = 20, height = 20}
+          cons[dimension] = case[1]
+          local ok, message = pcall(function()
+            return Geyser.Container:new(cons)
+          end)
+          assert.is_false(ok)
+          local expected = string.format("element '%s' has an invalid %s constraint %s", name, dimension, case[2])
+          assert.is_truthy(tostring(message):find(expected, 1, true), tostring(message))
+          assert.is_nil(Geyser.windowList[name], "the element it refused is still registered")
+        end
       end
+    end)
+
+    it("names a constraint that was left out when an element is added", function()
+      local box = track(Geyser.Container:new({name = "gcsMissingConstraintBox", x = 0, y = 0, width = 100, height = 100}))
+      local window = track(Geyser.Container:new({name = "gcsMissingConstraint", x = 0, y = 0, width = 10, height = 10}))
+      local ok, message = pcall(function()
+        box:add(window, {x = 0, y = 0, height = 20})
+      end)
+      assert.is_false(ok)
+      assert.is_truthy(tostring(message):find("element 'gcsMissingConstraint' has an invalid width constraint (nil)", 1, true), tostring(message))
+    end)
+
+    it("refuses a character constraint when it cannot read the element's font size", function()
+      local before = os.setlocale(nil, "numeric")
+      finally(function()
+        os.setlocale(before, "numeric")
+        if Geyser.windowList.gcsBadFontSize then
+          Geyser.windowList.gcsBadFontSize:delete()
+        end
+      end)
+      local other = os.setlocale("C.UTF-8", "numeric") or os.setlocale("C.utf8", "numeric") or before
+      -- a font size that is text is read as the name of a window, and there is none
+      local ok, message = pcall(function()
+        return Geyser.Label:new({name = "gcsBadFontSize", x = 0, y = 0, width = "10c", height = 20, fontSize = "gcsNoSuchWindow"})
+      end)
+      assert.is_false(ok)
+      assert.is_truthy(tostring(message):find("element 'gcsBadFontSize' has a character width constraint", 1, true), tostring(message))
+      assert.are.equal(other, os.setlocale(nil, "numeric"))
+      assert.is_nil(Geyser.windowList.gcsBadFontSize)
+
+      local label = track(Geyser.Label:new({name = "gcsBadFontSizeResize", x = 10, y = 10, width = 50, height = 20}))
+      local getX = label.get_x
+      label.fontSize = "gcsNoSuchWindow"
+      assert.is_false(pcall(function() label:resize("10c", nil) end))
+      assert.are.equal(getX, label.get_x)
+      assert.are.equal(other, os.setlocale(nil, "numeric"))
     end)
 
     it("leaves a box it refused an element for to its other children", function()
@@ -279,10 +334,31 @@ describe("Tests functionality of Geyser.Container", function()
         pending("no numeric locale other than C to switch from on this platform")
         return
       end
-      pcall(function()
+      local ok = pcall(function()
         return Geyser.Container:new({name = "gcsBadConstraintLocale", x = 0, y = 0, width = "nonsense", height = 20})
       end)
+      assert.is_false(ok)
       assert.are.equal(other, os.setlocale(nil, "numeric"))
+    end)
+
+    it("reads a decimal point in a constraint under a locale that writes a comma", function()
+      local before = os.setlocale(nil, "numeric")
+      finally(function() os.setlocale(before, "numeric") end)
+      local comma
+      for _, name in ipairs({"de_DE.UTF-8", "de_DE.utf8", "de_DE", "fr_FR.UTF-8", "fr_FR.utf8", "German"}) do
+        if os.setlocale(name, "numeric") and tonumber("0.5") == nil then
+          comma = name
+          break
+        end
+      end
+      if not comma then
+        os.setlocale(before, "numeric")
+        pending("no numeric locale that writes a decimal comma on this machine")
+        return
+      end
+      local box = track(Geyser.Container:new({name = "gcsCommaLocale", x = 0, y = 0, width = 200, height = 100}))
+      track(Geyser.Container:new({name = "gcsCommaLocaleChild", x = 0, y = 0, width = "50.5%", height = 10}, box))
+      assert.are.equal(101, box.windowList.gcsCommaLocaleChild:get_width())
     end)
 
     it("leaves the widget where it was when a move is given a bad constraint", function()
