@@ -4268,7 +4268,9 @@ describe("Tests db:create moving a single-column UNIQUE", function()
     local mydb = createCollectingWarnings({people = {name = "", city = "", _unique = {"name"}}})
     assert.is_true(db:add(mydb.people, {name = "Bob", city = "Lancre"}))
 
-    mydb = createCollectingWarnings({people = {name = "", city = "", _unique = {"city"}}})
+    local moveWarnings
+    mydb, moveWarnings = createCollectingWarnings({people = {name = "", city = "", _unique = {"city"}}})
+    assert.are.equal("", moveWarnings)
 
     assert.is_true(db:add(mydb.people, {name = "Bob", city = "Ankh-Morpork"}))
     local added, warnings = collectingWarnings(function() return db:add(mydb.people, {name = "Nanny", city = "Lancre"}) end)
@@ -4281,12 +4283,17 @@ describe("Tests db:create moving a single-column UNIQUE", function()
     local mydb = createCollectingWarnings({people = {name = "", city = "", _unique = {"name"}}})
     assert.is_true(db:add(mydb.people, {name = "Bob", city = "Lancre"}))
 
-    mydb = createCollectingWarnings({people = {name = "", city = "", region = "Ramtops", _unique = {"city"}}})
+    local moveWarnings
+    mydb, moveWarnings = createCollectingWarnings({people = {name = "", city = "", region = "Ramtops", _unique = {"city"}}})
+    assert.are.equal("", moveWarnings)
 
     local rows = db:fetch(mydb.people)
     assert.are.equal(1, #rows)
     assert.are.equal("Ramtops", rows[1].region)
     assert.is_true(db:add(mydb.people, {name = "Bob", city = "Ankh-Morpork", region = "Sto Plains"}))
+    local added, warnings = collectingWarnings(function() return db:add(mydb.people, {name = "Nanny", city = "Lancre"}) end)
+    assert.is_nil(added)
+    assert.is_truthy(string.find(warnings, "UNIQUE constraint failed: people.city", 1, true))
   end)
 
   it("keeps the sheet as it was when the column it now names holds duplicates", function()
