@@ -2906,6 +2906,45 @@ describe("Media playback effects with a generated sound file", function()
     assert.equals(1, #started, "a request made at a numeric volume of 50.6 was not played")
   end)
 
+  it("a Client.Media.Play message with a volume given as a string reads it as the number it names", function()
+    -- the same rule as for a number: a fractional one is rounded, and one that
+    -- is no number at all is absent - neither is the 0 that asks for a preload
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    writeSoundFiles()
+    stopGmcpMediaAfterwards()
+
+    local started = {}
+    collect("sysMediaStarted", started)
+
+    feedGmcp('Client.Media.Play {"name": "' .. longSoundFile .. '", "key": "busted-gmcp-string-fractional-volume", "volume": "50.6"}')
+    waitForCount("sysMediaStarted", started, 1)
+    assert.equals(1, #started, "a request made at a volume of \"50.6\" was not played")
+
+    feedGmcp('Client.Media.Play {"name": "' .. otherLongSoundFile .. '", "key": "busted-gmcp-string-unreadable-volume", "volume": "loud"}')
+    waitForCount("sysMediaStarted", started, 2)
+    assert.equals(2, #started, "a request made at a volume of \"loud\" was not played")
+  end)
+
+  it("a Client.Media.Play message with a fractional loop count plays the rounded number of times", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    writeSoundFiles()
+    stopGmcpMediaAfterwards()
+
+    for _, loops in ipairs({"2.6", '"2.6"'}) do
+      local started = {}
+      collect("sysMediaStarted", started)
+      feedGmcp('Client.Media.Play {"name": "' .. soundFile .. '", "key": "busted-gmcp-fractional-loops", "loops": ' .. loops .. '}')
+      waitForCount("sysMediaStarted", started, 3)
+      pumpEvents(500)
+      assert.equals(3, #started, "a request made with " .. loops .. " loops was not played three times")
+      feedGmcp("Client.Media.Stop {}")
+    end
+  end)
+
   it("a Client.Media.Default message sets the url the messages after it fetch from", function()
     if noFixtureServer() then
       return

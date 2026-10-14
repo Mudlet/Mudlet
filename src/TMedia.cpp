@@ -31,6 +31,7 @@
 
 #include <QDir>
 #include <QFileInfo>
+#include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonValue>
@@ -42,6 +43,8 @@
 #include <QTimer>
 
 #include <algorithm>
+#include <limits>
+#include <optional>
 
 using namespace std::chrono_literals;
 
@@ -86,6 +89,42 @@ bool mediaTypeNamed(const QJsonObject& json)
     }
 
     return !mediaTypeJSON.isString() || !mediaTypeJSON.toString().isEmpty();
+}
+
+// An unknown type is refused, not read as an absent one: a Play would default to a sound that the
+// server's stop for the type it meant never reaches, and a Stop or Pause would act on every type.
+bool unknownMediaTypeRefused(const QJsonObject& json, const TMediaData& mediaData, const QString& request)
+{
+    if (mediaData.mediaType() != TMediaData::MediaTypeNotSet || !mediaTypeNamed(json)) {
+        return false;
+    }
+
+    const auto mediaTypeJSON = json.value(qsl("type"));
+    // toVariant().toString() gives nothing for an array or an object
+    const QString named = mediaTypeJSON.isArray()    ? QString::fromUtf8(QJsonDocument(mediaTypeJSON.toArray()).toJson(QJsonDocument::Compact))
+                          : mediaTypeJSON.isObject() ? QString::fromUtf8(QJsonDocument(mediaTypeJSON.toObject()).toJson(QJsonDocument::Compact))
+                                                     : mediaTypeJSON.toVariant().toString();
+    qWarning().noquote() << qsl("TMedia WARNING - ignored a %1 naming an unknown media type: %2.").arg(request, named);
+    return true;
+}
+
+// A number field may arrive as a JSON number or as a string, and need not be whole. Not toInt(),
+// which gives 0 for any number that is not whole - the preload volume, or the default elsewhere.
+std::optional<double> mediaNumber(const QJsonValue& value)
+{
+    bool isNumber = value.isDouble();
+    double number = value.toDouble();
+
+    if (value.isString()) {
+        number = value.toString().toDouble(&isNumber);
+    }
+
+    // Also refuses NaN and infinity; qRound() of anything outside int's range is undefined
+    if (!isNumber || !(number > std::numeric_limits<int>::min() && number < std::numeric_limits<int>::max())) {
+        return std::nullopt;
+    }
+
+    return number;
 }
 
 // Every pass is a playlist entry built up front, so a huge count from a game would hang Mudlet
@@ -2282,115 +2321,55 @@ QString TMedia::parseJSONByMediaFileName(QJsonObject& json)
 // Documentation: https://wiki.mudlet.org/w/Manual:Scripting#volume:_1_to_100
 int TMedia::parseJSONByMediaVolume(QJsonObject& json)
 {
-    int mediaVolume = TMediaData::MediaVolumeDefault;
+    const auto volume = mediaNumber(json.value(qsl("volume")));
 
-    auto mediaVolumeJSON = json.value(qsl("volume"));
-
-    if (mediaVolumeJSON != QJsonValue::Undefined && mediaVolumeJSON.isString() && !mediaVolumeJSON.toString().isEmpty()) {
-        mediaVolume = mediaVolumeJSON.toString().toInt();
-    } else if (mediaVolumeJSON.isDouble()) {
-        // Not toInt(), which gives 0 - the preload volume - for any number that is not whole
-        const double volume = mediaVolumeJSON.toDouble();
-        mediaVolume = volume == 0.0 ? TMediaData::MediaVolumePreload : qRound(qBound(static_cast<double>(TMediaData::MediaVolumeMin), volume, static_cast<double>(TMediaData::MediaVolumeMax)));
+    if (!volume) {
+        return TMediaData::MediaVolumeDefault;
     }
 
-    return mediaVolume;
+    return *volume == 0.0 ? TMediaData::MediaVolumePreload : qRound(qBound(static_cast<double>(TMediaData::MediaVolumeMin), *volume, static_cast<double>(TMediaData::MediaVolumeMax)));
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Scripting#fadein
 int TMedia::parseJSONByMediaFadeIn(QJsonObject& json)
 {
-    int mediaFadeIn = TMediaData::MediaFadeNotSet;
-
-    auto mediaFadeInJSON = json.value(qsl("fadein"));
-
-    if (mediaFadeInJSON != QJsonValue::Undefined && mediaFadeInJSON.isString() && !mediaFadeInJSON.toString().isEmpty()) {
-        mediaFadeIn = mediaFadeInJSON.toString().toInt();
-    } else if (mediaFadeInJSON != QJsonValue::Undefined && mediaFadeInJSON.toInt()) {
-        mediaFadeIn = mediaFadeInJSON.toInt();
-    }
-
-    return mediaFadeIn;
+    const auto fadeIn = mediaNumber(json.value(qsl("fadein")));
+    return fadeIn ? qRound(*fadeIn) : TMediaData::MediaFadeNotSet;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Scripting#fadeout
 int TMedia::parseJSONByMediaFadeOut(QJsonObject& json)
 {
-    int mediaFadeOut = TMediaData::MediaFadeNotSet;
-
-    auto mediaFadeOutJSON = json.value(qsl("fadeout"));
-
-    if (mediaFadeOutJSON != QJsonValue::Undefined && mediaFadeOutJSON.isString() && !mediaFadeOutJSON.toString().isEmpty()) {
-        mediaFadeOut = mediaFadeOutJSON.toString().toInt();
-    } else if (mediaFadeOutJSON != QJsonValue::Undefined && mediaFadeOutJSON.toInt()) {
-        mediaFadeOut = mediaFadeOutJSON.toInt();
-    }
-
-    return mediaFadeOut;
+    const auto fadeOut = mediaNumber(json.value(qsl("fadeout")));
+    return fadeOut ? qRound(*fadeOut) : TMediaData::MediaFadeNotSet;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Scripting#start
 int TMedia::parseJSONByMediaStart(QJsonObject& json)
 {
-    int mediaStart = TMediaData::MediaStartDefault;
-
-    auto mediaStartJSON = json.value(qsl("start"));
-
-    if (mediaStartJSON != QJsonValue::Undefined && mediaStartJSON.isString() && !mediaStartJSON.toString().isEmpty()) {
-        mediaStart = mediaStartJSON.toString().toInt();
-    } else if (mediaStartJSON != QJsonValue::Undefined && mediaStartJSON.toInt()) {
-        mediaStart = mediaStartJSON.toInt();
-    }
-
-    return mediaStart;
+    const auto start = mediaNumber(json.value(qsl("start")));
+    return start ? qRound(*start) : TMediaData::MediaStartDefault;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Scripting#finish
 int TMedia::parseJSONByMediaFinish(QJsonObject& json)
 {
-    int mediaFinish = TMediaData::MediaFinishNotSet;
-
-    auto mediaFinishJSON = json.value(qsl("finish"));
-
-    if (mediaFinishJSON != QJsonValue::Undefined && mediaFinishJSON.isString() && !mediaFinishJSON.toString().isEmpty()) {
-        mediaFinish = mediaFinishJSON.toString().toInt();
-    } else if (mediaFinishJSON != QJsonValue::Undefined && mediaFinishJSON.toInt()) {
-        mediaFinish = mediaFinishJSON.toInt();
-    }
-
-    return mediaFinish;
+    const auto finish = mediaNumber(json.value(qsl("finish")));
+    return finish ? qRound(*finish) : TMediaData::MediaFinishNotSet;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Scripting#priority:_1_to_100
 int TMedia::parseJSONByMediaPriority(QJsonObject& json)
 {
-    int mediaPriority = TMediaData::MediaPriorityNotSet;
-
-    auto mediaPriorityJSON = json.value(qsl("priority"));
-
-    if (mediaPriorityJSON != QJsonValue::Undefined && mediaPriorityJSON.isString() && !mediaPriorityJSON.toString().isEmpty()) {
-        mediaPriority = mediaPriorityJSON.toString().toInt();
-    } else if (mediaPriorityJSON != QJsonValue::Undefined && mediaPriorityJSON.toInt()) {
-        mediaPriority = mediaPriorityJSON.toInt();
-    }
-
-    return mediaPriority;
+    const auto priority = mediaNumber(json.value(qsl("priority")));
+    return priority ? qRound(*priority) : TMediaData::MediaPriorityNotSet;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Scripting#loops:_-1.2C_1_or_more
 int TMedia::parseJSONByMediaLoops(QJsonObject& json)
 {
-    int mediaLoops = TMediaData::MediaLoopsDefault;
-
-    auto mediaLoopsJSON = json.value(qsl("loops"));
-
-    if (mediaLoopsJSON != QJsonValue::Undefined && mediaLoopsJSON.isString() && !mediaLoopsJSON.toString().isEmpty()) {
-        mediaLoops = mediaLoopsJSON.toString().toInt();
-    } else if (mediaLoopsJSON != QJsonValue::Undefined && mediaLoopsJSON.toInt()) {
-        mediaLoops = mediaLoopsJSON.toInt();
-    }
-
-    return mediaLoops;
+    const auto loops = mediaNumber(json.value(qsl("loops")));
+    return loops ? qRound(*loops) : TMediaData::MediaLoopsDefault;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Scripting#continue:_true_or_false_.28for_music.29
@@ -2553,14 +2532,11 @@ void TMedia::parseJSONForMediaPlay(QJsonObject& json)
     mediaData.setMediaProtocol(TMediaData::MediaProtocolGMCP);
     mediaData.setMediaType(TMedia::parseJSONByMediaType(json));
 
-    if (mediaData.mediaType() == TMediaData::MediaTypeNotSet) {
-        if (mediaTypeNamed(json)) {
-            // An unknown type is refused, not played as the default sound: the server's stop for
-            // the type it meant would never reach it.
-            qWarning() << qsl("TMedia::parseJSONForMediaPlay() WARNING - rejected a Client.Media.Play naming an unknown media type: %1.").arg(json.value(qsl("type")).toVariant().toString());
-            return;
-        }
+    if (unknownMediaTypeRefused(json, mediaData, qsl("Client.Media.Play"))) {
+        return;
+    }
 
+    if (mediaData.mediaType() == TMediaData::MediaTypeNotSet) {
         mediaData.setMediaType(TMediaData::MediaTypeSound);
     }
 
@@ -2600,9 +2576,7 @@ void TMedia::parseJSONForMediaPause(QJsonObject& json)
     mediaData.setMediaProtocol(TMediaData::MediaProtocolGMCP);
     mediaData.setMediaType(TMedia::parseJSONByMediaType(json));
 
-    if (mediaData.mediaType() == TMediaData::MediaTypeNotSet && mediaTypeNamed(json)) {
-        // An unknown type is not the wildcard an absent one is: a typo must not pause every type
-        qWarning() << qsl("TMedia::parseJSONForMediaPause() WARNING - ignored a Client.Media.Pause naming an unknown media type: %1.").arg(json.value(qsl("type")).toVariant().toString());
+    if (unknownMediaTypeRefused(json, mediaData, qsl("Client.Media.Pause"))) {
         return;
     }
 
@@ -2622,9 +2596,7 @@ void TMedia::parseJSONForMediaStop(QJsonObject& json)
     mediaData.setMediaProtocol(TMediaData::MediaProtocolGMCP);
     mediaData.setMediaType(TMedia::parseJSONByMediaType(json));
 
-    if (mediaData.mediaType() == TMediaData::MediaTypeNotSet && mediaTypeNamed(json)) {
-        // An unknown type is not the wildcard an absent one is: a typo must not stop every type
-        qWarning() << qsl("TMedia::parseJSONForMediaStop() WARNING - ignored a Client.Media.Stop naming an unknown media type: %1.").arg(json.value(qsl("type")).toVariant().toString());
+    if (unknownMediaTypeRefused(json, mediaData, qsl("Client.Media.Stop"))) {
         return;
     }
 

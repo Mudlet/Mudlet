@@ -746,14 +746,20 @@ private slots:
         QCOMPARE(data.mediaEnd(), TMediaData::MediaEndNotSet);
     }
 
-    // Only a volume of exactly 0 asks for a preload, so a fractional one has to be
-    // rounded into the 1 to 100 a player takes, not read as no volume at all (#10404)
+    // Only a volume of exactly 0 asks for a preload, so any other one, given as a number or as a
+    // string, is held to the 1 to 100 a player takes and then rounded
     void test_aFractionalGmcpVolumeIsRounded_data()
     {
         QTest::addColumn<QString>("volume");
         QTest::addColumn<int>("expected");
         QTest::newRow("50.6") << qsl("50.6") << 51;
         QTest::newRow("0.4") << qsl("0.4") << 1;
+        QTest::newRow("-0.4") << qsl("-0.4") << 1;
+        QTest::newRow("100.4") << qsl("100.4") << 100;
+        QTest::newRow("150.7") << qsl("150.7") << 100;
+        QTest::newRow("string 50.6") << qsl("\"50.6\"") << 51;
+        QTest::newRow("string 0.4") << qsl("\"0.4\"") << 1;
+        QTest::newRow("unreadable string") << qsl("\"loud\"") << static_cast<int>(TMediaData::MediaVolumeDefault);
     }
 
     void test_aFractionalGmcpVolumeIsRounded()
