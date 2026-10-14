@@ -2176,3 +2176,23 @@ describe("Tests Geyser.Label nests and menus inside a Geyser.ScrollBox", functio
     assert.spy(sizeSpy).was_not_called()
   end)
 end)
+
+describe("Tests a Geyser.Label right click menu in a user window deleted behind Geyser's back", function()
+  it("does not ask getUserWindowSize about the window that is gone", function()
+    local userWindow = Geyser.UserWindow:new({name = "glGoneUW", x = 10, y = 20, width = 200, height = 150})
+    finally(function()
+      if Geyser.Label.closeAllTimer then
+        killTimer(Geyser.Label.closeAllTimer)
+        Geyser.Label.closeAllTimer = nil
+      end
+      userWindow:delete()
+    end)
+    local label = Geyser.Label:new({name = "glGoneUWLabel", x = 0, y = 0, width = 50, height = 20}, userWindow)
+    label:createRightClickMenu({MenuItems = {"First"}})
+    deleteMiniConsole("glGoneUW")
+    local sizeSpy = spy.on(_G, "getUserWindowSize")
+    finally(function() sizeSpy:revert() end)
+    label:onRightClick({button = "RightButton", buttons = {"RightButton"}, x = 1, y = 1, globalX = 1, globalY = 1})
+    assert.spy(sizeSpy).was_not_called()
+  end)
+end)

@@ -720,6 +720,20 @@ describe("Tests functionality of Geyser.UserWindow", function()
       assert.spy(sizeSpy).was_not_called()
     end)
 
+    it("does not ask about a user window deleted behind Geyser's back", function()
+      local userWindow = track(Geyser.UserWindow:new({name = "guwRootBehind", x = 10, y = 20, width = 200, height = 150}))
+      local root = userWindow.container
+      track(Geyser.Label:new({name = "guwRootBehindLodger", x = 0, y = 0, width = 20, height = 20}, root))
+      track(root)
+      deleteMiniConsole("guwRootBehind")
+      local sizeSpy = spy.on(_G, "getUserWindowSize")
+      finally(function() sizeSpy:revert() end)
+      root:reposition()
+      assert.are.equal(0, root:get_width())
+      assert.are.equal(0, root:get_height())
+      assert.spy(sizeSpy).was_not_called()
+    end)
+
     it("leaves an Adjustable.Container in it as it was when asked for percentages", function()
       local userWindow = track(Geyser.UserWindow:new({name = "guwRootAdj", x = 10, y = 20, width = 200, height = 150}))
       local root = userWindow.container

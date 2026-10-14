@@ -379,11 +379,17 @@ function Geyser.Container:new(cons, container)
           container:add(me)
         end
         -- a user window that is gone has no size, so whatever is left in its
-        -- container takes up none
+        -- container takes up none; asking getUserWindowSize about it would warn
         container.get_width = function()
+            if windowType(me.windowname) ~= "userwindow" then
+                return 0
+            end
             return getUserWindowSize(me.windowname) or 0
         end
         container.get_height = function()
+            if windowType(me.windowname) ~= "userwindow" then
+                return 0
+            end
             local w, h = getUserWindowSize(me.windowname)
             return w and h or 0
         end

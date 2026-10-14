@@ -824,12 +824,10 @@ function doNestScroll(label)
   bscroll.nestParent:displayNest()
 end
 
--- the size a label's nest or right click menu is fitted into: its user window's,
--- else the main window's. Inside a scroll box windowname is the scroll box's,
--- which getUserWindowSize refuses with a warning in the Central Debug Console
+-- getUserWindowSize warns in the Central Debug Console about any other name,
+-- such as a scroll box's or a user window deleted behind Geyser's back
 local function labelWindowSize(windowname)
-  local parentWindow = Geyser.parentWindows and Geyser.parentWindows[windowname]
-  if windowname ~= "main" and not (parentWindow and parentWindow.type == "scrollBox") then
+  if windowType(windowname) == "userwindow" then
     local width, height = getUserWindowSize(windowname)
     if width then
       return width, height
