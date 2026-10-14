@@ -18,13 +18,13 @@
  ***************************************************************************/
 
 /*
- * Why not a spec: viewportRoomBounds() has to be asked directly, because at the
+ * Why not specs: viewportRoomBounds() has to be asked directly, because at the
  * zoom these cases cover the whole map is one pixel and nothing drawn differs
- * between the right answer and the wrong one; and loading a map file replaces
- * the map of the profile the specs share.
+ * between the right answer and the wrong one; loading a map file replaces the
+ * map of the profile the specs share; and no Lua function reads an area's extent.
  *
- * Both cases hang rather than fail when they regress, so what reports them is
- * the 60 second cap every functional test carries rather than an assertion.
+ * A paint whose scan never returns reports nothing, so what reports that
+ * regression is the 60 second cap every functional test carries.
  *
  * Run with: ctest -R MapCoordinateLimitTest -V
  */
