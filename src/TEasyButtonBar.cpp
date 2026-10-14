@@ -152,8 +152,8 @@ void TEasyButtonBar::addActionButtons(TAction* pAction)
         // This applies the CSS for THIS TAction to a CHILD's representation on the Toolbar
         pTFlipButton->setStyleSheet(pAction->css);
 
-        // Restoring a push-down button runs its script, but its command belongs to a click
-        // and is not sent
+        // Restoring a push-down button runs its script whether it is up or down, but
+        // neither of its commands is sent: they belong to a click
         if (pTAction->isPushDownButton() && pAction->mpHost->mIsProfileLoadingSequence) {
             qDebug() << "addActionButtons() name=" << pTAction->getName() << " executing script";
             pTAction->runScript();
