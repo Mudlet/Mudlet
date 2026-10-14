@@ -6984,9 +6984,12 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
                         oneWayPen.setStyle(Qt::DashLine);
                         painter.setPen(oneWayPen);
                         painter.drawLine(exitLine);
-                    } else if (!customLineRunsStraightTo(*room, *exitRoom) && !(exitRoom->z() == exportZLevel && customLineRunsStraightTo(*exitRoom, *room))) {
+                    } else {
+                        // Also for a line left out: the door drawn below takes its width from this pen
                         painter.setPen(pen);
-                        painter.drawLine(exitLine);
+                        if (!customLineRunsStraightTo(*room, *exitRoom) && !(exitRoom->z() == exportZLevel && customLineRunsStraightTo(*exitRoom, *room))) {
+                            painter.drawLine(exitLine);
+                        }
                     }
 
                 } else {

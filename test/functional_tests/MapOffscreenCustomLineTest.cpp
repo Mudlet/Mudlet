@@ -149,6 +149,41 @@ private:
         }
     }
 
+    // Pixels matching wanted in the image exportAreaToImage() writes for the area, or -1 if there is none.
+    int countInExport(T2DMap* p2dMap, const int areaId, const QString& name, bool (*wanted)(const QColor&)) const
+    {
+        const QString filePath = qsl("%1/%2.png").arg(mConfigDir.path(), name);
+        const auto [exported, message] = p2dMap->exportAreaToImage(areaId, filePath, 0, 1.0);
+        if (!exported) {
+            qWarning().noquote() << "exportAreaToImage() failed:" << message;
+            return -1;
+        }
+        QImage image;
+        // The file is written by a QtConcurrent task, and the widget must outlive it
+        if (!QTest::qWaitFor(
+                    [&]() {
+                        return image.load(filePath);
+                    },
+                    10000)
+            || !QTest::qWaitFor(
+                    [&]() {
+                        return p2dMap->findChildren<QFutureWatcherBase*>(QString(), Qt::FindDirectChildrenOnly).isEmpty();
+                    },
+                    10000)) {
+            qWarning().noquote() << "the exported image" << filePath << "could not be read back";
+            return -1;
+        }
+        int count = 0;
+        for (int y = 0; y < image.height(); ++y) {
+            for (int x = 0; x < image.width(); ++x) {
+                if (wanted(image.pixelColor(x, y))) {
+                    ++count;
+                }
+            }
+        }
+        return count;
+    }
+
     // A rendered frame with the mapping it was drawn with, which can change from one frame to the next.
     struct Frame
     {
@@ -895,53 +930,85 @@ private slots:
         T2DMap* p2dMap = showAreaAtTheOrigin(areaId);
         QVERIFY(p2dMap);
 
-        const auto plainPixelsInExport = [&](const QString& name) {
-            const QString filePath = qsl("%1/%2.png").arg(mConfigDir.path(), name);
-            const auto [exported, message] = p2dMap->exportAreaToImage(areaId, filePath, 0, 1.0);
-            if (!exported) {
-                qWarning().noquote() << "exportAreaToImage() failed:" << message;
-                return -1;
-            }
-            QImage image;
-            // The file is written by a QtConcurrent task, and the widget must outlive it
-            if (!QTest::qWaitFor(
-                        [&]() {
-                            return image.load(filePath);
-                        },
-                        10000)
-                || !QTest::qWaitFor(
-                        [&]() {
-                            return p2dMap->findChildren<QFutureWatcherBase*>(QString(), Qt::FindDirectChildrenOnly).isEmpty();
-                        },
-                        10000)) {
-                qWarning().noquote() << "the exported image" << filePath << "could not be read back";
-                return -1;
-            }
-            int count = 0;
-            for (int y = 0; y < image.height(); ++y) {
-                for (int x = 0; x < image.width(); ++x) {
-                    if (plainLineColoured(image.pixelColor(x, y))) {
-                        ++count;
-                    }
-                }
-            }
-            return count;
-        };
-
         for (const auto& [westId, eastId] : std::as_const(pairs)) {
             pRoomDB->getRoom(eastId)->setExit(-1, DIR_WEST);
         }
-        const int withoutReturnExits = plainPixelsInExport(qsl("export-one-way"));
+        const int withoutReturnExits = countInExport(p2dMap, areaId, qsl("export-one-way"), plainLineColoured);
         QVERIFY(withoutReturnExits >= 0);
         for (const auto& [westId, eastId] : std::as_const(pairs)) {
             QVERIFY(pRoomDB->getRoom(eastId)->setExit(westId, DIR_WEST));
         }
-        const int withReturnExits = plainPixelsInExport(qsl("export-two-way"));
+        const int withReturnExits = countInExport(p2dMap, areaId, qsl("export-two-way"), plainLineColoured);
         QVERIFY(withReturnExits >= 0);
         QVERIFY2(withReturnExits - withoutReturnExits <= pairs.size(),
                  qPrintable(qsl("the exported image drew plain return exits along the custom lines (%1 plain line pixels with them, %2 without). The image is at %3/export-two-way.png")
                                     .arg(withReturnExits)
                                     .arg(withoutReturnExits)
+                                    .arg(mConfigDir.path())));
+    }
+
+    // The exported image leaves out a second plain exit under a room's own straight custom line, and keeps an exit to a
+    // room on another level, whose custom line back it does not draw.
+    void test_anExportedAreaImageLeavesOutOnlyThePlainLinesACustomLineDraws()
+    {
+        TMap* pMap = map();
+        TRoomDB* pRoomDB = pMap->mpRoomDB.get();
+        pMap->mapClear();
+
+        const int areaId = pRoomDB->addArea(qsl("Export Lines Area"));
+        QVERIFY(areaId > 0);
+        QVERIFY(addRoomAt(kPlayerRoomId, areaId, 0, 0));
+        QVERIFY(addTwoWayPair(3601, 3602, areaId, QPoint(-6, 0), DIR_EAST, DIR_WEST));
+        // Drawn with no pen, so all the image can show along it is plain lines
+        setCustomLine(pRoomDB->getRoom(3601), qsl("e"), {QPointF(-4, 0)}, Qt::NoPen);
+        QVERIFY(addRoomAt(3611, areaId, 3, 0));
+        QVERIFY(addRoomAt(3612, areaId, 5, 0));
+        QVERIFY(pMap->setRoomCoordinates(3612, 5, 0, 1));
+        QVERIFY(pRoomDB->getRoom(3611)->setExit(3612, DIR_EAST));
+        QVERIFY(pRoomDB->getRoom(3612)->setExit(3611, DIR_WEST));
+        T2DMap* p2dMap = showAreaAtTheOrigin(areaId);
+        QVERIFY(p2dMap);
+
+        const int withoutLines = countInExport(p2dMap, areaId, qsl("export-lines-without"), plainLineColoured);
+        QVERIFY(withoutLines >= 0);
+        QVERIFY(pRoomDB->getRoom(3601)->setExit(3602, DIR_NORTHEAST));
+        QVERIFY(pRoomDB->getRoom(3602)->setExit(3601, DIR_SOUTHWEST));
+        setCustomLine(pRoomDB->getRoom(3612), qsl("w"), {QPointF(3, 0)}, Qt::NoPen);
+        const int withLines = countInExport(p2dMap, areaId, qsl("export-lines-with"), plainLineColoured);
+        QVERIFY(withLines >= 0);
+        // Under the second exit's line, or with the exit up a level gone, the two differ by about three hundred
+        QVERIFY2(qAbs(withLines - withoutLines) <= 20,
+                 qPrintable(qsl("the exported image drew a second plain exit under a custom line, or lost the exit to a room on another level (%1 plain line pixels, %2 "
+                                "before). The image is at %3/export-lines-with.png")
+                                    .arg(withLines)
+                                    .arg(withoutLines)
+                                    .arg(mConfigDir.path())));
+    }
+
+    // A door on an exit the exported image draws as a custom line is as wide as on a plain line.
+    void test_anExportedDoorKeepsItsWidthWhereACustomLineDrawsTheExit()
+    {
+        TMap* pMap = map();
+        TRoomDB* pRoomDB = pMap->mpRoomDB.get();
+        pMap->mapClear();
+
+        const int areaId = pRoomDB->addArea(qsl("Export Door Area"));
+        QVERIFY(areaId > 0);
+        QVERIFY(addRoomAt(kPlayerRoomId, areaId, 0, 0));
+        QVERIFY(addTwoWayPair(3701, 3702, areaId, QPoint(-6, 0), DIR_EAST, DIR_WEST));
+        QVERIFY(pRoomDB->getRoom(3701)->setDoor(qsl("e"), 3));
+        paintRoomsBlue({kPlayerRoomId, 3701, 3702});
+        T2DMap* p2dMap = showAreaAtTheOrigin(areaId);
+        QVERIFY(p2dMap);
+
+        const int doorOnPlainLine = countInExport(p2dMap, areaId, qsl("export-door-plain"), doorColoured);
+        setCustomLine(pRoomDB->getRoom(3702), qsl("w"), {QPointF(-6, 0)});
+        const int doorOnCustomLine = countInExport(p2dMap, areaId, qsl("export-door-custom"), doorColoured);
+        QVERIFY2(doorOnPlainLine > 20, qPrintable(qsl("the exported image drew no door on room 3701's exit east (%1 pixels)").arg(doorOnPlainLine)));
+        QVERIFY2(doorOnCustomLine * 4 >= doorOnPlainLine * 3,
+                 qPrintable(qsl("the exported door is thinner where a custom line draws the exit (%1 pixels, %2 on a plain line). The image is at %3/export-door-custom.png")
+                                    .arg(doorOnCustomLine)
+                                    .arg(doorOnPlainLine)
                                     .arg(mConfigDir.path())));
     }
 
