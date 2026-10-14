@@ -3043,6 +3043,13 @@ describe("Tests mapper functions against a shared fixture", function()
     it("hard-errors when the required coordinate arguments are missing", function()
       assert.has_error(function() createMapper() end)
     end)
+
+    it("refuses with false while the map widget is on screen", function()
+      assert.is_true(openMapWidget())
+      local ok, message = createMapper(0, 0, 300, 300)
+      assert.is_false(ok)
+      assert.are.equal("cannot create mapper. Do you already use a map window?", message)
+    end)
   end)
 
   describe("Tests secondary map views", function()
