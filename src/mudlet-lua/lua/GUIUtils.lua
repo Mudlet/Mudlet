@@ -676,6 +676,14 @@ local function utf16Units(char)
   return char:byte() >= 240 and 2 or 1
 end
 
+local function utf16Length(text)
+  local units = 0
+  for char in text:gmatch(utf8Char) do
+    units = units + utf16Units(char)
+  end
+  return units
+end
+
 
 --- Replaces all occurrences of what in the current line with <i>with</i>.
 ---
@@ -693,16 +701,17 @@ function replaceAll(word, what, keepColor)
   local whatLength = utf8.len(what)
   local resumeAt = 1
   while true do
-    -- utf8.find() reports character offsets, which is what selectSection() indexes by;
-    -- string.find() reported bytes, which any non-ASCII earlier in the line then shifted
-    local startp, endp = utf8.find(getCurrentLine(), word, resumeAt)
+    -- utf8.find() reports character offsets, which resumeAt and whatLength also count;
+    -- selectSection() wants them in UTF-16 units
+    local line = getCurrentLine()
+    local startp, endp = utf8.find(line, word, resumeAt)
     if not startp then
       break
     end
     if endp < startp then
       -- an empty match replaces nothing, so stepping over it is the only way to advance
       resumeAt = startp + 1
-    elseif not selectSection(startp - 1, endp - startp + 1) then
+    elseif not selectSection(utf16Length(utf8.sub(line, 1, startp - 1)), utf16Length(utf8.sub(line, startp, endp))) then
       -- a refused selection would leave replace() splicing into line 0 column 0
       break
     else
@@ -2338,7 +2347,7 @@ function suffix(what, func, fgc, bgc, window)
   assert(type(what) == 'string', 'suffix: bad argument #1 type (expected string, got '..type(what)..'!)')
   window = window or "main"
   func = insertFuncs[func] or func or insertText
-  local length = utf8.len(getCurrentLine(window))
+  local length = utf16Length(getCurrentLine(window))
   moveCursor(window, length, getLineNumber(window))
   -- fg()/bg() also repaint whatever is selected in the window, so drop any
   -- live selection first - only the text being added is meant to be coloured
