@@ -1024,6 +1024,10 @@ target_link_libraries(${EXE_MUDLET_TARGET} ${LIB_MUDLET_APP_TARGET} mudlet_lsan_
 # will fail to load with "undefined symbol" errors.
 set_target_properties(${EXE_MUDLET_TARGET} PROPERTIES ENABLE_EXPORTS ON)
 
+if(USE_HEADLESS)
+  add_subdirectory(headless)
+endif()
+
 if (WITH_SENTRY)
   include(cmake/WithSentry.cmake)
   add_subdirectory(crash_reporter)
