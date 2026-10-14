@@ -71,10 +71,10 @@ describe("Tests DateTime.lua functions", function()
     it("should cecho a negative count with the sign on the hours only", function()
       local expectedString = "<green>-61 <grey>seconds converts to: <green>-00<white>h,<green> 01<white>m <grey>and<green> 01<white>s."
       local oldcecho = _G.cecho
+      finally(function() _G.cecho = oldcecho end)
       _G.cecho = function() end
       local cecho = spy.on(_G, "cecho")
       shms(-61, true)
-      _G.cecho = oldcecho
       assert.spy(cecho).was.called(1)
       assert.spy(cecho).was.called_with(expectedString)
     end)
@@ -85,6 +85,16 @@ describe("Tests DateTime.lua functions", function()
       assert.error_matches(function() shms(-math.huge) end, message)
       assert.error_matches(function() shms(0/0) end, message)
       assert.error_matches(function() shms("inf") end, message)
+    end)
+
+    it("should raise its documented assertion for a count too large to split into whole seconds", function()
+      local message = "Please supply a valid number"
+      assert.error_matches(function() shms(1e300) end, message)
+      assert.error_matches(function() shms(-1e300) end, message)
+      assert.error_matches(function() shms(2^63) end, message)
+      assert.error_matches(function() shms(2^53) end, message)
+      assert.are.same({'2501999792983', '36', '31'}, {shms(2^53 - 1)})
+      assert.are.same({'-2501999792983', '36', '31'}, {shms(-(2^53 - 1))})
     end)
   end)
 
