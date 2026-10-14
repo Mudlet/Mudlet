@@ -892,6 +892,72 @@ describe("Trigger processing", function()
             end)
         end
 
+        it("should match the colors of a line a trigger rewraps from the unsplit line above it", function()
+            _G.wrapFromAboveMatches = {}
+            local savedWrap = getWindowWrap("main")
+            finally(function()
+                setWindowWrap("main", savedWrap)
+                _G.wrapFromAboveMatches = nil
+            end)
+
+            local wrapped
+            local wrapper = tempRegexTrigger("^WRAPFROMABOVE ", function()
+                setWindowWrap("main", 20)
+                wrapLine("main", getLineNumber() - 1)
+                wrapped = getLines(getLineNumber(), getLineNumber() + 2)
+            end)
+            local colorTrigger = tempAnsiColorTrigger(1, -1,
+                [[table.insert(_G.wrapFromAboveMatches, matches[1])]])
+
+            feedTriggers("\n\27[32mgggg\27[0m\n\27[31mWRAP\27[32mFROMABOVE xxxxxxx yyyyyyyyyy\27[0m\n")
+
+            killTrigger(wrapper)
+            killTrigger(colorTrigger)
+
+            assert.are.same({"WRAPFROMABOVE ", "xxxxxxx yyyyyyyyyy"}, wrapped)
+            assert.are.same({"WRAP"}, _G.wrapFromAboveMatches)
+        end)
+
+        it("should not match colors at the old line number after a nested trigger pass wraps the line above", function()
+            _G.wrapNestedMatches = {}
+            local savedWrap = getWindowWrap("main")
+            finally(function()
+                setWindowWrap("main", savedWrap)
+                _G.wrapNestedMatches = nil
+            end)
+
+            local outerLine, wrappedAbove
+            local inner = tempRegexTrigger("^WRAPNESTED$", function()
+                setWindowWrap("main", 20)
+                wrapLine("main", outerLine - 1)
+                wrappedAbove = getLines(outerLine - 1, outerLine + 1)
+            end)
+            local outer = tempRegexTrigger("^WRAPOUTER$", function()
+                outerLine = getLineNumber()
+                if selectString("OUTER", 1) > -1 then
+                    setFgColor(0, 0, 255)
+                end
+                deselect()
+                resetFormat()
+                feedTriggers("\nWRAPNESTED\n")
+                _G.wrapNestedMatches = {}
+            end)
+            local colorTrigger = tempAnsiColorTrigger(1, -1,
+                [[table.insert(_G.wrapNestedMatches, matches[1])]])
+
+            feedTriggers("\n\27[32mgggggggggg hhhhhhhhhh iiiiiiiiii\27[0m\n\27[31mWRAP\27[32mOUTER\27[0m\n")
+
+            killTrigger(inner)
+            killTrigger(outer)
+            killTrigger(colorTrigger)
+
+            assert.are.same({"gggggggggg ", "hhhhhhhhhh "}, wrappedAbove)
+            -- only the outer pass's matches, which run after the nested pass returns
+            for _, matched in ipairs(_G.wrapNestedMatches) do
+                assert.are.equal("WRAP", matched, "only the red text the game sent should be matched as red")
+            end
+        end)
+
     end)
 
     describe("tempAnsiColorTrigger callbacks", function()

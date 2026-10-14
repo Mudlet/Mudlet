@@ -704,6 +704,8 @@ private:
     enum class PassLineUniformity { Unknown, Uniform, Mixed };
     // Worked out on demand, so a profile with no color triggers never pays for it:
     PassLineUniformity mPreTriggerPassLineUniformity = PassLineUniformity::Unknown;
+    // Lowest line a wrapLine() during the current trigger pass pushed down, or -1:
+    int mFirstLineMovedDown = -1;
     // A line that ended at the game's own wrap column (Host::mUndoServerWrap)
     // is held here instead of being committed, so its continuation can be
     // joined back on and triggers run once over the whole logical line:

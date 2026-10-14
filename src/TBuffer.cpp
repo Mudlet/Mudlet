@@ -2341,6 +2341,8 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
         const int savedPassLineNumber = mPreTriggerPassLineNumber;
         const bool savedPassSnapshotTaken = mPreTriggerPassSnapshotTaken;
         const PassLineUniformity savedPassLineUniformity = mPreTriggerPassLineUniformity;
+        const int savedFirstLineMovedDown = mFirstLineMovedDown;
+        mFirstLineMovedDown = -1;
         mPreTriggerPassLine.swap(mSpareTriggerPassLine);
         mPreTriggerPassLine.clear();
         mPreTriggerPassSnapshotTaken = false;
@@ -2362,7 +2364,12 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
             std::vector<TChar>().swap(mSpareTriggerPassLine);
         }
         mPreTriggerPassLine.swap(savedPassLine);
-        mPreTriggerPassLineNumber = savedPassLineNumber;
+        // A wrap in this pass can move the enclosing pass's line, which wrapLine() cannot see parked here
+        const bool savedPassLineMoved = mFirstLineMovedDown >= 0 && savedPassLineNumber >= mFirstLineMovedDown;
+        mPreTriggerPassLineNumber = savedPassLineMoved ? -1 : savedPassLineNumber;
+        if (savedFirstLineMovedDown >= 0 && (mFirstLineMovedDown < 0 || savedFirstLineMovedDown < mFirstLineMovedDown)) {
+            mFirstLineMovedDown = savedFirstLineMovedDown;
+        }
         mPreTriggerPassSnapshotTaken = savedPassSnapshotTaken;
         mPreTriggerPassLineUniformity = savedPassLineUniformity;
     }
@@ -6101,8 +6108,13 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
     int lineCount = 0;
     for (int i = firstRewrappedLine; i < total; ++i) {
         // A line split above the pass line pushes it down, leaving its index naming other text
-        if (i == mPreTriggerPassLineNumber && firstRewrappedLine + static_cast<int>(queue.size()) != i) {
-            mPreTriggerPassLineNumber = -1;
+        if (firstRewrappedLine + static_cast<int>(queue.size()) != i) {
+            if (mFirstLineMovedDown < 0 || i < mFirstLineMovedDown) {
+                mFirstLineMovedDown = i;
+            }
+            if (i == mPreTriggerPassLineNumber) {
+                mPreTriggerPassLineNumber = -1;
+            }
         }
         lineCount++;
         std::vector<TChar> newBufferLine;
@@ -6140,7 +6152,9 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
             wrapGapList.append(wrapGapBuffer.at(i));
             continue;
         }
-        if (i == mPreTriggerPassLineNumber && mPreTriggerPassSnapshotTaken) {
+        if (i == mPreTriggerPassLineNumber) {
+            // The wrap may have started above this line, so the snapshot at startLine was not this one
+            materialisePreTriggerPassLine(i);
             wrapPreTriggerPassLine(lineBreaks.first(), lineBreaks.first().isNewline ? indent : hangingIndent);
         }
         const QString qIndent(indent, QChar::Space);
