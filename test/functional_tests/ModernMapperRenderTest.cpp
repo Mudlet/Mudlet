@@ -1727,9 +1727,10 @@ private slots:
         QVERIFY(frame.rect().contains(edge) && frame.rect().contains(middle));
         QVERIFY2(brightest(edge) > brightest(middle) + 150, qPrintable(qsl("a room's edge is %1 bright and its middle %2").arg(brightest(edge)).arg(brightest(middle))));
 
-        // Down the edge, the rows a scanline darkens against the others
-        const int from = pixelAt(QVector3D(2.24f, 0.15f, top)).y();
-        const int to = pixelAt(QVector3D(2.24f, -0.15f, top)).y();
+        // Down the edge, the rows a scanline darkens against the others: a little inside it, as the glow is added after the scanlines
+        const int column = pixelAt(QVector3D(2.21f, 0.0f, top)).x();
+        const int from = pixelAt(QVector3D(2.21f, 0.15f, top)).y();
+        const int to = pixelAt(QVector3D(2.21f, -0.15f, top)).y();
         QVERIFY(to - from > 12);
         qint64 dark = 0;
         qint64 light = 0;
@@ -1739,10 +1740,10 @@ private slots:
         for (int row = from; row <= to; ++row) {
             // A scanline is the first third of each period counted up from the bottom, through the pixel's center, as GL counts them
             if (std::fmod(static_cast<float>(frame.height() - 1 - row) + 0.5f, period) < period / 3.0f) {
-                dark += brightness(QPoint(edge.x(), row));
+                dark += brightness(QPoint(column, row));
                 ++darkRows;
             } else {
-                light += brightness(QPoint(edge.x(), row));
+                light += brightness(QPoint(column, row));
                 ++lightRows;
             }
         }
