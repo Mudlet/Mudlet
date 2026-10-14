@@ -4368,7 +4368,7 @@ bool mudlet::openProfile(const QString& profileName, bool connect)
     return loaded;
 }
 
-bool mudlet::requestProfileTabClose(const QString& profileName)
+bool mudlet::requestProfileClose(const QString& profileName)
 {
     const int index = mpTabBar->tabIndex(profileName);
     if (index == -1) {
