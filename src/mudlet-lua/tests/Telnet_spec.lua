@@ -1140,8 +1140,9 @@ describe("Tests the Client.GUI package offer", function()
 
   -- serves content as name.xml from a file: URL, offers it as the game's
   -- interface at this version and waits for the download to be settled one way
-  -- or the other. The test passes cleanUpServedGuis to finally() first
-  local function offerServedGui(name, content, version)
+  -- or the other. afterOffer, if given, runs straight after the offer. The test
+  -- passes cleanUpServedGuis to finally() first
+  local function offerServedGui(name, content, version, afterOffer)
     local source = getMudletHomeDir() .. "/mudlet-spec-servedgui-source"
     local served = source .. "/" .. name .. ".xml"
     local downloaded = getMudletHomeDir() .. "/" .. name .. ".xml"
@@ -1149,10 +1150,11 @@ describe("Tests the Client.GUI package offer", function()
     -- the starter UI stands aside on sysServerGuiInstalled and saves that in its
     -- settings, which are not this spec's to change
     local standAside = BaseUI and BaseUI.standAside
-    local result = {guis = {}, installs = {}, downloaded = downloaded}
+    local result = {guis = {}, listed = {}, installs = {}, downloaded = downloaded}
     local handlers = {
       registerAnonymousEventHandler("sysServerGuiInstalled", function(_, packageName)
         result.guis[#result.guis + 1] = packageName
+        result.listed[#result.listed + 1] = table.contains(getPackages(), packageName)
       end),
       registerAnonymousEventHandler("sysInstallPackage", function(_, packageName)
         result.installs[#result.installs + 1] = packageName
@@ -1210,6 +1212,9 @@ describe("Tests the Client.GUI package offer", function()
     local ok, msg = feedTelnet('<T_IAC><T_SB><O_GMCP>Client.GUI {"version": "' .. (version or "1") .. '", "url": "' .. url .. '"}<T_IAC><T_SE>')
     assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
     assert.is_truthy(downloadStarted(mark, name), "the offer never reached the downloader: " .. displayedSince(mark))
+    if afterOffer then
+      afterOffer()
+    end
     for _ = 1, 300 do
       -- sysInstallPackage is raised a pass after sysServerGuiInstalled
       if (#result.guis > 0 and #result.installs > 0) or shownSince(mark, "was empty") or shownSince(mark, "Package download failed") or shownSince(mark, "Failed to load package") then
@@ -1287,6 +1292,48 @@ describe("Tests the Client.GUI package offer", function()
     assert.is_truthy(shownSince(result.mark, "Upgrading the GUI to new version '3'"), displayedSince(result.mark))
     assert.same({switched}, result.guis, displayedSince(result.mark))
     assert.is_true(table.contains(getPackages(), other), "upgrading one interface uninstalled another")
+  end)
+
+  -- while a profile save runs installPackage() only queues the install, so
+  -- announcing the package then would announce one that is not installed yet
+  it("announces a Client.GUI package only once it is installed when a save was running", function()
+    local name = "mudlet-spec-savedovergui"
+    finally(cleanUpServedGuis)
+    local result = offerServedGui(name, minimalGuiPackage, "1", function()
+      assert.is_true(saveProfile())
+    end)
+    assert.same({name}, result.guis, displayedSince(result.mark))
+    assert.same({true}, result.listed, "the interface was announced before it was installed")
+  end)
+
+  -- installing runs the package's scripts, and an offer handled meanwhile must
+  -- not be taken for the package that has just installed
+  it("records the Client.GUI package that installed, not an offer made while it installed", function()
+    local name, offeredMeanwhile = "mudlet-spec-scriptedgui", "mudlet-spec-meanwhilegui"
+    local mark = getLastLineNumber("main")
+    finally(function()
+      _G.mudletSpecOfferMeanwhile = nil
+      cleanUpServedGuis()
+    end)
+    _G.mudletSpecOfferMeanwhile = function()
+      _G.mudletSpecOfferMeanwhile = nil
+      feedTelnet('<T_IAC><T_SB><O_GMCP>Client.GUI {"version": "2", "url": "' .. offerUrl(offeredMeanwhile) .. '"}<T_IAC><T_SE>')
+    end
+    local scripted = '<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE MudletPackage><MudletPackage version="1.001"><ScriptPackage>'
+      .. '<Script isActive="yes" isFolder="no"><name>mudlet-spec-scriptedgui</name><packageName></packageName>'
+      .. '<script>if mudletSpecOfferMeanwhile then mudletSpecOfferMeanwhile() end</script><eventHandlerList /></Script>'
+      .. '</ScriptPackage></MudletPackage>'
+    local result = offerServedGui(name, scripted, "1")
+    assert.is_truthy(downloadStarted(mark, offeredMeanwhile), "the package's script made no offer: " .. displayedSince(mark))
+    assert.same({name}, result.guis, displayedSince(result.mark))
+    -- the offer made meanwhile is this test's to finish, as in offerGui()
+    for _ = 1, 150 do
+      if shownSince(mark, "Package download failed from '" .. offerUrl(offeredMeanwhile) .. "'") then
+        break
+      end
+      pumpEvents(20)
+    end
+    assert.is_truthy(shownSince(mark, "Package download failed from '" .. offerUrl(offeredMeanwhile) .. "'"), displayedSince(mark))
   end)
 
   -- the recorded version is what decides whether an installed interface is

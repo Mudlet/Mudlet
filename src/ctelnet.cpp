@@ -2092,30 +2092,52 @@ void cTelnet::slot_replyFinished(QNetworkReply* reply)
         reply->deleteLater();
         mpPackageDownloadReply = nullptr;
 
-        // installPackage() reports the reason to the profile itself
-        if (!mpHost->installPackage(mServerPackage, enums::PackageModuleType::Package).first) {
-            return;
-        }
-        mpHost->mServerGUI_Package_version = mServerPackageVersion;
-
-        QString packageName = mServerPackage.section("/", -1);
-        packageName.remove(QLatin1String(".zip"), Qt::CaseInsensitive);
-        packageName.remove(QLatin1String(".trigger"), Qt::CaseInsensitive);
-        packageName.remove(QLatin1String(".xml"), Qt::CaseInsensitive);
-        packageName.remove(QLatin1String(".mpackage"), Qt::CaseInsensitive);
-        packageName.remove(QLatin1Char('/'));
-        packageName.remove(QLatin1Char('\\'));
-        mpHost->mServerGUI_Package_name = packageName;
-
-        // Let scripts (e.g. the preinstalled starter UI) react to the game
-        // having supplied its own interface:
-        TEvent event{};
-        event.mArgumentList.append(qsl("sysServerGuiInstalled"));
-        event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-        event.mArgumentList.append(packageName);
-        event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-        mpHost->raiseEvent(event);
+        // Copies: installing runs the package's scripts, and an offer handled meanwhile replaces both members
+        const QString packagePath = mServerPackage;
+        const QString packageVersion = mServerPackageVersion;
+        installDownloadedGUIPackage(packagePath, packageVersion);
     }
+}
+
+void cTelnet::installDownloadedGUIPackage(const QString& packagePath, const QString& packageVersion)
+{
+    // installPackage() would postpone the install past a running save and answer true at once,
+    // so the version would be recorded and the package announced before it was installed, or at all
+    if (mpHost->currentlySavingProfile()) {
+        connect(
+                mpHost,
+                &Host::profileSaveFinished,
+                this,
+                [this, packagePath, packageVersion]() {
+                    installDownloadedGUIPackage(packagePath, packageVersion);
+                },
+                static_cast<Qt::ConnectionType>(Qt::QueuedConnection | Qt::SingleShotConnection));
+        return;
+    }
+
+    // installPackage() reports the reason to the profile itself
+    if (!mpHost->installPackage(packagePath, enums::PackageModuleType::Package).first) {
+        return;
+    }
+    mpHost->mServerGUI_Package_version = packageVersion;
+
+    QString packageName = packagePath.section("/", -1);
+    packageName.remove(QLatin1String(".zip"), Qt::CaseInsensitive);
+    packageName.remove(QLatin1String(".trigger"), Qt::CaseInsensitive);
+    packageName.remove(QLatin1String(".xml"), Qt::CaseInsensitive);
+    packageName.remove(QLatin1String(".mpackage"), Qt::CaseInsensitive);
+    packageName.remove(QLatin1Char('/'));
+    packageName.remove(QLatin1Char('\\'));
+    mpHost->mServerGUI_Package_name = packageName;
+
+    // Let scripts (e.g. the preinstalled starter UI) react to the game
+    // having supplied its own interface:
+    TEvent event{};
+    event.mArgumentList.append(qsl("sysServerGuiInstalled"));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    event.mArgumentList.append(packageName);
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    mpHost->raiseEvent(event);
 }
 
 void cTelnet::slot_setDownloadProgress(qint64 got, qint64 tot)

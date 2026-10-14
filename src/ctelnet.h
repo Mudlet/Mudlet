@@ -480,6 +480,7 @@ private:
     QString parseGUIUrlFromJSON(const QJsonObject& json);
     bool parseGUIBaseUiDeclinedFromJSON(const QJsonObject& json);
     void downloadAndInstallGUIPackage(const QString& packageName, const QString& fileName, const QString& url);
+    void installDownloadedGUIPackage(const QString& packagePath, const QString& packageVersion);
     void handleGUIPackageInstallationAndUpgrade(QJsonDocument document);
 
     static std::pair<bool, bool> testReadReplayFile();
