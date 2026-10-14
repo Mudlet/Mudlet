@@ -26,8 +26,10 @@
 #include "utils.h"
 
 #include <QFontMetrics>
+#include <QGlyphRun>
 #include <QPainter>
 #include <QStringList>
+#include <QTextLayout>
 
 #include <cmath>
 
@@ -50,24 +52,43 @@ Look look(const TMap& map, const Host& host, const TRoom& room, const int player
     return result;
 }
 
-QString groundGlyph(const EnvironmentKit::Kit ground, const bool gridMode)
+QString groundGlyph(const EnvironmentKit::Kit ground, const bool gridMode, const bool ascii)
 {
     switch (ground) {
     case EnvironmentKit::Kit::Plain:
         return gridMode ? qsl(".") : qsl("\"");
     case EnvironmentKit::Kit::Water:
-        return QString(QChar(0x2248));
+        return ascii ? qsl("~") : QString(QChar(0x2248));
     case EnvironmentKit::Kit::Road:
         return qsl("#");
     case EnvironmentKit::Kit::Forest:
-        return QString(QChar(0x2663));
+        return ascii ? qsl("*") : QString(QChar(0x2663));
     case EnvironmentKit::Kit::Building:
-        return QString(QChar(0x25A0));
+        return ascii ? qsl("=") : QString(QChar(0x25A0));
     }
     return qsl("#");
 }
 
-QString terminalGlyph(const TRoom& room, const Look& look, const bool gridMode, const std::optional<EnvironmentKit::Kit> ground)
+bool fontShows(const QFont& font, const QString& text)
+{
+    QTextLayout layout(text, font);
+    layout.beginLayout();
+    layout.createLine();
+    layout.endLayout();
+    const QList<QGlyphRun> runs = layout.glyphRuns();
+    if (runs.isEmpty()) {
+        return false;
+    }
+    for (const QGlyphRun& run : runs) {
+        // Glyph 0 is every font's "missing glyph" box
+        if (run.glyphIndexes().contains(0)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+QString terminalGlyph(const TRoom& room, const Look& look, const bool gridMode, const std::optional<EnvironmentKit::Kit> ground, const bool asciiGround)
 {
     if (look.playerRoom) {
         return qsl("@");
@@ -88,7 +109,7 @@ QString terminalGlyph(const TRoom& room, const Look& look, const bool gridMode, 
         return qsl(">");
     }
     if (ground) {
-        return groundGlyph(*ground, gridMode);
+        return groundGlyph(*ground, gridMode, asciiGround);
     }
     return gridMode ? qsl(".") : qsl("#");
 }
@@ -112,13 +133,30 @@ QChar terminalLineGlyph(const qreal degrees)
     return QLatin1Char('\\');
 }
 
-QColor environmentColor(const TMap& map, const Host& host, int env)
+namespace {
+// The color an environment is drawn in: an ANSI color's number, or a custom color's environment ID
+std::optional<int> colorEnvironment(const TMap& map, int env)
 {
     if (map.mEnvColors.contains(env)) {
         env = map.mEnvColors[env];
     } else if (!map.mCustomEnvColors.contains(env)) {
-        env = 1;
+        return std::nullopt;
     }
+    if ((env >= 1 && env < 256) || map.mCustomEnvColors.contains(env)) {
+        return env;
+    }
+    return std::nullopt;
+}
+} // namespace
+
+bool environmentDefined(const TMap& map, const int environmentId)
+{
+    return colorEnvironment(map, environmentId).has_value();
+}
+
+QColor environmentColor(const TMap& map, const Host& host, const int environmentId)
+{
+    const int env = colorEnvironment(map, environmentId).value_or(1);
     switch (env) {
     case 1:
         return host.mRed_2;

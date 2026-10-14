@@ -1103,6 +1103,26 @@ qsizetype ModernGLWidget::glyphAtlasCell(const QString& text, const bool add)
     return mGlyphAtlasCells.size() - 1;
 }
 
+QFont ModernGLWidget::terminalGlyphFont(const MapStyle& style) const
+{
+    QFont font = style.labelFont(mpMap->mMapSymbolFont);
+    font.setBold(true);
+    font.setStyleStrategy(QFont::StyleStrategy(QFont::PreferNoShaping | QFont::PreferAntialias | QFont::PreferOutline));
+    return font;
+}
+
+bool ModernGLWidget::groundGlyphShown(const QFont& font, const QString& glyph)
+{
+    if (const QString fontKey = font.key(); fontKey != mGroundGlyphsFontKey) {
+        mGroundGlyphsFontKey = fontKey;
+        mGroundGlyphShown.clear();
+    }
+    if (const auto found = mGroundGlyphShown.constFind(glyph); found != mGroundGlyphShown.cend()) {
+        return *found;
+    }
+    return *mGroundGlyphShown.insert(glyph, RoomAppearance::fontShows(font, glyph));
+}
+
 GLuint ModernGLWidget::glyphAtlasTexture(const QFont& font)
 {
     const QString key = qsl("glyphs");
@@ -1171,6 +1191,7 @@ void ModernGLWidget::renderRooms()
     const bool terminal = style.glyphs == MapStyle::Glyphs::Terminal;
     const bool groundGlyphs = terminal && style.groundGlyphs;
     const QHash<int, EnvironmentKit::Kit> namedKits = groundGlyphs ? EnvironmentKit::stored(mpMap->mUserData) : QHash<int, EnvironmentKit::Kit>();
+    const QFont groundFont = groundGlyphs ? terminalGlyphFont(style) : QFont();
 
     const bool moreTransparent = mpHost->experimentEnabled(qsl("experiment.rendering.more-transparent"));
     const bool playerIcon = mpHost->experimentEnabled(qsl("experiment.3d-player-icon"));
@@ -1493,13 +1514,14 @@ void ModernGLWidget::renderRooms()
             if (groundGlyphs) {
                 ground = EnvironmentKit::forDefinedEnvironment(namedKits, *mpMap, pR->environment, look.color);
             }
-            const QString text = showId ? QString::number(currentRoomId) : RoomAppearance::terminalGlyph(*pR, look, pArea->gridMode, ground);
+            const bool asciiGround = ground && !groundGlyphShown(groundFont, RoomAppearance::groundGlyph(*ground, pArea->gridMode));
+            const QString text = showId ? QString::number(currentRoomId) : RoomAppearance::terminalGlyph(*pR, look, pArea->gridMode, ground, asciiGround);
             const bool symbol = !showId && !look.symbol.isEmpty();
             QColor textColor = symbol ? style.symbolColor(look.symbolColor, roomColor) : style.roomIdColor(roomColor);
             // The highlight fills the cell, so the character goes in reverse video on it
             const bool cellHighlighted = look.highlighted && MapDecals::highlightFillsRoom(style.highlightShape);
             if (cellHighlighted) {
-                textColor = background;
+                textColor = ExitAppearance::contrastColor(style.highlightColorFor(look.highlightColor));
             }
             TerminalCell cell{currentRoomId, text, showId, roomTop, GeometryManager::fadedColor(textColor, fade, fadeTarget), look.playerRoom, {}, hovered, &decals};
             if (look.playerRoom) {
@@ -1508,7 +1530,7 @@ void ModernGLWidget::renderRooms()
             } else if (symbol) {
                 RoomAppearance::Look plainLook = look;
                 plainLook.symbol.clear();
-                cell.plain = RoomAppearance::terminalGlyph(*pR, plainLook, pArea->gridMode, ground);
+                cell.plain = RoomAppearance::terminalGlyph(*pR, plainLook, pArea->gridMode, ground, asciiGround);
                 if (groundGlyphs) {
                     cell.underline = GeometryManager::fadedColor(cellHighlighted ? textColor : roomColor, fade, fadeTarget);
                 }
@@ -1670,9 +1692,7 @@ void ModernGLWidget::renderRooms()
 
     if (terminal) {
         // Every character goes into the atlas before it is drawn, so that it is drawn once for the frame
-        QFont glyphFont = style.labelFont(mpMap->mMapSymbolFont);
-        glyphFont.setBold(true);
-        glyphFont.setStyleStrategy(QFont::StyleStrategy(QFont::PreferNoShaping | QFont::PreferAntialias | QFont::PreferOutline));
+        const QFont glyphFont = terminalGlyphFont(style);
         QSet<QString> needed;
         const auto fillAtlas = [&]() {
             bool whole = true;
