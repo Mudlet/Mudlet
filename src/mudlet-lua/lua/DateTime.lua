@@ -162,7 +162,8 @@ end
 --- @return hours, minutes and seconds as strings
 function shms(seconds, bool)
   seconds = tonumber(seconds)
-  assert(type(seconds) == "number", "Assertion failed for function 'shms' - Please supply a valid number.")
+  -- NaN fails the self-comparison; infinities and NaN pass a type check but have no hours to give
+  assert(type(seconds) == "number" and seconds == seconds and math.abs(seconds) ~= math.huge, "Assertion failed for function 'shms' - Please supply a valid number.")
 
   local s = seconds
   local magnitude = math.floor(math.abs(s))

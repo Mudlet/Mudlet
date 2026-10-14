@@ -78,6 +78,14 @@ describe("Tests DateTime.lua functions", function()
       assert.spy(cecho).was.called(1)
       assert.spy(cecho).was.called_with(expectedString)
     end)
+
+    it("should raise its documented assertion for a count that is not finite", function()
+      local message = "Please supply a valid number"
+      assert.error_matches(function() shms(math.huge) end, message)
+      assert.error_matches(function() shms(-math.huge) end, message)
+      assert.error_matches(function() shms(0/0) end, message)
+      assert.error_matches(function() shms("inf") end, message)
+    end)
   end)
 
   describe("Tests datetime:parse", function()
