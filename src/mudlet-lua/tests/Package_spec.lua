@@ -536,7 +536,7 @@ describe("Tests the functionality of uninstallPackage", function()
   it("returns nil and says so for a package that is not installed", function()
     local ok, err = uninstallPackage("mudlet-spec-never-installed")
     assert.is_nil(ok)
-    assert.is_true(contains(err, "is not installed"), tostring(err))
+    assert.is_true(contains(err, "package 'mudlet-spec-never-installed' is not installed"), tostring(err))
   end)
 
   it("removes the package, its items and its folder, and raises the uninstall events", function()
@@ -1797,12 +1797,27 @@ describe("Tests uninstalling a package while the profile is being saved", functi
     withFixturePackage(minimalPackage)
     assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
     assert.is_true(saveProfile())
+    -- SETUP: see the spec installing a package during a save for why this says one is running
+    assert.is_true(installPackage(""), "SETUP: no profile save was running, so nothing below was refused")
 
     local ok, err = uninstallPackage(minimalPackage)
 
     assert.is_nil(ok)
     assert.is_true(contains(err, "profile save is in progress"), tostring(err))
     assert.is_true(packageInstalled(minimalPackage), "a refused uninstall took the package away")
+  end)
+
+  -- retrying a package that is not installed never works, so a running save must not be given as the reason
+  it("says a package that is not installed is not installed while a save is running", function()
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+    assert.is_true(saveProfile())
+    assert.is_true(installPackage(""), "SETUP: no profile save was running, so nothing below was refused")
+
+    local ok, err = uninstallPackage("mudlet-spec-never-installed")
+
+    assert.is_nil(ok)
+    assert.is_true(contains(err, "is not installed"), tostring(err))
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
   end)
 
   it("reports an uninstall a handler had already carried out as done", function()
