@@ -43,7 +43,7 @@ extern "C" {
 
 static jmp_buf buf;
 
-// lua_tostring() writes %.14g, which does not round-trip every double (#10630);
+// lua_tostring() writes %.14g, which does not round-trip every double;
 // adding digits only until it does keeps a number like 0.1 written as 0.1.
 static QString numberToText(const lua_Number number)
 {

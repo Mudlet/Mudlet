@@ -3097,16 +3097,14 @@ describe("Tests exporting the profile to a file with saveProfile", function()
   end)
 end)
 
--- A package's VariablePackage is read the way a profile load reads its saved
--- variables, and marks what it holds as saved - so installing one and saving
--- the profile sends a variable out through the writer, and installing what was
--- written brings it back in through the reader, as the next profile load would.
+-- A package's VariablePackage is read and marked saved as a profile load does, so
+-- installing what saveProfile() wrote brings it back through the profile reader.
 describe("Tests a saved variable's round trip through a profile save", function()
   local name = "mudlet-spec-saved-variable"
   local reloadedName = name .. "-reloaded"
   local xml = getMudletHomeDir() .. "/" .. name .. ".xml"
   local reloadedXml = getMudletHomeDir() .. "/" .. reloadedName .. ".xml"
-  local written, reloaded
+  local written, writtenRoot, reloaded
 
   -- mudletSpecSaved's own group out of the whole profile save, nested groups and all
   local function savedGroup(document)
@@ -3127,16 +3125,20 @@ describe("Tests a saved variable's round trip through a profile save", function(
       '<VariablePackage>',
       '<VariableGroup><name>mudletSpecSaved</name><keyType>4</keyType><value></value><valueType>5</valueType>',
       '</VariableGroup>',
+      '<Variable><name>mudletSpecSavedRoot</name><keyType>4</keyType><value>0</value><valueType>3</valueType></Variable>',
       '</VariablePackage>',
     }, "\n"))
     installUntilConfirmed(installPackage, xml, function() return packageInstalled(name) end, "the package " .. name)
     assert.is_table(mudletSpecSaved, "the package did not create mudletSpecSaved")
+    -- busted gives the spec file its own globals, so a bare assignment would not reach _G
+    _G.mudletSpecSavedRoot = 1 / 3
 
     mudletSpecSaved.third = 1 / 3
     mudletSpecSaved.pi = math.pi
     mudletSpecSaved.fifteenDigits = 123456789012345
     mudletSpecSaved.tenth = 0.1
-    mudletSpecSaved.negativeZero = -0.0
+    -- computed at run time: Lua 5.1 folds a -0.0 literal onto any earlier 0 constant
+    mudletSpecSaved.negativeZero = 1 / -math.huge
     mudletSpecSaved.pastTwoToThe53 = 2 ^ 53 + 2
     mudletSpecSaved.hugeNegative = -1e300
     mudletSpecSaved.smallestSubnormal = 5e-324
@@ -3148,10 +3150,14 @@ describe("Tests a saved variable's round trip through a profile save", function(
     local ok, savedPath = saveProfile()
     assert.is_true(ok, savedPath)
     assert.is_true(waitForProfileSaveToPass(), "the profile save did not finish")
-    written = savedGroup(readFile(savedPath))
+    local document = readFile(savedPath)
+    written = savedGroup(document)
+    writtenRoot = document:match("<Variable>%s*<name>mudletSpecSavedRoot</name>.-</Variable>")
+    assert.is_not_nil(writtenRoot, "the profile save does not hold mudletSpecSavedRoot")
 
     _G.mudletSpecSaved = nil
-    writePackageXml(reloadedXml, "<VariablePackage>\n" .. written .. "\n</VariablePackage>")
+    _G.mudletSpecSavedRoot = nil
+    writePackageXml(reloadedXml, "<VariablePackage>\n" .. written .. "\n" .. writtenRoot .. "\n</VariablePackage>")
     installUntilConfirmed(installPackage, reloadedXml, function() return packageInstalled(reloadedName) end, "the package " .. reloadedName)
     reloaded = _G.mudletSpecSaved
     assert.is_table(reloaded, "the written group did not create mudletSpecSaved again")
@@ -3159,6 +3165,7 @@ describe("Tests a saved variable's round trip through a profile save", function(
 
   teardown(function()
     _G.mudletSpecSaved = nil
+    _G.mudletSpecSavedRoot = nil
     removeFixturePackage(reloadedName)
     removeFixturePackage(name)
     os.remove(xml)
@@ -3170,6 +3177,7 @@ describe("Tests a saved variable's round trip through a profile save", function(
     assert.equals(math.pi, reloaded.pi)
     assert.equals(123456789012345, reloaded.fifteenDigits)
     assert.is_true(contains(written, "<value>0.1</value>"), "0.1 was not written as short as it reads back: " .. written)
+    assert.equals(1 / 3, _G.mudletSpecSavedRoot)
   end)
 
   it("keeps the numbers at the edges of what a double holds", function()
