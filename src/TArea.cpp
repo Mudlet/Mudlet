@@ -50,7 +50,8 @@ static const QColor defaultLabelForeground(QColor(0, 0, 0));
 static const QColor defaultLabelBackground(QColor(0, 0, 0));
 static const int kPixmapDataLineSize = 64;
 
-// The span index files y negated; INT_MIN has no negation in an int, so saturate it.
+// The span index files y negated. INT_MIN has no negation in an int, so it saturates to INT_MAX, which
+// leaves the area's extent one row short of a room at INT_MIN; the extents are ints in the map file.
 static int spanIndexY(const int y)
 {
     return y == std::numeric_limits<int>::min() ? std::numeric_limits<int>::max() : -y;
