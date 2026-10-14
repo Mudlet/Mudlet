@@ -4930,6 +4930,14 @@ describe("Tests saveJsonMap and loadJsonMap", function()
       it("is ignored when it is not a number", function()
         assert.are.equal(20, getMapZoom(importWithZoom(', "zoom2D": "33"')))
       end)
+
+      -- a format 20 binary save by Mudlet 5.0.1 or older put this key into the
+      -- live area user data, so that build's JSON export carried it
+      it("is taken from the legacy fallback user data key of an older export", function()
+        local area = importWithZoom(', "userData": {"system.fallback_map2DZoom": "33"}')
+        assert.are.equal(33, getMapZoom(area))
+        assert.is_nil(getAllAreaUserData(area)["system.fallback_map2DZoom"])
+      end)
     end)
   end)
 

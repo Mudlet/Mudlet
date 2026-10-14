@@ -864,10 +864,15 @@ std::pair<int, QString> TArea::readJsonArea(const QJsonArray& array, const int a
     const int id = areaObj.value(QLatin1String("id")).toInt();
     const QString name{areaObj.value(QLatin1String("name")).toString()};
     gridMode = areaObj.value(QLatin1String("gridMode")).toBool();
-    if (areaObj.value(QLatin1String("zoom2D")).isDouble()) {
-        set2DMapZoom(areaObj.value(QLatin1String("zoom2D")).toDouble());
+    const QJsonObject userDataObj{areaObj.value(QLatin1String("userData")).toObject()};
+    const QJsonValue zoomValue{areaObj.value(QLatin1String("zoom2D"))};
+    if (zoomValue.isDouble()) {
+        set2DMapZoom(zoomValue.toDouble());
+    } else {
+        // an export by Mudlet 5.0.1 or older after a format 20 binary save holds the zoom only here
+        set2DMapZoom(userDataObj.value(QLatin1String("system.fallback_map2DZoom")).toString().toDouble());
     }
-    readJsonUserData(areaObj.value(QLatin1String("userData")).toObject());
+    readJsonUserData(userDataObj);
     int roomCount = 0;
     for (int roomIndex = 0, total = areaObj.value(QLatin1String("rooms")).toArray().count(); roomIndex < total; ++roomIndex) {
         TRoom* pR = new TRoom(mpRoomDB);
