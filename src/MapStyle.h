@@ -142,7 +142,7 @@ struct MapStyle
     // Used instead of the profile's mapper background where the profile keeps the default black; invalid to keep it
     QColor defaultBackground;
     HighlightShape highlightShape = HighlightShape::Disc;
-    // Every shape but the disc in this color; invalid for the room's own highlight color
+    // Only for a highlighted room without a valid color of its own: a script's highlightRoom() colors carry meaning
     QColor highlightColor;
     // How much bigger than the highlight radius the room was given a shape is drawn, but for the cell
     float highlightScale = 1.0f;
@@ -240,6 +240,8 @@ struct MapStyle
     QColor roomBorderColor(const QColor& profileBorder, const QColor& roomColor, const QColor& background) const;
     // A room's name color, given the color it was given as user data
     QColor roomNameColorFor(const QString& roomColorData, const QColor& background) const;
+    // A highlighted room's highlight color, given the one it was highlighted in
+    QColor highlightColorFor(const QColor& roomHighlightColor) const;
     QColor roomColor(const QColor& environmentColor) const;
     QColor backgroundColor(const QColor& profileBackground) const;
     bool roundRooms(bool profileRoundRooms) const;

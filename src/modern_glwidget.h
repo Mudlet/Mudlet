@@ -238,6 +238,9 @@ private:
     QHash<QString, qsizetype> mGlyphAtlasIndex;
     qsizetype mGlyphAtlasDrawnCells = 0;
     QString mGlyphAtlasFontKey;
+    // Whether the glyph font, by its key, shows each ground's character, which a font without one would draw as a box
+    QString mGroundGlyphsFontKey;
+    QHash<QString, bool> mGroundGlyphShown;
     // A room's ink outline, by everything it is made from
     struct InkOutline
     {
@@ -491,6 +494,8 @@ private:
     qsizetype glyphAtlasCell(const QString& text, bool add = true);
     // Every cell's text in white on clear, to be tinted as drawn, in one texture; 0 if it could not be made
     GLuint glyphAtlasTexture(const QFont& font);
+    QFont terminalGlyphFont(const MapStyle& style) const;
+    bool groundGlyphShown(const QFont& font, const QString& glyph);
     void reportContextCreationFailure();
     bool contextCreationFailed() const;
     void startSmoothTransition(int targetAID, int targetX, int targetY, int targetZ);
