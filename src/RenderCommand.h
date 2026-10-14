@@ -38,10 +38,9 @@ class RenderCommand
 {
 public:
     // Unlit draws its colors as given, as the 2D map does; lit shades them by the light; wireframe draws an
-    // instanced shape's edges unlit, as glowing lines, and outline the same without its faint fill across the faces.
-    // Only instanced shapes support them and the unlit ink ones, and only plain triangles, given in clip space, support
-    // Paper
-    enum class Shading { Lit, Unlit, Wireframe, Outline, InkBlot, InkStroke, Seal, Paper };
+    // instanced shape's edges unlit, as glowing lines, and only instanced shapes support it and the unlit ink ones,
+    // and only plain triangles, given in clip space, support Paper
+    enum class Shading { Lit, Unlit, Wireframe, InkBlot, InkStroke, Seal, Paper };
 
     virtual ~RenderCommand() = default;
     virtual void execute(QOpenGLFunctions* gl,
