@@ -3819,6 +3819,7 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
         return {false, (translatableTexts ? tr("aborted by user") : qsl("aborted by user"))};
     }
 
+    // Not before the abort check above, so a cancelled import leaves the live map alone:
     mCustomEnvColors.swap(customEnvColors);
     mEnvColors.swap(envColors);
     mUserData.swap(userData);
@@ -3877,8 +3878,6 @@ void TMap::writeJsonUserData(QJsonObject& obj) const
     obj.insert(QLatin1String("userData"), jsonValue);
 }
 
-// Keeps only the string values. The caller swaps the result in after its abort
-// check, so a cancelled import leaves the live map user data alone.
 QMap<QString, QString> TMap::readJsonUserData(const QJsonObject& obj)
 {
     QMap<QString, QString> userData;
