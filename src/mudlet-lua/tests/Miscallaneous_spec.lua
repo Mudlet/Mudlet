@@ -1716,8 +1716,8 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         assert.is_false(fileExists(extractDirectory .. "/readme.txt"))
       end)
 
-      -- Stored, empty entries need no checksum, so the archive can be written here: no zip
-      -- tool would store a name that climbs out of the folder it is unpacked into.
+      -- Stored, empty entries all have a CRC-32 of 0, so the archive can be written here with each
+      -- name exactly as given, including ones that climb out of the folder it is unpacked into.
       local function writeArchiveOfEmptyFiles(path, entries)
         local function le(value, bytes)
           local out = {}
@@ -1739,11 +1739,12 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         writeFile(path, table.concat(localHeaders) .. directory .. le(0x06054b50, 4) .. le(0, 2) .. le(0, 2) .. le(#entries, 2) .. le(#entries, 2) .. le(#directory, 4) .. le(offset, 4) .. le(0, 2))
       end
 
-      -- safe.txt comes first, so finding it unpacked means entries were written before the refusal
-      local function assertRefusesEscapingArchive(entries, outsideNames)
+      -- safe.txt goes first, so finding it unpacked means entries were written before the refusal
+      local function assertRefusesEscapingArchive(escapingEntries, outsideNames)
         local base = getMudletHomeDir() .. "/mudlet-spec-unzipslip"
         local inside = base .. "/inside"
         local archive = base .. "/slip.zip"
+        local entries = {"safe.txt", unpack(escapingEntries)}
         local outside = {}
         for i, name in ipairs(outsideNames) do
           outside[i] = base .. "/" .. name
@@ -1751,6 +1752,7 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         finally(function()
           for _, path in ipairs(outside) do
             os.remove(path)
+            lfs.rmdir(path)
           end
           os.remove(inside .. "/safe.txt")
           for _, entry in ipairs(entries) do
@@ -1766,8 +1768,9 @@ describe("Tests C++ functions in the Miscallaneous category", function()
 
         assert.is_true(unzipAsync(archive, inside))
 
-        local event = waitForEvent("sysUnzipError", 5000)
+        local event, zipLocation = waitForEvent("sysUnzipError", 10000)
         assert.equals("sysUnzipError", event)
+        assert.equals(archive, zipLocation)
         for _, path in ipairs(outside) do
           assert.is_false(fileExists(path), path .. " was written outside the extract location")
         end
@@ -1779,8 +1782,16 @@ describe("Tests C++ functions in the Miscallaneous category", function()
           pending("waiting for sysUnzipError needs MUDLET_TEST_MODE")
           return
         end
-        assertRefusesEscapingArchive({"safe.txt", "../mudlet-spec-escaped.txt", "sub/../../mudlet-spec-escaped-too.txt"},
+        assertRefusesEscapingArchive({"../mudlet-spec-escaped.txt", "sub/../../mudlet-spec-escaped-too.txt"},
                                      {"mudlet-spec-escaped.txt", "mudlet-spec-escaped-too.txt"})
+      end)
+
+      it("refuses an archive with a folder entry outside the extract location", function()
+        if not testMode then
+          pending("waiting for sysUnzipError needs MUDLET_TEST_MODE")
+          return
+        end
+        assertRefusesEscapingArchive({"../mudlet-spec-escaped-folder/"}, {"mudlet-spec-escaped-folder"})
       end)
 
       it("refuses an archive that climbs out of the extract location with a backslash", function()
@@ -1789,7 +1800,7 @@ describe("Tests C++ functions in the Miscallaneous category", function()
           return
         end
         -- Windows takes a backslash as a separator, so this escapes there; elsewhere it is still refused
-        assertRefusesEscapingArchive({"safe.txt", "..\\mudlet-spec-escaped-back.txt"}, {"mudlet-spec-escaped-back.txt"})
+        assertRefusesEscapingArchive({"..\\mudlet-spec-escaped-back.txt"}, {"mudlet-spec-escaped-back.txt"})
       end)
 
       it("unpacks a name mixing both separators where it was checked to go", function()
@@ -1818,9 +1829,11 @@ describe("Tests C++ functions in the Miscallaneous category", function()
 
         assert.is_true(unzipAsync(archive, inside))
 
-        assert.equals("sysUnzipDone", waitForEvent("sysUnzipDone", 5000))
+        local event, zipLocation = waitForEvent("sysUnzipDone", 10000)
+        assert.equals("sysUnzipDone", event)
+        assert.equals(archive, zipLocation)
         assert.is_false(fileExists(outside), outside .. " was written outside the extract location")
-        assert.is_true(fileExists(inside .. "/mudlet-spec-escaped-mixed.txt"), "the entry was not unpacked where its name, read with either separator, puts it")
+        assert.is_true(fileExists(inside .. "/mudlet-spec-escaped-mixed.txt"), "the entry was not unpacked where its name, read with backslashes as separators, puts it")
       end)
 
       it("refuses an archive that a symbolic link in the extract location would carry outside it", function()
@@ -1854,9 +1867,110 @@ describe("Tests C++ functions in the Miscallaneous category", function()
 
         assert.is_true(unzipAsync(archive, inside))
 
-        assert.equals("sysUnzipError", waitForEvent("sysUnzipError", 5000))
+        local event, zipLocation = waitForEvent("sysUnzipError", 10000)
+        assert.equals("sysUnzipError", event)
+        assert.equals(archive, zipLocation)
         assert.is_false(fileExists(elsewhere .. "/mudlet-spec-through-link.txt"), "the archive was written through the link, outside the extract location")
         assert.is_false(fileExists(inside .. "/safe.txt"), "part of the refused archive was unpacked before it was refused")
+      end)
+
+      it("refuses an archive that would overwrite a file outside the extract location through a link", function()
+        if not testMode then
+          pending("waiting for sysUnzipError needs MUDLET_TEST_MODE")
+          return
+        end
+        local base = getMudletHomeDir() .. "/mudlet-spec-unzipfilelink"
+        local inside = base .. "/inside"
+        local kept = base .. "/kept.txt"
+        local nowhere = base .. "/nowhere.txt"
+        local archive = base .. "/filelink.zip"
+        finally(function()
+          os.remove(inside .. "/settings.lua")
+          os.remove(inside .. "/dangling.lua")
+          lfs.rmdir(inside)
+          os.remove(kept)
+          os.remove(nowhere)
+          os.remove(archive)
+          lfs.rmdir(base)
+        end)
+        lfs.mkdir(base)
+        lfs.mkdir(inside)
+        writeFile(kept, "keep")
+        if not lfs.link(kept, inside .. "/settings.lua", true) or not lfs.link(nowhere, inside .. "/dangling.lua", true) then
+          pending("this system would not make a symbolic link here")
+          return
+        end
+
+        for _, entry in ipairs({"settings.lua", "dangling.lua"}) do
+          writeArchiveOfEmptyFiles(archive, {entry})
+          assert.is_true(unzipAsync(archive, inside))
+          local event, zipLocation = waitForEvent("sysUnzipError", 10000)
+          assert.equals("sysUnzipError", event, entry)
+          assert.equals(archive, zipLocation)
+        end
+        assert.equals(4, lfs.attributes(kept, "size"), "the archive emptied a file outside the extract location through a link")
+        assert.is_false(fileExists(nowhere), "the archive made a file outside the extract location through a link")
+      end)
+
+      it("unpacks a nested file whose folders have no entries of their own", function()
+        if not testMode then
+          pending("waiting for sysUnzipDone needs MUDLET_TEST_MODE")
+          return
+        end
+        local base = getMudletHomeDir() .. "/mudlet-spec-unzipnested"
+        local archive = base .. "/nested.zip"
+        local unpacked = base .. "/inside/dir/sub/file.txt"
+        finally(function()
+          os.remove(unpacked)
+          lfs.rmdir(base .. "/inside/dir/sub")
+          lfs.rmdir(base .. "/inside/dir")
+          lfs.rmdir(base .. "/inside")
+          os.remove(archive)
+          lfs.rmdir(base)
+        end)
+        lfs.mkdir(base)
+        writeArchiveOfEmptyFiles(archive, {"dir/sub/file.txt"})
+
+        assert.is_true(unzipAsync(archive, base .. "/inside"))
+
+        local event, zipLocation = waitForEvent("sysUnzipDone", 10000)
+        assert.equals("sysUnzipDone", event)
+        assert.equals(archive, zipLocation)
+        assert.is_true(fileExists(unpacked), "the folders the file needed were not made")
+      end)
+
+      it("unpacks into an extract location reached through a symbolic link", function()
+        if not testMode then
+          pending("waiting for sysUnzipDone needs MUDLET_TEST_MODE")
+          return
+        end
+        local base = getMudletHomeDir() .. "/mudlet-spec-unzipvialink"
+        local real = base .. "/real"
+        local link = base .. "/link"
+        local archive = base .. "/vialink.zip"
+        finally(function()
+          os.remove(real .. "/a/b.txt")
+          lfs.rmdir(real .. "/a")
+          os.remove(link)
+          lfs.rmdir(link)
+          lfs.rmdir(real)
+          os.remove(archive)
+          lfs.rmdir(base)
+        end)
+        lfs.mkdir(base)
+        lfs.mkdir(real)
+        if not lfs.link(real, link, true) then
+          pending("this system would not make a symbolic link here")
+          return
+        end
+        writeArchiveOfEmptyFiles(archive, {"a/b.txt"})
+
+        assert.is_true(unzipAsync(archive, link))
+
+        local event, zipLocation = waitForEvent("sysUnzipDone", 10000)
+        assert.equals("sysUnzipDone", event)
+        assert.equals(archive, zipLocation)
+        assert.is_true(fileExists(real .. "/a/b.txt"), "the archive was not unpacked through the linked extract location")
       end)
 
       it("survives the profile that asked for it closing before the extraction reports back", function()

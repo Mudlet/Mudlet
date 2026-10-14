@@ -177,9 +177,9 @@ local function writePackageXml(path, body, version)
   file:close()
 end
 
--- Writes a zip archive of empty, stored files under the given names. Empty entries need no
--- checksum, so this can be done here, and it can store names that no zip tool would - one
--- that climbs out of the folder it is unpacked into, say.
+-- Writes a zip archive of empty, stored files under the given names, each exactly as given -
+-- one that climbs out of the folder it is unpacked into, say. Empty entries all have a CRC-32
+-- of 0, so this can be done here.
 local function writeArchiveOfEmptyFiles(path, entries)
   local function le(value, bytes)
     local out = {}
