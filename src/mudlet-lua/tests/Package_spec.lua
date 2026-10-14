@@ -2369,12 +2369,12 @@ describe("Tests the functionality of installPackageFromUrl", function()
     local ok, reason = installPackageFromUrl(downloadedName, url)
 
     assert.is_nil(ok)
-    assert.equals("mudlet-spec-refusal", reason)
+    assert.equals("Could not download package from " .. url .. ": mudlet-spec-refusal", reason)
     local text = textFrom(mark)
-    assert.is_true(containsWrapped(text, "Could not download package from " .. url .. ": mudlet-spec-refusal"), text)
+    assert.is_true(containsWrapped(text, reason), text)
     assert.is_false(containsWrapped(text, "Downloading package from"), text)
     -- installPackage() hands a URL on, and the refusal with it
-    assert.same({nil, "mudlet-spec-refusal"}, {installPackage(url)})
+    assert.same({nil, reason}, {installPackage(url)})
     -- a download that never started leaves nothing waiting for one to the same file
     raiseEvent("sysDownloadDone", destination)
     assert.same({}, installed)
@@ -2390,7 +2390,7 @@ describe("Tests the functionality of installPackageFromUrl", function()
     local ok, reason = installPackageFromUrl(downloadedName, "")
 
     assert.is_nil(ok)
-    assert.is_truthy(tostring(reason):find("url is invalid", 1, true), tostring(reason))
+    assert.is_truthy(tostring(reason):find("Could not download package from : url is invalid", 1, true), tostring(reason))
     local text = textFrom(mark)
     assert.is_true(containsWrapped(text, "Could not download package from"), text)
     assert.is_false(containsWrapped(text, "Downloading package from"), text)
@@ -2437,6 +2437,79 @@ describe("Tests the functionality of installPackageFromUrl", function()
 
     assert.equals(1, attempts)
     assert.is_false(fileExists(destination), "the download was left in the profile")
+  end)
+
+  it("lets a retry through once the pending download has made no progress for a while", function()
+    local installed = fakeDownloads()
+    local destination = getMudletHomeDir() .. "/" .. downloadedName
+    local stalledUrl = "http://127.0.0.1/stalled/" .. downloadedName
+    local retryUrl = "http://127.0.0.1/retry/" .. downloadedName
+    local realTime = _G.os.time
+    defer(function() _G.os.time = realTime end)
+    local now = realTime()
+    _G.os.time = function() return now end
+
+    assert.is_true(installPackageFromUrl(downloadedName, stalledUrl))
+    now = now + 25
+    raiseEvent("sysDownloadFileProgress", stalledUrl, 10, 1000)
+    now = now + 25
+    assert.is_nil((installPackageFromUrl(downloadedName, retryUrl)), "a download making progress was taken over")
+    now = now + 10
+    assert.is_true(installPackageFromUrl(downloadedName, retryUrl))
+
+    -- the stalled download no longer claims a completion of the file
+    raiseEvent("sysDownloadDone", destination)
+    raiseEvent("sysDownloadDone", destination)
+    assert.same({destination}, installed)
+  end)
+
+  it("lets the package being installed download its own file again", function()
+    local installed = fakeDownloads()
+    local destination = getMudletHomeDir() .. "/" .. downloadedName
+    local updateUrl = "http://127.0.0.1/update/" .. downloadedName
+    local again
+    _G.verbosePackageInstall = function(path)
+      installed[#installed + 1] = path
+      if #installed == 1 then
+        again = {installPackageFromUrl(downloadedName, updateUrl)}
+      end
+    end
+
+    installPackageFromUrl(downloadedName, "http://127.0.0.1/" .. downloadedName)
+    raiseEvent("sysDownloadDone", destination)
+
+    assert.same({true}, again)
+    raiseEvent("sysDownloadDone", destination)
+    assert.same({destination, destination}, installed)
+  end)
+
+  it("has verbosePackageInstall() of a URL announce the download, not an install", function()
+    local realVerboseInstall = _G.verbosePackageInstall
+    local url = "http://127.0.0.1/" .. downloadedName
+    local installed = fakeDownloads()
+    local mark = getLastLineNumber("main")
+
+    realVerboseInstall(url)
+
+    local text = textFrom(mark)
+    assert.is_true(containsWrapped(text, "Downloading package from " .. url), text)
+    assert.is_false(containsWrapped(text, "installed successfully"), text)
+    assert.same({}, installed)
+    raiseEvent("sysDownloadDone", getMudletHomeDir() .. "/" .. downloadedName)
+    assert.same({getMudletHomeDir() .. "/" .. downloadedName}, installed)
+  end)
+
+  it("has verbosePackageInstall() of a refused URL report it once", function()
+    local realVerboseInstall = _G.verbosePackageInstall
+    local url = "http://127.0.0.1/" .. downloadedName
+    fakeDownloads(function() return nil, "mudlet-spec-refusal" end)
+    local mark = getLastLineNumber("main")
+
+    realVerboseInstall(url)
+
+    local text = textFrom(mark)
+    assert.is_true(containsWrapped(text, "Could not download package from " .. url .. ": mudlet-spec-refusal"), text)
+    assert.is_false(containsWrapped(text, "Installing '"), text)
   end)
 
   it("refuses a second download of a file that is still being downloaded", function()
