@@ -3693,6 +3693,43 @@ describe("Tests db:create on underscored keys that are not sheet options", funct
     assert.are.equal("", warnings)
   end)
 
+  it("says nothing about the sheet options it knows in a sheet given as a list", function()
+    local _, warnings = createCollectingWarnings({
+      people = {"name", "city", _index = "city", _unique = "name", _violations = "IGNORE"},
+    })
+    assert.are.equal("", warnings)
+  end)
+
+  it("ignores the key it warns about", function()
+    local mydb, warnings = createCollectingWarnings({
+      people = {name = "", _indexes = {"name"}},
+      places = {"name", _uniqe = {"name"}},
+    })
+    assert.are.equal(
+      'db:create - people - "_indexes" is not a sheet option (those are _index, _unique and _violations): it is ignored.\n'..
+      'db:create - places - "_uniqe" is not a sheet option (those are _index, _unique and _violations): it is ignored.',
+      warnings)
+    assert.is_true(db:add(mydb.places, {name = "Lancre"}))
+    assert.is_true(db:add(mydb.places, {name = "Lancre"}))
+    assert.are.equal(2, #db:fetch(mydb.places))
+
+    local cursor = db.__conn[dbName]:execute("SELECT name FROM sqlite_master WHERE type = 'index' AND tbl_name = 'people'")
+    local index = cursor:fetch()
+    cursor:close()
+    assert.is_nil(index)
+  end)
+
+  it("warns about each unknown key in order, telling a capitalised option from the real one", function()
+    local _, warnings = createCollectingWarnings({
+      people = {name = "", _zeta = 1, _UNIQUE = {"name"}, _alpha = 2, _Index = {"name"}},
+    })
+    local named = {}
+    for key in warnings:gmatch('"(_%w+)" is not a sheet option') do
+      named[#named + 1] = key
+    end
+    assert.are.same({"_Index", "_UNIQUE", "_alpha", "_zeta"}, named)
+  end)
+
   it("names _violations when its value is refused, the key the unknown-key warning sends the user back to", function()
     local ok, err = pcall(function()
       return createCollectingWarnings({people = {name = "", _unique = {"name"}, _violations = "SKIP"}})

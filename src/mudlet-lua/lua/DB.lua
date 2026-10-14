@@ -488,8 +488,8 @@ function db:create(db_name, sheets, force)
     -- the sheet was provided in {"column1", "column2"} format
     if sheet[1] ~= nil then
       -- The list holds the column names, which are text defaulting to "". A key
-      -- is a sheet option when it starts with an underscore and an error
-      -- otherwise: sweeping keys in with the column names would make a column
+      -- is taken as a sheet option when it starts with an underscore and is an
+      -- error otherwise: sweeping keys in with the column names would make a column
       -- out of an index definition. Numeric keys are checked against #sheet so
       -- that a stray [7] in a two-item list is not taken for a column name.
       -- These stay hard errors rather than being skipped the way an unusable
