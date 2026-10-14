@@ -165,8 +165,11 @@ private:
             return true;
         }
         QSignalSpy connected(&(mpHost->mTelnet), &cTelnet::signal_connected);
+        QSignalSpy accepted(mpServer, &QTcpServer::newConnection);
         mpHost->mTelnet.connectIt(mLocalhost, mpServer->serverPort());
-        return connected.wait(15s);
+        // Mudlet's end can be connected before the stub has accepted it, and
+        // the stub drops what it is given to send between sessions
+        return connected.wait(15s) && (accepted.count() || accepted.wait(15s));
     }
 
     // The game's last words: a compressed burst, as much again uncompressed and
