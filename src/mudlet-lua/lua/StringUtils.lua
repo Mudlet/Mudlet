@@ -5,17 +5,48 @@
 
 
 
+-- Byte index of the last byte of the character starting at i; a byte that does
+-- not start a complete UTF-8 sequence counts as a character of its own.
+local function utf8CharEnd(s, i)
+  local lead = string.byte(s, i)
+  local continuations = lead < 0xC2 and 0 or lead < 0xE0 and 1 or lead < 0xF0 and 2 or lead < 0xF5 and 3 or 0
+  for k = 1, continuations do
+    local byte = string.byte(s, i + k)
+    if not byte or byte < 0x80 or byte > 0xBF then
+      return i
+    end
+  end
+  return i + continuations
+end
+
 --- Documentation: https://wiki.mudlet.org/w/Manual:String_Functions#string.cut
---- maxLen counts UTF-8 characters (code points), not bytes.
+--- maxLen counts UTF-8 characters (code points), not bytes; each byte that is
+--- not part of a valid UTF-8 sequence counts as one character.
 function string:cut(maxLen)
   if string.len(self) <= maxLen then
     return self
   end
   -- plain Lua has no utf8.sub: generate-changelog.lua runs this file outside Mudlet
-  if utf8 and utf8.sub then
-    return utf8.sub(self, 1, maxLen)
+  local hasUtf8 = utf8 and utf8.sub and utf8.len
+  if maxLen < 0 then
+    return hasUtf8 and utf8.sub(self, 1, maxLen) or string.sub(self, 1, maxLen)
   end
-  return string.sub(self, 1, maxLen)
+  if hasUtf8 then
+    -- utf8.sub folds a run of stray continuation bytes into the character before
+    -- it, so its result is only trusted when it is valid UTF-8
+    local prefix = utf8.sub(self, 1, maxLen)
+    if utf8.len(prefix) then
+      return prefix
+    end
+  end
+  local last = 0
+  for _ = 1, maxLen do
+    last = utf8CharEnd(self, last + 1)
+    if last >= string.len(self) then
+      return self
+    end
+  end
+  return string.sub(self, 1, last)
 end
 
 
