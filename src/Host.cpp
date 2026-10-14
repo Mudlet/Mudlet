@@ -3394,6 +3394,7 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
     QStringList loadErrors;
     // Asked of the reader, not the units: items another install filed under the name are not this one's
     bool anythingWasRead = false;
+    bool fontsWereLoaded = false;
     // A package file that broke before anything could be read out of it would be listed, and saved into the
     // profile, with nothing in it. As nothing of it was applied, taking it back leaves nothing behind. One that
     // got as far as an item, a variable or a setting stays installed and is warned about, as that is in use.
@@ -3576,7 +3577,7 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         // XML below is imported, because the scripts in it run as they are read
         // in and one of them may well want to use a font the package brought
         if (thing != enums::PackageModuleType::ModuleSync) {
-            installPackageFonts(packageName);
+            fontsWereLoaded = installPackageFonts(packageName);
         }
         QStringList _filterList;
         _filterList << qsl("*.xml") << qsl("*.trigger");
@@ -3740,9 +3741,10 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
     // reorder permanent and temporary triggers: perm first, temp second
     mTriggerUnit.reorderTriggersAfterPackageImport();
 
-    // A module whose XML stopped part-way still runs what was read before the break, so its handlers
-    // hear of it, with the load errors alongside any item's. Only one that brought in nothing goes unannounced.
-    const bool moduleLoadedNothing = thing != enums::PackageModuleType::Package && !mModulesLoadedOk.contains(packageName) && !anythingWasRead;
+    // A module whose XML stopped part-way still runs what was read before the break, and the fonts it
+    // brought, so its handlers hear of it, with the load errors alongside any item's. Only one that brought
+    // in nothing goes unannounced.
+    const bool moduleLoadedNothing = thing != enums::PackageModuleType::Package && !mModulesLoadedOk.contains(packageName) && !anythingWasRead && !fontsWereLoaded;
     QStringList allErrors;
     if (!itemErrors.isEmpty()) {
         allErrors << itemErrors;
@@ -4550,23 +4552,26 @@ QString Host::readProfileData(const QString& item)
 
 // makes fonts in a given package/module be available for Mudlet scripting
 // does not install font system-wide
-void Host::installPackageFonts(const QString& packageName)
+bool Host::installPackageFonts(const QString& packageName)
 {
     auto* fonts = FontManager::self();
     if (!fonts) {
-        return;
+        return false;
     }
     auto packagePath = MudletApp::getMudletPath(enums::profilePackagePath, getName(), packageName);
 
     QDirIterator it(packagePath, QDirIterator::Subdirectories);
+    bool loadedAny = false;
     while (it.hasNext()) {
         auto filePath = it.next();
 
         if (filePath.endsWith(QLatin1String(".otf"), Qt::CaseInsensitive) || filePath.endsWith(QLatin1String(".ttf"), Qt::CaseInsensitive)
             || filePath.endsWith(QLatin1String(".ttc"), Qt::CaseInsensitive) || filePath.endsWith(QLatin1String(".otc"), Qt::CaseInsensitive)) {
             fonts->loadFont(filePath, getName(), packageName);
+            loadedAny = loadedAny || fonts->loadedFontId(filePath, getName()) != -1;
         }
     }
+    return loadedAny;
 }
 
 // ensures fonts from all installed packages are loaded in Mudlet

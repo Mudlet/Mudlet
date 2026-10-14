@@ -1282,7 +1282,8 @@ private:
     void changeSetting(bool& setting, const bool state, const QString& settingName);
     void setBorders(const QMargins);
     void recheckCommandLineSpelling();
-    void installPackageFonts(const QString& packageName);
+    // Whether any font of the package is registered afterwards
+    bool installPackageFonts(const QString& packageName);
     void processGMCPDiscordStatus(const QJsonObject& discordInfo);
     void processGMCPDiscordInfo(const QJsonObject& discordInfo);
     void loadSecuredPassword();
