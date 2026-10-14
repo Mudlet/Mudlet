@@ -295,8 +295,9 @@ end
 -- This is very useful to see where a container actually is if you've
 -- forgotten its details or as an alert function to notify the user.
 -- @param time Time in seconds to flash for, default is 1.0s.
--- @param[opt=true] onHidden Flash even while this container or one of its parents is hidden.
--- Pass false to skip the flash then, e.g. to use it as an alert.
+-- @param[opt=true] onHidden Flash even while this container or one of its parents is hidden through Geyser
+-- (hide(), or created with hidden = true). Pass false to skip the flash then, e.g. to use it as an alert.
+-- A window hidden directly with hideWindow() does not count as hidden here.
 function Geyser.Container:flash (time, onHidden)
   local time = time or 1.0
 
