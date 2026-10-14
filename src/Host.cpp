@@ -1242,6 +1242,9 @@ std::pair<bool, QString> Host::reloadModule(const QString& syncModuleName, const
                     if (auto [reloaded, reason] = reloadModule(syncModuleName); !reloaded) {
                         //: %1 is the name of the module, %2 is the reason the reload that was waiting for a profile save to finish failed
                         postMessage(tr("[ WARN ]  - Module \"%1\" could not be reloaded: %2").arg(syncModuleName, reason));
+                    } else if (!reason.isEmpty()) {
+                        //: %1 is the name of the module, %2 is what went wrong in the parts of it that do not work, after a reload that was waiting for a profile save to finish
+                        postMessage(tr("[ WARN ]  - Module \"%1\" was reloaded, but parts of it are not working: %2").arg(syncModuleName, reason));
                     }
                     obj->deleteLater();
                 },

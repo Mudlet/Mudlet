@@ -1191,6 +1191,23 @@ describe("Tests the functionality of reloadModule", function()
     assert.is_true(ok)
     assert.is_true(contains(err, "mudlet-spec-brokenscripts first"), tostring(err))
   end)
+
+  -- The script was answered before a reload put off by a save is carried out, so
+  -- what its scripts got wrong can only go on the console.
+  it("says on the console what went wrong in a module whose reload was put off by a save", function()
+    local brokenModule = "mudlet-spec-brokenscripts"
+    withFixtureModule(brokenModule)
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+    local mark = getLastLineNumber("main")
+    assert.is_true(saveProfile())
+
+    assert.is_true(reloadModule(brokenModule), "the reload was not put off until the save had finished")
+
+    assert.is_true(waitForProfileSaveToPass(), "the profile save never finished")
+    pumpEvents(200)
+    assert.is_true(containsWrapped(textFrom(mark), 'Module "' .. brokenModule .. '" was reloaded, but parts of it are not working'), textFrom(mark))
+    assert.is_true(containsWrapped(textFrom(mark), "mudlet-spec-brokenscripts first"), textFrom(mark))
+  end)
 end)
 
 -- Runs once the block above has uninstalled the module it shares, which is what
