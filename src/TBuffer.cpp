@@ -2686,10 +2686,8 @@ const std::vector<TChar>* TBuffer::preTriggerPassLine(int lineNumber) const
     return nullptr;
 }
 
-// A structural edit to the trigger-pass line is mirrored in its snapshot, so the
-// snapshot keeps the game's colors at the edited text's offsets. Inserted text,
-// and any padding ahead of it, is new and keeps the colors it was written in.
-// The snapshot must be materialised before the edit is made to the buffer.
+// Both splices need the snapshot materialised before the buffer edit, or a debug build's
+// commitLineData() check fires; inserted text and padding keep the colors they were written in.
 void TBuffer::spliceInsertIntoPreTriggerPassLine(int y, int x, int count, const TChar& format)
 {
     if (!mPreTriggerPassSnapshotTaken || y < 0 || y != mPreTriggerPassLineNumber || y >= static_cast<int>(buffer.size())) {
@@ -5659,7 +5657,7 @@ bool TBuffer::insertInLine(QPoint& P, const QString& text, const TChar& format)
         // which is quadratic for large inserts.
         lineBuffer[y].insert(x, insertedText);
         buffer[y].insert(buffer[y].begin() + x, static_cast<std::size_t>(insertedText.size()), format);
-        spliceInsertIntoPreTriggerPassLine(y, x, insertedText.size(), format);
+        spliceInsertIntoPreTriggerPassLine(y, x, static_cast<int>(insertedText.size()), format);
     } else {
         appendLine(insertedText, 0, insertedText.size(), format.foreground(), format.background(), format.mFlags);
     }
