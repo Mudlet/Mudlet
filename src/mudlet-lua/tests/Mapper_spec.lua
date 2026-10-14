@@ -3353,14 +3353,9 @@ describe("Tests mapper functions against a shared fixture", function()
 
     it("exportAreaImage reports a save that failed against that export alone", function()
       local written, removeAll = expectExports({"mapper_spec_export_ok.png"})
-      -- a directory under the image's name passes every check made before the
-      -- save, which is the only way to reach a save that fails
-      local badPath = exportPath("mapper_spec_export_is_a_dir.png")
-      finally(function()
-        removeAll()
-        lfs.rmdir(badPath)
-      end)
-      assert.is_true(lfs.mkdir(badPath) or lfs.attributes(badPath, "mode") == "directory")
+      finally(removeAll)
+      -- a name longer than file systems allow passes the checks made before the save
+      local badPath = exportPath(string.rep("n", 300) .. ".png")
       assert.is_true(exportAreaImage(areaAlpha, badPath))
       assert.is_true(exportAreaImage(areaAlpha, exportPath("mapper_spec_export_ok.png")))
       assert.is_true(waitUntil(written, 5000))
@@ -3372,8 +3367,6 @@ describe("Tests mapper functions against a shared fixture", function()
       assert.are.equal(1, mainConsoleCount("Failed to save image to " .. badPath))
     end)
 
-    -- the save itself runs on another thread, too late to change the answer
-    -- (#10686), so what can be checked beforehand has to be
     it("exportAreaImage returns false and a message for an empty file name", function()
       local ok, err = exportAreaImage(areaAlpha, "")
       assert.is_false(ok)
@@ -3387,6 +3380,109 @@ describe("Tests mapper functions against a shared fixture", function()
       assert.is_false(ok)
       assert.is_truthy(err:find(missingDirectory, 1, true), err)
       assert.is_nil(lfs.attributes(missingDirectory))
+    end)
+
+    it("exportAreaImage returns false and a message for a path that is a directory", function()
+      local directory = exportPath("mapper_spec_export_dir")
+      local function entries()
+        local found = {}
+        for name in lfs.dir(directory) do
+          if name ~= "." and name ~= ".." then
+            found[#found + 1] = name
+          end
+        end
+        return found
+      end
+      finally(function()
+        for _, name in ipairs(entries()) do
+          os.remove(directory .. "/" .. name)
+        end
+        lfs.rmdir(directory)
+      end)
+      -- a file left under this name by an aborted run would otherwise fail every run after it
+      os.remove(directory)
+      assert.is_true(lfs.mkdir(directory) or lfs.attributes(directory, "mode") == "directory")
+      for _, path in ipairs({directory, directory .. "/"}) do
+        for _, allZLevels in ipairs({{}, {true}}) do
+          local ok, err = exportAreaImage(areaAlpha, path, unpack(allZLevels))
+          assert.is_false(ok)
+          assert.is_truthy(err:find("is a directory", 1, true), err)
+        end
+      end
+      -- "<directory>/" has no base name, so an export of every z level would write "_level_0.png" there
+      pumpEvents(500)
+      assert.are.same({}, entries())
+    end)
+
+    it("exportAreaImage returns false and a message when the directory is a file", function()
+      local file = exportPath("mapper_spec_export_plain_file")
+      finally(function() os.remove(file) end)
+      os.remove(file)
+      io.open(file, "w"):close()
+      local ok, err = exportAreaImage(areaAlpha, file .. "/unsaved.png")
+      assert.is_false(ok)
+      assert.are.equal(file .. " is not a directory", err)
+    end)
+
+    describe("with a target it may not write", function()
+      -- Windows is left out: there the directory check is skipped, and chmod is not to hand
+      local onWindows = getOS() == "windows"
+      local readOnly = exportPath("mapper_spec_export_read_only")
+      local function skipUnlessEnforced()
+        if onWindows then
+          pending("chmod and the directory check are not available on Windows")
+          return true
+        end
+        local probe = io.open(readOnly .. "/probe", "w")
+        if probe then
+          probe:close()
+          os.remove(readOnly .. "/probe")
+          pending("this user can write to a read-only directory, as root can")
+          return true
+        end
+        return false
+      end
+      before_each(function()
+        if onWindows then
+          return
+        end
+        os.execute("chmod 0755 '" .. readOnly .. "'")
+        os.remove(readOnly)
+        assert.is_true(lfs.mkdir(readOnly) or lfs.attributes(readOnly, "mode") == "directory")
+        io.open(readOnly .. "/existing.png", "w"):close()
+        os.execute("chmod 0444 '" .. readOnly .. "/existing.png'")
+        os.execute("chmod 0555 '" .. readOnly .. "'")
+      end)
+      after_each(function()
+        if onWindows then
+          return
+        end
+        os.execute("chmod 0755 '" .. readOnly .. "'")
+        os.execute("chmod 0644 '" .. readOnly .. "/existing.png'")
+        os.remove(readOnly .. "/existing.png")
+        os.remove(readOnly .. "/unsaved.png")
+        lfs.rmdir(readOnly)
+      end)
+
+      it("exportAreaImage returns false and a message for a directory it may not write to", function()
+        if skipUnlessEnforced() then
+          return
+        end
+        local ok, err = exportAreaImage(areaAlpha, readOnly .. "/unsaved.png")
+        assert.is_false(ok)
+        assert.are.equal("Directory " .. readOnly .. " is not writable", err)
+        pumpEvents(500)
+        assert.is_false(io.exists(readOnly .. "/unsaved.png"))
+      end)
+
+      it("exportAreaImage returns false and a message for a file it may not overwrite", function()
+        if skipUnlessEnforced() then
+          return
+        end
+        local ok, err = exportAreaImage(areaAlpha, readOnly .. "/existing.png")
+        assert.is_false(ok)
+        assert.are.equal("File " .. readOnly .. "/existing.png is not writable", err)
+      end)
     end)
 
     it("exportAreaImage returns false and a message for an image format it cannot write", function()

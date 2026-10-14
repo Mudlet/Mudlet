@@ -6366,16 +6366,33 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
     }
 
     // The image is written on another thread, too late for the caller to hear
-    // of a failure, so whatever can be checked beforehand is checked here
-    if (filePath.isEmpty()) {
+    // of a failure, so the likely causes are checked here; others (a full disk,
+    // a name the file system refuses) still only show on the console
+    const QFileInfo targetFileInfo(filePath);
+    if (targetFileInfo.isDir()) {
+        return {false, qsl("%1 is a directory").arg(targetFileInfo.absoluteFilePath())};
+    }
+    if (targetFileInfo.fileName().isEmpty()) {
         return {false, qsl("No file name given")};
     }
-    const QFileInfo targetFileInfo(filePath);
-    // Not isWritable() as well: on Windows that reads the read-only attribute,
-    // which shell folders such as Documents carry and which does not stop a write
-    if (!QFileInfo(targetFileInfo.absolutePath()).isDir()) {
-        return {false, qsl("Directory %1 does not exist").arg(targetFileInfo.absolutePath())};
+    const QString directory = targetFileInfo.absolutePath();
+    const QFileInfo directoryInfo(directory);
+    if (!directoryInfo.exists()) {
+        return {false, qsl("Directory %1 does not exist").arg(directory)};
     }
+    if (!directoryInfo.isDir()) {
+        return {false, qsl("%1 is not a directory").arg(directory)};
+    }
+    if (targetFileInfo.exists() && !targetFileInfo.isWritable()) {
+        return {false, qsl("File %1 is not writable").arg(targetFileInfo.absoluteFilePath())};
+    }
+#if !defined(Q_OS_WIN)
+    // Not on Windows: there isWritable() reads a directory's read-only attribute,
+    // which shell folders such as Documents carry and which does not stop a write
+    if (!targetFileInfo.exists() && !directoryInfo.isWritable()) {
+        return {false, qsl("Directory %1 is not writable").arg(directory)};
+    }
+#endif
     const QString format = targetFileInfo.suffix().isEmpty() ? qsl("png") : targetFileInfo.suffix().toLower();
     if (!QImageWriter::supportedImageFormats().contains(format.toLatin1())) {
         return {false, qsl("Image format \"%1\" is not supported").arg(format)};
