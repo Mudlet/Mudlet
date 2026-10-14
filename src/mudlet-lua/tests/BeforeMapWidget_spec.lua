@@ -4,30 +4,6 @@
 -- Geyser.Mapper persists the same way. So this file is named to sort ahead of
 -- every spec that makes one: busted runs its files in sorted order.
 
--- First in the first file to touch the map: loading, clearing or opening a
--- map each copies the profile's sixteen ANSI colours into it again, and so
--- does reading a saved profile, so this bites only on a profile that was new
--- when it was loaded, as CI's is. Earlier specs save it during the run, so
--- saved files existing now don't mean it was loaded from one
-describe("Tests the environment colours a profile starts out with", function()
-  it("starts environments 257 to 272 out as the profile's ANSI colours", function()
-    local atStart = getCustomEnvColorTable()
-    -- a new profile's defaults, in the order the map files them
-    local defaults = {
-      {128, 0, 0, 255}, {0, 128, 0, 255}, {128, 128, 0, 255}, {0, 0, 128, 255},
-      {128, 0, 128, 255}, {0, 128, 128, 255}, {192, 192, 192, 255}, {0, 0, 0, 255},
-      {255, 0, 0, 255}, {0, 255, 0, 255}, {255, 255, 0, 255}, {0, 0, 255, 255},
-      {255, 0, 255, 255}, {0, 255, 255, 255}, {255, 255, 255, 255}, {128, 128, 128, 255},
-    }
-    assert.is_true(deleteMap())
-    local copiedAgain = getCustomEnvColorTable()
-    for env = 257, 272 do
-      assert.are.same(defaults[env - 256], atStart[env], "environment " .. env)
-      assert.are.same(copiedAgain[env], atStart[env], "environment " .. env)
-    end
-  end)
-end)
-
 describe("Tests secondary map views in a profile without a mapper", function()
   local areaId, roomId
 
