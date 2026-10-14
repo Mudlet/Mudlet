@@ -3922,6 +3922,13 @@ describe("Tests saveMap and loadMap", function()
       assert.are.equal(3, getRoomBorderThickness(room))
     end)
 
+    it("names the missing room before the reserved key in setRoomUserData", function()
+      deleteMap()
+      local ok, err = setRoomUserData(999999, "room.ui_borderColor", "x")
+      assert.is_nil(ok)
+      assert.is_truthy(err:find("999999 is not a valid roomID", 1, true))
+    end)
+
     it("lists each entrance into a room once after a reload", function()
       buildMap()
       assert.are.same({roomA}, getAllRoomEntrances(roomB))
