@@ -1273,6 +1273,8 @@ function db:_migrate(db_name, s_name, force)
         missing[#missing + 1] = { name = k, default = v }
       end
     end
+    -- pairs order follows the Lua build's hashing: sorted, every build adds them alike
+    table.sort(missing, function(a, b) return a.name < b.name end)
 
     if #missing > 0 and
     table.size(current_columns) + #missing == table.size(schema.columns) + 1

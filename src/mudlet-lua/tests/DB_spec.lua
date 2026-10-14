@@ -4444,7 +4444,8 @@ describe("Tests db:create on schemas sqlite refuses or reads differently", funct
     local mydb = createCollectingWarnings({people = {name = ""}})
     assert.is_true(db:add(mydb.people, {name = "Bob"}))
 
-    -- sqlite 3.32 and later refuse a non-constant default only on a sheet holding rows
+    -- sqlite 3.32 and later refuse a non-constant default only on a sheet holding rows.
+    -- "added" sorts first, so a loop that stopped at the refusal would leave out note and city
     local _, warnings = createCollectingWarnings({people = {name = "", added = db:Timestamp("CURRENT_TIMESTAMP"), note = "", city = ""}})
     assert.is_truthy(string.find(warnings, 'db:create - people - could not add the column "added"', 1, true))
     local added = collectingWarnings(function() return db:add(mydb.people, {name = "Ann", note = "n", city = "c"}) end)
