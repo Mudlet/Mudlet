@@ -36,7 +36,7 @@ using namespace std::chrono_literals;
 // uninstallPackage() removes the profile folder named after the package, and the
 // name comes from the profile save, which can be hand-edited or older than the
 // install-time checks. A name that is not one folder of the profile's own must
-// not take anything outside the package with it (#10643). installPackage()
+// not take anything outside the package with it. installPackage()
 // refuses such names, so only a test that writes mInstalledPackages directly,
 // as a loaded save does, can get one into the profile.
 class PackageFolderRemovalTest : public QObject
@@ -47,10 +47,10 @@ private:
     QTemporaryDir mConfigDir;
     QByteArray mSavedXdg;
     TelnetServerStub* mpServer = nullptr;
-    const QString mpHostname = "Test-PackageFolderRemoval";
-    const QString mSiblingName = "Test-PackageFolderRemoval-sibling";
-    QString mpPort; // assigned the stub's actual ephemeral port in init()
-    const QString mpLocalhost = "localhost";
+    const QString mHostname = qsl("Test-PackageFolderRemoval");
+    const QString mSiblingName = qsl("Test-PackageFolderRemoval-sibling");
+    QString mPort; // assigned the stub's actual ephemeral port in init()
+    const QString mLocalhost = qsl("localhost");
 
     // Only files: removeDir() gives up at the first folder it cannot step into,
     // so a folder holding one would keep its files whatever the uninstall did.
@@ -96,15 +96,15 @@ private slots:
     void init()
     {
         mpServer = new TelnetServerStub(qApp);
-        mpServer->start(mpLocalhost, 0);
-        mpPort = QString::number(mpServer->serverPort());
+        mpServer->start(mLocalhost, 0);
+        mPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
         QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
-        TestProfile::removeProfileDirectory(mpHostname);
+        TestProfile::removeProfileDirectory(mHostname);
         QDir(siblingPath()).removeRecursively();
     }
 
@@ -119,13 +119,15 @@ private slots:
         delete mpServer;
         mpServer = nullptr;
         delete mudlet::self();
-        TestProfile::removeProfileDirectory(mpHostname);
+        TestProfile::removeProfileDirectory(mHostname);
         QDir(siblingPath()).removeRecursively();
     }
 
     void test_aNameFromTheSaveThatStepsOutOfTheProfileDeletesNothing_data()
     {
         QTest::addColumn<QString>("packageName");
+        // Without uninstallPackage()'s own check only the first row fails today, as removeDir() happens to give
+        // up early on the other three paths; they guard the day it no longer does.
         QTest::newRow("a sibling of the profile") << qsl("../%1").arg(mSiblingName);
         QTest::newRow("the folder of every profile") << qsl("..");
         QTest::newRow("the profile itself") << qsl(".");
@@ -135,13 +137,13 @@ private slots:
     void test_aNameFromTheSaveThatStepsOutOfTheProfileDeletesNothing()
     {
         QFETCH(QString, packageName);
-        auto host = TestProfile::create(mpHostname, mpLocalhost, mpPort);
+        auto host = TestProfile::create(mHostname, mLocalhost, mPort);
         QVERIFY2(host, "No active host available for the test.");
         QSignalSpy connected(&(host->mTelnet), &cTelnet::signal_connected);
         QVERIFY2(connected.wait(2s), "Could not connect with the host.");
 
         const QString siblingCanary = writeCanary(siblingPath());
-        const QString profileCanary = writeCanary(MudletApp::getMudletPath(enums::profileHomePath, mpHostname));
+        const QString profileCanary = writeCanary(MudletApp::getMudletPath(enums::profileHomePath, mHostname));
         QVERIFY2(!siblingCanary.isEmpty() && !profileCanary.isEmpty(), "Could not write the canary files");
 
         settleSaves(host);
@@ -152,6 +154,25 @@ private slots:
         QVERIFY2(!host->mInstalledPackages.contains(packageName), "The package stayed listed");
         QVERIFY2(QFileInfo::exists(siblingCanary), "Uninstalling the package deleted files in a folder beside the profile");
         QVERIFY2(QFileInfo::exists(profileCanary), "Uninstalling the package deleted the profile's own files");
+    }
+
+    // The user's own items carry no package name, so a package with none would be all of them
+    void test_aNameFromTheSaveThatIsEmptyKeepsTheUsersOwnItems()
+    {
+        auto host = TestProfile::create(mHostname, mLocalhost, mPort);
+        QVERIFY2(host, "No active host available for the test.");
+        QSignalSpy connected(&(host->mTelnet), &cTelnet::signal_connected);
+        QVERIFY2(connected.wait(2s), "Could not connect with the host.");
+
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("permRegexTrigger('mudlet-user-trigger', '', {'^zzz$'}, '')")));
+        QVERIFY2(host->getTriggerUnit()->findTrigger(qsl("mudlet-user-trigger")), "SETUP: the user's trigger was not made");
+
+        settleSaves(host);
+        host->mInstalledPackages.append(QString());
+        host->uninstallPackage(QString(), enums::PackageModuleType::Package);
+        QApplication::processEvents();
+
+        QVERIFY2(host->getTriggerUnit()->findTrigger(qsl("mudlet-user-trigger")), "Uninstalling a package with no name deleted the user's own trigger");
     }
 };
 

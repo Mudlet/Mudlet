@@ -552,12 +552,12 @@ private slots:
     // of that save behind: it would run on a destroyed Host.
     // A package installs into <profile>/<its name>, and the profile keeps its own
     // map, logs and downloaded media in folders right beside those - so a manifest
-    // can ask for one of their names. Three of them are made when the profile is,
-    // so an install asking for those is refused outright; the media folder is only
-    // made the first time something is downloaded into it, which can be long after
-    // a module took that name. From then on the two share a folder, and the module's
-    // next sync unpacks under the archive's file name, cannot rename that onto the
-    // folder it already owns, and clears the way by deleting what is there.
+    // can ask for one of their names. An install asking for one is refused, but a
+    // profile from an older Mudlet can still hold a module that took the media
+    // folder's name before anything was downloaded into it. From then on the two
+    // share a folder, and the module's next sync unpacks under the archive's file
+    // name, cannot rename that onto the folder it already owns, and clears the way
+    // by deleting what is there.
     void test_aModuleSyncDoesNotDeleteTheProfilesOwnFolder()
     {
         QTemporaryDir archiveDir;
@@ -568,7 +568,10 @@ private slots:
 
         mpHost->waitForProfileSave();
         QVERIFY2(!QDir(profileFilePath(sharedName)).exists(), "SETUP: the profile has that folder already, so the install below could not take the name");
+        // Reinstalling what a profile already holds is not refused, which is how an older Mudlet's module gets in
+        mpHost->mIsProfileLoadingSequence = true;
         auto [installed, message] = mpHost->installPackage(archivePath, enums::PackageModuleType::ModuleFromUI, true);
+        mpHost->mIsProfileLoadingSequence = false;
         QVERIFY2(installed, qPrintable(message));
         QVERIFY2(mpHost->mModuleInfo.contains(sharedName), "SETUP: the module did not register under the name its config.lua asked for");
         QVERIFY2(QDir(profileFilePath(sharedName)).exists(), "SETUP: the module did not land in the folder the profile downloads media into");

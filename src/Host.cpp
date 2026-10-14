@@ -84,7 +84,6 @@
 #include <QSet>
 #include <QScopeGuard>
 #include <QSettings>
-#include <QTemporaryDir>
 #include <QTemporaryFile>
 #include <QTextStream>
 #include <QThread>
@@ -3160,8 +3159,7 @@ static bool nameIsAStepOutOfTheProfile(const QString& name)
 }
 
 // Package folders sit beside the profile's own, so a package of one of these names would share that folder.
-// Gives the folder it would share, or nothing.
-static QString theProfilesOwnFolderCalled(const QString& name)
+static bool theProfileKeepsItsOwnDataIn(const QString& name)
 {
     QString folder = name;
 #if defined(Q_OS_WINDOWS) || defined(Q_OS_MACOS)
@@ -3178,28 +3176,38 @@ static QString theProfilesOwnFolderCalled(const QString& name)
 #endif
     for (const auto ownFolder : {QLatin1String("map"), QLatin1String("log"), QLatin1String("current"), QLatin1String("media")}) {
         if (!folder.compare(ownFolder, caseSensitivity)) {
-            return ownFolder;
+            return true;
         }
     }
-    return QString();
+    return false;
 }
 
-static bool theProfileKeepsItsOwnDataIn(const QString& name)
+static QString stagingFolderPrefix(const QString& packageName)
 {
-    return !theProfilesOwnFolderCalled(name).isEmpty();
+    return qsl("%1.mudlet-installing-").arg(packageName);
 }
+
+static constexpr int scmStagingFolderSuffixLength = 6;
 
 // A folder of its own to unpack an archive into beside the profile's package folders. The name is made
 // unpredictable, so it can never be a folder some package already owns. Ends in a separator, as
-// utils::unzip() expects.
+// utils::unzip() expects. Not QTemporaryDir: it makes the folder 0700 on Unix, and this one is renamed
+// into place as the package's own.
 static QString aFreshFolderToUnpackInto(const QString& profileHome, const QString& packageName)
 {
-    QTemporaryDir folder(qsl("%1/%2.mudlet-installing-XXXXXX").arg(profileHome, packageName));
-    if (!folder.isValid()) {
-        return QString();
+    static const QLatin1String characters("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789");
+    for (int attempt = 0; attempt < 16; ++attempt) {
+        QString suffix;
+        for (int i = 0; i < scmStagingFolderSuffixLength; ++i) {
+            suffix.append(characters.at(QRandomGenerator::global()->bounded(static_cast<int>(characters.size()))));
+        }
+        const QString folder = qsl("%1/%2%3").arg(profileHome, stagingFolderPrefix(packageName), suffix);
+        // Fails for a folder that is already there, so nothing in the profile is ever taken over
+        if (QDir().mkdir(folder)) {
+            return folder + QLatin1Char('/');
+        }
     }
-    folder.setAutoRemove(false);
-    return folder.path() + QLatin1Char('/');
+    return QString();
 }
 
 std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::PackageModuleType thing, bool quiet)
@@ -3434,29 +3442,37 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         // A module sync and a profile load reinstall what the profile already has, which may predate this refusal
         const bool refuseTheProfilesOwnFolders = thing != enums::PackageModuleType::ModuleSync && !mIsProfileLoadingSequence;
         // Unpacking into a folder the other kind, or the profile itself, owns would overwrite its files, and the
-        // rename below would carry it off. Such an archive unpacks beside it, moving in once its manifest's name proves free.
-        const bool unpackAside = !crossKindRefusalOnTheFileName.isEmpty() || (refuseTheProfilesOwnFolders && theProfileKeepsItsOwnDataIn(packageName));
+        // rename below would carry it off - on a sync too. Such an archive unpacks beside it, moving in once its
+        // manifest's name proves free.
+        const bool unpackAside = !crossKindRefusalOnTheFileName.isEmpty() || theProfileKeepsItsOwnDataIn(packageName);
+        if (unpackAside) {
+            // Every way out of an install removes its staging folder, so one still here was stranded by an install
+            // that never finished, such as one Mudlet was killed during. One listed as a package or module is left be.
+            const QString prefix = stagingFolderPrefix(packageName);
+            for (const QString& entry : QDir(_home).entryList(QDir::Dirs | QDir::NoDotAndDotDot | QDir::Hidden)) {
+                if (entry.size() == prefix.size() + scmStagingFolderSuffixLength && entry.startsWith(prefix) && !mInstalledPackages.contains(entry) && !mInstalledModules.contains(entry)) {
+                    const QString leftOver = qsl("%1/%2").arg(_home, entry);
+                    removeDir(leftOver, leftOver);
+                }
+            }
+        }
         const QString _dest = !unpackAside ? MudletApp::getMudletPath(enums::profilePackagePath, getName(), packageName) : aFreshFolderToUnpackInto(_home, packageName);
         if (_dest.isEmpty()) {
             return fail(qsl("could not create destination folder"));
         }
         // home directory for the PROFILE
         const QDir _tmpDir(_home);
-        // directory to store the expanded archive file contents
-        // Noted before it is made: the only folder this install may ever delete
-        // again is one it made itself. The package name is the archive's own file
-        // name, and then whatever its config.lua says, so it can just as well name
-        // a folder of the profile's that was already here ("map", "log",
-        // "current") - see the refusal further down.
+        // The only folder this install may ever delete again is one it made itself, so whether the destination
+        // was already here is noted before mkpath() below. A staging folder was made just now, by this install.
         const bool destinationAlreadyExisted = !unpackAside && QDir(_dest).exists();
         const bool mkpathSuccessful = _tmpDir.mkpath(_dest);
         if (!mkpathSuccessful) {
             return fail(qsl("could not create destination folder"));
         }
         QString folderThisInstallMade = destinationAlreadyExisted ? QString() : QDir(_dest).absolutePath();
-        // Only ever remove the folder this install made: an archive named after a profile folder ("map",
-        // "log") unpacks straight into it, and removeDir() takes everything below. The path check is a
-        // backstop; sanitizePackageName() keeps the name to one path section today.
+        // Only ever remove the folder this install made: an archive can unpack straight into a folder that was
+        // already here, such as an orphaned package's, and removeDir() takes everything below. The path check
+        // is a backstop; sanitizePackageName() keeps the name to one path section today.
         auto discardTheFolderThisInstallMade = [this, &folderThisInstallMade, &_home]() {
             const QString profileHome = QDir(_home).absolutePath();
             if (folderThisInstallMade.isEmpty() || !folderThisInstallMade.startsWith(profileHome + QLatin1Char('/'))) {
@@ -3529,10 +3545,14 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
             //: %1 is the name the package's config.lua asked to be installed under
             return refuseTheRenamedInstall(tr("The config.lua of this package asks to be installed as \"%1\", which is not a name a package can have.").arg(packageName));
         }
-        // map, log and current are made with the profile. media is only made on the first download, so until then a
-        // package may take the name; uninstallPackage() then leaves that folder, and what is downloaded into it, alone.
-        if (const QString ownFolder = theProfilesOwnFolderCalled(packageName);
-            refuseTheProfilesOwnFolders && !ownFolder.isEmpty() && (ownFolder != QLatin1String("media") || QDir(MudletApp::getMudletPath(enums::profileMediaPath, getName())).exists())) {
+        // Refused even while the profile has no such folder yet: map, current and media are only made when first
+        // needed, and a package let in first would share the folder from then on - uninstallPackage() leaves it
+        // be, so the package could never be installed again, and purgeMediaCache() would empty it.
+        if (refuseTheProfilesOwnFolders && theProfileKeepsItsOwnDataIn(packageName)) {
+            if (packageName != sanitizePackageName(fileName)) {
+                //: %1 is the name the package's config.lua asks to be installed under, which is also the name of a folder Mudlet keeps the profile's own files in, such as its maps or logs
+                return refuseTheRenamedInstall(tr("The config.lua of this package asks to be installed as \"%1\", but the profile keeps its own files in the folder of that name.").arg(packageName));
+            }
             //: %1 is the name the package would be installed under, which is also the name of a folder Mudlet keeps the profile's own files in, such as its maps or logs
             return refuseTheRenamedInstall(
                     tr("A package cannot be installed as \"%1\", as the profile keeps its own files in the folder of that name. Please rename it and try again.").arg(packageName));
@@ -3996,6 +4016,24 @@ bool Host::uninstallPackage(const QString& packageName, enums::PackageModuleType
         if (!mInstalledPackages.contains(packageName)) {
             return false;
         }
+    }
+
+    // The user's own items carry no package name, so the units below would remove every one of them. Only a
+    // hand-edited or old profile save can list a nameless package, so it is just forgotten.
+    if (packageName.isEmpty()) {
+        if (currentlySavingProfile()) {
+            return false;
+        }
+        if (isModule) {
+            mInstalledModules.remove(packageName);
+            mModulesLoadedOk.remove(packageName);
+            mActiveModules.removeAll(packageName);
+        } else {
+            mInstalledPackages.removeAll(packageName);
+        }
+        mDeferredSaveTimer.start(0ms);
+        emit signal_packageListChanged();
+        return true;
     }
 
     // A package's scripts run while it is being read in and may ask to uninstall it. Removing its items now
