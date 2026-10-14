@@ -180,7 +180,7 @@ end
 -- Every install and uninstall here owes an asynchronous profile save, and
 -- while one is running the package API stops doing what it is told: an install
 -- is postponed and answered with a bare true (see the pending spec at the end
--- of this file), an uninstall is refused, and a module reload is dropped. Lua
+-- of this file), an uninstall is refused, and a module reload is put off. Lua
 -- cannot ask whether a save is running, so each of the helpers below asks again
 -- until what it wanted has actually happened. They wait longer between tries
 -- than they need to on a fast machine on purpose: each postponed call queues
@@ -237,8 +237,8 @@ local function installUntilRefused(install, path)
   assert.is_true(false, "the install was never refused - it was carried out, or postponed three times over")
 end
 
--- reloadModule() is postponed the same way and then quietly dropped, so ask
--- until the reload is observable.
+-- reloadModule() is postponed the same way and only carried out once the save
+-- has finished, so ask until the reload is observable.
 local function reloadModuleUntil(name, reloaded)
   for attempt = 1, 3 do
     reloadModule(name)
@@ -1057,7 +1057,9 @@ describe("Tests the functionality of reloadModule", function()
 
     it("returns true for a reload it carries out", function()
       assert.is_true(waitForProfileSaveToPass(), "a profile save was still running, so the reload would be postponed")
+      local runsBefore = mudletSpecModuleRuns
       assert.is_true(reloadModule(moduleName))
+      assert.is_true(mudletSpecModuleRuns > runsBefore, "the reload answered true without being carried out")
     end)
 
     -- The reload takes the module apart before reading its file back in, so a
@@ -1076,7 +1078,7 @@ describe("Tests the functionality of reloadModule", function()
       assert.is_true(contains(err, "cannot be read"), tostring(err))
       assert.is_true(moduleInstalled(moduleName))
       assert.equals(1, exists(moduleName .. " alias", "alias"), "the module was emptied by a reload that could not read its file")
-      assert.is_false(containsWrapped(textFrom(mark), 'Module "' .. moduleName .. '" was not reloaded'), textFrom(mark))
+      assert.is_false(containsWrapped(textFrom(mark), moduleName), textFrom(mark))
     end)
 
     -- A reload asked for during a save is put off until it has finished, and the
@@ -1115,6 +1117,7 @@ describe("Tests the functionality of reloadModule", function()
 
       assert.is_nil(ok)
       assert.is_true(contains(err, "could not unzip package"), tostring(err))
+      assert.is_true(contains(err, "now empty"), "the reason did not say the module lost its items: " .. tostring(err))
     end)
 
     -- A reload asked for during a save is carried out once the save is done, and
@@ -1138,7 +1141,7 @@ describe("Tests the functionality of reloadModule", function()
 
       assert.is_true(waitForProfileSaveToPass(), "the profile save never finished")
       pumpEvents(200)
-      assert.is_true(containsWrapped(textFrom(mark), 'Module "' .. moduleName .. '" could not be reloaded'), textFrom(mark))
+      assert.is_true(containsWrapped(textFrom(mark), 'Module "' .. moduleName .. '" could not be reloaded: could not unzip package'), textFrom(mark))
     end)
 
     it("returns why when the module's XML could not be imported", function()
@@ -1174,6 +1177,19 @@ describe("Tests the functionality of reloadModule", function()
       assert.equals(4, getModulePriority(moduleName))
       assert.is_true(getModuleSync(moduleName))
     end)
+  end)
+
+  -- installModule() hands back what the module's scripts got wrong alongside its
+  -- true, and a reload of the same archive has the same to tell.
+  it("returns true and what went wrong for a module whose scripts do not work", function()
+    local brokenModule = "mudlet-spec-brokenscripts"
+    withFixtureModule(brokenModule)
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running, so the reload would be postponed")
+
+    local ok, err = reloadModule(brokenModule)
+
+    assert.is_true(ok)
+    assert.is_true(contains(err, "mudlet-spec-brokenscripts first"), tostring(err))
   end)
 end)
 
@@ -1668,9 +1684,9 @@ describe("Tests installing one name as both a package and a module", function()
     -- like from here. This one installs under the same name and different items.
     copyFile(otherRenamerArchive, path)
 
-    -- a postponed reload is dropped rather than carried out later, and a dropped
-    -- one would leave everything below true without the reload ever happening
-    assert.is_true(waitForProfileSaveToPass(), "SETUP: a save was still running, so the reload would have been dropped")
+    -- a postponed reload is only carried out once the save has finished, which
+    -- could be after the checks below
+    assert.is_true(waitForProfileSaveToPass(), "SETUP: a save was still running, so the reload would have been put off")
     reloadModule(renamedTo)
     pumpEvents(1000)
 
@@ -1679,6 +1695,31 @@ describe("Tests installing one name as both a package and a module", function()
     assert.equals(0, exists(renamedTo .. " alias", "alias"), "the items of the archive that was replaced are still installed")
     assert.is_false(fileExists(getMudletHomeDir() .. "/mudlet-spec-renamer"),
                     "the reload left the folder it unpacked into in the profile, under the archive's file name")
+  end)
+
+  -- The archive a module was installed from can be replaced by one whose
+  -- config.lua names it differently, and what it holds then goes in under that
+  -- name: the reload worked, even though no module of the old name was loaded.
+  it("answers true when it reloads a module from an archive that now installs under another name", function()
+    lfs.mkdir(scratchDirectory)
+    local path = scratchDirectory .. "/mudlet-spec-renamer.mpackage"
+    defer(function()
+      os.remove(path)
+      lfs.rmdir(scratchDirectory)
+    end)
+    copyFile(fixtureDirectory .. "/mudlet-spec-noconfig.mpackage", path)
+    defer(function() removeFixtureModule("mudlet-spec-renamer") end)
+    installUntilConfirmed(installModule, path, function() return moduleInstalled("mudlet-spec-renamer") end,
+                          "a module under the renaming archive's file name")
+    defer(function() removeFixtureModule(renamedTo) end)
+    copyFile(renamerArchive, path)
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running, so the reload would be postponed")
+
+    local ok, err = reloadModule("mudlet-spec-renamer")
+
+    assert.is_true(ok, tostring(err))
+    assert.is_true(moduleInstalled(renamedTo), "the archive's module was not installed")
+    assert.equals(1, exists(renamedTo .. " alias", "alias"), "the archive's items were not installed")
   end)
 
   -- The folder an install is staged in is taken away again on every way out, so

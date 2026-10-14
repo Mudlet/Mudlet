@@ -2880,12 +2880,11 @@ int TLuaInterpreter::reloadModule(lua_State* L)
 {
     const QString module = getVerifiedString(L, __func__, 1, "module name");
     Host& host = getHostFromLua(L);
-    // Quiet: the reason goes back to the script rather than onto the console
-    if (auto [success, message] = host.reloadModule(module, QString(), true); !success) {
+    auto [success, message] = host.reloadModule(module);
+    if (!success) {
         return warnArgumentValue(L, __func__, message);
     }
-    lua_pushboolean(L, true);
-    return 1;
+    return pushInstallSucceeded(L, message);
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#enableModuleSync
