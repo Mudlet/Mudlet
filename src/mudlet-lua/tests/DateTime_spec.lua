@@ -144,39 +144,61 @@ describe("Tests DateTime.lua functions", function()
       assert.are.same({hour = 5, min = 6, sec = 7}, dt)
     end)
 
-    it("places a time-only parse on today's date when as_epoch is true", function()
-      local today = os.date("*t")
-      local epoch = datetime:parse("05:06:07", "^%H:%M:%S$", true)
-      assert.are.equal("number", type(epoch))
-      local back = os.date("*t", epoch)
-      assert.are.equal(today.year, back.year)
-      assert.are.equal(today.month, back.month)
-      assert.are.equal(today.day, back.day)
-      assert.are.equal(5, back.hour)
-      assert.are.equal(6, back.min)
-      assert.are.equal(7, back.sec)
+    it("parses a partial date into a time table with only the parsed fields", function()
+      assert.are.same({year = 2024, month = 2}, datetime:parse("2024-02", "^%Y-%m$"))
+      assert.are.same({month = 2, day = 15}, datetime:parse("02-15", "^%m-%d$"))
     end)
 
-    it("starts a partial date with as_epoch at the first of the month, not today's day", function()
+    -- parse() reads today with os.date("*t"); pinning it keeps a run that crosses midnight from failing
+    local function pinToday(year, month, day)
       local realDate = os.date
       finally(function() os.date = realDate end)
-      -- on the 31st, today's day put into February rolls over into March
       os.date = function(format, time)
         if format == "*t" and time == nil then
           local today = realDate("*t")
-          today.month, today.day = 3, 31
+          today.year, today.month, today.day = year, month, day
           return today
         end
         return realDate(format, time)
       end
-      local epoch = datetime:parse("2024-02", "^%Y-%m$", true)
-      local yearOnly = datetime:parse("2024", "^%Y$", true)
-      os.date = realDate
+    end
 
-      local back = os.date("*t", epoch)
-      assert.are.same({2024, 2, 1}, {back.year, back.month, back.day})
-      back = os.date("*t", yearOnly)
-      assert.are.same({2024, 1, 1}, {back.year, back.month, back.day})
+    local function dateOf(epoch)
+      local t = os.date("*t", epoch)
+      return {t.year, t.month, t.day, t.hour, t.min, t.sec}
+    end
+
+    it("places a time-only parse on today's date when as_epoch is true", function()
+      pinToday(2026, 5, 10)
+      local epoch = datetime:parse("05:06:07", "^%H:%M:%S$", true)
+      assert.are.equal("number", type(epoch))
+      assert.are.same({2026, 5, 10, 5, 6, 7}, dateOf(epoch))
+    end)
+
+    it("starts a partial date with as_epoch at the first of the month, not today's day", function()
+      -- on the 31st, today's day put into February would roll over into March
+      pinToday(2026, 3, 31)
+      assert.are.same({2024, 2, 1, 12, 0, 0}, dateOf(datetime:parse("2024-02", "^%Y-%m$", true)))
+      assert.are.same({2024, 1, 1, 12, 0, 0}, dateOf(datetime:parse("2024", "^%Y$", true)))
+    end)
+
+    it("fills a partial date with as_epoch from today's year and month", function()
+      pinToday(2026, 3, 31)
+      assert.are.same({2026, 3, 15, 12, 0, 0}, dateOf(datetime:parse("15", "^%d$", true)))
+      assert.are.same({2026, 2, 15, 12, 0, 0}, dateOf(datetime:parse("02-15", "^%m-%d$", true)))
+    end)
+
+    it("returns nil with as_epoch for a partial date that does not exist", function()
+      pinToday(2026, 9, 10)
+      assert.is_nil(datetime:parse("31 10:00", "^%d %H:%M$", true))
+      assert.is_nil(datetime:parse("02-29 08:00", "^%m-%d %H:%M$", true))
+      assert.is_nil(datetime:parse("2024-13", "^%Y-%m$", true))
+      assert.are.same({2026, 9, 30, 10, 0, 0}, dateOf(datetime:parse("30 10:00", "^%d %H:%M$", true)))
+    end)
+
+    it("accepts 29 February with as_epoch in a leap year", function()
+      pinToday(2028, 9, 10)
+      assert.are.same({2028, 2, 29, 8, 0, 0}, dateOf(datetime:parse("02-29 08:00", "^%m-%d %H:%M$", true)))
     end)
   end)
 
