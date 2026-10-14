@@ -2693,8 +2693,8 @@ const std::vector<TChar>* TBuffer::preTriggerPassLine(int lineNumber) const
     return nullptr;
 }
 
-// Both splices need the snapshot materialised before the buffer edit, or a debug build's
-// commitLineData() check fires; inserted text and padding keep the colors they were written in.
+// Both splices need the snapshot materialised before the buffer edit, or color triggers judge an inserted-into
+// line by its pre-edit colors (commitLineData() catches this in debug); inserted text and padding keep their colors.
 void TBuffer::spliceInsertIntoPreTriggerPassLine(int y, int x, int count, const TChar& format)
 {
     if (!mPreTriggerPassSnapshotTaken || y < 0 || y != mPreTriggerPassLineNumber || y >= static_cast<int>(buffer.size())) {
