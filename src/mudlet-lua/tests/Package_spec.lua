@@ -1225,6 +1225,37 @@ describe("Tests what a package that uninstalls itself mid-pass can still see", f
     end, 8000), "the package's handler could not uninstall it")
     assert.are.same({0, 0, 0}, _G.mudletSpecMidpassSeen, "exists, findItems and isActive for the script queued for removal")
   end)
+
+  it("does not kill a temporary trigger group its package has just queued for removal", function()
+    local name = "mudlet-spec-midpass-tempgroup"
+    local group = "mudlet-spec midpass temporary group"
+    local child = triggerXml("mudlet-spec midpass child", "^mudlet_spec_midpass_never$", "")
+    withScratchPackage(name, table.concat({
+      "<TriggerPackage>",
+      -- a package may carry a temporary trigger, and this one has a child for doCleanup() to free with it
+      (triggerXml(group, "", ""):gsub('isTempTrigger="no"', 'isTempTrigger="yes"'):gsub('isFolder="no"', 'isFolder="yes"')
+        :gsub("</Trigger>$", child .. "\n</Trigger>")),
+      triggerXml("mudlet-spec midpass killer", "mudlet_spec_midpass_kill", table.concat({
+        'mudletSpecMidpassRemoved = uninstallPackage("' .. name .. '")',
+        'if mudletSpecMidpassRemoved then mudletSpecMidpassSeen = killTrigger("' .. group .. '") end'}, "\n")),
+      "</TriggerPackage>",
+    }, "\n"))
+    defer(function()
+      _G.mudletSpecMidpassRemoved, _G.mudletSpecMidpassSeen = nil, nil
+    end)
+    assert.are.equal(1, exists("mudlet-spec midpass child", "trigger"), "the group's child before the uninstall")
+
+    assert.is_true(waitUntil(function()
+      assert.is_true(waitForProfileSaveToPass(), "a profile save was still running after 5s")
+      feedTriggers("\nmudlet_spec_midpass_kill\n")
+      return _G.mudletSpecMidpassRemoved == true
+    end, 8000), "the package's trigger could not uninstall it")
+    assert.is_false(_G.mudletSpecMidpassSeen, "the uninstall has already taken the group, so killing it achieves nothing")
+    -- the line runs the cleanup that frees the group and its child
+    feedTriggers("\nmudlet_spec_midpass_after\n")
+    assert.are.equal(0, exists(group, "trigger"))
+    assert.are.equal(0, exists("mudlet-spec midpass child", "trigger"))
+  end)
 end)
 
 describe("Tests a package that uninstalls itself while it is being installed", function()
