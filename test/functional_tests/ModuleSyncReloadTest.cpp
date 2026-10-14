@@ -221,8 +221,13 @@ private slots:
 
     void cleanupTestCase()
     {
-        settleSaves(mpFirstHost);
-        settleSaves(mpSecondHost);
+        // Null when initTestCase skipped or failed before opening them, and QtTest still runs this
+        if (mpFirstHost) {
+            settleSaves(mpFirstHost);
+        }
+        if (mpSecondHost) {
+            settleSaves(mpSecondHost);
+        }
         delete mpServer;
         mpServer = nullptr;
         delete mudlet::self();
