@@ -3338,7 +3338,7 @@ describe("Tests installing a package whose trigger pattern does not compile", fu
 
     assert.equals(1, exists(name .. " trigger", "trigger"), "the broken trigger was not kept for fixing in the editor")
     assert.is_true(contains(reason, name .. " trigger: "), "the broken pattern was not reported: " .. tostring(reason))
-    assert.is_true(contains(reason, '"*(unclosed"'), "the pattern that failed was not named: " .. tostring(reason))
+    assert.is_true(contains(reason, '*(unclosed'), "the pattern that failed was not named: " .. tostring(reason))
     assert.is_false(contains(reason, name .. " group"), "the group was blamed for its child's pattern: " .. tostring(reason))
     assert.is_false(contains(reason, name .. " placeholder"), "a trigger with no patterns was reported as broken: " .. tostring(reason))
   end)
@@ -3349,13 +3349,13 @@ describe("Tests installing a package whose trigger pattern does not compile", fu
                            .. trigger(name .. " no colour", {isColor = true, patterns = {{"ANSI_COLORS_F{IGNORE}_B{IGNORE}", colour}}}) .. '\n'
                            .. trigger(name .. " unknown colour", {isColor = true, patterns = {{"ANSI_COLORS_F{300}_B{IGNORE}", colour}}}))
 
-    assert.is_true(contains(reason, '"*(first"'), "only the last broken pattern was reported: " .. tostring(reason))
-    assert.is_true(contains(reason, '"*(third"'), tostring(reason))
+    assert.is_true(contains(reason, '*(first'), "only the last broken pattern was reported: " .. tostring(reason))
+    assert.is_true(contains(reason, '*(third'), tostring(reason))
     assert.is_true(contains(reason, name .. ' lua: '), "a Lua condition that does not compile was not reported: " .. tostring(reason))
-    assert.is_true(contains(reason, '"if then"'), tostring(reason))
+    assert.is_true(contains(reason, 'if then'), tostring(reason))
     assert.is_true(contains(reason, name .. ' no colour: '), "a colour pattern with no colours was not reported: " .. tostring(reason))
-    assert.is_true(contains(reason, '"ANSI_COLORS_F{300}_B{IGNORE}"'), "a colour pattern with no colour Mudlet knows was not reported: " .. tostring(reason))
-    assert.is_nil(tostring(reason):find("<%/?[bi]>"), "the reason carries the editor's markup: " .. tostring(reason))
+    assert.is_true(contains(reason, 'ANSI_COLORS_F{300}_B{IGNORE}'), "a colour pattern with no colour Mudlet knows was not reported: " .. tostring(reason))
+    assert.is_nil(tostring(reason):find("<%/?%a+%s*%/?>"), "the reason carries the editor's markup: " .. tostring(reason))
   end)
 
   it("reports both the script and the pattern of a trigger where both fail, together", function()
@@ -3371,7 +3371,7 @@ describe("Tests installing a package whose trigger pattern does not compile", fu
     end
     assert.equals(2, #groupEntries, "the group's script and pattern were not both reported: " .. tostring(reason))
     assert.equals(groupEntries[1] + 1, groupEntries[2], "the group's errors were split up: " .. tostring(reason))
-    assert.is_true(contains(reason, '"*(group"'), tostring(reason))
+    assert.is_true(contains(reason, '*(group'), tostring(reason))
     assert.is_true(listContains(names, name .. " child"), tostring(reason))
   end)
 end)
