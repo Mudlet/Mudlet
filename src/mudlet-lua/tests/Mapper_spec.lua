@@ -3932,10 +3932,8 @@ describe("Tests saveMap and loadMap", function()
       assertMapRestored()
     end)
 
-    -- TMap::serialize() writes each area's fallback zoom and its labels' fonts
-    -- and outline colours as area user data. They belong in the file only: the
-    -- map autosave makes this same save at any moment, so whatever it leaves in
-    -- the live map is what scripts read back.
+    -- A save writes the fallback zoom and label fonts and outline colours as area user
+    -- data for the file only; the autosave makes this same save at any moment
     it("leaves an area's user data as it was before the save", function()
       deleteMap()
       local area = addAreaName("MapperSpecSaveAreaDataArea")

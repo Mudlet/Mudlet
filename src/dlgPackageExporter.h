@@ -35,8 +35,9 @@
 
 class Host;
 class QCloseEvent;
-class QFutureWatcherBase;
 class QGroupBox;
+template <typename T>
+class QFutureWatcher;
 class TAction;
 class TAlias;
 class TKey;
@@ -44,7 +45,7 @@ class TScript;
 class TTimer;
 class TTrigger;
 
-#if defined(LIBZIP_VERSION_MAJOR) && defined(LIBZIP_VERSION_MINOR) && ((LIBZIP_VERSION_MAJOR  > 1) || (LIBZIP_VERSION_MAJOR == 1) && (LIBZIP_VERSION_MINOR >= 7))
+#if defined(LIBZIP_VERSION_MAJOR) && defined(LIBZIP_VERSION_MINOR) && ((LIBZIP_VERSION_MAJOR > 1) || (LIBZIP_VERSION_MAJOR == 1) && (LIBZIP_VERSION_MINOR >= 7))
 // libzip 1.7.0 supports cancelling archiving in progress
 #define LIBZIP_SUPPORTS_CANCELLING TRUE
 #endif
@@ -194,11 +195,12 @@ private:
     QString mPackageConfig;
     QString mPackageComment;
     bool mCheckChildren = true;
-    // Shared by every exporter, so that only one export runs at a time
+    // Shared by every exporter, so that only one export runs at a time; held until the zip ends, even after a Cancel
     inline static bool mExportingPackage = false;
+    static void releaseExportLock();
     // This dialog's export has put the busy cursor up and not yet taken it down
     bool mExportRunning = false;
-    QFutureWatcherBase* mpZipWatcher = nullptr;
+    QFutureWatcher<std::pair<bool, QString>>* mpZipWatcher = nullptr;
     // Read on the zip's worker thread by libzip's cancel callback
     std::shared_ptr<std::atomic<bool>> mpZipCancelled;
 

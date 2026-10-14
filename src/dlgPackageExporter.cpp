@@ -165,16 +165,38 @@ dlgPackageExporter::~dlgPackageExporter()
     }
     QApplication::restoreOverrideCursor();
     if (!mpZipWatcher) {
-        mExportingPackage = false;
+        releaseExportLock();
         return;
     }
-    // The zip goes on writing the package, so no other export may start on its staging folder until it is done
-    QFutureWatcherBase* watcher = mpZipWatcher;
+    // Cancelled or not, the zip may still be reading its staging folder, so the lock is held until it ends
+    auto* watcher = mpZipWatcher;
     watcher->setParent(qApp);
-    connect(watcher, &QFutureWatcherBase::finished, qApp, [watcher]() {
-        mExportingPackage = false;
-        watcher->deleteLater();
-    });
+    connect(watcher,
+            &QFutureWatcherBase::finished,
+            qApp,
+            [watcher, cancelled = mpZipCancelled, isModule = mIsModuleCreationMode, packageName = mPackageName, packagePathFileName = mPackagePathFileName]() {
+                releaseExportLock();
+                if (auto [isOk, errorMsg] = watcher->result(); !isOk) {
+                    if (!cancelled->load()) {
+                        qWarning().noquote().nospace() << "dlgPackageExporter WARNING - exporting \"" << packageName << "\" failed after its dialog was closed: " << errorMsg;
+                    }
+                } else if (isModule) {
+                    qWarning().noquote().nospace() << "dlgPackageExporter WARNING - module \"" << packageName << "\" was written to \"" << packagePathFileName
+                                                   << "\" but not installed, as its dialog was closed before the export finished";
+                }
+                watcher->deleteLater();
+            });
+}
+
+void dlgPackageExporter::releaseExportLock()
+{
+    mExportingPackage = false;
+    // An exporter opened while the lock was held has a greyed-out Export button that nothing else re-enables
+    for (auto* widget : QApplication::topLevelWidgets()) {
+        if (auto* exporter = qobject_cast<dlgPackageExporter*>(widget)) {
+            exporter->checkToEnableExportButton();
+        }
+    }
 }
 
 void dlgPackageExporter::setModuleCreationMode(bool isModule)
@@ -921,6 +943,13 @@ void dlgPackageExporter::slot_exportPackage()
         }
     }
 
+    // The overwrite prompt above runs an event loop, in which another exporter may have started
+    if (mExportingPackage) {
+        //: Shown in the package exporter when an export is asked for while another package or module is still being exported
+        displayResultMessage(tr("Another package is still being exported. Please wait for it to finish."), false);
+        return;
+    }
+
     // QT Docs say that QStandardPaths::writableLocation(QStandardPaths::TempLocation)
     // "Returns a directory where temporary files can be stored. The returned
     // value might be application-specific, shared among other applications for
@@ -956,7 +985,11 @@ void dlgPackageExporter::slot_exportPackage()
 
     mCloseButton->setVisible(false);
     displayResultMessage(tr("Exporting package..."), true);
+    const QPointer<dlgPackageExporter> self(this);
     qApp->processEvents();
+    if (!self) {
+        return;
+    }
 
     auto plainDescription = copyNewImagesToTmp(tempPath);
 
@@ -979,8 +1012,7 @@ void dlgPackageExporter::slot_exportPackage()
                                      .arg(mXmlPathFileName.toHtmlEscaped()),
                              false);
         assetsFuture.cancel();
-        mExportingPackage = false;
-        checkToEnableExportButton();
+        releaseExportLock();
         mExportRunning = false;
         QApplication::restoreOverrideCursor();
         return;
@@ -1014,8 +1046,7 @@ void dlgPackageExporter::slot_exportPackage()
             auto watcher = new QFutureWatcher<std::pair<bool, QString>>(this);
             mpZipWatcher = watcher;
             connect(watcher, &QFutureWatcher<std::pair<bool, QString>>::finished, this, [=, this]() {
-                mExportingPackage = false;
-                checkToEnableExportButton();
+                releaseExportLock();
 
                 if (auto [isOk, errorMsg] = future.result(); !isOk) {
                     displayResultMessage(errorMsg, false);
@@ -1041,6 +1072,8 @@ void dlgPackageExporter::slot_exportPackage()
                                 mCloseButton->setVisible(true);
                                 mExportRunning = false;
                                 QApplication::restoreOverrideCursor();
+                                mpZipWatcher = nullptr;
+                                watcher->deleteLater();
                                 return;
                             }
                         }
@@ -1082,8 +1115,7 @@ void dlgPackageExporter::slot_exportPackage()
     if (isOk) {
         displayResultMessage(tr("Exporting package..."), true);
     } else {
-        mExportingPackage = false;
-        checkToEnableExportButton();
+        releaseExportLock();
         mCancelButton->setVisible(false);
         mCloseButton->setVisible(true);
         mExportRunning = false;
@@ -2122,8 +2154,6 @@ void dlgPackageExporter::slot_cancelExport()
     if (mpZipCancelled) {
         mpZipCancelled->store(true);
     }
-    mExportingPackage = false;
-    checkToEnableExportButton();
 
     mCancelButton->setVisible(false);
     mCloseButton->setVisible(true);
