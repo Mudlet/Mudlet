@@ -1570,7 +1570,7 @@ function xEcho(style, func, ...)
             moveCursor(win, getColumnNumber(win) + utf16Length(v), getLineNumber(win))
           end
         elseif v ~= "" then
-          -- a tag at the start leaves an empty run, and a link on no text is refused
+          -- a tag at the start or two tags in a row leave an empty run, which would be a link on no text
           -- if fmt then setUnderline(win, true) end -- not sure if underline is necessary unless asked for
           _G[func](win, v, cmd, hint, fmt == true)
         end

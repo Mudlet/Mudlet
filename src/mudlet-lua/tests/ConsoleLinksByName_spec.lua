@@ -385,6 +385,12 @@ describe("Tests that the link and text functions find their console by name", fu
                 place()
                 return call(fn)
               end
+              place()
+              local text = getLines(window, 0, getLastLineNumber(window) + 1)
+              local cursor = {getColumnNumber(window), getLineNumber(window)}
+              assert.are.same({nil, refusal}, {call(function() end)})
+              assert.are.same(text, getLines(window, 0, getLastLineNumber(window) + 1), "a refused insert changed the text")
+              assert.are.same(cursor, {getColumnNumber(window), getLineNumber(window)}, "a refused insert moved the cursor")
               assert.are.same({nil, refusal}, {insertThere(function() end)})
               assert.is_false(keptAfter(insertThere))
               assert.are.equal(0, registryGrowthOver(function()
@@ -509,6 +515,40 @@ describe("Tests that the link and text functions find their console by name", fu
           local selection, line = captureAfter("Insert" .. index, insert[2])
           assert.are.equal("payload", selection)
           assert.are.equal("ZZZZSpecLinksByNameInsert" .. index .. " Marker payload", line)
+        end)
+      end
+
+      local refusedInserts = {
+        {"the cursor is outside the text - cannot create link", function(fn) return insertLink("main", "Refused" .. suffix, fn, "hint") end},
+        {"the cursor is outside the text - cannot create popup", function(fn) return insertPopup("main", "Refused" .. suffix, {fn}, {"hint"}) end},
+      }
+
+      for index, insert in ipairs(refusedInserts) do
+        it("refuses " .. insert[1]:match("create (%w+)$") .. " left of its line, leaving the line and its captures alone", function()
+          local answer, kept
+          local selection, line = captureAfter("LeftOf" .. index, function()
+            moveCursor(-1, getLineNumber())
+            answer = {insert[2](function() end)}
+            kept = keptAfter(insert[2])
+          end)
+          assert.are.same({nil, insert[1]}, answer)
+          assert.is_false(kept)
+          assert.are.equal("payload", selection)
+          assert.are.equal("SpecLinksByNameLeftOf" .. index .. " Marker payload", line)
+        end)
+
+        it("refuses " .. insert[1]:match("create (%w+)$") .. " once its line is deleted, writing nothing", function()
+          local answer, kept
+          local trigger = tempRegexTrigger("^SpecLinksByNameDeleted" .. index .. " Marker$", function()
+            deleteLine()
+            answer = {insert[2](function() end)}
+            kept = keptAfter(insert[2])
+          end)
+          feedTriggers("\nSpecLinksByNameDeleted" .. index .. " Marker\n")
+          killTrigger(trigger)
+          assert.are.same({nil, insert[1]}, answer)
+          assert.is_false(kept)
+          assert.is_false(recentLinesHave("Refused" .. suffix))
         end)
       end
 
