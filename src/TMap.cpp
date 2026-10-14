@@ -3877,7 +3877,8 @@ void TMap::writeJsonUserData(QJsonObject& obj) const
     obj.insert(QLatin1String("userData"), jsonValue);
 }
 
-// Takes a userData object and parses all its elements
+// Keeps only the string values. The caller swaps the result in after its abort
+// check, so a cancelled import leaves the live map user data alone.
 QMap<QString, QString> TMap::readJsonUserData(const QJsonObject& obj)
 {
     QMap<QString, QString> userData;
