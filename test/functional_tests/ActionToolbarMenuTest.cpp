@@ -103,6 +103,13 @@ private:
         return group;
     }
 
+    // Host::send() echoes a command onto the main console as well as running it
+    // through the aliases, and an echo is seen even if the aliases are skipped
+    static bool mainConsoleShows(Host* host, const QString& text)
+    {
+        return host->mLuaInterpreter.compileAndExecuteScript(qsl("for _, line in ipairs(getLines(0, getLineCount() + 1)) do if line == [[%1]] then return end end error('not shown')").arg(text));
+    }
+
     // Searched from the main window rather than the console, because a
     // location-4 toolbar is a dock on the window while a location-0 bar sits in
     // the console. TFlipButton has no Q_OBJECT, so findChildren<> it as its
@@ -417,7 +424,7 @@ private slots:
 
     // A push-down button saved down is restored while the profile loads: its
     // script runs, but its command belongs to a click and must not be sent or
-    // echoed on every load (#10632).
+    // echoed.
     void test_aPushDownButtonRestoredDownOnLoadRunsItsScriptWithoutSendingItsCommand()
     {
         startProfile(mpHostname, mpLocalhost, mpPort);
@@ -447,6 +454,79 @@ private slots:
 
         QVERIFY2(host->mLuaInterpreter.compileAndExecuteScript(qsl("assert(qaPushDownRan == 1)")), "restoring the button on load did not run its script once");
         QVERIFY2(host->mLuaInterpreter.compileAndExecuteScript(qsl("assert(qaCommandSent == 0)")), "restoring the button on load sent its command");
+        QVERIFY2(!mainConsoleShows(host, qsl("QA_BUTTON_DOWN_COMMAND")), "restoring the button on load echoed its command");
+    }
+
+    // A push-down button saved up is restored the same way: its script runs,
+    // seeing the button up, and its up command is not sent either
+    void test_aPushDownButtonRestoredUpOnLoadRunsItsScriptWithoutSendingItsCommand()
+    {
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        auto* host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+
+        auto* master = makeAction(host, nullptr, qsl("pushUpTestPackage"), true);
+        master->mPackageName = qsl("pushUpTestPackage");
+        master->mModuleMasterFolder = true;
+        master->mLocation = 0;
+        auto* toolbar = makeAction(host, master, qsl("pushUpTestToolbar"), true);
+        toolbar->mLocation = 0;
+        auto* button = makeAction(host, toolbar, qsl("pushUpTestButton"), false);
+        button->setIsPushDownButton(true);
+        button->mButtonState = false;
+        button->setCommandButtonDown(qsl("QA_UNUSED_DOWN_COMMAND"));
+        button->setCommandButtonUp(qsl("QA_BUTTON_UP_COMMAND"));
+        QVERIFY(button->setScript(qsl("qaPushUpRan = (qaPushUpRan or 0) + 1; qaPushUpState = getButtonState()")));
+        host->mInstalledPackages << qsl("pushUpTestPackage");
+
+        QVERIFY(host->mLuaInterpreter.compileAndExecuteScript(qsl("qaPushUpRan = nil; qaPushUpState = nil; qaUpCommandSent = 0; "
+                                                                  "tempAlias([[^QA_\\w+_COMMAND$]], [[qaUpCommandSent = qaUpCommandSent + 1]])")));
+
+        host->mIsProfileLoadingSequence = true;
+        host->getActionUnit()->updateAllToolbars();
+        host->mIsProfileLoadingSequence = false;
+
+        QVERIFY2(host->mLuaInterpreter.compileAndExecuteScript(qsl("assert(qaPushUpRan == 1)")), "restoring the button on load did not run its script once");
+        QVERIFY2(host->mLuaInterpreter.compileAndExecuteScript(qsl("assert(qaPushUpState == 1)")), "the button's script did not see it up");
+        QVERIFY2(host->mLuaInterpreter.compileAndExecuteScript(qsl("assert(qaUpCommandSent == 0)")), "restoring the button on load sent a command");
+        QVERIFY2(!mainConsoleShows(host, qsl("QA_BUTTON_UP_COMMAND")), "restoring the button on load echoed its up command");
+    }
+
+    // Outside the loading sequence a click is what sends the command, and it
+    // still runs the script after it
+    void test_clickingAPushDownButtonSendsItsCommandAndRunsItsScript()
+    {
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        auto* host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+
+        auto* master = makeAction(host, nullptr, qsl("pushClickTestPackage"), true);
+        master->mPackageName = qsl("pushClickTestPackage");
+        master->mModuleMasterFolder = true;
+        master->mLocation = 0;
+        auto* toolbar = makeAction(host, master, qsl("pushClickTestToolbar"), true);
+        toolbar->mLocation = 0;
+        auto* button = makeAction(host, toolbar, qsl("pushClickTestButton"), false);
+        button->setIsPushDownButton(true);
+        button->mButtonState = false;
+        button->setCommandButtonDown(qsl("QA_CLICK_DOWN_COMMAND"));
+        QVERIFY(button->setScript(qsl("qaClickRan = (qaClickRan or 0) + 1; qaClickSentFirst = qaClickSent")));
+        host->mInstalledPackages << qsl("pushClickTestPackage");
+
+        QVERIFY(host->mLuaInterpreter.compileAndExecuteScript(qsl("qaClickRan = nil; qaClickSentFirst = nil; qaClickSent = 0; "
+                                                                  "tempAlias([[^QA_CLICK_DOWN_COMMAND$]], [[qaClickSent = qaClickSent + 1]])")));
+
+        host->getActionUnit()->updateAllToolbars();
+        auto* pB = findButtonWidget(button);
+        QVERIFY2(pB, "the button bar did not build the button");
+        QVERIFY(host->mLuaInterpreter.compileAndExecuteScript(qsl("assert(qaClickRan == nil)")));
+
+        pB->click();
+
+        QVERIFY(button->mButtonState);
+        QVERIFY2(host->mLuaInterpreter.compileAndExecuteScript(qsl("assert(qaClickSent == 1)")), "clicking the button did not send its command once");
+        QVERIFY2(host->mLuaInterpreter.compileAndExecuteScript(qsl("assert(qaClickRan == 1)")), "clicking the button did not run its script once");
+        QVERIFY2(host->mLuaInterpreter.compileAndExecuteScript(qsl("assert(qaClickSentFirst == 1)")), "the script ran before the command was sent");
     }
 
     // The same for a push-down entry in a button's menu, which the button bar
@@ -474,6 +554,7 @@ private slots:
 
         QVERIFY2(host->mLuaInterpreter.compileAndExecuteScript(qsl("assert(qaMenuEntryRan == 1)")), "restoring the menu entry on load did not run its script once");
         QVERIFY2(host->mLuaInterpreter.compileAndExecuteScript(qsl("assert(qaMenuCommandSent == 0)")), "restoring the menu entry on load sent its command");
+        QVERIFY2(!mainConsoleShows(host, qsl("QA_MENU_ENTRY_DOWN_COMMAND")), "restoring the menu entry on load echoed its command");
     }
 
     void cleanup()
