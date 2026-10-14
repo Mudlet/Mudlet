@@ -21,11 +21,17 @@
  ***************************************************************************/
 
 #include <QColor>
+#include <QFont>
 #include <QPointer>
+#include <QRect>
 #include <QSet>
+#include <QSize>
 #include <QString>
 
+#include <optional>
+
 class Host;
+class QSvgRenderer;
 
 // A label's widget-free state, so the Widgets-free core can hold a named label without a QLabel.
 // Owned by its TLabel, whose same-named reference members alias it; TWindowRegistry indexes
@@ -41,6 +47,12 @@ struct TLabelModel
     TLabelModel(const TLabelModel&) = delete;
     TLabelModel& operator=(const TLabelModel&) = delete;
 
+    // Whether the SVG renderer is worth trying on a file, judged by its first bytes.
+    static bool svgCandidate(const QString& path);
+    static bool loadSvg(QSvgRenderer& renderer, const QString& path);
+    // A file's natural size as an SVG document or a raster image, without a widget.
+    static std::optional<QSize> imageSize(const QString& path);
+
     // Each releases the Lua registry index it replaces.
     void setClick(const int func);
     void setDoubleClick(const int func);
@@ -49,6 +61,16 @@ struct TLabelModel
     void setWheel(const int func);
     void setEnter(const int func);
     void setLeave(const int func);
+
+    // What TLabel::setBackgroundColor() restyles a label with: the sheet with its background-color
+    // declarations given the colour, or the colour's appended.
+    static QString styleSheetWithBackgroundColor(const QString& styleSheet, const QColor& color);
+    // Whether the text has an anchor tag, which makes the label's links clickable
+    static bool containsAnchorTag(const QString& text);
+    // What TLabel::setText() shows for the text: each anchor given the link style as an inline style
+    QString linkStyledText(const QString& text);
+    // What the label shows for its text once the link style or the visited links change
+    QString restyledText();
 
     // A QPointer because Host and view are torn down in either order: quitting
     // destroys every Host before the labels' deferred deletes run.
@@ -75,9 +97,26 @@ struct TLabelModel
     double mSvgRotation = 0.0;
     double mSvgShearX = 0.0;
     double mSvgShearY = 0.0;
+    // The widget's pos() and size(), kept current by the view as Qt moves or resizes it.
+    QRect mGeometry;
+    // QWidget::isVisibleTo() the main console, kept current by the view.
+    bool mVisible = false;
+    // The widget's own styleSheet(), toolTip() and font(), kept current by the view.
+    QString mStyleSheet;
+    QString mToolTip;
+    QFont mFont;
+    // QLabel::text(), which a pixmap or movie empties, written by the view after each change.
+    QString mText;
 
 private:
     void releaseFunc(const int existingFunction, const int newFunction);
+    QString withoutInjectedLinkStyles(const QString& text) const;
+    QString styleLinks(const QString& text);
+
+    // what setText() was given, before the link styling was written into its anchors
+    QString mUnstyledText;
+    // the style attribute values the last styling pass wrote into the anchors
+    QSet<QString> mInjectedLinkStyles;
 };
 
 #endif // MUDLET_TLABELMODEL_H

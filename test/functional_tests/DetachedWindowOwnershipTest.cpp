@@ -36,8 +36,11 @@
  * Run with: ctest -R DetachedWindowOwnershipTest -V
  */
 
+#include <QAction>
 #include <QFileInfo>
+#include <QMimeData>
 #include <QSignalSpy>
+#include <QTabBar>
 #include <QTemporaryDir>
 #include <QPointer>
 #include <QWindow>
@@ -74,6 +77,9 @@ private:
     const QString mLocalhost = qsl("localhost");
     const QString mFirstHostname = qsl("DetachedWindowOwnership-First");
     const QString mSecondHostname = qsl("DetachedWindowOwnership-Second");
+    // Started by the cases that need three tabs; cleanup() closes it again so
+    // that every case begins with the same two
+    const QString mThirdHostname = qsl("DetachedWindowOwnership-Third");
 
     // setupConfig() consults portable.txt before the XDG logic
     static bool portableMarkerPresent()
@@ -111,6 +117,7 @@ private slots:
 
         deleteProfileDirectory(mFirstHostname);
         deleteProfileDirectory(mSecondHostname);
+        deleteProfileDirectory(mThirdHostname);
 
         // Two of them, because a tab only detaches while another one is left
         // behind in the main window
@@ -129,6 +136,7 @@ private slots:
         if (mudlet::self()) {
             deleteProfileDirectory(mFirstHostname);
             deleteProfileDirectory(mSecondHostname);
+            deleteProfileDirectory(mThirdHostname);
             delete mudlet::self();
         }
         mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);
@@ -145,6 +153,13 @@ private slots:
         const QStringList detachedProfiles = mudlet::self()->getDetachedWindows().keys();
         for (const QString& profileName : detachedProfiles) {
             mudlet::self()->slot_tabReattachRequested(profileName);
+        }
+        closeThirdProfile();
+        // init() detaches tab 1 and expects that to be the second profile
+        const int firstTab = mudlet::self()->mpTabBar->tabIndex(mFirstHostname);
+        if (firstTab > 0) {
+            mudlet::self()->slot_tabDetachRequested(firstTab, QPoint(200, 200));
+            reattachAndWait(mFirstHostname, 0);
         }
     }
 
@@ -281,7 +296,244 @@ private slots:
         reattachAndWait(leftMostProfile, 0);
     }
 
+    // The window's own Reattach puts the profile back in the slot it was
+    // dragged out of
+    void test_reattachingFromTheWindowPutsTheTabBackWhereItWas()
+    {
+        QVERIFY(mpDetachedWindow);
+        reattachAndWait(mSecondHostname);
+        QCOMPARE(mudlet::self()->mpTabBar->count(), 2);
+
+        const QString leftMostProfile = mudlet::self()->mpTabBar->tabName(0);
+        mudlet::self()->slot_tabDetachRequested(0, QPoint(200, 200));
+        TDetachedWindow* pDetachedWindow = mudlet::self()->getDetachedWindows().value(leftMostProfile);
+        QVERIFY2(pDetachedWindow, qPrintable(qsl("detaching the left-most tab ('%1') produced no window for it").arg(leftMostProfile)));
+        QAction* pReattach = pDetachedWindow->findChild<QAction*>(qsl("reattach_action"));
+        QVERIFY2(pReattach, "the detached window has no reattach action");
+
+        pReattach->trigger();
+        QVERIFY(QTest::qWaitFor(
+                []() {
+                    return mudlet::self()->getDetachedWindows().isEmpty();
+                },
+                2000ms));
+        QCOMPARE(mudlet::self()->mpTabBar->count(), 2);
+        QCOMPARE(mudlet::self()->mpTabBar->tabName(0), leftMostProfile);
+    }
+
+    // A tab from the middle of the bar, where neither "first" nor "last" would
+    // pass for the slot it left
+    void test_reattachingFromTheMiddleSlotPutsTheTabBetweenItsNeighbours()
+    {
+        startThirdProfile();
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        const QStringList before = mudlet::self()->mpTabBar->tabNames();
+
+        mudlet::self()->slot_tabDetachRequested(1, QPoint(200, 200));
+        triggerReattach(before.at(1));
+
+        QCOMPARE(mudlet::self()->mpTabBar->tabNames(), before);
+    }
+
+    // With two profiles out at once, each one's slot has to allow for the other
+    // coming back first
+    void test_profilesDetachedOneAfterAnotherComeBackInTheirOldOrder()
+    {
+        startThirdProfile();
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        const QStringList before = mudlet::self()->mpTabBar->tabNames();
+
+        mudlet::self()->slot_tabDetachRequested(0, QPoint(200, 200));
+        mudlet::self()->slot_tabDetachRequested(0, QPoint(400, 200));
+        triggerReattach(before.at(0));
+        triggerReattach(before.at(1));
+        QCOMPARE(mudlet::self()->mpTabBar->tabNames(), before);
+
+        mudlet::self()->slot_tabDetachRequested(0, QPoint(200, 200));
+        mudlet::self()->slot_tabDetachRequested(0, QPoint(400, 200));
+        triggerReattach(before.at(1));
+        triggerReattach(before.at(0));
+        QCOMPARE(mudlet::self()->mpTabBar->tabNames(), before);
+    }
+
+    // The Window menu's "Reattach detached windows" goes through the profiles
+    // by name rather than by where they were
+    void test_reattachingAllDetachedWindowsPutsEveryTabBack()
+    {
+        startThirdProfile();
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        const QStringList before = mudlet::self()->mpTabBar->tabNames();
+
+        mudlet::self()->slot_tabDetachRequested(1, QPoint(200, 200));
+        mudlet::self()->slot_tabDetachRequested(0, QPoint(400, 200));
+        mudlet::self()->slot_reattachAllDetachedWindows();
+        QVERIFY(QTest::qWaitFor(
+                []() {
+                    return mudlet::self()->getDetachedWindows().isEmpty();
+                },
+                2000ms));
+
+        QCOMPARE(mudlet::self()->mpTabBar->tabNames(), before);
+    }
+
+    // A tab dropped on the main window's body, away from its tab bar, says
+    // nothing about where it should go
+    void test_droppingADetachedTabOnTheMainWindowPutsItBackWhereItWas()
+    {
+        startThirdProfile();
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        const QStringList before = mudlet::self()->mpTabBar->tabNames();
+
+        mudlet::self()->slot_tabDetachRequested(0, QPoint(200, 200));
+        QVERIFY(mudlet::self()->getDetachedWindows().contains(before.at(0)));
+        dropTab(mudlet::self(), before.at(0));
+        QVERIFY(QTest::qWaitFor(
+                []() {
+                    return mudlet::self()->getDetachedWindows().isEmpty();
+                },
+                2000ms));
+
+        QCOMPARE(mudlet::self()->mpTabBar->tabNames(), before);
+    }
+
+    // Double-clicking the tab in the detached window is the same Reattach
+    void test_doubleClickingADetachedTabPutsItBackWhereItWas()
+    {
+        startThirdProfile();
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        const QStringList before = mudlet::self()->mpTabBar->tabNames();
+
+        mudlet::self()->slot_tabDetachRequested(0, QPoint(200, 200));
+        TDetachedWindow* pDetachedWindow = mudlet::self()->getDetachedWindows().value(before.at(0));
+        QVERIFY(pDetachedWindow);
+        auto* pTabBar = pDetachedWindow->findChild<QTabBar*>();
+        QVERIFY(pTabBar);
+        QTest::mouseDClick(pTabBar, Qt::LeftButton, Qt::NoModifier, pTabBar->tabRect(0).center());
+        QVERIFY(QTest::qWaitFor(
+                [&before]() {
+                    return !mudlet::self()->getDetachedWindows().contains(before.at(0));
+                },
+                2000ms));
+
+        QCOMPARE(mudlet::self()->mpTabBar->tabNames(), before);
+    }
+
+    // The slot belongs to the profile, not to the window it was first put in
+    void test_aProfileMovedToAnotherDetachedWindowKeepsItsSlot()
+    {
+        QVERIFY(mpDetachedWindow);
+        const QStringList before = mudlet::self()->mpTabBar->tabNames();
+        QCOMPARE(before.size(), 1);
+        startProfile(mThirdHostname);
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        const QString movedProfile = before.at(0);
+
+        mudlet::self()->slot_tabDetachRequested(0, QPoint(400, 200));
+        QVERIFY(mudlet::self()->getDetachedWindows().value(movedProfile) != mpDetachedWindow);
+        dropTab(mpDetachedWindow, movedProfile);
+        QVERIFY2(mudlet::self()->getDetachedWindows().value(movedProfile) == mpDetachedWindow, qPrintable(qsl("'%1' did not move into the other detached window").arg(movedProfile)));
+        mpDetachedWindow->switchToProfile(movedProfile);
+        triggerReattach(movedProfile);
+
+        QCOMPARE(mudlet::self()->mpTabBar->tabNames(), QStringList({movedProfile, mThirdHostname}));
+    }
+
+    // A main tab dropped into a window that is already open leaves its slot
+    // too, and that window's Reattach puts it back there
+    void test_reattachingATabDroppedIntoAnOpenWindowPutsItBackWhereItWas()
+    {
+        QVERIFY(mpDetachedWindow);
+        startProfile(mThirdHostname);
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        QCOMPARE(mudlet::self()->mpTabBar->count(), 2);
+        const QString leftMostProfile = mudlet::self()->mpTabBar->tabName(0);
+        const QString rightMostProfile = mudlet::self()->mpTabBar->tabName(1);
+
+        mudlet::self()->slot_profileDetachToWindow(leftMostProfile, mpDetachedWindow);
+        QVERIFY2(mudlet::self()->getDetachedWindows().value(leftMostProfile) == mpDetachedWindow, qPrintable(qsl("'%1' did not move into the open detached window").arg(leftMostProfile)));
+        mpDetachedWindow->switchToProfile(leftMostProfile);
+        QCOMPARE(mpDetachedWindow->getCurrentProfileName(), leftMostProfile);
+        QAction* pReattach = mpDetachedWindow->findChild<QAction*>(qsl("reattach_action"));
+        QVERIFY2(pReattach, "the detached window has no reattach action");
+
+        pReattach->trigger();
+        QVERIFY(QTest::qWaitFor(
+                [leftMostProfile]() {
+                    return !mudlet::self()->getDetachedWindows().contains(leftMostProfile);
+                },
+                2000ms));
+        QCOMPARE(mudlet::self()->mpTabBar->count(), 2);
+        QCOMPARE(mudlet::self()->mpTabBar->tabName(0), leftMostProfile);
+        QCOMPARE(mudlet::self()->mpTabBar->tabName(1), rightMostProfile);
+    }
+
 private:
+    // init() detached the second profile, so put it back and add a third
+    void startThirdProfile()
+    {
+        QVERIFY(mpDetachedWindow);
+        reattachAndWait(mSecondHostname);
+        startProfile(mThirdHostname);
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        QCOMPARE(mudlet::self()->mpTabBar->count(), 3);
+    }
+
+    void closeThirdProfile()
+    {
+        const int thirdTab = mudlet::self()->mpTabBar->tabIndex(mThirdHostname);
+        if (thirdTab < 0) {
+            return;
+        }
+        mudlet::self()->slot_closeProfileRequested(thirdTab);
+        QVERIFY(QTest::qWaitFor(
+                [this]() {
+                    return HostManager::self()->getHost(mThirdHostname) == nullptr;
+                },
+                10s));
+        // Or the next case to start it is told the name is already in use
+        deleteProfileDirectory(mThirdHostname);
+    }
+
+    void triggerReattach(const QString& profileName)
+    {
+        TDetachedWindow* pDetachedWindow = mudlet::self()->getDetachedWindows().value(profileName);
+        QVERIFY2(pDetachedWindow, qPrintable(qsl("'%1' has no detached window").arg(profileName)));
+        QAction* pReattach = pDetachedWindow->findChild<QAction*>(qsl("reattach_action"));
+        QVERIFY2(pReattach, "the detached window has no reattach action");
+        pReattach->trigger();
+        QVERIFY(QTest::qWaitFor(
+                [profileName]() {
+                    return !mudlet::self()->getDetachedWindows().contains(profileName);
+                },
+                2000ms));
+    }
+
+    // Through event() itself: QApplication::sendEvent() does not hand a
+    // synthesised drop on to the widget
+    static void dropTab(QWidget* pTarget, const QString& profileName)
+    {
+        QMimeData mimeData;
+        mimeData.setData(qsl("application/x-mudlet-tab"), profileName.toUtf8());
+        QDropEvent drop(QPointF(50, 50), Qt::MoveAction, &mimeData, Qt::LeftButton, Qt::NoModifier);
+        static_cast<QObject*>(pTarget)->event(&drop);
+    }
+
     void reattachAndWait(const QString& profileName, int insertIndex = -1)
     {
         mudlet::self()->slot_tabReattachRequested(profileName, insertIndex);

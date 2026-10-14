@@ -67,6 +67,7 @@ public:
     void resizeEvent(QResizeEvent* event) override;
     void paintEvent(QPaintEvent* event) override;
     void changeEvent(QEvent* event) override;
+    bool event(QEvent* event) override;
     QSize sizeHint() const override;
     void contextMenuEvent(QContextMenuEvent*) override;
     void setClickThrough(bool clickthrough);
@@ -79,8 +80,6 @@ public:
     void resetBackgroundImage();
     bool setSvgImage(const QString& path);
     void clearSvgImage();
-    static bool svgCandidate(const QString& path);
-    static bool loadSvg(QSvgRenderer& renderer, const QString& path);
     void setSvgTint(const QColor& color);
     void clearSvgTint();
     void setSvgRotation(double angle);
@@ -119,17 +118,12 @@ private:
     static constexpr Qt::TextInteractionFlags scmLinkInteraction = Qt::LinksAccessibleByMouse | Qt::LinksAccessibleByKeyboard;
 
     bool carriesLink() const;
-    QString withoutInjectedLinkStyles(const QString& text) const;
     void applyBackgroundColor();
-    void applyLinkStyle(const QString& text);
+    void showLinkStyledText(const QString& text);
     void reapplyLinkStyle();
 
     QColor& mBackgroundColor;
     QPixmap mSvgPixmapCache;
-    // what setText() was given, before the link styling was written into its anchors
-    QString mUnstyledText;
-    // the style attribute values the last styling pass wrote into the anchors
-    QSet<QString> mInjectedLinkStyles;
     // set when the link styling replaces the palette the stylesheet gave the label
     bool mPaletteSetSinceStyled = false;
 
