@@ -56,8 +56,8 @@ end
 function Geyser:base_add (window, cons)
   cons = cons or window -- 'cons' is optional
 
-  -- compiled before the window changes containers, so one whose constraints are refused stays where it was
-  Geyser.calc_constraints(window, cons, self)
+  -- checked before the window changes containers, so one whose constraints are refused stays where it was
+  Geyser.check_constraints(window, cons)
 
   -- Stop other container from controlling this window
   if window.container then
@@ -225,12 +225,12 @@ function Geyser:changeContainer (container)
   windowname = windowname or "main"
 
   -- before it leaves its container, so one the new container refuses stays where it was
-  Geyser.calc_constraints(self, self, container)
+  Geyser.check_constraints(self, self)
   self.container:remove(self)
   if self.windowname ~= windowname then
     setMyWindow(self, windowname)
     setContainerWindow(self, windowname)
   end
   -- use add2 without overwriting childrens' add functions
-  container:add2(self, cons, false)
+  container:add2(self, self, false)
 end

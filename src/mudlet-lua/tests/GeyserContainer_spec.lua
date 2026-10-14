@@ -237,11 +237,11 @@ describe("Tests functionality of Geyser.Container", function()
           end
         end
       end)
-      -- a value that is not text is shown by its type, so true is told apart from "true"
+      -- a value that is neither text nor a number is shown by its type, so true is told apart from "true"
       local cases = {
         {"nonsense", '"nonsense"'}, {"", '""'}, {"50 %", '"50 %"'}, {"50%%", '"50%%"'}, {"true", '"true"'},
         {{}, "(table)"}, {true, "(boolean)"}, {0 / 0, tostring(0 / 0)}, {math.huge, tostring(math.huge)},
-        {-math.huge, tostring(-math.huge)},
+        {-math.huge, tostring(-math.huge)}, {1e20, tostring(1e20)}, {-1e20, tostring(-1e20)}, {3e9, tostring(3e9)},
       }
       for _, dimension in ipairs({"x", "y", "width", "height"}) do
         for index, case in ipairs(cases) do
@@ -274,26 +274,77 @@ describe("Tests functionality of Geyser.Container", function()
       local before = os.setlocale(nil, "numeric")
       finally(function()
         os.setlocale(before, "numeric")
-        if Geyser.windowList.gcsBadFontSize then
-          Geyser.windowList.gcsBadFontSize:delete()
+        for _, name in ipairs({"gcsBadFontSize", "gcsBadFontSizetable", "gcsBadFontSizeboolean"}) do
+          if Geyser.windowList[name] then
+            Geyser.windowList[name]:delete()
+          end
         end
       end)
       local other = os.setlocale("C.UTF-8", "numeric") or os.setlocale("C.utf8", "numeric") or before
-      -- a font size that is text is read as the name of a window, and there is none
-      local ok, message = pcall(function()
-        return Geyser.Label:new({name = "gcsBadFontSize", x = 0, y = 0, width = "10c", height = 20, fontSize = "gcsNoSuchWindow"})
-      end)
-      assert.is_false(ok)
-      assert.is_truthy(tostring(message):find("element 'gcsBadFontSize' has a character width constraint", 1, true), tostring(message))
-      assert.are.equal(other, os.setlocale(nil, "numeric"))
-      assert.is_nil(Geyser.windowList.gcsBadFontSize)
+      -- with only "C" there is no telling whether the parser put the locale back
+      local checksLocale = other ~= "C"
+      -- a font size that is text is read as the name of a window, and there is none;
+      -- and one that is neither text nor a number is no font size at all
+      for _, case in ipairs({{"gcsBadFontSize", "gcsNoSuchWindow", '"gcsNoSuchWindow"'},
+          {"gcsBadFontSizetable", {}, "(table)"}, {"gcsBadFontSizeboolean", true, "(boolean)"}}) do
+        local name, fontSize, shown = case[1], case[2], case[3]
+        local ok, message = pcall(function()
+          return Geyser.Label:new({name = name, x = 0, y = 0, width = "10c", height = 20, fontSize = fontSize})
+        end)
+        assert.is_false(ok)
+        local expected = string.format("element '%s' has a character width constraint, but no font size could be read from fontSize %s", name, shown)
+        assert.is_truthy(tostring(message):find(expected, 1, true), tostring(message))
+        if checksLocale then
+          assert.are.equal(other, os.setlocale(nil, "numeric"))
+        end
+        assert.is_nil(Geyser.windowList[name])
+      end
 
       local label = track(Geyser.Label:new({name = "gcsBadFontSizeResize", x = 10, y = 10, width = 50, height = 20}))
       local getX = label.get_x
       label.fontSize = "gcsNoSuchWindow"
       assert.is_false(pcall(function() label:resize("10c", nil) end))
       assert.are.equal(getX, label.get_x)
-      assert.are.equal(other, os.setlocale(nil, "numeric"))
+      if checksLocale then
+        assert.are.equal(other, os.setlocale(nil, "numeric"))
+      else
+        pending("no numeric locale other than C to switch from on this platform")
+      end
+    end)
+
+    it("reads the font size once to lay out a character constraint", function()
+      local box = track(Geyser.Container:new({name = "gcsFontReadBox", x = 0, y = 0, width = 300, height = 100}))
+      local other = track(Geyser.Container:new({name = "gcsFontReadOther", x = 0, y = 0, width = 300, height = 100}))
+      local real = _G.calcFontSize
+      local reads = 0
+      finally(function() _G.calcFontSize = real end)
+      _G.calcFontSize = function(...)
+        reads = reads + 1
+        return real(...)
+      end
+      local label = track(Geyser.Label:new({name = "gcsFontRead", x = 0, y = 0, width = "10c", height = 20, fontSize = 10}, box))
+      reads = 0
+      other:add(label)
+      assert.are.equal(1, reads)
+      reads = 0
+      label:move(10, 20)
+      assert.are.equal(1, reads)
+    end)
+
+    it("compiles the constraints of a numeric move once", function()
+      local label = track(Geyser.Label:new({name = "gcsMoveCompiles", x = 0, y = 0, width = 50, height = 20}))
+      local real = Geyser.calc_constraints
+      local compiles = 0
+      finally(function() Geyser.calc_constraints = real end)
+      Geyser.calc_constraints = function(...)
+        compiles = compiles + 1
+        return real(...)
+      end
+      label:move(10, 20)
+      label:resize(60, 30)
+      Geyser.calc_constraints = real
+      assert.are.equal(2, compiles)
+      assert.are.same({x = 10, y = 20, width = 60, height = 30}, geometry("gcsMoveCompiles"))
     end)
 
     it("leaves a box it refused an element for to its other children", function()
@@ -392,6 +443,22 @@ describe("Tests functionality of Geyser.Container", function()
       assert.are.equal(label, source.windowList.gcsRefusedChange)
       assert.is_truthy(table.index_of(source.windows, "gcsRefusedChange"))
       assert.is_nil(destination.windowList.gcsRefusedChange)
+    end)
+
+    it("moves an element with changeContainer by its own constraints, whatever a script left in cons", function()
+      local source = track(Geyser.Container:new({name = "gcsChangeConsSource", x = 0, y = 0, width = 200, height = 100}))
+      local destination = track(Geyser.Container:new({name = "gcsChangeConsDestination", x = 0, y = 200, width = 200, height = 100}))
+      local label = track(Geyser.Label:new({name = "gcsChangeCons", x = 0, y = 0, width = 50, height = 50}, source))
+      local saved = _G.cons
+      finally(function() _G.cons = saved end)
+      _G.cons = {x = 0, y = 0, width = 77, height = 10}
+      label:changeContainer(destination)
+      assert.are.equal(label, destination.windowList.gcsChangeCons)
+      assert.are.same({x = 0, y = 200, width = 50, height = 50}, geometry("gcsChangeCons"))
+      _G.cons = {x = 0, y = 0, width = "nonsense", height = 10}
+      label:changeContainer(source)
+      assert.are.equal(label, source.windowList.gcsChangeCons)
+      assert.is_nil(destination.windowList.gcsChangeCons)
     end)
 
     it("leaves the window name of an element a container refused alone", function()
