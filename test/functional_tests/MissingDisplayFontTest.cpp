@@ -45,11 +45,16 @@
 
 #include <QtTest/QtTest>
 
+#include <QAbstractItemView>
+#include <QCheckBox>
 #include <QFont>
+#include <QFontComboBox>
 #include <QFontDatabase>
 #include <QFontInfo>
+#include <QSpinBox>
 #include <QTemporaryDir>
 #include <QUuid>
+#include <memory>
 #include <zip.h>
 
 #include "FontManager.h"
@@ -61,6 +66,7 @@
 #include "TLuaInterpreter.h"
 #include "TMainConsole.h"
 #include "TTextBox.h"
+#include "dlgProfilePreferences.h"
 #include "mudlet.h"
 
 #include "GroupedTest.h"
@@ -315,6 +321,18 @@ private:
         const QString target = (standIn == Host::scmDefaultFontFamily) ? mOtherBundledFamily : Host::scmDefaultFontFamily;
         QFont::insertSubstitution(mAliasFamily, target);
         return target;
+    }
+
+    // Picks a row of the combo box's popup list the way a mouse does
+    static void clickPopupRow(QFontComboBox* pFamilies, const int row)
+    {
+        pFamilies->showPopup();
+        QAbstractItemView* pList = pFamilies->view();
+        const QModelIndex index = pList->model()->index(row, 0);
+        pList->scrollTo(index);
+        const QPoint at = pList->visualRect(index).center();
+        QTest::mouseMove(pList->viewport(), at);
+        QTest::mouseClick(pList->viewport(), Qt::LeftButton, {}, at);
     }
 
 private slots:
@@ -746,6 +764,82 @@ private slots:
         const QString shown = consoleText(pHost);
         QVERIFY2(shown.contains(qsl("[ WARN ]")), qPrintable(qsl("no warning reached the main console; it holds: %1").arg(shown)));
         QVERIFY2(shown.contains(mPackageSuppliedFamily), qPrintable(qsl("the warning does not name the font that went missing; the console holds: %1").arg(shown)));
+    }
+
+    // Re-picking the family on show is how a player settles for the stand-in. The
+    // combo box only says its font changed when the picked row is another one.
+    void test_pickingTheStandInFamilyInThePreferencesSettlesForIt()
+    {
+        const QString profileName = qsl("MissingDisplayFont-Preferences-Test");
+        QVERIFY2(writeProfileSave(profileName, mMissingFamily), "could not write the test profile save");
+
+        Host* pHost = mudlet::self()->loadProfile(profileName, false);
+        QVERIFY(pHost);
+        QVERIFY2(pHost->mLoadedOk, "the test profile save could not be loaded");
+        mudlet::self()->slot_connectionDialogueFinished(profileName, false);
+        QVERIFY2(pHost->mainConsoleView(), "the profile came up without a main console");
+        QCOMPARE(pHost->getDisplayFont().family(), Host::scmDefaultFontFamily);
+        QCOMPARE(pHost->getDisplayFontForSaving().family(), mMissingFamily);
+
+        auto pPreferences = std::make_unique<dlgProfilePreferences>(mudlet::self(), pHost);
+        pPreferences->show();
+        QVERIFY(QTest::qWaitForWindowExposed(pPreferences.get()));
+        QFontComboBox* pFamilies = pPreferences->fontComboBox_displayFont;
+        QCOMPARE(pFamilies->currentFont().family(), Host::scmDefaultFontFamily);
+
+        clickPopupRow(pFamilies, pFamilies->currentIndex());
+
+        QCOMPARE(pHost->getDisplayFont().family(), Host::scmDefaultFontFamily);
+        QCOMPARE(pHost->getDisplayFontForSaving().family(), Host::scmDefaultFontFamily);
+    }
+
+    // The size and antialiasing controls send the family on show back to the Host
+    // too, and must not settle for the stand-in. Once they have, the font on show
+    // is exactly what the dialog would send, so a re-pick changes nothing at all
+    // and still has to settle.
+    void test_rePickingTheStandInAfterAdjustingItInThePreferencesSettlesForIt()
+    {
+        const QString profileName = qsl("MissingDisplayFont-PreferencesAdjust-Test");
+        QVERIFY2(writeProfileSave(profileName, mMissingFamily), "could not write the test profile save");
+
+        Host* pHost = mudlet::self()->loadProfile(profileName, false);
+        QVERIFY(pHost);
+        QVERIFY2(pHost->mLoadedOk, "the test profile save could not be loaded");
+        mudlet::self()->slot_connectionDialogueFinished(profileName, false);
+        QVERIFY2(pHost->mainConsoleView(), "the profile came up without a main console");
+        QCOMPARE(pHost->getDisplayFontForSaving().family(), mMissingFamily);
+
+        auto pPreferences = std::make_unique<dlgProfilePreferences>(mudlet::self(), pHost);
+        pPreferences->show();
+        QVERIFY(QTest::qWaitForWindowExposed(pPreferences.get()));
+        QFontComboBox* pFamilies = pPreferences->fontComboBox_displayFont;
+        QSpinBox* pSize = pPreferences->spinBox_displayFontSize;
+        const int size = pSize->value();
+
+        pSize->setValue(size + 1);
+        QCOMPARE(pHost->getDisplayFont().pointSize(), size + 1);
+        QCOMPARE(pHost->getDisplayFontForSaving().family(), mMissingFamily);
+        pPreferences->checkBox_antiAlias->click();
+        QCOMPARE(pHost->getDisplayFontForSaving().family(), mMissingFamily);
+        pPreferences->checkBox_antiAlias->click();
+        pSize->setValue(size);
+        QCOMPARE(pHost->getDisplayFontForSaving().family(), mMissingFamily);
+
+        QFont wouldSend = pFamilies->currentFont();
+        wouldSend.setPointSize(pSize->value());
+        wouldSend.setStyleHint(QFont::AnyStyle,
+                               pPreferences->checkBox_antiAlias->isChecked() ? static_cast<QFont::StyleStrategy>(QFont::PreferAntialias | QFont::PreferQuality)
+                                                                             : static_cast<QFont::StyleStrategy>(QFont::NoAntialias | QFont::PreferQuality));
+        QVERIFY2(TFontAttributes(pHost->getDisplayFont()) == TFontAttributes(wouldSend),
+                 "the font on show differs from what the dialog sends, so this case cannot show a re-pick that changes nothing");
+
+        clickPopupRow(pFamilies, pFamilies->currentIndex());
+        QCOMPARE(pHost->getDisplayFontForSaving().family(), Host::scmDefaultFontFamily);
+
+        auto [saved, xmlPath, saveError] = pHost->saveProfile(mSaveDir.path(), qsl("settled"));
+        QVERIFY2(saved, qPrintable(saveError));
+        pHost->waitForProfileSave();
+        QCOMPARE(savedDisplayFontFamily(xmlPath), Host::scmDefaultFontFamily);
     }
 };
 
