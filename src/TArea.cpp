@@ -105,6 +105,7 @@ QList<std::tuple<int, int, int>> TArea::getCollisionNodes()
     locations.reserve(rooms.size());
     for (const auto id : std::as_const(rooms)) {
         if (const auto room = mpRoomDB->getRoom(id)) {
+            // Stored (z,y,x) so that sorting yields the z, y, x order getCollisionNodes() promises
             locations.emplace_back(room->z(), room->y(), room->x());
         }
     }
