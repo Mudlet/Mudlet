@@ -333,15 +333,17 @@ end
 
 --- The below functions (table.save, table.load) can be used to save individual Lua tables to disc and load
 --- them again at a later time e.g. make a database, collect statistical information etc.
---- These functions are also used by Mudlet to load & save the entire Lua session variables. <br/><br/>
+--- saveVars() and loadVars() use them to keep the variables flagged with remember(). <br/><br/>
 ---
 --- Original code written by CHILLCODE™ on https://board.ptokax.ch, distributed under the same terms as Lua itself. <br/><br/>
 ---
 --- Notes: <br/>
----  Userdata and indices of these are not saved <br/>
----  Functions are saved via string.dump, so make sure it has no upvalues <br/>
+---  Functions, userdata and coroutines are not saved, whether as a key or as a value <br/>
+---  The Lua libraries and _G are not saved, wherever they are reached <br/>
 ---  References are saved <br/>
 ---
+--- @return true, or nil and an error message if the file could not be written. It raises an error,
+---   leaving the file as it was, when t is not a table.
 --- @usage Saves the given table into the given file.
 ---   <pre>
 ---   table.save(file, table)
@@ -356,8 +358,8 @@ function table.save( sfile, t )
   local tables = {}
   table.insert( tables, t )
   local lookup = { [t] = 1 }
-  -- written to the file only once the whole table is serialised, so a failure part way through
-  -- cannot leave the previous contents truncated
+  -- serialised in full before the file is opened, so an error while serialising leaves the previous
+  -- contents in place; a write that fails, such as on a full disk, still loses them
   local chunks = {}
   local buffer = { write = function(_, text) chunks[#chunks + 1] = text end }
   buffer:write( "return {" )
