@@ -441,11 +441,11 @@ TConsoleModel::WriteResult TConsoleModel::insertLink(const QString& text, QStrin
         mpHost->getLuaInterpreter()->adjustCaptureGroups(start.x(), text.size());
         QPoint at = start;
         buffer.insertInLine(at, text, format);
-        buffer.applyLink(start, end, commands, hints, luaReferences);
+        const bool linkDropped = !buffer.applyLink(start, end, commands, hints, luaReferences);
         if (start.y() < mEngineCursor) {
-            return {false, mUserCursor.y(), mUserCursor.y()};
+            return {false, mUserCursor.y(), mUserCursor.y(), linkDropped};
         }
-        return {};
+        return {false, -1, -1, linkDropped};
     }
     if (buffer.buffer.empty() || mUserCursor == buffer.getEndPos()) {
         buffer.addLink(mTriggerEngineMode, text, commands, hints, format, luaReferences);
@@ -453,7 +453,7 @@ TConsoleModel::WriteResult TConsoleModel::insertLink(const QString& text, QStrin
     }
 
     buffer.insertInLine(mUserCursor, text, format);
-    buffer.applyLink(start, end, commands, hints, luaReferences);
+    const bool linkDropped = !buffer.applyLink(start, end, commands, hints, luaReferences);
     const int line = mUserCursor.y();
     int newX = mUserCursor.x() + text.size();
     int down = 0;
@@ -465,7 +465,7 @@ TConsoleModel::WriteResult TConsoleModel::insertLink(const QString& text, QStrin
     if (buffer.moveCursor(newCursor)) {
         mUserCursor = QPoint(newX, line + down);
     }
-    return {false, line, line + down};
+    return {false, line, line + down, linkDropped};
 }
 
 bool TConsoleModel::echo(QString& text)

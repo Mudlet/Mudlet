@@ -2087,7 +2087,7 @@ int TLuaInterpreter::insertLink(lua_State* L)
     if (!pModel) {
         return windowNotFound(L, windowName);
     }
-    // an empty link covers no text, so nothing would take ownership of its functions;
+    // refused even where an empty link could be appended, as it would cover no text;
     // the QString stops at the first NUL, so "\0..." counts as empty too
     const QString text{lua_tostring(L, textPos)};
     if (text.isEmpty()) {
@@ -2106,7 +2106,10 @@ int TLuaInterpreter::insertLink(lua_State* L)
     hintList << QString{lua_tostring(L, hintPos)};
 
     const bool useCurrentFormat = hasFormatFlag && lua_toboolean(L, formatPos);
-    host.insertWindowLink(*pModel, text, commandList, hintList, useCurrentFormat, luaReferences);
+    if (!host.insertWindowLink(*pModel, text, commandList, hintList, useCurrentFormat, luaReferences)) {
+        releaseLuaReferences(L, luaReferences);
+        return warnArgumentValue(L, __func__, "the cursor is outside the text - cannot create link");
+    }
     lua_pushboolean(L, true);
     return 1;
 }
@@ -2144,7 +2147,7 @@ int TLuaInterpreter::insertPopup(lua_State* L)
     if (!pModel) {
         return windowNotFound(L, windowName);
     }
-    // an empty link covers no text, so nothing would take ownership of its functions;
+    // refused even where an empty link could be appended, as it would cover no text;
     // the QString stops at the first NUL, so "\0..." counts as empty too
     const QString text{lua_tostring(L, textPos)};
     if (text.isEmpty()) {
@@ -2168,7 +2171,10 @@ int TLuaInterpreter::insertPopup(lua_State* L)
     }
 
     const bool useCurrentFormat = hasFormatFlag && lua_toboolean(L, formatPos);
-    host.insertWindowLink(*pModel, text, commandList, hintList, useCurrentFormat, luaReferences);
+    if (!host.insertWindowLink(*pModel, text, commandList, hintList, useCurrentFormat, luaReferences)) {
+        releaseLuaReferences(L, luaReferences);
+        return warnArgumentValue(L, __func__, "the cursor is outside the text - cannot create popup");
+    }
     lua_pushboolean(L, true);
     return 1;
 }

@@ -5427,9 +5427,11 @@ void Host::echoWindowLink(TConsoleModel& model, const QString& text, QStringList
     emit model.mNotifier.newLinesWritten();
 }
 
-void Host::insertWindowLink(TConsoleModel& model, const QString& text, QStringList commands, QStringList hints, const bool useCurrentFormat, const QVector<int>& luaReferences)
+bool Host::insertWindowLink(TConsoleModel& model, const QString& text, QStringList commands, QStringList hints, const bool useCurrentFormat, const QVector<int>& luaReferences)
 {
-    showConsoleWrite(model, model.insertLink(text, commands, hints, useCurrentFormat, luaReferences));
+    const TConsoleModel::WriteResult result = model.insertLink(text, commands, hints, useCurrentFormat, luaReferences);
+    showConsoleWrite(model, result);
+    return !result.linkDropped;
 }
 
 bool Host::setWindowLink(TConsoleModel& model, const QStringList& commands, const QStringList& hints, const QVector<int>& luaReferences)

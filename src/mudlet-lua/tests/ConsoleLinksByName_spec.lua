@@ -338,6 +338,39 @@ describe("Tests that the link and text functions find their console by name", fu
           end
           assertFreeListWhole()
         end)
+
+        it("refuses to insert a link where the cursor is outside the text, keeping no function", function()
+          local places = {
+            function()
+              echo(window, "hello\n")
+              moveCursor(window, -1, 0)
+            end,
+            -- the line the cursor was on is deleted, leaving it past the last line
+            function()
+              echo(window, "hello\nworld")
+              moveCursor(window, 0, getLastLineNumber(window))
+              deleteLine(window)
+            end,
+          }
+          for _, place in ipairs(places) do
+            for _, entry in ipairs({
+              {"the cursor is outside the text - cannot create link", function(fn) return insertLink(window, "text", fn, "hint") end},
+              {"the cursor is outside the text - cannot create popup", function(fn) return insertPopup(window, "text", {fn, "cmd"}, {"one", "two"}) end},
+            }) do
+              local refusal, call = entry[1], entry[2]
+              local function insertThere(fn)
+                place()
+                return call(fn)
+              end
+              assert.are.same({nil, refusal}, {insertThere(function() end)})
+              assert.is_false(keptAfter(insertThere))
+              assert.are.equal(0, registryGrowthOver(function()
+                insertThere(function() end)
+              end))
+            end
+          end
+          assertFreeListWhole()
+        end)
       end)
     end
   end)
