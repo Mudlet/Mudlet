@@ -2342,12 +2342,11 @@ bool dlgConnectionProfiles::extractSettingsFromProfile(pugi::xml_document& newPr
     return true;
 }
 
-// The writer a profile save uses: pugixml's own save leaves a carriage return raw, which the reader takes for a line ending
+// The writer a profile save uses: pugixml's own save leaves a carriage return raw, which the reader takes for a line ending.
+// It logs a failure with the file name and the reason itself.
 void dlgConnectionProfiles::saveProfileCopy(const QDir& newProfiledir, const pugi::xml_document& newProfileXml) const
 {
-    if (!XMLexport::saveXmlDocToFile(newProfiledir.absoluteFilePath(qsl("Copied profile (settings only).xml")), newProfileXml)) {
-        qDebug() << "dlgConnectionProfiles::saveProfileCopy: error copying profile into" << newProfiledir.absolutePath();
-    }
+    XMLexport::saveXmlDocToFile(newProfiledir.absoluteFilePath(qsl("Copied profile (settings only).xml")), newProfileXml);
 }
 
 void dlgConnectionProfiles::loadProfile(bool alsoConnect)

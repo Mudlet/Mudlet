@@ -25,6 +25,7 @@
  * load path behind the button: the dialog creates such profiles itself, and
  * dimming Offline left them listed under My games and unreachable, with nothing
  * said, as a disabled button cannot show its own tooltip. See issue #10756.
+ * It also holds the dialog's "Copy settings only" carriage return case (#10631).
  *
  * Run with: ctest -R ConnectionDialogOfflineProfileTest -V
  */
@@ -122,7 +123,9 @@ private slots:
         const QByteArray contents = copied.readAll();
         const qsizetype start = contents.indexOf("<mCommandSeparator>");
         QVERIFY2(start >= 0, contents.constData());
-        const QByteArray element = contents.mid(start, contents.indexOf("</mCommandSeparator>") - start);
+        const qsizetype end = contents.indexOf("</mCommandSeparator>", start);
+        QVERIFY2(end >= 0, contents.constData());
+        const QByteArray element = contents.mid(start, end - start);
         QVERIFY2(!element.contains('\r'), qPrintable(qsl("raw CR in the copy: %1").arg(QString::fromLatin1(element.toHex(' ')))));
         QVERIFY2(element.contains("a&#13;b"), element.constData());
     }
