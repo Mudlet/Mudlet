@@ -189,6 +189,40 @@ private slots:
         QVERIFY(!MapDecals::highlightFillsRoom(MapStyle::HighlightShape::Glow));
     }
 
+    void test_everyStyleHighlightsInTheScriptsColor()
+    {
+        const QColor blue(0, 0, 255);
+        QList<MapStyle> styles = MapStyle::all();
+        MapStyle ownColor = tiles();
+        ownColor.id = qsl("tiles with a highlight color");
+        ownColor.highlightColor = QColor(255, 255, 85);
+        styles.append(ownColor);
+        for (const MapStyle& style : styles) {
+            const QColor color = style.highlightColorFor(blue);
+            QVERIFY2(color == blue, qPrintable(style.id));
+            const QImage image = MapDecals::highlight(style.highlightShape, color, blue, false, scmSize);
+            int shown = 0;
+            for (int y = 0; y < scmSize; ++y) {
+                for (int x = 0; x < scmSize; ++x) {
+                    const QColor pixel = QColor::fromRgba(image.pixel(x, y));
+                    if (pixel.alpha() > 100) {
+                        QVERIFY2(pixel.hue() == blue.hue(), qPrintable(style.id));
+                        ++shown;
+                    }
+                }
+            }
+            QVERIFY2(shown > 0, qPrintable(style.id));
+        }
+    }
+
+    void test_styleColorOnlyStandsInForAMissingHighlightColor()
+    {
+        MapStyle style = tiles();
+        QVERIFY(!style.highlightColorFor(QColor()).isValid());
+        style.highlightColor = QColor(255, 255, 85);
+        QCOMPARE(style.highlightColorFor(QColor()), QColor(255, 255, 85));
+    }
+
     void test_thinPlayerRingIsClearInside()
     {
         const QGradientStops stops = MapDecals::thinPlayerRingStops(QColor(255, 208, 90));
