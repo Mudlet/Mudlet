@@ -140,6 +140,8 @@ public:
 
 // Restores font information from userData that was stored during binary serialization.
 // Font data is stored as "family|pointSize|weight|italic" to avoid binary format version changes.
+// Call before restoreLabelOutlineColorFromUserData(), which takes the outline key this reads
+// to tell a label that had no font, whose font it then clears to an empty family.
 void TMap::restoreLabelFontFromUserData(TMapLabel& label, int labelId, QMap<QString, QString>& userData)
 {
     const QString fontKey = qsl("system.labelFont_%1").arg(labelId);

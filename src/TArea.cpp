@@ -1095,8 +1095,8 @@ void TArea::readJsonLabel(const QJsonObject& labelObj)
     if (outlineColor.isValid()) {
         label.outlineColor = outlineColor;
     } else {
-        // Older Mudlet wrote no outline field, but its exports after a binary
-        // save carried the binary format's copy in the area's user data
+        // The field is missing (older Mudlet wrote none) or unreadable: exports
+        // after a binary save carried the binary format's copy in the user data
         TMap::restoreLabelOutlineColorFromUserData(label, labelId, mUserData);
     }
 
@@ -1108,8 +1108,8 @@ void TArea::readJsonLabel(const QJsonObject& labelObj)
                            fontObj.value(QLatin1String("italic")).toBool());
     } else {
         // A default QFont has the application's family, which would give the
-        // label a font it never had. A font key in the area's user data is not
-        // this label's: a save writes one exactly when it writes "font" too.
+        // label a font it never had. Every writer emits a font only for a label
+        // with a family, so a font key in the area's user data is an earlier label's.
         label.font = QFont(QString());
     }
 
