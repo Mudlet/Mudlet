@@ -6354,6 +6354,58 @@ void T2DMap::pruneRoomSelectionToArea(const int areaId)
     hideSelectionWidget();
 }
 
+namespace {
+QString exportImageFormat(const QString& filePath)
+{
+    const QString suffix = QFileInfo(filePath).suffix();
+    return suffix.isEmpty() ? qsl("png") : suffix.toLower();
+}
+
+// The image is written on another thread, too late for the caller to hear of a
+// failure, so the likely causes are checked first; others (a full disk, a name
+// the file system refuses) still only show on the console. A name template for
+// every z level is never written itself, so only what its level files share is
+// checked against it. Returns an empty string when nothing is wrong.
+QString exportTargetProblem(const QString& filePath, const bool nameTemplate)
+{
+    if (filePath.isEmpty()) {
+        return qsl("No file name given");
+    }
+    const QFileInfo targetFileInfo(filePath);
+    if (targetFileInfo.isDir() && (!nameTemplate || targetFileInfo.fileName().isEmpty())) {
+        return qsl("%1 is a directory").arg(targetFileInfo.absoluteFilePath());
+    }
+    const QString directory = targetFileInfo.absolutePath();
+    const QFileInfo directoryInfo(directory);
+    if (!directoryInfo.exists()) {
+        return qsl("Directory %1 does not exist").arg(directory);
+    }
+    if (!directoryInfo.isDir()) {
+        return qsl("%1 is not a directory").arg(directory);
+    }
+    if (targetFileInfo.fileName().isEmpty()) {
+        return qsl("No file name given");
+    }
+    if (!nameTemplate) {
+        if (targetFileInfo.exists() && !targetFileInfo.isWritable()) {
+            return qsl("File %1 is not writable").arg(targetFileInfo.absoluteFilePath());
+        }
+#if !defined(Q_OS_WIN)
+        // Not on Windows: there isWritable() reads a directory's read-only attribute,
+        // which shell folders such as Documents carry and which does not stop a write
+        if (!targetFileInfo.exists() && !directoryInfo.isWritable()) {
+            return qsl("Directory %1 is not writable").arg(directory);
+        }
+#endif
+    }
+    const QString format = exportImageFormat(filePath);
+    if (!QImageWriter::supportedImageFormats().contains(format.toLatin1())) {
+        return qsl("Image format \"%1\" is not supported").arg(format);
+    }
+    return {};
+}
+} // namespace
+
 std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& filePath, std::optional<int> zLevel, qreal zoom, bool exportAllZLevels)
 {
     // Validate zoom parameter
@@ -6365,37 +6417,8 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
         return {false, qsl("Map not initialized")};
     }
 
-    // The image is written on another thread, too late for the caller to hear
-    // of a failure, so the likely causes are checked here; others (a full disk,
-    // a name the file system refuses) still only show on the console
-    const QFileInfo targetFileInfo(filePath);
-    if (targetFileInfo.isDir()) {
-        return {false, qsl("%1 is a directory").arg(targetFileInfo.absoluteFilePath())};
-    }
-    if (targetFileInfo.fileName().isEmpty()) {
-        return {false, qsl("No file name given")};
-    }
-    const QString directory = targetFileInfo.absolutePath();
-    const QFileInfo directoryInfo(directory);
-    if (!directoryInfo.exists()) {
-        return {false, qsl("Directory %1 does not exist").arg(directory)};
-    }
-    if (!directoryInfo.isDir()) {
-        return {false, qsl("%1 is not a directory").arg(directory)};
-    }
-    if (targetFileInfo.exists() && !targetFileInfo.isWritable()) {
-        return {false, qsl("File %1 is not writable").arg(targetFileInfo.absoluteFilePath())};
-    }
-#if !defined(Q_OS_WIN)
-    // Not on Windows: there isWritable() reads a directory's read-only attribute,
-    // which shell folders such as Documents carry and which does not stop a write
-    if (!targetFileInfo.exists() && !directoryInfo.isWritable()) {
-        return {false, qsl("Directory %1 is not writable").arg(directory)};
-    }
-#endif
-    const QString format = targetFileInfo.suffix().isEmpty() ? qsl("png") : targetFileInfo.suffix().toLower();
-    if (!QImageWriter::supportedImageFormats().contains(format.toLatin1())) {
-        return {false, qsl("Image format \"%1\" is not supported").arg(format)};
+    if (const QString problem = exportTargetProblem(filePath, exportAllZLevels); !problem.isEmpty()) {
+        return {false, problem};
     }
 
     TArea* pArea = mpMap->mpRoomDB->getArea(areaId);
@@ -6419,12 +6442,18 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
         QString extension = fileInfo.suffix();
         QString basePath = fileInfo.absolutePath();
 
-        // Iterates a copy: each export's calcSpan() replaces zLevels, which
-        // would free the list under this loop
-        const QList<int> zLevels = pArea->zLevels;
-        for (const int currentZLevel : zLevels) {
-            QString levelFileName = qsl("%1/%2_level_%3.%4").arg(basePath, baseFileName, QString::number(currentZLevel), extension.isEmpty() ? "png" : extension);
-
+        // Collected before any export runs: each export's calcSpan() replaces
+        // zLevels, which would free the list under a loop over it
+        QList<std::pair<int, QString>> levelExports;
+        for (const int currentZLevel : std::as_const(pArea->zLevels)) {
+            const QString levelFileName = qsl("%1/%2_level_%3.%4").arg(basePath, baseFileName, QString::number(currentZLevel), extension.isEmpty() ? "png" : extension);
+            // Every level is checked before any is queued, so a refusal leaves nothing written
+            if (const QString problem = exportTargetProblem(levelFileName, false); !problem.isEmpty()) {
+                return {false, qsl("Failed to export Z level %1: %2").arg(currentZLevel).arg(problem)};
+            }
+            levelExports.append({currentZLevel, levelFileName});
+        }
+        for (const auto& [currentZLevel, levelFileName] : levelExports) {
             // Recursively call this function for each Z level (without exportAllZLevels flag)
             auto [success, message] = exportAreaToImage(areaId, levelFileName, currentZLevel, zoom, false);
             if (!success) {
@@ -7125,7 +7154,7 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
         pWatcher->deleteLater();
     });
 
-    auto future = QtConcurrent::task(&T2DMap::performImageSave).withArguments(this, pixmap, filePath, format).spawn();
+    auto future = QtConcurrent::task(&T2DMap::performImageSave).withArguments(this, pixmap, filePath, exportImageFormat(filePath)).spawn();
     pWatcher->setFuture(future);
 
     return {true, {}};

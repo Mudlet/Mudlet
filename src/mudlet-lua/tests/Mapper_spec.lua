@@ -3244,6 +3244,13 @@ describe("Tests mapper functions against a shared fixture", function()
       return getMudletHomeDir() .. "/" .. name
     end
 
+    -- Windows has no chmod to hand
+    local function chmod(mode, path)
+      if getOS() ~= "windows" then
+        os.execute("chmod " .. mode .. " '" .. path .. "'")
+      end
+    end
+
     -- Removes the files first, so one left by an earlier run cannot stand in
     -- for the one under test; returns a check that they have all been written
     -- and a clean-up for the test's finally()
@@ -3376,9 +3383,11 @@ describe("Tests mapper functions against a shared fixture", function()
     it("exportAreaImage returns false and a message for a directory that is not there", function()
       local missingDirectory = exportPath("mapper_spec_no_such_dir")
       assert.is_nil(lfs.attributes(missingDirectory), "the spec needs a directory nothing has made")
-      local ok, err = exportAreaImage(areaAlpha, missingDirectory .. "/unsaved.png")
-      assert.is_false(ok)
-      assert.is_truthy(err:find(missingDirectory, 1, true), err)
+      for _, path in ipairs({missingDirectory .. "/unsaved.png", missingDirectory .. "/"}) do
+        local ok, err = exportAreaImage(areaAlpha, path)
+        assert.is_false(ok)
+        assert.are.equal("Directory " .. missingDirectory .. " does not exist", err)
+      end
       assert.is_nil(lfs.attributes(missingDirectory))
     end)
 
@@ -3402,16 +3411,86 @@ describe("Tests mapper functions against a shared fixture", function()
       -- a file left under this name by an aborted run would otherwise fail every run after it
       os.remove(directory)
       assert.is_true(lfs.mkdir(directory) or lfs.attributes(directory, "mode") == "directory")
-      for _, path in ipairs({directory, directory .. "/"}) do
-        for _, allZLevels in ipairs({{}, {true}}) do
-          local ok, err = exportAreaImage(areaAlpha, path, unpack(allZLevels))
-          assert.is_false(ok)
-          assert.is_truthy(err:find("is a directory", 1, true), err)
-        end
+      for _, call in ipairs({{directory}, {directory .. "/"}, {directory .. "/", true}}) do
+        local ok, err = exportAreaImage(areaAlpha, unpack(call))
+        assert.is_false(ok)
+        assert.is_truthy(err:find("is a directory", 1, true), err)
       end
       -- "<directory>/" has no base name, so an export of every z level would write "_level_0.png" there
       pumpEvents(500)
       assert.are.same({}, entries())
+    end)
+
+    -- Only the files made from the name are written, so a directory or a
+    -- read-only file under the name itself is no reason to refuse
+    it("exportAreaImage of every z level checks the files it writes, not the name they are made from", function()
+      local area = addAreaName("MapperSpecExportTemplate")
+      local directory = exportPath("mapper_spec_export_template_dir")
+      local file = exportPath("mapper_spec_export_template_file.png")
+      local written, removeAll = expectExports({
+        "mapper_spec_export_template_dir_level_0.png",
+        "mapper_spec_export_template_dir_level_1.png",
+        "mapper_spec_export_template_file_level_0.png",
+        "mapper_spec_export_template_file_level_1.png",
+      })
+      finally(function()
+        removeAll()
+        lfs.rmdir(directory)
+        chmod("0644", file)
+        os.remove(file)
+        deleteArea(area)
+      end)
+      for z = 0, 1 do
+        local id = createRoomID()
+        addRoom(id)
+        setRoomArea(id, area)
+        setRoomCoordinates(id, 0, 0, z)
+      end
+      os.remove(directory)
+      assert.is_true(lfs.mkdir(directory) or lfs.attributes(directory, "mode") == "directory")
+      chmod("0644", file)
+      io.open(file, "w"):close()
+      chmod("0444", file)
+      assert.is_true(exportAreaImage(area, directory, true))
+      assert.is_true(exportAreaImage(area, file, true))
+      assert.is_true(waitUntil(written, 5000))
+    end)
+
+    it("exportAreaImage of every z level writes none of them when one is refused", function()
+      local area = addAreaName("MapperSpecExportRefusedLevel")
+      local base = exportPath("mapper_spec_export_refused")
+      local levelZero, levelOne = base .. "_level_0.png", base .. "_level_1.png"
+      finally(function()
+        chmod("0644", levelOne)
+        os.remove(levelOne)
+        os.remove(levelZero)
+        deleteArea(area)
+      end)
+      if getOS() == "windows" then
+        pending("chmod is not available on Windows")
+        return
+      end
+      for z = 0, 1 do
+        local id = createRoomID()
+        addRoom(id)
+        setRoomArea(id, area)
+        setRoomCoordinates(id, 0, 0, z)
+      end
+      os.remove(levelZero)
+      chmod("0644", levelOne)
+      io.open(levelOne, "w"):close()
+      chmod("0444", levelOne)
+      local probe = io.open(levelOne, "a")
+      if probe then
+        probe:close()
+        pending("this user can write to a read-only file, as root can")
+        return
+      end
+      local ok, err = exportAreaImage(area, base .. ".png", true)
+      assert.is_false(ok)
+      assert.are.equal("Failed to export Z level 1: File " .. levelOne .. " is not writable", err)
+      pumpEvents(500)
+      assert.is_false(io.exists(levelZero))
     end)
 
     it("exportAreaImage returns false and a message when the directory is a file", function()
@@ -3447,6 +3526,9 @@ describe("Tests mapper functions against a shared fixture", function()
           return
         end
         os.execute("chmod 0755 '" .. readOnly .. "'")
+        -- what a run killed before after_each leaves behind
+        os.execute("chmod 0644 '" .. readOnly .. "/existing.png'")
+        os.remove(readOnly .. "/existing.png")
         os.remove(readOnly)
         assert.is_true(lfs.mkdir(readOnly) or lfs.attributes(readOnly, "mode") == "directory")
         io.open(readOnly .. "/existing.png", "w"):close()
