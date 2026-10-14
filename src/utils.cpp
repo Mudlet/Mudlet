@@ -57,38 +57,46 @@ bool utils::unzip(const QString& archivePath, const QString& destination, const 
     // An entry such as "../x" would otherwise be written outside the destination ("Zip Slip"). Each entry
     // is written to exactly the cleaned path checked here, so a name the check and the filesystem split
     // differently ("a\b/../../x" on Linux) can't slip through.
-    const QString root = QDir::cleanPath(QDir(destination).absolutePath());
-    // cleanPath() keeps the trailing separator of a filesystem root ("/", "C:/")
+    const QString root = QDir(destination).absolutePath();
+    // absolutePath() keeps the trailing separator of a filesystem root ("/", "C:/")
     const QString rootWithSeparator = root.endsWith(QLatin1Char('/')) ? root : root + QLatin1Char('/');
-    auto targetInsideDestination = [&root, &rootWithSeparator](const QString& entryInArchive) -> QString {
+    // Resolved on first need: the destination may not exist until the folders are made
+    QString resolvedRootWithSeparator;
+    auto targetInsideDestination = [&root, &rootWithSeparator, &resolvedRootWithSeparator](const QString& entryInArchive) -> QString {
         const QString target = QDir::cleanPath(rootWithSeparator + entryInArchive);
-        if (target != root && !target.startsWith(rootWithSeparator)) {
+        // A file can't take the place of the destination itself ("sub/..")
+        if (target == root ? !entryInArchive.endsWith(QLatin1Char('/')) : !target.startsWith(rootWithSeparator)) {
             return {};
         }
         // A symbolic link already in the destination would carry the write out of it, so what exists
         // of the target must resolve inside the destination too
-        QString existing = target;
-        while (existing != root && !QFileInfo::exists(existing) && !QFileInfo(existing).isSymLink()) {
-            existing = QFileInfo(existing).path();
+        QFileInfo existing(target);
+        while (existing.filePath() != root && !existing.exists() && !existing.isSymLink()) {
+            existing = QFileInfo(existing.path());
         }
-        if (existing == root && !QFileInfo::exists(root)) {
+        if (existing.filePath() == root && !existing.exists()) {
             return target;
         }
-        const QString resolvedRoot = QFileInfo(root).canonicalFilePath();
-        const QString resolved = QFileInfo(existing).canonicalFilePath();
-        if (resolvedRoot.isEmpty() || resolved.isEmpty()) {
+        if (resolvedRootWithSeparator.isEmpty()) {
+            const QString resolvedRoot = QFileInfo(root).canonicalFilePath();
+            if (resolvedRoot.isEmpty()) {
+                return {};
+            }
+            resolvedRootWithSeparator = resolvedRoot.endsWith(QLatin1Char('/')) ? resolvedRoot : resolvedRoot + QLatin1Char('/');
+        }
+        const QString resolved = existing.canonicalFilePath();
+        if (resolved.isEmpty()) {
             return {};
         }
-        const QString resolvedRootWithSeparator = resolvedRoot.endsWith(QLatin1Char('/')) ? resolvedRoot : resolvedRoot + QLatin1Char('/');
-        return (resolved == resolvedRoot || resolved.startsWith(resolvedRootWithSeparator)) ? target : QString();
+        return (resolved + QLatin1Char('/')).startsWith(resolvedRootWithSeparator) ? target : QString();
     };
     // Windows takes a backslash as a separator, so it is one everywhere
     auto nameInArchive = [](const char* name) {
         return QString::fromUtf8(name).replace(QLatin1Char('\\'), QLatin1Char('/'));
     };
-    auto refuseEscapingEntry = [&](const QString& entryInArchive) {
+    auto refuseEscapingEntry = [&](const char* nameStoredInArchive) {
         qWarning().noquote().nospace() << "utils::unzip(\"" << archivePath << "\", \"" << destination << "\", \"" << tmpDir.absolutePath() << "\") WARNING - refusing the archive, its entry \""
-                                       << entryInArchive << "\" would be written outside the destination";
+                                       << QString::fromUtf8(nameStoredInArchive) << "\" would be written outside the destination";
         zip_close(archive);
         return false;
     };
@@ -103,7 +111,7 @@ bool utils::unzip(const QString& archivePath, const QString& destination, const 
             const QString entryInArchive = nameInArchive(zs.name);
             const QString target = targetInsideDestination(entryInArchive);
             if (target.isEmpty()) {
-                return refuseEscapingEntry(entryInArchive);
+                return refuseEscapingEntry(zs.name);
             }
             const QString folder = entryInArchive.endsWith(QLatin1Char('/')) ? target : QFileInfo(target).path();
             if (folder != root) {
@@ -132,9 +140,10 @@ bool utils::unzip(const QString& archivePath, const QString& destination, const 
             return false;
         }
         const QString entryInArchive = nameInArchive(zs.name);
+        // Checked again because the folders could have been swapped for links since the first pass
         const QString target = targetInsideDestination(entryInArchive);
         if (target.isEmpty()) {
-            return refuseEscapingEntry(entryInArchive);
+            return refuseEscapingEntry(zs.name);
         }
         if (!entryInArchive.endsWith(QLatin1Char('/'))) {
             zf = zip_fopen_index(archive, static_cast<zip_uint64_t>(i), 0);
