@@ -758,11 +758,11 @@ private slots:
     // The editor writes its text back into Lua when it differs from the walk's value
     void testGetValueNumberMatchesWalk()
     {
-        execLua(QStringLiteral("testVar = 1/3"));
+        execLua(qsl("testVar = 1/3"));
         interface->getVars(false);
-        TVar* var = findChild(interface->getVarUnit()->getBase(), QStringLiteral("testVar"));
+        TVar* var = findChild(interface->getVarUnit()->getBase(), qsl("testVar"));
         QVERIFY(var);
-        QCOMPARE(interface->getValue(var), QStringLiteral("0.3333333333333333"));
+        QCOMPARE(interface->getValue(var), qsl("0.3333333333333333"));
         QCOMPARE(interface->getValue(var), var->getValue());
     }
 
