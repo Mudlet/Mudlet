@@ -1521,7 +1521,7 @@ void ModernGLWidget::renderRooms()
             // The highlight fills the cell, so the character goes in reverse video on it
             const bool cellHighlighted = look.highlighted && MapDecals::highlightFillsRoom(style.highlightShape);
             if (cellHighlighted) {
-                textColor = ExitAppearance::contrastColor(style.highlightColorFor(look.highlightColor));
+                textColor = ExitAppearance::contrastColor(style.highlightColorFor(look.highlightColor, look.highlightCenterColor));
             }
             TerminalCell cell{currentRoomId, text, showId, roomTop, GeometryManager::fadedColor(textColor, fade, fadeTarget), look.playerRoom, {}, hovered, &decals};
             if (look.playerRoom) {
