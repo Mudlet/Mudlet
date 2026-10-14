@@ -2245,6 +2245,34 @@ describe("Tests Other.lua functions", function()
       end
     end)
 
+    it("should leave out what a script put in place of a Lua library at the root of _G", function()
+      -- only names table.save itself does not look up while it runs: string, table, io, math and _G are
+      local names = { "os", "debug", "coroutine", "package", "xpcall" }
+      local real = {}
+      for _, name in ipairs(names) do
+        real[name] = rawget(_G, name)
+      end
+      local function restore()
+        for _, name in ipairs(names) do
+          rawset(_G, name, real[name])
+        end
+      end
+      finally(restore)
+
+      for _, name in ipairs(names) do
+        rawset(_G, name, { replacedBy = "a script" })
+      end
+      local ok = table.save(path, _G)
+      restore()
+      assert.is_true(ok)
+      local loaded = {}
+      table.load(path, loaded)
+
+      for _, name in ipairs(names) do
+        assert.is_nil(loaded[name], name)
+      end
+    end)
+
     it("should leave out a Lua library or _G reached from a data table", function()
       assert.is_true(table.save(path, { helpers = { text = string, env = _G }, keep = 1 }))
       local loaded = {}
@@ -2318,7 +2346,11 @@ describe("Tests Other.lua functions", function()
   describe("Tests saveVars", function()
     it("should report whether it could write the store", function()
       local store = getMudletHomeDir() .. "/SavedVariables.lua"
-      local backup = store .. ".saveVars-spec"
+      -- a name no file holds yet: a backup a killed run left behind may be the only copy of the store
+      local backup
+      repeat
+        backup = string.format("%s.saveVars-spec-%d", store, math.random(1e9))
+      until not io.exists(backup)
       local hadStore = io.exists(store)
       if hadStore then
         assert(os.rename(store, backup))
