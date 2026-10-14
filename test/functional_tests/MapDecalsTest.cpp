@@ -150,6 +150,7 @@ private slots:
         QCOMPARE(alphaAt(image, 0, 0), 0);
         QCOMPARE(QColor(image.pixel(scmSize / 2, scmSize / 2)).hue(), 0);
         QVERIFY(MapDecals::highlightOnGround(MapStyle::HighlightShape::Glow));
+        QVERIFY(MapDecals::highlightOnGround(MapStyle::HighlightShape::Rings));
     }
 
     void test_ringShapesAreClearInTheMiddle_data()

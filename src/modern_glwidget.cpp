@@ -3754,8 +3754,11 @@ void ModernGLWidget::paintScannerOverlay(QPainter& painter, const int top)
     if (!pArea) {
         return;
     }
+    const QColor panel = mapStyle().infoBackgroundColor(mpHost->mMapInfoBg);
+    // A profile's own info box color may be light, where the style's glowing ink would not read
+    const bool ownPanel = panel.isValid() && panel == mpHost->mMapInfoBg && panel.alpha() > 127;
     const QColor ink = mapStyle().ink.isValid() ? mapStyle().ink : ExitAppearance::contrastColor(backgroundColor());
-    const QColor text = ink.lighter(115);
+    const QColor text = ownPanel ? ExitAppearance::contrastColor(panel) : ink.lighter(115);
     QColor dimText = text;
     dimText.setAlphaF(0.65f);
     QColor bracket = text;
@@ -3792,7 +3795,7 @@ void ModernGLWidget::paintScannerOverlay(QPainter& painter, const int top)
             Qt::ElideRight,
             textWidth);
     // So that it reads over a crowded map
-    if (const QColor panel = mapStyle().infoBackgroundColor(mpHost->mMapInfoBg); panel.isValid()) {
+    if (panel.isValid()) {
         constexpr int pad = 4;
         const int panelWidth = std::max(metrics.horizontalAdvance(scan), metrics.horizontalAdvance(levels)) + 2 * pad;
         const int panelHeight = 2 * metrics.lineSpacing() + 4 + 2 * pad;
