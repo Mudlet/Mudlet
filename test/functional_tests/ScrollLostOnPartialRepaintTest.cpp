@@ -91,8 +91,8 @@ private slots:
     {
         startProfile(mpHostname, mpLocalhost, mpPort);
         auto host = mudlet::self()->getActiveHost();
-        QVERIFY2(host && host->mpConsole, "no main console");
-        TTextEdit* pane = host->mpConsole->mUpperPane;
+        QVERIFY2(host && host->mainConsoleView(), "no main console");
+        TTextEdit* pane = host->mainConsoleView()->mUpperPane;
         QVERIFY(pane);
         auto* lua = host->getLuaInterpreter();
 
@@ -107,7 +107,7 @@ private slots:
         // Measured against what the buffer already holds - a profile arrives with
         // a few lines of its own, and connect-time output would otherwise push the
         // view off the top and leave nothing for this case to exercise.
-        const int room = screenHeight - 2 - static_cast<int>(host->mpConsole->buffer.lineBuffer.size());
+        const int room = screenHeight - 2 - static_cast<int>(host->mainConsoleView()->buffer.lineBuffer.size());
         QVERIFY2(room > 0, "the profile filled the pane before the case could");
         lua->compileAndExecuteScript(qsl("for i = 1, %1 do echo('FILLER ' .. i .. '\\n') end\n").arg(room));
         qApp->processEvents();
@@ -145,8 +145,8 @@ private slots:
     {
         startProfile(mpHostname, mpLocalhost, mpPort);
         auto host = mudlet::self()->getActiveHost();
-        QVERIFY2(host && host->mpConsole, "no main console");
-        TTextEdit* pane = host->mpConsole->mUpperPane;
+        QVERIFY2(host && host->mainConsoleView(), "no main console");
+        TTextEdit* pane = host->mainConsoleView()->mUpperPane;
         QVERIFY(pane);
         auto* lua = host->getLuaInterpreter();
 
@@ -203,8 +203,8 @@ private slots:
         QFETCH(bool, opaque);
         startProfile(mpHostname, mpLocalhost, mpPort);
         auto host = mudlet::self()->getActiveHost();
-        QVERIFY2(host && host->mpConsole, "no main console");
-        TTextEdit* pane = host->mpConsole->mUpperPane;
+        QVERIFY2(host && host->mainConsoleView(), "no main console");
+        TTextEdit* pane = host->mainConsoleView()->mUpperPane;
         QVERIFY(pane);
         auto* lua = host->getLuaInterpreter();
         if (!background.isEmpty()) {
@@ -250,27 +250,43 @@ private slots:
     // pacer, and a full repaint landing first must not take that with it
     void test_aRepaintBeforeThePacerFiresLeavesTheScrollBarCurrent()
     {
+        // the welcome would land mid-case, and its output arms the pacer and
+        // refreshes the scrollbar too
+        mpServer->setSendsWelcome(false);
         startProfile(mpHostname, mpLocalhost, mpPort);
         auto host = mudlet::self()->getActiveHost();
-        QVERIFY2(host && host->mpConsole, "no main console");
-        TTextEdit* pane = host->mpConsole->mUpperPane;
+        QVERIFY2(host && host->mainConsoleView(), "no main console");
+        TTextEdit* pane = host->mainConsoleView()->mUpperPane;
         QVERIFY(pane);
-        QScrollBar* scrollBar = host->mpConsole->mpScrollBar;
+        QScrollBar* scrollBar = host->mainConsoleView()->mpScrollBar;
         QVERIFY(scrollBar);
         auto* lua = host->getLuaInterpreter();
 
         lua->compileAndExecuteScript(qsl("for i = 1, 200 do echo('FILLER ' .. i .. '\\n') end\n"));
-        qApp->processEvents();
-        pane->repaint();
-        lua->compileAndExecuteScript(qsl("echo('PACED_LINE\\n')\n"));
-        QVERIFY2(pane->mpPaintPacer->isActive(), "the line arrived after the paint window closed, so the pacer this case is about never started");
+        // the filler can leave the pacer running, and the one below has to be the echo's
+        QTRY_VERIFY(!pane->mpPaintPacer->isActive());
+
+        // The paint window is wall-clock time, so a runner that stalls mid-echo
+        // closes it first; each attempt paints again to open a new one
+        bool paced = false;
+        for (int attempt = 0; attempt < 20 && !paced; ++attempt) {
+            pane->repaint();
+            // timed from the end of the paint, which on a loaded runner can use
+            // the whole window by itself
+            pane->mSincePaint.restart();
+            lua->compileAndExecuteScript(qsl("echo('PACED_LINE\\n')\n"));
+            // the whole-pane path arms it at 0 and leaves no region for a paint to cover
+            paced = pane->mpPaintPacer->isActive() && pane->mpPaintPacer->interval() > 0;
+        }
+        QVERIFY2(paced, "twenty lines in a row arrived after their paint window closed, so the pacer never started");
         pane->forceUpdate();
         pane->repaint();
 
-        // not QTRY: later output from the connection refreshes the scrollbar
-        // within its retry window and would hide the loss
-        QTest::qWait(100ms);
-        QCOMPARE(scrollBar->maximum(), host->mpConsole->buffer.getLastLineNumber() + 1);
+        // A stalled runner can outlast any fixed wait before the timer gets its
+        // turn. Not a QTRY on the scrollbar, as a refresh from anywhere within
+        // its retry window would hide the loss.
+        QTRY_VERIFY(!pane->mpPaintPacer->isActive());
+        QCOMPARE(scrollBar->maximum(), host->mainConsoleView()->buffer.getLastLineNumber() + 1);
     }
 
     // A hover or selection repaint draws into a scratch buffer seeded only with
@@ -280,8 +296,8 @@ private slots:
     {
         startProfile(mpHostname, mpLocalhost, mpPort);
         auto host = mudlet::self()->getActiveHost();
-        QVERIFY2(host && host->mpConsole, "no main console");
-        TTextEdit* pane = host->mpConsole->mUpperPane;
+        QVERIFY2(host && host->mainConsoleView(), "no main console");
+        TTextEdit* pane = host->mainConsoleView()->mUpperPane;
         QVERIFY(pane);
         auto* lua = host->getLuaInterpreter();
         mudlet::self()->resize(1200, 800);
