@@ -181,8 +181,8 @@ private slots:
         QVERIFY(roomDB()->getAreaNamesMap().contains(doomedView->getCurrentAreaId()));
     }
 
-    // A view sets its palette explicitly, so it no longer follows the
-    // application's and has to be told when the colour scheme changes.
+    // Once the application palette carries a resolve mask, the view's own
+    // setPalette() pins it, so the view has to be told when the scheme changes.
     void test_aColourSchemeChangeReachesEveryMapView()
     {
         const QPalette original = QApplication::palette();
