@@ -1922,6 +1922,52 @@ private slots:
         // Up, down, in and out, each followed by its door where there is an exit: the in exit and the locked door's stairs
         QCOMPARE(markers, (QStringList{qsl("00200"), qsl("02300")}));
     }
+
+    // A script may fade a 2D highlight out from its center with a clear outer color, which a one-color shape would draw unseen
+    void test_aClearHighlightColorGivesWayToItsCenterColorWithoutGL()
+    {
+        const int areaId = addArea();
+        QVERIFY(areaId > 0);
+        QVERIFY(mpHost->mapStylePreset().highlightShape != MapStyle::HighlightShape::Disc);
+        TRoom* pEast = map()->mpRoomDB->getRoom(kEastRoomId);
+        const auto restore = qScopeGuard([this, pEast]() {
+            pEast->highlight = false;
+            pEast->mSymbol.clear();
+            mpHost->setMapStyle(qsl("tiles"));
+        });
+        pEast->highlight = true;
+        pEast->highlightRadius = 1.0f;
+        const QColor blue(0, 0, 255);
+        pEast->highlightColor = QColor(255, 0, 0, 0);
+        pEast->highlightColor2 = blue;
+        const auto drawnColors = [this, areaId]() {
+            ModernGLWidget widget(map(), mpHost);
+            queueFrame(widget, areaId);
+            QStringList colors;
+            for (const QString& key : std::as_const(widget.mRoomTexturesInUse)) {
+                if (key.startsWith(qsl("highlight|"))) {
+                    colors.append(key.section(QLatin1Char('|'), 2, 2));
+                }
+            }
+            return colors;
+        };
+        QCOMPARE(drawnColors(), QStringList{blue.name(QColor::HexArgb)});
+
+        pEast->highlightColor = blue;
+        pEast->highlightColor2 = QColor(255, 0, 0, 0);
+        QCOMPARE(drawnColors(), QStringList{blue.name(QColor::HexArgb)});
+
+        // The terminal's cell is filled in the center color, so its character contrasts with that
+        const QColor navy(0, 0, 160);
+        pEast->highlightColor = QColor(255, 255, 85, 0);
+        pEast->highlightColor2 = navy;
+        pEast->mSymbol = qsl("$");
+        QVERIFY(mpHost->setMapStyle(qsl("terminal")));
+        ModernGLWidget widget(map(), mpHost);
+        const DrawnGlyph symbol = glyphAt(terminalGlyphs(widget, areaId), QPointF(2, 0));
+        QCOMPARE(symbol.text, qsl("$"));
+        QCOMPARE(symbol.color.rgb(), ExitAppearance::contrastColor(navy).rgb());
+    }
 };
 
 #include "ModernMapperRenderTest.moc"
