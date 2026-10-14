@@ -315,6 +315,8 @@ public:
     QPointer<QObject> mpComposer;
     QNetworkAccessManager* mpDownloader = nullptr;
     QString mServerPackage;
+    // recorded as Host::mServerGUI_Package_version only once the download installs
+    QString mServerPackageVersion;
     QString mProfileName;
 
 

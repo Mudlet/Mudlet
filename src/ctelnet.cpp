@@ -2096,6 +2096,7 @@ void cTelnet::slot_replyFinished(QNetworkReply* reply)
         if (!mpHost->installPackage(mServerPackage, enums::PackageModuleType::Package).first) {
             return;
         }
+        mpHost->mServerGUI_Package_version = mServerPackageVersion;
 
         QString packageName = mServerPackage.section("/", -1);
         packageName.remove(QLatin1String(".zip"), Qt::CaseInsensitive);
@@ -4191,7 +4192,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                 // Check if the package is installed
                 if (!mpHost->mInstalledPackages.contains(packageName)) {
                     // Package is not installed, initiate the download
-                    mpHost->mServerGUI_Package_version = version;
+                    mServerPackageVersion = version;
                     downloadAndInstallGUIPackage(packageName, fileName, url);
                 } else if (mpHost->mServerGUI_Package_version != version) {
                     // Check if the version is different and handle the upgrade
@@ -4199,15 +4200,13 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                                    "(url='%3').")
                                         .arg(version, mpHost->mServerGUI_Package_version, url));
 
-                    // If uninstalling is refused, installing over it would fail as "already installed"
-                    // while the version recorded below claimed the upgrade. A name not installed
-                    // has nothing to remove,
-                    // and must not hold the upgrade up.
+                    // If uninstalling is refused, installing over it would fail as "already installed".
+                    // A name not installed has nothing to remove, and must not hold the upgrade up.
                     const QString oldPackageName = mpHost->mServerGUI_Package_name != qsl("nothing") ? mpHost->mServerGUI_Package_name : packageName;
                     const bool clearedTheWay = !mpHost->mInstalledPackages.contains(oldPackageName) || mpHost->uninstallPackage(oldPackageName, enums::PackageModuleType::Package);
                     if (clearedTheWay) {
                         // Download and install the new version
-                        mpHost->mServerGUI_Package_version = version;
+                        mServerPackageVersion = version;
                         downloadAndInstallGUIPackage(packageName, fileName, url);
                     } else {
                         //: %1 is the name of the GUI package the game offered to upgrade
@@ -4612,7 +4611,7 @@ void cTelnet::handleGUIPackageInstallationAndUpgrade(QJsonDocument document)
     // Check if the package is installed
     if (!mpHost->mInstalledPackages.contains(packageName)) {
         // Package is not installed, initiate the download
-        mpHost->mServerGUI_Package_version = version;
+        mServerPackageVersion = version;
         downloadAndInstallGUIPackage(packageName, fileName, url);
     } else if (mpHost->mServerGUI_Package_version != version) {
         // Check if the version is different and handle the upgrade
@@ -4620,15 +4619,13 @@ void cTelnet::handleGUIPackageInstallationAndUpgrade(QJsonDocument document)
                        "(url='%3').")
                             .arg(version, mpHost->mServerGUI_Package_version, url));
 
-        // If uninstalling is refused, installing over it would fail as "already installed"
-        // while the version recorded below claimed the upgrade. A name not installed
-        // has nothing to remove,
-        // and must not hold the upgrade up.
+        // If uninstalling is refused, installing over it would fail as "already installed".
+        // A name not installed has nothing to remove, and must not hold the upgrade up.
         const QString oldPackageName = mpHost->mServerGUI_Package_name != qsl("nothing") ? mpHost->mServerGUI_Package_name : packageName;
         const bool clearedTheWay = !mpHost->mInstalledPackages.contains(oldPackageName) || mpHost->uninstallPackage(oldPackageName, enums::PackageModuleType::Package);
         if (clearedTheWay) {
             // Download and install the new version
-            mpHost->mServerGUI_Package_version = version;
+            mServerPackageVersion = version;
             downloadAndInstallGUIPackage(packageName, fileName, url);
         } else {
             //: %1 is the name of the GUI package the game offered to upgrade

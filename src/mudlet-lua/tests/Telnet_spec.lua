@@ -1235,6 +1235,19 @@ describe("Tests the Client.GUI package offer", function()
     assert.is_true((lfs.attributes(result.downloaded, "size") or 0) > 0, "the package was saved into the profile without its contents")
   end)
 
+  -- the recorded version is what decides whether an installed interface is
+  -- offered an upgrade, so one that never arrived must not take its place
+  it("records no version for a Client.GUI download that installed nothing", function()
+    local installed = "mudlet-spec-keptgui"
+    finally(cleanUpServedGuis)
+    assert.same({installed}, offerServedGui(installed, minimalGuiPackage, "10660").guis)
+    offerServedGui("mudlet-spec-emptiedgui", "", "10661")
+
+    local result = offerServedGui(installed, minimalGuiPackage, "10661")
+    assert.is_truthy(shownSince(result.mark, "Upgrading the GUI to new version '10661'"), displayedSince(result.mark))
+    assert.same({installed}, result.guis, displayedSince(result.mark))
+  end)
+
   -- a game with an interface of its own can decline the built-in starter UI,
   -- which Mudlet passes on as the event an installed interface raises
   it("raises sysServerGuiInstalled when the game declines the starter UI", function()
