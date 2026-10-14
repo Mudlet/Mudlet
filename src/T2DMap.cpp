@@ -6305,6 +6305,18 @@ void T2DMap::forgetDeletedRoom(const int roomId)
     // A drag still in progress rebuilds the selection from these on its next move
     mMultiSelectionBaseSet.remove(roomId);
     mMultiSelectionAnchorSet.remove(roomId);
+    if (mCustomLinesRoomFrom == roomId) {
+        // The id can be reused, and the next click would add a point to that room
+        if (mpCustomLinesDialog) {
+            mpCustomLinesDialog->reject();
+        } else {
+            mCustomLinesRoomFrom = 0;
+            mCustomLinesRoomTo = 0;
+            mCustomLinesRoomExit.clear();
+        }
+        mHelpMsg.clear();
+        update();
+    }
     // Queued so that deleting many rooms walks the list once, not once per room
     if (!mSelectionWidgetPruneQueued && mMultiSelectionListWidget.topLevelItemCount() > 0) {
         mSelectionWidgetPruneQueued = true;

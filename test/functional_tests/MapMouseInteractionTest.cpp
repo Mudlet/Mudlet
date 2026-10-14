@@ -1093,6 +1093,21 @@ private slots:
         mpHost->closeMapView(viewId);
     }
 
+    // Room ids are reused, so a line left in progress would go on in another room.
+    void test_deletingTheRoomALineIsDrawnFromEndsTheDrawing()
+    {
+        buildMap();
+        showMapper(false);
+        QVERIFY(startDrawingALine(kEastRoomId, qsl("n")));
+
+        QVERIFY(runLua(qsl("deleteRoom(%1)").arg(kEastRoomId)));
+        QCOMPARE(mp2dMap->mCustomLinesRoomFrom, 0);
+
+        QVERIFY(addRoomAt(kEastRoomId, 1, 0, 0));
+        clickAt(pointUnitsFromCentre(1.5, 2.5));
+        QVERIFY2(map()->mpRoomDB->getRoom(kEastRoomId)->customLines.isEmpty(), "the click drew a line in the new room");
+    }
+
     // The list of selected rooms is rebuilt when the box takes in different
     // rooms, not on every move of the mouse, which on a big selection costs
     // more than the time between two moves.
