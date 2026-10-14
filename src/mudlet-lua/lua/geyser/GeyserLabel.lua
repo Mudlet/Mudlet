@@ -1253,35 +1253,62 @@ function Geyser.Label:show(auto)
   end
 end
 
+-- internal function: a label deleted on its own may share its name with a newer
+-- label by now, and deleting it again would take that label with it
+local function stillRegistered(label)
+  return type(label) == "table" and label.delete and label.container
+    and label.container.windowList[label.name] == label
+end
+
 --- Deletes the label using the C++ deleteLabel function, along with its nested
--- labels and their "More..." scroll labels
--- Nested labels live in the parent's container rather than in this label, so the
--- container's cascading delete does not reach them.
+-- labels, its own "More..." scroll labels and its right click menu items.
+-- Nested labels sit in the container addChild was given, the Geyser root by
+-- default, so the cascading delete of this label's container may not reach them.
 function Geyser.Label:type_delete()
-  local siblings = self.nestParent and self.nestParent.nestedLabels
-  local index = siblings and table.index_of(siblings, self)
-  if index then
-    table.remove(siblings, index)
+  local parent = self.nestParent
+  local siblings = parent and parent.nestedLabels
+  if siblings then
+    -- a new list rather than table.remove(), so that a script deleting a nest from
+    -- an ipairs() loop over it does not skip every other label
+    local kept, found = {}, false
+    for i = 1, table.maxn(siblings) do
+      if siblings[i] == self then
+        found = true
+      elseif siblings[i] ~= nil then
+        kept[#kept + 1] = siblings[i]
+      end
+    end
+    if found then
+      parent.nestedLabels = kept
+    end
+    -- the menu rebuilds an item it has no label for, in its place
+    if parent.MenuLabels and not self.ignore and parent.MenuLabels[self.menuName] == self then
+      parent.MenuLabels[self.menuName] = nil
+    end
   end
   if self.nestedLabels then
     local nested = self.nestedLabels
     self.nestedLabels = {}
-    -- a hidden menu item has left nestedLabels but is still a label of this menu,
-    -- unless it was deleted on its own and its name may now be another label's
+    -- a menu item can leave nestedLabels and still be a label of this menu: a
+    -- hidden one, or an attach label Adjustable.Container:onEnterAtt left out
     for _, item in pairs(self.MenuLabels or {}) do
-      if item.ignore and item.container and item.container.windowList[item.name] == item then
-        nested[#nested + 1] = item
-      end
+      nested[#nested + 1] = item
     end
     for _, child in pairs(nested) do
-      child:delete()
+      if stillRegistered(child) then
+        child:delete()
+      end
     end
   end
   for _, scrolls in ipairs({Geyser.Label.scrollV, Geyser.Label.scrollH}) do
-    if scrolls[self] then
-      scrolls[self][1]:delete()
-      scrolls[self][2]:delete()
+    local scrollLabels = scrolls[self]
+    if scrollLabels then
       scrolls[self] = nil
+      for _, scrollLabel in ipairs(scrollLabels) do
+        if stillRegistered(scrollLabel) then
+          scrollLabel:delete()
+        end
+      end
     end
   end
   deleteLabel(self.name)
@@ -1579,7 +1606,9 @@ function Geyser.Label:showMenuLabel(name)
     return
   end
   menuElement.ignore = false
-  table.insert(menuElement.MenuNestTable, menuElement.MenuIndex, menuElement)
+  -- the parent's list, not the one it was hidden from: deleting a sibling replaces it
+  local nestTable = menuElement.nestParent.nestedLabels
+  table.insert(nestTable, math.min(menuElement.MenuIndex, #nestTable + 1), menuElement)
   self:createMenuItems()
 end
 

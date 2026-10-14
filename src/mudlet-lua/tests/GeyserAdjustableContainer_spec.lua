@@ -300,7 +300,7 @@ describe("Tests functionality of Adjustable.Container", function()
 
     it("takes its right click menu labels and its registration with it", function()
       -- menu labels are registered as top level Geyser objects rather than as
-      -- children of the menu, so only the container's own delete reaches them
+      -- children of the menu, so the cascade reaches them only as nested labels
       local menuLabelName = container.lockLabel.name
       local lockStyleLabelName = container.adjLabel:findMenuElement("lockStylesLabel.standard").name
       assert.is_not_nil(Geyser.windowList[menuLabelName])
@@ -312,6 +312,30 @@ describe("Tests functionality of Adjustable.Container", function()
       assert.is_nil(getWindowGeometry(lockStyleLabelName))
       assert.is_nil(Adjustable.Container.all.gasContainer)
       assert.is_nil(table.index_of(Adjustable.Container.all_windows, "gasContainer"))
+    end)
+
+    it("leaves the menu labels of a same named container that replaced it", function()
+      local stale = Adjustable.Container:new({name = "gasReplaced", x = 0, y = 0, width = 100, height = 100, autoLoad = false, autoSave = false})
+      local live = Adjustable.Container:new({name = "gasReplaced", x = 0, y = 0, width = 100, height = 100, autoLoad = false, autoSave = false})
+      finally(function() live:delete() end)
+      stale:delete()
+      local lock = live.lockLabel
+      assert.are.equal(lock, lock.container.windowList[lock.name])
+      assert.is_not_nil(getWindowGeometry(lock.name))
+    end)
+
+    it("takes the attach labels its attach menu left out with it", function()
+      local attLabel = container.attLabel
+      local attachLabels = {}
+      for _, label in pairs(attLabel.MenuLabels) do
+        attachLabels[#attachLabels + 1] = label.name
+      end
+      -- onEnterAtt lists only the borders the container can attach to
+      attLabel.nestedLabels = {attLabel.nestedLabels[1]}
+      container:delete()
+      for _, name in ipairs(attachLabels) do
+        assert.is_nil(getWindowGeometry(name))
+      end
     end)
 
     it("takes the menu labels of a container inside a user window with it", function()

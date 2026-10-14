@@ -845,12 +845,77 @@ describe("Tests functionality of Geyser.Label widget state", function()
       label:displayNest()
       local scrolls = Geyser.Label.scrollV[label]
       assert.is_not_nil(scrolls, "the nest fitted, so it has no scroll labels to delete")
-      local forward, backward = scrolls[1].name, scrolls[2].name
+      local backward, forward = scrolls[1].name, scrolls[2].name
       label:delete()
       assert.is_nil(Geyser.Label.scrollV[label])
-      assert.is_nil(getWindowGeometry(forward))
       assert.is_nil(getWindowGeometry(backward))
+      assert.is_nil(getWindowGeometry(forward))
+      assert.is_nil(Geyser.windowList[backward])
       assert.is_nil(Geyser.windowList[forward])
+    end)
+
+    it("leaves a label reusing the name of a scroll label its container already deleted", function()
+      local _, mainHeight = getMainWindowSize()
+      local height = math.floor(mainHeight / 4) + 1
+      local box = track(Geyser.Container:new({name = "glsScrollBox", x = 0, y = 0, width = "100%", height = "100%"}))
+      local label = track(Geyser.Label:new({name = "glsScrollOwner", x = 0, y = 0, width = 40, height = 20}))
+      for i = 1, 5 do
+        label:addChild({name = "glsScrollOwnerChild" .. i, width = 40, height = height, layoutDir = "RV"}, box)
+      end
+      label:displayNest()
+      local scrolls = Geyser.Label.scrollV[label]
+      assert.is_not_nil(scrolls, "the nest fitted, so it has no scroll labels to delete")
+      box:delete()
+      local replacement = track(Geyser.Label:new({name = scrolls[1].name, x = 0, y = 0, width = 40, height = 20}))
+      label:delete()
+      assert.is_not_nil(getWindowGeometry(replacement.name))
+      assert.are.equal(replacement, Geyser.windowList[replacement.name])
+    end)
+
+    it("deletes every label of a nest a script deletes from an ipairs loop", function()
+      local label = track(Geyser.Label:new({name = "glsLoopOwner", x = 0, y = 0, width = 40, height = 20}))
+      for i = 1, 4 do
+        track(label:addChild({name = "glsLoopChild" .. i, width = 40, height = 20}))
+      end
+      for _, child in ipairs(label.nestedLabels) do
+        child:delete()
+      end
+      assert.are.same({}, label.nestedLabels)
+      for i = 1, 4 do
+        assert.is_nil(getWindowGeometry("glsLoopChild" .. i))
+      end
+    end)
+
+    it("leaves its nest parent's list when an addChild under its sibling's name left a gap", function()
+      local label = track(Geyser.Label:new({name = "glsGapOwner", x = 0, y = 0, width = 40, height = 20}))
+      track(label:addChild({name = "glsGapFirst", width = 40, height = 20}))
+      local second = track(label:addChild({name = "glsGapSecond", width = 40, height = 20}))
+      local again = track(label:addChild({name = "glsGapFirst", width = 40, height = 20}))
+      second:delete()
+      assert.are.same({again}, label.nestedLabels)
+      local replacement = track(Geyser.Label:new({name = "glsGapSecond", x = 0, y = 0, width = 40, height = 20}))
+      label:delete()
+      assert.is_not_nil(getWindowGeometry(replacement.name))
+      assert.are.equal(replacement, Geyser.windowList[replacement.name])
+    end)
+
+    it("still deletes itself and its nest when its nest holds something that is not a label", function()
+      local label = track(Geyser.Label:new({name = "glsNotALabel", x = 0, y = 0, width = 40, height = 20}))
+      track(label:addChild({name = "glsNotALabelChild", width = 40, height = 20}))
+      table.insert(label.nestedLabels, 1, "something")
+      assert.has_no.errors(function() label:delete() end)
+      assert.is_nil(getWindowGeometry("glsNotALabel"))
+      assert.is_nil(getWindowGeometry("glsNotALabelChild"))
+    end)
+
+    it("shows a hidden right click menu item again after a sibling was deleted", function()
+      local label = track(Geyser.Label:new({name = "glsMenuReshow", x = 0, y = 0, width = 40, height = 20}))
+      label:createRightClickMenu({MenuItems = {"First", "Second", "Third"}})
+      local third = label:findMenuElement("Third")
+      label:hideMenuLabel("Third")
+      label:findMenuElement("First"):delete()
+      label:showMenuLabel("Third")
+      assert.is_truthy(table.index_of(label.rightClickMenu.nestedLabels, third))
     end)
 
     it("hides a label with something that is not a label in its nest along with its container", function()
@@ -860,6 +925,19 @@ describe("Tests functionality of Geyser.Label widget state", function()
       assert.has_no.errors(function() box:hide() end)
       assert.has_no.errors(function() box:show() end)
       label.nestedLabels = nil
+    end)
+
+    it("rebuilds a deleted right click menu item when the menu changes", function()
+      local label = track(Geyser.Label:new({name = "glsMenuRebuild", x = 0, y = 0, width = 40, height = 20}))
+      label:createRightClickMenu({MenuItems = {"First", "Second"}})
+      label:findMenuElement("Second"):delete()
+      label:addMenuLabel("Third")
+      local names = {}
+      for _, item in ipairs(label.rightClickMenu.nestedLabels) do
+        names[#names + 1] = item.menuName
+        assert.is_not_nil(getWindowGeometry(item.name))
+      end
+      assert.are.same({"First", "Second", "Third"}, names)
     end)
   end)
 
