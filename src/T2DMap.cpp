@@ -6307,8 +6307,9 @@ void T2DMap::forgetDeletedRoom(const int roomId)
     // A drag still in progress rebuilds the selection from these on its next move
     mMultiSelectionBaseSet.remove(roomId);
     mMultiSelectionAnchorSet.remove(roomId);
-    if (mCustomLinesRoomFrom == roomId) {
-        // The id can be reused, and the next click would add a point to that room
+    if (mCustomLinesRoomFrom == roomId || mCustomLinesRoomTo == roomId) {
+        // The id can be reused, and the next click would add a point to that room;
+        // deleting the room the line leads to has already removed its exit
         if (mpCustomLinesDialog) {
             mpCustomLinesDialog->reject();
         } else {
@@ -6317,6 +6318,12 @@ void T2DMap::forgetDeletedRoom(const int roomId)
             mCustomLinesRoomExit.clear();
         }
         mHelpMsg.clear();
+        update();
+    }
+    if (mCustomLineSelectedRoom == roomId) {
+        mCustomLineSelectedRoom = 0;
+        mCustomLineSelectedExit.clear();
+        mCustomLineSelectedPoint = -1;
         update();
     }
     // Queued so that deleting many rooms walks the list once, not once per room.

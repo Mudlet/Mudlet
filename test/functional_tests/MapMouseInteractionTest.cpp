@@ -365,6 +365,24 @@ private:
         return pRoom;
     }
 
+    // Picks the exit's button in the custom line dialog for that room, which
+    // hides the dialog for the rest of the drawing.
+    bool startDrawingALineFromTheDialog(const int fromRoomId, const QString& exit) const
+    {
+        mp2dMap->mMultiSelectionSet = QSet<int>{fromRoomId};
+        mp2dMap->mMultiSelectionHighlightRoomId = fromRoomId;
+        mp2dMap->slot_setCustomLine();
+        if (!mp2dMap->mpCustomLinesDialog) {
+            return false;
+        }
+        auto* pButton = mp2dMap->mpCustomLinesDialog->findChild<QPushButton*>(exit);
+        if (!pButton || !pButton->isEnabled()) {
+            return false;
+        }
+        pButton->click();
+        return mp2dMap->mCustomLinesRoomFrom == fromRoomId && mp2dMap->mCustomLinesRoomExit == exit;
+    }
+
     void rightClickAt(const QPoint& position) const
     {
         sendMouse(QEvent::MouseButtonPress, position, Qt::RightButton, Qt::RightButton, Qt::NoModifier);
@@ -828,6 +846,9 @@ private slots:
         }
         runLua(qsl("mudlet.custom_speedwalk = nil\ndoSpeedWalk = nil"));
         mpHost->mainConsoleView()->discardAll();
+        if (mp2dMap->mpCustomLinesDialog) {
+            mp2dMap->mpCustomLinesDialog->reject();
+        }
         mp2dMap->mCustomLinesRoomFrom = 0;
         mp2dMap->mCustomLinesRoomTo = 0;
         mp2dMap->mCustomLinesRoomExit.clear();
@@ -1098,14 +1119,51 @@ private slots:
     {
         buildMap();
         showMapper(false);
-        QVERIFY(startDrawingALine(kEastRoomId, qsl("n")));
+        QVERIFY(runLua(qsl("setExit(%1, %2, 'n')").arg(kEastRoomId).arg(kNorthEastRoomId)));
+        QVERIFY(startDrawingALineFromTheDialog(kEastRoomId, qsl("n")));
 
         QVERIFY(runLua(qsl("deleteRoom(%1)").arg(kEastRoomId)));
         QCOMPARE(mp2dMap->mCustomLinesRoomFrom, 0);
+        QVERIFY2(!mp2dMap->mpCustomLinesDialog, "the custom line dialog outlived the drawing");
 
         QVERIFY(addRoomAt(kEastRoomId, 1, 0, 0));
         clickAt(pointUnitsFromCentre(1.5, 2.5));
         QVERIFY2(map()->mpRoomDB->getRoom(kEastRoomId)->customLines.isEmpty(), "the click drew a line in the new room");
+    }
+
+    // Deleting the room a line leads to takes the exit and the line with it
+    void test_deletingTheRoomALineIsDrawnToEndsTheDrawing()
+    {
+        buildMap();
+        showMapper(false);
+        QVERIFY(runLua(qsl("setExit(%1, %2, 'n')").arg(kPlayerRoomId).arg(kNorthRoomId)));
+        QVERIFY(startDrawingALineFromTheDialog(kPlayerRoomId, qsl("n")));
+        QCOMPARE(mp2dMap->mCustomLinesRoomTo, kNorthRoomId);
+
+        QVERIFY(runLua(qsl("deleteRoom(%1)").arg(kNorthRoomId)));
+        QCOMPARE(mp2dMap->mCustomLinesRoomFrom, 0);
+        QCOMPARE(mp2dMap->mCustomLinesRoomTo, 0);
+
+        clickAt(pointUnitsFromCentre(0.5, 1.5));
+        QVERIFY2(!map()->mpRoomDB->getRoom(kPlayerRoomId)->customLines.contains(qsl("n")), "the click drew a line for an exit that is gone");
+    }
+
+    void test_deletingARoomDropsItsSelectedCustomLine()
+    {
+        buildMap();
+        QVERIFY(addLineToTheEastRoom());
+        showMapper(false);
+        clickAt(pointUnitsFromCentre(1, 2));
+        QCOMPARE(mp2dMap->mCustomLineSelectedRoom, kLineRoomId);
+
+        QVERIFY(runLua(qsl("deleteRoom(%1)").arg(kLineRoomId)));
+        QCOMPARE(mp2dMap->mCustomLineSelectedRoom, 0);
+
+        QVERIFY(addRoomAt(kLineRoomId, 1, 0, 0));
+        TRoom* pNewRoom = addLineToTheEastRoom();
+        QVERIFY(pNewRoom);
+        rightClickAt(pointUnitsFromCentre(-3, -3));
+        QVERIFY2(!contextMenuItem(qsl("Delete line")), "the menu offers to delete a line in the room that took the deleted one's id");
     }
 
     // Room ids are reused, so a room a script makes after deleting a listed one
