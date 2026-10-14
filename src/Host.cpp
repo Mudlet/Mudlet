@@ -3582,6 +3582,7 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         _filterList << qsl("*.xml") << qsl("*.trigger");
         const QFileInfoList entries = _dir.entryInfoList(_filterList, QDir::Files);
         bool registeredFromArchive = false;
+        bool aPackageFileWasReadWhole = false;
         QStringList packageFileErrors;
         for (auto& entry : entries) {
             file2.setFileName(entry.absoluteFilePath());
@@ -3616,12 +3617,15 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
                 }
             } else if (!success) {
                 packageFileErrors << errorMsg;
+            } else {
+                aPackageFileWasReadWhole = true;
             }
             file2.close();
         }
         // Decided once every file has been tried: they are read in the order of their names, so a stray file
-        // that cannot be read would otherwise turn the package away or not depending on what it is called.
-        if (!packageFileErrors.isEmpty() && !anythingWasRead) {
+        // that cannot be read would otherwise turn the package away or not depending on what it is called. A file
+        // read through without a fault is the package, even when it holds nothing.
+        if (!packageFileErrors.isEmpty() && !anythingWasRead && !aPackageFileWasReadWhole) {
             takeBackAPackageNothingWasReadFrom(packageName);
             takeBackWhatTheManifestOverwrote();
             if (!discardTheFolderThisInstallMade()) {

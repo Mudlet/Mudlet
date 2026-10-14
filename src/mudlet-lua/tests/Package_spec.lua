@@ -2040,6 +2040,36 @@ describe("Tests installing an archive whose package XML cannot be read", functio
     assert.equals(reason, packageEvents[1][3])
   end)
 
+  -- A package file that was read through without a fault is the package, even an empty one
+  it("installs an archive whose unreadable stray file sits beside an empty package file", function()
+    local name = "mudlet-spec-emptywithstray"
+    defer(function() removeFixturePackage(name) end)
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+
+    local mark = getLastLineNumber("main")
+    installFixturePackage(name)
+
+    assert.is_true(containsWrapped(textFrom(mark), 'Failed to load package "' .. name .. '"'), textFrom(mark))
+  end)
+
+  it("refuses a package XML that broke after an empty help URL", function()
+    local name = "mudlet-spec-cutafteremptyhelp"
+    local xml = getMudletHomeDir() .. "/" .. name .. ".xml"
+    defer(function()
+      removeFixturePackage(name)
+      os.remove(xml)
+    end)
+    local file = io.open(xml, "wb")
+    assert.is_not_nil(file, "could not write " .. xml)
+    file:write('<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE MudletPackage>\n<MudletPackage version="1.001">\n<HelpPackage><helpURL></helpURL></HelpPackage>\n<TriggerPack')
+    file:close()
+
+    local err = installUntilRefused(installPackage, xml)
+
+    assert.is_true(contains(err, 'the contents of package "' .. name .. '" could not be read'), tostring(err))
+    assert.is_false(packageInstalled(name))
+  end)
+
   -- A variable is set as it is read, and refusing the package would not unset it
   it("keeps a package XML that broke after setting a variable", function()
     local name = "mudlet-spec-cutaftervariable"
