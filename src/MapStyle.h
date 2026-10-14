@@ -32,11 +32,40 @@ class QFont;
 // setConfig("mapStyle") takes, so an id must never change once released.
 struct MapStyle
 {
+    // What marks a highlighted room
+    enum class HighlightShape {
+        // The 2D map's disc, shading from the room's highlight center color out to its highlight color
+        Disc,
+        // A soft glow over the room, brightest at its middle and fading out past it
+        Glow,
+        // A dashed ring around the room, as a pencil marks a spot on a plan
+        DashedEllipse,
+        // Two thin rings around the room, one inside the other
+        DoubleEllipse,
+        // A broad soft ring on the ground round the room, clear in its middle
+        Halo,
+        // The room's own square or circle filled, as a text screen's cursor fills its cell
+        Cell,
+        // Two bright rings with a faint glow between them
+        Rings
+    };
+
+    // What rings the player's room, where the profile keeps the original player room marker
+    enum class PlayerRing {
+        // That marker
+        Profile,
+        // A thin ring in playerColor
+        Thin
+    };
+
     enum class Palette {
         // Each room in its environment's color, as on the 2D map
         Environment,
         // A drafting sheet: rooms filled with the style's background, only faintly tinted by their environment's color, and drawn in its ink
-        Ink
+        Ink,
+        // Each room in its environment's color, softened toward a lit pastel: less saturated, and kept from the
+        // darkest and lightest
+        Soft
     };
 
     enum class Shape {
@@ -49,7 +78,10 @@ struct MapStyle
         ViewedLevelRim,
         // A thin line around each room's top in the style's ink: solid on the viewed level, dashed and dimmed
         // with no fill on the others
-        InkOutlines
+        InkOutlines,
+        // A base around each room on the viewed level, halfway from the room's color to the background, so the
+        // room reads as a block with shaded sides
+        ViewedLevelBase
     };
 
     enum class Doors {
@@ -82,6 +114,42 @@ struct MapStyle
     QColor background;
     // Empty for the map's symbol font
     QString labelFontFamily;
+    // Used instead of the profile's mapper background where the profile keeps the default black; invalid to keep it
+    QColor defaultBackground;
+    HighlightShape highlightShape = HighlightShape::Disc;
+    // Every shape but the disc in this color; invalid for the room's own highlight color
+    QColor highlightColor;
+    // How much bigger than the highlight radius the room was given a shape is drawn, but for the cell
+    float highlightScale = 1.0f;
+    PlayerRing playerRing = PlayerRing::Profile;
+    // The player's ring and the beacon over the player's room, where the profile keeps the original player room
+    // marker; invalid for that marker's red
+    QColor playerColor;
+    // Map labels of text drawn again in labelFontFamily and mapLabelColor without the box behind them, but for what
+    // the label was given on purpose: its own font, a text color with a hue, a box with a hue
+    bool themedMapLabels = false;
+    QColor mapLabelColor;
+    // Around the text of a themed label with no box, so it reads over rooms; invalid for none
+    QColor mapLabelHalo;
+    // In rooms' spacing; 0 for no limit
+    float mapLabelMaxHeight = 0.0f;
+    // Room names, as quieter annotations: their color where the room was given none of its own, invalid for the
+    // color that stands out on the background, and their size against the usual where the map was given no font
+    QColor roomNameColor;
+    float roomNameScale = 1.0f;
+    // Invalid for the background, the color that stands out on it, and red
+    QColor compassFace;
+    QColor compassRim;
+    QColor compassNeedle;
+    // The room info box, where the profile keeps the default background for it; invalid for that, and for black or
+    // white text, whichever stands out on the background
+    QColor infoBackground;
+    QColor infoTextColor;
+    // Each room's top shaded from light at its north west to dark at its south east, with a soft shadow on the ground
+    // to its south east
+    bool shadedBlocks = false;
+    // Exits straight up or down drawn dashed, as a stair is on a plan
+    bool dashedStairs = false;
     PostEffects postEffects;
     Glyphs glyphs = Glyphs::RoomSymbols;
     // The Ink palette's lines and text; invalid for the profile's exit color
@@ -96,6 +164,14 @@ struct MapStyle
     bool floorPlates = true;
 
     QString displayName() const;
+    // Whether this style's player ring and color take the place of the profile's player room marker
+    bool themesPlayerMarker(int profilePlayerRoomStyle, bool strongHighlight) const;
+    // The info box's background, given the profile's
+    QColor infoBackgroundColor(const QColor& profileInfoBackground) const;
+    // A room's border, given the profile's, where the room was given none of its own
+    QColor roomBorderColor(const QColor& profileBorder, const QColor& roomColor, const QColor& background) const;
+    // A room's name color, given the color it was given as user data
+    QColor roomNameColorFor(const QString& roomColorData, const QColor& background) const;
     QColor roomColor(const QColor& environmentColor) const;
     QColor backgroundColor(const QColor& profileBackground) const;
     bool roundRooms(bool profileRoundRooms) const;

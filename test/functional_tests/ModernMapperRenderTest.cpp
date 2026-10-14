@@ -497,10 +497,11 @@ private slots:
         mudlet::self()->setDrawUpperLowerLevels(savedShown);
         mpHost->mLowerLevelColor = savedLower;
 
-        QCOMPARE(plainTarget, mpHost->mBgColor_2);
-        QCOMPARE(lowerTarget, GeometryManager::levelFadeTarget(-1, mpHost->mBgColor_2, mpHost->mUpperLevelColor, QColor(255, 0, 0, 64)));
-        QCOMPARE(upperTarget, GeometryManager::levelFadeTarget(1, mpHost->mBgColor_2, mpHost->mUpperLevelColor, QColor(255, 0, 0, 64)));
-        QCOMPARE(viewedTarget, mpHost->mBgColor_2);
+        const QColor background = mpHost->mapStylePreset().backgroundColor(mpHost->mBgColor_2);
+        QCOMPARE(plainTarget, background);
+        QCOMPARE(lowerTarget, GeometryManager::levelFadeTarget(-1, background, mpHost->mUpperLevelColor, QColor(255, 0, 0, 64)));
+        QCOMPARE(upperTarget, GeometryManager::levelFadeTarget(1, background, mpHost->mUpperLevelColor, QColor(255, 0, 0, 64)));
+        QCOMPARE(viewedTarget, background);
         QVERIFY2(plainRoom > std::numeric_limits<float>::lowest() && plainFloor > std::numeric_limits<float>::lowest(), "the room or floor below was not drawn");
         QVERIFY2(coloredRoom > plainRoom + 0.02f, qPrintable(qsl("the room below is %1 red with the levels' colors and %2 without").arg(coloredRoom).arg(plainRoom)));
         QVERIFY2(coloredFloor > plainFloor + 0.002f, qPrintable(qsl("the floor below is %1 red with the levels' colors and %2 without").arg(coloredFloor).arg(plainFloor)));
