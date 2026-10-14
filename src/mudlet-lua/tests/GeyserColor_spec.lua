@@ -207,6 +207,15 @@ describe("Tests functionality of Geyser.Color", function()
       assert.are.equal("#ff0000", first)
       assert.are.equal("#ff0000", second)
     end)
+
+    it("says which component is missing or not a number", function()
+      assert.error_matches(function() Geyser.Color.hex(1, "x", 3) end, "Geyser.Color.hex: bad green component %(number expected, got nil!%)")
+      assert.error_matches(function() Geyser.Color.hexa(255, 0, 0, "x") end, "Geyser.Color.hexa: bad alpha component %(number expected, got nil!%)")
+      assert.error_matches(function() Geyser.Color.hhex("geyserColorSpecNoSuchColour") end, "Geyser.Color.hhex: bad red component %(number expected, got nil!%)")
+      color_table.geyserColorSpecIncomplete = {255, 0}
+      finally(function() color_table.geyserColorSpecIncomplete = nil end)
+      assert.error_matches(function() Geyser.Color.hex("geyserColorSpecIncomplete") end, "Geyser.Color.hex: bad blue component %(number expected, got nil!%)")
+    end)
   end)
 
   -- applyColors is what the label, miniconsole, mapper and user window
