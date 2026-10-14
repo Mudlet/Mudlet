@@ -4014,6 +4014,70 @@ describe("Tests installing a module whose XML cannot be read", function()
     assert.same({name}, installEvents[1], "the healthy module was announced with the undone install's errors")
   end)
 
+  -- A reload takes the module apart and puts the same one straight back, which undoes nothing
+  local function collectModuleEventsFor(name)
+    local seen = {}
+    for _, eventName in ipairs({"sysInstall", "sysLuaInstallModule", "sysSyncInstallModule"}) do
+      local handler = registerAnonymousEventHandler(eventName, function(event, installed)
+        if installed == name then
+          seen[#seen + 1] = event
+        end
+      end)
+      defer(function() killAnonymousEventHandler(handler) end)
+    end
+    return seen
+  end
+
+  local function withReloadableModule(name)
+    local path = scratchDirectory .. "/" .. name .. ".xml"
+    defer(function()
+      removeFixtureModule(name)
+      os.remove(path)
+      lfs.rmdir(scratchDirectory)
+    end)
+    lfs.mkdir(scratchDirectory)
+    writePackageXml(path, '<AliasPackage><Alias isActive="yes" isFolder="no"><name>' .. name .. ' alias</name>'
+      .. '<script></script><command></command><packageName></packageName><regex>^' .. name .. '$</regex></Alias></AliasPackage>')
+    return path
+  end
+
+  it("still announces a script's install of a module that was reloaded before its events", function()
+    local name = "mudlet-spec-reloadedbeforeevents"
+    local path = withReloadableModule(name)
+    local seen = collectModuleEventsFor(name)
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+
+    -- back to back: the install's own save is not running yet, so the reload is carried out at once
+    assert.is_true(installModule(path))
+    reloadModule(name)
+    pumpEvents(300)
+
+    assert.is_true(moduleInstalled(name))
+    assert.same({"sysInstall", "sysLuaInstallModule", "sysInstall", "sysSyncInstallModule"}, seen)
+  end)
+
+  it("still raises the detailed install event when a sysInstall handler reloads the module", function()
+    local name = "mudlet-spec-reloadedbyhandler"
+    local path = withReloadableModule(name)
+    local seen = collectModuleEventsFor(name)
+    local reloaded = false
+    local handler = registerAnonymousEventHandler("sysInstall", function(_, installed)
+      if installed == name and not reloaded then
+        reloaded = true
+        reloadModule(name)
+      end
+    end)
+    defer(function() killAnonymousEventHandler(handler) end)
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+
+    assert.is_true(installModule(path))
+    pumpEvents(300)
+
+    assert.is_true(reloaded, "SETUP: the module was never announced, so nothing reloaded it")
+    assert.is_true(moduleInstalled(name))
+    assert.same({"sysInstall", "sysLuaInstallModule", "sysInstall", "sysSyncInstallModule"}, seen)
+  end)
+
   it("does not announce a module whose XML broke before anything was read in", function()
     local name = "mudlet-spec-brokenatonce"
     local path = scratchDirectory .. "/" .. name .. ".xml"

@@ -1364,9 +1364,8 @@ private:
     // runUninstallsDeferredByAnInstall() once the outermost install has finished
     // and the install events it queued have gone out.
     QList<DeferredUninstall> mUninstallsDeferredByAnInstall;
-    // Which install of each name is the latest, so queued install events of an earlier one are dropped
-    quint64 mInstallsAnnounced = 0;
-    QMap<QString, quint64> mLatestInstallOf;
+    // How often each name was uninstalled, so the queued install events of an install undone since are dropped
+    QMap<QString, quint64> mRemovalsOf;
     QScopedPointer<LuaInterface> mLuaInterface;
 
     // Experiment system storage: key -> enabled state

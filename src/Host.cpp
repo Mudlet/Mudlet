@@ -3751,16 +3751,15 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         allErrors << qsl("%1: %2").arg(packageName, loadError);
     }
     const QString eventErrors = allErrors.join(qsl("; "));
-    // Only the latest install of a name is announced: one undone and redone before its events went out
-    // would otherwise hand handlers its own, by then stale, errors
-    const quint64 installSerial = ++mInstallsAnnounced;
-    mLatestInstallOf[packageName] = installSerial;
+    // An install undone before its events went out is not announced, as its errors are stale by then. A
+    // ModuleSync removal is half of a reload that puts the same module straight back, so it does not count.
+    const quint64 removalsBeforeThisInstall = mRemovalsOf.value(packageName);
 
     // Defer raising install events until the next event loop iteration
     // This ensures all package installation is complete (including variable loading)
     // before event handlers execute, preventing Lua state corruption. Kept queued
     // for the ordering the deferred-uninstall drain below depends on, too.
-    QTimer::singleShot(0ms, this, [this, guard = QPointer<Host>(this), thing, packageName, fileName, moduleLoadedNothing, eventErrors, installSerial]() {
+    QTimer::singleShot(0ms, this, [this, guard = QPointer<Host>(this), thing, packageName, fileName, moduleLoadedNothing, eventErrors, removalsBeforeThisInstall]() {
         // The queued call can still be delivered once this Host has been
         // destroyed - the profile save queued the same way was #9653 - and the
         // isClosingDown() check below would then be read off freed memory. The
@@ -3775,9 +3774,9 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         }
 
         // A script may have uninstalled it again before this was delivered, or a handler of the first event
-        auto stillInstalled = [this, thing, packageName, installSerial]() {
+        auto stillInstalled = [this, thing, packageName, removalsBeforeThisInstall]() {
             const bool listed = thing == enums::PackageModuleType::Package ? mInstalledPackages.contains(packageName) : mInstalledModules.contains(packageName);
-            return listed && mLatestInstallOf.value(packageName) == installSerial;
+            return listed && mRemovalsOf.value(packageName) == removalsBeforeThisInstall;
         };
         if (moduleLoadedNothing || !stillInstalled()) {
             return;
@@ -4096,6 +4095,7 @@ bool Host::uninstallPackage(const QString& packageName, enums::PackageModuleType
 
     if (thing != enums::PackageModuleType::ModuleSync) {
         removePackageInfo(packageName, isModule);
+        ++mRemovalsOf[packageName];
     }
 
     // A profile saved before installPackage() refused it can hold a name as both package and module, and
