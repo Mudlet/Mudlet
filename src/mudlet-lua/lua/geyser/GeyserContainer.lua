@@ -27,10 +27,14 @@
 --              container. This is not a number, but a constraint
 --              specification. To find out the numeric width in terms of
 --              pixels, use the get_width() method. Default is "300px".
+--              get_x() and get_width() can be fractional: a widget's edges
+--              are rounded to the nearest pixel, so it spans from
+--              round(get_x()) to round(get_x() + get_width()).
 -- @field height The height of this window, possibly relative to the window's
 --               container. This is not a number, but a constraint
---               specification. To find out the numeric width in terms of
---               pixels, use the get_width() method. Default is "200px".
+--               specification. To find out the numeric height in terms of
+--               pixels, use the get_height() method. Default is "200px".
+--               Its edges are rounded the same way as the width's.
 -- @field windowList This is a list of all windows held by this container. It
 --                   used to handle proper resizing of held windows as well as
 --                   during show()s and hide()s to recursive show and hide all
@@ -319,7 +323,7 @@ function Geyser.Container:flash (time, onHidden)
   
   if not onHidden then return end
   
-  local x, y, width, height = self.get_x(), self.get_y(), self.get_width(), self.get_height()
+  local x, y, width, height = self:pixel_geometry()
   local name = self.name .. "_dimensions_flash"
   createLabel(self.windowname ,name, x, y, width, height, 1)
   resizeWindow(name, width, height)

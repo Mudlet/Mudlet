@@ -1,9 +1,8 @@
 -- Geyser resolves its constraints against the live main window, whose size
 -- differs between machines, so expectations are computed from
--- getMainWindowSize() at assert time rather than hardcoded. Geyser rounds each
--- edge to a whole pixel before handing the geometry to moveWindow() and
--- resizeWindow(), so a position is math.floor(x + 0.5) and a size is the
--- difference between its two rounded edges.
+-- getMainWindowSize() at assert time rather than hardcoded. Geyser places a
+-- widget at its edges rounded to whole pixels, so a position is
+-- math.floor(x + 0.5) and a size is the difference between its two rounded edges.
 --
 -- Containers themselves have no Mudlet widget, so geometry is read back from a
 -- child label - the widget Geyser actually moves and resizes.
@@ -55,6 +54,15 @@ describe("Tests functionality of Geyser.Container", function()
       assert.is_truthy(container.name:find("^anon_window_%d+$"))
       assert.are.same({}, container.windows)
     end)
+
+    -- edges at 33.4 and 66.8 round to 33 and 67, and at 10.4 and 31 to 10 and 31
+    for _, kind in ipairs({"Label", "MiniConsole", "CommandLine", "TextEdit", "ScrollBox"}) do
+      it("creates a " .. kind .. " at the pixels its fractional geometry rounds to", function()
+        local name = "gcsCreate" .. kind
+        track(Geyser[kind]:new({name = name, x = "33.4px", y = "10.4px", width = "33.4px", height = "20.6px"}))
+        assert.are.same({x = 33, y = 10, width = 34, height = 21}, geometry(name))
+      end)
+    end
 
     it("registers a top level container with the root Geyser window list", function()
       local container = track(Geyser.Container:new({name = "gcsRegistered"}))
@@ -757,6 +765,14 @@ describe("Tests functionality of Geyser.Container", function()
       container:flash(0.1)
       assert.are.same({x = 20, y = 30, width = 80, height = 40}, geometry("gcsFlash_dimensions_flash"))
       assert.is_true(windowVisible("gcsFlash_dimensions_flash"))
+    end)
+
+    it("puts a flash label over the pixels a fractional geometry rounds to", function()
+      local label = track(Geyser.Label:new({name = "gcsFlashFraction", x = "33.4px", y = "10.4px", width = "33.4px", height = "20.6px"}))
+      finally(function() deleteLabel("gcsFlashFraction_dimensions_flash") end)
+      label:flash(0.1)
+      assert.are.same({x = 33, y = 10, width = 34, height = 21}, geometry("gcsFlashFraction"))
+      assert.are.same(geometry("gcsFlashFraction"), geometry("gcsFlashFraction_dimensions_flash"))
     end)
 
     it("creates nothing when told not to flash", function()
