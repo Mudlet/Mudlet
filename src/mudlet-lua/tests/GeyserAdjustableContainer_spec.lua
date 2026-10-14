@@ -1185,6 +1185,17 @@ describe("Tests dragging an Adjustable.Container out of its parent", function()
     assertNear(child:get_height(), height, "restored height")
   end)
 
+  it("names the container when the height it restores to cannot be read", function()
+    makeChild({dragOut = true})
+    child:minimize()
+    child.origh = "50 %"
+
+    local ok, message = pcall(function() child:dragOutOfParent(0, 0) end)
+
+    assert.is_false(ok)
+    assert.is_truthy(tostring(message):find("element '" .. childName .. "' has an invalid height constraint", 1, true), tostring(message))
+  end)
+
   it("does nothing for a container that is not nested in another one", function()
     makeChild({dragOut = true})
     child:changeContainer(Geyser)

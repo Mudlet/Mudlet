@@ -128,7 +128,7 @@ end
 -- @param dimension "width" or "height"
 -- @param container the container to measure the constraint in
 local function constraintInPixels(self, constraint, dimension, container)
-    local probe = {x = self.x, y = self.y, width = self.width, height = self.height, fontSize = self.fontSize}
+    local probe = {name = self.name, x = self.x, y = self.y, width = self.width, height = self.height, fontSize = self.fontSize}
     probe[dimension] = constraint
     Geyser.calc_constraints(probe, probe, container)
     return probe["get_"..dimension](probe)
