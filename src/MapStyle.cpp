@@ -69,15 +69,18 @@ QList<MapStyle> registeredStyles()
     blueprint.background = QColor(18, 60, 110);
     blueprint.ink = QColor(225, 242, 255);
     blueprint.gridColor = QColor(150, 200, 255, 38);
-    blueprint.inkTint = 0.32f;
+    blueprint.inkTint = 0.3f;
+    blueprint.inkLightness = 0.8f;
     blueprint.labelFontFamily = qsl("Bitstream Vera Sans Mono");
     blueprint.labelLetterSpacing = 112.0;
     blueprint.labelCapitals = true;
+    blueprint.roomNameGap = 1.0;
     blueprint.exitWidthFactor = 0.5f;
     blueprint.doors = MapStyle::Doors::Swings;
     blueprint.floorPlates = false;
     blueprint.highlightShape = MapStyle::HighlightShape::DashedEllipse;
     blueprint.highlightScale = 1.3f;
+    blueprint.highlightColor = QColor(225, 242, 255, 220);
     blueprint.playerRing = MapStyle::PlayerRing::Crosshair;
     blueprint.playerColor = QColor(255, 112, 90);
     blueprint.playerBeacon = false;
@@ -121,9 +124,14 @@ QColor MapStyle::roomColor(const QColor& environmentColor) const
     case Palette::Ink: {
         const float tint = inkTint;
         const QColor paper = background.isValid() ? background : QColor(Qt::black);
-        return QColor::fromRgbF(paper.redF() + (environmentColor.redF() - paper.redF()) * tint,
-                                paper.greenF() + (environmentColor.greenF() - paper.greenF()) * tint,
-                                paper.blueF() + (environmentColor.blueF() - paper.blueF()) * tint,
+        QColor wash = environmentColor.toHsl();
+        if (wash.lightnessF() < inkLightness) {
+            wash = QColor::fromHslF(std::max(wash.hslHueF(), 0.0f), wash.hslSaturationF(), inkLightness, wash.alphaF());
+        }
+        wash = wash.toRgb();
+        return QColor::fromRgbF(paper.redF() + (wash.redF() - paper.redF()) * tint,
+                                paper.greenF() + (wash.greenF() - paper.greenF()) * tint,
+                                paper.blueF() + (wash.blueF() - paper.blueF()) * tint,
                                 environmentColor.alphaF());
     }
     case Palette::Soft: {
@@ -249,6 +257,18 @@ void MapStyle::letter(QFont& font) const
     if (labelCapitals) {
         font.setCapitalization(QFont::AllUppercase);
     }
+}
+
+QFont MapStyle::roomIdFont(const QFont& mapSymbolFont) const
+{
+    QFont font = labelFont(mapSymbolFont);
+    font.setLetterSpacing(mapSymbolFont.letterSpacingType(), mapSymbolFont.letterSpacing());
+    return font;
+}
+
+qreal MapStyle::roomNameSpan(const qreal nameWidth, const qreal spaceWidth) const
+{
+    return nameWidth + spaceWidth * roomNameGap;
 }
 
 QString MapStyle::defaultId()
