@@ -974,8 +974,9 @@ private slots:
     }
 #endif
 
-    // Last, as a package's bare <Host> resets every profile setting it leaves out. A mapper already
-    // on screen only repaints on signal_areaChanged, so without one it keeps the old colours (#10679)
+    // Last, as a package's bare <Host> resets every profile setting it leaves out. Nothing but
+    // signal_areaChanged prompts a mapper already on screen to repaint, so without it the
+    // mapper keeps the old colours (#10679)
     void test_aHostPackageRepaintsTheMapWithItsAnsiColors_10679()
     {
         const QByteArray packageXml = "<?xml version=\"1.0\"?><MudletPackage version=\"1.001\"><HostPackage>"
@@ -985,17 +986,30 @@ private slots:
         QVERIFY(packageFile.open());
         QCOMPARE(packageFile.write(packageXml), static_cast<qint64>(packageXml.size()));
         packageFile.close();
+        const auto importPackage = [this, &packageFile]() {
+            QFile file(packageFile.fileName());
+            if (!file.open(QFile::ReadOnly | QFile::Text)) {
+                return std::make_pair(false, file.errorString());
+            }
+            XMLimport importer(mpTarget);
+            return importer.importPackage(&file, qsl("ansiMapColorPackage"));
+        };
 
         QCoreApplication::processEvents();
         QSignalSpy areaChanged(mpTarget->mpMap.data(), &TMap::signal_areaChanged);
-        QFile file(packageFile.fileName());
-        QVERIFY2(file.open(QFile::ReadOnly | QFile::Text), qPrintable(file.errorString()));
-        XMLimport importer(mpTarget);
-        auto [imported, importError] = importer.importPackage(&file, qsl("ansiMapColorPackage"));
+        auto [imported, importError] = importPackage();
         QVERIFY2(imported, qPrintable(importError));
 
         QCOMPARE(mpTarget->mpMap->mCustomEnvColors.value(257), QColor(0, 255, 0));
         QVERIFY2(areaChanged.count() || areaChanged.wait(1000), "the map was never told to repaint with the package's colours");
+        QCOMPARE(areaChanged.takeFirst().first().toInt(), -1);
+
+        // A view showing another area than the one already queued must repaint as well
+        mpTarget->mpMap->updateArea(5);
+        std::tie(imported, importError) = importPackage();
+        QVERIFY2(imported, qPrintable(importError));
+        QVERIFY2(areaChanged.count() || areaChanged.wait(1000), "the map was never told to repaint with the package's colours");
+        QCOMPARE(areaChanged.takeFirst().first().toInt(), -1);
     }
 };
 

@@ -4057,14 +4057,19 @@ void TMap::announceMapperSettingChanged(const MapperSetting setting)
 
 void TMap::updateArea(int areaId)
 {
-    static bool debounce;
-    if (!debounce) {
-        debounce = true;
-        QTimer::singleShot(0ms, this, [this, areaId]() {
-            debounce = false;
-            emit signal_areaChanged(areaId);
-        });
+    if (mPendingAreaUpdate.has_value()) {
+        // One signal for the turn, so it has to name every area changed in it
+        if (*mPendingAreaUpdate != areaId) {
+            mPendingAreaUpdate = -1;
+        }
+        return;
     }
+    mPendingAreaUpdate = areaId;
+    QTimer::singleShot(0ms, this, [this]() {
+        const int changedAreaId = mPendingAreaUpdate.value_or(-1);
+        mPendingAreaUpdate.reset();
+        emit signal_areaChanged(changedAreaId);
+    });
 }
 
 QColor TMap::getColor(int id)
