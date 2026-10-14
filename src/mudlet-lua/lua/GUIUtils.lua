@@ -2726,7 +2726,8 @@ local function setActionCallback(callbackFunc, funcName, name, func, ...)
   local nr = arg.n + 1
   arg.n = arg.n + 1
   if type(func) == "string" then
-    local compiled, compileError = loadstring("return "..func.."(...)")
+    -- named after the user's text, so errors don't quote the "return ...(...)" wrapper around it
+    local compiled, compileError = loadstring("return "..func.."(...)", func)
     assert(compiled, string.format('<%s: bad argument #2 value (%s)>', funcName, tostring(compileError)))
     func = compiled
   end
