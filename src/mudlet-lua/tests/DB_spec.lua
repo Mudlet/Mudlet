@@ -4294,8 +4294,9 @@ describe("Tests db:create moving a single-column UNIQUE", function()
     assert.is_true(db:add(mydb.people, {name = "Bob", city = "Lancre"}))
     assert.is_true(db:add(mydb.people, {name = "Nanny", city = "Lancre"}))
 
-    local ok = pcall(createCollectingWarnings, {people = {name = "", city = "", _unique = {"city"}}})
+    local ok, err = pcall(createCollectingWarnings, {people = {name = "", city = "", _unique = {"city"}}})
     assert.is_false(ok)
+    assert.is_truthy(string.find(err, "db:create - people - _unique now asks for people.city to be unique", 1, true))
 
     local rows = db:fetch(mydb.people, nil, {mydb.people.name})
     assert.are.equal(2, #rows)
@@ -4304,6 +4305,17 @@ describe("Tests db:create moving a single-column UNIQUE", function()
     local added, warnings = collectingWarnings(function() return db:add(mydb.people, {name = "Bob", city = "Ankh-Morpork"}) end)
     assert.is_nil(added)
     assert.is_truthy(string.find(warnings, "UNIQUE constraint failed: people.name", 1, true))
+  end)
+
+  it("refuses a UNIQUE on a column it adds while the sheet holds more than one row", function()
+    local mydb = createCollectingWarnings({people = {name = "", _unique = {"name"}}})
+    assert.is_true(db:add(mydb.people, {name = "Bob"}))
+    assert.is_true(db:add(mydb.people, {name = "Nanny"}))
+
+    local ok, err = pcall(createCollectingWarnings, {people = {name = "", region = "Ramtops", _unique = {"region"}}})
+    assert.is_false(ok)
+    assert.is_truthy(string.find(err, "db:create - people - _unique now asks for people.region to be unique", 1, true))
+    assert.are.equal(2, #db:fetch(mydb.people))
   end)
 
   it("keeps the values of a column whose name holds the sheet's", function()
