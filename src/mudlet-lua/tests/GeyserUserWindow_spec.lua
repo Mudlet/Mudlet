@@ -250,11 +250,16 @@ describe("Tests functionality of Geyser.UserWindow", function()
     it("re-resolves the size of percentage children when it is resized", function()
       track(Geyser.Label:new({name = "guwMoveChild", x = 0, y = 0, width = "50%", height = "100%"}, userWindow))
       local firstWidth, firstHeight = getUserWindowSize("guwMove")
-      assert.are.same({x = 0, y = 0, width = math.floor(firstWidth / 2), height = firstHeight}, geometry("guwMoveChild"))
+      assert.are.same({x = 0, y = 0, width = math.floor(firstWidth / 2 + 0.5), height = firstHeight}, geometry("guwMoveChild"))
       userWindow:resize(400, 260)
       local secondWidth, secondHeight = getUserWindowSize("guwMove")
       assert.is_true(secondWidth > firstWidth)
-      assert.are.same({x = 0, y = 0, width = math.floor(secondWidth / 2), height = secondHeight}, geometry("guwMoveChild"))
+      assert.are.same({x = 0, y = 0, width = math.floor(secondWidth / 2 + 0.5), height = secondHeight}, geometry("guwMoveChild"))
+      -- one of 400 and 401 leaves an odd usable width, whatever the window frame
+      userWindow:resize(401, 260)
+      local thirdWidth, thirdHeight = getUserWindowSize("guwMove")
+      assert.are.equal(secondWidth + 1, thirdWidth)
+      assert.are.same({x = 0, y = 0, width = math.floor(thirdWidth / 2 + 0.5), height = thirdHeight}, geometry("guwMoveChild"))
     end)
   end)
 
@@ -268,13 +273,15 @@ describe("Tests functionality of Geyser.UserWindow", function()
     it("creates children inside the user window, sized against its usable area", function()
       local label = track(Geyser.Label:new({name = "guwLabel", x = "50%", y = 0, width = "50%", height = "100%"}, userWindow))
       assert.are.equal("guwHolder", label.windowname)
-      local usableWidth, usableHeight = getUserWindowSize("guwHolder")
-      assert.are.same({
-        x = math.floor(usableWidth / 2),
-        y = 0,
-        width = math.floor(usableWidth / 2),
-        height = usableHeight,
-      }, geometry("guwLabel"))
+      local function expected()
+        local usableWidth, usableHeight = getUserWindowSize("guwHolder")
+        local half = math.floor(usableWidth / 2 + 0.5)
+        return {x = half, y = 0, width = usableWidth - half, height = usableHeight}
+      end
+      assert.are.same(expected(), geometry("guwLabel"))
+      -- one of the two widths leaves an odd usable width, whatever the window frame
+      userWindow:resize(301, nil)
+      assert.are.same(expected(), geometry("guwLabel"))
       assert.is_true(windowVisible("guwLabel"))
     end)
 
