@@ -1015,6 +1015,84 @@ private slots:
         QCOMPARE(mp2dMap->mMultiSelectionSet, afterCtrlDrag);
     }
 
+    void test_deletingASelectedRoomKeepsTheRestInTheList()
+    {
+        buildMap();
+        showMapper(false);
+        dragFromTo(pointUnitsFromCentre(-1.5, 1.5), pointUnitsFromCentre(0.5, -0.5));
+        const int centre = mp2dMap->getCenterSelectedRoomId();
+        QSet<int> remaining{kNorthWestRoomId, kNorthRoomId, kWestRoomId, kPlayerRoomId};
+        const int deleted = centre == kNorthWestRoomId ? kNorthRoomId : kNorthWestRoomId;
+        remaining.remove(deleted);
+
+        QVERIFY(runLua(qsl("deleteRoom(%1)").arg(deleted)));
+        QCoreApplication::processEvents();
+
+        QCOMPARE(mp2dMap->mMultiSelectionSet, remaining);
+        QCOMPARE(mp2dMap->getCenterSelectedRoomId(), centre);
+        QVERIFY2(!mp2dMap->mMultiSelectionListWidget.isHidden(), "the list went away with rooms still selected");
+        QCOMPARE(listedRoomIds(), remaining);
+    }
+
+    // Picking a room from the list leaves the others listed but not selected,
+    // and picking a deleted one again would put it back in the selection.
+    void test_deletingAListedButUnselectedRoomDropsItsRow()
+    {
+        buildMap();
+        showMapper(false);
+        dragFromTo(pointUnitsFromCentre(-1.5, 1.5), pointUnitsFromCentre(0.5, -0.5));
+        for (QTreeWidgetItem* item : listedRooms()) {
+            item->setSelected(item->text(0).toInt() == kPlayerRoomId);
+        }
+        QCOMPARE(mp2dMap->mMultiSelectionSet, QSet<int>{kPlayerRoomId});
+
+        QVERIFY(runLua(qsl("deleteRoom(%1)").arg(kNorthWestRoomId)));
+        QCoreApplication::processEvents();
+
+        const QSet<int> stillListed{kNorthRoomId, kWestRoomId, kPlayerRoomId};
+        QCOMPARE(listedRoomIds(), stillListed);
+        QCOMPARE(mp2dMap->mMultiSelectionSet, QSet<int>{kPlayerRoomId});
+        for (QTreeWidgetItem* item : listedRooms()) {
+            item->setSelected(true);
+        }
+        QCOMPARE(mp2dMap->mMultiSelectionSet, stillListed);
+    }
+
+    void test_deletingOneOfTwoSelectedRoomsLeavesTheOtherHighlighted()
+    {
+        buildMap();
+        showMapper(false);
+        dragFromTo(pointUnitsFromCentre(-1.5, 1.5), pointUnitsFromCentre(0.5, 0.5));
+        QCOMPARE(mp2dMap->mMultiSelectionSet, (QSet<int>{kNorthWestRoomId, kNorthRoomId}));
+        const int deleted = mp2dMap->getCenterSelectedRoomId();
+        const int other = deleted == kNorthRoomId ? kNorthWestRoomId : kNorthRoomId;
+
+        QVERIFY(runLua(qsl("deleteRoom(%1)").arg(deleted)));
+        QCoreApplication::processEvents();
+
+        QCOMPARE(mp2dMap->mMultiSelectionSet, QSet<int>{other});
+        QCOMPARE(mp2dMap->mMultiSelectionHighlightRoomId, other);
+        QVERIFY2(mp2dMap->mMultiSelectionListWidget.isHidden(), "the list stayed up for a single room");
+    }
+
+    void test_aSecondaryViewDropsADeletedRoomFromItsSelection()
+    {
+        buildMap();
+        showMapper(false);
+        const auto [viewId, error] = mpHost->createMapView(mAreaId);
+        QVERIFY2(viewId > 0, qPrintable(error));
+        T2DMap* pViewMap = map()->getViewManager()->getView(viewId)->get2DMap();
+        pViewMap->mMultiSelectionSet = QSet<int>{kNorthWestRoomId, kNorthRoomId, kWestRoomId, kPlayerRoomId};
+        pViewMap->mMultiSelectionHighlightRoomId = kWestRoomId;
+
+        QVERIFY(runLua(qsl("deleteRoom(%1)").arg(kWestRoomId)));
+
+        const QSet<int> remaining{kNorthWestRoomId, kNorthRoomId, kPlayerRoomId};
+        QCOMPARE(pViewMap->mMultiSelectionSet, remaining);
+        QVERIFY2(remaining.contains(pViewMap->mMultiSelectionHighlightRoomId), "the view's highlight is still the deleted room");
+        mpHost->closeMapView(viewId);
+    }
+
     // The list of selected rooms is rebuilt when the box takes in different
     // rooms, not on every move of the mouse, which on a big selection costs
     // more than the time between two moves.

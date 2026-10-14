@@ -438,6 +438,7 @@ private:
 
     void resizeMultiSelectionWidget();
     void hideSelectionWidget();
+    void pruneDeletedRoomsFromSelectionWidget();
     std::pair<int, int> getMousePosition();
     std::pair<bool, QString> performImageSave(const QPixmap& pixmap, const QString& filePath, const QString& format);
     bool isSnapCustomLinePointsToGridEnabled() const;
@@ -513,6 +514,7 @@ private:
 
     bool mIsSelectionSorting = true;
     bool mIsSelectionSortByNames = false;
+    bool mSelectionWidgetPruneQueued = false;
 
     // Used to keep track of if sorting the multiple
     // room listing/selection widget, and by what,

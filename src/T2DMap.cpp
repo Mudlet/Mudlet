@@ -6305,6 +6305,11 @@ void T2DMap::forgetDeletedRoom(const int roomId)
     // A drag still in progress rebuilds the selection from these on its next move
     mMultiSelectionBaseSet.remove(roomId);
     mMultiSelectionAnchorSet.remove(roomId);
+    // Queued so that deleting many rooms walks the list once, not once per room
+    if (!mSelectionWidgetPruneQueued && mMultiSelectionListWidget.topLevelItemCount() > 0) {
+        mSelectionWidgetPruneQueued = true;
+        QTimer::singleShot(0, this, &T2DMap::pruneDeletedRoomsFromSelectionWidget);
+    }
     if (!mMultiSelectionSet.remove(roomId)) {
         return;
     }
@@ -6320,8 +6325,23 @@ void T2DMap::forgetDeletedRoom(const int roomId)
             getCenterSelection();
         }
     }
-    hideSelectionWidget();
     update();
+}
+
+void T2DMap::pruneDeletedRoomsFromSelectionWidget()
+{
+    mSelectionWidgetPruneQueued = false;
+    // Removing a selected row would otherwise rebuild mMultiSelectionSet from the rows left
+    mMultiSelectionListWidget.blockSignals(true);
+    for (int row = mMultiSelectionListWidget.topLevelItemCount() - 1; row >= 0; --row) {
+        if (!mpMap->mpRoomDB->getRoom(mMultiSelectionListWidget.topLevelItem(row)->text(0).toInt())) {
+            delete mMultiSelectionListWidget.takeTopLevelItem(row);
+        }
+    }
+    mMultiSelectionListWidget.blockSignals(false);
+    if (mMultiSelectionListWidget.topLevelItemCount() < 2) {
+        hideSelectionWidget();
+    }
 }
 
 void T2DMap::hideSelectionWidget()
