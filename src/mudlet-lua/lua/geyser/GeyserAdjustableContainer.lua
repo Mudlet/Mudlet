@@ -871,9 +871,9 @@ function Adjustable.Container:onClickLoad()
 end
 
 --- minimizes the container
--- hides everything beside the title
+-- hides everything beside the title; does nothing if it is already minimized
 function Adjustable.Container:minimize()
-    if self.minimized then
+    if self.minimized == true then
         return
     end
     self.origh = self.height
@@ -1126,6 +1126,7 @@ function Adjustable.Container:load(slot, dir)
 
 
     if mytable.x then
+        local fullHeight = self.minimized == true and self.origh or self.height
         self:move(mytable.x, mytable.y)
         self:resize(mytable.width, mytable.height)
         self.minimized = mytable.minimized
@@ -1134,6 +1135,11 @@ function Adjustable.Container:load(slot, dir)
 
         if self.minimized == true then self.Inside:hide() self:resize(nil, self.buttonsize + 10) else self.Inside:show() end
         self.origh = mytable.origh
+        -- a layout saved by a version that let minimize() run twice holds the
+        -- collapsed height as the one to restore to, which would never expand again
+        if self.minimized == true and mytable.origh == mytable.height then
+            self.origh = fullHeight
+        end
     end
 
     if mytable.auto_hidden or mytable.hidden then
@@ -1532,14 +1538,16 @@ function Adjustable.Container:new(cons,container)
         Adjustable.Container.all[me.name]:detach()
     end
 
-    -- minimize() skips a container already flagged as minimized
-    if me.minimized then
-        me.minimized = false
-        me:minimize()
-    end
-
+    -- minimize() skips a container already flagged as minimized and
+    -- lockContainer() refuses one, so lock first and minimize after
+    local startMinimized = me.minimized
+    me.minimized = false
     if me.locked then
         me:lockContainer()
+    end
+
+    if startMinimized then
+        me:minimize()
     end
 
     if me.attached then

@@ -112,7 +112,18 @@ describe("Tests functionality of Adjustable.Container", function()
       ac:delete()
     end)
 
+    -- registered before new() so a constructor that raises part way still
+    -- takes its half built container out of Geyser
+    local function deleteOnFinish(name)
+      finally(function()
+        if Geyser.windowList[name] then
+          Geyser.windowList[name]:delete()
+        end
+      end)
+    end
+
     it("comes up collapsed to its title bar when created minimized", function()
+      deleteOnFinish("testMinimizedContainer")
       local ac = Adjustable.Container:new({
         name = "testMinimizedContainer",
         x = 0, y = 0, width = 200, height = 200,
@@ -120,13 +131,32 @@ describe("Tests functionality of Adjustable.Container", function()
         autoLoad = false,
         autoSave = false
       })
-      finally(function() ac:delete() end)
 
       assert.is_true(ac.minimized)
       assert.equals(tonumber(ac.buttonsize) + 10, ac:get_height())
       assert.is_true(ac.Inside.hidden)
       ac:restore()
       assert.equals(200, ac:get_height())
+    end)
+
+    it("comes up collapsed and locked when created minimized and locked", function()
+      deleteOnFinish("testMinimizedLockedContainer")
+      local ac = Adjustable.Container:new({
+        name = "testMinimizedLockedContainer",
+        x = 0, y = 0, width = 200, height = 200,
+        minimized = true,
+        locked = true,
+        autoLoad = false,
+        autoSave = false
+      })
+
+      assert.equals(tonumber(ac.buttonsize) + 10, ac:get_height())
+      assert.is_true(ac.locked)
+      assert.is_false(windowVisible(ac.exitLabel.name))
+      assert.is_false(windowVisible(ac.minimizeLabel.name))
+      ac:restore()
+      assert.equals(200, ac:get_height())
+      assert.is_false(windowVisible(ac.exitLabel.name))
     end)
   end)
 
@@ -302,6 +332,15 @@ describe("Tests functionality of Adjustable.Container", function()
       container:restore()
       assert.is_false(container.minimized)
       assert.are.same({x = 20, y = 30, width = 200, height = 200}, geometry("gasContaineradjLabel"))
+    end)
+
+    it("minimizes and restores when its minimized flag is truthy but not true", function()
+      container.minimized = 1
+      container:minimize()
+      assert.is_true(container.minimized)
+      assert.are.equal(tonumber(container.buttonsize) + 10, geometry("gasContaineradjLabel").height)
+      container:restore()
+      assert.are.equal(200, geometry("gasContaineradjLabel").height)
     end)
 
     it("titles itself after its name again after resetTitle", function()
@@ -2265,6 +2304,23 @@ describe("Tests Adjustable.Container borders, persistence and menu items", funct
       assert.are.equal(12, container.attachedMargin)
       assert.are.equal("full", container.lockStyle)
       assert.is_true(container.locked)
+    end)
+
+    it("restores a layout saved with the collapsed height as the one to restore to", function()
+      local container = make("gapSavedCollapsed", {height = 200})
+      container:minimize()
+      container:save(nil, scratchDir)
+      local saved = {}
+      table.load(scratchDir .. "gapSavedCollapsed.lua", saved)
+      saved.origh = saved.height
+      table.save(scratchDir .. "gapSavedCollapsed.lua", saved)
+      container:delete()
+
+      local reloaded = make("gapSavedCollapsed", {height = 200})
+      reloaded:load(nil, scratchDir)
+      assert.are.equal(tonumber(reloaded.buttonsize) + 10, reloaded:get_height())
+      reloaded:restore()
+      assert.are.equal(200, reloaded:get_height())
     end)
 
     it("rejects a slot or a directory of the wrong type", function()
