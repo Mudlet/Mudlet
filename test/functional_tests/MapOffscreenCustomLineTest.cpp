@@ -134,10 +134,10 @@ private:
         pMap->mNewMove = false;
         pMap->setDefaultAreaShown(false);
         mpHost->showHideOrCreateMapper(false);
-        if (!pMap->mpMapper || !pMap->mpMapper->mp2dMap) {
+        if (!pMap->mapper() || !pMap->mapper()->mp2dMap) {
             return nullptr;
         }
-        T2DMap* p2dMap = pMap->mpMapper->mp2dMap;
+        T2DMap* p2dMap = pMap->mapper()->mp2dMap;
         p2dMap->init();
         p2dMap->resize(kWidgetWidth, kWidgetHeight);
         p2dMap->mRoomID = kPlayerRoomId;
@@ -356,8 +356,8 @@ private slots:
         pMap->setDefaultAreaShown(false);
 
         mpHost->showHideOrCreateMapper(false);
-        QVERIFY(pMap->mpMapper);
-        T2DMap* p2dMap = pMap->mpMapper->mp2dMap;
+        QVERIFY(pMap->mapper());
+        T2DMap* p2dMap = pMap->mapper()->mp2dMap;
         QVERIFY(p2dMap);
         p2dMap->init();
         p2dMap->resize(kWidgetWidth, kWidgetHeight);
@@ -468,8 +468,8 @@ private slots:
         pMap->setDefaultAreaShown(false);
 
         mpHost->showHideOrCreateMapper(false);
-        QVERIFY(pMap->mpMapper);
-        T2DMap* p2dMap = pMap->mpMapper->mp2dMap;
+        QVERIFY(pMap->mapper());
+        T2DMap* p2dMap = pMap->mapper()->mp2dMap;
         QVERIFY(p2dMap);
         p2dMap->init();
         p2dMap->resize(kWidgetWidth, kWidgetHeight);
