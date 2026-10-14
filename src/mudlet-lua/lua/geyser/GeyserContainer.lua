@@ -251,6 +251,8 @@ end
 -- @param x New x constraint to use. If nil, uses current value.
 -- @param y New y constraint to use. If nil, uses current value.
 function Geyser.Container:move (x, y)
+  -- checked first, so a refused move does not leave its constraint behind on the window
+  Geyser.calc_constraints(self, {x = x or self.x, y = y or self.y, width = self.width, height = self.height}, self.container)
   self.x = x or self.x
   self.y = y or self.y
   self:set_constraints(self)
@@ -260,6 +262,8 @@ end
 -- @param width New width constraint to use.  If nil, uses current value.
 -- @param height New height constraint to use.  If nil, uses current value.
 function Geyser.Container:resize (width, height)
+  -- checked first, so a refused resize does not leave its constraint behind on the window
+  Geyser.calc_constraints(self, {x = self.x, y = self.y, width = width or self.width, height = height or self.height}, self.container)
   self.width = width or self.width
   self.height = height or self.height
   self:set_constraints(self)

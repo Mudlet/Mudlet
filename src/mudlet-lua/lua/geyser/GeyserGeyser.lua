@@ -56,10 +56,7 @@ end
 function Geyser:base_add (window, cons)
   cons = cons or window -- 'cons' is optional
 
-  -- compiled before the window changes containers: one whose constraints raise
-  -- stays where it was, rather than left without getters in the new container,
-  -- where it would trip every later layout pass
-  window.windowname = window.windowname or self.windowname or "main"
+  -- compiled before the window changes containers, so one whose constraints are refused stays where it was
   Geyser.calc_constraints(window, cons, self)
 
   -- Stop other container from controlling this window
@@ -75,7 +72,8 @@ function Geyser:base_add (window, cons)
   end
   self.windowList[window.name] = window
 
-  window:reposition()
+  window.windowname = window.windowname or window.container.windowname or "main"
+  Geyser.set_constraints(window, cons, self)
   if not self.defer_updates then
     window:reposition()
   end
@@ -226,6 +224,8 @@ function Geyser:changeContainer (container)
   local windowname = container.windowname
   windowname = windowname or "main"
 
+  -- before it leaves its container, so one the new container refuses stays where it was
+  Geyser.calc_constraints(self, self, container)
   self.container:remove(self)
   if self.windowname ~= windowname then
     setMyWindow(self, windowname)

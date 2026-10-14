@@ -292,6 +292,57 @@ describe("Tests functionality of Geyser.Container", function()
       assert.are.same({x = 10, y = 10, width = 50, height = 50}, geometry("gcsBadMove"))
     end)
 
+    it("keeps a constraint a move or resize refused out of the element", function()
+      local box = track(Geyser.Container:new({name = "gcsRefusedMoveBox", x = 0, y = 0, width = 300, height = 100}))
+      local label = track(Geyser.Label:new({name = "gcsRefusedMove", x = 10, y = 10, width = 50, height = 50}, box))
+      local sibling = track(Geyser.Label:new({name = "gcsRefusedMoveSibling", x = 0, y = 60, width = "100%", height = 20}, box))
+      assert.is_false(pcall(function() label:move("nonsense", 20) end))
+      assert.is_false(pcall(function() label:resize(nil, "50 %") end))
+      assert.are.same({"10px", "10px", "50px", "50px"}, {label.x, label.y, label.width, label.height})
+      box:resize(150, nil)
+      assert.are.equal(150, geometry("gcsRefusedMoveSibling").width)
+      label:move(20, nil)
+      assert.are.same({x = 20, y = 10, width = 50, height = 50}, geometry("gcsRefusedMove"))
+    end)
+
+    it("leaves an element in its old container when changeContainer cannot lay it out in the new one", function()
+      local source = track(Geyser.Container:new({name = "gcsRefusedChangeSource", x = 0, y = 0, width = 200, height = 100}))
+      local destination = track(Geyser.Container:new({name = "gcsRefusedChangeDestination", x = 0, y = 200, width = 200, height = 100}))
+      local label = track(Geyser.Label:new({name = "gcsRefusedChange", x = 0, y = 0, width = 50, height = 50}, source))
+      -- set straight on the element, which no setter checks
+      label.x = "nonsense"
+      assert.is_false(pcall(function() label:changeContainer(destination) end))
+      assert.are.equal(source, label.container)
+      assert.are.equal(label, source.windowList.gcsRefusedChange)
+      assert.is_truthy(table.index_of(source.windows, "gcsRefusedChange"))
+      assert.is_nil(destination.windowList.gcsRefusedChange)
+    end)
+
+    it("leaves the window name of an element a container refused alone", function()
+      local destination = track(Geyser.Container:new({name = "gcsRefusedWindowName", x = 0, y = 0, width = 100, height = 100}))
+      destination.windowname = "gcsRefusedWindowNameWindow"
+      finally(function() destination.windowname = "main" end)
+      local window = {name = "gcsRefusedWindowNameChild"}
+      assert.is_false(pcall(function()
+        destination:add(window, {x = 0, y = 0, width = "nonsense", height = 10})
+      end))
+      assert.is_nil(window.windowname)
+    end)
+
+    it("lays an added element out through Geyser.set_constraints", function()
+      local box = track(Geyser.Container:new({name = "gcsSetConstraintsHook", x = 0, y = 0, width = 100, height = 100}))
+      local original = Geyser.set_constraints
+      local calls = 0
+      finally(function() Geyser.set_constraints = original end)
+      Geyser.set_constraints = function(...)
+        calls = calls + 1
+        return original(...)
+      end
+      track(Geyser.Container:new({name = "gcsSetConstraintsHookChild", x = 0, y = 0, width = 10, height = 10}, box))
+      Geyser.set_constraints = original
+      assert.are.equal(1, calls)
+    end)
+
     it("resolves percentages through two levels of nesting", function()
       local outer = track(Geyser.Container:new({name = "gcsOuter", x = 100, y = 50, width = 400, height = 200}))
       local middle = track(Geyser.Container:new({name = "gcsMiddle", x = "50%", y = 0, width = "50%", height = "100%"}, outer))
