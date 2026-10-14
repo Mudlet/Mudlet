@@ -3725,10 +3725,15 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
     emit signal_mapProgressSetValue(0);
     QCoreApplication::processEvents();
 
+    // A file not written by Mudlet may not give these, and an empty one cannot name an area
     mDefaultAreaName = mapObj[QLatin1String("defaultAreaName")].toString();
+    if (mDefaultAreaName.isEmpty()) {
+        //: Name of the map's default area, the one with id -1, used when a JSON map file does not give one
+        mDefaultAreaName = tr("Default Area");
+    }
     mUnnamedAreaName = mapObj[QLatin1String("anonymousAreaName")].toString();
     if (mUnnamedAreaName.isEmpty()) {
-        // A file not written by Mudlet may not say, and an empty one cannot name an area
+        //: Name given to an area that has none, used when a JSON map file does not give one; further such areas get "_001", "_002" and so on appended to it
         mUnnamedAreaName = tr("Unnamed Area");
     }
     if (mapObj.contains(QLatin1String("userData"))) {
@@ -3805,6 +3810,7 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
     bool abort = false;
     // Named once every other area is in, so that the name given cannot be one a later area has
     std::vector<std::pair<int, std::unique_ptr<TArea>>> unnamedAreas;
+    QSet<int> namedAreaIds;
     for (int i = 0, total = mapObj.value(QLatin1String("areas")).toArray().count(); i < total; ++i) {
         std::unique_ptr<TArea> pArea = std::make_unique<TArea>(this, pNewRoomDB.get());
         auto [id, name] = pArea->readJsonArea(mapObj.value(QLatin1String("areas")).toArray(), i);
@@ -3820,9 +3826,14 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
         // This will populate the TRoomDB::areas and TRoomDB::areaNameMap:
         if (pNewRoomDB->addArea(pArea.get(), id, name)) {
             pArea.release();
+            namedAreaIds.insert(id);
         }
     }
     if (abort) {
+        for (auto& unnamedArea : unnamedAreas) {
+            // Never added to pNewRoomDB, so ~TArea() must not try to remove it from there
+            unnamedArea.second->mpRoomDB = nullptr;
+        }
         emit signal_mapProgressClose();
         mMapProgressStandalone = false;
         mDefaultAreaName = oldDefaultAreaName;
@@ -3830,8 +3841,17 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
         return {false, (translatableTexts ? tr("aborted by user") : qsl("aborted by user"))};
     }
     for (auto& [id, pArea] : unnamedAreas) {
+        if (namedAreaIds.contains(id)) {
+            // Added after every named area, it would otherwise displace the named one wherever the file lists it
+            pArea->mpRoomDB = nullptr;
+            //: Shown when a JSON map file has two areas with the same id, one of them with an empty name. %1 is the area's id.
+            const QString dropMsg = tr("[ WARN ]  - The map file has an area with id %1 and no name as well as a named one with that id, only the named one has been kept.").arg(id);
+            appendErrorMsgWithNoLf(dropMsg, false);
+            postMessage(dropMsg);
+            continue;
+        }
         // TRoomDB::addArea() refuses a blank name, which would lose the area's user data and labels
-        const QString name = pNewRoomDB->unusedUnnamedAreaName();
+        const QString name = (id == -1 && pNewRoomDB->getAreaNamesMap().key(mDefaultAreaName, -1) == -1) ? mDefaultAreaName : pNewRoomDB->unusedUnnamedAreaName();
         //: Shown when an area in a JSON map file has an empty name. %1 is the area's id, %2 the name it is given instead.
         const QString warnMsg = tr(R"([ WARN ]  - The area with id %1 has no name in the map file, so it has been called "%2".)").arg(QString::number(id), name);
         appendErrorMsgWithNoLf(warnMsg, false);
