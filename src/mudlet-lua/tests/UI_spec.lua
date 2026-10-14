@@ -5038,7 +5038,7 @@ describe("Window and label state", function()
       removeCommandLineMenuEvent(menuLabel)
       local ok, err = removeCommandLineMenuEvent(menuLabel)
       assert.is_nil(ok)
-      assert.are.equal(("removeCommandLineMenuEvent: cannot remove '%s', menu item does not exist"):format(menuLabel), err)
+      assert.are.equal(("cannot remove '%s', menu item does not exist"):format(menuLabel), err)
     end)
 
     it("a menu event can be added to a named command line", function()

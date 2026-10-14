@@ -2514,9 +2514,7 @@ int TLuaInterpreter::removeCommandLineMenuEvent(lua_State* L)
         return commandLineNotFound(L, commandLineName);
     }
     if (!*removed) {
-        lua_pushnil(L);
-        lua_pushfstring(L, "removeCommandLineMenuEvent: cannot remove '%s', menu item does not exist", menuLabel.toUtf8().constData());
-        return 2;
+        return warnArgumentValue(L, __func__, qsl("cannot remove '%1', menu item does not exist").arg(menuLabel));
     }
     lua_pushboolean(L, true);
     return 1;
