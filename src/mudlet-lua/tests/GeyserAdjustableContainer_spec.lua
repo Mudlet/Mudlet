@@ -728,9 +728,9 @@ describe("Tests the Adjustable.Container mouse handlers", function()
 
       assert.are.equal("top", container.attached)
       -- the drag stores the height as a percentage, so it comes back as a
-      -- fraction of a pixel and setBorderTop takes the whole part of it
-      local reserved = container:get_height() + container:get_y() + container.attachedMargin
-      assert.are.equal(math.floor(reserved), getBorderTop())
+      -- fraction of a pixel and the border ends at the widget's rounded edge
+      local _, y, _, height = getWindowGeometry(container.name .. "adjLabel")
+      assert.are.equal(y + height + container.attachedMargin, getBorderTop())
       -- and it really did follow the drag: the height it replaced was 200
       assert.is_true(container:get_height() > 200)
     end)
