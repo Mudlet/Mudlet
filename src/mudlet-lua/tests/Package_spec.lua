@@ -129,11 +129,13 @@ local function containsWrapped(haystack, needle)
   return contains((tostring(haystack):gsub("%s+", "")), (needle:gsub("%s+", "")))
 end
 
--- An archive whose name a folder in the profile already has unpacks into a "mudlet-installing-" folder beside it
+-- An archive whose name a folder in the profile already has unpacks into a "mudlet-installing-" folder beside it.
+-- One that was there before these specs ran is no spec's leavings, so only the rest are counted.
+local foldersBeforeTheInstallSpecs = {}
 local function aStagingFolderIsLeft()
   local prefix = "mudlet-installing-"
   for entry in lfs.dir(getMudletHomeDir()) do
-    if entry:sub(1, #prefix) == prefix then
+    if entry:sub(1, #prefix) == prefix and not foldersBeforeTheInstallSpecs[entry] then
       return true
     end
   end
@@ -373,6 +375,12 @@ local function collectEventsForSpec(eventName)
 end
 
 describe("Tests the functionality of installPackage", function()
+  setup(function()
+    for entry in lfs.dir(getMudletHomeDir()) do
+      foldersBeforeTheInstallSpecs[entry] = true
+    end
+  end)
+
   it("raises a Lua error when called with no arguments", function()
     -- the Lua wrapper that lets installPackage() take a URL indexes its
     -- argument before the C++ side gets to report a "bad argument #1", so the
@@ -465,7 +473,7 @@ describe("Tests the functionality of installPackage", function()
     assert.is_false(aStagingFolderIsLeft(), "the install left the folder it unpacked into")
   end)
 
-  it("keeps the links, empty folders and permissions of a folder it installs over", function()
+  it("keeps the links, empty folders and permissions of a folder it installs over, and uninstalls without following the links", function()
     local leftover = getMudletHomeDir() .. "/" .. minimalPackage
     local outside = getMudletHomeDir() .. "/mudlet-spec-outside"
     local keptOutside = outside .. "/please-do-not-delete-me.txt"
@@ -483,11 +491,6 @@ describe("Tests the functionality of installPackage", function()
       os.remove(keptOutside)
       lfs.rmdir(outside)
     end)
-    -- removed before the uninstall above runs, so it never meets the links
-    defer(function()
-      os.remove(leftover .. "/sounds")
-      os.remove(leftover .. "/dangling")
-    end)
     local permissions = lfs.attributes(leftover, "permissions")
     if not lfs.link(outside, leftover .. "/sounds", true) or not lfs.link(outside .. "/nothing-here", leftover .. "/dangling", true) then
       pending("this system will not let the profile make symbolic links")
@@ -504,6 +507,10 @@ describe("Tests the functionality of installPackage", function()
     assert.equals("directory", lfs.attributes(leftover .. "/saves", "mode"), "the install took away an empty folder of the folder it installed over")
     assert.equals(permissions, lfs.attributes(leftover, "permissions"), "the install changed who may read the folder it installed over")
     assert.is_false(aStagingFolderIsLeft(), "the install left the folder it unpacked into")
+
+    removeFixturePackage(minimalPackage)
+    assert.is_true(fileExists(keptOutside), "the uninstall deleted a file outside the profile that the package's folder only linked to")
+    assert.is_nil(lfs.symlinkattributes(leftover .. "/sounds"), "the uninstall left a link of the package's folder behind")
   end)
 
   it("does not read in another package's file left in the folder it installs over", function()
@@ -624,12 +631,15 @@ describe("Tests the functionality of installPackage", function()
 
     assert.is_true(fileExists(occupant), "the install carried off a folder that was in the profile before it ran")
     assert.is_false(fileExists(getMudletHomeDir() .. "/" .. renamedTo .. "/please-do-not-delete-me.txt"), "the install moved a folder that was in the profile under its own name")
+    -- unpacked beside the folder in the way, in one the install made, and that is the one moved into place
+    assert.equals(lfs.attributes(standIn, "permissions"), lfs.attributes(getMudletHomeDir() .. "/" .. renamedTo, "permissions"),
+                  "the package's folder was not made with the permissions any other new folder gets")
     assert.is_false(aStagingFolderIsLeft(), "the install left the folder it unpacked into")
   end)
 
   it("leaves alone a folder called after the package with .mudlet-installing on the end", function()
-    -- a name a package can have, and the one an archive clashing with the other kind's folder used to be unpacked
-    -- into, after deleting whatever was there
+    -- a name a package can have, so an install made to clash with the other kind's folder below may not take it
+    -- for a folder of its own to unpack into
     local lookalike = getMudletHomeDir() .. "/" .. minimalPackage .. ".mudlet-installing"
     local kept = lookalike .. "/please-do-not-delete-me.txt"
     lfs.mkdir(lookalike)
@@ -1880,9 +1890,9 @@ describe("Tests installing one name as both a package and a module", function()
     installUntilConfirmed(installPackage, squatter, function() return packageInstalled("mudlet-spec-renamer") end,
                           "a package under the renaming archive's file name")
 
-    -- the name a clashing archive was once unpacked into, which was reused - or
-    -- deleted - by whatever install came next; the package above is what makes
-    -- the module below clash and unpack beside it
+    -- the archive's file name with .mudlet-installing on the end, which the
+    -- clashing install must neither read in nor delete; the package above is
+    -- what makes the module below clash and unpack beside it
     local leftOver = getMudletHomeDir() .. "/mudlet-spec-renamer.mudlet-installing"
     lfs.mkdir(leftOver)
     defer(function()
