@@ -320,6 +320,9 @@ set(TEARDOWN_GROUP_TEST_SOURCES
     HostManagerAccessorTest.cpp
     HostWidgetDecouplingTest.cpp
 )
+if(USE_HEADLESS)
+    list(APPEND TEARDOWN_GROUP_TEST_SOURCES HeadlessRunnerTest.cpp HeadlessSessionTest.cpp)
+endif()
 
 # Sound, music and video, speech in and out, and the rich presence published to Discord
 set(MEDIA_GROUP_TEST_SOURCES
@@ -529,6 +532,14 @@ set_property(SOURCE SpeechAcrossProfilesTest.cpp SpeechBridgeLuaTest.cpp SpeechR
 add_dependencies(functional_teardown_tests mudlet_executable)
 set_property(SOURCE AppStartupTeardownTest.cpp HeadlessVersionTest.cpp
     APPEND PROPERTY COMPILE_DEFINITIONS MUDLET_APP_BINARY="$<TARGET_FILE:mudlet_executable>")
+# The same for HeadlessRunnerTest and the mudlet-headless runner, and HeadlessSessionTest links the
+# library the runner is built on
+if(USE_HEADLESS)
+    target_link_libraries(functional_teardown_tests PRIVATE mudlet_headless)
+    add_dependencies(functional_teardown_tests mudlet_headless_executable)
+    set_property(SOURCE HeadlessRunnerTest.cpp
+        APPEND PROPERTY COMPILE_DEFINITIONS MUDLET_HEADLESS_BINARY="$<TARGET_FILE:mudlet_headless_executable>")
+endif()
 
 # Every list's cases, so a grouped test's properties are the solo ones verbatim
 foreach(test_name ${allFunctionalTestNames})
@@ -603,6 +614,9 @@ set_tests_properties(AppStartupTeardownTest PROPERTIES TIMEOUT 300)
 # HeadlessVersionTest runs the application once per row of its matrix, for the
 # same reason
 set_tests_properties(HeadlessVersionTest PROPERTIES TIMEOUT 300)
+if(TEST HeadlessRunnerTest)
+    set_tests_properties(HeadlessRunnerTest PROPERTIES TIMEOUT 300)
+endif()
 
 # Undo/redo tests need a longer timeout due to large batch operations
 set_tests_properties(dlgTriggerEditorUndoRedoTest PROPERTIES TIMEOUT 300)

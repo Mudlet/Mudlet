@@ -168,7 +168,7 @@ bool HostManager::addHost(const QString& hostname, const QString& port, const QS
     return true;
 }
 
-Host* HostManager::openProfile(const QString& name, const bool connect)
+Host* HostManager::openProfile(const QString& name, const bool connect, const std::function<void(Host*)>& beforeLoad)
 {
     if (mGoingDown || !addHost(name, QString(), QString(), QString())) {
         return nullptr;
@@ -178,6 +178,9 @@ Host* HostManager::openProfile(const QString& name, const bool connect)
         --mProfileLoadsInProgress;
     });
     Host* pHost = getHost(name);
+    if (beforeLoad) {
+        beforeLoad(pHost);
+    }
     pHost->loadProfileSave(QString());
     pHost->mIsProfileLoadingSequence = true;
     pHost->startProfileScripts();

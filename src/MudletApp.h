@@ -35,6 +35,7 @@
 #include <QString>
 
 class QNetworkRequest;
+class QTranslator;
 class QUrl;
 
 // The application-wide services that need no main window: where Mudlet keeps
@@ -156,6 +157,12 @@ public:
     static void noteEarlySettingsStatus(const QSettings&);
     // What noteEarlySettingsStatus() last heard of that file, or NoError
     static QSettings::Status earlySettingsStatus(const QString& fileName);
+    // For texts printed before there is a window or a profile, in Mudlet.ini's language or else the
+    // system's. Installed on the application; null when there is none. A print-and-exit run warns why not.
+    static QTranslator* loadTranslationsForCommandLine(bool printAndExitRun);
+    // FFmpeg on Windows and AVFoundation on macOS over Qt Multimedia's own default, unless QT_MEDIA_BACKEND
+    // names one; before the first media object is made
+    static void setDefaultMediaBackend();
 
     // Whether the config root in force actually came from a portable.txt. False
     // when a marker was present but named a root that had to be refused, which is

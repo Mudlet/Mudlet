@@ -224,55 +224,6 @@ private:
 #endif
 };
 
-QTranslator* loadTranslationsForCommandLine(const bool printAndExitRun)
-{
-    // Not MudletApp::getQSettings(): it stays null until setupConfig(), which a --help or --version run never
-    // reaches. Same file and format as setupConfig() opens - keep the spellings in step.
-    QSettings settings(qsl("%1/Mudlet.ini").arg(MudletApp::getMudletPath(enums::mainPath)), QSettings::IniFormat);
-    MudletApp::noteEarlySettingsStatus(settings);
-    // By name: only the first reader to parse a file is told of a format error, and the reader before this
-    // one, applyHighDpiRoundingPolicyFromConfig()'s, finds its root from argv[0] so it can have parsed another file
-    const QSettings::Status settingsStatus = MudletApp::earlySettingsStatus(settings.fileName());
-    // Other runs have getQSettings() report this, which a print-and-exit run never calls
-    if (printAndExitRun && settingsStatus == QSettings::FormatError) {
-        // Qt keeps every key it could parse, so a language set there may still be in use
-        qWarning().nospace().noquote() << "loadTranslationsForCommandLine() WARNING - \"" << settings.fileName()
-                                       << "\" is not valid INI, so an interface language set in it may have been read wrongly or not at all.";
-    } else if (printAndExitRun && settingsStatus != QSettings::NoError) {
-        qWarning().nospace().noquote() << "loadTranslationsForCommandLine() WARNING - \"" << settings.fileName()
-                                       << "\" is not readable, so any interface language set in it is not used for this text.";
-    }
-    auto interfaceLanguage = settings.value(QLatin1String("interfaceLanguage")).toString();
-    auto userLocale = interfaceLanguage.isEmpty() ? QLocale::system() : QLocale(interfaceLanguage);
-    if (userLocale == QLocale::c()) {
-        // Other runs have mudlet::readEarlySettings() report a code that names no locale
-        if (printAndExitRun && !interfaceLanguage.isEmpty()) {
-            qWarning().nospace().noquote() << "loadTranslationsForCommandLine() WARNING - the interface language \"" << interfaceLanguage
-                                           << "\" is not a recognised locale, so the command line text is in English.";
-        }
-        return nullptr;
-    }
-    // We only need the Mudlet translations for the Command Line texts, no need
-    // for any Qt ones. Parented to QCoreApplication::instance(), not qApp, which static-casts
-    // to a QApplication that a print-and-exit run has not created.
-    QTranslator* pMudletTranslator = new QTranslator(QCoreApplication::instance());
-    // If we allow the translations to be outside of the resource file inside
-    // the application executable then this will have to be revised to handle
-    // it:
-    const bool isOk = pMudletTranslator->load(userLocale, qsl("mudlet"), QString("_"), qsl(":/lang"), qsl(".qm"));
-    if (!isOk) {
-        // Only a print-and-exit run prints the text this is about
-        if (printAndExitRun && !interfaceLanguage.isEmpty()) {
-            qWarning().nospace().noquote() << "loadTranslationsForCommandLine() WARNING - no translation could be loaded for the interface language \"" << interfaceLanguage
-                                           << "\", so the command line text is in English.";
-        }
-        delete pMudletTranslator;
-        return nullptr;
-    }
-    QCoreApplication::installTranslator(pMudletTranslator);
-    return pMudletTranslator;
-}
-
 #ifdef Q_OS_WINDOWS
 void msys2QtMessageHandler(QtMsgType type, const QMessageLogContext& context, const QString& msg)
 {
@@ -591,7 +542,7 @@ int main(int argc, char* argv[])
 #endif
     }
 
-    QPointer<QTranslator> commandLineTranslator(loadTranslationsForCommandLine(printAndExitOption));
+    QPointer<QTranslator> commandLineTranslator(MudletApp::loadTranslationsForCommandLine(printAndExitOption));
 
     // A print-and-exit run keeps the verdict above: a second reading may differ, and such a run has no
     // QApplication for the rest of main() to dereference. Other runs are reparsed from the application's
@@ -797,27 +748,8 @@ int main(int argc, char* argv[])
         commandLineTranslator.clear();
     }
 
-    // Configure the media backend - does not work in mudlet class c'tor.
-    // On Windows, use FFmpeg which supports .ogg/.opus (native backend doesn't).
-    // On macOS, use darwin (AVFoundation) which works better than FFmpeg.
-#if defined(Q_OS_WINDOWS)
-    const QByteArray defaultMediaBackend("ffmpeg");
-#elif defined(Q_OS_MACOS)
-    const QByteArray defaultMediaBackend("darwin");
-#else
-    const QByteArray defaultMediaBackend;
-#endif
-    if (!defaultMediaBackend.isEmpty()) {
-        if (qEnvironmentVariableIsEmpty("QT_MEDIA_BACKEND")) {
-            if (qputenv("QT_MEDIA_BACKEND", defaultMediaBackend)) {
-                qDebug().noquote() << "main(...) INFO - setting QT_MEDIA_BACKEND environmental variable to:" << defaultMediaBackend;
-            } else {
-                qWarning().noquote() << "main(...) WARNING - failed to set QT_MEDIA_BACKEND environmental variable to:" << defaultMediaBackend << ", sound may not work.";
-            }
-        } else {
-            qDebug().noquote().nospace() << "main(...) INFO - QT_MEDIA_BACKEND environmental variable is set to: \"" << qgetenv("QT_MEDIA_BACKEND") << "\".";
-        }
-    }
+    // Does not work in the mudlet class c'tor
+    MudletApp::setDefaultMediaBackend();
 
     QStringList cliProfiles = parser.values(profileToOpen);
 
