@@ -6102,6 +6102,10 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
     QList<quint16> wrapGapList;
     int lineCount = 0;
     for (int i = firstRewrappedLine; i < total; ++i) {
+        // A line split above the pass line pushes it down, leaving its index naming other text
+        if (i == mPreTriggerPassLineNumber && firstRewrappedLine + static_cast<int>(queue.size()) != i) {
+            mPreTriggerPassLineNumber = -1;
+        }
         lineCount++;
         std::vector<TChar> newBufferLine;
         QString newLineText;
@@ -6138,8 +6142,7 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
             wrapGapList.append(wrapGapBuffer.at(i));
             continue;
         }
-        // Only a pass line whose first segment stays at its own index can keep its snapshot
-        if (i == mPreTriggerPassLineNumber && mPreTriggerPassSnapshotTaken && firstRewrappedLine + static_cast<int>(queue.size()) == i) {
+        if (i == mPreTriggerPassLineNumber && mPreTriggerPassSnapshotTaken) {
             wrapPreTriggerPassLine(lineBreaks.first(), lineBreaks.first().isNewline ? indent : hangingIndent);
         }
         const QString qIndent(indent, QChar::Space);

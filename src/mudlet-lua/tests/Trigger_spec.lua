@@ -824,6 +824,53 @@ describe("Trigger processing", function()
             end)
         end
 
+        -- Splitting the line above the one being processed pushes it down, so what
+        -- is left at its old line number is other text, which has no original colors.
+        local function recolorAbove()
+            if selectString("ABOVE", 1) > -1 then
+                setFgColor(0, 0, 255)
+            end
+            deselect()
+            resetFormat()
+        end
+        local function insertAtStart()
+            moveCursor(0, getLineNumber())
+            insertText("Z")
+            resetFormat()
+        end
+        for _, edit in ipairs({
+            {"", function() end, function() end},
+            {" of a recolored line", recolorAbove, function() end},
+            {" of a recolored line and then inserts text", recolorAbove, insertAtStart},
+        }) do
+            it("should not match colors at the old line number after a trigger wraps the line above" .. edit[1], function()
+                _G.wrapAboveMatches = {}
+                local savedWrap = getWindowWrap("main")
+                finally(function()
+                    setWindowWrap("main", savedWrap)
+                    _G.wrapAboveMatches = nil
+                end)
+
+                local wrapper = tempRegexTrigger("^WRAPABOVE$", function()
+                    edit[2]()
+                    setWindowWrap("main", 20)
+                    wrapLine("main", getLineNumber() - 1)
+                    edit[3]()
+                end)
+                local colorTrigger = tempAnsiColorTrigger(1, -1,
+                    [[table.insert(_G.wrapAboveMatches, matches[1])]])
+
+                feedTriggers("\n\27[32mgggggggggg hhhhhhhhhh iiiiiiiiii\27[0m\n\27[31mWRAP\27[32mABOVE\27[0m\n")
+
+                killTrigger(wrapper)
+                killTrigger(colorTrigger)
+
+                for _, matched in ipairs(_G.wrapAboveMatches) do
+                    assert.are.equal("WRAP", matched, "only the red text the game sent should be matched as red")
+                end
+            end)
+        end
+
     end)
 
     describe("tempAnsiColorTrigger callbacks", function()
