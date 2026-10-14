@@ -779,14 +779,15 @@ end
 --if no lockStyle is given the container's current lockStyle is used, or "standard" if that one does not exist (yet)
 -- @param lockNr the number or the name of the lockStyle [optional]; anything else, such as the
 -- mouse event of a click callback, is ignored
--- @param lockStyle the lockstyle used to lock the container, only used when lockNr is not given;
--- the lockStyle is the behaviour/mode of the locked state.
+-- @param lockStyle the name or the number of the lockstyle used to lock the container, only used when
+-- lockNr is not given; the lockStyle is the behaviour/mode of the locked state.
 -- integrated lockStyles are "standard", "border", "full" and "light" (default "standard")
 -- standard:    This is the default lockstyle, with a small margin on top to keep the right click menu usable.
 -- light:       Only hides the min/restore and close labels. Borders and margin are not affected.
 -- full:        The container gets fully locked without any margin left for the right click menu.
 -- border:      Keeps the borders of the container visible while locked.
--- @return true once locked, or nil and an error message for a lock style that does not exist or a minimized container
+-- @return true once locked, or nil and an error message for a lock style that does not exist or a minimized
+-- container that is not locked yet (a locked one that is minimized takes the new style)
 
 function Adjustable.Container:lockContainer(lockNr, lockStyle)
     closeAllLevels(self.rCLabel)
@@ -805,7 +806,7 @@ function Adjustable.Container:lockContainer(lockNr, lockStyle)
       return nil, string.format("lockContainer: unknown lock style \"%s\"", tostring(lockStyle))
     end
 
-    if self.minimized ~= false then
+    if self.minimized ~= false and not self.locked then
       return nil, "lockContainer: a minimized container cannot be locked"
     end
 
@@ -818,6 +819,9 @@ function Adjustable.Container:lockContainer(lockNr, lockStyle)
       if not usableLockStyle(self, lockStyle) then
         self.pendingLockStyle = lockStyle
         lockStyle = "standard"
+      elseif lockStyle ~= "standard" then
+        -- "standard" may still be the stand-in for the pending style; any other was set since
+        self.pendingLockStyle = nil
       end
     end
 
@@ -1407,10 +1411,11 @@ end
 --- creates a new Lockstyle
 -- @param name Name of the menu item/lockstyle
 -- @param func function of the new lockstyle
--- @return nil and an error message when func is not a function
+-- @return true, also when the name already exists (its style is kept), or nil and an error message
+-- when func is neither a function nor a callable table
 function Adjustable.Container:newLockStyle(name, func)
     if self.lockStyles[name] then
-        return
+        return true
     end
     if not callable(func) then
         return nil, string.format("newLockStyle: lock style \"%s\" needs a function, got %s", tostring(name), type(func))
@@ -1427,6 +1432,7 @@ function Adjustable.Container:newLockStyle(name, func)
             self:lockContainer(name)
         end
     end
+    return true
 end
 
 --- creates a new custom menu item
@@ -1577,12 +1583,16 @@ function Adjustable.Container:new(cons,container)
         Adjustable.Container.all[me.name]:detach()
     end
 
-    if me.minimized then
-        me:minimize()
-    end
-
+    -- cons flags both before either is applied, and minimize() skips a container already flagged
+    -- minimized and locked, so it is locked first and minimized after
+    local minimized = me.minimized
+    me.minimized = false
     if me.locked then
         me:lockContainer()
+    end
+
+    if minimized then
+        me:minimize()
     end
 
     if me.attached then

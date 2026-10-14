@@ -2545,6 +2545,55 @@ describe("Tests Adjustable.Container borders, persistence and menu items", funct
       assert.is_true(container.locked)
     end)
 
+    it("forgets a remembered style it could not use once another style is chosen", function()
+      local container = make("gapLockStaleReplaced")
+      container.lockStyle = "gapGoneStyle"
+      assert.is_true(container:lockContainer())
+      container:unlockContainer()
+      container.lockStyle = "full"
+      assert.is_true(container:lockContainer())
+      container:save(nil, scratchDir)
+      local saved = {}
+      table.load(scratchDir .. "gapLockStaleReplaced.lua", saved)
+      assert.are.equal("full", saved.lockStyle)
+    end)
+
+    it("takes a new style while locked and minimized and shows it once restored", function()
+      local container = make("gapLockMinimizedRestyle")
+      local reference = make("gapLockMinimizedReference")
+      assert.is_true(reference:lockContainer("border"))
+      assert.is_true(container:lockContainer("full"))
+      container:minimize()
+      assert.is_true(container:lockContainer("border"))
+      assert.are.equal("border", container.lockStyle)
+      container:restore()
+      assert.are.equal(reference.Inside:get_y() - reference:get_y(), container.Inside:get_y() - container:get_y())
+      assert.are.equal(reference.Inside:get_width(), container.Inside:get_width())
+      assert.are.equal(reference.Inside:get_height(), container.Inside:get_height())
+    end)
+
+    it("newLockStyle applies a remembered style to a container that is locked and minimized", function()
+      local container = make("gapLockLaterMinimized")
+      container.lockStyle = "gapLaterMinimizedStyle"
+      assert.is_true(container:lockContainer())
+      container:minimize()
+      local ran = 0
+      assert.is_true(container:newLockStyle("gapLaterMinimizedStyle", function() ran = ran + 1 end))
+      assert.are.equal(1, ran)
+      assert.are.equal("gapLaterMinimizedStyle", container.lockStyle)
+    end)
+
+    it("is created locked and minimized when asked for both", function()
+      local container = make("gapLockMinimizedNew", {minimized = true, locked = true, lockStyle = "border"})
+      local reference = make("gapLockMinimizedNewReference", {minimized = true})
+      assert.is_true(container.locked)
+      assert.is_true(container.minimized)
+      assert.is_true(container.exitLabel.hidden)
+      assert.are.equal(reference:get_height(), container:get_height())
+      container:restore()
+      assert.are.equal(container.padding, container.Inside:get_y() - container:get_y())
+    end)
+
     it("loads a layout saved locked and minimized as locked and minimized", function()
       local container = make("gapLockMinimizedSaved")
       assert.is_true(container:lockContainer("border"))
@@ -2562,7 +2611,7 @@ describe("Tests Adjustable.Container borders, persistence and menu items", funct
     it("newLockStyle adds a style and a menu item for it", function()
       local container = make("gapNewLockStyle")
       local ran = 0
-      container:newLockStyle("gapCustomStyle", function() ran = ran + 1 end)
+      assert.is_true(container:newLockStyle("gapCustomStyle", function() ran = ran + 1 end))
 
       assert.is_not_nil(container.lockStyles.gapCustomStyle)
       assert.is_not_nil(container.adjLabel:findMenuElement("lockStylesLabel.gapCustomStyle"))
@@ -2575,7 +2624,7 @@ describe("Tests Adjustable.Container borders, persistence and menu items", funct
     it("newLockStyle ignores a name it already has", function()
       local container = make("gapDuplicateLockStyle")
       local styleCount = #container.lockStyles
-      container:newLockStyle("standard", function() end)
+      assert.is_true(container:newLockStyle("standard", function() end))
       assert.are.equal(styleCount, #container.lockStyles)
     end)
 
