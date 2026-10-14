@@ -205,7 +205,6 @@ private:
     void readJsonHighlight(const QJsonObject&);
     void readJsonSymbol(const QJsonObject&);
     void readJsonBorder(const QJsonObject&);
-    void takeBorderFromUserData();
 
     void writeJsonExits(QJsonObject&) const;
     void writeJsonExitStubs(QJsonObject&) const;

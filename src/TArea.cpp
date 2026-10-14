@@ -861,7 +861,7 @@ std::pair<int, QString> TArea::readJsonArea(const QJsonArray& array, const int a
     const QString name{areaObj.value(QLatin1String("name")).toString()};
     gridMode = areaObj.value(QLatin1String("gridMode")).toBool();
     readJsonUserData(areaObj.value(QLatin1String("userData")).toObject());
-    // A file exported after a binary save can have the binary format's fallbacks in the user data
+    // An export by an older Mudlet can have the binary format's fallbacks in the user data
     if (const QString zoom = mUserData.take(QLatin1String("system.fallback_map2DZoom")); !zoom.isEmpty()) {
         set2DMapZoom(zoom.toDouble());
     }
@@ -889,9 +889,12 @@ std::pair<int, QString> TArea::readJsonArea(const QJsonArray& array, const int a
     if (areaObj.contains(QLatin1String("labels")) && areaObj.value(QLatin1String("labels")).isArray()) {
         readJsonLabels(areaObj);
     }
-    // Those for a label the file does not have are left over from one since deleted,
-    // while for one it has they can be the only copy of its font or outline color
-    dropFileOnlyUserData(mUserData, &mMapLabels);
+    // A JSON label has no field for its outline color, so such a fallback is the
+    // only copy of it, while its font is in its own fields
+    for (auto&& [labelId, label] : mMapLabels.asKeyValueRange()) {
+        restoreLabelOutlineColorFromUserData(label, labelId, mUserData);
+    }
+    dropFileOnlyUserData(mUserData);
     return {id, name};
 }
 
@@ -915,21 +918,35 @@ void TArea::writeJsonUserData(QJsonObject& obj) const
 // The binary format keeps an area's zoom (below format 21) and its labels'
 // fonts and outline colors as user data under these keys. They mean nothing in
 // the live map, and a map file can hold them for labels that no longer exist.
-void TArea::dropFileOnlyUserData(QMap<QString, QString>& userData, const QMap<int, TMapLabel>* pKeptLabels)
+void TArea::dropFileOnlyUserData(QMap<QString, QString>& userData)
 {
     // exactly the form a save writes, so "_007" or "_+5" stay a script's own
-    const auto labelKey = [pKeptLabels](const QString& key, const QLatin1String prefix) {
+    const auto labelKey = [](const QString& key, const QLatin1String prefix) {
         if (!key.startsWith(prefix)) {
             return false;
         }
         const QStringView suffix = QStringView(key).mid(prefix.size());
         bool isNumber = false;
         const int labelId = suffix.toInt(&isNumber);
-        return isNumber && suffix == QString::number(labelId) && !(pKeptLabels && pKeptLabels->contains(labelId));
+        return isNumber && suffix == QString::number(labelId);
     };
     userData.removeIf([&labelKey](const QMap<QString, QString>::iterator& it) {
         return it.key() == QLatin1String("system.fallback_map2DZoom") || labelKey(it.key(), QLatin1String("system.labelFont_")) || labelKey(it.key(), QLatin1String("system.labelOutlineColor_"));
     });
+}
+
+// Outline color data is stored as "r|g|b|a" to avoid binary format version changes.
+void TArea::restoreLabelOutlineColorFromUserData(TMapLabel& label, int labelId, QMap<QString, QString>& userData)
+{
+    const QString colorKey = qsl("system.labelOutlineColor_%1").arg(labelId);
+    if (userData.contains(colorKey)) {
+        const QStringList colorParts = userData.take(colorKey).split(QLatin1Char('|'));
+        if (colorParts.size() == 4) {
+            label.outlineColor = QColor(colorParts.at(0).toInt(), colorParts.at(1).toInt(), colorParts.at(2).toInt(), colorParts.at(3).toInt());
+        } else {
+            qWarning("TMap: Failed to parse outline color data for label %d, expected 4 parts but got %lld", labelId, colorParts.size());
+        }
+    }
 }
 
 // Takes a userData object and parses all its elements

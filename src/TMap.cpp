@@ -100,20 +100,6 @@ void restoreLabelFontFromUserData(TMapLabel& label, int labelId, QMap<QString, Q
     }
 }
 
-// Outline color data is stored as "r|g|b|a" to avoid binary format version changes.
-void restoreLabelOutlineColorFromUserData(TMapLabel& label, int labelId, QMap<QString, QString>& userData)
-{
-    const QString colorKey = qsl("system.labelOutlineColor_%1").arg(labelId);
-    if (userData.contains(colorKey)) {
-        const QStringList colorParts = userData.take(colorKey).split(QLatin1Char('|'));
-        if (colorParts.size() == 4) {
-            label.outlineColor = QColor(colorParts.at(0).toInt(), colorParts.at(1).toInt(), colorParts.at(2).toInt(), colorParts.at(3).toInt());
-        } else {
-            qWarning("TMap: Failed to parse outline color data for label %d, expected 4 parts but got %lld", labelId, colorParts.size());
-        }
-    }
-}
-
 enum class MapFileCheckResult { ValidMap, NotAMap, ParseError };
 
 struct MapFileCheck
@@ -2071,7 +2057,7 @@ bool TMap::restore(QString location)
                         ifs >> label.noScaling;
                         ifs >> label.showOnTop;
                         restoreLabelFontFromUserData(label, labelId, pA->mUserData);
-                        restoreLabelOutlineColorFromUserData(label, labelId, pA->mUserData);
+                        TArea::restoreLabelOutlineColorFromUserData(label, labelId, pA->mUserData);
                         pA->mMapLabels.insert(labelId, label);
                     }
                 }
@@ -2141,7 +2127,7 @@ bool TMap::restore(QString location)
                     }
                     if (pA) {
                         restoreLabelFontFromUserData(label, labelID, pA->mUserData);
-                        restoreLabelOutlineColorFromUserData(label, labelID, pA->mUserData);
+                        TArea::restoreLabelOutlineColorFromUserData(label, labelID, pA->mUserData);
                         pA->mMapLabels.insert(labelID, label);
                     }
                     ++areaLabelCounter;

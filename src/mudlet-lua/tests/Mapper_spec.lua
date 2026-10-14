@@ -4866,41 +4866,6 @@ describe("Tests saveJsonMap and loadJsonMap", function()
       assert.are.same({climate = "temperate", ruler = "nobody"}, getAllAreaUserData(area))
     end)
 
-    it("takes the binary format's fallbacks out of the user data of a file that has them", function()
-      deleteMap()
-      local area = addAreaName("MapperSpecJsonLeakedKeysArea")
-      roomA = createRoomID(); addRoom(roomA); setRoomArea(roomA, area)
-      assert.is_true(setAreaUserData(area, "climate", "temperate"))
-      assert.is_true(setRoomUserData(roomA, "kind", "cave"))
-      assert.is_true(saveJsonMap(jsonPath))
-      local file = assert(io.open(jsonPath, "r"))
-      local document = yajl.to_value(file:read("*a"))
-      file:close()
-      for _, exportedArea in ipairs(document.areas) do
-        if exportedArea.id == area then
-          exportedArea.zoom2D = nil
-          exportedArea.userData["system.fallback_map2DZoom"] = "27"
-          exportedArea.userData["system.labelOutlineColor_77"] = "1|2|3|255"
-          for _, room in ipairs(exportedArea.rooms) do
-            room.border = nil
-            room.userData["room.ui_borderColor"] = "#ff0a141e"
-            room.userData["room.ui_borderThickness"] = "4"
-          end
-        end
-      end
-      file = assert(io.open(jsonPath, "w"))
-      file:write(yajl.to_string(document))
-      file:close()
-      deleteMap()
-
-      assert.is_true(loadJsonMap(jsonPath))
-
-      assert.are.same({climate = "temperate"}, getAllAreaUserData(area))
-      assert.are.same({kind = "cave"}, getAllRoomUserData(roomA))
-      assert.are.same({10, 20, 30, 255}, {getRoomBorderColor(roomA)})
-      assert.are.equal(4, getRoomBorderThickness(roomA))
-    end)
-
     local function rewriteExport(edit)
       assert.is_true(saveJsonMap(jsonPath))
       local file = assert(io.open(jsonPath, "r"))
@@ -4914,42 +4879,74 @@ describe("Tests saveJsonMap and loadJsonMap", function()
       assert.is_true(loadJsonMap(jsonPath))
     end
 
-    it("keeps the fallbacks in the user data of a file for a label it has", function()
+    it("takes the binary format's fallbacks out of the user data of a file that has them", function()
+      deleteMap()
+      local area = addAreaName("MapperSpecJsonLeakedKeysArea")
+      roomA = createRoomID(); addRoom(roomA); setRoomArea(roomA, area)
+      assert.is_true(setAreaUserData(area, "climate", "temperate"))
+      assert.is_true(setRoomUserData(roomA, "kind", "cave"))
+      rewriteExport(function(document)
+        for _, exportedArea in ipairs(document.areas) do
+          if exportedArea.id == area then
+            exportedArea.userData["system.fallback_map2DZoom"] = "27"
+            exportedArea.userData["system.labelOutlineColor_77"] = "1|2|3|255"
+            exportedArea.userData["system.labelFont_78"] = "Sans|10|50|0"
+            for _, room in ipairs(exportedArea.rooms) do
+              -- a border cleared after the save that wrote these, as every
+              -- exporter that wrote them also wrote a "border" object
+              room.border = nil
+              room.userData["room.ui_borderColor"] = "#ff0a141e"
+              room.userData["room.ui_borderThickness"] = "4"
+            end
+          end
+        end
+      end)
+
+      assert.are.same({climate = "temperate"}, getAllAreaUserData(area))
+      assert.are.equal(27, getMapZoom(area))
+      assert.are.same({kind = "cave"}, getAllRoomUserData(roomA))
+      assert.is_nil(getRoomBorderColor(roomA))
+      assert.is_nil(getRoomBorderThickness(roomA))
+    end)
+
+    it("gives a label the outline color an older export keeps for it in the area's user data", function()
       deleteMap()
       local area = addAreaName("MapperSpecJsonKeptLabelKeysArea")
       roomA = createRoomID(); addRoom(roomA); setRoomArea(roomA, area)
       local labelId = createMapLabel(area, "Label", 0, 0, 0, 255, 255, 255, 0, 0, 0,
-                                     30.0, 12, true, false, "", 255, 50, false)
+                                     30.0, 12, true, false, "Bitstream Vera Sans", 255, 50, false)
       local outlineKey = "system.labelOutlineColor_" .. labelId
       rewriteExport(function(document)
         for _, exportedArea in ipairs(document.areas) do
           if exportedArea.id == area then
             exportedArea.userData = exportedArea.userData or {}
             exportedArea.userData[outlineKey] = "1|2|3|255"
-            for _, label in ipairs(exportedArea.labels) do
-              label.outlineColor = nil
-            end
+            -- the label's own "font" object says what its font is
+            exportedArea.userData["system.labelFont_" .. labelId] = "Other Font|20|700|1"
           end
         end
       end)
 
-      assert.is_true(saveJsonMap(jsonPath))
-      local file = assert(io.open(jsonPath, "r"))
-      local document = yajl.to_value(file:read("*a"))
+      assert.are.same({}, getAllAreaUserData(area))
+      -- no Lua call reads a label's outline color or font, but a binary save
+      -- writes both, as UTF-16 strings, into the area's user data in the file
+      local datPath = mapDirectory .. "/mapper_spec_json_label.dat"
+      finally(function() os.remove(datPath) end)
+      assert.is_true(saveMap(datPath))
+      local file = assert(io.open(datPath, "rb"))
+      local data = file:read("*a")
       file:close()
-      local keyValue, outlineColor
-      for _, exportedArea in ipairs(document.areas) do
-        if exportedArea.id == area then
-          keyValue = (exportedArea.userData or {})[outlineKey]
-          for _, label in ipairs(exportedArea.labels or {}) do
-            if label.id == labelId then
-              outlineColor = label.outlineColor and table.concat(label.outlineColor.color24RGB or {}, "|")
-            end
-          end
+      local function savedValue(key)
+        local _, keyEnd = data:find((key:gsub(".", "\0%0")), 1, true)
+        if not keyEnd then
+          return nil
         end
+        local b1, b2, b3, b4 = data:byte(keyEnd + 1, keyEnd + 4)
+        local length = ((b1 * 256 + b2) * 256 + b3) * 256 + b4
+        return (data:sub(keyEnd + 5, keyEnd + 4 + length):gsub("%z(.)", "%1"))
       end
-      -- kept in the area's user data, or as the label's own outline colour by a reader that takes it
-      assert.is_true(keyValue == "1|2|3|255" or outlineColor == "1|2|3")
+      assert.are.equal("1|2|3|255", savedValue(outlineKey))
+      assert.are.equal("Bitstream Vera Sans|12|", savedValue("system.labelFont_" .. labelId):match("^[^|]+|%d+|"))
     end)
 
     it("leaves out a stale border thickness in the user data of a file with a border object", function()
