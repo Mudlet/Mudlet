@@ -1816,7 +1816,7 @@ describe("Tests uninstalling a package while the profile is being saved", functi
     local ok, err = uninstallPackage("mudlet-spec-never-installed")
 
     assert.is_nil(ok)
-    assert.is_true(contains(err, "is not installed"), tostring(err))
+    assert.is_true(contains(err, "package 'mudlet-spec-never-installed' is not installed"), tostring(err))
     assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
   end)
 
