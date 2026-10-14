@@ -1177,6 +1177,8 @@ end
 -- the background color setting and stylesheet; nil and an error message for a name that is not a label
 function getLabelFormat(win)
   assert(win, "getLabelFormat: requires at least one argument")
+  local winType = type(win)
+  assert(winType == "string" or winType == "number", "getLabelFormat: bad argument #1 type (label as string expected, got " .. winType .. "!)")
   local stylesheet, err = getLabelStyleSheet(win)
   if not stylesheet then
     labelStyleSheetFormats[win] = nil

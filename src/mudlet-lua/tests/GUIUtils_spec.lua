@@ -1115,6 +1115,10 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       deleteLabel("gldfGone")
     end)
 
+    it("Should name itself when given a name that is not a string", function()
+      assert.has_error(function() getLabelFormat({}) end, "getLabelFormat: bad argument #1 type (label as string expected, got table!)")
+    end)
+
     it("Should start an echo to the label from its stylesheet, and pick up a new one", function()
       local function span(fg)
         return string.format('<span style="color: %s;background-color: rgba(0, 0, 0, 0); font-weight: bold; font-style: normal; text-decoration: underline;">', fg)
