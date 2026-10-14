@@ -810,9 +810,7 @@ private slots:
         TBuffer& buffer = host->mainConsoleModel().buffer;
         host->mUndoServerWrap = true;
         host->mUndoServerWrapWidth = 80;
-        auto restoreWrap = qScopeGuard([host]() {
-            host->mUndoServerWrap = false;
-        });
+        auto restoreWrap = qScopeGuard([host]() { host->mUndoServerWrap = false; });
 
         // 70 characters, inside the join band for a wrap column of 80
         const QString heldLine = QString(64, QChar('x')) + qsl(" alpha");
