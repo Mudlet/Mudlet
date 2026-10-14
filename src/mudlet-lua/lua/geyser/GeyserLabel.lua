@@ -79,7 +79,10 @@ function Geyser.Label:decho(message)
   self.message = message
 
   -- Build resetFormat table using label's actual fgColor, not just stylesheet
-  local resetFormat = getLabelFormat(self.name)
+  local resetFormat, err = getLabelFormat(self.name)
+  if not resetFormat then
+    return nil, err
+  end
   -- Override foreground with label's fgColor property if set
   if self.fgColor and self.fgColor ~= "" then
     resetFormat.foreground = Geyser.Color.hex(self.fgColor)
@@ -127,7 +130,10 @@ function Geyser.Label:hecho(message)
   self.message = message
 
   -- Build resetFormat table using label's actual fgColor, not just stylesheet
-  local resetFormat = getLabelFormat(self.name)
+  local resetFormat, err = getLabelFormat(self.name)
+  if not resetFormat then
+    return nil, err
+  end
   -- Override foreground with label's fgColor property if set
   if self.fgColor and self.fgColor ~= "" then
     resetFormat.foreground = Geyser.Color.hex(self.fgColor)
@@ -175,7 +181,10 @@ function Geyser.Label:cecho(message)
   self.message = message
 
   -- Build resetFormat table using label's actual fgColor, not just stylesheet
-  local resetFormat = getLabelFormat(self.name)
+  local resetFormat, err = getLabelFormat(self.name)
+  if not resetFormat then
+    return nil, err
+  end
   -- Override foreground with label's fgColor property if set
   if self.fgColor and self.fgColor ~= "" then
     resetFormat.foreground = Geyser.Color.hex(self.fgColor)

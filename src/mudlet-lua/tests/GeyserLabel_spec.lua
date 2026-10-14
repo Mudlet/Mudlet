@@ -570,6 +570,15 @@ describe("Tests functionality of Geyser.Label widget state", function()
       assert.is_truthy(green:find("green", 1, true))
       assert.is_truthy(green:find("color: rgb(0, 255, 0)", 1, true))
     end)
+
+    it("decho, hecho and cecho refuse a label whose widget is gone", function()
+      deleteLabel("glsText")
+      for _, call in ipairs({ { "decho", "<255,0,0>x" }, { "hecho", "|cff0000x" }, { "cecho", "<red>x" } }) do
+        local ok, err = label[call[1]](label, call[2])
+        assert.is_nil(ok, call[1])
+        assert.are.equal("label 'glsText' does not exist", err, call[1])
+      end
+    end)
   end)
 
   describe("Geyser.Label format setters", function()
