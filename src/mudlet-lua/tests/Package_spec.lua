@@ -3228,13 +3228,16 @@ describe("Tests exporting the profile to a file with saveProfile", function()
 
     assert.is_true(ok)
     assert.is_true(waitForTheBulkySave(), "the profile save never finished")
-    if not movedAway then
+    if not movedAway and getOS() == "windows" then
       -- Windows will not move a folder while a file in it is open
       pending("the folder could not be moved away while it was being written to: " .. tostring(whyNot))
       return
     end
+    assert.is_true(movedAway, "SETUP: the folder could not be moved away: " .. tostring(whyNot))
     assert.is_false(fileExists(moved .. "/mudlet-spec-raced.xml"), "SETUP: the write finished before its folder was moved away")
     assert.is_true(containsWrapped(textFrom(mark), "The profile could not be saved to"), textFrom(mark))
+    -- the reason follows the file name, whatever words the platform uses for it
+    assert.is_truthy(textFrom(mark):gsub("%s+", ""):find('mudlet%-spec%-raced%.xml":[^%[]'), textFrom(mark))
   end)
 
   it("refuses a second export while the first is still running", function()
