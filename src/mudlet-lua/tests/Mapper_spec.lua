@@ -4666,25 +4666,28 @@ describe("Tests saveJsonMap and loadJsonMap", function()
     end)
 
     -- the eight compass directions are the ones whose long and short names differ
-    it("puts a stub exit's door back in each of the twelve directions", function()
+    it("puts a stub exit's door and lock back in each of the twelve directions", function()
       local directions = {{"north", "n"}, {"northeast", "ne"}, {"northwest", "nw"}, {"east", "e"},
                           {"west", "w"}, {"south", "s"}, {"southeast", "se"}, {"southwest", "sw"},
                           {"up", "up"}, {"down", "down"}, {"in", "in"}, {"out", "out"}}
       deleteMap()
       local area = addAreaName("MapperSpecJsonStubDoorArea")
-      -- twelve stubs in each of four rooms, but doors on only three of them per
-      -- room, one in each state: no two directions are alike in every room, so
-      -- a door that came back under another direction's name would show
-      local rooms, expected = {}, {}
+      -- each direction has a door in one room and locks in the rooms set by its index's bits,
+      -- so a door or lock that came back under another direction's name shows
+      local rooms, expected, locked = {}, {}, {}
       for roomIndex = 1, 4 do
         local room = createRoomID(); addRoom(room); setRoomArea(room, area)
         rooms[roomIndex] = room
-        expected[room] = {}
+        expected[room], locked[room] = {}, {}
         for index, direction in ipairs(directions) do
           setExitStub(room, direction[1], true)
           if math.ceil(index / 3) == roomIndex then
             expected[room][direction[2]] = (index - 1) % 3 + 1
             assert.is_true(setDoor(room, direction[2], expected[room][direction[2]]), direction[1])
+          end
+          locked[room][direction[1]] = math.floor(index / 2 ^ (roomIndex - 1)) % 2 == 1
+          if locked[room][direction[1]] then
+            lockExit(room, direction[1], true)
           end
         end
       end
@@ -4696,6 +4699,7 @@ describe("Tests saveJsonMap and loadJsonMap", function()
         local doors = getDoors(room)
         for _, direction in ipairs(directions) do
           assert.are.equal(expected[room][direction[2]], doors[direction[2]], direction[1])
+          assert.are.equal(locked[room][direction[1]], hasExitLock(room, direction[1]), direction[1])
         end
       end
     end)
@@ -4988,9 +4992,9 @@ describe("Tests saveJsonMap and loadJsonMap", function()
   end)
 
   -- Every import ends in an audit that repairs data no mapper call can produce,
-  -- so these plant the fault into an exported file and read it back in. The last
-  -- one plants valid data rather than a fault, so it pins the reader's handling
-  -- of a stub's door and lock apart from the writer's.
+  -- so these plant the fault into an exported file and read it back in. The stub
+  -- door and lock test plants valid data rather than a fault, so it pins the
+  -- reader's handling of a stub's door and lock apart from the writer's.
   describe("Tests the audit of an imported JSON map", function()
     local function buildMap()
       deleteMap()
