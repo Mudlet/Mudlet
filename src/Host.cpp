@@ -1564,8 +1564,8 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
     return {true, filename_xml, QString()};
 }
 
-// For callers with nowhere to show a failure, such as the editor's autosave and a forced close. Turning a
-// save away because one is already running, or because the profile never loaded, is not a failure to write.
+// For callers with nowhere to show a failure, such as the editor's autosave; on a close only the warning outlives
+// the console. A save turned away because one is running, or because the profile never loaded, is not a failure.
 void Host::saveProfileReportingFailure(const QString& saveName)
 {
     if (auto [ok, filename, error] = saveProfile(QString(), saveName); !ok && !filename.isEmpty() && mLoadedOk && !mIsProfileLoadingSequence) {
