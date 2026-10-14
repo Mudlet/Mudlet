@@ -2197,6 +2197,27 @@ describe("Tests Other.lua functions", function()
       assert.equals(1, loaded.keep)
     end)
 
+    it("should keep the sign of zero and of the infinities, whichever is written first", function()
+      -- built at run time: a -0 literal would share this function's constant slot for 0
+      local negativeZero, zero = tonumber("-0"), tonumber("0")
+      local loaded = {}
+
+      table.save(path, { negativeZero, math.huge, -math.huge, zero })
+      table.load(path, loaded)
+      assert.is_true(1 / loaded[1] < 0)
+      assert.equals(math.huge, loaded[2])
+      assert.equals(-math.huge, loaded[3])
+      assert.is_true(1 / loaded[4] > 0)
+
+      loaded = {}
+      table.save(path, { zero, negativeZero, [math.huge] = "inf key", [-math.huge] = "negative inf key" })
+      table.load(path, loaded)
+      assert.is_true(1 / loaded[1] > 0)
+      assert.is_true(1 / loaded[2] < 0)
+      assert.equals("inf key", loaded[math.huge])
+      assert.equals("negative inf key", loaded[-math.huge])
+    end)
+
     it("should keep members named after a Lua library, at any depth", function()
       local original = { math = 1, os = 2, io = 3, string = 4, table = 5, debug = 6, coroutine = 7,
         package = 8, _G = 9, _VERSION = 10, xpcall = 11, keep = 12, inner = { string = 3, math = 4 } }

@@ -383,14 +383,18 @@ local libraryNames = {
   coroutine = true, _G = true, _VERSION = true, table = true
 }
 
--- tostring() gives inf, -inf and nan, which are not Lua literals, and only 14 significant digits
+-- tostring() gives inf, -inf and nan, which are not Lua literals, and only 14 significant digits.
+-- A chunk keeps 0 and -0 in one constant slot, whichever comes first, so -0 is negated from a
+-- string at load time and the infinities have no 0 in them: (1/0) after a -0 loads as -inf
 local function numberLiteral(n)
   if n ~= n then
     return "(0/0)"
   elseif n == math.huge then
-    return "(1/0)"
+    return "1e999"
   elseif n == -math.huge then
-    return "(-1/0)"
+    return "-1e999"
+  elseif n == 0 and 1 / n < 0 then
+    return '(-"0")'
   end
   local short = tostring( n )
   if tonumber( short ) == n then
