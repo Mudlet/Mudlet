@@ -370,9 +370,9 @@ private slots:
         QCOMPARE(blueprint().roomColor(QColor(40, 160, 60, 100)).alpha(), 100);
     }
 
-    void test_blueprintHighlightsInItsInk()
+    void test_blueprintHighlightsAColorlessRoomInItsInk()
     {
-        QCOMPARE(blueprint().highlightColor.rgb(), blueprint().ink.rgb());
+        QCOMPARE(blueprint().highlightColorFor(QColor()).rgb(), blueprint().ink.rgb());
         QVERIFY(!tiles().highlightColor.isValid());
     }
 
