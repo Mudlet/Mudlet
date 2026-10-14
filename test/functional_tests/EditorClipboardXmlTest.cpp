@@ -26,6 +26,7 @@
  */
 
 #include <QClipboard>
+#include <QMessageBox>
 #include <QScopeGuard>
 #include <QSignalBlocker>
 #include <QTemporaryDir>
@@ -211,16 +212,17 @@ private:
         mpHost->getActionUnit()->registerAction(pAction);
     }
 
-    int countBoxesOpenedBy(const std::function<void()>& action, QStringList* pTitles = nullptr)
+    int countBoxesOpenedBy(const std::function<void()>& action, QStringList* pTexts = nullptr)
     {
         int boxesOpened = 0;
         // closes any box that does open, so a failure does not hang the run
         QTimer closer;
-        connect(&closer, &QTimer::timeout, &closer, [&boxesOpened, pTitles]() {
+        connect(&closer, &QTimer::timeout, &closer, [&boxesOpened, pTexts]() {
             if (QWidget* pModal = QApplication::activeModalWidget()) {
                 ++boxesOpened;
-                if (pTitles) {
-                    *pTitles << pModal->windowTitle();
+                // The text, not the title: QMessageBox drops its title on macOS
+                if (auto* pBox = qobject_cast<QMessageBox*>(pModal); pTexts && pBox) {
+                    *pTexts << pBox->text();
                 }
                 pModal->close();
             }
@@ -385,7 +387,7 @@ private slots:
         tree->setCurrentItem(nullptr);
         const QString fileName = mConfigDir.filePath(qsl("qaExportNothing.xml"));
 
-        QStringList titles;
+        QStringList texts;
         const int boxesOpened = countBoxesOpenedBy(
                 [this, viewType, &fileName]() {
                     switch (viewType) {
@@ -411,10 +413,11 @@ private slots:
                         break;
                     }
                 },
-                &titles);
+                &texts);
 
         QCOMPARE(boxesOpened, 1);
-        QCOMPARE(titles, QStringList{qsl("Export Package:")});
+        QCOMPARE(texts.size(), 1);
+        QVERIFY2(texts.first().startsWith(qsl("You have to choose an item for export first.")), qPrintable(texts.first()));
         QVERIFY2(!QFile::exists(fileName), "exporting with nothing selected wrote a file");
     }
 
