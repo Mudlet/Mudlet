@@ -128,6 +128,42 @@ describe("Tests functionality of Geyser.HBox", function()
       end
       assert.are.equal(120, right)
     end)
+
+    local function assertTiles(prefix, count, left, right)
+      local edge = left
+      for index = 1, count do
+        local child = geometry(prefix .. index)
+        assert.are.equal(edge, child.x, prefix .. index .. " starts where the one before it ends")
+        edge = child.x + child.width
+      end
+      assert.are.equal(right, edge)
+    end
+
+    it("tiles children whose shared edges fall on a half pixel", function()
+      -- sixths of 105px meet at 17.5, 35, 52.5, 70 and 87.5
+      local box = track(Geyser.HBox:new({name = "ghbHalf", x = 0, y = 0, width = 105, height = 20}))
+      for index = 1, 6 do
+        track(Geyser.Label:new({name = "ghbHalf" .. index}, box))
+      end
+      assertTiles("ghbHalf", 6, 0, 105)
+    end)
+
+    it("tiles children of a box that starts on a half pixel", function()
+      local box = track(Geyser.HBox:new({name = "ghbHalfStart", x = "500.5px", y = 0, width = 300, height = 20}))
+      for index = 1, 3 do
+        track(Geyser.Label:new({name = "ghbHalfStart" .. index}, box))
+      end
+      assertTiles("ghbHalfStart", 3, 501, 801)
+    end)
+
+    it("still tiles its children after it is resized", function()
+      local box = track(Geyser.HBox:new({name = "ghbRetile", x = 20, y = 20, width = 100, height = 100}))
+      for index = 1, 3 do
+        track(Geyser.Label:new({name = "ghbRetile" .. index}, box))
+      end
+      box:resize(101, nil)
+      assertTiles("ghbRetile", 3, 20, 121)
+    end)
   end)
 
   -- The box lays itself out when a child arrives, and has to do the same when

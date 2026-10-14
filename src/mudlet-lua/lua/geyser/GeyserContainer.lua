@@ -103,12 +103,18 @@ function Geyser.Container:calculate_dynamic_window_size()
 end
 
 -- Internal function: this window's x, y, width and height in whole pixels. Each
--- edge is rounded, rather than each size truncated, so windows whose edges meet
--- at a fraction of a pixel, such as the children of an HBox, still tile.
+-- edge is rounded to the nearest pixel and the size is the distance between them,
+-- so windows whose edges meet at a fraction of a pixel, such as the children of an
+-- HBox, still tile. A neighbour computes the same edge by another sum, which can
+-- land a hair either side of a half pixel, so the tolerance rounds both alike.
+local function roundEdge(value)
+  return math.floor(value + 0.5 + 1e-6)
+end
+
 function Geyser.Container:pixel_geometry()
   local x, y = self:get_x(), self:get_y()
-  local left, top = math.floor(x + 0.5), math.floor(y + 0.5)
-  local right, bottom = math.floor(x + self:get_width() + 0.5), math.floor(y + self:get_height() + 0.5)
+  local left, top = roundEdge(x), roundEdge(y)
+  local right, bottom = roundEdge(x + self:get_width()), roundEdge(y + self:get_height())
   return left, top, right - left, bottom - top
 end
 

@@ -103,6 +103,21 @@ describe("Tests functionality of Geyser.VBox", function()
       assert.are.equal(160, expectedY)
     end)
 
+    it("tiles children whose shared edges fall on a half pixel", function()
+      -- sixths of 105px meet at 17.5, 35, 52.5, 70 and 87.5
+      local box = track(Geyser.VBox:new({name = "gvbHalf", x = 0, y = 0, width = 50, height = 105}))
+      for index = 1, 6 do
+        track(Geyser.Label:new({name = "gvbHalf" .. index}, box))
+      end
+      local edge = 0
+      for index = 1, 6 do
+        local child = geometry("gvbHalf" .. index)
+        assert.are.equal(edge, child.y, "gvbHalf" .. index .. " starts where the one before it ends")
+        edge = child.y + child.height
+      end
+      assert.are.equal(105, edge)
+    end)
+
     it("stretches children over the full width of the box", function()
       local box = track(Geyser.VBox:new({name = "gvbWide", x = 0, y = 0, width = 240, height = 100}))
       track(Geyser.Label:new({name = "gvbWideChild", width = 20}, box))
