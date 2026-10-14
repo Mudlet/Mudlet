@@ -891,13 +891,14 @@ local function split_on_commas(text, searchable)
 end
 
 
--- Bare names are read too: a table this module didn't write may not quote them, and reading them
--- as empty would make all its UNIQUEs look alike. Other forms ([name]) do come back empty, which no
--- expected CREATE TABLE holds, so that sheet is left alone rather than losing a rule.
+-- Bare, [bracketed] and `backquoted` names are read too: a table this module didn't write may use
+-- them, and reading them as empty would make all its UNIQUEs look alike. Other forms do come back
+-- empty, which no expected CREATE TABLE holds, so that sheet is left alone rather than losing a rule.
 local function leading_column_name(text)
   local trimmed = text:match("^%s*(.-)%s*$")
 
-  return trimmed:match('^"([^"]*)"') or trimmed:match("^([%w_$]+)") or ""
+  return trimmed:match('^"([^"]*)"') or trimmed:match("^%[([^%]]*)%]") or trimmed:match("^`([^`]*)`")
+    or trimmed:match("^([%w_$]+)") or ""
 end
 
 
@@ -905,10 +906,10 @@ end
 -- (a _violations change costs no uniqueness). Not db:_extract_table_constraints: it drops a
 -- column-level UNIQUE's column name, so a rule moving between columns would look unchanged.
 local function unique_targets(sql)
-  local counts = {}
+  local counts, unreadable = {}, false
   local content = normalize_sql(sql or ""):match("^create table [^(]+%((.+)%)$")
   if not content then
-    return counts
+    return counts, unreadable
   end
 
   -- quoted names and defaults may hold a comma, a bracket or "unique", so scan a copy with them
@@ -942,6 +943,9 @@ local function unique_targets(sql)
         columns[1] = leading_column_name(text)
       end
 
+      for _, column in ipairs(columns) do
+        unreadable = unreadable or column == ""
+      end
       table.sort(columns)
       -- not a comma, or a column called a,b would equal a UNIQUE over a and b
       local target = table.concat(columns, "\0")
@@ -949,12 +953,17 @@ local function unique_targets(sql)
     end
   end
 
-  return counts
+  return counts, unreadable
 end
 
 
 local function same_unique_targets(expected_sql, actual_sql)
-  local expected, actual = unique_targets(expected_sql), unique_targets(actual_sql)
+  local expected = unique_targets(expected_sql)
+  local actual, unreadable = unique_targets(actual_sql)
+  -- a name that can't be read can't be compared, so the constraint fingerprint decides alone
+  if unreadable then
+    return true
+  end
   for target, count in pairs(expected) do
     if actual[target] ~= count then
       return false

@@ -4329,6 +4329,22 @@ describe("Tests db:create moving a single-column UNIQUE", function()
     assert.are.equal(7, rows[1].people_id)
     assert.is_true(db:add(mydb.people, {people_id = 8, name = "Bob", city = "Ankh-Morpork"}))
   end)
+
+  it("leaves alone a sheet whose table names its columns in brackets", function()
+    -- the rebuild writes the sheet's own CREATE TABLE, so the CHECK below would go
+    local tableDefinition = "CREATE TABLE people (_row_id INTEGER PRIMARY KEY AUTOINCREMENT, " ..
+      "[name] TEXT UNIQUE ON CONFLICT FAIL CHECK(length(name) < 10), city TEXT)"
+    createCollectingWarnings({people = {name = "", city = ""}})
+    db.__conn[dbName]:execute("DROP TABLE people")
+    db.__conn[dbName]:execute(tableDefinition)
+
+    createCollectingWarnings({people = {name = "", city = "", _unique = {"name"}}})
+
+    local cursor = db.__conn[dbName]:execute("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'people'")
+    local row = cursor:fetch({}, "a")
+    cursor:close()
+    assert.are.equal(tableDefinition, row.sql)
+  end)
 end)
 
 -- A sheet may be given as a list of its column names instead of a table of
