@@ -5260,9 +5260,8 @@ describe("Tests saveJsonMap and loadJsonMap", function()
     end)
   end)
 
-  -- 257 to 272 are the profile's sixteen ANSI map colours: a file written
-  -- before #10679 was fixed can hold garbage for them, and the binary loader
-  -- puts the profile's back over whatever its file says
+  -- 257 to 272 are the profile's sixteen ANSI map colours, which every map
+  -- loader puts back over whatever the file holds
   describe("Tests environments 257 to 272 in a map read by loadJsonMap", function()
     local function reimportWith(edit)
       assert.is_true(saveJsonMap(jsonPath))
