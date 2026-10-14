@@ -4880,6 +4880,7 @@ describe("Tests saveJsonMap and loadJsonMap", function()
       deleteMap()
       clearMapUserData()
       assert.is_true(setMapUserData("mapper.spec.replaced", "B"))
+      assert.are.same({["mapper.spec.replaced"] = "B"}, getAllMapUserData())
       assert.is_true(loadJsonMap(jsonPath))
 
       assert.are.same({["mapper.spec.exported"] = "A"}, getAllMapUserData())
@@ -4894,8 +4895,9 @@ describe("Tests saveJsonMap and loadJsonMap", function()
       -- an export with no map user data leaves the field out altogether
       assert.is_true(saveJsonMap(jsonPath))
       local file = assert(io.open(jsonPath, "r"))
-      assert.is_nil(yajl.to_value(file:read("*a")).userData)
+      local exported = file:read("*a")
       file:close()
+      assert.is_nil(yajl.to_value(exported).userData)
 
       deleteMap()
       assert.is_true(setMapUserData("mapper.spec.replaced", "B"))
