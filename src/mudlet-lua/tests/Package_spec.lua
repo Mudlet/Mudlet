@@ -2677,16 +2677,12 @@ describe("Tests installing a package file from a later Mudlet", function()
   local name = "mudlet-spec-from-the-future"
   local xml = getMudletHomeDir() .. "/" .. name .. ".xml"
 
-  it("refuses to read it and says a newer Mudlet is needed", function()
-    defer(function()
-      removeFixturePackage(name)
-      os.remove(xml)
-    end)
-    writePackageXml(xml, table.concat({
+  local function writeLaterMudletXml(path, itemName)
+    writePackageXml(path, table.concat({
       '<TriggerPackage>',
       '<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no"',
       '         isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no">',
-      '<name>' .. name .. ' trigger</name><script></script>',
+      '<name>' .. itemName .. ' trigger</name><script></script>',
       '<triggerType>0</triggerType><conditonLineDelta>0</conditonLineDelta><mStayOpen>0</mStayOpen>',
       '<mCommand></mCommand><packageName></packageName>',
       '<regexCodeList><string>mudlet spec from the future</string></regexCodeList>',
@@ -2694,6 +2690,21 @@ describe("Tests installing a package file from a later Mudlet", function()
       '</Trigger>',
       '</TriggerPackage>',
     }, "\n"), "2.000")
+  end
+
+  -- the item folders named after the package are made before the version is read
+  local function assertNoFoldersNamed(folderName)
+    for _, kind in ipairs({"trigger", "timer", "alias", "script", "keybind", "button"}) do
+      assert.equals(0, exists(folderName, kind), "the unreadable file left an empty " .. kind .. " folder")
+    end
+  end
+
+  it("refuses to read it and says a newer Mudlet is needed", function()
+    defer(function()
+      removeFixturePackage(name)
+      os.remove(xml)
+    end)
+    writeLaterMudletXml(xml, name)
     assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
 
     local mark = getLastLineNumber("main")
@@ -2706,6 +2717,27 @@ describe("Tests installing a package file from a later Mudlet", function()
     -- nothing could be read out of it, nor is the package
     assert.equals(0, exists(name .. " trigger", "trigger"), "an unreadable file's trigger was installed anyway")
     assert.is_false(packageInstalled(name))
+    assertNoFoldersNamed(name)
+    -- the console has had its own alert, so the reason is one plain line
+    assert.is_false(contains(err, "\n"), tostring(err))
+  end)
+
+  it("leaves no empty folders behind when it is installed as a module", function()
+    local moduleFromTheFuture = "mudlet-spec-module-from-the-future"
+    local path = scratchDirectory .. "/" .. moduleFromTheFuture .. ".xml"
+    defer(function()
+      removeFixtureModule(moduleFromTheFuture)
+      os.remove(path)
+      lfs.rmdir(scratchDirectory)
+    end)
+    lfs.mkdir(scratchDirectory)
+    writeLaterMudletXml(path, moduleFromTheFuture)
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+
+    installUntilConfirmed(installModule, path, function() return moduleInstalled(moduleFromTheFuture) end, "the module from a later Mudlet")
+
+    assert.equals(0, exists(moduleFromTheFuture .. " trigger", "trigger"), "an unreadable file's trigger was installed anyway")
+    assertNoFoldersNamed(moduleFromTheFuture)
   end)
 end)
 

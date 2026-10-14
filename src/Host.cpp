@@ -3395,17 +3395,10 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
     // got as far as an item, a variable or a setting stays installed and is warned about, as that is in use.
     auto takeBackAPackageNothingWasReadFrom = [this](const QString& packageName) {
         mInstalledPackages.removeAll(packageName);
-        // A file from a later Mudlet is turned away after the empty folders for its items were made
-        mTriggerUnit.uninstall(packageName);
-        mTimerUnit.uninstall(packageName);
-        mAliasUnit.uninstall(packageName);
-        mActionUnit.uninstall(packageName);
-        mScriptUnit.uninstall(packageName);
-        mKeyUnit.uninstall(packageName);
+        // No item folders to take away: XMLimport removes the empty ones it made, and nothing filled any
         if (auto* fonts = FontManager::self()) {
             fonts->unloadFonts(getName(), packageName);
         }
-        getActionUnit()->updateAllToolbars();
         emit signal_editorCleanResetRequested();
         emit signal_packageListChanged();
     };
