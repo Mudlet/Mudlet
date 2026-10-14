@@ -15,10 +15,26 @@ Geyser.ScrollBox = Geyser.Window:new({
 -- and rewrites before it repositions the box.
 local function frameChildren(box)
     local own = {get_x = box.get_x, get_y = box.get_y, get_width = box.get_width, get_height = box.get_height}
-    box.get_x = function() return 0 end
-    box.get_y = function() return 0 end
-    box.get_width = function() return select(3, Geyser.Container.pixel_geometry(own)) end
-    box.get_height = function() return select(4, Geyser.Container.pixel_geometry(own)) end
+    local zero = function() return 0 end
+    local across = {get_x = own.get_x, get_y = zero, get_width = own.get_width, get_height = zero}
+    local down = {get_x = zero, get_y = own.get_y, get_width = zero, get_height = own.get_height}
+    -- a negative width or height is compiled as the far edge less the box's own
+    -- get_x or get_y, so those must give the box's real origin while it measures itself
+    local measuring = false
+    box.get_x = function() return measuring and own.get_x() or 0 end
+    box.get_y = function() return measuring and own.get_y() or 0 end
+    box.get_width = function()
+        measuring = true
+        local _, _, width = Geyser.Container.pixel_geometry(across)
+        measuring = false
+        return width
+    end
+    box.get_height = function()
+        measuring = true
+        local _, _, _, height = Geyser.Container.pixel_geometry(down)
+        measuring = false
+        return height
+    end
 end
 
 -- Overridden reposition for special coordination handling
