@@ -328,7 +328,11 @@ describe("Tests functionality of Adjustable.Container", function()
 
     it("keeps the height to restore to when minimized twice", function()
       container:minimize()
+      local origh = container.origh
       container:minimize()
+      assert.are.equal(origh, container.origh)
+      assert.is_true(container.Inside.hidden)
+      assert.are.equal(tonumber(container.buttonsize) + 10, geometry("gasContaineradjLabel").height)
       container:restore()
       assert.is_false(container.minimized)
       assert.are.same({x = 20, y = 30, width = 200, height = 200}, geometry("gasContaineradjLabel"))
@@ -2304,6 +2308,19 @@ describe("Tests Adjustable.Container borders, persistence and menu items", funct
       assert.are.equal(12, container.attachedMargin)
       assert.are.equal("full", container.lockStyle)
       assert.is_true(container.locked)
+    end)
+
+    it("saves the full height to restore to after being minimized twice", function()
+      local container = make("gapSavedMinimized", {height = 200})
+      container:minimize()
+      container:minimize()
+      container:save(nil, scratchDir)
+      container:delete()
+
+      local reloaded = make("gapSavedMinimized", {height = 200})
+      reloaded:load(nil, scratchDir)
+      reloaded:restore()
+      assert.are.equal(200, reloaded:get_height())
     end)
 
     it("restores a layout saved with the collapsed height as the one to restore to", function()
