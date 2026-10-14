@@ -575,6 +575,26 @@ local function followEdge(container, where, edge)
     end
 end
 
+-- internal function: the containers on other borders that follow the given border line up with the
+-- inner edge of whatever is still attached to it, or with the window's edge once nothing is
+local function closeGap(where)
+    local inward = (where == "left" or where == "top") and math.max or math.min
+    for _, container in pairs(Adjustable.Container.all) do
+        if container.connectedToBorder and container.connectedToBorder[where]
+            and (container.attached or container.hiddenAttached) ~= where then
+            local px, py, pw, ph = parentFrame(container)
+            local edge = ({left = px, right = px + pw, top = py, bottom = py + ph})[where]
+            for _, anchor in pairs(Adjustable.Container.Attached[where] or {}) do
+                local inner = ({left = anchor:get_x() + anchor:get_width(), right = anchor:get_x(),
+                                top = anchor:get_y() + anchor:get_height(), bottom = anchor:get_y()})[where]
+                edge = inward(edge, inner)
+            end
+            followEdge(container, where, edge)
+            container:adjustBorder()
+        end
+    end
+end
+
 -- internal function to adjust connected containers
 function Adjustable.Container:adjustConnectedContainers()
     local where = self.attached
@@ -646,6 +666,10 @@ function Adjustable.Container:connectToBorder(border)
             self.connectedContainers[k] = v
         end
         v:adjustConnectedContainers()
+    end
+    -- adjustConnectedContainers() leaves a hidden anchor's followers alone
+    if not next(Adjustable.Container.Attached[border] or {}) then
+        closeGap(border)
     end
     return true
 end
@@ -1077,23 +1101,6 @@ function Adjustable.Container:remove(window)
     end
 end
 
--- internal function: once nothing is left attached to the given border, the containers on other
--- borders that follow this one line up with the window's edge rather than leave a gap
-local function closeGap(self, where)
-    if not self.connectedContainers or next(Adjustable.Container.Attached[where] or {}) then
-        return
-    end
-    for k in pairs(self.connectedContainers) do
-        local container = Adjustable.Container.all[k]
-        if container and container ~= self and (container.attached or container.hiddenAttached) ~= where then
-            local px, py, pw, ph = parentFrame(container)
-            local edges = {left = px, right = px + pw, top = py, bottom = py + ph}
-            followEdge(container, where, edges[where])
-            container:adjustBorder()
-        end
-    end
-end
-
 --- hides the container. One attached to a border gives the border back while hidden:
 -- its attached field reads false and its hiddenAttached field names the border, which show() takes back
 -- @param auto true when a parent container is hiding it [optional]
@@ -1107,7 +1114,7 @@ function Adjustable.Container:hide(auto)
         self:detach()
         self.resizeHandlerID = handler
         self.hiddenAttached = attached
-        closeGap(self, attached)
+        closeGap(attached)
     end
 end
 

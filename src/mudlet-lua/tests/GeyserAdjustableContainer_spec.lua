@@ -3100,6 +3100,48 @@ describe("Tests Adjustable.Container borders, persistence and menu items", funct
       assert.are.equal(left:get_x() + left:get_width(), top:get_x())
       assert.are.equal(farEdge, top:get_x() + top:get_width())
     end)
+
+    it("lets a container on another border close up to the containers left on the border it follows", function()
+      local wide = make("gapGapWide", {width = 300, height = 400})
+      local top = make("gapGapWideTop", {x = 300, width = 500, height = 100})
+      wide:attachToBorder("left")
+      top:attachToBorder("top")
+      top:connectToBorder("left")
+      local narrow = make("gapGapNarrow", {width = 150, height = 400})
+      narrow:attachToBorder("left")
+      local farEdge = top:get_x() + top:get_width()
+      assert.are.equal(300, top:get_x())
+
+      wide:hide()
+      assert.are.equal(narrow:get_x() + narrow:get_width(), top:get_x())
+      assert.are.equal(farEdge, top:get_x() + top:get_width())
+
+      narrow:hide()
+      assert.are.equal(0, getBorderLeft())
+      assert.are.equal(0, top:get_x())
+      assert.are.equal(farEdge, top:get_x() + top:get_width())
+
+      narrow:show()
+      wide:show()
+      assert.are.equal(wide:get_x() + wide:get_width(), top:get_x())
+      assert.are.equal(farEdge, top:get_x() + top:get_width())
+    end)
+
+    it("lines a container up with the window's edge when it connects to a border whose containers are hidden", function()
+      local left = make("gapGapHiddenFirst", {width = 150, height = 400})
+      local top = make("gapGapHiddenFirstTop", {x = 200, width = 500, height = 100})
+      left:attachToBorder("left")
+      top:attachToBorder("top")
+      local farEdge = top:get_x() + top:get_width()
+      left:hide()
+
+      assert.is_true(top:connectToBorder("left"))
+      assert.are.equal(0, top:get_x())
+      assert.are.equal(farEdge, top:get_x() + top:get_width())
+
+      left:show()
+      assert.are.equal(left:get_x() + left:get_width(), top:get_x())
+    end)
   end)
 
   describe("Adjustable.Container:setAbsolute/setPercent", function()
