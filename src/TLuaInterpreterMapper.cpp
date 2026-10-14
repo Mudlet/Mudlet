@@ -4290,20 +4290,25 @@ int TLuaInterpreter::setRoomIDbyHash(lua_State* L)
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
         return warnArgumentValue(L, __func__, "no map present or loaded");
     }
-    if (!host.mpMap->mpRoomDB->getRoom(id)) {
+    TRoomDB* pRoomDB = host.mpMap->mpRoomDB.get();
+    if (!pRoomDB->getRoom(id)) {
         return warnArgumentValue(L, __func__, csmInvalidRoomID.arg(id));
     }
-    if (hash.isEmpty()) {
-        return warnArgumentValue(L, __func__, "hash cannot be empty");
+    if (pRoomDB->roomIDToHash.value(id) == hash && (hash.isEmpty() || pRoomDB->hashToRoomID.value(hash, -1) == id)) {
+        lua_pushboolean(L, true);
+        return 1;
     }
-    if (host.mpMap->mpRoomDB->roomIDToHash.contains(id)) {
-        host.mpMap->mpRoomDB->hashToRoomID.remove(host.mpMap->mpRoomDB->roomIDToHash[id]);
+    if (pRoomDB->roomIDToHash.contains(id)) {
+        pRoomDB->hashToRoomID.remove(pRoomDB->roomIDToHash.take(id));
     }
-    if (host.mpMap->mpRoomDB->hashToRoomID.contains(hash)) {
-        host.mpMap->mpRoomDB->roomIDToHash.remove(host.mpMap->mpRoomDB->hashToRoomID[hash]);
+    if (!hash.isEmpty()) {
+        if (pRoomDB->hashToRoomID.contains(hash)) {
+            pRoomDB->roomIDToHash.remove(pRoomDB->hashToRoomID[hash]);
+        }
+        pRoomDB->hashToRoomID[hash] = id;
+        pRoomDB->roomIDToHash[id] = hash;
     }
-    host.mpMap->mpRoomDB->hashToRoomID[hash] = id;
-    host.mpMap->mpRoomDB->roomIDToHash[id] = hash;
+    host.mpMap->setUnsaved(__func__);
     lua_pushboolean(L, true);
     return 1;
 }
