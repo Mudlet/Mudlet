@@ -716,9 +716,9 @@ function Geyser.Label:resetToolTip()
 end
 
 --- Set a predefined mouse cursor shape for this label
--- @param cursorShape the predefined cursorshape as a string
+-- @param cursorShape the name of a predefined cursor shape, or its number in mudlet.cursor
 -- See: <a href="https://wiki.mudlet.org/w/CursorShapes">https://wiki.mudlet.org/w/CursorShapes</a>
--- @return true, or nil and a message when the shape is not one Mudlet knows
+-- @return true, or nil and a message when the label or the shape is refused, leaving cursorShape as it was
 function Geyser.Label:setCursor(cursorShape)
   local ok, err = setLabelCursor(self.name, cursorShape)
   if not ok then
