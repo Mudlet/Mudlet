@@ -716,7 +716,7 @@ do
 
   function lockExit(from, direction, status)
     if type(direction) == "string" and not exitmap[direction] then
-      return false
+      return nil, ("%q is not a valid direction"):format(direction)
     end
 
     return oldlockExit(from, type(direction) == "string" and exitmap[direction] or direction, status)
@@ -724,7 +724,7 @@ do
 
   function hasExitLock(from, direction)
     if type(direction) == "string" and not exitmap[direction] then
-      return false
+      return nil, ("%q is not a valid direction"):format(direction)
     end
 
     return oldhasExitLock(from, type(direction) == "string" and exitmap[direction] or direction)

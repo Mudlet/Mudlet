@@ -334,7 +334,6 @@ describe("Tests addRoom", function()
 
 end)
 
--- What these specs create goes in an area of their own, which after_each deletes.
 describe("Tests room function refusals on a scratch area", function()
   local areaName = "MapperSpecRoomRefusals"
   local area
@@ -346,10 +345,6 @@ describe("Tests room function refusals on a scratch area", function()
     setRoomCoordinates(id, x, y, z or 0)
     return id
   end
-
-  setup(function()
-    assert.is_true(openMapWidget())
-  end)
 
   before_each(function()
     area = addAreaName(areaName)
@@ -370,10 +365,45 @@ describe("Tests room function refusals on a scratch area", function()
     local locked, err = hasExitLock(missing, "north")
     assert.is_nil(locked)
     assert.are.equal(expected, err)
-    local deleted
-    deleted, err = deleteRoom(0)
-    assert.is_nil(deleted)
-    assert.are.equal("number 0 is not a valid roomID", err)
+    local done
+    done, err = lockExit(missing, "north", true)
+    assert.is_nil(done)
+    assert.are.equal(expected, err)
+    for _, id in ipairs({missing, 0, -5}) do
+      done, err = deleteRoom(id)
+      assert.is_nil(done, id)
+      assert.are.equal(("number %d is not a valid roomID"):format(id), err, id)
+    end
+  end)
+
+  it("hasExitLock and lockExit return nil and a message for a direction they do not know", function()
+    local id = room(0, 0)
+    for _, name in ipairs({"hasExitLock", "lockExit"}) do
+      local result, err = _G[name](id, "sideways", true)
+      assert.is_nil(result, name)
+      assert.are.equal('"sideways" is not a valid direction', err, name)
+    end
+  end)
+
+  it("lockExit returns true once it has set or cleared an exit lock", function()
+    local id = room(0, 0)
+    setExit(id, room(0, 1), "n")
+    assert.is_true(lockExit(id, "north", true))
+    assert.is_true(hasExitLock(id, "north"))
+    assert.is_true(lockExit(id, "north", false))
+    assert.is_false(hasExitLock(id, "north"))
+  end)
+
+  it("getRoomWeight and getRoomHidden with no roomID say the player has no room", function()
+    local id = room(0, 0)
+    assert.is_true(centerview(id))
+    assert.is_true(deleteRoom(id))
+    local expected = "no roomID provided and the player does not have a valid roomID set"
+    for _, name in ipairs({"getRoomWeight", "getRoomHidden"}) do
+      local result, err = _G[name]()
+      assert.is_nil(result, name)
+      assert.are.equal(expected, err, name)
+    end
   end)
 
   it("clearSpecialExits returns true once it has cleared a room's special exits", function()

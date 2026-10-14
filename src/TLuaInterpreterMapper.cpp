@@ -1335,10 +1335,11 @@ int TLuaInterpreter::deleteRoom(lua_State* L)
     if (host.mpMap->scriptCallbackInProgress()) {
         return warnArgumentValue(L, __func__, csmMapInUseByCallback);
     }
-    int areaId = -1;
-    if (auto* pR = host.mpMap->mpRoomDB->getRoom(id)) {
-        areaId = pR->getArea();
+    auto* pR = host.mpMap->mpRoomDB->getRoom(id);
+    if (!pR) {
+        return warnArgumentValue(L, __func__, csmInvalidRoomID.arg(id));
     }
+    const int areaId = pR->getArea();
     lua_pushboolean(L, host.mpMap->mpRoomDB->removeRoom(id));
     host.mpMap->setUnsaved(__func__);
     host.mpMap->updateArea(areaId);
@@ -2531,6 +2532,9 @@ int TLuaInterpreter::getRoomWeight(lua_State* L)
         roomId = getVerifiedInt(L, __func__, 1, "roomID");
     } else {
         roomId = host.mpMap->mRoomIdHash.value(host.getName());
+        if (roomId <= 0) {
+            return warnArgumentValue(L, __func__, "no roomID provided and the player does not have a valid roomID set");
+        }
     }
 
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomId);
@@ -2847,11 +2851,15 @@ int TLuaInterpreter::lockExit(lua_State* L)
 
     const Host& host = getHostFromLua(L);
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
-    if (pR && pR->setExitLock(dir, b)) {
+    if (!pR) {
+        return warnArgumentValue(L, __func__, csmInvalidRoomID.arg(id));
+    }
+    if (pR->setExitLock(dir, b)) {
         host.mpMap->updateArea(pR->getArea());
         host.mpMap->mMapGraphNeedsUpdate = true;
     }
-    return 0;
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#lockRoom
@@ -4397,6 +4405,9 @@ int TLuaInterpreter::getRoomHidden(lua_State* L)
         roomId = getVerifiedInt(L, __func__, 1, "roomID");
     } else {
         roomId = host.mpMap->mRoomIdHash.value(host.getName());
+        if (roomId <= 0) {
+            return warnArgumentValue(L, __func__, "no roomID provided and the player does not have a valid roomID set");
+        }
     }
 
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomId);
