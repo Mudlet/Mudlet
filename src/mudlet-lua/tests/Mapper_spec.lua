@@ -5092,6 +5092,10 @@ describe("Tests saveJsonMap and loadJsonMap", function()
       local console = table.concat(getLines("main", consoleLine, getLastLineNumber("main") + 1), ""):gsub("%s", "")
       local title = ('"Importing JSON map "%s" at'):format(jsonPath):gsub("%s", "")
       assert.is_truthy(console:find(title, 1, true), "the console does not point at the import's report: " .. console)
+      -- every fault planted here leaves an exit into the dropped room, so the
+      -- audit's warning about it shows whether on-screen reporting is on
+      assert.are.equal(console:find("butthatroomdoesnotexist", 1, true) ~= nil, console:find("morethanoneroom", 1, true) ~= nil,
+                       "the dropped room's warning does not follow the on-screen reporting setting: " .. console)
       local report = readMapErrorLog():sub(logSize + 1)
       assert.is_truthy(report:find(('Importing JSON map "%s" at'):format(jsonPath), 1, true), report)
       return report
@@ -5129,6 +5133,21 @@ describe("Tests saveJsonMap and loadJsonMap", function()
 
       assert.are.equal(1, table.size(getRooms()))
       assert.are.equal(1, table.size(searchRoom("MapperSpecJsonFirstWithoutId")))
+      assert.is_truthy(report:find(("more than one room without a valid id, so one in area %d has been left out"):format(area), 1, true), report)
+      assert.is_falsy(report:find("with id 0", 1, true), report)
+    end)
+
+    it("does not claim a second room with id 0 when the room kept has no id", function()
+      buildMap()
+      local area = getRoomArea(roomA)
+      setRoomName(roomA, "MapperSpecJsonKeptWithoutId")
+      local report = reimportReporting(function(document)
+        findRoom(document, roomA).id = nil
+        findRoom(document, roomB).id = 0
+      end)
+
+      assert.are.equal(1, table.size(getRooms()))
+      assert.are.equal(1, table.size(searchRoom("MapperSpecJsonKeptWithoutId")))
       assert.is_truthy(report:find(("more than one room without a valid id, so one in area %d has been left out"):format(area), 1, true), report)
       assert.is_falsy(report:find("with id 0", 1, true), report)
     end)

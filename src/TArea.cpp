@@ -870,14 +870,14 @@ std::pair<int, QString> TArea::readJsonArea(const QJsonArray& array, const int a
         if (mpRoomDB->restoreSingleRoom(roomId, pR)) {
             rooms.insert(roomId);
         } else {
-            // A missing or non-integer id reads as 0, which the file never says:
+            // A missing or non-integer id reads as 0, so a clash on 0 may be with a room the file gives no id:
             const QJsonValue idValue = areaObj.value(QLatin1String("rooms")).toArray().at(roomIndex).toObject().value(QLatin1String("id"));
-            if (idValue.isDouble() && idValue.toDouble() == roomId) {
+            if (roomId != 0 && idValue.isDouble() && idValue.toDouble() == roomId) {
                 //: Shown when a JSON map file holds two rooms with the same id. %1 is the room id, %2 the id of the area the dropped room was in.
                 droppedRoomWarnings.append(
                         tr("[ WARN ]  - The map file has more than one room with id %1, so the one in area %2 has been left out.").arg(QString::number(roomId), QString::number(id)));
             } else {
-                //: Shown when a JSON map file holds more than one room whose "id" is missing or not a whole number; only the first is kept. %1 is the id of the area the dropped room was in.
+                //: Shown when a JSON map file holds more than one room whose "id" is missing, not a whole number or 0; only the first is kept. %1 is the id of the area the dropped room was in.
                 droppedRoomWarnings.append(tr("[ WARN ]  - The map file has more than one room without a valid id, so one in area %1 has been left out.").arg(QString::number(id)));
             }
         }

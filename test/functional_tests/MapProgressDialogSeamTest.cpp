@@ -96,6 +96,17 @@ private:
         }
     }
 
+    QString lastReportTitled(const QString& title) const
+    {
+        QFile log(MudletApp::getMudletPath(enums::profileLogErrorsFilePath, mTargetName));
+        if (!log.open(QIODevice::ReadOnly | QIODevice::Text)) {
+            return QString();
+        }
+        const QString logText = QString::fromUtf8(log.readAll());
+        const qsizetype start = logText.lastIndexOf(title);
+        return start < 0 ? QString() : logText.mid(start);
+    }
+
 private slots:
     void initTestCase()
     {
@@ -307,6 +318,8 @@ private slots:
         QSignalSpy exportCloseSpy(pSourceMap, &TMap::signal_mapProgressClose);
         const auto [wrote, writeMsg] = pSourceMap->writeJsonMapFile(file);
         QVERIFY2(wrote, qPrintable(writeMsg));
+        QCOMPARE(exportStartSpy.count(), 1);
+        QCOMPARE(exportCloseSpy.count(), 1);
 
         QFile jsonFile(file);
         QVERIFY(jsonFile.open(QIODevice::ReadOnly));
@@ -341,14 +354,22 @@ private slots:
         disconnect(cancelOnStart);
         QVERIFY(!read);
         QCOMPARE(readMsg, qsl("aborted by user"));
+        QCOMPARE(importCloseSpy.count(), 1);
 
         const QString reportTitle = qsl("MapProgressSeam later report");
         pTargetMap->pushErrorMessagesToFile(reportTitle, false);
-        QFile log(MudletApp::getMudletPath(enums::profileLogErrorsFilePath, mTargetName));
-        QVERIFY(log.open(QIODevice::ReadOnly | QIODevice::Text));
-        const QString logText = QString::fromUtf8(log.readAll());
-        const QString laterReport = logText.mid(logText.lastIndexOf(reportTitle));
+        const QString laterReport = lastReportTitled(reportTitle);
+        QVERIFY(!laterReport.isEmpty());
         QVERIFY2(!laterReport.contains(qsl("more than one room")), qPrintable(laterReport));
+
+        // The control: the same file read to the end does report the room, so
+        // the check above is not passing for want of the warning it looks for
+        const auto [reread, rereadMsg] = pTargetMap->readJsonMapFile(file);
+        QVERIFY2(reread, qPrintable(rereadMsg));
+        const QString controlTitle = qsl("MapProgressSeam completed import report");
+        pTargetMap->pushErrorMessagesToFile(controlTitle, false);
+        const QString controlReport = lastReportTitled(controlTitle);
+        QVERIFY2(controlReport.contains(qsl("more than one room with id")), qPrintable(controlReport));
     }
 };
 
