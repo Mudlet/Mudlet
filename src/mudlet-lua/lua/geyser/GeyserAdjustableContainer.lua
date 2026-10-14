@@ -1184,8 +1184,13 @@ function Adjustable.Container:load(slot, dir)
     self:adjustBorder()
 
     self.connectedContainers = mytable.connectedContainers or self.connectedContainers
-    self.connectedToBorder = mytable.connectedToBorder or self.connectedToBorder
-    if self.connectedToBorder then
+    local connectedToBorder = mytable.connectedToBorder or self.connectedToBorder
+    if connectedToBorder then
+        -- a layout saved before border names were lower cased can hold "Left"
+        self.connectedToBorder = {}
+        for k, v in pairs(connectedToBorder) do
+            self.connectedToBorder[type(k) == "string" and k:lower() or k] = v
+        end
         for k in pairs(self.connectedToBorder) do
             self:connectToBorder(k)
         end

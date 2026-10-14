@@ -2377,6 +2377,24 @@ describe("Tests Adjustable.Container borders, persistence and menu items", funct
       assert.are.equal(20, container:get_x())
     end)
 
+    it("lower cases a border connection saved in mixed case", function()
+      local anchor = make("gapSavedCaseAnchor", {width = 150})
+      local follower = make("gapSavedCaseFollower", {width = 150, y = 200})
+      anchor:attachToBorder("left")
+      follower:attachToBorder("left")
+      follower:connectToBorder("left")
+      follower:save(nil, scratchDir)
+      local file = scratchDir .. "gapSavedCaseFollower.lua"
+      local saved = {}
+      table.load(file, saved)
+      saved.connectedToBorder = {Left = true}
+      table.save(file, saved)
+
+      follower:load(nil, scratchDir)
+
+      assert.are.same({left = true}, follower.connectedToBorder)
+    end)
+
     it("says so rather than raising when there is nothing to load", function()
       local container = make("gapNothingSaved")
       local message = container:load(nil, scratchDir)
