@@ -235,7 +235,7 @@ private:
         return file.write(xml.toUtf8()) != -1;
     }
 
-    bool writeProfileSave(const QString& profileName, const QString& fontFamily, const QString& moduleName = QString(), const QString& modulePath = QString())
+    bool writeProfileSave(const QString& profileName, const QString& fontFamily, const QString& moduleName = QString(), const QString& modulePath = QString(), const int pointSize = 14)
     {
         const QString folder = MudletApp::getMudletPath(enums::profileXmlFilesPath, profileName);
         if (!QDir().mkpath(folder)) {
@@ -264,7 +264,7 @@ private:
                                 "</Host>\n"
                                 "</HostPackage>\n"
                                 "</MudletPackage>\n")
-                                    .arg(modules, QFont(fontFamily, 14).toString());
+                                    .arg(modules, QFont(fontFamily, pointSize).toString());
         QFile file(qsl("%1/2020-01-01#00-00-00.xml").arg(folder));
         if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
             return false;
@@ -669,6 +669,22 @@ private slots:
         pHost->waitForProfileSave();
         QCOMPARE(pHost->getDisplayFont().family(), mOtherBundledFamily);
         QCOMPARE(pHost->getDisplayFontForSaving().family(), mOtherBundledFamily);
+    }
+
+    // A save can hold a size setFontSize() refuses now, at which Qt drops the family
+    void test_aSavedDisplayFontTooLargeToShowKeepsItsFamilyAtTheDefaultSize()
+    {
+        const QString profileName = qsl("MissingDisplayFont-TooLarge-Test");
+        QVERIFY2(writeProfileSave(profileName, mOtherBundledFamily, QString(), QString(), 999999), "could not write the test profile save");
+
+        Host* pHost = mudlet::self()->loadProfile(profileName, false);
+        QVERIFY(pHost);
+        QVERIFY2(pHost->mLoadedOk, "the test profile save could not be loaded");
+        mudlet::self()->slot_connectionDialogueFinished(profileName, false);
+        QVERIFY2(pHost->mainConsoleView(), "the profile came up without a main console");
+        // QFontInfo, as getFont() reads it: QFont::family() only echoes the request
+        QCOMPARE(QFontInfo(pHost->getDisplayFont()).family(), mOtherBundledFamily);
+        QCOMPARE(pHost->getDisplayFont().pointSize(), 14);
     }
 
     // A module's fonts are only registered once the modules are installed, which
