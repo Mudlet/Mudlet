@@ -161,38 +161,28 @@ void dlgPackageManager::downloadRepositoryIndex()
     QNetworkRequest request(QUrl(qsl("https://raw.githubusercontent.com/Mudlet/mudlet-package-repository/refs/heads/main/packages/mpkg.packages.json")));
     request.setTransferTimeout(20000);
     QNetworkReply* reply = manager->get(request);
-    // Parented so closing the dialog mid-download frees it: otherwise only the handler below would,
-    // and that never runs once the reply, a grandchild of this dialog, is gone.
-    // A QSaveFile so that a failed download, or one that is not an index, leaves the previous index in place.
-    QSaveFile* file = new QSaveFile(outputPath, this);
 
-    if (!file->open(QIODevice::WriteOnly)) {
-        file->deleteLater();
-        reply->deleteLater();
-        manager->deleteLater();
-        return;
-    }
-
-    QObject::connect(reply, &QNetworkReply::finished, [reply, file, manager, this]() {
+    QObject::connect(reply, &QNetworkReply::finished, [reply, outputPath, manager, this]() {
         if (reply->error() != QNetworkReply::NoError) {
             qWarning() << "dlgPackageManager::downloadRepositoryIndex() ERROR - network request failed:" << reply->errorString();
-            file->cancelWriting();
         } else {
             const QByteArray data = reply->readAll();
             // A captive portal or proxy can answer with a page of its own and a success status
             const QJsonDocument doc = QJsonDocument::fromJson(data);
             if (!doc.isObject() || !doc.object().value(qsl("packages")).isArray()) {
-                qWarning() << "dlgPackageManager::downloadRepositoryIndex() ERROR - the download is not a package index, keeping the previous one";
-                file->cancelWriting();
-            } else if (file->write(data) != data.size()) {
-                qWarning() << "dlgPackageManager::downloadRepositoryIndex() ERROR - failed to write downloaded data:" << file->errorString();
-                file->cancelWriting();
-            } else if (!file->commit()) {
-                qWarning() << "dlgPackageManager::downloadRepositoryIndex() ERROR - failed to save the repository index:" << file->errorString();
+                qWarning() << "dlgPackageManager::downloadRepositoryIndex() ERROR - the download is not a package index, discarding it";
+            } else {
+                // Opened only once a whole index is in hand, so a failed, refused or abandoned refresh never
+                // touches the previous one. The fallback writes in place when the profile directory cannot
+                // take the temporary file, as a plain QFile always did.
+                QSaveFile file(outputPath);
+                file.setDirectWriteFallback(true);
+                if (!file.open(QIODevice::WriteOnly) || file.write(data) != data.size() || !file.commit()) {
+                    qWarning() << "dlgPackageManager::downloadRepositoryIndex() ERROR - failed to save the repository index:" << file.errorString();
+                }
             }
         }
         reply->deleteLater();
-        file->deleteLater();
         manager->deleteLater();
         readPackageRepositoryFile();
         populatePackagesWithUpdates();
