@@ -184,7 +184,8 @@ struct TConsoleModel
     // no longer valid, so replace() does not take it for no selection at all.
     void clear();
 
-    // Half-open: lines(n, n) is empty. Lines outside the buffer are left out.
+    // Half-open from `from`: lines(n, n) is empty, lines(2, 0) is lines 2 and 1 in that order.
+    // Lines outside the buffer are left out.
     QStringList lines(int from, int to) const;
 
     // Selecting a run of the cursor's line, painting it and restoring the format, for colorizer triggers

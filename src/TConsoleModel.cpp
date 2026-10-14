@@ -70,11 +70,15 @@ TConsoleModel::TConsoleModel(Host* pHost)
 QStringList TConsoleModel::lines(int from, int to) const
 {
     QStringList ret;
-    // a reversed pair names the same lines as the ordered one
-    const int first = std::min(from, to);
-    const qint64 end = std::min(static_cast<qint64>(std::max(from, to)), static_cast<qint64>(buffer.lineBuffer.size()));
-    for (qint64 i = std::max(first, 0); i < end; ++i) {
-        ret << buffer.lineBuffer.at(i);
+    const qsizetype size = buffer.lineBuffer.size();
+    if (from <= to) {
+        for (qsizetype i = std::max(from, 0), end = std::min<qsizetype>(to, size); i < end; ++i) {
+            ret << buffer.lineBuffer.at(i);
+        }
+    } else {
+        for (qsizetype i = std::min<qsizetype>(from, size - 1), end = std::max(to, -1); i > end; --i) {
+            ret << buffer.lineBuffer.at(i);
+        }
     }
     return ret;
 }
