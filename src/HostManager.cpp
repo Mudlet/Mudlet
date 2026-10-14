@@ -33,7 +33,40 @@
 #include "utils.h"
 
 #include <QDebug>
+#include <QScopeGuard>
 #include <QSettings>
+#include <QTimer>
+
+using namespace std::chrono_literals;
+
+namespace {
+// Process-wide, as a release can outlive the pool that began it
+int sReleasesPending = 0;
+
+void retryRelease(const QSharedPointer<Host>& pHost, const std::chrono::milliseconds delay)
+{
+    QTimer::singleShot(delay, [pHost]() {
+        if (pHost->deletionMustWait()) {
+            retryRelease(pHost, 50ms);
+            return;
+        }
+        // Its hold goes with this lambda, which Qt destroys once it has run
+        --sReleasesPending;
+    });
+}
+
+// Deleting a profile closes its Lua state, so the last hold on one goes only once no script of its own runs
+void releaseOnceUnwound(const QSharedPointer<Host>& pHost)
+{
+    ++sReleasesPending;
+    retryRelease(pHost, 0ms);
+}
+} // namespace
+
+bool HostManager::releasingProfile()
+{
+    return sReleasesPending > 0;
+}
 
 HostManager::HostManager(const ConfigRoot configRoot)
 : mpMedia(std::make_unique<MudletMedia>())
@@ -58,6 +91,7 @@ HostManager::HostManager(const ConfigRoot configRoot)
 
 HostManager::~HostManager()
 {
+    mGoingDown = true;
     for (const auto& pHost : hostList()) {
         pHost->raiseExitEventIfOwed();
     }
@@ -136,9 +170,13 @@ bool HostManager::addHost(const QString& hostname, const QString& port, const QS
 
 Host* HostManager::openProfile(const QString& name, const bool connect)
 {
-    if (!addHost(name, QString(), QString(), QString())) {
+    if (mGoingDown || !addHost(name, QString(), QString(), QString())) {
         return nullptr;
     }
+    ++mProfileLoadsInProgress;
+    const auto loadScope = qScopeGuard([this] {
+        --mProfileLoadsInProgress;
+    });
     Host* pHost = getHost(name);
     pHost->loadProfileSave(QString());
     pHost->mIsProfileLoadingSequence = true;
@@ -146,6 +184,102 @@ Host* HostManager::openProfile(const QString& name, const bool connect)
     pHost->loadMapAndConnect(connect);
     pHost->finishProfileLoad();
     return pHost;
+}
+
+bool HostManager::requestProfileClose(const QString& name)
+{
+    // Held, as the sysExitEvent handlers may take the profile out of the pool
+    const QSharedPointer<Host> pHost = mHostPool.value(name);
+    if (!pHost) {
+        return false;
+    }
+    // As the GUI's: a save wait ends on its own, so the close is asked again once it has
+    if (pHost->waitingForProfileSave()) {
+        QTimer::singleShot(50ms, pHost.data(), [this, alive = std::weak_ptr<bool>(mAlive), name, pClosingHost = pHost.data()]() {
+            if (!alive.expired() && getHost(name) == pClosingHost) {
+                requestProfileClose(name);
+            }
+        });
+        return true;
+    }
+    // As the GUI's tab close: a close from under the profile's own nested event loop is ignored
+    if (pHost->getLuaInterpreter()->pumpingEvents()) {
+        qWarning() << "HostManager: asked to close profile" << name << "while it is running a nested event loop, ignoring";
+        return true;
+    }
+    if (!pHost->closeWithNoView()) {
+        return true;
+    }
+    if (getHost(name) == pHost) {
+        deleteHostOnceUnwound(pHost.data(), 0ms);
+    } else {
+        // A handler took it out of the pool, so this is the last hold on it
+        releaseOnceUnwound(pHost);
+    }
+    return true;
+}
+
+// Deleting the profile closes its Lua state, so not while a script of its own is still running (as
+// after its closeProfile()). Tied to the profile, so the timer goes with it.
+void HostManager::deleteHostOnceUnwound(Host* pHost, const std::chrono::milliseconds delay)
+{
+    const QString name = pHost->getName();
+    QTimer::singleShot(delay, pHost, [this, alive = std::weak_ptr<bool>(mAlive), pHost, name]() {
+        // The handlers may have deleted this profile and opened another under its name
+        if (alive.expired() || getHost(name) != pHost) {
+            return;
+        }
+        if (pHost->deletionMustWait()) {
+            deleteHostOnceUnwound(pHost, 50ms);
+            return;
+        }
+        deleteHost(name);
+    });
+}
+
+void HostManager::closeAllProfiles()
+{
+    if (mGoingDown) {
+        return;
+    }
+    // Each pass marks every profile first, as the GUI's forceClose() does, so one a handler closes
+    // meanwhile saves too; a handler may open a profile, which the next pass then closes
+    bool metOpenProfile = true;
+    QList<QSharedPointer<Host>> met;
+    while (metOpenProfile) {
+        metOpenProfile = false;
+        const QList<QSharedPointer<Host>> hosts = hostList();
+        for (const auto& pHost : hosts) {
+            if (!met.contains(pHost)) {
+                met.append(pHost);
+            }
+        }
+        for (const auto& pHost : hosts) {
+            if (!pHost->isClosingDown() && !pHost->isClosingForced()) {
+                pHost->markClosingForced();
+            }
+        }
+        for (const auto& pHost : hosts) {
+            // One a handler has taken out of the pool meanwhile is no longer this pool's to close
+            if (getHost(pHost->getName()) == pHost) {
+                metOpenProfile |= pHost->closeWithNoView();
+            }
+        }
+    }
+    // As in requestProfileClose(): one a handler took out of the pool may be held here alone
+    for (const auto& pHost : std::as_const(met)) {
+        if (getHost(pHost->getName()) != pHost) {
+            releaseOnceUnwound(pHost);
+        }
+    }
+    met.clear();
+    for (const auto& pHost : hostList()) {
+        if (pHost->deletionMustWait()) {
+            deleteHostOnceUnwound(pHost.data(), 0ms);
+        } else {
+            deleteHost(pHost->getName());
+        }
+    }
 }
 
 int HostManager::getHostCount()

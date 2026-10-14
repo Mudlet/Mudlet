@@ -174,6 +174,9 @@ class Host : public QObject
     friend class PackageRemovalSaveTeardownTest;
     // Allows the functional test to put a recording view in place of the null one:
     friend class FrontendRoutingContractTest;
+    // Only callers that hold the profile alive through its handlers may close it with no view:
+    friend class HostManager;
+    friend class HeadlessHostSmokeTest;
 
 public:
     Host(int port, const QString& mHostName, const QString& login, const QString& pass, int host_id);
@@ -273,12 +276,19 @@ public:
     QStringList getValidExperiments() const;
 
     void forceClose();
+    // closeMudlet()'s mark: the close that follows saves, whatever save on exit says
+    void markClosingForced();
     bool profileResetInProgress() const { return mResetProfile; }
     bool isClosingDown() const { return mIsClosingDown; }
     bool isClosingForced() const { return mForcedClose; }
     bool requestClose();
     // A main console raises sysExitEvent as it closes; a profile that never had one gets it from this.
     void raiseExitEventIfOwed();
+    // The save a close makes without asking: the profile and its map, waited for; false if the map failed
+    bool saveForClose();
+    // Whether deleting the profile now would pull its Lua state or map from under code still running
+    // on them; asks a map operation to stop, so the wait ends.
+    bool deletionMustWait();
 
     // The profile load, in this order, with the GUI doing its window work between the steps. The first
     // returns true when the profile has no save of its own yet, so the GUI adds the default packages.
@@ -792,6 +802,9 @@ public:
     void setFontsAntiAlias(const bool antiAlias) { mNoAntiAlias = !antiAlias; }
 
 private:
+    // A main console's close, for a profile that never had one; with nobody to ask, an unforced close
+    // saves only if save on exit is set. False, doing nothing, for a profile already closing.
+    bool closeWithNoView();
     QSettings& profileIni();
 
     bool mNoAntiAlias = false;
@@ -834,6 +847,7 @@ private:
     // What consoleFrontend() hands out while mpConsole is not set.
     std::unique_ptr<TNullConsoleFrontend> mpNullConsoleFrontend;
     bool mExitEventOwed = true;
+    bool mClosingWithNoView = false;
 
 public:
     cTelnet mTelnet;
