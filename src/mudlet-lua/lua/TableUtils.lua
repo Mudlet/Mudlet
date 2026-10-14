@@ -700,32 +700,76 @@ function table.index_of(table, element)
   return nil
 end
 
--- copies maps each table on the way down to t to its copy, so a table that reaches itself ends the
--- recursion; it holds only those, so a table merely referenced twice still gets two copies
-local function deepcopy(t, copies)
-  if copies[t] then
-    return copies[t]
-  end
-  local mt = getmetatable(t)
-  local res = {}
-  copies[t] = res
-  for k, v in pairs(t) do
-    if type(v) == 'table' then
-      v = deepcopy(v, copies)
+-- Both walks keep their own stack instead of recursing, so a long chain such as a linked list
+-- cannot overflow the Lua stack.
+local function reachesItself(root)
+  local onPath, finished = { [root] = true }, {}
+  local path, resumeKey, depth = { root }, {}, 1
+  while depth > 0 do
+    local t = path[depth]
+    local k, v = next(t, resumeKey[depth])
+    while k ~= nil and type(v) ~= 'table' do
+      k, v = next(t, k)
     end
-    res[k] = v
+    if k == nil then
+      onPath[t], finished[t] = nil, true
+      path[depth], resumeKey[depth] = nil, nil
+      depth = depth - 1
+    else
+      resumeKey[depth] = k
+      if onPath[v] then
+        return true
+      end
+      if not finished[v] then
+        depth = depth + 1
+        path[depth], onPath[v] = v, true
+      end
+    end
   end
-  copies[t] = nil
-  setmetatable(res, mt)
-  return res
+  return false
+end
+
+-- With a cycle, copying per path would copy the cycle again for every way into it, which grows
+-- exponentially, so each table is copied once. Without one, a table reached twice keeps getting
+-- two copies, as callers that edit one of them independently expect.
+local function deepcopy(root, oncePerTable)
+  local rootCopy = {}
+  local copies = oncePerTable and { [root] = rootCopy }
+  local pending = { root, rootCopy }
+  while #pending > 0 do
+    local res = table.remove(pending)
+    local t = table.remove(pending)
+    for k, v in pairs(t) do
+      if type(v) == 'table' then
+        local copy = copies and copies[v]
+        if not copy then
+          copy = {}
+          if copies then
+            copies[v] = copy
+          end
+          pending[#pending + 1] = v
+          pending[#pending + 1] = copy
+        end
+        v = copy
+      end
+      res[k] = v
+    end
+    -- after the fields, so a __newindex in it never sees them; debug's, as getmetatable returns
+    -- a protected metatable's __metatable field instead of the metatable
+    setmetatable(res, debug.getmetatable(t))
+  end
+  return rootCopy
 end
 
 -- returns a deep copy of the table with the metatable intact. Credit to Steve Donovan of Penlight.
+-- Keys are not copied. A table with a cycle (t.parent.child == t) is copied with the same shape:
+-- every table in it gets one copy, so references that met at one table still do. Without a cycle,
+-- a table referenced from two places gets a separate copy for each.
 function table.deepcopy(t)
   if type(t) ~= 'table' then
     return t
   end
-  return deepcopy(t, {})
+  return deepcopy(t, reachesItself(t))
 end
 
 -- Table keys
