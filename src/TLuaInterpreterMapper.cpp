@@ -32,6 +32,7 @@
 
 #include "TLuaInterpreter.h"
 
+#include "EnvironmentKit.h"
 #include "Host.h"
 #include "TArea.h"
 #include "TConsoleFrontend.h"
@@ -1816,6 +1817,31 @@ int TLuaInterpreter::getGridMode(lua_State* L)
         return warnArgumentValue(L, __func__, csmInvalidAreaID.arg(id));
     }
     lua_pushboolean(L, area->gridMode);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getMapEnvironmentKit
+int TLuaInterpreter::getMapEnvironmentKit(lua_State* L)
+{
+    const int environmentId = getVerifiedInt(L, __func__, 1, "environmentID");
+    const Host& host = getHostFromLua(L);
+    const auto [kit, named] = EnvironmentKit::forEnvironment(*host.mpMap, host, environmentId);
+    lua_pushstring(L, EnvironmentKit::name(kit).toUtf8().constData());
+    lua_pushboolean(L, named);
+    return 2;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getMapEnvironmentKits
+int TLuaInterpreter::getMapEnvironmentKits(lua_State* L)
+{
+    const Host& host = getHostFromLua(L);
+    const QHash<int, EnvironmentKit::Kit> kits = EnvironmentKit::stored(host.mpMap->mUserData);
+    lua_newtable(L);
+    for (const auto& [environmentId, kit] : kits.asKeyValueRange()) {
+        lua_pushnumber(L, environmentId);
+        lua_pushstring(L, EnvironmentKit::name(kit).toUtf8().constData());
+        lua_settable(L, -3);
+    }
     return 1;
 }
 
@@ -4038,6 +4064,30 @@ int TLuaInterpreter::setGridMode(lua_State* L)
     pA->calcSpan();
     host.mpMap->updateArea(area);
     host.mpMap->setUnsaved(__func__);
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMapEnvironmentKit
+int TLuaInterpreter::setMapEnvironmentKit(lua_State* L)
+{
+    const int environmentId = getVerifiedInt(L, __func__, 1, "environmentID");
+    QString kitName;
+    if (lua_gettop(L) > 1 && !lua_isnil(L, 2)) {
+        kitName = getVerifiedString(L, __func__, 2, "kit name", true).trimmed().toLower();
+    }
+    Host& host = getHostFromLua(L);
+    QHash<int, EnvironmentKit::Kit> kits = EnvironmentKit::stored(host.mpMap->mUserData);
+    if (kitName.isEmpty()) {
+        kits.remove(environmentId);
+    } else if (const std::optional<EnvironmentKit::Kit> kit = EnvironmentKit::fromName(kitName)) {
+        kits.insert(environmentId, *kit);
+    } else {
+        return warnArgumentValue(L, __func__, qsl("kit name '%1' is not one of: %2").arg(kitName, EnvironmentKit::names().join(qsl(", "))));
+    }
+    EnvironmentKit::store(host.mpMap->mUserData, kits);
+    host.mpMap->setUnsaved(__func__);
+    host.mpMap->updateArea(-1);
     lua_pushboolean(L, true);
     return 1;
 }

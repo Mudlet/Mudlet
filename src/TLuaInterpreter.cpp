@@ -7051,6 +7051,9 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "addMapEvent", TLuaInterpreter::addMapEvent);
     lua_register(pGlobalLua, "removeMapEvent", TLuaInterpreter::removeMapEvent);
     lua_register(pGlobalLua, "getMapEvents", TLuaInterpreter::getMapEvents);
+    lua_register(pGlobalLua, "getMapEnvironmentKit", TLuaInterpreter::getMapEnvironmentKit);
+    lua_register(pGlobalLua, "getMapEnvironmentKits", TLuaInterpreter::getMapEnvironmentKits);
+    lua_register(pGlobalLua, "setMapEnvironmentKit", TLuaInterpreter::setMapEnvironmentKit);
     lua_register(pGlobalLua, "addMapMenu", TLuaInterpreter::addMapMenu);
     lua_register(pGlobalLua, "removeMapMenu", TLuaInterpreter::removeMapMenu);
     lua_register(pGlobalLua, "getMapMenus", TLuaInterpreter::getMapMenus);

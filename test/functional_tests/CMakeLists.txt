@@ -231,6 +231,7 @@ set(MAP_GROUP_TEST_SOURCES
     MapTextLabelCacheTest.cpp
     MapViewAreaListTest.cpp
     MapLabelRenderTest.cpp
+    MapDecalsTest.cpp
     MapViewCueTest.cpp
     LuaMapperCueTest.cpp
     MapLockNoOpTest.cpp
