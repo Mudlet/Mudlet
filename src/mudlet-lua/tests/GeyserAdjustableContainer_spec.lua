@@ -808,8 +808,10 @@ describe("Tests the Adjustable.Container mouse handlers", function()
       assert.is_true(container:get_width() > 200)
       -- same border, so the follower is given the anchor's new width
       assert.are.equal(container:get_width(), follower:get_width())
-      local reserved = container:get_width() + container:get_x() + container.attachedMargin
-      assert.are.equal(math.floor(reserved), getBorderLeft())
+      -- the drag stores a percentage, so the width is fractional and the border
+      -- has to end at the widget's rounded edge rather than a truncated one
+      local x, _, width = getWindowGeometry(container.name .. "adjLabel")
+      assert.are.equal(x + width + container.attachedMargin, getBorderLeft())
     end)
 
     -- the only script-visible surface of the reordering, and the suite asserted
