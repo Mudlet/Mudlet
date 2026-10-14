@@ -1174,7 +1174,7 @@ end
 
 -- https://wiki.mudlet.org/w/Manual:Lua_Functions#getLabelFormat
 -- used by xEcho for getting the default format for a label, taking into account
--- the background color setting and stylesheet
+-- the background color setting and stylesheet; nil and an error message for a name that is not a label
 function getLabelFormat(win)
   assert(win, "getLabelFormat: requires at least one argument")
   local stylesheet, err = getLabelStyleSheet(win)

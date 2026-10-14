@@ -1673,7 +1673,7 @@ end
 -- @table mouseWheelEvent
 
 --- Returns a table in the format of getTextFormat which describes the default formatting created by any stylesheets.
--- which are applied to the label.
+-- which are applied to the label, or nil and an error message if the label no longer exists.
 -- See: <a href="https://wiki.mudlet.org/w/Manual:Lua_Functions#getLabelFormat">https://wiki.mudlet.org/w/Manual:Lua_Functions#getLabelFormat</a>
 -- See: <a href="https://wiki.mudlet.org/w/Manual:Lua_Functions#getTextFormat">https://wiki.mudlet.org/w/Manual:Lua_Functions#getLabelFormat</a>
 function Geyser.Label:getFormat()
