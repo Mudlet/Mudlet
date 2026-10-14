@@ -439,7 +439,9 @@ private:
     };
     // For the lines and doors on the viewed level, the most used ground first; empty where the style draws no legend
     QList<LegendEntry> lineLegend(const TArea& area) const;
-    // Below top, where the view has room for it
+    // Below top; empty where there is no legend or the view has no room for it
+    QRect lineLegendRect(const TArea& area, int top) const;
+    QRect lineLegendRect(const QList<LegendEntry>& entries, int top) const;
     void paintLineLegend(QPainter& painter, const TArea& area, int top);
     struct LevelPlatform
     {
