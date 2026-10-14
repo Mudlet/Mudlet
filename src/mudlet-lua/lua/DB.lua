@@ -1407,12 +1407,13 @@ function db:_build_create_table_sql(schema, s_name)
 end
 
 
--- The sorted, comma-joined column names of an index's column list, as it is
--- stored or as db:_sql_columns renders it: a sort direction is not a column.
+-- The sorted, comma-joined ordering terms of an index's column list, as it is
+-- stored or as db:_sql_columns renders it. A desc direction stays on its column,
+-- so ("name") and ("name" desc) are different indexes.
 local function index_columns_key(column_list)
   local cols = {}
-  for col in normalize_sql(column_list):gmatch('"([^"]+)"') do
-    cols[#cols + 1] = col
+  for col, direction in normalize_sql(column_list):gmatch('"([^"]+)"%s*(%a*)') do
+    cols[#cols + 1] = direction == "desc" and col .. " desc" or col
   end
   table.sort(cols)
   return table.concat(cols, ",")

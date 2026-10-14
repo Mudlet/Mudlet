@@ -3950,6 +3950,37 @@ describe("Tests db:create keeping indexes on underscored column names", function
 
     assert.are.same({}, dropsOnCreate(sheets))
   end)
+
+  it("drops an index once the sheet asks for its column sorted the other way", function()
+    local ascending = {people = {name = "", desc = "", _index = {"name"}}}
+    local descending = {people = {name = "", desc = "", _index = {{"name", "desc"}}}}
+    createWithoutWarnings(ascending)
+
+    assert.are.same({"DROP INDEX IF EXISTS idx_people_c_name;"}, dropsOnCreate(descending))
+    assert.are.same({"idx_people_c_name_desc"}, indexNames("people"))
+
+    assert.are.same({"DROP INDEX IF EXISTS idx_people_c_name_desc;"}, dropsOnCreate(ascending))
+    assert.are.same({"idx_people_c_name"}, indexNames("people"))
+  end)
+
+  it("drops an index on a sheet named with letters outside ASCII once the sheet no longer asks for it", function()
+    createWithoutWarnings({["città"] = {a = "", b = "", _index = {"a"}}})
+
+    assert.are.same({"DROP INDEX IF EXISTS idx_città_c_a;"},
+      dropsOnCreate({["città"] = {a = "", b = "", _index = {"b"}}}))
+    assert.are.same({"idx_città_c_b"}, indexNames("città"))
+  end)
+
+  it("drops an orphaned idx index whether or not its CREATE statement quotes the sheet name", function()
+    local sheets = {people = {name = "", level = 0, _index = {"name"}}}
+    createWithoutWarnings(sheets)
+    db.__conn[dbName]:execute('CREATE INDEX idx_quoted ON "people" ("level")')
+    db.__conn[dbName]:execute('CREATE INDEX idx_unquoted ON people ("level")')
+
+    assert.are.same({"DROP INDEX IF EXISTS idx_quoted;", "DROP INDEX IF EXISTS idx_unquoted;"},
+      dropsOnCreate(sheets))
+    assert.are.same({"idx_people_c_name"}, indexNames("people"))
+  end)
 end)
 
 describe("Tests db:create with _unique naming unknown columns", function()
