@@ -422,11 +422,8 @@ void GLStateCommand::execute(QOpenGLFunctions* gl,
     }
 }
 
-RenderLabelCommand::RenderLabelCommand(float centerX,
-                                       float centerY,
-                                       float centerZ,
-                                       float width,
-                                       float height,
+RenderLabelCommand::RenderLabelCommand(float centerX, float centerY, float centerZ,
+                                       float width, float height,
                                        GLuint textureId,
                                        const QVector3D& cameraRight,
                                        const QVector3D& cameraUp,
@@ -434,31 +431,25 @@ RenderLabelCommand::RenderLabelCommand(float centerX,
                                        const QMatrix4x4& projectionMatrix,
                                        const QMatrix4x4& viewMatrix,
                                        const QMatrix4x4& modelMatrix)
-: mCenterX(centerX)
-, mCenterY(centerY)
-, mCenterZ(centerZ)
-, mWidth(width)
-, mHeight(height)
-, mTextureId(textureId)
-, mCameraRight(cameraRight)
-, mCameraUp(cameraUp)
-, mTint(tint)
-, mProjectionMatrix(projectionMatrix)
-, mViewMatrix(viewMatrix)
-, mModelMatrix(modelMatrix)
+    : mCenterX(centerX), mCenterY(centerY), mCenterZ(centerZ)
+    , mWidth(width), mHeight(height)
+    , mTextureId(textureId)
+    , mCameraRight(cameraRight), mCameraUp(cameraUp)
+    , mTint(tint)
+    , mProjectionMatrix(projectionMatrix), mViewMatrix(viewMatrix), mModelMatrix(modelMatrix)
 {
 }
 
 void RenderLabelCommand::execute(QOpenGLFunctions* gl,
-                                 QOpenGLShaderProgram* shader,
-                                 GeometryManager* geometryManager,
-                                 ResourceManager* resourceManager,
-                                 QOpenGLVertexArrayObject& vao,
-                                 QOpenGLBuffer& vertexBuffer,
-                                 QOpenGLBuffer& colorBuffer,
-                                 QOpenGLBuffer& normalBuffer,
-                                 QOpenGLBuffer& indexBuffer,
-                                 QOpenGLBuffer& texCoordBuffer)
+                                QOpenGLShaderProgram* shader,
+                                GeometryManager* geometryManager,
+                                ResourceManager* resourceManager,
+                                QOpenGLVertexArrayObject& vao,
+                                QOpenGLBuffer& vertexBuffer,
+                                QOpenGLBuffer& colorBuffer,
+                                QOpenGLBuffer& normalBuffer,
+                                QOpenGLBuffer& indexBuffer,
+                                QOpenGLBuffer& texCoordBuffer)
 {
     Q_UNUSED(gl)
 
@@ -467,7 +458,11 @@ void RenderLabelCommand::execute(QOpenGLFunctions* gl,
     }
 
     // Generate billboard geometry
-    GeometryData labelGeometry = geometryManager->generateBillboardGeometry(mCenterX, mCenterY, mCenterZ, mWidth, mHeight, mCameraRight, mCameraUp, mTextureId);
+    GeometryData labelGeometry = geometryManager->generateBillboardGeometry(
+        mCenterX, mCenterY, mCenterZ,
+        mWidth, mHeight,
+        mCameraRight, mCameraUp,
+        mTextureId);
 
     if (labelGeometry.isEmpty()) {
         return;
