@@ -4975,6 +4975,26 @@ describe("Tests saveJsonMap and loadJsonMap", function()
       assert.are.same({5, 6, 7, 50}, label.colors[2].color32RGBA)
     end)
 
+    it("puts the alpha back on the player room outer and inner colours", function()
+      deleteMap()
+      local area = addAreaName("MapperSpecJsonAlphaPlayerRoomArea")
+      roomA = createRoomID(); addRoom(roomA); setRoomArea(roomA, area)
+      local document = readExport()
+      -- an import also hands these colours to the profile's preferences
+      local originalColors = document.playerRoomColors
+      finally(function()
+        local restore = readExport()
+        restore.playerRoomColors = originalColors
+        writeImport(restore)
+      end)
+      document.playerRoomColors = {{color32RGBA = {10, 20, 30, 77}}, {color32RGBA = {40, 50, 60, 77}}}
+      writeImport(document)
+
+      local reexported = readExport()
+      assert.are.same({10, 20, 30, 77}, reexported.playerRoomColors[1].color32RGBA)
+      assert.are.same({40, 50, 60, 77}, reexported.playerRoomColors[2].color32RGBA)
+    end)
+
     -- TRoom::writeJsonExitStubs looks the stub's door up under the long
     -- direction name while TRoom::doors is keyed by the short one, so a door on
     -- a stub survives only for up, down, in and out, whose two spellings match
