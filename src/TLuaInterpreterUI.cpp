@@ -3628,7 +3628,8 @@ int TLuaInterpreter::resetSvgTransform(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setLabelCursor
 int TLuaInterpreter::setLabelCursor(lua_State* L)
 {
-    const bool cursorIsName = lua_type(L, 2) == LUA_TSTRING;
+    // A numeric string such as "5" is a shape number, as Lua's own coercion would read it.
+    const bool cursorIsName = lua_type(L, 2) == LUA_TSTRING && !lua_isnumber(L, 2);
     if (!checkStringArg(L, __func__, 1, "label name") || (!cursorIsName && !checkIntArg(L, __func__, 2, "cursortype"))) {
         return lua_error(L);
     }

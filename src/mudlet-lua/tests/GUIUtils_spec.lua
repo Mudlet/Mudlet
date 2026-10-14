@@ -3365,6 +3365,12 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       assert.are.equal("a label cannot have an empty string as its name", err)
     end)
 
+    it("Should take a shape number given as a string as that number", function()
+      assert.is_true(setLabelCursor(labelName, tostring(mudlet.cursor.OpenHand)))
+      assert.is_true(setLabelCursor(labelName, "-1"))
+      assert.are.same({setLabelCursor(labelName, 9999)}, {setLabelCursor(labelName, "9999")})
+    end)
+
     it("Should reset the cursor by asking for shape -1", function()
       setLabelCursor(labelName, "OpenHand")
       assert.is_true(resetLabelCursor(labelName))
