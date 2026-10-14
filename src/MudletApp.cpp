@@ -39,6 +39,7 @@
 #include <QFileInfo>
 #include <QHash>
 #include <QLibraryInfo>
+#include <QLocale>
 #include <QMutex>
 #include <atomic>
 #include <QNetworkRequest>
@@ -49,6 +50,7 @@
 #include <QSettings>
 #include <QSslConfiguration>
 #include <QTextStream>
+#include <QTranslator>
 #include <QUrl>
 
 namespace {
@@ -710,6 +712,58 @@ void MudletApp::noteEarlySettingsStatus(const QSettings& settings)
     }
     const QMutexLocker locker(&settingsMutex);
     smEarlySettingsErrors.insert(settings.fileName(), settings.status());
+}
+
+QTranslator* MudletApp::loadTranslationsForCommandLine()
+{
+    // Not MudletApp::getQSettings(): it stays null until setupConfig(), which a --help or --version run never
+    // reaches. Same file and format as setupConfig() opens - keep the spellings in step.
+    QSettings settings(qsl("%1/Mudlet.ini").arg(MudletApp::getMudletPath(enums::mainPath)), QSettings::IniFormat);
+    MudletApp::noteEarlySettingsStatus(settings);
+    auto interfaceLanguage = settings.value(QLatin1String("interfaceLanguage")).toString();
+    auto userLocale = interfaceLanguage.isEmpty() ? QLocale::system() : QLocale(interfaceLanguage);
+    if (userLocale == QLocale::c()) {
+        // nothing found
+        return nullptr;
+    }
+    // We only need the Mudlet translations for the Command Line texts, no need
+    // for any Qt ones. Parented to QCoreApplication::instance(), not qApp, which static-casts
+    // to a QApplication that a print-and-exit run has not created.
+    QTranslator* pMudletTranslator = new QTranslator(QCoreApplication::instance());
+    // If we allow the translations to be outside of the resource file inside
+    // the application executable then this will have to be revised to handle
+    // it:
+    const bool isOk = pMudletTranslator->load(userLocale, qsl("mudlet"), qsl("_"), qsl(":/lang"), qsl(".qm"));
+    if (!isOk) {
+        return nullptr;
+    }
+    QCoreApplication::installTranslator(pMudletTranslator);
+    return pMudletTranslator;
+}
+
+void MudletApp::setDefaultMediaBackend()
+{
+    // On Windows, use FFmpeg which supports .ogg/.opus (native backend doesn't).
+    // On macOS, use darwin (AVFoundation) which works better than FFmpeg.
+#if defined(Q_OS_WINDOWS)
+    const QByteArray defaultMediaBackend("ffmpeg");
+#elif defined(Q_OS_MACOS)
+    const QByteArray defaultMediaBackend("darwin");
+#else
+    const QByteArray defaultMediaBackend;
+#endif
+    if (defaultMediaBackend.isEmpty()) {
+        return;
+    }
+    if (!qEnvironmentVariableIsEmpty("QT_MEDIA_BACKEND")) {
+        qDebug().noquote().nospace() << "MudletApp::setDefaultMediaBackend() INFO - QT_MEDIA_BACKEND environmental variable is set to: \"" << qgetenv("QT_MEDIA_BACKEND") << "\".";
+        return;
+    }
+    if (qputenv("QT_MEDIA_BACKEND", defaultMediaBackend)) {
+        qDebug().noquote() << "MudletApp::setDefaultMediaBackend() INFO - setting QT_MEDIA_BACKEND environmental variable to:" << defaultMediaBackend;
+    } else {
+        qWarning().noquote() << "MudletApp::setDefaultMediaBackend() WARNING - failed to set QT_MEDIA_BACKEND environmental variable to:" << defaultMediaBackend << ", sound may not work.";
+    }
 }
 
 bool MudletApp::portableRootInUse()
