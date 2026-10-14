@@ -2461,6 +2461,22 @@ describe("Tests Other.lua functions", function()
       assert.equals(2, _G.saveVarsSpecOther)
     end)
 
+    it("should stop saving a restored variable once it is set to nil, even the last one", function()
+      _G.saveVarsSpecValue = "kept"
+      remember("saveVarsSpecValue")
+      assert.is_true(saveVars())
+
+      _G._saveTable = nil
+      _G.saveVarsSpecValue = nil
+      loadVars()
+      _G.saveVarsSpecValue = nil
+      assert.is_true(saveVars())
+
+      _G._saveTable = nil
+      loadVars()
+      assert.is_nil(_G.saveVarsSpecValue)
+    end)
+
     it("should save the remembered variable as it is at save time and load it back", function()
       _G.saveVarsSpecValue = { a = 1 }
       remember("saveVarsSpecValue")
