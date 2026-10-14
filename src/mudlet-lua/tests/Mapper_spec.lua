@@ -3439,9 +3439,9 @@ describe("Tests route weights and extreme coordinates on a scratch area", functi
 
   local function room(x, y, z)
     local id = createRoomID()
-    addRoom(id)
-    setRoomArea(id, area)
-    setRoomCoordinates(id, x, y, z or 0)
+    assert.is_true(addRoom(id))
+    assert.is_true(setRoomArea(id, area))
+    assert.is_true(setRoomCoordinates(id, x, y, z or 0))
     return id
   end
 
@@ -3450,12 +3450,14 @@ describe("Tests route weights and extreme coordinates on a scratch area", functi
   end)
 
   before_each(function()
-    area = addAreaName(areaName)
+    local err
+    area, err = addAreaName(areaName)
+    assert.is_number(area, err)
   end)
 
   after_each(function()
     setExitWeightFilter(nil)
-    deleteArea(areaName)
+    assert.is_true(deleteArea(areaName))
   end)
 
   it("getPath reports route weights exactly beyond what a float can hold", function()
@@ -3491,8 +3493,9 @@ describe("Tests route weights and extreme coordinates on a scratch area", functi
     assert.are.same({6442450941, "2147483647,2147483647,2147483647"}, weigh(ids[1], ids[4]))
   end)
 
-  -- Only a sanitizer build can see these go wrong: the y coordinate is negated
-  -- for the area's span index and the route search subtracts coordinates
+  -- Overflows only a UBSan build reports: the y coordinate is negated for the
+  -- area's span index and the route search subtracts coordinates. What the span
+  -- index files is checked by MapCoordinateLimitTest, as no Lua function reads it.
   it("moves and routes to a room at the most negative coordinate an int holds", function()
     local r1, r2 = room(0, 0), room(1, 1)
     setExit(r1, r2, "north")
