@@ -47,6 +47,7 @@
 
 using namespace std::chrono_literals;
 
+namespace {
 // A move a widget ignores is offered to its parent next, which is where a filter on the parent sees it
 class MoveCounter : public QObject
 {
@@ -61,6 +62,7 @@ public:
         return QObject::eventFilter(watched, event);
     }
 };
+} // namespace
 
 class LabelAnchorInteractionTest : public QObject
 {
@@ -85,20 +87,33 @@ private:
     // process.
     bool luaHolds(const QString& condition) const { return mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("assert(%1)").arg(condition)); }
 
-    // Where the label's only word of text sits, so a synthesised click lands on
-    // the link rather than the empty space around it
+    // Where the label's only word of text sits, so a synthesised click or move lands
+    // on the link rather than the empty space around it. QLabel puts the text where
+    // its alignment says within the contents rect, vertically centred by default,
+    // and aiming at the document's own middle misses a small font's line.
     QPoint linkCentre() const
     {
         QTextDocument document;
         document.setHtml(label()->text());
         document.setDefaultFont(label()->font());
-        return QPoint(static_cast<int>(document.idealWidth()) / 2, static_cast<int>(document.size().height()) / 2);
+        const QRect area = label()->contentsRect();
+        const int height = static_cast<int>(document.size().height());
+        const Qt::Alignment alignment = label()->alignment();
+        const int spare = area.height() - height;
+        const int top = area.top() + ((alignment & Qt::AlignVCenter) ? spare / 2 : (alignment & Qt::AlignBottom) ? spare : 0);
+        return QPoint(area.left() + static_cast<int>(document.idealWidth()) / 2, top + height / 2);
     }
 
-    // The document above is laid out on its own, without the label's contents
-    // margins or alignment, so a click aimed by it can miss the widget - which
-    // would read as a callback that did not fire.
+    // The document above is laid out on its own, so a click aimed by it can still
+    // miss the widget - which would read as a callback that did not fire.
     bool centreIsOnTheLabel() const { return label()->rect().contains(linkCentre()); }
+
+    // Sent rather than made with the real pointer, which a headless run has no control over
+    void moveTo(const QPoint& where) const
+    {
+        QMouseEvent move(QEvent::MouseMove, where, label()->mapToGlobal(where), Qt::NoButton, Qt::NoButton, Qt::NoModifier);
+        QApplication::sendEvent(label(), &move);
+    }
 
 private slots:
     void initTestCase()
@@ -298,15 +313,9 @@ private slots:
         label()->setText(qsl("<a href='https://example.com'>go</a>"));
         QVERIFY2(centreIsOnTheLabel(), "the point this case hovers is outside the label, so it would miss the link");
 
-        // moves are sent rather than made with the real pointer, which a headless run has no control over
-        auto moveTo = [this](const QPoint& where) {
-            QMouseEvent move(QEvent::MouseMove, where, label()->mapToGlobal(where), Qt::NoButton, Qt::NoButton, Qt::NoModifier);
-            QApplication::sendEvent(label(), &move);
-        };
-
         moveTo(QPoint(label()->width() - 1, label()->height() - 1));
         QVERIFY(label()->cursor().shape() != Qt::PointingHandCursor);
-        // with no move callback the move goes on to whatever is underneath, such as the map
+        // with no move callback the move goes on to the label's parent
         MoveCounter underneath;
         QWidget* parent = label()->parentWidget();
         // Qt drops a buttonless move on its way up at a widget that does not track the mouse
@@ -324,15 +333,79 @@ private slots:
         moveTo(QPoint(label()->width() - 1, label()->height() - 1));
         QVERIFY(label()->cursor().shape() != Qt::PointingHandCursor);
 
-        // left registered: all it does is count
         mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("anchorMoves = 0\n"
                                                                  "anchorMoveRegistered = setLabelMoveCallback('%1', function() anchorMoves = anchorMoves + 1 end)\n")
                                                                      .arg(mLabelName));
+        // a registered move callback keeps every later move from the parent, and the cases after this one share the label
+        auto dropCallback = qScopeGuard([this] {
+            mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("setLabelMoveCallback('%1', nil)").arg(mLabelName));
+        });
         QVERIFY2(luaHolds(qsl("anchorMoveRegistered")), "the move callback did not reach the label");
         moveTo(linkCentre());
         QVERIFY2(luaHolds(qsl("anchorMoves == 1")), "the label's move callback did not fire over its link");
         QVERIFY2(underneath.mMoves == 2, "a label's move callback did not keep the move to itself");
         QCOMPARE(label()->cursor().shape(), Qt::PointingHandCursor);
+    }
+
+    void test_aCursorSetOverALinkOutlastsTheHover_data()
+    {
+        QTest::addColumn<QString>("before");
+        QTest::addColumn<QString>("onTheLink");
+        QTest::addColumn<int>("expected");
+
+        QTest::newRow("set") << QString() << qsl("setLabelCursor('%1', mudlet.cursor.Busy)") << static_cast<int>(Qt::BusyCursor);
+        QTest::newRow("reset") << qsl("setLabelCursor('%1', mudlet.cursor.Cross)") << qsl("resetLabelCursor('%1')") << static_cast<int>(Qt::ArrowCursor);
+    }
+
+    // QLabel saves the cursor when the hover begins and puts that copy back when it ends
+    void test_aCursorSetOverALinkOutlastsTheHover()
+    {
+        QFETCH(QString, before);
+        QFETCH(QString, onTheLink);
+        QFETCH(int, expected);
+
+        label()->resetLinkStyle();
+        label()->unsetCursor();
+        label()->setText(qsl("<a href='https://example.com'>go</a>"));
+        QVERIFY2(centreIsOnTheLabel(), "the point this case hovers is outside the label, so it would miss the link");
+        const QPoint corner(label()->width() - 1, label()->height() - 1);
+        auto cleanUp = qScopeGuard([this] {
+            label()->unsetCursor();
+        });
+
+        moveTo(corner);
+        if (!before.isEmpty()) {
+            mpHost->getLuaInterpreter()->compileAndExecuteScript(before.arg(mLabelName));
+        }
+        moveTo(linkCentre());
+        QCOMPARE(label()->cursor().shape(), Qt::PointingHandCursor);
+        mpHost->getLuaInterpreter()->compileAndExecuteScript(onTheLink.arg(mLabelName));
+        moveTo(corner);
+        QCOMPARE(static_cast<int>(label()->cursor().shape()), expected);
+        // the next hover starts from the script's cursor and gives it back
+        moveTo(linkCentre());
+        QCOMPARE(label()->cursor().shape(), Qt::PointingHandCursor);
+        moveTo(corner);
+        QCOMPARE(static_cast<int>(label()->cursor().shape()), expected);
+    }
+
+    void test_leavingFromALinkDropsTheHand()
+    {
+        label()->resetLinkStyle();
+        label()->unsetCursor();
+        label()->setText(qsl("<a href='https://example.com'>go</a>"));
+        QVERIFY2(centreIsOnTheLabel(), "the point this case hovers is outside the label, so it would miss the link");
+
+        moveTo(linkCentre());
+        QCOMPARE(label()->cursor().shape(), Qt::PointingHandCursor);
+        QEvent leave(QEvent::Leave);
+        QApplication::sendEvent(label(), &leave);
+        // re-entering over plain text would show the label's cursor before any move arrives
+        QVERIFY(label()->cursor().shape() != Qt::PointingHandCursor);
+        // and coming straight back onto the link starts a new hover
+        moveTo(linkCentre());
+        QCOMPARE(label()->cursor().shape(), Qt::PointingHandCursor);
+        QApplication::sendEvent(label(), &leave);
     }
 
     void test_aRightClickOpensNoMenuOfQtsOwn_data()
