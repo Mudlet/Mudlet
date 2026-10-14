@@ -820,9 +820,9 @@ function Adjustable.Container:unlockContainer()
     self:setTitle()
 end
 
--- internal function: a padding goes into "-"..padding constraints, and the constraint parser strips
--- letters, so only a number tostring() writes without an exponent survives: rounding to 4 decimal places
--- turns a tiny one into 0, and below 1e13 %.14g never needs one
+-- internal function: a padding goes into "-"..padding constraints, which the constraint parser reads after
+-- stripping letters, so "--5", "-inf", "-nan" and an exponent all break it. Rounding to 4 decimal places turns
+-- a tiny padding into 0; one just below 1e14 rounds up to "1e+14", while one below 1e13 never gets an exponent
 local function validPadding(padding)
     padding = tonumber(padding)
     if not (padding and padding >= 0) then
@@ -1484,9 +1484,7 @@ function Adjustable.Container:new(cons,container)
     me.MenuFontSize = me.MenuFontSize or "8"
     me.buttonsize = me.buttonsize or "15"
     me.buttonFontSize = me.buttonFontSize or "8"
-    if me.padding ~= nil and not validPadding(me.padding) then
-        debugc(string.format("Adjustable.Container:new: ignored the invalid padding %s given for %s, using 10", tostring(me.padding), me.name))
-    end
+    local givenPadding = me.padding
     me.padding = validPadding(me.padding) or 10
     me.attachedMargin = me.attachedMargin or 5
 
@@ -1583,6 +1581,11 @@ function Adjustable.Container:new(cons,container)
     if not(me.autoLoad == false) then
         me.autoLoad = true
         me:load()
+    end
+
+    -- after load(), which may have replaced the fallback 10 with a saved padding
+    if givenPadding ~= nil and not validPadding(givenPadding) then
+        debugc(string.format("Adjustable.Container:new: ignored the invalid padding %s given for %s, using %s", tostring(givenPadding), me.name, tostring(me.padding)))
     end
 
     -- Saves on Exit if autoSave is not false
