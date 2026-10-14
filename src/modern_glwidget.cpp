@@ -25,6 +25,7 @@
 #include "modern_glwidget.h"
 
 #include "ExitAppearance.h"
+#include "EnvironmentKit.h"
 #include "ExitScene.h"
 #include "Host.h"
 #include "MapDecals.h"
@@ -757,8 +758,8 @@ constexpr float scmFloorPlateOpacity = 0.07f;
 // The terminal style's glyph atlas: cells of this many texels, this many to a side
 constexpr int scmGlyphCellTexels = 64;
 constexpr int scmGlyphAtlasColumns = 16;
-// The block and the printable ASCII characters, which the atlas always holds first
-constexpr qsizetype scmGlyphAtlasPreloaded = 1 + (u'~' - u'!' + 1);
+// The block, the printable ASCII characters and the three ground characters past them, which the atlas always holds first
+constexpr qsizetype scmGlyphAtlasPreloaded = 1 + (u'~' - u'!' + 1) + 3;
 // Clear around a character in its atlas cell, so that the smaller mipmaps of a cell do not take in its neighbors
 constexpr int scmGlyphCellInset = scmGlyphCellTexels / 16;
 // A character cell's side on the map: half rooms' spacing, so that an exit's line has a cell between two rooms side by side
@@ -769,6 +770,9 @@ constexpr float scmGlyphSize = scmGlyphCell * 1.25f;
 const QString scmGlyphBlock = QString(QChar(0x2588));
 // How opaque the cell under the pointer is lit, as a terminal's selection shows
 constexpr float scmGlyphHoverOpacity = 0.35f;
+// A symbol's underline across and down its cell, as a part of the cell
+constexpr float scmGlyphUnderlineWidth = 0.7f;
+constexpr float scmGlyphUnderlineHeight = 0.1f;
 
 // A cell of the glyph atlas, in texture coordinates; filled, only the part inside its inset, where the block is drawn
 QRectF glyphAtlasRect(const qsizetype cell, const bool filled = false)
@@ -1075,10 +1079,17 @@ qsizetype ModernGLWidget::glyphAtlasCell(const QString& text, const bool add)
         for (char16_t character = u'!'; character <= u'~'; ++character) {
             preloaded.append(QString(QChar(character)));
         }
+        // So that a room past a full atlas still shows its ground
+        for (const QString& kitName : EnvironmentKit::names()) {
+            if (const QString ground = RoomAppearance::groundGlyph(*EnvironmentKit::fromName(kitName), false); !preloaded.contains(ground)) {
+                preloaded.append(ground);
+            }
+        }
         for (const QString& cellText : preloaded) {
             mGlyphAtlasIndex.insert(cellText, mGlyphAtlasCells.size());
             mGlyphAtlasCells.append(cellText);
         }
+        Q_ASSERT(mGlyphAtlasCells.size() == scmGlyphAtlasPreloaded);
     }
     if (const auto found = mGlyphAtlasIndex.constFind(text); found != mGlyphAtlasIndex.cend()) {
         return *found;
@@ -1157,6 +1168,8 @@ void ModernGLWidget::renderRooms()
     const QColor contrast = ExitAppearance::contrastColor(background);
     const RenderCommand::Shading roomShading = style.lit ? RenderCommand::Shading::Lit : RenderCommand::Shading::Unlit;
     const bool terminal = style.glyphs == MapStyle::Glyphs::Terminal;
+    const bool groundGlyphs = terminal && style.groundGlyphs;
+    const QHash<int, EnvironmentKit::Kit> namedKits = groundGlyphs ? EnvironmentKit::stored(mpMap->mUserData) : QHash<int, EnvironmentKit::Kit>();
 
     const bool moreTransparent = mpHost->experimentEnabled(qsl("experiment.rendering.more-transparent"));
     const bool playerIcon = mpHost->experimentEnabled(qsl("experiment.3d-player-icon"));
@@ -1336,6 +1349,8 @@ void ModernGLWidget::renderRooms()
         RoomDecals* decals = nullptr;
         // For a symbol, the character the room would have without it
         QString plain;
+        // A line under the character in this color; no alpha for none
+        QVector4D underline;
     };
     QList<TerminalCell> terminalCells;
     // The cells rooms are in, as doubled map coordinates, and their levels: no exit's character goes over one
@@ -1473,16 +1488,28 @@ void ModernGLWidget::renderRooms()
         if (terminal) {
             // Only the viewed level's IDs, as on the 2D map: another level's, in the same cell, would run into them
             const bool showId = terminalIds && look.onViewedLevel();
-            const QString text = showId ? QString::number(currentRoomId) : RoomAppearance::terminalGlyph(*pR, look, pArea->gridMode);
-            const QColor textColor = !showId && !look.symbol.isEmpty() ? style.symbolColor(look.symbolColor, roomColor) : style.roomIdColor(roomColor);
+            std::optional<EnvironmentKit::Kit> ground;
+            if (groundGlyphs) {
+                ground = EnvironmentKit::forEnvironment(namedKits, pR->environment, look.color);
+            }
+            const QString text = showId ? QString::number(currentRoomId) : RoomAppearance::terminalGlyph(*pR, look, pArea->gridMode, ground);
+            const bool symbol = !showId && !look.symbol.isEmpty();
+            QColor textColor = symbol ? style.symbolColor(look.symbolColor, roomColor) : style.roomIdColor(roomColor);
+            // The highlight fills the cell, so the character goes in reverse video on it
+            if (look.highlighted && MapDecals::highlightFillsRoom(style.highlightShape)) {
+                textColor = background;
+            }
             TerminalCell cell{currentRoomId, text, showId, roomTop, GeometryManager::fadedColor(textColor, fade, fadeTarget), look.playerRoom, {}, hovered, &decals};
             if (look.playerRoom) {
                 cell.color = GeometryManager::fadedColor(roomColor, fade, fadeTarget);
                 cell.reverseColor = GeometryManager::fadedColor(ExitAppearance::contrastColor(roomColor), fade, fadeTarget);
-            } else if (!showId && !look.symbol.isEmpty()) {
+            } else if (symbol) {
                 RoomAppearance::Look plainLook = look;
                 plainLook.symbol.clear();
-                cell.plain = RoomAppearance::terminalGlyph(*pR, plainLook, pArea->gridMode);
+                cell.plain = RoomAppearance::terminalGlyph(*pR, plainLook, pArea->gridMode, ground);
+                if (groundGlyphs) {
+                    cell.underline = GeometryManager::fadedColor(roomColor, fade, fadeTarget);
+                }
             }
             terminalCells.append(cell);
             roomCells.insert({{qRound64(pR->x() * 2.0), qRound64(pR->y() * 2.0)}, pR->z()});
@@ -1697,11 +1724,21 @@ void ModernGLWidget::renderRooms()
                 const QVector4D textColor = cell.reverse ? cell.reverseColor : cell.color;
                 if (!cell.id) {
                     qsizetype atlasCell = glyphAtlasCell(cell.text, false);
+                    const bool symbolShown = atlasCell >= 0;
                     // A view of more symbols than the atlas holds shows the rest as plain rooms, rather than as nothing
                     if (atlasCell < 0 && !cell.plain.isEmpty()) {
                         atlasCell = glyphAtlasCell(cell.plain, false);
                     }
                     appendGlyph(batch, texture, cell.center, atlasCell, scmGlyphSize, textColor);
+                    if (symbolShown && cell.underline.w() > 0.0f && blockCell >= 0) {
+                        const QVector3D corner = cell.center - groundRight * (scmGlyphCell * scmGlyphUnderlineWidth / 2.0f) - groundUp * (scmGlyphCell / 2.0f);
+                        GeometryManager::appendQuad(batch,
+                                                    corner,
+                                                    groundRight * (scmGlyphCell * scmGlyphUnderlineWidth),
+                                                    groundUp * (scmGlyphCell * scmGlyphUnderlineHeight),
+                                                    cell.underline,
+                                                    glyphAtlasRect(blockCell, true));
+                    }
                     continue;
                 }
                 // Narrowed so that the whole ID is no wider than one character, however many digits it has
@@ -3339,33 +3376,86 @@ QRect ModernGLWidget::statusLineRect() const
     return QRect(0, height() - lineHeight, width(), lineHeight);
 }
 
-void ModernGLWidget::paintStatusLine(QPainter& painter)
+QList<ModernGLWidget::StatusLinePart> ModernGLWidget::statusLineParts() const
 {
-    const QRect area = statusLineRect();
-    if (area.isEmpty() || !mpMap || !mpMap->mpRoomDB) {
-        return;
+    QList<StatusLinePart> parts;
+    if (!mpMap || !mpMap->mpRoomDB || !mpHost) {
+        return parts;
     }
-    QStringList parts;
+    const QColor dim = mapStyle().ink.isValid() ? mapStyle().ink : ExitAppearance::contrastColor(backgroundColor());
+    const QColor bright = mpHost->mLightWhite_2;
     if (const QString areaName = mpMap->mpRoomDB->getAreaNamesMap().value(mAID); !areaName.isEmpty()) {
-        parts.append(areaName);
+        parts.append({qsl("["), dim});
+        parts.append({areaName, mpHost->mLightCyan_2});
+        parts.append({qsl("]  "), dim});
     }
     const int playerRoomId = mpMap->mRoomIdHash.value(mpMap->mProfileName);
     if (const TRoom* pR = mpMap->mpRoomDB->getRoom(playerRoomId); pR && pR->getArea() == mAID) {
-        //: The terminal map style's status line: where the player (shown as @ on the map) is - room ID, then its x, y and z coordinates
-        parts.append(tr("@ room %1 at %2,%3,%4").arg(QString::number(playerRoomId), QString::number(pR->x()), QString::number(pR->y()), QString::number(pR->z())));
+        parts.append({qsl("@ %1 ").arg(playerRoomId), bright});
+        parts.append({qsl("(%1,%2,%3)  ").arg(QString::number(pR->x()), QString::number(pR->y()), QString::number(pR->z())), dim});
+        QStringList exits;
+        for (const int direction : {DIR_NORTH, DIR_NORTHEAST, DIR_EAST, DIR_SOUTHEAST, DIR_SOUTH, DIR_SOUTHWEST, DIR_WEST, DIR_NORTHWEST, DIR_IN, DIR_OUT}) {
+            if (pR->getExit(direction) > 0) {
+                exits.append(TRoom::dirCodeToShortString(direction));
+            }
+        }
+        exits.append(pR->getSpecialExits().keys());
+        if (!exits.isEmpty()) {
+            //: The terminal map style's status line, before the list of directions (n e s w...) out of the player's room
+            parts.append({tr("exits:") + QLatin1Char(' '), dim});
+            parts.append({exits.join(QLatin1Char(' ')) + qsl("  "), bright});
+        }
+        // As the map shows a staircase up < and down >, each with where it leads
+        for (const auto& [direction, stair] : {std::pair{DIR_UP, QLatin1Char('<')}, std::pair{DIR_DOWN, QLatin1Char('>')}}) {
+            const int destinationId = pR->getExit(direction);
+            if (destinationId <= 0) {
+                continue;
+            }
+            const TRoom* pDestination = mpMap->mpRoomDB->getRoom(destinationId);
+            parts.append({QString(stair) + QLatin1Char(' '), bright});
+            parts.append({(pDestination && !pDestination->name.isEmpty() ? pDestination->name : QString::number(destinationId)) + qsl("  "), dim});
+        }
     }
     if (const TRoom* pR = mpMap->mpRoomDB->getRoom(mHoveredRoomId); pR && mHoveredRoomId != playerRoomId) {
         //: The terminal map style's status line: the room under the mouse pointer - its ID, then its name if it has one
-        parts.append(tr("cursor: room %1 %2").arg(QString::number(mHoveredRoomId), pR->name).trimmed());
+        parts.append({tr("cursor: room %1 %2").arg(QString::number(mHoveredRoomId), pR->name).trimmed() + QLatin1Char(' '), dim});
     }
-    // Reverse video, as a terminal program draws its status line
+    return parts;
+}
+
+void ModernGLWidget::paintStatusLine(QPainter& painter)
+{
+    const QRect area = statusLineRect();
+    if (area.isEmpty()) {
+        return;
+    }
+    const QList<StatusLinePart> parts = statusLineParts();
     const QColor ink = mapStyle().ink.isValid() ? mapStyle().ink : ExitAppearance::contrastColor(backgroundColor());
+    // A shade lighter than the screen, as a terminal program's status bar
+    const QColor screen = backgroundColor();
+    const QColor band =
+            QColor::fromRgbF(screen.redF() + (ink.redF() - screen.redF()) * 0.15f, screen.greenF() + (ink.greenF() - screen.greenF()) * 0.15f, screen.blueF() + (ink.blueF() - screen.blueF()) * 0.15f);
     painter.save();
-    painter.fillRect(area, ink);
-    painter.setPen(backgroundColor());
+    painter.fillRect(area, band);
     painter.setFont(statusLineFont(mapStyle()));
-    const QString text = parts.join(qsl(" | "));
-    painter.drawText(area.adjusted(6, 0, -6, 0), Qt::AlignLeft | Qt::AlignVCenter, QFontMetrics(painter.font()).elidedText(text, Qt::ElideRight, area.width() - 12));
+    const QFontMetrics metrics(painter.font());
+    const QRect text = area.adjusted(8, 0, -8, 0);
+    int x = text.left();
+    for (const StatusLinePart& part : parts) {
+        const int room = text.right() - x;
+        const QString shown = metrics.elidedText(part.text, Qt::ElideRight, room);
+        painter.setPen(part.color);
+        painter.drawText(QRect(x, text.top(), room, text.height()), Qt::AlignLeft | Qt::AlignVCenter, shown);
+        x += metrics.horizontalAdvance(shown);
+        if (shown != part.text) {
+            break;
+        }
+    }
+    // A terminal's cursor, waiting at the end of the line
+    const int cursorWidth = metrics.horizontalAdvance(QLatin1Char('M'));
+    if (x + cursorWidth <= text.right()) {
+        painter.fillRect(QRect(x, text.top() + 3, cursorWidth, text.height() - 6), mpHost->mLightGreen_2);
+    }
     painter.restore();
 }
 

@@ -160,6 +160,9 @@ struct MapStyle
     bool dashedStairs = false;
     PostEffects postEffects;
     Glyphs glyphs = Glyphs::RoomSymbols;
+    // With the Terminal glyphs, a room with no symbol or stairs shown by the kind of ground its environment is, as
+    // RoomAppearance::groundGlyph() draws it, rather than as #; and a symbol underlined in its room's color
+    bool groundGlyphs = false;
     // The Ink palette's lines and text; invalid for the profile's exit color
     QColor ink;
     // How much of its environment's color the Ink palette fills a room with, from none to all of it
@@ -188,7 +191,8 @@ struct MapStyle
     Doors doors = Doors::Strokes;
     // A faint plate under each level's rooms, which tints the background behind rooms filled with it
     bool floorPlates = true;
-    // A line along the view's foot naming the area and the player's room, as a terminal's status line
+    // A line along the view's foot naming the area, the player's room and the ways out of it, and the room under the
+    // mouse pointer, as a terminal's status line in the profile's ANSI colors
     bool statusLine = false;
 
     QString displayName() const;

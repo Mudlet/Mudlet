@@ -56,5 +56,7 @@ bool store(QMap<QString, QString>& mapUserData, int environmentId, std::optional
 
 // The kit for an environment, and whether the map names it rather than it being guessed from the environment's color
 std::pair<Kit, bool> forEnvironment(const TMap& map, const Host& host, int environmentId);
+// The same, from what stored() read once for many rooms and the environment's color
+Kit forEnvironment(const QHash<int, Kit>& named, int environmentId, const QColor& environmentColor);
 
 } // namespace EnvironmentKit
