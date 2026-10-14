@@ -317,7 +317,6 @@ describe("Tests Other.lua functions", function()
     -- speedwalk with no delay dispatches synchronously through the real send();
     -- the delayed form is covered by an immediate-contract test below and the
     -- speedwalk state machine (stop/pause/resume) has its own describe block.
-    -- Real timer firing is intentionally out of scope here (no sleeps).
 
     after_each(function()
       -- if the delayed-walk test's assertion fails before it cleans up, cancel
@@ -367,8 +366,8 @@ describe("Tests Other.lua functions", function()
     it("dispatches only the first step synchronously when a delay is given", function()
       local send = spy.on(_G, "send")
 
-      -- With a delay the remaining steps are scheduled on real tempTimers
-      -- (Wave 2 territory); only the first step happens synchronously.
+      -- With a delay the remaining steps are scheduled on tempTimers;
+      -- only the first step happens synchronously.
       speedwalk("3w, 2ne, w, u", true, 1.25)
       assert.spy(send).was.called(1)
 
@@ -386,10 +385,7 @@ describe("Tests Other.lua functions", function()
     -- assert the control functions' return contracts and events without sleeps.
 
     after_each(function()
-      -- Fully clear any active OR paused speedwalk so no timer chain or leftover
-      -- walklist survives into the next test. resumeSpeedwalk re-arms a paused
-      -- walk so the subsequent stopSpeedwalk can clear its list.
-      pcall(resumeSpeedwalk)
+      -- stops a running or paused walk, so none survives into the next test
       pcall(stopSpeedwalk)
     end)
 
@@ -470,6 +466,28 @@ describe("Tests Other.lua functions", function()
     local seen, handlers, sent
     local realSend
 
+    -- runs fn from the first sysDataSendRequest the given step raises, once
+    local function onStep(step, fn)
+      local steps = 0
+      handlers[#handlers + 1] = registerAnonymousEventHandler("sysDataSendRequest", function()
+        steps = steps + 1
+        if steps == step then
+          fn()
+        end
+      end)
+    end
+
+    -- runs fn from the first time eventName is raised, once
+    local function onceOn(eventName, fn)
+      local handled = false
+      handlers[#handlers + 1] = registerAnonymousEventHandler(eventName, function()
+        if not handled then
+          handled = true
+          fn()
+        end
+      end)
+    end
+
     before_each(function()
       seen, handlers, sent = {}, {}, {}
       for _, eventName in ipairs(speedwalkEvents) do
@@ -484,23 +502,24 @@ describe("Tests Other.lua functions", function()
       for _, handler in ipairs(handlers) do
         killAnonymousEventHandler(handler)
       end
-      pcall(resumeSpeedwalk)
       pcall(stopSpeedwalk)
     end)
 
     it("raises sysSpeedwalkFinished after a walk with no delay", function()
-      speedwalk("2n1e")
+      assert.is_true(speedwalk("2n1e"))
       assert.are.same({"n", "n", "e"}, sent)
       assert.are.same({"sysSpeedwalkStarted", "sysSpeedwalkFinished"}, seen)
     end)
 
     it("refuses a walk with no directions in it, without starting one", function()
       for _, walk in ipairs({"xyzzy", "", "5", ";;;", "0n"}) do
-        local ok, err = speedwalk(walk)
-        assert.is_nil(ok, walk)
-        assert.are.equal("speedwalk(): no directions found in the walk to take", err)
-        ok = speedwalk(walk, false, 0.01)
-        assert.is_nil(ok, walk)
+        for _, backwards in ipairs({false, true}) do
+          for _, delay in ipairs({false, 0.01}) do
+            local ok, err = speedwalk(walk, backwards, delay)
+            assert.is_nil(ok, walk)
+            assert.are.equal("speedwalk(): no directions found in the walk to take", err)
+          end
+        end
       end
       assert.are.same({}, sent)
       assert.are.same({}, seen)
@@ -511,8 +530,17 @@ describe("Tests Other.lua functions", function()
       assert.has_error(function() speedwalk() end, "speedwalk: bad argument #1 type (directions as string expected, got nil!)")
     end)
 
+    it("raises a bad argument error for a delay it cannot wait, without starting a walk", function()
+      assert.has_error(function() speedwalk("3n", false, "fast") end, "speedwalk: bad argument #3 type (delay in seconds as number expected, got string!)")
+      assert.has_error(function() speedwalk("3n", false, true) end, "speedwalk: bad argument #3 type (delay in seconds as number expected, got boolean!)")
+      assert.has_error(function() speedwalk("3n", false, -1) end, "speedwalk: bad argument #3 value (delay in seconds must be at least 0 and less than 86400, got -1)")
+      assert.are.same({}, sent)
+      assert.are.same({}, seen)
+      assert.is_nil((resumeSpeedwalk()))
+    end)
+
     it("does not report a pause when a running walk is stopped", function()
-      speedwalk("4n", false, 10)
+      assert.is_true(speedwalk("4n", false, 10))
       assert.is_true(stopSpeedwalk())
       assert.are.same({"sysSpeedwalkStarted", "sysSpeedwalkStopped"}, seen)
     end)
@@ -534,6 +562,94 @@ describe("Tests Other.lua functions", function()
       assert.are.same({"sysSpeedwalkStarted", "sysSpeedwalkPaused", "sysSpeedwalkStopped", "sysSpeedwalkStarted", "sysSpeedwalkFinished"}, seen)
     end)
 
+    it("stops a running delayed walk before a walk with no delay", function()
+      speedwalk("5n", false, 10)
+      speedwalk("e")
+      assert.is_nil(resumeSpeedwalk())
+      assert.are.same({"n", "e"}, sent)
+      assert.are.same({"sysSpeedwalkStarted", "sysSpeedwalkStopped", "sysSpeedwalkStarted", "sysSpeedwalkFinished"}, seen)
+    end)
+
+    it("raises sysSpeedwalkResumed before the steps the resumed walk takes", function()
+      speedwalk("2n", false, 10)
+      assert.is_true(pauseSpeedwalk())
+      assert.is_true(resumeSpeedwalk())
+      assert.are.same({"n", "n"}, sent)
+      assert.are.same({"sysSpeedwalkStarted", "sysSpeedwalkPaused", "sysSpeedwalkResumed", "sysSpeedwalkFinished"}, seen)
+    end)
+
+    it("lets a sysSpeedwalkStarted handler stop a walk before its first step", function()
+      for _, delay in ipairs({false, 10}) do
+        sent, seen = {}, {}
+        local result
+        onceOn("sysSpeedwalkStarted", function() result = {stopSpeedwalk()} end)
+        assert.is_true(speedwalk("3n", false, delay))
+        assert.are.same({true}, result)
+        assert.are.same({}, sent)
+        assert.are.same({"sysSpeedwalkStarted", "sysSpeedwalkStopped"}, seen)
+      end
+    end)
+
+    it("lets a sysDataSendRequest handler stop a walk with no delay part way", function()
+      local result
+      onStep(1, function() result = {stopSpeedwalk()} end)
+      speedwalk("3n")
+      assert.are.same({true}, result)
+      assert.are.same({"n"}, sent)
+      assert.are.same({"sysSpeedwalkStarted", "sysSpeedwalkStopped"}, seen)
+    end)
+
+    it("hands over from a walk with no delay to one a sysSpeedwalkStarted handler starts", function()
+      onceOn("sysSpeedwalkStarted", function() speedwalk("2e", false, 10) end)
+      speedwalk("2n")
+      assert.are.same({"e"}, sent)
+      assert.are.same({"sysSpeedwalkStarted", "sysSpeedwalkStopped", "sysSpeedwalkStarted"}, seen)
+      assert.is_true(pauseSpeedwalk())
+    end)
+
+    it("hands over from a walk with no delay to one a sysDataSendRequest handler starts", function()
+      onStep(1, function() speedwalk("2e", false, 10) end)
+      speedwalk("3n")
+      assert.are.same({"n", "e"}, sent)
+      assert.are.same({"sysSpeedwalkStarted", "sysSpeedwalkStopped", "sysSpeedwalkStarted"}, seen)
+      assert.is_true(pauseSpeedwalk())
+    end)
+
+    it("starts no walk of its own once a sysSpeedwalkStopped handler has run a walk with no delay", function()
+      speedwalk("4n", false, 10)
+      onceOn("sysSpeedwalkStopped", function() speedwalk("3e") end)
+      local ok, err = speedwalk("2s", false, 0.01)
+      assert.is_nil(ok)
+      assert.are.equal("speedwalk(): a sysSpeedwalkStopped handler started another speedwalk", err)
+      assert.are.same({"n", "e", "e", "e"}, sent)
+      assert.are.same({"sysSpeedwalkStarted", "sysSpeedwalkStopped", "sysSpeedwalkStarted", "sysSpeedwalkFinished"}, seen)
+      assert.is_nil((stopSpeedwalk()))
+    end)
+
+    it("refuses a resume from a sysSpeedwalkStarted handler, as the walk is not paused", function()
+      local result
+      onceOn("sysSpeedwalkStarted", function() result = {resumeSpeedwalk()} end)
+      speedwalk("3n", false, 10)
+      assert.are.same({nil, "resumeSpeedwalk(): attempted to resume an already running speedwalk"}, result)
+      assert.are.same({"n"}, sent)
+      assert.is_true(stopSpeedwalk())
+      assert.are.same({"sysSpeedwalkStarted", "sysSpeedwalkStopped"}, seen)
+    end)
+
+    it("pauses a delayed walk from a sysDataSendRequest handler during its first step", function()
+      local result
+      onStep(1, function() result = {pauseSpeedwalk()} end)
+      speedwalk("3n", false, 10)
+      assert.are.same({true}, result)
+      assert.are.same({"n"}, sent)
+      assert.is_nil((pauseSpeedwalk()))
+      assert.is_true(resumeSpeedwalk())
+      assert.are.same({"n", "n"}, sent)
+      assert.are.same({"sysSpeedwalkStarted", "sysSpeedwalkPaused", "sysSpeedwalkResumed"}, seen)
+      -- resuming armed the timer for the last step, so there is a running walk to pause
+      assert.is_true(pauseSpeedwalk())
+    end)
+
     -- waitForEvent only pumps the event loop in test mode
     if not os.getenv("MUDLET_TEST_MODE") then
       pending("the specs that wait for a delayed speedwalk's timers - need MUDLET_TEST_MODE for waitForEvent")
@@ -541,12 +657,12 @@ describe("Tests Other.lua functions", function()
       -- give a second timer chain, had one survived, time to show itself
       local function settle()
         tempTimer(0.1, function() raiseEvent("speedwalkSpecSettled") end)
-        waitForEvent("speedwalkSpecSettled", 5000)
+        assert(waitForEvent("speedwalkSpecSettled", 5000))
       end
 
       it("leaves nothing to pause or stop once a delayed walk has finished", function()
-        speedwalk("n;e;s", false, 0.01)
-        assert.are.equal("sysSpeedwalkFinished", (waitForEvent("sysSpeedwalkFinished", 5000)))
+        assert.is_true(speedwalk("n;e;s", false, 0.01))
+        assert.are.equal("sysSpeedwalkFinished", waitForEvent("sysSpeedwalkFinished", 5000))
         assert.are.same({"n", "e", "s"}, sent)
 
         local ok, err = pauseSpeedwalk()
@@ -561,7 +677,7 @@ describe("Tests Other.lua functions", function()
       it("stops a running delayed walk before starting another", function()
         speedwalk("3n", false, 0.01)
         speedwalk("3s", false, 0.01)
-        assert.are.equal("sysSpeedwalkFinished", (waitForEvent("sysSpeedwalkFinished", 5000)))
+        assert.are.equal("sysSpeedwalkFinished", waitForEvent("sysSpeedwalkFinished", 5000))
         settle()
         assert.are.same({"n", "s", "s", "s"}, sent)
         assert.are.same({"sysSpeedwalkStarted", "sysSpeedwalkStopped", "sysSpeedwalkStarted", "sysSpeedwalkFinished"}, seen)
@@ -569,15 +685,9 @@ describe("Tests Other.lua functions", function()
 
       it("starts no walk of its own once a sysSpeedwalkStopped handler has started one", function()
         speedwalk("4n", false, 0.01)
-        local handled = false
-        handlers[#handlers + 1] = registerAnonymousEventHandler("sysSpeedwalkStopped", function()
-          if not handled then
-            handled = true
-            speedwalk("3e", false, 0.01)
-          end
-        end)
+        onceOn("sysSpeedwalkStopped", function() speedwalk("3e", false, 0.01) end)
         local ok, err = speedwalk("2s", false, 0.01)
-        assert.are.equal("sysSpeedwalkFinished", (waitForEvent("sysSpeedwalkFinished", 5000)))
+        assert.are.equal("sysSpeedwalkFinished", waitForEvent("sysSpeedwalkFinished", 5000))
         settle()
         assert.are.same({"n", "e", "e", "e"}, sent)
         assert.are.same({"sysSpeedwalkStarted", "sysSpeedwalkStopped", "sysSpeedwalkStarted", "sysSpeedwalkFinished"}, seen)
@@ -586,35 +696,50 @@ describe("Tests Other.lua functions", function()
       end)
 
       it("hands over to a walk a sysSpeedwalkStarted handler starts", function()
-        local handled = false
-        handlers[#handlers + 1] = registerAnonymousEventHandler("sysSpeedwalkStarted", function()
-          if not handled then
-            handled = true
-            speedwalk("3e", false, 0.01)
-          end
-        end)
+        onceOn("sysSpeedwalkStarted", function() speedwalk("3e", false, 0.01) end)
         speedwalk("2n", false, 0.01)
-        assert.are.equal("sysSpeedwalkFinished", (waitForEvent("sysSpeedwalkFinished", 5000)))
+        assert.are.equal("sysSpeedwalkFinished", waitForEvent("sysSpeedwalkFinished", 5000))
         settle()
         assert.are.same({"e", "e", "e"}, sent)
         assert.are.same({"sysSpeedwalkStarted", "sysSpeedwalkStopped", "sysSpeedwalkStarted", "sysSpeedwalkFinished"}, seen)
       end)
 
       it("hands over to a walk a sysDataSendRequest handler starts during the last step", function()
-        local steps = 0
-        handlers[#handlers + 1] = registerAnonymousEventHandler("sysDataSendRequest", function()
-          steps = steps + 1
-          if steps == 2 then
-            speedwalk("3e", false, 10)
-          end
-        end)
+        onStep(2, function() speedwalk("3e", false, 10) end)
         speedwalk("2n", false, 0.01)
-        assert.are.equal("sysSpeedwalkStarted", (waitForEvent("sysSpeedwalkStarted", 5000)))
+        assert.are.equal("sysSpeedwalkStarted", waitForEvent("sysSpeedwalkStarted", 5000))
         settle()
         assert.is_true(pauseSpeedwalk())
         assert.is_true(stopSpeedwalk())
         assert.are.same({"n", "n", "e"}, sent)
         assert.are.same({"sysSpeedwalkStarted", "sysSpeedwalkStopped", "sysSpeedwalkStarted", "sysSpeedwalkPaused", "sysSpeedwalkStopped"}, seen)
+      end)
+
+      it("pauses a delayed walk from a sysDataSendRequest handler during a later step", function()
+        local result
+        onStep(2, function() result = {pauseSpeedwalk()} end)
+        speedwalk("4n", false, 0.01)
+        assert.are.equal("sysSpeedwalkPaused", waitForEvent("sysSpeedwalkPaused", 5000))
+        settle()
+        assert.are.same({true}, result)
+        assert.are.same({"n", "n"}, sent)
+        assert.is_true(resumeSpeedwalk())
+        assert.are.equal("sysSpeedwalkFinished", waitForEvent("sysSpeedwalkFinished", 5000))
+        settle()
+        assert.are.same({"n", "n", "n", "n"}, sent)
+        assert.are.same({"sysSpeedwalkStarted", "sysSpeedwalkPaused", "sysSpeedwalkResumed", "sysSpeedwalkFinished"}, seen)
+      end)
+
+      it("keeps one timer chain when a sysDataSendRequest handler pauses and resumes during a step", function()
+        onStep(2, function()
+          pauseSpeedwalk()
+          resumeSpeedwalk()
+        end)
+        speedwalk("4n", false, 0.01)
+        assert.are.equal("sysSpeedwalkFinished", waitForEvent("sysSpeedwalkFinished", 5000))
+        settle()
+        assert.are.same({"n", "n", "n", "n"}, sent)
+        assert.are.same({"sysSpeedwalkStarted", "sysSpeedwalkPaused", "sysSpeedwalkResumed", "sysSpeedwalkFinished"}, seen)
       end)
     end
   end)
@@ -3344,10 +3469,7 @@ describe("Tests the script API", function()
   end)
 
   describe("Tests the functionality of speedwalktimer", function()
-    -- resume first so a paused walk is re-armed and stopSpeedwalk can then
-    -- clear its walklist; both are shared upvalues of Other.lua
     after_each(function()
-      pcall(resumeSpeedwalk)
       pcall(stopSpeedwalk)
     end)
 
@@ -3376,16 +3498,34 @@ describe("Tests the script API", function()
       finally(function() killAnonymousEventHandler(handler) end)
       local send = spy.on(_G, "send")
       finally(function() send:revert() end)
-      -- clear any step timer an earlier test armed so the pause check below
-      -- can only be answering for this walklist
-      pcall(pauseSpeedwalk)
       local list = {"n"}
       speedwalktimer(list, 100, false)
       assert.spy(send).was.called_with("n", false)
       assert.are.same({}, list)
       assert.is_true(finished)
-      -- nothing was queued, so there is no timer left to pause
+      -- nothing was queued, so there is nothing left to pause or stop
       assert.is_nil((pauseSpeedwalk()))
+      assert.is_nil((stopSpeedwalk()))
+    end)
+
+    it("Should leave nothing to pause or stop once the step a timer was armed for has been sent", function()
+      local list = {"n", "e"}
+      local send = spy.on(_G, "send")
+      finally(function() send:revert() end)
+      speedwalktimer(list, 100, false)
+      -- the step the armed timer would have sent
+      speedwalktimer(list, 100, false)
+      assert.spy(send).was.called(2)
+      assert.are.same({}, list)
+      assert.is_nil((pauseSpeedwalk()))
+      assert.is_nil((stopSpeedwalk()))
+    end)
+
+    it("Should leave the current walk alone when given an empty walklist", function()
+      speedwalk("3n", false, 100)
+      speedwalktimer({}, 1, true)
+      assert.is_true(pauseSpeedwalk())
+      assert.is_true(stopSpeedwalk())
     end)
   end)
 
