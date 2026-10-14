@@ -3947,6 +3947,18 @@ describe("Tests saveMap and loadMap", function()
       assert.are.equal("Kept Label", getMapLabels(area)[0])
     end)
 
+    it("drops hash entries a map file holds for a missing room or an empty hash", function()
+      -- see fixtures/maps/README.md for what the file holds
+      assert.is_true(loadMap(specDirectory .. "/fixtures/maps/phantom-room-hashes.dat"))
+      assert.is_false(roomExists(999999))
+      assert.are.equal(-1, getRoomIDbyHash("phantom-hash"))
+      assert.is_nil(getRoomHashByID(999999))
+      assert.are.equal(-1, getRoomIDbyHash(""))
+      assert.is_nil(getRoomHashByID(1))
+      assert.are.equal(2, getRoomIDbyHash("real-hash"))
+      assert.are.equal("real-hash", getRoomHashByID(2))
+    end)
+
     it("replaces what is on the map rather than merging into it", function()
       buildMap()
       saveMap(savePath)
