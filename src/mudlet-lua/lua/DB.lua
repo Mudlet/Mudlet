@@ -393,7 +393,10 @@ local lua_reserved_words = {
 --- with no sign of it. A fault that would cost the sheet a column therefore stays fatal, and its
 --- message names the key so the fix is obvious. A value whose shape no sheet can be built from is
 --- refused as well, whatever it holds: a malformed _index, _unique or _violations leaves nothing to
---- skip and nothing to build from. <br/><br/>
+--- skip and nothing to build from. The exception is a column sqlite itself refuses to add to a sheet
+--- that already holds rows, as it does one with a db:Timestamp("CURRENT_TIMESTAMP") default: that is
+--- reported through printError on every call and the sheet goes on without the column, so give a
+--- column added to an existing sheet a constant default. <br/><br/>
 ---
 --- Note when weighing that up that printError is a quiet channel: it reaches the editor's Errors
 --- tab, which is hidden until the user opens it, and the main console only when they have turned
@@ -1062,8 +1065,8 @@ function db:_migrate(db_name, s_name, force)
     -- supported to define the primary key of any sheet.
     local sql = db:_build_create_table_sql(schema, s_name)
     db:echo_sql(sql)
-    -- reported rather than raised, as db:create is meant to run unguarded: without this the
-    -- sheet's handle looks normal and every later call fails with "no such table" instead
+    -- reported, not raised: db:create is meant to run unguarded. The return skips the indexes,
+    -- which sqlite would refuse too
     local created, create_err = conn:execute(sql)
     if not created then
       report_failed_statement(s_name, "could not create the sheet", create_err, sql)

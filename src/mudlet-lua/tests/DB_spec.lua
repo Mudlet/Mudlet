@@ -4432,21 +4432,26 @@ describe("Tests db:create on schemas sqlite refuses or reads differently", funct
     assert.are.equal("it's", rows[1].city)
   end)
 
-  it("reports a sheet it could not create rather than returning as if it had", function()
-    local mydb, warnings = createCollectingWarnings({["my sheet"] = {name = ""}})
+  it("reports a sheet it could not create, and attempts nothing more on it", function()
+    local mydb, warnings = createCollectingWarnings({["my sheet"] = {name = "", _index = {"name"}}})
     assert.is_table(mydb)
     assert.is_truthy(string.find(warnings, "db:create - my sheet - could not create the sheet", 1, true))
+    local _, reports = warnings:gsub("db:create %- ", "")
+    assert.are.equal(1, reports, warnings)
   end)
 
-  it("reports a column it could not add rather than returning as if it had", function()
+  it("reports a column it could not add, and still adds the others", function()
     local mydb = createCollectingWarnings({people = {name = ""}})
     assert.is_true(db:add(mydb.people, {name = "Bob"}))
 
-    local _, warnings = createCollectingWarnings({people = {name = "", added = db:Timestamp("CURRENT_TIMESTAMP")}})
+    -- sqlite refuses a non-constant default only on a sheet holding rows
+    local _, warnings = createCollectingWarnings({people = {name = "", added = db:Timestamp("CURRENT_TIMESTAMP"), note = "", city = ""}})
     assert.is_truthy(string.find(warnings, 'db:create - people - could not add the column "added"', 1, true))
+    local added = collectingWarnings(function() return db:add(mydb.people, {name = "Ann", note = "n", city = "c"}) end)
+    assert.is_true(added)
   end)
 
-  it("reports an index it could not create rather than returning as if it had", function()
+  it("reports an index it could not create, and carries on", function()
     local mydb = createCollectingWarnings({people = {name = ""}})
     -- a table already holding the name db:_index_name gives the index makes sqlite refuse it
     local conn = db.__conn[dbName]
