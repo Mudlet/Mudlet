@@ -1703,6 +1703,9 @@ bool TNullConsoleFrontend::resetLabelBackgroundImage(const QString& name)
         }
         clearLabelContents(label);
     }
+    if (const QString withoutImage = TLabelModel::styleSheetWithoutBackgroundImage(label.pModel->mStyleSheet); withoutImage != label.pModel->mStyleSheet) {
+        restyleLabel(label, withoutImage);
+    }
     return true;
 }
 

@@ -507,7 +507,9 @@ end
 -- of any text the label is showing. Which of the two it is comes from the file's
 -- content rather than from its name.
 -- resetBackgroundImage takes off the SVG layer, a raster image and a movie in one
--- call, and leaves the label's text where it is.
+-- call, and leaves the label's text where it is. It also takes the stylesheet's
+-- background-image declarations that are not inside a {...} rule out, see
+-- Geyser.Label:resetBackgroundImage.
 -- Returns true, or nil and an error message when the file cannot be read.
 -- @param imageFileName The image to use for a background image.
 function Geyser.Label:setBackgroundImage (imageFileName)
@@ -589,21 +591,33 @@ function Geyser.Label:resetSvgTransform ()
 end
 
 --- Sets a tiled background image for this label.
+-- It replaces the label's stylesheet with a background-image declaration, which
+-- Geyser.Label:resetBackgroundImage takes away again.
 -- @param imageFileName The image to use for a background image.
 function Geyser.Label:setTiledBackgroundImage (imageFileName)
   self:setStyleSheet("background-image: url(" .. imageFileName .. ");")
 end
 
---- Takes away the label's background image, whether set by setBackgroundImage or setTiledBackgroundImage
+--- Takes away the label's background image: what setBackgroundImage put there, and every
+-- background-image declaration of its stylesheet that is not inside a {...} rule, such as the one
+-- setTiledBackgroundImage writes - whoever wrote it. An image in a rule, such as a :hover one, the
+-- background shorthand and border-image stay.
+-- Unlike the resetBackgroundImage function, this also takes the image out of the stylesheet the
+-- label remembers, which setStyleSheet() with no argument puts back.
 -- @return true, or nil and a message
 function Geyser.Label:resetBackgroundImage()
   local ok, err = resetBackgroundImage(self.name)
   if not ok then
     return nil, err
   end
-  -- the C++ reset edits the stylesheet, which setStyleSheet() would otherwise re-apply as it was
+  -- the remembered sheet goes through the same reset; copying the label's own instead would also
+  -- remember the colour setBackgroundColor() adds to it
   if self.stylesheet then
+    local sheet = getLabelStyleSheet(self.name)
+    setLabelStyleSheet(self.name, self.stylesheet)
+    resetBackgroundImage(self.name)
     self.stylesheet = getLabelStyleSheet(self.name)
+    setLabelStyleSheet(self.name, sheet)
   end
   self:autoAdjustSize()
   return true
