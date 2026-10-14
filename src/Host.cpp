@@ -4059,6 +4059,11 @@ bool Host::uninstallPackage(const QString& packageName, enums::PackageModuleType
         mActiveModules.removeAll(packageName);
     } else {
         mInstalledPackages.removeAll(packageName);
+        // The recorded version is the installed copy's, and an offer at that version is taken as already installed
+        if (packageName == mServerGUI_Package_name) {
+            mServerGUI_Package_name = qsl("nothing");
+            mServerGUI_Package_version = qsl("-1");
+        }
     }
 
     // Before the ModuleSync exit: a sync empties both halves too, and leaving the other listed would show

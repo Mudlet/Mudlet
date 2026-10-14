@@ -1248,6 +1248,47 @@ describe("Tests the Client.GUI package offer", function()
     assert.is_true((lfs.attributes(result.downloaded, "size") or 0) > 0, "the package was saved into the profile without its contents")
   end)
 
+  -- the version recorded for an interface that has since been uninstalled
+  -- belongs to no installed copy, so it must not stand for one installed later
+  it("forgets the recorded Client.GUI version once that package is uninstalled", function()
+    local name = "mudlet-spec-forgottengui"
+    finally(cleanUpServedGuis)
+    -- a save postpones an install and refuses an uninstall, so each step waits one out first
+    local function waitForSaveToPass()
+      for _ = 1, 100 do
+        if installPackage("") == nil then
+          return
+        end
+        pumpEvents(50)
+      end
+    end
+    local result = offerServedGui(name, minimalGuiPackage, "10662")
+    assert.same({name}, result.guis)
+    waitForSaveToPass()
+    assert.is_true(uninstallPackage(name), "the served interface could not be uninstalled")
+    waitForSaveToPass()
+    assert.is_true(installPackage(result.downloaded), "the interface could not be put back by hand")
+    waitForSaveToPass()
+    assert.is_true(table.contains(getPackages(), name), "the interface put back by hand was not registered")
+
+    local mark = offerGui('{"version": "10662", "url": "' .. offerUrl(name) .. '"}', name)
+    assert.is_truthy(shownSince(mark, "Upgrading the GUI to new version '10662'"), displayedSince(mark))
+  end)
+
+  -- an upgrade has to replace the installed copy of the package offered, even
+  -- when another interface was recorded since: otherwise every offer fails again
+  it("upgrades a Client.GUI package after another one was installed", function()
+    local switched, other = "mudlet-spec-switchedgui", "mudlet-spec-othergui"
+    finally(cleanUpServedGuis)
+    assert.same({switched}, offerServedGui(switched, minimalGuiPackage, "1").guis)
+    assert.same({other}, offerServedGui(other, minimalGuiPackage, "2").guis)
+
+    local result = offerServedGui(switched, minimalGuiPackage, "3")
+    assert.is_truthy(shownSince(result.mark, "Upgrading the GUI to new version '3'"), displayedSince(result.mark))
+    assert.same({switched}, result.guis, displayedSince(result.mark))
+    assert.is_true(table.contains(getPackages(), other), "upgrading one interface uninstalled another")
+  end)
+
   -- the recorded version is what decides whether an installed interface is
   -- offered an upgrade, so one that never arrived must not take its place
   it("records no version for a Client.GUI download that installed nothing", function()

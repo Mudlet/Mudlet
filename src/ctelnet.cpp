@@ -4200,17 +4200,16 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                                    "(url='%3').")
                                         .arg(version, mpHost->mServerGUI_Package_version, url));
 
-                    // If uninstalling is refused, installing over it would fail as "already installed".
-                    // A name not installed has nothing to remove, and must not hold the upgrade up.
-                    const QString oldPackageName = mpHost->mServerGUI_Package_name != qsl("nothing") ? mpHost->mServerGUI_Package_name : packageName;
-                    const bool clearedTheWay = !mpHost->mInstalledPackages.contains(oldPackageName) || mpHost->uninstallPackage(oldPackageName, enums::PackageModuleType::Package);
+                    // The installed copy of the offered package is what has to go: removing any other leaves this
+                    // one in place, and installing over it fails as "already installed" at every offer
+                    const bool clearedTheWay = mpHost->uninstallPackage(packageName, enums::PackageModuleType::Package);
                     if (clearedTheWay) {
                         // Download and install the new version
                         mServerPackageVersion = version;
                         downloadAndInstallGUIPackage(packageName, fileName, url);
                     } else {
                         //: %1 is the name of the GUI package the game offered to upgrade
-                        postMessage(tr("[ WARN ]  - Could not remove \"%1\" to upgrade it while the profile is being saved. The game will offer the upgrade again.").arg(oldPackageName));
+                        postMessage(tr("[ WARN ]  - Could not remove \"%1\" to upgrade it while the profile is being saved. The game will offer the upgrade again.").arg(packageName));
                     }
                 }
             }
@@ -4619,17 +4618,16 @@ void cTelnet::handleGUIPackageInstallationAndUpgrade(QJsonDocument document)
                        "(url='%3').")
                             .arg(version, mpHost->mServerGUI_Package_version, url));
 
-        // If uninstalling is refused, installing over it would fail as "already installed".
-        // A name not installed has nothing to remove, and must not hold the upgrade up.
-        const QString oldPackageName = mpHost->mServerGUI_Package_name != qsl("nothing") ? mpHost->mServerGUI_Package_name : packageName;
-        const bool clearedTheWay = !mpHost->mInstalledPackages.contains(oldPackageName) || mpHost->uninstallPackage(oldPackageName, enums::PackageModuleType::Package);
+        // The installed copy of the offered package is what has to go: removing any other leaves this
+        // one in place, and installing over it fails as "already installed" at every offer
+        const bool clearedTheWay = mpHost->uninstallPackage(packageName, enums::PackageModuleType::Package);
         if (clearedTheWay) {
             // Download and install the new version
             mServerPackageVersion = version;
             downloadAndInstallGUIPackage(packageName, fileName, url);
         } else {
             //: %1 is the name of the GUI package the game offered to upgrade
-            postMessage(tr("[ WARN ]  - Could not remove \"%1\" to upgrade it while the profile is being saved. The game will offer the upgrade again.").arg(oldPackageName));
+            postMessage(tr("[ WARN ]  - Could not remove \"%1\" to upgrade it while the profile is being saved. The game will offer the upgrade again.").arg(packageName));
         }
     }
 }
