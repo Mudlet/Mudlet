@@ -191,7 +191,12 @@ dlgPackageExporter::~dlgPackageExporter()
 void dlgPackageExporter::releaseExportLock()
 {
     mExportingPackage = false;
-    // An exporter opened while the lock was held has a greyed-out Export button that nothing else re-enables
+    recheckEveryExportButton();
+}
+
+// Every open exporter's Export button follows the shared lock, not only the one that took or released it
+void dlgPackageExporter::recheckEveryExportButton()
+{
     for (auto* widget : QApplication::topLevelWidgets()) {
         if (auto* exporter = qobject_cast<dlgPackageExporter*>(widget)) {
             exporter->checkToEnableExportButton();
@@ -913,6 +918,18 @@ void dlgPackageExporter::slot_exportPackage()
         mPackagePathFileName = qsl("%1/%2.mpackage").arg(getActualPath(), mPackageName);
     }
 
+    const auto anotherExportRunning = [this]() {
+        if (!mExportingPackage) {
+            return false;
+        }
+        //: Shown in the package exporter when an export is asked for while another package or module is still being exported
+        displayResultMessage(tr("Another package is still being exported. Please wait for it to finish."), false);
+        return true;
+    };
+    if (anotherExportRunning()) {
+        return;
+    }
+
     // Confirm any overwrite BEFORE we create or truncate anything. Previously
     // the destination file was clobbered by the zip step regardless of the
     // user's answer, so declining still destroyed the existing file. Asking
@@ -944,9 +961,7 @@ void dlgPackageExporter::slot_exportPackage()
     }
 
     // The overwrite prompt above runs an event loop, in which another exporter may have started
-    if (mExportingPackage) {
-        //: Shown in the package exporter when an export is asked for while another package or module is still being exported
-        displayResultMessage(tr("Another package is still being exported. Please wait for it to finish."), false);
+    if (anotherExportRunning()) {
         return;
     }
 
@@ -977,7 +992,7 @@ void dlgPackageExporter::slot_exportPackage()
     mExportingPackage = true;
     mExportRunning = true;
     QApplication::setOverrideCursor(Qt::BusyCursor);
-    checkToEnableExportButton();
+    recheckEveryExportButton();
 
 #if defined(LIBZIP_SUPPORTS_CANCELLING)
     mCancelButton->setVisible(true);

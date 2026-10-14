@@ -198,6 +198,7 @@ private:
     // Shared by every exporter, so that only one export runs at a time; held until the zip ends, even after a Cancel
     inline static bool mExportingPackage = false;
     static void releaseExportLock();
+    static void recheckEveryExportButton();
     // This dialog's export has put the busy cursor up and not yet taken it down
     bool mExportRunning = false;
     QFutureWatcher<std::pair<bool, QString>>* mpZipWatcher = nullptr;

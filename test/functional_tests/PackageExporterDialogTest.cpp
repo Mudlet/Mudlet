@@ -1420,6 +1420,35 @@ private slots:
         QVERIFY2(!QApplication::overrideCursor(), "the busy cursor was left up");
     }
 
+    // The lock is shared, so an exporter that was open before the export began is held off too
+    void test_anExporterAlreadyOpenIsHeldOffWhileAnotherExports()
+    {
+        makeTrigger(qsl("exporter already open trigger"), nullptr);
+        const QString otherName = packageNamed(qsl("exporter-already-open"));
+        {
+            QFile existing(packagePath(otherName));
+            QVERIFY(existing.open(QIODevice::WriteOnly));
+        }
+        openExporter();
+        QVERIFY(checkItem(triggersTop(), qsl("exporter already open trigger")));
+        nameField()->setText(packageNamed(qsl("exporter-opened-first")));
+        auto other = openAnotherExporter(otherName, qsl("exporter already open trigger"));
+        QVERIFY2(exportButtonOf(other.get())->isEnabled(), "the other exporter did not offer Export before any export began");
+
+        mpExporter->slot_exportPackage();
+        QVERIFY2(infoLabel()->text().contains(qsl("Exporting package...")), qPrintable(qsl("The zip was never started; the dialog said: \"%1\"").arg(infoLabel()->text())));
+        QVERIFY2(!exportButtonOf(other.get())->isEnabled(), "an exporter that was already open still offered Export while another export ran");
+        // answered so that a prompt shown in error cannot hang the test
+        answerNextMessageBox(QMessageBox::Yes);
+        other->slot_exportPackage();
+        QVERIFY2(mAnsweredMessageBoxes == 0, "the user was asked to overwrite a package that could not be exported yet");
+        const QString otherSaid = other->findChild<QLabel*>(qsl("infoLabel"))->text();
+        QVERIFY2(otherSaid.contains(qsl("still being exported")), qPrintable(qsl("A second export was started alongside the first; it said: \"%1\"").arg(otherSaid)));
+
+        QVERIFY(waitForExportToSettle());
+        QTRY_VERIFY2(exportButtonOf(other.get())->isEnabled(), "the other exporter was not told the export had ended");
+    }
+
     // An uninstall refused while a profile save runs is one of the export's exits
     void test_aModuleWhoseOldCopyCannotBeRemovedLetsGoOfItsExport()
     {
