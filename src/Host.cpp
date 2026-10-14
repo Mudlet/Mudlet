@@ -3390,7 +3390,10 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
     // Filled per XML file by the archive branch, reported once both branches are done.
     QStringList itemsWithErrors;
     QStringList itemsWithErrorNames;
-    QString moduleLoadError;
+    // Why a file of it stopped part-way, one entry per file, for the return value and install events
+    QStringList loadErrors;
+    // Asked of the reader, not the units: items another install filed under the name are not this one's
+    bool anythingWasRead = false;
     // A package file that broke before anything could be read out of it would be listed, and saved into the
     // profile, with nothing in it. As nothing of it was applied, taking it back leaves nothing behind. One that
     // got as far as an item, a variable or a setting stays installed and is warned about, as that is in use.
@@ -3579,7 +3582,6 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         _filterList << qsl("*.xml") << qsl("*.trigger");
         const QFileInfoList entries = _dir.entryInfoList(_filterList, QDir::Files);
         bool registeredFromArchive = false;
-        bool anythingWasRead = false;
         QStringList packageFileErrors;
         for (auto& entry : entries) {
             file2.setFileName(entry.absoluteFilePath());
@@ -3610,7 +3612,7 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
                 } else {
                     qWarning() << "Host::installPackage() WARNING - failed to load module" << packageName << ":" << errorMsg;
                     postMessage(tr("[ WARN ]  - Failed to load module \"%1\": %2").arg(packageName, errorMsg));
-                    moduleLoadError = errorMsg;
+                    loadErrors << errorMsg;
                 }
             } else if (!success) {
                 packageFileErrors << errorMsg;
@@ -3633,6 +3635,7 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
             //: %1 is the package name, %2 is the reason its contents could not be read
             postMessage(tr("[ WARN ]  - Failed to load package \"%1\": %2").arg(packageName, errorMsg));
         }
+        loadErrors << packageFileErrors;
 
         // Registering the package is this loop's job, so an archive that holds no
         // package XML that could be read is not installed anywhere: it would be
@@ -3673,6 +3676,7 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         mPackagesBeingInstalled.push(packageName);
         auto [success, errorMsg] = reader.importPackage(&file2, packageName, static_cast<int>(thing));
         mPackagesBeingInstalled.pop();
+        anythingWasRead = reader.readAnything();
         itemsWithErrors << reader.itemsWithErrors();
         itemsWithErrorNames << reader.itemsWithErrorNames();
         if (thing != enums::PackageModuleType::Package) {
@@ -3681,9 +3685,9 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
             } else {
                 qWarning() << "Host::installPackage() WARNING - failed to load module" << packageName << ":" << errorMsg;
                 postMessage(tr("[ WARN ]  - Failed to load module \"%1\": %2").arg(packageName, errorMsg));
-                moduleLoadError = errorMsg;
+                loadErrors << errorMsg;
             }
-        } else if (!success && !reader.readAnything()) {
+        } else if (!success && !anythingWasRead) {
             file2.close();
             takeBackAPackageNothingWasReadFrom(packageName);
             return fail(nothingCouldBeReadReason(packageName, errorMsg));
@@ -3691,6 +3695,7 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
             qWarning() << "Host::installPackage() WARNING - failed to load package" << packageName << ":" << errorMsg;
             //: %1 is the package name, %2 is the reason its contents could not be read
             postMessage(tr("[ WARN ]  - Failed to load package \"%1\": %2").arg(packageName, errorMsg));
+            loadErrors << errorMsg;
         }
         file2.close();
     }
@@ -3731,20 +3736,27 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
     // reorder permanent and temporary triggers: perm first, temp second
     mTriggerUnit.reorderTriggersAfterPackageImport();
 
-    // A module whose XML stopped part-way still runs the items read before the break, so its handlers
-    // hear of it, with the load error alongside any item's. Only one that brought in nothing goes unannounced.
-    const bool moduleLoadedNothing = thing != enums::PackageModuleType::Package && !mModulesLoadedOk.contains(packageName) && !anythingIsInstalledUnder(packageName);
-    QString eventErrors = itemErrors;
-    if (!moduleLoadError.isEmpty()) {
-        const QString loadError = qsl("%1: %2").arg(packageName, moduleLoadError);
-        eventErrors = eventErrors.isEmpty() ? loadError : qsl("%1; %2").arg(eventErrors, loadError);
+    // A module whose XML stopped part-way still runs what was read before the break, so its handlers
+    // hear of it, with the load errors alongside any item's. Only one that brought in nothing goes unannounced.
+    const bool moduleLoadedNothing = thing != enums::PackageModuleType::Package && !mModulesLoadedOk.contains(packageName) && !anythingWasRead;
+    QStringList allErrors;
+    if (!itemErrors.isEmpty()) {
+        allErrors << itemErrors;
     }
+    for (const QString& loadError : std::as_const(loadErrors)) {
+        allErrors << qsl("%1: %2").arg(packageName, loadError);
+    }
+    const QString eventErrors = allErrors.join(qsl("; "));
+    // Only the latest install of a name is announced: one undone and redone before its events went out
+    // would otherwise hand handlers its own, by then stale, errors
+    const quint64 installSerial = ++mInstallsAnnounced;
+    mLatestInstallOf[packageName] = installSerial;
 
     // Defer raising install events until the next event loop iteration
     // This ensures all package installation is complete (including variable loading)
     // before event handlers execute, preventing Lua state corruption. Kept queued
     // for the ordering the deferred-uninstall drain below depends on, too.
-    QTimer::singleShot(0ms, this, [this, guard = QPointer<Host>(this), thing, packageName, fileName, moduleLoadedNothing, eventErrors]() {
+    QTimer::singleShot(0ms, this, [this, guard = QPointer<Host>(this), thing, packageName, fileName, moduleLoadedNothing, eventErrors, installSerial]() {
         // The queued call can still be delivered once this Host has been
         // destroyed - the profile save queued the same way was #9653 - and the
         // isClosingDown() check below would then be read off freed memory. The
@@ -3758,9 +3770,12 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
             return;
         }
 
-        // A script may have uninstalled it again before this was delivered
-        const bool stillInstalled = thing == enums::PackageModuleType::Package ? mInstalledPackages.contains(packageName) : mInstalledModules.contains(packageName);
-        if (moduleLoadedNothing || !stillInstalled) {
+        // A script may have uninstalled it again before this was delivered, or a handler of the first event
+        auto stillInstalled = [this, thing, packageName, installSerial]() {
+            const bool listed = thing == enums::PackageModuleType::Package ? mInstalledPackages.contains(packageName) : mInstalledModules.contains(packageName);
+            return listed && mLatestInstallOf.value(packageName) == installSerial;
+        };
+        if (moduleLoadedNothing || !stillInstalled()) {
             return;
         }
 
@@ -3778,6 +3793,9 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
             genericInstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         }
         raiseEvent(genericInstallEvent);
+        if (!stillInstalled()) {
+            return;
+        }
 
         TEvent detailedInstallEvent{};
         switch (thing) {

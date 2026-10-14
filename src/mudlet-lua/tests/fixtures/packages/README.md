@@ -40,6 +40,7 @@ deliberately.
 | `mudlet-spec-unreadablexml` | archive whose package file is plain text, so nothing can be read out of it and the package is refused |
 | `mudlet-spec-straynotes` | archive whose valid package XML has a plain-text `a-notes.xml` beside it that is read first, so the stray file alone must not get the package refused |
 | `mudlet-spec-partialxml` | archive whose package XML stops after one alias and one script, so those items import and the load still fails |
+| `mudlet-spec-twobrokenxml` | archive with two package XML files, each stopping after one alias with a different error, so both load errors have to be reported |
 | `mudlet-spec-emptyname` | archive whose `config.lua` asks for a name that trims away to nothing, so there is no name to install under |
 | `mudlet-spec-badconfig` | archive whose `config.lua` names the package and then raises, so the whole manifest is lost and the file name is used |
 | `mudlet-spec-silentconfig` | archive whose `config.lua` names the package and then raises an error with no message (`error()`), so there is not even a message to report |
