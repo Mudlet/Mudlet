@@ -1193,13 +1193,26 @@ describe("Tests the Client.GUI package offer", function()
     end
     local url = "file://" .. path
 
+    -- while a profile save runs, installPackage() postpones the install and
+    -- answers true, and an upgrade cannot uninstall the old interface; it gives
+    -- a save away by postponing even the empty path it would otherwise refuse
+    for _ = 1, 100 do
+      if installPackage("") == nil then
+        break
+      end
+      local pumped, why = pumpEvents(50)
+      assert.is_true(pumped, "pumpEvents could not run the event loop: " .. tostring(why))
+    end
+    assert.is_nil(installPackage(""), "a profile save was still running after 5s, so this offer's install would be postponed")
+
     local mark = getLastLineNumber("main")
     result.mark = mark
     local ok, msg = feedTelnet('<T_IAC><T_SB><O_GMCP>Client.GUI {"version": "' .. (version or "1") .. '", "url": "' .. url .. '"}<T_IAC><T_SE>')
     assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
     assert.is_truthy(downloadStarted(mark, name), "the offer never reached the downloader: " .. displayedSince(mark))
     for _ = 1, 300 do
-      if #result.guis > 0 or shownSince(mark, "was empty") or shownSince(mark, "Package download failed") or shownSince(mark, "Failed to load package") then
+      -- sysInstallPackage is raised a pass after sysServerGuiInstalled
+      if (#result.guis > 0 and #result.installs > 0) or shownSince(mark, "was empty") or shownSince(mark, "Package download failed") or shownSince(mark, "Failed to load package") then
         break
       end
       local pumped, why = pumpEvents(50)
