@@ -254,8 +254,10 @@ describe("HTTP and download functions validate arguments before issuing a reques
   describe("a url that is not http or https", function()
     -- file:, qrc: and data: urls would hand local or bundled content back as
     -- though it had been downloaded
-    local refused = {"file:///etc/hosts", "qrc:/icons/mudlet.png", "data:text/plain,hello", "ftp://localhost/file.txt"}
-    -- downloadFile() only copies to a local path, so a local file is still fine there
+    -- a scratch file rather than a system one: Qt's file backend would write a
+    -- putHTTP payload into it if the scheme check ever stopped refusing it
+    local refused = {"file://" .. getMudletHomeDir() .. "/busted-refused-scheme-target.txt", "qrc:/icons/mudlet.png", "data:text/plain,hello", "ftp://localhost/file.txt"}
+    -- downloadFile() only copies to a path the script chose, so a local file is still allowed there
     local refusedByDownloadFile = {"qrc:/icons/mudlet.png", "data:text/plain,hello", "ftp://localhost/file.txt"}
 
     local function assertRefused(url, ok, err)
@@ -265,26 +267,55 @@ describe("HTTP and download functions validate arguments before issuing a reques
     end
 
     it("is refused by downloadFile, unless it is a local file", function()
+      local target = getMudletHomeDir() .. "/busted-refused-scheme.txt"
+      finally(function() os.remove(target) end)
       for _, url in ipairs(refusedByDownloadFile) do
-        local target = getMudletHomeDir() .. "/busted-refused-scheme.txt"
         local ok, err = downloadFile(target, url)
         assertRefused(url, ok, err)
       end
     end)
 
+    it("is refused by downloadFile for a file url naming another host", function()
+      local target = getMudletHomeDir() .. "/busted-refused-host.txt"
+      finally(function() os.remove(target) end)
+      local ok, err = downloadFile(target, "file://example.invalid/share/x")
+      assert.is_nil(ok)
+      assert.is_true(contains(err, "file url names host 'example.invalid'"), tostring(err))
+    end)
+
     it("still lets downloadFile copy a local file", function()
+      if not os.getenv("MUDLET_TEST_MODE") then
+        pending("waiting for the copy needs pumpEvents(), which is refused outside MUDLET_TEST_MODE")
+        return
+      end
       local source = getMudletHomeDir() .. "/busted-local-download-source.txt"
       local target = getMudletHomeDir() .. "/busted-local-download-copy.txt"
+      -- a handler rather than waitForEvent(): another download still in flight
+      -- raises sysDownloadDone too, and one finishing alongside it would be missed
+      local copied = false
+      local handler = registerAnonymousEventHandler("sysDownloadDone", function(_, localFile)
+        if localFile == target then
+          copied = true
+        end
+      end)
       finally(function()
+        killAnonymousEventHandler(handler)
         os.remove(source)
         os.remove(target)
       end)
+      os.remove(target)
       local file = io.open(source, "w")
       file:write("mudlet-spec-local-copy")
       file:close()
 
       assert.is_true(downloadFile(target, source))
-      assert.equals("sysDownloadDone", (waitForEvent("sysDownloadDone", 2000)))
+      for _ = 1, 100 do
+        if copied then
+          break
+        end
+        pumpEvents(20)
+      end
+      assert.is_true(copied, "no sysDownloadDone for the copy")
       local copy = io.open(target, "r")
       assert.is_not_nil(copy, "the local file was not copied")
       local body = copy:read("*a")

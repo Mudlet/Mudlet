@@ -122,10 +122,14 @@ int TLuaInterpreter::downloadFile(lua_State* L)
     if (!url.isValid()) {
         return warnArgumentValue(L, __func__, qsl("url is invalid, reason: %1").arg(url.errorString()));
     }
-    // A local file is only copied to another local path, which scripts (the generic mapper's
-    // configurable download path among them) rely on; nothing of it reaches the script
+    // A local file is only copied to a path the script chose, not handed back in the event, and
+    // scripts rely on that (the generic mapper's download_path may be a local folder)
     if (!httpSchemeAllowed(url) && !url.isLocalFile()) {
         return warnArgumentValue(L, __func__, qsl("url is invalid, reason: unsupported scheme '%1', only http, https and file are allowed").arg(url.scheme()));
+    }
+    // isLocalFile() ignores the host, and on Windows Qt opens file://host/share as a UNC path
+    if (url.isLocalFile() && !url.host().isEmpty() && url.host().compare(qsl("localhost"), Qt::CaseInsensitive)) {
+        return warnArgumentValue(L, __func__, qsl("url is invalid, reason: file url names host '%1', only local files are allowed").arg(url.host()));
     }
 
     QNetworkRequest request = QNetworkRequest(url);
