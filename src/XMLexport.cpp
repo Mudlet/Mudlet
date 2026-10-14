@@ -228,6 +228,7 @@ void XMLexport::runAsyncSave(const QString& fileName, const QString& xmlSavedKey
     // deleteLater() below needs an event loop that is still running to be delivered,
     // and the save that matters most here is the one on the way out.
     auto watcher = new QFutureWatcher<bool>(host);
+    watcher->setObjectName(Host::scmProfileSaveWatcherName);
     connect(watcher, &QFutureWatcher<bool>::finished, host, [host, xmlSavedKey]() {
         if (!host) {
             return;

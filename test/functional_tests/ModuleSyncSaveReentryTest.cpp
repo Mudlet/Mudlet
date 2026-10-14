@@ -25,12 +25,14 @@
  * cannot wait for that save, which cannot finish until the install returns: it is
  * put off until the save is done instead.
  * No spec reaches this: only the editor's Save and Import ask for a save that
- * syncs modules.
+ * syncs modules. Nor can one hold a save that never reports itself done, which
+ * the last test here needs.
  *
  * Run with: ctest -R ModuleSyncSaveReentryTest -V
  */
 
 #include <QElapsedTimer>
+#include <QScopeGuard>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 #include <chrono>
@@ -294,6 +296,15 @@ private slots:
         const QString path = writePackage(nestedModule);
         QVERIFY(!path.isEmpty());
 
+        // The Module Manager refreshes on this, so it has to come once the module is there to list
+        QList<bool> listedOnChange;
+        const auto connection = connect(mpSavingHost, &Host::signal_moduleListChangedByScript, this, [this, &listedOnChange, &nestedModule]() {
+            listedOnChange << mpSavingHost->mInstalledModules.contains(nestedModule);
+        });
+        const auto disconnectGuard = qScopeGuard([connection]() {
+            disconnect(connection);
+        });
+
         const auto took = saveReachingBackWith(qsl("installModule"), path);
         QVERIFY(took >= 0);
 
@@ -306,6 +317,12 @@ private slots:
                     return mpSavingHost->mInstalledModules.contains(nestedModule);
                 },
                 5s));
+        QVERIFY2(QTest::qWaitFor(
+                         [&listedOnChange]() {
+                             return !listedOnChange.isEmpty() && listedOnChange.constLast();
+                         },
+                         2s),
+                 "the module list was never announced as changed once the put-off install had added the module");
         QVERIFY(settle(mpSavingHost));
         QVERIFY(mpSavingHost->uninstallPackage(nestedModule, enums::PackageModuleType::ModuleFromScript));
         QVERIFY(settle(mpSavingHost));
@@ -329,6 +346,29 @@ private slots:
                  qPrintable(mainConsoleText()));
         QVERIFY(mainConsoleText().contains(qsl("could not unzip package")));
         QVERIFY(settle(mpSavingHost));
+    }
+
+    void test_aScriptInstallSoonGivesUpOnASaveThatNeverReportsItselfFinished()
+    {
+        QVERIFY(settle(mpSavingHost));
+        const QString packageName = qsl("module-sync-reentry-stuck-save");
+        const QString path = writePackage(packageName);
+        QVERIFY(!path.isEmpty());
+        // Every write is done, but the save still reads as running
+        mpSavingHost->mWritingHostAndModules = true;
+        const auto unstick = qScopeGuard([this]() {
+            mpSavingHost->mWritingHostAndModules = false;
+        });
+
+        QElapsedTimer elapsed;
+        elapsed.start();
+        QVERIFY(runLua(mpSavingHost, qsl("local ok, err = installPackage([[%1]]); mudletTestNestedInstall = tostring(ok) .. '|' .. tostring(err)").arg(path)).isNull());
+        const auto took = elapsed.elapsed();
+
+        QCOMPARE(luaGlobalString(mpSavingHost, qsl("mudletTestNestedInstall")), qsl("nil|a profile save is still in progress, try again later"));
+        // Nothing else is delivered while a script waits, so the whole window stays unpainted until it gives up
+        QVERIFY2(took < 5000, qPrintable(qsl("the install took %1 ms to give up on the save").arg(took)));
+        QVERIFY(!mpSavingHost->mInstalledPackages.contains(packageName));
     }
 };
 

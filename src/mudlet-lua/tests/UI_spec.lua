@@ -7180,7 +7180,8 @@ describe("Toolbar buttons", function()
 
   -- Installing and uninstalling each start a profile save, and Lua cannot ask
   -- whether one is running - but installPackage() from a script waits a running
-  -- save out before it answers, and gives up only on one still going after 30s.
+  -- save out before it answers, and gives up only on one still saying it is
+  -- running once its writes are done.
   local function waitForProfileSaveToPass()
     local _, err = installPackage("")
     return not tostring(err):find("still in progress", 1, true)

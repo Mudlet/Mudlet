@@ -183,8 +183,9 @@ end
 -- save is running, so the helpers below that need one to be over ask again
 -- until what they wanted has actually happened.
 -- installPackage() from a script waits for a running save to finish before it
--- answers, and only gives up on one that has not finished after 30s, so asking
--- it for an empty path is a way to wait one out.
+-- answers, however long its writes take, and only gives up on one that still
+-- says it is running once they are done, so asking it for an empty path is a way
+-- to wait one out.
 local function waitForProfileSaveToPass()
   local _, err = installPackage("")
   return not contains(err, "still in progress")
@@ -420,6 +421,28 @@ describe("Tests the functionality of installPackage", function()
     assert.is_true(waitUntil(function() return #seen == 5 end, 2000), table.concat(seen, ", "))
 
     assert.are.same({"start first", "matches[2] after the install first", "end first", "start second", "end second"}, seen)
+  end)
+
+  it("hands the script that is waiting out a profile save no other background task's completion", function()
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+    local extractDirectory = getMudletHomeDir() .. "/mudlet-spec-unzip-during-save"
+    local seen = {}
+    local handler = registerAnonymousEventHandler("sysUnzipError", function() seen[#seen + 1] = "unzip finished" end)
+    defer(function()
+      killAnonymousEventHandler(handler)
+      lfs.rmdir(extractDirectory)
+    end)
+    assert.is_true(saveProfile())
+    assert.is_true(unzipAsync(fixtureDirectory .. "/mudlet-spec-notazip.mpackage", extractDirectory))
+    -- long enough for the unzip to fail, so its completion is already queued when the install starts to wait
+    local started = os.clock()
+    while os.clock() - started < 0.5 do end
+    seen[#seen + 1] = "install asked for"
+    installPackage(fixtureDirectory .. "/mudlet-spec-notazip.mpackage")
+    seen[#seen + 1] = "install answered"
+    assert.is_true(waitUntil(function() return #seen == 3 end, 2000), table.concat(seen, ", "))
+
+    assert.are.same({"install asked for", "install answered", "unzip finished"}, seen)
   end)
 
   describe("with the fixture package installed", function()
@@ -2292,7 +2315,7 @@ describe("Tests the functionality of installPackageFromUrl", function()
     local savedFirst = false
     _G.verbosePackageInstall = function(path, ...)
       if path == destination then
-        -- one some earlier spec's install still owed the profile serves as well
+        -- a save already running serves as well, such as one an earlier spec's install owed the profile
         local saved, err = saveProfile()
         savedFirst = saved == true or contains(err, "a save is already in progress")
       end

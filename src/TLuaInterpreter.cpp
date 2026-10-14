@@ -2822,7 +2822,8 @@ static int pushInstallSucceeded(lua_State* L, const QString& warning)
 
 // Host::installPackage() puts an install asked for during a profile save off until the save is done and
 // answers true at once, so a script would be told it had installed before it was even tried. Wait the
-// save out instead, so the answer is the real one; false when the save never finished.
+// save out instead, so the answer is the real one - except from inside the save's own module sync, below;
+// false when the save never finished.
 static bool waitOutAProfileSave(Host& host)
 {
     // From another profile's module reload at the end of this save, which cannot finish until this

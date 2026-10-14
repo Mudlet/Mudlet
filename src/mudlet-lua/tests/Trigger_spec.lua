@@ -12,8 +12,8 @@ describe("Trigger processing", function()
     -- Both of the package fixtures below are installed at run time, and while a
     -- profile save is running an uninstall is refused outright, so it is asked
     -- again until it takes. An install from a script waits a running save out
-    -- before it answers, and gives up only on one still going after 30s, which is
-    -- how a spec waits for a save to be over.
+    -- before it answers, and gives up only on one still saying it is running once
+    -- its writes are done, which is how a spec waits for a save to be over.
     local function packageInstalled(packageName)
         return contains(getPackages(), packageName)
     end
@@ -33,7 +33,9 @@ describe("Trigger processing", function()
             if not packageInstalled(packageName) then
                 break
             end
-            waitForProfileSaveToPass()
+            if not waitForProfileSaveToPass() then
+                reason = "a profile save was still running"
+            end
             local _, message = uninstallPackage(packageName)
             reason = message or reason
             pumpEvents(200)

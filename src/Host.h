@@ -496,9 +496,12 @@ public:
     // mDeferredSaveTimer.
     bool hasPendingProfileSave() const { return mDeferredSaveTimer.isActive(); }
     void processDiscordGMCP(const QString& packageMessage, const QString& data);
-    // A script waits with onlyTheSavesOwnEvents: nothing but the save's own completion is delivered, so
-    // no timer, incoming line or other script runs nested inside the one that is waiting
+    // A script waits with onlyTheSavesOwnEvents: only the completions of the watchers named
+    // scmProfileSaveWatcherName are delivered, so no timer, incoming line or other background task runs
+    // nested in the waiting script. A save that syncs modules still reloads them in the other profiles as
+    // it ends, and their scripts can raise a global event that reaches this profile's handlers.
     void waitForProfileSave(bool onlyTheSavesOwnEvents = false);
+    inline static const QString scmProfileSaveWatcherName = qsl("profileSaveWatcher");
     void clearDiscordData();
     void processDiscordMSDP(const QString& variable, QString value);
     void setDiscordMode(DiscordMode mode);
