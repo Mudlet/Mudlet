@@ -4891,6 +4891,46 @@ describe("Tests saveJsonMap and loadJsonMap", function()
         assert.are.equal(zoom, getMapZoom(areas[name]), name)
       end
     end)
+
+    describe("an area's 2D map zoom in an edited JSON file", function()
+      local editedPath = getMudletHomeDir() .. "/mapper_spec_zoom_edited.json"
+
+      after_each(function()
+        os.remove(editedPath)
+      end)
+
+      -- exports one area at zoom 33, swaps its zoom2D member for replacement, imports that
+      local function importWithZoom(replacement)
+        deleteMap()
+        local area = addAreaName("MapperSpecJsonZoomEdited")
+        local room = createRoomID(); addRoom(room); setRoomArea(room, area)
+        assert.is_true(setMapZoom(33, area))
+        assert.is_true(saveJsonMap(jsonPath))
+        local file = assert(io.open(jsonPath, "r"))
+        local text = file:read("*a")
+        file:close()
+        local edited, count = text:gsub(',%s*"zoom2D": 33', replacement)
+        assert.are.equal(1, count, "the export should hold the area's zoom2D member")
+        file = assert(io.open(editedPath, "w"))
+        file:write(edited)
+        file:close()
+        deleteMap()
+        assert.is_true(loadJsonMap(editedPath))
+        return area
+      end
+
+      it("is the default zoom when the area has no zoom2D member", function()
+        assert.are.equal(20, getMapZoom(importWithZoom("")))
+      end)
+
+      it("is refused below the mapper's minimum zoom", function()
+        assert.are.equal(20, getMapZoom(importWithZoom(', "zoom2D": 1')))
+      end)
+
+      it("is ignored when it is not a number", function()
+        assert.are.equal(20, getMapZoom(importWithZoom(', "zoom2D": "33"')))
+      end)
+    end)
   end)
 
   describe("Tests the saveJsonMap and loadJsonMap argument contract", function()
