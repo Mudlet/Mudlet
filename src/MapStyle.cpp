@@ -20,11 +20,14 @@
 #include "MapStyle.h"
 
 #include "ExitAppearance.h"
+#include "Host.h"
 #include "RoomAppearance.h"
 #include "utils.h"
 
 #include <QCoreApplication>
 #include <QFont>
+
+#include <algorithm>
 
 namespace {
 QList<MapStyle> registeredStyles()
@@ -33,6 +36,28 @@ QList<MapStyle> registeredStyles()
 
     MapStyle tiles;
     tiles.id = qsl("tiles");
+    tiles.palette = MapStyle::Palette::Soft;
+    tiles.roomScale = 3.2f;
+    tiles.edges = MapStyle::Edges::ViewedLevelBase;
+    tiles.roomFlattening = 2.5f;
+    tiles.defaultBackground = QColor(16, 22, 32);
+    tiles.highlightShape = MapStyle::HighlightShape::Glow;
+    tiles.highlightScale = 1.8f;
+    tiles.playerRing = MapStyle::PlayerRing::Thin;
+    tiles.playerColor = QColor(255, 208, 90);
+    tiles.themedMapLabels = true;
+    tiles.mapLabelColor = QColor(150, 190, 225);
+    tiles.mapLabelHalo = QColor(16, 22, 32, 200);
+    tiles.mapLabelMaxHeight = 0.9f;
+    tiles.roomNameColor = QColor(185, 205, 225, 230);
+    tiles.roomNameScale = 0.6f;
+    tiles.compassFace = QColor(18, 26, 38, 210);
+    tiles.compassRim = QColor(110, 140, 170);
+    tiles.compassNeedle = QColor(235, 96, 80);
+    tiles.infoBackground = QColor(18, 26, 38, 190);
+    tiles.infoTextColor = QColor(215, 225, 235);
+    tiles.shadedBlocks = true;
+    tiles.dashedStairs = true;
     styles.append(tiles);
 
     MapStyle blueprint;
@@ -44,10 +69,31 @@ QList<MapStyle> registeredStyles()
     blueprint.background = QColor(18, 60, 110);
     blueprint.ink = QColor(225, 242, 255);
     blueprint.gridColor = QColor(150, 200, 255, 38);
-    blueprint.labelFontFamily = qsl("Bitstream Vera Sans");
+    blueprint.inkTint = 0.32f;
+    blueprint.labelFontFamily = qsl("Bitstream Vera Sans Mono");
+    blueprint.labelLetterSpacing = 112.0;
+    blueprint.labelCapitals = true;
     blueprint.exitWidthFactor = 0.5f;
     blueprint.doors = MapStyle::Doors::Swings;
     blueprint.floorPlates = false;
+    blueprint.highlightShape = MapStyle::HighlightShape::DashedEllipse;
+    blueprint.highlightScale = 1.3f;
+    blueprint.playerRing = MapStyle::PlayerRing::Crosshair;
+    blueprint.playerColor = QColor(255, 112, 90);
+    blueprint.playerBeacon = false;
+    blueprint.themedMapLabels = true;
+    blueprint.mapLabelColor = QColor(225, 242, 255);
+    blueprint.mapLabelHalo = QColor(18, 60, 110, 210);
+    blueprint.mapLabelMaxHeight = 0.6f;
+    blueprint.roomNameColor = QColor(210, 232, 252, 235);
+    blueprint.roomNameScale = 0.6f;
+    blueprint.compassFace = QColor(18, 60, 110, 220);
+    blueprint.compassRim = QColor(225, 242, 255);
+    blueprint.compassNeedle = QColor(255, 112, 90);
+    blueprint.infoBackground = QColor(14, 48, 90, 210);
+    blueprint.infoTextColor = QColor(225, 242, 255);
+    blueprint.titleBlock = true;
+    blueprint.levelCallouts = true;
     styles.append(blueprint);
 
     MapStyle terminal;
@@ -91,8 +137,7 @@ QColor MapStyle::roomColor(const QColor& environmentColor) const
     case Palette::Environment:
         return environmentColor;
     case Palette::Ink: {
-        // Enough of the environment's color to tell areas of the plan apart, not so much that the ink stops standing out
-        constexpr float tint = 0.18f;
+        const float tint = inkTint;
         const QColor paper = background.isValid() ? background : QColor(Qt::black);
         return QColor::fromRgbF(paper.redF() + (environmentColor.redF() - paper.redF()) * tint,
                                 paper.greenF() + (environmentColor.greenF() - paper.greenF()) * tint,
@@ -105,6 +150,10 @@ QColor MapStyle::roomColor(const QColor& environmentColor) const
             return QColor::fromHsl(environmentColor.hslHue(), environmentColor.hslSaturation(), 96, environmentColor.alpha());
         }
         return environmentColor;
+    case Palette::Soft: {
+        const QColor hsl = environmentColor.toHsl();
+        return QColor::fromHslF(std::max(hsl.hslHueF(), 0.0f), hsl.hslSaturationF() * 0.7f, 0.25f + hsl.lightnessF() * 0.6f, hsl.alphaF());
+    }
     }
     return environmentColor;
 }
@@ -146,7 +195,45 @@ QColor MapStyle::playerRoomColor() const
 
 QColor MapStyle::backgroundColor(const QColor& profileBackground) const
 {
-    return background.isValid() ? background : profileBackground;
+    if (background.isValid()) {
+        return background;
+    }
+    if (defaultBackground.isValid() && profileBackground == QColor(Qt::black)) {
+        return defaultBackground;
+    }
+    return profileBackground;
+}
+
+bool MapStyle::themesPlayerMarker(const int profilePlayerRoomStyle, const bool strongHighlight) const
+{
+    if (profilePlayerRoomStyle != 0 || strongHighlight) {
+        return false;
+    }
+    return playerRing != PlayerRing::Profile || playerColor.isValid();
+}
+
+QColor MapStyle::infoBackgroundColor(const QColor& profileInfoBackground) const
+{
+    if (infoBackground.isValid() && profileInfoBackground == Host::scmDefaultMapInfoBg) {
+        return infoBackground;
+    }
+    return profileInfoBackground;
+}
+
+QColor MapStyle::roomBorderColor(const QColor& profileBorder, const QColor& roomColor, const QColor& background) const
+{
+    if (edges != Edges::ViewedLevelBase || profileBorder != Host::scmDefaultRoomBorderColor) {
+        return profileBorder;
+    }
+    return QColor::fromRgbF((roomColor.redF() + background.redF()) / 2.0f, (roomColor.greenF() + background.greenF()) / 2.0f, (roomColor.blueF() + background.blueF()) / 2.0f, roomColor.alphaF());
+}
+
+QColor MapStyle::roomNameColorFor(const QString& roomColorData, const QColor& background) const
+{
+    if (roomNameColor.isValid() && !QColor(roomColorData).isValid()) {
+        return roomNameColor;
+    }
+    return RoomAppearance::nameColor(roomColorData, background);
 }
 
 bool MapStyle::roundRooms(const bool profileRoundRooms) const
@@ -163,8 +250,19 @@ QFont MapStyle::labelFont(const QFont& mapSymbolFont) const
     QFont font = mapSymbolFont;
     if (!labelFontFamily.isEmpty()) {
         font.setFamily(labelFontFamily);
+        letter(font);
     }
     return font;
+}
+
+void MapStyle::letter(QFont& font) const
+{
+    if (labelLetterSpacing != 100.0) {
+        font.setLetterSpacing(QFont::PercentageSpacing, labelLetterSpacing);
+    }
+    if (labelCapitals) {
+        font.setCapitalization(QFont::AllUppercase);
+    }
 }
 
 QString MapStyle::defaultId()

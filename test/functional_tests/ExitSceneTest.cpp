@@ -236,6 +236,28 @@ private slots:
         QCOMPARE(lines.first().level, 0);
     }
 
+    void test_straightStairsAreDashedWhereTheStyleAsks()
+    {
+        TRoom* pHigh = addRoomAt(1, mAreaId, 0, 0, 1);
+        TRoom* pLow = addRoomAt(2, mAreaId, 0, 0, 0);
+        QVERIFY(pLow && pHigh);
+        pLow->setExit(1, DIR_UP);
+        pHigh->setExit(2, DIR_DOWN);
+
+        QCOMPARE(segmentsIn(build(), mExitColor).size(), 1);
+        ExitScene::Options sceneOptions = options();
+        sceneOptions.dashedStairs = true;
+        const QList<ExitScene::Segment> dashes = segmentsIn(build(sceneOptions), mExitColor);
+        QVERIFY2(dashes.size() > 1, qPrintable(qsl("%1 pieces").arg(dashes.size())));
+        float drawn = 0.0f;
+        for (const ExitScene::Segment& dash : dashes) {
+            QCOMPARE(dash.from.x(), 0.0f);
+            QCOMPARE(dash.to.y(), 0.0f);
+            drawn += (dash.to - dash.from).length();
+        }
+        QVERIFY2(drawn < 0.9f, "the gaps between dashes are left open");
+    }
+
     // The lower-numbered room draws its two-way exits, but dots them all when it has a one-way one to the same room
     void test_twoWayExitIsDrawnWhenTheOtherEndDotsItsLine()
     {
