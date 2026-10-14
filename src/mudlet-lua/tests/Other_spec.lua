@@ -2331,14 +2331,18 @@ describe("Tests Other.lua functions", function()
           os.rename(backup, store)
         end
         _G._saveTable = savedTable
+        _G.saveVarsSpecValue = nil
       end)
-      _G._saveTable = {}
+      _G._saveTable = nil
+      _G.saveVarsSpecValue = "kept"
+      remember("saveVarsSpecValue")
 
       -- a directory in its place: unlike a read-only file, that cannot be opened by root either
       lfs.mkdir(store)
       local ok, msg = saveVars()
       assert.is_nil(ok)
       assert.is_string(msg)
+      assert.is_falsy(msg:find("flagged", 1, true))
 
       lfs.rmdir(store)
       assert.is_true(saveVars())
@@ -2356,13 +2360,15 @@ describe("Tests Other.lua functions", function()
         file:close()
       end
       previousSaveTable = _G._saveTable
+      _G._saveTable = nil
     end)
 
     after_each(function()
       _G._saveTable = previousSaveTable
       _G.saveVarsSpecValue = nil
+      _G.saveVarsSpecOther = nil
       if previousStore then
-        local file = io.open(storePath, "wb")
+        local file = assert(io.open(storePath, "wb"))
         file:write(previousStore)
         file:close()
       else
@@ -2384,6 +2390,43 @@ describe("Tests Other.lua functions", function()
 
       loadVars()
       assert.equals("kept", _G.saveVarsSpecValue)
+    end)
+
+    it("should leave the file as it was when the remembered variable was still nil", function()
+      _G.saveVarsSpecValue = "kept"
+      remember("saveVarsSpecValue")
+      assert.is_true(saveVars())
+
+      _G._saveTable = nil
+      _G.saveVarsSpecValue = nil
+      remember("saveVarsSpecValue")
+      local saved, msg = saveVars()
+      assert.is_nil(saved)
+      assert.is_string(msg)
+
+      loadVars()
+      assert.equals("kept", _G.saveVarsSpecValue)
+    end)
+
+    it("should keep saving what loadVars restored without a new remember()", function()
+      _G.saveVarsSpecValue = 1
+      _G.saveVarsSpecOther = 2
+      remember("saveVarsSpecValue")
+      remember("saveVarsSpecOther")
+      assert.is_true(saveVars())
+
+      _G._saveTable = nil
+      _G.saveVarsSpecValue = nil
+      _G.saveVarsSpecOther = nil
+      loadVars()
+      _G.saveVarsSpecValue = 5
+      assert.is_true(saveVars())
+
+      _G.saveVarsSpecValue = nil
+      _G.saveVarsSpecOther = nil
+      loadVars()
+      assert.equals(5, _G.saveVarsSpecValue)
+      assert.equals(2, _G.saveVarsSpecOther)
     end)
 
     it("should save the remembered variable as it is at save time and load it back", function()

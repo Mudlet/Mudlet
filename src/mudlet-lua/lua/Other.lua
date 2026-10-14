@@ -274,8 +274,13 @@ end
 
 --- Flags a global variable to be written to "SavedVariables.lua" in the profile directory by saveVars().
 --- Nothing is saved or restored automatically: saveVars() and loadVars() have to be called by a script,
---- for example from sysExitEvent and sysLoadEvent handlers. loadVars() does not flag the variables it
---- restores, so call remember() again for each one in the new session.
+--- for example from sysExitEvent and sysLoadEvent handlers. resetProfile() raises sysLoadEvent but not
+--- sysExitEvent, so call saveVars() before resetting or the changes since the last save are lost.
+--- loadVars() flags the variables it restores, so they need no new remember() call.
+---
+--- A variable that is nil when remember() or saveVars() runs is neither flagged nor saved: give it a
+--- value first, and call remember() again once it has been nil. Functions, userdata and coroutines are
+--- not saved, inside a table or on their own.
 ---
 --- @usage remember("varName")
 ---
@@ -292,7 +297,9 @@ end
 
 --- Reads the variables saveVars() wrote to "SavedVariables.lua" in the profile directory back into the
 --- global namespace. Mudlet does not call it, so call it when the variables are needed, for example
---- from a sysLoadEvent handler.
+--- from a sysLoadEvent handler. The variables it restores are flagged as remember() would, so the next
+--- saveVars() keeps them. Without a "SavedVariables.lua" it restores nothing, and it raises an error
+--- when the file is not one table.save() wrote.
 ---
 --- @see remember
 --- @see saveVars
@@ -309,6 +316,7 @@ function loadVars()
     table.load(l_SettingsFile, lt_VariableHolder)
     for k, v in pairs(lt_VariableHolder) do
       _G[k] = v
+      remember(k)
     end
   end
 end
@@ -319,8 +327,8 @@ end
 --- profile directory, replacing what the file held. Mudlet does not call it, so call it whenever the
 --- variables should be kept, for example from a sysExitEvent handler.
 ---
---- @return true on success, or nil and a message when nothing was flagged (the file is then left as it
----   was) or the file could not be written
+--- @return true on success, or nil and a message when no flagged variable has a value (the file is then
+---   left as it was) or the file could not be written
 --- @see remember
 --- @see loadVars
 function saveVars()
@@ -331,13 +339,15 @@ function saveVars()
     _sep = "\\"
   end
   local l_SettingsFile = getMudletHomeDir() .. _sep .. "SavedVariables.lua"
-  -- left alone rather than emptied: loadVars() does not flag what it restores, so a session that
-  -- only loaded would otherwise wipe the store
-  if not _saveTable then
-    return nil, "saveVars: no variable has been flagged with remember(), so "..l_SettingsFile.." is left as it was"
+  if _saveTable then
+    for k, _ in pairs(_saveTable) do
+      remember(k)
+    end
   end
-  for k, _ in pairs(_saveTable) do
-    remember(k)
+  -- left alone rather than emptied: a remember() that ran while its variable was still nil flags
+  -- nothing, and writing an empty store then would wipe what an earlier session saved
+  if not _saveTable or next(_saveTable) == nil then
+    return nil, "saveVars: no variable has been flagged with remember(), so "..l_SettingsFile.." is left as it was"
   end
   return table.save(l_SettingsFile, _saveTable)
 end
@@ -479,7 +489,7 @@ end
 
 --- Restores a Lua table from a data file that has been saved with table.save().
 ---
---- @usage Loads a serialized file into the globals table (only Mudlet should use this).
+--- @usage Loads a serialized file into the globals table, replacing any global of the same name.
 ---   <pre>
 ---   table.load(file)
 ---   </pre>
