@@ -1644,7 +1644,7 @@ void ModernGLWidget::renderRooms()
         nameFont.setUnderline(false);
         nameFont.setOverline(false);
         nameFont.setStrikeOut(false);
-        nameFont.setBold(namesGivenFont || !style.roomNameColor.isValid());
+        nameFont.setBold(namesGivenFont || !style.roomNameColor.isValid() || style.roomNameBold);
         nameFont.setStyleStrategy(QFont::StyleStrategy(QFont::PreferNoShaping | QFont::PreferAntialias | QFont::PreferOutline));
         nameFont.setPointSizeF(scmTextTexelsPerRoom / 2.0);
     }
@@ -2421,8 +2421,8 @@ void ModernGLWidget::renderRooms()
             return viewModel.map(a.center).z() > viewModel.map(b.center).z();
         });
         const QColor nameHalo = style.labelHalos ? background : QColor();
-        // A halo covers what it overlaps as the text does
-        const int nameHaloWidth = textHaloWidth(nameMetrics, nameHalo.isValid());
+        // A halo or tag covers what it overlaps as the text does
+        const int nameHaloWidth = textHaloWidth(nameMetrics, nameHalo.isValid() || style.roomNamePlate.isValid());
         const qreal spaceWidth = nameMetrics.horizontalAdvance(QLatin1Char(' '));
         QList<QRectF> nameRects;
         nameRects.reserve(roomNames.size());
@@ -2437,10 +2437,20 @@ void ModernGLWidget::renderRooms()
             const RoomName& roomName = roomNames.at(index);
             QSize size;
             QString key = qsl("name|%1|%2|%3").arg(roomName.color.name(QColor::HexArgb), nameFontKey, roomName.name);
-            if (nameHalo.isValid()) {
-                key.append(qsl("|halo|%1").arg(nameHalo.name(QColor::HexArgb)));
+            GLuint texture = 0;
+            if (style.roomNamePlate.isValid() && MapStyle::readsOnPlate(roomName.color, style.roomNamePlate)) {
+                key.append(qsl("|plate|%1").arg(style.roomNamePlate.name(QColor::HexArgb)));
+                size = QSize(qMax(1, qCeil(nameMetrics.horizontalAdvance(roomName.name))) + 2 * nameHaloWidth, qMax(1, qCeil(nameMetrics.height())) + 2 * nameHaloWidth);
+                texture = imageTexture(key, [&roomName, &style, &nameFont, &nameMetrics, nameHaloWidth] {
+                    return MapDecals::taggedName(roomName.name, roomName.color, style.roomNamePlate, nameFont, nameMetrics, nameHaloWidth);
+                });
+            } else {
+                if (nameHalo.isValid()) {
+                    key.append(qsl("|halo|%1").arg(nameHalo.name(QColor::HexArgb)));
+                }
+                texture = textTexture(key, roomName.name, nameFont, nameMetrics, roomName.color, size, nameHalo);
             }
-            if (const GLuint texture = textTexture(key, roomName.name, nameFont, nameMetrics, roomName.color, size, nameHalo)) {
+            if (texture) {
                 const QVector3D across = groundRight * (size.width() * nameTexel);
                 const QVector3D upward = groundUp * (size.height() * nameTexel);
                 GeometryData& batch = roomName.decals->text[texture];
@@ -3108,7 +3118,8 @@ void ModernGLWidget::renderConnections()
                                    tint.y(),
                                    tint.z(),
                                    tint.w());
-        if (pavedPaths && !upright && segment.level == mMapCenterZ) {
+        // Not on a line sloping to another level, which leaves the paving
+        if (pavedPaths && segment.level == mMapCenterZ && qAbs(segment.to.z() - segment.from.z()) < 1e-4f) {
             // Thinner than the path, and just over the thickest tile, so that it shows over any of them; from the ground,
             // which sunk() puts a line's height below its middle, whatever this segment's own height
             const QVector3D raise(0.0f, 0.0f, DioramaLayout::flatTileTop(roomHeight) + (pavedPathHeight - options.lineHeight) / 2.0f);

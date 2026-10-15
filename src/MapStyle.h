@@ -217,6 +217,11 @@ struct MapStyle
     // color that stands out on the background, and their size against the usual where the map was given no font
     QColor roomNameColor;
     float roomNameScale = 1.0f;
+    // Room names in bold where the map was given no font, as they are where roomNameColor is invalid
+    bool roomNameBold = false;
+    // Behind a room's name, a rounded tag in this color, as a model's name card; invalid for none. A name in a
+    // color that would not read on it goes without
+    QColor roomNamePlate;
     // Invalid for the background, the color that stands out on it, and red
     QColor compassFace;
     QColor compassRim;

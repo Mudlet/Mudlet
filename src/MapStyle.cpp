@@ -264,6 +264,8 @@ QList<MapStyle> registeredStyles()
     diorama.symbolPlate = QColor(255, 255, 255, 235);
     diorama.roomNameColor = QColor(46, 60, 88);
     diorama.roomNameScale = 0.75f;
+    diorama.roomNameBold = true;
+    diorama.roomNamePlate = QColor(255, 255, 255, 235);
     diorama.compassFace = QColor(255, 255, 255, 220);
     diorama.compassRim = QColor(138, 118, 86);
     diorama.compassNeedle = QColor(214, 58, 48);
@@ -407,7 +409,9 @@ QColor MapStyle::symbolColor(const QColor& roomSymbolColor, const QColor& drawnR
 
 bool MapStyle::readsOnPlate(const QColor& color, const QColor& plate)
 {
-    return qAbs(qGray(color.rgb()) - qGray(plate.rgb())) >= 96;
+    // Faint as it is, a color shows mostly what is under it rather than how it differs from the tag
+    constexpr int faintest = 64;
+    return color.alpha() >= faintest && qAbs(qGray(color.rgb()) - qGray(plate.rgb())) >= 96;
 }
 
 QColor MapStyle::exitColor(const QColor& profileExitColor) const
