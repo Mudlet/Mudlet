@@ -286,13 +286,14 @@ public:
     bool mSelecting = false;
     int mShownAreaId = 0;
     bool mShowing3D = false;
+    bool mOnScreen = true;
     bool mProgressShown = false;
     int mProgressMaximum = 0;
 
     bool onScreen() const override
     {
         mCalls << call("onScreen");
-        return true;
+        return mOnScreen;
     }
     void showMapProgress(const QString& label, bool cancelable) override
     {
@@ -595,6 +596,7 @@ private slots:
         mMapView.mCalls.clear();
         mMapView.mSelection.clear();
         mMapView.mSelecting = false;
+        mMapView.mOnScreen = true;
         mMapViews.mCalls.clear();
     }
 
@@ -871,6 +873,26 @@ setConfig("experiment.3dmap.modernmapper", false)
                 call("recreate3DView"),
         };
         QCOMPARE(mMapView.mCalls.join(qsl("; ")), expected.join(qsl("; ")));
+#else
+        QSKIP("Built without the 3D mapper, so there is no 3D view to drive.");
+#endif
+    }
+
+    void test_hiddenMapViewKeeps3DViewChoice()
+    {
+#if defined(INCLUDE_3DMAPPER)
+        mMapView.mOnScreen = false;
+        mMapView.mShowing3D = false;
+        mpHost->mShow3DView = false;
+        const QString result = runMapLua(qsl(R"lua(
+assert(setConfig("show3dMapView", true) == true, "setConfig refused to show the 3D view")
+assert(getConfig("show3dMapView") == true, "getConfig did not keep the 3D view choice of a hidden map view")
+assert(setConfig("show3dMapView", false) == true, "setConfig refused to hide the 3D view")
+assert(getConfig("show3dMapView") == false, "getConfig did not keep the 2D view choice of a hidden map view")
+)lua"));
+        mMapView.mShowing3D = false;
+        mpHost->mShow3DView = false;
+        QCOMPARE(result, qsl("ok"));
 #else
         QSKIP("Built without the 3D mapper, so there is no 3D view to drive.");
 #endif

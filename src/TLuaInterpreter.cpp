@@ -9166,10 +9166,10 @@ int TLuaInterpreter::setConfig(lua_State* L)
 #if defined(INCLUDE_3DMAPPER)
         if (key == qsl("show3dMapView")) {
             const bool show = getVerifiedBool(L, __func__, 2, "value");
+            // getConfig reads this back while the mapper is hidden, whichever frontend shows it
+            host.mShow3DView = show;
             if (auto* mapper = host.mpMap->mapViewFrontend()) {
                 mapper->show3DView(show);
-            } else {
-                host.mShow3DView = show;
             }
             return success();
         }
