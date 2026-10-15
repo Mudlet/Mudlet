@@ -318,6 +318,56 @@ private slots:
         QVERIFY2(qAbs(cappedText.center().x() - fullText.center().x()) <= 3, "the text stays centered where the label was put");
     }
 
+    void test_dioramaLabelsSitOnARoundedTagThatFitsTheirPicture()
+    {
+        const MapStyle& diorama = *MapStyle::find(qsl("diorama"));
+        QVERIFY(diorama.themedMapLabels && diorama.mapLabelPlate.isValid());
+        QVERIFY(diorama.roomNameColor.isValid() && diorama.compassFace.isValid() && diorama.infoBackground.isValid() && diorama.infoTextColor.isValid());
+        const TMapLabel label = textLabel(Qt::white, QColor(0, 0, 0, 50));
+        const QImage image = MapDecals::themedLabel(label, diorama);
+        QCOMPARE(image.size(), label.pix.size());
+        // The tag's rounded ends leave the corners clear
+        QCOMPARE(alphaAt(image, 0, 0), 0);
+        QCOMPARE(alphaAt(image, image.width() - 1, image.height() - 1), 0);
+        // The tag shows round the letters: in the tag's color across the middle, before the first letter
+        const QRect tag = paintedArea(image);
+        QVERIFY(!tag.isEmpty());
+        const int y = tag.center().y();
+        int tagged = 0;
+        for (int x = tag.left(); x < tag.left() + tag.height() / 2; ++x) {
+            tagged += QColor::fromRgba(image.pixel(x, y)).rgb() == diorama.mapLabelPlate.rgb();
+        }
+        QVERIFY2(tagged > 0, "no tag before the text");
+        bool text = false;
+        for (int x = tag.left(); x <= tag.right() && !text; ++x) {
+            text = QColor::fromRgba(image.pixel(x, y)).rgb() == diorama.mapLabelColor.rgb();
+        }
+        QVERIFY2(text, "the text is not on the tag");
+    }
+
+    void test_dioramaSymbolsStandOnATagInAColorThatShowsOnIt()
+    {
+        const MapStyle& diorama = *MapStyle::find(qsl("diorama"));
+        QVERIFY(diorama.symbolPlate.isValid());
+        const QColor darkPurple(60, 30, 90);
+        QCOMPARE(diorama.symbolColor(QColor(), darkPurple), QColor(Qt::black));
+        QCOMPARE(tiles().symbolColor(QColor(), darkPurple), QColor(Qt::white));
+        QCOMPARE(diorama.symbolColor(QColor(200, 30, 30), darkPurple), QColor(200, 30, 30));
+
+        const QImage image = MapDecals::taggedSymbol(qsl("$"), Qt::black, diorama.symbolPlate, QFont(QString(), 20), 1.0, scmSize);
+        QCOMPARE(image.size(), QSize(scmSize, scmSize));
+        QCOMPARE(alphaAt(image, 0, 0), 0);
+        QCOMPARE(alphaAt(image, scmSize / 2, 2), 0);
+        QVERIFY2(qGray(image.pixel(scmSize / 2, scmSize / 6)) > 240 && alphaAt(image, scmSize / 2, scmSize / 6) > 200, "no tag round the symbol");
+        bool glyph = false;
+        for (int y = scmSize / 4; y < 3 * scmSize / 4 && !glyph; ++y) {
+            for (int x = scmSize / 4; x < 3 * scmSize / 4 && !glyph; ++x) {
+                glyph = qGray(image.pixel(x, y)) < 60 && alphaAt(image, x, y) > 200;
+            }
+        }
+        QVERIFY2(glyph, "no symbol on the tag");
+    }
+
     void test_registrationMarkCrossesItsRingAndRunsPastIt()
     {
         const QImage mark = MapDecals::registrationMark(QColor(255, 112, 90), scmSize);

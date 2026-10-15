@@ -249,11 +249,26 @@ QList<MapStyle> registeredStyles()
     // The board is the floor
     diorama.floorPlates = false;
     diorama.environmentKits = true;
+    diorama.pavedPathStrength = 0.3f;
     diorama.playerMarker = MapStyle::PlayerMarker::Token;
     // A warm glow on the board round the room, in the script's color, and in lamplight where it gave none
     diorama.highlightShape = MapStyle::HighlightShape::Glow;
     diorama.highlightColor = QColor(255, 214, 79);
     diorama.highlightScale = 1.7f;
+    // Names on white card tags, as a model's are
+    diorama.labelFontFamily = qsl("Bitstream Vera Sans");
+    diorama.themedMapLabels = true;
+    diorama.mapLabelColor = QColor(38, 56, 92);
+    diorama.mapLabelPlate = QColor(255, 255, 255, 235);
+    diorama.mapLabelMaxHeight = 0.7f;
+    diorama.symbolPlate = QColor(255, 255, 255, 235);
+    diorama.roomNameColor = QColor(46, 60, 88);
+    diorama.roomNameScale = 0.75f;
+    diorama.compassFace = QColor(255, 255, 255, 220);
+    diorama.compassRim = QColor(138, 118, 86);
+    diorama.compassNeedle = QColor(214, 58, 48);
+    diorama.infoBackground = QColor(255, 255, 255, 220);
+    diorama.infoTextColor = QColor(38, 56, 92);
     styles.append(diorama);
 
     return styles;
@@ -387,7 +402,7 @@ QColor MapStyle::symbolColor(const QColor& roomSymbolColor, const QColor& drawnR
     if (palette == Palette::Terminal || palette == Palette::Light) {
         return roomSymbolColor.isValid() ? roomColor(roomSymbolColor) : drawnRoomColor;
     }
-    return RoomAppearance::symbolColor(roomSymbolColor, drawnRoomColor);
+    return RoomAppearance::symbolColor(roomSymbolColor, symbolPlate.isValid() ? symbolPlate : drawnRoomColor);
 }
 
 QColor MapStyle::exitColor(const QColor& profileExitColor) const
