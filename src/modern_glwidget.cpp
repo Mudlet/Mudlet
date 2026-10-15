@@ -756,8 +756,7 @@ constexpr float scmRoundRoomInset = 0.707f;
 // Outlines' widths, as a part of a room's width: around the viewed level's unbordered, opaque rooms outside grid mode, and the one hovered over
 constexpr float scmLevelOutline = 0.06f;
 constexpr float scmHoverOutline = 0.14f;
-// An ink outline's width, and its dashes' length off the viewed level, as a part of a room's width
-constexpr float scmInkOutline = 0.035f;
+// An ink outline's dashes' length off the viewed level, as a part of a room's width
 constexpr qreal scmInkDash = 0.12;
 // An interchange's ring's width, as a part of its width
 constexpr float scmInterchangeRing = 0.3f;
@@ -1554,7 +1553,7 @@ void ModernGLWidget::renderRooms()
         if (inkOutlines) {
             const QColor lineColor = pR->mBorderColor.isValid() ? pR->mBorderColor : ink;
             const float pixel = outlinePixel();
-            const float lineWidth = qMax(static_cast<float>(roomSize * scmInkOutline), pixel);
+            const float lineWidth = qMax(roomSize * style.inkOutlineWidth, pixel);
             const float width = qMax(lineWidth * (hovered ? 2.5f : 1.0f), thickness);
             // Any wider than the plain line grows outward, as a border does, so as not to cover the room
             const float half = roomSize / 2.0f + (width - lineWidth) / 2.0f;

@@ -371,12 +371,24 @@ private slots:
     {
         const QColor sheet = blueprint().background;
         const QColor forest = blueprint().roomColor(QColor(40, 160, 60));
-        QVERIFY2(forest.green() - sheet.green() > 40, qPrintable(qsl("green %1 on a sheet of %2").arg(forest.green()).arg(sheet.green())));
+        QVERIFY2(forest.green() - sheet.green() > 25, qPrintable(qsl("green %1 on a sheet of %2").arg(forest.green()).arg(sheet.green())));
         QVERIFY(forest.green() - sheet.green() > forest.red() - sheet.red() && forest.green() - sheet.green() > forest.blue() - sheet.blue());
         const QColor cellar = blueprint().roomColor(QColor(50, 10, 70));
-        QVERIFY2(cellar.lightness() - sheet.lightness() > 40, qPrintable(qsl("a dark room's lightness is %1 on a sheet of %2").arg(cellar.lightness()).arg(sheet.lightness())));
-        QVERIFY2(cellar.red() - sheet.red() > 30, qPrintable(qsl("a purple room's red is %1 on a sheet of %2").arg(cellar.red()).arg(sheet.red())));
+        QVERIFY2(cellar.lightness() - sheet.lightness() > 20, qPrintable(qsl("a dark room's lightness is %1 on a sheet of %2").arg(cellar.lightness()).arg(sheet.lightness())));
+        QVERIFY2(cellar.red() - sheet.red() > 25, qPrintable(qsl("a purple room's red is %1 on a sheet of %2").arg(cellar.red()).arg(sheet.red())));
         QCOMPARE(blueprint().roomColor(QColor(40, 160, 60, 100)).alpha(), 100);
+    }
+
+    // Light line-work on the sheet: a fill only a little lighter than the sheet, under an outline in the much lighter ink
+    void test_blueprintFillsRoomsPaleUnderItsInk()
+    {
+        const QColor sheet = blueprint().background;
+        for (const QColor& environment : {QColor(40, 160, 60), QColor(50, 90, 200), QColor(220, 220, 220), QColor(128, 0, 0), QColor(255, 255, 0), QColor(Qt::white)}) {
+            const QColor fill = blueprint().roomColor(environment);
+            const int lift = fill.lightness() - sheet.lightness();
+            QVERIFY2(lift > 5 && lift < 40, qPrintable(qsl("%1 fills a room %2 lighter than the sheet").arg(environment.name()).arg(lift)));
+            QVERIFY2(blueprint().ink.lightness() - fill.lightness() > 100, qPrintable(qsl("%1 fills a room nearly as light as the ink").arg(environment.name())));
+        }
     }
 
     void test_blueprintHighlightsAColorlessRoomInItsInk()
