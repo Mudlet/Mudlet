@@ -37,6 +37,7 @@
 #include <QContextMenuEvent>
 #include <QMenu>
 #include <QPushButton>
+#include <QScopeGuard>
 #include <QTabBar>
 #include <chrono>
 
@@ -379,6 +380,19 @@ private slots:
             return QFileInfo(path).permissions().testAnyFlags(QFileDevice::ReadGroup | QFileDevice::WriteGroup | QFileDevice::ExeGroup | QFileDevice::ReadOther | QFileDevice::WriteOther
                                                               | QFileDevice::ExeOther);
         };
+        auto* copyAction = dialog->findChild<QAction*>(qsl("copyProfile"));
+        QVERIFY(copyAction);
+        // Also on a failed check: a copy still running would leave the busy cursor up for the tests after this one
+        const auto cleanUp = qScopeGuard([&]() {
+            QTest::qWaitFor(
+                    [copyAction]() {
+                        return copyAction->isEnabled();
+                    },
+                    15s);
+            removeProfiles();
+            dialog->fillout_form();
+            QTest::qWait(100ms);
+        });
         const auto openToEveryone = [&](const QString& path) {
             return QFile::setPermissions(path, QFileDevice::ReadOwner | QFileDevice::WriteOwner | QFileDevice::ReadGroup | QFileDevice::ReadOther) && reachableByOthers(path);
         };
@@ -389,7 +403,8 @@ private slots:
             QVERIFY2(!items.isEmpty(), "The test profile is not listed in the dialog");
             dialog->listWidget_profiles->setCurrentItem(items.first());
             dialog->slot_itemClicked(items.first());
-            // past slot_itemClicked()'s debounce, whose read of the password narrows the source's file
+            // With passwords kept in the profile, the password is read, and so its file narrowed, by a
+            // load slot_itemClicked() queues rather than runs
             QTest::qWait(400ms);
         };
 
@@ -406,8 +421,6 @@ private slots:
         for (const QString& item : secrets) {
             QVERIFY2(openToEveryone(pathOf(source, item)), "could not stage a password file open to everyone");
         }
-        auto* copyAction = dialog->findChild<QAction*>(qsl("copyProfile"));
-        QVERIFY(copyAction);
         dialog->slot_copyProfile();
         QVERIFY2(QTest::qWaitFor(
                          [copyAction]() {
@@ -429,10 +442,6 @@ private slots:
         // before the copy's own selection reads, and so narrows, its password
         QVERIFY2(QFileInfo::exists(pathOf(settingsCopy, qsl("password"))), "the settings-only copy has no password file");
         QVERIFY2(!reachableByOthers(pathOf(settingsCopy, qsl("password"))), "copying only the settings left the password file readable by other accounts");
-
-        removeProfiles();
-        dialog->fillout_form();
-        QTest::qWait(100ms);
     }
 
     // Must stay last: leaves the main window hidden and no connection dialog,
