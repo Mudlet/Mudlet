@@ -41,6 +41,7 @@
 #include <QFileInfo>
 #include <QFontDatabase>
 #include <QFontInfo>
+#include <QScreen>
 #include <QSignalSpy>
 #include <QTemporaryDir>
 #include <QTextBoundaryFinder>
@@ -148,6 +149,21 @@ private:
         QGuiApplication::clipboard()->clear();
         pane()->slot_copySelectionToClipboard();
         return QGuiApplication::clipboard()->text();
+    }
+
+    // A selected cell is drawn in reverse, so most of it takes the text colour.
+    // The screen is grabbed rather than the widget, which would paint afresh.
+    bool cellIsHighlightedOnScreen(const int offset) const
+    {
+        const QRect rect = textInterface()->characterRect(offset);
+        const QImage cell = QGuiApplication::primaryScreen()->grabWindow(0, rect.x(), rect.y(), rect.width(), rect.height()).toImage();
+        int notBackground = 0;
+        for (int y = 0; y < cell.height(); ++y) {
+            for (int x = 0; x < cell.width(); ++x) {
+                notBackground += QColor(cell.pixel(x, y)) != mpHost->mBgColor;
+            }
+        }
+        return notBackground * 2 > cell.width() * cell.height();
     }
 
     bool lineIsOnScreen(const int line) const { return line >= pane()->imageTopLine() && line < pane()->imageTopLine() + pane()->getScreenHeight(); }
@@ -616,6 +632,7 @@ private slots:
         int reportedEnd = -1;
 
         clickRepeatedly(pointOfOffset(spaceOffset), 2);
+        QVERIFY2(!pane()->mSelectedRegion.isEmpty(), "the two clicks were not taken as a double-click, so no word highlight was built");
         ti->selection(0, &reportedStart, &reportedEnd);
         QCOMPARE(ti->selectionCount(), 0);
         QCOMPARE(reportedStart, 0);
@@ -623,6 +640,7 @@ private slots:
 
         ti->removeSelection(0);
         tripleClickLine(emptyLine);
+        QVERIFY2(!pane()->mSelectedRegion.isEmpty(), "the three clicks were not taken as a triple-click, so no line highlight was built");
         QCOMPARE(ti->selectionCount(), 0);
 
         for (const int offset : {0, offsetOfLine(line) + 3}) {
@@ -631,6 +649,35 @@ private slots:
             ti->selection(0, &reportedStart, &reportedEnd);
             QCOMPARE(ti->selectionCount(), 0);
             QCOMPARE(reportedEnd, reportedStart);
+        }
+    }
+
+    // Taking a selection away, or replacing it with an empty range, takes its
+    // highlight off the screen too rather than leaving it drawn
+    void test_removingASelectionTakesItsHighlightOffTheScreen()
+    {
+        QAccessibleTextInterface* ti = textInterface();
+        QVERIFY(ti);
+        const int line = lineOf(mSecondMarker);
+        QVERIFY2(lineIsOnScreen(line), "the line being selected is off screen, so no highlight could be drawn for it");
+        const int lineStart = offsetOfLine(line);
+        const int cell = lineStart + 12;
+        QVERIFY2(!cellIsHighlightedOnScreen(cell), "the cell looks highlighted with nothing selected, so a highlight cannot be told apart");
+
+        for (const bool emptyRange : {false, true}) {
+            ti->addSelection(lineStart, lineStart + mSecondMarker.length());
+            QTRY_VERIFY2(cellIsHighlightedOnScreen(cell), "the selection was never drawn, so there was no highlight to take off");
+
+            if (emptyRange) {
+                ti->addSelection(lineStart + 3, lineStart + 3);
+            } else {
+                ti->removeSelection(0);
+            }
+            // No waiting: the console repaints on its own soon after, which would hide
+            // a highlight left behind by a removal that never asked for a repaint
+            QCoreApplication::processEvents();
+
+            QVERIFY2(!cellIsHighlightedOnScreen(cell), emptyRange ? "an empty range left the old highlight drawn" : "removeSelection() left the highlight drawn");
         }
     }
 
@@ -907,7 +954,8 @@ private slots:
 
     // Last, as it trims the buffer: the lines going off the front leave the
     // selection on indexes the buffer has moved on from until a copy catches
-    // it up, and catching up must keep the newline it took in
+    // it up, so the line and its newline have to be found both before the
+    // copy and after it
     void test_aSelectionTakingInANewlineKeepsItWhenTheBufferIsTrimmed()
     {
         QAccessibleTextInterface* ti = textInterface();
@@ -929,17 +977,17 @@ private slots:
             mpHost->mainConsoleView()->print(qsl("trimming %1\n").arg(i));
         }
         const bool trimmed = lineOf(marker) == line - batch;
-        int reportedStart = -1;
-        int reportedEnd = -1;
-        ti->selection(0, &reportedStart, &reportedEnd);
+        const bool stillHighlighted = trimmed && buffer.buffer.at(line - batch).at(0).isSelected();
         const int countBeforeCopy = ti->selectionCount();
+        const QString selectedBeforeCopy = selectedText();
         const QString copied = copiedText();
         const QString selectedAfterCopy = selectedText();
         buffer.setBufferSize(savedLimit, savedBatch);
 
         QVERIFY2(trimmed, "the buffer was not trimmed by a whole batch, so nothing here was tested");
-        QVERIFY2(reportedEnd <= ti->characterCount(), "the selection on the lines that moved was reported past the end of the text");
-        QCOMPARE(countBeforeCopy, 0);
+        QVERIFY2(stillHighlighted, "the selected line lost its highlight in the trim, so there was no selection left to report");
+        QCOMPARE(countBeforeCopy, 1);
+        QCOMPARE(selectedBeforeCopy, marker + QChar::LineFeed);
         QCOMPARE(copied, marker + QChar::LineFeed);
         QCOMPARE(selectedAfterCopy, marker + QChar::LineFeed);
     }

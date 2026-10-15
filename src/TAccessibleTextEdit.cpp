@@ -114,20 +114,9 @@ void TAccessibleTextEdit::selection(int selectionIndex, int* startOffset, int* e
         return;
     }
 
-    TTextEdit* edit = textEdit();
-
-    if (edit->mSelectedRegion == QRegion(0, 0, 0, 0)) {
-        *startOffset = *endOffset = 0;
-        return;
-    }
-
-    *startOffset = offsetForPosition(edit->mPA.y(), edit->mPA.x());
-    *endOffset = edit->selectionEndOffset();
-    // A double-click on a space, a triple-click on an empty line, or a selection left on
-    // lines the buffer has since trimmed highlights a cell but selects no text
-    if (*endOffset <= *startOffset || *endOffset > characterCount()) {
-        *startOffset = *endOffset = 0;
-    }
+    const auto [start, end] = textEdit()->accessibleSelection();
+    *startOffset = start;
+    *endOffset = end;
 }
 
 /*
@@ -135,10 +124,7 @@ void TAccessibleTextEdit::selection(int selectionIndex, int* startOffset, int* e
  */
 int TAccessibleTextEdit::selectionCount() const
 {
-    int startOffset = 0;
-    int endOffset = 0;
-    selection(0, &startOffset, &endOffset);
-    return endOffset > startOffset;
+    return textEdit()->accessibleSelectionLength() > 0;
 }
 
 /*
@@ -192,6 +178,8 @@ void TAccessibleTextEdit::removeSelection(int selectionIndex)
 
     textEdit()->unHighlight();
     textEdit()->mSelectedRegion = QRegion(0, 0, 0, 0);
+    // unHighlight() only deselects the characters, and the screen keeps showing them selected until a repaint
+    textEdit()->forceUpdate();
 }
 
 /*

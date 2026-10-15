@@ -1801,8 +1801,8 @@ void TTextEdit::highlightSelection()
     }
 
     if (QAccessible::isActive()) {
-        const int startOffset = offsetForPosition(mPA.y(), mPA.x());
-        QAccessibleTextSelectionEvent event(this, startOffset, std::max(startOffset, selectionEndOffset()));
+        const auto [startOffset, endOffset] = accessibleSelection();
+        QAccessibleTextSelectionEvent event(this, startOffset, endOffset);
         QAccessible::updateAccessibility(&event);
     }
 }
@@ -2862,10 +2862,10 @@ QString TTextEdit::getSelectedText(const QChar& newlineChar, const bool showTime
     // mPA QPoint where selection started
     // mPB QPoint where selection ended
     // try to prevent crash if buffer is batch deleted
-    if (mPA.y() > mpBuffer->lineBuffer.size() - 1 || mPB.y() > mpBuffer->lineBuffer.size() - 1) {
+    if (const int trimmed = selectionLinesTrimmed()) {
         const bool takesNewline = mPB == mPBTakingNewline;
-        mPA.ry() -= mpBuffer->mBatchDeleteSize;
-        mPB.ry() -= mpBuffer->mBatchDeleteSize;
+        mPA.ry() -= trimmed;
+        mPB.ry() -= trimmed;
         if (takesNewline) {
             mPBTakingNewline = mPB;
         }
@@ -4819,15 +4819,51 @@ int TTextEdit::offsetForPosition(int line, int column) const
     return ret;
 }
 
-// mPB is the last selected cell and the end offset the first one not selected. A whole-line
-// selection leaves mPB on the newline cell (x == line length), which counts as selected only
-// when mPBTakingNewline says the selection takes the newline in.
-int TTextEdit::selectionEndOffset() const
+// Lines lost off the front of a buffer at its limit shift every index down, while mPA and mPB
+// stay on the old indexes until getSelectedText() catches them up
+int TTextEdit::selectionLinesTrimmed() const
 {
-    const int line = mPB.y();
-    const int lineLength = (line >= 0 && line < static_cast<int>(mpBuffer->buffer.size())) ? static_cast<int>(mpBuffer->buffer.at(line).size()) : 0;
-    if (mPB == mPBTakingNewline) {
-        return offsetForPosition(line, lineLength) + 1;
+    const qsizetype lastLine = mpBuffer->lineBuffer.size() - 1;
+    return (mPA.y() > lastLine || mPB.y() > lastLine) ? mpBuffer->mBatchDeleteSize : 0;
+}
+
+// The characters of the accessible text the selection covers, 0 for none: a double-click on a
+// space or a triple-click on an empty line leaves a region but no cells. mPB is the last selected
+// cell, and a whole-line selection leaves it on the newline cell (x == line length), which counts
+// only when mPBTakingNewline says so. Walks just the selected lines, so it stays cheap however
+// long the buffer is.
+int TTextEdit::accessibleSelectionLength() const
+{
+    if (mSelectedRegion.isEmpty()) {
+        return 0;
     }
-    return offsetForPosition(line, std::min(mPB.x() + 1, lineLength));
+    const int trimmed = selectionLinesTrimmed();
+    const int firstLine = mPA.y() - trimmed;
+    const int lastLine = mPB.y() - trimmed;
+    const int lineCount = static_cast<int>(std::min(mpBuffer->lineBuffer.size(), static_cast<qsizetype>(mpBuffer->buffer.size())));
+    if (firstLine < 0 || firstLine > lastLine || lastLine >= lineCount) {
+        return 0;
+    }
+    const bool takesNewline = mPB == mPBTakingNewline;
+    // the text has no newline after its last line
+    if (takesNewline && lastLine == lineCount - 1) {
+        return 0;
+    }
+    const int lastLineLength = static_cast<int>(mpBuffer->buffer.at(lastLine).size());
+    int length = (takesNewline ? lastLineLength + 1 : std::min(mPB.x() + 1, lastLineLength)) - mPA.x();
+    for (int y = firstLine; y < lastLine; ++y) {
+        length += mpBuffer->line(y).length() + 1;
+    }
+    return std::max(length, 0);
+}
+
+// Start and one past the end, as the accessible text counts them, or (0, 0) for no selection
+std::pair<int, int> TTextEdit::accessibleSelection() const
+{
+    const int length = accessibleSelectionLength();
+    if (length == 0) {
+        return {0, 0};
+    }
+    const int start = offsetForPosition(mPA.y() - selectionLinesTrimmed(), mPA.x());
+    return {start, start + length};
 }
