@@ -942,6 +942,10 @@ describe("Tests C++ functions in the Miscallaneous category", function()
       -- changing most application-wide settings does not write Mudlet.ini, so a
       -- save has to, or a crash after it loses the change
       it("writes the application-wide settings to Mudlet.ini as well", function()
+        if not testMode then
+          pending("only test mode can wait out this test's save, so the save putting Mudlet.ini back would be refused")
+          return
+        end
         local iniFile = getMudletHomeDir():match("^(.*)/profiles/[^/]+$") .. "/Mudlet.ini"
         local function onDisk()
           local file = io.open(iniFile, "r")
@@ -966,10 +970,6 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         assert.is_true(setConfig("showTabConnectionIndicators", wanted))
 
         local saved, message = saveWaitingOutAnyOtherSave()
-        if not saved and not testMode then
-          pending("the profile save was refused and only test mode can wait one out: " .. tostring(message))
-          return
-        end
         assert.is_true(saved, tostring(message))
 
         assert.are.equal(tostring(wanted), onDisk(), "Mudlet.ini at " .. iniFile .. " did not get the new value")
