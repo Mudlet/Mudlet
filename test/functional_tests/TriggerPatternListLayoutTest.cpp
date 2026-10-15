@@ -30,6 +30,7 @@
  * Run with: ctest -R TriggerPatternListLayoutTest -V
  */
 
+#include <QLineEdit>
 #include <QScopeGuard>
 #include <QScrollArea>
 #include <QScrollBar>
@@ -69,6 +70,7 @@ private:
     const QString mNinePatternTrigger = qsl("qaNinePatterns");
     const QString mNinthPattern = qsl("qaNinthPattern");
     const QString mColourPatternTrigger = qsl("qaColourNinth");
+    const QString mSpacerPatternTrigger = qsl("qaSpacerNinth");
 
     void deleteProfileDirectory(const QString& profileName)
     {
@@ -111,6 +113,20 @@ private:
         pColour->setRegexCodeList(patterns, kinds);
         pColour->setScript(qsl("echo(\"hi\")\n"));
         QVERIFY(pColour->registerTrigger());
+
+        patterns.clear();
+        kinds.clear();
+        for (int i = 1; i <= 8; ++i) {
+            patterns << qsl("s%1").arg(QChar(u'a' + i - 1));
+            kinds << REGEX_PERL;
+        }
+        patterns << qsl("3");
+        kinds << REGEX_LINE_SPACER;
+        auto* pSpacer = new TTrigger(nullptr, mpHost);
+        pSpacer->setName(mSpacerPatternTrigger);
+        pSpacer->setRegexCodeList(patterns, kinds);
+        pSpacer->setScript(qsl("echo(\"hi\")\n"));
+        QVERIFY(pSpacer->registerTrigger());
     }
 
     QTreeWidgetItem* triggerItem(const QString& name) const
@@ -241,7 +257,8 @@ private slots:
         // does when a package is installed
         mpEditor->doCleanReset();
         QVERIFY2(QTest::qWaitFor([this]() {
-                     return triggerItem(mThreePatternTrigger) != nullptr && triggerItem(mNinePatternTrigger) != nullptr && triggerItem(mColourPatternTrigger) != nullptr;
+                     return triggerItem(mThreePatternTrigger) != nullptr && triggerItem(mNinePatternTrigger) != nullptr && triggerItem(mColourPatternTrigger) != nullptr
+                            && triggerItem(mSpacerPatternTrigger) != nullptr;
                  }),
                  "the editor never rebuilt its trees around the triggers this test planted");
 
@@ -350,6 +367,28 @@ private slots:
         QCOMPARE(QApplication::focusWidget(), pRow->pushButton_fgColor);
     }
 
+    // A line spacer's count is selected as it gains focus, so a digit typed
+    // straight after the jump replaces it rather than joining it
+    void test_aLineSpacerPatternSearchResultSelectsItsCount()
+    {
+        const auto cleanup = qScopeGuard([this]() {
+            clearSearch();
+            selectTrigger(mThreePatternTrigger);
+        });
+        QVERIFY2(selectTrigger(mThreePatternTrigger), "could not select the three pattern trigger");
+        QTreeWidgetItem* pResult = patternSearchResult(qsl("3"), mSpacerPatternTrigger, 8);
+        QVERIFY2(pResult, "searching for the line spacer's count found no result for it");
+
+        mpEditor->slot_itemSelectedInSearchResults(pResult);
+        auto* pSpinBox = mpEditor->mTriggerPatternEdit.at(8)->spinBox_lineSpacer;
+        QVERIFY(runQueuedTimers());
+        QVERIFY2(rowIsFullyVisible(mpEditor->mTriggerPatternEdit.at(8)), "the line spacer pattern should be in view after its search result was chosen");
+        QCOMPARE(QApplication::focusWidget(), pSpinBox);
+        auto* pSpinBoxEdit = pSpinBox->findChild<QLineEdit*>();
+        QVERIFY(pSpinBoxEdit);
+        QCOMPARE(pSpinBoxEdit->selectedText(), qsl("3"));
+    }
+
     // The jump to a pattern runs a moment after the result is chosen, and by
     // then another trigger can be showing. Its rows are not the result's, so
     // the jump must leave them alone: "gamma" matches "ma" past the end of
@@ -370,9 +409,11 @@ private slots:
         auto* pNine = triggerItem(mNinePatternTrigger);
         mpEditor->treeWidget_triggers->setCurrentItem(pNine);
         mpEditor->slot_triggerSelected(pNine);
+        QWidget* pFocusBeforeJump = QApplication::focusWidget();
+        const int scrollBeforeJump = mpEditor->mpScrollArea->verticalScrollBar()->value();
         QVERIFY(runQueuedTimers());
-        QVERIFY2(QApplication::focusWidget() != mpEditor->mTriggerPatternEdit.at(2)->singleLineTextEdit_pattern,
-                 "the jump for a pattern of the three pattern trigger focused a pattern of the nine pattern trigger");
+        QVERIFY2(QApplication::focusWidget() == pFocusBeforeJump, "the jump for a pattern of the three pattern trigger moved focus within the nine pattern trigger");
+        QCOMPARE(mpEditor->mpScrollArea->verticalScrollBar()->value(), scrollBeforeJump);
     }
 
     // A three pattern trigger draws four rows: its patterns and the blank one

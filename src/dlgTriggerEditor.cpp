@@ -2068,9 +2068,7 @@ void dlgTriggerEditor::slot_itemSelectedInSearchResults(QTreeWidgetItem* pItem)
                         auto* pEdit = pTriggerPattern->singleLineTextEdit_pattern;
                         if (!pEdit->isVisible()) {
                             // Colour, prompt and line spacer patterns have no text to put the caret in
-                            if (QWidget* pTarget = firstFocusablePatternWidget(pTriggerPattern)) {
-                                pTarget->setFocus(Qt::OtherFocusReason);
-                            }
+                            focusPatternItem(row, Qt::OtherFocusReason);
                             return;
                         }
                         pEdit->setFocus(Qt::OtherFocusReason);
