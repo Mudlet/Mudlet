@@ -180,6 +180,7 @@ describe("Tests that the generic mapper sends nothing when the map opens", funct
     saved = {
       helpShown = select(2, debug.getupvalue(map.eventHandler, helpShownIndex)),
       lines = select(2, debug.getupvalue(grabLine, linesIndex)),
+      awaitPrompt = select(2, debug.getupvalue(grabLine, awaitPromptIndex)),
       pattern = map.save.prompt_pattern[character],
       saveFile = readFile(saveFile),
       prompt = table.deepcopy(map.prompt),
@@ -190,6 +191,7 @@ describe("Tests that the generic mapper sends nothing when the map opens", funct
     end
     debug.setupvalue(map.eventHandler, helpShownIndex, false)
     debug.setupvalue(grabLine, linesIndex, {})
+    debug.setupvalue(grabLine, awaitPromptIndex, false)
     map.save.prompt_pattern[character] = nil
     map.set("currentName", nil)
     map.set("currentExits", nil)
@@ -210,9 +212,7 @@ describe("Tests that the generic mapper sends nothing when the map opens", funct
     tempTimer:revert()
     debug.setupvalue(map.eventHandler, helpShownIndex, saved.helpShown)
     debug.setupvalue(grabLine, linesIndex, saved.lines)
-    if awaitPromptIndex then
-      debug.setupvalue(grabLine, awaitPromptIndex, false)
-    end
+    debug.setupvalue(grabLine, awaitPromptIndex, saved.awaitPrompt)
     map.save.prompt_pattern[character] = saved.pattern
     if saved.saveFile then
       local file = io.open(saveFile, "wb")
@@ -237,6 +237,7 @@ describe("Tests that the generic mapper sends nothing when the map opens", funct
     assert.is_function(grabLine)
     assert.is_number(helpShownIndex)
     assert.is_number(linesIndex)
+    assert.is_number(awaitPromptIndex)
   end)
 
   it("sends nothing to the game", function()
@@ -277,6 +278,41 @@ describe("Tests that the generic mapper sends nothing when the map opens", funct
     map.eventHandler("mapOpenEvent")
     local ok, message = feedTelnet("Where The Spec Starts\r\n[ Exits: north ]\r\n")
     assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(message))
+    assert.is_nil(map.save.prompt_pattern[character])
+  end)
+
+  it("does not take a login pager or menu line for the prompt", function()
+    map.eventHandler("mapOpenEvent")
+    gameSends("Welcome to SpecMUD!\r\nMessage of the day...\r\n[Hit Return to continue] ")
+    gameSends("1) Play\r\n2) Quit\r\nChoice> ")
+    assert.is_nil(map.save.prompt_pattern[character])
+    gameSends("Where The Spec Starts\r\nA quiet corner.\r\n[ Exits: north ]\r\n<100hp 50mp> ")
+    assert.equals("^%[?%a*%]?<.*>", map.save.prompt_pattern[character])
+  end)
+
+  it("stops listening for a prompt once the player sets one", function()
+    local echo = stub(map, "echo")
+    local savedAlt = map.save.prompt_pattern.SpecAlt
+    finally(function()
+      echo:revert()
+      map.character = character
+      map.save.prompt_pattern.SpecAlt = savedAlt
+    end)
+    map.eventHandler("mapOpenEvent")
+    map.make_prompt_pattern("<.*>")
+    map.character = "SpecAlt"
+    map.save.prompt_pattern.SpecAlt = nil
+    gameSends("<100hp 50mp> ")
+    assert.is_nil(map.save.prompt_pattern.SpecAlt)
+  end)
+
+  it("stops listening for a prompt once find prompt gives up", function()
+    local echo = stub(map, "echo")
+    finally(function() echo:revert() end)
+    map.eventHandler("mapOpenEvent")
+    map.find_prompt()
+    map.search_timer_check()
+    gameSends("<100hp 50mp> ")
     assert.is_nil(map.save.prompt_pattern[character])
   end)
 end)

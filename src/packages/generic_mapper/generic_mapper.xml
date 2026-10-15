@@ -3882,6 +3882,7 @@ function map.search_timer_check()
     if find_prompt then
         map.echo("Prompt not auto-detected, use 'map prompt' to set a prompt pattern.",false,true)
         find_prompt = false
+        await_prompt = false
     end
 end
 
@@ -3896,6 +3897,7 @@ function map.make_prompt_pattern(str)
     if not str:starts("^") then str = "^"..str end
     map.save.prompt_pattern[map.character] = str
     find_prompt = false
+    await_prompt = false
     table.save(profilePath .. "/map downloads/map_save.dat",map.save)
     map.echo("Prompt pattern set: " .. str)
 end
@@ -3940,8 +3942,9 @@ end
 local function grab_line()
     table.insert(lines,line)
     -- unasked, only a line the game itself ends as a prompt (GA/EOR) is safe to test:
-    -- the loosest pattern also matches an ordinary "[ Exits: north ]" line
-    if await_prompt and not map.save.prompt_pattern[map.character] and isPrompt() then
+    -- the loosest pattern also matches an ordinary "[ Exits: north ]" line. A status
+    -- prompt shows numbers; a login pager or menu line ended the same way does not
+    if await_prompt and not map.save.prompt_pattern[map.character] and isPrompt() and line:find("%d") then
         match_prompt_patterns()
     end
     if map.save.prompt_pattern[map.character] and string.match(line, map.save.prompt_pattern[map.character]) then
