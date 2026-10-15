@@ -20,12 +20,15 @@
 #pragma once
 
 #include "MapStyle.h"
-#include "EnvironmentKit.h"
 
 #include <QGradient>
 #include <QImage>
 
 class TMapLabel;
+
+namespace EnvironmentKit {
+enum class Kit;
+}
 
 // The pictures the modern 3D view lays on and around rooms for a map style, made without GL so that they can be
 // checked on their own

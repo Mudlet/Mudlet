@@ -19,6 +19,7 @@
 
 #include "MapDecals.h"
 
+#include "EnvironmentKit.h"
 #include "RoomAppearance.h"
 #include "TMapLabel.h"
 #include "utils.h"
