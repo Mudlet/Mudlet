@@ -1304,6 +1304,34 @@ headlessBackground = ok and "ok" or tostring(err)
         QVERIFY2(QApplication::topLevelWidgets().isEmpty(), "Setting the background images created a widget.");
     }
 
+    // The answers are those GeyserLabel_spec.lua gets in the GUI self-test profile
+    void test_headlessResetTakesStyleSheetImage()
+    {
+        const QString hostname = qsl("Test-Headless-Host-Sheet-Image");
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = HostManager::self()->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+        QVERIFY(!host->hasConsoleView());
+
+        const bool ran = host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+local answers = {}
+createLabel("sheetImage", 0, 0, 40, 20, 1)
+for _, sheet in ipairs({
+  "border: 1px solid red; background-image: url(data:image/png;base64,AAAA); color: blue;",
+  "QLabel{color: red;} QLabel::hover{background-image: url(hover.png);}",
+  "Background-Image: url(:/icons/mudlet.png); color: blue;",
+}) do
+  setLabelStyleSheet("sheetImage", sheet)
+  answers[#answers + 1] = tostring(resetBackgroundImage("sheetImage")) .. ":" .. getLabelStyleSheet("sheetImage")
+end
+headlessSheetImageAnswers = table.concat(answers, "\n")
+)lua"));
+
+        QVERIFY2(ran, "The Lua chunk did not run.");
+        const QStringList answers{qsl("true:border: 1px solid red;  color: blue;"), qsl("true:QLabel{color: red;} QLabel::hover{background-image: url(hover.png);}"), qsl("true: color: blue;")};
+        QCOMPARE(luaGlobalString(host, "headlessSheetImageAnswers"), answers.join(QLatin1Char('\n')));
+    }
+
     // The answers are those of the same Lua run in the GUI self-test profile
     void test_headlessRaiseLowerContract()
     {

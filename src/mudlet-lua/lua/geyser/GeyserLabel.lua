@@ -507,7 +507,9 @@ end
 -- of any text the label is showing. Which of the two it is comes from the file's
 -- content rather than from its name.
 -- resetBackgroundImage takes off the SVG layer, a raster image and a movie in one
--- call, and leaves the label's text where it is.
+-- call, and leaves the label's text where it is. It also takes the stylesheet's
+-- background-image declarations that are not inside a {...} rule out, see
+-- Geyser.Label:resetBackgroundImage.
 -- Returns true, or nil and an error message when the file cannot be read.
 -- @param imageFileName The image to use for a background image.
 function Geyser.Label:setBackgroundImage (imageFileName)
@@ -589,9 +591,133 @@ function Geyser.Label:resetSvgTransform ()
 end
 
 --- Sets a tiled background image for this label.
+-- It replaces the label's stylesheet with a background-image declaration, which
+-- Geyser.Label:resetBackgroundImage takes away again.
 -- @param imageFileName The image to use for a background image.
 function Geyser.Label:setTiledBackgroundImage (imageFileName)
   self:setStyleSheet("background-image: url(" .. imageFileName .. ");")
+end
+
+-- Index just past the quoted string or comment starting at i, or i when none starts there.
+local function pastQuoteOrComment(sheet, i)
+  local c = sheet:sub(i, i)
+  if c == '"' or c == "'" then
+    local j = i + 1
+    while j <= #sheet and sheet:sub(j, j) ~= c do
+      j = j + (sheet:sub(j, j) == "\\" and 2 or 1)
+    end
+    return math.min(j + 1, #sheet + 1)
+  end
+  if c == "/" and sheet:sub(i + 1, i + 1) == "*" then
+    local finish = sheet:find("*/", i + 2, true)
+    return finish and finish + 2 or #sheet + 1
+  end
+  return i
+end
+
+-- The end of the background-image declaration starting at i, or i when none starts there.
+local function pastBackgroundImageDeclaration(sheet, i)
+  if sheet:sub(i, i + 15):lower() ~= "background-image" then
+    return i
+  end
+  local j = i + 16
+  while sheet:sub(j, j):match("^%s$") do
+    j = j + 1
+  end
+  if sheet:sub(j, j) ~= ":" then
+    return i
+  end
+  local parentheses = 0
+  j = j + 1
+  while j <= #sheet do
+    local skipped = pastQuoteOrComment(sheet, j)
+    if skipped ~= j then
+      j = skipped
+    else
+      local c = sheet:sub(j, j)
+      if c == "(" then
+        parentheses = parentheses + 1
+      elseif c == ")" and parentheses > 0 then
+        parentheses = parentheses - 1
+      elseif parentheses == 0 and c == ";" then
+        return j + 1
+      elseif parentheses == 0 and c == "}" then
+        return j
+      end
+      j = j + 1
+    end
+  end
+  return j
+end
+
+-- TLabelModel::styleSheetWithoutBackgroundImage() for a sheet that is not on the label: putting it
+-- there to reset it would apply its min-width, qproperty-* and the like to the label.
+local function styleSheetWithoutBackgroundImage(sheet)
+  local result = {}
+  local copiedUpTo = 1
+  local braces = 0
+  local parentheses = 0
+  local declarationCanStart = true
+  local i = 1
+  while i <= #sheet do
+    local skipped = pastQuoteOrComment(sheet, i)
+    if skipped ~= i then
+      if sheet:sub(i, i) ~= "/" then
+        declarationCanStart = false
+      end
+      i = skipped
+    else
+      local c = sheet:sub(i, i)
+      if c == "(" then
+        parentheses = parentheses + 1
+      elseif c == ")" and parentheses > 0 then
+        parentheses = parentheses - 1
+      end
+      local finish = i
+      if parentheses == 0 and braces == 0 and declarationCanStart then
+        finish = pastBackgroundImageDeclaration(sheet, i)
+      end
+      if finish ~= i then
+        result[#result + 1] = sheet:sub(copiedUpTo, i - 1)
+        copiedUpTo = finish
+        i = finish
+      else
+        if parentheses == 0 then
+          if c == "{" then
+            braces = braces + 1
+          elseif c == "}" and braces > 0 then
+            braces = braces - 1
+          end
+          if not c:match("^%s$") then
+            declarationCanStart = c == ";" or c == "}"
+          end
+        end
+        i = i + 1
+      end
+    end
+  end
+  result[#result + 1] = sheet:sub(copiedUpTo)
+  return table.concat(result)
+end
+
+--- Takes away the label's background image: what setBackgroundImage put there, and every
+-- background-image declaration of its stylesheet that is not inside a {...} rule, such as the one
+-- setTiledBackgroundImage writes - whoever wrote it. An image in a rule, such as a :hover one, the
+-- background shorthand and border-image stay.
+-- Unlike the resetBackgroundImage function, this also takes the image out of the stylesheet the
+-- label remembers, which setStyleSheet() with no argument puts back.
+-- @return true, or nil and a message
+function Geyser.Label:resetBackgroundImage()
+  local ok, err = resetBackgroundImage(self.name)
+  if not ok then
+    return nil, err
+  end
+  -- not a copy of the label's own sheet, which holds the colour setBackgroundColor() adds to it
+  if self.stylesheet then
+    self.stylesheet = styleSheetWithoutBackgroundImage(self.stylesheet)
+  end
+  self:autoAdjustSize()
+  return true
 end
 
 --- Sets a callback to be used when this label is clicked. When this
