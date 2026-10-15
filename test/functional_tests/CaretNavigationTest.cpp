@@ -611,6 +611,7 @@ private slots:
         QVERIFY(pMini->buffer.getFocusedLink() > 0);
         QVERIFY(runLua(qsl("for i = 1, 8 do moveCursor('caretSpaceDeleted', 0, 1) deleteLine('caretSpaceDeleted') end")));
         QCOMPARE(pMini->buffer.lineBuffer, QStringList({qsl("line 1"), qsl("KEPT"), QString()}));
+        QVERIFY2(pMini->buffer.getFocusedLink() > 0, "deleteLine() cleared the focused link, so Space never meets a stale one");
 
         press(pMiniPane, Qt::Key_Space);
 
@@ -636,6 +637,7 @@ private slots:
         QVERIFY(runLua(qsl("for i = 1, 40 do echo('caretSpaceTrimmed', 'more ' .. i .. '\\n') end")));
         QVERIFY2(pMini->buffer.lineBuffer.indexOf(qsl("MOVED")) < linkLine, "the buffer was never trimmed, so the link is still under the caret");
         QCOMPARE(pMini->buffer.getLinkIndexAt(pMiniPane->mCaretLine, pMiniPane->mCaretColumn), 0);
+        QVERIFY2(pMini->buffer.getFocusedLink() > 0, "the trim cleared the focused link, so Space never meets a stale one");
 
         press(pMiniPane, Qt::Key_Space);
 
