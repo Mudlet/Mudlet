@@ -24,7 +24,6 @@
 
 #include <QtTest/QtTest>
 
-#include <QFontMetricsF>
 #include <QImage>
 
 #include "EnvironmentKit.h"
@@ -357,34 +356,19 @@ private slots:
         QVERIFY2(yellowText, "a light label has no text");
     }
 
-    // Names stand out in bold on a white tag, as a model's name cards do; no other style's change
-    void test_dioramaNamesSitOnABoldTag()
+    // Names stand out in bold with a white rim round them, which their usual ink reads on; no other style's change
+    void test_dioramaNamesAreBoldInAWhiteHalo()
     {
         const MapStyle& diorama = *MapStyle::find(qsl("diorama"));
-        QVERIFY(diorama.roomNameBold && diorama.roomNamePlate.isValid());
-        QVERIFY(MapStyle::readsOnPlate(diorama.roomNameColor, diorama.roomNamePlate));
+        QVERIFY(diorama.roomNameBold);
+        QCOMPARE(diorama.roomNameHalo, QColor(255, 255, 255, 235));
+        QVERIFY(MapStyle::readsOnPlate(diorama.roomNameColor, diorama.roomNameHalo));
+        QVERIFY(!MapStyle::readsOnPlate(QColor(250, 250, 210), diorama.roomNameHalo));
         for (const MapStyle& style : MapStyle::all()) {
             if (style.id != diorama.id) {
-                QVERIFY2(!style.roomNameBold && !style.roomNamePlate.isValid(), qPrintable(style.id));
+                QVERIFY2(!style.roomNameBold && !style.roomNameHalo.isValid(), qPrintable(style.id));
             }
         }
-
-        QFont font(qsl("Bitstream Vera Sans"), 20);
-        font.setBold(true);
-        const QFontMetricsF metrics(font);
-        constexpr int pad = 4;
-        const QImage image = MapDecals::taggedName(qsl("Market Cross"), diorama.roomNameColor, diorama.roomNamePlate, font, metrics, pad);
-        QCOMPARE(image.size(), QSize(qCeil(metrics.horizontalAdvance(qsl("Market Cross"))) + 2 * pad, qCeil(metrics.height()) + 2 * pad));
-        // Rounded corners, and the tag's color round the text
-        QCOMPARE(alphaAt(image, 0, 0), 0);
-        QCOMPARE(alphaAt(image, image.width() - 1, image.height() - 1), 0);
-        QCOMPARE(QColor::fromRgba(image.pixel(pad / 2, image.height() / 2)).rgb(), diorama.roomNamePlate.rgb());
-        QCOMPARE(alphaAt(image, pad / 2, image.height() / 2), diorama.roomNamePlate.alpha());
-        bool text = false;
-        for (int x = pad; x < image.width() - pad && !text; ++x) {
-            text = QColor::fromRgba(image.pixel(x, image.height() / 2)).rgb() == diorama.roomNameColor.rgb();
-        }
-        QVERIFY2(text, "the name is not on the tag");
     }
 
     void test_dioramaSymbolsStandOnATagInAColorThatShowsOnIt()

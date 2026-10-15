@@ -2419,13 +2419,16 @@ void ModernGLWidget::renderRooms()
         std::stable_sort(roomNames.begin(), roomNames.end(), [&viewModel](const RoomName& a, const RoomName& b) {
             return viewModel.map(a.center).z() > viewModel.map(b.center).z();
         });
-        const QColor nameHalo = style.labelHalos ? background : QColor();
-        // A halo or tag covers what it overlaps as the text does
-        const int nameHaloWidth = textHaloWidth(nameMetrics, nameHalo.isValid() || style.roomNamePlate.isValid());
+        const QColor backgroundHalo = style.labelHalos ? background : QColor();
+        const auto haloFor = [&style, &backgroundHalo](const QColor& color) {
+            return style.roomNameHalo.isValid() && MapStyle::readsOnPlate(color, style.roomNameHalo) ? style.roomNameHalo : backgroundHalo;
+        };
         const qreal spaceWidth = nameMetrics.horizontalAdvance(QLatin1Char(' '));
         QList<QRectF> nameRects;
         nameRects.reserve(roomNames.size());
         for (const RoomName& roomName : std::as_const(roomNames)) {
+            // A halo covers what it overlaps as the text does
+            const int nameHaloWidth = textHaloWidth(nameMetrics, haloFor(roomName.color).isValid());
             const QSizeF size(qMax(1, qCeil(style.roomNameSpan(nameMetrics.horizontalAdvance(roomName.name), spaceWidth))) + 2 * nameHaloWidth,
                               qMax(1, qCeil(nameMetrics.height())) + 2 * nameHaloWidth);
             const QVector3D across = groundRight * static_cast<float>(size.width() * nameTexel);
@@ -2436,20 +2439,11 @@ void ModernGLWidget::renderRooms()
             const RoomName& roomName = roomNames.at(index);
             QSize size;
             QString key = qsl("name|%1|%2|%3").arg(roomName.color.name(QColor::HexArgb), nameFontKey, roomName.name);
-            GLuint texture = 0;
-            if (style.roomNamePlate.isValid() && MapStyle::readsOnPlate(roomName.color, style.roomNamePlate)) {
-                key.append(qsl("|plate|%1").arg(style.roomNamePlate.name(QColor::HexArgb)));
-                size = QSize(qMax(1, qCeil(nameMetrics.horizontalAdvance(roomName.name))) + 2 * nameHaloWidth, qMax(1, qCeil(nameMetrics.height())) + 2 * nameHaloWidth);
-                texture = imageTexture(key, [&roomName, &style, &nameFont, &nameMetrics, nameHaloWidth] {
-                    return MapDecals::taggedName(roomName.name, roomName.color, style.roomNamePlate, nameFont, nameMetrics, nameHaloWidth);
-                });
-            } else {
-                if (nameHalo.isValid()) {
-                    key.append(qsl("|halo|%1").arg(nameHalo.name(QColor::HexArgb)));
-                }
-                texture = textTexture(key, roomName.name, nameFont, nameMetrics, roomName.color, size, nameHalo);
+            const QColor halo = haloFor(roomName.color);
+            if (halo.isValid()) {
+                key.append(qsl("|halo|%1").arg(halo.name(QColor::HexArgb)));
             }
-            if (texture) {
+            if (const GLuint texture = textTexture(key, roomName.name, nameFont, nameMetrics, roomName.color, size, halo)) {
                 const QVector3D across = groundRight * (size.width() * nameTexel);
                 const QVector3D upward = groundUp * (size.height() * nameTexel);
                 GeometryData& batch = roomName.decals->text[texture];

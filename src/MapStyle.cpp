@@ -256,7 +256,7 @@ QList<MapStyle> registeredStyles()
     diorama.highlightShape = MapStyle::HighlightShape::Glow;
     diorama.highlightColor = QColor(255, 214, 79);
     diorama.highlightScale = 1.7f;
-    // Names on white card tags, as a model's are
+    // Map labels on white card tags, as a model's are
     diorama.labelFontFamily = qsl("Bitstream Vera Sans");
     diorama.themedMapLabels = true;
     diorama.mapLabelColor = QColor(38, 56, 92);
@@ -266,7 +266,7 @@ QList<MapStyle> registeredStyles()
     diorama.roomNameColor = QColor(46, 60, 88);
     diorama.roomNameScale = 0.75f;
     diorama.roomNameBold = true;
-    diorama.roomNamePlate = QColor(255, 255, 255, 235);
+    diorama.roomNameHalo = QColor(255, 255, 255, 235);
     diorama.compassFace = QColor(255, 255, 255, 220);
     diorama.compassRim = QColor(138, 118, 86);
     diorama.compassNeedle = QColor(214, 58, 48);
