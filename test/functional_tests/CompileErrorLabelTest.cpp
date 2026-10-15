@@ -118,7 +118,7 @@ private slots:
         lua_setallocf(L, sRealAlloc, sRealAllocData);
 
         QVERIFY(!compiled);
-        QVERIFY2(error.contains(qsl("not enough memory")), qPrintable(error));
+        QVERIFY2(error.contains(qsl("Lua error:not enough memory")), qPrintable(error));
         QVERIFY2(!error.contains(qsl("syntax error")), qPrintable(qsl("a load that ran out of memory was reported as a syntax error: %1").arg(error)));
     }
 };
