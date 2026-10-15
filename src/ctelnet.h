@@ -36,7 +36,6 @@
 #include <QHostAddress>
 #include <QHostInfo>
 #include <QPointer>
-#include <QScopeGuard>
 #include <QStringList>
 #if defined(QT_NO_SSL)
 #include <QTcpSocket>
@@ -259,14 +258,7 @@ public:
     std::tuple<QString, int, bool> getConnectionInfo() const;
     void setPostingTimeout(const int);
     int getPostingTimeout() const { return mTimeOut; }
-    void loopbackTest(QByteArray& data)
-    {
-        ++mLoopbackProcessingDepth;
-        const auto loopbackGuard = qScopeGuard([this] {
-            --mLoopbackProcessingDepth;
-        });
-        processSocketData(data.data(), data.size(), true);
-    }
+    void loopbackTest(QByteArray& data);
     int loopbackProcessingDepth() const { return mLoopbackProcessingDepth; }
     // Every feedTelnet() level nests inside processSocketData(), so it also
     // counts against scmMaxDecompressionRecursion; keep this below it, or a
@@ -275,9 +267,9 @@ public:
     // How deep processSocketData() may nest (the outermost call counts as one)
     // while draining data left over after a decompression pass (compressed input that did not fit in one
     // output buffer, or plain data following the compressed stream). Each level
-    // inflates at most one output buffer, so this caps decompressed output at
-    // ~scmMaxDecompressionRecursion * BUFFER_SIZE per socket read, which bounds
-    // a decompression bomb.
+    // inflates at most one output buffer; what is left at the deepest level waits
+    // in mDeferredInput, so a socket's decompression bomb is worked through
+    // ~scmMaxDecompressionRecursion * BUFFER_SIZE per event-loop turn.
     inline static const int scmMaxDecompressionRecursion = 8;
     void cancelLoginTimers();
     // A flag rather than a timer query, so every transition makes the Host
@@ -376,8 +368,8 @@ private:
 
     // Needs to call processSocketData() with a buffer it laid out itself, which
     // the public loopbackTest() cannot express - see issue #1065 - and to seed
-    // mDecompressionRecursionDepth so the over-limit refusal can be reached
-    // without a real decompression bomb.
+    // mDecompressionRecursionDepth so the over-limit refusal, which a drain
+    // never reaches itself, can be tested.
     friend class cTelnetBufferTest;
 
     // Reads the password-mode safety timer, the connection clock and the
@@ -465,15 +457,21 @@ private:
 
 private slots:
     void slot_networkLatencyBeat();
+    void slot_replaySpeedChanged();
     void slot_passwordMaskTimeout();
 
 private:
 #if !defined(QT_NO_SSL)
     void promptTlsConnectionAvailable();
 #endif
+    void armReplayChunkTimer();
+    void stopReplayChunkTimer();
     void sendNAWS(int width, int height);
     void sendCurrentNAWS();
     void readPendingSocketData();
+    bool readSocketDataOnce();
+    void drainBeforeDisconnection();
+    void finishDisconnection();
     QString parseGUIVersionFromJSON(const QJsonObject& json);
     QString parseGUIUrlFromJSON(const QJsonObject& json);
     bool parseGUIBaseUiDeclinedFromJSON(const QJsonObject& json);
@@ -553,8 +551,11 @@ private:
     // Whether mUninflatedInput still holds every byte the stream has taken
     bool mUninflatedInputComplete = true;
     // Re-entry depth of processSocketData() while draining leftover
-    // (de)compressed data; bounds stack use and decompression-bomb output.
+    // (de)compressed data; bounds stack use.
     int mDecompressionRecursionDepth = 0;
+    // Input left over once a drain reached scmMaxDecompressionRecursion, processed
+    // ahead of anything read after it
+    QByteArray mDeferredInput;
     std::string command;
     bool iac = false;
     bool iac2 = false;
@@ -645,6 +646,12 @@ private:
     // Inhibit mAutoReconnect from taking effect for one connection cycle,
     // either because the user wanted to disconnect or an SSL/TLS error occurred:
     bool mDontReconnect = false;
+    // Set by disconnectIt() and abortConnection(): what the game sent after that
+    // is not wanted. Unlike mDontReconnect, nothing else sets it while connected.
+    bool mDisconnectRequested = false;
+    // Set while what the game sent before closing is still being taken in, one
+    // read per event-loop turn; the disconnect is finished once it is all in.
+    bool mDisconnectionPending = false;
     bool mAutoReconnect = false;
     QStringList messageStack;
     // True if THIS profile is playing a replay, does not know about any OTHER
@@ -655,8 +662,12 @@ private:
     // A chunk is in ctelnet.cpp's global buffer but not yet parsed. Defensive: stops resumeReplay()
     // re-arming when a pause AND resume land inside one chunk's processing via a nested event loop.
     bool mReplayChunkPending = false;
-    // The gap scaled by replay speed, or what was left of it when paused mid-wait.
-    int mReplayChunkDelay = 0;
+    // What is left of the recorded gap before the pending chunk, in the recording's own
+    // milliseconds: a wait scaled to one speed and rescaled to another loses to truncation.
+    qint64 mReplayChunkOwedMsec = 0;
+    // The speed the running wait was armed at, and when.
+    int mReplayChunkSpeed = 1;
+    QElapsedTimer mReplayChunkArmedAt;
     // Not QTimer::singleShot, so pausing can stop it and keep the remaining time.
     QTimer* mpReplayChunkTimer = nullptr;
     // Used to disable the TConsole ending messages if run from lua:
