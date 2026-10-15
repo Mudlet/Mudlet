@@ -24,7 +24,6 @@
 #include <QGradient>
 #include <QImage>
 
-class QFontMetricsF;
 class TMapLabel;
 
 namespace EnvironmentKit {
@@ -61,8 +60,6 @@ QList<qreal> stackPlatforms(int count, qreal anchor, qreal spacing, qreal top, q
 QImage bullseye(const QColor& color, int size);
 // A room's symbol in color on a rounded tag of plate, as MapStyle::symbolPlate draws it, size texels across
 QImage taggedSymbol(const QString& symbol, const QColor& color, const QColor& plate, const QFont& font, qreal fontFudgeFactor, int size);
-// A room's name in color on a rounded tag of plate, as MapStyle::roomNamePlate draws it, pad texels round the text
-QImage taggedName(const QString& name, const QColor& color, const QColor& plate, const QFont& font, const QFontMetricsF& metrics, int pad);
 // The title block's second line, for the shown level of an area with these levels, lowest first
 QString titleLevelLine(int shownLevel, const QList<int>& areaLevels);
 

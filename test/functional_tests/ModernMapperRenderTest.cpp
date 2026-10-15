@@ -3016,8 +3016,8 @@ private slots:
         QVERIFY2(shaftTop < roomHeight, qPrintable(qsl("a shaft between the building's storeys rises to %1").arg(shaftTop)));
     }
 
-    // A symbol and a name each stand on a white tag where their color shows on it, and go without where it would not
-    void test_dioramaPutsSymbolsAndNamesOnTagsTheyShowOn()
+    // A symbol stands on a white tag, and a bold name in a white halo, where their color shows on it; else they go without
+    void test_dioramaTagsSymbolsAndHalosBoldNamesInColorsThatShowOnThem()
     {
         const int areaId = addArea();
         QVERIFY(areaId > 0);
@@ -3036,10 +3036,10 @@ private slots:
         });
         QVERIFY(mpHost->setMapStyle(qsl("diorama")));
         const MapStyle& diorama = mpHost->mapStylePreset();
-        QVERIFY(diorama.symbolPlate.isValid() && diorama.roomNamePlate.isValid());
+        QVERIFY(diorama.symbolPlate.isValid() && diorama.roomNameHalo.isValid());
         ModernGLWidget widget(map(), mpHost);
         queueFrame(widget, areaId);
-        // The key a texture of this kind was drawn under, for text which it ends with or which comes before its tag's color
+        // The key a texture of this kind was drawn under, for text which it ends with or which comes before its tag or halo
         const auto drawnKey = [&widget](const QString& kind, const QString& text) {
             for (const QString& key : std::as_const(widget.mRoomTexturesInUse)) {
                 if (key.startsWith(kind) && (key.endsWith(qsl("|%1").arg(text)) || key.contains(qsl("|%1|").arg(text)))) {
@@ -3048,12 +3048,16 @@ private slots:
             }
             return QString();
         };
-        const QString plate = qsl("|%1").arg(diorama.roomNamePlate.name(QColor::HexArgb));
-        QCOMPARE(diorama.symbolPlate, diorama.roomNamePlate);
+        const QString plate = qsl("|%1").arg(diorama.symbolPlate.name(QColor::HexArgb));
         QVERIFY2(drawnKey(qsl("symbol|"), qsl("$")).contains(plate), "a symbol in its usual color has no tag");
         QVERIFY2(!drawnKey(qsl("symbol|"), qsl("%")).isEmpty() && !drawnKey(qsl("symbol|"), qsl("%")).contains(plate), "a light symbol was put on a white tag");
-        QVERIFY2(drawnKey(qsl("name|"), qsl("Market Cross")).contains(plate), "a name has no tag");
-        QVERIFY2(!drawnKey(qsl("name|"), qsl("Mill")).isEmpty() && !drawnKey(qsl("name|"), qsl("Mill")).contains(plate), "a light name was put on a white tag");
+        const QString name = drawnKey(qsl("name|"), qsl("Market Cross"));
+        QVERIFY2(name.endsWith(qsl("|Market Cross|halo|%1").arg(diorama.roomNameHalo.name(QColor::HexArgb))), qPrintable(qsl("a name is drawn as %1, not in a white halo").arg(name)));
+        QFont nameFont;
+        QVERIFY(nameFont.fromString(name.section(QLatin1Char('|'), 2, 2)));
+        QVERIFY2(nameFont.bold(), qPrintable(qsl("a name's font %1 is not bold").arg(nameFont.toString())));
+        const QString lightName = drawnKey(qsl("name|"), qsl("Mill"));
+        QVERIFY2(!lightName.isEmpty() && !lightName.contains(qsl("|halo|")), "a light name was put in a white halo");
     }
 
     // Looking down: the board is wood under a pale sky, a room's top is lighter on the edge toward the light than on the
