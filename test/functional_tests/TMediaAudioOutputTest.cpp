@@ -73,8 +73,8 @@ private slots:
     }
 
     // Read off the outputs the player owns rather than QMediaPlayer::audioOutput(), so a player
-    // that stops reporting its output (#11012) still shows the full-volume, unmuted output and
-    // the pile-up that follow on the next change instead of only the missing pointer.
+    // that stops reporting its output (#11012) still shows the full-volume output that follows
+    // on the next change instead of only the missing pointer.
     void test_repeatedDeviceChangesCarryVolumeAndMuteAndLeaveOneLiveAudioOutput()
     {
         TMediaData mediaData{};
