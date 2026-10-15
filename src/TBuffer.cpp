@@ -6101,18 +6101,19 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
     // Each trigger pass line rewrapped here moves down to where its first part lands.
     // Matched against the indices they started at, as a line moved onto a later
     // line's old index must not be moved again
-    QVarLengthArray<int*, 2> passLines;
+    struct MovingPassLine
+    {
+        int* pLineNumber;
+        int from;
+    };
+    QVarLengthArray<MovingPassLine, 2> passLines;
     if (mPreTriggerPassLineNumber >= firstRewrappedLine) {
-        passLines.append(&mPreTriggerPassLineNumber);
+        passLines.append({&mPreTriggerPassLineNumber, mPreTriggerPassLineNumber});
     }
     for (EnclosingTriggerPass& enclosing : mEnclosingTriggerPasses) {
         if (enclosing.lineNumber >= firstRewrappedLine) {
-            passLines.append(&enclosing.lineNumber);
+            passLines.append({&enclosing.lineNumber, enclosing.lineNumber});
         }
-    }
-    QVarLengthArray<int, 2> passLinesFrom;
-    for (const int* pPassLine : std::as_const(passLines)) {
-        passLinesFrom.append(*pPassLine);
     }
 
     std::queue<std::vector<TChar>> queue;
@@ -6123,9 +6124,9 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
     int lineCount = 0;
     for (int i = firstRewrappedLine; i < total; ++i) {
         lineCount++;
-        for (qsizetype k = 0; k < passLines.size(); ++k) {
-            if (passLinesFrom.at(k) == i) {
-                *passLines[k] = firstRewrappedLine + static_cast<int>(tempList.size());
+        for (const MovingPassLine& passLine : std::as_const(passLines)) {
+            if (passLine.from == i) {
+                *passLine.pLineNumber = firstRewrappedLine + static_cast<int>(tempList.size());
             }
         }
         std::vector<TChar> newBufferLine;
