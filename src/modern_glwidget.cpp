@@ -1232,8 +1232,9 @@ GLuint ModernGLWidget::symbolTexture(const QString& symbol, const QColor& color)
 {
     const QFont& font = mpMap->mMapSymbolFont;
     const qreal fudgeFactor = mpMap->mMapSymbolFontFudgeFactor;
+    // A symbol given a light color of its own is drawn as it was, rather than lost on the tag
     const QColor plate = mapStyle().symbolPlate;
-    if (plate.isValid()) {
+    if (plate.isValid() && MapStyle::readsOnPlate(color, plate)) {
         return imageTexture(qsl("symbol|%1|%2|%3|%4|%5").arg(color.name(QColor::HexArgb), font.key(), QString::number(fudgeFactor), plate.name(QColor::HexArgb), symbol),
                             [&symbol, &color, &plate, &font, fudgeFactor] {
                                 return MapDecals::taggedSymbol(symbol, color, plate, font, fudgeFactor, scmRoomTextureSize);
@@ -3065,14 +3066,16 @@ void ModernGLWidget::renderConnections()
         return upright ? point - sink * qMax(0.0f, 1.0f - std::abs(point.z() - static_cast<float>(level)) / roomHeight) : point - sink;
     };
     // A tall building's storeys stand closer than their levels, so the shafts between them would rise out of its roof
-    QSet<std::pair<float, float>> towers;
+    // Each building's x,y and the levels from its foot to its top storey
+    QHash<std::pair<float, float>, std::pair<int, int>> towers;
     if (style.environmentKits) {
         if (const TArea* pArea = mpMap->mpRoomDB->getArea(mAID)) {
             const QHash<int, DioramaLayout::Piece> pieces = dioramaPieces(*pArea);
             for (auto piece = pieces.constBegin(); piece != pieces.constEnd(); ++piece) {
                 if (piece->storeys > 1) {
                     if (const TRoom* pRoom = mpMap->mpRoomDB->getRoom(piece.key())) {
-                        towers.insert({static_cast<float>(pRoom->x()), static_cast<float>(pRoom->y())});
+                        const int foot = pRoom->z() - piece->storey;
+                        towers.insert({static_cast<float>(pRoom->x()), static_cast<float>(pRoom->y())}, {foot, foot + piece->storeys - 1});
                     }
                 }
             }
@@ -3090,8 +3093,15 @@ void ModernGLWidget::renderConnections()
             tint.setW(tint.w() * scmGlowingExitStrength);
         }
         const bool upright = (segment.to - segment.from).toVector2D().lengthSquared() < 1e-8f;
-        if (upright && !towers.isEmpty() && towers.contains({segment.from.x(), segment.from.y()})) {
-            continue;
+        if (upright && !towers.isEmpty()) {
+            // Only the shafts between its own storeys: one down out of its foot, or below it, still shows
+            const auto tower = towers.constFind({segment.from.x(), segment.from.y()});
+            const auto inside = [&tower](const float z) {
+                return z > tower->first - 0.25f && z < tower->second + 0.25f;
+            };
+            if (tower != towers.cend() && inside(segment.from.z()) && inside(segment.to.z())) {
+                continue;
+            }
         }
         const CubeInstanceData bar(GeometryManager::barTransform(sunk(segment.from, segment.level, upright), sunk(segment.to, segment.level, upright), segment.width, segment.height),
                                    tint.x(),
@@ -3099,8 +3109,9 @@ void ModernGLWidget::renderConnections()
                                    tint.z(),
                                    tint.w());
         if (pavedPaths && !upright && segment.level == mMapCenterZ) {
-            // Thinner than the path, and just over the thickest tile, so that it shows over any of them
-            const QVector3D raise(0.0f, 0.0f, DioramaLayout::flatTileTop(roomHeight) + (pavedPathHeight - segment.height) / 2.0f);
+            // Thinner than the path, and just over the thickest tile, so that it shows over any of them; from the ground,
+            // which sunk() puts a line's height below its middle, whatever this segment's own height
+            const QVector3D raise(0.0f, 0.0f, DioramaLayout::flatTileTop(roomHeight) + (pavedPathHeight - options.lineHeight) / 2.0f);
             mSeeThroughExits[segment.level].bars.append(CubeInstanceData(
                     GeometryManager::barTransform(sunk(segment.from, segment.level, false) + raise, sunk(segment.to, segment.level, false) + raise, segment.width * scmPavedPathWidth, pavedPathHeight),
                     tint.x(),

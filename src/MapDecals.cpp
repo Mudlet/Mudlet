@@ -350,7 +350,8 @@ QImage themedLabel(const TMapLabel& label, const MapStyle& style)
     const QColor textColor = ownTextColor ? label.fgColor : withAlpha(style.mapLabelColor, label.fgColor.alpha());
     const bool box = keepsLabelBox(label);
     const bool outline = !neutral(label.outlineColor) && label.outlineColor != label.fgColor;
-    const bool plate = !box && style.mapLabelPlate.isValid();
+    // A label's own light color would be lost on the tag, so it keeps the halo instead
+    const bool plate = !box && style.mapLabelPlate.isValid() && MapStyle::readsOnPlate(textColor, style.mapLabelPlate);
     const bool halo = !box && !plate && !outline && style.mapLabelHalo.isValid();
 
     // Centered on the label's own picture, as the 2D map's label dialog centers it in the box drawn for it, so the

@@ -405,6 +405,11 @@ QColor MapStyle::symbolColor(const QColor& roomSymbolColor, const QColor& drawnR
     return RoomAppearance::symbolColor(roomSymbolColor, symbolPlate.isValid() ? symbolPlate : drawnRoomColor);
 }
 
+bool MapStyle::readsOnPlate(const QColor& color, const QColor& plate)
+{
+    return qAbs(qGray(color.rgb()) - qGray(plate.rgb())) >= 96;
+}
+
 QColor MapStyle::exitColor(const QColor& profileExitColor) const
 {
     return ink.isValid() ? ink : profileExitColor;
