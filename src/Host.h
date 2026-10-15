@@ -706,6 +706,8 @@ public:
         mScreenHeight = height;
     }
     std::optional<QString> windowType(const QString& name) const;
+    // A window a closed main window took with it: the registry still names it, but the null view did not make it
+    bool windowOutOfReach(const QString& name) const;
     std::optional<QRect> windowGeometry(const QString& name) const;
     // {} for no such label.
     std::optional<QString> labelStyleSheet(const QString& name) const;

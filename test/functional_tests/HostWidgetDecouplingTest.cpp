@@ -387,6 +387,7 @@ private slots:
             assert(createLabel("nullViewBgLabel", 0, 0, 10, 10, 1))
             assert(createTextEdit("nullViewBgText", 0, 20, 10, 10))
             assert(createCommandLine("nullViewBgCmd", 0, 40, 10, 10))
+            assert(createScrollBox("nullViewBgBox", 0, 60, 10, 10))
         )lua")));
 
         host->setMainConsoleView(nullptr);
@@ -397,6 +398,10 @@ private slots:
               select(2, setCmdLineAction("nullViewBgCmd", function() end)),
               select(2, setCmdLineAction("main", function() end)),
               select(2, resetCmdLineAction("main")),
+              select(2, getBackgroundColor("nullViewBgLabel")),
+              select(2, getBackgroundColor("nullViewBgText")),
+              select(2, getBackgroundColor("nullViewBgBox")),
+              select(2, setBackgroundColor("nullViewBgBox", 1, 2, 3)),
             }, "\n")
         )lua"));
         host->setMainConsoleView(console);
@@ -407,7 +412,45 @@ private slots:
         const QString refusals = QString::fromUtf8(lua_tostring(L, -1));
         lua_pop(L, 1);
         const QString noWindow = qsl("the profile has no main window");
-        QCOMPARE(refusals, QStringList(5, noWindow).join(QChar::LineFeed));
+        QCOMPARE(refusals, QStringList(9, noWindow).join(QChar::LineFeed));
+    }
+
+    // The null view drives the windows it makes after the close, so their refusals are the ones a headless profile gives
+    void test_refusalsForWindowsMadeAfterTheClose()
+    {
+        startProfile(mHostname, mLocalhost, mPort);
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+
+        QPointer<TMainConsole> console = host->mainConsoleView();
+        QVERIFY2(console, "The active host has no main console.");
+        host->setMainConsoleView(nullptr);
+        const bool ran = host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+            assert(createTextEdit("lateText", 0, 0, 10, 10))
+            assert(createScrollBox("lateBox", 0, 20, 10, 10))
+            assert(createCommandLine("lateCmd", 0, 40, 10, 10))
+            assert(setCmdLineAction("lateCmd", function() end))
+            lateRefusals = table.concat({
+              select(2, setBackgroundColor("lateText", 1, 2, 3)),
+              select(2, getBackgroundColor("lateBox")),
+              select(2, setBackgroundColor("noSuchWindow", 1, 2, 3)),
+              select(2, setCmdLineAction("noSuchCmd", function() end)),
+              select(2, resetCmdLineAction("noSuchCmd")),
+            }, "\n")
+        )lua"));
+        host->setMainConsoleView(console);
+
+        QVERIFY(ran);
+        lua_State* L = host->getLuaInterpreter()->getLuaGlobalState();
+        lua_getglobal(L, "lateRefusals");
+        const QString refusals = QString::fromUtf8(lua_tostring(L, -1));
+        lua_pop(L, 1);
+        const QStringList expected{qsl("'lateText' is a text edit, use setTextEditStyleSheet() to set its background"),
+                                   qsl("'lateBox' is a scroll box, whose background color cannot be read back"),
+                                   qsl("window/label 'noSuchWindow' not found"),
+                                   qsl("command line name 'noSuchCmd' not found"),
+                                   qsl("command line name 'noSuchCmd' not found")};
+        QCOMPARE(refusals, expected.join(QChar::LineFeed));
     }
 
     // Each view keeps only the windows it made: the null view leaves a detached view's windows alone, and

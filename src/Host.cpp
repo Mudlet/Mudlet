@@ -6293,6 +6293,11 @@ void Host::setControlCharacterMode(const ControlCharacterMode mode)
     }
 }
 
+bool Host::windowOutOfReach(const QString& name) const
+{
+    return TAppFrontend::hasView() && !hasConsoleView() && windowType(name) && !mpNullConsoleFrontend->holdsWindow(name);
+}
+
 std::optional<QString> Host::windowType(const QString& name) const
 {
     if (Q_UNLIKELY(name == QLatin1String("main"))) {

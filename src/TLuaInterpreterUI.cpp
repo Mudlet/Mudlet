@@ -78,12 +78,6 @@ static const char* no_main_window_value = "the profile has no main window";
 // TCommandLine::enterCommand() hands the main command line's text to Host::send(), which runs aliases, never to an action
 static const char* main_cmdline_action_value = "the main command line's action cannot be changed, use an alias to act on what is typed there";
 
-// A headless profile's null view holds the windows it made, so only a closed main window leaves them out of reach
-static bool mainWindowClosed(const Host& host)
-{
-    return TAppFrontend::hasView() && !host.hasConsoleView();
-}
-
 // No documentation available in wiki - internal function
 static bool isMain(const QString& name)
 {
@@ -1370,6 +1364,8 @@ int TLuaInterpreter::getBackgroundColor(lua_State* L)
         color = host.mainConsoleModel().mBgColor;
     } else if (auto optionalColor = host.getBackgroundColor(windowName)) {
         color = optionalColor.value();
+    } else if (host.windowOutOfReach(windowName)) {
+        return warnArgumentValue(L, __func__, no_main_window_value);
     } else if (const QString refusal = backgroundColorRefusal(host, windowName, true); !refusal.isEmpty()) {
         return warnArgumentValue(L, __func__, refusal);
     } else {
@@ -2607,7 +2603,7 @@ int TLuaInterpreter::resetCmdLineAction(lua_State* L)
         lua_pushboolean(L, true);
         return 1;
     }
-    if (mainWindowClosed(host)) {
+    if (host.windowOutOfReach(name)) {
         return warnArgumentValue(L, __func__, no_main_window_value);
     }
     if (isMain(name)) {
@@ -2929,7 +2925,7 @@ int TLuaInterpreter::setBackgroundColor(lua_State* L)
     if (isMain(windowName)) {
         host.setProfileBackgroundColor(QColor(r, g, b, alpha));
     } else if (!host.setBackgroundColor(windowName, r, g, b, alpha)) {
-        if (mainWindowClosed(host)) {
+        if (host.windowOutOfReach(windowName)) {
             return warnArgumentValue(L, __func__, no_main_window_value);
         }
         if (const QString refusal = backgroundColorRefusal(host, windowName, false); !refusal.isEmpty()) {
@@ -3267,7 +3263,7 @@ int TLuaInterpreter::setCmdLineAction(lua_State* L)
 
     if (!host.setCmdLineAction(name, func)) {
         luaL_unref(L, LUA_REGISTRYINDEX, func);
-        if (mainWindowClosed(host)) {
+        if (host.windowOutOfReach(name)) {
             return warnArgumentValue(L, __func__, no_main_window_value);
         }
         if (isMain(name)) {
