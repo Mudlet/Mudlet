@@ -35,6 +35,7 @@
 #include "mudlet.h"
 #include "MudletInstanceCoordinator.h"
 #include "TriggerMatchPool.h"
+#include <algorithm>
 #include <chrono>
 #include <csignal>
 #include <QCheckBox>
@@ -488,12 +489,9 @@ int main(int argc, char* argv[])
     // would find an 'h' in -stylesheet or a 'v' in -reverse.
     parser.setSingleDashWordOptionMode(QCommandLineParser::ParseAsLongOptions);
     bool commandLineReadOk = parser.parse(commandLineArguments);
-    // An unknown bare word spelled as a compacted group of Mudlet's short options (-qv, -vp Name) is split
-    // and the list read again, so it answers as it would with a display. A group starts with a no-value
-    // letter and -p/-o ends it, taking the rest of the word or else the next one, unless that is an option
-    // (-sp --version stays whole). No undeclared Qt 6.9 option (-display, -platform, -session, -visual...)
-    // is spelled as a group. Keep both letter sets in step with the options above. Known gap: -hx stays
-    // whole, as it looks like -visual, so it still needs a display.
+    // A word spelled as a group of Mudlet's short options (-qv, -vp Name) is split, so it answers as it would
+    // with a display. No undeclared Qt 6.9 option (-display, -visual...) is spelled as one. Keep both letter
+    // sets in step with the options above. Known gap: a letter outside them (-hx) could be such an option.
     const QString noValueLetters{qsl("hvsfmq")};
     const QString valueLetters{qsl("po")};
     const auto spelledAsFlagGroup = [&noValueLetters, &valueLetters](const QString& name) {
@@ -512,10 +510,19 @@ int main(int argc, char* argv[])
     };
     QStringList flagGroups;
     for (const QString& unknownName : parser.unknownOptionNames()) {
+        if (!spelledAsFlagGroup(unknownName)) {
+            continue;
+        }
+        // --qv reports the same unknown name as -qv; -vp=Name does too, and Qt's compacted reading gives -p
+        // the value after the '=', while -qv=x is an error there
         const QString word = qsl("-%1").arg(unknownName);
-        // --qv and -qv=x report the same unknown name, but only the bare single-dash spelling is a group
-        if (spelledAsFlagGroup(unknownName) && commandLineArguments.contains(word)) {
-            flagGroups << word;
+        const bool takesValue = std::any_of(unknownName.cbegin(), unknownName.cend(), [&valueLetters](const QChar letter) {
+            return valueLetters.contains(letter);
+        });
+        for (const QString& argument : commandLineArguments) {
+            if (argument == word || (takesValue && argument.startsWith(word + QLatin1Char('=')))) {
+                flagGroups << argument;
+            }
         }
     }
     if (!flagGroups.isEmpty()) {
@@ -530,16 +537,16 @@ int main(int argc, char* argv[])
             while (valueLetterAt < argument.size() && !valueLetters.contains(argument.at(valueLetterAt))) {
                 ++valueLetterAt;
             }
-            const bool takesNextWord = valueLetterAt == argument.size() - 1;
-            if (takesNextWord && i + 1 < commandLineArguments.size() && commandLineArguments.at(i + 1).startsWith(QLatin1Char('-'))) {
-                splitArguments << argument;
-                continue;
-            }
-            for (qsizetype j = 1; j <= valueLetterAt && j < argument.size(); ++j) {
-                splitArguments << qsl("-%1").arg(argument.at(j));
+            // A trailing -p/-o would take the option after it as its value (-sp --version, -hp --offline), so
+            // it is dropped: such a run only needs the flags read, and other runs are read again later
+            const bool valueLetterDropped = valueLetterAt == argument.size() - 1 && i + 1 < commandLineArguments.size() && commandLineArguments.at(i + 1).startsWith(QLatin1Char('-'));
+            const qsizetype letterCount = std::min(valueLetterAt, argument.size() - 1) - (valueLetterDropped ? 1 : 0);
+            for (const QChar letter : QStringView(argument).sliced(1, letterCount)) {
+                splitArguments << qsl("-%1").arg(letter);
             }
             if (valueLetterAt + 1 < argument.size()) {
-                splitArguments << argument.sliced(valueLetterAt + 1);
+                const QString value = argument.sliced(valueLetterAt + 1);
+                splitArguments << (value.startsWith(QLatin1Char('=')) ? value.sliced(1) : value);
             }
         }
         commandLineReadOk = parser.parse(splitArguments);
