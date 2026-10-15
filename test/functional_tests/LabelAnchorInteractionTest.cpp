@@ -35,6 +35,7 @@
 #include "PortableModeTestHelper.h"
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
+#include "TCommandLine.h"
 #include "TLabel.h"
 #include "TLuaInterpreter.h"
 #include "TMainConsole.h"
@@ -279,7 +280,7 @@ private slots:
     void cleanup()
     {
         if (mpHost) {
-            mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("anchorSchemeRan, anchorColon, anchorColonText = nil\n"
+            mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("anchorSchemeRan, anchorColon, anchorColonText, anchorSent, anchorSendHandler = nil\n"
                                                                      "javascript, JAVASCRIPT, ftp, file, steam, about, magnet, data, mailto, tel, SMS = nil\n"));
         }
     }
@@ -301,7 +302,8 @@ private slots:
         QTest::newRow("tel") << qsl("tel:+15551234");
     }
 
-    // Each scheme is also a global whose every method sets a sentinel, so a link run as Lua after all is seen
+    // Each scheme is also a global whose every method sets a sentinel, which catches a javascript: link run as Lua;
+    // the other links do not parse as Lua, so only the [ERROR:] check would catch one being run
     void test_aLinkOfANonLuaSchemeIsNotRun()
     {
         QFETCH(QString, link);
@@ -343,6 +345,10 @@ private slots:
         QTest::newRow("method of a table named data") << qsl("data:go()") << qsl("anchorColon.ran == 1");
         QTest::newRow("method of a field") << qsl("anchorColon.inner:go()") << qsl("anchorColon.ran == 1");
         QTest::newRow("method call with a string argument") << qsl("anchorColon:go 'x'") << qsl("anchorColon.ran == 1");
+        QTest::newRow("method call with a space after the colon") << qsl("anchorColon: go()") << qsl("anchorColon.ran == 1");
+        QTest::newRow("method call with a tab after the colon") << qsl("anchorColon:\tgo()") << qsl("anchorColon.ran == 1");
+        QTest::newRow("method call with a comment after the colon") << qsl("anchorColon:--[[c]]go()") << qsl("anchorColon.ran == 1");
+        QTest::newRow("method call with a comment before the arguments") << qsl("anchorColon:go --[==[c]==] ()") << qsl("anchorColon.ran == 1");
     }
 
     void test_aLuaCommandLinkWithAColonRuns()
@@ -364,6 +370,41 @@ private slots:
         QCOMPARE(activated.count(), 1);
         QCOMPARE(activated.first().first().toString(), command);
         QVERIFY2(luaHolds(ran), "the link's Lua command did not run");
+    }
+
+    void test_aPromptLinkKeepsItsTrailingSpace()
+    {
+        TCommandLine* commandLine = mpHost->mainConsoleView()->mpCommandLine;
+        QVERIFY(commandLine);
+        commandLine->clear();
+        label()->resetLinkStyle();
+        label()->setText(qsl("<a href=\"prompt:tell Bob \">go</a>"));
+        QVERIFY2(centreIsOnTheLabel(), "the point this case clicks is outside the label, so it would miss the link");
+
+        QSignalSpy activated(label(), &QLabel::linkActivated);
+        QTest::mouseClick(label(), Qt::LeftButton, Qt::NoModifier, linkCentre());
+
+        QCOMPARE(activated.count(), 1);
+        QCOMPARE(activated.first().first().toString(), qsl("prompt:tell Bob "));
+        QCOMPARE(commandLine->toPlainText(), qsl("tell Bob "));
+        commandLine->clear();
+    }
+
+    void test_aSendLinkKeepsItsTrailingSpace()
+    {
+        label()->resetLinkStyle();
+        label()->setText(qsl("<a href=\"send:say hi \">go</a>"));
+        mpHost->getLuaInterpreter()->compileAndExecuteScript(
+                qsl("anchorSent = {}\n"
+                    "anchorSendHandler = registerAnonymousEventHandler('sysDataSendRequest', function(_, command) anchorSent[#anchorSent + 1] = command end)\n"));
+        QVERIFY2(centreIsOnTheLabel(), "the point this case clicks is outside the label, so it would miss the link");
+
+        QSignalSpy activated(label(), &QLabel::linkActivated);
+        QTest::mouseClick(label(), Qt::LeftButton, Qt::NoModifier, linkCentre());
+        mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("killAnonymousEventHandler(anchorSendHandler)"));
+
+        QCOMPARE(activated.count(), 1);
+        QVERIFY2(luaHolds(qsl("#anchorSent == 1 and anchorSent[1] == 'say hi '")), "the send: link did not send its text with the trailing space kept");
     }
 
     void test_aRightClickOpensNoMenuOfQtsOwn_data()
