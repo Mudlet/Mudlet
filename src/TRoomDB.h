@@ -87,7 +87,7 @@ public:
 
     void buildAreas();
     void clearMapDB();
-    // Bumped on every clear, and by a database that replaces this one. Holders of room/area/label ids that
+    // Bumped on every clear; a database that replaces another starts one past that one's. Holders of room/area/label ids that
     // can outlive either (e.g. a dialog open across loadMap()) compare it to detect stale ids, since the next map reuses them.
     unsigned int mapGeneration() const { return mMapGeneration; }
     // For one that replaces another, so that the ids held from that one read as stale here too

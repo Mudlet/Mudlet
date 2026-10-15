@@ -1867,6 +1867,10 @@ bool TMap::restore(QString location)
         const QString folder = MudletApp::getMudletPath(enums::profileMapsPath, mProfileName);
         const QStringList entries = QDir(folder).entryList({qsl("*.[dD][aA][tT]"), qsl("*.[jJ][sS][oO][nN]")}, QDir::Files, QDir::Time);
         for (const QString& entry : entries) {
+            // A closing profile asks for this, and the close waits on it
+            if (mapOperationAbortRequested()) {
+                return false;
+            }
             const QString fileName = qsl("%1/%2").arg(folder, entry);
             if (entry != entries.constFirst()) {
                 //: Shown before each older map file of a profile that is tried because a newer one could not be loaded. %1 is the older file's path and name.
@@ -1881,8 +1885,9 @@ bool TMap::restore(QString location)
                     return true;
                 }
             } else {
-                // readJsonMapFile() refuses to start while another JSON import or export is running
-                const bool otherJsonOperationRunning = mMapProgressStandalone;
+                // readJsonMapFile() refuses to start while another JSON import or export, or a map download
+                // with no mapper on screen, is running
+                const bool mapProgressInUse = mMapProgressStandalone;
                 auto [isOk, message] = readJsonMapFile(fileName, true);
                 if (isOk) {
                     return true;
@@ -1894,21 +1899,21 @@ bool TMap::restore(QString location)
                                                .arg(message, fileName);
                 appendErrorMsgWithNoLf(errMsg);
                 postMessage(errMsg);
+                // Nothing wrong with the file then, so an older one is no better
+                if (mapProgressInUse || mapOperationAbortRequested() || message == tr("aborted by user")) {
+                    //: Shown after a JSON map file of a profile was stopped rather than found damaged, so no older map file is loaded in its place.
+                    const QString stopMsg = tr("[ INFO ]  - No older map file will be tried instead.");
+                    appendErrorMsgWithNoLf(stopMsg);
+                    postMessage(stopMsg);
+                    return false;
+                }
                 //: Shown after a JSON map file of a profile could not be loaded.
                 const QString infoMsg = tr("[ INFO ]  - Ignoring this map file.");
                 appendErrorMsgWithNoLf(infoMsg);
                 postMessage(infoMsg);
-                // Nothing wrong with the file then, so an older one is no better
-                if (otherJsonOperationRunning || mapOperationAbortRequested() || message == tr("aborted by user")) {
-                    return false;
-                }
             }
             // Allow for somethings to be updated - especially on Windows?
             QCoreApplication::processEvents();
-            // A closing profile asks for this, and the close waits on it
-            if (mapOperationAbortRequested()) {
-                return false;
-            }
         }
         return false;
     }
@@ -1949,9 +1954,8 @@ bool TMap::restore(QString location)
         }
         if (mVersion >= 7) {
             ifs >> pNewRoomDB->hashToRoomID;
-            QMap<QString, int>::const_iterator i;
-            for (i = pNewRoomDB->hashToRoomID.constBegin(); i != pNewRoomDB->hashToRoomID.constEnd(); ++i) {
-                pNewRoomDB->roomIDToHash.insert(i.value(), i.key());
+            for (const auto& [hash, roomId] : pNewRoomDB->hashToRoomID.asKeyValueRange()) {
+                pNewRoomDB->roomIDToHash.insert(roomId, hash);
             }
         }
 

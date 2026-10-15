@@ -3786,18 +3786,33 @@ describe("Tests saveMap and loadMap", function()
       local aside = getMudletHomeDir() .. "/mapper_spec_map_aside"
       lfs.mkdir(aside)
       local moved = {}
+      local function putBack()
+        local failed = {}
+        for _, entry in ipairs(moved) do
+          local ok, message = os.rename(aside .. "/" .. entry, mapDirectory .. "/" .. entry)
+          if not ok then
+            failed[#failed + 1] = message
+          end
+        end
+        moved = {}
+        lfs.rmdir(aside)
+        assert(#failed == 0, "map files left in " .. aside .. ": " .. table.concat(failed, "; "))
+      end
+      local entries = {}
       for entry in lfs.dir(mapDirectory) do
         if lfs.attributes(mapDirectory .. "/" .. entry, "mode") == "file" then
-          assert(os.rename(mapDirectory .. "/" .. entry, aside .. "/" .. entry))
-          moved[#moved + 1] = entry
+          entries[#entries + 1] = entry
         end
       end
-      return function()
-        for _, entry in ipairs(moved) do
-          os.rename(aside .. "/" .. entry, mapDirectory .. "/" .. entry)
+      for _, entry in ipairs(entries) do
+        local ok, message = os.rename(mapDirectory .. "/" .. entry, aside .. "/" .. entry)
+        if not ok then
+          putBack()
+          error(message)
         end
-        lfs.rmdir(aside)
+        moved[#moved + 1] = entry
       end
+      return putBack
     end
 
     it("returns false for a binary map file that is not there, keeping the loaded map", function()
@@ -3999,12 +4014,12 @@ describe("Tests saveMap and loadMap", function()
     local function loadDuringJsonExport(load)
       local exportPath = getMudletHomeDir() .. "/mapper_spec_export_under_load.json"
       local loadResult = "never ran"
-      tempTimer(0, function()
-        if loadResult == "never ran" then
-          loadResult = load()
-        end
+      local timer = tempTimer(0, function()
+        loadResult = load()
       end)
       local exported, message = saveJsonMap(exportPath)
+      -- An export that never pumped would leave the load to fire in a later spec
+      killTimer(timer)
       os.remove(exportPath)
       return exported, message, loadResult
     end
@@ -4048,6 +4063,9 @@ describe("Tests saveMap and loadMap", function()
       assert.is_false(loaded)
       assert.is_true(exported, message)
       assertKept(rooms, area, "room number 1")
+      local lineCount = getLineCount("main")
+      local console = table.concat(getLines("main", math.max(0, lineCount - 10), lineCount), "\n")
+      assert.is_truthy(console:find("No older map file will be tried instead.", 1, true), console)
     end)
 
     it("returns nil and a message naming the missing XML file", function()

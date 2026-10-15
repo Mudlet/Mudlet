@@ -119,8 +119,8 @@ private:
         return file.open(QIODevice::ReadWrite) && file.setFileTime(when, QFileDevice::FileModificationTime);
     }
 
-    // A map folder with a binary map that loads behind newer files that do
-    // not: the JSON one from initTestCase(), or ones a newer Mudlet wrote
+    // A map folder with a binary map that loads, behind either the JSON one
+    // from initTestCase(), which loads too, or ones a newer Mudlet wrote, which do not
     bool fillMapFolder(const QString& profileName, const QStringList& tooNewFiles = {})
     {
         const QString folder = MudletApp::getMudletPath(enums::profileMapsPath, profileName);
@@ -286,6 +286,8 @@ private slots:
         QVERIFY2(pTarget, "failed to create the target Host");
         QVERIFY2(fillMapFolder(name), "failed to write the profile's map files");
         TMap* pMap = pTarget->mpMap.data();
+        // The file has no user data, so a load that got as far as the swap would leave none
+        pMap->mUserData.insert(qsl("kept"), qsl("from the map before the load"));
 
         bool stopped = false;
         const QMetaObject::Connection stopOnProgress = connect(pMap, &TMap::signal_mapProgressSetValue, pMap, [&]() {
@@ -306,6 +308,7 @@ private slots:
         QVERIFY2(stopped, "the JSON load never announced any progress, so it was never stopped");
         QVERIFY2(!loaded, "restore() reported loading a map after the newest map file was stopped");
         QVERIFY2(pMap->mpRoomDB->isEmpty(), "restore() went on to load the older map file after the newest one was stopped");
+        QVERIFY2(pMap->mUserData.value(qsl("kept")) == qsl("from the map before the load"), "the stopped JSON load replaced the map user data");
         if (how == qsl("close")) {
             QVERIFY2(waitForProfileToClose(name), "the deferred close never completed once restore() had unwound");
         }
@@ -330,6 +333,52 @@ private slots:
         QVERIFY2(!loaded, "restore() went on to load the older map file after the profile was asked to close");
         QVERIFY2(pMap->mpRoomDB->isEmpty(), "restore() went on to load the older map file after the profile was asked to close");
         QVERIFY2(waitForProfileToClose(name), "the deferred close never completed once restore() had unwound");
+    }
+
+    // restore() can run nested inside another map operation, whose scope keeps
+    // a close asked for during it pending: no file should be read then either
+    void test_aCloseAskedForBeforeTheFallbackStopsItBeforeTheFirstFile()
+    {
+        const QString name = qsl("MapFallbackClosedBeforeStart-Test");
+        Host* pTarget = addProfile(name);
+        QVERIFY2(pTarget, "failed to create the target Host");
+        buildMap(pTarget);
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        TMap* pMap = pTarget->mpMap.data();
+        // Not in the map file, so it is gone if the file was loaded
+        QVERIFY(pMap->addRoom(99999));
+        const QString folder = MudletApp::getMudletPath(enums::profileMapsPath, name);
+        QVERIFY(QDir().mkpath(folder));
+        QVERIFY(HostManager::self()->getHost(mSourceName)->saveMapFile(qsl("%1/only.dat").arg(folder)));
+
+        bool closeRequested = false;
+        bool restoreRan = false;
+        bool abortPendingAtRestore = false;
+        bool loaded = false;
+        const QMetaObject::Connection closeOnProgress = connect(pMap, &TMap::signal_mapProgressSetValue, pMap, [&]() {
+            if (closeRequested) {
+                return;
+            }
+            closeRequested = true;
+            mudlet::self()->slot_closeProfileByName(name);
+            // Queued behind the close, as a script's timer running loadMap() would be
+            QTimer::singleShot(0, pMap, [&]() {
+                restoreRan = true;
+                abortPendingAtRestore = pMap->mapOperationAbortRequested();
+                loaded = pMap->restore(QString());
+            });
+        });
+        pMap->writeJsonMapFile(qsl("%1/close-before-fallback.json").arg(mSaveDir.path()));
+        disconnect(closeOnProgress);
+
+        QVERIFY2(closeRequested, "the export never announced any progress, so no close was asked for during it");
+        QVERIFY2(restoreRan, "the export's event pump never ran the queued restore()");
+        QVERIFY2(abortPendingAtRestore, "the close had not asked the map operation to stop by the time restore() ran");
+        QVERIFY2(!loaded, "restore() loaded a map file after the profile was asked to close");
+        QVERIFY2(pMap->mpRoomDB->getRoom(99999), "restore() replaced the map after the profile was asked to close");
+        QVERIFY2(waitForProfileToClose(name), "the deferred close never completed once the export had unwound");
     }
 
     void test_deletingAnAreaDuringAJsonExportStopsIt_data()
