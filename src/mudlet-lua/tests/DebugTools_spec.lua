@@ -246,15 +246,16 @@ describe("Tests DebugTools.lua functions", function()
     end)
 
     it("Should not recolour the previous group in place of one that captured nothing", function()
-      local fgSpy
+      local ok, err, fgSpy
       local id = tempRegexTrigger("^(\\w+) ?(\\d*)$", function()
         fgSpy = spy.on(_G, "setFgColor")
-        pcall(showCaptureGroups)
+        ok, err = pcall(showCaptureGroups)
         setFgColor:revert()
       end)
       feedTriggers("alpha\n")
       killTrigger(id)
 
+      assert.is_true(ok, err)
       -- the whole match and the word; the empty number group has nothing to colour
       assert.spy(fgSpy).was.called(2)
     end)
