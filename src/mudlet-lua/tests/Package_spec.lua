@@ -2615,6 +2615,121 @@ describe("Tests importing a package XML holding elements this Mudlet does not kn
   end)
 end)
 
+-- A package's VariablePackage is read the way a profile load reads its saved
+-- variables, so it can hand the reader the text a save holds for a number. Lua
+-- writes numbers with printf, so that text is however the platform that saved
+-- the profile spells NaN and infinity, this one included.
+describe("Tests reading the ways a save spells NaN and infinity", function()
+  local name = "mudlet-spec-saved-number"
+  local xml = getMudletHomeDir() .. "/" .. name .. ".xml"
+  local function variable(variableName, value)
+    return '<Variable><name>' .. variableName .. '</name><keyType>4</keyType><value>' .. value .. '</value><valueType>3</valueType></Variable>'
+  end
+  local function stringUnderNumberKey(key, value)
+    return '<Variable><name>' .. key .. '</name><keyType>3</keyType><value>' .. value .. '</value><valueType>4</valueType></Variable>'
+  end
+  local nanSpellings = {
+    thisBuildsNan = tostring(0/0),
+    glibcNan = "-nan",
+    ucrtNan = "-nan(ind)",
+    ucrtPositiveNan = "nan(ind)",
+    ucrtSignallingNan = "nan(snan)",
+    ucrtNegativeSignallingNan = "-nan(snan)",
+    msvcrtNan = "-1.#IND",
+    msvcrtPositiveNan = "1.#IND",
+    msvcrtQuietNan = "1.#QNAN",
+    msvcrtNegativeQuietNan = "-1.#QNAN",
+    msvcrtSignallingNan = "1.#SNAN",
+    msvcrtNegativeSignallingNan = "-1.#SNAN",
+    upperCaseNan = "-NAN",
+    mixedCaseNan = "1.#qnan",
+    paddedNan = " -nan ",
+  }
+
+  setup(function()
+    local body = {
+      '<VariablePackage>',
+      '<VariableGroup><name>mudletSpecSavedNumber</name><keyType>4</keyType><value></value><valueType>5</valueType>',
+    }
+    for variableName, spelling in pairs(nanSpellings) do
+      body[#body + 1] = variable(variableName, spelling)
+    end
+    for _, line in ipairs({
+      variable("thisBuildsInfinity", tostring(math.huge)),
+      variable("thisBuildsNegativeInfinity", tostring(-math.huge)),
+      variable("msvcrtInfinity", "1.#INF"),
+      variable("msvcrtNegativeInfinity", "-1.#INF"),
+      variable("paddedInfinity", "1.#INF "),
+      variable("notANumber", "banana"),
+      '</VariableGroup>',
+      -- a number key goes through the same text, so msvcrt's infinities must
+      -- not collapse onto key 0 and take its place
+      '<VariableGroup><name>mudletSpecSavedNumberKeys</name><keyType>4</keyType><value></value><valueType>5</valueType>',
+      stringUnderNumberKey("0", "zero"),
+      stringUnderNumberKey("1.#INF", "top"),
+      stringUnderNumberKey("-1.#INF", "bottom"),
+      '</VariableGroup>',
+      '<VariableGroup><name>mudletSpecSavedNumberTables</name><keyType>4</keyType><value></value><valueType>5</valueType>',
+      '<VariableGroup><name>0</name><keyType>3</keyType><value></value><valueType>5</valueType>',
+      '<Variable><name>inner</name><keyType>4</keyType><value>zero</value><valueType>4</valueType></Variable>',
+      '</VariableGroup>',
+      '<VariableGroup><name>1.#INF</name><keyType>3</keyType><value></value><valueType>5</valueType>',
+      '<Variable><name>inner</name><keyType>4</keyType><value>top</value><valueType>4</valueType></Variable>',
+      '</VariableGroup>',
+      '</VariableGroup>',
+      '</VariablePackage>',
+    }) do
+      body[#body + 1] = line
+    end
+    writePackageXml(xml, table.concat(body, "\n"))
+    installUntilConfirmed(installPackage, xml, function() return packageInstalled(name) end, "the package " .. name)
+    assert.is_table(mudletSpecSavedNumber, "the package did not create mudletSpecSavedNumber")
+    assert.is_table(mudletSpecSavedNumberKeys, "the package did not create mudletSpecSavedNumberKeys")
+    assert.is_table(mudletSpecSavedNumberTables, "the package did not create mudletSpecSavedNumberTables")
+  end)
+
+  teardown(function()
+    _G.mudletSpecSavedNumber = nil
+    _G.mudletSpecSavedNumberKeys = nil
+    _G.mudletSpecSavedNumberTables = nil
+    removeFixturePackage(name)
+    os.remove(xml)
+  end)
+
+  it("reads each way a save spells NaN back as NaN", function()
+    for variableName, spelling in pairs(nanSpellings) do
+      local value = mudletSpecSavedNumber[variableName]
+      assert.is_number(value, variableName .. " (" .. spelling .. ")")
+      assert.are_not.equal(value, value, variableName .. " (" .. spelling .. ") did not come back as NaN")
+    end
+  end)
+
+  it("reads each way a save spells infinity back as infinity", function()
+    assert.equals(math.huge, mudletSpecSavedNumber.thisBuildsInfinity)
+    assert.equals(-math.huge, mudletSpecSavedNumber.thisBuildsNegativeInfinity)
+    assert.equals(math.huge, mudletSpecSavedNumber.msvcrtInfinity)
+    assert.equals(-math.huge, mudletSpecSavedNumber.msvcrtNegativeInfinity)
+    assert.equals(math.huge, mudletSpecSavedNumber.paddedInfinity)
+  end)
+
+  it("does not take other text that holds nan for a NaN", function()
+    assert.equals(0, mudletSpecSavedNumber.notANumber)
+  end)
+
+  it("reads msvcrt's infinities back as number keys of their own", function()
+    assert.equals("zero", mudletSpecSavedNumberKeys[0])
+    assert.equals("top", mudletSpecSavedNumberKeys[math.huge])
+    assert.equals("bottom", mudletSpecSavedNumberKeys[-math.huge])
+  end)
+
+  it("reads msvcrt's infinity back as the number key of a table", function()
+    assert.is_table(mudletSpecSavedNumberTables[0], "the table under key 0 is missing")
+    assert.equals("zero", mudletSpecSavedNumberTables[0].inner)
+    assert.is_table(mudletSpecSavedNumberTables[math.huge], "the table under math.huge is missing")
+    assert.equals("top", mudletSpecSavedNumberTables[math.huge].inner)
+  end)
+end)
+
 -- A pattern type is stored as a bare number, so a file from a later Mudlet can
 -- name a type this one has no code for. Rather than drop the pattern - which
 -- would silently shift every later pattern's type by one, since the two lists
