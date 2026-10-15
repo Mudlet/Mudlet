@@ -10,18 +10,20 @@
 			<name>workaround for add</name>
 			<packageName></packageName>
 			<script>-- Once Geyser.add2 is in this is not needed anymore
--- the script runs again on every reinstall, and a second wrap would hide twice per add
-if not Adjustable.Container.guiDropAddWrapped then
-  Adjustable.Container.guiDropAddWrapped = true
-  local addwrapper = Adjustable.Container.add
-  function Adjustable.Container:add(window, cons)
-    addwrapper(self, window, cons)
-    if self.hidden then
-      tempTimer(0, function() self:hide() end)
-    end
-    if self.auto_hidden then
-      tempTimer(0, function() self:hide(true) end)
-    end
+-- the script runs again on every install, and wrapping an add it wrapped before would hide twice per add
+local add = Adjustable.Container.guiDropOriginalAdd or Adjustable.Container.add
+-- 1.3 and earlier wrapped it without keeping the original
+while debug.getupvalue(add, 1) == "addwrapper" do
+  add = select(2, debug.getupvalue(add, 1))
+end
+Adjustable.Container.guiDropOriginalAdd = add
+function Adjustable.Container:add(window, cons)
+  add(self, window, cons)
+  if self.hidden then
+    tempTimer(0, function() self:hide() end)
+  end
+  if self.auto_hidden then
+    tempTimer(0, function() self:hide(true) end)
   end
 end</script>
 			<eventHandlerList />
@@ -32,10 +34,12 @@ end</script>
 			<script>GUIDropManager = GUIDropManager or {}
 GUIDropImages = GUIDropImages or {}
 GUIDropManager.unrestored = GUIDropManager.unrestored or {}
+GUIDropManager.saved = GUIDropManager.saved or {}
 
 -- each image is restored on its own, and one that cannot be (its user window is not
 -- open yet) is kept for the next save rather than dropped from the GUIDropManager script
 function GUIDropManager.restore(name, chunk)
+    GUIDropManager.saved[name] = chunk
     local restoreImage, err = loadstring(chunk, "GUIDropManager: " .. name)
     local ok = false
     if restoreImage then
@@ -47,6 +51,22 @@ function GUIDropManager.restore(name, chunk)
         GUIDropManager.unrestored[name] = chunk
         debugc("gui-drop could not bring back the image " .. name .. ": " .. tostring(err))
     end
+    return ok, err
+end
+
+function GUIDropManager.restoreUnrestored(report)
+    for name, chunk in pairs(GUIDropManager.unrestored) do
+        local ok, err = GUIDropManager.restore(name, chunk)
+        if not ok and report then
+            echo(string.format("\ngui-drop could not bring back the image %s: %s\nIt stays saved for the next start; lua GUIDropManager.forget(%q) removes it.\n", name, tostring(err), name))
+        end
+    end
+end
+
+-- for an image that cannot come back, such as one whose user window is gone for good
+function GUIDropManager.forget(name)
+    GUIDropManager.unrestored[name] = nil
+    GUIDropManager.createDropManager()
 end
 
 function GUIDropManager.createDropManager()
@@ -89,7 +109,8 @@ function GUIDropManager.createDropManager()
         return chunk
     end
     local function longString(text)
-        local level = ""
+        -- not level 0: Lua 5.1 refuses a [[ inside [[...]]
+        local level = "="
         while text:find("]"..level.."]", 1, true) do
             level = level.."="
         end
@@ -98,29 +119,33 @@ function GUIDropManager.createDropManager()
 
     local entries = {}
     for key, v in pairs(GUIDropImages) do
-        if v.type == "adjustablecontainer" then
+        -- an image that did not come back whole is saved as it was, not as the part that came back
+        if v.type == "adjustablecontainer" and not GUIDropManager.unrestored[key] then
             local ok, chunk = pcall(imageScript, key, v)
             if ok then
                 entries[key] = chunk
             else
+                entries[key] = GUIDropManager.saved[key]
                 echo("\ngui-drop could not save the image "..key..": "..tostring(chunk).."\n")
             end
         end
     end
     for key, chunk in pairs(GUIDropManager.unrestored) do
-        if not GUIDropImages[key] then
-            entries[key] = chunk
-        end
+        entries[key] = chunk
     end
 
-    -- without the package (uninstalled), the images have nothing to be restored with
-    local script = {"--GUIDropManager", "if not GUIDropManager then return end"}
+    -- the package can load after this script (it was reinstalled, or is a module), and
+    -- brings the images back then; uninstalled, nothing does
+    local script = {"--GUIDropManager", "local restore = GUIDropManager and GUIDropManager.restore or function(name, chunk)",
+        "    GUIDropPendingImages = GUIDropPendingImages or {}", "    GUIDropPendingImages[name] = chunk", "end"}
     for key, chunk in pairs(entries) do
-        script[#script + 1] = string.format("GUIDropManager.restore(%q, %s)", key, longString(chunk))
+        script[#script + 1] = string.format("restore(%q, %s)", key, longString(chunk))
     end
     GUIDropManager.script = table.concat(script, "\n").."\n"
     local ok, err = pcall(setScript, "GUIDropManager", GUIDropManager.script, 2)
-    if not ok then
+    if ok then
+        GUIDropManager.saved = entries
+    else
         echo("\ngui-drop could not save the GUIDropManager script: "..tostring(err).."\n")
     end
 end</script>
@@ -299,6 +324,15 @@ if GUIDropManager.dropHandler then
 end
 GUIDropManager.dropHandler = registerAnonymousEventHandler("sysDropEvent", "GUIDropManager.ImageDrop")
 
+-- a user window can be opened by a sysLoadEvent handler, so the retry waits for those to run
+function GUIDropManager.onLoad()
+    tempTimer(0, function() GUIDropManager.restoreUnrestored(true) end)
+end
+if GUIDropManager.loadHandler then
+    killAnonymousEventHandler(GUIDropManager.loadHandler)
+end
+GUIDropManager.loadHandler = registerAnonymousEventHandler("sysLoadEvent", "GUIDropManager.onLoad")
+
 if GUIDropManager.uninstallHandler then
     killAnonymousEventHandler(GUIDropManager.uninstallHandler)
 end
@@ -309,8 +343,10 @@ GUIDropManager.uninstallHandler = registerAnonymousEventHandler("sysUninstall", 
         return
     end
     killAnonymousEventHandler(GUIDropManager.dropHandler)
+    killAnonymousEventHandler(GUIDropManager.loadHandler)
     killAnonymousEventHandler(GUIDropManager.uninstallHandler)
     GUIDropManager.dropHandler = nil
+    GUIDropManager.loadHandler = nil
     GUIDropManager.uninstallHandler = nil
 end)</script>
 			<eventHandlerList />
@@ -399,7 +435,14 @@ function Adjustable.Container:setDropImg()
     self:newCustomItem("saveAll",  function(s) Adjustable.Container:saveAll() end)
     self:newCustomItem("loadAll",  function(s) Adjustable.Container:loadAll() end)
     self:newCustomItem("updateScript",  function(s) Adjustable.Container:saveAll() GUIDropManager.createDropManager() end)
-end</script>
+end
+
+-- left by a GUIDropManager script that ran before the package
+for name, chunk in pairs(GUIDropPendingImages or {}) do
+    GUIDropManager.unrestored[name] = chunk
+end
+GUIDropPendingImages = nil
+GUIDropManager.restoreUnrestored()</script>
 			<eventHandlerList />
 		</Script>
 	</ScriptPackage>

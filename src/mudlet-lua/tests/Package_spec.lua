@@ -3733,6 +3733,7 @@ describe("Tests uninstalling the gui-drop package", function()
         GUIDropImages[key .. "Label"] = nil
         GUIDropManager.createDropManager()
       end
+      os.remove(getMudletHomeDir() .. "/AdjustableContainer/GUIDropImages." .. key .. ".lua")
       os.remove(path)
       os.remove(dropDirectory .. "/" .. fileName)
       lfs.rmdir(scratchDirectory)
@@ -3776,6 +3777,7 @@ describe("Tests uninstalling the gui-drop package", function()
     assert.is_true(fileExists(dropByEvent("packageSpecKept.png")), "a dropped image was not copied into the profile")
     dropByEvent("packageSpecStored.png")
     local keptImage = GUIDropImages.packageSpecKept
+    assert.is_not_nil(keptImage, "SETUP: the image was not dropped")
     keptImage:setDropImg()
 
     removeFixturePackage(name)
@@ -3790,12 +3792,45 @@ describe("Tests uninstalling the gui-drop package", function()
     _G.GUIDropManager, _G.GUIDropImages, Adjustable.Container.setDropImg = nil, nil, nil
     ok, err = pcall(stored)
     _G.GUIDropManager, _G.GUIDropImages, Adjustable.Container.setDropImg = manager, images, setDropImg
+    local pending = _G.GUIDropPendingImages
+    _G.GUIDropPendingImages = nil
     assert.is_true(ok, tostring(err))
+    assert.is_truthy(pending and pending.packageSpecStored)
+  end)
+
+  it("brings back the images when the GUIDropManager script ran before the package", function()
+    if not packageInstalled(name) then
+      pending("gui-drop is not installed in this profile")
+      return
+    end
+    defer(function()
+      installUntilConfirmed(installPackage, archive, function() return packageInstalled(name) end, name)
+    end)
+    dropByEvent("packageSpecEarly.png")
+    assert.is_not_nil(GUIDropImages.packageSpecEarly, "SETUP: the image was not dropped")
+    local stored = assert(loadstring(getScript("GUIDropManager", 2)))
+    GUIDropImages.packageSpecEarly:delete()
+    GUIDropImages.packageSpecEarly, GUIDropImages.packageSpecEarlyLabel = nil, nil
+    removeFixturePackage(name)
+
+    -- how the next start runs them after a reinstall, which puts the package after the script
+    _G.GUIDropManager = nil
+    assert.is_true(pcall(stored))
+    installUntilConfirmed(installPackage, archive, function() return packageInstalled(name) end, name)
+
+    assert.is_not_nil(GUIDropImages.packageSpecEarly)
+    assert.is_not_nil(GUIDropImages.packageSpecEarlyLabel)
   end)
 
   it("stops taking dropped images when it was installed as a module", function()
     if not packageInstalled(name) then
       pending("gui-drop is not installed in this profile")
+      return
+    end
+    -- a module has to be a file it can write back to, and Lua cannot read the bundled archive
+    local source = specDirectory .. "/../../packages/gui-drop/gui-drop.mpackage"
+    if not fileExists(source) then
+      pending("the gui-drop source archive is not next to these specs")
       return
     end
     local path = scratchDirectory .. "/gui-drop.mpackage"
@@ -3805,7 +3840,7 @@ describe("Tests uninstalling the gui-drop package", function()
     end)
     removeFixturePackage(name)
     lfs.mkdir(scratchDirectory)
-    copyFile(specDirectory .. "/../../packages/gui-drop/gui-drop.mpackage", path)
+    copyFile(source, path)
     installUntilConfirmed(installModule, path, function() return moduleInstalled(name) end, "gui-drop as a module")
 
     removeFixtureModule(name)
@@ -3824,6 +3859,42 @@ describe("Tests uninstalling the gui-drop package", function()
     local timers = hideTimersPerAdd()
 
     removeFixturePackage(name)
+    installUntilConfirmed(installPackage, archive, function() return packageInstalled(name) end, name)
+
+    assert.are.equal(timers, hideTimersPerAdd())
+  end)
+
+  it("does not wrap Adjustable.Container.add twice after an upgrade from 1.3", function()
+    if not packageInstalled(name) then
+      pending("gui-drop is not installed in this profile")
+      return
+    end
+    local oldName = "mudlet-spec-gui-drop-old-add"
+    local xml = scratchDirectory .. "/" .. oldName .. ".xml"
+    defer(function()
+      removeFixturePackage(oldName)
+      os.remove(xml)
+      lfs.rmdir(scratchDirectory)
+      installUntilConfirmed(installPackage, archive, function() return packageInstalled(name) end, name)
+    end)
+    local timers = hideTimersPerAdd()
+    -- gui-drop 1.3's "workaround for add", which wrapped add again on every install
+    lfs.mkdir(scratchDirectory)
+    writePackageXml(xml, table.concat({
+      '<ScriptPackage><Script isActive="yes" isFolder="no"><name>workaround for add</name><packageName></packageName><script>',
+      'local addwrapper = Adjustable.Container.add',
+      'function Adjustable.Container:add(window, cons)',
+      '  addwrapper(self, window, cons)',
+      '  if self.hidden then',
+      '    tempTimer(0, function() self:hide() end)',
+      '  end',
+      'end',
+      '</script><eventHandlerList/></Script></ScriptPackage>',
+    }, "\n"))
+    removeFixturePackage(name)
+    installUntilConfirmed(installPackage, xml, function() return packageInstalled(oldName) end, oldName)
+    removeFixturePackage(oldName)
+
     installUntilConfirmed(installPackage, archive, function() return packageInstalled(name) end, name)
 
     assert.are.equal(timers, hideTimersPerAdd())

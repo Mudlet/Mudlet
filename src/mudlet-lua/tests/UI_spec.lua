@@ -8546,19 +8546,28 @@ describe("Tests the gui-drop package's image drops", function()
     GUIDropManager.createDropManager()
   end)
 
-  -- what brings the drops back on the next start: the GUIDropManager script,
-  -- which one bad entry stops from being written at all
+  -- what brings the drops back on the next start
   local function storedScript()
     return getScript("GUIDropManager", 2) or ""
   end
 
   local function stores(key)
-    return storedScript():find(("GUIDropManager.restore(%q"):format(key), 1, true) ~= nil
+    return storedScript():find(("restore(%q"):format(key), 1, true) ~= nil
   end
 
   -- the parent the stored script gives an image dropped into a user window
   local function storedParent(key)
     return loadstring("return " .. GUIDropImages[key].containervar)()
+  end
+
+  local function pumpUntil(condition)
+    for _ = 1, 40 do
+      if condition() then
+        return true
+      end
+      pumpEvents(50)
+    end
+    return condition()
   end
 
   it("keeps an image dropped into a user window, and the drops after it", function()
@@ -8598,38 +8607,120 @@ describe("Tests the gui-drop package's image drops", function()
     assert.are.equal("guiDropSpecChatcontainer", GUIDropManager.getKeyFrom(userWindow, ".container"))
   end)
 
-  it("brings back the other images when a user window is not open at the next start", function()
-    userWindow = Geyser.UserWindow:new({name = "guiDrop spec window", x = 10, y = 10, width = 200, height = 150})
-    assert.is_true((drop(imageAt("plain", "guiDropSpecBefore.png"))))
-    assert.is_true((drop(imageAt("plain", "guiDropSpecAway.png"), "guiDrop spec window")))
-    assert.is_true((drop(imageAt("plain", "guiDropSpecAfter.png"))))
+  -- a spaced name is looked up through Geyser.windowList, a plain one through a path that is nil
+  for _, windowName in ipairs({"guiDrop spec window", "guiDropSpecAwayWindow"}) do
+    it("brings back the other images when the user window " .. windowName .. " is not open at the next start", function()
+      userWindow = Geyser.UserWindow:new({name = windowName, x = 10, y = 10, width = 200, height = 150})
+      assert.is_true((drop(imageAt("plain", "guiDropSpecBefore.png"))))
+      assert.is_true((drop(imageAt("plain", "guiDropSpecAway.png"), windowName)))
+      assert.is_true((drop(imageAt("plain", "guiDropSpecAfter.png"))))
+      local script = storedScript()
+      for _, key in ipairs({"guiDropSpecBefore", "guiDropSpecAway", "guiDropSpecAfter"}) do
+        forget(key)
+      end
+      userWindow:delete()
+      userWindow = nil
+
+      assert(loadstring(script))()
+
+      assert.is_not_nil(GUIDropImages.guiDropSpecBeforeLabel)
+      assert.is_not_nil(GUIDropImages.guiDropSpecAfterLabel)
+      assert.is_nil(GUIDropImages.guiDropSpecAway)
+      GUIDropManager.createDropManager()
+      assert.is_true(stores("guiDropSpecAway"))
+      assert.is_true(stores("guiDropSpecBefore"))
+      assert.is_true(stores("guiDropSpecAfter"))
+    end)
+  end
+
+  it("brings back an image once a sysLoadEvent handler has opened its user window", function()
+    userWindow = Geyser.UserWindow:new({name = "guiDropSpecLate", x = 10, y = 10, width = 200, height = 150})
+    assert.is_true((drop(imageAt("plain", "guiDropSpecLatePic.png"), "guiDropSpecLate")))
     local script = storedScript()
-    for _, key in ipairs({"guiDropSpecBefore", "guiDropSpecAway", "guiDropSpecAfter"}) do
-      forget(key)
-    end
+    forget("guiDropSpecLatePic")
     userWindow:delete()
     userWindow = nil
-
     assert(loadstring(script))()
+    assert.is_nil(GUIDropImages.guiDropSpecLatePic, "SETUP: the image came back without its window")
 
-    assert.is_not_nil(GUIDropImages.guiDropSpecBeforeLabel)
-    assert.is_not_nil(GUIDropImages.guiDropSpecAfterLabel)
-    assert.is_nil(GUIDropImages.guiDropSpecAway)
+    userWindow = Geyser.UserWindow:new({name = "guiDropSpecLate", x = 10, y = 10, width = 200, height = 150})
+    GUIDropManager.onLoad()
+
+    assert.is_true(pumpUntil(function() return GUIDropImages.guiDropSpecLatePic ~= nil end))
+    assert.is_nil(GUIDropManager.unrestored.guiDropSpecLatePic)
+  end)
+
+  it("says which image it could not bring back, and forgets it when asked", function()
+    userWindow = Geyser.UserWindow:new({name = "guiDropSpecGone", x = 10, y = 10, width = 200, height = 150})
+    assert.is_true((drop(imageAt("plain", "guiDropSpecGonePic.png"), "guiDropSpecGone")))
+    local script = storedScript()
+    forget("guiDropSpecGonePic")
+    userWindow:delete()
+    userWindow = nil
+    assert(loadstring(script))()
+    local said = {}
+    local echo = _G.echo
+    _G.echo = function(text, ...)
+      said[#said + 1] = tostring(text)
+      return echo(text, ...)
+    end
+    finally(function() _G.echo = echo end)
+
+    local function told()
+      return table.concat(said):find("could not bring back the image guiDropSpecGonePic", 1, true) ~= nil
+    end
+
+    GUIDropManager.onLoad()
+
+    assert.is_true(pumpUntil(told), table.concat(said))
+    _G.echo = echo
+    assert.is_true(stores("guiDropSpecGonePic"))
+    GUIDropManager.forget("guiDropSpecGonePic")
+    assert.is_false(stores("guiDropSpecGonePic"))
+  end)
+
+  it("saves an image that came back only in part as it was saved", function()
+    assert.is_true((drop(imageAt("plain", "guiDropSpecHalf.png"))))
+    local script = storedScript()
+    forget("guiDropSpecHalf")
+    local new = Geyser.Label.new
+    Geyser.Label.new = function(self, cons, ...)
+      if type(cons) == "table" and cons.name == "GUIDropImages.guiDropSpecHalfLabel" then
+        error("the label could not be made")
+      end
+      return new(self, cons, ...)
+    end
+    finally(function() Geyser.Label.new = new end)
+    assert(loadstring(script))()
+    Geyser.Label.new = new
+    assert.is_not_nil(GUIDropImages.guiDropSpecHalf, "SETUP: the container did not come back")
+    assert.is_nil(GUIDropImages.guiDropSpecHalfLabel, "SETUP: the label came back")
+
     GUIDropManager.createDropManager()
-    assert.is_true(stores("guiDropSpecAway"))
-    assert.is_true(stores("guiDropSpecBefore"))
-    assert.is_true(stores("guiDropSpecAfter"))
+
+    assert.truthy(storedScript():find("guiDropSpecHalfLabel", 1, true))
   end)
 
   it("keeps saving the drops after one whose file name has a quote in it", function()
-    -- Windows does not allow a double quote in a file name
-    local quotedName = getOS() == "windows" and "guiDrop 'spec' quoted.png" or 'guiDrop "spec" quoted.png'
-    local ok, err = drop(imageAt("plain", quotedName))
+    if getOS() == "windows" then
+      pending("a double quote cannot be part of a file name on Windows")
+      return
+    end
+    local ok, err = drop(imageAt("plain", 'guiDrop "spec" quoted.png'))
     assert.is_true(ok, tostring(err))
     ok, err = drop(imageAt("plain", "guiDropSpecAfterQuote.png"))
     assert.is_true(ok, tostring(err))
     assert.is_true(stores("guiDropspecquoted"))
     assert.is_true(stores("guiDropSpecAfterQuote"))
+  end)
+
+  it("keeps saving the drops after one whose file name has [[ in it", function()
+    local ok, err = drop(imageAt("plain", "guiDropSpec[[Bracket.png"))
+    assert.is_true(ok, tostring(err))
+    ok, err = drop(imageAt("plain", "guiDropSpecAfterBracket.png"))
+    assert.is_true(ok, tostring(err))
+    assert.is_true(stores("guiDropSpecBracket"))
+    assert.is_true(stores("guiDropSpecAfterBracket"))
   end)
 
   it("keeps saving the other drops when one image cannot be saved", function()
@@ -8641,6 +8732,8 @@ describe("Tests the gui-drop package's image drops", function()
     label.container = parent
     assert.is_true(ok, tostring(err))
     assert.is_true(stores("guiDropSpecUnbroken"))
+    -- as it was saved before
+    assert.is_true(stores("guiDropSpecBroken"))
   end)
 
   it("converts a dropped image to a label without it coming back as a container", function()
@@ -8733,14 +8826,16 @@ describe("Tests the gui-drop package's image drops", function()
   it("says why when it cannot copy the image into the profile", function()
     local moved = dropDirectory .. ".guiDropSpec"
     lfs.mkdir(dropDirectory)
+    finally(function()
+      if lfs.attributes(moved, "mode") == "directory" then
+        os.remove(dropDirectory)
+        os.rename(moved, dropDirectory)
+      end
+    end)
     assert.is_true(os.rename(dropDirectory, moved))
-    local blocker = io.open(dropDirectory, "w")
+    local blocker = assert(io.open(dropDirectory, "w"))
     blocker:write("not a folder")
     blocker:close()
-    finally(function()
-      os.remove(dropDirectory)
-      os.rename(moved, dropDirectory)
-    end)
     local ok, err = drop(imageAt("plain", "guiDropSpecBlocked.png"))
     assert.is_false(ok)
     assert.truthy(tostring(err):find("could not copy the image", 1, true), tostring(err))
