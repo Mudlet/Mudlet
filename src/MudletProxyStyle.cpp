@@ -32,6 +32,7 @@
 #include <QDBusMessage>
 #include <QDBusPendingCallWatcher>
 #include <QDBusPendingReply>
+#include <QDBusServiceWatcher>
 #include <QDBusVariant>
 #include <QDebug>
 
@@ -81,6 +82,9 @@ void MudletProxyStyle::watchScreenReaderStatus()
 
     bus.connect(csmA11yService, csmA11yPath, csmPropertiesInterface, qsl("PropertiesChanged"), this, SLOT(slot_a11yStatusChanged(QString, QVariantMap, QStringList)));
 
+    // The accessibility bus can start after Mudlet does, already reporting a screen reader
+    auto* busWatcher = new QDBusServiceWatcher(csmA11yService, bus, QDBusServiceWatcher::WatchForRegistration, this);
+    connect(busWatcher, &QDBusServiceWatcher::serviceRegistered, this, &MudletProxyStyle::readScreenReaderStatus);
     readScreenReaderStatus();
 #endif
 }

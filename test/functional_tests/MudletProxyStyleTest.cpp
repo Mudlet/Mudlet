@@ -148,6 +148,7 @@ private slots:
     void ignoresAnAccessibilityBusWithoutAScreenReader();
     void neverOverridesADetectedScreenReader();
     void detectsNothingWithoutAnAccessibilityBus();
+    void detectsAScreenReaderWhoseBusStartsLater();
 
 #if defined(Q_OS_UNIX) && !defined(Q_OS_MACOS)
 private:
@@ -338,6 +339,23 @@ void MudletProxyStyleTest::detectsNothingWithoutAnAccessibilityBus()
     QVERIFY(roundTrip());
     QCOMPARE(altKeyNavigation(style), 0);
 }
+
+// A screen reader already running when the bus appears announces nothing, so
+// the style has to ask
+void MudletProxyStyleTest::detectsAScreenReaderWhoseBusStartsLater()
+{
+    SKIP_WITHOUT_PRIVATE_BUS();
+    mpStandIn->mScreenReaderEnabled = true;
+    QVERIFY(QDBusConnection(csmStandInConnection).unregisterService(csmService));
+
+    QTest::ignoreMessage(QtDebugMsg, QRegularExpression(qsl("org\\.freedesktop\\.DBus\\.Error\\.ServiceUnknown")));
+    MudletProxyStyle style;
+    QVERIFY(roundTrip());
+    QCOMPARE(altKeyNavigation(style), 0);
+
+    QVERIFY(QDBusConnection(csmStandInConnection).registerService(csmService));
+    QTRY_COMPARE(altKeyNavigation(style), 1);
+}
 #else
 void MudletProxyStyleTest::initMain() {}
 void MudletProxyStyleTest::initTestCase() {}
@@ -363,6 +381,10 @@ void MudletProxyStyleTest::neverOverridesADetectedScreenReader()
     QSKIP(csmOffLinux);
 }
 void MudletProxyStyleTest::detectsNothingWithoutAnAccessibilityBus()
+{
+    QSKIP(csmOffLinux);
+}
+void MudletProxyStyleTest::detectsAScreenReaderWhoseBusStartsLater()
 {
     QSKIP(csmOffLinux);
 }
