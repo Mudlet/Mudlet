@@ -4154,6 +4154,9 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     checkBox_mmcpSnoopInMainConsole->setChecked(pHost->getMMCPShowSnoopInMainConsole());
     checkBox_runAllKeyBindings->setChecked(pHost->getKeyUnit()->mRunAllKeyMatches);
 
+    for (QSpinBox* pSpinBox : {topBorderHeight, bottomBorderHeight, leftBorderWidth, rightBorderWidth}) {
+        pSpinBox->setRange(-Host::scmMaxBorderSize, Host::scmMaxBorderSize);
+    }
     auto originalBorders = pHost->userBorders();
     topBorderHeight->setValue(originalBorders.top());
     bottomBorderHeight->setValue(originalBorders.bottom());

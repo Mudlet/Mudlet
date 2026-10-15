@@ -6646,6 +6646,10 @@ void Host::setUserBorders(const QMargins borders)
         return qBound(-scmMaxBorderSize, size, scmMaxBorderSize);
     };
     mUserBorders = QMargins(bounded(borders.left()), bounded(borders.top()), bounded(borders.right()), bounded(borders.bottom()));
+    if (mUserBorders != borders) {
+        qWarning().nospace().noquote() << "Host::setUserBorders(" << borders << ") WARNING - a border is outside of the supported range of " << -scmMaxBorderSize << " to " << scmMaxBorderSize
+                                       << ", using " << mUserBorders << " instead.";
+    }
     setBorders(mUserBorders + mMxpBorders);
 }
 
