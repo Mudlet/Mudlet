@@ -3065,14 +3065,16 @@ void cTelnet::autoEnableTTYPEVersion()
     });
 }
 
-// Open is the MXP spec's initial default mode: MXP starts there on each connection, whatever an earlier
-// game locked in, and a mode this game locks in later holds even if it repeats the subnegotiation
+// Each time the game switches MXP on, it starts in open mode (the spec's initial default) over whatever an
+// earlier game or autoEnableMXPProcessor() left, though Force MXP keeps its secure default; a mode the game
+// locks in after that holds when it repeats the switch-on
 void cTelnet::switchMxpOn()
 {
-    if (!enableMXP) {
+    if (!enableMXP || mMxpAutoEnabled) {
         mpHost->mMxpProcessor.setMode(MXP_MODE_CODE_LOCK_OPEN);
     }
     enableMXP = true;
+    mMxpAutoEnabled = false;
     mpHost->mMxpProcessor.enable();
 }
 
@@ -3083,6 +3085,7 @@ void cTelnet::autoEnableMXPProcessor()
 
     // Automatically enable MXP processing
     enableMXP = true;
+    mMxpAutoEnabled = true;
     mpHost->setForceMXPProcessorOn(true);
 
     // Games that auto-enable MXP (without telnet negotiation) typically use
