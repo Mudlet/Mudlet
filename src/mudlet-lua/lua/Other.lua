@@ -1286,7 +1286,7 @@ local oldgetConfig = getConfig
 -- Please sort this list alphabetically (case insensitive) as it helps to follow changes:
 -- This list contains all configuration options that are available in both getConfig and setConfig
 -- NOTE: Some options like "showMapInfo", "hideMapInfo" are setConfig-only write operations
--- Some options like "logDirectory", "specialForceMXPProcessorOn" are getConfig-only read operations  
+-- "logDirectory" is a getConfig-only read operation
 -- Left out on purpose: "ircNickName" (with no nick stored it reads as a new random one, and writing it
 -- back also replaces the app-wide nick) and "ircPassword" (it would show up in every dump of the table)
 local configOptions = {
@@ -1348,7 +1348,7 @@ local configOptions = {
   "specialForceCompressionOff",
   "specialForceGAOff",
   "specialForceMxpNegotiationOff",
-  "specialForceMXPProcessorOn",      -- read-only in getConfig
+  "specialForceMXPProcessorOn",
   "undoServerWrap",
   "undoServerWrapWidth",
   "versionInTTYPE",
