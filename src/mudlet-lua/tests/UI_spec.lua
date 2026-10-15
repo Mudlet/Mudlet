@@ -3053,6 +3053,12 @@ describe("Tests UI functions", function()
       assert.is_truthy(result:find("uiReplaceAllQuote It\226\128\153s Doe here", 1, true), "got: " .. result)
     end)
 
+    -- an emoji is one character to utf8.find() but two UTF-16 units to selectSection()
+    it("replaces the right characters after a character beyond the BMP", function()
+      local result = replaceOnMarkedLine("uiReplaceAllEmoji \240\159\152\128John and \240\159\152\128John", "John", "Doe")
+      assert.is_truthy(result:find("uiReplaceAllEmoji \240\159\152\128Doe and \240\159\152\128Doe", 1, true), "got: " .. result)
+    end)
+
     -- %a matches an accented letter for utf8.find but not for string.find, whose
     -- classes are byte-wise and locale-bound
     it("matches a pattern class against characters, not bytes", function()

@@ -686,6 +686,50 @@ end
 
 
 
+-- Cursor columns count UTF-16 code units: one per character, two for one outside the BMP.
+-- Each byte of a malformed sequence becomes its own U+FFFD when Qt decodes the text.
+local function utf16Length(str)
+  local length, i, n = 0, 1, #str
+  while i <= n do
+    local lead = str:byte(i)
+    local size, low, high = 1, 0x80, 0xBF
+    if lead >= 0xC2 and lead <= 0xDF then
+      size = 2
+    elseif lead >= 0xE0 and lead <= 0xEF then
+      size = 3
+      if lead == 0xE0 then low = 0xA0 elseif lead == 0xED then high = 0x9F end
+    elseif lead >= 0xF0 and lead <= 0xF4 then
+      size = 4
+      if lead == 0xF0 then low = 0x90 elseif lead == 0xF4 then high = 0x8F end
+    end
+    local valid = size > 1 and i + size - 1 <= n
+    if valid then
+      local second = str:byte(i + 1)
+      valid = second >= low and second <= high
+      for j = i + 2, i + size - 1 do
+        local byte = str:byte(j)
+        valid = valid and byte >= 0x80 and byte <= 0xBF
+      end
+    end
+    if valid then
+      length = length + (size == 4 and 2 or 1)
+      i = i + size
+    else
+      length = length + 1
+      i = i + 1
+    end
+  end
+  return length
+end
+
+-- lead-byte-only, which holds for the getCurrentLine() text copy2color() walks: Qt keeps it valid UTF-8
+local utf8Char = "[%z\1-\127\194-\244][\128-\191]*"
+
+local function utf16Units(char)
+  return char:byte() >= 240 and 2 or 1
+end
+
+
 --- Replaces all occurrences of what in the current line with <i>with</i>.
 ---
 --- @usage This will replace all occurrences of John with the word Doe.
@@ -702,16 +746,17 @@ function replaceAll(word, what, keepColor)
   local whatLength = utf8.len(what)
   local resumeAt = 1
   while true do
-    -- utf8.find() reports character offsets, which is what selectSection() indexes by;
-    -- string.find() reported bytes, which any non-ASCII earlier in the line then shifted
-    local startp, endp = utf8.find(getCurrentLine(), word, resumeAt)
+    -- utf8.find() reports character offsets, which resumeAt and whatLength also count;
+    -- selectSection() wants them in UTF-16 units
+    local line = getCurrentLine()
+    local startp, endp = utf8.find(line, word, resumeAt)
     if not startp then
       break
     end
     if endp < startp then
       -- an empty match replaces nothing, so stepping over it is the only way to advance
       resumeAt = startp + 1
-    elseif not selectSection(startp - 1, endp - startp + 1) then
+    elseif not selectSection(utf16Length(utf8.sub(line, 1, startp - 1)), utf16Length(utf8.sub(line, startp, endp))) then
       -- a refused selection would leave replace() splicing into line 0 column 0
       break
     else
@@ -1434,42 +1479,6 @@ local processedEchoToHTML = function(t, reset)
     parts[i + 1] = formatChanged and getHTMLformat(format) or v
   end
   return table.concat(parts)
-end
-
--- Cursor columns count UTF-16 code units: one per character, two for one outside the BMP.
--- Each byte of a malformed sequence becomes its own U+FFFD when Qt decodes the text.
-local function utf16Length(str)
-  local length, i, n = 0, 1, #str
-  while i <= n do
-    local lead = str:byte(i)
-    local size, low, high = 1, 0x80, 0xBF
-    if lead >= 0xC2 and lead <= 0xDF then
-      size = 2
-    elseif lead >= 0xE0 and lead <= 0xEF then
-      size = 3
-      if lead == 0xE0 then low = 0xA0 elseif lead == 0xED then high = 0x9F end
-    elseif lead >= 0xF0 and lead <= 0xF4 then
-      size = 4
-      if lead == 0xF0 then low = 0x90 elseif lead == 0xF4 then high = 0x8F end
-    end
-    local valid = size > 1 and i + size - 1 <= n
-    if valid then
-      local second = str:byte(i + 1)
-      valid = second >= low and second <= high
-      for j = i + 2, i + size - 1 do
-        local byte = str:byte(j)
-        valid = valid and byte >= 0x80 and byte <= 0xBF
-      end
-    end
-    if valid then
-      length = length + (size == 4 and 2 or 1)
-      i = i + size
-    else
-      length = length + 1
-      i = i + 1
-    end
-  end
-  return length
 end
 
 --- Generic color echo and insert function (allowing hecho, decho, cecho, hinsertText, dinsertText and cinsertText).
@@ -2405,7 +2414,7 @@ function suffix(what, func, fgc, bgc, window)
   assert(type(what) == 'string', 'suffix: bad argument #1 type (expected string, got '..type(what)..'!)')
   window = window or "main"
   func = insertFuncs[func] or func or insertText
-  local length = utf8.len(getCurrentLine(window))
+  local length = utf16Length(getCurrentLine(window))
   moveCursor(window, length, getLineNumber(window))
   -- fg()/bg() also repaint whatever is selected in the window, so drop any
   -- live selection first - only the text being added is meant to be coloured
@@ -2648,11 +2657,14 @@ local function copy2color(name,win,str,inst)
     -- happens when you try to use copy2decho() on an empty line
     return ""
   end
-  local start, len = selectString(win, str, inst), utf8.len(str)
+  local start = selectString(win, str, inst)
   if start < 0 then
     -- happens when the text is not on the current line, which is all selectString() searches
     return ""
   end
+  -- the selection's length is in the same UTF-16 units as start, and is what Qt made
+  -- of str, so it also holds for a number or for bytes that are not valid UTF-8
+  local _, _, len = getSelection(win)
   local style, endspan, r, g, b, rb, gb, bb, cr, cg, cb, crb, cgb, cbb, char
   local selectSection, getFgColor, getBgColor = selectSection, getFgColor, getBgColor
   local conversions = {
@@ -2673,38 +2685,38 @@ local function copy2color(name,win,str,inst)
     style = "%s<%d,%d,%d:%d,%d,%d>%s"
     endspan = "<r>"
   end
-  -- utf8.sub() and growing the result a character at a time both rescan from the
-  -- start of the line, which made long lines quadratic
-  local lineChars, lastIndex = {}, start + len
-  for lineChar in line:gmatch("[%z\1-\127\194-\244][\128-\191]*") do
-    lineChars[#lineChars + 1] = lineChar
-    if #lineChars == lastIndex then
+  -- walk the line once, tracking the UTF-16 offset: utf8.sub() would index by
+  -- character instead, and rescans the line from its start on every call
+  local pieces = {}
+  local offset, stop = 0, start + len
+  for lineChar in line:gmatch(utf8Char) do
+    if offset >= stop then
       break
     end
-  end
-  local pieces = {}
-  for index = start + 1, lastIndex do
-    if win ~= "main" then
-      selectSection(win, index - 1, 1)
-      r,g,b = getFgColor(win)
-      rb,gb,bb = getBgColor(win)
-    else
-      selectSection(index - 1, 1)
-      r,g,b = getFgColor()
-      rb,gb,bb = getBgColor()
-    end
+    if offset >= start then
+      if win ~= "main" then
+        selectSection(win, offset, 1)
+        r,g,b = getFgColor(win)
+        rb,gb,bb = getBgColor(win)
+      else
+        selectSection(offset, 1)
+        r,g,b = getFgColor()
+        rb,gb,bb = getBgColor()
+      end
 
-    char = lineChars[index] or ""
-    if name == "copy2html" then
-      char = conversions[char] or char -- replace HTML entities (if they are in the table)
-    end
+      char = lineChar
+      if name == "copy2html" then
+        char = conversions[char] or char
+      end
 
-    if r ~= cr or g ~= cg or b ~= cb or rb ~= crb or gb ~= cgb or bb ~= cbb then
-      cr,cg,cb,crb,cgb,cbb = r,g,b,rb,gb,bb
-      pieces[#pieces + 1] = string.format(style, #pieces > 0 and endspan or "", r, g, b, rb, gb, bb, char)
-    else
-      pieces[#pieces + 1] = char
+      if r ~= cr or g ~= cg or b ~= cb or rb ~= crb or gb ~= cgb or bb ~= cbb then
+        cr,cg,cb,crb,cgb,cbb = r,g,b,rb,gb,bb
+        pieces[#pieces + 1] = string.format(style, #pieces > 0 and endspan or "", r, g, b, rb, gb, bb, char)
+      else
+        pieces[#pieces + 1] = char
+      end
     end
+    offset = offset + utf16Units(lineChar)
   end
   pieces[#pieces + 1] = endspan
   return table.concat(pieces)
