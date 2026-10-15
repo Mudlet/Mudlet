@@ -483,7 +483,7 @@ int scaleBarRooms(const qreal pixelsPerRoom, const qreal shortest, const qreal l
             break;
         }
     }
-    return chosen;
+    return chosen * pixelsPerRoom >= shortest ? chosen : 0;
 }
 
 } // namespace MapDecals

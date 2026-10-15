@@ -215,6 +215,58 @@ private:
     }
 
     // The room-sized instances, not exit bars or the beacon, standing at a room's place
+    struct WashQuad
+    {
+        qsizetype command = -1;
+        int variant = -1;
+        QVector3D corner;
+        QVector3D opposite;
+        QPointF center() const { return QPointF((corner.x() + opposite.x()) / 2.0, (corner.y() + opposite.y()) / 2.0); }
+    };
+
+    static QList<WashQuad> washQuads(const ModernGLWidget& widget)
+    {
+        QHash<GLuint, int> variants;
+        for (int variant = 0; variant < MapDecals::scmWashVariants; ++variant) {
+            if (const GLuint texture = widget.mLabelTextureCache.imageTexture(qsl("wash|%1").arg(variant))) {
+                variants.insert(texture, variant);
+            }
+        }
+        QList<WashQuad> found;
+        const auto& commands = widget.mRenderCommandQueue.commands();
+        for (qsizetype index = 0; index < static_cast<qsizetype>(commands.size()); ++index) {
+            const auto* textured = dynamic_cast<const RenderTexturedTrianglesCommand*>(commands.at(index).get());
+            if (!textured || !variants.contains(textured->geometry().textureId)) {
+                continue;
+            }
+            const QVector<float>& vertices = textured->geometry().vertices;
+            for (qsizetype quad = 0; quad + 18 <= vertices.size(); quad += 18) {
+                found.append({index,
+                              variants.value(textured->geometry().textureId),
+                              QVector3D(vertices.at(quad), vertices.at(quad + 1), vertices.at(quad + 2)),
+                              QVector3D(vertices.at(quad + 6), vertices.at(quad + 7), vertices.at(quad + 8))});
+            }
+        }
+        return found;
+    }
+
+    // Whether depth writes are on when the command at index is drawn
+    static bool depthWritesAt(const ModernGLWidget& widget, const qsizetype index)
+    {
+        bool writes = true;
+        const auto& commands = widget.mRenderCommandQueue.commands();
+        for (qsizetype i = 0; i < index; ++i) {
+            if (const auto* state = dynamic_cast<const GLStateCommand*>(commands.at(i).get())) {
+                if (state->stateType() == GLStateCommand::ENABLE_DEPTH_WRITE) {
+                    writes = true;
+                } else if (state->stateType() == GLStateCommand::DISABLE_DEPTH_WRITE) {
+                    writes = false;
+                }
+            }
+        }
+        return writes;
+    }
+
     static QList<CubeInstanceData> roomInstances(const RenderInstancedCubesCommand& cubes, const QPointF& place)
     {
         QList<CubeInstanceData> found;
@@ -2029,6 +2081,187 @@ private slots:
                 QVERIFY2(qFuzzyCompare(lower.at(i).color[channel], plainLower.at(i).color[channel]), "the level below took on the lower level's color");
             }
         }
+    }
+
+    // Only the viewed level's shown rooms are washed, each the same way every frame, and neither the washes nor the
+    // marks, symbols and labels after them write depth, whose quads' clear margins would cut holes in what follows
+    void test_inkwashWashesTheViewedLevelSteadilyWithoutWritingDepth()
+    {
+        const int areaId = addArea();
+        QVERIFY(areaId > 0);
+        const bool savedLevels = mudlet::self()->drawUpperLowerLevels();
+        const auto restore = qScopeGuard([this, savedLevels]() {
+            mpHost->setMapStyle(qsl("tiles"));
+            mudlet::self()->setDrawUpperLowerLevels(savedLevels);
+        });
+        mudlet::self()->setDrawUpperLowerLevels(true);
+        constexpr int kUpperRoomId = 6;
+        constexpr int kHiddenRoomId = 7;
+        constexpr int kFirstRowId = 10;
+        constexpr int kRowRooms = 8;
+        QVERIFY(addRoomAt(kUpperRoomId, areaId, 2, 2, 1));
+        QVERIFY(addRoomAt(kHiddenRoomId, areaId, 4, 0, 0));
+        map()->mpRoomDB->getRoom(kHiddenRoomId)->setHidden(true);
+        QList<QPointF> viewed{QPointF(0.0, 0.0), QPointF(2.0, 0.0)};
+        for (int i = 0; i < kRowRooms; ++i) {
+            QVERIFY(addRoomAt(kFirstRowId + i, areaId, 2 * i - 6, -2, 0));
+            viewed.append(QPointF(2 * i - 6, -2));
+        }
+        map()->mpRoomDB->getRoom(kEastRoomId)->mSymbol = qsl("$");
+        const auto clearSymbol = qScopeGuard([this]() {
+            map()->mpRoomDB->getRoom(kEastRoomId)->mSymbol.clear();
+        });
+        QVERIFY(mpHost->setMapStyle(qsl("inkwash")));
+        ModernGLWidget widget(map(), mpHost);
+        queueFrame(widget, areaId);
+
+        const QList<WashQuad> washes = washQuads(widget);
+        QList<QPointF> washed;
+        QSet<int> variants;
+        for (const WashQuad& wash : washes) {
+            washed.append(wash.center());
+            variants.insert(wash.variant);
+        }
+        QCOMPARE(washed.size(), viewed.size());
+        for (const QPointF& place : std::as_const(viewed)) {
+            QVERIFY2(std::any_of(washed.cbegin(),
+                                 washed.cend(),
+                                 [&place](const QPointF& center) {
+                                     return QLineF(center, place).length() < 1e-3;
+                                 }),
+                     qPrintable(qsl("room at %1,%2 was not washed").arg(place.x()).arg(place.y())));
+        }
+        QVERIFY2(variants.size() >= 2, "every room was washed the same way");
+
+        // Up to the level above, everything after the first wash is drawn without writing depth
+        const auto& commands = widget.mRenderCommandQueue.commands();
+        qsizetype firstAbove = -1;
+        for (qsizetype index = 0; index < static_cast<qsizetype>(commands.size()) && firstAbove < 0; ++index) {
+            if (const auto* cubes = dynamic_cast<const RenderInstancedCubesCommand*>(commands.at(index).get()); cubes && cubes->shading() == RenderCommand::Shading::InkHatched) {
+                firstAbove = index;
+            }
+        }
+        QVERIFY(!washes.isEmpty() && firstAbove > washes.first().command);
+        int afterWashes = 0;
+        for (qsizetype index = washes.first().command; index < firstAbove; ++index) {
+            if (dynamic_cast<const RenderTexturedTrianglesCommand*>(commands.at(index).get())) {
+                QVERIFY2(!depthWritesAt(widget, index), qPrintable(qsl("command %1, after the washes, writes depth").arg(index)));
+                afterWashes += index > washes.last().command;
+            }
+        }
+        QVERIFY2(afterWashes > 0, "nothing was drawn after the washes, so their depth writes went untested");
+
+        queueFrame(widget, areaId);
+        QCOMPARE(washQuads(widget).size(), washes.size());
+        const QList<WashQuad> again = washQuads(widget);
+        for (qsizetype i = 0; i < washes.size(); ++i) {
+            QVERIFY2(again.at(i).variant == washes.at(i).variant && again.at(i).corner == washes.at(i).corner && again.at(i).opposite == washes.at(i).opposite, "a wash changed between frames");
+        }
+    }
+
+    // More symbols than the view has textures for still leave every room its wash
+    void test_inkwashWashesSurviveATextureCrowdWithoutGL()
+    {
+        constexpr int kRooms = 540;
+        constexpr int kColumns = 30;
+        map()->mapClear();
+        const int areaId = map()->mpRoomDB->addArea(qsl("Crowded Area"));
+        QVERIFY(areaId > 0);
+        for (int i = 0; i < kRooms; ++i) {
+            QVERIFY(addRoomAt(1000 + i, areaId, i % kColumns - kColumns / 2, i / kColumns - kRooms / kColumns / 2, 0));
+            map()->mpRoomDB->getRoom(1000 + i)->mSymbol = QString::number(i);
+        }
+        map()->mRoomIdHash[map()->mProfileName] = 0;
+        const auto restore = qScopeGuard([this]() {
+            mpHost->setMapStyle(qsl("tiles"));
+        });
+        QVERIFY(mpHost->setMapStyle(qsl("inkwash")));
+
+        ModernGLWidget widget(map(), mpHost);
+        widget.mLabelTextureCache.useTextureStandIn(
+                [lastTexture = GLuint{0}](const QImage&) mutable {
+                    return ++lastTexture;
+                },
+                [](GLuint) {});
+        widget.resize(800, 600);
+        widget.mCameraController.setViewportSize(widget.width(), widget.height());
+        widget.setViewCenter(areaId, 0, 0, 0);
+        widget.frameRooms(30.0);
+        widget.mCameraController.setTopView();
+        widget.updateMatrices();
+        widget.mRenderCommandQueue.clear();
+        widget.renderRooms();
+
+        QCOMPARE(washQuads(widget).size(), kRooms);
+    }
+
+    // A forest or water room is marked only where it would read: on the viewed level, not the player's, with no symbol
+    // or ID shown in its place, and big enough on screen
+    void test_inkwashMarksOnlyRoomsThatShowThemWithoutGL()
+    {
+        constexpr int kForest = 310;
+        const int areaId = addArea();
+        QVERIFY(areaId > 0);
+        map()->mCustomEnvColors[kForest] = QColor(40, 140, 60);
+        QVERIFY(EnvironmentKit::store(map()->mUserData, kForest, EnvironmentKit::Kit::Forest));
+        for (const int roomId : {kPlayerRoomId, kEastRoomId, kLowerRoomId}) {
+            map()->mpRoomDB->getRoom(roomId)->environment = kForest;
+        }
+        const bool savedLevels = mudlet::self()->drawUpperLowerLevels();
+        const bool savedIds = mpHost->mShowRoomID;
+        const auto restore = qScopeGuard([this, savedLevels, savedIds, kForest]() {
+            map()->mCustomEnvColors.remove(kForest);
+            map()->mUserData.remove(EnvironmentKit::userDataKey());
+            map()->mpRoomDB->getRoom(kEastRoomId)->mSymbol.clear();
+            mpHost->mShowRoomID = savedIds;
+            mudlet::self()->setDrawUpperLowerLevels(savedLevels);
+            mpHost->setMapStyle(qsl("tiles"));
+        });
+        mudlet::self()->setDrawUpperLowerLevels(true);
+        mpHost->mShowRoomID = false;
+        QVERIFY(mpHost->setMapStyle(qsl("inkwash")));
+        ModernGLWidget widget(map(), mpHost);
+        const auto marks = [&widget]() {
+            QList<QPointF> found;
+            for (const QString& key : std::as_const(widget.mRoomTexturesInUse)) {
+                if (!key.startsWith(qsl("mark|"))) {
+                    continue;
+                }
+                const GLuint texture = widget.mLabelTextureCache.imageTexture(key);
+                for (const auto& command : widget.mRenderCommandQueue.commands()) {
+                    if (const auto* textured = dynamic_cast<const RenderTexturedTrianglesCommand*>(command.get()); textured && textured->geometry().textureId == texture) {
+                        const QVector<float>& vertices = textured->geometry().vertices;
+                        for (qsizetype quad = 0; quad + 18 <= vertices.size(); quad += 18) {
+                            found.append(QPointF((vertices.at(quad) + vertices.at(quad + 6)) / 2.0, (vertices.at(quad + 1) + vertices.at(quad + 7)) / 2.0));
+                        }
+                    }
+                }
+            }
+            return found;
+        };
+
+        queueFrame(widget, areaId);
+        const QList<QPointF> shown = marks();
+        QCOMPARE(shown.size(), 1);
+        QVERIFY2(QLineF(shown.first(), QPointF(2.0, 0.0)).length() < 0.5, "the mark is not on the room east of the player");
+
+        mpHost->mShowRoomID = true;
+        queueFrame(widget, areaId);
+        QVERIFY2(marks().isEmpty(), "a room was marked under its ID");
+        mpHost->mShowRoomID = false;
+
+        map()->mpRoomDB->getRoom(kEastRoomId)->mSymbol = qsl("$");
+        queueFrame(widget, areaId);
+        QVERIFY2(marks().isEmpty(), "a room was marked under its symbol");
+        map()->mpRoomDB->getRoom(kEastRoomId)->mSymbol.clear();
+
+        queueFrame(widget, areaId);
+        QCOMPARE(marks().size(), 1);
+        widget.mCameraController.setScale(CameraController::scmMaxDistance);
+        widget.updateMatrices();
+        widget.mRenderCommandQueue.clear();
+        widget.queueScene();
+        QVERIFY2(marks().isEmpty(), "a room too small to read a mark on was marked");
     }
 
     // On the paper, a room is a pale lozenge in a dark line wobbling in a way of its own, laid in a wash that bleeds past
