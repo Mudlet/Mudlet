@@ -445,6 +445,90 @@ private slots:
         QVERIFY(MapDecals::stackPlatforms(0, 300.0, 40.0, 0.0, 1000.0).isEmpty());
     }
 
+    void test_inkwashRingsAColorlessRoomTwiceInOchreAndAScriptsColorWins()
+    {
+        const MapStyle& inkwash = *MapStyle::find(qsl("inkwash"));
+        QCOMPARE(inkwash.highlightShape, MapStyle::HighlightShape::DoubleEllipse);
+        const QColor ochre = inkwash.highlightColorFor(QColor());
+        QVERIFY(ochre.isValid());
+        QVERIFY(ochre.hue() >= 25 && ochre.hue() <= 50);
+        const QColor blue(0, 0, 255);
+        QCOMPARE(inkwash.highlightColorFor(blue, blue), blue);
+        QCOMPARE(inkwash.highlightColorFor(QColor(255, 0, 0, 0), blue), blue);
+        // Two separate rings along a line out from the middle
+        const QImage image = MapDecals::highlight(inkwash.highlightShape, ochre, ochre, false, scmSize);
+        int rings = 0;
+        bool inRing = false;
+        for (int x = scmSize / 2; x < scmSize; ++x) {
+            const bool painted = alphaAt(image, x, scmSize / 2) > 100;
+            rings += painted && !inRing;
+            inRing = painted;
+        }
+        QCOMPARE(rings, 2);
+    }
+
+    void test_inkwashWashesAreSoftEdgedAndDifferPerVariant()
+    {
+        constexpr int size = 128;
+        QList<QImage> washes;
+        for (int variant = 0; variant < MapDecals::scmWashVariants; ++variant) {
+            const QImage wash = MapDecals::wash(variant, size);
+            QCOMPARE(wash.size(), QSize(size, size));
+            QCOMPARE(alphaAt(wash, 0, 0), 0);
+            QCOMPARE(alphaAt(wash, size - 1, size / 2), 0);
+            QVERIFY(alphaAt(wash, size / 2, size / 2) > 100);
+            QCOMPARE(QColor::fromRgba(wash.pixel(size / 2, size / 2)).rgb(), QColor(Qt::white).rgb());
+            // Pooled darker just inside its edge than in its middle, as watercolor dries
+            int edge = 0;
+            for (int x = size / 2; x < size; ++x) {
+                edge = qMax(edge, alphaAt(wash, x, size / 2));
+            }
+            QVERIFY(edge > alphaAt(wash, size / 2, size / 2));
+            for (const QImage& other : std::as_const(washes)) {
+                QVERIFY(other != wash);
+            }
+            washes.append(wash);
+        }
+        QCOMPARE(MapDecals::wash(1, size), washes.at(1));
+    }
+
+    void test_inkwashWashKeepsTheHueAndFadesForGray()
+    {
+        const MapStyle& inkwash = *MapStyle::find(qsl("inkwash"));
+        const QColor green = inkwash.washColor(QColor(40, 160, 60));
+        QVERIFY(std::abs(green.hue() - QColor(40, 160, 60).hue()) <= 2);
+        const QColor gray = inkwash.washColor(QColor(128, 128, 128));
+        QVERIFY(gray.alpha() < green.alpha());
+        // However dark the environment, the room stays pale enough for the ink line on it to read
+        QVERIFY(inkwash.roomColor(QColor(80, 0, 0)).lightness() > 180);
+        QVERIFY(inkwash.roomColor(QColor(10, 10, 10)).lightness() > 180);
+    }
+
+    void test_environmentMarksOnlyForestAndWater()
+    {
+        const QColor ink(38, 34, 32);
+        for (const EnvironmentKit::Kit kit : {EnvironmentKit::Kit::Forest, EnvironmentKit::Kit::Water}) {
+            QVERIFY(MapDecals::environmentMarked(kit));
+            const QImage mark = MapDecals::environmentMark(kit, ink, scmSize);
+            QVERIFY(!paintedArea(mark).isEmpty());
+            QCOMPARE(alphaAt(mark, 0, 0), 0);
+        }
+        for (const EnvironmentKit::Kit kit : {EnvironmentKit::Kit::Plain, EnvironmentKit::Kit::Road, EnvironmentKit::Kit::Building}) {
+            QVERIFY(!MapDecals::environmentMarked(kit));
+            QVERIFY(MapDecals::environmentMark(kit, ink, scmSize).isNull());
+        }
+    }
+
+    void test_scaleBarSpansARoundNumberOfRooms()
+    {
+        QCOMPARE(MapDecals::scaleBarRooms(40.0, 60.0, 240.0), 2);
+        QCOMPARE(MapDecals::scaleBarRooms(10.0, 60.0, 240.0), 10);
+        QCOMPARE(MapDecals::scaleBarRooms(1.0, 60.0, 240.0), 100);
+        QCOMPARE(MapDecals::scaleBarRooms(100.0, 60.0, 240.0), 2);
+        QCOMPARE(MapDecals::scaleBarRooms(200.0, 60.0, 240.0), 0);
+        QCOMPARE(MapDecals::scaleBarRooms(0.0, 60.0, 240.0), 0);
+    }
+
     void test_bullseyeIsADotInARingOnWhite()
     {
         const QColor ink(35, 35, 40);
