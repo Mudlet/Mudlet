@@ -304,6 +304,9 @@ private slots:
         QTest::newRow("-platform <bogus> --version") << QStringList{qsl("-platform"), bogusPlatformPlugin(), qsl("--version")} << versionMarker << helpMarker << QStringList() << notUnknown;
         QTest::newRow("-session x --version") << QStringList{qsl("-session"), qsl("x"), qsl("--version")} << versionMarker << helpMarker << QStringList() << notUnknown;
         QTest::newRow("-qwindowgeometry 100x100 --help") << QStringList{qsl("-qwindowgeometry"), qsl("100x100"), qsl("--help")} << helpMarker << versionMarker << QStringList() << notUnknown;
+        // Should a Qt option take the -h as its value, the run is still answered,
+        // as though Qt's options were unknown
+        QTest::newRow("--name --help") << QStringList{qsl("--name"), qsl("--help")} << helpMarker << versionMarker << QStringList{qsl("Unknown option 'name'")} << QStringList();
         QTest::newRow("-qwindowtitle t -display :0 --version") << QStringList{qsl("-qwindowtitle"), qsl("t"), qsl("-display"), qsl(":0"), qsl("--version")} << versionMarker << helpMarker
                                                                << QStringList() << notUnknown;
 
@@ -374,20 +377,20 @@ private slots:
         }
     }
 
-    // A GUI run reparses the list its QApplication has tidied, so what it calls
-    // unknown is whatever Qt left there: on any platform but xcb, the xcb
-    // plugin's options. The child is stopped once its main window is being built.
+    // A GUI run reparses the list its QApplication has tidied, so it must call
+    // unknown whatever Qt left there. The child is stopped once mudlet::init() runs.
     void guiRunWarnsOnStandardError_data()
     {
         QTest::addColumn<QStringList>("arguments");
         QTest::addColumn<QStringList>("errorMustContain");
         QTest::addColumn<QStringList>("errorMustNotContain");
 
-        // Written with '=' so that no value is left over as a package to open,
-        // which a second Mudlet would hand to one already running
+        // The '=' rows leave no value over as a package to open, and Qt reads the
+        // '=' form of neither option, on xcb or elsewhere
         QTest::newRow("--bogus") << QStringList{qsl("--bogus")} << QStringList{qsl("Unknown option 'bogus'")} << QStringList();
-        QTest::newRow("--title=t, not on xcb") << QStringList{qsl("--title=t")} << QStringList{qsl("Unknown option 'title'")} << QStringList();
-        QTest::newRow("--qwindowtitle=t -qdevel") << QStringList{qsl("--qwindowtitle=t"), qsl("-qdevel")} << QStringList() << QStringList{qsl("Unknown option")};
+        QTest::newRow("--title=t") << QStringList{qsl("--title=t")} << QStringList{qsl("Unknown option 'title'")} << QStringList();
+        QTest::newRow("--qwindowtitle=t") << QStringList{qsl("--qwindowtitle=t")} << QStringList{qsl("Unknown option 'qwindowtitle'")} << QStringList();
+        QTest::newRow("-qwindowtitle t -qdevel") << QStringList{qsl("-qwindowtitle"), qsl("t"), qsl("-qdevel")} << QStringList() << QStringList{qsl("Unknown option")};
     }
 
     void guiRunWarnsOnStandardError()
