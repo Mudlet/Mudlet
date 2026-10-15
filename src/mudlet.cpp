@@ -8393,14 +8393,18 @@ void mudlet::armForceClose()
         // right back in it. Retrying terminates: the pump is capped at 30s, and a
         // profile's close ends once its save question is answered.
         for (auto pHost : mHostManager) {
-            if (pHost->getLuaInterpreter()->pumpingEvents() || pHost->waitingForProfileSave()) {
+            if (pHost->getLuaInterpreter()->pumpingEvents()) {
                 qWarning() << "mudlet::armForceClose() - a nested event loop is running, waiting for it to finish";
-                QTimer::singleShot(50ms, this, [this]() {
-                    mForceClosePending = false;
-                    armForceClose();
-                });
-                return;
+            } else if (pHost->waitingForProfileSave()) {
+                qWarning() << "mudlet::armForceClose() - profile" << pHost->getName() << "is waiting for its save to finish, waiting for it";
+            } else {
+                continue;
             }
+            QTimer::singleShot(50ms, this, [this]() {
+                mForceClosePending = false;
+                armForceClose();
+            });
+            return;
         }
         forceClose();
         // Not left set: closeEvent() can still refuse the close, and a later

@@ -83,7 +83,15 @@ private:
         QTimer::singleShot(10ms, &scope, [&pumped]() {
             pumped = true;
         });
-        QTimer::singleShot(300ms, &scope, [host = QPointer<Host>(pHost)]() {
+        const QPointer<Host> host(pHost);
+        // Also when the wait returns without running the timer below, which goes with scope,
+        // or the save would stay running for every test after this one
+        const auto endTheSave = qScopeGuard([host]() {
+            if (host) {
+                host->mWritingHostAndModules = false;
+            }
+        });
+        QTimer::singleShot(300ms, &scope, [host]() {
             if (host) {
                 host->mWritingHostAndModules = false;
             }
@@ -394,17 +402,9 @@ private slots:
         QObject scope;
         bool asked = false;
         bool acceptedDuringTheWait = true;
-        QTimer::singleShot(50ms, &scope, [&]() {
-            asked = true;
-            QCloseEvent close;
-            QCoreApplication::sendEvent(mudlet::self(), &close);
-            acceptedDuringTheWait = close.isAccepted();
-        });
-        holdASaveAndWaitForIt(mpHost);
-
-        QVERIFY2(asked, "the wait ended before the application close was asked for");
-        QVERIFY2(!acceptedDuringTheWait, "the application closed while a save was being waited for");
         bool questionSeen = false;
+        // Running before the wait, so a question that comes up inside it is answered and fails
+        // the test rather than hanging it
         QTimer driver;
         driver.setInterval(10ms);
         connect(&driver, &QTimer::timeout, &scope, [&]() {
@@ -415,6 +415,17 @@ private slots:
             }
         });
         driver.start();
+        QTimer::singleShot(50ms, &scope, [&]() {
+            asked = true;
+            QCloseEvent close;
+            QCoreApplication::sendEvent(mudlet::self(), &close);
+            acceptedDuringTheWait = close.isAccepted();
+        });
+        holdASaveAndWaitForIt(mpHost);
+        const bool questionSeenDuringTheWait = questionSeen;
+
+        QVERIFY2(asked, "the wait ended before the application close was asked for");
+        QVERIFY2(!acceptedDuringTheWait && !questionSeenDuringTheWait, "the application close went ahead while a save was being waited for");
         QVERIFY2(QTest::qWaitFor(
                          [&questionSeen]() {
                              return questionSeen;

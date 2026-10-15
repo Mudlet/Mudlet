@@ -1593,8 +1593,8 @@ void Host::waitForProfileSave()
         return;
     }
 
-    // Not a nested event loop for pumpingEvents(), whose guards refuse a reset or a tab close
-    // outright: this wait ends on its own, so those only have to wait for it.
+    // Not a nested event loop for pumpingEvents(), whose guards refuse a reset or a close outright: this
+    // wait ends on its own, so a close is retried after it and only a reset's second phase waits for it.
     ++mProfileSaveWaitDepth;
     const auto waitDepthGuard = qScopeGuard([this] {
         --mProfileSaveWaitDepth;
