@@ -18,20 +18,21 @@
  ***************************************************************************/
 
 /*
- * The diorama map style's kits. A spec reaches the guess only through the colors a
- * map can be given, and the layout of tall buildings not at all, as it has no Lua
- * entry point.
+ * The kinds of ground the 3D map styles draw, and the diorama style's pieces built from
+ * them. A spec reaches the guess only through the colors a map can be given, and the
+ * layout of tall buildings not at all, as it has no Lua entry point.
  */
 
 #include <QtTest/QtTest>
 
-#include "DioramaKit.h"
+#include "DioramaLayout.h"
+#include "EnvironmentKit.h"
 
 #include "GroupedTest.h"
 
-using DioramaKit::Kit;
+using EnvironmentKit::Kit;
 
-class DioramaKitTest : public QObject
+class DioramaLayoutTest : public QObject
 {
     Q_OBJECT
 
@@ -67,65 +68,47 @@ private slots:
     {
         QFETCH(QColor, color);
         QFETCH(Kit, kit);
-        QCOMPARE(DioramaKit::guess(color), kit);
+        QCOMPARE(EnvironmentKit::guess(color), kit);
     }
 
     void test_namesRoundTrip()
     {
-        const QStringList names = DioramaKit::names();
+        const QStringList names = EnvironmentKit::names();
         QCOMPARE(names, QStringList({qsl("plain"), qsl("water"), qsl("road"), qsl("forest"), qsl("building")}));
         for (const QString& name : names) {
-            const std::optional<Kit> kit = DioramaKit::fromName(name);
+            const std::optional<Kit> kit = EnvironmentKit::fromName(name);
             QVERIFY(kit);
-            QCOMPARE(DioramaKit::name(*kit), name);
+            QCOMPARE(EnvironmentKit::name(*kit), name);
         }
-        QVERIFY(!DioramaKit::fromName(qsl("castle")));
-        QVERIFY(!DioramaKit::fromName(QString()));
-    }
-
-    void test_storedKitsRoundTripThroughUserData()
-    {
-        QMap<QString, QString> userData{{qsl("someone.else"), qsl("kept")}};
-        DioramaKit::store(userData, {{310, Kit::Water}, {-1, Kit::Forest}});
-        QCOMPARE(DioramaKit::stored(userData), (QHash<int, Kit>{{310, Kit::Water}, {-1, Kit::Forest}}));
-        QCOMPARE(userData.value(qsl("someone.else")), qsl("kept"));
-
-        // An entry another version wrote and this one cannot read is left out, not taken as plain
-        userData.insert(DioramaKit::userDataKey(), qsl(R"({"5":"road","x":"water","6":"castle","7":3})"));
-        QCOMPARE(DioramaKit::stored(userData), (QHash<int, Kit>{{5, Kit::Road}}));
-        userData.insert(DioramaKit::userDataKey(), qsl("not json"));
-        QVERIFY(DioramaKit::stored(userData).isEmpty());
-
-        DioramaKit::store(userData, {});
-        QVERIFY(!userData.contains(DioramaKit::userDataKey()));
-        QCOMPARE(userData.size(), 1);
+        QVERIFY(!EnvironmentKit::fromName(qsl("castle")));
+        QVERIFY(!EnvironmentKit::fromName(QString()));
     }
 
     void test_flatKitsLieOnTheBoardAndWaterBelowIt()
     {
-        const QHash<int, DioramaKit::Piece> pieces =
-                DioramaKit::layout({{1, 0, 0, 0, Kit::Water}, {2, 1, 0, 0, Kit::Road}, {3, 2, 0, 0, Kit::Forest}, {4, 3, 0, 0, Kit::Building}, {5, 4, 0, 0, Kit::Plain}}, 0, kRoomSize, kRoomHeight);
-        const float board = -DioramaKit::groundBelowLevel(kRoomHeight);
-        const DioramaKit::Piece water = pieces.value(1);
+        const QHash<int, DioramaLayout::Piece> pieces =
+                DioramaLayout::layout({{1, 0, 0, 0, Kit::Water}, {2, 1, 0, 0, Kit::Road}, {3, 2, 0, 0, Kit::Forest}, {4, 3, 0, 0, Kit::Building}, {5, 4, 0, 0, Kit::Plain}}, 0, kRoomSize, kRoomHeight);
+        const float board = -DioramaLayout::groundBelowLevel(kRoomHeight);
+        const DioramaLayout::Piece water = pieces.value(1);
         QVERIFY(water.top < board);
-        QVERIFY(water.bottom >= board - DioramaKit::waterPitDepth(kRoomHeight) - 1e-5f);
+        QVERIFY(water.bottom >= board - DioramaLayout::waterPitDepth(kRoomHeight) - 1e-5f);
         QCOMPARE(water.halfWidth, 0.5f);
-        const DioramaKit::Piece road = pieces.value(2);
+        const DioramaLayout::Piece road = pieces.value(2);
         QCOMPARE(road.bottom, board);
         QVERIFY(road.top - road.bottom < kRoomHeight / 4.0f);
         QCOMPARE(road.peak, road.top);
-        const DioramaKit::Piece forest = pieces.value(3);
+        const DioramaLayout::Piece forest = pieces.value(3);
         QVERIFY(forest.top - forest.bottom < kRoomHeight / 4.0f);
         QVERIFY2(forest.peak > forest.top + kRoomHeight / 2.0f, "a forest's trees are not taller than its grass");
-        const DioramaKit::Piece building = pieces.value(4);
+        const DioramaLayout::Piece building = pieces.value(4);
         QCOMPARE(building.bottom, board);
         QVERIFY2(building.top > board + kRoomHeight, "a building is no taller than a plain block");
         QVERIFY2(building.peak > building.top, "a building has no roof");
-        const DioramaKit::Piece plain = pieces.value(5);
+        const DioramaLayout::Piece plain = pieces.value(5);
         QCOMPARE(plain.bottom, board);
         QCOMPARE(plain.top, board + kRoomHeight);
         QCOMPARE(plain.halfWidth, kRoomSize / 2.0f);
-        for (const DioramaKit::Piece& piece : pieces) {
+        for (const DioramaLayout::Piece& piece : pieces) {
             QCOMPARE(piece.storeys, 1);
         }
     }
@@ -134,20 +117,20 @@ private slots:
     // and the roof on the last; a gap ends it, and a room off to the side stays as it is
     void test_roomsStackedOnTheViewedLevelMakeOneBuilding()
     {
-        const QHash<int, DioramaKit::Piece> pieces = DioramaKit::layout({{1, 0, 0, 0, Kit::Road},
-                                                                         {2, 0, 0, 1, Kit::Water},
-                                                                         {3, 0, 0, 2, Kit::Forest},
-                                                                         {4, 0, 0, 3, Kit::Building},
-                                                                         {5, 0, 0, 5, Kit::Building},
-                                                                         {6, 1, 0, 1, Kit::Building},
-                                                                         {7, 2, 0, -1, Kit::Road},
-                                                                         {8, 2, 0, 0, Kit::Road}},
-                                                                        0,
-                                                                        kRoomSize,
-                                                                        kRoomHeight);
-        float floor = -DioramaKit::groundBelowLevel(kRoomHeight);
+        const QHash<int, DioramaLayout::Piece> pieces = DioramaLayout::layout({{1, 0, 0, 0, Kit::Road},
+                                                                               {2, 0, 0, 1, Kit::Water},
+                                                                               {3, 0, 0, 2, Kit::Forest},
+                                                                               {4, 0, 0, 3, Kit::Building},
+                                                                               {5, 0, 0, 5, Kit::Building},
+                                                                               {6, 1, 0, 1, Kit::Building},
+                                                                               {7, 2, 0, -1, Kit::Road},
+                                                                               {8, 2, 0, 0, Kit::Road}},
+                                                                              0,
+                                                                              kRoomSize,
+                                                                              kRoomHeight);
+        float floor = -DioramaLayout::groundBelowLevel(kRoomHeight);
         for (int storey = 0; storey < 4; ++storey) {
-            const DioramaKit::Piece piece = pieces.value(storey + 1);
+            const DioramaLayout::Piece piece = pieces.value(storey + 1);
             QCOMPARE(piece.kit, Kit::Building);
             QCOMPARE(piece.storey, storey);
             QCOMPARE(piece.storeys, 4);
@@ -169,12 +152,12 @@ private slots:
         QCOMPARE(pieces.value(8).kit, Kit::Road);
 
         // Viewed from the level above, the rooms there start their own building
-        const QHash<int, DioramaKit::Piece> higher = DioramaKit::layout({{1, 0, 0, 0, Kit::Road}, {2, 0, 0, 1, Kit::Road}, {3, 0, 0, 2, Kit::Road}}, 1, kRoomSize, kRoomHeight);
+        const QHash<int, DioramaLayout::Piece> higher = DioramaLayout::layout({{1, 0, 0, 0, Kit::Road}, {2, 0, 0, 1, Kit::Road}, {3, 0, 0, 2, Kit::Road}}, 1, kRoomSize, kRoomHeight);
         QCOMPARE(higher.value(1).storeys, 1);
         QCOMPARE(higher.value(2).storeys, 2);
         QCOMPARE(higher.value(3).storey, 1);
     }
 };
 
-#include "DioramaKitTest.moc"
-MUDLET_GROUPED_TEST_MAIN(DioramaKitTest)
+#include "DioramaLayoutTest.moc"
+MUDLET_GROUPED_TEST_MAIN(DioramaLayoutTest)

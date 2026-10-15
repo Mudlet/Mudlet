@@ -114,7 +114,7 @@ public slots:
     void slot_showSaveWarningMenu();
     void slot_saveErrorChanged(bool hasError);
 
-    // Returns how far down the info reaches, or yOffset if none was painted
+    // Returns where the box ends, down from the top
     static int paintMapInfo(const QElapsedTimer& renderTimer,
                             QPainter& painter,
                             Host* pHost,
@@ -126,7 +126,11 @@ public slots:
                             int xOffset,
                             int yOffset,
                             int widgetWidth,
-                            int fontHeight);
+                            int fontHeight,
+                            // Invalid for the profile's info box background
+                            const QColor& background = QColor(),
+                            // Empty for the profile's display font's
+                            const QString& fontFamily = QString());
     static int paintMapInfoContributor(QPainter& painter, int xOffset, int yOffset, const MapInfoProperties& properties, QColor bgColor, int fontHeight, int widgetWidth);
 
 protected:

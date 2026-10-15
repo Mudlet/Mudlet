@@ -46,7 +46,7 @@ set(mudlet_SRCS
     AliasUnit.cpp
     CredentialManager.cpp
     ctelnet.cpp
-    DioramaKit.cpp
+    DioramaLayout.cpp
     discord.cpp
     EditorAddItemCommand.cpp
     EditorDeleteItemCommand.cpp
@@ -55,6 +55,7 @@ set(mudlet_SRCS
     EditorMoveItemCommand.cpp
     EditorToggleActiveCommand.cpp
     EditorUndoStack.cpp
+    EnvironmentKit.cpp
     EventLoopPump.cpp
     ExitAppearance.cpp
     FontManager.cpp
@@ -67,6 +68,7 @@ set(mudlet_SRCS
     LuaInterface.cpp
     LuaLiteral.cpp
     mapInfoContributorManager.cpp
+    MapDecals.cpp
     MapStyle.cpp
     MMCPClient.cpp
     MMCPServer.cpp
@@ -337,7 +339,7 @@ set(mudlet_HDRS
     AliasUnit.h
     CredentialManager.h
     ctelnet.h
-    DioramaKit.h
+    DioramaLayout.h
     discord.h
     EditorAddItemCommand.h
     EditorCommand.h
@@ -347,6 +349,7 @@ set(mudlet_HDRS
     EditorMoveItemCommand.h
     EditorToggleActiveCommand.h
     EditorUndoStack.h
+    EnvironmentKit.h
     enums.h
     EventLoopPump.h
     ExitAppearance.h
@@ -361,6 +364,7 @@ set(mudlet_HDRS
     LuaLiteral.h
     MacMicrophonePermission.h
     mapInfoContributorManager.h
+    MapDecals.h
     MapStyle.h
     MMCP.h
     MMCPClient.h

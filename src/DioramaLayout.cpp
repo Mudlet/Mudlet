@@ -17,29 +17,13 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "DioramaKit.h"
+#include "DioramaLayout.h"
 
-#include "RoomAppearance.h"
-#include "TMap.h"
-#include "utils.h"
-
-#include <QJsonDocument>
-#include <QJsonObject>
 #include <QSet>
 
-#include <array>
-
-namespace DioramaKit {
+namespace DioramaLayout {
 
 namespace {
-constexpr std::array<std::pair<Kit, const char*>, 5> scmKitNames{{
-        {Kit::Plain, "plain"},
-        {Kit::Water, "water"},
-        {Kit::Road, "road"},
-        {Kit::Forest, "forest"},
-        {Kit::Building, "building"},
-}};
-
 // In rooms' heights, above the ground a room stands on
 constexpr float scmWaterDepth = 0.15f;
 constexpr float scmWaterThickness = 0.06f;
@@ -52,114 +36,6 @@ constexpr float scmRoofHeight = 0.85f;
 constexpr float scmTileHalfWidth = 0.5f;
 constexpr float scmGrassHalfWidth = 0.48f;
 } // namespace
-
-QString name(const Kit kit)
-{
-    for (const auto& [each, kitName] : scmKitNames) {
-        if (each == kit) {
-            return QString::fromLatin1(kitName);
-        }
-    }
-    return QString();
-}
-
-std::optional<Kit> fromName(const QString& name)
-{
-    for (const auto& [kit, kitName] : scmKitNames) {
-        if (name == QLatin1String(kitName)) {
-            return kit;
-        }
-    }
-    return std::nullopt;
-}
-
-QStringList names()
-{
-    QStringList result;
-    for (const auto& [kit, kitName] : scmKitNames) {
-        result.append(QString::fromLatin1(kitName));
-    }
-    return result;
-}
-
-Kit guess(const QColor& environmentColor)
-{
-    if (!environmentColor.isValid()) {
-        return Kit::Plain;
-    }
-    const QColor color = environmentColor.toHsl();
-    const float lightness = color.lightnessF();
-    if (lightness < 0.1f) {
-        return Kit::Road;
-    }
-    if (lightness > 0.92f) {
-        return Kit::Building;
-    }
-    const float saturation = color.hslSaturationF();
-    // Saturation alone overstates it near black and white, where a little tint is still a grey
-    const float chroma = static_cast<float>(qMax(qMax(color.redF(), color.greenF()), color.blueF()) - qMin(qMin(color.redF(), color.greenF()), color.blueF()));
-    if (saturation < 0.15f || chroma < 0.08f) {
-        return Kit::Road;
-    }
-    const float hue = color.hslHueF() * 360.0f;
-    if (hue >= 170.0f && hue < 250.0f) {
-        return Kit::Water;
-    }
-    if (hue >= 70.0f && hue < 170.0f) {
-        return Kit::Forest;
-    }
-    // Brown and tan are a dull or dark orange; a bright one is a painted building
-    if (hue >= 15.0f && hue < 50.0f && (saturation < 0.6f || lightness < 0.4f)) {
-        return Kit::Road;
-    }
-    return Kit::Building;
-}
-
-QString userDataKey()
-{
-    return qsl("system.mapStyle.diorama.environmentKits");
-}
-
-QHash<int, Kit> stored(const QMap<QString, QString>& mapUserData)
-{
-    QHash<int, Kit> kits;
-    const auto found = mapUserData.constFind(userDataKey());
-    if (found == mapUserData.cend()) {
-        return kits;
-    }
-    const QJsonObject object = QJsonDocument::fromJson(found->toUtf8()).object();
-    for (auto entry = object.constBegin(); entry != object.constEnd(); ++entry) {
-        bool number = false;
-        const int environmentId = entry.key().toInt(&number);
-        const std::optional<Kit> kit = fromName(entry.value().toString());
-        if (number && kit) {
-            kits.insert(environmentId, *kit);
-        }
-    }
-    return kits;
-}
-
-void store(QMap<QString, QString>& mapUserData, const QHash<int, Kit>& kits)
-{
-    if (kits.isEmpty()) {
-        mapUserData.remove(userDataKey());
-        return;
-    }
-    QJsonObject object;
-    for (auto kit = kits.constBegin(); kit != kits.constEnd(); ++kit) {
-        object.insert(QString::number(kit.key()), name(kit.value()));
-    }
-    mapUserData.insert(userDataKey(), QString::fromUtf8(QJsonDocument(object).toJson(QJsonDocument::Compact)));
-}
-
-std::pair<Kit, bool> forEnvironment(const TMap& map, const Host& host, const int environmentId)
-{
-    const QHash<int, Kit> named = stored(map.mUserData);
-    if (const auto found = named.constFind(environmentId); found != named.cend()) {
-        return {*found, true};
-    }
-    return {guess(RoomAppearance::environmentColor(map, host, environmentId)), false};
-}
 
 float groundBelowLevel(const float roomHeight)
 {
@@ -241,4 +117,4 @@ QHash<int, Piece> layout(const QList<Place>& places, const int viewedLevel, cons
     return pieces;
 }
 
-} // namespace DioramaKit
+} // namespace DioramaLayout

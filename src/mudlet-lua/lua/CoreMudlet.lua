@@ -1191,13 +1191,15 @@ if false then
 
 
 
-  --- Names the kit the 3D map's diorama style builds an environment's rooms as. Without one, the kit is
-  --- guessed from the environment's color: blue is water, green forest, grey, brown and tan road, and any
-  --- other color a building. The kits are saved with the map.
+  --- Names the kind of ground an environment is, for the 3D map styles that draw terrain: diorama builds the
+  --- environment's rooms as it, and terminal and ink wash mark them by it. Without one, the kind is guessed from
+  --- the environment's color: blue is water, green forest, grey, brown and tan road, and any other color a
+  --- building. The kits are saved with the map.
   ---
   --- @param environmentID the environment, as setRoomEnv() takes it
   --- @param kitName one of "plain", "water", "road", "forest" or "building"; nil or "" goes back to guessing
-  --- @return true, or nil and an error message for a kit name it does not know
+  --- @return true, or nil and an error message for a kit name it does not know, or when the kits saved in the
+  ---   map user data "system.mapStyle.environmentKits" are not a JSON object, which it leaves alone
   ---
   --- @usage Show the lava environment as water, and forget that the swamp environment was named
   ---   <pre>
@@ -1211,7 +1213,7 @@ if false then
 
 
 
-  --- The kit the 3D map's diorama style builds an environment's rooms as.
+  --- The kind of ground an environment is, for use by 3D map styles that draw terrain.
   ---
   --- @param environmentID the environment, as setRoomEnv() takes it
   --- @return the kit's name, and true when setMapEnvironmentKit() named it or false when it is guessed
@@ -1223,7 +1225,8 @@ if false then
 
 
 
-  --- The kits setMapEnvironmentKit() has named, leaving out those guessed from environments' colors.
+  --- The kits setMapEnvironmentKit() has named, leaving out those guessed from environments' colors and any saved
+  --- entry that cannot be read.
   ---
   --- @return a table of kit names keyed by environment ID
   ---

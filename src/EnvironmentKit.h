@@ -19,9 +19,7 @@
 
 #pragma once
 
-#include <QColor>
 #include <QHash>
-#include <QList>
 #include <QMap>
 #include <QString>
 #include <QStringList>
@@ -30,24 +28,14 @@
 #include <utility>
 
 class Host;
+class QColor;
 class TMap;
 
-// What the diorama map style builds a room as: its environment decides the piece's shape as well as its color.
-// A game names the kit for an environment, and until it does one is guessed from the environment's color
-namespace DioramaKit {
+// What kind of ground an environment is, for the 3D map styles that draw rooms by it rather than by color
+// alone. A game names the kit for an environment, and until it does one is guessed from the environment's color
+namespace EnvironmentKit {
 
-enum class Kit {
-    // A block, as the other styles draw a room
-    Plain,
-    // Sunk below the board, flat and glossy
-    Water,
-    // Flat paving, level with the board
-    Road,
-    // A grass tile with a few small trees on it
-    Forest,
-    // A block with a pitched roof
-    Building
-};
+enum class Kit { Plain, Water, Road, Forest, Building };
 
 // The lower-case name setMapEnvironmentKit() takes
 QString name(Kit kit);
@@ -60,48 +48,16 @@ Kit guess(const QColor& environmentColor);
 
 // The map user data key the kits a game set are saved under, as a JSON object of environment ID to kit name
 QString userDataKey();
-// Those set in the map's user data; an entry that cannot be read is left out
+// Those set in the map's user data; an entry that cannot be read is left out, with a warning the first time
 QHash<int, Kit> stored(const QMap<QString, QString>& mapUserData);
-// Saves kits in the map's user data, removing the key when there are none
-void store(QMap<QString, QString>& mapUserData, const QHash<int, Kit>& kits);
+// Sets or, with no kit, clears one environment's kit, keeping every other entry as it was, even one that cannot be
+// read. Refuses, returning false, when what is saved is not a JSON object, rather than overwrite it
+bool store(QMap<QString, QString>& mapUserData, int environmentId, std::optional<Kit> kit);
 
 // The kit for an environment, and whether the map names it rather than it being guessed from the environment's color
 std::pair<Kit, bool> forEnvironment(const TMap& map, const Host& host, int environmentId);
+// For drawing many rooms, from what stored() read once: the kit named for the environment, else one guessed from
+// its color where the map defines the environment; nothing for one it does not, which the map draws in a default color
+std::optional<Kit> forDefinedEnvironment(const QHash<int, Kit>& named, const TMap& map, int environmentId, const QColor& environmentColor);
 
-// Where a room stands on the board
-struct Place
-{
-    int roomId = 0;
-    int x = 0;
-    int y = 0;
-    int z = 0;
-    Kit kit = Kit::Plain;
-};
-
-// A room's piece, its heights on the map's z axis, where each level is one unit above the one below
-struct Piece
-{
-    Kit kit = Kit::Plain;
-    // The block's or tile's foot and its flat top
-    float bottom = 0.0f;
-    float top = 0.0f;
-    // The tip of the roof or of the tallest tree, or top where there is neither
-    float peak = 0.0f;
-    // Across the room's spacing
-    float halfWidth = 0.0f;
-    // Counted up from the board, in a building that spans several levels; 0 for a piece that stands alone
-    int storey = 0;
-    int storeys = 1;
-};
-
-// The board lies under the viewed level, its top where that level's rooms stand. A room on the viewed level with
-// rooms on the levels straight above it is the foot of a tall building, with a storey for each and a roof on top;
-// its storeys stand lower than their levels
-QHash<int, Piece> layout(const QList<Place>& places, int viewedLevel, float roomSize, float roomHeight);
-
-// How far below its level a room's ground is
-float groundBelowLevel(float roomHeight);
-// How deep the hole cut in the board for water goes, down to the water's underside
-float waterPitDepth(float roomHeight);
-
-} // namespace DioramaKit
+} // namespace EnvironmentKit

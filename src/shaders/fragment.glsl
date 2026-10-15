@@ -35,8 +35,8 @@ uniform float uWireFill;
 // Darkens every uScanlinePeriod-th row of pixels by uScanlines
 uniform float uScanlines = 0.0;
 uniform float uScanlinePeriod = 3.0;
-// Inkwash: 1 a blot, 2 a stroke, 3 a seal, 4 the paper. Uneven by where an instance stands or by the pixel, never by
-// time, so nothing shimmers
+// Inkwash: 1 a blot, 2 a stroke, 3 a seal, 4 the paper, 5 a lozenge, 6 a hatched one, 7 a dashed one. Uneven by where
+// an instance stands or by the pixel, never by time, so nothing shimmers
 uniform int uInk = 0;
 uniform bool uInkRound = false;
 flat in vec3 instanceOrigin;
@@ -317,6 +317,43 @@ void main()
             color = mix(color * (0.92 + 0.12 * ripple), vec3(1.0), 0.45 * streak);
         }
         FragColor = vec4(color, vertexColor.a);
+    } else if (uInk >= 5) {
+        uint seed = inkSeed();
+        vec2 p = localPosition.xy;
+        float inside;
+        if (uInkRound) {
+            inside = 1.0 - length(p);
+        } else {
+            vec2 q = abs(p) - vec2(0.9);
+            inside = 0.1 - length(max(q, 0.0)) - min(max(q.x, q.y), 0.0);
+        }
+        // Drawn by hand: the line wanders slowly in and out round the room, and presses harder in places, but stays
+        // inside the shape, which is all there is to draw on
+        vec2 around = p / max(length(p), 1e-4);
+        float wobble = (inkNoise(around * 1.8 + 3.0, seed) - 0.5) * 0.11 + (inkNoise(around * 6.0 + 8.0, seed + 1u) - 0.5) * 0.03;
+        float edge = inside - 0.11 - wobble;
+        float pixel = max(fwidth(inside), 1e-5);
+        float halfWidth = max(0.03, 0.6 * pixel);
+        float line = (1.0 - smoothstep(halfWidth, halfWidth + 1.5 * pixel, abs(edge))) * (0.75 + 0.25 * inkNoise(around * 4.0, seed + 2u));
+        float within = smoothstep(-pixel, pixel, edge);
+        vec3 inkColor = vertexColor.rgb * 0.28;
+        float fill = uInk == 7 ? 0.0 : (uInk == 6 ? 0.55 : 1.0);
+        vec4 color = vec4(vertexColor.rgb, fill * within);
+        if (uInk == 6) {
+            // Hatched across, as a sketch shows a floor over the one looked at
+            float across = (p.x - p.y) / 0.3 + inkRandom(ivec2(0), seed);
+            float hatch = 1.0 - smoothstep(0.07, 0.07 + 1.5 * fwidth(across), abs(fract(across) - 0.5));
+            color = mix(color, vec4(inkColor, 0.8), hatch * within);
+        } else if (uInk == 7) {
+            line *= step(0.45, fract(atan(p.y, p.x) / 6.2831853 * 14.0));
+        }
+        color = mix(color, vec4(inkColor, 1.0), line);
+        color.a *= paperGrain() * vertexColor.a;
+        // Only its top, as drawn on the paper; left until after fwidth(), which a discard before it would upset
+        if (localNormal.z < 0.5 || color.a < 0.004) {
+            discard;
+        }
+        FragColor = color;
     } else {
         FragColor = vertexColor;
     }

@@ -237,6 +237,28 @@ private slots:
         QCOMPARE(lines.first().level, 0);
     }
 
+    void test_straightStairsAreDashedWhereTheStyleAsks()
+    {
+        TRoom* pHigh = addRoomAt(1, mAreaId, 0, 0, 1);
+        TRoom* pLow = addRoomAt(2, mAreaId, 0, 0, 0);
+        QVERIFY(pLow && pHigh);
+        pLow->setExit(1, DIR_UP);
+        pHigh->setExit(2, DIR_DOWN);
+
+        QCOMPARE(segmentsIn(build(), mExitColor).size(), 1);
+        ExitScene::Options sceneOptions = options();
+        sceneOptions.dashedStairs = true;
+        const QList<ExitScene::Segment> dashes = segmentsIn(build(sceneOptions), mExitColor);
+        QVERIFY2(dashes.size() > 1, qPrintable(qsl("%1 pieces").arg(dashes.size())));
+        float drawn = 0.0f;
+        for (const ExitScene::Segment& dash : dashes) {
+            QCOMPARE(dash.from.x(), 0.0f);
+            QCOMPARE(dash.to.y(), 0.0f);
+            drawn += (dash.to - dash.from).length();
+        }
+        QVERIFY2(drawn < 0.9f, "the gaps between dashes are left open");
+    }
+
     // The lower-numbered room draws its two-way exits, but dots them all when it has a one-way one to the same room
     void test_twoWayExitIsDrawnWhenTheOtherEndDotsItsLine()
     {
@@ -687,6 +709,56 @@ private slots:
         QCOMPARE(segmentsIn(scene, ExitAppearance::oneWayArrowColor()).size(), 1);
     }
 
+    void test_linesJoiningTwoEnvironmentsTakeTheMixedColorWhereGiven()
+    {
+        map()->mCustomEnvColors[301] = QColor(200, 30, 30);
+        map()->mCustomEnvColors[302] = QColor(30, 60, 220);
+        auto restore = qScopeGuard([this] {
+            map()->mCustomEnvColors.remove(301);
+            map()->mCustomEnvColors.remove(302);
+        });
+        TRoom* pWest = addRoomAt(1, mAreaId, 0, 0);
+        TRoom* pEast = addRoomAt(2, mAreaId, 1, 0);
+        QVERIFY(pWest && pEast);
+        pWest->environment = 301;
+        pEast->environment = 302;
+        pWest->setExit(2, DIR_EAST);
+        pEast->setExit(1, DIR_WEST);
+        ExitScene::Options lines = options();
+        lines.environmentLines = true;
+        const QColor gray(178, 178, 178);
+        lines.mixedLineColor = gray;
+
+        const ExitScene::Scene scene = build(lines);
+
+        QCOMPARE(segmentsIn(scene, gray).size(), 1);
+        QCOMPARE(segmentsIn(scene, mExitColor).size(), 0);
+    }
+
+    // A station is on a line of its own environment only where an exit on its level joins it to a room of it that shows
+    void test_onEnvironmentLineTakesOnlyALevelExitToItsOwnEnvironment()
+    {
+        TRoom* pRoom = addRoomAt(1, mAreaId, 0, 0, 0);
+        TRoom* pOther = addRoomAt(2, mAreaId, 1, 0, 0);
+        TRoom* pAbove = addRoomAt(3, mAreaId, 0, 0, 1);
+        QVERIFY(pRoom && pOther && pAbove);
+        pRoom->environment = 301;
+        pOther->environment = 302;
+        pAbove->environment = 301;
+        pRoom->setExit(3, DIR_UP);
+        pRoom->setExit(2, DIR_EAST);
+        QVERIFY(!RoomAppearance::onEnvironmentLine(*map(), *pRoom));
+        pOther->environment = 301;
+        QVERIFY(RoomAppearance::onEnvironmentLine(*map(), *pRoom));
+        QVERIFY2(RoomAppearance::onEnvironmentLine(*map(), *pOther), "a one-way exit into the room does not put it on a line");
+        pOther->setHidden(true);
+        QVERIFY2(!RoomAppearance::onEnvironmentLine(*map(), *pRoom), "a line to a hidden room counts");
+        pOther->setHidden(false);
+        pRoom->customLines.insert(qsl("e"), {QPointF(0.5, 0.5), QPointF(1.0, 0.0)});
+        QVERIFY2(!RoomAppearance::onEnvironmentLine(*map(), *pRoom), "an exit drawn as a custom line counts as a line of its environment");
+        QVERIFY2(!RoomAppearance::onEnvironmentLine(*map(), *pOther), "an entrance drawn as a custom line counts as a line of its environment");
+    }
+
     void test_environmentLinesAreOffUnlessAsked()
     {
         map()->mCustomEnvColors[301] = QColor(200, 30, 30);
@@ -849,6 +921,96 @@ private slots:
         QCOMPARE(RoomAppearance::terminalGlyph(*pRoom, look, false), qsl("$"));
         look.playerRoom = true;
         QCOMPARE(RoomAppearance::terminalGlyph(*pRoom, look, false), qsl("@"));
+    }
+
+    void test_terminalGlyphShowsTheGroundUnlessThereIsMoreToSay()
+    {
+        TRoom* pRoom = addRoomAt(1, mAreaId, 0, 0);
+        TRoom* pAbove = addRoomAt(2, mAreaId, 0, 0, 1);
+        QVERIFY(pRoom && pAbove);
+        RoomAppearance::Look look;
+        QCOMPARE(RoomAppearance::terminalGlyph(*pRoom, look, false, EnvironmentKit::Kit::Water), QString(QChar(0x2248)));
+        QCOMPARE(RoomAppearance::terminalGlyph(*pRoom, look, false, EnvironmentKit::Kit::Forest), QString(QChar(0x2663)));
+        QCOMPARE(RoomAppearance::terminalGlyph(*pRoom, look, false, EnvironmentKit::Kit::Building), QString(QChar(0x25A0)));
+        QCOMPARE(RoomAppearance::terminalGlyph(*pRoom, look, false, EnvironmentKit::Kit::Road), qsl("#"));
+        QCOMPARE(RoomAppearance::terminalGlyph(*pRoom, look, false, EnvironmentKit::Kit::Plain), qsl("\""));
+        QCOMPARE(RoomAppearance::terminalGlyph(*pRoom, look, true, EnvironmentKit::Kit::Plain), qsl("."));
+        QCOMPARE(RoomAppearance::terminalGlyph(*pRoom, look, true, EnvironmentKit::Kit::Water), QString(QChar(0x2248)));
+        pRoom->setExit(2, DIR_UP);
+        QCOMPARE(RoomAppearance::terminalGlyph(*pRoom, look, false, EnvironmentKit::Kit::Water), qsl("<"));
+        look.symbol = qsl("$");
+        QCOMPARE(RoomAppearance::terminalGlyph(*pRoom, look, false, EnvironmentKit::Kit::Water), qsl("$"));
+    }
+
+    // A map that never defined an environment draws it in the default red, which is no kind of ground
+    void test_onlyADefinedEnvironmentHasAGround()
+    {
+        constexpr int kEnvironment = 9999;
+        const QColor blue(50, 90, 200);
+        const auto restore = qScopeGuard([this, kEnvironment]() {
+            map()->mCustomEnvColors.remove(kEnvironment);
+        });
+        QVERIFY(!EnvironmentKit::forDefinedEnvironment({}, *map(), kEnvironment, blue));
+        QCOMPARE(EnvironmentKit::forDefinedEnvironment({{kEnvironment, EnvironmentKit::Kit::Forest}}, *map(), kEnvironment, blue), EnvironmentKit::Kit::Forest);
+        map()->mCustomEnvColors[kEnvironment] = blue;
+        QCOMPARE(EnvironmentKit::forDefinedEnvironment({}, *map(), kEnvironment, blue), EnvironmentKit::Kit::Water);
+    }
+
+    // An environment mapped onto a color the map does not have is drawn in the default red, like an undefined one
+    void test_anEnvironmentMappedOntoNoColorHasNoGround()
+    {
+        constexpr int kEnvironment = 9998;
+        constexpr int kMissing = 9997;
+        const QColor blue(50, 90, 200);
+        const auto restore = qScopeGuard([this, kEnvironment]() {
+            map()->mEnvColors.remove(kEnvironment);
+        });
+        map()->mEnvColors[kEnvironment] = kMissing;
+        QVERIFY(!map()->mCustomEnvColors.contains(kMissing));
+        QVERIFY(!RoomAppearance::environmentDefined(*map(), kEnvironment));
+        QVERIFY(!EnvironmentKit::forDefinedEnvironment({}, *map(), kEnvironment, blue));
+        QCOMPARE(RoomAppearance::environmentColor(*map(), *mpHost, kEnvironment), mpHost->mRed_2);
+        map()->mEnvColors[kEnvironment] = 4;
+        QVERIFY(RoomAppearance::environmentDefined(*map(), kEnvironment));
+        QCOMPARE(RoomAppearance::environmentColor(*map(), *mpHost, kEnvironment), mpHost->mBlue_2);
+        QCOMPARE(EnvironmentKit::forDefinedEnvironment({}, *map(), kEnvironment, blue), EnvironmentKit::Kit::Water);
+    }
+
+    // Two profiles' maps with different unreadable kits, read in turn on every repaint, warn once each
+    void test_unreadableKitsWarnOnceForEachSavedValue()
+    {
+        QMap<QString, QString> first{{EnvironmentKit::userDataKey(), qsl("{\"1\": \"lava\"}")}};
+        QMap<QString, QString> second{{EnvironmentKit::userDataKey(), qsl("not json")}};
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("EnvironmentKit: .*lava")));
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("EnvironmentKit: .*not json")));
+        QTest::failOnWarning(QRegularExpression(qsl("EnvironmentKit: ")));
+        for (int frame = 0; frame < 3; ++frame) {
+            QVERIFY(EnvironmentKit::stored(first).isEmpty());
+            QVERIFY(EnvironmentKit::stored(second).isEmpty());
+        }
+    }
+
+    void test_groundFallsBackToAsciiForAFontWithoutIt()
+    {
+        QCOMPARE(RoomAppearance::groundGlyph(EnvironmentKit::Kit::Water, false, true), qsl("~"));
+        QCOMPARE(RoomAppearance::groundGlyph(EnvironmentKit::Kit::Forest, false, true), qsl("*"));
+        QCOMPARE(RoomAppearance::groundGlyph(EnvironmentKit::Kit::Building, false, true), qsl("="));
+        QCOMPARE(RoomAppearance::groundGlyph(EnvironmentKit::Kit::Road, false, true), qsl("#"));
+        QCOMPARE(RoomAppearance::groundGlyph(EnvironmentKit::Kit::Plain, true, true), qsl("."));
+        for (const QString& kitName : EnvironmentKit::names()) {
+            const QString ascii = RoomAppearance::groundGlyph(*EnvironmentKit::fromName(kitName), false, true);
+            QVERIFY2(ascii.size() == 1 && ascii.at(0).unicode() >= u'!' && ascii.at(0).unicode() <= u'~', qPrintable(ascii));
+        }
+        TRoom* pRoom = addRoomAt(1, mAreaId, 0, 0);
+        QVERIFY(pRoom);
+        const RoomAppearance::Look look;
+        QCOMPARE(RoomAppearance::terminalGlyph(*pRoom, look, false, EnvironmentKit::Kit::Forest, true), qsl("*"));
+
+        const QFont font(qsl("Bitstream Vera Sans Mono"));
+        QVERIFY(RoomAppearance::fontShows(font, qsl("#")));
+        // A noncharacter, which no font draws
+        QVERIFY(!RoomAppearance::fontShows(font, QString(QChar(0xFFFF))));
+        QVERIFY(!RoomAppearance::fontShows(font, QString()));
     }
 
     void test_areaExitPointsOutOfTheArea_data()

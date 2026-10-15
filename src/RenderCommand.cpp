@@ -34,10 +34,15 @@ int inkMode(const RenderCommand::Shading shading)
         return 3;
     case RenderCommand::Shading::Paper:
         return 4;
+    case RenderCommand::Shading::InkLozenge:
+        return 5;
+    case RenderCommand::Shading::InkHatched:
+        return 6;
+    case RenderCommand::Shading::InkDashed:
+        return 7;
     case RenderCommand::Shading::Lit:
     case RenderCommand::Shading::Unlit:
     case RenderCommand::Shading::Wireframe:
-    case RenderCommand::Shading::Outline:
     case RenderCommand::Shading::ModelBlock:
     case RenderCommand::Shading::ModelPath:
     case RenderCommand::Shading::ModelShadow:
@@ -65,11 +70,13 @@ int modelMode(const RenderCommand::Shading shading)
     case RenderCommand::Shading::Lit:
     case RenderCommand::Shading::Unlit:
     case RenderCommand::Shading::Wireframe:
-    case RenderCommand::Shading::Outline:
     case RenderCommand::Shading::InkBlot:
     case RenderCommand::Shading::InkStroke:
     case RenderCommand::Shading::Seal:
     case RenderCommand::Shading::Paper:
+    case RenderCommand::Shading::InkLozenge:
+    case RenderCommand::Shading::InkHatched:
+    case RenderCommand::Shading::InkDashed:
         return 0;
     }
     return 0;
@@ -350,7 +357,7 @@ void RenderInstancedCubesCommand::execute(QOpenGLFunctions* gl,
     shader->setUniformValue("uNormalMatrix", normalMatrix);
 
     const bool unlit = mShading != Shading::Lit;
-    const bool wireframe = mShading == Shading::Wireframe || mShading == Shading::Outline;
+    const bool wireframe = mShading == Shading::Wireframe;
     if (unlit) {
         shader->setUniformValue("uDisableLighting", true);
     }
@@ -358,7 +365,7 @@ void RenderInstancedCubesCommand::execute(QOpenGLFunctions* gl,
         shader->setUniformValue("uWireframe", true);
         shader->setUniformValue("uWireRound", mShape == GeometryManager::InstanceShape::Cylinder);
         shader->setUniformValue("uWireSides", static_cast<float>(GeometryManager::scmCylinderSegments));
-        shader->setUniformValue("uWireFill", mShading == Shading::Outline ? 0.0f : scmWireFill);
+        shader->setUniformValue("uWireFill", scmWireFill);
     }
     const int ink = inkMode(mShading);
     if (ink) {
