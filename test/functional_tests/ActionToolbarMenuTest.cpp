@@ -17,6 +17,8 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include <algorithm>
+
 #include <QMenu>
 #include <QPushButton>
 #include <QTemporaryDir>
@@ -103,11 +105,15 @@ private:
         return group;
     }
 
-    // Host::send() echoes a command onto the main console as well as running it
-    // through the aliases, and an echo is seen even if the aliases are skipped
+    // In the profile's default echo mode Host::send() echoes a command onto the
+    // main console, even if it skips the aliases. The echo can land on the end of
+    // a partial line such as a prompt, so any line containing the text counts.
     static bool mainConsoleShows(Host* host, const QString& text)
     {
-        return host->mLuaInterpreter.compileAndExecuteScript(qsl("for _, line in ipairs(getLines(0, getLineCount() + 1)) do if line == [[%1]] then return end end error('not shown')").arg(text));
+        const QStringList& lines = host->mainConsoleModel().buffer.lineBuffer;
+        return std::any_of(lines.cbegin(), lines.cend(), [&text](const QString& line) {
+            return line.contains(text);
+        });
     }
 
     // Searched from the main window rather than the console, because a
@@ -481,6 +487,8 @@ private slots:
 
         QVERIFY(host->mLuaInterpreter.compileAndExecuteScript(qsl("qaPushUpRan = nil; qaPushUpState = nil; qaUpCommandSent = 0; "
                                                                   "tempAlias([[^QA_\\w+_COMMAND$]], [[qaUpCommandSent = qaUpCommandSent + 1]])")));
+        // getButtonState() starts at 1 (up), so start it down: only the restore can put it back up
+        host->mainConsoleModel().mButtonState = 2;
 
         host->mIsProfileLoadingSequence = true;
         host->getActionUnit()->updateAllToolbars();
@@ -527,6 +535,7 @@ private slots:
         QVERIFY2(host->mLuaInterpreter.compileAndExecuteScript(qsl("assert(qaClickSent == 1)")), "clicking the button did not send its command once");
         QVERIFY2(host->mLuaInterpreter.compileAndExecuteScript(qsl("assert(qaClickRan == 1)")), "clicking the button did not run its script once");
         QVERIFY2(host->mLuaInterpreter.compileAndExecuteScript(qsl("assert(qaClickSentFirst == 1)")), "the script ran before the command was sent");
+        QVERIFY2(mainConsoleShows(host, qsl("QA_CLICK_DOWN_COMMAND")), "clicking the button did not echo its command");
     }
 
     // The same for a push-down entry in a button's menu, which the button bar
