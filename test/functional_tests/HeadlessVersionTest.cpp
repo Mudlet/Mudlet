@@ -310,18 +310,15 @@ private slots:
         QTest::newRow("-qwindowtitle t -display :0 --version") << QStringList{qsl("-qwindowtitle"), qsl("t"), qsl("-display"), qsl(":0"), qsl("--version")} << versionMarker << helpMarker
                                                                << QStringList() << notUnknown;
 
-        // Every option Qt 6 strips from a GUI run's list, written out here
-        // rather than read from main(), with the xcb plugin's as well. A flag
-        // declared as taking a value would take --version as it, and leave the
-        // run with a QApplication that cannot start.
+        // Each flag main() knows as Qt's, sync included: one declared as taking
+        // a value would take the --version as it
         for (const QString& flag : {qsl("dograb"), qsl("nograb"), qsl("qdebug"), qsl("qdevel"), qsl("reverse"), qsl("sync"), qsl("testability"), qsl("widgetcount")}) {
             for (const QString& spelling : {qsl("-%1").arg(flag), qsl("--%1").arg(flag)}) {
                 QTest::newRow(qPrintable(qsl("%1 --version").arg(spelling))) << QStringList{spelling, qsl("--version")} << versionMarker << helpMarker << QStringList() << notUnknown;
             }
         }
-        // An option declared as a flag would leave the -h after it to ask for
-        // the help page, so only one that takes it as its value prints the
-        // version alone
+        // Declared as a flag, one would leave the -h after it asking for the
+        // help page, so only an option that takes it as its value prints the version alone
         for (const QString& valued : {qsl("style"),
                                       qsl("stylesheet"),
                                       qsl("qmljsdebugger"),
@@ -412,16 +409,28 @@ private slots:
         QTemporaryDir sandbox;
         QVERIFY2(sandbox.isValid(), qPrintable(sandbox.errorString()));
         QVERIFY(QDir().mkpath(qsl("%1/config/mudlet/profiles").arg(sandbox.path())));
+        QVERIFY(QDir().mkpath(qsl("%1/tmp").arg(sandbox.path())));
 
+        QProcessEnvironment environment = childEnvironment(sandbox, qsl("offscreen"), qsl("C"));
+        // A killed child leaves its instance socket behind in the temp directory,
+        // which would stop the next real Mudlet listening there
+        environment.insert(qsl("TMPDIR"), qsl("%1/tmp").arg(sandbox.path()));
+        // Keeps it from registering itself as the telnet handler should it run on
+        environment.insert(qsl("CI"), qsl("1"));
+        // The start marker is a qDebug(), which logging rules or journald could swallow
+        environment.insert(qsl("QT_LOGGING_RULES"), qsl("default.debug=true"));
+        environment.insert(qsl("QT_FORCE_STDERR_LOGGING"), qsl("1"));
         QProcess mudlet;
-        mudlet.setProcessEnvironment(childEnvironment(sandbox, qsl("offscreen"), qsl("C")));
+        mudlet.setProcessEnvironment(environment);
         mudlet.setProgram(appBinary());
         mudlet.setArguments(arguments);
+        // So that waitForReadyRead() returns as soon as the child writes there
+        mudlet.setReadChannel(QProcess::StandardError);
         mudlet.start();
         const QString where = arguments.join(QChar::Space);
         QVERIFY2(mudlet.waitForStarted(scmStartTimeoutMs), qPrintable(qsl("mudlet %1: %2").arg(where, mudlet.errorString())));
 
-        // Logged by mudlet's constructor, which runs after the command line has been read
+        // Logged by mudlet::init(), which main() calls after it has warned of the command line
         const QString startedMarker{qsl("has been detected as the style factory in use")};
         QString standardError;
         QElapsedTimer waited;
@@ -433,11 +442,10 @@ private slots:
         mudlet.kill();
         mudlet.waitForFinished(scmFinishTimeoutMs);
         standardError += QString::fromUtf8(mudlet.readAllStandardError());
-        const QString standardOutput = QString::fromUtf8(mudlet.readAllStandardOutput());
 
-        const QString diagnostics = qsl("%1, stdout:\n%2\nstderr:\n%3").arg(where, standardOutput, standardError);
+        // Standard output is not checked: the kill loses whatever its buffer held
+        const QString diagnostics = qsl("%1, stderr:\n%2").arg(where, standardError);
         QVERIFY2(standardError.contains(startedMarker), qPrintable(qsl("mudlet %1 never got as far as its main window; %2").arg(where, diagnostics)));
-        QVERIFY2(!standardOutput.contains(qsl("Warning:")), qPrintable(qsl("mudlet %1 warned on standard output; %2").arg(where, diagnostics)));
         for (const QString& expected : errorMustContain) {
             QVERIFY2(standardError.contains(expected), qPrintable(qsl("mudlet %1 said nothing on standard error that says \"%2\"; %3").arg(where, expected, diagnostics)));
         }
