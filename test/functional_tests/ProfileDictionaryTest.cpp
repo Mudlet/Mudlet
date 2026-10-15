@@ -61,6 +61,18 @@ static void captureMessage(QtMsgType, const QMessageLogContext&, const QString& 
     sCapturedMessages << message;
 }
 
+static QLoggingCategory::CategoryFilter sPreviousFilter = nullptr;
+
+static void enableDebugOutput(QLoggingCategory* category)
+{
+    if (sPreviousFilter) {
+        sPreviousFilter(category);
+    }
+    if (qstrcmp(category->categoryName(), "default") == 0) {
+        category->setEnabled(QtDebugMsg, true);
+    }
+}
+
 class ProfileDictionaryTest : public QObject
 {
     Q_OBJECT
@@ -136,18 +148,19 @@ private:
     }
 
     // The diagnostics are qDebug() lines, which some distributions - Fedora
-    // among them - turn off by default in their shipped qtlogging.ini:
+    // among them - turn off in their shipped qtlogging.ini, and QT_LOGGING_RULES
+    // outranks setFilterRules(), so only a filter can be sure to turn them on:
     void startCapture()
     {
         sCapturedMessages.clear();
-        QLoggingCategory::setFilterRules(qsl("default.debug=true"));
+        sPreviousFilter = QLoggingCategory::installFilter(enableDebugOutput);
         mPreviousHandler = qInstallMessageHandler(captureMessage);
     }
 
     void stopCapture()
     {
         qInstallMessageHandler(mPreviousHandler);
-        QLoggingCategory::setFilterRules(QString());
+        QLoggingCategory::installFilter(sPreviousFilter);
     }
 
 private slots:
@@ -265,15 +278,10 @@ private slots:
         QCOMPARE(dictionaryLines(mQuietProfile), QStringList({qsl("1")}));
 
         // Only the second pass sees the padded count written by the first:
-        sCapturedMessages.clear();
-        // The diagnostics are qDebug() lines, which some distributions - Fedora
-        // among them - turn off by default in their shipped qtlogging.ini:
-        QLoggingCategory::setFilterRules(qsl("default.debug=true"));
-        QtMessageHandler previousHandler = qInstallMessageHandler(captureMessage);
+        startCapture();
         handle = TSpellChecker::prepareProfileDictionary(mQuietProfile, wordSet);
         const bool saved = TSpellChecker::saveDictionary(MudletApp::getMudletPath(enums::profileDataItemPath, mQuietProfile, qsl("profile")), wordSet);
-        qInstallMessageHandler(previousHandler);
-        QLoggingCategory::setFilterRules(QString());
+        stopCapture();
 
         QVERIFY2(handle, "prepareProfileDictionary() gave up before reaching hunspell");
         Hunspell_destroy(handle);
@@ -336,6 +344,8 @@ private slots:
         QCOMPARE(dictionaryLines(mCountlessProfile), QStringList({qsl("2"), qsl("frotz"), qsl("zorkmid")}));
         QCOMPARE(sortedTryGraphemes(mCountlessProfile), qsl("dfikmortz"));
         QVERIFY2(captured(qsl("the first line is not a word count")), "a dictionary with no count was read without a warning");
+        // The next check is on a qDebug() line, so it says nothing unless those were captured:
+        QVERIFY2(captured(qsl("Loaded custom dictionary")), "no dictionary diagnostics were captured");
         QVERIFY2(!captured(qsl("Previously, there were")), "a dictionary with no count was reported as having had one");
 
         // A single word with no line feed after it ends the file on the first read:
@@ -398,8 +408,12 @@ private slots:
         writeDictionary(mHandEditedSaveProfile, qsl("xyzzy\nplugh\n"));
         QSet<QString> wordSet{qsl("zorkmid")};
 
-        QVERIFY(TSpellChecker::saveDictionary(MudletApp::getMudletPath(enums::profileDataItemPath, mHandEditedSaveProfile, qsl("profile")), wordSet));
+        startCapture();
+        const bool saved = TSpellChecker::saveDictionary(MudletApp::getMudletPath(enums::profileDataItemPath, mHandEditedSaveProfile, qsl("profile")), wordSet);
+        stopCapture();
+        QVERIFY(saved);
         QCOMPARE(dictionaryLines(mHandEditedSaveProfile), QStringList({qsl("3"), qsl("plugh"), qsl("xyzzy"), qsl("zorkmid")}));
+        QVERIFY2(captured(qsl("edited by hand since it was loaded")), "the words of a hand edited dictionary were merged in without a warning");
     }
 };
 

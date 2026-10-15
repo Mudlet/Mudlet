@@ -108,7 +108,7 @@ private slots:
         mpHost = TestProfile::create(mHostname, mLocalhost, mPort);
         QVERIFY2(mpHost, "no active host after profile creation");
 
-        // The file-only profile is never loaded, so nothing else makes its folder:
+        // The file-only profile is never opened as a profile, so nothing else makes its folder:
         QVERIFY(QDir().mkpath(MudletApp::getMudletPath(enums::profileDataItemPath, mFileOnlyProfile, QString())));
     }
 

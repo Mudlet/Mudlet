@@ -81,17 +81,16 @@ QString unstorableWordMessage()
     return qsl("the word \"%1\" cannot be stored in the user dictionary, it must have some text in it, fit on a single line, not start or end with whitespace, and contain no tab or \"/\" character");
 }
 
-// Reads the first line that holds anything into line. A file written by hand
-// may have no count, and then that line is a word - true is returned and count
-// is left at 0. Blank lines above it are skipped, as no word can be blank and
-// taking one for the count would make the real count a word.
-bool firstLineIsAWord(QTextStream& ds, QString& line, int& count)
+// Reads the first line that is not all whitespace into line, and returns true
+// when it is not a number: a file written by hand may have no count, and then
+// that line is a word. Whitespace lines above it are skipped, as taking one for
+// the count would turn the real count into a word.
+bool firstLineIsAWord(QTextStream& ds, QString& line)
 {
-    count = 0;
     while (ds.readLineInto(&line)) {
         if (!line.trimmed().isEmpty()) {
             bool isOk = false;
-            count = line.toInt(&isOk);
+            line.toInt(&isOk);
             return !isOk;
         }
     }
@@ -595,8 +594,8 @@ QPair<bool, QString> TSpellChecker::removeWord(const QString& word)
     QHash<QString, unsigned int> graphemeCounts;
     QStringList wordList{wordSet.begin(), wordSet.end()};
 
-    // Only reported on: a file that has gone missing since it was read is no
-    // reason to lose the words the session added
+    // The old count only feeds the debug lines below, so a file that has gone
+    // missing since it was read is no reason to lose the words the session added:
     QStringList uncountedWords;
     const int oldWordCount = qMax(0, getDictionaryWordCount(dictionaryPath, uncountedWords));
     if (!uncountedWords.isEmpty()) {
@@ -642,7 +641,8 @@ QPair<bool, QString> TSpellChecker::removeWord(const QString& word)
 
     QTextStream ds(&dict);
     QString dictionaryLine;
-    const bool hasNoCount = firstLineIsAWord(ds, dictionaryLine, oldWC);
+    const bool hasNoCount = firstLineIsAWord(ds, dictionaryLine);
+    oldWC = hasNoCount ? 0 : dictionaryLine.toInt();
     if (hasNoCount) {
         qWarning().nospace().noquote() << "TSpellChecker::scanDictionaryFile(\"" << dict.fileName() << "\") WARNING - the first line is not a word count, so it is kept as a word.";
         wl << dictionaryLine;
@@ -743,23 +743,23 @@ QPair<bool, QString> TSpellChecker::removeWord(const QString& word)
     QString dictionaryLine;
     // The header line is not the count to report: an empty dictionary declares
     // one word so that hunspell will load it - see overwriteDictionaryFile(...).
-    int declaredCount = 0;
-    const bool hasNoCount = firstLineIsAWord(ds, dictionaryLine, declaredCount);
-    QStringList words;
+    const bool hasNoCount = firstLineIsAWord(ds, dictionaryLine);
+    int wordCount = 0;
     if (hasNoCount) {
-        words << dictionaryLine;
+        uncountedWords << dictionaryLine;
+        ++wordCount;
     }
     while (ds.readLineInto(&dictionaryLine)) {
         if (!dictionaryLine.isEmpty()) {
-            words << dictionaryLine;
+            ++wordCount;
+            if (hasNoCount) {
+                uncountedWords << dictionaryLine;
+            }
         }
     }
     dict.close();
 
-    if (hasNoCount) {
-        uncountedWords = words;
-    }
-    return words.count();
+    return wordCount;
 }
 
 // Returns false on significant failure (where the caller will have to bail out)
