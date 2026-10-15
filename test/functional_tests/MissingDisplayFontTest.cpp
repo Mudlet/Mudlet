@@ -216,7 +216,7 @@ private:
     // a profile's own save - no package or module Mudlet exports carries one. So
     // this is both what a profile save looks like and the only thing that can
     // bring a display font in through an install.
-    bool writeHostPackageXml(const QString& path, const QString& fontFamily)
+    bool writeHostPackageXml(const QString& path, const QFont& font)
     {
         QFile file(path);
         if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
@@ -231,7 +231,7 @@ private:
                                 "</Host>\n"
                                 "</HostPackage>\n"
                                 "</MudletPackage>\n")
-                                    .arg(QFont(fontFamily, 12).toString());
+                                    .arg(font.toString());
         return file.write(xml.toUtf8()) != -1;
     }
 
@@ -654,7 +654,7 @@ private slots:
 
         const QString absentFamily = qsl("Another Font That Is Not There");
         const QString absentPath = mArchiveDir.filePath(qsl("font-absent.xml"));
-        QVERIFY2(writeHostPackageXml(absentPath, absentFamily), "could not write the package XML");
+        QVERIFY2(writeHostPackageXml(absentPath, QFont(absentFamily, 12)), "could not write the package XML");
         QVERIFY2(pHost->installPackage(absentPath, enums::PackageModuleType::Package).first, "the package naming an uninstalled font did not install");
         // installPackage() defers an install for as long as a save is in flight -
         // so without this the next install could be only queued and the case would
@@ -664,7 +664,7 @@ private slots:
         QCOMPARE(pHost->getDisplayFontForSaving().family(), mMissingFamily);
 
         const QString presentPath = mArchiveDir.filePath(qsl("font-present.xml"));
-        QVERIFY2(writeHostPackageXml(presentPath, mOtherBundledFamily), "could not write the package XML");
+        QVERIFY2(writeHostPackageXml(presentPath, QFont(mOtherBundledFamily, 12)), "could not write the package XML");
         QVERIFY2(pHost->installPackage(presentPath, enums::PackageModuleType::Package).first, "the package naming an installed font did not install");
         pHost->waitForProfileSave();
         QCOMPARE(pHost->getDisplayFont().family(), mOtherBundledFamily);
@@ -685,6 +685,48 @@ private slots:
         // QFontInfo, as getFont() reads it: QFont::family() only echoes the request
         QCOMPARE(QFontInfo(pHost->getDisplayFont()).family(), mOtherBundledFamily);
         QCOMPARE(pHost->getDisplayFont().pointSize(), 14);
+    }
+
+    // A package can bring one in while the profile is at any size, and in pixels too
+    void test_aPackageDisplayFontTooLargeToShowKeepsItsFamilyAtTheSizeInUse()
+    {
+        const QString profileName = qsl("MissingDisplayFont-TooLargePackage-Test");
+        QVERIFY2(writeProfileSave(profileName, Host::scmDefaultFontFamily), "could not write the test profile save");
+
+        Host* pHost = mudlet::self()->loadProfile(profileName, false);
+        QVERIFY(pHost);
+        QVERIFY2(pHost->mLoadedOk, "the test profile save could not be loaded");
+        mudlet::self()->slot_connectionDialogueFinished(profileName, false);
+        QVERIFY2(pHost->mainConsoleView(), "the profile came up without a main console");
+        pHost->setDisplayFontSize(20);
+        QCOMPARE(pHost->getDisplayFont().pointSize(), 20);
+
+        auto install = [&](const QString& fileName, const QFont& font) {
+            const QString path = mArchiveDir.filePath(fileName);
+            QVERIFY2(writeHostPackageXml(path, font), "could not write the package XML");
+            QVERIFY2(pHost->installPackage(path, enums::PackageModuleType::Package).first, "the package did not install");
+            pHost->waitForProfileSave();
+        };
+
+        install(qsl("font-too-large-pt.xml"), QFont(mOtherBundledFamily, 999999));
+        QCOMPARE(QFontInfo(pHost->getDisplayFont()).family(), mOtherBundledFamily);
+        QCOMPARE(pHost->getDisplayFont().pointSize(), 20);
+
+        QFont tooManyPixels(Host::scmDefaultFontFamily);
+        tooManyPixels.setPixelSize(999999);
+        install(qsl("font-too-large-px.xml"), tooManyPixels);
+        QCOMPARE(QFontInfo(pHost->getDisplayFont()).family(), Host::scmDefaultFontFamily);
+        QCOMPARE(pHost->getDisplayFont().pointSize(), 20);
+
+        // A font in use given in pixels has no point size to keep
+        QFont inPixels(mOtherBundledFamily);
+        inPixels.setPixelSize(20);
+        install(qsl("font-in-pixels.xml"), inPixels);
+        const int sizeInPixelsAsPoints = QFontInfo(pHost->getDisplayFont()).pointSize();
+        QVERIFY(sizeInPixelsAsPoints > 0);
+        install(qsl("font-too-large-after-px.xml"), QFont(Host::scmDefaultFontFamily, 999999));
+        QCOMPARE(QFontInfo(pHost->getDisplayFont()).family(), Host::scmDefaultFontFamily);
+        QCOMPARE(pHost->getDisplayFont().pointSize(), sizeInPixelsAsPoints);
     }
 
     // A module's fonts are only registered once the modules are installed, which
