@@ -2421,7 +2421,8 @@ void ModernGLWidget::renderRooms()
         });
         const QColor backgroundHalo = style.labelHalos ? background : QColor();
         const auto haloFor = [&style, &backgroundHalo](const QColor& color) {
-            return style.roomNameHalo.isValid() && MapStyle::readsOnPlate(color, style.roomNameHalo) ? style.roomNameHalo : backgroundHalo;
+            const QColor halo = style.roomNameHaloFor(color);
+            return halo.isValid() ? halo : backgroundHalo;
         };
         const qreal spaceWidth = nameMetrics.horizontalAdvance(QLatin1Char(' '));
         QList<QRectF> nameRects;

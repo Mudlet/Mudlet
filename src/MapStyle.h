@@ -219,8 +219,9 @@ struct MapStyle
     float roomNameScale = 1.0f;
     // Room names in bold where the map was given no font, as they are where roomNameColor is invalid
     bool roomNameBold = false;
-    // Around a room's name, a rim in this color, so that it reads over whatever lies under it. Where it is invalid, or
-    // the name's color would not read on it, the name has the background's rim if labelHalos is set, else none
+    // Around a room's name, a rim in this color, so that it reads over whatever lies under it; see roomNameHaloFor().
+    // Where it is invalid, or the name reads on no rim it allows, the name has the background's rim if labelHalos is
+    // set, else none
     QColor roomNameHalo;
     // Invalid for the background, the color that stands out on it, and red
     QColor compassFace;
@@ -344,6 +345,9 @@ struct MapStyle
     // Whether text or a symbol in this color would read on a tag of this one, for mapLabelPlate, symbolPlate and
     // roomNameHalo
     static bool readsOnPlate(const QColor& color, const QColor& plate);
+    // The rim round a room's name in this color: roomNameHalo, else black or white where the name would not read on
+    // it, so that a script's light color still shows on a light board; invalid for none of them
+    QColor roomNameHaloFor(const QColor& nameColor) const;
     QColor exitColor(const QColor& profileExitColor) const;
     QColor roomIdColor(const QColor& drawnRoomColor) const;
     // roomBorderColor is the room's own, invalid unless one was set; drawnRoomColor is roomColor()'s

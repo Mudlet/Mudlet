@@ -3057,7 +3057,64 @@ private slots:
         QVERIFY(nameFont.fromString(name.section(QLatin1Char('|'), 2, 2)));
         QVERIFY2(nameFont.bold(), qPrintable(qsl("a name's font %1 is not bold").arg(nameFont.toString())));
         const QString lightName = drawnKey(qsl("name|"), qsl("Mill"));
-        QVERIFY2(!lightName.isEmpty() && !lightName.contains(qsl("|halo|")), "a light name was put in a white halo");
+        const QColor lightHalo(lightName.section(qsl("|halo|"), 1, 1));
+        QVERIFY2(lightHalo.isValid() && MapStyle::readsOnPlate(QColor(250, 250, 210), lightHalo), qPrintable(qsl("a light name is drawn as %1, in no rim it shows on").arg(lightName)));
+        QCOMPARE(lightHalo, mpHost->mapStylePreset().roomNameHaloFor(QColor(250, 250, 210)));
+
+        // Without a halo of its own, a style rims names in the background where it gives labels halos, else not at all
+        QVERIFY(mpHost->setMapStyle(qsl("transit")));
+        QVERIFY(mpHost->mapStylePreset().labelHalos && !mpHost->mapStylePreset().roomNameHalo.isValid());
+        queueFrame(widget, areaId);
+        const QString transitName = drawnKey(qsl("name|"), qsl("Market Cross"));
+        QVERIFY2(transitName.endsWith(qsl("|halo|%1").arg(widget.backgroundColor().name(QColor::HexArgb))), qPrintable(qsl("a transit name is drawn as %1").arg(transitName)));
+        QVERIFY(mpHost->setMapStyle(qsl("tiles")));
+        QVERIFY(!mpHost->mapStylePreset().labelHalos);
+        queueFrame(widget, areaId);
+        const QString tilesName = drawnKey(qsl("name|"), qsl("Market Cross"));
+        QVERIFY2(!tilesName.isEmpty() && !tilesName.contains(qsl("|halo|")), qPrintable(qsl("a tiles name is drawn as %1").arg(tilesName)));
+    }
+
+    // Names are kept apart by what they draw: two haloed names close enough for their halos to touch lose one, where
+    // the same two, one too faint for a halo, both stay
+    void test_dioramaDecluttersNamesByTheirOwnHalos()
+    {
+        const int areaId = addArea();
+        QVERIFY(areaId > 0);
+        TRoom* pPlayerRoom = map()->mpRoomDB->getRoom(kPlayerRoomId);
+        TRoom* pEastRoom = map()->mpRoomDB->getRoom(kEastRoomId);
+        pPlayerRoom->name = qsl("Alpha");
+        pEastRoom->name = qsl("Beta");
+        map()->setRoomNamesShown(true);
+        const auto restore = qScopeGuard([this]() {
+            mpHost->setMapStyle(qsl("tiles"));
+            map()->setRoomNamesShown(false);
+        });
+        QVERIFY(mpHost->setMapStyle(qsl("diorama")));
+        ModernGLWidget widget(map(), mpHost);
+        const auto namesKept = [&widget]() {
+            int kept = 0;
+            for (const QString& key : std::as_const(widget.mRoomTexturesInUse)) {
+                kept += key.startsWith(qsl("name|")) && (key.contains(qsl("|Alpha")) || key.contains(qsl("|Beta")));
+            }
+            return kept;
+        };
+        // Beta's name moved from under its room to under Alpha's, then down by step
+        const auto keptAt = [&](const double down, const QString& betaColor) {
+            pEastRoom->userData.insert(ROOM_UI_NAMEPOS, qsl("-2 %1").arg(down));
+            pEastRoom->userData.insert(ROOM_UI_NAMECOLOR, betaColor);
+            queueFrame(widget, areaId);
+            return namesKept();
+        };
+        const QString faint = qsl("#28000000");
+        QVERIFY(!mpHost->mapStylePreset().roomNameHaloFor(QColor::fromString(faint)).isValid());
+        QCOMPARE(keptAt(0.0, QString()), 1);
+        QCOMPARE(keptAt(0.0, faint), 1);
+        QCOMPARE(keptAt(2.0, QString()), 2);
+        bool haloesDecide = false;
+        for (double down = 0.0; down < 1.0 && !haloesDecide; down += 0.004) {
+            haloesDecide = keptAt(down, QString()) == 1 && keptAt(down, faint) == 2;
+        }
+        QVERIFY2(haloesDecide, "a name without a halo was kept apart as if it had one");
     }
 
     // Looking down: the board is wood under a pale sky, a room's top is lighter on the edge toward the light than on the
