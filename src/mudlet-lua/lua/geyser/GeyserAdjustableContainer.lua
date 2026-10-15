@@ -789,7 +789,7 @@ function Adjustable.Container:lockContainer(lockNr, lockStyle)
 
     self.lockStyle = lockStyle
 
-    if self.minimized == false then
+    if self.minimized ~= true then
         self.lockStyles[lockStyle][2](self)
         self.exitLabel:hide()
         self.minimizeLabel:hide()
@@ -802,7 +802,7 @@ end
 -- @param customItem the item clicked at
 function Adjustable.Container:customMenu(customItem)
     closeAllLevels(self.rCLabel)
-    if self.minimized == false then
+    if self.minimized ~= true then
         self.customItems[customItem][2](self)
     end
 end
@@ -851,10 +851,10 @@ end
 -- internal function: onClick minimize event
 function Adjustable.Container:onClickMin()
     closeAllLevels(self.rCLabel)
-    if self.minimized == false then
-        self:minimize()
-    else
+    if self.minimized == true then
         self:restore()
+    else
+        self:minimize()
     end
 end
 
@@ -871,9 +871,9 @@ function Adjustable.Container:onClickLoad()
 end
 
 --- minimizes the container
--- hides everything beside the title
+-- hides everything beside the title; does nothing if it is already minimized
 function Adjustable.Container:minimize()
-    if self.minimized and self.locked then
+    if self.minimized == true then
         return
     end
     self.origh = self.height
@@ -1126,14 +1126,20 @@ function Adjustable.Container:load(slot, dir)
 
 
     if mytable.x then
+        local fullHeight = self.minimized == true and self.origh or self.height
         self:move(mytable.x, mytable.y)
         self:resize(mytable.width, mytable.height)
-        self.minimized = mytable.minimized
+        self.minimized = mytable.minimized == true
 
         if mytable.locked == true then self:lockContainer()  else self:unlockContainer() end
 
         if self.minimized == true then self.Inside:hide() self:resize(nil, self.buttonsize + 10) else self.Inside:show() end
         self.origh = mytable.origh
+        -- a layout saved by a version that let minimize() run twice holds the
+        -- collapsed height as the one to restore to, which would never expand again
+        if self.minimized == true and mytable.origh == mytable.height then
+            self.origh = fullHeight
+        end
     end
 
     if mytable.auto_hidden or mytable.hidden then
@@ -1532,12 +1538,16 @@ function Adjustable.Container:new(cons,container)
         Adjustable.Container.all[me.name]:detach()
     end
 
-    if me.minimized then
-        me:minimize()
-    end
-
+    -- minimize() skips a container already flagged as minimized and
+    -- lockContainer() refuses one, so lock first and minimize after
+    local startMinimized = me.minimized
+    me.minimized = false
     if me.locked then
         me:lockContainer()
+    end
+
+    if startMinimized then
+        me:minimize()
     end
 
     if me.attached then
