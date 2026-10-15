@@ -1597,6 +1597,12 @@ void ModernGLWidget::renderRooms()
     }
     // Cleared before any of this frame's textures is asked for, as only those in it are kept from eviction
     mRoomTexturesInUse.clear();
+    // Before any room's own, so that a view short of room for textures still washes every room
+    if (style.washReach > 0.0f) {
+        for (int variant = 0; variant < MapDecals::scmWashVariants; ++variant) {
+            washTexture(variant);
+        }
+    }
     // A digit's texture and size by its color and character. Made before any room's other textures, so
     // that a view short of room for textures keeps its IDs whole
     QHash<std::pair<QRgb, char16_t>, std::pair<GLuint, QSize>> digitTextures;
@@ -2908,21 +2914,25 @@ void ModernGLWidget::queueWashes()
         const QVector3D center(static_cast<float>(pR->x()), static_cast<float>(pR->y()), static_cast<float>(pR->z()) - roomHeight / 2.0f);
         GeometryManager::appendQuad(batches[variant], center - (across + upward) / 2.0f, across, upward, *tint);
     }
-    mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::DISABLE_DEPTH_WRITE));
+    // Within renderRooms()' levels, which write no depth: a wash's clear margin would cut holes in what comes after it
     for (int variant = 0; variant < MapDecals::scmWashVariants; ++variant) {
         GeometryData& batch = batches[variant];
         if (batch.isEmpty()) {
             continue;
         }
-        batch.textureId = imageTexture(qsl("wash|%1").arg(variant), [variant] {
-            return MapDecals::wash(variant, scmRoomTextureSize);
-        });
+        batch.textureId = washTexture(variant);
         if (batch.textureId) {
             mRenderCommandQueue.addCommand(std::make_unique<RenderTexturedTrianglesCommand>(
                     batch, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix(), RenderCommand::Shading::Unlit));
         }
     }
-    mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::ENABLE_DEPTH_WRITE));
+}
+
+GLuint ModernGLWidget::washTexture(const int variant)
+{
+    return imageTexture(qsl("wash|%1").arg(variant), [variant] {
+        return MapDecals::wash(variant, scmRoomTextureSize);
+    });
 }
 
 void ModernGLWidget::queueGrid()

@@ -434,6 +434,7 @@ private:
     void queueGrid();
     // MapStyle::washReach's washes under the viewed level's rooms, writing no depth, under the exits and labels
     void queueWashes();
+    GLuint washTexture(int variant);
     // Map labels lie flat at their place on the map; those shown on top over the rooms, the others under the exits
     // What a frame draws, in order, into the render command queue
     void queueScene();
