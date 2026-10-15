@@ -415,6 +415,17 @@ bool MapStyle::readsOnPlate(const QColor& color, const QColor& plate)
     return color.alpha() >= faintest && qAbs(qGray(color.rgb()) - qGray(plate.rgb())) >= 96;
 }
 
+QColor MapStyle::roomNameHaloFor(const QColor& nameColor) const
+{
+    if (!roomNameHalo.isValid() || readsOnPlate(nameColor, roomNameHalo)) {
+        return roomNameHalo;
+    }
+    // Judged as readsOnPlate judges, by gray, so that a yellow is rimmed in black
+    QColor rim = qGray(nameColor.rgb()) > 127 ? QColor(Qt::black) : QColor(Qt::white);
+    rim.setAlpha(roomNameHalo.alpha());
+    return readsOnPlate(nameColor, rim) ? rim : QColor();
+}
+
 QColor MapStyle::exitColor(const QColor& profileExitColor) const
 {
     return ink.isValid() ? ink : profileExitColor;

@@ -363,10 +363,19 @@ private slots:
         QVERIFY(diorama.roomNameBold);
         QCOMPARE(diorama.roomNameHalo, QColor(255, 255, 255, 235));
         QVERIFY(MapStyle::readsOnPlate(diorama.roomNameColor, diorama.roomNameHalo));
-        QVERIFY(!MapStyle::readsOnPlate(QColor(250, 250, 210), diorama.roomNameHalo));
+        QCOMPARE(diorama.roomNameHaloFor(diorama.roomNameColor), diorama.roomNameHalo);
+        // A script's light color would be lost on the white, so it is rimmed in a dark one it reads on
+        for (const QColor& light : {QColor(250, 250, 210), QColor(255, 255, 0), QColor(255, 165, 0), QColor(192, 192, 192)}) {
+            QVERIFY(!MapStyle::readsOnPlate(light, diorama.roomNameHalo));
+            const QColor rim = diorama.roomNameHaloFor(light);
+            QVERIFY2(rim.isValid() && MapStyle::readsOnPlate(light, rim), qPrintable(light.name()));
+            QVERIFY2(qGray(rim.rgb()) < 64, qPrintable(qsl("%1 has a rim of %2").arg(light.name(), rim.name())));
+        }
+        // Too faint to read on any rim
+        QVERIFY(!diorama.roomNameHaloFor(QColor(0, 0, 0, 40)).isValid());
         for (const MapStyle& style : MapStyle::all()) {
             if (style.id != diorama.id) {
-                QVERIFY2(!style.roomNameBold && !style.roomNameHalo.isValid(), qPrintable(style.id));
+                QVERIFY2(!style.roomNameBold && !style.roomNameHalo.isValid() && !style.roomNameHaloFor(QColor(250, 250, 210)).isValid(), qPrintable(style.id));
             }
         }
     }
