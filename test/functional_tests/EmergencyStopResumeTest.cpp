@@ -379,11 +379,8 @@ private slots:
         QTRY_VERIFY_WITH_TIMEOUT(readGlobalInt(qsl("offsetChildTicks")) > 0, 5s);
     }
 
-    // An offset timer its parent has already armed must not run its script after
-    // the stop. Counted from the script body, not a sysDataSendRequest handler:
-    // the stop mutes events, so a sent command would go uncounted. The script is
-    // set after switching the child on, because switching on an offset timer with
-    // a script by name gives it a schedule of its own - see the case above.
+    // Counted from the script body: the stop mutes events. Script set after
+    // enableTimer(childName), or the child gets its own schedule.
     void test_armedOffsetTimerStoppedByEmergencyStop()
     {
         auto* unit = mpHost->getTimerUnit();
