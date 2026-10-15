@@ -955,6 +955,43 @@ describe("Tests functionality of Geyser.Label widget state", function()
       assert.is_nil(ok)
       assert.are.equal("console 'glsDeletedReset' not found", err)
     end)
+
+    it("Geyser.Label:resetBackgroundImage does not apply the stylesheet it remembers to the label", function()
+      local label = track(Geyser.Label:new({name = "glsStaleReset", x = 0, y = 0, width = 40, height = 20}))
+      label:setStyleSheet("qproperty-text: 'stale'; background-image: url(:/icons/mudlet.png);")
+      setLabelStyleSheet("glsStaleReset", "color: red;")
+      label:echo("current")
+      assert.is_true(label:resetBackgroundImage())
+      assert.are.equal("qproperty-text: 'stale'; ", label.stylesheet)
+      assert.are.equal("color: red;", getLabelStyleSheet("glsStaleReset"))
+      assert.truthy(getLabelText("glsStaleReset"):find("current", 1, true))
+    end)
+
+    it("Geyser.Label:resetBackgroundImage takes from the stylesheet it remembers what resetBackgroundImage takes from the label's", function()
+      local label = track(Geyser.Label:new({name = "glsResetParity", x = 0, y = 0, width = 40, height = 20}))
+      for _, sheet in ipairs({
+        "border: 1px solid red; background-image: url(data:image/png;base64,AAAA); color: blue;",
+        "QLabel{color: red;} QLabel::hover{background-image: url(hover.png);}",
+        "/* background-image: url(old.png) */ color: blue; background-image: url(current.png);",
+        [[background-image: url("image (1); copy.png"); color: blue;]],
+        "/* { */ background-image: url(current.png);",
+        [[background-image: url("a(.png"); color: blue;]],
+        [[background-image: url('a\'b.png'); color: blue;]],
+        "Background-Image: url(:/icons/mudlet.png); color: blue;",
+        "BACKGROUND-IMAGE : url(:/icons/mudlet.png)",
+        "QLabel#background-image:hover { color: red; }",
+        "background-imagex: foo; color: blue;",
+        "color: blue; background-image: url(a.png) /* unterminated",
+        "color: blue;background-image:url(a.png);font-size: 12px;",
+      }) do
+        setLabelStyleSheet("glsResetParity", sheet)
+        assert.is_true(resetBackgroundImage("glsResetParity"))
+        local expected = getLabelStyleSheet("glsResetParity")
+        label.stylesheet = sheet
+        assert.is_true(label:resetBackgroundImage())
+        assert.are.equal(expected, label.stylesheet, sheet)
+      end
+    end)
   end)
 end)
 
