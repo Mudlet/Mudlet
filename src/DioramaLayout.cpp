@@ -47,6 +47,11 @@ float waterPitDepth(const float roomHeight)
     return (scmWaterDepth + scmWaterThickness) * roomHeight;
 }
 
+float flatTileTop(const float roomHeight)
+{
+    return qMax(scmRoadThickness, scmGrassThickness) * roomHeight;
+}
+
 QHash<int, Piece> layout(const QList<Place>& places, const int viewedLevel, const float roomSize, const float roomHeight)
 {
     QHash<std::pair<int, int>, QSet<int>> levelsAt;

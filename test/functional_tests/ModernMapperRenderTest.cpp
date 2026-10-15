@@ -2598,18 +2598,38 @@ private slots:
 
         // The path east from the player's room lies on the ground, not halfway up the blocks
         bool path = false;
+        float pathMiddle = 0.0f;
         for (const auto& command : commands) {
             if (const auto* cubes = dynamic_cast<const RenderInstancedCubesCommand*>(command.get()); cubes && cubes->shading() == RenderCommand::Shading::ModelPath) {
                 for (const CubeInstanceData& cube : cubes->instances()) {
                     const QVector4D center = cube.transform.column(3);
                     if (qAbs(center.x() - 1.0f) < 0.3f && qAbs(center.y()) < 1e-4f) {
                         QVERIFY2(center.z() < -roomHeight / 4.0f && center.z() > -roomHeight / 2.0f, qPrintable(qsl("the path's middle is at %1").arg(center.z())));
-                        path = true;
+                        if (cube.color[3] >= 1.0f) {
+                            pathMiddle = center.z();
+                            path = true;
+                        }
                     }
                 }
             }
         }
         QVERIFY2(path, "the exit between the rooms is not a path");
+
+        // The same path shows again as a faint, thinner line over the paving and grass that would hide it
+        bool pavedLine = false;
+        for (const auto& command : commands) {
+            if (const auto* cubes = dynamic_cast<const RenderInstancedCubesCommand*>(command.get()); cubes && cubes->shading() == RenderCommand::Shading::ModelPath) {
+                for (const CubeInstanceData& cube : cubes->instances()) {
+                    const QVector4D center = cube.transform.column(3);
+                    if (qAbs(center.x() - 1.0f) < 0.3f && qAbs(center.y()) < 1e-4f && cube.color[3] < 0.5f) {
+                        QVERIFY2(center.z() - cube.transform.column(2).z() > pathMiddle + DioramaLayout::flatTileTop(roomHeight) / 2.0f,
+                                 qPrintable(qsl("the line over the paving is at %1, under the grass").arg(center.z())));
+                        pavedLine = true;
+                    }
+                }
+            }
+        }
+        QVERIFY2(pavedLine, "the path has no line over the paving");
 
         // The shaft up from the room below, one-way and so in two pieces, starts on the ground as the paths do but rises
         // from where it did, clear of the block's top

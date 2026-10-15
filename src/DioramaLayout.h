@@ -64,5 +64,7 @@ QHash<int, Piece> layout(const QList<Place>& places, int viewedLevel, float room
 float groundBelowLevel(float roomHeight);
 // How deep the hole cut in the board for water goes, down to the water's underside
 float waterPitDepth(float roomHeight);
+// How far above the ground the thickest flat tile, a forest's grass, reaches
+float flatTileTop(float roomHeight);
 
 } // namespace DioramaLayout

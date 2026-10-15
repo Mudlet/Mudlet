@@ -255,6 +255,22 @@ QImage bullseye(const QColor& color, const int size)
     return image;
 }
 
+QImage taggedSymbol(const QString& symbol, const QColor& color, const QColor& plate, const QFont& font, const qreal fontFudgeFactor, const int size)
+{
+    QImage image = clearImage(QSize(size, size), plate);
+    QPainter painter(&image);
+    painter.setRenderHint(QPainter::Antialiasing);
+    const QRectF tag = QRectF(image.rect()).adjusted(size * 0.14, size * 0.14, -size * 0.14, -size * 0.14);
+    painter.setPen(Qt::NoPen);
+    painter.setBrush(plate);
+    painter.drawRoundedRect(tag, size * 0.16, size * 0.16);
+    ushort fontSize = 1;
+    const int inset = qRound(size * 0.08);
+    RoomAppearance::paintSymbol(painter, tag.toAlignedRect().adjusted(inset, inset, -inset, -inset), symbol, color, font, fontFudgeFactor, fontSize);
+    painter.end();
+    return image;
+}
+
 QString titleLevelLine(const int shownLevel, const QList<int>& areaLevels)
 {
     const qsizetype sheet = areaLevels.indexOf(shownLevel);
@@ -319,6 +335,8 @@ bool keepsLabelBox(const TMapLabel& label)
 
 QImage themedLabel(const TMapLabel& label, const MapStyle& style)
 {
+    // A tag's margin round the text, above and below it and twice that at its ends, as a part of the text's height
+    constexpr qreal platePad = 0.3;
     const QSize canvas = label.pix.size();
     if (!style.themedMapLabels || label.text.isEmpty() || canvas.isEmpty()) {
         return QImage();
@@ -332,7 +350,8 @@ QImage themedLabel(const TMapLabel& label, const MapStyle& style)
     const QColor textColor = ownTextColor ? label.fgColor : withAlpha(style.mapLabelColor, label.fgColor.alpha());
     const bool box = keepsLabelBox(label);
     const bool outline = !neutral(label.outlineColor) && label.outlineColor != label.fgColor;
-    const bool halo = !box && !outline && style.mapLabelHalo.isValid();
+    const bool plate = !box && style.mapLabelPlate.isValid();
+    const bool halo = !box && !plate && !outline && style.mapLabelHalo.isValid();
 
     // Centered on the label's own picture, as the 2D map's label dialog centers it in the box drawn for it, so the
     // label keeps its place and size; only the text shrinks, to fit the box in the style's font and below its limit
@@ -343,6 +362,9 @@ QImage themedLabel(const TMapLabel& label, const MapStyle& style)
     qreal shrink = 1.0;
     if (bounds.width() > 0.0 && bounds.height() > 0.0) {
         shrink = std::min({1.0, (canvas.width() - 2.0 * margin) / bounds.width(), (canvas.height() - 2.0 * margin) / bounds.height()});
+        if (plate) {
+            shrink = std::min({shrink, canvas.width() / (bounds.width() + 4.0 * platePad * bounds.height()), canvas.height() / ((1.0 + 2.0 * platePad) * bounds.height())});
+        }
         const qreal labelHeight = std::abs(label.size.height());
         if (style.mapLabelMaxHeight > 0.0f && !label.noScaling && labelHeight > 0.0) {
             shrink = qMin(shrink, style.mapLabelMaxHeight * canvas.height() / labelHeight / bounds.height());
@@ -365,6 +387,14 @@ QImage themedLabel(const TMapLabel& label, const MapStyle& style)
     painter.setRenderHint(QPainter::TextAntialiasing);
     painter.setFont(font);
     const QRectF textRect(image.rect());
+    if (plate) {
+        const QRectF text = QFontMetricsF(font, &metricsDevice).boundingRect(textRect, flags, label.text);
+        const qreal pad = text.height() * platePad;
+        const QRectF tag = text.adjusted(-2.0 * pad, -pad, 2.0 * pad, pad).intersected(textRect.adjusted(0.5, 0.5, -0.5, -0.5));
+        painter.setPen(Qt::NoPen);
+        painter.setBrush(style.mapLabelPlate);
+        painter.drawRoundedRect(tag, tag.height() / 2.0, tag.height() / 2.0);
+    }
     if (halo) {
         painter.setPen(style.mapLabelHalo);
         for (const QPointF& offset : {QPointF(-2.0, 0.0), QPointF(2.0, 0.0), QPointF(0.0, -2.0), QPointF(0.0, 2.0), QPointF(-1.5, -1.5), QPointF(1.5, -1.5), QPointF(-1.5, 1.5), QPointF(1.5, 1.5)}) {

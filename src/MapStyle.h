@@ -207,6 +207,12 @@ struct MapStyle
     QColor mapLabelHalo;
     // In rooms' spacing; 0 for no limit
     float mapLabelMaxHeight = 0.0f;
+    // Behind the text of a themed label with no box, a rounded tag in this color, as a model's name card; invalid
+    // for none. It takes the place of mapLabelHalo
+    QColor mapLabelPlate;
+    // Behind a room's symbol, a rounded tag in this color, as a model's sign; invalid for none. A symbol given no
+    // color of its own is then drawn to stand out on the tag rather than on the room
+    QColor symbolPlate;
     // Room names, as quieter annotations: their color where the room was given none of its own, invalid for the
     // color that stands out on the background, and their size against the usual where the map was given no font
     QColor roomNameColor;
@@ -281,6 +287,9 @@ struct MapStyle
     // Each room built as EnvironmentKit picks for its environment, a room with rooms straight above it a building of
     // that many storeys, all standing on a wooden board under the viewed level
     bool environmentKits = false;
+    // With environmentKits, how strongly the viewed level's exits also show as a faint line over the paving, grass
+    // and water that would otherwise hide the paths inlaid in the board; 0 for not at all
+    float pavedPathStrength = 0.0f;
     // Room names and map labels drawn with a rim of the background around them, so that lines under them do not
     // run through the text
     bool labelHalos = false;

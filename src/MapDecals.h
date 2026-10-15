@@ -58,6 +58,8 @@ QString levelCallout(int level, int rooms);
 QList<qreal> stackPlatforms(int count, qreal anchor, qreal spacing, qreal top, qreal bottom);
 // The mark MapStyle::PlayerMarker::Pill draws on the player's room: a white disc, a ring and a dot, size texels across
 QImage bullseye(const QColor& color, int size);
+// A room's symbol in color on a rounded tag of plate, as MapStyle::symbolPlate draws it, size texels across
+QImage taggedSymbol(const QString& symbol, const QColor& color, const QColor& plate, const QFont& font, qreal fontFudgeFactor, int size);
 // The title block's second line, for the shown level of an area with these levels, lowest first
 QString titleLevelLine(int shownLevel, const QList<int>& areaLevels);
 

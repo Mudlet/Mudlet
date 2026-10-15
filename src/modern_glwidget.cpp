@@ -897,6 +897,8 @@ constexpr float scmModelShadowLift = 0.002f;
 constexpr float scmModelShadowTallReach = 0.25f;
 // In rooms' heights: lower than a diorama's thinnest paving, so that its exit lines show only on the bare board
 constexpr float scmDioramaPathHeight = 0.04f;
+// The faint line MapStyle::pavedPathStrength draws over the paving, as a part of its path's width
+constexpr float scmPavedPathWidth = 0.5f;
 // A pawn's foot, body and head: each a shape, its radius, and how high its foot and how tall it is, all in halves
 // of a room's width. The body narrows to a point inside the head, so a neck shows between them
 struct TokenPiece
@@ -1229,6 +1231,13 @@ GLuint ModernGLWidget::symbolTexture(const QString& symbol, const QColor& color)
 {
     const QFont& font = mpMap->mMapSymbolFont;
     const qreal fudgeFactor = mpMap->mMapSymbolFontFudgeFactor;
+    const QColor plate = mapStyle().symbolPlate;
+    if (plate.isValid()) {
+        return imageTexture(qsl("symbol|%1|%2|%3|%4|%5").arg(color.name(QColor::HexArgb), font.key(), QString::number(fudgeFactor), plate.name(QColor::HexArgb), symbol),
+                            [&symbol, &color, &plate, &font, fudgeFactor] {
+                                return MapDecals::taggedSymbol(symbol, color, plate, font, fudgeFactor, scmRoomTextureSize);
+                            });
+    }
     const QString key = qsl("symbol|%1|%2|%3|%4").arg(color.name(QColor::HexArgb), font.key(), QString::number(fudgeFactor), symbol);
     if (const GLuint texture = cachedRoomTexture(key)) {
         return texture;
@@ -3069,6 +3078,8 @@ void ModernGLWidget::renderConnections()
         }
     }
     const bool inkLozenges = style.edges == MapStyle::Edges::InkLozenges;
+    const bool pavedPaths = style.environmentKits && style.pavedPathStrength > 0.0f;
+    const float pavedPathHeight = 0.01f * roomHeight;
     QVector<CubeInstanceData> bars;
     QVector<CubeInstanceData> strokes;
     bars.reserve(scene.segments.size());
@@ -3086,6 +3097,16 @@ void ModernGLWidget::renderConnections()
                                    tint.y(),
                                    tint.z(),
                                    tint.w());
+        if (pavedPaths && !upright && segment.level == mMapCenterZ) {
+            // Thinner than the path, and just over the thickest tile, so that it shows over any of them
+            const QVector3D raise(0.0f, 0.0f, DioramaLayout::flatTileTop(roomHeight) + (pavedPathHeight - segment.height) / 2.0f);
+            mSeeThroughExits[segment.level].bars.append(CubeInstanceData(
+                    GeometryManager::barTransform(sunk(segment.from, segment.level, false) + raise, sunk(segment.to, segment.level, false) + raise, segment.width * scmPavedPathWidth, pavedPathHeight),
+                    tint.x(),
+                    tint.y(),
+                    tint.z(),
+                    tint.w() * style.pavedPathStrength));
+        }
         // Not drawn into the depth buffer, or it would cut its shape out of the levels below drawn after it
         const bool seeThrough = glowing || tint.w() < 1.0f;
         // Only a whole line tapers well: a door, a dash or a custom line's piece would thin out at one end
