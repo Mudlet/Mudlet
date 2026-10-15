@@ -258,5 +258,22 @@ describe("Tests DebugTools.lua functions", function()
       -- the whole match and the word; the empty number group has nothing to colour
       assert.spy(fgSpy).was.called(2)
     end)
+
+    it("Should not recolour the previous group in place of one that no longer fits the line", function()
+      local ok, err, fgSpy
+      local id = tempRegexTrigger("^(\\w+) (\\w+ \\w+)$", function()
+        selectString("cc", 1)
+        replace("")
+        fgSpy = spy.on(_G, "setFgColor")
+        ok, err = pcall(showCaptureGroups)
+        setFgColor:revert()
+      end)
+      feedTriggers("aa bb cc\n")
+      killTrigger(id)
+
+      assert.is_true(ok, err)
+      -- only "aa" still fits the shortened line "aa bb "
+      assert.spy(fgSpy).was.called(1)
+    end)
   end)
 end)
