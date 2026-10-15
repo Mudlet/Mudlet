@@ -43,6 +43,59 @@ describe("Tests DateTime.lua functions", function()
     it("should truncate a fractional second rather than rounding it up", function()
       assert.are.same({'00', '01', '01'}, {shms(61.9)})
     end)
+
+    it("should sign a negative count once, on the hours, keeping every magnitude", function()
+      assert.are.same({'-00', '00', '01'}, {shms(-1)})
+      assert.are.same({'-00', '01', '01'}, {shms(-61)})
+      assert.are.same({'-01', '01', '01'}, {shms(-3661)})
+    end)
+
+    it("should give a negative count under a second the same parts as zero", function()
+      assert.are.same({'00', '00', '00'}, {shms(-0.5)})
+    end)
+
+    it("should truncate a negative fractional count toward zero and keep hours past 24", function()
+      assert.are.same({'-00', '00', '01'}, {shms(-1.5)})
+      assert.are.same({'-00', '01', '01'}, {shms(-61.9)})
+      assert.are.same({'-25', '01', '01'}, {shms(-90061)})
+    end)
+
+    it("should leave the whole magnitude of a negative count in the parts after the sign", function()
+      for _, count in ipairs({-1, -61, -3661, -90061}) do
+        local hh, mm, ss = shms(count)
+        assert.are.equal("-", hh:sub(1, 1))
+        assert.are.equal(-count, tonumber(hh:sub(2)) * 3600 + tonumber(mm) * 60 + tonumber(ss))
+      end
+    end)
+
+    it("should cecho a negative count with the sign on the hours only", function()
+      local expectedString = "<green>-61 <grey>seconds converts to: <green>-00<white>h,<green> 01<white>m <grey>and<green> 01<white>s."
+      local oldcecho = _G.cecho
+      finally(function() _G.cecho = oldcecho end)
+      _G.cecho = function() end
+      local cecho = spy.on(_G, "cecho")
+      shms(-61, true)
+      assert.spy(cecho).was.called(1)
+      assert.spy(cecho).was.called_with(expectedString)
+    end)
+
+    it("should raise its documented assertion for a count that is not finite", function()
+      local message = "Please supply a valid number"
+      assert.error_matches(function() shms(math.huge) end, message)
+      assert.error_matches(function() shms(-math.huge) end, message)
+      assert.error_matches(function() shms(0/0) end, message)
+      assert.error_matches(function() shms("inf") end, message)
+    end)
+
+    it("should raise its documented assertion for a count too large to split into whole seconds", function()
+      local message = "Please supply a valid number"
+      assert.error_matches(function() shms(1e300) end, message)
+      assert.error_matches(function() shms(-1e300) end, message)
+      assert.error_matches(function() shms(2^63) end, message)
+      assert.error_matches(function() shms(2^53) end, message)
+      assert.are.same({'2501999792983', '36', '31'}, {shms(2^53 - 1)})
+      assert.are.same({'-2501999792983', '36', '31'}, {shms(-(2^53 - 1))})
+    end)
   end)
 
   describe("Tests datetime:parse", function()

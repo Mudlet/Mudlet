@@ -190,14 +190,25 @@ function datetime:parse(source, format, as_epoch)
 end
 
 
+--- Splits a count of seconds into zero-padded hours, minutes and seconds, dropping any fraction of a second.
+--- Hours keep counting past 24. A count still negative once its fraction is dropped carries its minus sign
+--- once, on the hours ("-00" under an hour), while the minutes and seconds stay unsigned, so read the sign
+--- from the hours string, not tonumber(); a negative count under one second splits the same as zero.
+--- @param seconds the count of seconds, as a number or a string holding one, smaller in size than 2^53
+--- @param bool if true, cecho the result instead of returning it
+--- @return hours, minutes and seconds as strings
 function shms(seconds, bool)
   seconds = tonumber(seconds)
-  assert(type(seconds) == "number", "Assertion failed for function 'shms' - Please supply a valid number.")
+  -- past 2^53 a double stops holding whole seconds; NaN and infinities fail the comparison too
+  assert(type(seconds) == "number" and math.abs(seconds) < 2^53, "Assertion failed for function 'shms' - Please supply a valid number.")
 
   local s = seconds
-  local ss = string.format("%02d", math.fmod(s, 60))
-  local mm = string.format("%02d", math.fmod((s / 60 ), 60))
-  local hh = string.format("%02d", (s / (60 * 60)))
+  local magnitude = math.floor(math.abs(s))
+  local sign = (s < 0 and magnitude > 0) and "-" or ""
+  local ss = string.format("%02d", magnitude % 60)
+  local mm = string.format("%02d", math.floor(magnitude / 60) % 60)
+  -- %d casts to a C long, which is 32 bits on Windows, so hours past 2^31 would wrap there
+  local hh = sign .. string.format("%02.0f", math.floor(magnitude / (60 * 60)))
 
   if bool then
     cecho("<green>" .. s .. " <grey>seconds converts to: <green>" .. hh .. "<white>h,<green> " .. mm .. "<white>m <grey>and<green> " .. ss .. "<white>s.")
