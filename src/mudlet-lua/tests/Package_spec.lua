@@ -3994,26 +3994,40 @@ describe("Tests the MedBootstrap package", function()
     return stub
   end
 
-  -- Holds MedBootstrap's 5s timers for the spec to fire by hand, so a minute
-  -- of looks takes no time; every other timer still starts as usual
+  -- Holds MedBootstrap's timers for the spec to fire by hand, so a minute of
+  -- looks takes no time; every other timer still starts as usual. scheduled
+  -- counts the 5s looks, held every timer
   local function holdLooks()
-    local looks = { scheduled = 0, errors = {}, pending = {} }
+    local looks = { scheduled = 0, held = 0, errors = {}, pending = {} }
     local realTempTimer = _G.tempTimer
     override("tempTimer", function(delay, code, ...)
       local source = type(code) == "function" and debug.getinfo(code, "S").source or ""
       if not source:find("MedBootstrap", 1, true) then
         return realTempTimer(delay, code, ...)
       end
-      looks.scheduled = looks.scheduled + 1
-      looks.pending[#looks.pending + 1] = code
-      return -looks.scheduled
+      looks.held = looks.held + 1
+      if delay > 0 then
+        looks.scheduled = looks.scheduled + 1
+      end
+      looks.pending[#looks.pending + 1] = { delay = delay, code = code }
+      return -looks.held
     end)
-    -- makes the next look of every waiting copy; answers how many there were
-    function looks.next()
-      local due = looks.pending
-      looks.pending = {}
-      for _, look in ipairs(due) do
-        local ok, err = pcall(look)
+    -- fires every held timer due within maxDelay (all of them without one),
+    -- which makes the next look of every waiting copy; answers how many fired
+    function looks.next(maxDelay)
+      -- otherwise a spec that expects nothing to happen passes without a look
+      assert(looks.held > 0, "no MedBootstrap timer was held")
+      local due, kept = {}, {}
+      for _, timer in ipairs(looks.pending) do
+        if maxDelay == nil or timer.delay <= maxDelay then
+          due[#due + 1] = timer
+        else
+          kept[#kept + 1] = timer
+        end
+      end
+      looks.pending = kept
+      for _, timer in ipairs(due) do
+        local ok, err = pcall(timer.code)
         if not ok then
           looks.errors[#looks.errors + 1] = tostring(err)
         end
@@ -4039,6 +4053,8 @@ describe("Tests the MedBootstrap package", function()
   end
 
   local function install()
+    -- the script keeps its run count in this global
+    override("MedBootstrap", _G.MedBootstrap)
     defer(function() removeFixturePackage(name) end)
     installUntilConfirmed(installPackage, archive, function() return packageInstalled(name) end, name)
   end
@@ -4167,7 +4183,8 @@ describe("Tests the MedBootstrap package", function()
 
   it("gives up after a minute and says the listing did not arrive", function()
     local installs = {}
-    override("mpkg", fakeMpkg(installs))
+    local mpkg = fakeMpkg(installs)
+    override("mpkg", mpkg)
     stubMpkgVersion("1")
     local looks = holdLooks()
     local mark = getLastLineNumber("main")
@@ -4176,6 +4193,7 @@ describe("Tests the MedBootstrap package", function()
     looks.all()
 
     assert.are.equal(12, looks.scheduled)
+    assert.are.equal(2, mpkg.listingDownloads, "the listing was not asked for at 20s and 40s")
     assert.are.same({}, installs)
     assert.is_true(containsWrapped(textFrom(mark), giveUpMessage), textFrom(mark))
   end)
@@ -4202,13 +4220,80 @@ describe("Tests the MedBootstrap package", function()
     assert.are.same({}, looks.errors)
   end)
 
+  it("asks for mpkg again when its download failed", function()
+    override("mpkg", nil)
+    local mpkgVersion = stubMpkgVersion("")
+    local installs = {}
+    local mpkgInstalls = 0
+    local realInstallPackage = _G.installPackage
+    override("installPackage", function(path, ...)
+      if path == mpkgArchive then
+        mpkgInstalls = mpkgInstalls + 1
+        -- the first download fails, the next one arrives
+        if mpkgInstalls > 1 then
+          mpkgVersion.version = "1"
+          _G.mpkg = fakeMpkg(installs)
+          _G.mpkg.packages = { packages = {} }
+        end
+        return true
+      end
+      return realInstallPackage(path, ...)
+    end)
+    local looks = holdLooks()
+
+    install()
+    looks.all()
+
+    assert.are.equal(2, mpkgInstalls)
+    assert.are.same({ { "MedUI", true } }, installs)
+  end)
+
+  -- an uninstalled mpkg leaves its table behind
+  it("says mpkg could not be installed when only a stale mpkg table is left", function()
+    override("mpkg", fakeMpkg({}))
+    stubMpkgVersion("")
+    local realInstallPackage = _G.installPackage
+    override("installPackage", function(path, ...)
+      if path == mpkgArchive then
+        return true
+      end
+      return realInstallPackage(path, ...)
+    end)
+    local looks = holdLooks()
+    local mark = getLastLineNumber("main")
+
+    install()
+    looks.all()
+
+    local text = textFrom(mark)
+    assert.is_true(containsWrapped(text, noMpkgMessage), text)
+    assert.is_false(containsWrapped(text, giveUpMessage), text)
+  end)
+
+  it("asks for mpkg straight away when the profile has none", function()
+    override("mpkg", nil)
+    stubMpkgVersion("")
+    local mpkgInstalls = 0
+    local realInstallPackage = _G.installPackage
+    override("installPackage", function(path, ...)
+      if path == mpkgArchive then
+        mpkgInstalls = mpkgInstalls + 1
+        return true
+      end
+      return realInstallPackage(path, ...)
+    end)
+    local looks = holdLooks()
+
+    install()
+    looks.next(0)
+
+    assert.are.equal(1, mpkgInstalls, "mpkg was not asked for before the first 5s look")
+    assert.are.equal(1, looks.scheduled)
+  end)
+
   -- the script runs on every load, and an installed MedUI only misses its update check
   it("says nothing when the listing does not arrive and MedUI is installed", function()
-    local mpkg = fakeMpkg({})
-    mpkg.getInstalledVersion = function(packageName)
-      return packageName == "MedUI" and "1" or nil
-    end
-    override("mpkg", mpkg)
+    override("mpkg", fakeMpkg({}))
     stubMpkgVersion("1")
     local realGetPackages = _G.getPackages
     override("getPackages", function()
