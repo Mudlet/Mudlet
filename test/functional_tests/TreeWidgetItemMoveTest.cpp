@@ -293,7 +293,7 @@ private slots:
         TTimer* pTimer = mpHost->getTimerUnit()->getTimer(timerItem->data(0, Qt::UserRole).toInt());
         QVERIFY(pFolder && pTimer);
         QVERIFY2(!pTimer->getParent(), "the timer was already inside something before the move");
-        // registerTimer() leaves a timer inactive whatever its user state, and
+        // registerTimer() clears both the user state and isActive(), and
         // rowsInserted() goes by ancestorsActive(), which reads isActive()
         pFolder->setIsActive(true);
         pTimer->setShouldBeActive(true);
