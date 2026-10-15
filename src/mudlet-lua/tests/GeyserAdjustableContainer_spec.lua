@@ -275,6 +275,58 @@ describe("Tests functionality of Adjustable.Container", function()
       assert.are.same({x = 50, y = 90, width = 140, height = 110}, geometry("gasPaddedChild"))
     end)
 
+    it("setPadding refuses a negative, non-numeric or huge padding and leaves the container usable", function()
+      Geyser.Label:new({name = "gasBadPaddingChild", x = 0, y = 0, width = "100%", height = "100%"}, container)
+      -- 25 rather than the default 10, so that falling back to the default shows
+      assert.is_true(container:setPadding(25))
+      -- 1e305 and up overflow to inf when rounded to 4 decimal places; the extra pass is setPadding(nil)
+      local paddings = {-5, "nonsense", false, 0 / 0, "nan", math.huge, "inf", 1e20, 1e13, 1e305, "1e305", 1.7e308}
+      for i = 1, #paddings + 1 do
+        local padding = paddings[i]
+        local ok, message
+        assert.has_no.errors(function() ok, message = container:setPadding(padding) end)
+        assert.is_nil(ok, tostring(padding))
+        assert.is_truthy(message:find("padding as a number of 0 or more and below 1e13 expected", 1, true))
+        assert.are.equal(25, container.padding, tostring(padding))
+        container:move(20, 30)
+        container:unlockContainer()
+        assert.are.same({x = 45, y = 80, width = 150, height = 125}, geometry("gasBadPaddingChild"))
+      end
+    end)
+
+    it("ignores an invalid padding given to new() and says so", function()
+      local messages = {}
+      -- busted runs a spec in its own environment, so the stub has to go into _G to reach Geyser
+      local realDebugc = _G.debugc
+      _G.debugc = function(message) messages[#messages + 1] = message end
+      finally(function() _G.debugc = realDebugc end)
+      for _, padding in ipairs({-5, "nonsense", math.huge}) do
+        local made
+        assert.has_no.errors(function()
+          made = Adjustable.Container:new({name = "gasBadNewPadding", x = 20, y = 30, width = 200, height = 200,
+                                           padding = padding, autoLoad = false, autoSave = false})
+        end)
+        Geyser.Label:new({name = "gasBadNewPaddingChild", x = 0, y = 0, width = "100%", height = "100%"}, made)
+        assert.are.equal(10, made.padding)
+        made:unlockContainer()
+        assert.are.same({x = 30, y = 50, width = 180, height = 170}, geometry("gasBadNewPaddingChild"))
+        made:delete()
+        assert.is_truthy(table.concat(messages, "\n"):find("ignored the invalid padding " .. tostring(padding), 1, true), table.concat(messages, "\n"))
+      end
+    end)
+
+    it("setPadding takes a padding too small to print without an exponent", function()
+      Geyser.Label:new({name = "gasTinyPaddingChild", x = 0, y = 0, width = "100%", height = "100%"}, container)
+      for _, padding in ipairs({"0.00001", 0.00001}) do
+        assert.has_no.errors(function() assert.is_true(container:setPadding(padding)) end)
+        assert.are.equal(0, container.padding)
+        container:move(20, 30)
+        container:unlockContainer()
+        assert.are.same({x = 20, y = 30, width = 200, height = 200}, geometry("gasTinyPaddingChild"))
+      end
+      container:setPadding(10)
+    end)
+
     it("hides and shows every widget it owns", function()
       container:hide()
       assert.is_false(windowVisible("gasContaineradjLabel"))
@@ -2312,6 +2364,48 @@ describe("Tests Adjustable.Container borders, persistence and menu items", funct
       local message = container:load(nil, scratchDir)
       assert.is_string(message)
       assert.is_truthy(message:find("Couldn't load settings from", 1, true))
+    end)
+
+    it("keeps its padding when the saved one is invalid, and says so", function()
+      local container = make("gapSavedBadPadding")
+      Geyser.Label:new({name = "gapSavedBadPaddingChild", x = 0, y = 0, width = "100%", height = "100%"}, container)
+      container:setPadding(25)
+      container:save(nil, scratchDir)
+      local messages = {}
+      -- busted runs a spec in its own environment, so the stub has to go into _G to reach Geyser
+      local realDebugc = _G.debugc
+      _G.debugc = function(message) messages[#messages + 1] = message end
+      finally(function() _G.debugc = realDebugc end)
+      for _, padding in ipairs({-5, "nonsense", 1e20}) do
+        local saved = {}
+        table.load(scratchDir .. "gapSavedBadPadding.lua", saved)
+        saved.padding = padding
+        table.save(scratchDir .. "gapSavedBadPadding.lua", saved)
+
+        assert.has_no.errors(function() container:load(nil, scratchDir) end)
+        assert.are.equal(25, container.padding)
+        assert.is_truthy(table.concat(messages, "\n"):find("ignored the invalid padding " .. tostring(padding), 1, true), table.concat(messages, "\n"))
+        container:unlockContainer()
+        assert.are.same({25, 50, 150, 25}, {getWindowGeometry("gapSavedBadPaddingChild")})
+      end
+    end)
+
+    it("names the padding it ends up with when new() ignores one and a saved padding is loaded", function()
+      local saving = make("gapNewBadPaddingLoaded", {defaultDir = scratchDir})
+      saving:setPadding(25)
+      assert.is_true(saving:save())
+      saving:delete()
+      local messages = {}
+      -- busted runs a spec in its own environment, so the stub has to go into _G to reach Geyser
+      local realDebugc = _G.debugc
+      _G.debugc = function(message) messages[#messages + 1] = message end
+      finally(function() _G.debugc = realDebugc end)
+      local made = Adjustable.Container:new({name = "gapNewBadPaddingLoaded", x = 0, y = 0, width = 200, height = 100,
+                                             padding = -5, defaultDir = scratchDir, autoSave = false})
+      containers[#containers + 1] = made
+      assert.are.equal(25, made.padding)
+      local log = table.concat(messages, "\n")
+      assert.is_truthy(log:find("ignored the invalid padding -5 given for gapNewBadPaddingLoaded, using 25", 1, true), log)
     end)
 
     it("brings back the padding, lock style and border margin", function()

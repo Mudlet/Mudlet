@@ -820,17 +820,37 @@ function Adjustable.Container:unlockContainer()
     self:setTitle()
 end
 
+-- internal function: a padding goes into "-"..padding constraints, which the constraint parser reads after
+-- stripping letters, so "--5", "-inf", "-nan" and an exponent all break it. Rounding to 4 decimal places turns
+-- a tiny padding into 0; one just below 1e14 rounds up to "1e+14", while one below 1e13 never gets an exponent
+local function validPadding(padding)
+    padding = tonumber(padding)
+    if not (padding and padding >= 0) then
+        return nil
+    end
+    padding = math.floor(padding * 10000 + 0.5) / 10000
+    if padding < 1e13 then
+        return padding
+    end
+end
+
 --- sets the padding of your container
 -- changes how far the the container is positioned from the border of the container 
 -- padding behaviour also depends on your lockStyle
--- @param padding the padding value (standard is 10)
+-- @param padding the padding value, a number of 0 or more and below 1e13 (standard is 10), rounded to 4 decimal places
+-- @return true, or nil and an error message if the padding is not a number of 0 or more and below 1e13
 function Adjustable.Container:setPadding(padding)
-    self.padding = padding
+    local valid = validPadding(padding)
+    if not valid then
+        return nil, "setPadding: bad argument #1 value (padding as a number of 0 or more and below 1e13 expected, got "..tostring(padding)..")"
+    end
+    self.padding = valid
     if self.locked then
         self:lockContainer()
     else
         self:unlockContainer()
     end
+    return true
 end
 
 -- internal function: onClick Lock event
@@ -1121,7 +1141,10 @@ function Adjustable.Container:load(slot, dir)
     end
 
     self.lockStyle = mytable.lockStyle or self.lockStyle
-    self.padding = mytable.padding or self.padding
+    if mytable.padding ~= nil and not validPadding(mytable.padding) then
+        debugc(string.format("Adjustable.Container.load: ignored the invalid padding %s saved for %s", tostring(mytable.padding), self.name))
+    end
+    self.padding = validPadding(mytable.padding) or self.padding
     self.attachedMargin = mytable.attachedMargin or self.attachedMargin
 
 
@@ -1428,7 +1451,7 @@ end
 --@param[opt="8"] cons.MenuFontSize  font size of the menu items
 --@param[opt="15"] cons.buttonsize  size of the minimize and close buttons
 --@param[opt="8"] cons.buttonFontSize  font size of the minimize and close buttons
---@param[opt="10"] cons.padding  how far is the inside element placed from the corner (depends also on the lockstyle setting)
+--@param[opt="10"] cons.padding  how far is the inside element placed from the corner (depends also on the lockstyle setting); one setPadding() would refuse is replaced by 10
 --@param[opt="5"] cons.attachedMargin  margin for the MainWindow border if an adjustable container is attached
 --@param cons.adjLabelstyle  style of the main Label where all elements are in
 --@param cons.menustyle  menu items style
@@ -1467,7 +1490,8 @@ function Adjustable.Container:new(cons,container)
     me.MenuFontSize = me.MenuFontSize or "8"
     me.buttonsize = me.buttonsize or "15"
     me.buttonFontSize = me.buttonFontSize or "8"
-    me.padding = me.padding or 10
+    local givenPadding = me.padding
+    me.padding = validPadding(me.padding) or 10
     me.attachedMargin = me.attachedMargin or 5
 
     me.adjLabelstyle = me.adjLabelstyle or [[
@@ -1567,6 +1591,11 @@ function Adjustable.Container:new(cons,container)
     if not(me.autoLoad == false) then
         me.autoLoad = true
         me:load()
+    end
+
+    -- after load(), which may have replaced the fallback 10 with a saved padding
+    if givenPadding ~= nil and not validPadding(givenPadding) then
+        debugc(string.format("Adjustable.Container:new: ignored the invalid padding %s given for %s, using %s", tostring(givenPadding), me.name, tostring(me.padding)))
     end
 
     -- Saves on Exit if autoSave is not false
