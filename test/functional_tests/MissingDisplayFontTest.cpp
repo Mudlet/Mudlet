@@ -671,7 +671,7 @@ private slots:
         QCOMPARE(pHost->getDisplayFontForSaving().family(), mOtherBundledFamily);
     }
 
-    // A save can hold a size setFontSize() refuses now, at which Qt drops the family
+    // A save can hold a size past Host::scmMaxFontSize, at which Qt drops the family
     void test_aSavedDisplayFontTooLargeToShowKeepsItsFamilyAtTheDefaultSize()
     {
         const QString profileName = qsl("MissingDisplayFont-TooLarge-Test");

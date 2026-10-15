@@ -1766,7 +1766,7 @@ void Host::setDisplayFontFromString(const QString& fontData)
         qWarning().nospace().noquote() << "Host::setDisplayFontFromString(...) WARNING - \"" << fontData << "\" is not a font description, so the font in use is kept.";
         return;
     }
-    // An older save can hold any size setFontSize() was once given
+    // A save, older or hand-edited, can hold a size past the limit, where Qt drops the family
     if (font.pointSize() > scmMaxFontSize) {
         const int size = std::min(getDisplayFont().pointSize(), scmMaxFontSize);
         qWarning().nospace().noquote() << "Host::setDisplayFontFromString(...) WARNING - \"" << fontData << "\" is larger than " << scmMaxFontSize << "pt, so its family is kept at a size of " << size
