@@ -346,6 +346,24 @@ function setGaugeWindow(windowName, gaugeName, x, y, show)
   setGauge(gaugeName, gaugesTable[gaugeName].value, 1)
 end
 
+local function namedColorError(message)
+  -- 1 is this function, 2 namedColorRGB, 3 getRGB or the wrapper that called it, 4 their caller.
+  -- A C caller, as in pcall(getRGB, name), or a tail call has no line, so blame the library line then
+  local caller = debug.getinfo(4, "l")
+  error(message, (caller and caller.currentline > 0) and 4 or 3)
+end
+
+local function namedColorRGB(colorName)
+  if type(colorName) ~= 'string' then
+    namedColorError('getRGB: bad argument #1 type (expected string, got '..type(colorName)..'!)')
+  end
+  local color = color_table[colorName]
+  if not color then
+    namedColorError('getRGB: bad argument #1 value (unknown color name "'..colorName..'")')
+  end
+  return color[1], color[2], color[3]
+end
+
 --- Set the text on a custom gauge.
 ---
 --- @usage
@@ -368,7 +386,7 @@ function setGaugeText(gaugeName, gaugeText, r, g, b)
   assert(gaugesTable[gaugeName], "setGaugeText: no such gauge exists.")
   if r ~= nil then
     if g == nil then
-      r, g, b = getRGB(r)
+      r, g, b = namedColorRGB(r)
     end
   else
     r, g, b = 0, 0, 0
@@ -451,7 +469,7 @@ function RGB2Hex(red, green, blue)
   local l_Red, l_Green, l_Blue = 0, 0, 0
   if green == nil then
     -- Not an RGB but a "color" instead!
-    l_Red, l_Green, l_Blue = getRGB(red)
+    l_Red, l_Green, l_Blue = namedColorRGB(red)
   else -- Nope, true color here
     l_Red, l_Green, l_Blue = red, green, blue
   end
@@ -465,16 +483,16 @@ end
 
 --- Get RGB component from color name.
 ---
+--- Raises an error if colorName is not a string, or is not a key of color_table (see showColors).
+---
 --- @usage Following will display "0.255.0" on your screen.
 ---   <pre>
 ---   local red, green, blue = getRGB("green")
 ---   echo(red .. "." .. green .. "." .. blue )
 ---   </pre>
 function getRGB(colorName)
-  assert(type(colorName) == 'string', 'getRGB: bad argument #1 type (expected string, got '..type(colorName)..'!)')
-  local red = color_table[colorName][1]
-  local green = color_table[colorName][2]
-  local blue = color_table[colorName][3]
+  -- not a tail call: namedColorError counts this frame
+  local red, green, blue = namedColorRGB(colorName)
   return red, green, blue
 end
 
@@ -517,7 +535,7 @@ function createGauge(windowname, gaugeName, width, height, x, y, gaugeText, r, g
   gaugeText = gaugeText or ""
   if type(r) == "string" then
     orientation = g
-    r, g, b = getRGB(r)
+    r, g, b = namedColorRGB(r)
   elseif r == nil then
     orientation = orientation or g
     -- default colors

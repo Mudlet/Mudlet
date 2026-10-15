@@ -1,5 +1,11 @@
 describe("Tests the GUI utilities as far as possible without mudlet", function()
 
+  -- the "file:line: " prefix error() gives for a call made on the line after the one calling this
+  local function nextLinePosition()
+    local info = debug.getinfo(2, "Sl")
+    return info.short_src .. ":" .. (info.currentline + 1) .. ": "
+  end
+
   describe("Tests the functionality of ansi2decho", function()
 
     it("Should have loaded the function successfully", function()
@@ -1772,6 +1778,17 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       assert.has_error(function() RGB2Hex() end)
     end)
 
+    it("Should error naming the colour when given an unknown colour name", function()
+      assert.error_matches(function() RGB2Hex("notacolour") end, 'unknown color name "notacolour"', 1, true)
+    end)
+
+    it("Should blame the caller's line for an unknown colour name", function()
+      local position = nextLinePosition()
+      local ok, err = pcall(function() RGB2Hex("notacolour") end)
+      assert.is_false(ok)
+      assert.equals(position, err:sub(1, #position))
+    end)
+
     it("Should produce six hex digits for every component below sixteen", function()
       assert.equals("0A0B0C", RGB2Hex(10, 11, 12))
       assert.equals("0A0A0A", RGB2Hex(10, 10, 10))
@@ -1813,11 +1830,31 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
     end)
 
     it("Should error when not given a string", function()
-      assert.has_error(function() getRGB(42) end)
+      assert.error_matches(function() getRGB(42) end, 'getRGB: bad argument #1 type (expected string, got number!)', 1, true)
     end)
 
-    it("Should error for a colour name that does not exist", function()
-      assert.has_error(function() getRGB("definitelyNotAColour") end)
+    it("Should error for a colour name that does not exist, naming the colour", function()
+      assert.error_matches(function() getRGB("definitelyNotAColour") end, 'getRGB: bad argument #1 value (unknown color name "definitelyNotAColour")', 1, true)
+      assert.error_matches(function() getRGB("") end, 'getRGB: bad argument #1 value (unknown color name "")', 1, true)
+    end)
+
+    it("Should blame the caller's line, not GUIUtils.lua, for a bad argument", function()
+      for _, badArgument in ipairs({"definitelyNotAColour", 42}) do
+        local position = nextLinePosition()
+        local ok, err = pcall(function() getRGB(badArgument) end)
+        assert.is_false(ok)
+        assert.equals(position, err:sub(1, #position))
+      end
+    end)
+
+    it("Should still give a position when its caller has no line of its own", function()
+      local ok, err = pcall(getRGB, "definitelyNotAColour")
+      assert.is_false(ok)
+      assert.is_truthy(err:find("^.-:%d+: getRGB: bad argument #1 value"))
+      local function tailCaller(name) return getRGB(name) end
+      ok, err = pcall(function() local _ = tailCaller("definitelyNotAColour") end)
+      assert.is_false(ok)
+      assert.is_truthy(err:find("^.-:%d+: getRGB: bad argument #1 value"))
     end)
   end)
 
@@ -1897,6 +1934,13 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
         createGauge("colourNameGauge", 100, 10, 0, 0, nil, "green")
         assert.are.same({0, 255, 0}, {gaugesTable.colourNameGauge.r, gaugesTable.colourNameGauge.g, gaugesTable.colourNameGauge.b})
         assert.equals("horizontal", gaugesTable.colourNameGauge.orientation)
+      end)
+
+      it("Should blame the caller's line for an unknown colour name", function()
+        local position = nextLinePosition()
+        local ok, err = pcall(function() createGauge("unknownColourGauge", 100, 10, 0, 0, nil, "notacolour") end)
+        assert.is_false(ok)
+        assert.equals(position, err:sub(1, #position))
       end)
 
       it("Should reject an unknown orientation", function()
@@ -2025,6 +2069,13 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       it("Should accept a colour name", function()
         setGaugeText(gaugeName, "hurt", "red")
         assert.equals([[<font color="#FF0000">hurt</font>]], gaugesTable[gaugeName].text)
+      end)
+
+      it("Should blame the caller's line for an unknown colour name", function()
+        local position = nextLinePosition()
+        local ok, err = pcall(function() setGaugeText(gaugeName, "hurt", "notacolour") end)
+        assert.is_false(ok)
+        assert.equals(position, err:sub(1, #position))
       end)
 
       it("Should accept an r, g, b triple", function()
