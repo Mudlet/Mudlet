@@ -835,13 +835,14 @@ describe("Trigger processing", function()
             local remembered, useMaximum = savedMainBufferSettings()
             assert.is_not_nil(remembered, "the main console's buffer settings could not be read back from a saved profile")
             local fired = {}
-            local echoer, colorTrigger
+            local echoer, cursorChecker, colorTrigger
             local linesTrimmed = 0
             local trimHandler = registerAnonymousEventHandler("sysBufferShrinkEvent", function(_, _, removed)
                 linesTrimmed = linesTrimmed + removed
             end)
             finally(function()
                 if echoer then killTrigger(echoer) end
+                if cursorChecker then killTrigger(cursorChecker) end
                 if colorTrigger then killTrigger(colorTrigger) end
                 killAnonymousEventHandler(trimHandler)
                 setConsoleBufferSize("main", remembered, batch)
@@ -861,6 +862,8 @@ describe("Trigger processing", function()
                     feedTriggers("trim nested " .. i .. "\n")
                 end
             end)
+            local cursorLine
+            cursorChecker = tempTrigger("TrimDuringPassMarker", function() cursorLine = getCurrentLine() end)
             local trimmedBeforeColorTrigger
             colorTrigger = tempAnsiColorTrigger(1, -1, function()
                 fired[#fired + 1] = matches[1]
@@ -870,6 +873,7 @@ describe("Trigger processing", function()
             feedTriggers("\27[31mTrimDuringPassMarker red\27[0m\n")
 
             assert.are.same({"TrimDuringPassMarker red"}, fired)
+            assert.are.equal("TrimDuringPassMarker red", cursorLine)
             assert.is_true(trimmedBeforeColorTrigger > 0, "the buffer should have trimmed lines before the colour trigger ran")
         end)
 
@@ -1121,6 +1125,40 @@ describe("Trigger processing", function()
                 assert.are_not.same({0, 0, 255}, foregroundAt(cursorLine))
             end)
         end
+
+        it("should leave a script's cursor on the line being processed after a nested pass deletes a line above it", function()
+            feedTriggers("line above that a nested pass deletes before a selection\n")
+            local doomed = getLineNumber()
+            local selected, cursorLine
+            local countBefore, countAfter
+            local outer = tempTrigger("SelectAfterNestedDeleteMarker", function() feedTriggers("NestedSelectDeleter\n") end)
+            local inner = tempTrigger("NestedSelectDeleter", function()
+                moveCursor(0, doomed)
+                countBefore = getLineCount()
+                deleteLine()
+                countAfter = getLineCount()
+            end)
+            local selector = tempTrigger("SelectAfterNestedDeleteMarker", function()
+                cursorLine = getCurrentLine()
+                selected = selectString("SelectAfterNestedDeleteMarker", 1)
+                fg("blue")
+                deselect()
+                resetFormat()
+            end)
+            finally(function()
+                killTrigger(outer)
+                killTrigger(inner)
+                killTrigger(selector)
+            end)
+
+            feedTriggers("\27[31mSelectAfterNestedDeleteMarker red\27[0m\n")
+
+            assert.are.equal(countBefore - 1, countAfter)
+            assert.are.equal("SelectAfterNestedDeleteMarker red", cursorLine)
+            assert.are.equal(0, selected)
+            assert.are.same({0, 0, 255}, foregroundAt(lastLineReading("SelectAfterNestedDeleteMarker red")))
+            assert.are_not.same({0, 0, 255}, foregroundAt(lastLineReading("NestedSelectDeleter")))
+        end)
 
         -- rewrapping goes on to the end of the buffer, past the line being processed,
         -- which is longer than the wrap width

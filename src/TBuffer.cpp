@@ -2326,6 +2326,12 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
     }
     const int lineIndex = lineBuffer.size() - 1;
     mCommitLineIndices.append(lineIndex);
+    // A line committed from inside a pass (feedTriggers()) can delete, rewrap or trim lines above
+    // that pass's line; neither deleteLines() nor shrinkBuffer() moves a cursor, so one a script
+    // still has on that line is moved with it below
+    const int enclosingPassLine = mPreTriggerPassLineNumber;
+    const bool userCursorOnEnclosingPassLine = mpModel && enclosingPassLine >= 0 && mpModel->mUserCursor.y() == enclosingPassLine;
+    const bool engineCursorOnEnclosingPassLine = mpModel && enclosingPassLine >= 0 && mpModel->mEngineCursor == enclosingPassLine;
     if (!mPendingSelectionStyling.isEmpty() || selectionLinkOpen()) {
         mSelectionStylingFromLine = (mSelectionStylingFromLine < 0) ? lineIndex : std::min(mSelectionStylingFromLine, lineIndex);
     }
@@ -2416,6 +2422,15 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
         // generate is NOT used for the TMainConsole case whereas this
         // (translateToPlainText(...)) method is ONLY for that one:
         shrinkBuffer();
+    }
+
+    if (mPreTriggerPassLineNumber >= 0) {
+        if (userCursorOnEnclosingPassLine) {
+            mpModel->mUserCursor.setY(mPreTriggerPassLineNumber);
+        }
+        if (engineCursorOnEnclosingPassLine) {
+            mpModel->mEngineCursor = mPreTriggerPassLineNumber;
+        }
     }
 
     applyPendingSelectionStyling();
