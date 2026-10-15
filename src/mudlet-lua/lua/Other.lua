@@ -1139,8 +1139,22 @@ end
 
 local acceptableSuffix = {"xml", "mpackage", "zip", "trigger"}
 
+-- the file name installPackage() downloads a package URL under, or nil when target is not one
+local function packageFileFromUrl(target)
+  if target:starts("http://") or target:starts("https://") then
+    local fileName, suffix = target:gmatch("([^/]+)%.([^.]+)$")()
+    if suffix and table.contains(acceptableSuffix, suffix) then
+      return string.format("%s.%s", fileName, suffix)
+    end
+  end
+end
+
 function verbosePackageInstall(fileName)
   local ok, reason = installPackage(fileName)
+  -- a URL has only started downloading: installPackageFromUrl() reports that, and the install once it is done
+  if packageFileFromUrl(fileName) then
+    return
+  end
   -- this has to stay a literal prefix strip: as a Lua pattern the profile path's
   -- magic characters bite, and a "-" (as in "Mudlet self-test") stops it
   -- matching at all
@@ -1206,39 +1220,94 @@ local oldInstallPackage = installPackage
 -- Override of original installPackage to allow installs from URL
 -- @param target - file path or url (starting with http(s):// and ending with package file extensions)
 function installPackage(target)
-  if target:starts("http://") or target:starts("https://") then
-    local fileName, suffix = target:gmatch("([^/]+)%.([^.]+)$")()
-    if suffix and table.contains(acceptableSuffix, suffix) then
-      local file = string.format("%s.%s", fileName, suffix)
-      return installPackageFromUrl(file, target)
-    end
+  local file = packageFileFromUrl(target)
+  if file then
+    return installPackageFromUrl(file, target)
   end
   return oldInstallPackage(target)
 end
 
---- Installs package from url
--- @param url
+-- downloadFile() sets no transfer timeout, so a stalled download may never end: one that
+-- has shown no progress for this long no longer keeps a retry of its file out
+local packageDownloadStallSeconds = 30
+local packageDownloadsPending = {}
+
+--- Downloads a package into the profile folder, then installs it and removes the download.
+-- @param file the name the download is saved under in the profile folder
+-- @param url where to download the package from
+-- @return true once the download is queued (the install follows when it finishes),
+-- or nil and the reason when the download was not started
 function installPackageFromUrl(file, url)
   local destination = string.format("%s/%s", getMudletHomeDir(), file)
-
-  registerAnonymousEventHandler("sysDownloadDone", function(_, saveTo)
-    if saveTo ~= destination then return end
-    verbosePackageInstall(destination)
-    os.remove(destination)
-  end, true)
-
   mudlet.Locale = mudlet.Locale or loadTranslations("Mudlet")
 
-  registerAnonymousEventHandler("sysDownloadError", function(_, errorFound, saveTo)
+  local function warn(text)
+    decho('<0,150,190>' .. mudlet.Locale.prefixWarn.message)
+    -- echo, as decho would take a tag such as <b> in the reason as formatting
+    setFgColor(190, 150, 0)
+    echo(text .. '\n')
+    resetFormat()
+  end
+
+  -- a second download would overwrite the same file, and both installs would claim the first to finish
+  local earlier = packageDownloadsPending[destination]
+  if earlier and os.time() - earlier.lastProgress < packageDownloadStallSeconds then
+    local refusal = string.format(mudlet.Locale.packageDownloadPending.message, file)
+    warn(refusal)
+    return nil, refusal
+  end
+
+  -- queued first: a download that never starts would leave the handlers below armed for good,
+  -- and its events only arrive once this script has returned
+  local queued, refusal = downloadFile(destination, url)
+  if not queued then
+    refusal = string.format(mudlet.Locale.packageDownloadRefused.message, url, tostring(refusal))
+    warn(refusal)
+    return nil, refusal
+  end
+  if earlier then
+    earlier.disarm()
+  end
+
+  local doneHandler, errorHandler, progressHandler
+  local pending = {lastProgress = os.time()}
+  function pending.disarm()
+    killAnonymousEventHandler(doneHandler)
+    killAnonymousEventHandler(errorHandler)
+    killAnonymousEventHandler(progressHandler)
+    packageDownloadsPending[destination] = nil
+  end
+  packageDownloadsPending[destination] = pending
+
+  progressHandler = registerAnonymousEventHandler("sysDownloadFileProgress", function(_, progressUrl)
+    if progressUrl == url then
+      pending.lastProgress = os.time()
+    end
+  end)
+
+  doneHandler = registerAnonymousEventHandler("sysDownloadDone", function(_, saveTo)
     if saveTo ~= destination then return end
+    -- before installing: the package's own scripts run during the install, and one that
+    -- downloads this file again (an updater, say) would otherwise be refused as still pending
+    pending.disarm()
+    local ok, err = pcall(verbosePackageInstall, destination)
+    os.remove(destination)
+    if not ok then
+      error(err, 0)
+    end
+  end)
+
+  errorHandler = registerAnonymousEventHandler("sysDownloadError", function(_, errorFound, saveTo)
+    if saveTo ~= destination then return end
+    pending.disarm()
     local warnPrefix = mudlet.Locale.prefixWarn.message
     decho('<0,150,190>' .. warnPrefix .. '<190,150,0>' .. errorFound .. '\n')
-  end, true)
+  end)
 
-  downloadFile(destination, url)
   local infoMessage = mudlet.Locale.packageDownloading.message
   local infoPrefix = mudlet.Locale.prefixInfo.message
     decho('<0,150,190>' ..infoPrefix .. '<190,100,50>' .. string.format(infoMessage, url) .. '\n')
+  return true
 end
 
 --- Installs packages which are dropped on MainConsole or UserWindow
