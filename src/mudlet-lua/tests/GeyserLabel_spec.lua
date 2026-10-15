@@ -1724,7 +1724,8 @@ describe("Tests Geyser.Label font, link style and tooltip", function()
       echo("glfLink", [[<a href="a()">a</a>]])
       assert.is_true(setBackgroundImage("glfLink", png))
       resetLinkStyle("glfLink")
-      local own = [[<a href="b()" style="color: #00ffff;">b</a>]]
+      -- the same tag the label wrote for the text the picture took the place of
+      local own = [[<a href="a()" style="color: #00ffff;">a</a>]]
       echo("glfLink", own)
       assert.are.equal(own, getLabelText("glfLink"))
     end)
@@ -1738,6 +1739,32 @@ describe("Tests Geyser.Label font, link style and tooltip", function()
       echo("glfLink", own)
       resetLinkStyle("glfLink")
       assert.are.equal(own, getLabelText("glfLink"))
+    end)
+
+    it("gives links read back in another order back as they were written", function()
+      setLinkStyle("glfLink", "#00ffff", "")
+      echo("glfLink", [[<a href="a()">A</a> <a href="b()">B</a>]])
+      echo("glfLink", [[<a href="b()" style="color: #00ffff;">B</a> <a href="a()" style="color: #00ffff;">A</a>]])
+      resetLinkStyle("glfLink")
+      assert.are.equal([[<a href="b()">B</a> <a href="a()">A</a>]], getLabelText("glfLink"))
+    end)
+
+    it("replaces a link's own style written straight after the href", function()
+      setLinkStyle("glfLink", "#00ffff", "")
+      echo("glfLink", [[<a href="x()"style="color:red">x</a>]])
+      assert.are.equal([[<a href="x()" style="color: #00ffff;">x</a>]], getLabelText("glfLink"))
+    end)
+
+    it("replaces every style a link has of its own", function()
+      setLinkStyle("glfLink", "#00ffff", "")
+      echo("glfLink", [[<a href="a()" style="x" style="color:red" title="t">go</a>]])
+      assert.are.equal([[<a href="a()" style="color: #00ffff;" title="t">go</a>]], getLabelText("glfLink"))
+    end)
+
+    it("does not take a style= inside a value it cannot read for the link's style", function()
+      setLinkStyle("glfLink", "#00ffff", "")
+      echo("glfLink", [[<a href="a()" title=a"b style=c">go</a>]])
+      assert.are.equal([[<a href="a()" style="color: #00ffff;" title=a"b style=c">go</a>]], getLabelText("glfLink"))
     end)
 
     it("gives a link split by whitespace back as it was written", function()

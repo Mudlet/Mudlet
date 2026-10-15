@@ -153,47 +153,54 @@ static const QRegularExpression& anchorTag()
     return anchor;
 }
 
-// One attribute after the href with the whitespace before it, so that neither data-style= nor a value
-// holding "style=" is taken for the anchor's own style attribute
+// One attribute with the whitespace before it, if any: Qt also reads one written straight after a quote
 static const QRegularExpression& anchorAttribute()
 {
-    static const QRegularExpression attribute(qsl("\\s+([^\\s=>\"']+)(?:\\s*=\\s*(?:\"[^\"]*\"|'[^']*'|[^\\s>\"']*))?"));
+    static const QRegularExpression attribute(qsl("\\s*([^\\s=>\"']+)(?:\\s*=\\s*(?:\"[^\"]*\"|'[^']*'|[^\\s>\"']*))?"));
     return attribute;
 }
 
-static QRegularExpressionMatch styleAttribute(const QString& attributes)
+// The attributes are read one after another from the start, so that neither data-style= nor a value
+// holding "style=" is taken for a style attribute; reading stops at the first thing that is not one.
+static QString withoutStyleAttributes(const QString& attributes)
 {
-    QRegularExpressionMatchIterator it = anchorAttribute().globalMatch(attributes);
-    while (it.hasNext()) {
-        QRegularExpressionMatch attribute = it.next();
-        if (attribute.captured(1).compare(qsl("style"), Qt::CaseInsensitive) == 0) {
-            return attribute;
+    QString result;
+    qsizetype at = 0;
+    while (at < attributes.size()) {
+        const QRegularExpressionMatch attribute = anchorAttribute().match(attributes, at, QRegularExpression::NormalMatch, QRegularExpression::AnchorAtOffsetMatchOption);
+        if (!attribute.hasMatch()) {
+            break;
         }
+        if (attribute.captured(1).compare(qsl("style"), Qt::CaseInsensitive) != 0) {
+            result += attribute.captured(0);
+        }
+        at = attribute.capturedEnd();
     }
-    return {};
+    result += QStringView(attributes).mid(at);
+    return result;
 }
 
 // Text read back with getLabelText() carries the anchor tags the last pass rewrote; each is put back as
 // it was given, so resetLinkStyle() can take the styling away again. Any other tag is the script's own.
 QString TLabelModel::withoutInjectedLinkStyles(const QString& text) const
 {
-    // with a pixmap or movie in place of the text there was nothing to read back
-    if (mStyledAnchors.isEmpty() || mText.isEmpty()) {
+    // a pixmap, a movie or a style sheet's qproperty-text has taken the place of what the last pass showed
+    if (mStyledAnchors.isEmpty() || mText != mStyledText) {
         return text;
     }
 
     QString result;
     qsizetype copied = 0;
-    qsizetype nextAnchor = 0;
+    QList<bool> restored(mStyledAnchors.size(), false);
     QRegularExpressionMatchIterator it = anchorTag().globalMatch(text);
     while (it.hasNext()) {
         const QRegularExpressionMatch match = it.next();
-        for (qsizetype i = nextAnchor; i < mStyledAnchors.size(); ++i) {
-            if (mStyledAnchors.at(i).styled == match.captured(0)) {
+        for (qsizetype i = 0; i < mStyledAnchors.size(); ++i) {
+            if (!restored.at(i) && mStyledAnchors.at(i).styled == match.captured(0)) {
                 result += QStringView(text).mid(copied, match.capturedStart() - copied);
                 result += mStyledAnchors.at(i).original;
                 copied = match.capturedEnd();
-                nextAnchor = i + 1;
+                restored[i] = true;
                 break;
             }
         }
@@ -219,9 +226,11 @@ QString TLabelModel::restyledText()
 QString TLabelModel::styleLinks(const QString& text)
 {
     mUnstyledText = text;
-    // Only the tags shown now are recognised when read back: text a script kept from an earlier pass
-    // comes back as its own, as nothing tells it apart from a style the script wrote that way.
+    // Only the tags shown now are recognised when read back, and only unchanged: text a script kept from
+    // an earlier pass, or an anchor it edited, comes back as its own, as nothing tells it apart from a
+    // style the script wrote that way.
     mStyledAnchors.clear();
+    mStyledText = text;
     if ((mLinkColor.isEmpty() && mLinkVisitedColor.isEmpty()) || !containsAnchorTag(text)) {
         return text;
     }
@@ -268,15 +277,13 @@ QString TLabelModel::styleLinks(const QString& text)
 
             // Intentionally overwrites any existing style attribute rather than merging
             // to keep implementation simple for the common case (labels without pre-existing inline styles)
-            if (const QRegularExpressionMatch ownStyle = styleAttribute(otherAttrs); ownStyle.hasMatch()) {
-                otherAttrs.remove(ownStyle.capturedStart(), ownStyle.capturedLength());
-            }
-            const QString replacement = qsl("<a href=%1 style=\"%2\"%3>").arg(hrefPart, linkStyle, otherAttrs);
+            const QString replacement = qsl("<a href=%1 style=\"%2\"%3>").arg(hrefPart, linkStyle, withoutStyleAttributes(otherAttrs));
 
             styledText.replace(match.capturedStart(), match.capturedLength(), replacement);
             mStyledAnchors.prepend({replacement, match.captured(0)});
         }
     }
+    mStyledText = styledText;
     return styledText;
 }
 

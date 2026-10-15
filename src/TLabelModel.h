@@ -124,6 +124,8 @@ private:
     QString mUnstyledText;
     // each anchor tag the last styling pass wrote and the one it replaced, in the order of the text
     QList<StyledAnchor> mStyledAnchors;
+    // what the last styling pass gave the view to show
+    QString mStyledText;
 };
 
 #endif // MUDLET_TLABELMODEL_H

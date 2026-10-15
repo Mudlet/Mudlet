@@ -305,6 +305,28 @@ private slots:
         QCOMPARE(label()->textInteractionFlags(), Qt::LinksAccessibleByMouse | Qt::LinksAccessibleByKeyboard);
     }
 
+    // The headless frontend a spec can run under does not apply a style sheet's qproperty-text
+    void test_aStyleSheetsTextLeavesTheScriptsOwnLinkColourAlone()
+    {
+        label()->setLinkStyle(qsl("#00ffff"), QString(), true);
+        const QString sheet = label()->styleSheet();
+        // a style sheet change puts back the font the label had before setFont(), which later cases aim by
+        const QFont font = label()->font();
+        auto restore = qScopeGuard([this, sheet, font]() {
+            label()->setStyleSheet(sheet);
+            label()->setFont(font);
+            label()->resetLinkStyle();
+        });
+        label()->setText(qsl("<a href=\"a()\">a</a>"));
+        label()->setStyleSheet(qsl("qproperty-text: \"plain\";"));
+        QCOMPARE(label()->text(), qsl("plain"));
+
+        label()->resetLinkStyle();
+        const QString own = qsl("<a href=\"a()\" style=\"color: #00ffff;\">a</a>");
+        label()->setText(own);
+        QCOMPARE(label()->text(), own);
+    }
+
     void test_aStyledLinkHoldingQuotesRunsItsCommand()
     {
         label()->setLinkStyle(qsl("#00ffff"), qsl("#ff00ff"), true);
