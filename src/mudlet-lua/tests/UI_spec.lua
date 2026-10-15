@@ -2568,25 +2568,60 @@ describe("Tests UI functions", function()
     end)
 
     -- the game's interface can be drawing on the profile's one map widget by the
-    -- time this UI stands aside holding it, and hiding an embedded mapper shrinks it
-    it("should leave the map widget to the game's own mapper when it stands aside holding the map", function()
+    -- time this UI stands aside holding it, and hiding an embedded mapper shrinks it.
+    -- Returns whether the game's geometry was applied again after the last shrink.
+    local function standAsideHoldingMap(floating)
       local saved = { container = BaseUI.container, map = BaseUI.map }
-      local layoutDock = stub(BaseUI, "layoutDock")
+      -- a section dragged out of the dock is hidden by layoutDock(), not with the dock
+      stub(BaseUI, "layoutDock", function()
+        if floating then
+          BaseUI.map:hide()
+        end
+      end)
       local applied = stub(_G, "createMapper")
-      local dock = Geyser.Container:new({ name = "BaseUI_spec_dock", x = 0, y = 0, width = 400, height = 400 })
-      dock.adjustBorder = function() end
-      BaseUI.container = dock
-      BaseUI.map = Geyser.Mapper:new({ name = "BaseUI_spec_map", x = 0, y = 0, width = "100%", height = "100%" }, dock)
-      local game = Geyser.Mapper:new({ name = "BaseUI_spec_gameMap", x = 10, y = 10, width = 300, height = 200 })
-      local ok, err = pcall(BaseUI.standAside, "sysServerGuiInstalled", "SomeGameUI")
-      local last = applied.calls[#applied.calls]
-      pcall(game.delete, game)
-      pcall(dock.delete, dock)
+      stub(_G, "closeMapWidget")
+      local dock, map, game, appliedCount
+      -- busted leaves a stub in place when the spec that made it raises
+      local ok, err = pcall(function()
+        dock = Geyser.Container:new({ name = "BaseUI_spec_dock", x = 0, y = 0, width = 400, height = 400 })
+        dock.adjustBorder = function() end
+        BaseUI.container = dock
+        map = floating and Geyser.Mapper:new({ name = "BaseUI_spec_map", x = 500, y = 0, width = 200, height = 200 })
+          or Geyser.Mapper:new({ name = "BaseUI_spec_map", x = 0, y = 0, width = "100%", height = "100%" }, dock)
+        BaseUI.map = map
+        game = Geyser.Mapper:new({ name = "BaseUI_spec_gameMap", x = 10, y = 10, width = 300, height = 200 })
+        BaseUI.standAside("sysServerGuiInstalled", "SomeGameUI")
+        appliedCount = #applied.calls
+      end)
+      -- a window left unmade by a raise is a nil the table never holds
+      for _, window in pairs({ game = game, map = map, dock = dock }) do
+        pcall(window.delete, window)
+      end
       _G.createMapper:revert()
-      layoutDock:revert()
+      _G.closeMapWidget:revert()
+      BaseUI.layoutDock:revert()
       BaseUI.container, BaseUI.map = saved.container, saved.map
       assert.is_true(ok, tostring(err))
-      assert.are.same({ 10, 10, 300, 200 }, { last.vals[2], last.vals[3], last.vals[4], last.vals[5] })
+      -- every other visible embedded mapper in the profile is put back too, in no set order
+      local shrunkAt, restored = nil, false
+      for i = 1, appliedCount do
+        local x, y, width, height = unpack(applied.calls[i].vals, 2, 5)
+        if width == 0 and height == 0 then
+          shrunkAt, restored = i, false
+        elseif shrunkAt and x == 10 and y == 10 and width == 300 and height == 200 then
+          restored = true
+        end
+      end
+      assert.is_not_nil(shrunkAt, "the starter UI's mapper was never hidden")
+      return restored
+    end
+
+    it("should leave the map widget to the game's own mapper when it stands aside holding the map", function()
+      assert.is_true(standAsideHoldingMap(false))
+    end)
+
+    it("should leave the map widget to the game's own mapper when its map section is out of the dock", function()
+      assert.is_true(standAsideHoldingMap(true))
     end)
 
     -- runs after the after_each of every spec above it
