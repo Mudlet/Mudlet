@@ -3493,8 +3493,14 @@ void dlgProfilePreferences::setupPasswordsMigration()
     });
 
     connect(mudlet::self(), &mudlet::signal_passwordsMigratedToProfiles, this, [=, this]() {
-        label_password_migration_notification->setText(tr("Migrated all passwords to profile storage."));
         comboBox_store_passwords_in->setEnabled(true);
+        const QStringList notMigrated = mudlet::self()->passwordsNotMigratedToProfiles();
+        if (!notMigrated.isEmpty()) {
+            //: Shown in the preferences when some passwords could not be saved into their profiles while switching to profile storage; %1 is a list of profile names
+            label_password_migration_notification->setText(tr("Could not save the passwords of these profiles into them, so they are still in secure storage: %1").arg(notMigrated.join(qsl(", "))));
+            return;
+        }
+        label_password_migration_notification->setText(tr("Migrated all passwords to profile storage."));
         hidePasswordMigrationLabelTimer->start(10s);
     });
 

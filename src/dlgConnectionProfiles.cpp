@@ -675,10 +675,7 @@ void dlgConnectionProfiles::slot_updatePassword(const QString& pass)
     } else {
         // Recorded process-wide, so an earlier failure is cleared before this save is asked about
         SecureStringUtils::takeUnprotectedSecretPath();
-        auto result = MudletApp::writeProfileData(profileName, qsl("password"), pass);
-        if (!result.first) {
-            qWarning().noquote().nospace() << "dlgConnectionProfiles::slot_updatePassword() ERROR - failed to save password for profile \"" << profileName << "\": " << result.second;
-        } else if (!SecureStringUtils::takeUnprotectedSecretPath().isEmpty()) {
+        if (saveProfileDetail(profileName, qsl("password"), pass).first && !SecureStringUtils::takeUnprotectedSecretPath().isEmpty()) {
             //: Shown in the connection dialog when a password was saved but its file could not be made unreadable to other users of the computer. %1 is a profile name.
             showNotification(tr("The password for '%1' was saved, but other accounts on this computer can still read it.").arg(profileName), notificationAreaIconLabelWarning);
         }
@@ -738,12 +735,7 @@ void dlgConnectionProfiles::slot_updateLogin(const QString& login)
 {
     QListWidgetItem* pItem = listWidget_profiles->currentItem();
     if (pItem) {
-        const QString profileName = pItem->data(csmNameRole).toString();
-        auto result = MudletApp::writeProfileData(profileName, qsl("login"), login);
-        if (!result.first) {
-            qWarning().noquote().nospace() << "dlgConnectionProfiles::slot_updateLogin() ERROR - failed to save character name for profile \"" << profileName << "\": " << result.second;
-            // Could optionally show user notification here
-        }
+        saveProfileDetail(pItem->data(csmNameRole).toString(), qsl("login"), login);
     }
 }
 
@@ -1131,6 +1123,7 @@ void dlgConnectionProfiles::showRemovalNotice(const QString& message)
 
 void dlgConnectionProfiles::showNotification(const QString& message, QLabel* pIcon)
 {
+    mUnsavedChange = {};
     notificationArea->show();
     for (auto* pCandidate : {notificationAreaIconLabelWarning, notificationAreaIconLabelError, notificationAreaIconLabelInformation}) {
         pCandidate->setVisible(pCandidate == pIcon);
@@ -1362,13 +1355,27 @@ QPair<bool, QString> dlgConnectionProfiles::writeProfileData(const QString& prof
     if (!QDir(MudletApp::getMudletPath(enums::profileHomePath, profile)).exists()) {
         return {false, qsl("there is no folder for the %1 profile").arg(profile)};
     }
+    return saveProfileDetail(profile, item, what);
+}
 
-    const auto result = MudletApp::writeProfileData(profile, item, what);
+// Selecting a profile sets every field, and each one writes itself back: skipping a value that is
+// already stored keeps a profile that cannot be written from raising a notice about a change nobody made
+QPair<bool, QString> dlgConnectionProfiles::saveProfileDetail(const QString& profile, const QString& item, const QString& what)
+{
+    const auto result = readProfileData(profile, item) == what ? qMakePair(true, QString()) : MudletApp::writeProfileData(profile, item, what);
     if (!result.first) {
         //: Shown in the connection dialog when a change to a profile's details could not be saved; %1 is the profile name, %2 the reason, e.g. "No space left on device"
-        showNotification(tr("Could not save this change to %1: %2").arg(profile, result.second), notificationAreaIconLabelError);
+        showUnsavedChange(tr("Could not save this change to %1: %2").arg(profile, result.second), profile, item);
+    } else if (mUnsavedChange == qMakePair(profile, item)) {
+        clearNotificationArea();
     }
     return result;
+}
+
+void dlgConnectionProfiles::showUnsavedChange(const QString& message, const QString& profile, const QString& item)
+{
+    showNotification(message, notificationAreaIconLabelError);
+    mUnsavedChange = {profile, item};
 }
 
 QString dlgConnectionProfiles::getDescription(const QString& profile_name) const
@@ -2208,7 +2215,12 @@ void dlgConnectionProfiles::saveDefaultProfileCopy(const QString& profileName, c
         writeSecurePassword(profileName, oldPassword);
     }
     mCopyingProfile = false;
-    validateProfile();
+    // validateProfile() clears the notification area, which would hide a detail of the copy that could not be saved
+    const auto unsavedChange = mUnsavedChange;
+    const QString unsavedMessage = notificationAreaMessageBox->text();
+    if (validateProfile() && !unsavedChange.first.isEmpty()) {
+        showUnsavedChange(unsavedMessage, unsavedChange.first, unsavedChange.second);
+    }
 }
 
 void dlgConnectionProfiles::slot_copyOnlySettingsOfProfile()
@@ -2809,6 +2821,7 @@ QIcon dlgConnectionProfiles::customIcon(const QString& text, const std::optional
 
 void dlgConnectionProfiles::clearNotificationArea()
 {
+    mUnsavedChange = {};
     notificationArea->hide();
     notificationAreaIconLabelWarning->hide();
     notificationAreaIconLabelError->hide();

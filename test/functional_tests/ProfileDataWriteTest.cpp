@@ -24,6 +24,7 @@
 
 #include <QDir>
 #include <QLabel>
+#include <QLineEdit>
 #include <QListWidget>
 #include <QPlainTextEdit>
 #include <QRegularExpression>
@@ -95,6 +96,31 @@ private:
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
         mMudletStarted = true;
+    }
+
+    // The dialog lists the profiles there were when it opened, so a test that makes its own reopens it
+    dlgConnectionProfiles* reopenConnectionDialog()
+    {
+        startMudlet();
+        if (mudlet::self()->mpConnectionDialog) {
+            mudlet::self()->mpConnectionDialog->close();
+            if (!QTest::qWaitFor(
+                        []() {
+                            return !mudlet::self()->mpConnectionDialog;
+                        },
+                        5s)) {
+                return nullptr;
+            }
+        }
+        mudlet::self()->startAutoLogin({});
+        if (!QTest::qWaitFor(
+                    []() {
+                        return mudlet::self()->mpConnectionDialog && mudlet::self()->mpConnectionDialog->isVisible();
+                    },
+                    5s)) {
+            return nullptr;
+        }
+        return mudlet::self()->mpConnectionDialog.data();
     }
 
 private slots:
@@ -183,23 +209,6 @@ private slots:
         QVERIFY(QDir().rmdir(MudletApp::getMudletPath(enums::profileDataItemPath, mProfile, item)));
     }
 
-    // Moving a password out of secure storage must not delete it there when it could not be saved here
-    void test_aPasswordThatCannotBeMigratedStaysInSecureStorage()
-    {
-        const QString profile = qsl("ProfileDataWriteMigrate");
-        QVERIFY(QDir().mkpath(MudletApp::getMudletPath(enums::profileDataItemPath, profile, qsl("password"))));
-        startMudlet();
-        QVERIFY(CredentialManager::storeCredential(profile, qsl("character"), qsl("secret")));
-
-        expectWriteWarning(qsl("password"));
-        // Whether secure storage keeps the password is settled before this returns; the
-        // legacy keychain lookups it also starts can outlast any wait on macOS runners
-        QVERIFY(mudlet::self()->migratePasswordsToProfileStorage());
-
-        QCOMPARE(CredentialManager::retrieveCredential(profile, qsl("character")), qsl("secret"));
-        QVERIFY(QDir().rmdir(MudletApp::getMudletPath(enums::profileDataItemPath, profile, qsl("password"))));
-    }
-
     void test_aDetailTheConnectionDialogCannotSaveIsShownThere()
     {
         const QString profile = qsl("ProfileDataWriteDialog");
@@ -218,7 +227,6 @@ private slots:
         dialog->listWidget_profiles->setCurrentItem(items.first());
         QVERIFY2(dialog->notificationAreaMessageBox->text().isEmpty(), "the dialog already shows a notice, so this proves nothing");
 
-        // selecting the profile wrote its empty description
         const QString descriptionPath = MudletApp::getMudletPath(enums::profileDataItemPath, profile, qsl("description"));
         QFile::remove(descriptionPath);
         QVERIFY(QDir().mkpath(descriptionPath));
@@ -227,6 +235,63 @@ private slots:
 
         QVERIFY2(dialog->notificationArea->isVisible(), "the dialog says nothing about a change it could not save");
         QVERIFY2(dialog->notificationAreaMessageBox->text().contains(profile), qPrintable(dialog->notificationAreaMessageBox->text()));
+        QVERIFY(QDir().rmdir(descriptionPath));
+
+        dialog->mud_description_textedit->setPlainText(qsl("saved"));
+        QCOMPARE(MudletApp::readProfileData(profile, qsl("description")), qsl("saved"));
+        QVERIFY2(!dialog->notificationArea->isVisible(), "the notice stays up after the change was saved");
+    }
+
+    void test_aLoginOrPasswordTheConnectionDialogCannotSaveIsShownThere()
+    {
+        const QString profile = qsl("ProfileDataWriteCredentials");
+        QVERIFY(MudletApp::writeProfileData(profile, qsl("url"), qsl("localhost")).first);
+        QVERIFY(MudletApp::writeProfileData(profile, qsl("port"), qsl("23")).first);
+        auto* dialog = reopenConnectionDialog();
+        QVERIFY(dialog);
+        mudlet::self()->setStorePasswordsSecurely(false);
+        const auto items = dialog->findData(*dialog->listWidget_profiles, profile, dlgConnectionProfiles::csmNameRole);
+        QVERIFY2(!items.isEmpty(), "the test profile is missing from the games list");
+        dialog->listWidget_profiles->setCurrentItem(items.first());
+        QVERIFY2(!dialog->notificationArea->isVisible(), "the dialog already shows a notice, so this proves nothing");
+        // Selecting loads the password on a zero timer, which would put the field back after it is typed in
+        QCoreApplication::processEvents();
+
+        const QString passwordPath = MudletApp::getMudletPath(enums::profileDataItemPath, profile, qsl("password"));
+        QVERIFY(QDir().mkpath(passwordPath));
+        expectWriteWarning(qsl("password"));
+        dialog->character_password_entry->setText(qsl("not saved"));
+        QTRY_VERIFY2(dialog->notificationArea->isVisible(), "the dialog says nothing about a password it could not save");
+        QVERIFY2(dialog->notificationAreaMessageBox->text().contains(profile), qPrintable(dialog->notificationAreaMessageBox->text()));
+        QVERIFY(QDir().rmdir(passwordPath));
+        dialog->character_password_entry->setText(qsl("saved"));
+        QTRY_COMPARE(MudletApp::readProfileData(profile, qsl("password")), qsl("saved"));
+        QVERIFY2(!dialog->notificationArea->isVisible(), "the notice stays up after the password was saved");
+
+        const QString loginPath = MudletApp::getMudletPath(enums::profileDataItemPath, profile, qsl("login"));
+        QVERIFY(QDir().mkpath(loginPath));
+        expectWriteWarning(qsl("login"));
+        QTest::keyClicks(dialog->login_entry, qsl("x"));
+        QVERIFY2(dialog->notificationArea->isVisible(), "the dialog says nothing about a character name it could not save");
+        QVERIFY(QDir().rmdir(loginPath));
+    }
+
+    void test_selectingAProfileThatCannotBeWrittenRaisesNoNotice()
+    {
+        const QString profile = qsl("ProfileDataWriteUnwritable");
+        QVERIFY(MudletApp::writeProfileData(profile, qsl("url"), qsl("localhost")).first);
+        QVERIFY(MudletApp::writeProfileData(profile, qsl("port"), qsl("23")).first);
+        const QString descriptionPath = MudletApp::getMudletPath(enums::profileDataItemPath, profile, qsl("description"));
+        QVERIFY(QDir().mkpath(descriptionPath));
+        auto* dialog = reopenConnectionDialog();
+        QVERIFY(dialog);
+        const auto items = dialog->findData(*dialog->listWidget_profiles, profile, dlgConnectionProfiles::csmNameRole);
+        QVERIFY2(!items.isEmpty(), "the test profile is missing from the games list");
+
+        QTest::failOnWarning(QRegularExpression(qsl("writeProfileData")));
+        dialog->listWidget_profiles->setCurrentItem(items.first());
+
+        QVERIFY2(!dialog->notificationArea->isVisible(), qPrintable(dialog->notificationAreaMessageBox->text()));
         QVERIFY(QDir().rmdir(descriptionPath));
     }
 
@@ -260,6 +325,79 @@ private slots:
 
         QVERIFY2(!QDir(MudletApp::getMudletPath(enums::profileHomePath, game)).exists(), qPrintable(qsl("a folder was made for %1, which has never been played").arg(game)));
         QCOMPARE(dialog->notificationAreaMessageBox->text(), noticeBefore);
+    }
+
+    void test_aDetailACopyCannotSaveIsShownAfterTheCopy()
+    {
+        startMudlet();
+        mudlet::self()->startAutoLogin({});
+        QVERIFY(QTest::qWaitFor(
+                []() {
+                    return mudlet::self()->mpConnectionDialog && mudlet::self()->mpConnectionDialog->isVisible();
+                },
+                5s));
+        auto* dialog = mudlet::self()->mpConnectionDialog.data();
+        QListWidgetItem* unplayed = nullptr;
+        for (int i = 0; i < dialog->listWidget_profiles->count() && !unplayed; ++i) {
+            const QString name = dialog->listWidget_profiles->item(i)->data(dlgConnectionProfiles::csmNameRole).toString();
+            if (!name.back().isDigit() && !QDir(MudletApp::getMudletPath(enums::profileHomePath, name)).exists() && !QDir(MudletApp::getMudletPath(enums::profileHomePath, name + qsl("1"))).exists()) {
+                unplayed = dialog->listWidget_profiles->item(i);
+            }
+        }
+        if (!unplayed) {
+            QSKIP("every game on the list has a folder already");
+        }
+        const QString game = unplayed->data(dlgConnectionProfiles::csmNameRole).toString();
+        const QString copy = game + qsl("1");
+        dialog->listWidget_profiles->setCurrentItem(unplayed);
+        dialog->mud_description_textedit->setPlainText(qsl("copied with the game"));
+        // Copying a game never played writes each detail of the copy itself
+        QVERIFY(QDir().mkpath(MudletApp::getMudletPath(enums::profileDataItemPath, copy, qsl("description"))));
+
+        expectWriteWarning(qsl("description"));
+        dialog->slot_copyProfile();
+
+        QCOMPARE(MudletApp::readProfileData(copy, qsl("url")), dialog->host_name_entry->text());
+        QVERIFY2(dialog->notificationArea->isVisible(), "the dialog says nothing about a detail of the copy it could not save");
+        QVERIFY2(dialog->notificationAreaMessageBox->text().contains(copy), qPrintable(dialog->notificationAreaMessageBox->text()));
+    }
+
+    // Moving a password out of secure storage must not delete it there when it could not be saved here. Last, as the
+    // keychain lookups it starts can answer during a later test, and the connection dialog reselects its profile then
+    void test_aPasswordThatCannotBeMigratedStaysInSecureStorage()
+    {
+        const QString profile = qsl("ProfileDataWriteMigrate");
+        QVERIFY(QDir().mkpath(MudletApp::getMudletPath(enums::profileDataItemPath, profile, qsl("password"))));
+        startMudlet();
+        QVERIFY(CredentialManager::storeCredential(profile, qsl("character"), qsl("secret")));
+
+        expectWriteWarning(qsl("password"));
+        // Whether secure storage keeps the password is settled before this returns; the
+        // legacy keychain lookups it also starts can outlast any wait on macOS runners
+        QVERIFY(mudlet::self()->migratePasswordsToProfileStorage());
+
+        QCOMPARE(CredentialManager::retrieveCredential(profile, qsl("character")), qsl("secret"));
+        QVERIFY2(mudlet::self()->passwordsNotMigratedToProfiles().contains(profile), "the migration reports every password as moved");
+        QVERIFY(QDir().rmdir(MudletApp::getMudletPath(enums::profileDataItemPath, profile, qsl("password"))));
+    }
+
+    void test_aLegacyKeychainPasswordThatCannotBeMigratedIsReported()
+    {
+        const QString profile = qsl("ProfileDataWriteLegacyMigrate");
+        const QString passwordPath = MudletApp::getMudletPath(enums::profileDataItemPath, profile, qsl("password"));
+        QVERIFY(QDir().mkpath(passwordPath));
+        startMudlet();
+        // A job that never ran reads as a successful lookup, so the slot goes on to save what it holds
+        auto* job = new QKeychain::ReadPasswordJob(qsl("Mudlet profile"));
+        job->setAutoDelete(false);
+        job->setProperty("profile", profile);
+
+        expectWriteWarning(qsl("password"));
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("could not migrate the password for profile \"%1\", so it stays in the legacy keychain storage").arg(profile)));
+        QVERIFY(QMetaObject::invokeMethod(mudlet::self(), "slot_passwordMigratedToPortableStorage", Qt::DirectConnection, Q_ARG(QKeychain::Job*, job)));
+
+        QVERIFY2(mudlet::self()->passwordsNotMigratedToProfiles().contains(profile), "the migration reports a password it could not save as moved");
+        QVERIFY(QDir().rmdir(passwordPath));
     }
 };
 

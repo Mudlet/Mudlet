@@ -7596,6 +7596,7 @@ bool mudlet::migratePasswordsToProfileStorage()
         return false;
     }
     MudletApp::setStorePasswordsSecurely(false);
+    mPasswordsNotMigratedToProfiles.clear();
 
     const QStringList profiles = QDir(MudletApp::getMudletPath(enums::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
 
@@ -7609,6 +7610,7 @@ bool mudlet::migratePasswordsToProfileStorage()
             if (!MudletApp::writeProfileData(profile, qsl("password"), password).first) {
                 qWarning().nospace().noquote() << "mudlet::migratePasswordsToProfileStorage() WARNING - could not migrate the password for profile \"" << profile
                                                << "\", so it stays in secure storage.";
+                mPasswordsNotMigratedToProfiles.append(profile);
             } else if (isVersionAtLeast(qsl("4.20.0"))) {
                 CredentialManager::removeCredential(profile, "character");
                 qDebug().nospace().noquote() << "mudlet::migratePasswordsToProfileStorage() INFO - migrated password for profile \"" << profile
@@ -7659,6 +7661,9 @@ void mudlet::slot_passwordMigratedToPortableStorage(QKeychain::Job* job)
         if (!MudletApp::writeProfileData(profileName, qsl("password"), readJob->textData()).first) {
             qWarning().nospace().noquote() << "mudlet::slot_passwordMigratedToPortableStorage(...) WARNING - could not migrate the password for profile \"" << profileName
                                            << "\", so it stays in the legacy keychain storage.";
+            if (!mPasswordsNotMigratedToProfiles.contains(profileName)) {
+                mPasswordsNotMigratedToProfiles.append(profileName);
+            }
         } else if (isVersionAtLeast(qsl("4.20.0"))) {
             auto* deleteJob = new QKeychain::DeletePasswordJob(qsl("Mudlet profile"));
             deleteJob->setAutoDelete(true);

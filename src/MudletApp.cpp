@@ -200,6 +200,19 @@ QString settledConfigRoot()
     }
     return configRoot;
 }
+
+#if defined(Q_OS_UNIX)
+// What fsync() gives for a file that cannot be synced at all, which QSaveFile::commit() shrugs off too
+bool syncUnsupported(const int error)
+{
+#if EOPNOTSUPP != ENOTSUP
+    if (error == EOPNOTSUPP) {
+        return true;
+    }
+#endif
+    return error == EINVAL || error == EROFS || error == ENOTSUP;
+}
+#endif
 } // namespace
 
 QString MudletApp::executableDir()
@@ -585,7 +598,8 @@ QPair<bool, QString> MudletApp::writeProfileData(const QString& profile, const Q
 
     const QString profileHomePath = MudletApp::getMudletPath(enums::profileHomePath, profile);
     if (!QDir(profileHomePath).exists() && !QDir().mkpath(profileHomePath)) {
-        return failure(qsl("Could not create profile directory: %1").arg(profileHomePath));
+        //: Why a profile setting could not be saved, shown in the connection dialog and returned to Lua scripts; %1 is the folder's path
+        return failure(QCoreApplication::translate("MudletApp", "Could not create profile directory: %1").arg(profileHomePath));
     }
 
     QSaveFile file(MudletApp::getMudletPath(enums::profileDataItemPath, profile, item));
@@ -606,12 +620,16 @@ QPair<bool, QString> MudletApp::writeProfileData(const QString& profile, const Q
     // A disk that fills part way through the write leaves no error on the file, only on the
     // stream, and commit() would rename the truncated file into place
     if (ofs.status() != QDataStream::Ok || file.error() != QFileDevice::NoError) {
-        return failure(file.error() == QFileDevice::NoError ? qsl("could not write all of the %1 data").arg(item) : file.errorString());
+        //: Why a profile setting could not be saved, shown in the connection dialog and returned to Lua scripts; %1 is the setting's internal name, e.g. description
+        return failure(file.error() == QFileDevice::NoError ? QCoreApplication::translate("MudletApp", "could not write all of the %1 data").arg(item) : file.errorString());
     }
 #if defined(Q_OS_UNIX)
     // commit() ignores a failed sync, which is where a quota or network filesystem reports a write that did not land
     if (::fsync(file.handle()) != 0) {
-        return failure(qt_error_string(errno));
+        const int syncError = errno;
+        if (!syncUnsupported(syncError)) {
+            return failure(qt_error_string(syncError));
+        }
     }
 #endif
     if (!file.commit()) {
