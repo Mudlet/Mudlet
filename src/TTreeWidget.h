@@ -60,6 +60,7 @@ public:
     void rowsInserted(const QModelIndex& parent, int start, int end) override;
     void mousePressEvent(QMouseEvent* event) override;
     void mouseReleaseEvent(QMouseEvent* event) override;
+    void mouseMoveEvent(QMouseEvent* event) override;
     void setHost(Host* pH);
     void setTreeType(TreeType type);
     void beginInsertRows(const QModelIndex& parent, int first, int last);
@@ -110,6 +111,7 @@ private:
     quint64 mVariablesGeneration = 0;
     // CHECK: Should this actually be a: QPersistentModelIndex ?
     QModelIndex mClickedItem;
+    bool mTickPressHeldFromView = false;
 };
 
 #endif // MUDLET_TTREEWIDGET_H

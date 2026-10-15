@@ -855,14 +855,7 @@ private slots:
         selectVariable(pD);
         mpEditor->mpVarsMainArea->lineEdit_var_name->setText(qsl("a0"));
 
-        mpVariablesTree->scrollToItem(pC);
-        auto* pView = static_cast<QTreeView*>(mpVariablesTree);
-        const QRect rowRect = pView->visualRect(mpVariablesTree->indexFromItem(pC));
-        const int indentation = rowRect.x() - pView->visualRect(pView->rootIndex()).x();
-        const QRect tickArea(pView->header()->sectionViewportPosition(0) + indentation, rowRect.y(), pView->style()->pixelMetric(QStyle::PM_IndicatorWidth), rowRect.height());
-        // A corner of the area the tree ticks on, not the middle of the box,
-        // where the item delegate takes the press before the view selects
-        const QPoint corner(tickArea.left() + 1, tickArea.top() + 2);
+        const QPoint corner = saveBoxCorner(pC);
         QCOMPARE(mpVariablesTree->itemAt(corner), pC);
         QTest::mousePress(mpVariablesTree->viewport(), Qt::LeftButton, {}, corner);
         QTest::mouseRelease(mpVariablesTree->viewport(), Qt::LeftButton, {}, corner);
@@ -878,7 +871,135 @@ private slots:
         mpEditor->repopulateVars();
     }
 
+    void test_movingThePointerOnARowsSaveBoxLeavesTheSelectionAlone()
+    {
+        const bool wasAnimated = mpVariablesTree->isAnimated();
+        mpVariablesTree->setAnimated(false);
+        execLua(qsl("dragHolder = {b = 'b', c = 'c', d = 'd'}"));
+        mpEditor->repopulateVars();
+        VarUnit* pVarUnit = mpHost->getLuaInterface()->getVarUnit();
+        pVarUnit->savedVars.clear();
+
+        QTreeWidgetItem* pHolder = findVariableItem({qsl("dragHolder")});
+        QVERIFY2(pHolder, "the Variables view did not show the table holding the rows");
+        pHolder->setExpanded(true);
+        QTreeWidgetItem* pC = findVariableItem({qsl("dragHolder"), qsl("c")});
+        QTreeWidgetItem* pD = findVariableItem({qsl("dragHolder"), qsl("d")});
+        QVERIFY(pC && pD);
+        // a real click, so the view remembers a press on d that a later drag could start from
+        mpVariablesTree->scrollToItem(pD);
+        QTest::qWait(50ms);
+        QTest::mouseClick(mpVariablesTree->viewport(), Qt::LeftButton, {}, mpVariablesTree->visualItemRect(pD).center());
+        QTest::qWait(QApplication::doubleClickInterval() + 50);
+        QCOMPARE(mpVariablesTree->currentItem(), pD);
+        mpEditor->mpVarsMainArea->lineEdit_var_name->setText(qsl("a0"));
+
+        const QPoint corner = saveBoxCorner(pC);
+        QTest::mousePress(mpVariablesTree->viewport(), Qt::LeftButton, {}, corner);
+        QTest::mouseMove(mpVariablesTree->viewport(), corner + QPoint(1, 1));
+        QTest::mouseRelease(mpVariablesTree->viewport(), Qt::LeftButton, {}, corner + QPoint(1, 1));
+
+        QCOMPARE(pC->checkState(0), Qt::Checked);
+        QCOMPARE(mpVariablesTree->selectedItems(), QList<QTreeWidgetItem*>{pD});
+        QCOMPARE(mpEditor->mpVarsMainArea->lineEdit_var_name->text(), qsl("a0"));
+        QCOMPARE(rowNames(pHolder), (QStringList{qsl("b"), qsl("c"), qsl("d")}));
+
+        QSignalSpy clickSpy(mpVariablesTree, &QTreeWidget::itemClicked);
+        QTest::qWait(QApplication::doubleClickInterval() + 50);
+        QTest::mousePress(mpVariablesTree->viewport(), Qt::LeftButton, {}, corner);
+        const QPoint cText(mpVariablesTree->visualItemRect(pC).center().x(), corner.y());
+        QTest::mouseMove(mpVariablesTree->viewport(), cText);
+        QTest::mouseRelease(mpVariablesTree->viewport(), Qt::LeftButton, {}, cText);
+
+        QCOMPARE(pC->checkState(0), Qt::Checked);
+        QCOMPARE(clickSpy.count(), 0);
+        QCOMPARE(mpVariablesTree->selectedItems(), QList<QTreeWidgetItem*>{pD});
+        QCOMPARE(mpVariablesTree->currentItem(), pD);
+        QCOMPARE(mpEditor->mpVarsMainArea->lineEdit_var_name->text(), qsl("a0"));
+
+        mpVariablesTree->setAnimated(wasAnimated);
+        mpEditor->mpCurrentVarItem = nullptr;
+        pVarUnit->savedVars.clear();
+        execLua(qsl("dragHolder = nil"));
+        mpEditor->repopulateVars();
+    }
+
+    void test_rightClickingARowsSaveBoxSelectsThatRow()
+    {
+        const bool wasAnimated = mpVariablesTree->isAnimated();
+        mpVariablesTree->setAnimated(false);
+        execLua(qsl("rightHolder = {b = 'b', c = 'c', d = 'd'}"));
+        mpEditor->repopulateVars();
+
+        QTreeWidgetItem* pHolder = findVariableItem({qsl("rightHolder")});
+        QVERIFY2(pHolder, "the Variables view did not show the table holding the rows");
+        pHolder->setExpanded(true);
+        QTreeWidgetItem* pC = findVariableItem({qsl("rightHolder"), qsl("c")});
+        QTreeWidgetItem* pD = findVariableItem({qsl("rightHolder"), qsl("d")});
+        QVERIFY(pC && pD);
+        selectVariable(pD);
+
+        const QPoint corner = saveBoxCorner(pC);
+        QTest::mousePress(mpVariablesTree->viewport(), Qt::RightButton, {}, corner);
+        QTest::mouseRelease(mpVariablesTree->viewport(), Qt::RightButton, {}, corner);
+        QCOMPARE(mpVariablesTree->selectedItems(), QList<QTreeWidgetItem*>{pC});
+
+        // what the context menu's Delete runs on
+        QVERIFY(mpVariablesTree->actions().contains(mpEditor->mDeleteItem));
+        mpEditor->mDeleteItem->trigger();
+        QCOMPARE(luaTypeOf(qsl("rightHolder.c")), qsl("nil"));
+        QCOMPARE(luaTypeOf(qsl("rightHolder.d")), qsl("string"));
+
+        mpVariablesTree->setAnimated(wasAnimated);
+        mpEditor->mpCurrentVarItem = nullptr;
+        execLua(qsl("rightHolder = nil"));
+        mpEditor->repopulateVars();
+    }
+
+    void test_clickingTheSaveBoxOfARowThatCannotBeSavedSelectsIt()
+    {
+        const bool wasAnimated = mpVariablesTree->isAnimated();
+        mpVariablesTree->setAnimated(false);
+        execLua(qsl("unsavableHolder = {a = 'a', f = function() end, g = 'g'}"));
+        mpEditor->repopulateVars();
+
+        QTreeWidgetItem* pHolder = findVariableItem({qsl("unsavableHolder")});
+        QVERIFY2(pHolder, "the Variables view did not show the table holding the rows");
+        pHolder->setExpanded(true);
+        QTreeWidgetItem* pA = findVariableItem({qsl("unsavableHolder"), qsl("a")});
+        QTreeWidgetItem* pF = findVariableItem({qsl("unsavableHolder"), qsl("f")});
+        QVERIFY(pA && pF);
+        QVERIFY2(!(pF->flags() & Qt::ItemIsUserCheckable), "a function value was offered for saving, so this row does not show an unsavable one");
+        QVERIFY(pHolder->indexOfChild(pF) != 0);
+        selectVariable(pA);
+
+        QTest::mouseClick(mpVariablesTree->viewport(), Qt::LeftButton, {}, saveBoxCorner(pF));
+        QCOMPARE(mpVariablesTree->currentItem(), pF);
+        QCOMPARE(mpEditor->mpVarsMainArea->lineEdit_var_name->text(), qsl("f"));
+
+        mpVariablesTree->setAnimated(wasAnimated);
+        mpEditor->mpCurrentVarItem = nullptr;
+        execLua(qsl("unsavableHolder = nil"));
+        mpEditor->repopulateVars();
+    }
+
 private:
+    // A corner of the area the tree ticks on, not the middle of the box,
+    // where the item delegate takes the press before the view selects
+    QPoint saveBoxCorner(QTreeWidgetItem* pItem)
+    {
+        mpVariablesTree->scrollToItem(pItem);
+        auto* pView = static_cast<QTreeView*>(mpVariablesTree);
+        const QRect rowRect = pView->visualRect(mpVariablesTree->indexFromItem(pItem));
+        const int indentation = rowRect.x() - pView->visualRect(pView->rootIndex()).x();
+        const QRect tickArea(pView->header()->sectionViewportPosition(0) + indentation, rowRect.y(), pView->style()->pixelMetric(QStyle::PM_IndicatorWidth), rowRect.height());
+        const QPoint corner(tickArea.left() + 1, tickArea.top() + 2);
+        if (mpVariablesTree->itemAt(corner) != pItem) {
+            qWarning() << "saveBoxCorner(): the point found is not on the row asked for";
+        }
+        return corner;
+    }
+
     static QStringList rowNames(const QTreeWidgetItem* pParent)
     {
         QStringList names;
