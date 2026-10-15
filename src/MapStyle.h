@@ -336,6 +336,8 @@ struct MapStyle
     qreal roomNameSpan(qreal nameWidth, qreal spaceWidth) const;
     // roomSymbolColor is the room's own, invalid unless one was set; drawnRoomColor is roomColor()'s
     QColor symbolColor(const QColor& roomSymbolColor, const QColor& drawnRoomColor) const;
+    // Whether text or a symbol in this color would read on a tag of this one, for mapLabelPlate and symbolPlate
+    static bool readsOnPlate(const QColor& color, const QColor& plate);
     QColor exitColor(const QColor& profileExitColor) const;
     QColor roomIdColor(const QColor& drawnRoomColor) const;
     // roomBorderColor is the room's own, invalid unless one was set; drawnRoomColor is roomColor()'s

@@ -2921,6 +2921,31 @@ private slots:
         queueFrame(widget, areaId);
         QVERIFY(shapesAt(RenderCommand::Shading::ModelWater, GeometryManager::InstanceShape::Box, QPointF(4.0, 0.0)).isEmpty());
         QCOMPARE(shapesAt(RenderCommand::Shading::ModelBlock, GeometryManager::InstanceShape::Box, QPointF(4.0, 0.0)).size(), 1);
+
+        // The shafts between the building's storeys are left out, but not one down out of its foot to a room below
+        constexpr int kCellarId = 21;
+        QVERIFY(addRoomAt(kCellarId, areaId, 2, 0, -1));
+        map()->mpRoomDB->getRoom(kEastRoomId)->setExit(kCellarId, DIR_DOWN);
+        map()->mpRoomDB->getRoom(kCellarId)->setExit(kEastRoomId, DIR_UP);
+        map()->mpRoomDB->getRoom(kEastRoomId)->setExit(kFirstStoreyId, DIR_UP);
+        map()->mpRoomDB->getRoom(kFirstStoreyId)->setExit(kEastRoomId, DIR_DOWN);
+        queueFrame(widget, areaId);
+        float shaftFoot = std::numeric_limits<float>::max();
+        float shaftTop = std::numeric_limits<float>::lowest();
+        for (const auto& command : commands) {
+            if (const auto* cubes = dynamic_cast<const RenderInstancedCubesCommand*>(command.get()); cubes && cubes->shading() == RenderCommand::Shading::ModelPath) {
+                for (const CubeInstanceData& cube : cubes->instances()) {
+                    const QVector4D center = cube.transform.column(3);
+                    const float halfLength = qAbs(cube.transform.column(0).z());
+                    if (qAbs(center.x() - 2.0f) < 1e-4f && qAbs(center.y()) < 1e-4f && halfLength > 0.01f) {
+                        shaftFoot = qMin(shaftFoot, center.z() - halfLength);
+                        shaftTop = qMax(shaftTop, center.z() + halfLength);
+                    }
+                }
+            }
+        }
+        QVERIFY2(shaftFoot < -0.5f, "the shaft down to the room below the building is left out");
+        QVERIFY2(shaftTop < roomHeight, qPrintable(qsl("a shaft between the building's storeys rises to %1").arg(shaftTop)));
     }
 
     // Looking down: the board is wood under a pale sky, a room's top is lighter on the edge toward the light than on the

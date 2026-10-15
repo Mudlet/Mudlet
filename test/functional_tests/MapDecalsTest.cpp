@@ -343,6 +343,13 @@ private slots:
             text = QColor::fromRgba(image.pixel(x, y)).rgb() == diorama.mapLabelColor.rgb();
         }
         QVERIFY2(text, "the text is not on the tag");
+
+        // A light color of the label's own would be lost on the tag, so it goes without
+        const QImage yellow = MapDecals::themedLabel(textLabel(QColor(255, 255, 0), QColor(0, 0, 0, 50)), diorama);
+        for (int x = 0; x < yellow.width(); ++x) {
+            const QRgb pixel = yellow.pixel(x, yellow.height() / 2);
+            QVERIFY2(qAlpha(pixel) < 200 || qBlue(pixel) < 200, "a light label is put on a white tag");
+        }
     }
 
     void test_dioramaSymbolsStandOnATagInAColorThatShowsOnIt()
@@ -353,6 +360,8 @@ private slots:
         QCOMPARE(diorama.symbolColor(QColor(), darkPurple), QColor(Qt::black));
         QCOMPARE(tiles().symbolColor(QColor(), darkPurple), QColor(Qt::white));
         QCOMPARE(diorama.symbolColor(QColor(200, 30, 30), darkPurple), QColor(200, 30, 30));
+        QVERIFY(MapStyle::readsOnPlate(Qt::black, diorama.symbolPlate));
+        QVERIFY(!MapStyle::readsOnPlate(QColor(250, 250, 210), diorama.symbolPlate));
 
         const QImage image = MapDecals::taggedSymbol(qsl("$"), Qt::black, diorama.symbolPlate, QFont(QString(), 20), 1.0, scmSize);
         QCOMPARE(image.size(), QSize(scmSize, scmSize));
