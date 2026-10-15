@@ -3077,6 +3077,167 @@ describe("Tests exporting the profile to a file with saveProfile", function()
     assert.is_true(contains(button, "<commandButtonDown>mudlet spec down</commandButtonDown>"), button)
   end)
 
+  -- The export is written on a pool thread after the call has answered, so a
+  -- target it cannot open has to be found out before then.
+  it("returns nil and says why for an export into a folder that does not exist", function()
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+    local missing = scratchDirectory .. "/mudlet-spec-no-such-folder"
+
+    local ok, reason = saveProfile(missing, "mudlet-spec-exported-nowhere")
+
+    assert.is_nil(ok)
+    assert.is_true(contains(reason, "'" .. missing .. "/mudlet-spec-exported-nowhere.xml' because: "), tostring(reason))
+    assert.is_truthy(reason:match("because: %S"), reason)
+    assert.is_false(fileExists(missing))
+  end)
+
+  it("returns nil and says why for a save into a folder that cannot be made", function()
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+    -- a file where the folder should be, which no platform can make a folder of
+    local blocker = scratchDirectory .. "/mudlet-spec-not-a-folder"
+    local file = io.open(blocker, "wb")
+    assert.is_not_nil(file, "could not write " .. blocker)
+    file:close()
+    defer(function() os.remove(blocker) end)
+
+    local ok, reason = saveProfile(blocker)
+
+    assert.is_nil(ok)
+    assert.is_true(contains(reason, "'" .. blocker .. "/"), tostring(reason))
+    assert.is_truthy(reason:match("because: %S"), reason)
+  end)
+
+  it("saves the command line history even when the profile file cannot be written", function()
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+    local current = getMudletHomeDir() .. "/current"
+    local aside = current .. "-mudlet-spec-aside"
+    local history = getMudletHomeDir() .. "/command_history_main"
+    local saveSize, saveHistory = getConfig("commandLineHistorySaveSize"), getSaveCommandHistory("main")
+    defer(function()
+      setConfig("commandLineHistorySaveSize", saveSize)
+      setSaveCommandHistory("main", saveHistory)
+    end)
+    setConfig("commandLineHistorySaveSize", 50)
+    setSaveCommandHistory("main", true)
+    lfs.mkdir(current)
+    assert.is_true(os.rename(current, aside))
+    defer(function()
+      os.remove(current)
+      assert(os.rename(aside, current))
+    end)
+    local file = assert(io.open(current, "wb"))
+    file:close()
+    os.remove(history)
+
+    local ok = saveProfile()
+
+    assert.is_nil(ok)
+    assert.is_true(fileExists(history), "the command line history was not saved")
+  end)
+
+  it("says so on the console when the save after a package install cannot be written", function()
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+    local current = getMudletHomeDir() .. "/current"
+    local aside = current .. "-mudlet-spec-aside"
+    defer(function() removeFixturePackage(minimalPackage) end)
+    lfs.mkdir(current)
+    assert.is_true(os.rename(current, aside))
+    defer(function()
+      os.remove(current)
+      assert(os.rename(aside, current))
+    end)
+    local file = assert(io.open(current, "wb"))
+    file:close()
+    local mark = getLastLineNumber("main")
+
+    installFixturePackage(minimalPackage)
+
+    assert.is_true(waitUntil(function() return containsWrapped(textFrom(mark), "The profile could not be saved to") end, 5000), textFrom(mark))
+  end)
+
+  it("makes a save folder that does not exist yet and saves into it", function()
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+    local folder = scratchDirectory .. "/mudlet-spec-made-by-the-save"
+    local mark = getLastLineNumber("main")
+    local path
+    defer(function()
+      if path then
+        os.remove(path)
+      end
+      lfs.rmdir(folder)
+    end)
+
+    local ok
+    ok, path = saveProfile(folder)
+
+    assert.is_true(ok, tostring(path))
+    assert.is_true(contains(path, folder .. "/"), tostring(path))
+    assert.is_true(waitUntil(function() return fileExists(path) end, 5000), "nothing was written to " .. tostring(path))
+    assert.is_true(waitForProfileSaveToPass(), "the profile save never finished")
+    assert.is_false(containsWrapped(textFrom(mark), "could not be saved"), textFrom(mark))
+  end)
+
+  -- The write runs on a pool thread after the call answers, and its temporary file stays in the folder
+  -- until the end, so moving the folder away during a large export makes that write fail.
+  it("says so on the console when the write fails after the call has answered", function()
+    local bulk = "mudlet-spec-bulky"
+    local bulkXml = scratchDirectory .. "/" .. bulk .. ".xml"
+    local folder = scratchDirectory .. "/mudlet-spec-gone-before-the-write"
+    local moved = folder .. "-moved"
+    -- saves of a profile this size can take longer than the usual wait
+    local function waitForTheBulkySave()
+      return waitUntil(function() return installPackage("") == nil end, 30000)
+    end
+    lfs.mkdir(scratchDirectory)
+    lfs.mkdir(folder)
+    defer(function()
+      removeFixturePackage(bulk)
+      os.remove(bulkXml)
+    end)
+    -- Its own clean-up, run first, so the folders still go when the uninstall gives up. Windows will not delete
+    -- a file the save still has open, so wait for it here too for a spec that failed before its own wait.
+    defer(function()
+      waitForTheBulkySave()
+      for _, directory in ipairs({moved, folder}) do
+        if fileExists(directory) then
+          for entry in lfs.dir(directory) do
+            if entry ~= "." and entry ~= ".." then
+              os.remove(directory .. "/" .. entry)
+            end
+          end
+          lfs.rmdir(directory)
+        end
+      end
+    end)
+    writePackageXml(bulkXml, table.concat({
+      '<ScriptPackage>',
+      '<Script isActive="no" isFolder="no">',
+      '<name>' .. bulk .. ' script</name><packageName></packageName>',
+      '<script>--[[' .. string.rep("mudlet spec ", 1024 * 1024) .. ']]</script><eventHandlerList/>',
+      '</Script>',
+      '</ScriptPackage>',
+    }, "\n"))
+    installUntilConfirmed(installPackage, bulkXml, function() return packageInstalled(bulk) end, "the bulky package")
+    assert.is_true(waitForTheBulkySave(), "a profile save was still running")
+    local mark = getLastLineNumber("main")
+
+    local ok = saveProfile(folder, "mudlet-spec-raced")
+    local movedAway, whyNot = os.rename(folder, moved)
+
+    assert.is_true(ok)
+    assert.is_true(waitForTheBulkySave(), "the profile save never finished")
+    if not movedAway and getOS() == "windows" then
+      -- Windows will not move a folder while a file in it is open
+      pending("the folder could not be moved away while it was being written to: " .. tostring(whyNot))
+      return
+    end
+    assert.is_true(movedAway, "SETUP: the folder could not be moved away: " .. tostring(whyNot))
+    assert.is_false(fileExists(moved .. "/mudlet-spec-raced.xml"), "SETUP: the write finished before its folder was moved away")
+    assert.is_true(containsWrapped(textFrom(mark), "The profile could not be saved to"), textFrom(mark))
+    -- the reason follows the file name, whatever words the platform uses for it
+    assert.is_truthy(textFrom(mark):gsub("%s+", ""):find('mudlet%-spec%-raced%.xml":[^%[]'), textFrom(mark))
+  end)
+
   it("refuses a second export while the first is still running", function()
     assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
     local ok = saveProfile(scratchDirectory, "mudlet-spec-exported-twice")

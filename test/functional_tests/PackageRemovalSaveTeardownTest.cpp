@@ -292,6 +292,21 @@ private slots:
         QCOMPARE(saveSpy.count(), 1);
     }
 
+    // A profile that never loaded turns the package change's save away, and that has to leave a trace somewhere
+    void test_aSaveTurnedAwayAfterAPackageChangeIsLogged()
+    {
+        mpHost->waitForProfileSave();
+        mpHost->mLoadedOk = false;
+        const auto restore = qScopeGuard([this]() {
+            mpHost->mLoadedOk = true;
+        });
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("profile was not loaded correctly to begin with")));
+
+        uninstallPackageOwingASave(qsl("uninstall-save-not-loaded"));
+
+        QTRY_VERIFY_WITH_TIMEOUT(!mpHost->hasPendingProfileSave(), 5s);
+    }
+
     // ...and so does a batch of installs. One that saved on the spot left that
     // save in flight, which put the next install off until it had finished, so
     // the Package Manager's multi-file install queued behind a save per package.
