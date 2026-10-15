@@ -288,18 +288,25 @@ describe("Tests keybind-related functions", function()
         assert.is_string(message, "tempKey gave no reason for refusing key code " .. keyCode)
 
         local keyName = freshNames("SpecPermKeyBadCode", "")
-        local permId, permMessage = permKey(keyName, "", mudlet.keymodifier.None, keyCode, "")
-        assert.is_nil(permId, "permKey took key code " .. keyCode)
-        assert.is_string(permMessage, "permKey gave no reason for refusing key code " .. keyCode)
+        local ok, permMessage = pcall(permKey, keyName, "", mudlet.keymodifier.None, keyCode, "")
+        assert.is_false(ok, "permKey took key code " .. keyCode)
+        assert.truthy(tostring(permMessage):find("is not a key code", 1, true), "permKey raised the wrong error for key code " .. keyCode .. ": " .. tostring(permMessage))
         assert.are.equal(0, exists(keyName, "keybind"), "permKey made a key for key code " .. keyCode)
       end
     end)
 
     it("keeps a key code at either end of Qt's key range", function()
+      -- busted keeps only the last finally(), so one callback kills every key
+      local ids = {}
+      finally(function()
+        for _, id in ipairs(ids) do
+          killKey(id)
+        end
+      end)
       for _, keyCode in ipairs({0, mudlet.key.A, mudlet.key.unknown}) do
         local id = tempKey(mudlet.keymodifier.None, keyCode, [[echo("x")]])
-        finally(function() killKey(id) end)
         assert.is_number(id, "tempKey refused key code " .. keyCode)
+        ids[#ids + 1] = id
         assert.are.equal(keyCode, (getKeyCode(id)), "key code " .. keyCode .. " did not read back unchanged")
       end
     end)
