@@ -43,6 +43,7 @@
 #include <QTabBar>
 #include <QTemporaryDir>
 #include <QPointer>
+#include <QScopeGuard>
 #include <QWindow>
 #include <QtTest/QtTest>
 #include <chrono>
@@ -228,15 +229,18 @@ private slots:
         QVERIFY(pHost && pHost->mainConsoleView());
         reattachAndWait(mSecondHostname);
         QTest::qWait(200ms);
+        // Ahead of the open, so that a check failing after it still closes the window
+        auto restore = qScopeGuard([pHost]() {
+            if (TConsole* pWindow = pHost->mainConsoleView()->subConsoleWidget(qsl("qaKeyboardWindow"))) {
+                pHost->mainConsoleView()->forgetCommandLine(pWindow->mpCommandLine);
+            }
+            pHost->getLuaInterpreter()->compileAndExecuteScript(qsl("hideWindow('qaKeyboardWindow')"));
+            pHost->mainConsoleView()->recordActiveCommandLine(pHost->mainConsoleView()->mpCommandLine);
+        });
         QVERIFY(pHost->getLuaInterpreter()->compileAndExecuteScript(qsl("openUserWindow('qaKeyboardWindow') enableCommandLine('qaKeyboardWindow')")));
         TConsole* pUserWindow = pHost->mainConsoleView()->subConsoleWidget(qsl("qaKeyboardWindow"));
         QVERIFY(pUserWindow && pUserWindow->mpCommandLine);
         const QPointer<TCommandLine> pUserCommandLine = pUserWindow->mpCommandLine.data();
-        auto restore = qScopeGuard([pHost, pUserCommandLine]() {
-            pHost->getLuaInterpreter()->compileAndExecuteScript(qsl("hideWindow('qaKeyboardWindow')"));
-            pHost->mainConsoleView()->forgetCommandLine(pUserCommandLine);
-            pHost->mainConsoleView()->recordActiveCommandLine(pHost->mainConsoleView()->mpCommandLine);
-        });
         pHost->mainConsoleView()->recordActiveCommandLine(pUserCommandLine);
         mudlet::self()->mpTabBar->setFocus(Qt::MouseFocusReason);
 
@@ -248,8 +252,8 @@ private slots:
         QCOMPARE(QApplication::activeWindow(), mpDetachedWindow.data());
         QCOMPARE(QApplication::focusWidget(), static_cast<QWidget*>(pHost->mainConsoleView()->mpCommandLine.data()));
 
-        // As a toolbar button or a click on a console does: the command line given
-        // the keyboard has to be the one on record from now on
+        // As a toolbar button, or a click on a console without a command line of its
+        // own, does: the command line given the keyboard has to be the one on record from now on
         pHost->setFocusOnHostActiveCommandLine();
         QTest::qWait(200ms);
         QCOMPARE(QApplication::activeWindow(), mpDetachedWindow.data());
@@ -265,14 +269,14 @@ private slots:
         QVERIFY(pHost && pHost->mainConsoleView());
         reattachAndWait(mSecondHostname);
         QTest::qWait(200ms);
+        auto restore = qScopeGuard([pHost]() {
+            pHost->mainConsoleView()->forgetCommandLine(pHost->mainConsoleView()->subCommandLineWidget(qsl("qaKeyboardLine")));
+            pHost->getLuaInterpreter()->compileAndExecuteScript(qsl("deleteCommandLine('qaKeyboardLine')"));
+            pHost->mainConsoleView()->recordActiveCommandLine(pHost->mainConsoleView()->mpCommandLine);
+        });
         QVERIFY(pHost->getLuaInterpreter()->compileAndExecuteScript(qsl("createCommandLine('qaKeyboardLine', 0, 0, 200, 30)")));
         const QPointer<TCommandLine> pSubCommandLine = pHost->mainConsoleView()->subCommandLineWidget(qsl("qaKeyboardLine"));
         QVERIFY(pSubCommandLine);
-        auto restore = qScopeGuard([pHost, pSubCommandLine]() {
-            pHost->getLuaInterpreter()->compileAndExecuteScript(qsl("disableCommandLine('qaKeyboardLine')"));
-            pHost->mainConsoleView()->forgetCommandLine(pSubCommandLine);
-            pHost->mainConsoleView()->recordActiveCommandLine(pHost->mainConsoleView()->mpCommandLine);
-        });
         pHost->mainConsoleView()->recordActiveCommandLine(pSubCommandLine);
         mudlet::self()->mpTabBar->setFocus(Qt::MouseFocusReason);
 
