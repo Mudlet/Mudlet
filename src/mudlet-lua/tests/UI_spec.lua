@@ -2374,6 +2374,18 @@ describe("Tests UI functions", function()
       end
     end)
 
+    it("should update before a handler registered later for the same message", function()
+      _G.gmcp = { Char = { Vitals = { hp = 50, maxhp = 100 } } }
+      local seen
+      local id = registerAnonymousEventHandler("gmcp.Char.Vitals", function()
+        seen = #applied
+      end)
+      raiseEvent("gmcp.Char.Vitals")
+      killAnonymousEventHandler(id)
+      assert.are.equal(1, seen)
+      assert.are.equal(1, #applied)
+    end)
+
     it("should only update for a vitals message", function()
       _G.gmcp = { Char = { Vitals = { hp = 50, maxhp = 100 }, Items = { List = {} } } }
       raiseEvent("gmcp.Char")
