@@ -429,8 +429,8 @@ private slots:
         QTest::newRow("release callback") << qsl("setLabelReleaseCallback");
     }
 
-    // A label with a callback answers right-clicks itself, so one stacked under a
-    // label without callbacks still keeps the console's menu from opening there
+    // A label with a click or release callback keeps right-clicks from the console,
+    // so one stacked under the clicked label stops the menu, though its callback does not run
     void test_aLabelWithCallbacksUnderTheOneRightClickedKeepsTheConsoleMenuShut()
     {
         QFETCH(QString, setCallback);
@@ -459,7 +459,7 @@ private slots:
         const auto [menuParent, consoleMenu] = rightClickLabel(pUpper);
         Q_UNUSED(consoleMenu)
 
-        QVERIFY2(!menuParent, "the console's menu opened through a label whose own callback answers right-clicks");
+        QVERIFY2(!menuParent, "the console's menu opened through a label with a click or release callback");
     }
 
     // The player cannot see a link the label hides, so a right-click there must
