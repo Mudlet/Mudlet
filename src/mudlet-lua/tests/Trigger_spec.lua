@@ -751,11 +751,14 @@ describe("Trigger processing", function()
         -- colour matcher has to follow it rather than read past the end of the buffer
         it("should still match after an earlier trigger deletes a line above the one being processed", function()
             local fired = {}
+            local countBefore, countAfter
             feedTriggers("\27[31mline above that a trigger deletes\27[0m\n")
             local doomed = getLineNumber()
             local deleter = tempTrigger("DeleteAboveMarker", function()
                 moveCursor(0, doomed)
+                countBefore = getLineCount()
                 deleteLine()
+                countAfter = getLineCount()
             end)
             local colorTrigger = tempAnsiColorTrigger(1, -1, function() fired[#fired + 1] = matches[1] end)
             finally(function()
@@ -765,11 +768,13 @@ describe("Trigger processing", function()
 
             feedTriggers("\27[31mDeleteAboveMarker red text\27[0m\n")
 
+            assert.are.equal(countBefore - 1, countAfter)
             assert.are.same({"DeleteAboveMarker red text"}, fired)
         end)
 
         it("should match the original colors of a recolored line after a line above it is deleted", function()
             local fired = {}
+            local countBefore, countAfter
             feedTriggers("\27[31mline above a recolored one\27[0m\n")
             local doomed = getLineNumber()
             local recolorAndDelete = tempTrigger("RecolorThenDeleteAbove", function()
@@ -777,7 +782,9 @@ describe("Trigger processing", function()
                 setFgColor(0, 255, 0)
                 resetFormat()
                 moveCursor(0, doomed)
+                countBefore = getLineCount()
                 deleteLine()
+                countAfter = getLineCount()
             end)
             local colorTrigger = tempAnsiColorTrigger(1, -1, function() fired[#fired + 1] = matches[1] end)
             finally(function()
@@ -787,6 +794,7 @@ describe("Trigger processing", function()
 
             feedTriggers("\27[31mRecolorThenDeleteAbove red\27[0m\n")
 
+            assert.are.equal(countBefore - 1, countAfter)
             assert.are.same({"RecolorThenDeleteAbove red"}, fired)
         end)
 
@@ -867,12 +875,15 @@ describe("Trigger processing", function()
 
         it("should still match after a trigger in a nested pass deletes a line above", function()
             local fired = {}
+            local countBefore, countAfter
             feedTriggers("\27[31mline above that a nested trigger deletes\27[0m\n")
             local doomed = getLineNumber()
             local outer = tempTrigger("NestedPassOuterMarker", function() feedTriggers("NestedPassInnerMarker\n") end)
             local inner = tempTrigger("NestedPassInnerMarker", function()
                 moveCursor(0, doomed)
+                countBefore = getLineCount()
                 deleteLine()
+                countAfter = getLineCount()
             end)
             local colorTrigger = tempAnsiColorTrigger(1, -1, function() fired[#fired + 1] = matches[1] end)
             finally(function()
@@ -883,6 +894,7 @@ describe("Trigger processing", function()
 
             feedTriggers("\27[31mNestedPassOuterMarker red\27[0m\n")
 
+            assert.are.equal(countBefore - 1, countAfter)
             assert.are.same({"NestedPassOuterMarker red"}, fired)
         end)
 
@@ -910,7 +922,12 @@ describe("Trigger processing", function()
 
         it("should still match the line being processed after an earlier trigger clears the window", function()
             local fired = {}
-            local clearer = tempTrigger("ClearedPassLineMarker", function() clearWindow() end)
+            local countBefore, countAfter
+            local clearer = tempTrigger("ClearedPassLineMarker", function()
+                countBefore = getLineCount()
+                clearWindow()
+                countAfter = getLineCount()
+            end)
             local colorTrigger = tempAnsiColorTrigger(1, -1, function() fired[#fired + 1] = matches[1] end)
             finally(function()
                 killTrigger(clearer)
@@ -919,17 +936,21 @@ describe("Trigger processing", function()
 
             feedTriggers("\27[31mClearedPassLineMarker red\27[0m\n")
 
+            assert.is_true(countAfter < countBefore, "the window should have been cleared")
             assert.are.same({"ClearedPassLineMarker red"}, fired)
         end)
 
         it("should match each line once when a trigger feeds a red line and then deletes a line above", function()
             local fired = {}
+            local countBefore, countAfter
             feedTriggers("\27[31mline above that is deleted after a nested pass\27[0m\n")
             local doomed = getLineNumber()
             local deleter = tempTrigger("FeedThenDeleteMarker", function()
                 feedTriggers("\27[31mfed red line\27[0m\n")
                 moveCursor(0, doomed)
+                countBefore = getLineCount()
                 deleteLine()
+                countAfter = getLineCount()
             end)
             local colorTrigger = tempAnsiColorTrigger(1, -1, function() fired[#fired + 1] = matches[1] end)
             finally(function()
@@ -939,13 +960,17 @@ describe("Trigger processing", function()
 
             feedTriggers("\27[31mFeedThenDeleteMarker red\27[0m\n")
 
+            assert.are.equal(countBefore - 1, countAfter)
             assert.are.same({"fed red line", "FeedThenDeleteMarker red"}, fired)
         end)
 
         it("should match each line once when a trigger deletes the line being processed and then feeds a red line", function()
             local fired = {}
+            local countBefore, countAfter
             local deleter = tempTrigger("DeleteThenFeedMarker", function()
+                countBefore = getLineCount()
                 deleteLine()
+                countAfter = getLineCount()
                 feedTriggers("\27[31mred line fed after the deletion\27[0m\n")
             end)
             local colorTrigger = tempAnsiColorTrigger(1, -1, function() fired[#fired + 1] = matches[1] end)
@@ -956,16 +981,20 @@ describe("Trigger processing", function()
 
             feedTriggers("\27[31mDeleteThenFeedMarker red\27[0m\n")
 
+            assert.are.equal(countBefore - 1, countAfter)
             assert.are.same({"red line fed after the deletion", "DeleteThenFeedMarker red"}, fired)
         end)
 
         it("should match part of a line in several colours after a line above it is deleted", function()
             local fired = {}
+            local countBefore, countAfter
             feedTriggers("line above a line in several colours\n")
             local doomed = getLineNumber()
             local deleter = tempTrigger("SeveralColoursMarker", function()
                 moveCursor(0, doomed)
+                countBefore = getLineCount()
                 deleteLine()
+                countAfter = getLineCount()
             end)
             local colorTrigger = tempAnsiColorTrigger(1, -1, function() fired[#fired + 1] = matches[1] end)
             finally(function()
@@ -975,6 +1004,7 @@ describe("Trigger processing", function()
 
             feedTriggers("SeveralColoursMarker plain \27[31mred part\27[0m tail\n")
 
+            assert.are.equal(countBefore - 1, countAfter)
             assert.are.same({"red part"}, fired)
         end)
 
@@ -1003,33 +1033,6 @@ describe("Trigger processing", function()
             assert.are.same({"RewrapAboveMarker red"}, fired)
         end)
 
-        it("should wrap the line being processed after a trigger feeds a line and deletes one above", function()
-            local wrapAt = getWindowWrap("main")
-            local deleter
-            finally(function()
-                if deleter then killTrigger(deleter) end
-                setWindowWrap("main", wrapAt)
-            end)
-            setWindowWrap("main", 40)
-            feedTriggers("line above that is deleted before the wrap\n")
-            local doomed = getLineNumber()
-            deleter = tempTrigger("WrapAfterDeleteMarker", function()
-                feedTriggers("line fed before the wrap\n")
-                moveCursor(0, doomed)
-                deleteLine()
-            end)
-
-            feedTriggers("WrapAfterDeleteMarker" .. string.rep(" wrapped words", 6) .. "\n")
-
-            local longest = 0
-            for lineNumber = math.max(0, getLineCount() - 8), getLineCount() do
-                moveCursor(0, lineNumber)
-                longest = math.max(longest, utf8.len(getCurrentLine()))
-            end
-            moveCursorEnd()
-            assert.is_true(longest <= 40, "no line should be left longer than the wrap width, the longest is " .. longest)
-        end)
-
         local function lastLineReading(text)
             for lineNumber = getLineCount(), 0, -1 do
                 moveCursor(0, lineNumber)
@@ -1049,6 +1052,46 @@ describe("Trigger processing", function()
             moveCursorEnd()
             return {r, g, b}
         end
+
+        it("should wrap the line being processed after a trigger feeds a line and deletes one above", function()
+            local wrapAt = getWindowWrap("main")
+            local deleter
+            finally(function()
+                if deleter then killTrigger(deleter) end
+                setWindowWrap("main", wrapAt)
+            end)
+            setWindowWrap("main", 40)
+            feedTriggers("line above that is deleted before the wrap\n")
+            local doomed = getLineNumber()
+            local countBefore, countAfter
+            deleter = tempTrigger("WrapAfterDeleteMarker", function()
+                feedTriggers("line fed before the wrap\n")
+                moveCursor(0, doomed)
+                countBefore = getLineCount()
+                deleteLine()
+                countAfter = getLineCount()
+            end)
+
+            feedTriggers("WrapAfterDeleteMarker" .. string.rep(" wrapped words", 6) .. "\n")
+
+            -- the parts of the line, from its start down to the line it fed, which comes after it
+            local parts = {}
+            for lineNumber = lastLineReading("line fed before the wrap") - 1, 0, -1 do
+                moveCursor(0, lineNumber)
+                local text = getCurrentLine()
+                table.insert(parts, 1, text)
+                if text:find("^WrapAfterDeleteMarker") or #parts > 10 then
+                    break
+                end
+            end
+            moveCursorEnd()
+            assert.are.equal(countBefore - 1, countAfter)
+            assert.is_truthy(parts[1]:find("^WrapAfterDeleteMarker"), "the line being processed should come before the line it fed")
+            assert.is_true(#parts > 1, "the line being processed should have been wrapped")
+            for _, part in ipairs(parts) do
+                assert.is_true(utf8.len(part) <= 40, "no part of the line should be longer than the wrap width: " .. part)
+            end
+        end)
 
         for _, kind in ipairs({"colour", "regex"}) do
             it("should highlight the line being processed after a line above it is deleted, by a " .. kind .. " trigger", function()
@@ -3535,7 +3578,10 @@ describe("Trigger processing", function()
             local doomed = getLineNumber()
             feed("colour chain line the parent removes\n")
             _G.ColorFilterSpec.chainDoomed = doomed
+            local countBefore = getLineCount()
             feed("\27[35mChainDeleteMarker magenta\27[0m\n")
+            -- one line in, two gone
+            assert.are.equal(countBefore - 1, getLineCount())
             assert.are.equal("ChainDeleteMarker magenta", _G.ColorFilterSpec.colourChainChildCapture)
         end)
 
