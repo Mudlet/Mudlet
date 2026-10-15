@@ -742,6 +742,17 @@ local msdpStats = {
   { key = "enemy", current = "OPPONENT_HEALTH", max = "OPPONENT_HEALTH_MAX", transient = true },
 }
 
+-- the first value found for a stat wins, so when a node is present in two
+-- casings the conventional capitalised one (Char.Maxstats) is read first
+local function gmcpNameBefore(a, b)
+  local aCapitalised = a == a:sub(1, 1):upper() .. a:sub(2):lower()
+  local bCapitalised = b == b:sub(1, 1):upper() .. b:sub(2):lower()
+  if aCapitalised ~= bCapitalised then
+    return aCapitalised
+  end
+  return a &lt; b
+end
+
 -- appends every table found at path in any casing; sorted, so a game sending
 -- two casings of one node has them read in the same order every time
 local function addGmcpNodes(path, found)
@@ -756,7 +767,7 @@ local function addGmcpNodes(path, found)
             names[#names + 1] = name
           end
         end
-        table.sort(names)
+        table.sort(names, gmcpNameBefore)
         for _, name in ipairs(names) do
           nextLevel[#nextLevel + 1] = node[name]
         end

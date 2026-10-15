@@ -2374,6 +2374,13 @@ describe("Tests UI functions", function()
       end
     end)
 
+    it("should read the capitalised spelling first when a node is present in two casings", function()
+      _G.gmcp = { Char = { Vitals = { hp = 50 }, Maxstats = { maxhp = 300 }, MaxStats = { maxhp = 100 } } }
+      raiseEvent("gmcp.Char.Maxstats")
+      assert.are.equal(1, #applied)
+      assert.are.same({ current = 50, max = 300 }, applied[1].hp)
+    end)
+
     it("should update before a handler registered later for the same message", function()
       _G.gmcp = { Char = { Vitals = { hp = 50, maxhp = 100 } } }
       local seen
