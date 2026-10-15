@@ -958,23 +958,52 @@ do
     return true
   end
 
+  -- one buffer per nesting level, as a handler can raise another event
+  local dispatchBuffers = {}
+  local dispatchDepth = 0
+
+  local function collectHandlers(buffer, n, list)
+    for key, func in pairs(list) do
+      buffer[n + 1], buffer[n + 2], buffer[n + 3] = list, key, func
+      n = n + 3
+    end
+    return n
+  end
+
   -- Dispatches an event to the registered lua functions.
   -- The order of registered events is not preserved.
   -- name: The name of the event that was fired.
   -- ...:  All arguments passed to the raised event.
   function dispatchEventToFunctions(event, ...)
-    if handlers[event] then
-      for _, func in pairs(handlers[event]) do
+    local eventHandlers, anyHandlers = handlers[event], handlers["*"]
+    if not eventHandlers and not anyHandlers then
+      return
+    end
+    -- Handlers run from a copy: Lua 5.1's next() can fail on a key added while pairs() walks the
+    -- table, and one registered mid-dispatch waits for the next event; one killed or replaced
+    -- mid-dispatch no longer holds its slot, so it is skipped
+    dispatchDepth = dispatchDepth + 1
+    local buffer = dispatchBuffers[dispatchDepth]
+    if not buffer then
+      buffer = {}
+      dispatchBuffers[dispatchDepth] = buffer
+    end
+    local n = 0
+    if eventHandlers then
+      n = collectHandlers(buffer, n, eventHandlers)
+    end
+    if anyHandlers then
+      n = collectHandlers(buffer, n, anyHandlers)
+    end
+    for i = 1, n, 3 do
+      local list, key, func = buffer[i], buffer[i + 1], buffer[i + 2]
+      buffer[i], buffer[i + 1], buffer[i + 2] = nil, nil, nil
+      if list[key] == func then
         local success, error = pcall(func, event, ...)
         if not success then showHandlerError(event, error) end
       end
     end
-    if handlers["*"] then
-      for _, func in pairs(handlers["*"]) do
-        local success, error = pcall(func, event, ...)
-        if not success then showHandlerError(event, error) end
-      end
-    end
+    dispatchDepth = dispatchDepth - 1
   end
 end
 
