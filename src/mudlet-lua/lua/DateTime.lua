@@ -57,6 +57,15 @@ function datetime:calculate_UTCdiff(ts)
 end
 
 
+function datetime:_days_in_month(year, month)
+  if month == 2 then
+    local leap = (year % 4 == 0 and year % 100 ~= 0) or year % 400 == 0
+    return leap and 29 or 28
+  end
+  return (month == 4 or month == 6 or month == 9 or month == 11) and 30 or 31
+end
+
+
 -- NOT LUADOC
 -- The rex.match function does not return named patterns even if you use named capture
 -- groups, but the r:tfind does -- but this only operates on compiled patterns. So,
@@ -84,6 +93,13 @@ end
 --- of seconds since 1970. This is a useful format for exchanging date/times with other systems. If as_epoch
 --- is false, then a Lua time table will be returned. Details of the time tables are provided
 --- in the http://www.lua.org/pil/22.1.html. <br/><br/>
+---
+--- A format without a date part (such as "^%H:%M:%S$") or with only part of one (such as "^%Y-%m$") returns
+--- a time table with only the fields it parsed and no isdst, which os.time() cannot take. With as_epoch, a
+--- format without a date part is placed on today's date, and a partial date takes the current year (and
+--- month, when it has a day) and starts a missing month or day at 1, so "^%Y-%m$" gives the first of that
+--- month. With as_epoch, a missing hour is 12 and a missing minute or second is 0, as in os.time(); a partial
+--- date that does not exist (such as "02-29" outside a leap year, or the 31st in a 30-day month) returns nil. <br/><br/>
 ---
 --- Supported Format Codes
 ---   </pre>
@@ -141,7 +157,27 @@ function datetime:parse(source, format, as_epoch)
 
     dt.min = tonumber(m.minute)
     dt.sec = tonumber(m.second)
-    dt.isdst = os.date("*t", os.time(dt))["isdst"]
+
+    if as_epoch and not (dt.year and dt.month and dt.day) then
+      local today = os.date("*t")
+      if not (dt.year or dt.month or dt.day) then
+        dt.year, dt.month, dt.day = today.year, today.month, today.day
+      end
+      dt.year = dt.year or today.year
+      dt.month = dt.month or (dt.day and today.month or 1)
+      -- not today's day: it could be past the end of a parsed month
+      dt.day = dt.day or 1
+      -- os.time() would roll an impossible date (the 31st in a 30-day month, 29 February outside a leap year,
+      -- month 13) into another day; check the date alone, as normalising the time can move the day too
+      if dt.month < 1 or dt.month > 12 or dt.day < 1 or dt.day > datetime:_days_in_month(dt.year, dt.month) then
+        return nil
+      end
+    end
+
+    -- os.time() raises on a table without a full date
+    if dt.year and dt.month and dt.day then
+      dt.isdst = os.date("*t", os.time(dt))["isdst"]
+    end
 
     if as_epoch then
       return os.time(dt)
