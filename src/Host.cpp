@@ -722,6 +722,7 @@ void Host::loadMapAndConnect(const bool connect)
     // too, so a family the profile names can be told apart from one that is
     // merely not loaded yet - and in the GUI the real console exists, so the stand-in
     // this may pick lands on it and the warning reaches the player.
+    mDisplayFontCheckReached = true;
     substituteMissingDisplayFont();
 
     // Now load the default (latest stored) map file:
@@ -1971,6 +1972,8 @@ bool Host::substituteMissingDisplayFont()
     // Only this branch remembers anything: a "Family Style" name resolves to a
     // base family that IS installed, so saving that name is no loss.
     mMissingDisplayFontFamily = requestedFamily;
+    // Lost anew, so an unusable copy coming back is news again
+    mRefusedDisplayFontFamily.clear();
 
     qWarning().nospace().noquote() << "Host::substituteMissingDisplayFont() WARNING - the font \"" << requestedFamily << "\" this profile asks for is not installed, using \"" << scmDefaultFontFamily
                                    << "\" instead.";
@@ -3760,11 +3763,14 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         raiseEvent(detailedInstallEvent);
     });
 
-    // Queued behind the install events: putting a font back runs the sysSettingChanged handlers
-    // of every open profile, and one that removes this package must not be heard before its
-    // sysInstall. A sync brings no fonts.
+    // Queued behind the install events, the outermost install's included: putting a font back runs every
+    // profile's sysSettingChanged handlers, which must not hear of it before sysInstall. A sync brings no fonts.
     if (thing != enums::PackageModuleType::ModuleSync) {
-        QTimer::singleShot(0ms, this, []() {
+        mDisplayFontRestoreOwed = true;
+    }
+    if (mPackagesBeingInstalled.isEmpty() && std::exchange(mDisplayFontRestoreOwed, false)) {
+        // Not this Host as the context: the restore is for every profile, and this one may close first
+        QTimer::singleShot(0ms, QCoreApplication::instance(), []() {
             restoreMissingDisplayFonts();
         });
     }
@@ -4097,14 +4103,8 @@ bool Host::uninstallPackage(const QString& packageName, enums::PackageModuleType
     const QString dest = MudletApp::getMudletPath(enums::profilePackagePath, getName(), packageName);
     removeDir(dest, dest);
 
-    // The fonts this package brought went out with it, so a display font that
-    // came from it is now missing - in any open profile, as fonts are registered
-    // for the whole application - and Qt would quietly render some other family
-    // instead. It has to sit past the reinstall above: uninstalling a module
-    // that shares a package's name puts that package and its fonts straight
-    // back, and moving off the font in between would warn about a font that
-    // is not gone. Past removeDir() too, because changing the font runs the
-    // profiles' sysSettingChanged handlers.
+    // Past the module reinstall above, which can put this package's fonts straight back, and past
+    // removeDir(), as changing the font runs every open profile's sysSettingChanged handlers
     substituteMissingDisplayFonts();
 
     // save the profile on the next Qt main loop cycle in order for the asyncronous save mechanism
@@ -4525,7 +4525,7 @@ void Host::substituteMissingDisplayFonts()
 {
     if (auto* hosts = HostManager::self()) {
         for (const auto& pHost : hosts->hostList()) {
-            if (pHost && !pHost->isClosingDown()) {
+            if (pHost && !pHost->isClosingDown() && pHost->mDisplayFontCheckReached) {
                 pHost->substituteMissingDisplayFont();
             }
         }

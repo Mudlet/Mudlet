@@ -803,6 +803,9 @@ private:
     // The missing family whose return the player has already been told could not be
     // used, so that every later install does not say it again
     QString mRefusedDisplayFontFamily;
+    // Set by loadMapAndConnect(): until then the fonts of this profile's own modules may not be
+    // registered yet, so another profile's uninstall must not judge its display font missing
+    bool mDisplayFontCheckReached = false;
     // Co-owned with the main-console view rather than owned outright: mudlet
     // destroys the Host before the lingering console widget, so a Host-owned
     // model would leave the view's aliasing references dangling. Reached
@@ -1376,6 +1379,8 @@ private:
     // runUninstallsDeferredByAnInstall() once the outermost install has finished
     // and the install events it queued have gone out.
     QList<DeferredUninstall> mUninstallsDeferredByAnInstall;
+    // A nested install's fonts are put back only once the outermost install has queued its own events
+    bool mDisplayFontRestoreOwed = false;
     QScopedPointer<LuaInterface> mLuaInterface;
 
     // Experiment system storage: key -> enabled state

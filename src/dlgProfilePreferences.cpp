@@ -9069,9 +9069,8 @@ void dlgProfilePreferences::rememberDisplayFontFamilyShown()
 
 void dlgProfilePreferences::slot_displayFontChanged()
 {
-    // QFontComboBox moves off a family by itself when it leaves the font database, as when the
-    // package that brought it is uninstalled. That is no choice of the user's, and the profile's
-    // own check is about to put the stand-in up and say so.
+    // QFontComboBox moves off a family by itself when its package is uninstalled: no choice of the
+    // user's, and the profile's own check is about to put the stand-in up and say so
     const QString shownBefore = mDisplayFontFamilyShown;
     rememberDisplayFontFamilyShown();
     if (mpHost.isNull() || (!shownBefore.isEmpty() && !mpHost->resolveFontFamily(shownBefore).available)) {
@@ -9106,13 +9105,14 @@ void dlgProfilePreferences::slot_hostDisplayFontChanged(const QFont& font)
         fontComboBox_displayFont->setCurrentFont(font);
         spinBox_displayFontSize->setMaximum(std::max(font.pointSize(), spinBox_displayFontSize->maximum()));
         spinBox_displayFontSize->setValue(std::max(1, font.pointSize()));
-        // Not fontsAntiAlias(): that flag is only written when the dialog closes, so it would undo a toggle made here
+        // Not fontsAntiAlias(): applyAll() writes that from this box only once the apply timer fires
         checkBox_antiAlias->setChecked(!(font.styleStrategy() & QFont::NoAntialias));
     }
     rememberDisplayFontFamilyShown();
-    // Not the user's edits, so they must not keep refreshFromSettings() from re-reading the rest -
-    // nor must the line edits inside the list and the spin box, which the snapshot holds as well
-    for (QWidget* pControl : {static_cast<QWidget*>(fontComboBox_displayFont), static_cast<QWidget*>(spinBox_displayFontSize), static_cast<QWidget*>(checkBox_antiAlias)}) {
+    // Not the user's edits, so they must not keep refreshFromSettings() from re-reading the rest - nor
+    // the line edits inside the list and the spin box, which the snapshot holds as well. The anti-alias
+    // box stays dirty, as this runs for the dialog's own toggle too and applyAll() must still store it
+    for (QWidget* pControl : {static_cast<QWidget*>(fontComboBox_displayFont), static_cast<QWidget*>(spinBox_displayFontSize)}) {
         mSnapshot.take(pControl);
         for (const auto* pPart : pControl->findChildren<QWidget*>()) {
             if (SettingsSnapshot::carriesValue(pPart)) {
