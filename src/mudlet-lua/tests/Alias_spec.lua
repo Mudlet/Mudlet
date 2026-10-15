@@ -388,8 +388,8 @@ describe("Alias processing", function()
                 return table.concat(getLines("main", mark, getLastLineNumber("main") + 1), "")
             end
 
-            -- checked first: on a profile that never echoes commands both would be silent
-            assert.is_truthy(echoed("expand_alias_echo_absent"):find("expand_alias_echo_absent", 1, true), "this profile does not echo commands, so the spec cannot tell the two apart")
+            -- checked first: while the game has taken over the echo (remote echo, as for a password) both would be silent
+            assert.is_truthy(echoed("expand_alias_echo_absent"):find("expand_alias_echo_absent", 1, true), "commands are not being echoed (is remote echo active?), so the spec cannot tell the two apart")
             assert.is_truthy(echoed("expand_alias_echo_nil", nil):find("expand_alias_echo_nil", 1, true), "a nil echo flag suppressed the echo")
             assert.is_truthy(echoed("expand_alias_echo_true", true):find("expand_alias_echo_true", 1, true), "an explicit true suppressed the echo")
             assert.is_falsy(echoed("expand_alias_echo_false", false):find("expand_alias_echo_false", 1, true), "an explicit false should still suppress the echo")

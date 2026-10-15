@@ -259,7 +259,9 @@ if false then
   --- Command field or a script other than an alias that it set off has expanded or set one.
   ---
   --- @param command text to process as if it was typed at the command line
-  --- @param echo optional boolean: false keeps the command from being shown; leaving it out or passing nil shows it
+  --- @param echo optional boolean: false keeps the command from being shown; leaving it out or passing nil shows it.
+  ---   It only has an effect while "Show sent commands" is "Script controlled" (the default): "Always" and "Never"
+  ---   override it, as does a game that has taken over the echo (for a password, for instance)
   ---
   --- @see send
   function expandAlias(command, echo)
@@ -1041,7 +1043,9 @@ if false then
   ---   </pre>
   ---
   --- @param echoTheValue optional boolean flag (default value is true) which determine if value should
-  ---   be echoed back on client.
+  ---   be echoed back on client. It only has an effect while "Show sent commands" is "Script controlled" (the
+  ---   default): "Always" and "Never" override it, as does a game that has taken over the echo (for a password,
+  ---   for instance)
   ---
   --- @see expandAlias
   --- @see sendAll
