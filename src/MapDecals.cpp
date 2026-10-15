@@ -271,6 +271,22 @@ QImage taggedSymbol(const QString& symbol, const QColor& color, const QColor& pl
     return image;
 }
 
+QImage taggedName(const QString& name, const QColor& color, const QColor& plate, const QFont& font, const QFontMetricsF& metrics, const int pad)
+{
+    QImage image = clearImage(QSize(qMax(1, qCeil(metrics.horizontalAdvance(name))) + 2 * pad, qMax(1, qCeil(metrics.height())) + 2 * pad), plate);
+    QPainter painter(&image);
+    painter.setRenderHint(QPainter::Antialiasing);
+    painter.setPen(Qt::NoPen);
+    painter.setBrush(plate);
+    const qreal radius = image.height() * 0.3;
+    painter.drawRoundedRect(QRectF(image.rect()), radius, radius);
+    QPainterPath path;
+    path.addText(pad, pad + metrics.ascent(), font, name);
+    painter.fillPath(path, color);
+    painter.end();
+    return image;
+}
+
 QString titleLevelLine(const int shownLevel, const QList<int>& areaLevels)
 {
     const qsizetype sheet = areaLevels.indexOf(shownLevel);

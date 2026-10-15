@@ -2453,6 +2453,12 @@ private slots:
         map()->mpRoomDB->getRoom(kLowerRoomId)->setExit(kEastRoomId, DIR_UP);
         map()->mpRoomDB->getRoom(kPlayerRoomId)->setExit(kLowerRoomId, DIR_NORTH);
         map()->mpRoomDB->getRoom(kLowerRoomId)->setExit(kPlayerRoomId, DIR_SOUTH);
+        // A door on the way east, whose strokes stand taller than the line; and a path on the level below
+        map()->mpRoomDB->getRoom(kPlayerRoomId)->doors[qsl("e")] = 1;
+        constexpr int kLowerEastRoomId = 4;
+        QVERIFY(addRoomAt(kLowerEastRoomId, areaId, 2, 2, -1));
+        map()->mpRoomDB->getRoom(kLowerRoomId)->setExit(kLowerEastRoomId, DIR_EAST);
+        map()->mpRoomDB->getRoom(kLowerEastRoomId)->setExit(kLowerRoomId, DIR_WEST);
         ModernGLWidget widget(map(), mpHost);
         const auto& commands = widget.mRenderCommandQueue.commands();
         // Anything but a model's own shapes standing above the player's room: the beacon
@@ -2598,15 +2604,15 @@ private slots:
 
         // The path east from the player's room lies on the ground, not halfway up the blocks
         bool path = false;
-        float pathMiddle = 0.0f;
+        float pathFoot = 0.0f;
         for (const auto& command : commands) {
             if (const auto* cubes = dynamic_cast<const RenderInstancedCubesCommand*>(command.get()); cubes && cubes->shading() == RenderCommand::Shading::ModelPath) {
                 for (const CubeInstanceData& cube : cubes->instances()) {
                     const QVector4D center = cube.transform.column(3);
                     if (qAbs(center.x() - 1.0f) < 0.3f && qAbs(center.y()) < 1e-4f) {
                         QVERIFY2(center.z() < -roomHeight / 4.0f && center.z() > -roomHeight / 2.0f, qPrintable(qsl("the path's middle is at %1").arg(center.z())));
-                        if (cube.color[3] >= 1.0f) {
-                            pathMiddle = center.z();
+                        if (cube.color[3] >= 1.0f && qAbs(cube.transform.column(0).x()) > 0.2f) {
+                            pathFoot = center.z() - cube.transform.column(2).z();
                             path = true;
                         }
                     }
@@ -2615,21 +2621,34 @@ private slots:
         }
         QVERIFY2(path, "the exit between the rooms is not a path");
 
-        // The same path shows again as a faint, thinner line over the paving and grass that would hide it
+        // The same path, door and all, shows again as a faint line just over the thickest tile, so over the paving and
+        // grass that would hide it: only the viewed level's, and only where it lies flat, not up a shaft or a slope
+        const float pavedFoot = pathFoot + DioramaLayout::flatTileTop(roomHeight);
         bool pavedLine = false;
+        bool pavedDoor = false;
         for (const auto& command : commands) {
             if (const auto* cubes = dynamic_cast<const RenderInstancedCubesCommand*>(command.get()); cubes && cubes->shading() == RenderCommand::Shading::ModelPath) {
                 for (const CubeInstanceData& cube : cubes->instances()) {
                     const QVector4D center = cube.transform.column(3);
-                    if (qAbs(center.x() - 1.0f) < 0.3f && qAbs(center.y()) < 1e-4f && cube.color[3] < 0.5f) {
-                        QVERIFY2(center.z() - cube.transform.column(2).z() > pathMiddle + DioramaLayout::flatTileTop(roomHeight) / 2.0f,
-                                 qPrintable(qsl("the line over the paving is at %1, under the grass").arg(center.z())));
+                    const float halfHeight = cube.transform.column(2).z();
+                    // Thinner than any line is drawn, so the faint copy
+                    if (cube.transform.column(2).toVector3D().length() >= 0.01f * roomHeight) {
+                        continue;
+                    }
+                    QVERIFY2(qAbs(cube.transform.column(0).z()) < 1e-5f, qPrintable(qsl("a faint line climbs or falls at %1,%2").arg(center.x()).arg(center.y())));
+                    QVERIFY2(center.y() < 1.0f, qPrintable(qsl("the level below's path has a faint line, at %1").arg(center.z())));
+                    QVERIFY2(qAbs(center.z() - halfHeight - pavedFoot) < 1e-4f,
+                             qPrintable(qsl("a faint line's foot is at %1, not just over the tiles at %2").arg(center.z() - halfHeight).arg(pavedFoot)));
+                    QVERIFY(cube.color[3] < 0.5f);
+                    if (qAbs(center.x() - 1.0f) < 0.3f && qAbs(center.y()) < 1e-4f) {
                         pavedLine = true;
                     }
+                    pavedDoor = pavedDoor || qAbs(cube.transform.column(0).y()) > qAbs(cube.transform.column(0).x());
                 }
             }
         }
         QVERIFY2(pavedLine, "the path has no line over the paving");
+        QVERIFY2(pavedDoor, "the door has no faint strokes over the paving");
 
         // The shaft up from the room below, one-way and so in two pieces, starts on the ground as the paths do but rises
         // from where it did, clear of the block's top
@@ -2759,21 +2778,28 @@ private slots:
         constexpr int kFirstStoreyId = 11;
         constexpr int kWaterRoomId = 20;
         constexpr int kWater = 310;
+        constexpr int kForestRoomId = 22;
+        constexpr int kForest = 311;
         for (int storey = 1; storey <= 3; ++storey) {
             QVERIFY(addRoomAt(kFirstStoreyId + storey - 1, areaId, 2, 0, storey));
         }
         QVERIFY(addRoomAt(kWaterRoomId, areaId, 4, 0, 0));
         map()->mCustomEnvColors[kWater] = QColor(60, 120, 200);
         map()->mpRoomDB->getRoom(kWaterRoomId)->environment = kWater;
+        QVERIFY(addRoomAt(kForestRoomId, areaId, 6, 0, 0));
+        map()->mCustomEnvColors[kForest] = QColor(90, 160, 70);
+        map()->mpRoomDB->getRoom(kForestRoomId)->environment = kForest;
+        QVERIFY(EnvironmentKit::store(map()->mUserData, kForest, EnvironmentKit::Kit::Forest));
         TRoom* pPlayerRoom = map()->mpRoomDB->getRoom(kPlayerRoomId);
         pPlayerRoom->highlight = true;
         pPlayerRoom->highlightColor = QColor(Qt::red);
         pPlayerRoom->highlightColor2 = QColor(Qt::green);
         pPlayerRoom->highlightRadius = 1.0f;
-        const auto restore = qScopeGuard([this, kWater]() {
+        const auto restore = qScopeGuard([this, kWater, kForest]() {
             mpHost->setMapStyle(qsl("tiles"));
             map()->mUserData.remove(EnvironmentKit::userDataKey());
             map()->mCustomEnvColors.remove(kWater);
+            map()->mCustomEnvColors.remove(kForest);
         });
         QVERIFY(mpHost->setMapStyle(qsl("diorama")));
         ModernGLWidget widget(map(), mpHost);
@@ -2920,7 +2946,49 @@ private slots:
         QVERIFY(EnvironmentKit::store(map()->mUserData, kWater, EnvironmentKit::Kit::Road));
         queueFrame(widget, areaId);
         QVERIFY(shapesAt(RenderCommand::Shading::ModelWater, GeometryManager::InstanceShape::Box, QPointF(4.0, 0.0)).isEmpty());
-        QCOMPARE(shapesAt(RenderCommand::Shading::ModelBlock, GeometryManager::InstanceShape::Box, QPointF(4.0, 0.0)).size(), 1);
+        const QList<CubeInstanceData> paving = shapesAt(RenderCommand::Shading::ModelBlock, GeometryManager::InstanceShape::Box, QPointF(4.0, 0.0));
+        QCOMPARE(paving.size(), 1);
+
+        // A highlighted paved room glows on its paving, not on the board the paving would hide it under
+        const QColor magenta(255, 0, 255);
+        TRoom* pRoadRoom = map()->mpRoomDB->getRoom(kWaterRoomId);
+        pRoadRoom->highlight = true;
+        pRoadRoom->highlightColor = magenta;
+        pRoadRoom->highlightColor2 = QColor(Qt::green);
+        pRoadRoom->highlightRadius = 1.0f;
+        const auto unhighlightRoad = qScopeGuard([pRoadRoom]() {
+            pRoadRoom->highlight = false;
+        });
+        queueFrame(widget, areaId);
+        const float pavingTop = paving.first().transform.column(3).z() + paving.first().transform.column(2).z();
+        QVERIFY2(pavingTop > ground + 1e-3f, "the paving is no thicker than the board");
+        const std::optional<float> roadGlow = glowAt(magenta, QPointF(4.0, 0.0));
+        QVERIFY2(roadGlow, "a highlighted paved room has no glow");
+        QVERIFY2(*roadGlow >= pavingTop - 1e-5f, qPrintable(qsl("a paved room's glow is at height %1, under its paving's top at %2").arg(*roadGlow).arg(pavingTop)));
+
+        // A forest is a grass tile with from one to three trees standing on it, each a trunk under a crown
+        const QList<CubeInstanceData> grass = shapesAt(RenderCommand::Shading::ModelBlock, GeometryManager::InstanceShape::Box, QPointF(6.0, 0.0));
+        QCOMPARE(grass.size(), 1);
+        const float grassTop = grass.first().transform.column(3).z() + grass.first().transform.column(2).z();
+        QVERIFY2(grassTop < ground + DioramaLayout::flatTileTop(roomHeight) + 1e-4f, "the grass is a block, not a tile");
+        QMap<GeometryManager::InstanceShape, int> treeParts;
+        for (const auto& command : commands) {
+            const auto* cubes = dynamic_cast<const RenderInstancedCubesCommand*>(command.get());
+            if (!cubes || cubes->shading() != RenderCommand::Shading::ModelBlock
+                || (cubes->shape() != GeometryManager::InstanceShape::Cone && cubes->shape() != GeometryManager::InstanceShape::Cylinder)) {
+                continue;
+            }
+            for (const CubeInstanceData& cube : cubes->instances()) {
+                const QVector4D center = cube.transform.column(3);
+                if (qAbs(center.x() - 6.0f) < 0.5f && qAbs(center.y()) < 0.5f) {
+                    QVERIFY2(center.z() - cube.transform.column(2).z() >= grassTop - 1e-4f, "a tree is sunk in the grass");
+                    ++treeParts[cubes->shape()];
+                }
+            }
+        }
+        const int trees = treeParts.value(GeometryManager::InstanceShape::Cone);
+        QVERIFY2(trees >= 1 && trees <= 3, qPrintable(qsl("the forest has %1 trees").arg(trees)));
+        QCOMPARE(treeParts.value(GeometryManager::InstanceShape::Cylinder), trees);
 
         // The shafts between the building's storeys are left out, but not one down out of its foot to a room below
         constexpr int kCellarId = 21;
@@ -2946,6 +3014,46 @@ private slots:
         }
         QVERIFY2(shaftFoot < -0.5f, "the shaft down to the room below the building is left out");
         QVERIFY2(shaftTop < roomHeight, qPrintable(qsl("a shaft between the building's storeys rises to %1").arg(shaftTop)));
+    }
+
+    // A symbol and a name each stand on a white tag where their color shows on it, and go without where it would not
+    void test_dioramaPutsSymbolsAndNamesOnTagsTheyShowOn()
+    {
+        const int areaId = addArea();
+        QVERIFY(areaId > 0);
+        TRoom* pPlayerRoom = map()->mpRoomDB->getRoom(kPlayerRoomId);
+        TRoom* pEastRoom = map()->mpRoomDB->getRoom(kEastRoomId);
+        pPlayerRoom->mSymbol = qsl("$");
+        pEastRoom->mSymbol = qsl("%");
+        pEastRoom->mSymbolColor = QColor(250, 250, 210);
+        pPlayerRoom->name = qsl("Market Cross");
+        pEastRoom->name = qsl("Mill");
+        pEastRoom->userData.insert(ROOM_UI_NAMECOLOR, qsl("#fafad2"));
+        map()->setRoomNamesShown(true);
+        const auto restore = qScopeGuard([this]() {
+            mpHost->setMapStyle(qsl("tiles"));
+            map()->setRoomNamesShown(false);
+        });
+        QVERIFY(mpHost->setMapStyle(qsl("diorama")));
+        const MapStyle& diorama = mpHost->mapStylePreset();
+        QVERIFY(diorama.symbolPlate.isValid() && diorama.roomNamePlate.isValid());
+        ModernGLWidget widget(map(), mpHost);
+        queueFrame(widget, areaId);
+        // The key a texture of this kind was drawn under, for text which it ends with or which comes before its tag's color
+        const auto drawnKey = [&widget](const QString& kind, const QString& text) {
+            for (const QString& key : std::as_const(widget.mRoomTexturesInUse)) {
+                if (key.startsWith(kind) && (key.endsWith(qsl("|%1").arg(text)) || key.contains(qsl("|%1|").arg(text)))) {
+                    return key;
+                }
+            }
+            return QString();
+        };
+        const QString plate = qsl("|%1").arg(diorama.roomNamePlate.name(QColor::HexArgb));
+        QCOMPARE(diorama.symbolPlate, diorama.roomNamePlate);
+        QVERIFY2(drawnKey(qsl("symbol|"), qsl("$")).contains(plate), "a symbol in its usual color has no tag");
+        QVERIFY2(!drawnKey(qsl("symbol|"), qsl("%")).isEmpty() && !drawnKey(qsl("symbol|"), qsl("%")).contains(plate), "a light symbol was put on a white tag");
+        QVERIFY2(drawnKey(qsl("name|"), qsl("Market Cross")).contains(plate), "a name has no tag");
+        QVERIFY2(!drawnKey(qsl("name|"), qsl("Mill")).isEmpty() && !drawnKey(qsl("name|"), qsl("Mill")).contains(plate), "a light name was put on a white tag");
     }
 
     // Looking down: the board is wood under a pale sky, a room's top is lighter on the edge toward the light than on the
