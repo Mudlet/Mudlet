@@ -3449,6 +3449,23 @@ describe("Trigger processing", function()
             end)
         end)
 
+        it("keeps its capture positions right when its command's alias edits the line", function()
+            withTrigger("command edits line", function(cleanup)
+                local aliasId = tempAlias([[^tkcmdedit mark$]], function()
+                    moveCursor(0, getLineNumber())
+                    insertText("[!] ")
+                end)
+                cleanup(function() killAlias(aliasId) end)
+
+                feedTriggers("tkcmdedit goblin\n")
+
+                local seen = _G.TriggerKindsSpec.commandEdit or {}
+                assert.are.equal("[!] tkcmdedit goblin", seen.line, "the alias should have edited the trigger's line")
+                assert.are.equal(1, seen.selected, "the trigger's capture should still be selectable")
+                assert.are.equal("goblin", seen.selection, "the alias's insert should have moved the trigger's capture along")
+            end)
+        end)
+
         -- A filter ("only pass matches") parent hands its children the text it
         -- matched instead of the line, whatever kind of pattern did the matching.
         -- Each child below matches ^(.+)$ and records what it was given.
