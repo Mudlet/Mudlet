@@ -3166,7 +3166,7 @@ headlessScroll = ok and "ok" or tostring(err)
                                     qsl("cleared=[1]0[1]0"),
                                     qsl("fedAfterClear=[1]30[1]30")};
         QCOMPARE(luaGlobalString(host, "scrollMain"), mainSteps.join(QLatin1Char(';')));
-        QCOMPARE(luaGlobalString(host, "scrollMainForms"), qsl("[0][1]30;[0][1]25;[0][1]20;[0][1]30;[1]true[1]true[1]true[1]true"));
+        QCOMPARE(luaGlobalString(host, "scrollMainForms"), qsl("[0][1]30;[0][1]25;[0][1]20;[0][1]30;[2]nil:msg[1]true[2]nil:msg[1]true"));
         const QStringList subConsoleSteps{qsl("fresh=[1]0[1]false[1]true"),
                                           qsl("filled=[1]60"),
                                           qsl("bar=[0][1]true[0][1]false"),
@@ -3193,15 +3193,15 @@ headlessScroll = ok and "ok" or tostring(err)
                                       qsl("filled=[1]60"),
                                       qsl("bar=[0][1]true[0][1]false"),
                                       qsl("hbar=[0][0]"),
-                                      qsl("frozen=[1]true[1]true[0][1]60"),
-                                      qsl("thawed=[1]true[1]true[0][1]60"),
+                                      qsl("frozen=[2]nil:msg[1]true[0][1]60"),
+                                      qsl("thawed=[2]nil:msg[1]true[0][1]60"),
                                       qsl("to10=[0][1]60"),
                                       qsl("to20=[0][1]60"),
                                       qsl("toMinus5=[0][1]60"),
                                       qsl("up3=[0][1]60"),
                                       qsl("down2=[0][1]60"),
                                       qsl("fedWhileBack=[1]65[1]65"),
-                                      qsl("frozenWhileBack=[1]true[1]65"),
+                                      qsl("frozenWhileBack=[2]nil:msg[1]65"),
                                       qsl("toMinus100=[0][1]65"),
                                       qsl("toEnd=[0][1]65"),
                                       qsl("to1000=[0][1]65"),

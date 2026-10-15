@@ -4511,11 +4511,14 @@ int TLuaInterpreter::pasteWindow(lua_State* L)
 int TLuaInterpreter::enableScrolling(lua_State* L)
 {
     const QString windowName{WINDOW_NAME(L, 1)};
-    if (windowName.compare(qsl("main"), Qt::CaseSensitive) == 0) {
+    if (isMain(windowName)) {
         return warnArgumentValue(L, __func__, "scrolling cannot be enabled/disabled for the 'main' window");
     }
 
     const Host& host = getHostFromLua(L);
+    if (host.windowRegistry().subConsoleKind(windowName) == TWindowRegistry::SubConsoleKind::Buffer) {
+        return warnArgumentValue(L, __func__, qsl("scrolling cannot be enabled/disabled for buffer \"%1\"").arg(windowName));
+    }
     if (!host.consoleFrontend()->setWindowScrolling(windowName, true)) {
         return windowNotFound(L, windowName);
     }
@@ -4527,11 +4530,14 @@ int TLuaInterpreter::enableScrolling(lua_State* L)
 int TLuaInterpreter::disableScrolling(lua_State* L)
 {
     const QString windowName{WINDOW_NAME(L, 1)};
-    if (windowName.compare(qsl("main"), Qt::CaseSensitive) == 0) {
+    if (isMain(windowName)) {
         return warnArgumentValue(L, __func__, "scrolling cannot be enabled/disabled for the 'main' window");
     }
 
     const Host& host = getHostFromLua(L);
+    if (host.windowRegistry().subConsoleKind(windowName) == TWindowRegistry::SubConsoleKind::Buffer) {
+        return warnArgumentValue(L, __func__, qsl("scrolling cannot be enabled/disabled for buffer \"%1\"").arg(windowName));
+    }
     if (!host.consoleFrontend()->setWindowScrolling(windowName, false)) {
         return windowNotFound(L, windowName);
     }
@@ -4543,8 +4549,8 @@ int TLuaInterpreter::disableScrolling(lua_State* L)
 int TLuaInterpreter::scrollingActive(lua_State* L)
 {
     const QString windowName{WINDOW_NAME(L, 1)};
-    if (windowName.compare(qsl("main"), Qt::CaseSensitive) == 0) {
-        // Handle the main console case:
+    if (isMain(windowName)) {
+        // The main console's scrolling can never be turned off, so this holds even with no view
         lua_pushboolean(L, true);
         return 1;
     }
