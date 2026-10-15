@@ -116,6 +116,31 @@ describe("Tests the functionality of IDMgr", function()
         raiseEvent(eventName)
         assert.are.same({"first", "second"}, calls)
       end)
+
+      it("Should finish the dispatch without the replacement when other handlers share the event", function()
+        for _, count in ipairs({2, 4}) do
+          local calls = {}
+          registerNamedEventHandler(user, "h1", eventName, function()
+            calls[#calls + 1] = "first"
+            registerNamedEventHandler(user, "h1", eventName, function() calls[#calls + 1] = "second" end)
+          end)
+          for i = 2, count do
+            registerNamedEventHandler(user, "h" .. i, eventName, function() calls[#calls + 1] = "other" end)
+          end
+          local anyId = registerAnonymousEventHandler("*", function(event)
+            if event == eventName then calls[#calls + 1] = "any" end
+          end)
+          finally(function() killAnonymousEventHandler(anyId) end)
+          local dispatched, err = pcall(dispatchEventToFunctions, eventName)
+          killAnonymousEventHandler(anyId)
+          assert.is_true(dispatched, err)
+          table.sort(calls)
+          local expected = {"any", "first"}
+          for _ = 2, count do expected[#expected + 1] = "other" end
+          assert.are.same(expected, calls)
+          deleteAllNamedEventHandlers(user)
+        end
+      end)
     end)
 
     describe("Tests the functionality of stopNamedEventHandler", function()
