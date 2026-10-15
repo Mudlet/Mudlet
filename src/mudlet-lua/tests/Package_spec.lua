@@ -1673,11 +1673,11 @@ describe("Tests installing one name as both a package and a module", function()
                     "the reload left the folder it unpacked into in the profile, under the archive's file name")
   end)
 
-  -- The folder an install is staged in is taken away again on every way out, so
-  -- one still sitting there is the leavings of an install that was interrupted.
-  -- Unpacking on top of it would import whatever it still holds under the name
-  -- being installed, which is somebody else's items under the user's package.
-  it("does not install what a staging folder left over from an interrupted install holds", function()
+  -- "x.mudlet-installing" is a name a package can have, so a folder of that name
+  -- beside a staged install may be somebody's. Unpacking on top of it would
+  -- import whatever it holds under the name being installed, and clearing it out
+  -- would delete files nobody knows the owner of.
+  it("neither installs nor deletes what a folder called <name>.mudlet-installing holds", function()
     lfs.mkdir(scratchDirectory)
     local squatterDirectory = scratchDirectory .. "/under-the-file-name"
     lfs.mkdir(squatterDirectory)
@@ -1692,8 +1692,8 @@ describe("Tests installing one name as both a package and a module", function()
     installUntilConfirmed(installPackage, squatter, function() return packageInstalled("mudlet-spec-renamer") end,
                           "a package under the renaming archive's file name")
 
-    -- only a name the other half already holds is staged, which is why the
-    -- package above has to be installed first for this folder to be in the way
+    -- the module below is only staged because the package above holds its file
+    -- name; its staging folder gets a random suffix, so one without is no install's
     local leftOver = getMudletHomeDir() .. "/mudlet-spec-renamer.mudlet-installing"
     lfs.mkdir(leftOver)
     defer(function()
@@ -1732,6 +1732,7 @@ describe("Tests installing one name as both a package and a module", function()
                           "the renaming fixture as a module past a leftover staging folder")
 
     assert.equals(0, exists("mudlet-spec-leftover alias", "alias"), "the leftover staging folder's items were installed under the module's name")
+    assert.is_true(fileExists(leftOver .. "/mudlet-spec-leftover.xml"), "the install deleted a folder it did not make")
   end)
 
   it("refuses a module whose config.lua renames it onto an installed module", function()
@@ -3097,6 +3098,359 @@ describe("Tests installing a map file as if it were a package", function()
     installUntilConfirmed(installPackage, xml, function() return packageInstalled(name) end, "the map file " .. name)
 
     assert.same(areasBefore, getAreaTable(), "a map file installed as a package replaced the profile's map")
+  end)
+end)
+
+-- A package's folder is the profile folder of the same name, so one named after
+-- a folder the profile keeps its own data in must not take that folder with it
+-- when it goes. A bare XML package has no folder and is let in under any name;
+-- what is pinned here is that uninstalling it never deletes the profile's data.
+-- "LOG" is the profile's log folder wherever the file system ignores case.
+describe("Tests uninstalling a package named after one of the profile's own folders", function()
+  for _, name in ipairs({"media", "log", "map", "current", "LOG"}) do
+    it("leaves the profile's " .. name:lower() .. " folder alone for a package called " .. name, function()
+      -- the log folder is made with the profile
+      if name ~= name:lower() and not fileExists(getMudletHomeDir() .. "/" .. name) then
+        pending("this file system tells " .. name .. " from " .. name:lower() .. ", so a package of that name has a folder of its own")
+        return
+      end
+      local folder = getMudletHomeDir() .. "/" .. name:lower()
+      local precious = folder .. "/mudlet-spec-precious.txt"
+      local xml = scratchDirectory .. "/" .. name .. ".xml"
+      local madeTheFolder = not fileExists(folder)
+      lfs.mkdir(folder)
+      lfs.mkdir(scratchDirectory)
+      defer(function()
+        removeFixturePackage(name)
+        os.remove(precious)
+        if madeTheFolder then
+          lfs.rmdir(folder)
+        end
+        os.remove(xml)
+        lfs.rmdir(scratchDirectory)
+      end)
+      local file = io.open(precious, "wb")
+      assert.is_not_nil(file, "could not write " .. precious)
+      file:write("not the package's")
+      file:close()
+      writePackageXml(xml, table.concat({
+        '<ScriptPackage>',
+        '<Script isActive="yes" isFolder="no">',
+        '<name>mudlet-spec ' .. name .. ' script</name><packageName></packageName>',
+        '<script></script><eventHandlerList/>',
+        '</Script>',
+        '</ScriptPackage>',
+      }, "\n"))
+
+      installUntilConfirmed(installPackage, xml, function() return packageInstalled(name) end, "the package " .. name)
+      removeFixturePackage(name)
+
+      assert.is_true(fileExists(precious), "uninstalling the package " .. name .. " deleted the profile's own " .. name:lower() .. " folder")
+    end)
+  end
+end)
+
+-- An archive unpacks into the profile folder of its name, so one of these names
+-- would put the package in among the profile's own files. map, current and media
+-- are only made when first needed, and a package let in before then would share
+-- the folder from then on, so each name is refused whether the folder is there
+-- yet or not.
+describe("Tests installing an archive named after one of the profile's own folders", function()
+  local home = getMudletHomeDir()
+  local media = home .. "/media"
+  local claimsMedia = fixtureDirectory .. "/mudlet-spec-claimsmedia.mpackage"
+
+  local function emptyAndRemove(folder)
+    if fileExists(folder) then
+      for entry in lfs.dir(folder) do
+        if entry ~= "." and entry ~= ".." then
+          os.remove(folder .. "/" .. entry)
+        end
+      end
+      lfs.rmdir(folder)
+    end
+  end
+
+  local function assertNoStagingFolderLeft()
+    for entry in lfs.dir(home) do
+      assert.is_nil(entry:find("mudlet%-installing"), "the install stranded the folder it unpacked: " .. entry)
+    end
+  end
+
+  -- Media_spec.lua and MSP_spec.lua run first and leave the profile a media
+  -- folder, so it is moved aside to see an install into a profile with none.
+  local function withNoMediaFolder()
+    local stash = home .. "/busted-package-media-stash"
+    if fileExists(media) and not os.rename(media, stash) then
+      return false
+    end
+    defer(function()
+      emptyAndRemove(media)
+      if fileExists(stash) then
+        os.rename(stash, media)
+      end
+    end)
+    return true
+  end
+
+  it("refuses a config.lua that asks for the media folder while the profile has none yet", function()
+    if not withNoMediaFolder() then
+      pending("the profile's media folder could not be moved aside")
+      return
+    end
+    defer(function() removeFixturePackage("media") end)
+
+    local reason = installUntilRefused(installPackage, claimsMedia)
+
+    assert.is_true(contains(reason, "keeps its own files"), tostring(reason))
+    assert.is_false(packageInstalled("media"), "the package took the name of the folder the profile downloads media into")
+    assert.is_false(fileExists(media), "the refused install made the profile's media folder its own")
+    assertNoStagingFolderLeft()
+    assert.is_false(fileExists(home .. "/mudlet-spec-claimsmedia"), "the refused install stranded the folder it unpacked")
+  end)
+
+  it("refuses a config.lua that asks for the media folder once the profile has one", function()
+    local precious = media .. "/mudlet-spec-precious.wav"
+    local madeTheFolder = not fileExists(media)
+    lfs.mkdir(media)
+    defer(function()
+      removeFixturePackage("media")
+      os.remove(precious)
+      if madeTheFolder then
+        lfs.rmdir(media)
+      end
+    end)
+    local file = io.open(precious, "wb")
+    assert.is_not_nil(file, "could not write " .. precious)
+    file:write("not the package's")
+    file:close()
+
+    local reason = installUntilRefused(installPackage, claimsMedia)
+
+    assert.is_true(contains(reason, "keeps its own files"), tostring(reason))
+    assert.is_false(packageInstalled("media"), "the package was installed into the profile's media folder")
+    assert.is_true(fileExists(precious), "the refused install touched the profile's media files")
+    assert.is_false(fileExists(media .. "/config.lua"), "the refused install unpacked into the profile's media folder")
+    assertNoStagingFolderLeft()
+    assert.is_false(fileExists(home .. "/mudlet-spec-claimsmedia"), "the refused install stranded the folder it unpacked")
+  end)
+
+  it("refuses an archive called media whose config.lua keeps that name, without unpacking into the media folder", function()
+    local precious = media .. "/mudlet-spec-precious.wav"
+    local archive = scratchDirectory .. "/media.mpackage"
+    local madeTheFolder = not fileExists(media)
+    lfs.mkdir(media)
+    lfs.mkdir(scratchDirectory)
+    defer(function()
+      removeFixturePackage("media")
+      os.remove(precious)
+      os.remove(media .. "/config.lua")
+      os.remove(media .. "/mudlet-spec-claimsmedia.xml")
+      if madeTheFolder then
+        lfs.rmdir(media)
+      end
+      os.remove(archive)
+      lfs.rmdir(scratchDirectory)
+    end)
+    local file = io.open(precious, "wb")
+    assert.is_not_nil(file, "could not write " .. precious)
+    file:write("not the package's")
+    file:close()
+    copyFile(claimsMedia, archive)
+
+    local reason = installUntilRefused(installPackage, archive)
+
+    assert.is_true(contains(reason, "keeps its own files"), tostring(reason))
+    -- renaming the file would not help, as the name comes from config.lua
+    assert.is_true(contains(reason, "config.lua"), tostring(reason))
+    assert.is_true(fileExists(precious), "the refused install touched the profile's media files")
+    assert.is_false(fileExists(media .. "/config.lua"), "the archive was unpacked into the profile's media folder")
+    assert.is_false(fileExists(media .. "/mudlet-spec-claimsmedia.xml"), "the archive was unpacked into the profile's media folder")
+    assertNoStagingFolderLeft()
+  end)
+
+  it("unpacks an archive whose file is called media beside the profile's media folder", function()
+    local precious = media .. "/mudlet-spec-precious.wav"
+    local archive = scratchDirectory .. "/media.mpackage"
+    local madeTheFolder = not fileExists(media)
+    lfs.mkdir(media)
+    lfs.mkdir(scratchDirectory)
+    defer(function()
+      removeFixturePackage(minimalPackage)
+      os.remove(precious)
+      if madeTheFolder then
+        lfs.rmdir(media)
+      end
+      os.remove(archive)
+      lfs.rmdir(scratchDirectory)
+    end)
+    local file = io.open(precious, "wb")
+    assert.is_not_nil(file, "could not write " .. precious)
+    file:write("not the package's")
+    file:close()
+    -- its config.lua renames it, so the name it ends up with is a package's own
+    copyFile(fixtureDirectory .. "/" .. minimalPackage .. ".mpackage", archive)
+
+    installUntilConfirmed(installPackage, archive, function() return packageInstalled(minimalPackage) end, "the archive called media")
+
+    assert.is_true(fileExists(precious), "the install carried the profile's media folder off as the package's")
+    assert.is_false(fileExists(home .. "/" .. minimalPackage .. "/mudlet-spec-precious.wav"),
+                    "the profile's media files ended up in the package's folder")
+    assert.is_false(fileExists(media .. "/config.lua"), "the archive was unpacked into the profile's media folder")
+    -- the folder it was staged in became the package's, so it has to be made like any other
+    assert.equals(lfs.attributes(scratchDirectory, "permissions"), lfs.attributes(home .. "/" .. minimalPackage, "permissions"),
+                  "the package's folder was not made the way the profile's folders are")
+    assertNoStagingFolderLeft()
+  end)
+
+  for _, name in ipairs({"log", "map", "current"}) do
+    it("refuses an archive called " .. name .. " with no config.lua, leaving the profile's " .. name .. " folder as it was", function()
+      local folder = home .. "/" .. name
+      local precious = folder .. "/mudlet-spec-precious.txt"
+      local archive = scratchDirectory .. "/" .. name .. ".mpackage"
+      local madeTheFolder = not fileExists(folder)
+      lfs.mkdir(folder)
+      lfs.mkdir(scratchDirectory)
+      defer(function()
+        removeFixturePackage(name)
+        os.remove(folder .. "/mudlet-spec-noconfig.xml")
+        os.remove(precious)
+        if madeTheFolder then
+          lfs.rmdir(folder)
+        end
+        os.remove(archive)
+        lfs.rmdir(scratchDirectory)
+      end)
+      local file = io.open(precious, "wb")
+      assert.is_not_nil(file, "could not write " .. precious)
+      file:write("not the package's")
+      file:close()
+      copyFile(fixtureDirectory .. "/mudlet-spec-noconfig.mpackage", archive)
+
+      local reason = installUntilRefused(installPackage, archive)
+
+      assert.is_true(contains(reason, "keeps its own files"), tostring(reason))
+      assert.is_false(packageInstalled(name), "the package took the profile's " .. name .. " folder")
+      assert.is_true(fileExists(precious), "the install touched the profile's " .. name .. " files")
+      assert.is_false(fileExists(folder .. "/mudlet-spec-noconfig.xml"), "the archive was unpacked into the profile's " .. name .. " folder")
+      assertNoStagingFolderLeft()
+    end)
+  end
+
+  -- The unpacking dialog of a large archive runs the event loop, so another
+  -- install can start while one is still unpacking into its staging folder.
+  it("leaves the staging folder of an install still unpacking to it when another install of that name starts", function()
+    if package.config:sub(1, 1) == "\\" then
+      pending("builds its archive with the zip command")
+      return
+    end
+    local renamed = "mudlet-spec-reentrant"
+    local big = scratchDirectory .. "/big"
+    local small = scratchDirectory .. "/small"
+    local bigArchive = big .. "/log.mpackage"
+    local smallArchive = small .. "/log.mpackage"
+    lfs.mkdir(scratchDirectory)
+    lfs.mkdir(big)
+    lfs.mkdir(small)
+    defer(function()
+      removeFixturePackage("mudlet-spec-renamed")
+      removeFixtureModule(renamed, "log")
+      for _, file in ipairs({big .. "/config.lua", big .. "/" .. renamed .. ".xml", big .. "/padding.bin", bigArchive, smallArchive}) do
+        os.remove(file)
+      end
+      lfs.rmdir(big)
+      lfs.rmdir(small)
+      lfs.rmdir(scratchDirectory)
+    end)
+    local function write(path, contents)
+      local file = io.open(path, "wb")
+      assert.is_not_nil(file, "could not write " .. path)
+      file:write(contents)
+      file:close()
+    end
+    write(big .. "/config.lua", "mpackage = [[" .. renamed .. "]]\n")
+    write(big .. "/" .. renamed .. ".xml", [[<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE MudletPackage>
+<MudletPackage version="1.001">
+	<AliasPackage>
+		<Alias isActive="yes" isFolder="no">
+			<name>mudlet-spec-reentrant alias</name>
+			<script></script>
+			<command></command>
+			<packageName></packageName>
+			<regex>^mudlet-spec-reentrant$</regex>
+		</Alias>
+	</AliasPackage>
+</MudletPackage>
+]])
+    -- big enough for an unpacking dialog, which only a sync of the module puts up
+    write(big .. "/padding.bin", string.rep("x", 26 * 1024 * 1024))
+    local zipped = os.execute("cd '" .. big .. "' && zip -q -0 log.mpackage config.lua " .. renamed .. ".xml padding.bin")
+    if zipped ~= 0 and zipped ~= true then
+      pending("the zip command is not available")
+      return
+    end
+    copyFile(fixtureDirectory .. "/mudlet-spec-renamer.mpackage", smallArchive)
+    installUntilConfirmed(installModule, bigArchive, function() return moduleInstalled(renamed) end, "the large module from an archive called log")
+
+    local stagingFoldersWhileUnpacking
+    tempTimer(0, function()
+      stagingFoldersWhileUnpacking = {}
+      for entry in lfs.dir(home) do
+        if entry:find("mudlet-installing", 1, true) then
+          stagingFoldersWhileUnpacking[#stagingFoldersWhileUnpacking + 1] = entry
+        end
+      end
+      installPackage(smallArchive)
+    end)
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running after 5s, so the sync would be postponed")
+    reloadModule(renamed)
+
+    assert.is_not_nil(stagingFoldersWhileUnpacking, "SETUP: the other install did not start while the module was unpacking")
+    assert.equals(1, #stagingFoldersWhileUnpacking, "SETUP: the module's sync did not unpack into a staging folder")
+    assert.is_true(waitUntil(function() return packageInstalled("mudlet-spec-renamed") end, 5000), "the install started during the sync never landed")
+    assert.is_true(moduleInstalled(renamed), "the sync lost the module")
+    assert.equals(1, exists("mudlet-spec-reentrant alias", "alias"), "the sync lost the module's items to the other install")
+    assertNoStagingFolderLeft()
+  end)
+
+  -- A module is reinstalled from its archive on every sync, and the sync is let
+  -- through under any name, as the profile already holds what it reinstalls.
+  it("keeps the profile's log folder when it syncs a module from an archive called log", function()
+    local log = home .. "/log"
+    local renamed = "mudlet-spec-renamed"
+    local moduleFolder = home .. "/" .. renamed
+    local precious = log .. "/mudlet-spec-precious.txt"
+    local madeTheFolder = not fileExists(log)
+    lfs.mkdir(log)
+    lfs.mkdir(scratchDirectory)
+    local archive = scratchDirectory .. "/log.mpackage"
+    defer(function()
+      removeFixtureModule(renamed, "log")
+      os.remove(precious)
+      if madeTheFolder then
+        lfs.rmdir(log)
+      end
+    end)
+    local file = io.open(precious, "wb")
+    assert.is_not_nil(file, "could not write " .. precious)
+    file:write("not the module's")
+    file:close()
+    copyFile(fixtureDirectory .. "/mudlet-spec-renamer.mpackage", archive)
+    installUntilConfirmed(installModule, archive, function() return moduleInstalled(renamed) end, "the renaming fixture as a module called log")
+
+    for round = 1, 2 do
+      -- the reload unpacks a fresh config.lua, which is how this sees that it happened
+      os.remove(moduleFolder .. "/config.lua")
+      assert.is_true(waitForProfileSaveToPass(), "SETUP: a save was still running, so the reload would have been dropped")
+      reloadModuleUntil(renamed, function() return fileExists(moduleFolder .. "/config.lua") end)
+
+      assert.is_true(moduleInstalled(renamed), "the reload took the module away")
+      assert.is_true(fileExists(precious), "reload " .. round .. " carried the profile's log folder off as the module's")
+      assert.is_false(fileExists(moduleFolder .. "/mudlet-spec-precious.txt"), "reload " .. round .. " put the profile's logs in the module's folder")
+      assert.is_false(fileExists(log .. "/config.lua"), "reload " .. round .. " unpacked the module into the profile's log folder")
+      assertNoStagingFolderLeft()
+    end
   end)
 end)
 
