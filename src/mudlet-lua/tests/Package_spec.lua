@@ -2771,6 +2771,218 @@ describe("Tests installing a package whose Lua does not work", function()
   end)
 end)
 
+-- A script whose body fails as the profile opens, or is reset, is reported each
+-- time, not only when its package was installed. The suite's own profile cannot be
+-- reopened from inside it, so this loads a second one, which reads its own
+-- console back from a script of its own.
+describe("Tests opening a profile whose script fails as it loads", function()
+  local name = "mudlet-spec-load-broken-script"
+  local moduleName = "mudlet-spec-load-broken-module"
+  local packageName = "mudlet-spec-load-broken-package"
+  local directory = getMudletHomeDir():match("^(.*)[/\\]") .. "/" .. name
+  -- written into the profile made here, so a profile of the same name that
+  -- this spec did not make is never deleted
+  local markerName = "mudlet-spec-fixture"
+  local marker = directory .. "/" .. markerName
+  local reportPhrase = "failed to run when the profile loaded"
+
+  local function removeTree(path)
+    if lfs.attributes(path, "mode") ~= "directory" then
+      os.remove(path)
+      return
+    end
+    for entry in lfs.dir(path) do
+      if entry ~= "." and entry ~= ".." then
+        removeTree(path .. "/" .. entry)
+      end
+    end
+    lfs.rmdir(path)
+  end
+
+  -- The marker goes only once everything else has, so a file that cannot be
+  -- deleted yet leaves the directory still owned by this spec for the next run
+  -- to finish off
+  local function removeOwnedProfile()
+    if not lfs.attributes(marker) then
+      return
+    end
+    for entry in lfs.dir(directory) do
+      if entry ~= "." and entry ~= ".." and entry ~= markerName then
+        removeTree(directory .. "/" .. entry)
+      end
+    end
+    for entry in lfs.dir(directory) do
+      if entry ~= "." and entry ~= ".." and entry ~= markerName then
+        return
+      end
+    end
+    os.remove(marker)
+    lfs.rmdir(directory)
+  end
+
+  local function loaded()
+    local entry = getProfiles()[name]
+    return entry ~= nil and entry.loaded
+  end
+
+  local function scriptXml(scriptName, body, attributes)
+    attributes = attributes or {}
+    return table.concat({
+      '<Script isActive="', attributes.inactive and "no" or "yes", '" isFolder="', attributes.children and "yes" or "no", '">',
+      '<name>', scriptName, '</name><packageName>', attributes.package or "", '</packageName>',
+      '<script>', body, '</script>',
+      '<eventHandlerList>', attributes.handler and ('<string>' .. attributes.handler .. '</string>') or "", '</eventHandlerList>',
+      table.concat(attributes.children or {}),
+      '</Script>',
+    })
+  end
+
+  local function countReports(text)
+    local count = 0
+    for _ in (tostring(text):gsub("%s+", "")):gmatch((reportPhrase:gsub("%s+", ""))) do
+      count = count + 1
+    end
+    return count
+  end
+
+  -- Opens the profile and returns a table that gains that profile's console
+  -- text each time its reporter script's body runs: once as it opens, and again
+  -- after every reset. A profile saved before installPackage() refused it can
+  -- hold one name as both a package and a module, which sharedName sets up.
+  local function openFixtureProfile(sharedName)
+    local packageName = sharedName and moduleName or packageName
+    assert.is_true(lfs.attributes(directory) == nil or lfs.attributes(marker) ~= nil,
+      "a profile named " .. name .. " already exists and is not this spec's to delete")
+    -- left behind by a run that crashed or was killed
+    removeOwnedProfile()
+    assert.is_nil(lfs.attributes(directory), "could not remove " .. directory .. " left behind by an earlier run")
+
+    -- closing a profile saves the shared window layout beside the profiles
+    -- directory, which the next Mudlet start reads, so put it back afterwards
+    local configurationDirectory = directory:match("^(.*)[/\\][^/\\]+[/\\][^/\\]+$")
+    local layoutFiles = {
+      configurationDirectory .. "/windowLayout.dat",
+      configurationDirectory .. "/windowLayoutGeometry.dat",
+    }
+    local layoutBefore = {}
+    for _, path in ipairs(layoutFiles) do
+      local handle = io.open(path, "rb")
+      if handle then
+        layoutBefore[path] = handle:read("*a")
+        handle:close()
+      end
+    end
+    defer(function()
+      for _, path in ipairs(layoutFiles) do
+        if layoutBefore[path] then
+          local handle = assert(io.open(path, "wb"))
+          handle:write(layoutBefore[path])
+          handle:close()
+        else
+          os.remove(path)
+        end
+      end
+    end)
+
+    local consoleTexts = {}
+    local handler = registerAnonymousEventHandler("mudletSpecLoadBrokenConsole", function(_, text)
+      consoleTexts[#consoleTexts + 1] = text
+    end)
+    defer(function()
+      killAnonymousEventHandler(handler)
+    end)
+    defer(function()
+      if loaded() then
+        closeProfile(name)
+      end
+      assert.is_true(waitUntil(function() return not loaded() end, 5000), "the profile " .. name .. " did not close, so it is left on disk")
+      removeOwnedProfile()
+      assert.is_nil(lfs.attributes(directory), "could not remove " .. directory)
+    end)
+
+    local made, whyNot = lfs.mkdir(directory)
+    assert.is_true(made, "could not make " .. directory .. ": " .. tostring(whyNot))
+    local markerFile, whyNotMarked = io.open(marker, "w")
+    assert.is_not_nil(markerFile, "could not write " .. marker .. ": " .. tostring(whyNotMarked))
+    markerFile:close()
+    made, whyNot = lfs.mkdir(directory .. "/current")
+    assert.is_true(made, "could not make " .. directory .. "/current: " .. tostring(whyNot))
+
+    -- the module's file is read again on every open, so its script fails on
+    -- every open too
+    local moduleFile = directory .. "/" .. moduleName .. ".xml"
+    writePackageXml(moduleFile, table.concat({
+      '<ScriptPackage>',
+      scriptXml("mudlet-spec-load-module-script", "mudletSpecMissingInModule()"),
+      '</ScriptPackage>',
+    }))
+    writePackageXml(directory .. "/current/2026-01-01#00-00-00.xml", table.concat({
+      '<HostPackage><Host>',
+      '<mInstalledPackages><string>', packageName, '</string></mInstalledPackages>',
+      '<mInstalledModules><key>', moduleName, '</key><filepath>', moduleFile, '</filepath>',
+      '<globalSave>0</globalSave><priority>-1</priority></mInstalledModules>',
+      '</Host></HostPackage>',
+      '<ScriptPackage>',
+      scriptXml("mudlet-spec-fails-at-load", "mudletSpecMissingAtLoad()"),
+      scriptXml("mudlet-spec-fixed-before-reset", "mudletSpecMissingUntilFixed()"),
+      scriptXml("mudlet-spec-disabled-before-reset", "mudletSpecMissingUntilDisabled()"),
+      scriptXml("mudlet-spec-inactive-fails", "mudletSpecMissingButInactive()", {inactive = true}),
+      scriptXml(packageName, "", {package = packageName, children = {
+        scriptXml("mudlet-spec-load-package-script", "mudletSpecMissingInPackage()"),
+      }}),
+      scriptXml("mudlet-spec-load-folder", "", {children = {
+        scriptXml("mudlet-spec-load-folder-script", "mudletSpecMissingInFolder()"),
+      }}),
+      scriptXml("mudletSpecLoadResetter",
+        'function mudletSpecLoadResetter() setScript("mudlet-spec-fixed-before-reset", "mudletSpecFixed = true") disableScript("mudlet-spec-disabled-before-reset") clearWindow() resetProfile() end',
+        {handler = "mudletSpecLoadBrokenReset"}),
+      scriptXml("mudlet-spec-load-reporter",
+        'tempTimer(0, function() raiseGlobalEvent("mudletSpecLoadBrokenConsole", table.concat(getLines("main", 0, getLastLineNumber("main") + 1), "\\n")) end)'),
+      '</ScriptPackage>',
+    }))
+
+    assert.is_true(loadProfile(name, true))
+    assert.is_true(waitUntil(function() return #consoleTexts >= 1 end, 5000), "the other profile never reported its console")
+    return consoleTexts
+  end
+
+  it("names the scripts that failed on that profile's console, once", function()
+    local consoleText = openFixtureProfile()[1]
+
+    assert.equals(1, countReports(consoleText), consoleText)
+    assert.is_true(containsWrapped(consoleText, '"mudlet-spec-fails-at-load"'), consoleText)
+    assert.is_true(containsWrapped(consoleText, '"mudlet-spec-fixed-before-reset"'), consoleText)
+    assert.is_true(containsWrapped(consoleText, '"mudlet-spec-load-package-script"'), "a package's script was not reported: " .. consoleText)
+    assert.is_true(containsWrapped(consoleText, '"mudlet-spec-load-folder-script"'), "a script inside a folder was not reported: " .. consoleText)
+    assert.is_false(containsWrapped(consoleText, '"mudlet-spec-load-reporter"'), "a script that ran fine was reported too: " .. consoleText)
+    assert.is_false(containsWrapped(consoleText, '"mudlet-spec-inactive-fails"'), "an inactive script was reported: " .. consoleText)
+    assert.is_false(containsWrapped(consoleText, '"mudlet-spec-load-module-script"'), "a module's script was reported: " .. consoleText)
+  end)
+
+  it("names them again after a reset, leaving out those fixed or disabled since", function()
+    local consoleTexts = openFixtureProfile()
+    assert.is_true(containsWrapped(consoleTexts[1], '"mudlet-spec-fixed-before-reset"'), consoleTexts[1])
+    assert.is_true(containsWrapped(consoleTexts[1], '"mudlet-spec-disabled-before-reset"'), consoleTexts[1])
+    raiseGlobalEvent("mudletSpecLoadBrokenReset")
+    assert.is_true(waitUntil(function() return #consoleTexts >= 2 end, 5000), "the other profile never reported its console after the reset")
+    local consoleText = consoleTexts[2]
+
+    assert.equals(1, countReports(consoleText), consoleText)
+    assert.is_true(containsWrapped(consoleText, '"mudlet-spec-fails-at-load"'), consoleText)
+    assert.is_true(containsWrapped(consoleText, '"mudlet-spec-load-folder-script"'), "a body that failed again in the reset was not reported: " .. consoleText)
+    assert.is_false(containsWrapped(consoleText, '"mudlet-spec-fixed-before-reset"'), "a script fixed before the reset was still reported: " .. consoleText)
+    assert.is_false(containsWrapped(consoleText, '"mudlet-spec-disabled-before-reset"'), "a script disabled before the reset was still reported: " .. consoleText)
+    assert.is_false(containsWrapped(consoleText, '"mudlet-spec-load-module-script"'), "a module's script was reported: " .. consoleText)
+  end)
+
+  it("names a package's script when a module has the package's name too", function()
+    local consoleText = openFixtureProfile(true)[1]
+
+    assert.is_true(containsWrapped(consoleText, '"mudlet-spec-load-package-script"'), "a package's script was not reported: " .. consoleText)
+    assert.is_false(containsWrapped(consoleText, '"mudlet-spec-load-module-script"'), "a module's script was reported: " .. consoleText)
+  end)
+end)
+
 -- The same failure the way a player meets it: an archive, whose XML files are
 -- read one at a time, holding more than one script that stops with an error.
 describe("Tests installing a package archive whose scripts stop with an error", function()
