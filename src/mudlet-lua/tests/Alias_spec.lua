@@ -488,7 +488,7 @@ describe("Alias processing", function()
 
             expandAlias("alias_feeds_command_outer", false)
 
-            assert.are.equal("set by the trigger", seen.command, "a trigger pass does not set command, so what its script put there should stay")
+            assert.are.equal("set by the trigger", seen.command, "feedTriggers() does not park command, so what the fed trigger's script put there should stay")
         end)
 
         -- "command" is set before any pattern is tried, so the commonest shape of
@@ -744,8 +744,8 @@ describe("Alias processing", function()
 
         -- Packages such as Repeater read "command" after an expandAlias() as the last command sent
         describe("command around expandAlias()", function()
-            -- Not straight from the spec: run through the runTests alias, that would
-            -- be an alias script, which gets its own "command" back
+            -- From an event handler, which is never an alias script, so the expansion
+            -- keeps its "command" even when the suite is started from inside an alias
             local function expandFromHandler(text)
                 local handlerId = registerAnonymousEventHandler("aliasSpecExpandFromHandler", function()
                     expandAlias(text, false)

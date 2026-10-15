@@ -1226,7 +1226,8 @@ int TLuaInterpreter::feedTriggers(lua_State* L)
     }
     const QByteArray data{lua_tostring(L, 1)};
     // During a trigger or alias pass this runs a whole trigger pass inside the calling script, so park
-    // its captures for it. Not "command": a trigger pass never sets it, but a script it runs may.
+    // its captures for it. Not "command": a fed trigger's Command field or script may expand a command,
+    // and the caller reads that back as the last command sent.
     TLuaInterpreter* pL = host.getLuaInterpreter();
     const bool nested = triggerUnit->processingDepth() > 0 || host.getAliasUnit()->processingDepth() > 0;
     auto feed = [L, &host, triggerUnit, pL, nested](std::string& text) {
