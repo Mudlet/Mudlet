@@ -680,6 +680,12 @@ void MudletApp::noteEarlySettingsStatus(const QSettings& settings)
     smEarlySettingsErrors.insert(settings.fileName(), settings.status());
 }
 
+QSettings::Status MudletApp::earlySettingsStatus(const QString& fileName)
+{
+    const QMutexLocker locker(&settingsMutex);
+    return smEarlySettingsErrors.value(fileName, QSettings::NoError);
+}
+
 bool MudletApp::portableRootInUse()
 {
     {
