@@ -1360,9 +1360,14 @@ end
 
 -- one level deep, which covers the colour tables getConfig() hands back
 local function sameConfigValue(key, wanted, current)
-  -- setConfig() takes mapInfoColor's alpha as optional, defaulting to opaque
-  if key == "mapInfoColor" and type(wanted) == "table" and wanted[4] == nil then
-    wanted = {wanted[1], wanted[2], wanted[3], 255}
+  -- read mapInfoColor as setConfig() does: components cut to whole numbers, and an alpha
+  -- that isn't a number is opaque
+  if key == "mapInfoColor" and type(wanted) == "table" then
+    local function component(value)
+      value = tonumber(value)
+      return value and (value < 0 and math.ceil(value) or math.floor(value))
+    end
+    wanted = {component(wanted[1]), component(wanted[2]), component(wanted[3]), component(wanted[4]) or 255}
   end
   if type(wanted) ~= "table" or type(current) ~= "table" then
     return wanted == current
