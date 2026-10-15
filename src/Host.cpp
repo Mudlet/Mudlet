@@ -3555,8 +3555,15 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         // make any fonts in the package available to Mudlet for use - before the
         // XML below is imported, because the scripts in it run as they are read
         // in and one of them may well want to use a font the package brought.
-        // A module sync too: the archive it unpacks can be a newer version
-        // bringing fonts of its own, and the ones already registered are skipped.
+        // A module sync too: the archive it unpacks can be a newer version with
+        // fonts of its own. Its old fonts are dropped first, as a file already
+        // registered is skipped by its path even when the unzip rewrote it with
+        // another font.
+        if (thing == enums::PackageModuleType::ModuleSync) {
+            if (auto* fonts = FontManager::self()) {
+                fonts->unloadFonts(getName(), packageName);
+            }
+        }
         installPackageFonts(packageName);
         QStringList _filterList;
         _filterList << qsl("*.xml") << qsl("*.trigger");

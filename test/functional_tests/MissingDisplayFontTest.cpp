@@ -96,6 +96,9 @@ private:
     const QString mModuleSuppliedFamily = qsl("Zqxwvu Modules Font Mono");
     // A font only a module's next version brings
     const QString mUpdatedModuleFamily = qsl("Zqxwvu Updated Font Mono");
+    // A module's next version that ships another font in a file of the same name
+    const QString mRewrittenModuleFamily = qsl("Zqxwvu Rewrite Font Mono");
+    const QString mRenamedModuleFamily = qsl("Zqxwvu Renamed Font Mono");
     // A module synced in from another profile
     const QString mSyncedModuleFamily = qsl("Zqxwvu Synced1 Font Mono");
     // Stands for a name no font database lists but the platform resolves anyway, like
@@ -900,6 +903,50 @@ private slots:
         pHost->waitForProfileSave();
         QVERIFY2(!FontManager::availableFonts().contains(mModuleSuppliedFamily, Qt::CaseInsensitive), "uninstalling the module left its font on the machine");
         QVERIFY2(!FontManager::availableFonts().contains(mUpdatedModuleFamily, Qt::CaseInsensitive), "uninstalling the module left the font its new version brought on the machine");
+    }
+
+    // The unzip rewrites a font file already registered by its path, so what the
+    // file now holds is what the reload has to register.
+    void test_reloadingAModuleWhoseFontFileNowHoldsAnotherFamilyRegistersIt()
+    {
+        const QString moduleName = qsl("font-rewrite");
+        const QString modulePath = mArchiveDir.filePath(qsl("%1.mpackage").arg(moduleName));
+        const QString fontFileName = qsl("%1.ttf").arg(moduleName);
+        const QByteArray fontBytes = renamedFontBytes(qsl(":/fonts/ttf-bitstream-vera-1.10/VeraMono.ttf"), Host::scmDefaultFontFamily, mRewrittenModuleFamily);
+        const QByteArray renamedBytes = renamedFontBytes(qsl(":/fonts/ttf-bitstream-vera-1.10/VeraMono.ttf"), Host::scmDefaultFontFamily, mRenamedModuleFamily);
+        QVERIFY2(!fontBytes.isEmpty() && !renamedBytes.isEmpty(), "the bundled font could not be read out of the Qt resources and renamed");
+        const QList<std::pair<QString, QByteArray>> entries{{fontFileName, fontBytes}, {qsl("%1.xml").arg(moduleName), minimalPackageXml(moduleName)}};
+        QVERIFY2(writeArchive(modulePath, entries), "could not write the test module archive");
+
+        const QString profileName = qsl("MissingDisplayFont-Rewrite-Test");
+        QVERIFY2(writeProfileSave(profileName, Host::scmDefaultFontFamily), "could not write the test profile save");
+        Host* pHost = mudlet::self()->loadProfile(profileName, false);
+        QVERIFY(pHost);
+        QVERIFY2(pHost->mLoadedOk, "the test profile save could not be loaded");
+        mudlet::self()->slot_connectionDialogueFinished(profileName, false);
+        QVERIFY2(pHost->mainConsoleView(), "the profile came up without a main console");
+        QVERIFY2(!FontManager::availableFonts().contains(mRenamedModuleFamily, Qt::CaseInsensitive),
+                 "the new version's family is already installed, so this cannot tell whether the reload registered it");
+
+        QVERIFY2(pHost->installPackage(modulePath, enums::PackageModuleType::ModuleFromUI).first, "the module carrying the font did not install");
+        pHost->waitForProfileSave();
+        QVERIFY2(FontManager::availableFonts().contains(mRewrittenModuleFamily, Qt::CaseInsensitive), "the module's font was never registered");
+
+        const QString updatedAliasOwner = qsl("%1 updated").arg(moduleName);
+        const QList<std::pair<QString, QByteArray>> updatedEntries{{fontFileName, renamedBytes}, {qsl("%1.xml").arg(moduleName), minimalPackageXml(updatedAliasOwner)}};
+        QVERIFY2(writeArchive(modulePath, updatedEntries), "could not write the updated test module archive");
+
+        pHost->reloadModule(moduleName);
+        pHost->waitForProfileSave();
+        QVERIFY2(pHost->getAliasUnit()->findFirstAlias(qsl("%1 alias").arg(updatedAliasOwner)), "the module's new version was never read in, so the reload did not run");
+        QVERIFY2(FontManager::availableFonts().contains(mRenamedModuleFamily, Qt::CaseInsensitive), "the font the rewritten file now holds was not registered by the reload");
+        QVERIFY(pHost->setDisplayFont(QFont(mRenamedModuleFamily, 12), Host::DisplayFontChange::UserChoice).first);
+        QCOMPARE(QFontInfo(pHost->getDisplayFont()).family(), mRenamedModuleFamily);
+        QVERIFY2(!FontManager::availableFonts().contains(mRewrittenModuleFamily, Qt::CaseInsensitive), "the family the file no longer holds is still registered");
+
+        QVERIFY2(pHost->uninstallPackage(moduleName, enums::PackageModuleType::ModuleFromUI), "the module did not uninstall at the end");
+        pHost->waitForProfileSave();
+        QVERIFY2(!FontManager::availableFonts().contains(mRenamedModuleFamily, Qt::CaseInsensitive), "uninstalling the module left its font on the machine");
     }
 
     // Saving a profile reloads its synced modules in every other profile from
