@@ -245,11 +245,13 @@ struct TConsoleModel
     void mirrorLineToStdOut(const QString& line);
     // What a write at mUserCursor leaves the view to do: show the lines it
     // appended, or repaint firstLine..lastLine, which it changed in place.
+    // linkDropped: insertLink() put its link on no text, so it took no luaReferences.
     struct WriteResult
     {
         bool appended = false;
         int firstLine = -1;
         int lastLine = -1;
+        bool linkDropped = false;
     };
     // echoLink() appends; the inserts go in at mUserCursor, text in
     // mFormatCurrent. While triggers run over this console's line, a write

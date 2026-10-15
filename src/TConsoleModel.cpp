@@ -437,23 +437,32 @@ TConsoleModel::WriteResult TConsoleModel::insertLink(const QString& text, QStrin
     const QPoint start = mUserCursor;
     const QPoint end(start.x() + text.size(), start.y());
     const TChar format = useCurrentFormat ? mFormatCurrent : standardLinkFormat(mBgColor);
+    // no link can go where the cursor is off every line or left of one, and insertInLine() would
+    // still append the text there, so the refusal comes before anything is written or moved
+    const bool cursorInText = start.x() >= 0 && start.y() >= 0 && start.y() < buffer.size();
     if (mTriggerEngineMode) {
+        if (!cursorInText) {
+            return {false, -1, -1, true};
+        }
         mpHost->getLuaInterpreter()->adjustCaptureGroups(start.x(), text.size());
         QPoint at = start;
         buffer.insertInLine(at, text, format);
-        buffer.applyLink(start, end, commands, hints, luaReferences);
+        const bool linkDropped = !buffer.applyLink(start, end, commands, hints, luaReferences);
         if (start.y() < mEngineCursor) {
-            return {false, mUserCursor.y(), mUserCursor.y()};
+            return {false, mUserCursor.y(), mUserCursor.y(), linkDropped};
         }
-        return {};
+        return {false, -1, -1, linkDropped};
     }
     if (buffer.buffer.empty() || mUserCursor == buffer.getEndPos()) {
         buffer.addLink(mTriggerEngineMode, text, commands, hints, format, luaReferences);
         return {true};
     }
+    if (!cursorInText) {
+        return {false, -1, -1, true};
+    }
 
     buffer.insertInLine(mUserCursor, text, format);
-    buffer.applyLink(start, end, commands, hints, luaReferences);
+    const bool linkDropped = !buffer.applyLink(start, end, commands, hints, luaReferences);
     const int line = mUserCursor.y();
     int newX = mUserCursor.x() + text.size();
     int down = 0;
@@ -465,7 +474,7 @@ TConsoleModel::WriteResult TConsoleModel::insertLink(const QString& text, QStrin
     if (buffer.moveCursor(newCursor)) {
         mUserCursor = QPoint(newX, line + down);
     }
-    return {false, line, line + down};
+    return {false, line, line + down, linkDropped};
 }
 
 bool TConsoleModel::echo(QString& text)
