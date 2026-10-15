@@ -2121,6 +2121,15 @@ void cTelnet::slot_replyFinished(QNetworkReply* reply)
             return;
         }
 
+        const QByteArray packageData = reply->readAll();
+        if (packageData.isEmpty()) {
+            //: %1 is the URL the game offered its package from
+            postMessage(tr("[ WARN ]  - Package download from '%1' was empty, so there is nothing to install.").arg(reply->url().toString()));
+            reply->deleteLater();
+            mpPackageDownloadReply = nullptr;
+            return;
+        }
+
         QSaveFile file(mServerPackage);
 
         if (!file.open(QFile::WriteOnly)) {
@@ -2132,7 +2141,7 @@ void cTelnet::slot_replyFinished(QNetworkReply* reply)
             return;
         }
 
-        file.write(reply->readAll());
+        file.write(packageData);
 
         if (!file.commit()) {
             //: %1 is the error message
@@ -2146,29 +2155,52 @@ void cTelnet::slot_replyFinished(QNetworkReply* reply)
         reply->deleteLater();
         mpPackageDownloadReply = nullptr;
 
-        // installPackage() reports the reason to the profile itself
-        if (!mpHost->installPackage(mServerPackage, enums::PackageModuleType::Package).first) {
-            return;
-        }
-
-        QString packageName = mServerPackage.section("/", -1);
-        packageName.remove(QLatin1String(".zip"), Qt::CaseInsensitive);
-        packageName.remove(QLatin1String(".trigger"), Qt::CaseInsensitive);
-        packageName.remove(QLatin1String(".xml"), Qt::CaseInsensitive);
-        packageName.remove(QLatin1String(".mpackage"), Qt::CaseInsensitive);
-        packageName.remove(QLatin1Char('/'));
-        packageName.remove(QLatin1Char('\\'));
-        mpHost->mServerGUI_Package_name = packageName;
-
-        // Let scripts (e.g. the preinstalled starter UI) react to the game
-        // having supplied its own interface:
-        TEvent event{};
-        event.mArgumentList.append(qsl("sysServerGuiInstalled"));
-        event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-        event.mArgumentList.append(packageName);
-        event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-        mpHost->raiseEvent(event);
+        // Copies: installing runs the package's scripts, and an offer handled meanwhile replaces both members
+        const QString packagePath = mServerPackage;
+        const QString packageVersion = mServerPackageVersion;
+        installDownloadedGUIPackage(packagePath, packageVersion);
     }
+}
+
+void cTelnet::installDownloadedGUIPackage(const QString& packagePath, const QString& packageVersion)
+{
+    // installPackage() would postpone the install past a running save and answer true at once,
+    // so the version would be recorded and the package announced before it was installed, or at all
+    if (mpHost->currentlySavingProfile()) {
+        connect(
+                mpHost,
+                &Host::profileSaveFinished,
+                this,
+                [this, packagePath, packageVersion]() {
+                    installDownloadedGUIPackage(packagePath, packageVersion);
+                },
+                static_cast<Qt::ConnectionType>(Qt::QueuedConnection | Qt::SingleShotConnection));
+        return;
+    }
+
+    // installPackage() reports the reason to the profile itself
+    if (!mpHost->installPackage(packagePath, enums::PackageModuleType::Package).first) {
+        return;
+    }
+    mpHost->mServerGUI_Package_version = packageVersion;
+
+    QString packageName = packagePath.section("/", -1);
+    packageName.remove(QLatin1String(".zip"), Qt::CaseInsensitive);
+    packageName.remove(QLatin1String(".trigger"), Qt::CaseInsensitive);
+    packageName.remove(QLatin1String(".xml"), Qt::CaseInsensitive);
+    packageName.remove(QLatin1String(".mpackage"), Qt::CaseInsensitive);
+    packageName.remove(QLatin1Char('/'));
+    packageName.remove(QLatin1Char('\\'));
+    mpHost->mServerGUI_Package_name = packageName;
+
+    // Let scripts (e.g. the preinstalled starter UI) react to the game
+    // having supplied its own interface:
+    TEvent event{};
+    event.mArgumentList.append(qsl("sysServerGuiInstalled"));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    event.mArgumentList.append(packageName);
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    mpHost->raiseEvent(event);
 }
 
 void cTelnet::slot_setDownloadProgress(qint64 got, qint64 tot)
@@ -2178,7 +2210,9 @@ void cTelnet::slot_setDownloadProgress(qint64 got, qint64 tot)
 
 void cTelnet::slot_cancelPackageDownload()
 {
-    if (mpPackageDownloadReply) {
+    // Closing the progress dialog when the download finishes emits canceled() too,
+    // and aborting a finished file: reply closes it before its data is read
+    if (mpPackageDownloadReply && !mpPackageDownloadReply->isFinished()) {
         mpPackageDownloadReply->abort();
     }
 }
@@ -4243,7 +4277,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                 // Check if the package is installed
                 if (!mpHost->mInstalledPackages.contains(packageName)) {
                     // Package is not installed, initiate the download
-                    mpHost->mServerGUI_Package_version = version;
+                    mServerPackageVersion = version;
                     downloadAndInstallGUIPackage(packageName, fileName, url);
                 } else if (mpHost->mServerGUI_Package_version != version) {
                     // Check if the version is different and handle the upgrade
@@ -4251,19 +4285,16 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                                    "(url='%3').")
                                         .arg(version, mpHost->mServerGUI_Package_version, url));
 
-                    // If uninstalling is refused, installing over it would fail as "already installed"
-                    // while the version recorded below claimed the upgrade. A name not installed
-                    // has nothing to remove,
-                    // and must not hold the upgrade up.
-                    const QString oldPackageName = mpHost->mServerGUI_Package_name != qsl("nothing") ? mpHost->mServerGUI_Package_name : packageName;
-                    const bool clearedTheWay = !mpHost->mInstalledPackages.contains(oldPackageName) || mpHost->uninstallPackage(oldPackageName, enums::PackageModuleType::Package);
+                    // The installed copy of the offered package is what has to go: removing any other leaves this
+                    // one in place, and installing over it fails as "already installed" at every offer
+                    const bool clearedTheWay = mpHost->uninstallPackage(packageName, enums::PackageModuleType::Package);
                     if (clearedTheWay) {
                         // Download and install the new version
-                        mpHost->mServerGUI_Package_version = version;
+                        mServerPackageVersion = version;
                         downloadAndInstallGUIPackage(packageName, fileName, url);
                     } else {
                         //: %1 is the name of the GUI package the game offered to upgrade
-                        postMessage(tr("[ WARN ]  - Could not remove \"%1\" to upgrade it while the profile is being saved. The game will offer the upgrade again.").arg(oldPackageName));
+                        postMessage(tr("[ WARN ]  - Could not remove \"%1\" to upgrade it while the profile is being saved. The game will offer the upgrade again.").arg(packageName));
                     }
                 }
             }
@@ -4664,7 +4695,7 @@ void cTelnet::handleGUIPackageInstallationAndUpgrade(QJsonDocument document)
     // Check if the package is installed
     if (!mpHost->mInstalledPackages.contains(packageName)) {
         // Package is not installed, initiate the download
-        mpHost->mServerGUI_Package_version = version;
+        mServerPackageVersion = version;
         downloadAndInstallGUIPackage(packageName, fileName, url);
     } else if (mpHost->mServerGUI_Package_version != version) {
         // Check if the version is different and handle the upgrade
@@ -4672,19 +4703,16 @@ void cTelnet::handleGUIPackageInstallationAndUpgrade(QJsonDocument document)
                        "(url='%3').")
                             .arg(version, mpHost->mServerGUI_Package_version, url));
 
-        // If uninstalling is refused, installing over it would fail as "already installed"
-        // while the version recorded below claimed the upgrade. A name not installed
-        // has nothing to remove,
-        // and must not hold the upgrade up.
-        const QString oldPackageName = mpHost->mServerGUI_Package_name != qsl("nothing") ? mpHost->mServerGUI_Package_name : packageName;
-        const bool clearedTheWay = !mpHost->mInstalledPackages.contains(oldPackageName) || mpHost->uninstallPackage(oldPackageName, enums::PackageModuleType::Package);
+        // The installed copy of the offered package is what has to go: removing any other leaves this
+        // one in place, and installing over it fails as "already installed" at every offer
+        const bool clearedTheWay = mpHost->uninstallPackage(packageName, enums::PackageModuleType::Package);
         if (clearedTheWay) {
             // Download and install the new version
-            mpHost->mServerGUI_Package_version = version;
+            mServerPackageVersion = version;
             downloadAndInstallGUIPackage(packageName, fileName, url);
         } else {
             //: %1 is the name of the GUI package the game offered to upgrade
-            postMessage(tr("[ WARN ]  - Could not remove \"%1\" to upgrade it while the profile is being saved. The game will offer the upgrade again.").arg(oldPackageName));
+            postMessage(tr("[ WARN ]  - Could not remove \"%1\" to upgrade it while the profile is being saved. The game will offer the upgrade again.").arg(packageName));
         }
     }
 }

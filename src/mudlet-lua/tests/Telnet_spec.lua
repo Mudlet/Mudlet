@@ -1032,9 +1032,9 @@ end)
 describe("Tests the Client.GUI package offer", function()
 
   -- A game may send Client.GUI as JSON, or as the raw telnet form of a version
-  -- and a URL on two lines. Either way the offer only has to reach the
-  -- downloader, so the URL is one nothing answers: the harness's fixture server
-  -- 404s it when it started one, a closed port refuses it when it did not.
+  -- and a URL on two lines. Most offers here only have to reach the
+  -- downloader, so offerUrl() is one nothing answers: the harness's fixture
+  -- server 404s it when it started one, a closed port refuses it when it did not.
   local httpPort = os.getenv("MUDLET_TEST_HTTP_PORT")
 
   local function offerUrl(packageName)
@@ -1124,6 +1124,241 @@ describe("Tests the Client.GUI package offer", function()
     -- the same offer made complete, so the silence above is about what was missing
     mark = offerGui('{"version": "5", "url": "' .. offerUrl("RegressCompleteGui") .. '"}', "RegressCompleteGui")
     assert.is_truthy(downloadStarted(mark, "RegressCompleteGui"), "a complete offer was not acted on either: " .. displayedSince(mark))
+  end)
+
+  local minimalGuiPackage = '<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE MudletPackage><MudletPackage version="1.001"></MudletPackage>'
+  local servedGuiCleanups = {}
+
+  -- busted keeps one finally() per test, so every offerServedGui() of a test is
+  -- undone by this one, last first
+  local function cleanUpServedGuis()
+    for index = #servedGuiCleanups, 1, -1 do
+      servedGuiCleanups[index]()
+      servedGuiCleanups[index] = nil
+    end
+  end
+
+  -- serves content as name.xml from a file: URL, offers it as the game's
+  -- interface at this version and waits for the download to be settled one way
+  -- or the other. afterOffer, if given, runs straight after the offer. The test
+  -- passes cleanUpServedGuis to finally() first
+  local function offerServedGui(name, content, version, afterOffer)
+    local source = getMudletHomeDir() .. "/mudlet-spec-servedgui-source"
+    local served = source .. "/" .. name .. ".xml"
+    local downloaded = getMudletHomeDir() .. "/" .. name .. ".xml"
+    local previousClient = gmcp.Client
+    -- the starter UI stands aside on sysServerGuiInstalled and saves that in its
+    -- settings, which are not this spec's to change
+    local standAside = BaseUI and BaseUI.standAside
+    local result = {guis = {}, listed = {}, installs = {}, downloaded = downloaded}
+    local handlers = {
+      registerAnonymousEventHandler("sysServerGuiInstalled", function(_, packageName)
+        result.guis[#result.guis + 1] = packageName
+        result.listed[#result.listed + 1] = table.contains(getPackages(), packageName)
+      end),
+      registerAnonymousEventHandler("sysInstallPackage", function(_, packageName)
+        result.installs[#result.installs + 1] = packageName
+      end),
+    }
+    servedGuiCleanups[#servedGuiCleanups + 1] = function()
+      for _, handler in ipairs(handlers) do
+        killAnonymousEventHandler(handler)
+      end
+      gmcp.Client = previousClient
+      if standAside then
+        BaseUI.standAside = standAside
+      end
+      for _ = 1, 100 do
+        if not table.contains(getPackages(), name) or uninstallPackage(name) then
+          break
+        end
+        pumpEvents(50)
+      end
+      os.remove(downloaded)
+      os.remove(served)
+      lfs.rmdir(source)
+    end
+    if standAside then
+      BaseUI.standAside = function() end
+    end
+    if lfs.attributes(source, "mode") ~= "directory" then
+      assert(lfs.mkdir(source))
+    end
+    local file = io.open(served, "wb")
+    assert.is_not_nil(file, "could not write " .. served)
+    file:write(content)
+    file:close()
+    local path = served:gsub("\\", "/"):gsub("[%%#%?%s]", function(character) return string.format("%%%02X", character:byte()) end)
+    -- A Windows path starts with its drive letter, which Qt would read as the URL's host
+    if path:sub(1, 1) ~= "/" then
+      path = "/" .. path
+    end
+    local url = "file://" .. path
+
+    -- while a profile save runs, installPackage() postpones the install and
+    -- answers true, and an upgrade cannot uninstall the old interface; it gives
+    -- a save away by postponing even the empty path it would otherwise refuse
+    for _ = 1, 100 do
+      if installPackage("") == nil then
+        break
+      end
+      local pumped, why = pumpEvents(50)
+      assert.is_true(pumped, "pumpEvents could not run the event loop: " .. tostring(why))
+    end
+    assert.is_nil(installPackage(""), "a profile save was still running after 5s, so this offer's install would be postponed")
+
+    local mark = getLastLineNumber("main")
+    result.mark = mark
+    local ok, msg = feedTelnet('<T_IAC><T_SB><O_GMCP>Client.GUI {"version": "' .. (version or "1") .. '", "url": "' .. url .. '"}<T_IAC><T_SE>')
+    assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
+    assert.is_truthy(downloadStarted(mark, name), "the offer never reached the downloader: " .. displayedSince(mark))
+    if afterOffer then
+      afterOffer()
+    end
+    for _ = 1, 300 do
+      -- sysInstallPackage is raised a pass after sysServerGuiInstalled
+      if (#result.guis > 0 and #result.installs > 0) or shownSince(mark, "was empty") or shownSince(mark, "Package download failed") or shownSince(mark, "Failed to load package") then
+        break
+      end
+      local pumped, why = pumpEvents(50)
+      assert.is_true(pumped, "pumpEvents could not run the event loop: " .. tostring(why))
+    end
+    return result
+  end
+
+  it("installs nothing from a Client.GUI download that came back empty", function()
+    local name = "mudlet-spec-emptygui"
+    finally(cleanUpServedGuis)
+    local result = offerServedGui(name, "")
+
+    -- the URL is shown decoded, so only its end is matched
+    assert.is_truthy(shownSince(result.mark, "/" .. name .. ".xml' was empty"), displayedSince(result.mark))
+    assert.same({}, result.guis, "an empty download was announced as the game's interface")
+    assert.same({}, result.installs, "an empty download was announced as an installed package")
+    assert.is_false(table.contains(getPackages(), name), "an empty download was registered as a package")
+    assert.is_nil(lfs.attributes(result.downloaded), "an empty download was written into the profile")
+  end)
+
+  -- the progress dialog closing on completion must not cancel the download it
+  -- tracked: aborting a finished file: reply empties it
+  it("installs a Client.GUI package downloaded from a file URL", function()
+    local name = "mudlet-spec-servedgui"
+    finally(cleanUpServedGuis)
+    local result = offerServedGui(name, minimalGuiPackage)
+
+    assert.same({name}, result.guis, "the downloaded interface was not announced: " .. displayedSince(result.mark))
+    assert.same({name}, result.installs, displayedSince(result.mark))
+    assert.is_true(table.contains(getPackages(), name), "the downloaded interface was not registered")
+    assert.is_falsy(shownSince(result.mark, "was empty"), displayedSince(result.mark))
+    assert.is_true((lfs.attributes(result.downloaded, "size") or 0) > 0, "the package was saved into the profile without its contents")
+  end)
+
+  -- the recorded version is the installed copy's, so offering that version again
+  -- has nothing to do, where anything else would reinstall it at every login
+  it("leaves an installed Client.GUI package alone when it is offered at the same version", function()
+    local name = "mudlet-spec-currentgui"
+    finally(cleanUpServedGuis)
+    assert.same({name}, offerServedGui(name, minimalGuiPackage, "10660").guis)
+
+    local mark = offerGui('{"version": "10660", "url": "' .. offerUrl(name) .. '"}', name)
+    assert.is_falsy(shownSince(mark, "Upgrading the GUI"), displayedSince(mark))
+    assert.is_falsy(downloadStarted(mark, name), displayedSince(mark))
+  end)
+
+  -- the version recorded for an interface that has since been uninstalled
+  -- belongs to no installed copy, so it must not stand for one installed later
+  it("forgets the recorded Client.GUI version once that package is uninstalled", function()
+    local name = "mudlet-spec-forgottengui"
+    finally(cleanUpServedGuis)
+    -- a save postpones an install and refuses an uninstall, so each step waits one out first
+    local function waitForSaveToPass()
+      for _ = 1, 100 do
+        if installPackage("") == nil then
+          return
+        end
+        pumpEvents(50)
+      end
+    end
+    local result = offerServedGui(name, minimalGuiPackage, "10662")
+    assert.same({name}, result.guis)
+    waitForSaveToPass()
+    assert.is_true(uninstallPackage(name), "the served interface could not be uninstalled")
+    waitForSaveToPass()
+    assert.is_true(installPackage(result.downloaded), "the interface could not be put back by hand")
+    waitForSaveToPass()
+    assert.is_true(table.contains(getPackages(), name), "the interface put back by hand was not registered")
+
+    local mark = offerGui('{"version": "10662", "url": "' .. offerUrl(name) .. '"}', name)
+    assert.is_truthy(shownSince(mark, "Upgrading the GUI to new version '10662'"), displayedSince(mark))
+  end)
+
+  -- an upgrade has to replace the installed copy of the package offered, even
+  -- when another interface was recorded since: otherwise every offer fails again
+  it("upgrades a Client.GUI package after another one was installed", function()
+    local switched, other = "mudlet-spec-switchedgui", "mudlet-spec-othergui"
+    finally(cleanUpServedGuis)
+    assert.same({switched}, offerServedGui(switched, minimalGuiPackage, "1").guis)
+    assert.same({other}, offerServedGui(other, minimalGuiPackage, "2").guis)
+
+    local result = offerServedGui(switched, minimalGuiPackage, "3")
+    assert.is_truthy(shownSince(result.mark, "Upgrading the GUI to new version '3'"), displayedSince(result.mark))
+    assert.same({switched}, result.guis, displayedSince(result.mark))
+    assert.is_true(table.contains(getPackages(), other), "upgrading one interface uninstalled another")
+  end)
+
+  -- while a profile save runs installPackage() only queues the install, so
+  -- announcing the package then would announce one that is not installed yet
+  it("announces a Client.GUI package only once it is installed when a save was running", function()
+    local name = "mudlet-spec-savedovergui"
+    finally(cleanUpServedGuis)
+    local result = offerServedGui(name, minimalGuiPackage, "1", function()
+      assert.is_true(saveProfile())
+    end)
+    assert.same({name}, result.guis, displayedSince(result.mark))
+    assert.same({true}, result.listed, "the interface was announced before it was installed")
+  end)
+
+  -- installing runs the package's scripts, and an offer handled meanwhile must
+  -- not be taken for the package that has just installed
+  it("records the Client.GUI package that installed, not an offer made while it installed", function()
+    local name, offeredMeanwhile = "mudlet-spec-scriptedgui", "mudlet-spec-meanwhilegui"
+    local mark = getLastLineNumber("main")
+    finally(function()
+      _G.mudletSpecOfferMeanwhile = nil
+      cleanUpServedGuis()
+    end)
+    _G.mudletSpecOfferMeanwhile = function()
+      _G.mudletSpecOfferMeanwhile = nil
+      feedTelnet('<T_IAC><T_SB><O_GMCP>Client.GUI {"version": "2", "url": "' .. offerUrl(offeredMeanwhile) .. '"}<T_IAC><T_SE>')
+    end
+    local scripted = '<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE MudletPackage><MudletPackage version="1.001"><ScriptPackage>'
+      .. '<Script isActive="yes" isFolder="no"><name>mudlet-spec-scriptedgui</name><packageName></packageName>'
+      .. '<script>if mudletSpecOfferMeanwhile then mudletSpecOfferMeanwhile() end</script><eventHandlerList /></Script>'
+      .. '</ScriptPackage></MudletPackage>'
+    local result = offerServedGui(name, scripted, "1")
+    assert.is_truthy(downloadStarted(mark, offeredMeanwhile), "the package's script made no offer: " .. displayedSince(mark))
+    assert.same({name}, result.guis, displayedSince(result.mark))
+    -- the offer made meanwhile is this test's to finish, as in offerGui()
+    for _ = 1, 150 do
+      if shownSince(mark, "Package download failed from '" .. offerUrl(offeredMeanwhile) .. "'") then
+        break
+      end
+      pumpEvents(20)
+    end
+    assert.is_truthy(shownSince(mark, "Package download failed from '" .. offerUrl(offeredMeanwhile) .. "'"), displayedSince(mark))
+  end)
+
+  -- the recorded version is what decides whether an installed interface is
+  -- offered an upgrade, so one that never arrived must not take its place
+  it("records no version for a Client.GUI download that installed nothing", function()
+    local installed = "mudlet-spec-keptgui"
+    finally(cleanUpServedGuis)
+    assert.same({installed}, offerServedGui(installed, minimalGuiPackage, "10660").guis)
+    offerServedGui("mudlet-spec-emptiedgui", "", "10661")
+
+    local result = offerServedGui(installed, minimalGuiPackage, "10661")
+    assert.is_truthy(shownSince(result.mark, "Upgrading the GUI to new version '10661'"), displayedSince(result.mark))
+    assert.same({installed}, result.guis, displayedSince(result.mark))
   end)
 
   -- a game with an interface of its own can decline the built-in starter UI,

@@ -307,6 +307,8 @@ public:
     QPointer<QObject> mpComposer;
     QNetworkAccessManager* mpDownloader = nullptr;
     QString mServerPackage;
+    // recorded as Host::mServerGUI_Package_version only once the download installs
+    QString mServerPackageVersion;
     QString mProfileName;
 
 
@@ -476,6 +478,7 @@ private:
     QString parseGUIUrlFromJSON(const QJsonObject& json);
     bool parseGUIBaseUiDeclinedFromJSON(const QJsonObject& json);
     void downloadAndInstallGUIPackage(const QString& packageName, const QString& fileName, const QString& url);
+    void installDownloadedGUIPackage(const QString& packagePath, const QString& packageVersion);
     void handleGUIPackageInstallationAndUpgrade(QJsonDocument document);
 
     static std::pair<bool, bool> testReadReplayFile();
