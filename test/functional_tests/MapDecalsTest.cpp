@@ -26,6 +26,7 @@
 
 #include <QImage>
 
+#include "EnvironmentKit.h"
 #include "Host.h"
 #include "MapDecals.h"
 #include "MapStyle.h"

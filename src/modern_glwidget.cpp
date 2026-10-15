@@ -1335,7 +1335,6 @@ void ModernGLWidget::renderRooms()
     // How far the player's pulse has spread, from 0 to 1, or less than 0 for none
     const float pulseSpread = pulse && mPulseStartedAt ? qMin(static_cast<float>(mPulseReference.elapsed() - *mPulseStartedAt) / static_cast<float>(scmPulseMilliseconds), 1.0f) : -1.0f;
     const bool groundGlyphs = terminal && style.groundGlyphs;
-    const QHash<int, EnvironmentKit::Kit> namedKits = groundGlyphs || style.environmentMarks ? EnvironmentKit::stored(mpMap->mUserData) : QHash<int, EnvironmentKit::Kit>();
     const QFont groundFont = groundGlyphs ? terminalGlyphFont(style) : QFont();
 
     const bool moreTransparent = mpHost->experimentEnabled(qsl("experiment.rendering.more-transparent"));
@@ -1558,6 +1557,7 @@ void ModernGLWidget::renderRooms()
     };
     // Too small on screen, a mark would only smudge the room
     const bool environmentMarks = style.environmentMarks && !terminal && !showRoomIds && roomSize / mCameraController.worldUnitsPerPixel(mCameraController.getTarget()) >= scmEnvironmentMarkPixels;
+    const QHash<int, EnvironmentKit::Kit> namedKits = groundGlyphs || environmentMarks ? EnvironmentKit::stored(mpMap->mUserData) : QHash<int, EnvironmentKit::Kit>();
     const QColor markInk = style.exitColor(contrast);
     QHash<int, GLuint> markTextures;
     mHoveredRoomId = roomUnderPointer();
@@ -1673,7 +1673,8 @@ void ModernGLWidget::renderRooms()
             const float borderWidth = (pR->mBorderThickness > 0 ? pR->mBorderThickness : 1) * borderUnit;
             const QColor borderColor = pR->mBorderColor.isValid() ? pR->mBorderColor : style.roomBorderColor(mpHost->mRoomBorderColor, roomColor, background);
             const QVector4D borderTint = GeometryManager::fadedColor(borderColor, fade, fadeTarget);
-            (borderTint.w() < 1.0f ? seeThroughLevels[pR->z()].cubes : borderInstances).append(outline(borderWidth, borderTint));
+            // In ink, a see-through level's cubes are lozenges: a border is a blot whatever its alpha
+            (borderTint.w() < 1.0f && !inkLozenges ? seeThroughLevels[pR->z()].cubes : borderInstances).append(outline(borderWidth, borderTint));
         }
 
         QMatrix4x4 transform;
@@ -2193,10 +2194,16 @@ void ModernGLWidget::renderRooms()
     std::sort(levels.begin(), levels.end());
     levels.erase(std::unique(levels.begin(), levels.end()), levels.end());
     qint64 unlabeledFrom = std::numeric_limits<int>::lowest();
+    // The viewed level's washes go over the levels below, which would otherwise show through them unwashed
+    bool washed = false;
     for (const int level : std::as_const(levels)) {
         // Those on levels with nothing else shown, under this one
         if (level > unlabeledFrom) {
             renderLabels(true, static_cast<int>(unlabeledFrom), level - 1);
+        }
+        if (!washed && level >= mMapCenterZ) {
+            queueWashes();
+            washed = true;
         }
         queuePlate(level);
         if (const auto exits = mSeeThroughExits.constFind(level); exits != mSeeThroughExits.cend()) {
@@ -2276,6 +2283,9 @@ void ModernGLWidget::renderRooms()
         }
         renderLabels(true, level, level);
         unlabeledFrom = qint64{level} + 1;
+    }
+    if (!washed) {
+        queueWashes();
     }
     if (unlabeledFrom <= std::numeric_limits<int>::max()) {
         renderLabels(true, static_cast<int>(unlabeledFrom), std::numeric_limits<int>::max());
@@ -4038,7 +4048,8 @@ void ModernGLWidget::paintScaleBar(QPainter& painter)
     }
     const QVector3D target = mCameraController.getTarget();
     const std::optional<QPointF> from = mCameraController.pixelForPoint(target);
-    const std::optional<QPointF> to = mCameraController.pixelForPoint(target + QVector3D(1.0f, 0.0f, 0.0f));
+    // Across the screen, as a map axis foreshortens once the view is tilted and turned
+    const std::optional<QPointF> to = mCameraController.pixelForPoint(target + mCameraController.screenRight());
     if (!from || !to) {
         return;
     }
@@ -4100,7 +4111,7 @@ void ModernGLWidget::paintPlayerNote(QPainter& painter)
         return;
     }
     const TRoom* pR = mpMap->mpRoomDB->getRoom(mpMap->mRoomIdHash.value(mpMap->mProfileName));
-    if (!pR || pR->getArea() != mAID || !levelShown(pR->z())) {
+    if (!pR || pR->isHidden() || pR->getArea() != mAID || !levelShown(pR->z())) {
         return;
     }
     const float roomSize = 2.0f / scale;
@@ -5128,7 +5139,6 @@ void ModernGLWidget::queueScene()
     queuePaper();
     // First, as on the 2D map, where the other levels, the labels and everything else paint over it
     queueGrid();
-    queueWashes();
     renderConnections();
     // Labels beneath the rooms come before them without writing depth, so that the translucent rooms
     // of other levels show over them rather than cutting holes in them

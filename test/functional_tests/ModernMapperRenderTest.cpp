@@ -1994,17 +1994,23 @@ private slots:
                  "the room above is not hatched");
         QVERIFY2(!atPlace(RenderCommand::Shading::InkDashed, QPointF(0.0, 2.0)).isEmpty() && atPlace(RenderCommand::Shading::InkLozenge, QPointF(0.0, 2.0)).isEmpty(), "the room below is not dashed");
 
-        // A wash wider than the room under it, laid before any exit's stroke
+        // A wash wider than the room under it, laid over the level below and under the one above
         const float roomSize = 2.0f * lozenge.first().transform.column(0).toVector3D().length();
-        qsizetype firstStroke = -1;
-        for (qsizetype index = 0; index < static_cast<qsizetype>(commands.size()) && firstStroke < 0; ++index) {
-            if (const auto* cubes = dynamic_cast<const RenderInstancedCubesCommand*>(commands.at(index).get()); cubes && cubes->shading() == RenderCommand::Shading::InkStroke) {
-                firstStroke = index;
+        qsizetype lastBelow = -1;
+        qsizetype firstAbove = -1;
+        for (qsizetype index = 0; index < static_cast<qsizetype>(commands.size()); ++index) {
+            if (const auto* cubes = dynamic_cast<const RenderInstancedCubesCommand*>(commands.at(index).get())) {
+                if (cubes->shading() == RenderCommand::Shading::InkDashed) {
+                    lastBelow = index;
+                } else if (cubes->shading() == RenderCommand::Shading::InkHatched && firstAbove < 0) {
+                    firstAbove = index;
+                }
             }
         }
-        QVERIFY(firstStroke > 0);
+        QVERIFY(lastBelow >= 0 && firstAbove > lastBelow);
         int washes = 0;
-        for (qsizetype index = 0; index < firstStroke; ++index) {
+        qsizetype washedAt = -1;
+        for (qsizetype index = 0; index < static_cast<qsizetype>(commands.size()); ++index) {
             const auto* textured = dynamic_cast<const RenderTexturedTrianglesCommand*>(commands.at(index).get());
             if (!textured) {
                 continue;
@@ -2016,15 +2022,22 @@ private slots:
                 const QVector3D middle = (corner + opposite) / 2.0f;
                 if (qAbs(middle.x() - 2.0f) < 1e-3f && qAbs(middle.y()) < 1e-3f && qAbs(corner.x() - opposite.x()) > 1.5f * roomSize) {
                     ++washes;
+                    washedAt = index;
                 }
             }
         }
         QCOMPARE(washes, 1);
+        QVERIFY2(washedAt > lastBelow && washedAt < firstAbove, "the wash is not between the levels below and above");
 
         // A room's own border still shows, under its line
         map()->mpRoomDB->getRoom(kEastRoomId)->mBorderColor = QColor(200, 40, 40);
         queueFrame(widget, areaId);
         QVERIFY2(!atPlace(RenderCommand::Shading::InkBlot, QPointF(2.0, 0.0)).isEmpty(), "a room's own border was dropped");
+        // See-through, it is still a blot rather than a second lozenge round the room
+        map()->mpRoomDB->getRoom(kEastRoomId)->mBorderColor = QColor(200, 40, 40, 120);
+        queueFrame(widget, areaId);
+        QVERIFY2(!atPlace(RenderCommand::Shading::InkBlot, QPointF(2.0, 0.0)).isEmpty() && atPlace(RenderCommand::Shading::InkLozenge, QPointF(2.0, 0.0)).size() == 1,
+                 "a see-through border was not a blot");
         map()->mpRoomDB->getRoom(kEastRoomId)->mBorderColor = QColor();
         queueFrame(widget, areaId);
         QVERIFY2(atPlace(RenderCommand::Shading::Unlit, QPointF(2.0, 0.0)).isEmpty() && atPlace(RenderCommand::Shading::Lit, QPointF(2.0, 0.0)).isEmpty(), "a room was drawn as a block");
