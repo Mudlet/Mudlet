@@ -642,8 +642,9 @@ int EditorAddItemCommand::id() const
     return EditorModifyPropertyCommand::CommandId;
 }
 
-// The editor finishes adding an item at its first save, so the edits up to and including that
-// save are part of adding it. Undo snapshots the item as it then stands, so absorbing them loses nothing.
+// Modifies of the new item pushed straight onto this add, per-property ones and the first full save,
+// are part of adding it; a command in between, such as a toggle, keeps the save a step of its own.
+// Undo snapshots the item as it then stands, so absorbing them loses nothing.
 bool EditorAddItemCommand::mergeWith(const QUndoCommand* other)
 {
     if (mAddFinished) {

@@ -5227,8 +5227,7 @@ void dlgTriggerEditor::addTrigger(bool isFolder)
     auto* qtCmd = new EditorAddItemCommand(EditorViewType::cmTriggerView, pNewTrigger->getID(), parentID, positionInParent, isFolder, name, mpHost);
     mpUndoStack->pushCommand(qtCmd);
 
-    // The edits up to and including the new item's first save merge into this
-    // command, see EditorAddItemCommand::mergeWith()
+    // Later edits can merge into this command, see EditorAddItemCommand::mergeWith()
 }
 
 
@@ -5317,8 +5316,7 @@ void dlgTriggerEditor::addTimer(bool isFolder)
     auto* qtCmd = new EditorAddItemCommand(EditorViewType::cmTimerView, pNewTimer->getID(), parentID, positionInParent, isFolder, name, mpHost);
     mpUndoStack->pushCommand(qtCmd);
 
-    // The edits up to and including the new item's first save merge into this
-    // command, see EditorAddItemCommand::mergeWith()
+    // Later edits can merge into this command, see EditorAddItemCommand::mergeWith()
 }
 
 void dlgTriggerEditor::addVar(bool isFolder)
@@ -5474,8 +5472,7 @@ void dlgTriggerEditor::addKey(bool isFolder)
     auto* qtCmd = new EditorAddItemCommand(EditorViewType::cmKeysView, pNewKey->getID(), parentID, positionInParent, isFolder, name, mpHost);
     mpUndoStack->pushCommand(qtCmd);
 
-    // The edits up to and including the new item's first save merge into this
-    // command, see EditorAddItemCommand::mergeWith()
+    // Later edits can merge into this command, see EditorAddItemCommand::mergeWith()
 }
 
 
@@ -5570,8 +5567,7 @@ void dlgTriggerEditor::addAlias(bool isFolder)
     auto* qtCmd = new EditorAddItemCommand(EditorViewType::cmAliasView, pNewAlias->getID(), parentID, positionInParent, isFolder, name, mpHost);
     mpUndoStack->pushCommand(qtCmd);
 
-    // The edits up to and including the new item's first save merge into this
-    // command, see EditorAddItemCommand::mergeWith()
+    // Later edits can merge into this command, see EditorAddItemCommand::mergeWith()
 }
 
 void dlgTriggerEditor::addAction(bool isFolder)
@@ -5671,8 +5667,7 @@ void dlgTriggerEditor::addAction(bool isFolder)
     auto* qtCmd = new EditorAddItemCommand(EditorViewType::cmActionView, pNewAction->getID(), parentID, positionInParent, isFolder, name, mpHost);
     mpUndoStack->pushCommand(qtCmd);
 
-    // The edits up to and including the new item's first save merge into this
-    // command, see EditorAddItemCommand::mergeWith()
+    // Later edits can merge into this command, see EditorAddItemCommand::mergeWith()
 }
 
 
@@ -5759,8 +5754,7 @@ void dlgTriggerEditor::addScript(bool isFolder)
     auto* qtCmd = new EditorAddItemCommand(EditorViewType::cmScriptView, pNewScript->getID(), parentID, positionInParent, isFolder, name, mpHost);
     mpUndoStack->pushCommand(qtCmd);
 
-    // The edits up to and including the new item's first save merge into this
-    // command, see EditorAddItemCommand::mergeWith()
+    // Later edits can merge into this command, see EditorAddItemCommand::mergeWith()
 }
 
 void dlgTriggerEditor::selectTriggerByID(int id)
