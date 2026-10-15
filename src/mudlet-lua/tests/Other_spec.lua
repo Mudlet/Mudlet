@@ -2069,7 +2069,7 @@ describe("Tests Other.lua functions", function()
         for _, refusal in ipairs(refusals) do
           local ok, err = setConfig("ircChannels", refusal[1])
           assert.is_nil(ok, "'" .. refusal[1] .. "' was taken")
-          assert.equals("channel name \"" .. refusal[2] .. "\" must start with #, & or + and hold no space or comma", err)
+          assert.equals("channel name \"" .. refusal[2] .. "\" must start with #, &, + or ! and hold no space or comma", err)
           assert.equals("#mudlet-spec", getConfig("ircChannels"))
         end
         local ok, err = setConfig("ircChannels", "")
@@ -2087,6 +2087,28 @@ describe("Tests Other.lua functions", function()
         writeIrcFile(ircFiles()[4], storedString("nohash"))
         assert.equals("#mudlet", getConfig("ircChannels"))
         assert.is_true(setConfig("ircChannels", getConfig("ircChannels")))
+      end)
+
+      -- RFC 2811 "safe" channels, as IRCnet has
+      it("keeps a stored channel with the ! prefix and takes a new one", function()
+        finally(snapshotIrc())
+
+        writeIrcFile(ircFiles()[4], storedString("#mudlet !ABCDEmychan"))
+        assert.equals("#mudlet !ABCDEmychan", getConfig("ircChannels"))
+        assert.is_true(setConfig("ircChannels", getConfig("ircChannels")))
+        assert.is_true(setConfig("ircChannels", "!ABCDEspec"))
+        assert.equals("!ABCDEspec", getConfig("ircChannels"))
+      end)
+
+      it("reads the default host in place of a stored one no writer takes any more", function()
+        finally(snapshotIrc())
+
+        for _, host in ipairs({" irc.libera.chat", "irc.libera.chat\t", "irc.mudlet spec", "irc.mudlet\nspec"}) do
+          writeIrcFile(ircFiles()[1], storedString(host))
+          assert.equals("irc.libera.chat", getConfig("ircHostName"), "stored '" .. host .. "' was handed out")
+          assert.equals("irc.libera.chat", (getIrcServer()))
+          assert.is_true(setConfig("ircHostName", getConfig("ircHostName")))
+        end
       end)
 
       it("reads the default port in place of a stored one outside 1 to 65535", function()

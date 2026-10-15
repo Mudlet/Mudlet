@@ -377,7 +377,8 @@ void TIrcClient::slot_receiveNumericMessage(IrcNumericMessage* message)
 QString TIrcClient::readIrcHostName(Host* pH)
 {
     QString hostname = pH->readProfileData(TIrcClient::HostNameCfgItem);
-    if (hostname.isEmpty()) {
+    // a profile saved before writeIrcHostName() refused them can still hold an unusable name
+    if (hostname.isEmpty() || textHasSpace(hostname) || textBreaksIrcLine(hostname)) {
         hostname = TIrcClient::DefaultHostName;
     }
     return hostname;
@@ -470,8 +471,8 @@ QStringList TIrcClient::readIrcChannels(Host* pH)
     return channels;
 }
 
-// The readers put a default in place of an empty, out of range or unusable value, so
-// the writers below refuse one rather than report a setting that will never be used.
+// The writers below refuse a value that would never be used - one the reader replaces with a
+// default or skips, or one that cannot go on an IRC line - rather than report it as saved.
 QPair<bool, QString> TIrcClient::writeIrcHostName(Host* pH, const QString& hostname)
 {
     if (hostname.isEmpty()) {
@@ -536,11 +537,11 @@ QPair<bool, QString> TIrcClient::writeIrcPassword(Host* pH, const QString& passw
     return pH->writeProfileData(TIrcClient::PasswordCfgItem, password);
 }
 
-// The stored list is space-joined and the JOIN command comma-joined, so a name holding
-// either would come back as two channels.
+// RFC 2811 channel prefixes only. The stored list is space-joined and JOIN comma-joined, so
+// whitespace or a comma would split a name, and a line break or NUL would end the command.
 bool TIrcClient::validIrcChannelName(const QString& channel)
 {
-    if (!channel.startsWith(QLatin1Char('#')) && !channel.startsWith(QLatin1Char('&')) && !channel.startsWith(QLatin1Char('+'))) {
+    if (!channel.startsWith(QLatin1Char('#')) && !channel.startsWith(QLatin1Char('&')) && !channel.startsWith(QLatin1Char('+')) && !channel.startsWith(QLatin1Char('!'))) {
         return false;
     }
     return !textHasSpace(channel) && !textBreaksIrcLine(channel) && !channel.contains(QLatin1Char(','));
@@ -553,7 +554,7 @@ QPair<bool, QString> TIrcClient::writeIrcChannels(Host* pH, const QStringList& c
     }
     for (const QString& channel : channels) {
         if (!validIrcChannelName(channel)) {
-            return {false, qsl("channel name \"%1\" must start with #, & or + and hold no space or comma").arg(escapedForError(channel))};
+            return {false, qsl("channel name \"%1\" must start with #, &, + or ! and hold no space or comma").arg(escapedForError(channel))};
         }
     }
 
