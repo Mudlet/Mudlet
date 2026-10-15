@@ -320,6 +320,19 @@ bool MudletApp::usingMudletDictionaries()
     return mudletDictionariesInUse;
 }
 
+QStringList MudletApp::systemHunspellDictionaryFolders()
+{
+#if defined(Q_OS_FREEBSD)
+    return {qsl("/usr/local/share/hunspell/"), qsl("/usr/share/hunspell/")};
+#elif defined(Q_OS_OPENBSD)
+    return {qsl("/usr/local/share/mozilla-dicts/"), qsl("/usr/share/mozilla-dicts/")};
+#elif defined(Q_OS_LINUX)
+    return {qsl("/usr/share/hunspell/")};
+#else
+    return {};
+#endif
+}
+
 QString MudletApp::sanitizeForPath(const QString& input)
 {
     static const auto fileSystemUnsafeChars = QRegularExpression(qsl(R"REGEX([/\\:*?"<>|])REGEX"));
@@ -435,18 +448,16 @@ QString MudletApp::getMudletPath(const enums::mudletPathType mode, const QString
     case enums::qtTranslationsPath:
         return QLibraryInfo::path(QLibraryInfo::TranslationsPath);
     case enums::hunspellDictionaryPath:
+        for (const auto& folder : systemHunspellDictionaryFolders()) {
+            if (QFile::exists(qsl("%1%2.aff").arg(folder, extra1))) {
+                mudletDictionariesInUse = false;
+                return folder;
+            }
+        }
 #if defined(Q_OS_MACOS)
         mudletDictionariesInUse = true;
         return qsl("%1/../Resources/").arg(QCoreApplication::applicationDirPath());
 #elif defined(Q_OS_FREEBSD)
-        if (QFile::exists(qsl("/usr/local/share/hunspell/%1.aff").arg(extra1))) {
-            mudletDictionariesInUse = false;
-            return QLatin1String("/usr/local/share/hunspell/");
-        }
-        if (QFile::exists(qsl("/usr/share/hunspell/%1.aff").arg(extra1))) {
-            mudletDictionariesInUse = false;
-            return QLatin1String("/usr/share/hunspell/");
-        }
         if (QFile::exists(qsl("%1/../../src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
             // From debug or release subdirectory of a shadow build directory alongside the ./src one:
             mudletDictionariesInUse = true;
@@ -466,14 +477,6 @@ QString MudletApp::getMudletPath(const enums::mudletPathType mode, const QString
         // the first run to find the rest - instead try for the en_GB one
         // - some of the entries for some of the locale/language/other parts of
         // the filesnames seem to be a bit random:
-        if (QFile::exists(qsl("/usr/local/share/mozilla-dicts/%1.aff").arg(extra1))) {
-            mudletDictionariesInUse = false;
-            return QLatin1String("/usr/local/share/mozilla-dicts/");
-        }
-        if (QFile::exists(qsl("/usr/share/mozilla-dicts/%1.aff").arg(extra1))) {
-            mudletDictionariesInUse = false;
-            return QLatin1String("/usr/share/mozilla-dicts/");
-        }
         if (QFile::exists(qsl("%1/../../src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
             // From debug or release subdirectory of a shadow build directory alongside the ./src one:
             mudletDictionariesInUse = true;
@@ -488,10 +491,6 @@ QString MudletApp::getMudletPath(const enums::mudletPathType mode, const QString
         mudletDictionariesInUse = true;
         return qsl("%1/").arg(QCoreApplication::applicationDirPath());
 #elif defined(Q_OS_LINUX)
-        if (QFile::exists(qsl("/usr/share/hunspell/%1.aff").arg(extra1))) {
-            mudletDictionariesInUse = false;
-            return QLatin1String("/usr/share/hunspell/");
-        }
         if (QFile::exists(qsl("%1/../../src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
             // From debug or release subdirectory of a shadow build directory
             // alongside the ./src one. {Typically QMake builds from Qtcreator

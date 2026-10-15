@@ -3923,9 +3923,8 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     // prevents us using it to find any system ones
     const QString& currentDictionary = pHost->getSpellDic();
     const bool currentDictionaryFound = TSpellChecker::systemDictionaryFound(currentDictionary);
-    // Also settles MudletApp::usingMudletDictionaries(), read below. A dictionary that is nowhere is
-    // given a fallback folder that need hold no others, so list where the starting one would be instead.
-    const QString path = MudletApp::getMudletPath(enums::hunspellDictionaryPath, currentDictionaryFound ? currentDictionary : Host::startingSpellDic());
+    // Also settles MudletApp::usingMudletDictionaries(), read below
+    const QString path = TSpellChecker::dictionaryFolderToList(currentDictionary);
     // Tweak the label for the provided spelling dictionaries depending on where
     // they come from:
     if (MudletApp::usingMudletDictionaries()) {
@@ -3958,8 +3957,8 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
             if (entries.at(i).endsWith(qsl("med"), Qt::CaseInsensitive)) {
                 continue;
             }
-            // Listed by the affix file, but a dictionary is only loaded with the word list beside it
-            if (!dir.exists(qsl("%1.dic").arg(entries.at(i)))) {
+            // Listed by the affix file, but only loaded when both files can be read
+            if (!TSpellChecker::dictionaryUsable(path, entries.at(i))) {
                 continue;
             }
 

@@ -28,6 +28,7 @@
 #include <QCollator>
 #include <QCoreApplication>
 #include <QDebug>
+#include <QDir>
 #include <QFile>
 #include <QFileInfo>
 #include <QMultiMap>
@@ -258,7 +259,7 @@ void TSpellChecker::loadSystemDictionary()
         //: %1 is the name of the spell-check dictionary the profile uses, such as "de_DE"
         mpHost->postMessage(QCoreApplication::translate("TSpellChecker",
                                                         "[ WARN ]  - The spell-check dictionary \"%1\" that this profile uses is not available on this computer, "
-                                                        "so nothing will be spell-checked until it is installed, or another one is picked, in the preferences.")
+                                                        "so nothing will be spell-checked until another one is picked in the preferences, or until it is installed and the preferences are opened.")
                                     .arg(mSystemDictionary));
         return;
     }
@@ -281,8 +282,32 @@ bool TSpellChecker::dictionaryFileUsable(const QString& path)
 
 bool TSpellChecker::systemDictionaryFound(const QString& name)
 {
-    const QString path = MudletApp::getMudletPath(enums::hunspellDictionaryPath, name);
-    return dictionaryFileUsable(qsl("%1%2.aff").arg(path, name)) && dictionaryFileUsable(qsl("%1%2.dic").arg(path, name));
+    return dictionaryUsable(MudletApp::getMudletPath(enums::hunspellDictionaryPath, name), name);
+}
+
+bool TSpellChecker::dictionaryUsable(const QString& folder, const QString& name)
+{
+    return dictionaryFileUsable(qsl("%1%2.aff").arg(folder, name)) && dictionaryFileUsable(qsl("%1%2.dic").arg(folder, name));
+}
+
+QString TSpellChecker::dictionaryFolderToList(const QString& currentDictionary)
+{
+    for (const auto& name : {currentDictionary, Host::startingSpellDic()}) {
+        const QString folder = MudletApp::getMudletPath(enums::hunspellDictionaryPath, name);
+        if (QFile::exists(qsl("%1%2.aff").arg(folder, name))) {
+            return folder;
+        }
+    }
+    for (const auto& folder : MudletApp::systemHunspellDictionaryFolders()) {
+        for (QString name : QDir(folder).entryList({qsl("*.aff")}, QDir::Files, QDir::Name)) {
+            name.chop(4);
+            if (dictionaryUsable(folder, name)) {
+                // Through getMudletPath() so that MudletApp::usingMudletDictionaries() is settled too
+                return MudletApp::getMudletPath(enums::hunspellDictionaryPath, name);
+            }
+        }
+    }
+    return MudletApp::getMudletPath(enums::hunspellDictionaryPath, currentDictionary);
 }
 
 // NOTE: Host::setUserDictionaryOptions() forces the user dictionary on, so the

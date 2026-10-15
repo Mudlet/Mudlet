@@ -371,6 +371,78 @@ private slots:
         QCOMPARE(warningsShownFor(dictionary), 1);
     }
 
+    void test_aDictionaryThatCannotBeReadIsShownAsNotAvailable_data()
+    {
+        QTest::addColumn<bool>("wordListIsAFolder");
+        QTest::newRow("empty word list") << false;
+        QTest::newRow("word list that is a folder") << true;
+    }
+
+    void test_aDictionaryThatCannotBeReadIsShownAsNotAvailable()
+    {
+        QFETCH(bool, wordListIsAFolder);
+        const QString dictionary = qsl("mudlet_unreadable_dictionary");
+        const QString folder = MudletApp::getMudletPath(enums::hunspellDictionaryPath, dictionary);
+        QVERIFY(QDir().mkpath(folder));
+        const QString affixPath = qsl("%1%2.aff").arg(folder, dictionary);
+        const QString wordsPath = qsl("%1%2.dic").arg(folder, dictionary);
+        const auto cleanup = qScopeGuard([this, affixPath, wordsPath]() {
+            QFile::remove(affixPath);
+            QFile::remove(wordsPath);
+            QDir().rmdir(wordsPath);
+            mpHost->setSpellDic(scmDictionary);
+        });
+        QVERIFY(writeFile(affixPath, "SET UTF-8\n"));
+        QVERIFY(wordListIsAFolder ? QDir().mkpath(wordsPath) : writeFile(wordsPath, QByteArray()));
+
+        mpHost->setSpellDic(dictionary);
+        QVERIFY(!mpHost->spellChecker().systemHandle());
+        delete mpPreferences;
+        mpPreferences = new dlgProfilePreferences(mudlet::self(), mpHost);
+        QComboBox* pDictionaries = mpPreferences->comboBox_dictionary;
+        QCOMPARE(pDictionaries->currentText(), qsl("%1 - not available").arg(dictionary));
+        int entries = 0;
+        for (int i = 0; i < pDictionaries->count(); ++i) {
+            entries += pDictionaries->itemData(i).toString() == dictionary;
+        }
+        QCOMPARE(entries, 1);
+    }
+
+    void test_aDictionaryWithoutItsWordListLeavesTheOthersBesideItToPickFrom()
+    {
+#if defined(Q_OS_MACOS)
+        QSKIP("macOS keeps every dictionary in the one folder, which is listed whatever the profile uses");
+#endif
+        const QString dictionary = qsl("mudlet_affix_only_dictionary");
+        const QString other = qsl("mudlet_dictionary_beside_it");
+        const QString siblingFolder = qsl("%1/../src/").arg(QCoreApplication::applicationDirPath());
+        const bool madeSiblingFolder = !QDir(siblingFolder).exists();
+        QVERIFY(QDir().mkpath(siblingFolder));
+        const auto cleanup = qScopeGuard([&]() {
+            QFile::remove(qsl("%1%2.aff").arg(siblingFolder, dictionary));
+            QFile::remove(qsl("%1%2.aff").arg(siblingFolder, other));
+            QFile::remove(qsl("%1%2.dic").arg(siblingFolder, other));
+            if (madeSiblingFolder) {
+                QDir().rmdir(siblingFolder);
+            }
+            mpHost->setSpellDic(scmDictionary);
+        });
+        QVERIFY(writeFile(qsl("%1%2.aff").arg(siblingFolder, dictionary), "SET UTF-8\n"));
+        QVERIFY(writeFile(qsl("%1%2.aff").arg(siblingFolder, other), "SET UTF-8\n"));
+        QVERIFY(writeFile(qsl("%1%2.dic").arg(siblingFolder, other), "1\nthe\n"));
+        if (QDir(MudletApp::getMudletPath(enums::hunspellDictionaryPath, dictionary)) != QDir(siblingFolder)) {
+            QSKIP("the dictionary is looked for somewhere ahead of the folder beside the one the tests run in");
+        }
+
+        mpHost->setSpellDic(dictionary);
+        delete mpPreferences;
+        mpPreferences = new dlgProfilePreferences(mudlet::self(), mpHost);
+        QComboBox* pDictionaries = mpPreferences->comboBox_dictionary;
+        QVERIFY2(pDictionaries->isEnabled() && pDictionaries->findData(other) >= 0,
+                 qPrintable(qsl("the preferences did not offer \"%1\", which is in the same folder as the profile's dictionary").arg(other)));
+        QCOMPARE(pDictionaries->currentText(), qsl("%1 - not available").arg(dictionary));
+    }
+
     // Nothing is marked against a dictionary that is not there, which includes the marks made against the one before
     void test_aMissingDictionaryLeavesNoMarksBehind()
     {

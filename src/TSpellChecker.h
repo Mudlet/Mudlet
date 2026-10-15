@@ -50,8 +50,13 @@ public:
 
     void setSystemDictionary(const QString&);
     bool systemDictionaryMissing() const { return mSystemDictionaryMissing; }
-    // Asks what the load asks before reading the dictionary in
+    // Whether loadSystemDictionary() would find both files usable, short of the
+    // Windows build's sanitizeUtf8Path() rewrite of non-ASCII paths
     static bool systemDictionaryFound(const QString&);
+    static bool dictionaryUsable(const QString& folder, const QString& name);
+    // Where the dictionaries to pick from are, which for a name that is nowhere is
+    // not the fallback folder getMudletPath() gives it
+    static QString dictionaryFolderToList(const QString& currentDictionary);
     // Builds the system handle (when spell check is on) and prepares the user
     // dictionary. Only a view schedules it (TMainConsole ctor), so a profile
     // without one builds both lazily on first use.
