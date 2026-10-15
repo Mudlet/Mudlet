@@ -88,20 +88,25 @@ private:
     bool luaHolds(const QString& condition) const { return mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("assert(%1)").arg(condition)); }
 
     // Where the label's only word of text sits, so a synthesised click or move lands
-    // on the link rather than the empty space around it. QLabel puts the text where
-    // its alignment says within the contents rect, vertically centred by default,
-    // and aiming at the document's own middle misses a small font's line.
+    // on the link rather than the empty space around it. QLabel lays its text out
+    // with no document margin and puts it where its alignment says within the
+    // contents rect, and aiming at a stand-alone document's middle misses a small
+    // font's line. Its margin() and indent() are not modelled.
     QPoint linkCentre() const
     {
         QTextDocument document;
+        document.setDocumentMargin(0);
         document.setHtml(label()->text());
         document.setDefaultFont(label()->font());
         const QRect area = label()->contentsRect();
+        const int width = static_cast<int>(document.idealWidth());
         const int height = static_cast<int>(document.size().height());
         const Qt::Alignment alignment = label()->alignment();
-        const int spare = area.height() - height;
-        const int top = area.top() + ((alignment & Qt::AlignVCenter) ? spare / 2 : (alignment & Qt::AlignBottom) ? spare : 0);
-        return QPoint(area.left() + static_cast<int>(document.idealWidth()) / 2, top + height / 2);
+        const int spareWidth = area.width() - width;
+        const int spareHeight = area.height() - height;
+        const int left = area.left() + ((alignment & Qt::AlignHCenter) ? spareWidth / 2 : (alignment & Qt::AlignRight) ? spareWidth : 0);
+        const int top = area.top() + ((alignment & Qt::AlignVCenter) ? spareHeight / 2 : (alignment & Qt::AlignBottom) ? spareHeight : 0);
+        return QPoint(left + width / 2, top + height / 2);
     }
 
     // The document above is laid out on its own, so a click aimed by it can still
@@ -355,6 +360,11 @@ private slots:
 
         QTest::newRow("set") << QString() << qsl("setLabelCursor('%1', mudlet.cursor.Busy)") << static_cast<int>(Qt::BusyCursor);
         QTest::newRow("reset") << qsl("setLabelCursor('%1', mudlet.cursor.Cross)") << qsl("resetLabelCursor('%1')") << static_cast<int>(Qt::ArrowCursor);
+        const QString cursorImage = qsl("%1/customCursor.png").arg(mConfigDir.path());
+        QPixmap image(16, 16);
+        image.fill(Qt::red);
+        QVERIFY(image.save(cursorImage));
+        QTest::newRow("custom") << QString() << qsl("setLabelCustomCursor('%1', [[%2]], 0, 0)").arg(qsl("%1"), cursorImage) << static_cast<int>(Qt::BitmapCursor);
     }
 
     // QLabel saves the cursor when the hover begins and puts that copy back when it ends
@@ -369,7 +379,9 @@ private slots:
         label()->setText(qsl("<a href='https://example.com'>go</a>"));
         QVERIFY2(centreIsOnTheLabel(), "the point this case hovers is outside the label, so it would miss the link");
         const QPoint corner(label()->width() - 1, label()->height() - 1);
+        // QLabel keeps its hover across a failed check, and the next case comes straight back to the link
         auto cleanUp = qScopeGuard([this] {
+            label()->endLinkHover();
             label()->unsetCursor();
         });
 
