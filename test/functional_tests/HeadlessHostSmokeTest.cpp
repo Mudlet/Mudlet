@@ -3422,7 +3422,8 @@ headlessFontWrap = ok and "ok" or tostring(err)
             return font ? font->pointSize() : -1;
         };
         QVERIFY(startFont.pointSize() != 10);
-        QCOMPARE(labelPointSize(qsl("fwLabel")), startFont.pointSize());
+        // The walk's setFontSize(13) reaches a label too
+        QCOMPARE(labelPointSize(qsl("fwLabel")), 13);
         QCOMPARE(labelPointSize(qsl("fwWindowLabel")), 10);
         QCOMPARE(labelPointSize(qsl("fwLateLabel")), 13);
         QCOMPARE(labelPointSize(qsl("fwWindowLateLabel")), 13);
@@ -3497,13 +3498,20 @@ headlessFontWrap = ok and "ok" or tostring(err)
                                qsl("familyAvg=%1").arg(averaged(familyFont))}
                     .join(QLatin1Char(';'));
         };
-        // A label has a font but no size, wrap or text of its own; a missing name has none of them
-        const auto otherSteps = [&](const QString& font, const QString& familyAnswer) {
-            return qsl("size=[1]nil;avg=[1]nil;font=%1;pt=[2]nil:msg;wrap=[2]nil:msg;wrap0=[2]nil:msg;wrap30=[2]nil:msg;wrapNow=[2]nil:msg;"
-                       "indent=[2]nil:msg;indentNeg=[2]nil:msg;hanging=[2]nil:msg;wrapLine=[0];wrapBack=[2]nil:msg;pt0=[2]nil:msg;pt13=[2]nil:msg;"
-                       "size13=[1]nil;avg13=[1]nil;fontEmpty=[2]nil:msg;fontMissing=[2]nil:msg;fontFamily=%2;familyFont=%3;familyPt=[2]nil:msg;"
+        // A label has a font and a point size but no measured size, wrap or text of its own; a missing name has none of them
+        const auto otherSteps = [&](const QString& font, const QString& familyAnswer, const int pointSize = 0) {
+            const QString refused = qsl("[2]nil:msg");
+            const bool label = pointSize > 0;
+            return qsl("size=[1]nil;avg=[1]nil;font=%1;pt=%4;wrap=[2]nil:msg;wrap0=[2]nil:msg;wrap30=[2]nil:msg;wrapNow=[2]nil:msg;"
+                       "indent=[2]nil:msg;indentNeg=[2]nil:msg;hanging=[2]nil:msg;wrapLine=[0];wrapBack=[2]nil:msg;pt0=[2]nil:msg;pt13=%5;"
+                       "size13=[1]nil;avg13=[1]nil;fontEmpty=[2]nil:msg;fontMissing=[2]nil:msg;fontFamily=%2;familyFont=%3;familyPt=%6;"
                        "familySize=[1]nil;familyAvg=[1]nil")
-                    .arg(font, familyAnswer.isEmpty() ? qsl("[2]nil:msg") : qsl("[1]true"), familyAnswer.isEmpty() ? qsl("[2]nil:msg") : familyAnswer);
+                    .arg(font,
+                         familyAnswer.isEmpty() ? refused : qsl("[1]true"),
+                         familyAnswer.isEmpty() ? refused : familyAnswer,
+                         label ? qsl("[1]%1").arg(pointSize) : refused,
+                         label ? qsl("[1]true") : refused,
+                         label ? qsl("[1]13") : refused);
         };
 
         QCOMPARE(luaGlobalString(host, "fwGlobal"), qsl("%1;%2;[1]%3;[1]%4;[1]100").arg(measured(startFont), averaged(startFont), family(startFont)).arg(startFont.pointSize()));
@@ -3518,7 +3526,7 @@ headlessFontWrap = ok and "ok" or tostring(err)
         QVERIFY(TFontAttributes(pFreshMini->mUpperPaneFont) == TFontAttributes(subConsoleFont(12)));
         QCOMPARE(luaGlobalString(host, "fwWindowSteps"), consoleSteps(subConsoleFont(10), 99999999));
         QCOMPARE(luaGlobalString(host, "fwBufferSteps"), consoleSteps(subConsoleFont(14), 100));
-        QCOMPARE(luaGlobalString(host, "fwLabelSteps"), otherSteps(qsl("[1]%1").arg(family(startFont)), qsl("[1]%1").arg(family(familyFont))));
+        QCOMPARE(luaGlobalString(host, "fwLabelSteps"), otherSteps(qsl("[1]%1").arg(family(startFont)), qsl("[1]%1").arg(family(familyFont)), startFont.pointSize()));
         QCOMPARE(luaGlobalString(host, "fwMissing"), otherSteps(qsl("[2]nil:msg"), QString()));
         QCOMPARE(luaGlobalString(host, "fwLabelFonts"), qsl("%1;%2;%2").arg(family(subConsoleFont(10)), family(familyFont)));
         // Moved to another window, one given no font by setFont() takes the application's
