@@ -1330,6 +1330,12 @@ describe("Tests Other.lua functions", function()
       assert.is_truthy(tostring(err):find("'logDirectory'", 1, true), tostring(err))
     end)
 
+    it("names the key from the table form when only the value asked for contains it", function()
+      local ok, err = setConfig({mapSymbolFont = "mapSymbolFont Mudletspec Sans"})
+      assert.is_nil(ok)
+      assert.is_truthy(tostring(err):find("^mapSymbolFont: font "), tostring(err))
+    end)
+
     it("names an unknown experiment from the table form", function()
       local ok, err = setConfig({["experiment.mudletspec.nosuchthing"] = false})
       assert.is_nil(ok)

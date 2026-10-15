@@ -1405,13 +1405,13 @@ function setConfig(...)
       raised = true
     end
     if not ok or message then
-      local text = tostring(message)
-      -- most C++ messages already name the key
-      if not text:find(tostring(k), 1, true) then
-        text = string.format("%s: %s", tostring(k), text)
+      local key, text = tostring(k), tostring(message)
+      -- most C++ messages already lead with the key; elsewhere it may only be part of the value asked for
+      if text:sub(1, #key) ~= key and text:sub(1, #key + 2) ~= "'" .. key .. "'" then
+        text = string.format("%s: %s", key, text)
       end
       local list = ok and warnings or failures
-      list[#list + 1] = {key = tostring(k), text = text}
+      list[#list + 1] = {key = key, text = text}
     end
   end
 
