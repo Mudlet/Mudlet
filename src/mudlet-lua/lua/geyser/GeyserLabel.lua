@@ -950,17 +950,25 @@ function doNestScroll(label)
   bscroll.nestParent:displayNest()
 end
 
+-- getUserWindowSize warns in the Central Debug Console about any other name,
+-- such as a scroll box's or a user window deleted behind Geyser's back
+local function labelWindowSize(windowname)
+  if windowType(windowname) == "userwindow" then
+    local width, height = getUserWindowSize(windowname)
+    if width then
+      return width, height
+    end
+  end
+  return getMainWindowSize()
+end
+
 --- Displays the nested elements within label, and orients them
 -- appropriately
 -- @param label The name of the label to use
 function Geyser.Label:displayNest()
   local maxDim = {}
   local flyMap = { R = { 1, 0 }, L = { -1, 0 }, T = { 0, -1 }, B = { 0, 1 } }
-  if self.windowname ~= "main" then
-    maxDim["H"], maxDim["V"] = getUserWindowSize(self.windowname)
-  else
-    maxDim["H"], maxDim["V"] = getMainWindowSize()
-  end
+  maxDim["H"], maxDim["V"] = labelWindowSize(self.windowname)
   local parent = self
   --build a list of the labels we can use until we hit the max
   local nestedLabels = {}
@@ -1561,7 +1569,7 @@ end
 function Geyser.Label:onRightClick(event)
   closeAllLevels(self.rightClickMenu)
   if event.button == "RightButton" then
-    local winw = getUserWindowSize(self.windowname)
+    local winw = labelWindowSize(self.windowname)
     local mousepos = self:get_x() + event.x
     local maxdiff = tonumber(self.rightClickMenu.MenuWidth)
     local diff = winw - mousepos

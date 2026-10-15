@@ -1356,9 +1356,16 @@ function Adjustable.Container:setPercent (size_as_percent, position_as_percent)
         x,y = x-self.container.get_x(),y-self.container.get_y()
         winw, winh = self.container.get_width(), self.container.get_height()
     end
-    x, y, w, h = make_percent(x/winw), make_percent(y/winh), make_percent(w/winw), make_percent(h/winh)
-    if size_as_percent then self:resize(w,h) end
-    if position_as_percent then self:move(x,y) end
+    -- an axis the container has no size on (such as the root container of a
+    -- deleted user window) has nothing to be a share of, so it is left as it is
+    local function share(value, total)
+        if total ~= 0 then
+            return make_percent(value/total)
+        end
+    end
+    x, y, w, h = share(x, winw), share(y, winh), share(w, winw), share(h, winh)
+    if size_as_percent and (w or h) then self:resize(w,h) end
+    if position_as_percent and (x or y) then self:move(x,y) end
 end
 -- Save a reference to our parent constructor
 Adjustable.Container.parent = Geyser.Container

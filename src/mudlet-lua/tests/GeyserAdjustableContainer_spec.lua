@@ -2834,6 +2834,23 @@ describe("Tests Adjustable.Container borders, persistence and menu items", funct
       assert.is_truthy(tostring(container.x):find("px$"))
       assert.are.equal("20%", container.width)
     end)
+
+    it("turns the axis its container has a size on into percentages", function()
+      local flat = Geyser.Container:new({name = "gapFlatParent", x = 0, y = 0, width = 300, height = 0})
+      finally(function() flat:delete() end)
+      local container = Adjustable.Container:new({name = "gapFlat", x = 30, y = 0, width = 150, height = 0, autoLoad = false, autoSave = false}, flat)
+      containers[#containers + 1] = container
+
+      container:setPercent(true, true)
+
+      local function percent(value)
+        return tonumber(tostring(value):match("^(.-)%%$"))
+      end
+      assert.are.equal(10, percent(container.x))
+      assert.are.equal(50, percent(container.width))
+      assert.are.equal("0px", container.y)
+      assert.are.equal("0px", container.height)
+    end)
   end)
 
   describe("Adjustable.Container:oldnew", function()
