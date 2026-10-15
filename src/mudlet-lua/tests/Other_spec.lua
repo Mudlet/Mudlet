@@ -1336,6 +1336,25 @@ describe("Tests Other.lua functions", function()
       assert.is_truthy(tostring(err):find("^mapSymbolFont: font "), tostring(err))
     end)
 
+    it("is not stopped by a script's getConfig() that raises", function()
+      snapshot("enableGMCP")
+      local wantGMCP = not getConfig("enableGMCP")
+      local scriptGetConfig = getConfig
+      finally(function()
+        _G.getConfig = scriptGetConfig
+        restore("enableGMCP")
+      end)
+      _G.getConfig = function()
+        error("mudletspec getConfig override")
+      end
+      local called, ok, err = pcall(setConfig, {enableGMCP = wantGMCP, mapSymbolFontScaling = 99})
+      _G.getConfig = scriptGetConfig
+      assert.is_true(called, tostring(ok))
+      assert.is_nil(ok)
+      assert.is_truthy(tostring(err):find("mapSymbolFontScaling 99 is out of range", 1, true), tostring(err))
+      assert.equals(wantGMCP, getConfig("enableGMCP"))
+    end)
+
     it("names an unknown experiment from the table form", function()
       local ok, err = setConfig({["experiment.mudletspec.nosuchthing"] = false})
       assert.is_nil(ok)
