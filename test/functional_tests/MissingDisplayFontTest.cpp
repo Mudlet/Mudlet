@@ -979,7 +979,7 @@ private slots:
             QVERIFY2(pHost->installPackage(modulePath, enums::PackageModuleType::ModuleFromUI).first, "the module carrying the font did not install");
             pHost->waitForProfileSave();
             QVERIFY(pHost->changeModuleSync(moduleName, QLatin1String("1")).first);
-            // Only a module with a priority syncs, and a fresh install has none until the profile is saved and loaded again
+            // Only a module with a priority syncs, and a fresh install has none until the module manager or setModulePriority() gives it one
             pHost->mModulePriorities[moduleName] = 0;
         }
         QVERIFY(pTo->setDisplayFont(QFont(mSyncedModuleFamily, 12), Host::DisplayFontChange::UserChoice).first);
