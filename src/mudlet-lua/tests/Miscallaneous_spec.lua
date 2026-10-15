@@ -2506,19 +2506,31 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         assert.equals("mudlet-spec-insertedmudlet-spec-insert-target", getCurrentLine())
       end)
 
-      it("renders the markup it is given", function()
-        -- BUG: insertHTML() hands the text straight to insertText(), so the
-        -- markup its name and the wiki both promise is put on the line as
-        -- literal characters. Left pending rather than pinning that as the
-        -- contract.
-        pending("insertHTML() does not interpret HTML, it is an alias for insertText")
+      -- Inserting the markup verbatim is the contract ruled on in #9805
+      it("inserts the markup verbatim without interpreting it", function()
         finally(function() moveCursorEnd() end)
         echo("mudlet-spec-html-target\n")
         moveCursor(0, getLastLineNumber("main") - 1)
 
         insertHTML("<b>mudlet-spec-bold</b>")
 
-        assert.equals("mudlet-spec-boldmudlet-spec-html-target", getCurrentLine())
+        assert.equals("<b>mudlet-spec-bold</b>mudlet-spec-html-target", getCurrentLine())
+      end)
+
+      it("takes no window name, inserting its first argument into the main console", function()
+        local name = "mudlet-spec-inserthtml-miniconsole"
+        createMiniConsole(name, 0, 0, 200, 100)
+        finally(function()
+          moveCursorEnd()
+          deleteMiniConsole(name)
+        end)
+        echo("mudlet-spec-html-window-target\n")
+        moveCursor(0, getLastLineNumber("main") - 1)
+
+        insertHTML(name, "mudlet-spec-html-dropped")
+
+        assert.equals(name .. "mudlet-spec-html-window-target", getCurrentLine("main"))
+        assert.equals("", getCurrentLine(name))
       end)
     end)
 

@@ -2161,7 +2161,8 @@ int TLuaInterpreter::insertPopup(lua_State* L)
     return 1;
 }
 
-// No Documentation - public function but should stay undocumented -- compare https://github.com/Mudlet/Mudlet/issues/1149
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#insertText (mentioned there, but not an alias of it)
+// Main console only, takes no window name and returns nothing; the markup is inserted verbatim, not interpreted
 int TLuaInterpreter::insertHTML(lua_State* L)
 {
     const QString sendText = getVerifiedString(L, __func__, 1, "sendText");
