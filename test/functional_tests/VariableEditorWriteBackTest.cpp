@@ -673,7 +673,85 @@ private slots:
         mpEditor->repopulateVars();
     }
 
+    // The Lua that saving a new variable runs can rebuild the variable tree, and
+    // the rows' pending variables go with the old tree. Parentless, so it hangs
+    // off the rebuilt base rather than off the one the rebuild freed.
+    void test_aNewVariableIsKeptWhenItsSaveRebuildsTheTree()
+    {
+        mpEditor->repopulateVars();
+        QTreeWidgetItem* pItem = addPendingVariableRow(qsl("rebuiltDuringSave"));
+        VarUnit* pVarUnit = mpHost->getLuaInterface()->getVarUnit();
+        const quint64 generationBefore = pVarUnit->treeGeneration();
+        pauseWhenLuaSets(qsl("rebuiltDuringSave"));
+        QTimer::singleShot(50ms, mpHost, [this]() {
+            mpHost->getLuaInterface()->getVars(false);
+        });
+
+        mpEditor->saveVar();
+
+        execLua(qsl("setmetatable(_G, nil)"));
+        QVERIFY2(pVarUnit->treeGeneration() != generationBefore, "the variable tree was not rebuilt while the save ran");
+        QCOMPARE(luaTypeOf(qsl("rebuiltDuringSave")), qsl("string"));
+        TVar* pSaved = mpEditor->treeWidget_variables->variableForRow(pVarUnit, pItem);
+        QVERIFY2(pSaved, "the saved variable's row stands for nothing");
+        QCOMPARE(pSaved->getName(), qsl("rebuiltDuringSave"));
+
+        mpEditor->mpCurrentVarItem = nullptr;
+        execLua(qsl("rebuiltDuringSave = nil"));
+        mpEditor->repopulateVars();
+    }
+
+    void test_aNewVariableIsKeptWhenAnotherIsAddedDuringItsSave()
+    {
+        mpEditor->repopulateVars();
+        QTreeWidgetItem* pItem = addPendingVariableRow(qsl("savedBesideAnAdd"));
+        VarUnit* pVarUnit = mpHost->getLuaInterface()->getVarUnit();
+        const quint64 generationBefore = pVarUnit->treeGeneration();
+        const int rowsBefore = mpEditor->mpVarBaseItem->childCount();
+        pauseWhenLuaSets(qsl("savedBesideAnAdd"));
+        QTimer::singleShot(50ms, mpHost, [this]() {
+            mpHost->getLuaInterface()->getVars(false);
+        });
+        QTimer::singleShot(100ms, mpEditor, [this]() {
+            mpEditor->addVar(false);
+        });
+
+        mpEditor->saveVar();
+
+        execLua(qsl("setmetatable(_G, nil)"));
+        QVERIFY2(pVarUnit->treeGeneration() != generationBefore, "the variable tree was not rebuilt while the save ran");
+        QCOMPARE(mpEditor->mpVarBaseItem->childCount(), rowsBefore + 1);
+        QCOMPARE(luaTypeOf(qsl("savedBesideAnAdd")), qsl("string"));
+        TVar* pSaved = mpEditor->treeWidget_variables->variableForRow(pVarUnit, pItem);
+        QVERIFY2(pSaved, "the saved variable's row stands for nothing");
+        QCOMPARE(pSaved->getName(), qsl("savedBesideAnAdd"));
+
+        mpEditor->mpCurrentVarItem = nullptr;
+        execLua(qsl("savedBesideAnAdd = nil variable_name = nil"));
+        mpEditor->repopulateVars();
+    }
+
 private:
+    // A selected, named row holding a new variable not yet saved, as addVar() leaves one
+    QTreeWidgetItem* addPendingVariableRow(const QString& name)
+    {
+        VarUnit* pVarUnit = mpHost->getLuaInterface()->getVarUnit();
+        auto* pItem = new QTreeWidgetItem(mpEditor->mpVarBaseItem, QStringList{name});
+        mpEditor->treeWidget_variables->setNewVariableForRow(pVarUnit, pItem, std::make_unique<TVar>());
+        mpEditor->mpCurrentVarItem = pItem;
+        mpVariablesTree->setCurrentItem(pItem);
+        mpEditor->mpVarsMainArea->lineEdit_var_name->setText(name);
+        mpEditor->mpSourceEditorEdbeeDocument->setText(qsl("saved value"));
+        return pItem;
+    }
+
+    // Runs the event loop from inside Lua's write of the global, as a script's
+    // __newindex can, so that timers fire while the editor is mid-save
+    void pauseWhenLuaSets(const QString& name)
+    {
+        execLua(qsl("setmetatable(_G, {__newindex = function(t, k, v) rawset(t, k, v) if k == '%1' then waitForEvent('neverRaised', 300) end end})").arg(name));
+    }
+
     QString keyTypeShown() const { return mpEditor->mpVarsMainArea->comboBox_variable_key_type->currentText(); }
 
     QStringList childNames(TVar* pVar) const

@@ -7259,10 +7259,10 @@ void dlgTriggerEditor::saveVar()
             }
             variable->setName(newName, uiNameType);
             variable->setValue(newValue, uiValueType);
+            // Before createVar(): the Lua it runs can rebuild the tree, which would delete it
+            treeWidget_variables->forgetNewVariableForRow(pItem);
             luaInterface->createVar(variable);
             varUnit->addVariable(variable);
-            // Before setVariableForRow(): a tree rebuilt during createVar() would otherwise delete it
-            treeWidget_variables->forgetNewVariableForRow(pItem);
             treeWidget_variables->setVariableForRow(varUnit, pItem, variable);
             // Attach to its real parent TVar (set in addVar) so the XML writer,
             // which iterates from the base, nests it inside the parent table
@@ -7342,9 +7342,9 @@ void dlgTriggerEditor::saveVar()
             var = treeWidget_variables->newVariableForRow(varUnit, pItem);
             var->setName(newName, uiNameType);
             var->setValue(newValue, uiValueType);
+            treeWidget_variables->forgetNewVariableForRow(pItem);
             luaInterface->createVar(var);
             varUnit->addVariable(var);
-            treeWidget_variables->forgetNewVariableForRow(pItem);
             treeWidget_variables->setVariableForRow(varUnit, pItem, var);
             pItem->setText(0, newName);
             mpCurrentVarItem = nullptr;
