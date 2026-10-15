@@ -2134,23 +2134,43 @@ describe("MXP auto-detection from the mode switch escape", function()
   end)
 
   -- the console joins an escape a read leaves unfinished to the next read, not
-  -- to what a trigger the read fired feeds in the meantime
-  it("finds the switch split around a read whose trigger feeds more data", function()
-    local id = tempExactMatchTrigger("MXPFEEDINGLINE", [[feedTelnet("fed by a trigger\r\n")]])
-    finally(function() killTrigger(id) end)
-    feed("MXPFEEDINGLINE\r\n\27[1")
-    feed("z<send>MXPAFTERFEED</send>\r\n")
-    assert.is_true(getConfig("promptForMXPProcessorOn"))
-  end)
+  -- to what a trigger the read fired feeds in the meantime. cTelnet posts a read
+  -- in two places, depending on whether the game has sent an IAC GA yet, and
+  -- once it has, that holds for the rest of the connection, so that run is last
+  for _, gaDriven in ipairs({false, true}) do
+    local after = gaDriven and " once the game has sent an IAC GA" or ""
 
-  it("does not join what a trigger feeds to the end of the read that fired it", function()
-    local id = tempExactMatchTrigger("MXPFEEDINGLINE", [[feedTelnet("z fed by a trigger\r\n")]])
-    finally(function() killTrigger(id) end)
-    feed("MXPFEEDINGLINE\r\n\27[1")
-    feed("m after it\27[0m\r\n")
-    assert.is_false(getConfig("promptForMXPProcessorOn"))
-    assert.is_false(getConfig("specialForceMXPProcessorOn"))
-  end)
+    local function feedingTrigger(fedData)
+      local fired = 0
+      local id = tempExactMatchTrigger("MXPFEEDINGLINE", function()
+        fired = fired + 1
+        feedTelnet(fedData)
+      end)
+      if gaDriven then
+        feed("<T_IAC><T_GA>")
+      end
+      return id, function() return fired end
+    end
+
+    it("finds the switch split around a read whose trigger feeds more data" .. after, function()
+      local id, firings = feedingTrigger("fed by a trigger\r\n")
+      finally(function() killTrigger(id) end)
+      feed("MXPFEEDINGLINE\r\n\27[1")
+      feed("z<send>MXPAFTERFEED</send>\r\n")
+      assert.equals(1, firings(), "the trigger that feeds more data did not fire")
+      assert.is_true(getConfig("promptForMXPProcessorOn"))
+    end)
+
+    it("does not join what a trigger feeds to the end of the read that fired it" .. after, function()
+      local id, firings = feedingTrigger("z fed by a trigger\r\n")
+      finally(function() killTrigger(id) end)
+      feed("MXPFEEDINGLINE\r\n\27[1")
+      feed("m after it\27[0m\r\n")
+      assert.equals(1, firings(), "the trigger that feeds more data did not fire")
+      assert.is_false(getConfig("promptForMXPProcessorOn"))
+      assert.is_false(getConfig("specialForceMXPProcessorOn"))
+    end)
+  end
 
   -- a GA prompt that came while MXP was negotiated is not scanned, so it too
   -- comes between the reads either side of it
@@ -2158,8 +2178,14 @@ describe("MXP auto-detection from the mode switch escape", function()
     local enabledBefore = getConfig("enableMXP")
     setConfig("enableMXP", true)
     finally(function() setConfig("enableMXP", enabledBefore) end)
+    local negotiated = false
+    local handler = registerAnonymousEventHandler("sysProtocolEnabled", function(_, protocol)
+      negotiated = negotiated or protocol == "MXP"
+    end)
     feed("x\27[1")
     feed("<T_IAC><T_DO><O_MXP>")
+    killAnonymousEventHandler(handler)
+    assert.is_true(negotiated, "the game's DO MXP was not taken up")
     feed("HP> <T_IAC><T_GA>")
     feed("<T_IAC><T_DONT><O_MXP>")
     feed("z after it\r\n")
