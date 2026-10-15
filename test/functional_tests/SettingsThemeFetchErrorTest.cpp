@@ -64,6 +64,13 @@
 #include <memory>
 #include <zip.h>
 
+#if defined(Q_OS_UNIX)
+#include <cerrno>
+#include <csignal>
+#include <cstring>
+#include <sys/resource.h>
+#endif
+
 class SettingsThemeFetchErrorTest : public QObject
 {
     Q_OBJECT
@@ -80,10 +87,10 @@ private:
     const QString mProfileName = qsl("SettingsThemeFetchError-Test");
     const QString mLocalhost = qsl("localhost");
     QString mPort;
+    QByteArray mServedArchive;
     // A message shaped like a real theme-fetch failure, set on the label by hand
     // for the layout tests: what they test is that the label wraps it. Kept in
     // step with the wording built at dlgProfilePreferences::maybeDownloadEditorThemes().
-    QByteArray mServedArchive;
     const QString mError = qsl("Could not update themes: Error transferring https://github.com/Colorsublime/Colorsublime-Themes/archive/master.zip - server replied: Not Found");
 
     void selectCategory(const QString& key)
@@ -406,13 +413,63 @@ private slots:
             savedTmpDir.isNull() ? qunsetenv("TMPDIR") : qputenv("TMPDIR", savedTmpDir);
         });
 
-        expectTheFailureToBeLogged(QString());
+        QTemporaryFile madeTheSameWay;
+        QVERIFY(!madeTheSameWay.open());
+        const QString reason = madeTheSameWay.errorString();
+        QVERIFY(!reason.isEmpty());
+
+        expectTheFailureToBeLogged(reason);
         fetchThemesFrom(QUrl::fromLocalFile(archive));
         if (QTest::currentTestFailed()) {
             return;
         }
-        verifyTheFailureIsOnShow(qsl("the downloaded themes could not be saved"));
+        verifyTheFailureIsOnShow(qsl("the downloaded themes could not be saved"), reason);
         QVERIFY2(!mpPreferences->theme_download_label->text().contains(qsl("unpacked")), "the archive could not be saved, but the label blames unpacking it");
+    }
+
+    void test_aThemeArchiveThatDoesNotFitOnTheDiskSaysWhy_data()
+    {
+        QTest::addColumn<int>("archiveSize");
+        QTest::addColumn<int>("roomForIt");
+        // Qt hands a write this large straight to the system, and holds a small one back until flush()
+        QTest::newRow("written straight through") << 1500000 << 65536;
+        QTest::newRow("buffered") << 9000 << 4096;
+    }
+
+    void test_aThemeArchiveThatDoesNotFitOnTheDiskSaysWhy()
+    {
+#if !defined(Q_OS_UNIX)
+        QSKIP("the room for a file is limited with setrlimit(), which is Unix only");
+#else
+        QFETCH(int, archiveSize);
+        QFETCH(int, roomForIt);
+        QTemporaryDir downloads;
+        QVERIFY(downloads.isValid());
+        QFile archive(downloads.filePath(qsl("themes.zip")));
+        QVERIFY(archive.open(QIODevice::WriteOnly));
+        QCOMPARE(archive.write(QByteArray(archiveSize, 'x')), archiveSize);
+        archive.close();
+
+        // A file is cut short at the limit as on a full disk; SIGXFSZ would end the run instead of failing the write
+        rlimit saved{};
+        QVERIFY(getrlimit(RLIMIT_FSIZE, &saved) == 0);
+        rlimit limited = saved;
+        limited.rlim_cur = static_cast<rlim_t>(roomForIt);
+        const auto savedHandler = std::signal(SIGXFSZ, SIG_IGN);
+        auto restore = qScopeGuard([&saved, savedHandler] {
+            setrlimit(RLIMIT_FSIZE, &saved);
+            std::signal(SIGXFSZ, savedHandler);
+        });
+        QVERIFY(setrlimit(RLIMIT_FSIZE, &limited) == 0);
+
+        const QString reason = QString::fromLocal8Bit(std::strerror(EFBIG));
+        expectTheFailureToBeLogged(reason);
+        fetchThemesFrom(QUrl::fromLocalFile(archive.fileName()));
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        verifyTheFailureIsOnShow(qsl("the downloaded themes did not fit on the disk"), reason);
+#endif
     }
 
     void test_aSuccessfulThemeUpdateListsTheNewThemesAndPutsTheLabelAway()

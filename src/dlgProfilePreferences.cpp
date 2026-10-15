@@ -7345,7 +7345,6 @@ void dlgProfilePreferences::maybeDownloadEditorThemes()
     pHost->updateProxySettings(manager);
     QNetworkReply* getReply = manager->get(request);
 
-    // Not put away on a timer: the themes listed stay out of date for as long as the dialog is open
     auto failThemeUpdate = [this](const QString& reason, const QString& loggedReason = QString()) {
         qWarning() << "dlgProfilePreferences: could not update the editor themes:" << (loggedReason.isEmpty() ? reason : loggedReason);
         //: Shown under the editor theme list in the preferences; %1 is why the update failed: a network or file system error from the system, or "the downloaded themes could not be unpacked"
@@ -7381,9 +7380,18 @@ void dlgProfilePreferences::maybeDownloadEditorThemes()
                             tempThemesArchive->deleteLater();
                             return;
                         }
-                        // The tail of the archive is only buffered by write(), and close() cannot report it failing to
-                        // reach the disk. A short write leaves Qt no reason to give until the rest is tried again.
-                        if (tempThemesArchive->write(downloadedArchive) != downloadedArchive.size() || !(tempThemesArchive->flush() || tempThemesArchive->flush())) {
+                        // Qt sets no error when only part of a write reaches the disk - in write() for a large one,
+                        // in flush() for a small one it buffered - so the rest is tried again to get the reason.
+                        // close() cannot report a failure at all.
+                        qint64 written = 0;
+                        while (written < downloadedArchive.size()) {
+                            const qint64 count = tempThemesArchive->write(downloadedArchive.constData() + written, downloadedArchive.size() - written);
+                            if (count <= 0) {
+                                break;
+                            }
+                            written += count;
+                        }
+                        if (written != downloadedArchive.size() || !(tempThemesArchive->flush() || tempThemesArchive->flush())) {
                             failThemeUpdate(tempThemesArchive->errorString());
                             tempThemesArchive->deleteLater();
                             return;
