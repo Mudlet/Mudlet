@@ -608,10 +608,11 @@ QPair<bool, QString> MudletApp::writeProfileData(const QString& profile, const Q
     }
 
     const bool holdsSecret = profileDataItemHoldsSecret(item);
+    bool narrowAfterCommit = false;
     if (holdsSecret) {
         // On the temporary file, before the secret is in it: commit() renames it into place, and a
-        // replaced file's mode would otherwise carry over. A refusal is reported after commit()
-        file.setPermissions(QFileDevice::ReadOwner | QFileDevice::WriteOwner);
+        // replaced file's mode would otherwise carry over
+        narrowAfterCommit = !file.setPermissions(QFileDevice::ReadOwner | QFileDevice::WriteOwner);
     }
 
     QDataStream ofs(&file);
@@ -636,8 +637,11 @@ QPair<bool, QString> MudletApp::writeProfileData(const QString& profile, const Q
         return failure(file.errorString());
     }
 
-    if (holdsSecret) {
-        // Only checked: narrowing it here would come after it was already in place, readable
+    if (narrowAfterCommit) {
+        // Some file systems refuse it on the open file but take it by path, which still closes the file for good
+        SecureStringUtils::restrictFileToOwner(file.fileName());
+    } else if (holdsSecret) {
+        // Only checked, so the tests see a narrowing above that went missing instead of this repairing it
         SecureStringUtils::confirmFileIsOwnerOnly(file.fileName());
     }
 
