@@ -266,11 +266,15 @@ private slots:
         QVERIFY2(alone > 100, qPrintable(qsl("the first user window is only %1 high on its own").arg(alone)));
 
         runLua(qsl("openUserWindow('%1', false)").arg(second));
-        settle();
-        const int firstHeight = dockSize(first).height();
-        const int secondHeight = dockSize(second).height();
-        QVERIFY2(secondHeight > alone / 4, qPrintable(qsl("the second user window is %1 high beside the first's %2 (%3)").arg(secondHeight).arg(firstHeight).arg(dockState(second))));
-        QVERIFY2(firstHeight > alone / 4, qPrintable(qsl("the first user window was squeezed to %1").arg(firstHeight)));
+        // The share is handed out from a posted call, and the resizeDocks() it makes
+        // only lands with the layout pass after that, so a fixed wait can end between the two
+        QTRY_VERIFY2_WITH_TIMEOUT(dockSize(second).height() > alone / 4,
+                                  qPrintable(qsl("the second user window is %1 high beside the first's %2 (%3)").arg(dockSize(second).height()).arg(dockSize(first).height()).arg(dockState(second))),
+                                  2000);
+        QTRY_VERIFY2_WITH_TIMEOUT(dockSize(first).height() > alone / 4, qPrintable(qsl("the first user window was squeezed to %1").arg(dockSize(first).height())), 2000);
+        // resizeDocks() need not settle both docks in the same pass, so the first has to stay big after the second's share lands
+        QTest::qWait(200ms);
+        QVERIFY2(dockSize(first).height() > alone / 4, qPrintable(qsl("the first user window was squeezed to %1 after the second got its share").arg(dockSize(first).height())));
         QCOMPARE(mpHost->userWindowSize(second).value_or(QSize()), dockSize(second));
     }
 
@@ -290,13 +294,17 @@ private slots:
         QVERIFY2(alone > 100, qPrintable(qsl("the first user window is only %1 high on its own").arg(alone)));
 
         runLua(qsl("openUserWindow('%1', false) hideWindow('%1')").arg(second));
+        // Lets the posted share run while the window is still hidden, so only the retry on being shown can hand it out
         settle();
         runLua(qsl("showWindow('%1')").arg(second));
-        settle();
-        const int firstHeight = dockSize(first).height();
-        const int secondHeight = dockSize(second).height();
-        QVERIFY2(secondHeight > alone / 4, qPrintable(qsl("the second user window is %1 high beside the first's %2 (%3)").arg(secondHeight).arg(firstHeight).arg(dockState(second))));
-        QVERIFY2(firstHeight > alone / 4, qPrintable(qsl("the first user window was squeezed to %1").arg(firstHeight)));
+        // as above, two event loop passes after the show
+        QTRY_VERIFY2_WITH_TIMEOUT(dockSize(second).height() > alone / 4,
+                                  qPrintable(qsl("the second user window is %1 high beside the first's %2 (%3)").arg(dockSize(second).height()).arg(dockSize(first).height()).arg(dockState(second))),
+                                  2000);
+        QTRY_VERIFY2_WITH_TIMEOUT(dockSize(first).height() > alone / 4, qPrintable(qsl("the first user window was squeezed to %1").arg(dockSize(first).height())), 2000);
+        // resizeDocks() need not settle both docks in the same pass, so the first has to stay big after the second's share lands
+        QTest::qWait(200ms);
+        QVERIFY2(dockSize(first).height() > alone / 4, qPrintable(qsl("the first user window was squeezed to %1 after the second got its share").arg(dockSize(first).height())));
     }
 
     // user windows are reported through a cache of their own, which used to keep

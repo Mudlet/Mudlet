@@ -221,6 +221,10 @@ void shareDockAreaIfSqueezed(QPointer<TDockWidget> dock)
             QObject::connect(dock.data(), &QDockWidget::visibilityChanged, dock.data(), retry, Qt::SingleShotConnection);
             return;
         }
+        // A busy event loop can run this ahead of the pending layout, while the console still has a
+        // new widget's default size, which reads as not squeezed
+        window->layout()->activate();
+        dock->layout()->activate();
         const Qt::DockWidgetArea area = window->dockWidgetArea(dock);
         const Qt::Orientation orientation = (area == Qt::TopDockWidgetArea || area == Qt::BottomDockWidgetArea) ? Qt::Horizontal : Qt::Vertical;
         const auto extent = [orientation](const QWidget* widget) {
@@ -458,6 +462,7 @@ void Host::setMainConsoleView(TMainConsole* view)
     // The view has no widget for a window the null view made, so none may outlive the swap
     if (view) {
         mpNullConsoleFrontend->dropWindows();
+        mExitEventOwed = false;
     }
     mpConsole = view;
     mpConsoleFrontend = view;

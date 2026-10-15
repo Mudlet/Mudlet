@@ -1621,8 +1621,8 @@ mainNamedSheets = getCmdLineStyleSheet() .. "|" .. getCmdLineStyleSheet("main")
 
     // Every one of these Lua functions used to reach through Host::mpConsole
     // without checking it, so calling any of them on a profile whose window had
-    // been closed took the whole client down with it. None of them can do what
-    // it was asked here, so each has to report that instead.
+    // been closed took the whole client down with it. Each has to report that it
+    // cannot do what it was asked here, or answer from the main console's model.
     void test_viewOnlyUiFunctionsReportWithNoView()
     {
         startProfile();
@@ -1654,16 +1654,26 @@ local function expectValue(name, expected, ...)
     end
 end
 
+-- how many values a function answers, and the first of them
+local function expectAnswer(name, expected, ...)
+    local answered = '[' .. select('#', ...) .. ']' .. tostring((...))
+    if answered ~= expected then
+        table.insert(noViewProblems, name .. ' answered ' .. answered .. ' rather than ' .. expected)
+    end
+end
+
 -- a family setFont() takes, which it checks for before it looks for a console
 local anyFont = next(getAvailableFonts())
 
-expectRefusal('createCommandLine', createCommandLine('noViewCl', 0, 0, 100, 20))
-expectRefusal('deleteCommandLine', deleteCommandLine('noViewCl'))
+-- a command line is a record the null view keeps
+expectValue('createCommandLine', true, createCommandLine('noViewCl', 0, 0, 100, 20))
+expectValue('deleteCommandLine', true, deleteCommandLine('noViewCl'))
+-- and so is a text edit
+expectValue('createTextEdit', true, createTextEdit('noViewTe', 0, 0, 100, 20))
+expectValue('deleteTextEdit', true, deleteTextEdit('noViewTe'))
 expectRefusal('deleteLabel', deleteLabel('noViewLbl'))
 expectRefusal('deleteMiniConsole', deleteMiniConsole('noViewMc'))
 expectRefusal('deleteScrollBox', deleteScrollBox('noViewSb'))
-expectRefusal('createTextEdit', createTextEdit('noViewTe', 0, 0, 100, 20))
-expectRefusal('deleteTextEdit', deleteTextEdit('noViewTe'))
 expectRefusal('getTextEditText', getTextEditText('noViewTe'))
 expectRefusal('setTextEditText', setTextEditText('noViewTe', 'x'))
 expectRefusal('clearTextEdit', clearTextEdit('noViewTe'))
@@ -1673,8 +1683,9 @@ expectRefusal('setTextEditStyleSheet', setTextEditStyleSheet('noViewTe', ''))
 expectRefusal('setTextEditFont', setTextEditFont('noViewTe', 'Courier'))
 expectRefusal('setTextEditFontSize', setTextEditFontSize('noViewTe', 10))
 expectRefusal('setTextEditTabMovesFocus', setTextEditTabMovesFocus('noViewTe', true))
-expectRefusal('getBorderColor', getBorderColor())
-expectRefusal('setBorderColor', setBorderColor(1, 2, 3))
+-- the border colour is the main console model's, so it answers with no view
+setBorderColor(1, 2, 3)
+expectValue('getBorderColor', 1, getBorderColor())
 expectRefusal('getLabelSizeHint', getLabelSizeHint('noViewLbl'))
 expectRefusal('getLabelStyleSheet', getLabelStyleSheet('noViewLbl'))
 expectRefusal('setLabelStyleSheet', setLabelStyleSheet('noViewLbl', ''))
@@ -1712,23 +1723,27 @@ expectRefusal('disableCommandLine', disableCommandLine('noViewCl'))
 expectRefusal('getCmdLineStyleSheet', getCmdLineStyleSheet())
 expectRefusal('setCmdLineStyleSheet', setCmdLineStyleSheet(''))
 expectRefusal('getMousePosition', getMousePosition())
-expectRefusal('getMainWindowSize', getMainWindowSize())
-expectRefusal('getUserWindowSize', getUserWindowSize('noViewUw'))
+-- the main console is the character grid NAWS reports, and a name with no user window takes its size
+expectValue('getMainWindowSize', 'number', type(getMainWindowSize()))
+expectValue('getUserWindowSize', getMainWindowSize(), getUserWindowSize('noViewUw'))
 expectRefusal('getUserWindowTitle', getUserWindowTitle('noViewUw'))
 expectRefusal('setUserWindowTitle', setUserWindowTitle('noViewUw', 't'))
 expectRefusal('getUserWindowStyleSheet', getUserWindowStyleSheet('noViewUw'))
 expectRefusal('setUserWindowStyleSheet', setUserWindowStyleSheet('noViewUw', ''))
-expectRefusal('enableScrollBar', enableScrollBar())
-expectRefusal('disableScrollBar', disableScrollBar())
-expectRefusal('enableHorizontalScrollBar', enableHorizontalScrollBar())
-expectRefusal('disableHorizontalScrollBar', disableHorizontalScrollBar())
-expectRefusal('getScrollBarVisible', getScrollBarVisible())
-expectRefusal('enableScrolling', enableScrolling())
-expectRefusal('disableScrolling', disableScrolling())
-expectRefusal('scrollingActive', scrollingActive())
-expectRefusal('getScroll', getScroll())
-expectRefusal('scrollTo', scrollTo(1))
-expectRefusal('scrollTo end', scrollTo())
+-- the main console's scrolling is its model's, so these answer as a real one's do
+expectAnswer('enableScrollBar', '[0]nil', enableScrollBar())
+expectAnswer('disableScrollBar', '[0]nil', disableScrollBar())
+expectAnswer('enableHorizontalScrollBar', '[0]nil', enableHorizontalScrollBar())
+expectAnswer('disableHorizontalScrollBar', '[0]nil', disableHorizontalScrollBar())
+expectAnswer('getScrollBarVisible', '[1]false', getScrollBarVisible())
+expectAnswer('enableScrolling', '[1]true', enableScrolling())
+expectAnswer('disableScrolling', '[1]true', disableScrolling())
+expectAnswer('scrollingActive', '[1]true', scrollingActive())
+expectAnswer('getScroll', '[1]' .. getLastLineNumber('main'), getScroll())
+expectAnswer('scrollTo', '[0]nil', scrollTo(1))
+expectAnswer('getScroll after scrollTo', '[1]1', getScroll())
+expectAnswer('scrollTo end', '[0]nil', scrollTo())
+expectAnswer('getScroll after scrollTo end', '[1]' .. getLastLineNumber('main'), getScroll())
 expectRefusal('getWindowWrap of a sub-console', getWindowWrap('noViewMc'))
 expectRefusal('setWindowWrap of a sub-console', setWindowWrap('noViewMc', 80))
 expectRefusal('moveCursor', moveCursor('noViewMc', 0, 0))
@@ -1736,14 +1751,15 @@ expectRefusal('moveCursorEnd', moveCursorEnd('noViewMc'))
 expectRefusal('getLineNumber', getLineNumber('noViewMc'))
 expectRefusal('getLineCount', getLineCount('noViewMc'))
 expectRefusal('getColumnNumber', getColumnNumber('noViewMc'))
-expectRefusal('getColumnCount', getColumnCount())
-expectRefusal('getRowCount', getRowCount())
+expectValue('getColumnCount', 'number', type(getColumnCount()))
+expectValue('getRowCount', 'number', type(getRowCount()))
 expectRefusal('deleteLine', deleteLine('noViewMc'))
-expectRefusal('getFont', getFont())
-expectRefusal('getFont main', getFont('main'))
-expectRefusal('setFont', setFont(anyFont))
-expectRefusal('getFontSize', getFontSize())
-expectRefusal('setFontSize', setFontSize(10))
+-- the main console's font is the profile's display font
+expectValue('getFont', 'string', type(getFont()))
+expectValue('getFont main', getFont(), getFont('main'))
+expectValue('setFont', true, setFont(anyFont))
+expectValue('setFontSize', true, setFontSize(10))
+expectValue('getFontSize', 10, getFontSize())
 -- the main console's clipboard and buffer size are its model's, but there are
 -- no other consoles
 expectRefusal('copy', copy('noViewMini'))
@@ -1769,7 +1785,6 @@ expectValue('getLastLineNumber', -1, getLastLineNumber('noViewMc'))
 expectValue('getCurrentLine', 'ERROR: mini console does not exist', getCurrentLine('noViewMc'))
 expectValue('getCurrentLine reason', 'window "noViewMc" not found', select(2, getCurrentLine('noViewMc')))
 -- whereas the font and the size are checked before any console is looked for
-expectValue('setFont reason', 'window "" not found', select(2, setFont(anyFont)))
 expectValue('setFont empty', 'font must not be empty', select(2, setFont('')))
 expectValue('setFontSize 0', 'size cannot be 0 or negative', select(2, setFontSize(0)))
 expectValue('copy reason', 'window "noViewMini" not found', select(2, copy('noViewMini')))

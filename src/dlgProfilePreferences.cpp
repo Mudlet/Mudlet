@@ -3875,6 +3875,8 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     checkBox_antiAlias->setChecked(pHost->fontsAntiAlias());
 
     connect(fontComboBox_displayFont, &QFontComboBox::currentFontChanged, this, &dlgProfilePreferences::slot_displayFontChanged, Qt::UniqueConnection);
+    // currentFontChanged is not emitted when the family already shown is picked again
+    connect(fontComboBox_displayFont, &QComboBox::activated, this, &dlgProfilePreferences::slot_displayFontChanged, Qt::UniqueConnection);
     connect(spinBox_displayFontSize, qOverload<int>(&QSpinBox::valueChanged), this, &dlgProfilePreferences::slot_displayFontSizeChanged, Qt::UniqueConnection);
     connect(checkBox_antiAlias, &QCheckBox::clicked, this, &dlgProfilePreferences::slot_displayFontAliasingChanged, Qt::UniqueConnection);
 
@@ -4837,6 +4839,7 @@ void dlgProfilePreferences::disconnectHostRelatedControls()
     // arguments to get the wanted wild-card behaviour for them:
 
     disconnect(fontComboBox_displayFont, &QFontComboBox::currentFontChanged, nullptr, nullptr);
+    disconnect(fontComboBox_displayFont, &QComboBox::activated, nullptr, nullptr);
     disconnect(spinBox_displayFontSize, qOverload<int>(&QSpinBox::valueChanged), nullptr, nullptr);
     disconnect(checkBox_antiAlias, &QCheckBox::clicked, nullptr, nullptr);
 
@@ -5426,7 +5429,7 @@ void dlgProfilePreferences::setButtonAndProfileColor(QPushButton* button, QColor
                                      || button == pushButton_Lwhite_2);
 
         if (isAMapEnvColor || button == pushButton_foreground_color_2 || button == pushButton_background_color_2 || button == pushButton_lowerLevelColor || button == pushButton_upperLevelColor
-            || button == pushButton_mapInfoBg || button == pushButton_roomBorderColor || button == pushButton_roomCollisionBorderColor) {
+            || button == pushButton_mapInfoBg || button == pushButton_roomBorderColor || button == pushButton_roomCollisionBorderColor || button == pushButton_mapGridColor) {
             if (pHost->mpMap) {
                 // Update the custom environment (room colors)
                 if (isAMapEnvColor) {
@@ -6632,7 +6635,7 @@ void dlgProfilePreferences::applyAll()
             pHost->mMapperShowRoomBorders = checkbox_mMapperShowRoomBorders->isChecked();
         }
         if (mSnapshot.dirty(checkBox_drawUpperLowerLevels)) {
-            pMudlet->mDrawUpperLowerLevels = checkBox_drawUpperLowerLevels->isChecked();
+            pMudlet->setDrawUpperLowerLevels(checkBox_drawUpperLowerLevels->isChecked());
         }
         if (pHost->mpMap) {
             if (mSnapshot.dirty(checkBox_showDefaultArea)) {
@@ -8687,7 +8690,7 @@ void dlgProfilePreferences::slot_changePlayerRoomStyle(const int index)
     }
     pHost->mpMap->mapper()->mp2dMap->setPlayerRoomStyle(style);
     // And update the displayed map:
-    pHost->mpMap->mapper()->mp2dMap->update();
+    pHost->mpMap->mapper()->repaintMaps();
 }
 
 void dlgProfilePreferences::slot_setPlayerRoomPrimaryColor()
@@ -8707,7 +8710,7 @@ void dlgProfilePreferences::slot_setPlayerRoomPrimaryColor()
         // The current setting IS for the custom color - so use it straight away:
         mpHost->mpMap->mapper()->mp2dMap->setPlayerRoomStyle(3);
         // And update the displayed map:
-        mpHost->mpMap->mapper()->mp2dMap->update();
+        mpHost->mpMap->mapper()->repaintMaps();
     }
 }
 
@@ -8728,7 +8731,7 @@ void dlgProfilePreferences::slot_setPlayerRoomSecondaryColor()
         // The current setting IS for the custom color - so use it straight away:
         mpHost->mpMap->mapper()->mp2dMap->setPlayerRoomStyle(3);
         // And update the displayed map:
-        mpHost->mpMap->mapper()->mp2dMap->update();
+        mpHost->mpMap->mapper()->repaintMaps();
     }
 }
 
@@ -8744,7 +8747,7 @@ void dlgProfilePreferences::slot_setPlayerRoomOuterDiameter(const int value)
         pHost->setPlayerRoomOuterDiameter(static_cast<quint8>(value));
         if (pHost->mpMap->mapper() && pHost->mpMap->mapper()->mp2dMap) {
             // And update the displayed map:
-            pHost->mpMap->mapper()->mp2dMap->update();
+            pHost->mpMap->mapper()->repaintMaps();
         }
     }
 }
@@ -8763,7 +8766,7 @@ void dlgProfilePreferences::slot_setPlayerRoomInnerDiameter(const int value)
             // Redefine the QGradientStops
             pHost->mpMap->mapper()->mp2dMap->setPlayerRoomStyle(qBound(0, comboBox_playerRoomStyle->currentIndex(), 3));
             // And update the displayed map:
-            pHost->mpMap->mapper()->mp2dMap->update();
+            pHost->mpMap->mapper()->repaintMaps();
         }
     }
 }
@@ -8933,17 +8936,13 @@ void dlgProfilePreferences::slot_changeMapperShowRoomBorders(const bool state)
 
     pHost->mMapperShowRoomBorders = state;
     if (pHost->mpMap && pHost->mpMap->mapper() && pHost->mpMap->mapper()->mp2dMap) {
-        pHost->mpMap->mapper()->mp2dMap->update();
+        pHost->mpMap->mapper()->repaintMaps();
     }
 }
 
 void dlgProfilePreferences::slot_changeDrawUpperLowerLevels(const bool state)
 {
-    mudlet::self()->mDrawUpperLowerLevels = state;
-    Host* pHost = mpHost;
-    if (pHost && pHost->mpMap && pHost->mpMap->mapper() && pHost->mpMap->mapper()->mp2dMap) {
-        pHost->mpMap->mapper()->mp2dMap->update();
-    }
+    mudlet::self()->setDrawUpperLowerLevels(state);
 }
 
 void dlgProfilePreferences::slot_changeMapperUseAntiAlias(const bool state)
@@ -9000,7 +8999,12 @@ bool dlgProfilePreferences::updateDisplayFont(const Host::DisplayFontChange chan
                                                              : static_cast<QFont::StyleStrategy>(QFont::NoAntialias | QFont::PreferQuality));
 
     if (TFontAttributes(mpHost->getDisplayFont()) == TFontAttributes(displayFont)) {
-        // No change!
+        // Nothing changes on screen, but a pick still has to reach the Host: re-picking
+        // the family standing in for a missing font settles for it. Every pick of a new
+        // family lands here as well, as activated follows currentFontChanged
+        if (change == Host::DisplayFontChange::UserChoice) {
+            mpHost->setDisplayFont(displayFont, change);
+        }
         return false;
     }
 
@@ -9056,8 +9060,9 @@ void dlgProfilePreferences::cancelShortcutCaptures()
 
 void dlgProfilePreferences::slot_displayFontChanged()
 {
-    // Only fires from QFontComboBox::currentFontChanged, so the family really is
-    // one the user just picked out of the list
+    // Only fires from QFontComboBox::currentFontChanged and QComboBox::activated,
+    // so the family really is one the user just picked out of the list. Picking a
+    // new family fires both, so a second run for the same font must change nothing
     if (!mpHost.isNull() && updateDisplayFont(Host::DisplayFontChange::UserChoice)) {
         mpHost->mTelnet.sendInfoNewEnvironValue(qsl("FONT"));
     }
@@ -9117,6 +9122,7 @@ void dlgProfilePreferences::slot_borderSizeChanged(int size)
         mpHost->mRoomBorderSize = internalSize;
         if (mpHost->mpMap && mpHost->mpMap->mapper() && mpHost->mpMap->mapper()->mp2dMap) {
             mpHost->mpMap->mapper()->mp2dMap->setBorderSize(internalSize);
+            mpHost->mpMap->mapper()->update3DView();
         }
     }
 }
@@ -9125,8 +9131,8 @@ void dlgProfilePreferences::slot_gridSizeChanged(double size)
 {
     if (mpHost) {
         mpHost->mMapGridLineSize = size;
-        if (mpHost->mpMap && mpHost->mpMap->mapper() && mpHost->mpMap->mapper()->mp2dMap) {
-            mpHost->mpMap->mapper()->mp2dMap->update();
+        if (mpHost->mpMap) {
+            mpHost->mpMap->requestMapRepaint();
         }
     }
 }

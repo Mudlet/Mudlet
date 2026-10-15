@@ -172,6 +172,8 @@ class Host : public QObject
     friend class PasswordEntryTest;
     // Allows the functional test to size its archives past the unpacking dialog's threshold:
     friend class PackageRemovalSaveTeardownTest;
+    // Allows the functional test to put a recording view in place of the null one:
+    friend class FrontendRoutingContractTest;
 
 public:
     Host(int port, const QString& mHostName, const QString& login, const QString& pass, int host_id);
@@ -274,6 +276,15 @@ public:
     bool isClosingDown() const { return mIsClosingDown; }
     bool isClosingForced() const { return mForcedClose; }
     bool requestClose();
+    // A main console raises sysExitEvent as it closes; a profile that never had one gets it from this.
+    void raiseExitEventIfOwed();
+
+    // The profile load, in this order, with the GUI doing its window work between the steps. The first
+    // returns true when the profile has no save of its own yet, so the GUI adds the default packages.
+    bool loadProfileSave(const QString& saveFileName);
+    void startProfileScripts();
+    void loadMapAndConnect(bool connect);
+    void finishProfileLoad();
 
     unsigned int assemblePath();
     bool checkForMappingScript();
@@ -318,6 +329,9 @@ public:
     // through it and has no other windows.
     TConsoleFrontend* consoleFrontend() const;
     bool hasConsoleView() const;
+    // Whether scripts see the map as open: once a mapper shows it, or always with no console view,
+    // where no mapper can be made and the model is the whole map.
+    bool mapOpen() const;
     void setMainConsoleView(TMainConsole* view);
     // Keeps TMainConsole's translation context, so the existing translations still apply.
     static QString loggingAnnouncementText(const bool isLogging, const QString& logFileName);
@@ -507,6 +521,8 @@ public:
     // Use this rather than accessing the TMainConsole::font() as the latter
     // isn't always around during profile start-up:
     QFont getDisplayFont();
+    // What getDisplayFont() answers with no main console, with the bundled fonts added to resolve it against
+    QFont displayFontWithNoView() const;
     QFont getAndClearTempDisplayFont();
     // Whether the font arriving is a fresh choice of family or only a tweak to
     // the one already in use: the caller knows which, and comparing the fonts
@@ -710,7 +726,8 @@ public:
     std::optional<QSize> userWindowSize(const QString& name) const;
     // Columns by rows of a console's text area; {} for no such console.
     std::optional<QSize> windowGridSize(const QString& name) const;
-    // The line a console's upper pane last drew up to, within its buffer; {} for no such console.
+    // The line a console's upper pane last drew up to, or with no view the one it is scrolled back to, else its
+    // last; within its buffer, {} for no such console.
     std::optional<int> windowScroll(const QString& name) const;
     // Whether a console scrolls; {} for no such console.
     std::optional<bool> windowScrolling(const QString& name) const;
@@ -727,7 +744,8 @@ public:
     std::optional<QColor> borderColor() const;
     // The main console answers the profile's display font; {} for no such console.
     std::optional<QFont> windowFont(const QString& name) const;
-    // The point size of a console's upper pane font; {} for no such console.
+    // The point size of a console's upper pane font, or the display font's for the main console with no
+    // main window; {} for no such console.
     std::optional<int> windowFontSize(const QString& name) const;
     bool getEditorShowBidi() const { return mEditorShowBidi; }
     void setEditorShowBidi(const bool);
@@ -745,6 +763,8 @@ public:
     bool importMapFile(const QString& location, QString* errMsg = nullptr);
     std::tuple<QString, bool> getCmdLineSettings(const enums::CommandLineType, const QString&);
     void setCmdLineSettings(const enums::CommandLineType, const bool, const QString&);
+    // The "+ 1" in TCommandLine::slot_saveHistory() must not overflow
+    static constexpr int scmMaxCommandLineHistorySaveSize = 1'000'000;
     int getCommandLineHistorySaveSize() const { return mCommandLineHistorySaveSize; }
     void setCommandLineHistorySaveSize(const int lines);
     bool showIdsInEditor() const { return mShowIDsInEditor; }
@@ -807,6 +827,7 @@ private:
     TConsoleFrontend* mpConsoleFrontend = nullptr;
     // What consoleFrontend() hands out while mpConsole is not set.
     std::unique_ptr<TNullConsoleFrontend> mpNullConsoleFrontend;
+    bool mExitEventOwed = true;
 
 public:
     cTelnet mTelnet;
@@ -1261,6 +1282,8 @@ private:
     void pasteClipboardInto(TConsoleModel& model);
     // Repaints the lines holding the console's selection, when it is on screen.
     void markSelectionDirty(TConsoleModel& model);
+    // False if the map cannot be loaded; true with no console view, which has no mapper to show it in.
+    bool prepareMapperForMapLoad();
     // Stores a boolean setting and tells scripts about it.
     void changeSetting(bool& setting, const bool state, const QString& settingName);
     void setBorders(const QMargins);
@@ -1330,6 +1353,7 @@ private:
     void autoSaveMap();
     QString sanitizePackageName(const QString packageName) const;
     void closeChildren();
+    void installModulesList(const QStringList&);
     void setupSandboxedLuaState(lua_State* L);
 
     QStringList mModulesToSync;
@@ -1544,13 +1568,8 @@ private:
     QMargins mUserBorders;
     QMargins mMxpBorders;
 
-    // The range - applied to ALL command lines - is 0 to 10000, with the knob
-    // on the profile preferences having a log-step action with multiples
-    // of 10 to integer powers and steps of (0,) 10, 20, 50, 100. Prior to the
-    // introduction of this feature the control would effectively have been
-    // zero - and whilst the knob shows the special value of "None" then
-    // to reproduce that behavior there is little reason to not enable it
-    // by default:
+    // 0 to scmMaxCommandLineHistorySaveSize lines, for ALL command lines; 0 turns
+    // saving the history off:
     int mCommandLineHistorySaveSize = 500;
 
     // Whether to display each item's ID number in the editor:
