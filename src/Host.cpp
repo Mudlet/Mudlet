@@ -4432,11 +4432,9 @@ std::tuple<QString, bool> Host::getCmdLineSettings(const enums::CommandLineType 
     bool isOk = false;
     const QString storedIndex = readProfileIniData(qsl("CommandLines/UsedIndexes"));
     auto usedIndex = storedIndex.toInt(&isOk);
+    // A counter that is gone while command lines it numbered remain has been lost, not never written
+    const bool damagedIndex = storedIndex.isEmpty() ? !mappedIndexes.isEmpty() : (!isOk || usedIndex <= 0);
     if (!isOk || usedIndex <= 0 || usedIndex == std::numeric_limits<int>::max()) {
-        if (!storedIndex.isEmpty() && (!isOk || usedIndex <= 0)) {
-            qWarning().nospace().noquote() << "Host::getCmdLineSettings() WARNING - the command line index \"" << storedIndex << "\" of profile \"" << getName()
-                                           << "\" cannot be used, carrying on from the highest one a command line has: " << highestMappedIndex << ".";
-        }
         // Missing, damaged or unable to be incremented, so carry on from the highest index a
         // command line in profile.ini has:
         usedIndex = highestMappedIndex;
@@ -4451,6 +4449,10 @@ std::tuple<QString, bool> Host::getCmdLineSettings(const enums::CommandLineType 
     writeProfileIniData(qsl("CommandLines/UsedIndexes"), QString::number(usedIndex));
     // Generate the name
     fileName = qsl("command_history_%1").arg(usedIndex, 2, 10, QLatin1Char('0'));
+    if (damagedIndex) {
+        qWarning().nospace().noquote() << "Host::getCmdLineSettings() WARNING - the command line index \"" << storedIndex << "\" of profile \"" << getName()
+                                       << "\" cannot be used, the new command line gets \"" << fileName << "\" instead.";
+    }
     // Save it:
     writeProfileIniData(qsl("CommandLines/NameMapping/%1").arg(localName), fileName);
     // And a default setting:

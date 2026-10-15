@@ -89,6 +89,26 @@ private:
         return probe.status() == QSettings::FormatError;
     }
 
+    // Reads a copy: QSettings keeps what it holds for a path, writes that never reached
+    // the file included, so a QSettings on the fixture itself would read those back
+    static QString writtenValue(const QString& iniPath, const QString& key)
+    {
+        const QString copyPath = qsl("%1.written").arg(iniPath);
+        QFile::remove(copyPath);
+        if (!QFile::copy(iniPath, copyPath)) {
+            return qsl("(profile.ini could not be copied)");
+        }
+        const QString value = QSettings(copyPath, QSettings::IniFormat).value(key).toString();
+        QFile::remove(copyPath);
+        return value;
+    }
+
+    static QRegularExpression damageReportFor(const QString& profileName, const QString& handedOut)
+    {
+        return QRegularExpression(
+                qsl(R"(^Host::getCmdLineSettings\(\) WARNING - the command line index ".*" of profile "%1" cannot be used, the new command line gets "%2" instead\.$)").arg(profileName, handedOut));
+    }
+
     // The file has to be in place before the Host first uses it: profile.ini is
     // opened once and kept, so a later write here would not be read again
     Host* hostWithProfileIni(const QString& profileName, const QByteArray& contents)
@@ -199,7 +219,7 @@ private slots:
         QTest::newRow("negative") << qsl("UsedIndexes=-5\n") << true << QStringList{qsl("command_history_01"), qsl("command_history_02")} << qsl("2");
         QTest::newRow("INT_MAX, files in use") << qsl("UsedIndexes=%1\n%2").arg(largest, filesInUse) << false << QStringList{qsl("command_history_04"), qsl("command_history_05")} << qsl("5");
         QTest::newRow("negative, files in use") << qsl("UsedIndexes=-5\n%1").arg(filesInUse) << true << QStringList{qsl("command_history_04"), qsl("command_history_05")} << qsl("5");
-        QTest::newRow("absent, file in use") << firstFileInUse << false << QStringList{qsl("command_history_02"), qsl("command_history_03")} << qsl("3");
+        QTest::newRow("absent, file in use") << firstFileInUse << true << QStringList{qsl("command_history_02"), qsl("command_history_03")} << qsl("3");
         QTest::newRow("not a number, file in use") << qsl("UsedIndexes=abc\n%1").arg(firstFileInUse) << true << QStringList{qsl("command_history_02"), qsl("command_history_03")} << qsl("3");
         QTest::newRow("zero, file in use") << qsl("UsedIndexes=0\n%1").arg(firstFileInUse) << true << QStringList{qsl("command_history_02"), qsl("command_history_03")} << qsl("3");
         QTest::newRow("next file in use") << qsl("UsedIndexes=2\nNameMapping\\log=command_history_03\n") << false << QStringList{qsl("command_history_04"), qsl("command_history_05")} << qsl("5");
@@ -215,11 +235,10 @@ private slots:
         QFETCH(QStringList, expectedFiles);
         QFETCH(QString, expectedIndex);
         const QString profileName = qsl("ProfileIniParseError-Index-%1").arg(QString::fromLatin1(QTest::currentDataTag()).replace(QRegularExpression(qsl("[^A-Za-z_]")), qsl("_")));
-        const QRegularExpression damageReport(qsl(R"(^Host::getCmdLineSettings\(\) WARNING - the command line index ".*" of profile "%1" cannot be used)").arg(profileName));
         if (damaged) {
-            QTest::ignoreMessage(QtWarningMsg, damageReport);
+            QTest::ignoreMessage(QtWarningMsg, damageReportFor(profileName, expectedFiles.constFirst()));
         } else {
-            QTest::failOnWarning(damageReport);
+            QTest::failOnWarning(damageReportFor(profileName, qsl(".*")));
         }
 
         Host* pHost = hostWithProfileIni(profileName, qsl("[CommandLines]\n%1").arg(iniLines).toUtf8());
@@ -228,22 +247,21 @@ private slots:
             HostManager::self()->deleteHost(profileName);
         });
 
-        QStringList names;
+        QList<std::pair<QString, QString>> handedOut;
         for (const QString& expectedFile : expectedFiles) {
-            const QString name = qsl("qaIndexCommandLine%1").arg(names.size() + 1);
+            const QString name = qsl("qaIndexCommandLine%1").arg(handedOut.size() + 1);
             const auto [fileName, saveCommands] = pHost->getCmdLineSettings(enums::SubCommandLine, name);
             Q_UNUSED(saveCommands)
             QCOMPARE(fileName, expectedFile);
-            names << name;
+            handedOut.append({name, fileName});
         }
 
-        // Read through the file: readProfileIniData() answers from the Host's own cache
+        // readProfileIniData() answers from the Host's own cache, so check the file
         deleteTheHost.dismiss();
         HostManager::self()->deleteHost(profileName);
-        QSettings written(iniPathFor(profileName), QSettings::IniFormat);
-        QCOMPARE(written.value(qsl("CommandLines/UsedIndexes")).toString(), expectedIndex);
-        for (qsizetype i = 0; i < names.size(); ++i) {
-            QCOMPARE(written.value(qsl("CommandLines/NameMapping/%1").arg(names.at(i))).toString(), expectedFiles.at(i));
+        QCOMPARE(writtenValue(iniPathFor(profileName), qsl("CommandLines/UsedIndexes")), expectedIndex);
+        for (const auto& [name, fileName] : handedOut) {
+            QCOMPARE(writtenValue(iniPathFor(profileName), qsl("CommandLines/NameMapping/%1").arg(name)), fileName);
         }
     }
 
@@ -253,7 +271,7 @@ private slots:
     {
         const QString profileName = qsl("ProfileIniParseError-IndexBoundary");
         const QString nearLargest = qsl("command_history_%1").arg(std::numeric_limits<int>::max() - 1);
-        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl(R"(^Host::getCmdLineSettings\(\) WARNING - the command line index "-1" of profile "%1" cannot be used)").arg(profileName)));
+        QTest::ignoreMessage(QtWarningMsg, damageReportFor(profileName, qsl("command_history_%1").arg(std::numeric_limits<int>::max())));
         Host* pHost = hostWithProfileIni(profileName, qsl("[CommandLines]\nUsedIndexes=-1\nNameMapping\\chat=%1\n").arg(nearLargest).toUtf8());
         QVERIFY2(pHost, "the profile with a history file next to the largest index was not created");
         const auto deleteTheHost = qScopeGuard([&profileName]() {
@@ -272,25 +290,44 @@ private slots:
 
     // A history file can outlive the profile.ini entry naming it, and handing it out
     // again would give the new command line another one's history
+    void test_aHistoryFileLeftInTheProfileIsNotHandedOutAgain_data()
+    {
+        QTest::addColumn<QString>("iniLines");
+        QTest::addColumn<QString>("leftOverFile");
+        QTest::addColumn<QString>("expectedFile");
+        QTest::addColumn<QString>("expectedIndex");
+        QTest::newRow("no counter") << QString() << qsl("command_history_01") << qsl("command_history_02") << qsl("2");
+        QTest::newRow("counter just below it") << qsl("UsedIndexes=1\n") << qsl("command_history_02") << qsl("command_history_03") << qsl("3");
+    }
+
     void test_aHistoryFileLeftInTheProfileIsNotHandedOutAgain()
     {
-        const QString profileName = qsl("ProfileIniParseError-IndexLeftOver");
+        QFETCH(QString, iniLines);
+        QFETCH(QString, leftOverFile);
+        QFETCH(QString, expectedFile);
+        QFETCH(QString, expectedIndex);
+        const QString profileName = qsl("ProfileIniParseError-IndexLeftOver-%1").arg(QString::fromLatin1(QTest::currentDataTag()).replace(QRegularExpression(qsl("[^A-Za-z_]")), qsl("_")));
+        QTest::failOnWarning(damageReportFor(profileName, qsl(".*")));
         const QString profileDir = QFileInfo(iniPathFor(profileName)).absolutePath();
         QVERIFY(QDir().mkpath(profileDir));
-        QFile leftOver(qsl("%1/command_history_01").arg(profileDir));
+        QFile leftOver(qsl("%1/%2").arg(profileDir, leftOverFile));
         QVERIFY(leftOver.open(QIODevice::WriteOnly));
         QVERIFY(leftOver.write("a command from a command line profile.ini has forgotten\n") > 0);
         leftOver.close();
 
-        Host* pHost = hostWithProfileIni(profileName, QByteArray("[CommandLines]\n"));
+        Host* pHost = hostWithProfileIni(profileName, qsl("[CommandLines]\n%1").arg(iniLines).toUtf8());
         QVERIFY2(pHost, "the profile with a history file left in it was not created");
-        const auto deleteTheHost = qScopeGuard([&profileName]() {
+        auto deleteTheHost = qScopeGuard([&profileName]() {
             HostManager::self()->deleteHost(profileName);
         });
 
         const auto [fileName, saveCommands] = pHost->getCmdLineSettings(enums::SubCommandLine, qsl("qaLeftOverCommandLine"));
         Q_UNUSED(saveCommands)
-        QCOMPARE(fileName, qsl("command_history_02"));
+        QCOMPARE(fileName, expectedFile);
+
+        deleteTheHost.dismiss();
+        HostManager::self()->deleteHost(profileName);
+        QCOMPARE(writtenValue(iniPathFor(profileName), qsl("CommandLines/UsedIndexes")), expectedIndex);
     }
 
     void test_anAbsentProfileIniIsNotReported()
