@@ -160,7 +160,10 @@ private slots:
         const QString target = mConfigDir.filePath(qsl("backup.xml"));
         bool dialogAnswered = false;
         int attempts = 0;
-        std::function<void()> answer = [&]() {
+        // Dies with this scope, so a failure before the dialog shows cannot leave it firing at dead locals
+        QTimer answerer;
+        answerer.setInterval(100ms);
+        connect(&answerer, &QTimer::timeout, this, [&]() {
             for (auto* pWidget : QApplication::topLevelWidgets()) {
                 if (auto* pDialog = qobject_cast<QFileDialog*>(pWidget); pDialog && pDialog->isVisible()) {
                     if (auto* pFileName = pDialog->findChild<QLineEdit*>(qsl("fileNameEdit"))) {
@@ -168,14 +171,15 @@ private slots:
                     }
                     QMetaObject::invokeMethod(pDialog, "accept", Qt::QueuedConnection);
                     dialogAnswered = true;
+                    answerer.stop();
                     return;
                 }
             }
-            if (++attempts < 50) {
-                QTimer::singleShot(100ms, answer);
+            if (++attempts >= 50) {
+                answerer.stop();
             }
-        };
-        QTimer::singleShot(100ms, answer);
+        });
+        answerer.start();
         // A native dialog would block without running the timer that answers it
         QCoreApplication::setAttribute(Qt::AA_DontUseNativeDialogs, true);
 
@@ -214,19 +218,23 @@ private slots:
         const QString wanted = flipAwayFromDisk();
         bool answered = false;
         int attempts = 0;
-        std::function<void()> answer = [&]() {
+        // Dies with this scope, so a failure before the question shows cannot leave it firing at dead locals
+        QTimer answerer;
+        answerer.setInterval(100ms);
+        connect(&answerer, &QTimer::timeout, this, [&]() {
             if (auto* pBox = qobject_cast<QMessageBox*>(QApplication::activeModalWidget())) {
                 if (auto* pYes = pBox->button(QMessageBox::Yes)) {
                     answered = true;
+                    answerer.stop();
                     pYes->click();
                     return;
                 }
             }
-            if (++attempts < 50) {
-                QTimer::singleShot(100ms, answer);
+            if (++attempts >= 50) {
+                answerer.stop();
             }
-        };
-        QTimer::singleShot(100ms, answer);
+        });
+        answerer.start();
 
         mudlet::self()->slot_closeProfileRequested(mudlet::self()->mpTabBar->tabIndex(mHostnames.at(2)));
 
