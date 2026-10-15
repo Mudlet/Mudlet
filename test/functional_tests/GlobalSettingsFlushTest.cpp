@@ -44,9 +44,10 @@
 
 using namespace std::chrono_literals;
 
-// Most application-wide settings are kept in memory until Mudlet quits, so
-// every way of saving a profile has to write Mudlet.ini as well, or a crash
-// after it loses them while the profile's own half survives.
+// Most application-wide settings are kept in memory until Mudlet quits, so the
+// saves a user asks for, and closing Preferences, write Mudlet.ini as well, or a
+// crash after one loses them while the profile's own half survives. Autosave and
+// the save after a package change leave Mudlet.ini alone.
 class GlobalSettingsFlushTest : public QObject
 {
     Q_OBJECT
