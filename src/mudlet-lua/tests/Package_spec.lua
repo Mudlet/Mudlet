@@ -882,6 +882,14 @@ describe("Tests the module accessors", function()
       assert.equals(name, getModuleInfo(name, "mpackage"))
     end)
 
+    it("accepts the name the module is installed under in place of the one its config.lua wrote", function()
+      local name = "mudlet-spec-dotted"
+      withFixtureModule(name)
+      assert.equals(name .. ".xml", getModuleInfo(name, "mpackage"), "SETUP: the fixture's config.lua no longer writes a name the install trims")
+      assert.is_true(setModuleInfo(name, "mpackage", name))
+      assert.equals(name, getModuleInfo(name, "mpackage"))
+    end)
+
     it("lets a module's own script describe it while the module is being read in", function()
       local name = "mudlet-spec-describesitselfmodule"
       local xml = scratchDirectory .. "/" .. name .. ".xml"
