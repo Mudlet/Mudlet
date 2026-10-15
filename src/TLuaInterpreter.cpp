@@ -3468,8 +3468,8 @@ bool TLuaInterpreter::compile(const QString& code, QString& errorMsg, const QStr
 }
 
 // No documentation available in wiki - internal function
-// Undoes compile()'s rich-text markup (kept in step by hand). The tags go first and "&amp;" is
-// decoded last, or a script whose own text says "&lt;b&gt;" would come back as "<b>".
+// Undoes compile()'s rich-text markup (kept in step by hand). The tags go before the entities, or
+// a script's own "<b>" is stripped, and "&amp;" goes last, or its "&lt;b&gt;" comes back as "<b>".
 QString TLuaInterpreter::compileErrorAsPlainText(const QString& error)
 {
     QString plainText = error;
