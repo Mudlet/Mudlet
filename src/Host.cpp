@@ -2142,8 +2142,8 @@ void Host::send(QString cmd, bool wantPrint, bool dontExpandAliases)
         if (!mAliasUnit.processDataStream(command)) {
             mTelnet.sendData(command, true, true);
         } else if (!mTelnet.dispatchingSendRequest()) {
-            // A deny left by an alias that sent nothing would swallow the next command; inside a
-            // sysDataSendRequest handler it is meant for the command that handler was given
+            // A deny left by an alias that sent nothing would swallow the next command. Under a sysDataSendRequest
+            // handler every pass, nested or not, keeps it for the next send: the handled command, unless the handler sends first
             mAllowToSendCommand = true;
         }
     }

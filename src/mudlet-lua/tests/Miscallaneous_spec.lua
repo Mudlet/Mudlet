@@ -2394,10 +2394,8 @@ describe("Tests C++ functions in the Miscallaneous category", function()
       end)
 
       describe("when raised by an alias", function()
-        -- Same observable as above: the warning for a command that cannot be
-        -- encoded is only posted for a send that was allowed. It names the
-        -- command, so the echo of a command that was then blocked cannot pass
-        -- for it, and the echo is turned off as well.
+        -- as above, but matching the warning's text: the echo of a blocked command
+        -- must not pass for a sent one
         local unencodable = "\228\184\128"
         local restore, originalMode
 
@@ -2544,6 +2542,37 @@ describe("Tests C++ functions in the Miscallaneous category", function()
           assert.is_true(sentSince(mark, "mudletSpecAllowedAfterGuard"), "the allowed send was not reported, so this spec cannot tell the two apart")
           assert.is_false(scriptSendSent, "the command the guard alias denied was sent anyway")
           assert.is_false(typedSent, "the typed command the guard alias denied was sent anyway")
+        end)
+
+        it("stops a command whose send request handler expands an alias that leaves the deny to a nested alias", function()
+          local rule = tempAlias("^mudletSpecRule (.*)$", function()
+            if matches[2]:find("mudletSpecDelegated", 1, true) then
+              denyCurrentSend()
+            end
+          end)
+          local check = tempAlias("^mudletSpecCheck (.*)$", function()
+            expandAlias("mudletSpecRule " .. matches[2], false)
+          end)
+          local handler = registerAnonymousEventHandler("sysDataSendRequest", function(_, sending)
+            if sending:find("^mudletSpecDelegated") then
+              expandAlias("mudletSpecCheck " .. sending, false)
+            end
+          end)
+          finally(function()
+            killAlias(rule)
+            killAlias(check)
+            killAnonymousEventHandler(handler)
+          end)
+
+          local mark = getLastLineNumber("main")
+          send("mudletSpecDelegated" .. unencodable, false)
+          local delegatedSent = sentSince(mark, "mudletSpecDelegated")
+
+          clearWarning()
+          mark = getLastLineNumber("main")
+          send("mudletSpecAllowedAfterDelegated" .. unencodable, false)
+          assert.is_true(sentSince(mark, "mudletSpecAllowedAfterDelegated"), "the allowed send was not reported, so this spec cannot tell the two apart")
+          assert.is_false(delegatedSent, "the command the nested alias denied was sent anyway")
         end)
       end)
     end)
