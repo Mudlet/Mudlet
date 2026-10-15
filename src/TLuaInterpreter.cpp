@@ -3031,8 +3031,8 @@ int TLuaInterpreter::setModuleInfo(lua_State* L)
     }
     const QString info{lua_tostring(L, 2)};
     const QString value{lua_tostring(L, 3)};
-    // The installed name stays accepted: it is what a module without a config.lua lacks, and what
-    // replaces a name config.lua wrote with an ending that the install trimmed off
+    // The installed name is still accepted: a module without a config.lua has no detail to start with, and the
+    // install sanitizes config.lua's name (folders, file extensions, backslashes) but stores it unchanged
     if (info == qsl("mpackage") && value != moduleName) {
         return warnArgumentValue(L, __func__, qsl("'mpackage' is the name module '%1' is installed under and cannot be changed").arg(moduleName));
     }
@@ -3055,8 +3055,8 @@ int TLuaInterpreter::setPackageInfo(lua_State* L)
     }
     const QString info{lua_tostring(L, 2)};
     const QString value{lua_tostring(L, 3)};
-    // The installed name stays accepted: it is what a package without a config.lua lacks, and what
-    // replaces a name config.lua wrote with an ending that the install trimmed off
+    // The installed name is still accepted: a package without a config.lua has no detail to start with, and the
+    // install sanitizes config.lua's name (folders, file extensions, backslashes) but stores it unchanged
     if (info == qsl("mpackage") && value != packageName) {
         return warnArgumentValue(L, __func__, qsl("'mpackage' is the name package '%1' is installed under and cannot be changed").arg(packageName));
     }
