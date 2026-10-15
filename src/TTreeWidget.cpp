@@ -569,10 +569,10 @@ void TTreeWidget::setVariableForRow(VarUnit* pVarUnit, QTreeWidgetItem* pItem, T
     mVariableForRow.insert(pItem, pVariable);
 }
 
-void TTreeWidget::setNewVariableForRow(VarUnit* pVarUnit, QTreeWidgetItem* pItem, TVar* pVariable)
+void TTreeWidget::setNewVariableForRow(VarUnit* pVarUnit, QTreeWidgetItem* pItem, std::unique_ptr<TVar> pVariable)
 {
     adoptVariableTree(pVarUnit);
-    mNewVariableForRow.insert_or_assign(pItem, std::unique_ptr<TVar>(pVariable));
+    mNewVariableForRow.insert_or_assign(pItem, std::move(pVariable));
 }
 
 void TTreeWidget::forgetRow(QTreeWidgetItem* pItem)

@@ -632,7 +632,7 @@ private slots:
         mpEditor->repopulateVars();
         VarUnit* pVarUnit = mpHost->getLuaInterface()->getVarUnit();
         auto* pItem = new QTreeWidgetItem(mpEditor->mpVarBaseItem, QStringList{qsl("unsavedNewVariable")});
-        mpEditor->treeWidget_variables->setNewVariableForRow(pVarUnit, pItem, new TVar(pVarUnit->getBase()));
+        mpEditor->treeWidget_variables->setNewVariableForRow(pVarUnit, pItem, std::make_unique<TVar>(pVarUnit->getBase()));
         QVERIFY(mpEditor->treeWidget_variables->newVariableForRow(pVarUnit, pItem));
 
         mpEditor->repopulateVars();
@@ -648,7 +648,7 @@ private slots:
         TVar* pHolderVar = mpEditor->treeWidget_variables->variableForRow(pVarUnit, pHolder);
         QVERIFY2(pHolderVar, "the Variables view has no variable behind the table's row");
         auto* pChild = new QTreeWidgetItem(pHolder, QStringList{qsl("unsavedNewMember")});
-        mpEditor->treeWidget_variables->setNewVariableForRow(pVarUnit, pChild, new TVar(pHolderVar));
+        mpEditor->treeWidget_variables->setNewVariableForRow(pVarUnit, pChild, std::make_unique<TVar>(pHolderVar));
 
         mpEditor->mpCurrentVarItem = nullptr;
         mpVariablesTree->clearSelection();
@@ -664,9 +664,10 @@ private slots:
         mpEditor->repopulateVars();
         VarUnit* pVarUnit = mpHost->getLuaInterface()->getVarUnit();
         auto* pItem = new QTreeWidgetItem(mpEditor->mpVarBaseItem, QStringList{qsl("replacedNewVariable")});
-        mpEditor->treeWidget_variables->setNewVariableForRow(pVarUnit, pItem, new TVar(pVarUnit->getBase()));
-        auto* pReplacement = new TVar(pVarUnit->getBase());
-        mpEditor->treeWidget_variables->setNewVariableForRow(pVarUnit, pItem, pReplacement);
+        mpEditor->treeWidget_variables->setNewVariableForRow(pVarUnit, pItem, std::make_unique<TVar>(pVarUnit->getBase()));
+        auto replacement = std::make_unique<TVar>(pVarUnit->getBase());
+        TVar* pReplacement = replacement.get();
+        mpEditor->treeWidget_variables->setNewVariableForRow(pVarUnit, pItem, std::move(replacement));
         QCOMPARE(mpEditor->treeWidget_variables->newVariableForRow(pVarUnit, pItem), pReplacement);
 
         mpEditor->repopulateVars();

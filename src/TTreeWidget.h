@@ -75,7 +75,7 @@ public:
     TVar* variableForRow(VarUnit* pVarUnit, QTreeWidgetItem* pItem) const;
     TVar* newVariableForRow(VarUnit* pVarUnit, QTreeWidgetItem* pItem) const;
     void setVariableForRow(VarUnit* pVarUnit, QTreeWidgetItem* pItem, TVar* pVariable);
-    void setNewVariableForRow(VarUnit* pVarUnit, QTreeWidgetItem* pItem, TVar* pVariable);
+    void setNewVariableForRow(VarUnit* pVarUnit, QTreeWidgetItem* pItem, std::unique_ptr<TVar> pVariable);
     void forgetRow(QTreeWidgetItem* pItem);
     // Gives up the row's unsaved variable without deleting it, for when the variable tree adopts it
     void forgetNewVariableForRow(QTreeWidgetItem* pItem);

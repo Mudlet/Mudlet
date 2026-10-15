@@ -1612,8 +1612,7 @@ private slots:
         // a row of the other kind: one holding a variable being added, which
         // saveVar() reads back to turn into a real one
         auto* pendingItem = new QTreeWidgetItem(rootItem, QStringList() << qsl("pendingName"));
-        auto* pendingVar = new TVar(vu->getBase());
-        tree.setNewVariableForRow(vu, pendingItem, pendingVar);
+        tree.setNewVariableForRow(vu, pendingItem, std::make_unique<TVar>(vu->getBase()));
         QVERIFY2(tree.newVariableForRow(vu, pendingItem), "the pending row has to resolve before the rebuild");
 
         interface->getVars(false); // frees every TVar the rows were built from
@@ -1670,8 +1669,9 @@ private slots:
         VarUnit* replacement = interface->getVarUnit();
 
         auto* addedItem = new QTreeWidgetItem(rootItem, QStringList() << qsl("addedName"));
-        auto* addedVar = new TVar(replacement->getBase());
-        tree.setNewVariableForRow(replacement, addedItem, addedVar);
+        auto added = std::make_unique<TVar>(replacement->getBase());
+        TVar* addedVar = added.get();
+        tree.setNewVariableForRow(replacement, addedItem, std::move(added));
 
         QCOMPARE(tree.newVariableForRow(replacement, addedItem), addedVar);
         QVERIFY2(!tree.variableForRow(replacement, strandedItem), "while the row the reset stranded still stands for nothing");
