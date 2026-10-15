@@ -78,8 +78,8 @@ bool environmentMarked(EnvironmentKit::Kit kit);
 // What MapStyle::environmentMarks draws on a room of a kind of ground, in ink, size texels across: a null image for
 // a kind it leaves bare
 QImage environmentMark(EnvironmentKit::Kit kit, const QColor& ink, int size);
-// How many rooms a scale bar spans, so that it is a round number of at least two and, where one fits, between shortest
-// and longest pixels long, given how many pixels a room's spacing is; 0 where none would be shorter than longest
+// How many rooms a scale bar spans, so that it is a round number of at least two and between shortest and longest
+// pixels long, given how many pixels a room's spacing is; 0 where none fits
 int scaleBarRooms(qreal pixelsPerRoom, qreal shortest, qreal longest);
 
 // The label drawn again in the style's font and color, without the box behind it, where the label keeps the

@@ -466,7 +466,7 @@ private slots:
         QVERIFY(ochre.isValid());
         QVERIFY(ochre.hue() >= 25 && ochre.hue() <= 50);
         const QColor blue(0, 0, 255);
-        QCOMPARE(inkwash.highlightColorFor(blue, blue), blue);
+        QCOMPARE(inkwash.highlightColorFor(blue, QColor(0, 255, 0)), blue);
         QCOMPARE(inkwash.highlightColorFor(QColor(255, 0, 0, 0), blue), blue);
         // Two separate rings along a line out from the middle
         const QImage image = MapDecals::highlight(inkwash.highlightShape, ochre, ochre, false, scmSize);
@@ -540,6 +540,10 @@ private slots:
         QCOMPARE(MapDecals::scaleBarRooms(100.0, 60.0, 240.0), 2);
         QCOMPARE(MapDecals::scaleBarRooms(200.0, 60.0, 240.0), 0);
         QCOMPARE(MapDecals::scaleBarRooms(0.0, 60.0, 240.0), 0);
+        QCOMPARE(MapDecals::scaleBarRooms(120.0, 60.0, 240.0), 2);
+        QCOMPARE(MapDecals::scaleBarRooms(0.06, 60.0, 240.0), 1000);
+        // So far out that even the longest would be too short to read
+        QCOMPARE(MapDecals::scaleBarRooms(0.05, 60.0, 240.0), 0);
     }
 
     void test_bullseyeIsADotInARingOnWhite()
