@@ -247,6 +247,8 @@ struct MapStyle
     // The least lightness the Ink palette lifts an environment's color to before tinting with it, so that dark
     // environments still read as pale washes of their color on the sheet
     float inkLightness = 0.0f;
+    // The InkOutlines edges' line width, as a part of a room's width
+    float inkOutlineWidth = 0.035f;
     // A column rising from the player's room
     bool playerBeacon = true;
     // The style's lettering: its spacing as a percentage of the font's usual, and whether it is set in capitals
