@@ -2815,7 +2815,7 @@ void TBuffer::decodeSGR38(const SgrParameters& parameters, bool isColonSeparated
                 }
 #endif
                 // An index we cannot read is not a request for colour zero, and
-                // xterm ignores one past the end of the 256-colour palette:
+                // xterm ignores any index past the end of the 256-colour palette:
                 return;
             }
         } else {
@@ -2976,7 +2976,7 @@ void TBuffer::decodeSGR48(const SgrParameters& parameters, bool isColonSeparated
                 }
 #endif
                 // An index we cannot read is not a request for colour zero, and
-                // xterm ignores one past the end of the 256-colour palette:
+                // xterm ignores any index past the end of the 256-colour palette:
                 return;
             }
         } else {
