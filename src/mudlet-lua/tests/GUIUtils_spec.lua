@@ -3493,6 +3493,15 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
           assert.is_truthy(err:find(setter .. ": bad argument #2 type (function expected, got number!)", 1, true))
         end)
 
+        it(setter .. " reports why a string that does not compile was refused", function()
+          local callback = "not valid lua("
+          local _, compileError = loadstring("return " .. callback .. "(...)", callback)
+          local ok, err = pcall(_G[setter], labelName, callback)
+          assert.is_false(ok)
+          assert.is_truthy(err:find(setter .. ": bad argument #2 value (" .. compileError .. ")", 1, true))
+          assert.is_truthy(err:find('[string "' .. callback .. '"]', 1, true))
+        end)
+
         it(setter .. " reports a label it cannot find and rejects an empty name", function()
           local ok, err = _G[setter]("guiUtilsNoSuchLabel", function() end)
           assert.is_nil(ok)
@@ -3535,6 +3544,15 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
         local ok, err = pcall(setCmdLineAction, cmdLineName, 42)
         assert.is_false(ok)
         assert.is_truthy(err:find("setCmdLineAction: bad argument #2 type (function expected, got number!)", 1, true))
+      end)
+
+      it("Should report why a string that does not compile was refused", function()
+        local callback = "not valid lua("
+        local _, compileError = loadstring("return " .. callback .. "(...)", callback)
+        local ok, err = pcall(setCmdLineAction, cmdLineName, callback)
+        assert.is_false(ok)
+        assert.is_truthy(err:find("setCmdLineAction: bad argument #2 value (" .. compileError .. ")", 1, true))
+        assert.is_truthy(err:find('[string "' .. callback .. '"]', 1, true))
       end)
 
       it("Should report a command line it cannot find", function()
