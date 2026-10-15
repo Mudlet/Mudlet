@@ -147,6 +147,9 @@ private:
     void showRemovalProblem(const QString& message);
     void showRemovalNotice(const QString& message);
     void showNotification(const QString& message, QLabel* pIcon);
+    // writeProfileData() less its folder check, as a login or password typed for a game never played makes the folder
+    QPair<bool, QString> saveProfileDetail(const QString& profile, const QString& item, const QString& what);
+    void showUnsavedChange(const QString& message, const QString& profile, const QString& item);
     void fitWelcomeMessageToContents();
     void continueProfileSave(QListWidgetItem* pItem, const QString& newProfileName, const QString& newProfileHost, const QString& newProfilePort, const int newProfileSslTsl);
     void setItemName(QListWidgetItem*, const QString&) const;
@@ -217,6 +220,8 @@ private:
     bool mPendingConnect = false;      // Whether to connect (true) or just load (false)
     QString mKeychainOperationProfile; // Whose password a keychain read is fetching, if any
     bool mKeychainWaitShown = false;   // Whether the dialog is showing the keychain wait
+    // The profile and item a shown notice says could not be saved, so saving that one later clears it
+    QPair<QString, QString> mUnsavedChange;
 
 
 private slots:
