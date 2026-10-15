@@ -1122,6 +1122,57 @@ describe("Trigger processing", function()
             end)
         end
 
+        -- rewrapping goes on to the end of the buffer, past the line being processed,
+        -- which is longer than the wrap width
+        it("should match and highlight all of the line being processed after a trigger rewraps a line above it", function()
+            local wrapAt = getWindowWrap("main")
+            local fired = {}
+            local splitter, colorTrigger
+            local countBefore, countAfter
+            local highlighter = "HighlightAfterRewrapAbove"
+            finally(function()
+                if splitter then killTrigger(splitter) end
+                if colorTrigger then killTrigger(colorTrigger) end
+                killTrigger(highlighter)
+                setWindowWrap("main", wrapAt)
+            end)
+            setWindowWrap("main", 40)
+            feedTriggers("line above a long one\n")
+            splitter = tempTrigger("LongRewrapAboveMarker", function()
+                local above = getLineNumber() - 1
+                moveCursor(0, above)
+                moveCursor(utf8.len(getCurrentLine()), above)
+                insertText("\nsplit off")
+                countBefore = getLineCount()
+                wrapLine("main", above)
+                countAfter = getLineCount()
+            end)
+            colorTrigger = tempAnsiColorTrigger(1, -1, function() fired[#fired + 1] = matches[1] end)
+            tempComplexRegexTrigger(highlighter, "redwordEND", [[]], 0, 0, 0, 0, 0, "blue", "transparent", 0, 0, 0)
+            local longLine = "LongRewrapAboveMarker" .. string.rep(" redword", 10) .. " redwordEND"
+
+            feedTriggers("\27[31m" .. longLine .. "\27[0m\n")
+
+            assert.are.equal(countBefore + 1, countAfter)
+            assert.are.same({longLine}, fired)
+            local endLine = lastLineReading("split off") + 1
+            for lineNumber = endLine, getLineCount() do
+                moveCursor(0, lineNumber)
+                if getCurrentLine():find("redwordEND", 1, true) then
+                    endLine = lineNumber
+                    break
+                end
+            end
+            moveCursor(0, endLine)
+            local column = utf8.len(getCurrentLine()) - #"redwordEND"
+            moveCursor(column, endLine)
+            selectSection(column, 1)
+            local r, g, b = getFgColor()
+            deselect()
+            moveCursorEnd()
+            assert.are.same({0, 0, 255}, {r, g, b})
+        end)
+
     end)
 
     describe("tempAnsiColorTrigger callbacks", function()

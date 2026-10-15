@@ -6053,9 +6053,9 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
     }
 
     // The Lua wrapLine() reaches here from inside a trigger pass, and rebuilding
-    // the line, or one above it, replaces the characters the pass is matching against:
-    if (mPreTriggerPassLineNumber >= startLine) {
-        materialisePreTriggerPassLine(mPreTriggerPassLineNumber);
+    // the line replaces the characters the pass is matching against:
+    if (mPreTriggerPassLineNumber == startLine) {
+        materialisePreTriggerPassLine(startLine);
     }
 
     // Checked here, not in the setters, as the wrap width can change after them.
@@ -6067,6 +6067,17 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
     const int indent = (indentSize > 0 && indentSize < maxWidth) ? std::min(indentSize, maxWidth / 2) : 0;
     const int hangingIndent = (hangingIndentSize > 0 && hangingIndentSize < maxWidth) ? std::min(hangingIndentSize, maxWidth / 2) : 0;
     const int total = static_cast<int>(buffer.size());
+    // A line a trigger pass is still running on is wrapped once its pass ends, so a wrap from above
+    // leaves it, and what follows it, whole: split now, color triggers and highlights would see only its first part
+    int wrapUpTo = total;
+    if (mPreTriggerPassLineNumber > startLine) {
+        wrapUpTo = mPreTriggerPassLineNumber;
+    }
+    for (const EnclosingTriggerPass& enclosing : std::as_const(mEnclosingTriggerPasses)) {
+        if (enclosing.lineNumber > startLine) {
+            wrapUpTo = std::min(wrapUpTo, enclosing.lineNumber);
+        }
+    }
 
     // Leading lines that getWrapInfo() finds no break points in stay where they
     // are. The loop below reproduces such a line unchanged, but only after
@@ -6076,7 +6087,7 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
     // drops its TChars, restamps it and clears its prompt flag.
     int firstRewrappedLine = startLine;
     QList<WrapInfo> lineBreaks;
-    while (firstRewrappedLine < total) {
+    while (firstRewrappedLine < wrapUpTo) {
         if (buffer[firstRewrappedLine].empty() || lineBuffer.at(firstRewrappedLine).isEmpty()) {
             break;
         }
@@ -6153,7 +6164,9 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
         // (which never reaches here) or with no text, and getWrapInfo() answers
         // an empty list for empty text too - so the stale value is the right
         // one either way.
-        if (i != firstRewrappedLine) {
+        if (i >= wrapUpTo) {
+            lineBreaks.clear();
+        } else if (i != firstRewrappedLine) {
             lineBreaks = getWrapInfo(lineText, isNewline, maxWidth, indent, hangingIndent);
         }
         if (lineBreaks.isEmpty()) {
