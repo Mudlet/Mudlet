@@ -731,7 +731,11 @@ int dlgMapper::shownAreaId() const
 bool dlgMapper::showing3DView() const
 {
 #if defined(INCLUDE_3DMAPPER)
-    return glWidget && glWidget->isVisible();
+    // The constructor builds the 3D view on the next event loop pass, so until then answer the mode it will show
+    if (!glWidget) {
+        return mIs3DMode;
+    }
+    return glWidget->isVisible();
 #else
     return false;
 #endif
