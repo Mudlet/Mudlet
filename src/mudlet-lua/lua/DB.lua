@@ -459,13 +459,14 @@ local lua_reserved_words = {
 ---   _violations among them, until the entry is spelled right. A db:create that
 ---   loses the sheet nothing is applied as usual, and one that also drops a column
 ---   does lose the rule, since removing a column is a rebuild in its own right.
----   Moving a _unique entry onto columns whose rows hold the same value more than
----   once cannot be applied as it stands, and neither can making a column this
----   db:create adds unique while the sheet has more than one row, as each row takes
----   its default. db:create then raises an error and leaves that sheet as it was.
----   With _violations = "IGNORE" or "REPLACE" the error is about the rows the move
----   would lose, as all but one of the rows sharing a value would go: given force,
----   db:create applies the move and deletes those rows.
+---   Moving a single-column _unique entry to another column rebuilds the sheet so
+---   the rule moves with it. A move onto a column whose rows hold the same value
+---   more than once cannot be applied as it stands, and neither can one onto a
+---   column this db:create adds while the sheet has more than one row, as each row
+---   takes its default. The sheet then keeps the uniqueness it already enforces and
+---   a warning is printed, so a script that loaded before still loads. With
+---   _violations = "IGNORE" or "REPLACE", given force, db:create applies the move
+---   and deletes all but one of the rows sharing a value.
 ---   Naming _row_id in a _unique entry written as a list is warned about but kept,
 ---   since a sheet's _row_id is unique on its own and the constraint is therefore
 ---   one that can never refuse a row.
@@ -1019,6 +1020,57 @@ local function count_rows(conn, s_name)
 end
 
 
+-- The first _unique entry the sheet's rows would break, worded for a message, or nil when none does.
+-- A column this db:create adds holds its default in every row, so it is left out of the grouping.
+local function unique_move_clash(conn, s_name, schema, current_columns)
+  for _, entry in ipairs(schema.options._unique or {}) do
+    local columns = type(entry) == "table" and entry or { entry }
+    local grouped, conditions, can_clash, added = {}, {}, true, nil
+    for _, column in ipairs(columns) do
+      local quoted = '"' .. column .. '"'
+      if current_columns[column] ~= nil and column ~= "_row_id" then
+        grouped[#grouped + 1] = quoted
+        conditions[#conditions + 1] = quoted .. " IS NOT NULL"
+      elseif column == "_row_id" or db:_sql_convert(schema.columns[column]) == "NULL" then
+        -- _row_id is unique on its own, and any number of rows may share a NULL
+        can_clash = false
+      else
+        added = added or quoted
+      end
+    end
+
+    if can_clash then
+      local sql
+      if #grouped == 0 then
+        sql = "SELECT 1 FROM " .. s_name .. " LIMIT 1 OFFSET 1"
+      else
+        sql = "SELECT 1 FROM " .. s_name .. " WHERE " .. table.concat(conditions, " AND ") ..
+          " GROUP BY " .. table.concat(grouped, ", ") .. " HAVING COUNT(*) > 1 LIMIT 1"
+      end
+      db:echo_sql(sql)
+      local cur = conn:execute(sql)
+      -- a check that could not run can't clear the move either
+      local clashes = true
+      if type(cur) == "userdata" then
+        clashes = cur:fetch({}, "a") ~= nil
+        cur:close()
+      end
+
+      if clashes then
+        local names = {}
+        for i, column in ipairs(columns) do
+          names[i] = '"' .. column .. '"'
+        end
+        return table.concat(names, ", ") .. (#columns > 1 and " to be unique together" or " to be unique") ..
+          (added and " (" .. added .. " is added by this db:create, so every row takes its default)" or "")
+      end
+    end
+  end
+
+  return nil
+end
+
+
 -- NOT LUADOC
 -- The migrate function is meant to upgrade an existing database live, to maintain a consistent
 -- and correct set of sheets and fields, along with their indexes. It should be safe to run
@@ -1099,6 +1151,7 @@ function db:_migrate(db_name, s_name, force)
     local table_constraints_changed = false
     local would_drop_a_unique = false
     local unique_lost_to_column_removal = false
+    local unique_only_moved = false
 
     if sql_cur and type(sql_cur) ~= "number" then
       local sql_row = sql_cur:fetch({}, "a")
@@ -1112,6 +1165,7 @@ function db:_migrate(db_name, s_name, force)
         -- both: the fingerprint carries ON CONFLICT but not which column a column-level UNIQUE is on
         if expected_constraints ~= actual_constraints or not same_unique_targets(expected_sql, actual_sql) then
           table_constraints_changed = true
+          unique_only_moved = expected_constraints == actual_constraints
           -- a skipped _unique entry is likely a typo, and once fixed its rule can't be restored over
           -- duplicates let in meanwhile, so hold back only a rebuild that would drop an enforced rule
           if schema.has_skipped_unique and drops_a_unique(expected_sql, actual_sql) then
@@ -1141,7 +1195,25 @@ function db:_migrate(db_name, s_name, force)
       end
     end
 
-    if table_constraints_changed and not would_drop_a_unique then
+    -- reported, not raised: a moved UNIQUE went unnoticed, so a sheet whose rows the move can't take
+    -- loaded fine, and raising would stop every script after its unguarded db:create
+    local keeps_moved_unique = false
+    if table_constraints_changed and not would_drop_a_unique and unique_only_moved then
+      local violations = schema.options._violations
+      local drops_clashing_rows = force and (violations == "IGNORE" or violations == "REPLACE")
+      local clash = not drops_clashing_rows and unique_move_clash(conn, s_name, schema, current_columns)
+      if clash then
+        keeps_moved_unique = true
+        printError("db:create - "..s_name.." - _unique now asks for "..clash..", but the sheet's rows "..
+          "hold the same value there more than once, so the sheet keeps the uniqueness it already "..
+          "enforces: remove the duplicates"..
+          ((violations == "IGNORE" or violations == "REPLACE") and
+            ", or pass force to db:create to delete all but one of the rows sharing a value," or "")..
+          " and the move is applied then.", true, false)
+      end
+    end
+
+    if table_constraints_changed and not would_drop_a_unique and not keeps_moved_unique then
       -- Commit any pending transaction before table recreation
       db:echo_sql("COMMIT")
       conn:commit()
