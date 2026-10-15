@@ -776,7 +776,7 @@ void LuaInterface::iterateTable(lua_State* L, int index, TVar* tVar, bool hide)
                 iterateTable(L, -2, var, hide);
                 depth--;
             } else {
-                const QString variableName = varUnit->shortVarName(var).join(qsl("."));
+                const QString variableName = varUnit->shortVarPath(var);
                 qWarning().noquote().nospace() << "LuaInterface::iterateTable() WARNING - not reading the contents of the table \"" << variableName
                                                << "\": " << (tooDeep ? qsl("it is nested more than %1 tables deep").arg(scmMaxTableDepth) : qsl("the Lua stack could not be grown"))
                                                << ". It is being treated as an empty table.";
@@ -799,7 +799,6 @@ void LuaInterface::iterateTable(lua_State* L, int index, TVar* tVar, bool hide)
             var->setValue("function");
         } else {
             tVar->removeChild(var);
-            varUnit->removeVariable(var);
             delete var;
         }
         lua_pop(L, 1);

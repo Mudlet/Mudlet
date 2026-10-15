@@ -21,11 +21,12 @@
 #define MUDLET_MUDLETPROXYSTYLE_H
 
 #include <QAbstractNativeEventFilter>
+#include <QIcon>
 #include <QProxyStyle>
 
 #include "enums.h"
 
-// Applies Mudlet's application-wide style hint adjustments on top of whichever
+// Applies Mudlet's application-wide style adjustments on top of whichever
 // base style is in use.
 //
 // Whether a lone Alt tap moves focus to the menu bar is the player's choice:
@@ -52,11 +53,16 @@ public:
     static enums::MenuBarAltKeyNavigation altKeyNavigation() { return smAltKeyNavigation; }
     static void setAltKeyNavigation(const enums::MenuBarAltKeyNavigation mode) { smAltKeyNavigation = mode; }
     int styleHint(StyleHint styleHint, const QStyleOption* opt, const QWidget* widget, QStyleHintReturn* returnData) const override;
+    void drawControl(ControlElement element, const QStyleOption* option, QPainter* painter, const QWidget* widget = nullptr) const override;
+    QIcon standardIcon(StandardPixmap standardIcon, const QStyleOption* option = nullptr, const QWidget* widget = nullptr) const override;
     bool nativeEventFilter(const QByteArray& eventType, void* message, qintptr* result) override;
 
 #if defined(Q_OS_UNIX) && !defined(Q_OS_MACOS)
 private slots:
     void slot_a11yStatusChanged(const QString& interfaceName, const QVariantMap& changedProperties, const QStringList& invalidatedProperties);
+
+private:
+    void readScreenReaderStatus();
 #endif
 
 private:
@@ -66,6 +72,14 @@ private:
     // QMenuBar asks for SH_MenuBar_AltKeyNavigation on every event its window
     // receives, so the operating system is asked once and then told of changes
     bool mScreenReaderRunning = false;
+
+    // Fusion loads each title bar icon from six embedded PNGs on every call, and paints a dock
+    // widget's title - each time any part of the dock is painted - by asking two of them for
+    // their actualSize(). That answer never depends on what the icon was asked before, which
+    // pixmap()'s does, so only the title paint shares an icon.
+    mutable bool mMeasuringDockTitle = false;
+    mutable QIcon mDockTitleCloseIcon;
+    mutable QIcon mDockTitleNormalIcon;
 };
 
 #endif

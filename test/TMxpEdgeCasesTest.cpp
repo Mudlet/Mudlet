@@ -63,6 +63,37 @@ private:
   }
 
 private slots:
+  void testVarSetsTheNamedVariable() {
+    TMxpStubClient client;
+    TMxpProcessor processor(&client);
+    processor.setMode(MXP_MODE_CODE_LOCK_SECURE);
+
+    processInput(processor, "before <VAR hp>42</VAR> after");
+
+    QCOMPARE(client.mVariables.size(), 1);
+    QCOMPARE(client.mVariables.first().first, qsl("hp"));
+    QCOMPARE(client.mVariables.first().second, qsl("42"));
+  }
+
+  // Neither the game text outside a VAR nor a VAR with no name may become a variable
+  void testStrayOrUnnamedVarSetsNothing() {
+    TMxpStubClient client;
+    TMxpProcessor processor(&client);
+    processor.setMode(MXP_MODE_CODE_LOCK_SECURE);
+
+    processInput(processor, "plain game text</VAR>");
+    QVERIFY(client.mVariables.isEmpty());
+
+    processInput(processor, "<VAR>42</VAR>");
+    QVERIFY(client.mVariables.isEmpty());
+
+    processInput(processor, "<VAR hp>42</VAR> more text</VAR>");
+    QCOMPARE(client.mVariables.size(), 1);
+
+    processInput(processor, "<VAR mp /> more text</VAR>");
+    QCOMPARE(client.mVariables.size(), 1);
+  }
+
   // Comments (<!-- -->) should be consumed, not displayed as text
   void testCommentsAreSilentlyConsumed() {
     TMxpEdgeCaseClient client;

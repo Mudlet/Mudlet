@@ -48,10 +48,23 @@
 #include <QProgressDialog>
 #include <QPushButton>
 #include <QSettings>
+#include <QSignalBlocker>
 #include <QTimer>
 #include <QVBoxLayout>
 
 using namespace std::chrono_literals;
+
+dlgMapper* TMap::mapper() const
+{
+    return mpMapper.data();
+}
+
+void TMap::setMapper(dlgMapper* pMapper)
+{
+    mpMapper = pMapper;
+    mpMapViewFrontend = pMapper;
+    mpMapViewObject = pMapper;
+}
 
 dlgMapper::dlgMapper(QWidget* parent, Host* pH, TMap* pM)
 : QWidget(parent)
@@ -137,10 +150,149 @@ dlgMapper::dlgMapper(QWidget* parent, Host* pH, TMap* pM)
     setupEmptyStateOverlay();
     setupProgressOverlay();
     connect(mpMap, &TMap::signal_mmpMapLocationChanged, this, &dlgMapper::updateEmptyStateOverlay);
+    connectMapCues();
+    updateEmptyStateOverlay();
+}
+
+bool dlgMapper::drawsTheMap() const
+{
+    return mpMap && mpMap->mapper() == this;
+}
+
+void dlgMapper::connectMapCues()
+{
     connect(mpMap, &TMap::signal_areaChanged, this, [this](int) {
+#if defined(INCLUDE_3DMAPPER)
+        if (glWidget && mpMap->mpM == glWidget) {
+            glWidget->update();
+        }
+#endif
+        if (drawsTheMap()) {
+            mp2dMap->mNewMoveAction = true;
+            mp2dMap->update();
+        }
         updateEmptyStateOverlay();
     });
-    updateEmptyStateOverlay();
+    connect(mpMap, &TMap::signal_mapperColoursChanged, this, [this]() {
+        if (drawsTheMap()) {
+            refreshColours();
+            update3DView();
+        }
+    });
+    connect(mpMap, &TMap::signal_mapCleared, this, [this]() {
+        if (!drawsTheMap()) {
+            return;
+        }
+        updateAreaComboBox();
+        mp2dMap->mMultiSelectionListWidget.clear();
+        mp2dMap->mMultiSelectionListWidget.hide();
+    });
+    connect(mpMap, &TMap::signal_mapLabelsChanged, this, [this]() {
+        if (drawsTheMap()) {
+            repaintMaps();
+        }
+    });
+    connect(mpMap, &TMap::signal_mapLoaded, this, [this](const bool showPlayerArea) {
+        if (!drawsTheMap()) {
+            return;
+        }
+        mp2dMap->init();
+        updateAreaComboBox();
+        if (showPlayerArea) {
+            resetAreaComboBoxToPlayerRoomArea();
+        }
+    });
+    connect(mpMap, &TMap::signal_mapperShowRequested, this, [this]() {
+        if (drawsTheMap()) {
+            show();
+        }
+    });
+    connect(mpMap, &TMap::signal_mapDownloadEnded, this, [this]() {
+        if (drawsTheMap()) {
+            updateEmptyStateOverlay();
+        }
+    });
+    connect(mpMap, &TMap::signal_symbolCachesStale, this, [this]() {
+        if (!drawsTheMap()) {
+            return;
+        }
+        mp2dMap->flushSymbolPixmapCache();
+        mp2dMap->update();
+        update3DView();
+        update();
+    });
+    connect(mpMap, &TMap::signal_playerRoomStyleChanged, this, [this]() {
+        if (drawsTheMap()) {
+            mp2dMap->setPlayerRoomStyle(mpMap->mPlayerRoomStyle);
+            update3DView();
+        }
+    });
+    connect(mpMap, &TMap::signal_areaListChanged, this, [this]() {
+        if (drawsTheMap()) {
+            updateAreaComboBox();
+        }
+    });
+    connect(mpMap, &TMap::signal_areaRenamed, this, [this](const QString& oldName, const QString& newName) {
+        if (!drawsTheMap()) {
+            return;
+        }
+        const bool wasShown = oldName == comboBox_showArea->currentText();
+        updateAreaComboBox();
+        if (wasShown) {
+            comboBox_showArea->setCurrentText(newName);
+        }
+    });
+    connect(mpMap, &TMap::signal_playerAreaShowRequested, this, [this]() {
+        if (drawsTheMap()) {
+            resetAreaComboBoxToPlayerRoomArea();
+        }
+    });
+    connect(mpMap, &TMap::signal_defaultAreaVisibilitySet, this, [this](const bool wasShown) {
+        if (!drawsTheMap()) {
+            return;
+        }
+        // The 2D map can be on the default area while the list leaves it out,
+        // and then relisting cannot keep the list on it:
+        if (!wasShown && mpMap->getDefaultAreaShown() && mp2dMap->mAreaID == -1) {
+            comboBox_showArea->setCurrentText(mpMap->getDefaultAreaName());
+        }
+        mp2dMap->repaint();
+        update();
+    });
+    connect(mpMap, &TMap::signal_mapInfoContributorsChanged, this, [this]() {
+        if (drawsTheMap()) {
+            slot_updateInfoContributors();
+        }
+    });
+    connect(mpMap, &TMap::signal_mapRepaintRequested, this, [this]() {
+        if (drawsTheMap()) {
+            repaintMaps();
+        }
+    });
+    connect(mpMap, &TMap::signal_mapperSettingChanged, this, [this](const TMap::MapperSetting setting) {
+        if (!drawsTheMap()) {
+            return;
+        }
+        switch (setting) {
+        case TMap::MapperSetting::RoomSize:
+            mp2dMap->setRoomSize(mpHost->mRoomSize);
+            mp2dMap->update();
+            break;
+        case TMap::MapperSetting::ExitSize:
+            mp2dMap->setExitSize(mpHost->mLineSize);
+            repaintMaps();
+            break;
+        case TMap::MapperSetting::RoundRooms:
+            slot_toggleRoundRooms(mpHost->mBubbleMode);
+            break;
+        case TMap::MapperSetting::ShowRoomIds:
+            slot_setShowRoomIds(mpHost->mShowRoomID);
+            break;
+        case TMap::MapperSetting::ShowGrid:
+            slot_setShowGrid(mpHost->mMapperShowGrid);
+            break;
+        }
+    });
 }
 
 static QFrame* createOverlayFrame(QWidget* parent, const QString& objectName)
@@ -283,6 +435,9 @@ void dlgMapper::showMapProgress(const QString& label, bool cancelable)
     mpProgressOverlay->show();
     repositionProgressOverlay();
     mpProgressOverlay->raise();
+    if (mpMap) {
+        connect(this, &dlgMapper::signal_mapProgressCanceled, mpMap, &TMap::slot_downloadCancel, Qt::UniqueConnection);
+    }
 }
 
 void dlgMapper::setMapProgressLabel(const QString& text)
@@ -324,6 +479,9 @@ void dlgMapper::setMapProgressCancelable(bool cancelable)
 
 void dlgMapper::hideMapProgress()
 {
+    if (mpMap) {
+        disconnect(this, &dlgMapper::signal_mapProgressCanceled, mpMap, &TMap::slot_downloadCancel);
+    }
     if (mpProgressOverlay) {
         mpProgressOverlay->hide();
     }
@@ -357,7 +515,7 @@ void dlgMapper::loadMapFromFile()
         }
         const QString fileName = dialog->selectedFiles().constFirst();
         Host* pHost = mpHost;
-        if (!pHost || !pHost->mpConsole) {
+        if (!pHost || !pHost->mainConsoleView()) {
             return;
         }
         bool success = false;
@@ -502,7 +660,7 @@ void dlgMapper::slot_toggleShowRoomIDs(int toggle)
 {
     mp2dMap->mShowRoomID = (toggle == Qt::Checked);
     mp2dMap->mpHost->mShowRoomID = mp2dMap->mShowRoomID;
-    mp2dMap->update();
+    repaintMaps();
 }
 
 void dlgMapper::slot_toggleStrongHighlight(int toggle)
@@ -516,7 +674,7 @@ void dlgMapper::slot_togglePanel()
     // The host holds the setting; widget_panel->isVisible() is also false while
     // the whole map dock is hidden, which would make this a no-op:
     const bool show = !mpHost->mShowPanel;
-    // This widget is not necessarily the one the host knows as mpMap->mpMapper,
+    // This widget is not necessarily the one the host knows as mpMap->mapper(),
     // which is all the setter pushes the change to:
     slot_setMapperPanelVisible(show);
     mpHost->setMapperPanelVisible(show);
@@ -527,9 +685,257 @@ void dlgMapper::slot_setMapperPanelVisible(bool panelVisible)
     widget_panel->setVisible(panelVisible);
 }
 
+void dlgMapper::update3DView()
+{
+#if defined(INCLUDE_3DMAPPER)
+    if (glWidget) {
+        glWidget->update();
+    }
+#endif
+}
+
+void dlgMapper::repaintMaps()
+{
+    mp2dMap->update();
+    update3DView();
+}
+
+std::pair<bool, QString> dlgMapper::setMapZoom(qreal zoom, int areaId)
+{
+#if defined(INCLUDE_3DMAPPER)
+    auto* modernWidget = qobject_cast<ModernGLWidget*>(glWidget);
+    if (!areaId) {
+        areaId = shownAreaId();
+    }
+    auto result = mp2dMap->setMapZoom(zoom, areaId);
+    if (result.first && modernWidget) {
+        modernWidget->applyMapZoom(zoom, areaId);
+    }
+    return result;
+#else
+    return mp2dMap->setMapZoom(zoom, areaId);
+#endif
+}
+
+int dlgMapper::shownAreaId() const
+{
+#if defined(INCLUDE_3DMAPPER)
+    // The hidden 2D map keeps the area it last showed, while the 3D view moves on
+    if (auto* modernWidget = qobject_cast<ModernGLWidget*>(glWidget); modernWidget && showing3DView()) {
+        return modernWidget->areaShownNext();
+    }
+#endif
+    return mp2dMap->getAreaId();
+}
+
+bool dlgMapper::showing3DView() const
+{
+#if defined(INCLUDE_3DMAPPER)
+    return glWidget && glWidget->isVisible();
+#else
+    return false;
+#endif
+}
+
+#if defined(INCLUDE_3DMAPPER)
+namespace {
+const QString scmGridModeRefusal = qsl("the area shown in the 3D view is in grid mode, which always looks straight down");
+
+// Empty when a script can move the camera of this 3D view; grid mode is checked by the callers
+QString cameraRefusal(const ModernGLWidget* modernWidget, const bool showing)
+{
+    if (!modernWidget || !showing) {
+        return qsl("the modern 3D map view is not showing");
+    }
+    if (!modernWidget->failureMessage().isEmpty()) {
+        return qsl("the modern 3D map view could not start: %1").arg(modernWidget->failureMessage());
+    }
+    return QString();
+}
+} // namespace
+#endif
+
+std::pair<bool, QString> dlgMapper::shift3DViewCamera(float verticalAngle, float horizontalAngle, float rotationAngle)
+{
+#if defined(INCLUDE_3DMAPPER)
+    auto* modernWidget = qobject_cast<ModernGLWidget*>(glWidget);
+    if (const QString refusal = cameraRefusal(modernWidget, showing3DView()); !refusal.isEmpty()) {
+        return {false, refusal};
+    }
+    if (modernWidget->cameraFixedByGridMode()) {
+        return {false, scmGridModeRefusal};
+    }
+    modernWidget->shiftCamera(verticalAngle, horizontalAngle, rotationAngle);
+    return {true, QString()};
+#else
+    Q_UNUSED(verticalAngle)
+    Q_UNUSED(horizontalAngle)
+    Q_UNUSED(rotationAngle)
+    return {false, qsl("the modern 3D map view is not showing")};
+#endif
+}
+
+std::pair<bool, QString> dlgMapper::set3DViewCameraPosition(float r, float theta, float phi)
+{
+#if defined(INCLUDE_3DMAPPER)
+    auto* modernWidget = qobject_cast<ModernGLWidget*>(glWidget);
+    if (const QString refusal = cameraRefusal(modernWidget, showing3DView()); !refusal.isEmpty()) {
+        return {false, refusal};
+    }
+    // Grid mode fixes the angles but not the distance, and no other call zooms the 3D view
+    if (modernWidget->cameraFixedByGridMode()) {
+        modernWidget->setCameraDistance(r);
+        return {false, qsl("%1, so only the distance was applied").arg(scmGridModeRefusal)};
+    }
+    modernWidget->setCameraPosition(r, theta, phi);
+    return {true, QString()};
+#else
+    Q_UNUSED(r)
+    Q_UNUSED(theta)
+    Q_UNUSED(phi)
+    return {false, qsl("the modern 3D map view is not showing")};
+#endif
+}
+
+#if defined(INCLUDE_3DMAPPER)
+void dlgMapper::connect3DViewControls()
+{
+    connect(pushButton_ortho, SIGNAL(clicked()), glWidget, SLOT(slot_showAllLevels()));
+    connect(pushButton_singleLevel, SIGNAL(clicked()), glWidget, SLOT(slot_singleLevelView()));
+    connect(pushButton_increaseTop, SIGNAL(clicked()), glWidget, SLOT(slot_showMoreUpperLevels()));
+    connect(pushButton_increaseBottom, SIGNAL(clicked()), glWidget, SLOT(slot_showMoreLowerLevels()));
+    connect(pushButton_reduceTop, SIGNAL(clicked()), glWidget, SLOT(slot_showLessUpperLevels()));
+    connect(pushButton_reduceBottom, SIGNAL(clicked()), glWidget, SLOT(slot_showLessLowerLevels()));
+    connect(toolButton_shiftZup, SIGNAL(clicked()), glWidget, SLOT(slot_shiftZup()));
+    connect(toolButton_shiftZdown, SIGNAL(clicked()), glWidget, SLOT(slot_shiftZdown()));
+    connect(pushButton_defaultView, SIGNAL(clicked()), glWidget, SLOT(slot_defaultView()));
+    connect(pushButton_sideView, SIGNAL(clicked()), glWidget, SLOT(slot_sideView()));
+    connect(pushButton_topView, SIGNAL(clicked()), glWidget, SLOT(slot_topView()));
+    connect(slider_scale, SIGNAL(valueChanged(int)), glWidget, SLOT(slot_setScale(int)));
+    connect(slider_xRot, SIGNAL(valueChanged(int)), glWidget, SLOT(slot_setCameraPositionX(int)));
+    connect(slider_yRot, SIGNAL(valueChanged(int)), glWidget, SLOT(slot_setCameraPositionY(int)));
+    connect(slider_zRot, SIGNAL(valueChanged(int)), glWidget, SLOT(slot_setCameraPositionZ(int)));
+
+    // Player icon adjustment controls
+    connect(slider_playerIconHeight, SIGNAL(valueChanged(int)), glWidget, SLOT(slot_setPlayerIconHeight(int)));
+    connect(slider_playerIconRotX, SIGNAL(valueChanged(int)), glWidget, SLOT(slot_setPlayerIconRotationX(int)));
+    connect(slider_playerIconRotY, SIGNAL(valueChanged(int)), glWidget, SLOT(slot_setPlayerIconRotationY(int)));
+    connect(slider_playerIconRotZ, SIGNAL(valueChanged(int)), glWidget, SLOT(slot_setPlayerIconRotationZ(int)));
+    connect(slider_playerIconScale, SIGNAL(valueChanged(int)), glWidget, SLOT(slot_setPlayerIconScale(int)));
+    connect(pushButton_resetPlayerIcon, SIGNAL(clicked()), glWidget, SLOT(slot_resetPlayerIcon()));
+
+    auto* modernWidget = qobject_cast<ModernGLWidget*>(glWidget);
+    if (!modernWidget) {
+        for (QWidget* control : {static_cast<QWidget*>(slider_scale),
+                                 static_cast<QWidget*>(slider_xRot),
+                                 static_cast<QWidget*>(slider_yRot),
+                                 static_cast<QWidget*>(slider_zRot),
+                                 static_cast<QWidget*>(pushButton_defaultView),
+                                 static_cast<QWidget*>(pushButton_topView),
+                                 static_cast<QWidget*>(pushButton_sideView)}) {
+            control->setToolTip(QString());
+        }
+        return;
+    }
+
+    modernWidget->setCompanion2DMap(mp2dMap);
+    connect(modernWidget, &ModernGLWidget::editIn2DRequested, this, [this, modernWidget](const int roomId) {
+        // Held on the room, as a view moved by hand is, so that switching views carries it to the 2D map
+        if (const TRoom* pRoom = mpMap->mpRoomDB->getRoom(roomId)) {
+            modernWidget->syncView(pRoom->getArea(), pRoom->x(), pRoom->y(), pRoom->z(), mpMap->mRoomIdHash.value(mpMap->mProfileName));
+        }
+        if (mp2dMap->mMapViewOnly) {
+            mp2dMap->slot_toggleMapViewOnly();
+        }
+        slot_toggle3DView(false);
+    });
+    connect(modernWidget, &ModernGLWidget::resetPlayerIconSliders, this, [this](int height, int rotX, int rotY, int rotZ, int scale) {
+        slider_playerIconHeight->setValue(height);
+        slider_playerIconRotX->setValue(rotX);
+        slider_playerIconRotY->setValue(rotY);
+        slider_playerIconRotZ->setValue(rotZ);
+        slider_playerIconScale->setValue(scale);
+    });
+    connect(modernWidget, &ModernGLWidget::cameraControlsChanged, this, [this](int scale, int tilt, int roll, int azimuth) {
+        const QSignalBlocker scaleBlocker(slider_scale);
+        const QSignalBlocker tiltBlocker(slider_xRot);
+        const QSignalBlocker rollBlocker(slider_yRot);
+        const QSignalBlocker azimuthBlocker(slider_zRot);
+        slider_scale->setValue(scale);
+        slider_xRot->setValue(tilt);
+        slider_yRot->setValue(roll);
+        slider_zRot->setValue(azimuth);
+    });
+
+    //: Tooltip for the zoom slider of the 3D map view
+    slider_scale->setToolTip(tr("Zoom the 3D view in (right) or out (left)"));
+    //: Tooltip for the slider that tilts the 3D map view
+    slider_xRot->setToolTip(tr("Tilt the 3D view, from looking along the ground (left) to looking straight down (right)"));
+    //: Tooltip for the slider that rolls the 3D map view around the direction it faces
+    slider_yRot->setToolTip(tr("Roll the 3D view around the direction it faces; the middle keeps the map level"));
+    //: Tooltip for the slider that turns the 3D map view around the map
+    slider_zRot->setToolTip(tr("Turn the 3D view around the map; the middle keeps north up"));
+    //: Tooltip for the button that resets the 3D map view to its default angle
+    pushButton_defaultView->setToolTip(tr("Look down at the map at an angle, with north up"));
+    //: Tooltip for the button that makes the 3D map view look straight down
+    pushButton_topView->setToolTip(tr("Look straight down at the map with north up, like the 2D map"));
+    //: Tooltip for the button that makes the 3D map view look along the ground
+    pushButton_sideView->setToolTip(tr("Look north across the map from just above it"));
+}
+
+void dlgMapper::sync3DViewFrom2D()
+{
+    auto* modernWidget = qobject_cast<ModernGLWidget*>(glWidget);
+    if (!modernWidget || !mpMap->mpRoomDB->getArea(mp2dMap->mAreaID)) {
+        return;
+    }
+    // The 2D map's y-axis points down the screen
+    modernWidget->syncView(mp2dMap->mAreaID, qRound(mp2dMap->mMapCenterX), qRound(-mp2dMap->mMapCenterY), mp2dMap->mMapCenterZ, mp2dMap->mRoomID);
+}
+
+void dlgMapper::sync2DViewFrom3D()
+{
+    auto* modernWidget = qobject_cast<ModernGLWidget*>(glWidget);
+    if (!modernWidget) {
+        return;
+    }
+    if (modernWidget->followingPlayer()) {
+        mp2dMap->mShiftMode = false;
+        resetAreaComboBoxToPlayerRoomArea();
+        return;
+    }
+
+    const int areaId = modernWidget->shownAreaId();
+    if (!mpMap->mpRoomDB->getArea(areaId)) {
+        return;
+    }
+    // Read first: switchArea() recenters the 3D view as well
+    const QVector3D center = modernWidget->viewCenter();
+    // The 3D view only centers on whole rooms, so if it was not moved the 2D map keeps its own center
+    if (areaId == mp2dMap->mAreaID && qRound(center.x()) == qRound(mp2dMap->mMapCenterX) && qRound(center.y()) == qRound(-mp2dMap->mMapCenterY) && qRound(center.z()) == mp2dMap->mMapCenterZ) {
+        return;
+    }
+    if (areaId != mp2dMap->mAreaID) {
+        mp2dMap->switchArea(areaId);
+    }
+    mp2dMap->mMapCenterX = center.x();
+    mp2dMap->mMapCenterY = -center.y();
+    mp2dMap->mMapCenterZ = qRound(center.z());
+    // The 2D map keeps a shifted view only while mRoomID is still the player's room
+    mp2dMap->mRoomID = mpMap->mRoomIdHash.value(mpMap->mProfileName);
+    mp2dMap->mShiftMode = true;
+    const QString areaName = mpMap->mpRoomDB->getAreaNamesMap().value(areaId);
+    if (!areaName.isEmpty()) {
+        comboBox_showArea->setCurrentText(areaName);
+    }
+}
+
+#endif
+
 void dlgMapper::slot_toggle3DView(const bool is3DMode)
 {
 #if defined(INCLUDE_3DMAPPER)
+    const bool was3DMode = glWidget && !glWidget->isHidden();
     mIs3DMode = is3DMode;
     if (glWidget) {
         glWidget->update();
@@ -544,42 +950,14 @@ void dlgMapper::slot_toggle3DView(const bool is3DMode)
         glWidget->setSizePolicy(sizePolicy);
         verticalLayout_mapper->insertWidget(0, glWidget);
         mpMap->mpM = glWidget;
-        connect(pushButton_ortho, SIGNAL(clicked()), glWidget, SLOT(slot_showAllLevels()));
-        connect(pushButton_singleLevel, SIGNAL(clicked()), glWidget, SLOT(slot_singleLevelView()));
-        connect(pushButton_increaseTop, SIGNAL(clicked()), glWidget, SLOT(slot_showMoreUpperLevels()));
-        connect(pushButton_increaseBottom, SIGNAL(clicked()), glWidget, SLOT(slot_showMoreLowerLevels()));
-        connect(pushButton_reduceTop, SIGNAL(clicked()), glWidget, SLOT(slot_showLessUpperLevels()));
-        connect(pushButton_reduceBottom, SIGNAL(clicked()), glWidget, SLOT(slot_showLessLowerLevels()));
-        connect(toolButton_shiftZup, SIGNAL(clicked()), glWidget, SLOT(slot_shiftZup()));
-        connect(toolButton_shiftZdown, SIGNAL(clicked()), glWidget, SLOT(slot_shiftZdown()));
-        connect(pushButton_defaultView, SIGNAL(clicked()), glWidget, SLOT(slot_defaultView()));
-        connect(pushButton_sideView, SIGNAL(clicked()), glWidget, SLOT(slot_sideView()));
-        connect(pushButton_topView, SIGNAL(clicked()), glWidget, SLOT(slot_topView()));
-        connect(slider_scale, SIGNAL(valueChanged(int)), glWidget, SLOT(slot_setScale(int)));
-        connect(slider_xRot, SIGNAL(valueChanged(int)), glWidget, SLOT(slot_setCameraPositionX(int)));
-        connect(slider_yRot, SIGNAL(valueChanged(int)), glWidget, SLOT(slot_setCameraPositionY(int)));
-        connect(slider_zRot, SIGNAL(valueChanged(int)), glWidget, SLOT(slot_setCameraPositionZ(int)));
-
-        // Player icon adjustment controls
-        connect(slider_playerIconHeight, SIGNAL(valueChanged(int)), glWidget, SLOT(slot_setPlayerIconHeight(int)));
-        connect(slider_playerIconRotX, SIGNAL(valueChanged(int)), glWidget, SLOT(slot_setPlayerIconRotationX(int)));
-        connect(slider_playerIconRotY, SIGNAL(valueChanged(int)), glWidget, SLOT(slot_setPlayerIconRotationY(int)));
-        connect(slider_playerIconRotZ, SIGNAL(valueChanged(int)), glWidget, SLOT(slot_setPlayerIconRotationZ(int)));
-        connect(slider_playerIconScale, SIGNAL(valueChanged(int)), glWidget, SLOT(slot_setPlayerIconScale(int)));
-        connect(pushButton_resetPlayerIcon, SIGNAL(clicked()), glWidget, SLOT(slot_resetPlayerIcon()));
-
-        // Connect reset signal from glWidget back to sliders (cast to ModernGLWidget*)
-        if (ModernGLWidget* modernWidget = qobject_cast<ModernGLWidget*>(glWidget)) {
-            connect(modernWidget, &ModernGLWidget::resetPlayerIconSliders, this, [this](int height, int rotX, int rotY, int rotZ, int scale) {
-                slider_playerIconHeight->setValue(height);
-                slider_playerIconRotX->setValue(rotX);
-                slider_playerIconRotY->setValue(rotY);
-                slider_playerIconRotZ->setValue(rotZ);
-                slider_playerIconScale->setValue(scale);
-            });
-        }
+        connect3DViewControls();
     }
 
+    if (is3DMode && !was3DMode) {
+        sync3DViewFrom2D();
+    } else if (!is3DMode && was3DMode) {
+        sync2DViewFrom3D();
+    }
 
     mp2dMap->setVisible(!is3DMode);
     glWidget->setVisible(is3DMode);
@@ -593,8 +971,14 @@ void dlgMapper::slot_toggle3DView(const bool is3DMode)
 #endif
         );
     } else {
+        widget_3DControls->setVisible(false);
+        widget_playerIconControls->setVisible(false);
         // workaround for buttons reloading oddly
         QTimer::singleShot(100ms, this, [this]() {
+            // The 3D view may have been shown again since
+            if (glWidget && !glWidget->isHidden()) {
+                return;
+            }
             widget_3DControls->setVisible(false);
             widget_playerIconControls->setVisible(false);
         });
@@ -625,7 +1009,9 @@ void dlgMapper::slot_setShowGrid(bool showGrid)
 {
     mp2dMap->mShowGrid = showGrid;
     mp2dMap->mpHost->mMapperShowGrid = showGrid;
-    mp2dMap->update();
+    repaintMaps();
+    // The map's other windows too
+    mpMap->requestMapRepaint();
 }
 
 void dlgMapper::slot_toggleRoundRooms(const bool state)
@@ -635,7 +1021,8 @@ void dlgMapper::slot_toggleRoundRooms(const bool state)
     }
     if (mp2dMap->mBubbleMode != state) {
         mp2dMap->mBubbleMode = state;
-        mp2dMap->update();
+        repaintMaps();
+        mpMap->requestMapRepaint();
     }
 }
 
@@ -645,6 +1032,12 @@ void dlgMapper::resetAreaComboBoxToPlayerRoomArea()
     if (!pHost) {
         return;
     }
+
+#if defined(INCLUDE_3DMAPPER)
+    if (auto* modernWidget = qobject_cast<ModernGLWidget*>(glWidget)) {
+        modernWidget->followPlayer();
+    }
+#endif
 
     TRoom* pR = mpMap->mpRoomDB->getRoom(mpMap->mRoomIdHash.value(mpMap->mProfileName));
     if (pR) {
@@ -707,6 +1100,9 @@ void dlgMapper::recreate3DWidget()
 
     bool was3DMode = glWidget->isVisible();
 
+    // setParent()'s own hide isn't explicit, so a show QLayout queued at insertWidget() and
+    // not yet run would map the detached widget as a window of its own
+    glWidget->hide();
     glWidget->setParent(nullptr);
     glWidget->deleteLater();
     glWidget = nullptr;
@@ -722,41 +1118,7 @@ void dlgMapper::recreate3DWidget()
     glWidget->setSizePolicy(sizePolicy);
     verticalLayout_mapper->insertWidget(0, glWidget);
     mpMap->mpM = glWidget;
-
-    connect(pushButton_ortho, SIGNAL(clicked()), glWidget, SLOT(slot_showAllLevels()));
-    connect(pushButton_singleLevel, SIGNAL(clicked()), glWidget, SLOT(slot_singleLevelView()));
-    connect(pushButton_increaseTop, SIGNAL(clicked()), glWidget, SLOT(slot_showMoreUpperLevels()));
-    connect(pushButton_increaseBottom, SIGNAL(clicked()), glWidget, SLOT(slot_showMoreLowerLevels()));
-    connect(pushButton_reduceTop, SIGNAL(clicked()), glWidget, SLOT(slot_showLessUpperLevels()));
-    connect(pushButton_reduceBottom, SIGNAL(clicked()), glWidget, SLOT(slot_showLessLowerLevels()));
-    connect(toolButton_shiftZup, SIGNAL(clicked()), glWidget, SLOT(slot_shiftZup()));
-    connect(toolButton_shiftZdown, SIGNAL(clicked()), glWidget, SLOT(slot_shiftZdown()));
-    connect(pushButton_defaultView, SIGNAL(clicked()), glWidget, SLOT(slot_defaultView()));
-    connect(pushButton_sideView, SIGNAL(clicked()), glWidget, SLOT(slot_sideView()));
-    connect(pushButton_topView, SIGNAL(clicked()), glWidget, SLOT(slot_topView()));
-    connect(slider_scale, SIGNAL(valueChanged(int)), glWidget, SLOT(slot_setScale(int)));
-    connect(slider_xRot, SIGNAL(valueChanged(int)), glWidget, SLOT(slot_setCameraPositionX(int)));
-    connect(slider_yRot, SIGNAL(valueChanged(int)), glWidget, SLOT(slot_setCameraPositionY(int)));
-    connect(slider_zRot, SIGNAL(valueChanged(int)), glWidget, SLOT(slot_setCameraPositionZ(int)));
-
-    // Player icon adjustment controls
-    connect(slider_playerIconHeight, SIGNAL(valueChanged(int)), glWidget, SLOT(slot_setPlayerIconHeight(int)));
-    connect(slider_playerIconRotX, SIGNAL(valueChanged(int)), glWidget, SLOT(slot_setPlayerIconRotationX(int)));
-    connect(slider_playerIconRotY, SIGNAL(valueChanged(int)), glWidget, SLOT(slot_setPlayerIconRotationY(int)));
-    connect(slider_playerIconRotZ, SIGNAL(valueChanged(int)), glWidget, SLOT(slot_setPlayerIconRotationZ(int)));
-    connect(slider_playerIconScale, SIGNAL(valueChanged(int)), glWidget, SLOT(slot_setPlayerIconScale(int)));
-    connect(pushButton_resetPlayerIcon, SIGNAL(clicked()), glWidget, SLOT(slot_resetPlayerIcon()));
-
-    // Connect reset signal from glWidget back to sliders (cast to ModernGLWidget*)
-    if (ModernGLWidget* modernWidget = qobject_cast<ModernGLWidget*>(glWidget)) {
-        connect(modernWidget, &ModernGLWidget::resetPlayerIconSliders, this, [this](int height, int rotX, int rotY, int rotZ, int scale) {
-            slider_playerIconHeight->setValue(height);
-            slider_playerIconRotX->setValue(rotX);
-            slider_playerIconRotY->setValue(rotY);
-            slider_playerIconRotZ->setValue(rotZ);
-            slider_playerIconScale->setValue(scale);
-        });
-    }
+    connect3DViewControls();
 
     glWidget->setVisible(was3DMode);
 #endif
@@ -795,9 +1157,17 @@ void dlgMapper::paintMapInfo(const QElapsedTimer& renderTimer,
     painter.save();
     painter.setFont(pHost->getDisplayFont());
 
-    for (const auto& key : pMap->mMapInfoContributorManager->getContributorKeys()) {
+    // The caller holds raw TRoom/TArea pointers across this, and a Lua contributor can
+    // register or kill contributors, so walk a copy and skip any that went away.
+    const TMap::ScriptCallbackScope callbackScope(pMap);
+    const QList<QString> keys = pMap->mMapInfoContributorManager->getContributorKeys();
+    for (const auto& key : keys) {
         if (pHost->mMapInfoContributors.contains(key)) {
-            auto properties = pMap->mMapInfoContributorManager->getContributor(key)(roomID, selectionSize, pRoom->getArea(), displayAreaId, infoColor);
+            const MapInfoCallback contributor = pMap->mMapInfoContributorManager->getContributor(key);
+            if (!contributor) {
+                continue;
+            }
+            auto properties = contributor(roomID, selectionSize, pRoom->getArea(), displayAreaId, infoColor);
             if (!properties.color.isValid()) {
                 properties.color = infoColor;
             }
@@ -926,23 +1296,21 @@ void dlgMapper::slot_setupMapperMenu()
 
 void dlgMapper::slot_toggleUpperLowerLevels(bool enabled)
 {
-    mudlet::self()->mDrawUpperLowerLevels = enabled;
-    if (mp2dMap) {
-        mp2dMap->update();
-    }
+    mudlet::self()->setDrawUpperLowerLevels(enabled);
+    repaintMaps();
 }
 
 void dlgMapper::slot_toggleShowRoomIDsFromMenu(bool enabled)
 {
     mp2dMap->mShowRoomID = enabled;
     mp2dMap->mpHost->mShowRoomID = enabled;
-    mp2dMap->update();
+    repaintMaps();
 }
 
 void dlgMapper::slot_toggleShowRoomNames(const bool enabled)
 {
     mpMap->setRoomNamesShown(enabled);
-    mp2dMap->update();
+    repaintMaps();
 }
 
 void dlgMapper::updateInfoMenu()

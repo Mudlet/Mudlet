@@ -88,6 +88,13 @@ public:
         return socket->flush();
     }
 
+    void dropLast()
+    {
+        if (!mSockets.isEmpty() && mSockets.last()) {
+            mSockets.last()->disconnectFromHost();
+        }
+    }
+
 protected:
     void incomingConnection(qintptr socketDescriptor) override
     {
@@ -419,6 +426,17 @@ private slots:
         QVERIFY2(waitForLua(qsl("getIrcConnectedHost()"), qsl("true|%1").arg(mServerName)), qPrintable(luaValues(qsl("getIrcConnectedHost()"))));
     }
 
+    void test_aDroppedConnectionNoLongerReportsTheServer()
+    {
+        QVERIFY(openRegisteredClient());
+        QVERIFY(mpIrcServer->sendLine(qsl(":%1 002 %2 :Your host is %1").arg(mServerName, mNick).toUtf8()));
+        QVERIFY2(waitForLua(qsl("getIrcConnectedHost()"), qsl("true|%1").arg(mServerName)), qPrintable(luaValues(qsl("getIrcConnectedHost()"))));
+
+        mpIrcServer->dropLast();
+
+        QVERIFY2(waitForLua(qsl("getIrcConnectedHost()"), qsl("false|not yet connected")), qPrintable(luaValues(qsl("getIrcConnectedHost()"))));
+    }
+
     void test_joinsAndPartsAreTrackedAndReported()
     {
         QVERIFY(openRegisteredClient());
@@ -487,8 +505,13 @@ private slots:
         // otherwise the line lands in the channel's document, which the restart takes away
         QVERIFY(showBuffer(mServerHost));
 
+        QVERIFY(mpIrcServer->sendLine(qsl(":%1 002 %2 :Your host is %1").arg(mServerName, mNick).toUtf8()));
+        QVERIFY2(waitForLua(qsl("getIrcConnectedHost()"), qsl("true|%1").arg(mServerName)), qPrintable(luaValues(qsl("getIrcConnectedHost()"))));
+
         QVERIFY(storeSettings(qsl("restartedbot"), qsl("#restarted")));
         QCOMPARE(luaValues(qsl("restartIrc()")), qsl("true"));
+        // the new server has not named itself yet
+        QCOMPARE(luaValues(qsl("getIrcConnectedHost()")), qsl("false|not yet connected"));
 
         QVERIFY2(waitForLine(oldConnection, "QUIT :Restarting IRC Client"), "the old connection was not quit");
         QVERIFY(shownText().contains(qsl("! Restarting IRC Client.")));
@@ -620,6 +643,27 @@ private slots:
 
         QCOMPARE(luaValues(qsl("restartIrc()")), qsl("true"));
         QCOMPARE(bufferTitles(), QStringList({mServerHost}));
+    }
+
+    void test_closingAChannelShowsTheServerBufferAfterTheServerRenamedIt()
+    {
+        QVERIFY(openJoinedClient());
+        const int connection = mpIrcServer->connectionCount() - 1;
+        QVERIFY(mpIrcServer->sendLine(qsl(":%1 002 %2 :Your host is %1").arg(mServerName, mNick).toUtf8()));
+        QVERIFY(QTest::qWaitFor(
+                [this]() {
+                    return bufferTitles().contains(mServerName);
+                },
+                5s));
+        QVERIFY(showBuffer(mChannel));
+
+        QVERIFY(typeLine(qsl("/close")));
+        QVERIFY(waitForLine(connection, qsl("PART %1").arg(mChannel).toUtf8()));
+
+        const auto* shown = mpHost->mpDlgIRC->bufferList->currentIndex().data(Irc::BufferRole).value<IrcBuffer*>();
+        QVERIFY2(shown && shown == mpHost->mpIrcClient->serverBuffer(), "the server buffer was not shown after the channel closed");
+        QVERIFY(typeLine(qsl("hello after close")));
+        QVERIFY2(waitForLine(connection, qsl("PRIVMSG %1 :hello after close").arg(mServerName).toUtf8()), qPrintable(mpIrcServer->lines(connection).join('\n')));
     }
 
     // The reply is timed from when the ping was typed, not from when it arrived

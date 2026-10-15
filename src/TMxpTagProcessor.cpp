@@ -91,10 +91,10 @@ TMxpTagHandlerResult TMxpTagProcessor::handleTag(TMxpContext& ctx, TMxpClient& c
     return MXP_TAG_NOT_HANDLED;
 }
 
-void TMxpTagProcessor::handleContent(char ch)
+void TMxpTagProcessor::handleContentBytes(QByteArrayView bytes)
 {
     for (const auto& handler : std::as_const(mRegisteredHandlers)) {
-        handler->handleContent(ch);
+        handler->handleContentBytes(bytes);
     }
 }
 

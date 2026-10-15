@@ -63,8 +63,12 @@
 #include <QSplashScreen>
 #include <QSslConfiguration>
 #include <QStringList>
-#include <QThreadPool>
 #include <QTranslator>
+#if defined(Q_OS_WINDOWS)
+#include <QThread>
+#else
+#include <pthread.h>
+#endif
 #include "TAccessibleConsole.h"
 #include "TAccessibleTextEdit.h"
 #include "FileOpenHandler.h"
@@ -80,10 +84,13 @@
 #include <QGuiApplication>
 #include <QProcessEnvironment>
 #include <QTextStream>
+#ifdef INCLUDE_MCPSERVER
+#include "TMCPBridge.h"
+#include <QCoreApplication>
+#endif
 
 #if defined(Q_OS_WINDOWS) && defined(INCLUDE_UPDATER)
 #include <windows.h>
-#include <QThread>
 #endif
 
 using namespace std::chrono_literals;
@@ -154,15 +161,95 @@ void removeOldNoteColorEmojiFonts()
 #endif // defined(Q_OS_LINUX)
 #endif // defined(INCLUDE_FONTS)
 
-QTranslator* loadTranslationsForCommandLine()
+// Joined so the warm-up thread has fully exited, exit handlers included, before the application object
+// and the statics go. Not QThread on macOS: Qt starts threads detached there, so wait() is no join. Not
+// std::thread on Windows: before Qt 6.9 a watcher thread frees its adopted thread data after the join.
+// pthread_create rather than std::thread, which throws when no thread can be had; the warm-up is optional.
+class TlsWarmup
+{
+public:
+    TlsWarmup() = default;
+    TlsWarmup(const TlsWarmup&) = delete;
+    TlsWarmup& operator=(const TlsWarmup&) = delete;
+    ~TlsWarmup() { join(); }
+
+    void start()
+    {
+#if defined(Q_OS_WINDOWS)
+        if (!mThread) {
+            mThread.reset(QThread::create(warmUp));
+            mThread->start();
+        }
+#else
+        if (!mStarted) {
+            const int error = pthread_create(&mThread, nullptr, &TlsWarmup::run, nullptr);
+            mStarted = error == 0;
+            if (!mStarted) {
+                qWarning().nospace() << "TlsWarmup::start() WARNING - no thread for the TLS warm-up (" << qt_error_string(error) << "), so the first connection will load the CA certificates itself";
+            }
+        }
+#endif
+    }
+
+    void join()
+    {
+#if defined(Q_OS_WINDOWS)
+        if (mThread) {
+            mThread->wait();
+            mThread.reset();
+        }
+#else
+        if (mStarted) {
+            pthread_join(mThread, nullptr);
+            mStarted = false;
+        }
+#endif
+    }
+
+private:
+    static void warmUp() { QSslConfiguration::defaultConfiguration(); }
+
+#if defined(Q_OS_WINDOWS)
+    std::unique_ptr<QThread> mThread;
+#else
+    static void* run(void* argument)
+    {
+        Q_UNUSED(argument)
+        warmUp();
+        return nullptr;
+    }
+
+    pthread_t mThread{};
+    bool mStarted = false;
+#endif
+};
+
+QTranslator* loadTranslationsForCommandLine(const bool printAndExitRun)
 {
     // Not MudletApp::getQSettings(): it stays null until setupConfig(), which a --help or --version run never
     // reaches. Same file and format as setupConfig() opens - keep the spellings in step.
     QSettings settings(qsl("%1/Mudlet.ini").arg(MudletApp::getMudletPath(enums::mainPath)), QSettings::IniFormat);
+    MudletApp::noteEarlySettingsStatus(settings);
+    // By name: only the first reader to parse a file is told of a format error, and the reader before this
+    // one, applyHighDpiRoundingPolicyFromConfig()'s, finds its root from argv[0] so it can have parsed another file
+    const QSettings::Status settingsStatus = MudletApp::earlySettingsStatus(settings.fileName());
+    // Other runs have getQSettings() report this, which a print-and-exit run never calls
+    if (printAndExitRun && settingsStatus == QSettings::FormatError) {
+        // Qt keeps every key it could parse, so a language set there may still be in use
+        qWarning().nospace().noquote() << "loadTranslationsForCommandLine() WARNING - \"" << settings.fileName()
+                                       << "\" is not valid INI, so an interface language set in it may have been read wrongly or not at all.";
+    } else if (printAndExitRun && settingsStatus != QSettings::NoError) {
+        qWarning().nospace().noquote() << "loadTranslationsForCommandLine() WARNING - \"" << settings.fileName()
+                                       << "\" is not readable, so any interface language set in it is not used for this text.";
+    }
     auto interfaceLanguage = settings.value(QLatin1String("interfaceLanguage")).toString();
     auto userLocale = interfaceLanguage.isEmpty() ? QLocale::system() : QLocale(interfaceLanguage);
     if (userLocale == QLocale::c()) {
-        // nothing found
+        // Other runs have mudlet::readEarlySettings() report a code that names no locale
+        if (printAndExitRun && !interfaceLanguage.isEmpty()) {
+            qWarning().nospace().noquote() << "loadTranslationsForCommandLine() WARNING - the interface language \"" << interfaceLanguage
+                                           << "\" is not a recognised locale, so the command line text is in English.";
+        }
         return nullptr;
     }
     // We only need the Mudlet translations for the Command Line texts, no need
@@ -174,6 +261,12 @@ QTranslator* loadTranslationsForCommandLine()
     // it:
     const bool isOk = pMudletTranslator->load(userLocale, qsl("mudlet"), QString("_"), qsl(":/lang"), qsl(".qm"));
     if (!isOk) {
+        // Only a print-and-exit run prints the text this is about
+        if (printAndExitRun && !interfaceLanguage.isEmpty()) {
+            qWarning().nospace().noquote() << "loadTranslationsForCommandLine() WARNING - no translation could be loaded for the interface language \"" << interfaceLanguage
+                                           << "\", so the command line text is in English.";
+        }
+        delete pMudletTranslator;
         return nullptr;
     }
     QCoreApplication::installTranslator(pMudletTranslator);
@@ -197,28 +290,37 @@ void msys2QtMessageHandler(QtMsgType type, const QMessageLogContext& context, co
 }
 #endif
 
+// The config root for callers that run before mudlet exists. argv[0] is the last resort:
+// a plain command name found via PATH resolves relative to the current directory instead
+// of the binary's, so applicationDirPath() is preferred whenever a QCoreApplication is up
+// to provide it.
+static QString earlyConfigPath(int argc, char* argv[])
+{
+    QString execDir;
+    const QProcessEnvironment sysEnv = QProcessEnvironment::systemEnvironment();
+    if (sysEnv.contains(qsl("APPIMAGE"))) {
+        execDir = QFileInfo(sysEnv.value(qsl("APPIMAGE"))).absolutePath();
+    } else if (QCoreApplication::instance()) {
+        execDir = QCoreApplication::applicationDirPath();
+    } else if (argc > 0) {
+        execDir = QFileInfo(QString::fromLocal8Bit(argv[0])).absolutePath();
+    } else {
+        return {};
+    }
+
+    return MudletApp::resolveConfigRoot(execDir).path;
+}
+
 #if !defined(Q_OS_MACOS)
 // Reads highDpiScaleFactorRoundingPolicy from Mudlet.ini before QApplication
 // creation, since Qt requires this to be set before the application is constructed.
-// Resolves the config root from argv[0] because
-// QCoreApplication::applicationDirPath() isn't available yet.
 static void applyHighDpiRoundingPolicyFromConfig(int argc, char* argv[])
 {
     if (!qEnvironmentVariableIsEmpty("QT_SCALE_FACTOR_ROUNDING_POLICY")) {
         return;
     }
 
-    QString execDir;
-    const QProcessEnvironment sysEnv = QProcessEnvironment::systemEnvironment();
-    if (sysEnv.contains(qsl("APPIMAGE"))) {
-        execDir = QFileInfo(sysEnv.value(qsl("APPIMAGE"))).absolutePath();
-    } else if (argc > 0) {
-        execDir = QFileInfo(QString::fromLocal8Bit(argv[0])).absolutePath();
-    } else {
-        return;
-    }
-
-    const QString confPath = MudletApp::resolveConfigRoot(execDir).path;
+    const QString confPath = earlyConfigPath(argc, argv);
     if (confPath.isEmpty()) {
         return;
     }
@@ -229,6 +331,7 @@ static void applyHighDpiRoundingPolicyFromConfig(int argc, char* argv[])
     }
 
     const QSettings settings(iniPath, QSettings::IniFormat);
+    MudletApp::noteEarlySettingsStatus(settings);
     const QString value = settings.value(qsl("highDpiScaleFactorRoundingPolicy")).toString();
     if (value.isEmpty()) {
         return;
@@ -276,6 +379,22 @@ int main(int argc, char* argv[])
         }
     }
 #endif
+
+    // Claude Desktop and other stdio MCP clients launch `mudlet --mcp-bridge` and talk
+    // JSON-RPC over its stdin/stdout; none of the GUI may come up in that mode. Handled
+    // in every build - a build without the server must still exit rather than open a
+    // Mudlet window each time an AI assistant tries to connect.
+    for (int i = 1; i < argc; ++i) {
+        if (qstrcmp(argv[i], "--mcp-bridge") == 0) {
+#ifdef INCLUDE_MCPSERVER
+            const QCoreApplication app(argc, argv);
+            return TMCPBridge::exec(earlyConfigPath(argc, argv));
+#else
+            std::cerr << "This Mudlet was built without MCP support, so --mcp-bridge is not available." << std::endl;
+            return 1;
+#endif
+        }
+    }
 
 #ifdef WITH_SENTRY
     initSentry();
@@ -422,21 +541,14 @@ int main(int argc, char* argv[])
     }
 
     // The first QSslSocket (each cTelnet holds two) makes Qt parse every system CA certificate on the
-    // constructing thread, inside profile load; warming up on a pool thread now usually finishes first.
-    // A local pool, so every early return joins it: the warm-up holds Qt's TLS backend mutex while loading
-    // the plugin, and static destruction tears those down. Not the global pool: waiting on it would also
-    // wait for QtConcurrent work a profile left running. --version starts it as it returns, only so
-    // AppStartupTeardownTest can drive that race: any earlier, it and this thread fill Qt's unguarded
-    // caches at once, which a QCoreApplication leaves empty - a double free.
-    QThreadPool sslWarmupPool;
-    const auto startSslWarmup = [&sslWarmupPool]() {
-        sslWarmupPool.start([]() {
-            QSslConfiguration::defaultConfiguration();
-        });
-    };
+    // constructing thread, inside profile load; warming up on another thread now usually finishes first.
+    // Every early return joins it on the way out: the warm-up holds Qt's TLS backend mutex while loading
+    // the plugin, and static destruction tears those down. GUI runs only: on a print-and-exit run it and
+    // this thread fill Qt's unguarded caches at once, which a QCoreApplication leaves empty - a double free.
+    TlsWarmup tlsWarmup;
 
     if (app) {
-        startSslWarmup();
+        tlsWarmup.start();
         mudlet::start();
         // GUI runs settle the config path here, before any file is read; a
         // print-and-exit run has MudletApp resolve it on first use instead.
@@ -450,7 +562,7 @@ int main(int argc, char* argv[])
 #endif
     }
 
-    QPointer<QTranslator> commandLineTranslator(loadTranslationsForCommandLine());
+    QPointer<QTranslator> commandLineTranslator(loadTranslationsForCommandLine(printAndExitOption));
 
     // A print-and-exit run keeps the verdict above: a second reading may differ, and such a run has no
     // QApplication for the rest of main() to dereference. Other runs are reparsed from the application's
@@ -503,6 +615,12 @@ int main(int argc, char* argv[])
         texts << appendLF.arg(QCoreApplication::translate("main",
                                                           "       --steammode                  adjusts Mudlet settings to match\n"
                                                           "                                    Steam's requirements."));
+#ifdef INCLUDE_MCPSERVER
+        texts << appendLF.arg(QCoreApplication::translate("main",
+                                                          "       --mcp-bridge                 relay MCP requests between an AI\n"
+                                                          "                                    assistant on stdin/stdout, such as\n"
+                                                          "                                    Claude Desktop, and a running Mudlet."));
+#endif
         texts << appendLF.arg(QCoreApplication::translate("main",
                                                           "There are other inherited options that arise from the Qt Libraries which are\n"
                                                           "less likely to be useful for normal use of this application:"));
@@ -581,9 +699,6 @@ int main(int argc, char* argv[])
                                                           "This is free software: you are free to change and redistribute it.\n"
                                                           "There is NO WARRANTY, to the extent permitted by law."));
         std::cout << texts.join(QString()).toStdString();
-        if (!app) {
-            startSslWarmup();
-        }
         return 0;
     }
 
@@ -1129,9 +1244,9 @@ int main(int argc, char* argv[])
         splash.finish(mudlet::self());
     }
 
-    mudlet::smMirrorToStdOut = parser.isSet(mirrorToStdout);
+    MudletApp::smMirrorToStdOut = parser.isSet(mirrorToStdout);
 #ifndef Q_OS_WINDOWS
-    if (mudlet::smMirrorToStdOut) {
+    if (MudletApp::smMirrorToStdOut) {
         // Without this a reader that exits first - `mudlet --mirror | head` -
         // kills Mudlet mid-session on the next line it copies; TConsole::
         // mirrorToStdOut() turns the write failure into a warning instead.
@@ -1201,7 +1316,7 @@ int main(int argc, char* argv[])
     // Before the QApplication goes, not just before main() returns: the TLS
     // plugin loader connects to qApp, so a warm-up still running here would
     // reach for one that has already been deleted.
-    sslWarmupPool.waitForDone();
+    tlsWarmup.join();
 
     // Joins the match helpers while the QApplication still exists; see
     // TriggerMatchPool::shutdown().

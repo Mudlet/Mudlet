@@ -770,6 +770,26 @@ describe("Tests Other.lua functions", function()
         assert.is_nil(ok)
         assert.is_string(err)
       end)
+
+      it("hands out the lowest free id, reusing one freed by deleteStopWatch", function()
+        local function createAndCheckLowestFree()
+          local before = getStopWatches()
+          local id = track(createStopWatch(false))
+          assert.is_number(id)
+          assert.is_nil(before[id], "id " .. id .. " was already in use")
+          for lower = 1, id - 1 do
+            assert.is_table(before[lower], "id " .. lower .. " was free but " .. id .. " was handed out")
+          end
+          return id
+        end
+        local ids = {}
+        for i = 1, 3 do
+          ids[i] = createAndCheckLowestFree()
+        end
+        assert.is_true(deleteStopWatch(ids[2]))
+        assert.equals(ids[2], createAndCheckLowestFree())
+        createAndCheckLowestFree()
+      end)
     end)
 
     describe("getStopWatchTime and adjustStopWatch", function()
@@ -1231,6 +1251,44 @@ describe("Tests Other.lua functions", function()
       assert.is_boolean(cfg.editorAutoComplete)
     end)
 
+    -- the no-argument table is built from a list kept in Other.lua, which has
+    -- to be told about every key the C++ side gains
+    it("includes the IRC and the CHARSET/NEW-ENVIRON keys in the table", function()
+      local cfg = getConfig()
+      for _, key in ipairs({"enableCHARSET", "enableNEWENVIRON", "ircChannels", "ircHostName",
+                            "ircHostPort", "ircHostSecure"}) do
+        assert.is_not_nil(cfg[key], "getConfig() left out " .. key)
+        assert.equals(getConfig(key), cfg[key], "getConfig() disagrees with getConfig('" .. key .. "')")
+      end
+      -- by name only: an unset nick reads as a random one, and the password is a credential
+      assert.is_nil(cfg.ircNickName)
+      assert.is_nil(cfg.ircPassword)
+    end)
+
+    it("restores the IRC server settings from a getConfig() snapshot", function()
+      local keys = {"ircHostName", "ircHostPort", "ircChannels"}
+      -- cleanup reads the originals by name: a snapshot missing the keys must not leave the test values behind
+      for _, key in ipairs(keys) do
+        snapshot(key)
+      end
+      finally(function()
+        for _, key in ipairs(keys) do
+          restore(key)
+        end
+      end)
+      local saved = getConfig()
+      assert.is_true(setConfig("ircHostName", "irc.example.org"))
+      assert.is_true(setConfig("ircHostPort", saved.ircHostPort == 5499 and 5498 or 5499))
+      assert.is_true(setConfig("ircChannels", "#mudletspec"))
+      -- only these: the snapshot's boolean showSentText would turn "always" into "script"
+      for _, key in ipairs(keys) do
+        assert.is_true(setConfig(key, saved[key]))
+      end
+      assert.equals(saved.ircHostName, getConfig("ircHostName"))
+      assert.equals(saved.ircHostPort, getConfig("ircHostPort"))
+      assert.equals(saved.ircChannels, getConfig("ircChannels"))
+    end)
+
     it("round-trips every boolean configuration option", function()
       local settable = 0
       for key, value in pairs(getConfig()) do
@@ -1538,6 +1596,25 @@ describe("Tests Other.lua functions", function()
       restore("commandLineHistorySaveSize")
     end)
 
+    -- 1000000 is Host::scmMaxCommandLineHistorySaveSize: the save adds one to the
+    -- size, so INT_MAX would overflow every time the profile closes; 0 is how
+    -- saving the history is turned off
+    it("refuses a commandLineHistorySaveSize below 0 or above 1000000", function()
+      snapshot("commandLineHistorySaveSize")
+      finally(function() restore("commandLineHistorySaveSize") end)
+      assert.is_true(setConfig("commandLineHistorySaveSize", 42))
+      for _, size in ipairs({-5, -1, 1000001, 2147483647}) do
+        local ok, err = setConfig("commandLineHistorySaveSize", size)
+        assert.is_nil(ok, "a size of " .. size .. " was taken")
+        assert.equals("commandLineHistorySaveSize " .. size .. " is outside of the supported range of 0 to 1000000", err)
+        assert.equals(42, getConfig("commandLineHistorySaveSize"))
+      end
+      assert.is_true(setConfig("commandLineHistorySaveSize", 0))
+      assert.equals(0, getConfig("commandLineHistorySaveSize"))
+      assert.is_true(setConfig("commandLineHistorySaveSize", 1000000))
+      assert.equals(1000000, getConfig("commandLineHistorySaveSize"))
+    end)
+
     -- A script saving the settings it changes and putting them back afterwards
     -- hands getConfig()'s answer straight back to setConfig(), so both have to
     -- speak the same unit - otherwise the rooms shrink every time it does.
@@ -1551,6 +1628,21 @@ describe("Tests Other.lua functions", function()
       assert.is_true(setConfig("mapRoomSize", getConfig("mapRoomSize")))
       assert.equals(target, getConfig("mapRoomSize"), "handing getConfig's answer back to setConfig changed the room size")
       restore("mapRoomSize")
+    end)
+
+    it("refuses a mapRoomSize below 1", function()
+      assert.is_true(openMapWidget(), "mapRoomSize cannot be set without the map widget")
+      snapshot("mapRoomSize")
+      finally(function() restore("mapRoomSize") end)
+      assert.is_true(setConfig("mapRoomSize", 7))
+      for _, size in ipairs({0, -3}) do
+        local ok, err = setConfig("mapRoomSize", size)
+        assert.is_nil(ok)
+        assert.equals("mapRoomSize must be at least 1, got " .. size, err)
+        assert.equals(7, getConfig("mapRoomSize"))
+      end
+      assert.is_true(setConfig("mapRoomSize", 1))
+      assert.equals(1, getConfig("mapRoomSize"))
     end)
 
     it("validates the undoServerWrapWidth range when the option exists", function()
@@ -1641,8 +1733,7 @@ describe("Tests Other.lua functions", function()
 
     -- The modern key and the negotiation-off key it replaced are two spellings
     -- of one flag, so a script written against either has to see what the other
-    -- one did. getConfig() with no arguments does not list the modern spellings,
-    -- so the generic round-trip loop above never reaches them.
+    -- one did.
     it("keeps enableCHARSET the exact inverse of specialForceCharsetNegotiationOff", function()
       snapshot("enableCHARSET")
       assert.is_boolean(getConfig("enableCHARSET"))
@@ -2055,15 +2146,70 @@ describe("Tests Other.lua functions", function()
     end)
   end)
 
+  describe("Tests table.save and table.load round-trips", function()
+    local path
+
+    before_each(function()
+      -- a name no file holds yet, so the cleanup below can only delete what the spec wrote
+      repeat
+        path = string.format("%s/table-save-spec-%d.lua", getMudletHomeDir(), math.random(1e9))
+      until not io.exists(path)
+    end)
+
+    after_each(function()
+      os.remove(path)
+    end)
+
+    it("should bring back nested tables, a table reached twice and a table used as a key", function()
+      local shared = { value = "shared" }
+      local original = {
+        name = "room",
+        [3] = 7,
+        exits = { north = 2, south = 4 },
+        first = shared,
+        second = shared,
+        [{ "key" }] = { deeper = { deepest = true } },
+      }
+
+      table.save(path, original)
+      local loaded = {}
+      table.load(path, loaded)
+
+      assert.equals("room", loaded.name)
+      assert.equals(7, loaded[3])
+      assert.same({ north = 2, south = 4 }, loaded.exits)
+      assert.same({ value = "shared" }, loaded.first)
+      assert.equals(loaded.first, loaded.second)
+      local tableKeys = {}
+      for key, value in pairs(loaded) do
+        if type(key) == "table" then
+          tableKeys[#tableKeys + 1] = { key = key, value = value }
+        end
+      end
+      assert.equals(1, #tableKeys)
+      assert.same({ "key" }, tableKeys[1].key)
+      assert.same({ deeper = { deepest = true } }, tableKeys[1].value)
+    end)
+
+    it("should bring back every one of many nested tables", function()
+      local rooms = {}
+      for i = 1, 500 do
+        rooms[i] = { id = i, exits = { north = i + 1, south = i - 1 } }
+      end
+
+      table.save(path, rooms)
+      local loaded = {}
+      table.load(path, loaded)
+
+      assert.same(rooms, loaded)
+    end)
+  end)
+
     --[[
     TODO:
       remember()
       loadVars()
       saveVars()
-      table.save()
-      table.pickle()
-      tacle.load()
-      table.unpickle()
       getColorWildcard()
       lockExit()
       hasExitLock()
@@ -2111,6 +2257,17 @@ describe("Tests the timer API", function()
     local name, message = waitForEvent(eventName, 5000)
     assert.equals(eventName, name, "waiting for " .. eventName .. ": " .. tostring(message))
     return name
+  end
+
+  -- installPackage() answers true but holds the install over while a profile save runs
+  local function waitForPackage(name)
+    for _ = 1, 100 do
+      if table.contains(getPackages(), name) then
+        return true
+      end
+      pumpEvents(50)
+    end
+    return false
   end
 
   -- Returns once `seconds` of real time have passed, by waiting for an event
@@ -2202,6 +2359,14 @@ describe("Tests the timer API", function()
       ]]))
       waitFor("w2aTempTimerFired")
       assert.equals(1, _G.W2aTimerSpec.fired)
+    end)
+
+    it("counts down a code-string timer from the moment it is made", function()
+      local id = trackTemp(tempTimer(5, [[_G.W2aTimerSpec.fired = _G.W2aTimerSpec.fired + 1]]))
+      assert.equals(1, isActive(id, "timer"))
+      local left = remainingTime(id)
+      assert.is_true(left > 4.5 and left <= 5, "a new 5s timer should have about 5s left, got: " .. tostring(left))
+      assert.is_true(killTimer(id))
     end)
 
     it("fires a function body", function()
@@ -2315,6 +2480,7 @@ describe("Tests the timer API", function()
 ]])
         file:close()
         assert.is_true(installPackage(path))
+        assert.is_true(waitForPackage(packageName), "the " .. packageName .. " package was not installed")
         return path
       end
 
@@ -2653,6 +2819,7 @@ describe("Tests the timer API", function()
 ]])
       file:close()
       assert.is_true(installPackage(path))
+      assert.is_true(waitForPackage("w2a-zero-timer"), "the zero timer package was not installed")
 
       -- the sibling shows that a package's timers do get switched on as they arrive
       assert.equals(1, isActive("W2aLiveFromPackage", "timer"))
@@ -3153,14 +3320,74 @@ describe("Tests the script API", function()
       assert.are_not.equal("deleteFullMarker line", getCurrentLine())
     end)
 
-    it("Should arm a one line trigger that gags a following prompt", function()
-      local lineTrigger = spy.on(_G, "tempLineTrigger")
-      finally(function() lineTrigger:revert() end)
+    it("Should arm one line trigger covering just the next line", function()
+      local original = _G.tempLineTrigger
+      local calls = {}
+      _G.tempLineTrigger = function(...)
+        calls[#calls + 1] = {...}
+        return original(...)
+      end
+      finally(function() _G.tempLineTrigger = original end)
       local id = tempTrigger("deleteFullArmMarker", function() deleteFull() end)
       feedTriggers("deleteFullArmMarker line\n")
       killTrigger(id)
-      assert.spy(lineTrigger).was.called(1)
-      assert.spy(lineTrigger).was.called_with(1, 1, [[if isPrompt() then deleteLine() end]])
+      assert.are.equal(1, #calls)
+      assert.are.equal(1, calls[1][1])
+      assert.are.equal(1, calls[1][2])
+      -- a function, so no gagged line compiles a script
+      assert.are.equal("function", type(calls[1][3]))
+    end)
+
+    it("Should return nothing", function()
+      local count
+      local id = tempTrigger("deleteFullReturnMarker", function() count = select("#", deleteFull()) end)
+      feedTriggers("deleteFullReturnMarker line\n")
+      killTrigger(id)
+      assert.are.equal(0, count)
+    end)
+
+    local function bufferText()
+      return table.concat(getLines("main", 0, getLastLineNumber("main") + 1), "\n")
+    end
+
+    it("Should gag a prompt that arrives on the next line", function()
+      local id = tempTrigger("deleteFullGagMarker", function() deleteFull() end)
+      local ok, msg = feedTelnet("deleteFullGagMarker line\r\n")
+      feedTelnet("deleteFullGaggedPrompt> <T_IAC><T_GA>")
+      feedTelnet("\r\n")
+      killTrigger(id)
+      assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
+      local text = bufferText()
+      assert.is_falsy(text:find("deleteFullGagMarker", 1, true))
+      assert.is_falsy(text:find("deleteFullGaggedPrompt", 1, true))
+    end)
+
+    it("Should leave a next line that is not a prompt, and gag nothing after it", function()
+      local id = tempTrigger("deleteFullKeepMarker", function() deleteFull() end)
+      local ok, msg = feedTelnet("deleteFullKeepMarker line\r\n")
+      feedTelnet("deleteFullKeptLine\r\n")
+      feedTelnet("deleteFullKeptPrompt> <T_IAC><T_GA>")
+      feedTelnet("\r\n")
+      killTrigger(id)
+      assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
+      local text = bufferText()
+      assert.is_falsy(text:find("deleteFullKeepMarker", 1, true))
+      assert.is_truthy(text:find("deleteFullKeptLine", 1, true))
+      assert.is_truthy(text:find("deleteFullKeptPrompt", 1, true))
+    end)
+
+    it("Should ask the isPrompt() in effect when the next line arrives", function()
+      local id = tempTrigger("deleteFullLateMarker", function() deleteFull() end)
+      feedTriggers("deleteFullLateMarker line\n")
+      killTrigger(id)
+      local original = _G.isPrompt
+      local asked = 0
+      _G.isPrompt = function() asked = asked + 1; return true end
+      finally(function() _G.isPrompt = original end)
+      feedTriggers("deleteFullLateLine\n")
+      _G.isPrompt = original
+      assert.is_true(asked >= 1)
+      assert.is_falsy(bufferText():find("deleteFullLateLine", 1, true))
     end)
   end)
 
@@ -3282,5 +3509,56 @@ describe("Tests how raiseEvent finds the Lua event dispatcher", function()
 
     assert.is_true(ok, tostring(message))
     assert.are.same({"otherSpecDispatchSwapped"}, seen)
+  end)
+
+  it("finds a dispatcher that only a globals metatable supplies", function()
+    local original = getfenv(0)
+    local seen = {}
+    raiseEvent("otherSpecDispatchSupplied", "before")
+    local swapped = setmetatable({}, {__index = function(_, key)
+      if key == "dispatchEventToFunctions" then
+        return function(event, ...)
+          seen[#seen + 1] = event
+          return original.dispatchEventToFunctions(event, ...)
+        end
+      end
+      return original[key]
+    end})
+    local ok, message = pcall(function()
+      setfenv(0, swapped)
+      raiseEvent("otherSpecDispatchSupplied", "after")
+      raiseEvent("otherSpecDispatchSupplied", "again")
+    end)
+    setfenv(0, original)
+
+    assert.is_true(ok, tostring(message))
+    assert.are.same({"otherSpecDispatchSupplied", "otherSpecDispatchSupplied"}, seen)
+  end)
+end)
+
+describe("Tests that raiseEvent hands numbers over unchanged", function()
+  local function roundTrip(value)
+    local received
+    local id = registerAnonymousEventHandler("otherSpecNumberRoundTrip", function(_, number)
+      received = number
+    end)
+    raiseEvent("otherSpecNumberRoundTrip", value)
+    killAnonymousEventHandler(id)
+    return received
+  end
+
+  it("keeps whole numbers, fractions and the largest exact integers", function()
+    for _, value in ipairs({0, 1, -1, 42, -123456789, 2^53 - 1, -(2^53 - 1), 2^53, 2^53 + 2, 2^63, 1e300, 0.1, -2.5, 1/3, 5e-324}) do
+      local received = roundTrip(value)
+      assert.are.equal("number", type(received))
+      assert.are.equal(string.format("%.17g", value), string.format("%.17g", received))
+    end
+  end)
+
+  it("keeps infinities and NaN", function()
+    assert.are.equal(math.huge, roundTrip(math.huge))
+    assert.are.equal(-math.huge, roundTrip(-math.huge))
+    local nan = roundTrip(0/0)
+    assert.is_true(nan ~= nan)
   end)
 end)

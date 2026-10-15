@@ -111,6 +111,9 @@ public:
 
     // Static method to check if the sherpa-onnx library is available on this system
     static bool sherpaAvailable();
+    // As sherpaAvailable(), but before the first probe only looks for the file
+    // on librarySearchPaths() instead of loading it
+    static bool libraryPresent();
 
     // Reset library load state to allow re-checking (e.g., after installation)
     static bool resetLibraryLoadState();

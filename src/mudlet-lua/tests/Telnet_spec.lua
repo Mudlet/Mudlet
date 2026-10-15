@@ -493,6 +493,58 @@ describe("Tests telnet subnegotiation handling", function()
   end)
 end)
 
+describe("Tests MCCP decompression", function()
+  local function bigEndian32(value)
+    return string.char(math.floor(value / 16777216) % 256, math.floor(value / 65536) % 256, math.floor(value / 256) % 256, value % 256)
+  end
+
+  local function adler32(data)
+    local a, b = 1, 0
+    for i = 1, #data do
+      a = (a + data:byte(i)) % 65521
+      b = (b + a) % 65521
+    end
+    return b * 65536 + a
+  end
+
+  -- a zlib stream of one stored (uncompressed) deflate block, so no zlib is
+  -- needed here to build one
+  local function zlibStored(data)
+    local length = #data
+    local inverse = 65535 - length
+    return "\120\1\1" .. string.char(length % 256, math.floor(length / 256), inverse % 256, math.floor(inverse / 256)) .. data .. bigEndian32(adler32(data))
+  end
+
+  -- once the outer stream ends, its decompressed bytes are scanned for telnet
+  -- sequences, and inflating a second stream found there back into the same
+  -- buffer overlapped source and destination (#10662)
+  local function feedNestedStream(option, start)
+    local nested = "AAAAAAAA" .. start .. zlibStored(string.rep("B", 1000)) .. "\r\n"
+    local stream = "\255\251" .. option .. start .. zlibStored(nested) .. "MCCP_AFTER_NESTED\r\n"
+    -- feedTelnet() stops at a NUL and reads <...> as the name of a telnet code
+    assert.is_nil(stream:find("[%z<>]"), "the crafted stream carries a byte feedTelnet() would not pass through")
+    finally(function() feedTelnet("\255\252" .. option) end)
+    local mark = getLastLineNumber("main")
+
+    local ok, msg = feedTelnet(stream)
+    assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
+
+    local displayed = table.concat(getLines("main", mark, getLastLineNumber("main") + 1))
+    assert.is_truthy(displayed:find("AAAAAAAA", 1, true), "the decompressed text before the nested start sequence was lost")
+    assert.is_truthy(displayed:find("MCCP_AFTER_NESTED", 1, true), "the plain text after the compressed stream was lost")
+  end
+
+  it("does not restart MCCP2 compression from inside data it has just decompressed", function()
+    feedNestedStream("\86", "\255\250\86\255\240")
+  end)
+
+  -- the MCCP1 start sequence has no IAC before its SE, so it has to be skipped
+  -- whole or the telnet parser is left inside a subnegotiation
+  it("does not restart MCCP1 compression from inside data it has just decompressed", function()
+    feedNestedStream("\85", "\255\250\85\251\240")
+  end)
+end)
+
 describe("Tests MSDP subnegotiation handling", function()
   -- MSDP forbids only NUL, IAC and its own six markers inside a value, so every
   -- other control code is legal payload the game means to send. Mudlet turns the
@@ -1631,31 +1683,26 @@ describe("Tests MCCP compressed streams", function()
     assert.is_truthy(shown:find("MCCPV1PLAINAFTER", 1, true), shown)
   end)
 
-  -- One read that inflates past the decompression bomb cap cannot be followed
-  -- to the end, and the part it drops leaves the stream unreadable, so the
-  -- stream has to be refused there rather than fed whatever comes next.
-  it("refuses a stream that inflates past the cap in one read", function()
+  -- One read can inflate to more than the drain works through in one go: the
+  -- rest has to be shown too, and what the game sends after it
+  it("shows all of a stream that inflates past the depth of one drain", function()
     -- zlib.compress(string.rep("\0", 1000000) .. "MCCPTAILOFBOMB\r\n", 9): NULs
-    -- are not displayed, so the cap is reached without drawing ~1 MB of text.
+    -- are not displayed, so the depth is reached without drawing ~1 MB of text.
     -- It has to inflate to more than scmMaxDecompressionRecursion * BUFFER_SIZE
-    -- (8 * 100000 bytes in ctelnet), or raising either leaves the cap unreached.
+    -- (8 * 100000 bytes in ctelnet), or the drain never goes that deep.
     local bomb = "\120\218\237\193\209\9\0\16\20\0\64\223\202\80\40\165\188\248\176\255\44\6\113\119\41\1"
       .. string.rep("\0", 968)
       .. "\191\138\222\207\173\115\237\209\118\180\146\31\105\128\4\26"
     local mark = getLastLineNumber("main")
     feed("<T_IAC><T_WILL><O_MCCP2>")
     feed("<T_IAC><T_SB><O_MCCP2><T_IAC><T_SE>" .. escaped(bomb))
-    -- what a game sends once it has seen the DONT
-    feed("MCCPPLAINAFTERCAP\r\n")
+    -- the stream ended with the bomb, so this is plain text
+    feed("MCCPPLAINAFTERBOMB\r\n")
     local shown = linesSince(mark)
-    assert.is_truthy(shown:find("Too much compressed data to process at once", 1, true), shown)
-    assert.is_falsy(shown:find("MCCP decompression error", 1, true), "the plain text was fed to the dropped stream: " .. shown)
-    assert.is_truthy(shown:find("MCCPPLAINAFTERCAP", 1, true), shown)
-
-    feed("<T_IAC><T_WILL><O_MCCP2>")
-    feed("<T_IAC><T_SB><O_MCCP2><T_IAC><T_SE>" .. escaped(COMPRESSED))
-    shown = linesSince(mark)
-    assert.is_truthy(shown:find("MCCPDECOMPRESSEDOK MCCPDECOMPRESSEDOK MCCPDECOMPRESSEDOK", 1, true), "offering MCCP again did not bring it back: " .. shown)
+    assert.is_truthy(shown:find("MCCPTAILOFBOMB", 1, true), shown)
+    assert.is_falsy(shown:find("Too much compressed data to process at once", 1, true), shown)
+    assert.is_falsy(shown:find("MCCP decompression error", 1, true), shown)
+    assert.is_truthy(shown:find("MCCPPLAINAFTERBOMB", 1, true), shown)
   end)
 end)
 

@@ -35,27 +35,31 @@ class Host;
 // These functions are used by the Qt undo framework commands
 // to preserve item state during undo/redo operations
 
-QString exportTriggerToXML(TTrigger* trigger);
+// A property edit only restores the item's own fields, and exporting a folder's
+// children too would cost a whole package on every save of that folder
+enum class SnapshotScope { ItemAndChildren, ItemOnly };
+
+QString exportTriggerToXML(TTrigger* trigger, SnapshotScope scope = SnapshotScope::ItemAndChildren);
 TTrigger* importTriggerFromXML(const QString& xmlSnapshot, TTrigger* pParent, Host* host, int position = -1);
 bool updateTriggerFromXML(TTrigger* trigger, const QString& xmlSnapshot);
 
-QString exportAliasToXML(TAlias* alias);
+QString exportAliasToXML(TAlias* alias, SnapshotScope scope = SnapshotScope::ItemAndChildren);
 TAlias* importAliasFromXML(const QString& xmlSnapshot, TAlias* pParent, Host* host, int position = -1);
 bool updateAliasFromXML(TAlias* alias, const QString& xmlSnapshot);
 
-QString exportTimerToXML(TTimer* timer);
+QString exportTimerToXML(TTimer* timer, SnapshotScope scope = SnapshotScope::ItemAndChildren);
 TTimer* importTimerFromXML(const QString& xmlSnapshot, TTimer* pParent, Host* host, int position = -1);
 bool updateTimerFromXML(TTimer* timer, const QString& xmlSnapshot);
 
-QString exportScriptToXML(TScript* script);
+QString exportScriptToXML(TScript* script, SnapshotScope scope = SnapshotScope::ItemAndChildren);
 TScript* importScriptFromXML(const QString& xmlSnapshot, TScript* pParent, Host* host, int position = -1);
 bool updateScriptFromXML(TScript* script, const QString& xmlSnapshot);
 
-QString exportKeyToXML(TKey* key);
+QString exportKeyToXML(TKey* key, SnapshotScope scope = SnapshotScope::ItemAndChildren);
 TKey* importKeyFromXML(const QString& xmlSnapshot, TKey* pParent, Host* host, int position = -1);
 bool updateKeyFromXML(TKey* key, const QString& xmlSnapshot);
 
-QString exportActionToXML(TAction* action);
+QString exportActionToXML(TAction* action, SnapshotScope scope = SnapshotScope::ItemAndChildren);
 TAction* importActionFromXML(const QString& xmlSnapshot, TAction* pParent, Host* host, int position = -1);
 bool updateActionFromXML(TAction* action, const QString& xmlSnapshot);
 

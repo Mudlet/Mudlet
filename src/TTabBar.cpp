@@ -382,6 +382,48 @@ void TTabBar::removeTab(const QString& tabName)
     }
 }
 
+void TTabBar::markActivity(const QString& tabName, const bool isLowerPriorityChange)
+{
+    const int index = tabIndex(tabName);
+    if (count() < 2 || index < 0) {
+        return;
+    }
+    if (!isLowerPriorityChange) {
+        if (tabBold(index) && !tabItalic(index)) {
+            return;
+        }
+        setTabBold(index, true);
+        setTabItalic(index, false);
+    } else {
+        // A lower priority, local change must not replace the indication of a
+        // higher priority remote one:
+        if (tabBold(index) || tabItalic(index)) {
+            return;
+        }
+        setTabItalic(index, true);
+    }
+    relayoutTab(index);
+}
+
+void TTabBar::clearActivity(const int index)
+{
+    if (!tabBold(index) && !tabItalic(index) && !tabUnderline(index)) {
+        return;
+    }
+    setTabBold(index, false);
+    setTabItalic(index, false);
+    setTabUnderline(index, false);
+    relayoutTab(index);
+}
+
+void TTabBar::relayoutTab(const int index)
+{
+    // QTabBar caches each tab's size and only asks tabSizeHint() again from its
+    // private refresh(), which setTabText() triggers - without it a tab whose
+    // font just became wider would clip its text:
+    setTabText(index, tabText(index));
+}
+
 QStringList TTabBar::tabNames() const
 {
     QStringList results;
@@ -411,17 +453,25 @@ void TTabBar::mousePressEvent(QMouseEvent* event)
 {
     if (event->button() == Qt::LeftButton) {
         mDragStartPos = event->pos();
-        mDragIndex = tabAt(event->pos());
+        mDragTabName = tabData(tabAt(event->pos())).toString();
         mDragStartTime = QDateTime::currentMSecsSinceEpoch();
         mPendingDetach = false;
     }
     QTabBar::mousePressEvent(event);
 }
 
+void TTabBar::mouseReleaseEvent(QMouseEvent* event)
+{
+    if (event->button() == Qt::LeftButton) {
+        mDragTabName.clear();
+    }
+    QTabBar::mouseReleaseEvent(event);
+}
+
 void TTabBar::mouseMoveEvent(QMouseEvent* event)
 {
     // Check if we should start a drag operation
-    if (!(event->buttons() & Qt::LeftButton) || mDragIndex == -1) {
+    if (!(event->buttons() & Qt::LeftButton) || mDragTabName.isEmpty()) {
         QTabBar::mouseMoveEvent(event);
         return;
     }
@@ -458,8 +508,11 @@ void TTabBar::mouseMoveEvent(QMouseEvent* event)
             // totalDistance is from the press point, not the bar's centre, so the tear-off threshold doesn't
             // depend on where the tab sits or was grabbed. It is Manhattan: horizontal travel counts too.
             if (!tabBarGlobalRect.contains(globalPos) && isVerticalMovement && totalDistance > DETACH_DISTANCE_THRESHOLD) {
-                emit tabDetachRequested(mDragIndex, globalPos);
-                mDragIndex = -1; // Reset drag state
+                const int dragIndex = tabIndex(mDragTabName);
+                mDragTabName.clear();
+                if (dragIndex > -1) {
+                    emit tabDetachRequested(dragIndex, globalPos);
+                }
                 return;
             }
         }

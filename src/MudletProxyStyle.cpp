@@ -20,6 +20,7 @@
 
 #include "MudletProxyStyle.h"
 
+#include <QScopedValueRollback>
 #include <QStyleFactory>
 
 #if defined(Q_OS_WIN)
@@ -80,22 +81,29 @@ void MudletProxyStyle::watchScreenReaderStatus()
 
     bus.connect(csmA11yService, csmA11yPath, csmPropertiesInterface, qsl("PropertiesChanged"), this, SLOT(slot_a11yStatusChanged(QString, QVariantMap, QStringList)));
 
+    readScreenReaderStatus();
+#endif
+}
+
+#if defined(Q_OS_UNIX) && !defined(Q_OS_MACOS)
+void MudletProxyStyle::readScreenReaderStatus()
+{
     // Asynchronous, so a slow or missing accessibility bus cannot stall startup
     QDBusMessage request = QDBusMessage::createMethodCall(csmA11yService, csmA11yPath, csmPropertiesInterface, qsl("Get"));
     request << csmA11yStatusInterface << csmScreenReaderEnabled;
-    auto* watcher = new QDBusPendingCallWatcher(bus.asyncCall(request), this);
+    auto* watcher = new QDBusPendingCallWatcher(QDBusConnection::sessionBus().asyncCall(request), this);
     connect(watcher, &QDBusPendingCallWatcher::finished, this, [this](QDBusPendingCallWatcher* call) {
         const QDBusPendingReply<QDBusVariant> reply = *call;
         if (reply.isError()) {
-            qDebug().nospace().noquote() << "MudletProxyStyle::watchScreenReaderStatus() INFO - unable to read the screen reader status from " << csmA11yService << " (" << reply.error().name() << ": "
+            qDebug().nospace().noquote() << "MudletProxyStyle::readScreenReaderStatus() INFO - unable to read the screen reader status from " << csmA11yService << " (" << reply.error().name() << ": "
                                          << reply.error().message() << "), so Alt-to-menu-bar navigation follows the preference only.";
         } else {
             mScreenReaderRunning = reply.value().variant().toBool();
         }
         call->deleteLater();
     });
-#endif
 }
+#endif
 
 // Only installed on Windows, where screen readers announce themselves by
 // setting SPI_SETSCREENREADER and broadcasting WM_SETTINGCHANGE
@@ -147,4 +155,26 @@ int MudletProxyStyle::styleHint(StyleHint styleHint, const QStyleOption* opt, co
     }
 
     return QProxyStyle::styleHint(styleHint, opt, widget, returnData);
+}
+
+void MudletProxyStyle::drawControl(ControlElement element, const QStyleOption* option, QPainter* painter, const QWidget* widget) const
+{
+    if (element == CE_DockWidgetTitle && !baseStyle()->name().compare(QLatin1String("fusion"), Qt::CaseInsensitive)) {
+        const QScopedValueRollback measuring(mMeasuringDockTitle, true);
+        QProxyStyle::drawControl(element, option, painter, widget);
+        return;
+    }
+    QProxyStyle::drawControl(element, option, painter, widget);
+}
+
+QIcon MudletProxyStyle::standardIcon(StandardPixmap standardIcon, const QStyleOption* option, const QWidget* widget) const
+{
+    if (!mMeasuringDockTitle || (standardIcon != SP_TitleBarCloseButton && standardIcon != SP_TitleBarNormalButton)) {
+        return QProxyStyle::standardIcon(standardIcon, option, widget);
+    }
+    QIcon& kept = standardIcon == SP_TitleBarCloseButton ? mDockTitleCloseIcon : mDockTitleNormalIcon;
+    if (kept.isNull()) {
+        kept = QProxyStyle::standardIcon(standardIcon, option, widget);
+    }
+    return kept;
 }

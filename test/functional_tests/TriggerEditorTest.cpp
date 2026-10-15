@@ -214,6 +214,21 @@ private slots:
     QCOMPARE(edit.toPlainText(), qsl("^first pattern$"));
   }
 
+  // A clipboard of nothing but line breaks has no first line to keep (#10337)
+  void test_pastingOnlyLineBreaksIntoAPatternInsertsNothing() {
+    SingleLineTextEdit edit;
+    edit.setPlainText(qsl("^pattern$"));
+    edit.moveCursor(QTextCursor::End);
+
+    QClipboard *clipboard = QGuiApplication::clipboard();
+    QVERIFY(clipboard);
+    clipboard->setText(qsl("\r\n\n\r\n"));
+
+    QTest::keyClick(&edit, Qt::Key_V, Qt::ControlModifier);
+
+    QCOMPARE(edit.toPlainText(), qsl("^pattern$"));
+  }
+
   // The deselect on focus-out exists so a pattern line does not keep showing a
   // stale selection once another line is being edited, so it has to survive
   // only the reasons that give focus straight back

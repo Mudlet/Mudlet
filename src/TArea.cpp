@@ -376,6 +376,26 @@ void TArea::addRoom(int id)
     }
 }
 
+void TArea::addRooms(const QSet<int>& ids)
+{
+    bool added = false;
+    for (const int id : ids) {
+        if (!mpRoomDB->getRoom(id)) {
+            const QString error = tr("roomID=%1 does not exist, can not set properties of a non-existent room!").arg(id);
+            mpMap->mpHost->printSystemMessage(error);
+        } else if (rooms.contains(id)) {
+            qDebug() << "TArea::addRooms(" << id << ") No creation! room already exists";
+        } else {
+            rooms.insert(id);
+            added = true;
+        }
+    }
+    if (added) {
+        bumpRoomsVersion();
+    }
+    calcSpan();
+}
+
 void TArea::addRoomWithCustomLines(int id, int z)
 {
     if (!rooms.contains(id)) {
@@ -765,11 +785,17 @@ const QMultiMap<int, QPair<QString, int>> TArea::getAreaExitRoomData() const
 
 int TArea::createLabelId() const
 {
-    int labelId = -1;
-    do {
-    } while (mMapLabels.contains(++labelId));
-    if (labelId < 0) {
-        labelId = -1;
+    if (mMapLabels.isEmpty()) {
+        return 0;
+    }
+    // The keys are sorted: when they fill 0..n-1 the lowest free id is n,
+    // otherwise it is the first one out of step
+    if (mMapLabels.firstKey() >= 0 && mMapLabels.lastKey() == mMapLabels.size() - 1) {
+        return mMapLabels.lastKey() + 1;
+    }
+    int labelId = 0;
+    for (auto it = mMapLabels.lowerBound(0); it != mMapLabels.cend() && it.key() == labelId; ++it) {
+        ++labelId;
     }
     return labelId;
 }
@@ -813,7 +839,9 @@ void TArea::writeJsonArea(QJsonArray& array) const
     }
     if (currentRoomCount % 10 != 0) {
         // Must add on any remainder otherwise the total will be wrong:
-        mpMap->incrementJsonProgressDialog(true, true, currentRoomCount % 10);
+        if (mpMap->incrementJsonProgressDialog(true, true, currentRoomCount % 10)) {
+            return;
+        }
     }
     const QJsonValue roomsValue{roomsArray};
     areaObj.insert(QLatin1String("rooms"), roomsValue);
@@ -877,6 +905,26 @@ void TArea::writeJsonUserData(QJsonObject& obj) const
     obj.insert(QLatin1String("userData"), userDatasValue);
 }
 
+// The binary format keeps an area's zoom (below format 21) and its labels'
+// fonts and outline colors as user data under these keys. They mean nothing in
+// the live map, and a map file can hold them for labels that no longer exist.
+void TArea::dropFileOnlyUserData(QMap<QString, QString>& userData)
+{
+    // exactly the form a save writes, so "_007" or "_+5" stay a script's own
+    const auto labelKey = [](const QString& key, const QLatin1String prefix) {
+        if (!key.startsWith(prefix)) {
+            return false;
+        }
+        const QStringView suffix = QStringView(key).mid(prefix.size());
+        bool isNumber = false;
+        const int labelId = suffix.toInt(&isNumber);
+        return isNumber && suffix == QString::number(labelId);
+    };
+    userData.removeIf([&labelKey](const QMap<QString, QString>::iterator& it) {
+        return it.key() == QLatin1String("system.fallback_map2DZoom") || labelKey(it.key(), QLatin1String("system.labelFont_")) || labelKey(it.key(), QLatin1String("system.labelOutlineColor_"));
+    });
+}
+
 // Takes a userData object and parses all its elements
 void TArea::readJsonUserData(const QJsonObject& obj)
 {
@@ -890,6 +938,8 @@ void TArea::readJsonUserData(const QJsonObject& obj)
             mUserData.insert(key, obj.value(key).toString());
         }
     }
+    // a JSON label keeps its font in its own fields and nothing reads these
+    dropFileOnlyUserData(mUserData);
 }
 
 void TArea::writeJsonLabels(QJsonObject& obj) const
@@ -1187,7 +1237,7 @@ bool TArea::hasPermanentLabels() const
 
 void TArea::set2DMapZoom(const qreal zoom)
 {
-    if (zoom >= TMap::scmMinXYZoom) {
+    if (qIsFinite(zoom) && zoom >= TMap::scmMinXYZoom) {
         mLast2DMapZoom = zoom;
     }
 }

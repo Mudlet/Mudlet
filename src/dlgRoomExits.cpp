@@ -494,7 +494,12 @@ void dlgRoomExits::slot_addSpecialExit()
 void dlgRoomExits::save()
 {
     mpHost->mpMap->mMapGraphNeedsUpdate = true;
-    if (!pR) {
+    // The dialog is not modal, so since init() a script may have deleted the
+    // room, or replaced it with a new one under the same id
+    pR = mpHost->mpMap->mpRoomDB->getRoom(mRoomID);
+    if (!pR || pR->serial() != mRoomSerial) {
+        pR = nullptr;
+        close();
         return;
     }
 
@@ -1666,6 +1671,7 @@ void dlgRoomExits::init()
     if (!pR) {
         return;
     }
+    mRoomSerial = pR->serial();
 
     roomID->setText(QString::number(mRoomID));
     if (pR->isLocked) {

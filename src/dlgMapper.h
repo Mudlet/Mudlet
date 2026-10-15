@@ -25,6 +25,7 @@
  ***************************************************************************/
 
 
+#include "TMapViewFrontend.h"
 #include "ui_mapper.h"
 #include <QPointer>
 
@@ -41,7 +42,7 @@ class QOpenGLWidget;
 #endif
 
 
-class dlgMapper : public QWidget, public Ui::mapper
+class dlgMapper : public QWidget, public Ui::mapper, public TMapViewFrontend
 {
     Q_OBJECT
 
@@ -59,16 +60,35 @@ public:
     int getCurrentShownAreaIndex();
     void setFont(const QFont&);
     void refreshColours();
+    // Redraws whichever of the 2D and 3D views exist, for settings both of them read
+    void repaintMaps();
+    void update3DView();
     void recreate3DWidget();
 
-    void showMapProgress(const QString& label, bool cancelable);
-    void setMapProgressLabel(const QString& text);
-    void setMapProgressRange(int minimum, int maximum);
-    void setMapProgressValue(int value);
-    int mapProgressMaximum() const;
-    void setMapProgressCancelable(bool cancelable);
-    void hideMapProgress();
-    bool isMapProgressVisible() const;
+    bool onScreen() const override { return isVisible(); }
+    void showMapProgress(const QString& label, bool cancelable) override;
+    void setMapProgressLabel(const QString& text) override;
+    void setMapProgressRange(int minimum, int maximum) override;
+    void setMapProgressValue(int value) override;
+    int mapProgressMaximum() const override;
+    void setMapProgressCancelable(bool cancelable) override;
+    void hideMapProgress() override;
+    bool isMapProgressVisible() const override;
+    void show3DView(bool shown) override { slot_toggle3DView(shown); }
+    bool showing3DView() const override;
+    void recreate3DView() override { recreate3DWidget(); }
+    std::pair<bool, QString> shift3DViewCamera(float verticalAngle, float horizontalAngle, float rotationAngle) override;
+    std::pair<bool, QString> set3DViewCameraPosition(float r, float theta, float phi) override;
+    bool selectingRooms() const override { return mp2dMap->mMultiSelection; }
+    QSet<int> selectedRooms() const override { return mp2dMap->mMultiSelectionSet; }
+    int centerSelectedRoom() const override { return mp2dMap->getCenterSelectedRoomId(); }
+    void clearRoomSelection() override { mp2dMap->clearSelection(); }
+    int shownAreaId() const override;
+    std::pair<bool, QString> setMapZoom(qreal zoom, int areaId) override;
+    std::pair<bool, QString> exportAreaToImage(int areaId, const QString& filePath, std::optional<int> zLevel, qreal zoom, bool exportAllZLevels) override
+    {
+        return mp2dMap->exportAreaToImage(areaId, filePath, zLevel, zoom, exportAllZLevels);
+    }
 
 signals:
     void signal_mapProgressCanceled();
@@ -112,11 +132,20 @@ protected:
     bool eventFilter(QObject* watched, QEvent* event) override;
 
 private:
+    // Only the mapper TMap::mpMapper names acts on the map's cues, as other
+    // mappers of the same profile (in a detached window, say) are not drawing it.
+    bool drawsTheMap() const;
+    void connectMapCues();
     void setupEmptyStateOverlay();
     void repositionEmptyStateOverlay();
     void setupProgressOverlay();
     void repositionProgressOverlay();
     void loadMapFromFile();
+#if defined(INCLUDE_3DMAPPER)
+    void connect3DViewControls();
+    void sync3DViewFrom2D();
+    void sync2DViewFrom3D();
+#endif
 
     TMap* mpMap = nullptr;
     QPointer<Host> mpHost;

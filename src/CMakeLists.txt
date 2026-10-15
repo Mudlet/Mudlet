@@ -39,19 +39,147 @@ if(USE_FONTS)
   endif()
 endif()
 
-# Add every .cpp source file here, kept in alphabetical order (case-insensitive).
+# Add every .cpp source file that does not need Qt Widgets here, for mudlet_core, kept
+# in alphabetical order (case-insensitive).
 set(mudlet_SRCS
     ActionUnit.cpp
     AliasUnit.cpp
     CredentialManager.cpp
     ctelnet.cpp
+    discord.cpp
+    EditorAddItemCommand.cpp
+    EditorDeleteItemCommand.cpp
+    EditorItemXMLHelpers.cpp
+    EditorModifyPropertyCommand.cpp
+    EditorMoveItemCommand.cpp
+    EditorToggleActiveCommand.cpp
+    EditorUndoStack.cpp
+    EventLoopPump.cpp
+    ExitAppearance.cpp
+    FontManager.cpp
+    GifTracker.cpp
+    GMCPAuthenticator.cpp
+    Host.cpp
+    HostManager.cpp
+    ircmessageformatter.cpp
+    KeyUnit.cpp
+    LuaInterface.cpp
+    LuaLiteral.cpp
+    mapInfoContributorManager.cpp
+    MMCPClient.cpp
+    MMCPServer.cpp
+    MudletApp.cpp
+    MudletInstanceCoordinator.cpp
+    MudletMedia.cpp
+    MudletReplay.cpp
+    MxpTag.cpp
+    OAuthClientFlow.cpp
+    RoomAppearance.cpp
+    ScriptUnit.cpp
+    SecureStringUtils.cpp
+    SentryWrapper.cpp
+    SherpaRecognizer.cpp
+    ShortcutsManager.cpp
+    SignInStoreReconciler.cpp
+    SpeechAudioCapture.cpp
+    SpeechRecognizerFactory.cpp
+    TAction.cpp
+    TAlias.cpp
+    TArea.cpp
+    TAreaGridIndex.cpp
+    TAreaLodExitIndex.cpp
+    TAreaSpanIndex.cpp
+    TAreaZLevelIndex.cpp
+    TBuffer.cpp
+    TConsoleModel.cpp
+    TDebug.cpp
+    TEncodingHelper.cpp
+    TEncodingTable.cpp
+    TEntityHandler.cpp
+    TEntityResolver.cpp
+    TForkedProcess.cpp
+    TGlyphCache.cpp
+    THyperlinkCompactManager.cpp
+    THyperlinkSelectionManager.cpp
+    THyperlinkVisibilityManager.cpp
+    TimerUnit.cpp
+    TIrcClient.cpp
+    TKey.cpp
+    TLabelModel.cpp
+    TLinkStore.cpp
+    TLuaInterpreter.cpp
+    TLuaInterpreterDiscord.cpp
+    TLuaInterpreterMapper.cpp
+    TLuaInterpreterMedia.cpp
+    TLuaInterpreterMMCP.cpp
+    TLuaInterpreterMudletObjects.cpp
+    TLuaInterpreterNetworking.cpp
+    TLuaInterpreterTextToSpeech.cpp
+    TLuaInterpreterSpeechToText.cpp
+    TLuaInterpreterUI.cpp
+    TMap.cpp
+    TMapLabel.cpp
+    TMedia.cpp
+    TMediaPlaylist.cpp
+    TMxpBRTagHandler.cpp
+    TMxpColorTagHandler.cpp
+    TMxpCustomElementTagHandler.cpp
+    TMxpDestTagHandler.cpp
+    TMxpElementDefinitionHandler.cpp
+    TMxpElementRegistry.cpp
+    TMxpEntityTagHandler.cpp
+    TMxpExpireTagHandler.cpp
+    TMxpFontTagHandler.cpp
+    TMxpFormattingTagsHandler.cpp
+    TMxpFrameManager.cpp
+    TMxpFrameTagHandler.cpp
+    TMxpHRTagHandler.cpp
+    TMxpImageTagHandler.cpp
+    TMxpLinkTagHandler.cpp
+    TMxpMudlet.cpp
+    TMxpMusicTagHandler.cpp
+    TMxpNodeBuilder.cpp
+    TMxpProcessor.cpp
+    TMxpSendTagHandler.cpp
+    TMxpSoundTagHandler.cpp
+    TMxpStatTagHandler.cpp
+    TMxpSupportTagHandler.cpp
+    TMxpTagHandler.cpp
+    TMxpTagParser.cpp
+    TMxpTagProcessor.cpp
+    TMxpVarTagHandler.cpp
+    TMxpVersionTagHandler.cpp
+    TNullAppFrontend.cpp
+    TNullConsoleFrontend.cpp
+    TriggerMatchPool.cpp
+    TriggerUnit.cpp
+    TTriggerPrescan.cpp
+    TRoom.cpp
+    TRoomDB.cpp
+    TScript.cpp
+    TSpeechBridge.cpp
+    TSpellChecker.cpp
+    TStringUtils.cpp
+    TTextCodec.cpp
+    TTimer.cpp
+    TTrigger.cpp
+    TVar.cpp
+    UntrustedText.cpp
+    utils.cpp
+    VarUnit.cpp
+    VoskRecognizer.cpp
+    XMLexport.cpp
+    XMLimport.cpp)
+
+# Every .cpp source file that needs Qt Widgets goes here instead, in mudlet_app, kept
+# in alphabetical order (case-insensitive).
+set(mudlet_app_SRCS
     CustomLineDrawContextMenuHandler.cpp
     CustomLineDrawHandler.cpp
     CustomLineEditContextMenuHandler.cpp
     CustomLineEditHandler.cpp
     CustomLineSession.cpp
     DarkTheme.cpp
-    discord.cpp
     dlgAboutDialog.cpp
     dlgActionMainArea.cpp
     dlgAliasMainArea.cpp
@@ -79,174 +207,57 @@ set(mudlet_SRCS
     dlgTriggersMainArea.cpp
     dlgVarsMainArea.cpp
     EAction.cpp
-    EditorAddItemCommand.cpp
-    EditorDeleteItemCommand.cpp
-    EditorItemXMLHelpers.cpp
-    EditorModifyPropertyCommand.cpp
-    EditorMoveItemCommand.cpp
     EditorAutoCompleteFocusHandler.cpp
-    EditorToggleActiveCommand.cpp
-    EditorUndoStack.cpp
-    EventLoopPump.cpp
     exitstreewidget.cpp
     FileOpenHandler.cpp
-    FontManager.cpp
-    GifTracker.cpp
-    GMCPAuthenticator.cpp
-    Host.cpp
     HostDialogs.cpp
-    HostManager.cpp
-    ircmessageformatter.cpp
-    KeyUnit.cpp
     LabelInteractionHandler.cpp
-    LuaInterface.cpp
-    LuaLiteral.cpp
-    main.cpp
-    mapInfoContributorManager.cpp
     MiddleMousePanHandler.cpp
-    MMCPClient.cpp
-    MMCPServer.cpp
     mudlet.cpp
-    MudletApp.cpp
-    MudletInstanceCoordinator.cpp
-    MudletMedia.cpp
     MudletProxyStyle.cpp
-    MudletReplay.cpp
-    MxpTag.cpp
-    OAuthClientFlow.cpp
     PackageItemDelegate.cpp
     PanInteractionHandler.cpp
     RoomContextMenuHandler.cpp
     RoomMoveActivationHandler.cpp
     RoomMoveDragHandler.cpp
-    ScriptUnit.cpp
-    SecureStringUtils.cpp
     SelectionRectangleHandler.cpp
-    SentryWrapper.cpp
-    SherpaRecognizer.cpp
-    ShortcutsManager.cpp
-    SignInStoreReconciler.cpp
     SingleLineTextEdit.cpp
-    SpeechAudioCapture.cpp
-    SpeechRecognizerFactory.cpp
     T2DMap.cpp
     TAccessibleTextEdit.cpp
-    TAction.cpp
-    TAlias.cpp
-    TArea.cpp
-    TAreaGridIndex.cpp
-    TAreaLodExitIndex.cpp
-    TAreaSpanIndex.cpp
-    TAreaZLevelIndex.cpp
-    TBuffer.cpp
     TCommandLine.cpp
+    TPasswordEntry.cpp
     TConsole.cpp
-    TConsoleModel.cpp
-    TDebug.cpp
     TDebugFilterBar.cpp
     TDetachedWindow.cpp
     TDockWidget.cpp
     TEasyButtonBar.cpp
-    TEncodingHelper.cpp
-    TEncodingTable.cpp
-    TEntityHandler.cpp
-    TEntityResolver.cpp
     TFeatureCallout.cpp
     TFlipButton.cpp
-    TForkedProcess.cpp
-    TGlyphCache.cpp
-    THyperlinkCompactManager.cpp
-    THyperlinkSelectionManager.cpp
-    THyperlinkVisibilityManager.cpp
-    TimerUnit.cpp
-    TIrcClient.cpp
-    TKey.cpp
     TKeySequenceEdit.cpp
     TLabel.cpp
-    TLabelModel.cpp
-    TLinkStore.cpp
-    TLuaInterpreter.cpp
-    TLuaInterpreterDiscord.cpp
-    TLuaInterpreterMapper.cpp
-    TLuaInterpreterMedia.cpp
-    TLuaInterpreterMMCP.cpp
-    TLuaInterpreterMudletObjects.cpp
-    TLuaInterpreterNetworking.cpp
-    TLuaInterpreterTextToSpeech.cpp
-    TLuaInterpreterSpeechToText.cpp
-    TLuaInterpreterUI.cpp
     TMainConsole.cpp
-    TMap.cpp
-    TMapLabel.cpp
     TMapView.cpp
     TMapViewManager.cpp
-    TMedia.cpp
-    TMediaPlaylist.cpp
-    TMxpBRTagHandler.cpp
-    TMxpColorTagHandler.cpp
-    TMxpCustomElementTagHandler.cpp
-    TMxpDestTagHandler.cpp
-    TMxpElementDefinitionHandler.cpp
-    TMxpElementRegistry.cpp
-    TMxpEntityTagHandler.cpp
-    TMxpExpireTagHandler.cpp
-    TMxpFontTagHandler.cpp
-    TMxpFormattingTagsHandler.cpp
-    TMxpFrameManager.cpp
-    TMxpFrameTagHandler.cpp
     TMxpFrameWidgets.cpp
-    TMxpHRTagHandler.cpp
-    TMxpImageTagHandler.cpp
-    TMxpLinkTagHandler.cpp
-    TMxpMudlet.cpp
-    TMxpMusicTagHandler.cpp
-    TMxpNodeBuilder.cpp
-    TMxpProcessor.cpp
-    TMxpSendTagHandler.cpp
-    TMxpSoundTagHandler.cpp
-    TMxpStatTagHandler.cpp
-    TMxpSupportTagHandler.cpp
-    TMxpTagHandler.cpp
-    TMxpTagParser.cpp
-    TMxpTagProcessor.cpp
-    TMxpVarTagHandler.cpp
-    TMxpVersionTagHandler.cpp
     TrailingWhitespaceMarker.cpp
     TriggerHighlighter.cpp
-    TriggerMatchPool.cpp
-    TriggerUnit.cpp
-    TTriggerPrescan.cpp
-    TRoom.cpp
-    TRoomDB.cpp
-    TScript.cpp
     TScrollBox.cpp
-    TSpellChecker.cpp
     TSplitter.cpp
     TSplitterHandle.cpp
-    TStringUtils.cpp
     TTabBar.cpp
     TTextBox.cpp
-    TTextCodec.cpp
     TTextEdit.cpp
-    TTimer.cpp
     TToolBar.cpp
     TTreeWidget.cpp
-    TTrigger.cpp
     TUiTour.cpp
-    TVar.cpp
-    UntrustedText.cpp
-    utils.cpp
-    VarUnit.cpp
-    VoskRecognizer.cpp
     WideComboBox.cpp
-    XMLexport.cpp
-    XMLimport.cpp)
+    widgetutils.cpp)
 
 if(APPLE)
   # Sparkle updater for macOS
   if(USE_UPDATER)
-    list(APPEND mudlet_SRCS sparkleupdater.mm)
-    list(APPEND mudlet_HDRS sparkleupdater.h)
+    list(APPEND mudlet_app_SRCS sparkleupdater.mm)
+    list(APPEND mudlet_app_HDRS sparkleupdater.h)
     set_source_files_properties(
       src/sparkleupdater.mm
       src/sparkleupdater.h
@@ -314,7 +325,8 @@ set(mudlet_UIS
     ui/triggers_main_area.ui
     ui/vars_main_area.ui)
 
-# Add every .h header file here, kept in alphabetical order (case-insensitive).
+# Add every .h header file that does not need Qt Widgets here, for mudlet_core, kept
+# in alphabetical order (case-insensitive).
 set(mudlet_HDRS
     ../3rdparty/discord/rpc/include/discord_register.h
     ../3rdparty/discord/rpc/include/discord_rpc.h
@@ -323,13 +335,157 @@ set(mudlet_HDRS
     AliasUnit.h
     CredentialManager.h
     ctelnet.h
+    discord.h
+    EditorAddItemCommand.h
+    EditorCommand.h
+    EditorDeleteItemCommand.h
+    EditorItemXMLHelpers.h
+    EditorModifyPropertyCommand.h
+    EditorMoveItemCommand.h
+    EditorToggleActiveCommand.h
+    EditorUndoStack.h
+    enums.h
+    EventLoopPump.h
+    ExitAppearance.h
+    FontManager.h
+    GifTracker.h
+    GMCPAuthenticator.h
+    Host.h
+    HostManager.h
+    ircmessageformatter.h
+    KeyUnit.h
+    LuaInterface.h
+    LuaLiteral.h
+    MacMicrophonePermission.h
+    mapInfoContributorManager.h
+    MMCP.h
+    MMCPClient.h
+    MMCPServer.h
+    MudletApp.h
+    MudletInstanceCoordinator.h
+    MudletMedia.h
+    MudletReplay.h
+    MxpTag.h
+    OAuthClientFlow.h
+    RoomAppearance.h
+    ScriptUnit.h
+    SecureStringUtils.h
+    SentryWrapper.h
+    SherpaRecognizer.h
+    ShortcutsManager.h
+    SignInStoreReconciler.h
+    SpeechAudioCapture.h
+    SpeechRecognizer.h
+    SpeechRecognizerFactory.h
+    TAction.h
+    TAlias.h
+    TAppFrontend.h
+    TArea.h
+    TAreaGridIndex.h
+    TAreaLodExitIndex.h
+    TAreaSpanIndex.h
+    TAreaZLevelIndex.h
+    TAstar.h
+    TBuffer.h
+    TConsoleFrontend.h
+    TConsoleModel.h
+    TConsoleModelNotifier.h
+    TDebug.h
+    TEncodingHelper.h
+    TEncodingTable.h
+    TEntityHandler.h
+    TEntityResolver.h
+    TEvent.h
+    TForkedProcess.h
+    TGameDetails.h
+    TGlyphCache.h
+    THyperlinkCompactManager.h
+    THyperlinkSelectionManager.h
+    THyperlinkStyling.h
+    THyperlinkVisibilityManager.h
+    TimerUnit.h
+    TIrcClient.h
+    TKey.h
+    TLabelModel.h
+    TLinkStore.h
+    TLuaInterpreter.h
+    TMap.h
+    TMapLabel.h
+    TMapViewFrontend.h
+    TMapViewsFrontend.h
+    TMatchState.h
+    TMedia.h
+    TMediaData.h
+    TMediaPlaylist.h
+    TMxpBRTagHandler.h
+    TMxpClient.h
+    TMxpColorTagHandler.h
+    TMxpContext.h
+    TMxpCustomElementTagHandler.h
+    TMxpDestTagHandler.h
+    TMxpElementDefinitionHandler.h
+    TMxpElementRegistry.h
+    TMxpEntityTagHandler.h
+    TMxpEvent.h
+    TMxpExpireTagHandler.h
+    TMxpFontTagHandler.h
+    TMxpFormattingTagsHandler.h
+    TMxpFrameFrontend.h
+    TMxpFrameManager.h
+    TMxpFrameTagHandler.h
+    TMxpHRTagHandler.h
+    TMxpImageTagHandler.h
+    TMxpLinkTagHandler.h
+    TMxpMudlet.h
+    TMxpMusicTagHandler.h
+    TMxpNodeBuilder.h
+    TMxpProcessor.h
+    TMxpSendTagHandler.h
+    TMxpSoundTagHandler.h
+    TMxpStatTagHandler.h
+    TMxpSupportTagHandler.h
+    TMxpTagHandler.h
+    TMxpTagHandlerResult.h
+    TMxpTagParser.h
+    TMxpTagProcessor.h
+    TMxpVarTagHandler.h
+    TMxpVersionTagHandler.h
+    TNullAppFrontend.h
+    TNullConsoleFrontend.h
+    TPrintSink.h
+    Tree.h
+    TriggerMatchPool.h
+    TriggerUnit.h
+    TTriggerPrescan.h
+    TRoom.h
+    TRoomDB.h
+    TScript.h
+    TSpeechBridge.h
+    TSpellChecker.h
+    TStringUtils.h
+    TTextCodec.h
+    TTextProperties.h
+    TTimer.h
+    TTrigger.h
+    TVar.h
+    TWindowRegistry.h
+    UntrustedText.h
+    utils.h
+    VarUnit.h
+    VoskRecognizer.h
+    widechar_width.h
+    XMLexport.h
+    XMLimport.h)
+
+# Every .h header file that needs Qt Widgets goes here instead, in mudlet_app, kept
+# in alphabetical order (case-insensitive).
+set(mudlet_app_HDRS
     CustomLineDrawContextMenuHandler.h
     CustomLineDrawHandler.h
     CustomLineEditContextMenuHandler.h
     CustomLineEditHandler.h
     CustomLineSession.h
     DarkTheme.h
-    discord.h
     dlgAboutDialog.h
     dlgActionMainArea.h
     dlgAliasMainArea.h
@@ -357,181 +513,52 @@ set(mudlet_HDRS
     dlgTriggersMainArea.h
     dlgVarsMainArea.h
     EAction.h
-    EditorAddItemCommand.h
-    EditorCommand.h
-    EditorDeleteItemCommand.h
-    EditorItemXMLHelpers.h
-    EditorModifyPropertyCommand.h
-    EditorMoveItemCommand.h
     EditorAutoCompleteFocusHandler.h
-    EditorToggleActiveCommand.h
-    EditorUndoStack.h
-    enums.h
-    EventLoopPump.h
     exitstreewidget.h
     FileOpenHandler.h
-    FontManager.h
-    GifTracker.h
-    GMCPAuthenticator.h
-    Host.h
     HostDialogs.h
-    HostManager.h
-    ircmessageformatter.h
-    KeyUnit.h
     LabelInteractionHandler.h
-    LuaInterface.h
-    LuaLiteral.h
-    MacMicrophonePermission.h
-    mapInfoContributorManager.h
     MiddleMousePanHandler.h
-    MMCP.h
-    MMCPClient.h
-    MMCPServer.h
     mudlet.h
-    MudletApp.h
-    MudletInstanceCoordinator.h
-    MudletMedia.h
     MudletProxyStyle.h
-    MudletReplay.h
-    MxpTag.h
-    OAuthClientFlow.h
     PackageItemDelegate.h
     PanInteractionHandler.h
     RoomContextMenuHandler.h
     RoomMoveActivationHandler.h
     RoomMoveDragHandler.h
-    ScriptUnit.h
-    SecureStringUtils.h
     SelectionRectangleHandler.h
-    SentryWrapper.h
-    SherpaRecognizer.h
-    ShortcutsManager.h
-    SignInStoreReconciler.h
     SingleLineTextEdit.h
-    SpeechAudioCapture.h
-    SpeechRecognizer.h
-    SpeechRecognizerFactory.h
     T2DMap.h
     TAccessibleConsole.h
     TAccessibleTextEdit.h
-    TAction.h
-    TAlias.h
-    TArea.h
-    TAreaGridIndex.h
-    TAreaLodExitIndex.h
-    TAreaSpanIndex.h
-    TAreaZLevelIndex.h
-    TAstar.h
-    TBuffer.h
     TCommandLine.h
+    TPasswordEntry.h
     TConsole.h
-    TConsoleModel.h
-    TConsoleModelNotifier.h
-    TDebug.h
     TDebugFilterBar.h
     TDetachedWindow.h
     TDockWidget.h
     TEasyButtonBar.h
-    TEncodingHelper.h
-    TEncodingTable.h
-    TEntityHandler.h
-    TEntityResolver.h
-    TEvent.h
     TFeatureCallout.h
     TFlipButton.h
-    TForkedProcess.h
-    TGameDetails.h
-    TGlyphCache.h
-    THyperlinkCompactManager.h
-    THyperlinkSelectionManager.h
-    THyperlinkStyling.h
-    THyperlinkVisibilityManager.h
-    TimerUnit.h
-    TIrcClient.h
-    TKey.h
     TKeySequenceEdit.h
     TLabel.h
-    TLabelModel.h
-    TLinkStore.h
-    TLuaInterpreter.h
     TMainConsole.h
-    TMap.h
-    TMapLabel.h
     TMapView.h
     TMapViewManager.h
-    TMatchState.h
-    TMedia.h
-    TMediaData.h
-    TMediaPlaylist.h
-    TMxpBRTagHandler.h
-    TMxpClient.h
-    TMxpColorTagHandler.h
-    TMxpContext.h
-    TMxpCustomElementTagHandler.h
-    TMxpDestTagHandler.h
-    TMxpElementDefinitionHandler.h
-    TMxpElementRegistry.h
-    TMxpEntityTagHandler.h
-    TMxpEvent.h
-    TMxpExpireTagHandler.h
-    TMxpFontTagHandler.h
-    TMxpFormattingTagsHandler.h
-    TMxpFrameManager.h
-    TMxpFrameTagHandler.h
     TMxpFrameWidgets.h
-    TMxpHRTagHandler.h
-    TMxpImageTagHandler.h
-    TMxpLinkTagHandler.h
-    TMxpMudlet.h
-    TMxpMusicTagHandler.h
-    TMxpNodeBuilder.h
-    TMxpProcessor.h
-    TMxpSendTagHandler.h
-    TMxpSoundTagHandler.h
-    TMxpStatTagHandler.h
-    TMxpSupportTagHandler.h
-    TMxpTagHandler.h
-    TMxpTagHandlerResult.h
-    TMxpTagParser.h
-    TMxpTagProcessor.h
-    TMxpVarTagHandler.h
-    TMxpVersionTagHandler.h
-    TPrintSink.h
     TrailingWhitespaceMarker.h
-    Tree.h
     TriggerHighlighter.h
-    TriggerMatchPool.h
-    TriggerUnit.h
-    TTriggerPrescan.h
-    TRoom.h
-    TRoomDB.h
-    TScript.h
     TScrollBox.h
-    TSpellChecker.h
     TSplitter.h
     TSplitterHandle.h
-    TStringUtils.h
     TTabBar.h
     TTextBox.h
-    TTextCodec.h
     TTextEdit.h
-    TTextProperties.h
-    TTimer.h
     TToolBar.h
     TTreeWidget.h
-    TTrigger.h
     TUiTour.h
-    TVar.h
-    TWindowRegistry.h
-    UntrustedText.h
-    utils.h
-    VarUnit.h
-    VoskRecognizer.h
-    widechar_width.h
     WideComboBox.h
-    widgetutils.h
-    XMLexport.h
-    XMLimport.h)
+    widgetutils.h)
 
 if(APPLE)
   # Appended rather than listed above: AUTOMOC generates a moc file for every
@@ -542,26 +569,28 @@ endif()
 
 
 if(USE_UPDATER)
-  list(APPEND mudlet_SRCS updater.cpp)
-  list(APPEND mudlet_HDRS updater.h)
+  list(APPEND mudlet_app_SRCS updater.cpp)
+  list(APPEND mudlet_app_HDRS updater.h)
   list(APPEND mudlet_SRCS updater/Feed.cpp)
   list(APPEND mudlet_HDRS updater/Feed.h)
   list(APPEND mudlet_SRCS updater/Release.cpp)
   list(APPEND mudlet_HDRS updater/Release.h)
   list(APPEND mudlet_SRCS updater/SemVer.cpp)
   list(APPEND mudlet_HDRS updater/SemVer.h)
-  list(APPEND mudlet_SRCS updater/UpdateDialog.cpp)
-  list(APPEND mudlet_HDRS updater/UpdateDialog.h)
+  list(APPEND mudlet_app_SRCS updater/UpdateDialog.cpp)
+  list(APPEND mudlet_app_HDRS updater/UpdateDialog.h)
   list(APPEND mudlet_UIS updater/update_dialog.ui)
 endif(USE_UPDATER)
 
 if(USE_3DMAPPER)
-  list(APPEND mudlet_SRCS glwidget.cpp)
-  list(APPEND mudlet_HDRS glwidget.h)
-  list(APPEND mudlet_SRCS modern_glwidget.cpp)
-  list(APPEND mudlet_HDRS modern_glwidget.h)
+  list(APPEND mudlet_app_SRCS glwidget.cpp)
+  list(APPEND mudlet_app_HDRS glwidget.h)
+  list(APPEND mudlet_app_SRCS modern_glwidget.cpp)
+  list(APPEND mudlet_app_HDRS modern_glwidget.h)
   list(APPEND mudlet_SRCS CameraController.cpp)
   list(APPEND mudlet_HDRS CameraController.h)
+  list(APPEND mudlet_SRCS ExitScene.cpp)
+  list(APPEND mudlet_HDRS ExitScene.h)
   list(APPEND mudlet_SRCS GeometryManager.cpp)
   list(APPEND mudlet_HDRS GeometryManager.h)
   list(APPEND mudlet_SRCS LabelTextureCache.cpp)
@@ -574,9 +603,18 @@ if(USE_3DMAPPER)
   list(APPEND mudlet_HDRS ResourceManager.h)
   list(APPEND mudlet_SRCS ShaderManager.cpp)
   list(APPEND mudlet_HDRS ShaderManager.h)
-  list(APPEND mudlet_HDRS glwidget_integration.h)
-  list(APPEND mudlet_SRCS glwidget_integration.cpp)
+  list(APPEND mudlet_app_HDRS glwidget_integration.h)
+  list(APPEND mudlet_app_SRCS glwidget_integration.cpp)
 endif(USE_3DMAPPER)
+
+if(USE_MCPSERVER)
+  list(APPEND mudlet_SRCS TMCPBridge.cpp)
+  list(APPEND mudlet_SRCS TMCPServer.cpp)
+  list(APPEND mudlet_SRCS TMCPLuaBridge.cpp)
+  list(APPEND mudlet_HDRS TMCPBridge.h)
+  list(APPEND mudlet_HDRS TMCPServer.h)
+  list(APPEND mudlet_HDRS TMCPLuaBridge.h)
+endif(USE_MCPSERVER)
 
 if(NOT WIN32)
   include(cmake/EnableSanitizers.cmake)
@@ -587,14 +625,20 @@ endif()
 find_package(Qt6 6.8.2 REQUIRED
     COMPONENTS Core
                Core5Compat
+               Gui
                Multimedia
                MultimediaWidgets
                Network
                OpenGL
+               OpenGLWidgets
                Svg
                UiTools
                Widgets
                Concurrent)
+
+if(USE_MCPSERVER)
+  find_package(Qt6 COMPONENTS HttpServer REQUIRED)
+endif()
 
 find_package(Qt6 COMPONENTS TextToSpeech QUIET)
 
@@ -604,14 +648,20 @@ set(QT_MAJOR_VERSION 6)
 set(QT_LIBS Qt6::Concurrent
               Qt6::Core
               Qt6::Core5Compat
+              Qt6::Gui
               Qt6::Network
               Qt6::Multimedia
-              Qt6::MultimediaWidgets
               Qt6::OpenGL
               Qt6::Svg
-              Qt6::UiTools
-              Qt6::Widgets
               qt6keychain)
+set(QT_APP_LIBS Qt6::MultimediaWidgets
+                Qt6::OpenGLWidgets
+                Qt6::UiTools
+                Qt6::Widgets)
+
+if(USE_MCPSERVER)
+  list(APPEND QT_LIBS Qt6::HttpServer)
+endif()
 
 if(Qt6TextToSpeech_FOUND)
   list(APPEND QT_LIBS Qt6::TextToSpeech)
@@ -621,7 +671,7 @@ endif()
 # MudletProxyStyle reads the AT-SPI screen reader status over D-Bus
 if(UNIX AND NOT APPLE)
   find_package(Qt6 COMPONENTS DBus REQUIRED)
-  list(APPEND QT_LIBS Qt6::DBus)
+  list(APPEND QT_APP_LIBS Qt6::DBus)
 endif()
 
 message(STATUS "Using ${CMAKE_CXX_COMPILER_ID} compiler")
@@ -666,7 +716,6 @@ add_library(${LIB_MUDLET_TARGET} STATIC
     ${mudlet_SRCS}
     ${mudlet_RCCS}
     ${mudlet_HDRS}
-    ${mudlet_UIS}
 )
 
 mudlet_precompile_headers(${LIB_MUDLET_TARGET})
@@ -767,7 +816,6 @@ endif()
 target_sources(${LIB_MUDLET_TARGET} PUBLIC "${mudlet_BINARY_DIR}/translations/translated/qm.qrc")
 
 set_target_properties(${LIB_MUDLET_TARGET} PROPERTIES
-  AUTOUIC ON AUTOUIC_SEARCH_PATHS "${CMAKE_CURRENT_SOURCE_DIR}/ui"
   AUTOMOC ON AUTORCC ON POSITION_INDEPENDENT_CODE ON
   AUTOGEN_ORIGIN_DEPENDS OFF)
 
@@ -870,8 +918,6 @@ target_compile_definitions(communi PUBLIC IRC_STATIC)
 target_link_libraries(
         ${LIB_MUDLET_TARGET}
         communi
-        edbee-lib
-        QTagEdit
         Boost::boost
         HUNSPELL::HUNSPELL
         LUA51::LUA51
@@ -927,6 +973,9 @@ if(USE_3DMAPPER)
   target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC INCLUDE_3DMAPPER)
 endif()
 
+if(USE_MCPSERVER)
+  target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC INCLUDE_MCPSERVER)
+endif()
 
 if(USE_VARIABLE_SPLASH_SCREEN)
   target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC INCLUDE_VARIABLE_SPLASH_SCREEN)
@@ -934,9 +983,41 @@ endif()
 
 target_compile_options(${LIB_MUDLET_TARGET} PUBLIC -Wno-deprecated)
 
-add_executable(${EXE_MUDLET_TARGET} emptyFile.cpp)
+# The widgets: main window, dialogs, consoles, map views and editors.
+# ${LIB_MUDLET_TARGET} must not depend on anything here, nor link Qt Widgets.
+add_library(${LIB_MUDLET_APP_TARGET} STATIC
+    ${mudlet_app_SRCS}
+    ${mudlet_app_HDRS}
+    ${mudlet_UIS}
+)
+mudlet_precompile_headers(${LIB_MUDLET_APP_TARGET} ${MUDLET_PRECOMPILED_WIDGET_HEADERS})
+set_target_properties(${LIB_MUDLET_APP_TARGET} PROPERTIES
+  AUTOUIC ON AUTOUIC_SEARCH_PATHS "${CMAKE_CURRENT_SOURCE_DIR}/ui"
+  AUTOMOC ON AUTORCC ON POSITION_INDEPENDENT_CODE ON
+  AUTOGEN_ORIGIN_DEPENDS OFF)
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+  set_property(SOURCE "${CMAKE_CURRENT_BINARY_DIR}/${LIB_MUDLET_APP_TARGET}_autogen/mocs_compilation.cpp"
+               APPEND PROPERTY COMPILE_OPTIONS -Wno-sfinae-incomplete)
+endif()
+# The ui_*.h headers, for the tests that reach into a dialog's widgets
+target_include_directories(${LIB_MUDLET_APP_TARGET} INTERFACE
+    ${CMAKE_CURRENT_BINARY_DIR}/${LIB_MUDLET_APP_TARGET}_autogen/include
+)
+# Qt Widgets ahead of ${LIB_MUDLET_TARGET}, so the linker records Qt's own
+# libraries before a distribution's qt6keychain: that one needs Qt6DBus, which
+# would otherwise be found in the system Qt rather than beside Qt6Gui.
+target_link_libraries(${LIB_MUDLET_APP_TARGET} PUBLIC
+    edbee-lib
+    QTagEdit
+    ${QT_APP_LIBS}
+    ${LIB_MUDLET_TARGET})
+
+# main() stays out of the libraries: a test that links them brings its own, and
+# the linker can pull main.cpp's object in for any inline function it defines.
+add_executable(${EXE_MUDLET_TARGET} main.cpp)
+target_compile_definitions(${EXE_MUDLET_TARGET} PRIVATE APP_TARGET="${APP_TARGET}")
 set_target_properties(${EXE_MUDLET_TARGET} PROPERTIES OUTPUT_NAME ${EXE_MUDLET_NAME})
-target_link_libraries(${EXE_MUDLET_TARGET} ${LIB_MUDLET_TARGET} mudlet_lsan_hooks)
+target_link_libraries(${EXE_MUDLET_TARGET} ${LIB_MUDLET_APP_TARGET} mudlet_lsan_hooks)
 
 # Enable symbol exports from the main executable so that dynamically loaded Lua modules
 # can find and use Lua API symbols (like lua_gettop) at runtime. Without this, modules
@@ -951,6 +1032,18 @@ endif()
 if(WIN32)
   target_link_libraries(${EXE_MUDLET_TARGET} ws2_32)
   set_target_properties(${EXE_MUDLET_TARGET} PROPERTIES WIN32_EXECUTABLE ON)
+  if(MINGW)
+    # Qt's entry point renames main() to qMain(), but its WinMain library drops off the link line
+    # because Qt6::Core sits in Sentry's LINK_GROUP; MinGW's own startup code calls main() fine
+    set_target_properties(${EXE_MUDLET_TARGET} PROPERTIES qt_no_entrypoint ON)
+  endif()
+  # Windows reserves only 1 MiB of stack by default, and Qt recurses once per overlapping sibling widget
+  # when repainting, so a few thousand labels overflowed it; 8 MiB matches the Linux and macOS main thread
+  if(MSVC)
+    target_link_options(${EXE_MUDLET_TARGET} PRIVATE "/STACK:8388608")
+  else()
+    target_link_options(${EXE_MUDLET_TARGET} PRIVATE "LINKER:--stack,8388608")
+  endif()
   # The UNICODE and _UNICODE definitions are needed to make
   # (QString) mudlet::getShortPathName(const QString& name) work in Windows:
   target_compile_definitions(${EXE_MUDLET_TARGET} PRIVATE UNICODE _UNICODE)
@@ -987,11 +1080,11 @@ if(APPLE)
 
   if(USE_UPDATER)
     # need to specifically call out Objective-C sources so that automoc builds them.
-    target_sources(${LIB_MUDLET_TARGET} PRIVATE
+    target_sources(${LIB_MUDLET_APP_TARGET} PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}/sparkleupdater.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/sparkleupdater.mm")
     find_package(Sparkle)
-    target_link_libraries(${LIB_MUDLET_TARGET} "-framework AppKit" Sparkle::Sparkle)
+    target_link_libraries(${LIB_MUDLET_APP_TARGET} PUBLIC "-framework AppKit" Sparkle::Sparkle)
   endif(USE_UPDATER)
 
   set_target_properties(${EXE_MUDLET_TARGET} PROPERTIES
@@ -1071,6 +1164,11 @@ if(UNIX AND NOT APPLE)
   # CMAKE_INSTALL_PREFIX is automagically set on Unix to DESTDIR environment
   # variable and is prefixed onto relative DESTINATION values
   install(
+	DIRECTORY "../translations/lua/"
+	DESTINATION "share/mudlet/lua/translations"
+	FILES_MATCHING PATTERN "*.json"
+	PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ)
+  install(
     DIRECTORY "mudlet-lua/lua"
     DESTINATION "share/mudlet"
     FILES_MATCHING
@@ -1086,7 +1184,9 @@ if(UNIX AND NOT APPLE)
     PATTERN "*.xml" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
     PATTERN "*.txt" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
     # the pathfinding specs' map fixture, zipped because unpacked it adds ~5MiB to every package
-    PATTERN "*.zip" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ)
+    PATTERN "*.zip" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
+    # binary map fixtures
+    PATTERN "*.dat" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ)
   install(
     DIRECTORY "../3rdparty/lcf"
     DESTINATION "share/mudlet/lua"

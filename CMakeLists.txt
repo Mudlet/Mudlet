@@ -161,6 +161,7 @@ message(STATUS "Value written to app-build.txt file: ${BUILD_VALUE}")
 set(APP_BUILD ${BUILD_VALUE} CACHE STRING "Auto-set during CMake run. Do not alter manually." FORCE)
 
 set(LIB_MUDLET_TARGET "mudlet_core")
+set(LIB_MUDLET_APP_TARGET "mudlet_app")
 
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${CMAKE_MODULE_PATH})
 
@@ -183,6 +184,13 @@ include_optional_module(ENVIRONMENT_VARIABLE WITH_FONTS
 include_optional_module(ENVIRONMENT_VARIABLE WITH_3DMAPPER
                         OPTION_VARIABLE USE_3DMAPPER
                         READABLE_NAME "3D mapper")
+# Off by default: it needs Qt6::HttpServer, which several of the project's own build
+# environments do not install, and it opens a port that runs arbitrary Lua - opting in
+# is the right shape for both.
+include_optional_module(ENVIRONMENT_VARIABLE WITH_MCPSERVER
+                        OPTION_VARIABLE USE_MCPSERVER
+                        READABLE_NAME "MCP server"
+                        DEFAULT OFF)
 include_optional_module(ENVIRONMENT_VARIABLE WITH_SHADER_HOT_RELOAD
                         OPTION_VARIABLE USE_SHADER_HOT_RELOAD
                         READABLE_NAME "shader hot-reloading"
@@ -270,8 +278,21 @@ endif()
 
 find_program(CCACHE_FOUND ccache)
 if(CCACHE_FOUND)
-  set(CMAKE_C_COMPILER_LAUNCHER ccache)
-  set(CMAKE_CXX_COMPILER_LAUNCHER ccache)
+  # Checkouts and worktrees only share hits once a base_dir turns their absolute
+  # paths relative, so default it to this checkout unless one is configured
+  execute_process(
+    COMMAND ${CCACHE_FOUND} --get-config base_dir
+    OUTPUT_VARIABLE ccacheBaseDir
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    ERROR_QUIET)
+  if(ccacheBaseDir STREQUAL "")
+    set(MUDLET_CCACHE_ENV "CCACHE_BASEDIR=${CMAKE_SOURCE_DIR}")
+    set(CMAKE_C_COMPILER_LAUNCHER ${CMAKE_COMMAND} -E env ${MUDLET_CCACHE_ENV} ${CCACHE_FOUND})
+    set(CMAKE_CXX_COMPILER_LAUNCHER ${CMAKE_COMMAND} -E env ${MUDLET_CCACHE_ENV} ${CCACHE_FOUND})
+  else()
+    set(CMAKE_C_COMPILER_LAUNCHER ccache)
+    set(CMAKE_CXX_COMPILER_LAUNCHER ccache)
+  endif()
 endif(CCACHE_FOUND)
 
 include(PrecompiledHeaders)
@@ -316,7 +337,7 @@ endif()
 add_subdirectory(3rdparty/communi)
 # Upstream ships a standalone library, so add_subdirectory() would adopt its install() rules and
 # put its dev files into every package. EXCLUDE_FROM_ALL keeps them out (observed, not documented
-# CMake behaviour, so the packaging scripts check the staged tree); mudlet_core still links it.
+# CMake behaviour, so the packaging scripts check the staged tree); mudlet_app still links it.
 add_subdirectory(3rdparty/qt-tags-widget EXCLUDE_FROM_ALL)
 add_subdirectory(translations/translated)
 add_subdirectory(src)

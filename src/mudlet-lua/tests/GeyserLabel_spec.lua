@@ -104,6 +104,39 @@ describe("Tests functionality of Geyser.Label", function()
       assert.is_truthy(html:find('align="center"'))
       assert.is_truthy(html:find("font%-size: 50pt"))
     end)
+
+    -- echo() keeps the markup it puts around a message between calls, so every
+    -- way of changing the format has to show up in the very next echo
+    it('wraps each echo in the markup the current format asks for', function()
+      local function assertEchoes(expected, ...)
+        for _ = 1, 2 do
+          label:echo(...)
+          assert.are.equal(expected, globalEchoSpy.calls[#globalEchoSpy.calls].vals[2])
+        end
+      end
+      assertEchoes('<div  style="color: #102030; font-size: 50pt; ">HP</div>', "HP", "#102030")
+      label:setFormat("cb18")
+      assertEchoes('<div align="center"  style="color: #102030; font-size: 18pt; "><b>HP</b></div>', "HP")
+      label:setItalics(true)
+      assertEchoes('<div align="center"  style="color: #102030; font-size: 18pt; "><i><b>MP</b></i></div>', "MP")
+      label.formatTable.underline = true
+      assertEchoes('<div align="center"  style="color: #102030; font-size: 18pt; "><u><i><b>MP</b></i></u></div>')
+      label:setStrikethrough(true)
+      assertEchoes('<div align="center"  style="color: #102030; font-size: 18pt; "><s><u><i><b>MP</b></i></u></s></div>')
+      label:setBold(false)
+      assertEchoes('<div align="center"  style="color: #102030; font-size: 18pt; "><s><u><i>MP</i></u></s></div>')
+      label:setFont("Bitstream Vera Sans Mono")
+      local face = '<font face ="' .. label.font .. '">'
+      assertEchoes('<div align="center"  style="color: #102030; font-size: 18pt; ">' .. face .. '<s><u><i>MP</i></u></s></font></div>')
+      assertEchoes('<div align="center"  style="color: #405060; font-size: 18pt; ">' .. face .. '<s><u><i>MP</i></u></s></font></div>', "MP", "#405060")
+      label:setAlignment("right")
+      assertEchoes('<div align="right"  style="color: #405060; font-size: 18pt; ">' .. face .. '<s><u><i>MP</i></u></s></font></div>')
+      label:setFontSize(12)
+      assertEchoes('<div align="right"  style="color: #405060; font-size: 12pt; ">' .. face .. '<s><u><i>MP</i></u></s></font></div>')
+      label:setFont("")
+      assertEchoes('<div align="right"  style="color: #405060; font-size: 12pt; "><s><u><i>MP</i></u></s></div>')
+      assertEchoes('<div align="right"  style=" font-size: 12pt; "><s><u><i>MP</i></u></s></div>', "MP", "nocolor")
+    end)
   end)
 
   describe("Tests SVG transform functions", function()
@@ -823,6 +856,141 @@ describe("Tests functionality of Geyser.Label widget state", function()
       local label = track(Geyser.Label:new({name = "glsTiled", x = 0, y = 0, width = 40, height = 20}))
       label:setTiledBackgroundImage("/tmp/whatever.png")
       assert.are.equal("background-image: url(/tmp/whatever.png);", getLabelStyleSheet("glsTiled"))
+    end)
+
+    it("resetBackgroundImage takes a tiled image away, and only the image", function()
+      local label = track(Geyser.Label:new({name = "glsTiledReset", x = 0, y = 0, width = 40, height = 20}))
+      setLabelStyleSheet("glsTiledReset", "border: 1px solid red; background-image: url(data:image/png;base64,AAAA); color: blue;")
+      assert.is_true(resetBackgroundImage("glsTiledReset"))
+      assert.are.equal("border: 1px solid red;  color: blue;", getLabelStyleSheet("glsTiledReset"))
+
+      label:setTiledBackgroundImage(":/icons/mudlet.png")
+      assert.is_true(resetBackgroundImage("glsTiledReset"))
+      assert.are.equal("", getLabelStyleSheet("glsTiledReset"))
+    end)
+
+    it("resetBackgroundImage leaves an image inside a rule of the stylesheet alone", function()
+      track(Geyser.Label:new({name = "glsHoverImage", x = 0, y = 0, width = 40, height = 20}))
+      local sheet = "QLabel{color: red;} QLabel::hover{background-image: url(hover.png);}"
+      setLabelStyleSheet("glsHoverImage", sheet)
+      assert.is_true(resetBackgroundImage("glsHoverImage"))
+      assert.are.equal(sheet, getLabelStyleSheet("glsHoverImage"))
+    end)
+
+    it("resetBackgroundImage passes over comments and quoted text in the stylesheet", function()
+      track(Geyser.Label:new({name = "glsCommentedImage", x = 0, y = 0, width = 40, height = 20}))
+      setLabelStyleSheet("glsCommentedImage", "/* background-image: url(old.png) */ color: blue; background-image: url(current.png);")
+      assert.is_true(resetBackgroundImage("glsCommentedImage"))
+      assert.are.equal("/* background-image: url(old.png) */ color: blue; ", getLabelStyleSheet("glsCommentedImage"))
+
+      setLabelStyleSheet("glsCommentedImage", [[background-image: url("image (1); copy.png"); color: blue;]])
+      assert.is_true(resetBackgroundImage("glsCommentedImage"))
+      assert.are.equal(" color: blue;", getLabelStyleSheet("glsCommentedImage"))
+
+      setLabelStyleSheet("glsCommentedImage", "/* { */ background-image: url(current.png);")
+      assert.is_true(resetBackgroundImage("glsCommentedImage"))
+      assert.are.equal("/* { */ ", getLabelStyleSheet("glsCommentedImage"))
+
+      -- the '(' in the quotes would otherwise leave the url open
+      setLabelStyleSheet("glsCommentedImage", [[background-image: url("a(.png"); color: blue;]])
+      assert.is_true(resetBackgroundImage("glsCommentedImage"))
+      assert.are.equal(" color: blue;", getLabelStyleSheet("glsCommentedImage"))
+    end)
+
+    it("resetBackgroundImage takes the image away whatever case its property is written in", function()
+      track(Geyser.Label:new({name = "glsCasedImage", x = 0, y = 0, width = 40, height = 20}))
+      setLabelStyleSheet("glsCasedImage", "Background-Image: url(:/icons/mudlet.png); color: blue;")
+      assert.is_true(resetBackgroundImage("glsCasedImage"))
+      assert.are.equal(" color: blue;", getLabelStyleSheet("glsCasedImage"))
+
+      setLabelStyleSheet("glsCasedImage", "BACKGROUND-IMAGE: url(:/icons/mudlet.png);")
+      assert.is_true(resetBackgroundImage("glsCasedImage"))
+      assert.are.equal("", getLabelStyleSheet("glsCasedImage"))
+    end)
+
+    it("resetBackgroundImage leaves a selector that names background-image alone", function()
+      track(Geyser.Label:new({name = "glsImageSelector", x = 0, y = 0, width = 40, height = 20}))
+      local sheet = "QLabel#background-image:hover { color: red; }"
+      setLabelStyleSheet("glsImageSelector", sheet)
+      assert.is_true(resetBackgroundImage("glsImageSelector"))
+      assert.are.equal(sheet, getLabelStyleSheet("glsImageSelector"))
+    end)
+
+    it("Geyser.Label:resetBackgroundImage takes a tiled image away for good", function()
+      local label = track(Geyser.Label:new({name = "glsTiledGeyserReset", x = 0, y = 0, width = 40, height = 20}))
+      label:setTiledBackgroundImage(":/icons/mudlet.png")
+      assert.is_true(label:resetBackgroundImage())
+      -- with no argument, setStyleSheet puts back the sheet the label remembers
+      label:setStyleSheet()
+      assert.are.equal("", getLabelStyleSheet("glsTiledGeyserReset"))
+      assert.are.equal("", label.stylesheet)
+    end)
+
+    it("Geyser.Label:resetBackgroundImage keeps the rest of the stylesheet it remembers", function()
+      local label = track(Geyser.Label:new({name = "glsRememberedReset", x = 0, y = 0, width = 40, height = 20}))
+      label:setStyleSheet("border: 1px solid red; background-image: url(:/icons/mudlet.png);")
+      assert.is_true(label:resetBackgroundImage())
+      label:setStyleSheet()
+      assert.are.equal("border: 1px solid red; ", getLabelStyleSheet("glsRememberedReset"))
+    end)
+
+    it("Geyser.Label:resetBackgroundImage does not remember the colour the label's stylesheet was given", function()
+      local label = track(Geyser.Label:new({name = "glsColouredReset", x = 0, y = 0, width = 40, height = 20}))
+      label:setStyleSheet("border: 1px solid red; background-image: url(:/icons/mudlet.png);")
+      setBackgroundColor("glsColouredReset", 255, 0, 0, 255)
+      assert.is_true(label:resetBackgroundImage())
+      assert.are.equal("border: 1px solid red; ", label.stylesheet)
+      assert.are.equal("border: 1px solid red; \nbackground-color: rgba(255, 0, 0, 255);", getLabelStyleSheet("glsColouredReset"))
+
+      label:setStyleSheet("border: 1px solid red;")
+      setBackgroundColor("glsColouredReset", 0, 0, 255, 255)
+      assert.is_true(label:resetBackgroundImage())
+      assert.are.equal("border: 1px solid red;", label.stylesheet)
+    end)
+
+    it("Geyser.Label:resetBackgroundImage answers nil and a message for a deleted label", function()
+      local label = track(Geyser.Label:new({name = "glsDeletedReset", x = 0, y = 0, width = 40, height = 20}))
+      label:delete()
+      local ok, err = label:resetBackgroundImage()
+      assert.is_nil(ok)
+      assert.are.equal("console 'glsDeletedReset' not found", err)
+    end)
+
+    it("Geyser.Label:resetBackgroundImage does not apply the stylesheet it remembers to the label", function()
+      local label = track(Geyser.Label:new({name = "glsStaleReset", x = 0, y = 0, width = 40, height = 20}))
+      label:setStyleSheet("qproperty-text: 'stale'; background-image: url(:/icons/mudlet.png);")
+      setLabelStyleSheet("glsStaleReset", "color: red;")
+      label:echo("current")
+      assert.is_true(label:resetBackgroundImage())
+      assert.are.equal("qproperty-text: 'stale'; ", label.stylesheet)
+      assert.are.equal("color: red;", getLabelStyleSheet("glsStaleReset"))
+      assert.truthy(getLabelText("glsStaleReset"):find("current", 1, true))
+    end)
+
+    it("Geyser.Label:resetBackgroundImage takes from the stylesheet it remembers what resetBackgroundImage takes from the label's", function()
+      local label = track(Geyser.Label:new({name = "glsResetParity", x = 0, y = 0, width = 40, height = 20}))
+      for _, sheet in ipairs({
+        "border: 1px solid red; background-image: url(data:image/png;base64,AAAA); color: blue;",
+        "QLabel{color: red;} QLabel::hover{background-image: url(hover.png);}",
+        "/* background-image: url(old.png) */ color: blue; background-image: url(current.png);",
+        [[background-image: url("image (1); copy.png"); color: blue;]],
+        "/* { */ background-image: url(current.png);",
+        [[background-image: url("a(.png"); color: blue;]],
+        [[background-image: url('a\'b.png'); color: blue;]],
+        "Background-Image: url(:/icons/mudlet.png); color: blue;",
+        "BACKGROUND-IMAGE : url(:/icons/mudlet.png)",
+        "QLabel#background-image:hover { color: red; }",
+        "background-imagex: foo; color: blue;",
+        "color: blue; background-image: url(a.png) /* unterminated",
+        "color: blue;background-image:url(a.png);font-size: 12px;",
+      }) do
+        setLabelStyleSheet("glsResetParity", sheet)
+        assert.is_true(resetBackgroundImage("glsResetParity"))
+        local expected = getLabelStyleSheet("glsResetParity")
+        label.stylesheet = sheet
+        assert.is_true(label:resetBackgroundImage())
+        assert.are.equal(expected, label.stylesheet, sheet)
+      end
     end)
   end)
 end)
@@ -1871,6 +2039,45 @@ describe("Tests Geyser.Label right click menus", function()
       assert.are.same({"First", "Fourth", "Second", "Third"}, menuOrder())
     end)
 
+    -- the names of the labels a call to addMenuLabel handed a stylesheet to; the
+    -- global is swapped in _G because this file runs in an environment of its own
+    local function labelsStyledBy(menuLabel, ...)
+      local styled = {}
+      local original = _G.setLabelStyleSheet
+      _G.setLabelStyleSheet = function(name, ...)
+        styled[#styled + 1] = name
+        return original(name, ...)
+      end
+      local ok, err = pcall(menuLabel.addMenuLabel, menuLabel, ...)
+      _G.setLabelStyleSheet = original
+      assert.is_true(ok, err)
+      return styled
+    end
+
+    it("styles the item it adds and leaves the ones already there alone", function()
+      assert.are.same({"glmHostrightClickMenuFourth"}, labelsStyledBy(label, "Fourth"))
+      assert.are.equal(getLabelStyleSheet(menuItem("First").name), getLabelStyleSheet(menuItem("Fourth").name))
+    end)
+
+    it("styles a child it adds to a submenu in that depth's style and leaves the rest alone", function()
+      local other = Geyser.Label:new({name = "glmDepthStyled", x = 0, y = 0, width = 100, height = 30})
+      other:createRightClickMenu({MenuItems = {"Parent", {"Old"}, "Sibling"}, Style2 = "dark"})
+
+      local styled = labelsStyledBy(other, "New", "Parent")
+
+      local new = other:findMenuElement("Parent.New")
+      assert.are.same({new.name}, styled)
+      assert.are.equal(getLabelStyleSheet(other:findMenuElement("Parent.Old").name), getLabelStyleSheet(new.name))
+      assert.are_not.equal(getLabelStyleSheet(other:findMenuElement("Parent").name), getLabelStyleSheet(new.name))
+    end)
+
+    it("keeps a sheet an item was given of its own when another is added", function()
+      menuItem("Second"):setStyleSheet("QLabel{ color: red; }")
+      label:addMenuLabel("Fourth")
+      assert.are.equal("QLabel{ color: red; }", getLabelStyleSheet(menuItem("Second").name))
+      assert.are_not.equal("QLabel{ color: red; }", getLabelStyleSheet(menuItem("Fourth").name))
+    end)
+
     it("adds an item under a parent that was declared with a submenu", function()
       -- a parent is declared by following its name with a table of its
       -- children, and an empty one is how a submenu that is filled in later is
@@ -1983,6 +2190,21 @@ describe("Tests Geyser.Label right click menus", function()
     it("takes a stylesheet of its own, which wins over the mode", function()
       label:styleMenuItems("dark", "QLabel{ background-color: red; }")
       assert.are.equal("QLabel{ background-color: red; }", getLabelStyleSheet(menuItem("First").name))
+    end)
+
+    it("restyles items added later and ones given a sheet of their own", function()
+      label:addMenuLabel("Fourth")
+      menuItem("Second"):setStyleSheet("QLabel{ color: red; }")
+      label:styleMenuItems("dark")
+      local dark = getLabelStyleSheet(menuItem("First").name)
+      assert.are.equal(dark, getLabelStyleSheet(menuItem("Second").name))
+      assert.are.equal(dark, getLabelStyleSheet(menuItem("Fourth").name))
+      label:addMenuLabel("Fifth")
+      assert.are.equal(dark, getLabelStyleSheet(menuItem("Fifth").name))
+    end)
+
+    it("raises for a mode it does not know", function()
+      assert.has_error(function() label:styleMenuItems("nosuchmode") end)
     end)
   end)
 

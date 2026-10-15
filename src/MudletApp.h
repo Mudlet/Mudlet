@@ -31,10 +31,10 @@
 #include "enums.h"
 
 #include <QPair>
+#include <QSettings>
 #include <QString>
 
 class QNetworkRequest;
-class QSettings;
 class QUrl;
 
 // The application-wide services that need no main window: where Mudlet keeps
@@ -133,6 +133,8 @@ public:
 
     // Creates the profile's directory if missing, so writing for a nonexistent profile brings it into being
     static QPair<bool, QString> writeProfileData(const QString& profile, const QString& item, const QString& what);
+    static QPair<bool, QString> setProfileIcon(const QString& profile, const QString& newIconPath);
+    static QPair<bool, QString> resetProfileIcon(const QString& profile);
 
     // The on-disk spelling of a profile named in any case, or an empty string if
     // neither an existing profile nor a predefined game goes by that name
@@ -143,6 +145,13 @@ public:
     // Callers that can run before mudlet::setupConfig() have to check; the rest
     // run long after startup and dereference it directly.
     static QSettings* getQSettings();
+    // For a QSettings that reads Mudlet.ini before getQSettings() exists. Qt hands
+    // a file parsed moments ago to the next QSettings without parsing it again,
+    // and only the one that parsed it hears of a format error, so getQSettings()
+    // would otherwise never report one.
+    static void noteEarlySettingsStatus(const QSettings&);
+    // What noteEarlySettingsStatus() last heard of that file, or NoError
+    static QSettings::Status earlySettingsStatus(const QString& fileName);
 
     // Whether the config root in force actually came from a portable.txt. False
     // when a marker was present but named a root that had to be refused, which is
@@ -168,6 +177,10 @@ public:
     static bool firstLaunch();
     // The interface is drawn dark, whether chosen or by following a dark system theme
     static bool darkMode();
+    // --mirror: copy each shown console line to stdout, for CI. Main console game text is copied on
+    // arrival, before a trigger can gag or rewrite it; print()/echo() output from any console too.
+    // Read for every line, so a plain flag rather than a call.
+    inline static bool smMirrorToStdOut = false;
 
     // Which build of Mudlet this is, and how it names itself to the outside world.
 
@@ -194,6 +207,8 @@ private:
     friend class ConfigDirOverrideTest;
     // Points the root at a scratch directory to seed the updater's version marker
     friend class FeedChecksumRaceTest;
+    // A fresh scratch config reads as a first launch, which never shows callouts
+    friend class FeatureCalloutTest;
     // Discards any settings store built under the previous root - and with it any
     // pointer a caller cached, so this must not run once init() has handed the
     // store to the Updater. portable says whether the root came from a

@@ -59,6 +59,10 @@ TIrcClient::TIrcClient(Host* pHost)
     connect(mpConnection, &IrcConnection::joinMessageReceived, this, &TIrcClient::slot_joinedChannel);
     connect(mpConnection, &IrcConnection::partMessageReceived, this, &TIrcClient::slot_partedChannel);
     connect(mpConnection, &IrcConnection::numericMessageReceived, this, &TIrcClient::slot_receiveNumericMessage);
+    // Only the server's RPL_YOURHOST names it again, so a dropped connection must not keep answering with the old name
+    connect(mpConnection, &IrcConnection::disconnected, this, [this]() {
+        mConnectedHostName.clear();
+    });
 
     mPassword = readIrcPassword(mpHost);
     mHostName = readIrcHostName(mpHost);
