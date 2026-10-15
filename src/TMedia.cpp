@@ -43,6 +43,7 @@
 #include <QTimer>
 
 #include <algorithm>
+#include <cmath>
 #include <limits>
 #include <optional>
 
@@ -119,12 +120,12 @@ std::optional<double> mediaNumber(const QJsonValue& value)
         number = value.toString().toDouble(&isNumber);
     }
 
-    // Also refuses NaN and infinity; qRound() of anything outside int's range is undefined
-    if (!isNumber || !(number > std::numeric_limits<int>::min() && number < std::numeric_limits<int>::max())) {
+    if (!isNumber || !std::isfinite(number)) {
         return std::nullopt;
     }
 
-    return number;
+    // qRound() of anything outside int's range is undefined
+    return std::clamp(number, static_cast<double>(std::numeric_limits<int>::min()), static_cast<double>(std::numeric_limits<int>::max()));
 }
 
 // Every pass is a playlist entry built up front, so a huge count from a game would hang Mudlet
@@ -2369,7 +2370,17 @@ int TMedia::parseJSONByMediaPriority(QJsonObject& json)
 int TMedia::parseJSONByMediaLoops(QJsonObject& json)
 {
     const auto loops = mediaNumber(json.value(qsl("loops")));
-    return loops ? qRound(*loops) : TMediaData::MediaLoopsDefault;
+
+    if (!loops) {
+        return TMediaData::MediaLoopsDefault;
+    }
+
+    // Only -1 itself repeats forever: a negative fraction rounded onto it would never stop
+    if (*loops < 0.0) {
+        return *loops == TMediaData::MediaLoopsRepeat ? TMediaData::MediaLoopsRepeat : TMediaData::MediaLoopsDefault;
+    }
+
+    return qRound(*loops);
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Scripting#continue:_true_or_false_.28for_music.29

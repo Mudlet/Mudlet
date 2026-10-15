@@ -2945,6 +2945,41 @@ describe("Media playback effects with a generated sound file", function()
     end
   end)
 
+  it("a Client.Media.Play message with a negative fractional loop count plays once rather than forever", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    writeSoundFiles()
+    stopGmcpMediaAfterwards()
+
+    for _, loops in ipairs({"-0.6", "-1.4", '"-0.6"'}) do
+      local started = {}
+      collect("sysMediaStarted", started)
+      feedGmcp('Client.Media.Play {"name": "' .. soundFile .. '", "key": "busted-gmcp-negative-fractional-loops", "loops": ' .. loops .. '}')
+      waitForCount("sysMediaStarted", started, 1)
+      pumpEvents(1500)
+      assert.equals(1, #started, "a request made with " .. loops .. " loops was not played exactly once")
+      feedGmcp("Client.Media.Stop {}")
+    end
+  end)
+
+  it("a Client.Media.Play message with the largest loop count there is keeps playing", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    writeSoundFiles()
+    stopGmcpMediaAfterwards()
+
+    for _, loops in ipairs({"2147483647", '"2147483647"', "1e10"}) do
+      local started = {}
+      collect("sysMediaStarted", started)
+      feedGmcp('Client.Media.Play {"name": "' .. soundFile .. '", "key": "busted-gmcp-huge-loops", "loops": ' .. loops .. '}')
+      waitForCount("sysMediaStarted", started, 3)
+      assert.is_true(#started >= 3, "a request made with " .. loops .. " loops was played only " .. #started .. " times")
+      feedGmcp("Client.Media.Stop {}")
+    end
+  end)
+
   it("a Client.Media.Default message sets the url the messages after it fetch from", function()
     if noFixtureServer() then
       return
