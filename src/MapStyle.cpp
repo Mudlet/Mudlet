@@ -69,8 +69,9 @@ QList<MapStyle> registeredStyles()
     blueprint.background = QColor(18, 60, 110);
     blueprint.ink = QColor(225, 242, 255);
     blueprint.gridColor = QColor(150, 200, 255, 38);
-    blueprint.inkTint = 0.3f;
-    blueprint.inkLightness = 0.8f;
+    blueprint.inkTint = 0.2f;
+    blueprint.inkLightness = 0.7f;
+    blueprint.inkOutlineWidth = 0.07f;
     blueprint.labelFontFamily = qsl("Bitstream Vera Sans Mono");
     blueprint.labelLetterSpacing = 112.0;
     blueprint.labelCapitals = true;

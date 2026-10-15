@@ -594,6 +594,36 @@ private slots:
         QVERIFY2(blueprintInkIds, "blueprint drew room IDs in another color than its ink");
     }
 
+    // A blueprint room reads as line-work: its outline is drawn as wide as the style asks, and that is bolder than a
+    // hairline
+    void test_blueprintOutlinesRoomsAsBoldAsItsStyleAsksWithoutGL()
+    {
+        const int areaId = addArea();
+        QVERIFY(areaId > 0);
+        const auto restore = qScopeGuard([this]() {
+            mpHost->setMapStyle(qsl("tiles"));
+        });
+        QVERIFY(mpHost->setMapStyle(qsl("blueprint")));
+        const MapStyle* blueprint = MapStyle::find(qsl("blueprint"));
+        QVERIFY(blueprint);
+        QVERIFY(blueprint->inkOutlineWidth > MapStyle().inkOutlineWidth);
+        ModernGLWidget widget(map(), mpHost);
+        queueFrame(widget, areaId);
+
+        const auto level = widget.mInkOutlines.constFind(0);
+        QVERIFY(level != widget.mInkOutlines.cend());
+        int solid = 0;
+        for (const auto& outline : level->outlines) {
+            if (outline.dashLength > 0.0f) {
+                continue;
+            }
+            ++solid;
+            const float widthOfRoom = outline.width / (2.0f * outline.half);
+            QVERIFY2(widthOfRoom >= blueprint->inkOutlineWidth * 0.99f, qPrintable(qsl("an outline %1 of its room's width, not %2").arg(widthOfRoom).arg(blueprint->inkOutlineWidth)));
+        }
+        QVERIFY(solid > 0);
+    }
+
     // Blueprint's crosshair takes the place of the beacon, but where the profile's own marker is drawn instead the
     // beacon still helps find the player
     void test_blueprintDropsTheBeaconOnlyForItsOwnMarker()
