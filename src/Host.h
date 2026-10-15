@@ -286,7 +286,7 @@ public:
     void loadMapAndConnect(bool connect);
     void finishProfileLoad();
 
-    unsigned int assemblePath();
+    qint64 assemblePath();
     bool checkForMappingScript();
     bool checkForCustomSpeedwalk();
 
