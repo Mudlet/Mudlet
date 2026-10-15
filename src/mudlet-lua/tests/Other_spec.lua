@@ -1306,8 +1306,8 @@ describe("Tests Other.lua functions", function()
       assert.is_truthy(tostring(warning):find("^mapSymbolFont: "), tostring(warning))
       local failed, err = setConfig({mapSymbolFont = getConfig("mapSymbolFont"), mapSymbolFontScaling = 99})
       assert.is_nil(failed)
-      assert.is_truthy(tostring(err):find("mapSymbolFont: font ", 1, true), tostring(err))
-      assert.is_truthy(tostring(err):find("mapSymbolFontScaling 99 is out of range", 1, true), tostring(err))
+      assert.is_truthy(tostring(err):find("^mapSymbolFontScaling 99 is out of range.*; applied with warnings: mapSymbolFont: font "),
+        tostring(err))
     end)
 
     it("answers true when handed back a getConfig() snapshot", function()

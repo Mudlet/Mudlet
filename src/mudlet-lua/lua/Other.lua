@@ -1424,14 +1424,15 @@ function setConfig(...)
     return table.concat(texts, "; ")
   end
   if #failures > 0 then
-    -- an applied key's warning still matters when another key failed
-    for _, warning in ipairs(warnings) do
-      failures[#failures + 1] = warning
+    local text = report(failures)
+    -- an applied key's warning still matters, but must not read as one more refusal
+    if #warnings > 0 then
+      text = text .. "; applied with warnings: " .. report(warnings)
     end
     if raised then
-      error(report(failures), 2)
+      error(text, 2)
     end
-    return nil, report(failures)
+    return nil, text
   end
   if #warnings > 0 then
     return true, report(warnings)
