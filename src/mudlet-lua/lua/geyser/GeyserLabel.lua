@@ -1200,6 +1200,11 @@ function Geyser.Label:new (cons, container)
   cons.type = cons.type or "label"
   cons.nestParent = cons.nestParent or nil
   cons.format = cons.format or ""
+  local taken = mudlet.nameTakenByOtherKind(cons.name, "label", cons.windowname or (container or Geyser).windowname)
+  if taken then
+    printError(string.format("Geyser.Label '%s' was not created: %s", cons.name, taken), false, false)
+    return nil, taken
+  end
 
   -- Call parent's constructor
   local me = self.parent:new(cons, container)
@@ -1219,7 +1224,7 @@ function Geyser.Label:new (cons, container)
     ok, err = createLabel(me.windowname, me.name, me:get_x(), me:get_y(),
       me:get_width(), me:get_height(), me.fillBg)
   end
-  if not mudlet.elementCreated(me.windowname, me.name, ok, err) then
+  if not mudlet.elementCreated(me.windowname, me.name, ok, err, "label") then
     printError(string.format("Geyser.Label '%s' was not created: %s", me.name, err or "unknown error"), false, false)
   end
 -- Geyser.Container:new() settles the hidden constraint before there is a widget to hide, so the hide is made good here
@@ -1354,8 +1359,7 @@ end
 function Geyser.Label:new2 (cons, container)
   cons = cons or {}
   cons.useAdd2 = true
-  local me = self:new(cons, container)
-  return me
+  return self:new(cons, container)
 end
 
 --- internal function that adds the "More..." scrollbars
@@ -1414,7 +1418,10 @@ function Geyser.Label:addChild(cons, container)
     flyDir = "L"
     layoutDir = "V"
   end
-  local me = Geyser.Label:new(cons, container)
+  local me, taken = Geyser.Label:new(cons, container)
+  if not me then
+    return nil, taken
+  end
   --this is our parent
   me.nestParent = self
   me:setOnEnter("doNestEnter", me)
@@ -1484,6 +1491,9 @@ local function addElement(self, name, configLabel, myMenu, depth, index, restyle
     nestable = true,
   }
 )
+if not myMenu.MenuLabels[name] then
+  return false
+end
 -- ensure Labels are on the same parent window
 if self.windowname ~= myMenu.MenuLabels[name].windowname then
   if self.windowname == "main" then
@@ -1505,6 +1515,7 @@ if not myMenu.MenuLabels[name].stylesheet then
   MenuStyle = MenuStyle or configLabel.MenuStyleMode[string.lower(Style)]
   myMenu.MenuLabels[name]:setStyleSheet(MenuStyle)
 end
+return true
 end
 
 -- internal function to create the right click Menu Labels
@@ -1519,14 +1530,15 @@ function Geyser.Label:createMenuItems(restyle, MenuItems, configLabel, myMenu, d
   local index = 1
 
   for i = 1, #MenuItems do
-    if type(MenuItems[i]) == "string" and not MenuItems[i].ignore then
-      addElement(self, MenuItems[i], configLabel, myMenu, depth, index, restyle)
+    -- an item another kind of element holds the name of is left out, Geyser.Label:new having said why
+    if type(MenuItems[i]) == "string" and not MenuItems[i].ignore
+      and addElement(self, MenuItems[i], configLabel, myMenu, depth, index, restyle) then
       myMenu.MenuLabels[MenuItems[i]].index = index
       myMenu.MenuLabels[MenuItems[i]].tblIndex = i
       index = index + 1
     end
     --Ignore all children if parent is hidden
-    if type(MenuItems[i]) == "table" and not MenuItems[i - 1].ignore then
+    if type(MenuItems[i]) == "table" and not MenuItems[i - 1].ignore and myMenu.MenuLabels[MenuItems[i - 1]] then
       myMenu.MenuLabels[MenuItems[i - 1]]:createMenuItems(restyle, MenuItems[i], configLabel, myMenu.MenuLabels[MenuItems[i - 1]], depth + 1)
       myMenu.MenuLabels[MenuItems[i - 1]].isParent = true
     end
