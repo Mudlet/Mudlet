@@ -3027,7 +3027,19 @@ int TLuaInterpreter::setModuleInfo(lua_State* L)
     if (!checkStringArg(L, __func__, 1, "module name") || !checkStringArg(L, __func__, 2, "info") || !checkStringArg(L, __func__, 3, "value")) {
         return lua_error(L);
     }
-    host.mModuleInfo[QString{lua_tostring(L, 1)}][QString{lua_tostring(L, 2)}] = QString{lua_tostring(L, 3)};
+    const QString moduleName{lua_tostring(L, 1)};
+    // A module being read in is listed already, so its own scripts can still describe it
+    if (!host.mInstalledModules.contains(moduleName)) {
+        return warnArgumentValue(L, __func__, qsl("module '%1' not found").arg(moduleName));
+    }
+    const QString info{lua_tostring(L, 2)};
+    const QString value{lua_tostring(L, 3)};
+    // The installed name is still accepted: a module without a config.lua has no detail to start with, and the
+    // install sanitizes config.lua's name (folders, file extensions, backslashes) but stores it unchanged
+    if (info == qsl("mpackage") && value != moduleName) {
+        return warnArgumentValue(L, __func__, qsl("'mpackage' is the name module '%1' is installed under and cannot be changed").arg(moduleName));
+    }
+    host.mModuleInfo[moduleName][info] = value;
     lua_pushboolean(L, true);
     return 1;
 }
@@ -3039,7 +3051,19 @@ int TLuaInterpreter::setPackageInfo(lua_State* L)
     if (!checkStringArg(L, __func__, 1, "package name") || !checkStringArg(L, __func__, 2, "info") || !checkStringArg(L, __func__, 3, "value")) {
         return lua_error(L);
     }
-    host.mPackageInfo[QString{lua_tostring(L, 1)}][QString{lua_tostring(L, 2)}] = QString{lua_tostring(L, 3)};
+    const QString packageName{lua_tostring(L, 1)};
+    // A package being read in is listed already, so its own scripts can still describe it
+    if (!host.mInstalledPackages.contains(packageName)) {
+        return warnArgumentValue(L, __func__, qsl("package '%1' not found").arg(packageName));
+    }
+    const QString info{lua_tostring(L, 2)};
+    const QString value{lua_tostring(L, 3)};
+    // The installed name is still accepted: a package without a config.lua has no detail to start with, and the
+    // install sanitizes config.lua's name (folders, file extensions, backslashes) but stores it unchanged
+    if (info == qsl("mpackage") && value != packageName) {
+        return warnArgumentValue(L, __func__, qsl("'mpackage' is the name package '%1' is installed under and cannot be changed").arg(packageName));
+    }
+    host.mPackageInfo[packageName][info] = value;
     lua_pushboolean(L, true);
     return 1;
 }
