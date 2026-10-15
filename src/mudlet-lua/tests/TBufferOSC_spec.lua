@@ -146,13 +146,35 @@ describe("Tests TBuffer OSC sequence handling", function()
       assert.equals("APCBEL1()APCBEL1", findRecentLine("APCBEL1"))
     end)
 
-    -- As with the private-CSI case below, two feedTriggers() calls cannot express
-    -- a packet split; what carries between local feeds is the mGotString latch,
-    -- not the pending bytes.
+    -- As with the private-CSI case below, a local feed that ends inside the
+    -- sequence hands its bytes on to the next one, as a packet split does.
     it("should swallow an APC sequence whose bytes arrive across two local feeds", function()
       assert.is_true(feedTriggers("APCSPLIT1(\027_first half "))
       assert.is_true(feedTriggers("second half\027\\)APCSPLIT1\n"))
       assert.equals("APCSPLIT1()APCSPLIT1", findRecentLine("APCSPLIT1"))
+    end)
+
+    it("should decode an OSC 8 link whose opener or closer is split between local feeds", function()
+      finally(function() feedTriggers("\027]8;;\027\\\027[0m\n") end)
+      local open = "\027]8;;send:x?config={\"style\":{\"color\":\"#00ff00\"}}"
+      assert.is_true(feedTriggers("\027[0mOSCSPLIT1(" .. open))
+      assert.is_true(feedTriggers("\027\\link\027]8;;\027\\rest)OSCSPLIT1\n"))
+      assert.equals("OSCSPLIT1(linkrest)OSCSPLIT1", findRecentLine("OSCSPLIT1"))
+      assert.are.same({ 0, 255, 0 }, foregroundOf("OSCSPLIT1", "link"))
+      assert.is_true(feedTriggers("OSCSPLIT2(" .. open .. "\027\\link\027]8;"))
+      assert.is_true(feedTriggers(";\027\\rest)OSCSPLIT2\n"))
+      assert.are.same({ 0, 255, 0 }, foregroundOf("OSCSPLIT2", "link"))
+      assert.are.same(foregroundOf("OSCSPLIT2", "OSCSPLIT2"), foregroundOf("OSCSPLIT2", "rest"))
+    end)
+
+    -- The outer feed scans on through its own text, so nothing the nested one
+    -- held can be read with it.
+    it("should not hand the bytes a nested local feed held on to a later one", function()
+      local id = tempExactMatchTrigger("OSCNEST1", [[feedTriggers("\027]0;title")]])
+      finally(function() killTrigger(id) end)
+      assert.is_true(feedTriggers("OSCNEST1\n\7OSCNEST2(\027["))
+      assert.is_true(feedTriggers("0;32mgreen\027[0m)OSCNEST2\n"))
+      assert.equals("OSCNEST2(green)OSCNEST2", findRecentLine("OSCNEST2"))
     end)
 
     it("should still render OSC 8 hyperlink text", function()
@@ -470,7 +492,7 @@ describe("Tests TBuffer OSC sequence handling", function()
       assert.equals("CSIACT4(green)CSIACT4", findRecentLine("CSIACT4"))
       assert.is_true(feedTriggers("\027[0mCSIACT5(\027[0;32mgreen\027[0m)CSIACT5\n"))
       assert.are.same(foregroundOf("CSIACT5", "green"), foregroundOf("CSIACT4", "green"))
-      -- an OSC split between local feeds leaves nothing behind for a CSI to pick up
+      -- nothing held from an OSC split between local feeds is left for a CSI to pick up
       assert.is_true(feedTriggers("CSIACT6(\027]0;title"))
       assert.is_true(feedTriggers("\7)CSIACT6\n"))
       assert.equals("CSIACT6()CSIACT6", findRecentLine("CSIACT6"))

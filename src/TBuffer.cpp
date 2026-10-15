@@ -1254,6 +1254,11 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
     // swapping the server state back in part way through:
     if (isFromServer || mProcessingLocalFeed) {
         translateToPlainTextInner(incoming, isFromServer);
+        if (!isFromServer) {
+            // The outer feed scans on through its own text, so bytes held from this nested one would
+            // be prepended to whichever local feed comes next, inside an unrelated sequence
+            mIncompleteSequenceBytes.clear();
+        }
         return;
     }
 
@@ -1318,9 +1323,9 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
     }
 
     if (!mIncompleteSequenceBytes.empty()) {
-        // A local feed carries only a CSI's bytes over to the next one: without them the rest of the
-        // sequence would be read as one of its own, and nothing continues what an OSC leaves behind
-        if (isFromServer || mGotCSI) {
+        // On the local channel only while the sequence they came from is still open: without them its rest
+        // would be read as a sequence of its own
+        if (isFromServer || mGotCSI || mGotOSC) {
 #if defined(DEBUG_SGR_PROCESSING) || defined(DEBUG_OSC_PROCESSING) || defined(DEBUG_UTF8_PROCESSING) || defined(DEBUG_GB_PROCESSING) || defined(DEBUG_BIG5_PROCESSING)
             qDebug() << "TBuffer::translateToPlainText(...) Prepending residual bytes onto incoming data!";
 #endif
