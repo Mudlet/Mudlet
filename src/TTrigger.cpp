@@ -2207,8 +2207,8 @@ bool TTrigger::fireReachesLua() const
 }
 
 // The trigger editor and a package can both leave the sound box ticked with no
-// file named, and a blank name resolves to the profile's media directory, which
-// TMedia can only fail to play.
+// file named, and a blank name names no file in the profile's media directory,
+// which TMedia can only fail to play.
 bool TTrigger::playsSound() const
 {
     return mSoundTrigger && !mSoundFile.trimmed().isEmpty();

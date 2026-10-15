@@ -18,8 +18,10 @@
  ***************************************************************************/
 
 /*
- * A sound trigger's fire with no file to play shows only in Mudlet's log, which
- * a spec cannot read, so these watch the log for TMedia trying to fetch one.
+ * Not a spec: a sound trigger's fire with no file to play shows only in Mudlet's
+ * log, which these watch for TMedia's warning that it has no URL to fetch a
+ * missing file from; and they set the trigger editor's state of a ticked sound
+ * box with no file directly.
  *
  * Run with: ctest -R TriggerSoundArgumentTest -V
  */
@@ -47,6 +49,7 @@ class TriggerSoundArgumentTest : public QObject
 private:
     QTemporaryDir mConfigDir;
     QByteArray mSavedXdg;
+    QByteArray mSavedXdgCache;
     TelnetServerStub* mpServer = nullptr;
     Host* mpHost = nullptr;
     const QString mHostname = qsl("TriggerSoundArgument-Test");
@@ -65,6 +68,9 @@ private slots:
         QVERIFY(QDir().mkpath(qsl("%1/mudlet/profiles").arg(mConfigDir.path())));
         mSavedXdg = qgetenv("XDG_CONFIG_HOME");
         qputenv("XDG_CONFIG_HOME", mConfigDir.path().toUtf8());
+        // TMedia makes its download cache directory before it finds it has no URL
+        mSavedXdgCache = qgetenv("XDG_CACHE_HOME");
+        qputenv("XDG_CACHE_HOME", qsl("%1/cache").arg(mConfigDir.path()).toUtf8());
 
         mpServer = new TelnetServerStub(qApp);
         mpServer->start(mLocalhost, 0);
@@ -91,6 +97,7 @@ private slots:
             delete mudlet::self();
         }
         mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);
+        mSavedXdgCache.isNull() ? qunsetenv("XDG_CACHE_HOME") : qputenv("XDG_CACHE_HOME", mSavedXdgCache);
     }
 
     void test_emptySoundFileMakesNoSoundTrigger()
@@ -126,6 +133,31 @@ private slots:
         feedLine(qsl("sound flag no file"));
     }
 
+    // A fire whose captures reach Lua resets `matches` afterwards, so a later
+    // trigger on the same line would find it emptied
+    void test_soundTriggerWithNoFileLeavesMatchesAlone()
+    {
+        QVERIFY(mpHost->mLuaInterpreter.compileAndExecuteScript(qsl(R"(tempComplexRegexTrigger("soundFlagQuiet", "^sound flag quiet$", "", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0))")));
+        TTrigger* pTrigger = mpHost->getTriggerUnit()->findTrigger(qsl("soundFlagQuiet"));
+        QVERIFY(pTrigger);
+        pTrigger->mSoundTrigger = true;
+        pTrigger->setSound(QString());
+        QVERIFY(mpHost->mLuaInterpreter.compileAndExecuteScript(qsl(R"(
+            SoundQuietFires = {}
+            tempLineTrigger(1, 3, function()
+                matches.fires = (matches.fires or 0) + 1
+                SoundQuietFires[#SoundQuietFires + 1] = matches.fires
+            end)
+            feedTriggers("\nsound quiet first\nsound flag quiet\nsound quiet third\n")
+            SoundQuietResult = table.concat(SoundQuietFires, ",")
+        )")));
+        lua_State* L = mpHost->getLuaInterpreter()->getLuaGlobalState();
+        lua_getglobal(L, "SoundQuietResult");
+        const QString result = QString::fromUtf8(lua_tostring(L, -1));
+        lua_pop(L, 1);
+        QCOMPARE(result, qsl("1,2,3"));
+    }
+
     void test_namedSoundFileMakesASoundTrigger()
     {
         QVERIFY(mpHost->mLuaInterpreter.compileAndExecuteScript(
@@ -134,8 +166,8 @@ private slots:
         QVERIFY(pTrigger);
         QVERIFY(pTrigger->mSoundTrigger);
         QCOMPARE(pTrigger->mSoundFile, qsl("ding.wav"));
-        // ding.wav is not in the profile's media directory, so playing it has
-        // TMedia look for it online - which is what proves the fire played it
+        // ding.wav is not in the profile's media directory and the trigger names
+        // no URL for it, so only a fire that played it gets this warning
         QTest::ignoreMessage(QtWarningMsg, scmMediaFetchWarning);
         feedLine(qsl("sound argument named"));
     }
