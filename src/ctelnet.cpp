@@ -5291,8 +5291,8 @@ void cTelnet::trackMXPElementDetection(const std::string& line)
 
 void cTelnet::gotRest(std::string& mud_data)
 {
-    // TBuffer joins an escape this read leaves unfinished to the next read, not to what a trigger
-    // feedTelnet()s while this read is posted, so that must neither be joined to this read's tail nor replace it
+    // An escape this read leaves unfinished is joined to the next read (in mMudData, or by TBuffer once mGA_Driver is set),
+    // not to what a trigger feedTelnet()s while this read is posted, so that must neither be joined to this read's tail nor replace it
     const auto postKeepingDetectionTail = [this]() {
         const std::string tail = std::exchange(mMxpDetectionTail, std::string());
         postData();
