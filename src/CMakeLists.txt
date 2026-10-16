@@ -174,6 +174,7 @@ set(mudlet_SRCS
 # Every .cpp source file that needs Qt Widgets goes here instead, in mudlet_app, kept
 # in alphabetical order (case-insensitive).
 set(mudlet_app_SRCS
+    ../3rdparty/qt-tags-widget/src/qtagedit.cpp
     AltFocusMenuBarDisable.cpp
     CustomLineDrawContextMenuHandler.cpp
     CustomLineDrawHandler.cpp
@@ -480,6 +481,7 @@ set(mudlet_HDRS
 # Every .h header file that needs Qt Widgets goes here instead, in mudlet_app, kept
 # in alphabetical order (case-insensitive).
 set(mudlet_app_HDRS
+    ../3rdparty/qt-tags-widget/include/QTagEdit/qtagedit.hpp
     AltFocusMenuBarDisable.h
     CustomLineDrawContextMenuHandler.h
     CustomLineDrawHandler.h
@@ -1002,9 +1004,13 @@ target_include_directories(${LIB_MUDLET_APP_TARGET} INTERFACE
 # would otherwise be found in the system Qt rather than beside Qt6Gui.
 target_link_libraries(${LIB_MUDLET_APP_TARGET} PUBLIC
     edbee-lib
-    QTagEdit
     ${QT_APP_LIBS}
     ${LIB_MUDLET_TARGET})
+
+# qt-tags-widget is listed in mudlet_app_SRCS/HDRS, not add_subdirectory()'d, as its own
+# project has install() rules; a file upstream adds or renames has to be listed there too.
+set_property(SOURCE ../3rdparty/qt-tags-widget/src/qtagedit.cpp APPEND PROPERTY
+  INCLUDE_DIRECTORIES ${CMAKE_CURRENT_SOURCE_DIR}/../3rdparty/qt-tags-widget/include/QTagEdit)
 
 # main() stays out of the libraries: a test that links them brings its own, and
 # the linker can pull main.cpp's object in for any inline function it defines.
