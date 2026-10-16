@@ -103,6 +103,7 @@
     <addaction name="dactionReplay"/>
     <addaction name="dactionModuleManager"/>
     <addaction name="dactionPackageExporter"/>
+    <addaction name="dactionExportToMudletWeb"/>
     <addaction name="dactionToggleReplay"/>
     <addaction name="dactionToggleLogging"/>
     <addaction name="dactionToggleEmergencyStop"/>
@@ -352,6 +353,14 @@
    </property>
    <property name="toolTip">
     <string>&lt;p&gt;Gather and bundle up collections of Mudlet Lua items and other reasources into a module.&lt;/p&gt;</string>
+   </property>
+  </action>
+  <action name="dactionExportToMudletWeb">
+   <property name="text">
+    <string comment="Mudlet Web is the browser version of Mudlet.">Export to Mudlet Web</string>
+   </property>
+   <property name="toolTip">
+    <string comment="Mudlet Web is the browser version of Mudlet.">&lt;p&gt;Save this profile - settings, triggers, aliases, scripts, packages, modules and map - into one file that Mudlet Web can import.&lt;/p&gt;</string>
    </property>
   </action>
   <action name="dactionMultiView">

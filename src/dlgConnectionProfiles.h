@@ -97,12 +97,17 @@ public slots:
     void slot_cancel();
     void slot_copyProfile();
     void slot_copyOnlySettingsOfProfile();
+    void slot_importProfiles();
+    // Adds the profiles in a .zip from Mudlet Web or another computer's Mudlet
+    void importProfilesFrom(const QString& archivePathFileName);
     void indicatePackagesInstallOnConnect(QStringList packages);
 
 
 protected:
     bool eventFilter(QObject*, QEvent*) override;
     void showEvent(QShowEvent*) override;
+    void dragEnterEvent(QDragEnterEvent*) override;
+    void dropEvent(QDropEvent*) override;
     void loadPasswordFromSettings(const QString& profile_name);
     void ensurePasswordLoadedThenConnect(bool alsoConnect);
     bool hasPendingKeychainOperation(const QString& profile_name) const;
@@ -197,6 +202,7 @@ private:
     QAction* mpAction_revealPassword;
     // true for the duration of the 'Copy profile' action
     bool mCopyingProfile = false;
+    bool mImportingProfiles = false;
     // true while a profile is selected or refreshed programmatically, so that
     // it is not mistaken for the user picking a game from the list
     bool mProgrammaticProfileSelection = false;

@@ -708,8 +708,11 @@ void Host::startProfileScripts()
 
 void Host::installModulesList(const QStringList& modules)
 {
+    const QString profileHome = MudletApp::getMudletPath(enums::profileHomePath, getName());
     for (const auto& module : modules) {
         QStringList entry = mInstalledModules[module];
+        // Kept, so that the next save lists the module where it was found
+        entry[0] = locateModuleFile(profileHome, module, entry[0]);
         if (!installPackage(entry[0], enums::PackageModuleType::ModuleFromUI).first) {
             qWarning() << "Host::installModulesList() WARNING - failed to load module" << module;
         }
@@ -717,6 +720,28 @@ void Host::installModulesList(const QStringList& modules)
         //where we overwrite the globalSave flag.  This restores saved and loaded packages to their proper flag
         mInstalledModules[module] = entry;
     }
+}
+
+QString Host::locateModuleFile(const QString& profileHome, const QString& module, const QString& filePath)
+{
+    const QFileInfo stored(filePath);
+    if (filePath.isEmpty() || (stored.isAbsolute() && stored.exists())) {
+        return filePath;
+    }
+    // Mudlet Web lists a module by its place inside the profile, and another
+    // computer by a path that only exists there - either way the file came along
+    const QString portable = QString(filePath).replace(QLatin1Char('\\'), QLatin1Char('/'));
+    QStringList candidates;
+    if (stored.isRelative()) {
+        candidates.append(qsl("%1/%2").arg(profileHome, portable));
+    }
+    candidates.append(qsl("%1/%2/%3").arg(profileHome, module, portable.section(QLatin1Char('/'), -1)));
+    for (const auto& candidate : std::as_const(candidates)) {
+        if (QFileInfo(candidate).isFile()) {
+            return QDir::cleanPath(candidate);
+        }
+    }
+    return filePath;
 }
 
 void Host::loadMapAndConnect(const bool connect)

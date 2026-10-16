@@ -215,6 +215,8 @@ set(mudlet_app_SRCS
     LabelInteractionHandler.cpp
     MiddleMousePanHandler.cpp
     mudlet.cpp
+    MudletWebExport.cpp
+    MudletWebImport.cpp
     PackageItemDelegate.cpp
     PanInteractionHandler.cpp
     RoomContextMenuHandler.cpp
@@ -521,6 +523,8 @@ set(mudlet_app_HDRS
     LabelInteractionHandler.h
     MiddleMousePanHandler.h
     mudlet.h
+    MudletWebExport.h
+    MudletWebImport.h
     PackageItemDelegate.h
     PanInteractionHandler.h
     RoomContextMenuHandler.h

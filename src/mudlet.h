@@ -88,6 +88,7 @@ class dlgPackageExporter;
 class dlgProfilePreferences;
 class dlgTriggerEditor;
 class Host;
+class MudletWebExport;
 #ifdef INCLUDE_MCPSERVER
 class TMCPServer;
 #endif
@@ -413,12 +414,16 @@ public:
 #endif
 
 
+    // Asks where to save, then packs the profile for Mudlet Web's "Import .zip"
+    void exportToMudletWeb(Host*, QWidget* dialogParent);
+
 public slots:
     void slot_closeCurrentProfile();
     void slot_closeProfileRequested(int);
     void slot_closeProfileByName(const QString& profileName);
     void slot_connectionDialogueFinished(const QString&, bool);
     void slot_disconnect();
+    void slot_exportToMudletWeb();
     void slot_handleToolbarVisibilityChanged(bool);
     void slot_toolbarToggleActionTriggered(bool);
 #if defined(INCLUDE_UPDATER)
@@ -560,6 +565,8 @@ private slots:
 
 
 private:
+    // One export at a time, whichever profile: each starts a save and holds the busy cursor
+    QPointer<MudletWebExport> mpMudletWebExport;
     void assignKeySequences();
     QString autodetectPreferredLanguage();
 #ifdef INCLUDE_MCPSERVER

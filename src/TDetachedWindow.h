@@ -156,6 +156,7 @@ private slots:
     void slot_showPackageManagerDialog();
     void slot_showModuleManagerDialog();
     void slot_showPackageExporterDialog();
+    void slot_exportToMudletWeb();
     void slot_muteMedia();
     void slot_muteAPI();
     void slot_muteGame();

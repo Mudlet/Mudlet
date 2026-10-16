@@ -335,6 +335,8 @@ public:
     void setMainConsoleView(TMainConsole* view);
     // Keeps TMainConsole's translation context, so the existing translations still apply.
     static QString loggingAnnouncementText(const bool isLogging, const QString& logFileName);
+    // Where a listed module's file is now, for one listed by a path inside the profile or on another computer
+    static QString locateModuleFile(const QString& profileHome, const QString& module, const QString& filePath);
     std::shared_ptr<TConsoleModel> sharedMainConsoleModel();
     // Colorizer triggers: select a run of the current line, paint it, restore the format. Model state
     // only, so these run with no view; the two colour ones repaint the

@@ -1,0 +1,528 @@
+/***************************************************************************
+ *   Copyright (C) 2026 by Vadim Peretokin - vadim.peretokin@mudlet.org    *
+ *                                                                         *
+ *   This program is free software; you can redistribute it and/or modify  *
+ *   it under the terms of the GNU General Public License as published by  *
+ *   the Free Software Foundation; either version 2 of the License, or     *
+ *   (at your option) any later version.                                   *
+ *                                                                         *
+ *   This program is distributed in the hope that it will be useful,       *
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ *   GNU General Public License for more details.                          *
+ *                                                                         *
+ *   You should have received a copy of the GNU General Public License     *
+ *   along with this program; if not, write to the                         *
+ *   Free Software Foundation, Inc.,                                       *
+ *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+ ***************************************************************************/
+
+// The archive "Export to Mudlet Web" writes is read by Mudlet Web's profile
+// import (mudletProfileImport.ts in Mudlet/mudlet-web), so what it must hold is
+// that importer's contract: the profile folder at the top, one save in
+// current/, one map in map/, and each module's file at "<module>/<file name>"
+// even when the module lives outside the profile. None of this has a Lua entry
+// point - the export is a menu action - hence a functional test.
+
+#include <QtTest/QtTest>
+
+#include <QSemaphore>
+#include <QTemporaryDir>
+#include <QThreadPool>
+#include <chrono>
+#include <zip.h>
+
+#include "AliasUnit.h"
+#include "Host.h"
+#include "TAlias.h"
+#include "MudletApp.h"
+#include "MudletInstanceCoordinator.h"
+#include "MudletWebExport.h"
+#include "PortableModeTestHelper.h"
+#include "ProfileTestHelper.h"
+#include "TMap.h"
+#include "TRoomDB.h"
+#include "TelnetServerStub.h"
+#include "mudlet.h"
+
+#include "GroupedTest.h"
+
+using namespace std::chrono_literals;
+
+class MudletWebExportTest : public QObject
+{
+    Q_OBJECT
+
+private:
+    TelnetServerStub* mpServer = nullptr;
+    Host* mpHost = nullptr;
+    const QString mProfileName = qsl("MudletWebExport-Test");
+    const QString mLocalhost = qsl("localhost");
+    QTemporaryDir mConfigDir;
+    QByteArray mSavedXdg;
+    // Modules live outside the profile on desktop, which is the whole difficulty
+    QTemporaryDir mModuleDir;
+    QTemporaryDir mOutputDir;
+
+    static QByteArray moduleXml(const QString& aliasName)
+    {
+        return qsl("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+                   "<!DOCTYPE MudletPackage>\n"
+                   "<MudletPackage version=\"1.001\">\n"
+                   "<AliasPackage>\n"
+                   "<Alias isActive=\"yes\" isFolder=\"no\">\n"
+                   "<name>%1</name>\n"
+                   "<script></script>\n"
+                   "<command></command>\n"
+                   "<packageName></packageName>\n"
+                   "<regex>^%1$</regex>\n"
+                   "</Alias>\n"
+                   "</AliasPackage>\n"
+                   "</MudletPackage>\n")
+                .arg(aliasName)
+                .toUtf8();
+    }
+
+    static bool writeFile(const QString& path, const QByteArray& contents)
+    {
+        if (!QDir().mkpath(QFileInfo(path).absolutePath())) {
+            return false;
+        }
+        QFile file(path);
+        if (!file.open(QFile::WriteOnly | QFile::Truncate)) {
+            return false;
+        }
+        return file.write(contents) == contents.size();
+    }
+
+    static QByteArray readFile(const QString& path)
+    {
+        QFile file(path);
+        if (!file.open(QFile::ReadOnly)) {
+            return {};
+        }
+        return file.readAll();
+    }
+
+    static bool writeArchive(const QString& path, const QString& entryName, const QByteArray& contents)
+    {
+        int errorCode = 0;
+        zip* archive = zip_open(path.toUtf8().constData(), ZIP_CREATE | ZIP_TRUNCATE, &errorCode);
+        if (!archive) {
+            return false;
+        }
+        zip_source* source = zip_source_buffer(archive, contents.constData(), contents.size(), 0);
+        if (!source || zip_file_add(archive, entryName.toUtf8().constData(), source, ZIP_FL_ENC_UTF_8) < 0) {
+            zip_source_free(source);
+            zip_discard(archive);
+            return false;
+        }
+        return zip_close(archive) == 0;
+    }
+
+    // Every entry of an archive, by name
+    static QMap<QString, QByteArray> readArchive(const QString& path)
+    {
+        QMap<QString, QByteArray> entries;
+        int errorCode = 0;
+        zip* archive = zip_open(path.toUtf8().constData(), ZIP_RDONLY, &errorCode);
+        if (!archive) {
+            return entries;
+        }
+        for (zip_int64_t i = 0, total = zip_get_num_entries(archive, 0); i < total; ++i) {
+            zip_stat_t entryStat;
+            if (zip_stat_index(archive, static_cast<zip_uint64_t>(i), 0, &entryStat) != 0) {
+                continue;
+            }
+            QByteArray contents;
+            if (zip_file* file = zip_fopen_index(archive, static_cast<zip_uint64_t>(i), 0); file) {
+                contents.resize(static_cast<qsizetype>(entryStat.size));
+                zip_fread(file, contents.data(), entryStat.size);
+                zip_fclose(file);
+            }
+            entries.insert(QString::fromUtf8(entryStat.name), contents);
+        }
+        zip_discard(archive);
+        return entries;
+    }
+
+    // Runs the export the way the menu action does and hands back what it said
+    std::tuple<bool, QString, QStringList> exportTo(const QString& archivePath)
+    {
+        MudletWebExport exporter(mpHost, archivePath);
+        QSignalSpy finished(&exporter, &MudletWebExport::finished);
+        exporter.start();
+        if (finished.isEmpty() && !finished.wait(30s)) {
+            return {false, qsl("the export never finished"), {}};
+        }
+        const auto arguments = finished.takeFirst();
+        return {arguments.at(0).toBool(), arguments.at(1).toString(), arguments.at(2).toStringList()};
+    }
+
+    QString profileHome() const { return MudletApp::getMudletPath(enums::profileHomePath, mProfileName); }
+
+    QString xmlModulePath() const { return mModuleDir.filePath(qsl("xml-module.xml")); }
+    QString archivedModulePath() const { return mModuleDir.filePath(qsl("archived-module.mpackage")); }
+
+    bool installModule(const QString& path)
+    {
+        mpHost->waitForProfileSave(); // an install during a save is postponed and answered with a bare true
+        auto [installed, message] = mpHost->installPackage(path, enums::PackageModuleType::ModuleFromScript);
+        if (!installed) {
+            qWarning().noquote() << "installing" << path << "failed:" << message;
+        }
+        QTest::qWaitFor(
+                [this]() {
+                    return !mpHost->hasPendingProfileSave();
+                },
+                5s);
+        mpHost->waitForProfileSave();
+        return installed;
+    }
+
+private slots:
+    void initTestCase()
+    {
+        if (portableMarkerPresent()) {
+            QSKIP("portable.txt present - it takes precedence over XDG_CONFIG_HOME, so the config dir cannot be redirected");
+        }
+        QVERIFY(mConfigDir.isValid());
+        QVERIFY(mModuleDir.isValid());
+        QVERIFY(mOutputDir.isValid());
+        mSavedXdg = qgetenv("XDG_CONFIG_HOME");
+        QVERIFY(QDir().mkpath(qsl("%1/mudlet/profiles").arg(mConfigDir.path())));
+        qputenv("XDG_CONFIG_HOME", mConfigDir.path().toUtf8());
+
+        mpServer = new TelnetServerStub(qApp);
+        mpServer->start(mLocalhost, 0);
+        mudlet::start();
+        mudlet::self()->setupConfig();
+        mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>(qsl("MudletInstanceCoordinator")));
+        mudlet::self()->init();
+        mudlet::self()->setStorePasswordsSecurely(false);
+        TestProfile::removeProfileDirectory(mProfileName);
+
+        mpHost = TestProfile::create(mProfileName, mLocalhost, QString::number(mpServer->serverPort()));
+        QVERIFY2(mpHost, "No active host after profile creation");
+
+        QVERIFY(writeFile(xmlModulePath(), moduleXml(qsl("xml module alias"))));
+        QVERIFY(writeArchive(archivedModulePath(), qsl("archived-module.xml"), moduleXml(qsl("archived module alias"))));
+        QVERIFY2(installModule(xmlModulePath()), "The XML module could not be installed");
+        QVERIFY2(installModule(archivedModulePath()), "The archived module could not be installed");
+
+        QVERIFY(writeFile(qsl("%1/notes/todo.txt").arg(profileHome()), QByteArrayLiteral("kill the dragon")));
+        QVERIFY(writeFile(qsl("%1/log/old-session.html").arg(profileHome()), QByteArrayLiteral("<html/>")));
+        QVERIFY(writeFile(qsl("%1/media/cached.wav").arg(profileHome()), QByteArrayLiteral("RIFF")));
+        QVERIFY(writeFile(qsl("%1/password").arg(profileHome()), QByteArrayLiteral("hunter2")));
+        QVERIFY(writeFile(qsl("%1/encryption_key").arg(profileHome()), QByteArrayLiteral("0123456789abcdef0123456789abcdef")));
+        QVERIFY(writeFile(qsl("%1/passwords/character_password.dat").arg(profileHome()), QByteArrayLiteral("sealed")));
+        QVERIFY(writeFile(qsl("%1/reconnect").arg(profileHome()), QByteArrayLiteral("account and provider")));
+        QVERIFY(writeFile(qsl("%1/current/2001-01-01#00-00-00.xml").arg(profileHome()), QByteArrayLiteral("<an old save/>")));
+        QVERIFY(writeFile(qsl("%1/map/2001-01-01#00-00-00map.dat").arg(profileHome()), QByteArrayLiteral("an old map")));
+
+        QVERIFY(mpHost->mpMap->addRoom(1));
+    }
+
+    void cleanupTestCase()
+    {
+        mpHost = nullptr;
+        delete mpServer;
+        mpServer = nullptr;
+        if (mudlet::self()) {
+            TestProfile::removeProfileDirectory(mProfileName);
+            delete mudlet::self();
+        }
+        mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);
+    }
+
+    void test_theArchiveHoldsTheProfileFolderWithItsModules()
+    {
+        const QString archivePath = mOutputDir.filePath(qsl("export.zip"));
+        auto [ok, error, warnings] = exportTo(archivePath);
+        QVERIFY2(ok, qPrintable(error));
+        QVERIFY2(warnings.isEmpty(), qPrintable(warnings.join(qsl("; "))));
+
+        const auto entries = readArchive(archivePath);
+        const QString root = mProfileName + QLatin1Char('/');
+        for (const auto& name : entries.keys()) {
+            QVERIFY2(name.startsWith(root), qPrintable(qsl("\"%1\" is outside the profile's folder").arg(name)));
+        }
+
+        // Only the save just made: Mudlet Web takes the newest by file name, and
+        // the older ones are nothing it can use
+        QStringList saves;
+        for (const auto& name : entries.keys()) {
+            if (name.startsWith(root + qsl("current/"))) {
+                saves << name;
+            }
+        }
+        QCOMPARE(saves.size(), 1);
+        QVERIFY2(!saves.first().endsWith(qsl("2001-01-01#00-00-00.xml")), "The old save went in instead of a fresh one");
+        QVERIFY2(entries.value(saves.first()).contains("<key>xml-module</key>"), "The save does not list the XML module");
+
+        // The map in memory, which has a room the old file on disk never had
+        QStringList maps;
+        for (const auto& name : entries.keys()) {
+            if (name.startsWith(root + qsl("map/"))) {
+                maps << name;
+            }
+        }
+        QCOMPARE(maps.size(), 1);
+        QVERIFY2(maps.first().endsWith(qsl("map.dat")), qPrintable(maps.first()));
+        QVERIFY2(entries.value(maps.first()) != QByteArrayLiteral("an old map"), "The old map went in instead of the one in memory");
+
+        // The module from outside the profile, under its own name
+        QCOMPARE(entries.value(root + qsl("xml-module/xml-module.xml")), readFile(xmlModulePath()));
+        // The archived one as its archive, which desktop reinstalls it from, beside
+        // the folder desktop unpacked it into
+        QCOMPARE(entries.value(root + qsl("archived-module/archived-module.mpackage")), readFile(archivedModulePath()));
+        QVERIFY2(entries.contains(root + qsl("archived-module/archived-module.xml")), "The archived module's unpacked folder is missing");
+
+        QCOMPARE(entries.value(root + qsl("notes/todo.txt")), QByteArrayLiteral("kill the dragon"));
+        for (const auto& secret : {qsl("password"), qsl("encryption_key"), qsl("reconnect")}) {
+            QVERIFY2(!entries.contains(root + secret), qPrintable(qsl("\"%1\" must never leave the machine in an export").arg(secret)));
+        }
+        for (const auto& name : entries.keys()) {
+            QVERIFY2(!name.startsWith(root + qsl("passwords/")), qPrintable(qsl("The credential store went in: %1").arg(name)));
+            QVERIFY2(!name.startsWith(root + qsl("log/")), qPrintable(qsl("Logs went in: %1").arg(name)));
+            QVERIFY2(!name.startsWith(root + qsl("media/")), qPrintable(qsl("The media cache went in: %1").arg(name)));
+        }
+    }
+
+    // The export's own save writes a synced module out before anything is copied,
+    // so an edit made in this session is in the archive rather than the stale file
+    void test_aSyncedModuleGoesInWithItsLatestEdits()
+    {
+        QVERIFY(mpHost->changeModuleSync(qsl("xml-module"), QLatin1String("1")).first);
+        const auto ids = mpHost->getAliasUnit()->findItems(qsl("xml module alias"), true, true);
+        QCOMPARE(ids.size(), 1);
+        mpHost->getAliasUnit()->getAlias(ids.front())->setName(qsl("edited xml module alias"));
+
+        const QString archivePath = mOutputDir.filePath(qsl("synced.zip"));
+        auto [ok, error, warnings] = exportTo(archivePath);
+        QVERIFY2(ok, qPrintable(error));
+        QVERIFY(readArchive(archivePath).value(mProfileName + qsl("/xml-module/xml-module.xml")).contains("edited xml module alias"));
+
+        mpHost->getAliasUnit()->getAlias(ids.front())->setName(qsl("xml module alias"));
+        QVERIFY(mpHost->changeModuleSync(qsl("xml-module"), QLatin1String("0")).first);
+        mpHost->saveProfile();
+        mpHost->waitForProfileSave();
+    }
+
+    // Kept inside the profile folder, a module already travels at its own path;
+    // Mudlet Web finds it there by file name
+    void test_aModuleInsideTheProfileGoesInOnce()
+    {
+        const QString path = qsl("%1/scripts/inside-module.xml").arg(profileHome());
+        QVERIFY(writeFile(path, moduleXml(qsl("inside module alias"))));
+        QVERIFY2(installModule(path), "The module could not be installed");
+
+        const QString archivePath = mOutputDir.filePath(qsl("inside.zip"));
+        auto [ok, error, warnings] = exportTo(archivePath);
+        QVERIFY2(ok, qPrintable(error));
+        QVERIFY2(warnings.isEmpty(), qPrintable(warnings.join(qsl("; "))));
+        const auto entries = readArchive(archivePath);
+        QCOMPARE(entries.value(mProfileName + qsl("/scripts/inside-module.xml")), readFile(path));
+        QVERIFY2(!entries.contains(mProfileName + qsl("/inside-module/inside-module.xml")), "The module went in twice");
+    }
+
+    // Asked for while another save is still being written, the export waits for
+    // it rather than failing on saveProfile()'s refusal to run alongside it
+    void test_anExportStartedDuringASaveWaitsForIt()
+    {
+        mpHost->waitForProfileSave();
+        auto [saved, file, saveError] = mpHost->saveProfile();
+        QVERIFY2(saved, qPrintable(saveError));
+        QVERIFY(mpHost->currentlySavingProfile());
+
+        const QString archivePath = mOutputDir.filePath(qsl("during-save.zip"));
+        auto [ok, error, warnings] = exportTo(archivePath);
+        QVERIFY2(ok, qPrintable(error));
+        int saves = 0;
+        for (const auto& name : readArchive(archivePath).keys()) {
+            saves += name.startsWith(mProfileName + qsl("/current/")) ? 1 : 0;
+        }
+        QCOMPARE(saves, 1);
+    }
+
+    // Saved into the profile's own folder, a second export must not swallow the first
+    void test_anExportInsideTheProfileDoesNotIncludeItself()
+    {
+        const QString archivePath = qsl("%1/exports/web.zip").arg(profileHome());
+        QVERIFY(QDir().mkpath(QFileInfo(archivePath).absolutePath()));
+        auto [firstOk, firstError, firstWarnings] = exportTo(archivePath);
+        QVERIFY2(firstOk, qPrintable(firstError));
+        auto [secondOk, secondError, secondWarnings] = exportTo(archivePath);
+        QVERIFY2(secondOk, qPrintable(secondError));
+
+        const auto entries = readArchive(archivePath);
+        QVERIFY(!entries.isEmpty());
+        QVERIFY2(!entries.contains(mProfileName + qsl("/exports/web.zip")), "The export packed a copy of itself");
+        QFile::remove(archivePath);
+    }
+
+    // Another save can rewrite a module while the archive is being compressed;
+    // what goes in is the file as the export found it, not a mix of two saves
+    void test_aModuleRewrittenDuringCompressionGoesInAsFound()
+    {
+        mpHost->waitForProfileSave();
+        const QByteArray found = readFile(xmlModulePath());
+        QThreadPool* pool = QThreadPool::globalInstance();
+        const int threads = pool->maxThreadCount();
+        QSemaphore running;
+        QSemaphore gate;
+        bool rewritten = false;
+
+        const QString archivePath = mOutputDir.filePath(qsl("rewritten.zip"));
+        MudletWebExport exporter(mpHost, archivePath);
+        QSignalSpy finished(&exporter, &MudletWebExport::finished);
+        // Heard before the export's own handler: the compression it queues waits
+        // for a thread until the module has been rewritten
+        auto holdThePool = connect(mpHost, &Host::profileSaveFinished, this, [&]() {
+            for (int i = 0; i < threads; ++i) {
+                pool->start([&running, &gate]() {
+                    running.release();
+                    gate.acquire();
+                });
+            }
+            running.acquire(threads);
+        });
+        exporter.start();
+        auto rewrite = connect(mpHost, &Host::profileSaveFinished, this, [&]() {
+            rewritten = writeFile(xmlModulePath(), moduleXml(qsl("rewritten module alias")));
+            gate.release(threads);
+        });
+        const bool done = !finished.isEmpty() || finished.wait(30s);
+        disconnect(holdThePool);
+        disconnect(rewrite);
+        QVERIFY(writeFile(xmlModulePath(), found));
+        QVERIFY2(done, "the export never finished");
+        QVERIFY2(rewritten, "the export's save finished without a background write to wait for");
+        QVERIFY2(finished.first().at(0).toBool(), qPrintable(finished.first().at(1).toString()));
+        QCOMPARE(readArchive(archivePath).value(mProfileName + qsl("/xml-module/xml-module.xml")), found);
+    }
+
+    // A link is read through to the file it points at, so a link to a password
+    // is the password
+    void test_aLinkToACredentialStaysOut()
+    {
+        const QString link = qsl("%1/notes/remember-me.lnk").arg(profileHome());
+        QVERIFY(QFile::link(qsl("%1/password").arg(profileHome()), link));
+        const QString archivePath = mOutputDir.filePath(qsl("linked-password.zip"));
+        auto [ok, error, warnings] = exportTo(archivePath);
+        QFile::remove(link);
+        QVERIFY2(ok, qPrintable(error));
+        const auto entries = readArchive(archivePath);
+        for (const auto& [name, contents] : entries.asKeyValueRange()) {
+            QVERIFY2(!contents.contains("hunter2"), qPrintable(qsl("The password went in as %1").arg(name)));
+        }
+    }
+
+    // An archive that has since gone leaves desktop's unpacked copy, which Mudlet
+    // Web reads in its place - so there is nothing to warn about
+    void test_anArchivedModuleWithoutItsArchiveComesThroughItsFolder()
+    {
+        QVERIFY(QFile::rename(archivedModulePath(), archivedModulePath() + qsl(".away")));
+        const QString archivePath = mOutputDir.filePath(qsl("archive-gone.zip"));
+        auto [ok, error, warnings] = exportTo(archivePath);
+        QVERIFY(QFile::rename(archivedModulePath() + qsl(".away"), archivedModulePath()));
+        QVERIFY2(ok, qPrintable(error));
+        QVERIFY2(warnings.isEmpty(), qPrintable(warnings.join(qsl("; "))));
+        const auto entries = readArchive(archivePath);
+        QVERIFY(entries.contains(mProfileName + qsl("/archived-module/archived-module.xml")));
+        QVERIFY(!entries.contains(mProfileName + qsl("/archived-module/archived-module.mpackage")));
+    }
+
+    void test_aModuleWhoseFileIsGoneIsReportedNotFatal()
+    {
+        const QString path = mModuleDir.filePath(qsl("vanishing-module.xml"));
+        QVERIFY(writeFile(path, moduleXml(qsl("vanishing module alias"))));
+        QVERIFY2(installModule(path), "The module could not be installed");
+        QVERIFY(QFile::remove(path));
+
+        const QString archivePath = mOutputDir.filePath(qsl("missing.zip"));
+        auto [ok, error, warnings] = exportTo(archivePath);
+        QVERIFY2(ok, qPrintable(error));
+        QCOMPARE(warnings.size(), 1);
+        QVERIFY2(warnings.first().contains(qsl("vanishing-module")), qPrintable(warnings.first()));
+        QVERIFY(readArchive(archivePath).contains(mProfileName + qsl("/xml-module/xml-module.xml")));
+    }
+
+    // A map that failed to load leaves nothing in memory, but the player's map is
+    // still the newest file on disk - which is what goes in then. Last, as it
+    // empties the map the other tests export.
+    void test_withNoMapInMemoryTheNewestFileGoesIn()
+    {
+        for (const int roomId : mpHost->mpMap->mpRoomDB->getRoomIDList()) {
+            QVERIFY(mpHost->mpMap->mpRoomDB->removeRoom(roomId));
+        }
+        // as a map that failed to load is: empty, with nothing unsaved
+        mpHost->mpMap->resetUnsaved();
+        const QFileInfoList onDisk = QDir(qsl("%1/map").arg(profileHome())).entryInfoList({qsl("*.dat")}, QDir::Files, QDir::Time);
+        QVERIFY(!onDisk.isEmpty());
+
+        const QString archivePath = mOutputDir.filePath(qsl("no-map-in-memory.zip"));
+        auto [ok, error, warnings] = exportTo(archivePath);
+        QVERIFY2(ok, qPrintable(error));
+
+        const auto entries = readArchive(archivePath);
+        QStringList maps;
+        for (const auto& name : entries.keys()) {
+            if (name.startsWith(mProfileName + qsl("/map/"))) {
+                maps << name;
+            }
+        }
+        QCOMPARE(maps, QStringList{qsl("%1/map/%2").arg(mProfileName, onDisk.first().fileName())});
+        QCOMPARE(entries.value(maps.first()), readFile(onDisk.first().absoluteFilePath()));
+
+        // Desktop loads only the newest map file, so when that is a JSON map that
+        // came to nothing, an older binary one is not the player's map either
+        const QString jsonPath = qsl("%1/map/2002-02-02#00-00-00map.json").arg(profileHome());
+        QVERIFY(writeFile(jsonPath, QByteArrayLiteral("{}")));
+        QFile json(jsonPath);
+        QVERIFY(json.open(QIODevice::ReadWrite));
+        QVERIFY(json.setFileTime(QDateTime::currentDateTime().addSecs(60), QFileDevice::FileModificationTime));
+        json.close();
+        const QString jsonArchivePath = mOutputDir.filePath(qsl("json-map.zip"));
+        auto [jsonOk, jsonError, jsonWarnings] = exportTo(jsonArchivePath);
+        QFile::remove(jsonPath);
+        QVERIFY2(jsonOk, qPrintable(jsonError));
+        QVERIFY2(jsonWarnings.filter(qsl("00-00-00map.json")).size() == 1, qPrintable(jsonWarnings.join(qsl("; "))));
+        for (const auto& name : readArchive(jsonArchivePath).keys()) {
+            QVERIFY2(!name.startsWith(mProfileName + qsl("/map/")), qPrintable(qsl("An older map stood in for the JSON one: %1").arg(name)));
+        }
+
+        // ...and a map the player has just cleared stays cleared, not brought back
+        mpHost->mpMap->setUnsaved(__func__);
+        const QString clearedPath = mOutputDir.filePath(qsl("cleared-map.zip"));
+        auto [clearedOk, clearedError, clearedWarnings] = exportTo(clearedPath);
+        QVERIFY2(clearedOk, qPrintable(clearedError));
+        for (const auto& name : readArchive(clearedPath).keys()) {
+            QVERIFY2(!name.startsWith(mProfileName + qsl("/map/")), qPrintable(qsl("A cleared map came back: %1").arg(name)));
+        }
+    }
+
+    // A module called "media" would land in the folder Mudlet Web takes for the
+    // profile's own, so it is reported rather than misfiled
+    void test_aModuleNamedLikeAProfileFolderIsReported()
+    {
+        const QString path = mModuleDir.filePath(qsl("media.xml"));
+        QVERIFY(writeFile(path, moduleXml(qsl("media module alias"))));
+        QVERIFY2(installModule(path), "The module could not be installed");
+
+        const QString archivePath = mOutputDir.filePath(qsl("reserved.zip"));
+        auto [ok, error, warnings] = exportTo(archivePath);
+        QVERIFY2(ok, qPrintable(error));
+        QVERIFY2(warnings.filter(qsl("\"media\"")).size() == 1, qPrintable(warnings.join(qsl("; "))));
+        QVERIFY(!readArchive(archivePath).contains(mProfileName + qsl("/media/media.xml")));
+    }
+
+    void test_theSuggestedFileNameIsSafeOnEveryPlatform()
+    {
+        QCOMPARE(MudletWebExport::suggestedFileName(qsl("Achaea")), qsl("Achaea-mudlet-web.zip"));
+        QCOMPARE(MudletWebExport::suggestedFileName(qsl("a/b\\c:d*e?f\"g<h>i|j")), qsl("a_b_c_d_e_f_g_h_i_j-mudlet-web.zip"));
+    }
+};
+
+MUDLET_GROUPED_TEST_MAIN(MudletWebExportTest)
+#include "MudletWebExportTest.moc"
