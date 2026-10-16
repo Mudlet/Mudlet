@@ -599,10 +599,20 @@ function Adjustable.Container:adjustConnectedContainers()
 end
 
 --- connect your container to a border
--- @param border main border ("top", "bottom", "left", "right")
+-- @param border main border ("top", "bottom", "left", "right"), in any case
+-- @return true, or nil and an error message if the border does not exist, the container is not attached
+-- to a border, or nothing is attached to the border to connect to
 function Adjustable.Container:connectToBorder(border)
-    if not self.attached or not Adjustable.Container.Attached[border] then
-        return
+    border = type(border) == "string" and border:lower()
+    if not oppositeBorder[border] then
+        return nil, "connectToBorder: bad argument #1 value (\"top\", \"bottom\", \"left\" or \"right\" expected)"
+    end
+    if not self.attached then
+        return nil, "connectToBorder: the container is not attached to a border"
+    end
+    -- detach() leaves an empty table behind once the last container on a border has gone
+    if not Adjustable.Container.Attached[border] or not next(Adjustable.Container.Attached[border]) then
+        return nil, string.format("connectToBorder: nothing is attached to the %s border", border)
     end
     self.connectedToBorder = self.connectedToBorder or {}
     self.connectedToBorder[border] = true
@@ -617,6 +627,7 @@ function Adjustable.Container:connectToBorder(border)
         end
         v:adjustConnectedContainers()
     end
+    return true
 end
 
 --- adds elements to connect containers to borders into the right click menu
@@ -697,8 +708,22 @@ end
 
 --- attaches your container to the given border
 -- attach is only possible if the container is located near the border
--- @param border possible border values are "top", "bottom", "right", "left"
+-- @param border possible border values are "top", "bottom", "right", "left", in any case
+-- @return true, or nil and an error message for any other border, or if the container is hidden,
+-- minimized or too far from that border to attach; a refused attach changes nothing, unless a
+-- sysWindowResizeEvent handler hides or moves the container while it leaves its old border
 function Adjustable.Container:attachToBorder(border)
+    -- the registry and adjustBorder() both work in lower case
+    border = type(border) == "string" and border:lower()
+    if not oppositeBorder[border] then
+        return nil, "attachToBorder: bad argument #1 value (\"top\", \"bottom\", \"left\" or \"right\" expected)"
+    end
+    local refused = string.format("attachToBorder: the container is hidden, minimized or too far from the %s border to attach", border)
+    -- adjustBorder()'s own test, made before this container or a namesake is taken off its border
+    if self.hidden or self.minimized or not table.contains(self:validAttachPositions(), border) then
+        closeAllLevels(self.rCLabel)
+        return nil, refused
+    end
     if self.attached then self:detach() end
     Adjustable.Container.Attached[border] = Adjustable.Container.Attached[border] or {}
     -- the registry is keyed by name, so a still live container of the same name
@@ -712,8 +737,13 @@ function Adjustable.Container:attachToBorder(border)
     Adjustable.Container.Attached[border][self.name] = self
     self.attached = border
     self:adjustBorder()
-    self.resizeHandlerID=registerAnonymousEventHandler("sysWindowResizeEvent", function() self:resizeBorder() end)
     closeAllLevels(self.rCLabel)
+    -- the detaches above raise sysWindowResizeEvent, whose handlers may have hidden or moved this container
+    if self.attached ~= border then
+        return nil, refused
+    end
+    self.resizeHandlerID=registerAnonymousEventHandler("sysWindowResizeEvent", function() self:resizeBorder() end)
+    return true
 end
 
 --- detaches the given container
@@ -730,6 +760,7 @@ function Adjustable.Container:detach()
     -- unhooked first: handing the border back raises an event we would answer by re-reserving
     self.attached = false
     if self.resizeHandlerID then killAnonymousEventHandler(self.resizeHandlerID) end
+    self.resizeHandlerID = nil
     self:resetBorder(where)
 end
 
@@ -1183,8 +1214,13 @@ function Adjustable.Container:load(slot, dir)
     self:adjustBorder()
 
     self.connectedContainers = mytable.connectedContainers or self.connectedContainers
-    self.connectedToBorder = mytable.connectedToBorder or self.connectedToBorder
-    if self.connectedToBorder then
+    local connectedToBorder = mytable.connectedToBorder or self.connectedToBorder
+    if connectedToBorder then
+        -- a layout saved before border names were lower cased can hold "Left"
+        self.connectedToBorder = {}
+        for k, v in pairs(connectedToBorder) do
+            self.connectedToBorder[type(k) == "string" and k:lower() or k] = v
+        end
         for k in pairs(self.connectedToBorder) do
             self:connectToBorder(k)
         end
