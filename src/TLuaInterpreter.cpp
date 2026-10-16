@@ -3918,16 +3918,15 @@ void TLuaInterpreter::settleCommandAfterAliasPass()
 }
 
 // No documentation available in wiki - internal function
-void TLuaInterpreter::adjustCaptureGroups(int x, int a)
+static void shiftCapturePositions(std::vector<int>& posList, NamedMatchesRanges& namedPosList, const int x, const int a)
 {
-    // adjust all capture group positions in line if data has been inserted by the user
-    for (int& it : mCaptureGroupPosList) {
+    for (int& it : posList) {
         if (it >= x) {
             it += a;
         }
     }
 
-    for (auto& [pos, length] : mCapturedNameGroupsPosList) {
+    for (auto& [pos, length] : namedPosList) {
         if (pos >= x) {
             pos += a;
         }
@@ -3935,27 +3934,46 @@ void TLuaInterpreter::adjustCaptureGroups(int x, int a)
 }
 
 // The capture that was exactly the replaced text keeps its start and takes on the
-// replacement's length; adjustCaptureGroups() would move its start instead, as
+// replacement's length; shiftCapturePositions() would move its start instead, as
 // though the text had been inserted in front of it
-void TLuaInterpreter::adjustCaptureGroupsForReplace(int x, int replacedLength, const QString& replacement)
+static void
+shiftCapturePositionsForReplace(std::vector<std::string>& captureList, std::vector<int>& posList, NamedMatchesRanges& namedPosList, const int x, const int replacedLength, const QString& replacement)
 {
     const int delta = replacement.size() - replacedLength;
-    const std::size_t count = std::min(mCaptureGroupPosList.size(), mCaptureGroupList.size());
+    const std::size_t count = std::min(posList.size(), captureList.size());
     for (std::size_t i = 0; i < count; ++i) {
-        int& pos = mCaptureGroupPosList[i];
-        if (pos == x && QString::fromStdString(mCaptureGroupList[i]).size() == replacedLength) {
-            mCaptureGroupList[i] = replacement.toStdString();
+        int& pos = posList[i];
+        if (pos == x && QString::fromStdString(captureList[i]).size() == replacedLength) {
+            captureList[i] = replacement.toStdString();
         } else if (pos > x) {
             pos += delta;
         }
     }
 
-    for (auto& [pos, length] : mCapturedNameGroupsPosList) {
+    for (auto& [pos, length] : namedPosList) {
         if (pos == x && length == replacedLength) {
             length = replacement.size();
         } else if (pos > x) {
             pos += delta;
         }
+    }
+}
+
+// The parked captures are moved along too: a trigger whose command's alias edits
+// its line reads them back once the alias pass returns
+void TLuaInterpreter::adjustCaptureGroups(int x, int a)
+{
+    shiftCapturePositions(mCaptureGroupPosList, mCapturedNameGroupsPosList, x, a);
+    for (auto& parked : mNestedDispatchStates) {
+        shiftCapturePositions(parked.captureGroupPosList, parked.capturedNameGroupsPosList, x, a);
+    }
+}
+
+void TLuaInterpreter::adjustCaptureGroupsForReplace(int x, int replacedLength, const QString& replacement)
+{
+    shiftCapturePositionsForReplace(mCaptureGroupList, mCaptureGroupPosList, mCapturedNameGroupsPosList, x, replacedLength, replacement);
+    for (auto& parked : mNestedDispatchStates) {
+        shiftCapturePositionsForReplace(parked.captureGroupList, parked.captureGroupPosList, parked.capturedNameGroupsPosList, x, replacedLength, replacement);
     }
 }
 

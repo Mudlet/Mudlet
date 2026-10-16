@@ -2253,7 +2253,16 @@ void TTrigger::execute()
         mpHost->mpMedia->playMedia(mediaData);
     }
     if (!mCommand.isEmpty()) {
+        // Sending runs a whole alias pass, and any alias it matches empties the
+        // captures before this trigger's script has read them; "command" is left
+        // as that pass sets it. Only the script reads them back, so a trigger
+        // without one does not pay for parking them on the flood path.
+        const bool scriptReadsCaptures = mRegisteredAnonymousLuaFunction || !mScript.isEmpty();
+        const int dispatchDepth = scriptReadsCaptures ? mpLua->pushNestedDispatchState(false) : -1;
         mpHost->send(mCommand);
+        if (dispatchDepth >= 0) {
+            mpLua->popNestedDispatchState(dispatchDepth);
+        }
     }
     if (mNeedsToBeCompiled) {
         if (!compileScript()) {
