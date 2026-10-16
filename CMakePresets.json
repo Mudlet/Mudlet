@@ -169,13 +169,14 @@
     {
       "name": "ci-shipping",
       "hidden": true,
-      "description": "Adds what a build that produces an artifact needs. The values come from the environment because a run varies them by tag and by matrix entry; an empty USE_SANITIZER is deliberate, as leaving it unset would default to address instead.",
+      "description": "Adds what a build that produces an artifact needs. The values come from the environment because a run varies them by tag and by matrix entry; an empty USE_SANITIZER is deliberate, as leaving it unset would default to address instead. MUDLET_PGO is GENERATE for the first pass of a profile-guided build on macOS, empty otherwise.",
       "inherits": "ci",
       "cacheVariables": {
         "USE_SANITIZER": "$env{USE_SANITIZER}",
         "WITH_SENTRY": "$env{WITH_SENTRY}",
         "SENTRY_DSN": "$env{SENTRY_DSN}",
-        "SENTRY_SEND_DEBUG": "$env{SENTRY_SEND_DEBUG}"
+        "SENTRY_SEND_DEBUG": "$env{SENTRY_SEND_DEBUG}",
+        "MUDLET_PGO": "$env{MUDLET_PGO}"
       }
     },
     {
