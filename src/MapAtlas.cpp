@@ -224,21 +224,9 @@ void MapAtlas::build(const TMap& map, const std::function<QColor(int)>& environm
     for (const TAreaGraph::Link& link : pGraph->links()) {
         const Area* pFrom = area(link.fromArea);
         const Area* pTo = area(link.toArea);
-        if (!pFrom || !pTo) {
-            continue;
+        if (pFrom && pTo) {
+            appendLink(*pFrom, *pTo, linkWidth(*pFrom, *pTo), linkColor, mWorldVertices, mWorldColors);
         }
-        const QLineF between(pFrom->center, pTo->center);
-        const qreal length = between.length();
-        if (length <= pFrom->radius + pTo->radius) {
-            continue;
-        }
-        const QPointF direction = (pTo->center - pFrom->center) / length;
-        const QPointF start = pFrom->center + direction * pFrom->radius;
-        const QPointF end = pTo->center - direction * pTo->radius;
-        const qreal width = qMax(scmMinimumLinkWidth, scmLinkWidthPerRadius * qMin(pFrom->radius, pTo->radius));
-        const QPointF side = QPointF(-direction.y(), direction.x()) * (width / 2.0);
-        appendTriangle(mWorldVertices, mWorldColors, start + side, end + side, end - side, linkColor);
-        appendTriangle(mWorldVertices, mWorldColors, start + side, end - side, start - side, linkColor);
     }
     for (const Area& area : std::as_const(mAreas)) {
         for (int segment = 0; segment < scmNodeSegments; ++segment) {
@@ -286,16 +274,80 @@ int MapAtlas::areaAt(const QPointF& point, const bool nodes, const float slop) c
 
 void MapAtlas::appendRing(const int areaId, const QColor& color, QVector<float>& vertices, QVector<float>& colors) const
 {
+    appendRing(areaId, scmRingInner, scmRingOuter, color, vertices, colors);
+}
+
+void MapAtlas::appendRing(const int areaId, const float inner, const float outer, const QColor& color, QVector<float>& vertices, QVector<float>& colors) const
+{
     const Area* pArea = area(areaId);
     if (!pArea) {
         return;
     }
     for (int segment = 0; segment < scmNodeSegments; ++segment) {
-        const QPointF innerFrom = onCircle(pArea->center, pArea->radius * scmRingInner, segment);
-        const QPointF innerTo = onCircle(pArea->center, pArea->radius * scmRingInner, segment + 1);
-        const QPointF outerFrom = onCircle(pArea->center, pArea->radius * scmRingOuter, segment);
-        const QPointF outerTo = onCircle(pArea->center, pArea->radius * scmRingOuter, segment + 1);
+        const QPointF innerFrom = onCircle(pArea->center, pArea->radius * inner, segment);
+        const QPointF innerTo = onCircle(pArea->center, pArea->radius * inner, segment + 1);
+        const QPointF outerFrom = onCircle(pArea->center, pArea->radius * outer, segment);
+        const QPointF outerTo = onCircle(pArea->center, pArea->radius * outer, segment + 1);
         appendTriangle(vertices, colors, innerFrom, outerFrom, outerTo, color);
         appendTriangle(vertices, colors, innerFrom, outerTo, innerTo, color);
     }
+}
+
+float MapAtlas::linkWidth(const Area& from, const Area& to)
+{
+    return qMax(scmMinimumLinkWidth, scmLinkWidthPerRadius * qMin(from.radius, to.radius));
+}
+
+float MapAtlas::linkWidth(const int fromAreaId, const int toAreaId) const
+{
+    const Area* pFrom = area(fromAreaId);
+    const Area* pTo = area(toAreaId);
+    return pFrom && pTo ? linkWidth(*pFrom, *pTo) : 0.0f;
+}
+
+void MapAtlas::appendLink(const Area& from, const Area& to, const float width, const QColor& color, QVector<float>& vertices, QVector<float>& colors)
+{
+    const qreal length = QLineF(from.center, to.center).length();
+    if (length <= from.radius + to.radius) {
+        return;
+    }
+    const QPointF direction = (to.center - from.center) / length;
+    const QPointF start = from.center + direction * from.radius;
+    const QPointF end = to.center - direction * to.radius;
+    const QPointF side = QPointF(-direction.y(), direction.x()) * (width / 2.0);
+    appendTriangle(vertices, colors, start + side, end + side, end - side, color);
+    appendTriangle(vertices, colors, start + side, end - side, start - side, color);
+}
+
+void MapAtlas::appendLink(const int fromAreaId, const int toAreaId, const float width, const QColor& color, QVector<float>& vertices, QVector<float>& colors) const
+{
+    const Area* pFrom = area(fromAreaId);
+    const Area* pTo = area(toAreaId);
+    if (pFrom && pTo) {
+        appendLink(*pFrom, *pTo, width, color, vertices, colors);
+    }
+}
+
+void MapAtlas::appendOutline(const int areaId, const float width, const QColor& color, QVector<float>& vertices, QVector<float>& colors) const
+{
+    const Area* pArea = area(areaId);
+    if (!pArea) {
+        return;
+    }
+    const QPolygonF& shape = pArea->footprint;
+    for (qsizetype i = 0; i < shape.size(); ++i) {
+        appendBand(shape.at(i), shape.at((i + 1) % shape.size()), width, color, vertices, colors);
+    }
+}
+
+void MapAtlas::appendBand(const QPointF& from, const QPointF& to, const float width, const QColor& color, QVector<float>& vertices, QVector<float>& colors)
+{
+    const qreal length = QLineF(from, to).length();
+    // Squared off past each end by half the width, so that bands meeting at a point leave no notch
+    const QPointF along = length > 0.0 ? (to - from) * (width / 2.0 / length) : QPointF(width / 2.0, 0.0);
+    const QPointF side(-along.y(), along.x());
+    const QPointF start = from - along;
+    const QPointF end = to + along;
+    appendTriangle(vertices, colors, start + side, end + side, end - side, color);
+    appendTriangle(vertices, colors, start + side, end - side, start - side, color);
 }

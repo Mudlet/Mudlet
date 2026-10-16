@@ -50,6 +50,7 @@
 #include "GeometryManager.h"
 #include "LabelTextureCache.h"
 #include "MapAtlas.h"
+#include "MapRoute.h"
 #include "RenderCommandQueue.h"
 #include "ResourceManager.h"
 #include "RetainedMapScene.h"
@@ -136,6 +137,12 @@ public:
     int areaAt(const QPoint& position);
     // Moves the view into the area, from where the area is drawn in the world around the one shown now, zooming in on it
     void flyToArea(int areaId);
+    // Shows the route from the player's room to this room, or to the nearest room of this area that can be reached,
+    // at every zoom, keeping it up to date as the player moves. Returns what was told the user if no route was set
+    QString planRouteToRoom(int roomId);
+    QString planRouteToArea(int areaId);
+    void clearRoute();
+    const MapRoute& route() const { return mRoute; }
 
     QSize minimumSizeHint() const override;
     QSize sizeHint() const override;
@@ -409,6 +416,11 @@ private:
         qreal progress = 0.0;
     };
     std::optional<Flight> mFlight;
+    MapRoute mRoute;
+    // Finds a stale route soon after a frame saw it was, outside painting, as finding it can run a script
+    QTimer* mRouteRefreshTimer = nullptr;
+    QElapsedTimer mRouteGraphBuilt;
+    qint64 mRouteGraphBuildMs = 0;
     RetainedMapScene mScene;
     int mSceneMaxRoomId = 0;
     // Rooms whose blocks are drawn narrower than this many pixels, in tiles of the scene so far away, are drawn
@@ -441,6 +453,22 @@ private:
     // Ends a flight into an area where it got to
     void stopFlight();
     void flightTick();
+    // Finds the route again if the player moved or the map changed since it was found
+    void refreshRoute();
+    void scheduleRouteRefresh();
+    bool findRoute();
+    QString reportRoute();
+    // The name of the room or area the route goes to
+    QString routeDestinationName() const;
+    // The route's color, and the color of the halo that keeps it apart from what it is drawn over
+    QColor routeColor() const;
+    QColor routeHaloColor() const;
+    // Over the rooms of the area shown: the route's rooms and the steps between them
+    void queueRouteInRooms();
+    // The route over the areas' footprints, and along the world graph, its lines this many world units a pixel
+    void appendRouteOnFootprints(float unitsPerPixel, QVector<float>& vertices, QVector<float>& colors) const;
+    void appendRouteOnWorld(float unitsPerPixel, QVector<float>& vertices, QVector<float>& colors) const;
+    void paintRouteStatus(QPainter& painter);
     // The blocks drawn for a room: its border, its outline, then the room itself, each with the layer it is drawn in
     void addRoomCubes(const TRoom& room, bool hovered, bool solidRed, const std::function<void(RetainedMapScene::Layer, const CubeInstanceData&)>& add) const;
     // The 2D map's grid, at the viewed level's room bottoms, writing no depth

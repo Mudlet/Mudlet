@@ -59,6 +59,7 @@
 #include <QKeyEvent>
 #include <QSurfaceFormat>
 #include <QToolTip>
+#include <QVector2D>
 #include <QVBoxLayout>
 #include <algorithm>
 #include <chrono>
@@ -99,6 +100,9 @@ ModernGLWidget::ModernGLWidget(TMap* pMap, Host* pHost, QWidget* parent)
     mCameraAnimationTimer->setInterval(17ms); // ~60fps updates for smoother animation
     connect(mCameraAnimationTimer, &QTimer::timeout, this, &ModernGLWidget::onCameraAnimationTick);
     mEasingCurve.setType(QEasingCurve::OutQuart); // Natural deceleration
+    mRouteRefreshTimer = new QTimer(this);
+    mRouteRefreshTimer->setSingleShot(true);
+    connect(mRouteRefreshTimer, &QTimer::timeout, this, &ModernGLWidget::refreshRoute);
 
     // A click takes focus only so that a floating view can pass typed keys on to the command line; focus from
     // Tab also lets the view pan and zoom with keys
@@ -698,6 +702,7 @@ void ModernGLWidget::paintGL()
 
     QPainter painter(this);
     paintAtlasLabels(painter);
+    paintRouteStatus(painter);
 
     // Draw map info using contributor manager
     QColor infoColor;
@@ -2473,13 +2478,27 @@ void ModernGLWidget::queueAtlas(const MapAtlas::Weights& weights)
     // Flat on one plane, each layer over the last and over the rooms it fades in on
     mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::DISABLE_DEPTH_TEST));
     mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::DISABLE_DEPTH_WRITE));
-    queueLayer(mAtlas.footprintVertices(), mAtlas.footprintColors(), weights.footprint * (1.0f - weights.world));
+    const float footprintOpacity = weights.footprint * (1.0f - weights.world);
+    queueLayer(mAtlas.footprintVertices(), mAtlas.footprintColors(), footprintOpacity);
+    const float unitsPerPixel = mCameraController.worldUnitsPerPixel(mCameraController.getTarget());
+    if (!mRoute.rooms().isEmpty() && footprintOpacity > 0.0f) {
+        QVector<float> routeVertices;
+        QVector<float> routeColors;
+        appendRouteOnFootprints(unitsPerPixel, routeVertices, routeColors);
+        queueLayer(routeVertices, routeColors, footprintOpacity);
+    }
     const float worldOpacity = weights.footprint * weights.world;
     queueLayer(mAtlas.worldVertices(), mAtlas.worldColors(), worldOpacity);
     QVector<float> ringVertices;
     QVector<float> ringColors;
     mAtlas.appendRing(mAID, ExitAppearance::contrastColor(mpHost->mBgColor_2), ringVertices, ringColors);
     queueLayer(ringVertices, ringColors, worldOpacity);
+    if (!mRoute.rooms().isEmpty() && worldOpacity > 0.0f) {
+        QVector<float> routeVertices;
+        QVector<float> routeColors;
+        appendRouteOnWorld(unitsPerPixel, routeVertices, routeColors);
+        queueLayer(routeVertices, routeColors, worldOpacity);
+    }
     mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::BLEND_BY_SOURCE_ALPHA));
     mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::ENABLE_DEPTH_WRITE));
     mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::ENABLE_DEPTH_TEST));
@@ -2495,10 +2514,14 @@ QList<ModernGLWidget::AtlasLabel> ModernGLWidget::atlasLabels(const MapAtlas::We
     for (const MapAtlas::Area& area : mAtlas.areas()) {
         areas.append(&area);
     }
-    // The area shown first, then the larger ones, which keep their names where the names would overlap
-    std::stable_sort(areas.begin(), areas.end(), [this](const MapAtlas::Area* a, const MapAtlas::Area* b) {
+    // The area shown first, then those on the route, then the larger ones, which keep their names where the names would overlap
+    const QHash<int, int>& routeSteps = mRoute.stepsByArea();
+    std::stable_sort(areas.begin(), areas.end(), [this, &routeSteps](const MapAtlas::Area* a, const MapAtlas::Area* b) {
         if ((a->id == mAID) != (b->id == mAID)) {
             return a->id == mAID;
+        }
+        if (routeSteps.contains(a->id) != routeSteps.contains(b->id)) {
+            return routeSteps.contains(a->id);
         }
         return a->roomCount > b->roomCount;
     });
@@ -2522,6 +2545,10 @@ QList<ModernGLWidget::AtlasLabel> ModernGLWidget::atlasLabels(const MapAtlas::We
         label.shownArea = pArea->id == mAID;
         //: Name shown on the 3D map's world view for an area that has no name, %1 is the area's number
         label.text = pArea->name.isEmpty() ? tr("Area %1").arg(pArea->id) : pArea->name;
+        if (const auto steps = routeSteps.constFind(pArea->id); steps != routeSteps.cend()) {
+            //: Name of an area on the 3D map's world view that the planned route passes through, %1 is the area's name and %n how many steps the route takes in it
+            label.text = tr("%1 (%n step(s))", nullptr, *steps).arg(label.text);
+        }
         label.rect = (label.shownArea ? boldMetrics : metrics).boundingRect(label.text);
         label.rect.moveCenter(*pixel);
         if (!view.intersects(label.rect)) {
@@ -2646,6 +2673,270 @@ void ModernGLWidget::stopFlight()
     mMapCenterX = qRound(mCurrentAnimationX);
     mMapCenterY = qRound(mCurrentAnimationY);
     mMapCenterZ = qRound(mCurrentAnimationZ);
+}
+
+QString ModernGLWidget::planRouteToRoom(const int roomId)
+{
+    mRoute.setDestinationRoom(roomId);
+    return reportRoute();
+}
+
+QString ModernGLWidget::planRouteToArea(const int areaId)
+{
+    mRoute.setDestinationArea(areaId);
+    return reportRoute();
+}
+
+void ModernGLWidget::clearRoute()
+{
+    if (!mRoute.hasDestination()) {
+        return;
+    }
+    mRoute.clear();
+    update();
+}
+
+QString ModernGLWidget::reportRoute()
+{
+    if (mpMap) {
+        findRoute();
+    }
+    QString message;
+    switch (mRoute.status()) {
+    case MapRoute::Status::Found:
+    case MapRoute::Status::Busy:
+        break;
+    case MapRoute::Status::Unreachable:
+        //: Message when no route can be planned on the 3D map, %1 is the room or area the route was to
+        message = tr("Mapper: Cannot find a route from here to %1 using known exits.").arg(routeDestinationName());
+        break;
+    case MapRoute::Status::Arrived:
+        //: Message when a route is planned on the 3D map to the room, or the area, the player is already in
+        message = tr("Mapper: You are already there.");
+        break;
+    case MapRoute::Status::NoPlayerRoom:
+        //: Message when a route is planned on the 3D map while the room the player is in is not known
+        message = tr("Mapper: Cannot plan a route, as where you are on the map is not known.");
+        break;
+    case MapRoute::Status::NoDestination:
+    case MapRoute::Status::NoSuchDestination:
+        //: Message when a route is planned on the 3D map to a room or area that is not in the map
+        message = tr("Mapper: Cannot plan a route to a place that is not on the map.");
+        break;
+    }
+    // Kept while unreachable, as a move or a new exit may yet open a way there
+    if (mRoute.status() != MapRoute::Status::Found && mRoute.status() != MapRoute::Status::Unreachable && mRoute.status() != MapRoute::Status::Busy) {
+        mRoute.clear();
+    }
+    if (!message.isEmpty()) {
+        if (TMainConsole* console = mpHost ? mpHost->mainConsoleView() : nullptr) {
+            console->printSystemMessage(qsl("%1\n").arg(message));
+        }
+    }
+    update();
+    return message;
+}
+
+void ModernGLWidget::scheduleRouteRefresh()
+{
+    if (!mpMap->mMapGraphNeedsUpdate || !mRouteGraphBuilt.isValid()) {
+        mRouteRefreshTimer->start(0ms);
+    } else if (!mRouteRefreshTimer->isActive()) {
+        // Rebuilding the path graph takes seconds on a large map, and a mapping script edits the map on every move,
+        // so the next rebuild waits five times as long as the last took
+        const qint64 intervalMs = std::max<qint64>(1000, 5 * mRouteGraphBuildMs);
+        const qint64 waitMs = std::max<qint64>(0, intervalMs - mRouteGraphBuilt.elapsed());
+        mRouteRefreshTimer->start(std::chrono::milliseconds(waitMs));
+    }
+}
+
+bool ModernGLWidget::findRoute()
+{
+    const bool graphNeedsUpdate = mpMap->mMapGraphNeedsUpdate;
+    QElapsedTimer finding;
+    finding.start();
+    const bool changed = mRoute.refresh(*mpMap);
+    if (graphNeedsUpdate && !mpMap->mMapGraphNeedsUpdate) {
+        mRouteGraphBuildMs = finding.elapsed();
+        mRouteGraphBuilt.start();
+    }
+    return changed;
+}
+
+void ModernGLWidget::refreshRoute()
+{
+    if (!mpMap || !findRoute()) {
+        return;
+    }
+    if (mRoute.status() == MapRoute::Status::Arrived || mRoute.status() == MapRoute::Status::NoSuchDestination) {
+        mRoute.clear();
+    }
+    if (mRoute.status() == MapRoute::Status::Busy) {
+        // Retried soon, as nothing may paint to find it stale again
+        mRouteRefreshTimer->start(100ms);
+        return;
+    }
+    update();
+}
+
+QColor ModernGLWidget::routeColor() const
+{
+    return mpHost ? mpHost->mLightYellow_2 : QColor(Qt::yellow);
+}
+
+QColor ModernGLWidget::routeHaloColor() const
+{
+    return mpHost ? mpHost->mBgColor_2 : QColor(Qt::black);
+}
+
+void ModernGLWidget::queueRouteInRooms()
+{
+    const QList<int>& rooms = mRoute.rooms();
+    if (rooms.isEmpty() || !mpMap || !mpMap->mpRoomDB || !mpHost) {
+        return;
+    }
+    const float roomSize = 2.0f / scale;
+    const float roomHeight = roomSize / zFlattening;
+    const float thickness = roomHeight / 4.0f;
+    const float lineWidth = roomSize * 0.2f;
+    const float haloWidth = roomSize * 0.12f;
+    const QColor color = routeColor();
+    const QColor halo = routeHaloColor();
+    QVector<CubeInstanceData> haloBars;
+    QVector<CubeInstanceData> routeBars;
+    const auto addBar = [&](const QVector3D& from, const QVector3D& to, const float width) {
+        haloBars.append(CubeInstanceData(GeometryManager::barTransform(from, to, width + haloWidth, thickness), halo.redF(), halo.greenF(), halo.blueF(), 1.0f));
+        routeBars.append(CubeInstanceData(GeometryManager::barTransform(from, to, width, thickness), color.redF(), color.greenF(), color.blueF(), 1.0f));
+    };
+    // On the room's top, as its symbol is
+    const auto shownAt = [&](const int roomId) -> std::optional<QVector3D> {
+        const TRoom* pR = mpMap->mpRoomDB->getRoom(roomId);
+        if (!pR || pR->getArea() != mAID || pR->isHidden() || !levelShown(pR->z())) {
+            return std::nullopt;
+        }
+        const float lift = roomId == mHoveredRoomId ? roomHeight : 0.0f;
+        return QVector3D(static_cast<float>(pR->x()), static_cast<float>(pR->y()), static_cast<float>(pR->z()) + lift + roomHeight / 2.0f + thickness / 2.0f);
+    };
+    std::optional<QVector3D> previous;
+    for (qsizetype i = 0; i < rooms.size(); ++i) {
+        const std::optional<QVector3D> at = shownAt(rooms.at(i));
+        if (at && previous) {
+            // From the edge of one room to the edge of the next, as an exit line is drawn, unless they are stacked
+            const QVector2D across = QVector2D(at->x() - previous->x(), at->y() - previous->y());
+            const float length = across.length();
+            const QVector3D trim = length > roomSize ? QVector3D(across / length * (roomSize / 2.0f), 0.0f) : QVector3D();
+            addBar(*previous + trim, *at - trim, lineWidth);
+        }
+        if (at) {
+            // A frame around the room, twice as thick around the room the route goes to
+            const float frameWidth = i + 1 == rooms.size() ? lineWidth : lineWidth / 2.0f;
+            const float reach = roomSize / 2.0f + frameWidth / 2.0f;
+            const std::array<QVector3D, 4> corners{
+                    *at + QVector3D(-reach, -reach, 0.0f), *at + QVector3D(reach, -reach, 0.0f), *at + QVector3D(reach, reach, 0.0f), *at + QVector3D(-reach, reach, 0.0f)};
+            for (int side = 0; side < 4; ++side) {
+                const QVector3D along = (corners[(side + 1) % 4] - corners[side]).normalized() * (frameWidth / 2.0f);
+                addBar(corners[side] - along, corners[(side + 1) % 4] + along, frameWidth);
+            }
+        }
+        previous = at;
+    }
+    if (routeBars.isEmpty()) {
+        return;
+    }
+    mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::DISABLE_DEPTH_WRITE));
+    for (const QVector<CubeInstanceData>* bars : {&haloBars, &routeBars}) {
+        mRenderCommandQueue.addCommand(std::make_unique<RenderInstancedCubesCommand>(
+                *bars, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix(), RenderCommand::Shading::Unlit));
+    }
+    mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::ENABLE_DEPTH_WRITE));
+}
+
+void ModernGLWidget::appendRouteOnFootprints(const float unitsPerPixel, QVector<float>& vertices, QVector<float>& colors) const
+{
+    const QList<int>& rooms = mRoute.rooms();
+    QList<QPointF> points;
+    points.reserve(rooms.size());
+    for (const int roomId : rooms) {
+        const TRoom* pR = mpMap->mpRoomDB->getRoom(roomId);
+        const MapAtlas::Area* pArea = pR ? mAtlas.area(pR->getArea()) : nullptr;
+        if (pArea) {
+            points.append(QPointF(pR->x(), pR->y()) + pArea->offset);
+        }
+    }
+    const QColor color = routeColor();
+    const QColor halo = routeHaloColor();
+    for (const auto& [lineColor, width] : {std::pair{halo, 6.0f}, std::pair{color, 3.0f}}) {
+        for (auto it = mRoute.stepsByArea().cbegin(); it != mRoute.stepsByArea().cend(); ++it) {
+            mAtlas.appendOutline(it.key(), width * unitsPerPixel, lineColor, vertices, colors);
+        }
+        for (qsizetype i = 1; i < points.size(); ++i) {
+            MapAtlas::appendBand(points.at(i - 1), points.at(i), width * unitsPerPixel, lineColor, vertices, colors);
+        }
+    }
+}
+
+void ModernGLWidget::appendRouteOnWorld(const float unitsPerPixel, QVector<float>& vertices, QVector<float>& colors) const
+{
+    const QList<MapRoute::AreaRun>& runs = mRoute.areaRuns();
+    const QColor color = routeColor();
+    const QColor halo = routeHaloColor();
+    for (qsizetype i = 1; i < runs.size(); ++i) {
+        const int from = runs.at(i - 1).areaId;
+        const int to = runs.at(i).areaId;
+        const float width = qMax(mAtlas.linkWidth(from, to) * 1.5f, 4.0f * unitsPerPixel);
+        mAtlas.appendLink(from, to, width + 2.0f * unitsPerPixel, halo, vertices, colors);
+        mAtlas.appendLink(from, to, width, color, vertices, colors);
+    }
+    // Outside the ring marking the area shown
+    for (auto it = mRoute.stepsByArea().cbegin(); it != mRoute.stepsByArea().cend(); ++it) {
+        mAtlas.appendRing(it.key(), 1.22f, 1.5f, color, vertices, colors);
+    }
+}
+
+QString ModernGLWidget::routeDestinationName() const
+{
+    if (const int roomId = mRoute.destinationRoomId()) {
+        const TRoom* pR = mpMap->mpRoomDB->getRoom(roomId);
+        //: The room a route planned on the 3D map goes to, when the room has no name; %1 is its number
+        return pR && !pR->name.isEmpty() ? pR->name : tr("room %1").arg(roomId);
+    }
+    const QString name = mpMap->mpRoomDB->getAreaNamesMap().value(mRoute.destinationAreaId());
+    //: The area a route planned on the 3D map goes to, when the area has no name; %1 is its number
+    return name.isEmpty() ? tr("Area %1").arg(mRoute.destinationAreaId()) : name;
+}
+
+void ModernGLWidget::paintRouteStatus(QPainter& painter)
+{
+    if (!mRoute.hasDestination() || !mpMap || !mpMap->mpRoomDB || !mpHost) {
+        return;
+    }
+    const QString destination = routeDestinationName();
+    QString text;
+    switch (mRoute.status()) {
+    case MapRoute::Status::Found:
+        //: Shown on the 3D map while a planned route is drawn; %1 is the room or area it goes to and %n how many steps it takes
+        text = tr("Route to %1: %n step(s)", nullptr, mRoute.steps()).arg(destination);
+        break;
+    case MapRoute::Status::Unreachable:
+        //: Shown on the 3D map while no route can be found to where one was planned to; %1 is the room or area
+        text = tr("No route from here to %1").arg(destination);
+        break;
+    case MapRoute::Status::NoPlayerRoom:
+        //: Shown on the 3D map while a route is planned but where the player is on the map is not known; %1 is the room or area
+        text = tr("Route to %1: where you are is not known").arg(destination);
+        break;
+    default:
+        return;
+    }
+    const QColor background = mpHost->mBgColor_2;
+    QPainterPath path;
+    const QFontMetricsF metrics(font());
+    path.addText(QPointF(10.0, height() - 10.0 - metrics.descent()), font(), text);
+    painter.save();
+    painter.setRenderHints(QPainter::Antialiasing | QPainter::TextAntialiasing);
+    painter.strokePath(path, QPen(background, 3.0, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+    painter.fillPath(path, mRoute.status() == MapRoute::Status::Found ? routeColor() : ExitAppearance::contrastColor(background));
+    painter.restore();
 }
 
 QString ModernGLWidget::roomToolTip(const int roomId) const
@@ -3103,6 +3394,33 @@ void ModernGLWidget::showContextMenu(const QPoint& position)
     QAction* firstAction = menu->actions().value(0);
     menu->insertAction(firstAction, editIn2D);
     menu->insertAction(firstAction, fitAreaAction);
+    if (mpMap->mpRoomDB && !mpMap->mpRoomDB->isEmpty()) {
+        // Not to where the player is, which would only drop the route planned already
+        const int playerRoomId = mpMap->mRoomIdHash.value(mpMap->mProfileName);
+        const TRoom* pPlayerRoom = mpMap->mpRoomDB->getRoom(playerRoomId);
+        const int areaId = roomId ? 0 : areaAt(position);
+        if (roomId && roomId != playerRoomId) {
+            //: 3D map view context menu item: shows the route from the player's room to the room clicked on, at every zoom
+            auto* planRoute = new QAction(tr("Plan route here"), menu);
+            connect(planRoute, &QAction::triggered, this, [this, roomId]() {
+                planRouteToRoom(roomId);
+            });
+            menu->insertAction(firstAction, planRoute);
+        } else if (areaId && (!pPlayerRoom || pPlayerRoom->getArea() != areaId)) {
+            //: 3D map view context menu item, zoomed out to the areas: shows the route from the player's room to the nearest room of the area clicked on
+            auto* planRoute = new QAction(tr("Plan route to this area"), menu);
+            connect(planRoute, &QAction::triggered, this, [this, areaId]() {
+                planRouteToArea(areaId);
+            });
+            menu->insertAction(firstAction, planRoute);
+        }
+        if (mRoute.hasDestination()) {
+            //: 3D map view context menu item: stops showing the route planned with "Plan route here"
+            auto* clearRouteAction = new QAction(tr("Clear route"), menu);
+            connect(clearRouteAction, &QAction::triggered, this, &ModernGLWidget::clearRoute);
+            menu->insertAction(firstAction, clearRouteAction);
+        }
+    }
     if (firstAction) {
         menu->insertSeparator(firstAction);
     }
@@ -3497,6 +3815,9 @@ void ModernGLWidget::slot_resetPlayerIcon()
 
 void ModernGLWidget::queueScene()
 {
+    if (mpMap && mRoute.stale(*mpMap)) {
+        scheduleRouteRefresh();
+    }
     mZoomWeights = zoomWeights();
     if (mZoomWeights.roomsShown()) {
         // First, as on the 2D map, where the other levels, the labels and everything else paint over it
@@ -3506,6 +3827,7 @@ void ModernGLWidget::queueScene()
         // of other levels show over them rather than cutting holes in them
         renderLabels(false, std::numeric_limits<int>::lowest(), std::numeric_limits<int>::max());
         renderRooms();
+        queueRouteInRooms();
         renderPlayerBeacon();
     }
     if (mZoomWeights.footprint > 0.0f) {

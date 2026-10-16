@@ -1027,6 +1027,7 @@ void TMap::initGraph()
 
     mGraphBuildInProgress = false;
     mMapGraphNeedsUpdate = false;
+    ++mPathGraphRevision;
     qDebug() << "TMap::initGraph() INFO: built graph with:" << locations.size() << "(" << roomCount << ") locations(roomCount), and discarded" << unUsableRoomSet.count()
              << "other NOT usable rooms and found:" << edgeCount << "distinct, usable edges in:" << _time.nsecsElapsed() * 1.0e-6 << "ms.";
 }
@@ -3850,6 +3851,7 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
     qDebug().nospace().noquote() << "TMap::readJsonMapFile(...) INFO - parsed a file (version: " << formatVersion << ") containing " << mProgressDialogRoomsCount << " rooms.";
 
     // This is it - the point at which the new map gets activated:
+    pNewRoomDB->succeed(*mpRoomDB);
     mpRoomDB = std::move(pNewRoomDB);
     ++mMapRevision;
     // User data is merged rather than replaced, so a layout left from the previous map would place this one's areas.
