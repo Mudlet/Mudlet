@@ -338,6 +338,50 @@ describe("Tests what feedTriggers will and will not carry", function()
     assert.same({"FeedNulLatin \195\169Tail", "FeedNulRaw \195\169Tail", ""}, lines)
   end)
 
+  -- Mudlet drops every carriage return a game sends, so captured output
+  -- replayed through feedTriggers() has to come out the same. Blank lines are
+  -- shown for these, as hiding them would hide a stray one too.
+  local function linesFed(isUtf8, ...)
+    local blankLines = getConfig("blankLinesBehaviour")
+    setConfig("blankLinesBehaviour", "show")
+    finally(function() setConfig("blankLinesBehaviour", blankLines) end)
+    assert.is_true(feedTriggers("\n"))
+    local mark = getLastLineNumber("main")
+    for _, text in ipairs({...}) do
+      assert.is_true(feedTriggers(text, isUtf8))
+    end
+    return getLines("main", mark, getLastLineNumber("main") + 1)
+  end
+
+  it("takes a CR LF line ending as one line ending", function()
+    assert.is_true(setServerEncoding("UTF-8"))
+    assert.same({"FeedCrLfOne", "FeedCrLfTwo", ""}, linesFed(true, "FeedCrLfOne\r\nFeedCrLfTwo\r\n"))
+    assert.same({"FeedCrCrLfOne", "FeedCrCrLfTwo", ""}, linesFed(true, "FeedCrCrLfOne\r\r\nFeedCrCrLfTwo\r\r\n"))
+  end)
+
+  it("keeps a blank line that arrives as CR LF CR LF", function()
+    assert.is_true(setServerEncoding("UTF-8"))
+    assert.same({"FeedCrLfAbove", "", "FeedCrLfBelow", ""}, linesFed(true, "FeedCrLfAbove\r\n\r\nFeedCrLfBelow\r\n"))
+  end)
+
+  it("drops a carriage return part way through the text", function()
+    assert.is_true(setServerEncoding("UTF-8"))
+    assert.same({"FeedCrHeadFeedCrTail", ""}, linesFed(true, "FeedCrHead\rFeedCrTail\n"))
+  end)
+
+  -- a script feeding a line in parts flushes the part it has with one
+  it("keeps a carriage return that ends the text", function()
+    assert.is_true(setServerEncoding("UTF-8"))
+    assert.same({"FeedCrFlushed", ""}, linesFed(true, "FeedCrFlushed\r"))
+    assert.same({"FeedCrFlushedA", "FeedCrFlushedB", ""}, linesFed(true, "FeedCrFlushedA\r", "FeedCrFlushedB\n"))
+  end)
+
+  it("takes a CR LF line ending as one in text it transcodes or takes pre-encoded", function()
+    assert.is_true(setServerEncoding("ISO 8859-1"))
+    assert.same({"FeedCrLfLatin \195\169", "FeedCrLfLatinNext", ""}, linesFed(true, "FeedCrLfLatin \195\169\r\nFeedCrLfLatinNext\r\n"))
+    assert.same({"FeedCrLfRaw \195\169", "FeedCrLfRawNext", ""}, linesFed(false, "FeedCrLfRaw \233\r\nFeedCrLfRawNext\r\n"))
+  end)
+
   it("raises on arguments it cannot make sense of", function()
     assertArgError(function() return feedTriggers({}) end, "bad argument #1 type")
     assertArgError(function() return feedTriggers("FeedEncNever\n", "yes") end, "bad argument #2 type")
