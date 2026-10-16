@@ -842,7 +842,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     connect(mpFolderTree, &QTreeWidget::currentItemChanged, this, &dlgTriggerEditor::slot_folderTreeItemChanged);
     // A click on a merged folder that is already current brings its summary back after one of its parts was opened
     connect(mpFolderTree, &QTreeWidget::itemClicked, this, [this](QTreeWidgetItem* pItem) {
-        if (pItem && pItem->data(0, FolderPartsRole).toStringList().size() > 1 && mFolderSummaryKey != pItem->data(0, FolderKeyRole).toString()) {
+        if (pItem && pItem->data(0, FolderPartsRole).toStringList().size() != 1 && mFolderSummaryKey != pItem->data(0, FolderKeyRole).toString()) {
             showFolderSummary(pItem);
         }
     });
@@ -855,8 +855,13 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     mpFolderTreeRefreshTimer = new QTimer(this);
     mpFolderTreeRefreshTimer->setSingleShot(true);
     connect(mpFolderTreeRefreshTimer, &QTimer::timeout, this, [this]() {
-        if (mFolderViewActive) {
+        if (!mFolderViewActive) {
+            return;
+        }
+        if (mFolderTreeStale) {
             populateFolderTree();
+        } else {
+            refreshFolderTreeData();
         }
     });
     for (const auto view :
@@ -866,7 +871,8 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
         connect(pModel, &QAbstractItemModel::rowsInserted, this, &dlgTriggerEditor::scheduleFolderTreeRefresh);
         connect(pModel, &QAbstractItemModel::rowsRemoved, this, &dlgTriggerEditor::scheduleFolderTreeRefresh);
         connect(pModel, &QAbstractItemModel::rowsMoved, this, &dlgTriggerEditor::scheduleFolderTreeRefresh);
-        connect(pModel, &QAbstractItemModel::dataChanged, this, &dlgTriggerEditor::scheduleFolderTreeRefresh);
+        // Every save sets its item's icon again, so this must not rebuild the tree under a pending click
+        connect(pModel, &QAbstractItemModel::dataChanged, this, &dlgTriggerEditor::scheduleFolderTreeDataRefresh);
         connect(pModel, &QAbstractItemModel::layoutChanged, this, &dlgTriggerEditor::scheduleFolderTreeRefresh);
         connect(pModel, &QAbstractItemModel::modelReset, this, &dlgTriggerEditor::scheduleFolderTreeRefresh);
         // Adding, deleting, pasting, undoing and searching all pick their item in the type tree, hidden or not
@@ -10949,7 +10955,7 @@ void dlgTriggerEditor::slot_showTimers()
         splitter_right->setSizes(sizes);
         mTimerEditorSplitterState = splitter_right->saveState();
     }
-    treeWidget_timers->setFocus();
+    focusItemTree(treeWidget_timers);
 }
 
 void dlgTriggerEditor::showCurrentTriggerItem()
@@ -10991,7 +10997,7 @@ void dlgTriggerEditor::slot_showTriggers()
         splitter_right->setSizes(sizes);
         mTriggerEditorSplitterState = splitter_right->saveState();
     }
-    treeWidget_triggers->setFocus();
+    focusItemTree(treeWidget_triggers);
 }
 
 void dlgTriggerEditor::slot_showScripts()
@@ -11014,7 +11020,7 @@ void dlgTriggerEditor::slot_showScripts()
         splitter_right->setSizes(sizes);
         mScriptEditorSplitterState = splitter_right->saveState();
     }
-    treeWidget_scripts->setFocus();
+    focusItemTree(treeWidget_scripts);
 }
 
 void dlgTriggerEditor::slot_showKeys()
@@ -11037,7 +11043,7 @@ void dlgTriggerEditor::slot_showKeys()
         splitter_right->setSizes(sizes);
         mKeyEditorSplitterState = splitter_right->saveState();
     }
-    treeWidget_keys->setFocus();
+    focusItemTree(treeWidget_keys);
 }
 
 void dlgTriggerEditor::slot_showVariables()
@@ -11108,7 +11114,7 @@ void dlgTriggerEditor::slot_showAliases()
         splitter_right->setSizes(sizes);
         mAliasEditorSplitterState = splitter_right->saveState();
     }
-    treeWidget_aliases->setFocus();
+    focusItemTree(treeWidget_aliases);
 }
 
 void dlgTriggerEditor::showError(const QString& text)
@@ -11324,7 +11330,7 @@ void dlgTriggerEditor::slot_showActions()
         splitter_right->setSizes(sizes);
         mActionEditorSplitterState = splitter_right->saveState();
     }
-    treeWidget_actions->setFocus();
+    focusItemTree(treeWidget_actions);
 }
 
 void dlgTriggerEditor::slot_saveEdits()
@@ -11724,10 +11730,10 @@ void dlgTriggerEditor::slot_nextSection()
     switch (mCurrentView) {
     case EditorViewType::cmTriggerView:
         if (qsl("edbee::TextEditorComponent").compare(QApplication::focusWidget()->metaObject()->className()) == 0) {
-            treeWidget_triggers->setFocus();
+            sectionTree(treeWidget_triggers)->setFocus();
             return;
         }
-        if (treeWidget_triggers->hasFocus()) {
+        if (sectionTree(treeWidget_triggers)->hasFocus()) {
             mpTriggersMainArea->lineEdit_trigger_name->setFocus();
             return;
         }
@@ -11750,10 +11756,10 @@ void dlgTriggerEditor::slot_nextSection()
         break;
     case EditorViewType::cmTimerView:
         if (qsl("edbee::TextEditorComponent").compare(QApplication::focusWidget()->metaObject()->className()) == 0) {
-            treeWidget_timers->setFocus();
+            sectionTree(treeWidget_timers)->setFocus();
             return;
         }
-        if (treeWidget_timers->hasFocus()) {
+        if (sectionTree(treeWidget_timers)->hasFocus()) {
             mpTimersMainArea->lineEdit_timer_name->setFocus();
             return;
         }
@@ -11766,10 +11772,10 @@ void dlgTriggerEditor::slot_nextSection()
         break;
     case EditorViewType::cmAliasView:
         if (QString("edbee::TextEditorComponent").compare(QApplication::focusWidget()->metaObject()->className()) == 0) {
-            treeWidget_aliases->setFocus();
+            sectionTree(treeWidget_aliases)->setFocus();
             return;
         }
-        if (treeWidget_aliases->hasFocus()) {
+        if (sectionTree(treeWidget_aliases)->hasFocus()) {
             mpAliasMainArea->lineEdit_alias_name->setFocus();
             return;
         }
@@ -11782,10 +11788,10 @@ void dlgTriggerEditor::slot_nextSection()
         break;
     case EditorViewType::cmScriptView:
         if (qsl("edbee::TextEditorComponent").compare(QApplication::focusWidget()->metaObject()->className()) == 0) {
-            treeWidget_scripts->setFocus();
+            sectionTree(treeWidget_scripts)->setFocus();
             return;
         }
-        if (treeWidget_scripts->hasFocus()) {
+        if (sectionTree(treeWidget_scripts)->hasFocus()) {
             mpScriptsMainArea->lineEdit_script_name->setFocus();
             return;
         }
@@ -11798,10 +11804,10 @@ void dlgTriggerEditor::slot_nextSection()
         break;
     case EditorViewType::cmActionView:
         if (qsl("edbee::TextEditorComponent").compare(QApplication::focusWidget()->metaObject()->className()) == 0) {
-            treeWidget_actions->setFocus();
+            sectionTree(treeWidget_actions)->setFocus();
             return;
         }
-        if (treeWidget_actions->hasFocus()) {
+        if (sectionTree(treeWidget_actions)->hasFocus()) {
             mpActionsMainArea->lineEdit_action_name->setFocus();
             return;
         }
@@ -11814,10 +11820,10 @@ void dlgTriggerEditor::slot_nextSection()
         break;
     case EditorViewType::cmKeysView:
         if (qsl("edbee::TextEditorComponent").compare(QApplication::focusWidget()->metaObject()->className()) == 0) {
-            treeWidget_keys->setFocus();
+            sectionTree(treeWidget_keys)->setFocus();
             return;
         }
-        if (treeWidget_keys->hasFocus()) {
+        if (sectionTree(treeWidget_keys)->hasFocus()) {
             mpKeysMainArea->lineEdit_key_name->setFocus();
             return;
         }
@@ -11830,10 +11836,10 @@ void dlgTriggerEditor::slot_nextSection()
         break;
     case EditorViewType::cmVarsView:
         if (qsl("edbee::TextEditorComponent").compare(QApplication::focusWidget()->metaObject()->className()) == 0) {
-            treeWidget_variables->setFocus();
+            sectionTree(treeWidget_variables)->setFocus();
             return;
         }
-        if (treeWidget_variables->hasFocus()) {
+        if (sectionTree(treeWidget_variables)->hasFocus()) {
             mpVarsMainArea->lineEdit_var_name->setFocus();
             return;
         }
@@ -11857,7 +11863,7 @@ void dlgTriggerEditor::slot_previousSection()
             mTriggerPatternEdit[0]->singleLineTextEdit_pattern->setFocus();
             return;
         }
-        if (treeWidget_triggers->hasFocus()) {
+        if (sectionTree(treeWidget_triggers)->hasFocus()) {
             mpSourceEditorEdbee->setFocus();
             return;
         }
@@ -11869,7 +11875,7 @@ void dlgTriggerEditor::slot_previousSection()
         }
         for (auto child : mpTriggersMainArea->findChildren<QWidget*>()) {
             if (child->hasFocus()) {
-                treeWidget_triggers->setFocus();
+                sectionTree(treeWidget_triggers)->setFocus();
                 return;
             }
         }
@@ -11879,13 +11885,13 @@ void dlgTriggerEditor::slot_previousSection()
             mpTimersMainArea->lineEdit_timer_name->setFocus();
             return;
         }
-        if (treeWidget_timers->hasFocus()) {
+        if (sectionTree(treeWidget_timers)->hasFocus()) {
             mpSourceEditorEdbee->setFocus();
             return;
         }
         for (auto child : mpTimersMainArea->findChildren<QWidget*>()) {
             if (child->hasFocus()) {
-                treeWidget_timers->setFocus();
+                sectionTree(treeWidget_timers)->setFocus();
                 return;
             }
         }
@@ -11895,13 +11901,13 @@ void dlgTriggerEditor::slot_previousSection()
             mpAliasMainArea->lineEdit_alias_name->setFocus();
             return;
         }
-        if (treeWidget_aliases->hasFocus()) {
+        if (sectionTree(treeWidget_aliases)->hasFocus()) {
             mpSourceEditorEdbee->setFocus();
             return;
         }
         for (auto child : mpAliasMainArea->findChildren<QWidget*>()) {
             if (child->hasFocus()) {
-                treeWidget_aliases->setFocus();
+                sectionTree(treeWidget_aliases)->setFocus();
                 return;
             }
         }
@@ -11911,13 +11917,13 @@ void dlgTriggerEditor::slot_previousSection()
             mpScriptsMainArea->lineEdit_script_name->setFocus();
             return;
         }
-        if (treeWidget_scripts->hasFocus()) {
+        if (sectionTree(treeWidget_scripts)->hasFocus()) {
             mpSourceEditorEdbee->setFocus();
             return;
         }
         for (auto child : mpScriptsMainArea->findChildren<QWidget*>()) {
             if (child->hasFocus()) {
-                treeWidget_scripts->setFocus();
+                sectionTree(treeWidget_scripts)->setFocus();
                 return;
             }
         }
@@ -11927,13 +11933,13 @@ void dlgTriggerEditor::slot_previousSection()
             mpActionsMainArea->lineEdit_action_name->setFocus();
             return;
         }
-        if (treeWidget_actions->hasFocus()) {
+        if (sectionTree(treeWidget_actions)->hasFocus()) {
             mpSourceEditorEdbee->setFocus();
             return;
         }
         for (auto child : mpActionsMainArea->findChildren<QWidget*>()) {
             if (child->hasFocus()) {
-                treeWidget_actions->setFocus();
+                sectionTree(treeWidget_actions)->setFocus();
                 return;
             }
         }
@@ -11943,13 +11949,13 @@ void dlgTriggerEditor::slot_previousSection()
             mpKeysMainArea->lineEdit_key_name->setFocus();
             return;
         }
-        if (treeWidget_keys->hasFocus()) {
+        if (sectionTree(treeWidget_keys)->hasFocus()) {
             mpSourceEditorEdbee->setFocus();
             return;
         }
         for (auto child : mpKeysMainArea->findChildren<QWidget*>()) {
             if (child->hasFocus()) {
-                treeWidget_keys->setFocus();
+                sectionTree(treeWidget_keys)->setFocus();
                 return;
             }
         }
@@ -11959,13 +11965,13 @@ void dlgTriggerEditor::slot_previousSection()
             mpVarsMainArea->lineEdit_var_name->setFocus();
             return;
         }
-        if (treeWidget_variables->hasFocus()) {
+        if (sectionTree(treeWidget_variables)->hasFocus()) {
             mpSourceEditorEdbee->setFocus();
             return;
         }
         for (auto child : mpVarsMainArea->findChildren<QWidget*>()) {
             if (child->hasFocus()) {
-                treeWidget_variables->setFocus();
+                sectionTree(treeWidget_variables)->setFocus();
                 return;
             }
         }
@@ -16558,22 +16564,22 @@ QString dlgTriggerEditor::folderTreeTypeName(const EditorViewType view, const bo
 {
     switch (view) {
     case EditorViewType::cmTriggerView:
-        //: Item type shown beside an entry in the editor's Folders view
+        //: Item type shown beside an entry in the editor's Folders view, and on its buttons for a merged folder
         return plural ? tr("Triggers") : tr("Trigger");
     case EditorViewType::cmAliasView:
-        //: Item type shown beside an entry in the editor's Folders view
+        //: Item type shown beside an entry in the editor's Folders view, and on its buttons for a merged folder
         return plural ? tr("Aliases") : tr("Alias");
     case EditorViewType::cmScriptView:
-        //: Item type shown beside an entry in the editor's Folders view
+        //: Item type shown beside an entry in the editor's Folders view, and on its buttons for a merged folder
         return plural ? tr("Scripts") : tr("Script");
     case EditorViewType::cmTimerView:
-        //: Item type shown beside an entry in the editor's Folders view
+        //: Item type shown beside an entry in the editor's Folders view, and on its buttons for a merged folder
         return plural ? tr("Timers") : tr("Timer");
     case EditorViewType::cmKeysView:
-        //: Item type shown beside an entry in the editor's Folders view
+        //: Item type shown beside an entry in the editor's Folders view, and on its buttons for a merged folder
         return plural ? tr("Keys") : tr("Key");
     case EditorViewType::cmActionView:
-        //: Item type shown beside an entry in the editor's Folders view
+        //: Item type shown beside an entry in the editor's Folders view, and on its buttons for a merged folder
         return plural ? tr("Buttons") : tr("Button");
     case EditorViewType::cmVarsView:
     case EditorViewType::cmUnknownView:
@@ -16582,23 +16588,26 @@ QString dlgTriggerEditor::folderTreeTypeName(const EditorViewType view, const bo
     return {};
 }
 
-void dlgTriggerEditor::addFolderTreeNode(QTreeWidgetItem* pSource, const EditorViewType view, QTreeWidgetItem* pParent, QTreeWidgetItem* pLooseItems, QHash<QString, QTreeWidgetItem*>& folders)
+void dlgTriggerEditor::addFolderTreeNode(QTreeWidgetItem* pSource, const EditorViewType view, QTreeWidgetItem* pParent, QTreeWidgetItem* pLooseItems, QHash<QString, int>& folderCounts)
 {
     const int id = pSource->data(0, IdRole).toInt();
     const QString itemKey = folderTreeItemKey(view, id);
     const QColor typeColor = palette().color(QPalette::PlaceholderText);
     QTreeWidgetItem* pNode = nullptr;
     if (folderItem(view, id)) {
-        // U+001F cannot be typed into a name, so a name cannot fake a deeper path
-        const QString key = (pParent ? pParent->data(0, FolderKeyRole).toString() : QString()) + QChar(0x1F) + pSource->text(0);
-        pNode = folders.value(key);
+        // The k-th same-named folder of one type merges with the k-th of each other type, never with its own siblings
+        const QString baseKey = (pParent ? pParent->data(0, FolderKeyRole).toString() : QString()) + QChar(0x1F) + pSource->text(0);
+        const QString countKey = baseKey + QChar(0x1E) + QString::number(static_cast<int>(view));
+        const int occurrence = folderCounts.value(countKey);
+        folderCounts.insert(countKey, occurrence + 1);
+        const QString key = baseKey + QChar(0x1E) + QString::number(occurrence);
+        pNode = mFolderTreeNodes.value(key);
         if (!pNode) {
             pNode = new QTreeWidgetItem();
             pNode->setText(0, pSource->text(0));
             pNode->setIcon(0, pSource->icon(0));
             pNode->setForeground(1, typeColor);
             pNode->setData(0, FolderKeyRole, key);
-            folders.insert(key, pNode);
             mFolderTreeNodes.insert(key, pNode);
             if (pParent) {
                 pParent->addChild(pNode);
@@ -16631,7 +16640,7 @@ void dlgTriggerEditor::addFolderTreeNode(QTreeWidgetItem* pSource, const EditorV
     mFolderTreeNodes.insert(itemKey, pNode);
 
     for (int i = 0, total = pSource->childCount(); i < total; ++i) {
-        addFolderTreeNode(pSource->child(i), view, pNode, pLooseItems, folders);
+        addFolderTreeNode(pSource->child(i), view, pNode, pLooseItems, folderCounts);
     }
 }
 
@@ -16659,7 +16668,7 @@ void dlgTriggerEditor::populateFolderTree()
         pLooseItems->setIcon(0, QIcon(qsl(":/icons/folder-grey.png")));
         pLooseItems->setData(0, FolderKeyRole, qsl("loose"));
 
-        QHash<QString, QTreeWidgetItem*> folders;
+        QHash<QString, int> folderCounts;
         for (const auto view :
              {EditorViewType::cmTriggerView, EditorViewType::cmAliasView, EditorViewType::cmScriptView, EditorViewType::cmTimerView, EditorViewType::cmKeysView, EditorViewType::cmActionView}) {
             QTreeWidgetItem* pRoot = treeForView(view)->topLevelItem(0);
@@ -16667,7 +16676,7 @@ void dlgTriggerEditor::populateFolderTree()
                 continue;
             }
             for (int i = 0, total = pRoot->childCount(); i < total; ++i) {
-                addFolderTreeNode(pRoot->child(i), view, nullptr, pLooseItems, folders);
+                addFolderTreeNode(pRoot->child(i), view, nullptr, pLooseItems, folderCounts);
             }
         }
         if (pLooseItems->childCount()) {
@@ -16689,12 +16698,65 @@ void dlgTriggerEditor::populateFolderTree()
     syncFolderTreeSelection(previousKey);
 }
 
+void dlgTriggerEditor::refreshFolderTreeData()
+{
+    for (const auto view :
+         {EditorViewType::cmTriggerView, EditorViewType::cmAliasView, EditorViewType::cmScriptView, EditorViewType::cmTimerView, EditorViewType::cmKeysView, EditorViewType::cmActionView}) {
+        QTreeWidgetItem* pRoot = treeForView(view)->topLevelItem(0);
+        if (!pRoot) {
+            continue;
+        }
+        for (QTreeWidgetItemIterator it(pRoot); *it; ++it) {
+            if (*it == pRoot) {
+                continue;
+            }
+            const QString itemKey = folderTreeItemKey(view, (*it)->data(0, IdRole).toInt());
+            QTreeWidgetItem* pNode = mFolderTreeNodes.value(itemKey);
+            // A renamed folder may now merge with, or split from, another
+            if (!pNode || pNode->text(0) != (*it)->text(0)) {
+                populateFolderTree();
+                return;
+            }
+            if (pNode->data(0, FolderPartsRole).toStringList().constFirst() == itemKey) {
+                pNode->setIcon(0, (*it)->icon(0));
+            }
+            if (pNode->data(0, FolderKeyRole).toString() == itemKey) {
+                pNode->setData(0, Qt::AccessibleDescriptionRole, (*it)->data(0, Qt::AccessibleDescriptionRole));
+            }
+        }
+    }
+}
+
 void dlgTriggerEditor::scheduleFolderTreeRefresh()
 {
     mFolderTreeStale = true;
     if (mFolderViewActive) {
         mpFolderTreeRefreshTimer->start();
     }
+}
+
+void dlgTriggerEditor::scheduleFolderTreeDataRefresh()
+{
+    if (!mFolderViewActive) {
+        mFolderTreeStale = true;
+        return;
+    }
+    mpFolderTreeRefreshTimer->start();
+}
+
+void dlgTriggerEditor::focusItemTree(QTreeWidget* pTypeTree)
+{
+    if (!mFolderViewActive) {
+        pTypeTree->setFocus();
+        return;
+    }
+    syncFolderTreeSelection({});
+    mpFolderTree->setFocus();
+}
+
+QTreeWidget* dlgTriggerEditor::sectionTree(QTreeWidget* pTypeTree) const
+{
+    return mFolderViewActive ? mpFolderTree : pTypeTree;
 }
 
 void dlgTriggerEditor::selectFolderTreeNode(QTreeWidgetItem* pNode)
@@ -16713,12 +16775,22 @@ void dlgTriggerEditor::syncFolderTreeSelection(const QString& fallbackKey)
 {
     if (!mFolderSummaryKey.isEmpty()) {
         QTreeWidgetItem* pSummaryNode = mFolderTreeNodes.value(mFolderSummaryKey);
-        if (pSummaryNode && pSummaryNode->data(0, FolderPartsRole).toStringList().size() > 1) {
+        if (pSummaryNode && pSummaryNode->data(0, FolderPartsRole).toStringList().size() == 1) {
+            hideFolderSummary();
+            selectFolderTreeNode(pSummaryNode);
+            slot_folderTreeItemChanged(pSummaryNode);
+            return;
+        }
+        if (pSummaryNode) {
             selectFolderTreeNode(pSummaryNode);
             showFolderSummary(pSummaryNode);
             return;
         }
-        hideFolderSummary();
+        changeView(mCurrentView);
+        QTreeWidget* pTree = treeForView(mCurrentView);
+        if (QTreeWidgetItem* pCurrent = pTree ? pTree->currentItem() : nullptr) {
+            selectItemInView(mCurrentView, pCurrent);
+        }
     }
 
     QTreeWidget* pTree = treeForView(mCurrentView);
@@ -16732,7 +16804,10 @@ void dlgTriggerEditor::syncFolderTreeSelection(const QString& fallbackKey)
 
     if (QTreeWidgetItem* pFallback = mFolderTreeNodes.value(fallbackKey)) {
         mpFolderTree->setCurrentItem(pFallback);
+        return;
     }
+    const QSignalBlocker blocker(mpFolderTree);
+    mpFolderTree->setCurrentItem(nullptr);
 }
 
 void dlgTriggerEditor::slot_folderTreeItemChanged(QTreeWidgetItem* pItem)
@@ -16741,14 +16816,12 @@ void dlgTriggerEditor::slot_folderTreeItemChanged(QTreeWidgetItem* pItem)
         return;
     }
     const QStringList parts = pItem->data(0, FolderPartsRole).toStringList();
-    if (parts.size() > 1) {
+    if (parts.size() != 1) {
         showFolderSummary(pItem);
         return;
     }
-    if (parts.size() == 1) {
-        const QStringList viewAndId = parts.constFirst().split(QLatin1Char(':'));
-        openItemFromFolderTree(static_cast<EditorViewType>(viewAndId.constFirst().toInt()), viewAndId.constLast().toInt());
-    }
+    const QStringList viewAndId = parts.constFirst().split(QLatin1Char(':'));
+    openItemFromFolderTree(static_cast<EditorViewType>(viewAndId.constFirst().toInt()), viewAndId.constLast().toInt());
 }
 
 void dlgTriggerEditor::openItemFromFolderTree(const EditorViewType view, const int id)
@@ -16779,7 +16852,10 @@ void dlgTriggerEditor::openItemFromFolderTree(const EditorViewType view, const i
 
 void dlgTriggerEditor::showFolderSummary(QTreeWidgetItem* pNode)
 {
-    saveOpenChanges();
+    // Moving between summaries leaves nothing new to save
+    if (mFolderSummaryKey.isEmpty()) {
+        saveOpenChanges();
+    }
     mFolderSummaryKey = pNode->data(0, FolderKeyRole).toString();
 
     mpTriggersMainArea->hide();
@@ -16792,19 +16868,24 @@ void dlgTriggerEditor::showFolderSummary(QTreeWidgetItem* pNode)
     mpSourceEditorArea->hide();
     mpFolderSummaryArea->show();
 
-    // A merged folder has no single item type for a new, deleted or saved item to belong to
-    mAddItem->setEnabled(false);
-    mAddGroup->setEnabled(false);
-    mDeleteItem->setEnabled(false);
+    // The item the type tree still has selected is hidden, so nothing may act on it
+    for (QAction* pAction : mpFolderTree->actions()) {
+        pAction->setEnabled(false);
+    }
     mSaveItem->setEnabled(false);
     mpAction_toggleActive->setEnabled(false);
     mpExportAction->setEnabled(false);
 
-    //: Shown in the editor's Folders view when a folder name exists in more than one item type, %1 is the folder name
-    mpFolderSummaryText->setText(tr("<p><b>%1</b> is a folder in more than one item type. Choose which one to open:</p>").arg(pNode->text(0).toHtmlEscaped()));
+    const QStringList parts = pNode->data(0, FolderPartsRole).toStringList();
+    if (parts.isEmpty()) {
+        //: Shown in the editor's Folders view when its "Not in a folder" group is selected
+        mpFolderSummaryText->setText(tr("<p>These items are not in any folder. Choose one to open it.</p>"));
+    } else {
+        //: Shown in the editor's Folders view when folders of the same name exist in different item types, %1 is the folder name
+        mpFolderSummaryText->setText(tr("<p><b>%1</b> is a folder in more than one item type. Choose which one to open:</p>").arg(pNode->text(0).toHtmlEscaped()));
+    }
 
     qDeleteAll(mpFolderSummaryButtons->findChildren<QPushButton*>(Qt::FindDirectChildrenOnly));
-    const QStringList parts = pNode->data(0, FolderPartsRole).toStringList();
     for (const QString& part : parts) {
         const QStringList viewAndId = part.split(QLatin1Char(':'));
         const auto view = static_cast<EditorViewType>(viewAndId.constFirst().toInt());
@@ -16822,7 +16903,7 @@ void dlgTriggerEditor::showFolderSummary(QTreeWidgetItem* pNode)
                 pending.append(pPending->child(i));
             }
         }
-        //: Button in the editor's Folders view that opens one item type's copy of a shared folder, %1 is the item type such as "Triggers"
+        //: Button in the editor's Folders view that opens the folder of one item type, %1 is the item type such as "Triggers", %n is how many items are inside it
         auto* pButton = new QPushButton(pSource->icon(0), tr("%1 (%n item(s))", nullptr, itemCount).arg(folderTreeTypeName(view, true)), mpFolderSummaryButtons);
         mpFolderSummaryButtons->layout()->addWidget(pButton);
         mpFolderSummaryButtons->layout()->setAlignment(pButton, Qt::AlignLeft);
@@ -16840,9 +16921,9 @@ void dlgTriggerEditor::hideFolderSummary()
     mFolderSummaryKey.clear();
     mpFolderSummaryArea->hide();
     mpSourceEditorArea->show();
-    mAddItem->setEnabled(true);
-    mAddGroup->setEnabled(true);
-    mDeleteItem->setEnabled(true);
+    for (QAction* pAction : mpFolderTree->actions()) {
+        pAction->setEnabled(true);
+    }
     mSaveItem->setEnabled(true);
     const bool itemView = mCurrentView != EditorViewType::cmVarsView && mCurrentView != EditorViewType::cmUnknownView;
     mpAction_toggleActive->setEnabled(itemView);

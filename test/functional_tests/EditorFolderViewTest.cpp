@@ -25,6 +25,7 @@
 
 #include <QPushButton>
 #include <QTemporaryDir>
+#include <QTimer>
 #include <QTreeWidget>
 #include <QtTest/QtTest>
 #include <chrono>
@@ -144,6 +145,16 @@ private slots:
             permAlias("qaKill", "qaCombat", "^kk$", "qaKill = 1")
             permScript("qaCombat", "", "", "")
             permScript("qaCombatHelpers", "qaCombat", "qaHelpers = 1")
+            permSubstringTrigger("qaSub", "qaMapping", {}, "")
+            permAlias("qaMapping", "", "", "")
+            permAlias("qaSub", "qaMapping", "", "")
+            permSubstringTrigger("qaOther", "", {}, "")
+            permSubstringTrigger("qaSub", "qaOther", {}, "")
+            permSubstringTrigger("qaTwin", "", {}, "")
+            permSubstringTrigger("qaTwin", "", {}, "")
+            permAlias("qaTwin", "", "", "")
+            permSubstringTrigger("qaPair", "", {}, "")
+            permAlias("qaPair", "", "", "")
         )")));
 
         mudlet::self()->slot_showScriptDialog();
@@ -197,9 +208,9 @@ private slots:
         QCOMPARE(pCombat->text(1), qsl("Triggers, Aliases, Scripts"));
         QCOMPARE(childNames(pCombat), (QStringList{qsl("qaHit"), qsl("qaKill"), qsl("qaCombatHelpers")}));
 
-        QTreeWidgetItem* pMapping = topLevelNamed(qsl("qaMapping"));
-        QVERIFY(pMapping);
-        QCOMPARE(pMapping->data(0, dlgTriggerEditor::FolderPartsRole).toStringList().size(), 1);
+        QTreeWidgetItem* pOther = topLevelNamed(qsl("qaOther"));
+        QVERIFY(pOther);
+        QCOMPARE(pOther->data(0, dlgTriggerEditor::FolderPartsRole).toStringList().size(), 1);
 
         const int topLevelCount = mpEditor->mpFolderTree->topLevelItemCount();
         QTreeWidgetItem* pLoose = mpEditor->mpFolderTree->topLevelItem(topLevelCount - 1);
@@ -261,6 +272,158 @@ private slots:
         const QString newTrigger = dlgTriggerEditor::tr("New trigger");
         QVERIFY2(childNamed(pCombat, newTrigger), "a trigger added inside a folder did not appear under it");
         QCOMPARE(mpEditor->mpFolderTree->currentItem(), childNamed(pCombat, newTrigger));
+    }
+
+    void test_nestedFoldersMergeOnlyUnderTheSameParent()
+    {
+        mpEditor->slot_showFolders();
+        QTreeWidgetItem* pMappingSub = childNamed(topLevelNamed(qsl("qaMapping")), qsl("qaSub"));
+        QVERIFY(pMappingSub);
+        QCOMPARE(pMappingSub->data(0, dlgTriggerEditor::FolderPartsRole).toStringList().size(), 2);
+        QTreeWidgetItem* pOtherSub = childNamed(topLevelNamed(qsl("qaOther")), qsl("qaSub"));
+        QVERIFY(pOtherSub);
+        QCOMPARE(pOtherSub->data(0, dlgTriggerEditor::FolderPartsRole).toStringList().size(), 1);
+    }
+
+    // A package installed twice leaves two trigger folders of one name, and
+    // merging those would mix their contents under one row
+    void test_twoFoldersOfOneTypeStayApart()
+    {
+        mpEditor->slot_showFolders();
+        QList<QTreeWidgetItem*> twins;
+        for (int i = 0, total = mpEditor->mpFolderTree->topLevelItemCount(); i < total; ++i) {
+            if (mpEditor->mpFolderTree->topLevelItem(i)->text(0) == qsl("qaTwin")) {
+                twins << mpEditor->mpFolderTree->topLevelItem(i);
+            }
+        }
+        QCOMPARE(twins.size(), 2);
+        QCOMPARE(twins.at(0)->data(0, dlgTriggerEditor::FolderPartsRole).toStringList().size(), 2);
+        QCOMPARE(twins.at(1)->data(0, dlgTriggerEditor::FolderPartsRole).toStringList().size(), 1);
+    }
+
+    // Saving the item that was open sets its icon again, which must not rebuild
+    // the tree under the summary, or its buttons are replaced before a click lands
+    void test_aMergedFolderSummaryStaysPut()
+    {
+        mpEditor->slot_showFolders();
+        QTreeWidgetItem* pHit = childNamed(topLevelNamed(qsl("qaCombat")), qsl("qaHit"));
+        QVERIFY(pHit);
+        mpEditor->mpFolderTree->setCurrentItem(pHit);
+        QTest::qWait(50ms);
+        mpEditor->mpFolderTree->setCurrentItem(topLevelNamed(qsl("qaCombat")));
+        QVERIFY(!summaryButtons().isEmpty());
+        const QPointer<QPushButton> pButton = summaryButtons().constFirst();
+        QSignalSpy refreshSpy(mpEditor->mpFolderTreeRefreshTimer, &QTimer::timeout);
+        QTest::qWait(200ms);
+        QVERIFY2(refreshSpy.count() <= 1, qPrintable(qsl("the Folders view rebuilt %1 times while idle").arg(refreshSpy.count())));
+        QVERIFY2(pButton, "the summary's buttons were replaced while it sat on screen");
+    }
+
+    void test_aClickOnAnotherItemIsDelivered()
+    {
+        mpEditor->slot_showFolders();
+        QTreeWidgetItem* pCombat = topLevelNamed(qsl("qaCombat"));
+        QVERIFY(pCombat);
+        pCombat->setExpanded(true);
+        QTreeWidgetItem* pHit = childNamed(pCombat, qsl("qaHit"));
+        QVERIFY(pHit);
+        mpEditor->mpFolderTree->setCurrentItem(pHit);
+        // Offscreen windows start small enough for other widgets to cover the tree
+        mpEditor->resize(1280, 800);
+        QTest::qWait(50ms);
+        QTreeWidgetItem* pKill = childNamed(topLevelNamed(qsl("qaCombat")), qsl("qaKill"));
+        QVERIFY(pKill);
+        const QPoint centre = mpEditor->mpFolderTree->visualItemRect(pKill).center();
+        QSignalSpy clickSpy(mpEditor->mpFolderTree, &QTreeWidget::itemClicked);
+        QSignalSpy pressSpy(mpEditor->mpFolderTree, &QTreeWidget::itemPressed);
+        QTest::mousePress(mpEditor->mpFolderTree->viewport(), Qt::LeftButton, Qt::NoModifier, centre);
+        QTest::qWait(50ms);
+        QTest::mouseRelease(mpEditor->mpFolderTree->viewport(), Qt::LeftButton, Qt::NoModifier, centre);
+        QCOMPARE(pressSpy.count(), 1);
+        QCOMPARE(clickSpy.count(), 1);
+        QCOMPARE(mpEditor->mCurrentView, EditorViewType::cmAliasView);
+    }
+
+    void test_actionsAreOffWhenNoSingleItemIsChosen()
+    {
+        mpEditor->slot_showFolders();
+        QTreeWidgetItem* pHit = childNamed(topLevelNamed(qsl("qaCombat")), qsl("qaHit"));
+        QVERIFY(pHit);
+        mpEditor->mpFolderTree->setCurrentItem(pHit);
+        QAction* pCopy = nullptr;
+        for (QAction* pAction : mpEditor->mpFolderTree->actions()) {
+            if (pAction->text() == dlgTriggerEditor::tr("Copy")) {
+                pCopy = pAction;
+            }
+        }
+        QVERIFY(pCopy);
+
+        const int topLevelCount = mpEditor->mpFolderTree->topLevelItemCount();
+        mpEditor->mpFolderTree->setCurrentItem(mpEditor->mpFolderTree->topLevelItem(topLevelCount - 1));
+        QVERIFY2(!mpEditor->mDeleteItem->isEnabled(), "Delete would remove the hidden trigger behind the \"Not in a folder\" row");
+        QVERIFY(!pCopy->isEnabled());
+
+        mpEditor->mpFolderTree->setCurrentItem(topLevelNamed(qsl("qaCombat")));
+        QVERIFY(!mpEditor->mDeleteItem->isEnabled());
+        QVERIFY(!mpEditor->mSaveItem->isEnabled());
+        QVERIFY(!mpEditor->mpAction_toggleActive->isEnabled());
+        QVERIFY2(!pCopy->isEnabled(), "Copy would take the hidden item behind a merged folder");
+
+        mpEditor->mpFolderTree->setCurrentItem(pHit);
+        QVERIFY(mpEditor->mDeleteItem->isEnabled());
+        QVERIFY(pCopy->isEnabled());
+    }
+
+    void test_aSummaryThatStopsBeingMergedOpensWhatIsLeft()
+    {
+        mpEditor->slot_showFolders();
+        QTreeWidgetItem* pPair = topLevelNamed(qsl("qaPair"));
+        QVERIFY(pPair);
+        mpEditor->mpFolderTree->setCurrentItem(pPair);
+        QVERIFY(!mpEditor->mpFolderSummaryArea->isHidden());
+
+        QTreeWidgetItem* pAliasRoot = mpEditor->treeWidget_aliases->topLevelItem(0);
+        QList<QTreeWidgetItem*> aliasPair = mpEditor->treeWidget_aliases->findItems(qsl("qaPair"), Qt::MatchExactly | Qt::MatchRecursive);
+        QCOMPARE(aliasPair.size(), 1);
+        delete pAliasRoot->takeChild(pAliasRoot->indexOfChild(aliasPair.constFirst()));
+        QTRY_VERIFY(!mpEditor->mFolderTreeStale);
+
+        QVERIFY(mpEditor->mpFolderSummaryArea->isHidden());
+        QCOMPARE(mpEditor->mCurrentView, EditorViewType::cmTriggerView);
+        QVERIFY2(!mpEditor->mpTriggersMainArea->isHidden(), "the summary went away and left no form behind");
+        QCOMPARE(mpEditor->treeWidget_triggers->currentItem()->text(0), qsl("qaPair"));
+    }
+
+    // The main window's own Triggers, Aliases... buttons switch the editor's view from outside it
+    void test_aViewSwitchFromOutsideFollowsInTheFoldersView()
+    {
+        mpEditor->slot_showFolders();
+        QTreeWidgetItem* pHit = childNamed(topLevelNamed(qsl("qaCombat")), qsl("qaHit"));
+        QVERIFY(pHit);
+        mpEditor->mpFolderTree->setCurrentItem(pHit);
+        mpEditor->mpFolderTree->setCurrentItem(childNamed(topLevelNamed(qsl("qaCombat")), qsl("qaKill")));
+        QCOMPARE(mpEditor->mCurrentView, EditorViewType::cmAliasView);
+
+        mpEditor->slot_showTriggers();
+        QVERIFY(mpEditor->mFolderViewActive);
+        QVERIFY(mpEditor->mpFolderTree->currentItem());
+        QCOMPARE(mpEditor->mpFolderTree->currentItem()->text(0), qsl("qaHit"));
+    }
+
+    void test_ctrlTabCyclesFromTheFoldersView()
+    {
+        mpEditor->slot_showFolders();
+        QTreeWidgetItem* pHit = childNamed(topLevelNamed(qsl("qaCombat")), qsl("qaHit"));
+        QVERIFY(pHit);
+        mpEditor->mpFolderTree->setCurrentItem(pHit);
+        mpEditor->activateWindow();
+        QVERIFY(QTest::qWaitForWindowActive(mpEditor));
+        mpEditor->mpSourceEditorEdbee->setFocus();
+        QTRY_VERIFY(mpEditor->mpSourceEditorEdbee->hasFocus() || QApplication::focusWidget());
+        mpEditor->slot_nextSection();
+        QTRY_VERIFY2(mpEditor->mpFolderTree->hasFocus(), "Ctrl+Tab from the code went to a hidden tree");
+        mpEditor->slot_nextSection();
+        QTRY_VERIFY2(mpEditor->mpTriggersMainArea->lineEdit_trigger_name->hasFocus(), "Ctrl+Tab from the Folders view went nowhere");
     }
 
     void test_turningTheSettingOffLeavesTheFoldersView()

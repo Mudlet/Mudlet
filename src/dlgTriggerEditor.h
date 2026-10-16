@@ -153,7 +153,7 @@ class dlgTriggerEditor : public QMainWindow, private Ui::trigger_editor
         // Folders view only - the node's identity, stable across rebuilds of that tree:
         FolderKeyRole = Qt::UserRole + 7,
         // Folders view only - the "view:id" keys of the real items a node stands for;
-        // more than one when same-named folders of several item types were merged:
+        // more than one when same-named folders of different item types were merged:
         FolderPartsRole = Qt::UserRole + 8
     };
 
@@ -422,8 +422,12 @@ private:
     EditorViewType resolveCurrentView();
     void rebuildStaleTrees();
     void populateFolderTree();
-    void addFolderTreeNode(QTreeWidgetItem* pSource, const EditorViewType view, QTreeWidgetItem* pParent, QTreeWidgetItem* pLooseItems, QHash<QString, QTreeWidgetItem*>& folders);
+    void addFolderTreeNode(QTreeWidgetItem* pSource, const EditorViewType view, QTreeWidgetItem* pParent, QTreeWidgetItem* pLooseItems, QHash<QString, int>& folderCounts);
+    void refreshFolderTreeData();
     void scheduleFolderTreeRefresh();
+    void scheduleFolderTreeDataRefresh();
+    void focusItemTree(QTreeWidget* pTypeTree);
+    QTreeWidget* sectionTree(QTreeWidget* pTypeTree) const;
     void syncFolderTreeSelection(const QString& fallbackKey);
     void selectFolderTreeNode(QTreeWidgetItem* pNode);
     void slot_folderTreeItemChanged(QTreeWidgetItem* pItem);
@@ -764,12 +768,12 @@ private:
     QAction* mpViewFoldersAction = nullptr;
     // Every item type at once, grouped by folder - built from the type trees, never edited directly
     QTreeWidget* mpFolderTree = nullptr;
-    // Shown instead of an item form when a Folders view node merges folders of several item types
+    // Shown instead of an item form when a Folders view node is not one item: a merged folder or "Not in a folder"
     QWidget* mpFolderSummaryArea = nullptr;
     QLabel* mpFolderSummaryText = nullptr;
     QWidget* mpFolderSummaryButtons = nullptr;
     QTimer* mpFolderTreeRefreshTimer = nullptr;
-    // "view:id" of a real item -> the Folders view node standing for it
+    // FolderKeyRole of a folder node, or "view:id" of a real item -> its Folders view node
     QHash<QString, QTreeWidgetItem*> mFolderTreeNodes;
     QString mFolderSummaryKey;
     bool mFolderViewActive = false;
