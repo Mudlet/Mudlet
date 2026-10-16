@@ -6763,7 +6763,7 @@ void dlgTriggerEditor::refreshAliasIconsIn(QTreeWidgetItem* pParent, bool ancest
             --remaining;
         }
         const bool dirty = ancestorDirty || pending;
-        const bool touchNotification = pending ? ((pItem == mpCurrentAliasItem) && (mCurrentView == EditorViewType::cmAliasView)) : ancestorTouchNotification;
+        const bool touchNotification = pending ? ((pItem == mpCurrentAliasItem) && (mCurrentView == EditorViewType::cmAliasView) && mFolderSummaryKey.isEmpty()) : ancestorTouchNotification;
         if (dirty) {
             if (TAlias* pT = mpHost->getAliasUnit()->getAlias(id)) {
                 paintAliasItem(pItem, pT, touchNotification);
@@ -9353,7 +9353,7 @@ void dlgTriggerEditor::refreshKeyIconsIn(QTreeWidgetItem* pParent, bool ancestor
             --remaining;
         }
         const bool dirty = ancestorDirty || pending;
-        const bool touchNotification = pending ? ((pItem == mpCurrentKeyItem) && (mCurrentView == EditorViewType::cmKeysView)) : ancestorTouchNotification;
+        const bool touchNotification = pending ? ((pItem == mpCurrentKeyItem) && (mCurrentView == EditorViewType::cmKeysView) && mFolderSummaryKey.isEmpty()) : ancestorTouchNotification;
         if (dirty) {
             if (TKey* pT = mpHost->getKeyUnit()->getKey(id)) {
                 paintKeyItem(pItem, pT, touchNotification);
@@ -9683,7 +9683,7 @@ void dlgTriggerEditor::refreshScriptIconsIn(QTreeWidgetItem* pParent, bool ances
             --remaining;
         }
         const bool dirty = ancestorDirty || pending;
-        const bool touchNotification = pending ? ((pItem == mpCurrentScriptItem) && (mCurrentView == EditorViewType::cmScriptView)) : ancestorTouchNotification;
+        const bool touchNotification = pending ? ((pItem == mpCurrentScriptItem) && (mCurrentView == EditorViewType::cmScriptView) && mFolderSummaryKey.isEmpty()) : ancestorTouchNotification;
         if (dirty) {
             if (TScript* pT = mpHost->getScriptUnit()->getScript(id)) {
                 paintScriptItem(pItem, pT, touchNotification);
@@ -9867,7 +9867,7 @@ void dlgTriggerEditor::refreshTimerIconsIn(QTreeWidgetItem* pParent, bool ancest
             --remaining;
         }
         const bool dirty = ancestorDirty || pending;
-        const bool touchNotification = pending ? ((pItem == mpCurrentTimerItem) && (mCurrentView == EditorViewType::cmTimerView)) : ancestorTouchNotification;
+        const bool touchNotification = pending ? ((pItem == mpCurrentTimerItem) && (mCurrentView == EditorViewType::cmTimerView) && mFolderSummaryKey.isEmpty()) : ancestorTouchNotification;
         if (dirty) {
             if (TTimer* pT = mpHost->getTimerUnit()->getTimer(id)) {
                 paintTimerItem(pItem, pT, touchNotification);
@@ -10061,7 +10061,7 @@ void dlgTriggerEditor::refreshTriggerIconsIn(QTreeWidgetItem* pParent, bool ance
             --remaining;
         }
         const bool dirty = ancestorDirty || pending;
-        const bool touchNotification = pending ? ((pItem == mpCurrentTriggerItem) && (mCurrentView == EditorViewType::cmTriggerView)) : ancestorTouchNotification;
+        const bool touchNotification = pending ? ((pItem == mpCurrentTriggerItem) && (mCurrentView == EditorViewType::cmTriggerView) && mFolderSummaryKey.isEmpty()) : ancestorTouchNotification;
         if (dirty) {
             if (TTrigger* pT = mpHost->getTriggerUnit()->getTrigger(id)) {
                 paintTriggerItem(pItem, pT, touchNotification);
@@ -16906,6 +16906,7 @@ void dlgTriggerEditor::showFolderSummary(QTreeWidgetItem* pNode)
     mSaveItem->setEnabled(false);
     mpAction_toggleActive->setEnabled(false);
     mpExportAction->setEnabled(false);
+    mpCreateModuleAction->setEnabled(false);
     slot_updateUndoRedoButtonStates();
 
     const QStringList parts = pNode->data(0, FolderPartsRole).toStringList();
@@ -16960,6 +16961,7 @@ void dlgTriggerEditor::hideFolderSummary()
     const bool itemView = mCurrentView != EditorViewType::cmVarsView && mCurrentView != EditorViewType::cmUnknownView;
     mpAction_toggleActive->setEnabled(itemView);
     mpExportAction->setEnabled(itemView);
+    mpCreateModuleAction->setEnabled(true);
     slot_updateUndoRedoButtonStates();
 }
 

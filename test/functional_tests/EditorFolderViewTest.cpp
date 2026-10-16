@@ -727,6 +727,39 @@ private slots:
         QVERIFY2(!bannerShown, "the error of a trigger the summary hides stayed on screen");
     }
 
+    void test_aLuaToggleOfTheHiddenItemKeepsItsErrorOffASummary()
+    {
+        mpEditor->slot_showFolders();
+        QTreeWidgetItem* pBad = childNamed(topLevelNamed(qsl("qaErr")), qsl("qaBad"));
+        QVERIFY(pBad);
+        mpEditor->mpFolderTree->setCurrentItem(pBad);
+        mpEditor->mpSourceEditorEdbee->textDocument()->setText(qsl("qaBad = ("));
+        mpEditor->mpFolderTree->setCurrentItem(topLevelNamed(qsl("qaErr")));
+        QVERIFY(!mpEditor->mpFolderSummaryArea->isHidden());
+        QVERIFY(mpEditor->mpSystemMessageArea->isHidden());
+        QVERIFY(runLua(qsl("disableTrigger('qaBad')")));
+        QTest::qWait(50ms);
+        const bool bannerShown = !mpEditor->mpSystemMessageArea->isHidden();
+        QVERIFY(runLua(qsl("enableTrigger('qaBad')")));
+        mpEditor->mpFolderTree->setCurrentItem(pBad);
+        mpEditor->mpSourceEditorEdbee->textDocument()->setText(QString());
+        mpEditor->saveOpenChanges();
+        QVERIFY2(!bannerShown, "a script toggling the hidden trigger brought its error back over the summary");
+    }
+
+    void test_createModuleIsOffOnASummary()
+    {
+        mpEditor->slot_showFolders();
+        QTreeWidgetItem* pHit = childNamed(topLevelNamed(qsl("qaCombat")), qsl("qaHit"));
+        QVERIFY(pHit);
+        mpEditor->mpFolderTree->setCurrentItem(pHit);
+        mpEditor->mpFolderTree->setCurrentItem(topLevelNamed(qsl("qaCombat")));
+        QVERIFY(mpEditor->mpCurrentTriggerItem);
+        QVERIFY2(!mpEditor->mpCreateModuleAction->isEnabled(), "Create Module would preselect the trigger the summary hides");
+        mpEditor->mpFolderTree->setCurrentItem(pHit);
+        QVERIFY(mpEditor->mpCreateModuleAction->isEnabled());
+    }
+
     void test_ctrlTabOnASummaryStaysOutOfTheHiddenForm()
     {
         mpEditor->slot_showFolders();
