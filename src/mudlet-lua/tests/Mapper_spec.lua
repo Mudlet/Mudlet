@@ -5457,6 +5457,18 @@ describe("Tests the app-wide mapper options in getConfig and setConfig", functio
     assert.is_true(setConfig("showUpperLowerLevels", original))
     assert.are.equal(original, getConfig("showUpperLowerLevels"))
   end)
+
+  it("round-trips mapStitchAreas, which is on unless turned off", function()
+    local original = getConfig("mapStitchAreas")
+    finally(function() setConfig("mapStitchAreas", original) end)
+
+    assert.are.equal("boolean", type(original))
+    assert.is_true(setConfig("mapStitchAreas", false))
+    assert.is_false(getConfig("mapStitchAreas"))
+    assert.is_false(getConfig().mapStitchAreas)
+    assert.is_true(setConfig("mapStitchAreas", true))
+    assert.is_true(getConfig("mapStitchAreas"))
+  end)
 end)
 
 describe("Tests closing another profile that opened a map widget", function()
