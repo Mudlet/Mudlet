@@ -434,6 +434,8 @@ private:
     void openItemFromFolderTree(const EditorViewType view, const int id);
     void showFolderSummary(QTreeWidgetItem* pNode);
     void hideFolderSummary();
+    void collapseHiddenSelections();
+    void cycleFolderSummaryFocus();
     void leaveFolderView();
     void setFolderViewAvailable(const bool);
     bool folderItem(const EditorViewType view, const int id);

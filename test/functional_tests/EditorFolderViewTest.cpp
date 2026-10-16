@@ -26,6 +26,7 @@
 #include <QPushButton>
 #include <QTemporaryDir>
 #include <QTimer>
+#include <QToolBar>
 #include <QTreeWidget>
 #include <QtTest/QtTest>
 #include <chrono>
@@ -167,6 +168,9 @@ private slots:
             permAlias("qaGone", "", "", "")
             permSubstringTrigger("qaVanish", "", {}, "")
             permAlias("qaVanish", "", "", "")
+            permSubstringTrigger("qaErr", "", {}, "")
+            permSubstringTrigger("qaBad", "qaErr", {}, "")
+            permAlias("qaErr", "", "", "")
         )")));
 
         mudlet::self()->slot_showScriptDialog();
@@ -705,6 +709,82 @@ private slots:
         QTreeWidgetItem* pHitNode = childNamed(topLevelNamed(qsl("qaCombat")), qsl("qaHit"));
         QVERIFY(pHitNode);
         QCOMPARE(pHitNode->icon(0).cacheKey(), hits.constFirst()->icon(0).cacheKey());
+    }
+
+    void test_aSummaryHidesAnErrorInTheItemLeftBehind()
+    {
+        mpEditor->slot_showFolders();
+        QTreeWidgetItem* pBad = childNamed(topLevelNamed(qsl("qaErr")), qsl("qaBad"));
+        QVERIFY(pBad);
+        mpEditor->mpFolderTree->setCurrentItem(pBad);
+        mpEditor->mpSourceEditorEdbee->textDocument()->setText(qsl("qaBad = ("));
+        mpEditor->mpFolderTree->setCurrentItem(topLevelNamed(qsl("qaErr")));
+        QVERIFY(!mpEditor->mpFolderSummaryArea->isHidden());
+        const bool bannerShown = !mpEditor->mpSystemMessageArea->isHidden();
+        mpEditor->mpFolderTree->setCurrentItem(pBad);
+        mpEditor->mpSourceEditorEdbee->textDocument()->setText(QString());
+        mpEditor->saveOpenChanges();
+        QVERIFY2(!bannerShown, "the error of a trigger the summary hides stayed on screen");
+    }
+
+    void test_ctrlTabOnASummaryStaysOutOfTheHiddenForm()
+    {
+        mpEditor->slot_showFolders();
+        QTreeWidgetItem* pHit = childNamed(topLevelNamed(qsl("qaCombat")), qsl("qaHit"));
+        QVERIFY(pHit);
+        mpEditor->mpFolderTree->setCurrentItem(pHit);
+        mpEditor->mpFolderTree->setCurrentItem(topLevelNamed(qsl("qaCombat")));
+        QVERIFY(!mpEditor->mpFolderSummaryArea->isHidden());
+        mpEditor->activateWindow();
+        QVERIFY(QTest::qWaitForWindowActive(mpEditor));
+        auto inHiddenForm = [this]() {
+            QWidget* pFocus = QApplication::focusWidget();
+            return pFocus && (mpEditor->mpTriggersMainArea->isAncestorOf(pFocus) || mpEditor->mpSourceEditorArea->isAncestorOf(pFocus));
+        };
+        mpEditor->mpFolderTree->setFocus();
+        QTRY_VERIFY(mpEditor->mpFolderTree->hasFocus());
+        mpEditor->slot_previousSection();
+        QTest::qWait(20ms);
+        QVERIFY2(!inHiddenForm(), "Ctrl+Shift+Tab put the keyboard into the script the summary hides");
+        mpEditor->mpFolderTree->setFocus();
+        QTRY_VERIFY(mpEditor->mpFolderTree->hasFocus());
+        mpEditor->slot_nextSection();
+        QTest::qWait(20ms);
+        QVERIFY2(!inHiddenForm(), "Ctrl+Tab put the keyboard into the form the summary hides");
+        QVERIFY2(summaryButtons().constFirst()->hasFocus(), "Ctrl+Tab could not reach the summary's buttons");
+    }
+
+    void test_aNewItemDoesNotGatherTheOneBeforeIt()
+    {
+        mpEditor->slot_showFolders();
+        QTreeWidgetItem* pHit = childNamed(topLevelNamed(qsl("qaCombat")), qsl("qaHit"));
+        QVERIFY(pHit);
+        mpEditor->mpFolderTree->setCurrentItem(pHit);
+        QTest::keyPress(mpEditor->mpFolderTree, Qt::Key_Control, Qt::ControlModifier);
+        mpEditor->addTrigger(false);
+        QTest::keyRelease(mpEditor->mpFolderTree, Qt::Key_Control, Qt::ControlModifier);
+        QTRY_VERIFY(!mpEditor->mFolderTreeStale);
+        const int selected = mpEditor->treeWidget_triggers->selectedItems().size();
+        {
+            const QSignalBlocker blocker(mpEditor->treeWidget_triggers);
+            mpEditor->treeWidget_triggers->setCurrentItem(mpEditor->treeWidget_triggers->currentItem(), 0, QItemSelectionModel::ClearAndSelect);
+        }
+        QVERIFY2(selected == 1, "Delete would also remove the trigger open before Ctrl+N");
+    }
+
+    void test_theFoldersTreeOffersToRestoreAHiddenToolbar()
+    {
+        mpEditor->slot_showFolders();
+        mpEditor->toolBar2->hide();
+        QTest::qWait(20ms);
+        mpEditor->mpFolderTree->setCurrentItem(topLevelNamed(qsl("qaCombat")));
+        QVERIFY(!mpEditor->mpFolderSummaryArea->isHidden());
+        QAction* pRestore = mpEditor->mpAction_restoreEditorItemsToolbar;
+        const bool offered = mpEditor->mpFolderTree->actions().contains(pRestore) && pRestore->isVisible() && pRestore->isEnabled();
+        pRestore->setEnabled(true);
+        pRestore->trigger();
+        QTRY_VERIFY(mpEditor->toolBar2->isVisible());
+        QVERIFY2(offered, "with the Items toolbar hidden the Folders view has no way back to it");
     }
 
     void test_turningTheSettingOffLeavesTheFoldersView()

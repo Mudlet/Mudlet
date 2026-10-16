@@ -1200,6 +1200,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     treeWidget_scripts->addAction(mpAction_restoreEditorActionsToolbar);
     treeWidget_actions->addAction(mpAction_restoreEditorActionsToolbar);
     treeWidget_keys->addAction(mpAction_restoreEditorActionsToolbar);
+    mpFolderTree->addAction(mpAction_restoreEditorActionsToolbar);
 
     treeWidget_triggers->addAction(mpAction_restoreEditorItemsToolbar);
     treeWidget_aliases->addAction(mpAction_restoreEditorItemsToolbar);
@@ -1207,6 +1208,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     treeWidget_scripts->addAction(mpAction_restoreEditorItemsToolbar);
     treeWidget_actions->addAction(mpAction_restoreEditorItemsToolbar);
     treeWidget_keys->addAction(mpAction_restoreEditorItemsToolbar);
+    mpFolderTree->addAction(mpAction_restoreEditorItemsToolbar);
 
     // These only have to be shown should the associated toolbar get hidden
     // and by default the starting state for those is a visible one so these
@@ -11737,6 +11739,11 @@ void dlgTriggerEditor::slot_toggleCentralDebugConsole()
 
 void dlgTriggerEditor::slot_nextSection()
 {
+    // Hidden widgets still take focus, and typing there would edit the item the summary hides
+    if (!mFolderSummaryKey.isEmpty()) {
+        cycleFolderSummaryFocus();
+        return;
+    }
     switch (mCurrentView) {
     case EditorViewType::cmTriggerView:
         if (qsl("edbee::TextEditorComponent").compare(QApplication::focusWidget()->metaObject()->className()) == 0) {
@@ -11867,6 +11874,10 @@ void dlgTriggerEditor::slot_nextSection()
 
 void dlgTriggerEditor::slot_previousSection()
 {
+    if (!mFolderSummaryKey.isEmpty()) {
+        cycleFolderSummaryFocus();
+        return;
+    }
     switch (mCurrentView) {
     case EditorViewType::cmTriggerView:
         if (QString("edbee::TextEditorComponent").compare(QApplication::focusWidget()->metaObject()->className()) == 0) {
@@ -16791,6 +16802,7 @@ void dlgTriggerEditor::selectFolderTreeNode(QTreeWidgetItem* pNode)
 
 void dlgTriggerEditor::syncFolderTreeSelection(const QString& fallbackKey)
 {
+    collapseHiddenSelections();
     if (!mFolderSummaryKey.isEmpty()) {
         QTreeWidgetItem* pSummaryNode = mFolderTreeNodes.value(mFolderSummaryKey);
         if (pSummaryNode && pSummaryNode->data(0, FolderPartsRole).toStringList().size() == 1) {
@@ -16871,6 +16883,7 @@ void dlgTriggerEditor::showFolderSummary(QTreeWidgetItem* pNode)
     // Moving between summaries leaves nothing new to save
     if (mFolderSummaryKey.isEmpty()) {
         saveOpenChanges();
+        clearEditorNotification();
     }
     mFolderSummaryKey = pNode->data(0, FolderKeyRole).toString();
 
@@ -16886,7 +16899,9 @@ void dlgTriggerEditor::showFolderSummary(QTreeWidgetItem* pNode)
 
     // The item the type tree still has selected is hidden, so nothing may act on it
     for (QAction* pAction : mpFolderTree->actions()) {
-        pAction->setEnabled(false);
+        if (pAction != mpAction_restoreEditorActionsToolbar && pAction != mpAction_restoreEditorItemsToolbar) {
+            pAction->setEnabled(false);
+        }
     }
     mSaveItem->setEnabled(false);
     mpAction_toggleActive->setEnabled(false);
@@ -16975,7 +16990,13 @@ void dlgTriggerEditor::slot_showFolders()
     if (mFolderTreeStale) {
         populateFolderTree();
     }
-    // The Folders view shows one item at a time, so a selection made in a type tree must not linger for Delete or Copy
+    collapseHiddenSelections();
+    showView(mCurrentView);
+}
+
+void dlgTriggerEditor::collapseHiddenSelections()
+{
+    // The Folders view shows one item at a time, so a selection made in a type tree, or by an add with Ctrl held, must not linger for Delete or Copy
     for (const auto view :
          {EditorViewType::cmTriggerView, EditorViewType::cmAliasView, EditorViewType::cmScriptView, EditorViewType::cmTimerView, EditorViewType::cmKeysView, EditorViewType::cmActionView}) {
         QTreeWidget* pTree = treeForView(view);
@@ -16984,7 +17005,16 @@ void dlgTriggerEditor::slot_showFolders()
             pTree->setCurrentItem(pTree->currentItem(), 0, QItemSelectionModel::ClearAndSelect);
         }
     }
-    showView(mCurrentView);
+}
+
+void dlgTriggerEditor::cycleFolderSummaryFocus()
+{
+    const QList<QPushButton*> buttons = mpFolderSummaryButtons->findChildren<QPushButton*>(Qt::FindDirectChildrenOnly);
+    if (mpFolderTree->hasFocus() && !buttons.isEmpty()) {
+        buttons.constFirst()->setFocus();
+    } else {
+        mpFolderTree->setFocus();
+    }
 }
 
 void dlgTriggerEditor::setFolderViewAvailable(const bool available)
