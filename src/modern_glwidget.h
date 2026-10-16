@@ -51,9 +51,12 @@
 #include "LabelTextureCache.h"
 #include "RenderCommandQueue.h"
 #include "ResourceManager.h"
+#include "RetainedMapScene.h"
 #include "ShaderManager.h"
 #include "CameraController.h"
 
+#include <array>
+#include <functional>
 #include <optional>
 
 class Host;
@@ -75,6 +78,7 @@ class ModernGLWidget : public QOpenGLWidget, protected QOpenGLFunctions
     friend class ModernRoomTextureTest;
     friend class Map3DViewInteractionTest;
     friend class ModernMapperRenderTest;
+    friend class ModernMapperSceneTest;
 
 public:
     Q_DISABLE_COPY(ModernGLWidget)
@@ -324,11 +328,49 @@ private:
     // to draw with their levels' rooms, lowest level first
     struct LevelExits
     {
-        QVector<CubeInstanceData> bars;
+        QList<InstanceRun> bars;
         QVector<float> vertices;
         QVector<float> colors;
     };
     QMap<int, LevelExits> mSeeThroughExits;
+    // Everything the kept scene's rooms and exits were made from; when any of it differs, the scene is made again.
+    // A map style drawing rooms its own way would add itself here, and its rooms' blocks to the scene
+    struct SceneInputs
+    {
+        int areaId = 0;
+        quint64 mapRevision = 0;
+        quint64 exitsRevision = 0;
+        quint32 roomsVersion = 0;
+        quint64 appearanceRevision = 0;
+        int centerZ = 0;
+        int levelsAbove = 0;
+        int levelsBelow = 0;
+        float scale = 0.0f;
+        float zFlattening = 0.0f;
+        bool gridMode = false;
+        bool showBorders = false;
+        double borderSize = 0.0;
+        double lineSize = 0.0;
+        bool moreTransparent = false;
+        bool drawUpperLowerLevels = false;
+        bool inOutStubs = false;
+        bool largeAreaExitArrows = false;
+        QColor borderColor;
+        QColor background;
+        QColor foreground;
+        QColor upperLevelColor;
+        QColor lowerLevelColor;
+        std::array<QColor, 16> hostColors;
+        QMap<int, int> envColors;
+        QMap<int, QColor> customEnvColors;
+        bool operator==(const SceneInputs&) const = default;
+    };
+    std::optional<SceneInputs> mSceneInputs;
+    RetainedMapScene mScene;
+    int mSceneMaxRoomId = 0;
+    // Rooms whose blocks are drawn narrower than this many pixels, in tiles of the scene so far away, are drawn
+    // without what is on them; such marks would be a pixel or less across
+    float mDetailPixels = 3.0f;
     // The rooms whose IDs the last room pass drew: those too small to read, or overlapping one kept before them
     // (the viewed level's first, then the nearest), are left out
     QSet<int> mRoomIdsDrawn;
@@ -337,6 +379,11 @@ private:
     void updateMatrices();
     void renderRooms();
     void renderConnections();
+    SceneInputs sceneInputs() const;
+    // Makes the kept scene again if anything it was made from changed, then sees what of it this frame shows
+    void refreshScene();
+    // The blocks drawn for a room: its border, its outline, then the room itself, each with the layer it is drawn in
+    void addRoomCubes(const TRoom& room, bool hovered, bool solidRed, const std::function<void(RetainedMapScene::Layer, const CubeInstanceData&)>& add) const;
     // The 2D map's grid, at the viewed level's room bottoms, writing no depth
     void queueGrid();
     // Map labels lie flat at their place on the map; those shown on top over the rooms, the others under the exits

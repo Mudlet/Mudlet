@@ -543,8 +543,15 @@ private slots:
         const QSet<int> apart = widget.mRoomIdsDrawn;
         const bool symbolWithAnId = symbolDrawn(qsl("A")) || symbolDrawn(qsl("B"));
 
-        widget.mCameraController.setScale(CameraController::scmMaxDistance);
-        widget.updateMatrices();
+        // Too small for an ID to be read, not yet so small that nothing on a room is drawn
+        const auto roomPixels = [&widget]() {
+            return 0.5f / widget.mCameraController.worldUnitsPerPixel(QVector3D(0.0f, 0.0f, 0.0f));
+        };
+        while (roomPixels() > 5.0f && widget.mCameraController.getScale() < CameraController::scmMaxDistance) {
+            widget.mCameraController.setScale(widget.mCameraController.getScale() * 1.25f);
+            widget.updateMatrices();
+        }
+        QVERIFY2(roomPixels() <= 5.0f, qPrintable(qsl("rooms are still %1 pixels across at the furthest the camera goes").arg(roomPixels())));
         widget.renderRooms();
         const QSet<int> tooSmall = widget.mRoomIdsDrawn;
         const bool symbolsWithoutIds = symbolDrawn(qsl("A")) && symbolDrawn(qsl("B"));

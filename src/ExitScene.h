@@ -72,6 +72,8 @@ struct Triangle
     QVector3D c;
     QColor color;
     int level = 0;
+    // Sized to stay readable when the rooms are too small to see, so drawn at any distance
+    bool distant = false;
 };
 
 // An area exit's arrow, from its room's center to its tip, for clicking through to destinationId
