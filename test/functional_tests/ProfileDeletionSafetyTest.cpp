@@ -275,8 +275,7 @@ private slots:
         dlg->auto_reconnect->setChecked(true);
         dlg->mud_description_textedit->setPlainText(qsl("a game to try later"));
 
-        // refilling the form by selecting the profile writes through the same
-        // field signals, so the selection path is covered as well
+        // showing the profile again must not add a file of its own either
         selectProfile(dlg, unplayed);
 
         const QStringList written = QDir(profilePath(unplayed)).entryList(QDir::Files | QDir::Hidden);

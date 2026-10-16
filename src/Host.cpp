@@ -596,7 +596,10 @@ bool Host::loadProfileSave(const QString& saveFileName)
     if (it != TGameDetails::scmDefaultGames.end()) {
         setUrl((*it).hostUrl);
         setPort((*it).port);
-        mSslTsl = (*it).tlsEnabled;
+        // A saved Secure choice is the player's own, which the connection dialog keeps over the catalog's too
+        if (MudletApp::readProfileData(profileName, qsl("ssl_tsl")).isEmpty()) {
+            mSslTsl = (*it).tlsEnabled;
+        }
     }
 
     const QString folder = MudletApp::getMudletPath(enums::profileXmlFilesPath, profileName);

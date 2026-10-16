@@ -6558,6 +6558,15 @@ QString mudlet::findMatchingProfile(const QString& host, int port)
     for (const auto& profileName : std::as_const(profileNames)) {
         QString profileHost = MudletApp::readProfileData(profileName, qsl("url"));
         QString profilePort = MudletApp::readProfileData(profileName, qsl("port"));
+        // A catalog game's folder can lack either file, as showing the game in the connection dialog writes neither
+        if (auto it = TGameDetails::findGame(profileName); it != TGameDetails::scmDefaultGames.end() && QFileInfo::exists(MudletApp::getMudletPath(enums::profileHomePath, profileName))) {
+            if (profileHost.isEmpty()) {
+                profileHost = (*it).hostUrl;
+            }
+            if (profilePort.isEmpty()) {
+                profilePort = QString::number((*it).port);
+            }
+        }
 
         if (!profileHost.compare(host, Qt::CaseInsensitive) && profilePort.toInt() == port) {
             QString profilePath = MudletApp::getMudletPath(enums::profileHomePath, profileName);
