@@ -38,6 +38,7 @@
 #include <QSignalSpy>
 #include <QTemporaryDir>
 #include <QLineEdit>
+#include <QListWidget>
 #include <QToolTip>
 #include <QtMath>
 #include <QtTest/QtTest>
@@ -934,6 +935,88 @@ private slots:
         other.ignore();
         QCoreApplication::sendEvent(pModern, &other);
         QVERIFY(!other.isAccepted());
+
+        // Typing into the map's search box, the box keeps them
+        QVERIFY(activate(pModern->window()));
+        pModern->openSearch();
+        auto* pSearchBox = pModern->findChild<QLineEdit*>();
+        QVERIFY(pSearchBox);
+        QTRY_VERIFY(pSearchBox->hasFocus());
+        QKeyEvent searching(QEvent::ShortcutOverride, Qt::Key_Tab, Qt::ControlModifier);
+        searching.ignore();
+        QCoreApplication::sendEvent(pSearchBox, &searching);
+        QVERIFY(!searching.isAccepted());
+        QTest::keyClick(pSearchBox, Qt::Key_Escape);
+        QVERIFY(!pSearchBox->isVisible());
+    }
+
+    void test_aSingleClickOnASearchResultFliesThere()
+    {
+        ModernGLWidget* pModern = viewAtThePlayer();
+        QVERIFY(pModern);
+        const auto refocus = qScopeGuard([this]() {
+            mpHost->mainConsoleView()->mpCommandLine->setFocus(Qt::OtherFocusReason);
+        });
+        QVERIFY(activate(pModern->window()));
+        pModern->openSearch();
+        auto* pSearchBox = pModern->findChild<QLineEdit*>();
+        QVERIFY(pSearchBox);
+        int otherRoomId = 0;
+        for (const int roomId : map()->mpRoomDB->getRoomIDList()) {
+            if (roomId != kPlayerRoomId && map()->mpRoomDB->getRoom(roomId)->getArea() == pModern->mAID) {
+                otherRoomId = roomId;
+                break;
+            }
+        }
+        QVERIFY(otherRoomId);
+        pSearchBox->setText(QString::number(otherRoomId));
+        auto* pList = pModern->findChild<QListWidget*>();
+        QVERIFY(pList);
+        QTRY_VERIFY(pList->isVisible() && pList->count() > 0);
+        QTest::mouseClick(pList->viewport(), Qt::LeftButton, Qt::NoModifier, pList->visualItemRect(pList->item(0)).center());
+        QVERIFY2(pModern->mFlight, "a single click on a place found did not fly there");
+        QTest::keyClick(pSearchBox, Qt::Key_Escape);
+    }
+
+    // Ctrl+F is the console's after a click, which leaves the keys to the command line, and a Key bound to it wins
+    // even with the view's own keys from Tab
+    void test_ctrlFSearchesTheMapOnlyWithTheViewsOwnKeys()
+    {
+        ModernGLWidget* pModern = viewAtThePlayer();
+        QVERIFY(pModern);
+        const auto searchShown = [pModern]() {
+            const auto* pSearchBox = pModern->findChild<QLineEdit*>();
+            return pSearchBox && pSearchBox->isVisible();
+        };
+        QLineEdit* pConsoleSearch = mpHost->mainConsoleView()->mpBufferSearchBox;
+        const auto refocus = qScopeGuard([this]() {
+            mpHost->mainConsoleView()->mpCommandLine->setFocus(Qt::OtherFocusReason);
+        });
+        QVERIFY(activate(pModern->window()));
+        QTest::mouseClick(pModern, Qt::LeftButton, Qt::NoModifier, pixelOfRoom(pModern, kPlayerRoomId));
+        QTRY_VERIFY(pModern->hasFocus());
+        QTest::keyClick(static_cast<QWidget*>(nullptr), Qt::Key_F, Qt::ControlModifier);
+        QCoreApplication::processEvents();
+        QVERIFY(!searchShown());
+        QTRY_VERIFY2(pConsoleSearch->hasFocus(), qPrintable(QDebug::toString(QApplication::focusWidget())));
+
+        QVERIFY(focusFromTheKeyboard(pModern));
+        QTest::keyClick(static_cast<QWidget*>(nullptr), Qt::Key_F, Qt::ControlModifier);
+        QVERIFY(searchShown());
+        QTest::keyClick(static_cast<QWidget*>(nullptr), Qt::Key_Escape);
+        QVERIFY(!searchShown());
+
+        QCOMPARE(runLua(qsl("findKeyRan = 0\n"
+                            "findKey = tempKey(mudlet.keymodifier.Control, mudlet.key.F, function() findKeyRan = findKeyRan + 1 end)")),
+                 QString());
+        const auto restore = qScopeGuard([this]() {
+            runLua(qsl("killKey(findKey)"));
+        });
+        QVERIFY(focusFromTheKeyboard(pModern));
+        QTest::keyClick(static_cast<QWidget*>(nullptr), Qt::Key_F, Qt::ControlModifier);
+        QCoreApplication::processEvents();
+        QVERIFY(!searchShown());
+        QCOMPARE(luaGlobalNumber("findKeyRan"), 1);
     }
 
     // Hiding the focused view hands focus on to the next widget in its window, which in a floating map is one of

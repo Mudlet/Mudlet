@@ -51,6 +51,7 @@
 #include "LabelTextureCache.h"
 #include "MapAtlas.h"
 #include "MapRoute.h"
+#include "MapSearch.h"
 #include "MapStitch.h"
 #include "RenderCommandQueue.h"
 #include "ResourceManager.h"
@@ -63,6 +64,7 @@
 #include <optional>
 
 class Host;
+class MapSearchPanel;
 class QFontMetricsF;
 class QLabel;
 class QPainter;
@@ -150,6 +152,10 @@ public:
     QString planRouteToArea(int areaId);
     void clearRoute();
     const MapRoute& route() const { return mRoute; }
+    // Opens the search box over the view, which searches every area of the map
+    void openSearch();
+    // Flies the view to a place the search found, switching area as needed, and marks a room found for a while
+    void goToSearchResult(const MapSearch::Result& result);
 
     QSize minimumSizeHint() const override;
     QSize sizeHint() const override;
@@ -462,6 +468,13 @@ private:
     QTimer* mRouteRefreshTimer = nullptr;
     QElapsedTimer mRouteGraphBuilt;
     qint64 mRouteGraphBuildMs = 0;
+    MapSearch mSearch;
+    MapSearchPanel* mpSearchPanel = nullptr;
+    QList<MapSearch::Result> mSearchResults;
+    // The room a search went to, marked until the time is up
+    int mSearchMarkedRoomId = 0;
+    QElapsedTimer mSearchMarkTime;
+    QTimer* mSearchMarkTimer = nullptr;
     RetainedMapScene mScene;
     int mSceneMaxRoomId = 0;
     // Rooms whose blocks are drawn narrower than this many pixels, in tiles of the scene so far away, are drawn
@@ -527,6 +540,19 @@ private:
     QString areaName(int areaId) const;
     // A flight into the area, begun from where flight.from is
     void startFlight(int areaId, const Flight& flight);
+    // How far from the area a view coming into it looks from: as it last did, or else as its 2D zoom shows it
+    float arrivalDistance(int areaId) const;
+    // A flight to this point of the area, from wherever the view is now, coming no further out than distance
+    void flyToPoint(int areaId, const QVector3D& point, float distance);
+    bool searchKeyed(const QKeyEvent* event) const;
+    void runSearch();
+    void chooseSearchResult(int row, bool planRoute);
+    // A room or area still on the map, and not where the player already is
+    bool routableSearchResult(const MapSearch::Result& result) const;
+    void showSearchResultMenu(int row, const QPoint& globalPosition);
+    QString searchResultLine(const MapSearch::Result& result) const;
+    void placeSearchPanel();
+    void queueSearchMark();
     // The blocks drawn for a room: its border, its outline, then the room itself, each with the layer it is drawn in
     void addRoomCubes(const TRoom& room, bool hovered, bool solidRed, const std::function<void(RetainedMapScene::Layer, const CubeInstanceData&)>& add) const;
     // The 2D map's grid, at the viewed level's room bottoms, writing no depth

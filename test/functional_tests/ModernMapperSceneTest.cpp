@@ -33,6 +33,7 @@
  *     rooms in five areas over several levels, at several zooms;
  *   MUDLET_BENCH_3D_FRAMES=<dir> saves frames of an ordinary map and of the big
  *     one as PNGs, so two builds' frames can be compared pixel for pixel.
+ * With MUDLET_BENCH_3D=1 a third prints METRIC lines for searching the big map.
  * MUDLET_BENCH_3D_STITCH=0 turns neighboring areas off for both, and
  * MUDLET_BENCH_3D_LINKS=1 joins the big map's first suburb beside its metropolis.
  */
@@ -42,6 +43,8 @@
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QLineEdit>
+#include <QListWidget>
 #include <QOpenGLContext>
 #include <QPainter>
 #include <QTemporaryDir>
@@ -53,6 +56,8 @@
 #include "MudletInstanceCoordinator.h"
 #include "RenderCommand.h"
 #include "MapRoute.h"
+#include "MapSearch.h"
+#include "MapSearchPanel.h"
 #include "RetainedMapScene.h"
 #include "RoomAppearance.h"
 #include "TArea.h"
@@ -65,6 +70,30 @@
 #include "mudlet.h"
 
 #include "GroupedTest.h"
+
+// Counts the events of one type that reach the object it watches
+class EventCounter : public QObject
+{
+public:
+    EventCounter(QObject* watched, QEvent::Type type)
+    : mType(type)
+    {
+        watched->installEventFilter(this);
+    }
+    int count = 0;
+
+protected:
+    bool eventFilter(QObject*, QEvent* event) override
+    {
+        if (event->type() == mType) {
+            ++count;
+        }
+        return false;
+    }
+
+private:
+    QEvent::Type mType;
+};
 
 class ModernMapperSceneTest : public QObject
 {
@@ -460,6 +489,19 @@ private:
         QMouseEvent release(QEvent::MouseButtonRelease, QPointF(position), widget.mapToGlobal(QPointF(position)), Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
         widget.mouseReleaseEvent(&release);
     }
+
+    // The names of what a search found, best first
+    static QStringList foundNames(const QList<MapSearch::Result>& results)
+    {
+        QStringList names;
+        for (const MapSearch::Result& result : results) {
+            names.append(result.name);
+        }
+        return names;
+    }
+
+    // The search's mark around a room, whose bars are a third as tall as a room
+    static QList<DrawnCube> drawnSearchMark(const ModernGLWidget& widget) { return drawnCubes(widget, 1.0f / 96.0f); }
 
 private slots:
     void initTestCase()
@@ -1603,6 +1645,315 @@ private slots:
         queueFrameAt(widget, map()->mpRoomDB->getRoom(1)->getArea(), 2.0f, QPoint(-8, -8));
         QVERIFY(widget.portalCards().isEmpty());
         mpHost->mMapperStitchAreas = true;
+    }
+
+    void test_theSearchRanksExactThenPrefixThenSubstringWithoutGL()
+    {
+        const auto [westId, eastId] = addTwoAreas(4);
+        const int eastFirst = 1 + 4 * 4;
+        TRoomDB& roomDB = *map()->mpRoomDB;
+        roomDB.getRoom(1)->name = qsl("Old Bakery");
+        roomDB.getRoom(2)->name = qsl("Bakery");
+        roomDB.getRoom(3)->name = qsl("Bakery Lane");
+        roomDB.getRoom(eastFirst)->name = qsl("Bakery");
+        roomDB.getRoom(eastFirst + 1)->name = qsl("Bakery Lane");
+        roomDB.getRoom(eastFirst + 2)->name = qsl("Old Bakery");
+        map()->setUnsaved(__func__);
+        MapSearch search;
+        QVERIFY(search.refresh(*map()));
+        QVERIFY(!search.refresh(*map()));
+
+        // Exact, then prefix, then substring, ignoring case; among those as good, the area the view shows first
+        QList<MapSearch::Result> found = search.find(qsl("bAKERY"), eastId, true);
+        QCOMPARE(foundNames(found), (QStringList{qsl("Bakery"), qsl("Bakery"), qsl("Bakery Lane"), qsl("Bakery Lane"), qsl("Old Bakery"), qsl("Old Bakery")}));
+        QCOMPARE(found.at(0).id, eastFirst);
+        QCOMPARE(found.at(0).areaId, eastId);
+        QCOMPARE(found.at(0).match, MapSearch::Match::Exact);
+        QCOMPARE(found.at(1).id, 2);
+        QCOMPARE(found.at(2).id, eastFirst + 1);
+        QCOMPARE(found.at(2).match, MapSearch::Match::Prefix);
+        QCOMPARE(found.at(4).id, eastFirst + 2);
+        QCOMPARE(found.at(4).match, MapSearch::Match::Substring);
+        found = search.find(qsl("bakery"), westId, true);
+        QCOMPARE(found.at(0).id, 2);
+        QCOMPARE(found.at(1).id, eastFirst);
+        QCOMPARE(found.at(4).id, 1);
+
+        // Areas by name, ahead of rooms as good a match in the same area
+        roomDB.getRoom(4)->name = qsl("Westmarch Gate");
+        map()->setUnsaved(__func__);
+        search.refresh(*map());
+        found = search.find(qsl("westmarch"), eastId, true);
+        QCOMPARE(found.size(), 2);
+        QCOMPARE(found.at(0).kind, MapSearch::Kind::Area);
+        QCOMPARE(found.at(0).id, westId);
+        QCOMPARE(found.at(1).id, 4);
+
+        // A room by its ID, named or not, comes first; others with the digits in their names follow
+        roomDB.getRoom(5)->name = qsl("Room 12 annex");
+        map()->setUnsaved(__func__);
+        search.refresh(*map());
+        found = search.find(qsl("12"), westId, true);
+        QCOMPARE(found.size(), 2);
+        QCOMPARE(found.at(0).kind, MapSearch::Kind::Room);
+        QCOMPARE(found.at(0).id, 12);
+        QCOMPARE(found.at(0).match, MapSearch::Match::Exact);
+        QCOMPARE(found.at(1).id, 5);
+
+        // Labels only when asked for, and at most as many as the limit, with how many there were in all
+        TMapLabel label;
+        label.text = qsl("Bakery district");
+        label.pos = QVector3D(1.0f, 2.0f, 0.0f);
+        label.size = QSizeF(4.0, 2.0);
+        TArea* pEast = roomDB.getArea(eastId);
+        const int labelId = pEast->createLabelId();
+        pEast->mMapLabels.insert(labelId, label);
+        map()->setUnsaved(__func__);
+        search.refresh(*map());
+        QCOMPARE(search.find(qsl("bakery"), westId, false).size(), 6);
+        found = search.find(qsl("bakery"), westId, true);
+        QCOMPARE(found.size(), 7);
+        QCOMPARE(found.at(4).kind, MapSearch::Kind::Label);
+        QCOMPARE(found.at(4).id, labelId);
+        qsizetype total = 0;
+        QCOMPARE(search.find(qsl("bakery"), westId, true, 3, &total).size(), 3);
+        QCOMPARE(total, 7);
+        QVERIFY(search.find(qsl("   "), westId, true).isEmpty());
+        QVERIFY(search.find(qsl("nowhere"), westId, true).isEmpty());
+    }
+
+    void test_theSearchIndexIsMadeAgainOnceTheMapChangesWithoutGL()
+    {
+        addTwoAreas(4);
+        MapSearch search;
+        search.refresh(*map());
+        QVERIFY(search.find(qsl("Cellar"), 0, true).isEmpty());
+
+        TRoom* pRoom = map()->mpRoomDB->getRoom(7);
+        pRoom->name = qsl("Cellar");
+        map()->setUnsaved(__func__);
+        QVERIFY(search.stale(*map()));
+        QVERIFY(search.refresh(*map()));
+        QCOMPARE(search.find(qsl("Cellar"), 0, true).value(0).id, 7);
+
+        map()->mpRoomDB->removeRoom(7);
+        map()->setUnsaved(__func__);
+        search.refresh(*map());
+        QVERIFY(search.find(qsl("Cellar"), 0, true).isEmpty());
+
+        // Hidden rooms are not given away
+        map()->mpRoomDB->getRoom(9)->name = qsl("Secret Cellar");
+        map()->mpRoomDB->getRoom(9)->setHidden(true);
+        search.refresh(*map());
+        QVERIFY(search.find(qsl("Cellar"), 0, true).isEmpty());
+        QVERIFY(search.find(qsl("9"), 0, true).isEmpty());
+        map()->mpRoomDB->getRoom(9)->setHidden(false);
+        search.refresh(*map());
+        QCOMPARE(search.find(qsl("Cellar"), 0, true).value(0).id, 9);
+        // Nor an area all of whose rooms are hidden, which would be flown to only to show nothing
+        const int hiddenAreaId = map()->mpRoomDB->getRoom(1)->getArea();
+        const QString hiddenAreaName = map()->mpRoomDB->getAreaNamesMap().value(hiddenAreaId);
+        QVERIFY(!search.find(hiddenAreaName, 0, true).isEmpty());
+        for (const int roomId : map()->mpRoomDB->getArea(hiddenAreaId)->getAreaRooms()) {
+            map()->mpRoomDB->getRoom(roomId)->setHidden(true);
+        }
+        search.refresh(*map());
+        QVERIFY(search.find(hiddenAreaName, 0, true).isEmpty());
+        for (const int roomId : map()->mpRoomDB->getArea(hiddenAreaId)->getAreaRooms()) {
+            map()->mpRoomDB->getRoom(roomId)->setHidden(false);
+        }
+        map()->mpRoomDB->getRoom(9)->name.clear();
+        map()->setUnsaved(__func__);
+
+        // Spaces count once, wherever they are
+        map()->mpRoomDB->getRoom(8)->name = qsl(" Wine  Cellar ");
+        map()->setUnsaved(__func__);
+        search.refresh(*map());
+        QCOMPARE(search.find(qsl("wine cellar"), 0, true).value(0).match, MapSearch::Match::Exact);
+        QCOMPARE(search.find(qsl("wine cellar"), 0, true).value(0).name, qsl("Wine Cellar"));
+        map()->mpRoomDB->getRoom(8)->name.clear();
+        map()->setUnsaved(__func__);
+        search.refresh(*map());
+
+        // Not made again for what changes only how the map looks, which scripts do all the time
+        map()->updateArea(map()->mpRoomDB->getRoom(1)->getArea());
+        QVERIFY(!search.stale(*map()));
+
+        // A label made for this session only, which bumps only how the area looks, as does taking it away
+        const int areaId = map()->mpRoomDB->getRoom(1)->getArea();
+        TArea* pArea = map()->mpRoomDB->getArea(areaId);
+        TMapLabel label;
+        label.text = qsl("Cellar door");
+        label.temporary = true;
+        const int labelId = pArea->createLabelId();
+        pArea->mMapLabels.insert(labelId, label);
+        map()->updateArea(areaId);
+        search.refresh(*map());
+        QCOMPARE(search.find(qsl("Cellar"), 0, true).size(), 1);
+        map()->deleteMapLabel(areaId, labelId);
+        map()->updateArea(areaId);
+        search.refresh(*map());
+        QVERIFY(search.find(qsl("Cellar"), 0, true).isEmpty());
+
+        // Another map read in starts again, even with the same revisions
+        addTwoAreas(4);
+        map()->mpRoomDB->getRoom(3)->name = qsl("Cellar");
+        search.refresh(*map());
+        QCOMPARE(search.find(qsl("Cellar"), 0, true).value(0).id, 3);
+    }
+
+    void test_aPlaceFoundIsFlownToAndMarkedWithoutGL()
+    {
+        const auto [westId, eastId] = addTwoAreas(6);
+        const int target = 1 + 6 * 6 + 14;
+        map()->mpRoomDB->getRoom(target)->name = qsl("Lighthouse");
+        map()->mpRoomDB->getRoom(3)->name = qsl("Lighthouse Keeper's Cottage");
+        map()->setUnsaved(__func__);
+        ModernGLWidget widget(map(), mpHost);
+        QSignalSpy flownInto(&widget, &ModernGLWidget::areaFlownInto);
+        queueFrame(widget, westId, 1.5f);
+        QVERIFY(!widget.mpSearchPanel);
+
+        // Ctrl+F on the view, with its keys its own, opens the search
+        widget.mKeysNavigate = true;
+        QKeyEvent find(QEvent::KeyPress, Qt::Key_F, Qt::ControlModifier);
+        widget.keyPressEvent(&find);
+        QVERIFY(widget.mpSearchPanel);
+        QVERIFY(!widget.mpSearchPanel->isHidden());
+        widget.mpSearchPanel->mpEdit->setText(qsl("lighthouse"));
+        QCOMPARE(widget.mSearchResults.size(), 2);
+        QCOMPARE(widget.mSearchResults.at(0).id, target);
+        QCOMPARE(widget.mpSearchPanel->mpList->count(), 2);
+        QCOMPARE(widget.mpSearchPanel->mpList->item(0)->text(), qsl("Lighthouse in Eastvale (room %1)").arg(target));
+        QCOMPARE(widget.mpSearchPanel->currentRow(), 0);
+
+        // Keys the box leaves, and the mouse over the panel, stay with it rather than reaching the map under it
+        EventCounter keysToView(&widget, QEvent::KeyPress);
+        QKeyEvent shift(QEvent::KeyPress, Qt::Key_Shift, Qt::ShiftModifier);
+        QCoreApplication::sendEvent(widget.mpSearchPanel->mpEdit, &shift);
+        QCOMPARE(keysToView.count, 0);
+        EventCounter pressesToView(&widget, QEvent::MouseButtonPress);
+        QMouseEvent press(QEvent::MouseButtonPress, QPointF(2.0, 2.0), QPointF(2.0, 2.0), Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+        QCoreApplication::sendEvent(widget.mpSearchPanel, &press);
+        QCOMPARE(pressesToView.count, 0);
+        EventCounter tooltipsToView(&widget, QEvent::ToolTip);
+        QHelpEvent tooltip(QEvent::ToolTip, QPoint(2, 2), widget.mapToGlobal(QPoint(2, 2)));
+        QCoreApplication::sendEvent(widget.mpSearchPanel->mpList->viewport(), &tooltip);
+        QCOMPARE(tooltipsToView.count, 0);
+
+        // Enter flies to the first, in the other area, and the area lists follow
+        QKeyEvent enter(QEvent::KeyPress, Qt::Key_Return, Qt::NoModifier);
+        QCoreApplication::sendEvent(widget.mpSearchPanel->mpEdit, &enter);
+        QCOMPARE(widget.mAID, eastId);
+        QVERIFY(widget.mFlight);
+        QCOMPARE(flownInto.size(), 1);
+        QCOMPARE(flownInto.first().first().toInt(), eastId);
+        finishFlight(widget);
+        const TRoom* pTarget = map()->mpRoomDB->getRoom(target);
+        QCOMPARE(widget.mCameraController.getTarget(), QVector3D(pTarget->x(), pTarget->y(), pTarget->z()));
+        QCOMPARE(QPoint(widget.mMapCenterX, widget.mMapCenterY), QPoint(pTarget->x(), pTarget->y()));
+        QVERIFY(widget.mCameraController.getScale() <= 1.5f);
+
+        // Marked for a while, around that room only
+        QCOMPARE(widget.mSearchMarkedRoomId, target);
+        widget.updateMatrices();
+        widget.mRenderCommandQueue.clear();
+        widget.queueScene();
+        QList<DrawnCube> mark = drawnSearchMark(widget);
+        QCOMPARE(mark.size(), 8);
+        for (const DrawnCube& bar : mark) {
+            QVERIFY(qAbs(bar.center.x() - pTarget->x()) <= 0.5f && qAbs(bar.center.y() - pTarget->y()) <= 0.5f);
+        }
+        QTRY_COMPARE_WITH_TIMEOUT(widget.mSearchMarkedRoomId, 0, 5000);
+        QVERIFY(!widget.mSearchMarkTimer->isActive());
+        widget.mRenderCommandQueue.clear();
+        widget.queueScene();
+        QVERIFY(drawnSearchMark(widget).isEmpty());
+
+        // Ctrl+Enter plans a route there rather than going
+        map()->mRoomIdHash[map()->mProfileName] = 1;
+        widget.mpSearchPanel->mpList->setCurrentRow(1);
+        QKeyEvent plan(QEvent::KeyPress, Qt::Key_Return, Qt::ControlModifier);
+        QCoreApplication::sendEvent(widget.mpSearchPanel->mpEdit, &plan);
+        QCOMPARE(widget.route().destinationRoomId(), 3);
+        QCOMPARE(widget.mAID, eastId);
+        // Not to the player's own room, which would only drop that route
+        map()->mpRoomDB->getRoom(1)->name = qsl("Lantern Room");
+        map()->setUnsaved(__func__);
+        widget.mpSearchPanel->mpEdit->setText(qsl("lantern"));
+        widget.chooseSearchResult(0, true);
+        QCOMPARE(widget.route().destinationRoomId(), 3);
+
+        // An area is flown into, back where the view shows its rooms, and the room found before is no longer marked
+        widget.mpSearchPanel->mpEdit->setText(qsl("lighthouse"));
+        widget.chooseSearchResult(0, false);
+        QCOMPARE(widget.mSearchMarkedRoomId, target);
+        finishFlight(widget);
+        widget.mpSearchPanel->mpEdit->setText(qsl("westmarch"));
+        QCOMPARE(widget.mSearchResults.value(0).kind, MapSearch::Kind::Area);
+        widget.chooseSearchResult(0, false);
+        QCOMPARE(widget.mAID, westId);
+        QCOMPARE(widget.mSearchMarkedRoomId, 0);
+        QCOMPARE(flownInto.size(), 3);
+        finishFlight(widget);
+
+        // Nor one hidden since
+        widget.mpSearchPanel->mpEdit->setText(qsl("lighthouse"));
+        map()->mpRoomDB->getRoom(target)->setHidden(true);
+        widget.chooseSearchResult(0, false);
+        QCOMPARE(widget.mAID, westId);
+        QVERIFY(!widget.mFlight);
+        map()->mpRoomDB->getRoom(target)->setHidden(false);
+        widget.mpSearchPanel->mpEdit->clear();
+
+        // A room taken off the map since it was found is not gone to
+        widget.mpSearchPanel->mpEdit->setText(qsl("lighthouse"));
+        map()->mpRoomDB->removeRoom(target);
+        map()->setUnsaved(__func__);
+        widget.chooseSearchResult(0, false);
+        QCOMPARE(widget.mAID, westId);
+        QVERIFY(!widget.mFlight);
+        QCOMPARE(widget.mSearchResults.size(), 1);
+
+        // Escape closes it
+        QKeyEvent escape(QEvent::KeyPress, Qt::Key_Escape, Qt::NoModifier);
+        QCoreApplication::sendEvent(widget.mpSearchPanel->mpEdit, &escape);
+        QVERIFY(widget.mpSearchPanel->isHidden());
+        // Wherever in the panel the focus is
+        widget.openSearch();
+        QCoreApplication::sendEvent(widget.mpSearchPanel->mpLabels, &escape);
+        QVERIFY(widget.mpSearchPanel->isHidden());
+
+        map()->mRoomIdHash[map()->mProfileName] = 0;
+    }
+
+    void benchmark_worldSearch()
+    {
+        if (qEnvironmentVariableIsEmpty("MUDLET_BENCH_3D")) {
+            QSKIP("set MUDLET_BENCH_3D=1 to run the 3D view benchmark");
+        }
+        addHugeMap();
+        static const QStringList words{qsl("Market"), qsl("Street"), qsl("Alley"), qsl("Temple"), qsl("Harbor"), qsl("Gate"), qsl("Tower"), qsl("Garden")};
+        for (TRoom* pRoom : map()->mpRoomDB->getRoomMap()) {
+            pRoom->name = qsl("%1 %2 %3").arg(words.at(pRoom->getId() % words.size()), words.at(pRoom->getId() / 7 % words.size())).arg(pRoom->getId() % 1000);
+        }
+        map()->setUnsaved(__func__);
+        MapSearch search;
+        QElapsedTimer timer;
+        timer.start();
+        search.refresh(*map());
+        std::printf("METRIC search_entries %lld\n", static_cast<long long>(search.size()));
+        std::printf("METRIC search_index_ms %.2f\n", static_cast<double>(timer.nsecsElapsed()) / 1.0e6);
+        for (const QString& query : {qsl("a"), qsl("market"), qsl("temple gate 12"), qsl("12345"), qsl("nowhere")}) {
+            constexpr int runs = 20;
+            qsizetype total = 0;
+            timer.restart();
+            for (int run = 0; run < runs; ++run) {
+                search.find(query, 1, true, MapSearch::scmMaxResults, &total);
+            }
+            std::printf("METRIC search_query_ms{%s} %.2f (%lld found)\n", qPrintable(query), static_cast<double>(timer.nsecsElapsed()) / 1.0e6 / runs, static_cast<long long>(total));
+        }
+        std::fflush(stdout);
     }
 
     void test_theWorldStaysPutAsAFlightToAnotherLevelSetsOffWithoutGL()
