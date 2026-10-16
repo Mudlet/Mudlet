@@ -451,6 +451,46 @@ describe("Alias processing", function()
             assert.are.equal("thing", seen.afterMatch, "the trigger's capture was emptied by the nested expansion")
         end)
 
+        -- feedTriggers() nests the same way, only with a trigger pass inside the alias
+        it("gives an alias that feeds the triggers back its matches", function()
+            local seen = {}
+            local triggerId = tempRegexTrigger([[^alias_feeds_trigger (\w+)$]], function()
+                seen.triggerMatch = matches[2]
+            end)
+            local aliasId = tempAlias([[^alias_feeds_outer (\w+)$]], function()
+                feedTriggers("\nalias_feeds_trigger deeper\n")
+                seen.afterFullMatch = matches[1]
+                seen.afterMatch = matches[2]
+            end)
+            finally(function()
+                killAlias(aliasId)
+                killTrigger(triggerId)
+            end)
+
+            expandAlias("alias_feeds_outer thing", false)
+
+            assert.are.equal("deeper", seen.triggerMatch, "the fed line should have fired the trigger")
+            assert.are.equal("alias_feeds_outer thing", seen.afterFullMatch, "matches[1] was emptied by the nested feed")
+            assert.are.equal("thing", seen.afterMatch, "the alias's capture was emptied by the nested feed")
+        end)
+
+        it("leaves an alias that feeds the triggers the command a fed trigger's script set", function()
+            local seen = {}
+            local triggerId = tempTrigger("alias_feeds_command", [==[command = "set by the trigger"]==])
+            local aliasId = tempAlias([[^alias_feeds_command_outer$]], function()
+                feedTriggers("\nalias_feeds_command\n")
+                seen.command = rawget(_G, "command")
+            end)
+            finally(function()
+                killAlias(aliasId)
+                killTrigger(triggerId)
+            end)
+
+            expandAlias("alias_feeds_command_outer", false)
+
+            assert.are.equal("set by the trigger", seen.command, "feedTriggers() does not park command, so what the fed trigger's script put there should stay")
+        end)
+
         -- "command" is set before any pattern is tried, so the commonest shape of
         -- all - expandAlias() used to push a plain command at the game - moves it
         -- even though nothing matches
@@ -704,8 +744,8 @@ describe("Alias processing", function()
 
         -- Packages such as Repeater read "command" after an expandAlias() as the last command sent
         describe("command around expandAlias()", function()
-            -- Not straight from the spec: run through the runTests alias, that would
-            -- be an alias script, which gets its own "command" back
+            -- From an event handler, which is never an alias script, so the expansion
+            -- keeps its "command" even when the suite is started from inside an alias
             local function expandFromHandler(text)
                 local handlerId = registerAnonymousEventHandler("aliasSpecExpandFromHandler", function()
                     expandAlias(text, false)
