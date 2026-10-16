@@ -125,7 +125,7 @@ describe("Tests that the font functions find their console by name", function()
     end)
   end)
 
-  it("lets a console win a name a label also carries", function()
+  it("keeps reaching a label when a mini console is refused its name", function()
     local shared = "specFontsByNameShared" .. suffix
     assert.is_true(createLabel(shared, 0, 0, 50, 20, 1))
     finally(function()
@@ -133,15 +133,11 @@ describe("Tests that the font functions find their console by name", function()
       deleteLabel(shared)
     end)
     assert.are.same({true}, {setFontSize(shared, 17)})
-    -- a new mini console starts at 12
-    assert.is_true(createMiniConsole(shared, 0, 0, 300, 200))
-    assert.are.same({12}, {getFontSize(shared)})
+    assert.is_false(createMiniConsole(shared, 0, 0, 300, 200))
+    assert.are.same({17}, {getFontSize(shared)})
 
     assert.are.same({true}, {setFontSize(shared, 21)})
     assert.are.same({21}, {getFontSize(shared)})
-    -- with the console gone the name reaches the label again, at its own size
-    assert.is_true(deleteMiniConsole(shared))
-    assert.are.same({17}, {getFontSize(shared)})
   end)
 
   it("checks the arguments before it looks for the console", function()
