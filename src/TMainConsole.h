@@ -281,6 +281,7 @@ public:
     void regenerateToolBars(const std::list<TAction*>& rootActions) override;
     void regenerateEasyButtonBars(const std::list<TAction*>& rootActions) override;
     void detachActionBars(TAction* pAction) override;
+    void disposeActionBars(TAction* pAction) override;
     // Each action's bars, looked up by the action. An action shown as a menu on
     // another's bar (on a floating toolbar, any entry of such a menu) is
     // recorded against that bar too, so what is asked of its bar here is done

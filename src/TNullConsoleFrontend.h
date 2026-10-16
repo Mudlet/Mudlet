@@ -253,6 +253,7 @@ public:
     void regenerateToolBars(const std::list<TAction*>&) override {}
     void regenerateEasyButtonBars(const std::list<TAction*>&) override {}
     void detachActionBars(TAction*) override {}
+    void disposeActionBars(TAction*) override {}
     bool hasEasyButtonBar(TAction*) const override { return false; }
     void setActionButtonChecked(TAction*, bool) override {}
     bool restyleActionButton(TAction*) override { return false; }

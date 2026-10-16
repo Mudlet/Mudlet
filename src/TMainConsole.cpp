@@ -1160,6 +1160,25 @@ void TMainConsole::detachActionBars(TAction* pAction)
     }
 }
 
+void TMainConsole::disposeActionBars(TAction* pAction)
+{
+    if (TEasyButtonBar* pBar = actionEasyButtonBar(pAction)) {
+        detachEasyButtonBar(pBar, pAction->mLocation);
+        mEasyButtonBarList.remove(pBar);
+        pBar->hide();
+        pBar->deleteLater();
+        setActionEasyButtonBar(pAction, nullptr);
+    }
+    if (TToolBar* pToolBar = actionToolBar(pAction)) {
+        pToolBar->setFloating(false);
+        undockToolBar(pToolBar);
+        mToolBarList.remove(pToolBar);
+        pToolBar->hide();
+        pToolBar->deleteLater();
+        setActionToolBar(pAction, nullptr);
+    }
+}
+
 // A QAction does not own its menu, which is parented to the bar instead
 static void deleteMenuEntryLater(EAction* pEntry)
 {
