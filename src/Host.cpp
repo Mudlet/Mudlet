@@ -3774,12 +3774,12 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         }
         file2.close();
     }
-    // An item whose Lua fails is kept for fixing in the editor and the install goes on. importPackage()
+    // An item whose Lua or pattern fails is kept for fixing in the editor and the install goes on. importPackage()
     // only answers for the XML, so without this a broken package looks healthy to the player, the caller
     // and install-event handlers.
     const QString itemErrors = itemsWithErrors.join(qsl("; "));
     if (!itemErrors.isEmpty()) {
-        qWarning() << "Host::installPackage() WARNING - lua in" << packageName << "did not work:" << itemErrors;
+        qWarning() << "Host::installPackage() WARNING - parts of" << packageName << "did not work:" << itemErrors;
         // Only for an install a person asked for and is watching, as with fail(), and never while a profile
         // opens: installModulesList() reinstalls every module then, so it would repeat every launch at someone
         // who may not own the module. Quiet callers get the reason in the return value and the install event.
