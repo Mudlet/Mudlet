@@ -344,8 +344,6 @@ describe("Console edges", function()
     end)
   end)
 
-  -- A range spanning most of the int range must not build a table entry per
-  -- line number it covers, or it runs out of memory
   describe("deleteMiniConsole()", function()
     it("frees the name its command line held at once", function()
       local console = name("DeletedCmdLineOwner")
@@ -360,6 +358,8 @@ describe("Console edges", function()
     end)
   end)
 
+  -- A range spanning most of the int range must not build a table entry per
+  -- line number it covers, or it runs out of memory
   describe("getLines() with a range reaching outside the buffer", function()
     local window = name("GetLines")
 
