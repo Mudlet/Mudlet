@@ -959,9 +959,7 @@ bool Host::importMapFile(const QString& location, QString* errMsg)
             postMessage(infoMsg);
         } else {
             // error message for lua loadMap()
-            *errMsg = tr("loadMap: bad argument #1 value (filename used: \n"
-                         "\"%1\" was not found).")
-                              .arg(filePathNameString);
+            *errMsg = tr("loadMap: bad argument #1 value (filename used: \"%1\" was not found).").arg(filePathNameString);
         }
         return false;
     }
@@ -981,9 +979,7 @@ bool Host::importMapFile(const QString& location, QString* errMsg)
             const QString infoMsg = tr(R"([ INFO ]  - Map file located but it could not opened, please check permissions on:"%1".)").arg(filePathNameString);
             postMessage(infoMsg);
         } else {
-            *errMsg = tr("loadMap: bad argument #1 value (filename used: \n"
-                         "\"%1\" could not be opened for reading).")
-                              .arg(filePathNameString);
+            *errMsg = tr("loadMap: bad argument #1 value (filename used: \"%1\" could not be opened for reading).").arg(filePathNameString);
         }
         return false;
     }

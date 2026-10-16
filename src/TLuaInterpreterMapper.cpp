@@ -1271,10 +1271,7 @@ int TLuaInterpreter::deleteArea(lua_State* L)
             return warnArgumentValue(L, __func__, "you can't delete the default area");
         }
     } else {
-        lua_pushfstring(L,
-                        "deleteArea: bad argument #1 type (area Id as number or area name as string\n"
-                        "expected, got %s!)",
-                        luaL_typename(L, 1));
+        lua_pushfstring(L, "deleteArea: bad argument #1 type (area Id as number or area name as string expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
     }
 
@@ -2188,10 +2185,7 @@ int TLuaInterpreter::getRoomAreaName(lua_State* L)
     QString name;
     if (!lua_isnumber(L, 1)) {
         if (!lua_isstring(L, 1)) {
-            lua_pushfstring(L,
-                            "getRoomAreaName: bad argument #1 type (area id as number or area name as string\n"
-                            "expected, got %s!)",
-                            luaL_typename(L, 1));
+            lua_pushfstring(L, "getRoomAreaName: bad argument #1 type (area id as number or area name as string expected, got %s!)", luaL_typename(L, 1));
             return lua_error(L);
         }
         name = lua_tostring(L, 1);
@@ -3559,10 +3553,7 @@ int TLuaInterpreter::setAreaName(lua_State* L)
             return warnArgumentValue(L, __func__, qsl("area name '%1' is reserved and protected - it cannot be changed").arg(existingName));
         }
     } else {
-        lua_pushfstring(L,
-                        "setAreaName: bad argument #1 type (areaID as number or area name as string\n"
-                        "expected, got %s!)",
-                        luaL_typename(L, 1));
+        lua_pushfstring(L, "setAreaName: bad argument #1 type (areaID as number or area name as string expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
     }
 
@@ -4129,10 +4120,7 @@ int TLuaInterpreter::setRoomArea(lua_State* L)
             lua_pop(L, 1);
         }
     } else {
-        lua_pushfstring(L,
-                        "setRoomArea: bad argument #1 type (roomID as number or table of roomIDs\n"
-                        "expected, got %s!)",
-                        luaL_typename(L, 1));
+        lua_pushfstring(L, "setRoomArea: bad argument #1 type (roomID as number or table of roomIDs expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
     }
 
@@ -4160,10 +4148,7 @@ int TLuaInterpreter::setRoomArea(lua_State* L)
             return warnArgumentValue(L, __func__, qsl("area name '%1' does not exist").arg(areaName));
         }
     } else {
-        lua_pushfstring(L,
-                        "setRoomArea: bad argument #2 type (areaID as number or area name as string\n"
-                        "expected, got %s!)",
-                        luaL_typename(L, 2));
+        lua_pushfstring(L, "setRoomArea: bad argument #2 type (areaID as number or area name as string expected, got %s!)", luaL_typename(L, 2));
         return lua_error(L);
     }
 

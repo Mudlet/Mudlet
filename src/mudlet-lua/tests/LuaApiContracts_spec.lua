@@ -322,7 +322,7 @@ end)
 -- error console, a script's own logging, a scraper reading either - work a line
 -- at a time, so a newline inside one hides everything after it. The rest of the
 -- API keeps a bad-argument refusal to the single line that names what was
--- wanted and what arrived; these two feeding functions are the pair that did not.
+-- wanted and what arrived.
 describe("Tests the shape of the feeding functions' bad-argument errors", function()
 
   local feeders = {
@@ -345,6 +345,90 @@ describe("Tests the shape of the feeding functions' bad-argument errors", functi
       assert.is_true(contains(err, expected), feeder.name .. " did not say " .. expected .. " - it said: " .. tostring(err))
     end)
   end
+end)
+
+describe("Tests that the other bad-argument refusals stay on one line", function()
+
+  local cases = {
+    {label = "deleteArea", call = function() return deleteArea({}) end,
+      expected = "deleteArea: bad argument #1 type (area Id as number or area name as string expected, got table!)"},
+    {label = "getRoomAreaName", call = function() return getRoomAreaName({}) end,
+      expected = "getRoomAreaName: bad argument #1 type (area id as number or area name as string expected, got table!)"},
+    {label = "setAreaName", call = function() return setAreaName({}, "x") end,
+      expected = "setAreaName: bad argument #1 type (areaID as number or area name as string expected, got table!)"},
+    {label = "setRoomArea's room", call = function() return setRoomArea("nope", 1) end,
+      expected = "setRoomArea: bad argument #1 type (roomID as number or table of roomIDs expected, got string!)"},
+    {label = "raiseEvent", call = function() return raiseEvent("mudletSpecTwoLine", coroutine.create(function() end)) end,
+      expected = "raiseEvent: bad argument #2 type (string, number, boolean, table, function, or nil expected, got a thread!)"},
+    {label = "raiseGlobalEvent", call = function() return raiseGlobalEvent("mudletSpecTwoLine", {}) end,
+      expected = "raiseGlobalEvent: bad argument #2 type (boolean, number, string or nil expected, got a table!)"},
+    {label = "getMudletVersion's option", call = function() return getMudletVersion("bananas") end,
+      expected = 'getMudletVersion: takes one (optional) argument: "major", "minor", "revision", "build", "string" or "table".'},
+    {label = "getMudletVersion's argument count", call = function() return getMudletVersion("major", "minor") end,
+      expected = 'getMudletVersion: only takes one (optional) argument: "major", "minor", "revision", "build", "string" or "table".'},
+  }
+
+  for _, case in ipairs(cases) do
+    it(case.label .. " refuses on one line", function()
+      local ok, err = pcall(case.call)
+      assert.is_false(ok)
+      assert.is_string(err)
+      assert.is_false(contains(err, "\n"), "split over more than one line: " .. tostring(err))
+      assert.is_true(contains(err, case.expected), "expected " .. case.expected .. " - got: " .. tostring(err))
+    end)
+  end
+
+  it("setRoomArea's area refuses on one line", function()
+    local id = createRoomID()
+    assert.is_true(addRoom(id))
+    finally(function() deleteRoom(id) end)
+    local ok, err = pcall(setRoomArea, id, {})
+    assert.is_false(ok)
+    assert.is_string(err)
+    assert.is_false(contains(err, "\n"), "split over more than one line: " .. tostring(err))
+    local expected = "setRoomArea: bad argument #2 type (areaID as number or area name as string expected, got table!)"
+    assert.is_true(contains(err, expected), "expected " .. expected .. " - got: " .. tostring(err))
+  end)
+
+  it("loadMap's missing map file is reported on one line", function()
+    local ok, err = loadMap("/no/such/mudletSpecOneLine.xml")
+    assert.is_nil(ok)
+    assert.is_string(err)
+    assert.is_false(contains(err, "\n"), "split over more than one line: " .. tostring(err))
+    -- Windows reports the path made absolute, with a drive letter in front
+    local pattern = 'loadMap: bad argument #1 value %(filename used: "%a?:?/no/such/mudletSpecOneLine%.xml" was not found%)%.'
+    assert.is_truthy(err:find(pattern), "expected a match for " .. pattern .. " - got: " .. tostring(err))
+  end)
+end)
+
+describe("Tests that raiseEvent lets go of what it was handed when it refuses", function()
+
+  local function registryEntryCount()
+    local count = 0
+    for _ in pairs(debug.getregistry()) do
+      count = count + 1
+    end
+    return count
+  end
+
+  -- The arguments are taken from the last one down, so a bad argument below a
+  -- table and a function is only reached after both have been anchored.
+  it("keeps nothing in the registry when an earlier argument is refused", function()
+    local function refuse()
+      return pcall(raiseEvent, "mudletSpecRefusedEvent", coroutine.create(function() end), {}, function() end)
+    end
+    -- a warm-up refusal: the registry's free list is created by the first release
+    refuse()
+    collectgarbage()
+    local before = registryEntryCount()
+    for _ = 1, 20 do
+      local ok, err = refuse()
+      assert.is_false(ok)
+      assert.is_true(contains(err, "raiseEvent: bad argument #2 type"), tostring(err))
+    end
+    collectgarbage()
+    assert.are.equal(before, registryEntryCount())
+  end)
 end)
 
 describe("Tests announce and showNotification", function()
