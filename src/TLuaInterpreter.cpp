@@ -6041,6 +6041,11 @@ bool TLuaInterpreter::callEventHandler(const QString& function, const TEvent& pE
         case ARGUMENT_TYPE_STRING:
             lua_pushstring(L, pE.mArgumentList.at(i).toUtf8().constData());
             break;
+        case ARGUMENT_TYPE_BYTES: {
+            const QByteArray bytes = pE.mArgumentList.at(i).toLatin1();
+            lua_pushlstring(L, bytes.constData(), bytes.size());
+            break;
+        }
         case ARGUMENT_TYPE_BOOLEAN:
             lua_pushboolean(L, pE.mArgumentList.at(i).toInt());
             break;
@@ -6106,6 +6111,11 @@ int TLuaInterpreter::createEventArgsTableRef(const TEvent& pE)
         case ARGUMENT_TYPE_STRING:
             lua_pushstring(L, pE.mArgumentList.at(i).toUtf8().constData());
             break;
+        case ARGUMENT_TYPE_BYTES: {
+            const QByteArray bytes = pE.mArgumentList.at(i).toLatin1();
+            lua_pushlstring(L, bytes.constData(), bytes.size());
+            break;
+        }
         case ARGUMENT_TYPE_BOOLEAN:
             lua_pushboolean(L, pE.mArgumentList.at(i).toInt());
             break;
