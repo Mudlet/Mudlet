@@ -164,6 +164,7 @@ private:
     void startOrExtendSameLineChain(TTrigger* pT);
     void collectPrescanTasks(TTrigger* pT);
     void rebuildPrescanTasksIfStale();
+    bool prescanPays() const;
     void stopSameLineCreationLoop(const int chainId);
     void markRootNodeAppended(TTrigger* pT);
     void markRootNodeRemoved(TTrigger* pT);
@@ -183,9 +184,11 @@ private:
     // Handed to the match pool as one list per line; see collectPrescanTasks()
     std::vector<TTrigger*> mPrescanTasks;
     quint64 mPrescanTasksGeneration = std::numeric_limits<quint64>::max();
-    // Estimates the work the pool could share out on this line. Not the count of regex triggers: most
-    // may be disabled or settled before their regex is reached.
+    // Estimate the work the pool could share out on this line, and how much of it would be a match the
+    // pool cannot save. Not the count of regex triggers: most may be disabled or settled before their
+    // regex is reached.
     int mRegexSearchesOnTheLastLine = 0;
+    int mRegexMatchesOnTheLastLine = 0;
     QMap<int, TTrigger*> mTriggerMap;
     std::list<TTrigger*> mTriggerRootNodeList;
     // Where each root node sits in mTriggerRootNodeList: std::list::remove() walks the whole list,
@@ -228,6 +231,8 @@ private:
     int statsPatternsActive = 0;
     // Counter for nested processing; cleanup deferred until 0
     int mProcessingDepth = 0;
+    // Set while a top-level line is matched without the pool as a sample, so the lines it feeds are too
+    bool mSamplingLine = false;
     bool mRunawayFeedStopped = false;
     // Decides whether summarising the next line is worth it; see TBigramFilter
     int mSubstringQuestionsOnTheLastLine = 0;

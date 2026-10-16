@@ -1,8 +1,9 @@
 -- A line arriving on its own and the same line arriving in the middle of a
 -- burst do not take the same path through the trigger engine. A chunk carrying
 -- MUDLET_MATCH_FLOOD_LINES lines or more (8 by default), in a profile whose
--- previous line ran MUDLET_MATCH_THRESHOLD regex searches or more (128), opens
--- the parallel prescan in TriggerMatchPool: worker threads decide up front
+-- previous line ran MUDLET_MATCH_THRESHOLD regex searches or more (128) that
+-- found no match, and MUDLET_MATCH_MISSES_PER_MATCH (2) of those for each one
+-- that did, opens the parallel prescan in TriggerMatchPool: worker threads decide up front
 -- which regex triggers cannot match the line, and TTrigger::match() then skips
 -- those. The first line of a burst is judged by the line before the burst.
 --
@@ -10,12 +11,12 @@
 -- drifts from the first, triggers stop firing and nothing says so. These specs
 -- feed the same lines both ways and require the same firings.
 --
--- The pool needs two threads to share a batch between (MUDLET_MATCH_THREADS,
--- default min(4, cores / 2)) and turns itself off below that, so by default a
--- machine with fewer than four cores never runs it. The counter that proves a
--- burst reached the pool is reported under MUDLET_TEST_MODE only. Without
--- either there is nothing here worth running, and these report as pending
--- rather than passing on a comparison that never happened.
+-- The pool is off unless switched on, in the settings or with
+-- MUDLET_MATCH_THREADS=2 or more, as CI and .claude/scripts/run-lua-tests.sh do.
+-- The counter that proves a burst reached the pool is reported under
+-- MUDLET_TEST_MODE only. Without either there is nothing here worth running,
+-- and these report as pending rather than passing on a comparison that never
+-- happened.
 --
 -- Worth running under more than the defaults - see "Runtime tuning" in
 -- docs/platform-builds.md. MUDLET_MATCH_SPIN_US=0 matters most here: the lines
@@ -67,7 +68,7 @@ describe("trigger matching under a flood", function()
             -- pool declined to start, so this asks whether the parallel path
             -- exists at all rather than how wide it is
             if workers < 2 then
-                pending("this machine has too few cores to run the parallel prescan")
+                pending("the parallel prescan is off - switch it on with MUDLET_MATCH_THREADS=2")
             end
             body()
         end)
@@ -264,6 +265,275 @@ describe("trigger matching under a flood", function()
         feedAsBurst(filler(12, {[6] = "flood_nojit_line"}))
 
         assert.are.equal(1, fired.noJit, "a burst dropped a match of a (*NO_JIT) pattern")
+    end)
+
+    -- The burst's first line is judged by whatever line came before it, so a
+    -- burst the pool stays out of may still reach it once
+    local function prescansDuring(lines)
+        local before = getProfileStats().triggers.prescans
+        feedTriggers(table.concat(lines, "\n") .. "\n")
+        return getProfileStats().triggers.prescans - before
+    end
+
+    local function hitLines()
+        local lines = {}
+        for index = 1, 12 do
+            lines[index] = "flood_hit " .. index
+        end
+        return lines
+    end
+
+    itFlood("leaves a burst to the main thread when most of its regex searches match", function()
+        -- A search that matches is reused, but still costs more with the pool
+        -- than without, so a burst like this must not open it. The padding adds
+        -- 130 searches that fail on every line; these add twice that many that
+        -- match. Counting every search, as MUDLET_MATCH_MISSES_PER_MATCH=0 asks,
+        -- opens it on every line.
+        for index = 1, 2 * paddingTriggers do
+            track(tempRegexTrigger("^(?:flood_hit|flood_also_hit_" .. index .. ") (\\d+)", function() note("hit") end))
+        end
+
+        local sampledBefore = getProfileStats().triggers.matchPool.sampledLines
+        local prescans = prescansDuring(hitLines())
+        -- A line the statistics sample is one the pool would have taken
+        local sampled = getProfileStats().triggers.matchPool.sampledLines - sampledBefore
+
+        assert.are.equal(12 * 2 * paddingTriggers, fired.hit, "every trigger should fire on every line")
+        if os.getenv("MUDLET_MATCH_MISSES_PER_MATCH") == "0" then
+            assert.is_true(prescans + sampled >= 11, "counting every search should open the pool, but it opened " .. prescans .. " times")
+        elseif os.getenv("MUDLET_MATCH_MISSES_PER_MATCH") then
+            pending("MUDLET_MATCH_MISSES_PER_MATCH changes how many matches keep a burst off the pool")
+        else
+            assert.is_true(prescans <= 1, "the burst went through the parallel prescan " .. prescans .. " times although most of its searches matched")
+        end
+    end)
+
+    itFlood("leaves a burst to the main thread when too few of its regex searches fail", function()
+        -- 140 searches a line, over the threshold, but only the 100 that fail are
+        -- work the pool could take away, and those are under it
+        if os.getenv("MUDLET_MATCH_THRESHOLD") or os.getenv("MUDLET_MATCH_MISSES_PER_MATCH") then
+            pending("this measures the default threshold and misses per match")
+        end
+        for _, id in ipairs(ids) do
+            disableTrigger(id)
+        end
+        for index = 1, 100 do
+            track(tempRegexTrigger("^(?:flood_hit|flood_also_hit_" .. index .. ") (\\d+) never$", function() note("miss") end))
+        end
+        for index = 1, 40 do
+            track(tempRegexTrigger("^(?:flood_hit|flood_more_hit_" .. index .. ") (\\d+)", function() note("hit") end))
+        end
+
+        local prescans = prescansDuring(hitLines())
+
+        assert.are.equal(12 * 40, fired.hit, "every matching trigger should fire on every line")
+        assert.is_nil(fired.miss)
+        assert.is_true(prescans <= 1, "the burst went through the parallel prescan " .. prescans .. " times on 100 failed searches a line")
+    end)
+
+    -- A regex the prescan finds a match for is not searched for again: match()
+    -- takes the captures the prescan's thread left in the trigger's match data.
+    -- So the specs below hold a burst to the trickle's captures and positions,
+    -- and check that the burst really did take some, or they compare nothing.
+    describe("captures a burst takes from the prescan", function()
+
+        local log
+
+        local function record(label)
+            local selected, start, length
+            if selectCaptureGroup(2) ~= -1 then
+                selected, start, length = getSelection()
+            end
+            local parts = {label}
+            for index, value in ipairs(matches) do
+                parts[#parts + 1] = index .. "=" .. value
+            end
+            for _, name in ipairs({"who", "amount"}) do
+                if matches[name] then
+                    parts[#parts + 1] = name .. "=" .. matches[name]
+                end
+            end
+            parts[#parts + 1] = "at " .. tostring(selected) .. "@" .. tostring(start) .. "+" .. tostring(length)
+            log[#log + 1] = table.concat(parts, " ")
+        end
+
+        -- Feeds the lines one at a time and then as a burst, and returns both logs
+        local function trickleThenBurst(lines)
+            log = {}
+            for _, line in ipairs(lines) do
+                feedTriggers(line .. "\n")
+            end
+            local trickle = log
+            log = {}
+            local reusedBefore = getProfileStats().triggers.prescanMatchesReused
+            assert.is_not_nil(reusedBefore, "this build does not count captures taken from the prescan")
+            feedAsBurst(lines)
+            assert.is_true(getProfileStats().triggers.prescanMatchesReused > reusedBefore,
+                           "no capture was taken from the prescan, so the burst compared nothing")
+            return trickle, log
+        end
+
+        after_each(function()
+            _G.FloodCaptureRecord = nil
+        end)
+
+        itFlood("hands a regex trigger the captures and positions it gets from a trickle", function()
+            _G.FloodCaptureRecord = record
+            track(tempRegexTrigger([[^flood_capture (\w+) (\d+)]], function() record("plain") end))
+            track(tempRegexTrigger([[^flood_named (?<who>\w+) gives (?<amount>\d+)$]], function() record("named") end))
+            track(tempRegexTrigger([[^flood_wide (\S+) (\S+) end$]], function() record("wide") end))
+            track(tempRegexTrigger([[(*NO_JIT)^flood_nojit_capture (\w+) (\w+)$]], function() record("noJit") end))
+            -- More groups than a prescan thread's scratch has room for
+            track(tempRegexTrigger("^flood_many" .. string.rep(" (\\w)", 40) .. "$", function() record("many") end))
+            -- Two patterns of one trigger, only the second of which matches
+            track(tempComplexRegexTrigger("FloodTwoPatterns", [[^flood_never_this (\w+)$]], [==[FloodCaptureRecord("second")]==],
+                                          0, 0, 0, 0, 0, 0, 0, 0, 0, 0))
+            -- which makes the trigger again, under a new id, with both patterns
+            track(tempComplexRegexTrigger("FloodTwoPatterns", [[^flood_second (\w+) (\w+)$]], [==[FloodCaptureRecord("second")]==],
+                                          0, 0, 0, 0, 0, 0, 0, 0, 0, 0))
+
+            local trickle, burst = trickleThenBurst(filler(12, {
+                [2] = "flood_capture alpha 12 and the rest",
+                [4] = "flood_named Cass gives 300",
+                [5] = "flood_wide naïve→ ✓ü𝄞 end",
+                [7] = "flood_nojit_capture left right",
+                [9] = "flood_second one two",
+                [11] = "flood_capture beta 7",
+                [12] = "flood_many" .. string.rep(" q", 39) .. " z",
+            }))
+
+            assert.are.equal(7, #trickle, "every trigger should fire once on its line when fed one at a time")
+            assert.are.same(trickle, burst)
+        end)
+
+        itFlood("hands a match-all trigger every match it gets from a trickle", function()
+            -- every match and its captures, one after another, in matches
+            _G.FloodCaptureRecord = record
+            track(tempComplexRegexTrigger("FloodMatchAll", [[flood_g(\d)(\w?)]], [==[FloodCaptureRecord("all")]==],
+                                          0, 0, 0, 0, 1, 0, 0, 0, 0, 0))
+
+            local trickle, burst = trickleThenBurst(filler(12, {
+                [3] = "flood_g1 flood_g2x then flood_g3",
+                [8] = "één flood_g4é flood_g5",
+            }))
+
+            assert.are.equal(2, #trickle, "the match-all trigger should fire once per line when fed one at a time")
+            assert.are.same(trickle, burst)
+        end)
+
+        itFlood("does not hand a trigger the captures of a line an earlier trigger fed in the meantime", function()
+            -- The earlier trigger feeds a line the later one also matches, so the
+            -- later one searches that line, into the same match data the prescan
+            -- left the outer line's match in, before the outer line reaches it.
+            track(tempRegexTrigger([[^flood_stale outer]], function() feedTriggers("flood_stale nested 22\n") end))
+            track(tempRegexTrigger([[^flood_stale (\w+) (\d+)$]], function() record("later") end))
+
+            local trickle, burst = trickleThenBurst(filler(12, {[6] = "flood_stale outer 1", [9] = "flood_stale other 3"}))
+
+            assert.are.equal(3, #trickle, "the later trigger should fire on the fed line and both of its own")
+            assert.truthy(trickle[1]:find("2=nested 3=22", 1, true), trickle[1])
+            assert.truthy(trickle[2]:find("2=outer 3=1", 1, true), trickle[2])
+            assert.truthy(trickle[3]:find("2=other 3=3", 1, true), trickle[3])
+            assert.are.same(trickle, burst)
+        end)
+
+        itFlood("does not hand a trigger the captures of a burst an earlier trigger fed in the meantime", function()
+            -- As above, but the fed lines are a burst of their own, which runs a
+            -- prescan of its own while the outer line's is still to be used
+            local nested = filler(10, {[5] = "flood_stale nested 22"})
+            local nestedPrescans = 0
+            track(tempRegexTrigger([[^flood_stale outer]], function()
+                local before = getProfileStats().triggers.prescans
+                feedTriggers(table.concat(nested, "\n") .. "\n")
+                nestedPrescans = nestedPrescans + getProfileStats().triggers.prescans - before
+            end))
+            track(tempRegexTrigger([[^flood_stale (\w+) (\d+)$]], function() record("later") end))
+
+            local trickle, burst = trickleThenBurst(filler(12, {[6] = "flood_stale outer 1", [9] = "flood_stale other 3"}))
+
+            assert.is_true(nestedPrescans > 0, "the fed lines never reached the prescan, so this compared nothing")
+            assert.are.equal(3, #trickle)
+            assert.are.same(trickle, burst)
+        end)
+
+        itFlood("captures the line it was given after an earlier trigger rewrote it", function()
+            -- Triggers go on matching the line as it arrived, whatever an earlier
+            -- script has since done to the buffer, so a match the prescan found
+            -- before the rewrite is still the one to report
+            track(tempRegexTrigger([[^flood_rewrite (\w+)]], function()
+                selectString(matches[2], 1)
+                replace("REPLACED")
+                insertText(" inserted ")
+            end))
+            track(tempRegexTrigger([[^flood_delete]], function() deleteLine() end))
+            track(tempRegexTrigger([[^flood_(rewrite|delete) (\w+) (\d+)$]], function() record("later") end))
+
+            local trickle, burst = trickleThenBurst(filler(12, {[4] = "flood_rewrite word 5", [8] = "flood_delete gone 6"}))
+
+            assert.are.equal(2, #trickle)
+            assert.are.same(trickle, burst)
+        end)
+
+        itFlood("captures with triggers an earlier trigger killed or created on the same line", function()
+            -- Each swap line kills the trigger the prescan judged and makes another
+            -- in its place, which the prescan never saw and so searches for itself
+            local current
+            local function makeSwapped()
+                current = track(tempRegexTrigger([[^flood_swap (\w+) (\d+)$]], function() record("swapped") end))
+            end
+            track(tempRegexTrigger([[^flood_swap]], function()
+                killTrigger(current)
+                makeSwapped()
+            end))
+            makeSwapped()
+
+            log = {}
+            local lines = filler(12, {[5] = "flood_swap first 1", [10] = "flood_swap second 2"})
+            for _, line in ipairs(lines) do
+                feedTriggers(line .. "\n")
+            end
+            local trickle = log
+            log = {}
+            feedAsBurst(lines)
+
+            assert.are.equal(2, #trickle, "only the trigger made on each swap line should fire on it")
+            assert.truthy(trickle[1]:find("2=first 3=1", 1, true), trickle[1])
+            assert.truthy(trickle[2]:find("2=second 3=2", 1, true), trickle[2])
+            assert.are.same(trickle, log)
+        end)
+    end)
+
+    it("reports on the pool in the profile statistics whether it is on or off", function()
+        local report = getProfileStats().triggers.matchPool
+        assert.is_table(report)
+        assert.is_number(report.threads)
+        assert.is_number(report.pooledLines)
+        assert.is_number(report.sampledLines)
+        assert.is_number(report.savedMilliseconds)
+        assert.truthy(({["not enough data"] = true, ["worth it"] = true, ["about even"] = true, ["not worth it"] = true})[report.verdict],
+                      tostring(report.verdict))
+    end)
+
+    itFlood("reports lines matched with the pool and a sample matched without it", function()
+        -- Fires on every line, so a sampled one has to fire as well
+        track(tempRegexTrigger([[^flood quiet filler \d+$]], function() note("filler") end))
+        local before = getProfileStats().triggers.matchPool
+        -- Comfortably more than one sampling period, 32 by default, of lines the pool would take
+        feedAsBurst(filler(100))
+
+        local after = getProfileStats().triggers.matchPool
+        assert.are.equal(100, fired.filler, "every line should fire its trigger, sampled or not")
+        assert.is_true(after.pooledLines > before.pooledLines, "no line of the burst was counted as matched with the pool")
+        assert.is_true(after.pooledMicroseconds > 0)
+        assert.is_true(after.threads >= 2)
+        if os.getenv("MUDLET_MATCH_SAMPLE_EVERY") == "0" then
+            assert.are.equal(before.sampledLines, after.sampledLines, "a line was sampled although sampling is off")
+        elseif os.getenv("MUDLET_MATCH_SAMPLE_EVERY") == nil then
+            -- a gap between samples is at most twice the period of 32
+            assert.is_true(after.sampledLines - before.sampledLines >= 1,
+                           "a burst of 100 lines should sample about one in 32, but sampled " .. (after.sampledLines - before.sampledLines))
+            assert.is_true(after.sampledMicroseconds > 0)
+        end
     end)
 
     -- Only a trigger with a regex among its patterns is prescanned, so the

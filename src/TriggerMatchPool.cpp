@@ -24,6 +24,7 @@
 #include "utils.h"
 
 #include <QDebug>
+#include <QRandomGenerator>
 #include <QSettings>
 #include <QThread>
 
@@ -105,7 +106,7 @@ int searchesOf(const uint64_t done)
 // is refused out loud: a typo that quietly measured the default is the worst outcome for a tuning knob.
 int knobOr(const char* envName, const QString& iniKey, const int fallback, const int minimum)
 {
-    if (qEnvironmentVariableIsSet(envName)) {
+    if (envName && qEnvironmentVariableIsSet(envName)) {
         bool parsed = false;
         const int value = qEnvironmentVariableIntValue(envName, &parsed);
         if (!parsed || value < minimum) {
@@ -140,31 +141,85 @@ void TriggerMatchPool::shutdown()
 {
     if (smpInstance) {
         smpInstance->stopHelpers();
+        smpInstance->mShutDown = true;
     }
+}
+
+TriggerMatchPool::Settings TriggerMatchPool::readSettings(const bool withEnvironment)
+{
+    const auto env = [withEnvironment](const char* name) {
+        return withEnvironment ? name : nullptr;
+    };
+    const Settings defaults;
+    Settings settings;
+    settings.threads = knobOr(env("MUDLET_MATCH_THREADS"), qsl("triggerMatchThreads"), defaults.threads, 0);
+    // Two-thread break-even on a Release build, measured on lines where every regex search failed: below it
+    // the fork-join costs the main thread as much as it hands away, while the helper spins a core for nothing.
+    settings.threshold = knobOr(env("MUDLET_MATCH_THRESHOLD"), qsl("triggerMatchThreshold"), defaults.threshold, 1);
+    settings.floodChunkLines = knobOr(env("MUDLET_MATCH_FLOOD_LINES"), qsl("triggerMatchFloodLines"), defaults.floodChunkLines, 1);
+    // About 1.4 measured on a 4-core Linux machine, rounded up so a line near the break-even stays on the
+    // main thread
+    settings.missesPerMatch = knobOr(env("MUDLET_MATCH_MISSES_PER_MATCH"), qsl("triggerMatchMissesPerMatch"), defaults.missesPerMatch, 0);
+    // Zero parks a helper as soon as a batch is exhausted, putting a wake-up under every line of a burst
+    settings.spinMicroseconds = knobOr(env("MUDLET_MATCH_SPIN_US"), qsl("triggerMatchSpinMicroseconds"), defaults.spinMicroseconds, 0);
+    settings.sampleEvery = knobOr(env("MUDLET_MATCH_SAMPLE_EVERY"), qsl("triggerMatchSampleEvery"), defaults.sampleEvery, 0);
+    return settings;
+}
+
+TriggerMatchPool::Settings TriggerMatchPool::settingsFromConfig()
+{
+    return readSettings(true);
+}
+
+TriggerMatchPool::Settings TriggerMatchPool::savedSettings()
+{
+    return readSettings(false);
+}
+
+int TriggerMatchPool::automaticThreads()
+{
+    return std::max(2, std::min(4, QThread::idealThreadCount() / 2));
 }
 
 TriggerMatchPool::TriggerMatchPool()
 {
     smpInstance = this;
-    const int cores = std::max(1, QThread::idealThreadCount());
-    // Past four threads the fork-join tail grows faster than each thread's share of work shrinks.
-    // Zero turns the pool off.
-    const int wanted = std::min(knobOr("MUDLET_MATCH_THREADS", qsl("triggerMatchThreads"), std::min(4, cores / 2), 0), cores);
-    // Two-thread break-even on a Release build, in regex searches per line: below it the fork-join costs
-    // the main thread as much as it hands away, while the helper spins a core for nothing.
-    mThreshold = knobOr("MUDLET_MATCH_THRESHOLD", qsl("triggerMatchThreshold"), 128, 1);
-    mFloodChunkLines = knobOr("MUDLET_MATCH_FLOOD_LINES", qsl("triggerMatchFloodLines"), 8, 1);
-    // Zero parks a helper as soon as a batch is exhausted, putting a wake-up under every line of a burst
-    mSpinBudget = std::chrono::microseconds(knobOr("MUDLET_MATCH_SPIN_US", qsl("triggerMatchSpinMicroseconds"), 100, 0));
+    configure(settingsFromConfig());
+}
+
+void TriggerMatchPool::configure(const Settings& settings)
+{
+    // Unchanged settings keep the report: an apply can come from another control, or from a knob an
+    // environment variable overrides
+    if (mShutDown || (settings == mSettings && mSettingsApplied)) {
+        return;
+    }
+    mSettingsApplied = true;
+    stopHelpers();
+    for (auto* scratch : mScratch) {
+        pcre2_match_data_free(scratch);
+    }
+    mScratch.clear();
+    mSettings = settings;
+    mThreshold = settings.threshold;
+    mFloodChunkLines = settings.floodChunkLines;
+    mMissesPerMatch = settings.missesPerMatch;
+    mSpinBudget = std::chrono::microseconds(settings.spinMicroseconds);
+    mReport = Report();
+    mLinesUntilSample = nextSampleGap();
+    startHelpers(std::min(settings.threads, std::max(1, QThread::idealThreadCount())));
+}
+
+void TriggerMatchPool::startHelpers(const int wanted)
+{
     if (wanted < 2) {
         return;
     }
-
     mScratch.resize(wanted, nullptr);
     for (int i = 0; i < wanted; ++i) {
-        // One ovector pair serves every pattern for a yes/no answer: PCRE2 returns 0, not failure,
-        // for a match it had no room to record.
-        mScratch[i] = pcre2_match_data_create(1, nullptr);
+        // Room for the captures of most patterns, so a match can be copied out for the main thread to
+        // reuse; PCRE2 returns 0, not failure, for a match it had no room to record.
+        mScratch[i] = pcre2_match_data_create(scmScratchOvectorPairs, nullptr);
         if (!mScratch[i]) {
             // A slot without scratch cannot answer for regex triggers; declining every batch is only
             // slower, while a slot that lies is wrong.
@@ -176,12 +231,15 @@ TriggerMatchPool::TriggerMatchPool()
             return;
         }
     }
+    // A helper starts on the batch already published, or it would take the stopping batch that ended
+    // the previous helpers for work of its own
+    const uint32_t seen = epochOf(mCursor.load(std::memory_order_relaxed));
     mThreads.reserve(wanted - 1);
     for (int slot = 1; slot < wanted; ++slot) {
         // QThread, not std::thread, for the name: it reaches the OS on all platforms (Windows since
         // Qt 6.8, our floor), so profilers and crash reports show it.
-        std::unique_ptr<QThread> thread(QThread::create([this, slot] {
-            workerLoop(slot);
+        std::unique_ptr<QThread> thread(QThread::create([this, slot, seen] {
+            workerLoop(slot, seen);
             mHelpersReturned.fetch_add(1, std::memory_order_release);
         }));
         thread->setObjectName(qsl("TriggerMatch-%1").arg(slot));
@@ -193,6 +251,70 @@ TriggerMatchPool::TriggerMatchPool()
         }
         mThreads.push_back(std::move(thread));
     }
+}
+
+TriggerMatchPool::Report::Verdict TriggerMatchPool::Report::verdict() const
+{
+    if (sampledLines < scmSampledLinesForVerdict || !pooledLines) {
+        return Verdict::NotEnoughData;
+    }
+    // Within 3% either way is inside the run-to-run noise of a desktop machine
+    const double ratio = static_cast<double>(averagePooledNanoseconds()) / static_cast<double>(std::max<qint64>(1, averageSampledNanoseconds()));
+    if (ratio < 0.97) {
+        return Verdict::WorthIt;
+    }
+    if (ratio > 1.03) {
+        return Verdict::NotWorthIt;
+    }
+    return Verdict::AboutEven;
+}
+
+qint64 TriggerMatchPool::Report::savedNanoseconds() const
+{
+    return (averageSampledNanoseconds() - averagePooledNanoseconds()) * static_cast<qint64>(pooledLines);
+}
+
+// Between 1 and twice the period, averaging the period: output that repeats on a fixed cycle would
+// otherwise put the same kind of line in every sample
+int TriggerMatchPool::nextSampleGap() const
+{
+    return mSettings.sampleEvery ? static_cast<int>(QRandomGenerator::global()->bounded(1, 2 * mSettings.sampleEvery)) : 0;
+}
+
+bool TriggerMatchPool::takeSample()
+{
+    if (mSettings.sampleEvery == 0 || --mLinesUntilSample > 0) {
+        return false;
+    }
+    mLinesUntilSample = nextSampleGap();
+    return true;
+}
+
+// The time includes the scripts the line fired, so one garbage collection or slow script would otherwise
+// decide the verdict on its own, above all on the few sampled lines. Each line counts for at most four times
+// the typical line of its kind: the median of the first few, then the running average.
+void TriggerMatchPool::recordLine(const bool pooled, const qint64 nanoseconds)
+{
+    quint64& lines = pooled ? mReport.pooledLines : mReport.sampledLines;
+    qint64& total = pooled ? mReport.pooledNanoseconds : mReport.sampledNanoseconds;
+    std::array<qint64, scmWarmUpLines>& warmUp = pooled ? mPooledWarmUp : mSampledWarmUp;
+    if (lines < scmWarmUpLines) {
+        warmUp[lines] = nanoseconds;
+        ++lines;
+        total += nanoseconds;
+        if (lines == scmWarmUpLines) {
+            std::array<qint64, scmWarmUpLines> sorted = warmUp;
+            std::nth_element(sorted.begin(), sorted.begin() + scmWarmUpLines / 2, sorted.end());
+            const qint64 cap = 4 * sorted[scmWarmUpLines / 2];
+            total = 0;
+            for (const qint64 value : warmUp) {
+                total += std::min(value, cap);
+            }
+        }
+        return;
+    }
+    total += std::min(nanoseconds, 4 * (total / static_cast<qint64>(lines)));
+    ++lines;
 }
 
 TriggerMatchPool::~TriggerMatchPool()
@@ -220,6 +342,9 @@ void TriggerMatchPool::stopHelpers()
     [[maybe_unused]] const int returned = mHelpersReturned.load(std::memory_order_acquire);
     Q_ASSERT(returned == static_cast<int>(mThreads.size()));
     mThreads.clear();
+    // Every helper has returned, so configure() can start new ones
+    mStop.store(false, std::memory_order_relaxed);
+    mHelpersReturned.store(0, std::memory_order_relaxed);
 }
 
 // With nobody asleep the notify is a waiter-count check, no syscall. The store is seq_cst, not release,
@@ -246,17 +371,20 @@ uint32_t TriggerMatchPool::runChunks(const int slot)
         const int begin = chunk * mJob.chunkSize;
         const int end = std::min(begin + mJob.chunkSize, mJob.count);
         int searches = 0;
+        int matches = 0;
         for (int i = begin; i < end; ++i) {
             TTrigger* trigger = mJob.triggers[i];
-            trigger->setPrescanVerdict(mJob.passId, trigger->prescanMayFire(mJob.subject, mJob.subjectLength, *mJob.haystack, *mJob.lineBigrams, mJob.dropsText, scratch, searches));
+            trigger->setPrescanVerdict(mJob.passId, trigger->prescanMayFire(mJob.subject, mJob.subjectLength, *mJob.haystack, *mJob.lineBigrams, mJob.dropsText, scratch, searches, matches));
+        }
+        if (matches) {
+            mMatchesDone.fetch_add(static_cast<uint32_t>(matches), std::memory_order_relaxed);
         }
         mDone.fetch_add(packDone(searches), std::memory_order_release);
     }
 }
 
-void TriggerMatchPool::workerLoop(const int slot)
+void TriggerMatchPool::workerLoop(const int slot, uint32_t seen)
 {
-    uint32_t seen = 0;
     auto idleSince = std::chrono::steady_clock::now();
     int pauses = 0;
     for (;;) {
@@ -306,6 +434,7 @@ bool TriggerMatchPool::prescan(
     mJob.dropsText = dropsText;
 
     mDone.store(0, std::memory_order_relaxed);
+    mMatchesDone.store(0, std::memory_order_relaxed);
     publish(chunkCount);
 
     runChunks(0);
@@ -332,6 +461,7 @@ bool TriggerMatchPool::prescan(
         done = mDone.load(std::memory_order_acquire);
     }
     mRegexSearchesInLastBatch = searchesOf(done);
+    mRegexMatchesInLastBatch = static_cast<int>(mMatchesDone.load(std::memory_order_relaxed));
     Q_ASSERT(chunkIndexOf(mCursor.load(std::memory_order_relaxed)) >= chunkCount);
     return true;
 }
