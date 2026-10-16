@@ -114,6 +114,7 @@ class dlgTriggerEditor : public QMainWindow, private Ui::trigger_editor
     friend class EditorAddItemTest;
     friend class EditorBannerViewSwitchTest;
     friend class EditorClipboardXmlTest;
+    friend class EditorFolderViewTest;
     friend class EditorSearchTest;
     friend class HostWidgetDecouplingTest;
     friend class ScriptEventHandlerLifetimeTest;
@@ -148,7 +149,12 @@ class dlgTriggerEditor : public QMainWindow, private Ui::trigger_editor
         // Value is the index (starting at 0) of the particular find used to
         // disambiguate multiple finds in the same "thing" (so we know which one
         // to jump to) - may not be as much use as it seems...
-        IndexRole = Qt::UserRole + 6
+        IndexRole = Qt::UserRole + 6,
+        // Folders view only - the node's identity, stable across rebuilds of that tree:
+        FolderKeyRole = Qt::UserRole + 7,
+        // Folders view only - the "view:id" keys of the real items a node stands for;
+        // more than one when same-named folders of several item types were merged:
+        FolderPartsRole = Qt::UserRole + 8
     };
 
     // Classify the search result - so we know where to position the cursor as
@@ -284,6 +290,7 @@ public slots:
     void slot_showAliases();
     void slot_showActions();
     void slot_showKeys();
+    void slot_showFolders();
     void slot_activateMainWindow();
     void slot_treeSelectionChanged();
     void slot_triggerSelected(QTreeWidgetItem* pItem);
@@ -414,6 +421,24 @@ private:
     EditorViewType determineViewFromVisibleTree();
     EditorViewType resolveCurrentView();
     void rebuildStaleTrees();
+    void populateFolderTree();
+    void addFolderTreeNode(QTreeWidgetItem* pSource, const EditorViewType view, QTreeWidgetItem* pParent, QTreeWidgetItem* pLooseItems, QHash<QString, QTreeWidgetItem*>& folders);
+    void scheduleFolderTreeRefresh();
+    void syncFolderTreeSelection(const QString& fallbackKey);
+    void selectFolderTreeNode(QTreeWidgetItem* pNode);
+    void slot_folderTreeItemChanged(QTreeWidgetItem* pItem);
+    void openItemFromFolderTree(const EditorViewType view, const int id);
+    void showFolderSummary(QTreeWidgetItem* pNode);
+    void hideFolderSummary();
+    void leaveFolderView();
+    void setFolderViewAvailable(const bool);
+    bool folderItem(const EditorViewType view, const int id);
+    QTreeWidget* treeForView(const EditorViewType view) const;
+    void selectItemInView(const EditorViewType view, QTreeWidgetItem* pItem);
+    QByteArray* splitterStateForView(const EditorViewType view);
+    static QTreeWidgetItem* findItemById(QTreeWidget* pTree, const int id);
+    static QString folderTreeItemKey(const EditorViewType view, const int id);
+    static QString folderTreeTypeName(const EditorViewType view, const bool plural);
     void saveTrigger();
     void saveAlias();
     void computeAliasIcon(TAlias* pT, QIcon& icon, QString& itemDescription) const;
@@ -736,6 +761,19 @@ private:
     // for the "Variables" view:
     QAction* mpAction_toggleActive = nullptr;
     QAction* mpExportAction = nullptr;
+    QAction* mpViewFoldersAction = nullptr;
+    // Every item type at once, grouped by folder - built from the type trees, never edited directly
+    QTreeWidget* mpFolderTree = nullptr;
+    // Shown instead of an item form when a Folders view node merges folders of several item types
+    QWidget* mpFolderSummaryArea = nullptr;
+    QLabel* mpFolderSummaryText = nullptr;
+    QWidget* mpFolderSummaryButtons = nullptr;
+    QTimer* mpFolderTreeRefreshTimer = nullptr;
+    // "view:id" of a real item -> the Folders view node standing for it
+    QHash<QString, QTreeWidgetItem*> mFolderTreeNodes;
+    QString mFolderSummaryKey;
+    bool mFolderViewActive = false;
+    bool mFolderTreeStale = true;
     QAction* mpCreateModuleAction = nullptr;
 
     // Smart undo/redo actions (route based on focus):

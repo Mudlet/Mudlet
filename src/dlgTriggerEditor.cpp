@@ -67,22 +67,27 @@
 #include <QFont>
 #include <QFrame>
 #include <QHBoxLayout>
+#include <QHeaderView>
 #include <QIcon>
 #include <QKeySequence>
 #include <QLabel>
 #include <QMessageBox>
 #include <QMetaEnum>
+#include <QPushButton>
 #include <QPalette>
 #include <QScrollBar>
 #include <QSettings>
 #include <QShortcut>
+#include <QSignalBlocker>
 #include <QSpinBox>
 #include <QStyle>
 #include <QTextCursor>
+#include <QTimer>
 #include <QShowEvent>
 #include <QRegularExpression>
 #include <QToolButton>
 #include <QToolBar>
+#include <QTreeWidgetItemIterator>
 #include <chrono>
 #include <sstream>
 #include <pugixml.hpp>
@@ -397,6 +402,20 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     connect(mpScriptsMainArea->lineEdit_script_event_handler_entry, &QLineEdit::returnPressed, this, &dlgTriggerEditor::slot_scriptMainAreaAddHandler);
     connect(mpScriptsMainArea->listWidget_script_registered_event_handlers, &QListWidget::itemSelectionChanged, this, &dlgTriggerEditor::slot_scriptMainAreaEditHandler);
     connect(mpScriptsMainArea->listWidget_script_registered_event_handlers, &QListWidget::itemActivated, this, &dlgTriggerEditor::slot_scriptMainAreaClearHandlerSelection);
+
+    mpFolderSummaryArea = new QWidget(this);
+    auto* pFolderSummaryLayout = new QVBoxLayout(mpFolderSummaryArea);
+    mpFolderSummaryText = new QLabel(mpFolderSummaryArea);
+    mpFolderSummaryText->setWordWrap(true);
+    mpFolderSummaryText->setTextFormat(Qt::RichText);
+    pFolderSummaryLayout->addWidget(mpFolderSummaryText);
+    mpFolderSummaryButtons = new QWidget(mpFolderSummaryArea);
+    auto* pFolderSummaryButtonsLayout = new QVBoxLayout(mpFolderSummaryButtons);
+    pFolderSummaryButtonsLayout->setContentsMargins(0, 0, 0, 0);
+    pFolderSummaryLayout->addWidget(mpFolderSummaryButtons);
+    pFolderSummaryLayout->addStretch(1);
+    layoutColumn->addWidget(mpFolderSummaryArea, 1);
+    mpFolderSummaryArea->hide();
 
 
     // source editor area
@@ -807,40 +826,119 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     treeWidget_scripts->setRootIsDecorated(false);
     treeWidget_scripts->setContextMenuPolicy(Qt::ActionsContextMenu);
 
+    mpFolderTree = new QTreeWidget(frame_left);
+    mpFolderTree->setObjectName(qsl("treeWidget_folders"));
+    //: Accessible name of the editor's Folders view, which lists every item type grouped by folder
+    mpFolderTree->setAccessibleName(tr("Folders"));
+    mpFolderTree->setColumnCount(2);
+    mpFolderTree->header()->hide();
+    // A narrow pane cuts off the item type rather than the name
+    mpFolderTree->header()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
+    mpFolderTree->setUniformRowHeights(true);
+    mpFolderTree->setContextMenuPolicy(Qt::ActionsContextMenu);
+    mpFolderTree->hide();
+    // After the seven type trees, so it shares their stretch and sits above the search box
+    verticalLayout_frame_left->insertWidget(7, mpFolderTree, 2);
+    connect(mpFolderTree, &QTreeWidget::currentItemChanged, this, &dlgTriggerEditor::slot_folderTreeItemChanged);
+    // A click on a merged folder that is already current brings its summary back after one of its parts was opened
+    connect(mpFolderTree, &QTreeWidget::itemClicked, this, [this](QTreeWidgetItem* pItem) {
+        if (pItem && pItem->data(0, FolderPartsRole).toStringList().size() > 1 && mFolderSummaryKey != pItem->data(0, FolderKeyRole).toString()) {
+            showFolderSummary(pItem);
+        }
+    });
+    connect(mpFolderTree, &QTreeWidget::itemActivated, this, [this](QTreeWidgetItem* pItem) {
+        if (pItem && pItem->data(0, FolderPartsRole).toStringList().size() == 1) {
+            slot_toggleItemOrGroupActiveFlag();
+        }
+    });
+
+    mpFolderTreeRefreshTimer = new QTimer(this);
+    mpFolderTreeRefreshTimer->setSingleShot(true);
+    connect(mpFolderTreeRefreshTimer, &QTimer::timeout, this, [this]() {
+        if (mFolderViewActive) {
+            populateFolderTree();
+        }
+    });
+    for (const auto view :
+         {EditorViewType::cmTriggerView, EditorViewType::cmAliasView, EditorViewType::cmScriptView, EditorViewType::cmTimerView, EditorViewType::cmKeysView, EditorViewType::cmActionView}) {
+        QTreeWidget* pTree = treeForView(view);
+        const QAbstractItemModel* pModel = pTree->model();
+        connect(pModel, &QAbstractItemModel::rowsInserted, this, &dlgTriggerEditor::scheduleFolderTreeRefresh);
+        connect(pModel, &QAbstractItemModel::rowsRemoved, this, &dlgTriggerEditor::scheduleFolderTreeRefresh);
+        connect(pModel, &QAbstractItemModel::rowsMoved, this, &dlgTriggerEditor::scheduleFolderTreeRefresh);
+        connect(pModel, &QAbstractItemModel::dataChanged, this, &dlgTriggerEditor::scheduleFolderTreeRefresh);
+        connect(pModel, &QAbstractItemModel::layoutChanged, this, &dlgTriggerEditor::scheduleFolderTreeRefresh);
+        connect(pModel, &QAbstractItemModel::modelReset, this, &dlgTriggerEditor::scheduleFolderTreeRefresh);
+        // Adding, deleting, pasting, undoing and searching all pick their item in the type tree, hidden or not
+        connect(pTree, &QTreeWidget::currentItemChanged, this, [this, view](QTreeWidgetItem* pCurrent) {
+            if (mFolderViewActive && pCurrent && pCurrent->parent()) {
+                selectFolderTreeNode(mFolderTreeNodes.value(folderTreeItemKey(view, pCurrent->data(0, IdRole).toInt())));
+            }
+        });
+    }
+
     QAction* viewTriggerAction = new QAction(QIcon(qsl(":/icons/tools-wizard.png")), tr("Triggers"), this);
     viewTriggerAction->setStatusTip(tr("Show Triggers"));
     viewTriggerAction->setToolTip(qsl("%1 (%2)").arg(tr("Show Triggers"), QKeySequence(Qt::CTRL | Qt::Key_1).toString(QKeySequence::NativeText)));
-    connect(viewTriggerAction, &QAction::triggered, this, &dlgTriggerEditor::slot_showTriggers);
+    connect(viewTriggerAction, &QAction::triggered, this, [this]() {
+        leaveFolderView();
+        slot_showTriggers();
+    });
 
     QAction* viewAliasAction = new QAction(QIcon(qsl(":/icons/system-users.png")), tr("Aliases"), this);
     viewAliasAction->setStatusTip(tr("Show Aliases"));
     viewAliasAction->setToolTip(qsl("%1 (%2)").arg(tr("Show Aliases"), QKeySequence(Qt::CTRL | Qt::Key_2).toString(QKeySequence::NativeText)));
-    connect(viewAliasAction, &QAction::triggered, this, &dlgTriggerEditor::slot_showAliases);
+    connect(viewAliasAction, &QAction::triggered, this, [this]() {
+        leaveFolderView();
+        slot_showAliases();
+    });
 
     QAction* viewScriptsAction = new QAction(QIcon(qsl(":/icons/document-properties.png")), tr("Scripts"), this);
     viewScriptsAction->setStatusTip(tr("Show Scripts"));
     viewScriptsAction->setToolTip(qsl("%1 (%2)").arg(tr("Show Scripts"), QKeySequence(Qt::CTRL | Qt::Key_3).toString(QKeySequence::NativeText)));
-    connect(viewScriptsAction, &QAction::triggered, this, &dlgTriggerEditor::slot_showScripts);
+    connect(viewScriptsAction, &QAction::triggered, this, [this]() {
+        leaveFolderView();
+        slot_showScripts();
+    });
 
     QAction* showTimersAction = new QAction(QIcon(qsl(":/icons/chronometer.png")), tr("Timers"), this);
     showTimersAction->setStatusTip(tr("Show Timers"));
     showTimersAction->setToolTip(qsl("%1 (%2)").arg(tr("Show Timers"), QKeySequence(Qt::CTRL | Qt::Key_4).toString(QKeySequence::NativeText)));
-    connect(showTimersAction, &QAction::triggered, this, &dlgTriggerEditor::slot_showTimers);
+    connect(showTimersAction, &QAction::triggered, this, [this]() {
+        leaveFolderView();
+        slot_showTimers();
+    });
 
     QAction* viewKeysAction = new QAction(QIcon(qsl(":/icons/preferences-desktop-keyboard.png")), tr("Keys"), this);
     viewKeysAction->setStatusTip(tr("Show Keybindings"));
     viewKeysAction->setToolTip(qsl("%1 (%2)").arg(tr("Show Keybindings"), QKeySequence(Qt::CTRL | Qt::Key_5).toString(QKeySequence::NativeText)));
-    connect(viewKeysAction, &QAction::triggered, this, &dlgTriggerEditor::slot_showKeys);
+    connect(viewKeysAction, &QAction::triggered, this, [this]() {
+        leaveFolderView();
+        slot_showKeys();
+    });
 
     QAction* viewVarsAction = new QAction(QIcon(qsl(":/icons/variables.png")), tr("Variables"), this);
     viewVarsAction->setStatusTip(tr("Show Variables"));
     viewVarsAction->setToolTip(qsl("%1 (%2)").arg(tr("Show Variables"), QKeySequence(Qt::CTRL | Qt::Key_6).toString(QKeySequence::NativeText)));
-    connect(viewVarsAction, &QAction::triggered, this, &dlgTriggerEditor::slot_showVariables);
+    connect(viewVarsAction, &QAction::triggered, this, [this]() {
+        leaveFolderView();
+        slot_showVariables();
+    });
 
     QAction* viewActionAction = new QAction(QIcon(qsl(":/icons/bookmarks.png")), tr("Buttons"), this);
     viewActionAction->setStatusTip(tr("Show Buttons"));
     viewActionAction->setToolTip(qsl("%1 (%2)").arg(tr("Show Buttons"), QKeySequence(Qt::CTRL | Qt::Key_7).toString(QKeySequence::NativeText)));
-    connect(viewActionAction, &QAction::triggered, this, &dlgTriggerEditor::slot_showActions);
+    connect(viewActionAction, &QAction::triggered, this, [this]() {
+        leaveFolderView();
+        slot_showActions();
+    });
+
+    //: Editor toolbar button that shows every item type together, grouped by folder
+    mpViewFoldersAction = new QAction(QIcon(qsl(":/icons/folder-blue.png")), tr("Folders"), this);
+    //: Status tip for the editor's Folders view button
+    mpViewFoldersAction->setStatusTip(tr("Show triggers, aliases, scripts, timers, keys and buttons together, grouped by folder"));
+    mpViewFoldersAction->setVisible(mpHost->folderViewInEditor());
+    connect(mpViewFoldersAction, &QAction::triggered, this, &dlgTriggerEditor::slot_showFolders);
 
 
     QAction* viewErrorsAction = new QAction(QIcon(qsl(":/icons/errors.png")), tr("Errors"), this);
@@ -915,6 +1013,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     treeWidget_scripts->addAction(copyAction);
     treeWidget_actions->addAction(copyAction);
     treeWidget_keys->addAction(copyAction);
+    mpFolderTree->addAction(copyAction);
     connect(copyAction, &QAction::triggered, this, &dlgTriggerEditor::slot_copyXml);
 
     QAction* pasteAction = new QAction(tr("Paste"), this);
@@ -929,6 +1028,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     treeWidget_scripts->addAction(pasteAction);
     treeWidget_actions->addAction(pasteAction);
     treeWidget_keys->addAction(pasteAction);
+    mpFolderTree->addAction(pasteAction);
     connect(pasteAction, &QAction::triggered, this, &dlgTriggerEditor::slot_pasteXml);
 
     // Add delete action to all tree widgets for right-click context menu
@@ -939,6 +1039,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     treeWidget_actions->addAction(mDeleteItem);
     treeWidget_keys->addAction(mDeleteItem);
     treeWidget_variables->addAction(mDeleteItem);
+    mpFolderTree->addAction(mDeleteItem);
 
     // Add separators and additional actions to context menu
     QAction* separator1 = new QAction(this);
@@ -947,7 +1048,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     separator2->setSeparator(true);
 
     // Add context menu actions to all tree widgets
-    QList<QTreeWidget*> treeWidgets = {treeWidget_triggers, treeWidget_aliases, treeWidget_timers, treeWidget_scripts, treeWidget_actions, treeWidget_keys, treeWidget_variables};
+    QList<QTreeWidget*> treeWidgets = {treeWidget_triggers, treeWidget_aliases, treeWidget_timers, treeWidget_scripts, treeWidget_actions, treeWidget_keys, treeWidget_variables, mpFolderTree};
 
     for (QTreeWidget* widget : treeWidgets) {
         widget->addAction(mAddItem);
@@ -1058,6 +1159,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     toolBar2->addAction(viewKeysAction);
     toolBar2->addAction(viewVarsAction);
     toolBar2->addAction(viewActionAction);
+    toolBar2->addAction(mpViewFoldersAction);
 
     toolBar2->addSeparator();
 
@@ -1412,6 +1514,8 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     connect(mpHost, &Host::signal_editorSearchOptionsChanged, this, &dlgTriggerEditor::setSearchOptions);
     connect(mpHost, &Host::signal_editorShowBidiChanged, this, &dlgTriggerEditor::setEditorShowBidi);
     connect(mpHost, &Host::signal_showIdsInEditorChanged, this, &dlgTriggerEditor::showIDLabels);
+    connect(mpHost, &Host::signal_folderViewInEditorChanged, this, &dlgTriggerEditor::setFolderViewAvailable);
+    connect(mudlet::self(), &mudlet::signal_appearanceChanged, this, &dlgTriggerEditor::scheduleFolderTreeRefresh);
     connect(mpHost, &Host::signal_triggerToggled, this, &dlgTriggerEditor::refreshTriggerIcon);
     connect(mpHost, &Host::signal_aliasToggled, this, &dlgTriggerEditor::refreshAliasIcon);
     connect(mpHost, &Host::signal_timerToggled, this, &dlgTriggerEditor::refreshTimerIcon);
@@ -1934,6 +2038,7 @@ void dlgTriggerEditor::slot_setTreeWidgetIconSize(const int s)
     treeWidget_keys->setIconSize(newSize);
     treeWidget_actions->setIconSize(newSize);
     treeWidget_variables->setIconSize(newSize);
+    mpFolderTree->setIconSize(newSize);
 }
 
 void dlgTriggerEditor::closeEvent(QCloseEvent* event)
@@ -10679,23 +10784,30 @@ void dlgTriggerEditor::changeView(EditorViewType view)
         hideSystemMessageArea();
     }
 
+    if (view == EditorViewType::cmVarsView) {
+        leaveFolderView();
+    }
+    hideFolderSummary();
+    const bool showTypeTree = !mFolderViewActive;
+    mpFolderTree->setVisible(mFolderViewActive);
+
     mpActionsMainArea->setVisible(view == EditorViewType::cmActionView);
-    treeWidget_actions->setVisible(view == EditorViewType::cmActionView);
+    treeWidget_actions->setVisible(showTypeTree && view == EditorViewType::cmActionView);
 
     mpAliasMainArea->setVisible(view == EditorViewType::cmAliasView);
-    treeWidget_aliases->setVisible(view == EditorViewType::cmAliasView);
+    treeWidget_aliases->setVisible(showTypeTree && view == EditorViewType::cmAliasView);
 
     mpKeysMainArea->setVisible(view == EditorViewType::cmKeysView);
-    treeWidget_keys->setVisible(view == EditorViewType::cmKeysView);
+    treeWidget_keys->setVisible(showTypeTree && view == EditorViewType::cmKeysView);
 
     mpScriptsMainArea->setVisible(view == EditorViewType::cmScriptView);
-    treeWidget_scripts->setVisible(view == EditorViewType::cmScriptView);
+    treeWidget_scripts->setVisible(showTypeTree && view == EditorViewType::cmScriptView);
 
     mpTimersMainArea->setVisible(view == EditorViewType::cmTimerView);
-    treeWidget_timers->setVisible(view == EditorViewType::cmTimerView);
+    treeWidget_timers->setVisible(showTypeTree && view == EditorViewType::cmTimerView);
 
     mpTriggersMainArea->setVisible(view == EditorViewType::cmTriggerView);
-    treeWidget_triggers->setVisible(view == EditorViewType::cmTriggerView);
+    treeWidget_triggers->setVisible(showTypeTree && view == EditorViewType::cmTriggerView);
 
     const bool enablePatternShortcuts = view == EditorViewType::cmTriggerView;
 
@@ -16314,4 +16426,472 @@ void dlgTriggerEditor::slot_saveProperty_ActionCSS()
     QString newStateXML = exportActionToXML(pT, SnapshotScope::ItemOnly);
 
     pushActionPropertyCommand(mpUndoStack, mpHost, actionID, pT->getName(), qsl("css"), oldStateXML, newStateXML);
+}
+
+QTreeWidget* dlgTriggerEditor::treeForView(const EditorViewType view) const
+{
+    switch (view) {
+    case EditorViewType::cmTriggerView:
+        return treeWidget_triggers;
+    case EditorViewType::cmAliasView:
+        return treeWidget_aliases;
+    case EditorViewType::cmScriptView:
+        return treeWidget_scripts;
+    case EditorViewType::cmTimerView:
+        return treeWidget_timers;
+    case EditorViewType::cmKeysView:
+        return treeWidget_keys;
+    case EditorViewType::cmActionView:
+        return treeWidget_actions;
+    case EditorViewType::cmVarsView:
+        return treeWidget_variables;
+    case EditorViewType::cmUnknownView:
+        break;
+    }
+    return nullptr;
+}
+
+QByteArray* dlgTriggerEditor::splitterStateForView(const EditorViewType view)
+{
+    switch (view) {
+    case EditorViewType::cmTriggerView:
+        return &mTriggerEditorSplitterState;
+    case EditorViewType::cmAliasView:
+        return &mAliasEditorSplitterState;
+    case EditorViewType::cmScriptView:
+        return &mScriptEditorSplitterState;
+    case EditorViewType::cmTimerView:
+        return &mTimerEditorSplitterState;
+    case EditorViewType::cmKeysView:
+        return &mKeyEditorSplitterState;
+    case EditorViewType::cmActionView:
+        return &mActionEditorSplitterState;
+    case EditorViewType::cmVarsView:
+        return &mVarEditorSplitterState;
+    case EditorViewType::cmUnknownView:
+        break;
+    }
+    return nullptr;
+}
+
+void dlgTriggerEditor::selectItemInView(const EditorViewType view, QTreeWidgetItem* pItem)
+{
+    switch (view) {
+    case EditorViewType::cmTriggerView:
+        slot_triggerSelected(pItem);
+        break;
+    case EditorViewType::cmAliasView:
+        slot_aliasSelected(pItem);
+        break;
+    case EditorViewType::cmScriptView:
+        slot_scriptsSelected(pItem);
+        break;
+    case EditorViewType::cmTimerView:
+        slot_timerSelected(pItem);
+        break;
+    case EditorViewType::cmKeysView:
+        slot_keySelected(pItem);
+        break;
+    case EditorViewType::cmActionView:
+        slot_actionSelected(pItem);
+        break;
+    case EditorViewType::cmVarsView:
+    case EditorViewType::cmUnknownView:
+        break;
+    }
+}
+
+bool dlgTriggerEditor::folderItem(const EditorViewType view, const int id)
+{
+    switch (view) {
+    case EditorViewType::cmTriggerView: {
+        auto* pTrigger = mpHost->getTriggerUnit()->getTrigger(id);
+        return pTrigger && pTrigger->isFolder();
+    }
+    case EditorViewType::cmAliasView: {
+        auto* pAlias = mpHost->getAliasUnit()->getAlias(id);
+        return pAlias && pAlias->isFolder();
+    }
+    case EditorViewType::cmScriptView: {
+        auto* pScript = mpHost->getScriptUnit()->getScript(id);
+        return pScript && pScript->isFolder();
+    }
+    case EditorViewType::cmTimerView: {
+        auto* pTimer = mpHost->getTimerUnit()->getTimer(id);
+        return pTimer && pTimer->isFolder();
+    }
+    case EditorViewType::cmKeysView: {
+        auto* pKey = mpHost->getKeyUnit()->getKey(id);
+        return pKey && pKey->isFolder();
+    }
+    case EditorViewType::cmActionView: {
+        auto* pAction = mpHost->getActionUnit()->getAction(id);
+        return pAction && pAction->isFolder();
+    }
+    case EditorViewType::cmVarsView:
+    case EditorViewType::cmUnknownView:
+        break;
+    }
+    return false;
+}
+
+QTreeWidgetItem* dlgTriggerEditor::findItemById(QTreeWidget* pTree, const int id)
+{
+    QTreeWidgetItem* pRoot = pTree ? pTree->topLevelItem(0) : nullptr;
+    if (!pRoot) {
+        return nullptr;
+    }
+    for (QTreeWidgetItemIterator it(pRoot); *it; ++it) {
+        if ((*it) != pRoot && (*it)->data(0, IdRole).toInt() == id) {
+            return *it;
+        }
+    }
+    return nullptr;
+}
+
+QString dlgTriggerEditor::folderTreeItemKey(const EditorViewType view, const int id)
+{
+    return qsl("%1:%2").arg(static_cast<int>(view)).arg(id);
+}
+
+QString dlgTriggerEditor::folderTreeTypeName(const EditorViewType view, const bool plural)
+{
+    switch (view) {
+    case EditorViewType::cmTriggerView:
+        //: Item type shown beside an entry in the editor's Folders view
+        return plural ? tr("Triggers") : tr("Trigger");
+    case EditorViewType::cmAliasView:
+        //: Item type shown beside an entry in the editor's Folders view
+        return plural ? tr("Aliases") : tr("Alias");
+    case EditorViewType::cmScriptView:
+        //: Item type shown beside an entry in the editor's Folders view
+        return plural ? tr("Scripts") : tr("Script");
+    case EditorViewType::cmTimerView:
+        //: Item type shown beside an entry in the editor's Folders view
+        return plural ? tr("Timers") : tr("Timer");
+    case EditorViewType::cmKeysView:
+        //: Item type shown beside an entry in the editor's Folders view
+        return plural ? tr("Keys") : tr("Key");
+    case EditorViewType::cmActionView:
+        //: Item type shown beside an entry in the editor's Folders view
+        return plural ? tr("Buttons") : tr("Button");
+    case EditorViewType::cmVarsView:
+    case EditorViewType::cmUnknownView:
+        break;
+    }
+    return {};
+}
+
+void dlgTriggerEditor::addFolderTreeNode(QTreeWidgetItem* pSource, const EditorViewType view, QTreeWidgetItem* pParent, QTreeWidgetItem* pLooseItems, QHash<QString, QTreeWidgetItem*>& folders)
+{
+    const int id = pSource->data(0, IdRole).toInt();
+    const QString itemKey = folderTreeItemKey(view, id);
+    const QColor typeColor = palette().color(QPalette::PlaceholderText);
+    QTreeWidgetItem* pNode = nullptr;
+    if (folderItem(view, id)) {
+        // U+001F cannot be typed into a name, so a name cannot fake a deeper path
+        const QString key = (pParent ? pParent->data(0, FolderKeyRole).toString() : QString()) + QChar(0x1F) + pSource->text(0);
+        pNode = folders.value(key);
+        if (!pNode) {
+            pNode = new QTreeWidgetItem();
+            pNode->setText(0, pSource->text(0));
+            pNode->setIcon(0, pSource->icon(0));
+            pNode->setForeground(1, typeColor);
+            pNode->setData(0, FolderKeyRole, key);
+            folders.insert(key, pNode);
+            mFolderTreeNodes.insert(key, pNode);
+            if (pParent) {
+                pParent->addChild(pNode);
+            } else {
+                mpFolderTree->addTopLevelItem(pNode);
+            }
+        }
+        QStringList parts = pNode->data(0, FolderPartsRole).toStringList();
+        parts.append(itemKey);
+        pNode->setData(0, FolderPartsRole, parts);
+        const QString typeName = folderTreeTypeName(view, true);
+        QStringList typeNames = pNode->text(1).isEmpty() ? QStringList() : pNode->text(1).split(qsl(", "));
+        if (!typeNames.contains(typeName)) {
+            typeNames.append(typeName);
+            pNode->setText(1, typeNames.join(qsl(", ")));
+            //: Screen reader description of a folder in the editor's Folders view, %1 is a list of item types such as "Triggers, Aliases"
+            pNode->setData(0, Qt::AccessibleDescriptionRole, tr("Folder of %1").arg(pNode->text(1)));
+        }
+    } else {
+        pNode = new QTreeWidgetItem();
+        pNode->setText(0, pSource->text(0));
+        pNode->setIcon(0, pSource->icon(0));
+        pNode->setText(1, folderTreeTypeName(view, false));
+        pNode->setForeground(1, typeColor);
+        pNode->setData(0, FolderKeyRole, itemKey);
+        pNode->setData(0, FolderPartsRole, QStringList{itemKey});
+        pNode->setData(0, Qt::AccessibleDescriptionRole, pSource->data(0, Qt::AccessibleDescriptionRole));
+        (pParent ? pParent : pLooseItems)->addChild(pNode);
+    }
+    mFolderTreeNodes.insert(itemKey, pNode);
+
+    for (int i = 0, total = pSource->childCount(); i < total; ++i) {
+        addFolderTreeNode(pSource->child(i), view, pNode, pLooseItems, folders);
+    }
+}
+
+void dlgTriggerEditor::populateFolderTree()
+{
+    QSet<QString> expandedKeys;
+    for (QTreeWidgetItemIterator it(mpFolderTree); *it; ++it) {
+        if ((*it)->isExpanded()) {
+            expandedKeys.insert((*it)->data(0, FolderKeyRole).toString());
+        }
+    }
+    const QString previousKey = mpFolderTree->currentItem() ? mpFolderTree->currentItem()->data(0, FolderKeyRole).toString() : QString();
+    const int scrollPosition = mpFolderTree->verticalScrollBar()->value();
+
+    {
+        const QSignalBlocker blocker(mpFolderTree);
+        mpFolderTree->setUpdatesEnabled(false);
+        mpFolderTree->clear();
+        mFolderTreeNodes.clear();
+
+        // Kept out of the tree until the end so it always comes last
+        auto* pLooseItems = new QTreeWidgetItem();
+        //: Group at the bottom of the editor's Folders view holding the items that are not inside any folder
+        pLooseItems->setText(0, tr("Not in a folder"));
+        pLooseItems->setIcon(0, QIcon(qsl(":/icons/folder-grey.png")));
+        pLooseItems->setData(0, FolderKeyRole, qsl("loose"));
+
+        QHash<QString, QTreeWidgetItem*> folders;
+        for (const auto view :
+             {EditorViewType::cmTriggerView, EditorViewType::cmAliasView, EditorViewType::cmScriptView, EditorViewType::cmTimerView, EditorViewType::cmKeysView, EditorViewType::cmActionView}) {
+            QTreeWidgetItem* pRoot = treeForView(view)->topLevelItem(0);
+            if (!pRoot) {
+                continue;
+            }
+            for (int i = 0, total = pRoot->childCount(); i < total; ++i) {
+                addFolderTreeNode(pRoot->child(i), view, nullptr, pLooseItems, folders);
+            }
+        }
+        if (pLooseItems->childCount()) {
+            mpFolderTree->addTopLevelItem(pLooseItems);
+            mFolderTreeNodes.insert(qsl("loose"), pLooseItems);
+        } else {
+            delete pLooseItems;
+        }
+
+        for (QTreeWidgetItemIterator it(mpFolderTree); *it; ++it) {
+            if (expandedKeys.contains((*it)->data(0, FolderKeyRole).toString())) {
+                (*it)->setExpanded(true);
+            }
+        }
+        mFolderTreeStale = false;
+        mpFolderTree->setUpdatesEnabled(true);
+    }
+    mpFolderTree->verticalScrollBar()->setValue(scrollPosition);
+    syncFolderTreeSelection(previousKey);
+}
+
+void dlgTriggerEditor::scheduleFolderTreeRefresh()
+{
+    mFolderTreeStale = true;
+    if (mFolderViewActive) {
+        mpFolderTreeRefreshTimer->start();
+    }
+}
+
+void dlgTriggerEditor::selectFolderTreeNode(QTreeWidgetItem* pNode)
+{
+    if (!pNode || pNode == mpFolderTree->currentItem()) {
+        return;
+    }
+    {
+        const QSignalBlocker blocker(mpFolderTree);
+        mpFolderTree->setCurrentItem(pNode);
+    }
+    mpFolderTree->scrollToItem(pNode);
+}
+
+void dlgTriggerEditor::syncFolderTreeSelection(const QString& fallbackKey)
+{
+    if (!mFolderSummaryKey.isEmpty()) {
+        QTreeWidgetItem* pSummaryNode = mFolderTreeNodes.value(mFolderSummaryKey);
+        if (pSummaryNode && pSummaryNode->data(0, FolderPartsRole).toStringList().size() > 1) {
+            selectFolderTreeNode(pSummaryNode);
+            showFolderSummary(pSummaryNode);
+            return;
+        }
+        hideFolderSummary();
+    }
+
+    QTreeWidget* pTree = treeForView(mCurrentView);
+    QTreeWidgetItem* pCurrent = pTree ? pTree->currentItem() : nullptr;
+    if (pCurrent && pCurrent->parent()) {
+        if (QTreeWidgetItem* pNode = mFolderTreeNodes.value(folderTreeItemKey(mCurrentView, pCurrent->data(0, IdRole).toInt()))) {
+            selectFolderTreeNode(pNode);
+            return;
+        }
+    }
+
+    if (QTreeWidgetItem* pFallback = mFolderTreeNodes.value(fallbackKey)) {
+        mpFolderTree->setCurrentItem(pFallback);
+    }
+}
+
+void dlgTriggerEditor::slot_folderTreeItemChanged(QTreeWidgetItem* pItem)
+{
+    if (!pItem) {
+        return;
+    }
+    const QStringList parts = pItem->data(0, FolderPartsRole).toStringList();
+    if (parts.size() > 1) {
+        showFolderSummary(pItem);
+        return;
+    }
+    if (parts.size() == 1) {
+        const QStringList viewAndId = parts.constFirst().split(QLatin1Char(':'));
+        openItemFromFolderTree(static_cast<EditorViewType>(viewAndId.constFirst().toInt()), viewAndId.constLast().toInt());
+    }
+}
+
+void dlgTriggerEditor::openItemFromFolderTree(const EditorViewType view, const int id)
+{
+    if (mNeedUpdateData) {
+        saveOpenChanges();
+        rebuildStaleTrees();
+    }
+    QTreeWidget* pTree = treeForView(view);
+    QTreeWidgetItem* pItem = findItemById(pTree, id);
+    if (!pItem) {
+        scheduleFolderTreeRefresh();
+        return;
+    }
+
+    const bool viewChanged = mCurrentView != view;
+    changeView(view);
+    {
+        const QSignalBlocker blocker(pTree);
+        pTree->setCurrentItem(pItem);
+    }
+    pTree->scrollToItem(pItem);
+    selectItemInView(view, pItem);
+    if (QByteArray* pSplitterState = splitterStateForView(view); viewChanged && pSplitterState && !pSplitterState->isEmpty()) {
+        splitter_right->restoreState(*pSplitterState);
+    }
+}
+
+void dlgTriggerEditor::showFolderSummary(QTreeWidgetItem* pNode)
+{
+    saveOpenChanges();
+    mFolderSummaryKey = pNode->data(0, FolderKeyRole).toString();
+
+    mpTriggersMainArea->hide();
+    mpAliasMainArea->hide();
+    mpScriptsMainArea->hide();
+    mpTimersMainArea->hide();
+    mpKeysMainArea->hide();
+    mpActionsMainArea->hide();
+    mpVarsMainArea->hide();
+    mpSourceEditorArea->hide();
+    mpFolderSummaryArea->show();
+
+    // A merged folder has no single item type for a new, deleted or saved item to belong to
+    mAddItem->setEnabled(false);
+    mAddGroup->setEnabled(false);
+    mDeleteItem->setEnabled(false);
+    mSaveItem->setEnabled(false);
+    mpAction_toggleActive->setEnabled(false);
+    mpExportAction->setEnabled(false);
+
+    //: Shown in the editor's Folders view when a folder name exists in more than one item type, %1 is the folder name
+    mpFolderSummaryText->setText(tr("<p><b>%1</b> is a folder in more than one item type. Choose which one to open:</p>").arg(pNode->text(0).toHtmlEscaped()));
+
+    qDeleteAll(mpFolderSummaryButtons->findChildren<QPushButton*>(Qt::FindDirectChildrenOnly));
+    const QStringList parts = pNode->data(0, FolderPartsRole).toStringList();
+    for (const QString& part : parts) {
+        const QStringList viewAndId = part.split(QLatin1Char(':'));
+        const auto view = static_cast<EditorViewType>(viewAndId.constFirst().toInt());
+        const int id = viewAndId.constLast().toInt();
+        QTreeWidgetItem* pSource = findItemById(treeForView(view), id);
+        if (!pSource) {
+            continue;
+        }
+        int itemCount = 0;
+        QList<QTreeWidgetItem*> pending{pSource};
+        while (!pending.isEmpty()) {
+            QTreeWidgetItem* pPending = pending.takeLast();
+            itemCount += pPending->childCount();
+            for (int i = 0, total = pPending->childCount(); i < total; ++i) {
+                pending.append(pPending->child(i));
+            }
+        }
+        //: Button in the editor's Folders view that opens one item type's copy of a shared folder, %1 is the item type such as "Triggers"
+        auto* pButton = new QPushButton(pSource->icon(0), tr("%1 (%n item(s))", nullptr, itemCount).arg(folderTreeTypeName(view, true)), mpFolderSummaryButtons);
+        mpFolderSummaryButtons->layout()->addWidget(pButton);
+        mpFolderSummaryButtons->layout()->setAlignment(pButton, Qt::AlignLeft);
+        connect(pButton, &QPushButton::clicked, this, [this, view, id]() {
+            openItemFromFolderTree(view, id);
+        });
+    }
+}
+
+void dlgTriggerEditor::hideFolderSummary()
+{
+    if (mFolderSummaryKey.isEmpty()) {
+        return;
+    }
+    mFolderSummaryKey.clear();
+    mpFolderSummaryArea->hide();
+    mpSourceEditorArea->show();
+    mAddItem->setEnabled(true);
+    mAddGroup->setEnabled(true);
+    mDeleteItem->setEnabled(true);
+    mSaveItem->setEnabled(true);
+    const bool itemView = mCurrentView != EditorViewType::cmVarsView && mCurrentView != EditorViewType::cmUnknownView;
+    mpAction_toggleActive->setEnabled(itemView);
+    mpExportAction->setEnabled(itemView);
+}
+
+void dlgTriggerEditor::leaveFolderView()
+{
+    if (!mFolderViewActive) {
+        return;
+    }
+    hideFolderSummary();
+    mFolderViewActive = false;
+    mpFolderTreeRefreshTimer->stop();
+    mpFolderTree->hide();
+}
+
+void dlgTriggerEditor::slot_showFolders()
+{
+    if (!mpHost->folderViewInEditor()) {
+        return;
+    }
+    if (mNeedUpdateData) {
+        saveOpenChanges();
+        rebuildStaleTrees();
+    }
+    mFolderViewActive = true;
+    if (mFolderTreeStale) {
+        populateFolderTree();
+    }
+    if (mCurrentView == EditorViewType::cmUnknownView || mCurrentView == EditorViewType::cmVarsView) {
+        slot_showTriggers();
+    } else {
+        changeView(mCurrentView);
+    }
+    syncFolderTreeSelection({});
+    mpFolderTree->setFocus();
+}
+
+void dlgTriggerEditor::setFolderViewAvailable(const bool available)
+{
+    mpViewFoldersAction->setVisible(available);
+    if (available || !mFolderViewActive) {
+        return;
+    }
+    leaveFolderView();
+    if (mCurrentView == EditorViewType::cmUnknownView) {
+        slot_showTriggers();
+    } else {
+        changeView(mCurrentView);
+    }
 }

@@ -5406,6 +5406,14 @@ void Host::setShowIdsInEditor(const bool isShown)
     emit signal_showIdsInEditorChanged(isShown);
 }
 
+void Host::setFolderViewInEditor(const bool enabled)
+{
+    if (mFolderViewInEditor != enabled) {
+        mFolderViewInEditor = enabled;
+        emit signal_folderViewInEditorChanged(enabled);
+    }
+}
+
 // Hands TMap::mpMapper back to this profile's own mapper. The map dock and the
 // detached windows borrow it while they show a map of their own, and every one
 // of them gives it back through here.

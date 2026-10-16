@@ -5117,6 +5117,7 @@ void dlgProfilePreferences::loadEditorTab()
     checkBox_autocompleteLuaCode->setChecked(pHost->mEditorAutoComplete);
     checkBox_showBidi->setChecked(pHost->getEditorShowBidi());
     checkBox_showIdNumbers->setChecked(pHost->showIdsInEditor());
+    checkBox_folderView->setChecked(pHost->folderViewInEditor());
 
     // changes the theme being previewed
     connect(code_editor_theme_selection_combobox, static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_themeSelected, Qt::UniqueConnection);
@@ -6790,6 +6791,9 @@ void dlgProfilePreferences::applyAll()
         }
         if (mSnapshot.dirty(checkBox_showIdNumbers)) {
             pHost->setShowIdsInEditor(checkBox_showIdNumbers->isChecked());
+        }
+        if (mSnapshot.dirty(checkBox_folderView)) {
+            pHost->setFolderViewInEditor(checkBox_folderView->isChecked());
         }
         // Re-theming an open script editor fully reconfigures edbee, so only when one of these changed
         auto* pDialogs = HostDialogs::find(pHost);
