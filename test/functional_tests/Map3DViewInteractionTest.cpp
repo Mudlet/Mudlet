@@ -1949,6 +1949,20 @@ private slots:
         QVERIFY2(saved.contains(qsl("\"%1\"").arg(mPlayerAreaId)) && saved.contains(qsl("\"%1\"").arg(mOtherAreaId)), qPrintable(saved));
     }
 
+    void test_flyingIntoAnAreaShowsItInTheAreaList()
+    {
+        ModernGLWidget* pModern = viewAtThePlayer();
+        QVERIFY(pModern);
+        dlgMapper* pMapper = map()->mapper();
+        pMapper->comboBox_showArea->setCurrentText(qsl("Player Area"));
+        pModern->flyToArea(mOtherAreaId);
+        QVERIFY(pModern->mFlight);
+        QCOMPARE(pModern->shownAreaId(), mOtherAreaId);
+        QCOMPARE(pMapper->comboBox_showArea->currentText(), qsl("Other Area"));
+        pModern->stopFlight();
+        pModern->followPlayer();
+    }
+
     // Closing the profile frees the Host and its TMap before the floating dock holding the view is
     // deleted, and that dock's teardown hides the view; must run last as it closes the profile
     void test_zzClosingTheProfileWithTheViewShownLeavesTheFreedMapAlone()
