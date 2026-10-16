@@ -433,14 +433,8 @@ int TLuaInterpreter::createBuffer(lua_State* L)
 {
     const QString text = getVerifiedString(L, __func__, 1, "name");
     Host& host = getHostFromLua(L);
-    if (!host.createBuffer(text)) {
-        if (host.windowRegistry().hasLabel(text)) {
-            return warnArgumentValue(L, __func__, qsl("label with the name '%1' already exists").arg(text), true);
-        }
-        return warnArgumentValue(L, __func__, qsl("a miniconsole/userwindow with the name '%1' already exists").arg(text), true);
-    }
-    lua_pushboolean(L, true);
-    return 1;
+    host.createBuffer(text);
+    return 0;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#createCommandLine

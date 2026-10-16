@@ -5657,10 +5657,6 @@ std::pair<bool, QString> Host::createMiniConsole(const QString& windowname, cons
         return {false, qsl("window '%1' not found").arg(windowname)};
     }
 
-    if (mWindowRegistry.hasLabel(name)) {
-        return {false, qsl("label with the name '%1' already exists").arg(name)};
-    }
-
     if (!mWindowRegistry.hasSubConsole(name)) {
         // The null view would make it in its main window, as it has no record of a detached view's windows
         if (!hasConsoleView() && !mpNullConsoleFrontend->ownsContainer(windowname)) {
@@ -5685,10 +5681,6 @@ std::pair<bool, QString> Host::createScrollBox(const QString& windowname, const 
 {
     if (parentWindowMissing(windowname)) {
         return {false, qsl("window '%1' not found").arg(windowname)};
-    }
-
-    if (mWindowRegistry.hasLabel(name)) {
-        return {false, qsl("label with the name '%1' already exists").arg(name)};
     }
 
     if (!mWindowRegistry.hasScrollBox(name)) {
@@ -5717,9 +5709,6 @@ std::pair<bool, QString> Host::createLabel(const QString& windowname, const QStr
     }
     if (mWindowRegistry.hasSubConsole(name)) {
         return {false, qsl("a miniconsole/userwindow with the name '%1' already exists").arg(name)};
-    }
-    if (mWindowRegistry.hasPlainWindow(name)) {
-        return {false, qsl("a scroll box, command line or text edit with the name '%1' already exists").arg(name)};
     }
     if (!hasConsoleView() && !mpNullConsoleFrontend->ownsContainer(windowname)) {
         return TNullConsoleFrontend::noView();
@@ -5829,7 +5818,7 @@ void Host::hideMudletsVariables()
 
 bool Host::createBuffer(const QString& name)
 {
-    if (mWindowRegistry.hasSubConsole(name) || mWindowRegistry.hasLabel(name)) {
+    if (mWindowRegistry.hasSubConsole(name)) {
         return false;
     }
     consoleFrontend()->createBuffer(name);

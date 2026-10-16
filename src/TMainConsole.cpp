@@ -1415,10 +1415,6 @@ void TMainConsole::deleteMiniConsole(const QString& name)
     auto pConsole = deregisterSubConsole(name);
     if (pConsole) {
         mpHost->windowRegistry().forgetUserWindowSize(name);
-        // Its command line is registered under its name and would hold that name until the deferred delete
-        if (pConsole->mpCommandLine) {
-            deregisterSubCommandLine(pConsole->mpCommandLine);
-        }
 
         // A UserWindow's TConsole lives *inside* a TDockWidget. Deleting only the
         // console (as for an ordinary miniconsole) leaves the dock orphaned in
@@ -1698,10 +1694,6 @@ std::pair<bool, QString> TMainConsole::createCommandLine(const QString& windowna
     // No Host::createCommandLine() wrapper makes this check, unlike the other creators.
     if (mpHost->parentWindowMissing(windowname)) {
         return {false, qsl("window '%1' not found").arg(windowname)};
-    }
-
-    if (mpHost->windowRegistry().hasLabel(name)) {
-        return {false, qsl("label with the name '%1' already exists").arg(name)};
     }
 
     auto pN = mSubCommandLineMap.value(name);
@@ -2317,10 +2309,6 @@ std::pair<bool, QString> TMainConsole::createTextBox(const QString& windowname, 
     // No Host::createTextEdit() wrapper makes this check, unlike the other creators.
     if (mpHost->parentWindowMissing(windowname)) {
         return {false, qsl("window '%1' not found").arg(windowname)};
-    }
-
-    if (mpHost->windowRegistry().hasLabel(name)) {
-        return {false, qsl("label with the name '%1' already exists").arg(name)};
     }
 
     auto pT = mTextBoxMap.value(name);
