@@ -185,6 +185,7 @@ public:
     // auto-login credentials, so only game commands can arm character-at-a-time
     // detection:
     bool sendData(QString& data, bool permitDataSendRequestEvent = true, bool isGameCommand = false);
+    bool dispatchingSendRequest() const { return mSendRequestDispatchDepth > 0; }
     QMap<QString, QPair<bool, QString>> getNewEnvironDataMap();
     bool isMNESVariable(const QString&);
     void sendInfoNewEnvironValue(const QString&);
@@ -674,6 +675,7 @@ private:
     // Used to disable the TConsole ending messages if run from lua:
     bool mIsReplayRunFromLua = false;
     QByteArrayList mAcceptableEncodings;
+    int mSendRequestDispatchDepth = 0;
     // Used to prevent more than one warning being shown in the event of a bad
     // encoding (when the user wants to use characters that cannot be encoded in
     // the current Server Encoding) - gets reset when the encoding is changed:
