@@ -171,6 +171,19 @@ std::vector<int> ActionUnit::findItems(const QString& name, const bool exactMatc
     return ids;
 }
 
+bool ActionUnit::pendingDeletion(TAction* pItem) const
+{
+    if (!hasPendingDeletes()) {
+        return false;
+    }
+    for (auto* pAncestor = pItem; pAncestor; pAncestor = pAncestor->getParent()) {
+        if (uninstallList.contains(pAncestor)) {
+            return true;
+        }
+    }
+    return false;
+}
+
 void ActionUnit::addActionRootNode(TAction* pT, int parentPosition, int childPosition)
 {
     if (!pT) {
