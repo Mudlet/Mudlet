@@ -125,19 +125,17 @@ describe("Tests that the font functions find their console by name", function()
     end)
   end)
 
-  it("keeps reaching a label when a mini console is refused its name", function()
-    local shared = "specFontsByNameShared" .. suffix
-    assert.is_true(createLabel(shared, 0, 0, 50, 20, 1))
+  -- "main" is the one name a console can still share with a label
+  it("lets the main console win the name of a label called main", function()
     finally(function()
-      deleteMiniConsole(shared)
-      deleteLabel(shared)
+      deleteLabel("main")
     end)
-    assert.are.same({true}, {setFontSize(shared, 17)})
-    assert.is_false(createMiniConsole(shared, 0, 0, 300, 200))
-    assert.are.same({17}, {getFontSize(shared)})
-
-    assert.are.same({true}, {setFontSize(shared, 21)})
-    assert.are.same({21}, {getFontSize(shared)})
+    local size = getFontSize("main") == 17 and 19 or 17
+    assert.is_true(createLabel("main", 0, 0, 50, 20, 1))
+    assert.are.same({true}, {setFontSize("main", size)})
+    assert.are.same({size}, {getFontSize("main")})
+    assert.is_true(deleteLabel("main"))
+    assert.are.same({size}, {getFontSize("main")})
   end)
 
   it("checks the arguments before it looks for the console", function()
