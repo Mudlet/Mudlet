@@ -423,9 +423,9 @@ private:
     void rebuildStaleTrees();
     void populateFolderTree();
     void addFolderTreeNode(QTreeWidgetItem* pSource, const EditorViewType view, QTreeWidgetItem* pParent, QTreeWidgetItem* pLooseItems, QHash<QString, int>& folderCounts);
-    void refreshFolderTreeData();
+    void refreshFolderTreeRows(const EditorViewType view, const QModelIndex& topLeft, const QModelIndex& bottomRight);
     void scheduleFolderTreeRefresh();
-    void scheduleFolderTreeDataRefresh();
+    void showView(const EditorViewType view);
     void focusItemTree(QTreeWidget* pTypeTree);
     QTreeWidget* sectionTree(QTreeWidget* pTypeTree) const;
     void syncFolderTreeSelection(const QString& fallbackKey);

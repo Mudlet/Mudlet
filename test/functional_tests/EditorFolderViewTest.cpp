@@ -31,6 +31,8 @@
 #include <chrono>
 
 #include "Host.h"
+#include "TTrigger.h"
+#include "TriggerUnit.h"
 #include "HostDialogs.h"
 #include "MudletApp.h"
 #include "MudletInstanceCoordinator.h"
@@ -40,6 +42,10 @@
 #include "ctelnet.h"
 #include "dlgAliasMainArea.h"
 #include "dlgTriggerEditor.h"
+#include "edbee/models/textdocument.h"
+#include "edbee/models/textundostack.h"
+#include "edbee/texteditorcontroller.h"
+#include "edbee/texteditorwidget.h"
 #include "mudlet.h"
 
 #include "GroupedTest.h"
@@ -155,6 +161,9 @@ private slots:
             permAlias("qaTwin", "", "", "")
             permSubstringTrigger("qaPair", "", {}, "")
             permAlias("qaPair", "", "", "")
+            permAlias("qaSub", "", "", "")
+            permSubstringTrigger("qaGone", "", {}, "")
+            permAlias("qaGone", "", "", "")
         )")));
 
         mudlet::self()->slot_showScriptDialog();
@@ -283,6 +292,9 @@ private slots:
         QTreeWidgetItem* pOtherSub = childNamed(topLevelNamed(qsl("qaOther")), qsl("qaSub"));
         QVERIFY(pOtherSub);
         QCOMPARE(pOtherSub->data(0, dlgTriggerEditor::FolderPartsRole).toStringList().size(), 1);
+        QTreeWidgetItem* pTopSub = topLevelNamed(qsl("qaSub"));
+        QVERIFY2(pTopSub, "a top-level alias folder merged into a trigger folder of the same name somewhere deeper");
+        QCOMPARE(pTopSub->data(0, dlgTriggerEditor::FolderPartsRole).toStringList().size(), 1);
     }
 
     // A package installed twice leaves two trigger folders of one name, and
@@ -424,6 +436,166 @@ private slots:
         QTRY_VERIFY2(mpEditor->mpFolderTree->hasFocus(), "Ctrl+Tab from the code went to a hidden tree");
         mpEditor->slot_nextSection();
         QTRY_VERIFY2(mpEditor->mpTriggersMainArea->lineEdit_trigger_name->hasFocus(), "Ctrl+Tab from the Folders view went nowhere");
+    }
+
+    void test_aMultipleSelectionDoesNotFollowIntoTheFoldersView()
+    {
+        mpEditor->leaveFolderView();
+        mpEditor->slot_showTriggers();
+        QList<QTreeWidgetItem*> hits = mpEditor->treeWidget_triggers->findItems(qsl("qaHit"), Qt::MatchExactly | Qt::MatchRecursive);
+        QList<QTreeWidgetItem*> loose = mpEditor->treeWidget_triggers->findItems(qsl("qaLooseTrigger"), Qt::MatchExactly | Qt::MatchRecursive);
+        QCOMPARE(hits.size(), 1);
+        QCOMPARE(loose.size(), 1);
+        mpEditor->treeWidget_triggers->setCurrentItem(hits.constFirst());
+        loose.constFirst()->setSelected(true);
+        QCOMPARE(mpEditor->treeWidget_triggers->selectedItems().size(), 2);
+
+        mpEditor->slot_showFolders();
+        QVERIFY2(mpEditor->treeWidget_triggers->selectedItems().size() == 1, "Delete would remove a hidden second trigger along with the highlighted one");
+
+        QTest::keyPress(mpEditor->mpFolderTree, Qt::Key_Control, Qt::ControlModifier);
+        mpEditor->mpFolderTree->setCurrentItem(mpEditor->mFolderTreeNodes.value(dlgTriggerEditor::folderTreeItemKey(EditorViewType::cmTriggerView, loose.constFirst()->data(0, Qt::UserRole).toInt())));
+        mpEditor->mpFolderTree->setCurrentItem(childNamed(topLevelNamed(qsl("qaCombat")), qsl("qaHit")));
+        QTest::keyRelease(mpEditor->mpFolderTree, Qt::Key_Control, Qt::ControlModifier);
+        QVERIFY2(mpEditor->treeWidget_triggers->selectedItems().size() == 1, "a held Ctrl key gathered hidden triggers into the selection");
+    }
+
+    void test_rootSelectedShowsTheIntroInTheFoldersView()
+    {
+        mpEditor->leaveFolderView();
+        mpEditor->slot_showTriggers();
+        mpEditor->treeWidget_triggers->setCurrentItem(mpEditor->treeWidget_triggers->topLevelItem(0));
+        mpEditor->slot_showTriggers();
+        QVERIFY(mpEditor->mpTriggersMainArea->isHidden());
+        mpEditor->slot_showFolders();
+        QVERIFY2(mpEditor->mpTriggersMainArea->isHidden(), "an empty trigger form came up for the Triggers root");
+    }
+
+    void test_aSummaryWhoseFolderIsGoneShowsTheIntro()
+    {
+        mpEditor->slot_showFolders();
+        QTreeWidgetItem* pHit = childNamed(topLevelNamed(qsl("qaCombat")), qsl("qaHit"));
+        QVERIFY(pHit);
+        mpEditor->mpFolderTree->setCurrentItem(pHit);
+        mpEditor->mpFolderTree->setCurrentItem(topLevelNamed(qsl("qaGone")));
+        QVERIFY(!mpEditor->mpFolderSummaryArea->isHidden());
+        {
+            const QSignalBlocker blocker(mpEditor->treeWidget_triggers);
+            mpEditor->treeWidget_triggers->setCurrentItem(mpEditor->treeWidget_triggers->topLevelItem(0));
+        }
+        for (QTreeWidget* pTree : {static_cast<QTreeWidget*>(mpEditor->treeWidget_triggers), static_cast<QTreeWidget*>(mpEditor->treeWidget_aliases)}) {
+            QTreeWidgetItem* pRoot = pTree->topLevelItem(0);
+            const QList<QTreeWidgetItem*> gone = pTree->findItems(qsl("qaGone"), Qt::MatchExactly | Qt::MatchRecursive);
+            QCOMPARE(gone.size(), 1);
+            delete pRoot->takeChild(pRoot->indexOfChild(gone.constFirst()));
+        }
+        QTRY_VERIFY(!mpEditor->mFolderTreeStale);
+        QVERIFY(mpEditor->mpFolderSummaryArea->isHidden());
+        QVERIFY2(mpEditor->mpTriggersMainArea->isHidden(), "a trigger form bound to no trigger came up");
+    }
+
+    void test_undoOnASummaryLeavesTheHiddenScriptAlone()
+    {
+        mpEditor->slot_showFolders();
+        QTreeWidgetItem* pHit = childNamed(topLevelNamed(qsl("qaCombat")), qsl("qaHit"));
+        QVERIFY(pHit);
+        mpEditor->mpFolderTree->setCurrentItem(pHit);
+        mpEditor->mpSourceEditorEdbee->controller()->replaceSelection(qsl("-- typed "));
+        QVERIFY(mpEditor->mpTextUndoStack->canUndo());
+        mpEditor->mpFolderTree->setCurrentItem(topLevelNamed(qsl("qaCombat")));
+        QVERIFY(!mpEditor->mpFolderSummaryArea->isHidden());
+        const QString before = mpEditor->mpSourceEditorEdbee->textDocument()->text();
+        mpEditor->slot_smartUndo();
+        QVERIFY2(mpEditor->mpSourceEditorEdbee->textDocument()->text() == before, "undo changed the script of a trigger the summary hides");
+    }
+
+    // Lua changes rebuild every type tree the next time the mouse enters the editor
+    void test_aRebuildKeepsTheOpenItemType()
+    {
+        mpEditor->slot_showFolders();
+        QTreeWidgetItem* pKill = childNamed(topLevelNamed(qsl("qaCombat")), qsl("qaKill"));
+        QVERIFY(pKill);
+        mpEditor->mpFolderTree->setCurrentItem(pKill);
+        QCOMPARE(mpEditor->mCurrentView, EditorViewType::cmAliasView);
+        mpEditor->mNeedUpdateData = true;
+        mpEditor->saveOpenChanges();
+        mpEditor->rebuildStaleTrees();
+        QTRY_VERIFY(!mpEditor->mFolderTreeStale);
+        QCOMPARE(mpEditor->mCurrentView, EditorViewType::cmAliasView);
+        QVERIFY(mpEditor->mpFolderTree->currentItem());
+        QCOMPARE(mpEditor->mpFolderTree->currentItem()->text(0), qsl("qaKill"));
+        QCOMPARE(mpEditor->mpAliasMainArea->lineEdit_alias_name->text(), qsl("qaKill"));
+    }
+
+    void test_anIconChangeJustBeforeLeavingIsKept()
+    {
+        mpEditor->slot_showFolders();
+        QTreeWidgetItem* pHitNode = childNamed(topLevelNamed(qsl("qaCombat")), qsl("qaHit"));
+        QVERIFY(pHitNode);
+        const QList<QTreeWidgetItem*> hits = mpEditor->treeWidget_triggers->findItems(qsl("qaHit"), Qt::MatchExactly | Qt::MatchRecursive);
+        QCOMPARE(hits.size(), 1);
+        const QIcon newIcon(qsl(":/icons/folder-red.png"));
+        hits.constFirst()->setIcon(0, newIcon);
+        mpEditor->leaveFolderView();
+        mpEditor->slot_showTriggers();
+        mpEditor->slot_showFolders();
+        pHitNode = childNamed(topLevelNamed(qsl("qaCombat")), qsl("qaHit"));
+        QVERIFY(pHitNode);
+        QCOMPARE(pHitNode->icon(0).cacheKey(), hits.constFirst()->icon(0).cacheKey());
+    }
+
+    void test_clickingAMergedFolderAgainBringsBackItsSummary()
+    {
+        mpEditor->slot_showFolders();
+        QTreeWidgetItem* pCombat = topLevelNamed(qsl("qaCombat"));
+        QVERIFY(pCombat);
+        mpEditor->mpFolderTree->setCurrentItem(pCombat);
+        QVERIFY(!summaryButtons().isEmpty());
+        summaryButtons().constFirst()->click();
+        QVERIFY(mpEditor->mpFolderSummaryArea->isHidden());
+        QCOMPARE(mpEditor->mpFolderTree->currentItem(), pCombat);
+
+        const QPoint centre = mpEditor->mpFolderTree->visualItemRect(pCombat).center();
+        QTest::mouseClick(mpEditor->mpFolderTree->viewport(), Qt::LeftButton, Qt::NoModifier, centre);
+        QVERIFY2(!mpEditor->mpFolderSummaryArea->isHidden(), "the merged folder's other types could not be reached again");
+    }
+
+    void test_activatingAnItemTogglesIt()
+    {
+        mpEditor->slot_showFolders();
+        QTreeWidgetItem* pHit = childNamed(topLevelNamed(qsl("qaCombat")), qsl("qaHit"));
+        QVERIFY(pHit);
+        mpEditor->mpFolderTree->setCurrentItem(pHit);
+        const QStringList viewAndId = pHit->data(0, dlgTriggerEditor::FolderPartsRole).toStringList().constFirst().split(QLatin1Char(':'));
+        TTrigger* pTrigger = mpHost->getTriggerUnit()->getTrigger(viewAndId.constLast().toInt());
+        QVERIFY(pTrigger);
+        const bool wasActive = pTrigger->isActive();
+        emit mpEditor->mpFolderTree->itemActivated(pHit, 0);
+        QCOMPARE(pTrigger->isActive(), !wasActive);
+        emit mpEditor->mpFolderTree->itemActivated(pHit, 0);
+        QCOMPARE(pTrigger->isActive(), wasActive);
+    }
+
+    void test_aRenameShowsInTheFoldersView()
+    {
+        mpEditor->slot_showFolders();
+        QTreeWidgetItem* pLoose = nullptr;
+        for (int i = 0, total = mpEditor->mpFolderTree->topLevelItemCount(); i < total; ++i) {
+            if (mpEditor->mpFolderTree->topLevelItem(i)->data(0, dlgTriggerEditor::FolderKeyRole).toString() == qsl("loose")) {
+                pLoose = mpEditor->mpFolderTree->topLevelItem(i);
+            }
+        }
+        QTreeWidgetItem* pItem = childNamed(pLoose, qsl("qaLooseTrigger"));
+        QVERIFY(pItem);
+        mpEditor->mpFolderTree->setCurrentItem(pItem);
+        mpEditor->mpTriggersMainArea->lineEdit_trigger_name->setText(qsl("qaRenamedTrigger"));
+        mpEditor->saveOpenChanges();
+        QTRY_VERIFY(!mpEditor->mFolderTreeStale);
+        QTRY_VERIFY(mpEditor->mFolderTreeNodes.value(qsl("loose")) && childNamed(mpEditor->mFolderTreeNodes.value(qsl("loose")), qsl("qaRenamedTrigger")));
+
+        mpEditor->mpTriggersMainArea->lineEdit_trigger_name->setText(qsl("qaLooseTrigger"));
+        mpEditor->saveOpenChanges();
+        QTRY_VERIFY(childNamed(mpEditor->mFolderTreeNodes.value(qsl("loose")), qsl("qaLooseTrigger")));
     }
 
     void test_turningTheSettingOffLeavesTheFoldersView()

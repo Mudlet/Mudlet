@@ -855,13 +855,8 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     mpFolderTreeRefreshTimer = new QTimer(this);
     mpFolderTreeRefreshTimer->setSingleShot(true);
     connect(mpFolderTreeRefreshTimer, &QTimer::timeout, this, [this]() {
-        if (!mFolderViewActive) {
-            return;
-        }
-        if (mFolderTreeStale) {
+        if (mFolderViewActive) {
             populateFolderTree();
-        } else {
-            refreshFolderTreeData();
         }
     });
     for (const auto view :
@@ -871,8 +866,10 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
         connect(pModel, &QAbstractItemModel::rowsInserted, this, &dlgTriggerEditor::scheduleFolderTreeRefresh);
         connect(pModel, &QAbstractItemModel::rowsRemoved, this, &dlgTriggerEditor::scheduleFolderTreeRefresh);
         connect(pModel, &QAbstractItemModel::rowsMoved, this, &dlgTriggerEditor::scheduleFolderTreeRefresh);
-        // Every save sets its item's icon again, so this must not rebuild the tree under a pending click
-        connect(pModel, &QAbstractItemModel::dataChanged, this, &dlgTriggerEditor::scheduleFolderTreeDataRefresh);
+        // Every save and every Lua toggle sets an item's icon again: a rebuild here would lose a pending click
+        connect(pModel, &QAbstractItemModel::dataChanged, this, [this, view](const QModelIndex& topLeft, const QModelIndex& bottomRight) {
+            refreshFolderTreeRows(view, topLeft, bottomRight);
+        });
         connect(pModel, &QAbstractItemModel::layoutChanged, this, &dlgTriggerEditor::scheduleFolderTreeRefresh);
         connect(pModel, &QAbstractItemModel::modelReset, this, &dlgTriggerEditor::scheduleFolderTreeRefresh);
         // Adding, deleting, pasting, undoing and searching all pick their item in the type tree, hidden or not
@@ -1611,6 +1608,10 @@ void dlgTriggerEditor::slot_smartUndo()
     // Stack-based undo: prioritize text editor changes, then fall back to item operations
     // This provides intuitive behavior - most recent change undoes first, regardless of focus
 
+    // A Folders view summary hides the item an undo would change
+    if (!mFolderSummaryKey.isEmpty()) {
+        return;
+    }
     bool canUndoText = mpTextUndoStack && mpTextUndoStack->canUndo();
     bool canUndoItems = mpUndoStack && mpUndoStack->canUndo();
 
@@ -1656,6 +1657,9 @@ void dlgTriggerEditor::slot_smartRedo()
     // Stack-based redo: prioritize text editor changes, then fall back to item operations
     // This provides intuitive behavior - most recently undone change redoes first, regardless of focus
 
+    if (!mFolderSummaryKey.isEmpty()) {
+        return;
+    }
     bool canRedoText = mpTextUndoStack && mpTextUndoStack->canRedo();
     bool canRedoItems = mpUndoStack && mpUndoStack->canRedo();
 
@@ -1712,7 +1716,7 @@ void dlgTriggerEditor::slot_updateUndoRedoButtonStates()
     // Disable undo/redo in variables view since variables can be modified via Lua API
     bool inVariablesView = (mCurrentView == EditorViewType::cmVarsView);
 
-    if (inVariablesView) {
+    if (inVariablesView || !mFolderSummaryKey.isEmpty()) {
         // In variables view, disable buttons and clear tooltips
         mpUndoAction->setEnabled(false);
         mpRedoAction->setEnabled(false);
@@ -11836,10 +11840,10 @@ void dlgTriggerEditor::slot_nextSection()
         break;
     case EditorViewType::cmVarsView:
         if (qsl("edbee::TextEditorComponent").compare(QApplication::focusWidget()->metaObject()->className()) == 0) {
-            sectionTree(treeWidget_variables)->setFocus();
+            treeWidget_variables->setFocus();
             return;
         }
-        if (sectionTree(treeWidget_variables)->hasFocus()) {
+        if (treeWidget_variables->hasFocus()) {
             mpVarsMainArea->lineEdit_var_name->setFocus();
             return;
         }
@@ -11965,13 +11969,13 @@ void dlgTriggerEditor::slot_previousSection()
             mpVarsMainArea->lineEdit_var_name->setFocus();
             return;
         }
-        if (sectionTree(treeWidget_variables)->hasFocus()) {
+        if (treeWidget_variables->hasFocus()) {
             mpSourceEditorEdbee->setFocus();
             return;
         }
         for (auto child : mpVarsMainArea->findChildren<QWidget*>()) {
             if (child->hasFocus()) {
-                sectionTree(treeWidget_variables)->setFocus();
+                treeWidget_variables->setFocus();
                 return;
             }
         }
@@ -16544,15 +16548,8 @@ bool dlgTriggerEditor::folderItem(const EditorViewType view, const int id)
 QTreeWidgetItem* dlgTriggerEditor::findItemById(QTreeWidget* pTree, const int id)
 {
     QTreeWidgetItem* pRoot = pTree ? pTree->topLevelItem(0) : nullptr;
-    if (!pRoot) {
-        return nullptr;
-    }
-    for (QTreeWidgetItemIterator it(pRoot); *it; ++it) {
-        if ((*it) != pRoot && (*it)->data(0, IdRole).toInt() == id) {
-            return *it;
-        }
-    }
-    return nullptr;
+    QTreeWidgetItem* pItem = findItemByID(pRoot, id);
+    return pItem == pRoot ? nullptr : pItem;
 }
 
 QString dlgTriggerEditor::folderTreeItemKey(const EditorViewType view, const int id)
@@ -16698,31 +16695,29 @@ void dlgTriggerEditor::populateFolderTree()
     syncFolderTreeSelection(previousKey);
 }
 
-void dlgTriggerEditor::refreshFolderTreeData()
+void dlgTriggerEditor::refreshFolderTreeRows(const EditorViewType view, const QModelIndex& topLeft, const QModelIndex& bottomRight)
 {
-    for (const auto view :
-         {EditorViewType::cmTriggerView, EditorViewType::cmAliasView, EditorViewType::cmScriptView, EditorViewType::cmTimerView, EditorViewType::cmKeysView, EditorViewType::cmActionView}) {
-        QTreeWidgetItem* pRoot = treeForView(view)->topLevelItem(0);
-        if (!pRoot) {
-            continue;
+    if (!mFolderViewActive) {
+        mFolderTreeStale = true;
+        return;
+    }
+    if (mFolderTreeStale || !topLeft.parent().isValid()) {
+        return;
+    }
+    for (int row = topLeft.row(); row <= bottomRight.row(); ++row) {
+        const QModelIndex index = topLeft.siblingAtRow(row);
+        const QString itemKey = folderTreeItemKey(view, index.data(IdRole).toInt());
+        QTreeWidgetItem* pNode = mFolderTreeNodes.value(itemKey);
+        // A renamed folder may now merge with, or split from, another
+        if (!pNode || pNode->text(0) != index.data(Qt::DisplayRole).toString()) {
+            scheduleFolderTreeRefresh();
+            return;
         }
-        for (QTreeWidgetItemIterator it(pRoot); *it; ++it) {
-            if (*it == pRoot) {
-                continue;
-            }
-            const QString itemKey = folderTreeItemKey(view, (*it)->data(0, IdRole).toInt());
-            QTreeWidgetItem* pNode = mFolderTreeNodes.value(itemKey);
-            // A renamed folder may now merge with, or split from, another
-            if (!pNode || pNode->text(0) != (*it)->text(0)) {
-                populateFolderTree();
-                return;
-            }
-            if (pNode->data(0, FolderPartsRole).toStringList().constFirst() == itemKey) {
-                pNode->setIcon(0, (*it)->icon(0));
-            }
-            if (pNode->data(0, FolderKeyRole).toString() == itemKey) {
-                pNode->setData(0, Qt::AccessibleDescriptionRole, (*it)->data(0, Qt::AccessibleDescriptionRole));
-            }
+        if (pNode->data(0, FolderPartsRole).toStringList().constFirst() == itemKey) {
+            pNode->setIcon(0, index.data(Qt::DecorationRole).value<QIcon>());
+        }
+        if (pNode->data(0, FolderKeyRole).toString() == itemKey) {
+            pNode->setData(0, Qt::AccessibleDescriptionRole, index.data(Qt::AccessibleDescriptionRole));
         }
     }
 }
@@ -16733,15 +16728,6 @@ void dlgTriggerEditor::scheduleFolderTreeRefresh()
     if (mFolderViewActive) {
         mpFolderTreeRefreshTimer->start();
     }
-}
-
-void dlgTriggerEditor::scheduleFolderTreeDataRefresh()
-{
-    if (!mFolderViewActive) {
-        mFolderTreeStale = true;
-        return;
-    }
-    mpFolderTreeRefreshTimer->start();
 }
 
 void dlgTriggerEditor::focusItemTree(QTreeWidget* pTypeTree)
@@ -16757,6 +16743,32 @@ void dlgTriggerEditor::focusItemTree(QTreeWidget* pTypeTree)
 QTreeWidget* dlgTriggerEditor::sectionTree(QTreeWidget* pTypeTree) const
 {
     return mFolderViewActive ? mpFolderTree : pTypeTree;
+}
+
+void dlgTriggerEditor::showView(const EditorViewType view)
+{
+    switch (view) {
+    case EditorViewType::cmAliasView:
+        slot_showAliases();
+        return;
+    case EditorViewType::cmScriptView:
+        slot_showScripts();
+        return;
+    case EditorViewType::cmTimerView:
+        slot_showTimers();
+        return;
+    case EditorViewType::cmKeysView:
+        slot_showKeys();
+        return;
+    case EditorViewType::cmActionView:
+        slot_showActions();
+        return;
+    case EditorViewType::cmTriggerView:
+    case EditorViewType::cmVarsView:
+    case EditorViewType::cmUnknownView:
+        slot_showTriggers();
+        return;
+    }
 }
 
 void dlgTriggerEditor::selectFolderTreeNode(QTreeWidgetItem* pNode)
@@ -16841,7 +16853,8 @@ void dlgTriggerEditor::openItemFromFolderTree(const EditorViewType view, const i
     changeView(view);
     {
         const QSignalBlocker blocker(pTree);
-        pTree->setCurrentItem(pItem);
+        // Without ClearAndSelect a held Ctrl or Shift would add to the hidden tree's selection, which Delete and Copy act on
+        pTree->setCurrentItem(pItem, 0, QItemSelectionModel::ClearAndSelect);
     }
     pTree->scrollToItem(pItem);
     selectItemInView(view, pItem);
@@ -16875,6 +16888,7 @@ void dlgTriggerEditor::showFolderSummary(QTreeWidgetItem* pNode)
     mSaveItem->setEnabled(false);
     mpAction_toggleActive->setEnabled(false);
     mpExportAction->setEnabled(false);
+    slot_updateUndoRedoButtonStates();
 
     const QStringList parts = pNode->data(0, FolderPartsRole).toStringList();
     if (parts.isEmpty()) {
@@ -16928,6 +16942,7 @@ void dlgTriggerEditor::hideFolderSummary()
     const bool itemView = mCurrentView != EditorViewType::cmVarsView && mCurrentView != EditorViewType::cmUnknownView;
     mpAction_toggleActive->setEnabled(itemView);
     mpExportAction->setEnabled(itemView);
+    slot_updateUndoRedoButtonStates();
 }
 
 void dlgTriggerEditor::leaveFolderView()
@@ -16939,6 +16954,9 @@ void dlgTriggerEditor::leaveFolderView()
     mFolderViewActive = false;
     mpFolderTreeRefreshTimer->stop();
     mpFolderTree->hide();
+    // On return the type trees decide what to highlight, not this stale row
+    const QSignalBlocker blocker(mpFolderTree);
+    mpFolderTree->setCurrentItem(nullptr);
 }
 
 void dlgTriggerEditor::slot_showFolders()
@@ -16954,13 +16972,16 @@ void dlgTriggerEditor::slot_showFolders()
     if (mFolderTreeStale) {
         populateFolderTree();
     }
-    if (mCurrentView == EditorViewType::cmUnknownView || mCurrentView == EditorViewType::cmVarsView) {
-        slot_showTriggers();
-    } else {
-        changeView(mCurrentView);
+    // The Folders view shows one item at a time, so a selection made in a type tree must not linger for Delete or Copy
+    for (const auto view :
+         {EditorViewType::cmTriggerView, EditorViewType::cmAliasView, EditorViewType::cmScriptView, EditorViewType::cmTimerView, EditorViewType::cmKeysView, EditorViewType::cmActionView}) {
+        QTreeWidget* pTree = treeForView(view);
+        if (pTree->selectedItems().size() > 1) {
+            const QSignalBlocker blocker(pTree);
+            pTree->setCurrentItem(pTree->currentItem(), 0, QItemSelectionModel::ClearAndSelect);
+        }
     }
-    syncFolderTreeSelection({});
-    mpFolderTree->setFocus();
+    showView(mCurrentView);
 }
 
 void dlgTriggerEditor::setFolderViewAvailable(const bool available)
@@ -16970,9 +16991,5 @@ void dlgTriggerEditor::setFolderViewAvailable(const bool available)
         return;
     }
     leaveFolderView();
-    if (mCurrentView == EditorViewType::cmUnknownView) {
-        slot_showTriggers();
-    } else {
-        changeView(mCurrentView);
-    }
+    showView(mCurrentView);
 }
