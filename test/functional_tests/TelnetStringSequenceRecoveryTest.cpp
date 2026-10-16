@@ -432,15 +432,15 @@ private slots:
         QVERIFY2(!joinedBuffer().contains(qsl("PAYLOAD")), qPrintable(qsl("Payload of the split sequence was displayed: '%1'").arg(joinedBuffer())));
     }
 
-    // The line endings that are not a line feed: a prompt marker (the game's
-    // IAC GA, or an escaped 0xff byte) and an end of transmission.
+    // The line endings that are not a line feed: a prompt (the game's IAC GA,
+    // which cTelnet marks with its own byte) and an end of transmission. A
+    // literal 0xFF is text in some encodings (Windows-1251 "я"), so it does
+    // not end the line.
     void recoveryByOtherLineEndings_data()
     {
         QTest::addColumn<QByteArray>("lineEnding");
         QTest::newRow("end of transmission (0x04)") << QByteArrayLiteral("\x04");
-        // Doubled so that the telnet layer delivers one literal 0xff byte
-        // rather than reading it as the start of a command:
-        QTest::newRow("prompt marker (0xff)") << QByteArrayLiteral("\xff\xff");
+        QTest::newRow("prompt (IAC GA)") << QByteArrayLiteral("\xff\xf9");
     }
 
     void recoveryByOtherLineEndings()
