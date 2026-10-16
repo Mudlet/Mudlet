@@ -837,18 +837,21 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     mpFolderTree->setUniformRowHeights(true);
     mpFolderTree->setContextMenuPolicy(Qt::ActionsContextMenu);
     mpFolderTree->hide();
-    // After the seven type trees, so it shares their stretch and sits above the search box
-    verticalLayout_frame_left->insertWidget(7, mpFolderTree, 2);
     connect(mpFolderTree, &QTreeWidget::currentItemChanged, this, &dlgTriggerEditor::slot_folderTreeItemChanged);
-    // A click on a merged folder that is already current brings its summary back after one of its parts was opened
+    // A click or Enter on a merged folder that is already current brings its summary back after one of its parts was opened
     connect(mpFolderTree, &QTreeWidget::itemClicked, this, [this](QTreeWidgetItem* pItem) {
         if (pItem && pItem->data(0, FolderPartsRole).toStringList().size() != 1 && mFolderSummaryKey != pItem->data(0, FolderKeyRole).toString()) {
             showFolderSummary(pItem);
         }
     });
     connect(mpFolderTree, &QTreeWidget::itemActivated, this, [this](QTreeWidgetItem* pItem) {
-        if (pItem && pItem->data(0, FolderPartsRole).toStringList().size() == 1) {
+        if (!pItem) {
+            return;
+        }
+        if (pItem->data(0, FolderPartsRole).toStringList().size() == 1) {
             slot_toggleItemOrGroupActiveFlag();
+        } else if (mFolderSummaryKey != pItem->data(0, FolderKeyRole).toString()) {
+            showFolderSummary(pItem);
         }
     });
 
@@ -923,10 +926,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     QAction* viewVarsAction = new QAction(QIcon(qsl(":/icons/variables.png")), tr("Variables"), this);
     viewVarsAction->setStatusTip(tr("Show Variables"));
     viewVarsAction->setToolTip(qsl("%1 (%2)").arg(tr("Show Variables"), QKeySequence(Qt::CTRL | Qt::Key_6).toString(QKeySequence::NativeText)));
-    connect(viewVarsAction, &QAction::triggered, this, [this]() {
-        leaveFolderView();
-        slot_showVariables();
-    });
+    connect(viewVarsAction, &QAction::triggered, this, &dlgTriggerEditor::slot_showVariables);
 
     QAction* viewActionAction = new QAction(QIcon(qsl(":/icons/bookmarks.png")), tr("Buttons"), this);
     viewActionAction->setStatusTip(tr("Show Buttons"));
@@ -1448,6 +1448,7 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     itemLayout->addWidget(treeWidget_scripts);
     itemLayout->addWidget(treeWidget_keys);
     itemLayout->addWidget(treeWidget_variables);
+    itemLayout->addWidget(mpFolderTree);
 
     searchSplitter->addWidget(itemContainer);
     searchSplitter->setStretchFactor(0, 1);
@@ -10647,6 +10648,8 @@ void dlgTriggerEditor::autoSave()
 
 void dlgTriggerEditor::rebuildStaleTrees()
 {
+    // fillout_form() forgets the view, and the Folders view hides every type tree resolveCurrentView() could recover it from
+    const EditorViewType folderViewType = mFolderViewActive ? mCurrentView : EditorViewType::cmUnknownView;
     treeWidget_triggers->clear();
     treeWidget_aliases->clear();
     treeWidget_timers->clear();
@@ -10656,6 +10659,9 @@ void dlgTriggerEditor::rebuildStaleTrees()
     treeWidget_variables->clear();
     fillout_form();
     mNeedUpdateData = false;
+    if (folderViewType != EditorViewType::cmUnknownView) {
+        mCurrentView = folderViewType;
+    }
     resolveCurrentView();
 }
 
@@ -16798,11 +16804,8 @@ void dlgTriggerEditor::syncFolderTreeSelection(const QString& fallbackKey)
             showFolderSummary(pSummaryNode);
             return;
         }
-        changeView(mCurrentView);
-        QTreeWidget* pTree = treeForView(mCurrentView);
-        if (QTreeWidgetItem* pCurrent = pTree ? pTree->currentItem() : nullptr) {
-            selectItemInView(mCurrentView, pCurrent);
-        }
+        showView(mCurrentView);
+        return;
     }
 
     QTreeWidget* pTree = treeForView(mCurrentView);
