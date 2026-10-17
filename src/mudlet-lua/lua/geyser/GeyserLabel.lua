@@ -712,8 +712,9 @@ end
 -- Needed for a label that shows only an image or icon. Pass "" to announce its text again.
 -- @param name the name to announce
 function Geyser.Label:setAccessibleName(name)
-  setLabelAccessibleName(self.name, name)
-  self.accessibleName = name
+  if setLabelAccessibleName(self.name, name) then
+    self.accessibleName = name
+  end
 end
 
 --- Sets whether a screen reader announces the label as a button or as text.
