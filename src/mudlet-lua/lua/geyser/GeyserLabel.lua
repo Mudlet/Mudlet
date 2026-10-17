@@ -1473,15 +1473,17 @@ function Geyser.Label:addChild(cons, container)
 end
 
 --- Sets label to no longer intercept mouse events
+--- @return true, or nil and an error message if the label no longer exists
 function Geyser.Label:enableClickthrough()
-  enableClickthrough(self.name)
   self.clickthrough = true
+  return enableClickthrough(self.name)
 end
 
 --- Sets label to once again intercept mouse events
+--- @return true, or nil and an error message if the label no longer exists
 function Geyser.Label:disableClickthrough()
-  disableClickthrough(self.name)
   self.clickthrough = false
+  return disableClickthrough(self.name)
 end
 
 -- internal function to change the layout of the rightClick menu if we are at the right edge

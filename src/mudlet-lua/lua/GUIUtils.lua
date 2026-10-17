@@ -743,8 +743,13 @@ end
 
 
 --- Function will gag the whole line. <b>Use deleteLine() instead.</b>
-function gagLine()
-  deleteLine()
+--- @param window optional name of the window to gag the line in, the main console if not given
+--- @return what deleteLine() answers: true, or nil and an error message for a window that does not exist
+function gagLine(window)
+  if window then
+    return deleteLine(window)
+  end
+  return deleteLine()
 end
 
 
@@ -843,7 +848,7 @@ function replaceLine(window, text)
   else
     selectCurrentLine(window)
   end
-  replace(window, text)
+  return replace(window, text)
 end
 
 
@@ -1564,6 +1569,7 @@ end
 --- @param func name of the function to write with: echo, insertText, echoLink, insertLink, echoPopup or insertPopup
 --- @param win windowName optional
 --- @param str text with embedded color information
+--- @return true, or nil and an error message if the window does not exist or a label is asked for anything but echo
 ---
 --- @see cecho
 --- @see decho
@@ -1627,13 +1633,13 @@ function xEcho(style, func, ...)
     end
     local reset = getLabelFormat(win)
     local result = processedEchoToHTML(t, reset)
-    echo(win, result)
+    return echo(win, result)
   else
-    if func == "insertText" and not getColumnNumber(win) then
-      return nil, "window does not exist"
+    local reset, resetError = resetFormat(win)
+    if not reset then
+      return nil, resetError
     end
     local t = _Echos.Process(str, style)
-    resetFormat(win)
     for _, v in ipairs(t) do
       if type(v) == 'table' then
         if v.fg then
@@ -1681,6 +1687,7 @@ function xEcho(style, func, ...)
       end
     end
     resetFormat(win)
+    return true
   end
 end
 
@@ -1700,7 +1707,7 @@ end
 --- @see xEcho
 --- @see hinsertText
 function hecho(...)
-  xEcho("Hex", "echo", ...)
+  return xEcho("Hex", "echo", ...)
 end
 
 
@@ -1718,7 +1725,7 @@ end
 --- @see xEcho
 --- @see dinsertText
 function decho(...)
-  xEcho("Decimal", "echo", ...)
+  return xEcho("Decimal", "echo", ...)
 end
 
 
@@ -1733,7 +1740,7 @@ end
 --- @see xEcho
 --- @see cinsertText
 function cecho(...)
-  xEcho("Color", "echo", ...)
+  return xEcho("Color", "echo", ...)
 end
 
 
@@ -1771,7 +1778,7 @@ end
 --- @see xEcho
 --- @see hecho
 function hechoLink(...)
-  xEcho("Hex", "echoLink", ...)
+  return xEcho("Hex", "echoLink", ...)
 end
 
 
@@ -1782,7 +1789,7 @@ end
 --- @see xEcho
 --- @see decho
 function dechoLink(...)
-  xEcho("Decimal", "echoLink", ...)
+  return xEcho("Decimal", "echoLink", ...)
 end
 
 
@@ -1793,7 +1800,7 @@ end
 --- @see xEcho
 --- @see cecho
 function cechoLink(...)
-  xEcho("Color", "echoLink", ...)
+  return xEcho("Color", "echoLink", ...)
 end
 
 --- Inserts a link with embedded color name information at the current position
@@ -1803,7 +1810,7 @@ end
 --- @see xEcho
 --- @see cecho
 function cinsertLink(...)
-  xEcho("Color", "insertLink", ...)
+  return xEcho("Color", "insertLink", ...)
 end
 
 --- Inserts a link with embedded decimal color information at the current position
@@ -1813,7 +1820,7 @@ end
 --- @see xEcho
 --- @see decho
 function dinsertLink(...)
-  xEcho("Decimal", "insertLink", ...)
+  return xEcho("Decimal", "insertLink", ...)
 end
 
 --- Inserts a link with embedded hex color information at the current position
@@ -1823,7 +1830,7 @@ end
 --- @see xEcho
 --- @see hecho
 function hinsertLink(...)
-  xEcho("Hex", "insertLink", ...)
+  return xEcho("Hex", "insertLink", ...)
 end
 
 --- Echos a popup with embedded color name information.
@@ -1833,7 +1840,7 @@ end
 --- @see xEcho
 --- @see cecho
 function cechoPopup(...)
-  xEcho("Color", "echoPopup", ...)
+  return xEcho("Color", "echoPopup", ...)
 end
 
 --- Echos a popup with embedded color name information.
@@ -1843,7 +1850,7 @@ end
 --- @see xEcho
 --- @see decho
 function dechoPopup(...)
-  xEcho("Decimal", "echoPopup", ...)
+  return xEcho("Decimal", "echoPopup", ...)
 end
 
 --- Echos a popup with embedded hex color information.
@@ -1853,7 +1860,7 @@ end
 --- @see xEcho
 --- @see hecho
 function hechoPopup(...)
-  xEcho("Hex", "echoPopup", ...)
+  return xEcho("Hex", "echoPopup", ...)
 end
 
 --- Echos a popup with embedded color name information.
@@ -1863,7 +1870,7 @@ end
 --- @see xEcho
 --- @see cecho
 function cinsertPopup(...)
-  xEcho("Color", "insertPopup", ...)
+  return xEcho("Color", "insertPopup", ...)
 end
 
 --- Echos a popup with embedded decimal color information.
@@ -1873,7 +1880,7 @@ end
 --- @see xEcho
 --- @see decho
 function dinsertPopup(...)
-  xEcho("Decimal", "insertPopup", ...)
+  return xEcho("Decimal", "insertPopup", ...)
 end
 
 --- Echos a popup with embedded hex color information.
@@ -1883,7 +1890,7 @@ end
 --- @see xEcho
 --- @see hecho
 function hinsertPopup(...)
-  xEcho("Hex", "insertPopup", ...)
+  return xEcho("Hex", "insertPopup", ...)
 end
 
 
@@ -2144,11 +2151,15 @@ do
     text = text or ""
 
     if keepcolor then
-      setBgColor(windowname, getBgColor(windowname))
+      local r, g, b = getBgColor(windowname)
+      if not r and g then
+        return nil, g
+      end
+      setBgColor(windowname, r, g, b)
       setFgColor(windowname, getFgColor(windowname))
     end
 
-    oldreplace(windowname, text)
+    return oldreplace(windowname, text)
   end
 end
 
@@ -2425,6 +2436,7 @@ end
 --- Form of setFgColor that accepts a hex color string instead of decimal values
 --- @param windowName Optional name of the window to use the function on
 --- @param colorString hex string for the color to use
+--- @return what setFgColor() answers: true, or nil and an error message for a window that does not exist
 function setHexFgColor(windowName, colorString)
   assert(type(windowName) == 'string', 'setHexFgColor: bad argument #1 type (expected string, got '..type(windowName)..'!)')
 
@@ -2446,15 +2458,15 @@ function setHexFgColor(windowName, colorString)
   }
 
   if win then
-    setFgColor(win, colTable.r, colTable.g, colTable.b)
-  else
-    setFgColor(colTable.r, colTable.g, colTable.b)
+    return setFgColor(win, colTable.r, colTable.g, colTable.b)
   end
+  return setFgColor(colTable.r, colTable.g, colTable.b)
 end
 
 --- Form of setBgColor that accepts a hex color string instead of decimal values
 --- @param windowName Optional name of the window to use the function on
 --- @param colorString hex string for the color to use
+--- @return what setBgColor() answers: true, or nil and an error message for a window that does not exist
 function setHexBgColor(windowName, colorString)
   assert(type(windowName) == 'string', 'setHexBgColor: bad argument #1 type (expected string, got '..type(windowName)..'!)')
 
@@ -2476,10 +2488,9 @@ function setHexBgColor(windowName, colorString)
   }
 
   if win then
-    setBgColor(win, colTable.r, colTable.g, colTable.b)
-  else
-    setBgColor(colTable.r, colTable.g, colTable.b)
+    return setBgColor(win, colTable.r, colTable.g, colTable.b)
   end
+  return setBgColor(colTable.r, colTable.g, colTable.b)
 end
 
 

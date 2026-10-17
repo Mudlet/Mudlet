@@ -187,6 +187,18 @@ static int windowNotFound(lua_State* L, const QString& name)
     return 2;
 }
 
+// A window that exists but is of a kind the caller cannot use is not reported missing
+static int windowNotFoundOrUnsupported(lua_State* L, const Host& host, const QString& name)
+{
+    const auto kind = host.windowType(name);
+    if (!kind) {
+        return windowNotFound(L, name);
+    }
+    lua_pushnil(L);
+    lua_pushstring(L, qsl("window \"%1\" is of type \"%2\", which this function cannot use").arg(name, *kind).toUtf8().constData());
+    return 2;
+}
+
 static int commandLineNotFound(lua_State* L, const QString& name)
 {
     lua_pushnil(L);
@@ -375,8 +387,7 @@ int TLuaInterpreter::calcFontSize(lua_State* L)
     }
 
     if (size.width() <= -1) {
-        lua_pushnil(L);
-        return 1;
+        return windowNotFoundOrUnsupported(L, host, windowName);
     }
 
     lua_pushnumber(L, size.width());
@@ -410,11 +421,11 @@ int TLuaInterpreter::clearUserWindow(lua_State* L)
     }
 
     Host& host = getHostFromLua(L);
-    host.clearWindow(windowName);
-    // Note that exceptionally THIS function does not return a true/nil+error
-    // message on failure - because on success this could plonk a "true" on the
-    // main screen if run from the command line - which sort of messes with the
-    // idea of clearing it of text!
+    if (!host.clearWindow(windowName)) {
+        return windowNotFoundOrUnsupported(L, host, windowName);
+    }
+    // Nothing on success: run from the command line, a "true" would land on the
+    // screen this has just cleared.
     return 0;
 }
 
@@ -945,7 +956,8 @@ int TLuaInterpreter::deleteLine(lua_State* L)
         return windowNotFound(L, windowName);
     }
     pModel->deleteLineAtCursor();
-    return 0;
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#deselect
@@ -967,9 +979,11 @@ int TLuaInterpreter::disableClickthrough(lua_State* L)
     const QString windowName{WINDOW_NAME(L, 1)};
 
     Host& host = getHostFromLua(L);
-
-    host.setClickthrough(windowName, false);
-    return 0;
+    if (!host.setClickthrough(windowName, false)) {
+        return warnArgumentValue(L, __func__, qsl("label name '%1' not found").arg(windowName));
+    }
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#disableCommandLine
@@ -1124,8 +1138,11 @@ int TLuaInterpreter::echoUserWindow(lua_State* L)
     const char* windowName = WINDOW_NAME(L, 1);
     const QString text = getVerifiedString(L, __func__, 2, "text");
     Host& host = getHostFromLua(L);
-    host.echoWindow(QString{windowName}, text);
-    return 0;
+    if (!host.echoWindow(QString{windowName}, text)) {
+        return windowNotFoundOrUnsupported(L, host, QString{windowName});
+    }
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#echoPopup
@@ -1190,9 +1207,11 @@ int TLuaInterpreter::enableClickthrough(lua_State* L)
     const QString windowName{WINDOW_NAME(L, 1)};
 
     Host& host = getHostFromLua(L);
-
-    host.setClickthrough(windowName, true);
-    return 0;
+    if (!host.setClickthrough(windowName, true)) {
+        return warnArgumentValue(L, __func__, qsl("label name '%1' not found").arg(windowName));
+    }
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setLinkStyle
@@ -1377,7 +1396,10 @@ int TLuaInterpreter::getBgColor(lua_State* L)
     }
 
     auto pModel = getHostFromLua(L).consoleModelNamed(windowName);
-    const TChar* pChar = pModel ? pModel->selectionStartChar() : nullptr;
+    if (!pModel) {
+        return windowNotFound(L, windowName);
+    }
+    const TChar* pChar = pModel->selectionStartChar();
     if (!pChar) {
         return 0;
     }
@@ -1507,7 +1529,10 @@ int TLuaInterpreter::getFgColor(lua_State* L)
     }
 
     auto pModel = getHostFromLua(L).consoleModelNamed(windowName);
-    const TChar* pChar = pModel ? pModel->selectionStartChar() : nullptr;
+    if (!pModel) {
+        return windowNotFound(L, windowName);
+    }
+    const TChar* pChar = pModel->selectionStartChar();
     if (!pChar) {
         return 0;
     }
@@ -2080,9 +2105,11 @@ int TLuaInterpreter::hideWindow(lua_State* L)
     const QString text = getVerifiedString(L, __func__, 1, "name");
 
     Host& host = getHostFromLua(L);
-    host.hideWindow(text);
-
-    return 0;
+    if (!host.hideWindow(text)) {
+        return windowNotFoundOrUnsupported(L, host, text);
+    }
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#insertLink
@@ -2455,8 +2482,11 @@ int TLuaInterpreter::moveWindow(lua_State* L)
     const double y1 = getVerifiedDouble(L, __func__, 3, "y");
     const QString text{lua_tostring(L, 1)};
     Host& host = getHostFromLua(L);
-    host.moveWindow(text, static_cast<int>(x1), static_cast<int>(y1));
-    return 0;
+    if (!host.moveWindow(text, static_cast<int>(x1), static_cast<int>(y1))) {
+        return windowNotFoundOrUnsupported(L, host, text);
+    }
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#openUserWindow
@@ -2604,7 +2634,8 @@ int TLuaInterpreter::replace(lua_State* L)
     if (!host.replaceWindowText(consoleName, text)) {
         return windowNotFound(L, consoleName);
     }
-    return 0;
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#resetCmdLineAction
@@ -2681,8 +2712,11 @@ int TLuaInterpreter::resizeWindow(lua_State* L)
     const double y1 = getVerifiedDouble(L, __func__, 3, "height");
     const QString text{lua_tostring(L, 1)};
     Host& host = getHostFromLua(L);
-    host.resizeWindow(text, static_cast<int>(x1), static_cast<int>(y1));
-    return 0;
+    if (!host.resizeWindow(text, static_cast<int>(x1), static_cast<int>(y1))) {
+        return windowNotFoundOrUnsupported(L, host, text);
+    }
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#saveWindowLayout
@@ -3225,7 +3259,8 @@ int TLuaInterpreter::setFgColor(lua_State* L)
     if (!getHostFromLua(L).setWindowFgColor(consoleName, QColor(luaRed, luaGreen, luaBlue))) {
         return windowNotFound(L, consoleName);
     }
-    return 0;
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setButtonStyleSheet
@@ -4589,12 +4624,16 @@ int TLuaInterpreter::wrapLine(lua_State* L)
         // The main buffer is the model's and keeps the view's wrap settings.
         TBuffer& buffer = host.mainConsoleModel().buffer;
         buffer.wrapLine(lineNumber, buffer.mWrapAt, buffer.mWrapIndent, buffer.mWrapHangingIndent);
-        return 0;
+        lua_pushboolean(L, true);
+        return 1;
     }
-    if (auto pModel = host.consoleModelNamed(windowName)) {
-        pModel->wrapLine(lineNumber);
+    auto pModel = host.consoleModelNamed(windowName);
+    if (!pModel) {
+        return windowNotFound(L, windowName);
     }
-    return 0;
+    pModel->wrapLine(lineNumber);
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // No Documentation - public function but should stay undocumented -- compare https://github.com/Mudlet/Mudlet/issues/1149
@@ -4606,8 +4645,11 @@ int TLuaInterpreter::pasteWindow(lua_State* L)
     }
     const QString windowName{WINDOW_NAME(L, 1)};
     Host& host = getHostFromLua(L);
-    host.pasteWindow(windowName);
-    return 0;
+    if (!host.pasteWindow(windowName)) {
+        return windowNotFoundOrUnsupported(L, host, windowName);
+    }
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#enableScrolling
