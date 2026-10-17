@@ -5088,9 +5088,6 @@ describe("Tests saveJsonMap and loadJsonMap", function()
       assert.is_true(roomLocked(roomA))
       assert.are.equal("J", getRoomChar(roomA))
       assert.are.same({11, 22, 33}, {getRoomCharColor(roomA)})
-      -- the alpha is the default 255 because an imported map cannot carry any
-      -- other, so this pins the three channels only:
-      -- https://github.com/Mudlet/Mudlet/issues/10368
       assert.are.same({44, 55, 66, 255}, {getRoomBorderColor(roomA)})
       assert.are.equal(3, getRoomBorderThickness(roomA))
       assert.are.equal(roomA, getRoomIDbyHash("mapperSpecJsonHash"))
@@ -5538,13 +5535,149 @@ describe("Tests saveJsonMap and loadJsonMap", function()
       assert.is_nil(data:find(("255|0|0|255"):gsub(".", "\0%0"), 1, true))
     end)
 
-    -- TMap::readJsonColor returns QColor(red, green, blue) for a colour array of
-    -- either three or four values, so the alpha the exporter wrote as
-    -- "color32RGBA" never reaches the QColor and comes back as 255. Every colour
-    -- read through that function flattens the same way, custom environment
-    -- colours included, so the test above can only use an opaque one.
-    -- https://github.com/Mudlet/Mudlet/issues/10368
-    pending("a translucent room border colour loses its alpha on import")
+    it("puts a translucent room border and environment colour back with their alpha", function()
+      deleteMap()
+      local area = addAreaName("MapperSpecJsonAlphaArea")
+      roomA = createRoomID(); addRoom(roomA); setRoomArea(roomA, area)
+      assert.is_true(setRoomBorderColor(roomA, 44, 55, 66, 128))
+      setRoomEnv(roomA, 502)
+      -- outside 257-272, for the same reason as the opaque one above
+      setCustomEnvColor(502, 11, 22, 33, 44)
+
+      roundTrip()
+
+      assert.are.same({44, 55, 66, 128}, {getRoomBorderColor(roomA)})
+      assert.are.same({11, 22, 33, 44}, getCustomEnvColorTable()[502])
+    end)
+
+    local function readExport()
+      assert.is_true(saveJsonMap(jsonPath))
+      local file = assert(io.open(jsonPath, "r"))
+      local document = yajl.to_value(file:read("*a"))
+      file:close()
+      return document
+    end
+
+    local function writeImport(document)
+      local file = assert(io.open(jsonPath, "w"))
+      file:write(yajl.to_string(document))
+      file:close()
+      deleteMap()
+      assert.is_true(loadJsonMap(jsonPath))
+    end
+
+    local function exportedRoom(document, roomId)
+      for _, exportedArea in ipairs(document.areas) do
+        for _, room in ipairs(exportedArea.rooms or {}) do
+          if room.id == roomId then
+            return room
+          end
+        end
+      end
+      error("room " .. tostring(roomId) .. " is not in the exported document")
+    end
+
+    local function importBorder(key, value)
+      deleteMap()
+      local area = addAreaName("MapperSpecJsonBorderValueArea")
+      roomA = createRoomID(); addRoom(roomA); setRoomArea(roomA, area)
+      assert.is_true(setRoomBorderColor(roomA, 44, 55, 66, 128))
+      local document = readExport()
+      exportedRoom(document, roomA).border = {[key] = value}
+      writeImport(document)
+    end
+
+    it("keeps a colour whose alpha in the file is out of range, as opaque", function()
+      -- 1e20 and -1e20 are beyond the range of an int as well as of an alpha
+      for _, outOfRange in ipairs({256, -1, 1e20, -1e20}) do
+        importBorder("color32RGBA", {44, 55, 66, outOfRange})
+
+        assert.are.same({44, 55, 66, 255}, {getRoomBorderColor(roomA)}, "alpha " .. outOfRange)
+      end
+    end)
+
+    it("drops a colour whose red, green or blue in the file is out of range", function()
+      for _, color in ipairs({{300, 55, 66, 128}, {44, -1, 66, 128}, {44, 55, 1e20, 128}}) do
+        importBorder("color32RGBA", color)
+
+        assert.are.same({}, {getRoomBorderColor(roomA)}, table.concat(color, ","))
+      end
+      importBorder("color24RGB", {44, 55, 256})
+      assert.are.same({}, {getRoomBorderColor(roomA)})
+    end)
+
+    it("reads a colour array one value short or long for its key as opaque", function()
+      importBorder("color32RGBA", {10, 20, 30})
+      assert.are.same({10, 20, 30, 255}, {getRoomBorderColor(roomA)})
+
+      importBorder("color24RGB", {10, 20, 30, 128})
+      assert.are.same({10, 20, 30, 255}, {getRoomBorderColor(roomA)})
+    end)
+
+    -- no Lua getter returns the alpha of these, so the second export shows it
+    it("puts the alpha back on a label, room symbol and custom line colour", function()
+      deleteMap()
+      local area = addAreaName("MapperSpecJsonAlphaOtherArea")
+      roomA = createRoomID(); addRoom(roomA); setRoomArea(roomA, area)
+      roomB = createRoomID(); addRoom(roomB); setRoomArea(roomB, area)
+      setExit(roomA, roomB, "east")
+      setRoomChar(roomA, "J")
+      setRoomCharColor(roomA, 11, 22, 33)
+      assert.is_true(addCustomLine(roomA, roomB, "e", "solid line", {1, 2, 3}, false))
+      createMapLabel(area, "MapperSpecJsonAlphaLabel", 1, 1, 0, 200, 100, 50, 5, 6, 7, 30, 10, true, false, "Bitstream Vera Sans Mono", 90, 50)
+      local document = readExport()
+      -- neither setter takes an alpha
+      local room = exportedRoom(document, roomA)
+      room.symbol.color24RGB = nil
+      room.symbol.color32RGBA = {11, 22, 33, 77}
+      for _, exit in ipairs(room.exits) do
+        if exit.customLine then
+          exit.customLine.color24RGB = nil
+          exit.customLine.color32RGBA = {1, 2, 3, 77}
+        end
+      end
+      writeImport(document)
+
+      local reexported = readExport()
+      room = exportedRoom(reexported, roomA)
+      assert.are.same({11, 22, 33, 77}, room.symbol.color32RGBA)
+      local lineColor
+      for _, exit in ipairs(room.exits) do
+        lineColor = lineColor or (exit.customLine and exit.customLine.color32RGBA)
+      end
+      assert.are.same({1, 2, 3, 77}, lineColor)
+      local label
+      for _, exportedArea in ipairs(reexported.areas) do
+        for _, candidate in ipairs(exportedArea.labels or {}) do
+          if candidate.text == "MapperSpecJsonAlphaLabel" then
+            label = candidate
+          end
+        end
+      end
+      assert.is_table(label)
+      assert.are.same({200, 100, 50, 90}, label.colors[1].color32RGBA)
+      assert.are.same({5, 6, 7, 50}, label.colors[2].color32RGBA)
+    end)
+
+    it("puts the alpha back on the player room outer and inner colours", function()
+      deleteMap()
+      local area = addAreaName("MapperSpecJsonAlphaPlayerRoomArea")
+      roomA = createRoomID(); addRoom(roomA); setRoomArea(roomA, area)
+      local document = readExport()
+      -- an import also hands these colours to the profile's preferences
+      local originalColors = document.playerRoomColors
+      finally(function()
+        local restore = readExport()
+        restore.playerRoomColors = originalColors
+        writeImport(restore)
+      end)
+      document.playerRoomColors = {{color32RGBA = {10, 20, 30, 77}}, {color32RGBA = {40, 50, 60, 77}}}
+      writeImport(document)
+
+      local reexported = readExport()
+      assert.are.same({10, 20, 30, 77}, reexported.playerRoomColors[1].color32RGBA)
+      assert.are.same({40, 50, 60, 77}, reexported.playerRoomColors[2].color32RGBA)
+    end)
 
     -- TRoom::writeJsonExitStubs looks the stub's door up under the long
     -- direction name while TRoom::doors is keyed by the short one, so a door on
