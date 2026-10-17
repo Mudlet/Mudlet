@@ -352,7 +352,9 @@ QImage themedLabel(const TMapLabel& label, const MapStyle& style)
     const bool outline = !neutral(label.outlineColor) && label.outlineColor != label.fgColor;
     // A label's own light color would be lost on the tag, so it keeps the halo instead
     const bool plate = !box && style.mapLabelPlate.isValid() && MapStyle::readsOnPlate(textColor, style.mapLabelPlate);
-    const bool halo = !box && !plate && !outline && style.mapLabelHalo.isValid();
+    // As for the tag, a label's own light color keeps the halo instead
+    const bool knockout = !box && !plate && style.mapLabelKnockout.isValid() && MapStyle::readsOnPlate(textColor, style.mapLabelKnockout);
+    const bool halo = !box && !plate && !knockout && !outline && style.mapLabelHalo.isValid();
 
     // Centered on the label's own picture, as the 2D map's label dialog centers it in the box drawn for it, so the
     // label keeps its place and size; only the text shrinks, to fit the box in the style's font and below its limit
@@ -363,7 +365,7 @@ QImage themedLabel(const TMapLabel& label, const MapStyle& style)
     qreal shrink = 1.0;
     if (bounds.width() > 0.0 && bounds.height() > 0.0) {
         shrink = std::min({1.0, (canvas.width() - 2.0 * margin) / bounds.width(), (canvas.height() - 2.0 * margin) / bounds.height()});
-        if (plate) {
+        if (plate || knockout) {
             shrink = std::min({shrink, canvas.width() / (bounds.width() + 4.0 * platePad * bounds.height()), canvas.height() / ((1.0 + 2.0 * platePad) * bounds.height())});
         }
         const qreal labelHeight = std::abs(label.size.height());
@@ -395,6 +397,22 @@ QImage themedLabel(const TMapLabel& label, const MapStyle& style)
         painter.setPen(Qt::NoPen);
         painter.setBrush(style.mapLabelPlate);
         painter.drawRoundedRect(tag, tag.height() / 2.0, tag.height() / 2.0);
+    }
+    if (knockout) {
+        // Patches ever smaller laid one on another, so that over the text they add up to the knockout's opacity and
+        // toward the edge they thin out, as paper scraped clean does
+        constexpr int layers = 8;
+        const QRectF text = QFontMetricsF(font, &metricsDevice).boundingRect(textRect, flags, label.text);
+        const qreal pad = text.height() * platePad;
+        QColor layer = style.mapLabelKnockout;
+        layer.setAlphaF(1.0 - std::pow(1.0 - style.mapLabelKnockout.alphaF(), 1.0 / layers));
+        painter.setPen(Qt::NoPen);
+        painter.setBrush(layer);
+        for (int index = layers; index >= 1; --index) {
+            const qreal reach = pad * index / layers;
+            const QRectF patch = text.adjusted(-2.0 * reach, -reach, 2.0 * reach, reach).intersected(textRect);
+            painter.drawRoundedRect(patch, patch.height() / 2.0, patch.height() / 2.0);
+        }
     }
     if (halo) {
         painter.setPen(style.mapLabelHalo);

@@ -223,8 +223,8 @@ struct MapStyle
     // Room names in bold where the map was given no font, as they are where roomNameColor is invalid
     bool roomNameBold = false;
     // Around a room's name, a rim in this color, so that it reads over whatever lies under it; see roomNameHaloFor().
-    // Where it is invalid, or the name reads on no rim it allows, the name has the background's rim if labelHalos is
-    // set, else none
+    // Where it is invalid, or the name reads on no rim it allows, the name has the background's rim if labelHalos or
+    // nameHalos is set, else none
     QColor roomNameHalo;
     // Invalid for the background, the color that stands out on it, and red
     QColor compassFace;
@@ -319,6 +319,17 @@ struct MapStyle
     bool playerNote = false;
     // The style's lettering slanted
     bool labelItalic = false;
+    // Room names stand facing the screen, upright as a printed map's lettering, hung just below their room as it is
+    // drawn; else they lie on the map, where a tilted view slants and squeezes them
+    bool uprightNames = false;
+    // Room names alone drawn with a rim of the background around them, which labelHalos gives map labels too
+    bool nameHalos = false;
+    // A name's rim fading out from the letters as a glow does, rather than ending in an edge
+    bool softNameHalos = false;
+    // Behind the text of a themed label with no box, a patch of this color fading out at its edges, as paper scraped
+    // clean for the lettering, so that rooms and lines under the label do not show through it; invalid for none. It
+    // takes the place of mapLabelHalo
+    QColor mapLabelKnockout;
 
     QString displayName() const;
     // Whether this style's player ring and color take the place of the profile's player room marker
@@ -351,6 +362,19 @@ struct MapStyle
     // The rim round a room's name in this color: roomNameHalo, else black or white where the name would not read on
     // it, so that a script's light color still shows on a light board; invalid for none of them
     QColor roomNameHaloFor(const QColor& nameColor) const;
+    // A color laid over an opaque one, as blending draws it
+    static QColor over(const QColor& top, const QColor& under);
+    // The contrast ratio of two opaque colors as WCAG measures it, from 1 for none to 21 for black on white
+    static qreal contrastRatio(const QColor& first, const QColor& second);
+    // The least contrast ratio names and labels are drawn with: WCAG's for body text
+    static constexpr qreal scmLeastTextContrast = 4.5;
+    // What a room name in the style's own color is drawn on, given the profile's background: its rim laid over the
+    // background, else the background; and the name as it shows there, tinted by labelTint
+    QColor roomNameBacking(const QColor& profileBackground) const;
+    QColor shownRoomNameColor(const QColor& profileBackground) const;
+    // The same for a themed map label in the style's own color, on its plate, knockout or halo
+    QColor mapLabelBacking(const QColor& profileBackground) const;
+    QColor shownMapLabelColor(const QColor& profileBackground) const;
     QColor exitColor(const QColor& profileExitColor) const;
     QColor roomIdColor(const QColor& drawnRoomColor) const;
     // roomBorderColor is the room's own, invalid unless one was set; drawnRoomColor is roomColor()'s
