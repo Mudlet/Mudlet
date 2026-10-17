@@ -1919,14 +1919,15 @@ void ModernGLWidget::renderRooms()
     };
 
     // A room well outside the view, or behind the camera, costs nothing: nothing of it could show. Its reach takes
-    // in a long name under it, its shadow and a tall piece on it, so that a room partly in view is drawn whole
+    // in a long name under it, its shadow and a tall piece on it, so that a room partly in view is drawn whole; beyond
+    // is how much further, along the map, the room draws anything
     const QRectF viewBounds = QRectF(rect()).adjusted(-100.0, -100.0, 100.0, 100.0);
-    const auto outOfView = [this, &viewBounds, roomSize](const QVector3D& center) {
+    const auto outOfView = [this, &viewBounds, roomSize](const QVector3D& center, const float beyond = 0.0f) {
         const std::optional<QPointF> pixel = mCameraController.pixelForPoint(center);
         if (!pixel) {
             return true;
         }
-        const auto reach = static_cast<qreal>(16.0f * roomSize / mCameraController.worldUnitsPerPixel(center));
+        const auto reach = static_cast<qreal>((16.0f * roomSize + beyond) / mCameraController.worldUnitsPerPixel(center));
         return !viewBounds.adjusted(-reach, -reach, reach, reach).contains(*pixel);
     };
 
@@ -1956,7 +1957,9 @@ void ModernGLWidget::renderRooms()
         } else {
             *extent = extent->united(cell);
         }
-        if (outOfView(QVector3D(rx, ry, static_cast<float>(pR->z())))) {
+        const QPointF nameOffset = showRoomNames && !pR->name.isEmpty() ? RoomAppearance::nameOffset(pR->userData.value(ROOM_UI_NAMEPOS)) : QPointF();
+        const float highlightReach = pR->highlight ? pR->highlightRadius * style.highlightScale / 2.0f : 0.0f;
+        if (outOfView(QVector3D(rx, ry, static_cast<float>(pR->z())), qMax(static_cast<float>(std::hypot(nameOffset.x(), nameOffset.y())), highlightReach))) {
             continue;
         }
         const bool hovered = currentRoomId == mHoveredRoomId;
@@ -2257,8 +2260,7 @@ void ModernGLWidget::renderRooms()
         // Only the viewed level's, as only the 2D map's are
         if (showRoomNames && look.onViewedLevel() && !pR->name.isEmpty()) {
             // One room's size below the room on screen, then moved by its offset along the map, in rooms' spacing, y downward
-            const QPointF offset = RoomAppearance::nameOffset(pR->userData.value(ROOM_UI_NAMEPOS));
-            const QVector3D center = roomTop - groundUp * roomSize + QVector3D(static_cast<float>(offset.x()), -static_cast<float>(offset.y()), 0.0f);
+            const QVector3D center = roomTop - groundUp * roomSize + QVector3D(static_cast<float>(nameOffset.x()), -static_cast<float>(nameOffset.y()), 0.0f);
             roomNames.append({center, style.roomNameColorFor(pR->userData.value(ROOM_UI_NAMECOLOR), background), pR->name, decalTint * nameTint, &decals});
         }
 

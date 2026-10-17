@@ -1605,6 +1605,58 @@ private slots:
         }
     }
 
+    void test_whatARoomOutOfViewDrawsIntoTheViewIsDrawnWithoutGL_data()
+    {
+        QTest::addColumn<int>("roomX");
+        QTest::addColumn<QString>("edit");
+        QTest::newRow("name moved into the view") << 60 << qsl("setRoomName(7000, 'Far Name') setRoomUserData(7000, 'room.ui_nameOffset', '-60 0')");
+        QTest::newRow("highlight reaching into the view") << 60 << qsl("highlightRoom(7000, 255, 0, 0, 0, 0, 255, 80, 255, 255)");
+        QTest::newRow("name of a room in view") << 1 << qsl("setRoomName(7000, 'Near Name')");
+    }
+
+    // A room's name may be moved far from it, and its highlight reach far around it: either is drawn while it shows
+    void test_whatARoomOutOfViewDrawsIntoTheViewIsDrawnWithoutGL()
+    {
+        QFETCH(int, roomX);
+        QFETCH(QString, edit);
+        map()->mapClear();
+        const int areaId = map()->mpRoomDB->addArea(qsl("Far Decal Area"));
+        QVERIFY(addRoomAt(7000, areaId, roomX, 0, 0));
+        map()->setRoomNamesShown(true);
+        const auto restore = qScopeGuard([this]() {
+            map()->setRoomNamesShown(false);
+        });
+        QVERIFY(mpHost->mLuaInterpreter.compileAndExecuteScript(edit));
+        ModernGLWidget widget(map(), mpHost);
+        widget.mLabelTextureCache.useTextureStandIn(
+                [lastTexture = GLuint{0}](const QImage&) mutable {
+                    return ++lastTexture;
+                },
+                [](GLuint) {});
+        widget.resize(800, 600);
+        widget.mCameraController.setViewportSize(widget.width(), widget.height());
+        widget.setViewCenter(areaId, 0, 0, 0);
+        widget.setCameraPosition(0.3f, CameraController::scmMinTilt, CameraController::scmNorthUpAzimuth);
+        widget.updateMatrices();
+        const std::optional<QPointF> room = widget.mCameraController.pixelForPoint(QVector3D(static_cast<float>(roomX), 0.0f, 0.0f));
+        QVERIFY(room);
+        QCOMPARE(QRectF(widget.rect()).adjusted(-800.0, -600.0, 800.0, 600.0).contains(*room), roomX < 10);
+        widget.mRenderCommandQueue.clear();
+        widget.queueScene();
+        bool drawnAtTheCenter = false;
+        for (const auto& command : widget.mRenderCommandQueue.commands()) {
+            if (const auto* textured = dynamic_cast<const RenderTexturedTrianglesCommand*>(command.get())) {
+                const QVector<float>& vertices = textured->geometry().vertices;
+                QRectF spans;
+                for (qsizetype i = 0; i + 2 < vertices.size(); i += 3) {
+                    spans = spans.united(QRectF(vertices.at(i), vertices.at(i + 1), 0.001, 0.001));
+                }
+                drawnAtTheCenter = drawnAtTheCenter || spans.intersects(QRectF(-0.5, -1.5, 1.0, 2.0));
+            }
+        }
+        QVERIFY2(drawnAtTheCenter, "what the room draws at the view's center was left out");
+    }
+
     // The terminal style's exit characters showing in the view are all drawn, as are their rooms
     void test_everyTerminalExitShowingInTheViewIsDrawnWithoutGL()
     {
