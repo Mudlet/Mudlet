@@ -221,6 +221,26 @@ void appendHtmlEscaped(QString& s, const QChar* text, const qsizetype length)
     s.append(text + runStart, length - runStart);
 }
 
+// A wrap or hanging indent held to half the width: each wrapped segment pads indent columns per
+// (maxWidth - indent) of text, so one near the width exhausts memory. One at or past the width is dropped,
+// as is a negative one (the insert() applying it takes an unsigned count). Clamped at use, not in the
+// setters, as the wrap width can change after them.
+int clampedWrapIndent(const int indentSize, const int maxWidth)
+{
+    return (indentSize > 0 && indentSize < maxWidth) ? std::min(indentSize, maxWidth / 2) : 0;
+}
+
+// True only if getWrapInfo() would find no break, decided without its scan, the costliest part of appending
+// a line. No grapheme is wider than graphemeInfo::maxWidth columns or shorter than one QChar, and printable
+// ASCII (which excludes LineFeed and Tab) is one column per QChar.
+bool fitsUnwrapped(const QString& lineText, const qsizetype widthAvailable)
+{
+    if (lineText.size() * graphemeInfo::maxWidth <= widthAvailable) {
+        return !lineText.contains(QChar::LineFeed);
+    }
+    return lineText.size() <= widthAvailable && lineBreakInfo::printableAscii(lineText);
+}
+
 // Asks for the cache line holding the allocator's bookkeeping for a heap block,
 // which freeing it reads first and which (in glibc) sits just below the address
 // the allocator handed out - itself ownHeaderBytes below the contents for a
@@ -2374,7 +2394,6 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
         mPreTriggerPassLineUniformity = savedPassLineUniformity;
     }
 
-    // Only use of TBuffer::wrap(), breaks up new text
     // NOTE: it MAY have been clobbered by the trigger engine!
     // If deleteLine() was called in a trigger, 'lineIndex' may now be past the
     // end of the buffer; clamp to the last valid line so that any text
@@ -2382,7 +2401,11 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
     // '\n' characters from insertInLine) is still wrapped correctly.
     const int lastValidLine = static_cast<int>(lineBuffer.size()) - 1;
     const int wrapStartLine = (lastValidLine >= 0) ? std::min(lineIndex, lastValidLine) : 0;
-    const int addedLines = wrapLine(wrapStartLine, mWrapAt, mWrapIndent, mWrapHangingIndent);
+    // Spares wrapLine()'s setup for the usual last line that fits; one with no text or no TChars still goes
+    // through, as wrapLine() rebuilds it. The width must stay getWrapInfo()'s widthAvailable for mWrapAt.
+    const bool fitsAsIs = wrapStartLine == lastValidLine && !lineBuffer.at(wrapStartLine).isEmpty() && !buffer[wrapStartLine].empty()
+                          && fitsUnwrapped(lineBuffer.at(wrapStartLine), wrapsFromPreviousLine(wrapStartLine) ? mWrapAt : mWrapAt - clampedWrapIndent(mWrapIndent, mWrapAt));
+    const int addedLines = fitsAsIs ? 0 : wrapLine(wrapStartLine, mWrapAt, mWrapIndent, mWrapHangingIndent);
     // The line feed ended this line, so an empty wrapped line left by the
     // spaces it ended on is where the next line starts, not more of this one
     if (!lineBuffer.isEmpty() && lineBuffer.back().isEmpty() && timeBuffer.back() == TBuffer::smBlankTimeStamp) {
@@ -5805,19 +5828,11 @@ inline QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewl
         return output;
     }
 
-    // The boundary finders below run a full Unicode analysis, the costliest part of appending a line. Printable
-    // ASCII is one column per QChar, so such a line no wider than the wrap column has no break to find.
-    // LineFeed and Tab are outside that range, so embedded breaks never take this path.
     const qsizetype widthAvailable = std::min<qsizetype>(isNewline ? maxWidth - indent : maxWidth, mWrapAt);
+    if (fitsUnwrapped(lineText, widthAvailable)) {
+        return output;
+    }
     const bool plainAscii = lineBreakInfo::printableAscii(lineText);
-    if (plainAscii && lineText.size() <= widthAvailable) {
-        return output;
-    }
-    // No grapheme is wider than graphemeInfo::maxWidth columns or shorter than one QChar, so this line
-    // can't reach the wrap column; only an embedded line feed can break it.
-    if (lineText.size() * graphemeInfo::maxWidth <= widthAvailable && !lineText.contains(QChar::LineFeed)) {
-        return output;
-    }
 
     // Each finder runs its own analysis over the whole line. A plain-ASCII
     // line's grapheme clusters are its characters, each one column wide, so
@@ -6062,14 +6077,8 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
     // the line replaces the characters the pass is matching against:
     materialisePreTriggerPassLine(startLine);
 
-    // Checked here, not in the setters, as the wrap width can change after them.
-    // Each wrapped line pads indent columns per (maxWidth - indent) of text, so an
-    // indent is held to half the width: near the width a long line becomes one
-    // padded line per character and exhausts memory. One as wide as the width is
-    // dropped, and so is a negative one, as the insert() applying it takes an
-    // unsigned count.
-    const int indent = (indentSize > 0 && indentSize < maxWidth) ? std::min(indentSize, maxWidth / 2) : 0;
-    const int hangingIndent = (hangingIndentSize > 0 && hangingIndentSize < maxWidth) ? std::min(hangingIndentSize, maxWidth / 2) : 0;
+    const int indent = clampedWrapIndent(indentSize, maxWidth);
+    const int hangingIndent = clampedWrapIndent(hangingIndentSize, maxWidth);
     const int total = static_cast<int>(buffer.size());
 
     // Leading lines that getWrapInfo() finds no break points in stay where they
