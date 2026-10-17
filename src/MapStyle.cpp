@@ -203,6 +203,10 @@ QList<MapStyle> registeredStyles()
     hologram.playerMarker = MapStyle::PlayerMarker::Pulse;
     hologram.labelTint = QColor(150, 235, 255, 230);
     hologram.scannerOverlay = true;
+    // The other levels as faint outlines, cyan above and blue below, rather than every room echoed in its own hue
+    // around the viewed level's
+    hologram.levelsAboveColor = QColor(35, 120, 130);
+    hologram.levelsBelowColor = QColor(25, 60, 125);
     hologram.highlightShape = MapStyle::HighlightShape::Rings;
     hologram.highlightColor = QColor(255, 214, 90);
     hologram.labelLetterSpacing = 108.0;
@@ -544,6 +548,22 @@ QColor MapStyle::wireColor(const QColor& roomBorderColor, const QColor& drawnRoo
     QColor color = liftedLight(roomBorderColor);
     color.setAlpha(drawnRoomColor.alpha());
     return color;
+}
+
+QColor MapStyle::otherLevelColorFor(const QColor& drawnColor, const bool above) const
+{
+    const QColor& levelColor = above ? levelsAboveColor : levelsBelowColor;
+    if (!levelColor.isValid()) {
+        return drawnColor;
+    }
+    QColor color = levelColor;
+    color.setAlphaF(levelColor.alphaF() * drawnColor.alphaF());
+    return color;
+}
+
+float MapStyle::otherLevelSaturation(const float levelSaturation, const bool above) const
+{
+    return (above ? levelsAboveColor : levelsBelowColor).isValid() ? 1.0f : levelSaturation;
 }
 
 QColor MapStyle::playerRoomColor() const

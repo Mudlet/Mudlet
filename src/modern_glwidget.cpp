@@ -849,6 +849,31 @@ void ModernGLWidget::applyTiltShift()
 }
 
 namespace {
+// How a room's or exit's color shows on a level other than the viewed one
+QVector4D otherLevelColor(const MapStyle& style, const QColor& drawnColor, GeometryManager::LevelFade fade, const QColor& fadeTarget, const bool above)
+{
+    fade.saturation = style.otherLevelSaturation(fade.saturation, above);
+    return GeometryManager::fadedColor(style.otherLevelColorFor(drawnColor, above), fade, fadeTarget);
+}
+
+// How much of its own color, and of its opacity, another level's exit keeps of what its rooms keep; the rest of its
+// color goes toward the background
+constexpr float scmOtherLevelExitKeep = 0.4f;
+constexpr float scmOtherLevelExitOpacity = 0.35f;
+
+// Another level's exits run in long lines across the viewed level's rooms, so they recede further than the rooms they
+// join, which are enough to show the level is there. Not glowing ones, which scmGlowingExitStrength already dims below
+// their rooms' outlines, nor where the levels are to be seen through by their distance alone
+GeometryManager::LevelFade exitFade(const int levelsAbove, const bool moreTransparent, const bool glowing)
+{
+    GeometryManager::LevelFade fade = GeometryManager::levelFade(levelsAbove, moreTransparent);
+    if (levelsAbove != 0 && !glowing && !moreTransparent) {
+        fade.opacity *= scmOtherLevelExitOpacity;
+        fade.towardBackground = 1.0f - (1.0f - fade.towardBackground) * scmOtherLevelExitKeep;
+    }
+    return fade;
+}
+
 // Texels across the textures drawn on room tops
 constexpr int scmRoomTextureSize = 128;
 // Past this many, textures this frame has not used yet are dropped to make room and remade if needed;
@@ -2010,7 +2035,7 @@ void ModernGLWidget::renderRooms()
         } else if (!inkLozenges && !bordered && !pArea->gridMode && look.onViewedLevel() && !seeThrough) {
             // Halfway from the room's color to the one that stands out on the background, or for a base to the background itself
             const QColor rimTarget = style.edges == MapStyle::Edges::ViewedLevelBase ? background : contrast;
-            outlineInstances.append(outline(roomSize * scmLevelOutline, GeometryManager::fadedColor(roomColor, {0.5f, 1.0f}, rimTarget)));
+            outlineInstances.append(outline(roomSize * scmLevelOutline, GeometryManager::fadedColor(roomColor, {.towardBackground = 0.5f, .opacity = 1.0f}, rimTarget)));
         }
         // A seal stands in for the room's border as for its fill: the paper is to show through the frame cut in it.
         // A diorama's pieces meet their neighbours, as the board's tiles do
@@ -2072,7 +2097,10 @@ void ModernGLWidget::renderRooms()
             seeThroughLevels[pR->z()].tokenShadows.append(CubeInstanceData(tokenShadow, scmModelShadowColor.x(), scmModelShadowColor.y(), scmModelShadowColor.z(), scmModelShadowStrength));
         }
         if (wireframes) {
-            QVector4D wireTint = look.playerRoom ? roomTint : GeometryManager::fadedColor(style.wireColor(bordered ? pR->mBorderColor : QColor(), roomColor), fade, fadeTarget);
+            const QColor wireColor = style.wireColor(bordered ? pR->mBorderColor : QColor(), roomColor);
+            QVector4D wireTint =
+                    look.playerRoom ? roomTint
+                                    : (look.onViewedLevel() ? GeometryManager::fadedColor(wireColor, fade, fadeTarget) : otherLevelColor(style, wireColor, fade, fadeTarget, look.levelOffset > 0));
             if (hovered) {
                 wireTint = QVector4D(wireTint.toVector3D() * 0.5f + QVector3D(0.5f, 0.5f, 0.5f), wireTint.w());
             }
@@ -2427,14 +2455,11 @@ void ModernGLWidget::renderRooms()
                     const qreal degrees = qRadiansToDegrees(std::atan2(QVector3D::dotProduct(glyph.along, groundUp), QVector3D::dotProduct(glyph.along, groundRight)));
                     character = RoomAppearance::terminalLineGlyph(degrees);
                 }
-                const GeometryManager::LevelFade fade = GeometryManager::levelFade(glyph.level - mMapCenterZ, moreTransparent);
+                const GeometryManager::LevelFade fade = exitFade(glyph.level - mMapCenterZ, moreTransparent, wireframes);
                 const QVector3D center(glyph.at.x(), glyph.at.y(), glyph.at.z() + roomHeight / 2.0f);
-                appendGlyph(seeThroughLevels[glyph.level].decals.glyphs,
-                            texture,
-                            center,
-                            glyphAtlasCell(QString(character), false),
-                            scmGlyphSize,
-                            GeometryManager::fadedColor(glyph.color, fade, levelFadeTarget(glyph.level)));
+                const QVector4D glyphTint = glyph.level == mMapCenterZ ? GeometryManager::fadedColor(glyph.color, fade, levelFadeTarget(glyph.level))
+                                                                       : otherLevelColor(style, glyph.color, fade, levelFadeTarget(glyph.level), glyph.level > mMapCenterZ);
+                appendGlyph(seeThroughLevels[glyph.level].decals.glyphs, texture, center, glyphAtlasCell(QString(character), false), scmGlyphSize, glyphTint);
             }
         }
     }
@@ -2972,7 +2997,10 @@ QColor ModernGLWidget::levelFadeTarget(const int z) const
     if (!mudlet::self() || !mudlet::self()->drawUpperLowerLevels() || mapStyle().edges == MapStyle::Edges::GlowingWireframes || mapStyle().palette == MapStyle::Palette::Wash) {
         return backgroundColor();
     }
-    return GeometryManager::levelFadeTarget(z - mMapCenterZ, backgroundColor(), mpHost->mUpperLevelColor, mpHost->mLowerLevelColor);
+    return GeometryManager::levelFadeTarget(z - mMapCenterZ,
+                                            backgroundColor(),
+                                            GeometryManager::calmedLevelColor(mpHost->mUpperLevelColor, Host::scmDefaultUpperLevelColor),
+                                            GeometryManager::calmedLevelColor(mpHost->mLowerLevelColor, Host::scmDefaultLowerLevelColor));
 }
 
 void ModernGLWidget::applyStyleGeometry()
@@ -3206,7 +3234,11 @@ void ModernGLWidget::renderConnections()
     const MapStyle& style = mapStyle();
     const auto faded = [&](const QColor& color, const int level) {
         // A custom line's own color, added onto the dark background, could leave nothing to see
-        return GeometryManager::fadedColor(glowing ? style.wireColor(color, color) : color, GeometryManager::levelFade(level - mMapCenterZ, moreTransparent), levelFadeTarget(level));
+        const QColor drawn = glowing ? style.wireColor(color, color) : color;
+        if (level == mMapCenterZ) {
+            return GeometryManager::fadedColor(drawn, GeometryManager::levelFade(0, moreTransparent), levelFadeTarget(level));
+        }
+        return otherLevelColor(style, drawn, exitFade(level - mMapCenterZ, moreTransparent, glowing), levelFadeTarget(level), level > mMapCenterZ);
     };
 
     mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::ENABLE_DEPTH_TEST));
