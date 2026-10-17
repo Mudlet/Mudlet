@@ -36,6 +36,7 @@
 #include <QMessageBox>
 #include <QNetworkAccessManager>
 #include <QProgressDialog>
+#include <QSaveFile>
 #include <QSettings>
 #include <QTimer>
 #include <QVersionNumber>
@@ -160,37 +161,28 @@ void dlgPackageManager::downloadRepositoryIndex()
     QNetworkRequest request(QUrl(qsl("https://raw.githubusercontent.com/Mudlet/mudlet-package-repository/refs/heads/main/packages/mpkg.packages.json")));
     request.setTransferTimeout(20000);
     QNetworkReply* reply = manager->get(request);
-    // Parented so closing the dialog mid-download frees it: otherwise only the handler below would,
-    // and that never runs once the reply, a grandchild of this dialog, is gone.
-    QFile* file = new QFile(outputPath, this);
 
-    if (!file->open(QIODevice::WriteOnly)) {
-        file->deleteLater();
-        reply->deleteLater();
-        manager->deleteLater();
-        return;
-    }
-
-    QObject::connect(reply, &QNetworkReply::readyRead, [file, reply]() {
-        const QByteArray data = reply->readAll();
-        if (file->write(data) != data.size()) {
-            qWarning() << "dlgPackageManager::downloadRepositoryIndex() ERROR - failed to write downloaded data:" << file->errorString();
-            reply->abort();
-        }
-    });
-
-    QObject::connect(reply, &QNetworkReply::finished, [reply, file, manager, this]() {
+    QObject::connect(reply, &QNetworkReply::finished, [reply, outputPath, manager, this]() {
         if (reply->error() != QNetworkReply::NoError) {
             qWarning() << "dlgPackageManager::downloadRepositoryIndex() ERROR - network request failed:" << reply->errorString();
         } else {
             const QByteArray data = reply->readAll();
-            if (!data.isEmpty() && file->write(data) != data.size()) {
-                qWarning() << "dlgPackageManager::downloadRepositoryIndex() ERROR - failed to write final data:" << file->errorString();
+            // A captive portal or proxy can answer with a page of its own and a success status
+            const QJsonDocument doc = QJsonDocument::fromJson(data);
+            if (!doc.isObject() || !doc.object().value(qsl("packages")).isArray()) {
+                qWarning() << "dlgPackageManager::downloadRepositoryIndex() ERROR - the download is not a package index, discarding it";
+            } else {
+                // Opened only once a whole index is in hand, so a failed, refused or abandoned download never
+                // touches the previous one. On Unix, a profile directory that cannot take the temporary file
+                // falls back to rewriting the index in place, which a write failing partway leaves truncated.
+                QSaveFile file(outputPath);
+                file.setDirectWriteFallback(true);
+                if (!file.open(QIODevice::WriteOnly) || file.write(data) != data.size() || !file.commit()) {
+                    qWarning() << "dlgPackageManager::downloadRepositoryIndex() ERROR - failed to save the repository index:" << file.errorString();
+                }
             }
         }
-        file->close();
         reply->deleteLater();
-        file->deleteLater();
         manager->deleteLater();
         // A successful read refreshes the updates list and badge itself
         if (!readPackageRepositoryFile()) {

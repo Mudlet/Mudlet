@@ -311,6 +311,9 @@ void TLabel::resetBackgroundImage()
         stopMovie();
         clear();
     }
+    if (const QString sheet = styleSheet(), withoutImage = TLabelModel::styleSheetWithoutBackgroundImage(sheet); withoutImage != sheet) {
+        restyle(withoutImage);
+    }
 }
 
 void TLabel::stopMovie()

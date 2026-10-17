@@ -184,7 +184,8 @@ struct TConsoleModel
     // no longer valid, so replace() does not take it for no selection at all.
     void clear();
 
-    // Half-open: lines(n, n) is empty. Lines outside the buffer are left out.
+    // Half-open from `from`: lines(n, n) is empty, lines(2, 0) is lines 2 and 1 in that order.
+    // Lines outside the buffer are left out.
     QStringList lines(int from, int to) const;
 
     // Selecting a run of the cursor's line, painting it and restoring the format, for colorizer triggers
@@ -245,11 +246,13 @@ struct TConsoleModel
     void mirrorLineToStdOut(const QString& line);
     // What a write at mUserCursor leaves the view to do: show the lines it
     // appended, or repaint firstLine..lastLine, which it changed in place.
+    // linkDropped: insertLink() put its link on no text, so it took no luaReferences.
     struct WriteResult
     {
         bool appended = false;
         int firstLine = -1;
         int lastLine = -1;
+        bool linkDropped = false;
     };
     // echoLink() appends; the inserts go in at mUserCursor, text in
     // mFormatCurrent. While triggers run over this console's line, a write
