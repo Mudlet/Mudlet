@@ -2094,6 +2094,439 @@ ubActionsKept = table.concat(kept, ",")
         QCOMPARE(luaGlobalString(host, "ubActionsKept"), QString());
     }
 
+    // As the GUI, where removing a hidden dock hides nothing, so a window elsewhere of the name of one it held answers
+    // shown only once the deferred deletes report the name
+    void test_headlessHiddenUserWindowReportsWhatItHeldOnItsDeferredDeletes()
+    {
+        const QString hostname = qsl("Test-Headless-Host-Hidden-User-Window-Deferred-Reports");
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = HostManager::self()->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+        const QString answer = qsl(R"lua(uhAnswer = tostring(windowVisible("uhLine")) .. "," .. tostring(windowVisible("uhBox")))lua");
+        bool ran = host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+assert(openUserWindow("uhWindow", false, false, "f"))
+assert(createTextEdit("uhLine", 0, 300, 50, 50))
+assert(createTextEdit("uhBox", 0, 360, 50, 50))
+assert(createCommandLine("uhWindow", "uhLine", 0, 0, 50, 20))
+assert(createScrollBox("uhWindow", "uhBox", 0, 0, 50, 50))
+hideWindow("uhWindow")
+assert(deleteMiniConsole("uhWindow"))
+%1
+)lua")
+                                                                              .arg(answer));
+        QVERIFY2(ran, "The Lua chunk did not run.");
+        QCOMPARE(luaGlobalString(host, "uhAnswer"), qsl("false,false"));
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+        ran = host->getLuaInterpreter()->compileAndExecuteScript(answer);
+        QVERIFY2(ran, "The Lua chunk after the deferred deletes did not run.");
+        const QString drained = luaGlobalString(host, "uhAnswer");
+        HostManager::self()->deleteHost(hostname);
+        QCOMPARE(drained, qsl("true,true"));
+    }
+
+    // As the GUI self-test profile answers, but for the frame and extra open-time resizes its window manager
+    // adds: a user window tells scripts each new size it is shown at, one resized hidden or closed as it shows
+    void test_headlessUserWindowResizeEventContract()
+    {
+        const QString hostname = qsl("Test-Headless-Host-User-Window-Resize");
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = HostManager::self()->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+        QVERIFY(!host->hasConsoleView());
+        host->registerAnonymousEventHandler(qsl("sysUserWindowResizeEvent"), qsl("onUwResize"));
+
+        const bool ran = host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+uwResize = "not run"
+local ok, err = pcall(function()
+  local events, during = {}, nil
+  function onUwResize(event, width, height, name)
+    events[#events + 1] = table.concat({type(width), width, type(height), height, type(name), name, tostring(windowVisible(name))}, ":")
+    if during then
+      local act = during
+      during = nil
+      act()
+    end
+  end
+  -- The older hook for the same resizes, which a script may still define
+  local legacy = handleWindowResizeEvent
+  function handleWindowResizeEvent()
+    events[#events + 1] = "hook"
+  end
+  local answers = {}
+  local function step(label, f, ...)
+    f(...)
+    answers[#answers + 1] = label .. "=" .. table.concat(events, ";")
+    events = {}
+  end
+  step("open", openUserWindow, "uwr", false, false, "f")
+  step("resize", resizeWindow, "uwr", 300, 200)
+  step("resizeSame", resizeWindow, "uwr", 300, 200)
+  step("hide", hideWindow, "uwr")
+  step("hiddenResize", resizeWindow, "uwr", 250, 150)
+  step("show", showWindow, "uwr")
+  step("hideAgain", hideWindow, "uwr")
+  step("showUnchanged", showWindow, "uwr")
+  step("reopenShown", openUserWindow, "uwr", false, false, "f")
+  step("close", closeUserWindow, "uwr")
+  step("closedResize", resizeWindow, "uwr", 280, 180)
+  step("reopen", openUserWindow, "uwr", false, false, "f")
+  step("negative", resizeWindow, "uwr", -5, -7)
+  createMiniConsole("uwr", "uwrMini", 0, 0, 100, 100)
+  step("innerMini", resizeWindow, "uwrMini", 50, 50)
+  createMiniConsole("uwrMainMini", 0, 0, 100, 100)
+  step("mainMini", resizeWindow, "uwrMainMini", 50, 50)
+  -- As in the GUI, the window a show sends the resize to stays hidden through the handler, until a change reports its
+  -- name, such as one to its own command line, and what it holds keeps its answer unless the handler makes, shows or
+  -- hides it
+  openUserWindow("uwrOther", false, false, "f")
+  hideWindow("uwr")
+  resizeWindow("uwr", 260, 170)
+  events = {}
+  during = function()
+    hideWindow("uwrOther")
+    showWindow("uwrOther")
+    events[#events + 1] = "during:" .. tostring(windowVisible("uwr")) .. ":" .. tostring(windowVisible("uwrMini"))
+  end
+  step("showHidingOther", showWindow, "uwr")
+  -- Qt applies a resize a handler makes to the window it is showing, but sends no event for it, then or at a later show
+  hideWindow("uwr")
+  resizeWindow("uwr", 240, 160)
+  events = {}
+  during = function()
+    resizeWindow("uwr", 230, 140)
+    events[#events + 1] = "during:" .. table.concat({getUserWindowSize("uwr")}, "x")
+  end
+  step("showResizingItself", showWindow, "uwr")
+  step("reshowResized", function() hideWindow("uwr"); showWindow("uwr") end)
+  -- One a handler opens in place of the window being shown is not the one being shown
+  openUserWindow("uwrSwap", false, false, "f")
+  hideWindow("uwrSwap")
+  resizeWindow("uwrSwap", 210, 110)
+  events = {}
+  during = function()
+    deleteMiniConsole("uwrSwap")
+    openUserWindow("uwrSwap", false, false, "f")
+    events[#events + 1] = "during:" .. tostring(windowVisible("uwrSwap"))
+  end
+  step("showReplacingItself", showWindow, "uwrSwap")
+  handleWindowResizeEvent = legacy
+  uwResizeAnswers = table.concat(answers, "\n")
+end)
+uwResize = ok and "ok" or tostring(err)
+)lua"));
+        QVERIFY2(ran, "The Lua chunk did not run.");
+        QCOMPARE(luaGlobalString(host, "uwResize"), qsl("ok"));
+        const QSize opened = host->mainWindowSize().value_or(QSize());
+        const QStringList answers{
+                qsl("open=hook;number:%1:number:%2:string:uwr:false").arg(opened.width()).arg(opened.height()),
+                qsl("resize=hook;number:300:number:200:string:uwr:true"),
+                qsl("resizeSame="),
+                qsl("hide="),
+                qsl("hiddenResize="),
+                qsl("show=hook;number:250:number:150:string:uwr:false"),
+                qsl("hideAgain="),
+                qsl("showUnchanged="),
+                qsl("reopenShown="),
+                qsl("close="),
+                qsl("closedResize="),
+                qsl("reopen=hook;number:280:number:180:string:uwr:false"),
+                qsl("negative=hook;number:0:number:0:string:uwr:true"),
+                qsl("innerMini="),
+                qsl("mainMini="),
+                qsl("showHidingOther=hook;number:260:number:170:string:uwr:false;during:false:false"),
+                qsl("showResizingItself=hook;number:240:number:160:string:uwr:false;during:230x140"),
+                qsl("reshowResized="),
+                qsl("showReplacingItself=hook;number:210:number:110:string:uwrSwap:false;hook;number:%1:number:%2:string:uwrSwap:false;during:true").arg(opened.width()).arg(opened.height())};
+        QCOMPARE(luaGlobalString(host, "uwResizeAnswers").split(QLatin1Char('\n')), answers);
+    }
+
+    void test_headlessUserWindowResizeInItsShowHandler_data()
+    {
+        QTest::addColumn<QString>("during");
+        QTest::addColumn<QString>("after");
+        QTest::addColumn<QString>("expected");
+        // Each answer: the events of the show and whether the window then shows, and the same for what follows it. The
+        // window's pending resize is only cleared once the show's handlers return, so a show nested in them sends it again.
+        const QString reshow = qsl("hideWindow('uws'); showWindow('uws')");
+        QTest::newRow("hides and shows") << qsl("hideWindow('uws'); showWindow('uws')") << reshow << qsl("260x170:false;260x170:false|true||true");
+        QTest::newRow("hides, resizes and shows") << qsl("hideWindow('uws'); resizeWindow('uws', 230, 140); showWindow('uws')") << reshow << qsl("260x170:false;230x140:false|true||true");
+        QTest::newRow("hides, shows and resizes") << qsl("hideWindow('uws'); showWindow('uws'); resizeWindow('uws', 230, 140)") << reshow << qsl("260x170:false;260x170:false;230x140:true|true||true");
+        QTest::newRow("resizes, hides and shows") << qsl("resizeWindow('uws', 230, 140); hideWindow('uws'); showWindow('uws')") << reshow << qsl("260x170:false;230x140:false|true||true");
+        // A resize while hidden is the window's own, which its next show sends; one while still shown is dropped
+        QTest::newRow("hides and resizes") << qsl("hideWindow('uws'); resizeWindow('uws', 230, 140)") << qsl("showWindow('uws')") << qsl("260x170:false|false|230x140:false|true");
+        QTest::newRow("resizes and hides") << qsl("resizeWindow('uws', 230, 140); hideWindow('uws')") << qsl("showWindow('uws')") << qsl("260x170:false|false||true");
+        // As QWidget::setVisible(true) on a widget not hidden, neither shows it again
+        QTest::newRow("shows itself") << qsl("showWindow('uws')") << QString() << qsl("260x170:false|true||true");
+        QTest::newRow("opens itself") << qsl("openUserWindow('uws', false, false, 'f')") << QString() << qsl("260x170:false|true||true");
+    }
+
+    // As the GUI self-test profile answers the same, but for the frame its sizes include
+    void test_headlessUserWindowResizeInItsShowHandler()
+    {
+        QFETCH(const QString, during);
+        QFETCH(const QString, after);
+        QFETCH(const QString, expected);
+        const QString hostname = qsl("Test-Headless-Host-User-Window-Show-Handler");
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = HostManager::self()->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+        host->registerAnonymousEventHandler(qsl("sysUserWindowResizeEvent"), qsl("onUwShowHandler"));
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+uwShowHandler = "not run"
+local events, during = {}, nil
+function onUwShowHandler(_, width, height, name)
+  if name == "uws" then
+    events[#events + 1] = width .. "x" .. height .. ":" .. tostring(windowVisible(name))
+    if during then
+      local act = during
+      during = nil
+      act()
+    end
+  end
+end
+local ok, err = pcall(function()
+  openUserWindow("uws", false, false, "f")
+  resizeWindow("uws", 300, 200)
+  hideWindow("uws")
+  resizeWindow("uws", 260, 170)
+  events = {}
+  during = function() %1 end
+  showWindow("uws")
+  local shown = table.concat(events, ";") .. "|" .. tostring(windowVisible("uws"))
+  events = {}
+  %2
+  uwShowHandler = shown .. "|" .. table.concat(events, ";") .. "|" .. tostring(windowVisible("uws"))
+end)
+if not ok then uwShowHandler = tostring(err) end
+)lua")
+                                                                           .arg(during, after)));
+        const QString answer = luaGlobalString(host, "uwShowHandler");
+        // Before comparing, so a failing row leaves the next its profile name
+        HostManager::self()->deleteHost(hostname);
+        QCOMPARE(answer, expected);
+    }
+
+    void test_headlessUserWindowContentsInItsShowHandler_data()
+    {
+        QTest::addColumn<QString>("during");
+        QTest::addColumn<QString>("expected");
+        // Each answer: what the handler finds, what showWindow() returns and whether the window then shows. What is
+        // inside the window answers as the GUI's isVisibleTo() once a change reaches it, and keeps its answer otherwise.
+        QTest::newRow("another window shown") << qsl("hideWindow('uwcOther'); showWindow('uwcOther'); return windowVisible('uwcOld')") << qsl("false|true|true");
+        QTest::newRow("new mini console, then another window shown") << qsl("createMiniConsole('uwc', 'uwcNew', 0, 0, 50, 50); hideWindow('uwcOther'); showWindow('uwcOther'); return "
+                                                                            "tostring(windowVisible('uwcNew')) .. ',' .. tostring(windowVisible('uwcOld'))")
+                                                                     << qsl("true,false|true|true");
+        QTest::newRow("mini console hidden and shown") << qsl("hideWindow('uwcOld'); showWindow('uwcOld'); return windowVisible('uwcOld')") << qsl("true|true|true");
+        // A show of what already shows changes nothing, so reports nothing
+        QTest::newRow("mini console shown again") << qsl("showWindow('uwcOld'); return windowVisible('uwcOld')") << qsl("false|true|true");
+        QTest::newRow("window shown again") << qsl("showWindow('uwc'); return windowVisible('uwcOld')") << qsl("false|true|true");
+        QTest::newRow("window opened again") << qsl("openUserWindow('uwc', false, false, 'f'); return windowVisible('uwcOld')") << qsl("false|true|true");
+        QTest::newRow("label shown again") << qsl("showWindow('uwcOldLabel'); return windowVisible('uwcOldLabel')") << qsl("false|true|true");
+        QTest::newRow("scroll box shown again") << qsl("showWindow('uwcOpenBox'); return windowVisible('uwcOpenBoxLabel')") << qsl("false|true|true");
+        QTest::newRow("command line shown again") << qsl("showWindow('uwcOldCmd'); return windowVisible('uwcOldCmd')") << qsl("false|true|true");
+        QTest::newRow("command line enabled again") << qsl("enableCommandLine('uwcOldCmd'); return windowVisible('uwcOldCmd')") << qsl("false|true|true");
+        QTest::newRow("hidden scroll box shown") << qsl("showWindow('uwcBox'); return tostring(windowVisible('uwcBoxLabel')) .. ',' .. tostring(windowVisible('uwcOld'))")
+                                                 << qsl("true,false|true|true");
+        QTest::newRow("new label, then the window hidden") << qsl("createLabel('uwc', 'uwcLabel', 0, 0, 20, 20, 1); hideWindow('uwc'); return windowVisible('uwcLabel')") << qsl("false|true|false");
+        QTest::newRow("window deleted") << qsl("deleteMiniConsole('uwc'); return 'deleted'") << qsl("deleted|false|nil");
+        QTest::newRow("window deleted and reopened") << qsl("deleteMiniConsole('uwc'); openUserWindow('uwc', false, false, 'f'); return 'reopened'") << qsl("reopened|true|true");
+    }
+
+    // As the GUI self-test profile answers the same
+    void test_headlessUserWindowContentsInItsShowHandler()
+    {
+        QFETCH(const QString, during);
+        QFETCH(const QString, expected);
+        const QString hostname = qsl("Test-Headless-Host-User-Window-Contents-Show-Handler");
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = HostManager::self()->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+        host->registerAnonymousEventHandler(qsl("sysUserWindowResizeEvent"), qsl("onUwcShowHandler"));
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+uwcShowHandler = "not run"
+local during, found = nil, "not run"
+function onUwcShowHandler(_, _, _, name)
+  if name == "uwc" and during then
+    local act = during
+    during = nil
+    found = tostring(act())
+  end
+end
+local ok, err = pcall(function()
+  openUserWindow("uwc", false, false, "f")
+  openUserWindow("uwcOther", false, false, "f")
+  createMiniConsole("uwc", "uwcOld", 0, 0, 50, 50)
+  createLabel("uwc", "uwcOldLabel", 0, 0, 20, 20, 1)
+  createCommandLine("uwc", "uwcOldCmd", 0, 60, 100, 20)
+  createScrollBox("uwc", "uwcOpenBox", 0, 0, 80, 80)
+  createLabel("uwcOpenBox", "uwcOpenBoxLabel", 0, 0, 20, 20, 1)
+  createScrollBox("uwc", "uwcBox", 0, 0, 80, 80)
+  createLabel("uwcBox", "uwcBoxLabel", 0, 0, 20, 20, 1)
+  hideWindow("uwcBox")
+  hideWindow("uwc")
+  resizeWindow("uwc", 260, 170)
+  during = function() %1 end
+  local shown = showWindow("uwc")
+  uwcShowHandler = found .. "|" .. tostring(shown) .. "|" .. tostring(windowVisible("uwc"))
+end)
+if not ok then uwcShowHandler = tostring(err) end
+)lua")
+                                                                           .arg(during)));
+        const QString answer = luaGlobalString(host, "uwcShowHandler");
+        // Before comparing, so a failing row leaves the next its profile name
+        HostManager::self()->deleteHost(hostname);
+        QCOMPARE(answer, expected);
+    }
+
+    void test_headlessUserWindowNamesInItsShowHandler_data()
+    {
+        QTest::addColumn<QString>("before");
+        QTest::addColumn<QString>("during");
+        QTest::addColumn<QString>("expected");
+        // As in the GUI, where a delete reports the name it frees, and a change to a scroll box or user window reports
+        // each name it holds, so also a window of that name elsewhere
+        const QString window = qsl("return windowVisible('uwn')");
+        const QString mini = qsl("return windowVisible('uwnMini')");
+        const QString boxed = qsl("createScrollBox('uwnBox', 0, 300, 80, 80); createTextEdit('uwnBox', 'uwnMini', 0, 0, 50, 50)");
+        QTest::newRow("same-named command line deleted") << qsl("enableCommandLine('uwn')") << qsl("deleteCommandLine('uwn'); %1").arg(window) << qsl("true|true|true");
+        QTest::newRow("same-named scroll box deleted") << qsl("createScrollBox('uwn', 'uwn', 0, 0, 50, 50)") << qsl("deleteScrollBox('uwn'); %1").arg(window) << qsl("true|true|true");
+        QTest::newRow("same-named text edit deleted") << qsl("createTextEdit('uwn', 'uwn', 0, 0, 50, 50)") << qsl("deleteTextEdit('uwn'); %1").arg(window) << qsl("true|true|true");
+        QTest::newRow("held window's namesake deleted") << qsl("createCommandLine('uwnMini', 0, 300, 50, 20)") << qsl("deleteCommandLine('uwnMini'); %1").arg(mini) << qsl("true|true|true");
+        QTest::newRow("scroll box holding a namesake hidden") << boxed << qsl("hideWindow('uwnBox'); %1").arg(mini) << qsl("true|true|true");
+        QTest::newRow("scroll box holding a namesake shown") << qsl("%1; hideWindow('uwnBox')").arg(boxed) << qsl("showWindow('uwnBox'); %1").arg(mini) << qsl("true|true|true");
+        QTest::newRow("scroll box holding a namesake moved") << boxed << qsl("setWindow('uwnOther', 'uwnBox', 0, 0, true); %1").arg(mini) << qsl("true|true|true");
+        QTest::newRow("window holding a namesake hidden") << qsl("createCommandLine('uwnOther', 'uwnMini', 0, 0, 50, 20)") << qsl("hideWindow('uwnOther'); %1").arg(mini) << qsl("true|true|true");
+        QTest::newRow("window holding a namesake shown") << qsl("createCommandLine('uwnOther', 'uwnMini', 0, 0, 50, 20); hideWindow('uwnOther')") << qsl("showWindow('uwnOther'); %1").arg(mini)
+                                                         << qsl("true|true|true");
+        QTest::newRow("window holding a namesake deleted") << qsl("createTextEdit('uwnOther', 'uwnMini', 0, 0, 50, 50)") << qsl("deleteMiniConsole('uwnOther'); %1").arg(mini) << qsl("true|true|true");
+        // A hidden dock's removal hides nothing, so what it held reports only as its deferred deletes run
+        QTest::newRow("hidden window holding a namesake deleted") << qsl("createTextEdit('uwnOther', 'uwnMini', 0, 0, 50, 50); hideWindow('uwnOther')")
+                                                                  << qsl("deleteMiniConsole('uwnOther'); %1").arg(mini) << qsl("false|true|true");
+        QTest::newRow("hidden window holding a namesake's command line deleted")
+                << qsl("createTextEdit('uwn', 'uwnHeld', 0, 0, 50, 50); createMiniConsole('uwnOther', 'uwnHeld', 0, 0, 50, 50); enableCommandLine('uwnHeld'); hideWindow('uwnOther')")
+                << qsl("deleteMiniConsole('uwnOther'); return windowVisible('uwnHeld')") << qsl("false|true|true");
+        QTest::newRow("window of a held namesake deleted") << qsl("createTextEdit('uwn', 'uwnOther', 0, 0, 50, 50)") << qsl("deleteMiniConsole('uwnOther'); return windowVisible('uwnOther')")
+                                                           << qsl("true|true|true");
+        QTest::newRow("hidden window of a held namesake deleted") << qsl("createTextEdit('uwn', 'uwnOther', 0, 0, 50, 50); hideWindow('uwnOther')")
+                                                                  << qsl("deleteMiniConsole('uwnOther'); return windowVisible('uwnOther')") << qsl("false|true|true");
+        // A delete run inside the pump shows that deferred report
+        QTest::newRow("hidden window holding a namesake deleted, then pumped")
+                << qsl("createTextEdit('uwnOther', 'uwnMini', 0, 0, 50, 50); hideWindow('uwnOther')") << qsl("tempTimer(0, function() deleteMiniConsole('uwnOther') end); pumpEvents(); %1").arg(mini)
+                << qsl("true|true|true");
+        QTest::newRow("scroll box holding no namesake hidden") << qsl("createScrollBox('uwnBox', 0, 300, 80, 80); createTextEdit('uwnBox', 'uwnElse', 0, 0, 50, 50)")
+                                                               << qsl("hideWindow('uwnBox'); %1").arg(mini) << qsl("false|true|true");
+    }
+
+    // As the GUI self-test profile answers the same
+    void test_headlessUserWindowNamesInItsShowHandler()
+    {
+        QFETCH(const QString, before);
+        QFETCH(const QString, during);
+        QFETCH(const QString, expected);
+        const QString hostname = qsl("Test-Headless-Host-User-Window-Names-Show-Handler");
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = HostManager::self()->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+        host->registerAnonymousEventHandler(qsl("sysUserWindowResizeEvent"), qsl("onUwnShowHandler"));
+        // With no view, pumpEvents() takes Mudlet for shutting down and pumps nothing
+        lua_register(host->getLuaInterpreter()->getLuaGlobalState(), "pumpEvents", [](lua_State*) -> int {
+            for (int pass = 0; pass < 10; ++pass) {
+                QCoreApplication::processEvents();
+            }
+            return 0;
+        });
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+uwnShowHandler = "not run"
+local during, found = nil, "not run"
+function onUwnShowHandler(_, _, _, name)
+  if name == "uwn" and during then
+    local act = during
+    during = nil
+    found = tostring(act())
+  end
+end
+local ok, err = pcall(function()
+  openUserWindow("uwn", false, false, "f")
+  openUserWindow("uwnOther", false, false, "f")
+  createMiniConsole("uwn", "uwnMini", 0, 0, 50, 50)
+  %1
+  hideWindow("uwn")
+  resizeWindow("uwn", 260, 170)
+  during = function() %2 end
+  local shown = showWindow("uwn")
+  uwnShowHandler = found .. "|" .. tostring(shown) .. "|" .. tostring(windowVisible("uwn"))
+end)
+if not ok then uwnShowHandler = tostring(err) end
+)lua")
+                                                                           .arg(before, during)));
+        const QString answer = luaGlobalString(host, "uwnShowHandler");
+        // Before comparing, so a failing row leaves the next its profile name
+        HostManager::self()->deleteHost(hostname);
+        QCOMPARE(answer, expected);
+    }
+
+    void test_headlessUserWindowCommandLineInItsShowHandler_data()
+    {
+        QTest::addColumn<QString>("line");
+        QTest::addColumn<QString>("during");
+        QTest::addColumn<QString>("expected");
+        // As in the GUI, where a change to the window's own command line reports the window's name, so its dock
+        const QString shown = qsl("enableCommandLine('uwl')");
+        const QString hidden = qsl("enableCommandLine('uwl'); disableCommandLine('uwl')");
+        const QString answer = qsl("return tostring(windowVisible('uwl')) .. ',' .. tostring(windowVisible('uwlOld'))");
+        QTest::newRow("first command line") << QString() << qsl("enableCommandLine('uwl'); %1").arg(answer) << qsl("true,false|true|true");
+        QTest::newRow("hidden command line shown") << hidden << qsl("enableCommandLine('uwl'); %1").arg(answer) << qsl("true,false|true|true");
+        QTest::newRow("shown command line hidden") << shown << qsl("disableCommandLine('uwl'); %1").arg(answer) << qsl("true,false|true|true");
+        QTest::newRow("first command line, then a scroll box shown") << QString() << qsl("enableCommandLine('uwl'); showWindow('uwlBox'); %1").arg(answer) << qsl("true,false|true|true");
+        // As QWidget::setVisible() to what the command line already is, which reports nothing
+        QTest::newRow("shown command line shown again") << shown << qsl("enableCommandLine('uwl'); %1").arg(answer) << qsl("false,false|true|true");
+        QTest::newRow("hidden command line hidden again") << hidden << qsl("disableCommandLine('uwl'); %1").arg(answer) << qsl("false,false|true|true");
+        QTest::newRow("no command line hidden") << QString() << qsl("disableCommandLine('uwl'); %1").arg(answer) << qsl("false,false|true|true");
+    }
+
+    // As the GUI self-test profile answers the same
+    void test_headlessUserWindowCommandLineInItsShowHandler()
+    {
+        QFETCH(const QString, line);
+        QFETCH(const QString, during);
+        QFETCH(const QString, expected);
+        const QString hostname = qsl("Test-Headless-Host-User-Window-Command-Line-Show-Handler");
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = HostManager::self()->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+        host->registerAnonymousEventHandler(qsl("sysUserWindowResizeEvent"), qsl("onUwlShowHandler"));
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+uwlShowHandler = "not run"
+local during, found = nil, "not run"
+function onUwlShowHandler(_, _, _, name)
+  if name == "uwl" and during then
+    local act = during
+    during = nil
+    found = tostring(act())
+  end
+end
+local ok, err = pcall(function()
+  openUserWindow("uwl", false, false, "f")
+  resizeWindow("uwl", 400, 250)
+  %1
+  createMiniConsole("uwl", "uwlOld", 0, 0, 50, 50)
+  createScrollBox("uwl", "uwlBox", 0, 0, 80, 80)
+  hideWindow("uwlBox")
+  hideWindow("uwl")
+  resizeWindow("uwl", 360, 220)
+  during = function() %2 end
+  local shown = showWindow("uwl")
+  uwlShowHandler = found .. "|" .. tostring(shown) .. "|" .. tostring(windowVisible("uwl"))
+end)
+if not ok then uwlShowHandler = tostring(err) end
+)lua")
+                                                                           .arg(line, during)));
+        const QString answer = luaGlobalString(host, "uwlShowHandler");
+        // Before comparing, so a failing row leaves the next its profile name
+        HostManager::self()->deleteHost(hostname);
+        QCOMPARE(answer, expected);
+    }
+
     // The answers are those of the same Lua run in the GUI self-test profile
     void test_headlessWindowSizesContract()
     {

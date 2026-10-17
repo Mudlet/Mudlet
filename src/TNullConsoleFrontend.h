@@ -371,6 +371,12 @@ private:
         QPointer<QObject> holder;
         // TConsole::mpCommandLine, which still holds a deleted command line until deferred deletes run
         QPointer<HistoryWriter> ownLine;
+        // A user window's console: its size, which a resize while the dock is hidden reaches only as it shows, and its
+        // QWidget::WA_PendingResizeEvent, set on a new one and by a size it takes while not visible
+        QSize consoleSize;
+        bool resizePending = true;
+        // From a show sending that resize until its handlers return, or a show nested in them after a hide ends
+        bool sendingResize = false;
     };
     // As TConsole::mpCommandLine tells a console's own command line from another of its name
     static bool ownsLine(const SubConsole& console, const PlainWindow& commandLine) { return commandLine.writer && commandLine.writer == console.ownLine; }
@@ -463,7 +469,8 @@ private:
     void polishLabel(Label& label);
     void restyleLabel(Label& label, const QString& sheet);
     bool setSubConsoleShown(const QString& name, bool shown);
-    void reportVisibility();
+    void raiseUserWindowResize(const QString& name);
+    void reportVisibility(const QString& changedWindow, const ScrollBox* changedBox);
     void reportWindowVisibility(const QString& name);
     std::optional<QFont> consoleFont(const QString& name) const;
     void setSubConsoleFont(const QString& name, const QFont& font);
@@ -483,6 +490,8 @@ private:
     std::vector<std::unique_ptr<TConsoleModel>> mRetiredConsoles;
     std::vector<std::unique_ptr<TLabelModel>> mRetiredLabels;
     bool mReleaseQueued = false;
+    // While a hidden user window is removed, the names its deferred deletes are to report
+    QStringList* mpDeferredReports = nullptr;
     // The main window, which holds what a script makes in it
     std::unique_ptr<QObject> mpMainHolder = std::make_unique<QObject>();
     // TMxpFrameWidgets' container widget of each frame, which holds the frame's console until a script moves it
