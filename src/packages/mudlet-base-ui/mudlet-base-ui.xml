@@ -1623,8 +1623,6 @@ function BaseUI.loadSettings()
   -- where a section was left is Geyser's to remember, in a file of its own, so
   -- any position the settings file carries is ignored
   BaseUI.settings.gaugePanel = nil
-  -- settings saved before `built` existed: only a built dock is ever announced
-  BaseUI.settings.built = BaseUI.settings.built or BaseUI.settings.announced
 end
 
 function BaseUI.saveSettings()

@@ -193,19 +193,6 @@ private slots:
         QVERIFY2(luaTrue(host, qsl("BaseUI.map ~= nil")), "the map loaded after the dock was rebuilt stays behind its placeholder");
     }
 
-    // Settings saved before the dock recorded being built only say it was announced,
-    // which it only ever is once built
-    void test_loadingAProfileFromBeforeTheBuiltFlagStillBuildsTheDock()
-    {
-        Host* host = startProfileWithoutTheStarterUi();
-        QVERIFY(host);
-        QVERIFY(runLua(host, qsl("table.save(getMudletHomeDir() .. '/base_ui_settings.lua', { announced = true, msdpSeeded = true, theme = 'midnight' })")));
-
-        QVERIFY(installTheStarterUi(host));
-
-        QVERIFY2(luaTrue(host, qsl("BaseUI.container ~= nil and getBorderRight() > 0")), "a profile upgraded from an older starter UI keeps its empty border at load");
-    }
-
     void test_loadingAProfileThatHidTheDockLeavesItUnbuiltUntilShown()
     {
         Host* host = startProfileWithoutTheStarterUi();
