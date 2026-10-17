@@ -625,6 +625,112 @@ private slots:
         mpEditor->repopulateVars();
     }
 
+    // A variable added but not yet saved belongs to no table, so its row is all
+    // that owns it. These only fail under LeakSanitizer, which the ASan CI build
+    // runs this test with (#10579).
+    void test_anUnsavedNewVariableIsFreedWhenTheViewIsRebuilt()
+    {
+        mpEditor->repopulateVars();
+        VarUnit* pVarUnit = mpHost->getLuaInterface()->getVarUnit();
+        auto* pItem = new QTreeWidgetItem(mpEditor->mpVarBaseItem, QStringList{qsl("unsavedNewVariable")});
+        mpEditor->treeWidget_variables->setNewVariableForRow(pVarUnit, pItem, std::make_unique<TVar>(pVarUnit->getBase()));
+        QVERIFY(mpEditor->treeWidget_variables->newVariableForRow(pVarUnit, pItem));
+
+        mpEditor->repopulateVars();
+    }
+
+    void test_anUnsavedNewVariableInADeletedTableIsFreed()
+    {
+        execLua(qsl("unsavedNewVariableHolder = {existing = 'existing value'}"));
+        mpEditor->repopulateVars();
+        VarUnit* pVarUnit = mpHost->getLuaInterface()->getVarUnit();
+        QTreeWidgetItem* pHolder = findVariableItem({qsl("unsavedNewVariableHolder")});
+        QVERIFY2(pHolder, "the Variables view did not show the table to add into");
+        TVar* pHolderVar = mpEditor->treeWidget_variables->variableForRow(pVarUnit, pHolder);
+        QVERIFY2(pHolderVar, "the Variables view has no variable behind the table's row");
+        auto* pChild = new QTreeWidgetItem(pHolder, QStringList{qsl("unsavedNewMember")});
+        mpEditor->treeWidget_variables->setNewVariableForRow(pVarUnit, pChild, std::make_unique<TVar>(pHolderVar));
+
+        mpEditor->mpCurrentVarItem = nullptr;
+        mpVariablesTree->clearSelection();
+        pHolder->setSelected(true);
+        mpEditor->delete_variable();
+        QCOMPARE(luaTypeOf(qsl("unsavedNewVariableHolder")), qsl("nil"));
+
+        mpEditor->repopulateVars();
+    }
+
+    void test_aReplacedUnsavedNewVariableIsFreed()
+    {
+        mpEditor->repopulateVars();
+        VarUnit* pVarUnit = mpHost->getLuaInterface()->getVarUnit();
+        auto* pItem = new QTreeWidgetItem(mpEditor->mpVarBaseItem, QStringList{qsl("replacedNewVariable")});
+        mpEditor->treeWidget_variables->setNewVariableForRow(pVarUnit, pItem, std::make_unique<TVar>(pVarUnit->getBase()));
+        auto replacement = std::make_unique<TVar>(pVarUnit->getBase());
+        TVar* pReplacement = replacement.get();
+        mpEditor->treeWidget_variables->setNewVariableForRow(pVarUnit, pItem, std::move(replacement));
+        QCOMPARE(mpEditor->treeWidget_variables->newVariableForRow(pVarUnit, pItem), pReplacement);
+
+        mpEditor->repopulateVars();
+    }
+
+    // The Lua that saving a new variable runs can rebuild the variable tree, and
+    // the rows' pending variables go with the old tree. Parentless, so it hangs
+    // off the rebuilt base rather than off the one the rebuild freed.
+    void test_aNewVariableIsKeptWhenItsSaveRebuildsTheTree()
+    {
+        mpEditor->repopulateVars();
+        QTreeWidgetItem* pItem = addPendingVariableRow(qsl("rebuiltDuringSave"));
+        VarUnit* pVarUnit = mpHost->getLuaInterface()->getVarUnit();
+        const quint64 generationBefore = pVarUnit->treeGeneration();
+        pauseWhenLuaSets(qsl("rebuiltDuringSave"));
+        QTimer::singleShot(50ms, mpHost, [this]() {
+            mpHost->getLuaInterface()->getVars(false);
+        });
+
+        mpEditor->saveVar();
+
+        execLua(qsl("setmetatable(_G, nil)"));
+        QVERIFY2(pVarUnit->treeGeneration() != generationBefore, "the variable tree was not rebuilt while the save ran");
+        QCOMPARE(luaTypeOf(qsl("rebuiltDuringSave")), qsl("string"));
+        TVar* pSaved = mpEditor->treeWidget_variables->variableForRow(pVarUnit, pItem);
+        QVERIFY2(pSaved, "the saved variable's row stands for nothing");
+        QCOMPARE(pSaved->getName(), qsl("rebuiltDuringSave"));
+
+        mpEditor->mpCurrentVarItem = nullptr;
+        execLua(qsl("rebuiltDuringSave = nil"));
+        mpEditor->repopulateVars();
+    }
+
+    void test_aNewVariableIsKeptWhenAnotherIsAddedDuringItsSave()
+    {
+        mpEditor->repopulateVars();
+        QTreeWidgetItem* pItem = addPendingVariableRow(qsl("savedBesideAnAdd"));
+        VarUnit* pVarUnit = mpHost->getLuaInterface()->getVarUnit();
+        const quint64 generationBefore = pVarUnit->treeGeneration();
+        const int rowsBefore = mpEditor->mpVarBaseItem->childCount();
+        pauseWhenLuaSets(qsl("savedBesideAnAdd"));
+        QTimer::singleShot(50ms, mpHost, [this]() {
+            mpHost->getLuaInterface()->getVars(false);
+        });
+        QTimer::singleShot(100ms, mpEditor, [this]() {
+            mpEditor->addVar(false);
+        });
+
+        mpEditor->saveVar();
+
+        execLua(qsl("setmetatable(_G, nil)"));
+        QVERIFY2(pVarUnit->treeGeneration() != generationBefore, "the variable tree was not rebuilt while the save ran");
+        QCOMPARE(mpEditor->mpVarBaseItem->childCount(), rowsBefore + 1);
+        QCOMPARE(luaTypeOf(qsl("savedBesideAnAdd")), qsl("string"));
+        TVar* pSaved = mpEditor->treeWidget_variables->variableForRow(pVarUnit, pItem);
+        QVERIFY2(pSaved, "the saved variable's row stands for nothing");
+        QCOMPARE(pSaved->getName(), qsl("savedBesideAnAdd"));
+
+        mpEditor->mpCurrentVarItem = nullptr;
+        execLua(qsl("savedBesideAnAdd = nil variable_name = nil"));
+    }
+
     // A full rebuild sorts the rows by name, so naming a new row has to put it
     // where that rebuild would, not leave it where it was added
     void test_aNewVariableIsSortedIntoPlaceOnceNamed()
@@ -984,6 +1090,26 @@ private slots:
     }
 
 private:
+    // A selected, named row holding a new variable not yet saved, as addVar() leaves one
+    QTreeWidgetItem* addPendingVariableRow(const QString& name)
+    {
+        VarUnit* pVarUnit = mpHost->getLuaInterface()->getVarUnit();
+        auto* pItem = new QTreeWidgetItem(mpEditor->mpVarBaseItem, QStringList{name});
+        mpEditor->treeWidget_variables->setNewVariableForRow(pVarUnit, pItem, std::make_unique<TVar>());
+        mpEditor->mpCurrentVarItem = pItem;
+        mpVariablesTree->setCurrentItem(pItem);
+        mpEditor->mpVarsMainArea->lineEdit_var_name->setText(name);
+        mpEditor->mpSourceEditorEdbeeDocument->setText(qsl("saved value"));
+        return pItem;
+    }
+
+    // Runs the event loop from inside Lua's write of the global, as a script's
+    // __newindex can, so that timers fire while the editor is mid-save
+    void pauseWhenLuaSets(const QString& name)
+    {
+        execLua(qsl("setmetatable(_G, {__newindex = function(t, k, v) rawset(t, k, v) if k == '%1' then waitForEvent('neverRaised', 300) end end})").arg(name));
+    }
+
     // A corner of the area the tree ticks on, not the middle of the box,
     // where the item delegate takes the press before the view selects
     QPoint saveBoxCorner(QTreeWidgetItem* pItem)
