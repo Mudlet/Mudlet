@@ -162,12 +162,13 @@ public:
     QList<TLabel*> keyboardButtons() const;
     // From the main window's links: focuses the first, or going backwards the last, button; false when there are none
     bool focusKeyboardButton(bool forward);
-    // Moves the focus from a label - focused, or losing its focus as it goes - to the next or previous button by
-    // its place on screen, else out of the buttons: to the first or last link when the player came from caret mode,
-    // else to the command line
+    // Moves the focus from a label, focused or losing its focus as it goes, to the next or previous button by its
+    // place on screen, else out of the buttons
     void focusButtonAfter(const TLabel* pLabel, bool next);
-    // Focus left the buttons for somewhere other than another button
-    void leftKeyboardButtons() { mKeyboardButtonsFromCaret = false; }
+    // To the first or last link when the player came from caret mode, else to the command line
+    void leaveKeyboardButtons(bool next);
+    // So that leaving the buttons later goes to the command line, not back to caret mode
+    void forgetCaretOrigin() { mKeyboardButtonsFromCaret = false; }
     // Copies a named window's current pos() and size() into Host's window registry (a label's into
     // its model), where Host::windowGeometry() reads them. Every view op that moves or resizes a
     // widget calls it, as a hidden widget gets no events to report its own.

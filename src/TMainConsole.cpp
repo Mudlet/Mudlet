@@ -1400,7 +1400,7 @@ void TMainConsole::deleteLabel(const QString& name)
     auto pL = mLabelMap.value(name);
     if (pL) {
         // Destroyed later, and a destroyed widget leaves the focus with nobody
-        if (pL->hasFocus()) {
+        if (pL->hasFocus() && pL->window() == window()) {
             focusButtonAfter(pL, true);
         }
         mpHost->windowRegistry().deregisterLabel(name, &pL->model());
@@ -1553,7 +1553,7 @@ QList<TLabel*> TMainConsole::keyboardButtons() const
 {
     QList<TLabel*> labels;
     for (TLabel* pLabel : mLabelMap) {
-        // Focus given to a label in a floating user window does not move the keyboard there
+        // A floating user window is a window of its own, out of reach of Tab here
         if (pLabel && pLabel->isVisible() && pLabel->isEnabled() && pLabel->window() == window() && pLabel->keyboardReachable()) {
             labels.append(pLabel);
         }
@@ -1581,21 +1581,30 @@ void TMainConsole::focusButtonAfter(const TLabel* pLabel, bool next)
 {
     const QList<TLabel*> buttons = keyboardButtons();
     TLabel* pTarget = nullptr;
-    if (next) {
-        const auto it = std::find_if(buttons.cbegin(), buttons.cend(), [pLabel](const TLabel* pButton) {
-            return pButton != pLabel && readsBefore(pLabel, pButton);
+    // Labels at the same corner read neither before nor after each other, so one still in the list goes by its place there
+    if (const auto it = std::find(buttons.cbegin(), buttons.cend(), pLabel); it != buttons.cend()) {
+        const qsizetype target = std::distance(buttons.cbegin(), it) + (next ? 1 : -1);
+        pTarget = target >= 0 && target < buttons.size() ? buttons.at(target) : nullptr;
+    } else if (next) {
+        const auto after = std::find_if(buttons.cbegin(), buttons.cend(), [pLabel](const TLabel* pButton) {
+            return !readsBefore(pButton, pLabel);
         });
-        pTarget = it == buttons.cend() ? nullptr : *it;
+        pTarget = after == buttons.cend() ? nullptr : *after;
     } else {
-        const auto it = std::find_if(buttons.crbegin(), buttons.crend(), [pLabel](const TLabel* pButton) {
-            return pButton != pLabel && readsBefore(pButton, pLabel);
+        const auto before = std::find_if(buttons.crbegin(), buttons.crend(), [pLabel](const TLabel* pButton) {
+            return readsBefore(pButton, pLabel);
         });
-        pTarget = it == buttons.crend() ? nullptr : *it;
+        pTarget = before == buttons.crend() ? nullptr : *before;
     }
     if (pTarget) {
         pTarget->setFocus(next ? Qt::TabFocusReason : Qt::BacktabFocusReason);
         return;
     }
+    leaveKeyboardButtons(next);
+}
+
+void TMainConsole::leaveKeyboardButtons(bool next)
+{
     if (std::exchange(mKeyboardButtonsFromCaret, false)) {
         mpHost->setCaretEnabled(true);
         mUpperPane->moveCaretToLink(next);
