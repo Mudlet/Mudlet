@@ -53,6 +53,7 @@
 #include <QStyleOptionViewItem>
 #include <QToolButton>
 #include <QTemporaryDir>
+#include <QWheelEvent>
 #include <QtTest/QtTest>
 
 #include "Host.h"
@@ -550,6 +551,36 @@ private:
             widget.onCameraAnimationTick();
         }
     }
+
+    // A notch of the mouse wheel at this point of the view, in or out whichever way the wheel is set to zoom
+    static void wheelAt(ModernGLWidget& widget, const QPoint& position, const bool in)
+    {
+        const int notch = in != mudlet::self()->invertMapZoom() ? 120 : -120;
+        QWheelEvent event(QPointF(position), widget.mapToGlobal(QPointF(position)), QPoint(), QPoint(0, notch), Qt::NoButton, Qt::NoModifier, Qt::NoScrollPhase, false);
+        widget.wheelEvent(&event);
+    }
+
+    // The hamlet and the road, the hamlet's middle 200 rooms north of the road's, and three towns of 20 by 20 rooms far
+    // off, so that a typical area is bigger than the hamlet; returns the hamlet's and the road's IDs
+    std::pair<int, int> addHamletAndRoadAmongTowns() const
+    {
+        const auto [hamletId, roadId] = addHamletAndRoad(300);
+        QList<int> towns;
+        int next = 1 + 5 * 5 + 300 * 2;
+        for (int town = 0; town < 3; ++town) {
+            towns.append(next);
+            next = addGridArea(qsl("Town %1").arg(town), next, 20, 20, 1, 0);
+        }
+        map()->areaGraph()->refresh();
+        map()->areaGraph()->setPosition(roadId, QPointF(0.0, 0.0));
+        map()->areaGraph()->setPosition(hamletId, QPointF(0.0, 200.0));
+        for (int town = 0; town < towns.size(); ++town) {
+            map()->areaGraph()->setPosition(map()->mpRoomDB->getRoom(towns.at(town))->getArea(), QPointF(2000.0 + 100.0 * town, 2000.0));
+        }
+        return {hamletId, roadId};
+    }
+
+    static bool sameWeights(const MapAtlas::Weights& a, const MapAtlas::Weights& b) { return qAbs(a.footprint - b.footprint) < 1e-4f && qAbs(a.world - b.world) < 1e-4f; }
 
     static void clickAt(ModernGLWidget& widget, const QPoint& position)
     {
@@ -1181,6 +1212,228 @@ private slots:
         QVERIFY(!widget.mFlight);
         widget.updateMatrices();
         QCOMPARE(widget.zoomWeights().footprint, 0.0f);
+    }
+
+    void test_theWheelZoomsAboutWhatIsUnderThePointerWithoutGL()
+    {
+        const auto [westId, eastId] = addTwoAreas(60);
+        map()->areaGraph()->refresh();
+        QVERIFY(map()->areaGraph()->setPosition(westId, QPointF(0.0, 0.0)));
+        QVERIFY(map()->areaGraph()->setPosition(eastId, QPointF(0.0, 150.0)));
+        map()->mRoomIdHash[map()->mProfileName] = 1;
+        // The cameras the view saves for these areas would be where later tests' views of them start
+        auto forgetCameras = qScopeGuard([this]() {
+            mpHost->writeProfileData(qsl("3dmapper_cameras"), QString());
+        });
+        ModernGLWidget widget(map(), mpHost);
+        const QPoint pointer(620, 140);
+        // To a twentieth of a pixel
+        const auto stays = [&widget](const std::optional<QPointF>& before, const std::optional<QPointF>& after) {
+            return before && after && QLineF(*before, *after).length() < 0.05 * widget.mCameraController.worldUnitsPerPixel(widget.mCameraController.getTarget());
+        };
+        // Among the rooms, looking straight down and at a slant, and zooming out on the world, which stays in the area
+        for (const auto& [distance, topView, steps] : {std::tuple{1.5f, true, 3}, std::tuple{1.5f, false, 3}, std::tuple{800.0f, true, 0}}) {
+            queueFrame(widget, westId, distance, topView);
+            for (const bool in : {true, false}) {
+                for (int step = 0; step < (in ? steps : 3); ++step) {
+                    const std::optional<QPointF> before = widget.mapPointOnLevel(pointer, 0);
+                    const float scale = widget.mCameraController.getScale();
+                    widget.mShiftMode = false;
+                    wheelAt(widget, pointer, in);
+                    QVERIFY(in ? widget.mCameraController.getScale() < scale : widget.mCameraController.getScale() > scale);
+                    QVERIFY2(stays(before, widget.mapPointOnLevel(pointer, 0)), qPrintable(qsl("what was under the pointer moved, %1 out").arg(distance)));
+                    QCOMPARE(widget.mAID, westId);
+                    QVERIFY2(widget.mShiftMode, "moved by the zoom, the view would be taken straight back to the player");
+                }
+            }
+        }
+        // About the view's center, as the keys zoom, it does not stop following the player
+        queueFrame(widget, westId, 1.5f);
+        widget.mShiftMode = false;
+        const QVector3D target = widget.mCameraController.getTarget();
+        const QPoint middle(widget.width() / 2, widget.height() / 2);
+        wheelAt(widget, middle, true);
+        QVERIFY(!widget.mShiftMode);
+        QCOMPARE(widget.mCameraController.getTarget(), target);
+        // Nor does it stop a glide after the player, which one about the pointer stops where it got to
+        widget.startSmoothTransition(westId, widget.mMapCenterX + 3, widget.mMapCenterY, 0);
+        widget.onCameraAnimationTick();
+        wheelAt(widget, middle, true);
+        QVERIFY(widget.mCameraSmoothAnimating);
+        const std::optional<QPointF> underPointer = widget.mapPointOnLevel(pointer, 0);
+        wheelAt(widget, pointer, true);
+        QVERIFY(!widget.mCameraSmoothAnimating);
+        QVERIFY(stays(underPointer, widget.mapPointOnLevel(pointer, 0)));
+
+        // Zooming in on the world goes into the area under the pointer, keeping the same place of the world under it,
+        // even part way through a glide
+        queueFrame(widget, westId, 800.0f);
+        QSignalSpy wentInto(&widget, &ModernGLWidget::areaFlownInto);
+        const QPoint overEast = pixelOfArea(widget, eastId);
+        const QPointF westOffset = widget.mAtlas.area(westId)->offset;
+        const QPointF eastOffset = widget.mAtlas.area(eastId)->offset;
+        widget.startSmoothTransition(westId, widget.mMapCenterX + 3, widget.mMapCenterY, 0);
+        widget.onCameraAnimationTick();
+        const std::optional<QPointF> before = widget.mapPointOnLevel(overEast, 0);
+        QVERIFY(before);
+        wheelAt(widget, overEast, true);
+        QCOMPARE(widget.mAID, eastId);
+        QVERIFY(!widget.mCameraSmoothAnimating);
+        const std::optional<QPointF> after = widget.mapPointOnLevel(overEast, 0);
+        QVERIFY(after);
+        QVERIFY2(stays(*before + westOffset, *after + eastOffset), "what was under the pointer moved as the view went into the area");
+        QCOMPARE(wentInto.size(), 1);
+        QCOMPARE(wentInto.first().first().toInt(), eastId);
+        QCOMPARE(map()->mRoomIdHash.value(map()->mProfileName), 1);
+
+        // Over nothing, into the nearest area
+        queueFrame(widget, westId, 800.0f);
+        const MapAtlas::Area* pWest = widget.mAtlas.area(westId);
+        const MapAtlas::Area* pEast = widget.mAtlas.area(eastId);
+        const QPointF away = (pEast->center - pWest->center) / QLineF(pWest->center, pEast->center).length();
+        const float unitsPerPixel = widget.mCameraController.worldUnitsPerPixel(widget.mCameraController.getTarget());
+        const QPoint beyondEast = pixelOfArea(widget, eastId, away * (pEast->radius + 30.0f * unitsPerPixel));
+        QCOMPARE(widget.areaAt(beyondEast), 0);
+        // On the level of the rooms there, not the one the area is landed on
+        const QPointF beyondInEast = *widget.mapPointOnLevel(beyondEast, 0) + pWest->offset - pEast->offset;
+        const int landingLevel = pEast->landingLevel;
+        const QSet<int> eastRooms = map()->mpRoomDB->getArea(eastId)->getAreaRooms();
+        const auto fromBeyond = [this, &beyondInEast](const int roomId) {
+            const TRoom* pRoom = map()->mpRoomDB->getRoom(roomId);
+            return QLineF(QPointF(pRoom->x(), pRoom->y()), beyondInEast).length();
+        };
+        qreal nearest = std::numeric_limits<qreal>::max();
+        for (const int roomId : eastRooms) {
+            nearest = std::min(nearest, fromBeyond(roomId));
+        }
+        for (const int roomId : eastRooms) {
+            if (fromBeyond(roomId) < nearest + 5.0) {
+                const TRoom* pRoom = map()->mpRoomDB->getRoom(roomId);
+                map()->setRoomCoordinates(roomId, pRoom->x(), pRoom->y(), landingLevel + 3);
+            }
+        }
+        wheelAt(widget, beyondEast, true);
+        QCOMPARE(widget.mAID, eastId);
+        QCOMPARE(widget.mMapCenterZ, landingLevel + 3);
+
+        // Not into an area too far from the pointer to be seen, nor while rooms are dragged
+        queueFrame(widget, westId, 800.0f);
+        wheelAt(widget, QPoint(0, 0), true);
+        QCOMPARE(widget.mAID, westId);
+        queueFrame(widget, westId, 800.0f);
+        widget.mMovingRooms = true;
+        wheelAt(widget, pixelOfArea(widget, eastId), true);
+        widget.mMovingRooms = false;
+        QCOMPARE(widget.mAID, westId);
+
+        // The keys go into the area at the view's center, stopping a glide that would go on in the old one
+        queueFrame(widget, westId, 800.0f);
+        const QPointF eastMiddle = widget.mAtlas.area(eastId)->center - widget.mAtlas.area(westId)->offset;
+        widget.centerViewOn(QVector3D(static_cast<float>(eastMiddle.x()), static_cast<float>(eastMiddle.y()), 0.0f));
+        widget.startSmoothTransition(westId, widget.mMapCenterX + 3, widget.mMapCenterY, 0);
+        widget.onCameraAnimationTick();
+        widget.zoomBySteps(1.0f);
+        QCOMPARE(widget.mAID, eastId);
+        QVERIFY(!widget.mCameraSmoothAnimating);
+    }
+
+    void test_goingIntoAnotherAreaByTheWheelCarriesTheZoomLevelsOnWithoutGL()
+    {
+        // From a long road into a hamlet, the share of the view gone by holds while the hamlet grows into it
+        const float inward = MapAtlas::handoverSpan(150.0f, 3.5f, 1000.0f);
+        QCOMPARE(inward, 150.0f / 3.5f);
+        QCOMPARE(MapAtlas::handoverRadius(150.0f, 3.5f, 1.0f, inward), 150.0f);
+        for (float closer = 1.0f; closer < 100.0f; closer *= 1.1f) {
+            QVERIFY(MapAtlas::handoverRadius(150.0f, 3.5f, closer * 1.1f, inward) * 1.1f >= MapAtlas::handoverRadius(150.0f, 3.5f, closer, inward) * 0.9999f);
+        }
+        QCOMPARE(MapAtlas::handoverRadius(150.0f, 3.5f, inward, inward), 3.5f);
+        // The other way, over twice closer
+        const float outward = MapAtlas::handoverSpan(3.5f, 150.0f, 1000.0f);
+        QCOMPARE(outward, MapAtlas::scmHandoverZoom);
+        QVERIFY(MapAtlas::handoverRadius(3.5f, 150.0f, 1.5f, outward) < 150.0f);
+        QCOMPARE(MapAtlas::handoverRadius(3.5f, 150.0f, outward, outward), 150.0f);
+        // Over no more than the camera can come in
+        QCOMPARE(MapAtlas::handoverSpan(150.0f, 3.5f, 10.0f), 10.0f);
+
+        const auto [hamletId, roadId] = addHamletAndRoadAmongTowns();
+        auto forgetCameras = qScopeGuard([this]() {
+            mpHost->writeProfileData(qsl("3dmapper_cameras"), QString());
+        });
+        ModernGLWidget widget(map(), mpHost);
+        // Goes into the area without the weights jumping, then zooms in a notch at a time, never back out a level, until only its rooms show
+        const auto zoomInto = [&widget](const int areaId, const int notches) {
+            const QPoint over = pixelOfArea(widget, areaId);
+            const MapAtlas::Weights before = widget.zoomWeights();
+            QVERIFY(before.areasPicked());
+            widget.zoomIntoAreaAt(over);
+            QCOMPARE(widget.mAID, areaId);
+            widget.updateMatrices();
+            MapAtlas::Weights last = widget.zoomWeights();
+            QVERIFY2(sameWeights(last, before),
+                     qPrintable(qsl("going in, the footprints went from %1 to %2 and the world from %3 to %4").arg(before.footprint).arg(last.footprint).arg(before.world).arg(last.world)));
+            for (int notch = 0; notch < notches && (last.footprint > 0.0f || widget.mZoomHandover); ++notch) {
+                wheelAt(widget, over, true);
+                const MapAtlas::Weights weights = widget.zoomWeights();
+                QVERIFY2(weights.footprint <= last.footprint + 1e-5f && weights.world <= last.world + 1e-5f, qPrintable(qsl("zooming in took a level back out at notch %1").arg(notch)));
+                last = weights;
+            }
+            QCOMPARE(widget.mAID, areaId);
+            QCOMPARE(last.footprint, 0.0f);
+            QVERIFY2(!widget.mZoomHandover, "zoomed in on the area's rooms, the zoom levels still do not go by it alone");
+        };
+
+        // The road's footprint half in: the hamlet, by its own size, would be in the world view
+        queueFrame(widget, roadId, 85.0f);
+        QVERIFY(widget.mZoomWeights.areasPicked() && !widget.mZoomWeights.nodesPicked());
+        zoomInto(hamletId, 60);
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+
+        // The hamlet in the world view: the road, by its own size, would show its rooms
+        queueFrame(widget, hamletId, 52.0f);
+        QVERIFY(widget.mZoomWeights.nodesPicked());
+        // Zooming out stays in the area shown
+        wheelAt(widget, pixelOfArea(widget, roadId), false);
+        QCOMPARE(widget.mAID, hamletId);
+        queueFrame(widget, hamletId, 52.0f);
+        zoomInto(roadId, 10);
+        // And going back out, by the road alone
+        wheelAt(widget, pixelOfArea(widget, roadId), false);
+        const auto radiusOf = [this](const int areaId) {
+            return static_cast<float>(TAreaGraph::radiusOf(*map()->mpRoomDB->getArea(areaId)));
+        };
+        QCOMPARE(widget.shownRadius(), radiusOf(roadId));
+
+        // Part way in and back out again, the zoom levels are as they were on going in
+        queueFrame(widget, hamletId, 52.0f);
+        const QPoint overRoad = pixelOfArea(widget, roadId);
+        wheelAt(widget, overRoad, false);
+        QVERIFY2(!widget.mViewCenterOffset.isNull(), "zooming about the pointer left the view on a room");
+        widget.zoomIntoAreaAt(overRoad);
+        QVERIFY(widget.mZoomHandover);
+        widget.updateMatrices();
+        const MapAtlas::Weights wentIn = widget.zoomWeights();
+        for (const bool in : {true, true, false, false}) {
+            wheelAt(widget, overRoad, in);
+        }
+        QVERIFY(widget.mZoomHandover);
+        QVERIFY(sameWeights(widget.zoomWeights(), wentIn));
+        // However the zoom gets all the way in
+        widget.setCameraDistance(CameraController::scmMinDistance);
+        widget.updateMatrices();
+        widget.queueScene();
+        QVERIFY(!widget.mZoomHandover);
+
+        // Taken to another area some other way, it goes by that area alone, on its rooms
+        queueFrame(widget, hamletId, 52.0f);
+        wheelAt(widget, overRoad, false);
+        widget.zoomIntoAreaAt(overRoad);
+        QVERIFY(widget.mZoomHandover);
+        widget.jumpTo(hamletId, 0, 0, 0);
+        QVERIFY(!widget.mZoomHandover);
+        QVERIFY(widget.mViewCenterOffset.isNull());
+        QCOMPARE(widget.shownRadius(), radiusOf(hamletId));
     }
 
     void test_anAreaFootprintCoversItsRoomsWithoutGL()

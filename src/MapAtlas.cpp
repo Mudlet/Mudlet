@@ -100,6 +100,20 @@ float MapAtlas::roomsAloneAcross(const float radius, const float shorterSide)
     return std::max(shorterSide / scmRoomsReadablePixels, 2.0f * radius / scmFootprintsFromShare);
 }
 
+float MapAtlas::handoverSpan(const float fromRadius, const float toRadius, const float reach)
+{
+    return std::min(std::max(scmHandoverZoom, fromRadius / toRadius), reach);
+}
+
+float MapAtlas::handoverRadius(const float fromRadius, const float toRadius, const float closer, const float span)
+{
+    if (closer >= span || span <= 1.0f) {
+        return toRadius;
+    }
+    const float progress = std::log(closer) / std::log(span);
+    return fromRadius * std::pow(toRadius / fromRadius, std::max(progress, 0.0f));
+}
+
 QPolygonF MapAtlas::hull(QList<QPointF> points)
 {
     std::sort(points.begin(), points.end(), [](const QPointF& a, const QPointF& b) {
