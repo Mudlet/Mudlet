@@ -515,11 +515,21 @@ QColor GeometryManager::levelFadeTarget(const int levelsAbove, const QColor& bac
         return background;
     }
     const QColor& levelColor = levelsAbove > 0 ? upperLevelColor : lowerLevelColor;
-    const float cover = levelColor.alphaF() * scmLevelColorShare;
+    const float cover = levelColor.alphaF();
     const auto over = [cover](const float own, const float back) {
         return own * cover + back * (1.0f - cover);
     };
     return QColor::fromRgbF(over(levelColor.redF(), background.redF()), over(levelColor.greenF(), background.greenF()), over(levelColor.blueF(), background.blueF()));
+}
+
+QColor GeometryManager::calmedLevelColor(const QColor& levelColor, const QColor& defaultColor)
+{
+    if (levelColor.rgba() != defaultColor.rgba()) {
+        return levelColor;
+    }
+    QColor calmed = levelColor;
+    calmed.setAlphaF(levelColor.alphaF() * scmLevelColorShare);
+    return calmed;
 }
 
 QList<QLineF> GeometryManager::gridLines(const QRectF& extent)

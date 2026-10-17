@@ -5395,8 +5395,8 @@ void dlgProfilePreferences::slot_resetMapColors()
     // As per values in Host.h:
     pHost->mFgColor_2 = QColorConstants::LightGray;
     pHost->mBgColor_2 = QColorConstants::Black;
-    pHost->mLowerLevelColor = QColorConstants::DarkGray;
-    pHost->mUpperLevelColor = QColorConstants::White;
+    pHost->mLowerLevelColor = Host::scmDefaultLowerLevelColor;
+    pHost->mUpperLevelColor = Host::scmDefaultUpperLevelColor;
     pHost->mRoomBorderColor = Host::scmDefaultRoomBorderColor;
     pHost->mRoomCollisionBorderColor = QColorConstants::Yellow;
     pHost->mBlack_2 = QColorConstants::Black;
