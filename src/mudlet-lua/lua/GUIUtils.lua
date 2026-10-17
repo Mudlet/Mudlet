@@ -346,6 +346,24 @@ function setGaugeWindow(windowName, gaugeName, x, y, show)
   setGauge(gaugeName, gaugesTable[gaugeName].value, 1)
 end
 
+local function namedColorError(message)
+  -- 1 is this function, 2 namedColorRGB, 3 getRGB or the wrapper that called it, 4 their caller.
+  -- A C caller, as in pcall(getRGB, name), or a tail call has no line, so blame the library line then
+  local caller = debug.getinfo(4, "l")
+  error(message, (caller and caller.currentline > 0) and 4 or 3)
+end
+
+local function namedColorRGB(colorName)
+  if type(colorName) ~= 'string' then
+    namedColorError('getRGB: bad argument #1 type (expected string, got '..type(colorName)..'!)')
+  end
+  local color = color_table[colorName]
+  if not color then
+    namedColorError('getRGB: bad argument #1 value (unknown color name "'..colorName..'")')
+  end
+  return color[1], color[2], color[3]
+end
+
 --- Set the text on a custom gauge.
 ---
 --- @usage
@@ -368,7 +386,7 @@ function setGaugeText(gaugeName, gaugeText, r, g, b)
   assert(gaugesTable[gaugeName], "setGaugeText: no such gauge exists.")
   if r ~= nil then
     if g == nil then
-      r, g, b = getRGB(r)
+      r, g, b = namedColorRGB(r)
     end
   else
     r, g, b = 0, 0, 0
@@ -451,7 +469,7 @@ function RGB2Hex(red, green, blue)
   local l_Red, l_Green, l_Blue = 0, 0, 0
   if green == nil then
     -- Not an RGB but a "color" instead!
-    l_Red, l_Green, l_Blue = getRGB(red)
+    l_Red, l_Green, l_Blue = namedColorRGB(red)
   else -- Nope, true color here
     l_Red, l_Green, l_Blue = red, green, blue
   end
@@ -465,16 +483,16 @@ end
 
 --- Get RGB component from color name.
 ---
+--- Raises an error if colorName is not a string, or is not a key of color_table (see showColors).
+---
 --- @usage Following will display "0.255.0" on your screen.
 ---   <pre>
 ---   local red, green, blue = getRGB("green")
 ---   echo(red .. "." .. green .. "." .. blue )
 ---   </pre>
 function getRGB(colorName)
-  assert(type(colorName) == 'string', 'getRGB: bad argument #1 type (expected string, got '..type(colorName)..'!)')
-  local red = color_table[colorName][1]
-  local green = color_table[colorName][2]
-  local blue = color_table[colorName][3]
+  -- not a tail call: namedColorError counts this frame
+  local red, green, blue = namedColorRGB(colorName)
   return red, green, blue
 end
 
@@ -517,7 +535,7 @@ function createGauge(windowname, gaugeName, width, height, x, y, gaugeText, r, g
   gaugeText = gaugeText or ""
   if type(r) == "string" then
     orientation = g
-    r, g, b = getRGB(r)
+    r, g, b = namedColorRGB(r)
   elseif r == nil then
     orientation = orientation or g
     -- default colors
@@ -597,21 +615,66 @@ end
 --- Answers whether a create...() call left the element the caller asked for in place.
 -- The native creators refuse a parent window they cannot resolve before they ever look at the
 -- element's name, so an element that already exists under that name is no proof that the call
--- did what was asked - the parent window's own refusal is what tells the two apart. Any other
--- refusal on a parent window that does resolve is the "call it again to move or resize it"
--- idiom, which is not worth a word.
+-- did what was asked - the parent window's own refusal is what tells the two apart, as does,
+-- when kind is given, another kind of element holding the name. Any other refusal counts as in
+-- place when an element holds the name: a call over a name the creator's own kind holds, which
+-- some creators answer by moving or resizing that element and others by leaving it as it was.
 -- @param windowName the parent window name given to the creator
 -- @param name the element's name
 -- @param ok the creator's first return value
 -- @param err the creator's second return value
-function mudlet.elementCreated(windowName, name, ok, err)
+-- @param[opt] kind the kind the creator makes, as mudlet.nameTakenByOtherKind takes it
+function mudlet.elementCreated(windowName, name, ok, err, kind)
   if ok then
     return true
   end
   if err == string.format("window '%s' not found", windowName) then
     return false
   end
+  if kind and mudlet.nameTakenByOtherKind(name, kind) then
+    return false
+  end
   return windowType(name) ~= nil
+end
+
+--- Answers whether another kind of element holds a name, which a creator of this kind refuses.
+-- A label cannot share its name with any other element, and the other kinds cannot share theirs
+-- with a label. Geyser asks before it adds the element to its container, because adding it moves,
+-- resizes and shows whatever window the name reaches.
+-- @param name the element's name
+-- @param kind "label", or the kind of element being made otherwise
+-- @param[opt] windowName the parent window the element is to go in, which the native creator checks first
+-- @return the refusal the native creator gives, or nil when the name is free to use
+function mudlet.nameTakenByOtherKind(name, kind, windowName)
+  if type(name) ~= "string" then
+    return nil
+  end
+  local held = windowType(name)
+  if not held or held == "main" then
+    return nil
+  end
+  local taken
+  if kind == "label" then
+    if held == "label" then
+      return nil
+    end
+    if held == "miniconsole" or held == "userwindow" or held == "buffer" then
+      taken = string.format("a miniconsole/userwindow with the name '%s' already exists", name)
+    else
+      taken = string.format("a scroll box, command line or text edit with the name '%s' already exists", name)
+    end
+  elseif held == "label" then
+    taken = string.format("label with the name '%s' already exists", name)
+  else
+    return nil
+  end
+  if type(windowName) == "string" and windowName ~= "" and windowName:lower() ~= "main" then
+    local parent = windowType(windowName)
+    if parent ~= "userwindow" and parent ~= "scrollbox" then
+      return string.format("window '%s' not found", windowName)
+    end
+  end
+  return taken
 end
 
 
@@ -643,7 +706,7 @@ function createConsole(windowName, consoleName, fontSize, charsPerLine, numberOf
   assert(type(Xpos) == 'number', 'createConsole: invalid type for Xpos (expected number, got '..type(Xpos)..'!)')
   assert(type(Ypos) == 'number', 'createConsole: invalid type for Ypos (expected number, got '..type(Ypos)..'!)')
   local ok, err = createMiniConsole(windowName, consoleName, 0, 0, 1, 1)
-  if not mudlet.elementCreated(windowName, consoleName, ok, err) then
+  if not mudlet.elementCreated(windowName, consoleName, ok, err, "miniconsole") then
     printError(string.format("createConsole: '%s' was not created: %s", consoleName, err or "unknown error"), false, false)
     return false, err
   end
@@ -668,6 +731,50 @@ end
 
 
 
+-- Cursor columns count UTF-16 code units: one per character, two for one outside the BMP.
+-- Each byte of a malformed sequence becomes its own U+FFFD when Qt decodes the text.
+local function utf16Length(str)
+  local length, i, n = 0, 1, #str
+  while i <= n do
+    local lead = str:byte(i)
+    local size, low, high = 1, 0x80, 0xBF
+    if lead >= 0xC2 and lead <= 0xDF then
+      size = 2
+    elseif lead >= 0xE0 and lead <= 0xEF then
+      size = 3
+      if lead == 0xE0 then low = 0xA0 elseif lead == 0xED then high = 0x9F end
+    elseif lead >= 0xF0 and lead <= 0xF4 then
+      size = 4
+      if lead == 0xF0 then low = 0x90 elseif lead == 0xF4 then high = 0x8F end
+    end
+    local valid = size > 1 and i + size - 1 <= n
+    if valid then
+      local second = str:byte(i + 1)
+      valid = second >= low and second <= high
+      for j = i + 2, i + size - 1 do
+        local byte = str:byte(j)
+        valid = valid and byte >= 0x80 and byte <= 0xBF
+      end
+    end
+    if valid then
+      length = length + (size == 4 and 2 or 1)
+      i = i + size
+    else
+      length = length + 1
+      i = i + 1
+    end
+  end
+  return length
+end
+
+-- lead-byte-only, which holds for the getCurrentLine() text copy2color() walks: Qt keeps it valid UTF-8
+local utf8Char = "[%z\1-\127\194-\244][\128-\191]*"
+
+local function utf16Units(char)
+  return char:byte() >= 240 and 2 or 1
+end
+
+
 --- Replaces all occurrences of what in the current line with <i>with</i>.
 ---
 --- @usage This will replace all occurrences of John with the word Doe.
@@ -684,16 +791,17 @@ function replaceAll(word, what, keepColor)
   local whatLength = utf8.len(what)
   local resumeAt = 1
   while true do
-    -- utf8.find() reports character offsets, which is what selectSection() indexes by;
-    -- string.find() reported bytes, which any non-ASCII earlier in the line then shifted
-    local startp, endp = utf8.find(getCurrentLine(), word, resumeAt)
+    -- utf8.find() reports character offsets, which resumeAt and whatLength also count;
+    -- selectSection() wants them in UTF-16 units
+    local line = getCurrentLine()
+    local startp, endp = utf8.find(line, word, resumeAt)
     if not startp then
       break
     end
     if endp < startp then
       -- an empty match replaces nothing, so stepping over it is the only way to advance
       resumeAt = startp + 1
-    elseif not selectSection(startp - 1, endp - startp + 1) then
+    elseif not selectSection(utf16Length(utf8.sub(line, 1, startp - 1)), utf16Length(utf8.sub(line, startp, endp))) then
       -- a refused selection would leave replace() splicing into line 0 column 0
       break
     else
@@ -1117,6 +1225,7 @@ end
 -- what getLabelFormat() last read out of each label's stylesheet, by label name, kept
 -- with the stylesheet it was read from so a changed one is read afresh
 local labelStyleSheetFormats = {}
+local labelDeletedHandler
 
 local function parseLabelStyleSheet(stylesheet)
   local parsed = {
@@ -1174,17 +1283,30 @@ end
 
 -- https://wiki.mudlet.org/w/Manual:Lua_Functions#getLabelFormat
 -- used by xEcho for getting the default format for a label, taking into account
--- the background color setting and stylesheet
+-- the background color setting and stylesheet; nil and an error message for a name that is not a label
 function getLabelFormat(win)
   assert(win, "getLabelFormat: requires at least one argument")
-  local stylesheet = getLabelStyleSheet(win)
-  local cached = labelStyleSheetFormats[win]
+  local winType = type(win)
+  assert(winType == "string" or winType == "number", "getLabelFormat: bad argument #1 type (label as string expected, got " .. winType .. "!)")
+  -- registered here rather than at load, as this file loads before Other.lua lets
+  -- registerAnonymousEventHandler take a function
+  labelDeletedHandler = labelDeletedHandler or registerAnonymousEventHandler("sysLabelDeleted", function(_, name)
+    labelStyleSheetFormats[name] = nil
+  end)
+  -- keyed by the name as a string, which is how sysLabelDeleted names it
+  local key = tostring(win)
+  local stylesheet, err = getLabelStyleSheet(win)
+  if not stylesheet then
+    labelStyleSheetFormats[key] = nil
+    return nil, err
+  end
+  local cached = labelStyleSheetFormats[key]
   local parsed
   if cached and cached.stylesheet == stylesheet then
     parsed = cached.parsed
   else
     parsed = parseLabelStyleSheet(stylesheet)
-    labelStyleSheetFormats[win] = { stylesheet = stylesheet, parsed = parsed }
+    labelStyleSheetFormats[key] = { stylesheet = stylesheet, parsed = parsed }
   end
   -- a new table every call, as callers are free to change the one they get
   return {
@@ -1418,42 +1540,6 @@ local processedEchoToHTML = function(t, reset)
   return table.concat(parts)
 end
 
--- Cursor columns count UTF-16 code units: one per character, two for one outside the BMP.
--- Each byte of a malformed sequence becomes its own U+FFFD when Qt decodes the text.
-local function utf16Length(str)
-  local length, i, n = 0, 1, #str
-  while i <= n do
-    local lead = str:byte(i)
-    local size, low, high = 1, 0x80, 0xBF
-    if lead >= 0xC2 and lead <= 0xDF then
-      size = 2
-    elseif lead >= 0xE0 and lead <= 0xEF then
-      size = 3
-      if lead == 0xE0 then low = 0xA0 elseif lead == 0xED then high = 0x9F end
-    elseif lead >= 0xF0 and lead <= 0xF4 then
-      size = 4
-      if lead == 0xF0 then low = 0x90 elseif lead == 0xF4 then high = 0x8F end
-    end
-    local valid = size > 1 and i + size - 1 <= n
-    if valid then
-      local second = str:byte(i + 1)
-      valid = second >= low and second <= high
-      for j = i + 2, i + size - 1 do
-        local byte = str:byte(j)
-        valid = valid and byte >= 0x80 and byte <= 0xBF
-      end
-    end
-    if valid then
-      length = length + (size == 4 and 2 or 1)
-      i = i + size
-    else
-      length = length + 1
-      i = i + 1
-    end
-  end
-  return length
-end
-
 --- Generic color echo and insert function (allowing hecho, decho, cecho, hinsertText, dinsertText and cinsertText).
 ---
 --- @param style Hex, Decimal or Color
@@ -1569,7 +1655,8 @@ function xEcho(style, func, ...)
           if func == 'insertText' then
             moveCursor(win, getColumnNumber(win) + utf16Length(v), getLineNumber(win))
           end
-        else
+        elseif v ~= "" then
+          -- a tag at the start or two tags in a row leave an empty run, which would be a link on no text
           -- if fmt then setUnderline(win, true) end -- not sure if underline is necessary unless asked for
           _G[func](win, v, cmd, hint, fmt == true)
         end
@@ -2080,13 +2167,53 @@ function hecho2string(text)
   return x2string(text, "Hex")
 end
 
-local ansiPattern = rex.new("\\e\\[([0-9:;]*?)m")
+-- captures an SGR, an MXP line mode, a cursor forward, a line ending or a run of text; the uncaptured
+-- alternatives are dropped: a string sequence, any other CSI, a charset, ESC 7/8/c/\, a stray ESC
+local ansiTokenPattern = rex.new("\\e\\[([0-9:;]*)m|(\\e\\[[0-9:;]*z)|\\e\\[([0-9]+)C"
+  .. "|\\e[\\]PX^_](?:[^\\a\\e\\n\\x04\\xff]++|\\e(?!\\\\))*+(?:\\a|\\e\\\\)?|\\e\\[[\\x20-\\x3F]*[\\x40-\\x7E]?|\\e[()*+][\\x30-\\x7E]?|\\e[78c\\\\]|\\e"
+  .. "|([\\n\\r\\x04\\xff])|([^\\e\\n\\r\\x04\\xff]+)")
+-- TBuffer's widest line; as there, a cursor forward stops at its last column
+local ansiLineWidth = 1000
+
+local function convertAnsi(text, onSgr, onMxp, onCursorForward)
+  local column = 0
+  return (rex.gsub(text, ansiTokenPattern, function(sgr, mxp, cursorForward, lineEnding, plain)
+    if plain then
+      column = (column + (utf8.len(plain) or #plain)) % ansiLineWidth
+      return nil
+    elseif lineEnding then
+      column = 0
+      return nil
+    elseif sgr then
+      return onSgr(sgr)
+    elseif mxp then
+      return onMxp(mxp)
+    elseif cursorForward then
+      local requested = tonumber(cursorForward)
+      -- TBuffer ignores a count that does not fit an int
+      if requested > 2147483647 then
+        return ""
+      end
+      local spaces = math.max(0, math.min(requested, ansiLineWidth - 1 - column))
+      column = column + spaces
+      return onCursorForward(spaces)
+    end
+    return ""
+  end))
+end
+
+local function dropAnsiToken()
+  return ""
+end
+
+local function ansiSpaces(count)
+  return string.rep(" ", count)
+end
 
 -- function for converting a raw ANSI string into plain strings
 function ansi2string(text)
   assert(type(text) == 'string', 'ansi2string: bad argument #1 type (expected string, got '..type(text)..'!)')
-  local result = rex.gsub(text, ansiPattern, "")
-  return result
+  return convertAnsi(text, dropAnsiToken, dropAnsiToken, ansiSpaces)
 end
 
 local ansiColorNames = {}
@@ -2117,10 +2244,11 @@ function ansi2decho(text, ansi_default_color)
   assert(type(text) == 'string', 'ansi2decho: bad argument #1 type (expected string, got '..type(text)..'!)')
   local lastColour = ansi_default_color
   local namesToUse = basicColourNames
+  local decorations = {}
 
   -- match each set of ansi tags, ie [0;36;40m and convert to decho equivalent.
   -- this works since both ansi colours and echo don't need closing tags and map to each other
-  local result = rex.gsub(text, ansiPattern, function(s)
+  local result = convertAnsi(text, function(s)
     local output = {} -- assemble the output into this table
 
     local delim = ";"
@@ -2140,6 +2268,7 @@ function ansi2decho(text, ansi_default_color)
       if code == '0' or code == '00' or code == '' then
         -- reset attributes
         output[#output + 1] = "<r>"
+        decorations = {}
         fg, bg = nil, nil
         namesToUse = basicColourNames
         lastColour = ansi_default_color
@@ -2160,26 +2289,32 @@ function ansi2decho(text, ansi_default_color)
         -- underline
         formatCodeHandled = true
         output[#output+1] = "<u>"
+        decorations.u = true
       elseif code == "24" then
         -- turn off underline
         formatCodeHandled = true
         output[#output+1] = "</u>"
+        decorations.u = nil
       elseif code == "9" then
         -- strikethrough
         formatCodeHandled = true
         output[#output+1] = "<s>"
+        decorations.s = true
       elseif code == "29" then
         -- turn off strikethrough
         formatCodeHandled = true
         output[#output+1] = "</s>"
+        decorations.s = nil
       elseif code == "53" then
         -- turn on overline
         formatCodeHandled = true
         output[#output+1] = "<o>"
+        decorations.o = true
       elseif code == "55" then
         -- turn off overline
         formatCodeHandled = true
         output[#output+1] = "</o>"
+        decorations.o = nil
       else
         formatCodeHandled = true
         local layerCode = floor(code / 10)  -- extract the "layer": 3 is fore
@@ -2254,6 +2389,16 @@ function ansi2decho(text, ansi_default_color)
     end
 
     return table.concat(output)
+  end, function() end, function(count)
+    -- the console draws these spaces in the background colour, so no line through or under them shows
+    local closing, opening = {}, {}
+    for _, tag in ipairs({"u", "s", "o"}) do
+      if decorations[tag] then
+        closing[#closing + 1] = "</" .. tag .. ">"
+        opening[#opening + 1] = "<" .. tag .. ">"
+      end
+    end
+    return count > 0 and table.concat(closing) .. string.rep(" ", count) .. table.concat(opening) or ""
   end)
 
   return result, lastColour
@@ -2329,7 +2474,7 @@ function suffix(what, func, fgc, bgc, window)
   assert(type(what) == 'string', 'suffix: bad argument #1 type (expected string, got '..type(what)..'!)')
   window = window or "main"
   func = insertFuncs[func] or func or insertText
-  local length = utf8.len(getCurrentLine(window))
+  local length = utf16Length(getCurrentLine(window))
   moveCursor(window, length, getLineNumber(window))
   -- fg()/bg() also repaint whatever is selected in the window, so drop any
   -- live selection first - only the text being added is meant to be coloured
@@ -2572,11 +2717,14 @@ local function copy2color(name,win,str,inst)
     -- happens when you try to use copy2decho() on an empty line
     return ""
   end
-  local start, len = selectString(win, str, inst), utf8.len(str)
+  local start = selectString(win, str, inst)
   if start < 0 then
     -- happens when the text is not on the current line, which is all selectString() searches
     return ""
   end
+  -- the selection's length is in the same UTF-16 units as start, and is what Qt made
+  -- of str, so it also holds for a number or for bytes that are not valid UTF-8
+  local _, _, len = getSelection(win)
   local style, endspan, r, g, b, rb, gb, bb, cr, cg, cb, crb, cgb, cbb, char
   local selectSection, getFgColor, getBgColor = selectSection, getFgColor, getBgColor
   local conversions = {
@@ -2597,38 +2745,38 @@ local function copy2color(name,win,str,inst)
     style = "%s<%d,%d,%d:%d,%d,%d>%s"
     endspan = "<r>"
   end
-  -- utf8.sub() and growing the result a character at a time both rescan from the
-  -- start of the line, which made long lines quadratic
-  local lineChars, lastIndex = {}, start + len
-  for lineChar in line:gmatch("[%z\1-\127\194-\244][\128-\191]*") do
-    lineChars[#lineChars + 1] = lineChar
-    if #lineChars == lastIndex then
+  -- walk the line once, tracking the UTF-16 offset: utf8.sub() would index by
+  -- character instead, and rescans the line from its start on every call
+  local pieces = {}
+  local offset, stop = 0, start + len
+  for lineChar in line:gmatch(utf8Char) do
+    if offset >= stop then
       break
     end
-  end
-  local pieces = {}
-  for index = start + 1, lastIndex do
-    if win ~= "main" then
-      selectSection(win, index - 1, 1)
-      r,g,b = getFgColor(win)
-      rb,gb,bb = getBgColor(win)
-    else
-      selectSection(index - 1, 1)
-      r,g,b = getFgColor()
-      rb,gb,bb = getBgColor()
-    end
+    if offset >= start then
+      if win ~= "main" then
+        selectSection(win, offset, 1)
+        r,g,b = getFgColor(win)
+        rb,gb,bb = getBgColor(win)
+      else
+        selectSection(offset, 1)
+        r,g,b = getFgColor()
+        rb,gb,bb = getBgColor()
+      end
 
-    char = lineChars[index] or ""
-    if name == "copy2html" then
-      char = conversions[char] or char -- replace HTML entities (if they are in the table)
-    end
+      char = lineChar
+      if name == "copy2html" then
+        char = conversions[char] or char
+      end
 
-    if r ~= cr or g ~= cg or b ~= cb or rb ~= crb or gb ~= cgb or bb ~= cbb then
-      cr,cg,cb,crb,cgb,cbb = r,g,b,rb,gb,bb
-      pieces[#pieces + 1] = string.format(style, #pieces > 0 and endspan or "", r, g, b, rb, gb, bb, char)
-    else
-      pieces[#pieces + 1] = char
+      if r ~= cr or g ~= cg or b ~= cb or rb ~= crb or gb ~= cgb or bb ~= cbb then
+        cr,cg,cb,crb,cgb,cbb = r,g,b,rb,gb,bb
+        pieces[#pieces + 1] = string.format(style, #pieces > 0 and endspan or "", r, g, b, rb, gb, bb, char)
+      else
+        pieces[#pieces + 1] = char
+      end
     end
+    offset = offset + utf16Units(lineChar)
   end
   pieces[#pieces + 1] = endspan
   return table.concat(pieces)
@@ -2676,7 +2824,8 @@ end
 local setLabelCursorLayer = setLabelCursor
 function setLabelCursor(labelname, cursorShape)
   if type(cursorShape) == "string" then
-    cursorShape = mudlet.cursor[cursorShape]
+    -- a name not in mudlet.cursor goes on as a string, for the C++ layer to refuse once it has checked the label
+    cursorShape = mudlet.cursor[cursorShape] or cursorShape
   end
   return setLabelCursorLayer(labelname, cursorShape)
 end
@@ -2726,7 +2875,12 @@ local function setActionCallback(callbackFunc, funcName, name, func, ...)
   local nr = arg.n + 1
   arg.n = arg.n + 1
   if type(func) == "string" then
-    func = loadstring("return "..func.."(...)")
+    -- chunk named after the user's text so the error is labelled with it rather than the
+    -- "return ...(...)" wrapper; Lua reads a leading "=" or "@" as a literal or file name
+    local chunkName = func:find("^[=@]") and string.format('=[string "%s"]', func) or func
+    local compiled, compileError = loadstring("return "..func.."(...)", chunkName)
+    assert(compiled, string.format('<%s: bad argument #2 value (%s)>', funcName, tostring(compileError)))
+    func = compiled
   end
   assert(type(func) == 'function', string.format('<%s: bad argument #2 type (function expected, got %s!)>', funcName, type(func)))
   if nr > 1 then

@@ -53,7 +53,6 @@ public:
 
     TRoom* getRoom(int id);
     TArea* getArea(int id);
-    TArea* getRawArea(int, bool*);
     bool addRoom(int id);
     int size() const { return rooms.size(); }
     bool isEmpty() const { return rooms.isEmpty(); }
