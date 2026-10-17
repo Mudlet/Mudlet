@@ -1178,8 +1178,71 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       assert.are.equal("red", getLabelFormat(labelName).foreground)
     end)
 
-    it("Should error for a label that does not exist", function()
-      assert.has_error(function() getLabelFormat("gldfNoSuchLabel") end)
+    it("Should refuse a label that does not exist, or a window that is not a label", function()
+      local ok, err = getLabelFormat("gldfNoSuchLabel")
+      assert.is_nil(ok)
+      assert.are.equal("label 'gldfNoSuchLabel' does not exist", err)
+      ok, err = getLabelFormat("main")
+      assert.is_nil(ok)
+      assert.are.equal("label 'main' does not exist", err)
+    end)
+
+    it("Should refuse a label deleted after it was read, and read it afresh once recreated", function()
+      finally(function() deleteLabel("gldfGone") end)
+      createLabel("gldfGone", 0, 0, 10, 10, 1)
+      setLabelStyleSheet("gldfGone", "color: red;")
+      assert.are.equal("red", getLabelFormat("gldfGone").foreground)
+      deleteLabel("gldfGone")
+      local ok, err = getLabelFormat("gldfGone")
+      assert.is_nil(ok)
+      assert.are.equal("label 'gldfGone' does not exist", err)
+      createLabel("gldfGone", 0, 0, 10, 10, 1)
+      setLabelStyleSheet("gldfGone", "color: blue;")
+      assert.are.equal("blue", getLabelFormat("gldfGone").foreground)
+    end)
+
+    describe("its cache of what it read", function()
+      local function cache()
+        for i = 1, math.huge do
+          local name, value = debug.getupvalue(getLabelFormat, i)
+          if not name then
+            return nil
+          end
+          if name == "labelStyleSheetFormats" then
+            return value
+          end
+        end
+      end
+
+      it("Should forget a label once it is deleted, by whatever type of name it was read", function()
+        finally(function()
+          deleteLabel("gldfCached")
+          deleteLabel("4711")
+        end)
+        createLabel("gldfCached", 0, 0, 10, 10, 1)
+        cecho("gldfCached", "<red>x")
+        createLabel("4711", 0, 0, 10, 10, 1)
+        getLabelFormat(4711)
+        getLabelFormat("4711")
+        assert.is_not_nil(cache()["gldfCached"])
+        assert.is_not_nil(cache()["4711"])
+        assert.is_nil(rawget(cache(), 4711))
+
+        deleteLabel("gldfCached")
+        deleteLabel("4711")
+        assert.is_nil(cache()["gldfCached"])
+        assert.is_nil(cache()["4711"])
+      end)
+
+      it("Should forget a name it is asked about once that is no label", function()
+        cache()["gldfStale"] = { stylesheet = "color: red;", parsed = {} }
+        assert.is_nil(getLabelFormat("gldfStale"))
+        assert.is_nil(cache()["gldfStale"])
+      end)
+    end)
+
+    it("Should name itself when given a name that is not a string", function()
+      assert.has_error(function() getLabelFormat({}) end, "getLabelFormat: bad argument #1 type (label as string expected, got table!)")
     end)
 
     it("Should start an echo to the label from its stylesheet, and pick up a new one", function()
