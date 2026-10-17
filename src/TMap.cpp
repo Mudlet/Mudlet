@@ -166,8 +166,6 @@ TMap::TMap(Host* pH, const QString& profileName)
 , mpHost(pH)
 , mProfileName(profileName)
 {
-    restore16ColorSet();
-
     // TODO: https://github.com/Mudlet/Mudlet/issues/6436
     // According to Qt Docs we should really only have one of these
     // (QNetworkAccessManager) for the whole application, but: each profile's
@@ -3818,6 +3816,8 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
 
     // Not before the abort check above, so a cancelled import leaves the live map alone:
     mCustomEnvColors.swap(customEnvColors);
+    // 257 to 272 belong to the profile, whatever the file says, as the binary loader also treats them
+    restore16ColorSet();
     mEnvColors.swap(envColors);
     mUserData.swap(userData);
     mIsOnlyMapSymbolFontToBeUsed = isOnlyMapSymbolFontToBeUsed;
@@ -4059,14 +4059,19 @@ void TMap::announceMapperSettingChanged(const MapperSetting setting)
 
 void TMap::updateArea(int areaId)
 {
-    static bool debounce;
-    if (!debounce) {
-        debounce = true;
-        QTimer::singleShot(0ms, this, [this, areaId]() {
-            debounce = false;
-            emit signal_areaChanged(areaId);
-        });
+    if (mPendingAreaUpdate.has_value()) {
+        // One signal for the turn, so it has to name every area changed in it
+        if (*mPendingAreaUpdate != areaId) {
+            mPendingAreaUpdate = -1;
+        }
+        return;
     }
+    mPendingAreaUpdate = areaId;
+    QTimer::singleShot(0ms, this, [this]() {
+        const int changedAreaId = mPendingAreaUpdate.value_or(-1);
+        mPendingAreaUpdate.reset();
+        emit signal_areaChanged(changedAreaId);
+    });
 }
 
 QColor TMap::getColor(int id)

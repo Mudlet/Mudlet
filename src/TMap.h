@@ -610,6 +610,8 @@ private:
     // Used to hide the default area from casual viewing for those MUDs that
     // want to script a "fog-of-war" system by hiding rooms in the -1 area:
     bool mShowDefaultArea = true;
+    // The area updateArea() has queued a signal_areaChanged for, -1 for all of them:
+    std::optional<int> mPendingAreaUpdate;
 };
 
 #endif // MUDLET_TMAP_H

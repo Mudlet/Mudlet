@@ -5426,6 +5426,7 @@ void dlgProfilePreferences::slot_resetMapColors()
     setColors2();
 
     if (pHost->mpMap) {
+        pHost->mpMap->restore16ColorSet();
         pHost->mpMap->updateArea(-1);
     }
 }
