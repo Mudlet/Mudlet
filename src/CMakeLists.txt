@@ -174,7 +174,6 @@ set(mudlet_SRCS
 # Every .cpp source file that needs Qt Widgets goes here instead, in mudlet_app, kept
 # in alphabetical order (case-insensitive).
 set(mudlet_app_SRCS
-    AltFocusMenuBarDisable.cpp
     CustomLineDrawContextMenuHandler.cpp
     CustomLineDrawHandler.cpp
     CustomLineEditContextMenuHandler.cpp
@@ -215,6 +214,7 @@ set(mudlet_app_SRCS
     LabelInteractionHandler.cpp
     MiddleMousePanHandler.cpp
     mudlet.cpp
+    MudletProxyStyle.cpp
     PackageItemDelegate.cpp
     PanInteractionHandler.cpp
     RoomContextMenuHandler.cpp
@@ -480,7 +480,6 @@ set(mudlet_HDRS
 # Every .h header file that needs Qt Widgets goes here instead, in mudlet_app, kept
 # in alphabetical order (case-insensitive).
 set(mudlet_app_HDRS
-    AltFocusMenuBarDisable.h
     CustomLineDrawContextMenuHandler.h
     CustomLineDrawHandler.h
     CustomLineEditContextMenuHandler.h
@@ -521,6 +520,7 @@ set(mudlet_app_HDRS
     LabelInteractionHandler.h
     MiddleMousePanHandler.h
     mudlet.h
+    MudletProxyStyle.h
     PackageItemDelegate.h
     PanInteractionHandler.h
     RoomContextMenuHandler.h
@@ -666,6 +666,12 @@ endif()
 if(Qt6TextToSpeech_FOUND)
   list(APPEND QT_LIBS Qt6::TextToSpeech)
   message(STATUS "Using TextToSpeech module")
+endif()
+
+# MudletProxyStyle reads the AT-SPI screen reader status over D-Bus
+if(UNIX AND NOT APPLE)
+  find_package(Qt6 COMPONENTS DBus REQUIRED)
+  list(APPEND QT_APP_LIBS Qt6::DBus)
 endif()
 
 message(STATUS "Using ${CMAKE_CXX_COMPILER_ID} compiler")
