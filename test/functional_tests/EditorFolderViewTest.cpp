@@ -818,7 +818,7 @@ private slots:
         QVERIFY2(offered, "with the Items toolbar hidden the Folders view has no way back to it");
     }
 
-    void test_aMergedFolderIsNotHighlightedOverOneFoldersForm()
+    void test_aMergedFolderOverOneFoldersFormCanStillBeChosen()
     {
         mpEditor->leaveFolderView();
         mpEditor->slot_showTriggers();
@@ -827,10 +827,57 @@ private slots:
         mpEditor->treeWidget_triggers->setCurrentItem(combat.constFirst());
         mpEditor->slot_showFolders();
         QVERIFY(!mpEditor->mpTriggersMainArea->isHidden());
-        const bool mergedHighlighted = mpEditor->mpFolderTree->currentItem() == topLevelNamed(qsl("qaCombat"));
-        mpEditor->mpFolderTree->setCurrentItem(topLevelNamed(qsl("qaCombat")));
-        QVERIFY2(!mergedHighlighted, "a merged folder was highlighted over one folder's form, so choosing it did nothing");
-        QVERIFY(noFormShown());
+        QTreeWidgetItem* pCombat = topLevelNamed(qsl("qaCombat"));
+        QVERIFY(pCombat);
+        mpEditor->resize(1280, 800);
+        QTest::qWait(50ms);
+        auto clickCombat = [&]() {
+            QTest::mouseClick(mpEditor->mpFolderTree->viewport(), Qt::LeftButton, Qt::NoModifier, mpEditor->mpFolderTree->visualItemRect(pCombat).center());
+        };
+        clickCombat();
+        QVERIFY2(noFormShown(), "choosing a merged folder from one of its folders' forms did nothing");
+
+        // The main window's Triggers button, with the merged folder already current
+        mpEditor->slot_showTriggers();
+        QVERIFY(!mpEditor->mpTriggersMainArea->isHidden());
+        clickCombat();
+        QVERIFY2(noFormShown(), "choosing a merged folder that was already current did nothing");
+    }
+
+    void test_arrowKeysMoveOnFromAFolderFormInTheFoldersView()
+    {
+        mpEditor->leaveFolderView();
+        mpEditor->slot_showTriggers();
+        const QList<QTreeWidgetItem*> combat = mpEditor->treeWidget_triggers->findItems(qsl("qaCombat"), Qt::MatchExactly | Qt::MatchRecursive);
+        QCOMPARE(combat.size(), 1);
+        mpEditor->treeWidget_triggers->setCurrentItem(combat.constFirst());
+        mpEditor->slot_showFolders();
+        QTreeWidgetItem* pCombat = topLevelNamed(qsl("qaCombat"));
+        QVERIFY(pCombat);
+        QTreeWidgetItem* pBelow = mpEditor->mpFolderTree->itemBelow(pCombat);
+        QVERIFY(pBelow);
+        QTest::keyClick(mpEditor->mpFolderTree, Qt::Key_Return);
+        QVERIFY2(noFormShown(), "Enter on a merged folder over one of its folders' forms did nothing");
+        QTest::keyClick(mpEditor->mpFolderTree, Qt::Key_Down);
+        QVERIFY2(mpEditor->mpFolderTree->currentItem() == pBelow, "Down from a merged folder did not move to the row below it");
+    }
+
+    void test_aFocusOutOnAMergedFolderLeavesTheHiddenItemAlone()
+    {
+        mpEditor->slot_showFolders();
+        QTreeWidgetItem* pBad = childNamed(topLevelNamed(qsl("qaErr")), qsl("qaBad"));
+        QVERIFY(pBad);
+        mpEditor->mpFolderTree->setCurrentItem(pBad);
+        mpEditor->mpSourceEditorEdbee->textDocument()->setText(qsl("qaBad = ("));
+        mpEditor->mpFolderTree->setCurrentItem(topLevelNamed(qsl("qaErr")));
+        QVERIFY(mpEditor->mpSystemMessageArea->isHidden());
+        QFocusEvent focusOut(QEvent::FocusOut);
+        QApplication::sendEvent(mpEditor, &focusOut);
+        const bool bannerShown = !mpEditor->mpSystemMessageArea->isHidden();
+        mpEditor->mpFolderTree->setCurrentItem(childNamed(topLevelNamed(qsl("qaErr")), qsl("qaBad")));
+        mpEditor->mpSourceEditorEdbee->textDocument()->setText(QString());
+        mpEditor->saveOpenChanges();
+        QVERIFY2(!bannerShown, "the editor losing focus brought back the error of a trigger the merged folder hides");
     }
 
     void test_saveProfileOnAMergedFolderLeavesTheHiddenItemAlone()

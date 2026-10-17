@@ -824,8 +824,21 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     mpFolderTree->hide();
     connect(mpFolderTree, &QTreeWidget::currentItemChanged, this, &dlgTriggerEditor::slot_folderTreeItemChanged);
     connect(mpFolderTree, &QTreeWidget::itemActivated, this, [this](QTreeWidgetItem* pItem) {
-        if (pItem && pItem->data(0, FolderPartsRole).toStringList().size() == 1) {
+        if (!pItem) {
+            return;
+        }
+        if (pItem->data(0, FolderPartsRole).toStringList().size() == 1) {
             slot_toggleItemOrGroupActiveFlag();
+            return;
+        }
+        if (mFolderGroupKey.isEmpty()) {
+            showFolderGroup(pItem);
+        }
+    });
+    // A merged folder stays current under the form of one of its folders, so choosing it changes no current item
+    connect(mpFolderTree, &QTreeWidget::itemClicked, this, [this](QTreeWidgetItem* pItem) {
+        if (pItem && mFolderGroupKey.isEmpty() && pItem->data(0, FolderPartsRole).toStringList().size() != 1) {
+            showFolderGroup(pItem);
         }
     });
 
@@ -10523,6 +10536,10 @@ void dlgTriggerEditor::expand_child_timers(TTimer* pTimerParent, QTreeWidgetItem
 
 void dlgTriggerEditor::saveOpenChanges()
 {
+    // The item behind a merged folder was saved when the folder was chosen, and its errors must stay hidden
+    if (!mFolderGroupKey.isEmpty()) {
+        return;
+    }
     switch (mCurrentView) {
     case EditorViewType::cmTriggerView:
         if (mpCurrentTriggerItem) {
@@ -16793,12 +16810,6 @@ void dlgTriggerEditor::showView(const EditorViewType view)
 void dlgTriggerEditor::selectFolderTreeNode(QTreeWidgetItem* pNode)
 {
     if (!pNode || pNode == mpFolderTree->currentItem()) {
-        return;
-    }
-    // A merged folder current under one folder's form could not be chosen to show no form
-    if (mFolderGroupKey.isEmpty() && pNode->data(0, FolderPartsRole).toStringList().size() > 1) {
-        const QSignalBlocker blocker(mpFolderTree);
-        mpFolderTree->setCurrentItem(nullptr);
         return;
     }
     {
