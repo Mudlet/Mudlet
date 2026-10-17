@@ -436,14 +436,14 @@ void ModernGLWidget::showFailure(const QString& message, const QString& advice)
         mpFailureLabel->setMargin(16);
         mpFailureLabel->setTextFormat(Qt::RichText);
         connect(mpFailureLabel, &QLabel::linkActivated, this, [this]() {
-            TAppFrontend::instance()->showOptionsDialog(qsl("mapper/checkBox_modern3DMapper"), mpHost.data());
+            TAppFrontend::instance()->showOptionsDialog(qsl("advanced/checkBox_experiment.3dmap.modernmapper"), mpHost.data());
         });
         auto layout = new QVBoxLayout(this);
         layout->setContentsMargins(0, 0, 0, 0);
         layout->addWidget(mpFailureLabel);
     }
-    //: Second paragraph of the message shown in place of the 3D map when the modern 3D mapper cannot run; "Use the modern 3D mapper" is the checkbox on the Mapper page of Settings, so translate both as they appear there, and keep the <a href="settings"> and </a> tags, which make Settings a link that opens the Mapper page at that checkbox
-    const QString tryClassic = tr("Turn off \"Use the modern 3D mapper\" in <a href=\"settings\">Settings</a> to try the classic 3D view; if that stays blank too, use the 2D map.");
+    //: Second paragraph of the message shown in place of the 3D map when the modern 3D mapper cannot run; "Modern 3D mapper" is the checkbox on the "Experiments (unsupported)" card of the Advanced page of Settings, so translate these as they appear there, and keep the <a href="settings"> and </a> tags, which make Settings a link that opens that checkbox
+    const QString tryClassic = tr("Turn off \"Modern 3D mapper\" in <a href=\"settings\">Settings</a>, Advanced, Experiments to try the classic 3D view; if that stays blank too, use the 2D map.");
     mpFailureLabel->setText(qsl("<p>%1</p><p>%2</p>").arg(message.toHtmlEscaped(), advice.isEmpty() ? tryClassic : advice.toHtmlEscaped()));
     mpFailureLabel->show();
 }

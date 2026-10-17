@@ -291,6 +291,7 @@ set(SETTINGS_GROUP_TEST_SOURCES
     SettingsBannerTest.cpp
     SettingsDeepLinkTest.cpp
     SettingsDirtyApplyTest.cpp
+    SettingsExperimentsTest.cpp
     SettingsHostLifecycleTest.cpp
     SettingsInstantApplyTest.cpp
     SettingsLiveSyncTest.cpp

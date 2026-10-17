@@ -263,14 +263,16 @@ public:
     bool getLargeAreaExitArrows() const { return mLargeAreaExitArrows; }
     void setLargeAreaExitArrows(const bool);
     bool getUseModern3DMapper() const { return experimentEnabled(qsl("experiment.3dmap.modernmapper")); }
-    void setUseModern3DMapper(const bool enabled) { setExperimentEnabled(qsl("experiment.3dmap.modernmapper"), enabled); }
 
     // Experiment system methods
     bool experimentEnabled(const QString& experimentKey) const;
     std::pair<bool, QString> setExperimentEnabled(const QString& experimentKey, bool enabled);
     QString getActiveExperimentInGroup(const QString& group) const;
     QStringList getAllExperiments() const;
-    QStringList getValidExperiments() const;
+    // Sorted, so the members of a group are listed together
+    static QStringList getValidExperiments();
+    // Experiments sharing a group are mutually exclusive; empty for one in no group
+    static QString experimentGroup(const QString& experimentKey);
 
     void forceClose();
     bool profileResetInProgress() const { return mResetProfile; }

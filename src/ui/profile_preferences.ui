@@ -2777,19 +2777,6 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
-          <item row="1" column="3">
-           <widget class="QCheckBox" name="checkBox_modern3DMapper">
-            <property name="toolTip">
-             <string>&lt;p&gt;Draws the 3D map with the newer 3D mapper, which needs OpenGL 3.3. Map windows can only show 3D with it. Turn it off to use the classic 3D view if the 3D map stays blank.&lt;/p&gt;</string>
-            </property>
-            <property name="accessibleDescription">
-             <string>Draws the 3D map with the newer 3D mapper, which needs OpenGL 3.3. Map windows can only show 3D with it. Turn it off to use the classic 3D view if the 3D map stays blank.</string>
-            </property>
-            <property name="text">
-             <string>Use the modern 3D mapper</string>
-            </property>
-           </widget>
-          </item>
           <item row="2" column="0" colspan="3">
            <widget class="QGroupBox" name="gridGroupBox">
             <property name="enabled">
