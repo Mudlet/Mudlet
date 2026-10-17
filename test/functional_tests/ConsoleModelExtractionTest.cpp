@@ -4306,6 +4306,34 @@ noViewWindowReport = table.concat(noViewWindowProblems, '; ')
         QCOMPARE(host->textBoxFont(name), std::optional<QFont>(textBox->font()));
     }
 
+    // No Lua getter reads a text edit's font, so only here can a test see that a
+    // refused name left the family alone rather than set the part before the NUL.
+    void test_aTextBoxKeepsItsFamilyWhenAFontNameHasANul()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
+
+        const QString name = qsl("nulFontNameTextBox");
+        runLua(host, qsl("createTextEdit('main', '%1', 0, 0, 100, 50)\nsetTextEditFont('%1', 'Ubuntu Mono')\n").arg(name));
+        TTextBox* textBox = host->mainConsoleView()->textBoxWidget(name);
+        QVERIFY2(textBox, "createTextEdit() made no widget.");
+        QCOMPARE(textBox->font().family(), qsl("Ubuntu Mono"));
+
+        runLua(host,
+               qsl("nulFontNameResult = {setTextEditFont('%1', 'Bitstream Vera Sans Mono\\0Garbage')}\n"
+                   "nulFontNameRefused = nulFontNameResult[1] == nil and nulFontNameResult[2] == 'font name must not contain a NUL character'\n")
+                       .arg(name));
+        lua_State* L = host->getLuaInterpreter()->getLuaGlobalState();
+        lua_getglobal(L, "nulFontNameRefused");
+        const bool refused = lua_toboolean(L, -1);
+        lua_pop(L, 1);
+        QVERIFY2(refused, "setTextEditFont() did not refuse a font name with a NUL in it.");
+        QCOMPARE(textBox->font().family(), qsl("Ubuntu Mono"));
+        QCOMPARE(host->textBoxFont(name)->family(), qsl("Ubuntu Mono"));
+    }
+
     // The label getters read the model, so whatever restyles, retips or refonts the
     // widget - a script, the label itself or an application stylesheet - must reach it.
     void test_aLabelsStyleSheetToolTipAndFontFollowTheWidget()
