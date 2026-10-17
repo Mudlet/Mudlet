@@ -196,6 +196,18 @@ public:
     // The indices of the screen rectangles to keep, taking them in the order given: one shorter than
     // minimumHeight, or overlapping one kept before it, is left out
     static QList<qsizetype> declutteredRects(const QList<QRectF>& rects, qreal minimumHeight);
+    // Where room names would overlap, which is kept: the player's room's, then a highlighted room's, then one round
+    // the player, the nearer first, then the one nearer the camera, as a printed map names what matters most
+    struct NamePriority
+    {
+        // 0 for the player's room, 1 for a highlighted one, 2 for one round the player, 3 for the rest
+        int rank = 3;
+        float playerDistance = 0.0f;
+        float cameraDistance = 0.0f;
+    };
+    static bool outranks(const NamePriority& first, const NamePriority& second);
+    // An opacity moved toward target by the part of fadeMilliseconds that has elapsed; at once for no fade
+    static float steppedOpacity(float opacity, float target, qint64 elapsedMilliseconds, int fadeMilliseconds);
 
     // How a level other than the viewed one recedes: how far its colors go toward the background, and
     // how opaque it stays

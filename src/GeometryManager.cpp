@@ -465,6 +465,26 @@ QList<qsizetype> GeometryManager::declutteredRects(const QList<QRectF>& rects, c
     return kept;
 }
 
+bool GeometryManager::outranks(const NamePriority& first, const NamePriority& second)
+{
+    if (first.rank != second.rank) {
+        return first.rank < second.rank;
+    }
+    if (first.playerDistance != second.playerDistance) {
+        return first.playerDistance < second.playerDistance;
+    }
+    return first.cameraDistance < second.cameraDistance;
+}
+
+float GeometryManager::steppedOpacity(const float opacity, const float target, const qint64 elapsedMilliseconds, const int fadeMilliseconds)
+{
+    if (fadeMilliseconds <= 0) {
+        return target;
+    }
+    const float step = static_cast<float>(qMax(qint64{0}, elapsedMilliseconds)) / static_cast<float>(fadeMilliseconds);
+    return opacity < target ? qMin(target, opacity + step) : qMax(target, opacity - step);
+}
+
 GeometryManager::LevelFade GeometryManager::levelFade(const int levelsAbove, const bool moreTransparent)
 {
     const int distance = std::abs(levelsAbove);
