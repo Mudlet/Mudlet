@@ -6130,6 +6130,14 @@ describe("Widget state getters", function()
       assert.are.equal("text", getLabelAccessibleRole(label))
     end)
 
+    it("returns nil and a message for an empty label name", function()
+      for _, set in ipairs({function() return setLabelAccessibleRole("", "text") end, function() return setLabelAccessibleName("", "a name") end}) do
+        local ok, err = set()
+        assert.is_nil(ok)
+        assert.are.equal("a label cannot have an empty string as its name", err)
+      end
+    end)
+
     it("returns nil and a message for a role it does not know", function()
       local ok, err = setLabelAccessibleRole(label, "slider")
       assert.is_nil(ok)

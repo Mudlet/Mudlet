@@ -24,8 +24,8 @@
 
 class TLabel;
 
-// A script's label as assistive technology sees it: a button or static text, and
-// its name, both as TLabelModel decides them.
+// A script's label as assistive technology sees it: a button as TLabelModel decides, else a
+// graphic, an animation or static text as Qt would report a QLabel, and the name TLabelModel gives it.
 class TAccessibleLabel : public QAccessibleWidget
 {
 public:

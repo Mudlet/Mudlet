@@ -3590,13 +3590,16 @@ int TLuaInterpreter::setLabelAccessibleName(lua_State* L)
     }
     const QString labelName{lua_tostring(L, 1)};
     const QString accessibleName{lua_tostring(L, 2)};
+    if (labelName.isEmpty()) {
+        return warnArgumentValue(L, __func__, "a label cannot have an empty string as its name");
+    }
 
-    const Host& host = getHostFromLua(L);
+    Host& host = getHostFromLua(L);
     if (!host.hasConsoleView()) {
         return warnArgumentValue(L, __func__, no_main_window_value);
     }
-    if (auto [success, message] = host.consoleFrontend()->setLabelAccessibleName(labelName, accessibleName); !success) {
-        return warnArgumentValue(L, __func__, message);
+    if (!host.setLabelAccessibleName(labelName, accessibleName)) {
+        return warnArgumentValue(L, __func__, qsl("label name '%1' not found").arg(labelName));
     }
 
     lua_pushboolean(L, true);
@@ -3612,6 +3615,9 @@ int TLuaInterpreter::getLabelAccessibleName(lua_State* L)
     }
 
     const Host& host = getHostFromLua(L);
+    if (!host.hasConsoleView()) {
+        return warnArgumentValue(L, __func__, no_main_window_value);
+    }
     if (auto accessibleName = host.labelAccessibleName(labelName)) {
         lua_pushstring(L, accessibleName->toUtf8().constData());
         return 1;
@@ -3628,6 +3634,9 @@ int TLuaInterpreter::setLabelAccessibleRole(lua_State* L)
     }
     const QString labelName{lua_tostring(L, 1)};
     const QString role{lua_tostring(L, 2)};
+    if (labelName.isEmpty()) {
+        return warnArgumentValue(L, __func__, "a label cannot have an empty string as its name");
+    }
 
     std::optional<bool> button;
     if (role == qsl("button")) {
@@ -3718,6 +3727,9 @@ int TLuaInterpreter::getLabelAccessibleRole(lua_State* L)
     }
 
     const Host& host = getHostFromLua(L);
+    if (!host.hasConsoleView()) {
+        return warnArgumentValue(L, __func__, no_main_window_value);
+    }
     if (auto button = host.labelActsAsButton(labelName)) {
         lua_pushstring(L, *button ? "button" : "text");
         return 1;
