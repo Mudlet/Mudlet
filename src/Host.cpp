@@ -6244,7 +6244,7 @@ bool Host::setLabelLiveRegion(const QString& name, TLabelLiveRegion liveRegion)
 
     auto* pModel = mWindowRegistry.labelModel(name);
     if (pModel) {
-        pModel->mLiveRegion = liveRegion;
+        pModel->setLiveRegion(liveRegion);
         return true;
     }
     return false;

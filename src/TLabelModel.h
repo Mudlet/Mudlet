@@ -35,12 +35,12 @@
 class Host;
 class QSvgRenderer;
 
-// A label's widget-free state, so the Widgets-free core can hold a named label without a QLabel.
-// Owned by its TLabel, whose same-named reference members alias it; TWindowRegistry indexes
-// these by name but does NOT own them.
 // How a change of a label's text is announced to a screen reader, as ARIA's aria-live
 enum class TLabelLiveRegion : int { Off, Polite, Assertive };
 
+// A label's widget-free state, so the Widgets-free core can hold a named label without a QLabel.
+// Owned by its TLabel, whose same-named reference members alias it; TWindowRegistry indexes
+// these by name but does NOT own them.
 struct TLabelModel
 {
     // Defined out of line: mpHost is a QPointer, which needs Host complete.
@@ -63,6 +63,7 @@ struct TLabelModel
     void setAccessibleName(const QString& name);
     void setAccessibleButton(std::optional<bool> button);
     void setClickThrough(bool clickThrough);
+    void setLiveRegion(TLabelLiveRegion liveRegion) { mLiveRegion = liveRegion; }
     // The view's copies of what the label shows, which name it unless a script named it
     void setText(const QString& text);
     void setToolTip(const QString& toolTip);

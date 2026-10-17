@@ -883,10 +883,13 @@ end
 -- showing something the player should hear about, such as a status or an alert. Only heard
 -- with the profile's accessibleLabels setting on; text that hasn't changed is not repeated.
 -- @param mode "polite" waits for the screen reader to finish, "assertive" interrupts it, "off" stops announcing
+-- @return true, or nil and why the label refused it
 function Geyser.Label:setLiveRegion(mode)
-  if setLabelLiveRegion(self.name, mode) then
+  local ok, err = setLabelLiveRegion(self.name, mode)
+  if ok then
     self.liveRegion = mode
   end
+  return ok, err
 end
 
 --- Resets the tooltip of the label
@@ -1423,7 +1426,10 @@ function Geyser.Label:new (cons, container)
   end
 
   if liveRegion then
-    me:setLiveRegion(liveRegion)
+    local ok, err = me:setLiveRegion(liveRegion)
+    if not ok then
+      debugc(string.format("Geyser.Label:new(): liveRegion refused for '%s': %s", me.name, tostring(err)))
+    end
   end
 
   -- Set clickthrough if included in constructor
