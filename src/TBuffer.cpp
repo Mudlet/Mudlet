@@ -2919,6 +2919,7 @@ void TBuffer::commitLineData(QString line, TLineFormat chars, const char ch)
     }
     const int lineIndex = lineBuffer.size() - 1;
     if (Q_LIKELY(mpModel)) {
+        mpModel->endPrintedLine();
         emit mpModel->mNotifier.lineCommitted(lineIndex);
     }
     mCommitLineIndices.append(lineIndex);

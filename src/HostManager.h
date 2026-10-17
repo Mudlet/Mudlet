@@ -31,6 +31,7 @@
 #include <chrono>
 #include <functional>
 #include <memory>
+#include <utility>
 
 class Discord;
 class FontManager;
@@ -79,6 +80,10 @@ public:
     // packages a new profile gets. Null when that profile is already open, or the pool is going.
     // beforeLoad is handed the profile before its save loads, so a frontend can watch it from the first line.
     Host* openProfile(const QString& name, bool connect, const std::function<void(Host*)>& beforeLoad = nullptr);
+    // Handed every profile openProfile() opens, a script's loadProfile() ones too, before beforeLoad. A call
+    // replaces the hook set before. The pool may outlive whoever set it, so the hook must capture no raw
+    // pointer to its setter.
+    void setProfileOpenedHook(std::function<void(Host*)> hook) { mProfileOpenedHook = std::move(hook); }
     // A profile tab's close button, with no window: sysExitEvent and the save now, out of the pool once
     // no script of its own is running. False if no such profile is open.
     bool requestProfileClose(const QString& name);
@@ -125,6 +130,7 @@ private:
     // From the destructor on: a profile opened then would never get its sysExitEvent
     bool mGoingDown = false;
     int mProfileLoadsInProgress = 0;
+    std::function<void(Host*)> mProfileOpenedHook;
     // Expires with the pool, for timers tied to a profile that may outlive it
     const std::shared_ptr<bool> mAlive = std::make_shared<bool>(true);
 };
