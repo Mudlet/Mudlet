@@ -913,6 +913,67 @@ private slots:
         QVERIFY2(mpEditor->mpSourceEditorEdbee->textDocument()->text() == before, "redo changed the script of a trigger the merged folder hides");
     }
 
+    void test_choosingAMergedFolderKeepsTheEditBehindIt()
+    {
+        mpEditor->slot_showFolders();
+        QTreeWidgetItem* pHit = childNamed(topLevelNamed(qsl("qaCombat")), qsl("qaHit"));
+        QVERIFY(pHit);
+        mpEditor->mpFolderTree->setCurrentItem(pHit);
+        TTrigger* pTrigger = mpHost->getTriggerUnit()->getTrigger(pHit->data(0, dlgTriggerEditor::FolderPartsRole).toStringList().constFirst().split(QLatin1Char(':')).constLast().toInt());
+        QVERIFY(pTrigger);
+        const QString original = pTrigger->getScript();
+        mpEditor->mpSourceEditorEdbee->textDocument()->setText(qsl("qaHit = 2"));
+        mpEditor->mpFolderTree->setCurrentItem(topLevelNamed(qsl("qaCombat")));
+        const QString saved = pTrigger->getScript();
+        mpEditor->mpFolderTree->setCurrentItem(childNamed(topLevelNamed(qsl("qaCombat")), qsl("qaHit")));
+        mpEditor->mpSourceEditorEdbee->textDocument()->setText(original);
+        mpEditor->saveOpenChanges();
+        QVERIFY2(saved == qsl("qaHit = 2"), "choosing a merged folder lost the edit to the trigger open before it");
+    }
+
+    void test_aRebuildKeepsOneFoldersFormUnderAMergedFolder()
+    {
+        mpEditor->leaveFolderView();
+        mpEditor->slot_showTriggers();
+        const QList<QTreeWidgetItem*> combat = mpEditor->treeWidget_triggers->findItems(qsl("qaCombat"), Qt::MatchExactly | Qt::MatchRecursive);
+        QCOMPARE(combat.size(), 1);
+        mpEditor->treeWidget_triggers->setCurrentItem(combat.constFirst());
+        mpEditor->slot_showFolders();
+        QVERIFY(!mpEditor->mpTriggersMainArea->isHidden());
+        mpEditor->mNeedUpdateData = true;
+        mpEditor->saveOpenChanges();
+        mpEditor->rebuildStaleTrees();
+        QTRY_VERIFY(!mpEditor->mFolderTreeStale);
+        QVERIFY2(!mpEditor->mpTriggersMainArea->isHidden(), "a rebuild hid the trigger folder's form behind its merged folder");
+        QCOMPARE(mpEditor->mpTriggersMainArea->lineEdit_trigger_name->text(), qsl("qaCombat"));
+        QVERIFY(mpEditor->mFolderGroupKey.isEmpty());
+    }
+
+    void test_leavingFromAMergedFolderKeepsTheHiddenItemsErrorAway()
+    {
+        mpEditor->slot_showFolders();
+        QTreeWidgetItem* pBad = childNamed(topLevelNamed(qsl("qaErr")), qsl("qaBad"));
+        QVERIFY(pBad);
+        mpEditor->mpFolderTree->setCurrentItem(pBad);
+        mpEditor->mpSourceEditorEdbee->textDocument()->setText(qsl("qaBad = ("));
+        mpEditor->mpFolderTree->setCurrentItem(topLevelNamed(qsl("qaErr")));
+        QVERIFY(mpEditor->mpSystemMessageArea->isHidden());
+        QAction* pShowAliases = nullptr;
+        for (QAction* pAction : mpEditor->findChildren<QAction*>()) {
+            if (pAction->statusTip() == dlgTriggerEditor::tr("Show Aliases")) {
+                pShowAliases = pAction;
+            }
+        }
+        QVERIFY(pShowAliases);
+        pShowAliases->trigger();
+        const bool errorShown = !mpEditor->mpSystemMessageArea->isHidden() && !mpEditor->mpSystemMessageArea->notificationAreaIconLabelError->isHidden();
+        mpEditor->slot_showFolders();
+        mpEditor->mpFolderTree->setCurrentItem(childNamed(topLevelNamed(qsl("qaErr")), qsl("qaBad")));
+        mpEditor->mpSourceEditorEdbee->textDocument()->setText(QString());
+        mpEditor->saveOpenChanges();
+        QVERIFY2(!errorShown, "leaving the Folders view from a merged folder brought back the error of the trigger it hid");
+    }
+
     void test_turningTheSettingOffLeavesTheFoldersView()
     {
         mpEditor->slot_showFolders();

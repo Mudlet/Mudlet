@@ -16685,7 +16685,19 @@ void dlgTriggerEditor::populateFolderTree()
             expandedKeys.insert((*it)->data(0, FolderKeyRole).toString());
         }
     }
-    const QString previousKey = mpFolderTree->currentItem() ? mpFolderTree->currentItem()->data(0, FolderKeyRole).toString() : QString();
+    QString previousKey;
+    if (const QTreeWidgetItem* pCurrent = mpFolderTree->currentItem()) {
+        previousKey = pCurrent->data(0, FolderKeyRole).toString();
+        // Under one folder's form a merged folder stands for that folder, which a rebuild must open again
+        if (mFolderGroupKey.isEmpty()) {
+            const QString viewPrefix = qsl("%1:").arg(static_cast<int>(mCurrentView));
+            for (const QString& part : pCurrent->data(0, FolderPartsRole).toStringList()) {
+                if (part.startsWith(viewPrefix)) {
+                    previousKey = part;
+                }
+            }
+        }
+    }
     const int scrollPosition = mpFolderTree->verticalScrollBar()->value();
 
     {
@@ -16825,7 +16837,6 @@ void dlgTriggerEditor::syncFolderTreeSelection(const QString& fallbackKey)
     if (!mFolderGroupKey.isEmpty()) {
         QTreeWidgetItem* pGroupNode = mFolderTreeNodes.value(mFolderGroupKey);
         if (pGroupNode && pGroupNode->data(0, FolderPartsRole).toStringList().size() == 1) {
-            hideFolderGroup();
             selectFolderTreeNode(pGroupNode);
             slot_folderTreeItemChanged(pGroupNode);
             return;
@@ -16849,6 +16860,12 @@ void dlgTriggerEditor::syncFolderTreeSelection(const QString& fallbackKey)
     }
 
     if (QTreeWidgetItem* pFallback = mFolderTreeNodes.value(fallbackKey)) {
+        if (pFallback->data(0, FolderPartsRole).toStringList().size() > 1 && pFallback->data(0, FolderKeyRole).toString() != fallbackKey) {
+            selectFolderTreeNode(pFallback);
+            const QStringList viewAndId = fallbackKey.split(QLatin1Char(':'));
+            openItemFromFolderTree(static_cast<EditorViewType>(viewAndId.constFirst().toInt()), viewAndId.constLast().toInt());
+            return;
+        }
         mpFolderTree->setCurrentItem(pFallback);
         return;
     }
@@ -16951,7 +16968,6 @@ void dlgTriggerEditor::leaveFolderView()
     if (!mFolderViewActive) {
         return;
     }
-    hideFolderGroup();
     mFolderViewActive = false;
     mpFolderTreeRefreshTimer->stop();
     mpFolderTree->hide();
