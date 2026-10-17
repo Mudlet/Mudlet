@@ -685,10 +685,10 @@ int TLuaInterpreter::shiftMapPerspective(lua_State* L)
         return warnArgumentValue(L, __func__, "the angles must be finite numbers");
     }
 
-    if (!host.mpMap || !host.mpMap->mpRoomDB || !host.mpMap->mapViewFrontend()) {
+    if (!host.mpMap || !host.mpMap->mpRoomDB || !host.mapViewFrontend()) {
         return warnArgumentValue(L, __func__, "you haven't opened a map yet");
     }
-    if (auto [moved, refusal] = host.mpMap->mapViewFrontend()->shift3DViewCamera(verticalAngle, horizontalAngle, rotationAngle); !moved) {
+    if (auto [moved, refusal] = host.mapViewFrontend()->shift3DViewCamera(verticalAngle, horizontalAngle, rotationAngle); !moved) {
         return warnArgumentValue(L, __func__, refusal);
     }
     lua_pushboolean(L, true);
@@ -705,10 +705,10 @@ int TLuaInterpreter::setMapPerspective(lua_State* L)
         return warnArgumentValue(L, __func__, "r, theta and phi must be finite numbers");
     }
 
-    if (!host.mpMap || !host.mpMap->mpRoomDB || !host.mpMap->mapViewFrontend()) {
+    if (!host.mpMap || !host.mpMap->mpRoomDB || !host.mapViewFrontend()) {
         return warnArgumentValue(L, __func__, "you haven't opened a map yet");
     }
-    if (auto [moved, refusal] = host.mpMap->mapViewFrontend()->set3DViewCameraPosition(r, theta, phi); !moved) {
+    if (auto [moved, refusal] = host.mapViewFrontend()->set3DViewCameraPosition(r, theta, phi); !moved) {
         return warnArgumentValue(L, __func__, refusal);
     }
     lua_pushboolean(L, true);
@@ -2118,7 +2118,7 @@ int TLuaInterpreter::getMapZoom(lua_State* L)
     }
 
     // Only a mapper on screen has an area it is showing
-    auto* mapper = host.mpMap->mapViewFrontend();
+    auto* mapper = host.mapViewFrontend();
     if (!mapper) {
         return warnArgumentValue(L, __func__, "no active mapper");
     }
@@ -4103,7 +4103,7 @@ int TLuaInterpreter::setMapZoom(lua_State* L)
     }
 
     // Primary mapper behavior
-    auto* mapper = host.mpMap->mapViewFrontend();
+    auto* mapper = host.mapViewFrontend();
     if (!mapper) {
         if (!host.mapOpen()) {
             return warnArgumentValue(L, __func__, "no active mapper");
