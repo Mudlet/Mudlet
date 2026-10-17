@@ -6085,6 +6085,88 @@ describe("Tests saveJsonMap and loadJsonMap", function()
       assert.is_nil(exportedLabels(area)[reusedId].font)
     end)
 
+    it("puts each area's 2D map zoom back", function()
+      deleteMap()
+      local zooms = {MapperSpecJsonZoomA = 33, MapperSpecJsonZoomB = 44.5, MapperSpecJsonZoomC = 1234}
+      local areas = {}
+      for name, zoom in pairs(zooms) do
+        local area = addAreaName(name)
+        local room = createRoomID(); addRoom(room); setRoomArea(room, area)
+        roomA = room
+        assert.is_true(setMapZoom(zoom, area))
+        areas[name] = area
+      end
+
+      roundTrip()
+
+      for name, zoom in pairs(zooms) do
+        assert.are.equal(zoom, getMapZoom(areas[name]), name)
+      end
+    end)
+
+    it("keeps an area's default zoom over a script's legacy fallback key, as a binary save does", function()
+      deleteMap()
+      local area = addAreaName("MapperSpecJsonZoomScriptKey")
+      roomA = createRoomID(); addRoom(roomA); setRoomArea(roomA, area)
+      assert.is_true(setAreaUserData(area, "system.fallback_map2DZoom", "50"))
+
+      roundTrip()
+
+      assert.are.equal(20, getMapZoom(area))
+    end)
+
+    describe("an area's 2D map zoom in an edited JSON file", function()
+      local editedPath = getMudletHomeDir() .. "/mapper_spec_zoom_edited.json"
+
+      after_each(function()
+        os.remove(editedPath)
+      end)
+
+      -- exports one area at zoom 33, swaps its zoom2D member for replacement, imports that
+      local function importWithZoom(replacement)
+        deleteMap()
+        local area = addAreaName("MapperSpecJsonZoomEdited")
+        local room = createRoomID(); addRoom(room); setRoomArea(room, area)
+        assert.is_true(setMapZoom(33, area))
+        assert.is_true(saveJsonMap(jsonPath))
+        local file = assert(io.open(jsonPath, "r"))
+        local text = file:read("*a")
+        file:close()
+        local edited, count = text:gsub(',%s*"zoom2D": 33', replacement)
+        assert.are.equal(1, count, "the export should hold the area's zoom2D member")
+        file = assert(io.open(editedPath, "w"))
+        file:write(edited)
+        file:close()
+        deleteMap()
+        assert.is_true(loadJsonMap(editedPath))
+        return area
+      end
+
+      it("is the default zoom when the area has no zoom2D member", function()
+        assert.are.equal(20, getMapZoom(importWithZoom("")))
+      end)
+
+      it("is refused below the mapper's minimum zoom", function()
+        assert.are.equal(20, getMapZoom(importWithZoom(', "zoom2D": 1')))
+      end)
+
+      it("is ignored when it is not a number", function()
+        assert.are.equal(20, getMapZoom(importWithZoom(', "zoom2D": "33"')))
+      end)
+
+      -- a format 20 binary save by Mudlet 5.0.1 or older put this key into the
+      -- live area user data, so that build's JSON export carried it
+      it("is taken from the legacy fallback user data key of an older export", function()
+        local area = importWithZoom(', "userData": {"system.fallback_map2DZoom": "33"}')
+        assert.are.equal(33, getMapZoom(area))
+        assert.is_nil(getAllAreaUserData(area)["system.fallback_map2DZoom"])
+      end)
+
+      it("is the zoom2D member when the file also holds the legacy fallback key", function()
+        local area = importWithZoom(', "zoom2D": 44, "userData": {"system.fallback_map2DZoom": "33"}')
+        assert.are.equal(44, getMapZoom(area))
+      end)
+    end)
   end)
 
   describe("Tests the saveJsonMap and loadJsonMap argument contract", function()
