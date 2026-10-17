@@ -129,6 +129,7 @@ private:
     void applyBackgroundColor();
     // After every setTextInteractionFlags(), which resets the focus policy
     void updateKeyboardAccess();
+    void announceTextChange(const QString& spokenBefore);
 
     QColor& mBackgroundColor;
     QPixmap mSvgPixmapCache;

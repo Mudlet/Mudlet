@@ -320,6 +320,11 @@ QString TLabelModel::effectiveAccessibleName() const
     return Qt::mightBeRichText(mToolTip) ? plainName(mToolTip) : mToolTip.simplified();
 }
 
+QString TLabelModel::spokenText() const
+{
+    return plainName(mText);
+}
+
 bool TLabelModel::namedByToolTip() const
 {
     return mAccessibleName.isEmpty() && plainName(mText).isEmpty() && !mToolTip.isEmpty();

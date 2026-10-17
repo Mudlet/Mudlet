@@ -37,6 +37,9 @@ class QSvgRenderer;
 // A label's widget-free state, so the Widgets-free core can hold a named label without a QLabel.
 // Owned by its TLabel, whose same-named reference members alias it; TWindowRegistry indexes
 // these by name but does NOT own them.
+// How a change of a label's text is announced to a screen reader, as ARIA's aria-live
+enum class TLabelLiveRegion : int { Off, Polite, Assertive };
+
 struct TLabelModel
 {
     // Defined out of line: mpHost is a QPointer, which needs Host complete.
@@ -50,6 +53,8 @@ struct TLabelModel
 
     // The name a screen reader hears: the one a script gave it, else its text, else its tooltip
     QString effectiveAccessibleName() const;
+    // The label's text as a screen reader would say it
+    QString spokenText() const;
     bool namedByToolTip() const;
     // Whether a screen reader is told it is a button: as a script said, else when it has a click or release callback
     bool actsAsButton() const;
@@ -117,6 +122,7 @@ struct TLabelModel
     QString mAccessibleName;
     // Set by a script whose label's callbacks are not a button's, such as a drag handle; empty means automatic
     std::optional<bool> mAccessibleButton;
+    TLabelLiveRegion mLiveRegion = TLabelLiveRegion::Off;
     QFont mFont;
     // QLabel::text(), which a pixmap or movie empties, written by the view after each change.
     QString mText;

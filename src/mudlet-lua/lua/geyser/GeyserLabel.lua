@@ -726,6 +726,16 @@ function Geyser.Label:setAccessibleRole(role)
   end
 end
 
+--- Sets whether a screen reader announces the label's new text when it changes, for a label
+-- showing something the player should hear about, such as a status or an alert. Only heard
+-- with the profile's accessibleLabels setting on; text that hasn't changed is not repeated.
+-- @param mode "polite" waits for the screen reader to finish, "assertive" interrupts it, "off" stops announcing
+function Geyser.Label:setLiveRegion(mode)
+  if setLabelLiveRegion(self.name, mode) then
+    self.liveRegion = mode
+  end
+end
+
 --- Resets the tooltip of the label
 function Geyser.Label:resetToolTip()
   resetLabelToolTip(self.name)
@@ -1227,6 +1237,10 @@ function Geyser.Label:new (cons, container)
 
   if me.accessibleRole then
     me:setAccessibleRole(me.accessibleRole)
+  end
+
+  if me.liveRegion then
+    me:setLiveRegion(me.liveRegion)
   end
 
   -- Set clickthrough if included in constructor

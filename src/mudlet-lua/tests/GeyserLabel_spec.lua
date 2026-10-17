@@ -1725,6 +1725,22 @@ describe("Tests Geyser.Label font, link style and tooltip", function()
       assert.are.equal("button", getLabelAccessibleRole("glfAccessibleRoleAtStart"))
     end)
   end)
+
+  describe("Geyser.Label:setLiveRegion", function()
+    it("sets the live region and remembers it, keeping it when refused", function()
+      local label = track(Geyser.Label:new({name = "glfLiveRegion", x = 0, y = 0, width = 200, height = 50}))
+      label:setLiveRegion("assertive")
+      assert.are.equal("assertive", getLabelLiveRegion("glfLiveRegion"))
+      assert.are.equal("assertive", label.liveRegion)
+      label:setLiveRegion("loud")
+      assert.are.equal("assertive", label.liveRegion)
+    end)
+
+    it("is given the live region when created with one", function()
+      track(Geyser.Label:new({name = "glfLiveRegionAtStart", x = 0, y = 0, width = 200, height = 50, liveRegion = "polite"}))
+      assert.are.equal("polite", getLabelLiveRegion("glfLiveRegionAtStart"))
+    end)
+  end)
 end)
 
 -- The right click menu. Its items are nested labels registered at the top of

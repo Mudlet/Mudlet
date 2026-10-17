@@ -106,8 +106,10 @@ void TLabel::setText(const QString& text)
     updateKeyboardAccess();
 
     stopMovie();
+    const QString spokenBefore = mpModel->spokenText();
     QLabel::setText(mpModel->linkStyledText(text));
     mpModel->mText = QLabel::text();
+    announceTextChange(spokenBefore);
     if (QAccessible::isActive() && mpModel->mAccessibleName.isEmpty()) {
         QAccessibleEvent event(this, QAccessible::NameChanged);
         QAccessible::updateAccessibility(&event);
@@ -140,6 +142,21 @@ void TLabel::updateKeyboardAccess()
     const bool linksByKeyboard = textInteractionFlags().testFlag(Qt::LinksAccessibleByKeyboard);
     setFocusPolicy(linksByKeyboard ? Qt::StrongFocus : keyboardOperable() ? Qt::TabFocus : Qt::NoFocus);
     update();
+}
+
+void TLabel::announceTextChange(const QString& spokenBefore)
+{
+    if (!mpHost || !mpHost->mAccessibleLabels || mpModel->mLiveRegion == TLabelLiveRegion::Off) {
+        return;
+    }
+    // A label redrawn with what it already said, as a gauge is on every prompt, would otherwise chatter
+    const QString spoken = mpModel->spokenText();
+    if (spoken.isEmpty() || spoken == spokenBefore) {
+        return;
+    }
+    QAccessibleAnnouncementEvent event(this, spoken);
+    event.setPoliteness(mpModel->mLiveRegion == TLabelLiveRegion::Assertive ? QAccessible::AnnouncementPoliteness::Assertive : QAccessible::AnnouncementPoliteness::Polite);
+    QAccessible::updateAccessibility(&event);
 }
 
 void TLabel::keyPressEvent(QKeyEvent* event)
