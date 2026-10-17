@@ -506,7 +506,7 @@ int TLuaInterpreter::createCommandLine(lua_State* L)
 
     const Host& host = getHostFromLua(L);
     if (auto [success, message] = host.consoleFrontend()->createCommandLine(windowName, commandLineName, x, y, width, height); !success) {
-        return warnArgumentValue(L, __func__, message);
+        return warnArgumentValue(L, __func__, message, true);
     }
 
     lua_pushboolean(L, true);
@@ -729,7 +729,7 @@ int TLuaInterpreter::createTextEdit(lua_State* L)
 
     const Host& host = getHostFromLua(L);
     if (auto [success, message] = host.consoleFrontend()->createTextBox(windowName, textEditName, x, y, width, height); !success) {
-        return warnArgumentValue(L, __func__, message);
+        return warnArgumentValue(L, __func__, message, true);
     }
 
     lua_pushboolean(L, true);
