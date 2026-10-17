@@ -25,6 +25,35 @@ describe("Tests StringUtils.lua functions", function()
       assert.equals("", ("This is a test"):cut(0))
       assert.equals("", (""):cut(0))
     end)
+
+    it("should count characters rather than bytes, never splitting a multi-byte one", function()
+      assert.equals("hé", ("héllo"):cut(2))
+      assert.equals("héllo", ("héllo"):cut(5))
+      assert.equals("日本", ("日本語"):cut(2))
+      assert.equals("日本語", ("日本語"):cut(6))
+    end)
+
+    it("should keep valid multi-byte characters whole in a string that is not valid UTF-8", function()
+      assert.equals("a\255", ("a\255bc"):cut(2))
+      assert.equals("\255é", ("\255é"):cut(2))
+      assert.equals("hé", ("héllo\255"):cut(2))
+      assert.equals("é", ("é\255x"):cut(1))
+    end)
+
+    it("should count each stray continuation byte as one character", function()
+      assert.equals(("\128"):rep(3), ("\128"):rep(20):cut(3))
+      assert.equals("\255", ("\255\128\128x"):cut(1))
+      assert.equals("\133", ("\133\148abc"):cut(1))
+      assert.equals("\176\177x", ("\176\177xyz"):cut(3))
+    end)
+
+    it("should not need the utf8 library", function()
+      local savedUtf8 = _G.utf8
+      finally(function() _G.utf8 = savedUtf8 end)
+      _G.utf8 = nil
+      assert.equals("ab", ("abc"):cut(2))
+      assert.equals("hé", ("héllo"):cut(2))
+    end)
   end)
 
   describe("Tests the functionality of string.enclose", function()
