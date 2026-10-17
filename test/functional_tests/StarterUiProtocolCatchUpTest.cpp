@@ -168,6 +168,34 @@ private slots:
         QVERIFY2(luaTrue(host, qsl("not BaseUI.sawGmcpVitals")), "vitals from an ended connection were recorded as this connection's");
     }
 
+    // The profile saves the border the dock was attached to and restores it at
+    // load, before the game has said anything, so a dock this profile has had
+    // before must be rebuilt then or that border is an empty strip
+    void test_loadingAProfileThatHadTheDockBuildsItBeforeTheGameSpeaks()
+    {
+        Host* host = startProfileWithoutTheStarterUi();
+        QVERIFY(host);
+        QVERIFY2(luaTrue(host, qsl("next(gmcp) == nil")), "precondition: this game has sent no GMCP at all");
+        QVERIFY(runLua(host, qsl("table.save(getMudletHomeDir() .. '/base_ui_settings.lua', { built = true, announced = true })")));
+
+        QVERIFY(installTheStarterUi(host));
+
+        QVERIFY2(luaTrue(host, qsl("BaseUI.container ~= nil and not BaseUI.container.hidden")), "the dock this profile had last session was not rebuilt at load");
+        QVERIFY2(luaTrue(host, qsl("getBorderRight() > 0")), "the rebuilt dock does not hold the border it sits in");
+    }
+
+    void test_loadingAProfileThatHidTheDockLeavesItUnbuilt()
+    {
+        Host* host = startProfileWithoutTheStarterUi();
+        QVERIFY(host);
+        QVERIFY(runLua(host, qsl("table.save(getMudletHomeDir() .. '/base_ui_settings.lua', { built = true, announced = true, hidden = true })")));
+
+        QVERIFY(installTheStarterUi(host));
+
+        QVERIFY2(luaTrue(host, qsl("BaseUI.container == nil")), "a dock the player hid was built again at load");
+        QVERIFY2(luaTrue(host, qsl("getBorderRight() == 0")), "a hidden dock took a border at load");
+    }
+
 private:
     // The starter UI is preinstalled for new users, and this test needs the
     // install to happen after the game has spoken rather than before, so it is
