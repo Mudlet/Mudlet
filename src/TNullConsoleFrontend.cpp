@@ -291,7 +291,7 @@ int sheetLength(const QString& value, const QFont& font)
         number.chop(1);
     }
     // lengthValueFromData()'s bounds, as qRound() is undefined outside int
-    return qRound(qBound(double(INT_MIN) + 0.1, scale.value_or(1) * number.toDouble(), double(INT_MAX)));
+    return qRound(qBound(static_cast<double>(INT_MIN) + 0.1, scale.value_or(1) * number.toDouble(), static_cast<double>(INT_MAX)));
 }
 
 // QRect and QSize add in int, which wraps past INT_MAX, and QWidget then holds a size it is given to 0 to QWIDGETSIZE_MAX
@@ -691,8 +691,12 @@ bool TNullConsoleFrontend::setLabelText(const QString& name, const QString& text
     if (it == mLabels.end()) {
         return false;
     }
-    Label& label = it->second;
-    const QString shown = label.pModel->linkStyledText(text);
+    showLabelText(it->second, it->second.pModel->linkStyledText(text));
+    return true;
+}
+
+void TNullConsoleFrontend::showLabelText(Label& label, const QString& shown)
+{
     // TLabel::setText() stops the movie even when QLabel::setText() keeps it for being given the same text
     if (label.showsMovie) {
         label.movie->stop();
@@ -705,7 +709,14 @@ bool TNullConsoleFrontend::setLabelText(const QString& name, const QString& text
         label.sizeHint.reset();
     }
     label.pModel->mText = shown;
-    return true;
+}
+
+// TLabel::reapplyLinkStyle()
+void TNullConsoleFrontend::reapplyLabelLinkStyle(Label& label)
+{
+    if (!label.pModel->mText.isEmpty() && TLabelModel::containsAnchorTag(label.pModel->mText)) {
+        showLabelText(label, label.pModel->restyledText());
+    }
 }
 
 std::optional<QSize> TNullConsoleFrontend::getLabelSizeHint(const QString& name) const
@@ -1561,6 +1572,7 @@ bool TNullConsoleFrontend::setLabelLinkStyle(const QString& name, const QString&
     pLabel->mLinkColor = linkColor;
     pLabel->mLinkVisitedColor = linkVisitedColor;
     pLabel->mLinkUnderline = underline;
+    reapplyLabelLinkStyle(it->second);
     return true;
 }
 
@@ -1571,15 +1583,12 @@ bool TNullConsoleFrontend::resetLabelLinkStyle(const QString& name)
 
 bool TNullConsoleFrontend::clearLabelVisitedLinks(const QString& name)
 {
-    TLabelModel* pLabel = labelModel(name);
-    if (!pLabel) {
+    const auto it = mLabels.find(name);
+    if (it == mLabels.end()) {
         return false;
     }
-    pLabel->mVisitedLinks.clear();
-    // TLabel::clearVisitedLinks() sets the text again, which picks up the current link style
-    if (!pLabel->mText.isEmpty() && TLabelModel::containsAnchorTag(pLabel->mText)) {
-        setLabelText(name, pLabel->mText);
-    }
+    it->second.pModel->mVisitedLinks.clear();
+    reapplyLabelLinkStyle(it->second);
     return true;
 }
 
@@ -1702,6 +1711,9 @@ bool TNullConsoleFrontend::resetLabelBackgroundImage(const QString& name)
             label.movie->stop();
         }
         clearLabelContents(label);
+    }
+    if (const QString withoutImage = TLabelModel::styleSheetWithoutBackgroundImage(label.pModel->mStyleSheet); withoutImage != label.pModel->mStyleSheet) {
+        restyleLabel(label, withoutImage);
     }
     return true;
 }

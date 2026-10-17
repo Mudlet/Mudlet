@@ -200,6 +200,8 @@ public:
     enums::controlsVisibility menuBarVisibility() const { return mMenuBarVisibility; }
     bool canHideToolBar() const { return mMenuBarVisibility != enums::visibleNever; }
     bool migratePasswordsToProfileStorage();
+    // Profiles whose password the last migration to profile storage could not save there, so it stays where it was
+    const QStringList& passwordsNotMigratedToProfiles() const { return mPasswordsNotMigratedToProfiles; }
     bool migratePasswordsToSecureStorage();
     // Helper function to check if current version is >= specified version for backward compatibility
     bool isVersionAtLeast(const QString& minVersion);
@@ -295,7 +297,7 @@ public:
     enums::controlsVisibility toolBarVisibility() const { return mToolbarVisibility; }
     void updateDiscordNamedIcon();
     void updateMultiViewControls();
-    void writeSettings();
+    void writeSettings() override;
 #ifdef INCLUDE_MCPSERVER
     bool mcpEnabled() const { return mEnableMCP; }
     quint16 mcpServerPort() const { return mMCPServerPort; }
@@ -706,6 +708,7 @@ private:
     QPointer<QWidget> mpFocusWidgetBeforeDeactivate;
     // a list of profiles currently being migrated to secure or profile storage
     QStringList mProfilePasswordsToMigrate;
+    QStringList mPasswordsNotMigratedToProfiles;
     // a list of character passwords currently being migrated to secure storage
     QList<QPair<QString, QString>> mCharacterPasswordsToMigrate;
     QPointer<QShortcut> mpShortcutCloseProfile;

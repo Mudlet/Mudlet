@@ -214,6 +214,9 @@ public:
     void recordActiveCommandLine(TCommandLine*);
     void forgetCommandLine(TCommandLine*);
     void focusActiveCommandLine() override;
+    // Raises and focuses that command line, or this console's own when none is on record or when the one
+    // on record is outside pWindow; in that last case this console's own also becomes the one on record.
+    void focusActiveCommandLine(const QWidget* pWindow);
     bool replaceCommandLineText(const QString& name, const QString& text) override;
     bool appendCommandLineText(const QString& name, const QString& text) override;
     bool clearCommandLine(const QString& name) override;
