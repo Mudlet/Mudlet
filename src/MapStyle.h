@@ -26,6 +26,9 @@
 #include <QStringList>
 
 class QFont;
+class QIcon;
+class QPixmap;
+class QSize;
 
 // A look for the modern 3D mapper: one renderer draws every style, and a preset
 // says how. A style is picked per profile by its id, which is what
@@ -359,6 +362,25 @@ struct MapStyle
     // The wash around rooms of an environment: its hue, soft and light enough for ink to read on, and fainter the
     // grayer it is, as a gray has no color to lay down
     QColor washColor(const QColor& environmentColor) const;
+
+    // A small picture of the style for picking it: six rooms in its palette, shape and edges joined by its exits, and
+    // the player's room marked as the style marks it, drawn for a screen of that many device pixels to a logical one
+    QPixmap previewPixmap(const QSize& size, qreal devicePixelRatio) const;
+    // previewPixmap() for each ratio of the screens attached, so that it is sharp on every one of them
+    QIcon previewIcon(const QSize& size) const;
+
+    // The Sky post effect's colors at the view's top and foot
+    static constexpr QColor scmSkyTop{207, 226, 238};
+    static constexpr QColor scmSkyFoot{239, 233, 220};
+    // With environmentKits: a building's walls are its environment's color washed this far toward plaster, under a roof
+    // in the color itself; a tree's crown is its environment's color darkened by this much over a trunk of wood; and
+    // the board under the viewed level has a top and a front edge of these
+    static constexpr QColor scmPlaster{236, 224, 200};
+    static constexpr float scmToPlaster = 0.6f;
+    static constexpr QColor scmTrunkColor{107, 74, 42};
+    static constexpr float scmCrownDarkening = 0.6f;
+    static constexpr QColor scmBoardTop{203, 194, 164};
+    static constexpr QColor scmBoardFront{160, 138, 102};
 
     static QString defaultId();
     // In the order the preferences list them
