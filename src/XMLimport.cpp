@@ -778,10 +778,11 @@ void XMLimport::readHost(Host* pHost)
 
     setBoolAttributeWithDefault(qsl("announceIncomingText"), pHost->mAnnounceIncomingText, true);
     setBoolAttributeWithDefault(qsl("advertiseScreenReader"), pHost->mAdvertiseScreenReader, false);
-    // Through the setter: a package carrying a host section is read into a profile whose labels already exist
-    bool accessibleLabels = false;
-    setBoolAttributeWithDefault(qsl("accessibleLabels"), accessibleLabels, false);
-    pHost->setAccessibleLabels(accessibleLabels);
+    // Through the setter: a package carrying a host section is read into a profile whose labels already exist.
+    // Only when it is there, as a package from before the setting would otherwise turn the player's off.
+    if (attributes().hasAttribute(qsl("accessibleLabels"))) {
+        pHost->setAccessibleLabels(attributes().value(qsl("accessibleLabels")) == YES);
+    }
     setBoolAttributeWithDefault(qsl("enableOSC8Hyperlinks"), pHost->mEnableOSC8Hyperlinks, true);
     setBoolAttributeWithDefault(qsl("enableClosedCaption"), pHost->mEnableClosedCaption, false);
     setBoolAttributeWithDefault(qsl("mEnableMTTS"), pHost->mEnableMTTS, true);

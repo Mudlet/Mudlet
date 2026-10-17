@@ -1399,6 +1399,10 @@ void TMainConsole::deleteLabel(const QString& name)
 {
     auto pL = mLabelMap.value(name);
     if (pL) {
+        // Destroyed later, and a destroyed widget leaves the focus with nobody
+        if (pL->hasFocus()) {
+            focusButtonAfter(pL, true);
+        }
         mpHost->windowRegistry().deregisterLabel(name, &pL->model());
         deregisterLabelWidget(pL);
         if (pL->mpMovie) {
@@ -1536,39 +1540,67 @@ std::pair<bool, QString> TMainConsole::deleteScrollBox(const QString& name)
     return {false, qsl("scrollbox name '%1' not found").arg(name)};
 }
 
-QList<QWidget*> TMainConsole::keyboardButtons() const
+namespace {
+bool readsBefore(const QWidget* a, const QWidget* b)
+{
+    const QPoint first = a->mapToGlobal(QPoint());
+    const QPoint second = b->mapToGlobal(QPoint());
+    return first.y() != second.y() ? first.y() < second.y() : first.x() < second.x();
+}
+} // namespace
+
+QList<TLabel*> TMainConsole::keyboardButtons() const
 {
     QList<TLabel*> labels;
     for (TLabel* pLabel : mLabelMap) {
-        if (pLabel && pLabel->isVisible() && pLabel->keyboardOperable()) {
+        // Focus given to a label in a floating user window does not move the keyboard there
+        if (pLabel && pLabel->isVisible() && pLabel->isEnabled() && pLabel->window() == window() && pLabel->keyboardReachable()) {
             labels.append(pLabel);
         }
     }
-    std::sort(labels.begin(), labels.end(), [](const TLabel* a, const TLabel* b) {
-        const QPoint first = a->mapToGlobal(QPoint());
-        const QPoint second = b->mapToGlobal(QPoint());
-        return first.y() != second.y() ? first.y() < second.y() : first.x() < second.x();
-    });
-    return {labels.cbegin(), labels.cend()};
+    std::stable_sort(labels.begin(), labels.end(), readsBefore);
+    return labels;
 }
 
 bool TMainConsole::focusKeyboardButton(bool forward)
 {
-    const QList<QWidget*> buttons = keyboardButtons();
+    const QList<TLabel*> buttons = keyboardButtons();
     if (buttons.isEmpty()) {
         return false;
     }
     mKeyboardButtonsFromCaret = mpHost->caretEnabled();
+#if defined(Q_OS_WINDOWS) || defined(Q_OS_LINUX)
+    // Caret mode holds the keyboard and only lets go of it on a timer, which a key pressed straight away would beat
+    mUpperPane->releaseKeyboard();
+#endif
     (forward ? buttons.first() : buttons.last())->setFocus(forward ? Qt::TabFocusReason : Qt::BacktabFocusReason);
     return true;
 }
 
-void TMainConsole::focusAfterKeyboardButtons()
+void TMainConsole::focusButtonAfter(const TLabel* pLabel, bool next)
 {
+    const QList<TLabel*> buttons = keyboardButtons();
+    TLabel* pTarget = nullptr;
+    if (next) {
+        const auto it = std::find_if(buttons.cbegin(), buttons.cend(), [pLabel](const TLabel* pButton) {
+            return pButton != pLabel && readsBefore(pLabel, pButton);
+        });
+        pTarget = it == buttons.cend() ? nullptr : *it;
+    } else {
+        const auto it = std::find_if(buttons.crbegin(), buttons.crend(), [pLabel](const TLabel* pButton) {
+            return pButton != pLabel && readsBefore(pButton, pLabel);
+        });
+        pTarget = it == buttons.crend() ? nullptr : *it;
+    }
+    if (pTarget) {
+        pTarget->setFocus(next ? Qt::TabFocusReason : Qt::BacktabFocusReason);
+        return;
+    }
     if (std::exchange(mKeyboardButtonsFromCaret, false)) {
         mpHost->setCaretEnabled(true);
+        mUpperPane->moveCaretToLink(next);
     } else if (mpCommandLine) {
-        mpCommandLine->setFocus(Qt::TabFocusReason);
+        mpCommandLine->setFocus(next ? Qt::TabFocusReason : Qt::BacktabFocusReason);
     }
 }
 
