@@ -1082,6 +1082,13 @@ void cTelnet::slot_socketConnected()
     }
 
     mpSocket->setSocketOption(QAbstractSocket::LowDelayOption, 1);
+#if defined(Q_OS_WINDOWS)
+    // Windows fixes a socket's receive buffer at 64 KB, so a burst of game text refills it every
+    // 64 KB with a notifier round trip each time; other platforms size it themselves. The cap on
+    // Qt's own buffer leaves what the queued reads have not caught up with in the socket instead
+    mpSocket->setSocketOption(QAbstractSocket::ReceiveBufferSizeSocketOption, 1024 * 1024);
+    mpSocket->setReadBufferSize(1024 * 1024);
+#endif
     reset();
     setKeepAlive(mpSocket->socketDescriptor());
 
@@ -5955,6 +5962,14 @@ void cTelnet::slot_socketReadyToBeRead()
         finishNetworkLatencyMeasurement();
     }
 
+#if defined(Q_OS_WINDOWS)
+    // This runs inside the socket notifier, which Qt's Windows dispatcher serves ahead of every
+    // timer: reading here as well as in the queued chain would hold the timers off until a flood
+    // was all in. The Unix dispatcher runs timers every turn; there the skip only slows a burst
+    if (mReadPending) {
+        return;
+    }
+#endif
     readPendingSocketData();
 }
 
@@ -5964,11 +5979,13 @@ void cTelnet::slot_socketReadyToBeRead()
 // them as that command's reply would report a latency of nearly nothing.
 void cTelnet::readPendingSocketData()
 {
+    mReadPending = false;
     if (!mpHost || mpHost->isClosingDown() || !mpSocket || mDeferredReconnect) {
         return;
     }
 
     if (readSocketDataOnce()) {
+        mReadPending = true;
         QMetaObject::invokeMethod(this, &cTelnet::readPendingSocketData, Qt::QueuedConnection);
     }
 }
