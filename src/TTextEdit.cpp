@@ -571,7 +571,7 @@ void TTextEdit::layoutLine(int lineNumber, int lineOfScreen, const TChar& timeSt
     }
     int currentSize = lineText.size();
     if (mpConsole->showTimeStamps()) {
-        const QString timestamp = mpBuffer->timeStampText(lineNumber);
+        const QString& timestamp = mLaidOutTimeStamps.emplace_back(mpBuffer->timeStampText(lineNumber));
         for (qsizetype i = 0, total = timestamp.size(); i < total; ++i) {
             // The column argument is not incremented here (is fixed at 0) so
             // the timestamp does not take up any places when it is clicked on
@@ -1597,6 +1597,7 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
     mPreviousLineLayout.clear();
     mCurrentLineLayout.clear();
     mOverflowLineLayout.clear();
+    mLaidOutTimeStamps.clear();
 
     calculateHMaxRange();
     if (Q_UNLIKELY(mpConsole->mHScrollBarEnabled && mpConsole->mpHScrollBar)) {
