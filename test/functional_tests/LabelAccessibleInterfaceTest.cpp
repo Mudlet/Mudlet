@@ -38,6 +38,7 @@
 #include "TAccessibleLabel.h"
 #include "TLabel.h"
 #include "TLuaInterpreter.h"
+#include "TTextEdit.h"
 #include "TMainConsole.h"
 #include "TelnetServerStub.h"
 #include "dlgConnectionProfiles.h"
@@ -341,6 +342,45 @@ private slots:
     }
 
     // A mouse click passes through it to what is underneath, so a screen reader cannot press it either
+    // Through the keys a player has: the command line keeps Tab for completion, so the way in is from the
+    // main window in caret mode, where Tab carries on from the game text's links to the buttons
+    void test_tabReachesTheButtonsFromTheMainWindowAndComesBack()
+    {
+        TTextEdit* pPane = mpHost->mainConsoleView()->mUpperPane;
+        const QString second = qsl("accessibleLabelSecond");
+        auto [created, createMessage] = mpHost->createLabel(qsl("main"), second, 10, 110, 200, 40, true, false);
+        QVERIFY2(created, qPrintable(createMessage));
+        auto restore = qScopeGuard([this, second]() {
+            if (mpHost->caretEnabled()) {
+                mpHost->setCaretEnabled(false);
+            }
+            mpHost->deleteLabel(second);
+        });
+        QVERIFY(runLua(qsl("setConfig('accessibleLabels', true); setLabelClickCallback('%1', function() accessibleLabelClicks = (accessibleLabelClicks or 0) + 1 end); "
+                           "setLabelClickCallback('%2', function() end)")
+                               .arg(mLabelName, second)));
+        mudlet::self()->activateWindow();
+        QVERIFY(QTest::qWaitForWindowActive(mudlet::self()));
+        mpHost->setCaretEnabled(true);
+        QTRY_COMPARE(QApplication::focusWidget(), pPane);
+
+        // the buffer holds no links, so the first Tab goes straight to the buttons, in reading order
+        QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
+        QTRY_COMPARE(QApplication::focusWidget(), static_cast<QWidget*>(label()));
+        QTest::keyClick(QApplication::focusWidget(), Qt::Key_Space);
+        QVERIFY(luaHolds(qsl("accessibleLabelClicks == 1")));
+
+        QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
+        QTRY_COMPARE(QApplication::focusWidget(), static_cast<QWidget*>(mpHost->mainConsoleView()->labelWidget(second)));
+
+        QTest::keyClick(QApplication::focusWidget(), Qt::Key_Tab);
+        QTRY_VERIFY2(mpHost->caretEnabled(), "leaving the last button did not go back to the main window");
+        QTRY_COMPARE(QApplication::focusWidget(), pPane);
+
+        QTest::keyClick(QApplication::focusWidget(), Qt::Key_Backtab, Qt::ShiftModifier);
+        QTRY_COMPARE(QApplication::focusWidget(), static_cast<QWidget*>(mpHost->mainConsoleView()->labelWidget(second)));
+    }
+
     void test_aClickThroughLabelIsNotAButton()
     {
         QVERIFY(runLua(qsl("setLabelClickCallback('%1', function() accessibleLabelClicks = 1 end); enableClickthrough('%1')").arg(mLabelName)));

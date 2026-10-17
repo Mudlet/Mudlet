@@ -75,6 +75,8 @@
 #include <QResizeEvent>
 #include <QVideoWidget>
 
+#include <algorithm>
+#include <utility>
 #include <chrono>
 
 namespace {
@@ -1532,6 +1534,42 @@ std::pair<bool, QString> TMainConsole::deleteScrollBox(const QString& name)
 
     // Message is of the form needed for a Lua API function call run-time error
     return {false, qsl("scrollbox name '%1' not found").arg(name)};
+}
+
+QList<QWidget*> TMainConsole::keyboardButtons() const
+{
+    QList<TLabel*> labels;
+    for (TLabel* pLabel : mLabelMap) {
+        if (pLabel && pLabel->isVisible() && pLabel->keyboardOperable()) {
+            labels.append(pLabel);
+        }
+    }
+    std::sort(labels.begin(), labels.end(), [](const TLabel* a, const TLabel* b) {
+        const QPoint first = a->mapToGlobal(QPoint());
+        const QPoint second = b->mapToGlobal(QPoint());
+        return first.y() != second.y() ? first.y() < second.y() : first.x() < second.x();
+    });
+    return {labels.cbegin(), labels.cend()};
+}
+
+bool TMainConsole::focusKeyboardButton(bool forward)
+{
+    const QList<QWidget*> buttons = keyboardButtons();
+    if (buttons.isEmpty()) {
+        return false;
+    }
+    mKeyboardButtonsFromCaret = mpHost->caretEnabled();
+    (forward ? buttons.first() : buttons.last())->setFocus(forward ? Qt::TabFocusReason : Qt::BacktabFocusReason);
+    return true;
+}
+
+void TMainConsole::focusAfterKeyboardButtons()
+{
+    if (std::exchange(mKeyboardButtonsFromCaret, false)) {
+        mpHost->setCaretEnabled(true);
+    } else if (mpCommandLine) {
+        mpCommandLine->setFocus(Qt::TabFocusReason);
+    }
 }
 
 std::pair<bool, QString> TMainConsole::setLabelToolTip(const QString& name, const QString& text, double duration)
