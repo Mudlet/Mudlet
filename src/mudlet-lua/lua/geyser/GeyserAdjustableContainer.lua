@@ -227,6 +227,7 @@ end
 
 -- internal function to handle the onRelease event of main Adjustable.Container Label
 --- raises an event "AdjustableContainerRepositionFinish", passed values (name, width, height, x, y)
+--- (width, height, x and y are the whole pixels the container's widget was placed at)
 -- @param label the main Adjustable.Container Label
 -- @param event the onRelease event and its information
 function Adjustable.Container:onRelease (label, event)
@@ -234,13 +235,14 @@ function Adjustable.Container:onRelease (label, event)
         if label.cursorShape == "ClosedHand" then
             label:setCursor("OpenHand")
         end
+        local x, y, width, height = self:pixel_geometry()
         raiseEvent(
           "AdjustableContainerRepositionFinish",
           self.name,
-          self.get_width(),
-          self.get_height(),
-          self.get_x(),
-          self.get_y()
+          width,
+          height,
+          x,
+          y
         )
         adjustInfo = {}
     end
@@ -461,15 +463,17 @@ end
 function Adjustable.Container:measureBorder()
     local winw, winh = getMainWindowSize()
     local where = type(self.attached) == "string" and self.attached:lower()
+    -- measured from the edges the widget was placed at, so it never overlaps the console
+    local x, y, width, height = self:pixel_geometry()
 
     if  where == "right" then 
-        self.borderSize = winw+self.attachedMargin-self.get_x()
+        self.borderSize = winw+self.attachedMargin-x
     elseif  where == "left"    then
-        self.borderSize =  self.get_width()+self.get_x()+self.attachedMargin
+        self.borderSize =  width+x+self.attachedMargin
     elseif  where == "bottom"  then 
-        self.borderSize = winh+self.attachedMargin-self.get_y()
+        self.borderSize = winh+self.attachedMargin-y
     elseif  where == "top"     then 
-        self.borderSize = self.get_height()+self.get_y()+self.attachedMargin
+        self.borderSize = height+y+self.attachedMargin
     else
         return false
     end
@@ -1233,17 +1237,19 @@ end
 
 --- overridden reposition function to raise an "AdjustableContainerReposition" event
 --- Event: "AdjustableContainerReposition" passed values (name, width, height, x, y, isMouseAction)
+--- (width, height, x and y are the whole pixels the container's widget was placed at)
 --- (the isMouseAction property is true if the reposition is an effect of user dragging/resizing the window,
 --- and false if the reposition event comes as effect of external action, such as resizing of main window)
 function Adjustable.Container:reposition(skipChildren)
     Geyser.Container.reposition(self, skipChildren)
+    local x, y, width, height = self:pixel_geometry()
     raiseEvent(
       "AdjustableContainerReposition",
       self.name,
-      self.get_width(),
-      self.get_height(),
-      self.get_x(),
-      self.get_y(),
+      width,
+      height,
+      x,
+      y,
       adjustInfo.name == self.adjLabel.name and (adjustInfo.move or adjustInfo.right or adjustInfo.left or adjustInfo.top or adjustInfo.bottom)
     )
 end

@@ -518,6 +518,7 @@ describe("Tests functionality of Adjustable.Container", function()
   describe("Tests the functionality of Adjustable.Container:attachToBorder/detach", function()
     local containers
     local borderBefore
+    local otherBordersBefore
 
     local function make(name, width)
       local container = Adjustable.Container:new({
@@ -533,6 +534,7 @@ describe("Tests functionality of Adjustable.Container", function()
     before_each(function()
       containers = {}
       borderBefore = getBorderLeft()
+      otherBordersBefore = {top = getBorderTop(), right = getBorderRight(), bottom = getBorderBottom()}
     end)
 
     -- Deliberately same named containers share their children's names too, so
@@ -549,11 +551,48 @@ describe("Tests functionality of Adjustable.Container", function()
       end
       containers = {}
       setBorderLeft(borderBefore)
+      setBorderTop(otherBordersBefore.top)
+      setBorderRight(otherBordersBefore.right)
+      setBorderBottom(otherBordersBefore.bottom)
       assert.is_nil(Adjustable.Container.Attached.left.gasAttachPlain)
       assert.is_nil(Adjustable.Container.Attached.left.gasAttachName)
       assert.is_nil(Adjustable.Container.Attached.left.gasDetachName)
       assert.is_nil(Adjustable.Container.Attached.left.gasDetachFresh)
     end)
+
+    -- each fractional edge rounds the way the widget's does, so the border ends
+    -- where the widget does and neither overlaps the other
+    for _, case in ipairs({
+      {where = "left", cons = function() return {x = 0, y = 0, width = "300.5px", height = 100} end},
+      {where = "top", cons = function() return {x = 0, y = 0, width = 100, height = "100.5px"} end},
+      {where = "right", cons = function()
+        return {x = (getMainWindowSize() - 300.5) .. "px", y = 0, width = "300.5px", height = 100}
+      end},
+      {where = "bottom", cons = function()
+        local _, height = getMainWindowSize()
+        return {x = 0, y = (height - 100.5) .. "px", width = 100, height = "100.5px"}
+      end},
+    }) do
+      it("reserves the " .. case.where .. " border up to the widget's rounded edge", function()
+        local getter = _G["getBorder" .. string.title(case.where)]
+        local cons = case.cons()
+        cons.name = "gasAttachHalf" .. case.where
+        cons.attachedMargin = 0
+        cons.autoLoad, cons.autoSave = false, false
+        local container = Adjustable.Container:new(cons)
+        containers[#containers + 1] = container
+        container:attachToBorder(case.where)
+        local widget = {getWindowGeometry(cons.name .. "adjLabel")}
+        local winw, winh = getMainWindowSize()
+        local edge = ({
+          left = widget[1] + widget[3],
+          top = widget[2] + widget[4],
+          right = winw - widget[1],
+          bottom = winh - widget[2],
+        })[case.where]
+        assert.are.equal(edge, getter())
+      end)
+    end
 
     it("reserves a border while attached and gives it back on detach", function()
       local container = make("gasAttachPlain", 200)
@@ -823,9 +862,9 @@ describe("Tests the Adjustable.Container mouse handlers", function()
 
       assert.are.equal("top", container.attached)
       -- the drag stores the height as a percentage, so it comes back as a
-      -- fraction of a pixel and setBorderTop takes the whole part of it
-      local reserved = container:get_height() + container:get_y() + container.attachedMargin
-      assert.are.equal(math.floor(reserved), getBorderTop())
+      -- fraction of a pixel and the border ends at the widget's rounded edge
+      local _, y, _, height = getWindowGeometry(container.name .. "adjLabel")
+      assert.are.equal(y + height + container.attachedMargin, getBorderTop())
       -- and it really did follow the drag: the height it replaced was 200
       assert.is_true(container:get_height() > 200)
     end)
@@ -903,12 +942,43 @@ describe("Tests the Adjustable.Container mouse handlers", function()
       assert.is_true(container:get_width() > 200)
       -- same border, so the follower is given the anchor's new width
       assert.are.equal(container:get_width(), follower:get_width())
-      local reserved = container:get_width() + container:get_x() + container.attachedMargin
-      assert.are.equal(math.floor(reserved), getBorderLeft())
+      -- the drag stores a percentage, so the width is fractional and the border
+      -- has to end at the widget's rounded edge rather than a truncated one
+      local x, _, width = getWindowGeometry(container.name .. "adjLabel")
+      assert.are.equal(x + width + container.attachedMargin, getBorderLeft())
+    end)
+
+    it("reports the pixels its widget was placed at in both reposition events", function()
+      local reported, finished
+      local handler = registerAnonymousEventHandler("AdjustableContainerReposition",
+        function(_, name, width, height, x, y)
+          if name == container.name then
+            reported = {x = x, y = y, width = width, height = height}
+          end
+        end)
+      local finishHandler = registerAnonymousEventHandler("AdjustableContainerRepositionFinish",
+        function(_, name, width, height, x, y)
+          if name == container.name then
+            finished = {x = x, y = y, width = width, height = height}
+          end
+        end)
+      finally(function()
+        killAnonymousEventHandler(handler)
+        killAnonymousEventHandler(finishHandler)
+      end)
+      container:move("33.4px", "10.4px")
+      container:resize("33.4px", "50.6px")
+      local x, y, width, height = getWindowGeometry(container.name .. "adjLabel")
+      local widget = {x = x, y = y, width = width, height = height}
+      assert.are.same({x = 33, y = 10, width = 34, height = 51}, widget)
+      assert.are.same(widget, reported)
+      container:onClick(container.adjLabel, mouseEvent("LeftButton", 10, 10))
+      container:onRelease(container.adjLabel, mouseEvent("LeftButton", 10, 10))
+      assert.are.same(widget, finished)
     end)
 
     -- the only script-visible surface of the reordering, and the suite asserted
-    -- nothing about it before: every other reposition spec watches the Finish
+    -- nothing about it before: every other spec of a drag watches the Finish
     -- event, which a mouse move does not raise
     it("raises AdjustableContainerReposition while the drag is in progress", function()
       local seen = {}
