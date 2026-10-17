@@ -251,6 +251,7 @@ public:
     void setEnableSpellCheck(const bool enable);
     bool getEnableSpellCheck() const { return mEnableSpellCheck; }
     QString getSpellDic() const;
+    static QString startingSpellDic();
     TSpellChecker& spellChecker() { return mSpellChecker; }
     void setUserDictionaryOptions(const bool useDictionary, const bool useShared);
     void getUserDictionaryOptions(bool& useDictionary, bool& useShared)
@@ -286,7 +287,7 @@ public:
     void loadMapAndConnect(bool connect);
     void finishProfileLoad();
 
-    unsigned int assemblePath();
+    qint64 assemblePath();
     bool checkForMappingScript();
     bool checkForCustomSpeedwalk();
 
@@ -444,6 +445,7 @@ public:
     void resetProfile_phase2();
     std::tuple<bool, QString, QString> saveProfile(const QString& saveLocation = QString(), const QString& saveName = QString(), bool syncModules = false);
     std::tuple<bool, QString, QString> saveProfileAs(const QString& fileName);
+    void saveProfileReportingFailure(const QString& saveName = QString());
     void stopAllTriggers();
     void reenableAllTriggers();
 
@@ -494,6 +496,8 @@ public:
     bool hasPendingProfileSave() const { return mDeferredSaveTimer.isActive(); }
     void processDiscordGMCP(const QString& packageMessage, const QString& data);
     void waitForProfileSave();
+    // waitForProfileSave() pumps the event loop with this Host still in use on the stack below it
+    bool waitingForProfileSave() const { return mProfileSaveWaitDepth > 0; }
     void clearDiscordData();
     void processDiscordMSDP(const QString& variable, QString value);
     void setDiscordMode(DiscordMode mode);
@@ -535,6 +539,8 @@ public:
     std::pair<QString, QFont::Weight> parseFontNameAndStyle(const QString& fontName) const;
     // The monospaced font Mudlet bundles and falls back to when a wanted one is missing:
     inline static const QString scmDefaultFontFamily = qsl("Bitstream Vera Sans Mono");
+    // Far past any screen, and far short of the 65536px (49152pt at 96 DPI) where Qt drops the font's family
+    static constexpr int scmMaxFontSize = 1000;
     struct FontFamilyResolution
     {
         QString family;       // family to actually use
@@ -556,6 +562,13 @@ public:
     // alone even when that is not registered, there being nothing better to move
     // it to. Returns true when the display font was changed.
     bool substituteMissingDisplayFont();
+    // The way back from substituteMissingDisplayFont() once a package brings the
+    // family it stood in for. Returns true when the display font was changed.
+    bool restoreMissingDisplayFont();
+    // Fonts are registered for the whole application, so one profile's package can
+    // take away or bring back the family any open profile uses or stood in for
+    static void substituteMissingDisplayFonts();
+    static void restoreMissingDisplayFonts();
     // Every package or module that could own the code a Lua chunk came from, by
     // the "Script: name" style item names or a file's package folder; "" is the profile
     QSet<QString> packagesOwningChunk(const QString& chunkName);
@@ -616,11 +629,12 @@ public:
     QPair<bool, QStringList> getLines(const QString& windowName, const int lineFrom, const int lineTo);
     // Link writes to a console the caller already found by name, so it is looked
     // up once per call and before any command becomes a Lua registry reference.
-    // The console takes over the references.
+    // The console takes over the references, except when insertWindowLink() or
+    // setWindowLink() answers false: then no text got the link and the caller still owns them.
     void echoWindowLink(TConsoleModel& model, const QString& text, QStringList commands, QStringList hints, bool useCurrentFormat, const QVector<int>& luaReferences);
-    void insertWindowLink(TConsoleModel& model, const QString& text, QStringList commands, QStringList hints, bool useCurrentFormat, const QVector<int>& luaReferences);
+    [[nodiscard]] bool insertWindowLink(TConsoleModel& model, const QString& text, QStringList commands, QStringList hints, bool useCurrentFormat, const QVector<int>& luaReferences);
     // Makes the console's selection a link.
-    void setWindowLink(TConsoleModel& model, const QStringList& commands, const QStringList& hints, const QVector<int>& luaReferences);
+    [[nodiscard]] bool setWindowLink(TConsoleModel& model, const QStringList& commands, const QStringList& hints, const QVector<int>& luaReferences);
     // Text writes to the named console, each false for a name that is no console's.
     // Text or a link put into the main console's line while a trigger runs over
     // it, or a replacement there, moves the trigger's captures to follow it.
@@ -708,6 +722,8 @@ public:
         mScreenHeight = height;
     }
     std::optional<QString> windowType(const QString& name) const;
+    // A window a closed main window took with it: the registry still names it, but the null view did not make it
+    bool windowOutOfReach(const QString& name) const;
     std::optional<QRect> windowGeometry(const QString& name) const;
     // {} for no such label.
     std::optional<QString> labelStyleSheet(const QString& name) const;
@@ -755,6 +771,9 @@ public:
     void setFocusOnHostActiveCommandLine();
     QMargins borders() const { return mBorders; }
     QMargins userBorders() const { return mUserBorders; }
+    // The console takes opposite borders off its own size, so they must not overflow
+    // int there; also the range the Profile Preferences border spin boxes offer.
+    static constexpr int scmMaxBorderSize = 1'000'000;
     void setUserBorders(const QMargins);
     void setMxpBorders(const QMargins);
     void loadMap();
@@ -797,6 +816,12 @@ private:
     // the console, so that saving cannot replace the player's choice with the
     // stand-in; empty whenever the console shows the family that was asked for.
     QString mMissingDisplayFontFamily;
+    // The missing family whose return the player has already been told could not be
+    // used, so that every later install does not say it again
+    QString mRefusedDisplayFontFamily;
+    // Set by loadMapAndConnect(): until then the fonts of this profile's own modules may not be
+    // registered yet, so another profile's uninstall must not judge its display font missing
+    bool mDisplayFontCheckReached = false;
     // Co-owned with the main-console view rather than owned outright: mudlet
     // destroys the Host before the lingering console widget, so a Host-owned
     // model would leave the view's aliasing references dangling. Reached
@@ -1370,6 +1395,8 @@ private:
     // runUninstallsDeferredByAnInstall() once the outermost install has finished
     // and the install events it queued have gone out.
     QList<DeferredUninstall> mUninstallsDeferredByAnInstall;
+    // A nested install's fonts are put back only once the outermost install has queued its own events
+    bool mDisplayFontRestoreOwed = false;
     QScopedPointer<LuaInterface> mLuaInterface;
 
     // Experiment system storage: key -> enabled state
@@ -1394,6 +1421,8 @@ private:
     // and the save then reads freed members - closeChildren() and ~Host() stop
     // this one instead (#9653).
     QTimer mDeferredSaveTimer;
+    // A counter, not a flag: a timer in one wait's pump can start another
+    int mProfileSaveWaitDepth = 0;
 
     QFile mErrorLogFile;
 

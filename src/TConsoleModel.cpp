@@ -70,11 +70,15 @@ TConsoleModel::TConsoleModel(Host* pHost)
 QStringList TConsoleModel::lines(int from, int to) const
 {
     QStringList ret;
-    // 64-bit, as from - to overflows an int for a script's extreme arguments
-    const qint64 first = from;
-    const qint64 end = std::min(first + qAbs(first - to), static_cast<qint64>(buffer.lineBuffer.size()));
-    for (qint64 i = std::max<qint64>(first, 0); i < end; ++i) {
-        ret << buffer.lineBuffer.at(i);
+    const qsizetype size = buffer.lineBuffer.size();
+    if (from <= to) {
+        for (qsizetype i = std::max(from, 0), end = std::min<qsizetype>(to, size); i < end; ++i) {
+            ret << buffer.lineBuffer.at(i);
+        }
+    } else {
+        for (qsizetype i = std::min<qsizetype>(from, size - 1), end = std::max(to, -1); i > end; --i) {
+            ret << buffer.lineBuffer.at(i);
+        }
     }
     return ret;
 }
@@ -234,20 +238,22 @@ QPair<quint8, TChar> TConsoleModel::textAttributes() const
 {
     int x = P_begin.x();
     int y = P_begin.y();
+    quint8 missing = 2;
 
     // Fallback to cursor position if no selection is active
     if (P_begin == P_end) {
         x = mUserCursor.x();
         y = mUserCursor.y();
+        missing = 1;
     }
 
     if (y < 0 || x < 0 || y >= static_cast<int>(buffer.buffer.size())) {
-        return qMakePair(2, TChar());
+        return qMakePair(missing, TChar());
     }
 
     const auto& line = buffer.buffer.at(y);
     if (x >= static_cast<int>(line.size())) {
-        return qMakePair(2, TChar());
+        return qMakePair(missing, TChar());
     }
 
     return qMakePair(0, line.at(x));
@@ -437,23 +443,32 @@ TConsoleModel::WriteResult TConsoleModel::insertLink(const QString& text, QStrin
     const QPoint start = mUserCursor;
     const QPoint end(start.x() + text.size(), start.y());
     const TChar format = useCurrentFormat ? mFormatCurrent : standardLinkFormat(mBgColor);
+    // no link can go where the cursor is off every line or left of one, and insertInLine() would
+    // still append the text there, so the refusal comes before anything is written or moved
+    const bool cursorInText = start.x() >= 0 && start.y() >= 0 && start.y() < buffer.size();
     if (mTriggerEngineMode) {
+        if (!cursorInText) {
+            return {false, -1, -1, true};
+        }
         mpHost->getLuaInterpreter()->adjustCaptureGroups(start.x(), text.size());
         QPoint at = start;
         buffer.insertInLine(at, text, format);
-        buffer.applyLink(start, end, commands, hints, luaReferences);
+        const bool linkDropped = !buffer.applyLink(start, end, commands, hints, luaReferences);
         if (start.y() < mEngineCursor) {
-            return {false, mUserCursor.y(), mUserCursor.y()};
+            return {false, mUserCursor.y(), mUserCursor.y(), linkDropped};
         }
-        return {};
+        return {false, -1, -1, linkDropped};
     }
     if (buffer.buffer.empty() || mUserCursor == buffer.getEndPos()) {
         buffer.addLink(mTriggerEngineMode, text, commands, hints, format, luaReferences);
         return {true};
     }
+    if (!cursorInText) {
+        return {false, -1, -1, true};
+    }
 
     buffer.insertInLine(mUserCursor, text, format);
-    buffer.applyLink(start, end, commands, hints, luaReferences);
+    const bool linkDropped = !buffer.applyLink(start, end, commands, hints, luaReferences);
     const int line = mUserCursor.y();
     int newX = mUserCursor.x() + text.size();
     int down = 0;
@@ -465,7 +480,7 @@ TConsoleModel::WriteResult TConsoleModel::insertLink(const QString& text, QStrin
     if (buffer.moveCursor(newCursor)) {
         mUserCursor = QPoint(newX, line + down);
     }
-    return {false, line, line + down};
+    return {false, line, line + down, linkDropped};
 }
 
 bool TConsoleModel::echo(QString& text)
