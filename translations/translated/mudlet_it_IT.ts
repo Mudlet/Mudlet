@@ -20877,7 +20877,7 @@ you can use it but there could be issues with aligning columns of text</source>
       <location filename="../src/ui/profile_preferences.ui" line="5082"/>
       <source>Copy</source>
       <extracomment>Label of the button that copies the MCP server&apos;s address to the clipboard.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Copia</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="5127"/>
@@ -20895,13 +20895,13 @@ you can use it but there could be issues with aligning columns of text</source>
       <location filename="../src/ui/profile_preferences.ui" line="5145"/>
       <source>Advanced</source>
       <extracomment>Label of the button that folds out the MCP server&apos;s less commonly needed settings.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Avanzate</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="5185"/>
       <source>Port:</source>
       <extracomment>Label in front of the number entry for the network port the MCP server listens on.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Porta:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="5195"/>
