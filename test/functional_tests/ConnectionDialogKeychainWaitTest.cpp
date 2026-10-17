@@ -37,7 +37,9 @@
 
 #include <QLabel>
 #include <QPushButton>
+#include <QScopeGuard>
 #include <QSignalBlocker>
+#include <QStandardPaths>
 #include <chrono>
 
 #include "GroupedTest.h"
@@ -412,6 +414,33 @@ private slots:
         QVERIFY2(!dlg->mKeychainWaitShown, "The dialog is still in its waiting-for-the-keychain state");
         QVERIFY2(dlg->mPendingProfileLoad.isEmpty(), "The queued load was left queued");
         QVERIFY2(!dlg->completePendingProfileLoad(mProfileName), "A keychain answer arriving late ran the queued load a second time");
+    }
+
+    // With nowhere to keep the key that would encrypt it, the password is not saved, and only a log
+    // line would say so
+    void test_aPasswordThatCannotBeSavedIsReported()
+    {
+        const QString profile = qsl("ConnDialogUnsavablePassword-Test");
+        const QString profileKeyDir = qsl("%1/profiles/%2").arg(QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation), profile);
+        auto* dlg = new dlgConnectionProfiles(mudlet::self());
+        auto cleanup = qScopeGuard([dlg, profileKeyDir] {
+            dlg->deleteLater();
+            QDir(profileKeyDir).removeRecursively();
+        });
+        // A directory where the key file belongs makes it impossible to write
+        QVERIFY(QDir().mkpath(profileKeyDir + qsl("/encryption_key")));
+        QVERIFY2(dlg->notificationAreaMessageBox->text().isEmpty(), "a fresh dialog already shows a notification, so this test cannot tell whether the failure added one");
+
+        dlg->writeSecurePassword(profile, qsl("cannot-be-protected"));
+
+        QVERIFY2(QTest::qWaitFor(
+                         [dlg]() {
+                             return !dlg->notificationAreaMessageBox->text().isEmpty();
+                         },
+                         5s),
+                 "a password that could not be saved left the dialog saying nothing");
+        QVERIFY(dlg->notificationAreaMessageBox->text().contains(profile));
+        QVERIFY2(!dlg->notificationAreaIconLabelWarning->isHidden(), "the failure is not shown as a warning");
     }
 };
 

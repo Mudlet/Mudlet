@@ -50,7 +50,7 @@ public:
      * @brief Encrypt a string using a profile-specific encryption key
      * @param plaintext The string to encrypt
      * @param profileName Name of the profile (used for key lookup)
-     * @return Base64-encoded encrypted string, or empty string if input is empty
+     * @return Base64-encoded encrypted string, or empty string if input is empty or no key could be stored for the profile
      */
     static QString encryptStringForProfile(const QString& plaintext, const QString& profileName);
 
@@ -58,9 +58,11 @@ public:
      * @brief Decrypt a string using a profile-specific encryption key
      * @param ciphertext Base64-encoded encrypted string
      * @param profileName Name of the profile (used for key lookup)
-     * @return Decrypted plaintext, or empty string if input is empty/invalid
+     * @param usedDerivableKey If given, set to whether only the key anyone can derive from the
+     *        profile name decrypted it, so the caller can re-encrypt it
+     * @return Decrypted plaintext, or empty string if input is empty/invalid or neither key decrypts it
      */
-    static QString decryptStringForProfile(const QString& ciphertext, const QString& profileName);
+    static QString decryptStringForProfile(const QString& ciphertext, const QString& profileName, bool* usedDerivableKey = nullptr);
 
     /**
      * @brief Check if a string appears to be in encrypted format
@@ -205,9 +207,17 @@ private:
     /**
      * @brief Get or create a profile-specific encryption key
      * @param profileName Name of the profile
-     * @return 32-byte encryption key for the profile
+     * @return 32-byte encryption key for the profile, or empty if no key could be stored
      */
     static QByteArray getProfileEncryptionKey(const QString& profileName);
+
+    /**
+     * @brief The key older Mudlets encrypted with when no key could be stored, which anyone can derive
+     *        from the profile name - only ever used to decrypt what they wrote
+     * @param profileName Name of the profile
+     * @return 32-byte key
+     */
+    static QByteArray legacyProfileEncryptionKey(const QString& profileName);
 
     /**
      * @brief Load encryption key from profile directory file
