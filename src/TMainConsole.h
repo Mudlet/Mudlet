@@ -449,6 +449,8 @@ private:
     QList<QPointer<TToolBar>> mToolBarLayoutChanges;
 
     QPointer<TPasswordEntry> mpPasswordEntry;
+    // What the open box took from the command line, not yet the player's hidden input
+    QString mPasswordEntryTypedAhead;
 
     bool mEnableClose = false;
     std::unique_ptr<TMxpFrameWidgets> mpMxpFrameWidgets;

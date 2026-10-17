@@ -283,7 +283,6 @@ public:
     // A flag rather than a timer query, so every transition makes the Host
     // recompute its hidden-input policy
     bool autoLoginPending() const { return mAutoLoginPending; }
-    bool echoAnomalyDetected() const { return mEchoAnomalyDetected; }
     bool autoLoginTimersRunning() const;
     // Called when a password turns up after the auto-login already reached the password step -
     // a keychain read the user only answered by then. Sends it only while the game is provably
