@@ -122,6 +122,20 @@ int TLuaInterpreter::downloadFile(lua_State* L)
     if (!url.isValid()) {
         return warnArgumentValue(L, __func__, qsl("url is invalid, reason: %1").arg(url.errorString()));
     }
+    // A local file is only copied to a path the script chose, not handed back in the event, and
+    // scripts rely on that (the generic mapper's download_path may be a local folder)
+    if (!httpSchemeAllowed(url) && !url.isLocalFile()) {
+        return warnArgumentValue(L, __func__, qsl("url is invalid, reason: unsupported scheme '%1', only http, https and file are allowed").arg(url.scheme()));
+    }
+    // isLocalFile() ignores the host, and on Windows Qt opens file://host/share as a UNC path
+    if (url.isLocalFile() && !url.host().isEmpty() && url.host().compare(qsl("localhost"), Qt::CaseInsensitive)) {
+        return warnArgumentValue(L, __func__, qsl("url is invalid, reason: file url names host '%1', only local files are allowed").arg(url.host()));
+    }
+    // With no host the path can still name a share: on Windows file:////host/share opens a UNC path
+    // path(), not toLocalFile(): the latter puts an allowed localhost back in front as //localhost
+    if (const QString path = url.path(QUrl::FullyDecoded); url.isLocalFile() && QString(path).replace(QLatin1Char('\\'), QLatin1Char('/')).startsWith(qsl("//"))) {
+        return warnArgumentValue(L, __func__, qsl("url is invalid, reason: file url names a network path '%1', only local files are allowed").arg(path));
+    }
 
     QNetworkRequest request = QNetworkRequest(url);
     MudletApp::setNetworkRequestDefaults(url, request);
@@ -666,6 +680,14 @@ int TLuaInterpreter::setIrcServer(lua_State* L)
     return 2;
 }
 
+// file:, qrc:, data: and the like would hand local or bundled content back to
+// a script (or to the game that supplied the url) as though it were a download
+/*static*/ bool TLuaInterpreter::httpSchemeAllowed(const QUrl& url)
+{
+    const QString scheme = url.scheme();
+    return !scheme.compare(qsl("http"), Qt::CaseInsensitive) || !scheme.compare(qsl("https"), Qt::CaseInsensitive);
+}
+
 // Validates the optional headers table at Lua stack index `index`: it must be
 // absent/nil, or a table whose keys and values are all strings, otherwise a Lua
 // error is raised. This has to run before any QUrl or QNetworkRequest is
@@ -682,14 +704,14 @@ int TLuaInterpreter::setIrcServer(lua_State* L)
     }
     lua_pushnil(L);
     while (lua_next(L, index) != 0) {
-        // key at index -2 and value at index -1
-        if (lua_type(L, -1) != LUA_TSTRING || lua_type(L, -2) != LUA_TSTRING) {
-            lua_pushfstring(L,
-                            "%s: bad argument #%d type (custom headers must be strings, got header: %s (should be string) and value: %s (should be string))",
-                            functionName,
-                            index,
-                            luaL_typename(L, -2),
-                            luaL_typename(L, -1));
+        // Name first: quoting a non-string key would blame its value and print a number
+        // key as its digits, or any other key as "(null)"
+        if (lua_type(L, -2) != LUA_TSTRING) {
+            lua_pushfstring(L, "%s: bad argument #%d type (custom header names must be strings, got %s)", functionName, index, luaL_typename(L, -2));
+            lua_error(L);
+        }
+        if (lua_type(L, -1) != LUA_TSTRING) {
+            lua_pushfstring(L, "%s: bad argument #%d type (custom header \"%s\" must have a string value, got %s)", functionName, index, lua_tostring(L, -2), luaL_typename(L, -1));
             lua_error(L);
         }
         // removes value, but keeps key for next iteration
@@ -724,6 +746,9 @@ int TLuaInterpreter::getHTTP(lua_State* L)
     const QUrl url = QUrl::fromUserInput(QString{lua_tostring(L, 1)});
     if (!url.isValid()) {
         return warnArgumentValue(L, __func__, qsl("url is invalid, reason: %1").arg(url.errorString()));
+    }
+    if (!httpSchemeAllowed(url)) {
+        return warnArgumentValue(L, __func__, qsl("url is invalid, reason: unsupported scheme '%1', only http and https are allowed").arg(url.scheme()));
     }
 
     QNetworkRequest request = QNetworkRequest(url);
@@ -766,6 +791,9 @@ int TLuaInterpreter::deleteHTTP(lua_State* L)
     const QUrl url = QUrl::fromUserInput(QString{lua_tostring(L, 1)});
     if (!url.isValid()) {
         return warnArgumentValue(L, __func__, qsl("url is invalid, reason: %1").arg(url.errorString()));
+    }
+    if (!httpSchemeAllowed(url)) {
+        return warnArgumentValue(L, __func__, qsl("url is invalid, reason: unsupported scheme '%1', only http and https are allowed").arg(url.scheme()));
     }
 
     QNetworkRequest request = QNetworkRequest(url);

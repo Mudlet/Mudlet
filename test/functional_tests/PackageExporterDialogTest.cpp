@@ -21,6 +21,7 @@
 #include <QDialogButtonBox>
 #include <QElapsedTimer>
 #include <QFileDialog>
+#include <QFutureWatcher>
 #include <QGroupBox>
 #include <QImage>
 #include <QLabel>
@@ -31,6 +32,7 @@
 #include <QStandardPaths>
 #include <QTemporaryDir>
 #include <QTextEdit>
+#include <QThreadPool>
 #include <QTimer>
 #include <QTreeWidget>
 #include <QtTest/QtTest>
@@ -137,6 +139,31 @@ private:
     // The Export button carries the ApplyRole so that pressing it does not close
     // the dialog, which is also how it is told apart from Close and Cancel.
     QPushButton* exportButton() const { return mpExporter->findChild<QDialogButtonBox*>(qsl("buttonBox"))->button(QDialogButtonBox::Apply); }
+    static QPushButton* exportButtonOf(dlgPackageExporter* exporter) { return exporter->findChild<QDialogButtonBox*>(qsl("buttonBox"))->button(QDialogButtonBox::Apply); }
+
+    // Cancel has the ResetRole, and is only shown while an export can still be stopped
+    bool clickCancel()
+    {
+        auto* box = mpExporter->findChild<QDialogButtonBox*>(qsl("buttonBox"));
+        for (auto* button : box->buttons()) {
+            if (box->buttonRole(button) == QDialogButtonBox::ResetRole && !button->isHidden()) {
+                button->click();
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // A second exporter, open alongside mpExporter, with the named trigger ticked
+    std::unique_ptr<dlgPackageExporter> openAnotherExporter(const QString& packageName, const QString& triggerName)
+    {
+        auto other = std::make_unique<dlgPackageExporter>(nullptr, mpHost);
+        if (auto* item = itemNamed(other->findChild<QTreeWidget*>(qsl("treeWidget_exportSelection"))->topLevelItem(0), triggerName)) {
+            item->setCheckState(0, Qt::Checked);
+        }
+        other->findChild<QLineEdit*>(qsl("lineEdit_packageName"))->setText(packageName);
+        return other;
+    }
 
     QTreeWidgetItem* triggersTop() const { return tree()->topLevelItem(0); }
     QTreeWidgetItem* aliasesTop() const { return tree()->topLevelItem(1); }
@@ -379,10 +406,7 @@ private:
         return file.readAll();
     }
 
-    void deleteProfileDirectory()
-    {
-        TestProfile::removeProfileDirectory(mProfileName);
-    }
+    void deleteProfileDirectory() { TestProfile::removeProfileDirectory(mProfileName); }
 
 private slots:
     void initTestCase()
@@ -1316,6 +1340,195 @@ private slots:
 
         packageList->setCurrentIndex(withoutIconIndex);
         QVERIFY2(iconLabel->isHidden(), "the icon label was left showing for a package that has no icon");
+    }
+
+    // The zip's finished handler dies with the dialog, so the dialog's destructor
+    // has to wind the export up: cursor, lock and watcher
+    void test_closingTheDialogMidExportLeavesExportingPossible_10441()
+    {
+        const QString packageName = packageNamed(qsl("exporter-closed-mid-export"));
+        makeTrigger(qsl("exporter mid-export trigger"), nullptr);
+        openExporter();
+        QVERIFY(checkItem(triggersTop(), qsl("exporter mid-export trigger")));
+        nameField()->setText(packageName);
+        QVERIFY2(!QApplication::overrideCursor(), "a cursor was already overridden before the export began");
+
+        mpExporter->slot_exportPackage();
+        QVERIFY2(infoLabel()->text().contains(qsl("Exporting package...")), qPrintable(qsl("The zip was never started; the dialog said: \"%1\"").arg(infoLabel()->text())));
+        // no event loop has run since, so the export's finished handler cannot have
+        delete mpExporter;
+        mpExporter = nullptr;
+        QVERIFY2(!QApplication::overrideCursor(), "the busy cursor was left up after the exporting dialog went away");
+
+        openExporter();
+        QVERIFY(checkItem(triggersTop(), qsl("exporter mid-export trigger")));
+        nameField()->setText(packageNamed(qsl("exporter-after-closed-export")));
+        QVERIFY2(!exportButton()->isEnabled(), "another export was offered while the closed dialog's zip could still be reading its staging folder");
+        QVERIFY2(QThreadPool::globalInstance()->waitForDone(30000), "the zip was still running after 30 seconds");
+        QVERIFY2(QFileInfo::exists(packagePath(packageName)), "closing the dialog stopped its package from being written");
+        // the zip's end is reported through the event loop, and no field is touched to re-check the button
+        QTRY_VERIFY2(exportButton()->isEnabled(), qPrintable(qsl("Exporting stayed blocked after the dialog that was exporting went away; the button said: \"%1\"").arg(exportButton()->toolTip())));
+        QTRY_VERIFY2(qApp->findChildren<QFutureWatcherBase*>(Qt::FindDirectChildrenOnly).isEmpty(), "the closed dialog's zip watcher was never deleted");
+    }
+
+    void test_aZipThatFailsAfterItsDialogClosedIsLogged()
+    {
+        const QString packageName = packageNamed(qsl("exporter-fails-after-close"));
+        makeTrigger(qsl("exporter fails after close trigger"), nullptr);
+        openExporter();
+        QVERIFY(checkItem(triggersTop(), qsl("exporter fails after close trigger")));
+        nameField()->setText(packageName);
+        // a folder where the package file goes makes the zip fail; permissions would not stop root
+        QVERIFY(QDir().mkpath(packagePath(packageName)));
+        answerNextMessageBox(QMessageBox::Yes);
+
+        mpExporter->slot_exportPackage();
+        QVERIFY2(infoLabel()->text().contains(qsl("Exporting package...")), qPrintable(qsl("The zip was never started; the dialog said: \"%1\"").arg(infoLabel()->text())));
+        delete mpExporter;
+        mpExporter = nullptr;
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("exporting \"%1\" failed after its dialog was closed").arg(packageName)));
+        QVERIFY2(QThreadPool::globalInstance()->waitForDone(30000), "the zip was still running after 30 seconds");
+        QTRY_VERIFY2(qApp->findChildren<QFutureWatcherBase*>(Qt::FindDirectChildrenOnly).isEmpty(), "the closed dialog's zip watcher was never deleted");
+    }
+
+    // Cancel only asks the zip to stop; until it has, its staging folder may still be read
+    void test_cancellingHoldsEveryExportOffUntilTheZipHasStopped()
+    {
+#if !defined(LIBZIP_SUPPORTS_CANCELLING)
+        QSKIP("this libzip cannot cancel an export");
+#endif
+        const QString packageName = packageNamed(qsl("exporter-cancelled-mid-zip"));
+        makeTrigger(qsl("exporter mid-zip cancel trigger"), nullptr);
+        openExporter();
+        QVERIFY(checkItem(triggersTop(), qsl("exporter mid-zip cancel trigger")));
+        nameField()->setText(packageName);
+
+        mpExporter->slot_exportPackage();
+        QVERIFY2(clickCancel(), "the Cancel button was not showing during the export");
+        QVERIFY2(!exportButton()->isEnabled(), "Export was offered again before the cancelled zip had stopped");
+        auto other = openAnotherExporter(packageNamed(qsl("exporter-while-cancelling")), qsl("exporter mid-zip cancel trigger"));
+        QVERIFY2(!exportButtonOf(other.get())->isEnabled(), "another exporter offered Export while the cancelled zip was still running");
+        other->slot_exportPackage();
+        const QString otherSaid = other->findChild<QLabel*>(qsl("infoLabel"))->text();
+        QVERIFY2(otherSaid.contains(qsl("still being exported")), qPrintable(qsl("A second export was started alongside the cancelled one; it said: \"%1\"").arg(otherSaid)));
+
+        QVERIFY(waitForExportToSettle());
+        QTRY_VERIFY2(exportButton()->isEnabled(), "Export stayed off after the cancelled zip had stopped");
+        QVERIFY2(exportButtonOf(other.get())->isEnabled(), "the other exporter was not told the cancelled zip had stopped");
+        QVERIFY2(!QApplication::overrideCursor(), "the busy cursor was left up");
+    }
+
+    // The lock is shared, so an exporter that was open before the export began is held off too
+    void test_anExporterAlreadyOpenIsHeldOffWhileAnotherExports()
+    {
+        makeTrigger(qsl("exporter already open trigger"), nullptr);
+        const QString otherName = packageNamed(qsl("exporter-already-open"));
+        {
+            QFile existing(packagePath(otherName));
+            QVERIFY(existing.open(QIODevice::WriteOnly));
+        }
+        openExporter();
+        QVERIFY(checkItem(triggersTop(), qsl("exporter already open trigger")));
+        nameField()->setText(packageNamed(qsl("exporter-opened-first")));
+        auto other = openAnotherExporter(otherName, qsl("exporter already open trigger"));
+        QVERIFY2(exportButtonOf(other.get())->isEnabled(), "the other exporter did not offer Export before any export began");
+
+        mpExporter->slot_exportPackage();
+        QVERIFY2(infoLabel()->text().contains(qsl("Exporting package...")), qPrintable(qsl("The zip was never started; the dialog said: \"%1\"").arg(infoLabel()->text())));
+        QVERIFY2(!exportButtonOf(other.get())->isEnabled(), "an exporter that was already open still offered Export while another export ran");
+        // answered so that a prompt shown in error cannot hang the test
+        answerNextMessageBox(QMessageBox::Yes);
+        other->slot_exportPackage();
+        QVERIFY2(mAnsweredMessageBoxes == 0, "the user was asked to overwrite a package that could not be exported yet");
+        const QString otherSaid = other->findChild<QLabel*>(qsl("infoLabel"))->text();
+        QVERIFY2(otherSaid.contains(qsl("still being exported")), qPrintable(qsl("A second export was started alongside the first; it said: \"%1\"").arg(otherSaid)));
+
+        QVERIFY(waitForExportToSettle());
+        QTRY_VERIFY2(exportButtonOf(other.get())->isEnabled(), "the other exporter was not told the export had ended");
+    }
+
+    // An uninstall refused while a profile save runs is one of the export's exits
+    void test_aModuleWhoseOldCopyCannotBeRemovedLetsGoOfItsExport()
+    {
+        const QString moduleName = packageNamed(qsl("exporter-module-not-removed"));
+        makeTrigger(qsl("exporter module not removed trigger"), nullptr);
+        openExporter();
+        mpExporter->setModuleCreationMode(true);
+        QVERIFY(checkItem(triggersTop(), qsl("exporter module not removed trigger")));
+        settleSaves();
+        nameField()->setText(moduleName);
+        mpExporter->slot_exportPackage();
+        QVERIFY(waitForExportToSettle());
+        QVERIFY2(mpHost->mInstalledModules.contains(moduleName), qPrintable(qsl("The module was not installed the first time round: \"%1\"").arg(infoLabel()->text())));
+        QTRY_VERIFY(mpExporter->findChildren<QFutureWatcherBase*>().isEmpty());
+
+        settleSaves();
+        nameField()->setText(moduleName);
+        answerNextMessageBox(QMessageBox::Yes);
+        mpExporter->slot_exportPackage();
+        mpHost->mWritingHostAndModules = true;
+        const bool settled = waitForExportToSettle();
+        mpHost->mWritingHostAndModules = false;
+        QVERIFY(settled);
+
+        QVERIFY2(infoLabel()->text().contains(qsl("failed to uninstall existing version")), qPrintable(qsl("The uninstall was not refused; the dialog said: \"%1\"").arg(infoLabel()->text())));
+        QTRY_VERIFY2(mpExporter->findChildren<QFutureWatcherBase*>().isEmpty(), "the export's zip watcher was left behind");
+        QVERIFY2(!QApplication::overrideCursor(), "the busy cursor was left up");
+    }
+
+    // processEvents() inside the export can run whatever deletes the dialog
+    void test_deletingTheDialogWhileTheExportGetsReadyEndsIt()
+    {
+        makeTrigger(qsl("exporter deleted early trigger"), nullptr);
+        openExporter();
+        QVERIFY(checkItem(triggersTop(), qsl("exporter deleted early trigger")));
+        nameField()->setText(packageNamed(qsl("exporter-deleted-early")));
+        dlgPackageExporter* exporter = mpExporter;
+        QMetaObject::invokeMethod(
+                this,
+                [this]() {
+                    delete mpExporter;
+                    mpExporter = nullptr;
+                },
+                Qt::QueuedConnection);
+
+        exporter->slot_exportPackage();
+        QVERIFY2(!mpExporter, "the dialog was not deleted while the export got ready");
+        QVERIFY2(!QApplication::overrideCursor(), "the busy cursor was left up");
+        auto other = openAnotherExporter(packageNamed(qsl("exporter-after-deleted-early")), qsl("exporter deleted early trigger"));
+        QVERIFY2(exportButtonOf(other.get())->isEnabled(), "exporting stayed blocked after the dialog was deleted");
+    }
+
+    // Cancel is shown, and the event loop runs, before the zip is started
+    void test_cancellingBeforeTheZipStartsStopsThePackageBeingWritten()
+    {
+#if !defined(LIBZIP_SUPPORTS_CANCELLING)
+        QSKIP("this libzip cannot cancel an export");
+#endif
+        const QString packageName = packageNamed(qsl("exporter-cancelled-early"));
+        makeTrigger(qsl("exporter early cancel trigger"), nullptr);
+        openExporter();
+        QVERIFY(checkItem(triggersTop(), qsl("exporter early cancel trigger")));
+        nameField()->setText(packageName);
+
+        bool cancelClicked = false;
+        QMetaObject::invokeMethod(
+                this,
+                [this, &cancelClicked]() {
+                    auto* box = mpExporter->findChild<QDialogButtonBox*>(qsl("buttonBox"));
+                    for (auto* button : box->buttons()) {
+                        if (box->buttonRole(button) == QDialogButtonBox::ResetRole && !button->isHidden()) {
+                            button->click();
+                            cancelClicked = true;
+                        }
+                    }
+                },
+                Qt::QueuedConnection);
+        mpExporter->slot_exportPackage();
+        QVERIFY2(cancelClicked, "the Cancel button was not showing while the export was getting ready");
+        QVERIFY(waitForExportToSettle());
+        QVERIFY2(infoLabel()->text().contains(qsl("Export cancelled.")), qPrintable(qsl("Cancelling did not stop the export; the dialog said: \"%1\"").arg(infoLabel()->text())));
+        QVERIFY2(!QFileInfo::exists(packagePath(packageName)), "the package was written although the export was cancelled");
     }
 
     // The recount waits for a zero timer and only one is armed at a time, so a
