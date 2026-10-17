@@ -43,6 +43,15 @@
 
 using namespace std::chrono_literals;
 
+namespace {
+void notifyAccessibility(QWidget* widget, QAccessible::Event type)
+{
+    // updateAccessibility() does nothing while no screen reader has made accessibility active
+    QAccessibleEvent event(widget, type);
+    QAccessible::updateAccessibility(&event);
+}
+} // namespace
+
 TLabel::TLabel(Host* pH, const QString& name, QWidget* pW)
 : QLabel(pW)
 , mpModel(std::make_unique<TLabelModel>(pH, name))
@@ -71,8 +80,8 @@ TLabel::TLabel(Host* pH, const QString& name, QWidget* pW)
     setTextFormat(Qt::RichText);
     setTextInteractionFlags(Qt::NoTextInteraction);
     setOpenExternalLinks(false);
-    mpModel->mAccessibilityChanged = [this]() {
-        updateKeyboardAccess();
+    mpModel->mAccessibilityChanged = [this](TLabelModel::AccessibilityChange change) {
+        accessibilityChanged(change);
     };
     updateKeyboardAccess();
 
@@ -115,10 +124,7 @@ void TLabel::showLinkStyledText(const QString& text)
     stopMovie();
     QLabel::setText(text);
     mpModel->mText = QLabel::text();
-    if (QAccessible::isActive() && mpModel->mAccessibleName.isEmpty()) {
-        QAccessibleEvent event(this, QAccessible::NameChanged);
-        QAccessible::updateAccessibility(&event);
-    }
+    derivedNameMayHaveChanged();
 }
 
 void TLabel::press()
@@ -127,12 +133,16 @@ void TLabel::press()
     QMouseEvent pressEvent(QEvent::MouseButtonPress, centre, mapToGlobal(centre), Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
     // The click callback may delete the label: deleteLabel() deregisters it at once but destroys it later
     QPointer<TLabel> self(this);
+    mScreenReaderPress = true;
     mousePressEvent(&pressEvent);
-    if (!self || !mpHost || mpHost->windowRegistry().labelModel(mName) != mpModel.get()) {
+    if (!self) {
         return;
     }
-    QMouseEvent releaseEvent(QEvent::MouseButtonRelease, centre, mapToGlobal(centre), Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
-    mouseReleaseEvent(&releaseEvent);
+    if (mpHost && mpHost->windowRegistry().labelModel(mName) == mpModel.get()) {
+        QMouseEvent releaseEvent(QEvent::MouseButtonRelease, centre, mapToGlobal(centre), Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+        mouseReleaseEvent(&releaseEvent);
+    }
+    mScreenReaderPress = false;
 }
 
 bool TLabel::keyboardOperable() const
@@ -174,10 +184,32 @@ void TLabel::focusOutEvent(QFocusEvent* event)
     update();
 }
 
-void TLabel::setAuthoredAccessibleName(const QString& name)
+bool TLabel::showsImage() const
 {
-    mpModel->mAccessibleName = name;
-    setAccessibleName(name);
+    return !pixmap().isNull() || mpSvgRenderer;
+}
+
+void TLabel::derivedNameMayHaveChanged()
+{
+    if (mpModel->mAccessibleName.isEmpty()) {
+        notifyAccessibility(this, QAccessible::NameChanged);
+    }
+}
+
+void TLabel::accessibilityChanged(TLabelModel::AccessibilityChange change)
+{
+    if (change == TLabelModel::AccessibilityChange::Name) {
+        notifyAccessibility(this, QAccessible::NameChanged);
+        return;
+    }
+    updateKeyboardAccess();
+    if (change == TLabelModel::AccessibilityChange::KeyboardAccess) {
+        return;
+    }
+#if QT_VERSION >= QT_VERSION_CHECK(6, 11, 0)
+    notifyAccessibility(this, QAccessible::RoleChanged);
+#endif
+    notifyAccessibility(this, QAccessible::ActionChanged);
 }
 
 bool TLabel::carriesLink() const
@@ -190,7 +222,7 @@ void TLabel::mousePressEvent(QMouseEvent* event)
     // QLabel needs the press to note the link so the release can activate it; with links-only flags it
     // leaves the press ignored, so the label's own click callback still runs.
     bool takenByQt = false;
-    if (carriesLink()) {
+    if (carriesLink() && !mScreenReaderPress) {
         QLabel::mousePressEvent(event);
         takenByQt = event->isAccepted();
     }
@@ -219,7 +251,7 @@ void TLabel::mouseDoubleClickEvent(QMouseEvent* event)
 void TLabel::mouseReleaseEvent(QMouseEvent* event)
 {
     bool takenByQt = false;
-    if (carriesLink()) {
+    if (carriesLink() && !mScreenReaderPress) {
         QLabel::mouseReleaseEvent(event);
         takenByQt = event->isAccepted();
     }
@@ -413,6 +445,7 @@ bool TLabel::setBackgroundImage(const QString& path)
     setPixmap(raster);
     // setPixmap() empties the text
     mpModel->mText = text();
+    derivedNameMayHaveChanged();
     return true;
 }
 
@@ -563,6 +596,7 @@ void TLabel::contextMenuEvent(QContextMenuEvent* event)
 void TLabel::setClickThrough(bool clickthrough)
 {
     setAttribute(Qt::WA_TransparentForMouseEvents, clickthrough);
+    mpModel->setClickThrough(clickthrough);
 
     // If clickthrough is enabled, text interaction (including hyperlinks) won't work
     // So we need to disable text interaction when clickthrough is on
@@ -620,6 +654,7 @@ bool TLabel::event(QEvent* event)
 {
     if (event->type() == QEvent::ToolTipChange) {
         mpModel->mToolTip = toolTip();
+        derivedNameMayHaveChanged();
     }
     const bool handled = QLabel::event(event);
     // A qproperty-text in a style sheet reaches QLabel::setText() directly, as the style is applied

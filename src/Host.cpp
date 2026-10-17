@@ -5684,7 +5684,7 @@ void Host::setAccessibleLabels(const bool state)
     }
     mAccessibleLabels = state;
     for (const TLabelModel* pModel : mWindowRegistry.labelModels()) {
-        pModel->accessibilityChanged();
+        pModel->accessibilityChanged(TLabelModel::AccessibilityChange::KeyboardAccess);
     }
     raiseSettingChangedEvent(qsl("accessibleLabels"), state);
 }
@@ -6231,6 +6231,20 @@ bool Host::setLabelClickCallback(const QString& name, const int func)
     auto* pModel = mWindowRegistry.labelModel(name);
     if (pModel) {
         pModel->setClick(func);
+        return true;
+    }
+    return false;
+}
+
+bool Host::setLabelAccessibleName(const QString& name, const QString& accessibleName)
+{
+    if (!hasConsoleView()) {
+        return false;
+    }
+
+    auto* pModel = mWindowRegistry.labelModel(name);
+    if (pModel) {
+        pModel->setAccessibleName(accessibleName);
         return true;
     }
     return false;

@@ -38,7 +38,14 @@ bool TAccessibleLabel::actsAsButton() const
 
 QAccessible::Role TAccessibleLabel::role() const
 {
-    return actsAsButton() ? QAccessible::Button : QAccessible::StaticText;
+    if (actsAsButton()) {
+        return QAccessible::Button;
+    }
+    // As Qt's own interface for a QLabel reports them
+    if (label()->movie()) {
+        return QAccessible::Animation;
+    }
+    return label()->showsImage() ? QAccessible::Graphic : QAccessible::StaticText;
 }
 
 QString TAccessibleLabel::text(QAccessible::Text t) const

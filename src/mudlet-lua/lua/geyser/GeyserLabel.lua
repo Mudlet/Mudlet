@@ -766,6 +766,10 @@ function Geyser.Label:setReleaseCallback (func, ...)
   setLabelReleaseCallback(self.name, func, ...)
   self.releaseCallback = func
   self.releaseArgs = { ... }
+  -- A right-click menu marked its label as text; a release callback makes it a button after all
+  if self.rightClickMenu and (not self.accessibleRole or self.accessibleRole == "") then
+    setLabelAccessibleRole(self.name, "")
+  end
 end
 
 --- Sets a callback to be used when the mouse cursor is moved over this label. When this
@@ -1383,12 +1387,16 @@ function Geyser.Label:new (cons, container)
     me:setToolTip(me.toolTip, me.toolTipDuration)
   end
 
-  if me.accessibleName then
-    me:setAccessibleName(me.accessibleName)
+  -- The constraints were copied onto the label already, so each is cleared before its setter
+  -- applies it, or a value the label refused would stay on the object
+  local accessibleName, accessibleRole = me.accessibleName, me.accessibleRole
+  me.accessibleName, me.accessibleRole = nil, nil
+  if accessibleName then
+    me:setAccessibleName(accessibleName)
   end
 
-  if me.accessibleRole then
-    me:setAccessibleRole(me.accessibleRole)
+  if accessibleRole then
+    me:setAccessibleRole(accessibleRole)
   end
 
   -- Set clickthrough if included in constructor
@@ -2005,8 +2013,8 @@ function Geyser.Label:createRightClickMenu(cons)
 
   if not(self.rightClickMenu) then
     self:setClickCallback(self.onRightClick, self)
-    -- A press is a left click, which this callback ignores
-    if not self.accessibleRole or self.accessibleRole == "" then
+    -- A press is a left click, which this callback ignores, so only a release callback makes it a button
+    if (not self.accessibleRole or self.accessibleRole == "") and not self.releaseCallback then
       setLabelAccessibleRole(self.name, "text")
     end
   end
