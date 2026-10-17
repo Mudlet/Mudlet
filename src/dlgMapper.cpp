@@ -74,9 +74,7 @@ dlgMapper::dlgMapper(QWidget* parent, Host* pH, TMap* pM)
     setupUi(this);
 
 #if defined(INCLUDE_3DMAPPER)
-    QSurfaceFormat fmt;
-    // Qt's Wayland backend otherwise composes the window with OpenGL ES, which cannot share with the 3D views' desktop contexts
-    fmt.setRenderableType(QSurfaceFormat::OpenGL);
+    QSurfaceFormat fmt = QSurfaceFormat::defaultFormat();
 #ifndef NDEBUG
     fmt.setOption(QSurfaceFormat::DebugContext);
 #endif

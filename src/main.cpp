@@ -63,6 +63,9 @@
 #include <QSplashScreen>
 #include <QSslConfiguration>
 #include <QStringList>
+#if defined(INCLUDE_3DMAPPER)
+#include <QSurfaceFormat>
+#endif
 #include <QTranslator>
 #if defined(Q_OS_WINDOWS)
 #include <QThread>
@@ -507,6 +510,14 @@ int main(int argc, char* argv[])
     // before constructing QGuiApplication."
     QApplication::setAttribute(Qt::AA_ShareOpenGLContexts);
 #endif // INCLUDE_3DMAPPER
+#endif
+#if defined(INCLUDE_3DMAPPER)
+    {
+        // Qt's Wayland backend otherwise composes windows with OpenGL ES, which cannot share with the 3D views' desktop contexts
+        QSurfaceFormat format = QSurfaceFormat::defaultFormat();
+        format.setRenderableType(QSurfaceFormat::OpenGL);
+        QSurfaceFormat::setDefaultFormat(format);
+    }
 #endif
 
     // Loading a platform plugin with no display server aborts, so print-and-exit options get an
