@@ -76,7 +76,10 @@ QString groundGlyph(EnvironmentKit::Kit ground, bool gridMode, bool ascii = fals
 // Whether the font, or one the system falls back on, has a glyph for every character of the text
 bool fontShows(const QFont& font, const QString& text);
 
-// The line character - | / or \ that reads as a line running at degrees, counterclockwise from rightward
+// What a terminal map's exit is drawn in where it runs straight across or up the screen: a dim trail of dots, which
+// unlike - and | neither runs together into a solid line nor breaks into dashes
+constexpr QChar terminalExitDot{0x00B7};
+// The character, terminalExitDot or / or \, that reads as a line running at degrees, counterclockwise from rightward
 QChar terminalLineGlyph(qreal degrees);
 
 // The room's exits in every direction and its special exits, wherever they lead; stubs are not exits

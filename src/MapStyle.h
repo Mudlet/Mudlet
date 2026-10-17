@@ -248,6 +248,8 @@ struct MapStyle
     bool groundGlyphs = false;
     // The Ink palette's lines and text; invalid for the profile's exit color
     QColor ink;
+    // Exit lines' color where it is not ink's, as a terminal's dim text is beside its bright text; invalid for ink
+    QColor exitInk;
     // How much of its environment's color the Ink palette fills a room with, from none to all of it
     float inkTint = 0.18f;
     // The least lightness the Ink palette lifts an environment's color to before tinting with it, so that dark

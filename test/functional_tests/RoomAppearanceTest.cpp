@@ -174,16 +174,16 @@ private slots:
     {
         QTest::addColumn<qreal>("degrees");
         QTest::addColumn<QChar>("expected");
-        QTest::newRow("rightward") << 0.0 << QChar(u'-');
-        QTest::newRow("leftward") << 180.0 << QChar(u'-');
-        QTest::newRow("just short of diagonal") << 22.0 << QChar(u'-');
+        QTest::newRow("rightward") << 0.0 << RoomAppearance::terminalExitDot;
+        QTest::newRow("leftward") << 180.0 << RoomAppearance::terminalExitDot;
+        QTest::newRow("just short of diagonal") << 22.0 << RoomAppearance::terminalExitDot;
         QTest::newRow("up and right") << 45.0 << QChar(u'/');
         QTest::newRow("down and left") << -135.0 << QChar(u'/');
-        QTest::newRow("upward") << 90.0 << QChar(u'|');
-        QTest::newRow("downward") << -90.0 << QChar(u'|');
+        QTest::newRow("upward") << 90.0 << RoomAppearance::terminalExitDot;
+        QTest::newRow("downward") << -90.0 << RoomAppearance::terminalExitDot;
         QTest::newRow("up and left") << 135.0 << QChar(u'\\');
         QTest::newRow("down and right") << -45.0 << QChar(u'\\');
-        QTest::newRow("nearly a full turn") << 350.0 << QChar(u'-');
+        QTest::newRow("nearly a full turn") << 350.0 << RoomAppearance::terminalExitDot;
     }
 
     void test_terminalLineGlyphReadsAsTheLineRuns()

@@ -122,16 +122,10 @@ QChar terminalLineGlyph(const qreal degrees)
     if (angle < 0.0) {
         angle += 180.0;
     }
-    if (angle < 22.5 || angle >= 157.5) {
-        return QLatin1Char('-');
+    if (angle < 22.5 || angle >= 157.5 || (angle >= 67.5 && angle < 112.5)) {
+        return terminalExitDot;
     }
-    if (angle < 67.5) {
-        return QLatin1Char('/');
-    }
-    if (angle < 112.5) {
-        return QLatin1Char('|');
-    }
-    return QLatin1Char('\\');
+    return angle < 67.5 ? QLatin1Char('/') : QLatin1Char('\\');
 }
 
 int exitCount(const TRoom& room)
