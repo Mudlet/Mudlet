@@ -32,6 +32,7 @@
 #include "HostDialogs.h"
 #include "HostManager.h"
 #include "MudletApp.h"
+#include "MudletProxyStyle.h"
 #include "TAction.h"
 #include "TAlias.h"
 #include "TConsole.h"
@@ -876,6 +877,12 @@ void dlgProfilePreferences::buildShell()
     moveIntoCard(pCard_captions, {checkBox_enableBlinkText, checkBox_enableClosedCaption});
     auto* pCard_keyboard = createCard(qsl("card_accessibilityKeyboard"));
     addCardRow(pCard_keyboard, label_caretModeKey, comboBox_caretModeKey);
+    addCardRow(pCard_keyboard, label_menuBarAltKeyNavigation, comboBox_menuBarAltKeyNavigation);
+#if defined(Q_OS_MACOS)
+    // The native menu bar takes no part in Alt key navigation
+    label_menuBarAltKeyNavigation->hide();
+    comboBox_menuBarAltKeyNavigation->hide();
+#endif
     moveIntoCard(pCard_keyboard, {checkBox_f3SearchEnabled});
     buildCategoryPage(scmCategory_accessibility, {groupBox_accessibility, pCard_captions, pCard_keyboard});
 
@@ -1290,6 +1297,8 @@ void dlgProfilePreferences::setSearchKeywords()
     synonyms.append({checkBox_advertiseScreenReader, tr("screen reader, NVDA, JAWS, VoiceOver, Orca, accessibility")});
     //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for reading incoming text out loud.
     synonyms.append({checkBox_announceIncomingText, tr("text to speech, TTS, speech, spoken, screen reader")});
+    //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for whether pressing Alt on its own moves focus to the menu bar.
+    synonyms.append({label_menuBarAltKeyNavigation, tr("Alt key, menu bar, menus, keyboard, screen reader")});
     //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for putting the time in front of each logged line.
     synonyms.append({mIsLoggingTimestamps, tr("timestamps, time, date, transcript")});
     //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for the format logs are written in.
@@ -3601,8 +3610,14 @@ void dlgProfilePreferences::setupPasswordsMigration()
     });
 
     connect(mudlet::self(), &mudlet::signal_passwordsMigratedToProfiles, this, [=, this]() {
-        label_password_migration_notification->setText(tr("Migrated all passwords to profile storage."));
         comboBox_store_passwords_in->setEnabled(true);
+        const QStringList notMigrated = mudlet::self()->passwordsNotMigratedToProfiles();
+        if (!notMigrated.isEmpty()) {
+            //: Shown in the preferences when some passwords could not be saved into their profiles while switching to profile storage; %1 is a list of profile names
+            label_password_migration_notification->setText(tr("Could not save the passwords of these profiles into them, so they are still in secure storage: %1").arg(notMigrated.join(qsl(", "))));
+            return;
+        }
+        label_password_migration_notification->setText(tr("Migrated all passwords to profile storage."));
         hidePasswordMigrationLabelTimer->start(10s);
     });
 
@@ -3943,6 +3958,7 @@ void dlgProfilePreferences::populateApplicationSettings()
         const QSignalBlocker blocker(comboBox_appearance);
         comboBox_appearance->setCurrentIndex(pMudlet->mAppearance);
     }
+    comboBox_menuBarAltKeyNavigation->setCurrentIndex(static_cast<int>(MudletProxyStyle::altKeyNavigation()));
     {
         const QSignalBlocker blocker(telnetHandlerEnabled);
         telnetHandlerEnabled->setChecked(MudletApp::getQSettings()->value("telnetHandlerEnabled", false).toBool());
@@ -3985,6 +4001,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     checkBox_antiAlias->setChecked(pHost->fontsAntiAlias());
 
     connect(fontComboBox_displayFont, &QFontComboBox::currentFontChanged, this, &dlgProfilePreferences::slot_displayFontChanged, Qt::UniqueConnection);
+    connect(comboBox_dictionary, &QComboBox::activated, this, &dlgProfilePreferences::slot_dictionaryPicked, Qt::UniqueConnection);
     // currentFontChanged is not emitted when the family already shown is picked again
     connect(fontComboBox_displayFont, &QComboBox::activated, this, &dlgProfilePreferences::slot_displayFontChanged, Qt::UniqueConnection);
     connect(spinBox_displayFontSize, qOverload<int>(&QSpinBox::valueChanged), this, &dlgProfilePreferences::slot_displayFontSizeChanged, Qt::UniqueConnection);
@@ -4031,8 +4048,9 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     // Unfortunately OpenBSD does not ship a dictionary for THAT language which
     // prevents us using it to find any system ones
     const QString& currentDictionary = pHost->getSpellDic();
+    const bool currentDictionaryFound = TSpellChecker::systemDictionaryFound(currentDictionary);
     // Also settles MudletApp::usingMudletDictionaries(), read below
-    const QString path = MudletApp::getMudletPath(enums::hunspellDictionaryPath, currentDictionary);
+    const QString path = TSpellChecker::dictionaryFolderToList(currentDictionary);
     // Tweak the label for the provided spelling dictionaries depending on where
     // they come from:
     if (MudletApp::usingMudletDictionaries()) {
@@ -4065,12 +4083,12 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
             if (entries.at(i).endsWith(qsl("med"), Qt::CaseInsensitive)) {
                 continue;
             }
+            // Listed by the affix file, but only loaded when both files can be read
+            if (!TSpellChecker::dictionaryUsable(path, entries.at(i))) {
+                continue;
+            }
 
-            auto key = entries.at(i).toLower();
-            key.replace(QLatin1String("-"), QLatin1String("_"));
-
-            QString displayText = mudlet::self()->mDictionaryLanguageCodeMap.contains(key) ? mudlet::self()->mDictionaryLanguageCodeMap.value(key) : tr("%1 - not recognised").arg(entries.at(i));
-            translatedNameToEntriesMap.insert(displayText, i);
+            translatedNameToEntriesMap.insert(dictionaryDisplayName(entries.at(i)), i);
         }
 
         QMapIterator<QString, int> itTranslatedName(translatedNameToEntriesMap);
@@ -4095,6 +4113,14 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
             }
         }
 
+        // Shown rather than left to fall back to the first entry, which would read as the profile's choice.
+        // Unlisted need not mean missing: "med" names are left out, and the file system may ignore case.
+        if (currentIndex < 0 && !currentDictionary.isEmpty()) {
+            //: %1 is the code of the spell-check dictionary the profile uses, such as "de_DE", when no dictionary file of that name is on this computer
+            comboBox_dictionary->addItem(currentDictionaryFound ? dictionaryDisplayName(currentDictionary) : tr("%1 - not available").arg(currentDictionary), currentDictionary);
+            currentIndex = comboBox_dictionary->count() - 1;
+        }
+
         if (currentIndex >= 0) {
             comboBox_dictionary->setCurrentIndex(currentIndex);
         }
@@ -4103,6 +4129,10 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         comboBox_dictionary->setToolTip(utils::richText(tr("No Hunspell dictionary files found, spell-checking will not be available.")));
     }
     comboBox_dictionary->blockSignals(false);
+    // Installed since it was looked for, the dictionary is read now rather than shown as there while checking nothing
+    if (currentDictionaryFound && pHost->spellChecker().systemDictionaryMissing()) {
+        pHost->setSpellDic(currentDictionary);
+    }
 
     if (!pHost->getMmpMapLocation().isEmpty()) {
         groupBox_downloadMapOptions->setVisible(true);
@@ -4264,6 +4294,9 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     checkBox_mmcpSnoopInMainConsole->setChecked(pHost->getMMCPShowSnoopInMainConsole());
     checkBox_runAllKeyBindings->setChecked(pHost->getKeyUnit()->mRunAllKeyMatches);
 
+    for (QSpinBox* pSpinBox : {topBorderHeight, bottomBorderHeight, leftBorderWidth, rightBorderWidth}) {
+        pSpinBox->setRange(-Host::scmMaxBorderSize, Host::scmMaxBorderSize);
+    }
     auto originalBorders = pHost->userBorders();
     topBorderHeight->setValue(originalBorders.top());
     bottomBorderHeight->setValue(originalBorders.bottom());
@@ -4954,6 +4987,7 @@ void dlgProfilePreferences::disconnectHostRelatedControls()
     // arguments to get the wanted wild-card behaviour for them:
 
     disconnect(fontComboBox_displayFont, &QFontComboBox::currentFontChanged, nullptr, nullptr);
+    disconnect(comboBox_dictionary, &QComboBox::activated, nullptr, nullptr);
     disconnect(fontComboBox_displayFont, &QComboBox::activated, nullptr, nullptr);
     disconnect(spinBox_displayFontSize, qOverload<int>(&QSpinBox::valueChanged), nullptr, nullptr);
     disconnect(checkBox_antiAlias, &QCheckBox::clicked, nullptr, nullptr);
@@ -5232,7 +5266,11 @@ void dlgProfilePreferences::loadEditorTab()
     script_preview_combobox->setMaxVisibleItems(20);
     script_preview_combobox->setDuplicatesEnabled(true);
 
-    theme_download_label->hide();
+    // Once fetched, the label reports how that went for as long as the dialog is open, and this runs again
+    // every time the dialog is reactivated
+    if (!mEditorThemesChecked) {
+        theme_download_label->hide();
+    }
 
     checkBox_autocompleteLuaCode->setChecked(pHost->mEditorAutoComplete);
     checkBox_showBidi->setChecked(pHost->getEditorShowBidi());
@@ -6147,6 +6185,7 @@ void dlgProfilePreferences::loadMap(const QString& fileName)
     mudlet::self()->setShowMapAuditErrors(checkBox_reportMapIssuesOnScreen->isChecked());
 
     bool success = false;
+    const bool isJson = fileName.endsWith(qsl(".json"), Qt::CaseInsensitive);
     label_mapFileActionResult->setText(tr("Loading map - please wait..."));
     qApp->processEvents(); // Needed to make the above message show up when loading big maps
     if (fileName.endsWith(qsl(".xml"), Qt::CaseInsensitive)) {
@@ -6154,8 +6193,8 @@ void dlgProfilePreferences::loadMap(const QString& fileName)
         success = pHost->importMapFile(fileName);
 
     } else {
-        if (fileName.endsWith(qsl(".json"), Qt::CaseInsensitive)) {
-            auto [localSuccess, errorMessage] = pHost->mpMap->readJsonMapFile(fileName);
+        if (isJson) {
+            auto [localSuccess, errorMessage] = pHost->mpMap->importJsonMapFile(fileName);
             success = localSuccess;
             if (!localSuccess) {
                 pHost->postMessage(tr("[ ERROR ] - Unable to load JSON map file: %1\n"
@@ -6170,7 +6209,9 @@ void dlgProfilePreferences::loadMap(const QString& fileName)
 
     if (success) {
         // TMap::audit() is what paints up the "[  OK  ]" message for the map load.
-        pHost->mpMap->audit();
+        if (!isJson) {
+            pHost->mpMap->audit();
+        }
         label_mapFileActionResult->setText(tr("Loaded map from %1.").arg(fileName.toHtmlEscaped()));
     } else {
         label_mapFileActionResult->setText(tr("Could not load map from %1.").arg(fileName.toHtmlEscaped()));
@@ -7154,6 +7195,9 @@ void dlgProfilePreferences::applyAll()
     if (mSnapshot.dirty(comboBox_appearance)) {
         pMudlet->setAppearance(static_cast<enums::Appearance>(comboBox_appearance->currentIndex()));
     }
+    if (mSnapshot.dirty(comboBox_menuBarAltKeyNavigation)) {
+        MudletProxyStyle::setAltKeyNavigation(static_cast<enums::MenuBarAltKeyNavigation>(comboBox_menuBarAltKeyNavigation->currentIndex()));
+    }
     if (mSnapshot.dirty(telnetHandlerEnabled)) {
         QSettings* settings = MudletApp::getQSettings();
         if (settings->value("telnetHandlerEnabled", false).toBool() != telnetHandlerEnabled->isChecked()) {
@@ -7469,14 +7513,18 @@ void dlgProfilePreferences::maybeDownloadEditorThemes()
     pHost->updateProxySettings(manager);
     QNetworkReply* getReply = manager->get(request);
 
+    auto failThemeUpdate = [this](const QString& reason, const QString& loggedReason = QString()) {
+        qWarning() << "dlgProfilePreferences: could not update the editor themes:" << (loggedReason.isEmpty() ? reason : loggedReason);
+        //: Shown under the editor theme list in the preferences; %1 is why the update failed: a network or file system error from the system, or "the downloaded themes could not be unpacked"
+        theme_download_label->setText(tr("Could not update themes: %1").arg(reason));
+        // A profile closed mid-fetch has greyed this page out and put the label away
+        if (mpHost) {
+            theme_download_label->show();
+        }
+    };
+
     connect(getReply, &QNetworkReply::errorOccurred, this, [=, this](QNetworkReply::NetworkError) {
-        // The label hides the message after a few seconds, so this is the only lasting record
-        qWarning() << "dlgProfilePreferences: could not update the editor themes:" << getReply->errorString();
-        theme_download_label->setText(tr("Could not update themes: %1").arg(getReply->errorString()));
-        QTimer::singleShot(5s, theme_download_label, [label = theme_download_label] {
-            label->hide();
-            label->setText(tr("Updating themes from colorsublime.github.io..."));
-        });
+        failThemeUpdate(getReply->errorString());
         getReply->deleteLater();
     });
 
@@ -7491,16 +7539,37 @@ void dlgProfilePreferences::maybeDownloadEditorThemes()
                         }
 
                         const QByteArray downloadedArchive = reply->readAll();
+                        const QUrl fetchedUrl = reply->url();
+                        reply->deleteLater();
 
                         tempThemesArchive = new QTemporaryFile(this);
                         if (!tempThemesArchive->open()) {
+                            failThemeUpdate(tempThemesArchive->errorString());
+                            tempThemesArchive->deleteLater();
                             return;
                         }
-                        tempThemesArchive->write(downloadedArchive);
+                        // Qt sets no error when only part of a write reaches the disk - in write() for a large one,
+                        // in flush() for a small one it buffered - so the rest is tried again to get the reason.
+                        // close() cannot report a failure at all.
+                        qint64 written = 0;
+                        while (written < downloadedArchive.size()) {
+                            const qint64 count = tempThemesArchive->write(downloadedArchive.constData() + written, downloadedArchive.size() - written);
+                            if (count <= 0) {
+                                break;
+                            }
+                            written += count;
+                        }
+                        if (written != downloadedArchive.size() || !(tempThemesArchive->flush() || tempThemesArchive->flush())) {
+                            failThemeUpdate(tempThemesArchive->errorString());
+                            tempThemesArchive->deleteLater();
+                            return;
+                        }
                         tempThemesArchive->close();
 
                         const QTemporaryDir temporaryDir;
                         if (!temporaryDir.isValid()) {
+                            failThemeUpdate(temporaryDir.errorString());
+                            tempThemesArchive->deleteLater();
                             return;
                         }
 
@@ -7510,16 +7579,21 @@ void dlgProfilePreferences::maybeDownloadEditorThemes()
                         connect(watcher, &QFutureWatcher<bool>::finished, this, [=, this]() {
                             if (future.result()) {
                                 populateThemesList();
+                                theme_download_label->hide();
 
                                 emit signal_themeUpdateCompleted();
+                            } else {
+                                // PreferCache would otherwise hand the same unusable download to every later dialog
+                                diskCache->remove(fetchedUrl);
+                                //: Shown after "Could not update themes: " when the downloaded editor themes could not be unpacked
+                                const char* const unpackFailure = QT_TR_NOOP("the downloaded themes could not be unpacked");
+                                failThemeUpdate(tr(unpackFailure), QString::fromLatin1(unpackFailure));
                             }
 
-                            theme_download_label->hide();
                             tempThemesArchive->deleteLater();
                             watcher->deleteLater();
                         });
                         watcher->setFuture(future);
-                        reply->deleteLater();
                     },
                     getReply));
 }
@@ -9181,6 +9255,27 @@ void dlgProfilePreferences::cancelShortcutCaptures()
 
         sequenceEdit->releaseKeyboard();
     }
+}
+
+// A missing dictionary picked again, once installed, is no change of entry for the apply to see,
+// so this is what retries it
+void dlgProfilePreferences::slot_dictionaryPicked(const int index)
+{
+    if (!mpHost) {
+        return;
+    }
+    const QString dictionary = comboBox_dictionary->itemData(index).toString();
+    mpHost->setSpellDic(dictionary);
+    if (TSpellChecker::systemDictionaryFound(dictionary)) {
+        comboBox_dictionary->setItemText(index, dictionaryDisplayName(dictionary));
+    }
+}
+
+QString dlgProfilePreferences::dictionaryDisplayName(const QString& dictionary)
+{
+    auto key = dictionary.toLower();
+    key.replace(QLatin1String("-"), QLatin1String("_"));
+    return mudlet::self()->mDictionaryLanguageCodeMap.value(key, tr("%1 - not recognised").arg(dictionary));
 }
 
 void dlgProfilePreferences::slot_displayFontChanged()

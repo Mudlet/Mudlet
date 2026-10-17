@@ -51,6 +51,11 @@
 #include <QTextStream>
 #include <QUrl>
 
+#if defined(Q_OS_UNIX)
+#include <cerrno>
+#include <unistd.h>
+#endif
+
 namespace {
 // Mudlet itself only resolves on the main thread; the locks are for engine
 // callers that may not. They cover the config root and the settings tier;
@@ -194,6 +199,19 @@ QString settledConfigRoot()
     }
     return configRoot;
 }
+
+#if defined(Q_OS_UNIX)
+// What fsync() gives for a file that cannot be synced at all, which QSaveFile::commit() shrugs off too
+bool syncUnsupported(const int error)
+{
+#if EOPNOTSUPP != ENOTSUP
+    if (error == EOPNOTSUPP) {
+        return true;
+    }
+#endif
+    return error == EINVAL || error == EROFS || error == ENOTSUP;
+}
+#endif
 } // namespace
 
 QString MudletApp::executableDir()
@@ -320,6 +338,19 @@ bool MudletApp::usingMudletDictionaries()
     return mudletDictionariesInUse;
 }
 
+QStringList MudletApp::systemHunspellDictionaryFolders()
+{
+#if defined(Q_OS_FREEBSD)
+    return {qsl("/usr/local/share/hunspell/"), qsl("/usr/share/hunspell/")};
+#elif defined(Q_OS_OPENBSD)
+    return {qsl("/usr/local/share/mozilla-dicts/"), qsl("/usr/share/mozilla-dicts/")};
+#elif defined(Q_OS_LINUX)
+    return {qsl("/usr/share/hunspell/")};
+#else
+    return {};
+#endif
+}
+
 QString MudletApp::sanitizeForPath(const QString& input)
 {
     static const auto fileSystemUnsafeChars = QRegularExpression(qsl(R"REGEX([/\\:*?"<>|])REGEX"));
@@ -435,18 +466,16 @@ QString MudletApp::getMudletPath(const enums::mudletPathType mode, const QString
     case enums::qtTranslationsPath:
         return QLibraryInfo::path(QLibraryInfo::TranslationsPath);
     case enums::hunspellDictionaryPath:
+        for (const auto& folder : systemHunspellDictionaryFolders()) {
+            if (QFile::exists(qsl("%1%2.aff").arg(folder, extra1))) {
+                mudletDictionariesInUse = false;
+                return folder;
+            }
+        }
 #if defined(Q_OS_MACOS)
         mudletDictionariesInUse = true;
         return qsl("%1/../Resources/").arg(QCoreApplication::applicationDirPath());
 #elif defined(Q_OS_FREEBSD)
-        if (QFile::exists(qsl("/usr/local/share/hunspell/%1.aff").arg(extra1))) {
-            mudletDictionariesInUse = false;
-            return QLatin1String("/usr/local/share/hunspell/");
-        }
-        if (QFile::exists(qsl("/usr/share/hunspell/%1.aff").arg(extra1))) {
-            mudletDictionariesInUse = false;
-            return QLatin1String("/usr/share/hunspell/");
-        }
         if (QFile::exists(qsl("%1/../../src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
             // From debug or release subdirectory of a shadow build directory alongside the ./src one:
             mudletDictionariesInUse = true;
@@ -466,14 +495,6 @@ QString MudletApp::getMudletPath(const enums::mudletPathType mode, const QString
         // the first run to find the rest - instead try for the en_GB one
         // - some of the entries for some of the locale/language/other parts of
         // the filesnames seem to be a bit random:
-        if (QFile::exists(qsl("/usr/local/share/mozilla-dicts/%1.aff").arg(extra1))) {
-            mudletDictionariesInUse = false;
-            return QLatin1String("/usr/local/share/mozilla-dicts/");
-        }
-        if (QFile::exists(qsl("/usr/share/mozilla-dicts/%1.aff").arg(extra1))) {
-            mudletDictionariesInUse = false;
-            return QLatin1String("/usr/share/mozilla-dicts/");
-        }
         if (QFile::exists(qsl("%1/../../src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
             // From debug or release subdirectory of a shadow build directory alongside the ./src one:
             mudletDictionariesInUse = true;
@@ -488,10 +509,6 @@ QString MudletApp::getMudletPath(const enums::mudletPathType mode, const QString
         mudletDictionariesInUse = true;
         return qsl("%1/").arg(QCoreApplication::applicationDirPath());
 #elif defined(Q_OS_LINUX)
-        if (QFile::exists(qsl("/usr/share/hunspell/%1.aff").arg(extra1))) {
-            mudletDictionariesInUse = false;
-            return QLatin1String("/usr/share/hunspell/");
-        }
         if (QFile::exists(qsl("%1/../../src/%2.aff").arg(QCoreApplication::applicationDirPath(), extra1))) {
             // From debug or release subdirectory of a shadow build directory
             // alongside the ./src one. {Typically QMake builds from Qtcreator
@@ -561,28 +578,45 @@ QString MudletApp::readProfileData(const QString& profile, const QString& item)
 
 QPair<bool, QString> MudletApp::writeProfileData(const QString& profile, const QString& item, const QString& what)
 {
-    const QDir profileDir;
+    const auto failure = [&profile, &item](const QString& reason) {
+        qWarning().noquote().nospace() << "MudletApp::writeProfileData(...) ERROR - writing profile: \"" << profile << "\", item: \"" << item << "\", reason: \"" << reason << "\".";
+        return qMakePair(false, reason);
+    };
+
     const QString profileHomePath = MudletApp::getMudletPath(enums::profileHomePath, profile);
-    if (!QDir(profileHomePath).exists() && !profileDir.mkpath(profileHomePath)) {
-        qDebug().noquote().nospace() << "MudletApp::writeProfileData(...) ERROR - could not create profile directory: \"" << profileHomePath << "\"";
-        return qMakePair(false, qsl("Could not create profile directory: %1").arg(profileHomePath));
+    if (!QDir(profileHomePath).exists() && !QDir().mkpath(profileHomePath)) {
+        //: Why a profile setting could not be saved, shown in the connection dialog and returned to Lua scripts; %1 is the folder's path
+        return failure(QCoreApplication::translate("MudletApp", "Could not create profile directory: %1").arg(profileHomePath));
     }
 
     QSaveFile file(MudletApp::getMudletPath(enums::profileDataItemPath, profile, item));
-    if (file.open(QIODevice::WriteOnly | QIODevice::Unbuffered)) {
-        QDataStream ofs(&file);
-        ofs.setVersion(QDataStream::Qt_5_12);
-        ofs << what;
-        if (!file.commit()) {
-            qDebug().noquote().nospace() << "MudletApp::writeProfileData(...) ERROR - writing profile: \"" << profile << "\", item: \"" << item << "\", reason: \"" << file.errorString() << "\".";
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Unbuffered)) {
+        return failure(file.errorString());
+    }
+
+    QDataStream ofs(&file);
+    ofs.setVersion(QDataStream::Qt_5_12);
+    ofs << what;
+    // A disk that fills part way through the write leaves no error on the file, only on the
+    // stream, and commit() would rename the truncated file into place
+    if (ofs.status() != QDataStream::Ok || file.error() != QFileDevice::NoError) {
+        //: Why a profile setting could not be saved, shown in the connection dialog and returned to Lua scripts; %1 is the setting's internal name, e.g. description
+        return failure(file.error() == QFileDevice::NoError ? QCoreApplication::translate("MudletApp", "could not write all of the %1 data").arg(item) : file.errorString());
+    }
+#if defined(Q_OS_UNIX)
+    // commit() ignores a failed sync, which is where a quota or network filesystem reports a write that did not land
+    if (::fsync(file.handle()) != 0) {
+        const int syncError = errno;
+        if (!syncUnsupported(syncError)) {
+            return failure(qt_error_string(syncError));
         }
     }
-
-    if (file.error() == QFile::NoError) {
-        return qMakePair(true, QString());
+#endif
+    if (!file.commit()) {
+        return failure(file.errorString());
     }
 
-    return qMakePair(false, file.errorString());
+    return qMakePair(true, QString());
 }
 
 QPair<bool, QString> MudletApp::setProfileIcon(const QString& profile, const QString& newIconPath)

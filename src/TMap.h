@@ -127,7 +127,9 @@ public:
     ~TMap();
     void mapClear();
     void refreshMapperColours();
+    // Returns the new label's id, -1 for an unknown area, or scmUnreadableImageLabel for an image that cannot be read.
     int createMapImageLabel(int area, QString filePath, float x, float y, float z, float width, float height, float zoom, bool showOnTop, bool temporary);
+    static constexpr int scmUnreadableImageLabel = -2;
     int createMapLabel(int area,
                        const QString& text,
                        float x,
@@ -293,6 +295,7 @@ public:
 
     std::pair<bool, QString> writeJsonMapFile(const QString&);
     std::pair<bool, QString> readJsonMapFile(const QString&, const bool translatableTexts = false);
+    std::pair<bool, QString> importJsonMapFile(const QString&);
     qsizetype getCurrentProgressRoomCount() const { return mProgressDialogRoomsCount; }
     bool incrementJsonProgressDialog(const bool isExportNotImport, const bool isRoomNotLabel, const int increment = 1);
     // TRoomDB calls this before it deletes an area or clears the map.
@@ -554,7 +557,7 @@ private:
     const QString createFileHeaderLine(QString, QChar);
     void warnIfMapProgressUnwired(const char* context, bool transferPath);
     void writeJsonUserData(QJsonObject&) const;
-    void readJsonUserData(const QJsonObject&);
+    static QMap<QString, QString> readJsonUserData(const QJsonObject&);
     bool validatePotentialMapFile(QFile&, QDataStream&);
     void flushSymbolCaches();
 

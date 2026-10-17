@@ -315,6 +315,10 @@ local ok, err = pcall(function()
   assert(setLabelCursor("stateLabel", 2) == true, "setLabelCursor did not answer true")
   local badShape, badShapeMsg = setLabelCursor("stateLabel", 99)
   assert(badShape == nil and badShapeMsg:find("cursor shape"), "an unknown cursor shape was not refused")
+  local badName, badNameMsg = setLabelCursor("stateLabel", "NoSuchCursor")
+  assert(badName == nil and badNameMsg:find("cursor shape 'NoSuchCursor' not found", 1, true) == 1 and badNameMsg:find("wiki.mudlet.org/w/CursorShapes", 1, true), "an unknown cursor name was not refused")
+  local noLabel, noLabelMsg = setLabelCursor("noSuchStateLabel", "NoSuchCursor")
+  assert(noLabel == nil and noLabelMsg == "label name 'noSuchStateLabel' not found", "a missing label was not refused before an unknown cursor name")
   local missing, missingMsg = setLabelStyleSheet("noSuchStateLabel", "color: red;")
   assert(missing == nil and missingMsg:find("not found"), "styling a missing label did not answer nil and a message")
   assert(setLabelClickCallback("stateLabel", function() end) == true, "setLabelClickCallback did not answer true")
@@ -2913,7 +2917,7 @@ end
                                   qsl("sheet=[1]true"),
                                   qsl("font=[1]true"),
                                   qsl("fontSize=[1]true"),
-                                  qsl("fontSizeNegative=[1]true"),
+                                  qsl("fontSizeNegative=[2]nil:size cannot be 0 or negative"),
                                   qsl("tab=[1]true"),
                                   qsl("getOther=[1]"),
                                   qsl("afterSetters:type=[1]textedit,geometry=[4]10:20:200:100,visible=[1]true"),
@@ -5290,8 +5294,15 @@ local ok, err = pcall(function()
   check("getConfig showUpperLowerLevels default", answered(true), getConfig("showUpperLowerLevels"))
   check("setConfig showUpperLowerLevels", answered(true), setConfig("showUpperLowerLevels", false))
   check("getConfig showUpperLowerLevels", answered(false), getConfig("showUpperLowerLevels"))
-  -- This drives the mapper widget, as in the GUI before its mapper exists
-  check("setConfig show3dMapView", refused(notAnOption), setConfig("show3dMapView", false))
+  -- Stored for a mapper made later, as in the GUI before its mapper exists; a build without the 3D mapper does not know the key
+  if setMapPerspective then
+    check("setConfig show3dMapView", answered(true), setConfig("show3dMapView", true))
+    check("getConfig show3dMapView", answered(true), getConfig("show3dMapView"))
+    check("setConfig show3dMapView false", answered(true), setConfig("show3dMapView", false))
+    check("getConfig show3dMapView false", answered(false), getConfig("show3dMapView"))
+  else
+    check("setConfig show3dMapView", refused(notAnOption), setConfig("show3dMapView", false))
+  end
 end)
 headlessMapConfig = ok and 'ok' or tostring(err)
 )lua");

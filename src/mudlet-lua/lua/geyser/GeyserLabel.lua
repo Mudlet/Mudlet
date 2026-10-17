@@ -74,12 +74,16 @@ end
 
 --- Prints a message to the label with decho color formatting, preserving label's font size and formatting.
 -- @param message The message to print. Uses decho color codes like "<255,0,0>text" for colors.
+-- @return true, or nil and an error message if the label no longer exists
 function Geyser.Label:decho(message)
   message = message or self.message
-  self.message = message
 
   -- Build resetFormat table using label's actual fgColor, not just stylesheet
-  local resetFormat = getLabelFormat(self.name)
+  local resetFormat, err = getLabelFormat(self.name)
+  if not resetFormat then
+    return nil, err
+  end
+  self.message = message
   -- Override foreground with label's fgColor property if set
   if self.fgColor and self.fgColor ~= "" then
     resetFormat.foreground = Geyser.Color.hex(self.fgColor)
@@ -118,16 +122,21 @@ function Geyser.Label:decho(message)
   [[">]] .. htmlContent .. [[</div>]]
   echo(self.name, htmlContent)
   self:autoAdjustSize()
+  return true
 end
 
 --- Prints a message to the label with hecho color formatting, preserving label's font size and formatting.
 -- @param message The message to print. Uses hecho color codes like "|cff0000text" for colors.
+-- @return true, or nil and an error message if the label no longer exists
 function Geyser.Label:hecho(message)
   message = message or self.message
-  self.message = message
 
   -- Build resetFormat table using label's actual fgColor, not just stylesheet
-  local resetFormat = getLabelFormat(self.name)
+  local resetFormat, err = getLabelFormat(self.name)
+  if not resetFormat then
+    return nil, err
+  end
+  self.message = message
   -- Override foreground with label's fgColor property if set
   if self.fgColor and self.fgColor ~= "" then
     resetFormat.foreground = Geyser.Color.hex(self.fgColor)
@@ -166,16 +175,21 @@ function Geyser.Label:hecho(message)
   [[">]] .. htmlContent .. [[</div>]]
   echo(self.name, htmlContent)
   self:autoAdjustSize()
+  return true
 end
 
 --- Prints a message to the label with cecho color formatting, preserving label's font size and formatting.
 -- @param message The message to print. Uses cecho color codes like "<red>text" for colors.
+-- @return true, or nil and an error message if the label no longer exists
 function Geyser.Label:cecho(message)
   message = message or self.message
-  self.message = message
 
   -- Build resetFormat table using label's actual fgColor, not just stylesheet
-  local resetFormat = getLabelFormat(self.name)
+  local resetFormat, err = getLabelFormat(self.name)
+  if not resetFormat then
+    return nil, err
+  end
+  self.message = message
   -- Override foreground with label's fgColor property if set
   if self.fgColor and self.fgColor ~= "" then
     resetFormat.foreground = Geyser.Color.hex(self.fgColor)
@@ -214,6 +228,7 @@ function Geyser.Label:cecho(message)
   [[">]] .. htmlContent .. [[</div>]]
   echo(self.name, htmlContent)
   self:autoAdjustSize()
+  return true
 end
 
 --- sets the color of the text on the label
@@ -842,10 +857,14 @@ function Geyser.Label:resetToolTip()
 end
 
 --- Set a predefined mouse cursor shape for this label
--- @param cursorShape the predefined cursorshape as a string
+-- @param cursorShape the name of a predefined cursor shape, or its number in mudlet.cursor
 -- See: <a href="https://wiki.mudlet.org/w/CursorShapes">https://wiki.mudlet.org/w/CursorShapes</a>
+-- @return true, or nil and a message when the label or the shape is refused, leaving cursorShape as it was
 function Geyser.Label:setCursor(cursorShape)
-  setLabelCursor(self.name, cursorShape)
+  local ok, err = setLabelCursor(self.name, cursorShape)
+  if not ok then
+    return nil, err
+  end
   -- Get cursorShape as string
   for k,v in pairs(mudlet.cursor) do
     if cursorShape == v then
@@ -854,6 +873,7 @@ function Geyser.Label:setCursor(cursorShape)
   end
 
   self.cursorShape = cursorShape
+  return true
 end
 
 --- Set a custom mouse cursor shape for this label.
@@ -1666,10 +1686,21 @@ function Geyser.Label:showMenuLabel(name)
   self:createMenuItems()
 end
 
+local function menuIndexProblem(index, count)
+  if type(index) ~= "number" or index ~= math.floor(index) then
+    return string.format("index must be a whole number, got %s (%s)", tostring(index), type(index))
+  end
+  if index < 1 or index > count then
+    return string.format("index %s out of range (1-%d)", tostring(index), count)
+  end
+end
+
 --- adds a new item to the right click menu
 -- @param name Name of the new menu item.
 -- @param parent name of the parent where the new item will be created in (optional)
--- @param index of the new menu item (optional). Not usable together with a nested
+-- @param index of the new menu item (optional), a whole number from 1 to the number of
+--        items at that level once it is added; any other index adds nothing and returns
+--        false plus a message. Not usable together with a nested
 --        parent: an item is named for the parent it sits in, so the index lookup
 --        misses and raises.
 -- @return true, or false plus a message when the item cannot be added
@@ -1691,6 +1722,18 @@ function Geyser.Label:addMenuLabel(name, parent, index)
 
   menuElement = menuElement or self.rightClickMenu
   menuParent = menuParent or self.rightClickMenu.MenuItems
+
+  if index then
+    local count = #(menuElement.nestedLabels or {})
+    local existing = menuElement.MenuLabels[name]
+    if not existing or existing.ignore then
+      count = count + 1
+    end
+    local problem = menuIndexProblem(index, count)
+    if problem then
+      return false, "addMenuLabel: "..problem
+    end
+  end
 
   if parent then
     parent = parent.."."
@@ -1715,7 +1758,8 @@ end
 
 --- changes a right click menu items index
 -- @param name Name of the menu item. If the menu item has a parent name needs to be given as "Parent.MenuItemName"
--- @param index the new index
+-- @param index the new position among the item's siblings, a whole number from 1 to the
+--        number of items at that level; any other index raises an error and leaves the menu as it was
 function Geyser.Label:changeMenuIndex(name, index)
   local menuElement, menuTable = self:findMenuElement(name, self.rightClickMenu)
 
@@ -1724,6 +1768,10 @@ function Geyser.Label:changeMenuIndex(name, index)
   end
 
   local nestTable = menuElement.nestParent.nestedLabels
+  local problem = menuIndexProblem(index, #nestTable)
+  if problem then
+    error("changeMenuIndex: "..problem)
+  end
   local newindex = nestTable[index].tblIndex
 
   -- table index is not the same as index
@@ -1810,7 +1858,7 @@ end
 -- @table mouseWheelEvent
 
 --- Returns a table in the format of getTextFormat which describes the default formatting created by any stylesheets.
--- which are applied to the label.
+-- which are applied to the label, or nil and an error message if the label no longer exists.
 -- See: <a href="https://wiki.mudlet.org/w/Manual:Lua_Functions#getLabelFormat">https://wiki.mudlet.org/w/Manual:Lua_Functions#getLabelFormat</a>
 -- See: <a href="https://wiki.mudlet.org/w/Manual:Lua_Functions#getTextFormat">https://wiki.mudlet.org/w/Manual:Lua_Functions#getLabelFormat</a>
 function Geyser.Label:getFormat()

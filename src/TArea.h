@@ -128,13 +128,14 @@ public:
     QList<int> getRoomsByPosition(int x, int y, int z);
     int createLabelId() const;
     void writeJsonArea(QJsonArray&) const;
-    std::pair<int, QString> readJsonArea(const QJsonArray&, const int);
+    std::pair<int, QString> readJsonArea(const QJsonArray&, const int, QStringList& droppedRoomWarnings);
     QList<int> getPermanentLabelIds() const;
     bool hasPermanentLabels() const;
     qreal get2DMapZoom() const { return mLast2DMapZoom; }
     void set2DMapZoom(const qreal zoom);
     void clean();
     static void dropFileOnlyUserData(QMap<QString, QString>& userData);
+    static void restoreLabelOutlineColorFromUserData(TMapLabel& label, int labelId, QMap<QString, QString>& userData);
 
 
     QSet<int> rooms; // rooms of this area
