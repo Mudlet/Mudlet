@@ -2917,7 +2917,7 @@ end
                                   qsl("sheet=[1]true"),
                                   qsl("font=[1]true"),
                                   qsl("fontSize=[1]true"),
-                                  qsl("fontSizeNegative=[1]true"),
+                                  qsl("fontSizeNegative=[2]nil:size cannot be 0 or negative"),
                                   qsl("tab=[1]true"),
                                   qsl("getOther=[1]"),
                                   qsl("afterSetters:type=[1]textedit,geometry=[4]10:20:200:100,visible=[1]true"),
