@@ -369,6 +369,12 @@ private:
     QElapsedTimer mPulseReference;
     std::optional<qint64> mPulseStartedAt;
     QTimer* mPulseTimer = nullptr;
+    // Room names that lose a place to another fade out over this long, and those that win one fade in, rather than
+    // blinking as the view moves; by room, how far each has faded in, timed on mNameFadeClock, for mNameFadeArea
+    int mNameFadeMilliseconds = 200;
+    QHash<int, float> mNameOpacity;
+    QElapsedTimer mNameFadeClock;
+    int mNameFadeArea = -1;
     bool mFramePending = true;
     // Set by a zoom or a change of area while hidden: the shown area is framed at its stored zoom, read then so a later
     // 2D zoom counts, for the size the view is first seen at, unless a camera distance is set first
@@ -532,7 +538,8 @@ private:
     // The 2D map's up/down/in/out markers for the room, or 0 when it has none
     GLuint exitMarkerTexture(const TRoom& room, const QColor& roomColor);
     // Text on a clear background, with a rim of halo around it if that is valid; size is set to the texture's size in pixels
-    GLuint textTexture(const QString& key, const QString& text, const QFont& font, const QFontMetricsF& metrics, const QColor& color, QSize& size, const QColor& halo = QColor());
+    GLuint
+    textTexture(const QString& key, const QString& text, const QFont& font, const QFontMetricsF& metrics, const QColor& color, QSize& size, const QColor& halo = QColor(), bool softHalo = false);
     // The label's image with a halo around it, made again only when the label or the halo changes
     const HaloedLabel& haloedLabel(int labelId, const QPixmap& pixmap, const QColor& halo, int backgroundAlpha);
     // The cell of the glyph atlas holding text, added if there is room, else -1; with add false, -1 for any not in it
