@@ -28,6 +28,7 @@
  * Each case here asserts both directions: a call that repeats the current state
  * leaves the two flags alone, and a call that really changes it still sets both.
  * The second half is what stops the fix from being "never do the work".
+ * setRoomIDbyHash() is held to the same rule for the unsaved flag.
  */
 
 #include <QSignalSpy>
@@ -210,6 +211,33 @@ private slots:
         markMapClean();
         QVERIFY(runLua(qsl("assert(lockSpecialExit(%1, %2, \"no such command\", true) == nil)").arg(scmFirstRoomId).arg(scmSecondRoomId)));
         verifyMapUntouched(qsl("lockSpecialExit() naming an exit that does not exist"));
+    }
+
+    // No Lua function reads the unsaved flag, so a spec cannot tell whether the
+    // autosave will ever write a hash change
+    void test_setRoomIDbyHashOnlyDirtiesTheMapWhenTheBindingChanges()
+    {
+        const QString bind = qsl("assert(setRoomIDbyHash(%1, \"lock-noop-hash\"))").arg(scmFirstRoomId);
+
+        markMapClean();
+        QVERIFY(runLua(bind));
+        QVERIFY2(mpHost->mpMap->isUnsaved(), "setRoomIDbyHash() bound a new hash but left the map marked as saved");
+
+        markMapClean();
+        QVERIFY(runLua(bind));
+        QVERIFY2(!mpHost->mpMap->isUnsaved(), "setRoomIDbyHash() repeating the room's own hash marked the map unsaved");
+
+        markMapClean();
+        QVERIFY(runLua(qsl("assert(setRoomIDbyHash(%1, \"lock-noop-hash\"))").arg(scmSecondRoomId)));
+        QVERIFY2(mpHost->mpMap->isUnsaved(), "setRoomIDbyHash() moved a hash to another room but left the map marked as saved");
+
+        markMapClean();
+        QVERIFY(runLua(qsl("assert(setRoomIDbyHash(%1, \"\"))").arg(scmSecondRoomId)));
+        QVERIFY2(mpHost->mpMap->isUnsaved(), "setRoomIDbyHash() cleared a room's hash but left the map marked as saved");
+
+        markMapClean();
+        QVERIFY(runLua(qsl("assert(setRoomIDbyHash(999999, \"lock-noop-hash\") == nil)")));
+        QVERIFY2(!mpHost->mpMap->isUnsaved(), "setRoomIDbyHash() refused a room that does not exist yet marked the map unsaved");
     }
 
 private:
