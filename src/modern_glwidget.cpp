@@ -153,6 +153,7 @@ void ModernGLWidget::cleanup()
     mTexCoordBuffer.destroy();
     mVAO.destroy();
     mTiltShiftScene.reset();
+    mDepthSnapshot.cleanup();
     mTiltShiftProgram.reset();
     mTiltShiftVAO.destroy();
     doneCurrent();
@@ -742,6 +743,9 @@ void ModernGLWidget::paintGL()
     if (mapStyle().postEffects.testFlag(MapStyle::PostEffect::TiltShift)) {
         applyTiltShift();
     }
+    shaderProgram->bind();
+    mRenderCommandQueue.executeDeferred(shaderProgram, &mGeometryManager, &mResourceManager, mVAO, mVertexBuffer, mColorBuffer, mNormalBuffer, mIndexBuffer, mTexCoordBuffer);
+    shaderProgram->release();
 
     QPainter painter(this);
     const MapStyle& style = mapStyle();
@@ -953,6 +957,8 @@ constexpr float scmTokenShadowReach = 0.9f;
 constexpr float scmTokenGhost = 0.35f;
 // A building's roof reaches out past its walls by this much
 constexpr float scmEaves = 1.12f;
+// How solid a piece is that stands between the camera and the player's room or a highlighted one
+constexpr float scmSeenThroughOpacity = 0.3f;
 // A forest's trees: a trunk and a crown of leaves, in rooms' spacing
 constexpr float scmTrunkRadius = 0.025f;
 constexpr float scmTrunkHeight = 0.05f;
@@ -986,6 +992,8 @@ constexpr int scmPlatformStations = 3;
 constexpr qreal scmLabelHalo = 0.12;
 // A map label's halo's greatest reach, in texels
 constexpr int scmMaxLabelHalo = 16;
+// The most texels a label drawn again sharper may have
+constexpr qint64 scmMaxSharpLabelTexels = 2048 * 2048;
 
 // A text texture's halo's width in texels, on each side; a soft one reaches further, as it fades out on its way
 int textHaloWidth(const QFontMetricsF& metrics, const bool haloed, const bool soft = false)
@@ -1431,7 +1439,9 @@ const ModernGLWidget::HaloedLabel& ModernGLWidget::haloedLabel(const int labelId
         return haloed;
     }
     const QImage source = pixmap.toImage().convertToFormat(QImage::Format_ARGB32_Premultiplied);
-    const int reach = qBound(2, qRound(source.height() * scmLabelHalo / 2.0), scmMaxLabelHalo);
+    // As wide on screen however sharp the label is drawn
+    const qreal ratio = pixmap.devicePixelRatio();
+    const int reach = qRound(qBound(2.0, std::round(source.height() / ratio * scmLabelHalo / 2.0), static_cast<qreal>(scmMaxLabelHalo)) * ratio);
     // The letters' shape in the halo's color, stamped all round them: only what is more opaque than the label's
     // background, so that the box behind the letters grows no band over what is round it
     QImage shape(source.size(), QImage::Format_ARGB32_Premultiplied);
@@ -1775,9 +1785,17 @@ void ModernGLWidget::renderRooms()
     using ShapeInstances = std::array<QVector<CubeInstanceData>, 5>;
     ShapeInstances tokenInstances;
     ShapeInstances kitInstances;
+    // Drawn after the viewed level's decals, so that the rooms they stand in front of show through them
+    ShapeInstances seenThroughInstances;
     QVector<CubeInstanceData> waterInstances;
     const bool kits = style.environmentKits;
     const QHash<int, DioramaLayout::Piece> pieces = kits ? dioramaPieces(*pArea) : QHash<int, DioramaLayout::Piece>();
+    if (!kits) {
+        // So that a diorama chosen again starts settled rather than from the fade it was left in
+        mPieceOpacity.clear();
+        mPieceFadeArea = -1;
+    }
+    const QHash<int, float> pieceOpacity = kits ? pieceOpacities(*pArea, pieces, playerRoomId) : QHash<int, float>();
     // Where the board is cut away for water to lie below it
     QSet<std::pair<int, int>> waterCells;
     QVector<CubeInstanceData> borderInstances;
@@ -1857,14 +1875,16 @@ void ModernGLWidget::renderRooms()
 
     // A diorama's piece for a room, in its color; level is the one its ground is on
     const auto queueKitPiece = [&](const int roomId, const int level, const float x, const float y, const float lift, const DioramaLayout::Piece& piece, const QVector4D& tint) {
-        const auto block = [x, y](const float bottom, const float top, const float halfX, const float halfY, const QVector3D& color, const float dx = 0.0f, const float dy = 0.0f) {
+        const float opacity = pieceOpacity.value(roomId, 1.0f);
+        const auto block = [x, y, opacity](const float bottom, const float top, const float halfX, const float halfY, const QVector3D& color, const float dx = 0.0f, const float dy = 0.0f) {
             QMatrix4x4 transform;
             transform.translate(x + dx, y + dy, (bottom + top) / 2.0f);
             transform.scale(halfX, halfY, (top - bottom) / 2.0f);
-            return CubeInstanceData(transform, color.x(), color.y(), color.z(), 1.0f);
+            return CubeInstanceData(transform, color.x(), color.y(), color.z(), opacity);
         };
-        const auto shape = [&kitInstances](const GeometryManager::InstanceShape instanceShape) -> QVector<CubeInstanceData>& {
-            return kitInstances.at(static_cast<size_t>(instanceShape));
+        // A forest's grass hides nothing, so stays solid under its trees
+        const auto shape = [&kitInstances, &seenThroughInstances, opacity](const GeometryManager::InstanceShape instanceShape, const bool ground = false) -> QVector<CubeInstanceData>& {
+            return (opacity < 1.0f && !ground ? seenThroughInstances : kitInstances).at(static_cast<size_t>(instanceShape));
         };
         const QVector3D color = tint.toVector3D();
         const float bottom = lift + piece.bottom;
@@ -1879,7 +1899,9 @@ void ModernGLWidget::renderRooms()
             shape(GeometryManager::InstanceShape::Box).append(block(bottom, top, half, half, color));
             break;
         case EnvironmentKit::Kit::Forest: {
-            shape(GeometryManager::InstanceShape::Box).append(block(bottom, top, half, half, color));
+            CubeInstanceData grass = block(bottom, top, half, half, color);
+            grass.color[3] = 1.0f;
+            shape(GeometryManager::InstanceShape::Box, true).append(grass);
             // Seeded by the room, so that its trees stay where they are from one frame and one session to the next
             quint32 seed = static_cast<quint32>(roomId);
             seed = (seed ^ (seed >> 16)) * 0x7feb352dU;
@@ -1901,7 +1923,7 @@ void ModernGLWidget::renderRooms()
                 const float offset = 0.4f * radius;
                 shadow.translate(x + dx + offset, y + dy - offset, top + scmModelShadowLift);
                 shadow.scale(1.4f * radius, 1.4f * radius, scmModelShadowLift);
-                seeThroughLevels[level].patches.append(CubeInstanceData(shadow, scmModelShadowColor.x(), scmModelShadowColor.y(), scmModelShadowColor.z(), 0.6f * scmModelShadowStrength));
+                seeThroughLevels[level].patches.append(CubeInstanceData(shadow, scmModelShadowColor.x(), scmModelShadowColor.y(), scmModelShadowColor.z(), 0.6f * scmModelShadowStrength * opacity));
             }
             break;
         }
@@ -2072,7 +2094,7 @@ void ModernGLWidget::renderRooms()
             QMatrix4x4 shadowTransform;
             shadowTransform.translate(rx + offset, ry - offset, ground + scmModelShadowLift);
             shadowTransform.scale(reach / scale, reach / scale, scmModelShadowLift);
-            const float strength = scmModelShadowStrength * roomTint.w() / (1.0f + lift / roomHeight);
+            const float strength = scmModelShadowStrength * roomTint.w() * pieceOpacity.value(currentRoomId, 1.0f) / (1.0f + lift / roomHeight);
             seeThroughLevels[pR->z()].shadows.append(CubeInstanceData(shadowTransform, scmModelShadowColor.x(), scmModelShadowColor.y(), scmModelShadowColor.z(), strength));
         }
         if (modelBlocks && token && look.playerRoom) {
@@ -2121,7 +2143,10 @@ void ModernGLWidget::renderRooms()
         // On a building, over its roof
         const QVector3D roomTop(rx, ry, piece ? lift + piece->peak : rz + roomHeight / 2.0f);
         const QVector3D roomFoot(rx, ry, static_cast<float>(pR->z()) - roomHeight / 2.0f);
-        const QVector4D decalTint = GeometryManager::fadedDecalTint(fade);
+        const QVector4D groundTint = GeometryManager::fadedDecalTint(fade);
+        // What is on a piece seen through fades with it
+        QVector4D decalTint = groundTint;
+        decalTint.setW(groundTint.w() * pieceOpacity.value(currentRoomId, 1.0f));
 
         if (sheenTexture) {
             decals.sheen.textureId = sheenTexture;
@@ -2198,28 +2223,45 @@ void ModernGLWidget::renderRooms()
             const bool disc = shape == MapStyle::HighlightShape::Disc;
             const QColor color = disc ? style.highlightColorFor(look.highlightColor) : style.highlightColorFor(look.highlightColor, look.highlightCenterColor);
             const QColor centerColor = disc ? look.highlightCenterColor : color;
-            const QString key = qsl("highlight|%1|%2|%3|%4").arg(QString::number(static_cast<int>(shape)), color.name(QColor::HexArgb), centerColor.name(QColor::HexArgb), QString::number(round));
-            if (const GLuint texture = imageTexture(key, [shape, color, centerColor, round] {
-                    return MapDecals::highlight(shape, color, centerColor, round, scmRoomTextureSize);
-                })) {
-                const bool onGround = MapDecals::highlightOnGround(shape);
-                // A diorama's ground is what the room's piece lies on: its paving, grass or water, or for a block or a
-                // building the board, under a building however many storeys up the room is
-                QVector3D ground = roomFoot;
-                RoomDecals* groundDecals = &decals;
-                if (piece && onGround) {
-                    const bool flat = piece->kit == EnvironmentKit::Kit::Road || piece->kit == EnvironmentKit::Kit::Forest || piece->kit == EnvironmentKit::Kit::Water;
-                    const int board = pR->z() - piece->storey;
-                    ground.setZ(flat ? lift + piece->top : static_cast<float>(board) - DioramaLayout::groundBelowLevel(roomHeight));
-                    if (board != pR->z()) {
-                        groundDecals = &opaqueDecals[board];
-                    }
+            const bool onGround = MapDecals::highlightOnGround(shape);
+            // A diorama's ground is what the room's piece lies on: its paving, grass or water, or for a block or a
+            // building the board, under a building however many storeys up the room is
+            QVector3D ground = roomFoot;
+            RoomDecals* groundDecals = &decals;
+            if (piece && onGround) {
+                const bool flat = piece->kit == EnvironmentKit::Kit::Road || piece->kit == EnvironmentKit::Kit::Forest || piece->kit == EnvironmentKit::Kit::Water;
+                const int board = pR->z() - piece->storey;
+                ground.setZ(flat ? lift + piece->top : static_cast<float>(board) - DioramaLayout::groundBelowLevel(roomHeight));
+                if (board != pR->z()) {
+                    groundDecals = &opaqueDecals[board];
                 }
+            }
+            const QVector3D at = onGround ? ground : roomTop;
+            // highlightRadius is in rooms' spacing, which is one unit here
+            const auto size = static_cast<float>(MapDecals::highlightSize(shape, look.highlightRadius, style.highlightScale, roomSize));
+            qreal lineWidth = MapDecals::scmOutlineWidth;
+            if (shape == MapStyle::HighlightShape::Outline) {
+                // Shortest across the room, as the view tilts the ground away
+                const auto across = [this, &at](const QVector3D& half) -> std::optional<qreal> {
+                    const std::optional<QPointF> from = mCameraController.pixelForPoint(at - half);
+                    const std::optional<QPointF> to = mCameraController.pixelForPoint(at + half);
+                    return from && to ? std::optional<qreal>(QLineF(*from, *to).length()) : std::nullopt;
+                };
+                const std::optional<qreal> wide = across(QVector3D(0.5f, 0.0f, 0.0f));
+                const std::optional<qreal> deep = across(QVector3D(0.0f, 0.5f, 0.0f));
+                if (wide && deep) {
+                    lineWidth = MapDecals::outlineWidth(qMin(*wide, *deep) * size * devicePixelRatioF());
+                }
+            }
+            const QString key =
+                    qsl("highlight|%1|%2|%3|%4|%5")
+                            .arg(QString::number(static_cast<int>(shape)), color.name(QColor::HexArgb), centerColor.name(QColor::HexArgb), QString::number(round), QString::number(lineWidth));
+            if (const GLuint texture = imageTexture(key, [shape, color, centerColor, round, lineWidth] {
+                    return MapDecals::highlight(shape, color, centerColor, round, scmRoomTextureSize, lineWidth);
+                })) {
                 GeometryData& batch = (onGround ? groundDecals->ground : decals.highlights)[texture];
                 batch.textureId = texture;
-                // highlightRadius is in rooms' spacing, which is one unit here
-                const float size = MapDecals::highlightFillsRoom(shape) ? roomSize : look.highlightRadius * style.highlightScale;
-                appendMapQuad(batch, onGround ? ground : roomTop, size, decalTint);
+                appendMapQuad(batch, at, size, onGround ? groundTint : decalTint);
             }
         }
 
@@ -2258,7 +2300,7 @@ void ModernGLWidget::renderRooms()
                 priority.rank = 2;
                 priority.playerDistance = playerDistance;
             }
-            roomNames.append({center, style.roomNameColorFor(pR->userData.value(ROOM_UI_NAMECOLOR), background), pR->name, decalTint * nameTint, &decals, pR->getId(), priority});
+            roomNames.append({center, style.roomNameColorFor(pR->userData.value(ROOM_UI_NAMECOLOR), background), pR->name, groundTint * nameTint, &decals, pR->getId(), priority});
         }
 
         // A terminal's room is only its character, and a wireframe has no fill, so their markers stand out from the background instead
@@ -2612,15 +2654,17 @@ void ModernGLWidget::renderRooms()
         mRenderCommandQueue.addCommand(std::make_unique<RenderTrianglesCommand>(
                 board.vertices, board.colors, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix(), RenderCommand::Shading::Unlit));
     }
-    const auto queueShapes = [this](const ShapeInstances& instances) {
+    const auto queueShapes = [this](const ShapeInstances& instances, const bool edges = false) {
         for (size_t shape = 0; shape < instances.size(); ++shape) {
             if (!instances.at(shape).isEmpty()) {
-                mRenderCommandQueue.addCommand(std::make_unique<RenderInstancedCubesCommand>(instances.at(shape),
-                                                                                             mCameraController.getProjectionMatrix(),
-                                                                                             mCameraController.getViewMatrix(),
-                                                                                             mCameraController.getModelMatrix(),
-                                                                                             RenderCommand::Shading::ModelBlock,
-                                                                                             static_cast<GeometryManager::InstanceShape>(shape)));
+                auto command = std::make_unique<RenderInstancedCubesCommand>(instances.at(shape),
+                                                                             mCameraController.getProjectionMatrix(),
+                                                                             mCameraController.getViewMatrix(),
+                                                                             mCameraController.getModelMatrix(),
+                                                                             RenderCommand::Shading::ModelBlock,
+                                                                             static_cast<GeometryManager::InstanceShape>(shape));
+                command->setEdges(edges);
+                mRenderCommandQueue.addCommand(std::move(command));
             }
         }
     };
@@ -2765,6 +2809,68 @@ void ModernGLWidget::renderRooms()
     std::sort(levels.begin(), levels.end());
     levels.erase(std::unique(levels.begin(), levels.end()), levels.end());
     qint64 unlabeledFrom = std::numeric_limits<int>::lowest();
+    // Drawn after the tilt-shift blurs the frame, so that what is to be read stays sharp; with depth writes off, as
+    // they are here
+    const bool sharpText = style.postEffects.testFlag(MapStyle::PostEffect::TiltShift);
+    bool depthSaved = false;
+    const auto deferText = [&](const bool deferring) {
+        if (!sharpText) {
+            return;
+        }
+        // Hidden only by what is drawn before it, as it would be undeferred, not by the levels above or the faded
+        // pieces drawn after it
+        if (deferring && !depthSaved) {
+            depthSaved = true;
+            mRenderCommandQueue.addCommand(std::make_unique<DepthSnapshotCommand>(&mDepthSnapshot, true));
+            mRenderCommandQueue.setDeferring(true);
+            mRenderCommandQueue.addCommand(std::make_unique<DepthSnapshotCommand>(&mDepthSnapshot, false));
+        }
+        mRenderCommandQueue.setDeferring(deferring);
+        if (deferring) {
+            mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::DISABLE_DEPTH_WRITE));
+        }
+    };
+    // The viewed level's names and highlights lying on it, taken from its decals to be drawn sharp
+    QList<RoomDecals> viewedText;
+    if (sharpText) {
+        for (RoomDecals* decals :
+             {opaqueDecals.contains(mMapCenterZ) ? &opaqueDecals[mMapCenterZ] : nullptr, seeThroughLevels.contains(mMapCenterZ) ? &seeThroughLevels[mMapCenterZ].decals : nullptr}) {
+            if (!decals || (decals->text.isEmpty() && decals->ground.isEmpty())) {
+                continue;
+            }
+            RoomDecals text;
+            text.text = std::exchange(decals->text, {});
+            text.ground = std::exchange(decals->ground, {});
+            viewedText.append(text);
+        }
+    }
+    // Over the viewed level's names, as a see-through level's rooms are drawn: depth first, so that each pixel blends
+    // just the nearest face. Blurred with the rest, but after the names' depth is saved, so that they show through
+    bool viewedLevelTopQueued = false;
+    const auto queueViewedLevelTop = [&]() {
+        if (viewedLevelTopQueued) {
+            return;
+        }
+        viewedLevelTopQueued = true;
+        deferText(true);
+        for (const RoomDecals& text : std::as_const(viewedText)) {
+            queueDecals(text);
+        }
+        deferText(false);
+        if (std::all_of(seenThroughInstances.cbegin(), seenThroughInstances.cend(), [](const QVector<CubeInstanceData>& instances) {
+                return instances.isEmpty();
+            })) {
+            return;
+        }
+        mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::ENABLE_DEPTH_WRITE));
+        mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::DISABLE_COLOR_WRITE));
+        queueShapes(seenThroughInstances);
+        mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::ENABLE_COLOR_WRITE));
+        mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::DISABLE_DEPTH_WRITE));
+        mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::DEPTH_FUNC_LEQUAL));
+        queueShapes(seenThroughInstances, true);
+        mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::DEPTH_FUNC_LESS));
+    };
     // The viewed level's names standing up or haloed, after everything else on it and over its rooms in front of them,
     // but under its labels shown on top, as on the 2D map
     bool namesQueued = false;
@@ -2782,8 +2888,10 @@ void ModernGLWidget::renderRooms()
             if (lowest < mMapCenterZ) {
                 renderLabels(true, static_cast<int>(lowest), mMapCenterZ - 1);
             }
+            deferText(true);
             queueNames();
             renderLabels(true, mMapCenterZ, static_cast<int>(highest));
+            deferText(false);
         } else {
             renderLabels(true, static_cast<int>(lowest), static_cast<int>(highest));
         }
@@ -2900,17 +3008,23 @@ void ModernGLWidget::renderRooms()
         if (seeThrough != seeThroughLevels.cend()) {
             queueDecals(seeThrough->decals);
         }
+        if (level == mMapCenterZ) {
+            queueViewedLevelTop();
+        }
         queueOnTopLabels(level, level);
         unlabeledFrom = qint64{level} + 1;
     }
     if (!washed) {
         queueWashes();
     }
+    queueViewedLevelTop();
     if (unlabeledFrom <= std::numeric_limits<int>::max()) {
         queueOnTopLabels(unlabeledFrom, std::numeric_limits<int>::max());
     }
     if (!namesQueued) {
+        deferText(true);
         queueNames();
+        deferText(false);
     }
     // Faintly, where anything stands between the pawn and the camera, so it is not lost inside a building
     if (std::any_of(tokenInstances.cbegin(), tokenInstances.cend(), [](const QVector<CubeInstanceData>& instances) {
@@ -2927,6 +3041,11 @@ void ModernGLWidget::renderRooms()
         mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::DEPTH_FUNC_LESS));
     }
     mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::ENABLE_DEPTH_WRITE));
+    if (sharpText) {
+        deferText(true);
+        mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::ENABLE_DEPTH_WRITE));
+        deferText(false);
+    }
     mSeeThroughExits.clear();
 }
 
@@ -3876,6 +3995,116 @@ QHash<int, DioramaLayout::Piece> ModernGLWidget::dioramaPieces(const TArea& area
         places.append({roomId, pR->x(), pR->y(), pR->z(), *kit});
     }
     return DioramaLayout::layout(places, mMapCenterZ, 2.0f / scale, 2.0f / scale / zFlattening);
+}
+
+QHash<int, float> ModernGLWidget::pieceOpacities(const TArea& area, const QHash<int, DioramaLayout::Piece>& pieces, const int playerRoomId)
+{
+    const float roomSize = 2.0f / scale;
+    const float roomHeight = roomSize / zFlattening;
+    // The map is shrunk and turned on its way to the camera, so distances are taken from where it puts each point
+    const QMatrix4x4 toEye = mCameraController.getViewMatrix() * mCameraController.getModelMatrix();
+    struct Box
+    {
+        QRectF onScreen;
+        float distance = 0.0f;
+        std::pair<int, int> cell;
+    };
+    // None where a corner is behind the camera
+    const auto box = [this, &toEye](const float x, const float y, const float half, const float bottom, const float top) -> std::optional<Box> {
+        qreal left = std::numeric_limits<qreal>::max();
+        qreal right = std::numeric_limits<qreal>::lowest();
+        qreal upper = std::numeric_limits<qreal>::max();
+        qreal lower = std::numeric_limits<qreal>::lowest();
+        for (const float dx : {-half, half}) {
+            for (const float dy : {-half, half}) {
+                for (const float z : {bottom, top}) {
+                    const std::optional<QPointF> pixel = mCameraController.pixelForPoint(QVector3D(x + dx, y + dy, z));
+                    if (!pixel) {
+                        return std::nullopt;
+                    }
+                    left = qMin(left, pixel->x());
+                    right = qMax(right, pixel->x());
+                    upper = qMin(upper, pixel->y());
+                    lower = qMax(lower, pixel->y());
+                }
+            }
+        }
+        return Box{QRectF(QPointF(left, upper), QPointF(right, lower)), toEye.map(QVector3D(x, y, (bottom + top) / 2.0f)).length(), {}};
+    };
+
+    QList<Box> targets;
+    for (const int roomId : area.getAreaRooms()) {
+        const TRoom* pR = mpMap->mpRoomDB->getRoom(roomId);
+        if (!pR || pR->isHidden() || (roomId != playerRoomId && !pR->highlight)) {
+            continue;
+        }
+        const auto piece = pieces.constFind(roomId);
+        // An upper storey of a building that rises from the viewed level is on it too, and its highlight on the board
+        const bool storey = piece != pieces.cend() && piece->storeys > 1 && piece->storey > 0;
+        if ((storey ? pR->z() - piece->storey : pR->z()) != mMapCenterZ) {
+            continue;
+        }
+        const float ground =
+                storey ? static_cast<float>(mMapCenterZ) - DioramaLayout::groundBelowLevel(roomHeight) : (piece != pieces.cend() ? piece->bottom : static_cast<float>(pR->z()) - roomHeight / 2.0f);
+        const float roof = piece != pieces.cend() ? piece->top : static_cast<float>(pR->z()) + roomHeight / 2.0f;
+        // A highlight lies on the ground round the room, and the player's token stands on its top
+        const float bottom = pR->highlight ? ground : roof;
+        const float top = roomId == playerRoomId ? roof + roomSize : roof;
+        if (std::optional<Box> target = box(static_cast<float>(pR->x()), static_cast<float>(pR->y()), 0.5f, bottom, top)) {
+            target->cell = {pR->x(), pR->y()};
+            targets.append(*target);
+        }
+    }
+
+    // A building is seen through whole, all its storeys, where any of them hides a room
+    QSet<std::pair<int, int>> hidingCells;
+    QHash<int, std::pair<int, int>> tallPieces;
+    for (auto it = pieces.cbegin(); it != pieces.cend(); ++it) {
+        const DioramaLayout::Piece& piece = it.value();
+        if (piece.kit == EnvironmentKit::Kit::Water || piece.kit == EnvironmentKit::Kit::Road) {
+            continue;
+        }
+        const TRoom* pR = mpMap->mpRoomDB->getRoom(it.key());
+        if (!pR || (piece.storeys == 1 && (pR->z() != mMapCenterZ || piece.kit == EnvironmentKit::Kit::Plain))) {
+            continue;
+        }
+        const std::pair<int, int> cell{pR->x(), pR->y()};
+        tallPieces.insert(it.key(), cell);
+        if (targets.isEmpty() || hidingCells.contains(cell)) {
+            continue;
+        }
+        const std::optional<Box> standing = box(static_cast<float>(pR->x()), static_cast<float>(pR->y()), piece.halfWidth * scmEaves, piece.bottom, piece.peak);
+        // Never to show a room its own building hides, as its roof stands over it
+        if (standing && std::any_of(targets.cbegin(), targets.cend(), [&standing, &cell](const Box& target) {
+                return target.cell != cell && DioramaLayout::hides(standing->onScreen, standing->distance, target.onScreen, target.distance);
+            })) {
+            hidingCells.insert(cell);
+        }
+    }
+
+    // No more than a frame's worth, so that the first frame after the view was left still starts each fade
+    const qint64 elapsed = mPieceFadeClock.isValid() ? qMin(mPieceFadeClock.restart(), qint64{33}) : 0;
+    if (!mPieceFadeClock.isValid()) {
+        mPieceFadeClock.start();
+    }
+    const bool snap = mPieceFadeArea != mAID;
+    mPieceFadeArea = mAID;
+    QHash<int, float> opacities;
+    bool settled = true;
+    for (auto it = tallPieces.cbegin(); it != tallPieces.cend(); ++it) {
+        const float target = hidingCells.contains(it.value()) ? scmSeenThroughOpacity : 1.0f;
+        const float previous = mPieceOpacity.value(it.key(), 1.0f);
+        const float opacity = snap ? target : GeometryManager::steppedOpacity(previous, target, elapsed, mPieceFadeMilliseconds);
+        settled = settled && opacity == target;
+        if (opacity < 1.0f) {
+            opacities.insert(it.key(), opacity);
+        }
+    }
+    mPieceOpacity = opacities;
+    if (!settled && !mNameFadeTimer->isActive()) {
+        mNameFadeTimer->start();
+    }
+    return opacities;
 }
 
 int ModernGLWidget::roomAt(const QPoint& position, const bool orNear, const std::optional<int> onLevel)
@@ -5965,6 +6194,7 @@ void ModernGLWidget::renderLabels(const bool onTop, const int lowestLevel, const
         mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::DISABLE_DEPTH_WRITE));
     }
 
+    const bool sharpLabels = style.postEffects.testFlag(MapStyle::PostEffect::TiltShift);
     for (auto it = pArea->mMapLabels.constBegin(); it != pArea->mMapLabels.constEnd(); ++it) {
         const TMapLabel& label = it.value();
         if (label.showOnTop != onTop || label.pix.isNull()) {
@@ -5980,7 +6210,23 @@ void ModernGLWidget::renderLabels(const bool onTop, const int lowestLevel, const
             continue;
         }
 
-        const QPixmap* themed = themedLabel(it.key(), label, style);
+        const auto x = static_cast<float>(label.pos.x());
+        const auto y = static_cast<float>(label.pos.y());
+        const float z = static_cast<float>(label.pos.z()) + (onTop ? roomHeight / 2.0f : -roomHeight / 2.0f);
+        // A label lying on the map can be shown many times larger than its picture
+        qreal pixelsPerTexel = 1.0;
+        const QSize canvas = label.pix.size();
+        if (style.themedMapLabels && !label.noScaling && !canvas.isEmpty()) {
+            const std::optional<QPointF> corner = mCameraController.pixelForPoint(QVector3D(x, y, z));
+            const std::optional<QPointF> across = mCameraController.pixelForPoint(QVector3D(x + std::abs(static_cast<float>(label.size.width())), y, z));
+            const std::optional<QPointF> down = mCameraController.pixelForPoint(QVector3D(x, y - std::abs(static_cast<float>(label.size.height())), z));
+            if (corner && across && down) {
+                pixelsPerTexel = qMax(QLineF(*corner, *across).length() / canvas.width(), QLineF(*corner, *down).length() / canvas.height());
+            }
+        }
+        // Only in a style that draws its labels after its blur; elsewhere a label is as it always was
+        const int sharpness = sharpLabels ? GeometryManager::labelSharpness(pixelsPerTexel, devicePixelRatioF(), canvas, scmMaxLabelHalo, mMaxTextureSize, scmMaxSharpLabelTexels) : 1;
+        const QPixmap* themed = themedLabel(it.key(), label, style, sharpness);
         const QPixmap& pixmap = themed ? *themed : label.pix;
         // Halo and all, as wide as the label is with it
         QPointF margin;
@@ -6000,9 +6246,6 @@ void ModernGLWidget::renderLabels(const bool onTop, const int lowestLevel, const
         }
 
         // pos is the top-left corner, on the map's plane: on the rooms' tops if shown on top of them, else beneath them
-        const auto x = static_cast<float>(label.pos.x());
-        const auto y = static_cast<float>(label.pos.y());
-        const float z = static_cast<float>(label.pos.z()) + (onTop ? roomHeight / 2.0f : -roomHeight / 2.0f);
         if (label.noScaling) {
             // Its own size in pixels whatever the zoom, as on the 2D map, so it faces the screen
             const QVector3D corner(x, y, z);
@@ -6059,17 +6302,18 @@ void ModernGLWidget::renderLabels(const bool onTop, const int lowestLevel, const
     }
 }
 
-const QPixmap* ModernGLWidget::themedLabel(const int labelId, const TMapLabel& label, const MapStyle& style)
+const QPixmap* ModernGLWidget::themedLabel(const int labelId, const TMapLabel& label, const MapStyle& style, const int sharpness)
 {
     if (!style.themedMapLabels) {
         mThemedLabels.clear();
         return nullptr;
     }
     ThemedLabel& themed = mThemedLabels[{mAID, labelId}];
-    if (themed.sourceKey != label.pix.cacheKey() || themed.styleId != style.id) {
-        const QImage image = MapDecals::themedLabel(label, style);
+    if (themed.sourceKey != label.pix.cacheKey() || themed.styleId != style.id || themed.sharpness != sharpness) {
+        const QImage image = MapDecals::themedLabel(label, style, sharpness);
         themed.sourceKey = label.pix.cacheKey();
         themed.styleId = style.id;
+        themed.sharpness = sharpness;
         themed.pixmap = image.isNull() ? QPixmap() : QPixmap::fromImage(image);
     }
     return themed.pixmap.isNull() ? nullptr : &themed.pixmap;

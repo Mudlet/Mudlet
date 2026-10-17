@@ -227,6 +227,8 @@ private:
     std::unique_ptr<QOpenGLShaderProgram> mTiltShiftProgram;
     QOpenGLVertexArrayObject mTiltShiftVAO;
     bool mTiltShiftFailed = false;
+    // The depth where the sharp text drawn after the blur starts, so that only what was drawn before it hides it
+    DepthSnapshot mDepthSnapshot;
 
     // Geometry management
     GeometryManager mGeometryManager;
@@ -292,9 +294,10 @@ private:
     // A map label drawn again in the map style's font and color, by area and label ID
     struct ThemedLabel
     {
-        // The label's own picture and the style it was drawn again from
+        // The label's own picture and the style it was drawn again from, and how many times its resolution
         qint64 sourceKey = 0;
         QString styleId;
+        int sharpness = 1;
         // Null where the style leaves the label as it is
         QPixmap pixmap;
     };
@@ -375,8 +378,14 @@ private:
     QHash<int, float> mNameOpacity;
     QElapsedTimer mNameFadeClock;
     int mNameFadeArea = -1;
-    // Repaints while a name is still fading
+    // Repaints while a name or a piece seen through is still fading
     QTimer* mNameFadeTimer = nullptr;
+    // A diorama's pieces that stand between the camera and the player's room or a highlighted one fade to see-through
+    // and back over this long; by room, how far each has faded, for those not solid, timed and kept as the names' are
+    int mPieceFadeMilliseconds = 250;
+    QHash<int, float> mPieceOpacity;
+    QElapsedTimer mPieceFadeClock;
+    int mPieceFadeArea = -1;
     // Read from the context once it is made; the least any OpenGL 3.3 driver offers until then
     int mMaxTextureSize = 1024;
     bool mFramePending = true;
@@ -522,6 +531,8 @@ private:
     int roomUnderPointer();
     // What the diorama style builds each of the area's shown rooms as
     QHash<int, DioramaLayout::Piece> dioramaPieces(const TArea& area) const;
+    // By room, how solid each piece that is not is drawn, as it fades to or from being seen through
+    QHash<int, float> pieceOpacities(const TArea& area, const QHash<int, DioramaLayout::Piece>& pieces, int playerRoomId);
     void endPan();
     void renderCube(float x, float y, float z, float size, float r, float g, float b, float a);
     void renderText(const QString& text, float x, float y);
@@ -538,7 +549,7 @@ private:
     // makeImage is only called when the texture is not already made
     GLuint imageTexture(const QString& key, const std::function<QImage()>& makeImage);
     // nullptr where the map style leaves the label as it is
-    const QPixmap* themedLabel(int labelId, const TMapLabel& label, const MapStyle& style);
+    const QPixmap* themedLabel(int labelId, const TMapLabel& label, const MapStyle& style, int sharpness);
     // The 2D map's up/down/in/out markers for the room, or 0 when it has none
     GLuint exitMarkerTexture(const TRoom& room, const QColor& roomColor);
     // Text on a clear background, with a rim of halo around it if that is valid; size is set to the texture's size in pixels

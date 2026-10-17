@@ -25,6 +25,7 @@
 #include <QFile>
 #include <QHash>
 #include <QImage>
+#include <QSize>
 #include <QtMath>
 
 #include <algorithm>
@@ -464,6 +465,16 @@ int GeometryManager::textSharpness(const qreal pixelsPerTexel, const qreal devic
     // With a tenth to spare, as a font made larger is not hinted to exactly that many times as wide
     const int fitting = widthTexels > 0.0 ? qMax(1, qFloor(maxTextureSize / (1.1 * widthTexels))) : wanted;
     return qMin(wanted, fitting);
+}
+
+int GeometryManager::labelSharpness(const qreal pixelsPerTexel, const qreal devicePixelRatio, const QSize& canvas, const int haloTexels, const int maxTextureSize, const qint64 maxTexels)
+{
+    const QSize haloed = canvas + QSize(2 * haloTexels, 2 * haloTexels);
+    int sharpness = textSharpness(pixelsPerTexel, devicePixelRatio, qMax(haloed.width(), haloed.height()), maxTextureSize);
+    while (sharpness > 1 && qint64{haloed.width()} * haloed.height() * sharpness * sharpness > maxTexels) {
+        --sharpness;
+    }
+    return sharpness;
 }
 
 GeometryManager::LevelFade GeometryManager::levelFade(const int levelsAbove, const bool moreTransparent)

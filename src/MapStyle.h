@@ -50,7 +50,9 @@ struct MapStyle
         // The room's own square or circle filled, as a text screen's cursor fills its cell
         Cell,
         // Two bright rings with a faint glow between them, on the ground round the room
-        Rings
+        Rings,
+        // A crisp line in the room's shape on the ground round it, with a faint glow either side of it
+        Outline
     };
 
     // What rings the player's room, where the profile keeps the original player room marker
