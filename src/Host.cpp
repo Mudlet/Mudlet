@@ -2539,7 +2539,7 @@ bool Host::hasConsoleView() const
 
 bool Host::mapOpen() const
 {
-    return mpMap && (mpMap->mapViewFrontend() || !hasConsoleView());
+    return mpMap && mapViewFrontend();
 }
 
 TMapViewFrontend* Host::mapViewFrontend() const
