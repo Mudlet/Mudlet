@@ -1716,6 +1716,9 @@ void CredentialManagerKeychainTest::testAKeychainNotOnDBusHoldsNothingToRemove()
     for (int deletion = 0; deletion < deletions; ++deletion) {
         QKeychain::Job* cleanup = watcher.waitForStalled(deletion);
         QVERIFY(cleanup);
+#if !defined(Q_OS_MACOS) && !defined(Q_OS_WIN)
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(QStringLiteral("could not reach the keychain.*org\\.freedesktop\\.secrets")));
+#endif
         JobStaller::answer(cleanup, QKeychain::OtherError, QStringLiteral("The name org.freedesktop.secrets was not provided by any .service files"));
     }
 
