@@ -54,6 +54,7 @@
 #include "ShaderManager.h"
 #include "CameraController.h"
 
+#include <functional>
 #include <optional>
 
 class Host;
@@ -63,8 +64,10 @@ class QPainter;
 class T2DMap;
 class TCommandLine;
 class TMap;
+class TMapLabel;
 class TRoom;
 struct MapInfoProperties;
+struct MapStyle;
 namespace ExitScene {
 struct Options;
 }
@@ -221,6 +224,17 @@ private:
     // Room textures this frame has used so far, which making room for another must keep
     QSet<QString> mRoomTexturesInUse;
     bool mRoomTextureLimitWarned = false;
+    // A map label drawn again in the map style's font and color, by area and label ID
+    struct ThemedLabel
+    {
+        // The label's own picture and the style it was drawn again from
+        qint64 sourceKey = 0;
+        QString styleId;
+        // Null where the style leaves the label as it is
+        QPixmap pixmap;
+    };
+    QHash<std::pair<int, int>, ThemedLabel> mThemedLabels;
+    static constexpr qsizetype scmThemedLabelsKept = 256;
     bool mSolidDashWarned = false;
 
     // Host reference
@@ -364,6 +378,10 @@ private:
     GLuint cachedRoomTexture(const QString& key);
     bool roomForAnotherTexture(const QString& key);
     GLuint addRoomTexture(const QString& key, const QImage& image);
+    // makeImage is only called when the texture is not already made
+    GLuint imageTexture(const QString& key, const std::function<QImage()>& makeImage);
+    // nullptr where the map style leaves the label as it is
+    const QPixmap* themedLabel(int labelId, const TMapLabel& label, const MapStyle& style);
     // The 2D map's up/down/in/out markers for the room, or 0 when it has none
     GLuint exitMarkerTexture(const TRoom& room, const QColor& roomColor);
     // Text on a clear background; size is set to the texture's size in pixels
@@ -382,6 +400,11 @@ private:
     bool levelShown(int z) const;
     // What rooms and exits on level z recede toward: the mapper's upper or lower level color, or the background
     QColor levelFadeTarget(int z) const;
+    const MapStyle& mapStyle() const;
+    // The style's background, else the profile's mapper background color
+    QColor backgroundColor() const;
+    // Of the beacon over the player's room, and of the style's thin ring around it
+    QColor playerMarkerColor() const;
     ExitScene::Options exitSceneOptions() const;
     void zoomBySteps(float steps);
     void panByRooms(int right, int up);

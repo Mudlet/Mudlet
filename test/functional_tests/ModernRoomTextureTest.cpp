@@ -160,6 +160,9 @@ private slots:
             // Short, so that every name fits its room and none is decluttered away
             pMap->mpRoomDB->getRoom(id)->name = qsl("R%1").arg(id);
         }
+        // A font of the map's own keeps names at their full size, whatever a map style would shrink them to,
+        // and in a font that ships with Mudlet rather than the platform's
+        pMap->mUserData.insert(ROOM_UI_NAMEFONT, QFont(Host::scmDefaultFontFamily).toString());
         mpHost->mShowRoomID = true;
         pMap->setRoomNamesShown(true);
         pMap->mRoomIdHash[pMap->mProfileName] = 312;

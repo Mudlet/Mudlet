@@ -125,7 +125,11 @@ public slots:
                              int xOffset,
                              int yOffset,
                              int widgetWidth,
-                             int fontHeight);
+                             int fontHeight,
+                             // Invalid for the profile's info box background
+                             const QColor& background = QColor(),
+                             // Empty for the profile's display font's
+                             const QString& fontFamily = QString());
     static int paintMapInfoContributor(QPainter& painter, int xOffset, int yOffset, const MapInfoProperties& properties, QColor bgColor, int fontHeight, int widgetWidth);
 
 protected:

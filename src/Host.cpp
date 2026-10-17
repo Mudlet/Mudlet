@@ -33,6 +33,7 @@
 #include "HostManager.h"
 #include "LuaInterface.h"
 #include "mapInfoContributorManager.h"
+#include "MapStyle.h"
 #include "MMCP.h"
 #include "MMCPServer.h"
 #include "TAction.h"
@@ -295,6 +296,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mPass(pass)
 , mPort(port)
 {
+    mpMapStyle = &MapStyle::findOrDefault(MapStyle::defaultId());
     // mTelnet is declared ahead of the members reset() clears (mMxpProcessor and friends),
     // so its own constructor can't do this.
     mTelnet.reset();
@@ -6731,6 +6733,26 @@ void Host::setLargeAreaExitArrows(const bool state)
             consoleFrontend()->setMapLargeAreaExitArrows(state);
         }
     }
+}
+
+const QString& Host::mapStyle() const
+{
+    return mpMapStyle->id;
+}
+
+bool Host::setMapStyle(const QString& id)
+{
+    const MapStyle* style = MapStyle::find(id);
+    if (!style) {
+        return false;
+    }
+    if (mpMapStyle != style) {
+        mpMapStyle = style;
+        if (mpMap) {
+            mpMap->announceMapperSettingChanged(TMap::MapperSetting::Style);
+        }
+    }
+    return true;
 }
 
 void Host::setEditorShowBidi(const bool state)

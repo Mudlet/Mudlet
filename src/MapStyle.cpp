@@ -1,0 +1,202 @@
+/***************************************************************************
+ *   Copyright (C) 2026 by Mudlet Developers                               *
+ *                                                                         *
+ *   This program is free software; you can redistribute it and/or modify  *
+ *   it under the terms of the GNU General Public License as published by  *
+ *   the Free Software Foundation; either version 2 of the License, or     *
+ *   (at your option) any later version.                                   *
+ *                                                                         *
+ *   This program is distributed in the hope that it will be useful,       *
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ *   GNU General Public License for more details.                          *
+ *                                                                         *
+ *   You should have received a copy of the GNU General Public License     *
+ *   along with this program; if not, write to the                         *
+ *   Free Software Foundation, Inc.,                                       *
+ *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+ ***************************************************************************/
+
+#include "MapStyle.h"
+
+#include "Host.h"
+#include "RoomAppearance.h"
+#include "utils.h"
+
+#include <QCoreApplication>
+#include <QFont>
+
+#include <algorithm>
+
+namespace {
+QList<MapStyle> registeredStyles()
+{
+    QList<MapStyle> styles;
+
+    MapStyle tiles;
+    tiles.id = qsl("tiles");
+    tiles.palette = MapStyle::Palette::Soft;
+    tiles.roomScale = 3.2f;
+    tiles.edges = MapStyle::Edges::ViewedLevelBase;
+    tiles.roomFlattening = 2.5f;
+    tiles.defaultBackground = QColor(16, 22, 32);
+    tiles.highlightShape = MapStyle::HighlightShape::Glow;
+    tiles.highlightScale = 1.8f;
+    tiles.playerRing = MapStyle::PlayerRing::Thin;
+    tiles.playerColor = QColor(255, 208, 90);
+    tiles.themedMapLabels = true;
+    tiles.mapLabelColor = QColor(150, 190, 225);
+    tiles.mapLabelHalo = QColor(16, 22, 32, 200);
+    tiles.mapLabelMaxHeight = 0.9f;
+    tiles.roomNameColor = QColor(185, 205, 225, 230);
+    tiles.roomNameScale = 0.6f;
+    tiles.compassFace = QColor(18, 26, 38, 210);
+    tiles.compassRim = QColor(110, 140, 170);
+    tiles.compassNeedle = QColor(235, 96, 80);
+    tiles.infoBackground = QColor(18, 26, 38, 190);
+    tiles.infoTextColor = QColor(215, 225, 235);
+    tiles.shadedBlocks = true;
+    tiles.dashedStairs = true;
+    styles.append(tiles);
+
+    return styles;
+}
+} // namespace
+
+QString MapStyle::displayName() const
+{
+    if (id == qsl("tiles")) {
+        //: Name of the 3D map style that draws rooms as lit blocks in their environment colors, chosen in the Mapper preferences
+        return QCoreApplication::translate("MapStyle", "Tiles");
+    }
+    return id;
+}
+
+QColor MapStyle::roomColor(const QColor& environmentColor) const
+{
+    switch (palette) {
+    case Palette::Environment:
+        return environmentColor;
+    case Palette::Soft: {
+        const QColor hsl = environmentColor.toHsl();
+        return QColor::fromHslF(std::max(hsl.hslHueF(), 0.0f), hsl.hslSaturationF() * 0.7f, 0.25f + hsl.lightnessF() * 0.6f, hsl.alphaF());
+    }
+    }
+    return environmentColor;
+}
+
+QColor MapStyle::backgroundColor(const QColor& profileBackground) const
+{
+    if (background.isValid()) {
+        return background;
+    }
+    if (defaultBackground.isValid() && profileBackground == QColor(Qt::black)) {
+        return defaultBackground;
+    }
+    return profileBackground;
+}
+
+bool MapStyle::themesPlayerMarker(const int profilePlayerRoomStyle, const bool strongHighlight) const
+{
+    if (profilePlayerRoomStyle != 0 || strongHighlight) {
+        return false;
+    }
+    return playerRing != PlayerRing::Profile || playerColor.isValid();
+}
+
+QColor MapStyle::infoBackgroundColor(const QColor& profileInfoBackground) const
+{
+    if (infoBackground.isValid() && profileInfoBackground == Host::scmDefaultMapInfoBg) {
+        return infoBackground;
+    }
+    return profileInfoBackground;
+}
+
+QColor MapStyle::roomBorderColor(const QColor& profileBorder, const QColor& roomColor, const QColor& background) const
+{
+    if (edges != Edges::ViewedLevelBase || profileBorder != Host::scmDefaultRoomBorderColor) {
+        return profileBorder;
+    }
+    return QColor::fromRgbF((roomColor.redF() + background.redF()) / 2.0f, (roomColor.greenF() + background.greenF()) / 2.0f, (roomColor.blueF() + background.blueF()) / 2.0f, roomColor.alphaF());
+}
+
+QColor MapStyle::roomNameColorFor(const QString& roomColorData, const QColor& background) const
+{
+    if (roomNameColor.isValid() && !QColor(roomColorData).isValid()) {
+        return roomNameColor;
+    }
+    return RoomAppearance::nameColor(roomColorData, background);
+}
+
+QColor MapStyle::highlightColorFor(const QColor& roomHighlightColor) const
+{
+    if (!roomHighlightColor.isValid() && highlightColor.isValid()) {
+        return highlightColor;
+    }
+    return roomHighlightColor;
+}
+
+QColor MapStyle::highlightColorFor(const QColor& roomHighlightColor, const QColor& roomHighlightCenterColor) const
+{
+    constexpr int faintest = 64;
+    if (roomHighlightColor.isValid() && roomHighlightColor.alpha() < faintest && roomHighlightCenterColor.isValid() && roomHighlightCenterColor.alpha() > roomHighlightColor.alpha()) {
+        return highlightColorFor(roomHighlightCenterColor);
+    }
+    return highlightColorFor(roomHighlightColor);
+}
+
+bool MapStyle::roundRooms(const bool profileRoundRooms) const
+{
+    switch (shape) {
+    case Shape::Profile:
+        return profileRoundRooms;
+    }
+    return profileRoundRooms;
+}
+
+QFont MapStyle::labelFont(const QFont& mapSymbolFont) const
+{
+    QFont font = mapSymbolFont;
+    if (!labelFontFamily.isEmpty()) {
+        font.setFamily(labelFontFamily);
+    }
+    return font;
+}
+
+QString MapStyle::defaultId()
+{
+    return qsl("tiles");
+}
+
+const QList<MapStyle>& MapStyle::all()
+{
+    static const QList<MapStyle> styles = registeredStyles();
+    return styles;
+}
+
+QStringList MapStyle::ids()
+{
+    QStringList result;
+    for (const MapStyle& style : all()) {
+        result.append(style.id);
+    }
+    return result;
+}
+
+const MapStyle* MapStyle::find(const QString& id)
+{
+    for (const MapStyle& style : all()) {
+        if (style.id == id) {
+            return &style;
+        }
+    }
+    return nullptr;
+}
+
+const MapStyle& MapStyle::findOrDefault(const QString& id)
+{
+    if (const MapStyle* style = find(id)) {
+        return *style;
+    }
+    return *find(defaultId());
+}

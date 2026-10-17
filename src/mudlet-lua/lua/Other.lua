@@ -1418,6 +1418,7 @@ function getConfig(...)
       "mapRoundRooms",
       "mapShowGrid",
       "mapShowRoomBorders",
+      "mapStyle",
       "mapSymbolFont",
       "mapSymbolFontOnlyUseSelected",
       "mapSymbolFontScaling",

@@ -24,6 +24,7 @@
 
 
 #include "LuaInterface.h"
+#include "MapStyle.h"
 #include "CredentialManager.h"
 #include "Host.h"
 #include "SecureStringUtils.h"
@@ -1126,6 +1127,11 @@ void XMLimport::readHost(Host* pHost)
     } else {
         // The default (and for profile files from before 4.18.0):
         pHost->setShowIdsInEditor(false);
+    }
+
+    // A style this version does not have, perhaps saved by a newer one, falls back to the default
+    if (!attributes().hasAttribute(qsl("mapStyle")) || !pHost->setMapStyle(attributes().value(qsl("mapStyle")).toString())) {
+        pHost->setMapStyle(MapStyle::defaultId());
     }
 
     if (attributes().hasAttribute(qsl("Large2DMapAreaExitArrows"))) {
