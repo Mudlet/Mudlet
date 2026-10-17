@@ -284,10 +284,11 @@ QList<MapStyle> registeredStyles()
     diorama.environmentKits = true;
     diorama.pavedPathStrength = 0.3f;
     diorama.playerMarker = MapStyle::PlayerMarker::Token;
-    // A warm glow on the board round the room, in the script's color, and in lamplight where it gave none
-    diorama.highlightShape = MapStyle::HighlightShape::Glow;
+    // A line on the board round the room, in the script's color, and in lamplight where it gave none: in the gap
+    // between the room's piece and its neighbours', where a building does not hide it
+    diorama.highlightShape = MapStyle::HighlightShape::Outline;
     diorama.highlightColor = QColor(255, 214, 79);
-    diorama.highlightScale = 1.7f;
+    diorama.highlightScale = 1.3f;
     // Map labels on white card tags, as a model's are
     diorama.labelFontFamily = qsl("Bitstream Vera Sans");
     diorama.themedMapLabels = true;

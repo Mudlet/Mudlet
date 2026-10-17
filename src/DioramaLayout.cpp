@@ -19,6 +19,7 @@
 
 #include "DioramaLayout.h"
 
+#include <QRectF>
 #include <QSet>
 
 namespace DioramaLayout {
@@ -120,6 +121,17 @@ QHash<int, Piece> layout(const QList<Place>& places, const int viewedLevel, cons
         pieces.insert(place.roomId, piece);
     }
     return pieces;
+}
+
+bool hides(const QRectF& pieceOnScreen, const float pieceDistance, const QRectF& roomOnScreen, const float roomDistance)
+{
+    // A tenth of the room, as far as the token stands up on it: less is only a corner of a neighbour's roof
+    constexpr qreal covered = 0.1;
+    if (pieceDistance >= roomDistance || !roomOnScreen.isValid()) {
+        return false;
+    }
+    const QRectF overlap = pieceOnScreen.intersected(roomOnScreen);
+    return overlap.isValid() && overlap.width() * overlap.height() >= covered * roomOnScreen.width() * roomOnScreen.height();
 }
 
 } // namespace DioramaLayout
