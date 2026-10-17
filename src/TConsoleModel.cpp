@@ -30,6 +30,7 @@
 #include <QDir>
 #include <QFileInfo>
 #include <QFontInfo>
+#include <QMetaMethod>
 #include <QTimer>
 
 #include <cerrno>
@@ -121,6 +122,7 @@ void TConsoleModel::clear()
     buffer.clear();
     // --mirror's pending line went with the buffer.
     mMirrorPendingLine.clear();
+    endPrintedLine();
     mUserCursor = QPoint();
     mScrolledBackTo.reset();
     // Past the line left, so isPrompt() sees that the line a trigger runs for went too, even when it was line 0
@@ -324,7 +326,9 @@ TConsoleModel::CommandEcho TConsoleModel::printCommand(QString& msg)
         if (buffer.lineBuffer.isEmpty()) {
             buffer.appendEmptyLine();
         }
-        if (!buffer.lineBuffer.back().isEmpty()) {
+        const bool startsLine = !buffer.lineBuffer.back().isEmpty();
+        notifyPrinted(msg, PrintedInto::committedLine, startsLine);
+        if (startsLine) {
             msg.prepend(QChar::LineFeed);
         }
         buffer.appendLine(msg, 0, msg.size() - 1, mCommandFgColor, mCommandBgColor);
@@ -338,6 +342,7 @@ TConsoleModel::CommandEcho TConsoleModel::printCommand(QString& msg)
         buffer.insertInLine(P, msg, format);
         const int down = buffer.wrapLine(lineBeforeNewContent);
         buffer.promptBuffer[lineBeforeNewContent] = false;
+        notifyPrinted(msg + QChar::LineFeed, PrintedInto::committedLine);
         return {CommandEcho::Kind::PromptLine, lineBeforeNewContent, lineBeforeNewContent + 1 + down};
     }
     msg.append(QChar::LineFeed);
@@ -375,8 +380,28 @@ QString mirrorPrefix(const QString& profileName, const QString& consoleName)
 }
 } // namespace
 
+bool TConsoleModelNotifier::textPrintedConnected() const
+{
+    static const QMetaMethod textPrintedSignal = QMetaMethod::fromSignal(&TConsoleModelNotifier::textPrinted);
+    return isSignalConnected(textPrintedSignal);
+}
+
+void TConsoleModel::notifyPrinted(const QString& text, const PrintedInto into, const bool startsLine)
+{
+    if (text.isEmpty() || !mNotifier.textPrintedConnected()) {
+        return;
+    }
+    const bool endOpenLine = mPrintedMidLine && (startsLine || mPrintedLineEnded || into != mPrintedInto);
+    mPrintedInto = into;
+    mPrintedMidLine = !text.endsWith(QChar::LineFeed);
+    mPrintedLineEnded = false;
+    emit mNotifier.textPrinted(endOpenLine ? QChar::LineFeed + text : text);
+}
+
 void TConsoleModel::mirrorToStdOut(const QString& text)
 {
+    // In trigger mode TBuffer::append() writes into the trigger's line, the last one
+    notifyPrinted(text, mTriggerEngineMode ? PrintedInto::committedLine : PrintedInto::end);
     if (Q_LIKELY(!MudletApp::smMirrorToStdOut)) {
         return;
     }
@@ -499,6 +524,7 @@ bool TConsoleModel::echo(QString& text)
         } else {
             buffer.appendLine(text, 0, text.size() - 1, mFormatCurrent.foreground(), mFormatCurrent.background(), mFormatCurrent.allDisplayAttributes());
         }
+        notifyPrinted(text, PrintedInto::committedLine);
     } else {
         buffer.append(text, 0, text.size(), mFormatCurrent.foreground(), mFormatCurrent.background(), mFormatCurrent.allDisplayAttributes());
         appended = true;

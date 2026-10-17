@@ -359,6 +359,114 @@ end))lua");
         QTRY_VERIFY_WITH_TIMEOUT((received += game->readAll()).contains("north\r\n\r\n"), 10000);
     }
 
+    // What the GUI writes into a trigger's line or a prompt's, which is not at the end as print() writes, keeps
+    // the lines the GUI shows: an echo into a trigger's line ends with that line
+    void test_commandEchoesAndTriggerEchoesReachLocalText()
+    {
+        const QString name = qsl("Headless Local Text");
+        QVERIFY(writeProfile(name, QString()));
+        QTcpServer server;
+        QVERIFY(server.listen(QHostAddress::LocalHost));
+        QVERIFY(MudletApp::writeProfileData(name, qsl("url"), qsl("127.0.0.1")).first);
+        QVERIFY(MudletApp::writeProfileData(name, qsl("port"), QString::number(server.serverPort())).first);
+
+        THeadlessSession session;
+        QSignalSpy output(&session, &THeadlessSession::outputLine);
+        QCOMPARE(session.start({.profile = name, .connect = true}), THeadlessSession::StartResult::started);
+        QVERIFY(session.runLua(qsl(R"lua(tempTrigger("Welcome", [[echo(" <tagged>") echo(" <twice>") send("from a trigger")]])
+tempTrigger("Second", [[echo(" <second>")]])
+tempTrigger("Third", [[echo(" <third>")]]))lua")));
+        QTRY_VERIFY_WITH_TIMEOUT(server.hasPendingConnections(), 10000);
+        std::unique_ptr<QTcpSocket> game(server.nextPendingConnection());
+        QSignalSpy local(&session, &THeadlessSession::localText);
+        game->write("Welcome\r\nSecond\r\nThird\r\nhp 10> \xff\xf9");
+        QTRY_VERIFY_WITH_TIMEOUT(outputTexts(output).contains(qsl("hp 10> ")), 10000);
+        QVERIFY(session.runLua(qsl(R"lua(echo("later\n"))lua")));
+        QVERIFY(session.submit(qsl("look")));
+        QCOMPARE(outputTexts(local).join(QString()), qsl(" <tagged> <twice>\nfrom a trigger\n <second>\n <third>\nlater\nlook\n"));
+        QCOMPARE(local.constFirst().at(0).toString(), name);
+    }
+
+    // An open piece ends with its line: the next game line, a deleted line's successor, and the trigger's own
+    // line, where echo() and print() from a trigger both land
+    void test_localTextEndsAPieceWithItsLine()
+    {
+        QVERIFY(writeProfile(qsl("Headless Local Lines"), QString()));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = qsl("Headless Local Lines"), .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.runLua(qsl(R"lua(tempTrigger("Alpha", [[echo(" <a>")]])
+tempTrigger("Beta", [[echo(" <b>") deleteLine()]])
+tempTrigger("Gamma", [[echo(" <c>")]]))lua")));
+        QSignalSpy local(&session, &THeadlessSession::localText);
+        QVERIFY(session.runLua(qsl(R"lua(echo("HP: "))lua")));
+        QVERIFY(session.runLua(qsl(R"lua(feedTriggers("Welcome\n"))lua")));
+        QVERIFY(session.runLua(qsl(R"lua(echo("ok\n"))lua")));
+        QVERIFY(session.runLua(qsl(R"lua(feedTriggers("Alpha\n"))lua")));
+        QVERIFY(session.runLua(qsl(R"lua(feedTriggers("Beta\n"))lua")));
+        QVERIFY(session.runLua(qsl(R"lua(feedTriggers("Gamma\n"))lua")));
+        QVERIFY(session.runLua(qsl(R"lua(echo("cleared") clearWindow() echo("end\n"))lua")));
+        QCOMPARE(outputTexts(local).join(QString()), qsl("HP: \nok\n <a>\n <b>\n <c>\ncleared\nend\n"));
+    }
+
+    void test_errorConsoleTextIsSent()
+    {
+        const QString name = qsl("Headless Error Console");
+        QVERIFY(writeProfile(name, QString()));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QSignalSpy errors(&session, &THeadlessSession::errorConsoleText);
+        QVERIFY(session.runLua(qsl(R"lua(registerAnonymousEventHandler("headlessBoom", function() error("headless boom") end) raiseEvent("headlessBoom"))lua")));
+        const QString text = outputTexts(errors).join(QString());
+        QVERIFY2(text.contains(qsl("headless boom")), qPrintable(text));
+        QCOMPARE(errors.constFirst().at(0).toString(), name);
+    }
+
+    void test_aConnectionThatCannotBeMadeIsDisconnected()
+    {
+        const QString name = qsl("Headless Refused");
+        QVERIFY(writeProfile(name, QString()));
+        quint16 port = 0;
+        {
+            QTcpServer closed;
+            QVERIFY(closed.listen(QHostAddress::LocalHost));
+            port = closed.serverPort();
+        }
+        QVERIFY(MudletApp::writeProfileData(name, qsl("url"), qsl("127.0.0.1")).first);
+        QVERIFY(MudletApp::writeProfileData(name, qsl("port"), QString::number(port)).first);
+
+        THeadlessSession session;
+        QSignalSpy disconnected(&session, &THeadlessSession::disconnected);
+        QCOMPARE(session.start({.profile = name, .connect = true}), THeadlessSession::StartResult::started);
+        QTRY_COMPARE_WITH_TIMEOUT(disconnected.count(), 1, 10000);
+        QCOMPARE(disconnected.constFirst().at(0).toString(), name);
+        session.shutdown(false);
+    }
+
+    // A frontend that opens the profile again asks about that run's close alone
+    void test_aStartForgetsAFailedSave()
+    {
+        const QString name = qsl("Headless Save Failed");
+        QVERIFY(writeProfile(name, QString()));
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.runLua(qsl(R"lua(registerAnonymousEventHandler("sysExitEvent", function()
+  local current = getMudletHomeDir() .. "/current"
+  os.rename(current, current .. ".moved")
+  local file = io.open(current, "wb")
+  file:write("not a folder")
+  file:close()
+end))lua")));
+        session.shutdown(true);
+        QVERIFY(session.saveFailed());
+        const QString current = qsl("%1/current").arg(MudletApp::getMudletPath(enums::profileHomePath, name));
+        QVERIFY(QFile::remove(current));
+        QVERIFY(QDir().rename(current + qsl(".moved"), current));
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(!session.saveFailed());
+        session.shutdown(true);
+        QVERIFY(!session.saveFailed());
+    }
+
     // Lines a trigger gags still go out as the game sent them, as --mirror copies them
     void test_fedLinesReachOutputLineInOrder()
     {

@@ -241,8 +241,16 @@ struct TConsoleModel
     CommandEcho printCommand(QString& msg);
 
     // For --mirror: copies text to stdout prefixed with the profile and console names. Text may be a
-    // line fragment, so what follows the last line feed is held until one arrives.
+    // line fragment, so what follows the last line feed is held until one arrives. Also tells
+    // mNotifier's textPrinted.
     void mirrorToStdOut(const QString& text);
+    // Where printed text landed: the line triggers are running on or a command was echoed into, or the end.
+    enum class PrintedInto { committedLine, end };
+    // Tells mNotifier's textPrinted of text, keeping the lines the view shows: a piece left open in one
+    // line is ended before text lands anywhere else.
+    void notifyPrinted(const QString& text, PrintedInto into, bool startsLine = false);
+    // A line was committed or the buffer cleared, so no later text continues the open piece.
+    void endPrintedLine() { mPrintedLineEnded = true; }
     // For a complete line: TBuffer::commitLineData() passes it as sent, before triggers can gag or rewrite it.
     void mirrorLineToStdOut(const QString& line);
     // What a write at mUserCursor leaves the view to do: show the lines it
@@ -361,6 +369,10 @@ struct TConsoleModel
     QString mProfileName;
     // --mirror text not yet ended by a line feed.
     QString mMirrorPendingLine;
+    // Where notifyPrinted() last wrote, and whether it left that line open
+    PrintedInto mPrintedInto = PrintedInto::end;
+    bool mPrintedMidLine = false;
+    bool mPrintedLineEnded = false;
     bool mScriptAddressable = false;
     // The line on which the current search result has been found, or the next
     // one is to start (currently only for the main console). An index into the
