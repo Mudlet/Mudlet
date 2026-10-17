@@ -10527,7 +10527,7 @@ void dlgTriggerEditor::timerEvent(QTimerEvent* event)
 
 void dlgTriggerEditor::autoSave()
 {
-    mpHost->saveProfile(QString(), qsl("autosave"));
+    mpHost->saveProfileReportingFailure(qsl("autosave"));
 }
 
 void dlgTriggerEditor::rebuildStaleTrees()
@@ -13348,8 +13348,13 @@ void dlgTriggerEditor::slot_profileSaveAsAction()
     }
     slot_saveEdits();
 
-    mpHost->saveProfileAs(fileName);
+    auto [ok, filename, error] = mpHost->saveProfileAs(fileName);
     mSavingAs = false;
+    if (!ok && !error.isEmpty()) {
+        //: %1 is the reason the profile could not be saved, such as an error from the operating system
+        const QString message = tr("Sorry, couldn't save your profile - got the following error: %1").arg(error);
+        QMessageBox::critical(this, tr("Couldn't save profile"), message);
+    }
 }
 
 bool dlgTriggerEditor::eventFilter(QObject* watched, QEvent* event)

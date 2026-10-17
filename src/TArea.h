@@ -123,16 +123,9 @@ public:
     // this area.
     void refreshAreaExitsToRoom(int);
     void removeRoom(int);
-    // List of coordinate triples (x,y,z) where there are multiple rooms
+    // Each (x,y,z) shared by more than one room, once, ordered by z then y then x
     QList<std::tuple<int, int, int>> getCollisionNodes();
     QList<int> getRoomsByPosition(int x, int y, int z);
-    /*
-     * Outer key: z coordinate,
-     * Middle key: y coordinate
-     * Inner key: x coordinate
-     * Inner value: is roomId:
-     */
-    QMap<int, QMap<int, QMultiMap<int, int>>> koordinatenSystem();
     int createLabelId() const;
     void writeJsonArea(QJsonArray&) const;
     std::pair<int, QString> readJsonArea(const QJsonArray&, const int);
