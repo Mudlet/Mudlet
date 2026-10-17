@@ -1406,11 +1406,17 @@ int TLuaInterpreter::permKey(lua_State* L)
         keyModifier = getVerifiedInt(L, __func__, 3, "key modifier", true);
         argIndex++;
     }
-    int keyCode = getVerifiedInt(L, __func__, argIndex, "key code");
+    const int keyCodeIndex = argIndex;
+    int keyCode = getVerifiedInt(L, __func__, keyCodeIndex, "key code");
 
     Host& host = getHostFromLua(L);
     TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
     if (pLuaInterpreter->reportInvalidLuaCodeParam(L, "permKey", ++argIndex)) {
+        return lua_error(L);
+    }
+    // -1 is how permGroup() asks for a group
+    if (keyCode != -1 && (keyCode < 0 || keyCode > Qt::Key_unknown)) {
+        lua_pushfstring(L, "permKey: bad argument #%d (%d is not a key code)", keyCodeIndex, keyCode);
         return lua_error(L);
     }
 
@@ -2739,6 +2745,9 @@ int TLuaInterpreter::tempKey(lua_State* L)
         argIndex++;
     }
     int keyCode = getVerifiedInt(L, __func__, argIndex, "key code");
+    if (keyCode < 0 || keyCode > Qt::Key_unknown) {
+        return warnArgumentValue(L, __func__, qsl("%1 is not a key code").arg(keyCode));
+    }
 
     Host& host = getHostFromLua(L);
     TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
