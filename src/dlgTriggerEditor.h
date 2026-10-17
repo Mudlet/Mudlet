@@ -432,10 +432,9 @@ private:
     void selectFolderTreeNode(QTreeWidgetItem* pNode);
     void slot_folderTreeItemChanged(QTreeWidgetItem* pItem);
     void openItemFromFolderTree(const EditorViewType view, const int id);
-    void showFolderSummary(QTreeWidgetItem* pNode);
-    void hideFolderSummary();
+    void showFolderGroup(QTreeWidgetItem* pNode);
+    void hideFolderGroup();
     void collapseHiddenSelections();
-    void cycleFolderSummaryFocus();
     void leaveFolderView();
     void setFolderViewAvailable(const bool);
     bool folderItem(const EditorViewType view, const int id);
@@ -770,14 +769,11 @@ private:
     QAction* mpViewFoldersAction = nullptr;
     // Every item type at once, grouped by folder - built from the type trees, never edited directly
     QTreeWidget* mpFolderTree = nullptr;
-    // Shown instead of an item form when a Folders view node is not one item: a merged folder or "Not in a folder"
-    QWidget* mpFolderSummaryArea = nullptr;
-    QLabel* mpFolderSummaryText = nullptr;
-    QWidget* mpFolderSummaryButtons = nullptr;
     QTimer* mpFolderTreeRefreshTimer = nullptr;
     // FolderKeyRole of a folder node, or "view:id" of a real item -> its Folders view node
     QHash<QString, QTreeWidgetItem*> mFolderTreeNodes;
-    QString mFolderSummaryKey;
+    // FolderKeyRole of the current Folders view node when it is not one item - a merged folder or "Not in a folder" - and no form shows
+    QString mFolderGroupKey;
     bool mFolderViewActive = false;
     bool mFolderTreeStale = true;
     QAction* mpCreateModuleAction = nullptr;

@@ -73,7 +73,6 @@
 #include <QLabel>
 #include <QMessageBox>
 #include <QMetaEnum>
-#include <QPushButton>
 #include <QPalette>
 #include <QScrollBar>
 #include <QSettings>
@@ -402,20 +401,6 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     connect(mpScriptsMainArea->lineEdit_script_event_handler_entry, &QLineEdit::returnPressed, this, &dlgTriggerEditor::slot_scriptMainAreaAddHandler);
     connect(mpScriptsMainArea->listWidget_script_registered_event_handlers, &QListWidget::itemSelectionChanged, this, &dlgTriggerEditor::slot_scriptMainAreaEditHandler);
     connect(mpScriptsMainArea->listWidget_script_registered_event_handlers, &QListWidget::itemActivated, this, &dlgTriggerEditor::slot_scriptMainAreaClearHandlerSelection);
-
-    mpFolderSummaryArea = new QWidget(this);
-    auto* pFolderSummaryLayout = new QVBoxLayout(mpFolderSummaryArea);
-    mpFolderSummaryText = new QLabel(mpFolderSummaryArea);
-    mpFolderSummaryText->setWordWrap(true);
-    mpFolderSummaryText->setTextFormat(Qt::RichText);
-    pFolderSummaryLayout->addWidget(mpFolderSummaryText);
-    mpFolderSummaryButtons = new QWidget(mpFolderSummaryArea);
-    auto* pFolderSummaryButtonsLayout = new QVBoxLayout(mpFolderSummaryButtons);
-    pFolderSummaryButtonsLayout->setContentsMargins(0, 0, 0, 0);
-    pFolderSummaryLayout->addWidget(mpFolderSummaryButtons);
-    pFolderSummaryLayout->addStretch(1);
-    layoutColumn->addWidget(mpFolderSummaryArea, 1);
-    mpFolderSummaryArea->hide();
 
 
     // source editor area
@@ -838,20 +823,9 @@ dlgTriggerEditor::dlgTriggerEditor(Host* pH)
     mpFolderTree->setContextMenuPolicy(Qt::ActionsContextMenu);
     mpFolderTree->hide();
     connect(mpFolderTree, &QTreeWidget::currentItemChanged, this, &dlgTriggerEditor::slot_folderTreeItemChanged);
-    // A click or Enter on a merged folder that is already current brings its summary back after one of its parts was opened
-    connect(mpFolderTree, &QTreeWidget::itemClicked, this, [this](QTreeWidgetItem* pItem) {
-        if (pItem && pItem->data(0, FolderPartsRole).toStringList().size() != 1 && mFolderSummaryKey != pItem->data(0, FolderKeyRole).toString()) {
-            showFolderSummary(pItem);
-        }
-    });
     connect(mpFolderTree, &QTreeWidget::itemActivated, this, [this](QTreeWidgetItem* pItem) {
-        if (!pItem) {
-            return;
-        }
-        if (pItem->data(0, FolderPartsRole).toStringList().size() == 1) {
+        if (pItem && pItem->data(0, FolderPartsRole).toStringList().size() == 1) {
             slot_toggleItemOrGroupActiveFlag();
-        } else if (mFolderSummaryKey != pItem->data(0, FolderKeyRole).toString()) {
-            showFolderSummary(pItem);
         }
     });
 
@@ -1611,8 +1585,8 @@ void dlgTriggerEditor::slot_smartUndo()
     // Stack-based undo: prioritize text editor changes, then fall back to item operations
     // This provides intuitive behavior - most recent change undoes first, regardless of focus
 
-    // A Folders view summary hides the item an undo would change
-    if (!mFolderSummaryKey.isEmpty()) {
+    // A merged folder in the Folders view hides the item an undo would change
+    if (!mFolderGroupKey.isEmpty()) {
         return;
     }
     bool canUndoText = mpTextUndoStack && mpTextUndoStack->canUndo();
@@ -1660,7 +1634,7 @@ void dlgTriggerEditor::slot_smartRedo()
     // Stack-based redo: prioritize text editor changes, then fall back to item operations
     // This provides intuitive behavior - most recently undone change redoes first, regardless of focus
 
-    if (!mFolderSummaryKey.isEmpty()) {
+    if (!mFolderGroupKey.isEmpty()) {
         return;
     }
     bool canRedoText = mpTextUndoStack && mpTextUndoStack->canRedo();
@@ -1719,7 +1693,7 @@ void dlgTriggerEditor::slot_updateUndoRedoButtonStates()
     // Disable undo/redo in variables view since variables can be modified via Lua API
     bool inVariablesView = (mCurrentView == EditorViewType::cmVarsView);
 
-    if (inVariablesView || !mFolderSummaryKey.isEmpty()) {
+    if (inVariablesView || !mFolderGroupKey.isEmpty()) {
         // In variables view, disable buttons and clear tooltips
         mpUndoAction->setEnabled(false);
         mpRedoAction->setEnabled(false);
@@ -6763,7 +6737,7 @@ void dlgTriggerEditor::refreshAliasIconsIn(QTreeWidgetItem* pParent, bool ancest
             --remaining;
         }
         const bool dirty = ancestorDirty || pending;
-        const bool touchNotification = pending ? ((pItem == mpCurrentAliasItem) && (mCurrentView == EditorViewType::cmAliasView) && mFolderSummaryKey.isEmpty()) : ancestorTouchNotification;
+        const bool touchNotification = pending ? ((pItem == mpCurrentAliasItem) && (mCurrentView == EditorViewType::cmAliasView) && mFolderGroupKey.isEmpty()) : ancestorTouchNotification;
         if (dirty) {
             if (TAlias* pT = mpHost->getAliasUnit()->getAlias(id)) {
                 paintAliasItem(pItem, pT, touchNotification);
@@ -9353,7 +9327,7 @@ void dlgTriggerEditor::refreshKeyIconsIn(QTreeWidgetItem* pParent, bool ancestor
             --remaining;
         }
         const bool dirty = ancestorDirty || pending;
-        const bool touchNotification = pending ? ((pItem == mpCurrentKeyItem) && (mCurrentView == EditorViewType::cmKeysView) && mFolderSummaryKey.isEmpty()) : ancestorTouchNotification;
+        const bool touchNotification = pending ? ((pItem == mpCurrentKeyItem) && (mCurrentView == EditorViewType::cmKeysView) && mFolderGroupKey.isEmpty()) : ancestorTouchNotification;
         if (dirty) {
             if (TKey* pT = mpHost->getKeyUnit()->getKey(id)) {
                 paintKeyItem(pItem, pT, touchNotification);
@@ -9683,7 +9657,7 @@ void dlgTriggerEditor::refreshScriptIconsIn(QTreeWidgetItem* pParent, bool ances
             --remaining;
         }
         const bool dirty = ancestorDirty || pending;
-        const bool touchNotification = pending ? ((pItem == mpCurrentScriptItem) && (mCurrentView == EditorViewType::cmScriptView) && mFolderSummaryKey.isEmpty()) : ancestorTouchNotification;
+        const bool touchNotification = pending ? ((pItem == mpCurrentScriptItem) && (mCurrentView == EditorViewType::cmScriptView) && mFolderGroupKey.isEmpty()) : ancestorTouchNotification;
         if (dirty) {
             if (TScript* pT = mpHost->getScriptUnit()->getScript(id)) {
                 paintScriptItem(pItem, pT, touchNotification);
@@ -9867,7 +9841,7 @@ void dlgTriggerEditor::refreshTimerIconsIn(QTreeWidgetItem* pParent, bool ancest
             --remaining;
         }
         const bool dirty = ancestorDirty || pending;
-        const bool touchNotification = pending ? ((pItem == mpCurrentTimerItem) && (mCurrentView == EditorViewType::cmTimerView) && mFolderSummaryKey.isEmpty()) : ancestorTouchNotification;
+        const bool touchNotification = pending ? ((pItem == mpCurrentTimerItem) && (mCurrentView == EditorViewType::cmTimerView) && mFolderGroupKey.isEmpty()) : ancestorTouchNotification;
         if (dirty) {
             if (TTimer* pT = mpHost->getTimerUnit()->getTimer(id)) {
                 paintTimerItem(pItem, pT, touchNotification);
@@ -10061,7 +10035,7 @@ void dlgTriggerEditor::refreshTriggerIconsIn(QTreeWidgetItem* pParent, bool ance
             --remaining;
         }
         const bool dirty = ancestorDirty || pending;
-        const bool touchNotification = pending ? ((pItem == mpCurrentTriggerItem) && (mCurrentView == EditorViewType::cmTriggerView) && mFolderSummaryKey.isEmpty()) : ancestorTouchNotification;
+        const bool touchNotification = pending ? ((pItem == mpCurrentTriggerItem) && (mCurrentView == EditorViewType::cmTriggerView) && mFolderGroupKey.isEmpty()) : ancestorTouchNotification;
         if (dirty) {
             if (TTrigger* pT = mpHost->getTriggerUnit()->getTrigger(id)) {
                 paintTriggerItem(pItem, pT, touchNotification);
@@ -10805,7 +10779,7 @@ void dlgTriggerEditor::changeView(EditorViewType view)
     if (view == EditorViewType::cmVarsView) {
         leaveFolderView();
     }
-    hideFolderSummary();
+    hideFolderGroup();
     const bool showTypeTree = !mFolderViewActive;
     mpFolderTree->setVisible(mFolderViewActive);
 
@@ -11739,9 +11713,9 @@ void dlgTriggerEditor::slot_toggleCentralDebugConsole()
 
 void dlgTriggerEditor::slot_nextSection()
 {
-    // Hidden widgets still take focus, and typing there would edit the item the summary hides
-    if (!mFolderSummaryKey.isEmpty()) {
-        cycleFolderSummaryFocus();
+    // Hidden widgets still take focus, and typing there would edit the item a merged folder hides
+    if (!mFolderGroupKey.isEmpty()) {
+        mpFolderTree->setFocus();
         return;
     }
     switch (mCurrentView) {
@@ -11874,8 +11848,8 @@ void dlgTriggerEditor::slot_nextSection()
 
 void dlgTriggerEditor::slot_previousSection()
 {
-    if (!mFolderSummaryKey.isEmpty()) {
-        cycleFolderSummaryFocus();
+    if (!mFolderGroupKey.isEmpty()) {
+        mpFolderTree->setFocus();
         return;
     }
     switch (mCurrentView) {
@@ -16803,17 +16777,17 @@ void dlgTriggerEditor::selectFolderTreeNode(QTreeWidgetItem* pNode)
 void dlgTriggerEditor::syncFolderTreeSelection(const QString& fallbackKey)
 {
     collapseHiddenSelections();
-    if (!mFolderSummaryKey.isEmpty()) {
-        QTreeWidgetItem* pSummaryNode = mFolderTreeNodes.value(mFolderSummaryKey);
-        if (pSummaryNode && pSummaryNode->data(0, FolderPartsRole).toStringList().size() == 1) {
-            hideFolderSummary();
-            selectFolderTreeNode(pSummaryNode);
-            slot_folderTreeItemChanged(pSummaryNode);
+    if (!mFolderGroupKey.isEmpty()) {
+        QTreeWidgetItem* pGroupNode = mFolderTreeNodes.value(mFolderGroupKey);
+        if (pGroupNode && pGroupNode->data(0, FolderPartsRole).toStringList().size() == 1) {
+            hideFolderGroup();
+            selectFolderTreeNode(pGroupNode);
+            slot_folderTreeItemChanged(pGroupNode);
             return;
         }
-        if (pSummaryNode) {
-            selectFolderTreeNode(pSummaryNode);
-            showFolderSummary(pSummaryNode);
+        if (pGroupNode) {
+            selectFolderTreeNode(pGroupNode);
+            showFolderGroup(pGroupNode);
             return;
         }
         showView(mCurrentView);
@@ -16844,7 +16818,7 @@ void dlgTriggerEditor::slot_folderTreeItemChanged(QTreeWidgetItem* pItem)
     }
     const QStringList parts = pItem->data(0, FolderPartsRole).toStringList();
     if (parts.size() != 1) {
-        showFolderSummary(pItem);
+        showFolderGroup(pItem);
         return;
     }
     const QStringList viewAndId = parts.constFirst().split(QLatin1Char(':'));
@@ -16878,14 +16852,14 @@ void dlgTriggerEditor::openItemFromFolderTree(const EditorViewType view, const i
     }
 }
 
-void dlgTriggerEditor::showFolderSummary(QTreeWidgetItem* pNode)
+void dlgTriggerEditor::showFolderGroup(QTreeWidgetItem* pNode)
 {
-    // Moving between summaries leaves nothing new to save
-    if (mFolderSummaryKey.isEmpty()) {
+    // Moving between merged folders leaves nothing new to save
+    if (mFolderGroupKey.isEmpty()) {
         saveOpenChanges();
         clearEditorNotification();
     }
-    mFolderSummaryKey = pNode->data(0, FolderKeyRole).toString();
+    mFolderGroupKey = pNode->data(0, FolderKeyRole).toString();
 
     mpTriggersMainArea->hide();
     mpAliasMainArea->hide();
@@ -16895,7 +16869,6 @@ void dlgTriggerEditor::showFolderSummary(QTreeWidgetItem* pNode)
     mpActionsMainArea->hide();
     mpVarsMainArea->hide();
     mpSourceEditorArea->hide();
-    mpFolderSummaryArea->show();
 
     // The item the type tree still has selected is hidden, so nothing may act on it
     for (QAction* pAction : mpFolderTree->actions()) {
@@ -16908,51 +16881,14 @@ void dlgTriggerEditor::showFolderSummary(QTreeWidgetItem* pNode)
     mpExportAction->setEnabled(false);
     mpCreateModuleAction->setEnabled(false);
     slot_updateUndoRedoButtonStates();
-
-    const QStringList parts = pNode->data(0, FolderPartsRole).toStringList();
-    if (parts.isEmpty()) {
-        //: Shown in the editor's Folders view when its "Not in a folder" group is selected
-        mpFolderSummaryText->setText(tr("<p>These items are not in any folder. Choose one to open it.</p>"));
-    } else {
-        //: Shown in the editor's Folders view when folders of the same name exist in different item types, %1 is the folder name
-        mpFolderSummaryText->setText(tr("<p><b>%1</b> is a folder in more than one item type. Choose which one to open:</p>").arg(pNode->text(0).toHtmlEscaped()));
-    }
-
-    qDeleteAll(mpFolderSummaryButtons->findChildren<QPushButton*>(Qt::FindDirectChildrenOnly));
-    for (const QString& part : parts) {
-        const QStringList viewAndId = part.split(QLatin1Char(':'));
-        const auto view = static_cast<EditorViewType>(viewAndId.constFirst().toInt());
-        const int id = viewAndId.constLast().toInt();
-        QTreeWidgetItem* pSource = findItemById(treeForView(view), id);
-        if (!pSource) {
-            continue;
-        }
-        int itemCount = 0;
-        QList<QTreeWidgetItem*> pending{pSource};
-        while (!pending.isEmpty()) {
-            QTreeWidgetItem* pPending = pending.takeLast();
-            itemCount += pPending->childCount();
-            for (int i = 0, total = pPending->childCount(); i < total; ++i) {
-                pending.append(pPending->child(i));
-            }
-        }
-        //: Button in the editor's Folders view that opens the folder of one item type, %1 is the item type such as "Triggers", %n is how many items are inside it
-        auto* pButton = new QPushButton(pSource->icon(0), tr("%1 (%n item(s))", nullptr, itemCount).arg(folderTreeTypeName(view, true)), mpFolderSummaryButtons);
-        mpFolderSummaryButtons->layout()->addWidget(pButton);
-        mpFolderSummaryButtons->layout()->setAlignment(pButton, Qt::AlignLeft);
-        connect(pButton, &QPushButton::clicked, this, [this, view, id]() {
-            openItemFromFolderTree(view, id);
-        });
-    }
 }
 
-void dlgTriggerEditor::hideFolderSummary()
+void dlgTriggerEditor::hideFolderGroup()
 {
-    if (mFolderSummaryKey.isEmpty()) {
+    if (mFolderGroupKey.isEmpty()) {
         return;
     }
-    mFolderSummaryKey.clear();
-    mpFolderSummaryArea->hide();
+    mFolderGroupKey.clear();
     mpSourceEditorArea->show();
     for (QAction* pAction : mpFolderTree->actions()) {
         pAction->setEnabled(true);
@@ -16970,7 +16906,7 @@ void dlgTriggerEditor::leaveFolderView()
     if (!mFolderViewActive) {
         return;
     }
-    hideFolderSummary();
+    hideFolderGroup();
     mFolderViewActive = false;
     mpFolderTreeRefreshTimer->stop();
     mpFolderTree->hide();
@@ -17006,16 +16942,6 @@ void dlgTriggerEditor::collapseHiddenSelections()
             const QSignalBlocker blocker(pTree);
             pTree->setCurrentItem(pTree->currentItem(), 0, QItemSelectionModel::ClearAndSelect);
         }
-    }
-}
-
-void dlgTriggerEditor::cycleFolderSummaryFocus()
-{
-    const QList<QPushButton*> buttons = mpFolderSummaryButtons->findChildren<QPushButton*>(Qt::FindDirectChildrenOnly);
-    if (mpFolderTree->hasFocus() && !buttons.isEmpty()) {
-        buttons.constFirst()->setFocus();
-    } else {
-        mpFolderTree->setFocus();
     }
 }
 

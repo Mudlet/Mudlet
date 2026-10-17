@@ -23,7 +23,6 @@
  * Lua has no way to see.
  */
 
-#include <QPushButton>
 #include <QTemporaryDir>
 #include <QTimer>
 #include <QToolBar>
@@ -42,7 +41,10 @@
 #include "ProfileTestHelper.h"
 #include "TelnetServerStub.h"
 #include "ctelnet.h"
+#include "dlgActionMainArea.h"
 #include "dlgAliasMainArea.h"
+#include "dlgKeysMainArea.h"
+#include "dlgScriptsMainArea.h"
 #include "dlgTriggerEditor.h"
 #include "edbee/models/textdocument.h"
 #include "edbee/models/textundostack.h"
@@ -114,7 +116,22 @@ private:
         return nullptr;
     }
 
-    QList<QPushButton*> summaryButtons() const { return mpEditor->mpFolderSummaryButtons->findChildren<QPushButton*>(Qt::FindDirectChildrenOnly); }
+    bool noFormShown() const
+    {
+        for (QWidget* pArea : {static_cast<QWidget*>(mpEditor->mpTriggersMainArea),
+                               static_cast<QWidget*>(mpEditor->mpAliasMainArea),
+                               static_cast<QWidget*>(mpEditor->mpScriptsMainArea),
+                               static_cast<QWidget*>(mpEditor->mpTimersMainArea),
+                               static_cast<QWidget*>(mpEditor->mpKeysMainArea),
+                               static_cast<QWidget*>(mpEditor->mpActionsMainArea),
+                               static_cast<QWidget*>(mpEditor->mpVarsMainArea),
+                               static_cast<QWidget*>(mpEditor->mpSourceEditorArea)}) {
+            if (!pArea->isHidden()) {
+                return false;
+            }
+        }
+        return true;
+    }
 
 private slots:
     void initTestCase()
@@ -251,26 +268,24 @@ private slots:
         QVERIFY(!mpEditor->mpFolderTree->isHidden());
     }
 
-    void test_aMergedFolderAsksWhichTypeToOpen()
+    void test_aMergedFolderShowsNoForm()
     {
         mpEditor->slot_showFolders();
         QTreeWidgetItem* pCombat = topLevelNamed(qsl("qaCombat"));
         QVERIFY(pCombat);
         mpEditor->mpFolderTree->setCurrentItem(pCombat);
 
-        QVERIFY(!mpEditor->mpFolderSummaryArea->isHidden());
-        QVERIFY(mpEditor->mpAliasMainArea->isHidden());
+        QVERIFY(!mpEditor->mFolderGroupKey.isEmpty());
+        QVERIFY2(noFormShown(), "a merged folder showed the form of one of its parts");
         QVERIFY2(!mpEditor->mAddItem->isEnabled(), "adding was left on with no item type to add to");
-        const QList<QPushButton*> buttons = summaryButtons();
-        QCOMPARE(buttons.size(), 3);
 
-        buttons.at(1)->click();
+        QTreeWidgetItem* pKill = childNamed(pCombat, qsl("qaKill"));
+        QVERIFY(pKill);
+        mpEditor->mpFolderTree->setCurrentItem(pKill);
         QCOMPARE(mpEditor->mCurrentView, EditorViewType::cmAliasView);
-        QCOMPARE(mpEditor->treeWidget_aliases->currentItem()->text(0), qsl("qaCombat"));
-        QVERIFY(mpEditor->mpFolderSummaryArea->isHidden());
+        QVERIFY(mpEditor->mFolderGroupKey.isEmpty());
         QVERIFY(!mpEditor->mpAliasMainArea->isHidden());
         QVERIFY(mpEditor->mAddItem->isEnabled());
-        QCOMPARE(mpEditor->mpFolderTree->currentItem(), pCombat);
     }
 
     void test_itemsMadeInTheEditorShowUpInTheFoldersView()
@@ -320,22 +335,20 @@ private slots:
         QCOMPARE(twins.at(1)->data(0, dlgTriggerEditor::FolderPartsRole).toStringList().size(), 1);
     }
 
-    // Saving the item that was open sets its icon again, which must not rebuild
-    // the tree under the summary, or its buttons are replaced before a click lands
-    void test_aMergedFolderSummaryStaysPut()
+    // Saving the item that was open sets its icon again, which must not rebuild the tree under the pointer
+    void test_aMergedFolderStaysPut()
     {
         mpEditor->slot_showFolders();
         QTreeWidgetItem* pHit = childNamed(topLevelNamed(qsl("qaCombat")), qsl("qaHit"));
         QVERIFY(pHit);
         mpEditor->mpFolderTree->setCurrentItem(pHit);
         QTest::qWait(50ms);
-        mpEditor->mpFolderTree->setCurrentItem(topLevelNamed(qsl("qaCombat")));
-        QVERIFY(!summaryButtons().isEmpty());
-        const QPointer<QPushButton> pButton = summaryButtons().constFirst();
+        QTreeWidgetItem* pCombat = topLevelNamed(qsl("qaCombat"));
+        mpEditor->mpFolderTree->setCurrentItem(pCombat);
         QSignalSpy refreshSpy(mpEditor->mpFolderTreeRefreshTimer, &QTimer::timeout);
         QTest::qWait(200ms);
         QVERIFY2(refreshSpy.count() <= 1, qPrintable(qsl("the Folders view rebuilt %1 times while idle").arg(refreshSpy.count())));
-        QVERIFY2(pButton, "the summary's buttons were replaced while it sat on screen");
+        QCOMPARE(mpEditor->mpFolderTree->currentItem(), pCombat);
     }
 
     void test_aClickOnAnotherItemIsDelivered()
@@ -393,13 +406,13 @@ private slots:
         QVERIFY(pCopy->isEnabled());
     }
 
-    void test_aSummaryThatStopsBeingMergedOpensWhatIsLeft()
+    void test_aMergedFolderThatStopsBeingMergedOpensWhatIsLeft()
     {
         mpEditor->slot_showFolders();
         QTreeWidgetItem* pPair = topLevelNamed(qsl("qaPair"));
         QVERIFY(pPair);
         mpEditor->mpFolderTree->setCurrentItem(pPair);
-        QVERIFY(!mpEditor->mpFolderSummaryArea->isHidden());
+        QVERIFY(!mpEditor->mFolderGroupKey.isEmpty());
 
         QTreeWidgetItem* pAliasRoot = mpEditor->treeWidget_aliases->topLevelItem(0);
         QList<QTreeWidgetItem*> aliasPair = mpEditor->treeWidget_aliases->findItems(qsl("qaPair"), Qt::MatchExactly | Qt::MatchRecursive);
@@ -407,9 +420,9 @@ private slots:
         delete pAliasRoot->takeChild(pAliasRoot->indexOfChild(aliasPair.constFirst()));
         QTRY_VERIFY(!mpEditor->mFolderTreeStale);
 
-        QVERIFY(mpEditor->mpFolderSummaryArea->isHidden());
+        QVERIFY(mpEditor->mFolderGroupKey.isEmpty());
         QCOMPARE(mpEditor->mCurrentView, EditorViewType::cmTriggerView);
-        QVERIFY2(!mpEditor->mpTriggersMainArea->isHidden(), "the summary went away and left no form behind");
+        QVERIFY2(!mpEditor->mpTriggersMainArea->isHidden(), "the merged folder went away and left no form behind");
         QCOMPARE(mpEditor->treeWidget_triggers->currentItem()->text(0), qsl("qaPair"));
     }
 
@@ -478,16 +491,16 @@ private slots:
         QVERIFY2(mpEditor->mpTriggersMainArea->isHidden(), "an empty trigger form came up for the Triggers root");
     }
 
-    void test_aSummaryWhoseFolderIsGoneShowsTheIntro()
+    void test_aMergedFolderThatIsGoneShowsTheIntro()
     {
         mpEditor->slot_showFolders();
         QTreeWidgetItem* pHit = childNamed(topLevelNamed(qsl("qaCombat")), qsl("qaHit"));
         QVERIFY(pHit);
         mpEditor->mpFolderTree->setCurrentItem(pHit);
         mpEditor->mpFolderTree->setCurrentItem(topLevelNamed(qsl("qaGone")));
-        QVERIFY(!mpEditor->mpFolderSummaryArea->isHidden());
+        QVERIFY(!mpEditor->mFolderGroupKey.isEmpty());
         {
-            // As a click on the root would have left it, without showing its intro over the summary
+            // As a click on the root would have left it, without showing its intro over the merged folder
             const QSignalBlocker blocker(mpEditor->treeWidget_triggers);
             mpEditor->treeWidget_triggers->setCurrentItem(mpEditor->treeWidget_triggers->topLevelItem(0));
             mpEditor->mpCurrentTriggerItem = mpEditor->treeWidget_triggers->topLevelItem(0);
@@ -499,11 +512,11 @@ private slots:
             delete pRoot->takeChild(pRoot->indexOfChild(gone.constFirst()));
         }
         QTRY_VERIFY(!mpEditor->mFolderTreeStale);
-        QVERIFY(mpEditor->mpFolderSummaryArea->isHidden());
+        QVERIFY(mpEditor->mFolderGroupKey.isEmpty());
         QVERIFY2(mpEditor->mpTriggersMainArea->isHidden(), "a trigger form bound to no trigger came up");
     }
 
-    void test_undoOnASummaryLeavesTheHiddenScriptAlone()
+    void test_undoOnAMergedFolderLeavesTheHiddenScriptAlone()
     {
         mpEditor->slot_showFolders();
         QTreeWidgetItem* pHit = childNamed(topLevelNamed(qsl("qaCombat")), qsl("qaHit"));
@@ -512,10 +525,10 @@ private slots:
         mpEditor->mpSourceEditorEdbee->controller()->replaceSelection(qsl("-- typed "));
         QVERIFY(mpEditor->mpTextUndoStack->canUndo());
         mpEditor->mpFolderTree->setCurrentItem(topLevelNamed(qsl("qaCombat")));
-        QVERIFY(!mpEditor->mpFolderSummaryArea->isHidden());
+        QVERIFY(!mpEditor->mFolderGroupKey.isEmpty());
         const QString before = mpEditor->mpSourceEditorEdbee->textDocument()->text();
         mpEditor->slot_smartUndo();
-        QVERIFY2(mpEditor->mpSourceEditorEdbee->textDocument()->text() == before, "undo changed the script of a trigger the summary hides");
+        QVERIFY2(mpEditor->mpSourceEditorEdbee->textDocument()->text() == before, "undo changed the script of a trigger the merged folder hides");
     }
 
     // Lua changes rebuild every type tree the next time the mouse enters the editor
@@ -551,22 +564,6 @@ private slots:
         pHitNode = childNamed(topLevelNamed(qsl("qaCombat")), qsl("qaHit"));
         QVERIFY(pHitNode);
         QCOMPARE(pHitNode->icon(0).cacheKey(), hits.constFirst()->icon(0).cacheKey());
-    }
-
-    void test_clickingAMergedFolderAgainBringsBackItsSummary()
-    {
-        mpEditor->slot_showFolders();
-        QTreeWidgetItem* pCombat = topLevelNamed(qsl("qaCombat"));
-        QVERIFY(pCombat);
-        mpEditor->mpFolderTree->setCurrentItem(pCombat);
-        QVERIFY(!summaryButtons().isEmpty());
-        summaryButtons().constFirst()->click();
-        QVERIFY(mpEditor->mpFolderSummaryArea->isHidden());
-        QCOMPARE(mpEditor->mpFolderTree->currentItem(), pCombat);
-
-        const QPoint centre = mpEditor->mpFolderTree->visualItemRect(pCombat).center();
-        QTest::mouseClick(mpEditor->mpFolderTree->viewport(), Qt::LeftButton, Qt::NoModifier, centre);
-        QVERIFY2(!mpEditor->mpFolderSummaryArea->isHidden(), "the merged folder's other types could not be reached again");
     }
 
     void test_activatingAnItemTogglesIt()
@@ -621,7 +618,7 @@ private slots:
         QVERIFY2(mpEditor->mCurrentView == EditorViewType::cmTriggerView, "Add, Delete and toggle would do nothing for an unknown item type");
     }
 
-    void test_aSummaryWhoseFolderAScriptRemovedShowsTheIntro()
+    void test_aMergedFolderAScriptRemovedShowsTheIntro()
     {
         mpEditor->slot_showFolders();
         QTreeWidgetItem* pHit = childNamed(topLevelNamed(qsl("qaCombat")), qsl("qaHit"));
@@ -632,7 +629,7 @@ private slots:
         const QStringList parts = pVanish->data(0, dlgTriggerEditor::FolderPartsRole).toStringList();
         QCOMPARE(parts.size(), 2);
         mpEditor->mpFolderTree->setCurrentItem(pVanish);
-        QVERIFY(!mpEditor->mpFolderSummaryArea->isHidden());
+        QVERIFY(!mpEditor->mFolderGroupKey.isEmpty());
 
         delete mpHost->getTriggerUnit()->getTrigger(parts.at(0).split(QLatin1Char(':')).constLast().toInt());
         delete mpHost->getAliasUnit()->getAlias(parts.at(1).split(QLatin1Char(':')).constLast().toInt());
@@ -640,7 +637,7 @@ private slots:
         mpEditor->saveOpenChanges();
         mpEditor->rebuildStaleTrees();
         QTRY_VERIFY(!mpEditor->mFolderTreeStale);
-        QVERIFY(mpEditor->mpFolderSummaryArea->isHidden());
+        QVERIFY(mpEditor->mFolderGroupKey.isEmpty());
         QVERIFY(mpEditor->mCurrentView != EditorViewType::cmUnknownView);
         QVERIFY2(mpEditor->mpSourceEditorArea->isHidden(), "an editor holding a script of no item was left on screen");
     }
@@ -653,7 +650,7 @@ private slots:
         QVERIFY2(pItemPane->isAncestorOf(mpEditor->mpFolderTree), "the search results pane cannot be resized against the Folders tree");
     }
 
-    void test_aSummaryHidesTheHiddenItemsBanner()
+    void test_aMergedFolderHidesTheHiddenItemsBanner()
     {
         mpEditor->slot_showFolders();
         QTreeWidgetItem* pHit = childNamed(topLevelNamed(qsl("qaCombat")), qsl("qaHit"));
@@ -662,24 +659,22 @@ private slots:
         mpEditor->showError(qsl("qaError"));
         QVERIFY(!mpEditor->mpSystemMessageArea->isHidden());
         mpEditor->mpFolderTree->setCurrentItem(topLevelNamed(qsl("qaCombat")));
-        QVERIFY2(mpEditor->mpSystemMessageArea->isHidden(), "the error of a trigger the summary hides stayed on screen");
+        QVERIFY2(mpEditor->mpSystemMessageArea->isHidden(), "the error of a trigger the merged folder hides stayed on screen");
     }
 
-    void test_enterOnAMergedFolderBringsBackItsSummary()
+    void test_enterOnAMergedFolderTogglesNothing()
     {
         mpEditor->slot_showFolders();
         QTreeWidgetItem* pCombat = topLevelNamed(qsl("qaCombat"));
         QVERIFY(pCombat);
         mpEditor->mpFolderTree->setCurrentItem(pCombat);
-        summaryButtons().constFirst()->click();
-        QVERIFY(mpEditor->mpFolderSummaryArea->isHidden());
         const QStringList viewAndId = pCombat->data(0, dlgTriggerEditor::FolderPartsRole).toStringList().constFirst().split(QLatin1Char(':'));
         TTrigger* pFolder = mpHost->getTriggerUnit()->getTrigger(viewAndId.constLast().toInt());
         QVERIFY(pFolder);
         const bool wasActive = pFolder->isActive();
         emit mpEditor->mpFolderTree->itemActivated(pCombat, 0);
-        QVERIFY2(!mpEditor->mpFolderSummaryArea->isHidden(), "the keyboard could not bring the merged folder's summary back");
-        QCOMPARE(pFolder->isActive(), wasActive);
+        QVERIFY2(pFolder->isActive() == wasActive, "Enter on a merged folder toggled the trigger folder it hides");
+        QVERIFY(noFormShown());
     }
 
     void test_aToolbarViewButtonLeavesTheFoldersView()
@@ -711,7 +706,7 @@ private slots:
         QCOMPARE(pHitNode->icon(0).cacheKey(), hits.constFirst()->icon(0).cacheKey());
     }
 
-    void test_aSummaryHidesAnErrorInTheItemLeftBehind()
+    void test_aMergedFolderHidesAnErrorInTheItemLeftBehind()
     {
         mpEditor->slot_showFolders();
         QTreeWidgetItem* pBad = childNamed(topLevelNamed(qsl("qaErr")), qsl("qaBad"));
@@ -719,15 +714,15 @@ private slots:
         mpEditor->mpFolderTree->setCurrentItem(pBad);
         mpEditor->mpSourceEditorEdbee->textDocument()->setText(qsl("qaBad = ("));
         mpEditor->mpFolderTree->setCurrentItem(topLevelNamed(qsl("qaErr")));
-        QVERIFY(!mpEditor->mpFolderSummaryArea->isHidden());
+        QVERIFY(!mpEditor->mFolderGroupKey.isEmpty());
         const bool bannerShown = !mpEditor->mpSystemMessageArea->isHidden();
         mpEditor->mpFolderTree->setCurrentItem(pBad);
         mpEditor->mpSourceEditorEdbee->textDocument()->setText(QString());
         mpEditor->saveOpenChanges();
-        QVERIFY2(!bannerShown, "the error of a trigger the summary hides stayed on screen");
+        QVERIFY2(!bannerShown, "the error of a trigger the merged folder hides stayed on screen");
     }
 
-    void test_aLuaToggleOfTheHiddenItemKeepsItsErrorOffASummary()
+    void test_aLuaToggleOfTheHiddenItemKeepsItsErrorOffAMergedFolder()
     {
         mpEditor->slot_showFolders();
         QTreeWidgetItem* pBad = childNamed(topLevelNamed(qsl("qaErr")), qsl("qaBad"));
@@ -735,7 +730,7 @@ private slots:
         mpEditor->mpFolderTree->setCurrentItem(pBad);
         mpEditor->mpSourceEditorEdbee->textDocument()->setText(qsl("qaBad = ("));
         mpEditor->mpFolderTree->setCurrentItem(topLevelNamed(qsl("qaErr")));
-        QVERIFY(!mpEditor->mpFolderSummaryArea->isHidden());
+        QVERIFY(!mpEditor->mFolderGroupKey.isEmpty());
         QVERIFY(mpEditor->mpSystemMessageArea->isHidden());
         QVERIFY(runLua(qsl("disableTrigger('qaBad')")));
         QTest::qWait(50ms);
@@ -744,10 +739,10 @@ private slots:
         mpEditor->mpFolderTree->setCurrentItem(pBad);
         mpEditor->mpSourceEditorEdbee->textDocument()->setText(QString());
         mpEditor->saveOpenChanges();
-        QVERIFY2(!bannerShown, "a script toggling the hidden trigger brought its error back over the summary");
+        QVERIFY2(!bannerShown, "a script toggling the hidden trigger brought its error back over the merged folder");
     }
 
-    void test_createModuleIsOffOnASummary()
+    void test_createModuleIsOffOnAMergedFolder()
     {
         mpEditor->slot_showFolders();
         QTreeWidgetItem* pHit = childNamed(topLevelNamed(qsl("qaCombat")), qsl("qaHit"));
@@ -755,19 +750,19 @@ private slots:
         mpEditor->mpFolderTree->setCurrentItem(pHit);
         mpEditor->mpFolderTree->setCurrentItem(topLevelNamed(qsl("qaCombat")));
         QVERIFY(mpEditor->mpCurrentTriggerItem);
-        QVERIFY2(!mpEditor->mpCreateModuleAction->isEnabled(), "Create Module would preselect the trigger the summary hides");
+        QVERIFY2(!mpEditor->mpCreateModuleAction->isEnabled(), "Create Module would preselect the trigger the merged folder hides");
         mpEditor->mpFolderTree->setCurrentItem(pHit);
         QVERIFY(mpEditor->mpCreateModuleAction->isEnabled());
     }
 
-    void test_ctrlTabOnASummaryStaysOutOfTheHiddenForm()
+    void test_ctrlTabOnAMergedFolderStaysOutOfTheHiddenForm()
     {
         mpEditor->slot_showFolders();
         QTreeWidgetItem* pHit = childNamed(topLevelNamed(qsl("qaCombat")), qsl("qaHit"));
         QVERIFY(pHit);
         mpEditor->mpFolderTree->setCurrentItem(pHit);
         mpEditor->mpFolderTree->setCurrentItem(topLevelNamed(qsl("qaCombat")));
-        QVERIFY(!mpEditor->mpFolderSummaryArea->isHidden());
+        QVERIFY(!mpEditor->mFolderGroupKey.isEmpty());
         mpEditor->activateWindow();
         QVERIFY(QTest::qWaitForWindowActive(mpEditor));
         auto inHiddenForm = [this]() {
@@ -778,13 +773,13 @@ private slots:
         QTRY_VERIFY(mpEditor->mpFolderTree->hasFocus());
         mpEditor->slot_previousSection();
         QTest::qWait(20ms);
-        QVERIFY2(!inHiddenForm(), "Ctrl+Shift+Tab put the keyboard into the script the summary hides");
+        QVERIFY2(!inHiddenForm(), "Ctrl+Shift+Tab put the keyboard into the script the merged folder hides");
         mpEditor->mpFolderTree->setFocus();
         QTRY_VERIFY(mpEditor->mpFolderTree->hasFocus());
         mpEditor->slot_nextSection();
         QTest::qWait(20ms);
-        QVERIFY2(!inHiddenForm(), "Ctrl+Tab put the keyboard into the form the summary hides");
-        QVERIFY2(summaryButtons().constFirst()->hasFocus(), "Ctrl+Tab could not reach the summary's buttons");
+        QVERIFY2(!inHiddenForm(), "Ctrl+Tab put the keyboard into the form the merged folder hides");
+        QVERIFY(mpEditor->mpFolderTree->hasFocus());
     }
 
     void test_aNewItemDoesNotGatherTheOneBeforeIt()
@@ -811,7 +806,7 @@ private slots:
         mpEditor->toolBar2->hide();
         QTest::qWait(20ms);
         mpEditor->mpFolderTree->setCurrentItem(topLevelNamed(qsl("qaCombat")));
-        QVERIFY(!mpEditor->mpFolderSummaryArea->isHidden());
+        QVERIFY(!mpEditor->mFolderGroupKey.isEmpty());
         QAction* pRestore = mpEditor->mpAction_restoreEditorItemsToolbar;
         const bool offered = mpEditor->mpFolderTree->actions().contains(pRestore) && pRestore->isVisible() && pRestore->isEnabled();
         pRestore->setEnabled(true);
