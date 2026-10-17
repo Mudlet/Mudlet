@@ -441,6 +441,30 @@ private slots:
         QCOMPARE(MapDecals::titleLevelLine(0, {-1, 0, 1}), qsl("Level 0 · sheet 2 of 3"));
         QCOMPARE(MapDecals::titleLevelLine(-1, {-1, 0, 1}), qsl("Level -1 · sheet 1 of 3"));
         QCOMPARE(MapDecals::titleLevelLine(5, {-1, 0, 1}), qsl("Level 5"));
+        QCOMPARE(MapDecals::levelName(2), qsl("L2"));
+        QCOMPARE(MapDecals::levelName(0), qsl("L0"));
+        QCOMPARE(MapDecals::levelName(-1), qsl("B1"));
+    }
+
+    void test_platformsStackAwayFromTheirAnchorAndStayInView()
+    {
+        QCOMPARE(MapDecals::stackPlatforms(3, 300.0, -40.0, 0.0, 1000.0), (QList<qreal>{180.0, 220.0, 260.0}));
+        QCOMPARE(MapDecals::stackPlatforms(2, 300.0, 40.0, 0.0, 1000.0), (QList<qreal>{340.0, 380.0}));
+        QCOMPARE(MapDecals::stackPlatforms(2, 300.0, 40.0, 0.0, 350.0), (QList<qreal>{340.0, 380.0}));
+        QCOMPARE(MapDecals::stackPlatforms(2, 100.0, -40.0, 50.0, 1000.0), (QList<qreal>{50.0, 90.0}));
+        QCOMPARE(MapDecals::stackPlatforms(2, 900.0, 40.0, 0.0, 950.0), (QList<qreal>{940.0, 980.0}));
+        QVERIFY(MapDecals::stackPlatforms(0, 300.0, 40.0, 0.0, 1000.0).isEmpty());
+    }
+
+    void test_bullseyeIsADotInARingOnWhite()
+    {
+        const QColor ink(35, 35, 40);
+        const QImage mark = MapDecals::bullseye(ink, scmSize);
+        const int middle = scmSize / 2;
+        QCOMPARE(mark.pixelColor(middle, middle).rgb(), ink.rgb());
+        QCOMPARE(mark.pixelColor(middle + qRound(middle * 0.6), middle).rgb(), QColor(Qt::white).rgb());
+        QCOMPARE(mark.pixelColor(middle + qRound(middle * 0.82), middle).rgb(), ink.rgb());
+        QCOMPARE(alphaAt(mark, 2, 2), 0);
     }
 };
 

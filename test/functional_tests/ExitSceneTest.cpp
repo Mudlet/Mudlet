@@ -563,6 +563,200 @@ private slots:
         QCOMPARE(colors.size(), 3);
     }
 
+    void test_doorBarCrossesTheLineInItsStatusColor_data()
+    {
+        QTest::addColumn<int>("status");
+        QTest::addColumn<int>("distance");
+        QTest::newRow("open, next door") << 1 << 1;
+        QTest::newRow("locked, next door") << 3 << 1;
+        QTest::newRow("closed, far apart") << 2 << 4;
+    }
+
+    void test_doorBarCrossesTheLineInItsStatusColor()
+    {
+        QFETCH(int, status);
+        QFETCH(int, distance);
+        TRoom* pWest = addRoomAt(1, mAreaId, 0, 0);
+        TRoom* pEast = addRoomAt(2, mAreaId, distance, 0);
+        QVERIFY(pWest && pEast);
+        pWest->setExit(2, DIR_EAST);
+        pEast->setExit(1, DIR_WEST);
+        pWest->setDoor(qsl("e"), status);
+        ExitScene::Options bars = options();
+        bars.doorBars = true;
+
+        const ExitScene::Scene scene = build(bars);
+        QList<ExitScene::Segment> door;
+        for (const ExitScene::Segment& segment : scene.segments) {
+            if (segment.color != mExitColor) {
+                door.append(segment);
+            }
+        }
+        QCOMPARE(door.size(), 1);
+        const ExitScene::Segment& bar = door.first();
+        QCOMPARE(bar.color, ExitAppearance::doorColor(status));
+        QVERIFY2(qAbs(bar.from.x() - bar.to.x()) < scmTolerance, "the bar does not run across the line");
+        QVERIFY2(bar.from.y() * bar.to.y() < 0.0f, "the bar does not cross the line");
+        QVERIFY2(qAbs(bar.from.y() - bar.to.y()) > bars.lineWidth, "the bar is no wider than the line");
+        QVERIFY2(bar.from.x() > 0.0f && bar.from.x() < distance / 2.0f, "the bar is not on its room's half of the exit");
+        QVERIFY2(bar.height > bars.lineHeight, "the bar does not stand above the line");
+        QVERIFY2(scene.triangles.isEmpty(), "a door bar has no swing or stroke");
+    }
+
+    void test_environmentLinesTakeTheirRoomsColorUnlessTheyJoinTwo()
+    {
+        const QColor red(200, 30, 30);
+        const QColor blue(30, 60, 220);
+        map()->mCustomEnvColors[301] = red;
+        map()->mCustomEnvColors[302] = blue;
+        auto restore = qScopeGuard([this] {
+            map()->mCustomEnvColors.remove(301);
+            map()->mCustomEnvColors.remove(302);
+        });
+        TRoom* pWest = addRoomAt(1, mAreaId, 0, 0);
+        TRoom* pMiddle = addRoomAt(2, mAreaId, 1, 0);
+        TRoom* pEast = addRoomAt(3, mAreaId, 2, 0);
+        QVERIFY(pWest && pMiddle && pEast);
+        pWest->environment = 301;
+        pMiddle->environment = 301;
+        pEast->environment = 302;
+        pWest->setExit(2, DIR_EAST);
+        pMiddle->setExit(1, DIR_WEST);
+        pMiddle->setExit(3, DIR_EAST);
+        pEast->setExit(2, DIR_WEST);
+        pEast->setExitStub(DIR_NORTH, true);
+        ExitScene::Options lines = options();
+        lines.environmentLines = true;
+
+        const ExitScene::Scene scene = build(lines);
+        const QColor redLine = ExitAppearance::standOutColor(red, lines.background);
+        const QColor blueLine = ExitAppearance::standOutColor(blue, lines.background);
+        const QList<ExitScene::Segment> sameLine = segmentsIn(scene, redLine);
+        QCOMPARE(sameLine.size(), 1);
+        QVERIFY(joins(sameLine.first(), QVector2D(0, 0), QVector2D(1, 0)));
+        const QList<ExitScene::Segment> mixedLine = segmentsIn(scene, mExitColor);
+        QCOMPARE(mixedLine.size(), 1);
+        QVERIFY(joins(mixedLine.first(), QVector2D(1, 0), QVector2D(2, 0)));
+        const QList<ExitScene::Segment> stub = segmentsIn(scene, blueLine);
+        QCOMPARE(stub.size(), 1);
+        QVERIFY(joins(stub.first(), QVector2D(2, 0), QVector2D(2, 0.5f)));
+        QVERIFY2(!trianglesIn(scene, blueLine).isEmpty(), "the stub's dot is not in its room's color");
+    }
+
+    // Stairs that are shafts and in/out stubs between rooms of one environment are in its line, as straight stairs are
+    void test_environmentLinesColorShaftsAndStubs()
+    {
+        const QColor red(200, 30, 30);
+        map()->mCustomEnvColors[301] = red;
+        auto restore = qScopeGuard([this] {
+            map()->mCustomEnvColors.remove(301);
+        });
+        TRoom* pLow = addRoomAt(1, mAreaId, 0, 0, 0);
+        TRoom* pHigh = addRoomAt(2, mAreaId, 3, 2, 1);
+        TRoom* pOneWay = addRoomAt(3, mAreaId, 6, 0, 1);
+        TRoom* pInside = addRoomAt(4, mAreaId, 0, 4, 0);
+        QVERIFY(pLow && pHigh && pOneWay && pInside);
+        for (TRoom* pRoom : {pLow, pHigh, pOneWay, pInside}) {
+            pRoom->environment = 301;
+        }
+        pLow->setExit(2, DIR_UP);
+        pHigh->setExit(1, DIR_DOWN);
+        pOneWay->setExit(1, DIR_DOWN);
+        pLow->setExit(4, DIR_IN);
+        pInside->setExit(1, DIR_OUT);
+        ExitScene::Options lines = options();
+        lines.environmentLines = true;
+        lines.inOutStubs = true;
+
+        const ExitScene::Scene scene = build(lines);
+        const QColor redLine = ExitAppearance::standOutColor(red, lines.background);
+
+        QCOMPARE(segmentsIn(scene, mExitColor).size(), 0);
+        QCOMPARE(segmentsIn(scene, redLine).size(), 5);
+        QCOMPARE(segmentsIn(scene, ExitAppearance::oneWayArrowColor()).size(), 1);
+    }
+
+    void test_linesJoiningTwoEnvironmentsTakeTheMixedColorWhereGiven()
+    {
+        map()->mCustomEnvColors[301] = QColor(200, 30, 30);
+        map()->mCustomEnvColors[302] = QColor(30, 60, 220);
+        auto restore = qScopeGuard([this] {
+            map()->mCustomEnvColors.remove(301);
+            map()->mCustomEnvColors.remove(302);
+        });
+        TRoom* pWest = addRoomAt(1, mAreaId, 0, 0);
+        TRoom* pEast = addRoomAt(2, mAreaId, 1, 0);
+        QVERIFY(pWest && pEast);
+        pWest->environment = 301;
+        pEast->environment = 302;
+        pWest->setExit(2, DIR_EAST);
+        pEast->setExit(1, DIR_WEST);
+        ExitScene::Options lines = options();
+        lines.environmentLines = true;
+        const QColor gray(178, 178, 178);
+        lines.mixedLineColor = gray;
+
+        const ExitScene::Scene scene = build(lines);
+
+        QCOMPARE(segmentsIn(scene, gray).size(), 1);
+        QCOMPARE(segmentsIn(scene, mExitColor).size(), 0);
+    }
+
+    // A station is on a line of its own environment only where an exit on its level joins it to a room of it that shows
+    void test_onEnvironmentLineTakesOnlyALevelExitToItsOwnEnvironment()
+    {
+        TRoom* pRoom = addRoomAt(1, mAreaId, 0, 0, 0);
+        TRoom* pOther = addRoomAt(2, mAreaId, 1, 0, 0);
+        TRoom* pAbove = addRoomAt(3, mAreaId, 0, 0, 1);
+        QVERIFY(pRoom && pOther && pAbove);
+        pRoom->environment = 301;
+        pOther->environment = 302;
+        pAbove->environment = 301;
+        pRoom->setExit(3, DIR_UP);
+        pRoom->setExit(2, DIR_EAST);
+        QVERIFY(!RoomAppearance::onEnvironmentLine(*map(), *pRoom));
+        pOther->environment = 301;
+        QVERIFY(RoomAppearance::onEnvironmentLine(*map(), *pRoom));
+        QVERIFY2(RoomAppearance::onEnvironmentLine(*map(), *pOther), "a one-way exit into the room does not put it on a line");
+        pOther->setHidden(true);
+        QVERIFY2(!RoomAppearance::onEnvironmentLine(*map(), *pRoom), "a line to a hidden room counts");
+        pOther->setHidden(false);
+        pRoom->customLines.insert(qsl("e"), {QPointF(0.5, 0.5), QPointF(1.0, 0.0)});
+        QVERIFY2(!RoomAppearance::onEnvironmentLine(*map(), *pRoom), "an exit drawn as a custom line counts as a line of its environment");
+        QVERIFY2(!RoomAppearance::onEnvironmentLine(*map(), *pOther), "an entrance drawn as a custom line counts as a line of its environment");
+    }
+
+    void test_environmentLinesAreOffUnlessAsked()
+    {
+        map()->mCustomEnvColors[301] = QColor(200, 30, 30);
+        auto restore = qScopeGuard([this] {
+            map()->mCustomEnvColors.remove(301);
+        });
+        TRoom* pWest = addRoomAt(1, mAreaId, 0, 0);
+        TRoom* pEast = addRoomAt(2, mAreaId, 1, 0);
+        QVERIFY(pWest && pEast);
+        pWest->environment = 301;
+        pEast->environment = 301;
+        pWest->setExit(2, DIR_EAST);
+        pEast->setExit(1, DIR_WEST);
+
+        QCOMPARE(segmentsIn(build(), mExitColor).size(), 1);
+    }
+
+    void test_exitCountTakesEveryRealExit()
+    {
+        TRoom* pRoom = addRoomAt(1, mAreaId, 0, 0);
+        TRoom* pOther = addRoomAt(2, mAreaId, 1, 0);
+        QVERIFY(pRoom && pOther);
+        QCOMPARE(RoomAppearance::exitCount(*pRoom), 0);
+        pRoom->setExit(2, DIR_EAST);
+        pRoom->setExit(2, DIR_UP);
+        pRoom->setExit(2, DIR_OUT);
+        pRoom->setSpecialExit(2, qsl("climb ladder"));
+        pRoom->setExitStub(DIR_NORTH, true);
+        QCOMPARE(RoomAppearance::exitCount(*pRoom), 4);
+    }
+
     void test_stubIsAHalfLineEndingInADot()
     {
         TRoom* pRoom = addRoomAt(1, mAreaId, 3, 4);
