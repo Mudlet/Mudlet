@@ -3468,13 +3468,15 @@ bool TLuaInterpreter::compile(const QString& code, QString& errorMsg, const QStr
     const int callerStackTop = lua_gettop(L);
 
     const QByteArray utf8Code = code.toUtf8();
-    const int error = (luaL_loadbuffer(L, utf8Code.constData(), utf8Code.size(), name.toUtf8().constData()) || lua_pcall(L, 0, 0, 0));
+    const int loadStatus = luaL_loadbuffer(L, utf8Code.constData(), utf8Code.size(), name.toUtf8().constData());
+    const bool error = loadStatus != 0 || lua_pcall(L, 0, 0, 0);
 
     if (error) {
         // The error object is on the top of the stack. Absolute slot 1 - which
         // this used to read - is the calling C function's first argument, which
         // is how a failure came to be reported as the script's own name.
-        std::string e = "Lua syntax error:";
+        // A load can also fail for want of memory, which is no syntax error
+        std::string e = loadStatus == LUA_ERRSYNTAX ? "Lua syntax error:" : "Lua error:";
         if (lua_isstring(L, -1)) {
             e.append(lua_tostring(L, -1));
         } else {
@@ -3492,6 +3494,21 @@ bool TLuaInterpreter::compile(const QString& code, QString& errorMsg, const QStr
     lua_settop(L, callerStackTop);
 
     return !error;
+}
+
+// No documentation available in wiki - internal function
+// Undoes compile()'s rich-text markup (kept in step by hand). The tags go before the entities, or
+// a script's own "<b>" is stripped, and "&amp;" goes last, or its "&lt;b&gt;" comes back as "<b>".
+QString TLuaInterpreter::compileErrorAsPlainText(const QString& error)
+{
+    QString plainText = error;
+    plainText.remove(qsl("<b>"));
+    plainText.remove(qsl("</b>"));
+    plainText.replace(qsl("&quot;"), qsl("\""));
+    plainText.replace(qsl("&lt;"), qsl("<"));
+    plainText.replace(qsl("&gt;"), qsl(">"));
+    plainText.replace(qsl("&amp;"), qsl("&"));
+    return plainText;
 }
 
 // No documentation available in wiki - internal function
@@ -7853,7 +7870,7 @@ std::pair<int, QString> TLuaInterpreter::createPermScript(const QString& name, c
     // This will lead to the generation of the ID number:
     mpHost->getScriptUnit()->registerScript(pS);
     if (!pS->setScript(luaCode)) {
-        const QString errMsg = pS->getError();
+        const QString errMsg = compileErrorAsPlainText(pS->getError());
         delete pS;
         return {-1, qsl("unable to compile \"%1\", reason: %2").arg(luaCode, errMsg)};
     }
@@ -7886,7 +7903,7 @@ std::pair<int, QString> TLuaInterpreter::setScriptCode(const QString& name, cons
     }
     const auto oldCode = pS->getScript();
     if (!pS->setScript(luaCode)) {
-        const QString errMsg = pS->getError();
+        const QString errMsg = compileErrorAsPlainText(pS->getError());
         pS->setScript(oldCode);
         return {-1, qsl("unable to compile \"%1\" for the script \"%2\" at position %3, reason: %4").arg(luaCode, name, QString::number(pos + 1), errMsg)};
     }
@@ -7921,7 +7938,7 @@ std::pair<int, QString> TLuaInterpreter::startPermTimer(const QString& name, con
     // This will lead to the generation of the ID number:
     mpHost->getTimerUnit()->registerTimer(pT);
     if (!pT->setScript(function)) {
-        const QString errMsg = pT->getError();
+        const QString errMsg = compileErrorAsPlainText(pT->getError());
         // Apparently this will call the TTimer::unregisterTimer(...) method:
         delete pT;
         return {-1, qsl("unable to compile \"%1\", reason: %2").arg(function, errMsg)};
@@ -7944,7 +7961,7 @@ QPair<int, QString> TLuaInterpreter::startTempTimer(double timeout, const QStrin
     // name for temporary timers:
     mpHost->getTimerUnit()->registerTimer(pT);
     if (!pT->setScript(function)) {
-        const QString errMsg = pT->getError();
+        const QString errMsg = compileErrorAsPlainText(pT->getError());
         // Apparently this will call the TTimer::unregisterTimer(...) method:
         delete pT;
         return qMakePair(-1, qsl("unable to compile \"%1\", reason: %2").arg(function, errMsg));

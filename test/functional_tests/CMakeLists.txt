@@ -172,6 +172,7 @@ set(TELNET_GROUP_TEST_SOURCES
 set(TRIGGER_GROUP_TEST_SOURCES
     CaptureGroupParkingTest.cpp
     BigramFilterTest.cpp
+    CompileErrorLabelTest.cpp
     CorruptTriggerPatternsTest.cpp
     EmergencyStopResumeTest.cpp
     MultilineTriggerReentrancyTest.cpp
