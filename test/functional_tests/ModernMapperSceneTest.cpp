@@ -215,6 +215,42 @@ private:
         return map()->mpRoomDB->getRoom(1)->getArea();
     }
 
+    // columns by rows areas of side x side rooms, each joined to the next east and north of it; returns the ID of
+    // the middle one, where the player is
+    int addManyAreas(const int columns, const int rows, const int side) const
+    {
+        map()->mapClear();
+        map()->mUserData.remove(TAreaGraph::cLayoutUserDataKey);
+        QList<int> firstRooms;
+        int next = 1;
+        for (int area = 0; area < columns * rows; ++area) {
+            firstRooms.append(next);
+            next = addGridArea(qsl("Bench Region %1").arg(area + 1), next, side, side, 1, 0);
+        }
+        const int middleOfWest = side / 2 * side;
+        const int middleOfEast = middleOfWest + side - 1;
+        const int middleOfSouth = side / 2;
+        const int middleOfNorth = (side - 1) * side + side / 2;
+        for (int row = 0; row < rows; ++row) {
+            for (int column = 0; column < columns; ++column) {
+                const int first = firstRooms.at(row * columns + column);
+                if (column + 1 < columns) {
+                    const int east = firstRooms.at(row * columns + column + 1);
+                    map()->setExit(first + middleOfEast, east + middleOfWest, DIR_EAST);
+                    map()->setExit(east + middleOfWest, first + middleOfEast, DIR_WEST);
+                }
+                if (row + 1 < rows) {
+                    const int north = firstRooms.at((row + 1) * columns + column);
+                    map()->setExit(first + middleOfNorth, north + middleOfSouth, DIR_NORTH);
+                    map()->setExit(north + middleOfSouth, first + middleOfNorth, DIR_SOUTH);
+                }
+            }
+        }
+        const int middle = firstRooms.at(rows / 2 * columns + columns / 2);
+        map()->mRoomIdHash[map()->mProfileName] = middle + middleOfWest;
+        return map()->mpRoomDB->getRoom(middle)->getArea();
+    }
+
     // A few dozen rooms with something of everything the view draws: levels, symbols, highlights, borders,
     // doors, ways up and down, custom lines, labels and an exit to another area
     int addOrdinaryMap() const
@@ -332,6 +368,22 @@ private:
         widget.mRenderCommandQueue.clear();
         widget.queueScene();
     }
+
+    // The nearest distance from which the view of the area passes the check, so a test holds wherever the zoom
+    // thresholds are; 0 if none does
+    static float distanceWhere(ModernGLWidget& widget, const int areaId, bool (*wanted)(ModernGLWidget&))
+    {
+        for (float distance = 1.0f; distance < 5000.0f; distance *= 1.05f) {
+            queueFrame(widget, areaId, distance);
+            if (wanted(widget)) {
+                return distance;
+            }
+        }
+        return 0.0f;
+    }
+
+    static bool footprintsAlone(ModernGLWidget& widget) { return widget.mZoomWeights.footprint == 1.0f && widget.mZoomWeights.world == 0.0f; }
+    static bool worldGraphAlone(ModernGLWidget& widget) { return widget.mZoomWeights.footprint > 0.0f && widget.mZoomWeights.world == 1.0f; }
 
     struct DrawnCube
     {
@@ -2661,6 +2713,366 @@ private slots:
 
         std::printf("METRIC rss_end_mib %.1f\n", memoryMiB("VmRSS"));
         std::printf("METRIC rss_peak_mib %.1f\n", memoryMiB("VmHWM"));
+        std::fflush(stdout);
+    }
+
+    void test_theAtlasIsWrittenToTheGPUOnlyWhenItChangesWithoutGL()
+    {
+        const int westId = addTwoAreas(60).first;
+        for (const int roomId : map()->mpRoomDB->getRoomIDList()) {
+            map()->mpRoomDB->getRoom(roomId)->environment = 300;
+        }
+        map()->mCustomEnvColors[300] = QColor(10, 200, 30);
+        ModernGLWidget widget(map(), mpHost);
+        const auto queuedLayers = [&widget]() {
+            QList<const RenderTrianglesCommand*> layers;
+            for (const auto& command : widget.mRenderCommandQueue.commands()) {
+                if (const auto* triangles = dynamic_cast<const RenderTrianglesCommand*>(command.get())) {
+                    layers.append(triangles);
+                }
+            }
+            return layers;
+        };
+        const float footprints = distanceWhere(widget, westId, footprintsAlone);
+        const float worldGraph = distanceWhere(widget, westId, worldGraphAlone);
+        QVERIFY(footprints > 0.0f && worldGraph > 0.0f);
+
+        queueFrame(widget, westId, footprints);
+        QCOMPARE(atlasLayerOpacities(widget), QList<float>{1.0f});
+        QCOMPARE(queuedLayers().first()->colors(), widget.mAtlas.footprintColors());
+        QVERIFY(!widget.mAtlasFootprints->written);
+        // As drawing them would
+        widget.mAtlasFootprints->written = true;
+
+        // Pan mode, as a drag sets, so updateMatrices() keeps the moved target
+        widget.mPanMode = true;
+        widget.slot_shiftRight();
+        widget.updateMatrices();
+        widget.mRenderCommandQueue.clear();
+        widget.queueScene();
+        QVERIFY2(widget.mAtlasFootprints->written, "the footprints were written again as the view moved");
+
+        map()->mCustomEnvColors[300] = QColor(200, 10, 30);
+        queueFrame(widget, westId, footprints);
+        QVERIFY2(!widget.mAtlasFootprints->written, "the footprints were not written again after their colors changed");
+        QCOMPARE(queuedLayers().first()->colors(), widget.mAtlas.footprintColors());
+        QCOMPARE(queuedLayers().first()->colors().at(0), QColor(200, 10, 30).redF());
+
+        queueFrame(widget, westId, worldGraph);
+        QCOMPARE(widget.mAtlasWorld->vertices, widget.mAtlas.worldVertices());
+        QVERIFY2(widget.mAtlasFootprints->vertices.isEmpty(), "the footprints are kept while they are not drawn");
+
+        queueFrame(widget, westId, 1.5f);
+        QVERIFY2(widget.mAtlasWorld->vertices.isEmpty(), "the world graph is kept among the rooms");
+    }
+
+    void test_theAtlasKeptOnTheGPUIsDrawnInItsNewColors()
+    {
+        if (!glAvailable()) {
+            QSKIP("no OpenGL context on this platform");
+        }
+        const int westId = addTwoAreas(60).first;
+        for (const int roomId : map()->mpRoomDB->getRoomIDList()) {
+            map()->mpRoomDB->getRoom(roomId)->environment = 300;
+        }
+        map()->mCustomEnvColors[300] = QColor(10, 200, 30);
+        float footprints = 0.0f;
+        {
+            ModernGLWidget probe(map(), mpHost);
+            footprints = distanceWhere(probe, westId, footprintsAlone);
+        }
+        QVERIFY(footprints > 0.0f);
+        ModernGLWidget widget(map(), mpHost);
+        widget.resize(800, 600);
+        widget.grabFramebuffer();
+        if (!widget.isValid() || !widget.failureMessage().isEmpty()) {
+            QSKIP("no OpenGL context on this platform");
+        }
+        widget.mShiftMode = true;
+        widget.jumpTo(westId, 0, 0, 0);
+        widget.mCameraController.setTopView();
+        widget.setCameraDistance(footprints);
+        // Inside the west area's footprint, clear of its name
+        const auto footprintColor = [&widget, westId]() {
+            const QImage frame = widget.grabFramebuffer();
+            const QPoint pixel = pixelOfArea(widget, westId, QPointF(0.0, 20.0));
+            return frame.rect().contains(pixel) ? frame.pixelColor(pixel) : QColor();
+        };
+        const auto near = [](const QColor& a, const QColor& b) {
+            return a.isValid() && qAbs(a.red() - b.red()) + qAbs(a.green() - b.green()) + qAbs(a.blue() - b.blue()) < 12;
+        };
+
+        QColor drawn = footprintColor();
+        QVERIFY2(near(drawn, QColor(10, 200, 30)), qPrintable(qsl("the footprint is drawn %1").arg(drawn.name())));
+        QVERIFY(widget.mAtlasFootprints->written);
+        drawn = footprintColor();
+        QVERIFY2(near(drawn, QColor(10, 200, 30)), qPrintable(qsl("the footprint kept on the GPU is drawn %1").arg(drawn.name())));
+
+        map()->mCustomEnvColors[300] = QColor(200, 10, 30);
+        drawn = footprintColor();
+        QVERIFY2(near(drawn, QColor(200, 10, 30)), qPrintable(qsl("the footprint is drawn %1 after its color changed").arg(drawn.name())));
+    }
+
+    void test_areaNamesAreDrawnAgainWhenTheirLookChangesWithoutGL()
+    {
+        const auto [westId, eastId] = addTwoAreas(60);
+        map()->areaGraph()->refresh();
+        QVERIFY(map()->areaGraph()->setPosition(westId, QPointF(0.0, 0.0)));
+        QVERIFY(map()->areaGraph()->setPosition(eastId, QPointF(0.0, 150.0)));
+        const QColor background = mpHost->mBgColor_2;
+        mpHost->mBgColor_2 = QColor(0, 0, 90);
+        auto restoreBackground = qScopeGuard([this, background] {
+            mpHost->mBgColor_2 = background;
+        });
+        ModernGLWidget widget(map(), mpHost);
+        queueFrame(widget, westId, distanceWhere(widget, westId, footprintsAlone));
+        const auto paintNames = [&widget](const qreal pixelRatio = 1.0) {
+            QImage overlay(QSize(800, 600) * pixelRatio, QImage::Format_ARGB32_Premultiplied);
+            overlay.setDevicePixelRatio(pixelRatio);
+            overlay.fill(Qt::transparent);
+            QPainter painter(&overlay);
+            widget.paintAtlasLabels(painter);
+            return overlay;
+        };
+        const auto westName = [&widget]() {
+            for (const ModernGLWidget::AtlasLabel& label : widget.atlasLabels(widget.mZoomWeights)) {
+                if (label.text == qsl("Westmarch")) {
+                    return label.rect;
+                }
+            }
+            return QRectF();
+        };
+        // Opaque pixels of about the color, around where the west area's name is
+        const auto pixelsOf = [&westName](const QImage& overlay, const QColor& color) {
+            const QRect around = westName().adjusted(-3.0, -3.0, 3.0, 3.0).toAlignedRect().intersected(overlay.rect());
+            int count = 0;
+            for (int y = around.top(); y <= around.bottom(); ++y) {
+                for (int x = around.left(); x <= around.right(); ++x) {
+                    const QColor pixel = overlay.pixelColor(x, y);
+                    if (pixel.alpha() == 255 && qAbs(pixel.red() - color.red()) + qAbs(pixel.green() - color.green()) + qAbs(pixel.blue() - color.blue()) < 12) {
+                        ++count;
+                    }
+                }
+            }
+            return count;
+        };
+        // What the names cover, in the overlay's pixels
+        const auto inked = [](const QImage& overlay) {
+            QRect bounds;
+            for (int y = 0; y < overlay.height(); ++y) {
+                const auto* line = reinterpret_cast<const QRgb*>(overlay.constScanLine(y));
+                for (int x = 0; x < overlay.width(); ++x) {
+                    if (qAlpha(line[x])) {
+                        bounds |= QRect(x, y, 1, 1);
+                    }
+                }
+            }
+            return bounds;
+        };
+
+        QImage overlay = paintNames();
+        QVERIFY(widget.mAtlasLabelSheet.places[1].contains(qsl("Westmarch")));
+        QVERIFY(!westName().isNull());
+        QVERIFY2(pixelsOf(overlay, QColor(0, 0, 90)) > 0, "the name has no halo of the background");
+        const qint64 sheet = widget.mAtlasLabelSheet.image.cacheKey();
+        const QRectF before = westName();
+        widget.mPanMode = true;
+        widget.slot_shiftRight();
+        widget.updateMatrices();
+        QVERIFY(westName() != before);
+        paintNames();
+        QVERIFY2(widget.mAtlasLabelSheet.image.cacheKey() == sheet, "the names were drawn again for a view moved along");
+
+        mpHost->mBgColor_2 = QColor(90, 0, 0);
+        overlay = paintNames();
+        QVERIFY2(pixelsOf(overlay, QColor(90, 0, 0)) > 0, "the name's halo is not of the new background");
+        QCOMPARE(pixelsOf(overlay, QColor(0, 0, 90)), 0);
+
+        const qreal width = westName().width();
+        QVERIFY(width > 0.0);
+        QFont bigger = widget.font();
+        bigger.setPointSizeF(bigger.pointSizeF() * 2.0);
+        widget.setFont(bigger);
+        QVERIFY2(westName().width() > width * 1.5, "the name was not measured again in the new font");
+        const QRect plain = inked(paintNames());
+        const int slotWidth = widget.mAtlasLabelSheet.places[1].value(qsl("Westmarch")).width();
+        QVERIFY2(slotWidth > width * 1.5, "the name was not drawn again in the new font");
+
+        const QRect dense = inked(paintNames(2.0));
+        QVERIFY2(widget.mAtlasLabelSheet.places[1].value(qsl("Westmarch")).width() > slotWidth * 1.5, "the name was not drawn again for the denser screen");
+        // Twice as many pixels each way, in the same places, give or take the rounding to whole pixels
+        const QRect expected(plain.topLeft() * 2, plain.size() * 2);
+        QVERIFY2(qAbs(dense.left() - expected.left()) <= 3 && qAbs(dense.top() - expected.top()) <= 3 && qAbs(dense.right() - expected.right()) <= 3 && qAbs(dense.bottom() - expected.bottom()) <= 3,
+                 qPrintable(qsl("the names cover %1,%2 %3x%4 on the denser screen rather than %5,%6 %7x%8")
+                                    .arg(dense.x())
+                                    .arg(dense.y())
+                                    .arg(dense.width())
+                                    .arg(dense.height())
+                                    .arg(expected.x())
+                                    .arg(expected.y())
+                                    .arg(expected.width())
+                                    .arg(expected.height())));
+
+        // Among the rooms, where no names are drawn, none are kept
+        queueFrame(widget, westId, 1.5f);
+        paintNames(2.0);
+        QVERIFY(widget.mAtlasLabelSheet.image.isNull() && widget.mAtlasLabelSheet.places[0].isEmpty() && widget.mAtlasLabelSheet.places[1].isEmpty());
+        QVERIFY(widget.mAtlasLabelBounds[0].isEmpty() && widget.mAtlasLabelBounds[1].isEmpty());
+    }
+
+    void test_namesComingIntoViewJoinThoseAlreadyDrawnWithoutGL()
+    {
+        const ThreeAreas areas = addThreeAreas(41);
+        map()->areaGraph()->refresh();
+        QVERIFY(map()->areaGraph()->setPosition(areas.west, QPointF(0.0, 0.0)));
+        QVERIFY(map()->areaGraph()->setPosition(areas.middle, QPointF(0.0, 150.0)));
+        QVERIFY(map()->areaGraph()->setPosition(areas.east, QPointF(0.0, -150.0)));
+        ModernGLWidget widget(map(), mpHost);
+        const float oneName = distanceWhere(widget, areas.west, [](ModernGLWidget& view) {
+            return view.atlasLabels(view.mZoomWeights).size() == 1;
+        });
+        const float threeNames = distanceWhere(widget, areas.west, [](ModernGLWidget& view) {
+            // Names are drawn as opaque as the footprints, so a faint one would hide what the names look like
+            return view.mZoomWeights.footprint == 1.0f && view.atlasLabels(view.mZoomWeights).size() == 3;
+        });
+        QVERIFY(oneName > 0.0f && threeNames > 0.0f);
+        const auto paintNames = [&widget]() {
+            QImage overlay(QSize(800, 600), QImage::Format_ARGB32_Premultiplied);
+            overlay.fill(Qt::transparent);
+            QPainter painter(&overlay);
+            widget.paintAtlasLabels(painter);
+            return overlay;
+        };
+        const auto namesKept = [&widget]() {
+            return widget.mAtlasLabelSheet.places[0].size() + widget.mAtlasLabelSheet.places[1].size();
+        };
+
+        queueFrame(widget, areas.west, oneName);
+        paintNames();
+        QCOMPARE(namesKept(), 1);
+
+        // The name already drawn is copied over, so the names look as they would all drawn afresh
+        queueFrame(widget, areas.west, threeNames);
+        const QImage joined = paintNames();
+        QCOMPARE(namesKept(), 3);
+        QImage blank(joined.size(), joined.format());
+        blank.fill(Qt::transparent);
+        QVERIFY(joined != blank);
+        widget.mAtlasLabelSheet = {};
+        QCOMPARE(joined, paintNames());
+
+        // Once most of the names it keeps are out of view, it lets go of them
+        queueFrame(widget, areas.west, oneName);
+        paintNames();
+        QCOMPARE(namesKept(), 1);
+    }
+
+    // Dragging the view across the map at each zoom, from among the rooms out to the world graph, on a map of many
+    // areas: MUDLET_BENCH_MAP=<file> pans a saved map instead
+    void benchmark_atlasPan()
+    {
+        if (qEnvironmentVariableIsEmpty("MUDLET_BENCH_3D")) {
+            QSKIP("set MUDLET_BENCH_3D=1 to run the 3D view benchmark");
+        }
+        if (!glAvailable()) {
+            QSKIP("no OpenGL context on this platform");
+        }
+        mpHost->mMapInfoContributors.clear();
+        applyBenchStitching();
+        const QString mapFile = qEnvironmentVariable("MUDLET_BENCH_MAP");
+        if (mapFile.isEmpty()) {
+            addManyAreas(24, 24, 9);
+        } else {
+            map()->mapClear();
+            QVERIFY2(map()->restore(mapFile), qPrintable(qsl("could not restore the map at \"%1\"").arg(mapFile)));
+            map()->audit();
+        }
+        // A saved map keeps the player's room under the name of the profile it was saved from
+        const int playerRoom = map()->mRoomIdHash.value(map()->mProfileName, map()->mRoomIdHash.isEmpty() ? 0 : *map()->mRoomIdHash.cbegin());
+        map()->mRoomIdHash[map()->mProfileName] = playerRoom;
+        const TRoom* pPlayer = map()->mpRoomDB->getRoom(playerRoom);
+        QVERIFY2(pPlayer, "the map has no player room to start the view from");
+        std::printf("METRIC pan_map_rooms %d\n", static_cast<int>(map()->mpRoomDB->size()));
+        std::printf("METRIC pan_map_areas %d\n", static_cast<int>(map()->mpRoomDB->getAreaMap().size()));
+
+        ModernGLWidget widget(map(), mpHost);
+        widget.resize(1200, 800);
+        widget.grabFramebuffer();
+        if (!widget.isValid() || !widget.failureMessage().isEmpty()) {
+            QSKIP("no OpenGL context on this platform");
+        }
+        widget.mShiftMode = true;
+        widget.makeCurrent();
+        std::printf("GL renderer: %s\n", reinterpret_cast<const char*>(widget.context()->functions()->glGetString(GL_RENDERER)));
+        widget.doneCurrent();
+
+        struct Scenario
+        {
+            const char* name;
+            float distance;
+        };
+        const QList<Scenario> scenarios{{"rooms", 8.0f}, {"rooms_far", 60.0f}, {"blend", 150.0f}, {"footprints", 300.0f}, {"world", 1500.0f}, {"world_far", 4000.0f}};
+        const int frames = qEnvironmentVariableIntValue("MUDLET_BENCH_3D_FRAMES_PER_SCENARIO") > 0 ? qEnvironmentVariableIntValue("MUDLET_BENCH_3D_FRAMES_PER_SCENARIO") : 40;
+        for (const Scenario& scenario : scenarios) {
+            widget.mPanMode = false;
+            widget.jumpTo(pPlayer->getArea(), pPlayer->x(), pPlayer->y(), pPlayer->z());
+            widget.mCameraController.setTopView();
+            widget.setCameraDistance(scenario.distance);
+            widget.grabFramebuffer();
+            // There and back, so every frame of every run shows the same places
+            widget.mPanMode = true;
+            const auto pan = [&widget](const int frame, const int of) {
+                if (frame % of < of / 2) {
+                    widget.slot_shiftRight();
+                } else {
+                    widget.slot_shiftLeft();
+                }
+            };
+            QElapsedTimer wall;
+            const double cpuBefore = processCpuMs();
+            wall.start();
+            for (int frame = 0; frame < frames; ++frame) {
+                pan(frame, 8);
+                widget.grabFramebuffer();
+            }
+            const double wallMs = static_cast<double>(wall.nsecsElapsed()) / 1.0e6 / frames;
+            const double cpuMs = (processCpuMs() - cpuBefore) / frames;
+
+            widget.makeCurrent();
+            QElapsedTimer build;
+            build.start();
+            for (int frame = 0; frame < frames; ++frame) {
+                pan(frame, 8);
+                widget.updateMatrices();
+                widget.mRenderCommandQueue.clear();
+                widget.queueScene();
+            }
+            const double buildMs = static_cast<double>(build.nsecsElapsed()) / 1.0e6 / frames;
+            widget.mRenderCommandQueue.clear();
+            widget.doneCurrent();
+
+            // The names alone, on the raster engine rather than the GL one the frames above use
+            QImage overlay(widget.size() * widget.devicePixelRatio(), QImage::Format_ARGB32_Premultiplied);
+            overlay.setDevicePixelRatio(widget.devicePixelRatio());
+            QElapsedTimer labels;
+            labels.start();
+            for (int frame = 0; frame < frames; ++frame) {
+                pan(frame, 8);
+                widget.updateMatrices();
+                overlay.fill(Qt::transparent);
+                QPainter painter(&overlay);
+                widget.paintAtlasLabels(painter);
+            }
+            const double labelsMs = static_cast<double>(labels.nsecsElapsed()) / 1.0e6 / frames;
+
+            std::printf("METRIC pan_%s_weights footprint=%.2f world=%.2f\n", scenario.name, widget.mZoomWeights.footprint, widget.mZoomWeights.world);
+            std::printf("METRIC pan_%s_frame_ms %.2f\n", scenario.name, wallMs);
+            std::printf("METRIC pan_%s_frame_cpu_ms %.2f\n", scenario.name, cpuMs);
+            std::printf("METRIC pan_%s_scene_build_ms %.3f\n", scenario.name, buildMs);
+            std::printf("METRIC pan_%s_labels_ms %.3f\n", scenario.name, labelsMs);
+            std::printf("METRIC pan_%s_rss_anon_mib %.1f\n", scenario.name, memoryMiB("RssAnon"));
+        }
+        std::printf("METRIC pan_rss_peak_mib %.1f\n", memoryMiB("VmHWM"));
         std::fflush(stdout);
     }
 

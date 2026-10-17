@@ -159,6 +159,25 @@ struct RetainedInstances
     void setInstances(QVector<CubeInstanceData>&& fresh);
 };
 
+// Flat triangles kept in buffers on the GPU from frame to frame, written again only once set to other arrays
+struct RetainedTriangles
+{
+    RetainedTriangles() = default;
+    // A copy would share the buffers but not know when the other let go of them
+    Q_DISABLE_COPY_MOVE(RetainedTriangles)
+
+    // Three coordinates and four color components a corner
+    QVector<float> vertices;
+    QVector<float> colors;
+    QOpenGLBuffer vertexBuffer{QOpenGLBuffer::VertexBuffer};
+    QOpenGLBuffer colorBuffer{QOpenGLBuffer::VertexBuffer};
+    bool written = false;
+
+    void setTriangles(const QVector<float>& freshVertices, const QVector<float>& freshColors);
+    // Needs the buffers' context current
+    void release();
+};
+
 class GeometryManager : protected QOpenGLFunctions
 {
 public:
@@ -298,6 +317,8 @@ public:
                              class ResourceManager* resourceManager,
                              GLenum drawMode = GL_TRIANGLES,
                              InstanceShape shape = InstanceShape::Box);
+
+    void renderRetainedTriangles(RetainedTriangles& retained, QOpenGLVertexArrayObject& vao, class ResourceManager* resourceManager);
 
 private:
     bool mInitialized = false;
