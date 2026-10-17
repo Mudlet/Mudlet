@@ -175,6 +175,13 @@ private slots:
         QCOMPARE(TMedia::mediaCacheFileName(home, home + QStringLiteral("/media"), QStringLiteral("D:/packs/3.ogg")), QStringLiteral("_absolute/D/packs/3.ogg"));
         QCOMPARE(TMedia::mediaCacheFileName(home, home + QStringLiteral("/media"), QStringLiteral("d:/packs/3.ogg")), QStringLiteral("_absolute/D/packs/3.ogg"));
     }
+
+    // A server named D is not drive D
+    void cache_networkShare_apartFromDrives()
+    {
+        const QString home = QStringLiteral("C:/Users/me/mudlet/profiles/Default");
+        QCOMPARE(TMedia::mediaCacheFileName(home, home + QStringLiteral("/media"), QStringLiteral("//D/packs/3.ogg")), QStringLiteral("_absolute/UNC/D/packs/3.ogg"));
+    }
 #endif
 
     void reserved_copyFolders_refusedInAnyCase()

@@ -2065,19 +2065,35 @@ describe("Media playback effects with a generated sound file", function()
     end
     local real = writeOutsideFile("busted-media-linked.wav", "busted-media-real")
     local linkDirectory = getMudletHomeDir() .. "/busted-media-link"
-    os.remove(linkDirectory)
-    assert.is_true(lfs.link(getMudletHomeDir() .. "/busted-media-real", linkDirectory, true))
-    onCleanup(function() os.remove(linkDirectory) end)
+    -- a Windows directory link is removed with rmdir, anything else with remove
+    local function removeLink()
+      os.remove(linkDirectory)
+      lfs.rmdir(linkDirectory)
+    end
+    removeLink()
+    if not lfs.link(getMudletHomeDir() .. "/busted-media-real", linkDirectory, true) then
+      pending("this system would not make a symbolic link here")
+      return
+    end
+    onCleanup(removeLink)
     onCleanup(function() stopSounds() end)
     local finished = {}
     collect("sysMediaFinished", finished)
+    local throughLink = linkDirectory .. "/busted-media-linked.wav"
 
-    assert.is_true(playSoundFile({name = linkDirectory .. "/busted-media-linked.wav", key = "busted-linked"}))
+    assert.is_true(playSoundFile({name = throughLink, key = "busted-linked"}))
     assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)))
-
     assert.is_true(stopSounds({name = real}))
     waitForCount("sysMediaFinished", finished, 1)
     assert.equals(1, #finished, "stopping by the real path left the sound played through the symlink playing")
+
+    -- and by the path it was played from once that no longer leads to it
+    assert.is_true(playSoundFile({name = throughLink, key = "busted-linked-gone"}))
+    assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)))
+    removeLink()
+    assert.is_true(stopSounds({name = throughLink}))
+    waitForCount("sysMediaFinished", finished, 2)
+    assert.equals(2, #finished, "the path a sound was played from stopped matching once its symlink was removed")
   end)
 
   it("a file already in the media directory plays where it is", function()

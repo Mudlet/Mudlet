@@ -608,6 +608,7 @@ TMediaData TMedia::requestForFilePlayers(const TMediaData& mediaData) const
     // look like one, so it is left as given to match none.
     if (!fileName.endsWith(QLatin1Char('/'))) {
         fileRequest.setMediaFileName(mediaCacheFileName(fileName));
+        fileRequest.setMediaSourcePath(QDir::cleanPath(fileName));
     }
 
     return fileRequest;
@@ -649,6 +650,12 @@ QString TMedia::mediaCacheFileName(const QString& absolutePath) const
     if (mirrored.size() > 1 && mirrored.at(0).isLetter() && mirrored.at(1) == QLatin1Char(':')) {
         mirrored.replace(0, 2, mirrored.at(0).toUpper());
     }
+#if defined(Q_OS_WINDOWS)
+    // A share, "//server/share", apart from the drive folders, which are one letter long
+    if (mirrored.startsWith(qsl("//"))) {
+        mirrored = qsl("UNC/%1").arg(mirrored.mid(2));
+    }
+#endif
     while (mirrored.startsWith(QLatin1Char('/'))) {
         mirrored.remove(0, 1);
     }
@@ -672,7 +679,9 @@ bool TMedia::isMediaMatch(const std::shared_ptr<TMediaPlayer>& player, const TMe
         return false;
     }
 
-    if (!mediaData.mediaFileName().isEmpty() && !player->mediaData().mediaFileName().isEmpty() && player->mediaData().mediaFileName() != mediaData.mediaFileName()) {
+    // The path a file was played from still names it after the symlink it was resolved through changes
+    const bool sameSource = !mediaData.mediaSourcePath().isEmpty() && player->mediaData().mediaSourcePath() == mediaData.mediaSourcePath();
+    if (!sameSource && !mediaData.mediaFileName().isEmpty() && !player->mediaData().mediaFileName().isEmpty() && player->mediaData().mediaFileName() != mediaData.mediaFileName()) {
         return false;
     }
 
@@ -867,6 +876,7 @@ bool TMedia::transitionNonRelativeFile(TMediaData& mediaData)
     }
 
     mediaData.setMediaFileName(cacheFileName);
+    mediaData.setMediaSourcePath(QDir::cleanPath(source));
     return true;
 }
 
