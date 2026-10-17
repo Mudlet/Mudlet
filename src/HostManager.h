@@ -65,9 +65,10 @@ public:
     FontManager& fonts() { return *mpFonts; }
 
     Host* getHost(const QString& hostname);
+    // False for an empty name, one already open, or while the pool is being destroyed
     bool addHost(const QString& name, const QString& port, const QString& login, const QString& pass);
     // Loads and starts a saved profile with no window: what the GUI's load gives, less the default
-    // packages a new profile gets. Null when that profile is already open.
+    // packages a new profile gets. Null when that profile is already open, or the pool is going.
     Host* openProfile(const QString& name, bool connect);
     int getHostCount();
     void deleteHost(const QString&);
@@ -89,6 +90,8 @@ private:
     // Before mHostPool too, as the profiles reach it through FontManager::self()
     std::unique_ptr<FontManager> mpFonts;
     HostMap mHostPool;
+    // From the destructor on: a profile opened then would never get its sysExitEvent
+    bool mGoingDown = false;
 };
 
 #endif // MUDLET_HOSTMANAGER_H

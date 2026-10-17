@@ -41,6 +41,7 @@
 #include <vector>
 
 class Host;
+class QDataStream;
 class QMovie;
 class TNullConsoleFrontend;
 struct TLabelModel;
@@ -101,6 +102,15 @@ public:
     // Some callers hand a failure's message straight to Lua, so it has to say why.
     static std::pair<bool, QString> noView() { return {false, qsl("the profile has no main window")}; }
 
+    struct Placement
+    {
+        QRect geometry;
+        bool shown = false;
+
+        friend QDataStream& operator<<(QDataStream&, const Placement&);
+        friend QDataStream& operator>>(QDataStream&, Placement&);
+    };
+
     explicit TNullConsoleFrontend(Host* pHost);
     // Virtual, as Host deletes whichever view it holds as this type
     virtual ~TNullConsoleFrontend();
@@ -113,6 +123,8 @@ public:
     void followView(QObject* view);
     void resumeMainCommandLine();
     bool ownsContainer(const QString& windowname) const;
+    bool subConsoleShown(const QString& name) const;
+    void reportUserWindowVisibility();
     bool holdsWindow(const QString& name) const { return mLabels.contains(name) || subConsoleModel(name) || mScrollBoxes.contains(name) || mCommandLines.contains(name) || mTextBoxes.contains(name); }
     // A deleted window's model can still be in use, as a sysBufferShrinkEvent handler runs inside its
     // buffer's append(), so models are kept until deferred deletes next run, as a real view's widgets are
@@ -199,7 +211,7 @@ public:
     bool resizeSubConsole(const QString& name, int width, int height) override;
     bool moveSubConsole(const QString& name, int x, int y) override;
     void closeSubConsole(const QString& name) override;
-    void openUserWindow(const QString& name, bool loadLayout, bool autoDock, const QString& area) override;
+    bool openUserWindow(const QString& name, bool loadLayout, bool autoDock, const QString& area) override;
     std::pair<bool, QString> setUserWindowStyleSheet(const QString& name, const QString& userWindowStyleSheet) override;
     std::pair<bool, QString> setUserWindowTitle(const QString& name, const QString& text) override;
     bool createScrollBox(const QString& windowname, const QString& name, int x, int y, int width, int height) override;
@@ -243,14 +255,17 @@ public:
     // The embedded mapper's position, size and visibility are not kept, as no Lua call reads them back
     std::pair<bool, QString> createMapper(const QString& windowname, int, int, int, int) override;
     void createMapperDock(const QString& title, const QString&) override;
-    // TMainConsole docks a new map widget on the right; the saved window layout it then restores is not modelled
-    void showNewMapperDock() override { placeMapWidget(qsl("r"), -1, -1, -1, -1); }
+    void showNewMapperDock() override;
     std::pair<bool, QString> placeMapWidget(const QString& area, int x, int y, int width, int height) override;
     bool mapWidgetCreated() const override { return mMapWidget.has_value(); }
     bool setMapWidgetTitle(const QString& title) override;
     std::optional<QString> mapWidgetTitle() const override;
     std::optional<QRect> mapWidgetGeometry() const override;
     bool hideMapWidget() override;
+    // Where the map widget is and whether it shows, even while hidden, for the window layout
+    std::optional<Placement> mapWidgetPlacement() const;
+    // As restoreState() places and shows or hides a dock, with no event of its own
+    void restoreMapWidgetPlacement(const Placement&);
     // A map widget or an embedded mapper, either of which a real view would draw the map in
     bool hasMapper() const { return mapView() != nullptr; }
     TMapViewFrontend* mapView() const { return mpEmbeddedMapper ? mpEmbeddedMapper.data() : mMapWidget ? mMapWidget->pView.get() : nullptr; }
@@ -375,6 +390,9 @@ private:
         bool resizePending = true;
         // From a show sending that resize until its handlers return, or a show nested in them after a hide ends
         bool sendingResize = false;
+        // TDockWidget::hasLayoutAlready: whether opening this user window has asked for the saved layout,
+        // which a load already running refuses
+        bool layoutRequested = false;
     };
     // As TConsole::mpCommandLine tells a console's own command line from another of its name
     static bool ownsLine(const SubConsole& console, const PlainWindow& commandLine) { return commandLine.writer && commandLine.writer == console.ownLine; }
@@ -488,6 +506,7 @@ private:
     bool mReleaseQueued = false;
     // While a hidden user window is removed, the names its deferred deletes are to report
     QStringList* mpDeferredReports = nullptr;
+    bool mDroppingWindows = false;
     // The main window, which holds what a script makes in it
     std::unique_ptr<QObject> mpMainHolder = std::make_unique<QObject>();
     // TMxpFrameWidgets' container widget of each frame, which holds the frame's console until a script moves it

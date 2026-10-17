@@ -7226,6 +7226,108 @@ describe("Main window size and saved layout", function()
       assert.is_true(loadWindowLayout())
     end)
 
+    it("saveWindowLayout is refused from a handler the load runs, so the load still places every window", function()
+      local first, second = "layoutSaveInLoadA", "layoutSaveInLoadB"
+      local handler
+      finally(function()
+        if handler then
+          killAnonymousEventHandler(handler)
+        end
+        deleteMiniConsole(first)
+        deleteMiniConsole(second)
+      end)
+      openUserWindow(first, false, false, "f")
+      openUserWindow(second, false, false, "f")
+      moveWindow(first, 100, 100)
+      resizeWindow(first, 300, 200)
+      moveWindow(second, 500, 100)
+      resizeWindow(second, 250, 150)
+      pumpEvents(300)
+      local savedSecond = {getWindowGeometry(second)}
+      assert.is_true(saveWindowLayout())
+      moveWindow(first, 150, 150)
+      resizeWindow(first, 320, 220)
+      moveWindow(second, 550, 150)
+      resizeWindow(second, 270, 170)
+      pumpEvents(300)
+      local loading, saved, saveError = false, "not run", nil
+      handler = registerAnonymousEventHandler("sysUserWindowResizeEvent", function(_, _, _, name)
+        if loading and saved == "not run" and (name == first or name == second) then
+          saved, saveError = saveWindowLayout()
+        end
+      end)
+      loading = true
+      assert.is_true(loadWindowLayout())
+      loading = false
+      pumpEvents(300)
+      assert.is_nil(saved)
+      assert.equals("cannot save the window layout while it is being loaded", saveError)
+      -- a save from there wrote this one where it was before the load, and kept the load from moving it; a restored
+      -- floating dock's position can drift under a real window server, its size does not
+      local _, _, savedWidth, savedHeight = unpack(savedSecond)
+      local _, _, width, height = getWindowGeometry(second)
+      assert.are.same({savedWidth, savedHeight}, {width, height})
+    end)
+
+    it("openUserWindow refuses a window a handler deletes or replaces as it is made or as the layout loads", function()
+      local other, deleted, replaced, replacedInLoad = "layoutFontOther", "layoutFontDeleted", "layoutFontReplaced", "layoutLoadReplaced"
+      local target, replace, trigger
+      local function replaceTarget(window)
+        deleteMiniConsole(window)
+        if replace then
+          openUserWindow(window, false, false, "f")
+          hideWindow(window)
+        end
+      end
+      local fontHandler = registerAnonymousEventHandler("sysFontChangeEvent", function(_, window)
+        if window == target then
+          target = nil
+          replaceTarget(window)
+        end
+      end)
+      -- the load resizes the other window, and its handler replaces the one being opened
+      local resizeHandler = registerAnonymousEventHandler("sysUserWindowResizeEvent", function(_, _, _, window)
+        if trigger and window == trigger.resized then
+          local opening = trigger.window
+          trigger = nil
+          replaceTarget(opening)
+        end
+      end)
+      finally(function()
+        killAnonymousEventHandler(fontHandler)
+        killAnonymousEventHandler(resizeHandler)
+        for _, name in ipairs({other, deleted, replaced, replacedInLoad}) do
+          deleteMiniConsole(name)
+        end
+      end)
+      openUserWindow(other, false, false, "f")
+      resizeWindow(other, 300, 200)
+      pumpEvents(300)
+      assert.is_true(saveWindowLayout())
+      -- the layout has the other one at 300x200, so only a load puts it back
+      for _, case in ipairs({{deleted, false, false, {400, 330}}, {replaced, true, false, {400, 330}}, {replacedInLoad, true, true, {300, 200}}}) do
+        resizeWindow(other, 400, 330)
+        pumpEvents(300)
+        replace = case[2]
+        if case[3] then
+          trigger = {resized = other, window = case[1]}
+        else
+          target = case[1]
+        end
+        local opened, openError = openUserWindow(case[1], true, false, "f")
+        pumpEvents(300)
+        assert.is_nil(opened)
+        assert.equals(("userwindow '%s' was deleted while it was being opened"):format(case[1]), openError)
+        local _, _, width, height = getWindowGeometry(other)
+        assert.are.same(case[4], {width, height})
+      end
+      assert.is_nil(windowType(deleted))
+      for _, name in ipairs({replaced, replacedInLoad}) do
+        assert.equals("userwindow", windowType(name))
+        assert.is_false(windowVisible(name))
+      end
+    end)
+
     it("verifying the restored dock geometry", function()
       pending("dock widget geometry is not readable from Lua - needs a functional test")
     end)
