@@ -135,6 +135,7 @@ std::pair<bool, QString> XMLimport::importPackage(QFile* pfile, QString packName
         mpHost->getScriptUnit()->registerScript(mpScript);
     }
 
+    QString laterMudletRefusal;
     while (!atEnd()) {
         readNext();
 
@@ -166,7 +167,11 @@ std::pair<bool, QString> XMLimport::importPackage(QFile* pfile, QString packName
                                                "and this one cannot read it, you need a newer Mudlet!")
                                                     .arg(pfile->fileName(), versionString);
                     mpHost->postMessage(moanMsg);
-                    return {false, moanMsg};
+                    //: The reason handed back to whoever asked for the file to be read, after the alert above; %1 is the version the file reports
+                    laterMudletRefusal =
+                            tr("the file reports a version (%1), so it must have come from a later Mudlet version and this one cannot read it, you need a newer Mudlet").arg(versionString);
+                    // Out through the clean-up below, which takes away the empty item folders made above
+                    break;
                 }
 
                 readPackage();
@@ -227,6 +232,9 @@ std::pair<bool, QString> XMLimport::importPackage(QFile* pfile, QString packName
         }
     }
 
+    if (!laterMudletRefusal.isEmpty()) {
+        return {false, laterMudletRefusal};
+    }
     return {!hasError(), errorString()};
 }
 
@@ -296,6 +304,7 @@ void XMLimport::readVariable(TVar* pParent)
                 var->setValue(value, valueType);
                 vu->addSavedVar(var);
                 lI->setValue(var);
+                gotOtherContent = true;
                 continue;
             } else if (name() == qsl("VariableGroup") || name() == qsl("Variable")) { // NOLINT(readability-else-after-return)
                 readVariable(var);
@@ -323,6 +332,7 @@ void XMLimport::readHiddenVariables()
             if (name() == qsl("name")) {
                 const QString var = readElementText();
                 vu->addHidden(var);
+                gotOtherContent = true;
                 continue;
             }
         }
@@ -688,6 +698,7 @@ void XMLimport::readHelpPackage()
             if (name() == qsl("helpURL")) {
                 const QString contents = readElementText();
                 mpHost->moduleHelp[mPackageName].insert("helpURL", contents);
+                gotOtherContent = gotOtherContent || !contents.isEmpty();
             }
         }
     }
@@ -733,6 +744,7 @@ void XMLimport::readHostPackage()
         }
         if (isStartElement()) {
             if (name() == qsl("Host")) {
+                gotOtherContent = true;
                 readHost(mpHost);
             } else {
                 readUnknownElement(qsl("HostPackage"));

@@ -2787,6 +2787,234 @@ describe("Tests Other.lua functions", function()
 
       assert.same(rooms, loaded)
     end)
+
+    it("should bring back boolean keys and leave out keys and values it cannot write", function()
+      local original = { flags = { [true] = "on", [false] = "off" }, [print] = "a function key", fn = print, keep = 1 }
+
+      assert.is_true(table.save(path, original))
+      local loaded = {}
+      table.load(path, loaded)
+
+      assert.same({ flags = { [true] = "on", [false] = "off" }, keep = 1 }, loaded)
+    end)
+
+    it("should leave the file as it was when saving fails part way through", function()
+      table.save(path, { keep = "the previous save" })
+      local realPickle = table.pickle
+      finally(function() table.pickle = realPickle end)
+      table.pickle = function() error("pickling failed") end
+
+      assert.has_error(function() table.save(path, { keep = "never written" }) end)
+      table.pickle = realPickle
+
+      local loaded = {}
+      table.load(path, loaded)
+      assert.same({ keep = "the previous save" }, loaded)
+    end)
+
+    it("should leave the file as it was when joining what it serialised fails", function()
+      table.save(path, { keep = "the previous save" })
+      local realPickle = table.pickle
+      finally(function() table.pickle = realPickle end)
+      -- a chunk table.concat cannot join
+      table.pickle = function(_, file) file:write({}) end
+
+      assert.has_error(function() table.save(path, { keep = "never written" }) end)
+      table.pickle = realPickle
+
+      local loaded = {}
+      table.load(path, loaded)
+      assert.same({ keep = "the previous save" }, loaded)
+    end)
+
+    it("should bring back infinities and NaN", function()
+      table.save(path, { inf = 1 / 0, neginf = -1 / 0, nan = 0 / 0, keep = 1 })
+      local loaded = {}
+      table.load(path, loaded)
+
+      assert.equals(math.huge, loaded.inf)
+      assert.equals(-math.huge, loaded.neginf)
+      assert.is_true(loaded.nan ~= loaded.nan)
+      assert.equals(1, loaded.keep)
+    end)
+
+    it("should keep the sign of zero and of the infinities, whichever is written first", function()
+      -- built at run time: a -0 literal would share this function's constant slot for 0
+      local negativeZero, zero = tonumber("-0"), tonumber("0")
+      local loaded = {}
+
+      table.save(path, { negativeZero, math.huge, -math.huge, zero })
+      table.load(path, loaded)
+      assert.is_true(1 / loaded[1] < 0)
+      assert.equals(math.huge, loaded[2])
+      assert.equals(-math.huge, loaded[3])
+      assert.is_true(1 / loaded[4] > 0)
+
+      loaded = {}
+      table.save(path, { zero, negativeZero, [math.huge] = "inf key", [-math.huge] = "negative inf key" })
+      table.load(path, loaded)
+      assert.is_true(1 / loaded[1] > 0)
+      assert.is_true(1 / loaded[2] < 0)
+      assert.equals("inf key", loaded[math.huge])
+      assert.equals("negative inf key", loaded[-math.huge])
+    end)
+
+    it("should keep members named after a Lua library, at any depth", function()
+      local original = { math = 1, os = 2, io = 3, string = 4, table = 5, debug = 6, coroutine = 7,
+        package = 8, _G = 9, _VERSION = 10, xpcall = 11, keep = 12, inner = { string = 3, math = 4 } }
+
+      table.save(path, original)
+      local loaded = {}
+      table.load(path, loaded)
+
+      assert.same(original, loaded)
+    end)
+
+    it("should save the globals table without the Lua libraries", function()
+      _G.tableSaveSpecMarker = "saved from _G"
+      finally(function() _G.tableSaveSpecMarker = nil end)
+
+      assert.is_true(table.save(path, _G))
+      local loaded = {}
+      table.load(path, loaded)
+
+      assert.equals("saved from _G", loaded.tableSaveSpecMarker)
+      for _, name in ipairs({ "string", "table", "math", "os", "io", "debug", "coroutine", "package", "_G",
+        "_VERSION", "xpcall" }) do
+        assert.is_nil(loaded[name], name)
+      end
+    end)
+
+    it("should leave out what a script put in place of a Lua library at the root of _G", function()
+      -- only names table.save itself does not look up while it runs: string, table, io, math and _G are
+      local names = { "os", "debug", "coroutine", "package", "xpcall" }
+      local real = {}
+      for _, name in ipairs(names) do
+        real[name] = rawget(_G, name)
+      end
+      local function restore()
+        for _, name in ipairs(names) do
+          rawset(_G, name, real[name])
+        end
+      end
+      finally(restore)
+
+      for _, name in ipairs(names) do
+        rawset(_G, name, { replacedBy = "a script" })
+      end
+      local ok = table.save(path, _G)
+      restore()
+      assert.is_true(ok)
+      local loaded = {}
+      table.load(path, loaded)
+
+      for _, name in ipairs(names) do
+        assert.is_nil(loaded[name], name)
+      end
+    end)
+
+    it("should leave out a Lua library or _G reached from a data table", function()
+      assert.is_true(table.save(path, { helpers = { text = string, env = _G }, keep = 1 }))
+      local loaded = {}
+      table.load(path, loaded)
+
+      assert.same({ helpers = {}, keep = 1 }, loaded)
+    end)
+
+    it("should refuse to save without a table, and write nothing", function()
+      assert.has_error(function() table.save(path) end, "table.save requires a table to save")
+      assert.is_false(io.exists(path))
+    end)
+
+    it("should report a write or a close that fails", function()
+      if not io.exists("/dev/full") then
+        pending("needs /dev/full")
+        return
+      end
+      -- more than the stdio buffer holds fails in the write, a few bytes only when closing
+      for _, payload in ipairs({ string.rep("x", 10000), "x" }) do
+        local ok, msg = table.save("/dev/full", { keep = payload })
+        assert.is_nil(ok)
+        assert.is_string(msg)
+      end
+    end)
+
+    it("should leave out coroutine and userdata keys and values", function()
+      local co = coroutine.create(function() end)
+      local original = { co = co, out = io.stdout, [co] = "a coroutine key", [io.stdout] = "a userdata key", keep = 1 }
+
+      assert.is_true(table.save(path, original))
+      local loaded = {}
+      table.load(path, loaded)
+
+      assert.same({ keep = 1 }, loaded)
+    end)
+
+    it("should keep fractional numeric keys apart from the integer ones and keep every digit", function()
+      local original = { [1] = "one", [1.5] = "float", [2.5] = "only", [-3.25] = "negative", precise = 0.1 + 0.2 }
+
+      table.save(path, original)
+      local loaded = {}
+      table.load(path, loaded)
+
+      assert.same(original, loaded)
+      assert.equals(0.1 + 0.2, loaded.precise)
+    end)
+
+    it("should bring back every byte of a string key or value", function()
+      local original = {
+        leadingNewline = "\nleading newline",
+        leadingCrlf = "\r\nleading crlf",
+        loneReturn = "x\ry",
+        nul = "a\0b",
+        brackets = "]] and ]=] and [[",
+        quote = 'say "hi"',
+        backslash = "C:\\path\\",
+        ["\nkey"] = 1,
+        ["]]"] = 2,
+        ['a "quoted" key'] = 3,
+      }
+
+      table.save(path, original)
+      local loaded = {}
+      table.load(path, loaded)
+
+      assert.same(original, loaded)
+    end)
+  end)
+
+  describe("Tests saveVars", function()
+    it("should report whether it could write the store", function()
+      local store = getMudletHomeDir() .. "/SavedVariables.lua"
+      -- a name no file holds yet: a backup a killed run left behind may be the only copy of the store
+      local backup
+      repeat
+        backup = string.format("%s.saveVars-spec-%d", store, math.random(1e9))
+      until not io.exists(backup)
+      local hadStore = io.exists(store)
+      if hadStore then
+        assert(os.rename(store, backup))
+      end
+      local savedTable = _G._saveTable
+      finally(function()
+        lfs.rmdir(store)
+        os.remove(store)
+        if hadStore then
+          os.rename(backup, store)
+        end
+        _G._saveTable = savedTable
+      end)
+      _G._saveTable = {}
+
+      -- a directory in its place: unlike a read-only file, that cannot be opened by root either
+      lfs.mkdir(store)
+      local ok, msg = saveVars()
+      assert.is_nil(ok)
+      assert.is_string(msg)
+
+      lfs.rmdir(store)
+      assert.is_true(saveVars())
+    end)
   end)
 
     --[[
