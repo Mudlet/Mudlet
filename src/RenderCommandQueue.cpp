@@ -20,7 +20,6 @@
 #include "RenderCommandQueue.h"
 
 #include <QDebug>
-#include <algorithm>
 #include <cstring>
 
 RenderCommandQueue::RenderCommandQueue() {}
@@ -75,9 +74,18 @@ void RenderCommandQueue::executeAll(QOpenGLShaderProgram* shader,
                                     QOpenGLBuffer& texCoordBuffer)
 {
     execute(false, shader, geometryManager, resourceManager, vao, vertexBuffer, colorBuffer, normalBuffer, indexBuffer, texCoordBuffer);
-    if (std::find(mDeferred.cbegin(), mDeferred.cend(), true) == mDeferred.cend()) {
-        clear();
+    std::vector<std::unique_ptr<RenderCommand>> deferred;
+    size_t index = 0;
+    for (auto& command : mCommands) {
+        if (mDeferred[index++]) {
+            deferred.push_back(std::move(command));
+        }
     }
+    const bool deferring = mDeferring;
+    clear();
+    mCommands = std::move(deferred);
+    mDeferred.assign(mCommands.size(), true);
+    mDeferring = deferring;
 }
 
 void RenderCommandQueue::executeDeferred(QOpenGLShaderProgram* shader,
@@ -90,7 +98,9 @@ void RenderCommandQueue::executeDeferred(QOpenGLShaderProgram* shader,
                                          QOpenGLBuffer& indexBuffer,
                                          QOpenGLBuffer& texCoordBuffer)
 {
-    execute(true, shader, geometryManager, resourceManager, vao, vertexBuffer, colorBuffer, normalBuffer, indexBuffer, texCoordBuffer);
+    if (!mCommands.empty()) {
+        execute(true, shader, geometryManager, resourceManager, vao, vertexBuffer, colorBuffer, normalBuffer, indexBuffer, texCoordBuffer);
+    }
     clear();
 }
 
@@ -107,6 +117,8 @@ void RenderCommandQueue::execute(const bool deferredOnes,
 {
     if (!mInitialized) {
         qWarning() << "RenderCommandQueue: Not initialized";
+        // Dropped with the rest, so that the deferred ones do not warn again
+        clear();
         return;
     }
     if (!shader) {

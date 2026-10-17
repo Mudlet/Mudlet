@@ -27,6 +27,7 @@
 #include <QImage>
 
 #include <algorithm>
+#include <cmath>
 
 #include "EnvironmentKit.h"
 #include "Host.h"
@@ -202,16 +203,79 @@ private slots:
         const auto strongest = std::max_element(alphas.cbegin(), alphas.cend());
         QVERIFY2(*strongest > 240, "the line is not solid");
         QCOMPARE(QColor::fromRgba(image.pixel(scmSize / 2 + static_cast<int>(strongest - alphas.cbegin()), scmSize / 2)).hue(), 0);
-        // Solid for only a few pixels: a line, not a band
-        const qsizetype solid = std::count_if(alphas.cbegin(), alphas.cend(), [](const int alpha) {
-            return alpha > 200;
-        });
+        // Solid in its own color for only a few pixels: a line, not a band
+        qsizetype solid = 0;
+        for (int x = scmSize / 2; x < scmSize; ++x) {
+            const QColor pixel = QColor::fromRgba(image.pixel(x, scmSize / 2));
+            solid += pixel.alpha() > 200 && pixel.red() > 200 ? 1 : 0;
+        }
         QVERIFY2(solid <= scmSize / 20, qPrintable(qsl("solid for %1 pixels").arg(solid)));
         const auto faint = [](const int alpha) {
             return alpha > 5 && alpha < 80;
         };
         QVERIFY2(std::any_of(alphas.cbegin(), strongest, faint), "no glow inside the line");
         QVERIFY2(std::any_of(strongest, alphas.cend(), faint), "no glow outside the line");
+    }
+
+    // A light line on a light board, as the diorama's lamplight is on its own board, is still seen by its dark rim
+    void test_outlineReadsOnALightBoard()
+    {
+        const QColor board(203, 194, 164);
+        const QImage image = MapDecals::highlight(MapStyle::HighlightShape::Outline, QColor(255, 214, 79), Qt::white, false, scmSize, 0.06);
+        const auto luminance = [](const QColor& color) {
+            const auto channel = [](const qreal value) {
+                return value <= 0.03928 ? value / 12.92 : std::pow((value + 0.055) / 1.055, 2.4);
+            };
+            return 0.2126 * channel(color.redF()) + 0.7152 * channel(color.greenF()) + 0.0722 * channel(color.blueF());
+        };
+        const qreal boardLuminance = luminance(board);
+        qreal mostContrast = 1.0;
+        for (int x = scmSize / 2; x < scmSize; ++x) {
+            const QColor pixel = QColor::fromRgba(image.pixel(x, scmSize / 2));
+            const qreal alpha = pixel.alphaF();
+            const QColor over = QColor::fromRgbF(
+                    pixel.redF() * alpha + board.redF() * (1.0 - alpha), pixel.greenF() * alpha + board.greenF() * (1.0 - alpha), pixel.blueF() * alpha + board.blueF() * (1.0 - alpha));
+            const qreal lighter = qMax(luminance(over), boardLuminance);
+            const qreal darker = qMin(luminance(over), boardLuminance);
+            mostContrast = qMax(mostContrast, (lighter + 0.05) / (darker + 0.05));
+        }
+        QVERIFY2(mostContrast >= 2.0, qPrintable(qsl("contrast %1").arg(mostContrast)));
+    }
+
+    void test_outlineKeepsTheColorsAlpha()
+    {
+        QColor half(Qt::red);
+        half.setAlphaF(0.5);
+        const QImage image = MapDecals::highlight(MapStyle::HighlightShape::Outline, half, Qt::white, false, scmSize);
+        int strongest = 0;
+        for (int x = scmSize / 2; x < scmSize; ++x) {
+            strongest = qMax(strongest, alphaAt(image, x, scmSize / 2));
+        }
+        QVERIFY2(strongest > 100 && strongest < 200, qPrintable(qsl("strongest %1").arg(strongest)));
+    }
+
+    // In the gap round the room's piece, whatever radius the script gave: a larger or smaller one puts it under a building
+    void test_outlineSizeIgnoresTheRadius()
+    {
+        for (const qreal radius : {0.5, 1.0, 2.0}) {
+            QCOMPARE(MapDecals::highlightSize(MapStyle::HighlightShape::Outline, radius, 1.4, 0.6), 1.4);
+            QCOMPARE(MapDecals::highlightSize(MapStyle::HighlightShape::Halo, radius, 1.4, 0.6), radius * 1.4);
+            QCOMPARE(MapDecals::highlightSize(MapStyle::HighlightShape::Cell, radius, 1.4, 0.6), 0.6);
+        }
+    }
+
+    // Never thinner on screen than a couple of pixels, however far off, nor a band close up
+    void test_outlineWidthHasAFloorInPixels()
+    {
+        QCOMPARE(MapDecals::outlineWidth(1000.0), MapDecals::scmOutlineWidth);
+        QCOMPARE(MapDecals::outlineWidth(0.0), MapDecals::scmOutlineWidth);
+        const qreal far = MapDecals::outlineWidth(20.0);
+        QVERIFY2(far * 20.0 >= MapDecals::scmOutlineMinPixels, qPrintable(qsl("%1 pixels").arg(far * 20.0)));
+        QVERIFY(far < MapDecals::scmOutlineMaxWidth);
+        QCOMPARE(MapDecals::outlineWidth(5.0), MapDecals::scmOutlineMaxWidth);
+        // At its widest, its glow still fades out inside its picture rather than being cut off by its edge
+        const QImage widest = MapDecals::highlight(MapStyle::HighlightShape::Outline, Qt::red, Qt::white, false, scmSize, MapDecals::scmOutlineMaxWidth);
+        QCOMPARE(alphaAt(widest, scmSize - 1, scmSize / 2), 0);
     }
 
     void test_cellFillsTheRoom()

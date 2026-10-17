@@ -295,6 +295,23 @@ private slots:
         QCOMPARE(GeometryManager::textSharpness(9.0, 2.0, 9000.0, 4096), 1);
     }
 
+    // A map label by its longer side and its halo, and no more texels in all than the cap
+    void test_labelsAreDrawnNoSharperThanATextureHolds()
+    {
+        QCOMPARE(GeometryManager::labelSharpness(9.0, 1.0, QSize(100, 100), 16, 4096, 2048 * 2048), 3);
+        // A tall label, as much as a wide one
+        QCOMPARE(GeometryManager::labelSharpness(9.0, 1.0, QSize(100, 1500), 16, 4096, 2048 * 2048), 2);
+        QCOMPARE(GeometryManager::labelSharpness(9.0, 1.0, QSize(100, 3000), 16, 4096, 2048 * 2048), 1);
+        // Its halo too: 1230 texels fit three times, but not with 16 on each side
+        QCOMPARE(GeometryManager::labelSharpness(9.0, 1.0, QSize(1230, 50), 0, 4096, 2048 * 2048), 3);
+        QCOMPARE(GeometryManager::labelSharpness(9.0, 1.0, QSize(1230, 50), 16, 4096, 2048 * 2048), 2);
+        // A large one stays within the texel cap
+        QCOMPARE(GeometryManager::labelSharpness(9.0, 1.0, QSize(1000, 1000), 0, 16384, 2048 * 2048), 2);
+        QCOMPARE(GeometryManager::labelSharpness(9.0, 1.0, QSize(1500, 1500), 0, 16384, 2048 * 2048), 1);
+        // Halo and all
+        QCOMPARE(GeometryManager::labelSharpness(9.0, 1.0, QSize(1000, 1000), 16, 16384, 2048 * 2048), 1);
+    }
+
     // Two rooms whose names just fit side by side: spaced capitals run together there, so blueprint keeps a space
     // between names and drops one, where every other style keeps both as before
     void test_onlySpacedNamesAreKeptASpaceApart()

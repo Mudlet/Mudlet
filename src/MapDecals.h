@@ -34,13 +34,23 @@ enum class Kit;
 // checked on their own
 namespace MapDecals {
 
+constexpr qreal scmOutlineWidth = 0.045;
+constexpr qreal scmOutlineMaxWidth = 0.15;
+constexpr qreal scmOutlineMinPixels = 2.5;
+
 // size texels across. color is the style's highlight color, else the room's; centerColor is the room's highlight
-// center color, which only the disc shades to; round is for round rooms, which only the cell follows
-QImage highlight(MapStyle::HighlightShape shape, const QColor& color, const QColor& centerColor, bool round, int size);
+// center color, which only the disc shades to; round is for round rooms, which only the cell follows. lineWidth is the
+// outline's, as a part of size
+QImage highlight(MapStyle::HighlightShape shape, const QColor& color, const QColor& centerColor, bool round, int size, qreal lineWidth = scmOutlineWidth);
 // Laid on the ground the room stands on, so that the room stands in it, rather than on its top
 bool highlightOnGround(MapStyle::HighlightShape shape);
 // Fills the room's own square or circle, whatever highlight radius the room was given
 bool highlightFillsRoom(MapStyle::HighlightShape shape);
+// How far across a highlight is drawn, in rooms' spacing, for the radius the room was given and the style's scale
+qreal highlightSize(MapStyle::HighlightShape shape, qreal radius, qreal scale, qreal roomSize);
+// The outline's width, as a part of its picture, for a picture shown pixelsAcross device pixels across: never so thin
+// that it is lost on screen
+qreal outlineWidth(qreal pixelsAcross);
 
 // The mark MapStyle::PlayerRing::Crosshair draws over the player's room, size texels across
 QImage registrationMark(const QColor& color, int size);

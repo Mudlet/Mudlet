@@ -38,6 +38,7 @@
 #include <assimp/postprocess.h>
 
 class QColor;
+class QSize;
 
 struct GeometryData
 {
@@ -209,6 +210,9 @@ public:
     // How many times a name's usual resolution to draw it at, so that it stays sharp zoomed in or on a high resolution
     // screen: as many texels as the device pixels it covers, from 1 to 3, and no wider than a texture can be
     static int textSharpness(qreal pixelsPerTexel, qreal devicePixelRatio, qreal widthTexels, int maxTextureSize);
+    // textSharpness for a map label canvas texels across, its halo reaching haloTexels past each side: no longer on
+    // its longer side than a texture can be, nor more than maxTexels in all
+    static int labelSharpness(qreal pixelsPerTexel, qreal devicePixelRatio, const QSize& canvas, int haloTexels, int maxTextureSize, qint64 maxTexels);
 
     // How a level other than the viewed one recedes: how far its colors go toward the background, how opaque it
     // stays, and how much of their saturation they keep before they fade

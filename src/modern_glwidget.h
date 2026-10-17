@@ -227,6 +227,8 @@ private:
     std::unique_ptr<QOpenGLShaderProgram> mTiltShiftProgram;
     QOpenGLVertexArrayObject mTiltShiftVAO;
     bool mTiltShiftFailed = false;
+    // The depth where the sharp text drawn after the blur starts, so that only what was drawn before it hides it
+    DepthSnapshot mDepthSnapshot;
 
     // Geometry management
     GeometryManager mGeometryManager;

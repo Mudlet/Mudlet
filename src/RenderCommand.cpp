@@ -20,6 +20,9 @@
 #include "RenderCommand.h"
 
 #include <QDebug>
+#include <QOpenGLContext>
+#include <QOpenGLExtraFunctions>
+#include <QOpenGLFramebufferObject>
 
 namespace {
 // The shader's uInk for a shading, 0 for none of the ink ones
@@ -48,6 +51,24 @@ int inkMode(const RenderCommand::Shading shading)
     case RenderCommand::Shading::ModelShadow:
     case RenderCommand::Shading::ModelWater:
     case RenderCommand::Shading::Sky:
+        return 0;
+    }
+    return 0;
+}
+
+// The shader's uModelEdges for a template
+int modelEdges(const GeometryManager::InstanceShape shape)
+{
+    switch (shape) {
+    case GeometryManager::InstanceShape::Box:
+        return 1;
+    case GeometryManager::InstanceShape::Cylinder:
+        return 2;
+    case GeometryManager::InstanceShape::Pyramid:
+        return 3;
+    case GeometryManager::InstanceShape::Cone:
+        return 4;
+    case GeometryManager::InstanceShape::Sphere:
         return 0;
     }
     return 0;
@@ -377,6 +398,8 @@ void RenderInstancedCubesCommand::execute(QOpenGLFunctions* gl,
         shader->setUniformValue("uModelShading", model);
         shader->setUniformValue("uModelRound", mShape == GeometryManager::InstanceShape::Cylinder);
         shader->setUniformValue("uModelBevel", mShape == GeometryManager::InstanceShape::Box || mShape == GeometryManager::InstanceShape::Cylinder);
+        shader->setUniformValue("uModelEdges", mEdges ? modelEdges(mShape) : 0);
+        shader->setUniformValue("uWireSides", static_cast<float>(GeometryManager::scmCylinderSegments));
     }
 
     geometryManager->renderInstancedCubes(mInstances, vao, vertexBuffer, colorBuffer, normalBuffer, indexBuffer, resourceManager, GL_TRIANGLES, mShape);
@@ -392,6 +415,7 @@ void RenderInstancedCubesCommand::execute(QOpenGLFunctions* gl,
     }
     if (model) {
         shader->setUniformValue("uModelShading", 0);
+        shader->setUniformValue("uModelEdges", 0);
     }
 }
 
@@ -551,4 +575,100 @@ void RenderLabelCommand::execute(QOpenGLFunctions* gl,
 
     // Reset lighting for subsequent draw calls
     shader->setUniformValue("uDisableLighting", false);
+}
+
+DepthSnapshot::DepthSnapshot() = default;
+
+DepthSnapshot::~DepthSnapshot() = default;
+
+void DepthSnapshot::save()
+{
+    QOpenGLContext* context = QOpenGLContext::currentContext();
+    if (!context) {
+        return;
+    }
+    QOpenGLExtraFunctions* gl = context->extraFunctions();
+    GLint frame = 0;
+    gl->glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &frame);
+    GLint viewport[4] = {0, 0, 0, 0};
+    gl->glGetIntegerv(GL_VIEWPORT, viewport);
+    GLint samples = 0;
+    gl->glGetIntegerv(GL_SAMPLES, &samples);
+    const QSize size(viewport[2], viewport[3]);
+    if (size.isEmpty()) {
+        return;
+    }
+    // A blit between multisampled buffers wants the same samples and depth format at both ends
+    if (!mFrame || mFrame->size() != size || mFrame->format().samples() != samples) {
+        QOpenGLFramebufferObjectFormat format;
+        format.setAttachment(QOpenGLFramebufferObject::CombinedDepthStencil);
+        format.setSamples(samples);
+        mFrame = std::make_unique<QOpenGLFramebufferObject>(size, format);
+    }
+    gl->glBindFramebuffer(GL_READ_FRAMEBUFFER, static_cast<GLuint>(frame));
+    gl->glBindFramebuffer(GL_DRAW_FRAMEBUFFER, mFrame->handle());
+    gl->glBlitFramebuffer(0, 0, size.width(), size.height(), 0, 0, size.width(), size.height(), GL_DEPTH_BUFFER_BIT, GL_NEAREST);
+    gl->glBindFramebuffer(GL_FRAMEBUFFER, static_cast<GLuint>(frame));
+    mSaved = true;
+}
+
+void DepthSnapshot::restore()
+{
+    QOpenGLContext* context = QOpenGLContext::currentContext();
+    if (!mSaved || !mFrame || !context) {
+        return;
+    }
+    mSaved = false;
+    QOpenGLExtraFunctions* gl = context->extraFunctions();
+    GLint frame = 0;
+    gl->glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &frame);
+    const QSize size = mFrame->size();
+    gl->glBindFramebuffer(GL_READ_FRAMEBUFFER, mFrame->handle());
+    gl->glBindFramebuffer(GL_DRAW_FRAMEBUFFER, static_cast<GLuint>(frame));
+    gl->glBlitFramebuffer(0, 0, size.width(), size.height(), 0, 0, size.width(), size.height(), GL_DEPTH_BUFFER_BIT, GL_NEAREST);
+    gl->glBindFramebuffer(GL_FRAMEBUFFER, static_cast<GLuint>(frame));
+}
+
+void DepthSnapshot::cleanup()
+{
+    mFrame.reset();
+    mSaved = false;
+}
+
+DepthSnapshotCommand::DepthSnapshotCommand(DepthSnapshot* snapshot, const bool save)
+: mSnapshot(snapshot)
+, mSave(save)
+{
+}
+
+void DepthSnapshotCommand::execute(QOpenGLFunctions* gl,
+                                   QOpenGLShaderProgram* shader,
+                                   GeometryManager* geometryManager,
+                                   ResourceManager* resourceManager,
+                                   QOpenGLVertexArrayObject& vao,
+                                   QOpenGLBuffer& vertexBuffer,
+                                   QOpenGLBuffer& colorBuffer,
+                                   QOpenGLBuffer& normalBuffer,
+                                   QOpenGLBuffer& indexBuffer,
+                                   QOpenGLBuffer& texCoordBuffer)
+{
+    Q_UNUSED(gl)
+    Q_UNUSED(shader)
+    Q_UNUSED(geometryManager)
+    Q_UNUSED(resourceManager)
+    Q_UNUSED(vao)
+    Q_UNUSED(vertexBuffer)
+    Q_UNUSED(colorBuffer)
+    Q_UNUSED(normalBuffer)
+    Q_UNUSED(indexBuffer)
+    Q_UNUSED(texCoordBuffer)
+
+    if (!mSnapshot) {
+        return;
+    }
+    if (mSave) {
+        mSnapshot->save();
+    } else {
+        mSnapshot->restore();
+    }
 }
