@@ -499,10 +499,12 @@ void TriggerUnit::rebuildTreeIndex()
     }
     mTreeIndex.beginRebuild(static_cast<int>(mTreeNodes.size()));
     std::vector<quint64> grams;
+    mTreeIndexFiled = 0;
     for (int position = 0; position < static_cast<int>(mTreeNodes.size()); ++position) {
         TTrigger* node = mTreeNodes[position];
         node->mTreeIndexPosition = position;
         node->mTreeFilterable = node->treeIndexGrams(grams);
+        mTreeIndexFiled += node->mTreeFilterable;
         mTreeIndex.fileNextSlot(grams);
     }
     mTreeIndex.endRebuild();
@@ -511,6 +513,7 @@ void TriggerUnit::rebuildTreeIndex()
         for (TTrigger* node : mTreeNodes) {
             node->mTreeFilterable = false;
         }
+        mTreeIndexFiled = 0;
     }
     mTreeIndexStale = false;
     ++mTreeIndexRebuilds;

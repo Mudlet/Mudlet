@@ -108,6 +108,8 @@ public:
     // Call on any change to a trigger's place below a root or to what its treeIndexGrams() answers
     void markTreeIndexStale() { mTreeIndexStale = true; }
     quint64 treeIndexRebuildCount() const { return mTreeIndexRebuilds; }
+    // Triggers the last rebuild filed, so a spec can tell the index is armed before it relies on it
+    int treeIndexFiledCount() const { return mTreeIndexFiled; }
     void doCleanup();
     void uninstall(const QString&);
     void _uninstall(TTrigger* pChild, const QString& packageName);
@@ -235,6 +237,7 @@ private:
     std::vector<int> mTreeHits;
     TTriggerPrescan mTreeIndex;
     bool mTreeIndexStale = true;
+    int mTreeIndexFiled = 0;
     quint64 mTreeIndexRebuilds = 0;
     quint64 mTreeStamps = 0;
     quint64 mOutermostLines = 0;
