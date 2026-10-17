@@ -166,6 +166,40 @@ QList<MapStyle> registeredStyles()
     transit.infoTextColor = QColor(35, 35, 40);
     styles.append(transit);
 
+    MapStyle hologram;
+    hologram.id = qsl("hologram");
+    hologram.palette = MapStyle::Palette::Light;
+    // Blocks tall enough that their sides show as a box of light, rather than as one line under the top
+    hologram.roomFlattening = 3.0f;
+    hologram.edges = MapStyle::Edges::GlowingWireframes;
+    hologram.lit = false;
+    hologram.background = QColor(3, 9, 18);
+    hologram.ink = QColor(70, 225, 255);
+    hologram.gridColor = QColor(70, 200, 255, 26);
+    hologram.labelFontFamily = qsl("Bitstream Vera Sans Mono");
+    hologram.postEffects = MapStyle::PostEffect::Scanlines | MapStyle::PostEffect::Bloom;
+    hologram.floorPlates = false;
+    hologram.playerMarker = MapStyle::PlayerMarker::Pulse;
+    hologram.labelTint = QColor(127, 227, 255, 160);
+    hologram.scannerOverlay = true;
+    hologram.highlightShape = MapStyle::HighlightShape::Rings;
+    hologram.highlightColor = QColor(255, 214, 90);
+    hologram.labelLetterSpacing = 108.0;
+    hologram.labelCapitals = true;
+    hologram.roomNameGap = 1.0;
+    hologram.themedMapLabels = true;
+    hologram.mapLabelColor = QColor(Qt::white);
+    hologram.mapLabelHalo = QColor(3, 9, 18, 200);
+    hologram.mapLabelMaxHeight = 0.6f;
+    hologram.roomNameColor = QColor(Qt::white);
+    hologram.roomNameScale = 0.75f;
+    hologram.compassFace = QColor(3, 9, 18, 200);
+    hologram.compassRim = QColor(70, 225, 255);
+    hologram.compassNeedle = QColor(255, 79, 216);
+    hologram.infoBackground = QColor(6, 22, 38, 200);
+    hologram.infoTextColor = QColor(127, 227, 255);
+    styles.append(hologram);
+
     return styles;
 }
 } // namespace
@@ -188,8 +222,24 @@ QString MapStyle::displayName() const
         //: Name of the 3D map style that draws rooms as stations and exits as colored lines, as a metro or subway map does, chosen in the Mapper preferences
         return QCoreApplication::translate("MapStyle", "Transit");
     }
+    if (id == qsl("hologram")) {
+        //: Name of the 3D map style that draws rooms and exits as glowing lines of light that every level shows through, as a science fiction hologram does, chosen in the Mapper preferences
+        return QCoreApplication::translate("MapStyle", "Hologram");
+    }
     return id;
 }
+
+namespace {
+// Light that dim would barely show over the background
+QColor liftedLight(const QColor& color)
+{
+    constexpr int dimmest = 150;
+    if (color.lightness() < dimmest) {
+        return QColor::fromHsl(color.hslHue(), color.hslSaturation(), dimmest, color.alpha());
+    }
+    return color;
+}
+} // namespace
 
 QColor MapStyle::roomColor(const QColor& environmentColor) const
 {
@@ -221,6 +271,19 @@ QColor MapStyle::roomColor(const QColor& environmentColor) const
         const QColor hsl = environmentColor.toHsl();
         return QColor::fromHslF(std::max(hsl.hslHueF(), 0.0f), hsl.hslSaturationF() * 0.7f, 0.25f + hsl.lightnessF() * 0.6f, hsl.alphaF());
     }
+    case Palette::Light: {
+        // Saturated and in a narrow band of lightness, so that areas read apart by hue alone and none glows much
+        // brighter than the rest
+        constexpr int grayest = 40;
+        constexpr int dimmest = 150;
+        constexpr int brightest = 185;
+        if (environmentColor.hslSaturation() < grayest || environmentColor.hslHue() < 0) {
+            QColor light = ink.isValid() ? ink : QColor(Qt::cyan);
+            light.setAlpha(environmentColor.alpha());
+            return liftedLight(light);
+        }
+        return QColor::fromHsl(environmentColor.hslHue(), 255, std::clamp(environmentColor.lightness(), dimmest, brightest), environmentColor.alpha());
+    }
     }
     return environmentColor;
 }
@@ -231,8 +294,9 @@ QColor MapStyle::symbolColor(const QColor& roomSymbolColor, const QColor& drawnR
     if (palette == Palette::Ink && ink.isValid() && !roomSymbolColor.isValid()) {
         return ink;
     }
-    // A character is drawn in the room's color rather than on it, and lifted as a room's is, so that it shows on the dark screen
-    if (palette == Palette::Terminal) {
+    // A character is drawn in the room's color rather than on it, and lifted as a room's is, so that it shows on the dark screen;
+    // light has no fill to draw a symbol on either
+    if (palette == Palette::Terminal || palette == Palette::Light) {
         return roomSymbolColor.isValid() ? roomColor(roomSymbolColor) : drawnRoomColor;
     }
     return RoomAppearance::symbolColor(roomSymbolColor, drawnRoomColor);
@@ -248,7 +312,22 @@ QColor MapStyle::roomIdColor(const QColor& drawnRoomColor) const
     if (palette == Palette::Terminal) {
         return drawnRoomColor;
     }
+    // One color for every room, as each color an ID is drawn in needs its own digits made
+    if (palette == Palette::Light) {
+        return ink.isValid() ? ink : QColor(Qt::cyan);
+    }
     return palette == Palette::Ink && ink.isValid() ? ink : ExitAppearance::contrastColor(drawnRoomColor);
+}
+
+QColor MapStyle::wireColor(const QColor& roomBorderColor, const QColor& drawnRoomColor) const
+{
+    // Added onto the background, a dark or clear border would leave nothing of the room to see
+    if (!roomBorderColor.isValid() || roomBorderColor.alpha() == 0) {
+        return drawnRoomColor;
+    }
+    QColor color = liftedLight(roomBorderColor);
+    color.setAlpha(drawnRoomColor.alpha());
+    return color;
 }
 
 QColor MapStyle::playerRoomColor() const
@@ -256,6 +335,10 @@ QColor MapStyle::playerRoomColor() const
     if (palette == Palette::Ink) {
         // Red would sink into the blue of a drafting sheet
         return QColor(255, 190, 60);
+    }
+    if (palette == Palette::Light) {
+        // Apart from the ink's cyan and the greens and blues most areas are drawn in
+        return QColor(255, 79, 216);
     }
     return QColor(Qt::red);
 }
