@@ -3162,6 +3162,19 @@ void cTelnet::autoEnableTTYPEVersion()
     });
 }
 
+// Each time the game switches MXP on, it starts in open mode (the spec's initial default) over whatever an
+// earlier game or autoEnableMXPProcessor() left, though Force MXP keeps its secure default; a mode the game
+// locks in after that holds when it repeats the switch-on
+void cTelnet::switchMxpOn()
+{
+    if (!enableMXP || mMxpAutoEnabled) {
+        mpHost->mMxpProcessor.setMode(MXP_MODE_CODE_LOCK_OPEN);
+    }
+    enableMXP = true;
+    mMxpAutoEnabled = false;
+    mpHost->mMxpProcessor.enable();
+}
+
 // Auto-enable MXP processor when indicators are detected
 void cTelnet::autoEnableMXPProcessor()
 {
@@ -3169,6 +3182,7 @@ void cTelnet::autoEnableMXPProcessor()
 
     // Automatically enable MXP processing
     enableMXP = true;
+    mMxpAutoEnabled = true;
     mpHost->setForceMXPProcessorOn(true);
 
     // Games that auto-enable MXP (without telnet negotiation) typically use
@@ -3549,9 +3563,8 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                 break;
             }
 
-            enableMXP = true;
+            switchMxpOn();
             sendTelnetOption(TN_DO, OPT_MXP);
-            mpHost->mMxpProcessor.enable();
 
             qDebug() << "MXP enabled";
             raiseProtocolEvent("sysProtocolEnabled", "MXP");
@@ -3926,9 +3939,8 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
 
         if (option == OPT_MXP) {
             if (mpHost->mEnableMXP) {
-                enableMXP = true;
+                switchMxpOn();
                 sendTelnetOption(TN_WILL, OPT_MXP);
-                mpHost->mMxpProcessor.enable();
                 raiseProtocolEvent("sysProtocolEnabled", "MXP");
             } else {
                 sendTelnetOption(TN_WONT, OPT_MXP);
@@ -4355,10 +4367,8 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
         // Some servers require this subnegotiation before processing MXP escape sequences
         if (option == OPT_MXP) {
             if (mpHost->mEnableMXP) {
-                enableMXP = true;
+                switchMxpOn();
                 qDebug() << "MXP enabled via subnegotiation";
-                mpHost->mMxpProcessor.enable();
-                mpHost->mMxpProcessor.setMode(MXP_MODE_CODE_LOCK_LOCKED);
                 raiseProtocolEvent("sysProtocolEnabled", "MXP");
             }
             return;
