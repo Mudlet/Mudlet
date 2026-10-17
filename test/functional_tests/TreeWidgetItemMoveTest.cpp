@@ -113,6 +113,28 @@ private:
         tree->dragLeaveEvent(&leaveEvent);
     }
 
+    // QIcon::pixmap() answers an invalid size with a null pixmap, and two null
+    // images compare equal, so both of those are refused before comparing
+    QString iconMismatch(TTreeWidget* tree, QTreeWidgetItem* item, const QString& expectedResource) const
+    {
+        const QSize iconSize = tree->iconSize();
+        if (iconSize.isEmpty()) {
+            return qsl("the tree has no icon size, so no comparison would mean anything");
+        }
+        const QImage expected = QIcon(expectedResource).pixmap(iconSize).toImage();
+        if (expected.isNull()) {
+            return qsl("%1 is not in the resources").arg(expectedResource);
+        }
+        const QImage painted = item->icon(0).pixmap(iconSize).toImage();
+        if (painted.isNull()) {
+            return qsl("the row was left with no icon, not %1").arg(expectedResource);
+        }
+        if (painted != expected) {
+            return qsl("the row was painted with some icon other than %1").arg(expectedResource);
+        }
+        return QString();
+    }
+
     void populateProfile()
     {
         auto* pTriggerFolder = new TTrigger(nullptr, mpHost);
@@ -139,6 +161,13 @@ private:
 
         auto* pTimer = new TTimer(qsl("qaMoveTimer"), QTime(0, 0, 30), mpHost);
         QVERIFY(mpHost->getTimerUnit()->registerTimer(pTimer));
+
+        auto* pInactiveTimerFolder = new TTimer(qsl("qaMoveInactiveTimerFolder"), QTime(0, 0, 1), mpHost);
+        pInactiveTimerFolder->setIsFolder(true);
+        QVERIFY(mpHost->getTimerUnit()->registerTimer(pInactiveTimerFolder));
+
+        auto* pInactiveTimer = new TTimer(qsl("qaMoveInactiveTimer"), QTime(0, 0, 30), mpHost);
+        QVERIFY(mpHost->getTimerUnit()->registerTimer(pInactiveTimer));
 
         auto* pTimerSubFolder = new TTimer(qsl("qaMoveTimerSubFolder"), QTime(0, 0, 1), mpHost);
         pTimerSubFolder->setIsFolder(true);
@@ -264,17 +293,48 @@ private slots:
         TTimer* pTimer = mpHost->getTimerUnit()->getTimer(timerItem->data(0, Qt::UserRole).toInt());
         QVERIFY(pFolder && pTimer);
         QVERIFY2(!pTimer->getParent(), "the timer was already inside something before the move");
-        // Only the active-timer icons are exercised here: the inactive one is
-        // painted from an icon path that does not exist (#10401)
-        pFolder->setShouldBeActive(true);
+        // registerTimer() clears both the user state and isActive(), and
+        // rowsInserted() goes by ancestorsActive(), which reads isActive()
+        pFolder->setIsActive(true);
         pTimer->setShouldBeActive(true);
+        QVERIFY2(pFolder->isActive(), "the folder being dropped into is inactive, so the icon asserted below is not the one that would be painted");
+        QVERIFY2(pTimer->shouldBeActive(), "the timer being dropped is not set to be active, so the icon asserted below is not the one that would be painted");
+        timerItem->setIcon(0, QIcon());
 
         QSignalSpy movedSpy(tree, &TTreeWidget::itemMoved);
         moveOntoFolder(tree, timerItem, folderItem);
 
         QCOMPARE(pTimer->getParent(), pFolder);
         QCOMPARE(movedSpy.count(), 1);
-        QVERIFY2(!folderItem->child(0)->icon(0).isNull(), "the moved timer was left with no icon");
+        QVERIFY2(pTimer->ancestorsActive(), "the moved timer's folder is inactive, so the icon asserted below is not the one that would be painted");
+        const QString mismatch = iconMismatch(tree, timerItem, qsl(":/icons/tag_checkbox_checked.png"));
+        QVERIFY2(mismatch.isEmpty(), qPrintable(mismatch));
+    }
+
+    void test_droppingAnInactiveTimerOnAnInactiveFolderRepaintsIt()
+    {
+        mpEditor->slot_showTimers();
+        auto* tree = mpEditor->treeWidget_timers;
+        QTreeWidgetItem* folderItem = itemNamed(tree, qsl("qaMoveInactiveTimerFolder"));
+        QTreeWidgetItem* timerItem = itemNamed(tree, qsl("qaMoveInactiveTimer"));
+        QVERIFY(folderItem && timerItem);
+
+        TTimer* pFolder = mpHost->getTimerUnit()->getTimer(folderItem->data(0, Qt::UserRole).toInt());
+        TTimer* pTimer = mpHost->getTimerUnit()->getTimer(timerItem->data(0, Qt::UserRole).toInt());
+        QVERIFY(pFolder && pTimer);
+        QVERIFY2(!pTimer->getParent(), "the timer was already inside something before the move");
+        pFolder->setIsActive(false);
+        pTimer->setShouldBeActive(false);
+        QVERIFY2(!pFolder->isActive(), "the folder being dropped into is active, so the icon asserted below is not the one that would be painted");
+        QVERIFY2(!pTimer->shouldBeActive(), "the timer being dropped is set to be active, so the icon asserted below is not the one that would be painted");
+        timerItem->setIcon(0, QIcon());
+
+        moveOntoFolder(tree, timerItem, folderItem);
+
+        QCOMPARE(pTimer->getParent(), pFolder);
+        QVERIFY2(!pTimer->ancestorsActive(), "the moved timer's folder is active, so the icon asserted below is not the one that would be painted");
+        const QString mismatch = iconMismatch(tree, timerItem, qsl(":/icons/tag_checkbox-grey.png"));
+        QVERIFY2(mismatch.isEmpty(), qPrintable(mismatch));
     }
 
     // Outside a drag the tree is a plain view, so rearranging it must not write

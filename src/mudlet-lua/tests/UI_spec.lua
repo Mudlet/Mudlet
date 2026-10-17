@@ -3053,6 +3053,12 @@ describe("Tests UI functions", function()
       assert.is_truthy(result:find("uiReplaceAllQuote It\226\128\153s Doe here", 1, true), "got: " .. result)
     end)
 
+    -- an emoji is one character to utf8.find() but two UTF-16 units to selectSection()
+    it("replaces the right characters after a character beyond the BMP", function()
+      local result = replaceOnMarkedLine("uiReplaceAllEmoji \240\159\152\128John and \240\159\152\128John", "John", "Doe")
+      assert.is_truthy(result:find("uiReplaceAllEmoji \240\159\152\128Doe and \240\159\152\128Doe", 1, true), "got: " .. result)
+    end)
+
     -- %a matches an accented letter for utf8.find but not for string.find, whose
     -- classes are byte-wise and locale-bound
     it("matches a pattern class against characters, not bytes", function()
@@ -4475,6 +4481,23 @@ describe("Window and label state", function()
       local ok, err = pcall(setLabelClickCallback, label, 42)
       assert.is_false(ok)
       assert.is_truthy(err:find("setLabelClickCallback: bad argument #2 type (function expected, got number!)", 1, true))
+    end)
+
+    it("setLabelClickCallback reports why a string that does not compile was refused", function()
+      local callback = "this is not valid lua("
+      local _, compileError = loadstring("return " .. callback .. "(...)", callback)
+      local ok, err = pcall(setLabelClickCallback, label, callback)
+      assert.is_false(ok)
+      assert.is_truthy(err:find("setLabelClickCallback: bad argument #2 value (" .. compileError .. ")", 1, true))
+      assert.is_falsy(err:find("return " .. callback, 1, true))
+    end)
+
+    it("setLabelClickCallback keeps a leading = or @ of the string in its compile error", function()
+      for _, callback in ipairs({"=oops", "@oops"}) do
+        local ok, err = pcall(setLabelClickCallback, label, callback)
+        assert.is_false(ok)
+        assert.is_truthy(err:find('[string "' .. callback .. '"]:1:', 1, true))
+      end
     end)
 
     it("setLabelClickCallback rejects an empty label name", function()
@@ -6986,6 +7009,23 @@ describe("Main window size and saved layout", function()
       -- function clears that flag before every call
       assert.is_true(saveWindowLayout())
       assert.is_true(saveWindowLayout())
+    end)
+
+    it("saveWindowLayout returns false when the layout file cannot be opened, and saves again once it can", function()
+      local layoutFile = layoutFiles[1]
+      os.remove(layoutFile)
+      -- a directory in its place makes the open fail even for root, which a
+      -- read-only directory does not
+      assert.is_true(lfs.mkdir(layoutFile))
+      finally(function()
+        lfs.rmdir(layoutFile)
+      end)
+      assert.is_false(saveWindowLayout())
+      assert.equals("directory", lfs.attributes(layoutFile, "mode"))
+
+      assert.is_true(lfs.rmdir(layoutFile))
+      assert.is_true(saveWindowLayout())
+      assert.equals("file", lfs.attributes(layoutFile, "mode"))
     end)
 
     it("loadWindowLayout reads back a layout that was saved", function()

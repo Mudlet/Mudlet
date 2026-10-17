@@ -444,8 +444,14 @@ int TLuaInterpreter::createBuffer(lua_State* L)
 {
     const QString text = getVerifiedString(L, __func__, 1, "name");
     Host& host = getHostFromLua(L);
-    host.createBuffer(text);
-    return 0;
+    if (!host.createBuffer(text)) {
+        if (host.windowRegistry().hasLabel(text)) {
+            return warnArgumentValue(L, __func__, qsl("label with the name '%1' already exists").arg(text), true);
+        }
+        return warnArgumentValue(L, __func__, qsl("a miniconsole/userwindow with the name '%1' already exists").arg(text), true);
+    }
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#createCommandLine
@@ -1546,7 +1552,14 @@ int TLuaInterpreter::getFontSize(lua_State* L)
 {
     const QString windowName{WINDOW_NAME(L, 1)};
     const Host& host = getHostFromLua(L);
-    const auto size = host.windowFontSize(windowName);
+    auto size = host.windowFontSize(windowName);
+    // a console wins a name a label also carries, as in getFont()
+    if (!size) {
+        if (const auto labelFont = host.labelFont(windowName)) {
+            // a style sheet's font-size in px leaves pointSize() at -1
+            size = QFontInfo(*labelFont).pointSize();
+        }
+    }
     if (!size) {
         return windowNotFound(L, windowName);
     }
@@ -1969,6 +1982,11 @@ int TLuaInterpreter::getUserWindowSize(lua_State* L)
     const QString windowName{WINDOW_NAME(L, 1)};
 
     const Host& host = getHostFromLua(L);
+    // an omitted name means the main window, as does "main" in any case (as
+    // createMiniConsole() takes it) unless a user window has that very name
+    if (!windowName.isEmpty() && windowName.compare(qsl("main"), Qt::CaseInsensitive) && !host.windowRegistry().hasDockWidget(windowName)) {
+        return warnArgumentValue(L, __func__, qsl("user window name '%1' not found").arg(windowName));
+    }
     const auto userWindowSize = host.userWindowSize(windowName);
     if (!userWindowSize) {
         return warnArgumentValue(L, __func__, no_main_window_value);
@@ -2114,6 +2132,12 @@ int TLuaInterpreter::insertLink(lua_State* L)
     if (!pModel) {
         return windowNotFound(L, windowName);
     }
+    // refused even where an empty link could be appended, as it would cover no text;
+    // the QString stops at the first NUL, so "\0..." counts as empty too
+    const QString text{lua_tostring(L, textPos)};
+    if (text.isEmpty()) {
+        return warnArgumentValue(L, __func__, "text is empty - cannot create link");
+    }
 
     QString command;
     int luaReference = 0;
@@ -2127,7 +2151,10 @@ int TLuaInterpreter::insertLink(lua_State* L)
     hintList << QString{lua_tostring(L, hintPos)};
 
     const bool useCurrentFormat = hasFormatFlag && lua_toboolean(L, formatPos);
-    host.insertWindowLink(*pModel, QString{lua_tostring(L, textPos)}, commandList, hintList, useCurrentFormat, luaReferences);
+    if (!host.insertWindowLink(*pModel, text, commandList, hintList, useCurrentFormat, luaReferences)) {
+        releaseLuaReferences(L, luaReferences);
+        return warnArgumentValue(L, __func__, "the cursor is outside the text - cannot create link");
+    }
     lua_pushboolean(L, true);
     return 1;
 }
@@ -2165,6 +2192,12 @@ int TLuaInterpreter::insertPopup(lua_State* L)
     if (!pModel) {
         return windowNotFound(L, windowName);
     }
+    // refused even where an empty link could be appended, as it would cover no text;
+    // the QString stops at the first NUL, so "\0..." counts as empty too
+    const QString text{lua_tostring(L, textPos)};
+    if (text.isEmpty()) {
+        return warnArgumentValue(L, __func__, "text is empty - cannot create popup");
+    }
 
     QStringList commandList;
     QStringList hintList;
@@ -2183,12 +2216,16 @@ int TLuaInterpreter::insertPopup(lua_State* L)
     }
 
     const bool useCurrentFormat = hasFormatFlag && lua_toboolean(L, formatPos);
-    host.insertWindowLink(*pModel, QString{lua_tostring(L, textPos)}, commandList, hintList, useCurrentFormat, luaReferences);
+    if (!host.insertWindowLink(*pModel, text, commandList, hintList, useCurrentFormat, luaReferences)) {
+        releaseLuaReferences(L, luaReferences);
+        return warnArgumentValue(L, __func__, "the cursor is outside the text - cannot create popup");
+    }
     lua_pushboolean(L, true);
     return 1;
 }
 
-// No Documentation - public function but should stay undocumented -- compare https://github.com/Mudlet/Mudlet/issues/1149
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#insertText (mentioned there, but not an alias of it)
+// Main console only, takes no window name and returns nothing; the markup is inserted verbatim, not interpreted
 int TLuaInterpreter::insertHTML(lua_State* L)
 {
     const QString sendText = getVerifiedString(L, __func__, 1, "sendText");
@@ -3386,8 +3423,14 @@ int TLuaInterpreter::setFontSize(lua_State* L)
 
     const QString consoleName{windowName};
     const Host& host = getHostFromLua(L);
+    // a console wins a name a label also carries, as in setFont()
     if (!host.consoleFrontend()->setWindowFontSize(consoleName, size)) {
-        return windowNotFound(L, consoleName);
+        auto labelFont = host.labelFont(consoleName);
+        if (!labelFont) {
+            return windowNotFound(L, consoleName);
+        }
+        labelFont->setPointSize(size);
+        host.consoleFrontend()->setLabelFont(consoleName, *labelFont);
     }
     lua_pushboolean(L, true);
     return 1;
@@ -3748,7 +3791,10 @@ int TLuaInterpreter::setLink(lua_State* L)
     hintList << QString{lua_tostring(L, hintPos)};
     luaReferences << luaReference;
 
-    host.setWindowLink(*pModel, commandList, hintList, luaReferences);
+    if (!host.setWindowLink(*pModel, commandList, hintList, luaReferences)) {
+        releaseLuaReferences(L, luaReferences);
+        return warnArgumentValue(L, __func__, "no text is selected - cannot create link");
+    }
 
     lua_pushboolean(L, true);
     return 1;
@@ -3885,7 +3931,10 @@ int TLuaInterpreter::setPopup(lua_State* L)
         return 2;
     }
 
-    host.setWindowLink(*pModel, commandList, hintList, luaReferences);
+    if (!host.setWindowLink(*pModel, commandList, hintList, luaReferences)) {
+        releaseLuaReferences(L, luaReferences);
+        return warnArgumentValue(L, __func__, "no text is selected - cannot create popup");
+    }
 
     lua_pushboolean(L, true);
     return 1;
@@ -4553,11 +4602,14 @@ int TLuaInterpreter::pasteWindow(lua_State* L)
 int TLuaInterpreter::enableScrolling(lua_State* L)
 {
     const QString windowName{WINDOW_NAME(L, 1)};
-    if (windowName.compare(qsl("main"), Qt::CaseSensitive) == 0) {
+    if (isMain(windowName)) {
         return warnArgumentValue(L, __func__, "scrolling cannot be enabled/disabled for the 'main' window");
     }
 
     const Host& host = getHostFromLua(L);
+    if (host.windowRegistry().subConsoleKind(windowName) == TWindowRegistry::SubConsoleKind::Buffer) {
+        return warnArgumentValue(L, __func__, qsl("scrolling cannot be enabled/disabled for buffer \"%1\"").arg(windowName));
+    }
     if (!host.consoleFrontend()->setWindowScrolling(windowName, true)) {
         return windowNotFound(L, windowName);
     }
@@ -4569,11 +4621,14 @@ int TLuaInterpreter::enableScrolling(lua_State* L)
 int TLuaInterpreter::disableScrolling(lua_State* L)
 {
     const QString windowName{WINDOW_NAME(L, 1)};
-    if (windowName.compare(qsl("main"), Qt::CaseSensitive) == 0) {
+    if (isMain(windowName)) {
         return warnArgumentValue(L, __func__, "scrolling cannot be enabled/disabled for the 'main' window");
     }
 
     const Host& host = getHostFromLua(L);
+    if (host.windowRegistry().subConsoleKind(windowName) == TWindowRegistry::SubConsoleKind::Buffer) {
+        return warnArgumentValue(L, __func__, qsl("scrolling cannot be enabled/disabled for buffer \"%1\"").arg(windowName));
+    }
     if (!host.consoleFrontend()->setWindowScrolling(windowName, false)) {
         return windowNotFound(L, windowName);
     }
@@ -4585,8 +4640,8 @@ int TLuaInterpreter::disableScrolling(lua_State* L)
 int TLuaInterpreter::scrollingActive(lua_State* L)
 {
     const QString windowName{WINDOW_NAME(L, 1)};
-    if (windowName.compare(qsl("main"), Qt::CaseSensitive) == 0) {
-        // Handle the main console case:
+    if (isMain(windowName)) {
+        // The main console's scrolling can never be turned off, so this holds even with no view
         lua_pushboolean(L, true);
         return 1;
     }

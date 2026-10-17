@@ -32,9 +32,11 @@
 
 #include <algorithm>
 #include <array>
+#include <limits>
 #include <QJsonArray>
 #include <QJsonObject>
 #include <QJsonValue>
+#include <vector>
 
 // Previous direction #defines here did not match the DIR_ defines in TRoom.h,
 // but as they are stored in the map file they ought not to be redefined without
@@ -48,6 +50,13 @@
 static const QColor defaultLabelForeground(QColor(0, 0, 0));
 static const QColor defaultLabelBackground(QColor(0, 0, 0));
 static const int kPixmapDataLineSize = 64;
+
+// The span index files y negated. INT_MIN has no negation in an int, so it saturates to INT_MAX, which
+// leaves the area's extent one row short of a room at INT_MIN; the extents are ints in the map file.
+static int spanIndexY(const int y)
+{
+    return y == std::numeric_limits<int>::min() ? std::numeric_limits<int>::max() : -y;
+}
 
 
 TArea::TArea(TMap* pMap, TRoomDB* pRDB)
@@ -76,31 +85,6 @@ int TArea::getAreaID()
     return -1;
 }
 
-QMap<int, QMap<int, QMultiMap<int, int>>> TArea::koordinatenSystem()
-{
-    QMap<int, QMap<int, QMultiMap<int, int>>> kS;
-    for (const auto id : std::as_const(rooms)) {
-        const auto room = mpRoomDB->getRoom(id);
-        if (!room) {
-            continue;
-        }
-
-        const int x = room->x();
-        const int y = room->y();
-        const int z = room->z();
-        if (!kS.contains(z)) {
-            const QMap<int, QMultiMap<int, int>> yMap;
-            kS[z] = yMap;
-        }
-        if (!kS.value(z).contains(y)) {
-            const QMultiMap<int, int> xMap;
-            kS[z][y] = xMap;
-        }
-        kS[z][y].insert(x, id);
-    }
-    return kS;
-}
-
 QList<int> TArea::getRoomsByPosition(int x, int y, int z)
 {
     // The grid index already files this area's rooms by cell, so this reads one
@@ -125,30 +109,24 @@ QList<int> TArea::getRoomsByPosition(int x, int y, int z)
 
 QList<std::tuple<int, int, int>> TArea::getCollisionNodes()
 {
-    // Coordinates (x,y,z) where there are multiple rooms
+    std::vector<std::tuple<int, int, int>> locations;
+    locations.reserve(rooms.size());
+    for (const auto id : std::as_const(rooms)) {
+        if (const auto room = mpRoomDB->getRoom(id)) {
+            // Stored (z,y,x) so that sorting yields the z, y, x order getCollisionNodes() promises
+            locations.emplace_back(room->z(), room->y(), room->x());
+        }
+    }
+    std::sort(locations.begin(), locations.end());
+
     QList<std::tuple<int, int, int>> problems;
-    const auto& zyx_map = koordinatenSystem();
-    QMapIterator<int, QMap<int, QMultiMap<int, int>>> itZ(zyx_map);
-    while (itZ.hasNext()) {
-        itZ.next();
-        const auto& yx_map = itZ.value();
-        QMapIterator<int, QMultiMap<int, int>> itY(yx_map);
-        while (itY.hasNext()) {
-            itY.next();
-            const QMultiMap<int, int>& x_map = itY.value();
-            const auto x_keysList = x_map.keys();
-            QSet<int> x_keys(x_keysList.constBegin(), x_keysList.constEnd());
-            QSetIterator<int> itX(x_keys);
-            while (itX.hasNext()) {
-                const auto x = itX.next();
-                const auto roomsHere = x_map.values(x);
-                if (roomsHere.count() > 1) {
-                    const auto y = itY.key();
-                    const auto z = itZ.key();
-                    const auto location = std::make_tuple(x, y, z);
-                    problems << location;
-                }
-            }
+    for (std::size_t i = 1; i < locations.size(); ++i) {
+        if (locations[i] != locations[i - 1]) {
+            continue;
+        }
+        const auto& [z, y, x] = locations[i];
+        if (problems.isEmpty() || problems.constLast() != std::make_tuple(x, y, z)) {
+            problems << std::make_tuple(x, y, z);
         }
     }
     return problems;
@@ -362,7 +340,7 @@ void TArea::addRoom(int id)
             if (!pR->customLines.empty()) {
                 mCustomLineIndex.addRoom(id, pR->z());
             }
-            if (mSpanIndex.addRoom(pR->x(), -1 * pR->y(), pR->z())) {
+            if (mSpanIndex.addRoom(pR->x(), spanIndexY(pR->y()), pR->z())) {
                 publishSpanForZ(pR->z());
             }
             // Rooms here with exits to the new room were treating it as another area's:
@@ -426,8 +404,8 @@ void TArea::moveRoom(int id, int fromZ, int fromX, int fromY, int toZ, int toX, 
     if (mCustomLineIndex.roomsForZ(fromZ).contains(id)) {
         mCustomLineIndex.moveRoom(id, fromZ, toZ);
     }
-    const bool fromExtremesMoved = mSpanIndex.removeRoom(fromX, -1 * fromY, fromZ);
-    const bool toExtremesMoved = mSpanIndex.addRoom(toX, -1 * toY, toZ);
+    const bool fromExtremesMoved = mSpanIndex.removeRoom(fromX, spanIndexY(fromY), fromZ);
+    const bool toExtremesMoved = mSpanIndex.addRoom(toX, spanIndexY(toY), toZ);
     if (fromExtremesMoved) {
         publishSpanForZ(fromZ);
     }
@@ -516,7 +494,7 @@ void TArea::calcSpan()
 
         roomIdToZ.insert(id, pR->z());
         zToRoomXY[pR->z()].insert(id, {pR->x(), pR->y()});
-        mSpanIndex.addRoom(pR->x(), -1 * pR->y(), pR->z());
+        mSpanIndex.addRoom(pR->x(), spanIndexY(pR->y()), pR->z());
         if (!pR->customLines.empty()) {
             customLineRoomIdToZ.insert(id, pR->z());
         }
@@ -677,7 +655,7 @@ void TArea::removeRoom(int room)
         mZLevelIndex.removeRoom(room, pR->z());
         mGridIndex.removeRoom(room, pR->z(), pR->x(), pR->y());
         mCustomLineIndex.removeRoom(room, pR->z());
-        if (mSpanIndex.removeRoom(pR->x(), -1 * pR->y(), pR->z())) {
+        if (mSpanIndex.removeRoom(pR->x(), spanIndexY(pR->y()), pR->z())) {
             publishSpanForZ(pR->z());
         }
     } else if (!pR && rooms.contains(room)) {
