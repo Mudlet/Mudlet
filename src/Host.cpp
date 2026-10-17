@@ -1326,9 +1326,10 @@ bool Host::resetProfile_phase1()
 void Host::resetProfile_phase2()
 {
     // A Lua API that spins a nested event loop delivers this while the script
-    // that asked for the reset is still running on the state closed below.
+    // that asked for the reset is still running on the state closed below, and
+    // a save wait while its caller still uses the units reset below.
     // A close that has come in meanwhile makes the reset moot.
-    if (mLuaInterpreter.luaOnStack()) {
+    if (mLuaInterpreter.luaOnStack() || waitingForProfileSave()) {
         QTimer::singleShot(50ms, this, [this]() {
             if (!mIsClosingDown) {
                 resetProfile_phase2();
@@ -1632,6 +1633,13 @@ void Host::waitForProfileSave()
         return;
     }
 
+    // Not a nested event loop for pumpingEvents(), whose guards refuse a reset or a close outright: this
+    // wait ends on its own, so a close is retried after it and only a reset's second phase waits for it.
+    ++mProfileSaveWaitDepth;
+    const auto waitDepthGuard = qScopeGuard([this] {
+        --mProfileSaveWaitDepth;
+    });
+
     // Only the notification below is on a clock - in wall-clock time, because a cap on
     // event loop passes is no wait at all on a fast machine (#9807) - and only because
     // a save that has written everything and still says it is running cannot be waited
@@ -1640,8 +1648,8 @@ void Host::waitForProfileSave()
     constexpr auto notificationTimeout = 30s;
     QElapsedTimer waitedForNotification;
     // A QEventLoop's processEvents() rather than QCoreApplication's only for its "did anything
-    // happen" answer - nothing is exec()ed here. No user input either: this runs on the
-    // way out of a profile, and all it is here to deliver is that notification.
+    // happen" answer - nothing is exec()ed here. No user input either: all it is here to
+    // deliver is that notification.
     QEventLoop pump;
     while (currentlySavingProfile()) {
         // Every pass rather than once up front: a save that starts while this is
@@ -4324,8 +4332,9 @@ void Host::runUninstallsDeferredByAnInstall(const QList<DeferredUninstall>& defe
         waitForProfileSave();
     }
 
-    // Closing, already or via the pump above. The script was told these removals were happening, so name
-    // what is left behind rather than let it silently return next session.
+    // Closing already: a close asked for during the wait above waits for it to end. The script was told
+    // these removals were happening, so name what is left behind rather than let it silently return next
+    // session.
     if (isClosingDown()) {
         qWarning() << "Host::runUninstallsDeferredByAnInstall() WARNING - the profile is closing down, so" << names(deferred)
                    << "were left installed although their own install scripts asked for them to be removed.";
