@@ -85,21 +85,6 @@ qreal usableSymbolFontFudgeFactor(const qreal fromFile)
     return qBound(TMap::scmMinimumSymbolFontFudgeFactor, fromFile, TMap::scmMaximumSymbolFontFudgeFactor);
 }
 
-// Restores font information from userData that was stored during binary serialization.
-// Font data is stored as "family|pointSize|weight|italic" to avoid binary format version changes.
-void restoreLabelFontFromUserData(TMapLabel& label, int labelId, QMap<QString, QString>& userData)
-{
-    const QString fontKey = qsl("system.labelFont_%1").arg(labelId);
-    if (userData.contains(fontKey)) {
-        const QStringList fontParts = userData.take(fontKey).split(QLatin1Char('|'));
-        if (fontParts.size() == 4) {
-            label.font = QFont(fontParts.at(0), fontParts.at(1).toInt(), fontParts.at(2).toInt(), fontParts.at(3).toInt() != 0);
-        } else {
-            qWarning("TMap: Failed to parse font data for label %d, expected 4 parts but got %lld", labelId, fontParts.size());
-        }
-    }
-}
-
 enum class MapFileCheckResult { ValidMap, NotAMap, ParseError };
 
 struct MapFileCheck
@@ -152,6 +137,41 @@ public:
     void update3DViewAvailability() override {}
 };
 } // anonymous namespace
+
+// Restores font information from userData that was stored during binary serialization.
+// Font data is stored as "family|pointSize|weight|italic" to avoid binary format version changes.
+// Call before restoreLabelOutlineColorFromUserData(), which takes the outline key this reads
+// to tell a label that had no font, whose font it then clears to an empty family.
+void TMap::restoreLabelFontFromUserData(TMapLabel& label, int labelId, QMap<QString, QString>& userData)
+{
+    const QString fontKey = qsl("system.labelFont_%1").arg(labelId);
+    if (userData.contains(fontKey)) {
+        const QStringList fontParts = userData.take(fontKey).split(QLatin1Char('|'));
+        if (fontParts.size() == 4) {
+            label.font = QFont(fontParts.at(0), fontParts.at(1).toInt(), fontParts.at(2).toInt(), fontParts.at(3).toInt() != 0);
+        } else {
+            qWarning("TMap: Failed to parse font data for label %d, expected 4 parts but got %lld", labelId, fontParts.size());
+        }
+    } else if (userData.contains(qsl("system.labelOutlineColor_%1").arg(labelId))) {
+        // A file that keeps outline colors writes a font for every label with
+        // one, so this label had none, and a default QFont would invent one
+        label.font = QFont(QString());
+    }
+}
+
+// Outline color data is stored as "r|g|b|a" to avoid binary format version changes.
+void TMap::restoreLabelOutlineColorFromUserData(TMapLabel& label, int labelId, QMap<QString, QString>& userData)
+{
+    const QString colorKey = qsl("system.labelOutlineColor_%1").arg(labelId);
+    if (userData.contains(colorKey)) {
+        const QStringList colorParts = userData.take(colorKey).split(QLatin1Char('|'));
+        if (colorParts.size() == 4) {
+            label.outlineColor = QColor(colorParts.at(0).toInt(), colorParts.at(1).toInt(), colorParts.at(2).toInt(), colorParts.at(3).toInt());
+        } else {
+            qWarning("TMap: Failed to parse outline color data for label %d, expected 4 parts but got %lld", labelId, colorParts.size());
+        }
+    }
+}
 
 TMapViewsFrontend* TMap::mapViewsFrontend() const
 {
@@ -2057,7 +2077,7 @@ bool TMap::restore(QString location)
                         ifs >> label.noScaling;
                         ifs >> label.showOnTop;
                         restoreLabelFontFromUserData(label, labelId, pA->mUserData);
-                        TArea::restoreLabelOutlineColorFromUserData(label, labelId, pA->mUserData);
+                        restoreLabelOutlineColorFromUserData(label, labelId, pA->mUserData);
                         pA->mMapLabels.insert(labelId, label);
                     }
                 }
@@ -2127,7 +2147,7 @@ bool TMap::restore(QString location)
                     }
                     if (pA) {
                         restoreLabelFontFromUserData(label, labelID, pA->mUserData);
-                        TArea::restoreLabelOutlineColorFromUserData(label, labelID, pA->mUserData);
+                        restoreLabelOutlineColorFromUserData(label, labelID, pA->mUserData);
                         pA->mMapLabels.insert(labelID, label);
                     }
                     ++areaLabelCounter;
@@ -3720,8 +3740,17 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
     emit signal_mapProgressSetValue(0);
     QCoreApplication::processEvents();
 
+    // A file not written by Mudlet may not give these, and an empty one cannot name an area
     mDefaultAreaName = mapObj[QLatin1String("defaultAreaName")].toString();
+    if (mDefaultAreaName.isEmpty()) {
+        //: Name of the map's default area, the one with id -1, used when a JSON map file does not give one
+        mDefaultAreaName = tr("Default Area");
+    }
     mUnnamedAreaName = mapObj[QLatin1String("anonymousAreaName")].toString();
+    if (mUnnamedAreaName.isEmpty()) {
+        //: Name given to an area that has none, used when a JSON map file does not give one; further such areas get "_001", "_002" and so on appended to it
+        mUnnamedAreaName = tr("Unnamed Area");
+    }
     QMap<QString, QString> userData;
     if (mapObj.contains(QLatin1String("userData"))) {
         userData = readJsonUserData(mapObj[QLatin1String("userData")].toObject());
@@ -3795,6 +3824,9 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
 
     auto pNewRoomDB = std::make_unique<TRoomDB>(this);
     bool abort = false;
+    // Named once every other area is in, so that the name given cannot be one a later area has
+    std::vector<std::pair<int, std::unique_ptr<TArea>>> unnamedAreas;
+    QSet<int> namedAreaIds;
     // Held back until the new map replaces the old one, as an aborted import drops nothing:
     QStringList droppedRoomWarnings;
     for (int i = 0, total = mapObj.value(QLatin1String("areas")).toArray().count(); i < total; ++i) {
@@ -3805,15 +3837,53 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
             abort = true;
             break;
         }
+        if (name.isEmpty()) {
+            unnamedAreas.emplace_back(id, std::move(pArea));
+            continue;
+        }
         // This will populate the TRoomDB::areas and TRoomDB::areaNameMap:
-        pNewRoomDB->addArea(pArea.release(), id, name);
+        if (pNewRoomDB->addArea(pArea.get(), id, name)) {
+            pArea.release();
+            namedAreaIds.insert(id);
+        }
     }
     if (abort) {
+        for (auto& unnamedArea : unnamedAreas) {
+            // Never added to pNewRoomDB, so ~TArea() must not try to remove it from there
+            unnamedArea.second->mpRoomDB = nullptr;
+        }
         emit signal_mapProgressClose();
         mMapProgressStandalone = false;
         mDefaultAreaName = oldDefaultAreaName;
         mUnnamedAreaName = oldUnnamedName;
         return {false, (translatableTexts ? tr("aborted by user") : qsl("aborted by user"))};
+    }
+    for (auto& [id, pArea] : unnamedAreas) {
+        if (namedAreaIds.contains(id)) {
+            // Added after every named area, it would otherwise displace the named one wherever the file lists it
+            pArea->mpRoomDB = nullptr;
+            //: Shown when a JSON map file has two areas with the same id, one of them with an empty name. %1 is the area's id.
+            const QString dropMsg = tr("[ WARN ]  - The map file has an area with id %1 and no name as well as a named one with that id, only the named one has been kept.").arg(id);
+            appendErrorMsgWithNoLf(dropMsg, false);
+            postMessage(dropMsg);
+            continue;
+        }
+        // TRoomDB::addArea() refuses a blank name, which would lose the area's user data and labels
+        bool defaultAreaNameFree = false;
+        if (id == -1) {
+            // The new TRoomDB's own placeholder -1 already holds the default name, so only another id taking it counts
+            QList<int> idsWithDefaultAreaName = pNewRoomDB->getAreaNamesMap().keys(mDefaultAreaName);
+            idsWithDefaultAreaName.removeAll(-1);
+            defaultAreaNameFree = idsWithDefaultAreaName.isEmpty();
+        }
+        const QString name = defaultAreaNameFree ? mDefaultAreaName : pNewRoomDB->unusedUnnamedAreaName();
+        //: Shown when an area in a JSON map file has an empty name. %1 is the area's id, %2 the name it is given instead.
+        const QString warnMsg = tr(R"([ WARN ]  - The area with id %1 has no name in the map file, so it has been called "%2".)").arg(QString::number(id), name);
+        appendErrorMsgWithNoLf(warnMsg, false);
+        postMessage(warnMsg);
+        if (pNewRoomDB->addArea(pArea.get(), id, name)) {
+            pArea.release();
+        }
     }
 
     // Not before the abort check above, so a cancelled import leaves the live map alone:
@@ -3930,16 +4000,25 @@ QColor TMap::readJsonColor(const QJsonObject& obj)
     } else {
         colorRGBAArray = obj.value(QLatin1String("color24RGB")).toArray();
     }
+    // Checked before rounding, as rounding a double beyond the range of int is undefined
+    const auto component = [&colorRGBAArray](const int index) {
+        const double value = colorRGBAArray.at(index).toDouble();
+        return (value > -0.5 && value < 255.5) ? qRound(value) : -1;
+    };
     const int size = colorRGBAArray.size();
     if ((size == 3 || size == 4) && colorRGBAArray.at(0).isDouble() && colorRGBAArray.at(1).isDouble() && colorRGBAArray.at(2).isDouble()) {
-        red = qRound(colorRGBAArray.at(0).toDouble());
-        green = qRound(colorRGBAArray.at(1).toDouble());
-        blue = qRound(colorRGBAArray.at(2).toDouble());
-        return QColor(red, green, blue);
-    }
-
-    if (hasAlpha && size == 4 && colorRGBAArray.at(3).isDouble()) {
-        alpha = qRound(colorRGBAArray.at(3).toDouble());
+        red = component(0);
+        green = component(1);
+        blue = component(2);
+        if (red < 0 || green < 0 || blue < 0) {
+            return QColor();
+        }
+        if (hasAlpha && size == 4 && colorRGBAArray.at(3).isDouble()) {
+            // QColor refuses the whole colour for an alpha out of range
+            if (const int value = component(3); value >= 0) {
+                alpha = value;
+            }
+        }
         return QColor(red, green, blue, alpha);
     }
 

@@ -32,6 +32,7 @@
 #include "HostDialogs.h"
 #include "HostManager.h"
 #include "MudletApp.h"
+#include "MudletProxyStyle.h"
 #include "TAction.h"
 #include "TAlias.h"
 #include "TConsole.h"
@@ -876,6 +877,12 @@ void dlgProfilePreferences::buildShell()
     moveIntoCard(pCard_captions, {checkBox_enableBlinkText, checkBox_enableClosedCaption});
     auto* pCard_keyboard = createCard(qsl("card_accessibilityKeyboard"));
     addCardRow(pCard_keyboard, label_caretModeKey, comboBox_caretModeKey);
+    addCardRow(pCard_keyboard, label_menuBarAltKeyNavigation, comboBox_menuBarAltKeyNavigation);
+#if defined(Q_OS_MACOS)
+    // The native menu bar takes no part in Alt key navigation
+    label_menuBarAltKeyNavigation->hide();
+    comboBox_menuBarAltKeyNavigation->hide();
+#endif
     moveIntoCard(pCard_keyboard, {checkBox_f3SearchEnabled});
     buildCategoryPage(scmCategory_accessibility, {groupBox_accessibility, pCard_captions, pCard_keyboard});
 
@@ -1286,6 +1293,8 @@ void dlgProfilePreferences::setSearchKeywords()
     synonyms.append({checkBox_advertiseScreenReader, tr("screen reader, NVDA, JAWS, VoiceOver, Orca, accessibility")});
     //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for reading incoming text out loud.
     synonyms.append({checkBox_announceIncomingText, tr("text to speech, TTS, speech, spoken, screen reader")});
+    //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for whether pressing Alt on its own moves focus to the menu bar.
+    synonyms.append({label_menuBarAltKeyNavigation, tr("Alt key, menu bar, menus, keyboard, screen reader")});
     //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for putting the time in front of each logged line.
     synonyms.append({mIsLoggingTimestamps, tr("timestamps, time, date, transcript")});
     //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for the format logs are written in.
@@ -3839,6 +3848,7 @@ void dlgProfilePreferences::populateApplicationSettings()
         const QSignalBlocker blocker(comboBox_appearance);
         comboBox_appearance->setCurrentIndex(pMudlet->mAppearance);
     }
+    comboBox_menuBarAltKeyNavigation->setCurrentIndex(static_cast<int>(MudletProxyStyle::altKeyNavigation()));
     {
         const QSignalBlocker blocker(telnetHandlerEnabled);
         telnetHandlerEnabled->setChecked(MudletApp::getQSettings()->value("telnetHandlerEnabled", false).toBool());
@@ -3874,6 +3884,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     loadEditorTab();
 
     fontComboBox_displayFont->setCurrentFont(pHost->getDisplayFont());
+    rememberDisplayFontFamilyShown();
     // Accommodate an initial font size being larger than expected - and ensure
     // it is a positive value:
     spinBox_displayFontSize->setMaximum(std::max(pHost->getDisplayFont().pointSize(), 40));
@@ -3886,6 +3897,8 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     connect(fontComboBox_displayFont, &QComboBox::activated, this, &dlgProfilePreferences::slot_displayFontChanged, Qt::UniqueConnection);
     connect(spinBox_displayFontSize, qOverload<int>(&QSpinBox::valueChanged), this, &dlgProfilePreferences::slot_displayFontSizeChanged, Qt::UniqueConnection);
     connect(checkBox_antiAlias, &QCheckBox::clicked, this, &dlgProfilePreferences::slot_displayFontAliasingChanged, Qt::UniqueConnection);
+
+    connect(pHost, &Host::signal_consoleFontChanged, this, &dlgProfilePreferences::slot_hostDisplayFontChanged, Qt::UniqueConnection);
 
     // Emptied first so a second run replaces the list
     {
@@ -4518,7 +4531,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
                         break;
                     default: {
                     } // There are a significant number of other errors
-                        // that are not handled here!
+                    // that are not handled here!
                     }
                 }
             }
@@ -7060,6 +7073,9 @@ void dlgProfilePreferences::applyAll()
     if (mSnapshot.dirty(comboBox_appearance)) {
         pMudlet->setAppearance(static_cast<enums::Appearance>(comboBox_appearance->currentIndex()));
     }
+    if (mSnapshot.dirty(comboBox_menuBarAltKeyNavigation)) {
+        MudletProxyStyle::setAltKeyNavigation(static_cast<enums::MenuBarAltKeyNavigation>(comboBox_menuBarAltKeyNavigation->currentIndex()));
+    }
     if (mSnapshot.dirty(telnetHandlerEnabled)) {
         QSettings* settings = MudletApp::getQSettings();
         if (settings->value("telnetHandlerEnabled", false).toBool() != telnetHandlerEnabled->isChecked()) {
@@ -9140,12 +9156,24 @@ QString dlgProfilePreferences::dictionaryDisplayName(const QString& dictionary)
     return mudlet::self()->mDictionaryLanguageCodeMap.value(key, tr("%1 - not recognised").arg(dictionary));
 }
 
+void dlgProfilePreferences::rememberDisplayFontFamilyShown()
+{
+    const QString family = fontComboBox_displayFont->currentFont().family();
+    mDisplayFontFamilyShown = (mpHost && mpHost->resolveFontFamily(family).available) ? family : QString();
+}
+
 void dlgProfilePreferences::slot_displayFontChanged()
 {
-    // Only fires from QFontComboBox::currentFontChanged and QComboBox::activated,
-    // so the family really is one the user just picked out of the list. Picking a
-    // new family fires both, so a second run for the same font must change nothing
-    if (!mpHost.isNull() && updateDisplayFont(Host::DisplayFontChange::UserChoice)) {
+    // QFontComboBox moves off a family by itself when its package is uninstalled: no choice of the
+    // user's, and the profile's own check is about to put the stand-in up and say so
+    const QString shownBefore = mDisplayFontFamilyShown;
+    rememberDisplayFontFamilyShown();
+    if (mpHost.isNull() || (!shownBefore.isEmpty() && !mpHost->resolveFontFamily(shownBefore).available)) {
+        return;
+    }
+    // Past that, only a pick out of the list gets here (currentFontChanged and activated both land
+    // here, so a second run for the same font must change nothing), so the family really is the user's choice
+    if (updateDisplayFont(Host::DisplayFontChange::UserChoice)) {
         mpHost->mTelnet.sendInfoNewEnvironValue(qsl("FONT"));
     }
 }
@@ -9154,6 +9182,38 @@ void dlgProfilePreferences::slot_displayFontSizeChanged()
 {
     if (!mpHost.isNull() && updateDisplayFont(Host::DisplayFontChange::Adjustment)) {
         mpHost->mTelnet.sendInfoNewEnvironValue(qsl("FONT_SIZE"));
+    }
+}
+
+// The font can change behind the dialog, from a script or as a package brings a missing family
+// back, and the next edit here builds the whole font from these controls
+void dlgProfilePreferences::slot_hostDisplayFontChanged(const QFont& font)
+{
+    // The connection outlives slot_handleHostDeletion(), which has cleared these controls
+    if (mpHost.isNull()) {
+        return;
+    }
+    {
+        const QSignalBlocker comboBlocker(fontComboBox_displayFont);
+        const QSignalBlocker sizeBlocker(spinBox_displayFontSize);
+        const QSignalBlocker antiAliasBlocker(checkBox_antiAlias);
+        fontComboBox_displayFont->setCurrentFont(font);
+        spinBox_displayFontSize->setMaximum(std::max(font.pointSize(), spinBox_displayFontSize->maximum()));
+        spinBox_displayFontSize->setValue(std::max(1, font.pointSize()));
+        // Not fontsAntiAlias(): applyAll() writes that from this box only once the apply timer fires
+        checkBox_antiAlias->setChecked(!(font.styleStrategy() & QFont::NoAntialias));
+    }
+    rememberDisplayFontFamilyShown();
+    // Not the user's edits, so they must not keep refreshFromSettings() from re-reading the rest - nor
+    // the line edits inside the list and the spin box, which the snapshot holds as well. The anti-alias
+    // box stays dirty, as this runs for the dialog's own toggle too and applyAll() must still store it
+    for (QWidget* pControl : {static_cast<QWidget*>(fontComboBox_displayFont), static_cast<QWidget*>(spinBox_displayFontSize)}) {
+        mSnapshot.take(pControl);
+        for (const auto* pPart : pControl->findChildren<QWidget*>()) {
+            if (SettingsSnapshot::carriesValue(pPart)) {
+                mSnapshot.take(pPart);
+            }
+        }
     }
 }
 
@@ -9266,6 +9326,9 @@ void dlgProfilePreferences::closeEvent(QCloseEvent* event)
     }
 
     MudletApp::getQSettings()->setValue(qsl("profilePreferencesGeometry"), saveGeometry());
+    // Most application-wide settings reach Mudlet.ini only at quit, so an
+    // unclean exit would lose the ones changed here
+    mudlet::self()->writeSettings();
 
     if (mpHost) {
         emit preferencesClosing(mpHost->getName());

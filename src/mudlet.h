@@ -297,7 +297,7 @@ public:
     enums::controlsVisibility toolBarVisibility() const { return mToolbarVisibility; }
     void updateDiscordNamedIcon();
     void updateMultiViewControls();
-    void writeSettings();
+    void writeSettings() override;
 #ifdef INCLUDE_MCPSERVER
     bool mcpEnabled() const { return mEnableMCP; }
     quint16 mcpServerPort() const { return mMCPServerPort; }

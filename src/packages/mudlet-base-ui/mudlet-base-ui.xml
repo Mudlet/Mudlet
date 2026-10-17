@@ -447,7 +447,7 @@
 			<name>Mudlet base UI</name>
 			<packageName></packageName>
 			<script>-- Mudlet base UI: a small starter interface that adapts to whatever the game
--- provides. Nothing is created until the game actually sends something:
+-- provides. Nothing is created until the game has actually sent something:
 -- vitals gauges are built from GMCP character data (normalised across the
 -- dialects games speak, and only for the fields that exist), with the map and
 -- chat windows alongside them. Chat comes from gmcp.Comm.Channel.Text when
@@ -1705,7 +1705,7 @@ local function applyConsoleTint(giveBack)
   end
   -- A hidden UI, or one standing aside for the game's own interface, has no
   -- business colouring the game's text. Neither has one that does not exist yet:
-  -- the dock is built only once the game sends something to show, and a tint with
+  -- the dock is built only once the game has sent something to show, and a tint with
   -- no dock beside it is a recoloured window with nothing to show for it, so
   -- build() applies this once it has one.
   local tint = not giveBack and BaseUI.container and not BaseUI.dormant() and theme.console
@@ -2062,6 +2062,7 @@ function BaseUI.build()
   BaseUI.chat = BaseUI.chats.all
   -- now that there is a dock to tint alongside, and panes to keep in step with it
   applyConsoleTint()
+  BaseUI.settings.built = true
   BaseUI.saveSettings()
   BaseUI.refreshChatTabs()
   BaseUI.chats.all:decho("&lt;150,158,167&gt;Tells, says and channel chat from the game will be collected here.\n")
@@ -2799,6 +2800,9 @@ function BaseUI.show()
   BaseUI.armChatTriggers()
   BaseUI.createVitalsTriggers()
   BaseUI.renderVitals()
+  if not BaseUI.container and BaseUI.settings.built then
+    BaseUI.build()
+  end
   if BaseUI.container then
     BaseUI.container:show()
     if not BaseUI.container.attached then
@@ -2906,6 +2910,8 @@ onEvent("sysMapDownloadEvent", "BaseUI.checkMapData")
 onEvent("sysMapAreaChanged", "BaseUI.checkMapData")
 onEvent("gmcp.Room.Info", "BaseUI.checkMapData")
 onEvent("gmcp.room.info", "BaseUI.checkMapData")
+-- a profile's saved map is loaded after its scripts have run
+onEvent("sysLoadEvent", "BaseUI.checkMapData")
 
 -- Everything above only reacts to what arrives next, which leaves the dock
 -- waiting on a game that has already spoken. Installing the package mid-session,
@@ -2917,7 +2923,7 @@ onEvent("gmcp.room.info", "BaseUI.checkMapData")
 -- the dock appearing at once and it appearing whenever the character next takes
 -- damage.
 --
--- On a fresh connection every branch below is a no-op, so this costs nothing and
+-- On a fresh connection every branch of this catch-up is a no-op, so it costs nothing and
 -- sends nothing: gmcp is created empty and only filled once data arrives, and
 -- msdp is not created at all until the first MSDP variable lands. What is sent
 -- is only what the handlers themselves would have sent.
@@ -2936,6 +2942,12 @@ if connected then
     BaseUI.enableMsdpVitals(nil, "MSDP")
     BaseUI.updateMsdpVitals()
   end
+end
+
+-- The profile restores the border the dock had at exit, so a dock this game has
+-- filled before is built now rather than leaving that border empty until it speaks
+if BaseUI.settings.built and not BaseUI.dormant() then
+  BaseUI.build()
 end</script>
 			<eventHandlerList />
 		</Script>

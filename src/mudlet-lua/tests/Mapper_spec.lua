@@ -3335,6 +3335,13 @@ describe("Tests mapper functions against a shared fixture", function()
     it("hard-errors when the required coordinate arguments are missing", function()
       assert.has_error(function() createMapper() end)
     end)
+
+    it("refuses with false while the map widget is on screen", function()
+      assert.is_true(openMapWidget())
+      local ok, message = createMapper(0, 0, 300, 300)
+      assert.is_false(ok)
+      assert.are.equal("cannot create mapper. Do you already use a map window?", message)
+    end)
   end)
 
   describe("Tests secondary map views", function()
@@ -3536,6 +3543,13 @@ describe("Tests mapper functions against a shared fixture", function()
       return getMudletHomeDir() .. "/" .. name
     end
 
+    -- Windows has no chmod to hand
+    local function chmod(mode, path)
+      if getOS() ~= "windows" then
+        os.execute("chmod " .. mode .. " '" .. path .. "'")
+      end
+    end
+
     -- Removes the files first, so one left by an earlier run cannot stand in
     -- for the one under test; returns a check that they have all been written
     -- and a clean-up for the test's finally()
@@ -3652,8 +3666,8 @@ describe("Tests mapper functions against a shared fixture", function()
     it("exportAreaImage reports a save that failed against that export alone", function()
       local written, removeAll = expectExports({"mapper_spec_export_ok.png"})
       finally(removeAll)
-      local badPath = exportPath("mapper_spec_no_such_dir/unsaved.png")
-      assert.is_false(io.exists(exportPath("mapper_spec_no_such_dir")), "the spec needs a directory nothing has made")
+      -- a name longer than file systems allow passes the checks made before the save
+      local badPath = exportPath(string.rep("n", 300) .. ".png")
       -- Not the last few lines: the generic mapper prints its help on a timer
       -- after the map opens, which can push the report out of them
       local marker = "mapper spec failed-save marker " .. tostring({})
@@ -3667,6 +3681,205 @@ describe("Tests mapper functions against a shared fixture", function()
       pumpEvents(500)
       assert.are.equal(1, mainConsoleCountAfter(marker, "Failed to save image to "))
       assert.are.equal(1, mainConsoleCountAfter(marker, "Failed to save image to " .. badPath))
+    end)
+
+    it("exportAreaImage returns false and a message for an empty file name", function()
+      local ok, err = exportAreaImage(areaAlpha, "")
+      assert.is_false(ok)
+      assert.are.equal("No file name given", err)
+    end)
+
+    it("exportAreaImage returns false and a message for a directory that is not there", function()
+      local missingDirectory = exportPath("mapper_spec_no_such_dir")
+      assert.is_nil(lfs.attributes(missingDirectory), "the spec needs a directory nothing has made")
+      for _, path in ipairs({missingDirectory .. "/unsaved.png", missingDirectory .. "/"}) do
+        local ok, err = exportAreaImage(areaAlpha, path)
+        assert.is_false(ok)
+        assert.are.equal("Directory " .. missingDirectory .. " does not exist", err)
+      end
+      assert.is_nil(lfs.attributes(missingDirectory))
+    end)
+
+    it("exportAreaImage returns false and a message for a path that is a directory", function()
+      local directory = exportPath("mapper_spec_export_dir")
+      local function entries()
+        local found = {}
+        for name in lfs.dir(directory) do
+          if name ~= "." and name ~= ".." then
+            found[#found + 1] = name
+          end
+        end
+        return found
+      end
+      finally(function()
+        for _, name in ipairs(entries()) do
+          os.remove(directory .. "/" .. name)
+        end
+        lfs.rmdir(directory)
+      end)
+      -- a file left under this name by an aborted run would otherwise fail every run after it
+      os.remove(directory)
+      assert.is_true(lfs.mkdir(directory) or lfs.attributes(directory, "mode") == "directory")
+      for _, call in ipairs({{directory}, {directory .. "/"}, {directory .. "/", true}}) do
+        local ok, err = exportAreaImage(areaAlpha, unpack(call))
+        assert.is_false(ok)
+        assert.is_truthy(err:find("is a directory", 1, true), err)
+      end
+      -- "<directory>/" has no base name, so an export of every z level would write "_level_0.png" there
+      pumpEvents(500)
+      assert.are.same({}, entries())
+    end)
+
+    -- Only the files made from the name are written, so a directory or a
+    -- read-only file under the name itself is no reason to refuse
+    it("exportAreaImage of every z level checks the files it writes, not the name they are made from", function()
+      local area = addAreaName("MapperSpecExportTemplate")
+      local directory = exportPath("mapper_spec_export_template_dir")
+      local file = exportPath("mapper_spec_export_template_file.png")
+      local written, removeAll = expectExports({
+        "mapper_spec_export_template_dir_level_0.png",
+        "mapper_spec_export_template_dir_level_1.png",
+        "mapper_spec_export_template_file_level_0.png",
+        "mapper_spec_export_template_file_level_1.png",
+      })
+      finally(function()
+        removeAll()
+        lfs.rmdir(directory)
+        chmod("0644", file)
+        os.remove(file)
+        deleteArea(area)
+      end)
+      for z = 0, 1 do
+        local id = createRoomID()
+        addRoom(id)
+        setRoomArea(id, area)
+        setRoomCoordinates(id, 0, 0, z)
+      end
+      os.remove(directory)
+      assert.is_true(lfs.mkdir(directory) or lfs.attributes(directory, "mode") == "directory")
+      chmod("0644", file)
+      io.open(file, "w"):close()
+      chmod("0444", file)
+      assert.is_true(exportAreaImage(area, directory, true))
+      assert.is_true(exportAreaImage(area, file, true))
+      assert.is_true(waitUntil(written, 5000))
+    end)
+
+    it("exportAreaImage of every z level writes none of them when one is refused", function()
+      local area = addAreaName("MapperSpecExportRefusedLevel")
+      local base = exportPath("mapper_spec_export_refused")
+      local levelZero, levelOne = base .. "_level_0.png", base .. "_level_1.png"
+      finally(function()
+        chmod("0644", levelOne)
+        os.remove(levelOne)
+        os.remove(levelZero)
+        deleteArea(area)
+      end)
+      if getOS() == "windows" then
+        pending("chmod is not available on Windows")
+        return
+      end
+      for z = 0, 1 do
+        local id = createRoomID()
+        addRoom(id)
+        setRoomArea(id, area)
+        setRoomCoordinates(id, 0, 0, z)
+      end
+      os.remove(levelZero)
+      chmod("0644", levelOne)
+      io.open(levelOne, "w"):close()
+      chmod("0444", levelOne)
+      local probe = io.open(levelOne, "a")
+      if probe then
+        probe:close()
+        pending("this user can write to a read-only file, as root can")
+        return
+      end
+      local ok, err = exportAreaImage(area, base .. ".png", true)
+      assert.is_false(ok)
+      assert.are.equal("Failed to export Z level 1: File " .. levelOne .. " is not writable", err)
+      pumpEvents(500)
+      assert.is_false(io.exists(levelZero))
+    end)
+
+    it("exportAreaImage returns false and a message when the directory is a file", function()
+      local file = exportPath("mapper_spec_export_plain_file")
+      finally(function() os.remove(file) end)
+      os.remove(file)
+      io.open(file, "w"):close()
+      local ok, err = exportAreaImage(areaAlpha, file .. "/unsaved.png")
+      assert.is_false(ok)
+      assert.are.equal(file .. " is not a directory", err)
+    end)
+
+    describe("with a target it may not write", function()
+      -- Windows is left out: there the directory check is skipped, and chmod is not to hand
+      local onWindows = getOS() == "windows"
+      local readOnly = exportPath("mapper_spec_export_read_only")
+      local function skipUnlessEnforced()
+        if onWindows then
+          pending("chmod and the directory check are not available on Windows")
+          return true
+        end
+        local probe = io.open(readOnly .. "/probe", "w")
+        if probe then
+          probe:close()
+          os.remove(readOnly .. "/probe")
+          pending("this user can write to a read-only directory, as root can")
+          return true
+        end
+        return false
+      end
+      before_each(function()
+        if onWindows then
+          return
+        end
+        os.execute("chmod 0755 '" .. readOnly .. "'")
+        -- what a run killed before after_each leaves behind
+        os.execute("chmod 0644 '" .. readOnly .. "/existing.png'")
+        os.remove(readOnly .. "/existing.png")
+        os.remove(readOnly)
+        assert.is_true(lfs.mkdir(readOnly) or lfs.attributes(readOnly, "mode") == "directory")
+        io.open(readOnly .. "/existing.png", "w"):close()
+        os.execute("chmod 0444 '" .. readOnly .. "/existing.png'")
+        os.execute("chmod 0555 '" .. readOnly .. "'")
+      end)
+      after_each(function()
+        if onWindows then
+          return
+        end
+        os.execute("chmod 0755 '" .. readOnly .. "'")
+        os.execute("chmod 0644 '" .. readOnly .. "/existing.png'")
+        os.remove(readOnly .. "/existing.png")
+        os.remove(readOnly .. "/unsaved.png")
+        lfs.rmdir(readOnly)
+      end)
+
+      it("exportAreaImage returns false and a message for a directory it may not write to", function()
+        if skipUnlessEnforced() then
+          return
+        end
+        local ok, err = exportAreaImage(areaAlpha, readOnly .. "/unsaved.png")
+        assert.is_false(ok)
+        assert.are.equal("Directory " .. readOnly .. " is not writable", err)
+        pumpEvents(500)
+        assert.is_false(io.exists(readOnly .. "/unsaved.png"))
+      end)
+
+      it("exportAreaImage returns false and a message for a file it may not overwrite", function()
+        if skipUnlessEnforced() then
+          return
+        end
+        local ok, err = exportAreaImage(areaAlpha, readOnly .. "/existing.png")
+        assert.is_false(ok)
+        assert.are.equal("File " .. readOnly .. "/existing.png is not writable", err)
+      end)
+    end)
+
+    it("exportAreaImage returns false and a message for an image format it cannot write", function()
+      local ok, err = exportAreaImage(areaAlpha, exportPath("mapper_spec_export.notanimageformat"))
+      assert.is_false(ok)
+      assert.is_truthy(err:find("notanimageformat", 1, true), err)
     end)
 
     -- The first two exports are the control: with nothing changed they must match,
@@ -5081,9 +5294,6 @@ describe("Tests saveJsonMap and loadJsonMap", function()
       assert.is_true(roomLocked(roomA))
       assert.are.equal("J", getRoomChar(roomA))
       assert.are.same({11, 22, 33}, {getRoomCharColor(roomA)})
-      -- the alpha is the default 255 because an imported map cannot carry any
-      -- other, so this pins the three channels only:
-      -- https://github.com/Mudlet/Mudlet/issues/10368
       assert.are.same({44, 55, 66, 255}, {getRoomBorderColor(roomA)})
       assert.are.equal(3, getRoomBorderThickness(roomA))
       assert.are.equal(roomA, getRoomIDbyHash("mapperSpecJsonHash"))
@@ -5212,18 +5422,43 @@ describe("Tests saveJsonMap and loadJsonMap", function()
       assert.are.equal(2, doors["wriggle"])
     end)
 
-    it("keeps a stub exit's door where the long and short direction names match", function()
+    -- the eight compass directions are the ones whose long and short names differ
+    it("puts a stub exit's door and lock back in each of the twelve directions", function()
+      local directions = {{"north", "n"}, {"northeast", "ne"}, {"northwest", "nw"}, {"east", "e"},
+                          {"west", "w"}, {"south", "s"}, {"southeast", "se"}, {"southwest", "sw"},
+                          {"up", "up"}, {"down", "down"}, {"in", "in"}, {"out", "out"}}
       deleteMap()
       local area = addAreaName("MapperSpecJsonStubDoorArea")
-      roomA = createRoomID(); addRoom(roomA); setRoomArea(roomA, area)
-      setExitStub(roomA, "up", true)
-      setDoor(roomA, "up", 2)
+      -- each direction has a door in one room and locks in the rooms set by its index's bits,
+      -- so a door or lock that came back under another direction's name shows
+      local rooms, expected, locked = {}, {}, {}
+      for roomIndex = 1, 4 do
+        local room = createRoomID(); addRoom(room); setRoomArea(room, area)
+        rooms[roomIndex] = room
+        expected[room], locked[room] = {}, {}
+        for index, direction in ipairs(directions) do
+          setExitStub(room, direction[1], true)
+          if math.ceil(index / 3) == roomIndex then
+            expected[room][direction[2]] = (index - 1) % 3 + 1
+            assert.is_true(setDoor(room, direction[2], expected[room][direction[2]]), direction[1])
+          end
+          locked[room][direction[1]] = math.floor(index / 2 ^ (roomIndex - 1)) % 2 == 1
+          if locked[room][direction[1]] then
+            lockExit(room, direction[1], true)
+          end
+        end
+      end
+      roomA = rooms[1]
 
       roundTrip()
 
-      -- the eight compass directions lose this:
-      -- https://github.com/Mudlet/Mudlet/issues/10369
-      assert.are.equal(2, getDoors(roomA)["up"])
+      for _, room in ipairs(rooms) do
+        local doors = getDoors(room)
+        for _, direction in ipairs(directions) do
+          assert.are.equal(expected[room][direction[2]], doors[direction[2]], direction[1])
+          assert.are.equal(locked[room][direction[1]], hasExitLock(room, direction[1]), direction[1])
+        end
+      end
     end)
 
     it("puts a custom environment colour back", function()
@@ -5436,6 +5671,10 @@ describe("Tests saveJsonMap and loadJsonMap", function()
       rewriteExport(function(document)
         for _, exportedArea in ipairs(document.areas) do
           if exportedArea.id == area then
+            -- an older export has no outline color field on the label
+            for _, label in ipairs(exportedArea.labels or {}) do
+              label.outlineColor = nil
+            end
             exportedArea.userData = exportedArea.userData or {}
             exportedArea.userData[outlineKey] = "1|2|3|255"
             -- the label's own "font" object says what its font is
@@ -5531,19 +5770,149 @@ describe("Tests saveJsonMap and loadJsonMap", function()
       assert.is_nil(data:find(("255|0|0|255"):gsub(".", "\0%0"), 1, true))
     end)
 
-    -- TMap::readJsonColor returns QColor(red, green, blue) for a colour array of
-    -- either three or four values, so the alpha the exporter wrote as
-    -- "color32RGBA" never reaches the QColor and comes back as 255. Every colour
-    -- read through that function flattens the same way, custom environment
-    -- colours included, so the test above can only use an opaque one.
-    -- https://github.com/Mudlet/Mudlet/issues/10368
-    pending("a translucent room border colour loses its alpha on import")
+    it("puts a translucent room border and environment colour back with their alpha", function()
+      deleteMap()
+      local area = addAreaName("MapperSpecJsonAlphaArea")
+      roomA = createRoomID(); addRoom(roomA); setRoomArea(roomA, area)
+      assert.is_true(setRoomBorderColor(roomA, 44, 55, 66, 128))
+      setRoomEnv(roomA, 502)
+      -- outside 257-272, for the same reason as the opaque one above
+      setCustomEnvColor(502, 11, 22, 33, 44)
 
-    -- TRoom::writeJsonExitStubs looks the stub's door up under the long
-    -- direction name while TRoom::doors is keyed by the short one, so a door on
-    -- a stub survives only for up, down, in and out, whose two spellings match
-    -- https://github.com/Mudlet/Mudlet/issues/10369
-    pending("a stub exit's door is dropped on export in the eight compass directions")
+      roundTrip()
+
+      assert.are.same({44, 55, 66, 128}, {getRoomBorderColor(roomA)})
+      assert.are.same({11, 22, 33, 44}, getCustomEnvColorTable()[502])
+    end)
+
+    local function readExport()
+      assert.is_true(saveJsonMap(jsonPath))
+      local file = assert(io.open(jsonPath, "r"))
+      local document = yajl.to_value(file:read("*a"))
+      file:close()
+      return document
+    end
+
+    local function writeImport(document)
+      local file = assert(io.open(jsonPath, "w"))
+      file:write(yajl.to_string(document))
+      file:close()
+      deleteMap()
+      assert.is_true(loadJsonMap(jsonPath))
+    end
+
+    local function exportedRoom(document, roomId)
+      for _, exportedArea in ipairs(document.areas) do
+        for _, room in ipairs(exportedArea.rooms or {}) do
+          if room.id == roomId then
+            return room
+          end
+        end
+      end
+      error("room " .. tostring(roomId) .. " is not in the exported document")
+    end
+
+    local function importBorder(key, value)
+      deleteMap()
+      local area = addAreaName("MapperSpecJsonBorderValueArea")
+      roomA = createRoomID(); addRoom(roomA); setRoomArea(roomA, area)
+      assert.is_true(setRoomBorderColor(roomA, 44, 55, 66, 128))
+      local document = readExport()
+      exportedRoom(document, roomA).border = {[key] = value}
+      writeImport(document)
+    end
+
+    it("keeps a colour whose alpha in the file is out of range, as opaque", function()
+      -- 1e20 and -1e20 are beyond the range of an int as well as of an alpha
+      for _, outOfRange in ipairs({256, -1, 1e20, -1e20}) do
+        importBorder("color32RGBA", {44, 55, 66, outOfRange})
+
+        assert.are.same({44, 55, 66, 255}, {getRoomBorderColor(roomA)}, "alpha " .. outOfRange)
+      end
+    end)
+
+    it("drops a colour whose red, green or blue in the file is out of range", function()
+      for _, color in ipairs({{300, 55, 66, 128}, {44, -1, 66, 128}, {44, 55, 1e20, 128}}) do
+        importBorder("color32RGBA", color)
+
+        assert.are.same({}, {getRoomBorderColor(roomA)}, table.concat(color, ","))
+      end
+      importBorder("color24RGB", {44, 55, 256})
+      assert.are.same({}, {getRoomBorderColor(roomA)})
+    end)
+
+    it("reads a colour array one value short or long for its key as opaque", function()
+      importBorder("color32RGBA", {10, 20, 30})
+      assert.are.same({10, 20, 30, 255}, {getRoomBorderColor(roomA)})
+
+      importBorder("color24RGB", {10, 20, 30, 128})
+      assert.are.same({10, 20, 30, 255}, {getRoomBorderColor(roomA)})
+    end)
+
+    -- no Lua getter returns the alpha of these, so the second export shows it
+    it("puts the alpha back on a label, room symbol and custom line colour", function()
+      deleteMap()
+      local area = addAreaName("MapperSpecJsonAlphaOtherArea")
+      roomA = createRoomID(); addRoom(roomA); setRoomArea(roomA, area)
+      roomB = createRoomID(); addRoom(roomB); setRoomArea(roomB, area)
+      setExit(roomA, roomB, "east")
+      setRoomChar(roomA, "J")
+      setRoomCharColor(roomA, 11, 22, 33)
+      assert.is_true(addCustomLine(roomA, roomB, "e", "solid line", {1, 2, 3}, false))
+      createMapLabel(area, "MapperSpecJsonAlphaLabel", 1, 1, 0, 200, 100, 50, 5, 6, 7, 30, 10, true, false, "Bitstream Vera Sans Mono", 90, 50)
+      local document = readExport()
+      -- neither setter takes an alpha
+      local room = exportedRoom(document, roomA)
+      room.symbol.color24RGB = nil
+      room.symbol.color32RGBA = {11, 22, 33, 77}
+      for _, exit in ipairs(room.exits) do
+        if exit.customLine then
+          exit.customLine.color24RGB = nil
+          exit.customLine.color32RGBA = {1, 2, 3, 77}
+        end
+      end
+      writeImport(document)
+
+      local reexported = readExport()
+      room = exportedRoom(reexported, roomA)
+      assert.are.same({11, 22, 33, 77}, room.symbol.color32RGBA)
+      local lineColor
+      for _, exit in ipairs(room.exits) do
+        lineColor = lineColor or (exit.customLine and exit.customLine.color32RGBA)
+      end
+      assert.are.same({1, 2, 3, 77}, lineColor)
+      local label
+      for _, exportedArea in ipairs(reexported.areas) do
+        for _, candidate in ipairs(exportedArea.labels or {}) do
+          if candidate.text == "MapperSpecJsonAlphaLabel" then
+            label = candidate
+          end
+        end
+      end
+      assert.is_table(label)
+      assert.are.same({200, 100, 50, 90}, label.colors[1].color32RGBA)
+      assert.are.same({5, 6, 7, 50}, label.colors[2].color32RGBA)
+    end)
+
+    it("puts the alpha back on the player room outer and inner colours", function()
+      deleteMap()
+      local area = addAreaName("MapperSpecJsonAlphaPlayerRoomArea")
+      roomA = createRoomID(); addRoom(roomA); setRoomArea(roomA, area)
+      local document = readExport()
+      -- an import also hands these colours to the profile's preferences
+      local originalColors = document.playerRoomColors
+      finally(function()
+        local restore = readExport()
+        restore.playerRoomColors = originalColors
+        writeImport(restore)
+      end)
+      document.playerRoomColors = {{color32RGBA = {10, 20, 30, 77}}, {color32RGBA = {40, 50, 60, 77}}}
+      writeImport(document)
+
+      local reexported = readExport()
+      assert.are.same({10, 20, 30, 77}, reexported.playerRoomColors[1].color32RGBA)
+      assert.are.same({40, 50, 60, 77}, reexported.playerRoomColors[2].color32RGBA)
+    end)
 
     it("replaces the map user data of the map it replaces", function()
       deleteMap()
@@ -5581,6 +5950,143 @@ describe("Tests saveJsonMap and loadJsonMap", function()
       assert.is_true(loadJsonMap(jsonPath))
 
       assert.are.same({}, getAllMapUserData())
+      end)
+
+    local function exportedLabels(area)
+      assert.is_true(saveJsonMap(jsonPath))
+      local file = assert(io.open(jsonPath, "r"))
+      local document = yajl.to_value(file:read("*a"))
+      file:close()
+      for _, exportedArea in ipairs(document.areas) do
+        if exportedArea.id == area then
+          local labels = {}
+          for _, label in ipairs(exportedArea.labels or {}) do
+            labels[label.id] = label
+          end
+          return labels
+        end
+      end
+      error("area " .. tostring(area) .. " is not in the exported document")
+    end
+
+    -- getMapLabel() reports neither the outline nor the font, so they are
+    -- read from what a second export makes of the imported labels
+    it("puts a map label's outline colour back, and no font on a label that had none", function()
+      deleteMap()
+      local area = addAreaName("MapperSpecJsonLabelOutlineArea")
+      roomA = createRoomID(); addRoom(roomA); setRoomArea(roomA, area)
+      local outlinedId = createMapLabel(area, "Outlined", 0, 0, 0, 255, 255, 255, 0, 0, 0,
+                                        30.0, 12, true, false, "Bitstream Vera Sans", 255, 50, false, 255, 255, 0)
+      local fontlessId = createMapLabel(area, "Fontless", 1, 1, 0, 255, 255, 255, 0, 0, 0,
+                                        30.0, 12, true, false, "", 255, 50, false)
+      local before = exportedLabels(area)
+      assert.is_nil(before[fontlessId].font)
+
+      roundTrip()
+
+      local after = exportedLabels(area)
+      assert.is_table(after[outlinedId].outlineColor)
+      assert.are.same({255, 255, 0}, after[outlinedId].outlineColor.color24RGB)
+      assert.are.equal("Bitstream Vera Sans", after[outlinedId].font.family)
+      assert.is_nil(after[fontlessId].font)
+    end)
+
+    local function rewriteExportedArea(area, edit)
+      assert.is_true(saveJsonMap(jsonPath))
+      local file = assert(io.open(jsonPath, "r"))
+      local document = yajl.to_value(file:read("*a"))
+      file:close()
+      for _, exportedArea in ipairs(document.areas) do
+        if exportedArea.id == area then
+          exportedArea.userData = exportedArea.userData or {}
+          edit(exportedArea)
+        end
+      end
+      file = assert(io.open(jsonPath, "w"))
+      file:write(yajl.to_string(document))
+      file:close()
+      deleteMap()
+      assert.is_true(loadJsonMap(jsonPath))
+    end
+
+    it("takes a label's outline colour from the area user data of a file that has it only there", function()
+      deleteMap()
+      local area = addAreaName("MapperSpecJsonLabelFallbackArea")
+      roomA = createRoomID(); addRoom(roomA); setRoomArea(roomA, area)
+      local labelId = createMapLabel(area, "Fallback", 0, 0, 0, 255, 255, 255, 0, 0, 0,
+                                     30.0, 12, true, false, "", 255, 50, false)
+      -- an older Mudlet's export after a binary save: outline colours only in
+      -- the area user data, beside a font key left over from a deleted label
+      rewriteExportedArea(area, function(exportedArea)
+        for _, label in ipairs(exportedArea.labels) do
+          label.outlineColor = nil
+        end
+        exportedArea.userData["system.labelOutlineColor_" .. labelId] = "0|128|255|255"
+        exportedArea.userData["system.labelFont_" .. labelId] = "Bitstream Vera Sans|12|400|0"
+      end)
+
+      local after = exportedLabels(area)
+      assert.are.same({0, 128, 255}, after[labelId].outlineColor.color24RGB)
+      -- every writer leaves "font" out exactly when the label has none, so a
+      -- font key beside such a label belonged to an earlier one with its id
+      assert.is_nil(after[labelId].font)
+      assert.is_nil(getAllAreaUserData(area)["system.labelOutlineColor_" .. labelId])
+      assert.is_nil(getAllAreaUserData(area)["system.labelFont_" .. labelId])
+    end)
+
+    it("takes a label's outline colour from the area user data when the file's own is unreadable", function()
+      deleteMap()
+      local area = addAreaName("MapperSpecJsonLabelBadOutlineArea")
+      roomA = createRoomID(); addRoom(roomA); setRoomArea(roomA, area)
+      local labelId = createMapLabel(area, "Unreadable", 0, 0, 0, 255, 255, 255, 0, 0, 0,
+                                     30.0, 12, true, false, "Bitstream Vera Sans", 255, 50, false, 0, 128, 255)
+      rewriteExportedArea(area, function(exportedArea)
+        for _, label in ipairs(exportedArea.labels) do
+          label.outlineColor = {color24RGB = {255, 255}}
+        end
+        exportedArea.userData["system.labelOutlineColor_" .. labelId] = "255|0|0|255"
+      end)
+
+      assert.are.same({255, 0, 0}, exportedLabels(area)[labelId].outlineColor.color24RGB)
+      assert.is_nil(getAllAreaUserData(area)["system.labelOutlineColor_" .. labelId])
+    end)
+
+    it("keeps a label without a font fontless through a binary save and load", function()
+      local binaryPath = getMudletHomeDir() .. "/mapper_spec_label_fontless.dat"
+      finally(function() os.remove(binaryPath) end)
+      deleteMap()
+      local area = addAreaName("MapperSpecBinaryFontlessLabelArea")
+      roomA = createRoomID(); addRoom(roomA); setRoomArea(roomA, area)
+      local fontedId = createMapLabel(area, "Fonted", 0, 0, 0, 255, 255, 255, 0, 0, 0,
+                                      30.0, 12, true, false, "Bitstream Vera Sans", 255, 50, false)
+      local fontlessId = createMapLabel(area, "Fontless", 1, 1, 0, 255, 255, 255, 0, 0, 0,
+                                        30.0, 12, true, false, "", 255, 50, false)
+      assert.is_true(saveMap(binaryPath))
+      deleteMap()
+      assert.is_true(loadMap(binaryPath))
+
+      local after = exportedLabels(area)
+      assert.are.equal("Bitstream Vera Sans", after[fontedId].font.family)
+      assert.is_nil(after[fontlessId].font)
+    end)
+
+    it("does not give a deleted label's font to a later label given its id", function()
+      local binaryPath = getMudletHomeDir() .. "/mapper_spec_label_reused_id.dat"
+      finally(function() os.remove(binaryPath) end)
+      deleteMap()
+      local area = addAreaName("MapperSpecJsonLabelReusedIdArea")
+      roomA = createRoomID(); addRoom(roomA); setRoomArea(roomA, area)
+      local deletedId = createMapLabel(area, "Deleted", 0, 0, 0, 255, 255, 255, 0, 0, 0,
+                                       30.0, 12, true, false, "Bitstream Vera Sans", 255, 50, false)
+      assert.is_true(saveMap(binaryPath))
+      deleteMapLabel(area, deletedId)
+      local reusedId = createMapLabel(area, "Fontless", 0, 0, 0, 255, 255, 255, 0, 0, 0,
+                                      30.0, 12, true, false, "", 255, 50, false)
+      assert.are.equal(deletedId, reusedId)
+
+      roundTrip()
+
+      assert.is_nil(exportedLabels(area)[reusedId].font)
     end)
 
   end)
@@ -5684,9 +6190,9 @@ describe("Tests saveJsonMap and loadJsonMap", function()
   end)
 
   -- Every import ends in an audit that repairs data no mapper call can produce,
-  -- so these plant the fault into an exported file and read it back in. The last
-  -- one plants valid data rather than a fault, because the export cannot write a
-  -- compass stub's door at all: https://github.com/Mudlet/Mudlet/issues/10369
+  -- so these plant the fault into an exported file and read it back in. The stub
+  -- door and lock test plants valid data rather than a fault, so it pins the
+  -- reader's handling of a stub's door and lock apart from the writer's.
   describe("Tests the audit of an imported JSON map", function()
     local function buildMap()
       deleteMap()
@@ -5779,10 +6285,181 @@ describe("Tests saveJsonMap and loadJsonMap", function()
     end)
 
     it("rebuilds an area whose name is empty in the file around the rooms that claim it", function()
-      -- driving this path leaks the rejected TArea, which turns the leak
-      -- detection half of the Linux CI job red (#10396)
-      pending("importing a blank-named area leaks it")
+      buildMap()
+      local area = getRoomArea(roomA)
+      assert.is_true(setAreaUserData(area, "mapper.spec.kept", "yes"))
+      local labelId = createMapLabel(area, "MapperSpecBlankAreaLabel", 2, -3, 0, 255, 255, 255, 0, 0, 0,
+                                     30.0, 50, true, true, "", 255, 50, false)
+      assert.is_true(labelId >= 0)
+      reimportWith(function(document)
+        for _, exportedArea in ipairs(document.areas) do
+          if exportedArea.id == area then
+            exportedArea.name = ""
+          end
+        end
+      end)
+
+      assert.are.equal(area, getRoomArea(roomA))
+      assert.are.equal(area, getRoomArea(roomB))
+      assert.are.same({["mapper.spec.kept"] = "yes"}, getAllAreaUserData(area))
+      local label = getMapLabel(area, labelId)
+      assert.is_table(label)
+      assert.are.equal("MapperSpecBlankAreaLabel", label.Text)
+      assert.are.same({2, -3, 0}, {label.X, label.Y, label.Z})
+      local name = getAreaTableSwap()[area]
+      assert.is_string(name)
+      assert.are_not.equal("", name)
     end)
+
+    it("names an area whose name is empty even when the file gives no name for unnamed areas", function()
+      buildMap()
+      local area = getRoomArea(roomA)
+      assert.is_true(setAreaUserData(area, "mapper.spec.kept", "yes"))
+      reimportWith(function(document)
+        document.anonymousAreaName = nil
+        for _, exportedArea in ipairs(document.areas) do
+          if exportedArea.id == area then
+            exportedArea.name = ""
+          end
+        end
+      end)
+
+      assert.are.same({["mapper.spec.kept"] = "yes"}, getAllAreaUserData(area))
+      assert.are_not.equal("", getAreaTableSwap()[area] or "")
+    end)
+
+    it("does not give an area whose name is empty the name of a later area in the file", function()
+      deleteMap()
+      local blankArea = addAreaName("MapperSpecJsonBlankFirstArea")
+      local namedArea = addAreaName("MapperSpecJsonNamedLaterArea")
+      roomA = createRoomID(); addRoom(roomA); setRoomArea(roomA, blankArea)
+      roomB = createRoomID(); addRoom(roomB); setRoomArea(roomB, namedArea)
+      assert.is_true(setAreaUserData(blankArea, "mapper.spec.kept", "yes"))
+      local namedAreaName
+      reimportWith(function(document)
+        -- the blank one first, ahead of the area holding the name it would get
+        table.sort(document.areas, function(a, b) return a.id == blankArea and b.id ~= blankArea end)
+        if (document.anonymousAreaName or "") == "" then
+          document.anonymousAreaName = "Unnamed Area"
+        end
+        namedAreaName = document.anonymousAreaName
+        for _, exportedArea in ipairs(document.areas) do
+          if exportedArea.id == blankArea then
+            exportedArea.name = ""
+          elseif exportedArea.id == namedArea then
+            exportedArea.name = document.anonymousAreaName
+          end
+        end
+      end)
+
+      local names = getAreaTableSwap()
+      assert.are.same({["mapper.spec.kept"] = "yes"}, getAllAreaUserData(blankArea))
+      assert.are.equal(namedAreaName, names[namedArea])
+      assert.is_string(names[blankArea])
+      assert.are_not.equal(names[blankArea], names[namedArea])
+    end)
+
+    it("gives each of several areas whose names are empty a name of its own", function()
+      deleteMap()
+      local firstArea = addAreaName("MapperSpecJsonBlankFirst")
+      local secondArea = addAreaName("MapperSpecJsonBlankSecond")
+      roomA = createRoomID(); addRoom(roomA); setRoomArea(roomA, firstArea)
+      roomB = createRoomID(); addRoom(roomB); setRoomArea(roomB, secondArea)
+      assert.is_true(setAreaUserData(firstArea, "mapper.spec.which", "first"))
+      assert.is_true(setAreaUserData(secondArea, "mapper.spec.which", "second"))
+      local unnamedAreaName
+      reimportWith(function(document)
+        unnamedAreaName = document.anonymousAreaName
+        for _, exportedArea in ipairs(document.areas) do
+          if exportedArea.id == firstArea or exportedArea.id == secondArea then
+            exportedArea.name = ""
+          end
+        end
+      end)
+
+      assert.are.same({["mapper.spec.which"] = "first"}, getAllAreaUserData(firstArea))
+      assert.are.same({["mapper.spec.which"] = "second"}, getAllAreaUserData(secondArea))
+      local names = getAreaTableSwap()
+      assert.are_not.equal(names[firstArea], names[secondArea])
+      for _, area in ipairs({firstArea, secondArea}) do
+        assert.are.equal(unnamedAreaName, names[area]:sub(1, #unnamedAreaName))
+      end
+    end)
+
+    it("keeps the default area's own name when its name is empty in the file", function()
+      buildMap()
+      local defaultAreaName = getAreaTableSwap()[-1]
+      reimportWith(function(document)
+        local found = false
+        for _, exportedArea in ipairs(document.areas) do
+          if exportedArea.id == -1 then
+            exportedArea.name = ""
+            found = true
+          end
+        end
+        assert.is_true(found, "the export has no default area to blank")
+      end)
+
+      assert.are.equal(defaultAreaName, getAreaTableSwap()[-1])
+      assert.are.equal(-1, getAreaTable()[defaultAreaName])
+    end)
+
+    it("does not give the default area a name another area in the file has when its own is empty", function()
+      buildMap()
+      local area = getRoomArea(roomA)
+      local defaultAreaName = getAreaTableSwap()[-1]
+      local unnamedAreaName
+      reimportWith(function(document)
+        unnamedAreaName = document.anonymousAreaName
+        local found = false
+        for _, exportedArea in ipairs(document.areas) do
+          if exportedArea.id == -1 then
+            exportedArea.name = ""
+            found = true
+          elseif exportedArea.id == area then
+            exportedArea.name = document.defaultAreaName
+          end
+        end
+        assert.is_true(found, "the export has no default area to blank")
+      end)
+
+      local names = getAreaTableSwap()
+      assert.are.equal(defaultAreaName, names[area])
+      assert.are.equal(unnamedAreaName, names[-1]:sub(1, #unnamedAreaName))
+    end)
+
+    it("keeps the default area's name when the file does not give one", function()
+      buildMap()
+      local defaultAreaName = getAreaTableSwap()[-1]
+      reimportWith(function(document)
+        document.defaultAreaName = nil
+      end)
+
+      -- the area -1 in the file still carries its name, so only a new map shows the one the import settled on
+      deleteMap()
+      assert.are.equal(defaultAreaName, getAreaTableSwap()[-1])
+    end)
+
+    for _, position in ipairs({"after", "before"}) do
+      it("keeps a named area when the file also lists its id with no name " .. position .. " it", function()
+        buildMap()
+        local area = getRoomArea(roomA)
+        assert.is_true(setAreaUserData(area, "mapper.spec.kept", "yes"))
+        reimportWith(function(document)
+          for index, exportedArea in ipairs(document.areas) do
+            if exportedArea.id == area then
+              table.insert(document.areas, position == "after" and #document.areas + 1 or index, {id = area, name = ""})
+              break
+            end
+          end
+        end)
+
+        assert.are.equal("MapperSpecJsonAuditArea", getAreaTableSwap()[area])
+        assert.are.same({["mapper.spec.kept"] = "yes"}, getAllAreaUserData(area))
+        assert.are.equal(area, getRoomArea(roomA))
+        assert.are.equal(area, getRoomArea(roomB))
+      end)
+    end
 
     local function readMapErrorLog()
       local file = io.open(getMudletHomeDir() .. "/log/errors.txt", "r")

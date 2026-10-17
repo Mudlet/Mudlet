@@ -4136,6 +4136,8 @@ void TMainConsole::closeEvent(QCloseEvent* event)
         // A save still running would turn this one away, and it may predate the session's last changes
         mpHost->waitForProfileSave();
         mpHost->saveProfileReportingFailure();
+        // Other profiles can keep Mudlet running long after this one closes
+        mudlet::self()->writeSettings();
 
         if (mpHost->mpMap && mpHost->mpMap->mpRoomDB) {
             // There is a map loaded - but it *could* have no rooms at all!
@@ -4168,6 +4170,7 @@ void TMainConsole::closeEvent(QCloseEvent* event)
                         this, tr("Could not save profile"), tr("Sorry, could not save your profile as \"%1\" - got the following error: \"%2\".").arg(filename, error), QMessageBox::Retry);
                 goto ASK_PROFILE;
             }
+            mudlet::self()->writeSettings();
 
             if (mpHost->mpMap && mpHost->mpMap->mpRoomDB) {
                 // There is a map loaded - but it *could* have no rooms at all!

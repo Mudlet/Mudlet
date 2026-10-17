@@ -720,9 +720,8 @@ private:
     QString mServerWrapPendingSegmentStart;
     // Used to hold the unprocessed bytes that could be left at the end of a
     // packet if we detect that there should be more - will be prepended to the
-    // next chunk of data - PROVIDED it is flagged as coming from the MUD Server
-    // and is not generated locally {because both pass through
-    // translateToPlainText()}:
+    // next chunk of data on the same channel. On the local one that is whatever
+    // local source feeds next (a script, MMCP, MXP), as they all share it:
     std::string mIncompleteSequenceBytes;
     // The lead byte of a double-byte character that the game restyled before
     // sending its trail byte, with the rendition that paints its left half;

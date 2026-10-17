@@ -878,11 +878,7 @@ std::pair<int, QString> TArea::readJsonArea(const QJsonArray& array, const int a
     if (areaObj.contains(QLatin1String("labels")) && areaObj.value(QLatin1String("labels")).isArray()) {
         readJsonLabels(areaObj);
     }
-    // A JSON label has no field for its outline color, so in an older export its
-    // system.labelOutlineColor_<id> key is the only copy of it; its font has its own fields
-    for (auto&& [labelId, label] : mMapLabels.asKeyValueRange()) {
-        restoreLabelOutlineColorFromUserData(label, labelId, mUserData);
-    }
+    // only once the labels have taken the outline colors an older export left here
     dropFileOnlyUserData(mUserData);
     return {id, name};
 }
@@ -925,20 +921,6 @@ void TArea::dropFileOnlyUserData(QMap<QString, QString>& userData)
     userData.removeIf([&labelKey](const QMap<QString, QString>::iterator& it) {
         return it.key() == QLatin1String("system.fallback_map2DZoom") || labelKey(it.key(), QLatin1String("system.labelFont_")) || labelKey(it.key(), QLatin1String("system.labelOutlineColor_"));
     });
-}
-
-// Outline color data is stored as "r|g|b|a" to avoid binary format version changes.
-void TArea::restoreLabelOutlineColorFromUserData(TMapLabel& label, int labelId, QMap<QString, QString>& userData)
-{
-    const QString colorKey = qsl("system.labelOutlineColor_%1").arg(labelId);
-    if (userData.contains(colorKey)) {
-        const QStringList colorParts = userData.take(colorKey).split(QLatin1Char('|'));
-        if (colorParts.size() == 4) {
-            label.outlineColor = QColor(colorParts.at(0).toInt(), colorParts.at(1).toInt(), colorParts.at(2).toInt(), colorParts.at(3).toInt());
-        } else {
-            qWarning("TMap: Failed to parse outline color data for label %d, expected 4 parts but got %lld", labelId, colorParts.size());
-        }
-    }
 }
 
 // Takes a userData object and parses all its elements
@@ -1050,6 +1032,10 @@ void TArea::writeJsonLabel(QJsonArray& array, const int id, const TMapLabel* pLa
     // Invert the logic here as we are saying "scaled" rather than "unscaled":
     labelObj.insert(QLatin1String("scaledels"), !pLabel->noScaling);
 
+    QJsonObject outlineColorObj;
+    TMap::writeJsonColor(outlineColorObj, pLabel->outlineColor);
+    labelObj.insert(QLatin1String("outlineColor"), outlineColorObj);
+
     if (!pLabel->font.family().isEmpty()) {
         QJsonObject fontObj;
         fontObj.insert(QLatin1String("family"), pLabel->font.family());
@@ -1101,12 +1087,26 @@ void TArea::readJsonLabel(const QJsonObject& labelObj)
 
     label.noScaling = !labelObj.value(QLatin1String("scaledels")).toBool(true);
 
+    const QColor outlineColor = TMap::readJsonColor(labelObj.value(QLatin1String("outlineColor")).toObject());
+    if (outlineColor.isValid()) {
+        label.outlineColor = outlineColor;
+    } else {
+        // The field is missing (older Mudlet wrote none) or unreadable: exports
+        // after a binary save carried the binary format's copy in the user data
+        TMap::restoreLabelOutlineColorFromUserData(label, labelId, mUserData);
+    }
+
     if (labelObj.contains(QLatin1String("font"))) {
         const QJsonObject fontObj = labelObj.value(QLatin1String("font")).toObject();
         label.font = QFont(fontObj.value(QLatin1String("family")).toString(),
                            fontObj.value(QLatin1String("pointSize")).toInt(),
                            fontObj.value(QLatin1String("weight")).toInt(),
                            fontObj.value(QLatin1String("italic")).toBool());
+    } else {
+        // A default QFont has the application's family, which would give the
+        // label a font it never had. Every writer emits a font only for a label
+        // with a family, so a font key in the area's user data is an earlier label's.
+        label.font = QFont(QString());
     }
 
     mMapLabels.insert(labelId, label);

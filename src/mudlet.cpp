@@ -30,7 +30,6 @@
 #include "MudletApp.h"
 #include "MudletMedia.h"
 
-#include "AltFocusMenuBarDisable.h"
 #include "CredentialManager.h"
 #include "DarkTheme.h"
 #include "FontManager.h"
@@ -41,6 +40,7 @@
 #include "TDebug.h"
 #include "TDebugFilterBar.h"
 #include "MudletInstanceCoordinator.h"
+#include "MudletProxyStyle.h"
 #include "TDetachedWindow.h"
 #include "TDockWidget.h"
 #include "TEvent.h"
@@ -4718,6 +4718,9 @@ void mudlet::readEarlySettings(const QSettings& settings)
         mAppearance = static_cast<enums::Appearance>(appearance);
     }
 
+    MudletProxyStyle::setAltKeyNavigation(
+            static_cast<enums::MenuBarAltKeyNavigation>(settings.value(qsl("menuBarAltKeyNavigation"), static_cast<int>(enums::MenuBarAltKeyNavigation::WhenScreenReaderRunning)).toInt()));
+
     const QString interfaceLanguage = settings.value("interfaceLanguage", autodetectPreferredLanguage()).toString();
     MudletApp::setInterfaceLanguage(interfaceLanguage);
     mUserLocale = QLocale(interfaceLanguage);
@@ -5144,6 +5147,7 @@ void mudlet::writeSettings()
     // 'darkTheme' value was only used during PTBs, remove it to reduce confusion in the future
     settings.remove("darkTheme");
     settings.setValue("appearance", mAppearance);
+    settings.setValue(qsl("menuBarAltKeyNavigation"), static_cast<int>(MudletProxyStyle::altKeyNavigation()));
 
     settings.setValue("minLengthForSpellCheck", mMinLengthForSpellCheck);
     settings.setValue(qsl("enableMultiViewMode"), mMultiView);
@@ -7856,11 +7860,11 @@ void mudlet::setAppearance(const enums::Appearance state, const bool& loading)
             qApp->setStyle(new DarkTheme);
         } else {
             // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks)
-            qApp->setStyle(new AltFocusMenuBarDisable(mDefaultStyle));
+            qApp->setStyle(new MudletProxyStyle(mDefaultStyle));
         }
     } else {
         // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks)
-        qApp->setStyle(new AltFocusMenuBarDisable(mDefaultStyle));
+        qApp->setStyle(new MudletProxyStyle(mDefaultStyle));
     }
 
     refreshTabBarsAfterStyleChange();
