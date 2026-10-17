@@ -400,6 +400,113 @@ describe("Tests addRoom", function()
 
 end)
 
+describe("Tests room function refusals on a scratch area", function()
+  local areaName = "MapperSpecRoomRefusals"
+  local area
+
+  local function room(x, y, z)
+    local id = createRoomID()
+    addRoom(id)
+    setRoomArea(id, area)
+    setRoomCoordinates(id, x, y, z or 0)
+    return id
+  end
+
+  setup(function()
+    assert.is_true(openMapWidget())
+  end)
+
+  before_each(function()
+    area = addAreaName(areaName)
+  end)
+
+  after_each(function()
+    deleteArea(areaName)
+  end)
+
+  it("room functions return nil and a message for a room that does not exist", function()
+    local missing = 990000101
+    local expected = ("number %d is not a valid roomID"):format(missing)
+    for _, name in ipairs({"getRoomExits", "getRoomEnv", "getRoomWeight", "getRoomHidden", "clearSpecialExits"}) do
+      local result, err = _G[name](missing)
+      assert.is_nil(result, name)
+      assert.are.equal(expected, err, name)
+    end
+    local locked, err = hasExitLock(missing, "north")
+    assert.is_nil(locked)
+    assert.are.equal(expected, err)
+    local done
+    done, err = lockExit(missing, "north", true)
+    assert.is_nil(done)
+    assert.are.equal(expected, err)
+    for _, id in ipairs({missing, 0, -5}) do
+      done, err = deleteRoom(id)
+      assert.is_nil(done, id)
+      assert.are.equal(("number %d is not a valid roomID"):format(id), err, id)
+    end
+  end)
+
+  it("hasExitLock and lockExit return nil and a message for a direction they do not know", function()
+    local id = room(0, 0)
+    for _, name in ipairs({"hasExitLock", "lockExit"}) do
+      local result, err = _G[name](id, "sideways", true)
+      assert.is_nil(result, name)
+      assert.are.equal('"sideways" is not a valid direction', err, name)
+    end
+  end)
+
+  it("lockExit returns true once it has set or cleared an exit lock", function()
+    local id = room(0, 0)
+    setExit(id, room(0, 1), "n")
+    assert.is_true(lockExit(id, "north", true))
+    assert.is_true(hasExitLock(id, "north"))
+    assert.is_true(lockExit(id, "north", false))
+    assert.is_false(hasExitLock(id, "north"))
+  end)
+
+  it("hasExitLock and lockExit take the direction spellings setExit takes", function()
+    local id = room(0, 0)
+    setExit(id, room(0, 1), "North")
+    setExit(id, room(1, 0), "in")
+    setExit(id, room(-1, 0), "out")
+    for _, direction in ipairs({"North", "N", "NORTH"}) do
+      assert.is_true(lockExit(id, direction, true), direction)
+      assert.is_true(hasExitLock(id, direction), direction)
+      assert.is_true(lockExit(id, direction, false), direction)
+      assert.is_false(hasExitLock(id, direction), direction)
+    end
+    for _, pair in ipairs({{"i", "in"}, {"O", "out"}}) do
+      assert.is_true(lockExit(id, pair[1], true), pair[1])
+      assert.is_true(hasExitLock(id, pair[2]), pair[1])
+    end
+  end)
+
+  it("getRoomWeight and getRoomHidden with no roomID say the player has no room", function()
+    local playerRoom = getPlayerRoom()
+    finally(function()
+      if playerRoom then
+        centerview(playerRoom)
+      end
+    end)
+    local id = room(0, 0)
+    assert.is_true(centerview(id))
+    assert.is_true(deleteRoom(id))
+    local expected = "no roomID provided and the player does not have a valid roomID set"
+    for _, name in ipairs({"getRoomWeight", "getRoomHidden"}) do
+      local result, err = _G[name]()
+      assert.is_nil(result, name)
+      assert.are.equal(expected, err, name)
+    end
+  end)
+
+  it("clearSpecialExits returns true once it has cleared a room's special exits", function()
+    local from, to = room(0, 0), room(1, 0)
+    assert.is_true(addSpecialExit(from, to, "climb"))
+    assert.is_true(clearSpecialExits(from))
+    assert.is_nil(next(getSpecialExitsSwap(from)))
+  end)
+end)
+
 describe("Tests map info functions", function()
 
   describe("Tests getMapInfo", function()
