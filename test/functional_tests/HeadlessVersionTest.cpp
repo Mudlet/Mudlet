@@ -247,8 +247,7 @@ private slots:
         QTest::newRow("-hp --offline") << QStringList{qsl("-hp"), qsl("--offline")} << bogusPlatformPlugin() << QString() << helpMarker << helpOnly;
         QTest::newRow("-vo -s") << QStringList{qsl("-vo"), qsl("-s")} << bogusPlatformPlugin() << QString() << versionMarker << versionOnly;
         // The other words keep their meaning when a group is split
-        QTest::newRow("--bogus -qv") << QStringList{qsl("--bogus"), qsl("-qv")} << bogusPlatformPlugin() << QString() << QStringList{qsl("GPLv3"), qsl("Warning: Unknown option 'bogus'")}
-                                     << helpMarker;
+        QTest::newRow("--bogus -qv") << QStringList{qsl("--bogus"), qsl("-qv")} << bogusPlatformPlugin() << QString() << versionMarker << helpMarker;
         QTest::newRow("-stylesheet, then -qv") << QStringList{qsl("-stylesheet"), qsl("headless-version-test.qss"), qsl("-qv")} << bogusPlatformPlugin() << QString() << versionMarker << versionOnly;
         QTest::newRow("-reverse -fh") << QStringList{qsl("-reverse"), qsl("-fh")} << bogusPlatformPlugin() << QString() << helpMarker << helpOnly;
 
@@ -321,6 +320,7 @@ private slots:
         const QString helpMarker{qsl("Report bugs to")};
         QTest::newRow("--bogus --version") << QStringList{qsl("--bogus"), qsl("--version")} << versionMarker << helpMarker << QStringList{qsl("Unknown option 'bogus'")} << QStringList();
         QTest::newRow("--bogus --help") << QStringList{qsl("--bogus"), qsl("--help")} << helpMarker << versionMarker << QStringList{qsl("Unknown option 'bogus'")} << QStringList();
+        QTest::newRow("--bogus -qv") << QStringList{qsl("--bogus"), qsl("-qv")} << versionMarker << helpMarker << QStringList{qsl("Unknown option 'bogus'")} << QStringList{qsl("Unknown option 'qv'")};
 
         // Qt's own options that the help text does not document are still
         // Qt's, and not unknown
