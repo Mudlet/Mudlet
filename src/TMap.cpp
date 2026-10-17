@@ -2612,23 +2612,14 @@ int TMap::createMapImageLabel(int area, QString imagePath, float x, float y, flo
 void TMap::deleteMapLabel(int area, int labelId)
 {
     auto pA = mpRoomDB->getArea(area);
-    if (!pA) {
+    if (!pA || !pA->mMapLabels.contains(labelId)) {
         return;
     }
 
-    auto label = pA->mMapLabels.take(labelId);
-    if (!label.pos.isNull() || !label.text.isEmpty() || label.bgColor != QColorConstants::Black || label.fgColor != QColorConstants::Black) {
-        // If any of the above tests are false then we can take it that we do
-        // not have a "default constructed" label - i.e. a real one and not
-        // one that the QMap<T1, T2>::take(const T1&) has created for us in the
-        // absence of an actual TMapLabel.
-        // The TMapLabel default constructor sets the 'temporary' class member
-        // to false so we can safely rely on it being true for a temporary one:
-        if (!label.temporary) {
-            setUnsaved(__func__);
-        }
-        emit signal_mapLabelsChanged();
+    if (!pA->mMapLabels.take(labelId).temporary) {
+        setUnsaved(__func__);
     }
+    emit signal_mapLabelsChanged();
 }
 
 void TMap::postMessage(const QString text)

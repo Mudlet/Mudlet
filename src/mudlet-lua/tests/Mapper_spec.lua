@@ -191,6 +191,72 @@ describe("Tests custom map event and menu functions", function()
 
 end)
 
+-- map menus and events belong to no area, so deleteArea() leaves them behind
+describe("Tests map label and map menu refusals on a scratch area", function()
+  local areaName = "MapperSpecLabelsAndMenus"
+  local area
+
+  setup(function()
+    assert.is_true(openMapWidget())
+  end)
+
+  before_each(function()
+    area = assert(addAreaName(areaName))
+  end)
+
+  after_each(function()
+    deleteArea(areaName)
+    removeMapEvent("MapperSpecOrphanEvent")
+    removeMapEvent("MapperSpecOnlyOrphanEvent")
+    removeMapMenu("MapperSpecOrphanMenu")
+    removeMapMenu("MapperSpecNeverAdded")
+  end)
+
+  it("deleteMapLabel returns true, or nil and a message for an area or label it cannot find", function()
+    local labelId = createMapLabel(area, "MapperSpecScratchLabel", 0, 0, 0, 255, 255, 255, 0, 0, 0)
+    assert.is_true(labelId >= 0, "createMapLabel could not make the label these checks delete")
+    local ok, err = deleteMapLabel(990000102, labelId)
+    assert.is_nil(ok)
+    assert.are.equal("areaID 990000102 does not exist", err)
+    ok, err = deleteMapLabel(area, labelId + 1)
+    assert.is_nil(ok)
+    assert.are.equal(("labelID %d does not exist in area with areaID %d"):format(labelId + 1, area), err)
+    assert.is_true(deleteMapLabel(area, labelId))
+    ok, err = deleteMapLabel(area, labelId)
+    assert.is_nil(ok)
+    assert.are.equal(("labelID %d does not exist in area with areaID %d"):format(labelId, area), err)
+  end)
+
+  it("deleteMapLabel refuses a negative labelID as getMapLabel does", function()
+    local ok, err = deleteMapLabel(area, -1)
+    assert.is_nil(ok)
+    assert.are.equal("labelID -1 is invalid, it must be zero or greater", err)
+  end)
+
+  it("removeMapEvent and removeMapMenu return nil and a message for a name never added", function()
+    local ok, err = removeMapEvent("MapperSpecNoSuchEvent")
+    assert.is_nil(ok)
+    assert.are.equal("map event 'MapperSpecNoSuchEvent' does not exist", err)
+    ok, err = removeMapMenu("MapperSpecNoSuchMenu")
+    assert.is_nil(ok)
+    assert.are.equal("map menu 'MapperSpecNoSuchMenu' does not exist", err)
+  end)
+
+  it("removeMapMenu removes what was filed under a parent that was never added", function()
+    assert.is_true(addMapMenu("MapperSpecOrphanMenu", "MapperSpecNeverAdded"))
+    assert.is_true(addMapEvent("MapperSpecOrphanEvent", "mapperSpecOrphanEvent", "MapperSpecNeverAdded"))
+    assert.is_true(removeMapMenu("MapperSpecNeverAdded"))
+    assert.is_nil(getMapMenus()["MapperSpecOrphanMenu"])
+    assert.is_nil(getMapEvents()["MapperSpecOrphanEvent"])
+  end)
+
+  it("removeMapMenu removes an event filed under a parent that was never added, with no menu beside it", function()
+    assert.is_true(addMapEvent("MapperSpecOnlyOrphanEvent", "mapperSpecOnlyOrphanEvent", "MapperSpecNeverAdded"))
+    assert.is_true(removeMapMenu("MapperSpecNeverAdded"))
+    assert.is_nil(getMapEvents()["MapperSpecOnlyOrphanEvent"])
+  end)
+end)
+
 describe("Tests per-room border functions", function()
 
   local testRoomId
