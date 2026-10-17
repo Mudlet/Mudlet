@@ -170,6 +170,14 @@ void TLabel::mouseReleaseEvent(QMouseEvent* event)
 
 void TLabel::mouseMoveEvent(QMouseEvent* event)
 {
+    // QLabel is what switches to the pointing hand over a link. The flag answers what carriesLink() does
+    // without scanning the whole text on every move. With no move callback the move is ignored below, so
+    // one with a button held (or any, if the parent tracks the mouse) goes on to the label's parent - not
+    // to a sibling such as an embedded map.
+    if (textInteractionFlags() & Qt::LinksAccessibleByMouse) {
+        QLabel::mouseMoveEvent(event);
+    }
+
     if (mpHost && mMoveFunction) {
         mpHost->getLuaInterpreter()->callLabelCallbackEvent(mMoveFunction, event);
         event->accept();
@@ -188,8 +196,21 @@ void TLabel::wheelEvent(QWheelEvent* event)
     }
 }
 
+// QLabel only notices the pointer leaving a link from a move, and then restores the cursor it saved when
+// the hover began. A made-up move where no link can be ends the hover once the pointer has left the label,
+// or before a script sets a cursor that the saved copy would later overwrite.
+void TLabel::endLinkHover()
+{
+    if (textInteractionFlags() & Qt::LinksAccessibleByMouse) {
+        const QPointF nowhere(-1, -1);
+        QMouseEvent away(QEvent::MouseMove, nowhere, mapToGlobal(nowhere), Qt::NoButton, Qt::NoButton, Qt::NoModifier);
+        QLabel::mouseMoveEvent(&away);
+    }
+}
+
 void TLabel::leaveEvent(QEvent* event)
 {
+    endLinkHover();
     if (mpHost && mLeaveFunction) {
         mpHost->getLuaInterpreter()->callLabelCallbackEvent(mLeaveFunction, event);
         event->accept();
