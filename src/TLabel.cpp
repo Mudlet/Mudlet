@@ -122,10 +122,14 @@ void TLabel::showLinkStyledText(const QString& text)
     updateKeyboardAccess();
 
     stopMovie();
-    const QString spokenBefore = mpModel->spokenText();
+    // Rendering the text to plain is not free, and a gauge is redrawn on every prompt
+    const bool announcing = announcesTextChanges();
+    const QString spokenBefore = announcing ? mpModel->spokenText() : QString();
     QLabel::setText(text);
     mpModel->mText = QLabel::text();
-    announceTextChange(spokenBefore);
+    if (announcing) {
+        announceTextChange(spokenBefore);
+    }
     derivedNameMayHaveChanged();
 }
 
@@ -161,11 +165,13 @@ void TLabel::updateKeyboardAccess()
     update();
 }
 
+bool TLabel::announcesTextChanges() const
+{
+    return mpHost && mpHost->mAccessibleLabels && mpModel->mLiveRegion != TLabelLiveRegion::Off;
+}
+
 void TLabel::announceTextChange(const QString& spokenBefore)
 {
-    if (!mpHost || !mpHost->mAccessibleLabels || mpModel->mLiveRegion == TLabelLiveRegion::Off) {
-        return;
-    }
     // A label redrawn with what it already said, as a gauge is on every prompt, would otherwise chatter
     const QString spoken = mpModel->spokenText();
     if (spoken.isEmpty() || spoken == spokenBefore) {

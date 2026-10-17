@@ -1399,8 +1399,8 @@ function Geyser.Label:new (cons, container)
 
   -- The constraints were copied onto the label already, so each is cleared before its setter
   -- applies it, or a value the label refused would stay on the object
-  local accessibleName, accessibleRole = me.accessibleName, me.accessibleRole
-  me.accessibleName, me.accessibleRole = nil, nil
+  local accessibleName, accessibleRole, liveRegion = me.accessibleName, me.accessibleRole, me.liveRegion
+  me.accessibleName, me.accessibleRole, me.liveRegion = nil, nil, nil
   if accessibleName then
     me:setAccessibleName(accessibleName)
   end
@@ -1409,8 +1409,8 @@ function Geyser.Label:new (cons, container)
     me:setAccessibleRole(accessibleRole)
   end
 
-  if me.liveRegion then
-    me:setLiveRegion(me.liveRegion)
+  if liveRegion then
+    me:setLiveRegion(liveRegion)
   end
 
   -- Set clickthrough if included in constructor

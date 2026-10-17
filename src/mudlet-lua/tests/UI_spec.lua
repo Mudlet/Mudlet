@@ -6170,6 +6170,12 @@ describe("Widget state getters", function()
       assert.are.equal("off", getLabelLiveRegion(label))
     end)
 
+    it("returns nil and a message for an empty label name", function()
+      local ok, err = setLabelLiveRegion("", "polite")
+      assert.is_nil(ok)
+      assert.are.equal("a label cannot have an empty string as its name", err)
+    end)
+
     it("returns nil and a message for a mode it does not know", function()
       local ok, err = setLabelLiveRegion(label, "loud")
       assert.is_nil(ok)

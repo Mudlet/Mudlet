@@ -2318,6 +2318,12 @@ describe("Tests Geyser.Label font, link style and tooltip", function()
       assert.are.equal("assertive", label.liveRegion)
     end)
 
+    it("does not keep a live region the constructor was given and the label refused", function()
+      local label = track(Geyser.Label:new({name = "glfLiveRegionRefused", x = 0, y = 0, width = 200, height = 50, liveRegion = "loud"}))
+      assert.is_nil(label.liveRegion)
+      assert.are.equal("off", getLabelLiveRegion("glfLiveRegionRefused"))
+    end)
+
     it("is given the live region when created with one", function()
       track(Geyser.Label:new({name = "glfLiveRegionAtStart", x = 0, y = 0, width = 200, height = 50, liveRegion = "polite"}))
       assert.are.equal("polite", getLabelLiveRegion("glfLiveRegionAtStart"))

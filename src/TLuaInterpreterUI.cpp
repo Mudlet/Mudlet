@@ -3667,6 +3667,9 @@ int TLuaInterpreter::setLabelLiveRegion(lua_State* L)
     }
     const QString labelName{lua_tostring(L, 1)};
     const QString mode{lua_tostring(L, 2)};
+    if (labelName.isEmpty()) {
+        return warnArgumentValue(L, __func__, "a label cannot have an empty string as its name");
+    }
 
     TLabelLiveRegion liveRegion;
     if (mode == qsl("polite")) {
@@ -3700,6 +3703,9 @@ int TLuaInterpreter::getLabelLiveRegion(lua_State* L)
     }
 
     const Host& host = getHostFromLua(L);
+    if (!host.hasConsoleView()) {
+        return warnArgumentValue(L, __func__, no_main_window_value);
+    }
     if (auto liveRegion = host.labelLiveRegion(labelName)) {
         switch (*liveRegion) {
         case TLabelLiveRegion::Polite:
