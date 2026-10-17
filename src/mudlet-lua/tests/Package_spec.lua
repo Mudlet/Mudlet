@@ -3181,6 +3181,42 @@ describe("Tests installing a package XML whose profile settings list an incomple
   end)
 end)
 
+-- A profile or package saved by an older build can hold a border no setter
+-- accepts any more, and the console takes opposite borders off its own size
+describe("Tests installing a package XML whose profile settings carry an overflowing border", function()
+  local name = "mudlet-spec-overflowing-border"
+  local xml = getMudletHomeDir() .. "/" .. name .. ".xml"
+
+  it("bounds each border to the range the setters accept", function()
+    local bordersBefore = getBorderSizes()
+    defer(function()
+      setBorderSizes(bordersBefore.top, bordersBefore.right, bordersBefore.bottom, bordersBefore.left)
+      removeFixturePackage(name)
+      os.remove(xml)
+    end)
+    -- see the incomplete module spec above for why the Host element is copied
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+    local saved, savedTo = saveProfile()
+    assert.is_true(saved, tostring(savedTo))
+    assert.is_true(waitForProfileSaveToPass(), "the profile save was still running")
+    local hostElement = readFile(savedTo):match("<Host%s[^>]*>")
+    assert.is_string(hostElement, "the profile's save has no Host element to copy the settings of")
+
+    writePackageXml(xml, table.concat({
+      '<HostPackage>',
+      hostElement,
+      '<borderTopHeight>2147483640</borderTopHeight><borderBottomHeight>7</borderBottomHeight>',
+      '<borderLeftWidth>-2147483640</borderLeftWidth><borderRightWidth>-1000000</borderRightWidth>',
+      '</Host>',
+      '</HostPackage>',
+    }, "\n"))
+
+    installUntilConfirmed(installPackage, xml, function() return packageInstalled(name) end, "the package " .. name)
+
+    assert.are.same({top = 1000000, right = -1000000, bottom = 7, left = -1000000}, getBorderSizes())
+  end)
+end)
+
 -- A package's Lua is compiled as the package is read in, and a script's body is
 -- run there and then. Whatever does not get through that is kept all the same,
 -- so that it can be opened in the editor and fixed - the rest of the package
