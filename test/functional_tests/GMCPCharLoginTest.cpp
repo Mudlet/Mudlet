@@ -876,10 +876,20 @@ private slots:
         if (!earlierToken.isEmpty()) {
             QVERIFY(seedSplitSignIn(host->getName(), qsl("{\"account\": \"acct:char\", \"secure_only\": false}"), earlierToken));
         }
+        mpServer->clearReceived();
         mpServer->sendGmcp(qsl("Char.Login.Default {\"version\": 2, \"type\": [\"password-credentials\"]}"));
-        QVERIFY2(waitForGmcpProcessed(host), "the offer never reached the client");
-        mpServer->sendGmcp(laterDefault);
-        QVERIFY2(waitForGmcpProcessed(host), "the later Default never reached the client");
+        if (earlierToken.isEmpty()) {
+            QVERIFY2(waitForGmcpProcessed(host), "the offer never reached the client");
+            mpServer->sendGmcp(laterDefault);
+            QVERIFY2(waitForGmcpProcessed(host), "the later Default never reached the client");
+        } else {
+            // A rotation arrives while the replay is under way, which the marker waitForGmcpProcessed() sends
+            // would end, so the game's messages follow the replay with nothing between them
+            QJsonObject replayed;
+            QVERIFY2(waitForClientGmcp(qsl("Char.Login.Reconnect"), replayed), "the earlier token was not replayed");
+            QCOMPARE(replayed.value(qsl("token")).toString(), earlierToken);
+            mpServer->sendGmcp(laterDefault);
+        }
 
         mpServer->sendGmcp(qsl("Char.Login.Token {\"account\": \"acct:char\", \"token\": \"token-B\", \"secure_only\": false}"));
         QVERIFY2(waitForStoredToken(host, qsl("token-B")), "the token sent after token_storage was promised was dropped");
