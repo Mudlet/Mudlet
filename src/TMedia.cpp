@@ -1647,7 +1647,8 @@ std::shared_ptr<TMediaPlayer> TMedia::getMediaPlayer(TMediaData& mediaData)
             continue; // Another play() call is setting this one up
         }
 
-        if (existingPlayer->getPlaybackState() != QMediaPlayer::PlayingState && existingPlayer->mediaPlayer()->mediaStatus() != QMediaPlayer::LoadingMedia) {
+        // Not a paused one either: it still holds a sound waiting to be resumed
+        if (existingPlayer->getPlaybackState() == QMediaPlayer::StoppedState && existingPlayer->mediaPlayer()->mediaStatus() != QMediaPlayer::LoadingMedia) {
             return existingPlayer; // Reuse existing player
         }
     }
