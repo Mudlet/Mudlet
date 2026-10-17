@@ -161,27 +161,6 @@ int64_t physicalMemoryTotal()
 #endif
 }
 
-// QTime::currentTime() consults the timezone database per call (on glibc a stat() of /etc/localtime), so
-// reuse the stamp until the millisecond or the (translatable) format changes.
-QString currentTimeStamp()
-{
-    static qint64 cachedMSecs = 0;
-    static QString cachedFormat;
-    static QString cachedStamp;
-
-    // The cached format is a copy of the static, so until that is reassigned the two share one buffer
-    // and the characters need no comparing:
-    if (QDateTime::currentMSecsSinceEpoch() != cachedMSecs || cachedFormat.constData() != TBuffer::smTimeStampFormat.constData()) {
-        // Filed under the millisecond it was read in, which the clock may have moved past since the check
-        // above; the earlier one would stamp the rest of this millisecond's lines a millisecond early.
-        const QDateTime now = QDateTime::currentDateTime();
-        cachedMSecs = now.toMSecsSinceEpoch();
-        cachedFormat = TBuffer::smTimeStampFormat;
-        cachedStamp = now.time().toString(TBuffer::smTimeStampFormat);
-    }
-    return cachedStamp;
-}
-
 // Writes "rgb(r,g,b)" without the allocations QString::number() and arg() make
 void appendHtmlRgb(QString& s, const QRgb color)
 {
@@ -952,6 +931,25 @@ void TBuffer::setBufferSize(int requestedLinesLimit, int batch)
 
     mBatchDeleteSize = batch;
     mLinesUntilLinkSweep = 0;
+}
+
+/* static */ QString TBuffer::formatTimeStamp(const qint64 msecs)
+{
+    if (msecs == csmNoTimeStamp) {
+        return QString();
+    }
+    if (msecs == csmWrappedLineTimeStamp) {
+        return smBlankTimeStamp;
+    }
+    // The local-time conversion consults the timezone database on every call, so the last answer is kept for
+    // the run of lines a log or a paint reads that arrived within one millisecond
+    static qint64 lastMSecs = csmNoTimeStamp;
+    static QString lastText;
+    if (msecs != lastMSecs) {
+        lastMSecs = msecs;
+        lastText = QDateTime::fromMSecsSinceEpoch(msecs).time().toString(smTimeStampFormat);
+    }
+    return lastText;
 }
 
 // naive calculation to get a reasonable limit for a maximum buffer size
@@ -2279,7 +2277,7 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
             lineBuffer << QString();
         }
         buffer.push_back(std::move(chars));
-        timeBuffer << currentTimeStamp();
+        timeBuffer << QDateTime::currentMSecsSinceEpoch();
         if (ch == '\xff') {
             promptBuffer.append(true);
         } else {
@@ -2300,7 +2298,7 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
         // the one the enclosing pass is still running over:
         materialisePreTriggerPassLine(static_cast<int>(buffer.size()) - 1);
         buffer.back() = std::move(chars);
-        timeBuffer.back() = currentTimeStamp();
+        timeBuffer.back() = QDateTime::currentMSecsSinceEpoch();
         if (ch == '\xff') {
             promptBuffer.back() = true;
         } else {
@@ -2385,8 +2383,8 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
     const int addedLines = wrapLine(wrapStartLine, mWrapAt, mWrapIndent, mWrapHangingIndent);
     // The line feed ended this line, so an empty wrapped line left by the
     // spaces it ended on is where the next line starts, not more of this one
-    if (!lineBuffer.isEmpty() && lineBuffer.back().isEmpty() && timeBuffer.back() == TBuffer::smBlankTimeStamp) {
-        timeBuffer.back() = QString();
+    if (!lineBuffer.isEmpty() && lineBuffer.back().isEmpty() && timeBuffer.back() == csmWrappedLineTimeStamp) {
+        timeBuffer.back() = csmNoTimeStamp;
     }
 
     // Skip logging if a trigger deleted the line that was being committed;
@@ -2400,7 +2398,7 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
     if (addedLines == 0 || !lineBuffer.back().isEmpty()) {
         buffer.emplace_back();
         lineBuffer.push_back(QString());
-        timeBuffer.push_back(QString());
+        timeBuffer.push_back(csmNoTimeStamp);
         promptBuffer << false;
         wrapGapBuffer.append(0);
     }
@@ -5477,8 +5475,8 @@ void TBuffer::appendFormatted(const QString& text, const std::vector<TChar>& for
             chars.resize(first + runLength, defaultChar);
             if (firstChar) {
                 // an empty wrapped line is the rest of the line above it
-                if (timeBuffer.back() != TBuffer::smBlankTimeStamp) {
-                    timeBuffer.back() = currentTimeStamp();
+                if (timeBuffer.back() != TBuffer::csmWrappedLineTimeStamp) {
+                    timeBuffer.back() = QDateTime::currentMSecsSinceEpoch();
                 }
                 firstChar = false;
             }
@@ -5509,7 +5507,7 @@ void TBuffer::appendFormatted(const QString& text, const std::vector<TChar>& for
     }
 }
 
-void TBuffer::append(const QString& text, int sub_start, int sub_end, const QColor& fgColor, const QColor& bgColor, TChar::AttributeFlags flags, int linkID, const QString& timeStampOverride)
+void TBuffer::append(const QString& text, int sub_start, int sub_end, const QColor& fgColor, const QColor& bgColor, TChar::AttributeFlags flags, int linkID, const qint64 timeStampOverride)
 {
     if (buffer.empty()) {
         appendEmptyLine();
@@ -5541,14 +5539,8 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, const QCol
     }
 }
 
-void TBuffer::appendLine(const QString& text,
-                         const int sub_start,
-                         const int sub_end,
-                         const QColor& fgColor,
-                         const QColor& bgColor,
-                         const TChar::AttributeFlags flags,
-                         const int linkID,
-                         const QString& timeStampOverride)
+void TBuffer::appendLine(
+        const QString& text, const int sub_start, const int sub_end, const QColor& fgColor, const QColor& bgColor, const TChar::AttributeFlags flags, const int linkID, const qint64 timeStampOverride)
 {
     if (sub_end < 0) {
         return;
@@ -5622,8 +5614,8 @@ void TBuffer::appendLine(const QString& text,
         if (firstChar) {
             // Replayed held-back content supplies its arrival time, and an
             // empty wrapped line is the rest of the line above it:
-            if (timeBuffer.back() != TBuffer::smBlankTimeStamp) {
-                timeBuffer.back() = timeStampOverride.isEmpty() ? currentTimeStamp() : timeStampOverride;
+            if (timeBuffer.back() != TBuffer::csmWrappedLineTimeStamp) {
+                timeBuffer.back() = timeStampOverride == csmNoTimeStamp ? QDateTime::currentMSecsSinceEpoch() : timeStampOverride;
             }
             firstChar = false;
         }
@@ -5634,7 +5626,7 @@ void TBuffer::appendEmptyLine()
 {
     buffer.emplace_back();
     lineBuffer.push_back(QString());
-    timeBuffer << currentTimeStamp();
+    timeBuffer << QDateTime::currentMSecsSinceEpoch();
     promptBuffer << false;
     wrapGapBuffer.append(0);
 }
@@ -5998,8 +5990,9 @@ QString TBuffer::assembleLog(int fromLine, int toLine)
             text.append(bufferToHtml(timestamps, i));
             continue;
         }
-        if (timestamps && !timeBuffer.at(i).isEmpty()) {
-            text.append(QStringView(timeBuffer.at(i)).left(TBuffer::smTimeStampFormat.length()));
+        if (timestamps) {
+            const QString timeStamp = timeStampText(i);
+            text.append(QStringView(timeStamp).left(TBuffer::smTimeStampFormat.length()));
         }
         text.append(lineBuffer.at(i));
         text.append(QChar::LineFeed);
@@ -6084,8 +6077,7 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
         if (buffer[firstRewrappedLine].empty() || lineBuffer.at(firstRewrappedLine).isEmpty()) {
             break;
         }
-        // a blank timestamp indicates a wrapped line
-        lineBreaks = getWrapInfo(lineBuffer.at(firstRewrappedLine), timeBuffer.at(firstRewrappedLine) != TBuffer::smBlankTimeStamp, maxWidth, indent, hangingIndent);
+        lineBreaks = getWrapInfo(lineBuffer.at(firstRewrappedLine), timeBuffer.at(firstRewrappedLine) != TBuffer::csmWrappedLineTimeStamp, maxWidth, indent, hangingIndent);
         if (!lineBreaks.isEmpty()) {
             break;
         }
@@ -6104,7 +6096,7 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
 
     std::queue<std::vector<TChar>> queue;
     QStringList tempList;
-    QStringList timeList;
+    QList<qint64> timeList;
     QList<bool> promptList;
     QList<quint16> wrapGapList;
     int lineCount = 0;
@@ -6121,7 +6113,7 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
         lineCount++;
         std::vector<TChar> newBufferLine;
         QString newLineText;
-        const QString time = timeBuffer[i];
+        const qint64 time = timeBuffer[i];
         // trivial case
         if (buffer[i].empty()) {
             tempList.append(newLineText);
@@ -6136,8 +6128,7 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
         int newBufferCharPosition = 0;
         const bool isPrompt = promptBuffer[i];
         const QString lineText = lineBuffer[i];
-        // a blank timestamp indicates a wrapped line
-        const bool isNewline = (time != TBuffer::smBlankTimeStamp);
+        const bool isNewline = (time != TBuffer::csmWrappedLineTimeStamp);
         // The scan above computed this for the line it stopped on. It can also
         // stop before computing anything, but only on a line with no TChars
         // (which never reaches here) or with no text, and getWrapInfo() answers
@@ -6196,14 +6187,14 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
             // everything else
             newLineText.append(lineText.mid(w.firstChar, w.lastChar - w.firstChar));
             tempList.append(newLineText);
-            if (w.isNewline && previousSegmentEnd >= 0 && time == TBuffer::smBlankTimeStamp) {
+            if (w.isNewline && previousSegmentEnd >= 0 && time == TBuffer::csmWrappedLineTimeStamp) {
                 // A line feed inserted into a wrapped line starts a line of its
-                // own, which the blank timestamp would join back onto the last
-                timeList.append(currentTimeStamp());
+                // own, which csmWrappedLineTimeStamp would join back onto the last
+                timeList.append(QDateTime::currentMSecsSinceEpoch());
             } else if (w.isNewline) {
                 timeList.append(time);
             } else {
-                timeList.append(TBuffer::smBlankTimeStamp);
+                timeList.append(TBuffer::csmWrappedLineTimeStamp);
             }
             queue.push(std::move(newBufferLine));
             promptList.append(isPrompt);
@@ -6234,8 +6225,8 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
             appendEmptyLine();
             // A break that leaves only dropped spaces for the last line keeps
             // it wrapped, for whatever is echoed next to carry on from them
-            if (timeList[i] == TBuffer::smBlankTimeStamp) {
-                timeBuffer.back() = TBuffer::smBlankTimeStamp;
+            if (timeList[i] == TBuffer::csmWrappedLineTimeStamp) {
+                timeBuffer.back() = TBuffer::csmWrappedLineTimeStamp;
                 wrapGapBuffer.back() = wrapGapList[i];
             }
         } else {
@@ -6281,7 +6272,7 @@ QString badLineError = qsl("ERROR: invalid line number");
 // and counted for a copy to put back
 bool TBuffer::dropSpaceAtWrap(const QChar c)
 {
-    if (c != QChar::Space || !lineBuffer.back().isEmpty() || timeBuffer.back() != TBuffer::smBlankTimeStamp) {
+    if (c != QChar::Space || !lineBuffer.back().isEmpty() || timeBuffer.back() != TBuffer::csmWrappedLineTimeStamp) {
         return false;
     }
     if (wrapGapBuffer.back() < std::numeric_limits<quint16>::max()) {
@@ -6292,8 +6283,7 @@ bool TBuffer::dropSpaceAtWrap(const QChar c)
 
 bool TBuffer::wrapsFromPreviousLine(const int lineNumber) const
 {
-    // a blank timestamp is what marks a line wrapLine() split off another
-    return lineNumber > 0 && lineNumber < timeBuffer.size() && timeBuffer.at(lineNumber) == TBuffer::smBlankTimeStamp;
+    return lineNumber > 0 && lineNumber < timeBuffer.size() && timeBuffer.at(lineNumber) == TBuffer::csmWrappedLineTimeStamp;
 }
 
 // How many spaces word wrapping dropped at the break before this line - only
@@ -6621,7 +6611,7 @@ void TBuffer::clear()
 
     buffer.emplace_back();
     lineBuffer << QString();
-    timeBuffer << QString();
+    timeBuffer << csmNoTimeStamp;
     promptBuffer.push_back(false);
     wrapGapBuffer.append(0);
 }
@@ -6737,8 +6727,8 @@ void TBuffer::clearLastLine()
             lineBuffer.back().clear();
         }
         // what goes in its place starts a line rather than carrying on one
-        if (!timeBuffer.isEmpty() && timeBuffer.back() == TBuffer::smBlankTimeStamp) {
-            timeBuffer.back() = QString();
+        if (!timeBuffer.isEmpty() && timeBuffer.back() == csmWrappedLineTimeStamp) {
+            timeBuffer.back() = csmNoTimeStamp;
         }
     }
 }
@@ -7180,13 +7170,14 @@ QString TBuffer::bufferToHtml(const bool showTimeStamp /*= false*/, const int ro
     // <span timestamp format>Timestamp (13 chars)</span><span default>___padding spaces___</span><span first chunk style>first chunk...
     // we will NOT need a closing "</span>"
     const QColor consoleBgColor{mpModel ? mpModel->mBgColor : QColor(Qt::black)};
-    if (showTimeStamp && !timeBuffer.at(row).isEmpty()) {
+    if (showTimeStamp && timeBuffer.at(row) != csmNoTimeStamp) {
         // Use the console's background so the timestamp blends in with the
         // rest of the text, as done in TTextEdit::layoutLine(...).
         s.append(QLatin1StringView("<span style=\"color: rgb(200,150,0); background: "));
         s.append(consoleBgColor.name());
         s.append(QLatin1StringView("; \">"));
-        s.append(QStringView(timeBuffer.at(row)).left(TBuffer::smTimeStampFormat.length()));
+        const QString timeStamp = timeStampText(row);
+        s.append(QStringView(timeStamp).left(TBuffer::smTimeStampFormat.length()));
         // Set the current idea of what the formatting is so we can spot if it
         // changes:
         currentFgColor = qRgb(200, 150, 0);
