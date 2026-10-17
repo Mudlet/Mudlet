@@ -73,19 +73,35 @@ public:
         int landingLevel = 0;
     };
 
-    // Pixels between neighboring rooms: above the first the rooms show alone, by the second they are footprints
+    // How much of the view's shorter side the area shown spans across its node: below the first its footprint
+    // comes in, by the second its rooms are gone; below the third the world graph comes in, by the fourth it is all there is
+    static constexpr float scmFootprintsFromShare = 0.4f;
+    static constexpr float scmFootprintsOnlyShare = 0.25f;
+    static constexpr float scmWorldFromShare = 0.15f;
+    static constexpr float scmWorldOnlyShare = 0.05f;
+    // However little of the view a small area spans, its rooms show alone while this many pixels apart, as far
+    // out as what is on them is still drawn, and give way by the second
+    static constexpr float scmRoomsReadablePixels = 6.0f;
+    static constexpr float scmRoomsUnreadablePixels = 3.0f;
+    // For an area too big to leave the view, pixels between neighboring rooms: above the first the rooms show alone, by the second they are footprints
     static constexpr float scmRoomsAlonePixels = 2.5f;
     static constexpr float scmFootprintsOnlyPixels = 1.25f;
-    // Camera distances: up to the first the rooms show alone however small, so every view the mapper could
-    // show before it could be pulled back any further looks as it did; by the second they are footprints
+    // Camera distances: up to the first, as far as the zoom slider goes, such an area's rooms show alone however
+    // small; by the second they are footprints
     static constexpr float scmRoomsAloneDistance = 100.0f;
     static constexpr float scmFootprintsOnlyDistance = 200.0f;
     // Pixels across the radius of a typical area: below the first the world graph comes in, by the second it is all there is
     static constexpr float scmWorldFromPixels = 8.0f;
     static constexpr float scmWorldOnlyPixels = 4.0f;
 
-    // roomPixels is how many pixels apart neighboring rooms are; areaPixels how many a typical area's radius spans
-    static Weights weightsFor(float roomPixels, float areaPixels, float distance);
+    // roomPixels is how many pixels apart neighboring rooms are; areaPixels how many a typical area's radius spans;
+    // shownShare how much of the view's shorter side the area shown spans, infinite when there is none
+    static Weights weightsFor(float roomPixels, float areaPixels, float distance, float shownShare);
+    // The footprint weight weightsFor() gives, which needs no typical area
+    static float footprintFor(float roomPixels, float distance, float shownShare);
+    // The most rooms across the view's shorter side, of this many pixels, that still show an area of this radius
+    // with its rooms alone, while no further out than scmRoomsAloneDistance
+    static float roomsAloneAcross(float radius, float shorterSide);
     // The convex hull, counterclockwise, without repeated or collinear points
     static QPolygonF hull(QList<QPointF> points);
 
