@@ -692,13 +692,26 @@ describe("Tests the functionality of installPackage", function()
     local name = "mudlet-installing-spec"
     lfs.mkdir(scratchDirectory)
     local archive = scratchDirectory .. "/" .. name .. ".mpackage"
+    local source = scratchDirectory .. "/" .. name
+    lfs.mkdir(source)
     defer(function()
       os.remove(archive)
+      os.remove(source .. "/" .. name .. ".xml")
+      os.remove(source .. "/.mudlet-unpacking")
+      lfs.rmdir(source)
       lfs.rmdir(scratchDirectory)
     end)
-    -- an empty package XML is still read in, and the marker an install leaves in a folder it is unpacking into
+    -- a package with no items is still read in, and the marker an install leaves in a folder it is unpacking into
     -- comes with the archive
-    writeArchiveOfEmptyFiles(archive, {name .. ".xml", ".mudlet-unpacking"})
+    writePackageXml(source .. "/" .. name .. ".xml", "")
+    local marker = io.open(source .. "/.mudlet-unpacking", "wb")
+    assert.is_not_nil(marker, "could not write the archive's marker")
+    marker:close()
+    local zipped = os.execute("cd '" .. source .. "' && zip -q '" .. archive .. "' " .. name .. ".xml .mudlet-unpacking")
+    if zipped ~= 0 and zipped ~= true then
+      pending("the zip command is not available")
+      return
+    end
     defer(function() removeFixturePackage(name) end)
     installUntilConfirmed(installPackage, archive, function() return packageInstalled(name) end, "a package named like an unpacking folder")
 
@@ -742,7 +755,7 @@ describe("Tests the functionality of installPackage", function()
     assert.is_false(fileExists(mapFolder .. "/mudlet-spec-stray.txt"), "the refused archive left its file in the profile's map folder")
 
     reason = installUntilRefused(installPackage, aPackage)
-    assert.is_true(contains(reason, "keeps its own data"), tostring(reason))
+    assert.is_true(contains(reason, "keeps its own files"), tostring(reason))
     assert.is_false(packageInstalled("map"))
     assert.is_true(fileExists(mapFile), "the refused install took the profile's map")
     assert.is_false(aStagingFolderIsLeft(), "the refused install left the folder it unpacked into")
