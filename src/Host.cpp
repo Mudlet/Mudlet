@@ -1219,8 +1219,20 @@ void Host::updateModuleZip(const ModuleWriteJob& job)
     }
 }
 
-void Host::reloadModule(const QString& syncModuleName, const QString& syncingFromHost)
+std::pair<bool, QString> Host::reloadModule(const QString& syncModuleName, const QString& syncingFromHost)
 {
+    if (!mInstalledModules.contains(syncModuleName)) {
+        return {false, qsl("module doesn't exist")};
+    }
+    const QString moduleLocation = mInstalledModules.value(syncModuleName).value(0);
+    const bool fromTheOtherProfile = !syncingFromHost.isEmpty() && (moduleLocation.endsWith(qsl(".zip"), Qt::CaseInsensitive) || moduleLocation.endsWith(qsl(".mpackage"), Qt::CaseInsensitive));
+    const QString fileName = fromTheOtherProfile ? MudletApp::getMudletPath(enums::profilePackagePathFileName, syncingFromHost, syncModuleName) : moduleLocation;
+    // Before the uninstall below empties the module, and before a reload is put off, so a script is answered now.
+    // Only logged: a sync from another profile would repeat it on every save there.
+    if (const QFileInfo moduleFile(fileName); !moduleFile.isFile() || !moduleFile.isReadable()) {
+        qWarning().noquote().nospace() << "Host::reloadModule() WARNING - not reloading module \"" << syncModuleName << "\" as its file \"" << fileName << "\" cannot be read.";
+        return {false, qsl("module file '%1' cannot be read").arg(fileName)};
+    }
     //Wait till profile is finished saving
     if (syncingFromHost.isEmpty() && currentlySavingProfile()) {
         //create a dummy object to singleshot connect (disconnect/delete after execution)
@@ -1230,31 +1242,47 @@ void Host::reloadModule(const QString& syncModuleName, const QString& syncingFro
                 &Host::profileSaveFinished,
                 obj,
                 [=, this]() {
-                    reloadModule(syncModuleName);
+                    // The script was answered before this ran, so only the console is left to tell
+                    if (auto [reloaded, reason] = reloadModule(syncModuleName); !reloaded) {
+                        //: %1 is the name of the module, %2 is the reason the reload that was waiting for a profile save to finish failed
+                        postMessage(tr("[ WARN ]  - Module \"%1\" could not be reloaded: %2").arg(syncModuleName, reason));
+                    } else if (!reason.isEmpty()) {
+                        //: %1 is the name of the module, %2 is what went wrong in the parts of it that do not work, after a reload that was waiting for a profile save to finish
+                        postMessage(tr("[ WARN ]  - Module \"%1\" was reloaded, but parts of it are not working: %2").arg(syncModuleName, reason));
+                    }
                     obj->deleteLater();
                 },
                 deferredSaveHandlerConnection);
-        return;
+        return {true, QString()};
     }
+    QString failure;
+    QString itemErrors;
+    bool installedUnderAnotherName = false;
     QMap<QString, QStringList> installedModules = mInstalledModules;
     QMapIterator<QString, QStringList> moduleIterator(installedModules);
     while (moduleIterator.hasNext()) {
         moduleIterator.next();
         const auto& moduleName = moduleIterator.key();
-        const auto& moduleLocation = moduleIterator.value()[0];
-        QString fileName = moduleLocation;
         if (moduleName == syncModuleName) {
-            if (!syncingFromHost.isEmpty() && (fileName.endsWith(qsl(".zip"), Qt::CaseInsensitive) || fileName.endsWith(qsl(".mpackage"), Qt::CaseInsensitive))) {
-                uninstallPackage(moduleName, enums::PackageModuleType::ModuleSync);
-                fileName = MudletApp::getMudletPath(enums::profilePackagePathFileName, syncingFromHost, moduleName);
-                installPackage(fileName, enums::PackageModuleType::ModuleSync);
-                QStringList moduleEntry;
-                moduleEntry << moduleLocation;
-                moduleEntry << qsl("0");
-                mInstalledModules[moduleName] = moduleEntry;
+            const bool loadedBefore = mModulesLoadedOk.contains(moduleName);
+            const bool uninstalled = uninstallPackage(moduleName, enums::PackageModuleType::ModuleSync);
+            // A config.lua can rename the module, so whether anything loaded is told by this set, not the name
+            const QSet<QString> loadedAfterUninstall = mModulesLoadedOk;
+            if (auto [installed, reason] = installPackage(fileName, enums::PackageModuleType::ModuleSync); !installed) {
+                // A refused uninstall left the module's items in place
+                failure = uninstalled ? qsl("%1, so the module is now empty").arg(reason) : reason;
+                // installPackage() is silent for a module sync, and a sync from another profile has no script to
+                // answer. Only when this one emptied a loaded module: that sync repeats on every save there.
+                if (!syncingFromHost.isEmpty() && uninstalled && loadedBefore) {
+                    //: %1 is the name of the module, %2 is the reason it could not be installed again
+                    postMessage(tr("[ WARN ]  - Module \"%1\" could not be reloaded and is now empty: %2").arg(moduleName, reason));
+                }
+            } else if (uninstalled && mModulesLoadedOk == loadedAfterUninstall) {
+                // installPackage() has put the XML error on the console
+                failure = qsl("module '%1' could not be loaded from '%2'").arg(moduleName, fileName);
             } else {
-                uninstallPackage(moduleName, enums::PackageModuleType::ModuleSync);
-                installPackage(fileName, enums::PackageModuleType::ModuleSync);
+                itemErrors = reason;
+                installedUnderAnotherName = uninstalled && !mInstalledModules.contains(moduleName);
             }
         }
     }
@@ -1263,9 +1291,18 @@ void Host::reloadModule(const QString& syncModuleName, const QString& syncingFro
     moduleIterator.toFront();
     while (moduleIterator.hasNext()) {
         moduleIterator.next();
+        // Putting the old name back would list a module with nothing in it beside the one now holding its archive
+        if (installedUnderAnotherName && moduleIterator.key() == syncModuleName) {
+            removePackageInfo(syncModuleName, true);
+            continue;
+        }
         const QStringList entry = installedModules[moduleIterator.key()];
         mInstalledModules[moduleIterator.key()] = entry;
     }
+    if (!failure.isEmpty()) {
+        return {false, failure};
+    }
+    return {true, itemErrors};
 }
 
 std::pair<bool, QString> Host::changeModuleSync(const QString& moduleName, const QLatin1String& value)
