@@ -934,18 +934,22 @@ void dlgRoomExits::save()
         pR->customLines.remove(exitKey);
     }
 
-    pR->setExitLock(DIR_NORTHWEST, noroute_nw->isChecked());
-    pR->setExitLock(DIR_NORTH, noroute_n->isChecked());
-    pR->setExitLock(DIR_NORTHEAST, noroute_ne->isChecked());
-    pR->setExitLock(DIR_UP, noroute_up->isChecked());
-    pR->setExitLock(DIR_WEST, noroute_w->isChecked());
-    pR->setExitLock(DIR_EAST, noroute_e->isChecked());
-    pR->setExitLock(DIR_DOWN, noroute_down->isChecked());
-    pR->setExitLock(DIR_SOUTHWEST, noroute_sw->isChecked());
-    pR->setExitLock(DIR_SOUTH, noroute_s->isChecked());
-    pR->setExitLock(DIR_SOUTHEAST, noroute_se->isChecked());
-    pR->setExitLock(DIR_IN, noroute_in->isChecked());
-    pR->setExitLock(DIR_OUT, noroute_out->isChecked());
+    // A box greys out, still ticked, while its roomID is retyped, so it only counts where an exit or stub was saved
+    const auto saveExitLock = [this](const int dirCode, const QCheckBox* pNoRoute) {
+        pR->setExitLock(dirCode, pNoRoute->isChecked() && (pR->getExit(dirCode) > 0 || pR->hasExitStub(dirCode)));
+    };
+    saveExitLock(DIR_NORTHWEST, noroute_nw);
+    saveExitLock(DIR_NORTH, noroute_n);
+    saveExitLock(DIR_NORTHEAST, noroute_ne);
+    saveExitLock(DIR_UP, noroute_up);
+    saveExitLock(DIR_WEST, noroute_w);
+    saveExitLock(DIR_EAST, noroute_e);
+    saveExitLock(DIR_DOWN, noroute_down);
+    saveExitLock(DIR_SOUTHWEST, noroute_sw);
+    saveExitLock(DIR_SOUTH, noroute_s);
+    saveExitLock(DIR_SOUTHEAST, noroute_se);
+    saveExitLock(DIR_IN, noroute_in);
+    saveExitLock(DIR_OUT, noroute_out);
 
     // return value from checkedId() is -1 for no radio button in group checked,
     //   and then more negative values starting from -2 for each button that was
@@ -2027,7 +2031,6 @@ void dlgRoomExits::init()
     connect(doortype_s,            &QButtonGroup::idClicked,                       this, &dlgRoomExits::slot_checkModified);
     connect(doortype_se,           &QButtonGroup::idClicked,                       this, &dlgRoomExits::slot_checkModified);
     connect(doortype_in,           &QButtonGroup::idClicked,                       this, &dlgRoomExits::slot_checkModified);
-    connect(doortype_down,         &QButtonGroup::idClicked,                       this, &dlgRoomExits::slot_checkModified);
     connect(doortype_out,          &QButtonGroup::idClicked,                       this, &dlgRoomExits::slot_checkModified);
     // clang-format on
 }

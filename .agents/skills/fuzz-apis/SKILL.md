@@ -99,8 +99,8 @@ across 6 seeds clean under ASan - that surface is well explored at default setti
 
 - PRNG: Lua 5.1 has no integer or bit operations; MINSTD (`s = (16807 * s) % 2147483647`)
   stays exact in a double. Take the seed from an environment variable and print it.
-- `feedTelnet()` C-string-truncates on a raw NUL and decodes `<...>` escapes: build input
-  with `string.char`, escaping only NUL as `<00>`, `<` as `<<` and `>` as `>>`.
+- `feedTelnet()` decodes `<...>` escapes: build input with `string.char`, escaping `<` as
+  `<<` and `>` as `>>`. A raw NUL arrives as is, the same as the `<00>` escape.
 - Gate the spec behind `MUDLET_FUZZ` like the existing ones. Fuzz specs mutate persistent
   state (telnet negotiation, encodings), so they must not join the always-on suite.
 - Aim at state, not just parsing. The telnet byte parser itself came back clean; the real

@@ -28,8 +28,10 @@
  * Run with: ctest -R ProfileDeletionSafetyTest -V
  */
 
+#include <QScopeGuard>
 #include <QtTest/QtTest>
 
+#include "CredentialManager.h"
 #include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "MudletInstanceCoordinator.h"
@@ -119,6 +121,33 @@ private:
     {
         dlg->deleteLater();
         QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+    }
+
+    // A new profile, named as a player would type it
+    void nameNewProfile(dlgConnectionProfiles* dlg, const QString& name) const
+    {
+        addListEntry(dlg, name);
+        dlg->profile_name_entry->setText(name);
+        dlg->validateProfile();
+    }
+
+    // Each removal of a removed profile's sign-in waits in the list until a case starts it, as one waits
+    // on a slow keychain
+    static std::shared_ptr<QList<std::function<void()>>> holdSignInRemovals()
+    {
+        auto held = std::make_shared<QList<std::function<void()>>>();
+        dlgConnectionProfiles::signInRemovalStarterForTesting() = [held](std::function<void()> startRemoval) {
+            held->append(std::move(startRemoval));
+        };
+        return held;
+    }
+
+    static void releaseSignInRemovals(const std::shared_ptr<QList<std::function<void()>>>& held)
+    {
+        dlgConnectionProfiles::signInRemovalStarterForTesting() = {};
+        while (!held->isEmpty()) {
+            held->takeFirst()();
+        }
     }
 
     // The Connect and Offline buttons are the dialog's only AcceptRole buttons
@@ -387,6 +416,156 @@ private slots:
 
         QVERIFY2(!QDir(profilePath(doomed)).exists(), "the confirmed profile was not removed");
         QVERIFY2(QDir(profilePath(mKeeper)).exists(), "an unrelated profile was removed too");
+        closeDialog(dlg);
+    }
+
+    // The credential store is not inside the profile folder, so removing the
+    // folder alone leaves a sign-in for a new profile of the same name to find
+    void test_aRemovedProfileTakesItsSavedSignInWithIt_data()
+    {
+        QTest::addColumn<bool>("storingSecurely");
+        QTest::newRow("passwords kept in the profile") << false;
+        // the sign-in removal waits behind the password one here
+        QTest::newRow("passwords kept securely") << true;
+    }
+
+    void test_aRemovedProfileTakesItsSavedSignInWithIt()
+    {
+        QFETCH(bool, storingSecurely);
+        mudlet::self()->setStorePasswordsSecurely(storingSecurely);
+        const QString signedIn = qsl("QA Signed In");
+        // On macOS and Windows the store is outside the test's own directory
+        auto forgetBoth = qScopeGuard([this, signedIn] {
+            for (const QString& profile : {signedIn, mKeeper}) {
+                CredentialManager::removeCredential(profile, qsl("reconnect"));
+                CredentialManager::removeCredential(profile, qsl("reconnect-token"));
+            }
+            mudlet::self()->setStorePasswordsSecurely(false);
+        });
+        makeProfileWithSavedGame(signedIn);
+        QVERIFY(CredentialManager::storeCredential(signedIn, qsl("reconnect"), qsl(R"({"account": "acct:char", "provider": "discord", "token": "inline-token"})")));
+        QVERIFY(CredentialManager::storeCredential(signedIn, qsl("reconnect-token"), qsl("left-behind")));
+        QVERIFY(CredentialManager::storeCredential(mKeeper, qsl("reconnect-token"), qsl("keeper-token")));
+
+        auto* dlg = openDialog();
+        selectProfile(dlg, signedIn);
+        removeProfileAndConfirm(dlg, signedIn);
+        QVERIFY2(!QDir(profilePath(signedIn)).exists(), "the confirmed profile was not removed");
+
+        QTRY_VERIFY2(CredentialManager::retrieveCredential(signedIn, qsl("reconnect-token")).isEmpty(), "the removed profile's sign-in token is still stored");
+        QTRY_VERIFY2(CredentialManager::retrieveCredential(signedIn, qsl("reconnect")).isEmpty(), "the removed profile's sign-in record, with its token, is still stored");
+        QCOMPARE(CredentialManager::retrieveCredential(mKeeper, qsl("reconnect-token")), qsl("keeper-token"));
+        QVERIFY2(!dlgConnectionProfiles::namesWithSignInBeingRemoved().contains(dlgConnectionProfiles::removalKey(signedIn)), "the name stayed refused after its sign-in was removed");
+        closeDialog(dlg);
+    }
+
+    // The removal waits on the keychain, and a profile made or connected under the name meanwhile would
+    // read the sign-in it has not reached yet
+    void test_aNameIsRefusedWhileItsSignInIsStillBeingRemoved()
+    {
+        const QString reused = qsl("QA Reused Name");
+        makeProfileWithSavedGame(reused);
+        const auto held = holdSignInRemovals();
+        auto release = qScopeGuard([held] {
+            releaseSignInRemovals(held);
+        });
+
+        auto* remover = openDialog();
+        selectProfile(remover, reused);
+        removeProfileAndConfirm(remover, reused);
+        QVERIFY2(!QDir(profilePath(reused)).exists(), "the confirmed profile was not removed");
+        QCOMPARE(held->size(), 1);
+        closeDialog(remover);
+
+        // Opened while the removal runs, so it is not the dialog that started it
+        auto* dlg = openDialog();
+        nameNewProfile(dlg, reused);
+        QVERIFY2(!dlg->offline_button->isEnabled() && !dlg->connect_button->isEnabled(), "a name whose sign-in is still being removed could be opened");
+
+        held->takeFirst()();
+        QVERIFY2(dlg->offline_button->isEnabled(), "the name stayed refused once its sign-in was gone");
+        closeDialog(dlg);
+    }
+
+    // A telnet:// link can make the profile again while its first removal runs
+    void test_aNameRemovedTwiceIsRefusedUntilBothRemovalsFinish()
+    {
+        const QString twice = qsl("QA Removed Twice");
+        const auto held = holdSignInRemovals();
+        auto release = qScopeGuard([held] {
+            releaseSignInRemovals(held);
+        });
+
+        auto* dlg = openDialog();
+        for (int removal = 0; removal < 2; ++removal) {
+            makeProfileWithSavedGame(twice);
+            dlg->fillout_form();
+            selectProfile(dlg, twice);
+            removeProfileAndConfirm(dlg, twice);
+            QVERIFY2(!QDir(profilePath(twice)).exists(), "the confirmed profile was not removed");
+        }
+        QCOMPARE(held->size(), 2);
+
+        nameNewProfile(dlg, twice);
+        held->takeFirst()();
+        dlg->validateProfile();
+        QVERIFY2(!dlg->offline_button->isEnabled(), "the name was released while its second removal was still running");
+
+        held->takeFirst()();
+        QVERIFY2(dlg->offline_button->isEnabled(), "the name stayed refused once both removals were done");
+        closeDialog(dlg);
+    }
+
+    void test_aCopyIsNotNamedAfterAProfileStillBeingRemoved()
+    {
+        const QString original = qsl("QA Copy");
+        const QString removed = qsl("QA Copy1");
+        const QString nextFree = qsl("QA Copy2");
+        makeProfileWithSavedGame(original);
+        makeProfileWithSavedGame(removed);
+        const auto held = holdSignInRemovals();
+        auto release = qScopeGuard([this, held, original, removed, nextFree] {
+            releaseSignInRemovals(held);
+            for (const QString& profile : {original, removed, nextFree}) {
+                QDir(profilePath(profile)).removeRecursively();
+            }
+        });
+
+        auto* dlg = openDialog();
+        selectProfile(dlg, removed);
+        removeProfileAndConfirm(dlg, removed);
+        QCOMPARE(held->size(), 1);
+
+        selectProfile(dlg, original);
+        dlg->slot_copyProfile();
+        QTRY_VERIFY2(!dlg->mCopyingProfile, "the copy never finished");
+        QVERIFY2(!QDir(profilePath(removed)).exists(), "the copy took a name whose old sign-in was still being deleted");
+        QVERIFY2(QDir(profilePath(nextFree)).exists(), "the copy did not move on to the next free name");
+        closeDialog(dlg);
+    }
+
+    // Where the disk ignores case, a variant of the name is the removed profile's folder and its sign-in;
+    // elsewhere it is another profile, whose sign-in the removal never touches
+    void test_aNameDifferingOnlyInCaseIsRefusedWhereTheDiskIgnoresCase()
+    {
+        const QString removed = qsl("QA Case Name");
+        makeProfileWithSavedGame(removed);
+        const auto held = holdSignInRemovals();
+        auto release = qScopeGuard([held] {
+            releaseSignInRemovals(held);
+        });
+
+        auto* dlg = openDialog();
+        selectProfile(dlg, removed);
+        removeProfileAndConfirm(dlg, removed);
+        QCOMPARE(held->size(), 1);
+
+        nameNewProfile(dlg, qsl(" qa case NAME"));
+#if defined(Q_OS_WINDOWS) || defined(Q_OS_MACOS)
+        QVERIFY2(!dlg->offline_button->isEnabled(), "a name naming the same folder as a profile still being removed could be opened");
+#else
+        QVERIFY2(dlg->offline_button->isEnabled(), "a profile whose name differs only in case, with a sign-in of its own, was refused");
+#endif
         closeDialog(dlg);
     }
 
