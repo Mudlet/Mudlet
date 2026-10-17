@@ -241,8 +241,12 @@ private:
     // Room textures this frame has used so far and the last frame used, which making room for another must keep
     QSet<QString> mRoomTexturesInUse;
     QSet<QString> mRoomTexturesKept;
-    // How many room textures are kept, lowered by tests
-    qsizetype mMaxRoomTextures;
+    // Past this many, room textures neither this frame nor the last used are dropped to make room for another, and
+    // past this frame's own the rest are not drawn. It must hold the names, IDs and symbols a dense area seen from
+    // above shows at once, or a turn of the view would drop textures it asks for again a moment later
+    static constexpr qsizetype scmMaxRoomTextures = 1024;
+    // Lowered by tests
+    qsizetype mMaxRoomTextures = scmMaxRoomTextures;
     // The text in each cell of the terminal style's glyph atlas, in order, and how many of them and in which font
     // its texture was last drawn with
     QStringList mGlyphAtlasCells;

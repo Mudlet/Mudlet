@@ -149,7 +149,10 @@ public:
     void logError(const QString&);
     bool setExit(int from, int to, int dir);
     bool setRoomCoordinates(int id, int x, int y, int z);
+    // After a change to the map: also counts its revision up
     void updateArea(int areaId);
+    // For what only moves the view or the player, which every move of the player asks for
+    void repaintArea(int areaId);
     // For a whole map read in outside TMap, as XMLimport does:
     void announceMapLoaded(bool showPlayerArea);
     void requestMapperShown();

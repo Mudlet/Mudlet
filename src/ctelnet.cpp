@@ -4549,9 +4549,9 @@ void cTelnet::setATCPVariables(const QByteArray& msg)
             const int roomId = arg.toInt();
             mpHost->mpMap->mRoomIdHash[mProfileName] = roomId;
             if (auto* pR = mpHost->mpMap->mpRoomDB->getRoom(roomId)) {
-                mpHost->mpMap->updateArea(pR->getArea());
+                mpHost->mpMap->repaintArea(pR->getArea());
             } else {
-                mpHost->mpMap->updateArea(-1);
+                mpHost->mpMap->repaintArea(-1);
             }
         }
     }

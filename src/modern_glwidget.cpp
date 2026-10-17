@@ -77,17 +77,9 @@
 
 using namespace std::chrono_literals;
 
-namespace {
-// Past this many, room textures neither this frame nor the last has used are dropped to make room; once those two
-// frames have used this many, the rest are not drawn. A dense map seen from above shows hundreds of names at once,
-// and a cap that one frame overran dropped textures the same frame then asked for again, remaking hundreds a frame
-constexpr qsizetype scmMaxRoomTextures = 2048;
-} // namespace
-
 ModernGLWidget::ModernGLWidget(TMap* pMap, Host* pHost, QWidget* parent)
 : QOpenGLWidget(parent)
 , mpMap(pMap)
-, mMaxRoomTextures(scmMaxRoomTextures)
 , mShaderManager(&mResourceManager, this)
 , mVertexBuffer(QOpenGLBuffer::VertexBuffer)
 , mColorBuffer(QOpenGLBuffer::VertexBuffer)
@@ -1066,7 +1058,7 @@ struct FlatLines
     QVector<float> colors;
 };
 
-// Two triangles between four corners, appended in blocks rather than a float at a time
+// Two triangles between four corners
 void appendTwoTriangles(FlatLines& mesh, const std::array<QVector3D, 4>& corners, const QVector4D& color)
 {
     float vertices[18];
@@ -1078,12 +1070,8 @@ void appendTwoTriangles(FlatLines& mesh, const std::array<QVector3D, 4>& corners
     }
     const float colors[24] = {color.x(), color.y(), color.z(), color.w(), color.x(), color.y(), color.z(), color.w(), color.x(), color.y(), color.z(), color.w(),
                               color.x(), color.y(), color.z(), color.w(), color.x(), color.y(), color.z(), color.w(), color.x(), color.y(), color.z(), color.w()};
-    const qsizetype vertexCount = mesh.vertices.size();
-    mesh.vertices.resize(vertexCount + 18);
-    std::copy_n(vertices, 18, mesh.vertices.data() + vertexCount);
-    const qsizetype colorCount = mesh.colors.size();
-    mesh.colors.resize(colorCount + 24);
-    std::copy_n(colors, 24, mesh.colors.data() + colorCount);
+    GeometryManager::appendFloats(mesh.vertices, vertices, 18);
+    GeometryManager::appendFloats(mesh.colors, colors, 24);
 }
 
 void appendBoardQuad(FlatLines& mesh, const std::array<QVector3D, 4>& corners, const QColor& color)
@@ -1226,13 +1214,16 @@ GLuint ModernGLWidget::cachedRoomTexture(const QString& key)
     const GLuint texture = mLabelTextureCache.imageTexture(key);
     if (texture) {
         mRoomTexturesInUse.insert(key);
+        mRoomTexturesKept.insert(key);
     }
     return texture;
 }
 
 bool ModernGLWidget::roomForAnotherTexture(const QString& key)
 {
-    if (mLabelTextureCache.makeRoomForImageTexture(mMaxRoomTextures, mRoomTexturesInUse | mRoomTexturesKept)) {
+    // Those the last frame used are kept too where there is room, so turning the view does not drop and make again
+    // what it shows a moment later; past that, only this frame's
+    if (mLabelTextureCache.makeRoomForImageTexture(mMaxRoomTextures, mRoomTexturesKept) || mLabelTextureCache.makeRoomForImageTexture(mMaxRoomTextures, mRoomTexturesInUse)) {
         return true;
     }
     if (!mRoomTextureLimitWarned) {
@@ -1247,6 +1238,7 @@ GLuint ModernGLWidget::addRoomTexture(const QString& key, const QImage& image)
     const GLuint texture = mLabelTextureCache.addImageTexture(key, image);
     if (texture) {
         mRoomTexturesInUse.insert(key);
+        mRoomTexturesKept.insert(key);
     }
     return texture;
 }
@@ -1369,9 +1361,6 @@ GLuint ModernGLWidget::exitMarkerTexture(const TRoom& room, const QColor& roomCo
         return 0;
     }
     const QString markers = exitMarkerKey(room);
-    if (markers.count(QLatin1Char('0')) == markers.size()) {
-        return 0;
-    }
     const QColor markerColor = ExitAppearance::contrastColor(roomColor);
     const QString key = qsl("markers|%1|%2").arg(markerColor.name(), markers);
     if (const GLuint texture = cachedRoomTexture(key)) {
@@ -1646,7 +1635,7 @@ void ModernGLWidget::renderRooms()
         idTexel = 0.9f * symbolSize / static_cast<float>(qMax(widest, idMetrics->height()));
     }
     // Before any of this frame's textures is asked for, as only those in it and the last frame's are kept from eviction
-    mRoomTexturesKept = std::move(mRoomTexturesInUse);
+    mRoomTexturesKept = mRoomTexturesInUse;
     mRoomTexturesInUse.clear();
     // Before any room's own, so that a view short of room for textures still washes every room
     if (style.washReach > 0.0f) {

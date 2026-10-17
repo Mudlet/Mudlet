@@ -348,14 +348,12 @@ std::pair<QVector3D, QVector3D> GeometryManager::groundAxes(const QVector3D& cam
     return {QVector3D(right.x(), right.y(), 0.0f), QVector3D(-right.y(), right.x(), 0.0f)};
 }
 
-namespace {
-void appendFloats(QVector<float>& to, const float* from, const qsizetype count)
+void GeometryManager::appendFloats(QVector<float>& to, const float* from, const qsizetype count)
 {
     const qsizetype size = to.size();
     to.resize(size + count);
     std::copy_n(from, count, to.data() + size);
 }
-} // namespace
 
 void GeometryManager::appendQuad(GeometryData& batch, const QVector3D& origin, const QVector3D& across, const QVector3D& upward, const QVector4D& color, const QRectF& textureRect)
 {
@@ -364,7 +362,6 @@ void GeometryManager::appendQuad(GeometryData& batch, const QVector3D& origin, c
     const QVector3D topRight = origin + across + upward;
     const QVector3D topLeft = origin + upward;
 
-    // Six corners at a time rather than a float at a time: a frame appends tens of thousands of these
     const float vertices[18] = {bottomLeft.x(),
                                 bottomLeft.y(),
                                 bottomLeft.z(),

@@ -1855,6 +1855,11 @@ bool TMap::listLengthFits(QDataStream& ifs, const qint64 minBytesPerElement)
 bool TMap::restore(QString location)
 {
     const MapOperationScope operationScope(this);
+    // Before, for a view painted while it reads, and after, whichever way it ends
+    ++mRevision;
+    const auto countRevisionOnReturn = qScopeGuard([this] {
+        ++mRevision;
+    });
     qDebug().noquote().nospace() << "TMap::restore(\"" << location << "\") INFO: restoring map of Profile: \"" << mProfileName << "\" URL: " << mpHost->getUrl();
 
     QElapsedTimer _time;
@@ -3840,6 +3845,7 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
 
     // This is it - the point at which the new map gets activated:
     mpRoomDB = std::move(pNewRoomDB);
+    ++mRevision;
     // The routing graph holds pointers to the rooms just destroyed, and the bulk
     // deletion skipped the per-room cleanup that would otherwise have flagged it:
     roomidToIndex.clear();
@@ -4050,7 +4056,7 @@ QString TMap::zoomError(const qreal zoom)
 
 void TMap::requestMapRepaint()
 {
-    // A script's updateMap() may follow changes made without this map noticing
+    // Asked for when a mapper setting changes, which what a view keeps between frames may be made from
     ++mRevision;
     emit signal_mapRepaintRequested();
 }
@@ -4062,8 +4068,12 @@ void TMap::announceMapperSettingChanged(const MapperSetting setting)
 
 void TMap::updateArea(int areaId)
 {
-    // Asked for after changes that do not all mark the map unsaved, such as to the mapper's colors
     ++mRevision;
+    repaintArea(areaId);
+}
+
+void TMap::repaintArea(int areaId)
+{
     static bool debounce;
     if (!debounce) {
         debounce = true;

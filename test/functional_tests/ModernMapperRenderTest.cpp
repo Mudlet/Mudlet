@@ -904,6 +904,13 @@ private slots:
         QVERIFY(pFirst);
         pFirst->mBorderColor = QColor(120, 255, 120);
         QVERIFY2(keptMatchesMade(), "after the first room's border color changed, the outlines differ from a fresh widget's");
+
+        // Each room's outline is found by its room, so rooms coming and going leave the others' in other places
+        constexpr int kWestRoomId = 6;
+        QVERIFY(addRoomAt(kWestRoomId, areaId, -2, 0, 0));
+        QVERIFY2(keptMatchesMade(), "after a room was added, the outlines differ from a fresh widget's");
+        QVERIFY(map()->mpRoomDB->removeRoom(kEastRoomId));
+        QVERIFY2(keptMatchesMade(), "after a room was removed, the outlines differ from a fresh widget's");
     }
 
     // Going to another style and back leaves tiles queueing just what it did before
@@ -1055,9 +1062,44 @@ private slots:
         QVERIFY(widget.mExitSceneCache.scene.segments.size() > 1);
     }
 
-    // Past the cap on room textures, a frame drops only textures that neither it nor the last frame used, so a view
-    // that needs more than fit draws what it can rather than remaking textures every frame
+    // Past the cap on room textures, one the last frame used is kept where there is anything else to drop, so a view
+    // turning back and forth does not make the same textures again and again
     void test_texturesUsedLastFrameAreKeptPastTheCapWithoutGL()
+    {
+        ModernGLWidget widget(map(), mpHost);
+        widget.mLabelTextureCache.useTextureStandIn(
+                [lastTexture = GLuint{0}](const QImage&) mutable {
+                    return ++lastTexture;
+                },
+                [](GLuint) {});
+        widget.mMaxRoomTextures = 12;
+        const auto make = [&widget](const QString& key) {
+            return widget.imageTexture(key, [] {
+                return QImage(4, 4, QImage::Format_ARGB32);
+            });
+        };
+        QStringList lastFrames;
+        for (int i = 0; i < 8; ++i) {
+            lastFrames.append(qsl("last|%1").arg(i));
+            QVERIFY(make(lastFrames.constLast()));
+        }
+        for (int i = 0; i < 4; ++i) {
+            QVERIFY(make(qsl("unused|%1").arg(i)));
+        }
+        // A new frame, after one that used only the first eight
+        widget.mRoomTexturesKept = QSet<QString>(lastFrames.cbegin(), lastFrames.cend());
+        widget.mRoomTexturesInUse.clear();
+        for (int i = 0; i < 4; ++i) {
+            QVERIFY(make(qsl("new|%1").arg(i)));
+        }
+        for (const QString& key : std::as_const(lastFrames)) {
+            QVERIFY2(widget.mLabelTextureCache.imageTexture(key), qPrintable(qsl("%1, which the last frame used, was dropped").arg(key)));
+        }
+    }
+
+    // Where the last frame's and this one's together pass the cap, the last frame's go, so this frame still shows as
+    // many as fit rather than leaving out what it needs
+    void test_aFrameStillFillsTheCapAfterOneThatUsedOthersWithoutGL()
     {
         map()->mapClear();
         const int areaId = map()->mpRoomDB->addArea(qsl("Named Area"));
@@ -1068,18 +1110,18 @@ private slots:
         }
         map()->mRoomIdHash[map()->mProfileName] = 100;
         map()->setRoomNamesShown(true);
+        const auto restore = qScopeGuard([this]() {
+            map()->setRoomNamesShown(false);
+        });
         ModernGLWidget widget(map(), mpHost);
         widget.mMaxRoomTextures = 12;
         queueFrame(widget, areaId);
-        const qint64 firstFrame = widget.mLabelTextureCache.imageTexturesMade();
-        QCOMPARE(firstFrame, 12);
-        // Turned, the names come in another order; nothing used last frame is dropped for them, so none is made again
+        QCOMPARE(widget.mRoomTexturesInUse.size(), widget.mMaxRoomTextures);
+        for (int i = 0; i < 30; ++i) {
+            map()->mpRoomDB->getRoom(100 + i)->name = qsl("Other %1").arg(i);
+        }
         queueTurnedFrame(widget);
-        QCOMPARE(widget.mLabelTextureCache.imageTexturesMade(), firstFrame);
-        // Only a texture the last frame left unused makes room for another, so at most one is made, not a cascade
-        queueTurnedFrame(widget);
-        QVERIFY(widget.mLabelTextureCache.imageTexturesMade() <= firstFrame + 1);
-        map()->setRoomNamesShown(false);
+        QCOMPARE(widget.mRoomTexturesInUse.size(), widget.mMaxRoomTextures);
     }
 
     // The redness of the exit bar between the two rooms of the level below, which fades toward the lower level color
@@ -1158,6 +1200,133 @@ private slots:
         QVERIFY(map()->revision() > restored);
     }
 
+    // The hologram's exits glow, so all of them are drawn with their level's see-through rooms: from what was kept, on
+    // a frame that makes nothing again, as on the one that made it
+    void test_keptExitsAreStillDrawnSeeThroughWithoutGL()
+    {
+        const int areaId = addArea();
+        QVERIFY(areaId > 0);
+        QVERIFY(map()->setExit(kPlayerRoomId, kEastRoomId, DIR_EAST));
+        QVERIFY(map()->setExit(kEastRoomId, kPlayerRoomId, DIR_WEST));
+        const auto restore = qScopeGuard([this]() {
+            mpHost->setMapStyle(qsl("tiles"));
+        });
+        QVERIFY(mpHost->setMapStyle(qsl("hologram")));
+        ModernGLWidget widget(map(), mpHost);
+        queueFrame(widget, areaId);
+        QCOMPARE(widget.mExitGeometryBuilds, 1);
+        QVERIFY(widget.mExitGeometry.bars.isEmpty());
+        QCOMPARE(exitBarMiddles(widget), QList<float>{1.0f});
+        queueTurnedFrame(widget);
+        QCOMPARE(widget.mExitGeometryBuilds, 1);
+        QCOMPARE(exitBarMiddles(widget), QList<float>{1.0f});
+    }
+
+    // Rooms well outside the view are left out of the frame, but a room just past its edge is drawn whole, and the
+    // level's floor plate still reaches under every room
+    void test_roomsWellOutsideTheViewAreLeftOutWithoutGL()
+    {
+        const int areaId = addArea();
+        QVERIFY(areaId > 0);
+        constexpr int farRoomId = 9;
+        QVERIFY(addRoomAt(farRoomId, areaId, 200, 0, 0));
+        ModernGLWidget widget(map(), mpHost);
+        const auto roomQueuedAt = [&widget](const QPointF& place) {
+            for (const auto& command : widget.mRenderCommandQueue.commands()) {
+                if (const auto* cubes = dynamic_cast<const RenderInstancedCubesCommand*>(command.get()); cubes && !roomInstances(*cubes, place).isEmpty()) {
+                    return true;
+                }
+            }
+            return false;
+        };
+        const auto plateReach = [&widget]() {
+            float reach = std::numeric_limits<float>::lowest();
+            for (const auto& command : widget.mRenderCommandQueue.commands()) {
+                if (const auto* triangles = dynamic_cast<const RenderTrianglesCommand*>(command.get()); triangles && triangles->vertices().size() == 18) {
+                    for (qsizetype i = 0; i < 18; i += 3) {
+                        reach = qMax(reach, triangles->vertices().at(i));
+                    }
+                }
+            }
+            return reach;
+        };
+        queueFrame(widget, areaId);
+        QVERIFY(roomQueuedAt(QPointF(2.0, 0.0)));
+        QVERIFY2(!roomQueuedAt(QPointF(200.0, 0.0)), "a room far outside the view was queued");
+        QVERIFY2(plateReach() > 200.0f, qPrintable(qsl("the floor plate reaches only to x %1, short of the room at 200").arg(plateReach())));
+
+        // East along the row, the first place whose middle shows just past the view's right edge
+        int justOutside = 0;
+        for (int x = 4; x < 200 && !justOutside; ++x) {
+            const std::optional<QPointF> pixel = widget.mCameraController.pixelForPoint(QVector3D(static_cast<float>(x), 0.0f, 0.0f));
+            if (pixel && pixel->x() > widget.width() + 10.0) {
+                justOutside = x;
+            }
+        }
+        QVERIFY(justOutside > 0);
+        constexpr int edgeRoomId = 10;
+        QVERIFY(addRoomAt(edgeRoomId, areaId, justOutside, 0, 0));
+        queueFrame(widget, areaId);
+        QVERIFY2(roomQueuedAt(QPointF(justOutside, 0.0)), "a room just past the view's edge was left out");
+    }
+
+    // A diorama's pieces are laid out again for another area, or another level of it
+    void test_dioramaPiecesFollowTheAreaAndLevelShownWithoutGL()
+    {
+        const int areaId = addArea();
+        QVERIFY(areaId > 0);
+        const int otherAreaId = map()->mpRoomDB->addArea(qsl("Other Area"));
+        constexpr int otherRoomId = 11;
+        QVERIFY(addRoomAt(otherRoomId, otherAreaId, 0, 0, 0));
+        const auto restore = qScopeGuard([this]() {
+            mpHost->setMapStyle(qsl("tiles"));
+        });
+        QVERIFY(mpHost->setMapStyle(qsl("diorama")));
+        ModernGLWidget widget(map(), mpHost);
+        queueFrame(widget, areaId);
+        QCOMPARE(widget.mDioramaLayouts, 1);
+        QVERIFY(!widget.mDioramaPiecesCache.pieces.contains(otherRoomId));
+        queueFrame(widget, otherAreaId);
+        QCOMPARE(widget.mDioramaLayouts, 2);
+        QVERIFY(widget.mDioramaPiecesCache.pieces.contains(otherRoomId));
+        queueFrame(widget, areaId, -1);
+        QCOMPARE(widget.mDioramaLayouts, 3);
+        QCOMPARE(widget.mDioramaPiecesCache.centerZ, -1);
+    }
+
+    // Only a change to the map counts its revision up, not the repaint every move of the player asks for, so what the
+    // view keeps is not made again on every move; a map read in, or user data a script clears, does
+    void test_theMapsRevisionCountsChangesNotMovesWithoutGL()
+    {
+        const int areaId = addArea();
+        QVERIFY(areaId > 0);
+        QVERIFY(map()->setExit(kPlayerRoomId, kEastRoomId, DIR_EAST));
+        ModernGLWidget widget(map(), mpHost);
+        queueFrame(widget, areaId);
+        QCOMPARE(widget.mExitSceneBuilds, 1);
+
+        quint64 revision = map()->revision();
+        map()->repaintArea(areaId);
+        QCOMPARE(map()->revision(), revision);
+        QVERIFY(mpHost->mLuaInterpreter.compileAndExecuteScript(qsl("centerview(%1) updateMap()").arg(kEastRoomId)));
+        QCOMPARE(map()->revision(), revision);
+        queueTurnedFrame(widget);
+        QCOMPARE(widget.mExitSceneBuilds, 1);
+
+        map()->mUserData.insert(qsl("perf.test.item"), qsl("1"));
+        revision = map()->revision();
+        QVERIFY(mpHost->mLuaInterpreter.compileAndExecuteScript(qsl("clearMapUserDataItem('perf.test.item')")));
+        QVERIFY2(map()->revision() > revision, "clearing a map user data item left the revision as it was");
+
+        QTemporaryDir directory;
+        QVERIFY(directory.isValid());
+        const QString file = directory.filePath(qsl("map.json"));
+        QVERIFY(map()->writeJsonMapFile(file).first);
+        revision = map()->revision();
+        QVERIFY(map()->readJsonMapFile(file).first);
+        QVERIFY2(map()->revision() > revision, "reading a map in left the revision as it was");
+    }
+
     // The diorama's pieces are laid out once a frame at most, and again only when the map, the levels shown or the
     // style changes
     void test_dioramaPiecesAreLaidOutAgainOnlyWhenTheMapOrLevelsChangeWithoutGL()
@@ -1182,13 +1351,15 @@ private slots:
         // Water, by its color, as setRoomEnv() changes a room
         const int water = 301;
         map()->mCustomEnvColors[water] = QColor(30, 90, 220);
+        const auto forgetWater = qScopeGuard([this, water]() {
+            map()->mCustomEnvColors.remove(water);
+        });
         map()->mpRoomDB->getRoom(kEastRoomId)->environment = water;
         map()->setUnsaved("test");
         queueTurnedFrame(widget);
         QCOMPARE(widget.mDioramaLayouts, 2);
         QCOMPARE(widget.mDioramaPiecesCache.pieces.value(kEastRoomId).kit, EnvironmentKit::Kit::Water);
         QVERIFY(widget.mDioramaPiecesCache.pieces.value(kEastRoomId).kit != before);
-        map()->mCustomEnvColors.remove(water);
 
         widget.slot_showLessUpperLevels();
         queueTurnedFrame(widget);
@@ -4263,7 +4434,7 @@ private slots:
                                 texturesMade += widget.mLabelTextureCache.imageTexturesMade() - madeBefore;
                             }
                             if (trace) {
-                                std::printf("TRACE %s %s %s %s frame %d %.3f ms, %lld textures made, %zu commands\n",
+                                std::printf("TRACE %s %s %s %s frame %d %.3f ms, %lld textures made, %lld in use, %zu commands\n",
                                             qPrintable(styleId),
                                             qPrintable(mapName),
                                             qPrintable(view),
@@ -4271,6 +4442,7 @@ private slots:
                                             step,
                                             ms,
                                             static_cast<long long>(widget.mLabelTextureCache.imageTexturesMade() - madeBefore),
+                                            static_cast<long long>(widget.mRoomTexturesInUse.size()),
                                             widget.mRenderCommandQueue.getCommandCount());
                             }
                         }
