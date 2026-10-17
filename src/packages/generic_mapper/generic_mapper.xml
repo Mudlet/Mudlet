@@ -2001,8 +2001,9 @@ map.help.language = [[
 
         SvenskMUD rooms have no title, so the first sentence of the description
         names the room. The mapper learns your prompt from the game: it asks
-        with 'prompt' when it has none, and follows along when you change it
-        with 'prompt &lt;template&gt;'.
+        with 'prompt' when it has none or stops seeing it, and follows along
+        when you change it with 'prompt &lt;template&gt;'. If it still gets it
+        wrong, set it yourself with &lt;yellow&gt;map prompt&lt;reset&gt;.
 ]]
 map.help.quick_start = [[
     &lt;link: quick_start&gt;map basics&lt;/link&gt; (quick start guide)
@@ -2477,6 +2478,8 @@ local reverse_dirs = {
 }
 
 local wait_echo = {}
+-- what the game says about its prompt is only believed in reply to a prompt command, so another player cannot set it
+local awaiting_prompt_reply, prompt_seen, untitled_room_seen, asked_for_prompt = false, false, false, {}
 local mapper_tag = "&lt;112,229,0&gt;(&lt;73,149,0&gt;mapper&lt;112,229,0&gt;): &lt;255,255,255&gt;"
 local debug_tag = "&lt;255,165,0&gt;(&lt;200,120,0&gt;debug&lt;255,165,0&gt;): &lt;255,255,255&gt;"
 local err_tag = "&lt;255,0,0&gt;(&lt;178,34,34&gt;error&lt;255,0,0&gt;): &lt;255,255,255&gt;"
@@ -3952,6 +3955,7 @@ local function grab_line()
         if map.prompt.exits and map.prompt.exits ~= "" then
             raiseEvent("onNewRoom")
         end
+        prompt_seen = true
         print_wait_echoes()
         map.echo("Prompt captured",true)
     end
@@ -4100,10 +4104,17 @@ local numeric_prompt_tokens = {HP = true, MAXHP = true, MP = true, MAXMP = true}
 
 -- SvenskMUD names the template its prompt is built from, e.g. "&lt;HP&gt;/&lt;MAXHP&gt;hp &lt;MP&gt;/&lt;MAXMP&gt;mp"
 function map.learnPromptTemplate(template)
-    if not template or string.trim(template) == "" then return end
+    if not awaiting_prompt_reply then return end
+    awaiting_prompt_reply = false
+    if string.trim(template or "") == "" then
+        map.save.prompt_pattern[map.character] = nil
+        table.save(profilePath .. "/map downloads/map_save.dat", map.save)
+        map.echo("Prompt pattern cleared.")
+        return
+    end
     local pattern = string.gsub(template, "[%^%$%(%)%%%.%[%]%*%+%-%?]", "%%%0")
     pattern = string.gsub(pattern, "&lt;([%w_]+)&gt;", function(token)
-        return numeric_prompt_tokens[string.upper(token)] and "%d+" or "%S+"
+        return numeric_prompt_tokens[string.upper(token)] and "%-?%d+" or "%S+"
     end)
     map.make_prompt_pattern(pattern)
 end
@@ -4115,8 +4126,6 @@ function map.promptOnly(text)
     end
     return not string.find(text, "%a")
 end
-
-local asked_for_prompt = false
 
 local function lang_dirs_untouched()
     for k, v in pairs(map.defaults.lang_dirs) do
@@ -4130,9 +4139,12 @@ function map.captureUntitledRoom(exits, language)
         map.setLanguage(language)
     end
     local name = untitled_room_name()
+    -- a room before this one was followed by a prompt, so not seeing one means the pattern is missing or out of date
+    local stale = untitled_room_seen and not prompt_seen
+    untitled_room_seen, prompt_seen = true, false
     -- after the name is read: sending clears the lines it is read from
-    if language == "swedish" and not map.save.prompt_pattern[map.character] and not asked_for_prompt then
-        asked_for_prompt = true
+    if language == "swedish" and not asked_for_prompt[map.character or ""] and (stale or not map.save.prompt_pattern[map.character]) then
+        asked_for_prompt[map.character or ""] = true
         send("prompt", false)
     end
     if not name then
@@ -4452,6 +4464,9 @@ function map.eventHandler(event, ...)
         map.echo("onForcedMove",true)
         capture_move_cmd(arg1,arg2=="true")
     elseif event == "sysDataSendRequest" then
+        if string.match(arg1, "^%s*(%S*)") == "prompt" then
+            awaiting_prompt_reply = true
+        end
         capture_move_cmd(arg1)
         -- check to prevent multiple version checks in a row without user intervention
         if map.update_waiting and map.update_timer then
