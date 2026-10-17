@@ -43,6 +43,7 @@
 #include <QUrl>
 #include <QtEvents>
 #include <chrono>
+#include <utility>
 
 using namespace std::chrono_literals;
 
@@ -126,7 +127,9 @@ void TLabel::showLinkStyledText(const QString& text)
 
     stopMovie();
     QLabel::setText(text);
-    mpModel->setText(QLabel::text());
+    syncTextAnnouncedByQt();
+    // Text over an SVG hides it, and new text replaces a raster or movie
+    imageMayHaveChanged();
 }
 
 void TLabel::press()
@@ -266,13 +269,30 @@ bool TLabel::showsImage() const
 
 void TLabel::imageMayHaveChanged()
 {
-    mpModel->accessibilityChanged(TLabelModel::AccessibilityChange::Role);
+    const ShownContent shown = movie() ? ShownContent::Animation : showsImage() ? ShownContent::Graphic : ShownContent::Text;
+    // A button's role stays a button whatever it shows
+    if (std::exchange(mShownContent, shown) != shown && !mpModel->actsAsButton()) {
+        mpModel->accessibilityChanged(TLabelModel::AccessibilityChange::Role);
+    }
+}
+
+void TLabel::syncTextAnnouncedByQt()
+{
+    mTextAnnouncedByQt = true;
+    mpModel->setText(QLabel::text());
+    mTextAnnouncedByQt = false;
 }
 
 void TLabel::accessibilityChanged(TLabelModel::AccessibilityChange change)
 {
     if (change == TLabelModel::AccessibilityChange::Name) {
-        notifyAccessibility(this, QAccessible::NameChanged);
+        // QLabel::setText() announces the text as the new name whenever the widget's own name is empty,
+        // so the widget carries a script's name too, and an unnamed label's text is announced once
+        if (const QString& name = mpModel->mAccessibleName; name != accessibleName()) {
+            setAccessibleName(name);
+        } else if (!mTextAnnouncedByQt) {
+            notifyAccessibility(this, QAccessible::NameChanged);
+        }
         return;
     }
     updateKeyboardAccess();
@@ -743,7 +763,7 @@ bool TLabel::event(QEvent* event)
     const bool handled = QLabel::event(event);
     // A qproperty-text in a style sheet reaches QLabel::setText() directly, as the style is applied
     if (event->type() == QEvent::Polish || event->type() == QEvent::StyleChange) {
-        mpModel->setText(text());
+        syncTextAnnouncedByQt();
     }
     return handled;
 }
