@@ -772,23 +772,34 @@ do
     d = 10,
     down = 10,
     ["in"] = 11,
-    out = 12
+    i = 11,
+    out = 12,
+    o = 12
   }
 
+  local function exitNumber(direction)
+    if type(direction) == "string" then
+      return exitmap[direction:lower()]
+    end
+    return direction
+  end
+
   function lockExit(from, direction, status)
-    if type(direction) == "string" and not exitmap[direction] then
-      return false
+    local number = exitNumber(direction)
+    if type(direction) == "string" and not number then
+      return nil, ("%q is not a valid direction"):format(direction)
     end
 
-    return oldlockExit(from, type(direction) == "string" and exitmap[direction] or direction, status)
+    return oldlockExit(from, number, status)
   end
 
   function hasExitLock(from, direction)
-    if type(direction) == "string" and not exitmap[direction] then
-      return false
+    local number = exitNumber(direction)
+    if type(direction) == "string" and not number then
+      return nil, ("%q is not a valid direction"):format(direction)
     end
 
-    return oldhasExitLock(from, type(direction) == "string" and exitmap[direction] or direction)
+    return oldhasExitLock(from, number)
   end
 end
 
