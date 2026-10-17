@@ -38,6 +38,18 @@ bool highlightOnGround(MapStyle::HighlightShape shape);
 // Fills the room's own square or circle, whatever highlight radius the room was given
 bool highlightFillsRoom(MapStyle::HighlightShape shape);
 
+// The mark MapStyle::PlayerRing::Crosshair draws over the player's room, size texels across
+QImage registrationMark(const QColor& color, int size);
+// Where to put callouts, listed top to bottom, that each want to be at a height, so that they stay in that order at
+// least spacing apart and, where they fit, between top and bottom
+QList<qreal> spreadCallouts(const QList<qreal>& wanted, qreal spacing, qreal top, qreal bottom);
+// Which of levels to call out beside the shown one: at most most of them, nearest it first, listed top to bottom
+QList<int> calloutLevels(const QList<int>& levels, int shownLevel, int most);
+// A level's callout: its name, as L1 or B1, and how many rooms it has
+QString levelCallout(int level, int rooms);
+// The title block's second line, for the shown level of an area with these levels, lowest first
+QString titleLevelLine(int shownLevel, const QList<int>& areaLevels);
+
 // The ring MapStyle::PlayerRing::Thin draws around the player's room
 QGradientStops thinPlayerRingStops(const QColor& color);
 

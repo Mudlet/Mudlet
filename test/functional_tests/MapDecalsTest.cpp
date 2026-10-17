@@ -59,6 +59,11 @@ const MapStyle& tiles()
     return *MapStyle::find(qsl("tiles"));
 }
 
+const MapStyle& blueprint()
+{
+    return *MapStyle::find(qsl("blueprint"));
+}
+
 TMapLabel textLabel(const QColor& fg, const QColor& bg)
 {
     TMapLabel label;
@@ -309,6 +314,133 @@ private slots:
         QVERIFY2(cappedText.height() <= 0.25 * label.pix.height() + 2, qPrintable(qsl("%1 pixels tall").arg(cappedText.height())));
         QVERIFY(cappedText.height() < fullText.height());
         QVERIFY2(qAbs(cappedText.center().x() - fullText.center().x()) <= 3, "the text stays centered where the label was put");
+    }
+
+    void test_registrationMarkCrossesItsRingAndRunsPastIt()
+    {
+        const QImage mark = MapDecals::registrationMark(QColor(255, 112, 90), scmSize);
+        const int middle = scmSize / 2;
+        QVERIFY2(alphaAt(mark, middle, middle) > 150, "a dot marks the middle");
+        QVERIFY2(alphaAt(mark, 3, middle) > 100 && alphaAt(mark, middle, scmSize - 4) > 100, "the cross runs on past the ring");
+        const int diagonal = qRound(0.52 * middle * M_SQRT1_2);
+        QVERIFY2(alphaAt(mark, middle + diagonal, middle - diagonal) > 60, "the ring shows between the arms");
+        QCOMPARE(alphaAt(mark, 4, 4), 0);
+        QCOMPARE(alphaAt(mark, middle - 6, middle - 6), 0);
+    }
+
+    void test_calloutsAreSpreadApartInOrderAndKeptInView()
+    {
+        const QList<qreal> placed = MapDecals::spreadCallouts({50.0, 100.0, 100.0, 90.0, 400.0}, 20.0, 0.0, 1000.0);
+        QCOMPARE(placed, (QList<qreal>{50.0, 100.0, 120.0, 140.0, 400.0}));
+
+        const QList<qreal> squeezed = MapDecals::spreadCallouts({190.0, 195.0, 199.0}, 20.0, 0.0, 200.0);
+        QCOMPARE(squeezed.at(2), 200.0);
+        QCOMPARE(squeezed.at(1), 180.0);
+        QCOMPARE(squeezed.at(0), 160.0);
+
+        const QList<qreal> lifted = MapDecals::spreadCallouts({-30.0}, 20.0, 10.0, 200.0);
+        QCOMPARE(lifted.at(0), 10.0);
+        QVERIFY(MapDecals::spreadCallouts({}, 20.0, 0.0, 100.0).isEmpty());
+    }
+
+    void test_blueprintLettersInSpacedCapitals()
+    {
+        const QFont font = blueprint().labelFont(QFont(qsl("Bitstream Vera Sans"), 10));
+        QCOMPARE(font.family(), blueprint().labelFontFamily);
+        QCOMPARE(font.capitalization(), QFont::AllUppercase);
+        QVERIFY(font.letterSpacing() > 100.0);
+        QCOMPARE(font.letterSpacingType(), QFont::PercentageSpacing);
+        const QFont plain = MapStyle().labelFont(QFont(qsl("Bitstream Vera Sans"), 10));
+        QCOMPARE(plain.capitalization(), QFont::MixedCase);
+        QCOMPARE(plain.letterSpacing(), 0.0);
+    }
+
+    void test_blueprintMarksThePlayerWithACrosshairAndNoBeacon()
+    {
+        QCOMPARE(blueprint().playerRing, MapStyle::PlayerRing::Crosshair);
+        QVERIFY(blueprint().themesPlayerMarker(0, false));
+        QVERIFY(!blueprint().playerBeacon);
+        QVERIFY(tiles().playerBeacon);
+        QCOMPARE(blueprint().highlightShape, MapStyle::HighlightShape::DashedEllipse);
+        QVERIFY(blueprint().titleBlock && blueprint().levelCallouts);
+        QVERIFY(!tiles().titleBlock && !tiles().levelCallouts);
+    }
+
+    // A pale wash of the environment's color over the sheet, however dark the color
+    void test_blueprintTintsRoomsByTheirEnvironment()
+    {
+        const QColor sheet = blueprint().background;
+        const QColor forest = blueprint().roomColor(QColor(40, 160, 60));
+        QVERIFY2(forest.green() - sheet.green() > 25, qPrintable(qsl("green %1 on a sheet of %2").arg(forest.green()).arg(sheet.green())));
+        QVERIFY(forest.green() - sheet.green() > forest.red() - sheet.red() && forest.green() - sheet.green() > forest.blue() - sheet.blue());
+        const QColor cellar = blueprint().roomColor(QColor(50, 10, 70));
+        QVERIFY2(cellar.lightness() - sheet.lightness() > 20, qPrintable(qsl("a dark room's lightness is %1 on a sheet of %2").arg(cellar.lightness()).arg(sheet.lightness())));
+        QVERIFY2(cellar.red() - sheet.red() > 25, qPrintable(qsl("a purple room's red is %1 on a sheet of %2").arg(cellar.red()).arg(sheet.red())));
+        QCOMPARE(blueprint().roomColor(QColor(40, 160, 60, 100)).alpha(), 100);
+    }
+
+    // Light line-work on the sheet: a fill only a little lighter than the sheet, under an outline in the much lighter ink
+    void test_blueprintFillsRoomsPaleUnderItsInk()
+    {
+        const QColor sheet = blueprint().background;
+        for (const QColor& environment : {QColor(40, 160, 60), QColor(50, 90, 200), QColor(220, 220, 220), QColor(128, 0, 0), QColor(255, 255, 0), QColor(Qt::white)}) {
+            const QColor fill = blueprint().roomColor(environment);
+            const int lift = fill.lightness() - sheet.lightness();
+            QVERIFY2(lift > 5 && lift < 40, qPrintable(qsl("%1 fills a room %2 lighter than the sheet").arg(environment.name()).arg(lift)));
+            QVERIFY2(blueprint().ink.lightness() - fill.lightness() > 100, qPrintable(qsl("%1 fills a room nearly as light as the ink").arg(environment.name())));
+        }
+    }
+
+    void test_blueprintHighlightsAColorlessRoomInItsInk()
+    {
+        QCOMPARE(blueprint().highlightColorFor(QColor()).rgb(), blueprint().ink.rgb());
+        QVERIFY(!tiles().highlightColor.isValid());
+    }
+
+    // Each digit is a texture of its own, drawn side by side, so spacing would leave gaps inside the number
+    void test_blueprintRoomIdsAreNotLetterSpaced()
+    {
+        const QFont symbolFont(qsl("Bitstream Vera Sans"), 10);
+        const QFont ids = blueprint().roomIdFont(symbolFont);
+        QCOMPARE(ids.family(), blueprint().labelFontFamily);
+        QCOMPARE(ids.letterSpacing(), symbolFont.letterSpacing());
+        QCOMPARE(ids.letterSpacingType(), symbolFont.letterSpacingType());
+        QVERIFY(blueprint().labelFont(symbolFont).letterSpacing() > 100.0);
+        QCOMPARE(tiles().roomIdFont(symbolFont), tiles().labelFont(symbolFont));
+    }
+
+    void test_calloutsNameTheNearestLevelsTopToBottom_data()
+    {
+        QTest::addColumn<QList<int>>("levels");
+        QTest::addColumn<int>("shown");
+        QTest::addColumn<int>("most");
+        QTest::addColumn<QList<int>>("named");
+        QTest::newRow("all fit") << QList<int>{-1, 0, 1, 2} << 0 << 8 << QList<int>{2, 1, -1};
+        QTest::newRow("the shown level is never named") << QList<int>{0} << 0 << 8 << QList<int>{};
+        QTest::newRow("the furthest left out") << QList<int>{-4, -3, -2, -1, 0, 1, 2, 3} << 0 << 4 << QList<int>{2, 1, -1, -2};
+        QTest::newRow("of two as near, the one above") << QList<int>{-1, 0, 1} << 0 << 1 << QList<int>{1};
+        QTest::newRow("from a shown level up high") << QList<int>{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10} << 9 << 8 << QList<int>{10, 8, 7, 6, 5, 4, 3, 2};
+        QTest::newRow("no room for any") << QList<int>{1, 2} << 0 << 0 << QList<int>{};
+        QTest::newRow("unsorted, with repeats") << QList<int>{3, -2, 3, 1} << 0 << 8 << QList<int>{3, 1, -2};
+    }
+
+    void test_calloutsNameTheNearestLevelsTopToBottom()
+    {
+        QFETCH(QList<int>, levels);
+        QFETCH(int, shown);
+        QFETCH(int, most);
+        QFETCH(QList<int>, named);
+        QCOMPARE(MapDecals::calloutLevels(levels, shown, most), named);
+    }
+
+    void test_calloutsAndTitleNameLevels()
+    {
+        QCOMPARE(MapDecals::levelCallout(1, 16), qsl("L1 · 16"));
+        QCOMPARE(MapDecals::levelCallout(0, 3), qsl("L0 · 3"));
+        QCOMPARE(MapDecals::levelCallout(-2, 6), qsl("B2 · 6"));
+        QCOMPARE(MapDecals::titleLevelLine(0, {-1, 0, 1}), qsl("Level 0 · sheet 2 of 3"));
+        QCOMPARE(MapDecals::titleLevelLine(-1, {-1, 0, 1}), qsl("Level -1 · sheet 1 of 3"));
+        QCOMPARE(MapDecals::titleLevelLine(5, {-1, 0, 1}), qsl("Level 5"));
     }
 };
 

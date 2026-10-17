@@ -34,9 +34,11 @@
 
 #include <QFileInfo>
 #include <QOpenGLContext>
+#include <QScopeGuard>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
+#include "ExitAppearance.h"
 #include "GeometryManager.h"
 #include "Host.h"
 #include "HostManager.h"
@@ -44,6 +46,7 @@
 #include "MudletApp.h"
 #include "MudletInstanceCoordinator.h"
 #include "RenderCommand.h"
+#include "RoomAppearance.h"
 #include "TArea.h"
 #include "TMap.h"
 #include "TMapLabel.h"
@@ -66,8 +69,12 @@ private:
     static constexpr int kPlayerRoomId = 1;
     static constexpr int kEastRoomId = 2;
     static constexpr int kLowerRoomId = 3;
-    // As renderRooms sizes it: 2 / scale (4) / zFlattening (8)
-    static constexpr float kRoomHeight = 2.0f / 4.0f / 8.0f;
+    // As renderRooms sizes the default style's rooms
+    static float roomHeight()
+    {
+        const MapStyle* tiles = MapStyle::find(qsl("tiles"));
+        return 2.0f / tiles->roomScale / tiles->roomFlattening;
+    }
 
     static bool portableMarkerPresent()
     {
@@ -234,7 +241,7 @@ private slots:
         QVERIFY2(widget.failureMessage().isEmpty(), qPrintable(widget.failureMessage()));
         mpHost->mMapGridColor = QColor(Qt::white);
         mpHost->mMapGridLineSize = 5.0;
-        const QVector3D onALine(1.0f, 1.5f, -kRoomHeight / 2.0f);
+        const QVector3D onALine(1.0f, 1.5f, -roomHeight() / 2.0f);
 
         mpHost->mMapperShowGrid = false;
         const QColor hidden = colorAt(widget, onALine);
@@ -257,15 +264,18 @@ private slots:
         if (!widget.isValid()) {
             QSKIP("no OpenGL context on this platform");
         }
-        const QVector3D corner(2.22f, 0.22f, kRoomHeight / 2.0f);
-        const QVector3D empty(2.4f, 0.4f, kRoomHeight / 2.0f);
+        const float halfRoom = 1.0f / MapStyle::find(qsl("tiles"))->roomScale;
+        // The corner away from the view's middle, which sees the block's other sides, and from its shadow to the south east
+        const QVector3D corner(2.0f + halfRoom * 0.9f, halfRoom * 0.9f, roomHeight() / 2.0f);
+        // Between the rooms, on the level's floor
+        const QVector3D empty(1.0f, halfRoom * 0.9f, roomHeight() / 2.0f);
 
         mpHost->mBubbleMode = false;
         const QColor square = colorAt(widget, corner);
         const QColor squareEmpty = colorAt(widget, empty);
         mpHost->mBubbleMode = true;
         const QColor round = colorAt(widget, corner);
-        const QColor middle = colorAt(widget, QVector3D(2.0f, 0.0f, kRoomHeight / 2.0f));
+        const QColor middle = colorAt(widget, QVector3D(2.0f, 0.0f, roomHeight() / 2.0f));
         mpHost->mBubbleMode = false;
         QVERIFY(square.isValid() && squareEmpty.isValid() && round.isValid() && middle.isValid());
         QVERIFY2(difference(square, squareEmpty) > 60, qPrintable(qsl("a square room's corner is %1, beside it %2").arg(square.name(), squareEmpty.name())));
@@ -288,7 +298,7 @@ private slots:
         const QColor savedLower = mpHost->mLowerLevelColor;
         const bool savedShown = mudlet::self()->drawUpperLowerLevels();
         mpHost->mLowerLevelColor = QColor(Qt::red);
-        const QVector3D lowerRoom(0.0f, 2.0f, -1.0f + kRoomHeight / 2.0f);
+        const QVector3D lowerRoom(0.0f, 2.0f, -1.0f + roomHeight() / 2.0f);
 
         mudlet::self()->setDrawUpperLowerLevels(false);
         const QColor plain = colorAt(widget, lowerRoom);
@@ -340,7 +350,7 @@ private slots:
                 const auto* triangles = static_cast<const RenderTrianglesCommand*>(command);
                 gridAtTheRoomsBottoms = !triangles->vertices().isEmpty();
                 for (qsizetype i = 2; i < triangles->vertices().size(); i += 3) {
-                    gridAtTheRoomsBottoms = gridAtTheRoomsBottoms && qFuzzyCompare(triangles->vertices().at(i), -kRoomHeight / 2.0f);
+                    gridAtTheRoomsBottoms = gridAtTheRoomsBottoms && qFuzzyCompare(triangles->vertices().at(i), -roomHeight() / 2.0f);
                 }
                 const auto* before = index > 0 ? dynamic_cast<const GLStateCommand*>(commands.at(index - 1).get()) : nullptr;
                 const auto* after = index + 1 < static_cast<qsizetype>(commands.size()) ? dynamic_cast<const GLStateCommand*>(commands.at(index + 1).get()) : nullptr;
@@ -463,7 +473,7 @@ private slots:
         const bool savedShown = mudlet::self()->drawUpperLowerLevels();
         mpHost->mLowerLevelColor = QColor(255, 0, 0, 64);
         ModernGLWidget widget(map(), mpHost);
-        const float floorZ = -1.0f - kRoomHeight;
+        const float floorZ = -1.0f - roomHeight();
         const auto redness = [&widget, floorZ]() {
             float room = std::numeric_limits<float>::lowest();
             float floor = std::numeric_limits<float>::lowest();
@@ -502,6 +512,262 @@ private slots:
         QVERIFY2(plainRoom > std::numeric_limits<float>::lowest() && plainFloor > std::numeric_limits<float>::lowest(), "the room or floor below was not drawn");
         QVERIFY2(coloredRoom > plainRoom + 0.02f, qPrintable(qsl("the room below is %1 red with the levels' colors and %2 without").arg(coloredRoom).arg(plainRoom)));
         QVERIFY2(coloredFloor > plainFloor + 0.002f, qPrintable(qsl("the floor below is %1 red with the levels' colors and %2 without").arg(coloredFloor).arg(plainFloor)));
+    }
+
+    // Tiles keeps the profile's own colors, softened but not swapped for a palette of its own
+    void test_tilesTakesTheProfilesColors()
+    {
+        const MapStyle* tiles = MapStyle::find(qsl("tiles"));
+        QVERIFY(tiles);
+        const QColor environment(10, 200, 30, 128);
+        const QColor profileColor(1, 2, 3, 4);
+        QCOMPARE(tiles->palette, MapStyle::Palette::Soft);
+        QCOMPARE(tiles->roomColor(environment).alpha(), environment.alpha());
+        QVERIFY(qAbs(tiles->roomColor(environment).hueF() - environment.hueF()) < 0.02f);
+        QCOMPARE(tiles->backgroundColor(profileColor), profileColor);
+        QCOMPARE(tiles->exitColor(profileColor), profileColor);
+        QCOMPARE(tiles->symbolColor(QColor(), environment), RoomAppearance::symbolColor(QColor(), environment));
+        QCOMPARE(tiles->symbolColor(QColor(Qt::yellow), environment), RoomAppearance::symbolColor(QColor(Qt::yellow), environment));
+        QCOMPARE(tiles->roomIdColor(environment), ExitAppearance::contrastColor(environment));
+        QCOMPARE(tiles->playerRoomColor(), QColor(Qt::red));
+        QCOMPARE(tiles->doors, MapStyle::Doors::Strokes);
+        QVERIFY(tiles->floorPlates);
+        QVERIFY(!tiles->gridColor.isValid());
+        QVERIFY(!tiles->ink.isValid());
+        QCOMPARE(tiles->exitWidthFactor, 1.0f);
+    }
+
+    // Blueprint fills its rooms with little more than its sheet and draws them in its ink
+    void test_blueprintDrawsInItsInk()
+    {
+        const MapStyle* blueprint = MapStyle::find(qsl("blueprint"));
+        QVERIFY(blueprint);
+        const QColor ink = blueprint->ink;
+        QVERIFY(ink.isValid());
+        const QColor environment(200, 40, 40, 200);
+        const QColor profileColor(1, 2, 3);
+        QCOMPARE(blueprint->exitColor(profileColor), ink);
+        QCOMPARE(blueprint->roomIdColor(environment), ink);
+        QCOMPARE(blueprint->symbolColor(QColor(), blueprint->roomColor(environment)), ink);
+        // A room's own symbol color is the mapper's choice, not the automatic one
+        QCOMPARE(blueprint->symbolColor(QColor(Qt::yellow), blueprint->roomColor(environment)), QColor(Qt::yellow));
+        QCOMPARE(blueprint->backgroundColor(profileColor), blueprint->background);
+        const QColor room = blueprint->roomColor(environment);
+        const QColor sheet = blueprint->background;
+        QVERIFY2(difference(room, sheet) < difference(room, environment), "a room is filled nearer its environment's color than the sheet's");
+        QVERIFY2(room != sheet, "a room's environment does not show at all");
+        QCOMPARE(room.alpha(), environment.alpha());
+        QVERIFY(blueprint->playerRoomColor() != QColor(Qt::red));
+        QCOMPARE(blueprint->doors, MapStyle::Doors::Swings);
+    }
+
+    // Outlines and room IDs in the ink in Blueprint, and none of either in Tiles
+    void test_blueprintOutlinesRoomsInItsInkWithoutGL()
+    {
+        const int areaId = addArea();
+        QVERIFY(areaId > 0);
+        const bool savedIds = mpHost->mShowRoomID;
+        const auto restore = qScopeGuard([this, savedIds]() {
+            mpHost->setMapStyle(qsl("tiles"));
+            mpHost->mShowRoomID = savedIds;
+        });
+        mpHost->mShowRoomID = true;
+        ModernGLWidget widget(map(), mpHost);
+        const QColor ink = MapStyle::find(qsl("blueprint"))->ink;
+        const auto inkIdDrawn = [&widget, &ink]() {
+            return std::any_of(widget.mRoomTexturesInUse.cbegin(), widget.mRoomTexturesInUse.cend(), [&ink](const QString& key) {
+                return key.startsWith(qsl("digit|%1|").arg(ink.name()));
+            });
+        };
+
+        queueFrame(widget, areaId);
+        const qsizetype tilesOutlines = trianglesIn(widget, ink);
+        const bool tilesInkIds = inkIdDrawn();
+        QVERIFY(mpHost->setMapStyle(qsl("blueprint")));
+        queueFrame(widget, areaId);
+        const qsizetype blueprintOutlines = trianglesIn(widget, ink);
+        const bool blueprintInkIds = inkIdDrawn();
+
+        QCOMPARE(tilesOutlines, -1);
+        QVERIFY2(!tilesInkIds, "tiles drew room IDs in the blueprint ink");
+        QVERIFY2(blueprintOutlines >= 0, "blueprint queued no outlines in its ink");
+        QVERIFY2(blueprintInkIds, "blueprint drew room IDs in another color than its ink");
+    }
+
+    // A blueprint room reads as line-work: its outline is drawn as wide as the style asks, and that is bolder than a
+    // hairline
+    void test_blueprintOutlinesRoomsAsBoldAsItsStyleAsksWithoutGL()
+    {
+        const int areaId = addArea();
+        QVERIFY(areaId > 0);
+        const auto restore = qScopeGuard([this]() {
+            mpHost->setMapStyle(qsl("tiles"));
+        });
+        QVERIFY(mpHost->setMapStyle(qsl("blueprint")));
+        const MapStyle* blueprint = MapStyle::find(qsl("blueprint"));
+        QVERIFY(blueprint);
+        QVERIFY(blueprint->inkOutlineWidth > MapStyle().inkOutlineWidth);
+        ModernGLWidget widget(map(), mpHost);
+        queueFrame(widget, areaId);
+
+        const auto level = widget.mInkOutlines.constFind(0);
+        QVERIFY(level != widget.mInkOutlines.cend());
+        int solid = 0;
+        for (const auto& outline : level->outlines) {
+            if (outline.dashLength > 0.0f) {
+                continue;
+            }
+            ++solid;
+            const float widthOfRoom = outline.width / (2.0f * outline.half);
+            QVERIFY2(widthOfRoom >= blueprint->inkOutlineWidth * 0.99f, qPrintable(qsl("an outline %1 of its room's width, not %2").arg(widthOfRoom).arg(blueprint->inkOutlineWidth)));
+        }
+        QVERIFY(solid > 0);
+    }
+
+    // Blueprint's crosshair takes the place of the beacon, but where the profile's own marker is drawn instead the
+    // beacon still helps find the player
+    void test_blueprintDropsTheBeaconOnlyForItsOwnMarker()
+    {
+        const int areaId = addArea();
+        QVERIFY(areaId > 0);
+        const int savedRoomStyle = map()->mPlayerRoomStyle;
+        const bool savedStrong = mpHost->mMapStrongHighlight;
+        const auto restore = qScopeGuard([this, savedRoomStyle, savedStrong]() {
+            mpHost->setMapStyle(qsl("tiles"));
+            map()->mPlayerRoomStyle = savedRoomStyle;
+            mpHost->mMapStrongHighlight = savedStrong;
+        });
+        map()->mPlayerRoomStyle = 0;
+        mpHost->mMapStrongHighlight = false;
+        ModernGLWidget widget(map(), mpHost);
+        queueFrame(widget, areaId);
+        const auto beaconCommands = [&widget]() {
+            widget.mRenderCommandQueue.clear();
+            widget.renderPlayerBeacon();
+            return std::count_if(widget.mRenderCommandQueue.commands().cbegin(), widget.mRenderCommandQueue.commands().cend(), [](const auto& command) {
+                return dynamic_cast<const RenderInstancedCubesCommand*>(command.get()) != nullptr;
+            });
+        };
+
+        const auto tilesBeacon = beaconCommands();
+        QVERIFY(mpHost->setMapStyle(qsl("blueprint")));
+        const auto blueprintBeacon = beaconCommands();
+        map()->mPlayerRoomStyle = 1;
+        const auto profileMarkerBeacon = beaconCommands();
+        map()->mPlayerRoomStyle = 0;
+        mpHost->mMapStrongHighlight = true;
+        const auto strongHighlightBeacon = beaconCommands();
+
+        QVERIFY2(tilesBeacon > 0, "tiles queued no beacon");
+        QCOMPARE(blueprintBeacon, 0);
+        QVERIFY2(profileMarkerBeacon > 0, "blueprint dropped the beacon though the profile's own player marker is drawn");
+        QVERIFY2(strongHighlightBeacon > 0, "blueprint dropped the beacon though the profile's strong highlight is drawn");
+    }
+
+    // Outlines are kept from frame to frame, and pieced together from the ones that did not change, so after
+    // each change they must be just what a widget with nothing kept makes
+    void test_inkOutlinesFollowTheirRoomsWithoutGL()
+    {
+        constexpr int kFarEastRoomId = 4;
+        constexpr int kFarthestEastRoomId = 5;
+        const int areaId = addArea();
+        QVERIFY(areaId > 0);
+        QVERIFY(addRoomAt(kFarEastRoomId, areaId, 4, 0, 0) && addRoomAt(kFarthestEastRoomId, areaId, 6, 0, 0));
+        const auto restore = qScopeGuard([this]() {
+            mpHost->setMapStyle(qsl("tiles"));
+        });
+        QVERIFY(mpHost->setMapStyle(qsl("blueprint")));
+        ModernGLWidget widget(map(), mpHost);
+        const auto triangles = [areaId](ModernGLWidget& from) {
+            queueFrame(from, areaId);
+            QVector<float> vertices;
+            QVector<float> colors;
+            for (const auto& command : from.mRenderCommandQueue.commands()) {
+                if (const auto* drawn = dynamic_cast<const RenderTrianglesCommand*>(command.get())) {
+                    vertices += drawn->vertices();
+                    colors += drawn->colors();
+                }
+            }
+            return std::make_pair(vertices, colors);
+        };
+        const auto keptMatchesMade = [this, &widget, &triangles]() {
+            const auto kept = triangles(widget);
+            ModernGLWidget made(map(), mpHost);
+            return kept == triangles(made);
+        };
+
+        QVERIFY2(keptMatchesMade(), "the first frame's outlines differ from a fresh widget's");
+        const auto first = triangles(widget);
+        QVERIFY(!first.first.isEmpty());
+        QVERIFY2(keptMatchesMade(), "the outlines kept unchanged differ from a fresh widget's");
+        QCOMPARE(triangles(widget), first);
+
+        QVERIFY(map()->setRoomCoordinates(kEastRoomId, 3, 0, 0));
+        QVERIFY2(keptMatchesMade(), "after a room moved, the outlines differ from a fresh widget's");
+        QVERIFY2(triangles(widget).first != first.first, "a room's outline stayed where the room was");
+
+        map()->mpRoomDB->getRoom(kEastRoomId)->mBorderThickness = 4;
+        QVERIFY2(keptMatchesMade(), "after a border thickened, the outlines differ from a fresh widget's");
+
+        const auto beforeColor = triangles(widget);
+        map()->mpRoomDB->getRoom(kFarEastRoomId)->mBorderColor = QColor(255, 120, 120);
+        QVERIFY2(keptMatchesMade(), "after a border's color changed, the outlines differ from a fresh widget's");
+        QVERIFY2(triangles(widget).second != beforeColor.second, "a room's outline kept its color after its border's changed");
+
+        // Then the room the outlines start with, so that both a kept first outline and a remade one are pieced onto
+        const auto level = widget.mInkOutlines.constFind(0);
+        QVERIFY(level != widget.mInkOutlines.cend() && !level->outlines.isEmpty());
+        TRoom* pFirst = nullptr;
+        for (const int roomId : {kPlayerRoomId, kEastRoomId, kFarEastRoomId, kFarthestEastRoomId}) {
+            TRoom* pRoom = map()->mpRoomDB->getRoom(roomId);
+            if (pRoom && static_cast<float>(pRoom->x()) == level->outlines.first().x) {
+                pFirst = pRoom;
+            }
+        }
+        QVERIFY(pFirst);
+        pFirst->mBorderColor = QColor(120, 255, 120);
+        QVERIFY2(keptMatchesMade(), "after the first room's border color changed, the outlines differ from a fresh widget's");
+    }
+
+    // Going to another style and back leaves tiles queueing just what it did before
+    void test_tilesIsTheSameAfterAnotherStyleWithoutGL()
+    {
+        const int areaId = addArea();
+        QVERIFY(areaId > 0);
+        ModernGLWidget widget(map(), mpHost);
+        const auto frame = [&widget, areaId]() {
+            queueFrame(widget, areaId);
+            QStringList commands;
+            for (const auto& command : widget.mRenderCommandQueue.commands()) {
+                QString line = QString::fromLatin1(typeid(*command).name());
+                if (const auto* triangles = dynamic_cast<const RenderTrianglesCommand*>(command.get())) {
+                    for (const float value : triangles->vertices() + triangles->colors()) {
+                        line += qsl(" %1").arg(value);
+                    }
+                } else if (const auto* cubes = dynamic_cast<const RenderInstancedCubesCommand*>(command.get())) {
+                    for (const CubeInstanceData& cube : cubes->instances()) {
+                        for (int i = 0; i < 16; ++i) {
+                            line += qsl(" %1").arg(cube.transform.constData()[i]);
+                        }
+                        line += qsl(" %1 %2 %3 %4").arg(cube.color[0]).arg(cube.color[1]).arg(cube.color[2]).arg(cube.color[3]);
+                    }
+                }
+                commands.append(line);
+            }
+            return commands;
+        };
+
+        const QStringList before = frame();
+        const auto restore = qScopeGuard([this]() {
+            mpHost->setMapStyle(qsl("tiles"));
+        });
+        QVERIFY(mpHost->setMapStyle(qsl("blueprint")));
+        const QStringList blueprint = frame();
+        QVERIFY(mpHost->setMapStyle(qsl("tiles")));
+        const QStringList after = frame();
+
+        QVERIFY(before != blueprint);
+        QCOMPARE(after, before);
     }
 
     // As names are: where IDs overlap one is kept, the viewed level's as only it has IDs on the 2D map,

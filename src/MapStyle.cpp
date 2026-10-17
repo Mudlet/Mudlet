@@ -19,6 +19,7 @@
 
 #include "MapStyle.h"
 
+#include "ExitAppearance.h"
 #include "Host.h"
 #include "RoomAppearance.h"
 #include "utils.h"
@@ -59,6 +60,46 @@ QList<MapStyle> registeredStyles()
     tiles.dashedStairs = true;
     styles.append(tiles);
 
+    MapStyle blueprint;
+    blueprint.id = qsl("blueprint");
+    blueprint.palette = MapStyle::Palette::Ink;
+    blueprint.roomFlattening = 16.0f;
+    blueprint.edges = MapStyle::Edges::InkOutlines;
+    blueprint.lit = false;
+    blueprint.background = QColor(18, 60, 110);
+    blueprint.ink = QColor(225, 242, 255);
+    blueprint.gridColor = QColor(150, 200, 255, 38);
+    blueprint.inkTint = 0.2f;
+    blueprint.inkLightness = 0.7f;
+    blueprint.inkOutlineWidth = 0.07f;
+    blueprint.labelFontFamily = qsl("Bitstream Vera Sans Mono");
+    blueprint.labelLetterSpacing = 112.0;
+    blueprint.labelCapitals = true;
+    blueprint.roomNameGap = 1.0;
+    blueprint.exitWidthFactor = 0.5f;
+    blueprint.doors = MapStyle::Doors::Swings;
+    blueprint.floorPlates = false;
+    blueprint.highlightShape = MapStyle::HighlightShape::DashedEllipse;
+    blueprint.highlightScale = 1.3f;
+    blueprint.highlightColor = QColor(225, 242, 255, 220);
+    blueprint.playerRing = MapStyle::PlayerRing::Crosshair;
+    blueprint.playerColor = QColor(255, 112, 90);
+    blueprint.playerBeacon = false;
+    blueprint.themedMapLabels = true;
+    blueprint.mapLabelColor = QColor(225, 242, 255);
+    blueprint.mapLabelHalo = QColor(18, 60, 110, 210);
+    blueprint.mapLabelMaxHeight = 0.6f;
+    blueprint.roomNameColor = QColor(210, 232, 252, 235);
+    blueprint.roomNameScale = 0.6f;
+    blueprint.compassFace = QColor(18, 60, 110, 220);
+    blueprint.compassRim = QColor(225, 242, 255);
+    blueprint.compassNeedle = QColor(255, 112, 90);
+    blueprint.infoBackground = QColor(14, 48, 90, 210);
+    blueprint.infoTextColor = QColor(225, 242, 255);
+    blueprint.titleBlock = true;
+    blueprint.levelCallouts = true;
+    styles.append(blueprint);
+
     return styles;
 }
 } // namespace
@@ -69,6 +110,10 @@ QString MapStyle::displayName() const
         //: Name of the 3D map style that draws rooms as lit blocks in their environment colors, chosen in the Mapper preferences
         return QCoreApplication::translate("MapStyle", "Tiles");
     }
+    if (id == qsl("blueprint")) {
+        //: Name of the 3D map style that draws rooms as thin white outlines on a deep blue drafting sheet, chosen in the Mapper preferences
+        return QCoreApplication::translate("MapStyle", "Blueprint");
+    }
     return id;
 }
 
@@ -77,12 +122,53 @@ QColor MapStyle::roomColor(const QColor& environmentColor) const
     switch (palette) {
     case Palette::Environment:
         return environmentColor;
+    case Palette::Ink: {
+        const float tint = inkTint;
+        const QColor paper = background.isValid() ? background : QColor(Qt::black);
+        QColor wash = environmentColor.toHsl();
+        if (wash.lightnessF() < inkLightness) {
+            wash = QColor::fromHslF(std::max(wash.hslHueF(), 0.0f), wash.hslSaturationF(), inkLightness, wash.alphaF());
+        }
+        wash = wash.toRgb();
+        return QColor::fromRgbF(paper.redF() + (wash.redF() - paper.redF()) * tint,
+                                paper.greenF() + (wash.greenF() - paper.greenF()) * tint,
+                                paper.blueF() + (wash.blueF() - paper.blueF()) * tint,
+                                environmentColor.alphaF());
+    }
     case Palette::Soft: {
         const QColor hsl = environmentColor.toHsl();
         return QColor::fromHslF(std::max(hsl.hslHueF(), 0.0f), hsl.hslSaturationF() * 0.7f, 0.25f + hsl.lightnessF() * 0.6f, hsl.alphaF());
     }
     }
     return environmentColor;
+}
+
+QColor MapStyle::symbolColor(const QColor& roomSymbolColor, const QColor& drawnRoomColor) const
+{
+    // The automatic choice is made against the environment's color, which the ink palette barely fills a room with
+    if (palette == Palette::Ink && ink.isValid() && !roomSymbolColor.isValid()) {
+        return ink;
+    }
+    return RoomAppearance::symbolColor(roomSymbolColor, drawnRoomColor);
+}
+
+QColor MapStyle::exitColor(const QColor& profileExitColor) const
+{
+    return ink.isValid() ? ink : profileExitColor;
+}
+
+QColor MapStyle::roomIdColor(const QColor& drawnRoomColor) const
+{
+    return palette == Palette::Ink && ink.isValid() ? ink : ExitAppearance::contrastColor(drawnRoomColor);
+}
+
+QColor MapStyle::playerRoomColor() const
+{
+    if (palette == Palette::Ink) {
+        // Red would sink into the blue of a drafting sheet
+        return QColor(255, 190, 60);
+    }
+    return QColor(Qt::red);
 }
 
 QColor MapStyle::backgroundColor(const QColor& profileBackground) const
@@ -159,8 +245,31 @@ QFont MapStyle::labelFont(const QFont& mapSymbolFont) const
     QFont font = mapSymbolFont;
     if (!labelFontFamily.isEmpty()) {
         font.setFamily(labelFontFamily);
+        letter(font);
     }
     return font;
+}
+
+void MapStyle::letter(QFont& font) const
+{
+    if (labelLetterSpacing != 100.0) {
+        font.setLetterSpacing(QFont::PercentageSpacing, labelLetterSpacing);
+    }
+    if (labelCapitals) {
+        font.setCapitalization(QFont::AllUppercase);
+    }
+}
+
+QFont MapStyle::roomIdFont(const QFont& mapSymbolFont) const
+{
+    QFont font = labelFont(mapSymbolFont);
+    font.setLetterSpacing(mapSymbolFont.letterSpacingType(), mapSymbolFont.letterSpacing());
+    return font;
+}
+
+qreal MapStyle::roomNameSpan(const qreal nameWidth, const qreal spaceWidth) const
+{
+    return nameWidth + spaceWidth * roomNameGap;
 }
 
 QString MapStyle::defaultId()

@@ -1128,34 +1128,34 @@ void dlgMapper::recreate3DWidget()
 #endif
 }
 
-void dlgMapper::paintMapInfo(const QElapsedTimer& renderTimer,
-                             QPainter& painter,
-                             Host* pHost,
-                             TMap* pMap,
-                             int roomID,
-                             int displayAreaId,
-                             int selectionSize,
-                             QColor& infoColor,
-                             int xOffset,
-                             int yOffset,
-                             int widgetWidth,
-                             int fontHeight,
-                             const QColor& background,
-                             const QString& fontFamily)
+int dlgMapper::paintMapInfo(const QElapsedTimer& renderTimer,
+                            QPainter& painter,
+                            Host* pHost,
+                            TMap* pMap,
+                            int roomID,
+                            int displayAreaId,
+                            int selectionSize,
+                            QColor& infoColor,
+                            int xOffset,
+                            int yOffset,
+                            int widgetWidth,
+                            int fontHeight,
+                            const QColor& background,
+                            const QString& fontFamily)
 {
     if (!pMap || !pMap->mMapInfoContributorManager || !pHost) {
-        return;
+        return yOffset;
     }
 
     QList<QString> contributorList = pMap->mMapInfoContributorManager->getContributorKeys();
     QSet<QString> const contributorKeys{contributorList.begin(), contributorList.end()};
     if (!contributorKeys.intersects(pHost->mMapInfoContributors)) {
-        return;
+        return yOffset;
     }
 
     TRoom* pRoom = pMap->mpRoomDB->getRoom(roomID);
     if (!pRoom) {
-        return;
+        return yOffset;
     }
 
     const int initialYOffset = yOffset;
@@ -1199,6 +1199,7 @@ void dlgMapper::paintMapInfo(const QElapsedTimer& renderTimer,
     if (yOffset > initialYOffset) {
         painter.fillRect(xOffset, initialYOffset - 10, widgetWidth - 10 - xOffset, 10, infoBackground);
     }
+    return yOffset;
 }
 
 int dlgMapper::paintMapInfoContributor(QPainter& painter, int xOffset, int yOffset, const MapInfoProperties& properties, QColor bgColor, int fontHeight, int widgetWidth)

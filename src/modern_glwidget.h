@@ -36,6 +36,7 @@
 #include <QMap>
 #include <QMatrix4x4>
 #include <QVector3D>
+#include <QVector4D>
 #include <QQuaternion>
 #include <QOpenGLBuffer>
 #include <QOpenGLFunctions>
@@ -62,6 +63,7 @@ class QFontMetricsF;
 class QLabel;
 class QPainter;
 class T2DMap;
+class TArea;
 class TCommandLine;
 class TMap;
 class TMapLabel;
@@ -93,6 +95,8 @@ public:
     void syncView(int areaId, int x, int y, int z, int roomId);
     void followPlayer();
     bool followingPlayer() const;
+    // The room sizes, and whether the view is opaque, from the profile's style
+    void applyStyle();
     int shownAreaId() const { return mAID; }
     int areaShownNext() const;
     QVector3D viewCenter() const { return QVector3D(mMapCenterX, mMapCenterY, mMapCenterZ); }
@@ -223,6 +227,30 @@ private:
     LabelTextureCache mLabelTextureCache;
     // Room textures this frame has used so far, which making room for another must keep
     QSet<QString> mRoomTexturesInUse;
+    // A room's ink outline, by everything it is made from
+    struct InkOutline
+    {
+        float x = 0.0f;
+        float y = 0.0f;
+        float top = 0.0f;
+        float half = 0.0f;
+        float width = 0.0f;
+        float dashLength = 0.0f;
+        QVector4D color;
+        bool operator==(const InkOutline&) const = default;
+    };
+    // A level's ink outlines and the triangles made from them, where each outline's are remade only when it
+    // changes, as making them all for a large area costs more each frame than all the rest of its rooms
+    struct InkOutlineLevel
+    {
+        QVector<InkOutline> outlines;
+        bool round = false;
+        QVector<float> vertices;
+        QVector<float> colors;
+        // Where each outline's vertices end
+        QVector<int> ends;
+    };
+    QHash<int, InkOutlineLevel> mInkOutlines;
     bool mRoomTextureLimitWarned = false;
     // A map label drawn again in the map style's font and color, by area and label ID
     struct ThemedLabel
@@ -361,6 +389,12 @@ private:
     // A column of light over the player's room, seen faintly through anything in front of it
     void renderPlayerBeacon();
     void paintCompass(QPainter& painter);
+    // The style's lettering at the size of the text drawn over the view
+    QFont sheetFont() const;
+    // Where it was drawn, below top, or an empty rectangle where the style draws none or the view has no room for it
+    QRect paintTitleBlock(QPainter& painter, const TArea& area, int top);
+    // Below top, and above the title block
+    void paintLevelCallouts(QPainter& painter, const TArea& area, int top, const QRect& titleBlock);
     void turnNorthUp();
     void setHoveredRoom(int roomId);
     // Worked out afresh, as the view can move under a pointer that stays still
@@ -401,6 +435,7 @@ private:
     // What rooms and exits on level z recede toward: the mapper's upper or lower level color, or the background
     QColor levelFadeTarget(int z) const;
     const MapStyle& mapStyle() const;
+    void applyStyleGeometry();
     // The style's background, else the profile's mapper background color
     QColor backgroundColor() const;
     // Of the beacon over the player's room, and of the style's thin ring around it
