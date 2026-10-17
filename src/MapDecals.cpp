@@ -70,7 +70,7 @@ void ring(QPainter& painter, const QPointF& center, const qreal radius, const QC
 }
 } // namespace
 
-QImage highlight(const MapStyle::HighlightShape shape, const QColor& color, const QColor& centerColor, const bool round, const int size)
+QImage highlight(const MapStyle::HighlightShape shape, const QColor& color, const QColor& centerColor, const bool round, const int size, const qreal lineWidth)
 {
     QImage image = clearImage(QSize(size, size), color);
     QPainter painter(&image);
@@ -119,9 +119,18 @@ QImage highlight(const MapStyle::HighlightShape shape, const QColor& color, cons
         const qreal reach = radius * 0.78;
         const QRectF line(center.x() - reach, center.y() - reach, 2.0 * reach, 2.0 * reach);
         painter.setBrush(Qt::NoBrush);
-        // Wide and faint under narrow and strong, so the glow fades away from the line on both sides
-        for (const auto& [width, alpha] : {std::pair{0.18, 25}, std::pair{0.1, 45}, std::pair{0.045, 255}}) {
-            painter.setPen(QPen(withAlpha(color, alpha), size * width));
+        const qreal opacity = color.alphaF();
+        // A faint glow either side, then a dark rim, so a light color still reads on a light board, then the line itself
+        struct Stroke
+        {
+            qreal width;
+            QColor color;
+            int alpha;
+        };
+        const QColor rim = color.darker(300);
+        for (const Stroke& stroke : {Stroke{lineWidth * 4.0, color, 25}, Stroke{lineWidth * 2.2, color, 45}, Stroke{lineWidth * 2.0, rim, 170}, Stroke{lineWidth, color, 255}}) {
+            // Short of the picture's edge, which would cut a wide glow off square
+            painter.setPen(QPen(withAlpha(stroke.color, qRound(stroke.alpha * opacity)), size * qMin(stroke.width, 0.18)));
             if (round) {
                 painter.drawEllipse(line);
             } else {
@@ -155,6 +164,29 @@ bool highlightOnGround(const MapStyle::HighlightShape shape)
 bool highlightFillsRoom(const MapStyle::HighlightShape shape)
 {
     return shape == MapStyle::HighlightShape::Cell;
+}
+
+qreal highlightSize(const MapStyle::HighlightShape shape, const qreal radius, const qreal scale, const qreal roomSize)
+{
+    if (highlightFillsRoom(shape)) {
+        return roomSize;
+    }
+    // In the gap round the room's piece whatever radius the script gave it: any other puts the line under a building
+    if (shape == MapStyle::HighlightShape::Outline) {
+        return scale;
+    }
+    return radius * scale;
+}
+
+qreal outlineWidth(const qreal pixelsAcross)
+{
+    if (pixelsAcross <= 0.0) {
+        return scmOutlineWidth;
+    }
+    // In steps, so that a zoom makes few textures
+    constexpr qreal step = 0.01;
+    const qreal wanted = std::ceil(scmOutlineMinPixels / pixelsAcross / step) * step;
+    return std::clamp(wanted, scmOutlineWidth, scmOutlineMaxWidth);
 }
 
 QImage registrationMark(const QColor& color, const int size)

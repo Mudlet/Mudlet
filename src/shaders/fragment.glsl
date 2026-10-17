@@ -46,6 +46,9 @@ flat in vec3 instanceOrigin;
 uniform int uModelShading = 0;
 uniform bool uModelRound = false;
 uniform bool uModelBevel = true;
+// A see-through model's edges, drawn solid so that it reads as a building rather than a smudge: 0 for none, 1 for the
+// cube, 2 the cylinder, 3 the pyramid and 4 the cone template's
+uniform int uModelEdges = 0;
 in vec3 surfaceNormal;
 flat in vec3 instanceSide;
 const vec3 cModelLight = vec3(-0.45, 0.55, 0.7);
@@ -89,6 +92,29 @@ uint inkSeed()
 float paperGrain()
 {
     return 0.94 + 0.06 * inkRandom(ivec2(gl_FragCoord.xy), 7u);
+}
+
+// How far this point of the [-1,1] template is from its nearest edge, in the template's units: 1 for the cube, 2 the
+// cylinder, 3 the pyramid and 4 the cone
+float templateEdge(int shape)
+{
+    if (shape == 1) {
+        // A face's own axis is pushed out of reach so only the two axes along the face make edges
+        vec3 inward = 1.0 - abs(localPosition) + step(0.5, abs(localNormal)) * 2.0;
+        return min(min(inward.x, inward.y), inward.z);
+    }
+    bool base = localNormal.z < -0.5;
+    if (shape == 3) {
+        vec2 a = abs(localPosition.xy);
+        return base ? 1.0 - max(a.x, a.y) : min(localPosition.z + 1.0, abs(a.x - a.y));
+    }
+    if (shape == 2 ? abs(localNormal.z) > 0.5 : base) {
+        // To the cap's nearest side: a circle's radius would leave the middle of each side short of the rim, zoomed in
+        float side = 6.2831853 / uWireSides;
+        float middle = (floor(atan(localPosition.y, localPosition.x) / side) + 0.5) * side;
+        return 1.0 - dot(localPosition.xy, vec2(cos(middle), sin(middle))) / cos(side * 0.5);
+    }
+    return shape == 2 ? 1.0 - abs(localPosition.z) : localPosition.z + 1.0;
 }
 
 void main()
@@ -169,21 +195,7 @@ void main()
         vec4 textureColor = texture(uTexture, texCoord);
         FragColor = textureColor * vertexColor;
     } else if (uWireframe) {
-        float edge;
-        if (uWireRound) {
-            if (abs(localNormal.z) > 0.5) {
-                // To the cap's nearest side: a circle's radius would leave the middle of each side short of the rim, zoomed in
-                float side = 6.2831853 / uWireSides;
-                float middle = (floor(atan(localPosition.y, localPosition.x) / side) + 0.5) * side;
-                edge = 1.0 - dot(localPosition.xy, vec2(cos(middle), sin(middle))) / cos(side * 0.5);
-            } else {
-                edge = 1.0 - abs(localPosition.z);
-            }
-        } else {
-            // A face's own axis is pushed out of reach so only the two axes along the face make edges
-            vec3 inward = 1.0 - abs(localPosition) + step(0.5, abs(localNormal)) * 2.0;
-            edge = min(min(inward.x, inward.y), inward.z);
-        }
+        float edge = templateEdge(uWireRound ? 2 : 1);
         float pixels = edge / max(fwidth(edge), 1e-6);
         float line = clamp(uWireWidth + 0.5 - pixels, 0.0, 1.0);
         float glow = exp(-pixels / uWireGlow);
@@ -288,7 +300,15 @@ void main()
         if (uModelShading == 1 && uModelBevel && !top && localNormal.z > -0.5) {
             light *= mix(0.6, 1.0, smoothstep(-1.0, 0.6, localPosition.z));
         }
-        FragColor = vec4(vertexColor.rgb * light * vec3(1.03, 1.0, 0.95), vertexColor.a);
+        vec3 shaded = vertexColor.rgb * light * vec3(1.03, 1.0, 0.95);
+        float alpha = vertexColor.a;
+        if (uModelShading == 1 && uModelEdges > 0 && alpha < 0.999) {
+            float edge = templateEdge(uModelEdges);
+            float line = clamp(uWireWidth + 0.5 - edge / max(fwidth(edge), 1e-6), 0.0, 1.0);
+            shaded *= 1.0 - 0.5 * line * min(1.0, (1.0 - alpha) / 0.7);
+            alpha = mix(alpha, 1.0, line);
+        }
+        FragColor = vec4(shaded, alpha);
     } else if (uModelShading == 3) {
         // A soft blob on the ground, rounded at a square's corners, fading out by its rim
         if (localNormal.z < 0.5) {

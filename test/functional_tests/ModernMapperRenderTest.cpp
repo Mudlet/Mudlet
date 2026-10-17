@@ -4102,10 +4102,12 @@ private slots:
         constexpr int kNorthTowerId = 50;
         constexpr int kEastTowerId = 60;
         constexpr int kMiddleTowerId = 70;
+        constexpr int kNearTowerId = 80;
         for (int storey = 0; storey < 3; ++storey) {
             QVERIFY(addRoomAt(kSouthTowerId + storey, areaId, 0, -1, storey));
             QVERIFY(addRoomAt(kNorthTowerId + storey, areaId, 0, 4, storey));
             QVERIFY(addRoomAt(kEastTowerId + storey, areaId, 2, -1, storey));
+            QVERIFY(addRoomAt(kNearTowerId + storey, areaId, 0, 1, storey));
         }
         const auto restore = qScopeGuard([this]() {
             mpHost->setMapStyle(qsl("tiles"));
@@ -4134,16 +4136,78 @@ private slots:
             });
         };
 
+        const auto highlight = [this](const int roomId, const bool on) {
+            TRoom* pR = map()->mpRoomDB->getRoom(roomId);
+            pR->highlight = on;
+            pR->highlightColor = QColor(Qt::red);
+            pR->highlightColor2 = QColor(Qt::green);
+            pR->highlightRadius = 1.0f;
+        };
+
         queueFrame(widget, areaId);
         QVERIFY2(seenThrough(opacitiesAt(QPointF(0.0, -1.0))), "the tower in front of the player is solid");
         QVERIFY2(solid(opacitiesAt(QPointF(0.0, 4.0))), "the tower behind the player is seen through");
+        QVERIFY2(solid(opacitiesAt(QPointF(0.0, 1.0))), "the tower just behind the player is seen through");
         QVERIFY2(solid(opacitiesAt(QPointF(2.0, -1.0))), "a tower in front of a room that is not highlighted is seen through");
+        // Blurred with the rest of the scene, as a solid one is, so that nothing jumps from sharp to blurred as it fades
+        const auto& commands = widget.mRenderCommandQueue.commands();
+        bool fadedQueued = false;
+        bool edgesQueued = false;
+        for (size_t index = 0; index < commands.size(); ++index) {
+            if (const auto* cubes = dynamic_cast<const RenderInstancedCubesCommand*>(commands.at(index).get()); cubes && cubes->shading() == RenderCommand::Shading::ModelBlock) {
+                const bool faded = std::any_of(cubes->instances().cbegin(), cubes->instances().cend(), [](const CubeInstanceData& cube) {
+                    return cube.color[3] < 1.0f;
+                });
+                fadedQueued = fadedQueued || faded;
+                edgesQueued = edgesQueued || cubes->edges();
+                QVERIFY2(!faded || !widget.mRenderCommandQueue.deferred(index), "a faded piece is drawn after the blur");
+                QVERIFY2(faded || !cubes->edges(), "a solid piece has its edges drawn");
+            }
+        }
+        QVERIFY(fadedQueued);
+        QVERIFY2(edgesQueued, "a faded piece is drawn without its edges");
+        // Played back as paintGL does, the scene and then what is drawn after the blur each leave GL as they found it
+        for (const bool deferredPass : {false, true}) {
+            bool depthWrites = true;
+            bool colorWrites = true;
+            GLStateCommand::StateType depthFunction = GLStateCommand::DEPTH_FUNC_LESS;
+            for (size_t index = 0; index < commands.size(); ++index) {
+                const auto* state = dynamic_cast<const GLStateCommand*>(commands.at(index).get());
+                if (!state || widget.mRenderCommandQueue.deferred(index) != deferredPass) {
+                    continue;
+                }
+                switch (state->stateType()) {
+                case GLStateCommand::ENABLE_DEPTH_WRITE:
+                    depthWrites = true;
+                    break;
+                case GLStateCommand::DISABLE_DEPTH_WRITE:
+                    depthWrites = false;
+                    break;
+                case GLStateCommand::ENABLE_COLOR_WRITE:
+                    colorWrites = true;
+                    break;
+                case GLStateCommand::DISABLE_COLOR_WRITE:
+                    colorWrites = false;
+                    break;
+                case GLStateCommand::DEPTH_FUNC_LEQUAL:
+                case GLStateCommand::DEPTH_FUNC_LESS:
+                case GLStateCommand::DEPTH_FUNC_GREATER:
+                    depthFunction = state->stateType();
+                    break;
+                default:
+                    break;
+                }
+            }
+            QVERIFY2(depthWrites && colorWrites && depthFunction == GLStateCommand::DEPTH_FUNC_LESS,
+                     qPrintable(qsl("the %1 pass leaves depth writes %2, color writes %3 and depth function %4")
+                                        .arg(deferredPass ? qsl("deferred") : qsl("scene"))
+                                        .arg(depthWrites)
+                                        .arg(colorWrites)
+                                        .arg(depthFunction)));
+        }
 
-        TRoom* pEastRoom = map()->mpRoomDB->getRoom(kEastRoomId);
-        pEastRoom->highlight = true;
-        pEastRoom->highlightColor = QColor(Qt::red);
-        pEastRoom->highlightColor2 = QColor(Qt::green);
-        pEastRoom->highlightRadius = 1.0f;
+        highlight(kEastRoomId, true);
+        widget.mNameFadeTimer->stop();
         queueFrame(widget, areaId);
         QVERIFY2(widget.mNameFadeTimer->isActive(), "nothing repaints the view while the tower fades");
         widget.mPieceFadeMilliseconds = 0;
@@ -4151,16 +4215,40 @@ private slots:
         QVERIFY2(seenThrough(opacitiesAt(QPointF(2.0, -1.0))), "the tower in front of a highlighted room is solid");
         QVERIFY2(seenThrough(opacitiesAt(QPointF(0.0, -1.0))), "the tower in front of the player is solid once a room is highlighted");
 
-        pEastRoom->highlight = false;
-        TRoom* pNorthTop = map()->mpRoomDB->getRoom(kNorthTowerId + 2);
-        pNorthTop->highlight = true;
-        pNorthTop->highlightColor = QColor(Qt::red);
-        pNorthTop->highlightColor2 = QColor(Qt::green);
-        pNorthTop->highlightRadius = 1.0f;
+        highlight(kEastRoomId, false);
+        queueFrame(widget, areaId);
+        QVERIFY2(solid(opacitiesAt(QPointF(2.0, -1.0))), "the tower in front of a room no longer highlighted stays seen through");
+
+        // A highlighted building is not seen through for its own rooms, which it stands on or over, but still is for
+        // another's it hides
+        highlight(kSouthTowerId, true);
+        highlight(kEastTowerId + 1, true);
+        queueFrame(widget, areaId);
+        QVERIFY2(seenThrough(opacitiesAt(QPointF(0.0, -1.0))), "a highlighted tower in front of the player is solid");
+        QVERIFY2(solid(opacitiesAt(QPointF(2.0, -1.0))), "a highlighted tower is seen through for its own room");
+        highlight(kSouthTowerId, false);
+        highlight(kEastTowerId + 1, false);
+
+        highlight(kNorthTowerId + 2, true);
         QVERIFY(addRoomAt(kMiddleTowerId, areaId, 0, 3, 0));
         QVERIFY(addRoomAt(kMiddleTowerId + 1, areaId, 0, 3, 1));
         queueFrame(widget, areaId);
         QVERIFY2(seenThrough(opacitiesAt(QPointF(0.0, 3.0))), "a tower in front of a highlighted upper storey is solid");
+        highlight(kNorthTowerId + 2, false);
+
+        // Back from another style, a diorama starts settled, not from the fade it was left in
+        widget.mPieceFadeMilliseconds = 250;
+        queueFrame(widget, areaId);
+        QVERIFY(seenThrough(opacitiesAt(QPointF(0.0, -1.0))));
+        QVERIFY(mpHost->setMapStyle(qsl("tiles")));
+        queueFrame(widget, areaId);
+        map()->mRoomIdHash[map()->mProfileName] = kEastRoomId;
+        const auto restorePlayer = qScopeGuard([this]() {
+            map()->mRoomIdHash[map()->mProfileName] = kPlayerRoomId;
+        });
+        QVERIFY(mpHost->setMapStyle(qsl("diorama")));
+        queueFrame(widget, areaId);
+        QVERIFY2(solid(opacitiesAt(QPointF(0.0, -1.0))), "a tower fades back in from where another style left it");
     }
 
     // Drawn after the tilt-shift blurs the frame, which only diorama has, so that they stay sharp; a label shown
@@ -4238,6 +4326,43 @@ private slots:
         const Counts tiles = counts();
         QVERIFY(tiles.labels > 0 && tiles.names > 0);
         QCOMPARE(tiles.deferred, 0);
+        // Another style's labels, blurred by nothing, are drawn as they always were, however close they are seen
+        QCOMPARE(widget.mThemedLabels.value({areaId, labelId}).sharpness, 1);
+    }
+
+    // Drawn after the blur, a label on the viewed level is still hidden only by what stands on that level in front of
+    // it: not by the level above, nor by a piece seen through. And nothing is left queued after the frame
+    void test_dioramaLabelsShowUnderTheLevelAbove()
+    {
+        if (!glAvailable()) {
+            QSKIP("no OpenGL context on this platform");
+        }
+        const int areaId = addArea();
+        QVERIFY(areaId > 0);
+        constexpr int kUpperRoomId = 90;
+        QVERIFY(addRoomAt(kUpperRoomId, areaId, -2, 1, 1));
+        const QColor box(255, 0, 255);
+        // Spaces first, so that the box's left end has no letters on it
+        const int labelId = map()->createMapLabel(areaId, qsl("          Moor"), -2.25f, 1.4f, 0.0f, Qt::white, box, true, false, true, 30.0, 24);
+        QVERIFY(labelId >= 0);
+        const auto restore = qScopeGuard([this, areaId, labelId]() {
+            mpHost->setMapStyle(qsl("tiles"));
+            map()->deleteMapLabel(areaId, labelId);
+        });
+        QVERIFY(mpHost->setMapStyle(qsl("diorama")));
+        ModernGLWidget widget(map(), mpHost);
+        lookDown(widget);
+        if (!widget.isValid()) {
+            QSKIP("no OpenGL context on this platform");
+        }
+        const TMapLabel label = map()->mpRoomDB->getArea(areaId)->mMapLabels.value(labelId);
+        constexpr float roomHeight = 2.0f / 3.0f / 2.0f;
+        const QVector3D probe(static_cast<float>(label.pos.x()) + 0.1f, static_cast<float>(label.pos.y() - std::abs(label.size.height()) / 2.0), roomHeight / 2.0f);
+        QVERIFY2(std::abs(probe.x() + 2.0f) < 0.3f && std::abs(probe.y() - 1.0f) < 0.3f && std::abs(label.size.width()) > 0.5,
+                 qPrintable(qsl("the label is %1 by %2, and its box's left end at %3, %4 is not under the room above").arg(label.size.width()).arg(label.size.height()).arg(probe.x()).arg(probe.y())));
+        const QColor shown = colorAt(widget, probe);
+        QVERIFY2(widget.mRenderCommandQueue.commands().empty(), "commands are left queued after the frame");
+        QVERIFY2(difference(shown, box) < 90, qPrintable(qsl("the label shows %1 under the room above").arg(shown.name())));
     }
 
     // A symbol stands on a white tag, and a bold name in a white halo, where their color shows on it; else they go without

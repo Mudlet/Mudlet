@@ -46,7 +46,7 @@ public:
     void setDeferring(bool deferring);
     bool deferred(size_t index) const;
 
-    // Execute the queued commands but the deferred ones, which stay queued
+    // Execute the queued commands but the deferred ones, which alone stay queued
     void executeAll(QOpenGLShaderProgram* shader,
                     GeometryManager* geometryManager,
                     ResourceManager* resourceManager,
