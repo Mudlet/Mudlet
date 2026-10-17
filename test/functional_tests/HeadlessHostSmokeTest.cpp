@@ -3506,6 +3506,365 @@ deleteMiniConsole("csReset")
         HostManager::self()->deleteHost(hostname);
     }
 
+    // The answers are those of the same Lua run in the GUI self-test profile, but for those about the main command line
+    void test_headlessCommandLineStyleSheetContract()
+    {
+        const QString hostname = qsl("Test Headless Host Command Line Style");
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = HostManager::self()->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+        QVERIFY(!host->hasConsoleView());
+        const bool ran = host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+headlessCmdLineStyle = "not run"
+local ok, err = pcall(function()
+  local function described(called, ...)
+    if not called then
+      return "raised:" .. tostring((...))
+    end
+    local count = select("#", ...)
+    local values = {}
+    for i = 1, count do
+      values[i] = tostring((select(i, ...)))
+    end
+    return "[" .. count .. "]" .. table.concat(values, ":")
+  end
+  local answers = {}
+  local function step(label, f, ...)
+    answers[#answers + 1] = label .. "=" .. described(pcall(f, ...))
+  end
+  local function look(label, name)
+    answers[#answers + 1] = label .. "=" .. described(pcall(getWindowGeometry, name))
+  end
+  local profileId = (getProfileName():gsub(" ", "\\ "))
+  local function line(key, sheet, w, h)
+    local name = "cs" .. key
+    createCommandLine(name, 0, 0, w or 10, h or 10)
+    local parts = {described(pcall(setCmdLineStyleSheet, name, sheet)), described(pcall(getCmdLineStyleSheet, name)), described(pcall(getWindowGeometry, name))}
+    resizeWindow(name, 5, 500)
+    parts[#parts + 1] = described(pcall(getWindowGeometry, name))
+    resizeWindow(name, 500, 5)
+    parts[#parts + 1] = described(pcall(getWindowGeometry, name))
+    answers[#answers + 1] = key .. "=" .. table.concat(parts, " ")
+  end
+  createCommandLine("csFresh", 0, 0, 10, 10)
+  step("fresh.sheet", getCmdLineStyleSheet, "csFresh")
+  line("min", "min-width: 50px; min-height: 30px")
+  line("max", "max-width: 20px; max-height: 8px", 100, 100)
+  line("padded", "min-width: 50px; padding: 2px; border: 3px solid", 1, 1)
+  line("width", "width: 100px; min-width: 50px", 1, 1)
+  line("rule", "QPlainTextEdit { min-width: 60px }", 1, 1)
+  line("ownRule", "TCommandLine { min-height: 60px }", 1, 1)
+  line("textBoxRule", "TTextBox { min-height: 60px }", 1, 1)
+  line("scrollRule", "QAbstractScrollArea { min-height: 61px }", 1, 1)
+  line("frameRule", "QFrame { min-width: 62px }", 1, 1)
+  line("labelRule", "QLabel { min-width: 60px }", 1, 1)
+  line("native", "border-style: native; min-width: 50px", 1, 1)
+  line("nativeWidth", "border: 4px native; min-width: 50px", 1, 1)
+  line("solid", "border: 2px solid; min-width: 50px", 1, 1)
+  line("none", "border: none; min-width: 50px", 1, 1)
+  line("radius", "border-radius: 2px; min-width: 50px", 1, 1)
+  line("em", "font-size: 20px; min-width: 2em", 1, 1)
+  line("editable", "QPlainTextEdit:editable { min-width: 60px }", 1, 1)
+  line("readOnly", "QPlainTextEdit:read-only { min-width: 60px }", 1, 1)
+  line("notReadOnly", "QPlainTextEdit:!read-only { min-width: 60px }", 1, 1)
+  line("active", "QPlainTextEdit:active { min-width: 60px }", 1, 1)
+  line("inactive", "QPlainTextEdit:!active { padding: 2px; min-width: 50px }", 1, 1)
+  line("focus", "QPlainTextEdit:focus { min-width: 60px }", 1, 1)
+  line("named", "#commandLine_" .. profileId .. "_csnamed { min-width: 60px }", 1, 1)
+  line("otherNamed", "#commandLine_" .. profileId .. "_csother { min-width: 60px }", 1, 1)
+  line("textEditNamed", "#textEdit_" .. profileId .. "_cstextEditNamed { min-width: 60px }", 1, 1)
+  line("star", "* { min-width: 60px }", 1, 1)
+  line("background", "QPlainTextEdit { background-color: red; }", 1, 1)
+  line("minOverMax", "min-width: 50px; max-width: 20px; min-height: 9px; max-height: 40px", 30, 30)
+  -- Clearing a sheet keeps the size and lets it go
+  line("cleared", "min-width: 50px; max-height: 8px", 1, 100)
+  step("cleared.clear", setCmdLineStyleSheet, "cscleared", "")
+  step("cleared.sheet", getCmdLineStyleSheet, "cscleared")
+  look("cleared.after", "cscleared")
+  resizeWindow("cscleared", 5, 500)
+  look("cleared.free", "cscleared")
+  -- Missing, deleted and odd names
+  step("missing", setCmdLineStyleSheet, "csMissing", "min-width: 50px")
+  step("missing.get", getCmdLineStyleSheet, "csMissing")
+  createCommandLine("csGone", 0, 0, 10, 10)
+  deleteCommandLine("csGone")
+  step("gone", setCmdLineStyleSheet, "csGone", "min-width: 50px")
+  step("gone.get", getCmdLineStyleSheet, "csGone")
+  step("number", setCmdLineStyleSheet, "csFresh", 5)
+  step("number.get", getCmdLineStyleSheet, "csFresh")
+  step("noSheet", setCmdLineStyleSheet, "csFresh", nil)
+  createLabel("csLabel", 0, 0, 10, 10, 1)
+  step("labelName", setCmdLineStyleSheet, "csLabel", "x")
+  deleteLabel("csLabel")
+  -- In a user window and a scroll box, and moved between them
+  openUserWindow("csWindow", false, false, "f")
+  createCommandLine("csWindow", "csInWindow", 0, 0, 1, 1)
+  step("inWindow", setCmdLineStyleSheet, "csInWindow", "min-width: 40px")
+  look("inWindow", "csInWindow")
+  createScrollBox("csBox", 0, 0, 100, 100)
+  createCommandLine("csBox", "csInBox", 0, 0, 1, 1)
+  step("inBox", setCmdLineStyleSheet, "csInBox", "min-width: 41px")
+  look("inBox", "csInBox")
+  step("inBox.moveBox", setWindow, "csWindow", "csBox", 0, 0, true)
+  resizeWindow("csInBox", 5, 5)
+  look("inBox.box", "csInBox")
+  step("inBox.moveOut", setWindow, "main", "csInBox", 3, 3, true)
+  resizeWindow("csInBox", 5, 5)
+  look("inBox.out", "csInBox")
+  step("inBox.get", getCmdLineStyleSheet, "csInBox")
+  -- Hidden
+  createCommandLine("csHidden", 0, 0, 1, 1)
+  hideWindow("csHidden")
+  step("hidden", setCmdLineStyleSheet, "csHidden", "min-width: 42px")
+  look("hidden", "csHidden")
+  -- Sharing a name with a scroll box or a text edit
+  createScrollBox("csSharedBox", 0, 0, 30, 30)
+  createCommandLine("csSharedBox", 0, 0, 1, 1)
+  step("sharedBox", setCmdLineStyleSheet, "csSharedBox", "min-width: 50px")
+  step("sharedBox.get", getCmdLineStyleSheet, "csSharedBox")
+  look("sharedBox", "csSharedBox")
+  deleteScrollBox("csSharedBox")
+  look("sharedBox.alone", "csSharedBox")
+  resizeWindow("csSharedBox", 5, 5)
+  look("sharedBox.resized", "csSharedBox")
+  createTextEdit("csSharedEdit", 0, 0, 1, 1)
+  createCommandLine("csSharedEdit", 0, 0, 2, 2)
+  step("sharedEdit", setCmdLineStyleSheet, "csSharedEdit", "min-width: 50px")
+  look("sharedEdit", "csSharedEdit")
+  deleteCommandLine("csSharedEdit")
+  look("sharedEdit.edit", "csSharedEdit")
+  createCommandLine("csSharedEdit2", 0, 0, 2, 2)
+  createTextEdit("csSharedEdit2", 0, 0, 1, 1)
+  setTextEditStyleSheet("csSharedEdit2", "min-width: 70px")
+  step("sharedEdit2", setCmdLineStyleSheet, "csSharedEdit2", "min-height: 30px")
+  look("sharedEdit2", "csSharedEdit2")
+  -- A console's own command line
+  createMiniConsole("csMini", 0, 0, 100, 100)
+  step("mini.before", setCmdLineStyleSheet, "csMini", "min-height: 50px")
+  enableCommandLine("csMini")
+  step("mini.sheet", getCmdLineStyleSheet, "csMini")
+  step("mini.set", setCmdLineStyleSheet, "csMini", "min-height: 300px; min-width: 300px")
+  step("mini.get", getCmdLineStyleSheet, "csMini")
+  disableCommandLine("csMini")
+  step("mini.disabled", setCmdLineStyleSheet, "csMini", "min-height: 30px")
+  step("mini.disabledGet", getCmdLineStyleSheet, "csMini")
+  step("mini.reenabled", enableCommandLine, "csMini")
+  step("mini.reenabledGet", getCmdLineStyleSheet, "csMini")
+  createCommandLine("csDisplaced", 0, 0, 1, 1)
+  setCmdLineStyleSheet("csDisplaced", "min-width: 50px")
+  createMiniConsole("csDisplaced", 0, 0, 100, 100)
+  enableCommandLine("csDisplaced")
+  step("displaced.get", getCmdLineStyleSheet, "csDisplaced")
+  openUserWindow("csOwnWindow", false, false, "f")
+  enableCommandLine("csOwnWindow")
+  step("window.set", setCmdLineStyleSheet, "csOwnWindow", "min-height: 30px")
+  step("window.get", getCmdLineStyleSheet, "csOwnWindow")
+  closeUserWindow("csOwnWindow")
+  createBuffer("csBuffer")
+  enableCommandLine("csBuffer")
+  step("buffer.set", setCmdLineStyleSheet, "csBuffer", "color: red")
+  step("buffer.get", getCmdLineStyleSheet, "csBuffer")
+  for key in ("Fresh min max padded width rule ownRule textBoxRule scrollRule frameRule labelRule native nativeWidth solid none radius em editable readOnly notReadOnly active inactive focus named otherNamed textEditNamed star background minOverMax cleared InWindow InBox Hidden SharedBox SharedEdit2"):gmatch("%S+") do
+    deleteCommandLine("cs" .. key)
+  end
+  deleteTextEdit("csSharedEdit")
+  deleteTextEdit("csSharedEdit2")
+  deleteScrollBox("csBox")
+  deleteMiniConsole("csMini")
+  deleteMiniConsole("csDisplaced")
+  closeUserWindow("csWindow")
+  -- A frame console's own command line outlives a frame it was moved out of, and shows its own geometry then
+  setConfig("specialForceMXPProcessorOn", true)
+  openUserWindow("csFrameWindow", false, false, "f")
+  -- Where its console's layout puts it is not modelled, so one a minimum does not hold is only read once moved
+  local frames = {
+    {"csFrame", "csFrameWindow", "min-height: 2000px; min-width: 2000px"},
+    {"csFrameMain", "main", "min-height: 2000px; min-width: 2000px"},
+    {"csFrameMax", "csFrameWindow", "max-height: 20px; max-width: 50px"},
+  }
+  for _, frame in ipairs(frames) do
+    local key, window, sheet = frame[1], frame[2], frame[3]
+    local minimum = sheet:find("min", 1, true)
+    feedTriggers([[<FRAME Name="]] .. key .. [[" Left="0" Top="0" Width="20%" Height="30%">]] .. "\n")
+    enableCommandLine(key)
+    step(key .. ".sheet", setCmdLineStyleSheet, key, sheet)
+    step(key .. ".move", setWindow, window, key, 0, 0, true)
+    feedTriggers([[<FRAME ]] .. key .. [[ ACTION="close">]] .. "\n")
+    step(key .. ".type", windowType, key)
+    if minimum then
+      look(key, key)
+    end
+    resizeWindow(key, 5, 5)
+    if minimum then
+      look(key .. ".resized", key)
+    end
+    resizeWindow(key, 500, 500)
+    step(key .. ".moveOut", setWindow, "main", key, 1, 1, true)
+    look(key .. ".out", key)
+    resizeWindow(key, 5, 5)
+    look(key .. ".outResized", key)
+    resizeWindow(key, 500, 500)
+    look(key .. ".outResizedLarge", key)
+    step(key .. ".get", getCmdLineStyleSheet, key)
+    deleteCommandLine(key)
+  end
+  closeUserWindow("csFrameWindow")
+  setConfig("specialForceMXPProcessorOn", false)
+  headlessCmdLineStyleAnswers = table.concat(answers, "\n")
+  local mainAnswers = {}
+  local function mainStep(label, f, ...)
+    mainAnswers[#mainAnswers + 1] = label .. "=" .. described(pcall(f, ...))
+  end
+  mainStep("main", setCmdLineStyleSheet, "main", "min-height: 5px")
+  mainStep("mainGet", getCmdLineStyleSheet, "main")
+  mainStep("noName", setCmdLineStyleSheet, "min-height: 5px")
+  mainStep("empty", setCmdLineStyleSheet, "", "min-height: 5px")
+  mainStep("nilGet", getCmdLineStyleSheet)
+  headlessCmdLineStyleMainAnswers = table.concat(mainAnswers, "\n")
+end)
+headlessCmdLineStyle = ok and "ok" or tostring(err)
+)lua"));
+        QVERIFY2(ran, "The Lua chunk did not run.");
+        QCOMPARE(luaGlobalString(host, "headlessCmdLineStyle"), qsl("ok"));
+        // QCss measures a command line's em in the application font at the sheet's size
+        QFont sheetFont;
+        sheetFont.setPixelSize(20);
+        const int twoEm = 2 * QFontMetrics(sheetFont).height();
+        // As the chunk escapes the profile name in a selector
+        const QString profileId = QString(hostname).replace(QLatin1Char(' '), qsl("\\ "));
+        const QStringList answers{qsl("fresh.sheet=[1]QPlainTextEdit{background-color: rgb(0, 0, 0);}"),
+                                  qsl("min=[1]true [1]min-width: 50px; min-height: 30px [4]0:0:52:32 [4]0:0:52:500 [4]0:0:500:32"),
+                                  qsl("max=[1]true [1]max-width: 20px; max-height: 8px [4]0:0:22:10 [4]0:0:5:10 [4]0:0:22:5"),
+                                  qsl("padded=[1]true [1]min-width: 50px; padding: 2px; border: 3px solid [4]0:0:60:1 [4]0:0:60:500 [4]0:0:500:5"),
+                                  qsl("width=[1]true [1]width: 100px; min-width: 50px [4]0:0:102:1 [4]0:0:102:500 [4]0:0:500:5"),
+                                  qsl("rule=[1]true [1]QPlainTextEdit { min-width: 60px } [4]0:0:62:1 [4]0:0:62:500 [4]0:0:500:5"),
+                                  qsl("ownRule=[1]true [1]TCommandLine { min-height: 60px } [4]0:0:1:62 [4]0:0:5:500 [4]0:0:500:62"),
+                                  qsl("textBoxRule=[1]true [1]TTextBox { min-height: 60px } [4]0:0:1:1 [4]0:0:5:500 [4]0:0:500:5"),
+                                  qsl("scrollRule=[1]true [1]QAbstractScrollArea { min-height: 61px } [4]0:0:1:63 [4]0:0:5:500 [4]0:0:500:63"),
+                                  qsl("frameRule=[1]true [1]QFrame { min-width: 62px } [4]0:0:64:1 [4]0:0:64:500 [4]0:0:500:5"),
+                                  qsl("labelRule=[1]true [1]QLabel { min-width: 60px } [4]0:0:1:1 [4]0:0:5:500 [4]0:0:500:5"),
+                                  qsl("native=[1]true [1]border-style: native; min-width: 50px [4]0:0:52:1 [4]0:0:52:500 [4]0:0:500:5"),
+                                  qsl("nativeWidth=[1]true [1]border: 4px native; min-width: 50px [4]0:0:58:1 [4]0:0:58:500 [4]0:0:500:5"),
+                                  qsl("solid=[1]true [1]border: 2px solid; min-width: 50px [4]0:0:54:1 [4]0:0:54:500 [4]0:0:500:5"),
+                                  qsl("none=[1]true [1]border: none; min-width: 50px [4]0:0:50:1 [4]0:0:50:500 [4]0:0:500:5"),
+                                  qsl("radius=[1]true [1]border-radius: 2px; min-width: 50px [4]0:0:50:1 [4]0:0:50:500 [4]0:0:500:5"),
+                                  qsl("em=[1]true [1]font-size: 20px; min-width: 2em [4]0:0:%1:1 [4]0:0:%1:500 [4]0:0:500:5").arg(twoEm + 2),
+                                  qsl("editable=[1]true [1]QPlainTextEdit:editable { min-width: 60px } [4]0:0:62:1 [4]0:0:62:500 [4]0:0:500:5"),
+                                  qsl("readOnly=[1]true [1]QPlainTextEdit:read-only { min-width: 60px } [4]0:0:1:1 [4]0:0:5:500 [4]0:0:500:5"),
+                                  qsl("notReadOnly=[1]true [1]QPlainTextEdit:!read-only { min-width: 60px } [4]0:0:62:1 [4]0:0:62:500 [4]0:0:500:5"),
+                                  qsl("active=[1]true [1]QPlainTextEdit:active { min-width: 60px } [4]0:0:1:1 [4]0:0:5:500 [4]0:0:500:5"),
+                                  qsl("inactive=[1]true [1]QPlainTextEdit:!active { padding: 2px; min-width: 50px } [4]0:0:56:1 [4]0:0:56:500 [4]0:0:500:5"),
+                                  qsl("focus=[1]true [1]QPlainTextEdit:focus { min-width: 60px } [4]0:0:1:1 [4]0:0:5:500 [4]0:0:500:5"),
+                                  qsl("named=[1]true [1]#commandLine_%1_csnamed { min-width: 60px } [4]0:0:62:1 [4]0:0:62:500 [4]0:0:500:5").arg(profileId),
+                                  qsl("otherNamed=[1]true [1]#commandLine_%1_csother { min-width: 60px } [4]0:0:1:1 [4]0:0:5:500 [4]0:0:500:5").arg(profileId),
+                                  qsl("textEditNamed=[1]true [1]#textEdit_%1_cstextEditNamed { min-width: 60px } [4]0:0:1:1 [4]0:0:5:500 [4]0:0:500:5").arg(profileId),
+                                  qsl("star=[1]true [1]* { min-width: 60px } [4]0:0:62:1 [4]0:0:62:500 [4]0:0:500:5"),
+                                  qsl("background=[1]true [1]QPlainTextEdit { background-color: red; } [4]0:0:1:1 [4]0:0:5:500 [4]0:0:500:5"),
+                                  qsl("minOverMax=[1]true [1]min-width: 50px; max-width: 20px; min-height: 9px; max-height: 40px [4]0:0:52:30 [4]0:0:52:42 [4]0:0:52:11"),
+                                  qsl("cleared=[1]true [1]min-width: 50px; max-height: 8px [4]0:0:52:10 [4]0:0:52:10 [4]0:0:500:5"),
+                                  qsl("cleared.clear=[1]true"),
+                                  qsl("cleared.sheet=[1]"),
+                                  qsl("cleared.after=[4]0:0:500:5"),
+                                  qsl("cleared.free=[4]0:0:5:500"),
+                                  qsl("missing=[2]nil:command-line name 'csMissing' not found"),
+                                  qsl("missing.get=[2]nil:command-line name 'csMissing' not found"),
+                                  qsl("gone=[2]nil:command-line name 'csGone' not found"),
+                                  qsl("gone.get=[2]nil:command-line name 'csGone' not found"),
+                                  qsl("number=[1]true"),
+                                  qsl("number.get=[1]5"),
+                                  qsl("noSheet=raised:setCmdLineStyleSheet: bad argument #2 type (StyleSheet as string expected, got nil!)"),
+                                  qsl("labelName=[2]nil:command-line name 'csLabel' not found"),
+                                  qsl("inWindow=[1]true"),
+                                  qsl("inWindow=[4]0:0:42:1"),
+                                  qsl("inBox=[1]true"),
+                                  qsl("inBox=[4]0:0:43:1"),
+                                  qsl("inBox.moveBox=[1]true"),
+                                  qsl("inBox.box=[4]0:0:43:5"),
+                                  qsl("inBox.moveOut=[1]true"),
+                                  qsl("inBox.out=[4]3:3:43:5"),
+                                  qsl("inBox.get=[1]min-width: 41px"),
+                                  qsl("hidden=[1]true"),
+                                  qsl("hidden=[4]0:0:44:1"),
+                                  qsl("sharedBox=[1]true"),
+                                  qsl("sharedBox.get=[1]min-width: 50px"),
+                                  qsl("sharedBox=[4]0:0:30:30"),
+                                  qsl("sharedBox.alone=[4]0:0:52:1"),
+                                  qsl("sharedBox.resized=[4]0:0:52:5"),
+                                  qsl("sharedEdit=[1]true"),
+                                  qsl("sharedEdit=[4]0:0:52:2"),
+                                  qsl("sharedEdit.edit=[4]0:0:1:1"),
+                                  qsl("sharedEdit2=[1]true"),
+                                  qsl("sharedEdit2=[4]0:0:2:32"),
+                                  qsl("mini.before=[2]nil:command-line name 'csMini' not found"),
+                                  qsl("mini.sheet=[1]QPlainTextEdit{background-color: rgb(0, 0, 0);}"),
+                                  qsl("mini.set=[1]true"),
+                                  qsl("mini.get=[1]min-height: 300px; min-width: 300px"),
+                                  qsl("mini.disabled=[1]true"),
+                                  qsl("mini.disabledGet=[1]min-height: 30px"),
+                                  qsl("mini.reenabled=[1]true"),
+                                  qsl("mini.reenabledGet=[1]min-height: 30px"),
+                                  qsl("displaced.get=[1]QPlainTextEdit{background-color: rgb(0, 0, 0);}"),
+                                  qsl("window.set=[1]true"),
+                                  qsl("window.get=[1]min-height: 30px"),
+                                  qsl("buffer.set=[1]true"),
+                                  qsl("buffer.get=[1]color: red"),
+                                  qsl("csFrame.sheet=[1]true"),
+                                  qsl("csFrame.move=[1]true"),
+                                  qsl("csFrame.type=[1]commandline"),
+                                  qsl("csFrame=[4]0:0:2002:2002"),
+                                  qsl("csFrame.resized=[4]0:0:2002:2002"),
+                                  qsl("csFrame.moveOut=[1]true"),
+                                  qsl("csFrame.out=[4]1:1:2002:2002"),
+                                  qsl("csFrame.outResized=[4]1:1:2002:2002"),
+                                  qsl("csFrame.outResizedLarge=[4]1:1:2002:2002"),
+                                  qsl("csFrame.get=[1]min-height: 2000px; min-width: 2000px"),
+                                  qsl("csFrameMain.sheet=[1]true"),
+                                  qsl("csFrameMain.move=[1]true"),
+                                  qsl("csFrameMain.type=[1]commandline"),
+                                  qsl("csFrameMain=[4]0:0:2002:2002"),
+                                  qsl("csFrameMain.resized=[4]0:0:2002:2002"),
+                                  qsl("csFrameMain.moveOut=[1]true"),
+                                  qsl("csFrameMain.out=[4]1:1:2002:2002"),
+                                  qsl("csFrameMain.outResized=[4]1:1:2002:2002"),
+                                  qsl("csFrameMain.outResizedLarge=[4]1:1:2002:2002"),
+                                  qsl("csFrameMain.get=[1]min-height: 2000px; min-width: 2000px"),
+                                  qsl("csFrameMax.sheet=[1]true"),
+                                  qsl("csFrameMax.move=[1]true"),
+                                  qsl("csFrameMax.type=[1]commandline"),
+                                  qsl("csFrameMax.moveOut=[1]true"),
+                                  qsl("csFrameMax.out=[4]1:1:52:22"),
+                                  qsl("csFrameMax.outResized=[4]1:1:5:5"),
+                                  qsl("csFrameMax.outResizedLarge=[4]1:1:52:22"),
+                                  qsl("csFrameMax.get=[1]max-height: 20px; max-width: 50px")};
+        const QStringList actual = luaGlobalString(host, "headlessCmdLineStyleAnswers").split(QLatin1Char('\n'));
+        QStringList mismatches;
+        for (qsizetype i = 0; i < std::max(actual.size(), answers.size()); ++i) {
+            if (actual.value(i) != answers.value(i)) {
+                mismatches << qsl("%1, not %2").arg(actual.value(i), answers.value(i));
+            }
+        }
+        QVERIFY2(mismatches.isEmpty(), qPrintable(mismatches.join(QChar::LineFeed)));
+        // The main command line is a view's, so it is not found here where the GUI answers for it
+        const QStringList mainAnswers{qsl("main=[2]nil:the profile has no main window"),
+                                      qsl("mainGet=[2]nil:command-line name 'main' not found"),
+                                      qsl("noName=[2]nil:the profile has no main window"),
+                                      qsl("empty=[2]nil:the profile has no main window"),
+                                      qsl("nilGet=[2]nil:command-line name 'main' not found")};
+        QCOMPARE(luaGlobalString(host, "headlessCmdLineStyleMainAnswers"), mainAnswers.join(QLatin1Char('\n')));
+
+        // A new command line's sheet is built from the profile's command line background as TCommandLine's constructor
+        // builds it, which the GUI profile's black leaves untested
+        host->mCommandLineBgColor = QColor(10, 20, 30);
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+createCommandLine("csColour", 0, 0, 10, 10)
+createMiniConsole("csColourMini", 0, 0, 10, 10)
+enableCommandLine("csColourMini")
+headlessCmdLineColours = getCmdLineStyleSheet("csColour") .. "|" .. getCmdLineStyleSheet("csColourMini")
+)lua")));
+        QCOMPARE(luaGlobalString(host, "headlessCmdLineColours"), qsl("QPlainTextEdit{background-color: rgb(10, 20, 30);}|QPlainTextEdit{background-color: rgb(10, 20, 30);}"));
+        HostManager::self()->deleteHost(hostname);
+    }
+
     // The answers are those of the same Lua run in the GUI self-test profile, but for the last ones,
     // which a spec cannot wait for: a text edit in a deleted scroll box goes with it
     void test_headlessTextEditContract()
