@@ -1572,11 +1572,12 @@ describe("Tests Other.lua functions", function()
     -- and the numeric/table keys) are handled in dedicated tests below; map keys
     -- (which need an open mapper to set) are exercised only when settable.
     local originalValues = {}
-    -- show3dMapView is skipped because flipping it to true opens the 3D OpenGL
-    -- map view. Initialising the software GL stack under headless CI leaks
-    -- one-time allocations in a GL driver module that is unloaded before exit,
-    -- so leak detection flags it and it cannot be name-suppressed. The 3D view
-    -- is not what this config round-trip is meant to exercise.
+    -- show3dMapView is skipped because setting it on an open mapper, to either
+    -- value, builds the 3D OpenGL map view. Initialising the software GL stack
+    -- under headless CI leaks one-time allocations in a GL driver module that is
+    -- unloaded before exit, so leak detection flags it and it cannot be
+    -- name-suppressed. The 3D view is not what this config round-trip is meant
+    -- to exercise.
     local skipInGenericLoop = { showSentText = true, show3dMapView = true }
 
     local function snapshot(key)
@@ -1605,6 +1606,115 @@ describe("Tests Other.lua functions", function()
       assert.is_table(cfg)
       assert.is_boolean(cfg.enableGMCP)
       assert.is_boolean(cfg.editorAutoComplete)
+    end)
+
+
+    it("answers true from the table form when every key was applied", function()
+      snapshot("enableGMCP")
+      snapshot("enableMSDP")
+      local wantGMCP, wantMSDP = not getConfig("enableGMCP"), not getConfig("enableMSDP")
+      assert.is_true(setConfig({enableGMCP = wantGMCP, enableMSDP = wantMSDP}))
+      assert.equals(wantGMCP, getConfig("enableGMCP"))
+      assert.equals(wantMSDP, getConfig("enableMSDP"))
+      restore("enableGMCP")
+      restore("enableMSDP")
+    end)
+
+    it("names each refused key from the table form and still applies the rest", function()
+      snapshot("enableGMCP")
+      snapshot("mapSymbolFontScaling")
+      local wantGMCP = not getConfig("enableGMCP")
+      local scaling = getConfig("mapSymbolFontScaling")
+      local ok, err = setConfig({enableGMCP = wantGMCP, mapSymbolFontScaling = 99, mudletSpecNoSuchKey = true})
+      assert.is_nil(ok)
+      assert.equals("mapSymbolFontScaling 99 is out of range, it must be between 0.50 and 2.00; "
+        .. "'mudletSpecNoSuchKey' isn't a valid configuration option", err)
+      assert.equals(wantGMCP, getConfig("enableGMCP"), "a refused key stopped the others from being applied")
+      assert.equals(scaling, getConfig("mapSymbolFontScaling"), "a refused key was applied anyway")
+      restore("enableGMCP")
+      restore("mapSymbolFontScaling")
+    end)
+
+    it("raises for a key of the wrong type from the table form, as the scalar form does", function()
+      snapshot("enableGMCP")
+      local wantGMCP = not getConfig("enableGMCP")
+      local called, err = pcall(setConfig, {enableGMCP = wantGMCP, enableMSDP = "yes"})
+      assert.is_false(called, "the table form swallowed a bad-argument error")
+      assert.is_truthy(tostring(err):find("enableMSDP: .*bad argument #2 type"), tostring(err))
+      assert.equals(wantGMCP, getConfig("enableGMCP"), "a raised error stopped the others from being applied")
+      restore("enableGMCP")
+    end)
+
+    it("hands back an applied key's warning from the table form, even when another key failed", function()
+      snapshot("mapSymbolFont")
+      snapshot("mapSymbolFontScaling")
+      -- U+10FFFD has no glyph in any font, see the symbol font warning spec below
+      local roomId = createRoomID()
+      finally(function()
+        deleteRoom(roomId)
+        restore("mapSymbolFont")
+        restore("mapSymbolFontScaling")
+      end)
+      assert.is_true(addRoom(roomId))
+      assert.is_true(setRoomChar(roomId, "\244\143\191\189"))
+      local ok, warning = setConfig({mapSymbolFont = getConfig("mapSymbolFont")})
+      assert.is_true(ok)
+      assert.is_truthy(tostring(warning):find("^mapSymbolFont: "), tostring(warning))
+      local failed, err = setConfig({mapSymbolFont = getConfig("mapSymbolFont"), mapSymbolFontScaling = 99})
+      assert.is_nil(failed)
+      assert.is_truthy(tostring(err):find("^mapSymbolFontScaling 99 is out of range.*; applied with warnings: mapSymbolFont: font "),
+        tostring(err))
+    end)
+
+    it("answers true when handed back a getConfig() snapshot", function()
+      -- the snapshot holds showSentText as a boolean, which would turn "always" into "script"
+      local sentText = getConfig("showSentText", true)
+      finally(function()
+        setConfig("showSentText", sentText)
+      end)
+      local config = getConfig()
+      -- with a mapper open, setting show3dMapView to either value builds the
+      -- OpenGL view, after which a headless run never exits
+      config.show3dMapView = nil
+      local ok, err = setConfig(config)
+      assert.is_true(ok, tostring(err))
+    end)
+
+    it("names a getConfig()-only key asked for at another value from the table form", function()
+      local ok, err = setConfig({logDirectory = getConfig("logDirectory") .. "/mudletSpecElsewhere"})
+      assert.is_nil(ok)
+      assert.is_truthy(tostring(err):find("'logDirectory'", 1, true), tostring(err))
+    end)
+
+    it("names the key from the table form when only the value asked for contains it", function()
+      local ok, err = setConfig({mapSymbolFont = "mapSymbolFont Mudletspec Sans"})
+      assert.is_nil(ok)
+      assert.is_truthy(tostring(err):find("^mapSymbolFont: font "), tostring(err))
+    end)
+
+    it("is not stopped by a script's getConfig() that raises", function()
+      snapshot("enableGMCP")
+      local wantGMCP = not getConfig("enableGMCP")
+      local scriptGetConfig = getConfig
+      finally(function()
+        _G.getConfig = scriptGetConfig
+        restore("enableGMCP")
+      end)
+      _G.getConfig = function()
+        error("mudletspec getConfig override")
+      end
+      local called, ok, err = pcall(setConfig, {enableGMCP = wantGMCP, mapSymbolFontScaling = 99})
+      _G.getConfig = scriptGetConfig
+      assert.is_true(called, tostring(ok))
+      assert.is_nil(ok)
+      assert.is_truthy(tostring(err):find("mapSymbolFontScaling 99 is out of range", 1, true), tostring(err))
+      assert.equals(wantGMCP, getConfig("enableGMCP"))
+    end)
+
+    it("names an unknown experiment from the table form", function()
+      local ok, err = setConfig({["experiment.mudletspec.nosuchthing"] = false})
+      assert.is_nil(ok)
+      assert.is_truthy(tostring(err):find("experiment.mudletspec.nosuchthing", 1, true), tostring(err))
     end)
 
     -- the no-argument table is built from a list kept in Other.lua, which has
