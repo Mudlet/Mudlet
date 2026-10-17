@@ -346,6 +346,8 @@ public:
     // which case TTriggerPrescan offers it every line.
     const std::vector<quint64>& prescanGrams() const;
     void invalidatePrescan(bool nowFiresWithoutMatching = false);
+    // Call on anything that changes what treeIndexGrams() answers
+    void invalidateTreeIndex();
     // Whether the line's bigram summary already rules this trigger out, so match() need not be entered.
     // One-sided like the summary: false leaves match() to decide. Only a trigger whose every pattern
     // matches by containing text, and that never fires on a line it does not match - the cases
@@ -362,6 +364,33 @@ public:
         }
         return true;
     }
+    // Grams for the whole-tree index: those of every pattern, or of the first alone for a multiline
+    // trigger, which with no state in progress tests nothing else. Empty, with false, when the line's
+    // text cannot rule the trigger out.
+    bool treeIndexGrams(std::vector<quint64>& grams) const;
+    // Whether match() would do nothing on this line, so need not be entered: the line held none of
+    // the grams the tree index filed it under, and nothing makes it act on a line it does not match.
+    // One-sided like the index: false leaves match() to decide. mTreeFilterable is only ever true for
+    // a trigger the index files as its patterns now are, so a trigger changed or created mid-line is
+    // visited until the next rebuild; mKeepFiring and the multiline states are read live.
+    bool skippableForLine() const { return mTreeFilterable && mLineStamp != smLineStamp && mKeepFiring <= 0 && mConditionMap.empty(); }
+    // MUDLET_TREE_INDEX=verify: runs a trigger skippableForLine() would skip and reports it if it acted
+    bool verifySkippable(const TUtf8Subject& subject, const QString& haystack, int line, int posOffset, const TBigramFilter* pLineBigrams);
+    static quint64 treeVerifiedSkips() { return smTreeVerifiedSkips; }
+    // Stamp of the outermost pass in flight anywhere, which nested passes (a script feeding text back,
+    // from any profile) share: a nested line only adds stamps, so nothing the outer line stamped is lost.
+    static quint32 lineStamp() { return smLineStamp; }
+    static bool enterPass()
+    {
+        if (++smPassDepth != 1) {
+            return false;
+        }
+        if (++smLineStamp == 0) {
+            ++smLineStamp;
+        }
+        return true;
+    }
+    static void leavePass() { --smPassDepth; }
     // What a line can dismiss this trigger by without calling into it - the cases cannotMatch() and
     // match_color_pattern() decide, copied only for a single-pattern trigger that never fires on a
     // line it does not match.
@@ -387,6 +416,7 @@ public:
     {
         mIsLineTrigger = b;
         invalidatePrescan(b);
+        invalidateTreeIndex();
     }
     void setStartOfLineDelta(int b) { mStartOfLineDelta = b; }
     void setLineDelta(int b) { mLineDelta = b; }
@@ -395,6 +425,7 @@ public:
     {
         mIsMultiline = b;
         invalidatePrescan(b);
+        invalidateTreeIndex();
     }
     void enableTrigger(const QString&);
     void disableTrigger(const QString&);
@@ -436,6 +467,11 @@ public:
     int mColorTriggerFgAnsi = scmIgnored;
     int mColorTriggerBgAnsi = scmIgnored;
     int mKeepFiring = 0;
+    // Set by TriggerUnit's tree index: the stamp of the last line that held one of this trigger's grams,
+    // and whether the index files this trigger as it now is - see skippableForLine()
+    quint32 mLineStamp = 0;
+    bool mTreeFilterable = false;
+    int mTreeIndexPosition = -1;
     QPointer<Host> mpHost;
     QString mName;
     QStringList mPatterns;
@@ -557,6 +593,9 @@ private:
     static quint64 smRegexSearches;
     static quint32 smPrescanPassId;
     static quint32 smPrescanPassIdCounter;
+    static quint32 smLineStamp;
+    static int smPassDepth;
+    static quint64 smTreeVerifiedSkips;
     quint32 mPrescanPassId = 0;
     bool mPrescanMayFire = true;
 };

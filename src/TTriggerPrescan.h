@@ -48,6 +48,11 @@ public:
     static quint64 patternGram(const QString& pattern);
 
     void rebuild(const std::vector<TTrigger*>& roots);
+    // The same rebuild one slot at a time, for an index whose grams the caller works out: slots are
+    // filed in the order given, position 0 first.
+    void beginRebuild(int slotCount);
+    void fileNextSlot(const std::vector<quint64>& grams);
+    void endRebuild();
     // Incremental updates for root-list changes that keep existing positions, so one trigger costs one
     // trigger's work. Removed slots are never reused, keeping positions stable, until shouldRebuild()
     // says the holes outweigh what the incremental path saves.
@@ -60,6 +65,9 @@ public:
     // Fills `out` in root-list order. `scratch` is caller-owned so a trigger script feeding text back
     // through the pipeline cannot disturb an outer pass.
     void candidates(const QString& line, std::vector<int>& scratch, std::vector<int>& out) const;
+    // Only the filed slots the line's n-grams hit, in no particular order and without the unfilterable
+    // ones, for a caller that marks slots rather than walks them.
+    void hits(const QString& line, std::vector<int>& out) const;
 
 private:
     // Below this the plain walk is cheaper than filtering it.
@@ -82,6 +90,7 @@ private:
     void unfileSlot(int position);
 
     bool mActive = false;
+    int mNextRebuildSlot = 0;
     // Which n-grams anything is filed under: one bit test rejects most of a line's before the map lookup
     std::vector<quint64> mGramBits;
     std::unordered_map<quint64, std::vector<int>> mIndex;

@@ -172,6 +172,7 @@ void TriggerUnit::reParentTrigger(int childID, int oldParentID, int newParentID,
 
     // Changes the prescan list: a trigger under a chain matches its parent's capture, not the line
     TTrigger::bumpStructureGeneration();
+    mTreeIndexStale = true;
 
     if (pOldParent) {
         pOldParent->popChild(pChild);
@@ -290,6 +291,11 @@ void TriggerUnit::unregisterTrigger(TTrigger* pT)
     // of the end-of-pass reset, so drop its lineage here instead.
     std::replace(mRootNodesAddedWhileProcessing.begin(), mRootNodesAddedWhileProcessing.end(), pT, static_cast<TTrigger*>(nullptr));
     pT->setSameLineChain(0, 0);
+    const int treePosition = pT->mTreeIndexPosition;
+    if (treePosition >= 0 && treePosition < static_cast<int>(mTreeNodes.size()) && mTreeNodes[treePosition] == pT) {
+        mTreeNodes[treePosition] = nullptr;
+        mTreeIndexStale = true;
+    }
     if (pT->getParent()) {
         removeTrigger(pT);
         return;
@@ -309,6 +315,7 @@ void TriggerUnit::addTrigger(TTrigger* pT)
     }
 
     mTriggerMap.insert(pT->getID(), pT);
+    mTreeIndexStale = true;
 }
 
 void TriggerUnit::removeTrigger(TTrigger* pT)
@@ -454,6 +461,80 @@ void TriggerUnit::rebuildPrescanTasksIfStale()
         collectPrescanTasks(trigger);
     }
     mPrescanTasksGeneration = generation;
+}
+
+TriggerUnit::TreeIndexMode TriggerUnit::smTreeIndexMode = TriggerUnit::readTreeIndexMode();
+
+TriggerUnit::TreeIndexMode TriggerUnit::readTreeIndexMode()
+{
+    const QString value = qEnvironmentVariable("MUDLET_TREE_INDEX");
+    if (value == QLatin1String("0")) {
+        return TreeIndexMode::Off;
+    }
+    if (value == QLatin1String("verify")) {
+        return TreeIndexMode::Verify;
+    }
+    return TreeIndexMode::On;
+}
+
+void TriggerUnit::collectTreeNodes(TTrigger* pT)
+{
+    for (auto* childNode : *pT->mpMyChildrenList) {
+        auto* child = static_cast<TTrigger*>(childNode);
+        mTreeNodes.push_back(child);
+        collectTreeNodes(child);
+    }
+}
+
+void TriggerUnit::rebuildTreeIndex()
+{
+    for (TTrigger* node : mTreeNodes) {
+        if (node) {
+            node->mTreeIndexPosition = -1;
+        }
+    }
+    mTreeNodes.clear();
+    for (auto* root : mTriggerRootNodeList) {
+        collectTreeNodes(root);
+    }
+    mTreeIndex.beginRebuild(static_cast<int>(mTreeNodes.size()));
+    std::vector<quint64> grams;
+    for (int position = 0; position < static_cast<int>(mTreeNodes.size()); ++position) {
+        TTrigger* node = mTreeNodes[position];
+        node->mTreeIndexPosition = position;
+        node->mTreeFilterable = node->treeIndexGrams(grams);
+        mTreeIndex.fileNextSlot(grams);
+    }
+    mTreeIndex.endRebuild();
+    if (!mTreeIndex.active()) {
+        // Nothing stamps, so nothing may be skipped
+        for (TTrigger* node : mTreeNodes) {
+            node->mTreeFilterable = false;
+        }
+    }
+    mTreeIndexStale = false;
+    ++mTreeIndexRebuilds;
+}
+
+// Rebuilt only by this unit's outermost pass: a nested pass refiling a trigger an outer pass has
+// already walked past, as filterable now, could leave it skipped on the outer line it matches. Until
+// then a changed trigger is unfilterable and a new one unstamped, both of which are visited.
+void TriggerUnit::stampTreeCandidates(const QString& line)
+{
+    if (mTreeIndexStale && mProcessingDepth == 1) {
+        rebuildTreeIndex();
+    }
+    if (!mTreeIndex.active()) {
+        return;
+    }
+    mTreeIndex.hits(line, mTreeHits);
+    const quint32 stamp = TTrigger::lineStamp();
+    for (const int position : mTreeHits) {
+        if (TTrigger* node = mTreeNodes[position]) {
+            node->mLineStamp = stamp;
+        }
+    }
+    mTreeStamps += mTreeHits.size();
 }
 
 void TriggerUnit::markPrescanStale(TTrigger* pT)
@@ -627,6 +708,17 @@ void TriggerUnit::processDataStream(const QString& data, int line)
     }
     const auto pinnedSnapshot = mpRootNodeSnapshot;
     const std::vector<TTrigger*>& pinnedNodeList = pinnedSnapshot->mNodes;
+    const bool outermostPassAnywhere = TTrigger::enterPass();
+    const auto passGuard = qScopeGuard([] {
+        TTrigger::leavePass();
+    });
+    if (smTreeIndexMode != TreeIndexMode::Off) {
+        stampTreeCandidates(data);
+        if (outermostPassAnywhere && treeIndexVerifying() && ++mOutermostLines % 20000 == 0) {
+            qWarning().nospace() << "TriggerUnit tree index: lines " << mOutermostLines << ", rebuilds " << mTreeIndexRebuilds << ", nodes " << mTreeNodes.size() << ", stamps " << mTreeStamps
+                                 << ", verified skips " << TTrigger::treeVerifiedSkips();
+        }
+    }
     // Triggers registered by a script during this pass (tempTrigger() & Co.)
     // are missing from the snapshot but must still match the current line:
     // before the snapshot the loop walked the live std::list, which a push_back

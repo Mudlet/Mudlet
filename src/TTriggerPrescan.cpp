@@ -139,22 +139,36 @@ void TTriggerPrescan::unfileSlot(const int position)
 
 void TTriggerPrescan::rebuild(const std::vector<TTrigger*>& roots)
 {
+    beginRebuild(static_cast<int>(roots.size()));
+    for (TTrigger* root : roots) {
+        fileNextSlot(root->prescanGrams());
+    }
+    endRebuild();
+}
+
+void TTriggerPrescan::beginRebuild(const int slotCount)
+{
     mIndex.clear();
     mUnfiltered.clear();
     mGramPool.clear();
-    mSlotGrams.assign(roots.size(), GramRange{});
+    mSlotGrams.assign(slotCount, GramRange{});
     mGramBits.assign((1u << scmGramBitsLog) / 64, 0);
     mLengthUse.fill(0);
-    mSeen.assign(roots.size(), 0);
+    mSeen.assign(slotCount, 0);
     mGeneration = 0;
     mIndexedSlots = 0;
-    mLiveSlots = static_cast<int>(roots.size());
+    mLiveSlots = slotCount;
     mMutations = 0;
+    mNextRebuildSlot = 0;
+}
 
-    const int rootCount = static_cast<int>(roots.size());
-    for (int position = 0; position < rootCount; ++position) {
-        fileSlot(position, roots[position]->prescanGrams());
-    }
+void TTriggerPrescan::fileNextSlot(const std::vector<quint64>& grams)
+{
+    fileSlot(mNextRebuildSlot++, grams);
+}
+
+void TTriggerPrescan::endRebuild()
+{
     mActive = mIndexedSlots >= scmMinimumIndexedTriggers;
 }
 
@@ -187,7 +201,14 @@ void TTriggerPrescan::refileSlot(const int position, const std::vector<quint64>&
 
 void TTriggerPrescan::candidates(const QString& line, std::vector<int>& scratch, std::vector<int>& out) const
 {
-    scratch.clear();
+    hits(line, scratch);
+    std::sort(scratch.begin(), scratch.end());
+    out.resize(scratch.size() + mUnfiltered.size());
+    std::merge(mUnfiltered.cbegin(), mUnfiltered.cend(), scratch.cbegin(), scratch.cend(), out.begin());
+}
+
+void TTriggerPrescan::hits(const QString& line, std::vector<int>& out) const
+{
     out.clear();
     if (++mGeneration == 0) {
         // Wrapped: old stamps would otherwise read as "this line"
@@ -216,12 +237,8 @@ void TTriggerPrescan::candidates(const QString& line, std::vector<int>& scratch,
                     continue;
                 }
                 mSeen[position] = mGeneration;
-                scratch.push_back(position);
+                out.push_back(position);
             }
         }
     }
-
-    std::sort(scratch.begin(), scratch.end());
-    out.resize(scratch.size() + mUnfiltered.size());
-    std::merge(mUnfiltered.cbegin(), mUnfiltered.cend(), scratch.cbegin(), scratch.cend(), out.begin());
 }
