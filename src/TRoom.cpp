@@ -1047,10 +1047,10 @@ void TRoom::restore(QDataStream& ifs, int roomID, int version)
 
     // Border properties are stored in userData (not binary stream) to avoid map bloat
     if (userData.contains(ROOM_UI_BORDERCOLOR)) {
-        mBorderColor = QColor(userData.value(ROOM_UI_BORDERCOLOR));
+        mBorderColor = QColor(userData.take(ROOM_UI_BORDERCOLOR));
     }
     if (userData.contains(ROOM_UI_BORDERTHICKNESS)) {
-        int thickness = userData.value(ROOM_UI_BORDERTHICKNESS).toInt();
+        int thickness = userData.take(ROOM_UI_BORDERTHICKNESS).toInt();
         if (thickness > 0 && thickness <= 10) {
             mBorderThickness = thickness;
         }
@@ -1982,6 +1982,11 @@ int TRoom::readJsonRoom(const QJsonArray& array, const int index, const int area
     name = roomObj.value(QLatin1String("name")).toString();
     area = areaId;
     readJsonUserData(roomObj.value(QLatin1String("userData")).toObject());
+    // An export by an older Mudlet can have the binary format's border keys in the
+    // user data; every such exporter also wrote the "border" object, so without
+    // one they are left over from a border cleared after the save that wrote them
+    userData.remove(ROOM_UI_BORDERCOLOR);
+    userData.remove(ROOM_UI_BORDERTHICKNESS);
 
     const QJsonArray coordinatesArray = roomObj.value(QLatin1String("coordinates")).toArray();
     mX = coordinatesArray.at(0).toInt();

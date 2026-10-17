@@ -1,0 +1,5 @@
+mpackage = [[mudlet-spec-straynotes]]
+author = [[Mudlet test suite]]
+title = [[Fixture with a stray plain-text .xml file beside its package XML, for Package_spec.lua]]
+version = [[1.0]]
+description = [[A valid package XML with one alias, and a plain-text a-notes.xml that sorts before it.]]
