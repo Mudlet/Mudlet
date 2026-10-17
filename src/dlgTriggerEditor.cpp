@@ -13290,7 +13290,11 @@ void dlgTriggerEditor::slot_profileSaveAction()
 
     auto [ok, filename, error] = mpHost->saveProfile(QString(), QString(), true);
 
-    if (!ok && !error.isEmpty()) {
+    if (ok) {
+        // Most application-wide settings reach Mudlet.ini only at quit, so an
+        // unclean exit would lose the ones this save is meant to keep
+        mudlet::self()->writeSettings();
+    } else if (!error.isEmpty()) {
         QMessageBox::critical(this, tr("Couldn't save profile"), tr("Sorry, couldn't save your profile - got the following error: %1").arg(error));
     }
 }
@@ -13317,6 +13321,9 @@ void dlgTriggerEditor::slot_profileSaveAsAction()
     slot_saveEdits();
 
     auto [ok, filename, error] = mpHost->saveProfileAs(fileName);
+    if (ok) {
+        mudlet::self()->writeSettings();
+    }
     mSavingAs = false;
     if (!ok && !error.isEmpty()) {
         //: %1 is the reason the profile could not be saved, such as an error from the operating system

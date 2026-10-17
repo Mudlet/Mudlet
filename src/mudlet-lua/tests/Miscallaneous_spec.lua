@@ -939,6 +939,42 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         assert.is_false(fileExists(escapee), "the save landed at " .. escapee)
       end)
 
+      -- changing most application-wide settings does not write Mudlet.ini, so a
+      -- save has to, or a crash after it loses the change
+      it("writes the application-wide settings to Mudlet.ini as well", function()
+        if not testMode then
+          pending("only test mode can wait out this test's save, so the save putting Mudlet.ini back would be refused")
+          return
+        end
+        local iniFile = getMudletHomeDir():match("^(.*)/profiles/[^/]+$") .. "/Mudlet.ini"
+        local function onDisk()
+          local file = io.open(iniFile, "r")
+          if not file then
+            return nil
+          end
+          local value
+          for line in file:lines() do
+            value = line:match("^showTabConnectionIndicators=(.*)$") or value
+          end
+          file:close()
+          return value
+        end
+        local original = getConfig("showTabConnectionIndicators")
+        -- the opposite of what the file holds, so only this save can put it there
+        local wanted = onDisk() ~= "true"
+        finally(function()
+          setConfig("showTabConnectionIndicators", original)
+          local restored, why = saveWaitingOutAnyOtherSave()
+          assert.is_true(restored, "Mudlet.ini keeps the test's value: " .. tostring(why))
+        end)
+        assert.is_true(setConfig("showTabConnectionIndicators", wanted))
+
+        local saved, message = saveWaitingOutAnyOtherSave()
+        assert.is_true(saved, tostring(message))
+
+        assert.are.equal(tostring(wanted), onDisk(), "Mudlet.ini at " .. iniFile .. " did not get the new value")
+      end)
+
       -- Only nil stands for no folder: any other folder that is not a string
       -- raises, as a file name that is not a string does
       it("raises for a folder that is not a string", function()
