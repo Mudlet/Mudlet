@@ -30,6 +30,7 @@
 #include "mudlet.h"
 #include "TMainConsole.h"
 
+#include <QAccessible>
 #include <QDesktopServices>
 #include <QPainter>
 #include <QSvgRenderer>
@@ -39,8 +40,18 @@
 #include <QUrl>
 #include <QtEvents>
 #include <chrono>
+#include <utility>
 
 using namespace std::chrono_literals;
+
+namespace {
+void notifyAccessibility(QWidget* widget, QAccessible::Event type)
+{
+    // updateAccessibility() does nothing while no screen reader has made accessibility active
+    QAccessibleEvent event(widget, type);
+    QAccessible::updateAccessibility(&event);
+}
+} // namespace
 
 TLabel::TLabel(Host* pH, const QString& name, QWidget* pW)
 : QLabel(pW)
@@ -70,6 +81,9 @@ TLabel::TLabel(Host* pH, const QString& name, QWidget* pW)
     setTextFormat(Qt::RichText);
     setTextInteractionFlags(Qt::NoTextInteraction);
     setOpenExternalLinks(false);
+    mpModel->mAccessibilityChanged = [this](TLabelModel::AccessibilityChange change) {
+        accessibilityChanged(change);
+    };
 
     connect(this, &QLabel::linkActivated, this, &TLabel::slot_linkActivated);
 
@@ -108,7 +122,67 @@ void TLabel::showLinkStyledText(const QString& text)
 
     stopMovie();
     QLabel::setText(text);
-    mpModel->mText = QLabel::text();
+    syncTextAnnouncedByQt();
+    // Text over an SVG hides it, and new text replaces a raster or movie
+    imageMayHaveChanged();
+}
+
+void TLabel::press()
+{
+    const QPointF centre = QRectF(rect()).center();
+    QMouseEvent pressEvent(QEvent::MouseButtonPress, centre, mapToGlobal(centre), Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+    // The click callback may delete the label: deleteLabel() deregisters it at once but destroys it later
+    QPointer<TLabel> self(this);
+    mScreenReaderPress = true;
+    mousePressEvent(&pressEvent);
+    if (!self) {
+        return;
+    }
+    if (mpHost && mpHost->windowRegistry().labelModel(mName) == mpModel.get()) {
+        QMouseEvent releaseEvent(QEvent::MouseButtonRelease, centre, mapToGlobal(centre), Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+        mouseReleaseEvent(&releaseEvent);
+    }
+    mScreenReaderPress = false;
+}
+
+bool TLabel::showsImage() const
+{
+    // A raster replaces the text, but text drawn over the SVG layer is what the label then shows
+    return !pixmap().isNull() || (mpSvgRenderer && QTextDocumentFragment::fromHtml(text()).toPlainText().trimmed().isEmpty());
+}
+
+void TLabel::imageMayHaveChanged()
+{
+    const ShownContent shown = movie() ? ShownContent::Animation : showsImage() ? ShownContent::Graphic : ShownContent::Text;
+    // A button's role stays a button whatever it shows
+    if (std::exchange(mShownContent, shown) != shown && !mpModel->actsAsButton()) {
+        mpModel->accessibilityChanged(TLabelModel::AccessibilityChange::Role);
+    }
+}
+
+void TLabel::syncTextAnnouncedByQt()
+{
+    mTextAnnouncedByQt = true;
+    mpModel->setText(QLabel::text());
+    mTextAnnouncedByQt = false;
+}
+
+void TLabel::accessibilityChanged(TLabelModel::AccessibilityChange change)
+{
+    if (change == TLabelModel::AccessibilityChange::Name) {
+        // QLabel::setText() announces the text as the new name whenever the widget's own name is empty,
+        // so the widget carries a script's name too, and an unnamed label's text is announced once
+        if (const QString& name = mpModel->mAccessibleName; name != accessibleName()) {
+            setAccessibleName(name);
+        } else if (!mTextAnnouncedByQt) {
+            notifyAccessibility(this, QAccessible::NameChanged);
+        }
+        return;
+    }
+#if QT_VERSION >= QT_VERSION_CHECK(6, 11, 0)
+    notifyAccessibility(this, QAccessible::RoleChanged);
+#endif
+    notifyAccessibility(this, QAccessible::ActionChanged);
 }
 
 bool TLabel::carriesLink() const
@@ -121,7 +195,7 @@ void TLabel::mousePressEvent(QMouseEvent* event)
     // QLabel needs the press to note the link so the release can activate it; with links-only flags it
     // leaves the press ignored, so the label's own click callback still runs.
     bool takenByQt = false;
-    if (carriesLink()) {
+    if (carriesLink() && !mScreenReaderPress) {
         QLabel::mousePressEvent(event);
         takenByQt = event->isAccepted();
     }
@@ -150,7 +224,7 @@ void TLabel::mouseDoubleClickEvent(QMouseEvent* event)
 void TLabel::mouseReleaseEvent(QMouseEvent* event)
 {
     bool takenByQt = false;
-    if (carriesLink()) {
+    if (carriesLink() && !mScreenReaderPress) {
         QLabel::mouseReleaseEvent(event);
         takenByQt = event->isAccepted();
     }
@@ -336,7 +410,8 @@ bool TLabel::setBackgroundImage(const QString& path)
     stopMovie();
     setPixmap(raster);
     // setPixmap() empties the text
-    mpModel->mText = text();
+    mpModel->setText(text());
+    imageMayHaveChanged();
     return true;
 }
 
@@ -362,6 +437,7 @@ bool TLabel::setSvgImage(const QString& path)
     }
     refreshSvg();
     updateGeometry();
+    imageMayHaveChanged();
     return true;
 }
 
@@ -373,10 +449,12 @@ void TLabel::resetBackgroundImage()
     if (!pixmap().isNull() || movie()) {
         stopMovie();
         clear();
+        mpModel->setText(text());
     }
     if (const QString sheet = styleSheet(), withoutImage = TLabelModel::styleSheetWithoutBackgroundImage(sheet); withoutImage != sheet) {
         restyle(withoutImage);
     }
+    imageMayHaveChanged();
 }
 
 void TLabel::stopMovie()
@@ -487,6 +565,7 @@ void TLabel::contextMenuEvent(QContextMenuEvent* event)
 void TLabel::setClickThrough(bool clickthrough)
 {
     setAttribute(Qt::WA_TransparentForMouseEvents, clickthrough);
+    mpModel->setClickThrough(clickthrough);
 
     // If clickthrough is enabled, text interaction (including hyperlinks) won't work
     // So we need to disable text interaction when clickthrough is on
@@ -542,12 +621,12 @@ void TLabel::changeEvent(QEvent* event)
 bool TLabel::event(QEvent* event)
 {
     if (event->type() == QEvent::ToolTipChange) {
-        mpModel->mToolTip = toolTip();
+        mpModel->setToolTip(toolTip());
     }
     const bool handled = QLabel::event(event);
     // A qproperty-text in a style sheet reaches QLabel::setText() directly, as the style is applied
     if (event->type() == QEvent::Polish || event->type() == QEvent::StyleChange) {
-        mpModel->mText = text();
+        syncTextAnnouncedByQt();
     }
     return handled;
 }

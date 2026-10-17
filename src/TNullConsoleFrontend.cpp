@@ -708,7 +708,7 @@ void TNullConsoleFrontend::showLabelText(Label& label, const QString& shown)
         label.pixmapSize.reset();
         label.sizeHint.reset();
     }
-    label.pModel->mText = shown;
+    label.pModel->setText(shown);
 }
 
 // TLabel::reapplyLinkStyle()
@@ -1523,7 +1523,7 @@ std::pair<bool, QString> TNullConsoleFrontend::setLabelToolTip(const QString& na
     if (!pLabel) {
         return {false, qsl("label name '%1' not found").arg(name)};
     }
-    pLabel->mToolTip = text;
+    pLabel->setToolTip(text);
     return {true, QString()};
 }
 
