@@ -183,6 +183,11 @@ void TMedia::playMedia(TMediaData& mediaData)
             return;
         }
 
+        if ((mediaData.mediaProtocol() == TMediaData::MediaProtocolMSP || mediaData.mediaProtocol() == TMediaData::MediaProtocolGMCP) && mediaFileNameReservedForCopies(mediaData.mediaFileName())) {
+            qWarning() << qsl("TMedia::playMedia() WARNING - rejected a media file name in a folder kept for scripts' copies: %1.").arg(mediaData.mediaFileName());
+            return;
+        }
+
         if (!mediaData.mediaFileName().contains(QLatin1Char('*')) && !mediaData.mediaFileName().contains(QLatin1Char('?'))) { // File path wildcards are * and ?
             // Append appropriate file extension for MSP files
             if (mediaData.mediaProtocol() == TMediaData::MediaProtocolMSP && !mediaData.mediaFileName().contains(QLatin1Char('.'))) {
@@ -196,8 +201,9 @@ void TMedia::playMedia(TMediaData& mediaData)
                 }
             }
 
-            if (!fileRelative) { // API files may start as absolute, but get copied into the media folder for processing.
-                TMedia::transitionNonRelativeFile(mediaData);
+            // API files may start as absolute, but get copied into the media folder for processing.
+            if (!fileRelative && !TMedia::transitionNonRelativeFile(mediaData)) {
+                return;
             }
 
             const QString absolutePathFileName = TMedia::setupMediaAbsolutePathFileName(mediaData);
@@ -247,9 +253,8 @@ QList<TMediaData> TMedia::playingMedia(TMediaData& mediaData)
             return matchingMediaDataList; // MSP and GMCP files should not have absolute paths.
         }
 
-        // API files may start as absolute, but get copied into the media folder for processing. Trim the path from the file name.
         if (!fileRelative) {
-            mediaData.setMediaFileName(mediaData.mediaFileName().section('/', -1));
+            mediaData = requestForFilePlayers(mediaData);
         }
     }
 
@@ -298,9 +303,8 @@ QList<TMediaData> TMedia::pausedMedia(TMediaData& mediaData)
             return matchingMediaDataList; // MSP and GMCP files should not have absolute paths.
         }
 
-        // API files may start as absolute but get copied into the media folder. Trim the path.
         if (!fileRelative) {
-            mediaData.setMediaFileName(mediaData.mediaFileName().section('/', -1));
+            mediaData = requestForFilePlayers(mediaData);
         }
     }
 
@@ -345,11 +349,6 @@ void TMedia::pauseMedia(TMediaData& mediaData)
 
         if (!fileRelative && (mediaData.mediaProtocol() == TMediaData::MediaProtocolMSP || mediaData.mediaProtocol() == TMediaData::MediaProtocolGMCP)) {
             return; // MSP and GMCP files should not have absolute paths.
-        }
-
-        // API files may start as absolute but get copied into the media folder. Trim the path.
-        if (!fileRelative) {
-            mediaData.setMediaFileName(mediaData.mediaFileName().section(QLatin1Char('/'), -1));
         }
     }
 
@@ -401,11 +400,6 @@ void TMedia::stopMedia(TMediaData& mediaData)
 
         if (!fileRelative && (mediaData.mediaProtocol() == TMediaData::MediaProtocolMSP || mediaData.mediaProtocol() == TMediaData::MediaProtocolGMCP)) {
             return; // MSP and GMCP files should not have absolute paths.
-        }
-
-        // API files may start as absolute but get copied into the media folder. Trim the path.
-        if (!fileRelative) {
-            mediaData.setMediaFileName(mediaData.mediaFileName().section(QLatin1Char('/'), -1));
         }
     }
 
@@ -642,11 +636,10 @@ QList<std::shared_ptr<TMediaPlayer>> TMedia::findMediaPlayersByCriteria(const TM
     return {}; // Default empty list fallback
 }
 
-// A pause, stop or resume carries no input type of its own. An absolute path an API call names plays
-// from the copy transitionNonRelativeFile() made under its bare file name, its directories dropped,
-// so that is what a player of a file is matched against; a stream keeps the name it was given and
-// is matched against it as asked.
-TMediaData TMedia::requestForFilePlayers(const TMediaData& mediaData)
+// A pause, stop, resume or query carries no input type of its own. An absolute path an API call names plays
+// from the copy transitionNonRelativeFile() made of it, so that is what a player of a file is matched
+// against; a stream keeps the name it was given and is matched against it as asked.
+TMediaData TMedia::requestForFilePlayers(const TMediaData& mediaData) const
 {
     TMediaData fileRequest = mediaData;
     const QString& fileName = mediaData.mediaFileName();
@@ -655,15 +648,69 @@ TMediaData TMedia::requestForFilePlayers(const TMediaData& mediaData)
         return fileRequest;
     }
 
-    // A name ending in a separator has no file name to trim to, and an empty one would match every
-    // player, so it is left as given to match none.
-    const QString bareName = fileName.section(QLatin1Char('/'), -1);
-
-    if (!bareName.isEmpty()) {
-        fileRequest.setMediaFileName(bareName);
+    // A name ending in a separator names no file, and cleanPath() would drop the separator and make it
+    // look like one, so it is left as given to match none.
+    if (!fileName.endsWith(QLatin1Char('/'))) {
+        fileRequest.setMediaFileName(mediaCacheFileName(fileName));
+        fileRequest.setMediaSourcePath(QDir::cleanPath(fileName));
     }
 
     return fileRequest;
+}
+
+QString TMedia::mediaCacheFileName(const QString& absolutePath) const
+{
+    // Resolved, so a symlinked or differently cased spelling of a path still names the same copy
+    const auto resolved = [](const QString& path) {
+        const QString canonical = QFileInfo(path).canonicalFilePath();
+        return canonical.isEmpty() ? QDir::cleanPath(path) : canonical;
+    };
+    return mediaCacheFileName(
+            resolved(MudletApp::getMudletPath(enums::profileHomePath, mpHost->getName())), resolved(MudletApp::getMudletPath(enums::profileMediaPath, mpHost->getName())), resolved(absolutePath));
+}
+
+// Keeps the source's folders so same-named files in different folders get separate copies, under
+// folders mediaFileNameReservedForCopies() keeps games out of.
+/*static*/ QString TMedia::mediaCacheFileName(const QString& profileHome, const QString& mediaRoot, const QString& absolutePath)
+{
+    const QString source = QDir::cleanPath(absolutePath);
+    const auto relativeTo = [&source](const QString& root) -> QString {
+        const QString relative = QDir(QDir::cleanPath(root)).relativeFilePath(source);
+        if (relative.isEmpty() || relative == qsl("..") || relative.startsWith(qsl("../")) || !QFileInfo(relative).isRelative()) {
+            return {};
+        }
+        return relative;
+    };
+
+    if (const QString inMedia = relativeTo(mediaRoot); !inMedia.isEmpty()) {
+        return inMedia;
+    }
+    if (const QString inProfile = relativeTo(profileHome); !inProfile.isEmpty()) {
+        return qsl("_profile/%1").arg(inProfile);
+    }
+
+    QString mirrored = source;
+    // ':' cannot be in a Windows folder name, so "c:/sounds" is filed under "C/sounds"
+    if (mirrored.size() > 1 && mirrored.at(0).isLetter() && mirrored.at(1) == QLatin1Char(':')) {
+        mirrored.replace(0, 2, mirrored.at(0).toUpper());
+    }
+#if defined(Q_OS_WINDOWS)
+    // A share, "//server/share", apart from the drive folders, which are one letter long
+    if (mirrored.startsWith(qsl("//"))) {
+        mirrored = qsl("UNC/%1").arg(mirrored.mid(2));
+    }
+#endif
+    while (mirrored.startsWith(QLatin1Char('/'))) {
+        mirrored.remove(0, 1);
+    }
+    return qsl("_absolute/%1").arg(mirrored);
+}
+
+/*static*/ bool TMedia::mediaFileNameReservedForCopies(const QString& mediaFileName)
+{
+    // Case-insensitive: on macOS and Windows "_PROFILE" is the same folder
+    const QString firstFolder = QDir::cleanPath(mediaFileName).section(QLatin1Char('/'), 0, 0);
+    return firstFolder.compare(qsl("_profile"), Qt::CaseInsensitive) == 0 || firstFolder.compare(qsl("_absolute"), Qt::CaseInsensitive) == 0;
 }
 
 bool TMedia::isMediaMatch(const std::shared_ptr<TMediaPlayer>& player, const TMediaData& mediaData)
@@ -676,7 +723,9 @@ bool TMedia::isMediaMatch(const std::shared_ptr<TMediaPlayer>& player, const TMe
         return false;
     }
 
-    if (!mediaData.mediaFileName().isEmpty() && !player->mediaData().mediaFileName().isEmpty() && player->mediaData().mediaFileName() != mediaData.mediaFileName()) {
+    // The path a file was played from still names it after the symlink it was resolved through changes
+    const bool sameSource = !mediaData.mediaSourcePath().isEmpty() && player->mediaData().mediaSourcePath() == mediaData.mediaSourcePath();
+    if (!sameSource && !mediaData.mediaFileName().isEmpty() && !player->mediaData().mediaFileName().isEmpty() && player->mediaData().mediaFileName() != mediaData.mediaFileName()) {
         return false;
     }
 
@@ -706,11 +755,6 @@ bool TMedia::resume(TMediaData mediaData)
 
         if (!fileRelative && (mediaData.mediaProtocol() == TMediaData::MediaProtocolMSP || mediaData.mediaProtocol() == TMediaData::MediaProtocolGMCP)) {
             return resumed; // MSP and GMCP files will not have absolute paths. Something is wrong.
-        }
-
-        // API files may start as absolute, but get copied into the media folder for processing. Trim the path from the file name.
-        if (!fileRelative) {
-            mediaData.setMediaFileName(mediaData.mediaFileName().section(QLatin1Char('/'), -1));
         }
     }
 
@@ -851,23 +895,33 @@ void TMedia::setMediaPlayersMuted(const TMediaData::MediaProtocol mediaProtocol,
     }
 }
 
-void TMedia::transitionNonRelativeFile(TMediaData& mediaData)
+bool TMedia::transitionNonRelativeFile(TMediaData& mediaData)
 {
-    const QString mediaPath = MudletApp::getMudletPath(enums::profileMediaPath, mpHost->getName());
-    const QDir mediaDir(mediaPath);
+    const QString source = mediaData.mediaFileName();
+    // Checked first, or a mistyped path would leave its folders behind in the media directory
+    if (!QFileInfo(source).isFile()) {
+        qWarning() << qsl("TMedia::transitionNonRelativeFile() WARNING - there is no file to play at %1.").arg(source);
+        return false;
+    }
 
-    if (!mediaDir.mkpath(mediaPath)) {
-        qWarning() << qsl("TMedia::playMedia() WARNING - attempt made to create a directory failed: %1").arg(MudletApp::getMudletPath(enums::profileMediaPath, mpHost->getName()));
-    } else {
-        const QString mediaFilePath = qsl("%1/%2").arg(MudletApp::getMudletPath(enums::profileMediaPath, mpHost->getName()), mediaData.mediaFileName().section(QLatin1Char('/'), -1));
-        const QFile mediaFile(mediaFilePath);
+    const QString cacheFileName = mediaCacheFileName(source);
+    const QString mediaFilePath = qsl("%1/%2").arg(MudletApp::getMudletPath(enums::profileMediaPath, mpHost->getName()), cacheFileName);
 
-        if (!mediaFile.exists() && !QFile::copy(mediaData.mediaFileName(), mediaFilePath)) {
-            qWarning() << qsl("TMedia::playMedia() WARNING - attempt made to copy file %1 to a directory %2 failed.").arg(mediaData.mediaFileName(), mediaFilePath);
-        } else {
-            mediaData.setMediaFileName(mediaData.mediaFileName().section(QLatin1Char('/'), -1));
+    if (!QFile::exists(mediaFilePath)) {
+        const QString folder = QFileInfo(mediaFilePath).path();
+        if (!QDir().mkpath(folder)) {
+            qWarning() << qsl("TMedia::transitionNonRelativeFile() WARNING - could not create the folder %1 to copy %2 into.").arg(folder, source);
+            return false;
+        }
+        if (!QFile::copy(source, mediaFilePath)) {
+            qWarning() << qsl("TMedia::transitionNonRelativeFile() WARNING - could not copy %1 to %2.").arg(source, mediaFilePath);
+            return false;
         }
     }
+
+    mediaData.setMediaFileName(cacheFileName);
+    mediaData.setMediaSourcePath(QDir::cleanPath(source));
+    return true;
 }
 
 QString TMedia::getStreamUrl(const TMediaData& mediaData)
@@ -1238,6 +1292,12 @@ void TMedia::downloadFile(TMediaData& mediaData)
     // directory through ".." segments.
     if (mediaFilePathEscapesMediaDir(mediaData)) {
         qWarning() << qsl("TMedia::downloadFile() WARNING - refused a media file name that escapes the profile media directory: %1.").arg(mediaData.mediaFileName());
+        return;
+    }
+
+    // A game's file there would be played in place of the script's copy of its own file
+    if ((mediaData.mediaProtocol() == TMediaData::MediaProtocolMSP || mediaData.mediaProtocol() == TMediaData::MediaProtocolGMCP) && mediaFileNameReservedForCopies(mediaData.mediaFileName())) {
+        qWarning() << qsl("TMedia::downloadFile() WARNING - refused a media file name in a folder kept for scripts' copies: %1.").arg(mediaData.mediaFileName());
         return;
     }
 
