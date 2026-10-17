@@ -1603,18 +1603,6 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
             ofs << pR->mSymbolColor;
         }
 
-        // Border properties are stored in userData (not binary stream) to avoid map bloat
-        if (pR->mBorderColor.isValid()) {
-            pR->userData.insert(ROOM_UI_BORDERCOLOR, pR->mBorderColor.name(QColor::HexArgb));
-        } else {
-            pR->userData.remove(ROOM_UI_BORDERCOLOR);
-        }
-        if (pR->mBorderThickness > 0) {
-            pR->userData.insert(ROOM_UI_BORDERTHICKNESS, QString::number(pR->mBorderThickness));
-        } else {
-            pR->userData.remove(ROOM_UI_BORDERTHICKNESS);
-        }
-
         // Formats before 21 carry the hidden flag and symbol color - and
         // formats before 19 the symbol - as user data fallbacks; use a local
         // copy so that saving does not modify the live room's user data.
@@ -1632,6 +1620,17 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
         }
         if (mSaveVersion < 19 && !pR->mSymbol.isEmpty()) {
             userData.insert(QLatin1String("system.fallback_symbol"), pR->mSymbol);
+        }
+        // Border properties are stored in userData (not binary stream) to avoid map bloat, in every format
+        if (pR->mBorderColor.isValid()) {
+            userData.insert(ROOM_UI_BORDERCOLOR, pR->mBorderColor.name(QColor::HexArgb));
+        } else {
+            userData.remove(ROOM_UI_BORDERCOLOR);
+        }
+        if (pR->mBorderThickness > 0) {
+            userData.insert(ROOM_UI_BORDERTHICKNESS, QString::number(pR->mBorderThickness));
+        } else {
+            userData.remove(ROOM_UI_BORDERTHICKNESS);
         }
         ofs << userData;
         if (mSaveVersion >= 20) {
@@ -2593,6 +2592,9 @@ int TMap::createMapImageLabel(int area, QString imagePath, float x, float y, flo
         pixSize *= std::sqrt(cMaxImageLabelPixels / pixels);
     }
     const QPixmap imagePixmap = QPixmap(imagePath);
+    if (imagePixmap.isNull()) {
+        return scmUnreadableImageLabel;
+    }
     QPixmap pix = QPixmap(pixSize.toSize());
     pix.fill(Qt::transparent);
     QPainter lp(&pix);
@@ -2615,23 +2617,14 @@ int TMap::createMapImageLabel(int area, QString imagePath, float x, float y, flo
 void TMap::deleteMapLabel(int area, int labelId)
 {
     auto pA = mpRoomDB->getArea(area);
-    if (!pA) {
+    if (!pA || !pA->mMapLabels.contains(labelId)) {
         return;
     }
 
-    auto label = pA->mMapLabels.take(labelId);
-    if (!label.pos.isNull() || !label.text.isEmpty() || label.bgColor != QColorConstants::Black || label.fgColor != QColorConstants::Black) {
-        // If any of the above tests are false then we can take it that we do
-        // not have a "default constructed" label - i.e. a real one and not
-        // one that the QMap<T1, T2>::take(const T1&) has created for us in the
-        // absence of an actual TMapLabel.
-        // The TMapLabel default constructor sets the 'temporary' class member
-        // to false so we can safely rely on it being true for a temporary one:
-        if (!label.temporary) {
-            setUnsaved(__func__);
-        }
-        emit signal_mapLabelsChanged();
+    if (!pA->mMapLabels.take(labelId).temporary) {
+        setUnsaved(__func__);
     }
+    emit signal_mapLabelsChanged();
 }
 
 void TMap::postMessage(const QString text)
@@ -3646,6 +3639,22 @@ std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
     return {file.error() == QFileDevice::NoError, ((file.error() == QFileDevice::NoError) ? QString() : qsl("could not export file, reason: %1").arg(file.errorString()))};
 }
 
+// readJsonMapFile() is also how restore() loads a JSON file, whose caller files
+// the report; an import on its own has to audit the map and file one itself
+std::pair<bool, QString> TMap::importJsonMapFile(const QString& source)
+{
+    //: Title of a report in the map error log file, holding anything left over from before a JSON map import.
+    pushErrorMessagesToFile(tr("Pre-Map JSON importing report"), true);
+    const QDateTime now(QDateTime::currentDateTime());
+    auto result = readJsonMapFile(source);
+    if (result.first) {
+        audit();
+    }
+    //: Title of a report in the map error log file. %1 is the JSON map file, %2 the date and time the import started.
+    pushErrorMessagesToFile(tr(R"(Importing JSON map "%1" at %2 report)").arg(source, now.toString(Qt::ISODate)), true);
+    return result;
+}
+
 // The translatable messages are used within this file and do not need to
 // mention the file concerned whereas the untranslated messages are used by the
 // Lua sub-system and do need to report the file:
@@ -3733,8 +3742,9 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
 
     mDefaultAreaName = mapObj[QLatin1String("defaultAreaName")].toString();
     mUnnamedAreaName = mapObj[QLatin1String("anonymousAreaName")].toString();
+    QMap<QString, QString> userData;
     if (mapObj.contains(QLatin1String("userData"))) {
-        readJsonUserData(mapObj[QLatin1String("userData")].toObject());
+        userData = readJsonUserData(mapObj[QLatin1String("userData")].toObject());
     }
     const QString mapSymbolFontText = mapObj[QLatin1String("mapSymbolFontDetails")].toString();
     // qRound() returns an int, so dividing by an int literal here used to be
@@ -3805,9 +3815,11 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
 
     auto pNewRoomDB = std::make_unique<TRoomDB>(this);
     bool abort = false;
+    // Held back until the new map replaces the old one, as an aborted import drops nothing:
+    QStringList droppedRoomWarnings;
     for (int i = 0, total = mapObj.value(QLatin1String("areas")).toArray().count(); i < total; ++i) {
         std::unique_ptr<TArea> pArea = std::make_unique<TArea>(this, pNewRoomDB.get());
-        auto [id, name] = pArea->readJsonArea(mapObj.value(QLatin1String("areas")).toArray(), i);
+        auto [id, name] = pArea->readJsonArea(mapObj.value(QLatin1String("areas")).toArray(), i, droppedRoomWarnings);
         ++mProgressDialogAreasCount;
         if (incrementJsonProgressDialog(false, true, 0)) {
             abort = true;
@@ -3824,8 +3836,10 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
         return {false, (translatableTexts ? tr("aborted by user") : qsl("aborted by user"))};
     }
 
+    // Not before the abort check above, so a cancelled import leaves the live map alone:
     mCustomEnvColors.swap(customEnvColors);
     mEnvColors.swap(envColors);
+    mUserData.swap(userData);
     mIsOnlyMapSymbolFontToBeUsed = isOnlyMapSymbolFontToBeUsed;
     QFont mapSymbolFont;
     mapSymbolFont.fromString(mapSymbolFontText);
@@ -3844,6 +3858,12 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
 
     // This is it - the point at which the new map gets activated:
     mpRoomDB = std::move(pNewRoomDB);
+    for (const auto& warning : std::as_const(droppedRoomWarnings)) {
+        appendErrorMsgWithNoLf(warning, true);
+        if (smShowMapAuditErrors) {
+            postMessage(warning);
+        }
+    }
     // The routing graph holds pointers to the rooms just destroyed, and the bulk
     // deletion skipped the per-room cleanup that would otherwise have flagged it:
     roomidToIndex.clear();
@@ -3881,19 +3901,15 @@ void TMap::writeJsonUserData(QJsonObject& obj) const
     obj.insert(QLatin1String("userData"), jsonValue);
 }
 
-// Takes a userData object and parses all its elements
-void TMap::readJsonUserData(const QJsonObject& obj)
+QMap<QString, QString> TMap::readJsonUserData(const QJsonObject& obj)
 {
-    if (obj.isEmpty()) {
-        // Skip doing anything more if there is nothing to do:
-        return;
-    }
-
+    QMap<QString, QString> userData;
     for (auto& key : obj.keys()) {
         if (obj.value(key).isString()) {
-            mUserData.insert(key, obj.value(key).toString());
+            userData.insert(key, obj.value(key).toString());
         }
     }
+    return userData;
 }
 
 // Inserts a color as an array of 3 or 4 ints (cast to doubles) into the

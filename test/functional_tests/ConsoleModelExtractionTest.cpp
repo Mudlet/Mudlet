@@ -1534,15 +1534,14 @@ private slots:
         QVERIFY2(host, "No active host available for the test.");
         QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
 
-        // Hunspell_create() hands back a usable handle even when neither file
-        // exists, so a non-null handle only proves the load ran. Telling a
-        // reload apart from a failed load needs a dictionary that knows a word,
-        // which a machine without the starting one installed cannot supply -
-        // asked of the files rather than of the handle, so a dictionary that is
-        // there but loads no words is a failure and not a skip.
+        // A dictionary with no files is not loaded at all, so the reload shows as
+        // the starting one going away - which needs it to have been loaded, and
+        // a machine without it installed cannot supply that. Asked of the files
+        // rather than of the handle, so a dictionary that is there but loads no
+        // words is a failure and not a skip.
         const QString startingDictionary = host->getSpellDic();
-        const QString affixPath = qsl("%1%2.aff").arg(MudletApp::getMudletPath(enums::hunspellDictionaryPath, startingDictionary), startingDictionary);
-        if (!QFileInfo::exists(affixPath)) {
+        const QString folder = MudletApp::getMudletPath(enums::hunspellDictionaryPath, startingDictionary);
+        if (!QFileInfo::exists(qsl("%1%2.aff").arg(folder, startingDictionary)) || !QFileInfo::exists(qsl("%1%2.dic").arg(folder, startingDictionary))) {
             QSKIP(qPrintable(qsl("no \"%1\" dictionary is installed here, so a reload cannot be told apart from a failed load").arg(startingDictionary)));
         }
 
@@ -1554,9 +1553,7 @@ private slots:
         QVERIFY2(!host->spellChecker().systemCodecName().isEmpty(), "The system dictionary was loaded but its encoding was never read off it.");
 
         host->setSpellDic(mProfileSpellDic);
-        Hunhandle* reloaded = host->spellChecker().systemHandle();
-        QVERIFY2(reloaded, "The reload left the profile with no system dictionary handle at all.");
-        QVERIFY2(!Hunspell_spell(reloaded, "the"), "Choosing a dictionary that does not exist left the previous one loaded, so Host::setSpellDic() never reached the spell checker.");
+        QVERIFY2(!host->spellChecker().systemHandle(), "Choosing a dictionary that does not exist left the previous one loaded, so Host::setSpellDic() never reached the spell checker.");
     }
 
     // Nothing reads profile.dic until something asks for the dictionary handle,
@@ -1719,9 +1716,9 @@ expectRefusal('disableCommandLine', disableCommandLine('noViewCl'))
 expectRefusal('getCmdLineStyleSheet', getCmdLineStyleSheet())
 expectRefusal('setCmdLineStyleSheet', setCmdLineStyleSheet(''))
 expectRefusal('getMousePosition', getMousePosition())
--- the main console is the character grid NAWS reports, and a name with no user window takes its size
+-- the main console is the character grid NAWS reports; a name with no user window has no size of its own
 expectValue('getMainWindowSize', 'number', type(getMainWindowSize()))
-expectValue('getUserWindowSize', getMainWindowSize(), getUserWindowSize('noViewUw'))
+expectRefusal('getUserWindowSize', getUserWindowSize('noViewUw'))
 expectRefusal('getUserWindowTitle', getUserWindowTitle('noViewUw'))
 expectRefusal('setUserWindowTitle', setUserWindowTitle('noViewUw', 't'))
 expectRefusal('getUserWindowStyleSheet', getUserWindowStyleSheet('noViewUw'))
@@ -1732,8 +1729,9 @@ expectAnswer('disableScrollBar', '[0]nil', disableScrollBar())
 expectAnswer('enableHorizontalScrollBar', '[0]nil', enableHorizontalScrollBar())
 expectAnswer('disableHorizontalScrollBar', '[0]nil', disableHorizontalScrollBar())
 expectAnswer('getScrollBarVisible', '[1]false', getScrollBarVisible())
-expectAnswer('enableScrolling', '[1]true', enableScrolling())
-expectAnswer('disableScrolling', '[1]true', disableScrolling())
+-- scrolling is never switched for the main console, by whichever name it is given
+expectRefusal('enableScrolling', enableScrolling())
+expectRefusal('disableScrolling', disableScrolling())
 expectAnswer('scrollingActive', '[1]true', scrollingActive())
 expectAnswer('getScroll', '[1]' .. getLastLineNumber('main'), getScroll())
 expectAnswer('scrollTo', '[0]nil', scrollTo(1))
@@ -2651,14 +2649,14 @@ local function expectTrue(name, ...)
 end
 
 -- The system dictionary arms answer for real on a machine that has en_US
--- installed and refuse by naming the missing dictionaries on one that does not.
+-- installed and refuse by naming the missing dictionary on one that does not.
 -- Either is a working view-less profile; a refusal about a missing window is not.
 local function expectAnswerOrNoDictionary(name, wanted, ...)
     local first, second = ...
     if type(first) == wanted then
         return
     end
-    if first == nil and type(second) == 'string' and second:find('no main dictionaries', 1, true) then
+    if first == nil and type(second) == 'string' and (second:find('no main dictionaries', 1, true) or second:find('dictionary this profile uses is not available', 1, true)) then
         return
     end
     table.insert(noViewSpellProblems, name .. ' returned ' .. tostring(first) .. ' (' .. tostring(second) .. ')')
