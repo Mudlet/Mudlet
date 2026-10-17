@@ -3576,6 +3576,7 @@ void ModernGLWidget::mousePressEvent(QMouseEvent* event)
         if (mCameraSmoothAnimating) {
             const std::optional<QPointF> seenAt = pRoom ? mapPointOnLevel(mPressPosition, pRoom->z()) : std::nullopt;
             // Stopped where it is and held there, so neither a drag nor a glide after the player moves it on
+            closeInOnRooms();
             stopSmoothTransition();
             mMapCenterX = qRound(mCurrentAnimationX);
             mMapCenterY = qRound(mCurrentAnimationY);
