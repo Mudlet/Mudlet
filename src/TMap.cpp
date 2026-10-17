@@ -4062,6 +4062,8 @@ void TMap::announceMapperSettingChanged(const MapperSetting setting)
 
 void TMap::updateArea(int areaId)
 {
+    // Asked for after changes that do not all mark the map unsaved, such as to the mapper's colors
+    ++mRevision;
     static bool debounce;
     if (!debounce) {
         debounce = true;
@@ -4163,6 +4165,7 @@ QColor TMap::getColor(int id)
 
 void TMap::restore16ColorSet()
 {
+    ++mRevision;
     mCustomEnvColors[257] = mpHost->mRed_2;
     mCustomEnvColors[258] = mpHost->mGreen_2;
     mCustomEnvColors[259] = mpHost->mYellow_2;

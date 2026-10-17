@@ -1573,6 +1573,15 @@ void ModernGLWidget::renderRooms()
 
     const int playerRoomId = mpMap->mRoomIdHash.value(mpMap->mProfileName);
     const MapStyle& style = mapStyle();
+    // What each level fades toward, worked out once a frame rather than for every room and character on it
+    QHash<int, QColor> fadeTargets;
+    const auto fadeTargetOf = [this, &fadeTargets](const int z) {
+        auto found = fadeTargets.constFind(z);
+        if (found == fadeTargets.cend()) {
+            found = fadeTargets.insert(z, levelFadeTarget(z));
+        }
+        return *found;
+    };
     const QColor background = backgroundColor();
     const QColor contrast = ExitAppearance::contrastColor(background);
     const bool inkLozenges = style.edges == MapStyle::Edges::InkLozenges;
@@ -1708,8 +1717,14 @@ void ModernGLWidget::renderRooms()
         QVector4D tint;
         RoomDecals* decals = nullptr;
     };
-    const auto queueSymbol = [this, symbolSize, &screenRight, &screenUp](const RoomSymbol& roomSymbol) {
-        if (const GLuint texture = symbolTexture(roomSymbol.symbol, roomSymbol.color)) {
+    // By symbol and color, as finding one's texture means building its key; a texture this frame uses is not dropped
+    QHash<std::pair<QString, QRgb>, GLuint> symbolTextures;
+    const auto queueSymbol = [this, symbolSize, &screenRight, &screenUp, &symbolTextures](const RoomSymbol& roomSymbol) {
+        auto found = symbolTextures.constFind({roomSymbol.symbol, roomSymbol.color.rgba()});
+        if (found == symbolTextures.cend()) {
+            found = symbolTextures.insert({roomSymbol.symbol, roomSymbol.color.rgba()}, symbolTexture(roomSymbol.symbol, roomSymbol.color));
+        }
+        if (const GLuint texture = *found) {
             GeometryData& batch = roomSymbol.decals->symbols[texture];
             batch.textureId = texture;
             GeometryManager::appendGroundQuad(batch, roomSymbol.center, symbolSize, screenRight, screenUp, roomSymbol.tint);
@@ -1963,7 +1978,7 @@ void ModernGLWidget::renderRooms()
         const RoomAppearance::Look look = RoomAppearance::look(*mpMap, *mpHost, *pR, playerRoomId, mMapCenterZ);
         const GeometryManager::LevelFade fade = GeometryManager::levelFade(look.levelOffset, moreTransparent);
 
-        const QColor fadeTarget = levelFadeTarget(pR->z());
+        const QColor fadeTarget = fadeTargetOf(pR->z());
 
         const QColor roomColor = style.roomColor(look.color);
         QVector4D roomTint = GeometryManager::fadedColor(roomColor, fade, fadeTarget);
@@ -2435,7 +2450,7 @@ void ModernGLWidget::renderRooms()
                 mRoomIdsDrawn.insert(cell.roomId);
             }
             for (const ExitScene::Glyph& glyph : std::as_const(mExitGlyphs)) {
-                if (!levelShown(glyph.level) || roomCells.contains({{qRound64(glyph.at.x() * 2.0), qRound64(glyph.at.y() * 2.0)}, glyph.level})) {
+                if (!levelShown(glyph.level) || outOfView(glyph.at) || roomCells.contains({{qRound64(glyph.at.x() * 2.0), qRound64(glyph.at.y() * 2.0)}, glyph.level})) {
                     continue;
                 }
                 QChar character = glyph.character;
@@ -2451,7 +2466,7 @@ void ModernGLWidget::renderRooms()
                             center,
                             glyphAtlasCell(QString(character), false),
                             scmGlyphSize,
-                            GeometryManager::fadedColor(glyph.color, fade, levelFadeTarget(glyph.level)));
+                            GeometryManager::fadedColor(glyph.color, fade, fadeTargetOf(glyph.level)));
             }
         }
     }
@@ -2595,7 +2610,7 @@ void ModernGLWidget::renderRooms()
         if (extent == levelExtents.cend() || !style.floorPlates) {
             return;
         }
-        const QVector4D tint = GeometryManager::fadedColor(plateColor, GeometryManager::levelFade(level - mMapCenterZ, moreTransparent), levelFadeTarget(level));
+        const QVector4D tint = GeometryManager::fadedColor(plateColor, GeometryManager::levelFade(level - mMapCenterZ, moreTransparent), fadeTargetOf(level));
         // Under a model's blocks, where they stand
         const float plateZ = static_cast<float>(level) - (modelBlocks ? roomHeight / 2.0f : roomHeight);
         QVector<float> vertices;
@@ -3099,15 +3114,65 @@ void ModernGLWidget::renderConnections()
     }
 
     const bool moreTransparent = mpHost->experimentEnabled(qsl("experiment.rendering.more-transparent"));
+    const MapStyle& style = mapStyle();
+    const ExitGeometry::Inputs inputs{mExitSceneBuilds,
+                                      style.id,
+                                      moreTransparent,
+                                      mudlet::self() && mudlet::self()->drawUpperLowerLevels(),
+                                      mpHost->mUpperLevelColor,
+                                      mpHost->mLowerLevelColor,
+                                      mShowTopLevels,
+                                      mShowBottomLevels};
+    if (!mExitGeometry.valid || !(mExitGeometry.inputs == inputs)) {
+        buildExitGeometry(scene, options, moreTransparent);
+        mExitGeometry.inputs = inputs;
+        mExitGeometry.valid = true;
+    }
+    mSeeThroughExits = mExitGeometry.seeThrough;
+
+    mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::ENABLE_DEPTH_TEST));
+    if (!mExitGeometry.bars.isEmpty()) {
+        mRenderCommandQueue.addCommand(std::make_unique<RenderInstancedCubesCommand>(
+                mExitGeometry.bars, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix(), exitShading()));
+    }
+    if (!mExitGeometry.strokes.isEmpty()) {
+        mRenderCommandQueue.addCommand(std::make_unique<RenderInstancedCubesCommand>(
+                mExitGeometry.strokes, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix(), RenderCommand::Shading::InkStroke));
+    }
+    if (!mExitGeometry.vertices.isEmpty()) {
+        // Arrowheads and dots lie on the lines' tops
+        mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::ENABLE_POLYGON_OFFSET));
+        mRenderCommandQueue.addCommand(std::make_unique<RenderTrianglesCommand>(mExitGeometry.vertices,
+                                                                                mExitGeometry.colors,
+                                                                                mCameraController.getProjectionMatrix(),
+                                                                                mCameraController.getViewMatrix(),
+                                                                                mCameraController.getModelMatrix(),
+                                                                                RenderCommand::Shading::Unlit));
+        mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::DISABLE_POLYGON_OFFSET));
+    }
+}
+
+void ModernGLWidget::buildExitGeometry(const ExitScene::Scene& scene, const ExitScene::Options& options, const bool moreTransparent)
+{
+    ++mExitGeometryBuilds;
+    mExitGeometry.bars.clear();
+    mExitGeometry.strokes.clear();
+    mExitGeometry.vertices.clear();
+    mExitGeometry.colors.clear();
+    mExitGeometry.seeThrough.clear();
+    QMap<int, LevelExits>& seeThroughExits = mExitGeometry.seeThrough;
     // Glowing exits are added onto what is under them with their level's rooms, as they would cover it drawn solid
     const bool glowing = mapStyle().edges == MapStyle::Edges::GlowingWireframes;
     const MapStyle& style = mapStyle();
+    QHash<int, QColor> fadeTargets;
     const auto faded = [&](const QColor& color, const int level) {
+        auto fadeTarget = fadeTargets.constFind(level);
+        if (fadeTarget == fadeTargets.cend()) {
+            fadeTarget = fadeTargets.insert(level, levelFadeTarget(level));
+        }
         // A custom line's own color, added onto the dark background, could leave nothing to see
-        return GeometryManager::fadedColor(glowing ? style.wireColor(color, color) : color, GeometryManager::levelFade(level - mMapCenterZ, moreTransparent), levelFadeTarget(level));
+        return GeometryManager::fadedColor(glowing ? style.wireColor(color, color) : color, GeometryManager::levelFade(level - mMapCenterZ, moreTransparent), *fadeTarget);
     };
-
-    mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::ENABLE_DEPTH_TEST));
 
     const QVector3D sink(0.0f, 0.0f, exitSink(options));
     const float roomHeight = 2.0f / scale / zFlattening;
@@ -3136,8 +3201,8 @@ void ModernGLWidget::renderConnections()
     const bool inkLozenges = style.edges == MapStyle::Edges::InkLozenges;
     const bool pavedPaths = style.environmentKits && style.pavedPathStrength > 0.0f;
     const float pavedPathHeight = 0.01f * roomHeight;
-    QVector<CubeInstanceData> bars;
-    QVector<CubeInstanceData> strokes;
+    QVector<CubeInstanceData>& bars = mExitGeometry.bars;
+    QVector<CubeInstanceData>& strokes = mExitGeometry.strokes;
     bars.reserve(scene.segments.size());
     for (const ExitScene::Segment& segment : scene.segments) {
         QVector4D tint = faded(segment.color, segment.level);
@@ -3165,7 +3230,7 @@ void ModernGLWidget::renderConnections()
             // Thinner than the path, and just over the thickest tile, so that it shows over any of them; from the ground,
             // which sunk() puts a line's height below its middle, whatever this segment's own height
             const QVector3D raise(0.0f, 0.0f, DioramaLayout::flatTileTop(roomHeight) + (pavedPathHeight - options.lineHeight) / 2.0f);
-            mSeeThroughExits[segment.level].bars.append(CubeInstanceData(
+            seeThroughExits[segment.level].bars.append(CubeInstanceData(
                     GeometryManager::barTransform(sunk(segment.from, segment.level, false) + raise, sunk(segment.to, segment.level, false) + raise, segment.width * scmPavedPathWidth, pavedPathHeight),
                     tint.x(),
                     tint.y(),
@@ -3176,27 +3241,19 @@ void ModernGLWidget::renderConnections()
         const bool seeThrough = glowing || tint.w() < 1.0f;
         // Only a whole line tapers well: a door, a dash or a custom line's piece would thin out at one end
         if (inkLozenges && segment.stroke) {
-            (seeThrough ? mSeeThroughExits[segment.level].strokes : strokes).append(bar);
+            (seeThrough ? seeThroughExits[segment.level].strokes : strokes).append(bar);
         } else {
-            (seeThrough ? mSeeThroughExits[segment.level].bars : bars).append(bar);
+            (seeThrough ? seeThroughExits[segment.level].bars : bars).append(bar);
         }
     }
-    if (!bars.isEmpty()) {
-        mRenderCommandQueue.addCommand(
-                std::make_unique<RenderInstancedCubesCommand>(bars, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix(), exitShading()));
-    }
-    if (!strokes.isEmpty()) {
-        mRenderCommandQueue.addCommand(std::make_unique<RenderInstancedCubesCommand>(
-                strokes, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix(), RenderCommand::Shading::InkStroke));
-    }
 
-    QVector<float> vertices;
-    QVector<float> colors;
+    QVector<float>& vertices = mExitGeometry.vertices;
+    QVector<float>& colors = mExitGeometry.colors;
     vertices.reserve(scene.triangles.size() * 9);
     colors.reserve(scene.triangles.size() * 12);
     for (const ExitScene::Triangle& triangle : scene.triangles) {
         const QVector4D tint = faded(triangle.color, triangle.level);
-        LevelExits* seeThrough = glowing || tint.w() < 1.0f ? &mSeeThroughExits[triangle.level] : nullptr;
+        LevelExits* seeThrough = glowing || tint.w() < 1.0f ? &seeThroughExits[triangle.level] : nullptr;
         // An upright arrowhead, as on a line straight up, stays with the line's middle, which is not sunk
         const QVector3D normal = QVector3D::crossProduct(triangle.b - triangle.a, triangle.c - triangle.a);
         const QVector3D drop = std::abs(normal.z()) < 0.01f * normal.length() ? QVector3D() : sink;
@@ -3204,13 +3261,6 @@ void ModernGLWidget::renderConnections()
             (seeThrough ? seeThrough->vertices : vertices) << corner.x() << corner.y() << corner.z();
             (seeThrough ? seeThrough->colors : colors) << tint.x() << tint.y() << tint.z() << tint.w();
         }
-    }
-    if (!vertices.isEmpty()) {
-        // Arrowheads and dots lie on the lines' tops
-        mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::ENABLE_POLYGON_OFFSET));
-        mRenderCommandQueue.addCommand(std::make_unique<RenderTrianglesCommand>(
-                vertices, colors, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix(), RenderCommand::Shading::Unlit));
-        mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::DISABLE_POLYGON_OFFSET));
     }
 }
 

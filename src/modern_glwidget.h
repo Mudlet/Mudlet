@@ -433,8 +433,34 @@ private:
         ExitScene::Scene scene;
     };
     ExitSceneCache mExitSceneCache;
-    // How many times the exits have been built, for tests
+    // How many times the exits have been built: what is made from them is made again whenever this changes
     int mExitSceneBuilds = 0;
+    // The bars, strokes and triangles renderConnections() makes from the exits, kept until the exits or anything else
+    // they are made from changes, as none of it depends on the camera
+    struct ExitGeometry
+    {
+        struct Inputs
+        {
+            int sceneBuilds = 0;
+            QString styleId;
+            bool moreTransparent = false;
+            bool upperLowerLevels = false;
+            QColor upperLevelColor;
+            QColor lowerLevelColor;
+            int levelsAbove = 0;
+            int levelsBelow = 0;
+            bool operator==(const Inputs&) const = default;
+        };
+        bool valid = false;
+        Inputs inputs;
+        QVector<CubeInstanceData> bars;
+        QVector<CubeInstanceData> strokes;
+        QVector<float> vertices;
+        QVector<float> colors;
+        QMap<int, LevelExits> seeThrough;
+    };
+    ExitGeometry mExitGeometry;
+    int mExitGeometryBuilds = 0;
     // What the diorama's pieces were last laid out from, as above; the pieces too change only with the map, the
     // levels shown and the style, and both passes of a frame and picking a room ask for them
     struct DioramaPiecesCache
@@ -541,6 +567,7 @@ private:
     const QHash<int, DioramaLayout::Piece>& dioramaPieces(const TArea& area);
     // The exits of the area shown, built again only when the map or the options they are built from change
     const ExitScene::Scene& exitScene(const ExitScene::Options& options);
+    void buildExitGeometry(const ExitScene::Scene& scene, const ExitScene::Options& options, bool moreTransparent);
     void endPan();
     void renderCube(float x, float y, float z, float size, float r, float g, float b, float a);
     void renderText(const QString& text, float x, float y);

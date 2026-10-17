@@ -1082,6 +1082,82 @@ private slots:
         map()->setRoomNamesShown(false);
     }
 
+    // The redness of the exit bar between the two rooms of the level below, which fades toward the lower level color
+    static float lowerExitRedness(const ModernGLWidget& widget)
+    {
+        float redness = std::numeric_limits<float>::lowest();
+        const auto check = [&redness](const QVector<CubeInstanceData>& bars) {
+            for (const CubeInstanceData& bar : bars) {
+                const QVector4D middle = bar.transform.column(3);
+                if (qAbs(middle.y() - 2.0f) < 0.01f && qAbs(middle.x() - 1.0f) < 0.01f && middle.z() < -0.5f) {
+                    redness = qMax(redness, bar.color[0] - bar.color[1]);
+                }
+            }
+        };
+        check(widget.mExitGeometry.bars);
+        for (const ModernGLWidget::LevelExits& exits : widget.mExitGeometry.seeThrough) {
+            check(exits.bars);
+        }
+        return redness;
+    }
+
+    // What the exits are drawn as is made once and kept while the camera moves, and made again when anything it is
+    // made from changes: the map, the level colors and whether they are drawn, the style or the levels shown
+    void test_exitGeometryIsMadeAgainOnlyWhenWhatItIsMadeFromChangesWithoutGL()
+    {
+        const int areaId = addArea();
+        QVERIFY(areaId > 0);
+        constexpr int lowerEastRoomId = 4;
+        QVERIFY(addRoomAt(lowerEastRoomId, areaId, 2, 2, -1));
+        QVERIFY(map()->setExit(kLowerRoomId, lowerEastRoomId, DIR_EAST));
+        QVERIFY(map()->setExit(lowerEastRoomId, kLowerRoomId, DIR_WEST));
+        const QColor savedLower = mpHost->mLowerLevelColor;
+        const bool savedShown = mudlet::self()->drawUpperLowerLevels();
+        const auto restore = qScopeGuard([this, savedLower, savedShown]() {
+            mpHost->mLowerLevelColor = savedLower;
+            mudlet::self()->setDrawUpperLowerLevels(savedShown);
+            mpHost->setMapStyle(qsl("tiles"));
+        });
+        mudlet::self()->setDrawUpperLowerLevels(true);
+        mpHost->mLowerLevelColor = QColor(0, 0, 255, 128);
+        ModernGLWidget widget(map(), mpHost);
+        queueFrame(widget, areaId);
+        QCOMPARE(widget.mExitGeometryBuilds, 1);
+        const float blue = lowerExitRedness(widget);
+        QVERIFY2(blue > std::numeric_limits<float>::lowest(), "no exit was drawn on the level below");
+        queueTurnedFrame(widget);
+        widget.setCameraDistance(3.0f);
+        queueTurnedFrame(widget);
+        QCOMPARE(widget.mExitGeometryBuilds, 1);
+
+        mpHost->mLowerLevelColor = QColor(255, 0, 0, 128);
+        queueTurnedFrame(widget);
+        QCOMPARE(widget.mExitGeometryBuilds, 2);
+        QVERIFY2(lowerExitRedness(widget) > blue + 0.1f, qPrintable(qsl("the exit below is %1 red after the lower level turned red, %2 before").arg(lowerExitRedness(widget)).arg(blue)));
+
+        mudlet::self()->setDrawUpperLowerLevels(false);
+        queueTurnedFrame(widget);
+        QCOMPARE(widget.mExitGeometryBuilds, 3);
+
+        QVERIFY(mpHost->setMapStyle(qsl("inkwash")));
+        queueTurnedFrame(widget);
+        QCOMPARE(widget.mExitGeometryBuilds, 4);
+
+        widget.slot_showLessLowerLevels();
+        queueTurnedFrame(widget);
+        QCOMPARE(widget.mExitGeometryBuilds, 5);
+
+        // The mapper's colors set in the preferences, which only ask for the map to be drawn again
+        const quint64 revision = map()->revision();
+        map()->updateArea(-1);
+        QVERIFY(map()->revision() > revision);
+        queueTurnedFrame(widget);
+        QCOMPARE(widget.mExitGeometryBuilds, 6);
+        const quint64 restored = map()->revision();
+        map()->restore16ColorSet();
+        QVERIFY(map()->revision() > restored);
+    }
+
     // The diorama's pieces are laid out once a frame at most, and again only when the map, the levels shown or the
     // style changes
     void test_dioramaPiecesAreLaidOutAgainOnlyWhenTheMapOrLevelsChangeWithoutGL()
@@ -4073,7 +4149,8 @@ private slots:
     // so it runs only when asked:
     //   MUDLET_MAPPER_BENCH=1 QT_QPA_PLATFORM=xcb ./functional_map_tests ModernMapperRenderTest bench_frameTimesPerStyle
     // MUDLET_MAPPER_BENCH_STYLES, _MAPS, _VIEWS and _MOTIONS take comma-separated subsets, _FRAMES the frames per run,
-    // and with GL, _DUMP a directory to write each run's last frame into, for comparing builds pixel by pixel
+    // and with GL, _DUMP a directory to write each run's last frame into, for comparing builds pixel by pixel;
+    // _TRACE prints every frame's time and the textures it made, to see what a slow frame did
     void bench_frameTimesPerStyle()
     {
         if (!qEnvironmentVariableIsSet("MUDLET_MAPPER_BENCH")) {
@@ -4100,6 +4177,7 @@ private slots:
         constexpr int warmUp = 3;
         const bool gl = glAvailable();
         const QString dumpDirectory = qEnvironmentVariable("MUDLET_MAPPER_BENCH_DUMP");
+        const bool trace = qEnvironmentVariableIsSet("MUDLET_MAPPER_BENCH_TRACE");
         if (gl && !dumpDirectory.isEmpty()) {
             QVERIFY(QDir().mkpath(dumpDirectory));
         }
@@ -4169,7 +4247,10 @@ private slots:
                             if (motion == qsl("orbit")) {
                                 azimuth += 4.0f * static_cast<float>(along);
                             } else if (motion == qsl("pan")) {
-                                centerX += along;
+                                // Back and forth across the middle half of the map, so the view never leaves it
+                                const int reach = side / 2;
+                                const int phase = along % (4 * reach);
+                                centerX += phase < 2 * reach ? phase - reach : 3 * reach - phase;
                             } else {
                                 r = distance * (1.0f + 0.5f * std::sin(0.15f * static_cast<float>(along)));
                             }
@@ -4180,6 +4261,17 @@ private slots:
                             if (step >= 0) {
                                 times.append(ms);
                                 texturesMade += widget.mLabelTextureCache.imageTexturesMade() - madeBefore;
+                            }
+                            if (trace) {
+                                std::printf("TRACE %s %s %s %s frame %d %.3f ms, %lld textures made, %zu commands\n",
+                                            qPrintable(styleId),
+                                            qPrintable(mapName),
+                                            qPrintable(view),
+                                            qPrintable(motion),
+                                            step,
+                                            ms,
+                                            static_cast<long long>(widget.mLabelTextureCache.imageTexturesMade() - madeBefore),
+                                            widget.mRenderCommandQueue.getCommandCount());
                             }
                         }
                         std::sort(times.begin(), times.end());
