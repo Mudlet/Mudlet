@@ -4973,16 +4973,9 @@ void Host::lookUpSecuredPassword(CredentialManager* credManager)
             "character",
             [this, credManager](bool success, const QString& password, const QString& errorMessage, CredentialManager::ReadOutcome outcome) {
                 securedPasswordAnswered(success, password, errorMessage, outcome == CredentialManager::ReadOutcome::TimedOut);
-                // Only a refusal: a timed-out read can still be answered late. A refusal does not say a
-                // password is there, so the message doesn't either.
-                // Nor when a password is already set, as the connection dialog may have put one in, nor
-                // without a login, as auto-login would send no password anyway. Not for Unavailable: a
-                // desktop with no keychain service says so on every load, password or not.
-                if (outcome == CredentialManager::ReadOutcome::Unreadable && !getLogin().isEmpty() && getPass().isEmpty()) {
-                    //: Shown in the profile's console when Mudlet could not check for a saved character password, e.g. because the computer's password manager is locked, so auto-login won't send one
-                    postMessage(tr("[ WARN ]  - Could not check for a saved password, so none will be sent automatically. "
-                                   "If your computer's password manager is locked, unlock it; otherwise type your password when the game asks for it."));
-                }
+                // Only a refusal: a timed-out read can still be answered late. Not for Unavailable: a desktop
+                // with no keychain service says so on every load, password or not.
+                mSecuredPasswordUnreadable = outcome == CredentialManager::ReadOutcome::Unreadable;
 
                 // Clean up the credential manager
                 credManager->deleteLater();
@@ -4991,6 +4984,19 @@ void Host::lookUpSecuredPassword(CredentialManager* credManager)
             [this](bool success, const QString& password, const QString& errorMessage) {
                 securedPasswordAnswered(success, password, errorMessage, false);
             });
+}
+
+void Host::reportUnreadableSavedPassword()
+{
+    // Once per load, as a reconnect has no more of a password than the first connection had
+    if (!mSecuredPasswordUnreadable || mLogin.isEmpty() || !mPass.isEmpty()) {
+        return;
+    }
+    mSecuredPasswordUnreadable = false;
+    // A refusal does not say a password is there, so the message doesn't either
+    //: Shown in the profile's console when the automatic login reaches its password step and Mudlet could not check for a saved character password, e.g. because the computer's password manager is locked, so none is sent
+    postMessage(tr("[ WARN ]  - Could not check for a saved password, so none will be sent automatically. "
+                   "If your computer's password manager is locked, unlock it and reopen the profile; otherwise type your password when the game asks for it."));
 }
 
 void Host::securedPasswordAnswered(bool success, const QString& password, const QString& errorMessage, bool timedOut)

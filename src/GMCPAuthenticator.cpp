@@ -244,7 +244,10 @@ void rememberRejectedToken(const QString& profileName, const QByteArray& hash)
 
 void forgetRejectedToken(const QString& profileName)
 {
-    QFile::remove(MudletApp::getMudletPath(enums::profileDataItemPath, profileName, rejectedTokenKey()));
+    QFile record(MudletApp::getMudletPath(enums::profileDataItemPath, profileName, rejectedTokenKey()));
+    if (record.exists() && !record.remove()) {
+        qWarning().noquote() << "GMCP Char.Login - could not remove the record of a rejected token for profile" << profileName << ":" << record.errorString();
+    }
 }
 
 } // namespace
