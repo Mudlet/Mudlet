@@ -24,6 +24,8 @@
 #include <QHash>
 #include <QList>
 
+class QRectF;
+
 // How the diorama map style builds each room as a piece on its board, by the room's EnvironmentKit
 namespace DioramaLayout {
 
@@ -59,6 +61,10 @@ struct Piece
 // rooms on the levels straight above it is the foot of a tall building, with a storey for each and a roof on top;
 // its storeys stand lower than their levels
 QHash<int, Piece> layout(const QList<Place>& places, int viewedLevel, float roomSize, float roomHeight);
+
+// Whether a piece nearer the camera than a room that is to stay in sight covers enough of that room on screen to be
+// seen through; each is given by its outline on screen and its distance from the camera
+bool hides(const QRectF& pieceOnScreen, float pieceDistance, const QRectF& roomOnScreen, float roomDistance);
 
 // How far below its level a room's ground is
 float groundBelowLevel(float roomHeight);

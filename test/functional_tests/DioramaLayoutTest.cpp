@@ -157,6 +157,19 @@ private slots:
         QCOMPARE(higher.value(2).storeys, 2);
         QCOMPARE(higher.value(3).storey, 1);
     }
+
+    // Only a piece nearer the camera, and over a good part of the room, not just a corner of its roof
+    void test_aPieceHidesARoomOnlyFromInFrontAndOverEnoughOfIt()
+    {
+        const QRectF room(100, 100, 50, 60);
+        QVERIFY(DioramaLayout::hides(QRectF(110, 130, 40, 50), 1.0f, room, 2.0f));
+        QVERIFY(!DioramaLayout::hides(QRectF(110, 130, 40, 50), 2.5f, room, 2.0f));
+        QVERIFY(!DioramaLayout::hides(QRectF(110, 130, 40, 50), 2.0f, room, 2.0f));
+        QVERIFY(!DioramaLayout::hides(QRectF(140, 150, 40, 50), 1.0f, room, 2.0f));
+        QVERIFY(!DioramaLayout::hides(QRectF(200, 100, 40, 50), 1.0f, room, 2.0f));
+        QVERIFY(DioramaLayout::hides(QRectF(0, 0, 400, 400), 1.0f, room, 2.0f));
+        QVERIFY(!DioramaLayout::hides(QRectF(0, 0, 400, 400), 1.0f, QRectF(), 2.0f));
+    }
 };
 
 #include "DioramaLayoutTest.moc"

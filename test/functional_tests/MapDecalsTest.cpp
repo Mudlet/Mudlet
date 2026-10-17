@@ -26,6 +26,8 @@
 
 #include <QImage>
 
+#include <algorithm>
+
 #include "EnvironmentKit.h"
 #include "Host.h"
 #include "MapDecals.h"
@@ -175,6 +177,41 @@ private slots:
             }
         }
         QVERIFY2(strongest > 100, "the ring itself shows");
+    }
+
+    // Clear inside, a strong line, and a faint glow either side of it fading away from it
+    void test_outlineIsACrispLineWithAFaintGlow_data()
+    {
+        QTest::addColumn<bool>("round");
+        QTest::newRow("round") << true;
+        QTest::newRow("square") << false;
+    }
+
+    void test_outlineIsACrispLineWithAFaintGlow()
+    {
+        QFETCH(bool, round);
+        const QImage image = MapDecals::highlight(MapStyle::HighlightShape::Outline, Qt::red, Qt::white, round, scmSize);
+        QVERIFY(MapDecals::highlightOnGround(MapStyle::HighlightShape::Outline));
+        QVERIFY(!MapDecals::highlightFillsRoom(MapStyle::HighlightShape::Outline));
+        QCOMPARE(alphaAt(image, scmSize / 2, scmSize / 2), 0);
+        QCOMPARE(alphaAt(image, 0, scmSize / 2), 0);
+        QList<int> alphas;
+        for (int x = scmSize / 2; x < scmSize; ++x) {
+            alphas.append(alphaAt(image, x, scmSize / 2));
+        }
+        const auto strongest = std::max_element(alphas.cbegin(), alphas.cend());
+        QVERIFY2(*strongest > 240, "the line is not solid");
+        QCOMPARE(QColor::fromRgba(image.pixel(scmSize / 2 + static_cast<int>(strongest - alphas.cbegin()), scmSize / 2)).hue(), 0);
+        // Solid for only a few pixels: a line, not a band
+        const qsizetype solid = std::count_if(alphas.cbegin(), alphas.cend(), [](const int alpha) {
+            return alpha > 200;
+        });
+        QVERIFY2(solid <= scmSize / 20, qPrintable(qsl("solid for %1 pixels").arg(solid)));
+        const auto faint = [](const int alpha) {
+            return alpha > 5 && alpha < 80;
+        };
+        QVERIFY2(std::any_of(alphas.cbegin(), strongest, faint), "no glow inside the line");
+        QVERIFY2(std::any_of(strongest, alphas.cend(), faint), "no glow outside the line");
     }
 
     void test_cellFillsTheRoom()
@@ -416,6 +453,21 @@ private slots:
         QVERIFY2(cappedText.height() <= 0.25 * label.pix.height() + 2, qPrintable(qsl("%1 pixels tall").arg(cappedText.height())));
         QVERIFY(cappedText.height() < fullText.height());
         QVERIFY2(qAbs(cappedText.center().x() - fullText.center().x()) <= 3, "the text stays centered where the label was put");
+    }
+
+    // Drawn finer for a label shown larger than its picture, standing in the same place
+    void test_sharperThemedLabelIsFinerButTheSameSize()
+    {
+        const MapStyle& diorama = *MapStyle::find(qsl("diorama"));
+        const TMapLabel label = textLabel(Qt::white, QColor(0, 0, 0, 50));
+        const QImage plain = MapDecals::themedLabel(label, diorama);
+        const QImage sharp = MapDecals::themedLabel(label, diorama, 2);
+        QCOMPARE(sharp.size(), plain.size() * 2);
+        QCOMPARE(sharp.deviceIndependentSize(), plain.deviceIndependentSize());
+        QCOMPARE(MapDecals::themedLabel(label, diorama, 0).size(), plain.size());
+        const QRect plainText = paintedArea(plain);
+        const QRect sharpText = paintedArea(sharp);
+        QVERIFY2(qAbs(sharpText.center().x() - 2 * plainText.center().x()) <= 4 && qAbs(sharpText.center().y() - 2 * plainText.center().y()) <= 4, "the label moved");
     }
 
     void test_dioramaLabelsSitOnARoundedTagThatFitsTheirPicture()
@@ -669,10 +721,10 @@ private slots:
         QCOMPARE(rings, 2);
     }
 
-    void test_dioramaGlowsAColorlessRoomInLamplightAndAScriptsColorWins()
+    void test_dioramaOutlinesAColorlessRoomInLamplightAndAScriptsColorWins()
     {
         const MapStyle& diorama = *MapStyle::find(qsl("diorama"));
-        QCOMPARE(diorama.highlightShape, MapStyle::HighlightShape::Glow);
+        QCOMPARE(diorama.highlightShape, MapStyle::HighlightShape::Outline);
         QVERIFY(MapDecals::highlightOnGround(diorama.highlightShape));
         const QColor lamplight = diorama.highlightColorFor(QColor());
         QVERIFY(lamplight.isValid());

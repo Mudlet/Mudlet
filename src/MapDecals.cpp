@@ -115,6 +115,21 @@ QImage highlight(const MapStyle::HighlightShape shape, const QColor& color, cons
         ring(painter, center, radius * 0.92, color, size * 0.03);
         ring(painter, center, radius * 0.68, color, size * 0.03);
         break;
+    case MapStyle::HighlightShape::Outline: {
+        const qreal reach = radius * 0.78;
+        const QRectF line(center.x() - reach, center.y() - reach, 2.0 * reach, 2.0 * reach);
+        painter.setBrush(Qt::NoBrush);
+        // Wide and faint under narrow and strong, so the glow fades away from the line on both sides
+        for (const auto& [width, alpha] : {std::pair{0.18, 25}, std::pair{0.1, 45}, std::pair{0.045, 255}}) {
+            painter.setPen(QPen(withAlpha(color, alpha), size * width));
+            if (round) {
+                painter.drawEllipse(line);
+            } else {
+                painter.drawRoundedRect(line, reach * 0.3, reach * 0.3);
+            }
+        }
+        break;
+    }
     }
     painter.end();
     return image;
@@ -126,6 +141,7 @@ bool highlightOnGround(const MapStyle::HighlightShape shape)
     case MapStyle::HighlightShape::Halo:
     case MapStyle::HighlightShape::Glow:
     case MapStyle::HighlightShape::Rings:
+    case MapStyle::HighlightShape::Outline:
         return true;
     case MapStyle::HighlightShape::Disc:
     case MapStyle::HighlightShape::DashedEllipse:
@@ -333,7 +349,7 @@ bool keepsLabelBox(const TMapLabel& label)
     return !neutral(label.bgColor) && label.bgColor.alpha() > 0;
 }
 
-QImage themedLabel(const TMapLabel& label, const MapStyle& style)
+QImage themedLabel(const TMapLabel& label, const MapStyle& style, const int sharpness)
 {
     // A tag's margin round the text, above and below it and twice that at its ends, as a part of the text's height
     constexpr qreal platePad = 0.3;
@@ -381,15 +397,17 @@ QImage themedLabel(const TMapLabel& label, const MapStyle& style)
         }
     }
 
-    QImage image = clearImage(canvas, textColor);
+    const int times = qMax(1, sharpness);
+    QImage image = clearImage(canvas * times, textColor);
     if (box) {
         image.fill(label.bgColor);
     }
     QPainter painter(&image);
+    painter.scale(times, times);
     painter.setRenderHint(QPainter::Antialiasing);
     painter.setRenderHint(QPainter::TextAntialiasing);
     painter.setFont(font);
-    const QRectF textRect(image.rect());
+    const QRectF textRect{QPointF(), QSizeF(canvas)};
     if (plate) {
         const QRectF text = QFontMetricsF(font, &metricsDevice).boundingRect(textRect, flags, label.text);
         const qreal pad = text.height() * platePad;
@@ -429,7 +447,7 @@ QImage themedLabel(const TMapLabel& label, const MapStyle& style)
     painter.setPen(textColor);
     painter.drawText(textRect, flags, label.text);
     painter.end();
-    image.setDevicePixelRatio(label.pix.devicePixelRatio());
+    image.setDevicePixelRatio(label.pix.devicePixelRatio() * times);
     return image;
 }
 

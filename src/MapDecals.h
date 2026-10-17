@@ -86,8 +86,9 @@ int scaleBarRooms(qreal pixelsPerRoom, qreal shortest, qreal longest);
 
 // The label drawn again in the style's font and color, without the box behind it, where the label keeps the
 // defaults for them, in place of the label's own picture and the same size: a null image when the style leaves labels
-// as they are, or the label is a picture
-QImage themedLabel(const TMapLabel& label, const MapStyle& style);
+// as they are, or the label is a picture. Drawn at sharpness times its picture's resolution, for a label shown larger
+// than that, with the device pixel ratio to match
+QImage themedLabel(const TMapLabel& label, const MapStyle& style, int sharpness = 1);
 // Whether themedLabel() keeps the box behind the label, which it does only for a box given a hue on purpose
 bool keepsLabelBox(const TMapLabel& label);
 

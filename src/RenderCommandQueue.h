@@ -41,17 +41,30 @@ public:
 
     // Add commands to the queue
     void addCommand(std::unique_ptr<RenderCommand> command);
+    // Commands added while deferring are left for executeDeferred(), so that a pass over the frame between the two
+    // leaves them out
+    void setDeferring(bool deferring);
+    bool deferred(size_t index) const;
 
-    // Execute all queued commands
+    // Execute the queued commands but the deferred ones, which stay queued
     void executeAll(QOpenGLShaderProgram* shader,
-                   GeometryManager* geometryManager,
-                   ResourceManager* resourceManager,
-                   QOpenGLVertexArrayObject& vao,
-                   QOpenGLBuffer& vertexBuffer,
-                   QOpenGLBuffer& colorBuffer,
-                   QOpenGLBuffer& normalBuffer,
-                   QOpenGLBuffer& indexBuffer,
-                   QOpenGLBuffer& texCoordBuffer);
+                    GeometryManager* geometryManager,
+                    ResourceManager* resourceManager,
+                    QOpenGLVertexArrayObject& vao,
+                    QOpenGLBuffer& vertexBuffer,
+                    QOpenGLBuffer& colorBuffer,
+                    QOpenGLBuffer& normalBuffer,
+                    QOpenGLBuffer& indexBuffer,
+                    QOpenGLBuffer& texCoordBuffer);
+    void executeDeferred(QOpenGLShaderProgram* shader,
+                         GeometryManager* geometryManager,
+                         ResourceManager* resourceManager,
+                         QOpenGLVertexArrayObject& vao,
+                         QOpenGLBuffer& vertexBuffer,
+                         QOpenGLBuffer& colorBuffer,
+                         QOpenGLBuffer& normalBuffer,
+                         QOpenGLBuffer& indexBuffer,
+                         QOpenGLBuffer& texCoordBuffer);
 
     // Clear the command queue
     void clear();
@@ -62,7 +75,21 @@ public:
     void printStatistics() const;
 
 private:
+    void execute(bool deferredOnes,
+                 QOpenGLShaderProgram* shader,
+                 GeometryManager* geometryManager,
+                 ResourceManager* resourceManager,
+                 QOpenGLVertexArrayObject& vao,
+                 QOpenGLBuffer& vertexBuffer,
+                 QOpenGLBuffer& colorBuffer,
+                 QOpenGLBuffer& normalBuffer,
+                 QOpenGLBuffer& indexBuffer,
+                 QOpenGLBuffer& texCoordBuffer);
+
     std::vector<std::unique_ptr<RenderCommand>> mCommands;
+    // By command, whether it was added while deferring
+    std::vector<bool> mDeferred;
+    bool mDeferring = false;
     bool mInitialized = false;
 
     // Statistics
