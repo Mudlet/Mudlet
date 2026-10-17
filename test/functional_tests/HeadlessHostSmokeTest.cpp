@@ -5294,8 +5294,15 @@ local ok, err = pcall(function()
   check("getConfig showUpperLowerLevels default", answered(true), getConfig("showUpperLowerLevels"))
   check("setConfig showUpperLowerLevels", answered(true), setConfig("showUpperLowerLevels", false))
   check("getConfig showUpperLowerLevels", answered(false), getConfig("showUpperLowerLevels"))
-  -- This drives the mapper widget, as in the GUI before its mapper exists
-  check("setConfig show3dMapView", refused(notAnOption), setConfig("show3dMapView", false))
+  -- Stored for a mapper made later, as in the GUI before its mapper exists; a build without the 3D mapper does not know the key
+  if setMapPerspective then
+    check("setConfig show3dMapView", answered(true), setConfig("show3dMapView", true))
+    check("getConfig show3dMapView", answered(true), getConfig("show3dMapView"))
+    check("setConfig show3dMapView false", answered(true), setConfig("show3dMapView", false))
+    check("getConfig show3dMapView false", answered(false), getConfig("show3dMapView"))
+  else
+    check("setConfig show3dMapView", refused(notAnOption), setConfig("show3dMapView", false))
+  end
 end)
 headlessMapConfig = ok and 'ok' or tostring(err)
 )lua");

@@ -1569,8 +1569,7 @@ describe("Tests Other.lua functions", function()
     -- than hard-coded, so this adapts to whichever build runs it. Every value
     -- changed here is restored (config is written to the profile on close). Keys
     -- with lossy or multi-valued representations (showSentText, the string enums
-    -- and the numeric/table keys) are handled in dedicated tests below; map keys
-    -- (which need an open mapper to set) are exercised only when settable.
+    -- and the numeric/table keys) are handled in dedicated tests below.
     local originalValues = {}
     -- show3dMapView is skipped because setting it on an open mapper, to either
     -- value, builds the 3D OpenGL map view. Initialising the software GL stack
@@ -1760,15 +1759,10 @@ describe("Tests Other.lua functions", function()
       for key, value in pairs(getConfig()) do
         if type(value) == "boolean" and not skipInGenericLoop[key] then
           snapshot(key)
-          local ok = setConfig(key, not value)
-          if ok then
-            assert.equals(not value, getConfig(key), "round-trip failed for boolean config key: " .. key)
-            settable = settable + 1
-          else
-            -- not settable in this environment (e.g. a map option with the
-            -- mapper closed); the getter still returns a boolean
-            assert.is_boolean(getConfig(key), "expected boolean for config key: " .. key)
-          end
+          local ok, err = setConfig(key, not value)
+          assert.is_true(ok, "setConfig refused boolean config key " .. key .. ": " .. tostring(err))
+          assert.equals(not value, getConfig(key), "round-trip failed for boolean config key: " .. key)
+          settable = settable + 1
           restore(key)
         end
       end
@@ -1798,8 +1792,6 @@ describe("Tests Other.lua functions", function()
     end)
 
     it("round-trips the 2D map room symbol font", function()
-      -- Unlike the other map keys these do not need an open mapper, because the
-      -- settings live on the map object rather than the mapper widget.
       local original = getConfig("mapSymbolFont")
       assert.is_string(original)
       snapshot("mapSymbolFont")
@@ -1933,11 +1925,11 @@ describe("Tests Other.lua functions", function()
       assert.is_true(exercised > 0, "expected at least one string enum config option")
     end)
 
-    -- These keys go to the 2D map widget itself, so setConfig() only knows them
-    -- while the mapper is open - with it closed they are refused as unknown.
-    describe("the map keys that need an open mapper", function()
+    -- With the mapper open these keys also reach the 2D map widget itself;
+    -- BeforeMapWidget_spec.lua covers setting them with no mapper.
+    describe("the map keys with the mapper open", function()
       before_each(function()
-        assert.is_true(openMapWidget(), "these keys cannot be set without the map widget")
+        assert.is_true(openMapWidget(), "these keys are meant to be set with the map widget open")
       end)
 
       it("round-trips mapExitSize", function()
@@ -2097,7 +2089,7 @@ describe("Tests Other.lua functions", function()
     end)
 
     it("refuses a mapRoomSize below 1", function()
-      assert.is_true(openMapWidget(), "mapRoomSize cannot be set without the map widget")
+      assert.is_true(openMapWidget(), "could not open the map widget")
       snapshot("mapRoomSize")
       finally(function() restore("mapRoomSize") end)
       assert.is_true(setConfig("mapRoomSize", 7))
@@ -2129,7 +2121,7 @@ describe("Tests Other.lua functions", function()
     -- 12.5 for a 4, and getConfig() answers that - so setConfig() has to take it
     -- back as it is for a script restoring the settings it changed.
     it("round-trips a mapExitSize that is not a whole number", function()
-      assert.is_true(openMapWidget(), "mapExitSize cannot be set without the map widget")
+      assert.is_true(openMapWidget(), "could not open the map widget")
       snapshot("mapExitSize")
       finally(function() restore("mapExitSize") end)
       assert.is_true(setConfig("mapExitSize", 12.5))
@@ -2144,7 +2136,7 @@ describe("Tests Other.lua functions", function()
     -- preferences, so a value that is not a finite number of at least 1 must
     -- never reach it.
     it("rejects a mapExitSize that is not a finite number of at least 1", function()
-      assert.is_true(openMapWidget(), "mapExitSize cannot be set without the map widget")
+      assert.is_true(openMapWidget(), "could not open the map widget")
       snapshot("mapExitSize")
       finally(function() restore("mapExitSize") end)
       assert.is_true(setConfig("mapExitSize", 10))
