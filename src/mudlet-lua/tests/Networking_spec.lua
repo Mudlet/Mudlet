@@ -2789,7 +2789,7 @@ describe("The IRC configuration functions round-trip through the profile", funct
       assert.is_nil(ok)
       assert.is_true(contains(err, "no (valid) channel names provided"), tostring(err))
 
-      -- a channel name has to start with #, & or +, and only strings are read
+      -- a channel name has to start with #, &, + or !, and only strings are read
       ok, err = setIrcChannels({"mudlet", 42, ""})
       assert.is_nil(ok)
       assert.is_true(contains(err, "no (valid) channel names provided"), tostring(err))
