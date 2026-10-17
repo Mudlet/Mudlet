@@ -152,6 +152,7 @@ set(mudlet_SRCS
     TNullAppFrontend.cpp
     TNullConsoleFrontend.cpp
     TNullMapView.cpp
+    TNullMapViews.cpp
     TriggerMatchPool.cpp
     TriggerUnit.cpp
     TTriggerPrescan.cpp
@@ -454,6 +455,7 @@ set(mudlet_HDRS
     TNullAppFrontend.h
     TNullConsoleFrontend.h
     TNullMapView.h
+    TNullMapViews.h
     TPrintSink.h
     Tree.h
     TriggerMatchPool.h

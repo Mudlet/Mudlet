@@ -25,11 +25,13 @@
 
 #include "Host.h"
 #include "MudletApp.h"
+#include "TAppFrontend.h"
 #include "TArea.h"
 #include "TEvent.h"
 #include "TMapLabel.h"
 #include "TMapViewFrontend.h"
 #include "TMapViewsFrontend.h"
+#include "TNullMapViews.h"
 #include "TRoomDB.h"
 #include "XMLimport.h"
 #include "TLuaInterpreter.h"
@@ -124,6 +126,7 @@ MapFileCheck fileHoldsMapData(QFile& file)
     return check;
 }
 
+// For a profile in the GUI before it has its view manager
 class TNullMapViewsFrontend final : public TMapViewsFrontend
 {
 public:
@@ -175,8 +178,14 @@ void TMap::restoreLabelOutlineColorFromUserData(TMapLabel& label, int labelId, Q
 
 TMapViewsFrontend* TMap::mapViewsFrontend() const
 {
+    if (mpViewsFrontend) {
+        return mpViewsFrontend;
+    }
+    if (mpNullViews) {
+        return mpNullViews;
+    }
     static TNullMapViewsFrontend noViews;
-    return mpViewsFrontend ? mpViewsFrontend : &noViews;
+    return &noViews;
 }
 
 TMap::TMap(Host* pH, const QString& profileName)
@@ -185,6 +194,7 @@ TMap::TMap(Host* pH, const QString& profileName)
 , mpRoomDB(std::make_unique<TRoomDB>(this))
 , mpHost(pH)
 , mProfileName(profileName)
+, mpNullViews(TAppFrontend::hasView() ? nullptr : new TNullMapViews(pH, this))
 {
     restore16ColorSet();
 
