@@ -238,8 +238,11 @@ private:
     // Label texture cache
     LabelTextureCache mLabelTextureCache;
     BloomPass mBloom;
-    // Room textures this frame has used so far, which making room for another must keep
+    // Room textures this frame has used so far and the last frame used, which making room for another must keep
     QSet<QString> mRoomTexturesInUse;
+    QSet<QString> mRoomTexturesKept;
+    // How many room textures are kept, lowered by tests
+    qsizetype mMaxRoomTextures;
     // The text in each cell of the terminal style's glyph atlas, in order, and how many of them and in which font
     // its texture was last drawn with
     QStringList mGlyphAtlasCells;
@@ -252,6 +255,7 @@ private:
     // A room's ink outline, by everything it is made from
     struct InkOutline
     {
+        int roomId = 0;
         float x = 0.0f;
         float y = 0.0f;
         float top = 0.0f;
@@ -269,8 +273,9 @@ private:
         bool round = false;
         QVector<float> vertices;
         QVector<float> colors;
-        // Where each outline's vertices end
+        // Where each outline's vertices end, and which outline is each room's
         QVector<int> ends;
+        QHash<int, int> indexOfRoom;
     };
     QHash<int, InkOutlineLevel> mInkOutlines;
     // A map label's image with a halo around it, by its area and ID, and what it was made from

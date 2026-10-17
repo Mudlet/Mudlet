@@ -1055,6 +1055,33 @@ private slots:
         QVERIFY(widget.mExitSceneCache.scene.segments.size() > 1);
     }
 
+    // Past the cap on room textures, a frame drops only textures that neither it nor the last frame used, so a view
+    // that needs more than fit draws what it can rather than remaking textures every frame
+    void test_texturesUsedLastFrameAreKeptPastTheCapWithoutGL()
+    {
+        map()->mapClear();
+        const int areaId = map()->mpRoomDB->addArea(qsl("Named Area"));
+        for (int i = 0; i < 30; ++i) {
+            const int roomId = 100 + i;
+            QVERIFY(addRoomAt(roomId, areaId, (i % 6) * 2, (i / 6) * 2, 0));
+            map()->mpRoomDB->getRoom(roomId)->name = qsl("Room %1").arg(i);
+        }
+        map()->mRoomIdHash[map()->mProfileName] = 100;
+        map()->setRoomNamesShown(true);
+        ModernGLWidget widget(map(), mpHost);
+        widget.mMaxRoomTextures = 12;
+        queueFrame(widget, areaId);
+        const qint64 firstFrame = widget.mLabelTextureCache.imageTexturesMade();
+        QCOMPARE(firstFrame, 12);
+        // Turned, the names come in another order; nothing used last frame is dropped for them, so none is made again
+        queueTurnedFrame(widget);
+        QCOMPARE(widget.mLabelTextureCache.imageTexturesMade(), firstFrame);
+        // Only a texture the last frame left unused makes room for another, so at most one is made, not a cascade
+        queueTurnedFrame(widget);
+        QVERIFY(widget.mLabelTextureCache.imageTexturesMade() <= firstFrame + 1);
+        map()->setRoomNamesShown(false);
+    }
+
     // The diorama's pieces are laid out once a frame at most, and again only when the map, the levels shown or the
     // style changes
     void test_dioramaPiecesAreLaidOutAgainOnlyWhenTheMapOrLevelsChangeWithoutGL()
@@ -4133,6 +4160,7 @@ private slots:
                     const float tilt = view == qsl("top") ? CameraController::scmMinTilt : CameraController::scmDefaultTilt;
                     for (const QString& motion : motions) {
                         QList<double> times;
+                        qint64 texturesMade = 0;
                         for (int step = -warmUp; step < frames; ++step) {
                             const int along = step + warmUp;
                             float azimuth = CameraController::scmNorthUpAzimuth;
@@ -4147,9 +4175,11 @@ private slots:
                             }
                             widget.jumpTo(areaId, centerX, playerRoom->y(), playerRoom->z());
                             widget.setCameraPosition(r, tilt, azimuth);
+                            const qint64 madeBefore = widget.mLabelTextureCache.imageTexturesMade();
                             const double ms = frame();
                             if (step >= 0) {
                                 times.append(ms);
+                                texturesMade += widget.mLabelTextureCache.imageTexturesMade() - madeBefore;
                             }
                         }
                         std::sort(times.begin(), times.end());
@@ -4161,6 +4191,7 @@ private slots:
                         emitMetric(name + qsl("_p95_ms"), percentile(times, 0.95));
                         emitMetric(name + qsl("_p99_ms"), percentile(times, 0.99));
                         emitMetric(name + qsl("_max_ms"), times.last());
+                        emitMetric(name + qsl("_textures_made"), static_cast<double>(texturesMade));
                     }
                 }
             }

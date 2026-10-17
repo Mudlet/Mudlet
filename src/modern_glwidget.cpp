@@ -77,9 +77,17 @@
 
 using namespace std::chrono_literals;
 
+namespace {
+// Past this many, room textures neither this frame nor the last has used are dropped to make room; once those two
+// frames have used this many, the rest are not drawn. A dense map seen from above shows hundreds of names at once,
+// and a cap that one frame overran dropped textures the same frame then asked for again, remaking hundreds a frame
+constexpr qsizetype scmMaxRoomTextures = 2048;
+} // namespace
+
 ModernGLWidget::ModernGLWidget(TMap* pMap, Host* pHost, QWidget* parent)
 : QOpenGLWidget(parent)
 , mpMap(pMap)
+, mMaxRoomTextures(scmMaxRoomTextures)
 , mShaderManager(&mResourceManager, this)
 , mVertexBuffer(QOpenGLBuffer::VertexBuffer)
 , mColorBuffer(QOpenGLBuffer::VertexBuffer)
@@ -844,9 +852,6 @@ void ModernGLWidget::applyTiltShift()
 namespace {
 // Texels across the textures drawn on room tops
 constexpr int scmRoomTextureSize = 128;
-// Past this many, textures this frame has not used yet are dropped to make room and remade if needed;
-// once the frame itself has used this many, the rest are not drawn
-constexpr qsizetype scmMaxRoomTextures = 512;
 
 // An image whose clear texels keep edgeColor's hue, so that filtering does not fringe what is drawn on it with black
 QImage clearImage(const QSize& size, QColor edgeColor)
@@ -1061,12 +1066,29 @@ struct FlatLines
     QVector<float> colors;
 };
 
+// Two triangles between four corners, appended in blocks rather than a float at a time
+void appendTwoTriangles(FlatLines& mesh, const std::array<QVector3D, 4>& corners, const QVector4D& color)
+{
+    float vertices[18];
+    float* vertex = vertices;
+    for (const int corner : {0, 1, 2, 0, 2, 3}) {
+        *vertex++ = corners.at(corner).x();
+        *vertex++ = corners.at(corner).y();
+        *vertex++ = corners.at(corner).z();
+    }
+    const float colors[24] = {color.x(), color.y(), color.z(), color.w(), color.x(), color.y(), color.z(), color.w(), color.x(), color.y(), color.z(), color.w(),
+                              color.x(), color.y(), color.z(), color.w(), color.x(), color.y(), color.z(), color.w(), color.x(), color.y(), color.z(), color.w()};
+    const qsizetype vertexCount = mesh.vertices.size();
+    mesh.vertices.resize(vertexCount + 18);
+    std::copy_n(vertices, 18, mesh.vertices.data() + vertexCount);
+    const qsizetype colorCount = mesh.colors.size();
+    mesh.colors.resize(colorCount + 24);
+    std::copy_n(colors, 24, mesh.colors.data() + colorCount);
+}
+
 void appendBoardQuad(FlatLines& mesh, const std::array<QVector3D, 4>& corners, const QColor& color)
 {
-    for (const int corner : {0, 1, 2, 0, 2, 3}) {
-        mesh.vertices << corners.at(corner).x() << corners.at(corner).y() << corners.at(corner).z();
-        mesh.colors << color.redF() << color.greenF() << color.blueF() << 1.0f;
-    }
+    appendTwoTriangles(mesh, corners, QVector4D(color.redF(), color.greenF(), color.blueF(), 1.0f));
 }
 
 // A wooden board under extent and a margin around it, its top at z, with a hole down to the water in each water cell
@@ -1158,10 +1180,12 @@ void appendFlatOutline(FlatLines& lines, const QList<QPointF>& corners, const fl
         const QPointF b = to + toEnd + side;
         const QPointF c = to + toEnd - side;
         const QPointF d = from - fromEnd - side;
-        for (const QPointF& corner : {a, b, c, a, c, d}) {
-            lines.vertices << static_cast<float>(corner.x()) << static_cast<float>(corner.y()) << z;
-            lines.colors << color.x() << color.y() << color.z() << color.w();
-        }
+        appendTwoTriangles(lines,
+                           {QVector3D(static_cast<float>(a.x()), static_cast<float>(a.y()), z),
+                            QVector3D(static_cast<float>(b.x()), static_cast<float>(b.y()), z),
+                            QVector3D(static_cast<float>(c.x()), static_cast<float>(c.y()), z),
+                            QVector3D(static_cast<float>(d.x()), static_cast<float>(d.y()), z)},
+                           color);
     };
     qreal position = 0.0;
     for (qsizetype i = 0, total = corners.size(); i < total; ++i) {
@@ -1208,12 +1232,12 @@ GLuint ModernGLWidget::cachedRoomTexture(const QString& key)
 
 bool ModernGLWidget::roomForAnotherTexture(const QString& key)
 {
-    if (mLabelTextureCache.makeRoomForImageTexture(scmMaxRoomTextures, mRoomTexturesInUse)) {
+    if (mLabelTextureCache.makeRoomForImageTexture(mMaxRoomTextures, mRoomTexturesInUse | mRoomTexturesKept)) {
         return true;
     }
     if (!mRoomTextureLimitWarned) {
         mRoomTextureLimitWarned = true;
-        qWarning().nospace() << "ModernGLWidget: this view needs more than " << scmMaxRoomTextures << " different room symbols, IDs, markers and names, so some are not shown, the first being " << key;
+        qWarning().nospace() << "ModernGLWidget: this view needs more than " << mMaxRoomTextures << " different room symbols, IDs, markers and names, so some are not shown, the first being " << key;
     }
     return false;
 }
@@ -1604,7 +1628,8 @@ void ModernGLWidget::renderRooms()
         const qreal widest = idMetrics->horizontalAdvance(QString(QString::number(maxRoomId).size(), QLatin1Char('8')));
         idTexel = 0.9f * symbolSize / static_cast<float>(qMax(widest, idMetrics->height()));
     }
-    // Cleared before any of this frame's textures is asked for, as only those in it are kept from eviction
+    // Before any of this frame's textures is asked for, as only those in it and the last frame's are kept from eviction
+    mRoomTexturesKept = std::move(mRoomTexturesInUse);
     mRoomTexturesInUse.clear();
     // Before any room's own, so that a view short of room for textures still washes every room
     if (style.washReach > 0.0f) {
@@ -1986,7 +2011,8 @@ void ModernGLWidget::renderRooms()
             // Any wider than the plain line grows outward, as a border does, so as not to cover the room
             const float half = roomSize / 2.0f + (width - lineWidth) / 2.0f;
             const bool dashed = !look.onViewedLevel() && !hovered;
-            roomOutlines[pR->z()].append({rx, ry, top, half, width, dashed ? static_cast<float>(roomSize * scmInkDash) : 0.0f, GeometryManager::fadedColor(lineColor, fade, fadeTarget)});
+            roomOutlines[pR->z()].append(
+                    {currentRoomId, rx, ry, top, half, width, dashed ? static_cast<float>(roomSize * scmInkDash) : 0.0f, GeometryManager::fadedColor(lineColor, fade, fadeTarget)});
         } else if (stationRings) {
             QColor ringColor = pR->mBorderColor.isValid() ? pR->mBorderColor : ink;
             if (!pR->mBorderColor.isValid() && !interchange && !(style.inkRimsOnLines && RoomAppearance::onEnvironmentLine(*mpMap, *pR))) {
@@ -2001,7 +2027,7 @@ void ModernGLWidget::renderRooms()
             const float width = qMax(ring, thickness);
             // Just inside the station's edge, unless a thick border reaches past it
             const float half = roomSize / 2.0f - ring / 2.0f + (width - ring) / 2.0f;
-            roomOutlines[pR->z()].append({rx, ry, top, half, width, 0.0f, GeometryManager::fadedColor(ringColor, fade, fadeTarget)});
+            roomOutlines[pR->z()].append({currentRoomId, rx, ry, top, half, width, 0.0f, GeometryManager::fadedColor(ringColor, fade, fadeTarget)});
         } else if (hovered && !terminal && !wireframes) {
             // Taller than a border, so that it shows over one; in ink, a wash around the room rather than a darker blot
             // Mixed toward the paper rather than see-through, as it is drawn with the opaque rooms and would hide the levels below
@@ -2592,17 +2618,20 @@ void ModernGLWidget::renderRooms()
             inkLevels.insert(outlines.key(), previous);
             continue;
         }
-        // The rooms come in the same order while the area's rooms stay the same
-        const bool reusable = previous.round == round && previous.outlines.size() == outlines.value().size();
+        // A room's outline is found by its room, as which rooms are in view changes with the camera
+        const bool reusable = previous.round == round;
         InkOutlineLevel& level = inkLevels[outlines.key()];
         level.outlines = outlines.value();
         level.round = round;
+        level.indexOfRoom.reserve(level.outlines.size());
         FlatLines lines;
         for (int index = 0; index < level.outlines.size(); ++index) {
             const InkOutline& outline = level.outlines.at(index);
-            if (reusable && previous.outlines.at(index) == outline) {
-                const int from = index > 0 ? previous.ends.at(index - 1) : 0;
-                const int to = previous.ends.at(index);
+            level.indexOfRoom.insert(outline.roomId, index);
+            const int previousIndex = reusable ? previous.indexOfRoom.value(outline.roomId, -1) : -1;
+            if (previousIndex >= 0 && previous.outlines.at(previousIndex) == outline) {
+                const int from = previousIndex > 0 ? previous.ends.at(previousIndex - 1) : 0;
+                const int to = previous.ends.at(previousIndex);
                 lines.vertices.append(previous.vertices.sliced(from, to - from));
                 lines.colors.append(previous.colors.sliced(from / 3 * 4, (to - from) / 3 * 4));
             } else {
