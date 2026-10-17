@@ -546,7 +546,9 @@ private:
     TChar currentFormat() const;
     inline QList<WrapInfo> getWrapInfo(const QString& lineText, bool isNewline, const int maxWidth, const int indent, const int hangingIndent);
     void shrinkBuffer();
-    void syncPreTriggerPassLine(int y);
+    void spliceInsertIntoPreTriggerPassLine(int y, int x, int count, const TChar& format);
+    void spliceEraseFromPreTriggerPassLine(int y, int x, int xEnd);
+    void wrapPreTriggerPassLine(const WrapInfo& firstSegment, int indentWidth);
     void noteFoundLines(int first, int last);
     void materialisePreTriggerPassLine(int y);
     int remapLinkId(const TLinkStore& sourceLinkStore, int sourceLinkId, QHash<int, int>& remappedLinkIds, int line = -1);
@@ -702,6 +704,8 @@ private:
     enum class PassLineUniformity { Unknown, Uniform, Mixed };
     // Worked out on demand, so a profile with no color triggers never pays for it:
     PassLineUniformity mPreTriggerPassLineUniformity = PassLineUniformity::Unknown;
+    // Lowest line a wrapLine() during the current trigger pass pushed down, or -1:
+    int mFirstLineMovedDown = -1;
     // A line that ended at the game's own wrap column (Host::mUndoServerWrap)
     // is held here instead of being committed, so its continuation can be
     // joined back on and triggers run once over the whole logical line:
@@ -716,9 +720,8 @@ private:
     QString mServerWrapPendingSegmentStart;
     // Used to hold the unprocessed bytes that could be left at the end of a
     // packet if we detect that there should be more - will be prepended to the
-    // next chunk of data - PROVIDED it is flagged as coming from the MUD Server
-    // and is not generated locally {because both pass through
-    // translateToPlainText()}:
+    // next chunk of data on the same channel. On the local one that is whatever
+    // local source feeds next (a script, MMCP, MXP), as they all share it:
     std::string mIncompleteSequenceBytes;
     // The lead byte of a double-byte character that the game restyled before
     // sending its trail byte, with the rendition that paints its left half;
