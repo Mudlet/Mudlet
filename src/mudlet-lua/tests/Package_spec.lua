@@ -1,7 +1,8 @@
 -- Specs for the package and module lifecycle Lua APIs.
 --
--- Every spec here drives the real API against the fixture kit committed in
--- fixtures/packages/ - nothing is mocked. Alongside each contract (what a call
+-- The specs drive the real API against the fixture kit committed in
+-- fixtures/packages/; only the blocks for packages Mudlet bundles stand in for
+-- what those packages call out to. Alongside each contract (what a call
 -- returns, and what it returns when it is misused) the effect is checked too:
 -- the package's files actually land under getMudletHomeDir(), its aliases and
 -- scripts actually exist, its script body actually ran, and getPackages() /
@@ -5249,6 +5250,430 @@ describe("Tests that uninstalling takes the addon commands it made", function()
     -- a reload postponed by a profile save could otherwise be what removed it
     assert.equals(loads, mudletSpecModuleLoads, "the module was reloaded while being removed")
     assert.is_false(enableCommand(id), "the command outlived the module that made it")
+  end)
+end)
+
+-- MedBootstrap is installed only for Medievia, so it is installed here from the
+-- copy compiled into Mudlet
+describe("Tests the MedBootstrap package", function()
+  local name = "MedBootstrap"
+  local archive = ":/packages/MedBootstrap/MedBootstrap.mpackage"
+  local mpkgArchive = "https://github.com/Mudlet/mudlet-package-repository/raw/refs/heads/main/packages/mpkg.mpackage"
+  local giveUpMessage = "the package listing did not arrive, so MedUI is not installed yet"
+  local noMpkgMessage = "mpkg could not be installed, so MedUI is not installed yet"
+
+  -- Overrides a global for the rest of the spec; Package_spec's own environment
+  -- would only shadow it, and the packages read their globals from _G
+  local function override(globalName, value)
+    local original = _G[globalName]
+    defer(function() _G[globalName] = original end)
+    _G[globalName] = value
+    return original
+  end
+
+  -- Stands in for mpkg, whose ready() starts a fresh download of the listing
+  -- each time it finds none, as the real one does
+  local function fakeMpkg(installs)
+    local fake = { listingDownloads = 0, upgrades = {} }
+    local function listingReady()
+      return fake.packages ~= nil and fake.packages.packages ~= nil
+    end
+    fake.ready = function()
+      if listingReady() then
+        return true
+      end
+      fake.updatePackageList(true)
+      return false
+    end
+    fake.updatePackageList = function()
+      fake.listingDownloads = fake.listingDownloads + 1
+    end
+    fake.getInstalledVersion = function()
+      return nil
+    end
+    fake.getRepositoryVersion = function()
+      return "1"
+    end
+    fake.install = function(packageName)
+      installs[#installs + 1] = { packageName, listingReady() }
+    end
+    fake.upgrade = function(packageName)
+      fake.upgrades[#fake.upgrades + 1] = packageName
+    end
+    return fake
+  end
+
+  local function stubMpkgVersion(version)
+    local realGetPackageInfo = _G.getPackageInfo
+    local stub = { version = version }
+    override("getPackageInfo", function(packageName, ...)
+      if packageName == "mpkg" then
+        return stub.version
+      end
+      return realGetPackageInfo(packageName, ...)
+    end)
+    return stub
+  end
+
+  -- Holds MedBootstrap's timers for the spec to fire by hand, so a minute of
+  -- looks takes no time; every other timer still starts as usual. scheduled
+  -- counts the 5s looks, held every timer
+  local function holdLooks()
+    local looks = { scheduled = 0, held = 0, errors = {}, pending = {} }
+    local realTempTimer = _G.tempTimer
+    override("tempTimer", function(delay, code, ...)
+      local source = type(code) == "function" and debug.getinfo(code, "S").source or ""
+      if not source:find("MedBootstrap", 1, true) then
+        return realTempTimer(delay, code, ...)
+      end
+      looks.held = looks.held + 1
+      if delay > 0 then
+        looks.scheduled = looks.scheduled + 1
+      end
+      looks.pending[#looks.pending + 1] = { delay = delay, code = code }
+      return -looks.held
+    end)
+    -- fires every held timer due within maxDelay (all of them without one),
+    -- which makes the next look of every waiting copy; answers how many fired
+    function looks.next(maxDelay)
+      -- otherwise a spec that expects nothing to happen passes without a look
+      assert(looks.held > 0, "no MedBootstrap timer was held")
+      local due, kept = {}, {}
+      for _, timer in ipairs(looks.pending) do
+        if maxDelay == nil or timer.delay <= maxDelay then
+          due[#due + 1] = timer
+        else
+          kept[#kept + 1] = timer
+        end
+      end
+      looks.pending = kept
+      for _, timer in ipairs(due) do
+        local ok, err = pcall(timer.code)
+        if not ok then
+          looks.errors[#looks.errors + 1] = tostring(err)
+        end
+      end
+      return #due
+    end
+    function looks.all()
+      for _ = 1, 50 do
+        if looks.next() == 0 then
+          return
+        end
+      end
+    end
+    return looks
+  end
+
+  -- semver comes with mpkg, which the self-test profile does not have
+  local function stubSemver()
+    override("semver", function(version)
+      assert(version ~= nil, "At least one parameter is needed")
+      return tonumber(version)
+    end)
+  end
+
+  local function install()
+    -- the script keeps its run count in this global
+    override("MedBootstrap", _G.MedBootstrap)
+    defer(function() removeFixturePackage(name) end)
+    installUntilConfirmed(installPackage, archive, function() return packageInstalled(name) end, name)
+  end
+
+  -- On a Medievia profile mpkg can be installed before MedBootstrap runs, while
+  -- its package listing is still downloading - and mpkg.install() gives up then
+  it("installs MedUI once mpkg has its package listing, not before", function()
+    local installs = {}
+    local mpkg = fakeMpkg(installs)
+    override("mpkg", mpkg)
+    stubMpkgVersion("1")
+    local looks = holdLooks()
+
+    install()
+    looks.next()
+    assert.are.same({}, installs, "MedUI was asked for while mpkg could not install it")
+
+    mpkg.packages = { packages = {} }
+    looks.next()
+    assert.are.same({ { "MedUI", true } }, installs)
+    assert.are.equal(0, mpkg.listingDownloads, "waiting for the listing started downloads of its own")
+    assert.are.same({}, looks.errors)
+  end)
+
+  it("does not install MedUI once it has been uninstalled", function()
+    local installs = {}
+    local mpkg = fakeMpkg(installs)
+    override("mpkg", mpkg)
+    stubMpkgVersion("1")
+    local looks = holdLooks()
+
+    install()
+    removeFixturePackage(name)
+    mpkg.packages = { packages = {} }
+    looks.all()
+
+    assert.are.same({}, installs, "MedUI was installed after MedBootstrap was uninstalled")
+  end)
+
+  it("installs MedUI once when it is reinstalled while it waits", function()
+    local installs = {}
+    local mpkg = fakeMpkg(installs)
+    override("mpkg", mpkg)
+    stubMpkgVersion("1")
+    local looks = holdLooks()
+
+    install()
+    removeFixturePackage(name)
+    install()
+    mpkg.packages = { packages = {} }
+    looks.all()
+
+    assert.are.same({ { "MedUI", true } }, installs)
+  end)
+
+  it("installs mpkg and then MedUI when the profile has no mpkg", function()
+    local installs = {}
+    local mpkg = fakeMpkg(installs)
+    override("mpkg", nil)
+    stubMpkgVersion("")
+    local mpkgInstalls = 0
+    local realInstallPackage = _G.installPackage
+    override("installPackage", function(path, ...)
+      if path == mpkgArchive then
+        mpkgInstalls = mpkgInstalls + 1
+        return true
+      end
+      return realInstallPackage(path, ...)
+    end)
+    local looks = holdLooks()
+
+    install()
+    looks.next()
+    assert.are.equal(1, mpkgInstalls, "mpkg was not installed")
+    _G.mpkg = mpkg
+    looks.next()
+    assert.are.same({}, installs, "MedUI was asked for while mpkg could not install it")
+
+    mpkg.packages = { packages = {} }
+    looks.next()
+    assert.are.same({ { "MedUI", true } }, installs)
+    assert.are.equal(1, mpkgInstalls, "mpkg was installed more than once")
+  end)
+
+  -- the preinstall list comes from a QHash, so the bundled mpkg can come next
+  it("does not download mpkg when the bundled one is installed after it", function()
+    local mpkgVersion = stubMpkgVersion("")
+    override("mpkg", nil)
+    local mpkgInstalls = 0
+    local realInstallPackage = _G.installPackage
+    override("installPackage", function(path, ...)
+      if path == mpkgArchive then
+        mpkgInstalls = mpkgInstalls + 1
+        return true
+      end
+      return realInstallPackage(path, ...)
+    end)
+    local looks = holdLooks()
+
+    install()
+    mpkgVersion.version = "1"
+    _G.mpkg = fakeMpkg({})
+    looks.next()
+
+    assert.are.equal(0, mpkgInstalls, "mpkg was downloaded although the bundled one was installed")
+  end)
+
+  -- mpkg itself retries a failed listing download only every 12 hours
+  it("asks for the package listing again when its download failed", function()
+    local installs = {}
+    local mpkg = fakeMpkg(installs)
+    mpkg.updatePackageList = function()
+      mpkg.listingDownloads = mpkg.listingDownloads + 1
+      mpkg.packages = { packages = {} }
+    end
+    override("mpkg", mpkg)
+    stubMpkgVersion("1")
+    local looks = holdLooks()
+
+    install()
+    looks.all()
+
+    assert.are.same({ { "MedUI", true } }, installs)
+    assert.are.equal(1, mpkg.listingDownloads)
+  end)
+
+  it("gives up after a minute and says the listing did not arrive", function()
+    local installs = {}
+    local mpkg = fakeMpkg(installs)
+    override("mpkg", mpkg)
+    stubMpkgVersion("1")
+    local looks = holdLooks()
+    local mark = getLastLineNumber("main")
+
+    install()
+    looks.all()
+
+    assert.are.equal(12, looks.scheduled)
+    assert.are.equal(2, mpkg.listingDownloads, "the listing was not asked for at 20s and 40s")
+    assert.are.same({}, installs)
+    assert.is_true(containsWrapped(textFrom(mark), giveUpMessage), textFrom(mark))
+  end)
+
+  it("gives up after a minute and says mpkg could not be installed", function()
+    override("mpkg", nil)
+    stubMpkgVersion("")
+    local realInstallPackage = _G.installPackage
+    override("installPackage", function(path, ...)
+      if path == mpkgArchive then
+        return true
+      end
+      return realInstallPackage(path, ...)
+    end)
+    local looks = holdLooks()
+    local mark = getLastLineNumber("main")
+
+    install()
+    looks.all()
+
+    local text = textFrom(mark)
+    assert.is_true(containsWrapped(text, noMpkgMessage), text)
+    assert.is_false(containsWrapped(text, giveUpMessage), text)
+    assert.are.same({}, looks.errors)
+  end)
+
+  it("asks for mpkg again when its download failed", function()
+    override("mpkg", nil)
+    local mpkgVersion = stubMpkgVersion("")
+    local installs = {}
+    local mpkgInstalls = 0
+    local realInstallPackage = _G.installPackage
+    override("installPackage", function(path, ...)
+      if path == mpkgArchive then
+        mpkgInstalls = mpkgInstalls + 1
+        -- the first download fails, the next one arrives
+        if mpkgInstalls > 1 then
+          mpkgVersion.version = "1"
+          _G.mpkg = fakeMpkg(installs)
+          _G.mpkg.packages = { packages = {} }
+        end
+        return true
+      end
+      return realInstallPackage(path, ...)
+    end)
+    local looks = holdLooks()
+
+    install()
+    looks.all()
+
+    assert.are.equal(2, mpkgInstalls)
+    assert.are.same({ { "MedUI", true } }, installs)
+  end)
+
+  -- an uninstalled mpkg leaves its table behind
+  it("says mpkg could not be installed when only a stale mpkg table is left", function()
+    override("mpkg", fakeMpkg({}))
+    stubMpkgVersion("")
+    local realInstallPackage = _G.installPackage
+    override("installPackage", function(path, ...)
+      if path == mpkgArchive then
+        return true
+      end
+      return realInstallPackage(path, ...)
+    end)
+    local looks = holdLooks()
+    local mark = getLastLineNumber("main")
+
+    install()
+    looks.all()
+
+    local text = textFrom(mark)
+    assert.is_true(containsWrapped(text, noMpkgMessage), text)
+    assert.is_false(containsWrapped(text, giveUpMessage), text)
+  end)
+
+  it("asks for mpkg straight away when the profile has none", function()
+    override("mpkg", nil)
+    stubMpkgVersion("")
+    local mpkgInstalls = 0
+    local realInstallPackage = _G.installPackage
+    override("installPackage", function(path, ...)
+      if path == mpkgArchive then
+        mpkgInstalls = mpkgInstalls + 1
+        return true
+      end
+      return realInstallPackage(path, ...)
+    end)
+    local looks = holdLooks()
+
+    install()
+    looks.next(0)
+
+    assert.are.equal(1, mpkgInstalls, "mpkg was not asked for before the first 5s look")
+    assert.are.equal(1, looks.scheduled)
+  end)
+
+  -- the script runs on every load, and an installed MedUI only misses its update check
+  it("says nothing when the listing does not arrive and MedUI is installed", function()
+    override("mpkg", fakeMpkg({}))
+    stubMpkgVersion("1")
+    local realGetPackages = _G.getPackages
+    override("getPackages", function()
+      local packages = realGetPackages()
+      packages[#packages + 1] = "MedUI"
+      return packages
+    end)
+    local looks = holdLooks()
+    local mark = getLastLineNumber("main")
+
+    install()
+    looks.all()
+
+    assert.are.equal(12, looks.scheduled)
+    assert.is_false(containsWrapped(textFrom(mark), "MedUI is not installed yet"), textFrom(mark))
+  end)
+
+  it("upgrades MedUI when the listing has a newer one", function()
+    local installs = {}
+    local mpkg = fakeMpkg(installs)
+    mpkg.getInstalledVersion = function()
+      return "1"
+    end
+    mpkg.getRepositoryVersion = function()
+      return "2"
+    end
+    override("mpkg", mpkg)
+    stubMpkgVersion("1")
+    stubSemver()
+    local looks = holdLooks()
+
+    install()
+    mpkg.packages = { packages = {} }
+    looks.next()
+
+    assert.are.same({ "MedUI" }, mpkg.upgrades)
+    assert.are.same({}, installs)
+    assert.are.same({}, looks.errors)
+  end)
+
+  it("leaves MedUI alone when the listing has none", function()
+    local mpkg = fakeMpkg({})
+    mpkg.getInstalledVersion = function()
+      return "1"
+    end
+    mpkg.getRepositoryVersion = function()
+      return nil, "Package does not exist in repository."
+    end
+    override("mpkg", mpkg)
+    stubMpkgVersion("1")
+    stubSemver()
+    local looks = holdLooks()
+
+    install()
+    mpkg.packages = { packages = {} }
+    looks.next()
+
+    assert.are.same({}, mpkg.upgrades)
+    assert.are.same({}, looks.errors)
   end)
 end)
 
