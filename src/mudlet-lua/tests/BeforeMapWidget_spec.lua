@@ -36,3 +36,121 @@ describe("Tests secondary map views in a profile without a mapper", function()
     assert.are.equal(areaId, getMapViewInfo(viewId).areaId)
   end)
 end)
+
+-- These settings live on the Host or on mudlet, and a mapper made later picks
+-- them up, so a startup script can set them before there is one
+describe("Tests setConfig for the map keys in a profile without a mapper", function()
+  local saved = {}
+  local keys = {"mapRoomSize", "mapExitSize", "mapRoundRooms", "showRoomIdsOnMap", "mapShowGrid",
+                "mapShowRoomBorders", "showUpperLowerLevels", "mapInfoColor"}
+
+  setup(function()
+    local _, message = getMapZoom()
+    assert.are.equal("no active mapper", message, "this profile already has a mapper, so this file can no longer test a profile without one")
+    for _, key in ipairs(keys) do
+      saved[key] = getConfig(key)
+    end
+  end)
+
+  teardown(function()
+    for _, key in ipairs(keys) do
+      pcall(setConfig, key, saved[key])
+    end
+  end)
+
+  it("sets and reads back each map key", function()
+    local wanted = {
+      mapRoomSize = saved.mapRoomSize == 7 and 8 or 7,
+      mapExitSize = saved.mapExitSize == 4 and 6 or 4,
+      mapRoundRooms = not saved.mapRoundRooms,
+      showRoomIdsOnMap = not saved.showRoomIdsOnMap,
+      mapShowGrid = not saved.mapShowGrid,
+      mapShowRoomBorders = not saved.mapShowRoomBorders,
+      showUpperLowerLevels = not saved.showUpperLowerLevels,
+      mapInfoColor = {10, 20, 30, 40},
+    }
+    for _, key in ipairs(keys) do
+      local ok, err = setConfig(key, wanted[key])
+      assert.is_true(ok, key .. " was refused: " .. tostring(err))
+      assert.are.same(wanted[key], getConfig(key), key .. " did not read back")
+    end
+  end)
+
+  it("shows and hides a map info contributor", function()
+    local name = next(getMapInfo())
+    assert.is_string(name, "the map has no info contributors to toggle")
+    local wasShown = getMapInfo()[name]
+    finally(function()
+      setConfig(wasShown and "showMapInfo" or "hideMapInfo", name)
+    end)
+    assert.is_true(setConfig("hideMapInfo", name))
+    assert.is_false(getMapInfo()[name])
+    assert.is_true(setConfig("showMapInfo", name))
+    assert.is_true(getMapInfo()[name])
+  end)
+
+  -- stored for the mapper made later to open in; a build without the 3D
+  -- mapper does not know the key at all
+  if setMapPerspective == nil then
+    pending("show3dMapView needs a Mudlet built with the 3D mapper")
+  else
+    it("stores show3dMapView until there is a mapper", function()
+      local original = getConfig("show3dMapView")
+      -- put back, or the mapper a later spec opens would come up in a mode the profile did not ask for
+      finally(function()
+        setConfig("show3dMapView", original)
+      end)
+      local ok, err = setConfig("show3dMapView", true)
+      assert.is_true(ok, tostring(err))
+      assert.is_true(getConfig("show3dMapView"))
+      assert.is_true(setConfig("show3dMapView", false))
+      assert.is_false(getConfig("show3dMapView"))
+    end)
+  end
+end)
+
+-- A profile with no console view answers these from the model instead (HeadlessHostSmokeTest)
+describe("Tests the map functions that wait for a mapper in a profile without one", function()
+  local jsonPath = getMudletHomeDir() .. "/before_map_widget.json"
+  local areaId, roomId
+
+  setup(function()
+    local _, message = getMapZoom()
+    assert.are.equal("no active mapper", message, "this profile already has a mapper, so this file can no longer test a profile without one")
+
+    areaId = addAreaName("BeforeMapWidgetSpecRefusals")
+    roomId = createRoomID()
+    assert.is_true(addRoom(roomId))
+    assert.is_true(setRoomArea(roomId, areaId))
+  end)
+
+  teardown(function()
+    os.remove(jsonPath)
+    if roomId then
+      deleteRoom(roomId)
+      deleteArea(areaId)
+    end
+  end)
+
+  it("refuses them although the map holds a room", function()
+    assert.are.same({nil, "you haven't opened a map yet"}, {getPlayerRoom()})
+    assert.are.same({nil, "you haven't opened a map yet"}, {centerview(roomId)})
+    assert.are.same({nil, "no map present or loaded"}, {saveJsonMap(jsonPath)})
+    assert.are.same({nil, "no map present or loaded"}, {loadJsonMap(jsonPath)})
+  end)
+
+  it("refuses setDefaultAreaVisible and an area's zoom", function()
+    assert.are.same({false}, {setDefaultAreaVisible(true)})
+    assert.are.same({nil, "no active mapper"}, {getMapZoom(areaId)})
+  end)
+
+  it("lists no secondary map views", function()
+    assert.are.same({{}}, {getMapViewIds()})
+    assert.are.same({0}, {closeAllMapViews()})
+  end)
+
+  it("refuses the map selection", function()
+    assert.are.same({nil, "no map present or loaded"}, {getMapSelection()})
+    assert.are.same({nil, "no map present or loaded"}, {clearMapSelection()})
+  end)
+end)

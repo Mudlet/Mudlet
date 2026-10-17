@@ -602,13 +602,13 @@
              </sizepolicy>
             </property>
             <property name="toolTip">
-             <string>&lt;p&gt;Disable password masking when servers request hidden input.&lt;/p&gt;&lt;p&gt;&lt;b&gt;Warning:&lt;/b&gt; This is not recommended for security reasons as passwords will be visible in plain text.&lt;/p&gt;</string>
+             <string extracomment="Tooltip of the profile preference that stops the hidden-input box opening when the game asks for hidden input">&lt;p&gt;Passwords are typed into the normal command line, where they are shown, kept in the history and run through your aliases like any other command.&lt;/p&gt;&lt;p&gt;Turn this on for a game that hides everything you type, not only passwords.&lt;/p&gt;</string>
             </property>
             <property name="accessibleDescription">
-             <string>Disable password masking when servers request hidden input. Warning: This is not recommended for security reasons as passwords will be visible in plain text.</string>
+             <string extracomment="Accessibility-friendly description of the profile preference that stops the hidden-input box opening when the game asks for hidden input">Passwords are typed into the normal command line, where they are shown and kept in the history. Turn this on for a game that hides everything you type, not only passwords.</string>
             </property>
             <property name="text">
-             <string>Disable password masking</string>
+             <string extracomment="Label of the profile preference that stops the hidden-input box opening when the game asks for hidden input">Show passwords as you type them</string>
             </property>
            </widget>
           </item>
@@ -4743,6 +4743,41 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
+          <item row="7" column="0">
+           <widget class="QLabel" name="label_menuBarAltKeyNavigation">
+            <property name="text">
+             <string>Pressing Alt on its own moves focus to the menu bar:</string>
+            </property>
+            <property name="buddy">
+             <cstring>comboBox_menuBarAltKeyNavigation</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="7" column="1">
+           <widget class="QComboBox" name="comboBox_menuBarAltKeyNavigation">
+            <property name="toolTip">
+             <string>&lt;p&gt;Screen reader users reach Mudlet's menus by pressing and releasing Alt. Mudlet turns this on when the system reports a screen reader. Choose &lt;b&gt;always&lt;/b&gt; if yours is not detected, or &lt;b&gt;never&lt;/b&gt; if a mistimed Alt keybinding keeps moving focus away from the command line.&lt;/p&gt;</string>
+            </property>
+            <property name="accessibleDescription">
+             <string>Screen reader users reach Mudlet's menus by pressing and releasing Alt. Mudlet turns this on when the system reports a screen reader. Choose always if yours is not detected, or never if a mistimed Alt keybinding keeps moving focus away from the command line.</string>
+            </property>
+            <item>
+             <property name="text">
+              <string>when a screen reader is running</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>always</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>never</string>
+             </property>
+            </item>
+           </widget>
+          </item>
          </layout>
         </widget>
        </item>
@@ -5678,6 +5713,7 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>checkBox_enableClosedCaption</tabstop>
   <tabstop>comboBox_blankLinesBehaviour</tabstop>
   <tabstop>comboBox_caretModeKey</tabstop>
+  <tabstop>comboBox_menuBarAltKeyNavigation</tabstop>
   <tabstop>checkBox_f3SearchEnabled</tabstop>
   <tabstop>checkBox_enableBlinkText</tabstop>
   <tabstop>mFORCE_MCCP_OFF</tabstop>

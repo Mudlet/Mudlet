@@ -33,8 +33,10 @@ class QSize;
 class TAppFrontend
 {
 public:
-    // nullptr until the main window exists, and again from the end of its destructor.
-    static TAppFrontend* instance() { return smpInstance; }
+    // Never null: while there is no main window, before it is made and from the end of its
+    // destructor, this is a null view whose answers are all "not there".
+    static TAppFrontend* instance() { return smpInstance ? smpInstance : nullView(); }
+    static bool hasView() { return smpInstance != nullptr; }
     static void setInstance(TAppFrontend* frontend) { smpInstance = frontend; }
 
     // The profile in the active tab, or nullptr if there is none or it has no console yet.
@@ -46,6 +48,7 @@ public:
     // Only the profile in the active tab drives the menu's checkbox.
     virtual void setCompactInputLineChecked(Host* pHost, bool checked) = 0;
     virtual void armForceClose() = 0;
+    virtual void writeSettings() = 0;
     virtual bool openWebPage(const QString& url) = 0;
     // Without msecs, the frontend picks how long the notification stays up.
     virtual void showNotification(const QString& title, const QString& text, std::optional<int> msecs) = 0;
@@ -59,7 +62,7 @@ public:
     // -1 for a profile with no tab
     virtual int profileTabIndex(const QString& profileName) const = 0;
     virtual void setActiveProfileTab(const QString& profileName) = 0;
-    virtual void refreshTabBarsAfterStyleChange() = 0;
+    virtual void setAppStyleSheet(const QString& styleSheet) = 0;
     virtual void resizeMainWindow(int width, int height) = 0;
     virtual bool loadWindowLayout() = 0;
     // Saves even if quitting already saved the layout; if this save fails, quitting saves it again.
@@ -108,6 +111,8 @@ protected:
     ~TAppFrontend() = default;
 
 private:
+    static TAppFrontend* nullView();
+
     inline static TAppFrontend* smpInstance = nullptr;
 };
 

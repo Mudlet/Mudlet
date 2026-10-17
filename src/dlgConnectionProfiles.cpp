@@ -32,6 +32,7 @@
 #include "LuaInterface.h"
 #include "MudletApp.h"
 #include "TGameDetails.h"
+#include "XMLexport.h"
 #include "XMLimport.h"
 #include "discord.h"
 #include "mudlet.h"
@@ -56,7 +57,6 @@
 #include <QTabBar>
 #include <QTime>
 #include <chrono>
-#include <sstream>
 
 using namespace std::chrono_literals;
 
@@ -673,10 +673,7 @@ void dlgConnectionProfiles::slot_updatePassword(const QString& pass)
             writeSecurePassword(profileName, pass);
         }
     } else {
-        auto result = MudletApp::writeProfileData(profileName, qsl("password"), pass);
-        if (!result.first) {
-            qWarning().noquote().nospace() << "dlgConnectionProfiles::slot_updatePassword() ERROR - failed to save password for profile \"" << profileName << "\": " << result.second;
-        }
+        saveProfileDetail(profileName, qsl("password"), pass);
     }
 }
 
@@ -733,12 +730,7 @@ void dlgConnectionProfiles::slot_updateLogin(const QString& login)
 {
     QListWidgetItem* pItem = listWidget_profiles->currentItem();
     if (pItem) {
-        const QString profileName = pItem->data(csmNameRole).toString();
-        auto result = MudletApp::writeProfileData(profileName, qsl("login"), login);
-        if (!result.first) {
-            qWarning().noquote().nospace() << "dlgConnectionProfiles::slot_updateLogin() ERROR - failed to save character name for profile \"" << profileName << "\": " << result.second;
-            // Could optionally show user notification here
-        }
+        saveProfileDetail(pItem->data(csmNameRole).toString(), qsl("login"), login);
     }
 }
 
@@ -1126,6 +1118,7 @@ void dlgConnectionProfiles::showRemovalNotice(const QString& message)
 
 void dlgConnectionProfiles::showNotification(const QString& message, QLabel* pIcon)
 {
+    mUnsavedChange = {};
     notificationArea->show();
     for (auto* pCandidate : {notificationAreaIconLabelWarning, notificationAreaIconLabelError, notificationAreaIconLabelInformation}) {
         pCandidate->setVisible(pCandidate == pIcon);
@@ -1441,21 +1434,30 @@ QString dlgConnectionProfiles::readProfileData(const QString& profile, const QSt
 // write before there is one is quietly dropped.
 QPair<bool, QString> dlgConnectionProfiles::writeProfileData(const QString& profile, const QString& item, const QString& what)
 {
-    QSaveFile file(MudletApp::getMudletPath(enums::profileDataItemPath, profile, item));
-    if (file.open(QIODevice::WriteOnly | QIODevice::Unbuffered)) {
-        QDataStream ofs(&file);
-        ofs.setVersion(QDataStream::Qt_5_12);
-        ofs << what;
-        if (!file.commit()) {
-            qDebug().noquote().nospace() << "dlgConnectionProfiles::writeProfileData(...) ERROR - writing profile: \"" << profile << "\", item: \"" << item << "\", reason: \"" << file.errorString()
-                                         << "\".";
-        }
+    if (!QDir(MudletApp::getMudletPath(enums::profileHomePath, profile)).exists()) {
+        return {false, qsl("there is no folder for the %1 profile").arg(profile)};
     }
+    return saveProfileDetail(profile, item, what);
+}
 
-    if (file.error() == QFileDevice::NoError) {
-        return {true, QString()};
+// Selecting a profile sets every field, and each one writes itself back: skipping a value that is
+// already stored keeps a profile that cannot be written from raising a notice about a change nobody made
+QPair<bool, QString> dlgConnectionProfiles::saveProfileDetail(const QString& profile, const QString& item, const QString& what)
+{
+    const auto result = readProfileData(profile, item) == what ? qMakePair(true, QString()) : MudletApp::writeProfileData(profile, item, what);
+    if (!result.first) {
+        //: Shown in the connection dialog when a change to a profile's details could not be saved; %1 is the profile name, %2 the reason, e.g. "No space left on device"
+        showUnsavedChange(tr("Could not save this change to %1: %2").arg(profile, result.second), profile, item);
+    } else if (mUnsavedChange == qMakePair(profile, item)) {
+        clearNotificationArea();
     }
-    return {false, file.errorString()};
+    return result;
+}
+
+void dlgConnectionProfiles::showUnsavedChange(const QString& message, const QString& profile, const QString& item)
+{
+    showNotification(message, notificationAreaIconLabelError);
+    mUnsavedChange = {profile, item};
 }
 
 QString dlgConnectionProfiles::getDescription(const QString& profile_name) const
@@ -2281,7 +2283,12 @@ void dlgConnectionProfiles::saveDefaultProfileCopy(const QString& profileName, c
         writeSecurePassword(profileName, oldPassword);
     }
     mCopyingProfile = false;
-    validateProfile();
+    // validateProfile() clears the notification area, which would hide a detail of the copy that could not be saved
+    const auto unsavedChange = mUnsavedChange;
+    const QString unsavedMessage = notificationAreaMessageBox->text();
+    if (validateProfile() && !unsavedChange.first.isEmpty()) {
+        showUnsavedChange(unsavedMessage, unsavedChange.first, unsavedChange.second);
+    }
 }
 
 void dlgConnectionProfiles::slot_copyOnlySettingsOfProfile()
@@ -2419,22 +2426,11 @@ bool dlgConnectionProfiles::extractSettingsFromProfile(pugi::xml_document& newPr
     return true;
 }
 
-// save profile using Qt's API's which handle non-ASCII characters in Windows paths fine
+// The writer a profile save uses: pugixml's own save leaves a carriage return raw, which the reader takes for a line ending.
+// It logs a failure with the file name and the reason itself.
 void dlgConnectionProfiles::saveProfileCopy(const QDir& newProfiledir, const pugi::xml_document& newProfileXml) const
 {
-    QSaveFile file(newProfiledir.absoluteFilePath(qsl("Copied profile (settings only).xml")));
-    if (!file.open(QFile::WriteOnly)) {
-        qDebug() << "dlgConnectionProfiles::copyProfileSettingsOnly ERROR - couldn't create new profile file:" << file.fileName() << "-" << file.errorString();
-        return;
-    }
-
-    std::stringstream saveStringStream(std::ios::out);
-    newProfileXml.save(saveStringStream);
-    std::string output(saveStringStream.str());
-    file.write(output.data());
-    if (!file.commit()) {
-        qDebug() << "dlgConnectionProfiles::saveProfileCopy: error copying profile: " << file.errorString();
-    }
+    XMLexport::saveXmlDocToFile(newProfiledir.absoluteFilePath(qsl("Copied profile (settings only).xml")), newProfileXml);
 }
 
 void dlgConnectionProfiles::loadProfile(bool alsoConnect)
@@ -2891,6 +2887,7 @@ QIcon dlgConnectionProfiles::customIcon(const QString& text, const std::optional
 
 void dlgConnectionProfiles::clearNotificationArea()
 {
+    mUnsavedChange = {};
     notificationArea->hide();
     notificationAreaIconLabelWarning->hide();
     notificationAreaIconLabelError->hide();
@@ -3069,7 +3066,7 @@ void dlgConnectionProfiles::slot_loadPasswordAsync()
         credManager->retrievePassword(
                 profile_name,
                 "character",
-                [this, credManager, profile_name](bool success, const QString& retrievedPassword, const QString& errorMessage, bool) {
+                [this, credManager, profile_name](bool success, const QString& retrievedPassword, const QString& errorMessage, CredentialManager::ReadOutcome) {
                     passwordRetrieved(profile_name, success, retrievedPassword, errorMessage);
 
                     credManager->deleteLater();

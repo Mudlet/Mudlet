@@ -112,6 +112,7 @@ public:
     std::pair<bool, bool> callLuaFunctionReturnBool(void* pT, const QString& itemName = QString());
     double condenseMapLoad();
     bool compile(const QString& code, QString& error, const QString& name);
+    static QString compileErrorAsPlainText(const QString& error);
     void setAtcpTable(const QString&, const QString&);
     void signalMXPEvent(const QString& type, const QMap<QString, QString>& attrs, const QStringList& actions, const QString& caption = QString());
     void setGMCPTable(QString&, const QString&);
@@ -713,6 +714,9 @@ public:
     static int addMapMenu(lua_State*);
     static int removeMapMenu(lua_State*);
     static int getMapMenus(lua_State*);
+    static int hideMapMenuItem(lua_State*);
+    static int showMapMenuItem(lua_State*);
+    static int getHiddenMapMenuItems(lua_State*);
     static int getMudletVersion(lua_State*);
     static int openWebPage(lua_State*);
     static int getAllRoomEntrances(lua_State*);
@@ -873,7 +877,7 @@ public:
     int duplicateLuaRegistryIndex(int index);
     void freeAllInLuaRegistry(TEvent);
     // For C++ that runs a nested event loop for this profile outside a Lua call,
-    // so pumpingEvents() holds off a reset or close until it returns.
+    // so pumpingEvents() refuses a reset or a profile close while it runs.
     void enterNestedEventLoop() { ++mEventPumpDepth; }
     void leaveNestedEventLoop() { --mEventPumpDepth; }
 
@@ -936,9 +940,11 @@ private:
     static int warnArgumentChoice(lua_State*, const char* functionName, const QString& argumentName, const QStringList& accepted, const QString& value);
     static int setLabelCallback(lua_State*, const char* funcName);
     static int movieFunc(lua_State*, const char* funcName);
+    static int setMapMenuItemHidden(lua_State*, const char* functionName, const bool hidden);
     static std::pair<bool, QString> discordApiEnabled(lua_State*, bool writeAccess = false);
     static void setRequestDefaults(const QUrl& url, QNetworkRequest& request);
     static int performHttpRequest(lua_State*, const char* functionName, const int pos, QNetworkAccessManager::Operation operation, const char* verb);
+    static bool httpSchemeAllowed(const QUrl&);
     static void validateHttpHeaders(lua_State*, const int index, const char* functionName);
     static void applyHttpHeaders(lua_State*, const int index, QNetworkRequest& request);
     // The last argument is only needed if the third one is true:

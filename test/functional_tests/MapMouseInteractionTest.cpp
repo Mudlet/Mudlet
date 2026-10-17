@@ -44,6 +44,7 @@
 #include <QMouseEvent>
 #include <QPixmap>
 #include <QPushButton>
+#include <QScopeGuard>
 #include <QSignalSpy>
 #include <QTemporaryDir>
 #include <QTimer>
@@ -363,6 +364,24 @@ private:
         mp2dMap->mCustomLinesRoomFrom = fromRoomId;
         mp2dMap->mCustomLinesRoomExit = exit;
         return pRoom;
+    }
+
+    // Picks the exit's button in the custom line dialog for that room, which
+    // hides the dialog for the rest of the drawing.
+    bool startDrawingALineFromTheDialog(const int fromRoomId, const QString& exit) const
+    {
+        mp2dMap->mMultiSelectionSet = QSet<int>{fromRoomId};
+        mp2dMap->mMultiSelectionHighlightRoomId = fromRoomId;
+        mp2dMap->slot_setCustomLine();
+        if (!mp2dMap->mpCustomLinesDialog) {
+            return false;
+        }
+        auto* pButton = mp2dMap->mpCustomLinesDialog->findChild<QPushButton*>(exit);
+        if (!pButton || !pButton->isEnabled()) {
+            return false;
+        }
+        pButton->click();
+        return mp2dMap->mCustomLinesRoomFrom == fromRoomId && mp2dMap->mCustomLinesRoomExit == exit;
     }
 
     void rightClickAt(const QPoint& position) const
@@ -810,6 +829,7 @@ private slots:
         mp2dMap->slot_setSnapCustomLinePointsToGrid(false);
         map()->mUserMenus.clear();
         map()->mUserActions.clear();
+        map()->mHiddenMenuItems.clear();
         map()->setMmpMapLocation(QString());
         mudlet::self()->setInvertMapZoom(false);
         mp2dMap->mRoomBeingMoved = false;
@@ -827,6 +847,9 @@ private slots:
         }
         runLua(qsl("mudlet.custom_speedwalk = nil\ndoSpeedWalk = nil"));
         mpHost->mainConsoleView()->discardAll();
+        if (mp2dMap->mpCustomLinesDialog) {
+            mp2dMap->mpCustomLinesDialog->reject();
+        }
         mp2dMap->mCustomLinesRoomFrom = 0;
         mp2dMap->mCustomLinesRoomTo = 0;
         mp2dMap->mCustomLinesRoomExit.clear();
@@ -967,6 +990,242 @@ private slots:
         QCOMPARE(mp2dMap->mMultiSelectionSet, expected);
     }
 
+    // Whatever is done to the selection afterwards must not reach a room that is gone.
+    void test_deletingASelectedRoomDropsItFromTheSelection()
+    {
+        buildMap();
+        showMapper(false);
+        dragFromTo(pointUnitsFromCentre(-1.5, 1.5), pointUnitsFromCentre(0.5, -0.5));
+        QCOMPARE(mp2dMap->mMultiSelectionSet, (QSet<int>{1, kNorthRoomId, kWestRoomId, kPlayerRoomId}));
+        const int centre = mp2dMap->getCenterSelectedRoomId();
+        QVERIFY(mp2dMap->mMultiSelectionSet.contains(centre));
+
+        QVERIFY(runLua(qsl("deleteRoom(%1)").arg(centre)));
+
+        QSet<int> remaining{1, kNorthRoomId, kWestRoomId, kPlayerRoomId};
+        remaining.remove(centre);
+        QCOMPARE(mp2dMap->mMultiSelectionSet, remaining);
+        QVERIFY2(remaining.contains(mp2dMap->getCenterSelectedRoomId()), "the selection's centre is still the deleted room");
+    }
+
+    // A shift- or ctrl-drag rebuilds the selection on each move from the rooms
+    // selected at its press, so a room a script deletes mid-drag must leave
+    // those too or the next move brings it back.
+    void test_aRoomDeletedMidDragIsNotBroughtBackByTheDrag()
+    {
+        buildMap();
+        showMapper(false);
+        dragFromTo(pointUnitsFromCentre(-1.5, 1.5), pointUnitsFromCentre(0.5, -0.5));
+
+        const QPoint south = pointUnitsFromCentre(0, -1);
+        pressAt(south, Qt::ShiftModifier);
+        moveTo(south, Qt::ShiftModifier);
+        QVERIFY(runLua(qsl("deleteRoom(%1)").arg(kNorthWestRoomId)));
+        moveTo(south + QPoint(1, 1), Qt::ShiftModifier);
+        const QSet<int> afterShiftDrag{kNorthRoomId, kWestRoomId, kPlayerRoomId, kSouthRoomId};
+        QCOMPARE(mp2dMap->mMultiSelectionSet, afterShiftDrag);
+        releaseAt(south + QPoint(1, 1), Qt::ShiftModifier);
+
+        const QPoint emptySpot = pointUnitsFromCentre(3.5, 3.5);
+        pressAt(emptySpot, Qt::ControlModifier);
+        moveTo(emptySpot, Qt::ControlModifier);
+        QVERIFY(runLua(qsl("deleteRoom(%1)").arg(kNorthRoomId)));
+        moveTo(emptySpot + QPoint(1, 1), Qt::ControlModifier);
+        const QSet<int> afterCtrlDrag{kWestRoomId, kPlayerRoomId, kSouthRoomId};
+        QCOMPARE(mp2dMap->mMultiSelectionSet, afterCtrlDrag);
+        releaseAt(emptySpot + QPoint(1, 1), Qt::ControlModifier);
+        QCOMPARE(mp2dMap->mMultiSelectionSet, afterCtrlDrag);
+    }
+
+    void test_deletingASelectedRoomKeepsTheRestInTheList()
+    {
+        buildMap();
+        showMapper(false);
+        dragFromTo(pointUnitsFromCentre(-1.5, 1.5), pointUnitsFromCentre(0.5, -0.5));
+        const int centre = mp2dMap->getCenterSelectedRoomId();
+        QSet<int> remaining{kNorthWestRoomId, kNorthRoomId, kWestRoomId, kPlayerRoomId};
+        const int deleted = centre == kNorthWestRoomId ? kNorthRoomId : kNorthWestRoomId;
+        remaining.remove(deleted);
+
+        QVERIFY(runLua(qsl("deleteRoom(%1)").arg(deleted)));
+        QCoreApplication::processEvents();
+
+        QCOMPARE(mp2dMap->mMultiSelectionSet, remaining);
+        QCOMPARE(mp2dMap->getCenterSelectedRoomId(), centre);
+        QVERIFY2(!mp2dMap->mMultiSelectionListWidget.isHidden(), "the list went away with rooms still selected");
+        QCOMPARE(listedRoomIds(), remaining);
+    }
+
+    // Picking a room from the list leaves the others listed but not selected,
+    // and picking a deleted one again would put it back in the selection.
+    void test_deletingAListedButUnselectedRoomDropsItsRow()
+    {
+        buildMap();
+        showMapper(false);
+        dragFromTo(pointUnitsFromCentre(-1.5, 1.5), pointUnitsFromCentre(0.5, -0.5));
+        for (QTreeWidgetItem* item : listedRooms()) {
+            item->setSelected(item->text(0).toInt() == kPlayerRoomId);
+        }
+        QCOMPARE(mp2dMap->mMultiSelectionSet, QSet<int>{kPlayerRoomId});
+
+        QVERIFY(runLua(qsl("deleteRoom(%1)").arg(kNorthWestRoomId)));
+        QCoreApplication::processEvents();
+
+        const QSet<int> stillListed{kNorthRoomId, kWestRoomId, kPlayerRoomId};
+        QCOMPARE(listedRoomIds(), stillListed);
+        QCOMPARE(mp2dMap->mMultiSelectionSet, QSet<int>{kPlayerRoomId});
+        for (QTreeWidgetItem* item : listedRooms()) {
+            item->setSelected(true);
+        }
+        QCOMPARE(mp2dMap->mMultiSelectionSet, stillListed);
+    }
+
+    void test_deletingOneOfTwoSelectedRoomsLeavesTheOtherHighlighted()
+    {
+        buildMap();
+        showMapper(false);
+        dragFromTo(pointUnitsFromCentre(-1.5, 1.5), pointUnitsFromCentre(0.5, 0.5));
+        QCOMPARE(mp2dMap->mMultiSelectionSet, (QSet<int>{kNorthWestRoomId, kNorthRoomId}));
+        const int deleted = mp2dMap->getCenterSelectedRoomId();
+        const int other = deleted == kNorthRoomId ? kNorthWestRoomId : kNorthRoomId;
+
+        QVERIFY(runLua(qsl("deleteRoom(%1)").arg(deleted)));
+        QCoreApplication::processEvents();
+
+        QCOMPARE(mp2dMap->mMultiSelectionSet, QSet<int>{other});
+        QCOMPARE(mp2dMap->mMultiSelectionHighlightRoomId, other);
+        QVERIFY2(mp2dMap->mMultiSelectionListWidget.isHidden(), "the list stayed up for a single room");
+    }
+
+    void test_aSecondaryViewDropsADeletedRoomFromItsSelection()
+    {
+        buildMap();
+        showMapper(false);
+        const auto [viewId, error] = mpHost->createMapView(mAreaId);
+        QVERIFY2(viewId > 0, qPrintable(error));
+        const int openedViewId = viewId;
+        const auto closeTheView = qScopeGuard([this, openedViewId] {
+            mpHost->closeMapView(openedViewId);
+        });
+        T2DMap* pViewMap = map()->getViewManager()->getView(viewId)->get2DMap();
+        pViewMap->mMultiSelectionSet = QSet<int>{kNorthWestRoomId, kNorthRoomId, kWestRoomId, kPlayerRoomId};
+        pViewMap->mMultiSelectionHighlightRoomId = kWestRoomId;
+
+        QVERIFY(runLua(qsl("deleteRoom(%1)").arg(kWestRoomId)));
+
+        const QSet<int> remaining{kNorthWestRoomId, kNorthRoomId, kPlayerRoomId};
+        QCOMPARE(pViewMap->mMultiSelectionSet, remaining);
+        QVERIFY2(remaining.contains(pViewMap->mMultiSelectionHighlightRoomId), "the view's highlight is still the deleted room");
+    }
+
+    // Room ids are reused, so a line left in progress would go on in another room.
+    void test_deletingTheRoomALineIsDrawnFromEndsTheDrawing()
+    {
+        buildMap();
+        showMapper(false);
+        QVERIFY(runLua(qsl("setExit(%1, %2, 'n')").arg(kEastRoomId).arg(kNorthEastRoomId)));
+        QVERIFY(startDrawingALineFromTheDialog(kEastRoomId, qsl("n")));
+
+        QVERIFY(runLua(qsl("deleteRoom(%1)").arg(kEastRoomId)));
+        QCOMPARE(mp2dMap->mCustomLinesRoomFrom, 0);
+        QVERIFY2(!mp2dMap->mpCustomLinesDialog, "the custom line dialog outlived the drawing");
+
+        QVERIFY(addRoomAt(kEastRoomId, 1, 0, 0));
+        clickAt(pointUnitsFromCentre(1.5, 2.5));
+        QVERIFY2(map()->mpRoomDB->getRoom(kEastRoomId)->customLines.isEmpty(), "the click drew a line in the new room");
+    }
+
+    // Deleting the room a line leads to takes the exit and the line with it
+    void test_deletingTheRoomALineIsDrawnToEndsTheDrawing()
+    {
+        buildMap();
+        showMapper(false);
+        QVERIFY(runLua(qsl("setExit(%1, %2, 'n')").arg(kPlayerRoomId).arg(kNorthRoomId)));
+        QVERIFY(startDrawingALineFromTheDialog(kPlayerRoomId, qsl("n")));
+        QCOMPARE(mp2dMap->mCustomLinesRoomTo, kNorthRoomId);
+
+        QVERIFY(runLua(qsl("deleteRoom(%1)").arg(kNorthRoomId)));
+        QCOMPARE(mp2dMap->mCustomLinesRoomFrom, 0);
+        QCOMPARE(mp2dMap->mCustomLinesRoomTo, 0);
+
+        clickAt(pointUnitsFromCentre(0.5, 1.5));
+        QVERIFY2(!map()->mpRoomDB->getRoom(kPlayerRoomId)->customLines.contains(qsl("n")), "the click drew a line for an exit that is gone");
+    }
+
+    void test_deletingARoomDropsItsSelectedCustomLine()
+    {
+        buildMap();
+        QVERIFY(addLineToTheEastRoom());
+        showMapper(false);
+        clickAt(pointUnitsFromCentre(1, 2));
+        QCOMPARE(mp2dMap->mCustomLineSelectedRoom, kLineRoomId);
+
+        QVERIFY(runLua(qsl("deleteRoom(%1)").arg(kLineRoomId)));
+        QCOMPARE(mp2dMap->mCustomLineSelectedRoom, 0);
+
+        QVERIFY(addRoomAt(kLineRoomId, 1, 0, 0));
+        TRoom* pNewRoom = addLineToTheEastRoom();
+        QVERIFY(pNewRoom);
+        rightClickAt(pointUnitsFromCentre(-3, -3));
+        QVERIFY2(!contextMenuItem(qsl("Delete line")), "the menu offers to delete a line in the room that took the deleted one's id");
+    }
+
+    // Room ids are reused, so a room a script makes after deleting a listed one
+    // may get its id, and must not get its row as well.
+    void test_aRoomGivenADeletedListedRoomsIdIsNotListed()
+    {
+        buildMap();
+        showMapper(false);
+        dragFromTo(pointUnitsFromCentre(-1.5, 1.5), pointUnitsFromCentre(0.5, -0.5));
+
+        QVERIFY(runLua(qsl("deleteRoom(%1); addRoom(%1); setRoomArea(%1, %2); setRoomCoordinates(%1, 5, 5, 0)").arg(kNorthWestRoomId).arg(mAreaId)));
+        QCoreApplication::processEvents();
+
+        const QSet<int> remaining{kNorthRoomId, kWestRoomId, kPlayerRoomId};
+        QCOMPARE(listedRoomIds(), remaining);
+        for (QTreeWidgetItem* item : listedRooms()) {
+            item->setSelected(item->text(0).toInt() == kPlayerRoomId);
+        }
+        for (QTreeWidgetItem* item : listedRooms()) {
+            item->setSelected(true);
+        }
+        QCOMPARE(mp2dMap->mMultiSelectionSet, remaining);
+    }
+
+    void test_theListFitsTheRoomsLeftAfterADeletion()
+    {
+        buildMap();
+        showMapper(false);
+        dragFromTo(pointUnitsFromCentre(-1.5, 1.5), pointUnitsFromCentre(1.5, 0.5));
+        const int threeRowsHigh = mp2dMap->mMultiSelectionListWidget.height();
+        QVERIFY(runLua(qsl("setRoomName(%1, 'a'); setRoomName(%2, 'b')").arg(kNorthWestRoomId).arg(kNorthRoomId)));
+        dragFromTo(pointUnitsFromCentre(-1.5, 1.5), pointUnitsFromCentre(1.5, -1.5));
+        QVERIFY(mp2dMap->mMultiSelectionListWidget.height() > threeRowsHigh);
+        QVERIFY(!mp2dMap->mMultiSelectionListWidget.isColumnHidden(1));
+
+        QVERIFY(runLua(qsl("for _, id in ipairs({1, 2, 3, 4, 6, 7}) do deleteRoom(id) end")));
+        QCoreApplication::processEvents();
+
+        QCOMPARE(listedRoomIds(), (QSet<int>{kPlayerRoomId, kSouthRoomId, 9}));
+        QCOMPARE(mp2dMap->mMultiSelectionListWidget.height(), threeRowsHigh);
+        QVERIFY2(mp2dMap->mMultiSelectionListWidget.isColumnHidden(1), "the name column is still shown with no named room left");
+    }
+
+    // A hidden list is rebuilt before it is shown again, so it is not worth walking
+    void test_deletingARoomLeavesAHiddenListAlone()
+    {
+        buildMap();
+        showMapper(false);
+        dragFromTo(pointUnitsFromCentre(-1.5, 1.5), pointUnitsFromCentre(0.5, -0.5));
+        dragFromTo(pointUnitsFromCentre(0.6, -0.6), pointUnitsFromCentre(1.4, -1.4));
+        QVERIFY(mp2dMap->mMultiSelectionListWidget.isHidden());
+        QVERIFY(mp2dMap->mMultiSelectionListWidget.topLevelItemCount() > 0);
+
+        QVERIFY(runLua(qsl("deleteRoom(%1)").arg(kNorthEastRoomId)));
+
+        QVERIFY2(mp2dMap->mRoomsToDropFromSelectionWidget.isEmpty(), "a walk of the hidden list was queued");
+    }
+
     // The list of selected rooms is rebuilt when the box takes in different
     // rooms, not on every move of the mouse, which on a big selection costs
     // more than the time between two moves.
@@ -1016,6 +1275,19 @@ private slots:
         releaseAt(south + QPoint(1, 1), Qt::ShiftModifier);
     }
 
+    // With Ctrl the box toggles the rooms it covers in what was selected before.
+    void test_aCtrlDragTogglesTheRoomsTheBoxCovers()
+    {
+        buildMap();
+        showMapper(false);
+        dragFromTo(pointUnitsFromCentre(-1.5, 1.5), pointUnitsFromCentre(0.5, -0.5));
+
+        dragFromTo(pointUnitsFromCentre(-0.5, 0.5), pointUnitsFromCentre(1.5, -0.5), Qt::ControlModifier);
+
+        const QSet<int> expected{kNorthWestRoomId, kNorthRoomId, kWestRoomId, kEastRoomId};
+        QCOMPARE(mp2dMap->mMultiSelectionSet, expected);
+    }
+
     // The same drag while viewing pans instead of drawing a box, which is what
     // the map being locked for viewing means.
     void test_draggingWhileViewingDrawsNoSelectionBox()
@@ -1058,11 +1330,14 @@ private slots:
         pEastRoom->customLinesArrow[qsl("n")] = false;
         pEastRoom->calcRoomDimensions();
         showMapper(false);
+        map()->resetUnsaved();
 
         // A custom line's first segment runs out of the middle of the room it
         // belongs to, so press just short of the middle: on it, the handler that
         // edits a line's points would take the press instead.
         dragFromTo(pointUnitsFromCentre(1, -0.2), pointUnitsFromCentre(1, 1.8));
+
+        QVERIFY2(map()->isUnsaved(), "moving a room did not mark the map as changed");
 
         QCOMPARE(pEastRoom->x(), 1);
         QCOMPARE(pEastRoom->y(), 2);
@@ -2090,6 +2365,67 @@ private slots:
                            "assert(#mouseTestRooms == 2 and mouseTestRooms[1] == %1 and mouseTestRooms[2] == %2, table.concat(mouseTestRooms, ','))")
                                .arg(kWestRoomId)
                                .arg(kEastRoomId)));
+    }
+
+    void test_aScriptCanHideTheViewingItemsAndKeepItsOwn()
+    {
+        buildMap();
+        showMapper(true);
+        QVERIFY(runLua(qsl("hideMapMenuItem('setPlayerLocation')\n"
+                           "hideMapMenuItem('switchMapMode')\n"
+                           "addMapEvent('mouseTestAction', 'mouseTestEvent', '', 'Do the thing')")));
+        rightClickAt(pointUnitsFromCentre(1, 0));
+
+        QVERIFY(!contextMenuItem(qsl("Set player location")));
+        QVERIFY(!contextMenuItem(qsl("Switch to editing mode")));
+        QVERIFY(contextMenuItem(qsl("Do the thing")));
+    }
+
+    void test_aMenuWithEveryItemHiddenDoesNotPopUp()
+    {
+        buildMap();
+        showMapper(true);
+        QVERIFY(runLua(qsl("hideMapMenuItem('setPlayerLocation')\n"
+                           "hideMapMenuItem('switchMapMode')")));
+        rightClickAt(pointUnitsFromCentre(1, 0));
+
+        QVERIFY2(!mp2dMap->mActiveContextMenu, "an empty context menu was put up");
+    }
+
+    void test_hidingAnEditingItemLeavesTheOthersOnTheMenu()
+    {
+        buildMap();
+        showMapper(false);
+        QVERIFY(runLua(qsl("hideMapMenuItem('deleteRoom')")));
+        rightClickAt(pointUnitsFromCentre(1, 0));
+
+        QVERIFY(!contextMenuItem(qsl("Delete")));
+        QVERIFY(contextMenuItem(qsl("Set exits...")));
+        QVERIFY(contextMenuItem(qsl("Create label...")));
+        QVERIFY(contextMenuItem(qsl("Switch to viewing mode")));
+    }
+
+    void test_showingAHiddenItemPutsItBackOnTheMenu()
+    {
+        buildMap();
+        showMapper(true);
+        QVERIFY(runLua(qsl("hideMapMenuItem('setPlayerLocation')\n"
+                           "showMapMenuItem('setPlayerLocation')")));
+        rightClickAt(pointUnitsFromCentre(1, 0));
+
+        QVERIFY(contextMenuItem(qsl("Set player location")));
+    }
+
+    void test_theMenuOnAnEmptyMapLeavesOutHiddenItems()
+    {
+        buildMap();
+        showMapper(true);
+        map()->mapClear();
+        QVERIFY(runLua(qsl("hideMapMenuItem('loadMap')")));
+        rightClickAt(viewCentre());
+
+        QVERIFY(!contextMenuItem(qsl("Load map...")));
+        QVERIFY(contextMenuItem(qsl("Create new map")));
     }
 
     void test_theMenuOnAnEmptyMapOffersToLoadOrCreateOne()

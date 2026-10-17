@@ -41,6 +41,7 @@
 #include "TMedia.h"
 #include "TMxpFrameWidgets.h"
 #include "TNullConsoleFrontend.h"
+#include "TPasswordEntry.h"
 #include "TRoomDB.h"
 #include "TScrollBox.h"
 #include "TTextBox.h"
@@ -71,6 +72,7 @@
 #include <QTextCodec>
 #include <QTimer>
 #include <QPainter>
+#include <QResizeEvent>
 #include <QVideoWidget>
 
 #include <chrono>
@@ -219,6 +221,10 @@ void shareDockAreaIfSqueezed(QPointer<TDockWidget> dock)
             QObject::connect(dock.data(), &QDockWidget::visibilityChanged, dock.data(), retry, Qt::SingleShotConnection);
             return;
         }
+        // A busy event loop can run this ahead of the pending layout, while the console still has a
+        // new widget's default size, which reads as not squeezed
+        window->layout()->activate();
+        dock->layout()->activate();
         const Qt::DockWidgetArea area = window->dockWidgetArea(dock);
         const Qt::Orientation orientation = (area == Qt::TopDockWidgetArea || area == Qt::BottomDockWidgetArea) ? Qt::Horizontal : Qt::Vertical;
         const auto extent = [orientation](const QWidget* widget) {
@@ -300,6 +306,9 @@ TMainConsole::TMainConsole(Host* pH, QWidget* parent)
     mpLatencyBoxPacer->setSingleShot(true);
     mpLatencyBoxPacer->setInterval(csmLatencyBoxPaceMs);
     connect(mpLatencyBoxPacer, &QTimer::timeout, this, &TMainConsole::slot_refreshLatencyBox);
+
+    connect(pH, &Host::signal_passwordEntryWantedChanged, this, &TMainConsole::slot_passwordEntryWanted, Qt::UniqueConnection);
+    slot_passwordEntryWanted(pH->passwordEntryWanted());
 
     // Ensure the QWidget has the profile name embedded into it
     setProperty("HostName", pH->getName());
@@ -453,6 +462,7 @@ void Host::setMainConsoleView(TMainConsole* view)
     // The view has no widget for a window the null view made, so none may outlive the swap
     if (view) {
         mpNullConsoleFrontend->dropWindows();
+        mExitEventOwed = false;
     }
     mpConsole = view;
     mpConsoleFrontend = view;
@@ -1405,6 +1415,10 @@ void TMainConsole::deleteMiniConsole(const QString& name)
     auto pConsole = deregisterSubConsole(name);
     if (pConsole) {
         mpHost->windowRegistry().forgetUserWindowSize(name);
+        // Its command line is registered under its name and would hold that name until the deferred delete
+        if (pConsole->mpCommandLine) {
+            deregisterSubCommandLine(pConsole->mpCommandLine);
+        }
 
         // A UserWindow's TConsole lives *inside* a TDockWidget. Deleting only the
         // console (as for an ordinary miniconsole) leaves the dock orphaned in
@@ -1547,8 +1561,10 @@ std::pair<bool, QString> TMainConsole::setLabelCursor(const QString& name, int s
     auto pL = mLabelMap.value(name);
     if (pL) {
         if (shape > -1 && shape < 22) {
+            pL->endLinkHover();
             pL->setCursor(static_cast<Qt::CursorShape>(shape));
         } else if (shape == -1) {
+            pL->endLinkHover();
             pL->unsetCursor();
         } else {
             return {false, qsl("cursor shape '%1' not found. see https://doc.qt.io/qt-5/qt.html#CursorShape-enum").arg(shape)};
@@ -1575,6 +1591,7 @@ std::pair<bool, QString> TMainConsole::setLabelCustomCursor(const QString& name,
             return {false, qsl("couldn't find custom cursor, is the location \"%1\" correct?").arg(pixMapLocation)};
         }
         const QCursor custom_cursor = QCursor(cursor_pixmap, hotX, hotY);
+        pL->endLinkHover();
         pL->setCursor(custom_cursor);
         return {true, QString()};
     }
@@ -1684,6 +1701,10 @@ std::pair<bool, QString> TMainConsole::createCommandLine(const QString& windowna
     // No Host::createCommandLine() wrapper makes this check, unlike the other creators.
     if (mpHost->parentWindowMissing(windowname)) {
         return {false, qsl("window '%1' not found").arg(windowname)};
+    }
+
+    if (mpHost->windowRegistry().hasLabel(name)) {
+        return {false, qsl("label with the name '%1' already exists").arg(name)};
     }
 
     auto pN = mSubCommandLineMap.value(name);
@@ -1798,8 +1819,118 @@ void TMainConsole::updateCommandLineSpellCheck(bool enabled)
 
 void TMainConsole::setCommandLineText(const QString& text)
 {
+    if (mpPasswordEntry) {
+        mpPasswordEntry->setText(text);
+        mpPasswordEntry->selectAll();
+        return;
+    }
     mpCommandLine->setPlainText(text);
     mpCommandLine->selectAll();
+}
+
+void TMainConsole::printToCommandLine(const QString& text)
+{
+    if (mpPasswordEntry) {
+        mpPasswordEntry->setText(text);
+        return;
+    }
+    mpCommandLine->setPlainText(text);
+    QTextCursor cursor = mpCommandLine->textCursor();
+    cursor.clearSelection();
+    // End, not EndOfLine: the latter stops at the end of the first wrapped line
+    cursor.movePosition(QTextCursor::End);
+    mpCommandLine->setTextCursor(cursor);
+    mpCommandLine->adjustHeight();
+}
+
+TPasswordEntry* TMainConsole::passwordEntry() const
+{
+    return mpPasswordEntry;
+}
+
+void TMainConsole::slot_passwordEntryWanted(const bool wanted)
+{
+    if (!mpCommandLine || !mpHost || mpHost->isClosingDown()) {
+        return;
+    }
+    if (wanted && !mpPasswordEntry) {
+        openPasswordEntry();
+    } else if (!wanted && mpPasswordEntry) {
+        closePasswordEntry();
+    }
+}
+
+void TMainConsole::openPasswordEntry()
+{
+    // A sibling, not a child: an ignored key event would bubble from a child
+    // into TCommandLine::event()
+    mpPasswordEntry = new TPasswordEntry(mpHost, mpCommandLine, layerCommandLine);
+    mpPasswordEntry->setGeometry(mpCommandLine->geometry());
+    mpPasswordEntry->raise();
+    mpPasswordEntry->show();
+    mpCommandLine->installEventFilter(this);
+
+    // So a fast typist's password is not split between the two. A box that comes
+    // back later in the hold finds text typed into the command line on purpose.
+    // setText() does not report the move as the player's first edit on its own.
+    if (mpHost->passwordEntryOpensWithThePrompt() && mpCommandLine->playerTypedLine()) {
+        QString typedAhead = mpCommandLine->toPlainText();
+        typedAhead.remove(QChar::CarriageReturn);
+        typedAhead.remove(QChar::LineFeed);
+        if (!typedAhead.isEmpty()) {
+            mpPasswordEntry->setText(typedAhead);
+            mpCommandLine->clear();
+            mpHost->passwordEntryEdited();
+        }
+    }
+
+    // Before the box takes focus, so a screen reader announces this wording
+    if (mpHost->passwordEntryReopened()) {
+        mpPasswordEntry->setReopened();
+    }
+
+    // QApplication::focusWidget() is null while Mudlet is not the active
+    // application. Read before setting the proxy, which moves focus to the box.
+    QWidget* pFocused = window()->focusWidget();
+    mpCommandLine->setFocusProxy(mpPasswordEntry);
+
+    // A printable key typed anywhere else reaches the box through the proxy anyway
+    auto* pCommandLineFocused = qobject_cast<TCommandLine*>(pFocused);
+    const bool fromOwnCommandLine = !pFocused || pFocused == mpCommandLine || (pCommandLineFocused && pCommandLineFocused->console() && pCommandLineFocused->console()->getHost() == mpHost);
+    if (fromOwnCommandLine) {
+        mpPasswordEntry->setFocus(Qt::OtherFocusReason);
+    } else {
+        //: Spoken by a screen reader when the game asks for hidden input while the keyboard focus is somewhere the hidden-input box does not take it from
+        mudlet::self()->announce(tr("The game asks for hidden input."), QString(), true);
+    }
+
+    connect(mpPasswordEntry, &TPasswordEntry::dismissed, mpHost, &Host::dismissPasswordEntry);
+}
+
+void TMainConsole::closePasswordEntry()
+{
+    TPasswordEntry* pEntry = mpPasswordEntry;
+    mpPasswordEntry = nullptr;
+    // Before the box hides, or hide() runs focusNextPrevChild() itself
+    const bool hadFocus = window()->focusWidget() == pEntry;
+    mpCommandLine->setFocusProxy(nullptr);
+    if (hadFocus) {
+        mpCommandLine->setFocus(Qt::OtherFocusReason);
+    }
+    mpCommandLine->removeEventFilter(this);
+    // Hidden before the deferred delete, or a WONT and a WILL in one read leave
+    // two boxes alive. Qt zero-fills only a password-mode line edit's text.
+    pEntry->setEchoMode(QLineEdit::Password);
+    pEntry->hide();
+    pEntry->deleteLater();
+}
+
+bool TMainConsole::eventFilter(QObject* watched, QEvent* event)
+{
+    if (mpPasswordEntry && watched == mpCommandLine && (event->type() == QEvent::Resize || event->type() == QEvent::Move)) {
+        mpPasswordEntry->setGeometry(mpCommandLine->geometry());
+    }
+    return TConsole::eventFilter(watched, event);
 }
 
 void TMainConsole::recordActiveCommandLine(TCommandLine* pCommandLine)
@@ -1837,9 +1968,20 @@ TCommandLine* TMainConsole::activeCommandLine()
 
 void TMainConsole::focusActiveCommandLine()
 {
+    focusActiveCommandLine(nullptr);
+}
+
+void TMainConsole::focusActiveCommandLine(const QWidget* pWindow)
+{
     using namespace std::chrono_literals;
 
     TCommandLine* pCommandLine = activeCommandLine();
+    if (pCommandLine && pWindow && pCommandLine->window() != pWindow) {
+        pCommandLine = nullptr;
+        // The setFocus() below can land only once pWindow activates, as a Qt::ActiveWindowFocusReason
+        // focus-in that TCommandLine does not record, so record the line it gives the keyboard here
+        recordActiveCommandLine(mpCommandLine);
+    }
     TCommandLine* targetCommandLine = pCommandLine ? pCommandLine : mpCommandLine.data();
     if (!targetCommandLine) {
         return;
@@ -1898,6 +2040,10 @@ bool TMainConsole::replaceCommandLineText(const QString& name, const QString& te
     if (!pN) {
         return false;
     }
+    if (pN == mpCommandLine) {
+        printToCommandLine(text);
+        return true;
+    }
     putTextOnCommandLine(pN, text);
     return true;
 }
@@ -1907,6 +2053,17 @@ bool TMainConsole::appendCommandLineText(const QString& name, const QString& tex
     auto pN = commandLineNamed(name);
     if (!pN) {
         return false;
+    }
+    if (pN == mpCommandLine) {
+        if (mpPasswordEntry) {
+            // A script's write is not the player's first edit, which would cancel the auto-login
+            const QSignalBlocker blocker(mpPasswordEntry);
+            mpPasswordEntry->end(false);
+            mpPasswordEntry->insert(text);
+            return true;
+        }
+        printToCommandLine(mpCommandLine->toPlainText() + text);
+        return true;
     }
     putTextOnCommandLine(pN, pN->toPlainText() + text);
     return true;
@@ -1918,6 +2075,10 @@ bool TMainConsole::clearCommandLine(const QString& name)
     if (!pN) {
         return false;
     }
+    if (pN == mpCommandLine && mpPasswordEntry) {
+        mpPasswordEntry->setText(QString());
+        return true;
+    }
     pN->clear();
     pN->adjustHeight();
     return true;
@@ -1928,6 +2089,10 @@ bool TMainConsole::selectCommandLineText(const QString& name)
     auto pN = commandLineNamed(name);
     if (!pN) {
         return false;
+    }
+    if (pN == mpCommandLine && mpPasswordEntry) {
+        mpPasswordEntry->selectAll();
+        return true;
     }
     pN->selectAll();
     return true;
@@ -2166,6 +2331,10 @@ std::pair<bool, QString> TMainConsole::createTextBox(const QString& windowname, 
     // No Host::createTextEdit() wrapper makes this check, unlike the other creators.
     if (mpHost->parentWindowMissing(windowname)) {
         return {false, qsl("window '%1' not found").arg(windowname)};
+    }
+
+    if (mpHost->windowRegistry().hasLabel(name)) {
+        return {false, qsl("label with the name '%1' already exists").arg(name)};
     }
 
     auto pT = mTextBoxMap.value(name);
@@ -3964,8 +4133,11 @@ void TMainConsole::closeEvent(QCloseEvent* event)
     if (mpHost->mFORCE_SAVE_ON_EXIT || mpHost->isClosingForced()) {
         mudlet::self()->saveWindowLayout();
         mpHost->modulesToWrite.clear();
-        // We are not checking the status result from here!
-        mpHost->saveProfile();
+        // A save still running would turn this one away, and it may predate the session's last changes
+        mpHost->waitForProfileSave();
+        mpHost->saveProfileReportingFailure();
+        // Other profiles can keep Mudlet running long after this one closes
+        mudlet::self()->writeSettings();
 
         if (mpHost->mpMap && mpHost->mpMap->mpRoomDB) {
             // There is a map loaded - but it *could* have no rooms at all!
@@ -3998,6 +4170,7 @@ void TMainConsole::closeEvent(QCloseEvent* event)
                         this, tr("Could not save profile"), tr("Sorry, could not save your profile as \"%1\" - got the following error: \"%2\".").arg(filename, error), QMessageBox::Retry);
                 goto ASK_PROFILE;
             }
+            mudlet::self()->writeSettings();
 
             if (mpHost->mpMap && mpHost->mpMap->mpRoomDB) {
                 // There is a map loaded - but it *could* have no rooms at all!

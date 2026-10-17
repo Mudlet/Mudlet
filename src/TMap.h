@@ -65,6 +65,7 @@ class TArea;
 class TMapViewManager;
 class TRoom;
 class TRoomDB;
+class TMapLabel;
 class QFile;
 class QNetworkAccessManager;
 class MapInfoContributorManager;
@@ -72,6 +73,9 @@ class MapInfoContributorManager;
 class TMap : public QObject
 {
     Q_OBJECT
+
+    // Allows the functional test to put recording map views in place of the GUI's:
+    friend class FrontendRoutingContractTest;
 
 public:
     // Host settings the 2D map keeps a copy of to draw with
@@ -82,9 +86,12 @@ signals:
     void signal_areaChanged(int areaId);
     void signal_mmpMapLocationChanged();
     void signal_mapSymbolFontChanged();
+    // Reaches every 2D map showing this map, the mapper's and each secondary view's
+    void signal_roomDeleted(int roomId);
 
-    // Cues for the mapper drawing this map (mpMapper); the symbol cache one
-    // also reaches every secondary map view. With no mapper nothing listens.
+    // Cues for the mapper drawing this map (mpMapper); the colour and symbol
+    // cache ones also reach every secondary map view, and with the 3D mapper
+    // built in so do the repaint and mapper-setting ones.
     void signal_mapperColoursChanged();
     void signal_mapCleared();
     void signal_mapLabelsChanged();
@@ -123,7 +130,9 @@ public:
     ~TMap();
     void mapClear();
     void refreshMapperColours();
+    // Returns the new label's id, -1 for an unknown area, or scmUnreadableImageLabel for an image that cannot be read.
     int createMapImageLabel(int area, QString filePath, float x, float y, float z, float width, float height, float zoom, bool showOnTop, bool temporary);
+    static constexpr int scmUnreadableImageLabel = -2;
     int createMapLabel(int area,
                        const QString& text,
                        float x,
@@ -170,6 +179,8 @@ public:
     bool serialize(QDataStream&, int saveVersion = 0);
     static bool listLengthFits(QDataStream&, qint64 minBytesPerElement);
     bool restore(QString location);
+    static void restoreLabelFontFromUserData(TMapLabel&, int labelId, QMap<QString, QString>& userData);
+    static void restoreLabelOutlineColorFromUserData(TMapLabel&, int labelId, QMap<QString, QString>& userData);
     bool retrieveMapFileStats(QString, QString*, int*, int*, qsizetype*, qsizetype*);
     void initGraph();
     QString connectExitStubByDirection(const int fromRoomId, const int dirType);
@@ -219,7 +230,7 @@ public:
     void clearTransferProgress();
 
     // True while a map import, export or download is on the stack. Those pump
-    // qApp->processEvents() to keep their progress display alive, so anything
+    // QCoreApplication::processEvents() to keep their progress display alive, so anything
     // delivered from an event loop can find itself running nested inside one -
     // and destroying this map's Host from there would free the operation's own
     // "this" (#9520). Whoever would do that has to wait for this to go false.
@@ -281,12 +292,15 @@ public:
     // The 2D zoom a new area starts at, and the smallest one a view accepts:
     static constexpr qreal scmDefaultXYZoom = 20.0;
     static constexpr qreal scmMinXYZoom = 3.0;
+    // Why a script's 2D zoom can't be used, or empty when it can
+    static QString zoomError(qreal zoom);
     // Which of the symbols in use would be drawn as the replacement character
     // if the given font were the symbol font:
     QStringList symbolsNotInFont(const QFont&);
 
     std::pair<bool, QString> writeJsonMapFile(const QString&);
     std::pair<bool, QString> readJsonMapFile(const QString&, const bool translatableTexts = false);
+    std::pair<bool, QString> importJsonMapFile(const QString&);
     qsizetype getCurrentProgressRoomCount() const { return mProgressDialogRoomsCount; }
     bool incrementJsonProgressDialog(const bool isExportNotImport, const bool isRoomNotLabel, const int increment = 1);
     // TRoomDB calls this before it deletes an area or clears the map.
@@ -323,8 +337,9 @@ public:
     TMapViewManager* getViewManager() { return mpViewManager; }
     // Defined in TMapViewManager.cpp, which can see that TMapViewManager is a TMapViewsFrontend.
     void setViewManager(TMapViewManager* pViewManager);
-    // mpViewManager as core code drives it.
-    TMapViewsFrontend* mapViewsFrontend() const { return mpViewsFrontend; }
+    // mpViewManager as core code drives it. Never null: with no manager, as in a profile with no
+    // console view, a frontend that has no views and can make none.
+    TMapViewsFrontend* mapViewsFrontend() const;
 
     // Was a single int mRoomId but that breaks things when maps are
     // copied/shared between profiles - so now we track the profile name
@@ -370,7 +385,7 @@ public:
     dlgMapper* mapper() const;
     void setMapper(dlgMapper* pMapper);
     // mapper() as core code drives it; null when that is.
-    TMapViewFrontend* mapViewFrontend() const { return mpMapper.isNull() ? nullptr : mpMapViewFrontend; }
+    TMapViewFrontend* mapViewFrontend() const { return mpMapViewObject.isNull() ? nullptr : mpMapViewFrontend; }
     QHash<int, int> roomidToIndex;
 
     // User-registered mapper context menu entries (addMapEvent()/addMapMenu());
@@ -379,6 +394,10 @@ public:
     QMap<QString, QStringList> mUserActions;
     // unique name, List:parent name ("" if null), display name
     QMap<QString, QStringList> mUserMenus;
+    // Built-in context menu items hidden with hideMapMenuItem(); session-only like the above.
+    QSet<QString> mHiddenMenuItems;
+    static const QStringList& builtInMenuItemNames();
+    bool menuItemShown(const QString& itemName) const;
 
     typedef boost::adjacency_list<boost::listS, boost::vecS, boost::directedS, boost::no_property, boost::property<boost::edge_weight_t, cost>> mygraph_t;
     typedef boost::property_map<mygraph_t, boost::edge_weight_t>::type WeightMap;
@@ -486,8 +505,11 @@ private:
     // The same object as mpViewManager, set with it by setViewManager().
     TMapViewsFrontend* mpViewsFrontend = nullptr;
     QPointer<dlgMapper> mpMapper;
-    // The same object as mpMapper, set with it by setMapper(); read only while mpMapper is set.
+    // The same object as mpMapper, set with it by setMapper(); read only while mpMapViewObject is set.
     TMapViewFrontend* mpMapViewFrontend = nullptr;
+    // mpMapViewFrontend as a QObject, so it clears when the view goes. Not mpMapper, so a view that
+    // is not a dlgMapper can stand in its place.
+    QPointer<QObject> mpMapViewObject;
 
     // A* leaving the route in mSearchPredecessor; see the definition for why not boost::astar_search().
     bool searchGraph(const vertex start, const vertex goal);
@@ -540,7 +562,7 @@ private:
     const QString createFileHeaderLine(QString, QChar);
     void warnIfMapProgressUnwired(const char* context, bool transferPath);
     void writeJsonUserData(QJsonObject&) const;
-    void readJsonUserData(const QJsonObject&);
+    static QMap<QString, QString> readJsonUserData(const QJsonObject&);
     bool validatePotentialMapFile(QFile&, QDataStream&);
     void flushSymbolCaches();
 

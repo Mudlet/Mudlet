@@ -22,12 +22,17 @@
 
 #include <QColor>
 #include <QFont>
+#include <QList>
 #include <QPointer>
 #include <QRect>
 #include <QSet>
+#include <QSize>
 #include <QString>
 
+#include <optional>
+
 class Host;
+class QSvgRenderer;
 
 // A label's widget-free state, so the Widgets-free core can hold a named label without a QLabel.
 // Owned by its TLabel, whose same-named reference members alias it; TWindowRegistry indexes
@@ -43,6 +48,12 @@ struct TLabelModel
     TLabelModel(const TLabelModel&) = delete;
     TLabelModel& operator=(const TLabelModel&) = delete;
 
+    // Whether the SVG renderer is worth trying on a file, judged by its first bytes.
+    static bool svgCandidate(const QString& path);
+    static bool loadSvg(QSvgRenderer& renderer, const QString& path);
+    // A file's natural size as an SVG document or a raster image, without a widget.
+    static std::optional<QSize> imageSize(const QString& path);
+
     // Each releases the Lua registry index it replaces.
     void setClick(const int func);
     void setDoubleClick(const int func);
@@ -51,6 +62,19 @@ struct TLabelModel
     void setWheel(const int func);
     void setEnter(const int func);
     void setLeave(const int func);
+
+    // What TLabel::setBackgroundColor() restyles a label with: the sheet with its background-color
+    // declarations given the colour, or the colour's appended.
+    static QString styleSheetWithBackgroundColor(const QString& styleSheet, const QColor& color);
+    // What TLabel::resetBackgroundImage() restyles a label with: the sheet without its background-image
+    // declarations, but for those inside a {...} rule, such as a :hover image.
+    static QString styleSheetWithoutBackgroundImage(const QString& styleSheet);
+    // Whether the text has an anchor tag, which makes the label's links clickable
+    static bool containsAnchorTag(const QString& text);
+    // What TLabel::setText() shows for the text: each anchor given the link style as an inline style
+    QString linkStyledText(const QString& text);
+    // What the label shows for its text once the link style or the visited links change
+    QString restyledText();
 
     // A QPointer because Host and view are torn down in either order: quitting
     // destroys every Host before the labels' deferred deletes run.
@@ -90,6 +114,21 @@ struct TLabelModel
 
 private:
     void releaseFunc(const int existingFunction, const int newFunction);
+    QString withoutInjectedLinkStyles(const QString& text) const;
+    QString styleLinks(const QString& text);
+
+    struct StyledAnchor
+    {
+        QString styled;
+        QString original;
+    };
+
+    // the text the last styling pass started from, with the anchor tags it rewrote put back
+    QString mUnstyledText;
+    // each anchor tag the last styling pass wrote and the one it replaced, in the order of the text
+    QList<StyledAnchor> mStyledAnchors;
+    // what the last styling pass gave the view to show
+    QString mStyledText;
 };
 
 #endif // MUDLET_TLABELMODEL_H

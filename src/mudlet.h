@@ -27,9 +27,7 @@
  ***************************************************************************/
 
 #include "discord.h"
-#include "FontManager.h"
 #include "HostManager.h"
-#include "MudletMedia.h"
 #include "MudletReplay.h"
 #include "ShortcutsManager.h"
 #include "TAppFrontend.h"
@@ -202,6 +200,8 @@ public:
     enums::controlsVisibility menuBarVisibility() const { return mMenuBarVisibility; }
     bool canHideToolBar() const { return mMenuBarVisibility != enums::visibleNever; }
     bool migratePasswordsToProfileStorage();
+    // Profiles whose password the last migration to profile storage could not save there, so it stays where it was
+    const QStringList& passwordsNotMigratedToProfiles() const { return mPasswordsNotMigratedToProfiles; }
     bool migratePasswordsToSecureStorage();
     // Helper function to check if current version is >= specified version for backward compatibility
     bool isVersionAtLeast(const QString& minVersion);
@@ -220,7 +220,7 @@ public:
     void readEarlySettings(const QSettings&);
     void readLateSettings(const QSettings&);
     void refreshTabBar();
-    void refreshTabBarsAfterStyleChange() override;
+    void refreshTabBarsAfterStyleChange();
     // Used by a profile to tell the mudlet class
     // to tell other profiles to reload the updated
     // maps (via signal_profileMapReloadRequested(...))
@@ -232,6 +232,7 @@ public:
     void scanForMudletTranslations(const QString&);
     void scanForQtTranslations(const QString&);
     void setAppearance(enums::Appearance, const bool& loading = false);
+    void setAppStyleSheet(const QString& styleSheet) override;
     bool setClickthrough(Host*, const QString&, bool);
     void setEditorTextoptions(bool isTabsAndSpacesToBeShown, bool isLinesAndParagraphsToBeShown);
     void setEditorTreeWidgetIconSize(int);
@@ -255,7 +256,7 @@ public:
     bool showTabConnectionIndicators() const override { return mShowTabConnectionIndicators; }
     void showNotification(const QString& title, const QString& text, std::optional<int> msecs) override;
     bool drawUpperLowerLevels() const override { return mDrawUpperLowerLevels; }
-    void setDrawUpperLowerLevels(bool draw) override { mDrawUpperLowerLevels = draw; }
+    void setDrawUpperLowerLevels(bool draw) override;
     // Addon toolbar button management
     int addAddonCommand(const CommandRequest& request, Host* pHost, const QString& package, QString& error) override;
     bool removeAddonCommand(int commandId, Host* pHost) override;
@@ -296,7 +297,7 @@ public:
     enums::controlsVisibility toolBarVisibility() const { return mToolbarVisibility; }
     void updateDiscordNamedIcon();
     void updateMultiViewControls();
-    void writeSettings();
+    void writeSettings() override;
 #ifdef INCLUDE_MCPSERVER
     bool mcpEnabled() const { return mEnableMCP; }
     quint16 mcpServerPort() const { return mMCPServerPort; }
@@ -352,7 +353,6 @@ public:
     // are considered/used/stored
     QTextOption::Flags mEditorTextOptions = QTextOption::Flags();
     int mEditorTreeWidgetIconSize = 0;
-    FontManager mFontManager;
     bool mHasSavedLayout = false;
     bool mIsLoadingLayout = false;
     QStringList mOnlyShownPredefinedProfiles;
@@ -575,14 +575,13 @@ private:
     void goingDown() { mIsGoingDown = true; }
     void endProfileLoad();
     void initEdbee();
-    void installModulesList(Host*, QStringList);
     void loadMaps();
     void loadTranslators(const QString&);
     void migrateDebugConsole(Host*);
     void setupTrayIcon();
     void setGlobalStyleSheet(const QString&);
-    // Not const: HostManager::getHostCount() is not
-    bool toolBarShouldBeVisible();
+    // For the menu bar or toolbar setting. Not const: HostManager::getHostCount() is not
+    bool controlShouldBeVisible(enums::controlsVisibility);
     void reshowRequiredMainConsoles();
     void updateReplayTimeLabel();
     QString replayTimeLabelText(const QString& time, const bool paused) const;
@@ -596,6 +595,8 @@ private:
     void moveProfileFromDetachedToMainWindow(const QString& profileName, TDetachedWindow* sourceWindow);
     int findTabIndex(const QString& profileName) const;
     void cleanupDetachedWindowsMap(); // Remove null pointers from the map
+    void syncMainTabOrder();
+    int mainTabSlotFor(const QString& profileName);
 
 
     inline static QPointer<mudlet> smpSelf = nullptr;
@@ -609,8 +610,6 @@ private:
     // Stores the translated names for the Encodings for the static and thus
     // const TBuffer::csmEncodingTable:
     QMap<QByteArray, QString> mEncodingNameMap;
-    // Before mHostManager, so it is destroyed after the profiles that reach it
-    MudletMedia mMedia;
     HostManager mHostManager;
     // After mHostManager, so it is gone before the profiles that reach it are
     MudletReplay mReplay;
@@ -709,6 +708,7 @@ private:
     QPointer<QWidget> mpFocusWidgetBeforeDeactivate;
     // a list of profiles currently being migrated to secure or profile storage
     QStringList mProfilePasswordsToMigrate;
+    QStringList mPasswordsNotMigratedToProfiles;
     // a list of character passwords currently being migrated to secure storage
     QList<QPair<QString, QString>> mCharacterPasswordsToMigrate;
     QPointer<QShortcut> mpShortcutCloseProfile;
@@ -886,6 +886,9 @@ private:
 
     // Detached windows for profiles
     QMap<QString, QPointer<TDetachedWindow>> mDetachedWindows;
+    // Every profile in main tab bar order, with each detached one kept behind
+    // the tab it followed, so that a reattach can put it back there
+    QStringList mMainTabOrder;
 
     // The map actions' enabled state before the active profile's
     // "mapperButton" setConfig mode is applied on top - the last baseline the

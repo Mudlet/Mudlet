@@ -810,7 +810,9 @@ private slots:
         TBuffer& buffer = host->mainConsoleModel().buffer;
         host->mUndoServerWrap = true;
         host->mUndoServerWrapWidth = 80;
-        auto restoreWrap = qScopeGuard([host]() { host->mUndoServerWrap = false; });
+        auto restoreWrap = qScopeGuard([host]() {
+            host->mUndoServerWrap = false;
+        });
 
         // 70 characters, inside the join band for a wrap column of 80
         const QString heldLine = QString(64, QChar('x')) + qsl(" alpha");
@@ -1534,15 +1536,14 @@ private slots:
         QVERIFY2(host, "No active host available for the test.");
         QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
 
-        // Hunspell_create() hands back a usable handle even when neither file
-        // exists, so a non-null handle only proves the load ran. Telling a
-        // reload apart from a failed load needs a dictionary that knows a word,
-        // which a machine without the starting one installed cannot supply -
-        // asked of the files rather than of the handle, so a dictionary that is
-        // there but loads no words is a failure and not a skip.
+        // A dictionary with no files is not loaded at all, so the reload shows as
+        // the starting one going away - which needs it to have been loaded, and
+        // a machine without it installed cannot supply that. Asked of the files
+        // rather than of the handle, so a dictionary that is there but loads no
+        // words is a failure and not a skip.
         const QString startingDictionary = host->getSpellDic();
-        const QString affixPath = qsl("%1%2.aff").arg(MudletApp::getMudletPath(enums::hunspellDictionaryPath, startingDictionary), startingDictionary);
-        if (!QFileInfo::exists(affixPath)) {
+        const QString folder = MudletApp::getMudletPath(enums::hunspellDictionaryPath, startingDictionary);
+        if (!QFileInfo::exists(qsl("%1%2.aff").arg(folder, startingDictionary)) || !QFileInfo::exists(qsl("%1%2.dic").arg(folder, startingDictionary))) {
             QSKIP(qPrintable(qsl("no \"%1\" dictionary is installed here, so a reload cannot be told apart from a failed load").arg(startingDictionary)));
         }
 
@@ -1554,9 +1555,7 @@ private slots:
         QVERIFY2(!host->spellChecker().systemCodecName().isEmpty(), "The system dictionary was loaded but its encoding was never read off it.");
 
         host->setSpellDic(mProfileSpellDic);
-        Hunhandle* reloaded = host->spellChecker().systemHandle();
-        QVERIFY2(reloaded, "The reload left the profile with no system dictionary handle at all.");
-        QVERIFY2(!Hunspell_spell(reloaded, "the"), "Choosing a dictionary that does not exist left the previous one loaded, so Host::setSpellDic() never reached the spell checker.");
+        QVERIFY2(!host->spellChecker().systemHandle(), "Choosing a dictionary that does not exist left the previous one loaded, so Host::setSpellDic() never reached the spell checker.");
     }
 
     // Nothing reads profile.dic until something asks for the dictionary handle,
@@ -1621,8 +1620,8 @@ mainNamedSheets = getCmdLineStyleSheet() .. "|" .. getCmdLineStyleSheet("main")
 
     // Every one of these Lua functions used to reach through Host::mpConsole
     // without checking it, so calling any of them on a profile whose window had
-    // been closed took the whole client down with it. None of them can do what
-    // it was asked here, so each has to report that instead.
+    // been closed took the whole client down with it. Each has to report that it
+    // cannot do what it was asked here, or answer from the main console's model.
     void test_viewOnlyUiFunctionsReportWithNoView()
     {
         startProfile();
@@ -1654,16 +1653,26 @@ local function expectValue(name, expected, ...)
     end
 end
 
+-- how many values a function answers, and the first of them
+local function expectAnswer(name, expected, ...)
+    local answered = '[' .. select('#', ...) .. ']' .. tostring((...))
+    if answered ~= expected then
+        table.insert(noViewProblems, name .. ' answered ' .. answered .. ' rather than ' .. expected)
+    end
+end
+
 -- a family setFont() takes, which it checks for before it looks for a console
 local anyFont = next(getAvailableFonts())
 
-expectRefusal('createCommandLine', createCommandLine('noViewCl', 0, 0, 100, 20))
-expectRefusal('deleteCommandLine', deleteCommandLine('noViewCl'))
+-- a command line is a record the null view keeps
+expectValue('createCommandLine', true, createCommandLine('noViewCl', 0, 0, 100, 20))
+expectValue('deleteCommandLine', true, deleteCommandLine('noViewCl'))
+-- and so is a text edit
+expectValue('createTextEdit', true, createTextEdit('noViewTe', 0, 0, 100, 20))
+expectValue('deleteTextEdit', true, deleteTextEdit('noViewTe'))
 expectRefusal('deleteLabel', deleteLabel('noViewLbl'))
 expectRefusal('deleteMiniConsole', deleteMiniConsole('noViewMc'))
 expectRefusal('deleteScrollBox', deleteScrollBox('noViewSb'))
-expectRefusal('createTextEdit', createTextEdit('noViewTe', 0, 0, 100, 20))
-expectRefusal('deleteTextEdit', deleteTextEdit('noViewTe'))
 expectRefusal('getTextEditText', getTextEditText('noViewTe'))
 expectRefusal('setTextEditText', setTextEditText('noViewTe', 'x'))
 expectRefusal('clearTextEdit', clearTextEdit('noViewTe'))
@@ -1673,8 +1682,9 @@ expectRefusal('setTextEditStyleSheet', setTextEditStyleSheet('noViewTe', ''))
 expectRefusal('setTextEditFont', setTextEditFont('noViewTe', 'Courier'))
 expectRefusal('setTextEditFontSize', setTextEditFontSize('noViewTe', 10))
 expectRefusal('setTextEditTabMovesFocus', setTextEditTabMovesFocus('noViewTe', true))
-expectRefusal('getBorderColor', getBorderColor())
-expectRefusal('setBorderColor', setBorderColor(1, 2, 3))
+-- the border colour is the main console model's, so it answers with no view
+setBorderColor(1, 2, 3)
+expectValue('getBorderColor', 1, getBorderColor())
 expectRefusal('getLabelSizeHint', getLabelSizeHint('noViewLbl'))
 expectRefusal('getLabelStyleSheet', getLabelStyleSheet('noViewLbl'))
 expectRefusal('setLabelStyleSheet', setLabelStyleSheet('noViewLbl', ''))
@@ -1708,23 +1718,28 @@ expectRefusal('disableCommandLine', disableCommandLine('noViewCl'))
 expectRefusal('getCmdLineStyleSheet', getCmdLineStyleSheet())
 expectRefusal('setCmdLineStyleSheet', setCmdLineStyleSheet(''))
 expectRefusal('getMousePosition', getMousePosition())
-expectRefusal('getMainWindowSize', getMainWindowSize())
+-- the main console is the character grid NAWS reports; a name with no user window has no size of its own
+expectValue('getMainWindowSize', 'number', type(getMainWindowSize()))
 expectRefusal('getUserWindowSize', getUserWindowSize('noViewUw'))
 expectRefusal('getUserWindowTitle', getUserWindowTitle('noViewUw'))
 expectRefusal('setUserWindowTitle', setUserWindowTitle('noViewUw', 't'))
 expectRefusal('getUserWindowStyleSheet', getUserWindowStyleSheet('noViewUw'))
 expectRefusal('setUserWindowStyleSheet', setUserWindowStyleSheet('noViewUw', ''))
-expectRefusal('enableScrollBar', enableScrollBar())
-expectRefusal('disableScrollBar', disableScrollBar())
-expectRefusal('enableHorizontalScrollBar', enableHorizontalScrollBar())
-expectRefusal('disableHorizontalScrollBar', disableHorizontalScrollBar())
-expectRefusal('getScrollBarVisible', getScrollBarVisible())
+-- the main console's scrolling is its model's, so these answer as a real one's do
+expectAnswer('enableScrollBar', '[0]nil', enableScrollBar())
+expectAnswer('disableScrollBar', '[0]nil', disableScrollBar())
+expectAnswer('enableHorizontalScrollBar', '[0]nil', enableHorizontalScrollBar())
+expectAnswer('disableHorizontalScrollBar', '[0]nil', disableHorizontalScrollBar())
+expectAnswer('getScrollBarVisible', '[1]false', getScrollBarVisible())
+-- scrolling is never switched for the main console, by whichever name it is given
 expectRefusal('enableScrolling', enableScrolling())
 expectRefusal('disableScrolling', disableScrolling())
-expectRefusal('scrollingActive', scrollingActive())
-expectRefusal('getScroll', getScroll())
-expectRefusal('scrollTo', scrollTo(1))
-expectRefusal('scrollTo end', scrollTo())
+expectAnswer('scrollingActive', '[1]true', scrollingActive())
+expectAnswer('getScroll', '[1]' .. getLastLineNumber('main'), getScroll())
+expectAnswer('scrollTo', '[0]nil', scrollTo(1))
+expectAnswer('getScroll after scrollTo', '[1]1', getScroll())
+expectAnswer('scrollTo end', '[0]nil', scrollTo())
+expectAnswer('getScroll after scrollTo end', '[1]' .. getLastLineNumber('main'), getScroll())
 expectRefusal('getWindowWrap of a sub-console', getWindowWrap('noViewMc'))
 expectRefusal('setWindowWrap of a sub-console', setWindowWrap('noViewMc', 80))
 expectRefusal('moveCursor', moveCursor('noViewMc', 0, 0))
@@ -1732,14 +1747,15 @@ expectRefusal('moveCursorEnd', moveCursorEnd('noViewMc'))
 expectRefusal('getLineNumber', getLineNumber('noViewMc'))
 expectRefusal('getLineCount', getLineCount('noViewMc'))
 expectRefusal('getColumnNumber', getColumnNumber('noViewMc'))
-expectRefusal('getColumnCount', getColumnCount())
-expectRefusal('getRowCount', getRowCount())
+expectValue('getColumnCount', 'number', type(getColumnCount()))
+expectValue('getRowCount', 'number', type(getRowCount()))
 expectRefusal('deleteLine', deleteLine('noViewMc'))
-expectRefusal('getFont', getFont())
-expectRefusal('getFont main', getFont('main'))
-expectRefusal('setFont', setFont(anyFont))
-expectRefusal('getFontSize', getFontSize())
-expectRefusal('setFontSize', setFontSize(10))
+-- the main console's font is the profile's display font
+expectValue('getFont', 'string', type(getFont()))
+expectValue('getFont main', getFont(), getFont('main'))
+expectValue('setFont', true, setFont(anyFont))
+expectValue('setFontSize', true, setFontSize(10))
+expectValue('getFontSize', 10, getFontSize())
 -- the main console's clipboard and buffer size are its model's, but there are
 -- no other consoles
 expectRefusal('copy', copy('noViewMini'))
@@ -1765,7 +1781,6 @@ expectValue('getLastLineNumber', -1, getLastLineNumber('noViewMc'))
 expectValue('getCurrentLine', 'ERROR: mini console does not exist', getCurrentLine('noViewMc'))
 expectValue('getCurrentLine reason', 'window "noViewMc" not found', select(2, getCurrentLine('noViewMc')))
 -- whereas the font and the size are checked before any console is looked for
-expectValue('setFont reason', 'window "" not found', select(2, setFont(anyFont)))
 expectValue('setFont empty', 'font must not be empty', select(2, setFont('')))
 expectValue('setFontSize 0', 'size cannot be 0 or negative', select(2, setFontSize(0)))
 expectValue('copy reason', 'window "noViewMini" not found', select(2, copy('noViewMini')))
@@ -1838,7 +1853,7 @@ noViewReport = table.concat(noViewProblems, '; ')
         runLua(host,
                qsl("noViewSubEcho = {echo('noViewEchoMini', 'NoViewSubEcho one\\nNoViewSubEcho open')}\n"
                    "noViewSubEchoAnswers = #noViewSubEcho .. tostring(noViewSubEcho[1]) .. select('#', echoUserWindow('noViewEchoMini', ', closed\\n'))\n"));
-        QCOMPARE(luaGlobalString(host, "noViewSubEchoAnswers"), qsl("1true0"));
+        QCOMPARE(luaGlobalString(host, "noViewSubEchoAnswers"), qsl("1true1"));
         QCOMPARE(model.buffer.line(0), qsl("NoViewSubEcho one"));
         QCOMPARE(model.buffer.line(1), qsl("NoViewSubEcho open, closed"));
         QCOMPARE(model.buffer.buffer.at(1).at(0).foreground(), foreground);
@@ -1954,7 +1969,7 @@ noViewCursor = table.concat(results, '|')
 )LUA")
                        .arg(first));
 
-        const QString expected = qsl("true|%1|4|NoViewCursor second|false|%1|%2|%2|0|NoViewCursor third|%3|0|%3").arg(first + 1).arg(first + 3).arg(first + 2);
+        const QString expected = qsl("true|%1|4|NoViewCursor second|false|%1|%2|%2|1|NoViewCursor third|%3|0|%3").arg(first + 1).arg(first + 3).arg(first + 2);
         QCOMPARE(luaGlobalString(host, "noViewCursor"), expected);
         QCOMPARE(model->mUserCursor, QPoint(0, first + 2));
         QCOMPARE(model->buffer.line(first + 1), qsl("NoViewCursor third"));
@@ -2636,14 +2651,14 @@ local function expectTrue(name, ...)
 end
 
 -- The system dictionary arms answer for real on a machine that has en_US
--- installed and refuse by naming the missing dictionaries on one that does not.
+-- installed and refuse by naming the missing dictionary on one that does not.
 -- Either is a working view-less profile; a refusal about a missing window is not.
 local function expectAnswerOrNoDictionary(name, wanted, ...)
     local first, second = ...
     if type(first) == wanted then
         return
     end
-    if first == nil and type(second) == 'string' and second:find('no main dictionaries', 1, true) then
+    if first == nil and type(second) == 'string' and (second:find('no main dictionaries', 1, true) or second:find('dictionary this profile uses is not available', 1, true)) then
         return
     end
     table.insert(noViewSpellProblems, name .. ' returned ' .. tostring(first) .. ' (' .. tostring(second) .. ')')
@@ -2886,7 +2901,7 @@ expectValues('deselect', {true}, deselect())
 expectValues('selectString', {7}, selectString('alpha', 1))
 expectValues('setBold', {true}, setBold(true))
 expectValues('setUnderline', {true}, setUnderline(true))
-expectValues('setFgColor', {}, setFgColor(1, 2, 3))
+expectValues('setFgColor', {true}, setFgColor(1, 2, 3))
 expectValues('setBgColor', {true}, setBgColor(4, 5, 6))
 local format = getTextFormat()
 if type(format) ~= 'table' then
@@ -2913,7 +2928,7 @@ expectMissing('setBold', setBold('nosuchwindow', true))
 expectMissing('setFgColor', setFgColor('nosuchwindow', 1, 2, 3))
 expectMissing('setBgColor', setBgColor('nosuchwindow', 1, 2, 3))
 expectMissing('resetFormat', resetFormat('nosuchwindow'))
-expectValues('getFgColor of a missing window', {}, getFgColor('nosuchwindow'))
+expectMissing('getFgColor', getFgColor('nosuchwindow'))
 expectValues('setTextFormat of a missing window', {false, "window 'nosuchwindow' does not exist"}, setTextFormat('nosuchwindow', 0, 0, 0, 0, 0, 0, false, false, false))
 
 noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
@@ -2930,6 +2945,53 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         QCOMPARE(model->P_end, QPoint());
         QCOMPARE(model->mFormatCurrent.foreground(), QColor(10, 11, 12));
         QCOMPARE(model->mFormatCurrent.background(), QColor(7, 8, 9));
+    }
+
+    // With no view the window functions still refuse a window that does not exist by name.
+    void test_windowFunctionsRefuseWithNoView()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
+        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+        destroyTheView(host);
+        const int line = appendModelLine(model->buffer, qsl("noview wrap me"));
+
+        runLua(host,
+               qsl(R"LUA(
+noViewWindowProblems = {}
+local notFound = 'window "nosuchwindow" not found'
+local labelNotFound = "label name 'nosuchwindow' not found"
+
+local function expectValues(name, expected, ...)
+    local got = {...}
+    for i = 1, math.max(#expected, select('#', ...)) do
+        if got[i] ~= expected[i] then
+            table.insert(noViewWindowProblems, name .. ' answered ' .. tostring(got[i]) .. ' rather than ' .. tostring(expected[i]) .. ' at ' .. i)
+        end
+    end
+end
+
+local width, height = calcFontSize('main')
+if type(width) ~= 'number' or type(height) ~= 'number' then
+    table.insert(noViewWindowProblems, 'calcFontSize of the main console answered ' .. tostring(width) .. ', ' .. tostring(height))
+end
+expectValues('calcFontSize of a missing window', {nil, notFound}, calcFontSize('nosuchwindow'))
+expectValues('hideWindow', {nil, notFound}, hideWindow('nosuchwindow'))
+expectValues('moveWindow', {nil, notFound}, moveWindow('nosuchwindow', 1, 1))
+expectValues('resizeWindow', {nil, notFound}, resizeWindow('nosuchwindow', 1, 1))
+expectValues('enableClickthrough', {nil, labelNotFound}, enableClickthrough('nosuchwindow'))
+expectValues('disableClickthrough', {nil, labelNotFound}, disableClickthrough('nosuchwindow'))
+expectValues('wrapLine of a missing window', {nil, notFound}, wrapLine('nosuchwindow', 0))
+expectValues('wrapLine of the main console', {true}, wrapLine('main', %1))
+expectValues('getBgColor of a missing window', {nil, notFound}, getBgColor('nosuchwindow'))
+
+noViewWindowReport = table.concat(noViewWindowProblems, '; ')
+)LUA")
+                       .arg(line));
+
+        QCOMPARE(luaGlobalString(host, "noViewWindowReport"), QString());
     }
 
     // The main console's background is the model's, so a script can still read
@@ -4242,6 +4304,34 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         runLua(host, qsl("setTextEditStyleSheet('%1', '')\nsetTextEditFontSize('%1', 9)\n").arg(name));
         QCOMPARE(textBox->font().pointSize(), 9);
         QCOMPARE(host->textBoxFont(name), std::optional<QFont>(textBox->font()));
+    }
+
+    // No Lua getter reads a text edit's font, so only here can a test see that a
+    // refused name left the family alone rather than set the part before the NUL.
+    void test_aTextBoxKeepsItsFamilyWhenAFontNameHasANul()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
+
+        const QString name = qsl("nulFontNameTextBox");
+        runLua(host, qsl("createTextEdit('main', '%1', 0, 0, 100, 50)\nsetTextEditFont('%1', 'Ubuntu Mono')\n").arg(name));
+        TTextBox* textBox = host->mainConsoleView()->textBoxWidget(name);
+        QVERIFY2(textBox, "createTextEdit() made no widget.");
+        QCOMPARE(textBox->font().family(), qsl("Ubuntu Mono"));
+
+        runLua(host,
+               qsl("nulFontNameResult = {setTextEditFont('%1', 'Bitstream Vera Sans Mono\\0Garbage')}\n"
+                   "nulFontNameRefused = nulFontNameResult[1] == nil and nulFontNameResult[2] == 'font name must not contain a NUL character'\n")
+                       .arg(name));
+        lua_State* L = host->getLuaInterpreter()->getLuaGlobalState();
+        lua_getglobal(L, "nulFontNameRefused");
+        const bool refused = lua_toboolean(L, -1);
+        lua_pop(L, 1);
+        QVERIFY2(refused, "setTextEditFont() did not refuse a font name with a NUL in it.");
+        QCOMPARE(textBox->font().family(), qsl("Ubuntu Mono"));
+        QCOMPARE(host->textBoxFont(name)->family(), qsl("Ubuntu Mono"));
     }
 
     // The label getters read the model, so whatever restyles, retips or refonts the

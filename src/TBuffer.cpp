@@ -26,6 +26,7 @@
 #include "Host.h"
 #include "LuaLiteral.h"
 #include "MudletApp.h"
+#include "TAppFrontend.h"
 #include "TConsoleModel.h"
 #include "TEvent.h"
 #include "THyperlinkCompactManager.h"
@@ -363,10 +364,11 @@ bool sgrDigits(const QStringView parameter, int& value)
     return true;
 }
 
-// Maximum length for a CSI sequence's parameter string before aborting - a
-// valid one is only a handful of bytes, so this only trips on a malformed or
-// hostile sequence that never sends a final byte (defense against a server
-// growing mIncompleteSequenceBytes without bound across packets)
+// Maximum length of the bytes ahead of a CSI sequence's final byte before
+// aborting - a valid one is only a handful of bytes, so this only trips on a
+// malformed or hostile sequence, such as one that never sends a final byte
+// (defense against a server growing mIncompleteSequenceBytes without bound
+// across packets)
 constexpr size_t MAX_CSI_SEQUENCE_LENGTH = 4096;
 // Inline room for any SGR parameter string a game actually sends, avoiding the heap:
 constexpr qsizetype SGR_INLINE_CHARS = 64;
@@ -1252,6 +1254,11 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
     // swapping the server state back in part way through:
     if (isFromServer || mProcessingLocalFeed) {
         translateToPlainTextInner(incoming, isFromServer);
+        if (!isFromServer) {
+            // The outer feed scans on through its own text, so bytes held from this nested one would
+            // be prepended to whichever local feed comes next, inside an unrelated sequence
+            mIncompleteSequenceBytes.clear();
+        }
         return;
     }
 
@@ -1315,11 +1322,15 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
         mLocalPendingLead = 0;
     }
 
-    if (isFromServer && !mIncompleteSequenceBytes.empty()) {
+    if (!mIncompleteSequenceBytes.empty()) {
+        // On the local channel only while the sequence they came from is still open: without them its rest
+        // would be read as a sequence of its own
+        if (isFromServer || mGotCSI || mGotOSC) {
 #if defined(DEBUG_SGR_PROCESSING) || defined(DEBUG_OSC_PROCESSING) || defined(DEBUG_UTF8_PROCESSING) || defined(DEBUG_GB_PROCESSING) || defined(DEBUG_BIG5_PROCESSING)
-        qDebug() << "TBuffer::translateToPlainText(...) Prepending residual bytes onto incoming data!";
+            qDebug() << "TBuffer::translateToPlainText(...) Prepending residual bytes onto incoming data!";
 #endif
-        localBuffer.insert(0, mIncompleteSequenceBytes);
+            localBuffer.insert(0, mIncompleteSequenceBytes);
+        }
         mIncompleteSequenceBytes.clear();
     }
 
@@ -1471,21 +1482,28 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
         }
 
         if (mGotCSI) {
-            // Lookahead over the parameter string - see cParameter and cParameterPrivateIntroducer.
+            // Lookahead over the parameter string - see csiParameterByte() and csiPrivateIntroducerByte().
             size_t const spanStart = localBufferPosition;
             size_t spanEnd = spanStart;
             while (spanEnd < localBufferLength && csiParameterByte(localBuffer[spanEnd])) {
                 ++spanEnd;
             }
+            // Then over any intermediate bytes, and the parameter bytes a malformed sequence has after them,
+            // or that tail would reach the screen as game text:
+            size_t const parametersEnd = spanEnd;
+            while (spanEnd < localBufferLength && (csiIntermediateByte(localBuffer[spanEnd]) || csiParameterByte(localBuffer[spanEnd]))) {
+                ++spanEnd;
+            }
+            bool const hasIntermediateBytes = spanEnd != parametersEnd;
 
             if (spanEnd - spanStart >= MAX_CSI_SEQUENCE_LENGTH) {
-                // The parameter string is far longer than any valid CSI (which
-                // is only a handful of bytes): discard it instead of buffering
-                // it without bound while waiting for a final byte that a hostile
-                // server may never send.
-                qWarning().noquote().nospace() << "TBuffer::translateToPlainText(...) WARNING - CSI sequence exceeded " << MAX_CSI_SEQUENCE_LENGTH
-                                               << " bytes without a final byte, discarding it to recover.";
-                localBufferPosition += 1 + spanEnd - spanStart;
+                // The sequence is far longer than any valid CSI (which is only
+                // a handful of bytes): discard it, along with its final byte if
+                // that is what stopped the scan, instead of buffering it without
+                // bound while waiting for a final byte that a hostile server may
+                // never send.
+                qWarning().noquote().nospace() << "TBuffer::translateToPlainText(...) WARNING - CSI sequence reached " << MAX_CSI_SEQUENCE_LENGTH << " bytes, discarding it to recover.";
+                localBufferPosition += spanEnd - spanStart + (spanEnd < localBufferLength && csiFinalByte(localBuffer[spanEnd]) ? 1 : 0);
                 mGotCSI = false;
                 if (Q_UNLIKELY(mPendingLead)) {
                     flushPendingLead();
@@ -1511,9 +1529,14 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
                 return;
             }
 
-            if (Q_UNLIKELY(mPendingLead) && localBuffer[spanEnd] != 'm') {
+            if (Q_UNLIKELY(mPendingLead) && (hasIntermediateBytes || localBuffer[spanEnd] != 'm')) {
                 flushPendingLead();
             }
+
+            // Only a final byte belongs to the sequence: any other byte that cut one short, such as a newline,
+            // an escape or a character's lead byte, is left to be read, or eating it would join two lines, drop
+            // the next sequence or break a character
+            const bool hasFinalByte = csiFinalByte(localBuffer[spanEnd]);
 
             // Only now that a complete sequence is in hand, test whether the
             // first byte is within the usable subset of the allowed value - or
@@ -1527,42 +1550,23 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
                 qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - detected a private/reserved CSI sequence beginning with \"CSI"
                                              << localBuffer.substr(spanStart, spanEnd - spanStart).c_str() << "\" which Mudlet cannot interpret.";
 #endif
-                // So skip over it as far as we can - will still possibly have
-                // garbage beyond the end which will still be shown...
-                localBufferPosition += 1 + spanEnd - spanStart;
+                localBufferPosition += spanEnd - spanStart + (hasFinalByte ? 1 : 0);
                 mGotCSI = false;
                 // Go around while loop again:
                 continue;
             }
 
-            // Now we can take a peek at what the next character is, it could
-            // be an optional (and we are not expecting this) "intermediate
-            // byte" which is space or one of "!"#$%&'()*+,-./" or a "final
-            // byte" which is what determines what on earth the CSI is for, it
-            // should be in the (ASCII) range '@' to '~' and the end of that
-            // range 'p' to '~' is for "private" or "experimental" use.
+            // The final byte, in the (ASCII) range '@' to '~', is what
+            // determines what on earth the CSI is for; the end of that range,
+            // 'p' to '~', is for "private" or "experimental" use.
 
-            if (csiIntermediateByte(localBuffer[spanEnd])) {
-                // We do not handle any sequences with intermediate bytes
-                // Report it and then ignore it, try and find out what the byte
-                // afterwards is as it might help to debug things
-                if (spanEnd + 1 < localBufferLength) {
-                    // Yeah there is another byte we can report as the final byte
-                    qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - detected a CSI sequence with an 'intermediate' byte ('" << localBuffer[spanEnd]
-                                                 << "') and a 'final' byte ('" << localBuffer[spanEnd + 1] << "') which Mudlet cannot interpret.";
-                } else {
-                    qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - detected a CSI sequence with an 'intermediate' byte ('" << localBuffer[spanEnd]
-                                                 << "') which Mudlet cannot interpret.";
-                }
-                // So skip over it as far as we can - will still be possible to
-                // have garbage beyond the end which will still be shown...
-                localBufferPosition += 1 + spanEnd - spanStart;
-                mGotCSI = false;
-                // Go around while loop again:
-                continue;
-            }
-
-            if (csiFinalByte(localBuffer[spanEnd])) {
+            if (hasIntermediateBytes && hasFinalByte) {
+                // We do not handle any sequences with intermediate bytes, so
+                // report it and skip it along with its final byte - which the
+                // general step at the end of this block does
+                qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - detected a CSI sequence with an 'intermediate' byte ('" << localBuffer[parametersEnd]
+                                             << "') and a 'final' byte ('" << localBuffer[spanEnd] << "') which Mudlet cannot interpret.";
+            } else if (hasFinalByte) {
                 // We have a valid CSI sequence - but is it one we handle?
                 // We currently only handle the 'm' for SGR and the 'z' for
                 // Zuggsoft's MXP protocol:
@@ -1573,7 +1577,7 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
 #if defined(DEBUG_SGR_PROCESSING)
                     qDebug().nospace().noquote() << "    Consider the SGR sequence: \"" << localBuffer.substr(spanStart, spanEnd - spanStart).c_str() << "\"";
 #endif
-                    // Only non-private cParameter bytes get here, each a single UTF-16 unit, so no QString is needed:
+                    // Only non-private parameter bytes get here, each a single UTF-16 unit, so no QString is needed:
                     QVarLengthArray<char16_t, SGR_INLINE_CHARS> sgrChars(spanEnd - spanStart);
                     for (size_t i = spanStart; i < spanEnd; ++i) {
                         sgrChars[i - spanStart] = static_cast<unsigned char>(localBuffer[i]);
@@ -1671,10 +1675,7 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
             } // End of the isAValidFinalByte test
 
             mGotCSI = false;
-            // Step over the parameter string and final byte, unless that is a control byte: a sequence with no
-            // final byte doesn't own the newline or escape that stopped the scan, and eating it would join two
-            // lines or drop the next sequence:
-            localBufferPosition += spanEnd - spanStart + (static_cast<unsigned char>(localBuffer[spanEnd]) < ' ' ? 0 : 1);
+            localBufferPosition += spanEnd - spanStart + (hasFinalByte ? 1 : 0);
             // Go around while loop again:
             continue;
 
@@ -2340,6 +2341,8 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
         const int savedPassLineNumber = mPreTriggerPassLineNumber;
         const bool savedPassSnapshotTaken = mPreTriggerPassSnapshotTaken;
         const PassLineUniformity savedPassLineUniformity = mPreTriggerPassLineUniformity;
+        const int savedFirstLineMovedDown = mFirstLineMovedDown;
+        mFirstLineMovedDown = -1;
         mPreTriggerPassLine.swap(mSpareTriggerPassLine);
         mPreTriggerPassLine.clear();
         mPreTriggerPassSnapshotTaken = false;
@@ -2361,7 +2364,12 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
             std::vector<TChar>().swap(mSpareTriggerPassLine);
         }
         mPreTriggerPassLine.swap(savedPassLine);
-        mPreTriggerPassLineNumber = savedPassLineNumber;
+        // A wrap in this pass can move the enclosing pass's line, which wrapLine() cannot see parked here
+        const bool savedPassLineMoved = mFirstLineMovedDown >= 0 && savedPassLineNumber >= mFirstLineMovedDown;
+        mPreTriggerPassLineNumber = savedPassLineMoved ? -1 : savedPassLineNumber;
+        if (savedFirstLineMovedDown >= 0 && (mFirstLineMovedDown < 0 || savedFirstLineMovedDown < mFirstLineMovedDown)) {
+            mFirstLineMovedDown = savedFirstLineMovedDown;
+        }
         mPreTriggerPassSnapshotTaken = savedPassSnapshotTaken;
         mPreTriggerPassLineUniformity = savedPassLineUniformity;
     }
@@ -2685,15 +2693,55 @@ const std::vector<TChar>* TBuffer::preTriggerPassLine(int lineNumber) const
     return nullptr;
 }
 
-// A structural edit to the trigger-pass line makes the edited text the new
-// baseline for color matching:
-void TBuffer::syncPreTriggerPassLine(int y)
+// Both splices need the snapshot materialised before the buffer edit, or color triggers judge an inserted-into
+// line by its pre-edit colors (commitLineData() catches this in debug); inserted text and padding keep their colors.
+void TBuffer::spliceInsertIntoPreTriggerPassLine(int y, int x, int count, const TChar& format)
 {
-    if (y >= 0 && y == mPreTriggerPassLineNumber && y < static_cast<int>(buffer.size())) {
-        mPreTriggerPassLine = buffer[y];
-        mPreTriggerPassLineUniformity = PassLineUniformity::Unknown;
-        mPreTriggerPassSnapshotTaken = true;
+    if (!mPreTriggerPassSnapshotTaken || y < 0 || y != mPreTriggerPassLineNumber || y >= static_cast<int>(buffer.size())) {
+        return;
     }
+    const int known = static_cast<int>(mPreTriggerPassLine.size());
+    const int padEnd = std::min(x, static_cast<int>(buffer[y].size()));
+    if (padEnd > known) {
+        mPreTriggerPassLine.insert(mPreTriggerPassLine.end(), buffer[y].cbegin() + known, buffer[y].cbegin() + padEnd);
+    }
+    const int at = std::min(x, static_cast<int>(mPreTriggerPassLine.size()));
+    mPreTriggerPassLine.insert(mPreTriggerPassLine.begin() + at, static_cast<std::size_t>(count), format);
+    mPreTriggerPassLineUniformity = PassLineUniformity::Unknown;
+}
+
+void TBuffer::spliceEraseFromPreTriggerPassLine(int y, int x, int xEnd)
+{
+    if (!mPreTriggerPassSnapshotTaken || y < 0 || y != mPreTriggerPassLineNumber) {
+        return;
+    }
+    const int size = static_cast<int>(mPreTriggerPassLine.size());
+    const int from = std::min(x, size);
+    const int to = std::min(xEnd, size);
+    if (from < to) {
+        mPreTriggerPassLine.erase(mPreTriggerPassLine.begin() + from, mPreTriggerPassLine.begin() + to);
+        mPreTriggerPassLineUniformity = PassLineUniformity::Unknown;
+    }
+}
+
+// wrapLine() leaves only the first segment of the trigger-pass line in its place,
+// so the snapshot is cut and indented the same way to stay in step with it.
+void TBuffer::wrapPreTriggerPassLine(const WrapInfo& firstSegment, int indentWidth)
+{
+    const int known = static_cast<int>(mPreTriggerPassLine.size());
+    const int from = std::min(firstSegment.firstChar, known);
+    const int to = std::min(firstSegment.lastChar, known);
+    if (from < to) {
+        const TChar indentColors = mPreTriggerPassLine[from];
+        mPreTriggerPassLine.erase(mPreTriggerPassLine.begin() + to, mPreTriggerPassLine.end());
+        mPreTriggerPassLine.erase(mPreTriggerPassLine.begin(), mPreTriggerPassLine.begin() + from);
+        if (firstSegment.needsIndent) {
+            mPreTriggerPassLine.insert(mPreTriggerPassLine.begin(), static_cast<std::size_t>(indentWidth), indentColors);
+        }
+    } else {
+        mPreTriggerPassLine.clear();
+    }
+    mPreTriggerPassLineUniformity = PassLineUniformity::Unknown;
 }
 
 void TBuffer::materialisePreTriggerPassLine(int y)
@@ -2745,8 +2793,9 @@ void TBuffer::processMxpWatchdogCallback()
         mTagWatchdog->start(MAX_TAG_TIMEOUT_MS);
     } else if (mWatchdogPhase == WatchdogPhase::Phase2_Unfreeze) {
         // The continuation commits into this buffer and finalizes the main
-        // console's view, so it needs that view and this to be its buffer:
-        if (isMxpParserFrozen && mpHost->hasConsoleView() && mpModel == &mpHost->mainConsoleModel()) {
+        // console's view, so it needs this to be its buffer, and that view
+        // unless there is no main window to have made one:
+        if (isMxpParserFrozen && (mpHost->hasConsoleView() || !TAppFrontend::hasView()) && mpModel == &mpHost->mainConsoleModel()) {
             mpHost->mMxpProcessor.setLastEntityValue(QString::fromStdString('<' + currentTagContent));
             const TChar style(mForeGroundColor, mBackGroundColor, computeCurrentAttributeFlags());
             QPointer<Host> hostGuard = mpHost;
@@ -2760,7 +2809,7 @@ void TBuffer::processMxpWatchdogCallback()
                 // commitLine() and finalize() below both reach the main console
                 // through the host, and that pointer empties on its own when the
                 // profile's console goes:
-                if (!hostGuard || !hostGuard->hasConsoleView()) {
+                if (!hostGuard || (!hostGuard->hasConsoleView() && TAppFrontend::hasView())) {
                     return;
                 }
                 QString lastEntityValue = hostGuard->mMxpProcessor.getEntityValue();
@@ -2802,17 +2851,18 @@ void TBuffer::decodeSGR38(const SgrParameters& parameters, bool isColonSeparated
         if (parameters.count() > 2) {
             bool isOk = false;
             tag = parameters.at(2).toInt(&isOk);
-            if (!isOk) {
+            if (!isOk || tag < 0 || tag > 255) {
 #if defined(DEBUG_SGR_PROCESSING)
                 if (isColonSeparated) {
                     qDebug().noquote().nospace() << "TBuffer::decodeSGR38(...) ERROR - failed to parse color index parameter element (the third part) in a SGR...;38:5:" << parameters.at(2)
-                                                 << ":...;...m sequence, leaving the colour as it was!";
+                                                 << ":...;...m sequence, or it is out of range, leaving the colour as it was!";
                 } else {
                     qDebug().noquote().nospace() << "TBuffer::decodeSGR38(...) ERROR - failed to parse color index parameter string (the third part) in a SGR...;38;5;" << parameters.at(2)
-                                                 << ";...m sequence, leaving the colour as it was!";
+                                                 << ";...m sequence, or it is out of range, leaving the colour as it was!";
                 }
 #endif
-                // An index we cannot read is not a request for colour zero:
+                // An index we cannot read is not a request for colour zero, and
+                // xterm ignores any index past the end of the 256-colour palette:
                 return;
             }
         } else {
@@ -2962,17 +3012,18 @@ void TBuffer::decodeSGR48(const SgrParameters& parameters, bool isColonSeparated
         if (parameters.count() > 2) {
             bool isOk = false;
             tag = parameters.at(2).toInt(&isOk);
-            if (!isOk) {
+            if (!isOk || tag < 0 || tag > 255) {
 #if defined(DEBUG_SGR_PROCESSING)
                 if (isColonSeparated) {
                     qDebug().noquote().nospace() << "TBuffer::decodeSGR48(...) ERROR - failed to parse color index parameter element (the third part) in a SGR...;48:5:" << parameters.at(2)
-                                                 << ":...;...m sequence, leaving the colour as it was!";
+                                                 << ":...;...m sequence, or it is out of range, leaving the colour as it was!";
                 } else {
                     qDebug().noquote().nospace() << "TBuffer::decodeSGR48(...) ERROR - failed to parse color index parameter string (the third part) in a SGR...;48;5;" << parameters.at(2)
-                                                 << ";...m sequence, leaving the colour as it was!";
+                                                 << ";...m sequence, or it is out of range, leaving the colour as it was!";
                 }
 #endif
-                // An index we cannot read is not a request for colour zero:
+                // An index we cannot read is not a request for colour zero, and
+                // xterm ignores any index past the end of the 256-colour palette:
                 return;
             }
         } else {
@@ -3159,13 +3210,8 @@ void TBuffer::decodeSGR(const QStringView sequence)
                     SgrParameters madeElements;
                     madeElements << parameterStrings.at(paraIndex);     // "38"
                     madeElements << parameterStrings.at(paraIndex + 1); // "2" or "5" hopefully
-                    bool isOk = false;
-                    const int sgr38_type = madeElements.at(1).toInt(&isOk);
-                    if (madeElements.at(1).isEmpty() || !isOk || sgr38_type == 0) {
-                        // Oh dear that parameter is empty or equivalent to zero
-                        // so we cannot do anything more
-                        return;
-                    }
+                    // An empty or unreadable type reads as 0, which default: steps over
+                    const int sgr38_type = madeElements.at(1).toInt();
 
                     switch (sgr38_type) {
                     case 5: // Needs just one more number
@@ -3231,6 +3277,11 @@ void TBuffer::decodeSGR(const QStringView sequence)
                         // transparent, is no use to us
                         [[fallthrough]];
                     default:
+#if defined(DEBUG_SGR_PROCESSING)
+                        qDebug().noquote().nospace() << "TBuffer::decodeSGR(...) WARNING - unhandled SGR code: SGR...;38;" << madeElements.at(1) << ";...m ignoring this colour!";
+#endif
+                        // Step over the type, or it is read as an SGR code of its own
+                        ++paraIndex;
                         break;
                     }
                 }
@@ -3255,13 +3306,8 @@ void TBuffer::decodeSGR(const QStringView sequence)
                     SgrParameters madeElements;
                     madeElements << parameterStrings.at(paraIndex);
                     madeElements << parameterStrings.at(paraIndex + 1);
-                    bool isOk = false;
-                    const int sgr48_type = madeElements.at(1).toInt(&isOk);
-                    if (madeElements.at(1).isEmpty() || !isOk || sgr48_type == 0) {
-                        // Oh dear that parameter is empty or equivalent to zero
-                        // so we cannot do anything more
-                        return;
-                    }
+                    // An empty or unreadable type reads as 0, which default: steps over
+                    const int sgr48_type = madeElements.at(1).toInt();
 
                     switch (sgr48_type) {
                     case 5: // Needs one more number
@@ -3327,6 +3373,11 @@ void TBuffer::decodeSGR(const QStringView sequence)
                         // transparent, is no use to us
                         [[fallthrough]];
                     default:
+#if defined(DEBUG_SGR_PROCESSING)
+                        qDebug().noquote().nospace() << "TBuffer::decodeSGR(...) WARNING - unhandled SGR code: SGR...;48;" << madeElements.at(1) << ";...m ignoring this colour!";
+#endif
+                        // Step over the type, or it is read as an SGR code of its own
+                        ++paraIndex;
                         break;
                     }
                 }
@@ -3620,13 +3671,8 @@ void TBuffer::decodeSGR(const QStringView sequence)
                     SgrParameters madeElements;
                     madeElements << parameterStrings.at(paraIndex);
                     madeElements << parameterStrings.at(paraIndex + 1);
-                    bool isOk = false;
-                    const int sgr38_type = madeElements.at(1).toInt(&isOk);
-                    if (madeElements.at(1).isEmpty() || !isOk || sgr38_type == 0) {
-                        // Oh dear that parameter is empty or equivalent to zero
-                        // so we cannot do anything more
-                        return;
-                    }
+                    // An empty or unreadable type reads as 0, which default: steps over
+                    const int sgr38_type = madeElements.at(1).toInt();
 
                     switch (sgr38_type) {
                     case 5: // Needs one more number
@@ -3694,6 +3740,11 @@ void TBuffer::decodeSGR(const QStringView sequence)
                         // transparent, is no use to us
                         [[fallthrough]];
                     default:
+#if defined(DEBUG_SGR_PROCESSING)
+                        qDebug().noquote().nospace() << "TBuffer::decodeSGR(...) WARNING - unhandled SGR code: SGR...;38;" << madeElements.at(1) << ";...m ignoring this colour!";
+#endif
+                        // Step over the type, or it is read as an SGR code of its own
+                        ++paraIndex;
                         break;
                     }
                 } break;
@@ -3740,13 +3791,8 @@ void TBuffer::decodeSGR(const QStringView sequence)
                     SgrParameters madeElements;
                     madeElements << parameterStrings.at(paraIndex);
                     madeElements << parameterStrings.at(paraIndex + 1);
-                    bool isOk = false;
-                    const int sgr48_type = madeElements.at(1).toInt(&isOk);
-                    if (madeElements.at(1).isEmpty() || !isOk || sgr48_type == 0) {
-                        // Oh dear that parameter is empty or equivalent to zero
-                        // so we cannot do anything more
-                        return;
-                    }
+                    // An empty or unreadable type reads as 0, which default: steps over
+                    const int sgr48_type = madeElements.at(1).toInt();
 
                     switch (sgr48_type) {
                     case 5: // Needs one more number
@@ -3812,6 +3858,11 @@ void TBuffer::decodeSGR(const QStringView sequence)
                         // transparent, is no use to us
                         [[fallthrough]];
                     default:
+#if defined(DEBUG_SGR_PROCESSING)
+                        qDebug().noquote().nospace() << "TBuffer::decodeSGR(...) WARNING - unhandled SGR code: SGR...;48;" << madeElements.at(1) << ";...m ignoring this colour!";
+#endif
+                        // Step over the type, or it is read as an SGR code of its own
+                        ++paraIndex;
                         break;
                     }
                 } break;
@@ -5605,6 +5656,7 @@ bool TBuffer::insertInLine(QPoint& P, const QString& text, const TChar& format)
         if (x < 0) {
             return false;
         }
+        materialisePreTriggerPassLine(y);
         if (x >= static_cast<int>(buffer.at(y).size())) {
             TChar c = currentFormat();
             expandLine(y, x - buffer.at(y).size(), c);
@@ -5614,7 +5666,7 @@ bool TBuffer::insertInLine(QPoint& P, const QString& text, const TChar& format)
         // which is quadratic for large inserts.
         lineBuffer[y].insert(x, insertedText);
         buffer[y].insert(buffer[y].begin() + x, static_cast<std::size_t>(insertedText.size()), format);
-        syncPreTriggerPassLine(y);
+        spliceInsertIntoPreTriggerPassLine(y, x, static_cast<int>(insertedText.size()), format);
     } else {
         appendLine(insertedText, 0, insertedText.size(), format.foreground(), format.background(), format.mFlags);
     }
@@ -6057,6 +6109,15 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
     QList<quint16> wrapGapList;
     int lineCount = 0;
     for (int i = firstRewrappedLine; i < total; ++i) {
+        // A line split above the pass line pushes it down, leaving its index naming other text
+        if (firstRewrappedLine + static_cast<int>(queue.size()) != i) {
+            if (mFirstLineMovedDown < 0 || i < mFirstLineMovedDown) {
+                mFirstLineMovedDown = i;
+            }
+            if (i == mPreTriggerPassLineNumber) {
+                mPreTriggerPassLineNumber = -1;
+            }
+        }
         lineCount++;
         std::vector<TChar> newBufferLine;
         QString newLineText;
@@ -6092,6 +6153,11 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
             promptList.append(isPrompt);
             wrapGapList.append(wrapGapBuffer.at(i));
             continue;
+        }
+        if (i == mPreTriggerPassLineNumber) {
+            // The wrap may have started above this line, so the snapshot at startLine was not this one
+            materialisePreTriggerPassLine(i);
+            wrapPreTriggerPassLine(lineBreaks.first(), lineBreaks.first().isNewline ? indent : hangingIndent);
         }
         const QString qIndent(indent, QChar::Space);
         const QString qHangingIndent(hangingIndent, QChar::Space);
@@ -6341,11 +6407,12 @@ bool TBuffer::replaceInLine(QPoint& P_begin, QPoint& P_end, const QString& with,
             continue;
         }
         noteRemovedLinks(buffer[y], mLinesRemovedTotal + y, x, x_end);
+        materialisePreTriggerPassLine(y);
         lineBuffer[y].remove(x, x_end - x);
         auto it1 = buffer[y].begin() + x;
         auto it2 = buffer[y].begin() + x_end;
         buffer[y].erase(it1, it2);
-        syncPreTriggerPassLine(y);
+        spliceEraseFromPreTriggerPassLine(y, x, x_end);
     }
 
     // insert replacement
@@ -6715,6 +6782,10 @@ void TBuffer::shrinkBuffer()
     // away:
     if (mpModel) {
         mpModel->mCurrentSearchResult = qMax(0, mpModel->mCurrentSearchResult - mBatchDeleteSize);
+        // As mCursorY above, which a real view's upper pane takes its line from as it repaints
+        if (mpModel->mScrolledBackTo) {
+            mpModel->mScrolledBackTo = std::max(0, *mpModel->mScrolledBackTo - mBatchDeleteSize);
+        }
     }
     mPreTriggerPassLineNumber = -1;
     if (mLastFoundLine >= mBatchDeleteSize) {

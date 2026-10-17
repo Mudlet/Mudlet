@@ -38,6 +38,7 @@
 #include <QStringList>
 #include <QTextStream>
 
+#include <optional>
 #include <tuple>
 
 class Host;
@@ -183,7 +184,8 @@ struct TConsoleModel
     // no longer valid, so replace() does not take it for no selection at all.
     void clear();
 
-    // Half-open: lines(n, n) is empty. Lines outside the buffer are left out.
+    // Half-open from `from`: lines(n, n) is empty, lines(2, 0) is lines 2 and 1 in that order.
+    // Lines outside the buffer are left out.
     QStringList lines(int from, int to) const;
 
     // Selecting a run of the cursor's line, painting it and restoring the format, for colorizer triggers
@@ -199,7 +201,8 @@ struct TConsoleModel
     // Whether the selection is still valid, its text (else why not), its start and its length. The text
     // is read from the cursor's line, not the selection's, at the selection's columns.
     std::tuple<bool, QString, int, int> selection();
-    // The selected character's format, or the cursor's with no selection; first is 2 when there is none.
+    // The selected character's format, or the cursor's when the selection is empty; first is 2 when a non-empty
+    // selection starts off the buffer's text, 1 when the selection is empty and no character is under the cursor.
     QPair<quint8, TChar> textAttributes() const;
     // The character the selection starts on, or nullptr when that is off the buffer. With no selection
     // that is the buffer's first character: unlike textAttributes(), this does not fall back to the cursor.
@@ -244,11 +247,13 @@ struct TConsoleModel
     void mirrorLineToStdOut(const QString& line);
     // What a write at mUserCursor leaves the view to do: show the lines it
     // appended, or repaint firstLine..lastLine, which it changed in place.
+    // linkDropped: insertLink() put its link on no text, so it took no luaReferences.
     struct WriteResult
     {
         bool appended = false;
         int firstLine = -1;
         int lastLine = -1;
+        bool linkDropped = false;
     };
     // echoLink() appends; the inserts go in at mUserCursor, text in
     // mFormatCurrent. While triggers run over this console's line, a write
@@ -335,6 +340,9 @@ struct TConsoleModel
     QSize mGridSize;
     // The upper pane's TTextEdit::mCursorY, which it copies out of the buffer as it repaints.
     int mUpperPaneCursorY = 0;
+    // The line the null view has this console scrolled back to, none while it follows new lines; a real
+    // view keeps that in its upper pane. clear() follows again, as TConsole::clearSplit() does.
+    std::optional<int> mScrolledBackTo;
     // The upper pane's font, which TTextEdit copies out as it changes, a style sheet's included.
     QFont mUpperPaneFont;
     bool mScrollingEnabled = true;

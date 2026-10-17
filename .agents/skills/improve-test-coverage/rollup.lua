@@ -55,10 +55,10 @@ local subsystems = {
     "^Host", "^mudlet%.", "^main%.", "^MudletInstanceCoordinator", "^EventLoopPump",
     "^FontManager", "^GeometryManager", "^ShortcutsManager", "^ResourceManager",
     "^CredentialManager", "^SecureStringUtils", "^OAuthClientFlow", "^SentryWrapper",
-    "^FileOpenHandler", "^DarkTheme", "^AltFocusMenuBarDisable", "^TForkedProcess",
+    "^FileOpenHandler", "^DarkTheme", "^MudletProxyStyle", "^TForkedProcess",
     "^TUiTour", "^TFeatureCallout", "^TTabBar", "^TToolBar", "^TDockWidget",
     "^TDetachedWindow", "^TEasyButtonBar", "^TFlipButton", "^TLabel", "^TTreeWidget",
-    "^WideComboBox", "^PackageItemDelegate", "^GifTracker", "^LsanHooks", "^emptyFile",
+    "^WideComboBox", "^PackageItemDelegate", "^GifTracker", "^LsanHooks",
     "^enums%.h", "^utils%.h", "^TGameDetails", "^TMapView",
   }},
 }

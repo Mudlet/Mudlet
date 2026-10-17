@@ -48,6 +48,7 @@
 #include "CredentialManager.h"
 #include "GMCPAuthenticator.h"
 #include "Host.h"
+#include "LoopbackTlsCertificate.h"
 #include "HostDialogs.h"
 #include "MudletInstanceCoordinator.h"
 #include "ctelnet.h"
@@ -61,56 +62,6 @@
 #include "GroupedTest.h"
 
 using namespace std::chrono_literals;
-
-// Self-signed loopback certificate, valid until 2126; the client accepts it via Host::mSslIgnoreAll.
-static const char* csmTestCertificatePem = R"PEM(-----BEGIN CERTIFICATE-----
-MIIDJzCCAg+gAwIBAgIULa4vwGAVOB+r6qtcLMPqwzBlEJgwDQYJKoZIhvcNAQEL
-BQAwFDESMBAGA1UEAwwJbG9jYWxob3N0MCAXDTI2MDgwNjE0MTM0OFoYDzIxMjYw
-NzEzMTQxMzQ4WjAUMRIwEAYDVQQDDAlsb2NhbGhvc3QwggEiMA0GCSqGSIb3DQEB
-AQUAA4IBDwAwggEKAoIBAQDEg1HE09f69FW/OLD0jrWEQRbKkSkIkexLfV5OtzbI
-ZVDWcH3Y3NKrbZ60j8WEY8DqVzO2kMnOppc5LBEKGP1TTs6C9R+e5hlI6McoKown
-ha4aU9nqM7dsjY71xGZNN9DCVxhRpqadlZon7M4wzVvUO5VIRhFeA2AO6LRVQhyi
-9Whe/uJVlncb2tbiGgTavixWSQ5kH0ocE8Cp4SbuHuXPwgiZ9hYEIX2xAFSR48OB
-bjWgqVISptu/s+UkK2XckI42qdxqzwglLIIqjFYJ1HvGqhqV69DeqB0XNw6qp8W2
-qwTpv3gPGzI60vNL6aaHTivLxnsEClPbcrTfG1y8DnnLAgMBAAGjbzBtMB0GA1Ud
-DgQWBBSyDWWzo202vFbYncaD2crvY5V2pDAfBgNVHSMEGDAWgBSyDWWzo202vFbY
-ncaD2crvY5V2pDAPBgNVHRMBAf8EBTADAQH/MBoGA1UdEQQTMBGCCWxvY2FsaG9z
-dIcEfwAAATANBgkqhkiG9w0BAQsFAAOCAQEAs5nw4GBPPHc9Nc08uLUYTDLkA2XM
-WPugjSO7OxUe8NptVh/v4GbeKzQ4FRIF6rca8De15+OOZgIDppRUoy+fd+ncoDan
-flw38rIj13XfV/3WF33Uag2xtZG0Hrpu4PFZQyIzr0MwGJJ/v2uRjMiV0CX+rc0L
-BJg2JS4oCbNdQpwH81qOktoH8aHirAyLjtm732GQgAGLe0fIBBsb4Dg2ZdvN+TF5
-xfKoFfri3H1rwju43zHXmUyCE/RPdIBR8flO6gzdgWAVY0jaixZi1fzQEQuReh2j
-d2iZYOFSrVDea41ltrUvRC6q6gxe/REVjj1nCSYU1x44J9DQ6n6ljvJCVw==
------END CERTIFICATE-----)PEM";
-
-static const char* csmTestPrivateKeyPem = R"PEM(-----BEGIN PRIVATE KEY-----
-MIIEwAIBADANBgkqhkiG9w0BAQEFAASCBKowggSmAgEAAoIBAQDEg1HE09f69FW/
-OLD0jrWEQRbKkSkIkexLfV5OtzbIZVDWcH3Y3NKrbZ60j8WEY8DqVzO2kMnOppc5
-LBEKGP1TTs6C9R+e5hlI6McoKownha4aU9nqM7dsjY71xGZNN9DCVxhRpqadlZon
-7M4wzVvUO5VIRhFeA2AO6LRVQhyi9Whe/uJVlncb2tbiGgTavixWSQ5kH0ocE8Cp
-4SbuHuXPwgiZ9hYEIX2xAFSR48OBbjWgqVISptu/s+UkK2XckI42qdxqzwglLIIq
-jFYJ1HvGqhqV69DeqB0XNw6qp8W2qwTpv3gPGzI60vNL6aaHTivLxnsEClPbcrTf
-G1y8DnnLAgMBAAECggEBALRPHebwzfrI2CilttAeZXTdWDEzsifX5K17cd3eBBkp
-xVuNShuCupZq9bUNOhl4ghlDPALmpRTFDHp78YKHXWFkLN5CVeoxjL+2Po6fQ4w7
-/3zOtWNMYp/q32Kn+4ocjaLT0U+SDs0G6LR7dtGWjAyXQylWiTbu9+OWJ2kXSTlH
-QbdtamymoJrrjRTV1HUEq/a3qSHlqTA5/EKIcGeiETq2NR0fZ3NFbe+PLiOSpiNg
-uIiVEdsItuZTdINSEzOtMFvRd2od0ITDpMtLG404aGsI4Zisiuhr5naf4DWqK2aL
-n9Z/55LSuAdBqvrtJ9XVdtNsFdCRjbIj2R1qqDTFm/kCgYEA6W/+ufDXrhPi8XWS
-8+7tlOoUd0jYZL9N+N1hfho21SN3eH5TtNO0b/os/PN/M+5dKeWPtnyzwg49EksF
-Es9Z4+lLt/Z+71RDmYqSCwaLhXNKtUZluZmrGHcRogd4hJDYv9icgmpwMK5Hg634
-PYCgVYb9C1Wug/mZhgLg7Aw3hn8CgYEA14GxAPViaSszVNRps+a9WVEJklPbPR8U
-kAxWTP6n1SdT3Z9HRcHH9inIdTLyC/3ti4+4dc1pDkMrq+MUTjvF8BqN35uzJa7l
-6dnsXBmWvB1cIcwQb4SLnDb7jzmiK2uIjMrO54x3+atB83GdvESLOQ/9NAJL/+NX
-ILq5kAs2nrUCgYEAqq7/8pceLKNPybttMr0drEenpTx3NNsIORItydWDCD8BiPHd
-ZJdzFHk5Uc780EzWg97dQNJXYWmlz+1YjVNdZ57ahW1PjNDxCKBgfn1PoMkW9ArA
-MIAisSXGl9GcllmOkl/guB75Xy7fDXIz00xsb3zfIt2IV+k2Dt2l9hJMuyMCgYEA
-lv45ZHCJeSJZntANF41NkazjxfCXJaYHJD5goSWztfcOHbOhnlB9qA3yc5s0WA6c
-RzJ1jaRUPTf2+0HpUj8zGl2gldFjnb2DPWwA3S7YnAj+Knft9BSsNNGZQ+qfo0h+
-rhbTDQ0wanABj25FlEl6OornX29UjH9e5oGtziztIhkCgYEAppTHqOgLiKmeV15d
-i850uRyh7X6whywY8gm0VLO+xzCVsCR6CvgZY1MwwFuDwu2d/d5jdJXLpHueQwNU
-3HipTI77OuIRv4ykXwPOIemT9VmL/N21CgrckJGA6dYywTnc/JNpOKxdTM9srOyr
-Rcsgla9jttJevaHI71x2jLNBaKk=
------END PRIVATE KEY-----)PEM";
 
 // Hands out QSslSocket connections when asked to, so the stub can offer an encrypted transport.
 class GmcpTcpServer : public QTcpServer
@@ -137,8 +88,8 @@ protected:
             delete socket;
             return;
         }
-        socket->setLocalCertificate(QSslCertificate(QByteArray(csmTestCertificatePem)));
-        socket->setPrivateKey(QSslKey(QByteArray(csmTestPrivateKeyPem), QSsl::Rsa));
+        socket->setLocalCertificate(QSslCertificate(QByteArray(csmLoopbackCertificatePem)));
+        socket->setPrivateKey(QSslKey(QByteArray(csmLoopbackPrivateKeyPem), QSsl::Rsa));
         socket->startServerEncryption();
         // QSslSocket buffers writes queued before the handshake, so this behaves like a plain socket.
         addPendingConnection(socket);
@@ -2729,7 +2680,9 @@ private slots:
         QVERIFY2(waitForStoredToken(host, qsl("rotated-after-replay")), "a rotation of a token saved after the last forget should be stored");
     }
 
-    void testARecoveryThatCannotReadTheTokenWarnsBeforeRemovingIt()
+    // The token another instance rotated in meanwhile may be the one stored, live, and removing it would
+    // cost a browser sign-in; only a read that answers decides
+    void testARecoveryThatCannotReadTheTokenLeavesItInPlace()
     {
         Host* host = connectAndNegotiate();
         QVERIFY(host);
@@ -2748,9 +2701,135 @@ private slots:
         QVERIFY(CredentialManager::removeCredential(host->getName(), qsl("reconnect-token")));
         QVERIFY(QDir().mkpath(tokenPath));
 
+        holdStoreOperations(host);
         QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("could not read the saved token back after a rejected reconnect")));
         mpServer->sendGmcp(qsl("Char.Login.Result {\"success\": false, \"message\": \"Reconnect token expired\"}"));
         QVERIFY(waitForConsoleContains(host, qsl("saved sign-in has expired")));
+        QVERIFY2(mHeldStoreOperations.empty(), "a token that could not be read back was removed anyway");
+    }
+
+    // The same when the record is what cannot be read: one saved before the token had a key of its own
+    // is read from the store, with the token inside it
+    void testARecoveryThatCannotReadTheRecordLeavesItInPlace()
+    {
+        Host* host = connectAndNegotiate(true);
+        QVERIFY(host);
+        host->setLogin(QString());
+        host->setPass(QString());
+        QVERIFY(CredentialManager::storeCredential(host->getName(), qsl("reconnect"), qsl("{\"account\": \"acct:char\", \"provider\": \"discord\", \"token\": \"dead-token\"}")));
+
+        mpServer->clearReceived();
+        mpServer->sendGmcp(qsl("Char.Login.Default {\"version\": 2, \"type\": [\"oauth\"]}"));
+        QJsonObject sent;
+        QVERIFY2(waitForClientGmcp(qsl("Char.Login.Reconnect"), sent), "client did not replay the saved token");
+
+        const QString recordPath = reconnectCredentialPath(host->getName(), qsl("reconnect"));
+        QVERIFY2(QFileInfo::exists(recordPath), qPrintable(qsl("the credential store no longer files entries at %1").arg(recordPath)));
+        QVERIFY(CredentialManager::removeCredential(host->getName(), qsl("reconnect")));
+        QVERIFY(QDir().mkpath(recordPath));
+
+        holdStoreOperations(host);
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("could not read the saved token back after a rejected reconnect")));
+        mpServer->sendGmcp(qsl("Char.Login.Result {\"success\": false, \"message\": \"Reconnect token expired\"}"));
+        QVERIFY(waitForConsoleContains(host, qsl("saved sign-in has expired")));
+        QVERIFY2(mHeldStoreOperations.empty(), "a sign-in whose record could not be read back was removed anyway");
+    }
+
+    // A store that can't be asked fails every read, and the record of a current sign-in is read from the
+    // profile, so the token's read is the one that fails on each connect
+    void testAStoreThatCannotBeReadWarnsOnceUntilItAnswers()
+    {
+        Host* host = connectAndNegotiate();
+        QVERIFY(host);
+        host->setLogin(QString());
+        host->setPass(QString());
+        QVERIFY(seedSplitSignIn(host->getName(), qsl("{\"account\": \"acct:char\", \"provider\": \"discord\", \"secure_only\": false}"), qsl("locked-away")));
+        const QString tokenPath = reconnectCredentialPath(host->getName(), qsl("reconnect-token"));
+        QVERIFY(CredentialManager::removeCredential(host->getName(), qsl("reconnect-token")));
+        QVERIFY(QDir().mkpath(tokenPath));
+
+        const QRegularExpression warning(qsl("could not read the saved token"));
+        QTest::ignoreMessage(QtWarningMsg, warning);
+        QTest::failOnWarning(warning);
+        for (int connect = 0; connect < 2; ++connect) {
+            mpServer->clearReceived();
+            mpServer->sendGmcp(qsl("Char.Login.Default {\"version\": 2, \"type\": [\"oauth\"]}"));
+            QJsonObject sent;
+            QVERIFY2(waitForClientGmcp(qsl("Char.Login.Credentials"), sent), "client did not resume the saved provider");
+        }
+
+        // A read that works makes the next failure news again
+        QVERIFY(QDir(tokenPath).removeRecursively());
+        QVERIFY(CredentialManager::storeCredential(host->getName(), qsl("reconnect-token"), qsl("readable-again")));
+        mpServer->clearReceived();
+        mpServer->sendGmcp(qsl("Char.Login.Default {\"version\": 2, \"type\": [\"oauth\"]}"));
+        QJsonObject replayed;
+        QVERIFY2(waitForClientGmcp(qsl("Char.Login.Reconnect"), replayed), "client did not replay the token once it could be read");
+
+        QVERIFY(CredentialManager::removeCredential(host->getName(), qsl("reconnect-token")));
+        QVERIFY(QDir().mkpath(tokenPath));
+        QTest::ignoreMessage(QtWarningMsg, warning);
+        mpServer->clearReceived();
+        mpServer->sendGmcp(qsl("Char.Login.Default {\"version\": 2, \"type\": [\"oauth\"]}"));
+        QJsonObject resumed;
+        QVERIFY2(waitForClientGmcp(qsl("Char.Login.Credentials"), resumed), "client did not resume the saved provider after the store failed again");
+    }
+
+    // A sign-in saved before the record moved into the profile is read from the store itself, so that
+    // read working also makes the next failure news again
+    void testAStoreRecordReadThatWorksEndsTheQuiet()
+    {
+        Host* host = connectAndNegotiate(true);
+        QVERIFY(host);
+        host->setLogin(QString());
+        host->setPass(QString());
+        const QString recordPath = reconnectCredentialPath(host->getName(), qsl("reconnect"));
+        const QRegularExpression warning(qsl("could not read the stored sign-in"));
+        const auto connectExpecting = [this](const QString& message) {
+            mpServer->clearReceived();
+            mpServer->sendGmcp(qsl("Char.Login.Default {\"version\": 2, \"type\": [\"oauth\"]}"));
+            QJsonObject sent;
+            return waitForClientGmcp(message, sent);
+        };
+
+        QVERIFY(QDir().mkpath(recordPath));
+        QTest::ignoreMessage(QtWarningMsg, warning);
+        QVERIFY2(connectExpecting(qsl("Char.Login.Credentials")), "client did not hand off when the store could not be read");
+
+        QVERIFY(QDir(recordPath).removeRecursively());
+        QVERIFY(CredentialManager::storeCredential(host->getName(), qsl("reconnect"), qsl("{\"account\": \"acct:char\", \"provider\": \"discord\", \"token\": \"inline-token\"}")));
+        QVERIFY2(connectExpecting(qsl("Char.Login.Reconnect")), "client did not replay the record once the store could be read");
+
+        QVERIFY(CredentialManager::removeCredential(host->getName(), qsl("reconnect")));
+        QVERIFY(QDir().mkpath(recordPath));
+        QTest::ignoreMessage(QtWarningMsg, warning);
+        QVERIFY2(connectExpecting(qsl("Char.Login.Credentials")), "client did not hand off when the store failed again");
+    }
+
+    void testASignInWithNothingStoredDoesNotWarn_data()
+    {
+        QTest::addColumn<QString>("record");
+        QTest::newRow("no sign-in saved") << QString();
+        QTest::newRow("a resume hint with no token") << qsl("{\"account\": \"acct:char\", \"provider\": \"discord\", \"secure_only\": false}");
+    }
+
+    // Nothing stored is an answer, not a failure, so it must not warn on every connect
+    void testASignInWithNothingStoredDoesNotWarn()
+    {
+        QFETCH(QString, record);
+        QTest::failOnWarning(QRegularExpression(qsl("could not read the (stored sign-in|saved token)")));
+        Host* host = connectAndNegotiate();
+        QVERIFY(host);
+        host->setLogin(QString());
+        host->setPass(QString());
+        if (!record.isEmpty()) {
+            QVERIFY(MudletApp::writeProfileData(host->getName(), qsl("reconnect"), record).first);
+        }
+
+        mpServer->clearReceived();
+        mpServer->sendGmcp(qsl("Char.Login.Default {\"version\": 2, \"type\": [\"oauth\"]}"));
+        QJsonObject sent;
+        QVERIFY2(waitForClientGmcp(qsl("Char.Login.Credentials"), sent), "client did not hand off or resume with Char.Login.Credentials");
     }
 
     void testASignInReadWhileASaveIsPartWayThroughReplaysTheNewToken()

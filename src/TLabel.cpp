@@ -26,13 +26,12 @@
 #include "TCommandLine.h"
 #include "TConsole.h"
 #include "TDockWidget.h"
+#include "TTextEdit.h"
 #include "mudlet.h"
 #include "TMainConsole.h"
 
 #include <QDesktopServices>
-#include <QFile>
 #include <QPainter>
-#include <QRegularExpression>
 #include <QSvgRenderer>
 #include <QTextCursor>
 #include <QTextDocumentFragment>
@@ -42,36 +41,6 @@
 #include <chrono>
 
 using namespace std::chrono_literals;
-
-// Not a case-insensitive contains("<a "): that can't tell a tag from prose and case-folds every character.
-// Any whitespace separates, as in HTML; setText()'s styling pass knows only ASCII whitespace, so an
-// anchor split by a non-breaking space is clickable but unstyled.
-static bool containsAnchorTag(const QString& text)
-{
-    qsizetype close = -1;
-    // Later '<'s are nearer the end still, so one too close to it for a tag name and separator ends the walk.
-    for (qsizetype at = text.indexOf(QLatin1Char('<')); at >= 0 && at + 2 < text.size(); at = text.indexOf(QLatin1Char('<'), at + 1)) {
-        const char16_t tagName = text.at(at + 1).unicode();
-        if ((tagName != u'a' && tagName != u'A') || !text.at(at + 2).isSpace()) {
-            continue;
-        }
-        // Only a tag if its closing '>' comes before any other '<'. That also rejects a '<' inside an
-        // attribute value, which HTML wants written &lt; anyway.
-        if (close < at) {
-            // Re-searched only once the walk passes the last '>' found, keeping the scans linear.
-            close = text.indexOf(QLatin1Char('>'), at + 3);
-            if (close < 0) {
-                // no tag anywhere past here can be closed either
-                return false;
-            }
-        }
-        const qsizetype nextOpen = text.indexOf(QLatin1Char('<'), at + 3);
-        if (nextOpen < 0 || close < nextOpen) {
-            return true;
-        }
-    }
-    return false;
-}
 
 TLabel::TLabel(Host* pH, const QString& name, QWidget* pW)
 : QLabel(pW)
@@ -127,85 +96,24 @@ TLabel::~TLabel()
 
 void TLabel::setText(const QString& text)
 {
-    const bool hasAnchor = containsAnchorTag(text);
+    showLinkStyledText(mpModel->linkStyledText(text));
+}
 
-    setTextInteractionFlags(hasAnchor ? scmLinkInteraction : Qt::TextInteractionFlags(Qt::NoTextInteraction));
+void TLabel::showLinkStyledText(const QString& text)
+{
+    // a click-through label passes the mouse on, so its links stay out of reach of the keyboard too
+    const bool linksReachable = TLabelModel::containsAnchorTag(text) && !testAttribute(Qt::WA_TransparentForMouseEvents);
 
-    // If we have link styling configured and the text contains HTML links,
-    // we need to inject inline styles because QTextDocument doesn't use
-    // widget stylesheets or QPalette for link colors when a stylesheet exists
-    if ((!mLinkColor.isEmpty() || !mLinkVisitedColor.isEmpty()) && hasAnchor) {
-        QString styledText = text;
+    setTextInteractionFlags(linksReachable ? scmLinkInteraction : Qt::TextInteractionFlags(Qt::NoTextInteraction));
 
-        // Replace all <a href="..."> tags with <a href="..." style="...">
-        // Note: This regex is intentionally strict (lowercase, href first, no spacing around =)
-        // because Mudlet's HTML generation (via echo(), setLabelText(), etc.) consistently
-        // uses this format. User-provided HTML outside this pattern will still render as
-        // clickable links (Qt handles that), but won't receive custom styling.
-        static const QRegularExpression anchorRegex(qsl("<a\\s+href=([\"'][^\"']*[\"'])([^>]*)>"));
-        QRegularExpressionMatchIterator it = anchorRegex.globalMatch(styledText);
-
-        // Process matches in reverse order to avoid offset issues
-        QList<QRegularExpressionMatch> matches;
-        while (it.hasNext()) {
-            matches.prepend(it.next());
-        }
-
-        for (const auto& match : matches) {
-            QString fullMatch = match.captured(0);
-            QString hrefPart = match.captured(1);   // The href="..." part
-            QString otherAttrs = match.captured(2); // Other attributes
-
-            // Extract the actual URL from hrefPart (remove quotes)
-            QString url = hrefPart;
-            url.remove(0, 1); // Remove opening quote
-            url.chop(1);      // Remove closing quote
-
-            bool isVisited = mVisitedLinks.contains(url);
-
-            QString linkStyle;
-            if (isVisited && !mLinkVisitedColor.isEmpty()) {
-                linkStyle += qsl("color: %1; ").arg(mLinkVisitedColor);
-            } else if (!mLinkColor.isEmpty()) {
-                linkStyle += qsl("color: %1; ").arg(mLinkColor);
-            }
-
-            if (!mLinkUnderline) {
-                linkStyle += qsl("text-decoration: none; ");
-            }
-
-            if (!linkStyle.isEmpty()) {
-                linkStyle = linkStyle.trimmed();
-
-                QString replacement;
-                if (otherAttrs.contains(qsl("style="))) {
-                    // Already has a style attribute - merge our styles
-                    // This is complex, so for now just prepend our styles
-                    replacement = qsl("<a href=%1 style=\"%2\"").arg(hrefPart, linkStyle);
-                    // Intentionally overwrites any existing style attribute rather than merging
-                    // to keep implementation simple for the common case (labels without pre-existing inline styles)
-                    otherAttrs.remove(QRegularExpression(qsl("style=([\"'][^\"']*[\"'])")));
-                    replacement += otherAttrs + qsl(">");
-                } else {
-                    replacement = qsl("<a href=%1 style=\"%2\"%3>").arg(hrefPart, linkStyle, otherAttrs);
-                }
-
-                styledText.replace(match.capturedStart(), match.capturedLength(), replacement);
-            }
-        }
-
-        stopMovie();
-        QLabel::setText(styledText);
-    } else {
-        stopMovie();
-        QLabel::setText(text);
-    }
+    stopMovie();
+    QLabel::setText(text);
     mpModel->mText = QLabel::text();
 }
 
 bool TLabel::carriesLink() const
 {
-    return textFormat() == Qt::RichText && containsAnchorTag(text());
+    return textFormat() == Qt::RichText && TLabelModel::containsAnchorTag(text());
 }
 
 void TLabel::mousePressEvent(QMouseEvent* event)
@@ -256,13 +164,56 @@ void TLabel::mouseReleaseEvent(QMouseEvent* event)
     if (mpHost && mReleaseFunction) {
         mpHost->getLuaInterpreter()->callLabelCallbackEvent(mReleaseFunction, event);
         event->accept();
+    } else if (!takenByQt && !mClickFunction && event->button() == Qt::RightButton && forwardRightClickToConsole(event)) {
+        event->accept();
     } else if (!takenByQt) {
         QWidget::mouseReleaseEvent(event);
     }
 }
 
+// The console builds its context menu in its text pane, which the label covers but is not
+// inside, so an ignored right-click, offered only to the label's ancestors, never reaches it
+bool TLabel::forwardRightClickToConsole(QMouseEvent* event)
+{
+    QWidget* pParent = parentWidget();
+    if (!pParent) {
+        return false;
+    }
+    // This label, and any other without a click or release callback stacked under it, is left
+    // out of the hit test for a moment, so that it finds what they cover
+    const QPoint where = pParent->mapFromGlobal(event->globalPosition().toPoint());
+    QList<TLabel*> skipped;
+    QWidget* pHit = nullptr;
+    for (TLabel* pLabel = this; pLabel; pLabel = qobject_cast<TLabel*>(pHit)) {
+        if (pLabel->mClickFunction || pLabel->mReleaseFunction) {
+            break;
+        }
+        pLabel->setAttribute(Qt::WA_TransparentForMouseEvents, true);
+        skipped.append(pLabel);
+        pHit = pParent->childAt(where);
+    }
+    for (auto* pLabel : skipped) {
+        pLabel->setAttribute(Qt::WA_TransparentForMouseEvents, false);
+    }
+    auto* pPane = qobject_cast<TTextEdit*>(pHit);
+    if (!pPane) {
+        return false;
+    }
+    // Not the pane's own right-click handling: that acts on a link the label hides
+    pPane->showContextMenu(event->globalPosition().toPoint());
+    return true;
+}
+
 void TLabel::mouseMoveEvent(QMouseEvent* event)
 {
+    // QLabel is what switches to the pointing hand over a link. The flag answers what carriesLink() does
+    // without scanning the whole text on every move. With no move callback the move is ignored below, so
+    // one with a button held (or any, if the parent tracks the mouse) goes on to the label's parent - not
+    // to a sibling such as an embedded map.
+    if (textInteractionFlags() & Qt::LinksAccessibleByMouse) {
+        QLabel::mouseMoveEvent(event);
+    }
+
     if (mpHost && mMoveFunction) {
         mpHost->getLuaInterpreter()->callLabelCallbackEvent(mMoveFunction, event);
         event->accept();
@@ -281,8 +232,21 @@ void TLabel::wheelEvent(QWheelEvent* event)
     }
 }
 
+// QLabel only notices the pointer leaving a link from a move, and then restores the cursor it saved when
+// the hover began. A made-up move where no link can be ends the hover once the pointer has left the label,
+// or before a script sets a cursor that the saved copy would later overwrite.
+void TLabel::endLinkHover()
+{
+    if (textInteractionFlags() & Qt::LinksAccessibleByMouse) {
+        const QPointF nowhere(-1, -1);
+        QMouseEvent away(QEvent::MouseMove, nowhere, mapToGlobal(nowhere), Qt::NoButton, Qt::NoButton, Qt::NoModifier);
+        QLabel::mouseMoveEvent(&away);
+    }
+}
+
 void TLabel::leaveEvent(QEvent* event)
 {
+    endLinkHover();
     if (mpHost && mLeaveFunction) {
         mpHost->getLuaInterpreter()->callLabelCallbackEvent(mLeaveFunction, event);
         event->accept();
@@ -355,66 +319,9 @@ QSize TLabel::sizeHint() const
     return documentSize.grownBy(contentsMargins()) + QSize(2 * margin(), 2 * margin());
 }
 
-// QPixmap and QImage read a file by its content, so a raster saved under a .svg
-// name has always displayed. This only asks whether the renderer is worth trying:
-// the renderer itself is the authority on what is an SVG.
-bool TLabel::svgCandidate(const QString& path)
-{
-    QFile file(path);
-    if (!file.open(QIODevice::ReadOnly)) {
-        return false;
-    }
-    const QByteArray head = file.read(64);
-    if (head.startsWith(QByteArrayLiteral("\x1f\x8b"))) {
-        return true;
-    }
-
-    qsizetype at = 0;
-    bool utf16 = false;
-    if (head.startsWith(QByteArrayLiteral("\xef\xbb\xbf"))) {
-        at = 3;
-    } else if (head.startsWith(QByteArrayLiteral("\xff\xfe")) || head.startsWith(QByteArrayLiteral("\xfe\xff"))) {
-        at = 2;
-        utf16 = true;
-    }
-    for (; at < head.size(); ++at) {
-        const char byte = head.at(at);
-        // in UTF-16 every ASCII character is half of a code unit whose other half
-        // is a NUL, whichever way round the byte order mark put them
-        if (utf16 && byte == '\0') {
-            continue;
-        }
-        if (byte == ' ' || byte == '\t' || byte == '\n' || byte == '\r' || byte == '\f' || byte == '\v') {
-            continue;
-        }
-        return byte == '<';
-    }
-    return false;
-}
-
-bool TLabel::loadSvg(QSvgRenderer& renderer, const QString& path)
-{
-    QFile file(path);
-    if (!file.open(QIODevice::ReadOnly)) {
-        return false;
-    }
-
-    // QSvgRenderer inflates a gzipped document by its content on the QByteArray
-    // overload, but only by a .svgz or .svg.gz name on the path one
-    if (file.peek(2) == QByteArrayLiteral("\x1f\x8b")) {
-        renderer.load(file.readAll());
-    } else {
-        file.close();
-        // the path overload resolves a relative href inside the document against
-        // the directory the document sits in
-        renderer.load(path);
-    }
-    return renderer.isValid();
-}
-
 bool TLabel::setBackgroundImage(const QString& path)
 {
-    if (svgCandidate(path) && setSvgImage(path)) {
+    if (TLabelModel::svgCandidate(path) && setSvgImage(path)) {
         return true;
     }
 
@@ -438,7 +345,7 @@ bool TLabel::setSvgImage(const QString& path)
     // the new document has to prove readable before the current one goes, or a
     // mistyped path takes the SVG down with it
     auto* renderer = new QSvgRenderer(this);
-    if (!loadSvg(*renderer, path)) {
+    if (!TLabelModel::loadSvg(*renderer, path)) {
         delete renderer;
         return false;
     }
@@ -466,6 +373,9 @@ void TLabel::resetBackgroundImage()
     if (!pixmap().isNull() || movie()) {
         stopMovie();
         clear();
+    }
+    if (const QString sheet = styleSheet(), withoutImage = TLabelModel::styleSheetWithoutBackgroundImage(sheet); withoutImage != sheet) {
+        restyle(withoutImage);
     }
 }
 
@@ -584,32 +494,15 @@ void TLabel::setClickThrough(bool clickthrough)
         setTextInteractionFlags(Qt::NoTextInteraction);
     } else {
         // Re-enable text interaction only if the current text has hyperlinks
-        setTextInteractionFlags(containsAnchorTag(text()) ? scmLinkInteraction : Qt::TextInteractionFlags(Qt::NoTextInteraction));
+        setTextInteractionFlags(TLabelModel::containsAnchorTag(text()) ? scmLinkInteraction : Qt::TextInteractionFlags(Qt::NoTextInteraction));
     }
-}
-
-// the lookbehind keeps selection-background-color and friends out of it
-static const QRegularExpression& backgroundColorDeclaration()
-{
-    static const QRegularExpression declaration(qsl("(?<![-\\w])background-color\\s*:[^;]*;"));
-    return declaration;
 }
 
 void TLabel::setBackgroundColor(const QColor& color)
 {
     mBackgroundColor = color;
 
-    const QString newColor = qsl("background-color: rgba(%1, %2, %3, %4);").arg(color.red()).arg(color.green()).arg(color.blue()).arg(color.alpha());
-    QString sheet = styleSheet();
-    if (sheet.contains(backgroundColorDeclaration())) {
-        sheet.replace(backgroundColorDeclaration(), newColor);
-    } else {
-        if (!sheet.isEmpty() && !sheet.endsWith(QChar::LineFeed)) {
-            sheet.append(QChar::LineFeed);
-        }
-        sheet.append(newColor);
-    }
-    if (!restyle(sheet)) {
+    if (!restyle(TLabelModel::styleSheetWithBackgroundColor(styleSheet(), color))) {
         applyBackgroundColor();
     }
 }
@@ -696,10 +589,8 @@ void TLabel::setLinkStyle(const QString& linkColor, const QString& linkVisitedCo
     setPalette(palette);
     mPaletteSetSinceStyled = true;
 
-    // Note: Widget stylesheets don't affect QTextDocument rendering
-    // Link colors are applied via inline styles in setText()
-
-    // Force update to re-render with new styles
+    // Widget stylesheets don't affect QTextDocument rendering, so links already shown are re-styled inline
+    reapplyLinkStyle();
     update();
 }
 
@@ -717,17 +608,22 @@ void TLabel::resetLinkStyle()
     mLinkVisitedColor.clear();
     mLinkUnderline = true;
 
-    // Force update to re-render with new styles
+    // the styles written into the anchors would otherwise stay
+    reapplyLinkStyle();
     update();
 }
 
 void TLabel::clearVisitedLinks()
 {
     mVisitedLinks.clear();
+    reapplyLinkStyle();
+}
 
-    QString currentText = text();
-    if (!currentText.isEmpty() && containsAnchorTag(currentText)) {
-        setText(currentText);
+void TLabel::reapplyLinkStyle()
+{
+    // a pixmap or movie takes the text out of QLabel's content slot
+    if (const QString currentText = text(); !currentText.isEmpty() && TLabelModel::containsAnchorTag(currentText)) {
+        showLinkStyledText(mpModel->restyledText());
     }
 }
 
@@ -739,21 +635,18 @@ void TLabel::slot_linkActivated(const QString& link)
 
     if (!mLinkVisitedColor.isEmpty()) {
         mVisitedLinks.insert(link);
-
-        // Refresh the label to update link colors
-        // We need to re-apply the current text to trigger the styling update
-        QString currentText = text();
-        if (!currentText.isEmpty() && containsAnchorTag(currentText)) {
-            setText(currentText);
-        }
+        reapplyLinkStyle();
     }
 
-    // Check for custom schemes by looking for the colon separator
-    const int colonPos = link.indexOf(':');
+    // Check for custom schemes by looking for the colon separator; a browser
+    // also drops the whitespace around an href before reading its scheme
+    const QString href = link.trimmed();
+    const int colonPos = href.indexOf(':');
 
     if (colonPos > 0) {
-        const QString scheme = link.left(colonPos).toLower(); // RFC 3986: schemes are case-insensitive
-        const QString payload = link.mid(colonPos + 1);       // Everything after the colon
+        const QString scheme = href.left(colonPos).toLower(); // RFC 3986: schemes are case-insensitive
+        // Untrimmed: a prompt: or send: payload can end in a space the player means to keep
+        const QString payload = link.mid(link.indexOf(':') + 1);
 
         // Handle custom Mudlet URL schemes for Lua commands
         if (scheme == qsl("send")) {
@@ -766,10 +659,7 @@ void TLabel::slot_linkActivated(const QString& link)
             // prompt: scheme - put text in command line and wait for user to press enter
             if (mpHost->mainConsoleView() && mpHost->mainConsoleView()->mpCommandLine) {
                 QPointer<TCommandLine> commandLine = mpHost->mainConsoleView()->mpCommandLine;
-                commandLine->setPlainText(payload);
-                QTextCursor cursor = commandLine->textCursor();
-                cursor.movePosition(QTextCursor::End);
-                commandLine->setTextCursor(cursor);
+                mpHost->mainConsoleView()->printToCommandLine(payload);
                 // Defer the focus operation to avoid issues with QPointer manipulation
                 // during the signal handler execution
                 QTimer::singleShot(0ms, commandLine.data(), [commandLine]() {
@@ -782,15 +672,22 @@ void TLabel::slot_linkActivated(const QString& link)
         }
 
         if (scheme == qsl("http") || scheme == qsl("https")) {
-            QDesktopServices::openUrl(QUrl(link));
+            QDesktopServices::openUrl(QUrl(href));
             return;
         }
 
-        // Unknown scheme - ignore safely to prevent unintended Lua execution
-        // Only links without a scheme should be treated as Lua code
-        return;
+        // After a scheme-shaped prefix only a Lua method call - tel:go(), pkg.ui:show "x" - is Lua;
+        // ftp://host, mailto:a@b.c or about:blank are URLs that Lua would only report as syntax errors.
+        static const QRegularExpression schemeName(qsl("^[a-z][a-z0-9+.-]*$"));
+        // Lua allows whitespace and --[[ ]] comments on either side of the method name
+        static const QRegularExpression methodCall(qsl("^(?:\\s|--\\[(=*)\\[.*?\\]\\1\\])*[A-Za-z_][A-Za-z0-9_]*(?:\\s|--\\[(=*)\\[.*?\\]\\2\\])*[(\"'{[]"));
+        if (scheme == qsl("javascript") || (schemeName.match(scheme).hasMatch() && !methodCall.match(payload).hasMatch())) {
+            //: Printed in the Errors console when a link in a label is clicked but neither handled nor run; %1 is the link, %2 its scheme
+            const QString note = tr("[LINK:] The label link \"%1\" was not run: %2: is not a scheme Mudlet handles, and the link is not a Lua command.").arg(link, scheme);
+            emit mpHost->signal_errorConsolePrint(note + QChar::LineFeed, QColor(255, 128, 0), QColor(Qt::black));
+            return;
+        }
     }
 
-    // No scheme - treat as Lua code to execute
     mpHost->mLuaInterpreter.compileAndExecuteScript(link);
 }
