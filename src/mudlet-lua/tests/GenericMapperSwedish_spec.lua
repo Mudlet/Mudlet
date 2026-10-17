@@ -28,7 +28,7 @@ describe("Tests that the generic mapper follows a game in Swedish", function()
   end
 
   local mapperState = {"mapping", "currentRoom", "currentArea", "currentName", "currentExits", "prevRoom", "prevName", "prevExits"}
-  local configKeys = {"lang_dirs", "translate", "language", "use_translation"}
+  local configKeys = {"lang_dirs", "translate", "language", "use_translation", "clear_lines_on_send"}
   local saved, savedPrompt, savedConfigs, savedQueue, dockWasShowing
 
   -- the base UI reads the prompts fed here as vitals and docks itself on the right
@@ -268,6 +268,13 @@ describe("Tests that the generic mapper follows a game in Swedish", function()
     assert.is_nil(map.save.prompt_pattern[map.character])
   end)
 
+  it("keeps the saved prompt when the template ends in a word it cannot tell from the room", function()
+    resetPromptState()
+    send("prompt", false)
+    feedTriggers('\nDu sätter din prompt till "<HP> <NAMN>".\n')
+    assert.are.equal("^%d+/%d+ %d+/%d+", map.save.prompt_pattern[map.character])
+  end)
+
   it("names a room when a learned prompt with letters is glued to it", function()
     map.save.prompt_pattern[map.character] = "^%-?%d+/%-?%d+hp %-?%d+/%-?%d+mp"
     feedTriggers("\n96/96hp 96/96mpDu står vid ängen. Söderut ligger sjön.\n   Det finns en synlig väg härifrån: söder\n")
@@ -319,6 +326,16 @@ describe("Tests that the generic mapper follows a game in Swedish", function()
     assert.are.equal("Du står vid sjön.", map.currentName)
     feedTriggers(room)
     assert.are.equal(1, sent.prompt)
+  end)
+
+  it("asks the game for its prompt again after reconnecting", function()
+    resetPromptState()
+    map.save.prompt_pattern[map.character] = nil
+    local sent = countPromptSends()
+    feedTriggers(room)
+    map.eventHandler("sysConnectionEvent")
+    feedTriggers(room)
+    assert.are.equal(2, sent.prompt)
   end)
 
   it("asks the game for its prompt again once the saved one stops showing", function()

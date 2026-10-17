@@ -4112,6 +4112,11 @@ function map.learnPromptTemplate(template)
         map.echo("Prompt pattern cleared.")
         return
     end
+    local last_token = string.match(template, "&lt;([%w_]+)&gt;%s*$")
+    if last_token and not numeric_prompt_tokens[string.upper(last_token)] then
+        map.echo("Your prompt ends in " .. last_token .. ", which runs into the text after it. Set the prompt pattern with 'map prompt'.", false, true)
+        return
+    end
     local pattern = string.gsub(template, "[%^%$%(%)%%%.%[%]%*%+%-%?]", "%%%0")
     pattern = string.gsub(pattern, "&lt;([%w_]+)&gt;", function(token)
         return numeric_prompt_tokens[string.upper(token)] and "%-?%d+" or "%S+"
@@ -4496,6 +4501,8 @@ function map.eventHandler(event, ...)
                 map.checkVersion()
             end
         end
+    elseif event == "sysConnectionEvent" then
+        awaiting_prompt_reply, prompt_seen, untitled_room_seen, asked_for_prompt = false, false, false, {}
     elseif event == "sysLoadEvent" or event == "sysInstall" then
         config()
         raiseEvent("mapperScriptLoaded", "generic_mapper")
