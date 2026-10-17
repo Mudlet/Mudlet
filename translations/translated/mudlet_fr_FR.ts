@@ -12320,7 +12320,7 @@ Breadcrumb name of the subpage holding the AI assistant settings, reached from t
       <location filename="../src/dlgProfilePreferences.cpp" line="1853"/>
       <source>Starting...</source>
       <extracomment>Summary on the General page&apos;s AI assistant card in the moment between the server being switched on and it answering</extracomment>
-      <translation type="unfinished"/>
+      <translation>Démarrage...</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1901"/>
@@ -20563,7 +20563,7 @@ you can use it but there could be issues with aligning columns of text</source>
       <location filename="../src/ui/profile_preferences.ui" line="5082"/>
       <source>Copy</source>
       <extracomment>Label of the button that copies the MCP server&apos;s address to the clipboard.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Copie</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="5127"/>
