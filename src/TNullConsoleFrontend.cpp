@@ -20,6 +20,7 @@
 #include "TNullConsoleFrontend.h"
 
 #include "Host.h"
+#include "TAppFrontend.h"
 #include "TEvent.h"
 #include "TLabelModel.h"
 #include "TMap.h"
@@ -1074,7 +1075,7 @@ void TNullConsoleFrontend::closeSubConsole(const QString& name)
     }
 }
 
-void TNullConsoleFrontend::openUserWindow(const QString& name, bool, bool, const QString&)
+void TNullConsoleFrontend::openUserWindow(const QString& name, const bool loadLayout, bool, const QString&)
 {
     TWindowRegistry& registry = mpHost->windowRegistry();
     if (!mSubConsoles.count(name)) {
@@ -1092,6 +1093,12 @@ void TNullConsoleFrontend::openUserWindow(const QString& name, bool, bool, const
         registry.setUserWindowSize(name, size);
         // As TMainConsole::createUserWindow() sizes its font, which raises sysFontChangeEvent
         setWindowFontSize(name, 10);
+    }
+    SubConsole& userWindow = mSubConsoles.at(name);
+    // As TMainConsole::placeUserWindow(): once per window, and before the show that then reports the size restored
+    if (loadLayout && !userWindow.layoutLoaded) {
+        userWindow.layoutLoaded = true;
+        TAppFrontend::instance()->loadWindowLayout();
     }
     setSubConsoleShown(name, true);
 }

@@ -26,6 +26,7 @@
 #include "FontManager.h"
 #include "Host.h"
 #include "MudletMedia.h"
+#include "TAppFrontend.h"
 
 #include <QDebug>
 
@@ -46,6 +47,7 @@ HostManager::~HostManager()
 {
     for (const auto& pHost : hostList()) {
         pHost->raiseExitEventIfOwed();
+        saveLayoutOfClosingProfile(pHost.get());
     }
     // Drain the pool while self() still answers: ~Host() may reach the manager it is being removed from.
     mHostPool.clear();
@@ -64,10 +66,21 @@ void HostManager::deleteHost(const QString& hostname)
     }
 
     pHost->raiseExitEventIfOwed();
+    saveLayoutOfClosingProfile(pHost.get());
     // The handlers may have deleted this profile and opened another under its name
     if (mHostPool.value(hostname) == pHost) {
         // The Host is destroyed as pHost goes out of scope, once it is out of the pool
         mHostPool.remove(hostname);
+    }
+}
+
+// As TMainConsole::closeEvent() saves the window layout after sysExitEvent on every path that closes a
+// profile; one with no main window has no close event of its own. Nothing to do in the GUI, whose
+// consoles outlive the main window's members, so a profile closing with one is never seen here.
+void HostManager::saveLayoutOfClosingProfile(const Host* pHost)
+{
+    if (!TAppFrontend::hasView() && !pHost->hasConsoleView()) {
+        TAppFrontend::instance()->saveWindowLayoutForScript();
     }
 }
 

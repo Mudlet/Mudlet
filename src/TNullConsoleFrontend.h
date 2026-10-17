@@ -373,6 +373,8 @@ private:
         QPointer<HistoryWriter> ownLine;
         // A user window's size as sysUserWindowResizeEvent last gave it
         std::optional<QSize> reportedSize;
+        // TDockWidget::hasLayoutAlready: whether opening this user window has loaded the saved layout
+        bool layoutLoaded = false;
     };
     // As TConsole::mpCommandLine tells a console's own command line from another of its name
     static bool ownsLine(const SubConsole& console, const PlainWindow& commandLine) { return commandLine.writer && commandLine.writer == console.ownLine; }
