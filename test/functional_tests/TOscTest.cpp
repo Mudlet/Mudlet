@@ -390,8 +390,8 @@ private slots:
   // packets must survive the boundary. The branch that discards such a sequence
   // has to sit BELOW the incomplete-packet check: above it, the first packet's
   // "?25" is consumed on its own and the trailing "l" is left to print as text.
-  // Only a genuine packet split reaches this - two feedTriggers() calls cannot,
-  // because the incomplete bytes are carried only when isFromServer is set.
+  // CSISPLIT1 in TBufferOSC_spec.lua covers the same split between two local
+  // feeds; this covers the Game Server channel.
   void test_SplitPrivateCsiSurvivesThePacketBoundary() {
     std::string part1{"PRIVSPLIT(\x1b[?25"};
     mpHost->printOnDisplay(part1, true);
