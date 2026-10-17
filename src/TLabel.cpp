@@ -95,12 +95,18 @@ TLabel::~TLabel()
 
 void TLabel::setText(const QString& text)
 {
-    const bool hasAnchor = TLabelModel::containsAnchorTag(text);
+    showLinkStyledText(mpModel->linkStyledText(text));
+}
 
-    setTextInteractionFlags(hasAnchor ? scmLinkInteraction : Qt::TextInteractionFlags(Qt::NoTextInteraction));
+void TLabel::showLinkStyledText(const QString& text)
+{
+    // a click-through label passes the mouse on, so its links stay out of reach of the keyboard too
+    const bool linksReachable = TLabelModel::containsAnchorTag(text) && !testAttribute(Qt::WA_TransparentForMouseEvents);
+
+    setTextInteractionFlags(linksReachable ? scmLinkInteraction : Qt::TextInteractionFlags(Qt::NoTextInteraction));
 
     stopMovie();
-    QLabel::setText(mpModel->linkStyledText(text));
+    QLabel::setText(text);
     mpModel->mText = QLabel::text();
 }
 
@@ -526,10 +532,8 @@ void TLabel::setLinkStyle(const QString& linkColor, const QString& linkVisitedCo
     setPalette(palette);
     mPaletteSetSinceStyled = true;
 
-    // Note: Widget stylesheets don't affect QTextDocument rendering
-    // Link colors are applied via inline styles in setText()
-
-    // Force update to re-render with new styles
+    // Widget stylesheets don't affect QTextDocument rendering, so links already shown are re-styled inline
+    reapplyLinkStyle();
     update();
 }
 
@@ -547,17 +551,22 @@ void TLabel::resetLinkStyle()
     mLinkVisitedColor.clear();
     mLinkUnderline = true;
 
-    // Force update to re-render with new styles
+    // the styles written into the anchors would otherwise stay
+    reapplyLinkStyle();
     update();
 }
 
 void TLabel::clearVisitedLinks()
 {
     mVisitedLinks.clear();
+    reapplyLinkStyle();
+}
 
-    QString currentText = text();
-    if (!currentText.isEmpty() && TLabelModel::containsAnchorTag(currentText)) {
-        setText(currentText);
+void TLabel::reapplyLinkStyle()
+{
+    // a pixmap or movie takes the text out of QLabel's content slot
+    if (const QString currentText = text(); !currentText.isEmpty() && TLabelModel::containsAnchorTag(currentText)) {
+        showLinkStyledText(mpModel->restyledText());
     }
 }
 
@@ -569,13 +578,7 @@ void TLabel::slot_linkActivated(const QString& link)
 
     if (!mLinkVisitedColor.isEmpty()) {
         mVisitedLinks.insert(link);
-
-        // Refresh the label to update link colors
-        // We need to re-apply the current text to trigger the styling update
-        QString currentText = text();
-        if (!currentText.isEmpty() && TLabelModel::containsAnchorTag(currentText)) {
-            setText(currentText);
-        }
+        reapplyLinkStyle();
     }
 
     // Check for custom schemes by looking for the colon separator

@@ -119,6 +119,8 @@ private:
 
     bool carriesLink() const;
     void applyBackgroundColor();
+    void showLinkStyledText(const QString& text);
+    void reapplyLinkStyle();
 
     QColor& mBackgroundColor;
     QPixmap mSvgPixmapCache;
