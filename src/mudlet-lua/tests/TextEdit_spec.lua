@@ -117,6 +117,16 @@ describe("Tests TextEdit widget functions", function()
       assert.is_true(setTextEditFontSize(name, 14))
     end)
 
+    it("Should refuse a font size it cannot show", function()
+      -- there is no getter to read the size back, so this puts back the one the case before set
+      finally(function() setTextEditFontSize(name, 14) end)
+      assert.are.same({nil, "size cannot be 0 or negative"}, {setTextEditFontSize(name, 0)})
+      assert.are.same({nil, "size cannot be 0 or negative"}, {setTextEditFontSize(name, -5)})
+      assert.are.same({nil, "size 999999 is too large, it cannot be more than 1000"}, {setTextEditFontSize(name, 999999)})
+      assert.are.same({nil, "size 1001 is too large, it cannot be more than 1000"}, {setTextEditFontSize(name, 1001)})
+      assert.is_true(setTextEditFontSize(name, 1000))
+    end)
+
     it("Should set tab moves focus", function()
       assert.is_true(setTextEditTabMovesFocus(name, true))
       assert.is_true(setTextEditTabMovesFocus(name, false))

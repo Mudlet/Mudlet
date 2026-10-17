@@ -30,11 +30,14 @@
 #include <QTextEdit>
 #include <zip.h>
 
+#include <atomic>
 #include <memory>
 
 class Host;
 class QCloseEvent;
 class QGroupBox;
+template <typename T>
+class QFutureWatcher;
 class TAction;
 class TAlias;
 class TKey;
@@ -42,7 +45,7 @@ class TScript;
 class TTimer;
 class TTrigger;
 
-#if defined(LIBZIP_VERSION_MAJOR) && defined(LIBZIP_VERSION_MINOR) && ((LIBZIP_VERSION_MAJOR  > 1) || (LIBZIP_VERSION_MAJOR == 1) && (LIBZIP_VERSION_MINOR >= 7))
+#if defined(LIBZIP_VERSION_MAJOR) && defined(LIBZIP_VERSION_MINOR) && ((LIBZIP_VERSION_MAJOR > 1) || (LIBZIP_VERSION_MAJOR == 1) && (LIBZIP_VERSION_MINOR >= 7))
 // libzip 1.7.0 supports cancelling archiving in progress
 #define LIBZIP_SUPPORTS_CANCELLING TRUE
 #endif
@@ -92,7 +95,7 @@ public:
     TAction* actionOf(const QMap<QTreeWidgetItem*, int>&, QTreeWidgetItem*) const;
     TScript* scriptOf(const QMap<QTreeWidgetItem*, int>&, QTreeWidgetItem*) const;
     TKey* keyOf(const QMap<QTreeWidgetItem*, int>&, QTreeWidgetItem*) const;
-    static void copy_directory(const QString &fromDir, const QString &toDir, bool overwrite);
+    static void copy_directory(const QString& fromDir, const QString& toDir, bool overwrite);
     QMap<QTreeWidgetItem*, int> triggerMap;
     QMap<QTreeWidgetItem*, int> modTriggerMap;
     QMap<QTreeWidgetItem*, int> aliasMap;
@@ -126,8 +129,8 @@ private slots:
     void slot_openPackageLocation();
     void slot_packageChanged(int);
     void slot_updateLocationPlaceholder();
-    void slot_recountItems(QTreeWidgetItem *item);
-    void slot_rightClickOnItems(const QPoint &point);
+    void slot_recountItems(QTreeWidgetItem* item);
+    void slot_rightClickOnItems(const QPoint& point);
     void slot_cancelExport();
 
 protected:
@@ -144,7 +147,12 @@ private:
     QString getActualPath() const;
     static const int isTopFolder = 1;
     static std::pair<bool, QString> writeFileToZip(const QString& archiveFileName, const QString& fileSystemFileName, zip* archive);
-    static std::pair<bool, QString> zipPackage(const QString& stagingDirName, const QString& packagePathFileName, const QString& xmlPathFileName, const QString& packageName, const QString& packageComment);
+    static std::pair<bool, QString> zipPackage(const QString& stagingDirName,
+                                               const QString& packagePathFileName,
+                                               const QString& xmlPathFileName,
+                                               const QString& packageName,
+                                               const QString& packageComment,
+                                               std::shared_ptr<std::atomic<bool>> cancelled);
     static std::pair<bool, QString> copyAssetsToTmp(const QStringList& assetPaths, const QString& tempPath);
     QFileInfo copyIconToTmp(const QString& tempPath) const;
     QString normalizedHelpUrl() const;
@@ -187,7 +195,15 @@ private:
     QString mPackageConfig;
     QString mPackageComment;
     bool mCheckChildren = true;
+    // Shared by every exporter, so that only one export runs at a time; held until the zip ends, even after a Cancel
     inline static bool mExportingPackage = false;
+    static void releaseExportLock();
+    static void recheckEveryExportButton();
+    // This dialog's export has put the busy cursor up and not yet taken it down
+    bool mExportRunning = false;
+    QFutureWatcher<std::pair<bool, QString>>* mpZipWatcher = nullptr;
+    // Read on the zip's worker thread by libzip's cancel callback
+    std::shared_ptr<std::atomic<bool>> mpZipCancelled;
 
 signals:
     void signal_exportLocationChanged(const QString& location);

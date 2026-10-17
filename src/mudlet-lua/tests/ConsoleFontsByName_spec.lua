@@ -1,8 +1,8 @@
 -- Every one of these finds its console by name: an empty name or "main" is the
 -- main console, and any other is a mini console, user window or buffer. Every
 -- kind of window shares the one name space, so a name that belongs to some
--- other kind must not be taken for a console. getFont and setFont also reach a
--- label, but only once no console answers to the name.
+-- other kind must not be taken for a console. They also reach a label, but
+-- only once no console answers to the name.
 describe("Tests that the font functions find their console by name", function()
   local suffix = ("-%d-%d"):format(os.time(), math.random(100000))
   local unknown = "specFontsByNameNoSuchWindow" .. suffix
@@ -33,11 +33,11 @@ describe("Tests that the font functions find their console by name", function()
 
   -- an array rather than a keyed table so the specs are always generated in
   -- the same order
-  local consoleOnly = {
+  local sizeCalls = {
     {"getFontSize", function(n) return getFontSize(n) end},
     {"setFontSize", function(n) return setFontSize(n, 10) end},
   }
-  local labelsToo = {
+  local familyCalls = {
     {"getFont", function(n) return getFont(n) end},
     {"setFont", function(n) return setFont(n, families[1]) end},
   }
@@ -69,8 +69,8 @@ describe("Tests that the font functions find their console by name", function()
   end
 
   it("refuses a name that is no window at all", function()
-    assertRefuses(unknown, consoleOnly)
-    assertRefuses(unknown, labelsToo)
+    assertRefuses(unknown, sizeCalls)
+    assertRefuses(unknown, familyCalls)
   end)
 
   describe("with the name of another kind of window", function()
@@ -92,17 +92,50 @@ describe("Tests that the font functions find their console by name", function()
     for _, kind in ipairs(kinds) do
       it("refuses every font function for a " .. kind[1], function()
         assert.is_true(kind[2]())
-        assertRefuses(otherName, consoleOnly)
-        assertRefuses(otherName, labelsToo)
+        assertRefuses(otherName, sizeCalls)
+        assertRefuses(otherName, familyCalls)
       end)
     end
 
-    it("refuses the size of a label, but reaches its font", function()
+    it("reaches the font and the font size of a label", function()
       assert.is_true(createLabel(otherName, 0, 0, 50, 20, 1))
-      assertRefuses(otherName, consoleOnly)
+      local fresh = getFontSize(otherName)
+      assert.is_true(type(fresh) == "number" and fresh > 0, ("a new label answered %s"):format(tostring(fresh)))
       assert.is_true(setFont(otherName, families[1]))
+      assert.are.same({true}, {setFontSize(otherName, 17)})
+      assert.are.same({17}, {getFontSize(otherName)})
+      -- each keeps what the other set
       assert.are.equal(families[1], getFont(otherName))
+      assert.is_true(setFont(otherName, families[2]))
+      assert.are.equal(families[2], getFont(otherName))
+      assert.are.same({17}, {getFontSize(otherName)})
     end)
+
+    it("reaches the font size of a label sized in pixels by its style sheet", function()
+      assert.is_true(createLabel(otherName, 0, 0, 50, 20, 1))
+      setLabelStyleSheet(otherName, "font-size: 12px;")
+      local small = getFontSize(otherName)
+      setLabelStyleSheet(otherName, "font-size: 48px;")
+      local large = getFontSize(otherName)
+      local answered = ("getFontSize answered %s for 12px and %s for 48px"):format(tostring(small), tostring(large))
+      assert.is_true(type(small) == "number" and small > 0, answered)
+      -- points per pixel depend on the display, but four times the pixels is
+      -- about four times the points on any of them
+      assert.is_true(type(large) == "number" and large >= 3 * small and large <= 5 * small, answered)
+    end)
+  end)
+
+  -- "main" is the one name a console can still share with a label
+  it("lets the main console win the name of a label called main", function()
+    finally(function()
+      deleteLabel("main")
+    end)
+    local size = getFontSize("main") == 17 and 19 or 17
+    assert.is_true(createLabel("main", 0, 0, 50, 20, 1))
+    assert.are.same({true}, {setFontSize("main", size)})
+    assert.are.same({size}, {getFontSize("main")})
+    assert.is_true(deleteLabel("main"))
+    assert.are.same({size}, {getFontSize("main")})
   end)
 
   it("checks the arguments before it looks for the console", function()
@@ -126,6 +159,8 @@ describe("Tests that the font functions find their console by name", function()
       assert.are.same({nil, ("font '%s' is not available"):format(name)}, {setFont(unknown, name)})
     end
     assert.are.same({nil, "size cannot be 0 or negative"}, {setFontSize(unknown, 0)})
+    assert.are.same({nil, "size 999999 is too large, it cannot be more than 1000"}, {setFontSize(unknown, 999999)})
+    assert.are.same({nil, "size 1001 is too large, it cannot be more than 1000"}, {setFontSize(unknown, 1001)})
     assert.are.same({nil, "font name must not contain a NUL character"}, {setFont(unknown, families[1] .. "\0Garbage")})
   end)
 
@@ -180,6 +215,18 @@ describe("Tests that the font functions find their console by name", function()
           assert.are.equal(size, getFontSize(window))
           assert.are.same({}, events)
           assert.are.equal(mainSize, getFontSize("main"))
+        end)
+
+        it("takes the largest size it allows and refuses one past it", function()
+          local family, size = getFont(window), getFontSize(window)
+          finally(function()
+            setFontSize(window, size)
+          end)
+          assert.are.same({true}, {setFontSize(window, 1000)})
+          assert.are.equal(1000, getFontSize(window))
+          assert.are.equal(family, getFont(window))
+          assert.are.same({nil, "size 1001 is too large, it cannot be more than 1000"}, {setFontSize(window, 1001)})
+          assert.are.equal(1000, getFontSize(window))
         end)
 
         it("sets and reads that console's font, keeping its size", function()
@@ -297,6 +344,18 @@ describe("Tests that the font functions find their console by name", function()
       assert.are.equal(size, getFontSize("main"))
       assert.are.same({true}, {setFont(family)})
       assert.are.equal(family, getFont("main"))
+    end)
+
+    it("takes the largest size it allows for the main console and refuses one past it", function()
+      local family, size = getFont("main"), getFontSize("main")
+      finally(function()
+        setFontSize("main", size)
+      end)
+      assert.are.same({true}, {setFontSize("main", 1000)})
+      assert.are.equal(1000, getFontSize("main"))
+      assert.are.equal(family, getFont("main"))
+      assert.are.same({nil, "size 1001 is too large, it cannot be more than 1000"}, {setFontSize("main", 1001)})
+      assert.are.equal(1000, getFontSize("main"))
     end)
 
     it("refuses the main console's command line", function()

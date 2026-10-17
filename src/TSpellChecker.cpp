@@ -26,8 +26,11 @@
 #include "utils.h"
 
 #include <QCollator>
+#include <QCoreApplication>
 #include <QDebug>
+#include <QDir>
 #include <QFile>
+#include <QFileInfo>
 #include <QMultiMap>
 #include <QSaveFile>
 #include <QTextBoundaryFinder>
@@ -36,7 +39,6 @@
 
 #if defined(Q_OS_WINDOWS)
 #include <QCryptographicHash>
-#include <QFileInfo>
 #include <QRegularExpression>
 #include <QScopedArrayPointer>
 #include <windows.h>
@@ -173,11 +175,12 @@ TSpellChecker::~TSpellChecker()
 
 void TSpellChecker::setSystemDictionary(const QString& newDict)
 {
-    if (newDict.isEmpty() || mSystemDictionary == newDict) {
+    if (newDict.isEmpty() || (mSystemDictionary == newDict && !mSystemDictionaryMissing)) {
         return;
     }
 
     mSystemDictionary = newDict;
+    mSystemDictionaryMissing = false;
 
     if (mpHunspell_system) {
         Hunspell_destroy(mpHunspell_system);
@@ -213,7 +216,7 @@ void TSpellChecker::warmDictionaries()
 
 Hunhandle* TSpellChecker::systemHandle()
 {
-    if (!mpHunspell_system) {
+    if (!mpHunspell_system && !mSystemDictionaryMissing) {
         if (mSystemDictionary.isEmpty()) {
             // A profile whose XML names no dictionary never calls
             // Host::setSpellDic(), so the platform's starting one has to be
@@ -249,12 +252,62 @@ void TSpellChecker::loadSystemDictionary()
     sanitizeUtf8Path(spell_dic);
 #endif
 
+    if (!dictionaryFileUsable(spell_aff) || !dictionaryFileUsable(spell_dic)) {
+        mSystemDictionaryMissing = true;
+        qWarning().noquote().nospace() << "TSpellChecker::loadSystemDictionary() WARNING - the Hunspell dictionary \"" << mSystemDictionary << "\" is not available, as \"" << spell_aff << "\" and \""
+                                       << spell_dic << "\" are not both there to be read.";
+        //: %1 is the name of the spell-check dictionary the profile uses, such as "de_DE"
+        mpHost->postMessage(QCoreApplication::translate("TSpellChecker",
+                                                        "[ WARN ]  - The spell-check dictionary \"%1\" that this profile uses is not available on this computer, "
+                                                        "so nothing will be spell-checked until another one is picked in the preferences, or until it is installed and the preferences are opened.")
+                                    .arg(mSystemDictionary));
+        return;
+    }
+
     mpHunspell_system = Hunspell_create(spell_aff.toUtf8().constData(), spell_dic.toUtf8().constData());
     if (mpHunspell_system) {
         mHunspellCodecName_system = QByteArray(Hunspell_get_dic_encoding(mpHunspell_system));
         qDebug().noquote().nospace() << "TSpellChecker::loadSystemDictionary() INFO - System Hunspell dictionary \"" << mSystemDictionary << "\" loaded for profile, it uses a \""
                                      << Hunspell_get_dic_encoding(mpHunspell_system) << "\" encoding...";
     }
+}
+
+// Hunspell_create() cannot fail: given files that are not there, or that are
+// empty, it hands back an empty dictionary, which marks every word as misspelt
+bool TSpellChecker::dictionaryFileUsable(const QString& path)
+{
+    const QFileInfo file(path);
+    return file.isFile() && file.isReadable() && file.size() > 0;
+}
+
+bool TSpellChecker::systemDictionaryFound(const QString& name)
+{
+    return dictionaryUsable(MudletApp::getMudletPath(enums::hunspellDictionaryPath, name), name);
+}
+
+bool TSpellChecker::dictionaryUsable(const QString& folder, const QString& name)
+{
+    return dictionaryFileUsable(qsl("%1%2.aff").arg(folder, name)) && dictionaryFileUsable(qsl("%1%2.dic").arg(folder, name));
+}
+
+QString TSpellChecker::dictionaryFolderToList(const QString& currentDictionary)
+{
+    for (const auto& name : {currentDictionary, Host::startingSpellDic()}) {
+        const QString folder = MudletApp::getMudletPath(enums::hunspellDictionaryPath, name);
+        if (QFile::exists(qsl("%1%2.aff").arg(folder, name))) {
+            return folder;
+        }
+    }
+    for (const auto& folder : MudletApp::systemHunspellDictionaryFolders()) {
+        for (QString name : QDir(folder).entryList({qsl("*.aff")}, QDir::Files, QDir::Name)) {
+            name.chop(4);
+            if (dictionaryUsable(folder, name)) {
+                // Through getMudletPath() so that MudletApp::usingMudletDictionaries() is settled too
+                return MudletApp::getMudletPath(enums::hunspellDictionaryPath, name);
+            }
+        }
+    }
+    return MudletApp::getMudletPath(enums::hunspellDictionaryPath, currentDictionary);
 }
 
 // NOTE: Host::setUserDictionaryOptions() forces the user dictionary on, so the
