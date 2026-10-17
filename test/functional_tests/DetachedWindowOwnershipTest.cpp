@@ -43,6 +43,7 @@
 #include <QTabBar>
 #include <QTemporaryDir>
 #include <QPointer>
+#include <QScopeGuard>
 #include <QWindow>
 #include <QtTest/QtTest>
 #include <chrono>
@@ -53,7 +54,9 @@
 #include "HostDialogs.h"
 #include "HostManager.h"
 #include "MudletInstanceCoordinator.h"
+#include "TCommandLine.h"
 #include "TDetachedWindow.h"
+#include "TMainConsole.h"
 #include "TTabBar.h"
 #include "TelnetServerStub.h"
 #include "dlgTriggerEditor.h"
@@ -196,6 +199,92 @@ private slots:
         // activation settles instead of a moment those could still move it from
         QTest::qWait(200ms);
         QCOMPARE(QApplication::activeWindow(), mpDetachedWindow.data());
+    }
+
+    // The player carries on typing straight after the drag, so the profile they
+    // dragged out has to have the keyboard in its new window
+    void test_theDetachedProfilesCommandLineHasTheKeyboard()
+    {
+        QVERIFY(mpDetachedWindow);
+        Host* pHost = HostManager::self()->getHost(mSecondHostname);
+        QVERIFY(pHost && pHost->mainConsoleView());
+        reattachAndWait(mSecondHostname);
+        QTest::qWait(200ms); // the reattach's own deferred focus changes
+        // Away from the command line, so that only the detach can hand it the keyboard:
+        // left alone, the new window gives it to its own tab bar
+        mudlet::self()->mpTabBar->setFocus(Qt::MouseFocusReason);
+        mpDetachedWindow = detachSecondProfile();
+        QVERIFY(mpDetachedWindow);
+        // Unconditional for the same reason as the case above
+        QTest::qWait(200ms);
+        QCOMPARE(QApplication::focusWidget(), static_cast<QWidget*>(pHost->mainConsoleView()->mpCommandLine.data()));
+    }
+
+    // A user window is not moved with its profile, docked or floating, so the
+    // command line last used in one cannot be the one given the keyboard
+    void test_theDetachedProfilesCommandLineHasTheKeyboardAfterAUserWindowsWasUsed()
+    {
+        QVERIFY(mpDetachedWindow);
+        Host* pHost = HostManager::self()->getHost(mSecondHostname);
+        QVERIFY(pHost && pHost->mainConsoleView());
+        reattachAndWait(mSecondHostname);
+        QTest::qWait(200ms);
+        // Ahead of the open, so that a check failing after it still closes the window
+        auto restore = qScopeGuard([pHost]() {
+            if (TConsole* pWindow = pHost->mainConsoleView()->subConsoleWidget(qsl("qaKeyboardWindow"))) {
+                pHost->mainConsoleView()->forgetCommandLine(pWindow->mpCommandLine);
+            }
+            pHost->getLuaInterpreter()->compileAndExecuteScript(qsl("hideWindow('qaKeyboardWindow')"));
+            pHost->mainConsoleView()->recordActiveCommandLine(pHost->mainConsoleView()->mpCommandLine);
+        });
+        QVERIFY(pHost->getLuaInterpreter()->compileAndExecuteScript(qsl("openUserWindow('qaKeyboardWindow') enableCommandLine('qaKeyboardWindow')")));
+        TConsole* pUserWindow = pHost->mainConsoleView()->subConsoleWidget(qsl("qaKeyboardWindow"));
+        QVERIFY(pUserWindow && pUserWindow->mpCommandLine);
+        const QPointer<TCommandLine> pUserCommandLine = pUserWindow->mpCommandLine.data();
+        pHost->mainConsoleView()->recordActiveCommandLine(pUserCommandLine);
+        mudlet::self()->mpTabBar->setFocus(Qt::MouseFocusReason);
+
+        mpDetachedWindow = detachSecondProfile();
+        QVERIFY(mpDetachedWindow);
+        QVERIFY2(pUserCommandLine->window() != mpDetachedWindow.data(), "the user window moved with its profile, so this case no longer covers a command line left behind");
+        QTest::qWait(200ms);
+        QVERIFY2(QApplication::focusWidget() != pUserCommandLine.data(), "the keyboard went to the user window's command line, left behind in the main window");
+        QCOMPARE(QApplication::activeWindow(), mpDetachedWindow.data());
+        QCOMPARE(QApplication::focusWidget(), static_cast<QWidget*>(pHost->mainConsoleView()->mpCommandLine.data()));
+
+        // As a toolbar button, or a click on a console without a command line of its
+        // own, does: the command line given the keyboard has to be the one on record from now on
+        pHost->setFocusOnHostActiveCommandLine();
+        QTest::qWait(200ms);
+        QCOMPARE(QApplication::activeWindow(), mpDetachedWindow.data());
+        QCOMPARE(QApplication::focusWidget(), static_cast<QWidget*>(pHost->mainConsoleView()->mpCommandLine.data()));
+    }
+
+    // A command line made in the profile's own console moves with it, so when it
+    // was the last one used it keeps the keyboard
+    void test_aCommandLineThatMovedWithItsProfileKeepsTheKeyboard()
+    {
+        QVERIFY(mpDetachedWindow);
+        Host* pHost = HostManager::self()->getHost(mSecondHostname);
+        QVERIFY(pHost && pHost->mainConsoleView());
+        reattachAndWait(mSecondHostname);
+        QTest::qWait(200ms);
+        auto restore = qScopeGuard([pHost]() {
+            pHost->mainConsoleView()->forgetCommandLine(pHost->mainConsoleView()->subCommandLineWidget(qsl("qaKeyboardLine")));
+            pHost->getLuaInterpreter()->compileAndExecuteScript(qsl("deleteCommandLine('qaKeyboardLine')"));
+            pHost->mainConsoleView()->recordActiveCommandLine(pHost->mainConsoleView()->mpCommandLine);
+        });
+        QVERIFY(pHost->getLuaInterpreter()->compileAndExecuteScript(qsl("createCommandLine('qaKeyboardLine', 0, 0, 200, 30)")));
+        const QPointer<TCommandLine> pSubCommandLine = pHost->mainConsoleView()->subCommandLineWidget(qsl("qaKeyboardLine"));
+        QVERIFY(pSubCommandLine);
+        pHost->mainConsoleView()->recordActiveCommandLine(pSubCommandLine);
+        mudlet::self()->mpTabBar->setFocus(Qt::MouseFocusReason);
+
+        mpDetachedWindow = detachSecondProfile();
+        QVERIFY(mpDetachedWindow);
+        QVERIFY2(pSubCommandLine->window() == mpDetachedWindow.data(), "the profile's own command line did not move with it, so this case no longer covers one that did");
+        QTest::qWait(200ms);
+        QCOMPARE(QApplication::focusWidget(), static_cast<QWidget*>(pSubCommandLine.data()));
     }
 
     void test_reattachingDestroysTheDetachedWindow()
