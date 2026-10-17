@@ -330,6 +330,9 @@ struct MapStyle
     // clean for the lettering, so that rooms and lines under the label do not show through it; invalid for none. It
     // takes the place of mapLabelHalo
     QColor mapLabelKnockout;
+    // Rooms and exits on levels other than the viewed one drawn in this color rather than their own, before they
+    // fade, so that those levels read as one quiet layer behind it; invalid to keep their own
+    QColor otherLevelColor;
 
     QString displayName() const;
     // Whether this style's player ring and color take the place of the profile's player room marker
@@ -379,6 +382,11 @@ struct MapStyle
     QColor roomIdColor(const QColor& drawnRoomColor) const;
     // roomBorderColor is the room's own, invalid unless one was set; drawnRoomColor is roomColor()'s
     QColor wireColor(const QColor& roomBorderColor, const QColor& drawnRoomColor) const;
+    // A room's or exit's color on a level other than the viewed one, given the one it is drawn in on the viewed level
+    QColor otherLevelColorFor(const QColor& drawnColor) const;
+    // How much of its saturation a level other than the viewed one keeps, given how much of its own it would: all of
+    // this style's own color for it, which is already the one hue those levels share
+    float otherLevelSaturation(float levelSaturation) const;
     // The player's room, where its marker could not be made
     QColor playerRoomColor() const;
     // A ring or a line in an environment's color, made darker or lighter where it would not stand out on backgroundColor()

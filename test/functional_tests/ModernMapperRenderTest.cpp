@@ -2349,6 +2349,167 @@ private slots:
         }
     }
 
+    // Another level is a dim cyan outline of its rooms and exits, whatever their hues, so the viewed level's colors are
+    // the ones that show; still lines, so that rooms there can be found
+    void test_hologramDrawsOtherLevelsAsDimCyanOutlinesWithoutGL()
+    {
+        const int areaId = addArea();
+        QVERIFY(areaId > 0);
+        constexpr int kUpperRoomId = 6;
+        constexpr int kUpperEastRoomId = 7;
+        QVERIFY(addRoomAt(kUpperRoomId, areaId, 2, 2, 1));
+        QVERIFY(addRoomAt(kUpperEastRoomId, areaId, 4, 2, 1));
+        map()->mCustomEnvColors[301] = QColor(200, 30, 30);
+        const auto restore = qScopeGuard([this]() {
+            mpHost->setMapStyle(qsl("tiles"));
+            map()->mCustomEnvColors.remove(301);
+        });
+        for (const int roomId : {kEastRoomId, kLowerRoomId, kUpperRoomId, kUpperEastRoomId}) {
+            map()->mpRoomDB->getRoom(roomId)->environment = 301;
+        }
+        map()->mpRoomDB->getRoom(kUpperRoomId)->setExit(kUpperEastRoomId, DIR_EAST);
+        QVERIFY(mpHost->setMapStyle(qsl("hologram")));
+        ModernGLWidget widget(map(), mpHost);
+        queueFrame(widget, areaId);
+
+        QList<CubeInstanceData> lines;
+        for (const auto& command : widget.mRenderCommandQueue.commands()) {
+            if (const auto* cubes = dynamic_cast<const RenderInstancedCubesCommand*>(command.get()); cubes && cubes->shading() == RenderCommand::Shading::Wireframe) {
+                lines.append(cubes->instances());
+            }
+        }
+        const auto linesAt = [&lines](const QPointF& place, const bool rooms) {
+            QList<CubeInstanceData> found;
+            for (const CubeInstanceData& cube : std::as_const(lines)) {
+                const QVector4D center = cube.transform.column(3);
+                if (qAbs(center.x() - place.x()) < 0.3 && qAbs(center.y() - place.y()) < 0.3 && (cube.transform.column(0).toVector3D().length() > 0.2f) == rooms) {
+                    found.append(cube);
+                }
+            }
+            return found;
+        };
+        const auto hue = [](const CubeInstanceData& cube) {
+            return QColor::fromRgbF(cube.color[0], cube.color[1], cube.color[2]).hslHue();
+        };
+        const auto glow = [](const CubeInstanceData& cube) {
+            return (cube.color[0] + cube.color[1] + cube.color[2]) * cube.color[3];
+        };
+        // As vivid as the style's own color for other levels, rather than grayed as another level's own hues are
+        const qreal vivid = 0.75 * mpHost->mapStylePreset().otherLevelColor.hsvSaturationF();
+        const auto saturation = [](const CubeInstanceData& cube) {
+            return QColor::fromRgbF(cube.color[0], cube.color[1], cube.color[2]).hsvSaturationF();
+        };
+        const QList<CubeInstanceData> viewed = linesAt(QPointF(2.0, 0.0), true);
+        QCOMPARE(viewed.size(), 1);
+        QVERIFY2(hue(viewed.first()) < 20 || hue(viewed.first()) > 340, qPrintable(qsl("the viewed level's red room glows at hue %1").arg(hue(viewed.first()))));
+        for (const auto& [place, where] : {std::make_pair(QPointF(0.0, 2.0), qsl("below")), std::make_pair(QPointF(2.0, 2.0), qsl("above"))}) {
+            const QList<CubeInstanceData> ghost = linesAt(place, true);
+            QVERIFY2(ghost.size() == 1, qPrintable(qsl("the red room %1 is not outlined").arg(where)));
+            QVERIFY2(hue(ghost.first()) >= 175 && hue(ghost.first()) <= 200, qPrintable(qsl("the red room %1 glows at hue %2").arg(where).arg(hue(ghost.first()))));
+            QVERIFY2(saturation(ghost.first()) >= vivid, qPrintable(qsl("the room %1 is grayed to %2").arg(where).arg(saturation(ghost.first()))));
+            QVERIFY2(glow(ghost.first()) < 0.5f * glow(viewed.first()),
+                     qPrintable(qsl("the room %1 glows %2, against %3 on the viewed level").arg(where).arg(glow(ghost.first())).arg(glow(viewed.first()))));
+            QVERIFY2(glow(ghost.first()) > 0.02f, qPrintable(qsl("the room %1 glows too faintly to find, %2").arg(where).arg(glow(ghost.first()))));
+        }
+        const QList<CubeInstanceData> exit = linesAt(QPointF(3.0, 2.0), false);
+        QVERIFY2(!exit.isEmpty(), "the exit on the level above is not drawn");
+        for (const CubeInstanceData& bar : exit) {
+            QVERIFY2(hue(bar) >= 175 && hue(bar) <= 200, qPrintable(qsl("the exit on the level above glows at hue %1").arg(hue(bar))));
+            QVERIFY2(saturation(bar) >= vivid, qPrintable(qsl("the exit on the level above is grayed to %1").arg(saturation(bar))));
+        }
+    }
+
+    // In tiles another level's blocks lose their hue and sink toward the background, further for a level further off,
+    // while the viewed level keeps its colors
+    void test_otherLevelsSinkBehindTheViewedOneWithoutGL()
+    {
+        const int areaId = addArea();
+        QVERIFY(areaId > 0);
+        constexpr int kTwoBelowRoomId = 6;
+        QVERIFY(addRoomAt(kTwoBelowRoomId, areaId, 2, 2, -2));
+        map()->mCustomEnvColors[301] = QColor(200, 30, 30);
+        const bool savedLevels = mudlet::self()->drawUpperLowerLevels();
+        const auto restore = qScopeGuard([this, savedLevels]() {
+            map()->mCustomEnvColors.remove(301);
+            mudlet::self()->setDrawUpperLowerLevels(savedLevels);
+        });
+        mudlet::self()->setDrawUpperLowerLevels(true);
+        for (const int roomId : {kEastRoomId, kLowerRoomId, kTwoBelowRoomId}) {
+            map()->mpRoomDB->getRoom(roomId)->environment = 301;
+        }
+        QVERIFY(mpHost->setMapStyle(qsl("tiles")));
+        ModernGLWidget widget(map(), mpHost);
+        queueFrame(widget, areaId);
+        const auto blockAt = [&widget](const QPointF& place) {
+            QColor found;
+            float narrowest = std::numeric_limits<float>::max();
+            for (const auto& command : widget.mRenderCommandQueue.commands()) {
+                if (const auto* cubes = dynamic_cast<const RenderInstancedCubesCommand*>(command.get())) {
+                    for (const CubeInstanceData& cube : roomInstances(*cubes, place)) {
+                        // The block itself, not the rim or border drawn wider round it
+                        if (const float width = cube.transform.column(0).toVector3D().length(); width < narrowest) {
+                            narrowest = width;
+                            found = QColor::fromRgbF(cube.color[0], cube.color[1], cube.color[2], cube.color[3]);
+                        }
+                    }
+                }
+            }
+            return found;
+        };
+        const QColor background = mpHost->mapStylePreset().backgroundColor(mpHost->mBgColor_2);
+        const auto chroma = [](const QColor& color) {
+            return std::max({color.red(), color.green(), color.blue()}) - std::min({color.red(), color.green(), color.blue()});
+        };
+        const QColor viewed = blockAt(QPointF(2.0, 0.0));
+        const QColor below = blockAt(QPointF(0.0, 2.0));
+        const QColor twoBelow = blockAt(QPointF(2.0, 2.0));
+        QVERIFY2(viewed.isValid() && below.isValid() && twoBelow.isValid(), "a red block was not drawn");
+        QVERIFY2(chroma(below) < chroma(viewed) / 2, qPrintable(qsl("the level below keeps its red, %1 against %2").arg(below.name(), viewed.name())));
+        QVERIFY2(chroma(twoBelow) < chroma(below), qPrintable(qsl("two levels below is as red as one, %1 against %2").arg(twoBelow.name(), below.name())));
+        QVERIFY2(MapStyle::contrastRatio(MapStyle::over(below, background), background) < MapStyle::contrastRatio(viewed, background), "the level below stands out as much as the viewed one");
+        QVERIFY2(MapStyle::contrastRatio(MapStyle::over(twoBelow, background), background) < MapStyle::contrastRatio(MapStyle::over(below, background), background),
+                 "two levels below stands out as much as one");
+    }
+
+    // Another level's exits run across the viewed level's rooms, so they are fainter than the rooms they join there,
+    // while on the viewed level an exit is as solid as its rooms
+    void test_otherLevelsExitsRecedeFurtherThanTheirRoomsWithoutGL()
+    {
+        const int areaId = addArea();
+        QVERIFY(areaId > 0);
+        constexpr int kUpperRoomId = 6;
+        constexpr int kUpperEastRoomId = 7;
+        QVERIFY(addRoomAt(kUpperRoomId, areaId, 2, 2, 1));
+        QVERIFY(addRoomAt(kUpperEastRoomId, areaId, 4, 2, 1));
+        map()->mpRoomDB->getRoom(kUpperRoomId)->setExit(kUpperEastRoomId, DIR_EAST);
+        map()->mpRoomDB->getRoom(kPlayerRoomId)->setExit(kEastRoomId, DIR_EAST);
+        QVERIFY(mpHost->setMapStyle(qsl("tiles")));
+        ModernGLWidget widget(map(), mpHost);
+        queueFrame(widget, areaId);
+        const auto opacityAt = [&widget](const QPointF& place, const bool rooms) {
+            float most = 0.0f;
+            for (const auto& command : widget.mRenderCommandQueue.commands()) {
+                if (const auto* cubes = dynamic_cast<const RenderInstancedCubesCommand*>(command.get())) {
+                    for (const CubeInstanceData& cube : cubes->instances()) {
+                        const QVector4D center = cube.transform.column(3);
+                        if (qAbs(center.x() - place.x()) < 0.3 && qAbs(center.y() - place.y()) < 0.3 && (cube.transform.column(0).toVector3D().length() > 0.2f) == rooms) {
+                            most = qMax(most, cube.color[3]);
+                        }
+                    }
+                }
+            }
+            return most;
+        };
+        const float viewedRoom = opacityAt(QPointF(2.0, 0.0), true);
+        const float viewedExit = opacityAt(QPointF(1.0, 0.0), false);
+        const float upperRoom = opacityAt(QPointF(2.0, 2.0), true);
+        const float upperExit = opacityAt(QPointF(3.0, 2.0), false);
+        QVERIFY2(viewedRoom > 0.0f && viewedExit > 0.0f && upperRoom > 0.0f && upperExit > 0.0f, "a room or exit was not drawn");
+        QVERIFY2(upperRoom < viewedRoom, "the level above is as solid as the viewed one");
+        QVERIFY2(upperExit / viewedExit < upperRoom / viewedRoom,
+                 qPrintable(qsl("the exit above keeps %1 of the viewed exit's opacity, no less than its rooms' %2").arg(upperExit / viewedExit).arg(upperRoom / viewedRoom)));
+    }
+
     // The player is marked by a diamond of glowing lines over their room, in the player's color, not a column
     void test_hologramMarksThePlayerWithADiamondWithoutGL()
     {

@@ -502,25 +502,38 @@ GeometryManager::LevelFade GeometryManager::levelFade(const int levelsAbove, con
     if (distance == 0) {
         return fade;
     }
+    // Grayed before they fade, so that the viewed level's hues are the ones that catch the eye, while a level nearby
+    // keeps enough of its own to be told apart
+    const auto further = static_cast<float>(distance - 1);
+    fade.saturation = std::max(0.05f, 0.4f - 0.2f * further);
     if (moreTransparent) {
         fade.towardBackground = distance == 1 ? 0.5f : (distance == 2 ? 0.8f : 0.95f);
         return fade;
     }
     if (levelsAbove > 0) {
         // Above the viewed level, so see-through enough not to hide it
-        fade.towardBackground = std::min(0.8f, 0.35f + 0.15f * static_cast<float>(distance - 1));
-        fade.opacity = std::max(0.1f, 0.35f - 0.1f * static_cast<float>(distance - 1));
+        fade.towardBackground = std::min(0.85f, 0.35f + 0.15f * further);
+        fade.opacity = std::max(0.1f, 0.4f - 0.1f * further);
     } else {
-        fade.towardBackground = std::min(0.75f, 0.3f * static_cast<float>(distance));
+        fade.towardBackground = std::min(0.85f, 0.4f + 0.2f * further);
     }
     return fade;
 }
 
 QVector4D GeometryManager::fadedColor(const QColor& color, const LevelFade& fade, const QColor& background)
 {
+    float gray = 0.0f;
+    if (fade.saturation < 1.0f) {
+        // The gray as bright to the eye as the color: averaging the gamma-encoded channels would turn a saturated red
+        // or blue nearly black, and so lose the room against a dark background
+        const auto linear = [](const float channel) {
+            return std::pow(channel, 2.2f);
+        };
+        gray = std::pow(0.2126f * linear(color.redF()) + 0.7152f * linear(color.greenF()) + 0.0722f * linear(color.blueF()), 1.0f / 2.2f);
+    }
     const float keep = 1.0f - fade.towardBackground;
     const auto mixed = [&](const float own, const float back) {
-        return own * keep + back * fade.towardBackground;
+        return (gray + (own - gray) * fade.saturation) * keep + back * fade.towardBackground;
     };
     return QVector4D(mixed(color.redF(), background.redF()), mixed(color.greenF(), background.greenF()), mixed(color.blueF(), background.blueF()), color.alphaF() * fade.opacity);
 }
@@ -531,7 +544,7 @@ QColor GeometryManager::levelFadeTarget(const int levelsAbove, const QColor& bac
         return background;
     }
     const QColor& levelColor = levelsAbove > 0 ? upperLevelColor : lowerLevelColor;
-    const float cover = levelColor.alphaF();
+    const float cover = levelColor.alphaF() * scmLevelColorShare;
     const auto over = [cover](const float own, const float back) {
         return own * cover + back * (1.0f - cover);
     };
