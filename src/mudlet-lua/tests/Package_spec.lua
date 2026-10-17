@@ -2186,14 +2186,39 @@ describe("Tests installing an archive whose package XML cannot be read", functio
   -- unreadable one turns the package away must not depend on what it is called
   it("installs an archive whose unreadable stray file is read before its package file", function()
     local name = "mudlet-spec-straynotes"
+    local installEvents = collectEventsForSpec("sysInstall")
     defer(function() removeFixturePackage(name) end)
     assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
 
     local mark = getLastLineNumber("main")
-    installFixturePackage(name)
+    local ok, reason = installUntilConfirmed(installPackage, fixtureDirectory .. "/" .. name .. ".mpackage",
+                                             function() return packageInstalled(name) end, "the package with a stray file")
 
     assert.equals(1, exists(name .. " alias", "alias"), "the package file beside the stray one was not read")
     assert.is_true(containsWrapped(textFrom(mark), 'Failed to load package "' .. name .. '"'), textFrom(mark))
+    -- named by the file, so a script can tell the stray one from the package file
+    assert.is_true(ok)
+    assert.equals(name .. "/a-notes.xml: Start tag expected.", reason)
+    assert.is_true(waitUntil(function() return #installEvents > 0 end, 2000), "the install events never came")
+    assert.equals(reason, installEvents[1][2])
+  end)
+
+  it("tells the script and the install events that a package's XML stopped part-way", function()
+    local name = "mudlet-spec-partialxml"
+    local installEvents = collectEventsForSpec("sysInstall")
+    local packageEvents = collectEventsForSpec("sysInstallPackage")
+    defer(function() removeFixturePackage(name) end)
+
+    local ok, reason = installUntilConfirmed(installPackage, fixtureDirectory .. "/" .. name .. ".mpackage",
+                                             function() return packageInstalled(name) end, "the package whose XML stopped part-way")
+    assert.equals(1, exists(name .. " alias", "alias"), "SETUP: the fixture no longer imports items before its XML breaks")
+
+    assert.is_true(ok)
+    assert.equals(name .. "/" .. name .. ".xml: Premature end of document.", reason)
+    assert.is_true(waitUntil(function() return #installEvents > 0 and #packageEvents > 0 end, 2000),
+                   "the install events never came")
+    assert.equals(reason, installEvents[1][2])
+    assert.equals(reason, packageEvents[1][3])
   end)
 
   -- A package file that was read through without a fault is the package, even an empty one
@@ -2230,6 +2255,8 @@ describe("Tests installing an archive whose package XML cannot be read", functio
   it("keeps a package XML that broke after setting a variable", function()
     local name = "mudlet-spec-cutaftervariable"
     local xml = getMudletHomeDir() .. "/" .. name .. ".xml"
+    local installEvents = collectEventsForSpec("sysInstall")
+    local packageEvents = collectEventsForSpec("sysInstallPackage")
     defer(function()
       removeFixturePackage(name)
       os.remove(xml)
@@ -2249,9 +2276,15 @@ describe("Tests installing an archive whose package XML cannot be read", functio
     file:close()
     mudletSpecCutAfterVariable = nil
 
-    installUntilConfirmed(installPackage, xml, function() return packageInstalled(name) end, "the package XML cut off after its variable")
+    local ok, reason = installUntilConfirmed(installPackage, xml, function() return packageInstalled(name) end, "the package XML cut off after its variable")
 
     assert.equals(5, mudletSpecCutAfterVariable)
+    assert.is_true(ok)
+    assert.equals(name .. ": Premature end of document.", reason)
+    assert.is_true(waitUntil(function() return #installEvents > 0 and #packageEvents > 0 end, 2000),
+                   "the install events never came")
+    assert.equals(reason, installEvents[1][2])
+    assert.equals(reason, packageEvents[1][3])
   end)
 end)
 
@@ -3278,11 +3311,14 @@ describe("Tests installing a package file from a later Mudlet", function()
     lfs.mkdir(scratchDirectory)
     writeLaterMudletXml(path, moduleFromTheFuture)
     assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+    local installEvents = collectEventsForSpec("sysInstall")
 
     installUntilConfirmed(installModule, path, function() return moduleInstalled(moduleFromTheFuture) end, "the module from a later Mudlet")
+    pumpEvents(300)
 
     assert.equals(0, exists(moduleFromTheFuture .. " trigger", "trigger"), "an unreadable file's trigger was installed anyway")
     assertNoFoldersNamed(moduleFromTheFuture)
+    assert.same({}, installEvents, "a module nothing could be read out of was announced as installed")
   end)
 end)
 
@@ -4980,6 +5016,292 @@ describe("Tests installing a module whose XML cannot be read", function()
     assert.is_true(containsWrapped(text, 'Failed to load module "' .. name .. '"'), text)
   end)
 
+  it("announces a module whose XML stopped part-way, as its items are running", function()
+    local name = "mudlet-spec-partialxml"
+    local installEvents = collectEventsForSpec("sysInstall")
+    local moduleEvents = collectEventsForSpec("sysLuaInstallModule")
+    local _, ok, reason = withFixtureModule(name)
+    assert.equals(1, exists(name .. " alias", "alias"), "SETUP: the fixture no longer imports items before its XML breaks")
+    assert.is_true(ok)
+    -- the reader's own message, as an item of the same name whose Lua failed would also give "<name>: "
+    assert.is_true(contains(reason, name .. "/" .. name .. ".xml: Premature end of document."), tostring(reason))
+
+    assert.is_true(waitUntil(function() return #installEvents > 0 and #moduleEvents > 0 end, 2000),
+                   "the install events never came for a module whose items are running")
+    assert.equals(name, installEvents[1][1])
+    -- the trailing argument tells a handler the module did not load in full, as the script that asked was
+    assert.equals(reason, installEvents[1][2])
+    assert.equals(name, moduleEvents[1][1])
+    assert.equals(reason, moduleEvents[1][3])
+  end)
+
+  it("announces a module whose XML stopped part-way after setting only a variable", function()
+    local name = "mudlet-spec-cutaftervariablemodule"
+    local path = scratchDirectory .. "/" .. name .. ".xml"
+    local installEvents = collectEventsForSpec("sysInstall")
+    defer(function()
+      removeFixtureModule(name)
+      os.remove(path)
+      lfs.rmdir(scratchDirectory)
+      mudletSpecCutAfterVariableModule = nil
+    end)
+    lfs.mkdir(scratchDirectory)
+    local file = io.open(path, "wb")
+    assert.is_not_nil(file, "could not write " .. path)
+    file:write(table.concat({
+      '<?xml version="1.0" encoding="UTF-8"?>',
+      '<!DOCTYPE MudletPackage>',
+      '<MudletPackage version="1.001">',
+      '<VariablePackage>',
+      '<Variable><name>mudletSpecCutAfterVariableModule</name><keyType>4</keyType><value>5</value><valueType>3</valueType></Variable>',
+      '</VariablePackage>',
+      '<AliasPack',
+    }, "\n"))
+    file:close()
+    mudletSpecCutAfterVariableModule = nil
+
+    installUntilConfirmed(installModule, path, function() return moduleInstalled(name) end, "the module cut off after its variable")
+    assert.equals(5, mudletSpecCutAfterVariableModule, "SETUP: the variable before the break was not set")
+
+    assert.is_true(waitUntil(function() return #installEvents > 0 end, 2000),
+                   "a module whose variable is set was never announced")
+    assert.equals(name, installEvents[1][1])
+    assert.is_true(contains(installEvents[1][2], name .. ": Premature end of document."), tostring(installEvents[1][2]))
+  end)
+
+  it("tells of every file of a module archive that stopped part-way", function()
+    local name = "mudlet-spec-twobrokenxml"
+    local installEvents = collectEventsForSpec("sysInstall")
+    local _, ok, reason = withFixtureModule(name)
+    assert.equals(1, exists(name .. " alias a", "alias"), "SETUP: the first file no longer imports its alias")
+    assert.equals(1, exists(name .. " alias b", "alias"), "SETUP: the second file no longer imports its alias")
+
+    assert.is_true(ok)
+    -- each named by its file, as both carry the module's name
+    assert.is_true(contains(reason, name .. "/a.xml: Premature end of document."), tostring(reason))
+    assert.is_true(contains(reason, name .. "/b.xml: Opening and ending tag mismatch."), tostring(reason))
+    assert.is_true(waitUntil(function() return #installEvents > 0 end, 2000), "the module was never announced")
+    assert.equals(reason, installEvents[1][2])
+  end)
+
+  it("tells of a module's broken Lua and its broken XML together", function()
+    local name = "mudlet-spec-brokenluaandxml"
+    local path = scratchDirectory .. "/" .. name .. ".xml"
+    local installEvents = collectEventsForSpec("sysInstall")
+    defer(function()
+      removeFixtureModule(name)
+      os.remove(path)
+      lfs.rmdir(scratchDirectory)
+    end)
+    lfs.mkdir(scratchDirectory)
+    local file = io.open(path, "wb")
+    assert.is_not_nil(file, "could not write " .. path)
+    file:write(table.concat({
+      '<?xml version="1.0" encoding="UTF-8"?>',
+      '<!DOCTYPE MudletPackage>',
+      '<MudletPackage version="1.001">',
+      '<ScriptPackage>',
+      '<Script isActive="yes" isFolder="no"><name>brokenLuaAndXml</name><packageName></packageName><script>this is not lua</script><eventHandlerList/></Script>',
+      '</ScriptPackage>',
+      '<AliasPack',
+    }, "\n"))
+    file:close()
+
+    local ok, reason = installUntilConfirmed(installModule, path, function() return moduleInstalled(name) end, "the module with broken Lua and XML")
+
+    assert.is_true(ok)
+    assert.is_true(contains(reason, "brokenLuaAndXml: "), tostring(reason))
+    assert.is_true(contains(reason, "; " .. name .. ": Premature end of document."), tostring(reason))
+    assert.is_true(waitUntil(function() return #installEvents > 0 end, 2000), "the module was never announced")
+    assert.equals(reason, installEvents[1][2])
+  end)
+
+  it("tells a reload's handlers that the module's XML stopped part-way", function()
+    local name = "mudlet-spec-partialxml"
+    withFixtureModule(name)
+    local syncEvents = collectEventsForSpec("sysSyncInstallModule")
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+
+    reloadModuleUntil(name, function() return #syncEvents > 0 end)
+
+    assert.equals(name, syncEvents[1][1])
+    assert.equals(name .. "/" .. name .. ".xml: Premature end of document.", syncEvents[1][3])
+  end)
+
+  it("announces only the latest of a module installed, uninstalled and installed again before its events", function()
+    local name = "mudlet-spec-partialxml"
+    local brokenPath = scratchDirectory .. "/" .. name .. ".mpackage"
+    local fixedFolder = scratchDirectory .. "/fixed"
+    local fixedPath = fixedFolder .. "/" .. name .. ".xml"
+    defer(function()
+      removeFixtureModule(name)
+      os.remove(fixedPath)
+      lfs.rmdir(fixedFolder)
+      lfs.rmdir(scratchDirectory)
+    end)
+    lfs.mkdir(scratchDirectory)
+    lfs.mkdir(fixedFolder)
+    copyFile(fixtureDirectory .. "/" .. name .. ".mpackage", brokenPath)
+    writePackageXml(fixedPath, '<AliasPackage><Alias isActive="yes" isFolder="no"><name>' .. name .. ' alias</name>'
+      .. '<script></script><command></command><packageName></packageName><regex>^fixed$</regex></Alias></AliasPackage>')
+    local installEvents = collectEventsForSpec("sysInstall")
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+
+    -- back to back, with no event loop pass between them, so the first install's events are still queued
+    local brokenOk = installModule(brokenPath)
+    local uninstalled = uninstallModule(name)
+    local fixedOk, fixedReason = installModule(fixedPath)
+    pumpEvents(300)
+
+    assert.is_true(brokenOk and uninstalled and fixedOk, "SETUP: the module could not be installed, uninstalled and installed again")
+    assert.is_nil(fixedReason)
+    assert.equals(1, #installEvents, "the undone install was announced as well")
+    assert.same({name}, installEvents[1], "the healthy module was announced with the undone install's errors")
+  end)
+
+  -- A reload takes the module apart and puts the same one straight back, which undoes nothing
+  local function collectModuleEventsFor(name)
+    local seen = {}
+    for _, eventName in ipairs({"sysInstall", "sysLuaInstallModule", "sysSyncInstallModule"}) do
+      local handler = registerAnonymousEventHandler(eventName, function(event, installed)
+        if installed == name then
+          seen[#seen + 1] = event
+        end
+      end)
+      defer(function() killAnonymousEventHandler(handler) end)
+    end
+    return seen
+  end
+
+  local function withReloadableModule(name)
+    local path = scratchDirectory .. "/" .. name .. ".xml"
+    defer(function()
+      removeFixtureModule(name)
+      os.remove(path)
+      lfs.rmdir(scratchDirectory)
+    end)
+    lfs.mkdir(scratchDirectory)
+    writePackageXml(path, '<AliasPackage><Alias isActive="yes" isFolder="no"><name>' .. name .. ' alias</name>'
+      .. '<script></script><command></command><packageName></packageName><regex>^' .. name .. '$</regex></Alias></AliasPackage>')
+    return path
+  end
+
+  it("still announces a script's install of a module that was reloaded before its events", function()
+    local name = "mudlet-spec-reloadedbeforeevents"
+    local path = withReloadableModule(name)
+    local seen = collectModuleEventsFor(name)
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+
+    -- back to back: the install's own save is not running yet, so the reload is carried out at once
+    assert.is_true(installModule(path))
+    reloadModule(name)
+    pumpEvents(300)
+
+    assert.is_true(moduleInstalled(name))
+    assert.same({"sysInstall", "sysLuaInstallModule", "sysInstall", "sysSyncInstallModule"}, seen)
+  end)
+
+  it("still raises the detailed install event when a sysInstall handler reloads the module", function()
+    local name = "mudlet-spec-reloadedbyhandler"
+    local path = withReloadableModule(name)
+    local seen = collectModuleEventsFor(name)
+    local reloaded = false
+    local handler = registerAnonymousEventHandler("sysInstall", function(_, installed)
+      if installed == name and not reloaded then
+        reloaded = true
+        reloadModule(name)
+      end
+    end)
+    defer(function() killAnonymousEventHandler(handler) end)
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+
+    assert.is_true(installModule(path))
+    pumpEvents(300)
+
+    assert.is_true(reloaded, "SETUP: the module was never announced, so nothing reloaded it")
+    assert.is_true(moduleInstalled(name))
+    assert.same({"sysInstall", "sysLuaInstallModule", "sysInstall", "sysSyncInstallModule"}, seen)
+  end)
+
+  it("does not announce a module whose XML broke before anything was read in", function()
+    local name = "mudlet-spec-brokenatonce"
+    local path = scratchDirectory .. "/" .. name .. ".xml"
+    local installEvents = collectEventsForSpec("sysInstall")
+    defer(function()
+      removeFixtureModule(name)
+      os.remove(path)
+      lfs.rmdir(scratchDirectory)
+    end)
+    lfs.mkdir(scratchDirectory)
+    local file = io.open(path, "wb")
+    assert.is_not_nil(file, "could not write " .. path)
+    file:write('<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE MudletPackage>\n<MudletPackage version="1.001">\n<AliasPa')
+    file:close()
+
+    installUntilConfirmed(installModule, path, function() return moduleInstalled(name) end, "the module that broke at once")
+    pumpEvents(300)
+
+    assert.same({}, installEvents, "a module with nothing running was announced as installed")
+  end)
+
+  -- Back to back, with no event loop pass between them, so the install events are still queued
+  local function installThenUninstall(install, uninstall, path, name, installed)
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+    install(path)
+    return installed(name) and uninstall(name) == true
+  end
+
+  it("does not announce a module that was uninstalled before its install events were raised", function()
+    local path = scratchDirectory .. "/" .. minimalPackage .. ".mpackage"
+    lfs.mkdir(scratchDirectory)
+    copyFile(fixtureDirectory .. "/" .. minimalPackage .. ".mpackage", path)
+    defer(function() removeFixtureModule(minimalPackage) end)
+    local installEvents = collectEventsForSpec("sysInstall")
+    local moduleEvents = collectEventsForSpec("sysLuaInstallModule")
+
+    local uninstalled = installThenUninstall(installModule, uninstallModule, path, minimalPackage, moduleInstalled)
+    pumpEvents(300)
+
+    assert.is_true(uninstalled, "SETUP: the module could not be installed and uninstalled back to back")
+    assert.is_false(moduleInstalled(minimalPackage))
+    assert.same({}, installEvents, "a module that was already gone was announced as installed")
+    assert.same({}, moduleEvents, "a module that was already gone was announced as installed")
+  end)
+
+  it("does not announce a package that was uninstalled before its install events were raised", function()
+    defer(function() removeFixturePackage(minimalPackage) end)
+    local installEvents = collectEventsForSpec("sysInstall")
+    local packageEvents = collectEventsForSpec("sysInstallPackage")
+
+    local uninstalled = installThenUninstall(installPackage, uninstallPackage, fixtureDirectory .. "/" .. minimalPackage .. ".mpackage", minimalPackage, packageInstalled)
+    pumpEvents(300)
+
+    assert.is_true(uninstalled, "SETUP: the package could not be installed and uninstalled back to back")
+    assert.is_false(packageInstalled(minimalPackage))
+    assert.same({}, installEvents, "a package that was already gone was announced as installed")
+    assert.same({}, packageEvents, "a package that was already gone was announced as installed")
+  end)
+
+  it("does not raise the detailed install event for a package a sysInstall handler took away", function()
+    local packageEvents = collectEventsForSpec("sysInstallPackage")
+    local remover = registerAnonymousEventHandler("sysInstall", function(_, installed)
+      if installed == minimalPackage then
+        uninstallPackage(minimalPackage)
+      end
+    end)
+    defer(function()
+      killAnonymousEventHandler(remover)
+      removeFixturePackage(minimalPackage)
+    end)
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+
+    installPackage(fixtureDirectory .. "/" .. minimalPackage .. ".mpackage")
+    pumpEvents(300)
+
+    assert.is_false(packageInstalled(minimalPackage), "SETUP: the sysInstall handler did not uninstall the package")
+    assert.same({}, packageEvents, "a package that was already gone was announced as installed")
+  end)
+
   it("says so for a bare XML module too", function()
     local name = "mudlet-spec-badxml-bare"
     local path = scratchDirectory .. "/" .. name .. ".xml"
@@ -4992,10 +5314,16 @@ describe("Tests installing a module whose XML cannot be read", function()
     copyFile(fixtureDirectory .. "/sources/" .. name .. "/" .. name .. ".xml", path)
     assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
 
+    local installEvents = collectEventsForSpec("sysInstall")
+
     local mark = getLastLineNumber("main")
-    installUntilConfirmed(installModule, path, function() return moduleInstalled(name) end, "the truncated bare XML module")
+    local ok, reason = installUntilConfirmed(installModule, path, function() return moduleInstalled(name) end, "the truncated bare XML module")
 
     assert.is_true(containsWrapped(textFrom(mark), 'Failed to load module "' .. name .. '"'), textFrom(mark))
+    assert.is_true(ok)
+    assert.equals(name .. ": Opening and ending tag mismatch.", reason)
+    assert.is_true(waitUntil(function() return #installEvents > 0 end, 2000), "the module was never announced")
+    assert.equals(reason, installEvents[1][2])
   end)
 end)
 

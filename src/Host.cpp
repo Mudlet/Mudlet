@@ -3489,6 +3489,11 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
     // Filled per XML file by the archive branch, reported once both branches are done.
     QStringList itemsWithErrors;
     QStringList itemsWithErrorNames;
+    // Each file of it that did not load in full, with the reason, for the return value and install events
+    QStringList loadErrors;
+    // Asked of the reader, not the units: items another install filed under the name are not this one's
+    bool anythingWasRead = false;
+    bool fontsWereLoaded = false;
     // A package file that broke before anything could be read out of it would be listed, and saved into the
     // profile, with nothing in it. As nothing of it was applied, taking it back leaves nothing behind. One that
     // got as far as an item, a variable or a setting stays installed and is warned about, as that is in use.
@@ -3689,13 +3694,12 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         // XML below is imported, because the scripts in it run as they are read
         // in and one of them may well want to use a font the package brought
         if (thing != enums::PackageModuleType::ModuleSync) {
-            installPackageFonts(packageName);
+            fontsWereLoaded = installPackageFonts(packageName);
         }
         QStringList _filterList;
         _filterList << qsl("*.xml") << qsl("*.trigger");
         const QFileInfoList entries = _dir.entryInfoList(_filterList, QDir::Files);
         bool registeredFromArchive = false;
-        bool anythingWasRead = false;
         bool aPackageFileWasReadWhole = false;
         QStringList packageFileErrors;
         for (auto& entry : entries) {
@@ -3727,9 +3731,11 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
                 } else {
                     qWarning() << "Host::installPackage() WARNING - failed to load module" << packageName << ":" << errorMsg;
                     postMessage(tr("[ WARN ]  - Failed to load module \"%1\": %2").arg(packageName, errorMsg));
+                    loadErrors << qsl("%1/%2: %3").arg(packageName, entry.fileName(), errorMsg);
                 }
             } else if (!success) {
                 packageFileErrors << errorMsg;
+                loadErrors << qsl("%1/%2: %3").arg(packageName, entry.fileName(), errorMsg);
             } else {
                 aPackageFileWasReadWhole = true;
             }
@@ -3792,6 +3798,7 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         mPackagesBeingInstalled.push(packageName);
         auto [success, errorMsg] = reader.importPackage(&file2, packageName, static_cast<int>(thing));
         mPackagesBeingInstalled.pop();
+        anythingWasRead = reader.readAnything();
         itemsWithErrors << reader.itemsWithErrors();
         itemsWithErrorNames << reader.itemsWithErrorNames();
         if (thing != enums::PackageModuleType::Package) {
@@ -3800,8 +3807,9 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
             } else {
                 qWarning() << "Host::installPackage() WARNING - failed to load module" << packageName << ":" << errorMsg;
                 postMessage(tr("[ WARN ]  - Failed to load module \"%1\": %2").arg(packageName, errorMsg));
+                loadErrors << qsl("%1: %2").arg(packageName, errorMsg);
             }
-        } else if (!success && !reader.readAnything()) {
+        } else if (!success && !anythingWasRead) {
             file2.close();
             takeBackAPackageNothingWasReadFrom(packageName);
             return fail(nothingCouldBeReadReason(packageName, errorMsg));
@@ -3809,6 +3817,7 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
             qWarning() << "Host::installPackage() WARNING - failed to load package" << packageName << ":" << errorMsg;
             //: %1 is the package name, %2 is the reason its contents could not be read
             postMessage(tr("[ WARN ]  - Failed to load package \"%1\": %2").arg(packageName, errorMsg));
+            loadErrors << qsl("%1: %2").arg(packageName, errorMsg);
         }
         file2.close();
     }
@@ -3849,11 +3858,25 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
     // reorder permanent and temporary triggers: perm first, temp second
     mTriggerUnit.reorderTriggersAfterPackageImport();
 
+    // A module whose XML stopped part-way still runs what was read before the break, and the fonts it
+    // brought, so its handlers hear of it, with the load errors alongside any item's. Only one that brought
+    // in nothing goes unannounced.
+    const bool moduleLoadedNothing = thing != enums::PackageModuleType::Package && !mModulesLoadedOk.contains(packageName) && !anythingWasRead && !fontsWereLoaded;
+    QStringList allErrors;
+    if (!itemErrors.isEmpty()) {
+        allErrors << itemErrors;
+    }
+    allErrors << loadErrors;
+    const QString eventErrors = allErrors.join(qsl("; "));
+    // An install undone before its events went out is not announced, as its errors are stale by then. A
+    // ModuleSync removal is half of a reload that puts the same module straight back, so it does not count.
+    const quint64 removalsBeforeThisInstall = mRemovalsOf.value(packageName);
+
     // Defer raising install events until the next event loop iteration
     // This ensures all package installation is complete (including variable loading)
     // before event handlers execute, preventing Lua state corruption. Kept queued
     // for the ordering the deferred-uninstall drain below depends on, too.
-    QTimer::singleShot(0ms, this, [this, guard = QPointer<Host>(this), thing, packageName, fileName, itemErrors]() {
+    QTimer::singleShot(0ms, this, [this, guard = QPointer<Host>(this), thing, packageName, fileName, moduleLoadedNothing, eventErrors, removalsBeforeThisInstall]() {
         // The queued call can still be delivered once this Host has been
         // destroyed - the profile save queued the same way was #9653 - and the
         // isClosingDown() check below would then be read off freed memory. The
@@ -3867,8 +3890,12 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
             return;
         }
 
-        // Don't raise install events for modules that failed to load
-        if (thing != enums::PackageModuleType::Package && !mModulesLoadedOk.contains(packageName)) {
+        // A script may have uninstalled it again before this was delivered, or a handler of the first event
+        auto stillInstalled = [this, thing, packageName, removalsBeforeThisInstall]() {
+            const bool listed = thing == enums::PackageModuleType::Package ? mInstalledPackages.contains(packageName) : mInstalledModules.contains(packageName);
+            return listed && mRemovalsOf.value(packageName) == removalsBeforeThisInstall;
+        };
+        if (moduleLoadedNothing || !stillInstalled()) {
             return;
         }
 
@@ -3881,11 +3908,14 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         genericInstallEvent.mArgumentList.append(packageName);
         genericInstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         // Only added when there are errors, so handlers declaring the usual arguments are unaffected
-        if (!itemErrors.isEmpty()) {
-            genericInstallEvent.mArgumentList.append(itemErrors);
+        if (!eventErrors.isEmpty()) {
+            genericInstallEvent.mArgumentList.append(eventErrors);
             genericInstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         }
         raiseEvent(genericInstallEvent);
+        if (!stillInstalled()) {
+            return;
+        }
 
         TEvent detailedInstallEvent{};
         switch (thing) {
@@ -3907,8 +3937,8 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         detailedInstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         detailedInstallEvent.mArgumentList.append(fileName);
         detailedInstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-        if (!itemErrors.isEmpty()) {
-            detailedInstallEvent.mArgumentList.append(itemErrors);
+        if (!eventErrors.isEmpty()) {
+            detailedInstallEvent.mArgumentList.append(eventErrors);
             detailedInstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         }
         raiseEvent(detailedInstallEvent);
@@ -3943,7 +3973,7 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         mDeferredSaveTimer.start(0ms);
     }
 
-    return {true, itemErrors};
+    return {true, eventErrors};
 }
 
 
@@ -4200,6 +4230,7 @@ bool Host::uninstallPackage(const QString& packageName, enums::PackageModuleType
 
     if (thing != enums::PackageModuleType::ModuleSync) {
         removePackageInfo(packageName, isModule);
+        ++mRemovalsOf[packageName];
     }
 
     // A profile saved before installPackage() refused it can hold a name as both package and module, and
@@ -4667,23 +4698,26 @@ QString Host::readProfileData(const QString& item)
 
 // makes fonts in a given package/module be available for Mudlet scripting
 // does not install font system-wide
-void Host::installPackageFonts(const QString& packageName)
+bool Host::installPackageFonts(const QString& packageName)
 {
     auto* fonts = FontManager::self();
     if (!fonts) {
-        return;
+        return false;
     }
     auto packagePath = MudletApp::getMudletPath(enums::profilePackagePath, getName(), packageName);
 
     QDirIterator it(packagePath, QDirIterator::Subdirectories);
+    bool loadedAny = false;
     while (it.hasNext()) {
         auto filePath = it.next();
 
         if (filePath.endsWith(QLatin1String(".otf"), Qt::CaseInsensitive) || filePath.endsWith(QLatin1String(".ttf"), Qt::CaseInsensitive)
             || filePath.endsWith(QLatin1String(".ttc"), Qt::CaseInsensitive) || filePath.endsWith(QLatin1String(".otc"), Qt::CaseInsensitive)) {
             fonts->loadFont(filePath, getName(), packageName);
+            loadedAny = loadedAny || fonts->loadedFontId(filePath, getName()) != -1;
         }
     }
+    return loadedAny;
 }
 
 // ensures fonts from all installed packages are loaded in Mudlet
