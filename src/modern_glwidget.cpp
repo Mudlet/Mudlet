@@ -615,6 +615,11 @@ void ModernGLWidget::paintGL()
         return;
     }
 
+    // A move is drawn, and may have taken the player to or from the place a route would be planned to
+    if (mpSearchPanel && !mpSearchPanel->isHidden()) {
+        mpSearchPanel->showKeys();
+    }
+
     QOpenGLShaderProgram* shaderProgram = mShaderManager.getMainShaderProgram();
     if (!shaderProgram) {
         return;
@@ -2774,6 +2779,9 @@ void ModernGLWidget::openSearch()
         connect(mpSearchPanel, &MapSearchPanel::closed, this, [this]() {
             setFocus(Qt::OtherFocusReason);
         });
+        mpSearchPanel->setRoutable([this](const int row) {
+            return row >= 0 && row < mSearchResults.size() && routableSearchResult(mSearchResults.at(row));
+        });
     }
     // The map, or the area shown, may have changed since it was last open
     runSearch();
@@ -2795,7 +2803,6 @@ void ModernGLWidget::runSearch()
         row.kind = result.kind;
         row.title = result.name;
         row.spoken = searchResultLine(result);
-        row.routable = routableSearchResult(result);
         switch (result.kind) {
         case MapSearch::Kind::Area:
             if (const TArea* pArea = mpMap->mpRoomDB ? mpMap->mpRoomDB->getArea(result.id) : nullptr) {
@@ -2854,7 +2861,9 @@ void ModernGLWidget::placeSearchPanel()
     // From the view's edge to the card's, the panel's shadow lying in between
     constexpr int margin = 12 - MapSearchPanel::scmShadowMargin;
     const int panelWidth = std::max(0, std::min(mpSearchPanel->preferredWidth(), width() - 2 * margin));
-    const int panelHeight = std::max(0, std::min(mpSearchPanel->sizeHint().height(), height() * 2 / 3));
+    // Taller than its size hint when narrow, for the hint under the heading wraps onto more lines
+    const int wantedHeight = mpSearchPanel->hasHeightForWidth() ? mpSearchPanel->heightForWidth(panelWidth) : mpSearchPanel->sizeHint().height();
+    const int panelHeight = std::max(0, std::min(wantedHeight, height() * 2 / 3));
     mpSearchPanel->setGeometry(width() - margin - panelWidth, margin, panelWidth, panelHeight);
 }
 
