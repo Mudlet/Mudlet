@@ -416,6 +416,9 @@ private:
     // the other symbol settings changing does not cost a rebuild:
     QFont mGlyphDisplayFont;
     QPointer<QDoubleSpinBox> mpDoubleSpinBox_mapSymbolFontFudge;
+    // Kept so that initWithHost(), which runs again for each profile, can replace it rather than stack another
+    QMetaObject::Connection mMapStyleConnection;
+    void followMapStyle();
     std::unique_ptr<QTimer> hidePasswordMigrationLabelTimer;
     QMap<QString, QKeySequence> currentShortcuts;
     // Must be declared after currentShortcuts, which it references
