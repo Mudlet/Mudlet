@@ -501,21 +501,6 @@ TArea* TRoomDB::getArea(int id)
     return nullptr;
 }
 
-// Used by TMap::audit() - can detect and return areas with normally invalids Id (less than -1 or zero)!
-TArea* TRoomDB::getRawArea(int id, bool* isValid = nullptr)
-{
-    if (areas.contains(id)) {
-        if (isValid) {
-            *isValid = true;
-        }
-        return areas.value(id);
-    }
-    if (isValid) {
-        *isValid = false;
-    }
-    return nullptr;
-}
-
 bool TRoomDB::setAreaName(int areaID, QString name)
 {
     if (areaID < 1) {

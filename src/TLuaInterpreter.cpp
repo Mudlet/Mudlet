@@ -1425,11 +1425,14 @@ int TLuaInterpreter::saveProfile(lua_State* L)
 {
     Host& host = getHostFromLua(L);
 
+    if (!lua_isnoneornil(L, 1) && !checkStringArg(L, __func__, 1, "folder", true)) {
+        return lua_error(L);
+    }
     if (!lua_isnoneornil(L, 2) && !checkStringArg(L, __func__, 2, "file name", true)) {
         return lua_error(L);
     }
     QString saveToDir;
-    if (lua_isstring(L, 1)) {
+    if (!lua_isnoneornil(L, 1)) {
         saveToDir = lua_tostring(L, 1);
     }
     QString saveAsFile;
@@ -2837,12 +2840,14 @@ int TLuaInterpreter::uninstallPackage(lua_State* L)
 {
     const QString packageName = getVerifiedString(L, __func__, 1, "package name");
     Host& host = getHostFromLua(L);
-    const bool result = host.uninstallPackage(packageName, enums::PackageModuleType::Package);
-    if (!result) {
-        lua_pushnil(L);
-    } else {
-        lua_pushboolean(L, result);
+    if (!host.mInstalledPackages.contains(packageName)) {
+        return warnArgumentValue(L, __func__, qsl("package '%1' is not installed").arg(packageName));
     }
+    if (!host.uninstallPackage(packageName, enums::PackageModuleType::Package)) {
+        // An installed package is only refused while a profile save is running
+        return warnArgumentValue(L, __func__, qsl("a profile save is in progress, try again once it has finished"));
+    }
+    lua_pushboolean(L, true);
     return 1;
 }
 
@@ -3027,7 +3032,19 @@ int TLuaInterpreter::setModuleInfo(lua_State* L)
     if (!checkStringArg(L, __func__, 1, "module name") || !checkStringArg(L, __func__, 2, "info") || !checkStringArg(L, __func__, 3, "value")) {
         return lua_error(L);
     }
-    host.mModuleInfo[QString{lua_tostring(L, 1)}][QString{lua_tostring(L, 2)}] = QString{lua_tostring(L, 3)};
+    const QString moduleName{lua_tostring(L, 1)};
+    // A module being read in is listed already, so its own scripts can still describe it
+    if (!host.mInstalledModules.contains(moduleName)) {
+        return warnArgumentValue(L, __func__, qsl("module '%1' not found").arg(moduleName));
+    }
+    const QString info{lua_tostring(L, 2)};
+    const QString value{lua_tostring(L, 3)};
+    // The installed name is still accepted: a module without a config.lua has no detail to start with, and the
+    // install sanitizes config.lua's name (folders, file extensions, backslashes) but stores it unchanged
+    if (info == qsl("mpackage") && value != moduleName) {
+        return warnArgumentValue(L, __func__, qsl("'mpackage' is the name module '%1' is installed under and cannot be changed").arg(moduleName));
+    }
+    host.mModuleInfo[moduleName][info] = value;
     lua_pushboolean(L, true);
     return 1;
 }
@@ -3039,7 +3056,19 @@ int TLuaInterpreter::setPackageInfo(lua_State* L)
     if (!checkStringArg(L, __func__, 1, "package name") || !checkStringArg(L, __func__, 2, "info") || !checkStringArg(L, __func__, 3, "value")) {
         return lua_error(L);
     }
-    host.mPackageInfo[QString{lua_tostring(L, 1)}][QString{lua_tostring(L, 2)}] = QString{lua_tostring(L, 3)};
+    const QString packageName{lua_tostring(L, 1)};
+    // A package being read in is listed already, so its own scripts can still describe it
+    if (!host.mInstalledPackages.contains(packageName)) {
+        return warnArgumentValue(L, __func__, qsl("package '%1' not found").arg(packageName));
+    }
+    const QString info{lua_tostring(L, 2)};
+    const QString value{lua_tostring(L, 3)};
+    // The installed name is still accepted: a package without a config.lua has no detail to start with, and the
+    // install sanitizes config.lua's name (folders, file extensions, backslashes) but stores it unchanged
+    if (info == qsl("mpackage") && value != packageName) {
+        return warnArgumentValue(L, __func__, qsl("'mpackage' is the name package '%1' is installed under and cannot be changed").arg(packageName));
+    }
+    host.mPackageInfo[packageName][info] = value;
     lua_pushboolean(L, true);
     return 1;
 }
@@ -6204,6 +6233,9 @@ int TLuaInterpreter::performHttpRequest(lua_State* L, const char* functionName, 
     const QUrl url = QUrl::fromUserInput(urlString);
     if (!url.isValid()) {
         return warnArgumentValue(L, functionName, qsl("url is invalid, reason: %1.").arg(url.errorString()));
+    }
+    if (!httpSchemeAllowed(url)) {
+        return warnArgumentValue(L, functionName, qsl("url is invalid, reason: unsupported scheme '%1', only http and https are allowed.").arg(url.scheme()));
     }
 
     QNetworkRequest request = QNetworkRequest(url);
@@ -9524,6 +9556,9 @@ int TLuaInterpreter::setConfig(lua_State* L)
     }
     if (key == qsl("commandLineHistorySaveSize")) {
         const auto value = getVerifiedInt(L, __func__, 2, "value");
+        if (value < 0 || value > Host::scmMaxCommandLineHistorySaveSize) {
+            return warnArgumentValue(L, __func__, qsl("commandLineHistorySaveSize %1 is outside of the supported range of 0 to %2").arg(value).arg(Host::scmMaxCommandLineHistorySaveSize));
+        }
         host.setCommandLineHistorySaveSize(value);
         return success();
     }
