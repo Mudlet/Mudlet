@@ -1864,6 +1864,15 @@ private slots:
             change();
             return QTest::qWaitFor(windowAsked, 500);
         };
+        // A notice shown in place of a view that cannot draw lays its rich text out again once shown
+        const bool settled = QTest::qWaitFor(
+                [&windowRequests]() {
+                    windowRequests.mRequests = 0;
+                    QTest::qWait(300);
+                    return windowRequests.mRequests == 0;
+                },
+                5000);
+        QVERIFY2(settled, "the map window never stopped asking to repaint");
         const bool askedUnprompted = asksTheWindow([] {});
         const bool gridAsks = asksTheWindow([pMapper, grid] {
             pMapper->slot_setShowGrid(!grid);
