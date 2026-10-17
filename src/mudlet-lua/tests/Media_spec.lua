@@ -2052,7 +2052,8 @@ describe("Media playback effects with a generated sound file", function()
     assert.is_true(playSoundFile({name = sword, key = "busted-shared-paused-sword"}))
     local _, _, path = waitForEvent("sysMediaStarted", 5000)
     assert.equals(swordCopy, eventPath(path), "playing the second file resumed the first")
-    assert.equals(1, #getPausedSounds({key = "busted-shared-paused-sand"}))
+    -- as playing any other sound does, it ended the paused one
+    assert.equals(0, #getPausedSounds({key = "busted-shared-paused-sand"}))
   end)
 
   it("a sound named by a path through a symlink is matched by its real path", function()
