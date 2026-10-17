@@ -147,6 +147,8 @@ void ModernGLWidget::cleanup()
     mGeometryManager.cleanup();
     mScene.releaseBuffers();
     mStitchScene.releaseBuffers();
+    mAtlasFootprints->release();
+    mAtlasWorld->release();
     mShaderManager.cleanup();
     mVertexBuffer.destroy();
     mColorBuffer.destroy();
@@ -2522,11 +2524,22 @@ void ModernGLWidget::queueAtlas(const MapAtlas::Weights& weights)
         mRenderCommandQueue.addCommand(
                 std::make_unique<RenderTrianglesCommand>(vertices, colors, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), model, RenderCommand::Shading::Unlit));
     };
+    // Kept on the GPU only while drawn
+    const auto queueRetainedLayer = [&](const std::shared_ptr<RetainedTriangles>& retained, const QVector<float>& vertices, const QVector<float>& colors, const float opacity) {
+        if (opacity <= 0.0f || vertices.isEmpty()) {
+            retained->release();
+            return;
+        }
+        retained->setTriangles(vertices, colors);
+        mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::BLEND_BY_OPACITY, opacity));
+        mRenderCommandQueue.addCommand(
+                std::make_unique<RenderTrianglesCommand>(retained, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), model, RenderCommand::Shading::Unlit));
+    };
     // Flat on one plane, each layer over the last and over the rooms it fades in on
     mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::DISABLE_DEPTH_TEST));
     mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::DISABLE_DEPTH_WRITE));
     const float footprintOpacity = weights.footprint * (1.0f - weights.world);
-    queueLayer(mAtlas.footprintVertices(), mAtlas.footprintColors(), footprintOpacity);
+    queueRetainedLayer(mAtlasFootprints, mAtlas.footprintVertices(), mAtlas.footprintColors(), footprintOpacity);
     const float unitsPerPixel = mCameraController.worldUnitsPerPixel(mCameraController.getTarget());
     if (!mRoute.rooms().isEmpty() && footprintOpacity > 0.0f) {
         QVector<float> routeVertices;
@@ -2535,7 +2548,7 @@ void ModernGLWidget::queueAtlas(const MapAtlas::Weights& weights)
         queueLayer(routeVertices, routeColors, footprintOpacity);
     }
     const float worldOpacity = weights.footprint * weights.world;
-    queueLayer(mAtlas.worldVertices(), mAtlas.worldColors(), worldOpacity);
+    queueRetainedLayer(mAtlasWorld, mAtlas.worldVertices(), mAtlas.worldColors(), worldOpacity);
     QVector<float> ringVertices;
     QVector<float> ringColors;
     mAtlas.appendRing(mAID, ExitAppearance::contrastColor(mpHost->mBgColor_2), ringVertices, ringColors);
@@ -4345,6 +4358,9 @@ void ModernGLWidget::queueScene()
     }
     if (mZoomWeights.footprint > 0.0f) {
         queueAtlas(mZoomWeights);
+    } else {
+        mAtlasFootprints->release();
+        mAtlasWorld->release();
     }
 }
 

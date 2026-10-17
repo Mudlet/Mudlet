@@ -123,6 +123,8 @@ public:
                            const QMatrix4x4& viewMatrix,
                            const QMatrix4x4& modelMatrix,
                            Shading shading = Shading::Lit);
+    RenderTrianglesCommand(
+            std::shared_ptr<RetainedTriangles> retained, const QMatrix4x4& projectionMatrix, const QMatrix4x4& viewMatrix, const QMatrix4x4& modelMatrix, Shading shading = Shading::Lit);
 
     void execute(QOpenGLFunctions* gl,
                 QOpenGLShaderProgram* shader,
@@ -143,6 +145,7 @@ public:
 private:
     QVector<float> mVertices;
     QVector<float> mColors;
+    std::shared_ptr<RetainedTriangles> mRetained;
     QMatrix4x4 mProjectionMatrix;
     QMatrix4x4 mViewMatrix;
     QMatrix4x4 mModelMatrix;

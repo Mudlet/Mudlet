@@ -122,6 +122,18 @@ RenderTrianglesCommand::RenderTrianglesCommand(
 {
 }
 
+RenderTrianglesCommand::RenderTrianglesCommand(
+        std::shared_ptr<RetainedTriangles> retained, const QMatrix4x4& projectionMatrix, const QMatrix4x4& viewMatrix, const QMatrix4x4& modelMatrix, const Shading shading)
+: mVertices(retained->vertices)
+, mColors(retained->colors)
+, mRetained(std::move(retained))
+, mProjectionMatrix(projectionMatrix)
+, mViewMatrix(viewMatrix)
+, mModelMatrix(modelMatrix)
+, mShading(shading)
+{
+}
+
 void RenderTrianglesCommand::execute(QOpenGLFunctions* gl,
                                      QOpenGLShaderProgram* shader,
                                      GeometryManager* geometryManager,
@@ -136,10 +148,12 @@ void RenderTrianglesCommand::execute(QOpenGLFunctions* gl,
     Q_UNUSED(gl)
     Q_UNUSED(texCoordBuffer)
 
-    GeometryData triangleGeometry = geometryManager->generateTriangleGeometry(mVertices, mColors);
-
-    if (triangleGeometry.isEmpty()) {
-        return;
+    GeometryData triangleGeometry;
+    if (!mRetained) {
+        triangleGeometry = geometryManager->generateTriangleGeometry(mVertices, mColors);
+        if (triangleGeometry.isEmpty()) {
+            return;
+        }
     }
 
     // Set uniforms
@@ -158,7 +172,11 @@ void RenderTrianglesCommand::execute(QOpenGLFunctions* gl,
         shader->setUniformValue("uDisableLighting", true);
     }
 
-    geometryManager->renderGeometry(triangleGeometry, vao, vertexBuffer, colorBuffer, normalBuffer, indexBuffer, resourceManager, GL_TRIANGLES);
+    if (mRetained) {
+        geometryManager->renderRetainedTriangles(*mRetained, vao, resourceManager);
+    } else {
+        geometryManager->renderGeometry(triangleGeometry, vao, vertexBuffer, colorBuffer, normalBuffer, indexBuffer, resourceManager, GL_TRIANGLES);
+    }
 
     if (unlit) {
         shader->setUniformValue("uDisableLighting", false);

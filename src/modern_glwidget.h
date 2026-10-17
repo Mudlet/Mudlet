@@ -434,6 +434,8 @@ private:
     QFont mAtlasLabelFont;
     QColor mAtlasLabelBackground;
     qreal mAtlasLabelPixelRatio = 0.0;
+    std::shared_ptr<RetainedTriangles> mAtlasFootprints = std::make_shared<RetainedTriangles>();
+    std::shared_ptr<RetainedTriangles> mAtlasWorld = std::make_shared<RetainedTriangles>();
     // A view flying into an area: it glides across the map, then zooms in, in the new area's coordinates
     struct Flight
     {

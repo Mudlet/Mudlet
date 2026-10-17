@@ -383,6 +383,7 @@ private:
     }
 
     static bool footprintsAlone(ModernGLWidget& widget) { return widget.mZoomWeights.footprint == 1.0f && widget.mZoomWeights.world == 0.0f; }
+    static bool worldGraphAlone(ModernGLWidget& widget) { return widget.mZoomWeights.footprint > 0.0f && widget.mZoomWeights.world == 1.0f; }
 
     struct DrawnCube
     {
@@ -2713,6 +2714,103 @@ private slots:
         std::printf("METRIC rss_end_mib %.1f\n", memoryMiB("VmRSS"));
         std::printf("METRIC rss_peak_mib %.1f\n", memoryMiB("VmHWM"));
         std::fflush(stdout);
+    }
+
+    void test_theAtlasIsWrittenToTheGPUOnlyWhenItChangesWithoutGL()
+    {
+        const int westId = addTwoAreas(60).first;
+        for (const int roomId : map()->mpRoomDB->getRoomIDList()) {
+            map()->mpRoomDB->getRoom(roomId)->environment = 300;
+        }
+        map()->mCustomEnvColors[300] = QColor(10, 200, 30);
+        ModernGLWidget widget(map(), mpHost);
+        const auto queuedLayers = [&widget]() {
+            QList<const RenderTrianglesCommand*> layers;
+            for (const auto& command : widget.mRenderCommandQueue.commands()) {
+                if (const auto* triangles = dynamic_cast<const RenderTrianglesCommand*>(command.get())) {
+                    layers.append(triangles);
+                }
+            }
+            return layers;
+        };
+        const float footprints = distanceWhere(widget, westId, footprintsAlone);
+        const float worldGraph = distanceWhere(widget, westId, worldGraphAlone);
+        QVERIFY(footprints > 0.0f && worldGraph > 0.0f);
+
+        queueFrame(widget, westId, footprints);
+        QCOMPARE(atlasLayerOpacities(widget), QList<float>{1.0f});
+        QCOMPARE(queuedLayers().first()->colors(), widget.mAtlas.footprintColors());
+        QVERIFY(!widget.mAtlasFootprints->written);
+        // As drawing them would
+        widget.mAtlasFootprints->written = true;
+
+        // Pan mode, as a drag sets, so updateMatrices() keeps the moved target
+        widget.mPanMode = true;
+        widget.slot_shiftRight();
+        widget.updateMatrices();
+        widget.mRenderCommandQueue.clear();
+        widget.queueScene();
+        QVERIFY2(widget.mAtlasFootprints->written, "the footprints were written again as the view moved");
+
+        map()->mCustomEnvColors[300] = QColor(200, 10, 30);
+        queueFrame(widget, westId, footprints);
+        QVERIFY2(!widget.mAtlasFootprints->written, "the footprints were not written again after their colors changed");
+        QCOMPARE(queuedLayers().first()->colors(), widget.mAtlas.footprintColors());
+        QCOMPARE(queuedLayers().first()->colors().at(0), QColor(200, 10, 30).redF());
+
+        queueFrame(widget, westId, worldGraph);
+        QCOMPARE(widget.mAtlasWorld->vertices, widget.mAtlas.worldVertices());
+        QVERIFY2(widget.mAtlasFootprints->vertices.isEmpty(), "the footprints are kept while they are not drawn");
+
+        queueFrame(widget, westId, 1.5f);
+        QVERIFY2(widget.mAtlasWorld->vertices.isEmpty(), "the world graph is kept among the rooms");
+    }
+
+    void test_theAtlasKeptOnTheGPUIsDrawnInItsNewColors()
+    {
+        if (!glAvailable()) {
+            QSKIP("no OpenGL context on this platform");
+        }
+        const int westId = addTwoAreas(60).first;
+        for (const int roomId : map()->mpRoomDB->getRoomIDList()) {
+            map()->mpRoomDB->getRoom(roomId)->environment = 300;
+        }
+        map()->mCustomEnvColors[300] = QColor(10, 200, 30);
+        float footprints = 0.0f;
+        {
+            ModernGLWidget probe(map(), mpHost);
+            footprints = distanceWhere(probe, westId, footprintsAlone);
+        }
+        QVERIFY(footprints > 0.0f);
+        ModernGLWidget widget(map(), mpHost);
+        widget.resize(800, 600);
+        widget.grabFramebuffer();
+        if (!widget.isValid() || !widget.failureMessage().isEmpty()) {
+            QSKIP("no OpenGL context on this platform");
+        }
+        widget.mShiftMode = true;
+        widget.jumpTo(westId, 0, 0, 0);
+        widget.mCameraController.setTopView();
+        widget.setCameraDistance(footprints);
+        // Inside the west area's footprint, clear of its name
+        const auto footprintColor = [&widget, westId]() {
+            const QImage frame = widget.grabFramebuffer();
+            const QPoint pixel = pixelOfArea(widget, westId, QPointF(0.0, 20.0));
+            return frame.rect().contains(pixel) ? frame.pixelColor(pixel) : QColor();
+        };
+        const auto near = [](const QColor& a, const QColor& b) {
+            return a.isValid() && qAbs(a.red() - b.red()) + qAbs(a.green() - b.green()) + qAbs(a.blue() - b.blue()) < 12;
+        };
+
+        QColor drawn = footprintColor();
+        QVERIFY2(near(drawn, QColor(10, 200, 30)), qPrintable(qsl("the footprint is drawn %1").arg(drawn.name())));
+        QVERIFY(widget.mAtlasFootprints->written);
+        drawn = footprintColor();
+        QVERIFY2(near(drawn, QColor(10, 200, 30)), qPrintable(qsl("the footprint kept on the GPU is drawn %1").arg(drawn.name())));
+
+        map()->mCustomEnvColors[300] = QColor(200, 10, 30);
+        drawn = footprintColor();
+        QVERIFY2(near(drawn, QColor(200, 10, 30)), qPrintable(qsl("the footprint is drawn %1 after its color changed").arg(drawn.name())));
     }
 
     void test_areaNamesAreDrawnAgainWhenTheirLookChangesWithoutGL()
