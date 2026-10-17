@@ -63,6 +63,7 @@ struct TLabelModel
     void setAccessibleName(const QString& name);
     void setAccessibleButton(std::optional<bool> button);
     void setClickThrough(bool clickThrough);
+    // Nothing to tell the view: a live region is heard only when the text next changes
     void setLiveRegion(TLabelLiveRegion liveRegion) { mLiveRegion = liveRegion; }
     // The view's copies of what the label shows, which name it unless a script named it
     void setText(const QString& text);
