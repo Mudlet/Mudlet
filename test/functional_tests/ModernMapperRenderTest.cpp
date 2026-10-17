@@ -31,6 +31,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdio>
 #include <memory>
 #include <numbers>
 
@@ -3837,6 +3838,181 @@ private slots:
         const DrawnGlyph symbol = glyphAt(terminalGlyphs(widget, areaId), QPointF(2, 0));
         QCOMPARE(symbol.text, qsl("$"));
         QCOMPARE(symbol.color.rgb(), ExitAppearance::contrastColor(navy).rgb());
+    }
+
+    // A grid of side by side rooms on three levels, joined by exits, with names, environments, some symbols, a few
+    // doors and text labels, the player in the middle of the viewed level
+    int addBenchArea(const int side) const
+    {
+        map()->mapClear();
+        const int areaId = map()->mpRoomDB->addArea(qsl("Bench Area"));
+        int id = 0;
+        for (int z = -1; z <= 1; ++z) {
+            for (int y = 0; y < side; ++y) {
+                for (int x = 0; x < side; ++x) {
+                    ++id;
+                    if (!addRoomAt(id, areaId, x * 2, y * 2, z)) {
+                        return 0;
+                    }
+                    TRoom* room = map()->mpRoomDB->getRoom(id);
+                    room->name = qsl("Room %1").arg(id);
+                    room->environment = (x + y) % 8 + 1;
+                    if ((x * 7 + y) % 5 == 0) {
+                        room->mSymbol = QString(QChar(u'A' + static_cast<char16_t>((x + y) % 26)));
+                    }
+                    if (x > 0) {
+                        map()->setExit(id, id - 1, DIR_WEST);
+                        map()->setExit(id - 1, id, DIR_EAST);
+                        if ((x + y) % 11 == 0) {
+                            room->setDoor(qsl("west"), (x + y) % 3 + 1);
+                        }
+                    }
+                    if (y > 0) {
+                        map()->setExit(id, id - side, DIR_NORTH);
+                        map()->setExit(id - side, id, DIR_SOUTH);
+                    }
+                    if (z > -1 && (x + y) % 6 == 0) {
+                        map()->setExit(id, id - side * side, DIR_DOWN);
+                        map()->setExit(id - side * side, id, DIR_UP);
+                    }
+                }
+            }
+        }
+        for (int label = 0; label < qMax(2, side / 2); ++label) {
+            const float x = static_cast<float>((label * 7) % side) * 2.0f;
+            const float y = static_cast<float>((label * 3) % side) * 2.0f;
+            map()->createMapLabel(areaId, qsl("Label %1").arg(label), x, y, 0.0f, QColor(Qt::white), QColor(0, 0, 0, 0), label % 2 == 0, false);
+        }
+        map()->setRoomNamesShown(true);
+        map()->mRoomIdHash[map()->mProfileName] = side * side + (side / 2) * side + side / 2;
+        map()->mNewMove = false;
+        return areaId;
+    }
+
+    static double percentile(const QList<double>& sorted, const double fraction)
+    {
+        const qsizetype index = qBound<qsizetype>(0, static_cast<qsizetype>(std::ceil(fraction * static_cast<double>(sorted.size()))) - 1, sorted.size() - 1);
+        return sorted.at(index);
+    }
+
+    static void emitMetric(const QString& name, const double value) { std::printf("METRIC %s %.3f\n", qPrintable(name), value); }
+
+    // Frame times per map style, as METRIC lines in milliseconds: on a small map and a dense one, at a slant and
+    // looking down, while orbiting, panning and zooming, and the first frame after switching to the style. Whole
+    // frames where there is GL, else only the commands a frame queues, with stand-in textures. Report-only and long,
+    // so it runs only when asked:
+    //   MUDLET_MAPPER_BENCH=1 QT_QPA_PLATFORM=xcb ./functional_map_tests ModernMapperRenderTest bench_frameTimesPerStyle
+    // MUDLET_MAPPER_BENCH_STYLES, _MAPS, _VIEWS and _MOTIONS take comma-separated subsets, _FRAMES the frames per run
+    void bench_frameTimesPerStyle()
+    {
+        if (!qEnvironmentVariableIsSet("MUDLET_MAPPER_BENCH")) {
+            QSKIP("set MUDLET_MAPPER_BENCH=1 to run the frame-time benchmark");
+        }
+        const auto chosen = [](const char* variable, const QStringList& all) {
+            const QString value = qEnvironmentVariable(variable);
+            if (value.isEmpty()) {
+                return all;
+            }
+            QStringList picked;
+            for (const QString& id : value.split(QLatin1Char(','), Qt::SkipEmptyParts)) {
+                if (all.contains(id)) {
+                    picked.append(id);
+                }
+            }
+            return picked;
+        };
+        const QStringList styles = chosen("MUDLET_MAPPER_BENCH_STYLES", MapStyle::ids());
+        const QStringList maps = chosen("MUDLET_MAPPER_BENCH_MAPS", {qsl("small"), qsl("dense")});
+        const QStringList views = chosen("MUDLET_MAPPER_BENCH_VIEWS", {qsl("default"), qsl("top")});
+        const QStringList motions = chosen("MUDLET_MAPPER_BENCH_MOTIONS", {qsl("orbit"), qsl("pan"), qsl("zoom")});
+        const int frames = qMax(5, qEnvironmentVariableIntValue("MUDLET_MAPPER_BENCH_FRAMES"));
+        constexpr int warmUp = 3;
+        const bool gl = glAvailable();
+        std::printf("METRIC bench_3d_whole_frames %d\n", gl ? 1 : 0);
+        const auto restoreStyle = qScopeGuard([this] {
+            mpHost->setMapStyle(qsl("tiles"));
+        });
+
+        for (const QString& mapName : maps) {
+            const int side = mapName == qsl("dense") ? 40 : 8;
+            const int areaId = addBenchArea(side);
+            QVERIFY(areaId > 0);
+            const TRoom* playerRoom = map()->mpRoomDB->getRoom(map()->mRoomIdHash.value(map()->mProfileName));
+            QVERIFY(playerRoom);
+            QVERIFY(mpHost->setMapStyle(qsl("tiles")));
+            ModernGLWidget widget(map(), mpHost);
+            widget.setSecondaryView(true);
+            widget.resize(800, 600);
+            if (gl) {
+                widget.grabFramebuffer();
+                if (!widget.isValid()) {
+                    QSKIP("no OpenGL context on this platform");
+                }
+                QVERIFY2(widget.failureMessage().isEmpty(), qPrintable(widget.failureMessage()));
+            } else {
+                widget.mLabelTextureCache.useTextureStandIn(
+                        [lastTexture = GLuint{0}](const QImage&) mutable {
+                            return ++lastTexture;
+                        },
+                        [](GLuint) {});
+            }
+            widget.mCameraController.setViewportSize(widget.width(), widget.height());
+            widget.setViewCenter(areaId, playerRoom->x(), playerRoom->y(), playerRoom->z());
+            const float aspect = static_cast<float>(widget.width()) / static_cast<float>(widget.height());
+            const float distance = CameraController::distanceToShow(mapName == qsl("dense") ? 24.0f : 10.0f, aspect);
+            const auto frame = [&widget, gl] {
+                QElapsedTimer timer;
+                timer.start();
+                if (gl) {
+                    widget.grabFramebuffer();
+                } else {
+                    widget.updateMatrices();
+                    widget.mRenderCommandQueue.clear();
+                    widget.queueScene();
+                }
+                return static_cast<double>(timer.nsecsElapsed()) / 1.0e6;
+            };
+
+            for (const QString& styleId : styles) {
+                widget.jumpTo(areaId, playerRoom->x(), playerRoom->y(), playerRoom->z());
+                widget.setCameraPosition(distance, CameraController::scmDefaultTilt, CameraController::scmNorthUpAzimuth);
+                frame();
+                QVERIFY(mpHost->setMapStyle(styleId));
+                emitMetric(qsl("bench_3d_%1_%2_switch_ms").arg(styleId, mapName), frame());
+
+                for (const QString& view : views) {
+                    const float tilt = view == qsl("top") ? CameraController::scmMinTilt : CameraController::scmDefaultTilt;
+                    for (const QString& motion : motions) {
+                        QList<double> times;
+                        for (int step = -warmUp; step < frames; ++step) {
+                            const int along = step + warmUp;
+                            float azimuth = CameraController::scmNorthUpAzimuth;
+                            float r = distance;
+                            int centerX = playerRoom->x();
+                            if (motion == qsl("orbit")) {
+                                azimuth += 4.0f * static_cast<float>(along);
+                            } else if (motion == qsl("pan")) {
+                                centerX += along;
+                            } else {
+                                r = distance * (1.0f + 0.5f * std::sin(0.15f * static_cast<float>(along)));
+                            }
+                            widget.jumpTo(areaId, centerX, playerRoom->y(), playerRoom->z());
+                            widget.setCameraPosition(r, tilt, azimuth);
+                            const double ms = frame();
+                            if (step >= 0) {
+                                times.append(ms);
+                            }
+                        }
+                        std::sort(times.begin(), times.end());
+                        const QString name = qsl("bench_3d_%1_%2_%3_%4").arg(styleId, mapName, view, motion);
+                        emitMetric(name + qsl("_p50_ms"), percentile(times, 0.5));
+                        emitMetric(name + qsl("_p95_ms"), percentile(times, 0.95));
+                        emitMetric(name + qsl("_p99_ms"), percentile(times, 0.99));
+                        emitMetric(name + qsl("_max_ms"), times.last());
+                    }
+                }
+            }
+        }
     }
 };
 
