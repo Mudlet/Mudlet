@@ -307,6 +307,8 @@ public:
     QPointer<QObject> mpComposer;
     QNetworkAccessManager* mpDownloader = nullptr;
     QString mServerPackage;
+    // recorded as Host::mServerGUI_Package_version only once the download installs
+    QString mServerPackageVersion;
     QString mProfileName;
 
 
@@ -476,12 +478,14 @@ private:
     QString parseGUIUrlFromJSON(const QJsonObject& json);
     bool parseGUIBaseUiDeclinedFromJSON(const QJsonObject& json);
     void downloadAndInstallGUIPackage(const QString& packageName, const QString& fileName, const QString& url);
+    void installDownloadedGUIPackage(const QString& packagePath, const QString& packageVersion);
     void handleGUIPackageInstallationAndUpgrade(QJsonDocument document);
 
     static std::pair<bool, bool> testReadReplayFile();
 
     void trackKaVirNegotiation(unsigned char option);
     void autoEnableMXPProcessor();
+    void switchMxpOn();
     void autoEnableTTYPEVersion();
     QByteArray encodingForCharacterSet(const QByteArray& characterSet) const;
 
@@ -598,6 +602,8 @@ private:
 
     std::string mMudData;
     bool mIsTimerPosting = false;
+    // The last bytes trackMXPElementDetection() saw, so an ESC[#z split between two reads is found
+    std::string mMxpDetectionTail;
     // Beats while a write waits on its reply - see NETWORK_LATENCY_BEAT in
     // ctelnet.cpp:
     QTimer* mpNetworkLatencyBeatTimer = nullptr;
@@ -640,6 +646,8 @@ private:
     bool enableMSDP = false;
     bool enableMSP = false;
     bool enableMXP = false;
+    // enableMXP was set by autoEnableMXPProcessor() rather than by the game switching MXP on
+    bool mMxpAutoEnabled = false;
     bool enableChannel102 = false;
     // Inhibit mAutoReconnect from taking effect for one connection cycle,
     // either because the user wanted to disconnect or an SSL/TLS error occurred:

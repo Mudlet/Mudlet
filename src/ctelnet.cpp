@@ -270,6 +270,7 @@ void cTelnet::reset()
     abandonNetworkLatencyMeasurement();
     command = "";
     mMudData = "";
+    mMxpDetectionTail.clear();
     mDeferredInput.clear();
 
     mServerRequestedSGA = false;
@@ -2121,6 +2122,15 @@ void cTelnet::slot_replyFinished(QNetworkReply* reply)
             return;
         }
 
+        const QByteArray packageData = reply->readAll();
+        if (packageData.isEmpty()) {
+            //: %1 is the URL the game offered its package from
+            postMessage(tr("[ WARN ]  - Package download from '%1' was empty, so there is nothing to install.").arg(reply->url().toString()));
+            reply->deleteLater();
+            mpPackageDownloadReply = nullptr;
+            return;
+        }
+
         QSaveFile file(mServerPackage);
 
         if (!file.open(QFile::WriteOnly)) {
@@ -2132,7 +2142,7 @@ void cTelnet::slot_replyFinished(QNetworkReply* reply)
             return;
         }
 
-        file.write(reply->readAll());
+        file.write(packageData);
 
         if (!file.commit()) {
             //: %1 is the error message
@@ -2146,29 +2156,52 @@ void cTelnet::slot_replyFinished(QNetworkReply* reply)
         reply->deleteLater();
         mpPackageDownloadReply = nullptr;
 
-        // installPackage() reports the reason to the profile itself
-        if (!mpHost->installPackage(mServerPackage, enums::PackageModuleType::Package).first) {
-            return;
-        }
-
-        QString packageName = mServerPackage.section("/", -1);
-        packageName.remove(QLatin1String(".zip"), Qt::CaseInsensitive);
-        packageName.remove(QLatin1String(".trigger"), Qt::CaseInsensitive);
-        packageName.remove(QLatin1String(".xml"), Qt::CaseInsensitive);
-        packageName.remove(QLatin1String(".mpackage"), Qt::CaseInsensitive);
-        packageName.remove(QLatin1Char('/'));
-        packageName.remove(QLatin1Char('\\'));
-        mpHost->mServerGUI_Package_name = packageName;
-
-        // Let scripts (e.g. the preinstalled starter UI) react to the game
-        // having supplied its own interface:
-        TEvent event{};
-        event.mArgumentList.append(qsl("sysServerGuiInstalled"));
-        event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-        event.mArgumentList.append(packageName);
-        event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-        mpHost->raiseEvent(event);
+        // Copies: installing runs the package's scripts, and an offer handled meanwhile replaces both members
+        const QString packagePath = mServerPackage;
+        const QString packageVersion = mServerPackageVersion;
+        installDownloadedGUIPackage(packagePath, packageVersion);
     }
+}
+
+void cTelnet::installDownloadedGUIPackage(const QString& packagePath, const QString& packageVersion)
+{
+    // installPackage() would postpone the install past a running save and answer true at once,
+    // so the version would be recorded and the package announced before it was installed, or at all
+    if (mpHost->currentlySavingProfile()) {
+        connect(
+                mpHost,
+                &Host::profileSaveFinished,
+                this,
+                [this, packagePath, packageVersion]() {
+                    installDownloadedGUIPackage(packagePath, packageVersion);
+                },
+                static_cast<Qt::ConnectionType>(Qt::QueuedConnection | Qt::SingleShotConnection));
+        return;
+    }
+
+    // installPackage() reports the reason to the profile itself
+    if (!mpHost->installPackage(packagePath, enums::PackageModuleType::Package).first) {
+        return;
+    }
+    mpHost->mServerGUI_Package_version = packageVersion;
+
+    QString packageName = packagePath.section("/", -1);
+    packageName.remove(QLatin1String(".zip"), Qt::CaseInsensitive);
+    packageName.remove(QLatin1String(".trigger"), Qt::CaseInsensitive);
+    packageName.remove(QLatin1String(".xml"), Qt::CaseInsensitive);
+    packageName.remove(QLatin1String(".mpackage"), Qt::CaseInsensitive);
+    packageName.remove(QLatin1Char('/'));
+    packageName.remove(QLatin1Char('\\'));
+    mpHost->mServerGUI_Package_name = packageName;
+
+    // Let scripts (e.g. the preinstalled starter UI) react to the game
+    // having supplied its own interface:
+    TEvent event{};
+    event.mArgumentList.append(qsl("sysServerGuiInstalled"));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    event.mArgumentList.append(packageName);
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    mpHost->raiseEvent(event);
 }
 
 void cTelnet::slot_setDownloadProgress(qint64 got, qint64 tot)
@@ -2178,7 +2211,9 @@ void cTelnet::slot_setDownloadProgress(qint64 got, qint64 tot)
 
 void cTelnet::slot_cancelPackageDownload()
 {
-    if (mpPackageDownloadReply) {
+    // Closing the progress dialog when the download finishes emits canceled() too,
+    // and aborting a finished file: reply closes it before its data is read
+    if (mpPackageDownloadReply && !mpPackageDownloadReply->isFinished()) {
         mpPackageDownloadReply->abort();
     }
 }
@@ -3128,6 +3163,19 @@ void cTelnet::autoEnableTTYPEVersion()
     });
 }
 
+// Each time the game switches MXP on, it starts in open mode (the spec's initial default) over whatever an
+// earlier game or autoEnableMXPProcessor() left, though Force MXP keeps its secure default; a mode the game
+// locks in after that holds when it repeats the switch-on
+void cTelnet::switchMxpOn()
+{
+    if (!enableMXP || mMxpAutoEnabled) {
+        mpHost->mMxpProcessor.setMode(MXP_MODE_CODE_LOCK_OPEN);
+    }
+    enableMXP = true;
+    mMxpAutoEnabled = false;
+    mpHost->mMxpProcessor.enable();
+}
+
 // Auto-enable MXP processor when indicators are detected
 void cTelnet::autoEnableMXPProcessor()
 {
@@ -3135,6 +3183,7 @@ void cTelnet::autoEnableMXPProcessor()
 
     // Automatically enable MXP processing
     enableMXP = true;
+    mMxpAutoEnabled = true;
     mpHost->setForceMXPProcessorOn(true);
 
     // Games that auto-enable MXP (without telnet negotiation) typically use
@@ -3515,9 +3564,8 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                 break;
             }
 
-            enableMXP = true;
+            switchMxpOn();
             sendTelnetOption(TN_DO, OPT_MXP);
-            mpHost->mMxpProcessor.enable();
 
             qDebug() << "MXP enabled";
             raiseProtocolEvent("sysProtocolEnabled", "MXP");
@@ -3892,9 +3940,8 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
 
         if (option == OPT_MXP) {
             if (mpHost->mEnableMXP) {
-                enableMXP = true;
+                switchMxpOn();
                 sendTelnetOption(TN_WILL, OPT_MXP);
-                mpHost->mMxpProcessor.enable();
                 raiseProtocolEvent("sysProtocolEnabled", "MXP");
             } else {
                 sendTelnetOption(TN_WONT, OPT_MXP);
@@ -4243,7 +4290,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                 // Check if the package is installed
                 if (!mpHost->mInstalledPackages.contains(packageName)) {
                     // Package is not installed, initiate the download
-                    mpHost->mServerGUI_Package_version = version;
+                    mServerPackageVersion = version;
                     downloadAndInstallGUIPackage(packageName, fileName, url);
                 } else if (mpHost->mServerGUI_Package_version != version) {
                     // Check if the version is different and handle the upgrade
@@ -4251,19 +4298,16 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                                    "(url='%3').")
                                         .arg(version, mpHost->mServerGUI_Package_version, url));
 
-                    // If uninstalling is refused, installing over it would fail as "already installed"
-                    // while the version recorded below claimed the upgrade. A name not installed
-                    // has nothing to remove,
-                    // and must not hold the upgrade up.
-                    const QString oldPackageName = mpHost->mServerGUI_Package_name != qsl("nothing") ? mpHost->mServerGUI_Package_name : packageName;
-                    const bool clearedTheWay = !mpHost->mInstalledPackages.contains(oldPackageName) || mpHost->uninstallPackage(oldPackageName, enums::PackageModuleType::Package);
+                    // The installed copy of the offered package is what has to go: removing any other leaves this
+                    // one in place, and installing over it fails as "already installed" at every offer
+                    const bool clearedTheWay = mpHost->uninstallPackage(packageName, enums::PackageModuleType::Package);
                     if (clearedTheWay) {
                         // Download and install the new version
-                        mpHost->mServerGUI_Package_version = version;
+                        mServerPackageVersion = version;
                         downloadAndInstallGUIPackage(packageName, fileName, url);
                     } else {
                         //: %1 is the name of the GUI package the game offered to upgrade
-                        postMessage(tr("[ WARN ]  - Could not remove \"%1\" to upgrade it while the profile is being saved. The game will offer the upgrade again.").arg(oldPackageName));
+                        postMessage(tr("[ WARN ]  - Could not remove \"%1\" to upgrade it while the profile is being saved. The game will offer the upgrade again.").arg(packageName));
                     }
                 }
             }
@@ -4324,10 +4368,8 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
         // Some servers require this subnegotiation before processing MXP escape sequences
         if (option == OPT_MXP) {
             if (mpHost->mEnableMXP) {
-                enableMXP = true;
+                switchMxpOn();
                 qDebug() << "MXP enabled via subnegotiation";
-                mpHost->mMxpProcessor.enable();
-                mpHost->mMxpProcessor.setMode(MXP_MODE_CODE_LOCK_LOCKED);
                 raiseProtocolEvent("sysProtocolEnabled", "MXP");
             }
             return;
@@ -4664,7 +4706,7 @@ void cTelnet::handleGUIPackageInstallationAndUpgrade(QJsonDocument document)
     // Check if the package is installed
     if (!mpHost->mInstalledPackages.contains(packageName)) {
         // Package is not installed, initiate the download
-        mpHost->mServerGUI_Package_version = version;
+        mServerPackageVersion = version;
         downloadAndInstallGUIPackage(packageName, fileName, url);
     } else if (mpHost->mServerGUI_Package_version != version) {
         // Check if the version is different and handle the upgrade
@@ -4672,19 +4714,16 @@ void cTelnet::handleGUIPackageInstallationAndUpgrade(QJsonDocument document)
                        "(url='%3').")
                             .arg(version, mpHost->mServerGUI_Package_version, url));
 
-        // If uninstalling is refused, installing over it would fail as "already installed"
-        // while the version recorded below claimed the upgrade. A name not installed
-        // has nothing to remove,
-        // and must not hold the upgrade up.
-        const QString oldPackageName = mpHost->mServerGUI_Package_name != qsl("nothing") ? mpHost->mServerGUI_Package_name : packageName;
-        const bool clearedTheWay = !mpHost->mInstalledPackages.contains(oldPackageName) || mpHost->uninstallPackage(oldPackageName, enums::PackageModuleType::Package);
+        // The installed copy of the offered package is what has to go: removing any other leaves this
+        // one in place, and installing over it fails as "already installed" at every offer
+        const bool clearedTheWay = mpHost->uninstallPackage(packageName, enums::PackageModuleType::Package);
         if (clearedTheWay) {
             // Download and install the new version
-            mpHost->mServerGUI_Package_version = version;
+            mServerPackageVersion = version;
             downloadAndInstallGUIPackage(packageName, fileName, url);
         } else {
             //: %1 is the name of the GUI package the game offered to upgrade
-            postMessage(tr("[ WARN ]  - Could not remove \"%1\" to upgrade it while the profile is being saved. The game will offer the upgrade again.").arg(oldPackageName));
+            postMessage(tr("[ WARN ]  - Could not remove \"%1\" to upgrade it while the profile is being saved. The game will offer the upgrade again.").arg(packageName));
         }
     }
 }
@@ -5261,8 +5300,12 @@ void cTelnet::gotPrompt(std::string& mud_data)
 
     mMudData += mud_data;
 
-    if (!mpHost->mPromptedForMXPProcessorOn && !mpHost->getForceMXPProcessorOn() && !isMXPEnabled()) {
+    // Scanned as gotRest() scans, or a forced processor misses a re-initialisation that arrives with a prompt
+    if (mpHost->getForceMXPProcessorOn() || (!mpHost->mPromptedForMXPProcessorOn && !isMXPEnabled())) {
         trackMXPElementDetection(mud_data);
+    } else {
+        // gotRest() may scan again once that changes, and must not join its next read to one this read came between
+        mMxpDetectionTail.clear();
     }
 
     // Patch for servers that need GA/EOR for prompt fixups
@@ -5324,7 +5367,16 @@ void cTelnet::trackMXPElementDetection(const std::string& line)
         return;
     }
 
-    if (!containsMxpModeSwitch(line)) {
+    // ESC[#z is four bytes, so three carried over from the last read are enough to complete one
+    constexpr size_t tailLength = 3;
+    const bool found = containsMxpModeSwitch(line) || (!mMxpDetectionTail.empty() && containsMxpModeSwitch(mMxpDetectionTail + line.substr(0, tailLength)));
+    if (line.size() >= tailLength) {
+        mMxpDetectionTail.assign(line, line.size() - tailLength, tailLength);
+    } else {
+        mMxpDetectionTail += line;
+        mMxpDetectionTail.erase(0, mMxpDetectionTail.size() > tailLength ? mMxpDetectionTail.size() - tailLength : 0);
+    }
+    if (!found) {
         return;
     }
 
@@ -5340,6 +5392,14 @@ void cTelnet::trackMXPElementDetection(const std::string& line)
 
 void cTelnet::gotRest(std::string& mud_data)
 {
+    // An escape this read leaves unfinished is joined to the next read (in mMudData, or by TBuffer once mGA_Driver is set),
+    // not to what a trigger feedTelnet()s while this read is posted, so that must neither be joined to this read's tail nor replace it
+    const auto postKeepingDetectionTail = [this]() {
+        const std::string tail = std::exchange(mMxpDetectionTail, std::string());
+        postData();
+        mMxpDetectionTail = tail;
+    };
+
     if (mud_data.empty()) {
         return;
     }
@@ -5349,6 +5409,9 @@ void cTelnet::gotRest(std::string& mud_data)
     // Otherwise, only scan if MXP hasn't been prompted for and isn't telnet-negotiated
     if (mpHost->getForceMXPProcessorOn() || (!mpHost->mPromptedForMXPProcessorOn && !isMXPEnabled())) {
         trackMXPElementDetection(mud_data);
+    } else {
+        // As in gotPrompt(): the next scanned read must not be joined to one from before this one
+        mMxpDetectionTail.clear();
     }
 
     if (!mGA_Driver) {
@@ -5356,7 +5419,7 @@ void cTelnet::gotRest(std::string& mud_data)
 
         if (i != std::string::npos) {
             mMudData.append(mud_data, 0, i + 1);
-            postData();
+            postKeepingDetectionTail();
 
             if (!mIsTimerPosting && (mpPostingTimer->interval() != mTimeOut)) {
                 mpPostingTimer->setInterval(mTimeOut);
@@ -5380,7 +5443,7 @@ void cTelnet::gotRest(std::string& mud_data)
         }
     } else {
         mMudData += mud_data;
-        postData();
+        postKeepingDetectionTail();
         mMudData = "";
     }
 }
@@ -5391,11 +5454,9 @@ void cTelnet::slot_timerPosting()
         return;
     }
 
+    // Not scanned for MXP: gotRest() saw these bytes as they came in, and scanning them again with the
+    // flush marker would put that, not the read's last bytes, in the tail the next read is joined to
     mMudData += "\r";
-
-    if (!mpHost->mPromptedForMXPProcessorOn && !mpHost->getForceMXPProcessorOn() && !isMXPEnabled()) {
-        trackMXPElementDetection(mMudData);
-    }
 
     postData();
     mMudData = "";

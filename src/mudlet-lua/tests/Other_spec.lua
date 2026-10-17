@@ -317,7 +317,6 @@ describe("Tests Other.lua functions", function()
     -- speedwalk with no delay dispatches synchronously through the real send();
     -- the delayed form is covered by an immediate-contract test below and the
     -- speedwalk state machine (stop/pause/resume) has its own describe block.
-    -- Real timer firing is intentionally out of scope here (no sleeps).
 
     after_each(function()
       -- if the delayed-walk test's assertion fails before it cleans up, cancel
@@ -367,8 +366,8 @@ describe("Tests Other.lua functions", function()
     it("dispatches only the first step synchronously when a delay is given", function()
       local send = spy.on(_G, "send")
 
-      -- With a delay the remaining steps are scheduled on real tempTimers
-      -- (Wave 2 territory); only the first step happens synchronously.
+      -- With a delay the remaining steps are scheduled on tempTimers;
+      -- only the first step happens synchronously.
       speedwalk("3w, 2ne, w, u", true, 1.25)
       assert.spy(send).was.called(1)
 
@@ -386,10 +385,7 @@ describe("Tests Other.lua functions", function()
     -- assert the control functions' return contracts and events without sleeps.
 
     after_each(function()
-      -- Fully clear any active OR paused speedwalk so no timer chain or leftover
-      -- walklist survives into the next test. resumeSpeedwalk re-arms a paused
-      -- walk so the subsequent stopSpeedwalk can clear its list.
-      pcall(resumeSpeedwalk)
+      -- stops a running or paused walk, so none survives into the next test
       pcall(stopSpeedwalk)
     end)
 
@@ -463,6 +459,366 @@ describe("Tests Other.lua functions", function()
       assert.is_nil(ok)
       assert.equals("resumeSpeedwalk(): attempted to resume an already running speedwalk", err)
     end)
+  end)
+
+  describe("Tests the events a speedwalk raises over its whole life", function()
+    local speedwalkEvents = {"sysSpeedwalkStarted", "sysSpeedwalkFinished", "sysSpeedwalkPaused", "sysSpeedwalkResumed", "sysSpeedwalkStopped"}
+    local seen, handlers, sent
+    local realSend
+
+    -- runs fn from the first sysDataSendRequest the given step raises, once
+    local function onStep(step, fn)
+      local steps = 0
+      handlers[#handlers + 1] = registerAnonymousEventHandler("sysDataSendRequest", function()
+        steps = steps + 1
+        if steps == step then
+          fn()
+        end
+      end)
+    end
+
+    -- runs fn from the first time eventName is raised, once
+    local function onceOn(eventName, fn)
+      local handled = false
+      handlers[#handlers + 1] = registerAnonymousEventHandler(eventName, function()
+        if not handled then
+          handled = true
+          fn()
+        end
+      end)
+    end
+
+    before_each(function()
+      seen, handlers, sent = {}, {}, {}
+      for _, eventName in ipairs(speedwalkEvents) do
+        handlers[#handlers + 1] = registerAnonymousEventHandler(eventName, function(event) seen[#seen + 1] = event end)
+      end
+      realSend = _G.send
+      _G.send = function(command, show) sent[#sent + 1] = command; return realSend(command, show) end
+    end)
+
+    after_each(function()
+      _G.send = realSend
+      for _, handler in ipairs(handlers) do
+        killAnonymousEventHandler(handler)
+      end
+      pcall(stopSpeedwalk)
+    end)
+
+    it("raises sysSpeedwalkFinished after a walk with no delay", function()
+      assert.is_true(speedwalk("2n1e"))
+      assert.are.same({"n", "n", "e"}, sent)
+      assert.are.same({"sysSpeedwalkStarted", "sysSpeedwalkFinished"}, seen)
+    end)
+
+    it("refuses a walk with no directions in it, without starting one", function()
+      for _, walk in ipairs({"xyzzy", "", "5", ";;;", "0n"}) do
+        for _, backwards in ipairs({false, true}) do
+          for _, delay in ipairs({false, 0.01}) do
+            local ok, err = speedwalk(walk, backwards, delay)
+            assert.is_nil(ok, walk)
+            assert.are.equal("speedwalk(): no directions found in the walk to take", err)
+          end
+        end
+      end
+      assert.are.same({}, sent)
+      assert.are.same({}, seen)
+    end)
+
+    it("raises a bad argument error for directions that are not a string", function()
+      assert.has_error(function() speedwalk(42) end, "speedwalk: bad argument #1 type (directions as string expected, got number!)")
+      assert.has_error(function() speedwalk() end, "speedwalk: bad argument #1 type (directions as string expected, got nil!)")
+    end)
+
+    it("raises a bad argument error for a delay it cannot wait, without starting a walk", function()
+      assert.has_error(function() speedwalk("3n", false, "fast") end, "speedwalk: bad argument #3 type (delay in seconds as number expected, got string!)")
+      assert.has_error(function() speedwalk("3n", false, true) end, "speedwalk: bad argument #3 type (delay in seconds as number expected, got boolean!)")
+      assert.has_error(function() speedwalk("3n", false, -1) end, "speedwalk: bad argument #3 value (delay in seconds must be at least 0 and less than 86400, got -1)")
+      assert.are.same({}, sent)
+      assert.are.same({}, seen)
+      assert.is_nil((resumeSpeedwalk()))
+    end)
+
+    it("does not report a pause when a running walk is stopped", function()
+      assert.is_true(speedwalk("4n", false, 10))
+      assert.is_true(stopSpeedwalk())
+      assert.are.same({"sysSpeedwalkStarted", "sysSpeedwalkStopped"}, seen)
+    end)
+
+    it("stops a paused walk, so there is nothing left to resume", function()
+      speedwalk("5n", false, 10)
+      assert.is_true(pauseSpeedwalk())
+      assert.is_true(stopSpeedwalk())
+      assert.is_nil(resumeSpeedwalk())
+      assert.are.same({"sysSpeedwalkStarted", "sysSpeedwalkPaused", "sysSpeedwalkStopped"}, seen)
+    end)
+
+    it("stops a paused walk before starting another", function()
+      speedwalk("5n", false, 10)
+      assert.is_true(pauseSpeedwalk())
+      speedwalk("3e")
+      assert.is_nil(resumeSpeedwalk())
+      assert.are.same({"n", "e", "e", "e"}, sent)
+      assert.are.same({"sysSpeedwalkStarted", "sysSpeedwalkPaused", "sysSpeedwalkStopped", "sysSpeedwalkStarted", "sysSpeedwalkFinished"}, seen)
+    end)
+
+    it("stops a running delayed walk before a walk with no delay", function()
+      speedwalk("5n", false, 10)
+      speedwalk("e")
+      assert.is_nil(resumeSpeedwalk())
+      assert.are.same({"n", "e"}, sent)
+      assert.are.same({"sysSpeedwalkStarted", "sysSpeedwalkStopped", "sysSpeedwalkStarted", "sysSpeedwalkFinished"}, seen)
+    end)
+
+    it("raises sysSpeedwalkResumed before the steps the resumed walk takes", function()
+      speedwalk("2n", false, 10)
+      assert.is_true(pauseSpeedwalk())
+      assert.is_true(resumeSpeedwalk())
+      assert.are.same({"n", "n"}, sent)
+      assert.are.same({"sysSpeedwalkStarted", "sysSpeedwalkPaused", "sysSpeedwalkResumed", "sysSpeedwalkFinished"}, seen)
+    end)
+
+    it("lets a sysSpeedwalkStarted handler stop a walk before its first step", function()
+      for _, delay in ipairs({false, 10}) do
+        sent, seen = {}, {}
+        local result
+        onceOn("sysSpeedwalkStarted", function() result = {stopSpeedwalk()} end)
+        assert.is_true(speedwalk("3n", false, delay))
+        assert.are.same({true}, result)
+        assert.are.same({}, sent)
+        assert.are.same({"sysSpeedwalkStarted", "sysSpeedwalkStopped"}, seen)
+      end
+    end)
+
+    it("lets a sysDataSendRequest handler stop a walk with no delay part way", function()
+      local result
+      onStep(1, function() result = {stopSpeedwalk()} end)
+      speedwalk("3n")
+      assert.are.same({true}, result)
+      assert.are.same({"n"}, sent)
+      assert.are.same({"sysSpeedwalkStarted", "sysSpeedwalkStopped"}, seen)
+    end)
+
+    it("hands over from a walk with no delay to one a sysSpeedwalkStarted handler starts", function()
+      onceOn("sysSpeedwalkStarted", function() speedwalk("2e", false, 10) end)
+      speedwalk("2n")
+      assert.are.same({"e"}, sent)
+      assert.are.same({"sysSpeedwalkStarted", "sysSpeedwalkStopped", "sysSpeedwalkStarted"}, seen)
+      assert.is_true(pauseSpeedwalk())
+    end)
+
+    it("hands over from a walk with no delay to one a sysDataSendRequest handler starts", function()
+      onStep(1, function() speedwalk("2e", false, 10) end)
+      speedwalk("3n")
+      assert.are.same({"n", "e"}, sent)
+      assert.are.same({"sysSpeedwalkStarted", "sysSpeedwalkStopped", "sysSpeedwalkStarted"}, seen)
+      assert.is_true(pauseSpeedwalk())
+    end)
+
+    it("starts no walk of its own once a sysSpeedwalkStopped handler has run a walk with no delay", function()
+      speedwalk("4n", false, 10)
+      onceOn("sysSpeedwalkStopped", function() speedwalk("3e") end)
+      local ok, err = speedwalk("2s", false, 0.01)
+      assert.is_nil(ok)
+      assert.are.equal("speedwalk(): a sysSpeedwalkStopped handler started another speedwalk", err)
+      assert.are.same({"n", "e", "e", "e"}, sent)
+      assert.are.same({"sysSpeedwalkStarted", "sysSpeedwalkStopped", "sysSpeedwalkStarted", "sysSpeedwalkFinished"}, seen)
+      assert.is_nil((stopSpeedwalk()))
+    end)
+
+    it("refuses a resume from a sysSpeedwalkStarted handler, as the walk is not paused", function()
+      local result
+      onceOn("sysSpeedwalkStarted", function() result = {resumeSpeedwalk()} end)
+      speedwalk("3n", false, 10)
+      assert.are.same({nil, "resumeSpeedwalk(): attempted to resume an already running speedwalk"}, result)
+      assert.are.same({"n"}, sent)
+      assert.is_true(stopSpeedwalk())
+      assert.are.same({"sysSpeedwalkStarted", "sysSpeedwalkStopped"}, seen)
+    end)
+
+    it("pauses a delayed walk from a sysDataSendRequest handler during its first step", function()
+      local result
+      onStep(1, function() result = {pauseSpeedwalk()} end)
+      speedwalk("3n", false, 10)
+      assert.are.same({true}, result)
+      assert.are.same({"n"}, sent)
+      assert.is_nil((pauseSpeedwalk()))
+      assert.is_true(resumeSpeedwalk())
+      assert.are.same({"n", "n"}, sent)
+      assert.are.same({"sysSpeedwalkStarted", "sysSpeedwalkPaused", "sysSpeedwalkResumed"}, seen)
+      -- the resumed walk still has its last step to take
+      assert.is_true(pauseSpeedwalk())
+    end)
+
+    it("takes one step when a sysSpeedwalkStarted handler pauses and resumes a delayed walk", function()
+      onceOn("sysSpeedwalkStarted", function()
+        pauseSpeedwalk()
+        resumeSpeedwalk()
+      end)
+      assert.is_true(speedwalk("3n", false, 10))
+      assert.are.same({"n"}, sent)
+      assert.are.same({"sysSpeedwalkStarted", "sysSpeedwalkPaused", "sysSpeedwalkResumed"}, seen)
+    end)
+
+    it("takes one step when a sysSpeedwalkPaused handler resumes a walk its sysSpeedwalkStarted handler paused", function()
+      onceOn("sysSpeedwalkStarted", function() pauseSpeedwalk() end)
+      onceOn("sysSpeedwalkPaused", function() resumeSpeedwalk() end)
+      assert.is_true(speedwalk("3n", false, 10))
+      assert.are.same({"n"}, sent)
+      assert.are.same({"sysSpeedwalkStarted", "sysSpeedwalkPaused", "sysSpeedwalkResumed"}, seen)
+    end)
+
+    it("refuses to pause a walk while its last step is being sent", function()
+      local result
+      onStep(2, function() result = {pauseSpeedwalk()} end)
+      assert.is_true(speedwalk("2n"))
+      assert.are.same({nil, "pauseSpeedwalk(): no active speedwalk found"}, result)
+      assert.are.same({"n", "n"}, sent)
+      assert.are.same({"sysSpeedwalkStarted", "sysSpeedwalkFinished"}, seen)
+    end)
+
+    it("takes a delay given as a string holding a number", function()
+      assert.is_true(speedwalk("2n", false, "10"))
+      assert.are.same({"n"}, sent)
+      assert.is_true(pauseSpeedwalk())
+    end)
+
+    it("checks the delay as tempTimer does, once rounded to whole milliseconds", function()
+      assert.has_error(function() speedwalk("3n", false, 86399.9996) end, "speedwalk: bad argument #3 value (delay in seconds must be at least 0 and less than 86400, got 86399.9996)")
+      assert.are.same({}, sent)
+      assert.are.same({}, seen)
+      assert.is_true(speedwalk("2n", false, -0.0004))
+      assert.are.same({"n"}, sent)
+    end)
+
+    it("ends a walk whose step send() refuses, so the next walk can be paused and resumed", function()
+      assert.has_error(function() speedwalktimer({{}, "n"}, 10, false) end)
+      assert.are.same({"sysSpeedwalkStopped"}, seen)
+      assert.is_nil((pauseSpeedwalk()))
+      sent = {}
+      assert.is_true(speedwalk("3n", false, 10))
+      assert.is_true(pauseSpeedwalk())
+      assert.is_true(resumeSpeedwalk())
+      assert.are.same({"n", "n"}, sent)
+    end)
+
+    it("stops the running walk before speedwalktimer starts another", function()
+      speedwalk("5n", false, 10)
+      speedwalktimer({"e", "e"}, 10, false)
+      assert.are.same({"n", "e"}, sent)
+      assert.are.same({"sysSpeedwalkStarted", "sysSpeedwalkStopped"}, seen)
+      assert.is_true(pauseSpeedwalk())
+    end)
+
+    it("refuses a speedwalktimer delay it cannot wait, without starting a walk", function()
+      assert.has_error(function() speedwalktimer({"n", "e"}, -1, false) end, "speedwalktimer: bad argument #2 value (delay in seconds must be at least 0 and less than 86400, got -1)")
+      assert.are.same({}, sent)
+      assert.is_nil((pauseSpeedwalk()))
+    end)
+
+    -- waitForEvent only pumps the event loop in test mode
+    if not os.getenv("MUDLET_TEST_MODE") then
+      pending("the specs that wait for a delayed speedwalk's timers - need MUDLET_TEST_MODE for waitForEvent")
+    else
+      -- give a second timer chain, had one survived, time to show itself
+      local function settle()
+        tempTimer(0.1, function() raiseEvent("speedwalkSpecSettled") end)
+        assert(waitForEvent("speedwalkSpecSettled", 5000))
+      end
+
+      it("leaves nothing to pause or stop once a delayed walk has finished", function()
+        assert.is_true(speedwalk("n;e;s", false, 0.01))
+        assert.are.equal("sysSpeedwalkFinished", waitForEvent("sysSpeedwalkFinished", 5000))
+        assert.are.same({"n", "e", "s"}, sent)
+
+        local ok, err = pauseSpeedwalk()
+        assert.is_nil(ok)
+        assert.are.equal("pauseSpeedwalk(): no active speedwalk found", err)
+        ok, err = stopSpeedwalk()
+        assert.is_nil(ok)
+        assert.are.equal("stopSpeedwalk(): no active speedwalk found", err)
+        assert.are.same({"sysSpeedwalkStarted", "sysSpeedwalkFinished"}, seen)
+      end)
+
+      it("stops a running delayed walk before starting another", function()
+        speedwalk("3n", false, 0.01)
+        speedwalk("3s", false, 0.01)
+        assert.are.equal("sysSpeedwalkFinished", waitForEvent("sysSpeedwalkFinished", 5000))
+        settle()
+        assert.are.same({"n", "s", "s", "s"}, sent)
+        assert.are.same({"sysSpeedwalkStarted", "sysSpeedwalkStopped", "sysSpeedwalkStarted", "sysSpeedwalkFinished"}, seen)
+      end)
+
+      it("starts no walk of its own once a sysSpeedwalkStopped handler has started one", function()
+        speedwalk("4n", false, 0.01)
+        onceOn("sysSpeedwalkStopped", function() speedwalk("3e", false, 0.01) end)
+        local ok, err = speedwalk("2s", false, 0.01)
+        assert.are.equal("sysSpeedwalkFinished", waitForEvent("sysSpeedwalkFinished", 5000))
+        settle()
+        assert.are.same({"n", "e", "e", "e"}, sent)
+        assert.are.same({"sysSpeedwalkStarted", "sysSpeedwalkStopped", "sysSpeedwalkStarted", "sysSpeedwalkFinished"}, seen)
+        assert.is_nil(ok)
+        assert.are.equal("speedwalk(): a sysSpeedwalkStopped handler started another speedwalk", err)
+      end)
+
+      it("hands over to a walk a sysSpeedwalkStarted handler starts", function()
+        onceOn("sysSpeedwalkStarted", function() speedwalk("3e", false, 0.01) end)
+        speedwalk("2n", false, 0.01)
+        assert.are.equal("sysSpeedwalkFinished", waitForEvent("sysSpeedwalkFinished", 5000))
+        settle()
+        assert.are.same({"e", "e", "e"}, sent)
+        assert.are.same({"sysSpeedwalkStarted", "sysSpeedwalkStopped", "sysSpeedwalkStarted", "sysSpeedwalkFinished"}, seen)
+      end)
+
+      it("hands over to a walk a sysDataSendRequest handler starts during the last step", function()
+        onStep(2, function() speedwalk("3e", false, 10) end)
+        speedwalk("2n", false, 0.01)
+        assert.are.equal("sysSpeedwalkStarted", waitForEvent("sysSpeedwalkStarted", 5000))
+        settle()
+        assert.is_true(pauseSpeedwalk())
+        assert.is_true(stopSpeedwalk())
+        assert.are.same({"n", "n", "e"}, sent)
+        assert.are.same({"sysSpeedwalkStarted", "sysSpeedwalkStopped", "sysSpeedwalkStarted", "sysSpeedwalkPaused", "sysSpeedwalkStopped"}, seen)
+      end)
+
+      it("pauses a delayed walk from a sysDataSendRequest handler during a later step", function()
+        local result
+        onStep(2, function() result = {pauseSpeedwalk()} end)
+        speedwalk("4n", false, 0.01)
+        assert.are.equal("sysSpeedwalkPaused", waitForEvent("sysSpeedwalkPaused", 5000))
+        settle()
+        assert.are.same({true}, result)
+        assert.are.same({"n", "n"}, sent)
+        assert.is_true(resumeSpeedwalk())
+        assert.are.equal("sysSpeedwalkFinished", waitForEvent("sysSpeedwalkFinished", 5000))
+        settle()
+        assert.are.same({"n", "n", "n", "n"}, sent)
+        assert.are.same({"sysSpeedwalkStarted", "sysSpeedwalkPaused", "sysSpeedwalkResumed", "sysSpeedwalkFinished"}, seen)
+      end)
+
+      it("refuses to pause a delayed walk while its last step is being sent", function()
+        local result
+        onStep(2, function() result = {pauseSpeedwalk()} end)
+        speedwalk("2n", false, 0.01)
+        assert.are.equal("sysSpeedwalkFinished", waitForEvent("sysSpeedwalkFinished", 5000))
+        settle()
+        assert.are.same({nil, "pauseSpeedwalk(): no active speedwalk found"}, result)
+        assert.are.same({"n", "n"}, sent)
+        assert.are.same({"sysSpeedwalkStarted", "sysSpeedwalkFinished"}, seen)
+      end)
+
+      it("keeps one timer chain when a sysDataSendRequest handler pauses and resumes during a step", function()
+        onStep(2, function()
+          pauseSpeedwalk()
+          resumeSpeedwalk()
+        end)
+        speedwalk("4n", false, 0.01)
+        assert.are.equal("sysSpeedwalkFinished", waitForEvent("sysSpeedwalkFinished", 5000))
+        settle()
+        assert.are.same({"n", "n", "n", "n"}, sent)
+        assert.are.same({"sysSpeedwalkStarted", "sysSpeedwalkPaused", "sysSpeedwalkResumed", "sysSpeedwalkFinished"}, seen)
+      end)
+    end
   end)
 
   describe("Tests the interface language Mudlet publishes", function()
@@ -1213,14 +1569,14 @@ describe("Tests Other.lua functions", function()
     -- than hard-coded, so this adapts to whichever build runs it. Every value
     -- changed here is restored (config is written to the profile on close). Keys
     -- with lossy or multi-valued representations (showSentText, the string enums
-    -- and the numeric/table keys) are handled in dedicated tests below; map keys
-    -- (which need an open mapper to set) are exercised only when settable.
+    -- and the numeric/table keys) are handled in dedicated tests below.
     local originalValues = {}
-    -- show3dMapView is skipped because flipping it to true opens the 3D OpenGL
-    -- map view. Initialising the software GL stack under headless CI leaks
-    -- one-time allocations in a GL driver module that is unloaded before exit,
-    -- so leak detection flags it and it cannot be name-suppressed. The 3D view
-    -- is not what this config round-trip is meant to exercise.
+    -- show3dMapView is skipped because setting it on an open mapper, to either
+    -- value, builds the 3D OpenGL map view. Initialising the software GL stack
+    -- under headless CI leaks one-time allocations in a GL driver module that is
+    -- unloaded before exit, so leak detection flags it and it cannot be
+    -- name-suppressed. The 3D view is not what this config round-trip is meant
+    -- to exercise.
     local skipInGenericLoop = { showSentText = true, show3dMapView = true }
 
     local function snapshot(key)
@@ -1249,6 +1605,115 @@ describe("Tests Other.lua functions", function()
       assert.is_table(cfg)
       assert.is_boolean(cfg.enableGMCP)
       assert.is_boolean(cfg.editorAutoComplete)
+    end)
+
+
+    it("answers true from the table form when every key was applied", function()
+      snapshot("enableGMCP")
+      snapshot("enableMSDP")
+      local wantGMCP, wantMSDP = not getConfig("enableGMCP"), not getConfig("enableMSDP")
+      assert.is_true(setConfig({enableGMCP = wantGMCP, enableMSDP = wantMSDP}))
+      assert.equals(wantGMCP, getConfig("enableGMCP"))
+      assert.equals(wantMSDP, getConfig("enableMSDP"))
+      restore("enableGMCP")
+      restore("enableMSDP")
+    end)
+
+    it("names each refused key from the table form and still applies the rest", function()
+      snapshot("enableGMCP")
+      snapshot("mapSymbolFontScaling")
+      local wantGMCP = not getConfig("enableGMCP")
+      local scaling = getConfig("mapSymbolFontScaling")
+      local ok, err = setConfig({enableGMCP = wantGMCP, mapSymbolFontScaling = 99, mudletSpecNoSuchKey = true})
+      assert.is_nil(ok)
+      assert.equals("mapSymbolFontScaling 99 is out of range, it must be between 0.50 and 2.00; "
+        .. "'mudletSpecNoSuchKey' isn't a valid configuration option", err)
+      assert.equals(wantGMCP, getConfig("enableGMCP"), "a refused key stopped the others from being applied")
+      assert.equals(scaling, getConfig("mapSymbolFontScaling"), "a refused key was applied anyway")
+      restore("enableGMCP")
+      restore("mapSymbolFontScaling")
+    end)
+
+    it("raises for a key of the wrong type from the table form, as the scalar form does", function()
+      snapshot("enableGMCP")
+      local wantGMCP = not getConfig("enableGMCP")
+      local called, err = pcall(setConfig, {enableGMCP = wantGMCP, enableMSDP = "yes"})
+      assert.is_false(called, "the table form swallowed a bad-argument error")
+      assert.is_truthy(tostring(err):find("enableMSDP: .*bad argument #2 type"), tostring(err))
+      assert.equals(wantGMCP, getConfig("enableGMCP"), "a raised error stopped the others from being applied")
+      restore("enableGMCP")
+    end)
+
+    it("hands back an applied key's warning from the table form, even when another key failed", function()
+      snapshot("mapSymbolFont")
+      snapshot("mapSymbolFontScaling")
+      -- U+10FFFD has no glyph in any font, see the symbol font warning spec below
+      local roomId = createRoomID()
+      finally(function()
+        deleteRoom(roomId)
+        restore("mapSymbolFont")
+        restore("mapSymbolFontScaling")
+      end)
+      assert.is_true(addRoom(roomId))
+      assert.is_true(setRoomChar(roomId, "\244\143\191\189"))
+      local ok, warning = setConfig({mapSymbolFont = getConfig("mapSymbolFont")})
+      assert.is_true(ok)
+      assert.is_truthy(tostring(warning):find("^mapSymbolFont: "), tostring(warning))
+      local failed, err = setConfig({mapSymbolFont = getConfig("mapSymbolFont"), mapSymbolFontScaling = 99})
+      assert.is_nil(failed)
+      assert.is_truthy(tostring(err):find("^mapSymbolFontScaling 99 is out of range.*; applied with warnings: mapSymbolFont: font "),
+        tostring(err))
+    end)
+
+    it("answers true when handed back a getConfig() snapshot", function()
+      -- the snapshot holds showSentText as a boolean, which would turn "always" into "script"
+      local sentText = getConfig("showSentText", true)
+      finally(function()
+        setConfig("showSentText", sentText)
+      end)
+      local config = getConfig()
+      -- with a mapper open, setting show3dMapView to either value builds the
+      -- OpenGL view, after which a headless run never exits
+      config.show3dMapView = nil
+      local ok, err = setConfig(config)
+      assert.is_true(ok, tostring(err))
+    end)
+
+    it("names a getConfig()-only key asked for at another value from the table form", function()
+      local ok, err = setConfig({logDirectory = getConfig("logDirectory") .. "/mudletSpecElsewhere"})
+      assert.is_nil(ok)
+      assert.is_truthy(tostring(err):find("'logDirectory'", 1, true), tostring(err))
+    end)
+
+    it("names the key from the table form when only the value asked for contains it", function()
+      local ok, err = setConfig({mapSymbolFont = "mapSymbolFont Mudletspec Sans"})
+      assert.is_nil(ok)
+      assert.is_truthy(tostring(err):find("^mapSymbolFont: font "), tostring(err))
+    end)
+
+    it("is not stopped by a script's getConfig() that raises", function()
+      snapshot("enableGMCP")
+      local wantGMCP = not getConfig("enableGMCP")
+      local scriptGetConfig = getConfig
+      finally(function()
+        _G.getConfig = scriptGetConfig
+        restore("enableGMCP")
+      end)
+      _G.getConfig = function()
+        error("mudletspec getConfig override")
+      end
+      local called, ok, err = pcall(setConfig, {enableGMCP = wantGMCP, mapSymbolFontScaling = 99})
+      _G.getConfig = scriptGetConfig
+      assert.is_true(called, tostring(ok))
+      assert.is_nil(ok)
+      assert.is_truthy(tostring(err):find("mapSymbolFontScaling 99 is out of range", 1, true), tostring(err))
+      assert.equals(wantGMCP, getConfig("enableGMCP"))
+    end)
+
+    it("names an unknown experiment from the table form", function()
+      local ok, err = setConfig({["experiment.mudletspec.nosuchthing"] = false})
+      assert.is_nil(ok)
+      assert.is_truthy(tostring(err):find("experiment.mudletspec.nosuchthing", 1, true), tostring(err))
     end)
 
     -- the no-argument table is built from a list kept in Other.lua, which has
@@ -1294,15 +1759,10 @@ describe("Tests Other.lua functions", function()
       for key, value in pairs(getConfig()) do
         if type(value) == "boolean" and not skipInGenericLoop[key] then
           snapshot(key)
-          local ok = setConfig(key, not value)
-          if ok then
-            assert.equals(not value, getConfig(key), "round-trip failed for boolean config key: " .. key)
-            settable = settable + 1
-          else
-            -- not settable in this environment (e.g. a map option with the
-            -- mapper closed); the getter still returns a boolean
-            assert.is_boolean(getConfig(key), "expected boolean for config key: " .. key)
-          end
+          local ok, err = setConfig(key, not value)
+          assert.is_true(ok, "setConfig refused boolean config key " .. key .. ": " .. tostring(err))
+          assert.equals(not value, getConfig(key), "round-trip failed for boolean config key: " .. key)
+          settable = settable + 1
           restore(key)
         end
       end
@@ -1332,8 +1792,6 @@ describe("Tests Other.lua functions", function()
     end)
 
     it("round-trips the 2D map room symbol font", function()
-      -- Unlike the other map keys these do not need an open mapper, because the
-      -- settings live on the map object rather than the mapper widget.
       local original = getConfig("mapSymbolFont")
       assert.is_string(original)
       snapshot("mapSymbolFont")
@@ -1467,11 +1925,11 @@ describe("Tests Other.lua functions", function()
       assert.is_true(exercised > 0, "expected at least one string enum config option")
     end)
 
-    -- These keys go to the 2D map widget itself, so setConfig() only knows them
-    -- while the mapper is open - with it closed they are refused as unknown.
-    describe("the map keys that need an open mapper", function()
+    -- With the mapper open these keys also reach the 2D map widget itself;
+    -- BeforeMapWidget_spec.lua covers setting them with no mapper.
+    describe("the map keys with the mapper open", function()
       before_each(function()
-        assert.is_true(openMapWidget(), "these keys cannot be set without the map widget")
+        assert.is_true(openMapWidget(), "these keys are meant to be set with the map widget open")
       end)
 
       it("round-trips mapExitSize", function()
@@ -1631,7 +2089,7 @@ describe("Tests Other.lua functions", function()
     end)
 
     it("refuses a mapRoomSize below 1", function()
-      assert.is_true(openMapWidget(), "mapRoomSize cannot be set without the map widget")
+      assert.is_true(openMapWidget(), "could not open the map widget")
       snapshot("mapRoomSize")
       finally(function() restore("mapRoomSize") end)
       assert.is_true(setConfig("mapRoomSize", 7))
@@ -1663,7 +2121,7 @@ describe("Tests Other.lua functions", function()
     -- 12.5 for a 4, and getConfig() answers that - so setConfig() has to take it
     -- back as it is for a script restoring the settings it changed.
     it("round-trips a mapExitSize that is not a whole number", function()
-      assert.is_true(openMapWidget(), "mapExitSize cannot be set without the map widget")
+      assert.is_true(openMapWidget(), "could not open the map widget")
       snapshot("mapExitSize")
       finally(function() restore("mapExitSize") end)
       assert.is_true(setConfig("mapExitSize", 12.5))
@@ -1678,7 +2136,7 @@ describe("Tests Other.lua functions", function()
     -- preferences, so a value that is not a finite number of at least 1 must
     -- never reach it.
     it("rejects a mapExitSize that is not a finite number of at least 1", function()
-      assert.is_true(openMapWidget(), "mapExitSize cannot be set without the map widget")
+      assert.is_true(openMapWidget(), "could not open the map widget")
       snapshot("mapExitSize")
       finally(function() restore("mapExitSize") end)
       assert.is_true(setConfig("mapExitSize", 10))
@@ -1981,18 +2439,52 @@ describe("Tests Other.lua functions", function()
     describe("IRC keys", function()
       -- These are stored in the profile rather than on the Host, and are the
       -- only config keys that read back through dlgIRC.
-      local ircKeys = {"ircHostName", "ircHostPort", "ircHostSecure", "ircChannels", "ircNickName"}
+      local function ircFiles()
+        local profile = getMudletHomeDir()
+        -- the last is the application-wide default nick, which the nick writer also rewrites
+        return {profile .. "/irc_host", profile .. "/irc_port", profile .. "/irc_secure",
+          profile .. "/irc_channels", profile .. "/irc_nick", profile .. "/../../irc_nick"}
+      end
 
+      local function readIrcFile(path)
+        local file = io.open(path, "rb")
+        if not file then
+          return nil
+        end
+        local data = file:read("*a")
+        file:close()
+        return data
+      end
+
+      local function writeIrcFile(path, data)
+        if data == nil then
+          os.remove(path)
+          return
+        end
+        local file = assert(io.open(path, "wb"))
+        file:write(data)
+        file:close()
+      end
+
+      -- Put back byte for byte: a restore through setConfig() can be refused, and
+      -- would leave a generated nick behind where none was stored
       local function snapshotIrc()
         local saved = {}
-        for _, key in ipairs(ircKeys) do
-          saved[key] = getConfig(key)
+        for index, path in ipairs(ircFiles()) do
+          saved[index] = readIrcFile(path)
         end
         return function()
-          for _, key in ipairs(ircKeys) do
-            setConfig(key, saved[key])
+          for index, path in ipairs(ircFiles()) do
+            writeIrcFile(path, saved[index])
           end
         end
+      end
+
+      -- an ASCII QString as QDataStream writes it: a big-endian byte count, then UTF-16BE
+      local function storedString(text)
+        local utf16 = text:gsub(".", function(character) return "\0" .. character end)
+        local size = #utf16
+        return string.char(math.floor(size / 16777216) % 256, math.floor(size / 65536) % 256, math.floor(size / 256) % 256, size % 256) .. utf16
       end
 
       it("answers every IRC key with the documented type", function()
@@ -2030,23 +2522,115 @@ describe("Tests Other.lua functions", function()
         assert.equals("#mudlet #mudlet-spec", getConfig("ircChannels"))
       end)
 
-      -- An unusable port would strand the IRC client on a connect attempt it
-      -- can never make, so the reader falls back rather than handing it out
-      it("reads back the default port when the stored one is out of range", function()
+      it("refuses a port outside 1 to 65535 and keeps the stored one", function()
         finally(snapshotIrc())
 
-        assert.is_true(setConfig("ircHostPort", 6697))
-        assert.equals(6697, getConfig("ircHostPort"))
-
-        -- the writer takes any integer today; whether it starts refusing this
-        -- one is not what is being pinned, only that the reader never answers
-        -- with a port nothing can connect to
-        local stored = setConfig("ircHostPort", 70000)
-        local fallback = getConfig("ircHostPort")
-        assert.is_true(fallback >= 1 and fallback <= 65535, "an unusable port was handed out: " .. tostring(fallback))
-        if stored then
-          assert.are_not.equals(6697, fallback, "the stored port was left in place rather than replaced by the default")
+        for _, port in ipairs({1, 65535, 6699}) do
+          assert.is_true(setConfig("ircHostPort", port))
+          assert.equals(port, getConfig("ircHostPort"))
         end
+        for _, port in ipairs({-1, 0, 65536, 70000}) do
+          local ok, err = setConfig("ircHostPort", port)
+          assert.is_nil(ok, "port " .. port .. " was taken")
+          assert.equals("invalid port number " .. port .. " given, it must be in range 1 to 65535", err)
+          assert.equals(6699, getConfig("ircHostPort"))
+        end
+      end)
+
+      it("refuses an empty host or nick name and keeps the stored one", function()
+        finally(snapshotIrc())
+
+        assert.is_true(setConfig("ircHostName", "irc.mudlet-spec.invalid"))
+        local ok, err = setConfig("ircHostName", "")
+        assert.is_nil(ok)
+        assert.equals("hostname must not be empty", err)
+        assert.equals("irc.mudlet-spec.invalid", getConfig("ircHostName"))
+
+        assert.is_true(setConfig("ircNickName", "MudletSpecNick"))
+        local appNick = readIrcFile(ircFiles()[6])
+        ok, err = setConfig("ircNickName", "")
+        assert.is_nil(ok)
+        assert.equals("nick must not be empty", err)
+        assert.equals("MudletSpecNick", getConfig("ircNickName"))
+        assert.equals(appNick, readIrcFile(ircFiles()[6]), "the refused nick reached the application-wide default")
+      end)
+
+      it("refuses a host name holding a space or a line break and keeps the stored one", function()
+        finally(snapshotIrc())
+
+        assert.is_true(setConfig("ircHostName", "irc.mudlet-spec.invalid"))
+        for _, host in ipairs({"   ", " irc.libera.chat", "irc.libera.chat\t", "irc.mudlet\nspec"}) do
+          local ok, err = setConfig("ircHostName", host)
+          assert.is_nil(ok, "'" .. host .. "' was taken")
+          assert.is_truthy(err:find("must not hold a space or a line break", 1, true), err)
+          assert.equals("irc.mudlet-spec.invalid", getConfig("ircHostName"))
+        end
+        local ok, err = setIrcServer("irc.mudlet\nspec")
+        assert.is_nil(ok)
+        assert.equals("unable to save hostname, reason: hostname \"irc.mudlet\\nspec\" must not hold a space or a line break", err)
+        assert.equals("irc.mudlet-spec.invalid", getConfig("ircHostName"))
+      end)
+
+      it("refuses a channel list with a name that is not a channel", function()
+        finally(snapshotIrc())
+
+        assert.is_true(setConfig("ircChannels", "#mudlet-spec"))
+        local refusals = {
+          {"nohash", "nohash"},
+          {"#mudlet nohash", "nohash"},
+          {"#mudlet,#spec", "#mudlet,#spec"},
+          {"#mudlet #a\tb", "#a\tb"},
+        }
+        for _, refusal in ipairs(refusals) do
+          local ok, err = setConfig("ircChannels", refusal[1])
+          assert.is_nil(ok, "'" .. refusal[1] .. "' was taken")
+          assert.equals("channel name \"" .. refusal[2] .. "\" must start with #, &, + or ! and hold no space or comma", err)
+          assert.equals("#mudlet-spec", getConfig("ircChannels"))
+        end
+        local ok, err = setConfig("ircChannels", "")
+        assert.is_nil(ok)
+        assert.equals("no (valid) channel names provided", err)
+        assert.equals("#mudlet-spec", getConfig("ircChannels"))
+      end)
+
+      -- Profiles saved before the writers refused these still hold them
+      it("reads past a stored channel name no writer takes any more", function()
+        finally(snapshotIrc())
+
+        writeIrcFile(ircFiles()[4], storedString("nohash #mudlet-spec"))
+        assert.equals("#mudlet-spec", getConfig("ircChannels"))
+        writeIrcFile(ircFiles()[4], storedString("nohash"))
+        assert.equals("#mudlet", getConfig("ircChannels"))
+        assert.is_true(setConfig("ircChannels", getConfig("ircChannels")))
+      end)
+
+      -- RFC 2811 "safe" channels, as IRCnet has
+      it("keeps a stored channel with the ! prefix and takes a new one", function()
+        finally(snapshotIrc())
+
+        writeIrcFile(ircFiles()[4], storedString("#mudlet !ABCDEmychan"))
+        assert.equals("#mudlet !ABCDEmychan", getConfig("ircChannels"))
+        assert.is_true(setConfig("ircChannels", getConfig("ircChannels")))
+        assert.is_true(setConfig("ircChannels", "!ABCDEspec"))
+        assert.equals("!ABCDEspec", getConfig("ircChannels"))
+      end)
+
+      it("reads the default host in place of a stored one no writer takes any more", function()
+        finally(snapshotIrc())
+
+        for _, host in ipairs({" irc.libera.chat", "irc.libera.chat\t", "irc.mudlet spec", "irc.mudlet\nspec"}) do
+          writeIrcFile(ircFiles()[1], storedString(host))
+          assert.equals("irc.libera.chat", getConfig("ircHostName"), "stored '" .. host .. "' was handed out")
+          assert.equals("irc.libera.chat", (getIrcServer()))
+          assert.is_true(setConfig("ircHostName", getConfig("ircHostName")))
+        end
+      end)
+
+      it("reads the default port in place of a stored one outside 1 to 65535", function()
+        finally(snapshotIrc())
+
+        writeIrcFile(ircFiles()[2], storedString("70000"))
+        assert.equals(6667, getConfig("ircHostPort"))
       end)
     end)
   end)
@@ -2204,6 +2788,234 @@ describe("Tests Other.lua functions", function()
 
       assert.same(rooms, loaded)
     end)
+
+    it("should bring back boolean keys and leave out keys and values it cannot write", function()
+      local original = { flags = { [true] = "on", [false] = "off" }, [print] = "a function key", fn = print, keep = 1 }
+
+      assert.is_true(table.save(path, original))
+      local loaded = {}
+      table.load(path, loaded)
+
+      assert.same({ flags = { [true] = "on", [false] = "off" }, keep = 1 }, loaded)
+    end)
+
+    it("should leave the file as it was when saving fails part way through", function()
+      table.save(path, { keep = "the previous save" })
+      local realPickle = table.pickle
+      finally(function() table.pickle = realPickle end)
+      table.pickle = function() error("pickling failed") end
+
+      assert.has_error(function() table.save(path, { keep = "never written" }) end)
+      table.pickle = realPickle
+
+      local loaded = {}
+      table.load(path, loaded)
+      assert.same({ keep = "the previous save" }, loaded)
+    end)
+
+    it("should leave the file as it was when joining what it serialised fails", function()
+      table.save(path, { keep = "the previous save" })
+      local realPickle = table.pickle
+      finally(function() table.pickle = realPickle end)
+      -- a chunk table.concat cannot join
+      table.pickle = function(_, file) file:write({}) end
+
+      assert.has_error(function() table.save(path, { keep = "never written" }) end)
+      table.pickle = realPickle
+
+      local loaded = {}
+      table.load(path, loaded)
+      assert.same({ keep = "the previous save" }, loaded)
+    end)
+
+    it("should bring back infinities and NaN", function()
+      table.save(path, { inf = 1 / 0, neginf = -1 / 0, nan = 0 / 0, keep = 1 })
+      local loaded = {}
+      table.load(path, loaded)
+
+      assert.equals(math.huge, loaded.inf)
+      assert.equals(-math.huge, loaded.neginf)
+      assert.is_true(loaded.nan ~= loaded.nan)
+      assert.equals(1, loaded.keep)
+    end)
+
+    it("should keep the sign of zero and of the infinities, whichever is written first", function()
+      -- built at run time: a -0 literal would share this function's constant slot for 0
+      local negativeZero, zero = tonumber("-0"), tonumber("0")
+      local loaded = {}
+
+      table.save(path, { negativeZero, math.huge, -math.huge, zero })
+      table.load(path, loaded)
+      assert.is_true(1 / loaded[1] < 0)
+      assert.equals(math.huge, loaded[2])
+      assert.equals(-math.huge, loaded[3])
+      assert.is_true(1 / loaded[4] > 0)
+
+      loaded = {}
+      table.save(path, { zero, negativeZero, [math.huge] = "inf key", [-math.huge] = "negative inf key" })
+      table.load(path, loaded)
+      assert.is_true(1 / loaded[1] > 0)
+      assert.is_true(1 / loaded[2] < 0)
+      assert.equals("inf key", loaded[math.huge])
+      assert.equals("negative inf key", loaded[-math.huge])
+    end)
+
+    it("should keep members named after a Lua library, at any depth", function()
+      local original = { math = 1, os = 2, io = 3, string = 4, table = 5, debug = 6, coroutine = 7,
+        package = 8, _G = 9, _VERSION = 10, xpcall = 11, keep = 12, inner = { string = 3, math = 4 } }
+
+      table.save(path, original)
+      local loaded = {}
+      table.load(path, loaded)
+
+      assert.same(original, loaded)
+    end)
+
+    it("should save the globals table without the Lua libraries", function()
+      _G.tableSaveSpecMarker = "saved from _G"
+      finally(function() _G.tableSaveSpecMarker = nil end)
+
+      assert.is_true(table.save(path, _G))
+      local loaded = {}
+      table.load(path, loaded)
+
+      assert.equals("saved from _G", loaded.tableSaveSpecMarker)
+      for _, name in ipairs({ "string", "table", "math", "os", "io", "debug", "coroutine", "package", "_G",
+        "_VERSION", "xpcall" }) do
+        assert.is_nil(loaded[name], name)
+      end
+    end)
+
+    it("should leave out what a script put in place of a Lua library at the root of _G", function()
+      -- only names table.save itself does not look up while it runs: string, table, io, math and _G are
+      local names = { "os", "debug", "coroutine", "package", "xpcall" }
+      local real = {}
+      for _, name in ipairs(names) do
+        real[name] = rawget(_G, name)
+      end
+      local function restore()
+        for _, name in ipairs(names) do
+          rawset(_G, name, real[name])
+        end
+      end
+      finally(restore)
+
+      for _, name in ipairs(names) do
+        rawset(_G, name, { replacedBy = "a script" })
+      end
+      local ok = table.save(path, _G)
+      restore()
+      assert.is_true(ok)
+      local loaded = {}
+      table.load(path, loaded)
+
+      for _, name in ipairs(names) do
+        assert.is_nil(loaded[name], name)
+      end
+    end)
+
+    it("should leave out a Lua library or _G reached from a data table", function()
+      assert.is_true(table.save(path, { helpers = { text = string, env = _G }, keep = 1 }))
+      local loaded = {}
+      table.load(path, loaded)
+
+      assert.same({ helpers = {}, keep = 1 }, loaded)
+    end)
+
+    it("should refuse to save without a table, and write nothing", function()
+      assert.has_error(function() table.save(path) end, "table.save requires a table to save")
+      assert.is_false(io.exists(path))
+    end)
+
+    it("should report a write or a close that fails", function()
+      if not io.exists("/dev/full") then
+        pending("needs /dev/full")
+        return
+      end
+      -- more than the stdio buffer holds fails in the write, a few bytes only when closing
+      for _, payload in ipairs({ string.rep("x", 10000), "x" }) do
+        local ok, msg = table.save("/dev/full", { keep = payload })
+        assert.is_nil(ok)
+        assert.is_string(msg)
+      end
+    end)
+
+    it("should leave out coroutine and userdata keys and values", function()
+      local co = coroutine.create(function() end)
+      local original = { co = co, out = io.stdout, [co] = "a coroutine key", [io.stdout] = "a userdata key", keep = 1 }
+
+      assert.is_true(table.save(path, original))
+      local loaded = {}
+      table.load(path, loaded)
+
+      assert.same({ keep = 1 }, loaded)
+    end)
+
+    it("should keep fractional numeric keys apart from the integer ones and keep every digit", function()
+      local original = { [1] = "one", [1.5] = "float", [2.5] = "only", [-3.25] = "negative", precise = 0.1 + 0.2 }
+
+      table.save(path, original)
+      local loaded = {}
+      table.load(path, loaded)
+
+      assert.same(original, loaded)
+      assert.equals(0.1 + 0.2, loaded.precise)
+    end)
+
+    it("should bring back every byte of a string key or value", function()
+      local original = {
+        leadingNewline = "\nleading newline",
+        leadingCrlf = "\r\nleading crlf",
+        loneReturn = "x\ry",
+        nul = "a\0b",
+        brackets = "]] and ]=] and [[",
+        quote = 'say "hi"',
+        backslash = "C:\\path\\",
+        ["\nkey"] = 1,
+        ["]]"] = 2,
+        ['a "quoted" key'] = 3,
+      }
+
+      table.save(path, original)
+      local loaded = {}
+      table.load(path, loaded)
+
+      assert.same(original, loaded)
+    end)
+  end)
+
+  describe("Tests saveVars", function()
+    it("should report whether it could write the store", function()
+      local store = getMudletHomeDir() .. "/SavedVariables.lua"
+      -- a name no file holds yet: a backup a killed run left behind may be the only copy of the store
+      local backup
+      repeat
+        backup = string.format("%s.saveVars-spec-%d", store, math.random(1e9))
+      until not io.exists(backup)
+      local hadStore = io.exists(store)
+      if hadStore then
+        assert(os.rename(store, backup))
+      end
+      local savedTable = _G._saveTable
+      finally(function()
+        lfs.rmdir(store)
+        os.remove(store)
+        if hadStore then
+          os.rename(backup, store)
+        end
+        _G._saveTable = savedTable
+      end)
+      _G._saveTable = {}
+
+      -- a directory in its place: unlike a read-only file, that cannot be opened by root either
+      lfs.mkdir(store)
+      local ok, msg = saveVars()
+      assert.is_nil(ok)
+      assert.is_string(msg)
+
+      lfs.rmdir(store)
+      assert.is_true(saveVars())
+    end)
   end)
 
     --[[
@@ -2326,6 +3138,21 @@ describe("Tests the timer API", function()
         "the reason should be the Lua error, got: " .. tostring(message))
       assert.is_falsy(message:find("0.125", 1, true),
         "the delay must not be reported as the Lua error, got: " .. tostring(message))
+      -- plain text for Lua, not the editor's rich text
+      assert.is_truthy(message:find([[[string "Timer:]], 1, true), "the chunk name should be quoted as Lua quotes it, got: " .. message)
+      assert.is_falsy(message:find("&quot;", 1, true), "the reason was HTML escaped: " .. message)
+      assert.is_falsy(message:find("<b>", 1, true), "the reason was wrapped in rich text markup: " .. message)
+    end)
+
+    it("permTimer gives the reason a body does not compile as plain text", function()
+      -- "..." parses on its own, so only the compile of the timer's wrapping function rejects it
+      local ok, err = pcall(permTimer, "W2aPermTimerNoCompile", "", 30, [[print(...)]])
+      assert.is_false(ok, "a body that does not compile must not create a timer")
+      err = tostring(err)
+      assert.is_truthy(err:find([[[string "Timer: W2aPermTimerNoCompile"]], 1, true), "the chunk name should be quoted as Lua quotes it, got: " .. err)
+      assert.is_truthy(err:find("outside a vararg function", 1, true), "the reason should be the Lua error, got: " .. err)
+      assert.is_falsy(err:find("&quot;", 1, true), "the reason was HTML escaped: " .. err)
+      assert.is_falsy(err:find("<b>", 1, true), "the reason was wrapped in rich text markup: " .. err)
     end)
 
     it("errors for a negative delay", function()
@@ -2974,6 +3801,24 @@ describe("Tests the script API", function()
         "permScript should report the Lua error, got: " .. tostring(err))
     end)
 
+    it("reports a body that raises as plain text, and not as a syntax error", function()
+      local ok, err = pcall(makeScript, "W2aScriptRaisesPlain", "", [[error("w2a \"quoted\" <b>boom</b>")]])
+      assert.is_false(ok, "a body that raises must not create a script")
+      err = tostring(err)
+      assert.is_truthy(err:find([[w2a "quoted" <b>boom</b>]], 1, true), "the reason should be the Lua error as Lua raised it, got: " .. err)
+      assert.is_falsy(err:find("&quot;", 1, true), "the reason was HTML escaped: " .. err)
+      assert.is_falsy(err:find("reason: <b>", 1, true), "the reason was wrapped in rich text markup: " .. err)
+      assert.is_falsy(err:find("syntax error", 1, true), "a body that parsed was reported as a syntax error: " .. err)
+    end)
+
+    it("gives back a raised message that is itself escaped markup as it was raised", function()
+      local ok, err = pcall(makeScript, "W2aScriptRaisesEntities", "", [[error("w2a &lt;b&gt; &amp;quot; & done")]])
+      assert.is_false(ok, "a body that raises must not create a script")
+      err = tostring(err)
+      -- anchored on the line number, as the message also quotes the code itself
+      assert.is_truthy(err:find([[:1: w2a &lt;b&gt; &amp;quot; & done]], 1, true), "the raised text should come back unchanged, got: " .. err)
+    end)
+
     it("reports the type when the body raises something other than a string", function()
       -- the error object is not a string, so there is no message to quote - the
       -- reason still has to say what came back rather than name the script
@@ -3120,6 +3965,18 @@ describe("Tests the script API", function()
         "setScript should report the Lua error, got: " .. tostring(err))
     end)
 
+    it("reports a body that raises as plain text, and not as a syntax error", function()
+      local body = [[local w2aPlain = 1]]
+      local _, position = makeScript("W2aScriptSetPlain", "", body)
+      local ok, err = pcall(setScript, "W2aScriptSetPlain", [[error("w2a \"set\" boom")]], position)
+      assert.is_false(ok)
+      err = tostring(err)
+      assert.is_truthy(err:find([[w2a "set" boom]], 1, true), "the reason should be the Lua error as Lua raised it, got: " .. err)
+      assert.is_falsy(err:find("&quot;", 1, true), "the reason was HTML escaped: " .. err)
+      assert.is_falsy(err:find("<b>", 1, true), "the reason was wrapped in rich text markup: " .. err)
+      assert.is_falsy(err:find("syntax error", 1, true), "a body that parsed was reported as a syntax error: " .. err)
+    end)
+
     it("sets the script at the requested position when several share a name", function()
       local _, firstPosition = makeScript("W2aScriptSetPosition", "", [[local w2aFirst = 1]])
       local secondId, secondPosition = makeScript("W2aScriptSetPosition", "", [[local w2aSecond = 2]])
@@ -3260,10 +4117,7 @@ describe("Tests the script API", function()
   end)
 
   describe("Tests the functionality of speedwalktimer", function()
-    -- resume first so a paused walk is re-armed and stopSpeedwalk can then
-    -- clear its walklist; both are shared upvalues of Other.lua
     after_each(function()
-      pcall(resumeSpeedwalk)
       pcall(stopSpeedwalk)
     end)
 
@@ -3281,8 +4135,10 @@ describe("Tests the script API", function()
       local list = {"n", "e"}
       local send = spy.on(_G, "send")
       finally(function() send:revert() end)
+      local timer = spy.on(_G, "tempTimer")
+      finally(function() timer:revert() end)
       speedwalktimer(list, 100, false)
-      -- pauseSpeedwalk only succeeds while a step timer is armed
+      assert.spy(timer).was.called(1)
       assert.is_true(pauseSpeedwalk())
     end)
 
@@ -3292,16 +4148,34 @@ describe("Tests the script API", function()
       finally(function() killAnonymousEventHandler(handler) end)
       local send = spy.on(_G, "send")
       finally(function() send:revert() end)
-      -- clear any step timer an earlier test armed so the pause check below
-      -- can only be answering for this walklist
-      pcall(pauseSpeedwalk)
       local list = {"n"}
       speedwalktimer(list, 100, false)
       assert.spy(send).was.called_with("n", false)
       assert.are.same({}, list)
       assert.is_true(finished)
-      -- nothing was queued, so there is no timer left to pause
+      -- nothing was queued, so there is nothing left to pause or stop
       assert.is_nil((pauseSpeedwalk()))
+      assert.is_nil((stopSpeedwalk()))
+    end)
+
+    it("Should leave nothing to pause or stop once the step a timer was armed for has been sent", function()
+      local list = {"n", "e"}
+      local send = spy.on(_G, "send")
+      finally(function() send:revert() end)
+      speedwalktimer(list, 100, false)
+      -- sends the last step itself, killing the armed timer rather than letting it fire
+      speedwalktimer(list, 100, false)
+      assert.spy(send).was.called(2)
+      assert.are.same({}, list)
+      assert.is_nil((pauseSpeedwalk()))
+      assert.is_nil((stopSpeedwalk()))
+    end)
+
+    it("Should leave the current walk alone when given an empty walklist", function()
+      speedwalk("3n", false, 100)
+      speedwalktimer({}, 1, true)
+      assert.is_true(pauseSpeedwalk())
+      assert.is_true(stopSpeedwalk())
     end)
   end)
 
