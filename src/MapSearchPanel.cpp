@@ -27,10 +27,12 @@
 #include <QKeyEvent>
 #include <QKeySequence>
 #include <QLabel>
+#include <QLayout>
 #include <QLineEdit>
 #include <QListWidget>
 #include <QPainter>
 #include <QPainterPath>
+#include <QStyle>
 #include <QStyledItemDelegate>
 #include <QToolButton>
 #include <QVBoxLayout>
@@ -250,6 +252,93 @@ private:
     QString mLabelTag;
 };
 
+// Elided only when even a line of its own is too narrow for it
+class ElidingLabel : public QLabel
+{
+public:
+    using QLabel::QLabel;
+
+    QSize minimumSizeHint() const override { return {fontMetrics().horizontalAdvance(QChar(0x2026)), QLabel::minimumSizeHint().height()}; }
+
+protected:
+    void paintEvent(QPaintEvent* event) override
+    {
+        Q_UNUSED(event)
+        QPainter painter(this);
+        const QRect area = contentsRect();
+        const QString shown = fontMetrics().elidedText(text(), Qt::ElideRight, area.width());
+        // Cut short, it fills the line from its start
+        const Qt::Alignment align = shown == text() ? alignment() : (alignment() & Qt::AlignVertical_Mask) | Qt::AlignLeft;
+        style()->drawItemText(&painter, area, static_cast<int>(align), palette(), isEnabled(), shown, foregroundRole());
+    }
+};
+
+// The count at the left and the key hints at the right, or on a line of their own under it when both do not fit
+class FooterLayout : public QLayout
+{
+public:
+    FooterLayout(QLabel* count, QLabel* keys)
+    : mpCountLabel(count)
+    , mpKeysLabel(keys)
+    {
+        mItems = {new QWidgetItem(count), new QWidgetItem(keys)};
+    }
+    ~FooterLayout() override { qDeleteAll(mItems); }
+
+    void addItem(QLayoutItem* item) override { mItems.append(item); }
+    int count() const override { return static_cast<int>(mItems.size()); }
+    QLayoutItem* itemAt(const int index) const override { return mItems.value(index); }
+    QLayoutItem* takeAt(const int index) override { return index >= 0 && index < mItems.size() ? mItems.takeAt(index) : nullptr; }
+    Qt::Orientations expandingDirections() const override { return {}; }
+    bool hasHeightForWidth() const override { return true; }
+    int heightForWidth(const int width) const override
+    {
+        const QMargins margins = contentsMargins();
+        const int rows = stacked(width - margins.left() - margins.right()) ? countHint().height() + scmRowSpacing + keysHint().height() : std::max(countHint().height(), keysHint().height());
+        return rows + margins.top() + margins.bottom();
+    }
+    QSize sizeHint() const override
+    {
+        const QMargins margins = contentsMargins();
+        return {countHint().width() + (showsCount() ? scmGap : 0) + keysHint().width() + margins.left() + margins.right(),
+                std::max(countHint().height(), keysHint().height()) + margins.top() + margins.bottom()};
+    }
+    QSize minimumSize() const override
+    {
+        const QMargins margins = contentsMargins();
+        return {mpKeysLabel->minimumSizeHint().width() + margins.left() + margins.right(), heightForWidth(0)};
+    }
+    void setGeometry(const QRect& rect) override
+    {
+        QLayout::setGeometry(rect);
+        const QRect area = rect.marginsRemoved(contentsMargins());
+        const QSize count = countHint();
+        const QSize keys = keysHint();
+        const int keysWidth = std::min(keys.width(), area.width());
+        if (stacked(area.width())) {
+            mpCountLabel->setGeometry(area.left(), area.top(), std::min(count.width(), area.width()), count.height());
+            mpKeysLabel->setGeometry(area.left(), area.top() + count.height() + scmRowSpacing, keysWidth, keys.height());
+            return;
+        }
+        const int height = std::max(count.height(), keys.height());
+        mpCountLabel->setGeometry(area.left(), area.top(), showsCount() ? count.width() : 0, height);
+        mpKeysLabel->setGeometry(area.right() + 1 - keysWidth, area.top(), keysWidth, height);
+    }
+
+private:
+    static constexpr int scmGap = 12;
+    static constexpr int scmRowSpacing = 2;
+
+    bool showsCount() const { return !mpCountLabel->text().isEmpty(); }
+    QSize countHint() const { return showsCount() ? mpCountLabel->sizeHint() : QSize(0, 0); }
+    QSize keysHint() const { return mpKeysLabel->sizeHint(); }
+    bool stacked(const int width) const { return showsCount() && countHint().width() + scmGap + keysHint().width() > width; }
+
+    QLabel* mpCountLabel;
+    QLabel* mpKeysLabel;
+    QList<QLayoutItem*> mItems;
+};
+
 } // namespace
 
 MapSearchPanel::MapSearchPanel(QWidget* parent)
@@ -326,7 +415,7 @@ MapSearchPanel::MapSearchPanel(QWidget* parent)
     mpHint->setWordWrap(true);
     mpHint->setContentsMargins(4, 0, 4, 6);
     mpCount = new QLabel(this);
-    mpKeys = new QLabel(this);
+    mpKeys = new ElidingLabel(this);
     mpKeys->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
 
     auto* top = new QHBoxLayout();
@@ -335,11 +424,8 @@ MapSearchPanel::MapSearchPanel(QWidget* parent)
     top->addWidget(mpEdit, 1);
     top->addWidget(mpLabels);
     top->addWidget(mpClose);
-    auto* footer = new QHBoxLayout();
+    auto* footer = new FooterLayout(mpCount, mpKeys);
     footer->setContentsMargins(4, 0, 4, 0);
-    footer->addWidget(mpCount);
-    footer->addStretch(1);
-    footer->addWidget(mpKeys);
     auto* layout = new QVBoxLayout(this);
     layout->setContentsMargins(
             scmShadowMargin + scmCardPadding, scmShadowMargin - scmShadowDrop + scmCardPadding, scmShadowMargin + scmCardPadding, scmShadowMargin + scmShadowDrop + scmCardPadding - 2);

@@ -2372,6 +2372,56 @@ private slots:
         QVERIFY(pPanel->mpMessage->geometry().bottom() < pPanel->mpHint->geometry().top());
     }
 
+    void test_theSearchPanelsFooterIsNotClippedInANarrowViewWithoutGL()
+    {
+        const auto [westId, eastId] = addTwoAreas(6);
+        Q_UNUSED(eastId)
+        ModernGLWidget widget(map(), mpHost);
+        queueFrame(widget, westId, 1.5f);
+        widget.openSearch();
+        MapSearchPanel* pPanel = widget.mpSearchPanel;
+        pPanel->mpEdit->setText(qsl("1"));
+        QVERIFY(!pPanel->mpCount->text().isEmpty());
+        // Settled first, as a grab otherwise brings the resize and layout requests still pending
+        pPanel->grab();
+        const auto laidOutAt = [pPanel](const int width) {
+            pPanel->setGeometry(0, 0, width, pPanel->heightForWidth(width));
+            pPanel->layout()->setGeometry(pPanel->rect());
+        };
+        const auto inCard = [pPanel](const QRect& geometry) {
+            return pPanel->card().contains(QRectF(geometry));
+        };
+
+        // Side by side while both fit
+        laidOutAt(pPanel->preferredWidth());
+        QCOMPARE(pPanel->mpKeys->geometry().top(), pPanel->mpCount->geometry().top());
+        QCOMPARE(pPanel->mpKeys->width(), pPanel->mpKeys->sizeHint().width());
+        QVERIFY(pPanel->mpCount->geometry().right() < pPanel->mpKeys->geometry().left());
+
+        // Then the hints on a line of their own under the count, still whole
+        laidOutAt(300);
+        QVERIFY(pPanel->mpKeys->geometry().top() > pPanel->mpCount->geometry().bottom());
+        QCOMPARE(pPanel->mpKeys->width(), pPanel->mpKeys->sizeHint().width());
+        QCOMPARE(pPanel->mpCount->width(), pPanel->mpCount->sizeHint().width());
+        QVERIFY(inCard(pPanel->mpKeys->geometry()));
+        QVERIFY(pPanel->mpList->geometry().bottom() < pPanel->mpCount->geometry().top());
+
+        // And cut short only where not even that line is wide enough, keeping the whole text to be read out
+        const QString keys = pPanel->mpKeys->text();
+        laidOutAt(2 * MapSearchPanel::scmShadowMargin + pPanel->mpKeys->sizeHint().width() / 2);
+        QVERIFY(pPanel->mpKeys->width() < pPanel->mpKeys->sizeHint().width());
+        QVERIFY(inCard(pPanel->mpKeys->geometry()));
+        QCOMPARE(pPanel->mpKeys->text(), keys);
+        QLabel elided(pPanel);
+        elided.setFont(pPanel->mpKeys->font());
+        elided.setStyleSheet(pPanel->mpKeys->styleSheet());
+        elided.setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+        elided.setText(pPanel->mpKeys->fontMetrics().elidedText(keys, Qt::ElideRight, pPanel->mpKeys->contentsRect().width()));
+        elided.setGeometry(pPanel->mpKeys->geometry());
+        QVERIFY(elided.text().endsWith(QChar(0x2026)));
+        QCOMPARE(pPanel->mpKeys->grab().toImage(), elided.grab().toImage());
+    }
+
     void test_theSearchOffersARouteOnlyWhileThePlayerIsElsewhere()
     {
         if (!glAvailable()) {
