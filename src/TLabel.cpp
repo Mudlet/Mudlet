@@ -96,12 +96,18 @@ TLabel::~TLabel()
 
 void TLabel::setText(const QString& text)
 {
-    const bool hasAnchor = TLabelModel::containsAnchorTag(text);
+    showLinkStyledText(mpModel->linkStyledText(text));
+}
 
-    setTextInteractionFlags(hasAnchor ? scmLinkInteraction : Qt::TextInteractionFlags(Qt::NoTextInteraction));
+void TLabel::showLinkStyledText(const QString& text)
+{
+    // a click-through label passes the mouse on, so its links stay out of reach of the keyboard too
+    const bool linksReachable = TLabelModel::containsAnchorTag(text) && !testAttribute(Qt::WA_TransparentForMouseEvents);
+
+    setTextInteractionFlags(linksReachable ? scmLinkInteraction : Qt::TextInteractionFlags(Qt::NoTextInteraction));
 
     stopMovie();
-    QLabel::setText(mpModel->linkStyledText(text));
+    QLabel::setText(text);
     mpModel->mText = QLabel::text();
 }
 
@@ -200,6 +206,14 @@ bool TLabel::forwardRightClickToConsole(QMouseEvent* event)
 
 void TLabel::mouseMoveEvent(QMouseEvent* event)
 {
+    // QLabel is what switches to the pointing hand over a link. The flag answers what carriesLink() does
+    // without scanning the whole text on every move. With no move callback the move is ignored below, so
+    // one with a button held (or any, if the parent tracks the mouse) goes on to the label's parent - not
+    // to a sibling such as an embedded map.
+    if (textInteractionFlags() & Qt::LinksAccessibleByMouse) {
+        QLabel::mouseMoveEvent(event);
+    }
+
     if (mpHost && mMoveFunction) {
         mpHost->getLuaInterpreter()->callLabelCallbackEvent(mMoveFunction, event);
         event->accept();
@@ -218,8 +232,21 @@ void TLabel::wheelEvent(QWheelEvent* event)
     }
 }
 
+// QLabel only notices the pointer leaving a link from a move, and then restores the cursor it saved when
+// the hover began. A made-up move where no link can be ends the hover once the pointer has left the label,
+// or before a script sets a cursor that the saved copy would later overwrite.
+void TLabel::endLinkHover()
+{
+    if (textInteractionFlags() & Qt::LinksAccessibleByMouse) {
+        const QPointF nowhere(-1, -1);
+        QMouseEvent away(QEvent::MouseMove, nowhere, mapToGlobal(nowhere), Qt::NoButton, Qt::NoButton, Qt::NoModifier);
+        QLabel::mouseMoveEvent(&away);
+    }
+}
+
 void TLabel::leaveEvent(QEvent* event)
 {
+    endLinkHover();
     if (mpHost && mLeaveFunction) {
         mpHost->getLuaInterpreter()->callLabelCallbackEvent(mLeaveFunction, event);
         event->accept();
@@ -346,6 +373,9 @@ void TLabel::resetBackgroundImage()
     if (!pixmap().isNull() || movie()) {
         stopMovie();
         clear();
+    }
+    if (const QString sheet = styleSheet(), withoutImage = TLabelModel::styleSheetWithoutBackgroundImage(sheet); withoutImage != sheet) {
+        restyle(withoutImage);
     }
 }
 
@@ -559,10 +589,8 @@ void TLabel::setLinkStyle(const QString& linkColor, const QString& linkVisitedCo
     setPalette(palette);
     mPaletteSetSinceStyled = true;
 
-    // Note: Widget stylesheets don't affect QTextDocument rendering
-    // Link colors are applied via inline styles in setText()
-
-    // Force update to re-render with new styles
+    // Widget stylesheets don't affect QTextDocument rendering, so links already shown are re-styled inline
+    reapplyLinkStyle();
     update();
 }
 
@@ -580,17 +608,22 @@ void TLabel::resetLinkStyle()
     mLinkVisitedColor.clear();
     mLinkUnderline = true;
 
-    // Force update to re-render with new styles
+    // the styles written into the anchors would otherwise stay
+    reapplyLinkStyle();
     update();
 }
 
 void TLabel::clearVisitedLinks()
 {
     mVisitedLinks.clear();
+    reapplyLinkStyle();
+}
 
-    QString currentText = text();
-    if (!currentText.isEmpty() && TLabelModel::containsAnchorTag(currentText)) {
-        setText(currentText);
+void TLabel::reapplyLinkStyle()
+{
+    // a pixmap or movie takes the text out of QLabel's content slot
+    if (const QString currentText = text(); !currentText.isEmpty() && TLabelModel::containsAnchorTag(currentText)) {
+        showLinkStyledText(mpModel->restyledText());
     }
 }
 
@@ -602,13 +635,7 @@ void TLabel::slot_linkActivated(const QString& link)
 
     if (!mLinkVisitedColor.isEmpty()) {
         mVisitedLinks.insert(link);
-
-        // Refresh the label to update link colors
-        // We need to re-apply the current text to trigger the styling update
-        QString currentText = text();
-        if (!currentText.isEmpty() && TLabelModel::containsAnchorTag(currentText)) {
-            setText(currentText);
-        }
+        reapplyLinkStyle();
     }
 
     // Check for custom schemes by looking for the colon separator

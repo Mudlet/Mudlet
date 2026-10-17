@@ -225,16 +225,32 @@ private:
 #endif
 };
 
-QTranslator* loadTranslationsForCommandLine()
+QTranslator* loadTranslationsForCommandLine(const bool printAndExitRun)
 {
     // Not MudletApp::getQSettings(): it stays null until setupConfig(), which a --help or --version run never
     // reaches. Same file and format as setupConfig() opens - keep the spellings in step.
     QSettings settings(qsl("%1/Mudlet.ini").arg(MudletApp::getMudletPath(enums::mainPath)), QSettings::IniFormat);
     MudletApp::noteEarlySettingsStatus(settings);
+    // By name: only the first reader to parse a file is told of a format error, and the reader before this
+    // one, applyHighDpiRoundingPolicyFromConfig()'s, finds its root from argv[0] so it can have parsed another file
+    const QSettings::Status settingsStatus = MudletApp::earlySettingsStatus(settings.fileName());
+    // Other runs have getQSettings() report this, which a print-and-exit run never calls
+    if (printAndExitRun && settingsStatus == QSettings::FormatError) {
+        // Qt keeps every key it could parse, so a language set there may still be in use
+        qWarning().nospace().noquote() << "loadTranslationsForCommandLine() WARNING - \"" << settings.fileName()
+                                       << "\" is not valid INI, so an interface language set in it may have been read wrongly or not at all.";
+    } else if (printAndExitRun && settingsStatus != QSettings::NoError) {
+        qWarning().nospace().noquote() << "loadTranslationsForCommandLine() WARNING - \"" << settings.fileName()
+                                       << "\" is not readable, so any interface language set in it is not used for this text.";
+    }
     auto interfaceLanguage = settings.value(QLatin1String("interfaceLanguage")).toString();
     auto userLocale = interfaceLanguage.isEmpty() ? QLocale::system() : QLocale(interfaceLanguage);
     if (userLocale == QLocale::c()) {
-        // nothing found
+        // Other runs have mudlet::readEarlySettings() report a code that names no locale
+        if (printAndExitRun && !interfaceLanguage.isEmpty()) {
+            qWarning().nospace().noquote() << "loadTranslationsForCommandLine() WARNING - the interface language \"" << interfaceLanguage
+                                           << "\" is not a recognised locale, so the command line text is in English.";
+        }
         return nullptr;
     }
     // We only need the Mudlet translations for the Command Line texts, no need
@@ -246,6 +262,12 @@ QTranslator* loadTranslationsForCommandLine()
     // it:
     const bool isOk = pMudletTranslator->load(userLocale, qsl("mudlet"), QString("_"), qsl(":/lang"), qsl(".qm"));
     if (!isOk) {
+        // Only a print-and-exit run prints the text this is about
+        if (printAndExitRun && !interfaceLanguage.isEmpty()) {
+            qWarning().nospace().noquote() << "loadTranslationsForCommandLine() WARNING - no translation could be loaded for the interface language \"" << interfaceLanguage
+                                           << "\", so the command line text is in English.";
+        }
+        delete pMudletTranslator;
         return nullptr;
     }
     QCoreApplication::installTranslator(pMudletTranslator);
@@ -404,54 +426,46 @@ int main(int argc, char* argv[])
     // making the option take a value that follows it - as such they do not
     // need to be passed to the translation system.
     const QCommandLineOption profileToOpen(QStringList() << qsl("p") << qsl("profile"), qsl("Profile to open automatically"), qsl("profile"));
-    parser.addOption(profileToOpen);
 
     const QCommandLineOption showHelp(QStringList() << qsl("h") << qsl("help"), qsl("Display help and exit"));
-    parser.addOption(showHelp);
 
     const QCommandLineOption showVersion(QStringList() << qsl("v") << qsl("version"), qsl("Display version and exit"));
-    parser.addOption(showVersion);
 
     const QCommandLineOption showSplashscreen(QStringList() << qsl("s") << qsl("splashscreen"), qsl("Show the splash screen when starting"));
-    parser.addOption(showSplashscreen);
 
     const QCommandLineOption startFullscreen(QStringList() << qsl("f") << qsl("fullscreen"), qsl("Start Mudlet in fullscreen mode"));
-    parser.addOption(startFullscreen);
 
     const QCommandLineOption mirrorToStdout(QStringList() << qsl("m") << qsl("mirror"),
                                             qsl("Copy console output to STDOUT: the main console's game text as it arrives, and what scripts print to any console"));
-    parser.addOption(mirrorToStdout);
 
     QCommandLineOption beQuiet(QStringList() << qsl("q") << qsl("quiet"), qsl("Depricated option, previously used to disable showing the splash screen"));
     beQuiet.setFlags(QCommandLineOption::HiddenFromHelp);
-    parser.addOption(beQuiet);
 
     const QCommandLineOption onlyPredefinedProfileToShow(
             QStringList() << qsl("o") << qsl("only"), qsl("Set Mudlet to only show this predefined MUD profile and hide all other predefined ones."), qsl("predefined_game"));
-    parser.addOption(onlyPredefinedProfileToShow);
 
     // long-only, as -o is taken by --only just above
     const QCommandLineOption openOffline(qsl("offline"), qsl("Open the profiles loaded at startup without connecting to their game server"));
-    parser.addOption(openOffline);
 
     const QCommandLineOption steamMode(QStringList() << qsl("steammode"), qsl("Adjusts Mudlet settings to match Steam's requirements."));
-    parser.addOption(steamMode);
 
-    parser.addPositionalArgument(qsl("package"), qsl("Path to .mpackage file"));
-
-    // A print-and-exit run is parsed before an application object strips Qt's own options, so this parser
-    // meets them. Those the hand-written help text promises are declared here, hidden, so that
-    // `mudlet --reverse --version` answers rather than calling a documented option unknown. Keep in step.
-    for (const QString& inheritedName : {qsl("dograb"), qsl("nograb"), qsl("reverse"), qsl("sync"), qsl("widgetcount")}) {
-        QCommandLineOption inheritedOption(inheritedName);
-        inheritedOption.setFlags(QCommandLineOption::HiddenFromHelp);
-        parser.addOption(inheritedOption);
-    }
-    for (const QString& inheritedName : {qsl("style"), qsl("stylesheet"), qsl("qmljsdebugger")}) {
-        QCommandLineOption inheritedOption(inheritedName, QString(), inheritedName);
-        inheritedOption.setFlags(QCommandLineOption::HiddenFromHelp);
-        parser.addOption(inheritedOption);
-    }
+    // A GUI run is reparsed from the list its QApplication has tidied, so it declares only the Qt options
+    // the help text documents. Keep in step with that text, which also lists --sync, though Qt 6 ignores it.
+    const auto declareOptions = [&](QCommandLineParser& target) {
+        target.addOptions({profileToOpen, showHelp, showVersion, showSplashscreen, startFullscreen, mirrorToStdout, beQuiet, onlyPredefinedProfileToShow, openOffline, steamMode});
+        target.addPositionalArgument(qsl("package"), qsl("Path to .mpackage file"));
+        for (const QString& inheritedName : {qsl("dograb"), qsl("nograb"), qsl("reverse"), qsl("sync"), qsl("widgetcount")}) {
+            QCommandLineOption inheritedOption(inheritedName);
+            inheritedOption.setFlags(QCommandLineOption::HiddenFromHelp);
+            target.addOption(inheritedOption);
+        }
+        for (const QString& inheritedName : {qsl("style"), qsl("stylesheet"), qsl("qmljsdebugger")}) {
+            QCommandLineOption inheritedOption(inheritedName, QString(), inheritedName);
+            inheritedOption.setFlags(QCommandLineOption::HiddenFromHelp);
+            target.addOption(inheritedOption);
+        }
+    };
+    declareOptions(parser);
 
     // Raw argv: the application object that would tidy it is what this list decides the kind of. Only
     // ASCII option spellings are read, so the local 8-bit conversion loses nothing looked at here.
@@ -466,8 +480,45 @@ int main(int argc, char* argv[])
     // would find an 'h' in -stylesheet or a 'v' in -reverse. Known gap: -h/-v in a compacted group (-qv,
     // -fh) isn't seen here, so such a run builds a QApplication and still needs a display.
     parser.setSingleDashWordOptionMode(QCommandLineParser::ParseAsLongOptions);
-    const bool commandLineReadOk = parser.parse(commandLineArguments);
+    bool commandLineReadOk = parser.parse(commandLineArguments);
     const bool printAndExitOption = parser.isSet(showHelp) || parser.isSet(showVersion);
+    // No application object will strip Qt's options from a print-and-exit run, so it is answered by a parser
+    // that knows all of them: QCoreApplication's, QGuiApplication's, QApplication's and the xcb plugin's.
+    QCommandLineParser printAndExitParser;
+    QCommandLineParser* answeringParser = &parser;
+    if (printAndExitOption) {
+        declareOptions(printAndExitParser);
+        for (const QString& qtName : {qsl("qdebug"), qsl("qdevel"), qsl("testability")}) {
+            QCommandLineOption qtOption(qtName);
+            qtOption.setFlags(QCommandLineOption::HiddenFromHelp);
+            printAndExitParser.addOption(qtOption);
+        }
+        for (const QString& qtName : {qsl("platform"),
+                                      qsl("platformpluginpath"),
+                                      qsl("platformtheme"),
+                                      qsl("plugin"),
+                                      qsl("qwindowgeometry"),
+                                      qsl("qwindowicon"),
+                                      qsl("qwindowtitle"),
+                                      qsl("session"),
+                                      qsl("display"),
+                                      qsl("geometry"),
+                                      qsl("icon"),
+                                      qsl("name"),
+                                      qsl("title"),
+                                      qsl("visual")}) {
+            QCommandLineOption qtOption(qtName, QString(), qtName);
+            qtOption.setFlags(QCommandLineOption::HiddenFromHelp);
+            printAndExitParser.addOption(qtOption);
+        }
+        printAndExitParser.setSingleDashWordOptionMode(QCommandLineParser::ParseAsLongOptions);
+        const bool printAndExitReadOk = printAndExitParser.parse(commandLineArguments);
+        // One of them taking the -h or -v as its value leaves the first reading's answer standing
+        if (printAndExitParser.isSet(showHelp) || printAndExitParser.isSet(showVersion)) {
+            answeringParser = &printAndExitParser;
+            commandLineReadOk = printAndExitReadOk;
+        }
+    }
 
 #if !defined(Q_OS_MACOS)
     applyHighDpiRoundingPolicyFromConfig(argc, argv);
@@ -541,7 +592,7 @@ int main(int argc, char* argv[])
 #endif
     }
 
-    QPointer<QTranslator> commandLineTranslator(loadTranslationsForCommandLine());
+    QPointer<QTranslator> commandLineTranslator(loadTranslationsForCommandLine(printAndExitOption));
 
     // A print-and-exit run keeps the verdict above: a second reading may differ, and such a run has no
     // QApplication for the rest of main() to dereference. Other runs are reparsed from the application's
@@ -562,14 +613,16 @@ int main(int argc, char* argv[])
 
     if (!parsedCommandLineOk) {
         // Warn of unknown options but tolerate them.
-        // We want the message to be visible for someone launching from command prompt
-        // and will have standard output left on their screen, but still allow program
-        // to start when launched by installer.
+        // We want the message to be visible for someone launching from command prompt,
+        // but on standard error, out of the --version text a script reads, and still
+        // allow program to start when launched by installer.
         // --squirrel-firstrun for example is given for launch at end of install process.
-        std::cout << QCoreApplication::translate("main", "Warning: %1\n").arg(parser.errorText()).toStdString();
+        //: Printed on standard error before a command line Mudlet only partly understood is acted on; %1 is
+        //: the parser's own, untranslated, account of what it did not understand. Keep the trailing newline.
+        std::cerr << QCoreApplication::translate("main", "Warning: %1\n").arg(answeringParser->errorText()).toStdString();
     }
 
-    if (parser.isSet(showHelp)) {
+    if (answeringParser->isSet(showHelp)) {
         // Do "help" action
         texts << appendLF.arg(QCoreApplication::translate("main",
                                                           "Usage: %1 [OPTION...] [FILE] ",
@@ -603,6 +656,10 @@ int main(int argc, char* argv[])
         texts << appendLF.arg(QCoreApplication::translate("main",
                                                           "There are other inherited options that arise from the Qt Libraries which are\n"
                                                           "less likely to be useful for normal use of this application:"));
+        //: Follows the line introducing the Qt options in the --help text; the option names are not translated
+        texts << appendLF.arg(QCoreApplication::translate("main",
+                                                          "Qt 6 ignores --sync and reads the rest with a single dash too, as in -reverse;\n"
+                                                          "it has others not listed here, such as -platform, -session and -qwindowgeometry."));
         // From documentation and from http://qt-project.org/doc/qt-5/qapplication.html:
         texts << appendLF.arg(QCoreApplication::translate("main",
                                                           "       --dograb                     ignore any implicit or explicit -nograb.\n"
@@ -660,7 +717,7 @@ int main(int argc, char* argv[])
         return 0;
     }
 
-    if (parser.isSet(showVersion)) {
+    if (answeringParser->isSet(showVersion)) {
         // Do "version" action - wording and format is quite tightly specified by the coding standards
 #if defined(QT_DEBUG)
         texts << appendLF.arg(QCoreApplication::translate("main",

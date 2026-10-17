@@ -251,6 +251,8 @@ end
 -- @param x New x constraint to use. If nil, uses current value.
 -- @param y New y constraint to use. If nil, uses current value.
 function Geyser.Container:move (x, y)
+  -- checked first, so a refused move does not leave its constraint behind on the window
+  Geyser.check_constraints(self, {x = x or self.x, y = y or self.y, width = self.width, height = self.height})
   self.x = x or self.x
   self.y = y or self.y
   self:set_constraints(self)
@@ -260,6 +262,8 @@ end
 -- @param width New width constraint to use.  If nil, uses current value.
 -- @param height New height constraint to use.  If nil, uses current value.
 function Geyser.Container:resize (width, height)
+  -- checked first, so a refused resize does not leave its constraint behind on the window
+  Geyser.check_constraints(self, {x = self.x, y = self.y, width = width or self.width, height = height or self.height})
   self.width = width or self.width
   self.height = height or self.height
   self:set_constraints(self)
@@ -295,13 +299,16 @@ end
 -- This is very useful to see where a container actually is if you've
 -- forgotten its details or as an alert function to notify the user.
 -- @param time Time in seconds to flash for, default is 1.0s.
--- @param[opt=true] onHidden Optional, use as an alert function and don't flash hidden containers.
+-- @param[opt=true] onHidden Flash even while this container or one of its parents is hidden through Geyser
+-- (hide(), or created with hidden = true). Pass false to skip the flash then, e.g. to use it as an alert.
+-- A window hidden directly with hideWindow() does not count as hidden here.
 function Geyser.Container:flash (time, onHidden)
   local time = time or 1.0
-  local onHidden = onHidden ~= false
-  
-  if not onHidden then return end
-  
+
+  if onHidden == false and (self.hidden or self.auto_hidden) then
+    return
+  end
+
   local x, y, width, height = self.get_x(), self.get_y(), self.get_width(), self.get_height()
   local name = self.name .. "_dimensions_flash"
   createLabel(self.windowname ,name, x, y, width, height, 1)
@@ -378,12 +385,20 @@ function Geyser.Container:new(cons, container)
         else
           container:add(me)
         end
+        -- a user window that is gone has no size, so whatever is left in its
+        -- container takes up none; asking getUserWindowSize about it would warn
         container.get_width = function()
-            return getUserWindowSize(me.windowname)
+            if windowType(me.windowname) ~= "userwindow" then
+                return 0
+            end
+            return getUserWindowSize(me.windowname) or 0
         end
         container.get_height = function()
+            if windowType(me.windowname) ~= "userwindow" then
+                return 0
+            end
             local w, h = getUserWindowSize(me.windowname)
-            return h
+            return w and h or 0
         end
         -- so the user window can take this container with it when it is deleted
         -- without having to guess at the container by its name

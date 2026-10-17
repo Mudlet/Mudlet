@@ -105,6 +105,8 @@ public:
     void compile();
     bool compileScript();
     void execute();
+    // execute() without sending the button's command, for restoring a push-down button's state
+    void runScript();
     QString getIcon() const { return mIcon; }
     void setIcon(const QString& icon) {
         if (icon != mIcon) {

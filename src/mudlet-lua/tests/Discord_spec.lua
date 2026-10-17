@@ -918,4 +918,19 @@ describe("presence the game sends over GMCP", function()
     assert.equals(1750000000, startTime)
     assert.equals(0, endTime, "a start time that lands in the end timestamp as well turns the elapsed timer into a countdown")
   end)
+
+  it("names the game after the host it connected to, not the profile's saved address", function()
+    if not readyForDiscord() then
+      return
+    end
+    -- Not saved, so the profile keeps its own address; the dropped connection
+    -- still leaves 127.0.0.1 as the host and lets feedTelnet() through
+    connectToServer("127.0.0.1", 1)
+    disconnect()
+    feedDiscordStatus('{"game": "spec game"}')
+
+    assert.equals("Playing localhost", getDiscordDetail())
+    assert.equals("localhost", getDiscordLargeIcon())
+    assert.equals("spec game at 127.0.0.1:1", getDiscordLargeIconText())
+  end)
 end)

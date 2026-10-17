@@ -240,6 +240,7 @@ private slots:
     void slot_borderSizeChanged(int size);
     void slot_gridSizeChanged(double size);
     void slot_displayFontChanged();
+    void slot_dictionaryPicked(const int index);
     void slot_displayFontSizeChanged();
     void slot_displayFontAliasingChanged();
     void slot_changeShowTabConnectionIndicators(bool state);
@@ -307,6 +308,7 @@ private:
     void cancelShortcutCaptures();
     void updateShortcutConflictWarning();
     void switchEditorTheme(const QString& themeName);
+    static QString dictionaryDisplayName(const QString&);
     static QString findThemeCounterpart(const QString& themeName, const QComboBox* themeComboBox, bool toDark);
 
     // The sidebar-and-cards shell that replaces the .ui file's tab widget
