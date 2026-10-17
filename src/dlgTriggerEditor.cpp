@@ -5358,7 +5358,7 @@ void dlgTriggerEditor::addVar(bool isFolder)
         }
     }
 
-    auto newVar = new TVar();
+    auto newVar = std::make_unique<TVar>();
     if (pParentItem) {
         //we're nested under something, or going to be.  This HAS to be a table
         TVar* parent = treeWidget_variables->variableForRow(vu, pParentItem);
@@ -5380,7 +5380,7 @@ void dlgTriggerEditor::addVar(bool isFolder)
     } else {
         newVar->setValueType(LUA_TNONE);
     }
-    treeWidget_variables->setNewVariableForRow(vu, pNewItem, newVar);
+    treeWidget_variables->setNewVariableForRow(vu, pNewItem, std::move(newVar));
     pNewItem->setFlags(pNewItem->flags() & ~(Qt::ItemIsDragEnabled | Qt::ItemIsDropEnabled));
 
     // Finalize selection
@@ -7259,10 +7259,11 @@ void dlgTriggerEditor::saveVar()
             }
             variable->setName(newName, uiNameType);
             variable->setValue(newValue, uiValueType);
+            // Before createVar(): the Lua it runs can rebuild the tree, which would delete it
+            treeWidget_variables->forgetNewVariableForRow(pItem);
             luaInterface->createVar(variable);
             varUnit->addVariable(variable);
             treeWidget_variables->setVariableForRow(varUnit, pItem, variable);
-            treeWidget_variables->forgetNewVariableForRow(pItem);
             // Attach to its real parent TVar (set in addVar) so the XML writer,
             // which iterates from the base, nests it inside the parent table
             // rather than at root level.
@@ -7341,6 +7342,7 @@ void dlgTriggerEditor::saveVar()
             var = treeWidget_variables->newVariableForRow(varUnit, pItem);
             var->setName(newName, uiNameType);
             var->setValue(newValue, uiValueType);
+            treeWidget_variables->forgetNewVariableForRow(pItem);
             luaInterface->createVar(var);
             varUnit->addVariable(var);
             treeWidget_variables->setVariableForRow(varUnit, pItem, var);
