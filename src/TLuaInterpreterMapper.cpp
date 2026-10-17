@@ -1166,12 +1166,16 @@ int TLuaInterpreter::createMapImageLabel(lua_State* L)
     const bool showOnTop = getVerifiedBool(L, __func__, 9, "showOnTop");
     bool temporary = false;
     if (args > 9) {
-        temporary = getVerifiedBool(L, __func__, 10, "showOnTop", true);
+        temporary = getVerifiedBool(L, __func__, 10, "temporary", true);
     }
 
     const Host& host = getHostFromLua(L);
     const QString imagePathFileName{lua_tostring(L, 2)};
-    lua_pushinteger(L, host.mpMap->createMapImageLabel(area, imagePathFileName, posx, posy, posz, width, height, zoom, showOnTop, temporary));
+    const int labelId = host.mpMap->createMapImageLabel(area, imagePathFileName, posx, posy, posz, width, height, zoom, showOnTop, temporary);
+    if (labelId == TMap::scmUnreadableImageLabel) {
+        return warnArgumentValue(L, __func__, qsl("image file '%1' could not be read").arg(imagePathFileName));
+    }
+    lua_pushinteger(L, labelId);
     host.mpMap->updateArea(area);
     return 1;
 }
