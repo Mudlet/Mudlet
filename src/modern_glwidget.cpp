@@ -2555,6 +2555,7 @@ QList<ModernGLWidget::AtlasLabel> ModernGLWidget::atlasLabels(const MapAtlas::We
 {
     QList<AtlasLabel> labels;
     if (weights.footprint <= 0.0f) {
+        mAtlasLabelBounds = {};
         return labels;
     }
     QList<const MapAtlas::Area*> areas;
@@ -2575,10 +2576,16 @@ QList<ModernGLWidget::AtlasLabel> ModernGLWidget::atlasLabels(const MapAtlas::We
     const MapAtlas::Area* pShown = mAtlas.area(mAID);
     const QPointF shownOffset = pShown ? pShown->offset : QPointF();
     const float level = atlasLevel();
+    if (font() != mAtlasLabelFont) {
+        mAtlasLabelFont = font();
+        mAtlasLabelBounds = {};
+        mAtlasLabelSheet = {};
+    }
     QFont boldFont = font();
     boldFont.setBold(true);
-    const QFontMetricsF metrics(font());
-    const QFontMetricsF boldMetrics(boldFont);
+    const std::array<QFontMetricsF, 2> metrics{QFontMetricsF(font()), QFontMetricsF(boldFont)};
+    // Only the names measured this time are kept, so that one whose route steps changed does not linger
+    std::array<QHash<QString, QRectF>, 2> bounds;
     const QRectF view(0.0, 0.0, width(), height());
     QList<AtlasLabel> candidates;
     QList<QRectF> rects;
@@ -2596,7 +2603,13 @@ QList<ModernGLWidget::AtlasLabel> ModernGLWidget::atlasLabels(const MapAtlas::We
             //: Name of an area on the 3D map's world view that the planned route passes through, %1 is the area's name and %n how many steps the route takes in it
             label.text = tr("%1 (%n step(s))", nullptr, *steps).arg(label.text);
         }
-        label.rect = (label.shownArea ? boldMetrics : metrics).boundingRect(label.text);
+        const int style = label.shownArea ? 1 : 0;
+        auto measured = bounds[style].constFind(label.text);
+        if (measured == bounds[style].cend()) {
+            const auto known = mAtlasLabelBounds[style].constFind(label.text);
+            measured = bounds[style].insert(label.text, known != mAtlasLabelBounds[style].cend() ? *known : metrics[style].boundingRect(label.text));
+        }
+        label.rect = *measured;
         label.rect.moveCenter(*pixel);
         if (!view.intersects(label.rect)) {
             continue;
@@ -2604,34 +2617,133 @@ QList<ModernGLWidget::AtlasLabel> ModernGLWidget::atlasLabels(const MapAtlas::We
         candidates.append(label);
         rects.append(label.rect);
     }
+    mAtlasLabelBounds = std::move(bounds);
     for (const qsizetype index : GeometryManager::declutteredRects(rects, 0.0)) {
         labels.append(candidates.at(index));
     }
     return labels;
 }
 
+namespace {
+// A halo of the background around each name keeps it readable over the areas' colors and the links
+constexpr qreal scmLabelHaloWidth = 3.0;
+// How far the halo reaches past a name's outline, with its antialiasing
+constexpr qreal scmLabelHaloReach = scmLabelHaloWidth / 2.0 + 0.5;
+} // namespace
+
+void ModernGLWidget::paintAtlasLabelSheet(const QList<AtlasLabel>& labels, const qreal pixelRatio)
+{
+    // A pixel between names, so that filtering at the edge of one never picks up the next
+    constexpr int spacing = 1;
+    QFont boldFont = font();
+    boldFont.setBold(true);
+    const std::array<QFont, 2> fonts{font(), boldFont};
+    std::array<QHash<QString, QRect>, 2> places;
+    QList<const AtlasLabel*> names;
+    // Centered on the name's bounds, as it is placed; empty for a name copied from the old sheet
+    QList<QPainterPath> outlines;
+    int widest = 0;
+    int total = 0;
+    for (const AtlasLabel& label : labels) {
+        const int style = label.shownArea ? 1 : 0;
+        if (places[style].contains(label.text)) {
+            continue;
+        }
+        QRect slot;
+        QPainterPath outline;
+        if (const auto drawn = mAtlasLabelSheet.places[style].constFind(label.text); drawn != mAtlasLabelSheet.places[style].cend()) {
+            slot.setSize(drawn->size());
+        } else {
+            const QRectF bounds = mAtlasLabelBounds[style].value(label.text);
+            outline.addText(-bounds.center(), fonts[style], label.text);
+            // Bounds from CoreText and DirectWrite go by advances and ascent, so glyphs can reach past them
+            const QRectF reach = outline.boundingRect();
+            const qreal halfWidth = std::max({bounds.width() / 2.0, -reach.left(), reach.right()}) + scmLabelHaloReach;
+            const qreal halfHeight = std::max({bounds.height() / 2.0, -reach.top(), reach.bottom()}) + scmLabelHaloReach;
+            slot.setSize(QSize(qCeil(2.0 * halfWidth * pixelRatio), qCeil(2.0 * halfHeight * pixelRatio)));
+        }
+        places[style].insert(label.text, slot);
+        names.append(&label);
+        outlines.append(outline);
+        widest = std::max(widest, slot.width());
+        total += slot.width() + spacing;
+    }
+    const int sheetWidth = std::max(widest, std::min(total, 1024));
+    QPoint at;
+    int rowHeight = 0;
+    for (const AtlasLabel* pLabel : std::as_const(names)) {
+        QRect& slot = places[pLabel->shownArea ? 1 : 0][pLabel->text];
+        if (at.x() + slot.width() > sheetWidth) {
+            at = QPoint(0, at.y() + rowHeight + spacing);
+            rowHeight = 0;
+        }
+        slot.moveTopLeft(at);
+        at.rx() += slot.width() + spacing;
+        rowHeight = std::max(rowHeight, slot.height());
+    }
+
+    QImage sheet(sheetWidth, at.y() + rowHeight, QImage::Format_ARGB32_Premultiplied);
+    if (sheet.isNull()) {
+        mAtlasLabelSheet = {};
+        return;
+    }
+    sheet.fill(Qt::transparent);
+    const QColor background = mpHost->mBgColor_2;
+    const QPen halo(background, scmLabelHaloWidth, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin);
+    const QColor fill = ExitAppearance::contrastColor(background);
+    QPainter painter(&sheet);
+    painter.setRenderHints(QPainter::Antialiasing | QPainter::TextAntialiasing);
+    for (qsizetype index = 0; index < names.size(); ++index) {
+        const AtlasLabel* pLabel = names.at(index);
+        const int style = pLabel->shownArea ? 1 : 0;
+        const QRect slot = places[style].value(pLabel->text);
+        if (const auto drawn = mAtlasLabelSheet.places[style].constFind(pLabel->text); drawn != mAtlasLabelSheet.places[style].cend()) {
+            painter.drawImage(slot.topLeft(), mAtlasLabelSheet.image, *drawn);
+            continue;
+        }
+        painter.save();
+        painter.translate(QRectF(slot).center());
+        painter.scale(pixelRatio, pixelRatio);
+        painter.strokePath(outlines.at(index), halo);
+        painter.fillPath(outlines.at(index), fill);
+        painter.restore();
+    }
+    painter.end();
+    // A QImage keeps the raster engine that painted it until destroyed; copy() sheds it
+    mAtlasLabelSheet = {sheet.copy(), std::move(places)};
+}
+
 void ModernGLWidget::paintAtlasLabels(QPainter& painter)
 {
     const QList<AtlasLabel> labels = atlasLabels(mZoomWeights);
+    const qreal pixelRatio = painter.device() ? painter.device()->devicePixelRatio() : devicePixelRatioF();
+    if (mpHost->mBgColor_2 != mAtlasLabelBackground || pixelRatio != mAtlasLabelPixelRatio) {
+        mAtlasLabelBackground = mpHost->mBgColor_2;
+        mAtlasLabelPixelRatio = pixelRatio;
+        mAtlasLabelSheet = {};
+    }
     if (labels.isEmpty()) {
+        mAtlasLabelSheet = {};
         return;
     }
-    const QColor background = mpHost->mBgColor_2;
-    const QColor textColor = ExitAppearance::contrastColor(background);
-    QFont boldFont = font();
-    boldFont.setBold(true);
+    // Redrawn for a missing name, or once names gone from view are over half of it
+    const bool lacking = std::any_of(labels.cbegin(), labels.cend(), [this](const AtlasLabel& label) {
+        return !mAtlasLabelSheet.places[label.shownArea ? 1 : 0].contains(label.text);
+    });
+    if (lacking || mAtlasLabelSheet.places[0].size() + mAtlasLabelSheet.places[1].size() > 2 * labels.size()) {
+        paintAtlasLabelSheet(labels, pixelRatio);
+        if (mAtlasLabelSheet.image.isNull()) {
+            return;
+        }
+    }
     painter.save();
     painter.setOpacity(mZoomWeights.footprint);
-    painter.setRenderHints(QPainter::Antialiasing | QPainter::TextAntialiasing);
-    // A halo of the background keeps a name readable over the areas' colors and the links
-    const QPen halo(background, 3.0, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin);
     for (const AtlasLabel& label : labels) {
-        const QFont& labelFont = label.shownArea ? boldFont : font();
-        const QRectF bounds = QFontMetricsF(labelFont).boundingRect(label.text);
-        QPainterPath path;
-        path.addText(label.rect.topLeft() - bounds.topLeft(), labelFont, label.text);
-        painter.strokePath(path, halo);
-        painter.fillPath(path, textColor);
+        const QRect slot = mAtlasLabelSheet.places[label.shownArea ? 1 : 0].value(label.text);
+        // On whole device pixels, as the name was drawn into the sheet
+        const QPointF topLeft = label.rect.center() * pixelRatio - QPointF(slot.width(), slot.height()) / 2.0;
+        const QRectF target(QPointF(std::round(topLeft.x()), std::round(topLeft.y())) / pixelRatio, QSizeF(slot.size()) / pixelRatio);
+        painter.drawImage(target, mAtlasLabelSheet.image, slot);
     }
     painter.restore();
 }
