@@ -399,6 +399,37 @@ local lua_reserved_words = {
 }
 
 
+-- NOT LUADOC
+-- Fits a sheet's entry to the table a refused migration left: db:fetch raises over an undeclared column
+local function with_columns_on_disk(conn, s_name, entry)
+  local sql = "SELECT * FROM " .. s_name .. " LIMIT 0"
+  db:echo_sql(sql)
+  local cur, err = conn:execute(sql)
+  if type(cur) ~= "userdata" then
+    if not tostring(err):find("no such table", 1, true) then
+      printError("db:create - " .. s_name .. " - could not read back the columns this sheet has after its " ..
+        "migration was refused, so reading it may fail: " .. tostring(err), true, false)
+    end
+    return entry
+  end
+
+  local columns = {}
+  for _, column in ipairs(cur:getcolnames() or {}) do
+    if column ~= "_row_id" then
+      local declared = entry.columns[column]
+      if declared == nil then
+        declared = ""
+      end
+      columns[column] = declared
+    end
+  end
+  cur:close()
+  entry.columns = columns
+
+  return entry
+end
+
+
 --- Creates and/or modifies an existing database. This function is safe to define at a top-level of a Mudlet
 --- script: in fact it is recommended you run this function at a top-level without any kind of guards.
 --- If the named database does not exist it will create it. If the database does exist then it will add
@@ -425,6 +456,10 @@ local lua_reserved_words = {
 --- Note when weighing that up that printError is a quiet channel: it reaches the editor's Errors
 --- tab, which is hidden until the user opens it, and the main console only when they have turned
 --- on echoing Lua errors. <br/><br/>
+---
+--- When db:create refuses a migration, such as dropping a column that still holds data without force,
+--- it raises, and every sheet not migrated by then keeps the columns its table still has, so db:fetch
+--- reads them as before. <br/><br/>
 ---
 --- The database will be called Database_<sanitized database name>.db and will be stored in the
 --- Mudlet configuration directory. <br/><br/>
@@ -807,10 +842,46 @@ function db:create(db_name, sheets, force)
     db.__autocommit[db_name] = true
   end
 
+  local previous = db.__schema[db_name] or {}
   db.__schema[db_name] = schema
 
+  local conn = db.__conn[db_name]
+  local migrated = {}
   for sheet_name, _ in pairs(sheets) do
-    db:_migrate(db_name, sheet_name, force)
+    -- a savepoint: after db:_begin() the caller's own pending writes must survive a refusal
+    db:echo_sql("SAVEPOINT db_create_migrate")
+    local saved = conn:execute("SAVEPOINT db_create_migrate")
+    local ok, err = pcall(db._migrate, db, db_name, sheet_name, force)
+    if not ok then
+      -- roll the refusal back, or the next write commits what it left half done; inside db:_begin() with
+      -- no savepoint that would take the caller's writes with it, so there they are left pending instead
+      if saved then
+        db:echo_sql("ROLLBACK TO db_create_migrate")
+        if conn:execute("ROLLBACK TO db_create_migrate") then
+          db:echo_sql("RELEASE db_create_migrate")
+          conn:execute("RELEASE db_create_migrate")
+        else
+          -- _migrate committed, which ended the savepoint and the caller's transaction with it
+          db:echo_sql("ROLLBACK")
+          conn:rollback()
+        end
+      elseif db.__autocommit[db_name] then
+        db:echo_sql("ROLLBACK")
+        conn:rollback()
+      end
+      for name in pairs(sheets) do
+        if not migrated[name] then
+          schema[name] = with_columns_on_disk(conn, name, previous[name] or schema[name])
+        end
+      end
+      for name, entry in pairs(previous) do
+        if sheets[name] == nil then
+          schema[name] = entry
+        end
+      end
+      error(err, 0)
+    end
+    migrated[sheet_name] = true
   end
   return db:get_database(db_name)
 end
