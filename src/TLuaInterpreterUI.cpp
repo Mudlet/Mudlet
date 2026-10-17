@@ -2794,6 +2794,10 @@ int TLuaInterpreter::resizeWindow(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#saveWindowLayout
 int TLuaInterpreter::saveWindowLayout(lua_State* L)
 {
+    // Mid-load, the GUI's saveState() writes the windows the load has yet to reach where they were, and stops it moving them
+    if (TAppFrontend::instance()->layoutLoading()) {
+        return warnArgumentValue(L, __func__, qsl("cannot save the window layout while it is being loaded"));
+    }
     lua_pushboolean(L, TAppFrontend::instance()->saveWindowLayoutForScript());
     return 1;
 }

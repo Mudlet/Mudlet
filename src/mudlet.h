@@ -200,6 +200,7 @@ public:
     bool closeHeldOffByEventPump(Host*) const;
     Host* loadProfile(const QString&, const bool, const QString& saveFileName = QString());
     bool loadWindowLayout() override;
+    bool layoutLoading() const override { return mIsLoadingLayout; }
     enums::controlsVisibility menuBarVisibility() const { return mMenuBarVisibility; }
     bool canHideToolBar() const { return mMenuBarVisibility != enums::visibleNever; }
     bool migratePasswordsToProfileStorage();
