@@ -3892,6 +3892,26 @@ private slots:
         return std::nullopt;
     }
 
+    // The index of the command drawing this room's name and the tint it is drawn with; -1 for a name not drawn
+    static std::pair<qsizetype, QVector4D> nameCommand(ModernGLWidget& widget, const QString& name)
+    {
+        for (const QString& key : std::as_const(widget.mRoomTexturesInUse)) {
+            if (!key.startsWith(qsl("name|")) || !(key.endsWith(qsl("|%1").arg(name)) || key.contains(qsl("|%1|").arg(name)))) {
+                continue;
+            }
+            const GLuint texture = widget.mLabelTextureCache.imageTexture(key);
+            const auto& commands = widget.mRenderCommandQueue.commands();
+            for (qsizetype index = 0; index < static_cast<qsizetype>(commands.size()); ++index) {
+                const auto* textured = dynamic_cast<const RenderTexturedTrianglesCommand*>(commands.at(index).get());
+                if (textured && textured->geometry().textureId == texture && textured->geometry().colors.size() >= 4) {
+                    const QVector<float>& colors = textured->geometry().colors;
+                    return {index, QVector4D(colors.at(0), colors.at(1), colors.at(2), colors.at(3))};
+                }
+            }
+        }
+        return {-1, QVector4D()};
+    }
+
     // As a printed map's lettering: upright on screen however the map is tilted, and under the room it names, where a
     // style stands its names up; a style that lays them on the map draws them slanted by the tilt
     void test_namesStandUprightUnderTheirRoomWhereAStyleSetsThemUp()
@@ -3951,6 +3971,7 @@ private slots:
         QVERIFY(mpHost->setMapStyle(qsl("inkwash")));
         QVERIFY(!mpHost->mapStylePreset().uprightNames);
         queueFrame(widget, areaId);
+        QVERIFY(drawnName(widget, qsl("Market Cross")));
         QVERIFY2(slant().first > 1.0, qPrintable(qsl("a name lying on a tilted map is drawn upright, %1 pixels off").arg(slant().first)));
     }
 
@@ -3966,6 +3987,21 @@ private slots:
             map()->setRoomNamesShown(false);
         });
         ModernGLWidget widget(map(), mpHost);
+        // How wide the name is on the map, across the screen
+        const auto nameWidth = [&widget]() {
+            const qsizetype index = nameCommand(widget, qsl("Market Cross")).first;
+            if (index < 0) {
+                return 0.0f;
+            }
+            const QVector<float>& vertices = static_cast<const RenderTexturedTrianglesCommand*>(widget.mRenderCommandQueue.commands().at(index).get())->geometry().vertices;
+            float least = std::numeric_limits<float>::max();
+            float most = std::numeric_limits<float>::lowest();
+            for (qsizetype vertex = 0; vertex + 2 < vertices.size(); vertex += 3) {
+                least = qMin(least, vertices.at(vertex));
+                most = qMax(most, vertices.at(vertex));
+            }
+            return most - least;
+        };
         const auto nameFontSize = [&widget](const float distance) {
             widget.setCameraPosition(distance, 40.0f, CameraController::scmNorthUpAzimuth);
             widget.updateMatrices();
@@ -3981,9 +4017,33 @@ private slots:
         };
         queueFrame(widget, areaId);
         const qreal far = nameFontSize(1.0f);
+        const float farWidth = nameWidth();
         const qreal near = nameFontSize(0.25f);
+        const float nearWidth = nameWidth();
         QVERIFY2(far > 0.0 && near >= 2.0 * far, qPrintable(qsl("a name is drawn at %1 points far off and %2 close up").arg(far).arg(near)));
         QVERIFY2(near <= 3.0 * far, "a name close up is drawn sharper than it can be seen");
+        // Sharper, not larger: the same size on the map, but for rounding to whole texels
+        QVERIFY2(farWidth > 0.0f && qAbs(nearWidth - farWidth) < 0.05f * farWidth, qPrintable(qsl("a name is %1 wide far off and %2 close up").arg(farWidth).arg(nearWidth)));
+
+        // Each name as sharp as it is seen itself: one far off is not drawn as sharp as one close up
+        constexpr int farRoomId = 4;
+        QVERIFY(addRoomAt(farRoomId, areaId, 0, 6, 0));
+        map()->mpRoomDB->getRoom(farRoomId)->name = qsl("Far Gate");
+        widget.setCameraPosition(0.25f, 40.0f, CameraController::scmNorthUpAzimuth);
+        widget.updateMatrices();
+        widget.mRenderCommandQueue.clear();
+        widget.queueScene();
+        QStringList drawnSizes;
+        for (const QString& key : std::as_const(widget.mRoomTexturesInUse)) {
+            if (key.startsWith(qsl("name|"))) {
+                QFont font;
+                font.fromString(key.section(QLatin1Char('|'), 2, 2));
+                drawnSizes.append(qsl("%1 %2").arg(key.section(QLatin1Char('|'), 3, 3)).arg(font.pointSizeF()));
+            }
+        }
+        drawnSizes.sort();
+        QCOMPARE(drawnSizes.size(), 2);
+        QVERIFY2(drawnSizes.at(0).section(QLatin1Char(' '), -1).toDouble() < drawnSizes.at(1).section(QLatin1Char(' '), -1).toDouble(), qPrintable(drawnSizes.join(qsl(", "))));
     }
 
     // Where names overlap, the player's room's is kept over one nearer the camera, then a highlighted room's; without
@@ -3994,6 +4054,9 @@ private slots:
         QVERIFY(areaId > 0);
         constexpr int nearerRoomId = 4;
         QVERIFY(addRoomAt(nearerRoomId, areaId, 0, -3, 0));
+        // Within reach of Alpha, not of Beta
+        constexpr int besideRoomId = 5;
+        QVERIFY(addRoomAt(besideRoomId, areaId, -2, 0, 0));
         TRoom* pPlayerRoom = map()->mpRoomDB->getRoom(kPlayerRoomId);
         TRoom* pNearerRoom = map()->mpRoomDB->getRoom(nearerRoomId);
         pPlayerRoom->name = qsl("Alpha");
@@ -4026,6 +4089,10 @@ private slots:
             pPlayerRoom->highlight = true;
             QCOMPARE(kept(), qsl("Alpha"));
             pPlayerRoom->highlight = false;
+            // Next to the player, though the player is in neither room
+            map()->mRoomIdHash[map()->mProfileName] = besideRoomId;
+            QCOMPARE(kept(), qsl("Alpha"));
+            map()->mRoomIdHash[map()->mProfileName] = kPlayerRoomId;
         }
     }
 
@@ -4059,7 +4126,214 @@ private slots:
         QTest::qWait(10);
         queueFrame(widget, areaId);
         QVERIFY2(!drawnName(widget, qsl("Alpha")), "a name that lost its place is still drawn once faded out");
-        QCOMPARE(drawnName(widget, qsl("Beta"))->second, 1.0f);
+        const auto faded = drawnName(widget, qsl("Beta"));
+        QVERIFY(faded);
+        QCOMPARE(faded->second, 1.0f);
+    }
+
+    // Standing names are drawn over the viewed level's rooms and lines with the depth test off, turned back on before
+    // anything after them, and under its labels shown on top, as on the 2D map; only its own names are drawn. Diorama's
+    // names lie in its scene, so they keep the depth test
+    void test_standingNamesGoOverTheirLevelButUnderItsLabelsShownOnTop()
+    {
+        const int areaId = addArea();
+        QVERIFY(areaId > 0);
+        map()->mpRoomDB->getRoom(kPlayerRoomId)->name = qsl("Market Cross");
+        map()->mpRoomDB->getRoom(kLowerRoomId)->name = qsl("Cellar");
+        TMapLabel label;
+        label.text = qsl("Old Keep");
+        label.pos = QVector3D(4.5f, 1.0f, 0.0f);
+        label.size = QSizeF(1.5, 0.5);
+        label.pix = QPixmap(60, 20);
+        label.pix.fill(Qt::white);
+        label.showOnTop = true;
+        map()->mpRoomDB->getArea(areaId)->mMapLabels.insert(1, label);
+        map()->setRoomNamesShown(true);
+        const auto restore = qScopeGuard([this, areaId]() {
+            mpHost->setMapStyle(qsl("tiles"));
+            map()->setRoomNamesShown(false);
+            map()->mpRoomDB->getArea(areaId)->mMapLabels.clear();
+        });
+        // The depth test's state set nearest the command, before or after it, among the state changes next to it
+        const auto depthTestBy = [](const ModernGLWidget& widget, qsizetype index, const int step) {
+            const auto& commands = widget.mRenderCommandQueue.commands();
+            for (index += step; index >= 0 && index < static_cast<qsizetype>(commands.size()); index += step) {
+                const auto* state = dynamic_cast<const GLStateCommand*>(commands.at(index).get());
+                if (!state) {
+                    break;
+                }
+                if (state->stateType() == GLStateCommand::ENABLE_DEPTH_TEST || state->stateType() == GLStateCommand::DISABLE_DEPTH_TEST) {
+                    return std::optional<GLStateCommand::StateType>(state->stateType());
+                }
+            }
+            return std::optional<GLStateCommand::StateType>();
+        };
+        // The last textured quad lying wholly over the label's spot
+        const auto labelCommand = [](const ModernGLWidget& widget) {
+            const auto& commands = widget.mRenderCommandQueue.commands();
+            qsizetype found = -1;
+            for (qsizetype index = 0; index < static_cast<qsizetype>(commands.size()); ++index) {
+                const auto* textured = dynamic_cast<const RenderTexturedTrianglesCommand*>(commands.at(index).get());
+                if (!textured || textured->geometry().vertices.isEmpty()) {
+                    continue;
+                }
+                bool there = true;
+                const QVector<float>& vertices = textured->geometry().vertices;
+                for (qsizetype vertex = 0; vertex + 2 < vertices.size(); vertex += 3) {
+                    there = there && vertices.at(vertex) > 4.4f;
+                }
+                if (there) {
+                    found = index;
+                }
+            }
+            return found;
+        };
+
+        QVERIFY(mpHost->setMapStyle(qsl("tiles")));
+        ModernGLWidget widget(map(), mpHost);
+        queueFrame(widget, areaId);
+        const qsizetype name = nameCommand(widget, qsl("Market Cross")).first;
+        QVERIFY(name >= 0);
+        QCOMPARE(depthTestBy(widget, name, -1), std::optional(GLStateCommand::DISABLE_DEPTH_TEST));
+        QCOMPARE(depthTestBy(widget, name, 1), std::optional(GLStateCommand::ENABLE_DEPTH_TEST));
+        const qsizetype onTop = labelCommand(widget);
+        QVERIFY2(onTop > name, qPrintable(qsl("the label shown on top is queued at %1, the name at %2").arg(onTop).arg(name)));
+        QVERIFY2(!drawnName(widget, qsl("Cellar")), "a name on the level below is drawn");
+
+        QVERIFY(mpHost->setMapStyle(qsl("diorama")));
+        ModernGLWidget diorama(map(), mpHost);
+        diorama.mNameFadeMilliseconds = 0;
+        queueFrame(diorama, areaId);
+        const qsizetype dioramaName = nameCommand(diorama, qsl("Market Cross")).first;
+        QVERIFY(dioramaName >= 0);
+        QVERIFY(depthTestBy(diorama, dioramaName, -1) != std::optional(GLStateCommand::DISABLE_DEPTH_TEST));
+    }
+
+    // What every style draws a name in is what the contrast audit measures: its color, its rim, whether that is soft,
+    // and the tint over it
+    void test_everyStyleDrawsNamesAsTheContrastAuditMeasuresThem()
+    {
+        const int areaId = addArea();
+        QVERIFY(areaId > 0);
+        map()->mpRoomDB->getRoom(kPlayerRoomId)->name = qsl("Market Cross");
+        map()->setRoomNamesShown(true);
+        const auto restore = qScopeGuard([this]() {
+            mpHost->setMapStyle(qsl("tiles"));
+            map()->setRoomNamesShown(false);
+        });
+        for (const MapStyle& style : MapStyle::all()) {
+            QVERIFY(mpHost->setMapStyle(style.id));
+            ModernGLWidget widget(map(), mpHost);
+            queueFrame(widget, areaId);
+            const QColor background = widget.backgroundColor();
+            const QColor color = style.roomNameColorFor(QString(), background);
+            QColor halo = style.roomNameHaloFor(color);
+            if (!halo.isValid() && (style.labelHalos || style.nameHalos)) {
+                halo = background;
+            }
+            QString expected = qsl("name|%1|").arg(color.name(QColor::HexArgb));
+            QString ending = qsl("|Market Cross");
+            if (halo.isValid()) {
+                ending.append(qsl("|halo|%1").arg(halo.name(QColor::HexArgb)));
+                if (style.softNameHalos) {
+                    ending.append(qsl("|soft"));
+                }
+            }
+            QString drawn;
+            for (const QString& key : std::as_const(widget.mRoomTexturesInUse)) {
+                if (key.startsWith(qsl("name|"))) {
+                    drawn = key;
+                }
+            }
+            QVERIFY2(drawn.startsWith(expected) && drawn.endsWith(ending), qPrintable(qsl("%1 draws %2, measured as %3...%4").arg(style.id, drawn, expected, ending)));
+            const QVector4D tint = nameCommand(widget, qsl("Market Cross")).second;
+            const QColor styleTint = style.labelTint.isValid() ? style.labelTint : QColor(Qt::white);
+            QVERIFY2(qAbs(tint.x() - styleTint.redF()) < 0.01f && qAbs(tint.y() - styleTint.greenF()) < 0.01f && qAbs(tint.z() - styleTint.blueF()) < 0.01f
+                             && qAbs(tint.w() - styleTint.alphaF()) < 0.01f,
+                     qPrintable(qsl("%1 tints its names %2 %3 %4 %5").arg(style.id).arg(tint.x()).arg(tint.y()).arg(tint.z()).arg(tint.w())));
+        }
+    }
+
+    // A soft halo fades out from the letters: thickest by them, thinning toward its edge
+    void test_aSoftHaloFadesOutFromTheLetters()
+    {
+        const int areaId = addArea();
+        QVERIFY(areaId > 0);
+        map()->mpRoomDB->getRoom(kPlayerRoomId)->name = qsl("I");
+        map()->setRoomNamesShown(true);
+        const auto restore = qScopeGuard([this]() {
+            mpHost->setMapStyle(qsl("tiles"));
+            map()->setRoomNamesShown(false);
+        });
+        QVERIFY(mpHost->setMapStyle(qsl("hologram")));
+        QVERIFY(mpHost->mapStylePreset().softNameHalos);
+        ModernGLWidget widget(map(), mpHost);
+        QHash<GLuint, QImage> images;
+        widget.mLabelTextureCache.useTextureStandIn(
+                [&images, lastTexture = GLuint{0}](const QImage& image) mutable {
+                    images.insert(++lastTexture, image);
+                    return lastTexture;
+                },
+                [](GLuint) {});
+        widget.setViewCenter(areaId, 0, 0, 0);
+        widget.resize(800, 600);
+        widget.mCameraController.setViewportSize(widget.width(), widget.height());
+        widget.setCameraPosition(1.0f, 40.0f, CameraController::scmNorthUpAzimuth);
+        widget.updateMatrices();
+        widget.mRenderCommandQueue.clear();
+        widget.queueScene();
+        QImage image;
+        for (const QString& key : std::as_const(widget.mRoomTexturesInUse)) {
+            if (key.startsWith(qsl("name|"))) {
+                image = images.value(widget.mLabelTextureCache.imageTexture(key));
+            }
+        }
+        QVERIFY(!image.isNull());
+        // Along the middle row, from the left edge in to where the letter is
+        const int y = image.height() / 2;
+        int letter = 0;
+        while (letter < image.width() && qAlpha(image.pixel(letter, y)) < 250) {
+            ++letter;
+        }
+        int outer = 0;
+        while (outer < letter && qAlpha(image.pixel(outer, y)) == 0) {
+            ++outer;
+        }
+        QVERIFY2(letter - outer >= 3, qPrintable(qsl("the halo is %1 texels wide").arg(letter - outer)));
+        int previous = 0;
+        for (int x = outer; x < letter; ++x) {
+            const int alpha = qAlpha(image.pixel(x, y));
+            QVERIFY2(alpha + 2 >= previous, qPrintable(qsl("the halo grows fainter toward the letter at %1: %2 after %3").arg(x).arg(alpha).arg(previous)));
+            previous = alpha;
+        }
+        QVERIFY2(2 * qAlpha(image.pixel(outer, y)) < qAlpha(image.pixel(letter - 1, y)),
+                 qPrintable(qsl("the halo's edge is %1 opaque and by the letter %2").arg(qAlpha(image.pixel(outer, y))).arg(qAlpha(image.pixel(letter - 1, y)))));
+    }
+
+    // While a name is still fading the view asks to be drawn again, so the fade runs without anything else moving
+    void test_aFadingNameKeepsTheViewDrawing()
+    {
+        const int areaId = addArea();
+        QVERIFY(areaId > 0);
+        constexpr int nearerRoomId = 4;
+        QVERIFY(addRoomAt(nearerRoomId, areaId, 0, -3, 0));
+        map()->mpRoomDB->getRoom(kPlayerRoomId)->name = qsl("Alpha");
+        TRoom* pNearerRoom = map()->mpRoomDB->getRoom(nearerRoomId);
+        pNearerRoom->name = qsl("Beta");
+        pNearerRoom->userData.insert(ROOM_UI_NAMEPOS, qsl("0 -2.9"));
+        map()->setRoomNamesShown(true);
+        const auto restore = qScopeGuard([this]() {
+            map()->setRoomNamesShown(false);
+        });
+        ModernGLWidget widget(map(), mpHost);
+        widget.mNameFadeMilliseconds = 10000;
+        queueFrame(widget, areaId);
+        QVERIFY2(!widget.mNameFadeTimer->isActive(), "a settled view keeps drawing");
+        map()->mRoomIdHash[map()->mProfileName] = 0;
+        QTest::qWait(20);
+        queueFrame(widget, areaId);
+        QVERIFY2(widget.mNameFadeTimer->isActive(), "a fading name does not ask for the view to be drawn again");
+        map()->mRoomIdHash[map()->mProfileName] = kPlayerRoomId;
     }
 
     // Names are kept apart by what they draw: two haloed names close enough for their halos to touch lose one, where

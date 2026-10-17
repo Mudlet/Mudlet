@@ -119,6 +119,11 @@ ModernGLWidget::ModernGLWidget(TMap* pMap, Host* pHost, QWidget* parent)
         update();
     });
 
+    mNameFadeTimer = new QTimer(this);
+    mNameFadeTimer->setSingleShot(true);
+    mNameFadeTimer->setInterval(16ms);
+    connect(mNameFadeTimer, &QTimer::timeout, this, qOverload<>(&QWidget::update));
+
     // A click takes focus only so that a floating view can pass typed keys on to the command line; focus from
     // Tab also lets the view pan and zoom with keys
     setFocusPolicy(Qt::StrongFocus);
@@ -494,6 +499,8 @@ void ModernGLWidget::initializeGL()
     }
     qDebug().nospace() << "ModernGLWidget: OpenGL " << actualFormat.majorVersion() << "." << actualFormat.minorVersion()
                        << (actualFormat.profile() == QSurfaceFormat::CoreProfile ? " core" : " compatibility") << " on " << reinterpret_cast<const char*>(glGetString(GL_RENDERER));
+
+    glGetIntegerv(GL_MAX_TEXTURE_SIZE, &mMaxTextureSize);
 
     const QColor color(backgroundColor());
     glClearColor(color.redF(), color.greenF(), color.blueF(), color.alphaF());
@@ -1394,7 +1401,8 @@ GLuint ModernGLWidget::textTexture(const QString& key, const QString& text, cons
         if (softHalo) {
             // Rims ever wider, each laid over the narrower ones, so that by the letters they add up to nearly the
             // halo's own opacity and it fades out from there; an opaque one could not fade
-            const int rims = qMax(2, haloWidth);
+            // Enough rims to look smooth, but no more, as each is a stroke of the whole text
+            const int rims = qBound(2, haloWidth, 8);
             QColor rim = halo;
             rim.setAlphaF(1.0 - std::pow(1.0 - 0.97 * halo.alphaF(), 1.0 / rims));
             for (int index = rims; index >= 1; --index) {
@@ -2491,8 +2499,8 @@ void ModernGLWidget::renderRooms()
     }
 
     // Names come after every symbol and marker, so that a view short of room for textures loses names first. Those
-    // standing up or haloed are drawn over every level, as a printed map's lettering is, so that neither the lines
-    // of the levels above nor the ground a standing name would reach into cut through them
+    // standing up or haloed are drawn over the viewed level, as a printed map's lettering is, so that neither its lines
+    // nor the ground a standing name would reach into cut through them
     const bool namesLast = style.uprightNames || style.nameHalos;
     RoomDecals lastNames;
     if (!roomNames.isEmpty()) {
@@ -2530,7 +2538,8 @@ void ModernGLWidget::renderRooms()
         const qreal spaceWidth = nameMetrics.horizontalAdvance(QLatin1Char(' '));
         QList<QRectF> nameRects;
         nameRects.reserve(roomNames.size());
-        qreal tallest = 0.0;
+        QList<int> sharpness;
+        sharpness.reserve(roomNames.size());
         for (const RoomName& roomName : std::as_const(roomNames)) {
             // A halo covers what it overlaps as the text does
             const int nameHaloWidth = textHaloWidth(nameMetrics, haloFor(roomName.color).isValid(), style.softNameHalos);
@@ -2540,22 +2549,34 @@ void ModernGLWidget::renderRooms()
             const QRectF rect = screenRect(corner, across, upward);
             nameRects.append(rect);
             // Up the text, not across the box round it, which a name lying on a turned map makes taller than the text
+            qreal pixelsPerTexel = 0.0;
             if (rect.isValid()) {
                 const std::optional<QPointF> foot = mCameraController.pixelForPoint(corner);
                 const std::optional<QPointF> head = mCameraController.pixelForPoint(corner + upward);
                 if (foot && head) {
-                    tallest = qMax(tallest, QLineF(*foot, *head).length() / size.height());
+                    pixelsPerTexel = QLineF(*foot, *head).length() / size.height();
                 }
             }
+            sharpness.append(GeometryManager::textSharpness(pixelsPerTexel, devicePixelRatioF(), size.width(), mMaxTextureSize));
         }
-        // Drawn with as many texels as the tallest name covers device pixels, up to three times, so names stay sharp
-        // on a high resolution screen or zoomed in
-        const int sharpness = qBound(1, qCeil(tallest * devicePixelRatioF() - 0.25), 3);
-        QFont drawnFont = nameFont;
-        drawnFont.setPointSizeF(nameFont.pointSizeF() * sharpness);
-        const QFontMetricsF drawnMetrics = sharpness == 1 ? nameMetrics : imageFontMetrics(drawnFont);
-        const QString drawnFontKey = sharpness == 1 ? nameFontKey : drawnFont.key();
-        const float drawnTexel = nameTexel / static_cast<float>(sharpness);
+        // By sharpness, less one: the font a name is drawn in, its metrics and its key, made when first needed
+        struct DrawnFont
+        {
+            QFont font;
+            std::optional<QFontMetricsF> metrics;
+            QString key;
+        };
+        std::array<DrawnFont, 3> drawnFonts;
+        const auto drawnFont = [&](const int times) -> const DrawnFont& {
+            DrawnFont& drawn = drawnFonts.at(times - 1);
+            if (!drawn.metrics) {
+                drawn.font = nameFont;
+                drawn.font.setPointSizeF(nameFont.pointSizeF() * times);
+                drawn.metrics = times == 1 ? nameMetrics : imageFontMetrics(drawn.font);
+                drawn.key = times == 1 ? nameFontKey : drawn.font.key();
+            }
+            return drawn;
+        };
 
         const QList<qsizetype> kept = GeometryManager::declutteredRects(nameRects, scmMinimumTextPixels);
         const QSet<qsizetype> winners(kept.cbegin(), kept.cend());
@@ -2586,13 +2607,18 @@ void ModernGLWidget::renderRooms()
         }
         mNameOpacity = opacities;
         if (!settled) {
-            QTimer::singleShot(16ms, this, qOverload<>(&QWidget::update));
+            // Not restarted by each frame, which would put it off for as long as frames come quicker than it
+            if (!mNameFadeTimer->isActive()) {
+                mNameFadeTimer->start();
+            }
         }
 
         for (const auto& [index, opacity] : std::as_const(shown)) {
             const RoomName& roomName = roomNames.at(index);
+            const int times = sharpness.at(index);
+            const DrawnFont& drawn = drawnFont(times);
             QSize size;
-            QString key = qsl("name|%1|%2|%3").arg(roomName.color.name(QColor::HexArgb), drawnFontKey, roomName.name);
+            QString key = qsl("name|%1|%2|%3").arg(roomName.color.name(QColor::HexArgb), drawn.key, roomName.name);
             const QColor halo = haloFor(roomName.color);
             if (halo.isValid()) {
                 key.append(qsl("|halo|%1").arg(halo.name(QColor::HexArgb)));
@@ -2600,8 +2626,8 @@ void ModernGLWidget::renderRooms()
                     key.append(qsl("|soft"));
                 }
             }
-            if (const GLuint texture = textTexture(key, roomName.name, drawnFont, drawnMetrics, roomName.color, size, halo, style.softNameHalos)) {
-                const auto [corner, across, upward] = nameQuad(roomName, size, drawnTexel);
+            if (const GLuint texture = textTexture(key, roomName.name, drawn.font, *drawn.metrics, roomName.color, size, halo, style.softNameHalos)) {
+                const auto [corner, across, upward] = nameQuad(roomName, size, nameTexel / static_cast<float>(times));
                 QVector4D tint = roomName.tint;
                 tint.setW(tint.w() * opacity);
                 GeometryData& batch = (namesLast ? lastNames : *roomName.decals).text[texture];
@@ -2776,12 +2802,35 @@ void ModernGLWidget::renderRooms()
     std::sort(levels.begin(), levels.end());
     levels.erase(std::unique(levels.begin(), levels.end()), levels.end());
     qint64 unlabeledFrom = std::numeric_limits<int>::lowest();
+    // The viewed level's names standing up or haloed, after everything else on it and over its rooms in front of them,
+    // but under its labels shown on top, as on the 2D map
+    bool namesQueued = false;
+    const auto queueNames = [&]() {
+        namesQueued = true;
+        if (lastNames.text.isEmpty()) {
+            return;
+        }
+        mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::DISABLE_DEPTH_TEST));
+        queueDecals(lastNames);
+        mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::ENABLE_DEPTH_TEST));
+    };
+    const auto queueOnTopLabels = [&](const qint64 lowest, const qint64 highest) {
+        if (!namesQueued && lowest <= mMapCenterZ && mMapCenterZ <= highest) {
+            if (lowest < mMapCenterZ) {
+                renderLabels(true, static_cast<int>(lowest), mMapCenterZ - 1);
+            }
+            queueNames();
+            renderLabels(true, mMapCenterZ, static_cast<int>(highest));
+        } else {
+            renderLabels(true, static_cast<int>(lowest), static_cast<int>(highest));
+        }
+    };
     // The viewed level's washes go over the levels below, which would otherwise show through them unwashed
     bool washed = false;
     for (const int level : std::as_const(levels)) {
         // Those on levels with nothing else shown, under this one
         if (level > unlabeledFrom) {
-            renderLabels(true, static_cast<int>(unlabeledFrom), level - 1);
+            queueOnTopLabels(unlabeledFrom, level - 1);
         }
         if (!washed && level >= mMapCenterZ) {
             queueWashes();
@@ -2888,18 +2937,18 @@ void ModernGLWidget::renderRooms()
         if (seeThrough != seeThroughLevels.cend()) {
             queueDecals(seeThrough->decals);
         }
-        renderLabels(true, level, level);
+        queueOnTopLabels(level, level);
         unlabeledFrom = qint64{level} + 1;
     }
     if (!washed) {
         queueWashes();
     }
     if (unlabeledFrom <= std::numeric_limits<int>::max()) {
-        renderLabels(true, static_cast<int>(unlabeledFrom), std::numeric_limits<int>::max());
+        queueOnTopLabels(unlabeledFrom, std::numeric_limits<int>::max());
     }
-    mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::DISABLE_DEPTH_TEST));
-    queueDecals(lastNames);
-    mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::ENABLE_DEPTH_TEST));
+    if (!namesQueued) {
+        queueNames();
+    }
     // Faintly, where anything stands between the pawn and the camera, so it is not lost inside a building
     if (std::any_of(tokenInstances.cbegin(), tokenInstances.cend(), [](const QVector<CubeInstanceData>& instances) {
             return !instances.isEmpty();

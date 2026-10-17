@@ -272,6 +272,26 @@ private slots:
         QCOMPARE(GeometryManager::steppedOpacity(0.5f, 0.0f, 0, 0), 0.0f);
     }
 
+    // A name drawn at as many texels as the device pixels it covers, from once to three times its usual resolution,
+    // counting the screen's pixel ratio, and never wider than a texture can be
+    void test_namesAreDrawnAsSharpAsTheyAreSeen()
+    {
+        QCOMPARE(GeometryManager::textSharpness(0.0, 1.0, 100.0, 4096), 1);
+        QCOMPARE(GeometryManager::textSharpness(0.6, 1.0, 100.0, 4096), 1);
+        QCOMPARE(GeometryManager::textSharpness(1.2, 1.0, 100.0, 4096), 1);
+        QCOMPARE(GeometryManager::textSharpness(1.3, 1.0, 100.0, 4096), 2);
+        QCOMPARE(GeometryManager::textSharpness(2.5, 1.0, 100.0, 4096), 3);
+        QCOMPARE(GeometryManager::textSharpness(9.0, 1.0, 100.0, 4096), 3);
+        // A high resolution screen's name covers twice the device pixels
+        QCOMPARE(GeometryManager::textSharpness(0.6, 2.0, 100.0, 4096), 1);
+        QCOMPARE(GeometryManager::textSharpness(1.0, 2.0, 100.0, 4096), 2);
+        QCOMPARE(GeometryManager::textSharpness(1.2, 2.0, 100.0, 4096), 3);
+        // A long name is drawn no sharper than a texture can hold it
+        QCOMPARE(GeometryManager::textSharpness(9.0, 2.0, 1500.0, 4096), 2);
+        QCOMPARE(GeometryManager::textSharpness(9.0, 2.0, 3000.0, 4096), 1);
+        QCOMPARE(GeometryManager::textSharpness(9.0, 2.0, 9000.0, 4096), 1);
+    }
+
     // Two rooms whose names just fit side by side: spaced capitals run together there, so blueprint keeps a space
     // between names and drops one, where every other style keeps both as before
     void test_onlySpacedNamesAreKeptASpaceApart()

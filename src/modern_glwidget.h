@@ -379,6 +379,10 @@ private:
     QHash<int, float> mNameOpacity;
     QElapsedTimer mNameFadeClock;
     int mNameFadeArea = -1;
+    // Repaints while a name is still fading
+    QTimer* mNameFadeTimer = nullptr;
+    // Read from the context once it is made; the least any OpenGL 3.3 driver offers until then
+    int mMaxTextureSize = 1024;
     bool mFramePending = true;
     // Set by a zoom or a change of area while hidden: the shown area is framed at its stored zoom, read then so a later
     // 2D zoom counts, for the size the view is first seen at, unless a camera distance is set first
