@@ -1968,9 +1968,20 @@ TCommandLine* TMainConsole::activeCommandLine()
 
 void TMainConsole::focusActiveCommandLine()
 {
+    focusActiveCommandLine(nullptr);
+}
+
+void TMainConsole::focusActiveCommandLine(const QWidget* pWindow)
+{
     using namespace std::chrono_literals;
 
     TCommandLine* pCommandLine = activeCommandLine();
+    if (pCommandLine && pWindow && pCommandLine->window() != pWindow) {
+        pCommandLine = nullptr;
+        // The setFocus() below can land only once pWindow activates, as a Qt::ActiveWindowFocusReason
+        // focus-in that TCommandLine does not record, so record the line it gives the keyboard here
+        recordActiveCommandLine(mpCommandLine);
+    }
     TCommandLine* targetCommandLine = pCommandLine ? pCommandLine : mpCommandLine.data();
     if (!targetCommandLine) {
         return;

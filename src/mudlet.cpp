@@ -8717,9 +8717,14 @@ void mudlet::detachTab(int tabIndex, const QPoint& position)
     // moment control returns to the event loop. Ours is queued later so it runs
     // later; the 10ms and 50ms retries behind it only setFocus(), which cannot
     // activate an inactive window.
-    QTimer::singleShot(0ms, detachedWindow, [detachedWindow]() {
+    QTimer::singleShot(0ms, detachedWindow, [detachedWindow, pDetachedHost = QPointer<Host>(pHost)]() {
         detachedWindow->raise();
         detachedWindow->activateWindow();
+        if (pDetachedHost && pDetachedHost->mainConsoleView()) {
+            // Without this no command line in the new window has the keyboard. User windows do not
+            // move with the profile, and focusing a command line in one would take the keyboard away
+            pDetachedHost->mainConsoleView()->focusActiveCommandLine(detachedWindow);
+        }
     });
 
     // Update multi-view controls
