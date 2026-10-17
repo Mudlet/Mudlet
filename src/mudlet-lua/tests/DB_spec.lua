@@ -2771,6 +2771,143 @@ describe("Tests DB.lua functions", function()
 
 end)
 
+describe("Tests db:add, db:update and db:set on a NUL byte", function()
+  local dbName = "nulbytetestingonly"
+  local dbFile = getMudletHomeDir() .. "/Database_" .. dbName .. ".db"
+
+  local function collectingWarnings(fn)
+    local collected = {}
+    -- through _G: a spec file's globals are its own
+    local originalPrintError = _G.printError
+    _G.printError = function(msg) collected[#collected + 1] = msg end
+    finally(function() _G.printError = originalPrintError end)
+
+    local result, message = fn()
+    _G.printError = originalPrintError
+    return result, table.concat(collected, "\n"), message
+  end
+
+  after_each(function()
+    if not pcall(function() db:close(dbName) end) then
+      db.__conn[dbName] = nil
+    end
+    os.remove(dbFile)
+  end)
+
+  describe("a NUL byte in a value", function()
+    local mydb
+
+    before_each(function()
+      mydb = db:create(dbName, {items = {tag = "", payload = "", n = 0}})
+      db:add(mydb.items, {tag = "plain", payload = "ab"}, {tag = "other", payload = "cd"})
+    end)
+
+    local function payloads()
+      local seen = {}
+      for _, row in ipairs(db:fetch(mydb.items, nil, {mydb.items.tag})) do
+        seen[#seen + 1] = row.tag .. "=" .. row.payload
+      end
+      return table.concat(seen, ",")
+    end
+
+    it("is refused by db:add, naming the column, and the row is not added", function()
+      local added, warnings, message = collectingWarnings(function()
+        return db:add(mydb.items, {tag = "nul", payload = "a\0b"})
+      end)
+      assert.is_nil(added)
+      assert.is_truthy(string.find(message, 'can not add to items: the value for "payload" holds a NUL byte', 1, true))
+      assert.are.equal(message, warnings)
+      assert.are.equal("other=cd,plain=ab", payloads())
+    end)
+
+    it("is refused by db:add before any of the rows given with it is added", function()
+      local added, _, message = collectingWarnings(function()
+        return db:add(mydb.items, {tag = "first", payload = "ok"}, {tag = "nul", payload = "a\0b"})
+      end)
+      assert.is_nil(added)
+      assert.is_truthy(string.find(message, 'the value for "payload" holds a NUL byte', 1, true))
+      -- a later write commits whatever the refused db:add left pending
+      assert.is_true(db:add(mydb.items, {tag = "zlast", payload = "ef"}))
+      assert.are.equal("other=cd,plain=ab,zlast=ef", payloads())
+    end)
+
+    it("is refused by db:update before any row is touched", function()
+      local row = db:fetch(mydb.items, db:eq(mydb.items.tag, "plain"))[1]
+      row.payload = "c\0d"
+      local ok, err = pcall(db.update, db, mydb.items, row)
+      assert.is_false(ok)
+      assert.is_truthy(string.find(err, 'can not update items: the value for "payload" holds a NUL byte', 1, true))
+      assert.are.equal("other=cd,plain=ab", payloads())
+    end)
+
+    it("is not refused by db:update for a field of the row's that is not a column", function()
+      local row = db:fetch(mydb.items, db:eq(mydb.items.tag, "plain"))[1]
+      row.payload = "ef"
+      row.raw = "a\0b"
+      db:update(mydb.items, row)
+      assert.are.equal("other=cd,plain=ef", payloads())
+    end)
+
+    it("is refused by db:set, in the value or in the query, before any row is touched", function()
+      local ok, err = pcall(db.set, db, mydb.items.payload, "x\0y", db:eq(mydb.items.tag, "plain"))
+      assert.is_false(ok)
+      assert.is_truthy(string.find(err, 'can not set a field in items: the value for "payload" holds a NUL byte', 1, true))
+
+      ok, err = pcall(db.set, db, mydb.items.payload, "x", db:eq(mydb.items.tag, "pla\0in"))
+      assert.is_false(ok)
+      assert.is_truthy(string.find(err, "can not set a field in items: the query holds a NUL byte", 1, true))
+      assert.are.equal("other=cd,plain=ab", payloads())
+    end)
+
+    it("is refused in a db:exp() given to db:set or db:add, before any row is touched", function()
+      local ok, err = pcall(db.set, db, mydb.items.payload, db:exp("'x\0' || payload"), db:eq(mydb.items.tag, "plain"))
+      assert.is_false(ok)
+      assert.is_truthy(string.find(err, 'can not set a field in items: the value for "payload" holds a NUL byte', 1, true))
+
+      local added, _, message = collectingWarnings(function()
+        return db:add(mydb.items, {tag = "nul", payload = db:exp("'x\0y'")})
+      end)
+      assert.is_nil(added)
+      assert.is_truthy(string.find(message, 'can not add to items: the value for "payload" holds a NUL byte', 1, true))
+      assert.are.equal("other=cd,plain=ab", payloads())
+    end)
+
+    it("does not stop db:set or db:add taking a db:exp() of a number", function()
+      db:set(mydb.items.n, db:exp(7), db:eq(mydb.items.tag, "plain"))
+      assert.is_true(db:add(mydb.items, {tag = "exp", payload = "ef", n = db:exp(5)}))
+      db:set(mydb.items.payload, "gh", db:exp(1))
+      local ns = {}
+      for _, row in ipairs(db:fetch(mydb.items, nil, {mydb.items.tag})) do
+        ns[#ns + 1] = row.tag .. "=" .. row.payload .. "/" .. row.n
+      end
+      assert.are.equal("exp=gh/5,other=gh/0,plain=gh/7", table.concat(ns, ","))
+    end)
+
+    it("is not refused by db:add for a _row_id, which db:add does not write", function()
+      assert.is_true(db:add(mydb.items, {tag = "rowid", payload = "ef", _row_id = "1\0"}))
+      assert.are.equal("other=cd,plain=ab,rowid=ef", payloads())
+    end)
+
+    it("is refused by db:set and db:update before the statement is echoed", function()
+      local echoed = 0
+      local originalEchoSql = db.echo_sql
+      db.echo_sql = function() echoed = echoed + 1 end
+      finally(function() db.echo_sql = originalEchoSql end)
+
+      local row = db:fetch(mydb.items, db:eq(mydb.items.tag, "plain"))[1]
+      echoed = 0
+      row.payload = "c\0d"
+      local ok, err = pcall(db.update, db, mydb.items, row)
+      assert.is_false(ok)
+      assert.is_truthy(string.find(err, "holds a NUL byte", 1, true))
+      ok, err = pcall(db.set, db, mydb.items.payload, "x\0y", db:eq(mydb.items.tag, "plain"))
+      assert.is_false(ok)
+      assert.is_truthy(string.find(err, "holds a NUL byte", 1, true))
+      assert.are.equal(0, echoed)
+    end)
+  end)
+end)
+
 describe("Tests db:echo_sql", function()
   local saved
 

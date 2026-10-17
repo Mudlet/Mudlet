@@ -261,6 +261,33 @@ local function db_no_connection_message(action, db_name, expected)
 end
 
 
+-- sqlite reads a statement as a C string, so a NUL cuts it short. A db:exp() goes in as its
+-- _expression (db:add and a query read it through __tostring), which is a number for db:exp(0)
+local function holds_nul(value)
+  if type(value) == "table" then value = tostring(value) end
+  return type(value) == "string" and value:find("\0", 1, true) ~= nil
+end
+
+local function nul_byte_message(action, values, query)
+  local holding
+  for key, value in pairs(values) do
+    -- db:add drops a _row_id before it builds the statement
+    if key ~= "_row_id" and holds_nul(value) then
+      holding = "the value for \""..tostring(key).."\""
+      break
+    end
+  end
+  if not holding and query and holds_nul(query) then
+    holding = "the query"
+  end
+
+  if holding then
+    return "can not "..action..": "..holding.." holds a NUL byte (\\0), which sqlite can not be given "..
+      "in a statement."
+  end
+end
+
+
 local VALIDATION_OPTIONS = {
   "ABORT",
   "FAIL",
@@ -1641,6 +1668,7 @@ end
 --- @return boolean result true when the rows went in, nil when the insert failed. A
 ---   multi-row call stops at the first row the database refuses, so earlier rows of
 ---   that same call are left in the transaction uncommitted rather than rolled back.
+---   A value holding a NUL byte refuses the whole call before any of its rows is sent.
 --- @return string message Why the insert failed, absent when it did not.
 function db:add(sheet, ...)
   local db_name = sheet._db_name
@@ -1657,8 +1685,18 @@ function db:add(sheet, ...)
   end
 
   local sql_insert = "INSERT INTO %s %s VALUES %s"
+  local rows = { ... }
 
-  for _, t in ipairs({ ... }) do
+  -- every row before any is sent, or the ones ahead of the refused row would be committed later
+  for _, t in ipairs(rows) do
+    local nul_msg = nul_byte_message("add to "..s_name, t)
+    if nul_msg then
+      printError(nul_msg, true, false)
+      return nil, nul_msg
+    end
+  end
+
+  for _, t in ipairs(rows) do
     if t._row_id then
       -- You are not permitted to change a _row_id
       t._row_id = nil
@@ -2039,6 +2077,8 @@ end
 --- obtained by db:fetch. Its primary purpose is that if you do a db:fetch, then change the value of a field
 --- or tow, you can save back that table.
 ---
+--- It raises an error, and writes nothing, when a value it would write holds a NUL byte (\0).
+---
 --- @usage This obtains a database reference, and queries the friends sheet for someone named Bob. As this
 ---   returns a table array containing only one item, it assigns that one item to the local variable named bob.
 ---   We then change the notes on Bob, and pass it into db:update() to save the changes back.
@@ -2062,16 +2102,22 @@ function db:update(sheet, tbl)
 
   local set_chunks = {}
   local set_block = [["%s" = %s]]
+  local written = {}
 
   for k, v in pairs(db.__schema[db_name][s_name]['columns']) do
     if tbl[k] then
       local field = sheet[k]
       set_chunks[#set_chunks + 1] = set_block:format(k, db:_coerce(field, tbl[k]))
+      written[k] = tbl[k]
     end
   end
 
   sql_chunks[#sql_chunks + 1] = table.concat(set_chunks, ",")
   sql_chunks[#sql_chunks + 1] = "WHERE _row_id = " .. tbl._row_id
+
+  -- only the columns written: a fetched row may carry fields of the script's own
+  local nul_msg = nul_byte_message("update "..s_name, written)
+  if nul_msg then error(nul_msg, 2) end
 
   local sql = table.concat(sql_chunks, " ")
   db:echo_sql(sql)
@@ -2087,6 +2133,7 @@ end
 --- Meaning, you can change all of the last_read fields in the sheet to a certain value, or possibly only
 --- the last_read fields which are in a certain city. The query argument can be any value which is appropriate
 --- for db:fetch, even nil which will change the value for the specified column for EVERY row in the sheet.
+--- It raises an error, and writes nothing, when the value or the query holds a NUL byte (\0).
 ---
 --- For example, consider a situation in which you are tracking how many times you find a certain
 --- type of egg during Easter. You start by setting up your database and adding an Eggs sheet, and
@@ -2131,6 +2178,9 @@ function db:set(field, value, query)
 
   local conn = db.__conn[db_name]
   if not conn then error(db_no_connection_message("set a field in", db_name, A_FIELD), 2) end
+
+  local nul_msg = nul_byte_message("set a field in "..s_name, {[field.name] = value}, query)
+  if nul_msg then error(nul_msg, 2) end
 
   local sql_update = [[UPDATE %s SET "%s" = %s]]
   if query then
