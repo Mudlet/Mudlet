@@ -3842,13 +3842,145 @@ describe("Tests db:create with a single column name as _index", function()
 
   it("warns about the _row_id no sheet definition names either", function()
     -- the sheet is given one, but no definition declares it: it is not there to
-    -- index on the db:create that makes the sheet, and db:_drop_orphaned_indexes
-    -- cannot match the leading underscore, so an index on it was dropped and
-    -- made again on every db:create after that
+    -- index on the db:create that makes the sheet
     local mydb, warnings = createCollectingWarnings({people = {name = "", city = "", _index = "_row_id"}})
     assert.is_table(mydb)
     assert.is_truthy(string.find(warnings, '_index names "_row_id"', 1, true))
     assert.are.same({}, indexNames("people"))
+  end)
+end)
+
+describe("Tests db:create keeping indexes on underscored column names", function()
+  local dbName = "underscoreindextestingonly"
+  local dbFile = getMudletHomeDir() .. "/Database_" .. dbName .. ".db"
+
+  local function collectingWarnings(fn)
+    local collected = {}
+    -- through _G: a spec file's globals are its own
+    local originalPrintError = _G.printError
+    _G.printError = function(msg) collected[#collected + 1] = msg end
+    finally(function() _G.printError = originalPrintError end)
+
+    local result = fn()
+    _G.printError = originalPrintError
+    return result, table.concat(collected, "\n")
+  end
+
+  local function createCollectingWarnings(sheets)
+    return collectingWarnings(function() return db:create(dbName, sheets) end)
+  end
+
+  after_each(function()
+    if not pcall(function() db:close(dbName) end) then
+      db.__conn[dbName] = nil
+    end
+    os.remove(dbFile)
+  end)
+
+  local function indexNames(sheetName)
+    local cursor = db.__conn[dbName]:execute(
+      "SELECT name FROM sqlite_master WHERE type = 'index' AND tbl_name = '" .. sheetName .. "' AND sql IS NOT NULL"
+    )
+    local names = {}
+    local row = cursor:fetch({}, "a")
+    while row do
+      names[#names + 1] = row.name
+      row = cursor:fetch({}, "a")
+    end
+    cursor:close()
+    table.sort(names)
+    return names
+  end
+
+  -- the DROP INDEX statements a db:create runs; through pcall rather than
+  -- finally, as busted keeps only the last finally an it registers
+  local function dropsOnCreate(sheets)
+    local drops = {}
+    local originalEchoSql = db.echo_sql
+    db.echo_sql = function(_, sql)
+      if string.find(sql, "DROP INDEX", 1, true) then
+        drops[#drops + 1] = sql
+      end
+    end
+    local ok, result = pcall(db.create, db, dbName, sheets)
+    db.echo_sql = originalEchoSql
+    assert(ok, result)
+    assert.is_table(result)
+    return drops
+  end
+
+  local function createWithoutWarnings(sheets)
+    local mydb, warnings = createCollectingWarnings(sheets)
+    assert.is_table(mydb)
+    assert.are.equal("", warnings)
+  end
+
+  it("leaves an index on a column with an underscore in its name alone on the next create", function()
+    local sheets = {people = {home_city = "", name = "", _index = {"home_city", {"name", "home_city"}}}}
+    local expected = {"idx_people_c_home_city", "idx_people_c_name_home_city"}
+    createWithoutWarnings(sheets)
+    assert.are.same(expected, indexNames("people"))
+
+    assert.are.same({}, dropsOnCreate(sheets))
+    assert.are.same(expected, indexNames("people"))
+  end)
+
+  it("drops an index on an underscored column once the sheet no longer asks for it", function()
+    createWithoutWarnings({people = {home_city = "", name = "", _index = {"name", {"name", "home_city"}}}})
+
+    assert.are.same({"DROP INDEX IF EXISTS idx_people_c_name_home_city;"},
+      dropsOnCreate({people = {home_city = "", name = "", _index = {"name"}}}))
+    assert.are.same({"idx_people_c_name"}, indexNames("people"))
+  end)
+
+  it("keeps and drops an index on a column named with letters outside ASCII the same way", function()
+    local sheets = {people = {["città"] = "", other = "", _index = {"città"}}}
+    createWithoutWarnings(sheets)
+    assert.are.same({}, dropsOnCreate(sheets))
+
+    assert.are.same({"DROP INDEX IF EXISTS idx_people_c_città;"},
+      dropsOnCreate({people = {["città"] = "", other = "", _index = {"other"}}}))
+    assert.are.same({"idx_people_c_other"}, indexNames("people"))
+  end)
+
+  it("leaves a compound index whose second column is named desc alone on the next create", function()
+    -- db:_sql_columns renders {"name", "desc"} as "name" desc, a sort direction
+    local sheets = {people = {name = "", desc = "", _index = {{"name", "desc"}}}}
+    createWithoutWarnings(sheets)
+    assert.are.same({"idx_people_c_name_desc"}, indexNames("people"))
+
+    assert.are.same({}, dropsOnCreate(sheets))
+  end)
+
+  it("drops an index once the sheet asks for its column sorted the other way", function()
+    local ascending = {people = {name = "", desc = "", _index = {"name"}}}
+    local descending = {people = {name = "", desc = "", _index = {{"name", "desc"}}}}
+    createWithoutWarnings(ascending)
+
+    assert.are.same({"DROP INDEX IF EXISTS idx_people_c_name;"}, dropsOnCreate(descending))
+    assert.are.same({"idx_people_c_name_desc"}, indexNames("people"))
+
+    assert.are.same({"DROP INDEX IF EXISTS idx_people_c_name_desc;"}, dropsOnCreate(ascending))
+    assert.are.same({"idx_people_c_name"}, indexNames("people"))
+  end)
+
+  it("drops an index on a sheet named with letters outside ASCII once the sheet no longer asks for it", function()
+    createWithoutWarnings({["città"] = {a = "", b = "", _index = {"a"}}})
+
+    assert.are.same({"DROP INDEX IF EXISTS idx_città_c_a;"},
+      dropsOnCreate({["città"] = {a = "", b = "", _index = {"b"}}}))
+    assert.are.same({"idx_città_c_b"}, indexNames("città"))
+  end)
+
+  it("drops an orphaned idx index whether or not its CREATE statement quotes the sheet name", function()
+    local sheets = {people = {name = "", level = 0, _index = {"name"}}}
+    createWithoutWarnings(sheets)
+    db.__conn[dbName]:execute('CREATE INDEX idx_quoted ON "people" ("level")')
+    db.__conn[dbName]:execute('CREATE INDEX idx_unquoted ON people ("level")')
+
+    assert.are.same({"DROP INDEX IF EXISTS idx_quoted;", "DROP INDEX IF EXISTS idx_unquoted;"},
+      dropsOnCreate(sheets))
+    assert.are.same({"idx_people_c_name"}, indexNames("people"))
   end)
 end)
 
