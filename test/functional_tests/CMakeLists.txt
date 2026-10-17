@@ -231,6 +231,7 @@ set(MAP_GROUP_TEST_SOURCES
     MapViewCueTest.cpp
     LuaMapperCueTest.cpp
     MapLockNoOpTest.cpp
+    MapRevisionTest.cpp
     RoomPropertiesDialogTest.cpp
     MapperButtonConfigTest.cpp
     MapperPanelTest.cpp
