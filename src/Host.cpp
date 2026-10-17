@@ -64,6 +64,7 @@
 
 #include <chrono>
 #include <cstring>
+#include <limits>
 #include <QtConcurrentRun>
 #include <QCoreApplication>
 #include <QDataStream>
@@ -4602,19 +4603,50 @@ std::tuple<QString, bool> Host::getCmdLineSettings(const enums::CommandLineType 
         return {fileName, saveCommands};
     }
 
-    // Else the name is not in the settings so we will have to create one:
-    // Get the highest number used so far:
-    bool isOk = false;
-    auto usedIndex = readProfileIniData(qsl("CommandLines/UsedIndexes")).toInt(&isOk);
-    if (!isOk || !usedIndex) {
-        // The value was not found / is null - so force it to be the right one
-        // to start with, remembering that it will be incremented before use:
-        usedIndex = 0;
+    // Else the name is not in the settings so we will have to create one, from an index that
+    // neither another command line nor a history file left in the profile already has:
+    QSet<int> mappedIndexes;
+    int highestMappedIndex = 0;
+    QSettings& settings = profileIni();
+    settings.beginGroup(qsl("CommandLines/NameMapping"));
+    for (const auto& key : settings.childKeys()) {
+        const QString mappedFile = settings.value(key).toString();
+        if (!mappedFile.startsWith(qsl("command_history_"))) {
+            continue;
+        }
+        bool parsed = false;
+        const int mappedIndex = mappedFile.mid(qsl("command_history_").size()).toInt(&parsed);
+        if (parsed && mappedIndex > 0) {
+            mappedIndexes.insert(mappedIndex);
+            highestMappedIndex = std::max(highestMappedIndex, mappedIndex);
+        }
     }
-    // Increment it and save the new value
-    writeProfileIniData(qsl("CommandLines/UsedIndexes"), QString::number(++usedIndex));
+    settings.endGroup();
+    // The last index handed out, which after a wrap is not the highest one in use:
+    bool isOk = false;
+    const QString storedIndex = readProfileIniData(qsl("CommandLines/UsedIndexes"));
+    auto usedIndex = storedIndex.toInt(&isOk);
+    // A counter that is gone while command lines it numbered remain has been lost, not never written
+    const bool damagedIndex = storedIndex.isEmpty() ? !mappedIndexes.isEmpty() : (!isOk || usedIndex <= 0);
+    if (!isOk || usedIndex <= 0 || usedIndex == std::numeric_limits<int>::max()) {
+        // Missing, damaged or unable to be incremented, so carry on from the highest index a
+        // command line in profile.ini has:
+        usedIndex = highestMappedIndex;
+    }
+    const auto historyFileFor = [this](const int index) {
+        return MudletApp::getMudletPath(enums::profileDataItemPath, getName(), qsl("command_history_%1").arg(index, 2, 10, QLatin1Char('0')));
+    };
+    // Past the largest index carry on from the start, where some indexes may still be taken
+    do {
+        usedIndex = usedIndex < std::numeric_limits<int>::max() ? usedIndex + 1 : 1;
+    } while (mappedIndexes.contains(usedIndex) || QFile::exists(historyFileFor(usedIndex)));
+    writeProfileIniData(qsl("CommandLines/UsedIndexes"), QString::number(usedIndex));
     // Generate the name
     fileName = qsl("command_history_%1").arg(usedIndex, 2, 10, QLatin1Char('0'));
+    if (damagedIndex) {
+        qWarning().nospace().noquote() << "Host::getCmdLineSettings() WARNING - the command line index \"" << storedIndex << "\" of profile \"" << getName()
+                                       << "\" cannot be used, the new command line gets \"" << fileName << "\" instead.";
+    }
     // Save it:
     writeProfileIniData(qsl("CommandLines/NameMapping/%1").arg(localName), fileName);
     // And a default setting:
