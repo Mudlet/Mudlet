@@ -778,7 +778,10 @@ void XMLimport::readHost(Host* pHost)
 
     setBoolAttributeWithDefault(qsl("announceIncomingText"), pHost->mAnnounceIncomingText, true);
     setBoolAttributeWithDefault(qsl("advertiseScreenReader"), pHost->mAdvertiseScreenReader, false);
-    setBoolAttributeWithDefault(qsl("accessibleLabels"), pHost->mAccessibleLabels, false);
+    // Through the setter: a package carrying a host section is read into a profile whose labels already exist
+    bool accessibleLabels = false;
+    setBoolAttributeWithDefault(qsl("accessibleLabels"), accessibleLabels, false);
+    pHost->setAccessibleLabels(accessibleLabels);
     setBoolAttributeWithDefault(qsl("enableOSC8Hyperlinks"), pHost->mEnableOSC8Hyperlinks, true);
     setBoolAttributeWithDefault(qsl("enableClosedCaption"), pHost->mEnableClosedCaption, false);
     setBoolAttributeWithDefault(qsl("mEnableMTTS"), pHost->mEnableMTTS, true);
