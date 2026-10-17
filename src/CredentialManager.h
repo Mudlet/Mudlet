@@ -69,6 +69,8 @@ class CredentialManager : public QObject
     friend class TelnetLatePasswordTest;
     // Reads the storage preference with no main window
     friend class HeadlessHostSmokeTest;
+    // Answers the keychain for the managers a profile with no main window makes itself
+    friend class HeadlessSessionTest;
 
 public:
     explicit CredentialManager(QObject* parent = nullptr);
@@ -286,6 +288,8 @@ private:
     // Returning false leaves the job unstarted for the hook to answer. A job that has reached the store
     // can't be cancelled and the store keeps a pointer to it, so only the store may answer that one.
     std::function<bool(QKeychain::Job*)> mJobStartHook;
+    // Test-only: the hook every manager made from then on starts with, for one the code under test makes itself
+    static std::function<bool(QKeychain::Job*)>& jobStartHookForTesting();
 
     // Destruction flag to prevent operations during cleanup
     bool mShuttingDown = false;

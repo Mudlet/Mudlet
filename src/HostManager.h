@@ -26,6 +26,7 @@
 
 #include <QMap>
 #include <QString>
+#include <QStringList>
 #include <QSharedPointer>
 
 #include <chrono>
@@ -76,14 +77,17 @@ public:
 
     Host* getHost(const QString& hostname);
     bool addHost(const QString& name, const QString& port, const QString& login, const QString& pass);
-    // Loads and starts a saved profile with no window: what the GUI's load gives, less the default
-    // packages a new profile gets. Null when that profile is already open, or the pool is going.
-    // beforeLoad is handed the profile before its save loads, so a frontend can watch it from the first line.
-    Host* openProfile(const QString& name, bool connect, const std::function<void(Host*)>& beforeLoad = nullptr);
+    // Loads and starts a profile with no window, as the GUI's load does, a new profile getting its game's
+    // default packages. Null when that profile is already open, or the pool is going.
+    // beforeLoad is handed the profile before its save loads, so a frontend can watch it from the first line;
+    // afterLoad once its save has loaded and before its scripts start, where the connection dialog puts what
+    // is typed into it over what the load set.
+    Host* openProfile(const QString& name, bool connect, const std::function<void(Host*)>& beforeLoad = nullptr, const std::function<void(Host*)>& afterLoad = nullptr);
     // Handed every profile openProfile() opens, a script's loadProfile() ones too, before beforeLoad. A call
     // replaces the hook set before. The pool may outlive whoever set it, so the hook must capture no raw
     // pointer to its setter.
     void setProfileOpenedHook(std::function<void(Host*)> hook) { mProfileOpenedHook = std::move(hook); }
+    static QStringList defaultPackages(const QString& gameUrl, const QString& profileName, bool serverGuiAccepted);
     // A profile tab's close button, with no window: sysExitEvent and the save now, out of the pool once
     // no script of its own is running. False if no such profile is open.
     bool requestProfileClose(const QString& name);

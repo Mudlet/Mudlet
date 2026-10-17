@@ -3360,7 +3360,7 @@ static void removeTheStagingFoldersInstallsLeftBehind(Host& host)
     }
 }
 
-std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::PackageModuleType thing, bool quiet)
+std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::PackageModuleType thing, bool quiet, QStringList* problems)
 {
     // Wait for profile save to complete before installing package
     // to prevent Lua state corruption during concurrent operations
@@ -3568,7 +3568,7 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         }
     } else {
         if (mInstalledPackages.contains(packageName)) {
-            return fail(qsl("package %1 is already installed").arg(packageName));
+            return fail(packageAlreadyInstalledReason(packageName));
         }
         if (!mIsProfileLoadingSequence && aModuleIsUsingTheName(packageName)) {
             //: %1 is the name of the module that is already installed
@@ -3688,8 +3688,12 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
                 // Carry on - the contents still work - but it lands under its file name with no author, version
                 // or description, so name-based uninstall, repository updates and dependants stop matching it.
                 qWarning() << "Host::installPackage() could not read the manifest of" << fileName << ":" << whyTheManifestWasNotRead;
-                // Said even to a quiet caller, as the install succeeds and no return value carries it. Not for a
-                // module sync, which reinstalls on every save and reloadModule() and would repeat it forever.
+                // Said even to a quiet caller, as the install succeeds and the return value does not carry it. Not
+                // for a module sync, which reinstalls on every save and reloadModule() and would repeat it forever.
+                if (problems) {
+                    //: Part of an error saying what of an installed package does not work; %1 is the error its config.lua gave
+                    problems->append(tr("its config.lua could not be read, so it was installed under its file's name: %1").arg(whyTheManifestWasNotRead));
+                }
                 if (thing != enums::PackageModuleType::ModuleSync) {
                     //: %1 is the name the package is being installed under, %2 is the error its config.lua gave
                     postMessage(tr("[ WARN ]  - The config.lua of \"%1\" could not be read, so it is being installed under that name with no details: %2").arg(packageName, whyTheManifestWasNotRead));
@@ -3736,7 +3740,7 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         } else {
             if (mInstalledPackages.contains(packageName)) {
                 // cleanup and quit if already installed
-                return refuseTheRenamedInstall(qsl("package %1 is already installed").arg(packageName));
+                return refuseTheRenamedInstall(packageAlreadyInstalledReason(packageName));
             }
             if (!mIsProfileLoadingSequence && aModuleIsUsingTheName(packageName)) {
                 //: %1 is the name of the module that is already installed
@@ -3830,6 +3834,10 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
                 if (success) {
                     mModulesLoadedOk.insert(packageName);
                 } else {
+                    if (problems) {
+                        //: Part of an error saying what of an installed package or module does not work; %1 is why a file of it could not be read through
+                        problems->append(tr("not all of it could be read: %1").arg(errorMsg));
+                    }
                     qWarning() << "Host::installPackage() WARNING - failed to load module" << packageName << ":" << errorMsg;
                     postMessage(tr("[ WARN ]  - Failed to load module \"%1\": %2").arg(packageName, errorMsg));
                 }
@@ -3853,6 +3861,10 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         }
         // What was read out of its files is already running, so the package stays installed
         for (const QString& errorMsg : std::as_const(packageFileErrors)) {
+            if (problems) {
+                //: Part of an error saying what of an installed package or module does not work; %1 is why a file of it could not be read through
+                problems->append(tr("not all of it could be read: %1").arg(errorMsg));
+            }
             qWarning() << "Host::installPackage() WARNING - failed to load package" << packageName << ":" << errorMsg;
             //: %1 is the package name, %2 is the reason its contents could not be read
             postMessage(tr("[ WARN ]  - Failed to load package \"%1\": %2").arg(packageName, errorMsg));
@@ -3903,6 +3915,10 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
             if (success) {
                 mModulesLoadedOk.insert(packageName);
             } else {
+                if (problems) {
+                    //: Part of an error saying what of an installed package or module does not work; %1 is why a file of it could not be read through
+                    problems->append(tr("not all of it could be read: %1").arg(errorMsg));
+                }
                 qWarning() << "Host::installPackage() WARNING - failed to load module" << packageName << ":" << errorMsg;
                 postMessage(tr("[ WARN ]  - Failed to load module \"%1\": %2").arg(packageName, errorMsg));
             }
@@ -3911,6 +3927,10 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
             takeBackAPackageNothingWasReadFrom(packageName);
             return fail(nothingCouldBeReadReason(packageName, errorMsg));
         } else if (!success) {
+            if (problems) {
+                //: Part of an error saying what of an installed package or module does not work; %1 is why a file of it could not be read through
+                problems->append(tr("not all of it could be read: %1").arg(errorMsg));
+            }
             qWarning() << "Host::installPackage() WARNING - failed to load package" << packageName << ":" << errorMsg;
             //: %1 is the package name, %2 is the reason its contents could not be read
             postMessage(tr("[ WARN ]  - Failed to load package \"%1\": %2").arg(packageName, errorMsg));
@@ -5585,7 +5605,11 @@ void Host::securedPasswordAnswered(bool success, const QString& password, const 
     mSecuredPasswordPending = !success && timedOut;
 
     if (success && !password.isEmpty()) {
-        setPass(password);
+        // A later answer replaces an earlier one, as the keychain's does the encrypted file's at a deadline,
+        // but not one given for the run
+        if (!mPassGiven) {
+            setPass(password);
+        }
         // The auto-login is timer based, so a password this slow (the user answering the
         // keychain prompt after the game had reached its password prompt) has already missed
         // its turn. The telnet side knows whether the game is still waiting for it:
