@@ -11321,6 +11321,10 @@ void dlgTriggerEditor::slot_showActions()
 
 void dlgTriggerEditor::slot_saveEdits()
 {
+    // The item behind a merged folder was saved when the folder was chosen, and its errors must stay hidden
+    if (!mFolderGroupKey.isEmpty()) {
+        return;
+    }
     switch (resolveCurrentView()) {
     case EditorViewType::cmTriggerView:
         saveTrigger();
@@ -16552,23 +16556,47 @@ QString dlgTriggerEditor::folderTreeTypeName(const EditorViewType view, const bo
 {
     switch (view) {
     case EditorViewType::cmTriggerView:
-        //: Item type shown beside an entry in the editor's Folders view, and on its buttons for a merged folder
-        return plural ? tr("Triggers") : tr("Trigger");
+        if (plural) {
+            //: Item types listed beside a folder in the editor's Folders view, such as "Triggers, Aliases"
+            return tr("Triggers");
+        }
+        //: Item type shown beside an entry in the editor's Folders view
+        return tr("Trigger");
     case EditorViewType::cmAliasView:
-        //: Item type shown beside an entry in the editor's Folders view, and on its buttons for a merged folder
-        return plural ? tr("Aliases") : tr("Alias");
+        if (plural) {
+            //: Item types listed beside a folder in the editor's Folders view, such as "Triggers, Aliases"
+            return tr("Aliases");
+        }
+        //: Item type shown beside an entry in the editor's Folders view
+        return tr("Alias");
     case EditorViewType::cmScriptView:
-        //: Item type shown beside an entry in the editor's Folders view, and on its buttons for a merged folder
-        return plural ? tr("Scripts") : tr("Script");
+        if (plural) {
+            //: Item types listed beside a folder in the editor's Folders view, such as "Triggers, Aliases"
+            return tr("Scripts");
+        }
+        //: Item type shown beside an entry in the editor's Folders view
+        return tr("Script");
     case EditorViewType::cmTimerView:
-        //: Item type shown beside an entry in the editor's Folders view, and on its buttons for a merged folder
-        return plural ? tr("Timers") : tr("Timer");
+        if (plural) {
+            //: Item types listed beside a folder in the editor's Folders view, such as "Triggers, Aliases"
+            return tr("Timers");
+        }
+        //: Item type shown beside an entry in the editor's Folders view
+        return tr("Timer");
     case EditorViewType::cmKeysView:
-        //: Item type shown beside an entry in the editor's Folders view, and on its buttons for a merged folder
-        return plural ? tr("Keys") : tr("Key");
+        if (plural) {
+            //: Item types listed beside a folder in the editor's Folders view, such as "Triggers, Aliases"
+            return tr("Keys");
+        }
+        //: Item type shown beside an entry in the editor's Folders view
+        return tr("Key");
     case EditorViewType::cmActionView:
-        //: Item type shown beside an entry in the editor's Folders view, and on its buttons for a merged folder
-        return plural ? tr("Buttons") : tr("Button");
+        if (plural) {
+            //: Item types listed beside a folder in the editor's Folders view, such as "Triggers, Aliases"
+            return tr("Buttons");
+        }
+        //: Item type shown beside an entry in the editor's Folders view
+        return tr("Button");
     case EditorViewType::cmVarsView:
     case EditorViewType::cmUnknownView:
         break;
@@ -16765,6 +16793,12 @@ void dlgTriggerEditor::showView(const EditorViewType view)
 void dlgTriggerEditor::selectFolderTreeNode(QTreeWidgetItem* pNode)
 {
     if (!pNode || pNode == mpFolderTree->currentItem()) {
+        return;
+    }
+    // A merged folder current under one folder's form could not be chosen to show no form
+    if (mFolderGroupKey.isEmpty() && pNode->data(0, FolderPartsRole).toStringList().size() > 1) {
+        const QSignalBlocker blocker(mpFolderTree);
+        mpFolderTree->setCurrentItem(nullptr);
         return;
     }
     {

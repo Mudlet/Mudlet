@@ -399,10 +399,13 @@ private slots:
         QVERIFY(!mpEditor->mDeleteItem->isEnabled());
         QVERIFY(!mpEditor->mSaveItem->isEnabled());
         QVERIFY(!mpEditor->mpAction_toggleActive->isEnabled());
+        QVERIFY(!mpEditor->mpExportAction->isEnabled());
         QVERIFY2(!pCopy->isEnabled(), "Copy would take the hidden item behind a merged folder");
 
         mpEditor->mpFolderTree->setCurrentItem(pHit);
         QVERIFY(mpEditor->mDeleteItem->isEnabled());
+        QVERIFY(mpEditor->mSaveItem->isEnabled());
+        QVERIFY(mpEditor->mpExportAction->isEnabled());
         QVERIFY(pCopy->isEnabled());
     }
 
@@ -774,8 +777,8 @@ private slots:
         mpEditor->slot_previousSection();
         QTest::qWait(20ms);
         QVERIFY2(!inHiddenForm(), "Ctrl+Shift+Tab put the keyboard into the script the merged folder hides");
-        mpEditor->mpFolderTree->setFocus();
-        QTRY_VERIFY(mpEditor->mpFolderTree->hasFocus());
+        mpEditor->comboBox_searchTerms->setFocus();
+        QTRY_VERIFY(mpEditor->comboBox_searchTerms->hasFocus());
         mpEditor->slot_nextSection();
         QTest::qWait(20ms);
         QVERIFY2(!inHiddenForm(), "Ctrl+Tab put the keyboard into the form the merged folder hides");
@@ -813,6 +816,54 @@ private slots:
         pRestore->trigger();
         QTRY_VERIFY(mpEditor->toolBar2->isVisible());
         QVERIFY2(offered, "with the Items toolbar hidden the Folders view has no way back to it");
+    }
+
+    void test_aMergedFolderIsNotHighlightedOverOneFoldersForm()
+    {
+        mpEditor->leaveFolderView();
+        mpEditor->slot_showTriggers();
+        const QList<QTreeWidgetItem*> combat = mpEditor->treeWidget_triggers->findItems(qsl("qaCombat"), Qt::MatchExactly | Qt::MatchRecursive);
+        QCOMPARE(combat.size(), 1);
+        mpEditor->treeWidget_triggers->setCurrentItem(combat.constFirst());
+        mpEditor->slot_showFolders();
+        QVERIFY(!mpEditor->mpTriggersMainArea->isHidden());
+        const bool mergedHighlighted = mpEditor->mpFolderTree->currentItem() == topLevelNamed(qsl("qaCombat"));
+        mpEditor->mpFolderTree->setCurrentItem(topLevelNamed(qsl("qaCombat")));
+        QVERIFY2(!mergedHighlighted, "a merged folder was highlighted over one folder's form, so choosing it did nothing");
+        QVERIFY(noFormShown());
+    }
+
+    void test_saveProfileOnAMergedFolderLeavesTheHiddenItemAlone()
+    {
+        mpEditor->slot_showFolders();
+        QTreeWidgetItem* pBad = childNamed(topLevelNamed(qsl("qaErr")), qsl("qaBad"));
+        QVERIFY(pBad);
+        mpEditor->mpFolderTree->setCurrentItem(pBad);
+        mpEditor->mpSourceEditorEdbee->textDocument()->setText(qsl("qaBad = ("));
+        mpEditor->mpFolderTree->setCurrentItem(topLevelNamed(qsl("qaErr")));
+        QVERIFY(mpEditor->mpSystemMessageArea->isHidden());
+        mpEditor->slot_profileSaveAction();
+        const bool bannerShown = !mpEditor->mpSystemMessageArea->isHidden();
+        mpEditor->mpFolderTree->setCurrentItem(childNamed(topLevelNamed(qsl("qaErr")), qsl("qaBad")));
+        mpEditor->mpSourceEditorEdbee->textDocument()->setText(QString());
+        mpEditor->saveOpenChanges();
+        QVERIFY2(!bannerShown, "Save Profile brought back the error of a trigger the merged folder hides");
+    }
+
+    void test_redoOnAMergedFolderLeavesTheHiddenScriptAlone()
+    {
+        mpEditor->slot_showFolders();
+        QTreeWidgetItem* pHit = childNamed(topLevelNamed(qsl("qaCombat")), qsl("qaHit"));
+        QVERIFY(pHit);
+        mpEditor->mpFolderTree->setCurrentItem(pHit);
+        mpEditor->mpSourceEditorEdbee->controller()->replaceSelection(qsl("-- typed "));
+        mpEditor->slot_smartUndo();
+        QVERIFY(mpEditor->mpTextUndoStack->canRedo());
+        mpEditor->mpFolderTree->setCurrentItem(topLevelNamed(qsl("qaCombat")));
+        QVERIFY(!mpEditor->mFolderGroupKey.isEmpty());
+        const QString before = mpEditor->mpSourceEditorEdbee->textDocument()->text();
+        mpEditor->slot_smartRedo();
+        QVERIFY2(mpEditor->mpSourceEditorEdbee->textDocument()->text() == before, "redo changed the script of a trigger the merged folder hides");
     }
 
     void test_turningTheSettingOffLeavesTheFoldersView()
