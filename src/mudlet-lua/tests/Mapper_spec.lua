@@ -5691,6 +5691,66 @@ describe("Tests saveJsonMap and loadJsonMap", function()
       pending("importing a blank-named area leaks it")
     end)
 
+    local function readMapErrorLog()
+      local file = io.open(getMudletHomeDir() .. "/log/errors.txt", "r")
+      if not file then
+        return ""
+      end
+      local text = file:read("*a")
+      file:close()
+      return text
+    end
+
+    -- unless on-screen map reporting is on, the console only names the report
+    -- the details went to, so they are read from the report itself
+    local function reimportReporting(plantFault)
+      local logSize = #readMapErrorLog()
+      local consoleLine = getLastLineNumber("main")
+      reimportWith(plantFault)
+      local console = table.concat(getLines("main", consoleLine, getLastLineNumber("main") + 1), ""):gsub("%s", "")
+      local title = ('"Importing JSON map "%s" at'):format(jsonPath):gsub("%s", "")
+      assert.is_truthy(console:find(title, 1, true), "the console does not point at the import's report: " .. console)
+      local report = readMapErrorLog():sub(logSize + 1)
+      assert.is_truthy(report:find(('Importing JSON map "%s" at'):format(jsonPath), 1, true), report)
+      return report
+    end
+
+    it("reports a room whose id another room in the file already has", function()
+      buildMap()
+      local firstArea = getRoomArea(roomA)
+      local secondArea = addAreaName("MapperSpecJsonAuditSecondArea")
+      setRoomArea(roomB, secondArea)
+      setRoomName(roomA, "MapperSpecJsonFirstOfTwo")
+      setRoomName(roomB, "MapperSpecJsonSecondOfTwo")
+      local report = reimportReporting(function(document)
+        table.sort(document.areas, function(a, b) return a.id == firstArea and b.id ~= firstArea end)
+        findRoom(document, roomB).id = roomA
+      end)
+
+      assert.are.equal(1, table.size(getRooms()))
+      assert.are.same({}, searchRoom("MapperSpecJsonSecondOfTwo"))
+      assert.are.equal("MapperSpecJsonFirstOfTwo", getRoomName(roomA))
+      assert.are.equal(firstArea, getRoomArea(roomA))
+      local expected = ("more than one room with id %d, so the one in area %d has been left out"):format(roomA, secondArea)
+      assert.is_truthy(report:find(expected, 1, true), report)
+    end)
+
+    it("reports a room left out for having no valid id without naming one", function()
+      buildMap()
+      local area = getRoomArea(roomA)
+      setRoomName(roomA, "MapperSpecJsonFirstWithoutId")
+      local report = reimportReporting(function(document)
+        local first, second = findRoom(document, roomA), findRoom(document, roomB)
+        first.id = nil
+        second.id = tostring(second.id)
+      end)
+
+      assert.are.equal(1, table.size(getRooms()))
+      assert.are.equal(1, table.size(searchRoom("MapperSpecJsonFirstWithoutId")))
+      assert.is_truthy(report:find(("more than one room without a valid id, so one in area %d has been left out"):format(area), 1, true), report)
+      assert.is_falsy(report:find("with id 0", 1, true), report)
+    end)
+
     it("drops a special exit whose target id is below one before the audit sees it", function()
       buildMap()
       reimportWith(function(document)

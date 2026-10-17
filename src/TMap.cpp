@@ -3619,6 +3619,22 @@ std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
     return {file.error() == QFileDevice::NoError, ((file.error() == QFileDevice::NoError) ? QString() : qsl("could not export file, reason: %1").arg(file.errorString()))};
 }
 
+// readJsonMapFile() is also how restore() loads a JSON file, whose caller files
+// the report; an import on its own has to audit the map and file one itself
+std::pair<bool, QString> TMap::importJsonMapFile(const QString& source)
+{
+    //: Title of a report in the map error log file, holding anything left over from before a JSON map import.
+    pushErrorMessagesToFile(tr("Pre-Map JSON importing report"), true);
+    const QDateTime now(QDateTime::currentDateTime());
+    auto result = readJsonMapFile(source);
+    if (result.first) {
+        audit();
+    }
+    //: Title of a report in the map error log file. %1 is the JSON map file, %2 the date and time the import started.
+    pushErrorMessagesToFile(tr(R"(Importing JSON map "%1" at %2 report)").arg(source, now.toString(Qt::ISODate)), true);
+    return result;
+}
+
 // The translatable messages are used within this file and do not need to
 // mention the file concerned whereas the untranslated messages are used by the
 // Lua sub-system and do need to report the file:
@@ -3779,9 +3795,11 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
 
     auto pNewRoomDB = std::make_unique<TRoomDB>(this);
     bool abort = false;
+    // Held back until the new map replaces the old one, as an aborted import drops nothing:
+    QStringList droppedRoomWarnings;
     for (int i = 0, total = mapObj.value(QLatin1String("areas")).toArray().count(); i < total; ++i) {
         std::unique_ptr<TArea> pArea = std::make_unique<TArea>(this, pNewRoomDB.get());
-        auto [id, name] = pArea->readJsonArea(mapObj.value(QLatin1String("areas")).toArray(), i);
+        auto [id, name] = pArea->readJsonArea(mapObj.value(QLatin1String("areas")).toArray(), i, droppedRoomWarnings);
         ++mProgressDialogAreasCount;
         if (incrementJsonProgressDialog(false, true, 0)) {
             abort = true;
@@ -3820,6 +3838,12 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
 
     // This is it - the point at which the new map gets activated:
     mpRoomDB = std::move(pNewRoomDB);
+    for (const auto& warning : std::as_const(droppedRoomWarnings)) {
+        appendErrorMsgWithNoLf(warning, true);
+        if (smShowMapAuditErrors) {
+            postMessage(warning);
+        }
+    }
     // The routing graph holds pointers to the rooms just destroyed, and the bulk
     // deletion skipped the per-room cleanup that would otherwise have flagged it:
     roomidToIndex.clear();

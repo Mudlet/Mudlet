@@ -37,6 +37,9 @@
  */
 
 #include <QFileInfo>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <QtTest/QtTest>
 
 #include <QSignalSpy>
@@ -302,6 +305,59 @@ private slots:
         QVERIFY2(read, qPrintable(readMsg));
         QCOMPARE(importCloseSpy.count(), 1);
         QVERIFY(!pTargetMap->hasActiveTransferProgress());
+    }
+    // A room dropped for a duplicate id is only news once the import replaces
+    // the map: an aborted one keeps the old map, so nothing may be reported.
+    void test_cancelledJsonImportReportsNoDroppedRoom()
+    {
+        TMap* pSourceMap = mpSource->mpMap.data();
+        const QString file = qsl("%1/cancel-duplicate.json").arg(mSaveDir.path());
+        QSignalSpy exportStartSpy(pSourceMap, &TMap::signal_mapJsonProgressStart);
+        QSignalSpy exportCloseSpy(pSourceMap, &TMap::signal_mapProgressClose);
+        const auto [wrote, writeMsg] = pSourceMap->writeJsonMapFile(file);
+        QVERIFY2(wrote, qPrintable(writeMsg));
+
+        QFile jsonFile(file);
+        QVERIFY(jsonFile.open(QIODevice::ReadOnly));
+        QJsonObject mapObj = QJsonDocument::fromJson(jsonFile.readAll()).object();
+        jsonFile.close();
+        QJsonArray areas = mapObj.value(qsl("areas")).toArray();
+        qsizetype areaIndex = 0;
+        while (areaIndex < areas.size() && areas.at(areaIndex).toObject().value(qsl("rooms")).toArray().size() < 2) {
+            ++areaIndex;
+        }
+        QVERIFY(areaIndex < areas.size());
+        QJsonObject firstArea = areas.at(areaIndex).toObject();
+        QJsonArray rooms = firstArea.value(qsl("rooms")).toArray();
+        QJsonObject secondRoom = rooms.at(1).toObject();
+        secondRoom.insert(qsl("id"), rooms.at(0).toObject().value(qsl("id")));
+        rooms.replace(1, secondRoom);
+        firstArea.insert(qsl("rooms"), rooms);
+        // The abort comes at the end of the first area read, so that has to be this one:
+        areas.removeAt(areaIndex);
+        areas.prepend(firstArea);
+        mapObj.insert(qsl("areas"), areas);
+        QVERIFY(jsonFile.open(QIODevice::WriteOnly | QIODevice::Truncate));
+        jsonFile.write(QJsonDocument(mapObj).toJson());
+        jsonFile.close();
+
+        TMap* pTargetMap = mpTarget->mpMap.data();
+        QSignalSpy importCloseSpy(pTargetMap, &TMap::signal_mapProgressClose);
+        const QMetaObject::Connection cancelOnStart = connect(pTargetMap, &TMap::signal_mapJsonProgressStart, pTargetMap, [pTargetMap]() {
+            pTargetMap->slot_mapProgressDialogCancelled();
+        });
+        const auto [read, readMsg] = pTargetMap->readJsonMapFile(file);
+        disconnect(cancelOnStart);
+        QVERIFY(!read);
+        QCOMPARE(readMsg, qsl("aborted by user"));
+
+        const QString reportTitle = qsl("MapProgressSeam later report");
+        pTargetMap->pushErrorMessagesToFile(reportTitle, false);
+        QFile log(MudletApp::getMudletPath(enums::profileLogErrorsFilePath, mTargetName));
+        QVERIFY(log.open(QIODevice::ReadOnly | QIODevice::Text));
+        const QString logText = QString::fromUtf8(log.readAll());
+        const QString laterReport = logText.mid(logText.lastIndexOf(reportTitle));
+        QVERIFY2(!laterReport.contains(qsl("more than one room")), qPrintable(laterReport));
     }
 };
 
