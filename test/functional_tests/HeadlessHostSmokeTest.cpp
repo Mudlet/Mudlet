@@ -7342,9 +7342,9 @@ headlessDiscord = ok and 'ok' or tostring(err)
             spPool->deleteHost(QString::fromUtf8(lua_tostring(L, 1)));
             return 0;
         });
-        // saveJsonMap() pumps events while it writes
+        // saveJsonMap() pumps events while it writes, and needs a mapper to count the map as open, as in the GUI
         const QString mapPath = mConfigDir.filePath(qsl("headless-exit-pump.json"));
-        QVERIFY(pumping->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(function onHeadlessExitPump() dropProfile([[%1]]) saveJsonMap([[%2]]) end)lua").arg(connectedHostname, mapPath)));
+        QVERIFY(pumping->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(assert(openMapWidget()) function onHeadlessExitPump() dropProfile([[%1]]) saveJsonMap([[%2]]) end)lua").arg(connectedHostname, mapPath)));
         pumping->registerAnonymousEventHandler(qsl("sysExitEvent"), qsl("onHeadlessExitPump"));
 
         connected->mTelnet.connectIt(qsl("127.0.0.1"), server.serverPort());
@@ -8520,7 +8520,7 @@ headlessMapLoad = ok and 'ok' or tostring(err)
         QVERIFY2(QApplication::topLevelWidgets().isEmpty(), "Loading a map created a widget.");
         HostManager::self()->deleteHost(hostname);
     }
-    // As the GUI answers once loadMap has made its mapper; with no main window the model is the open map
+    // As the GUI answers before and after loadMap makes its mapper
     void test_playerRoomAndJsonMapWithNoMainWindow()
     {
         QVERIFY2(!TAppFrontend::hasView(), "A main window exists, so this run is not headless.");
@@ -8533,13 +8533,14 @@ headlessMapLoad = ok and 'ok' or tostring(err)
         QTemporaryDir mapDir;
         QVERIFY(mapDir.isValid());
 
-        const QString script = qsl("headlessMapDir = [[%1]]\n").arg(mapDir.path()) + qsl(R"lua(
+        // The refusal is outside the raw string: moc pairs up the apostrophes in one, and an odd count breaks it
+        const QString script = qsl("headlessMapDir = [[%1]]\nnoMapOpen = \"you haven't opened a map yet\"\n").arg(mapDir.path()) + qsl(R"lua(
 headlessMapLua = 'not run'
 local ok, err = pcall(function()
   local function answers(...) return select("#", ...), ... end
   local count, first, second = answers(getPlayerRoom())
-  assert(count == 2 and first == nil and second == "the player does not have a valid roomID set",
-    "getPlayerRoom with no player room answered " .. tostring(first) .. ", " .. tostring(second))
+  assert(count == 2 and first == nil and second == noMapOpen,
+    "getPlayerRoom with no mapper answered " .. tostring(first) .. ", " .. tostring(second))
 
   local area = addAreaName("Headless Lua Area")
   local kept = createRoomID()
@@ -8584,9 +8585,16 @@ headlessMapLua = ok and 'ok' or tostring(err)
         QVERIFY2(host, "The profile is not in the pool.");
         const int area = host->mpMap->mpRoomDB->addArea(qsl("Headless Config Area"));
         QVERIFY(host->mpMap->mpRoomDB->set2DMapZoom(area, 7.5));
+        // As a profile saved with the 3D view showing loads
+        host->mShow3DView = true;
 
-        // The refusal is outside the raw string: moc pairs up the apostrophes in one, and an odd count breaks it
-        const QString script = qsl("headlessArea = %1\nnotAnOption = \"'show3dMapView' isn't a valid configuration option\"\n").arg(area) + qsl(R"lua(
+        // The refusals are outside the raw string: moc pairs up the apostrophes in one, and an odd count breaks it
+#if defined(INCLUDE_3DMAPPER)
+        const QString threeD = qsl("hide3d = {n = 1, true}\nshow3d = {n = 2, nil, \"there is no main window to show the 3D map view in\"}\n");
+#else
+        const QString threeD = qsl("hide3d = {n = 2, nil, \"'show3dMapView' isn't a valid configuration option\"}\nshow3d = hide3d\n");
+#endif
+        const QString script = qsl("headlessArea = %1\n").arg(area) + threeD + qsl(R"lua(
 headlessMapConfig = 'not run'
 local ok, err = pcall(function()
   local function check(label, want, ...)
@@ -8600,6 +8608,7 @@ local ok, err = pcall(function()
   local function refused(message) return {n = 2, nil, message} end
   local function answered(value) return {n = 1, value} end
 
+  check("openMapWidget", answered(true), openMapWidget())
   local room = createRoomID()
   addRoom(room); setRoomArea(room, headlessArea)
   local ids = getMapViewIds()
@@ -8618,13 +8627,11 @@ local ok, err = pcall(function()
 
   check("getMapZoom of an area", answered(7.5), getMapZoom(headlessArea))
   check("getMapZoom of no such area", refused("number 9999 is not a valid areaID"), getMapZoom(9999))
-  check("getMapZoom of the shown area", refused("no active mapper"), getMapZoom())
   check("setMapZoom of an area", answered(true), setMapZoom(12.25, headlessArea))
   check("getMapZoom after setMapZoom", answered(12.25), getMapZoom(headlessArea))
   check("setMapZoom too small", refused("zoom 2 is invalid, it must be at least 3"), setMapZoom(2, headlessArea))
   check("setMapZoom not finite", refused("zoom nan is invalid, it must be a finite number"), setMapZoom(0/0))
   check("setMapZoom of no such area", refused("number 9999 is not a valid areaID"), setMapZoom(5, 9999))
-  check("setMapZoom of the shown area", refused("no active mapper"), setMapZoom(5))
   check("getMapZoom after refusals", answered(12.25), getMapZoom(headlessArea))
   check("setDefaultAreaVisible", answered(true), setDefaultAreaVisible(false))
 
@@ -8647,15 +8654,11 @@ local ok, err = pcall(function()
   check("getConfig showUpperLowerLevels default", answered(true), getConfig("showUpperLowerLevels"))
   check("setConfig showUpperLowerLevels", answered(true), setConfig("showUpperLowerLevels", false))
   check("getConfig showUpperLowerLevels", answered(false), getConfig("showUpperLowerLevels"))
-  -- Stored for a mapper made later, as in the GUI before its mapper exists; a build without the 3D mapper does not know the key
-  if setMapPerspective then
-    check("setConfig show3dMapView", answered(true), setConfig("show3dMapView", true))
-    check("getConfig show3dMapView", answered(true), getConfig("show3dMapView"))
-    check("setConfig show3dMapView false", answered(true), setConfig("show3dMapView", false))
-    check("getConfig show3dMapView false", answered(false), getConfig("show3dMapView"))
-  else
-    check("setConfig show3dMapView", refused(notAnOption), setConfig("show3dMapView", false))
-  end
+  -- The null view's mapper has no 3D view, so it can only hide one
+  check("getConfig show3dMapView", answered(false), getConfig("show3dMapView"))
+  check("setConfig show3dMapView false", hide3d, setConfig("show3dMapView", false))
+  check("getConfig show3dMapView hidden", answered(false), getConfig("show3dMapView"))
+  check("setConfig show3dMapView true", show3d, setConfig("show3dMapView", true))
 end)
 headlessMapConfig = ok and 'ok' or tostring(err)
 )lua");
@@ -8665,7 +8668,323 @@ headlessMapConfig = ok and 'ok' or tostring(err)
         QCOMPARE(luaGlobalString(host, "headlessMapConfig"), qsl("ok"));
         QVERIFY2(!host->mpMap->getDefaultAreaShown(), "setDefaultAreaVisible(false) did not hide the default area.");
         QVERIFY2(host->mMapInfoContributors.contains(qsl("Headless")), "setConfig showMapInfo did not add the contributor.");
+#if defined(INCLUDE_3DMAPPER)
+        QVERIFY2(!host->mShow3DView, "Hiding the 3D view was not kept for the profile to save.");
+#endif
         QVERIFY2(QApplication::topLevelWidgets().isEmpty(), "The map functions created a widget.");
+    }
+
+    // The answers are those of the same Lua chunk run in the GUI self-test profile, which has no mapper until loadMap
+    // makes one; closing the map widget then only hides it
+    void test_mapOpenContract()
+    {
+        QVERIFY2(!TAppFrontend::hasView(), "A main window exists, so this run is not headless.");
+        const QString hostname = qsl("Test-Headless-Host-Map-Open");
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = HostManager::self()->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+        host->getLuaInterpreter()->loadGlobal();
+        // With no view, pumpEvents() takes Mudlet for shutting down and pumps nothing
+        lua_register(host->getLuaInterpreter()->getLuaGlobalState(), "pumpEvents", [](lua_State*) -> int {
+            for (int pass = 0; pass < 10; ++pass) {
+                QCoreApplication::processEvents();
+            }
+            return 0;
+        });
+        const QString chunk = qsl(R"lua(
+headlessMapOpen = "not run"
+local ok, err = pcall(function()
+  local profile = getProfileName():gsub("%p", "%%%0")
+  local function described(called, ...)
+    if not called then
+      return "raised:" .. tostring((...))
+    end
+    local count = select("#", ...)
+    local values = {}
+    for i = 1, count do
+      local value = (select(i, ...))
+      if type(value) == "table" then
+        local keys = {}
+        for k in pairs(value) do keys[#keys + 1] = tostring(k) end
+        table.sort(keys)
+        value = "{" .. table.concat(keys, ",") .. "}"
+      end
+      values[i] = tostring(value):gsub(profile, "<profile>")
+    end
+    return "[" .. count .. "]" .. table.concat(values, ":")
+  end
+  local answers = {}
+  local function step(label, f, ...)
+    answers[#answers + 1] = label .. "=" .. described(pcall(f, ...))
+  end
+  local area = addAreaName("Headless Map Open Area")
+  local room = createRoomID()
+  addRoom(room)
+  setRoomArea(room, area)
+  setRoomCoordinates(room, 0, 0, 0)
+  local home = getMudletHomeDir()
+  local jsonPath = home .. "/map open.json"
+  local datPath = home .. "/map open.dat"
+  local imagePath = home .. "/map open.png"
+  local function calls(suffix)
+    step("getPlayerRoom" .. suffix, getPlayerRoom)
+    step("centerview" .. suffix, centerview, room)
+    step("getPlayerRoom.centred" .. suffix, getPlayerRoom)
+    step("saveJsonMap" .. suffix, saveJsonMap, jsonPath)
+    step("loadJsonMap" .. suffix, loadJsonMap, jsonPath)
+    step("setDefaultAreaVisible" .. suffix, setDefaultAreaVisible, true)
+    step("getMapZoom.area" .. suffix, getMapZoom, area)
+    step("setMapZoom.area" .. suffix, setMapZoom, 6, area)
+    step("setMapZoom.badArea" .. suffix, setMapZoom, 6, 9999)
+    step("setMapZoom.small" .. suffix, setMapZoom, 1, area)
+    step("getMapSelection" .. suffix, getMapSelection)
+    step("clearMapSelection" .. suffix, clearMapSelection)
+    for _, key in ipairs({"mapRoomSize", "mapExitSize", "mapRoundRooms", "showRoomIdsOnMap", "mapShowRoomBorders", "mapShowGrid", "showUpperLowerLevels"}) do
+      step("setConfig." .. key .. suffix, setConfig, key, getConfig(key))
+    end
+    step("setConfig.showMapInfo" .. suffix, setConfig, "showMapInfo", "Probe")
+    step("setConfig.hideMapInfo" .. suffix, setConfig, "hideMapInfo", "Probe")
+    step("setConfig.mapInfoColor" .. suffix, setConfig, "mapInfoColor", {1, 2, 3})
+    step("getMapViewIds" .. suffix, getMapViewIds)
+  end
+  step("getMapZoom.none", getMapZoom)
+  step("setMapZoom.none", setMapZoom, 5)
+  calls(".none")
+  -- Only without a mapper: drawing the area takes T2DMap, which a profile with no main window lacks
+  step("exportAreaImage.none", exportAreaImage, area, imagePath)
+  step("saveMap.none", saveMap, datPath)
+  step("getMapZoom.none2", getMapZoom)
+  step("loadMap", loadMap, datPath)
+  pumpEvents(300)
+  calls(".loaded")
+  step("closeMapWidget", closeMapWidget)
+  calls(".closed")
+  os.remove(jsonPath)
+  os.remove(datPath)
+  os.remove(imagePath)
+  headlessMapOpenAnswers = table.concat(answers, "\n")
+end)
+headlessMapOpen = ok and "ok" or tostring(err)
+)lua");
+        const QStringList answers{qsl("getMapZoom.none=[2]nil:no active mapper"),
+                                  qsl("setMapZoom.none=[2]nil:no active mapper"),
+                                  qsl("getPlayerRoom.none=[2]nil:you haven't opened a map yet"),
+                                  qsl("centerview.none=[2]nil:you haven't opened a map yet"),
+                                  qsl("getPlayerRoom.centred.none=[2]nil:you haven't opened a map yet"),
+                                  qsl("saveJsonMap.none=[2]nil:no map present or loaded"),
+                                  qsl("loadJsonMap.none=[2]nil:no map present or loaded"),
+                                  qsl("setDefaultAreaVisible.none=[1]false"),
+                                  qsl("getMapZoom.area.none=[2]nil:no active mapper"),
+                                  qsl("setMapZoom.area.none=[2]nil:no active mapper"),
+                                  qsl("setMapZoom.badArea.none=[2]nil:no active mapper"),
+                                  qsl("setMapZoom.small.none=[2]nil:no active mapper"),
+                                  qsl("getMapSelection.none=[2]nil:no map present or loaded"),
+                                  qsl("clearMapSelection.none=[2]nil:no map present or loaded"),
+                                  qsl("setConfig.mapRoomSize.none=[1]true"),
+                                  qsl("setConfig.mapExitSize.none=[1]true"),
+                                  qsl("setConfig.mapRoundRooms.none=[1]true"),
+                                  qsl("setConfig.showRoomIdsOnMap.none=[1]true"),
+                                  qsl("setConfig.mapShowRoomBorders.none=[1]true"),
+                                  qsl("setConfig.mapShowGrid.none=[1]true"),
+                                  qsl("setConfig.showUpperLowerLevels.none=[1]true"),
+                                  qsl("setConfig.showMapInfo.none=[1]true"),
+                                  qsl("setConfig.hideMapInfo.none=[1]true"),
+                                  qsl("setConfig.mapInfoColor.none=[1]true"),
+                                  qsl("getMapViewIds.none=[1]{}"),
+                                  qsl("exportAreaImage.none=[2]nil:map needs to be open"),
+                                  qsl("saveMap.none=[1]true"),
+                                  qsl("getMapZoom.none2=[2]nil:no active mapper"),
+                                  qsl("loadMap=[1]true"),
+                                  qsl("getPlayerRoom.loaded=[2]nil:the player does not have a valid roomID set"),
+                                  qsl("centerview.loaded=[1]true"),
+                                  qsl("getPlayerRoom.centred.loaded=[1]1"),
+                                  qsl("saveJsonMap.loaded=[1]true"),
+                                  qsl("loadJsonMap.loaded=[1]true"),
+                                  qsl("setDefaultAreaVisible.loaded=[1]true"),
+                                  qsl("getMapZoom.area.loaded=[1]20"),
+                                  qsl("setMapZoom.area.loaded=[1]true"),
+                                  qsl("setMapZoom.badArea.loaded=[2]nil:number 9999 is not a valid areaID"),
+                                  qsl("setMapZoom.small.loaded=[2]nil:zoom 1 is invalid, it must be at least 3"),
+                                  qsl("getMapSelection.loaded=[1]{}"),
+                                  qsl("clearMapSelection.loaded=[1]false"),
+                                  qsl("setConfig.mapRoomSize.loaded=[1]true"),
+                                  qsl("setConfig.mapExitSize.loaded=[1]true"),
+                                  qsl("setConfig.mapRoundRooms.loaded=[1]true"),
+                                  qsl("setConfig.showRoomIdsOnMap.loaded=[1]true"),
+                                  qsl("setConfig.mapShowRoomBorders.loaded=[1]true"),
+                                  qsl("setConfig.mapShowGrid.loaded=[1]true"),
+                                  qsl("setConfig.showUpperLowerLevels.loaded=[1]true"),
+                                  qsl("setConfig.showMapInfo.loaded=[1]true"),
+                                  qsl("setConfig.hideMapInfo.loaded=[1]true"),
+                                  qsl("setConfig.mapInfoColor.loaded=[1]true"),
+                                  qsl("getMapViewIds.loaded=[1]{}"),
+                                  qsl("closeMapWidget=[1]true"),
+                                  qsl("getPlayerRoom.closed=[1]1"),
+                                  qsl("centerview.closed=[1]true"),
+                                  qsl("getPlayerRoom.centred.closed=[1]1"),
+                                  qsl("saveJsonMap.closed=[1]true"),
+                                  qsl("loadJsonMap.closed=[1]true"),
+                                  qsl("setDefaultAreaVisible.closed=[1]true"),
+                                  qsl("getMapZoom.area.closed=[1]6"),
+                                  qsl("setMapZoom.area.closed=[1]true"),
+                                  qsl("setMapZoom.badArea.closed=[2]nil:number 9999 is not a valid areaID"),
+                                  qsl("setMapZoom.small.closed=[2]nil:zoom 1 is invalid, it must be at least 3"),
+                                  qsl("getMapSelection.closed=[1]{}"),
+                                  qsl("clearMapSelection.closed=[1]false"),
+                                  qsl("setConfig.mapRoomSize.closed=[1]true"),
+                                  qsl("setConfig.mapExitSize.closed=[1]true"),
+                                  qsl("setConfig.mapRoundRooms.closed=[1]true"),
+                                  qsl("setConfig.showRoomIdsOnMap.closed=[1]true"),
+                                  qsl("setConfig.mapShowRoomBorders.closed=[1]true"),
+                                  qsl("setConfig.mapShowGrid.closed=[1]true"),
+                                  qsl("setConfig.showUpperLowerLevels.closed=[1]true"),
+                                  qsl("setConfig.showMapInfo.closed=[1]true"),
+                                  qsl("setConfig.hideMapInfo.closed=[1]true"),
+                                  qsl("setConfig.mapInfoColor.closed=[1]true"),
+                                  qsl("getMapViewIds.closed=[1]{}")};
+
+        QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(chunk), "The Lua chunk did not run.");
+        QCOMPARE(luaGlobalString(host, "headlessMapOpen"), qsl("ok"));
+        const QStringList actual = luaGlobalString(host, "headlessMapOpenAnswers").split(QLatin1Char('\n'));
+        QStringList different;
+        for (qsizetype i = 0; i < std::max(actual.size(), answers.size()); ++i) {
+            if (actual.value(i) != answers.value(i)) {
+                different << qsl("%1, not %2").arg(actual.value(i), answers.value(i));
+            }
+        }
+        QVERIFY2(different.isEmpty(), qPrintable(different.join(QChar::LineFeed)));
+        QVERIFY2(QApplication::topLevelWidgets().isEmpty(), "Using the map created a widget.");
+        HostManager::self()->deleteHost(hostname);
+    }
+
+    // The answers are those of the same Lua chunk run in the GUI self-test profile reopened with the map it saved:
+    // opening a profile loads its map, but only openMapWidget makes the mapper
+    void test_reopenedProfileMapOpenContract()
+    {
+        QVERIFY2(!TAppFrontend::hasView(), "A main window exists, so this run is not headless.");
+        const QString makerHostname = qsl("Test-Headless-Host-Reopen-Map-Maker");
+        QVERIFY2(HostManager::self()->addHost(makerHostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        const QByteArray map = binaryMapOf(HostManager::self()->getHost(makerHostname), 9);
+        HostManager::self()->deleteHost(makerHostname);
+
+        const QString hostname = qsl("Test-Headless-Host-Reopen-Map");
+        const QString mapFolder = MudletApp::getMudletPath(enums::profileMapsPath, hostname);
+        QVERIFY(QDir().mkpath(mapFolder));
+        QFile mapFile(qsl("%1/headless.dat").arg(mapFolder));
+        QVERIFY(mapFile.open(QIODevice::WriteOnly));
+        mapFile.write(map);
+        mapFile.close();
+        Host* host = HostManager::self()->openProfile(hostname, false);
+        QVERIFY2(host, "The profile did not open.");
+        lua_register(host->getLuaInterpreter()->getLuaGlobalState(), "pumpEvents", [](lua_State*) -> int {
+            for (int pass = 0; pass < 10; ++pass) {
+                QCoreApplication::processEvents();
+            }
+            return 0;
+        });
+        const QString chunk = qsl(R"lua(
+headlessMapOpen = "not run"
+local ok, err = pcall(function()
+  local profile = getProfileName():gsub("%p", "%%%0")
+  local function described(called, ...)
+    if not called then
+      return "raised:" .. tostring((...))
+    end
+    local count = select("#", ...)
+    local values = {}
+    for i = 1, count do
+      local value = (select(i, ...))
+      if type(value) == "table" then
+        local keys = {}
+        for k in pairs(value) do keys[#keys + 1] = tostring(k) end
+        table.sort(keys)
+        value = "{" .. table.concat(keys, ",") .. "}"
+      end
+      values[i] = tostring(value):gsub(profile, "<profile>")
+    end
+    return "[" .. count .. "]" .. table.concat(values, ":")
+  end
+  local answers = {}
+  local function step(label, f, ...)
+    answers[#answers + 1] = label .. "=" .. described(pcall(f, ...))
+  end
+  local room = 9
+  local area = getRoomArea(room)
+  local home = getMudletHomeDir()
+  local jsonPath = home .. "/map reopen.json"
+  local imagePath = home .. "/map reopen.png"
+  local function calls(suffix)
+    step("getPlayerRoom" .. suffix, getPlayerRoom)
+    step("centerview" .. suffix, centerview, room)
+    step("getPlayerRoom.centred" .. suffix, getPlayerRoom)
+    step("saveJsonMap" .. suffix, saveJsonMap, jsonPath)
+    step("loadJsonMap" .. suffix, loadJsonMap, jsonPath)
+    step("getMapZoom.area" .. suffix, getMapZoom, area)
+    step("setMapZoom.area" .. suffix, setMapZoom, 6, area)
+    step("getMapSelection" .. suffix, getMapSelection)
+    step("setConfig.mapRoomSize" .. suffix, setConfig, "mapRoomSize", getConfig("mapRoomSize"))
+    step("exportAreaImage" .. suffix, exportAreaImage, area, imagePath)
+    step("getConfig.show3dMapView" .. suffix, getConfig, "show3dMapView")
+    step("setConfig.show3dMapView.false" .. suffix, setConfig, "show3dMapView", false)
+  end
+  step("rooms", function() return table.size(getRooms()) .. ":" .. tostring(roomExists(9)) end)
+  calls(".reopened")
+  step("openMapWidget", openMapWidget)
+  pumpEvents(300)
+  calls(".opened")
+  os.remove(jsonPath)
+  os.remove(imagePath)
+  headlessMapOpenAnswers = table.concat(answers, "\n")
+end)
+headlessMapOpen = ok and "ok" or tostring(err)
+)lua");
+#if defined(INCLUDE_3DMAPPER)
+        const QString hide3dReopened = qsl("setConfig.show3dMapView.false.reopened=[1]true");
+        const QString hide3dOpened = qsl("setConfig.show3dMapView.false.opened=[1]true");
+#else
+        const QString hide3dReopened = qsl("setConfig.show3dMapView.false.reopened=[2]nil:'show3dMapView' isn't a valid configuration option");
+        const QString hide3dOpened = qsl("setConfig.show3dMapView.false.opened=[2]nil:'show3dMapView' isn't a valid configuration option");
+#endif
+        const QStringList answers{qsl("rooms=[1]1:true"),
+                                  qsl("getPlayerRoom.reopened=[2]nil:you haven't opened a map yet"),
+                                  qsl("centerview.reopened=[2]nil:you haven't opened a map yet"),
+                                  qsl("getPlayerRoom.centred.reopened=[2]nil:you haven't opened a map yet"),
+                                  qsl("saveJsonMap.reopened=[2]nil:no map present or loaded"),
+                                  qsl("loadJsonMap.reopened=[2]nil:no map present or loaded"),
+                                  qsl("getMapZoom.area.reopened=[2]nil:no active mapper"),
+                                  qsl("setMapZoom.area.reopened=[2]nil:no active mapper"),
+                                  qsl("getMapSelection.reopened=[2]nil:no map present or loaded"),
+                                  qsl("setConfig.mapRoomSize.reopened=[1]true"),
+                                  qsl("exportAreaImage.reopened=[2]nil:map needs to be open"),
+                                  qsl("getConfig.show3dMapView.reopened=[1]false"),
+                                  hide3dReopened,
+                                  qsl("openMapWidget=[1]true"),
+                                  qsl("getPlayerRoom.opened=[2]nil:the player does not have a valid roomID set"),
+                                  qsl("centerview.opened=[1]true"),
+                                  qsl("getPlayerRoom.centred.opened=[1]9"),
+                                  qsl("saveJsonMap.opened=[1]true"),
+                                  qsl("loadJsonMap.opened=[1]true"),
+                                  qsl("getMapZoom.area.opened=[1]20"),
+                                  qsl("setMapZoom.area.opened=[1]true"),
+                                  qsl("getMapSelection.opened=[1]{}"),
+                                  qsl("setConfig.mapRoomSize.opened=[1]true"),
+                                  // The GUI draws the image, with the T2DMap the null view lacks
+                                  qsl("exportAreaImage.opened=[2]false:there is no main window to draw the map in"),
+                                  qsl("getConfig.show3dMapView.opened=[1]false"),
+                                  hide3dOpened};
+
+        QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(chunk), "The Lua chunk did not run.");
+        QCOMPARE(luaGlobalString(host, "headlessMapOpen"), qsl("ok"));
+        const QStringList actual = luaGlobalString(host, "headlessMapOpenAnswers").split(QLatin1Char('\n'));
+        QStringList different;
+        for (qsizetype i = 0; i < std::max(actual.size(), answers.size()); ++i) {
+            if (actual.value(i) != answers.value(i)) {
+                different << qsl("%1, not %2").arg(actual.value(i), answers.value(i));
+            }
+        }
+        QVERIFY2(different.isEmpty(), qPrintable(different.join(QChar::LineFeed)));
+        QVERIFY2(QApplication::topLevelWidgets().isEmpty(), "Using the map created a widget.");
+        HostManager::self()->deleteHost(hostname);
     }
 
     // An embedder closes a profile by deleting it from the pool, and quits by destroying the pool
