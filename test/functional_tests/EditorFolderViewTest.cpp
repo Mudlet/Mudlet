@@ -974,6 +974,46 @@ private slots:
         QVERIFY2(!errorShown, "leaving the Folders view from a merged folder brought back the error of the trigger it hid");
     }
 
+    void test_aRebuildKeepsAnAliasFoldersFormUnderAMergedFolder()
+    {
+        mpEditor->leaveFolderView();
+        mpEditor->slot_showAliases();
+        const QList<QTreeWidgetItem*> combat = mpEditor->treeWidget_aliases->findItems(qsl("qaCombat"), Qt::MatchExactly | Qt::MatchRecursive);
+        QCOMPARE(combat.size(), 1);
+        mpEditor->treeWidget_aliases->setCurrentItem(combat.constFirst());
+        mpEditor->slot_showFolders();
+        QVERIFY(!mpEditor->mpAliasMainArea->isHidden());
+        mpEditor->mNeedUpdateData = true;
+        mpEditor->saveOpenChanges();
+        mpEditor->rebuildStaleTrees();
+        QTRY_VERIFY(!mpEditor->mFolderTreeStale);
+        QCOMPARE(mpEditor->mCurrentView, EditorViewType::cmAliasView);
+        QVERIFY2(!mpEditor->mpAliasMainArea->isHidden(), "a rebuild hid the alias folder's form behind its merged folder");
+        QCOMPARE(mpEditor->mpAliasMainArea->lineEdit_alias_name->text(), qsl("qaCombat"));
+    }
+
+    void test_importOnAMergedFolderLeavesTheHiddenItemAlone()
+    {
+        mpEditor->slot_showFolders();
+        QTreeWidgetItem* pBad = childNamed(topLevelNamed(qsl("qaErr")), qsl("qaBad"));
+        QVERIFY(pBad);
+        mpEditor->mpFolderTree->setCurrentItem(pBad);
+        mpEditor->mpSourceEditorEdbee->textDocument()->setText(qsl("qaBad = ("));
+        mpEditor->mpFolderTree->setCurrentItem(topLevelNamed(qsl("qaErr")));
+        QVERIFY(mpEditor->mpSystemMessageArea->isHidden());
+        QTimer::singleShot(200ms, qApp, []() {
+            if (QWidget* pDialog = QApplication::activeModalWidget()) {
+                pDialog->close();
+            }
+        });
+        mpEditor->slot_import();
+        const bool errorShown = !mpEditor->mpSystemMessageArea->isHidden();
+        mpEditor->mpFolderTree->setCurrentItem(childNamed(topLevelNamed(qsl("qaErr")), qsl("qaBad")));
+        mpEditor->mpSourceEditorEdbee->textDocument()->setText(QString());
+        mpEditor->saveOpenChanges();
+        QVERIFY2(!errorShown, "Import brought back the error of a trigger the merged folder hides");
+    }
+
     void test_turningTheSettingOffLeavesTheFoldersView()
     {
         mpEditor->slot_showFolders();

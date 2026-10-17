@@ -13295,30 +13295,33 @@ void dlgTriggerEditor::slot_pasteXml()
 
 void dlgTriggerEditor::slot_import()
 {
-    switch (mCurrentView) {
-    case EditorViewType::cmTriggerView:
-        saveTrigger();
-        break;
-    case EditorViewType::cmTimerView:
-        saveTimer();
-        break;
-    case EditorViewType::cmAliasView:
-        saveAlias();
-        break;
-    case EditorViewType::cmScriptView:
-        saveScript();
-        break;
-    case EditorViewType::cmActionView:
-        saveAction();
-        break;
-    case EditorViewType::cmKeysView:
-        saveKey();
-        break;
-    case EditorViewType::cmVarsView:
-        qWarning().nospace().noquote() << "dlgTriggerEditor::slot_import() WARNING - switch(EditorViewType) not expected to be called for \"EditorViewType::cmVarsView!\"";
-        break;
-    case EditorViewType::cmUnknownView:
-        qWarning().nospace().noquote() << "dlgTriggerEditor::slot_import() WARNING - switch(EditorViewType) not expected to be called for \"EditorViewType::cmUnknownView!\"";
+    // The item behind a merged folder was saved when the folder was chosen, and its errors must stay hidden
+    if (mFolderGroupKey.isEmpty()) {
+        switch (mCurrentView) {
+        case EditorViewType::cmTriggerView:
+            saveTrigger();
+            break;
+        case EditorViewType::cmTimerView:
+            saveTimer();
+            break;
+        case EditorViewType::cmAliasView:
+            saveAlias();
+            break;
+        case EditorViewType::cmScriptView:
+            saveScript();
+            break;
+        case EditorViewType::cmActionView:
+            saveAction();
+            break;
+        case EditorViewType::cmKeysView:
+            saveKey();
+            break;
+        case EditorViewType::cmVarsView:
+            qWarning().nospace().noquote() << "dlgTriggerEditor::slot_import() WARNING - switch(EditorViewType) not expected to be called for \"EditorViewType::cmVarsView!\"";
+            break;
+        case EditorViewType::cmUnknownView:
+            qWarning().nospace().noquote() << "dlgTriggerEditor::slot_import() WARNING - switch(EditorViewType) not expected to be called for \"EditorViewType::cmUnknownView!\"";
+        }
     }
 
     QSettings& settings = *MudletApp::getQSettings();
