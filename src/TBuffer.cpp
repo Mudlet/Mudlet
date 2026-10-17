@@ -2341,6 +2341,8 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
         const int savedPassLineNumber = mPreTriggerPassLineNumber;
         const bool savedPassSnapshotTaken = mPreTriggerPassSnapshotTaken;
         const PassLineUniformity savedPassLineUniformity = mPreTriggerPassLineUniformity;
+        const int savedFirstLineMovedDown = mFirstLineMovedDown;
+        mFirstLineMovedDown = -1;
         mPreTriggerPassLine.swap(mSpareTriggerPassLine);
         mPreTriggerPassLine.clear();
         mPreTriggerPassSnapshotTaken = false;
@@ -2362,7 +2364,12 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
             std::vector<TChar>().swap(mSpareTriggerPassLine);
         }
         mPreTriggerPassLine.swap(savedPassLine);
-        mPreTriggerPassLineNumber = savedPassLineNumber;
+        // A wrap in this pass can move the enclosing pass's line, which wrapLine() cannot see parked here
+        const bool savedPassLineMoved = mFirstLineMovedDown >= 0 && savedPassLineNumber >= mFirstLineMovedDown;
+        mPreTriggerPassLineNumber = savedPassLineMoved ? -1 : savedPassLineNumber;
+        if (savedFirstLineMovedDown >= 0 && (mFirstLineMovedDown < 0 || savedFirstLineMovedDown < mFirstLineMovedDown)) {
+            mFirstLineMovedDown = savedFirstLineMovedDown;
+        }
         mPreTriggerPassSnapshotTaken = savedPassSnapshotTaken;
         mPreTriggerPassLineUniformity = savedPassLineUniformity;
     }
@@ -2686,15 +2693,55 @@ const std::vector<TChar>* TBuffer::preTriggerPassLine(int lineNumber) const
     return nullptr;
 }
 
-// A structural edit to the trigger-pass line makes the edited text the new
-// baseline for color matching:
-void TBuffer::syncPreTriggerPassLine(int y)
+// Both splices need the snapshot materialised before the buffer edit, or color triggers judge an inserted-into
+// line by its pre-edit colors (commitLineData() catches this in debug); inserted text and padding keep their colors.
+void TBuffer::spliceInsertIntoPreTriggerPassLine(int y, int x, int count, const TChar& format)
 {
-    if (y >= 0 && y == mPreTriggerPassLineNumber && y < static_cast<int>(buffer.size())) {
-        mPreTriggerPassLine = buffer[y];
-        mPreTriggerPassLineUniformity = PassLineUniformity::Unknown;
-        mPreTriggerPassSnapshotTaken = true;
+    if (!mPreTriggerPassSnapshotTaken || y < 0 || y != mPreTriggerPassLineNumber || y >= static_cast<int>(buffer.size())) {
+        return;
     }
+    const int known = static_cast<int>(mPreTriggerPassLine.size());
+    const int padEnd = std::min(x, static_cast<int>(buffer[y].size()));
+    if (padEnd > known) {
+        mPreTriggerPassLine.insert(mPreTriggerPassLine.end(), buffer[y].cbegin() + known, buffer[y].cbegin() + padEnd);
+    }
+    const int at = std::min(x, static_cast<int>(mPreTriggerPassLine.size()));
+    mPreTriggerPassLine.insert(mPreTriggerPassLine.begin() + at, static_cast<std::size_t>(count), format);
+    mPreTriggerPassLineUniformity = PassLineUniformity::Unknown;
+}
+
+void TBuffer::spliceEraseFromPreTriggerPassLine(int y, int x, int xEnd)
+{
+    if (!mPreTriggerPassSnapshotTaken || y < 0 || y != mPreTriggerPassLineNumber) {
+        return;
+    }
+    const int size = static_cast<int>(mPreTriggerPassLine.size());
+    const int from = std::min(x, size);
+    const int to = std::min(xEnd, size);
+    if (from < to) {
+        mPreTriggerPassLine.erase(mPreTriggerPassLine.begin() + from, mPreTriggerPassLine.begin() + to);
+        mPreTriggerPassLineUniformity = PassLineUniformity::Unknown;
+    }
+}
+
+// wrapLine() leaves only the first segment of the trigger-pass line in its place,
+// so the snapshot is cut and indented the same way to stay in step with it.
+void TBuffer::wrapPreTriggerPassLine(const WrapInfo& firstSegment, int indentWidth)
+{
+    const int known = static_cast<int>(mPreTriggerPassLine.size());
+    const int from = std::min(firstSegment.firstChar, known);
+    const int to = std::min(firstSegment.lastChar, known);
+    if (from < to) {
+        const TChar indentColors = mPreTriggerPassLine[from];
+        mPreTriggerPassLine.erase(mPreTriggerPassLine.begin() + to, mPreTriggerPassLine.end());
+        mPreTriggerPassLine.erase(mPreTriggerPassLine.begin(), mPreTriggerPassLine.begin() + from);
+        if (firstSegment.needsIndent) {
+            mPreTriggerPassLine.insert(mPreTriggerPassLine.begin(), static_cast<std::size_t>(indentWidth), indentColors);
+        }
+    } else {
+        mPreTriggerPassLine.clear();
+    }
+    mPreTriggerPassLineUniformity = PassLineUniformity::Unknown;
 }
 
 void TBuffer::materialisePreTriggerPassLine(int y)
@@ -5607,6 +5654,7 @@ bool TBuffer::insertInLine(QPoint& P, const QString& text, const TChar& format)
         if (x < 0) {
             return false;
         }
+        materialisePreTriggerPassLine(y);
         if (x >= static_cast<int>(buffer.at(y).size())) {
             TChar c = currentFormat();
             expandLine(y, x - buffer.at(y).size(), c);
@@ -5616,7 +5664,7 @@ bool TBuffer::insertInLine(QPoint& P, const QString& text, const TChar& format)
         // which is quadratic for large inserts.
         lineBuffer[y].insert(x, insertedText);
         buffer[y].insert(buffer[y].begin() + x, static_cast<std::size_t>(insertedText.size()), format);
-        syncPreTriggerPassLine(y);
+        spliceInsertIntoPreTriggerPassLine(y, x, static_cast<int>(insertedText.size()), format);
     } else {
         appendLine(insertedText, 0, insertedText.size(), format.foreground(), format.background(), format.mFlags);
     }
@@ -6059,6 +6107,15 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
     QList<quint16> wrapGapList;
     int lineCount = 0;
     for (int i = firstRewrappedLine; i < total; ++i) {
+        // A line split above the pass line pushes it down, leaving its index naming other text
+        if (firstRewrappedLine + static_cast<int>(queue.size()) != i) {
+            if (mFirstLineMovedDown < 0 || i < mFirstLineMovedDown) {
+                mFirstLineMovedDown = i;
+            }
+            if (i == mPreTriggerPassLineNumber) {
+                mPreTriggerPassLineNumber = -1;
+            }
+        }
         lineCount++;
         std::vector<TChar> newBufferLine;
         QString newLineText;
@@ -6094,6 +6151,11 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
             promptList.append(isPrompt);
             wrapGapList.append(wrapGapBuffer.at(i));
             continue;
+        }
+        if (i == mPreTriggerPassLineNumber) {
+            // The wrap may have started above this line, so the snapshot at startLine was not this one
+            materialisePreTriggerPassLine(i);
+            wrapPreTriggerPassLine(lineBreaks.first(), lineBreaks.first().isNewline ? indent : hangingIndent);
         }
         const QString qIndent(indent, QChar::Space);
         const QString qHangingIndent(hangingIndent, QChar::Space);
@@ -6343,11 +6405,12 @@ bool TBuffer::replaceInLine(QPoint& P_begin, QPoint& P_end, const QString& with,
             continue;
         }
         noteRemovedLinks(buffer[y], mLinesRemovedTotal + y, x, x_end);
+        materialisePreTriggerPassLine(y);
         lineBuffer[y].remove(x, x_end - x);
         auto it1 = buffer[y].begin() + x;
         auto it2 = buffer[y].begin() + x_end;
         buffer[y].erase(it1, it2);
-        syncPreTriggerPassLine(y);
+        spliceEraseFromPreTriggerPassLine(y, x, x_end);
     }
 
     // insert replacement

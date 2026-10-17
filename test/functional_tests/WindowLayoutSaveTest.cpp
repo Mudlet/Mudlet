@@ -193,6 +193,25 @@ private slots:
         QVERIFY2(luaGlobalIsTrue(qsl("_layoutSaved")), "saveWindowLayout() is refused once Mudlet has saved the layout itself");
         QVERIFY2(mudlet::self()->mHasSavedLayout, "a scripted saveWindowLayout() lowered a flag it did not raise");
     }
+
+    void test_aLayoutFileThatCannotBeOpenedIsReportedAndLeavesTheShutdownSaveToRun()
+    {
+        const QString layoutFilePath = MudletApp::getMudletPath(enums::mainDataItemPath, qsl("windowLayout.dat"));
+        QFile::remove(layoutFilePath);
+        // a directory in its place makes the open fail even for root, which a
+        // read-only directory does not
+        QVERIFY(QDir().mkpath(layoutFilePath));
+        mudlet::self()->mHasSavedLayout = false;
+
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("error opening window layout file for writing: .*windowLayout\\.dat")));
+        const bool saved = mudlet::self()->saveWindowLayout();
+        const bool flagRaised = mudlet::self()->mHasSavedLayout;
+        QVERIFY(QDir(layoutFilePath).removeRecursively());
+
+        QVERIFY2(!saved, "saveWindowLayout() reported a save it could not make");
+        QVERIFY2(!flagRaised, "a failed save raised the flag that turns the save at shutdown into a no-op");
+        QVERIFY2(mudlet::self()->saveWindowLayout(), "the layout could not be saved once the file could be opened again");
+    }
 };
 
 #include "WindowLayoutSaveTest.moc"

@@ -1198,6 +1198,8 @@ void dlgConnectionProfiles::reallyDeleteProfile(const QString& profile)
         return;
     }
 
+    ++namesWithSignInBeingRemoved()[removalKey(profile)];
+
     // Clean up keychain entries for the deleted profile
     // Note: CredentialManager only supports one operation at a time, so we must
     // chain the operations - the second removal starts only after the first completes.
@@ -1216,6 +1218,7 @@ void dlgConnectionProfiles::reallyDeleteProfile(const QString& profile)
             // Check if credManager was destroyed before chaining next operation
             if (!safeCredManager) {
                 qWarning() << "dlgConnectionProfiles: CredentialManager destroyed, cannot clean up proxy password";
+                forgetSignInOfRemovedProfile(profile);
                 return;
             }
 
@@ -1229,8 +1232,14 @@ void dlgConnectionProfiles::reallyDeleteProfile(const QString& profile)
                 if (safeCredManager) {
                     safeCredManager->deleteLater();
                 }
+
+                // Only now: keychain jobs run one at a time, and each times out while it waits its turn
+                forgetSignInOfRemovedProfile(profile);
             });
         });
+    } else {
+        // Passwords stored with the profile went with its folder; the sign-in never lives there
+        forgetSignInOfRemovedProfile(profile);
     }
 
     // only the self-test entry needs its removal recorded: fillout_form() lists
@@ -1260,6 +1269,62 @@ void dlgConnectionProfiles::reallyDeleteProfile(const QString& profile)
             //: %1 is a game name, e.g. Achaea, that has never been played and so has nothing saved to remove
             showRemovalNotice(tr("Nothing has been saved for '%1' yet, so there was nothing to remove.").arg(profile));
         }
+    }
+}
+
+/*static*/ QHash<QString, int>& dlgConnectionProfiles::namesWithSignInBeingRemoved()
+{
+    static QHash<QString, int> names;
+    return names;
+}
+
+/*static*/ QString dlgConnectionProfiles::removalKey(const QString& name)
+{
+    // Folded only where profile folders, and the credential files beside them, ignore case: elsewhere a
+    // name differing in case is another profile, with a sign-in of its own
+#if defined(Q_OS_WINDOWS) || defined(Q_OS_MACOS)
+    return name.trimmed().toCaseFolded();
+#else
+    return name.trimmed();
+#endif
+}
+
+/*static*/ bool dlgConnectionProfiles::signInRemovalPending(const QString& name)
+{
+    return namesWithSignInBeingRemoved().contains(removalKey(name));
+}
+
+/*static*/ std::function<void(std::function<void()> startRemoval)>& dlgConnectionProfiles::signInRemovalStarterForTesting()
+{
+    static std::function<void(std::function<void()>)> starter;
+    return starter;
+}
+
+/*static*/ void dlgConnectionProfiles::forgetSignInOfRemovedProfile(const QString& profile)
+{
+    auto startRemoval = [profile]() {
+        GMCPAuthenticator::forgetSavedSignInOfRemovedProfile(profile, [profile]() {
+            const QString key = removalKey(profile);
+            auto& pending = namesWithSignInBeingRemoved();
+            if (--pending[key] > 0) {
+                return;
+            }
+            pending.remove(key);
+            // Every connection dialog, not just the one that removed it: one opened since would otherwise
+            // stay refused until a field is edited. Only where it is the form being refused, as
+            // revalidating clears the notification area, which may be saying the removal went through.
+            for (auto* window : QApplication::topLevelWidgets()) {
+                auto* dialog = qobject_cast<dlgConnectionProfiles*>(window);
+                if (dialog && removalKey(dialog->profile_name_entry->text()) == key) {
+                    dialog->validateProfile();
+                }
+            }
+        });
+    };
+    if (auto& starter = signInRemovalStarterForTesting()) {
+        starter(std::move(startRemoval));
+    } else {
+        startRemoval();
     }
 }
 
@@ -2255,13 +2320,13 @@ bool dlgConnectionProfiles::copyProfileWidget(QString& profile_name, QString& ol
         int i = 1;
         do {
             profile_name = profile_name.left(profile_name.size() - 1) + QString::number(profile_name.at(profile_name.size() - 1).digitValue() + i++);
-        } while (mProfileList.contains(profile_name));
+        } while (mProfileList.contains(profile_name) || signInRemovalPending(profile_name));
     } else {
         int i = 1;
         QString profile_name2;
         do {
             profile_name2 = profile_name + QString::number(i++);
-        } while (mProfileList.contains(profile_name2));
+        } while (mProfileList.contains(profile_name2) || signInRemovalPending(profile_name2));
         profile_name = profile_name2;
     }
 
@@ -2499,6 +2564,16 @@ bool dlgConnectionProfiles::validateProfile()
         if ((QString::compare(pItem->data(csmNameRole).toString(), name, Qt::CaseInsensitive) != 0) && mProfileList.contains(name, Qt::CaseInsensitive)) {
             notificationAreaIconLabelError->show();
             notificationAreaMessageBox->setText(qsl("%1\n%2").arg(notificationAreaMessageBox->text(), tr("This profile name is already in use.")));
+            validName = false;
+            valid = false;
+        }
+
+        if (signInRemovalPending(name)) {
+            notificationAreaIconLabelError->show();
+            notificationAreaMessageBox->setText(
+                    qsl("%1\n%2").arg(notificationAreaMessageBox->text(),
+                                      //: Shown after a profile is removed, while its saved sign-in is still being deleted from the password store; it clears by itself when that finishes
+                                      tr("A profile with this name was just removed, and its saved sign-in is still being deleted. This will clear on its own in a moment.")));
             validName = false;
             valid = false;
         }

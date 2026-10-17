@@ -221,16 +221,23 @@ bool XMLexport::exportHost(const QString& filename_pugi_xml)
 void XMLexport::runAsyncSave(const QString& fileName, const QString& xmlSavedKey)
 {
     QPointer<Host> host = mpHost;
-    auto future = QtConcurrent::run([fileName, doc = takeExportDocument()]() {
-        return XMLexport::saveXmlDocToFile(fileName, *doc);
+    // Written on the pool thread before the future finishes, read only after it has
+    auto reason = std::make_shared<QString>();
+    auto future = QtConcurrent::run([fileName, doc = takeExportDocument(), reason]() {
+        return XMLexport::saveXmlDocToFile(fileName, *doc, reason.get());
     });
     // Parented to the profile for the same reason the module save's watcher is: the
     // deleteLater() below needs an event loop that is still running to be delivered,
     // and the save that matters most here is the one on the way out.
     auto watcher = new QFutureWatcher<bool>(host);
-    connect(watcher, &QFutureWatcher<bool>::finished, host, [host, xmlSavedKey]() {
+    connect(watcher, &QFutureWatcher<bool>::finished, host, [host, xmlSavedKey, fileName, watcher, reason]() {
         if (!host) {
             return;
+        }
+        // The caller was told the save had started long before this, so the console is the only place left to say it
+        if (!watcher->result()) {
+            //: %1 is the file the profile was being saved to, %2 is the reason it could not be
+            host->postMessage(tr("[ ERROR ] - The profile could not be saved to \"%1\": %2").arg(fileName, *reason));
         }
         host->xmlSaved(xmlSavedKey);
     });
@@ -382,16 +389,20 @@ bool XMLexport::saveXml(const QString& fileName)
 // Callable from a background thread as long as nothing modifies the document
 // concurrently, which handing it over with takeExportDocument() ensures. Static so it
 // neither keeps the XMLexport alive nor touches any instance state.
-bool XMLexport::saveXmlDocToFile(const QString& fileName, const pugi::xml_document& doc)
+bool XMLexport::saveXmlDocToFile(const QString& fileName, const pugi::xml_document& doc, QString* errorString)
 {
     QSaveFile file(fileName);
 
-    auto printErrorMessage = [&](const QString& errorString) {
-        qDebug().noquote().nospace() << "XMLexport::saveXmlDocToFile(\"" << fileName << "\") ERROR - failed to save file, reason: " << errorString << ".";
+    // The reason goes on to a translated console line, so the stage stays in the log
+    auto printErrorMessage = [&](const QString& reason, const char* stage = "save file") {
+        qDebug().noquote().nospace() << "XMLexport::saveXmlDocToFile(\"" << fileName << "\") ERROR - failed to " << stage << ", reason: " << reason << ".";
+        if (errorString) {
+            *errorString = reason;
+        }
     };
 
     if (!file.open(QIODevice::WriteOnly)) {
-        printErrorMessage(file.errorString().prepend("failed to open file, "));
+        printErrorMessage(file.errorString(), "open file");
         return false;
     }
 
