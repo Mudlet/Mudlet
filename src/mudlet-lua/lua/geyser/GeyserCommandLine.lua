@@ -72,6 +72,11 @@ end
 function Geyser.CommandLine:new (cons, container)
   cons = cons or {}
   cons.type = cons.type or "commandLine"
+  local taken = mudlet.nameTakenByOtherKind(cons.name, "commandline", cons.windowname or (container or Geyser).windowname)
+  if taken then
+    printError(string.format("Geyser.CommandLine '%s' was not created: %s", cons.name, taken), false, false)
+    return nil, taken
+  end
   
   -- Call parent's constructor
   local me = self.parent:new(cons, container)
@@ -82,7 +87,7 @@ function Geyser.CommandLine:new (cons, container)
   self.__index = self
   
   local ok, err = createCommandLine(me.windowname, me.name, me:pixel_geometry())
-  if not mudlet.elementCreated(me.windowname, me.name, ok, err) then
+  if not mudlet.elementCreated(me.windowname, me.name, ok, err, "commandline") then
     printError(string.format("Geyser.CommandLine '%s' was not created: %s", me.name, err or "unknown error"), false, false)
   end
   if me.stylesheet then 
@@ -106,6 +111,5 @@ end
 function Geyser.CommandLine:new2 (cons, container)
   cons = cons or {}
   cons.useAdd2 = true
-  local me = self:new(cons, container)
-  return me
+  return self:new(cons, container)
 end

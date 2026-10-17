@@ -507,7 +507,9 @@ end
 -- of any text the label is showing. Which of the two it is comes from the file's
 -- content rather than from its name.
 -- resetBackgroundImage takes off the SVG layer, a raster image and a movie in one
--- call, and leaves the label's text where it is.
+-- call, and leaves the label's text where it is. It also takes the stylesheet's
+-- background-image declarations that are not inside a {...} rule out, see
+-- Geyser.Label:resetBackgroundImage.
 -- Returns true, or nil and an error message when the file cannot be read.
 -- @param imageFileName The image to use for a background image.
 function Geyser.Label:setBackgroundImage (imageFileName)
@@ -589,9 +591,133 @@ function Geyser.Label:resetSvgTransform ()
 end
 
 --- Sets a tiled background image for this label.
+-- It replaces the label's stylesheet with a background-image declaration, which
+-- Geyser.Label:resetBackgroundImage takes away again.
 -- @param imageFileName The image to use for a background image.
 function Geyser.Label:setTiledBackgroundImage (imageFileName)
   self:setStyleSheet("background-image: url(" .. imageFileName .. ");")
+end
+
+-- Index just past the quoted string or comment starting at i, or i when none starts there.
+local function pastQuoteOrComment(sheet, i)
+  local c = sheet:sub(i, i)
+  if c == '"' or c == "'" then
+    local j = i + 1
+    while j <= #sheet and sheet:sub(j, j) ~= c do
+      j = j + (sheet:sub(j, j) == "\\" and 2 or 1)
+    end
+    return math.min(j + 1, #sheet + 1)
+  end
+  if c == "/" and sheet:sub(i + 1, i + 1) == "*" then
+    local finish = sheet:find("*/", i + 2, true)
+    return finish and finish + 2 or #sheet + 1
+  end
+  return i
+end
+
+-- The end of the background-image declaration starting at i, or i when none starts there.
+local function pastBackgroundImageDeclaration(sheet, i)
+  if sheet:sub(i, i + 15):lower() ~= "background-image" then
+    return i
+  end
+  local j = i + 16
+  while sheet:sub(j, j):match("^%s$") do
+    j = j + 1
+  end
+  if sheet:sub(j, j) ~= ":" then
+    return i
+  end
+  local parentheses = 0
+  j = j + 1
+  while j <= #sheet do
+    local skipped = pastQuoteOrComment(sheet, j)
+    if skipped ~= j then
+      j = skipped
+    else
+      local c = sheet:sub(j, j)
+      if c == "(" then
+        parentheses = parentheses + 1
+      elseif c == ")" and parentheses > 0 then
+        parentheses = parentheses - 1
+      elseif parentheses == 0 and c == ";" then
+        return j + 1
+      elseif parentheses == 0 and c == "}" then
+        return j
+      end
+      j = j + 1
+    end
+  end
+  return j
+end
+
+-- TLabelModel::styleSheetWithoutBackgroundImage() for a sheet that is not on the label: putting it
+-- there to reset it would apply its min-width, qproperty-* and the like to the label.
+local function styleSheetWithoutBackgroundImage(sheet)
+  local result = {}
+  local copiedUpTo = 1
+  local braces = 0
+  local parentheses = 0
+  local declarationCanStart = true
+  local i = 1
+  while i <= #sheet do
+    local skipped = pastQuoteOrComment(sheet, i)
+    if skipped ~= i then
+      if sheet:sub(i, i) ~= "/" then
+        declarationCanStart = false
+      end
+      i = skipped
+    else
+      local c = sheet:sub(i, i)
+      if c == "(" then
+        parentheses = parentheses + 1
+      elseif c == ")" and parentheses > 0 then
+        parentheses = parentheses - 1
+      end
+      local finish = i
+      if parentheses == 0 and braces == 0 and declarationCanStart then
+        finish = pastBackgroundImageDeclaration(sheet, i)
+      end
+      if finish ~= i then
+        result[#result + 1] = sheet:sub(copiedUpTo, i - 1)
+        copiedUpTo = finish
+        i = finish
+      else
+        if parentheses == 0 then
+          if c == "{" then
+            braces = braces + 1
+          elseif c == "}" and braces > 0 then
+            braces = braces - 1
+          end
+          if not c:match("^%s$") then
+            declarationCanStart = c == ";" or c == "}"
+          end
+        end
+        i = i + 1
+      end
+    end
+  end
+  result[#result + 1] = sheet:sub(copiedUpTo)
+  return table.concat(result)
+end
+
+--- Takes away the label's background image: what setBackgroundImage put there, and every
+-- background-image declaration of its stylesheet that is not inside a {...} rule, such as the one
+-- setTiledBackgroundImage writes - whoever wrote it. An image in a rule, such as a :hover one, the
+-- background shorthand and border-image stay.
+-- Unlike the resetBackgroundImage function, this also takes the image out of the stylesheet the
+-- label remembers, which setStyleSheet() with no argument puts back.
+-- @return true, or nil and a message
+function Geyser.Label:resetBackgroundImage()
+  local ok, err = resetBackgroundImage(self.name)
+  if not ok then
+    return nil, err
+  end
+  -- not a copy of the label's own sheet, which holds the colour setBackgroundColor() adds to it
+  if self.stylesheet then
+    self.stylesheet = styleSheetWithoutBackgroundImage(self.stylesheet)
+  end
+  self:autoAdjustSize()
+  return true
 end
 
 --- Sets a callback to be used when this label is clicked. When this
@@ -824,17 +950,25 @@ function doNestScroll(label)
   bscroll.nestParent:displayNest()
 end
 
+-- getUserWindowSize warns in the Central Debug Console about any other name,
+-- such as a scroll box's or a user window deleted behind Geyser's back
+local function labelWindowSize(windowname)
+  if windowType(windowname) == "userwindow" then
+    local width, height = getUserWindowSize(windowname)
+    if width then
+      return width, height
+    end
+  end
+  return getMainWindowSize()
+end
+
 --- Displays the nested elements within label, and orients them
 -- appropriately
 -- @param label The name of the label to use
 function Geyser.Label:displayNest()
   local maxDim = {}
   local flyMap = { R = { 1, 0 }, L = { -1, 0 }, T = { 0, -1 }, B = { 0, 1 } }
-  if self.windowname ~= "main" then
-    maxDim["H"], maxDim["V"] = getUserWindowSize(self.windowname)
-  else
-    maxDim["H"], maxDim["V"] = getMainWindowSize()
-  end
+  maxDim["H"], maxDim["V"] = labelWindowSize(self.windowname)
   local parent = self
   --build a list of the labels we can use until we hit the max
   local nestedLabels = {}
@@ -1074,6 +1208,11 @@ function Geyser.Label:new (cons, container)
   cons.type = cons.type or "label"
   cons.nestParent = cons.nestParent or nil
   cons.format = cons.format or ""
+  local taken = mudlet.nameTakenByOtherKind(cons.name, "label", cons.windowname or (container or Geyser).windowname)
+  if taken then
+    printError(string.format("Geyser.Label '%s' was not created: %s", cons.name, taken), false, false)
+    return nil, taken
+  end
 
   -- Call parent's constructor
   local me = self.parent:new(cons, container)
@@ -1092,7 +1231,7 @@ function Geyser.Label:new (cons, container)
   else
     ok, err = createLabel(me.windowname, me.name, x, y, width, height, me.fillBg)
   end
-  if not mudlet.elementCreated(me.windowname, me.name, ok, err) then
+  if not mudlet.elementCreated(me.windowname, me.name, ok, err, "label") then
     printError(string.format("Geyser.Label '%s' was not created: %s", me.name, err or "unknown error"), false, false)
   end
 -- Geyser.Container:new() settles the hidden constraint before there is a widget to hide, so the hide is made good here
@@ -1227,8 +1366,7 @@ end
 function Geyser.Label:new2 (cons, container)
   cons = cons or {}
   cons.useAdd2 = true
-  local me = self:new(cons, container)
-  return me
+  return self:new(cons, container)
 end
 
 --- internal function that adds the "More..." scrollbars
@@ -1287,7 +1425,10 @@ function Geyser.Label:addChild(cons, container)
     flyDir = "L"
     layoutDir = "V"
   end
-  local me = Geyser.Label:new(cons, container)
+  local me, taken = Geyser.Label:new(cons, container)
+  if not me then
+    return nil, taken
+  end
   --this is our parent
   me.nestParent = self
   me:setOnEnter("doNestEnter", me)
@@ -1357,6 +1498,9 @@ local function addElement(self, name, configLabel, myMenu, depth, index, restyle
     nestable = true,
   }
 )
+if not myMenu.MenuLabels[name] then
+  return false
+end
 -- ensure Labels are on the same parent window
 if self.windowname ~= myMenu.MenuLabels[name].windowname then
   if self.windowname == "main" then
@@ -1378,6 +1522,7 @@ if not myMenu.MenuLabels[name].stylesheet then
   MenuStyle = MenuStyle or configLabel.MenuStyleMode[string.lower(Style)]
   myMenu.MenuLabels[name]:setStyleSheet(MenuStyle)
 end
+return true
 end
 
 -- internal function to create the right click Menu Labels
@@ -1392,14 +1537,15 @@ function Geyser.Label:createMenuItems(restyle, MenuItems, configLabel, myMenu, d
   local index = 1
 
   for i = 1, #MenuItems do
-    if type(MenuItems[i]) == "string" and not MenuItems[i].ignore then
-      addElement(self, MenuItems[i], configLabel, myMenu, depth, index, restyle)
+    -- an item another kind of element holds the name of is left out, Geyser.Label:new having said why
+    if type(MenuItems[i]) == "string" and not MenuItems[i].ignore
+      and addElement(self, MenuItems[i], configLabel, myMenu, depth, index, restyle) then
       myMenu.MenuLabels[MenuItems[i]].index = index
       myMenu.MenuLabels[MenuItems[i]].tblIndex = i
       index = index + 1
     end
     --Ignore all children if parent is hidden
-    if type(MenuItems[i]) == "table" and not MenuItems[i - 1].ignore then
+    if type(MenuItems[i]) == "table" and not MenuItems[i - 1].ignore and myMenu.MenuLabels[MenuItems[i - 1]] then
       myMenu.MenuLabels[MenuItems[i - 1]]:createMenuItems(restyle, MenuItems[i], configLabel, myMenu.MenuLabels[MenuItems[i - 1]], depth + 1)
       myMenu.MenuLabels[MenuItems[i - 1]].isParent = true
     end
@@ -1422,7 +1568,7 @@ end
 function Geyser.Label:onRightClick(event)
   closeAllLevels(self.rightClickMenu)
   if event.button == "RightButton" then
-    local winw = getUserWindowSize(self.windowname)
+    local winw = labelWindowSize(self.windowname)
     local mousepos = self:get_x() + event.x
     local maxdiff = tonumber(self.rightClickMenu.MenuWidth)
     local diff = winw - mousepos

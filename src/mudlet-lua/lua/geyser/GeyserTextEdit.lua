@@ -58,6 +58,11 @@ function Geyser.TextEdit:new (cons, container)
   cons = cons or {}
   cons.type = cons.type or "textEdit"
 
+  local taken = mudlet.nameTakenByOtherKind(cons.name, "textedit", cons.windowname or (container or Geyser).windowname)
+  if taken then
+    printError(string.format("Geyser.TextEdit '%s' was not created: %s", cons.name, taken), false, false)
+    return nil, taken
+  end
   local me = self.parent:new(cons, container)
   me.windowname = me.windowname or me.container.windowname or "main"
 
@@ -65,7 +70,7 @@ function Geyser.TextEdit:new (cons, container)
   self.__index = self
 
   local ok, err = createTextEdit(me.windowname, me.name, me:pixel_geometry())
-  if not mudlet.elementCreated(me.windowname, me.name, ok, err) then
+  if not mudlet.elementCreated(me.windowname, me.name, ok, err, "textedit") then
     printError(string.format("Geyser.TextEdit '%s' was not created: %s", me.name, err or "unknown error"), false, false)
   end
   if me.stylesheet then
@@ -86,6 +91,5 @@ end
 function Geyser.TextEdit:new2(cons, container)
   cons = cons or {}
   cons.useAdd2 = true
-  local me = self:new(cons, container)
-  return me
+  return self:new(cons, container)
 end

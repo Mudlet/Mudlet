@@ -322,7 +322,7 @@ void TTreeWidget::rowsInserted(const QModelIndex& parent, int start, int end)
                             if (pTChild->ancestorsActive()) {
                                 icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
                             } else {
-                                icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_grey.png")), QIcon::Normal, QIcon::Off);
+                                icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox-grey.png")), QIcon::Normal, QIcon::Off);
                             }
                         }
                     }
