@@ -30,6 +30,7 @@
  */
 
 #include <algorithm>
+#include <memory>
 #include <numbers>
 
 #include <QFileInfo>
@@ -38,6 +39,7 @@
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
+#include "EnvironmentKit.h"
 #include "ExitAppearance.h"
 #include "GeometryManager.h"
 #include "Host.h"
@@ -185,6 +187,83 @@ private:
             if (cube.transform.column(0).toVector3D().length() > 0.2f && qFuzzyCompare(center.x() + 1.0f, static_cast<float>(place.x()) + 1.0f)
                 && qFuzzyCompare(center.y() + 1.0f, static_cast<float>(place.y()) + 1.0f)) {
                 found.append(cube);
+            }
+        }
+        return found;
+    }
+
+    struct DrawnGlyph
+    {
+        QPointF center;
+        QSizeF size;
+        QString text;
+        QColor color;
+    };
+
+    // Seen from above, every quad the terminal style draws from its glyph atlas, with the character its cell held when
+    // the texture was drawn; a symbol's underline and a reverse-video cell are drawn from the solid block
+    static QList<DrawnGlyph> terminalGlyphs(ModernGLWidget& widget, const int areaId)
+    {
+        auto atlasTextures = std::make_shared<QHash<GLuint, QStringList>>();
+        auto lastTexture = std::make_shared<GLuint>(0);
+        widget.mLabelTextureCache.useTextureStandIn(
+                [&widget, atlasTextures, lastTexture](const QImage& image) {
+                    ++*lastTexture;
+                    if (image.size() == QSize(1024, 1024)) {
+                        atlasTextures->insert(*lastTexture, widget.mGlyphAtlasCells);
+                    }
+                    return *lastTexture;
+                },
+                [](GLuint) {});
+        widget.resize(800, 600);
+        widget.mCameraController.setViewportSize(widget.width(), widget.height());
+        // Drawn again, so that the stand-in sees which character each cell holds
+        widget.mGlyphAtlasDrawnCells = -1;
+        widget.setViewCenter(areaId, 0, 0, 0);
+        widget.mCameraController.setTopView();
+        widget.setCameraDistance(1.0f);
+        widget.updateMatrices();
+        widget.mRenderCommandQueue.clear();
+        widget.renderRooms();
+        QList<DrawnGlyph> glyphs;
+        for (const auto& command : widget.mRenderCommandQueue.commands()) {
+            const auto* textured = dynamic_cast<const RenderTexturedTrianglesCommand*>(command.get());
+            if (!textured || !atlasTextures->contains(textured->geometry().textureId)) {
+                continue;
+            }
+            const GeometryData& batch = textured->geometry();
+            const QStringList& cells = atlasTextures->value(batch.textureId);
+            for (qsizetype quad = 0; quad * 18 + 8 < batch.vertices.size() && quad * 12 + 5 < batch.textureCoords.size() && quad * 24 + 3 < batch.colors.size(); ++quad) {
+                const float* corner = batch.vertices.constData() + quad * 18;
+                const float* texture = batch.textureCoords.constData() + quad * 12;
+                const float* color = batch.colors.constData() + quad * 24;
+                const int cell = (15 - static_cast<int>((texture[1] + texture[5]) / 2.0f * 16.0f)) * 16 + static_cast<int>((texture[0] + texture[2]) / 2.0f * 16.0f);
+                glyphs.append({QPointF((corner[0] + corner[6]) / 2.0f, (corner[1] + corner[7]) / 2.0f),
+                               QSizeF(qAbs(corner[6] - corner[0]), qAbs(corner[7] - corner[1])),
+                               cells.value(cell),
+                               QColor::fromRgbF(color[0], color[1], color[2], color[3])});
+            }
+        }
+        return glyphs;
+    }
+
+    // The character drawn for the room at this place, not its underline nor a cell behind it
+    static DrawnGlyph glyphAt(const QList<DrawnGlyph>& glyphs, const QPointF& place)
+    {
+        for (const DrawnGlyph& glyph : glyphs) {
+            if (glyph.text != QString(QChar(0x2588)) && QLineF(glyph.center, place).length() < 0.05) {
+                return glyph;
+            }
+        }
+        return {};
+    }
+
+    static QList<DrawnGlyph> underlines(const QList<DrawnGlyph>& glyphs)
+    {
+        QList<DrawnGlyph> found;
+        for (const DrawnGlyph& glyph : glyphs) {
+            if (glyph.text == QString(QChar(0x2588)) && glyph.size.height() < glyph.size.width() / 2.0) {
+                found.append(glyph);
             }
         }
         return found;
@@ -827,6 +906,392 @@ private slots:
         QVERIFY2(symbolsWithoutIds, "rooms whose IDs are too small to read show no symbols");
     }
 
+    void test_terminalStatusLineListsTheWaysOutWithoutGL()
+    {
+        const int areaId = addArea();
+        QVERIFY(areaId > 0);
+        constexpr int kTowerId = 4;
+        QVERIFY(addRoomAt(kTowerId, areaId, 0, 0, 1));
+        map()->mpRoomDB->getRoom(kTowerId)->name = qsl("tower");
+        TRoom* pPlayerRoom = map()->mpRoomDB->getRoom(kPlayerRoomId);
+        pPlayerRoom->setExit(kEastRoomId, DIR_EAST);
+        pPlayerRoom->setExit(kTowerId, DIR_UP);
+        pPlayerRoom->setExit(kLowerRoomId, DIR_DOWN);
+        pPlayerRoom->setSpecialExit(kEastRoomId, qsl("enter portal"));
+        const auto restore = qScopeGuard([this]() {
+            mpHost->setMapStyle(qsl("tiles"));
+        });
+        QVERIFY(mpHost->setMapStyle(qsl("terminal")));
+
+        ModernGLWidget widget(map(), mpHost);
+        widget.setViewCenter(areaId, 0, 0, 0);
+        QString line;
+        QHash<QString, QColor> colors;
+        for (const ModernGLWidget::StatusLinePart& part : widget.statusLineParts()) {
+            line += part.text;
+            colors.insert(part.text.trimmed(), part.color);
+        }
+        QVERIFY2(line.startsWith(qsl("[Render Area]")), qPrintable(line));
+        QVERIFY2(line.contains(qsl("(0,0,0)")), qPrintable(line));
+        QVERIFY2(line.contains(qsl("exits: e \"enter portal\" ")), qPrintable(line));
+        // The stairs are named by where they lead, or by its ID where that has no name
+        QVERIFY2(line.contains(qsl("< tower")), qPrintable(line));
+        QVERIFY2(line.contains(qsl("> %1").arg(kLowerRoomId)), qPrintable(line));
+        QCOMPARE(colors.value(qsl("Render Area")), mpHost->mLightCyan_2);
+        QCOMPARE(colors.value(qsl("e \"enter portal\"")), mpHost->mLightWhite_2);
+    }
+
+    // A profile's ANSI colors darkened to near black still show on the status line's dark band
+    void test_terminalStatusLineLiftsDarkColorsWithoutGL()
+    {
+        const int areaId = addArea();
+        QVERIFY(areaId > 0);
+        map()->mpRoomDB->getRoom(kPlayerRoomId)->setExit(kEastRoomId, DIR_EAST);
+        const QColor savedCyan = mpHost->mLightCyan_2;
+        const QColor savedWhite = mpHost->mLightWhite_2;
+        const auto restore = qScopeGuard([this, savedCyan, savedWhite]() {
+            mpHost->mLightCyan_2 = savedCyan;
+            mpHost->mLightWhite_2 = savedWhite;
+            mpHost->setMapStyle(qsl("tiles"));
+        });
+        QVERIFY(mpHost->setMapStyle(qsl("terminal")));
+        const QColor dark(20, 20, 20);
+        mpHost->mLightCyan_2 = dark;
+        mpHost->mLightWhite_2 = dark;
+
+        ModernGLWidget widget(map(), mpHost);
+        widget.setViewCenter(areaId, 0, 0, 0);
+        QHash<QString, QColor> colors;
+        for (const ModernGLWidget::StatusLinePart& part : widget.statusLineParts()) {
+            colors.insert(part.text.trimmed(), part.color);
+        }
+        const QColor lifted = MapStyle::findOrDefault(qsl("terminal")).roomColor(dark);
+        QVERIFY(lifted.lightness() > dark.lightness() + 40);
+        QCOMPARE(colors.value(qsl("Render Area")), lifted);
+        QCOMPARE(colors.value(qsl("e")), lifted);
+    }
+
+    // Away from the player's area, only the area and the room under the pointer are named
+    void test_terminalStatusLineOutsideThePlayersAreaWithoutGL()
+    {
+        const int areaId = addArea();
+        QVERIFY(areaId > 0);
+        map()->mpRoomDB->getRoom(kPlayerRoomId)->setExit(kEastRoomId, DIR_EAST);
+        const int otherAreaId = map()->mpRoomDB->addArea(qsl("Other Area"));
+        constexpr int kOtherRoomId = 7;
+        QVERIFY(addRoomAt(kOtherRoomId, otherAreaId, 0, 0, 0));
+        map()->mpRoomDB->getRoom(kOtherRoomId)->name = qsl("cellar");
+        const auto restore = qScopeGuard([this]() {
+            mpHost->setMapStyle(qsl("tiles"));
+        });
+        QVERIFY(mpHost->setMapStyle(qsl("terminal")));
+
+        ModernGLWidget widget(map(), mpHost);
+        const auto line = [&widget]() {
+            QString text;
+            for (const ModernGLWidget::StatusLinePart& part : widget.statusLineParts()) {
+                text += part.text;
+            }
+            return text;
+        };
+        widget.setViewCenter(otherAreaId, 0, 0, 0);
+        QVERIFY2(line().startsWith(qsl("[Other Area]")), qPrintable(line()));
+        QVERIFY2(!line().contains(qsl("exits:")) && !line().contains(QLatin1Char('@')), qPrintable(line()));
+        QVERIFY2(!line().contains(qsl("cursor:")), qPrintable(line()));
+        widget.mHoveredRoomId = kOtherRoomId;
+        QVERIFY2(line().contains(qsl("cursor: room %1 cellar").arg(kOtherRoomId)), qPrintable(line()));
+        // Not for the player's own room, which the line already names
+        widget.setViewCenter(areaId, 0, 0, 0);
+        widget.mHoveredRoomId = kPlayerRoomId;
+        QVERIFY2(!line().contains(qsl("cursor:")), qPrintable(line()));
+    }
+
+    // A room shows the ground its environment is: guessed from a defined color, or named for the environment, and in
+    // ASCII where the glyph font has no character for it
+    void test_terminalRoomsShowTheirGroundWithoutGL()
+    {
+        constexpr int kBlue = 300;
+        constexpr int kNamed = 301;
+        const int areaId = addArea();
+        QVERIFY(areaId > 0);
+        map()->mRoomIdHash[map()->mProfileName] = 0;
+        map()->mCustomEnvColors[kBlue] = QColor(40, 80, 220);
+        map()->mCustomEnvColors[kNamed] = QColor(40, 80, 220);
+        QVERIFY(EnvironmentKit::store(map()->mUserData, kNamed, EnvironmentKit::Kit::Plain));
+        map()->mpRoomDB->getRoom(kEastRoomId)->environment = kBlue;
+        map()->mpRoomDB->getRoom(kPlayerRoomId)->environment = kNamed;
+        const auto restore = qScopeGuard([this, kBlue, kNamed]() {
+            map()->mCustomEnvColors.remove(kBlue);
+            map()->mCustomEnvColors.remove(kNamed);
+            map()->mUserData.remove(EnvironmentKit::userDataKey());
+            mpHost->setMapStyle(qsl("tiles"));
+        });
+        QVERIFY(mpHost->setMapStyle(qsl("terminal")));
+
+        ModernGLWidget widget(map(), mpHost);
+        const QString water = RoomAppearance::groundGlyph(EnvironmentKit::Kit::Water, false);
+        const bool waterShown = RoomAppearance::fontShows(widget.terminalGlyphFont(widget.mapStyle()), water);
+        QList<DrawnGlyph> glyphs = terminalGlyphs(widget, areaId);
+        QCOMPARE(glyphAt(glyphs, QPointF(2, 0)).text, waterShown ? water : qsl("~"));
+        QCOMPARE(glyphAt(glyphs, QPointF(0, 0)).text, qsl("\""));
+
+        // As a font without it would have it
+        widget.mGroundGlyphsFontKey = widget.terminalGlyphFont(widget.mapStyle()).key();
+        widget.mGroundGlyphShown.insert(water, false);
+        glyphs = terminalGlyphs(widget, areaId);
+        QCOMPARE(glyphAt(glyphs, QPointF(2, 0)).text, qsl("~"));
+    }
+
+    // Every style draws a highlighted room in the colors a script highlighted it in; the terminal's cell is filled
+    // with it, its character and the symbol's underline in a color that reads on it
+    void test_highlightKeepsTheScriptsColorWithoutGL()
+    {
+        const int areaId = addArea();
+        QVERIFY(areaId > 0);
+        TRoom* pEast = map()->mpRoomDB->getRoom(kEastRoomId);
+        pEast->highlight = true;
+        pEast->highlightRadius = 1.0f;
+        pEast->mSymbol = qsl("$");
+        const auto restore = qScopeGuard([this, pEast]() {
+            pEast->highlight = false;
+            pEast->mSymbol.clear();
+            mpHost->setMapStyle(qsl("tiles"));
+        });
+        for (const QColor& scriptColor : {QColor(0, 0, 160), QColor(255, 255, 85)}) {
+            pEast->highlightColor = scriptColor;
+            pEast->highlightColor2 = scriptColor;
+            for (const QString& styleId : {qsl("tiles"), qsl("blueprint"), qsl("terminal")}) {
+                QVERIFY(mpHost->setMapStyle(styleId));
+                ModernGLWidget widget(map(), mpHost);
+                queueFrame(widget, areaId);
+                bool found = false;
+                for (const QString& key : std::as_const(widget.mRoomTexturesInUse)) {
+                    if (key.startsWith(qsl("highlight|"))) {
+                        QVERIFY2(key.section(QLatin1Char('|'), 2, 2) == scriptColor.name(QColor::HexArgb), qPrintable(qsl("%1: %2").arg(styleId, key)));
+                        found = true;
+                    }
+                }
+                QVERIFY2(found, qPrintable(styleId));
+            }
+            ModernGLWidget widget(map(), mpHost);
+            const QList<DrawnGlyph> glyphs = terminalGlyphs(widget, areaId);
+            const QColor legible = ExitAppearance::contrastColor(scriptColor);
+            const DrawnGlyph symbol = glyphAt(glyphs, QPointF(2, 0));
+            QCOMPARE(symbol.text, qsl("$"));
+            QCOMPARE(symbol.color.rgb(), legible.rgb());
+            const QList<DrawnGlyph> lines = underlines(glyphs);
+            QCOMPARE(lines.size(), 1);
+            QCOMPARE(lines.constFirst().color.rgb(), legible.rgb());
+        }
+    }
+
+    // Two areas' symbols together overflow the terminal style's glyph atlas, so each switch starts it again;
+    // every room must still be drawn from the cell holding its own character, in a texture drawn with it there
+    void test_terminalGlyphsComeFromTheirOwnAtlasCellsWithoutGL()
+    {
+        constexpr int kRoomsPerArea = 150;
+        constexpr int kColumns = 15;
+        map()->mapClear();
+        QHash<int, QHash<QPair<int, int>, QString>> expected;
+        QList<int> areaIds;
+        for (const char16_t base : {u'\x4E00', u'\xAC00'}) {
+            const int areaId = map()->mpRoomDB->addArea(qsl("Atlas Area %1").arg(areaIds.size()));
+            QVERIFY(areaId > 0);
+            for (int i = 0; i < kRoomsPerArea; ++i) {
+                const int roomId = 1000 * (areaIds.size() + 1) + i;
+                const int x = i % kColumns - kColumns / 2;
+                const int y = i / kColumns - kRoomsPerArea / kColumns / 2;
+                QVERIFY(addRoomAt(roomId, areaId, x, y, 0));
+                const QString symbol(QChar(static_cast<char16_t>(base + i)));
+                map()->mpRoomDB->getRoom(roomId)->mSymbol = symbol;
+                expected[areaId].insert({x, y}, symbol);
+            }
+            areaIds.append(areaId);
+        }
+        // No player's room here, so that no cell is drawn in reverse video
+        map()->mRoomIdHash[map()->mProfileName] = 0;
+        const QFont savedFont = map()->mMapSymbolFont;
+        const auto restore = qScopeGuard([this, savedFont]() {
+            map()->mMapSymbolFont = savedFont;
+            mpHost->setMapStyle(qsl("tiles"));
+        });
+        QVERIFY(mpHost->setMapStyle(qsl("terminal")));
+
+        ModernGLWidget widget(map(), mpHost);
+        // The atlas's cells as each of its textures was drawn, which is what the texture shows
+        QHash<GLuint, QStringList> atlasTextures;
+        GLuint lastTexture = 0;
+        widget.mLabelTextureCache.useTextureStandIn(
+                [&widget, &atlasTextures, &lastTexture](const QImage& image) {
+                    ++lastTexture;
+                    if (image.size() == QSize(1024, 1024)) {
+                        atlasTextures.insert(lastTexture, widget.mGlyphAtlasCells);
+                    }
+                    return lastTexture;
+                },
+                [](GLuint) {});
+        widget.resize(800, 600);
+        widget.mCameraController.setViewportSize(widget.width(), widget.height());
+
+        // The atlas texture the area was drawn with, or 0 where a room was drawn from another's cell
+        const auto drawnFromOwnCells = [&](const int areaId) -> GLuint {
+            widget.setViewCenter(areaId, 0, 0, 0);
+            widget.frameRooms(30.0);
+            widget.mCameraController.setTopView();
+            widget.updateMatrices();
+            widget.mRenderCommandQueue.clear();
+            widget.renderRooms();
+            GLuint atlas = 0;
+            int glyphs = 0;
+            for (const auto& command : widget.mRenderCommandQueue.commands()) {
+                const auto* textured = dynamic_cast<const RenderTexturedTrianglesCommand*>(command.get());
+                if (!textured || !atlasTextures.contains(textured->geometry().textureId)) {
+                    continue;
+                }
+                const GeometryData& batch = textured->geometry();
+                atlas = batch.textureId;
+                const QStringList& cells = atlasTextures.value(atlas);
+                for (qsizetype quad = 0; quad * 18 + 8 < batch.vertices.size() && quad * 12 + 5 < batch.textureCoords.size(); ++quad) {
+                    // Each quad's first vertex is its bottom-left corner and its third its top-right; the atlas's rows run
+                    // up the texture, as its image is uploaded upside down
+                    const float* corner = batch.vertices.constData() + quad * 18;
+                    const float* texture = batch.textureCoords.constData() + quad * 12;
+                    const QPair<int, int> place{qRound((corner[0] + corner[6]) / 2.0f), qRound((corner[1] + corner[7]) / 2.0f)};
+                    const int cell = (15 - static_cast<int>((texture[1] + texture[5]) / 2.0f * 16.0f)) * 16 + static_cast<int>((texture[0] + texture[2]) / 2.0f * 16.0f);
+                    // A symbol's underline is drawn from the atlas's solid block
+                    if (cell == 0) {
+                        continue;
+                    }
+                    const QString symbol = expected.value(areaId).value(place);
+                    if (symbol.isEmpty() || cell >= cells.size() || cells.at(cell) != symbol || widget.mGlyphAtlasIndex.value(symbol, -1) != cell) {
+                        qWarning() << "the room at" << place << "shows" << cells.value(cell) << "for" << symbol;
+                        return 0;
+                    }
+                    ++glyphs;
+                }
+            }
+            if (glyphs != kRoomsPerArea) {
+                qWarning() << glyphs << "glyphs drawn for" << kRoomsPerArea << "rooms";
+                return 0;
+            }
+            return atlas;
+        };
+
+        const GLuint first = drawnFromOwnCells(areaIds.at(0));
+        QVERIFY2(first, "the first area is drawn from the wrong cells");
+        QVERIFY2(drawnFromOwnCells(areaIds.at(1)), "the second area is drawn from the first area's cells");
+        const GLuint back = drawnFromOwnCells(areaIds.at(0));
+        QVERIFY2(back, "back in the first area, it is drawn from the second area's cells");
+        QVERIFY(back != first);
+
+        map()->mMapSymbolFont.setItalic(!map()->mMapSymbolFont.italic());
+        const GLuint restyled = drawnFromOwnCells(areaIds.at(0));
+        QVERIFY2(restyled, "in another font, the area is drawn from the wrong cells");
+        QVERIFY2(restyled != back, "the atlas was not drawn again in the new font");
+        // Started again for each area, the atlas still keeps every ground's character
+        for (const QString& kitName : EnvironmentKit::names()) {
+            const QString ground = RoomAppearance::groundGlyph(*EnvironmentKit::fromName(kitName), false);
+            QVERIFY2(widget.mGlyphAtlasIndex.contains(ground), qPrintable(ground));
+        }
+    }
+
+    // A view of more symbols than the atlas holds still shows every room, the rest as plain rooms
+    void test_terminalSymbolsPastTheAtlasShowAsPlainRoomsWithoutGL()
+    {
+        constexpr int kRooms = 200;
+        constexpr int kColumns = 20;
+        map()->mapClear();
+        const int areaId = map()->mpRoomDB->addArea(qsl("Crowded Area"));
+        QVERIFY(areaId > 0);
+        for (int i = 0; i < kRooms; ++i) {
+            QVERIFY(addRoomAt(1000 + i, areaId, i % kColumns - kColumns / 2, i / kColumns - kRooms / kColumns / 2, 0));
+            map()->mpRoomDB->getRoom(1000 + i)->mSymbol = QString(QChar(static_cast<char16_t>(0x4E00 + i)));
+        }
+        map()->mRoomIdHash[map()->mProfileName] = 0;
+        const auto restore = qScopeGuard([this]() {
+            mpHost->setMapStyle(qsl("tiles"));
+        });
+        QVERIFY(mpHost->setMapStyle(qsl("terminal")));
+
+        ModernGLWidget widget(map(), mpHost);
+        QSet<GLuint> atlasTextures;
+        GLuint lastTexture = 0;
+        widget.mLabelTextureCache.useTextureStandIn(
+                [&atlasTextures, &lastTexture](const QImage& image) {
+                    if (image.size() == QSize(1024, 1024)) {
+                        atlasTextures.insert(lastTexture + 1);
+                    }
+                    return ++lastTexture;
+                },
+                [](GLuint) {});
+        widget.resize(800, 600);
+        widget.mCameraController.setViewportSize(widget.width(), widget.height());
+        widget.setViewCenter(areaId, 0, 0, 0);
+        widget.frameRooms(30.0);
+        widget.mCameraController.setTopView();
+        widget.updateMatrices();
+        widget.mRenderCommandQueue.clear();
+        widget.renderRooms();
+
+        qsizetype glyphs = 0;
+        for (const auto& command : widget.mRenderCommandQueue.commands()) {
+            const auto* textured = dynamic_cast<const RenderTexturedTrianglesCommand*>(command.get());
+            if (!textured || !atlasTextures.contains(textured->geometry().textureId)) {
+                continue;
+            }
+            const GeometryData& batch = textured->geometry();
+            for (qsizetype quad = 0; quad * 12 + 5 < batch.textureCoords.size(); ++quad) {
+                const float* texture = batch.textureCoords.constData() + quad * 12;
+                // Not a symbol's underline, drawn from the atlas's solid block in its first cell
+                if ((15 - static_cast<int>((texture[1] + texture[5]) / 2.0f * 16.0f)) * 16 + static_cast<int>((texture[0] + texture[2]) / 2.0f * 16.0f) != 0) {
+                    ++glyphs;
+                }
+            }
+        }
+        QCOMPARE(glyphs, kRooms);
+        // These rooms' environment is not one the map defines, so they show no ground
+        QVERIFY(widget.mGlyphAtlasIndex.contains(qsl("#")));
+
+        // An underline for each symbol shown, and none for one shown as a plain room
+        const QList<DrawnGlyph> drawn = terminalGlyphs(widget, areaId);
+        qsizetype symbols = 0;
+        for (const DrawnGlyph& glyph : drawn) {
+            symbols += glyph.text.size() == 1 && glyph.text.at(0).unicode() >= 0x4E00 && glyph.text.at(0).unicode() < 0x4E00 + kRooms;
+        }
+        QVERIFY(symbols > 0 && symbols < kRooms);
+        QCOMPARE(underlines(drawn).size(), symbols);
+    }
+
+    // A terminal's room shows plain stairs in its character, but not an in or out exit or a door, which its markers show
+    void test_terminalMarksOnlyWhatItsCharacterCannotShowWithoutGL()
+    {
+        constexpr int kStairsRoomId = 4;
+        constexpr int kInRoomId = 5;
+        constexpr int kDoorRoomId = 6;
+        const int areaId = addArea();
+        QVERIFY(areaId > 0);
+        QVERIFY(addRoomAt(kStairsRoomId, areaId, 4, 0, 0) && addRoomAt(kInRoomId, areaId, 6, 0, 0) && addRoomAt(kDoorRoomId, areaId, 8, 0, 0));
+        map()->mpRoomDB->getRoom(kStairsRoomId)->setExit(kLowerRoomId, DIR_DOWN);
+        map()->mpRoomDB->getRoom(kInRoomId)->setExit(kPlayerRoomId, DIR_IN);
+        map()->mpRoomDB->getRoom(kDoorRoomId)->setExit(kLowerRoomId, DIR_DOWN);
+        map()->mpRoomDB->getRoom(kDoorRoomId)->setDoor(qsl("down"), 3);
+        const auto restore = qScopeGuard([this]() {
+            mpHost->setMapStyle(qsl("tiles"));
+        });
+        QVERIFY(mpHost->setMapStyle(qsl("terminal")));
+        ModernGLWidget widget(map(), mpHost);
+        queueFrame(widget, areaId);
+        QStringList markers;
+        for (const QString& key : std::as_const(widget.mRoomTexturesInUse)) {
+            if (key.startsWith(qsl("markers|"))) {
+                markers.append(key.section(QLatin1Char('|'), 2));
+            }
+        }
+        markers.sort();
+        // Up, down, in and out, each followed by its door where there is an exit: the in exit and the locked door's stairs
+        QCOMPARE(markers, (QStringList{qsl("00200"), qsl("02300")}));
+    }
+
     // A script may fade a 2D highlight out from its center with a clear outer color, which a one-color shape would draw unseen
     void test_aClearHighlightColorGivesWayToItsCenterColorWithoutGL()
     {
@@ -834,8 +1299,10 @@ private slots:
         QVERIFY(areaId > 0);
         QVERIFY(mpHost->mapStylePreset().highlightShape != MapStyle::HighlightShape::Disc);
         TRoom* pEast = map()->mpRoomDB->getRoom(kEastRoomId);
-        const auto restore = qScopeGuard([pEast]() {
+        const auto restore = qScopeGuard([this, pEast]() {
             pEast->highlight = false;
+            pEast->mSymbol.clear();
+            mpHost->setMapStyle(qsl("tiles"));
         });
         pEast->highlight = true;
         pEast->highlightRadius = 1.0f;
@@ -858,6 +1325,17 @@ private slots:
         pEast->highlightColor = blue;
         pEast->highlightColor2 = QColor(255, 0, 0, 0);
         QCOMPARE(drawnColors(), QStringList{blue.name(QColor::HexArgb)});
+
+        // The terminal's cell is filled in the center color, so its character contrasts with that
+        const QColor navy(0, 0, 160);
+        pEast->highlightColor = QColor(255, 255, 85, 0);
+        pEast->highlightColor2 = navy;
+        pEast->mSymbol = qsl("$");
+        QVERIFY(mpHost->setMapStyle(qsl("terminal")));
+        ModernGLWidget widget(map(), mpHost);
+        const DrawnGlyph symbol = glyphAt(terminalGlyphs(widget, areaId), QPointF(2, 0));
+        QCOMPARE(symbol.text, qsl("$"));
+        QCOMPARE(symbol.color.rgb(), ExitAppearance::contrastColor(navy).rgb());
     }
 };
 

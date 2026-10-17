@@ -26,6 +26,7 @@
 #include "TRoom.h"
 #include "TRoomDB.h"
 
+#include <QHash>
 #include <QLineF>
 #include <QtMath>
 
@@ -43,6 +44,9 @@ constexpr qreal scmDoorSwingWidth = 0.3;
 constexpr int scmDiscSides = 16;
 // Qt's dash stroker's limit, QDashStroker::repetitionLimit()
 constexpr qreal scmMaxDashRepetitions = 10000.0;
+// The most characters a glyph line is drawn with; a longer one is drawn as a bar, as one line of a misplaced room
+// could otherwise make millions of characters every frame
+constexpr qint64 scmMaxGlyphRun = 2048;
 // How far a shaft for an up or down exit rises or drops from its room, in levels
 constexpr float scmShaftLength = 0.35f;
 // The part of a one-way exit's shaft, at its tip, in the one-way arrow's color
@@ -98,6 +102,10 @@ private:
     // Along the exit line from its start, across it to the side
     void doorSwing(int status, const QVector3D& from, const QVector3D& along, const QVector3D& side, float length, float height, int level);
     void customLine(const TRoom& room, const QString& key, const QList<QPointF>& points);
+    void glyph(const QVector3D& at, const QVector3D& along, QChar character, const QColor& color, int level);
+    // A line's characters in the cells between its ends, which its rooms are drawn in; false, drawing nothing, for
+    // a line too long to draw so
+    bool glyphRun(const QVector3D& from, const QVector3D& to, const QColor& color, int level);
 
     const TMap& mMap;
     const Host& mHost;
@@ -105,6 +113,8 @@ private:
     const float mWidth;
     const float mHeight;
     int mRoomId = 0;
+    // Index into mScene.glyphs by cell, as doubled coordinates, and level
+    QHash<std::pair<std::pair<qint64, qint64>, int>, qsizetype> mGlyphCells;
 };
 
 bool Builder::levelShown(const int z) const
@@ -191,6 +201,41 @@ void Builder::dashedBar(const QVector3D& from, const QVector3D& to, const QList<
     phase = std::fmod(phase + length, period);
 }
 
+void Builder::glyph(const QVector3D& at, const QVector3D& along, const QChar character, const QColor& color, const int level)
+{
+    const qint64 column = qRound64(at.x() * 2.0);
+    const qint64 row = qRound64(at.y() * 2.0);
+    const Glyph placed{QVector3D(column / 2.0f, row / 2.0f, at.z()), along, character, color, level};
+    const auto key = std::pair{std::pair{column, row}, level};
+    if (const auto found = mGlyphCells.constFind(key); found != mGlyphCells.cend()) {
+        // A door's character shows over the line it is on, and the first of either is kept
+        Glyph& existing = mScene.glyphs[*found];
+        if (existing.character.isNull() && !character.isNull()) {
+            existing = placed;
+        }
+        return;
+    }
+    mGlyphCells.insert(key, mScene.glyphs.size());
+    mScene.glyphs.append(placed);
+}
+
+bool Builder::glyphRun(const QVector3D& from, const QVector3D& to, const QColor& color, const int level)
+{
+    const QVector3D line = to - from;
+    const qint64 cells = qRound64(2.0 * qMax(std::abs(line.x()), std::abs(line.y())));
+    if (cells > scmMaxGlyphRun) {
+        return false;
+    }
+    if (cells < 2) {
+        return true;
+    }
+    const QVector3D along = line.normalized();
+    for (qint64 cell = 1; cell < cells; ++cell) {
+        glyph(from + line * (static_cast<float>(cell) / static_cast<float>(cells)), along, QChar(), color, level);
+    }
+    return true;
+}
+
 void Builder::triangle(const QVector3D& a, const QVector3D& b, const QVector3D& c, const QColor& color, const int level)
 {
     mScene.triangles.append({a, b, c, color, level});
@@ -253,6 +298,12 @@ void Builder::door(const TRoom& room, const QString& key, const QVector3D& from,
     }
     // Worked out flat along the line, as the 2D map does, then stood on it
     const QVector3D along = line / length;
+    if (mOptions.glyphs) {
+        // In the line's first cell from the room, as glyphRun() steps along it, as a roguelike puts a door in a room's wall
+        const qint64 cells = qRound64(2.0 * qMax(std::abs(line.x()), std::abs(line.y())));
+        glyph(cells > 0 ? from + line / static_cast<float>(cells) : to, along, QLatin1Char('+'), ExitAppearance::doorColor(status), level);
+        return;
+    }
     const QVector3D side = sideways(along);
     const auto place = [&](const QPointF& point) {
         return from + along * static_cast<float>(point.x()) + side * static_cast<float>(point.y());
@@ -393,6 +444,10 @@ void Builder::addRoom(const int roomId, const TRoom& room)
             }
             const QVector3D end = center + step(direction) * 0.5f;
             door(room, TRoom::dirCodeToShortString(direction), center, end, level);
+            if (mOptions.glyphs) {
+                glyph(end, step(direction).normalized(), QChar(), exitColor, level);
+                continue;
+            }
             bar(center, end, mWidth, mHeight, exitColor, level);
             disc(QVector3D(end.x(), end.y(), top(rz)), 0.1f, exitColor, level);
         }
@@ -495,12 +550,16 @@ void Builder::addRoom(const int roomId, const TRoom& room)
                 dashedBar(center, destination, ExitAppearance::visibleDashes(Qt::DashLine), phase, exitColor, lineLevel);
                 continue;
             }
-            bar(center, destination, mWidth, mHeight, exitColor, lineLevel);
+            if (!mOptions.glyphs || rise != 0.0f || !glyphRun(center, destination, exitColor, lineLevel)) {
+                bar(center, destination, mWidth, mHeight, exitColor, lineLevel);
+            }
             continue;
         }
 
-        qreal phase = 0.0;
-        dashedBar(center, destination, ExitAppearance::visibleDashes(Qt::DotLine), phase, exitColor, lineLevel);
+        if (!mOptions.glyphs || rise != 0.0f || !glyphRun(center, destination, exitColor, lineLevel)) {
+            qreal phase = 0.0;
+            dashedBar(center, destination, ExitAppearance::visibleDashes(Qt::DotLine), phase, exitColor, lineLevel);
+        }
         const QVector3D line = destination - center;
         if (line.lengthSquared() > 1e-10f) {
             const QVector3D along = line.normalized();

@@ -27,9 +27,12 @@
  * Run with: ctest -R ExitSceneTest -V
  */
 
+#include <algorithm>
+
 #include <QFileInfo>
 #include <QImage>
 #include <QPainter>
+#include <QScopeGuard>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
@@ -579,6 +582,208 @@ private slots:
             }
         }
         QCOMPARE(segmentsIn(scene, ExitAppearance::doorColor(2)).size(), 2);
+    }
+
+    void test_glyphsFillTheCellsBetweenRoomsWithTheDoorNextToItsRoom()
+    {
+        TRoom* pWest = addRoomAt(1, mAreaId, 0, 0);
+        TRoom* pEast = addRoomAt(2, mAreaId, 2, 0);
+        QVERIFY(pWest && pEast);
+        pWest->setExit(2, DIR_EAST);
+        pEast->setExit(1, DIR_WEST);
+        pWest->setDoor(qsl("e"), 2);
+        ExitScene::Options glyphOptions = options();
+        glyphOptions.glyphs = true;
+
+        const ExitScene::Scene scene = build(glyphOptions);
+        QVERIFY(segmentsIn(scene, mExitColor).isEmpty());
+        QCOMPARE(scene.glyphs.size(), 3);
+        for (const ExitScene::Glyph& glyph : scene.glyphs) {
+            QVERIFY(qAbs(glyph.at.y()) < scmTolerance);
+            if (qAbs(glyph.at.x() - 0.5f) < scmTolerance) {
+                QCOMPARE(glyph.character, QChar(u'+'));
+                QCOMPARE(glyph.color, ExitAppearance::doorColor(2));
+            } else {
+                QVERIFY2(qAbs(glyph.at.x() - 1.0f) < scmTolerance || qAbs(glyph.at.x() - 1.5f) < scmTolerance, "a line's character is outside the cells between the rooms");
+                QVERIFY(glyph.character.isNull());
+                QCOMPARE(glyph.color, mExitColor);
+            }
+        }
+    }
+
+    // A room misplaced far along its exit's line must not make a character for every cell of it, which froze the view
+    void test_aGlyphLineTooLongIsDrawnAsABar()
+    {
+        TRoom* pWest = addRoomAt(1, mAreaId, 0, 0);
+        TRoom* pEast = addRoomAt(2, mAreaId, 1000000, 0);
+        QVERIFY(pWest && pEast);
+        pWest->setExit(2, DIR_EAST);
+        pEast->setExit(1, DIR_WEST);
+        ExitScene::Options glyphOptions = options();
+        glyphOptions.glyphs = true;
+
+        const ExitScene::Scene scene = build(glyphOptions);
+        QVERIFY2(scene.glyphs.size() < 10000, qPrintable(qsl("%1 characters for one line").arg(scene.glyphs.size())));
+        QVERIFY2(!segmentsIn(scene, mExitColor).isEmpty(), "the line is not drawn at all");
+    }
+
+    void test_glyphDoorStaysOnASlantedLine()
+    {
+        TRoom* pWest = addRoomAt(1, mAreaId, 0, 0);
+        TRoom* pEast = addRoomAt(2, mAreaId, 4, 2);
+        QVERIFY(pWest && pEast);
+        pWest->setExit(2, DIR_EAST);
+        pEast->setExit(1, DIR_WEST);
+        ExitScene::Options glyphOptions = options();
+        glyphOptions.glyphs = true;
+        QList<QVector2D> lineCells;
+        for (const ExitScene::Glyph& glyph : build(glyphOptions).glyphs) {
+            lineCells.append(flat(glyph.at));
+        }
+
+        pWest->setDoor(qsl("e"), 1);
+        const ExitScene::Scene scene = build(glyphOptions);
+        QCOMPARE(scene.glyphs.size(), lineCells.size());
+        int doors = 0;
+        for (const ExitScene::Glyph& glyph : scene.glyphs) {
+            if (glyph.character == QChar(u'+')) {
+                ++doors;
+                QVERIFY2(std::any_of(lineCells.cbegin(),
+                                     lineCells.cend(),
+                                     [&glyph](const QVector2D& cell) {
+                                         return closeTo(cell, flat(glyph.at));
+                                     }),
+                         "the door is off its line");
+            }
+        }
+        QCOMPARE(doors, 1);
+    }
+
+    void test_glyphStubIsOneCharacterAtItsEnd()
+    {
+        TRoom* pRoom = addRoomAt(1, mAreaId, 3, 4);
+        QVERIFY(pRoom);
+        pRoom->setExitStub(DIR_NORTH, true);
+        ExitScene::Options glyphOptions = options();
+        glyphOptions.glyphs = true;
+
+        const ExitScene::Scene scene = build(glyphOptions);
+        QVERIFY(segmentsIn(scene, mExitColor).isEmpty());
+        QVERIFY(trianglesIn(scene, mExitColor).isEmpty());
+        QCOMPARE(scene.glyphs.size(), 1);
+        QVERIFY(closeTo(flat(scene.glyphs.first().at), QVector2D(3, 4.5f)));
+        QVERIFY(scene.glyphs.first().character.isNull());
+    }
+
+    void test_terminalGlyphMarksThePlayerStairsAndSymbol()
+    {
+        TRoom* pRoom = addRoomAt(1, mAreaId, 0, 0);
+        TRoom* pAbove = addRoomAt(2, mAreaId, 0, 0, 1);
+        TRoom* pBelow = addRoomAt(3, mAreaId, 0, 0, -1);
+        QVERIFY(pRoom && pAbove && pBelow);
+        RoomAppearance::Look look;
+        QCOMPARE(RoomAppearance::terminalGlyph(*pRoom, look, false), qsl("#"));
+        QCOMPARE(RoomAppearance::terminalGlyph(*pRoom, look, true), qsl("."));
+        pRoom->setExit(2, DIR_UP);
+        QCOMPARE(RoomAppearance::terminalGlyph(*pRoom, look, false), qsl("<"));
+        pRoom->setExitStub(DIR_DOWN, true);
+        QCOMPARE(RoomAppearance::terminalGlyph(*pRoom, look, false), qsl("X"));
+        pRoom->setExit(-1, DIR_UP);
+        QCOMPARE(RoomAppearance::terminalGlyph(*pRoom, look, false), qsl(">"));
+        look.symbol = qsl("$");
+        QCOMPARE(RoomAppearance::terminalGlyph(*pRoom, look, false), qsl("$"));
+        look.playerRoom = true;
+        QCOMPARE(RoomAppearance::terminalGlyph(*pRoom, look, false), qsl("@"));
+    }
+
+    void test_terminalGlyphShowsTheGroundUnlessThereIsMoreToSay()
+    {
+        TRoom* pRoom = addRoomAt(1, mAreaId, 0, 0);
+        TRoom* pAbove = addRoomAt(2, mAreaId, 0, 0, 1);
+        QVERIFY(pRoom && pAbove);
+        RoomAppearance::Look look;
+        QCOMPARE(RoomAppearance::terminalGlyph(*pRoom, look, false, EnvironmentKit::Kit::Water), QString(QChar(0x2248)));
+        QCOMPARE(RoomAppearance::terminalGlyph(*pRoom, look, false, EnvironmentKit::Kit::Forest), QString(QChar(0x2663)));
+        QCOMPARE(RoomAppearance::terminalGlyph(*pRoom, look, false, EnvironmentKit::Kit::Building), QString(QChar(0x25A0)));
+        QCOMPARE(RoomAppearance::terminalGlyph(*pRoom, look, false, EnvironmentKit::Kit::Road), qsl("#"));
+        QCOMPARE(RoomAppearance::terminalGlyph(*pRoom, look, false, EnvironmentKit::Kit::Plain), qsl("\""));
+        QCOMPARE(RoomAppearance::terminalGlyph(*pRoom, look, true, EnvironmentKit::Kit::Plain), qsl("."));
+        QCOMPARE(RoomAppearance::terminalGlyph(*pRoom, look, true, EnvironmentKit::Kit::Water), QString(QChar(0x2248)));
+        pRoom->setExit(2, DIR_UP);
+        QCOMPARE(RoomAppearance::terminalGlyph(*pRoom, look, false, EnvironmentKit::Kit::Water), qsl("<"));
+        look.symbol = qsl("$");
+        QCOMPARE(RoomAppearance::terminalGlyph(*pRoom, look, false, EnvironmentKit::Kit::Water), qsl("$"));
+    }
+
+    // A map that never defined an environment draws it in the default red, which is no kind of ground
+    void test_onlyADefinedEnvironmentHasAGround()
+    {
+        constexpr int kEnvironment = 9999;
+        const QColor blue(50, 90, 200);
+        const auto restore = qScopeGuard([this, kEnvironment]() {
+            map()->mCustomEnvColors.remove(kEnvironment);
+        });
+        QVERIFY(!EnvironmentKit::forDefinedEnvironment({}, *map(), kEnvironment, blue));
+        QCOMPARE(EnvironmentKit::forDefinedEnvironment({{kEnvironment, EnvironmentKit::Kit::Forest}}, *map(), kEnvironment, blue), EnvironmentKit::Kit::Forest);
+        map()->mCustomEnvColors[kEnvironment] = blue;
+        QCOMPARE(EnvironmentKit::forDefinedEnvironment({}, *map(), kEnvironment, blue), EnvironmentKit::Kit::Water);
+    }
+
+    // An environment mapped onto a color the map does not have is drawn in the default red, like an undefined one
+    void test_anEnvironmentMappedOntoNoColorHasNoGround()
+    {
+        constexpr int kEnvironment = 9998;
+        constexpr int kMissing = 9997;
+        const QColor blue(50, 90, 200);
+        const auto restore = qScopeGuard([this, kEnvironment]() {
+            map()->mEnvColors.remove(kEnvironment);
+        });
+        map()->mEnvColors[kEnvironment] = kMissing;
+        QVERIFY(!map()->mCustomEnvColors.contains(kMissing));
+        QVERIFY(!RoomAppearance::environmentDefined(*map(), kEnvironment));
+        QVERIFY(!EnvironmentKit::forDefinedEnvironment({}, *map(), kEnvironment, blue));
+        QCOMPARE(RoomAppearance::environmentColor(*map(), *mpHost, kEnvironment), mpHost->mRed_2);
+        map()->mEnvColors[kEnvironment] = 4;
+        QVERIFY(RoomAppearance::environmentDefined(*map(), kEnvironment));
+        QCOMPARE(RoomAppearance::environmentColor(*map(), *mpHost, kEnvironment), mpHost->mBlue_2);
+        QCOMPARE(EnvironmentKit::forDefinedEnvironment({}, *map(), kEnvironment, blue), EnvironmentKit::Kit::Water);
+    }
+
+    // Two profiles' maps with different unreadable kits, read in turn on every repaint, warn once each
+    void test_unreadableKitsWarnOnceForEachSavedValue()
+    {
+        QMap<QString, QString> first{{EnvironmentKit::userDataKey(), qsl("{\"1\": \"lava\"}")}};
+        QMap<QString, QString> second{{EnvironmentKit::userDataKey(), qsl("not json")}};
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("EnvironmentKit: .*lava")));
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("EnvironmentKit: .*not json")));
+        QTest::failOnWarning(QRegularExpression(qsl("EnvironmentKit: ")));
+        for (int frame = 0; frame < 3; ++frame) {
+            QVERIFY(EnvironmentKit::stored(first).isEmpty());
+            QVERIFY(EnvironmentKit::stored(second).isEmpty());
+        }
+    }
+
+    void test_groundFallsBackToAsciiForAFontWithoutIt()
+    {
+        QCOMPARE(RoomAppearance::groundGlyph(EnvironmentKit::Kit::Water, false, true), qsl("~"));
+        QCOMPARE(RoomAppearance::groundGlyph(EnvironmentKit::Kit::Forest, false, true), qsl("*"));
+        QCOMPARE(RoomAppearance::groundGlyph(EnvironmentKit::Kit::Building, false, true), qsl("="));
+        QCOMPARE(RoomAppearance::groundGlyph(EnvironmentKit::Kit::Road, false, true), qsl("#"));
+        QCOMPARE(RoomAppearance::groundGlyph(EnvironmentKit::Kit::Plain, true, true), qsl("."));
+        for (const QString& kitName : EnvironmentKit::names()) {
+            const QString ascii = RoomAppearance::groundGlyph(*EnvironmentKit::fromName(kitName), false, true);
+            QVERIFY2(ascii.size() == 1 && ascii.at(0).unicode() >= u'!' && ascii.at(0).unicode() <= u'~', qPrintable(ascii));
+        }
+        TRoom* pRoom = addRoomAt(1, mAreaId, 0, 0);
+        QVERIFY(pRoom);
+        const RoomAppearance::Look look;
+        QCOMPARE(RoomAppearance::terminalGlyph(*pRoom, look, false, EnvironmentKit::Kit::Forest, true), qsl("*"));
+
+        const QFont font(qsl("Bitstream Vera Sans Mono"));
+        QVERIFY(RoomAppearance::fontShows(font, qsl("#")));
+        // A noncharacter, which no font draws
+        QVERIFY(!RoomAppearance::fontShows(font, QString(QChar(0xFFFF))));
+        QVERIFY(!RoomAppearance::fontShows(font, QString()));
     }
 
     void test_areaExitPointsOutOfTheArea_data()
