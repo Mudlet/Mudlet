@@ -432,8 +432,8 @@ void TMapView::update3DViewAvailability()
         //: Tooltip for the button in a secondary map window that switches it between the 2D and 3D map
         mp3DButton->setToolTip(tr("Show this window's map in 3D"));
     } else {
-        //: Tooltip for the disabled 3D button in a secondary map window; keep setConfig("experiment.3dmap.modernmapper", true) exactly as written, it is Lua code the user types
-        mp3DButton->setToolTip(tr("Map windows show the map in 3D with the modern 3D mapper only; use setConfig(\"experiment.3dmap.modernmapper\", true) to switch to it"));
+        //: Tooltip for the disabled 3D button in a secondary map window; "Use the modern 3D mapper" is the checkbox on the Mapper page of Preferences, so translate it the same way
+        mp3DButton->setToolTip(tr("Map windows show the map in 3D with the modern 3D mapper only; turn on \"Use the modern 3D mapper\" in Preferences, Mapper to switch to it"));
     }
     const QSignalBlocker blocker(mp3DButton);
     mp3DButton->setChecked(showing3DView());

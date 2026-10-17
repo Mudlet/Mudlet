@@ -47,6 +47,7 @@
 #include "TKey.h"
 #include "TLabelModel.h"
 #include "TMap.h"
+#include "TMapViewFrontend.h"
 #include "TMapViewsFrontend.h"
 #include "TMedia.h"
 #include "TNullConsoleFrontend.h"
@@ -7076,8 +7077,14 @@ std::pair<bool, QString> Host::setExperimentEnabled(const QString& experimentKey
     }
 
 #if defined(INCLUDE_3DMAPPER)
-    // Refresh maps if any experiments changed the 3D map
     if (mpMap) {
+        if (experimentKey == qsl("experiment.3dmap.modernmapper")) {
+            if (auto* mapper = mpMap->mapViewFrontend()) {
+                mapper->recreate3DView();
+            }
+            mpMap->mapViewsFrontend()->update3DViewAvailability();
+        }
+        // Refresh maps if any experiments changed the 3D map
         consoleFrontend()->requestMapRepaint();
     }
 #endif

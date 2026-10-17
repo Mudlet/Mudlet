@@ -263,6 +263,7 @@ public:
     bool getLargeAreaExitArrows() const { return mLargeAreaExitArrows; }
     void setLargeAreaExitArrows(const bool);
     bool getUseModern3DMapper() const { return experimentEnabled(qsl("experiment.3dmap.modernmapper")); }
+    void setUseModern3DMapper(const bool enabled) { setExperimentEnabled(qsl("experiment.3dmap.modernmapper"), enabled); }
 
     // Experiment system methods
     bool experimentEnabled(const QString& experimentKey) const;

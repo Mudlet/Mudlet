@@ -30,6 +30,7 @@
 #include "RoomAppearance.h"
 #include "RoomContextMenuHandler.h"
 #include "T2DMap.h"
+#include "TAppFrontend.h"
 #include "TArea.h"
 #include "TCommandLine.h"
 #include "TEvent.h"
@@ -433,14 +434,17 @@ void ModernGLWidget::showFailure(const QString& message, const QString& advice)
         mpFailureLabel->setWordWrap(true);
         mpFailureLabel->setAutoFillBackground(true);
         mpFailureLabel->setMargin(16);
+        mpFailureLabel->setTextFormat(Qt::RichText);
+        connect(mpFailureLabel, &QLabel::linkActivated, this, [this]() {
+            TAppFrontend::instance()->showOptionsDialog(qsl("mapper/checkBox_modern3DMapper"), mpHost.data());
+        });
         auto layout = new QVBoxLayout(this);
         layout->setContentsMargins(0, 0, 0, 0);
         layout->addWidget(mpFailureLabel);
     }
-    //: Second paragraph of the message shown in place of the 3D map when the modern 3D mapper cannot run; keep setConfig("experiment.3dmap.modernmapper", false) and the word true exactly as written, they are Lua code the user types
-    const QString tryClassic = tr("Use setConfig(\"experiment.3dmap.modernmapper\", false) to try the classic 3D view; if that stays blank too, use the 2D map. Setting it back to true "
-                                  "tries the modern one again.");
-    mpFailureLabel->setText(qsl("%1\n\n%2").arg(message, advice.isEmpty() ? tryClassic : advice));
+    //: Second paragraph of the message shown in place of the 3D map when the modern 3D mapper cannot run; "Use the modern 3D mapper" is the checkbox on the Mapper page of Preferences, so translate it the same way, and keep the <a href="preferences"> and </a> tags, which make Preferences a link that opens it
+    const QString tryClassic = tr("Turn off \"Use the modern 3D mapper\" in <a href=\"preferences\">Preferences</a> to try the classic 3D view; if that stays blank too, use the 2D map.");
+    mpFailureLabel->setText(qsl("<p>%1</p><p>%2</p>").arg(message.toHtmlEscaped(), advice.isEmpty() ? tryClassic : advice.toHtmlEscaped()));
     mpFailureLabel->show();
 }
 

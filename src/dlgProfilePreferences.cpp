@@ -1981,14 +1981,23 @@ void dlgProfilePreferences::reflowWideCards()
         verticalLayout_groupBox_wrapping->insertWidget(wrappingRow++, pFrame);
     }
 
-    const QList<QWidget*> mapViewOptions{
-            mMapperUseAntiAlias, checkBox_drawUpperLowerLevels, checkbox_mMapperShowRoomBorders, checkBox_invertMapZoom, checkBox_largeAreaExitArrows, checkBox_showDefaultArea};
+    const QList<QWidget*> mapViewOptions{mMapperUseAntiAlias,
+                                         checkBox_drawUpperLowerLevels,
+                                         checkbox_mMapperShowRoomBorders,
+                                         checkBox_invertMapZoom,
+                                         checkBox_largeAreaExitArrows,
+                                         checkBox_showDefaultArea,
+                                         checkBox_modern3DMapper};
     takeOutOfLayout(gridLayout_groupBox_mapViewOptions, mapViewOptions + QList<QWidget*>{gridGroupBox, groupBox_mapSymbols});
     for (int i = 0, total = mapViewOptions.size(); i < total; ++i) {
         gridLayout_groupBox_mapViewOptions->addWidget(mapViewOptions.at(i), i / 2, i % 2);
     }
-    gridLayout_groupBox_mapViewOptions->addWidget(gridGroupBox, 3, 0, 1, 2);
-    gridLayout_groupBox_mapViewOptions->addWidget(groupBox_mapSymbols, 4, 0, 1, 2);
+    const int mapViewOptionRows = (mapViewOptions.size() + 1) / 2;
+    gridLayout_groupBox_mapViewOptions->addWidget(gridGroupBox, mapViewOptionRows, 0, 1, 2);
+    gridLayout_groupBox_mapViewOptions->addWidget(groupBox_mapSymbols, mapViewOptionRows + 1, 0, 1, 2);
+#if !defined(INCLUDE_3DMAPPER)
+    checkBox_modern3DMapper->hide();
+#endif
 
     // A column of three, leaving free the two cells initWithHost() appends the scaling factor to
     const QList<QWidget*> mapSymbolRows{label_mapSymbolsFont, fontComboBox_mapSymbols, pushButton_showGlyphUsage, checkBox_isOnlyMapSymbolFontToBeUsed};
@@ -3894,6 +3903,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     checkBox_mVersionInTTYPE->setChecked(pHost->mVersionInTTYPE);
     checkBox_mForceMXPProcessorOn->setChecked(pHost->getForceMXPProcessorOn());
     mMapperUseAntiAlias->setChecked(pHost->mMapperUseAntiAlias);
+    checkBox_modern3DMapper->setChecked(pHost->getUseModern3DMapper());
     checkbox_mMapperShowRoomBorders->setChecked(pHost->mMapperShowRoomBorders);
     checkBox_drawUpperLowerLevels->setChecked(mudlet::self()->mDrawUpperLowerLevels);
     acceptServerGUI->setChecked(pHost->mAcceptServerGUI);
@@ -4951,6 +4961,7 @@ void dlgProfilePreferences::clearHostDetails()
     checkBox_mVersionInTTYPE->setChecked(false);
     checkBox_mForceMXPProcessorOn->setChecked(false);
     mMapperUseAntiAlias->setChecked(false);
+    checkBox_modern3DMapper->setChecked(false);
     checkbox_mMapperShowRoomBorders->setChecked(false);
     checkBox_drawUpperLowerLevels->setChecked(false);
     acceptServerGUI->setChecked(false);
@@ -6631,6 +6642,11 @@ void dlgProfilePreferences::applyAll()
         if (mSnapshot.dirty(mMapperUseAntiAlias)) {
             pHost->mMapperUseAntiAlias = mMapperUseAntiAlias->isChecked();
         }
+#if defined(INCLUDE_3DMAPPER)
+        if (mSnapshot.dirty(checkBox_modern3DMapper)) {
+            pHost->setUseModern3DMapper(checkBox_modern3DMapper->isChecked());
+        }
+#endif
         if (mSnapshot.dirty(checkbox_mMapperShowRoomBorders)) {
             pHost->mMapperShowRoomBorders = checkbox_mMapperShowRoomBorders->isChecked();
         }
