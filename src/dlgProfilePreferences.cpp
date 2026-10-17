@@ -4618,8 +4618,11 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     {
         const QSignalBlocker blocker(comboBox_mapStyle);
         comboBox_mapStyle->clear();
+        // Wider than tall, as the combo box has room across for the preview's rooms to show
+        const QSize previewSize(48, 32);
+        comboBox_mapStyle->setIconSize(previewSize);
         for (const MapStyle& style : MapStyle::all()) {
-            comboBox_mapStyle->addItem(style.displayName(), style.id);
+            comboBox_mapStyle->addItem(style.previewIcon(previewSize), style.displayName(), style.id);
         }
         comboBox_mapStyle->setCurrentIndex(comboBox_mapStyle->findData(pHost->mapStyle()));
     }

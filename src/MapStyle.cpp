@@ -26,8 +26,17 @@
 
 #include <QCoreApplication>
 #include <QFont>
+#include <QGuiApplication>
+#include <QIcon>
+#include <QPainter>
+#include <QPainterPath>
+#include <QPixmap>
+#include <QScreen>
+#include <QtMath>
 
 #include <algorithm>
+#include <array>
+#include <utility>
 
 namespace {
 QList<MapStyle> registeredStyles()
@@ -593,6 +602,316 @@ QFont MapStyle::roomIdFont(const QFont& mapSymbolFont) const
 qreal MapStyle::roomNameSpan(const qreal nameWidth, const qreal spaceWidth) const
 {
     return nameWidth + spaceWidth * roomNameGap;
+}
+
+namespace {
+// Six rooms, three across and two down, and the exits between them: a forest, a road, water and a town, so that a
+// style's palette shows how it tells areas apart
+constexpr int scmPreviewColumns = 3;
+constexpr int scmPreviewRows = 2;
+constexpr std::array<QColor, scmPreviewColumns * scmPreviewRows> scmPreviewEnvironments{
+        QColor(40, 160, 60), QColor(40, 160, 60), QColor(50, 90, 200), QColor(150, 150, 150), QColor(200, 120, 40), QColor(50, 90, 200)};
+constexpr std::array<std::pair<int, int>, 6> scmPreviewExits{{{0, 1}, {1, 2}, {3, 4}, {4, 5}, {0, 3}, {2, 5}}};
+constexpr int scmPreviewPlayerRoom = 1;
+// The 2D map's defaults, which a profile keeps unless it was given its own
+constexpr QColor scmPreviewProfileBackground(QColorConstants::Black);
+constexpr QColor scmPreviewProfileExits(QColorConstants::LightGray);
+constexpr QColor scmPreviewProfilePlayer(QColorConstants::Red);
+
+QPainterPath previewRoomPath(const QRectF& room, const bool round)
+{
+    QPainterPath path;
+    if (round) {
+        path.addEllipse(room);
+    } else {
+        const qreal corner = room.width() * 0.12;
+        path.addRoundedRect(room, corner, corner);
+    }
+    return path;
+}
+} // namespace
+
+QPixmap MapStyle::previewPixmap(const QSize& size, const qreal devicePixelRatio) const
+{
+    // Nothing to draw on, and the grid's steps would come to nothing
+    if (size.isEmpty() || devicePixelRatio <= 0.0) {
+        return {};
+    }
+    QPixmap pixmap(QSize(qCeil(size.width() * devicePixelRatio), qCeil(size.height() * devicePixelRatio)));
+    pixmap.setDevicePixelRatio(devicePixelRatio);
+    pixmap.fill(Qt::transparent);
+
+    QPainter painter(&pixmap);
+    painter.setRenderHint(QPainter::Antialiasing);
+    painter.setRenderHint(QPainter::TextAntialiasing);
+    const QRectF bounds(0.0, 0.0, size.width(), size.height());
+    const qreal corner = std::min(bounds.width(), bounds.height()) / 7.0;
+    QPainterPath sheetPath;
+    sheetPath.addRoundedRect(bounds.adjusted(0.5, 0.5, -0.5, -0.5), corner, corner);
+    painter.setClipPath(sheetPath);
+
+    const QColor sheet = backgroundColor(scmPreviewProfileBackground);
+    if (postEffects.testFlag(PostEffect::Sky)) {
+        QLinearGradient sky(bounds.topLeft(), bounds.bottomLeft());
+        sky.setColorAt(0.0, scmSkyTop);
+        sky.setColorAt(1.0, scmSkyFoot);
+        painter.fillRect(bounds, sky);
+    } else {
+        painter.fillRect(bounds, sheet);
+    }
+
+    const qreal pitch = std::min(bounds.width() / scmPreviewColumns, bounds.height() / (scmPreviewRows + 0.4));
+    const QPointF origin((bounds.width() - pitch * scmPreviewColumns) / 2.0, (bounds.height() - pitch * scmPreviewRows) / 2.0);
+    // Bigger than the style draws them against their spacing, so that the smallest still reads, but in proportion
+    const qreal side = pitch * std::clamp(2.0 / roomScale, 0.42, 0.62);
+    auto centre = [&](const int room) {
+        return origin + QPointF(pitch * (room % scmPreviewColumns + 0.5), pitch * (room / scmPreviewColumns + 0.5));
+    };
+    auto roomRect = [&](const int room) {
+        const QPointF middle = centre(room);
+        return QRectF(middle.x() - side / 2.0, middle.y() - side / 2.0, side, side);
+    };
+
+    if (gridColor.isValid()) {
+        QColor line = gridColor;
+        line.setAlpha(std::min(255, line.alpha() * 3));
+        painter.setPen(QPen(line, 0.0));
+        for (qreal x = origin.x(); x < bounds.width(); x += pitch) {
+            painter.drawLine(QPointF(x, 0.0), QPointF(x, bounds.height()));
+        }
+        for (qreal y = origin.y(); y < bounds.height(); y += pitch) {
+            painter.drawLine(QPointF(0.0, y), QPointF(bounds.width(), y));
+        }
+    }
+
+    if (washReach > 0.0f) {
+        painter.setPen(Qt::NoPen);
+        for (int room = 0; room < static_cast<int>(scmPreviewEnvironments.size()); ++room) {
+            QColor wash = washColor(scmPreviewEnvironments.at(room));
+            QRadialGradient blot(centre(room), pitch * 0.75);
+            blot.setColorAt(0.0, wash);
+            wash.setAlpha(0);
+            blot.setColorAt(1.0, wash);
+            painter.setBrush(blot);
+            painter.drawEllipse(centre(room), pitch * 0.75, pitch * 0.75);
+        }
+    }
+
+    const bool terminalGlyphs = glyphs == Glyphs::Terminal;
+    const qreal exitWidth = std::clamp(pitch * 0.07 * exitWidthFactor, 0.75, pitch * 0.22);
+    for (const auto& [from, to] : scmPreviewExits) {
+        const QColor fromEnvironment = scmPreviewEnvironments.at(from);
+        QColor line = exitColor(scmPreviewProfileExits);
+        if (environmentLines) {
+            if (fromEnvironment == scmPreviewEnvironments.at(to)) {
+                line = ringColor(fromEnvironment, scmPreviewProfileBackground);
+            } else if (mixedLineColor.isValid()) {
+                line = mixedLineColor;
+            }
+        }
+        if (edges == Edges::GlowingWireframes) {
+            QColor glow = line;
+            glow.setAlpha(70);
+            painter.setPen(QPen(glow, exitWidth * 3.0, Qt::SolidLine, Qt::RoundCap));
+            painter.drawLine(centre(from), centre(to));
+        }
+        QPen pen(line, exitWidth, terminalGlyphs ? Qt::DotLine : Qt::SolidLine, Qt::RoundCap);
+        painter.setPen(pen);
+        painter.drawLine(centre(from), centre(to));
+    }
+
+    const bool round = roundRooms(false);
+    QFont glyphFont(labelFontFamily);
+    glyphFont.setPixelSize(std::max(6, qRound(pitch * 0.8)));
+    glyphFont.setBold(true);
+    for (int room = 0; room < static_cast<int>(scmPreviewEnvironments.size()); ++room) {
+        const QColor environment = scmPreviewEnvironments.at(room);
+        const QColor fill = roomColor(environment);
+        const QRectF rect = roomRect(room);
+        const bool player = room == scmPreviewPlayerRoom;
+        if (terminalGlyphs) {
+            painter.setFont(glyphFont);
+            painter.setPen(player ? scmPreviewProfilePlayer : fill);
+            // A cell of the screen's black behind each character, so the dotted exits stop at it
+            painter.fillRect(rect.adjusted(-side * 0.3, -side * 0.3, side * 0.3, side * 0.3), sheet);
+            painter.drawText(rect.adjusted(-side, -side, side, side), Qt::AlignCenter, player ? qsl("@") : qsl("#"));
+            continue;
+        }
+        const QPainterPath path = previewRoomPath(rect, round);
+        switch (edges) {
+        case Edges::ViewedLevelBase: {
+            painter.setPen(Qt::NoPen);
+            painter.setBrush(roomBorderColor(Host::scmDefaultRoomBorderColor, fill, sheet));
+            painter.drawPath(previewRoomPath(rect.adjusted(-side * 0.12, -side * 0.12, side * 0.12, side * 0.2), round));
+            if (shadedBlocks) {
+                QLinearGradient shade(rect.topLeft(), rect.bottomRight());
+                shade.setColorAt(0.0, fill.lighter(120));
+                shade.setColorAt(1.0, fill.darker(120));
+                painter.setBrush(shade);
+            } else {
+                painter.setBrush(fill);
+            }
+            painter.drawPath(path);
+            break;
+        }
+        case Edges::InkOutlines:
+            painter.setBrush(fill);
+            painter.setPen(QPen(ink.isValid() ? ink : scmPreviewProfileExits, std::max(1.0, side * inkOutlineWidth)));
+            painter.drawPath(path);
+            break;
+        case Edges::StationRings:
+            painter.setBrush(fill);
+            painter.setPen(QPen(ringColor(environment, scmPreviewProfileBackground), std::max(1.0, side * stationRing * 1.5)));
+            painter.drawPath(path);
+            break;
+        case Edges::GlowingWireframes: {
+            QColor haze = fill;
+            haze.setAlpha(45);
+            painter.setBrush(haze);
+            QColor glow = fill;
+            glow.setAlpha(80);
+            painter.setPen(QPen(glow, 3.0));
+            painter.drawPath(path);
+            painter.setBrush(Qt::NoBrush);
+            painter.setPen(QPen(fill, 1.0));
+            painter.drawPath(path);
+            break;
+        }
+        case Edges::InkLozenges: {
+            const qreal lozenge = side * 0.2;
+            painter.setBrush(fill);
+            painter.setPen(QPen(ink.isValid() ? ink : scmPreviewProfileExits, 1.0));
+            painter.drawRoundedRect(rect, lozenge, lozenge);
+            break;
+        }
+        case Edges::ModelBlocks: {
+            painter.setPen(Qt::NoPen);
+            painter.setBrush(QColor(0, 0, 0, 50));
+            painter.drawEllipse(rect.translated(side * 0.2, side * 0.35));
+            painter.setBrush(fill.darker(140));
+            painter.drawPath(previewRoomPath(rect.translated(0.0, side * 0.25), round));
+            QLinearGradient light(rect.topLeft(), rect.bottomRight());
+            light.setColorAt(0.0, fill.lighter(125));
+            light.setColorAt(1.0, fill);
+            painter.setBrush(light);
+            painter.drawPath(path);
+            break;
+        }
+        case Edges::ViewedLevelRim:
+            painter.setBrush(fill);
+            painter.setPen(QPen(Host::scmDefaultRoomBorderColor, 1.0));
+            painter.drawPath(path);
+            break;
+        }
+    }
+
+    const QRectF playerRect = roomRect(scmPreviewPlayerRoom);
+    const QPointF playerCentre = playerRect.center();
+    const QColor playerTone = playerColor.isValid() ? playerColor : scmPreviewProfilePlayer;
+    painter.setBrush(Qt::NoBrush);
+    switch (playerMarker) {
+    case PlayerMarker::Ring: {
+        if (terminalGlyphs) {
+            break;
+        }
+        const qreal radius = side * 0.85;
+        if (playerRing == PlayerRing::Profile) {
+            painter.setPen(QPen(playerTone, std::max(1.2, side * 0.2)));
+            painter.drawEllipse(playerCentre, radius, radius);
+            break;
+        }
+        painter.setPen(QPen(playerTone, 1.2));
+        painter.drawEllipse(playerCentre, radius, radius);
+        if (playerRing == PlayerRing::Crosshair) {
+            const qreal reach = radius * 1.5;
+            painter.drawLine(playerCentre - QPointF(reach, 0.0), playerCentre + QPointF(reach, 0.0));
+            painter.drawLine(playerCentre - QPointF(0.0, reach), playerCentre + QPointF(0.0, reach));
+        }
+        break;
+    }
+    case PlayerMarker::Pill: {
+        const qreal radius = side * 0.8;
+        painter.setPen(QPen(ink.isValid() ? ink : scmPreviewProfileExits, 1.2));
+        painter.setBrush(Qt::white);
+        painter.drawEllipse(playerCentre, radius, radius);
+        painter.setPen(Qt::NoPen);
+        painter.setBrush(playerRoomColor());
+        painter.drawEllipse(playerCentre, radius * 0.5, radius * 0.5);
+        break;
+    }
+    case PlayerMarker::Pulse: {
+        painter.setPen(QPen(playerRoomColor(), 1.0));
+        QColor fill = playerRoomColor();
+        fill.setAlpha(110);
+        painter.setBrush(fill);
+        painter.drawPath(previewRoomPath(playerRect, roundRooms(false)));
+        const qreal half = side * 0.3;
+        const QPointF top = playerCentre - QPointF(0.0, side * 1.05);
+        painter.setPen(Qt::NoPen);
+        painter.setBrush(playerRoomColor());
+        painter.drawPolygon(QPolygonF{top + QPointF(0.0, -half), top + QPointF(half, 0.0), top + QPointF(0.0, half), top + QPointF(-half, 0.0)});
+        break;
+    }
+    case PlayerMarker::Seal: {
+        painter.setPen(Qt::NoPen);
+        painter.setBrush(playerRoomColor());
+        painter.drawRect(playerRect);
+        painter.setPen(QPen(sheet, std::max(0.8, side * 0.08)));
+        painter.setBrush(Qt::NoBrush);
+        painter.drawRect(playerRect.adjusted(side * 0.2, side * 0.2, -side * 0.2, -side * 0.2));
+        break;
+    }
+    case PlayerMarker::Token: {
+        // A pawn standing on the room: its foot, its body and a ball for its head
+        const QColor paint = playerRoomColor();
+        const qreal foot = playerRect.center().y() + side * 0.15;
+        painter.setPen(QPen(paint.darker(150), 0.6));
+        painter.setBrush(paint);
+        painter.drawEllipse(QPointF(playerCentre.x(), foot), side * 0.42, side * 0.16);
+        painter.drawPolygon(QPolygonF{QPointF(playerCentre.x() - side * 0.3, foot),
+                                      QPointF(playerCentre.x() + side * 0.3, foot),
+                                      QPointF(playerCentre.x() + side * 0.1, foot - side * 0.75),
+                                      QPointF(playerCentre.x() - side * 0.1, foot - side * 0.75)});
+        painter.drawEllipse(QPointF(playerCentre.x(), foot - side * 0.9), side * 0.24, side * 0.24);
+        break;
+    }
+    }
+
+    if (postEffects.testFlag(PostEffect::Scanlines)) {
+        painter.setPen(Qt::NoPen);
+        painter.setBrush(QColor(0, 0, 0, 70));
+        for (qreal y = 0.0; y < bounds.height(); y += 2.0) {
+            painter.drawRect(QRectF(0.0, y, bounds.width(), 0.6));
+        }
+    }
+    if (postEffects.testFlag(PostEffect::Vignette)) {
+        QRadialGradient vignette(bounds.center(), std::max(bounds.width(), bounds.height()) * 0.75);
+        vignette.setColorAt(0.6, QColor(0, 0, 0, 0));
+        vignette.setColorAt(1.0, QColor(60, 40, 20, 70));
+        painter.fillRect(bounds, vignette);
+    }
+
+    // A hairline round the sheet, so one as light as the menu behind it still shows its edge
+    painter.setClipping(false);
+    painter.setBrush(Qt::NoBrush);
+    painter.setPen(QPen(QColor(128, 128, 128, 150), 0.0));
+    painter.drawPath(sheetPath);
+    return pixmap;
+}
+
+QIcon MapStyle::previewIcon(const QSize& size) const
+{
+    QList<qreal> ratios{1.0, 2.0};
+    for (const QScreen* screen : QGuiApplication::screens()) {
+        if (!ratios.contains(screen->devicePixelRatio())) {
+            ratios.append(screen->devicePixelRatio());
+        }
+    }
+    QIcon icon;
+    for (const qreal ratio : ratios) {
+        icon.addPixmap(previewPixmap(size, ratio));
+    }
+    return icon;
 }
 
 QString MapStyle::defaultId()

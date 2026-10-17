@@ -940,9 +940,6 @@ constexpr float scmBoardThickness = 0.35f;
 constexpr QColor scmBoardTop(203, 194, 164);
 constexpr QColor scmBoardFront(160, 138, 102);
 constexpr QColor scmBoardSide(138, 118, 86);
-// The sky behind a diorama, at the top of the view and at its foot
-constexpr QColor scmSkyTop(207, 226, 238);
-constexpr QColor scmSkyFoot(239, 233, 220);
 // How many pixels across a room is on screen, at the least, for MapStyle::environmentMarks to draw on it
 constexpr float scmEnvironmentMarkPixels = 24.0f;
 // The diamond over the player's room in a style with a pulse: how high its foot is over the room and how wide it is, as parts of
@@ -2880,7 +2877,7 @@ void ModernGLWidget::queueBackdrop()
     QVector<float> colors;
     for (const QPointF& corner : {QPointF(-1.0, -1.0), QPointF(1.0, -1.0), QPointF(1.0, 1.0), QPointF(-1.0, -1.0), QPointF(1.0, 1.0), QPointF(-1.0, 1.0)}) {
         vertices << static_cast<float>(corner.x()) << static_cast<float>(corner.y()) << 0.0f;
-        const QColor color = sky ? (corner.y() > 0.0 ? scmSkyTop : scmSkyFoot) : backdrop;
+        const QColor color = sky ? (corner.y() > 0.0 ? MapStyle::scmSkyTop : MapStyle::scmSkyFoot) : backdrop;
         colors << color.redF() << color.greenF() << color.blueF() << color.alphaF();
     }
     mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::DISABLE_DEPTH_TEST));
