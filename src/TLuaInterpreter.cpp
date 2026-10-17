@@ -46,7 +46,6 @@
 #include "TMap.h"
 #include "TMapLabel.h"
 #include "TMapViewFrontend.h"
-#include "TMapViewsFrontend.h"
 #include "TRoomDB.h"
 #include "TScript.h"
 #include "TEncodingHelper.h"
@@ -9662,18 +9661,6 @@ int TLuaInterpreter::setConfig(lua_State* L)
         auto [result, errorMessage] = host.setExperimentEnabled(QString::fromUtf8(lua_tostring(L, 1)), enabled);
         if (!result) {
             return warnArgumentValue(L, __func__, errorMessage);
-        }
-
-        // Special handling for 3D mapper experiment
-        if (key == qsl("experiment.3dmap.modernmapper")) {
-#if defined(INCLUDE_3DMAPPER)
-            if (auto* mapper = host.mpMap ? host.mpMap->mapViewFrontend() : nullptr) {
-                mapper->recreate3DView();
-            }
-            if (auto* views = host.mpMap ? host.mpMap->mapViewsFrontend() : nullptr) {
-                views->update3DViewAvailability();
-            }
-#endif
         }
         return success();
     }

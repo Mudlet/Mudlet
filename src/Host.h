@@ -270,7 +270,10 @@ public:
     std::pair<bool, QString> setExperimentEnabled(const QString& experimentKey, bool enabled);
     QString getActiveExperimentInGroup(const QString& group) const;
     QStringList getAllExperiments() const;
-    QStringList getValidExperiments() const;
+    // Sorted, so the members of a group are listed together
+    static QStringList getValidExperiments();
+    // Experiments sharing a group are mutually exclusive; empty for one in no group
+    static QString experimentGroup(const QString& experimentKey);
 
     void forceClose();
     bool profileResetInProgress() const { return mResetProfile; }
