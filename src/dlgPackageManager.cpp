@@ -184,9 +184,14 @@ void dlgPackageManager::downloadRepositoryIndex()
         }
         reply->deleteLater();
         manager->deleteLater();
-        readPackageRepositoryFile();
-        populatePackagesWithUpdates();
-        updateUpdatesBadge();
+        // A successful read refreshes the updates list and badge itself
+        if (!readPackageRepositoryFile()) {
+            populatePackagesWithUpdates();
+            updateUpdatesBadge();
+        } else if (mCurrentView != NavigationView::Installed) {
+            // Explore and Updates are listed from the index, so what is on show predates this one
+            slot_setPackageList();
+        }
     });
 }
 
@@ -579,7 +584,11 @@ void dlgPackageManager::slot_itemChanged(QListWidgetItem* pItem)
     if (mCurrentView == NavigationView::Installed) {
         auto packageInfo{mpHost->mPackageInfo.value(packageName)};
         if (packageInfo.isEmpty()) {
-            packageDescription->clear();
+            mPackageName = packageName;
+            elidePackageName();
+            label_icon->setPixmap(QPixmap(qsl(":/icons/package-manager.png")).scaled(96, 96, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+            //: Package manager - shown in the details pane for an installed package that came with no details, such as a plain .xml package. %1 is the package name
+            packageDescription->setPlainText(tr("'%1' was installed without any details to show: it has no title, author, version or description.").arg(packageName));
             return;
         }
 
@@ -607,22 +616,24 @@ void dlgPackageManager::slot_itemChanged(QListWidgetItem* pItem)
         fillPackageDetails(packageName, packageInfo.value(qsl("title")), packageInfo.value(qsl("author")), packageInfo.value(qsl("version")));
 
     } else if (mCurrentView == NavigationView::Explore) {
-        pushButton_website->show();
-        pushButton_report->show();
-        downloadIcon(packageName);
-
         if (packageLookup.contains(packageName)) {
+            pushButton_website->show();
+            pushButton_report->show();
+            downloadIcon(packageName);
+
             QJsonObject packageObj = packageLookup.value(packageName);
             fillPackageDetails(
                     packageObj.value(qsl("mpackage")).toString(), packageObj.value(qsl("title")).toString(), packageObj.value(qsl("author")).toString(), packageObj.value(qsl("version")).toString());
             packageDescription->setMarkdown(packageObj.value(qsl("description")).toString());
+        } else {
+            showMissingFromIndex(packageName);
         }
     } else if (mCurrentView == NavigationView::Updates) {
-        pushButton_website->show();
-        pushButton_report->show();
-        downloadIcon(packageName);
-
         if (packageLookup.contains(packageName)) {
+            pushButton_website->show();
+            pushButton_report->show();
+            downloadIcon(packageName);
+
             QJsonObject packageObj = packageLookup.value(packageName);
             const auto packageInfo = mpHost->mPackageInfo.value(packageName);
             const QString installedVersion = packageInfo.value(qsl("version"));
@@ -634,6 +645,8 @@ void dlgPackageManager::slot_itemChanged(QListWidgetItem* pItem)
             label_version->setText(tr("Version %1 → %2").arg(installedVersion, repoVersion));
 
             packageDescription->setMarkdown(packageObj.value(qsl("description")).toString());
+        } else {
+            showMissingFromIndex(packageName);
         }
     }
 }
@@ -844,6 +857,7 @@ void dlgPackageManager::slot_setPackageList()
     }
 
     if (!lineEdit_searchBar->text().isEmpty()) {
+        clearPackageDetails();
         slot_searchTextChanged(lineEdit_searchBar->text());
         return;
     }
@@ -873,6 +887,9 @@ void dlgPackageManager::slot_setPackageList()
         }
     } else if (mCurrentView == NavigationView::Explore) {
         if (!readPackageRepositoryFile()) {
+            //: Package manager - shown in the details pane of the Explore view when the list of packages in the repository has not been downloaded or cannot be read
+            packageDescription->setPlainText(tr(
+                    "The list of packages in the repository is not available: it is still downloading, or the download failed. If it does not appear here, reopen the package manager to try again."));
             return;
         }
         for (const QJsonValue& packageVal : std::as_const(repositoryPackages)) {
@@ -981,6 +998,17 @@ void dlgPackageManager::showImportStatus(const QString& message)
     label_importStatus->setStyleSheet(qsl("QLabel { padding: 8px; }"));
     label_importStatus->show();
     QTimer::singleShot(4s, label_importStatus, &QWidget::hide);
+}
+
+// Every index read relists Explore and Updates, so no row should get here; a blank pane would read as a broken dialog
+void dlgPackageManager::showMissingFromIndex(const QString& packageName)
+{
+    qWarning() << "dlgPackageManager::showMissingFromIndex() WARNING - package not found in the repository index:" << packageName;
+    mPackageName = packageName;
+    elidePackageName();
+    label_icon->setPixmap(QPixmap(qsl(":/icons/package-manager.png")).scaled(96, 96, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+    //: Package manager - shown in the details pane when the selected package is not in the downloaded package index. %1 is the package name
+    packageDescription->setPlainText(tr("The details of '%1' could not be found in the package index. It may have been renamed or removed; try reopening the package manager.").arg(packageName));
 }
 
 void dlgPackageManager::updateUpdatesBadge()

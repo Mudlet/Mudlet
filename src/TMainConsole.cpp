@@ -1561,8 +1561,10 @@ std::pair<bool, QString> TMainConsole::setLabelCursor(const QString& name, int s
     auto pL = mLabelMap.value(name);
     if (pL) {
         if (shape > -1 && shape < 22) {
+            pL->endLinkHover();
             pL->setCursor(static_cast<Qt::CursorShape>(shape));
         } else if (shape == -1) {
+            pL->endLinkHover();
             pL->unsetCursor();
         } else {
             return {false, qsl("cursor shape '%1' not found. see https://doc.qt.io/qt-5/qt.html#CursorShape-enum").arg(shape)};
@@ -1589,6 +1591,7 @@ std::pair<bool, QString> TMainConsole::setLabelCustomCursor(const QString& name,
             return {false, qsl("couldn't find custom cursor, is the location \"%1\" correct?").arg(pixMapLocation)};
         }
         const QCursor custom_cursor = QCursor(cursor_pixmap, hotX, hotY);
+        pL->endLinkHover();
         pL->setCursor(custom_cursor);
         return {true, QString()};
     }
@@ -1965,9 +1968,20 @@ TCommandLine* TMainConsole::activeCommandLine()
 
 void TMainConsole::focusActiveCommandLine()
 {
+    focusActiveCommandLine(nullptr);
+}
+
+void TMainConsole::focusActiveCommandLine(const QWidget* pWindow)
+{
     using namespace std::chrono_literals;
 
     TCommandLine* pCommandLine = activeCommandLine();
+    if (pCommandLine && pWindow && pCommandLine->window() != pWindow) {
+        pCommandLine = nullptr;
+        // The setFocus() below can land only once pWindow activates, as a Qt::ActiveWindowFocusReason
+        // focus-in that TCommandLine does not record, so record the line it gives the keyboard here
+        recordActiveCommandLine(mpCommandLine);
+    }
     TCommandLine* targetCommandLine = pCommandLine ? pCommandLine : mpCommandLine.data();
     if (!targetCommandLine) {
         return;
@@ -4122,6 +4136,8 @@ void TMainConsole::closeEvent(QCloseEvent* event)
         // A save still running would turn this one away, and it may predate the session's last changes
         mpHost->waitForProfileSave();
         mpHost->saveProfileReportingFailure();
+        // Other profiles can keep Mudlet running long after this one closes
+        mudlet::self()->writeSettings();
 
         if (mpHost->mpMap && mpHost->mpMap->mpRoomDB) {
             // There is a map loaded - but it *could* have no rooms at all!
@@ -4154,6 +4170,7 @@ void TMainConsole::closeEvent(QCloseEvent* event)
                         this, tr("Could not save profile"), tr("Sorry, could not save your profile as \"%1\" - got the following error: \"%2\".").arg(filename, error), QMessageBox::Retry);
                 goto ASK_PROFILE;
             }
+            mudlet::self()->writeSettings();
 
             if (mpHost->mpMap && mpHost->mpMap->mpRoomDB) {
                 // There is a map loaded - but it *could* have no rooms at all!

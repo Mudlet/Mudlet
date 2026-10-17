@@ -145,6 +145,68 @@ const QString& key_down = qsl("down");
 const QString& key_in = qsl("in");
 const QString& key_out = qsl("out");
 
+namespace {
+// The room an XY-plane exit leads to, or 0 for any other exit.
+int xyExitFor(const TRoom& room, const QString& key)
+{
+    if (key == key_n) {
+        return room.getNorth();
+    }
+    if (key == key_ne) {
+        return room.getNortheast();
+    }
+    if (key == key_e) {
+        return room.getEast();
+    }
+    if (key == key_se) {
+        return room.getSoutheast();
+    }
+    if (key == key_s) {
+        return room.getSouth();
+    }
+    if (key == key_sw) {
+        return room.getSouthwest();
+    }
+    if (key == key_w) {
+        return room.getWest();
+    }
+    if (key == key_nw) {
+        return room.getNorthwest();
+    }
+    return 0;
+}
+
+// Whether owner has a custom line for an exit to other that runs straight to its centre, so a plain line between them
+// would cover it, show through its gaps or run beside it. The line's fixed first half-room segment may leave that line.
+bool customLineRunsStraightTo(const TRoom& owner, const TRoom& other)
+{
+    if (owner.customLines.empty()) {
+        return false;
+    }
+    const QPointF from(owner.x(), owner.y());
+    const QPointF to(other.x(), other.y());
+    const QPointF along = to - from;
+    const qreal lengthSquared = QPointF::dotProduct(along, along);
+    if (lengthSquared <= 0.0) {
+        return false;
+    }
+    constexpr qreal tolerance = 0.1;
+    const auto onThePlainLine = [&](const QPointF& point) {
+        const qreal fraction = std::clamp(QPointF::dotProduct(point - from, along) / lengthSquared, 0.0, 1.0);
+        return QLineF(point, from + along * fraction).length() <= tolerance;
+    };
+    for (const auto& [key, points] : owner.customLines.asKeyValueRange()) {
+        if (points.isEmpty() || QLineF(points.last(), to).length() > tolerance || xyExitFor(owner, key) != other.getId()) {
+            continue;
+        }
+        if (std::all_of(points.cbegin(), points.cend(), onThePlainLine)) {
+            return true;
+        }
+    }
+    return false;
+}
+} // namespace
+
 const QString& key_icon_line_solid = qsl(":/icons/solid-line.png");
 const QString& key_icon_line_dot = qsl(":/icons/dot-line.png");
 const QString& key_icon_line_dash = qsl(":/icons/dash-line.png");
@@ -3227,6 +3289,23 @@ void T2DMap::paintRoomExits(QPainter& painter,
         }
     }
 
+    const auto exitsReachWidget = [&](const TRoom* pRoom) {
+        if (pRoom->customLines.empty()) {
+            const float roomX = pRoom->x() * mRoomWidth + mRX;
+            const float roomY = pRoom->y() * -1 * mRoomHeight + mRY;
+            return !(roomX < 0 || roomY < 0 || roomX > widgetWidth || roomY > widgetHeight);
+        }
+        const float miny = pRoom->min_y * -1 * mRoomHeight + static_cast<float>(mRY);
+        const float maxy = pRoom->max_y * -1 * mRoomHeight + static_cast<float>(mRY);
+        const float minx = pRoom->min_x * mRoomWidth + static_cast<float>(mRX);
+        const float maxx = pRoom->max_x * mRoomWidth + static_cast<float>(mRX);
+        return (minx > 0.0 || maxx > 0.0) && (static_cast<float>(widgetWidth) > minx || static_cast<float>(widgetWidth) > maxx) && (miny > 0.0 || maxy > 0.0)
+               && (static_cast<float>(widgetHeight) > miny || static_cast<float>(widgetHeight) > maxy);
+    };
+
+    // Every room with custom lines on this level, wherever it is; roomsToPaint holds them all, and the
+    // loop below paints those that are not hidden and whose lines reach the widget.
+    const QSet<int>& customLineRooms = pArea->getCustomLineRoomsForZ(zLevel);
     for (const int _id : std::as_const(roomsToPaint)) {
         TRoom* room = mpMap->mpRoomDB->getRoom(_id);
         if (!room) {
@@ -3237,24 +3316,8 @@ void T2DMap::paintRoomExits(QPainter& painter,
         }
         const float rx = room->x() * mRoomWidth + mRX;
         const float ry = room->y() * -1 * mRoomHeight + mRY;
-
-        if (room->customLines.empty()) {
-            if (rx < 0 || ry < 0 || rx > widgetWidth || ry > widgetHeight) {
-                continue;
-            }
-        } else {
-            const float miny = room->min_y * -1 * mRoomHeight + static_cast<float>(mRY);
-            const float maxy = room->max_y * -1 * mRoomHeight + static_cast<float>(mRY);
-            const float minx = room->min_x * mRoomWidth + static_cast<float>(mRX);
-            const float maxx = room->max_x * mRoomWidth + static_cast<float>(mRX);
-
-            if (!((minx > 0.0 || maxx > 0.0) && (static_cast<float>(widgetWidth) > minx || static_cast<float>(widgetWidth) > maxx))) {
-                continue;
-            }
-
-            if (!((miny > 0.0 || maxy > 0.0) && (static_cast<float>(widgetHeight) > miny || static_cast<float>(widgetHeight) > maxy))) {
-                continue;
-            }
+        if (!exitsReachWidget(room)) {
+            continue;
         }
 
         room->rendered = true;
@@ -3275,10 +3338,10 @@ void T2DMap::paintRoomExits(QPainter& painter,
         // exitList is a list of the destination rooms reached by exit lines
         // that are NOT custom exit lines from this room so are places to
         // which a straight line is to be drawn from the centre of this room
-        // to (now half way for a two-way exit) the center of the exit room,
-        // this does mean that multiple exits to the same room are drawn
-        // on top of each other and that there is no indication from which
-        // exit direction they are for...!
+        // to the center of the exit room, unless a straight custom line
+        // already draws it; this does mean that multiple exits to the same
+        // room are drawn on top of each other and that there is no
+        // indication from which exit direction they are for...!
         exitList.clear();
         if (!room->customLines.empty()) {
             // This room has custom exit lines:
@@ -3387,6 +3450,14 @@ void T2DMap::paintRoomExits(QPainter& painter,
                     exitList.push_back({pER, exitRoomId, pER->getSoutheast() != _id});
                 }
             }
+        }
+        // A straight custom line between the two rooms, from either end, already draws a two-way exit; a plain
+        // line would land on top of it or under it, whichever room paints last. Only where that line is painted.
+        for (ExitToPaint& exit : exitList) {
+            const TRoom* pDestination = exit.destination;
+            exit.drawnByCustomLine = !exit.oneWay
+                                     && (customLineRunsStraightTo(*room, *pDestination)
+                                         || (customLineRooms.contains(exit.destinationId) && exitsReachWidget(pDestination) && customLineRunsStraightTo(*pDestination, *room)));
         }
 
         if (!room->customLines.empty()) {
@@ -3578,7 +3649,7 @@ void T2DMap::paintRoomExits(QPainter& painter,
             // This was a QLine (so used integer coordinates), but lets
             // try with a QLineF as we are using floating point numbers:
             QLineF line;
-            if (!areaExit) {
+            if (!areaExit && !exit.drawnByCustomLine) {
                 // Non-area exit:
                 // Exits to the same room overlap, so one being one-way arrows them all.
                 bool oneWayToDestination = false;
@@ -3642,7 +3713,7 @@ void T2DMap::paintRoomExits(QPainter& painter,
                     painter.restore();
                 }
 
-            } else {
+            } else if (areaExit) {
                 // Area exit:
                 painter.save();
                 QPointF clickPoint;
@@ -4086,6 +4157,8 @@ void T2DMap::updateSelectionWidget()
         mIsSelectionSorting = mMultiSelectionListWidget.isSortingEnabled();
         mIsSelectionSortByNames = (mMultiSelectionListWidget.sortColumn() == 1);
         mMultiSelectionListWidget.clear();
+        // The rows are rebuilt from mMultiSelectionSet, which deleted rooms have already left
+        mRoomsToDropFromSelectionWidget.clear();
         // Do NOT sort while inserting items!
         mMultiSelectionListWidget.setSortingEnabled(false);
         QSetIterator<int> itRoom = mMultiSelectionSet;
@@ -6300,6 +6373,89 @@ void T2DMap::clearSelection()
     }
 }
 
+void T2DMap::forgetDeletedRoom(const int roomId)
+{
+    // A drag still in progress rebuilds the selection from these on its next move
+    mMultiSelectionBaseSet.remove(roomId);
+    mMultiSelectionAnchorSet.remove(roomId);
+    if (mCustomLinesRoomFrom == roomId || mCustomLinesRoomTo == roomId) {
+        // The id can be reused, and the next click would add a point to that room;
+        // deleting the room the line leads to has already removed its exit
+        if (mpCustomLinesDialog) {
+            mpCustomLinesDialog->reject();
+        } else {
+            mCustomLinesRoomFrom = 0;
+            mCustomLinesRoomTo = 0;
+            mCustomLinesRoomExit.clear();
+        }
+        mHelpMsg.clear();
+        update();
+    }
+    if (mCustomLineSelectedRoom == roomId) {
+        mCustomLineSelectedRoom = 0;
+        mCustomLineSelectedExit.clear();
+        mCustomLineSelectedPoint = -1;
+        update();
+    }
+    // Queued so that deleting many rooms walks the list once, not once per room.
+    // A hidden list is rebuilt before it is shown again.
+    if (!mMultiSelectionListWidget.isHidden() && mMultiSelectionListWidget.topLevelItemCount() > 0) {
+        if (mRoomsToDropFromSelectionWidget.isEmpty()) {
+            QTimer::singleShot(0, this, &T2DMap::pruneDeletedRoomsFromSelectionWidget);
+        }
+        mRoomsToDropFromSelectionWidget.insert(roomId);
+    }
+    if (!mMultiSelectionSet.remove(roomId)) {
+        return;
+    }
+    if (mMultiSelectionHighlightRoomId == roomId) {
+        switch (mMultiSelectionSet.size()) {
+        case 0:
+            mMultiSelectionHighlightRoomId = 0;
+            break;
+        case 1:
+            mMultiSelectionHighlightRoomId = *(mMultiSelectionSet.constBegin());
+            break;
+        default:
+            getCenterSelection();
+        }
+    }
+    update();
+}
+
+void T2DMap::pruneDeletedRoomsFromSelectionWidget()
+{
+    // By id, not by getRoom(): a script may already have made a new room with a deleted one's id
+    const QSet<int> deletedRoomIds = mRoomsToDropFromSelectionWidget;
+    mRoomsToDropFromSelectionWidget.clear();
+    bool rowsRemoved = false;
+    // Removing a selected row would otherwise rebuild mMultiSelectionSet from the rows left
+    mMultiSelectionListWidget.blockSignals(true);
+    for (int row = mMultiSelectionListWidget.topLevelItemCount() - 1; row >= 0; --row) {
+        if (deletedRoomIds.contains(mMultiSelectionListWidget.topLevelItem(row)->text(0).toInt())) {
+            delete mMultiSelectionListWidget.takeTopLevelItem(row);
+            rowsRemoved = true;
+        }
+    }
+    mMultiSelectionListWidget.blockSignals(false);
+    if (mMultiSelectionListWidget.topLevelItemCount() < 2) {
+        hideSelectionWidget();
+        return;
+    }
+    if (!rowsRemoved) {
+        return;
+    }
+    mIsSelectionUsingNames = false;
+    for (int row = 0; row < mMultiSelectionListWidget.topLevelItemCount(); ++row) {
+        if (!mMultiSelectionListWidget.topLevelItem(row)->text(1).isEmpty()) {
+            mIsSelectionUsingNames = true;
+            break;
+        }
+    }
+    mMultiSelectionListWidget.setColumnHidden(1, !mIsSelectionUsingNames);
+    resizeMultiSelectionWidget();
+}
+
 void T2DMap::hideSelectionWidget()
 {
     mMultiSelectionListWidget.hide();
@@ -6836,7 +6992,7 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
                 addExitAndCheckOneWay("sw", room->getSouthwest());
             }
 
-            // Draw regular exit lines to destination rooms (same as paintRoomExits logic)
+            // Draw regular exit lines to destination rooms, leaving out those a straight custom line already draws
             for (const int exitRoomId : roomExitList) {
                 if (exitRoomId <= 0)
                     continue;
@@ -6912,11 +7068,14 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
                         QPen oneWayPen = pen;
                         oneWayPen.setStyle(Qt::DashLine);
                         painter.setPen(oneWayPen);
+                        painter.drawLine(exitLine);
                     } else {
+                        // Also for a line left out: the door drawn below takes its width from this pen
                         painter.setPen(pen);
+                        if (!customLineRunsStraightTo(*room, *exitRoom) && !(exitRoom->z() == exportZLevel && customLineRunsStraightTo(*exitRoom, *room))) {
+                            painter.drawLine(exitLine);
+                        }
                     }
-
-                    painter.drawLine(exitLine);
 
                 } else {
                     // Area exit: draw directional stub with arrow (like original paintRoomExits)

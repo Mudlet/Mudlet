@@ -453,9 +453,27 @@ function PadHexNum(incString)
 end
 
 
+-- %X of an out of range component is not two digits (-5 gives FFFFFFFFFFFFFFFB)
+local function clampColorComponent(value)
+  return math.min(255, math.max(0, math.floor(value)))
+end
+
+local rgbComponentNames = {"red", "green", "blue"}
+
+-- from a colour name the position is not an argument the caller passed, so name the component
+local function rgb2HexComponent(value, position, colorName)
+  if not tonumber(value) then
+    if colorName then
+      error(string.format("RGB2Hex: colour %q has a bad %s component (number expected, got %s!)", tostring(colorName), rgbComponentNames[position], type(value)), 3)
+    end
+    error(string.format("RGB2Hex: bad argument #%d type (number expected, got %s!)", position, type(value)), 3)
+  end
+  return PadHexNum(string.format("%X", clampColorComponent(value)))
+end
 
 --- Converts an RGB value into an HTML compliant(label usable) HEX number.
 --- This function is colorNames aware and can take any defined global color as its first argument.
+--- Components are rounded down and clamped to 0-255.
 ---
 --- @usage Both following commands will returns "FFFFFF".
 ---   <pre>
@@ -467,16 +485,16 @@ end
 function RGB2Hex(red, green, blue)
   assert(red, "RGB2Hex: require at least one argument (color_name or r,g,b)!")
   local l_Red, l_Green, l_Blue = 0, 0, 0
+  local colorName
   if green == nil then
     -- Not an RGB but a "color" instead!
+    colorName = red
     l_Red, l_Green, l_Blue = namedColorRGB(red)
   else -- Nope, true color here
     l_Red, l_Green, l_Blue = red, green, blue
   end
 
-  return PadHexNum(string.format("%X", l_Red)) ..
-  PadHexNum(string.format("%X", l_Green)) ..
-  PadHexNum(string.format("%X", l_Blue))
+  return rgb2HexComponent(l_Red, 1, colorName) .. rgb2HexComponent(l_Green, 2, colorName) .. rgb2HexComponent(l_Blue, 3, colorName)
 end
 
 
@@ -725,8 +743,13 @@ end
 
 
 --- Function will gag the whole line. <b>Use deleteLine() instead.</b>
-function gagLine()
-  deleteLine()
+--- @param window optional name of the window to gag the line in, the main console if not given
+--- @return what deleteLine() answers: true, or nil and an error message for a window that does not exist
+function gagLine(window)
+  if window then
+    return deleteLine(window)
+  end
+  return deleteLine()
 end
 
 
@@ -825,7 +848,7 @@ function replaceLine(window, text)
   else
     selectCurrentLine(window)
   end
-  replace(window, text)
+  return replace(window, text)
 end
 
 
@@ -1225,6 +1248,7 @@ end
 -- what getLabelFormat() last read out of each label's stylesheet, by label name, kept
 -- with the stylesheet it was read from so a changed one is read afresh
 local labelStyleSheetFormats = {}
+local labelDeletedHandler
 
 local function parseLabelStyleSheet(stylesheet)
   local parsed = {
@@ -1282,17 +1306,30 @@ end
 
 -- https://wiki.mudlet.org/w/Manual:Lua_Functions#getLabelFormat
 -- used by xEcho for getting the default format for a label, taking into account
--- the background color setting and stylesheet
+-- the background color setting and stylesheet; nil and an error message for a name that is not a label
 function getLabelFormat(win)
   assert(win, "getLabelFormat: requires at least one argument")
-  local stylesheet = getLabelStyleSheet(win)
-  local cached = labelStyleSheetFormats[win]
+  local winType = type(win)
+  assert(winType == "string" or winType == "number", "getLabelFormat: bad argument #1 type (label as string expected, got " .. winType .. "!)")
+  -- registered here rather than at load, as this file loads before Other.lua lets
+  -- registerAnonymousEventHandler take a function
+  labelDeletedHandler = labelDeletedHandler or registerAnonymousEventHandler("sysLabelDeleted", function(_, name)
+    labelStyleSheetFormats[name] = nil
+  end)
+  -- keyed by the name as a string, which is how sysLabelDeleted names it
+  local key = tostring(win)
+  local stylesheet, err = getLabelStyleSheet(win)
+  if not stylesheet then
+    labelStyleSheetFormats[key] = nil
+    return nil, err
+  end
+  local cached = labelStyleSheetFormats[key]
   local parsed
   if cached and cached.stylesheet == stylesheet then
     parsed = cached.parsed
   else
     parsed = parseLabelStyleSheet(stylesheet)
-    labelStyleSheetFormats[win] = { stylesheet = stylesheet, parsed = parsed }
+    labelStyleSheetFormats[key] = { stylesheet = stylesheet, parsed = parsed }
   end
   -- a new table every call, as callers are free to change the one they get
   return {
@@ -1532,6 +1569,7 @@ end
 --- @param func name of the function to write with: echo, insertText, echoLink, insertLink, echoPopup or insertPopup
 --- @param win windowName optional
 --- @param str text with embedded color information
+--- @return true, or nil and an error message if the window does not exist or a label is asked for anything but echo
 ---
 --- @see cecho
 --- @see decho
@@ -1595,13 +1633,13 @@ function xEcho(style, func, ...)
     end
     local reset = getLabelFormat(win)
     local result = processedEchoToHTML(t, reset)
-    echo(win, result)
+    return echo(win, result)
   else
-    if func == "insertText" and not getColumnNumber(win) then
-      return nil, "window does not exist"
+    local reset, resetError = resetFormat(win)
+    if not reset then
+      return nil, resetError
     end
     local t = _Echos.Process(str, style)
-    resetFormat(win)
     for _, v in ipairs(t) do
       if type(v) == 'table' then
         if v.fg then
@@ -1649,6 +1687,7 @@ function xEcho(style, func, ...)
       end
     end
     resetFormat(win)
+    return true
   end
 end
 
@@ -1668,7 +1707,7 @@ end
 --- @see xEcho
 --- @see hinsertText
 function hecho(...)
-  xEcho("Hex", "echo", ...)
+  return xEcho("Hex", "echo", ...)
 end
 
 
@@ -1686,7 +1725,7 @@ end
 --- @see xEcho
 --- @see dinsertText
 function decho(...)
-  xEcho("Decimal", "echo", ...)
+  return xEcho("Decimal", "echo", ...)
 end
 
 
@@ -1701,7 +1740,7 @@ end
 --- @see xEcho
 --- @see cinsertText
 function cecho(...)
-  xEcho("Color", "echo", ...)
+  return xEcho("Color", "echo", ...)
 end
 
 
@@ -1739,7 +1778,7 @@ end
 --- @see xEcho
 --- @see hecho
 function hechoLink(...)
-  xEcho("Hex", "echoLink", ...)
+  return xEcho("Hex", "echoLink", ...)
 end
 
 
@@ -1750,7 +1789,7 @@ end
 --- @see xEcho
 --- @see decho
 function dechoLink(...)
-  xEcho("Decimal", "echoLink", ...)
+  return xEcho("Decimal", "echoLink", ...)
 end
 
 
@@ -1761,7 +1800,7 @@ end
 --- @see xEcho
 --- @see cecho
 function cechoLink(...)
-  xEcho("Color", "echoLink", ...)
+  return xEcho("Color", "echoLink", ...)
 end
 
 --- Inserts a link with embedded color name information at the current position
@@ -1771,7 +1810,7 @@ end
 --- @see xEcho
 --- @see cecho
 function cinsertLink(...)
-  xEcho("Color", "insertLink", ...)
+  return xEcho("Color", "insertLink", ...)
 end
 
 --- Inserts a link with embedded decimal color information at the current position
@@ -1781,7 +1820,7 @@ end
 --- @see xEcho
 --- @see decho
 function dinsertLink(...)
-  xEcho("Decimal", "insertLink", ...)
+  return xEcho("Decimal", "insertLink", ...)
 end
 
 --- Inserts a link with embedded hex color information at the current position
@@ -1791,7 +1830,7 @@ end
 --- @see xEcho
 --- @see hecho
 function hinsertLink(...)
-  xEcho("Hex", "insertLink", ...)
+  return xEcho("Hex", "insertLink", ...)
 end
 
 --- Echos a popup with embedded color name information.
@@ -1801,7 +1840,7 @@ end
 --- @see xEcho
 --- @see cecho
 function cechoPopup(...)
-  xEcho("Color", "echoPopup", ...)
+  return xEcho("Color", "echoPopup", ...)
 end
 
 --- Echos a popup with embedded color name information.
@@ -1811,7 +1850,7 @@ end
 --- @see xEcho
 --- @see decho
 function dechoPopup(...)
-  xEcho("Decimal", "echoPopup", ...)
+  return xEcho("Decimal", "echoPopup", ...)
 end
 
 --- Echos a popup with embedded hex color information.
@@ -1821,7 +1860,7 @@ end
 --- @see xEcho
 --- @see hecho
 function hechoPopup(...)
-  xEcho("Hex", "echoPopup", ...)
+  return xEcho("Hex", "echoPopup", ...)
 end
 
 --- Echos a popup with embedded color name information.
@@ -1831,7 +1870,7 @@ end
 --- @see xEcho
 --- @see cecho
 function cinsertPopup(...)
-  xEcho("Color", "insertPopup", ...)
+  return xEcho("Color", "insertPopup", ...)
 end
 
 --- Echos a popup with embedded decimal color information.
@@ -1841,7 +1880,7 @@ end
 --- @see xEcho
 --- @see decho
 function dinsertPopup(...)
-  xEcho("Decimal", "insertPopup", ...)
+  return xEcho("Decimal", "insertPopup", ...)
 end
 
 --- Echos a popup with embedded hex color information.
@@ -1851,7 +1890,7 @@ end
 --- @see xEcho
 --- @see hecho
 function hinsertPopup(...)
-  xEcho("Hex", "insertPopup", ...)
+  return xEcho("Hex", "insertPopup", ...)
 end
 
 
@@ -2112,11 +2151,15 @@ do
     text = text or ""
 
     if keepcolor then
-      setBgColor(windowname, getBgColor(windowname))
+      local r, g, b = getBgColor(windowname)
+      if not r and g then
+        return nil, g
+      end
+      setBgColor(windowname, r, g, b)
       setFgColor(windowname, getFgColor(windowname))
     end
 
-    oldreplace(windowname, text)
+    return oldreplace(windowname, text)
   end
 end
 
@@ -2393,6 +2436,7 @@ end
 --- Form of setFgColor that accepts a hex color string instead of decimal values
 --- @param windowName Optional name of the window to use the function on
 --- @param colorString hex string for the color to use
+--- @return what setFgColor() answers: true, or nil and an error message for a window that does not exist
 function setHexFgColor(windowName, colorString)
   assert(type(windowName) == 'string', 'setHexFgColor: bad argument #1 type (expected string, got '..type(windowName)..'!)')
 
@@ -2414,15 +2458,15 @@ function setHexFgColor(windowName, colorString)
   }
 
   if win then
-    setFgColor(win, colTable.r, colTable.g, colTable.b)
-  else
-    setFgColor(colTable.r, colTable.g, colTable.b)
+    return setFgColor(win, colTable.r, colTable.g, colTable.b)
   end
+  return setFgColor(colTable.r, colTable.g, colTable.b)
 end
 
 --- Form of setBgColor that accepts a hex color string instead of decimal values
 --- @param windowName Optional name of the window to use the function on
 --- @param colorString hex string for the color to use
+--- @return what setBgColor() answers: true, or nil and an error message for a window that does not exist
 function setHexBgColor(windowName, colorString)
   assert(type(windowName) == 'string', 'setHexBgColor: bad argument #1 type (expected string, got '..type(windowName)..'!)')
 
@@ -2444,10 +2488,9 @@ function setHexBgColor(windowName, colorString)
   }
 
   if win then
-    setBgColor(win, colTable.r, colTable.g, colTable.b)
-  else
-    setBgColor(colTable.r, colTable.g, colTable.b)
+    return setBgColor(win, colTable.r, colTable.g, colTable.b)
   end
+  return setBgColor(colTable.r, colTable.g, colTable.b)
 end
 
 
@@ -2810,7 +2853,8 @@ end
 local setLabelCursorLayer = setLabelCursor
 function setLabelCursor(labelname, cursorShape)
   if type(cursorShape) == "string" then
-    cursorShape = mudlet.cursor[cursorShape]
+    -- a name not in mudlet.cursor goes on as a string, for the C++ layer to refuse once it has checked the label
+    cursorShape = mudlet.cursor[cursorShape] or cursorShape
   end
   return setLabelCursorLayer(labelname, cursorShape)
 end
@@ -3122,10 +3166,10 @@ local function processedColorsToEchoString(colorType, colors, cacheChecked)
   if colorType == "hex" then
     local fg,bg = "", ""
     if colors.fg then
-      fg = string.format("%02x%02x%02x", unpack(colors.fg))
+      fg = string.format("%02x%02x%02x", clampColorComponent(colors.fg[1]), clampColorComponent(colors.fg[2]), clampColorComponent(colors.fg[3]))
     end
     if colors.bg then
-      bg = string.format(",%02x%02x%02x", unpack(colors.bg))
+      bg = string.format(",%02x%02x%02x", clampColorComponent(colors.bg[1]), clampColorComponent(colors.bg[2]), clampColorComponent(colors.bg[3]))
     end
     result = string.format("#%s%s", fg, bg)
   elseif colorType == "color" then
