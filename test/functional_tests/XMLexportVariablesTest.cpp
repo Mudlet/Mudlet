@@ -1165,6 +1165,47 @@ private slots:
         QCOMPARE(luaL_dostring(L, "bracketReload = nil"), 0);
     }
 
+    // A save whose number text cannot be read still loads, as 0, but has to say
+    // so, since a 0 key also takes the place of whatever else was saved under 0.
+    void test_unreadableSavedNumberTextIsReported()
+    {
+        LuaInterface* lI = mpHost->getLuaInterface();
+        VarUnit* vu = lI->getVarUnit();
+        lua_State* L = mpHost->mLuaInterpreter.getLuaGlobalState();
+        const QString xmlPath = MudletApp::getMudletPath(enums::profileHomePath, mHostname) + qsl("/unreadable-number-test.xml");
+        QFile out(xmlPath);
+        QVERIFY2(out.open(QFile::WriteOnly | QFile::Text), qPrintable(out.errorString()));
+        out.write(R"(<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE MudletPackage>
+<MudletPackage version="1.001">
+<VariablePackage>
+<VariableGroup><name>unreadableNumbers</name><keyType>4</keyType><value></value><valueType>5</valueType>
+<Variable><name>badValue</name><keyType>4</keyType><value>12,5</value><valueType>3</valueType></Variable>
+<Variable><name>1e5x</name><keyType>3</keyType><value>bad key</value><valueType>4</valueType></Variable>
+</VariableGroup>
+</VariablePackage>
+</MudletPackage>
+)");
+        out.close();
+
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl(R"("12,5" is not a number, so "badValue" is being set to 0)")));
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl(R"(the key "1e5x" is not a number, so it is being written as the key 0)")));
+        QFile file(xmlPath);
+        QVERIFY2(file.open(QFile::ReadOnly | QFile::Text), qPrintable(file.errorString()));
+        XMLimport importer(mpHost);
+        auto [imported, importError] = importer.importPackage(&file);
+        file.close();
+        QFile::remove(xmlPath);
+        QVERIFY2(imported, qPrintable(importError));
+
+        QVERIFY2(luaL_dostring(L, "assert(unreadableNumbers.badValue == 0 and unreadableNumbers[0] == 'bad key')") == 0, "the unreadable number text was not loaded as 0");
+
+        for (const auto& name : {qsl("unreadableNumbers"), qsl("unreadableNumbers.badValue"), qsl("unreadableNumbers.1e5x")}) {
+            vu->savedVars.remove(name);
+        }
+        QCOMPARE(luaL_dostring(L, "unreadableNumbers = nil"), 0);
+    }
+
 private:
     // Returns false rather than asserting: a QVERIFY here would only return from
     // this helper, leaving the caller to dereference a null editor.

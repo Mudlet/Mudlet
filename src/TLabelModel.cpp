@@ -116,6 +116,110 @@ QString TLabelModel::styleSheetWithBackgroundColor(const QString& styleSheet, co
     return sheet;
 }
 
+// Index just past the quoted string or comment starting at i, or i when none starts there.
+static qsizetype pastQuoteOrComment(const QString& sheet, qsizetype i)
+{
+    const QChar c = sheet.at(i);
+    if (c == u'"' || c == u'\'') {
+        qsizetype j = i + 1;
+        while (j < sheet.size() && sheet.at(j) != c) {
+            j += sheet.at(j) == u'\\' ? 2 : 1;
+        }
+        return qMin(j + 1, sheet.size());
+    }
+    if (c == u'/' && i + 1 < sheet.size() && sheet.at(i + 1) == u'*') {
+        const qsizetype end = sheet.indexOf(qsl("*/"), i + 2);
+        return end < 0 ? sheet.size() : end + 2;
+    }
+    return i;
+}
+
+// The end of the background-image declaration starting at i, or i when none starts there;
+// a url() may hold a ';' of its own, as a data: URI does. Qt reads property names in any case.
+static qsizetype pastBackgroundImageDeclaration(const QString& sheet, qsizetype i)
+{
+    static const QString property = qsl("background-image");
+    if (!QStringView(sheet).sliced(i).startsWith(property, Qt::CaseInsensitive)) {
+        return i;
+    }
+    qsizetype j = i + property.size();
+    while (j < sheet.size() && sheet.at(j).isSpace()) {
+        ++j;
+    }
+    if (j == sheet.size() || sheet.at(j) != u':') {
+        return i;
+    }
+    int parentheses = 0;
+    while (++j < sheet.size()) {
+        if (const qsizetype skipped = pastQuoteOrComment(sheet, j); skipped != j) {
+            j = skipped - 1;
+            continue;
+        }
+        const QChar c = sheet.at(j);
+        if (c == u'(') {
+            ++parentheses;
+        } else if (c == u')' && parentheses > 0) {
+            --parentheses;
+        } else if (parentheses == 0 && c == u';') {
+            return j + 1;
+        } else if (parentheses == 0 && c == u'}') {
+            return j;
+        }
+    }
+    return j;
+}
+
+// Comments, quoted strings and a url()'s contents hold no declarations and no braces, as in CSS.
+// A declaration starts the sheet or follows a ';' or a rule's '}', so selector text such as
+// QLabel#background-image:hover is not one.
+QString TLabelModel::styleSheetWithoutBackgroundImage(const QString& sheet)
+{
+    QString result;
+    qsizetype copiedUpTo = 0;
+    int braces = 0;
+    int parentheses = 0;
+    bool declarationCanStart = true;
+    qsizetype i = 0;
+    while (i < sheet.size()) {
+        if (const qsizetype skipped = pastQuoteOrComment(sheet, i); skipped != i) {
+            if (sheet.at(i) != u'/') {
+                declarationCanStart = false;
+            }
+            i = skipped;
+            continue;
+        }
+        const QChar c = sheet.at(i);
+        if (c == u'(') {
+            ++parentheses;
+        } else if (c == u')' && parentheses > 0) {
+            --parentheses;
+        }
+        if (parentheses > 0) {
+            ++i;
+            continue;
+        }
+        if (braces == 0 && declarationCanStart) {
+            if (const qsizetype end = pastBackgroundImageDeclaration(sheet, i); end != i) {
+                result += QStringView(sheet).sliced(copiedUpTo, i - copiedUpTo);
+                copiedUpTo = end;
+                i = end;
+                continue;
+            }
+        }
+        if (c == u'{') {
+            ++braces;
+        } else if (c == u'}' && braces > 0) {
+            --braces;
+        }
+        if (!c.isSpace()) {
+            declarationCanStart = c == u';' || c == u'}';
+        }
+        ++i;
+    }
+    result += QStringView(sheet).sliced(copiedUpTo);
+    return result;
+}
+
 // Not a case-insensitive contains("<a "): that can't tell a tag from prose and case-folds every character.
 // Any whitespace separates, as in HTML; setText()'s styling pass knows only ASCII whitespace, so an
 // anchor split by a non-breaking space is clickable but unstyled.

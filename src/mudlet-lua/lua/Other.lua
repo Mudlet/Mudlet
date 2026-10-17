@@ -313,6 +313,7 @@ end
 
 --- This function should primarily be used by Mudlet. It saves the contents of _saveTable into a file for persistence.
 ---
+--- @return true, or nil and an error message if the file could not be written
 --- @see loadVars
 function saveVars()
   local _sep = ""
@@ -325,26 +326,25 @@ function saveVars()
   for k, _ in pairs(_saveTable) do
     remember(k)
   end
-  table.save(l_SettingsFile, _saveTable)
+  return table.save(l_SettingsFile, _saveTable)
 end
 
 
 
 --- The below functions (table.save, table.load) can be used to save individual Lua tables to disc and load
 --- them again at a later time e.g. make a database, collect statistical information etc.
---- These functions are also used by Mudlet to load & save the entire Lua session variables. <br/><br/>
+--- saveVars() and loadVars() use them to keep the variables flagged with remember(). <br/><br/>
 ---
 --- Original code written by CHILLCODE™ on https://board.ptokax.ch, distributed under the same terms as Lua itself. <br/><br/>
 ---
 --- Notes: <br/>
----  Userdata and indices of these are not saved <br/>
----  Functions are saved via string.dump, so make sure it has no upvalues <br/>
+---  Functions, userdata and coroutines are not saved, whether as a key or as a value <br/>
+---  The standard Lua libraries and _G are not saved, wherever they are reached; other library tables,
+---  such as lfs or utf8, are saved without their functions <br/>
 ---  References are saved <br/>
 ---
---- @usage Saves the globals table (minus some lua environment stuff) into a file (only Mudlet should use this).
----   <pre>
----   table.save(file)
----   </pre>
+--- @return true, or nil and an error message if the file could not be written. It raises an error,
+---   leaving the file as it was, when t is not a table.
 --- @usage Saves the given table into the given file.
 ---   <pre>
 ---   table.save(file, table)
@@ -353,17 +353,78 @@ end
 --- @see table.load
 function table.save( sfile, t )
   assert(type(sfile) == "string", "table.save requires a file path to save to")
+  -- no default of _G: table.load(file) would then overwrite db, Geyser and the rest with copies
+  -- that lost their functions
+  assert(type(t) == "table", "table.save requires a table to save")
   local tables = {}
   table.insert( tables, t )
   local lookup = { [t] = 1 }
+  -- serialised in full before the file is opened, so an error while serialising leaves the previous
+  -- contents in place; a write that fails, such as on a full disk, still loses them
+  local chunks = {}
+  local buffer = { write = function(_, text) chunks[#chunks + 1] = text end }
+  buffer:write( "return {" )
+  for i, v in ipairs( tables ) do
+    table.pickle( v, buffer, tables, lookup )
+  end
+  buffer:write( "}" )
+  local text = table.concat( chunks )
   local file, msg = io.open( sfile, "w" )
   if not file then return nil, msg end
-  file:write( "return {" )
-  for i, v in ipairs( tables ) do
-    table.pickle( v, file, tables, lookup )
+  local written, write_msg = file:write( text )
+  local closed, close_msg = file:close()
+  if not written then return nil, write_msg end
+  if not closed then return nil, close_msg end
+  return true
+end
+
+
+
+-- these names are left out when saving _G itself, not when a data table merely has a member of
+-- the same name
+local libraryNames = {
+  string = true, xpcall = true, package = true, os = true, io = true, math = true, debug = true,
+  coroutine = true, _G = true, _VERSION = true, table = true
+}
+
+-- and these tables wherever they are reached: without their functions, what would come back is an
+-- empty table, a partial copy of package, or for _G a copy of every global
+local libraryTables = {
+  [_G] = true, [string] = true, [table] = true, [math] = true, [os] = true, [io] = true,
+  [debug] = true, [coroutine] = true, [package] = true
+}
+
+-- tostring() gives inf, -inf and nan, which are not Lua literals, and only 14 significant digits.
+-- A chunk keeps 0 and -0 in one constant slot, whichever comes first, so -0 is negated from a
+-- string at load time and the infinities have no 0 in them: (1/0) after a -0 loads as -inf
+local function numberLiteral(n)
+  if n ~= n then
+    return "(0/0)"
+  elseif n == math.huge then
+    return "1e999"
+  elseif n == -math.huge then
+    return "-1e999"
+  elseif n == 0 and 1 / n < 0 then
+    return '(-"0")'
   end
-  file:write( "}" )
-  file:close()
+  local short = tostring( n )
+  if tonumber( short ) == n then
+    return short
+  end
+  return string.format( "%.17g", n )
+end
+
+-- %q rather than a long bracket, which drops a leading newline and turns a lone \r into \n
+local function literal(v)
+  local kind = type( v )
+  if kind == "string" then
+    return string.format( "%q", v )
+  elseif kind == "number" then
+    return numberLiteral( v )
+  elseif kind == "boolean" then
+    return tostring( v )
+  end
+  return nil
 end
 
 
@@ -372,8 +433,10 @@ end
 function table.pickle( t, file, tables, lookup )
   file:write( "{" )
   for i, v in pairs( t ) do
-    -- escape functions
-    if type( v ) ~= "function" and type( v ) ~= "userdata" and (i ~= "string" and i ~= "xpcall" and i ~= "package" and i ~= "os" and i ~= "io" and i ~= "math" and i ~= "debug" and i ~= "coroutine" and i ~= "_G" and i ~= "_VERSION" and i ~= "table") then
+    -- functions, userdata and threads have no literal to be written as, as a key or as a value
+    local index = type( i ) == "table" or literal( i )
+    local value = type( v ) == "table" or literal( v )
+    if index and value and not (libraryTables[i] or libraryTables[v] or (rawequal( t, _G ) and libraryNames[i])) then
       -- handle index
       if type( i ) == "table" then
         if not lookup[i] then
@@ -383,8 +446,7 @@ function table.pickle( t, file, tables, lookup )
         end
         file:write( "[{" .. lookup[i] .. "}] = " )
       else
-        local index = ( type( i ) == "string" and "[ " .. string.enclose( i, 50 ) .. " ]" ) or string.format( "[%d]", i )
-        file:write( index .. " = " )
+        file:write( "[" .. index .. "] = " )
       end
       -- handle value
       if type( v ) == "table" then
@@ -394,7 +456,6 @@ function table.pickle( t, file, tables, lookup )
         end
         file:write( "{" .. lookup[v] .. "}," )
       else
-        local value = ( type( v ) == "string" and string.enclose( v, 50 ) ) or tostring( v )
         file:write( value .. "," )
       end
     end
@@ -1139,8 +1200,22 @@ end
 
 local acceptableSuffix = {"xml", "mpackage", "zip", "trigger"}
 
+-- the file name installPackage() downloads a package URL under, or nil when target is not one
+local function packageFileFromUrl(target)
+  if target:starts("http://") or target:starts("https://") then
+    local fileName, suffix = target:gmatch("([^/]+)%.([^.]+)$")()
+    if suffix and table.contains(acceptableSuffix, suffix) then
+      return string.format("%s.%s", fileName, suffix)
+    end
+  end
+end
+
 function verbosePackageInstall(fileName)
   local ok, reason = installPackage(fileName)
+  -- a URL has only started downloading: installPackageFromUrl() reports that, and the install once it is done
+  if packageFileFromUrl(fileName) then
+    return
+  end
   -- this has to stay a literal prefix strip: as a Lua pattern the profile path's
   -- magic characters bite, and a "-" (as in "Mudlet self-test") stops it
   -- matching at all
@@ -1206,39 +1281,94 @@ local oldInstallPackage = installPackage
 -- Override of original installPackage to allow installs from URL
 -- @param target - file path or url (starting with http(s):// and ending with package file extensions)
 function installPackage(target)
-  if target:starts("http://") or target:starts("https://") then
-    local fileName, suffix = target:gmatch("([^/]+)%.([^.]+)$")()
-    if suffix and table.contains(acceptableSuffix, suffix) then
-      local file = string.format("%s.%s", fileName, suffix)
-      return installPackageFromUrl(file, target)
-    end
+  local file = packageFileFromUrl(target)
+  if file then
+    return installPackageFromUrl(file, target)
   end
   return oldInstallPackage(target)
 end
 
---- Installs package from url
--- @param url
+-- downloadFile() sets no transfer timeout, so a stalled download may never end: one that
+-- has shown no progress for this long no longer keeps a retry of its file out
+local packageDownloadStallSeconds = 30
+local packageDownloadsPending = {}
+
+--- Downloads a package into the profile folder, then installs it and removes the download.
+-- @param file the name the download is saved under in the profile folder
+-- @param url where to download the package from
+-- @return true once the download is queued (the install follows when it finishes),
+-- or nil and the reason when the download was not started
 function installPackageFromUrl(file, url)
   local destination = string.format("%s/%s", getMudletHomeDir(), file)
-
-  registerAnonymousEventHandler("sysDownloadDone", function(_, saveTo)
-    if saveTo ~= destination then return end
-    verbosePackageInstall(destination)
-    os.remove(destination)
-  end, true)
-
   mudlet.Locale = mudlet.Locale or loadTranslations("Mudlet")
 
-  registerAnonymousEventHandler("sysDownloadError", function(_, errorFound, saveTo)
+  local function warn(text)
+    decho('<0,150,190>' .. mudlet.Locale.prefixWarn.message)
+    -- echo, as decho would take a tag such as <b> in the reason as formatting
+    setFgColor(190, 150, 0)
+    echo(text .. '\n')
+    resetFormat()
+  end
+
+  -- a second download would overwrite the same file, and both installs would claim the first to finish
+  local earlier = packageDownloadsPending[destination]
+  if earlier and os.time() - earlier.lastProgress < packageDownloadStallSeconds then
+    local refusal = string.format(mudlet.Locale.packageDownloadPending.message, file)
+    warn(refusal)
+    return nil, refusal
+  end
+
+  -- queued first: a download that never starts would leave the handlers below armed for good,
+  -- and its events only arrive once this script has returned
+  local queued, refusal = downloadFile(destination, url)
+  if not queued then
+    refusal = string.format(mudlet.Locale.packageDownloadRefused.message, url, tostring(refusal))
+    warn(refusal)
+    return nil, refusal
+  end
+  if earlier then
+    earlier.disarm()
+  end
+
+  local doneHandler, errorHandler, progressHandler
+  local pending = {lastProgress = os.time()}
+  function pending.disarm()
+    killAnonymousEventHandler(doneHandler)
+    killAnonymousEventHandler(errorHandler)
+    killAnonymousEventHandler(progressHandler)
+    packageDownloadsPending[destination] = nil
+  end
+  packageDownloadsPending[destination] = pending
+
+  progressHandler = registerAnonymousEventHandler("sysDownloadFileProgress", function(_, progressUrl)
+    if progressUrl == url then
+      pending.lastProgress = os.time()
+    end
+  end)
+
+  doneHandler = registerAnonymousEventHandler("sysDownloadDone", function(_, saveTo)
     if saveTo ~= destination then return end
+    -- before installing: the package's own scripts run during the install, and one that
+    -- downloads this file again (an updater, say) would otherwise be refused as still pending
+    pending.disarm()
+    local ok, err = pcall(verbosePackageInstall, destination)
+    os.remove(destination)
+    if not ok then
+      error(err, 0)
+    end
+  end)
+
+  errorHandler = registerAnonymousEventHandler("sysDownloadError", function(_, errorFound, saveTo)
+    if saveTo ~= destination then return end
+    pending.disarm()
     local warnPrefix = mudlet.Locale.prefixWarn.message
     decho('<0,150,190>' .. warnPrefix .. '<190,150,0>' .. errorFound .. '\n')
-  end, true)
+  end)
 
-  downloadFile(destination, url)
   local infoMessage = mudlet.Locale.packageDownloading.message
   local infoPrefix = mudlet.Locale.prefixInfo.message
     decho('<0,150,190>' ..infoPrefix .. '<190,100,50>' .. string.format(infoMessage, url) .. '\n')
+  return true
 end
 
 --- Installs packages which are dropped on MainConsole or UserWindow
@@ -1304,6 +1434,8 @@ function getConfig(...)
     -- This list contains all configuration options that are available in both getConfig and setConfig
     -- NOTE: Some options like "showMapInfo", "hideMapInfo" are setConfig-only write operations
     -- Some options like "logDirectory", "specialForceMXPProcessorOn" are getConfig-only read operations  
+    -- Left out on purpose: "ircNickName" (with no nick stored it reads as a new random one, and writing it
+    -- back also replaces the app-wide nick) and "ircPassword" (it would show up in every dump of the table)
     local list = {
       "advertiseScreenReader",
       "ambiguousEAsianWidthCharacters",
@@ -1317,6 +1449,7 @@ function getConfig(...)
       "controlCharacterHandling",
       "editorAutoComplete",
       "enableBlinkText",
+      "enableCHARSET",
       "enableClosedCaption",
       "enableGMCP",
       "enableMNES",
@@ -1326,10 +1459,15 @@ function getConfig(...)
       "enableMTTS",
       "enableMXP",
       "enableNAWS",
+      "enableNEWENVIRON",
       "f3SearchEnabled",
       "fixUnnecessaryLinebreaks",
       "forceNewEnvironNegotiationOff",
       "inputLineStrictUnixEndings",
+      "ircChannels",
+      "ircHostName",
+      "ircHostPort",
+      "ircHostSecure",
       "lazyCaptureGlobals",
       "logDirectory",                    -- read-only in getConfig
       "logInHTML",

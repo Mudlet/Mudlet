@@ -3108,7 +3108,7 @@ void mudlet::slot_reattachAllDetachedWindows()
             qDebug() << "slot_reattachAllDetachedWindows: Reattaching profile" << profileName;
 #endif
             // Use the existing reattach mechanism
-            reattachTab(profileName, -1); // Use default insert index
+            reattachTab(profileName, mainTabSlotFor(profileName));
         }
     }
 
@@ -4207,7 +4207,7 @@ bool mudlet::saveWindowLayout()
         ofs.setVersion(QDataStream::Qt_5_12);
         ofs << layoutData;
         if (!layoutFile.commit()) {
-            qDebug() << "mudlet::saveWindowLayout: error saving window layout: " << layoutFile.errorString();
+            qWarning() << "mudlet::saveWindowLayout: error saving window layout file:" << layoutFilePath << layoutFile.errorString();
             return false;
         }
 
@@ -4218,6 +4218,7 @@ bool mudlet::saveWindowLayout()
         mHasSavedLayout = true;
         return true;
     }
+    qWarning() << "mudlet::saveWindowLayout: error opening window layout file for writing:" << layoutFilePath << layoutFile.errorString();
     return false;
 }
 
@@ -4886,11 +4887,13 @@ void mudlet::setMenuBarVisibility(const enums::controlsVisibility state)
 // This only adjusts the visibility as appropriate
 void mudlet::adjustMenuBarVisibility()
 {
-    const int hostCount = mHostManager.getHostCount();
-    if ((hostCount < 1 && (mMenuBarVisibility & enums::visibleAlways)) || (hostCount >= 1 && (mMenuBarVisibility & enums::visibleMaskNormally))) {
-        menuBar()->show();
-    } else {
-        menuBar()->hide();
+    const bool menuBarVisible = controlShouldBeVisible(mMenuBarVisibility);
+    menuBar()->setVisible(menuBarVisible);
+
+    for (const auto& detachedWindow : std::as_const(mDetachedWindows)) {
+        if (detachedWindow) {
+            detachedWindow->setMenuBarVisibility(menuBarVisible);
+        }
     }
 }
 
@@ -4916,7 +4919,7 @@ void mudlet::slot_handleToolbarVisibilityChanged(bool isVisible)
 {
     if (!isVisible && mMenuBarVisibility == enums::visibleNever) {
         // Only need to worry about it DIS-appearing if the menu bar is not showing
-        if (toolBarShouldBeVisible()) {
+        if (controlShouldBeVisible(mToolbarVisibility)) {
             mpMainToolBar->show();
         }
     }
@@ -4951,20 +4954,20 @@ void mudlet::slot_toolbarToggleActionTriggered(bool checked)
     synchronizeToolBarVisibility(checked);
 }
 
-bool mudlet::toolBarShouldBeVisible()
+bool mudlet::controlShouldBeVisible(const enums::controlsVisibility visibility)
 {
     const int hostCount = mHostManager.getHostCount();
-    return (hostCount < 1 && (mToolbarVisibility & enums::visibleAlways)) || (hostCount >= 1 && (mToolbarVisibility & enums::visibleMaskNormally));
+    return (hostCount < 1 && (visibility & enums::visibleAlways)) || (hostCount >= 1 && (visibility & enums::visibleMaskNormally));
 }
 
 void mudlet::adjustToolBarVisibility()
 {
-    const bool toolBarVisible = toolBarShouldBeVisible();
+    const bool toolBarVisible = controlShouldBeVisible(mToolbarVisibility);
     mpMainToolBar->setVisible(toolBarVisible);
 
     // Detached windows only get the toolbar state in their constructor and from the toolbar's own toggle,
     // so push the setting to them too. They mirror the main window even for a hide canHideToolBar() would
-    // refuse: a detached window always keeps its own menu bar.
+    // refuse, and are left with the same console context menu to get the controls back.
     for (const auto& detachedWindow : std::as_const(mDetachedWindows)) {
         if (detachedWindow) {
             detachedWindow->setToolBarVisibility(toolBarVisible);
@@ -8665,6 +8668,7 @@ void mudlet::detachTab(int tabIndex, const QPoint& position)
         }
     }
 
+    syncMainTabOrder();
     // Remove tab from main window tab bar since it will be in the detached window
     mpTabBar->removeTab(tabIndex);
 
@@ -8683,6 +8687,7 @@ void mudlet::detachTab(int tabIndex, const QPoint& position)
     // Create detached window with toolbar state inherited from main window
     bool toolbarVisible = (mpMainToolBar && mpMainToolBar->isVisible());
     auto detachedWindow = new TDetachedWindow(profileName, console, toolbarVisible);
+    detachedWindow->setMenuBarVisibility(controlShouldBeVisible(mMenuBarVisibility));
     mDetachedWindows.insert(profileName, detachedWindow);
 
     // Transfer any dock widgets from the main window to the detached window
@@ -8690,7 +8695,7 @@ void mudlet::detachTab(int tabIndex, const QPoint& position)
 
     // Connect signals
     connect(detachedWindow, &TDetachedWindow::reattachRequested, this, [this](const QString& profileName) {
-        slot_tabReattachRequested(profileName, -1); // Use default insert index
+        slot_tabReattachRequested(profileName, mainTabSlotFor(profileName));
     });
     connect(detachedWindow, &TDetachedWindow::windowClosed, this, &mudlet::slot_detachedWindowClosed);
     connect(detachedWindow, &TDetachedWindow::profileDetachToWindowRequested, this, &mudlet::slot_profileDetachToWindow);
@@ -9161,6 +9166,7 @@ void mudlet::moveProfileFromMainToDetachedWindow(const QString& profileName, int
         return;
     }
 
+    syncMainTabOrder();
     // Remove tab from main window tab bar
     mpTabBar->removeTab(tabIndex);
 
@@ -9325,6 +9331,48 @@ void mudlet::cleanupDetachedWindowsMap()
     }
 }
 
+void mudlet::syncMainTabOrder()
+{
+    const QStringList barOrder = mpTabBar->tabNames();
+    // Keyed by the attached tab each detached profile follows; an empty key is
+    // the front of the bar
+    QHash<QString, QStringList> detachedBehind;
+    QString lastAttached;
+    for (const QString& name : std::as_const(mMainTabOrder)) {
+        if (barOrder.contains(name)) {
+            lastAttached = name;
+        } else if (mDetachedWindows.contains(name)) {
+            detachedBehind[lastAttached].append(name);
+        }
+    }
+
+    QStringList order = detachedBehind.value(QString());
+    for (const QString& name : barOrder) {
+        order.append(name);
+        order.append(detachedBehind.value(name));
+    }
+    mMainTabOrder = order;
+}
+
+// The main tab bar index that puts a detached profile back where it was, or
+// -1 when it has no recorded place
+int mudlet::mainTabSlotFor(const QString& profileName)
+{
+    syncMainTabOrder();
+    const qsizetype position = mMainTabOrder.indexOf(profileName);
+    if (position < 0) {
+        return -1;
+    }
+
+    int slot = 0;
+    for (qsizetype i = 0; i < position; ++i) {
+        if (findTabIndex(mMainTabOrder.at(i)) >= 0) {
+            ++slot;
+        }
+    }
+    return slot;
+}
+
 int mudlet::findTabIndex(const QString& profileName) const
 {
     for (int i = 0; i < mpTabBar->count(); ++i) {
@@ -9392,7 +9440,10 @@ void mudlet::moveProfileFromDetachedToMainWindow(const QString& profileName, TDe
     }
 
     // Now add console to main window - it should have parent=nullptr now
-    const int insertIndex = mpTabBar->count(); // Insert at end
+    int insertIndex = mainTabSlotFor(profileName);
+    if (insertIndex < 0) {
+        insertIndex = mpTabBar->count();
+    }
 
     // CRITICAL DEBUG: Check if main window splitter already contains a console for this profile
     for (int i = 0; i < mpSplitter_profileContainer->count(); ++i) {

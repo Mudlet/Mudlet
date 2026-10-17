@@ -63,6 +63,7 @@
 #include <QSslError>
 #include <QtGlobal>
 
+#include <array>
 #include <memory>
 
 using namespace std::chrono_literals;
@@ -269,6 +270,7 @@ void cTelnet::reset()
     abandonNetworkLatencyMeasurement();
     command = "";
     mMudData = "";
+    mDeferredInput.clear();
 
     mServerRequestedSGA = false;
     mCharacterModeDetected = false;
@@ -662,6 +664,20 @@ void cTelnet::cacheHostSettings()
 
 void cTelnet::connectIt(const QString& address, int port)
 {
+    if (mDisconnectionPending) {
+        if (mDecompressionRecursionDepth > 0) {
+            // A trigger on the last words of the connection that ended: tearing
+            // it down from inside their read would reset the parse it is in
+            QTimer::singleShot(0ms, this, [this, address, port]() {
+                connectIt(address, port);
+            });
+            return;
+        }
+        // Finished as a reconnect on a live connection would end it, without the rest of what it sent
+        mDisconnectionPending = false;
+        finishDisconnection();
+    }
+
     // Set early - before the recursion-on-busy-socket block below - so the
     // QCoreApplication::processEvents() call there cannot leave the indicator
     // briefly showing Disconnected during a reconnect.
@@ -767,6 +783,7 @@ void cTelnet::reconnect()
 void cTelnet::disconnectIt()
 {
     mDontReconnect = true;
+    mDisconnectRequested = true;
     mLookingUpHost = false;
     mTimerFailedConnectionRetry->stop();
     mFailedConnectionCount = 0;
@@ -788,6 +805,7 @@ void cTelnet::abortConnection()
     // lingering until the (asynchronous) disconnect signal arrives.
     mLookingUpHost = false;
     mDontReconnect = true;
+    mDisconnectRequested = true;
     mTimerFailedConnectionRetry->stop();
     mFailedConnectionCount = 0;
     abandonHostLookup();
@@ -1044,6 +1062,7 @@ void cTelnet::slot_socketConnected()
     // Disconnect pressed while there was nothing to disconnect, it would inhibit the automatic
     // reconnect after this connection ends and blame that ending on the user.
     mDontReconnect = false;
+    mDisconnectRequested = false;
 
     // Which socket is this? Once we know, set mpSocket to point at it and
     // disable the other one from doing anything more
@@ -1109,10 +1128,6 @@ void cTelnet::slot_socketDisconnected()
     // Ahead of the shutdown check below, since the reset() that would otherwise
     // do it is past that return and a beat has no connection left to time
     abandonNetworkLatencyMeasurement();
-    TEvent event{};
-#if !defined(QT_NO_SSL)
-    bool sslerr = false;
-#endif
 
     // Check if Host is closing down or null/invalid
     if (!mpHost || mpHost->isClosingDown()) {
@@ -1120,6 +1135,53 @@ void cTelnet::slot_socketDisconnected()
         return;
     }
 
+    // The socket still holds what the game sent before it closed - often its
+    // last words, such as a quit message - and no readyRead() will come for it.
+    // Not after a Disconnect, when it is not wanted; an abort() leaves nothing.
+    if (!mDisconnectRequested && !mDeferredReconnect && mpSocket && (!mDeferredInput.isEmpty() || mpSocket->bytesAvailable() > 0)) {
+        mDisconnectionPending = true;
+        QMetaObject::invokeMethod(this, &cTelnet::drainBeforeDisconnection, Qt::QueuedConnection);
+        return;
+    }
+    finishDisconnection();
+}
+
+// A read per event-loop turn, as readPendingSocketData() takes a burst, so a
+// large one does not hold up every other profile and the display until it is in
+void cTelnet::drainBeforeDisconnection()
+{
+    if (!mDisconnectionPending || !mpHost || mpHost->isClosingDown()) {
+        return;
+    }
+    // A trigger is running a nested event loop: a read now would land in the
+    // middle of the one it is part of
+    if (mDecompressionRecursionDepth > 0) {
+        QTimer::singleShot(10ms, this, &cTelnet::drainBeforeDisconnection);
+        return;
+    }
+    if (!mDisconnectRequested && !mDeferredReconnect && mpSocket && readSocketDataOnce()) {
+        QMetaObject::invokeMethod(this, &cTelnet::drainBeforeDisconnection, Qt::QueuedConnection);
+        return;
+    }
+    mDisconnectionPending = false;
+    finishDisconnection();
+}
+
+void cTelnet::finishDisconnection()
+{
+    // Rechecked, as a trigger on the last words may have closed the profile
+    if (!mpHost || mpHost->isClosingDown()) {
+        return;
+    }
+    TEvent event{};
+#if !defined(QT_NO_SSL)
+    bool sslerr = false;
+#endif
+
+    // A drain's deferred input was read before the connection closed, and no
+    // later read will come to take it in
+    while (!mDeferredInput.isEmpty() && mpSocket && !mpHost->isClosingDown() && !mDeferredReconnect && readSocketDataOnce()) {
+    }
     postData();
     // A line held back for server-wrap undoing is complete now that the
     // connection is gone - commit it, in trigger context as for any other
@@ -1302,6 +1364,7 @@ void cTelnet::slot_socketDisconnected()
         connectIt(mHostUrl, mHostPort);
     }
     mDontReconnect = false;
+    mDisconnectRequested = false;
 }
 
 #if !defined(QT_NO_SSL)
@@ -2058,6 +2121,15 @@ void cTelnet::slot_replyFinished(QNetworkReply* reply)
             return;
         }
 
+        const QByteArray packageData = reply->readAll();
+        if (packageData.isEmpty()) {
+            //: %1 is the URL the game offered its package from
+            postMessage(tr("[ WARN ]  - Package download from '%1' was empty, so there is nothing to install.").arg(reply->url().toString()));
+            reply->deleteLater();
+            mpPackageDownloadReply = nullptr;
+            return;
+        }
+
         QSaveFile file(mServerPackage);
 
         if (!file.open(QFile::WriteOnly)) {
@@ -2069,7 +2141,7 @@ void cTelnet::slot_replyFinished(QNetworkReply* reply)
             return;
         }
 
-        file.write(reply->readAll());
+        file.write(packageData);
 
         if (!file.commit()) {
             //: %1 is the error message
@@ -2083,29 +2155,52 @@ void cTelnet::slot_replyFinished(QNetworkReply* reply)
         reply->deleteLater();
         mpPackageDownloadReply = nullptr;
 
-        // installPackage() reports the reason to the profile itself
-        if (!mpHost->installPackage(mServerPackage, enums::PackageModuleType::Package).first) {
-            return;
-        }
-
-        QString packageName = mServerPackage.section("/", -1);
-        packageName.remove(QLatin1String(".zip"), Qt::CaseInsensitive);
-        packageName.remove(QLatin1String(".trigger"), Qt::CaseInsensitive);
-        packageName.remove(QLatin1String(".xml"), Qt::CaseInsensitive);
-        packageName.remove(QLatin1String(".mpackage"), Qt::CaseInsensitive);
-        packageName.remove(QLatin1Char('/'));
-        packageName.remove(QLatin1Char('\\'));
-        mpHost->mServerGUI_Package_name = packageName;
-
-        // Let scripts (e.g. the preinstalled starter UI) react to the game
-        // having supplied its own interface:
-        TEvent event{};
-        event.mArgumentList.append(qsl("sysServerGuiInstalled"));
-        event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-        event.mArgumentList.append(packageName);
-        event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-        mpHost->raiseEvent(event);
+        // Copies: installing runs the package's scripts, and an offer handled meanwhile replaces both members
+        const QString packagePath = mServerPackage;
+        const QString packageVersion = mServerPackageVersion;
+        installDownloadedGUIPackage(packagePath, packageVersion);
     }
+}
+
+void cTelnet::installDownloadedGUIPackage(const QString& packagePath, const QString& packageVersion)
+{
+    // installPackage() would postpone the install past a running save and answer true at once,
+    // so the version would be recorded and the package announced before it was installed, or at all
+    if (mpHost->currentlySavingProfile()) {
+        connect(
+                mpHost,
+                &Host::profileSaveFinished,
+                this,
+                [this, packagePath, packageVersion]() {
+                    installDownloadedGUIPackage(packagePath, packageVersion);
+                },
+                static_cast<Qt::ConnectionType>(Qt::QueuedConnection | Qt::SingleShotConnection));
+        return;
+    }
+
+    // installPackage() reports the reason to the profile itself
+    if (!mpHost->installPackage(packagePath, enums::PackageModuleType::Package).first) {
+        return;
+    }
+    mpHost->mServerGUI_Package_version = packageVersion;
+
+    QString packageName = packagePath.section("/", -1);
+    packageName.remove(QLatin1String(".zip"), Qt::CaseInsensitive);
+    packageName.remove(QLatin1String(".trigger"), Qt::CaseInsensitive);
+    packageName.remove(QLatin1String(".xml"), Qt::CaseInsensitive);
+    packageName.remove(QLatin1String(".mpackage"), Qt::CaseInsensitive);
+    packageName.remove(QLatin1Char('/'));
+    packageName.remove(QLatin1Char('\\'));
+    mpHost->mServerGUI_Package_name = packageName;
+
+    // Let scripts (e.g. the preinstalled starter UI) react to the game
+    // having supplied its own interface:
+    TEvent event{};
+    event.mArgumentList.append(qsl("sysServerGuiInstalled"));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    event.mArgumentList.append(packageName);
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    mpHost->raiseEvent(event);
 }
 
 void cTelnet::slot_setDownloadProgress(qint64 got, qint64 tot)
@@ -2115,7 +2210,9 @@ void cTelnet::slot_setDownloadProgress(qint64 got, qint64 tot)
 
 void cTelnet::slot_cancelPackageDownload()
 {
-    if (mpPackageDownloadReply) {
+    // Closing the progress dialog when the download finishes emits canceled() too,
+    // and aborting a finished file: reply closes it before its data is read
+    if (mpPackageDownloadReply && !mpPackageDownloadReply->isFinished()) {
         mpPackageDownloadReply->abort();
     }
 }
@@ -4180,7 +4277,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                 // Check if the package is installed
                 if (!mpHost->mInstalledPackages.contains(packageName)) {
                     // Package is not installed, initiate the download
-                    mpHost->mServerGUI_Package_version = version;
+                    mServerPackageVersion = version;
                     downloadAndInstallGUIPackage(packageName, fileName, url);
                 } else if (mpHost->mServerGUI_Package_version != version) {
                     // Check if the version is different and handle the upgrade
@@ -4188,19 +4285,16 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                                    "(url='%3').")
                                         .arg(version, mpHost->mServerGUI_Package_version, url));
 
-                    // If uninstalling is refused, installing over it would fail as "already installed"
-                    // while the version recorded below claimed the upgrade. A name not installed
-                    // has nothing to remove,
-                    // and must not hold the upgrade up.
-                    const QString oldPackageName = mpHost->mServerGUI_Package_name != qsl("nothing") ? mpHost->mServerGUI_Package_name : packageName;
-                    const bool clearedTheWay = !mpHost->mInstalledPackages.contains(oldPackageName) || mpHost->uninstallPackage(oldPackageName, enums::PackageModuleType::Package);
+                    // The installed copy of the offered package is what has to go: removing any other leaves this
+                    // one in place, and installing over it fails as "already installed" at every offer
+                    const bool clearedTheWay = mpHost->uninstallPackage(packageName, enums::PackageModuleType::Package);
                     if (clearedTheWay) {
                         // Download and install the new version
-                        mpHost->mServerGUI_Package_version = version;
+                        mServerPackageVersion = version;
                         downloadAndInstallGUIPackage(packageName, fileName, url);
                     } else {
                         //: %1 is the name of the GUI package the game offered to upgrade
-                        postMessage(tr("[ WARN ]  - Could not remove \"%1\" to upgrade it while the profile is being saved. The game will offer the upgrade again.").arg(oldPackageName));
+                        postMessage(tr("[ WARN ]  - Could not remove \"%1\" to upgrade it while the profile is being saved. The game will offer the upgrade again.").arg(packageName));
                     }
                 }
             }
@@ -4601,7 +4695,7 @@ void cTelnet::handleGUIPackageInstallationAndUpgrade(QJsonDocument document)
     // Check if the package is installed
     if (!mpHost->mInstalledPackages.contains(packageName)) {
         // Package is not installed, initiate the download
-        mpHost->mServerGUI_Package_version = version;
+        mServerPackageVersion = version;
         downloadAndInstallGUIPackage(packageName, fileName, url);
     } else if (mpHost->mServerGUI_Package_version != version) {
         // Check if the version is different and handle the upgrade
@@ -4609,19 +4703,16 @@ void cTelnet::handleGUIPackageInstallationAndUpgrade(QJsonDocument document)
                        "(url='%3').")
                             .arg(version, mpHost->mServerGUI_Package_version, url));
 
-        // If uninstalling is refused, installing over it would fail as "already installed"
-        // while the version recorded below claimed the upgrade. A name not installed
-        // has nothing to remove,
-        // and must not hold the upgrade up.
-        const QString oldPackageName = mpHost->mServerGUI_Package_name != qsl("nothing") ? mpHost->mServerGUI_Package_name : packageName;
-        const bool clearedTheWay = !mpHost->mInstalledPackages.contains(oldPackageName) || mpHost->uninstallPackage(oldPackageName, enums::PackageModuleType::Package);
+        // The installed copy of the offered package is what has to go: removing any other leaves this
+        // one in place, and installing over it fails as "already installed" at every offer
+        const bool clearedTheWay = mpHost->uninstallPackage(packageName, enums::PackageModuleType::Package);
         if (clearedTheWay) {
             // Download and install the new version
-            mpHost->mServerGUI_Package_version = version;
+            mServerPackageVersion = version;
             downloadAndInstallGUIPackage(packageName, fileName, url);
         } else {
             //: %1 is the name of the GUI package the game offered to upgrade
-            postMessage(tr("[ WARN ]  - Could not remove \"%1\" to upgrade it while the profile is being saved. The game will offer the upgrade again.").arg(oldPackageName));
+            postMessage(tr("[ WARN ]  - Could not remove \"%1\" to upgrade it while the profile is being saved. The game will offer the upgrade again.").arg(packageName));
         }
     }
 }
@@ -5544,8 +5635,9 @@ bool cTelnet::loadReplay(const QString& name, QString* pErrMsg)
         loadingReplay = true;
         mReplayPaused = false;
         mReplayChunkPending = false;
-        mReplayChunkDelay = 0;
+        mReplayChunkOwedMsec = 0;
         if (auto* replay = MudletReplay::self(); replay && replay->start(mpHost)) {
+            connect(replay, &MudletReplay::signal_replaySpeedChanged, this, &cTelnet::slot_replaySpeedChanged, Qt::UniqueConnection);
             auto [ok, modifiedFormat] = testReadReplayFile();
             if (Q_LIKELY(ok)) {
                 mReplayHasFaultyFormat = modifiedFormat;
@@ -5620,11 +5712,13 @@ void cTelnet::loadReplayChunk()
         // Previous use of loadedBytes + 1 caused a spurious character at end of
         // string display by a qDebug of the loadBuffer contents
         loadBuffer[loadedBytes] = '\0';
-        auto* replay = MudletReplay::self();
-        mReplayChunkDelay = replay ? replay->advance(offset) : offset;
+        if (auto* replay = MudletReplay::self()) {
+            replay->advance(offset);
+        }
+        mReplayChunkOwedMsec = offset;
         mReplayChunkPending = true;
         if (!mReplayPaused) {
-            mpReplayChunkTimer->start(mReplayChunkDelay);
+            armReplayChunkTimer();
         }
     } else {
         endReplay(mIsReplayRunFromLua ? QString() : tr("[  OK  ]  - The replay has ended."));
@@ -5638,13 +5732,9 @@ void cTelnet::pauseReplay()
     }
 
     mReplayPaused = true;
-    if (mpReplayChunkTimer->isActive()) {
-        // Bank what is left of the wait rather than the whole gap, so that
-        // resuming does not serve the part of it that had already elapsed all
-        // over again. remainingTime() is -1 on a timer that is not running:
-        mReplayChunkDelay = qMax(0, mpReplayChunkTimer->remainingTime());
-        mpReplayChunkTimer->stop();
-    }
+    // Banks what is left of the wait rather than the whole gap, so that resuming
+    // does not serve the part of it that had already elapsed all over again
+    stopReplayChunkTimer();
 }
 
 void cTelnet::resumeReplay()
@@ -5658,8 +5748,39 @@ void cTelnet::resumeReplay()
     // next loadReplayChunk() arms it, and at the end of the file
     // arming it would push the chunk just played through a second time.
     if (mReplayChunkPending) {
-        mpReplayChunkTimer->start(mReplayChunkDelay);
+        armReplayChunkTimer();
     }
+}
+
+// A paused wait is rescaled when it resumes, so only a running one needs re-arming here
+void cTelnet::slot_replaySpeedChanged()
+{
+    if (!loadingReplay || !mReplayChunkPending || mReplayPaused || !mpReplayChunkTimer->isActive()) {
+        return;
+    }
+
+    stopReplayChunkTimer();
+    armReplayChunkTimer();
+}
+
+void cTelnet::armReplayChunkTimer()
+{
+    auto* replay = MudletReplay::self();
+    mReplayChunkSpeed = replay ? replay->speed() : 1;
+    mpReplayChunkTimer->start(static_cast<int>(mReplayChunkOwedMsec / mReplayChunkSpeed));
+    mReplayChunkArmedAt.start();
+}
+
+void cTelnet::stopReplayChunkTimer()
+{
+    if (!mpReplayChunkTimer->isActive()) {
+        return;
+    }
+
+    mpReplayChunkTimer->stop();
+    // Nanoseconds, as at 1024x every real millisecond is a second of the recording
+    const qint64 playedMsec = mReplayChunkArmedAt.nsecsElapsed() * mReplayChunkSpeed / 1'000'000;
+    mReplayChunkOwedMsec = qMax(qint64{0}, mReplayChunkOwedMsec - playedMsec);
 }
 
 void cTelnet::stopReplay()
@@ -5804,8 +5925,8 @@ void cTelnet::slot_socketReadyToBeRead()
     readPendingSocketData();
 }
 
-// Requeues itself for what is left after one BUFFER_SIZE read: readyRead() fires only on fresh bytes,
-// so the rest of a burst would sit unseen until the server sent again. Not drained via
+// Requeues itself for what is left after one BUFFER_SIZE read, or deferred by a drain: readyRead()
+// fires only on fresh bytes, so the rest of a burst would sit unseen until the server sent again. Not drained via
 // slot_socketReadyToBeRead(): the leftovers predate any command a trigger has since sent, so treating
 // them as that command's reply would report a latency of nearly nothing.
 void cTelnet::readPendingSocketData()
@@ -5814,18 +5935,50 @@ void cTelnet::readPendingSocketData()
         return;
     }
 
-    // TODO: https://github.com/Mudlet/Mudlet/issues/5780 (2 of 7) - investigate switching from using `char[]` to `std::array<char>`
-    char in_buffer[BUFFER_SIZE + 10];
+    if (readSocketDataOnce()) {
+        QMetaObject::invokeMethod(this, &cTelnet::readPendingSocketData, Qt::QueuedConnection);
+    }
+}
 
-    int amount = mpSocket->read(in_buffer, BUFFER_SIZE);
-    processSocketData(in_buffer, amount);
+// Processes one read's worth and answers whether more is waiting.
+bool cTelnet::readSocketDataOnce()
+{
+    int amount = 0;
+    if (!mDeferredInput.isEmpty()) {
+        QByteArray deferred;
+        deferred.swap(mDeferredInput);
+        amount = static_cast<int>(deferred.size());
+        processSocketData(deferred.data(), amount);
+    } else if (mpSocket) {
+        std::array<char, BUFFER_SIZE + 10> in_buffer;
+
+        amount = static_cast<int>(mpSocket->read(in_buffer.data(), BUFFER_SIZE));
+        processSocketData(in_buffer.data(), amount);
+    }
 
     // amount > 0 as well as bytesAvailable(): a read that yields nothing while the
     // socket still reports bytes would otherwise requeue forever, spinning a core
     // for as long as the connection stayed in that state.
-    if (amount > 0 && mpSocket && mpSocket->bytesAvailable() > 0) {
-        QMetaObject::invokeMethod(this, &cTelnet::readPendingSocketData, Qt::QueuedConnection);
+    return amount > 0 && (!mDeferredInput.isEmpty() || (mpSocket && mpSocket->bytesAvailable() > 0));
+}
+
+void cTelnet::loopbackTest(QByteArray& data)
+{
+    ++mLoopbackProcessingDepth;
+    const auto loopbackGuard = qScopeGuard([this] {
+        --mLoopbackProcessingDepth;
+    });
+    // A connection's leftover input is not this feed's to process
+    QByteArray connectionInput;
+    connectionInput.swap(mDeferredInput);
+    processSocketData(data.data(), static_cast<int>(data.size()), true);
+    // There is no later read for fed data to wait for
+    while (!mDeferredInput.isEmpty()) {
+        QByteArray deferred;
+        deferred.swap(mDeferredInput);
+        processSocketData(deferred.data(), static_cast<int>(deferred.size()), true);
     }
+    mDeferredInput.swap(connectionInput);
 }
 
 void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopbackTesting)
@@ -5846,17 +5999,18 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
     if (mDecompressionRecursionDepth > scmMaxDecompressionRecursion) {
         qWarning() << "cTelnet::processSocketData(...) WARNING - recursion depth exceeded, dropping remaining data";
         if (mNeedDecompression) {
-            // What is dropped here is the rest of the compressed stream, and
-            // zlib cannot pick a stream up again past a gap, so whatever the
-            // game compresses next would come out as garbage or not at all.
-            // Refuse the stream so the game falls back to plain text instead.
-            //: Shown when one read from the game inflates to more than can be processed safely (e.g. a decompression bomb) while MCCP compression is on.
+            // A drain defers its input rather than going this deep, so this is
+            // processing nested inside one, such as a feedTelnet() from a trigger
+            // at its deepest level. zlib cannot pick a stream up again past what
+            // is dropped here, so refuse the stream and have the game fall back
+            // to plain text.
+            //: Shown when data is processed nested too deeply to do safely (e.g. feedTelnet() called from a trigger while a large compressed read is being shown) while MCCP compression is on.
             postMessage(tr("[ WARN  ]  - Too much compressed data to process at once, some was lost - compression disabled.\n"
                            "If the display looks garbled, please reconnect to the game."));
             refuseCompressedStream();
             return;
         }
-        //: Shown when too much data expands out of one compressed read (e.g. a decompression bomb) to process safely.
+        //: Shown when data is processed nested too deeply to do safely (e.g. feedTelnet() called from a trigger while a large compressed read is being shown).
         postMessage(tr("[ WARN  ]  - Too much data to process at once, some may have been lost."));
         return;
     }
@@ -5901,7 +6055,6 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
         // out of compression on stream end or a broken stream. Anything it did
         // not consume - more compressed data, or plain data past the stream -
         // must still be processed, so queue it (see the re-entry at the end).
-        // The recursion cap bounds this if a pass ever makes no progress.
         if (amount > 0) {
             remainingData = in_buffer;
             remainingAmount = amount;
@@ -6166,12 +6319,19 @@ Some data loss is likely - please mention this problem to the game admins.)",
     // reconnect makes this leftover the dropped connection's, same as the bytes
     // the loop above stopped at.
     if (remainingData && remainingAmount > 0 && !(mDeferredReconnect && !loopbackTesting)) {
-        // the leftover arrived in the same read, so it has no wait of its own
+        // the leftover arrived in the same read, so it has no wait of its own;
+        // a part deferred below is recorded with the wait for its turn
         if (recordingThisRead) {
             mRecordLastChunkMSecTimeOffset = static_cast<qint32>(mRecordingChunkTimer.elapsed());
         }
-        processSocketData(remainingData, remainingAmount, loopbackTesting);
-        return;
+        if (mDecompressionRecursionDepth < scmMaxDecompressionRecursion) {
+            processSocketData(remainingData, remainingAmount, loopbackTesting);
+            return;
+        }
+        // Another level would be refused, and losing the rest of a compressed
+        // stream garbles everything after it, so leave it for the next
+        // event-loop turn (loopbackTest() takes it in straight away)
+        mDeferredInput.append(remainingData, remainingAmount);
     }
 
     if (mpHost) {

@@ -21,7 +21,8 @@
  * Covers the bookkeeping behind "Install" in the package manager's Explore
  * view - dlgPackageManager::slot_installPackageFromRepository(), which downloads
  * every selected package and then installs the batch once the last one has
- * landed.
+ * landed - and the repository index refresh it starts when a selection cannot
+ * be resolved from the cached index, dlgPackageManager::downloadRepositoryIndex().
  *
  * Nothing but that button starts one, so there is no Lua entry point and the
  * busted suite cannot reach any of it. What decides when the batch is finished
@@ -33,10 +34,16 @@
  * "Downloading packages..." dialog up for the rest of the session, on top of a
  * profile the user can no longer click on.
  *
+ * The index refresh tests (#10217) check that the cached mpkg.packages.json, which
+ * the Explore view is filled from, is replaced only by an index that arrived
+ * whole: a refresh that fails, is answered with something else, or is cut off by
+ * closing the dialog must leave it as it was.
+ *
  * The downloads are pointed at a stub standing in as an HTTP proxy rather than
  * at github.com: an application proxy is the one place a QNetworkAccessManager
  * built with no seam for a test can still be redirected, and it means these
- * tests neither reach the network nor depend on a name resolving.
+ * tests neither reach the network nor depend on a name resolving. To answer an
+ * index refresh the stub opens the tunnel and terminates its TLS itself.
  *
  * A real profile rather than a bare Host, because the dialog connects to
  * mpHost->mainConsoleView() in its constructor and installs into a profile directory.
@@ -58,13 +65,18 @@
 #include <QNetworkProxy>
 #include <QPointer>
 #include <QProgressDialog>
+#include <QScopeGuard>
+#include <QSslCertificate>
+#include <QSslConfiguration>
+#include <QSslKey>
+#include <QSslSocket>
 #include <QTcpServer>
-#include <QTcpSocket>
 #include <QTemporaryDir>
 #include <QTimer>
 #include <chrono>
 
 #include "Host.h"
+#include "LoopbackTlsCertificate.h"
 #include "MudletInstanceCoordinator.h"
 #include "MudletApp.h"
 #include "PortableModeTestHelper.h"
@@ -80,8 +92,8 @@ using namespace std::chrono_literals;
 // Stands in as the HTTP proxy every download in this file is pointed at. The
 // package URLs are https, so what a real proxy would see first is a CONNECT
 // establishing the tunnel - which is exactly the point at which this one either
-// hangs up or says nothing at all, and neither answer needs a line of HTTP to
-// be written to produce it.
+// hangs up or says nothing at all, or else opens the tunnel and answers the
+// request inside it itself.
 class StubProxy : public QTcpServer
 {
     Q_OBJECT
@@ -95,6 +107,9 @@ public:
         // accept and then say nothing, so the download stays in flight until
         // the request's own 30s transfer timeout, which outlasts these tests
         Stall,
+        // open the tunnel and answer whatever is asked inside it with a 200
+        // carrying the body given to serve()
+        Serve,
     };
 
     explicit StubProxy(QObject* parent = nullptr)
@@ -104,21 +119,54 @@ public:
 
     void setAnswer(const Answer answer) { mAnswer = answer; }
 
+    void serve(const QByteArray& body)
+    {
+        mAnswer = Answer::Serve;
+        mBody = body;
+    }
+
     QNetworkProxy asApplicationProxy() const { return QNetworkProxy(QNetworkProxy::HttpProxy, qsl("127.0.0.1"), serverPort()); }
 
 protected:
     void incomingConnection(const qintptr socketDescriptor) override
     {
-        auto* socket = new QTcpSocket(this);
+        auto* socket = new QSslSocket(this);
         socket->setSocketDescriptor(socketDescriptor);
-        connect(socket, &QTcpSocket::disconnected, socket, &QObject::deleteLater);
+        connect(socket, &QSslSocket::disconnected, socket, &QObject::deleteLater);
         if (mAnswer == Answer::Refuse) {
             socket->disconnectFromHost();
+        } else if (mAnswer == Answer::Serve) {
+            socket->setLocalCertificate(QSslCertificate(QByteArray(csmLoopbackCertificatePem)));
+            socket->setPrivateKey(QSslKey(QByteArray(csmLoopbackPrivateKeyPem), QSsl::Rsa));
+            connect(socket, &QSslSocket::readyRead, this, [this, socket]() {
+                answerRequest(socket);
+            });
         }
     }
 
 private:
+    void answerRequest(QSslSocket* socket)
+    {
+        const QByteArray request = socket->property("request").toByteArray() + socket->readAll();
+        if (!request.contains("\r\n\r\n")) {
+            socket->setProperty("request", request);
+            return;
+        }
+        socket->setProperty("request", QByteArray());
+        if (request.startsWith("CONNECT ")) {
+            socket->write("HTTP/1.1 200 Connection established\r\n\r\n");
+            socket->flush();
+            socket->startServerEncryption();
+            return;
+        }
+        socket->write("HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: " + QByteArray::number(mBody.size()) + "\r\nConnection: close\r\n\r\n");
+        socket->write(mBody);
+        socket->flush();
+        socket->disconnectFromHost();
+    }
+
     Answer mAnswer = Answer::Refuse;
+    QByteArray mBody;
 };
 
 // Closes any message box that appears, recording what it said. The download
@@ -251,6 +299,7 @@ private:
     QString mPort;
     QTemporaryDir mConfigDir;
     QByteArray mSavedXdg;
+    QSslConfiguration mOriginalSslConfiguration;
 
     QString profileHome() const { return MudletApp::getMudletPath(enums::profileHomePath, mProfileName); }
 
@@ -266,6 +315,15 @@ private:
         QJsonObject root;
         root.insert(qsl("packages"), packages);
         return file.write(QJsonDocument(root).toJson()) > 0;
+    }
+
+    QByteArray readRepositoryIndex() const
+    {
+        QFile file(qsl("%1/mpkg.packages.json").arg(profileHome()));
+        if (!file.open(QIODevice::ReadOnly)) {
+            return QByteArray();
+        }
+        return file.readAll();
     }
 
     static QJsonObject repositoryEntry(const QString& name, const QString& fileName)
@@ -342,6 +400,20 @@ private:
         return count;
     }
 
+    // What an index refresh left of its own beside the profile: a named temporary
+    // file, or a descriptor still held on the index or on the unnamed temporary
+    // file Linux can write it through first ("<dir>/#<inode> (deleted)" in /proc),
+    // which no directory listing shows.
+    QStringList indexRefreshLeftovers() const
+    {
+        QStringList leftovers = QDir(profileHome()).entryList({qsl("mpkg.packages.json?*")}, QDir::Files | QDir::Hidden);
+        const int handles = openHandlesFor(qsl("%1/mpkg.packages.json").arg(profileHome())) + openHandlesFor(qsl("%1/#").arg(profileHome()));
+        if (handles > 0) {
+            leftovers << qsl("%1 open file descriptor(s)").arg(handles);
+        }
+        return leftovers;
+    }
+
 private slots:
     void initTestCase()
     {
@@ -369,10 +441,17 @@ private slots:
         mpProxy = new StubProxy(qApp);
         QVERIFY2(mpProxy->listen(QHostAddress::LocalHost, 0), "Could not start the stub proxy the downloads are pointed at");
         QNetworkProxy::setApplicationProxy(mpProxy->asApplicationProxy());
+
+        // The stub answers for raw.githubusercontent.com with a certificate issued to localhost
+        mOriginalSslConfiguration = QSslConfiguration::defaultConfiguration();
+        QSslConfiguration configuration = mOriginalSslConfiguration;
+        configuration.setPeerVerifyMode(QSslSocket::VerifyNone);
+        QSslConfiguration::setDefaultConfiguration(configuration);
     }
 
     void cleanupTestCase()
     {
+        QSslConfiguration::setDefaultConfiguration(mOriginalSslConfiguration);
         QNetworkProxy::setApplicationProxy(QNetworkProxy::NoProxy);
         delete mpProxy;
         mpProxy = nullptr;
@@ -615,6 +694,167 @@ private slots:
         QVERIFY2(dismisser.seen().at(1).contains(qsl("b-after-the-rebuild")), "The selection after the rebuild was not the package that was picked");
 
         QTRY_VERIFY_WITH_TIMEOUT(settle() && !downloadDialogStillUp(manager), 15s);
+
+        manager->close();
+        QTRY_VERIFY_WITH_TIMEOUT(settle() && manager.isNull(), 15s);
+    }
+
+    // A selection the index cannot answer for sends the package manager to fetch
+    // a fresh index. When that fetch fails the index already on disk is still
+    // the best there is, and it is what the Explore view is filled from next time.
+    void test_aFailedIndexRefreshKeepsTheCachedIndex_10217()
+    {
+        mpProxy->setAnswer(StubProxy::Answer::Refuse);
+        MessageBoxDismisser dismisser;
+
+        QPointer<dlgPackageManager> manager =
+                openManagerListing({repositoryEntry(qsl("a-unanswerable-package"), QString()), repositoryEntry(qsl("b-cached-package"), qsl("b-cached-package.mpackage"))});
+        const QByteArray cachedIndex = readRepositoryIndex();
+        QVERIFY2(!cachedIndex.isEmpty(), "The repository index was not seeded");
+        QVERIFY2(selectPackages(manager, {qsl("a-unanswerable-package")}), "The package under test was not listed in the Explore view");
+
+        QVERIFY(QMetaObject::invokeMethod(manager, "slot_installPackageFromRepository"));
+
+        QTRY_VERIFY_WITH_TIMEOUT(!dismisser.seen().isEmpty(), 15s);
+        QVERIFY2(dismisser.seen().constFirst().contains(qsl("a-unanswerable-package")), "The reported failure was not the one this test arranged");
+        // the refresh's network manager is disposed of by the handler that ends it
+        QTRY_VERIFY_WITH_TIMEOUT(settle() && manager->findChildren<QNetworkAccessManager*>().isEmpty(), 15s);
+
+        QCOMPARE(readRepositoryIndex(), cachedIndex);
+        const QStringList leftovers = indexRefreshLeftovers();
+        QVERIFY2(leftovers.isEmpty(), qPrintable(qsl("The failed refresh left files behind: %1").arg(leftovers.join(qsl(", ")))));
+
+        manager->close();
+        QTRY_VERIFY_WITH_TIMEOUT(settle() && manager.isNull(), 15s);
+    }
+
+    void test_aSuccessfulIndexRefreshReplacesTheCachedIndex_10217()
+    {
+        if (!QSslSocket::supportsSsl()) {
+            QSKIP("no TLS backend to answer the https refresh with");
+        }
+        QJsonObject refreshed;
+        refreshed.insert(qsl("packages"), QJsonArray{repositoryEntry(qsl("a-unanswerable-package"), QString()), repositoryEntry(qsl("c-refreshed-package"), qsl("c-refreshed-package.mpackage"))});
+        const QByteArray refreshedIndex = QJsonDocument(refreshed).toJson();
+        mpProxy->serve(refreshedIndex);
+        MessageBoxDismisser dismisser;
+
+        QPointer<dlgPackageManager> manager =
+                openManagerListing({repositoryEntry(qsl("a-unanswerable-package"), QString()), repositoryEntry(qsl("b-cached-package"), qsl("b-cached-package.mpackage"))});
+        QVERIFY2(readRepositoryIndex() != refreshedIndex, "The seeded index is already the one the refresh serves");
+        QVERIFY2(selectPackages(manager, {qsl("a-unanswerable-package")}), "The package under test was not listed in the Explore view");
+
+        QVERIFY(QMetaObject::invokeMethod(manager, "slot_installPackageFromRepository"));
+
+        QTRY_VERIFY_WITH_TIMEOUT(!dismisser.seen().isEmpty(), 15s);
+        QTRY_VERIFY_WITH_TIMEOUT(settle() && manager->findChildren<QNetworkAccessManager*>().isEmpty(), 15s);
+
+        QCOMPARE(readRepositoryIndex(), refreshedIndex);
+        const QStringList leftovers = indexRefreshLeftovers();
+        QVERIFY2(leftovers.isEmpty(), qPrintable(qsl("The refresh left files behind: %1").arg(leftovers.join(qsl(", ")))));
+
+        manager->close();
+        QTRY_VERIFY_WITH_TIMEOUT(settle() && manager.isNull(), 15s);
+    }
+
+    void test_aRefreshAnsweredWithSomethingOtherThanAnIndexKeepsTheCachedIndex_10217_data()
+    {
+        QTest::addColumn<QByteArray>("body");
+        // A captive portal or a proxy can answer the refresh with a page of its own and a success status
+        QTest::newRow("captive portal page") << QByteArrayLiteral("<html><body>Sign in to the network to continue</body></html>");
+        // Valid JSON, but not an index: the reader would refuse it and leave the Explore view empty
+        QTest::newRow("JSON without a packages array") << QByteArrayLiteral(R"({"message":"API rate limit exceeded"})");
+    }
+
+    void test_aRefreshAnsweredWithSomethingOtherThanAnIndexKeepsTheCachedIndex_10217()
+    {
+        QFETCH(QByteArray, body);
+        if (!QSslSocket::supportsSsl()) {
+            QSKIP("no TLS backend to answer the https refresh with");
+        }
+        mpProxy->serve(body);
+        MessageBoxDismisser dismisser;
+
+        QPointer<dlgPackageManager> manager =
+                openManagerListing({repositoryEntry(qsl("a-unanswerable-package"), QString()), repositoryEntry(qsl("b-cached-package"), qsl("b-cached-package.mpackage"))});
+        const QByteArray cachedIndex = readRepositoryIndex();
+        QVERIFY2(!cachedIndex.isEmpty(), "The repository index was not seeded");
+        QVERIFY2(selectPackages(manager, {qsl("a-unanswerable-package")}), "The package under test was not listed in the Explore view");
+
+        QVERIFY(QMetaObject::invokeMethod(manager, "slot_installPackageFromRepository"));
+
+        QTRY_VERIFY_WITH_TIMEOUT(!dismisser.seen().isEmpty(), 15s);
+        QTRY_VERIFY_WITH_TIMEOUT(settle() && manager->findChildren<QNetworkAccessManager*>().isEmpty(), 15s);
+
+        QCOMPARE(readRepositoryIndex(), cachedIndex);
+        const QStringList leftovers = indexRefreshLeftovers();
+        QVERIFY2(leftovers.isEmpty(), qPrintable(qsl("The refused refresh left files behind: %1").arg(leftovers.join(qsl(", ")))));
+
+        manager->close();
+        QTRY_VERIFY_WITH_TIMEOUT(settle() && manager.isNull(), 15s);
+    }
+
+    // On a slow network the dialog can be closed while the refresh is still downloading
+    void test_closingTheDialogMidRefreshKeepsTheCachedIndex_10217()
+    {
+        mpProxy->setAnswer(StubProxy::Answer::Stall);
+        MessageBoxDismisser dismisser;
+
+        QPointer<dlgPackageManager> manager =
+                openManagerListing({repositoryEntry(qsl("a-unanswerable-package"), QString()), repositoryEntry(qsl("b-cached-package"), qsl("b-cached-package.mpackage"))});
+        const QByteArray cachedIndex = readRepositoryIndex();
+        QVERIFY2(!cachedIndex.isEmpty(), "The repository index was not seeded");
+        QVERIFY2(selectPackages(manager, {qsl("a-unanswerable-package")}), "The package under test was not listed in the Explore view");
+
+        QVERIFY(QMetaObject::invokeMethod(manager, "slot_installPackageFromRepository"));
+
+        QTRY_VERIFY_WITH_TIMEOUT(!dismisser.seen().isEmpty(), 15s);
+        // the stalled refresh's network manager, which only the handler that ends it would dispose of
+        QTRY_VERIFY_WITH_TIMEOUT(settle() && !manager->findChildren<QNetworkAccessManager*>().isEmpty(), 15s);
+
+        manager->close();
+        QTRY_VERIFY_WITH_TIMEOUT(settle() && manager.isNull(), 15s);
+
+        QCOMPARE(readRepositoryIndex(), cachedIndex);
+        const QStringList leftovers = indexRefreshLeftovers();
+        QVERIFY2(leftovers.isEmpty(), qPrintable(qsl("The abandoned refresh left files behind: %1").arg(leftovers.join(qsl(", ")))));
+    }
+
+    // A profile directory that cannot take new files can still have its index rewritten in place
+    void test_aRefreshIntoADirectoryThatCannotTakeNewFilesStillReplacesTheIndex_10217()
+    {
+        if (!QSslSocket::supportsSsl()) {
+            QSKIP("no TLS backend to answer the https refresh with");
+        }
+        QJsonObject refreshed;
+        refreshed.insert(qsl("packages"), QJsonArray{repositoryEntry(qsl("a-unanswerable-package"), QString()), repositoryEntry(qsl("c-refreshed-package"), qsl("c-refreshed-package.mpackage"))});
+        const QByteArray refreshedIndex = QJsonDocument(refreshed).toJson();
+        mpProxy->serve(refreshedIndex);
+        MessageBoxDismisser dismisser;
+
+        QPointer<dlgPackageManager> manager =
+                openManagerListing({repositoryEntry(qsl("a-unanswerable-package"), QString()), repositoryEntry(qsl("b-cached-package"), qsl("b-cached-package.mpackage"))});
+        QVERIFY2(selectPackages(manager, {qsl("a-unanswerable-package")}), "The package under test was not listed in the Explore view");
+
+        const QFileDevice::Permissions writable = QFile::permissions(profileHome());
+        QVERIFY(QFile::setPermissions(profileHome(), writable & ~(QFileDevice::WriteOwner | QFileDevice::WriteUser | QFileDevice::WriteGroup | QFileDevice::WriteOther)));
+        auto restore = qScopeGuard([this, writable]() {
+            QFile::setPermissions(profileHome(), writable);
+        });
+        QFile canary(qsl("%1/mpkg.packages.json.canary").arg(profileHome()));
+        if (canary.open(QIODevice::WriteOnly)) {
+            canary.remove();
+            manager->close();
+            QTRY_VERIFY_WITH_TIMEOUT(settle() && manager.isNull(), 15s);
+            QSKIP("this process can create files in a read-only directory (root, or a platform that ignores the mode)");
+        }
+
+        QVERIFY(QMetaObject::invokeMethod(manager, "slot_installPackageFromRepository"));
+
+        QTRY_VERIFY_WITH_TIMEOUT(!dismisser.seen().isEmpty(), 15s);
+        QTRY_VERIFY_WITH_TIMEOUT(settle() && manager->findChildren<QNetworkAccessManager*>().isEmpty(), 15s);
+
+        QCOMPARE(readRepositoryIndex(), refreshedIndex);
 
         manager->close();
         QTRY_VERIFY_WITH_TIMEOUT(settle() && manager.isNull(), 15s);
