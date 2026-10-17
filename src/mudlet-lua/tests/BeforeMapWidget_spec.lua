@@ -109,7 +109,7 @@ describe("Tests setConfig for the map keys in a profile without a mapper", funct
   end
 end)
 
--- A profile with no console view answers these from the model instead (HeadlessHostSmokeTest)
+-- A profile with no console view answers these the same way (HeadlessHostSmokeTest)
 describe("Tests the map functions that wait for a mapper in a profile without one", function()
   local jsonPath = getMudletHomeDir() .. "/before_map_widget.json"
   local areaId, roomId
@@ -142,6 +142,7 @@ describe("Tests the map functions that wait for a mapper in a profile without on
   it("refuses setDefaultAreaVisible and an area's zoom", function()
     assert.are.same({false}, {setDefaultAreaVisible(true)})
     assert.are.same({nil, "no active mapper"}, {getMapZoom(areaId)})
+    assert.are.same({nil, "no active mapper"}, {setMapZoom(5, areaId)})
   end)
 
   it("lists no secondary map views", function()

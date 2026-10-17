@@ -331,8 +331,7 @@ public:
     // through it and has no other windows.
     TConsoleFrontend* consoleFrontend() const;
     bool hasConsoleView() const;
-    // Whether scripts see the map as open: once a mapper shows it, or always with no console view,
-    // where the model is the whole map.
+    // Whether scripts see the map as open: once there is a mapper, a closed one included
     bool mapOpen() const;
     // The mapper whose 2D map scripts ask about; with no console view, the one the null view has recorded
     TMapViewFrontend* mapViewFrontend() const;
