@@ -116,7 +116,7 @@ void TLabel::press()
     // The click callback may delete the label: deleteLabel() deregisters it at once but destroys it later
     QPointer<TLabel> self(this);
     mousePressEvent(&pressEvent);
-    if (!self || mpHost->windowRegistry().labelModel(mName) != mpModel.get()) {
+    if (!self || !mpHost || mpHost->windowRegistry().labelModel(mName) != mpModel.get()) {
         return;
     }
     QMouseEvent releaseEvent(QEvent::MouseButtonRelease, centre, mapToGlobal(centre), Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
