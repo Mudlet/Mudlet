@@ -158,6 +158,12 @@ public:
     bool scaleLabelMovie(const QString& name, bool followLabelSize) override;
     // Not the open map, so map changes stay in this class, in step with the window registry.
     TLabel* labelWidget(const QString& name) const { return mLabelMap.value(name); }
+    // The labels the keyboard can press, in reading order rather than the order scripts made them
+    QList<QWidget*> keyboardButtons() const;
+    // Focuses the first, or going backwards the last, of them; false when there are none
+    bool focusKeyboardButton(bool forward);
+    // Where Tab goes on leaving the buttons: back to the main window when the player came from it, else the command line
+    void focusAfterKeyboardButtons();
     // Copies a named window's current pos() and size() into Host's window registry (a label's into
     // its model), where Host::windowGeometry() reads them. Every view op that moves or resizes a
     // widget calls it, as a hidden widget gets no events to report its own.
@@ -434,6 +440,8 @@ private:
     void deregisterTextBox(TTextBox* pTextBox);
 
     // Private so Host's window registry stays in step with them; use the *Widget() accessors.
+    // Leaving the main window for the buttons turns caret mode off, so this remembers to turn it back on
+    bool mKeyboardButtonsFromCaret = false;
     QMap<QString, TLabel*> mLabelMap;
     // QPointer: a miniconsole in a user window dies with that dock unannounced, and a null entry
     // makes the dead name a lookup miss that can be reused.

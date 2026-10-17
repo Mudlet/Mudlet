@@ -172,6 +172,23 @@ void TLabel::keyPressEvent(QKeyEvent* event)
     QLabel::keyPressEvent(event);
 }
 
+// The buttons are visited in reading order, and the last hands Tab back to where the player came from
+bool TLabel::focusNextPrevChild(bool next)
+{
+    TMainConsole* pConsole = mpHost ? mpHost->mainConsoleView() : nullptr;
+    if (!pConsole || !keyboardOperable()) {
+        return QLabel::focusNextPrevChild(next);
+    }
+    const QList<QWidget*> buttons = pConsole->keyboardButtons();
+    const qsizetype target = buttons.indexOf(this) + (next ? 1 : -1);
+    if (buttons.contains(this) && target >= 0 && target < buttons.size()) {
+        buttons.at(target)->setFocus(next ? Qt::TabFocusReason : Qt::BacktabFocusReason);
+    } else {
+        pConsole->focusAfterKeyboardButtons();
+    }
+    return true;
+}
+
 void TLabel::focusInEvent(QFocusEvent* event)
 {
     QLabel::focusInEvent(event);
