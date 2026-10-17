@@ -364,10 +364,11 @@ bool sgrDigits(const QStringView parameter, int& value)
     return true;
 }
 
-// Maximum length for a CSI sequence's parameter string before aborting - a
-// valid one is only a handful of bytes, so this only trips on a malformed or
-// hostile sequence that never sends a final byte (defense against a server
-// growing mIncompleteSequenceBytes without bound across packets)
+// Maximum length of the bytes ahead of a CSI sequence's final byte before
+// aborting - a valid one is only a handful of bytes, so this only trips on a
+// malformed or hostile sequence, such as one that never sends a final byte
+// (defense against a server growing mIncompleteSequenceBytes without bound
+// across packets)
 constexpr size_t MAX_CSI_SEQUENCE_LENGTH = 4096;
 // Inline room for any SGR parameter string a game actually sends, avoiding the heap:
 constexpr qsizetype SGR_INLINE_CHARS = 64;
@@ -1253,6 +1254,11 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
     // swapping the server state back in part way through:
     if (isFromServer || mProcessingLocalFeed) {
         translateToPlainTextInner(incoming, isFromServer);
+        if (!isFromServer) {
+            // The outer feed scans on through its own text, so bytes held from this nested one would
+            // be prepended to whichever local feed comes next, inside an unrelated sequence
+            mIncompleteSequenceBytes.clear();
+        }
         return;
     }
 
@@ -1316,11 +1322,15 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
         mLocalPendingLead = 0;
     }
 
-    if (isFromServer && !mIncompleteSequenceBytes.empty()) {
+    if (!mIncompleteSequenceBytes.empty()) {
+        // On the local channel only while the sequence they came from is still open: without them its rest
+        // would be read as a sequence of its own
+        if (isFromServer || mGotCSI || mGotOSC) {
 #if defined(DEBUG_SGR_PROCESSING) || defined(DEBUG_OSC_PROCESSING) || defined(DEBUG_UTF8_PROCESSING) || defined(DEBUG_GB_PROCESSING) || defined(DEBUG_BIG5_PROCESSING)
-        qDebug() << "TBuffer::translateToPlainText(...) Prepending residual bytes onto incoming data!";
+            qDebug() << "TBuffer::translateToPlainText(...) Prepending residual bytes onto incoming data!";
 #endif
-        localBuffer.insert(0, mIncompleteSequenceBytes);
+            localBuffer.insert(0, mIncompleteSequenceBytes);
+        }
         mIncompleteSequenceBytes.clear();
     }
 
@@ -1472,21 +1482,28 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
         }
 
         if (mGotCSI) {
-            // Lookahead over the parameter string - see cParameter and cParameterPrivateIntroducer.
+            // Lookahead over the parameter string - see csiParameterByte() and csiPrivateIntroducerByte().
             size_t const spanStart = localBufferPosition;
             size_t spanEnd = spanStart;
             while (spanEnd < localBufferLength && csiParameterByte(localBuffer[spanEnd])) {
                 ++spanEnd;
             }
+            // Then over any intermediate bytes, and the parameter bytes a malformed sequence has after them,
+            // or that tail would reach the screen as game text:
+            size_t const parametersEnd = spanEnd;
+            while (spanEnd < localBufferLength && (csiIntermediateByte(localBuffer[spanEnd]) || csiParameterByte(localBuffer[spanEnd]))) {
+                ++spanEnd;
+            }
+            bool const hasIntermediateBytes = spanEnd != parametersEnd;
 
             if (spanEnd - spanStart >= MAX_CSI_SEQUENCE_LENGTH) {
-                // The parameter string is far longer than any valid CSI (which
-                // is only a handful of bytes): discard it instead of buffering
-                // it without bound while waiting for a final byte that a hostile
-                // server may never send.
-                qWarning().noquote().nospace() << "TBuffer::translateToPlainText(...) WARNING - CSI sequence exceeded " << MAX_CSI_SEQUENCE_LENGTH
-                                               << " bytes without a final byte, discarding it to recover.";
-                localBufferPosition += 1 + spanEnd - spanStart;
+                // The sequence is far longer than any valid CSI (which is only
+                // a handful of bytes): discard it, along with its final byte if
+                // that is what stopped the scan, instead of buffering it without
+                // bound while waiting for a final byte that a hostile server may
+                // never send.
+                qWarning().noquote().nospace() << "TBuffer::translateToPlainText(...) WARNING - CSI sequence reached " << MAX_CSI_SEQUENCE_LENGTH << " bytes, discarding it to recover.";
+                localBufferPosition += spanEnd - spanStart + (spanEnd < localBufferLength && csiFinalByte(localBuffer[spanEnd]) ? 1 : 0);
                 mGotCSI = false;
                 if (Q_UNLIKELY(mPendingLead)) {
                     flushPendingLead();
@@ -1512,9 +1529,14 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
                 return;
             }
 
-            if (Q_UNLIKELY(mPendingLead) && localBuffer[spanEnd] != 'm') {
+            if (Q_UNLIKELY(mPendingLead) && (hasIntermediateBytes || localBuffer[spanEnd] != 'm')) {
                 flushPendingLead();
             }
+
+            // Only a final byte belongs to the sequence: any other byte that cut one short, such as a newline,
+            // an escape or a character's lead byte, is left to be read, or eating it would join two lines, drop
+            // the next sequence or break a character
+            const bool hasFinalByte = csiFinalByte(localBuffer[spanEnd]);
 
             // Only now that a complete sequence is in hand, test whether the
             // first byte is within the usable subset of the allowed value - or
@@ -1528,42 +1550,23 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
                 qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - detected a private/reserved CSI sequence beginning with \"CSI"
                                              << localBuffer.substr(spanStart, spanEnd - spanStart).c_str() << "\" which Mudlet cannot interpret.";
 #endif
-                // So skip over it as far as we can - will still possibly have
-                // garbage beyond the end which will still be shown...
-                localBufferPosition += 1 + spanEnd - spanStart;
+                localBufferPosition += spanEnd - spanStart + (hasFinalByte ? 1 : 0);
                 mGotCSI = false;
                 // Go around while loop again:
                 continue;
             }
 
-            // Now we can take a peek at what the next character is, it could
-            // be an optional (and we are not expecting this) "intermediate
-            // byte" which is space or one of "!"#$%&'()*+,-./" or a "final
-            // byte" which is what determines what on earth the CSI is for, it
-            // should be in the (ASCII) range '@' to '~' and the end of that
-            // range 'p' to '~' is for "private" or "experimental" use.
+            // The final byte, in the (ASCII) range '@' to '~', is what
+            // determines what on earth the CSI is for; the end of that range,
+            // 'p' to '~', is for "private" or "experimental" use.
 
-            if (csiIntermediateByte(localBuffer[spanEnd])) {
-                // We do not handle any sequences with intermediate bytes
-                // Report it and then ignore it, try and find out what the byte
-                // afterwards is as it might help to debug things
-                if (spanEnd + 1 < localBufferLength) {
-                    // Yeah there is another byte we can report as the final byte
-                    qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - detected a CSI sequence with an 'intermediate' byte ('" << localBuffer[spanEnd]
-                                                 << "') and a 'final' byte ('" << localBuffer[spanEnd + 1] << "') which Mudlet cannot interpret.";
-                } else {
-                    qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - detected a CSI sequence with an 'intermediate' byte ('" << localBuffer[spanEnd]
-                                                 << "') which Mudlet cannot interpret.";
-                }
-                // So skip over it as far as we can - will still be possible to
-                // have garbage beyond the end which will still be shown...
-                localBufferPosition += 1 + spanEnd - spanStart;
-                mGotCSI = false;
-                // Go around while loop again:
-                continue;
-            }
-
-            if (csiFinalByte(localBuffer[spanEnd])) {
+            if (hasIntermediateBytes && hasFinalByte) {
+                // We do not handle any sequences with intermediate bytes, so
+                // report it and skip it along with its final byte - which the
+                // general step at the end of this block does
+                qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - detected a CSI sequence with an 'intermediate' byte ('" << localBuffer[parametersEnd]
+                                             << "') and a 'final' byte ('" << localBuffer[spanEnd] << "') which Mudlet cannot interpret.";
+            } else if (hasFinalByte) {
                 // We have a valid CSI sequence - but is it one we handle?
                 // We currently only handle the 'm' for SGR and the 'z' for
                 // Zuggsoft's MXP protocol:
@@ -1574,7 +1577,7 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
 #if defined(DEBUG_SGR_PROCESSING)
                     qDebug().nospace().noquote() << "    Consider the SGR sequence: \"" << localBuffer.substr(spanStart, spanEnd - spanStart).c_str() << "\"";
 #endif
-                    // Only non-private cParameter bytes get here, each a single UTF-16 unit, so no QString is needed:
+                    // Only non-private parameter bytes get here, each a single UTF-16 unit, so no QString is needed:
                     QVarLengthArray<char16_t, SGR_INLINE_CHARS> sgrChars(spanEnd - spanStart);
                     for (size_t i = spanStart; i < spanEnd; ++i) {
                         sgrChars[i - spanStart] = static_cast<unsigned char>(localBuffer[i]);
@@ -1672,10 +1675,7 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
             } // End of the isAValidFinalByte test
 
             mGotCSI = false;
-            // Step over the parameter string and final byte, unless that is a control byte: a sequence with no
-            // final byte doesn't own the newline or escape that stopped the scan, and eating it would join two
-            // lines or drop the next sequence:
-            localBufferPosition += spanEnd - spanStart + (static_cast<unsigned char>(localBuffer[spanEnd]) < ' ' ? 0 : 1);
+            localBufferPosition += spanEnd - spanStart + (hasFinalByte ? 1 : 0);
             // Go around while loop again:
             continue;
 

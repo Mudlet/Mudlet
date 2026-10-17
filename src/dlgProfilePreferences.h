@@ -243,6 +243,7 @@ private slots:
     void slot_dictionaryPicked(const int index);
     void slot_displayFontSizeChanged();
     void slot_displayFontAliasingChanged();
+    void slot_hostDisplayFontChanged(const QFont&);
     void slot_changeShowTabConnectionIndicators(bool state);
     void slot_crashReportPolicyChanged(int index);
     // Named rather than lambdas so initWithHost() can connect them with Qt::UniqueConnection
@@ -305,6 +306,7 @@ private:
     void loadMap(const QString&);
     void fillOutMapHistory();
     bool updateDisplayFont(Host::DisplayFontChange change);
+    void rememberDisplayFontFamilyShown();
     void cancelShortcutCaptures();
     void updateShortcutConflictWarning();
     void switchEditorTheme(const QString& themeName);
@@ -410,6 +412,9 @@ private:
     void maybeDownloadEditorThemes();
 
     QPointer<Host> mpHost;
+    // The family the display font list was last set to while the font database had it, so that
+    // the list moving off it as it leaves the database is not taken for the user's choice
+    QString mDisplayFontFamilyShown;
     QPointer<QTemporaryFile> tempThemesArchive;
     QMap<QString, QString> mSearchEngineMap;
     QPointer<QMenu> mpMenu;

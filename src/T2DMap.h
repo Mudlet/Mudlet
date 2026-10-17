@@ -200,6 +200,7 @@ public:
     void switchArea(const QString& newAreaName);
     void switchArea(int areaId);
     void clearSelection();
+    void forgetDeletedRoom(int roomId);
     void pruneRoomSelectionToArea(int areaId);
     void initiateSpeedWalk(const int speedWalkStartRoomId, const int speedWalkTargetRoomId);
 
@@ -437,6 +438,7 @@ private:
 
     void resizeMultiSelectionWidget();
     void hideSelectionWidget();
+    void pruneDeletedRoomsFromSelectionWidget();
     std::pair<int, int> getMousePosition();
     std::pair<bool, QString> performImageSave(const QPixmap& pixmap, const QString& filePath, const QString& format);
     bool isSnapCustomLinePointsToGridEnabled() const;
@@ -514,6 +516,7 @@ private:
 
     bool mIsSelectionSorting = true;
     bool mIsSelectionSortByNames = false;
+    QSet<int> mRoomsToDropFromSelectionWidget;
 
     // Used to keep track of if sorting the multiple
     // room listing/selection widget, and by what,

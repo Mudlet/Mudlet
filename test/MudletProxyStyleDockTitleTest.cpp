@@ -17,9 +17,10 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include "AltFocusMenuBarDisable.h"
+#include "MudletProxyStyle.h"
 
 #include <QPainter>
+#include <QStyleFactory>
 #include <QStyleOption>
 #include <QtTest/QtTest>
 
@@ -29,15 +30,15 @@
  * on every paint. The title must paint exactly as Fusion paints it, and every
  * other request for an icon must still get a new one from Fusion.
  */
-class RecordingStyle : public AltFocusMenuBarDisable
+class RecordingStyle : public MudletProxyStyle
 {
 public:
-    using AltFocusMenuBarDisable::AltFocusMenuBarDisable;
+    using MudletProxyStyle::MudletProxyStyle;
     mutable QList<qint64> mCloseIconKeys;
 
     QIcon standardIcon(StandardPixmap standardIcon, const QStyleOption* option = nullptr, const QWidget* widget = nullptr) const override
     {
-        const QIcon icon = AltFocusMenuBarDisable::standardIcon(standardIcon, option, widget);
+        const QIcon icon = MudletProxyStyle::standardIcon(standardIcon, option, widget);
         if (standardIcon == SP_TitleBarCloseButton) {
             mCloseIconKeys.append(icon.cacheKey());
         }
@@ -45,7 +46,7 @@ public:
     }
 };
 
-class AltFocusMenuBarDisableTest : public QObject
+class MudletProxyStyleDockTitleTest : public QObject
 {
     Q_OBJECT
 
@@ -106,7 +107,7 @@ private slots:
         QFETCH(QString, title);
 
         const QStyleOptionDockWidget option = titleOption(closable, floatable, vertical, static_cast<Qt::LayoutDirection>(direction), title);
-        AltFocusMenuBarDisable style(QStringLiteral("Fusion"));
+        MudletProxyStyle style(QStringLiteral("Fusion"));
         QProxyStyle fusion(QStyleFactory::create(QStringLiteral("Fusion")));
         const QImage expected = paintTitle(fusion, option);
 
@@ -158,7 +159,7 @@ private slots:
 
     void otherBaseStylesAreLeftAlone()
     {
-        AltFocusMenuBarDisable style(QStringLiteral("Windows"));
+        MudletProxyStyle style(QStringLiteral("Windows"));
         if (style.baseStyle()->name().compare(QLatin1String("windows"), Qt::CaseInsensitive)) {
             QSKIP("the Windows style is not available");
         }
@@ -168,5 +169,5 @@ private slots:
     }
 };
 
-QTEST_MAIN(AltFocusMenuBarDisableTest)
-#include "AltFocusMenuBarDisableTest.moc"
+QTEST_MAIN(MudletProxyStyleDockTitleTest)
+#include "MudletProxyStyleDockTitleTest.moc"

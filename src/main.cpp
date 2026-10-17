@@ -70,7 +70,6 @@
 #else
 #include <pthread.h>
 #endif
-#include "AltFocusMenuBarDisable.h"
 #include "TAccessibleConsole.h"
 #include "TAccessibleTextEdit.h"
 #include "FileOpenHandler.h"
