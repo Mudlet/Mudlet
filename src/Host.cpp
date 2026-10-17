@@ -1805,6 +1805,16 @@ void Host::setDisplayFontFromString(const QString& fontData)
         qWarning().nospace().noquote() << "Host::setDisplayFontFromString(...) WARNING - \"" << fontData << "\" is not a font description, so the font in use is kept.";
         return;
     }
+    // A save, older or hand-edited, can hold a size past the limit, where Qt drops the family
+    if (font.pointSize() > scmMaxFontSize || font.pixelSize() > scmMaxFontSize) {
+        const QFont current = getDisplayFont();
+        // A font in use given in pixels has no point size, so take the one Qt shows it at
+        const int currentSize = current.pointSize() > 0 ? current.pointSize() : QFontInfo(current).pointSize();
+        const int size = currentSize > 0 ? std::min(currentSize, scmMaxFontSize) : TFontAttributes().mPointSize;
+        qWarning().nospace().noquote() << "Host::setDisplayFontFromString(...) WARNING - \"" << fontData << "\" is larger than " << scmMaxFontSize << (font.pointSize() > 0 ? "pt" : "px")
+                                       << ", so its family is kept at a size of " << size << "pt.";
+        font.setPointSize(size);
+    }
 
     // <mDisplayFont> is written only by a profile's own save, and so reaches here
     // twice: reading that save, before the one-shot check that stands a default in

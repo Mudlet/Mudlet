@@ -880,6 +880,12 @@ int TLuaInterpreter::setTextEditFontSize(lua_State* L)
         return lua_error(L);
     }
     const int size = getVerifiedInt(L, __func__, 2, "font size");
+    if (size <= 0) {
+        return warnArgumentValue(L, __func__, "size cannot be 0 or negative");
+    }
+    if (size > Host::scmMaxFontSize) {
+        return warnArgumentValue(L, __func__, qsl("size %1 is too large, it cannot be more than %2").arg(size).arg(Host::scmMaxFontSize));
+    }
     const QString textEditName{lua_tostring(L, 1)};
 
     const Host& host = getHostFromLua(L);
@@ -3418,6 +3424,9 @@ int TLuaInterpreter::setFontSize(lua_State* L)
     if (size <= 0) {
         // just throw an error, no default needed.
         return warnArgumentValue(L, __func__, "size cannot be 0 or negative");
+    }
+    if (size > Host::scmMaxFontSize) {
+        return warnArgumentValue(L, __func__, qsl("size %1 is too large, it cannot be more than %2").arg(size).arg(Host::scmMaxFontSize));
     }
 
     const QString consoleName{windowName};
