@@ -1851,6 +1851,7 @@ int ModernGLWidget::areaShownNext() const
 void ModernGLWidget::setCameraDistance(float r)
 {
     stopFlight();
+    mZoomHandover.reset();
     mCameraController.setScale(r);
     mDistanceRequested = true;
     mFrameWhenShown = false;
@@ -1861,6 +1862,7 @@ void ModernGLWidget::setCameraDistance(float r)
 void ModernGLWidget::setCameraPosition(float r, float theta, float phi)
 {
     stopFlight();
+    mZoomHandover.reset();
     mCameraController.setPosition(r, theta, phi);
     mDistanceRequested = true;
     // Set for the area on view, so it is that area's camera now even before a paint
@@ -1940,6 +1942,8 @@ void ModernGLWidget::frameRooms(const qreal zoom, const float furthest)
 {
     const float aspectRatio = height() > 0 ? static_cast<float>(width()) / static_cast<float>(height()) : 1.0f;
     mCameraController.setScale(std::min(CameraController::distanceToShow(static_cast<float>(zoom), aspectRatio), furthest));
+    // Framed by the area's own size, which the zoom levels must then go by too
+    mZoomHandover.reset();
     emitCameraControls();
 }
 
