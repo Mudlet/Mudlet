@@ -42,6 +42,7 @@
 #include <QtTest/QtTest>
 
 #include <QCheckBox>
+#include <QComboBox>
 #include <QDoubleSpinBox>
 #include <QFontComboBox>
 #include <QPushButton>
@@ -54,6 +55,7 @@
 #include "ProfileTestHelper.h"
 #include "Host.h"
 #include "HostDialogs.h"
+#include "MapStyle.h"
 #include "MudletInstanceCoordinator.h"
 #include "T2DMap.h"
 #include "TelnetServerStub.h"
@@ -646,6 +648,19 @@ private slots:
         closePreferences();
         QCOMPARE(map()->getSymbolFontFudgeFactor(), scalingInFile);
         QVERIFY(map()->getOnlySymbolFontUsed());
+    }
+
+    // The style list in the preferences shows each style's picture, as the
+    // mapper menu's does, at a size its rooms show at.
+    void test_theStyleListInPreferencesShowsAPictureOfEachStyle()
+    {
+        openPreferences();
+        QComboBox* pStyles = mpPreferences->comboBox_mapStyle;
+        QCOMPARE(pStyles->count(), MapStyle::all().size());
+        QVERIFY2(pStyles->iconSize().height() >= 32, qPrintable(qsl("the pictures are %1 pixels high").arg(pStyles->iconSize().height())));
+        for (int i = 0; i < pStyles->count(); ++i) {
+            QVERIFY2(!pStyles->itemIcon(i).isNull(), qPrintable(qsl("%1 has no picture").arg(pStyles->itemText(i))));
+        }
     }
 };
 
