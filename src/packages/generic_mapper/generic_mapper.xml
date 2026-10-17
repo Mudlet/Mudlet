@@ -2454,7 +2454,7 @@ local reverse_dirs = {
     eastup = "westdown", westdown = "eastup", westup = "eastdown", eastdown = "westup",
 }
 
-local wait_echo = {}
+local wait_echo, wait_echo_timer = {}, nil
 local mapper_tag = "&lt;112,229,0&gt;(&lt;73,149,0&gt;mapper&lt;112,229,0&gt;): &lt;255,255,255&gt;"
 local debug_tag = "&lt;255,165,0&gt;(&lt;200,120,0&gt;debug&lt;255,165,0&gt;): &lt;255,255,255&gt;"
 local err_tag = "&lt;255,0,0&gt;(&lt;178,34,34&gt;error&lt;255,0,0&gt;): &lt;255,255,255&gt;"
@@ -2677,6 +2677,10 @@ local function print_echoes(what, debug, err)
 end
 
 local function print_wait_echoes()
+    if wait_echo_timer then
+        killTimer(wait_echo_timer)
+        wait_echo_timer = nil
+    end
     for k,v in ipairs(wait_echo) do
         print_echoes(v[1],v[2],v[3])
     end
@@ -2688,6 +2692,11 @@ function map.echo(what, debug, err, wait)
     what = tostring(what) or ""
     if wait then
         table.insert(wait_echo,{what, debug, err})
+        -- held for the prompt, but a prompt the mapper cannot recognise would hold it until the next echo
+        wait_echo_timer = wait_echo_timer or tempTimer(0, function()
+            wait_echo_timer = nil
+            print_wait_echoes()
+        end)
         return
     end
     print_wait_echoes()

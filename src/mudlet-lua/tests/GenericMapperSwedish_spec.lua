@@ -202,4 +202,46 @@ describe("Tests that the generic mapper follows a game in Swedish", function()
     assert.are.equal(start, getRoomExits(village).south)
     assert.are.equal(2, table.size(getAreaRooms(areaId)))
   end)
+
+  it("announces a new room without waiting for a prompt it cannot recognise", function()
+    if not os.getenv("MUDLET_TEST_MODE") then
+      pending("needs MUDLET_TEST_MODE for waitForEvent")
+      return
+    end
+    local areaId = addAreaName("genericMapperSwedishEchoSpec")
+    finally(function() deleteArea(areaId) end)
+    local start = createRoomID()
+    addRoom(start)
+    setRoomArea(start, areaId)
+    setRoomCoordinates(start, 0, 0, 0)
+    setRoomName(start, "Du står vid sjön.")
+    map.setLanguage("swedish")
+    map.save.prompt_pattern[map.character] = nil
+    map.set("currentRoom", start)
+    map.set("currentArea", areaId)
+    map.set("currentName", "Du står vid sjön.")
+    map.set("currentExits", {"north"})
+    map.set("mapping", true)
+    map.prompt.hash = nil
+
+    local function announced()
+      local last = getLastLineNumber("main")
+      for _, text in ipairs(getLines("main", math.max(0, last - 10), last + 1)) do
+        if text:find("New Room: Du står vid ängen.", 1, true) then
+          return true
+        end
+      end
+      return false
+    end
+
+    captureMoveCmd("n")
+    feedTriggers("\n52/52 52/52Du står vid ängen. Söderut ligger sjön.\n   Det finns en synlig väg härifrån: söder\n52/52 52/52")
+    assert.are_not.equal(start, map.currentRoom)
+    for _ = 1, 5 do
+      if announced() then break end
+      tempTimer(0, function() raiseEvent("genericMapperSwedishEchoPump") end)
+      waitForEvent("genericMapperSwedishEchoPump", 2000)
+    end
+    assert.is_true(announced())
+  end)
 end)
