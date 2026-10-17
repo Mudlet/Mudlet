@@ -1435,7 +1435,10 @@ void TRoomDB::deleteDisplacedArea(int areaID, TArea* pA)
     if (!pExisting || pExisting == pA) {
         return;
     }
-    mpMap->areasAboutToBeDeleted();
+    // A map file is read into a database that is not yet the map's, and nothing walks its areas
+    if (mpMap->mpRoomDB.get() == this) {
+        mpMap->areasAboutToBeDeleted();
+    }
     // Prevent TArea::~TArea() from re-entrantly calling removeArea(this),
     // mirroring the pattern in TRoomDB::removeArea(int)
     pExisting->mpRoomDB = nullptr;
