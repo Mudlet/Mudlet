@@ -777,6 +777,8 @@ void TMap::audit()
         appendErrorMsg(infoMsg);
     }
 
+    // It may have removed or renumbered rooms and areas, bypassing the setters that count changes
+    ++mRevision;
     mpHost->getLuaInterpreter()->condenseMapLoad();
 }
 
@@ -1855,11 +1857,6 @@ bool TMap::listLengthFits(QDataStream& ifs, const qint64 minBytesPerElement)
 bool TMap::restore(QString location)
 {
     const MapOperationScope operationScope(this);
-    // Before, for a view painted while it reads, and after, whichever way it ends
-    ++mRevision;
-    const auto countRevisionOnReturn = qScopeGuard([this] {
-        ++mRevision;
-    });
     qDebug().noquote().nospace() << "TMap::restore(\"" << location << "\") INFO: restoring map of Profile: \"" << mProfileName << "\" URL: " << mpHost->getUrl();
 
     QElapsedTimer _time;

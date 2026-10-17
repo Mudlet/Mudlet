@@ -664,6 +664,7 @@ int TLuaInterpreter::auditAreas(lua_State* L)
 {
     const Host& host = getHostFromLua(L);
     host.mpMap->audit();
+    host.mpMap->updateArea(-1);
     return 0;
 }
 
