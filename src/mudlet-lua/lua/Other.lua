@@ -1536,6 +1536,110 @@ if not ttsSpeak then --check if ttsSpeak is defined, if not then Mudlet lacks TT
   end
 end
 
+local oldgetConfig = getConfig
+
+-- Please sort this list alphabetically (case insensitive) as it helps to follow changes:
+-- This list contains all configuration options that are available in both getConfig and setConfig
+-- NOTE: Some options like "showMapInfo", "hideMapInfo" are setConfig-only write operations
+-- "logDirectory" is a getConfig-only read operation
+-- Left out on purpose: "ircNickName" (with no nick stored it reads as a new random one, and writing it
+-- back also replaces the app-wide nick) and "ircPassword" (it would show up in every dump of the table)
+local configOptions = {
+  "advertiseScreenReader",
+  "ambiguousEAsianWidthCharacters",
+  "announceIncomingText",
+  "askTlsAvailable", 
+  "autoClearInputLine",
+  "blankLinesBehaviour",
+  "caretShortcut",
+  "commandLineHistorySaveSize",
+  "compactInputLine",
+  "controlCharacterHandling",
+  "editorAutoComplete",
+  "enableBlinkText",
+  "enableCHARSET",
+  "enableClosedCaption",
+  "enableGMCP",
+  "enableMNES",
+  "enableMSDP", 
+  "enableMSP",
+  "enableMSSP",
+  "enableMTTS",
+  "enableMXP",
+  "enableNAWS",
+  "enableNEWENVIRON",
+  "f3SearchEnabled",
+  "fixUnnecessaryLinebreaks",
+  "forceNewEnvironNegotiationOff",
+  "inputLineStrictUnixEndings",
+  "ircChannels",
+  "ircHostName",
+  "ircHostPort",
+  "ircHostSecure",
+  "lazyCaptureGlobals",
+  "logDirectory",                    -- read-only in getConfig
+  "logInHTML",
+  "mapExitSize",
+  "mapInfoColor",
+  "mapperButton",
+  "mapperPanelVisible",
+  "mapRoomSize",
+  "mapRoundRooms",
+  "mapShowGrid",
+  "mapShowRoomBorders",
+  "mapSymbolFont",
+  "mapSymbolFontOnlyUseSelected",
+  "mapSymbolFontScaling",
+  "muteMediaAPI",
+  "muteMediaGame",
+  "promptForMXPProcessorOn",
+  "promptForVersionInTTYPE",
+  "show3dMapView",
+  "showRoomIdsOnMap", 
+  "showSentText",
+  "showTabConnectionIndicators",
+  "showUpperLowerLevels",
+  "specialForceCharsetNegotiationOff",
+  "specialForceCompressionOff",
+  "specialForceGAOff",
+  "specialForceMxpNegotiationOff",
+  "specialForceMXPProcessorOn",
+  "undoServerWrap",
+  "undoServerWrapWidth",
+  "versionInTTYPE",
+}
+local isConfigOption = {}
+for _, key in ipairs(configOptions) do
+  isConfigOption[key] = true
+end
+
+-- one level deep, which covers the colour tables getConfig() hands back
+local function sameConfigValue(key, wanted, current)
+  -- read mapInfoColor as setConfig() does: components cut to whole numbers, and an alpha
+  -- that isn't a number is opaque
+  if key == "mapInfoColor" and type(wanted) == "table" then
+    local function component(value)
+      value = tonumber(value)
+      return value and (value < 0 and math.ceil(value) or math.floor(value))
+    end
+    wanted = {component(wanted[1]), component(wanted[2]), component(wanted[3]), component(wanted[4]) or 255}
+  end
+  if type(wanted) ~= "table" or type(current) ~= "table" then
+    return wanted == current
+  end
+  for k, v in pairs(wanted) do
+    if current[k] ~= v then
+      return false
+    end
+  end
+  for k, v in pairs(current) do
+    if wanted[k] ~= v then
+      return false
+    end
+  end
+  return true
+end
+
 local oldsetConfig = setConfig
 function setConfig(...)
   local args = {...}
@@ -1544,88 +1648,64 @@ function setConfig(...)
     return oldsetConfig(...)
   end
 
+  -- every key is tried before anything is reported, so one refusal - or a raised
+  -- bad-argument error - does not leave the rest unapplied
+  local failures, warnings, raised = {}, {}, false
   for k,v in pairs(args[1]) do
-    oldsetConfig(k, v)
+    local called, ok, message = pcall(oldsetConfig, k, v)
+    if not called then
+      ok, message = nil, ok
+    end
+    -- C++ refuses logDirectory, and the map keys while no mapper is open, so a
+    -- listed option already at the value asked for counts as applied
+    if not ok and isConfigOption[k] and sameConfigValue(k, v, oldgetConfig(k)) then
+      ok, message = true, nil
+    end
+    if not ok and not called then
+      raised = true
+    end
+    if not ok or message then
+      local key, text = tostring(k), tostring(message)
+      -- most C++ messages already lead with the key; elsewhere it may only be part of the value asked for
+      if text:sub(1, #key) ~= key and text:sub(1, #key + 2) ~= "'" .. key .. "'" then
+        text = string.format("%s: %s", key, text)
+      end
+      local list = ok and warnings or failures
+      list[#list + 1] = {key = key, text = text}
+    end
   end
+
+  local function report(entries)
+    table.sort(entries, function(a, b) return a.key < b.key end)
+    local texts = {}
+    for _, entry in ipairs(entries) do
+      texts[#texts + 1] = entry.text
+    end
+    return table.concat(texts, "; ")
+  end
+  if #failures > 0 then
+    local text = report(failures)
+    -- an applied key's warning still matters, but must not read as one more refusal
+    if #warnings > 0 then
+      text = text .. "; applied with warnings: " .. report(warnings)
+    end
+    if raised then
+      error(text, 2)
+    end
+    return nil, text
+  end
+  if #warnings > 0 then
+    return true, report(warnings)
+  end
+  return true
 end
 
-local oldgetConfig = getConfig
 function getConfig(...)
   local args = {...}
   local result = {}
 
   if #args == 0 then
-    -- Please sort this list alphabetically (case insensitive) as it helps to follow changes:
-    -- This list contains all configuration options that are available in both getConfig and setConfig
-    -- NOTE: Some options like "showMapInfo", "hideMapInfo" are setConfig-only write operations
-    -- Some options like "logDirectory", "specialForceMXPProcessorOn" are getConfig-only read operations  
-    -- Left out on purpose: "ircNickName" (with no nick stored it reads as a new random one, and writing it
-    -- back also replaces the app-wide nick) and "ircPassword" (it would show up in every dump of the table)
-    local list = {
-      "advertiseScreenReader",
-      "ambiguousEAsianWidthCharacters",
-      "announceIncomingText",
-      "askTlsAvailable", 
-      "autoClearInputLine",
-      "blankLinesBehaviour",
-      "caretShortcut",
-      "commandLineHistorySaveSize",
-      "compactInputLine",
-      "controlCharacterHandling",
-      "editorAutoComplete",
-      "enableBlinkText",
-      "enableCHARSET",
-      "enableClosedCaption",
-      "enableGMCP",
-      "enableMNES",
-      "enableMSDP", 
-      "enableMSP",
-      "enableMSSP",
-      "enableMTTS",
-      "enableMXP",
-      "enableNAWS",
-      "enableNEWENVIRON",
-      "f3SearchEnabled",
-      "fixUnnecessaryLinebreaks",
-      "forceNewEnvironNegotiationOff",
-      "inputLineStrictUnixEndings",
-      "ircChannels",
-      "ircHostName",
-      "ircHostPort",
-      "ircHostSecure",
-      "lazyCaptureGlobals",
-      "logDirectory",                    -- read-only in getConfig
-      "logInHTML",
-      "mapExitSize",
-      "mapInfoColor",
-      "mapperButton",
-      "mapperPanelVisible",
-      "mapRoomSize",
-      "mapRoundRooms",
-      "mapShowGrid",
-      "mapShowRoomBorders",
-      "mapSymbolFont",
-      "mapSymbolFontOnlyUseSelected",
-      "mapSymbolFontScaling",
-      "muteMediaAPI",
-      "muteMediaGame",
-      "promptForMXPProcessorOn",
-      "promptForVersionInTTYPE",
-      "show3dMapView",
-      "showRoomIdsOnMap", 
-      "showSentText",
-      "showTabConnectionIndicators",
-      "showUpperLowerLevels",
-      "specialForceCharsetNegotiationOff",
-      "specialForceCompressionOff",
-      "specialForceGAOff",
-      "specialForceMxpNegotiationOff",
-      "specialForceMXPProcessorOn",      -- read-only in getConfig
-      "undoServerWrap",
-      "undoServerWrapWidth",
-      "versionInTTYPE",
-    }
-    for _,v in ipairs(list) do
+    for _,v in ipairs(configOptions) do
       result[v] = oldgetConfig(v)
     end
     return result
