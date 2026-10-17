@@ -5121,7 +5121,11 @@ void dlgProfilePreferences::loadEditorTab()
     script_preview_combobox->setMaxVisibleItems(20);
     script_preview_combobox->setDuplicatesEnabled(true);
 
-    theme_download_label->hide();
+    // Once fetched, the label reports how that went for as long as the dialog is open, and this runs again
+    // every time the dialog is reactivated
+    if (!mEditorThemesChecked) {
+        theme_download_label->hide();
+    }
 
     checkBox_autocompleteLuaCode->setChecked(pHost->mEditorAutoComplete);
     checkBox_showBidi->setChecked(pHost->getEditorShowBidi());
@@ -7356,14 +7360,18 @@ void dlgProfilePreferences::maybeDownloadEditorThemes()
     pHost->updateProxySettings(manager);
     QNetworkReply* getReply = manager->get(request);
 
+    auto failThemeUpdate = [this](const QString& reason, const QString& loggedReason = QString()) {
+        qWarning() << "dlgProfilePreferences: could not update the editor themes:" << (loggedReason.isEmpty() ? reason : loggedReason);
+        //: Shown under the editor theme list in the preferences; %1 is why the update failed: a network or file system error from the system, or "the downloaded themes could not be unpacked"
+        theme_download_label->setText(tr("Could not update themes: %1").arg(reason));
+        // A profile closed mid-fetch has greyed this page out and put the label away
+        if (mpHost) {
+            theme_download_label->show();
+        }
+    };
+
     connect(getReply, &QNetworkReply::errorOccurred, this, [=, this](QNetworkReply::NetworkError) {
-        // The label hides the message after a few seconds, so this is the only lasting record
-        qWarning() << "dlgProfilePreferences: could not update the editor themes:" << getReply->errorString();
-        theme_download_label->setText(tr("Could not update themes: %1").arg(getReply->errorString()));
-        QTimer::singleShot(5s, theme_download_label, [label = theme_download_label] {
-            label->hide();
-            label->setText(tr("Updating themes from colorsublime.github.io..."));
-        });
+        failThemeUpdate(getReply->errorString());
         getReply->deleteLater();
     });
 
@@ -7378,16 +7386,37 @@ void dlgProfilePreferences::maybeDownloadEditorThemes()
                         }
 
                         const QByteArray downloadedArchive = reply->readAll();
+                        const QUrl fetchedUrl = reply->url();
+                        reply->deleteLater();
 
                         tempThemesArchive = new QTemporaryFile(this);
                         if (!tempThemesArchive->open()) {
+                            failThemeUpdate(tempThemesArchive->errorString());
+                            tempThemesArchive->deleteLater();
                             return;
                         }
-                        tempThemesArchive->write(downloadedArchive);
+                        // Qt sets no error when only part of a write reaches the disk - in write() for a large one,
+                        // in flush() for a small one it buffered - so the rest is tried again to get the reason.
+                        // close() cannot report a failure at all.
+                        qint64 written = 0;
+                        while (written < downloadedArchive.size()) {
+                            const qint64 count = tempThemesArchive->write(downloadedArchive.constData() + written, downloadedArchive.size() - written);
+                            if (count <= 0) {
+                                break;
+                            }
+                            written += count;
+                        }
+                        if (written != downloadedArchive.size() || !(tempThemesArchive->flush() || tempThemesArchive->flush())) {
+                            failThemeUpdate(tempThemesArchive->errorString());
+                            tempThemesArchive->deleteLater();
+                            return;
+                        }
                         tempThemesArchive->close();
 
                         const QTemporaryDir temporaryDir;
                         if (!temporaryDir.isValid()) {
+                            failThemeUpdate(temporaryDir.errorString());
+                            tempThemesArchive->deleteLater();
                             return;
                         }
 
@@ -7397,16 +7426,21 @@ void dlgProfilePreferences::maybeDownloadEditorThemes()
                         connect(watcher, &QFutureWatcher<bool>::finished, this, [=, this]() {
                             if (future.result()) {
                                 populateThemesList();
+                                theme_download_label->hide();
 
                                 emit signal_themeUpdateCompleted();
+                            } else {
+                                // PreferCache would otherwise hand the same unusable download to every later dialog
+                                diskCache->remove(fetchedUrl);
+                                //: Shown after "Could not update themes: " when the downloaded editor themes could not be unpacked
+                                const char* const unpackFailure = QT_TR_NOOP("the downloaded themes could not be unpacked");
+                                failThemeUpdate(tr(unpackFailure), QString::fromLatin1(unpackFailure));
                             }
 
-                            theme_download_label->hide();
                             tempThemesArchive->deleteLater();
                             watcher->deleteLater();
                         });
                         watcher->setFuture(future);
-                        reply->deleteLater();
                     },
                     getReply));
 }
