@@ -1881,6 +1881,18 @@ void ModernGLWidget::renderRooms()
         }
     };
 
+    // A room well outside the view, or behind the camera, costs nothing: nothing of it could show. Its reach takes
+    // in a long name under it, its shadow and a tall piece on it, so that a room partly in view is drawn whole
+    const QRectF viewBounds = QRectF(rect()).adjusted(-100.0, -100.0, 100.0, 100.0);
+    const auto outOfView = [this, &viewBounds, roomSize](const QVector3D& center) {
+        const std::optional<QPointF> pixel = mCameraController.pixelForPoint(center);
+        if (!pixel) {
+            return true;
+        }
+        const auto reach = static_cast<qreal>(16.0f * roomSize / mCameraController.worldUnitsPerPixel(center));
+        return !viewBounds.adjusted(-reach, -reach, reach, reach).contains(*pixel);
+    };
+
     QSetIterator<int> itRoom(pArea->getAreaRooms());
     while (itRoom.hasNext()) {
         int currentRoomId = itRoom.next();
@@ -1899,6 +1911,17 @@ void ModernGLWidget::renderRooms()
 
         auto rx = static_cast<float>(pR->x());
         auto ry = static_cast<float>(pR->y());
+        // The level's plate reaches under every room, in view or not
+        const QRectF cell(rx - 0.5f, ry - 0.5f, 1.0, 1.0);
+        const auto extent = levelExtents.find(pR->z());
+        if (extent == levelExtents.end()) {
+            levelExtents.insert(pR->z(), cell);
+        } else {
+            *extent = extent->united(cell);
+        }
+        if (outOfView(QVector3D(rx, ry, static_cast<float>(pR->z())))) {
+            continue;
+        }
         const bool hovered = currentRoomId == mHoveredRoomId;
         const DioramaLayout::Piece* piece = nullptr;
         if (const auto found = pieces.constFind(currentRoomId); found != pieces.cend()) {
@@ -1911,13 +1934,6 @@ void ModernGLWidget::renderRooms()
         // A character stays in its cell, and a storey in its building
         const float lift = hovered && !terminal && !storey ? roomHeight : 0.0f;
         const float rz = static_cast<float>(pR->z()) + lift;
-        const QRectF cell(rx - 0.5f, ry - 0.5f, 1.0, 1.0);
-        const auto extent = levelExtents.find(pR->z());
-        if (extent == levelExtents.end()) {
-            levelExtents.insert(pR->z(), cell);
-        } else {
-            *extent = extent->united(cell);
-        }
 
         const RoomAppearance::Look look = RoomAppearance::look(*mpMap, *mpHost, *pR, playerRoomId, mMapCenterZ);
         const GeometryManager::LevelFade fade = GeometryManager::levelFade(look.levelOffset, moreTransparent);

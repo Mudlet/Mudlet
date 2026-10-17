@@ -3085,8 +3085,9 @@ private slots:
         QVERIFY2(storeyGlow, "a highlighted storey has no glow");
         QVERIFY2(qAbs(*storeyGlow - ground) < 1e-4f, qPrintable(qsl("a storey's glow is at height %1, not on the board at %2").arg(*storeyGlow).arg(ground)));
 
-        // Named a road, the water's room is paved instead
+        // Named a road, the water's room is paved instead; setMapEnvironmentKit() marks the map changed as it stores
         QVERIFY(EnvironmentKit::store(map()->mUserData, kWater, EnvironmentKit::Kit::Road));
+        map()->setUnsaved("test");
         queueFrame(widget, areaId);
         QVERIFY(shapesAt(RenderCommand::Shading::ModelWater, GeometryManager::InstanceShape::Box, QPointF(4.0, 0.0)).isEmpty());
         const QList<CubeInstanceData> paving = shapesAt(RenderCommand::Shading::ModelBlock, GeometryManager::InstanceShape::Box, QPointF(4.0, 0.0));
@@ -4044,7 +4045,8 @@ private slots:
     // frames where there is GL, else only the commands a frame queues, with stand-in textures. Report-only and long,
     // so it runs only when asked:
     //   MUDLET_MAPPER_BENCH=1 QT_QPA_PLATFORM=xcb ./functional_map_tests ModernMapperRenderTest bench_frameTimesPerStyle
-    // MUDLET_MAPPER_BENCH_STYLES, _MAPS, _VIEWS and _MOTIONS take comma-separated subsets, _FRAMES the frames per run
+    // MUDLET_MAPPER_BENCH_STYLES, _MAPS, _VIEWS and _MOTIONS take comma-separated subsets, _FRAMES the frames per run,
+    // and with GL, _DUMP a directory to write each run's last frame into, for comparing builds pixel by pixel
     void bench_frameTimesPerStyle()
     {
         if (!qEnvironmentVariableIsSet("MUDLET_MAPPER_BENCH")) {
@@ -4070,6 +4072,10 @@ private slots:
         const int frames = qMax(5, qEnvironmentVariableIntValue("MUDLET_MAPPER_BENCH_FRAMES"));
         constexpr int warmUp = 3;
         const bool gl = glAvailable();
+        const QString dumpDirectory = qEnvironmentVariable("MUDLET_MAPPER_BENCH_DUMP");
+        if (gl && !dumpDirectory.isEmpty()) {
+            QVERIFY(QDir().mkpath(dumpDirectory));
+        }
         std::printf("METRIC bench_3d_whole_frames %d\n", gl ? 1 : 0);
         const auto restoreStyle = qScopeGuard([this] {
             mpHost->setMapStyle(qsl("tiles"));
@@ -4102,11 +4108,12 @@ private slots:
             widget.setViewCenter(areaId, playerRoom->x(), playerRoom->y(), playerRoom->z());
             const float aspect = static_cast<float>(widget.width()) / static_cast<float>(widget.height());
             const float distance = CameraController::distanceToShow(mapName == qsl("dense") ? 24.0f : 10.0f, aspect);
-            const auto frame = [&widget, gl] {
+            QImage lastFrame;
+            const auto frame = [&widget, &lastFrame, gl] {
                 QElapsedTimer timer;
                 timer.start();
                 if (gl) {
-                    widget.grabFramebuffer();
+                    lastFrame = widget.grabFramebuffer();
                 } else {
                     widget.updateMatrices();
                     widget.mRenderCommandQueue.clear();
@@ -4147,6 +4154,9 @@ private slots:
                         }
                         std::sort(times.begin(), times.end());
                         const QString name = qsl("bench_3d_%1_%2_%3_%4").arg(styleId, mapName, view, motion);
+                        if (gl && !dumpDirectory.isEmpty()) {
+                            QVERIFY(lastFrame.save(qsl("%1/%2.png").arg(dumpDirectory, name)));
+                        }
                         emitMetric(name + qsl("_p50_ms"), percentile(times, 0.5));
                         emitMetric(name + qsl("_p95_ms"), percentile(times, 0.95));
                         emitMetric(name + qsl("_p99_ms"), percentile(times, 0.99));
