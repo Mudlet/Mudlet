@@ -37,12 +37,15 @@
 #include <QFileInfo>
 #include <QOpenGLContext>
 #include <QPainter>
+#include <QPolygonF>
 #include <QScopeGuard>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
+#include "DioramaLayout.h"
 #include "EnvironmentKit.h"
 #include "ExitAppearance.h"
+#include "ExitScene.h"
 #include "GeometryManager.h"
 #include "Host.h"
 #include "HostManager.h"
@@ -74,6 +77,8 @@ private:
     static constexpr int kPlayerRoomId = 1;
     static constexpr int kEastRoomId = 2;
     static constexpr int kLowerRoomId = 3;
+    // As renderRooms sizes it: 2 / scale (4) / zFlattening (8)
+    static constexpr float kRoomHeight = 2.0f / 4.0f / 8.0f;
     // As renderRooms sizes a style's rooms, the default style's unless named
     static float roomHeight(const QString& styleId = qsl("tiles"))
     {
@@ -940,6 +945,8 @@ private slots:
         const QStringList hologram = frame();
         QVERIFY(mpHost->setMapStyle(qsl("inkwash")));
         const QStringList inkwash = frame();
+        QVERIFY(mpHost->setMapStyle(qsl("diorama")));
+        const QStringList diorama = frame();
         QVERIFY(mpHost->setMapStyle(qsl("tiles")));
         const QStringList after = frame();
 
@@ -947,6 +954,7 @@ private slots:
         QVERIFY(before != transit);
         QVERIFY(before != hologram);
         QVERIFY(before != inkwash);
+        QVERIFY(before != diorama);
         QCOMPARE(after, before);
     }
 
@@ -2388,6 +2396,784 @@ private slots:
         const int start = widthAt(0.45f);
         const int end = widthAt(1.55f);
         QVERIFY2(end > 0 && start > end + end / 2, qPrintable(qsl("the stroke is %1 wide at its start and %2 near its end").arg(start).arg(end)));
+    }
+
+    // A painted miniature: each room keeps its environment's hue, a little desaturated and kept from the darkest and
+    // lightest, under a pale sky and in tilt-shift focus, with the player a red pawn
+    void test_dioramaPaintsMiniatures()
+    {
+        const MapStyle* diorama = MapStyle::find(qsl("diorama"));
+        QVERIFY(diorama);
+        const QColor red = diorama->roomColor(QColor(230, 40, 40, 200));
+        const QColor green = diorama->roomColor(QColor(40, 230, 40));
+        const QColor blue = diorama->roomColor(QColor(40, 40, 230));
+        const QColor black = diorama->roomColor(QColor(Qt::black));
+        const QColor white = diorama->roomColor(QColor(Qt::white));
+        QCOMPARE(red.alpha(), 200);
+        QVERIFY2(qAbs(red.hue() - 0) < 15 || qAbs(red.hue() - 360) < 15, "a red room lost its hue");
+        QVERIFY2(qAbs(green.hue() - 120) < 15, "a green room lost its hue");
+        QVERIFY2(qAbs(blue.hue() - 240) < 15, "a blue room lost its hue");
+        for (const QColor& room : {red, green, blue}) {
+            QVERIFY2(room.saturation() < 170 && room.saturation() > 90, qPrintable(qsl("a bright room is %1 saturated").arg(room.saturation())));
+        }
+        QVERIFY2(black.lightness() >= 60, qPrintable(qsl("a black room is %1 light, too dark to shade").arg(black.lightness())));
+        QVERIFY2(white.lightness() <= 215, qPrintable(qsl("a white room is %1 light, too light to shade").arg(white.lightness())));
+        // Warmed, as model paints are
+        QVERIFY2(white.red() > white.blue() + 8, "a white room is not warmed");
+        QVERIFY2(difference(red, green) >= 60 && difference(green, blue) >= 60 && difference(blue, red) >= 60, "areas' rooms cannot be told apart");
+        QVERIFY2(diorama->background.lightness() > 180, "the sky is not pale");
+        const QColor token = diorama->playerRoomColor();
+        QVERIFY2(token.red() > token.green() + 100 && token.red() > token.blue() + 100, "the token is not red");
+        QCOMPARE(diorama->edges, MapStyle::Edges::ModelBlocks);
+        QCOMPARE(diorama->playerMarker, MapStyle::PlayerMarker::Token);
+        QVERIFY(diorama->postEffects.testFlag(MapStyle::PostEffect::Sky));
+        QVERIFY(diorama->postEffects.testFlag(MapStyle::PostEffect::TiltShift));
+        QVERIFY(diorama->environmentKits);
+        QVERIFY(!diorama->postEffects.testFlag(MapStyle::PostEffect::PaperGrain));
+        QVERIFY(diorama->lit);
+        const MapStyle* inkwash = MapStyle::find(qsl("inkwash"));
+        QVERIFY(inkwash);
+        QVERIFY(!inkwash->postEffects.testFlag(MapStyle::PostEffect::Sky));
+        QVERIFY(!inkwash->postEffects.testFlag(MapStyle::PostEffect::TiltShift));
+        QVERIFY(!inkwash->environmentKits);
+    }
+
+    // The sky laid under everything, each room a building with a soft shadow on the ground beside it, the player's room
+    // keeping its own color with a pawn standing on it and no beacon, and the exits low paths on the ground
+    void test_dioramaBuildsATabletopModelWithoutGL()
+    {
+        const int areaId = addArea();
+        QVERIFY(areaId > 0);
+        const auto restore = qScopeGuard([this]() {
+            mpHost->setMapStyle(qsl("tiles"));
+        });
+        map()->mpRoomDB->getRoom(kPlayerRoomId)->setExit(kEastRoomId, DIR_EAST);
+        map()->mpRoomDB->getRoom(kEastRoomId)->setExit(kPlayerRoomId, DIR_WEST);
+        // Up to a room that is not straight above, so drawn as a shaft
+        map()->mpRoomDB->getRoom(kLowerRoomId)->setExit(kEastRoomId, DIR_UP);
+        map()->mpRoomDB->getRoom(kPlayerRoomId)->setExit(kLowerRoomId, DIR_NORTH);
+        map()->mpRoomDB->getRoom(kLowerRoomId)->setExit(kPlayerRoomId, DIR_SOUTH);
+        // A door on the way east, whose strokes stand taller than the line; and a path on the level below
+        map()->mpRoomDB->getRoom(kPlayerRoomId)->doors[qsl("e")] = 1;
+        constexpr int kLowerEastRoomId = 4;
+        QVERIFY(addRoomAt(kLowerEastRoomId, areaId, 2, 2, -1));
+        map()->mpRoomDB->getRoom(kLowerRoomId)->setExit(kLowerEastRoomId, DIR_EAST);
+        map()->mpRoomDB->getRoom(kLowerEastRoomId)->setExit(kLowerRoomId, DIR_WEST);
+        ModernGLWidget widget(map(), mpHost);
+        const auto& commands = widget.mRenderCommandQueue.commands();
+        // Anything but a model's own shapes standing above the player's room: the beacon
+        const auto beaconQueued = [&commands]() {
+            for (const auto& command : commands) {
+                if (const auto* cubes = dynamic_cast<const RenderInstancedCubesCommand*>(command.get()); cubes && cubes->shading() != RenderCommand::Shading::ModelBlock) {
+                    for (const CubeInstanceData& cube : cubes->instances()) {
+                        const QVector4D center = cube.transform.column(3);
+                        if (qAbs(center.x()) < 1e-4f && qAbs(center.y()) < 1e-4f && center.z() > kRoomHeight) {
+                            return true;
+                        }
+                    }
+                }
+            }
+            return false;
+        };
+        const auto atPlace = [&commands](const RenderCommand::Shading shading, const QPointF& place) {
+            QList<CubeInstanceData> found;
+            for (const auto& command : commands) {
+                if (const auto* cubes = dynamic_cast<const RenderInstancedCubesCommand*>(command.get()); cubes && cubes->shading() == shading) {
+                    found.append(roomInstances(*cubes, place));
+                }
+            }
+            return found;
+        };
+        const auto lastIndexOf = [&commands](const RenderCommand::Shading shading) {
+            qsizetype last = -1;
+            for (qsizetype index = 0; index < static_cast<qsizetype>(commands.size()); ++index) {
+                if (const auto* cubes = dynamic_cast<const RenderInstancedCubesCommand*>(commands.at(index).get()); cubes && cubes->shading() == shading) {
+                    last = index;
+                }
+            }
+            return last;
+        };
+
+        queueFrame(widget, areaId);
+        QVERIFY2(beaconQueued(), "tiles raised no beacon, so its absence proves nothing");
+
+        QVERIFY(mpHost->setMapStyle(qsl("diorama")));
+        queueFrame(widget, areaId);
+        qsizetype sky = -1;
+        qsizetype firstDrawn = -1;
+        for (qsizetype index = 0; index < static_cast<qsizetype>(commands.size()); ++index) {
+            const auto* triangles = dynamic_cast<const RenderTrianglesCommand*>(commands.at(index).get());
+            if (triangles && triangles->shading() == RenderCommand::Shading::Sky) {
+                QVERIFY2(sky < 0, "the sky was laid twice");
+                sky = index;
+                // Bluer at the top of the view than at its foot
+                const QList<float>& vertices = triangles->vertices();
+                const QList<float>& colors = triangles->colors();
+                for (qsizetype vertex = 0; vertex * 3 + 1 < vertices.size(); ++vertex) {
+                    const float blueOverRed = colors.at(vertex * 4 + 2) - colors.at(vertex * 4);
+                    QVERIFY2(vertices.at(vertex * 3 + 1) > 0.0f ? blueOverRed > 0.05f : blueOverRed < 0.0f, "the sky has no gradient");
+                }
+            }
+            QVERIFY2(!triangles || triangles->shading() != RenderCommand::Shading::Paper, "the sky is drawn as paper");
+            if (firstDrawn < 0 && (triangles || dynamic_cast<const RenderInstancedCubesCommand*>(commands.at(index).get()))) {
+                firstDrawn = index;
+            }
+        }
+        QVERIFY2(sky >= 0, "no sky was laid");
+        QCOMPARE(sky, firstDrawn);
+
+        // As renderRooms sizes it: 2 / scale (3) / zFlattening (2)
+        constexpr float roomHeight = 2.0f / 3.0f / 2.0f;
+        const QList<CubeInstanceData> east = atPlace(RenderCommand::Shading::ModelBlock, QPointF(2.0, 0.0));
+        QVERIFY2(!east.isEmpty(), "a room is not a block");
+        QVERIFY2(atPlace(RenderCommand::Shading::Lit, QPointF(2.0, 0.0)).isEmpty() && atPlace(RenderCommand::Shading::Unlit, QPointF(2.0, 0.0)).isEmpty(), "a room was drawn as a tile");
+        // The pawn stands there too, as other shapes than the room's block
+        QList<CubeInstanceData> player;
+        for (const auto& command : commands) {
+            if (const auto* cubes = dynamic_cast<const RenderInstancedCubesCommand*>(command.get());
+                cubes && cubes->shading() == RenderCommand::Shading::ModelBlock && cubes->shape() == GeometryManager::InstanceShape::Box) {
+                player.append(roomInstances(*cubes, QPointF(0.0, 0.0)));
+            }
+        }
+        QVERIFY(!player.isEmpty());
+        const QColor tokenColor = MapStyle::find(qsl("diorama"))->playerRoomColor();
+        for (const CubeInstanceData& block : player) {
+            QVERIFY2(!qFuzzyCompare(block.color[0], static_cast<float>(tokenColor.redF())) || !qFuzzyCompare(block.color[1], static_cast<float>(tokenColor.greenF())),
+                     "the player's room was painted in the token's color");
+        }
+
+        // Toward the south-east, on the ground the room stands on, under where the block itself stands
+        const auto shadowBeside = [&commands, roomHeight](const QPointF& place) {
+            for (const auto& command : commands) {
+                if (const auto* cubes = dynamic_cast<const RenderInstancedCubesCommand*>(command.get()); cubes && cubes->shading() == RenderCommand::Shading::ModelShadow) {
+                    for (const CubeInstanceData& cube : cubes->instances()) {
+                        const QVector4D center = cube.transform.column(3);
+                        if (center.x() > place.x() + 0.01 && center.x() < place.x() + 0.5 && center.y() < place.y() - 0.01 && center.y() > place.y() - 0.5
+                            && qAbs(center.z() + roomHeight / 2.0f) < 0.01f && cube.color[3] > 0.3f && cube.transform.column(0).toVector3D().length() > 1.0f / 3.0f) {
+                            return true;
+                        }
+                    }
+                }
+            }
+            return false;
+        };
+        QVERIFY2(shadowBeside(QPointF(2.0, 0.0)), "a room casts no shadow");
+        QVERIFY2(shadowBeside(QPointF(0.0, 0.0)), "the player's room casts no shadow");
+        // The pawn's faint ghost is drawn last of all, over the shadows too
+        qsizetype lastOpaqueBlock = -1;
+        for (qsizetype index = 0; index < static_cast<qsizetype>(commands.size()); ++index) {
+            if (const auto* cubes = dynamic_cast<const RenderInstancedCubesCommand*>(commands.at(index).get());
+                cubes && cubes->shading() == RenderCommand::Shading::ModelBlock && !cubes->instances().isEmpty() && cubes->instances().constFirst().color[3] >= 1.0f) {
+                lastOpaqueBlock = index;
+            }
+        }
+        QVERIFY2(lastIndexOf(RenderCommand::Shading::ModelShadow) > lastOpaqueBlock, "the shadows are drawn before the blocks that hide them");
+
+        // A pawn in the player's color standing on the player's room's roof, and nowhere else: a round foot, a body
+        // narrowing up to a ball for a head, each drawn once as it is and once faintly where something hides it
+        QMap<GeometryManager::InstanceShape, int> pieces;
+        float footTop = 0.0f;
+        float headBottom = 0.0f;
+        for (const auto& command : commands) {
+            const auto* cubes = dynamic_cast<const RenderInstancedCubesCommand*>(command.get());
+            if (!cubes || cubes->shading() != RenderCommand::Shading::ModelBlock || cubes->shape() == GeometryManager::InstanceShape::Box
+                || cubes->shape() == GeometryManager::InstanceShape::Pyramid) {
+                continue;
+            }
+            for (const CubeInstanceData& cube : cubes->instances()) {
+                const QVector4D center = cube.transform.column(3);
+                QVERIFY2(qAbs(center.x()) < 1e-4f && qAbs(center.y()) < 1e-4f, "a pawn stands off the player's room");
+                QVERIFY2(center.z() > roomHeight, "a pawn's piece is sunk in the building");
+                QVERIFY(qFuzzyCompare(cube.color[0], static_cast<float>(tokenColor.redF())));
+                if (cube.color[3] < 1.0f) {
+                    continue;
+                }
+                ++pieces[cubes->shape()];
+                if (cubes->shape() == GeometryManager::InstanceShape::Cylinder) {
+                    footTop = center.z() + cube.transform.column(2).z();
+                } else if (cubes->shape() == GeometryManager::InstanceShape::Sphere) {
+                    headBottom = center.z() - cube.transform.column(2).z();
+                }
+            }
+        }
+        QCOMPARE(pieces.value(GeometryManager::InstanceShape::Cylinder), 1);
+        QCOMPARE(pieces.value(GeometryManager::InstanceShape::Cone), 1);
+        QCOMPARE(pieces.value(GeometryManager::InstanceShape::Sphere), 1);
+        QVERIFY2(headBottom > footTop, "the pawn's head is not above its foot");
+        QVERIFY2(!beaconQueued(), "a beacon stands over the token");
+
+        // The path east from the player's room lies on the ground, not halfway up the blocks
+        bool path = false;
+        float pathFoot = 0.0f;
+        for (const auto& command : commands) {
+            if (const auto* cubes = dynamic_cast<const RenderInstancedCubesCommand*>(command.get()); cubes && cubes->shading() == RenderCommand::Shading::ModelPath) {
+                for (const CubeInstanceData& cube : cubes->instances()) {
+                    const QVector4D center = cube.transform.column(3);
+                    if (qAbs(center.x() - 1.0f) < 0.3f && qAbs(center.y()) < 1e-4f) {
+                        QVERIFY2(center.z() < -roomHeight / 4.0f && center.z() > -roomHeight / 2.0f, qPrintable(qsl("the path's middle is at %1").arg(center.z())));
+                        if (cube.color[3] >= 1.0f && qAbs(cube.transform.column(0).x()) > 0.2f) {
+                            pathFoot = center.z() - cube.transform.column(2).z();
+                            path = true;
+                        }
+                    }
+                }
+            }
+        }
+        QVERIFY2(path, "the exit between the rooms is not a path");
+
+        // The same path, door and all, shows again as a faint line just over the thickest tile, so over the paving and
+        // grass that would hide it: only the viewed level's, and only where it lies flat, not up a shaft or a slope
+        const float pavedFoot = pathFoot + DioramaLayout::flatTileTop(roomHeight);
+        bool pavedLine = false;
+        bool pavedDoor = false;
+        for (const auto& command : commands) {
+            if (const auto* cubes = dynamic_cast<const RenderInstancedCubesCommand*>(command.get()); cubes && cubes->shading() == RenderCommand::Shading::ModelPath) {
+                for (const CubeInstanceData& cube : cubes->instances()) {
+                    const QVector4D center = cube.transform.column(3);
+                    const float halfHeight = cube.transform.column(2).z();
+                    // Thinner than any line is drawn, so the faint copy
+                    if (cube.transform.column(2).toVector3D().length() >= 0.01f * roomHeight) {
+                        continue;
+                    }
+                    QVERIFY2(qAbs(cube.transform.column(0).z()) < 1e-5f, qPrintable(qsl("a faint line climbs or falls at %1,%2").arg(center.x()).arg(center.y())));
+                    QVERIFY2(center.y() < 1.0f, qPrintable(qsl("the level below's path has a faint line, at %1").arg(center.z())));
+                    QVERIFY2(qAbs(center.z() - halfHeight - pavedFoot) < 1e-4f,
+                             qPrintable(qsl("a faint line's foot is at %1, not just over the tiles at %2").arg(center.z() - halfHeight).arg(pavedFoot)));
+                    QVERIFY(cube.color[3] < 0.5f);
+                    if (qAbs(center.x() - 1.0f) < 0.3f && qAbs(center.y()) < 1e-4f) {
+                        pavedLine = true;
+                    }
+                    pavedDoor = pavedDoor || qAbs(cube.transform.column(0).y()) > qAbs(cube.transform.column(0).x());
+                }
+            }
+        }
+        QVERIFY2(pavedLine, "the path has no line over the paving");
+        QVERIFY2(pavedDoor, "the door has no faint strokes over the paving");
+
+        // The shaft up from the room below, one-way and so in two pieces, starts on the ground as the paths do but rises
+        // from where it did, clear of the block's top
+        float shaftTop = std::numeric_limits<float>::lowest();
+        float shaftFoot = std::numeric_limits<float>::max();
+        for (const auto& command : commands) {
+            if (const auto* cubes = dynamic_cast<const RenderInstancedCubesCommand*>(command.get()); cubes && cubes->shading() == RenderCommand::Shading::ModelPath) {
+                for (const CubeInstanceData& cube : cubes->instances()) {
+                    const QVector4D center = cube.transform.column(3);
+                    const float halfLength = cube.transform.column(0).z();
+                    if (qAbs(center.x()) < 1e-4f && qAbs(center.y() - 2.0f) < 1e-4f && halfLength > 0.01f) {
+                        shaftTop = qMax(shaftTop, center.z() + halfLength);
+                        shaftFoot = qMin(shaftFoot, center.z() - halfLength);
+                    }
+                }
+            }
+        }
+        QVERIFY2(shaftTop > -1.0f + roomHeight / 2.0f + 0.1f, qPrintable(qsl("the shaft only reaches %1").arg(shaftTop)));
+        QVERIFY2(shaftFoot < -1.0f - roomHeight / 4.0f, qPrintable(qsl("the shaft starts at %1, off the ground").arg(shaftFoot)));
+
+        // The line slanting down north to the room below lies on the ground all along, as the flat ones do
+        bool slant = false;
+        for (const auto& command : commands) {
+            if (const auto* cubes = dynamic_cast<const RenderInstancedCubesCommand*>(command.get()); cubes && cubes->shading() == RenderCommand::Shading::ModelPath) {
+                for (const CubeInstanceData& cube : cubes->instances()) {
+                    const QVector4D center = cube.transform.column(3);
+                    if (qAbs(center.x()) < 1e-4f && center.y() > 0.3f && center.y() < 1.7f) {
+                        QVERIFY2(center.z() < -center.y() / 2.0f - roomHeight / 4.0f, qPrintable(qsl("the slanting line is at %1 where it is %2 north").arg(center.z()).arg(center.y())));
+                        slant = true;
+                    }
+                }
+            }
+        }
+        QVERIFY2(slant, "the exit to the room below has no line");
+    }
+
+    // A dotted custom line west to a room on the level below ends in a piece straight down, split into dots before they
+    // are laid on the ground: each dot keeps most of its length, so none is lost and the line stays joined up
+    void test_dioramaKeepsADottedLineToAnotherLevelWhole()
+    {
+        const int areaId = addArea();
+        QVERIFY(areaId > 0);
+        constexpr int kWestLowerRoomId = 4;
+        QVERIFY(addRoomAt(kWestLowerRoomId, areaId, -2, 0, -1));
+        const auto restore = qScopeGuard([this, lineSize = mpHost->mLineSize]() {
+            mpHost->mLineSize = lineSize;
+            mpHost->setMapStyle(qsl("tiles"));
+        });
+        mpHost->mLineSize = 18.0;
+        TRoom* pPlayerRoom = map()->mpRoomDB->getRoom(kPlayerRoomId);
+        pPlayerRoom->setExit(kWestLowerRoomId, DIR_WEST);
+        pPlayerRoom->customLines.insert(qsl("w"), {QPointF(-2.0, 0.0)});
+        pPlayerRoom->customLinesColor.insert(qsl("w"), QColor(Qt::cyan));
+        pPlayerRoom->customLinesStyle.insert(qsl("w"), Qt::DotLine);
+        QVERIFY(mpHost->setMapStyle(qsl("diorama")));
+        ModernGLWidget widget(map(), mpHost);
+        queueFrame(widget, areaId);
+
+        const auto atShaft = [](const QVector3D& point) {
+            return qAbs(point.x() + 2.0f) < 1e-4f && qAbs(point.y()) < 1e-4f;
+        };
+        QList<float> drawn;
+        for (const ExitScene::Segment& segment : ExitScene::build(*map(), *mpHost, widget.exitSceneOptions()).segments) {
+            if (atShaft(segment.from) && atShaft(segment.to)) {
+                drawn.append((segment.to - segment.from).length());
+            }
+        }
+        QVERIFY2(drawn.size() >= 2, qPrintable(qsl("the piece down is in %1 dots").arg(drawn.size())));
+
+        QList<float> queued;
+        for (const auto& command : widget.mRenderCommandQueue.commands()) {
+            if (const auto* cubes = dynamic_cast<const RenderInstancedCubesCommand*>(command.get()); cubes && cubes->shading() == RenderCommand::Shading::ModelPath) {
+                for (const CubeInstanceData& cube : cubes->instances()) {
+                    const QVector4D axis = cube.transform.column(0);
+                    if (atShaft(cube.transform.column(3).toVector3D()) && qAbs(axis.x()) < 1e-4f && qAbs(axis.y()) < 1e-4f) {
+                        queued.append(2.0f * qAbs(axis.z()));
+                    }
+                }
+            }
+        }
+        QCOMPARE(queued.size(), drawn.size());
+        for (qsizetype i = 0; i < drawn.size(); ++i) {
+            QVERIFY2(queued.at(i) > drawn.at(i) / 2.0f, qPrintable(qsl("a dot %1 long is laid %2 long").arg(drawn.at(i)).arg(queued.at(i))));
+        }
+    }
+
+    // Looking at the level under the player's, whose room is then see-through: the token's shadow is drawn over the
+    // room's top, not before it, or the room's paint would blend over the shadow
+    void test_dioramaLaysTheTokenShadowOverASeeThroughRoom()
+    {
+        const int areaId = addArea();
+        QVERIFY(areaId > 0);
+        const auto restore = qScopeGuard([this]() {
+            mpHost->setMapStyle(qsl("tiles"));
+        });
+        QVERIFY(mpHost->setMapStyle(qsl("diorama")));
+        ModernGLWidget widget(map(), mpHost);
+        queueFrame(widget, areaId, -1);
+        const auto& commands = widget.mRenderCommandQueue.commands();
+        qsizetype playerBlock = -1;
+        qsizetype tokenShadow = -1;
+        for (qsizetype index = 0; index < static_cast<qsizetype>(commands.size()); ++index) {
+            const auto* cubes = dynamic_cast<const RenderInstancedCubesCommand*>(commands.at(index).get());
+            if (!cubes) {
+                continue;
+            }
+            if (cubes->shading() == RenderCommand::Shading::ModelBlock && cubes->shape() != GeometryManager::InstanceShape::Cylinder && !roomInstances(*cubes, QPointF(0.0, 0.0)).isEmpty()) {
+                QVERIFY2(cubes->instances().first().color[3] < 1.0f, "the player's room is not see-through from the level below");
+                playerBlock = index;
+            }
+            if (cubes->shading() == RenderCommand::Shading::ModelShadow && cubes->shape() == GeometryManager::InstanceShape::Cylinder) {
+                tokenShadow = index;
+            }
+        }
+        QVERIFY2(playerBlock >= 0, "the player's room is not drawn");
+        QVERIFY2(tokenShadow >= 0, "the token casts no shadow");
+        QVERIFY2(tokenShadow > playerBlock, qPrintable(qsl("the token's shadow is command %1, before the player's room at %2").arg(tokenShadow).arg(playerBlock)));
+    }
+
+    // Rooms straight above one on the viewed level stand as one solid building, a storey each with the roof on the top
+    // one, and each storey is picked where it shows; water lies in a hole cut in the board, a highlighted room glows on
+    // the board, and naming an environment's kit rebuilds its rooms
+    void test_dioramaBuildsKitsAndTowers()
+    {
+        const int areaId = addArea();
+        QVERIFY(areaId > 0);
+        constexpr int kFirstStoreyId = 11;
+        constexpr int kWaterRoomId = 20;
+        constexpr int kWater = 310;
+        constexpr int kForestRoomId = 22;
+        constexpr int kForest = 311;
+        for (int storey = 1; storey <= 3; ++storey) {
+            QVERIFY(addRoomAt(kFirstStoreyId + storey - 1, areaId, 2, 0, storey));
+        }
+        QVERIFY(addRoomAt(kWaterRoomId, areaId, 4, 0, 0));
+        map()->mCustomEnvColors[kWater] = QColor(60, 120, 200);
+        map()->mpRoomDB->getRoom(kWaterRoomId)->environment = kWater;
+        QVERIFY(addRoomAt(kForestRoomId, areaId, 6, 0, 0));
+        map()->mCustomEnvColors[kForest] = QColor(90, 160, 70);
+        map()->mpRoomDB->getRoom(kForestRoomId)->environment = kForest;
+        QVERIFY(EnvironmentKit::store(map()->mUserData, kForest, EnvironmentKit::Kit::Forest));
+        TRoom* pPlayerRoom = map()->mpRoomDB->getRoom(kPlayerRoomId);
+        pPlayerRoom->highlight = true;
+        pPlayerRoom->highlightColor = QColor(Qt::red);
+        pPlayerRoom->highlightColor2 = QColor(Qt::green);
+        pPlayerRoom->highlightRadius = 1.0f;
+        const auto restore = qScopeGuard([this, kWater, kForest]() {
+            mpHost->setMapStyle(qsl("tiles"));
+            map()->mUserData.remove(EnvironmentKit::userDataKey());
+            map()->mCustomEnvColors.remove(kWater);
+            map()->mCustomEnvColors.remove(kForest);
+        });
+        QVERIFY(mpHost->setMapStyle(qsl("diorama")));
+        ModernGLWidget widget(map(), mpHost);
+        queueFrame(widget, areaId);
+        const auto& commands = widget.mRenderCommandQueue.commands();
+        constexpr float roomHeight = 2.0f / 3.0f / 2.0f;
+        const float ground = -roomHeight / 2.0f;
+        const auto shapesAt = [&commands](const RenderCommand::Shading shading, const GeometryManager::InstanceShape shape, const QPointF& place) {
+            QList<CubeInstanceData> found;
+            for (const auto& command : commands) {
+                if (const auto* cubes = dynamic_cast<const RenderInstancedCubesCommand*>(command.get()); cubes && cubes->shading() == shading && cubes->shape() == shape) {
+                    found.append(roomInstances(*cubes, place));
+                }
+            }
+            return found;
+        };
+
+        QList<CubeInstanceData> walls = shapesAt(RenderCommand::Shading::ModelBlock, GeometryManager::InstanceShape::Box, QPointF(2.0, 0.0));
+        QCOMPARE(walls.size(), 4);
+        std::sort(walls.begin(), walls.end(), [](const CubeInstanceData& a, const CubeInstanceData& b) {
+            return a.transform.column(3).z() < b.transform.column(3).z();
+        });
+        float floor = ground;
+        for (const CubeInstanceData& wall : std::as_const(walls)) {
+            QCOMPARE(wall.color[3], 1.0f);
+            const float half = wall.transform.column(2).z();
+            QVERIFY2(qAbs(wall.transform.column(3).z() - half - floor) < 1e-4f, "a storey does not stand on the one below");
+            floor = wall.transform.column(3).z() + half;
+        }
+        const QList<CubeInstanceData> roofs = shapesAt(RenderCommand::Shading::ModelBlock, GeometryManager::InstanceShape::Pyramid, QPointF(2.0, 0.0));
+        QCOMPARE(roofs.size(), 1);
+        QVERIFY2(qAbs(roofs.first().transform.column(3).z() - roofs.first().transform.column(2).z() - floor) < 1e-4f, "the roof is not on the top storey");
+        for (const auto& command : commands) {
+            if (const auto* cubes = dynamic_cast<const RenderInstancedCubesCommand*>(command.get()); cubes && cubes->shading() == RenderCommand::Shading::ModelBlock) {
+                for (const CubeInstanceData& cube : roomInstances(*cubes, QPointF(2.0, 0.0))) {
+                    QVERIFY2(cube.color[3] == 1.0f, "a storey is drawn see-through, as a room on another level");
+                }
+            }
+        }
+
+        // Each storey picked through the side of it that faces the camera
+        const TArea* pArea = map()->mpRoomDB->getArea(areaId);
+        const QHash<int, DioramaLayout::Piece> pieces = widget.dioramaPieces(*pArea);
+        const QVector3D eye = (widget.mCameraController.getViewMatrix() * widget.mCameraController.getModelMatrix()).inverted().map(QVector3D());
+        for (const int roomId : {kEastRoomId, kFirstStoreyId, kFirstStoreyId + 1, kFirstStoreyId + 2}) {
+            const DioramaLayout::Piece piece = pieces.value(roomId);
+            QVERIFY(piece.storeys == 4);
+            const QVector3D middle(2.0f, 0.0f, (piece.bottom + piece.peak) / 2.0f);
+            QVector3D face;
+            float facing = std::numeric_limits<float>::lowest();
+            for (const QVector3D& normal : {QVector3D(1, 0, 0), QVector3D(-1, 0, 0), QVector3D(0, 1, 0), QVector3D(0, -1, 0)}) {
+                const QVector3D at = middle + normal * piece.halfWidth;
+                if (const float toward = QVector3D::dotProduct(normal, (eye - at).normalized()); toward > facing) {
+                    facing = toward;
+                    face = at;
+                }
+            }
+            const std::optional<QPointF> pixel = widget.mCameraController.pixelForPoint(face);
+            QVERIFY(pixel);
+            QCOMPARE(widget.roomPickedAt(pixel->toPoint(), false), roomId);
+        }
+
+        // Water below the board, which has no top where it lies but has one between rooms
+        const QList<CubeInstanceData> water = shapesAt(RenderCommand::Shading::ModelWater, GeometryManager::InstanceShape::Box, QPointF(4.0, 0.0));
+        QCOMPARE(water.size(), 1);
+        QVERIFY2(water.first().transform.column(3).z() + water.first().transform.column(2).z() < ground, "the water is not below the board");
+        const RenderTrianglesCommand* board = nullptr;
+        for (const auto& command : commands) {
+            if (const auto* triangles = dynamic_cast<const RenderTrianglesCommand*>(command.get()); triangles && triangles->shading() == RenderCommand::Shading::Unlit) {
+                for (qsizetype i = 2; i < triangles->vertices().size(); i += 3) {
+                    if (triangles->vertices().at(i) < ground - 0.3f) {
+                        board = triangles;
+                    }
+                }
+            }
+        }
+        QVERIFY2(board, "no board is laid under the rooms");
+        const auto boardTopCovers = [board, ground](const QPointF& place) {
+            const QList<float>& v = board->vertices();
+            for (qsizetype t = 0; t + 8 < v.size(); t += 9) {
+                if (qAbs(v.at(t + 2) - ground) > 1e-4f || qAbs(v.at(t + 5) - ground) > 1e-4f || qAbs(v.at(t + 8) - ground) > 1e-4f) {
+                    continue;
+                }
+                const QPolygonF triangle({QPointF(v.at(t), v.at(t + 1)), QPointF(v.at(t + 3), v.at(t + 4)), QPointF(v.at(t + 6), v.at(t + 7))});
+                if (triangle.containsPoint(place, Qt::OddEvenFill)) {
+                    return true;
+                }
+            }
+            return false;
+        };
+        QVERIFY2(!boardTopCovers(QPointF(4.0, 0.1)), "the board covers the water");
+        QVERIFY2(boardTopCovers(QPointF(3.0, 0.1)), "the board has a hole between rooms");
+        QVERIFY2(boardTopCovers(QPointF(-0.9, -0.9)), "the board does not reach past the rooms");
+
+        // The shared glow, in the script's color, on the board around the highlighted room, and on the board under a
+        // building for a room storeys up
+        const QColor blue(0, 0, 255);
+        TRoom* pUpperStorey = map()->mpRoomDB->getRoom(kFirstStoreyId + 1);
+        pUpperStorey->highlight = true;
+        pUpperStorey->highlightColor = blue;
+        pUpperStorey->highlightColor2 = QColor(Qt::green);
+        pUpperStorey->highlightRadius = 1.0f;
+        const auto unhighlight = qScopeGuard([pUpperStorey]() {
+            pUpperStorey->highlight = false;
+        });
+        QCOMPARE(mpHost->mapStylePreset().highlightShape, MapStyle::HighlightShape::Glow);
+        queueFrame(widget, areaId);
+        const auto glowAt = [&widget](const QColor& color, const QPointF& place) -> std::optional<float> {
+            const QString key = qsl("highlight|%1|%2|").arg(QString::number(static_cast<int>(MapStyle::HighlightShape::Glow)), color.name(QColor::HexArgb));
+            for (const QString& used : std::as_const(widget.mRoomTexturesInUse)) {
+                if (!used.startsWith(key)) {
+                    continue;
+                }
+                const GLuint texture = widget.mLabelTextureCache.imageTexture(used);
+                for (const auto& command : widget.mRenderCommandQueue.commands()) {
+                    const auto* textured = dynamic_cast<const RenderTexturedTrianglesCommand*>(command.get());
+                    if (!textured || textured->geometry().textureId != texture) {
+                        continue;
+                    }
+                    const QVector<float>& vertices = textured->geometry().vertices;
+                    for (qsizetype quad = 0; quad + 17 < vertices.size(); quad += 18) {
+                        float x = 0.0f;
+                        float y = 0.0f;
+                        for (qsizetype vertex = quad; vertex < quad + 18; vertex += 3) {
+                            x += vertices.at(vertex) / 6.0f;
+                            y += vertices.at(vertex + 1) / 6.0f;
+                        }
+                        if (qAbs(x - place.x()) < 1e-3 && qAbs(y - place.y()) < 1e-3) {
+                            return vertices.at(quad + 2);
+                        }
+                    }
+                }
+            }
+            return std::nullopt;
+        };
+        const std::optional<float> playerGlow = glowAt(QColor(Qt::red), QPointF(0.0, 0.0));
+        QVERIFY2(playerGlow, "the highlighted room has no glow in its script's color");
+        QVERIFY2(qAbs(*playerGlow - ground) < 1e-4f, qPrintable(qsl("the glow is at height %1, the board at %2").arg(*playerGlow).arg(ground)));
+        const std::optional<float> storeyGlow = glowAt(blue, QPointF(2.0, 0.0));
+        QVERIFY2(storeyGlow, "a highlighted storey has no glow");
+        QVERIFY2(qAbs(*storeyGlow - ground) < 1e-4f, qPrintable(qsl("a storey's glow is at height %1, not on the board at %2").arg(*storeyGlow).arg(ground)));
+
+        // Named a road, the water's room is paved instead
+        QVERIFY(EnvironmentKit::store(map()->mUserData, kWater, EnvironmentKit::Kit::Road));
+        queueFrame(widget, areaId);
+        QVERIFY(shapesAt(RenderCommand::Shading::ModelWater, GeometryManager::InstanceShape::Box, QPointF(4.0, 0.0)).isEmpty());
+        const QList<CubeInstanceData> paving = shapesAt(RenderCommand::Shading::ModelBlock, GeometryManager::InstanceShape::Box, QPointF(4.0, 0.0));
+        QCOMPARE(paving.size(), 1);
+
+        // A highlighted paved room glows on its paving, not on the board the paving would hide it under
+        const QColor magenta(255, 0, 255);
+        TRoom* pRoadRoom = map()->mpRoomDB->getRoom(kWaterRoomId);
+        pRoadRoom->highlight = true;
+        pRoadRoom->highlightColor = magenta;
+        pRoadRoom->highlightColor2 = QColor(Qt::green);
+        pRoadRoom->highlightRadius = 1.0f;
+        const auto unhighlightRoad = qScopeGuard([pRoadRoom]() {
+            pRoadRoom->highlight = false;
+        });
+        queueFrame(widget, areaId);
+        const float pavingTop = paving.first().transform.column(3).z() + paving.first().transform.column(2).z();
+        QVERIFY2(pavingTop > ground + 1e-3f, "the paving is no thicker than the board");
+        const std::optional<float> roadGlow = glowAt(magenta, QPointF(4.0, 0.0));
+        QVERIFY2(roadGlow, "a highlighted paved room has no glow");
+        QVERIFY2(*roadGlow >= pavingTop - 1e-5f, qPrintable(qsl("a paved room's glow is at height %1, under its paving's top at %2").arg(*roadGlow).arg(pavingTop)));
+
+        // A forest is a grass tile with from one to three trees standing on it, each a trunk under a crown
+        const QList<CubeInstanceData> grass = shapesAt(RenderCommand::Shading::ModelBlock, GeometryManager::InstanceShape::Box, QPointF(6.0, 0.0));
+        QCOMPARE(grass.size(), 1);
+        const float grassTop = grass.first().transform.column(3).z() + grass.first().transform.column(2).z();
+        QVERIFY2(grassTop < ground + DioramaLayout::flatTileTop(roomHeight) + 1e-4f, "the grass is a block, not a tile");
+        QMap<GeometryManager::InstanceShape, int> treeParts;
+        for (const auto& command : commands) {
+            const auto* cubes = dynamic_cast<const RenderInstancedCubesCommand*>(command.get());
+            if (!cubes || cubes->shading() != RenderCommand::Shading::ModelBlock
+                || (cubes->shape() != GeometryManager::InstanceShape::Cone && cubes->shape() != GeometryManager::InstanceShape::Cylinder)) {
+                continue;
+            }
+            for (const CubeInstanceData& cube : cubes->instances()) {
+                const QVector4D center = cube.transform.column(3);
+                if (qAbs(center.x() - 6.0f) < 0.5f && qAbs(center.y()) < 0.5f) {
+                    QVERIFY2(center.z() - cube.transform.column(2).z() >= grassTop - 1e-4f, "a tree is sunk in the grass");
+                    ++treeParts[cubes->shape()];
+                }
+            }
+        }
+        const int trees = treeParts.value(GeometryManager::InstanceShape::Cone);
+        QVERIFY2(trees >= 1 && trees <= 3, qPrintable(qsl("the forest has %1 trees").arg(trees)));
+        QCOMPARE(treeParts.value(GeometryManager::InstanceShape::Cylinder), trees);
+
+        // The shafts between the building's storeys are left out, but not one down out of its foot to a room below
+        constexpr int kCellarId = 21;
+        QVERIFY(addRoomAt(kCellarId, areaId, 2, 0, -1));
+        map()->mpRoomDB->getRoom(kEastRoomId)->setExit(kCellarId, DIR_DOWN);
+        map()->mpRoomDB->getRoom(kCellarId)->setExit(kEastRoomId, DIR_UP);
+        map()->mpRoomDB->getRoom(kEastRoomId)->setExit(kFirstStoreyId, DIR_UP);
+        map()->mpRoomDB->getRoom(kFirstStoreyId)->setExit(kEastRoomId, DIR_DOWN);
+        queueFrame(widget, areaId);
+        float shaftFoot = std::numeric_limits<float>::max();
+        float shaftTop = std::numeric_limits<float>::lowest();
+        for (const auto& command : commands) {
+            if (const auto* cubes = dynamic_cast<const RenderInstancedCubesCommand*>(command.get()); cubes && cubes->shading() == RenderCommand::Shading::ModelPath) {
+                for (const CubeInstanceData& cube : cubes->instances()) {
+                    const QVector4D center = cube.transform.column(3);
+                    const float halfLength = qAbs(cube.transform.column(0).z());
+                    if (qAbs(center.x() - 2.0f) < 1e-4f && qAbs(center.y()) < 1e-4f && halfLength > 0.01f) {
+                        shaftFoot = qMin(shaftFoot, center.z() - halfLength);
+                        shaftTop = qMax(shaftTop, center.z() + halfLength);
+                    }
+                }
+            }
+        }
+        QVERIFY2(shaftFoot < -0.5f, "the shaft down to the room below the building is left out");
+        QVERIFY2(shaftTop < roomHeight, qPrintable(qsl("a shaft between the building's storeys rises to %1").arg(shaftTop)));
+    }
+
+    // A symbol stands on a white tag, and a bold name in a white halo, where their color shows on it; else they go without
+    void test_dioramaTagsSymbolsAndHalosBoldNamesInColorsThatShowOnThem()
+    {
+        const int areaId = addArea();
+        QVERIFY(areaId > 0);
+        TRoom* pPlayerRoom = map()->mpRoomDB->getRoom(kPlayerRoomId);
+        TRoom* pEastRoom = map()->mpRoomDB->getRoom(kEastRoomId);
+        pPlayerRoom->mSymbol = qsl("$");
+        pEastRoom->mSymbol = qsl("%");
+        pEastRoom->mSymbolColor = QColor(250, 250, 210);
+        pPlayerRoom->name = qsl("Market Cross");
+        pEastRoom->name = qsl("Mill");
+        pEastRoom->userData.insert(ROOM_UI_NAMECOLOR, qsl("#fafad2"));
+        map()->setRoomNamesShown(true);
+        const auto restore = qScopeGuard([this]() {
+            mpHost->setMapStyle(qsl("tiles"));
+            map()->setRoomNamesShown(false);
+        });
+        QVERIFY(mpHost->setMapStyle(qsl("diorama")));
+        const MapStyle& diorama = mpHost->mapStylePreset();
+        QVERIFY(diorama.symbolPlate.isValid() && diorama.roomNameHalo.isValid());
+        ModernGLWidget widget(map(), mpHost);
+        queueFrame(widget, areaId);
+        // The key a texture of this kind was drawn under, for text which it ends with or which comes before its tag or halo
+        const auto drawnKey = [&widget](const QString& kind, const QString& text) {
+            for (const QString& key : std::as_const(widget.mRoomTexturesInUse)) {
+                if (key.startsWith(kind) && (key.endsWith(qsl("|%1").arg(text)) || key.contains(qsl("|%1|").arg(text)))) {
+                    return key;
+                }
+            }
+            return QString();
+        };
+        const QString plate = qsl("|%1").arg(diorama.symbolPlate.name(QColor::HexArgb));
+        QVERIFY2(drawnKey(qsl("symbol|"), qsl("$")).contains(plate), "a symbol in its usual color has no tag");
+        QVERIFY2(!drawnKey(qsl("symbol|"), qsl("%")).isEmpty() && !drawnKey(qsl("symbol|"), qsl("%")).contains(plate), "a light symbol was put on a white tag");
+        const QString name = drawnKey(qsl("name|"), qsl("Market Cross"));
+        QVERIFY2(name.endsWith(qsl("|Market Cross|halo|%1").arg(diorama.roomNameHalo.name(QColor::HexArgb))), qPrintable(qsl("a name is drawn as %1, not in a white halo").arg(name)));
+        QFont nameFont;
+        QVERIFY(nameFont.fromString(name.section(QLatin1Char('|'), 2, 2)));
+        QVERIFY2(nameFont.bold(), qPrintable(qsl("a name's font %1 is not bold").arg(nameFont.toString())));
+        const QString lightName = drawnKey(qsl("name|"), qsl("Mill"));
+        const QColor lightHalo(lightName.section(qsl("|halo|"), 1, 1));
+        QVERIFY2(lightHalo.isValid() && MapStyle::readsOnPlate(QColor(250, 250, 210), lightHalo), qPrintable(qsl("a light name is drawn as %1, in no rim it shows on").arg(lightName)));
+        QCOMPARE(lightHalo, mpHost->mapStylePreset().roomNameHaloFor(QColor(250, 250, 210)));
+
+        // Without a halo of its own, a style rims names in the background where it gives labels halos, else not at all
+        QVERIFY(mpHost->setMapStyle(qsl("transit")));
+        QVERIFY(mpHost->mapStylePreset().labelHalos && !mpHost->mapStylePreset().roomNameHalo.isValid());
+        queueFrame(widget, areaId);
+        const QString transitName = drawnKey(qsl("name|"), qsl("Market Cross"));
+        QVERIFY2(transitName.endsWith(qsl("|halo|%1").arg(widget.backgroundColor().name(QColor::HexArgb))), qPrintable(qsl("a transit name is drawn as %1").arg(transitName)));
+        QVERIFY(mpHost->setMapStyle(qsl("tiles")));
+        QVERIFY(!mpHost->mapStylePreset().labelHalos);
+        queueFrame(widget, areaId);
+        const QString tilesName = drawnKey(qsl("name|"), qsl("Market Cross"));
+        QVERIFY2(!tilesName.isEmpty() && !tilesName.contains(qsl("|halo|")), qPrintable(qsl("a tiles name is drawn as %1").arg(tilesName)));
+    }
+
+    // Names are kept apart by what they draw: two haloed names close enough for their halos to touch lose one, where
+    // the same two, one too faint for a halo, both stay
+    void test_dioramaDecluttersNamesByTheirOwnHalos()
+    {
+        const int areaId = addArea();
+        QVERIFY(areaId > 0);
+        TRoom* pPlayerRoom = map()->mpRoomDB->getRoom(kPlayerRoomId);
+        TRoom* pEastRoom = map()->mpRoomDB->getRoom(kEastRoomId);
+        pPlayerRoom->name = qsl("Alpha");
+        pEastRoom->name = qsl("Beta");
+        map()->setRoomNamesShown(true);
+        const auto restore = qScopeGuard([this]() {
+            mpHost->setMapStyle(qsl("tiles"));
+            map()->setRoomNamesShown(false);
+        });
+        QVERIFY(mpHost->setMapStyle(qsl("diorama")));
+        ModernGLWidget widget(map(), mpHost);
+        const auto namesKept = [&widget]() {
+            int kept = 0;
+            for (const QString& key : std::as_const(widget.mRoomTexturesInUse)) {
+                kept += key.startsWith(qsl("name|")) && (key.contains(qsl("|Alpha")) || key.contains(qsl("|Beta")));
+            }
+            return kept;
+        };
+        // Beta's name moved from under its room to under Alpha's, then down by step
+        const auto keptAt = [&](const double down, const QString& betaColor) {
+            pEastRoom->userData.insert(ROOM_UI_NAMEPOS, qsl("-2 %1").arg(down));
+            pEastRoom->userData.insert(ROOM_UI_NAMECOLOR, betaColor);
+            queueFrame(widget, areaId);
+            return namesKept();
+        };
+        const QString faint = qsl("#28000000");
+        QVERIFY(!mpHost->mapStylePreset().roomNameHaloFor(QColor::fromString(faint)).isValid());
+        QCOMPARE(keptAt(0.0, QString()), 1);
+        QCOMPARE(keptAt(0.0, faint), 1);
+        QCOMPARE(keptAt(2.0, QString()), 2);
+        bool haloesDecide = false;
+        for (double down = 0.0; down < 1.0 && !haloesDecide; down += 0.004) {
+            haloesDecide = keptAt(down, QString()) == 1 && keptAt(down, faint) == 2;
+        }
+        QVERIFY2(haloesDecide, "a name without a halo was kept apart as if it had one");
+    }
+
+    // Looking down: the board is wood under a pale sky, a room's top is lighter on the edge toward the light than on the
+    // far one, the ground just south-east of a room is in its shadow, the pawn shows red, and nothing changes between frames
+    void test_dioramaShadesBlocksUnderSoftLight()
+    {
+        if (!glAvailable()) {
+            QSKIP("no OpenGL context on this platform");
+        }
+        QVERIFY(addArea() > 0);
+        const auto restore = qScopeGuard([this]() {
+            mpHost->setMapStyle(qsl("tiles"));
+        });
+        // No borders: nothing around a room but its shadow
+        const bool savedBorders = mpHost->mMapperShowRoomBorders;
+        const auto restoreBorders = qScopeGuard([this, savedBorders]() {
+            mpHost->mMapperShowRoomBorders = savedBorders;
+        });
+        mpHost->mMapperShowRoomBorders = false;
+        // Plain blocks rather than the buildings the rooms' red would make, as their tops are what is looked at
+        QVERIFY(EnvironmentKit::store(map()->mUserData, -1, EnvironmentKit::Kit::Plain));
+        QVERIFY(mpHost->setMapStyle(qsl("diorama")));
+        ModernGLWidget widget(map(), mpHost);
+        lookDown(widget);
+        if (!widget.isValid()) {
+            QSKIP("no OpenGL context on this platform");
+        }
+        const QImage frame = widget.grabFramebuffer();
+        QCOMPARE(widget.grabFramebuffer(), frame);
+        constexpr float roomHeight = 2.0f / 3.0f / 2.0f;
+        const auto pixelAt = [&widget](const float x, const float y, const float z) {
+            const std::optional<QPointF> pixel = widget.mCameraController.pixelForPoint(QVector3D(x, y, z));
+            return pixel ? pixel->toPoint() : QPoint(-1, -1);
+        };
+        const auto topAt = [&](const float x, const float y) {
+            return frame.pixelColor(pixelAt(x, y, roomHeight / 2.0f));
+        };
+        const auto groundAt = [&](const float x, const float y) {
+            return frame.pixelColor(pixelAt(x, y, -roomHeight / 2.0f));
+        };
+
+        const QColor board = groundAt(1.0f, -0.9f);
+        QVERIFY2(board.red() > board.blue() + 20 && board.lightness() > 120, qPrintable(qsl("the board is %1, not light wood").arg(board.name())));
+        const QColor sky = frame.pixelColor(2, 2);
+        QVERIFY2(sky.blue() > sky.red() + 10 && sky.lightness() > 180, qPrintable(qsl("the sky is %1, not pale blue").arg(sky.name())));
+
+        // A room reaches a third of a unit from its middle; the light comes from the north-west
+        const int middle = topAt(2.0f, 0.0f).lightness();
+        const int lit = topAt(2.0f - 0.31f, 0.31f).lightness();
+        const int shaded = topAt(2.0f + 0.31f, -0.31f).lightness();
+        QVERIFY2(lit > shaded + 20, qPrintable(qsl("a room's top is %1 light toward the light and %2 away from it").arg(lit).arg(shaded)));
+        QVERIFY2(middle > shaded, "a room's top is darker in its middle than its shaded edge");
+
+        const int shadow = groundAt(2.4f, -0.4f).lightness();
+        const int open = groundAt(1.6f, 0.4f).lightness();
+        QVERIFY2(open > shadow + 10, qPrintable(qsl("the ground is %1 light in a room's shadow and %2 out of it").arg(shadow).arg(open)));
+
+        const QColor token = frame.pixelColor(pixelAt(0.0f, 0.0f, roomHeight));
+        QVERIFY2(token.red() > token.green() + 60 && token.red() > token.blue() + 60, "no red token stands on the player's room");
     }
 
     // Bloom spreads a soft glow a few pixels out past a room's edge, onto background nothing is drawn on

@@ -40,6 +40,15 @@ uniform float uScanlinePeriod = 3.0;
 uniform int uInk = 0;
 uniform bool uInkRound = false;
 flat in vec3 instanceOrigin;
+// Diorama: 1 a block, 2 a path, 3 a shadow on the ground, 4 the sky, 5 water. Lit by a soft light of its own from high
+// in the north-west, which a block's rounded top edges catch on that side and lose on the other; a cone, a roof or a
+// ball has no such edges
+uniform int uModelShading = 0;
+uniform bool uModelRound = false;
+uniform bool uModelBevel = true;
+in vec3 surfaceNormal;
+flat in vec3 instanceSide;
+const vec3 cModelLight = vec3(-0.45, 0.55, 0.7);
 
 // pcg3d, a hash that gives the same on every GPU
 uint inkHash(uvec3 v)
@@ -246,6 +255,68 @@ void main()
         float fibres = max(inkNoise(vec2(one.x / 2.5, one.y / 55.0), 13u), inkNoise(vec2(two.x / 2.5, two.y / 70.0), 14u));
         float shade = paperGrain() + 0.025 - 0.05 * cloud - 0.03 * smoothstep(0.85, 0.98, fibres);
         FragColor = vec4(vertexColor.rgb * shade, vertexColor.a);
+    } else if (uModelShading == 1 || uModelShading == 2) {
+        vec3 normal = normalize(surfaceNormal);
+        // A path standing upright, as an up or down exit's, turns its template's top to the side
+        bool top = uModelShading == 1 ? localNormal.z > 0.5 : normal.z > 0.5;
+        if (uModelShading == 1 && uModelBevel) {
+            if (top) {
+                // Leaning outward over the last part of the way to the rim, as a rounded edge does
+                vec2 outward;
+                float inside;
+                if (uModelRound) {
+                    outward = localPosition.xy / max(length(localPosition.xy), 1e-4);
+                    inside = 1.0 - length(localPosition.xy);
+                } else {
+                    vec2 a = abs(localPosition.xy);
+                    outward = a.x > a.y ? vec2(sign(localPosition.x), 0.0) : vec2(0.0, sign(localPosition.y));
+                    inside = 1.0 - max(a.x, a.y);
+                }
+                float lean = 1.0 - smoothstep(0.0, 0.16, inside);
+                normal = normalize(vec3(outward * 1.3 * lean, 1.0));
+            } else if (abs(localNormal.z) < 0.5) {
+                // The same edge seen from the side, curling up into the top
+                normal = normalize(normal + vec3(0.0, 0.0, 1.3 * smoothstep(0.7, 1.0, localPosition.z)));
+            }
+        } else if (uModelShading == 2 && top) {
+            // A path's crown, highest along its middle
+            normal = normalize(normal + instanceSide * localPosition.y * 0.6);
+        }
+        float diffuse = max(dot(normal, normalize(cModelLight)), 0.0);
+        float light = 0.42 + 0.22 * (0.5 + 0.5 * normal.z) + 0.45 * diffuse;
+        // Darker toward the ground, where little light reaches between the blocks
+        if (uModelShading == 1 && uModelBevel && !top && localNormal.z > -0.5) {
+            light *= mix(0.6, 1.0, smoothstep(-1.0, 0.6, localPosition.z));
+        }
+        FragColor = vec4(vertexColor.rgb * light * vec3(1.03, 1.0, 0.95), vertexColor.a);
+    } else if (uModelShading == 3) {
+        // A soft blob on the ground, rounded at a square's corners, fading out by its rim
+        if (localNormal.z < 0.5) {
+            discard;
+        }
+        vec2 a = abs(localPosition.xy);
+        float reach = uModelRound ? length(a) : min(max(a.x, a.y), 0.45) + length(max(a - 0.45, 0.0));
+        float alpha = (1.0 - smoothstep(0.45, 1.0, reach)) * vertexColor.a;
+        if (alpha < 0.004) {
+            discard;
+        }
+        FragColor = vec4(vertexColor.rgb, alpha);
+    } else if (uModelShading == 4) {
+        // A gradient this gentle bands on an 8-bit screen unless each pixel is nudged by less than a step
+        float dither = (inkRandom(ivec2(gl_FragCoord.xy), 21u) - 0.5) / 255.0;
+        FragColor = vec4(vertexColor.rgb + dither, vertexColor.a);
+    } else if (uModelShading == 5) {
+        vec3 normal = normalize(surfaceNormal);
+        float light = 0.55 + 0.25 * (0.5 + 0.5 * normal.z) + 0.25 * max(dot(normal, normalize(cModelLight)), 0.0);
+        vec3 color = vertexColor.rgb * light;
+        if (localNormal.z > 0.5) {
+            // Ripples, and the sky caught in a streak across the water, which stay put on the water as the view turns
+            float across = (localPosition.x + localPosition.y) * 0.5;
+            float ripple = inkNoise(localPosition.xy * 2.5 + instanceOrigin.xy * 3.0, 31u);
+            float streak = (1.0 - smoothstep(0.04, 0.18, abs(across - 0.25 + 0.12 * ripple))) * smoothstep(0.95, 0.6, abs(localPosition.x - localPosition.y) * 0.5);
+            color = mix(color * (0.92 + 0.12 * ripple), vec3(1.0), 0.45 * streak);
+        }
+        FragColor = vec4(color, vertexColor.a);
     } else if (uInk >= 5) {
         uint seed = inkSeed();
         vec2 p = localPosition.xy;
@@ -286,8 +357,8 @@ void main()
     } else {
         FragColor = vertexColor;
     }
-    // The paper is the background the fog fades toward already
-    if (uFogEnd > uFogStart && uInk != 4) {
+    // The paper and the sky are the background the fog fades toward already
+    if (uFogEnd > uFogStart && uInk != 4 && uModelShading != 4) {
         float fog = clamp((eyeDepth - uFogStart) / (uFogEnd - uFogStart), 0.0, 1.0) * uFogMax;
         FragColor.rgb = mix(FragColor.rgb, uFogColor, fog);
     }

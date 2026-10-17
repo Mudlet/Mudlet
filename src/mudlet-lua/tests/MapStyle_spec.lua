@@ -88,11 +88,22 @@ describe("Tests the modern 3D mapper's style through setConfig and getConfig", f
     end
   end)
 
+  it("switches to the diorama style and back from each of the others", function()
+    for _, from in ipairs({"tiles", "blueprint", "terminal", "transit", "hologram", "inkwash"}) do
+      assert.is_true(setConfig("mapStyle", from))
+      assert.is_true(setConfig("mapStyle", "diorama"))
+      assert.equals("diorama", getConfig("mapStyle"))
+      assert.equals("diorama", getConfig()["mapStyle"])
+      assert.is_true(setConfig("mapStyle", from))
+      assert.equals(from, getConfig("mapStyle"))
+    end
+  end)
+
   it("refuses a style that does not exist, naming the ones that do, and keeps the one in use", function()
     assert.is_true(setConfig("mapStyle", "blueprint"))
     local ok, err = setConfig("mapStyle", "no such style")
     assert.is_nil(ok)
-    assert.equals('mapStyle must be "tiles", "blueprint", "terminal", "transit", "hologram" or "inkwash", got "no such style"', err)
+    assert.equals('mapStyle must be "tiles", "blueprint", "terminal", "transit", "hologram", "inkwash" or "diorama", got "no such style"', err)
     assert.equals("blueprint", getConfig("mapStyle"))
   end)
 
@@ -106,6 +117,7 @@ describe("Tests the modern 3D mapper's style through setConfig and getConfig", f
     assert.is_nil(setConfig("mapStyle", "Hologram"))
     assert.is_nil(setConfig("mapStyle", "Inkwash"))
     assert.is_nil(setConfig("mapStyle", "ink wash"))
+    assert.is_nil(setConfig("mapStyle", "Diorama"))
     assert.equals("tiles", getConfig("mapStyle"))
   end)
 
@@ -124,7 +136,7 @@ describe("Tests the modern 3D mapper's style through setConfig and getConfig", f
   -- Only saveProfile() without a file name writes the profile's own settings. The write runs on a pool
   -- thread, so the file turns up after saveProfile() has answered, and only test mode can pump the
   -- event loop to wait for it
-  for _, style in ipairs({"terminal", "transit", "hologram", "inkwash"}) do
+  for _, style in ipairs({"terminal", "transit", "hologram", "inkwash", "diorama"}) do
     it("saves the " .. style .. " style with the profile", function()
       if not testMode then
         return

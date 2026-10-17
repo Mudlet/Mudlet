@@ -59,11 +59,13 @@
 #include "CameraController.h"
 
 #include <functional>
+#include <memory>
 #include <optional>
 
 class Host;
 class QFontMetricsF;
 class QLabel;
+class QOpenGLFramebufferObject;
 class QPainter;
 class T2DMap;
 class TArea;
@@ -73,6 +75,9 @@ class TMapLabel;
 class TRoom;
 struct MapInfoProperties;
 struct MapStyle;
+namespace DioramaLayout {
+struct Piece;
+}
 namespace ExitScene {
 struct Glyph;
 struct Options;
@@ -216,6 +221,12 @@ private:
     QOpenGLBuffer mIndexBuffer;
     QOpenGLBuffer mTexCoordBuffer;
     QOpenGLVertexArrayObject mVAO;
+    // The diorama's tilt-shift blur: the frame is copied out of the view's framebuffer, which may be multisampled and
+    // so cannot be read as a texture, then blurred back into it
+    std::unique_ptr<QOpenGLFramebufferObject> mTiltShiftScene;
+    std::unique_ptr<QOpenGLShaderProgram> mTiltShiftProgram;
+    QOpenGLVertexArrayObject mTiltShiftVAO;
+    bool mTiltShiftFailed = false;
 
     // Geometry management
     GeometryManager mGeometryManager;
@@ -417,8 +428,8 @@ private:
     void updateMatrices();
     void renderRooms();
     void renderConnections();
-    // The paper behind the map, for a style drawn on paper
-    void queuePaper();
+    // The paper or the felt behind the map, for a style drawn on either
+    void queueBackdrop();
     // The 2D map's grid, at the viewed level's room bottoms, writing no depth
     void queueGrid();
     // MapStyle::washReach's washes under the viewed level's rooms, writing no depth, under the exits and labels
@@ -496,8 +507,11 @@ private:
     void paintPlayerPill(QPainter& painter, int top, const std::pair<PlatformShaft, PlatformShaft>& shafts);
     void turnNorthUp();
     void setHoveredRoom(int roomId);
+    void applyTiltShift();
     // Worked out afresh, as the view can move under a pointer that stays still
     int roomUnderPointer();
+    // What the diorama style builds each of the area's shown rooms as
+    QHash<int, DioramaLayout::Piece> dioramaPieces(const TArea& area) const;
     void endPan();
     void renderCube(float x, float y, float z, float size, float r, float g, float b, float a);
     void renderText(const QString& text, float x, float y);
@@ -552,6 +566,10 @@ private:
     // Of the beacon over the player's room, and of the style's thin ring around it
     QColor playerMarkerColor() const;
     ExitScene::Options exitSceneOptions() const;
+    // The shading of the exits not brushed on as strokes
+    RenderCommand::Shading exitShading() const;
+    // How far below where ExitScene puts them exits are drawn, so that a model's paths lie on the ground
+    float exitSink(const ExitScene::Options&) const;
     void zoomBySteps(float steps);
     void panByRooms(int right, int up);
     void selectRoom(int roomId, Qt::KeyboardModifiers modifiers);

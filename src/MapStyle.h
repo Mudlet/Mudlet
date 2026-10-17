@@ -78,7 +78,10 @@ struct MapStyle
         Light,
         // Watercolor on paper: every room the paper lightly washed with its environment's hue, so that the ink line
         // around it and what is drawn on it read; the hue kept, so areas still tell apart
-        Wash
+        Wash,
+        // A painted miniature: each room in its environment's color, a little desaturated, kept from the darkest and
+        // lightest, and warmed, as model paints are
+        Painted
     };
 
     enum class Shape {
@@ -106,7 +109,10 @@ struct MapStyle
         // An ink sketch: each room's top a pale lozenge in a wobbly ink line, hatched on the levels above the viewed one
         // and only dashed on those below, and each exit a brush stroke thinning toward its end, each uneven in a way it
         // takes from where it stands so that it holds still
-        InkLozenges
+        InkLozenges,
+        // A tabletop model: no rim, each room a block shaded under soft light from above with its top's edges rounded
+        // off, darkening where it meets the ground and casting a soft shadow there, and each exit a low path on the ground
+        ModelBlocks
     };
 
     enum class Doors {
@@ -129,7 +135,10 @@ struct MapStyle
         // sending out a ring of light each time the player arrives
         Pulse,
         // The player's room stamped in playerRoomColor() as a seal on a painting, with a frame cut into it
-        Seal
+        Seal,
+        // A game's pawn in playerRoomColor(), a foot, a body and a ball for a head, standing on the player's room,
+        // which keeps its own color
+        Token
     };
 
     enum class Compass {
@@ -156,7 +165,12 @@ struct MapStyle
         // The brightest of what is drawn blurred and added back, so that lines of light glow softly
         Bloom = 0x4,
         // The view darkened a little toward its edges and corners, as an old sheet is
-        Vignette = 0x8
+        Vignette = 0x8,
+        // The background a pale sky, light blue at the top of the view fading to a warm haze at its foot
+        Sky = 0x10,
+        // A tilt-shift photograph's shallow focus: sharp in a band across the view through the player, blurring
+        // toward the view's top and foot, so that the map looks like a model seen up close
+        TiltShift = 0x20
     };
     Q_DECLARE_FLAGS(PostEffects, PostEffect)
 
@@ -193,10 +207,22 @@ struct MapStyle
     QColor mapLabelHalo;
     // In rooms' spacing; 0 for no limit
     float mapLabelMaxHeight = 0.0f;
+    // Behind the text of a themed label with no box, a rounded tag in this color, as a model's name card; invalid
+    // for none. It takes the place of mapLabelHalo
+    QColor mapLabelPlate;
+    // Behind a room's symbol, a rounded tag in this color, as a model's sign; invalid for none. A symbol given no
+    // color of its own is then drawn to stand out on the tag rather than on the room
+    QColor symbolPlate;
     // Room names, as quieter annotations: their color where the room was given none of its own, invalid for the
     // color that stands out on the background, and their size against the usual where the map was given no font
     QColor roomNameColor;
     float roomNameScale = 1.0f;
+    // Room names in bold where the map was given no font, as they are where roomNameColor is invalid
+    bool roomNameBold = false;
+    // Around a room's name, a rim in this color, so that it reads over whatever lies under it; see roomNameHaloFor().
+    // Where it is invalid, or the name reads on no rim it allows, the name has the background's rim if labelHalos is
+    // set, else none
+    QColor roomNameHalo;
     // Invalid for the background, the color that stands out on it, and red
     QColor compassFace;
     QColor compassRim;
@@ -264,6 +290,12 @@ struct MapStyle
     bool lineLegend = false;
     // The fewest exits that make a room an interchange, as Edges::StationRings draws one; 0 for none
     int interchangeExits = 0;
+    // Each room built as EnvironmentKit picks for its environment, a room with rooms straight above it a building of
+    // that many storeys, all standing on a wooden board under the viewed level
+    bool environmentKits = false;
+    // With environmentKits, how strongly the viewed level's exits also show as a faint line over the paving, grass
+    // and water that would otherwise hide the paths inlaid in the board; 0 for not at all
+    float pavedPathStrength = 0.0f;
     // Room names and map labels drawn with a rim of the background around them, so that lines under them do not
     // run through the text
     bool labelHalos = false;
@@ -310,6 +342,12 @@ struct MapStyle
     qreal roomNameSpan(qreal nameWidth, qreal spaceWidth) const;
     // roomSymbolColor is the room's own, invalid unless one was set; drawnRoomColor is roomColor()'s
     QColor symbolColor(const QColor& roomSymbolColor, const QColor& drawnRoomColor) const;
+    // Whether text or a symbol in this color would read on a tag of this one, for mapLabelPlate, symbolPlate and
+    // roomNameHalo
+    static bool readsOnPlate(const QColor& color, const QColor& plate);
+    // The rim round a room's name in this color: roomNameHalo, else black or white where the name would not read on
+    // it, so that a script's light color still shows on a light board; invalid for none of them
+    QColor roomNameHaloFor(const QColor& nameColor) const;
     QColor exitColor(const QColor& profileExitColor) const;
     QColor roomIdColor(const QColor& drawnRoomColor) const;
     // roomBorderColor is the room's own, invalid unless one was set; drawnRoomColor is roomColor()'s

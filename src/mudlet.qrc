@@ -252,6 +252,8 @@
         <file>packages/run-tests/run-tests.mpackage</file>
         <file>shaders/vertex.glsl</file>
         <file>shaders/fragment.glsl</file>
+        <file>shaders/tiltshift-fragment.glsl</file>
+        <file>shaders/tiltshift-vertex.glsl</file>
         <file>shaders/bloom_vertex.glsl</file>
         <file>shaders/bloom_fragment.glsl</file>
         <file>packages/mudlet-tutorial/mudlet-tutorial.mpackage</file>
