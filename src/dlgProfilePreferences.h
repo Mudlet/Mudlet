@@ -240,8 +240,10 @@ private slots:
     void slot_borderSizeChanged(int size);
     void slot_gridSizeChanged(double size);
     void slot_displayFontChanged();
+    void slot_dictionaryPicked(const int index);
     void slot_displayFontSizeChanged();
     void slot_displayFontAliasingChanged();
+    void slot_hostDisplayFontChanged(const QFont&);
     void slot_changeShowTabConnectionIndicators(bool state);
     void slot_crashReportPolicyChanged(int index);
     // Named rather than lambdas so initWithHost() can connect them with Qt::UniqueConnection
@@ -304,9 +306,11 @@ private:
     void loadMap(const QString&);
     void fillOutMapHistory();
     bool updateDisplayFont(Host::DisplayFontChange change);
+    void rememberDisplayFontFamilyShown();
     void cancelShortcutCaptures();
     void updateShortcutConflictWarning();
     void switchEditorTheme(const QString& themeName);
+    static QString dictionaryDisplayName(const QString&);
     static QString findThemeCounterpart(const QString& themeName, const QComboBox* themeComboBox, bool toDark);
 
     // The sidebar-and-cards shell that replaces the .ui file's tab widget
@@ -408,6 +412,9 @@ private:
     void maybeDownloadEditorThemes();
 
     QPointer<Host> mpHost;
+    // The family the display font list was last set to while the font database had it, so that
+    // the list moving off it as it leaves the database is not taken for the user's choice
+    QString mDisplayFontFamilyShown;
     QPointer<QTemporaryFile> tempThemesArchive;
     QMap<QString, QString> mSearchEngineMap;
     QPointer<QMenu> mpMenu;

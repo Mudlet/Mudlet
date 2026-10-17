@@ -215,7 +215,9 @@ end
 -- gauge's fill table rather than closing over its numbers, so that a new value
 -- costs a layout pass and not a fresh set of constraints. Only the back label's
 -- spacing is compensated for: Qt lays the front label's own border and padding
--- outside its content area, and setStyleSheet strips its margins.
+-- outside its content area, and setStyleSheet strips its margins. The lengths
+-- stay fractional: rounding them here as well as at the edges would leave a
+-- full front a pixel off the back it covers.
 local function setFrontConstraints(gauge)
   local fill = gauge.frontFill
   local front = gauge.front
@@ -227,35 +229,35 @@ local function setFrontConstraints(gauge)
     front.x = function() return fill.left end
     front.y = function() return fill.top end
     front.width = function()
-      return math.floor((gauge.back.get_width() - fill.left - fill.right) * (fill.value / 100) + 0.5)
+      return (gauge.back.get_width() - fill.left - fill.right) * (fill.value / 100)
     end
-    front.height = function() return math.floor(gauge.back.get_height() - fill.top - fill.bottom + 0.5) end
+    front.height = function() return gauge.back.get_height() - fill.top - fill.bottom end
   elseif orientation == "vertical" then
     -- bottom to top, so an emptier gauge starts further down
     front.x = function() return fill.left end
     front.y = function()
-      return fill.top + math.floor((gauge.back.get_height() - fill.top - fill.bottom) * (1 - fill.value / 100) + 0.5)
+      return fill.top + (gauge.back.get_height() - fill.top - fill.bottom) * (1 - fill.value / 100)
     end
-    front.width = function() return math.floor(gauge.back.get_width() - fill.left - fill.right + 0.5) end
+    front.width = function() return gauge.back.get_width() - fill.left - fill.right end
     front.height = function()
-      return math.floor((gauge.back.get_height() - fill.top - fill.bottom) * (fill.value / 100) + 0.5)
+      return (gauge.back.get_height() - fill.top - fill.bottom) * (fill.value / 100)
     end
   elseif orientation == "goofy" then
     -- right to left, so an emptier gauge starts further right
     front.x = function()
-      return fill.left + math.floor((gauge.back.get_width() - fill.left - fill.right) * (1 - fill.value / 100) + 0.5)
+      return fill.left + (gauge.back.get_width() - fill.left - fill.right) * (1 - fill.value / 100)
     end
     front.y = function() return fill.top end
     front.width = function()
-      return math.floor((gauge.back.get_width() - fill.left - fill.right) * (fill.value / 100) + 0.5)
+      return (gauge.back.get_width() - fill.left - fill.right) * (fill.value / 100)
     end
-    front.height = function() return math.floor(gauge.back.get_height() - fill.top - fill.bottom + 0.5) end
+    front.height = function() return gauge.back.get_height() - fill.top - fill.bottom end
   else -- batty (top to bottom), and anything the gauge cannot make sense of
     front.x = function() return fill.left end
     front.y = function() return fill.top end
-    front.width = function() return math.floor(gauge.back.get_width() - fill.left - fill.right + 0.5) end
+    front.width = function() return gauge.back.get_width() - fill.left - fill.right end
     front.height = function()
-      return math.floor((gauge.back.get_height() - fill.top - fill.bottom) * (fill.value / 100) + 0.5)
+      return (gauge.back.get_height() - fill.top - fill.bottom) * (fill.value / 100)
     end
   end
 
@@ -339,7 +341,8 @@ function Geyser.Gauge:setValue (currentValue, maxValue, text)
   elseif spaced or (filled and not resizesInPlace(fill, front)) then
     front:reposition()
   elseif filled then
-    resizeWindow(front.name, front:get_width(), front:get_height())
+    local _, _, width, height = front:pixel_geometry()
+    resizeWindow(front.name, width, height)
   end
 
   if text then
@@ -517,6 +520,17 @@ function Geyser.Gauge:new (cons, container)
   cons = cons or {}
   cons.type = cons.type or "gauge"
 
+  -- the gauge's labels are made only once the gauge is in its container, too late to stop there
+  if cons.name then
+    for _, suffix in ipairs({"_back", "_front", "_text"}) do
+      local taken = mudlet.nameTakenByOtherKind(cons.name .. suffix, "label", cons.windowname or (container or Geyser).windowname)
+      if taken then
+        printError(string.format("Geyser.Gauge '%s' was not created: %s", cons.name, taken), false, false)
+        return nil, taken
+      end
+    end
+  end
+
   -- Call parent's constructor
   local me = self.parent:new(cons, container)
 
@@ -594,6 +608,5 @@ end
 function Geyser.Gauge:new2 (cons, container)
   cons = cons or {}
   cons.useAdd2 = true
-  local me = self:new(cons, container)
-  return me
+  return self:new(cons, container)
 end
