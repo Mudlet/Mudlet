@@ -2704,7 +2704,7 @@ describe("Tests DB.lua functions", function()
         })
       end)
       assert.is_false(ok)
-      assert.is_true(string.find(err, "_validations must be one of", 1, true) ~= nil)
+      assert.is_true(string.find(err, "_violations must be one of", 1, true) ~= nil)
     end)
 
     it("errors on a non-string _violations option", function()
@@ -2714,7 +2714,7 @@ describe("Tests DB.lua functions", function()
         })
       end)
       assert.is_false(ok)
-      assert.is_true(string.find(err, "_validations must be a string", 1, true) ~= nil)
+      assert.is_true(string.find(err, "_violations must be a string", 1, true) ~= nil)
     end)
 
     it("errors on a malformed _unique constraint", function()
@@ -2771,6 +2771,143 @@ describe("Tests DB.lua functions", function()
 
 end)
 
+describe("Tests db:add, db:update and db:set on a NUL byte", function()
+  local dbName = "nulbytetestingonly"
+  local dbFile = getMudletHomeDir() .. "/Database_" .. dbName .. ".db"
+
+  local function collectingWarnings(fn)
+    local collected = {}
+    -- through _G: a spec file's globals are its own
+    local originalPrintError = _G.printError
+    _G.printError = function(msg) collected[#collected + 1] = msg end
+    finally(function() _G.printError = originalPrintError end)
+
+    local result, message = fn()
+    _G.printError = originalPrintError
+    return result, table.concat(collected, "\n"), message
+  end
+
+  after_each(function()
+    if not pcall(function() db:close(dbName) end) then
+      db.__conn[dbName] = nil
+    end
+    os.remove(dbFile)
+  end)
+
+  describe("a NUL byte in a value", function()
+    local mydb
+
+    before_each(function()
+      mydb = db:create(dbName, {items = {tag = "", payload = "", n = 0}})
+      db:add(mydb.items, {tag = "plain", payload = "ab"}, {tag = "other", payload = "cd"})
+    end)
+
+    local function payloads()
+      local seen = {}
+      for _, row in ipairs(db:fetch(mydb.items, nil, {mydb.items.tag})) do
+        seen[#seen + 1] = row.tag .. "=" .. row.payload
+      end
+      return table.concat(seen, ",")
+    end
+
+    it("is refused by db:add, naming the column, and the row is not added", function()
+      local added, warnings, message = collectingWarnings(function()
+        return db:add(mydb.items, {tag = "nul", payload = "a\0b"})
+      end)
+      assert.is_nil(added)
+      assert.is_truthy(string.find(message, 'can not add to items: the value for "payload" holds a NUL byte', 1, true))
+      assert.are.equal(message, warnings)
+      assert.are.equal("other=cd,plain=ab", payloads())
+    end)
+
+    it("is refused by db:add before any of the rows given with it is added", function()
+      local added, _, message = collectingWarnings(function()
+        return db:add(mydb.items, {tag = "first", payload = "ok"}, {tag = "nul", payload = "a\0b"})
+      end)
+      assert.is_nil(added)
+      assert.is_truthy(string.find(message, 'the value for "payload" holds a NUL byte', 1, true))
+      -- a later write commits whatever the refused db:add left pending
+      assert.is_true(db:add(mydb.items, {tag = "zlast", payload = "ef"}))
+      assert.are.equal("other=cd,plain=ab,zlast=ef", payloads())
+    end)
+
+    it("is refused by db:update before any row is touched", function()
+      local row = db:fetch(mydb.items, db:eq(mydb.items.tag, "plain"))[1]
+      row.payload = "c\0d"
+      local ok, err = pcall(db.update, db, mydb.items, row)
+      assert.is_false(ok)
+      assert.is_truthy(string.find(err, 'can not update items: the value for "payload" holds a NUL byte', 1, true))
+      assert.are.equal("other=cd,plain=ab", payloads())
+    end)
+
+    it("is not refused by db:update for a field of the row's that is not a column", function()
+      local row = db:fetch(mydb.items, db:eq(mydb.items.tag, "plain"))[1]
+      row.payload = "ef"
+      row.raw = "a\0b"
+      db:update(mydb.items, row)
+      assert.are.equal("other=cd,plain=ef", payloads())
+    end)
+
+    it("is refused by db:set, in the value or in the query, before any row is touched", function()
+      local ok, err = pcall(db.set, db, mydb.items.payload, "x\0y", db:eq(mydb.items.tag, "plain"))
+      assert.is_false(ok)
+      assert.is_truthy(string.find(err, 'can not set a field in items: the value for "payload" holds a NUL byte', 1, true))
+
+      ok, err = pcall(db.set, db, mydb.items.payload, "x", db:eq(mydb.items.tag, "pla\0in"))
+      assert.is_false(ok)
+      assert.is_truthy(string.find(err, "can not set a field in items: the query holds a NUL byte", 1, true))
+      assert.are.equal("other=cd,plain=ab", payloads())
+    end)
+
+    it("is refused in a db:exp() given to db:set or db:add, before any row is touched", function()
+      local ok, err = pcall(db.set, db, mydb.items.payload, db:exp("'x\0' || payload"), db:eq(mydb.items.tag, "plain"))
+      assert.is_false(ok)
+      assert.is_truthy(string.find(err, 'can not set a field in items: the value for "payload" holds a NUL byte', 1, true))
+
+      local added, _, message = collectingWarnings(function()
+        return db:add(mydb.items, {tag = "nul", payload = db:exp("'x\0y'")})
+      end)
+      assert.is_nil(added)
+      assert.is_truthy(string.find(message, 'can not add to items: the value for "payload" holds a NUL byte', 1, true))
+      assert.are.equal("other=cd,plain=ab", payloads())
+    end)
+
+    it("does not stop db:set or db:add taking a db:exp() of a number", function()
+      db:set(mydb.items.n, db:exp(7), db:eq(mydb.items.tag, "plain"))
+      assert.is_true(db:add(mydb.items, {tag = "exp", payload = "ef", n = db:exp(5)}))
+      db:set(mydb.items.payload, "gh", db:exp(1))
+      local ns = {}
+      for _, row in ipairs(db:fetch(mydb.items, nil, {mydb.items.tag})) do
+        ns[#ns + 1] = row.tag .. "=" .. row.payload .. "/" .. row.n
+      end
+      assert.are.equal("exp=gh/5,other=gh/0,plain=gh/7", table.concat(ns, ","))
+    end)
+
+    it("is not refused by db:add for a _row_id, which db:add does not write", function()
+      assert.is_true(db:add(mydb.items, {tag = "rowid", payload = "ef", _row_id = "1\0"}))
+      assert.are.equal("other=cd,plain=ab,rowid=ef", payloads())
+    end)
+
+    it("is refused by db:set and db:update before the statement is echoed", function()
+      local echoed = 0
+      local originalEchoSql = db.echo_sql
+      db.echo_sql = function() echoed = echoed + 1 end
+      finally(function() db.echo_sql = originalEchoSql end)
+
+      local row = db:fetch(mydb.items, db:eq(mydb.items.tag, "plain"))[1]
+      echoed = 0
+      row.payload = "c\0d"
+      local ok, err = pcall(db.update, db, mydb.items, row)
+      assert.is_false(ok)
+      assert.is_truthy(string.find(err, "holds a NUL byte", 1, true))
+      ok, err = pcall(db.set, db, mydb.items.payload, "x\0y", db:eq(mydb.items.tag, "plain"))
+      assert.is_false(ok)
+      assert.is_truthy(string.find(err, "holds a NUL byte", 1, true))
+      assert.are.equal(0, echoed)
+    end)
+  end)
+end)
+
 describe("Tests db:echo_sql", function()
   local saved
 
@@ -2801,6 +2938,60 @@ describe("Tests db:echo_sql", function()
 
   it("is silent by default", function()
     assert.is_falsy(saved)
+  end)
+end)
+
+describe("Tests db:fetch sorting by a column called desc or asc", function()
+  local dbName = "sortdesctestingonly"
+  local dbFile = getMudletHomeDir() .. "/Database_" .. dbName .. ".db"
+
+  after_each(function()
+    if not pcall(function() db:close(dbName) end) then
+      db.__conn[dbName] = nil
+    end
+    os.remove(dbFile)
+  end)
+
+  local function createSheet()
+    local collected = {}
+    -- through _G: a spec file's globals are its own
+    local originalPrintError = _G.printError
+    _G.printError = function(msg) collected[#collected + 1] = msg end
+    finally(function() _G.printError = originalPrintError end)
+
+    local mydb = db:create(dbName, {notes = {name = "", desc = "", Asc = ""}})
+    _G.printError = originalPrintError
+    assert.are.equal("", table.concat(collected, "\n"))
+    db:add(mydb.notes, {name = "a", desc = "2", Asc = "2"}, {name = "a", desc = "1", Asc = "1"},
+      {name = "b", desc = "0", Asc = "0"})
+    return mydb
+  end
+
+  local function order(rows, column)
+    local seen = {}
+    for _, row in ipairs(rows) do
+      seen[#seen + 1] = row.name .. "/" .. row[column]
+    end
+    return table.concat(seen, ",")
+  end
+
+  it("sorts by a column called desc rather than reading it as a sort direction", function()
+    local mydb = createSheet()
+    assert.are.equal("a/1,a/2,b/0", order(db:fetch(mydb.notes, nil, {mydb.notes.name, mydb.notes.desc}), "desc"))
+    assert.are.equal("b/0,a/2,a/1", order(db:fetch(mydb.notes, nil, {mydb.notes.name, mydb.notes.desc}, true), "desc"))
+  end)
+
+  it("sorts by a column called asc, whatever its case", function()
+    local mydb = createSheet()
+    assert.are.equal("a/1,a/2,b/0", order(db:fetch(mydb.notes, nil, {mydb.notes.name, mydb.notes.Asc}), "Asc"))
+    assert.are.equal("b/0,a/2,a/1", order(db:fetch(mydb.notes, nil, {mydb.notes.name, mydb.notes.Asc}, true), "Asc"))
+  end)
+
+  it("refuses a field name that is not a string", function()
+    local mydb = createSheet()
+    local ok, err = pcall(db.fetch, db, mydb.notes, nil, {{name = 5}})
+    assert.is_false(ok)
+    assert.is_truthy(string.find(err, "Column names must be strings, not number", 1, true))
   end)
 end)
 
@@ -2842,10 +3033,11 @@ describe("Tests db's internal SQL helpers", function()
   end)
 
   describe("Tests db:_sql_convert", function()
-    it("double quotes a string default and doubles up single quotes in it", function()
-      assert.are.equal('""', db:_sql_convert(""))
-      assert.are.equal('"plain"', db:_sql_convert("plain"))
-      assert.are.equal([["it''s"]], db:_sql_convert("it's"))
+    it("single quotes a string default and doubles up single quotes in it", function()
+      assert.are.equal("''", db:_sql_convert(""))
+      assert.are.equal("'plain'", db:_sql_convert("plain"))
+      assert.are.equal([['it''s']], db:_sql_convert("it's"))
+      assert.are.equal([['say "hi"']], db:_sql_convert('say "hi"'))
     end)
 
     it("renders nil and db:Null as the NULL keyword", function()
@@ -2923,11 +3115,10 @@ describe("Tests db's internal SQL helpers", function()
       assert.are.equal('"name","city"', db:_sql_columns({"name", "City"}))
     end)
 
-    it("attaches a sort direction to the column before it instead of quoting it", function()
-      -- db:fetch appends "DESC" as its own list entry, so it must not come out
-      -- as a column name of its own
-      assert.are.equal('"name" DESC', db:_sql_columns({"name", "DESC"}))
-      assert.are.equal('"name" asc,"city" desc', db:_sql_columns({"name", "asc", "city", "desc"}))
+    it("quotes a column called desc or asc as the column name it is", function()
+      -- a sheet is allowed a column of either name, and an index takes no sort direction
+      assert.are.equal('"name","desc"', db:_sql_columns({"name", "DESC"}))
+      assert.are.equal('"name","asc","city","desc"', db:_sql_columns({"name", "asc", "city", "desc"}))
     end)
 
     it("refuses anything that is not a string or a table", function()
@@ -2942,9 +3133,7 @@ describe("Tests db's internal SQL helpers", function()
       assert.is_truthy(string.find(err, "Column names must be strings, not number", 1, true))
     end)
 
-    it("quotes a leading sort direction as the column name it has to be", function()
-      -- there is no column in front of it to attach it to, and a sheet is
-      -- allowed a column called desc
+    it("quotes a leading desc or asc as a column name too", function()
       assert.are.equal('"desc"', db:_sql_columns({"desc"}))
       assert.are.equal('"asc","name"', db:_sql_columns({"asc", "name"}))
     end)
@@ -3026,14 +3215,14 @@ describe("Tests db's internal SQL helpers", function()
     it("rejects an option it does not know and says what it wanted", function()
       local valid, msg = db:_validate_validations("NONSENSE")
       assert.is_false(valid)
-      assert.is_truthy(string.find(msg, "_validations must be one of", 1, true))
+      assert.is_truthy(string.find(msg, "_violations must be one of", 1, true))
       assert.is_truthy(string.find(msg, "NONSENSE", 1, true))
     end)
 
     it("rejects a non-string and names the type it got", function()
       local valid, msg = db:_validate_validations(42)
       assert.is_false(valid)
-      assert.are.equal("_validations must be a string. Received number", msg)
+      assert.are.equal("_violations must be a string. Received number", msg)
     end)
 
     it("is case sensitive", function()
@@ -3224,7 +3413,7 @@ describe("Tests db's internal SQL helpers", function()
   describe("Tests db:_build_create_table_sql", function()
     it("always gives the sheet an autoincrementing _row_id", function()
       local sql = db:_build_create_table_sql({columns = {name = ""}, options = {}}, "people")
-      assert.are.equal('CREATE TABLE people ("_row_id" INTEGER PRIMARY KEY AUTOINCREMENT, "name" TEXT NULL DEFAULT "")', sql)
+      assert.are.equal([[CREATE TABLE people ("_row_id" INTEGER PRIMARY KEY AUTOINCREMENT, "name" TEXT NULL DEFAULT '')]], sql)
     end)
 
     it("types a column from its default value", function()
@@ -3234,7 +3423,7 @@ describe("Tests db's internal SQL helpers", function()
 
     it("adds a column level unique constraint for a single unique column", function()
       local sql = db:_build_create_table_sql({columns = {name = ""}, options = {_unique = "name"}}, "people")
-      assert.is_truthy(string.find(sql, '"name" TEXT NULL DEFAULT "" UNIQUE ON CONFLICT FAIL', 1, true))
+      assert.is_truthy(string.find(sql, [["name" TEXT NULL DEFAULT '' UNIQUE ON CONFLICT FAIL]], 1, true))
     end)
 
     it("accepts the unique column as a one entry list too", function()
@@ -3527,7 +3716,7 @@ describe("Tests db's internals against a real database", function()
 
       schema.options._unique = {"name"}
       local legacy = db:_build_create_table_sql(schema, "people"):gsub(" ON CONFLICT %u+", "")
-      assert.is_truthy(string.find(legacy, '"name" TEXT NULL DEFAULT "" UNIQUE', 1, true))
+      assert.is_truthy(string.find(legacy, [["name" TEXT NULL DEFAULT '' UNIQUE]], 1, true))
       conn:execute("DROP TABLE people")
       conn:execute(legacy)
       conn:commit()
@@ -3647,6 +3836,101 @@ describe("Tests db's internals against a real database", function()
   end)
 end)
 
+describe("Tests db:create on underscored keys that are not sheet options", function()
+  local dbName = "sheetoptionstestingonly"
+  local dbFile = getMudletHomeDir() .. "/Database_" .. dbName .. ".db"
+
+  local function collectingWarnings(fn)
+    local collected = {}
+    -- through _G: a spec file's globals are its own
+    local originalPrintError = _G.printError
+    _G.printError = function(msg) collected[#collected + 1] = msg end
+    finally(function() _G.printError = originalPrintError end)
+
+    local result = fn()
+    _G.printError = originalPrintError
+    return result, table.concat(collected, "\n")
+  end
+
+  local function createCollectingWarnings(sheets)
+    return collectingWarnings(function() return db:create(dbName, sheets) end)
+  end
+
+  after_each(function()
+    if not pcall(function() db:close(dbName) end) then
+      db.__conn[dbName] = nil
+    end
+    os.remove(dbFile)
+  end)
+
+  it("warns about an underscored key that is not a sheet option, in either form of sheet", function()
+    local mydb, warnings = createCollectingWarnings({
+      people = {name = "", _indexes = {"name"}},
+      places = {"name", _uniqe = {"name"}},
+    })
+    assert.is_table(mydb)
+    assert.is_truthy(string.find(warnings, 'db:create - people - "_indexes" is not a sheet option', 1, true))
+    assert.is_truthy(string.find(warnings, 'db:create - places - "_uniqe" is not a sheet option', 1, true))
+    assert.is_true(db:add(mydb.people, {name = "Bob"}))
+    assert.is_true(db:add(mydb.places, {name = "Lancre"}))
+  end)
+
+  it("says nothing about the sheet options it knows", function()
+    local _, warnings = createCollectingWarnings({
+      people = {name = "", city = "", _index = {"city"}, _unique = {"name"}, _violations = "IGNORE"},
+    })
+    assert.are.equal("", warnings)
+  end)
+
+  it("says nothing about the sheet options it knows in a sheet given as a list", function()
+    local _, warnings = createCollectingWarnings({
+      people = {"name", "city", _index = "city", _unique = "name", _violations = "IGNORE"},
+    })
+    assert.are.equal("", warnings)
+  end)
+
+  it("ignores the key it warns about", function()
+    local mydb, warnings = createCollectingWarnings({
+      people = {name = "", _indexes = {"name"}},
+      places = {"name", _uniqe = {"name"}},
+    })
+    -- db:create warns sheet by sheet in pairs() order, which the spec must not rely on
+    local _, lines = warnings:gsub("is not a sheet option", "")
+    assert.are.equal(2, lines)
+    assert.is_truthy(string.find(warnings,
+      'db:create - people - "_indexes" is not a sheet option (those are _index, _unique and _violations): it is ignored.', 1, true))
+    assert.is_truthy(string.find(warnings,
+      'db:create - places - "_uniqe" is not a sheet option (those are _index, _unique and _violations): it is ignored.', 1, true))
+    assert.is_true(db:add(mydb.places, {name = "Lancre"}))
+    assert.is_true(db:add(mydb.places, {name = "Lancre"}))
+    assert.are.equal(2, #db:fetch(mydb.places))
+
+    local cursor = db.__conn[dbName]:execute("SELECT name FROM sqlite_master WHERE type = 'index' AND tbl_name = 'people'")
+    local index = cursor:fetch()
+    cursor:close()
+    assert.is_nil(index)
+  end)
+
+  it("warns about each unknown key in order, telling a capitalised option from the real one", function()
+    local _, warnings = createCollectingWarnings({
+      people = {name = "", _zeta = 1, _UNIQUE = {"name"}, _alpha = 2, _Index = {"name"}},
+    })
+    local named = {}
+    for key in warnings:gmatch('"(_%w+)" is not a sheet option') do
+      named[#named + 1] = key
+    end
+    assert.are.same({"_Index", "_UNIQUE", "_alpha", "_zeta"}, named)
+  end)
+
+  it("names _violations when its value is refused, the key the unknown-key warning sends the user back to", function()
+    local ok, err = pcall(function()
+      return createCollectingWarnings({people = {name = "", _unique = {"name"}, _violations = "SKIP"}})
+    end)
+    assert.is_false(ok)
+    assert.is_truthy(string.find(err, "_violations must be one of", 1, true))
+  end)
+end)
+
 -- _index takes a single column name as well as a list of them, exactly as
 -- _unique does. db:_index_name, db:_index_valid and db.Database:_drop each take
 -- either shape, but db:_drop_orphaned_indexes walks _index with ipairs, so what
@@ -3669,6 +3953,18 @@ describe("Tests db:create with a single column name as _index", function()
     cursor:close()
     table.sort(names)
     return names
+  end
+
+  local function indexColumns(indexName)
+    local cursor = db.__conn[dbName]:execute("PRAGMA index_info(" .. indexName .. ")")
+    local columns = {}
+    local row = cursor:fetch({}, "a")
+    while row do
+      columns[tonumber(row.seqno) + 1] = row.name
+      row = cursor:fetch({}, "a")
+    end
+    cursor:close()
+    return columns
   end
 
   after_each(function()
@@ -3824,30 +4120,178 @@ describe("Tests db:create with a single column name as _index", function()
   end)
 
   it("warns about a sort direction where a column name belongs", function()
-    -- db:_sql_columns would render "name" desc, but db:_index_valid refuses the
-    -- entry, so an index with a sort direction has never been created: saying so
-    -- beats leaving the sheet with no index and no complaint
+    -- an index with a sort direction has never been created: saying so beats
+    -- leaving the sheet with no index and no complaint
     local mydb, warnings = createCollectingWarnings({people = {name = "", city = "", _index = {{"name", "desc"}}}})
     assert.is_table(mydb)
     assert.is_truthy(string.find(warnings, "an index takes column names only, not a sort direction", 1, true))
     assert.are.same({}, indexNames("people"))
 
-    -- a sheet that really has a column of that name is not warned about; what
-    -- db:_sql_columns then makes of it is that function's business
+    -- a sheet that really has a column of that name is not warned about, and
+    -- gets the compound index it asked for
     local other, otherWarnings = createCollectingWarnings({people = {name = "", desc = "", _index = {{"name", "desc"}}}})
     assert.is_table(other)
     assert.are.equal("", otherWarnings)
+    assert.are.same({"name", "desc"}, indexColumns(db:_index_name("people", {"name", "desc"})))
+
+    local _, ascWarnings = createCollectingWarnings({people = {name = "", asc = "", _index = {{"name", "asc"}}}})
+    assert.are.equal("", ascWarnings)
+    assert.are.same({"name", "asc"}, indexColumns(db:_index_name("people", {"name", "asc"})))
+  end)
+
+  it("rebuilds the one-column index an older Mudlet made for a column called desc", function()
+    db:create(dbName, {people = {name = "", desc = ""}})
+    db.__conn[dbName]:execute('CREATE INDEX ' .. db:_index_name("people", {"name", "desc"}) .. ' ON people ("name" desc)')
+    -- db:create turns autocommit off, and db:close would roll the index back
+    db.__conn[dbName]:commit()
+    assert.are.same({"name"}, indexColumns(db:_index_name("people", {"name", "desc"})))
+    db:close(dbName)
+
+    db:create(dbName, {people = {name = "", desc = "", _index = {{"name", "desc"}}}})
+    assert.are.same({"name", "desc"}, indexColumns(db:_index_name("people", {"name", "desc"})))
   end)
 
   it("warns about the _row_id no sheet definition names either", function()
     -- the sheet is given one, but no definition declares it: it is not there to
-    -- index on the db:create that makes the sheet, and db:_drop_orphaned_indexes
-    -- cannot match the leading underscore, so an index on it was dropped and
-    -- made again on every db:create after that
+    -- index on the db:create that makes the sheet
     local mydb, warnings = createCollectingWarnings({people = {name = "", city = "", _index = "_row_id"}})
     assert.is_table(mydb)
     assert.is_truthy(string.find(warnings, '_index names "_row_id"', 1, true))
     assert.are.same({}, indexNames("people"))
+  end)
+end)
+
+describe("Tests db:create keeping indexes on underscored column names", function()
+  local dbName = "underscoreindextestingonly"
+  local dbFile = getMudletHomeDir() .. "/Database_" .. dbName .. ".db"
+
+  local function collectingWarnings(fn)
+    local collected = {}
+    -- through _G: a spec file's globals are its own
+    local originalPrintError = _G.printError
+    _G.printError = function(msg) collected[#collected + 1] = msg end
+    finally(function() _G.printError = originalPrintError end)
+
+    local result = fn()
+    _G.printError = originalPrintError
+    return result, table.concat(collected, "\n")
+  end
+
+  local function createCollectingWarnings(sheets)
+    return collectingWarnings(function() return db:create(dbName, sheets) end)
+  end
+
+  after_each(function()
+    if not pcall(function() db:close(dbName) end) then
+      db.__conn[dbName] = nil
+    end
+    os.remove(dbFile)
+  end)
+
+  local function indexNames(sheetName)
+    local cursor = db.__conn[dbName]:execute(
+      "SELECT name FROM sqlite_master WHERE type = 'index' AND tbl_name = '" .. sheetName .. "' AND sql IS NOT NULL"
+    )
+    local names = {}
+    local row = cursor:fetch({}, "a")
+    while row do
+      names[#names + 1] = row.name
+      row = cursor:fetch({}, "a")
+    end
+    cursor:close()
+    table.sort(names)
+    return names
+  end
+
+  -- the DROP INDEX statements a db:create runs; through pcall rather than
+  -- finally, as busted keeps only the last finally an it registers
+  local function dropsOnCreate(sheets)
+    local drops = {}
+    local originalEchoSql = db.echo_sql
+    db.echo_sql = function(_, sql)
+      if string.find(sql, "DROP INDEX", 1, true) then
+        drops[#drops + 1] = sql
+      end
+    end
+    local ok, result = pcall(db.create, db, dbName, sheets)
+    db.echo_sql = originalEchoSql
+    assert(ok, result)
+    assert.is_table(result)
+    return drops
+  end
+
+  local function createWithoutWarnings(sheets)
+    local mydb, warnings = createCollectingWarnings(sheets)
+    assert.is_table(mydb)
+    assert.are.equal("", warnings)
+  end
+
+  it("leaves an index on a column with an underscore in its name alone on the next create", function()
+    local sheets = {people = {home_city = "", name = "", _index = {"home_city", {"name", "home_city"}}}}
+    local expected = {"idx_people_c_home_city", "idx_people_c_name_home_city"}
+    createWithoutWarnings(sheets)
+    assert.are.same(expected, indexNames("people"))
+
+    assert.are.same({}, dropsOnCreate(sheets))
+    assert.are.same(expected, indexNames("people"))
+  end)
+
+  it("drops an index on an underscored column once the sheet no longer asks for it", function()
+    createWithoutWarnings({people = {home_city = "", name = "", _index = {"name", {"name", "home_city"}}}})
+
+    assert.are.same({"DROP INDEX IF EXISTS idx_people_c_name_home_city;"},
+      dropsOnCreate({people = {home_city = "", name = "", _index = {"name"}}}))
+    assert.are.same({"idx_people_c_name"}, indexNames("people"))
+  end)
+
+  it("keeps and drops an index on a column named with letters outside ASCII the same way", function()
+    local sheets = {people = {["città"] = "", other = "", _index = {"città"}}}
+    createWithoutWarnings(sheets)
+    assert.are.same({}, dropsOnCreate(sheets))
+
+    assert.are.same({"DROP INDEX IF EXISTS idx_people_c_città;"},
+      dropsOnCreate({people = {["città"] = "", other = "", _index = {"other"}}}))
+    assert.are.same({"idx_people_c_other"}, indexNames("people"))
+  end)
+
+  it("leaves a compound index whose second column is named desc alone on the next create", function()
+    -- db:_sql_columns renders {"name", "desc"} as "name" desc, a sort direction
+    local sheets = {people = {name = "", desc = "", _index = {{"name", "desc"}}}}
+    createWithoutWarnings(sheets)
+    assert.are.same({"idx_people_c_name_desc"}, indexNames("people"))
+
+    assert.are.same({}, dropsOnCreate(sheets))
+  end)
+
+  it("drops an index once the sheet asks for its column sorted the other way", function()
+    local ascending = {people = {name = "", desc = "", _index = {"name"}}}
+    local descending = {people = {name = "", desc = "", _index = {{"name", "desc"}}}}
+    createWithoutWarnings(ascending)
+
+    assert.are.same({"DROP INDEX IF EXISTS idx_people_c_name;"}, dropsOnCreate(descending))
+    assert.are.same({"idx_people_c_name_desc"}, indexNames("people"))
+
+    assert.are.same({"DROP INDEX IF EXISTS idx_people_c_name_desc;"}, dropsOnCreate(ascending))
+    assert.are.same({"idx_people_c_name"}, indexNames("people"))
+  end)
+
+  it("drops an index on a sheet named with letters outside ASCII once the sheet no longer asks for it", function()
+    createWithoutWarnings({["città"] = {a = "", b = "", _index = {"a"}}})
+
+    assert.are.same({"DROP INDEX IF EXISTS idx_città_c_a;"},
+      dropsOnCreate({["città"] = {a = "", b = "", _index = {"b"}}}))
+    assert.are.same({"idx_città_c_b"}, indexNames("città"))
+  end)
+
+  it("drops an orphaned idx index whether or not its CREATE statement quotes the sheet name", function()
+    local sheets = {people = {name = "", level = 0, _index = {"name"}}}
+    createWithoutWarnings(sheets)
+    db.__conn[dbName]:execute('CREATE INDEX idx_quoted ON "people" ("level")')
+    db.__conn[dbName]:execute('CREATE INDEX idx_unquoted ON people ("level")')
+
+    assert.are.same({"DROP INDEX IF EXISTS idx_quoted;", "DROP INDEX IF EXISTS idx_unquoted;"},
+      dropsOnCreate(sheets))
+    assert.are.same({"idx_people_c_name"}, indexNames("people"))
   end)
 end)
 
@@ -4394,6 +4838,118 @@ describe("Tests db:create with a sheet given as a list of column names", functio
   end)
 end)
 
+describe("Tests db:create on schemas sqlite refuses or reads differently", function()
+  local dbName = "schemareportstestingonly"
+  local dbFile = getMudletHomeDir() .. "/Database_" .. dbName .. ".db"
+
+  local function collectingWarnings(fn)
+    local collected = {}
+    -- through _G: a spec file's globals are its own
+    local originalPrintError = _G.printError
+    _G.printError = function(msg) collected[#collected + 1] = msg end
+    finally(function() _G.printError = originalPrintError end)
+
+    local result = fn()
+    _G.printError = originalPrintError
+    return result, table.concat(collected, "\n")
+  end
+
+  local function createCollectingWarnings(sheets)
+    return collectingWarnings(function() return db:create(dbName, sheets) end)
+  end
+
+  after_each(function()
+    if not pcall(function() db:close(dbName) end) then
+      db.__conn[dbName] = nil
+    end
+    os.remove(dbFile)
+  end)
+
+  it("builds a sheet whose text defaults hold quotes, and stores them as given", function()
+    local mydb, warnings = createCollectingWarnings({people = {tag = "", name = 'say "hi"', city = "it's"}})
+    assert.are.equal("", warnings)
+    assert.is_true(db:add(mydb.people, {tag = "defaults"}))
+    local rows = db:fetch(mydb.people)
+    assert.are.equal(1, #rows)
+    assert.are.equal('say "hi"', rows[1].name)
+    assert.are.equal("it's", rows[1].city)
+  end)
+
+  it("reports a sheet it could not create, and attempts nothing more on it", function()
+    local mydb, warnings = createCollectingWarnings({["my sheet"] = {name = "", _index = {"name"}}})
+    assert.is_table(mydb)
+    assert.is_truthy(string.find(warnings, "db:create - my sheet - could not create the sheet", 1, true))
+    local _, reports = warnings:gsub("db:create %- ", "")
+    assert.are.equal(1, reports, warnings)
+  end)
+
+  it("reports a column it could not add, and still adds the others", function()
+    local mydb = createCollectingWarnings({people = {name = ""}})
+    assert.is_true(db:add(mydb.people, {name = "Bob"}))
+
+    -- sqlite 3.32 and later refuse a non-constant default only on a sheet holding rows.
+    -- "added" sorts first, so a loop that stopped at the refusal would leave out note and city
+    local _, warnings = createCollectingWarnings({people = {name = "", added = db:Timestamp("CURRENT_TIMESTAMP"), note = "", city = ""}})
+    assert.is_truthy(string.find(warnings, 'db:create - people - could not add the column "added"', 1, true))
+    local added = collectingWarnings(function() return db:add(mydb.people, {name = "Ann", note = "n", city = "c"}) end)
+    assert.is_true(added)
+  end)
+
+  it("drops an unused column whose name sqlite needs quoted", function()
+    local mydb = createCollectingWarnings({people = {name = "", ["my col"] = "", order = ""}})
+    assert.is_true(db:add(mydb.people, {name = "Bob", ["my col"] = db:Null(), order = db:Null()}))
+
+    local ok, err = pcall(createCollectingWarnings, {people = {name = ""}})
+    assert.is_true(ok, err)
+    local added, msg = collectingWarnings(function() return db:add(mydb.people, {name = "Ann", order = "x"}) end)
+    assert.is_nil(added)
+    assert.is_truthy(string.find(msg, "no column named order", 1, true))
+    local rows = db:fetch(mydb.people)
+    assert.are.equal(1, #rows)
+    assert.are.equal("Bob", rows[1].name)
+  end)
+
+  it("names the sheet and the query when it cannot read an unused column", function()
+    createCollectingWarnings({people = {name = ""}})
+    -- a name holding a double quote is one the redundant-column check cannot spell
+    local conn = db.__conn[dbName]
+    assert.is_truthy(conn:execute([[ALTER TABLE people ADD COLUMN "a""b" TEXT]]))
+    conn:commit()
+
+    local ok, err = pcall(createCollectingWarnings, {people = {name = ""}})
+    assert.is_false(ok)
+    assert.is_truthy(string.find(err, "db:create - people - could not check the unused columns for data: ", 1, true), err)
+    assert.is_truthy(string.find(err, "SELECT max(", 1, true), err)
+  end)
+
+  it("reports an index it could not create, and carries on", function()
+    local mydb = createCollectingWarnings({people = {name = ""}})
+    -- a table already holding the name db:_index_name gives the index makes sqlite refuse it
+    local conn = db.__conn[dbName]
+    assert.is_truthy(conn:execute("CREATE TABLE idx_people_c_name (x)"))
+    conn:commit()
+
+    local ok, result, warnings = pcall(createCollectingWarnings, {people = {name = "", _index = {"name"}}})
+    assert.is_true(ok, result)
+    assert.is_truthy(string.find(warnings, "db:create - people - could not create an index: ", 1, true))
+    assert.is_truthy(string.find(warnings, "there is already a table named idx_people_c_name", 1, true))
+    assert.is_truthy(string.find(warnings, "CREATE INDEX IF NOT EXISTS idx_people_c_name ON people", 1, true))
+    assert.is_true(db:add(mydb.people, {name = "Bob"}))
+  end)
+
+  it("reads the uniqueness that follows a text default holding a double quote", function()
+    local sql = [[CREATE TABLE people ("_row_id" INTEGER PRIMARY KEY AUTOINCREMENT, "note" TEXT NULL DEFAULT '5" ruler', ]] ..
+      [["name" TEXT NULL DEFAULT '' UNIQUE ON CONFLICT FAIL, "city" TEXT NULL DEFAULT 'it''s')]]
+    assert.are.equal("unique on conflict fail", db:_extract_table_constraints(sql))
+
+    local mydb = createCollectingWarnings({people = {note = '5" ruler', name = "", city = "", _unique = "name"}})
+    assert.is_true(db:add(mydb.people, {name = "Bob"}))
+    mydb = createCollectingWarnings({people = {note = '5" ruler', name = "", city = ""}})
+    local added = collectingWarnings(function() return db:add(mydb.people, {name = "Bob"}) end)
+    assert.is_true(added)
+  end)
+end)
+
 -- db:_closeAll is what db:close() with no name does and what the profile calls
 -- on shutdown, so the rest of this file already leans on it. These specs pin
 -- the two things it reports and the state it leaves behind.
@@ -4460,6 +5016,226 @@ describe("Tests db:_closeAll", function()
     makeDatabases()
     assert.is_true((db:close()))
     assert.is_nil(db.__env)
+  end)
+end)
+
+describe("Tests db:create refusing a migration", function()
+  local dbName = "refusedmigrationtestingonly"
+  local dbFile = getMudletHomeDir() .. "/Database_" .. dbName .. ".db"
+
+  local function createWithoutWarnings(sheets)
+    local collected = {}
+    -- through _G: a spec file's globals are its own
+    local originalPrintError = _G.printError
+    _G.printError = function(msg) collected[#collected + 1] = msg end
+    finally(function() _G.printError = originalPrintError end)
+
+    local result = db:create(dbName, sheets)
+    _G.printError = originalPrintError
+    assert.are.equal("", table.concat(collected, "\n"))
+    return result
+  end
+
+  local function columnsOnDisk(sheetName)
+    local cur = db.__conn[dbName]:execute("SELECT * FROM " .. sheetName .. " LIMIT 0")
+    local names = {}
+    for _, name in ipairs(cur:getcolnames()) do
+      if name ~= "_row_id" then
+        names[#names + 1] = name
+      end
+    end
+    cur:close()
+    table.sort(names)
+    return table.concat(names, ",")
+  end
+
+  after_each(function()
+    local conn = db.__conn[dbName]
+    if not pcall(function() db:close(dbName) end) then
+      pcall(function() conn:close() end)
+      db.__conn[dbName] = nil
+    end
+    db.__schema[dbName] = nil
+    os.remove(dbFile)
+  end)
+
+  it("keeps what the sheets migrated before the refusal gained, and the old columns of the rest", function()
+    local initial = {}
+    for _, sheetName in ipairs({"people", "places", "things"}) do
+      initial[sheetName] = {name = "", city = ""}
+    end
+    local mydb = createWithoutWarnings(initial)
+    for sheetName in pairs(initial) do
+      db:add(mydb[sheetName], {name = "Bob", city = "Lancre"})
+    end
+
+    local sheets = {}
+    for sheetName in pairs(initial) do
+      sheets[sheetName] = {name = "", city = "", seen = db:Timestamp(nil)}
+    end
+    local order = {}
+    for sheetName in pairs(sheets) do
+      order[#order + 1] = sheetName
+    end
+    -- the middle one in db:create's own order refuses, so one sheet migrates first and one is never reached
+    local first, refused, unreached = order[1], order[2], order[3]
+    sheets[refused] = {name = "", seen = db:Timestamp(nil)}
+
+    local ok, err = pcall(db.create, db, dbName, sheets)
+    assert.is_false(ok)
+    assert.is_truthy(string.find(err, "data present in undefined columns: city", 1, true))
+
+    assert.are.equal("city,name,seen", columnsOnDisk(first))
+    assert.is_true(db:add(mydb[first], {name = "Nanny", city = "Lancre", seen = db:Timestamp(1700000000)}))
+    assert.are.equal(1700000000, db:fetch(mydb[first], db:eq(mydb[first].name, "Nanny"))[1].seen._timestamp)
+
+    for _, sheetName in ipairs({refused, unreached}) do
+      assert.are.equal("city,name", columnsOnDisk(sheetName))
+      local rows = db:fetch(mydb[sheetName])
+      assert.are.equal(1, #rows)
+      assert.are.equal("Lancre", rows[1].city)
+      assert.is_true(db:add(mydb[sheetName], {name = "Nanny", city = "Lancre"}))
+      assert.are.equal(2, #db:fetch(mydb[sheetName]))
+    end
+  end)
+
+  it("keeps reading a sheet the refused db:create does not mention", function()
+    local mydb = createWithoutWarnings({people = {name = "", city = ""}, places = {name = ""}})
+    db:add(mydb.people, {name = "Bob", city = "Lancre"})
+    db:add(mydb.places, {name = "Lancre"})
+
+    assert.is_false(pcall(db.create, db, dbName, {people = {name = ""}}))
+
+    assert.are.equal("Lancre", db:fetch(mydb.places)[1].name)
+    assert.are.equal("Lancre", db:fetch(mydb.people)[1].city)
+  end)
+
+  it("keeps reading a sheet after refusing to migrate it in the session's first create", function()
+    local mydb = createWithoutWarnings({people = {name = "", city = ""}, places = {name = ""}})
+    db:add(mydb.people, {name = "Bob", city = "Lancre"})
+    db:add(mydb.places, {name = "Lancre"})
+    db:close(dbName)
+    db.__schema[dbName] = nil
+
+    local ok, err = pcall(db.create, db, dbName, {people = {name = "", town = ""}, places = {name = ""}})
+    assert.is_false(ok)
+    assert.is_truthy(string.find(err, "data present in undefined columns: city", 1, true))
+
+    mydb = db:get_database(dbName)
+    local rows = db:fetch(mydb.people)
+    assert.are.equal(1, #rows)
+    assert.are.equal("Lancre", rows[1].city)
+    assert.is_true(db:add(mydb.people, {name = "Nanny", city = "Lancre"}))
+    assert.are.equal(1, #db:fetch(mydb.places))
+    -- the refused rename never reached the table, so the sheet does not offer it either
+    assert.are.equal("city,name", columnsOnDisk("people"))
+    assert.has_error(function() return mydb.people.town end)
+  end)
+
+  it("reports a sheet whose columns it cannot read back after a refusal", function()
+    local mydb = createWithoutWarnings({people = {name = "", city = ""}})
+    db:add(mydb.people, {name = "Bob", city = "Lancre"})
+    db.__schema[dbName] = nil
+
+    local conn = db.__conn[dbName]
+    db.__conn[dbName] = setmetatable({}, {__index = function(_, method)
+      return function(_, sql, ...)
+        if method == "execute" and sql == "SELECT * FROM people LIMIT 0" then
+          return nil, "refused for the test"
+        end
+        return conn[method](conn, sql, ...)
+      end
+    end})
+    local collected = {}
+    local originalPrintError = _G.printError
+    _G.printError = function(msg) collected[#collected + 1] = msg end
+    finally(function()
+      db.__conn[dbName] = conn
+      _G.printError = originalPrintError
+    end)
+
+    assert.is_false(pcall(db.create, db, dbName, {people = {name = ""}}))
+
+    db.__conn[dbName] = conn
+    _G.printError = originalPrintError
+    assert.is_truthy(string.find(table.concat(collected, "\n"), "refused for the test", 1, true))
+  end)
+
+  it("does not leave a refused migration's statements for the next write to commit", function()
+    local mydb = createWithoutWarnings({people = {name = ""}})
+    db:add(mydb.people, {name = "Bob"})
+    -- a name db:create would never make, so pruning it fails after the new column was added
+    local conn = db.__conn[dbName]
+    assert.is_truthy(conn:execute('CREATE INDEX "odd index" ON people(name)'))
+    conn:commit()
+
+    assert.is_false(pcall(db.create, db, dbName, {people = {name = "", city = ""}}))
+
+    assert.is_true(db:add(mydb.people, {name = "Nanny"}))
+    assert.are.equal(2, #db:fetch(mydb.people))
+    assert.are.equal("name", columnsOnDisk("people"))
+  end)
+
+  it("keeps the writes a transaction has pending when it refuses a migration", function()
+    local mydb = createWithoutWarnings({people = {name = "", city = ""}})
+    db:add(mydb.people, {name = "Bob", city = "Lancre"})
+    assert.is_true(mydb:_begin())
+    db:add(mydb.people, {name = "Nanny", city = "Lancre"})
+
+    assert.is_false(pcall(db.create, db, dbName, {people = {name = ""}}))
+
+    assert.is_true(mydb:_commit())
+    mydb:_end()
+    assert.are.equal(2, #db:fetch(mydb.people))
+  end)
+
+  it("keeps the writes a transaction has pending when it cannot set its savepoint", function()
+    local mydb = createWithoutWarnings({people = {name = "", city = ""}})
+    db:add(mydb.people, {name = "Bob", city = "Lancre"})
+    assert.is_true(mydb:_begin())
+    db:add(mydb.people, {name = "Nanny", city = "Lancre"})
+
+    local conn = db.__conn[dbName]
+    db.__conn[dbName] = setmetatable({}, {__index = function(_, method)
+      return function(_, sql, ...)
+        if method == "execute" and sql == "SAVEPOINT db_create_migrate" then
+          return nil, "refused for the test"
+        end
+        return conn[method](conn, sql, ...)
+      end
+    end})
+    finally(function() db.__conn[dbName] = conn end)
+
+    assert.is_false(pcall(db.create, db, dbName, {people = {name = ""}}))
+
+    db.__conn[dbName] = conn
+    assert.is_true(mydb:_commit())
+    mydb:_end()
+    assert.are.equal(2, #db:fetch(mydb.people))
+  end)
+
+  it("does not leave a refused migration's statements for the next write to commit when it cannot set its savepoint", function()
+    local mydb = createWithoutWarnings({people = {name = ""}})
+    db:add(mydb.people, {name = "Bob"})
+    local conn = db.__conn[dbName]
+    assert.is_truthy(conn:execute('CREATE INDEX "odd index" ON people(name)'))
+    conn:commit()
+
+    db.__conn[dbName] = setmetatable({}, {__index = function(_, method)
+      return function(_, sql, ...)
+        if method == "execute" and sql == "SAVEPOINT db_create_migrate" then
+          return nil, "refused for the test"
+        end
+        return conn[method](conn, sql, ...)
+      end
+    end})
+    finally(function() db.__conn[dbName] = conn end)
+
+    assert.is_false(pcall(db.create, db, dbName, {people = {name = "", city = ""}}))
+
+    db.__conn[dbName] = conn
+    assert.is_true(db:add(mydb.people, {name = "Nanny"}))
+    assert.are.equal("name", columnsOnDisk("people"))
   end)
 end)
 
