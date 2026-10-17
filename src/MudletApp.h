@@ -124,6 +124,8 @@ public:
     // ones provided by the system (false). Settled as a side effect of resolving
     // enums::hunspellDictionaryPath, so it only answers once that has been asked for.
     static bool usingMudletDictionaries();
+    // Looked in, in this order, ahead of the dictionaries bundled with Mudlet
+    static QStringList systemHunspellDictionaryFolders();
 
     // Replaces filesystem-unsafe characters with underscores and bounds the length. A shortened name carries
     // a digest of the whole input, as callers file data (e.g. passwords) under it and must not collide.

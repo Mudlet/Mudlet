@@ -2851,17 +2851,18 @@ void TBuffer::decodeSGR38(const SgrParameters& parameters, bool isColonSeparated
         if (parameters.count() > 2) {
             bool isOk = false;
             tag = parameters.at(2).toInt(&isOk);
-            if (!isOk) {
+            if (!isOk || tag < 0 || tag > 255) {
 #if defined(DEBUG_SGR_PROCESSING)
                 if (isColonSeparated) {
                     qDebug().noquote().nospace() << "TBuffer::decodeSGR38(...) ERROR - failed to parse color index parameter element (the third part) in a SGR...;38:5:" << parameters.at(2)
-                                                 << ":...;...m sequence, leaving the colour as it was!";
+                                                 << ":...;...m sequence, or it is out of range, leaving the colour as it was!";
                 } else {
                     qDebug().noquote().nospace() << "TBuffer::decodeSGR38(...) ERROR - failed to parse color index parameter string (the third part) in a SGR...;38;5;" << parameters.at(2)
-                                                 << ";...m sequence, leaving the colour as it was!";
+                                                 << ";...m sequence, or it is out of range, leaving the colour as it was!";
                 }
 #endif
-                // An index we cannot read is not a request for colour zero:
+                // An index we cannot read is not a request for colour zero, and
+                // xterm ignores any index past the end of the 256-colour palette:
                 return;
             }
         } else {
@@ -3011,17 +3012,18 @@ void TBuffer::decodeSGR48(const SgrParameters& parameters, bool isColonSeparated
         if (parameters.count() > 2) {
             bool isOk = false;
             tag = parameters.at(2).toInt(&isOk);
-            if (!isOk) {
+            if (!isOk || tag < 0 || tag > 255) {
 #if defined(DEBUG_SGR_PROCESSING)
                 if (isColonSeparated) {
                     qDebug().noquote().nospace() << "TBuffer::decodeSGR48(...) ERROR - failed to parse color index parameter element (the third part) in a SGR...;48:5:" << parameters.at(2)
-                                                 << ":...;...m sequence, leaving the colour as it was!";
+                                                 << ":...;...m sequence, or it is out of range, leaving the colour as it was!";
                 } else {
                     qDebug().noquote().nospace() << "TBuffer::decodeSGR48(...) ERROR - failed to parse color index parameter string (the third part) in a SGR...;48;5;" << parameters.at(2)
-                                                 << ";...m sequence, leaving the colour as it was!";
+                                                 << ";...m sequence, or it is out of range, leaving the colour as it was!";
                 }
 #endif
-                // An index we cannot read is not a request for colour zero:
+                // An index we cannot read is not a request for colour zero, and
+                // xterm ignores any index past the end of the 256-colour palette:
                 return;
             }
         } else {
@@ -3208,13 +3210,8 @@ void TBuffer::decodeSGR(const QStringView sequence)
                     SgrParameters madeElements;
                     madeElements << parameterStrings.at(paraIndex);     // "38"
                     madeElements << parameterStrings.at(paraIndex + 1); // "2" or "5" hopefully
-                    bool isOk = false;
-                    const int sgr38_type = madeElements.at(1).toInt(&isOk);
-                    if (madeElements.at(1).isEmpty() || !isOk || sgr38_type == 0) {
-                        // Oh dear that parameter is empty or equivalent to zero
-                        // so we cannot do anything more
-                        return;
-                    }
+                    // An empty or unreadable type reads as 0, which default: steps over
+                    const int sgr38_type = madeElements.at(1).toInt();
 
                     switch (sgr38_type) {
                     case 5: // Needs just one more number
@@ -3280,6 +3277,11 @@ void TBuffer::decodeSGR(const QStringView sequence)
                         // transparent, is no use to us
                         [[fallthrough]];
                     default:
+#if defined(DEBUG_SGR_PROCESSING)
+                        qDebug().noquote().nospace() << "TBuffer::decodeSGR(...) WARNING - unhandled SGR code: SGR...;38;" << madeElements.at(1) << ";...m ignoring this colour!";
+#endif
+                        // Step over the type, or it is read as an SGR code of its own
+                        ++paraIndex;
                         break;
                     }
                 }
@@ -3304,13 +3306,8 @@ void TBuffer::decodeSGR(const QStringView sequence)
                     SgrParameters madeElements;
                     madeElements << parameterStrings.at(paraIndex);
                     madeElements << parameterStrings.at(paraIndex + 1);
-                    bool isOk = false;
-                    const int sgr48_type = madeElements.at(1).toInt(&isOk);
-                    if (madeElements.at(1).isEmpty() || !isOk || sgr48_type == 0) {
-                        // Oh dear that parameter is empty or equivalent to zero
-                        // so we cannot do anything more
-                        return;
-                    }
+                    // An empty or unreadable type reads as 0, which default: steps over
+                    const int sgr48_type = madeElements.at(1).toInt();
 
                     switch (sgr48_type) {
                     case 5: // Needs one more number
@@ -3376,6 +3373,11 @@ void TBuffer::decodeSGR(const QStringView sequence)
                         // transparent, is no use to us
                         [[fallthrough]];
                     default:
+#if defined(DEBUG_SGR_PROCESSING)
+                        qDebug().noquote().nospace() << "TBuffer::decodeSGR(...) WARNING - unhandled SGR code: SGR...;48;" << madeElements.at(1) << ";...m ignoring this colour!";
+#endif
+                        // Step over the type, or it is read as an SGR code of its own
+                        ++paraIndex;
                         break;
                     }
                 }
@@ -3669,13 +3671,8 @@ void TBuffer::decodeSGR(const QStringView sequence)
                     SgrParameters madeElements;
                     madeElements << parameterStrings.at(paraIndex);
                     madeElements << parameterStrings.at(paraIndex + 1);
-                    bool isOk = false;
-                    const int sgr38_type = madeElements.at(1).toInt(&isOk);
-                    if (madeElements.at(1).isEmpty() || !isOk || sgr38_type == 0) {
-                        // Oh dear that parameter is empty or equivalent to zero
-                        // so we cannot do anything more
-                        return;
-                    }
+                    // An empty or unreadable type reads as 0, which default: steps over
+                    const int sgr38_type = madeElements.at(1).toInt();
 
                     switch (sgr38_type) {
                     case 5: // Needs one more number
@@ -3743,6 +3740,11 @@ void TBuffer::decodeSGR(const QStringView sequence)
                         // transparent, is no use to us
                         [[fallthrough]];
                     default:
+#if defined(DEBUG_SGR_PROCESSING)
+                        qDebug().noquote().nospace() << "TBuffer::decodeSGR(...) WARNING - unhandled SGR code: SGR...;38;" << madeElements.at(1) << ";...m ignoring this colour!";
+#endif
+                        // Step over the type, or it is read as an SGR code of its own
+                        ++paraIndex;
                         break;
                     }
                 } break;
@@ -3789,13 +3791,8 @@ void TBuffer::decodeSGR(const QStringView sequence)
                     SgrParameters madeElements;
                     madeElements << parameterStrings.at(paraIndex);
                     madeElements << parameterStrings.at(paraIndex + 1);
-                    bool isOk = false;
-                    const int sgr48_type = madeElements.at(1).toInt(&isOk);
-                    if (madeElements.at(1).isEmpty() || !isOk || sgr48_type == 0) {
-                        // Oh dear that parameter is empty or equivalent to zero
-                        // so we cannot do anything more
-                        return;
-                    }
+                    // An empty or unreadable type reads as 0, which default: steps over
+                    const int sgr48_type = madeElements.at(1).toInt();
 
                     switch (sgr48_type) {
                     case 5: // Needs one more number
@@ -3861,6 +3858,11 @@ void TBuffer::decodeSGR(const QStringView sequence)
                         // transparent, is no use to us
                         [[fallthrough]];
                     default:
+#if defined(DEBUG_SGR_PROCESSING)
+                        qDebug().noquote().nospace() << "TBuffer::decodeSGR(...) WARNING - unhandled SGR code: SGR...;48;" << madeElements.at(1) << ";...m ignoring this colour!";
+#endif
+                        // Step over the type, or it is read as an SGR code of its own
+                        ++paraIndex;
                         break;
                     }
                 } break;

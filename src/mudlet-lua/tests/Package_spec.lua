@@ -1,7 +1,8 @@
 -- Specs for the package and module lifecycle Lua APIs.
 --
--- Every spec here drives the real API against the fixture kit committed in
--- fixtures/packages/ - nothing is mocked. Alongside each contract (what a call
+-- The specs drive the real API against the fixture kit committed in
+-- fixtures/packages/; only the blocks for packages Mudlet bundles stand in for
+-- what those packages call out to. Alongside each contract (what a call
 -- returns, and what it returns when it is misused) the effect is checked too:
 -- the package's files actually land under getMudletHomeDir(), its aliases and
 -- scripts actually exist, its script body actually ran, and getPackages() /
@@ -2546,6 +2547,129 @@ describe("Tests installing an archive whose package XML cannot be read", functio
 
     assert.is_true(containsWrapped(textFrom(mark), 'Failed to load package "' .. name .. '"'), textFrom(mark))
   end)
+
+  -- Nothing at all could be read out of these, so listing them would put an empty
+  -- package in the profile - as a file saved as plain text, or one cut off before
+  -- its first item, would be
+  it("refuses an archive whose package file nothing could be read out of", function()
+    local name = "mudlet-spec-unreadablexml"
+    -- only needed should the refusal regress and leave the package installed
+    defer(function() removeFixturePackage(name) end)
+
+    local err = installUntilRefused(installPackage, fixtureDirectory .. "/" .. name .. ".mpackage")
+
+    assert.is_true(contains(err, 'the contents of package "' .. name .. '" could not be read'), tostring(err))
+    assert.is_false(packageInstalled(name))
+    assert.same({}, getPackageInfo(name), "the refused package left the details its config.lua filed")
+    assert.is_false(fileExists(getMudletHomeDir() .. "/" .. name), "the refused package stranded the folder it unpacked")
+  end)
+
+  it("refuses an empty package XML installed without an archive around it", function()
+    local name = "mudlet-spec-emptyxml"
+    local xml = getMudletHomeDir() .. "/" .. name .. ".xml"
+    defer(function()
+      removeFixturePackage(name)
+      os.remove(xml)
+    end)
+    local file = io.open(xml, "wb")
+    assert.is_not_nil(file, "could not write " .. xml)
+    file:close()
+
+    local err = installUntilRefused(installPackage, xml)
+
+    assert.is_true(contains(err, 'the contents of package "' .. name .. '" could not be read'), tostring(err))
+    assert.is_false(packageInstalled(name))
+  end)
+
+  it("refuses a package XML that broke before its first item", function()
+    local name = "mudlet-spec-cutbeforeitems"
+    local xml = getMudletHomeDir() .. "/" .. name .. ".xml"
+    defer(function()
+      removeFixturePackage(name)
+      os.remove(xml)
+    end)
+    local file = io.open(xml, "wb")
+    assert.is_not_nil(file, "could not write " .. xml)
+    file:write('<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE MudletPackage>\n<MudletPackage version="1.001">\n<AliasPack')
+    file:close()
+
+    local err = installUntilRefused(installPackage, xml)
+
+    assert.is_true(contains(err, "could not be read"), tostring(err))
+    assert.is_false(packageInstalled(name))
+  end)
+
+  -- An archive's files are read in the order of their names, so whether a stray
+  -- unreadable one turns the package away must not depend on what it is called
+  it("installs an archive whose unreadable stray file is read before its package file", function()
+    local name = "mudlet-spec-straynotes"
+    defer(function() removeFixturePackage(name) end)
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+
+    local mark = getLastLineNumber("main")
+    installFixturePackage(name)
+
+    assert.equals(1, exists(name .. " alias", "alias"), "the package file beside the stray one was not read")
+    assert.is_true(containsWrapped(textFrom(mark), 'Failed to load package "' .. name .. '"'), textFrom(mark))
+  end)
+
+  -- A package file that was read through without a fault is the package, even an empty one
+  it("installs an archive whose unreadable stray file sits beside an empty package file", function()
+    local name = "mudlet-spec-emptywithstray"
+    defer(function() removeFixturePackage(name) end)
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+
+    local mark = getLastLineNumber("main")
+    installFixturePackage(name)
+
+    assert.is_true(containsWrapped(textFrom(mark), 'Failed to load package "' .. name .. '"'), textFrom(mark))
+  end)
+
+  it("refuses a package XML that broke after an empty help URL", function()
+    local name = "mudlet-spec-cutafteremptyhelp"
+    local xml = getMudletHomeDir() .. "/" .. name .. ".xml"
+    defer(function()
+      removeFixturePackage(name)
+      os.remove(xml)
+    end)
+    local file = io.open(xml, "wb")
+    assert.is_not_nil(file, "could not write " .. xml)
+    file:write('<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE MudletPackage>\n<MudletPackage version="1.001">\n<HelpPackage><helpURL></helpURL></HelpPackage>\n<TriggerPack')
+    file:close()
+
+    local err = installUntilRefused(installPackage, xml)
+
+    assert.is_true(contains(err, 'the contents of package "' .. name .. '" could not be read'), tostring(err))
+    assert.is_false(packageInstalled(name))
+  end)
+
+  -- A variable is set as it is read, and refusing the package would not unset it
+  it("keeps a package XML that broke after setting a variable", function()
+    local name = "mudlet-spec-cutaftervariable"
+    local xml = getMudletHomeDir() .. "/" .. name .. ".xml"
+    defer(function()
+      removeFixturePackage(name)
+      os.remove(xml)
+      mudletSpecCutAfterVariable = nil
+    end)
+    local file = io.open(xml, "wb")
+    assert.is_not_nil(file, "could not write " .. xml)
+    file:write(table.concat({
+      '<?xml version="1.0" encoding="UTF-8"?>',
+      '<!DOCTYPE MudletPackage>',
+      '<MudletPackage version="1.001">',
+      '<VariablePackage>',
+      '<Variable><name>mudletSpecCutAfterVariable</name><keyType>4</keyType><value>5</value><valueType>3</valueType></Variable>',
+      '</VariablePackage>',
+      '<AliasPack',
+    }, "\n"))
+    file:close()
+    mudletSpecCutAfterVariable = nil
+
+    installUntilConfirmed(installPackage, xml, function() return packageInstalled(name) end, "the package XML cut off after its variable")
+
+    assert.equals(5, mudletSpecCutAfterVariable)
+  end)
 end)
 
 describe("Tests installing an archive whose config.lua will not run", function()
@@ -3515,16 +3639,12 @@ describe("Tests installing a package file from a later Mudlet", function()
   local name = "mudlet-spec-from-the-future"
   local xml = getMudletHomeDir() .. "/" .. name .. ".xml"
 
-  it("refuses to read it and says a newer Mudlet is needed", function()
-    defer(function()
-      removeFixturePackage(name)
-      os.remove(xml)
-    end)
-    writePackageXml(xml, table.concat({
+  local function writeLaterMudletXml(path, itemName)
+    writePackageXml(path, table.concat({
       '<TriggerPackage>',
       '<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no"',
       '         isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no">',
-      '<name>' .. name .. ' trigger</name><script></script>',
+      '<name>' .. itemName .. ' trigger</name><script></script>',
       '<triggerType>0</triggerType><conditonLineDelta>0</conditonLineDelta><mStayOpen>0</mStayOpen>',
       '<mCommand></mCommand><packageName></packageName>',
       '<regexCodeList><string>mudlet spec from the future</string></regexCodeList>',
@@ -3532,17 +3652,54 @@ describe("Tests installing a package file from a later Mudlet", function()
       '</Trigger>',
       '</TriggerPackage>',
     }, "\n"), "2.000")
+  end
+
+  -- the item folders named after the package are made before the version is read
+  local function assertNoFoldersNamed(folderName)
+    for _, kind in ipairs({"trigger", "timer", "alias", "script", "keybind", "button"}) do
+      assert.equals(0, exists(folderName, kind), "the unreadable file left an empty " .. kind .. " folder")
+    end
+  end
+
+  it("refuses to read it and says a newer Mudlet is needed", function()
+    defer(function()
+      removeFixturePackage(name)
+      os.remove(xml)
+    end)
+    writeLaterMudletXml(xml, name)
     assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
 
     local mark = getLastLineNumber("main")
-    installUntilConfirmed(installPackage, xml, function() return packageInstalled(name) end, "the package " .. name)
+    local err = installUntilRefused(installPackage, xml)
     local text = textFrom(mark)
 
     assert.is_true(containsWrapped(text, "you need a newer Mudlet"), text)
-    -- the file is refused as a whole, so nothing in it is installed - even
-    -- though the package itself stays registered, the same way one whose XML is
-    -- malformed does
+    assert.is_true(contains(err, "you need a newer Mudlet"), tostring(err))
+    -- the file is refused as a whole, so nothing in it is installed, and as
+    -- nothing could be read out of it, nor is the package
     assert.equals(0, exists(name .. " trigger", "trigger"), "an unreadable file's trigger was installed anyway")
+    assert.is_false(packageInstalled(name))
+    assertNoFoldersNamed(name)
+    -- the console has had its own alert, so the reason is one plain line
+    assert.is_false(contains(err, "\n"), tostring(err))
+  end)
+
+  it("leaves no empty folders behind when it is installed as a module", function()
+    local moduleFromTheFuture = "mudlet-spec-module-from-the-future"
+    local path = scratchDirectory .. "/" .. moduleFromTheFuture .. ".xml"
+    defer(function()
+      removeFixtureModule(moduleFromTheFuture)
+      os.remove(path)
+      lfs.rmdir(scratchDirectory)
+    end)
+    lfs.mkdir(scratchDirectory)
+    writeLaterMudletXml(path, moduleFromTheFuture)
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+
+    installUntilConfirmed(installModule, path, function() return moduleInstalled(moduleFromTheFuture) end, "the module from a later Mudlet")
+
+    assert.equals(0, exists(moduleFromTheFuture .. " trigger", "trigger"), "an unreadable file's trigger was installed anyway")
+    assertNoFoldersNamed(moduleFromTheFuture)
   end)
 end)
 
@@ -3594,6 +3751,42 @@ describe("Tests installing a package XML whose profile settings list an incomple
     assert.equals(1, exists(name .. " alias", "alias"), "the package's alias was not installed")
     assert.is_false(moduleInstalled(moduleName), "a module with no file to load was listed")
     assert.is_nil(getModulePath(moduleName))
+  end)
+end)
+
+-- A profile or package saved by an older build can hold a border no setter
+-- accepts any more, and the console takes opposite borders off its own size
+describe("Tests installing a package XML whose profile settings carry an overflowing border", function()
+  local name = "mudlet-spec-overflowing-border"
+  local xml = getMudletHomeDir() .. "/" .. name .. ".xml"
+
+  it("bounds each border to the range the setters accept", function()
+    local bordersBefore = getBorderSizes()
+    defer(function()
+      setBorderSizes(bordersBefore.top, bordersBefore.right, bordersBefore.bottom, bordersBefore.left)
+      removeFixturePackage(name)
+      os.remove(xml)
+    end)
+    -- see the incomplete module spec above for why the Host element is copied
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+    local saved, savedTo = saveProfile()
+    assert.is_true(saved, tostring(savedTo))
+    assert.is_true(waitForProfileSaveToPass(), "the profile save was still running")
+    local hostElement = readFile(savedTo):match("<Host%s[^>]*>")
+    assert.is_string(hostElement, "the profile's save has no Host element to copy the settings of")
+
+    writePackageXml(xml, table.concat({
+      '<HostPackage>',
+      hostElement,
+      '<borderTopHeight>2147483640</borderTopHeight><borderBottomHeight>7</borderBottomHeight>',
+      '<borderLeftWidth>-2147483640</borderLeftWidth><borderRightWidth>-1000000</borderRightWidth>',
+      '</Host>',
+      '</HostPackage>',
+    }, "\n"))
+
+    installUntilConfirmed(installPackage, xml, function() return packageInstalled(name) end, "the package " .. name)
+
+    assert.are.same({top = 1000000, right = -1000000, bottom = 7, left = -1000000}, getBorderSizes())
   end)
 end)
 
@@ -3690,6 +3883,23 @@ describe("Tests installing a package whose Lua does not work", function()
     assert.is_false(contains(installReason, "<b>"), tostring(installReason))
     assert.is_false(contains(installReason, "&quot;"), tostring(installReason))
     assert.is_true(contains(installReason, '[string "Script: ' .. name .. ' script"]'), tostring(installReason))
+  end)
+
+  -- the trigger's body does not parse, the script's parses and then raises
+  it("tells a syntax error from an error raised as the body ran", function()
+    local function reasonFor(item)
+      local label = name .. " " .. item .. ": "
+      local first = installReason:find(label, 1, true)
+      assert.is_truthy(first, "no reason given for the " .. item .. ": " .. tostring(installReason))
+      local start = first + #label
+      local stop = installReason:find("; ", start, true)
+      return installReason:sub(start, stop and stop - 1 or -1)
+    end
+    local triggerReason = reasonFor("trigger")
+    local scriptReason = reasonFor("script")
+    assert.is_truthy(triggerReason:find("Lua syntax error:", 1, true), triggerReason)
+    assert.is_truthy(scriptReason:find("Lua error:", 1, true), scriptReason)
+    assert.is_falsy(scriptReason:find("syntax", 1, true), "a body that parsed was reported as a syntax error: " .. scriptReason)
   end)
 
   it("carries the reason on sysInstall and sysInstallPackage", function()
@@ -5259,6 +5469,193 @@ describe("Tests installing a module whose XML cannot be read", function()
   end)
 end)
 
+-- gui-drop installs into fresh profiles, the self-test one included
+describe("Tests uninstalling the gui-drop package", function()
+  local name = "gui-drop"
+  local archive = ":/packages/gui-drop/gui-drop.mpackage"
+  local dropDirectory = getMudletHomeDir() .. "/GUIDropImages"
+
+  -- drops an image the way TConsole::dropEvent() does, answering the copy it made in the profile
+  local function dropByEvent(fileName)
+    lfs.mkdir(scratchDirectory)
+    local path = scratchDirectory .. "/" .. fileName
+    copyFile(specDirectory .. "/fixtures/images/solid-magenta-4x4.png", path)
+    defer(function()
+      local key = fileName:match("^(.*)%.png$")
+      if GUIDropImages and GUIDropImages[key] then
+        GUIDropImages[key]:delete()
+        GUIDropImages[key] = nil
+        GUIDropImages[key .. "Label"] = nil
+        GUIDropManager.createDropManager()
+      end
+      os.remove(getMudletHomeDir() .. "/AdjustableContainer/GUIDropImages." .. key .. ".lua")
+      os.remove(path)
+      os.remove(dropDirectory .. "/" .. fileName)
+      lfs.rmdir(scratchDirectory)
+    end)
+    raiseEvent("sysDropEvent", path, "png", 10, 10, "main")
+    return dropDirectory .. "/" .. fileName
+  end
+
+  local function hideTimersPerAdd()
+    local hidden = Adjustable.Container:new({name = "packageSpecHidden", x = 0, y = 0, width = 50, height = 50, autoLoad = false, autoSave = false})
+    hidden:hide()
+    local timers = 0
+    local tempTimer = _G.tempTimer
+    _G.tempTimer = function(...)
+      timers = timers + 1
+      return tempTimer(...)
+    end
+    local ok, err = pcall(hidden.add, hidden, Geyser.Label:new({name = "packageSpecHiddenChild", x = 0, y = 0, width = 10, height = 10}))
+    _G.tempTimer = tempTimer
+    hidden:delete()
+    Adjustable.Container.all[hidden.name] = nil
+    local index = table.index_of(Adjustable.Container.all_windows, hidden.name)
+    if index then
+      table.remove(Adjustable.Container.all_windows, index)
+    end
+    assert.is_true(ok, tostring(err))
+    return timers
+  end
+
+  it("stops taking dropped images but keeps the ones already dropped working", function()
+    if not packageInstalled(name) then
+      pending("gui-drop is not installed in this profile")
+      return
+    end
+    defer(function()
+      installUntilConfirmed(installPackage, archive, function() return packageInstalled(name) end, name)
+    end)
+    -- uninstalling some other package must leave the drops working
+    installFixturePackage(minimalPackage)
+    removeFixturePackage(minimalPackage)
+    assert.is_true(fileExists(dropByEvent("packageSpecKept.png")), "a dropped image was not copied into the profile")
+    dropByEvent("packageSpecStored.png")
+    local keptImage = GUIDropImages.packageSpecKept
+    assert.is_not_nil(keptImage, "SETUP: the image was not dropped")
+    keptImage:setDropImg()
+
+    removeFixturePackage(name)
+
+    assert.is_false(fileExists(dropByEvent("packageSpecAfterUninstall.png")), "the uninstalled package still copied a dropped image into the profile")
+    local ok, err = pcall(keptImage.customItems.deleteImage[2], keptImage)
+    assert.is_true(ok, tostring(err))
+    assert.is_nil(GUIDropImages.packageSpecKept)
+    -- the next start runs the GUIDropManager script, which still holds packageSpecStored, without the package
+    local stored = assert(loadstring(getScript("GUIDropManager", 2)))
+    local manager, images, setDropImg = _G.GUIDropManager, _G.GUIDropImages, Adjustable.Container.setDropImg
+    _G.GUIDropManager, _G.GUIDropImages, Adjustable.Container.setDropImg = nil, nil, nil
+    ok, err = pcall(stored)
+    _G.GUIDropManager, _G.GUIDropImages, Adjustable.Container.setDropImg = manager, images, setDropImg
+    local pending = _G.GUIDropPendingImages
+    _G.GUIDropPendingImages = nil
+    assert.is_true(ok, tostring(err))
+    assert.is_truthy(pending and pending.packageSpecStored)
+  end)
+
+  it("brings back the images when the GUIDropManager script ran before the package", function()
+    if not packageInstalled(name) then
+      pending("gui-drop is not installed in this profile")
+      return
+    end
+    defer(function()
+      installUntilConfirmed(installPackage, archive, function() return packageInstalled(name) end, name)
+    end)
+    dropByEvent("packageSpecEarly.png")
+    assert.is_not_nil(GUIDropImages.packageSpecEarly, "SETUP: the image was not dropped")
+    local stored = assert(loadstring(getScript("GUIDropManager", 2)))
+    GUIDropImages.packageSpecEarly:delete()
+    GUIDropImages.packageSpecEarly, GUIDropImages.packageSpecEarlyLabel = nil, nil
+    removeFixturePackage(name)
+
+    -- how the next start runs them after a reinstall, which puts the package after the script
+    _G.GUIDropManager = nil
+    assert.is_true(pcall(stored))
+    installUntilConfirmed(installPackage, archive, function() return packageInstalled(name) end, name)
+
+    assert.is_not_nil(GUIDropImages.packageSpecEarly)
+    assert.is_not_nil(GUIDropImages.packageSpecEarlyLabel)
+  end)
+
+  it("stops taking dropped images when it was installed as a module", function()
+    if not packageInstalled(name) then
+      pending("gui-drop is not installed in this profile")
+      return
+    end
+    -- a module has to be a file it can write back to, and Lua cannot read the bundled archive
+    local source = specDirectory .. "/../../packages/gui-drop/gui-drop.mpackage"
+    if not fileExists(source) then
+      pending("the gui-drop source archive is not next to these specs")
+      return
+    end
+    local path = scratchDirectory .. "/gui-drop.mpackage"
+    defer(function()
+      removeFixtureModule(name)
+      installUntilConfirmed(installPackage, archive, function() return packageInstalled(name) end, name)
+    end)
+    removeFixturePackage(name)
+    lfs.mkdir(scratchDirectory)
+    copyFile(source, path)
+    installUntilConfirmed(installModule, path, function() return moduleInstalled(name) end, "gui-drop as a module")
+
+    removeFixtureModule(name)
+
+    assert.is_false(fileExists(dropByEvent("packageSpecAfterModule.png")), "the uninstalled module still copied a dropped image into the profile")
+  end)
+
+  it("does not wrap Adjustable.Container.add again when it is reinstalled", function()
+    if not packageInstalled(name) then
+      pending("gui-drop is not installed in this profile")
+      return
+    end
+    defer(function()
+      installUntilConfirmed(installPackage, archive, function() return packageInstalled(name) end, name)
+    end)
+    local timers = hideTimersPerAdd()
+
+    removeFixturePackage(name)
+    installUntilConfirmed(installPackage, archive, function() return packageInstalled(name) end, name)
+
+    assert.are.equal(timers, hideTimersPerAdd())
+  end)
+
+  it("does not wrap Adjustable.Container.add twice after an upgrade from 1.3", function()
+    if not packageInstalled(name) then
+      pending("gui-drop is not installed in this profile")
+      return
+    end
+    local oldName = "mudlet-spec-gui-drop-old-add"
+    local xml = scratchDirectory .. "/" .. oldName .. ".xml"
+    defer(function()
+      removeFixturePackage(oldName)
+      os.remove(xml)
+      lfs.rmdir(scratchDirectory)
+      installUntilConfirmed(installPackage, archive, function() return packageInstalled(name) end, name)
+    end)
+    local timers = hideTimersPerAdd()
+    -- gui-drop 1.3's "workaround for add", which wrapped add again on every install
+    lfs.mkdir(scratchDirectory)
+    writePackageXml(xml, table.concat({
+      '<ScriptPackage><Script isActive="yes" isFolder="no"><name>workaround for add</name><packageName></packageName><script>',
+      'local addwrapper = Adjustable.Container.add',
+      'function Adjustable.Container:add(window, cons)',
+      '  addwrapper(self, window, cons)',
+      '  if self.hidden then',
+      '    tempTimer(0, function() self:hide() end)',
+      '  end',
+      'end',
+      '</script><eventHandlerList/></Script></ScriptPackage>',
+    }, "\n"))
+    removeFixturePackage(name)
+    installUntilConfirmed(installPackage, xml, function() return packageInstalled(oldName) end, oldName)
+    removeFixturePackage(oldName)
+
+    installUntilConfirmed(installPackage, archive, function() return packageInstalled(name) end, name)
+
+    assert.are.equal(timers, hideTimersPerAdd())
+  end)
+end)
+
 -- Once a package is gone nothing knows its commands' ids, so whatever its Lua
 -- placed has to go with it: left behind, a command stays on screen, keeps
 -- raising sysCommandClicked, and holds its shortcut against the same package's
@@ -5473,6 +5870,430 @@ describe("Tests that uninstalling takes the addon commands it made", function()
     -- a reload postponed by a profile save could otherwise be what removed it
     assert.equals(loads, mudletSpecModuleLoads, "the module was reloaded while being removed")
     assert.is_false(enableCommand(id), "the command outlived the module that made it")
+  end)
+end)
+
+-- MedBootstrap is installed only for Medievia, so it is installed here from the
+-- copy compiled into Mudlet
+describe("Tests the MedBootstrap package", function()
+  local name = "MedBootstrap"
+  local archive = ":/packages/MedBootstrap/MedBootstrap.mpackage"
+  local mpkgArchive = "https://github.com/Mudlet/mudlet-package-repository/raw/refs/heads/main/packages/mpkg.mpackage"
+  local giveUpMessage = "the package listing did not arrive, so MedUI is not installed yet"
+  local noMpkgMessage = "mpkg could not be installed, so MedUI is not installed yet"
+
+  -- Overrides a global for the rest of the spec; Package_spec's own environment
+  -- would only shadow it, and the packages read their globals from _G
+  local function override(globalName, value)
+    local original = _G[globalName]
+    defer(function() _G[globalName] = original end)
+    _G[globalName] = value
+    return original
+  end
+
+  -- Stands in for mpkg, whose ready() starts a fresh download of the listing
+  -- each time it finds none, as the real one does
+  local function fakeMpkg(installs)
+    local fake = { listingDownloads = 0, upgrades = {} }
+    local function listingReady()
+      return fake.packages ~= nil and fake.packages.packages ~= nil
+    end
+    fake.ready = function()
+      if listingReady() then
+        return true
+      end
+      fake.updatePackageList(true)
+      return false
+    end
+    fake.updatePackageList = function()
+      fake.listingDownloads = fake.listingDownloads + 1
+    end
+    fake.getInstalledVersion = function()
+      return nil
+    end
+    fake.getRepositoryVersion = function()
+      return "1"
+    end
+    fake.install = function(packageName)
+      installs[#installs + 1] = { packageName, listingReady() }
+    end
+    fake.upgrade = function(packageName)
+      fake.upgrades[#fake.upgrades + 1] = packageName
+    end
+    return fake
+  end
+
+  local function stubMpkgVersion(version)
+    local realGetPackageInfo = _G.getPackageInfo
+    local stub = { version = version }
+    override("getPackageInfo", function(packageName, ...)
+      if packageName == "mpkg" then
+        return stub.version
+      end
+      return realGetPackageInfo(packageName, ...)
+    end)
+    return stub
+  end
+
+  -- Holds MedBootstrap's timers for the spec to fire by hand, so a minute of
+  -- looks takes no time; every other timer still starts as usual. scheduled
+  -- counts the 5s looks, held every timer
+  local function holdLooks()
+    local looks = { scheduled = 0, held = 0, errors = {}, pending = {} }
+    local realTempTimer = _G.tempTimer
+    override("tempTimer", function(delay, code, ...)
+      local source = type(code) == "function" and debug.getinfo(code, "S").source or ""
+      if not source:find("MedBootstrap", 1, true) then
+        return realTempTimer(delay, code, ...)
+      end
+      looks.held = looks.held + 1
+      if delay > 0 then
+        looks.scheduled = looks.scheduled + 1
+      end
+      looks.pending[#looks.pending + 1] = { delay = delay, code = code }
+      return -looks.held
+    end)
+    -- fires every held timer due within maxDelay (all of them without one),
+    -- which makes the next look of every waiting copy; answers how many fired
+    function looks.next(maxDelay)
+      -- otherwise a spec that expects nothing to happen passes without a look
+      assert(looks.held > 0, "no MedBootstrap timer was held")
+      local due, kept = {}, {}
+      for _, timer in ipairs(looks.pending) do
+        if maxDelay == nil or timer.delay <= maxDelay then
+          due[#due + 1] = timer
+        else
+          kept[#kept + 1] = timer
+        end
+      end
+      looks.pending = kept
+      for _, timer in ipairs(due) do
+        local ok, err = pcall(timer.code)
+        if not ok then
+          looks.errors[#looks.errors + 1] = tostring(err)
+        end
+      end
+      return #due
+    end
+    function looks.all()
+      for _ = 1, 50 do
+        if looks.next() == 0 then
+          return
+        end
+      end
+    end
+    return looks
+  end
+
+  -- semver comes with mpkg, which the self-test profile does not have
+  local function stubSemver()
+    override("semver", function(version)
+      assert(version ~= nil, "At least one parameter is needed")
+      return tonumber(version)
+    end)
+  end
+
+  local function install()
+    -- the script keeps its run count in this global
+    override("MedBootstrap", _G.MedBootstrap)
+    defer(function() removeFixturePackage(name) end)
+    installUntilConfirmed(installPackage, archive, function() return packageInstalled(name) end, name)
+  end
+
+  -- On a Medievia profile mpkg can be installed before MedBootstrap runs, while
+  -- its package listing is still downloading - and mpkg.install() gives up then
+  it("installs MedUI once mpkg has its package listing, not before", function()
+    local installs = {}
+    local mpkg = fakeMpkg(installs)
+    override("mpkg", mpkg)
+    stubMpkgVersion("1")
+    local looks = holdLooks()
+
+    install()
+    looks.next()
+    assert.are.same({}, installs, "MedUI was asked for while mpkg could not install it")
+
+    mpkg.packages = { packages = {} }
+    looks.next()
+    assert.are.same({ { "MedUI", true } }, installs)
+    assert.are.equal(0, mpkg.listingDownloads, "waiting for the listing started downloads of its own")
+    assert.are.same({}, looks.errors)
+  end)
+
+  it("does not install MedUI once it has been uninstalled", function()
+    local installs = {}
+    local mpkg = fakeMpkg(installs)
+    override("mpkg", mpkg)
+    stubMpkgVersion("1")
+    local looks = holdLooks()
+
+    install()
+    removeFixturePackage(name)
+    mpkg.packages = { packages = {} }
+    looks.all()
+
+    assert.are.same({}, installs, "MedUI was installed after MedBootstrap was uninstalled")
+  end)
+
+  it("installs MedUI once when it is reinstalled while it waits", function()
+    local installs = {}
+    local mpkg = fakeMpkg(installs)
+    override("mpkg", mpkg)
+    stubMpkgVersion("1")
+    local looks = holdLooks()
+
+    install()
+    removeFixturePackage(name)
+    install()
+    mpkg.packages = { packages = {} }
+    looks.all()
+
+    assert.are.same({ { "MedUI", true } }, installs)
+  end)
+
+  it("installs mpkg and then MedUI when the profile has no mpkg", function()
+    local installs = {}
+    local mpkg = fakeMpkg(installs)
+    override("mpkg", nil)
+    stubMpkgVersion("")
+    local mpkgInstalls = 0
+    local realInstallPackage = _G.installPackage
+    override("installPackage", function(path, ...)
+      if path == mpkgArchive then
+        mpkgInstalls = mpkgInstalls + 1
+        return true
+      end
+      return realInstallPackage(path, ...)
+    end)
+    local looks = holdLooks()
+
+    install()
+    looks.next()
+    assert.are.equal(1, mpkgInstalls, "mpkg was not installed")
+    _G.mpkg = mpkg
+    looks.next()
+    assert.are.same({}, installs, "MedUI was asked for while mpkg could not install it")
+
+    mpkg.packages = { packages = {} }
+    looks.next()
+    assert.are.same({ { "MedUI", true } }, installs)
+    assert.are.equal(1, mpkgInstalls, "mpkg was installed more than once")
+  end)
+
+  -- the preinstall list comes from a QHash, so the bundled mpkg can come next
+  it("does not download mpkg when the bundled one is installed after it", function()
+    local mpkgVersion = stubMpkgVersion("")
+    override("mpkg", nil)
+    local mpkgInstalls = 0
+    local realInstallPackage = _G.installPackage
+    override("installPackage", function(path, ...)
+      if path == mpkgArchive then
+        mpkgInstalls = mpkgInstalls + 1
+        return true
+      end
+      return realInstallPackage(path, ...)
+    end)
+    local looks = holdLooks()
+
+    install()
+    mpkgVersion.version = "1"
+    _G.mpkg = fakeMpkg({})
+    looks.next()
+
+    assert.are.equal(0, mpkgInstalls, "mpkg was downloaded although the bundled one was installed")
+  end)
+
+  -- mpkg itself retries a failed listing download only every 12 hours
+  it("asks for the package listing again when its download failed", function()
+    local installs = {}
+    local mpkg = fakeMpkg(installs)
+    mpkg.updatePackageList = function()
+      mpkg.listingDownloads = mpkg.listingDownloads + 1
+      mpkg.packages = { packages = {} }
+    end
+    override("mpkg", mpkg)
+    stubMpkgVersion("1")
+    local looks = holdLooks()
+
+    install()
+    looks.all()
+
+    assert.are.same({ { "MedUI", true } }, installs)
+    assert.are.equal(1, mpkg.listingDownloads)
+  end)
+
+  it("gives up after a minute and says the listing did not arrive", function()
+    local installs = {}
+    local mpkg = fakeMpkg(installs)
+    override("mpkg", mpkg)
+    stubMpkgVersion("1")
+    local looks = holdLooks()
+    local mark = getLastLineNumber("main")
+
+    install()
+    looks.all()
+
+    assert.are.equal(12, looks.scheduled)
+    assert.are.equal(2, mpkg.listingDownloads, "the listing was not asked for at 20s and 40s")
+    assert.are.same({}, installs)
+    assert.is_true(containsWrapped(textFrom(mark), giveUpMessage), textFrom(mark))
+  end)
+
+  it("gives up after a minute and says mpkg could not be installed", function()
+    override("mpkg", nil)
+    stubMpkgVersion("")
+    local realInstallPackage = _G.installPackage
+    override("installPackage", function(path, ...)
+      if path == mpkgArchive then
+        return true
+      end
+      return realInstallPackage(path, ...)
+    end)
+    local looks = holdLooks()
+    local mark = getLastLineNumber("main")
+
+    install()
+    looks.all()
+
+    local text = textFrom(mark)
+    assert.is_true(containsWrapped(text, noMpkgMessage), text)
+    assert.is_false(containsWrapped(text, giveUpMessage), text)
+    assert.are.same({}, looks.errors)
+  end)
+
+  it("asks for mpkg again when its download failed", function()
+    override("mpkg", nil)
+    local mpkgVersion = stubMpkgVersion("")
+    local installs = {}
+    local mpkgInstalls = 0
+    local realInstallPackage = _G.installPackage
+    override("installPackage", function(path, ...)
+      if path == mpkgArchive then
+        mpkgInstalls = mpkgInstalls + 1
+        -- the first download fails, the next one arrives
+        if mpkgInstalls > 1 then
+          mpkgVersion.version = "1"
+          _G.mpkg = fakeMpkg(installs)
+          _G.mpkg.packages = { packages = {} }
+        end
+        return true
+      end
+      return realInstallPackage(path, ...)
+    end)
+    local looks = holdLooks()
+
+    install()
+    looks.all()
+
+    assert.are.equal(2, mpkgInstalls)
+    assert.are.same({ { "MedUI", true } }, installs)
+  end)
+
+  -- an uninstalled mpkg leaves its table behind
+  it("says mpkg could not be installed when only a stale mpkg table is left", function()
+    override("mpkg", fakeMpkg({}))
+    stubMpkgVersion("")
+    local realInstallPackage = _G.installPackage
+    override("installPackage", function(path, ...)
+      if path == mpkgArchive then
+        return true
+      end
+      return realInstallPackage(path, ...)
+    end)
+    local looks = holdLooks()
+    local mark = getLastLineNumber("main")
+
+    install()
+    looks.all()
+
+    local text = textFrom(mark)
+    assert.is_true(containsWrapped(text, noMpkgMessage), text)
+    assert.is_false(containsWrapped(text, giveUpMessage), text)
+  end)
+
+  it("asks for mpkg straight away when the profile has none", function()
+    override("mpkg", nil)
+    stubMpkgVersion("")
+    local mpkgInstalls = 0
+    local realInstallPackage = _G.installPackage
+    override("installPackage", function(path, ...)
+      if path == mpkgArchive then
+        mpkgInstalls = mpkgInstalls + 1
+        return true
+      end
+      return realInstallPackage(path, ...)
+    end)
+    local looks = holdLooks()
+
+    install()
+    looks.next(0)
+
+    assert.are.equal(1, mpkgInstalls, "mpkg was not asked for before the first 5s look")
+    assert.are.equal(1, looks.scheduled)
+  end)
+
+  -- the script runs on every load, and an installed MedUI only misses its update check
+  it("says nothing when the listing does not arrive and MedUI is installed", function()
+    override("mpkg", fakeMpkg({}))
+    stubMpkgVersion("1")
+    local realGetPackages = _G.getPackages
+    override("getPackages", function()
+      local packages = realGetPackages()
+      packages[#packages + 1] = "MedUI"
+      return packages
+    end)
+    local looks = holdLooks()
+    local mark = getLastLineNumber("main")
+
+    install()
+    looks.all()
+
+    assert.are.equal(12, looks.scheduled)
+    assert.is_false(containsWrapped(textFrom(mark), "MedUI is not installed yet"), textFrom(mark))
+  end)
+
+  it("upgrades MedUI when the listing has a newer one", function()
+    local installs = {}
+    local mpkg = fakeMpkg(installs)
+    mpkg.getInstalledVersion = function()
+      return "1"
+    end
+    mpkg.getRepositoryVersion = function()
+      return "2"
+    end
+    override("mpkg", mpkg)
+    stubMpkgVersion("1")
+    stubSemver()
+    local looks = holdLooks()
+
+    install()
+    mpkg.packages = { packages = {} }
+    looks.next()
+
+    assert.are.same({ "MedUI" }, mpkg.upgrades)
+    assert.are.same({}, installs)
+    assert.are.same({}, looks.errors)
+  end)
+
+  it("leaves MedUI alone when the listing has none", function()
+    local mpkg = fakeMpkg({})
+    mpkg.getInstalledVersion = function()
+      return "1"
+    end
+    mpkg.getRepositoryVersion = function()
+      return nil, "Package does not exist in repository."
+    end
+    override("mpkg", mpkg)
+    stubMpkgVersion("1")
+    stubSemver()
+    local looks = holdLooks()
+
+    install()
+    mpkg.packages = { packages = {} }
+    looks.next()
+
+    assert.are.same({}, mpkg.upgrades)
+    assert.are.same({}, looks.errors)
   end)
 end)
 

@@ -832,13 +832,17 @@ void TArea::writeJsonArea(QJsonArray& array) const
     array.append(areaValue);
 }
 
-std::pair<int, QString> TArea::readJsonArea(const QJsonArray& array, const int areaIndex)
+std::pair<int, QString> TArea::readJsonArea(const QJsonArray& array, const int areaIndex, QStringList& droppedRoomWarnings)
 {
     const QJsonObject areaObj{array.at(areaIndex).toObject()};
     const int id = areaObj.value(QLatin1String("id")).toInt();
     const QString name{areaObj.value(QLatin1String("name")).toString()};
     gridMode = areaObj.value(QLatin1String("gridMode")).toBool();
     readJsonUserData(areaObj.value(QLatin1String("userData")).toObject());
+    // An export by an older Mudlet can have the binary format's fallbacks in the user data
+    if (const QString zoom = mUserData.take(QLatin1String("system.fallback_map2DZoom")); !zoom.isEmpty()) {
+        set2DMapZoom(zoom.toDouble());
+    }
     int roomCount = 0;
     for (int roomIndex = 0, total = areaObj.value(QLatin1String("rooms")).toArray().count(); roomIndex < total; ++roomIndex) {
         TRoom* pR = new TRoom(mpRoomDB);
@@ -847,6 +851,17 @@ std::pair<int, QString> TArea::readJsonArea(const QJsonArray& array, const int a
         // one for the audit to renumber and frees one whose id is taken:
         if (mpRoomDB->restoreSingleRoom(roomId, pR)) {
             rooms.insert(roomId);
+        } else {
+            // A missing or non-integer id reads as 0, so a clash on 0 may be with a room the file gives no id:
+            const QJsonValue idValue = areaObj.value(QLatin1String("rooms")).toArray().at(roomIndex).toObject().value(QLatin1String("id"));
+            if (roomId != 0 && idValue.isDouble() && idValue.toDouble() == roomId) {
+                //: Shown when a JSON map file holds two rooms with the same id. %1 is the room id, %2 the id of the area the dropped room was in.
+                droppedRoomWarnings.append(
+                        tr("[ WARN ]  - The map file has more than one room with id %1, so the one in area %2 has been left out.").arg(QString::number(roomId), QString::number(id)));
+            } else {
+                //: Shown when a JSON map file holds more than one room whose "id" is missing, not a whole number or 0; only the first is kept. %1 is the id of the area the dropped room was in.
+                droppedRoomWarnings.append(tr("[ WARN ]  - The map file has more than one room without a valid id, so one in area %1 has been left out.").arg(QString::number(id)));
+            }
         }
         if (++roomCount % 10 == 0) {
             if (mpMap->incrementJsonProgressDialog(false, true, 10)) {
@@ -863,17 +878,26 @@ std::pair<int, QString> TArea::readJsonArea(const QJsonArray& array, const int a
     if (areaObj.contains(QLatin1String("labels")) && areaObj.value(QLatin1String("labels")).isArray()) {
         readJsonLabels(areaObj);
     }
+    // A JSON label has no field for its outline color, so in an older export its
+    // system.labelOutlineColor_<id> key is the only copy of it; its font has its own fields
+    for (auto&& [labelId, label] : mMapLabels.asKeyValueRange()) {
+        restoreLabelOutlineColorFromUserData(label, labelId, mUserData);
+    }
+    dropFileOnlyUserData(mUserData);
     return {id, name};
 }
 
 void TArea::writeJsonUserData(QJsonObject& obj) const
 {
     QJsonObject userDataObj;
-    if (mUserData.isEmpty()) {
+    // A binary save replaces a script's value under these keys, so an import must not apply it to a label
+    QMap<QString, QString> userData{mUserData};
+    dropFileOnlyUserData(userData);
+    if (userData.isEmpty()) {
         // Skip creating a user data array if it will be empty:
         return;
     }
-    QMapIterator<QString, QString> itDataItem(mUserData);
+    QMapIterator<QString, QString> itDataItem(userData);
     while (itDataItem.hasNext()) {
         itDataItem.next();
         const QJsonValue userDataValue{itDataItem.value()};
@@ -903,6 +927,20 @@ void TArea::dropFileOnlyUserData(QMap<QString, QString>& userData)
     });
 }
 
+// Outline color data is stored as "r|g|b|a" to avoid binary format version changes.
+void TArea::restoreLabelOutlineColorFromUserData(TMapLabel& label, int labelId, QMap<QString, QString>& userData)
+{
+    const QString colorKey = qsl("system.labelOutlineColor_%1").arg(labelId);
+    if (userData.contains(colorKey)) {
+        const QStringList colorParts = userData.take(colorKey).split(QLatin1Char('|'));
+        if (colorParts.size() == 4) {
+            label.outlineColor = QColor(colorParts.at(0).toInt(), colorParts.at(1).toInt(), colorParts.at(2).toInt(), colorParts.at(3).toInt());
+        } else {
+            qWarning("TMap: Failed to parse outline color data for label %d, expected 4 parts but got %lld", labelId, colorParts.size());
+        }
+    }
+}
+
 // Takes a userData object and parses all its elements
 void TArea::readJsonUserData(const QJsonObject& obj)
 {
@@ -916,8 +954,6 @@ void TArea::readJsonUserData(const QJsonObject& obj)
             mUserData.insert(key, obj.value(key).toString());
         }
     }
-    // a JSON label keeps its font in its own fields and nothing reads these
-    dropFileOnlyUserData(mUserData);
 }
 
 void TArea::writeJsonLabels(QJsonObject& obj) const

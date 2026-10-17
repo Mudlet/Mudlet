@@ -203,8 +203,11 @@ describe("Tests painting a map label many times bigger than the map window", fun
   end)
 
   it("paints a scaled image label", function()
-    local id = createMapImageLabel(areaId, getMudletHomeDir() .. "/nonexistent.png", -kHugeLabelRooms / 2, kHugeLabelRooms / 2, 0,
-      kHugeLabelRooms, kHugeLabelRooms, 0.005, true)
+    local specDirectory = debug.getinfo(1, "S").source:match("^@(.*)[/\\]")
+    assert(specDirectory, "MapViewportLimits_spec.lua has to be run from a file so that it can find its fixtures")
+    local image = specDirectory .. "/fixtures/images/solid-magenta-4x4.png"
+    local id = assert(createMapImageLabel(areaId, image, -kHugeLabelRooms / 2, kHugeLabelRooms / 2, 0,
+      kHugeLabelRooms, kHugeLabelRooms, 0.005, true))
     finally(function() deleteMapLabel(areaId, id) end)
 
     paintCloseUp()
@@ -261,8 +264,8 @@ describe("Tests painting a map label many times bigger than the map window", fun
         os.remove(labelledPath)
       end)
       local bare = exportAndWait(barePath)
-      id = createMapImageLabel(areaId, opaqueImage, -kHugeLabelRooms / 2, kHugeLabelRooms / 2, 0,
-        kHugeLabelRooms, kHugeLabelRooms, 0.005, showOnTop)
+      id = assert(createMapImageLabel(areaId, opaqueImage, -kHugeLabelRooms / 2, kHugeLabelRooms / 2, 0,
+        kHugeLabelRooms, kHugeLabelRooms, 0.005, showOnTop))
 
       local labelled = exportAndWait(labelledPath)
       assert.is_true(bare ~= labelled,

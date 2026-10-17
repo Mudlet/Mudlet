@@ -1178,8 +1178,71 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       assert.are.equal("red", getLabelFormat(labelName).foreground)
     end)
 
-    it("Should error for a label that does not exist", function()
-      assert.has_error(function() getLabelFormat("gldfNoSuchLabel") end)
+    it("Should refuse a label that does not exist, or a window that is not a label", function()
+      local ok, err = getLabelFormat("gldfNoSuchLabel")
+      assert.is_nil(ok)
+      assert.are.equal("label 'gldfNoSuchLabel' does not exist", err)
+      ok, err = getLabelFormat("main")
+      assert.is_nil(ok)
+      assert.are.equal("label 'main' does not exist", err)
+    end)
+
+    it("Should refuse a label deleted after it was read, and read it afresh once recreated", function()
+      finally(function() deleteLabel("gldfGone") end)
+      createLabel("gldfGone", 0, 0, 10, 10, 1)
+      setLabelStyleSheet("gldfGone", "color: red;")
+      assert.are.equal("red", getLabelFormat("gldfGone").foreground)
+      deleteLabel("gldfGone")
+      local ok, err = getLabelFormat("gldfGone")
+      assert.is_nil(ok)
+      assert.are.equal("label 'gldfGone' does not exist", err)
+      createLabel("gldfGone", 0, 0, 10, 10, 1)
+      setLabelStyleSheet("gldfGone", "color: blue;")
+      assert.are.equal("blue", getLabelFormat("gldfGone").foreground)
+    end)
+
+    describe("its cache of what it read", function()
+      local function cache()
+        for i = 1, math.huge do
+          local name, value = debug.getupvalue(getLabelFormat, i)
+          if not name then
+            return nil
+          end
+          if name == "labelStyleSheetFormats" then
+            return value
+          end
+        end
+      end
+
+      it("Should forget a label once it is deleted, by whatever type of name it was read", function()
+        finally(function()
+          deleteLabel("gldfCached")
+          deleteLabel("4711")
+        end)
+        createLabel("gldfCached", 0, 0, 10, 10, 1)
+        cecho("gldfCached", "<red>x")
+        createLabel("4711", 0, 0, 10, 10, 1)
+        getLabelFormat(4711)
+        getLabelFormat("4711")
+        assert.is_not_nil(cache()["gldfCached"])
+        assert.is_not_nil(cache()["4711"])
+        assert.is_nil(rawget(cache(), 4711))
+
+        deleteLabel("gldfCached")
+        deleteLabel("4711")
+        assert.is_nil(cache()["gldfCached"])
+        assert.is_nil(cache()["4711"])
+      end)
+
+      it("Should forget a name it is asked about once that is no label", function()
+        cache()["gldfStale"] = { stylesheet = "color: red;", parsed = {} }
+        assert.is_nil(getLabelFormat("gldfStale"))
+        assert.is_nil(cache()["gldfStale"])
+      end)
+    end)
+
+    it("Should name itself when given a name that is not a string", function()
+      assert.has_error(function() getLabelFormat({}) end, "getLabelFormat: bad argument #1 type (label as string expected, got table!)")
     end)
 
     it("Should start an echo to the label from its stylesheet, and pick up a new one", function()
@@ -3512,13 +3575,32 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
     end)
 
     it("Should map a cursor name to the id the C++ layer wants", function()
-      -- the name to id mapping is the Lua half of this function; the C++ half
-      -- only accepts a number, so a name that is not in mudlet.cursor has to
-      -- reach it as nil and be refused
+      -- the name to id mapping is the Lua half of this function; a name that is
+      -- not in mudlet.cursor is left for the C++ half to refuse
       assert.is_true(setLabelCursor(labelName, "OpenHand"))
       assert.is_true(setLabelCursor(labelName, mudlet.cursor.OpenHand))
       assert.is_nil(mudlet.cursor.definitelyNotACursor)
-      assert.has_error(function() setLabelCursor(labelName, "definitelyNotACursor") end)
+      local ok, err = setLabelCursor(labelName, "definitelyNotACursor")
+      assert.is_nil(ok)
+      assert.are.equal("cursor shape 'definitelyNotACursor' not found. see https://wiki.mudlet.org/w/CursorShapes", err)
+    end)
+
+    it("Should refuse a bad label before an unknown cursor name, as it does before an unknown number", function()
+      assert.has_error(function() setLabelCursor(nil, "definitelyNotACursor") end,
+        "setLabelCursor: bad argument #1 type (label name as string expected, got nil!)")
+      local ok, err = setLabelCursor("guiUtilsNoSuchCursorLabel", "definitelyNotACursor")
+      assert.is_nil(ok)
+      assert.are.equal("label name 'guiUtilsNoSuchCursorLabel' not found", err)
+      assert.are.same({setLabelCursor("guiUtilsNoSuchCursorLabel", 9999)}, {ok, err})
+      ok, err = setLabelCursor("", "definitelyNotACursor")
+      assert.is_nil(ok)
+      assert.are.equal("a label cannot have an empty string as its name", err)
+    end)
+
+    it("Should take a shape number given as a string as that number", function()
+      assert.is_true(setLabelCursor(labelName, tostring(mudlet.cursor.OpenHand)))
+      assert.is_true(setLabelCursor(labelName, "-1"))
+      assert.are.same({setLabelCursor(labelName, 9999)}, {setLabelCursor(labelName, "9999")})
     end)
 
     it("Should reset the cursor by asking for shape -1", function()

@@ -112,6 +112,7 @@ public:
     std::pair<bool, bool> callLuaFunctionReturnBool(void* pT, const QString& itemName = QString());
     double condenseMapLoad();
     bool compile(const QString& code, QString& error, const QString& name);
+    static QString compileErrorAsPlainText(const QString& error);
     void setAtcpTable(const QString&, const QString&);
     void signalMXPEvent(const QString& type, const QMap<QString, QString>& attrs, const QStringList& actions, const QString& caption = QString());
     void setGMCPTable(QString&, const QString&);
@@ -876,7 +877,7 @@ public:
     int duplicateLuaRegistryIndex(int index);
     void freeAllInLuaRegistry(TEvent);
     // For C++ that runs a nested event loop for this profile outside a Lua call,
-    // so pumpingEvents() holds off a reset or close until it returns.
+    // so pumpingEvents() refuses a reset or a profile close while it runs.
     void enterNestedEventLoop() { ++mEventPumpDepth; }
     void leaveNestedEventLoop() { --mEventPumpDepth; }
 

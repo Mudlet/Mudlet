@@ -1202,6 +1202,29 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
             updateEntranceMap(pR, true);
         }
     }
+
+    // Maps saved by a Mudlet whose setRoomIDbyHash() took any room id or an
+    // empty hash can still carry those entries
+    int droppedHashCount = 0;
+    QMutableMapIterator<QString, int> itHash(hashToRoomID);
+    while (itHash.hasNext()) {
+        itHash.next();
+        if (itHash.key().isEmpty() || !rooms.contains(itHash.value())) {
+            if (roomIDToHash.value(itHash.value()) == itHash.key()) {
+                roomIDToHash.remove(itHash.value());
+            }
+            itHash.remove();
+            ++droppedHashCount;
+        }
+    }
+    if (droppedHashCount) {
+        //: Map audit message, a room hash is the identifier a game gives a room so that a script can find it in the map
+        const QString infoMsg = tr("[ INFO ]  - %n room hash(es) that named a room which does not exist, or that were empty, have been removed.", nullptr, droppedHashCount);
+        if (TMap::smShowMapAuditErrors) {
+            mpMap->postMessage(infoMsg);
+        }
+        mpMap->appendErrorMsg(infoMsg, false);
+    }
 }
 
 void TRoomDB::clearMapDB()
@@ -1429,11 +1452,11 @@ bool TRoomDB::restoreSingleRoom(int i, TRoom* pT)
     }
 
     // addRoom() refuses an id that is already taken and takes no ownership when
-    // it does, so this room has to go here or it leaks - restoring onto a map
-    // that still holds rooms is the case that reaches this. TRoom::restore()
-    // has already put the colliding id on it, and ~TRoom() would use that id to
-    // remove the room legitimately holding it, so unhook it first - the same
-    // dance deleteDisplacedArea() does for an area.
+    // it does, so this room has to go here or it leaks - a file holding the same
+    // id twice, or restoring onto a map that still holds rooms, reaches this.
+    // TRoom::restore() or readJsonRoom() has already put the colliding id on it,
+    // and ~TRoom() would use that id to remove the room legitimately holding it,
+    // so unhook it first - the same dance deleteDisplacedArea() does for an area.
     pT->mpRoomDB = nullptr;
     delete pT;
     return false;
