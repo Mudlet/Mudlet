@@ -65,6 +65,9 @@ struct TLabelModel
     // What TLabel::setBackgroundColor() restyles a label with: the sheet with its background-color
     // declarations given the colour, or the colour's appended.
     static QString styleSheetWithBackgroundColor(const QString& styleSheet, const QColor& color);
+    // What TLabel::resetBackgroundImage() restyles a label with: the sheet without its background-image
+    // declarations, but for those inside a {...} rule, such as a :hover image.
+    static QString styleSheetWithoutBackgroundImage(const QString& styleSheet);
     // Whether the text has an anchor tag, which makes the label's links clickable
     static bool containsAnchorTag(const QString& text);
     // What TLabel::setText() shows for the text: each anchor given the link style as an inline style

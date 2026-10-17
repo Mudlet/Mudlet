@@ -3438,6 +3438,98 @@ describe("Tests mapper functions against a shared fixture", function()
 
 end)
 
+-- Each spec builds its rooms in an area of its own, which after_each deletes
+-- along with them, so none of them can see another's exits or weights.
+describe("Tests route weights and extreme coordinates on a scratch area", function()
+  local areaName = "MapperSpecScratch"
+  local area
+
+  local function room(x, y, z)
+    local id = createRoomID()
+    assert.is_true(addRoom(id))
+    assert.is_true(setRoomArea(id, area))
+    assert.is_true(setRoomCoordinates(id, x, y, z or 0))
+    return id
+  end
+
+  setup(function()
+    assert.is_true(openMapWidget())
+  end)
+
+  before_each(function()
+    local err
+    area, err = addAreaName(areaName)
+    assert.is_number(area, err)
+  end)
+
+  after_each(function()
+    setExitWeightFilter(nil)
+    assert.is_true(deleteArea(areaName))
+  end)
+
+  it("getPath reports route weights exactly beyond what a float can hold", function()
+    local ids = {}
+    for i = 1, 4 do
+      ids[i] = room(i, 0)
+    end
+    for i = 1, 3 do
+      setExit(ids[i], ids[i + 1], "east")
+      setExit(ids[i + 1], ids[i], "west")
+    end
+    local function weigh(from, to)
+      local ok, weight = getPath(from, to)
+      assert.is_true(ok)
+      return {weight, table.concat(speedWalkWeight, ",")}
+    end
+
+    setExitWeight(ids[1], "east", 16777217)
+    assert.are.same({16777217, "16777217"}, weigh(ids[1], ids[2]))
+    setExitWeight(ids[1], "east", 2147483647)
+    assert.are.same({2147483647, "2147483647"}, weigh(ids[1], ids[2]))
+    for i = 1, 3 do
+      setExitWeight(ids[i], "east", 1000000000)
+    end
+    assert.are.same({3000000000, "1000000000,1000000000,1000000000"}, weigh(ids[1], ids[4]))
+    setExitWeight(ids[1], "east", 2147483647)
+    setExitWeight(ids[2], "east", 2147483647)
+    -- 0 hands the exit back to the weight of the room it leads to, which is 1
+    setExitWeight(ids[3], "east", 0)
+    assert.are.same({4294967295, "2147483647,2147483647,1"}, weigh(ids[1], ids[4]))
+    -- past what an unsigned 32-bit total holds, so it only passes if the sum is 64-bit
+    setExitWeight(ids[3], "east", 2147483647)
+    assert.are.same({6442450941, "2147483647,2147483647,2147483647"}, weigh(ids[1], ids[4]))
+  end)
+
+  -- Negating y for the area's span index overflows here; only a UBSan build
+  -- reports that, so MapCoordinateLimitTest checks where the index files the room.
+  it("moves and routes to a room at the most negative coordinate an int holds", function()
+    local r1, r2 = room(0, 0), room(1, 1)
+    setExit(r1, r2, "north")
+    setExit(r2, r1, "south")
+    assert.is_true(setRoomCoordinates(r1, 0, -2147483648, 0))
+    assert.is_true(setRoomCoordinates(r1, 0, 5, 0))
+    assert.is_true(setRoomCoordinates(r1, -2147483648, 0, 0))
+    assert.is_true(getPath(r2, r1))
+    assert.are.same({"s"}, speedWalkDir)
+  end)
+
+  -- Subtracted as an int, INT_MIN - INT_MAX wraps to 1: the far room a would look
+  -- a step from the goal and the search would settle for the weight 20 route.
+  it("routes by weight between rooms an int's whole range apart", function()
+    local start, a, b, goal = room(1, 0), room(0, 2147483647), room(0, 0), room(0, -2147483648)
+    setExit(start, a, "north")
+    setExit(a, goal, "east")
+    setExit(start, b, "west")
+    setExit(b, goal, "south")
+    setExitWeight(start, "north", 10)
+    setExitWeight(a, "east", 10)
+    setExitWeight(start, "west", 1)
+    setExitWeight(b, "south", 1)
+    local ok, weight = getPath(start, goal)
+    assert.are.same({true, 2, {"w", "s"}}, {ok, weight, speedWalkDir})
+  end)
+end)
+
 -- closeMapWidget() has to leave the profile in a state that is distinguishable
 -- from "the map widget is open", or every map window function keeps answering
 -- for a widget the script just put away.
@@ -3552,6 +3644,50 @@ describe("Tests deleteMap", function()
     assert.is_false(roomExists(a))
     assert.is_false(roomExists(b))
     assert.is_nil(next(getRooms()))
+  end)
+end)
+
+describe("Tests getCollisionLocationsInArea on a scratch area", function()
+  local areaName = "MapperSpecCollisions"
+  local area
+
+  local function room(x, y, z)
+    local id = createRoomID()
+    addRoom(id)
+    setRoomArea(id, area)
+    setRoomCoordinates(id, x, y, z or 0)
+    return id
+  end
+
+  setup(function()
+    assert.is_true(openMapWidget())
+  end)
+
+  before_each(function()
+    area = assert(addAreaName(areaName))
+  end)
+
+  after_each(function()
+    deleteArea(areaName)
+  end)
+
+  it("getCollisionLocationsInArea lists each shared location once, ordered by z, y and x", function()
+    room(5, 1, 0); room(5, 1, 0); room(5, 1, 0)
+    room(-2, 1, 0); room(-2, 1, 0)
+    room(0, 0, 3); room(0, 0, 3)
+    room(1, 1, 0)
+    room(5, 2, 0)
+    -- y comes before -2,1 and 5,1 but x comes after, so sorting by x before y would fail
+    room(9, 0, 0); room(9, 0, 0)
+    -- stacked over 5,2,0 and next to it in (z, y, x) order: a check that skipped z would report it
+    room(5, 2, 1)
+    -- enough x in one row that hash order all but never comes out ascending
+    for _, x in ipairs({7, -3, 12, 0, 100, -50, 4, 33}) do room(x, 0, 2); room(x, 0, 2) end
+    assert.are.same({
+      {9, 0, 0}, {-2, 1, 0}, {5, 1, 0},
+      {-50, 0, 2}, {-3, 0, 2}, {0, 0, 2}, {4, 0, 2}, {7, 0, 2}, {12, 0, 2}, {33, 0, 2}, {100, 0, 2},
+      {0, 0, 3}
+    }, getCollisionLocationsInArea(area))
   end)
 end)
 

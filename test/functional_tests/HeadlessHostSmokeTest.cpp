@@ -418,7 +418,8 @@ local ok, err = pcall(function()
   end
   assert(setFont("gridMini", family) == true, "setFont did not answer true for the miniconsole")
   assert(setFont("gridMini", family) == true, "setFont did not answer true for an unchanged family")
-  assert(joined(getUserWindowSize("gridMini")) == gridMainSize, "a miniconsole has a user window size of its own")
+  local miniSize, miniSizeMsg = getUserWindowSize("gridMini")
+  assert(miniSize == nil and type(miniSizeMsg) == "string", "getUserWindowSize did not refuse the miniconsole with a message")
   local missing, missingMsg = setFontSize("noSuchGridWindow", 10)
   assert(missing == nil and type(missingMsg) == "string", "setFontSize on a missing window did not answer nil and a message")
 
@@ -1302,6 +1303,34 @@ headlessBackground = ok and "ok" or tostring(err)
                                   qsl("gone:gifs=0/0")};
         QCOMPARE(luaGlobalString(host, "headlessBackgroundAnswers"), answers.join(QLatin1Char('\n')));
         QVERIFY2(QApplication::topLevelWidgets().isEmpty(), "Setting the background images created a widget.");
+    }
+
+    // The answers are those GeyserLabel_spec.lua gets in the GUI self-test profile
+    void test_headlessResetTakesStyleSheetImage()
+    {
+        const QString hostname = qsl("Test-Headless-Host-Sheet-Image");
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = HostManager::self()->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+        QVERIFY(!host->hasConsoleView());
+
+        const bool ran = host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+local answers = {}
+createLabel("sheetImage", 0, 0, 40, 20, 1)
+for _, sheet in ipairs({
+  "border: 1px solid red; background-image: url(data:image/png;base64,AAAA); color: blue;",
+  "QLabel{color: red;} QLabel::hover{background-image: url(hover.png);}",
+  "Background-Image: url(:/icons/mudlet.png); color: blue;",
+}) do
+  setLabelStyleSheet("sheetImage", sheet)
+  answers[#answers + 1] = tostring(resetBackgroundImage("sheetImage")) .. ":" .. getLabelStyleSheet("sheetImage")
+end
+headlessSheetImageAnswers = table.concat(answers, "\n")
+)lua"));
+
+        QVERIFY2(ran, "The Lua chunk did not run.");
+        const QStringList answers{qsl("true:border: 1px solid red;  color: blue;"), qsl("true:QLabel{color: red;} QLabel::hover{background-image: url(hover.png);}"), qsl("true: color: blue;")};
+        QCOMPARE(luaGlobalString(host, "headlessSheetImageAnswers"), answers.join(QLatin1Char('\n')));
     }
 
     // The answers are those of the same Lua run in the GUI self-test profile
@@ -3166,7 +3195,7 @@ headlessScroll = ok and "ok" or tostring(err)
                                     qsl("cleared=[1]0[1]0"),
                                     qsl("fedAfterClear=[1]30[1]30")};
         QCOMPARE(luaGlobalString(host, "scrollMain"), mainSteps.join(QLatin1Char(';')));
-        QCOMPARE(luaGlobalString(host, "scrollMainForms"), qsl("[0][1]30;[0][1]25;[0][1]20;[0][1]30;[1]true[1]true[1]true[1]true"));
+        QCOMPARE(luaGlobalString(host, "scrollMainForms"), qsl("[0][1]30;[0][1]25;[0][1]20;[0][1]30;[2]nil:msg[1]true[2]nil:msg[1]true"));
         const QStringList subConsoleSteps{qsl("fresh=[1]0[1]false[1]true"),
                                           qsl("filled=[1]60"),
                                           qsl("bar=[0][1]true[0][1]false"),
@@ -3193,15 +3222,15 @@ headlessScroll = ok and "ok" or tostring(err)
                                       qsl("filled=[1]60"),
                                       qsl("bar=[0][1]true[0][1]false"),
                                       qsl("hbar=[0][0]"),
-                                      qsl("frozen=[1]true[1]true[0][1]60"),
-                                      qsl("thawed=[1]true[1]true[0][1]60"),
+                                      qsl("frozen=[2]nil:msg[1]true[0][1]60"),
+                                      qsl("thawed=[2]nil:msg[1]true[0][1]60"),
                                       qsl("to10=[0][1]60"),
                                       qsl("to20=[0][1]60"),
                                       qsl("toMinus5=[0][1]60"),
                                       qsl("up3=[0][1]60"),
                                       qsl("down2=[0][1]60"),
                                       qsl("fedWhileBack=[1]65[1]65"),
-                                      qsl("frozenWhileBack=[1]true[1]65"),
+                                      qsl("frozenWhileBack=[2]nil:msg[1]65"),
                                       qsl("toMinus100=[0][1]65"),
                                       qsl("toEnd=[0][1]65"),
                                       qsl("to1000=[0][1]65"),
@@ -3394,7 +3423,8 @@ headlessFontWrap = ok and "ok" or tostring(err)
             return font ? font->pointSize() : -1;
         };
         QVERIFY(startFont.pointSize() != 10);
-        QCOMPARE(labelPointSize(qsl("fwLabel")), startFont.pointSize());
+        // The walk's setFontSize(13) reaches a label too
+        QCOMPARE(labelPointSize(qsl("fwLabel")), 13);
         QCOMPARE(labelPointSize(qsl("fwWindowLabel")), 10);
         QCOMPARE(labelPointSize(qsl("fwLateLabel")), 13);
         QCOMPARE(labelPointSize(qsl("fwWindowLateLabel")), 13);
@@ -3469,13 +3499,20 @@ headlessFontWrap = ok and "ok" or tostring(err)
                                qsl("familyAvg=%1").arg(averaged(familyFont))}
                     .join(QLatin1Char(';'));
         };
-        // A label has a font but no size, wrap or text of its own; a missing name has none of them
-        const auto otherSteps = [&](const QString& font, const QString& familyAnswer) {
-            return qsl("size=[1]nil;avg=[1]nil;font=%1;pt=[2]nil:msg;wrap=[2]nil:msg;wrap0=[2]nil:msg;wrap30=[2]nil:msg;wrapNow=[2]nil:msg;"
-                       "indent=[2]nil:msg;indentNeg=[2]nil:msg;hanging=[2]nil:msg;wrapLine=[0];wrapBack=[2]nil:msg;pt0=[2]nil:msg;pt13=[2]nil:msg;"
-                       "size13=[1]nil;avg13=[1]nil;fontEmpty=[2]nil:msg;fontMissing=[2]nil:msg;fontFamily=%2;familyFont=%3;familyPt=[2]nil:msg;"
+        // A label has a font and a point size but no measured size, wrap or text of its own; a missing name has none of them
+        const auto otherSteps = [&](const QString& font, const QString& familyAnswer, const int pointSize = 0) {
+            const QString refused = qsl("[2]nil:msg");
+            const bool label = pointSize > 0;
+            return qsl("size=[1]nil;avg=[1]nil;font=%1;pt=%4;wrap=[2]nil:msg;wrap0=[2]nil:msg;wrap30=[2]nil:msg;wrapNow=[2]nil:msg;"
+                       "indent=[2]nil:msg;indentNeg=[2]nil:msg;hanging=[2]nil:msg;wrapLine=[0];wrapBack=[2]nil:msg;pt0=[2]nil:msg;pt13=%5;"
+                       "size13=[1]nil;avg13=[1]nil;fontEmpty=[2]nil:msg;fontMissing=[2]nil:msg;fontFamily=%2;familyFont=%3;familyPt=%6;"
                        "familySize=[1]nil;familyAvg=[1]nil")
-                    .arg(font, familyAnswer.isEmpty() ? qsl("[2]nil:msg") : qsl("[1]true"), familyAnswer.isEmpty() ? qsl("[2]nil:msg") : familyAnswer);
+                    .arg(font,
+                         familyAnswer.isEmpty() ? refused : qsl("[1]true"),
+                         familyAnswer.isEmpty() ? refused : familyAnswer,
+                         label ? qsl("[1]%1").arg(pointSize) : refused,
+                         label ? qsl("[1]true") : refused,
+                         label ? qsl("[1]13") : refused);
         };
 
         QCOMPARE(luaGlobalString(host, "fwGlobal"), qsl("%1;%2;[1]%3;[1]%4;[1]100").arg(measured(startFont), averaged(startFont), family(startFont)).arg(startFont.pointSize()));
@@ -3490,7 +3527,7 @@ headlessFontWrap = ok and "ok" or tostring(err)
         QVERIFY(TFontAttributes(pFreshMini->mUpperPaneFont) == TFontAttributes(subConsoleFont(12)));
         QCOMPARE(luaGlobalString(host, "fwWindowSteps"), consoleSteps(subConsoleFont(10), 99999999));
         QCOMPARE(luaGlobalString(host, "fwBufferSteps"), consoleSteps(subConsoleFont(14), 100));
-        QCOMPARE(luaGlobalString(host, "fwLabelSteps"), otherSteps(qsl("[1]%1").arg(family(startFont)), qsl("[1]%1").arg(family(familyFont))));
+        QCOMPARE(luaGlobalString(host, "fwLabelSteps"), otherSteps(qsl("[1]%1").arg(family(startFont)), qsl("[1]%1").arg(family(familyFont)), startFont.pointSize()));
         QCOMPARE(luaGlobalString(host, "fwMissing"), otherSteps(qsl("[2]nil:msg"), QString()));
         QCOMPARE(luaGlobalString(host, "fwLabelFonts"), qsl("%1;%2;%2").arg(family(subConsoleFont(10)), family(familyFont)));
         // Moved to another window, one given no font by setFont() takes the application's
