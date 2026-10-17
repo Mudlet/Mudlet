@@ -63,10 +63,13 @@ struct TLabelModel
     void setAccessibleName(const QString& name);
     void setAccessibleButton(std::optional<bool> button);
     void setClickThrough(bool clickThrough);
+    // The view's copies of what the label shows, which name it unless a script named it
+    void setText(const QString& text);
+    void setToolTip(const QString& toolTip);
 
     // KeyboardAccess: the profile's accessibleLabels setting changed
     enum class AccessibilityChange { Name, Role, KeyboardAccess };
-    // Set by the view, which tells assistive technology; the core changes these without a widget
+    // Set by the widget, if there is one, to update its focus policy and tell assistive technology of a change
     std::function<void(AccessibilityChange)> mAccessibilityChanged;
     void accessibilityChanged(AccessibilityChange change) const;
 
@@ -130,7 +133,7 @@ struct TLabelModel
     // The widget's own styleSheet(), toolTip() and font(), kept current by the view.
     QString mStyleSheet;
     QString mToolTip;
-    // What a script named the label for screen readers; empty means its text is used
+    // What a script named the label for screen readers; empty means its text is used, else its tooltip
     QString mAccessibleName;
     // Set by a script whose label's callbacks are not a button's, such as a drag handle; empty means automatic
     std::optional<bool> mAccessibleButton;

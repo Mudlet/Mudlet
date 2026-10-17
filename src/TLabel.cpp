@@ -31,10 +31,13 @@
 #include "TMainConsole.h"
 
 #include <QAccessible>
+#include <QApplication>
 #include <QDesktopServices>
 #include <QPainter>
 #include <QSvgRenderer>
+#include <QTextBlock>
 #include <QTextCursor>
+#include <QTextDocument>
 #include <QTextDocumentFragment>
 #include <QTimer>
 #include <QUrl>
@@ -126,11 +129,10 @@ void TLabel::showLinkStyledText(const QString& text)
     const bool announcing = announcesTextChanges();
     const QString spokenBefore = announcing ? mpModel->spokenText() : QString();
     QLabel::setText(text);
-    mpModel->mText = QLabel::text();
+    mpModel->setText(QLabel::text());
     if (announcing) {
         announceTextChange(spokenBefore);
     }
-    derivedNameMayHaveChanged();
 }
 
 void TLabel::press()
@@ -154,6 +156,31 @@ void TLabel::press()
 bool TLabel::keyboardOperable() const
 {
     return mpHost && mpHost->mAccessibleLabels && mpModel->actsAsButton();
+}
+
+bool TLabel::keyboardReachable() const
+{
+    return keyboardOperable() || (mpHost && mpHost->mAccessibleLabels && textInteractionFlags().testFlag(Qt::LinksAccessibleByKeyboard));
+}
+
+int TLabel::anchorCount() const
+{
+    QTextDocument document;
+    document.setHtml(text());
+    int count = 0;
+    QString previousHref;
+    for (QTextBlock block = document.begin(); block.isValid(); block = block.next()) {
+        for (auto it = block.begin(); !it.atEnd(); ++it) {
+            const QTextCharFormat format = it.fragment().charFormat();
+            // A link with formatting inside it is several fragments with the one href
+            const QString href = format.isAnchor() ? format.anchorHref() : QString();
+            if (!href.isEmpty() && href != previousHref) {
+                ++count;
+            }
+            previousHref = href;
+        }
+    }
+    return count;
 }
 
 void TLabel::updateKeyboardAccess()
@@ -192,48 +219,77 @@ void TLabel::keyPressEvent(QKeyEvent* event)
         press();
         return;
     }
+    TMainConsole* pConsole = mpHost ? mpHost->mainConsoleView() : nullptr;
+    if (pConsole && hasFocus() && mpHost->caretShortcutMatches(event)) {
+        event->accept();
+        mpHost->setCaretEnabled(true);
+        return;
+    }
+    // Typing, or a keybinding on a function key, carries on in the command line as it does from the main window
+    const bool typed = !(event->modifiers() & (Qt::ControlModifier | Qt::AltModifier | Qt::MetaModifier)) && !event->text().isEmpty() && event->text().front().isPrint();
+    const bool functionKey = event->key() >= Qt::Key_F1 && event->key() <= Qt::Key_F35;
+    if (pConsole && pConsole->mpCommandLine && hasFocus() && (typed || functionKey)) {
+        mpHost->setFocusOnHostActiveCommandLine();
+        QKeyEvent forwarded(event->type(), event->key(), event->modifiers(), event->text(), event->isAutoRepeat(), event->count());
+        qApp->sendEvent(pConsole->mpCommandLine, &forwarded);
+        return;
+    }
     QLabel::keyPressEvent(event);
 }
 
-// The buttons are visited in reading order, and the last hands Tab back to where the player came from
+// Qt's own chain follows the order scripts made labels in, so with accessibleLabels on the main console's labels
+// step through the buttons by their place on screen instead - after a label's own links, which QLabel steps through
 bool TLabel::focusNextPrevChild(bool next)
 {
     TMainConsole* pConsole = mpHost ? mpHost->mainConsoleView() : nullptr;
-    if (!pConsole || !keyboardOperable()) {
+    // A label in a floating user window is in a window of its own, where the main window's buttons are out of reach
+    if (!pConsole || !mpHost->mAccessibleLabels || pConsole->labelWidget(mName) != this || window() != pConsole->window()) {
         return QLabel::focusNextPrevChild(next);
     }
-    const QList<QWidget*> buttons = pConsole->keyboardButtons();
-    const qsizetype target = buttons.indexOf(this) + (next ? 1 : -1);
-    if (buttons.contains(this) && target >= 0 && target < buttons.size()) {
-        buttons.at(target)->setFocus(next ? Qt::TabFocusReason : Qt::BacktabFocusReason);
-    } else {
-        pConsole->focusAfterKeyboardButtons();
+    const int anchors = textInteractionFlags().testFlag(Qt::LinksAccessibleByKeyboard) ? anchorCount() : 0;
+    const int target = mFocusedAnchor + (next ? 1 : -1);
+    if (target >= 0 && target < anchors && QLabel::focusNextPrevChild(next)) {
+        mFocusedAnchor = target;
+        return true;
     }
+    pConsole->focusButtonAfter(this, next);
     return true;
 }
 
 void TLabel::focusInEvent(QFocusEvent* event)
 {
     QLabel::focusInEvent(event);
+    // Arriving by Tab, QLabel focuses the first link; by Shift+Tab, the last
+    if (event->reason() == Qt::TabFocusReason) {
+        mFocusedAnchor = 0;
+    } else if (event->reason() == Qt::BacktabFocusReason) {
+        mFocusedAnchor = anchorCount() - 1;
+    } else {
+        mFocusedAnchor = -1;
+    }
     update();
 }
 
 void TLabel::focusOutEvent(QFocusEvent* event)
 {
     QLabel::focusOutEvent(event);
+    TMainConsole* pConsole = mpHost ? mpHost->mainConsoleView() : nullptr;
+    const bool windowOnly = event->reason() == Qt::ActiveWindowFocusReason || event->reason() == Qt::PopupFocusReason;
+    if (pConsole && !windowOnly && !qobject_cast<TLabel*>(QApplication::focusWidget())) {
+        pConsole->leftKeyboardButtons();
+    }
     update();
 }
 
 bool TLabel::showsImage() const
 {
-    return !pixmap().isNull() || mpSvgRenderer;
+    // A raster replaces the text, but text drawn over the SVG layer is what the label then shows
+    return !pixmap().isNull() || (mpSvgRenderer && QTextDocumentFragment::fromHtml(text()).toPlainText().trimmed().isEmpty());
 }
 
-void TLabel::derivedNameMayHaveChanged()
+void TLabel::imageMayHaveChanged()
 {
-    if (mpModel->mAccessibleName.isEmpty()) {
-        notifyAccessibility(this, QAccessible::NameChanged);
-    }
+    mpModel->accessibilityChanged(TLabelModel::AccessibilityChange::Role);
 }
 
 void TLabel::accessibilityChanged(TLabelModel::AccessibilityChange change)
@@ -243,6 +299,10 @@ void TLabel::accessibilityChanged(TLabelModel::AccessibilityChange change)
         return;
     }
     updateKeyboardAccess();
+    // Qt leaves the focus where it is when the policy changes, on a label that can no longer act on a key
+    if (hasFocus() && focusPolicy() == Qt::NoFocus && mpHost && mpHost->mainConsoleView()) {
+        mpHost->mainConsoleView()->focusButtonAfter(this, true);
+    }
     if (change == TLabelModel::AccessibilityChange::KeyboardAccess) {
         return;
     }
@@ -484,8 +544,8 @@ bool TLabel::setBackgroundImage(const QString& path)
     stopMovie();
     setPixmap(raster);
     // setPixmap() empties the text
-    mpModel->mText = text();
-    derivedNameMayHaveChanged();
+    mpModel->setText(text());
+    imageMayHaveChanged();
     return true;
 }
 
@@ -511,6 +571,7 @@ bool TLabel::setSvgImage(const QString& path)
     }
     refreshSvg();
     updateGeometry();
+    imageMayHaveChanged();
     return true;
 }
 
@@ -522,10 +583,12 @@ void TLabel::resetBackgroundImage()
     if (!pixmap().isNull() || movie()) {
         stopMovie();
         clear();
+        mpModel->setText(text());
     }
     if (const QString sheet = styleSheet(), withoutImage = TLabelModel::styleSheetWithoutBackgroundImage(sheet); withoutImage != sheet) {
         restyle(withoutImage);
     }
+    imageMayHaveChanged();
 }
 
 void TLabel::stopMovie()
@@ -692,14 +755,18 @@ void TLabel::changeEvent(QEvent* event)
 // QWidget::event() doesn't pass ToolTipChange on to changeEvent()
 bool TLabel::event(QEvent* event)
 {
+    // The caret shortcut has to beat an application-wide QShortcut on the same key, as in TTextEdit::event()
+    if (event->type() == QEvent::ShortcutOverride && mpHost && hasFocus() && mpHost->caretShortcutMatches(static_cast<QKeyEvent*>(event))) {
+        event->accept();
+        return true;
+    }
     if (event->type() == QEvent::ToolTipChange) {
-        mpModel->mToolTip = toolTip();
-        derivedNameMayHaveChanged();
+        mpModel->setToolTip(toolTip());
     }
     const bool handled = QLabel::event(event);
     // A qproperty-text in a style sheet reaches QLabel::setText() directly, as the style is applied
     if (event->type() == QEvent::Polish || event->type() == QEvent::StyleChange) {
-        mpModel->mText = text();
+        mpModel->setText(text());
     }
     return handled;
 }

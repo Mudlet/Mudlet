@@ -766,9 +766,10 @@ function Geyser.Label:setReleaseCallback (func, ...)
   setLabelReleaseCallback(self.name, func, ...)
   self.releaseCallback = func
   self.releaseArgs = { ... }
-  -- A right-click menu marked its label as text; a release callback makes it a button after all
+  -- A right-click menu marks its label as text; a release callback makes it a button after all, and
+  -- clearing that callback makes it text again
   if self.rightClickMenu and (not self.accessibleRole or self.accessibleRole == "") then
-    setLabelAccessibleRole(self.name, "")
+    setLabelAccessibleRole(self.name, func and "" or "text")
   end
 end
 
@@ -856,20 +857,26 @@ end
 --- Sets the name a screen reader announces for the label, in place of its text.
 -- Needed for a label that shows only an image or icon. Pass "" to announce its text again.
 -- @param name the name to announce
+-- @return true, or nil and why the label refused it
 function Geyser.Label:setAccessibleName(name)
-  if setLabelAccessibleName(self.name, name) then
+  local ok, err = setLabelAccessibleName(self.name, name)
+  if ok then
     self.accessibleName = name
   end
+  return ok, err
 end
 
 --- Sets whether a screen reader announces the label as a button or as text.
 -- By default it is a button when it has a click or release callback; use "text" for one whose
 -- callbacks are not a button's, such as a drag handle. Pass "" to decide by its callbacks again.
 -- @param role "button", "text" or ""
+-- @return true, or nil and why the label refused it
 function Geyser.Label:setAccessibleRole(role)
-  if setLabelAccessibleRole(self.name, role) then
+  local ok, err = setLabelAccessibleRole(self.name, role)
+  if ok then
     self.accessibleRole = role
   end
+  return ok, err
 end
 
 --- Sets whether a screen reader announces the label's new text when it changes, for a label
@@ -1402,11 +1409,17 @@ function Geyser.Label:new (cons, container)
   local accessibleName, accessibleRole, liveRegion = me.accessibleName, me.accessibleRole, me.liveRegion
   me.accessibleName, me.accessibleRole, me.liveRegion = nil, nil, nil
   if accessibleName then
-    me:setAccessibleName(accessibleName)
+    local ok, err = me:setAccessibleName(accessibleName)
+    if not ok then
+      debugc(string.format("Geyser.Label:new(): accessibleName refused for '%s': %s", me.name, tostring(err)))
+    end
   end
 
   if accessibleRole then
-    me:setAccessibleRole(accessibleRole)
+    local ok, err = me:setAccessibleRole(accessibleRole)
+    if not ok then
+      debugc(string.format("Geyser.Label:new(): accessibleRole refused for '%s': %s", me.name, tostring(err)))
+    end
   end
 
   if liveRegion then

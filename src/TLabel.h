@@ -57,14 +57,17 @@ public:
     ~TLabel();
 
     void setText(const QString& text);
-    // A screen reader's activation, delivered as the left click a mouse would make
+    // A screen reader's or the keyboard's activation, delivered as the left click a mouse would make
     void press();
-    // Its image or SVG background, which a screen reader is told is a graphic
+    // Whether what it shows is an image - a raster, or an SVG with no text over it - which a screen reader
+    // is told is a graphic unless the label is a button
     bool showsImage() const;
-    // After a change to the text or tooltip, which name the label unless a script named it
-    void derivedNameMayHaveChanged();
+    // After its image or movie changes, which can make it a graphic, an animation or text
+    void imageMayHaveChanged();
     // Whether the player can reach and press it from the keyboard: a button, with the profile's accessibleLabels on
     bool keyboardOperable() const;
+    // Whether Tab stops on it with accessibleLabels on: a button, or a label with links to step through
+    bool keyboardReachable() const;
     void mousePressEvent(QMouseEvent*) override;
     void mouseDoubleClickEvent(QMouseEvent*) override;
     void mouseReleaseEvent(QMouseEvent*) override;
@@ -133,6 +136,10 @@ private:
     void accessibilityChanged(TLabelModel::AccessibilityChange change);
     // A screen reader's press is the label's, not one of a link that happens to sit under its centre
     bool mScreenReaderPress = false;
+    // QLabel steps between its links but does not say which has the focus, and past the last it would hand Tab
+    // to Qt's own chain, so the label keeps count: -1 before the first
+    int mFocusedAnchor = -1;
+    int anchorCount() const;
     bool carriesLink() const;
     bool forwardRightClickToConsole(QMouseEvent* event);
     void applyBackgroundColor();

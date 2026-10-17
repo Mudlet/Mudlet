@@ -511,22 +511,54 @@ bool TLabelModel::actsAsButton() const
     return !mClickThrough && mAccessibleButton.value_or(mClickFunction != 0 || mReleaseFunction != 0);
 }
 
+// Each setter tells the view only of a real change, as a screen reader may say the label again on hearing of one
 void TLabelModel::setAccessibleName(const QString& name)
 {
+    if (mAccessibleName == name) {
+        return;
+    }
     mAccessibleName = name;
     accessibilityChanged(AccessibilityChange::Name);
 }
 
 void TLabelModel::setAccessibleButton(std::optional<bool> button)
 {
+    if (mAccessibleButton == button) {
+        return;
+    }
     mAccessibleButton = button;
     accessibilityChanged(AccessibilityChange::Role);
 }
 
 void TLabelModel::setClickThrough(bool clickThrough)
 {
+    if (mClickThrough == clickThrough) {
+        return;
+    }
     mClickThrough = clickThrough;
     accessibilityChanged(AccessibilityChange::Role);
+}
+
+void TLabelModel::setText(const QString& text)
+{
+    if (mText == text) {
+        return;
+    }
+    mText = text;
+    if (mAccessibleName.isEmpty()) {
+        accessibilityChanged(AccessibilityChange::Name);
+    }
+}
+
+void TLabelModel::setToolTip(const QString& toolTip)
+{
+    if (mToolTip == toolTip) {
+        return;
+    }
+    mToolTip = toolTip;
+    if (mAccessibleName.isEmpty()) {
+        accessibilityChanged(AccessibilityChange::Name);
+    }
 }
 
 void TLabelModel::accessibilityChanged(AccessibilityChange change) const

@@ -4070,6 +4070,24 @@ void TTextEdit::reportCodepointErrors()
 }
 #endif
 
+void TTextEdit::moveCaretToLink(bool first)
+{
+    int line = 0;
+    int column = 0;
+    if (!mpBuffer || !mpBuffer->findNextLink(0, -1, line, column)) {
+        return;
+    }
+    // Walked forward rather than searched back from the end, which would skip a link the end sits on
+    int nextLine = line;
+    int nextColumn = column;
+    bool wrapped = false;
+    while (!first && mpBuffer->findNextLink(line, column, nextLine, nextColumn, &wrapped) && !wrapped) {
+        line = nextLine;
+        column = nextColumn;
+    }
+    setCaretPosition(line, column);
+}
+
 void TTextEdit::setCaretPosition(int line, int column)
 {
     mCaretLine = line;
@@ -4479,7 +4497,8 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
         int outCol = 0;
         bool wrapped = false;
         const bool found = forward ? mpBuffer->findNextLink(mCaretLine, mCaretColumn, outLine, outCol, &wrapped) : mpBuffer->findPreviousLink(mCaretLine, mCaretColumn, outLine, outCol, &wrapped);
-        // Past the last link Tab carries on to the script buttons, as a web page's controls follow its links
+        // Past either end of the links, or with none, the focus goes on to the script buttons instead of wrapping,
+        // as a web page's controls follow its links
         if ((!found || wrapped) && mpHost->mainConsoleView() && mpHost->mainConsoleView()->focusKeyboardButton(forward)) {
             return true;
         }

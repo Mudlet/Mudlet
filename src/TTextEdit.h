@@ -120,6 +120,8 @@ public:
 
     void initializeCaret();
     void setCaretPosition(int line, int column);
+    // Onto the first or the last link, where Tab leaving the script buttons lands; nowhere new with no links
+    void moveCaretToLink(bool first);
     void updateCaret();
     void showLinkContextMenu();
     void announceLinkFocus(int linkIndex);
