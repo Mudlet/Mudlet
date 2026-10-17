@@ -55,6 +55,7 @@
 #include "TLuaInterpreter.h"
 #include "TMap.h"
 #include "TMxpFrameFrontend.h"
+#include "TNullMapViews.h"
 #include "TRoomDB.h"
 #include "XMLimport.h"
 
@@ -7725,7 +7726,8 @@ local ok, err = pcall(function()
   check("centerview in a view", refused("view 99 not found"), centerview(room, 99))
   check("getMapZoom in a view", refused("view 99 not found"), getMapZoom(headlessArea, 99))
   check("setMapZoom in a view", refused("view 99 not found"), setMapZoom(5, headlessArea, 99))
-  check("createMapView", refused("no view manager available"), createMapView(headlessArea))
+  check("createMapView", answered(1), createMapView(headlessArea))
+  check("closeMapView", answered(true), closeMapView(1))
 
   check("getMapZoom of an area", answered(7.5), getMapZoom(headlessArea))
   check("getMapZoom of no such area", refused("number 9999 is not a valid areaID"), getMapZoom(9999))
@@ -8086,6 +8088,360 @@ headlessMapOpen = ok and "ok" or tostring(err)
         }
         QVERIFY2(different.isEmpty(), qPrintable(different.join(QChar::LineFeed)));
         QVERIFY2(QApplication::topLevelWidgets().isEmpty(), "Using the map created a widget.");
+        HostManager::self()->deleteHost(hostname);
+    }
+
+    void test_secondaryMapViewsContract()
+    {
+        QVERIFY2(!TAppFrontend::hasView(), "A main window exists, so this run is not headless.");
+        const QString hostname = qsl("Test-Headless-Host-Map-Views");
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = HostManager::self()->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+        host->getLuaInterpreter()->loadGlobal();
+        lua_register(host->getLuaInterpreter()->getLuaGlobalState(), "pumpEvents", [](lua_State*) -> int {
+            for (int pass = 0; pass < 10; ++pass) {
+                QCoreApplication::processEvents();
+            }
+            return 0;
+        });
+        const QString chunk = qsl(R"lua(
+headlessMapOpen = "not run"
+local ok, err = pcall(function()
+  local profile = getProfileName():gsub("%p", "%%%0")
+  local function described(called, ...)
+    if not called then
+      return "raised:" .. tostring((...))
+    end
+    local count = select("#", ...)
+    local values = {}
+    for i = 1, count do
+      local value = (select(i, ...))
+      if type(value) == "table" then
+        local keys = {}
+        for k in pairs(value) do keys[#keys + 1] = tostring(k) end
+        table.sort(keys)
+        value = "{" .. table.concat(keys, ",") .. "}"
+      end
+      values[i] = tostring(value):gsub(profile, "<profile>")
+    end
+    return "[" .. count .. "]" .. table.concat(values, ":")
+  end
+  local answers = {}
+  local function step(label, f, ...)
+    answers[#answers + 1] = label .. "=" .. described(pcall(f, ...))
+  end
+  local function info(view)
+    local i, why = getMapViewInfo(view)
+    if type(i) ~= "table" then return tostring(i) .. ":" .. tostring(why) end
+    return string.format("area=%s room=%s zoom=%s z=%s", tostring(i.areaId), tostring(i.centeredRoomId), tostring(i.zoom), tostring(i.zLevel))
+  end
+  local events = {}
+  local handler = registerAnonymousEventHandler("sysMapAreaChanged", function(_, new, old)
+    events[#events + 1] = tostring(new) .. "<" .. tostring(old)
+  end)
+  local function flushEvents(label)
+    answers[#answers + 1] = "events." .. label .. "=" .. table.concat(events, ",")
+    events = {}
+  end
+  local a = addAreaName("Views A")
+  local b = addAreaName("Views B")
+  local c = addAreaName("Views C")
+  local function ids()
+    return table.concat(getMapViewIds(), ",")
+  end
+  local function room(id, area, x, y, z)
+    addRoom(id)
+    setRoomArea(id, area)
+    setRoomCoordinates(id, x, y, z)
+  end
+  room(101, a, 0, 0, 0)
+  room(102, a, 1, 0, 0)
+  room(103, b, 0, 0, 2)
+  room(104, b, 5, 5, 2)
+  room(105, b, 0, 0, -1)
+  step("ids.start", ids)
+  step("create.bad", createMapView, 9999)
+  step("create.badType", createMapView, "x")
+  local _, v1 = pcall(createMapView)
+  answers[#answers + 1] = "create.none=" .. tostring(v1)
+  step("info.v1", info, v1)
+  flushEvents("v1")
+  pumpEvents(300)
+  step("info.v1.pumped", info, v1)
+  step("zoom.v1", setMapZoom, 7, 0, v1)
+  step("getzoom.v1", getMapZoom, 0, v1)
+  local _, v2 = pcall(createMapView, a)
+  answers[#answers + 1] = "create.a=" .. tostring(v2)
+  step("info.v2", info, v2)
+  flushEvents("v2")
+  local _, v3 = pcall(createMapView, b)
+  answers[#answers + 1] = "create.b=" .. tostring(v3)
+  step("info.v3", info, v3)
+  flushEvents("v3")
+  local _, v4 = pcall(createMapView, -1)
+  answers[#answers + 1] = "create.default=" .. tostring(v4)
+  step("info.v4", info, v4)
+  local _, v5 = pcall(createMapView, c)
+  answers[#answers + 1] = "create.c=" .. tostring(v5)
+  step("info.v5", info, v5)
+  flushEvents("v4v5")
+  pumpEvents(300)
+  step("ids", ids)
+  step("info.v2.pumped", info, v2)
+  step("info.v3.pumped", info, v3)
+  step("info.v5.pumped", info, v5)
+  flushEvents("pumped")
+  step("center.v2", centerview, 103, v2)
+  step("info.v2.centred", info, v2)
+  step("center.v1", centerview, 105, v1)
+  step("info.v1.centred", info, v1)
+  step("center.missingView", centerview, 101, 999)
+  step("center.missingRoom", centerview, 999, v2)
+  flushEvents("centred")
+  step("zoom.small", setMapZoom, 1, 0, v2)
+  step("zoom.v2", setMapZoom, 8, 0, v2)
+  step("info.v2.zoomed", info, v2)
+  step("getzoom.v2", getMapZoom, 0, v2)
+  step("zoom.missingView", setMapZoom, 8, 0, 999)
+  step("getzoom.missingView", getMapZoom, 0, 999)
+  pumpEvents(300)
+  step("info.v2.zoomedPumped", info, v2)
+  step("info.v3.zoomedPumped", info, v3)
+  step("zoom.v3same", setMapZoom, 8, 0, v3)
+  step("info.missing", info, 999)
+  step("info.badType", getMapViewInfo, "x")
+  step("deleteArea.b", deleteArea, b)
+  step("info.v1.deleted", info, v1)
+  step("info.v2.deleted", info, v2)
+  step("info.v3.deleted", info, v3)
+  flushEvents("deleted")
+  pumpEvents(300)
+  step("info.v2.deletedPumped", info, v2)
+  step("close.v1", closeMapView, v1)
+  step("close.v1again", closeMapView, v1)
+  step("close.badType", closeMapView, "x")
+  step("ids.closed", ids)
+  step("info.v1.closed", info, v1)
+  step("closeAll", closeAllMapViews)
+  step("ids.allClosed", ids)
+  step("closeAll.none", closeAllMapViews)
+  pumpEvents(300)
+  local _, v6 = pcall(createMapView, a)
+  answers[#answers + 1] = "create.afterClose=" .. tostring(v6)
+  pumpEvents(300)
+  step("info.v6", info, v6)
+  flushEvents("v6")
+  step("openMapWidget", openMapWidget)
+  step("centerview.player", centerview, 102)
+  pumpEvents(300)
+  flushEvents("player")
+  local _, v7 = pcall(createMapView, a)
+  step("info.v7", info, v7)
+  local _, v8 = pcall(createMapView, c)
+  step("info.v8", info, v8)
+  flushEvents("v7v8")
+  step("zoom.v7", setMapZoom, 9, 0, v7)
+  step("info.v7.zoomed", info, v7)
+  step("getzoom.v7", getMapZoom, 0, v7)
+  pumpEvents(300)
+  step("info.v7.zoomedPumped", info, v7)
+  step("info.v6.zoomedPumped", info, v6)
+  step("getzoom.a", getMapZoom, a)
+  step("zoom.v8", setMapZoom, 4, 0, v8)
+  pumpEvents(300)
+  step("info.v8.zoomedPumped", info, v8)
+  step("setDefaultAreaVisible", setDefaultAreaVisible, false)
+  step("deleteArea.c", deleteArea, c)
+  pumpEvents(300)
+  step("info.v8.deleted", info, v8)
+  flushEvents("end")
+  step("closeAll.end", closeAllMapViews)
+  for id in pairs(getRooms()) do deleteRoom(id) end
+  pumpEvents(300)
+  flushEvents("roomsDeleted")
+  local d = addAreaName("Views D")
+  local _, v9 = pcall(createMapView, d)
+  local _, v10 = pcall(createMapView, d)
+  flushEvents("v9v10")
+  step("zoom.v9", setMapZoom, 6, 0, v9)
+  pumpEvents(300)
+  step("info.v9.noRooms", info, v9)
+  step("info.v10.noRooms", info, v10)
+  room(106, d, 0, 0, 0)
+  pumpEvents(300)
+  step("info.v9.roomAdded", info, v9)
+  step("info.v10.roomAdded", info, v10)
+  step("zoom.mapper", setMapZoom, 7, d)
+  pumpEvents(300)
+  step("info.v9.mapperZoomed", info, v9)
+  step("info.v10.mapperZoomed", info, v10)
+  local e = addAreaName("Views E")
+  room(107, e, 0, 0, 0)
+  local _, v11 = pcall(createMapView, e)
+  local _, v12 = pcall(createMapView, e)
+  flushEvents("v11v12")
+  local made, closed
+  local meddler = registerAnonymousEventHandler("sysMapAreaChanged", function()
+    if made == nil then
+      closed = described(pcall(closeMapView, v12))
+      made = createMapView()
+    end
+  end)
+  step("deleteArea.e", deleteArea, e)
+  killAnonymousEventHandler(meddler)
+  answers[#answers + 1] = "meddle.close=" .. tostring(closed)
+  answers[#answers + 1] = "meddle.create=" .. tostring(made)
+  step("ids.meddled", ids)
+  step("info.v11.meddled", info, v11)
+  step("info.made", info, made)
+  flushEvents("meddled")
+  local others = {}
+  for id in pairs(getAreaTableSwap()) do
+    if id ~= -1 and id ~= d then others[#others + 1] = id end
+  end
+  table.sort(others)
+  for _, id in ipairs(others) do deleteArea(id) end
+  step("deleteArea.last", deleteArea, d)
+  step("info.v9.allDeleted", info, v9)
+  step("info.v10.allDeleted", info, v10)
+  step("info.v11.allDeleted", info, v11)
+  step("info.made.allDeleted", info, made)
+  flushEvents("allDeleted")
+  step("closeAll.final", closeAllMapViews)
+  killAnonymousEventHandler(handler)
+  headlessMapOpenAnswers = table.concat(answers, "\n")
+end)
+headlessMapOpen = ok and "ok" or tostring(err)
+)lua");
+        const QStringList answers{qsl("ids.start=[1]"),
+                                  qsl("create.bad=[2]nil:area 9999 does not exist"),
+                                  qsl("create.badType=raised:createMapView: bad argument #1 type (area id as number is optional, got string!)"),
+                                  qsl("create.none=1"),
+                                  qsl("info.v1=[1]area=0 room=0 zoom=20 z=0"),
+                                  qsl("events.v1="),
+                                  qsl("info.v1.pumped=[1]area=0 room=0 zoom=20 z=0"),
+                                  qsl("zoom.v1=[2]nil:number 0 is not a valid areaID"),
+                                  qsl("getzoom.v1=[1]20"),
+                                  qsl("create.a=2"),
+                                  qsl("info.v2=[1]area=1 room=0 zoom=20 z=0"),
+                                  qsl("events.v2=1<0"),
+                                  qsl("create.b=3"),
+                                  qsl("info.v3=[1]area=2 room=0 zoom=20 z=2"),
+                                  qsl("events.v3=2<0"),
+                                  qsl("create.default=4"),
+                                  qsl("info.v4=[1]area=0 room=0 zoom=20 z=0"),
+                                  qsl("create.c=5"),
+                                  qsl("info.v5=[1]area=3 room=0 zoom=20 z=0"),
+                                  qsl("events.v4v5=3<0"),
+                                  qsl("ids=[1]1,2,3,4,5"),
+                                  qsl("info.v2.pumped=[1]area=1 room=0 zoom=20 z=0"),
+                                  qsl("info.v3.pumped=[1]area=2 room=0 zoom=20 z=2"),
+                                  qsl("info.v5.pumped=[1]area=3 room=0 zoom=20 z=0"),
+                                  qsl("events.pumped="),
+                                  qsl("center.v2=[1]true"),
+                                  qsl("info.v2.centred=[1]area=2 room=103 zoom=20 z=2"),
+                                  qsl("center.v1=[1]true"),
+                                  qsl("info.v1.centred=[1]area=2 room=105 zoom=20 z=-1"),
+                                  qsl("center.missingView=[2]nil:view 999 not found"),
+                                  qsl("center.missingRoom=[2]nil:number 999 is not a valid roomID"),
+                                  qsl("events.centred="),
+                                  qsl("zoom.small=[2]nil:zoom 1 is invalid, it must be at least 3"),
+                                  qsl("zoom.v2=[1]true"),
+                                  qsl("info.v2.zoomed=[1]area=2 room=103 zoom=20 z=2"),
+                                  qsl("getzoom.v2=[1]20"),
+                                  qsl("zoom.missingView=[2]nil:view 999 not found"),
+                                  qsl("getzoom.missingView=[2]nil:view 999 not found"),
+                                  qsl("info.v2.zoomedPumped=[1]area=2 room=103 zoom=8 z=2"),
+                                  qsl("info.v3.zoomedPumped=[1]area=2 room=0 zoom=8 z=2"),
+                                  qsl("zoom.v3same=[1]true"),
+                                  qsl("info.missing=[1]nil:view 999 not found"),
+                                  qsl("info.badType=raised:getMapViewInfo: bad argument #1 type (view id as number expected, got string!)"),
+                                  qsl("deleteArea.b=[1]true"),
+                                  qsl("info.v1.deleted=[1]area=-1 room=105 zoom=20 z=0"),
+                                  qsl("info.v2.deleted=[1]area=-1 room=103 zoom=20 z=0"),
+                                  qsl("info.v3.deleted=[1]area=-1 room=0 zoom=20 z=0"),
+                                  qsl("events.deleted=-1<2,-1<2,-1<2"),
+                                  qsl("info.v2.deletedPumped=[1]area=-1 room=103 zoom=20 z=0"),
+                                  qsl("close.v1=[1]true"),
+                                  qsl("close.v1again=[2]nil:view 1 not found"),
+                                  qsl("close.badType=raised:closeMapView: bad argument #1 type (view id as number expected, got string!)"),
+                                  qsl("ids.closed=[1]2,3,4,5"),
+                                  qsl("info.v1.closed=[1]nil:view 1 not found"),
+                                  qsl("closeAll=[1]4"),
+                                  qsl("ids.allClosed=[1]"),
+                                  qsl("closeAll.none=[1]0"),
+                                  qsl("create.afterClose=6"),
+                                  qsl("info.v6=[1]area=1 room=0 zoom=20 z=0"),
+                                  qsl("events.v6=1<0"),
+                                  qsl("openMapWidget=[1]true"),
+                                  qsl("centerview.player=[1]true"),
+                                  qsl("events.player=1<-2"),
+                                  qsl("info.v7=[1]area=1 room=0 zoom=20 z=0"),
+                                  qsl("info.v8=[1]area=3 room=0 zoom=20 z=0"),
+                                  qsl("events.v7v8=1<0,3<0"),
+                                  qsl("zoom.v7=[1]true"),
+                                  qsl("info.v7.zoomed=[1]area=1 room=0 zoom=20 z=0"),
+                                  qsl("getzoom.v7=[1]20"),
+                                  qsl("info.v7.zoomedPumped=[1]area=1 room=0 zoom=9 z=0"),
+                                  qsl("info.v6.zoomedPumped=[1]area=1 room=0 zoom=9 z=0"),
+                                  qsl("getzoom.a=[1]9"),
+                                  qsl("zoom.v8=[1]true"),
+                                  qsl("info.v8.zoomedPumped=[1]area=3 room=0 zoom=4 z=0"),
+                                  qsl("setDefaultAreaVisible=[1]true"),
+                                  qsl("deleteArea.c=[1]true"),
+                                  qsl("info.v8.deleted=[1]area=1 room=0 zoom=9 z=0"),
+                                  qsl("events.end=1<3"),
+                                  qsl("closeAll.end=[1]3"),
+                                  qsl("events.roomsDeleted="),
+                                  qsl("events.v9v10=4<0,4<0"),
+                                  qsl("zoom.v9=[1]true"),
+                                  qsl("info.v9.noRooms=[1]area=4 room=0 zoom=20 z=0"),
+                                  qsl("info.v10.noRooms=[1]area=4 room=0 zoom=20 z=0"),
+                                  qsl("info.v9.roomAdded=[1]area=4 room=0 zoom=6 z=0"),
+                                  qsl("info.v10.roomAdded=[1]area=4 room=0 zoom=6 z=0"),
+                                  qsl("zoom.mapper=[1]true"),
+                                  qsl("info.v9.mapperZoomed=[1]area=4 room=0 zoom=7 z=0"),
+                                  qsl("info.v10.mapperZoomed=[1]area=4 room=0 zoom=7 z=0"),
+                                  qsl("events.v11v12=4<1,5<0,5<0"),
+                                  qsl("deleteArea.e=[1]true"),
+                                  qsl("meddle.close=[1]true"),
+                                  qsl("meddle.create=13"),
+                                  qsl("ids.meddled=[1]9,10,11,13"),
+                                  qsl("info.v11.meddled=[1]area=1 room=0 zoom=9 z=0"),
+                                  qsl("info.made=[1]area=0 room=0 zoom=20 z=0"),
+                                  qsl("events.meddled=1<5"),
+                                  qsl("deleteArea.last=[1]true"),
+                                  qsl("info.v9.allDeleted=[1]area=-1 room=0 zoom=20 z=0"),
+                                  qsl("info.v10.allDeleted=[1]area=-1 room=0 zoom=20 z=0"),
+                                  qsl("info.v11.allDeleted=[1]area=-1 room=0 zoom=20 z=0"),
+                                  qsl("info.made.allDeleted=[1]area=0 room=0 zoom=20 z=0"),
+                                  qsl("events.allDeleted=4<1,-1<4,-1<4,-1<4"),
+                                  qsl("closeAll.final=[1]4")};
+
+        QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(chunk), "The Lua chunk did not run.");
+        QCOMPARE(luaGlobalString(host, "headlessMapOpen"), qsl("ok"));
+        const QStringList actual = luaGlobalString(host, "headlessMapOpenAnswers").split(QLatin1Char('\n'));
+        QStringList different;
+        for (qsizetype i = 0; i < std::max(actual.size(), answers.size()); ++i) {
+            if (actual.value(i) != answers.value(i)) {
+                different << qsl("%1, not %2").arg(actual.value(i), answers.value(i));
+            }
+        }
+        QVERIFY2(different.isEmpty(), qPrintable(different.join(QChar::LineFeed)));
+
+        // TMapViewManager's dock for the view, which no Lua call reads
+        const auto [viewId, refusal] = host->createMapView(0);
+        QCOMPARE(viewId, 14);
+        const auto* views = dynamic_cast<TNullMapViews*>(host->mpMap->mapViewsFrontend());
+        QVERIFY2(views, "The profile has no null secondary views.");
+        const TNullSecondaryMapView* view = views->record(viewId);
+        QVERIFY(view);
+        QCOMPARE(view->mDock.title, qsl("Map View 14 - %1").arg(hostname));
+        QVERIFY(view->mDock.floating);
+        QCOMPARE(view->mDock.size, QSize(400, 500));
+        QVERIFY(view->mDock.shown);
+        QVERIFY2(QApplication::topLevelWidgets().isEmpty(), "Using the map views created a widget.");
         HostManager::self()->deleteHost(hostname);
     }
 
