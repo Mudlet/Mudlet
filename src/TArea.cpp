@@ -791,6 +791,10 @@ void TArea::writeJsonArea(QJsonArray& array) const
         areaObj.insert(QLatin1String("gridMode"), true);
     }
 
+    if (mLast2DMapZoom != TMap::scmDefaultXYZoom) {
+        areaObj.insert(QLatin1String("zoom2D"), static_cast<double>(mLast2DMapZoom));
+    }
+
     writeJsonUserData(areaObj);
 
     QList<int> roomList{rooms.begin(), rooms.end()};
@@ -840,8 +844,13 @@ std::pair<int, QString> TArea::readJsonArea(const QJsonArray& array, const int a
     gridMode = areaObj.value(QLatin1String("gridMode")).toBool();
     readJsonUserData(areaObj.value(QLatin1String("userData")).toObject());
     // An export by an older Mudlet can have the binary format's fallbacks in the user data
-    if (const QString zoom = mUserData.take(QLatin1String("system.fallback_map2DZoom")); !zoom.isEmpty()) {
-        set2DMapZoom(zoom.toDouble());
+    const QString fallbackZoom = mUserData.take(QLatin1String("system.fallback_map2DZoom"));
+    const QJsonValue zoomValue{areaObj.value(QLatin1String("zoom2D"))};
+    if (zoomValue.isDouble()) {
+        set2DMapZoom(zoomValue.toDouble());
+    } else if (!fallbackZoom.isEmpty()) {
+        // an export by Mudlet 5.0.1 or older after a format 20 binary save holds the zoom only here
+        set2DMapZoom(fallbackZoom.toDouble());
     }
     int roomCount = 0;
     for (int roomIndex = 0, total = areaObj.value(QLatin1String("rooms")).toArray().count(); roomIndex < total; ++roomIndex) {
@@ -886,7 +895,7 @@ std::pair<int, QString> TArea::readJsonArea(const QJsonArray& array, const int a
 void TArea::writeJsonUserData(QJsonObject& obj) const
 {
     QJsonObject userDataObj;
-    // A binary save replaces a script's value under these keys, so an import must not apply it to a label
+    // A binary save replaces a script's value under these keys, so an import must not apply it to a label or read it back as the zoom
     QMap<QString, QString> userData{mUserData};
     dropFileOnlyUserData(userData);
     if (userData.isEmpty()) {
