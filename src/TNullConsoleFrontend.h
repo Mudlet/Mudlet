@@ -394,6 +394,8 @@ private:
     void removeScrollBoxContents(const ScrollBox* box);
     void moveScrollBoxContents(const ScrollBox* box);
     void inheritLabelFont(Label& label, bool restyle);
+    void showLabelText(Label& label, const QString& shown);
+    void reapplyLabelLinkStyle(Label& label);
     TLabelModel* labelModel(const QString& name) const;
     TConsoleModel* subConsoleModel(const QString& name) const;
     bool setLabelShown(const QString& name, bool shown);
