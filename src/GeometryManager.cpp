@@ -348,6 +348,15 @@ std::pair<QVector3D, QVector3D> GeometryManager::groundAxes(const QVector3D& cam
     return {QVector3D(right.x(), right.y(), 0.0f), QVector3D(-right.y(), right.x(), 0.0f)};
 }
 
+namespace {
+void appendFloats(QVector<float>& to, const float* from, const qsizetype count)
+{
+    const qsizetype size = to.size();
+    to.resize(size + count);
+    std::copy_n(from, count, to.data() + size);
+}
+} // namespace
+
 void GeometryManager::appendQuad(GeometryData& batch, const QVector3D& origin, const QVector3D& across, const QVector3D& upward, const QVector4D& color, const QRectF& textureRect)
 {
     const QVector3D bottomLeft = origin;
@@ -355,17 +364,40 @@ void GeometryManager::appendQuad(GeometryData& batch, const QVector3D& origin, c
     const QVector3D topRight = origin + across + upward;
     const QVector3D topLeft = origin + upward;
 
-    for (const QVector3D& corner : {bottomLeft, bottomRight, topRight, bottomLeft, topRight, topLeft}) {
-        batch.vertices << corner.x() << corner.y() << corner.z();
-        batch.normals << 0.0f << 0.0f << 1.0f;
-        batch.colors << color.x() << color.y() << color.z() << color.w();
-    }
+    // Six corners at a time rather than a float at a time: a frame appends tens of thousands of these
+    const float vertices[18] = {bottomLeft.x(),
+                                bottomLeft.y(),
+                                bottomLeft.z(),
+                                bottomRight.x(),
+                                bottomRight.y(),
+                                bottomRight.z(),
+                                topRight.x(),
+                                topRight.y(),
+                                topRight.z(),
+                                bottomLeft.x(),
+                                bottomLeft.y(),
+                                bottomLeft.z(),
+                                topRight.x(),
+                                topRight.y(),
+                                topRight.z(),
+                                topLeft.x(),
+                                topLeft.y(),
+                                topLeft.z()};
+    appendFloats(batch.vertices, vertices, 18);
+    static constexpr float normals[18] = {0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f};
+    appendFloats(batch.normals, normals, 18);
+    const float r = color.x();
+    const float g = color.y();
+    const float b = color.z();
+    const float a = color.w();
+    const float colors[24] = {r, g, b, a, r, g, b, a, r, g, b, a, r, g, b, a, r, g, b, a, r, g, b, a};
+    appendFloats(batch.colors, colors, 24);
     const auto left = static_cast<float>(textureRect.left());
     const auto right = static_cast<float>(textureRect.right());
     const auto bottom = static_cast<float>(textureRect.top());
     const auto top = static_cast<float>(textureRect.bottom());
-    batch.textureCoords << left << bottom << right << bottom << right << top;
-    batch.textureCoords << left << bottom << right << top << left << top;
+    const float textureCoords[12] = {left, bottom, right, bottom, right, top, left, bottom, right, top, left, top};
+    appendFloats(batch.textureCoords, textureCoords, 12);
 }
 
 void GeometryManager::appendLabelQuad(GeometryData& batch, const QVector3D& topLeft, const float width, const float height, const bool turned, const QVector4D& color)

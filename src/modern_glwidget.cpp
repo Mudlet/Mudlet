@@ -1635,7 +1635,9 @@ void ModernGLWidget::renderRooms()
     QFont nameFont = style.labelFont(mpMap->mMapSymbolFont);
     bool namesGivenFont = false;
     if (showRoomNames) {
-        if (QFont font; font.fromString(mpMap->mUserData.value(ROOM_UI_NAMEFONT))) {
+        // Only a font that is set: QFont::fromString() warns about an empty one, every frame
+        const QString nameFontString = mpMap->mUserData.value(ROOM_UI_NAMEFONT);
+        if (QFont font; !nameFontString.isEmpty() && font.fromString(nameFontString)) {
             nameFont = font;
             namesGivenFont = true;
         }
@@ -1736,7 +1738,8 @@ void ModernGLWidget::renderRooms()
     ShapeInstances kitInstances;
     QVector<CubeInstanceData> waterInstances;
     const bool kits = style.environmentKits;
-    const QHash<int, DioramaLayout::Piece> pieces = kits ? dioramaPieces(*pArea) : QHash<int, DioramaLayout::Piece>();
+    const QHash<int, DioramaLayout::Piece> noPieces;
+    const QHash<int, DioramaLayout::Piece>& pieces = kits ? dioramaPieces(*pArea) : noPieces;
     // Where the board is cut away for water to lie below it
     QSet<std::pair<int, int>> waterCells;
     QVector<CubeInstanceData> borderInstances;
@@ -3039,7 +3042,7 @@ void ModernGLWidget::renderConnections()
     }
 
     const ExitScene::Options options = exitSceneOptions();
-    const ExitScene::Scene scene = ExitScene::build(*mpMap, *mpHost, options);
+    const ExitScene::Scene& scene = exitScene(options);
     if (scene.solidDashRoomId && !mSolidDashWarned) {
         mSolidDashWarned = true;
         qWarning().nospace() << "ModernGLWidget: room " << scene.solidDashRoomId
@@ -3074,7 +3077,7 @@ void ModernGLWidget::renderConnections()
     QHash<std::pair<float, float>, std::pair<int, int>> towers;
     if (style.environmentKits) {
         if (const TArea* pArea = mpMap->mpRoomDB->getArea(mAID)) {
-            const QHash<int, DioramaLayout::Piece> pieces = dioramaPieces(*pArea);
+            const QHash<int, DioramaLayout::Piece>& pieces = dioramaPieces(*pArea);
             for (auto piece = pieces.constBegin(); piece != pieces.constEnd(); ++piece) {
                 if (piece->storeys > 1) {
                     if (const TRoom* pRoom = mpMap->mpRoomDB->getRoom(piece.key())) {
@@ -3678,8 +3681,14 @@ std::optional<float> rayHitsCylinder(const QVector3D& origin, const QVector3D& d
 constexpr qreal scmPickSlopPixels = 6.0;
 } // namespace
 
-QHash<int, DioramaLayout::Piece> ModernGLWidget::dioramaPieces(const TArea& area) const
+const QHash<int, DioramaLayout::Piece>& ModernGLWidget::dioramaPieces(const TArea& area)
 {
+    DioramaPiecesCache& cache = mDioramaPiecesCache;
+    const MapStyle& style = mapStyle();
+    if (cache.valid && cache.mapRevision == mpMap->revision() && cache.areaId == mAID && cache.centerZ == mMapCenterZ && cache.levelsAbove == mShowTopLevels && cache.levelsBelow == mShowBottomLevels
+        && cache.styleId == style.id) {
+        return cache.pieces;
+    }
     QList<DioramaLayout::Place> places;
     QHash<int, EnvironmentKit::Kit> kits;
     for (const int roomId : area.getAreaRooms()) {
@@ -3693,7 +3702,29 @@ QHash<int, DioramaLayout::Piece> ModernGLWidget::dioramaPieces(const TArea& area
         }
         places.append({roomId, pR->x(), pR->y(), pR->z(), *kit});
     }
-    return DioramaLayout::layout(places, mMapCenterZ, 2.0f / scale, 2.0f / scale / zFlattening);
+    cache.pieces = DioramaLayout::layout(places, mMapCenterZ, 2.0f / scale, 2.0f / scale / zFlattening);
+    cache.valid = true;
+    cache.mapRevision = mpMap->revision();
+    cache.areaId = mAID;
+    cache.centerZ = mMapCenterZ;
+    cache.levelsAbove = mShowTopLevels;
+    cache.levelsBelow = mShowBottomLevels;
+    cache.styleId = style.id;
+    ++mDioramaLayouts;
+    return cache.pieces;
+}
+
+const ExitScene::Scene& ModernGLWidget::exitScene(const ExitScene::Options& options)
+{
+    ExitSceneCache& cache = mExitSceneCache;
+    if (!cache.valid || cache.mapRevision != mpMap->revision() || !(cache.options == options)) {
+        cache.scene = ExitScene::build(*mpMap, *mpHost, options);
+        cache.valid = true;
+        cache.mapRevision = mpMap->revision();
+        cache.options = options;
+        ++mExitSceneBuilds;
+    }
+    return cache.scene;
 }
 
 int ModernGLWidget::roomAt(const QPoint& position, const bool orNear, const std::optional<int> onLevel)

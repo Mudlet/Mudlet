@@ -51,6 +51,8 @@
 #include <QEasingCurve>
 
 #include "BloomPass.h"
+#include "DioramaLayout.h"
+#include "ExitScene.h"
 #include "GeometryManager.h"
 #include "LabelTextureCache.h"
 #include "RenderCommandQueue.h"
@@ -75,13 +77,6 @@ class TMapLabel;
 class TRoom;
 struct MapInfoProperties;
 struct MapStyle;
-namespace DioramaLayout {
-struct Piece;
-}
-namespace ExitScene {
-struct Glyph;
-struct Options;
-}
 
 class ModernGLWidget : public QOpenGLWidget, protected QOpenGLFunctions
 {
@@ -423,6 +418,33 @@ private:
     QSet<int> mRoomIdsDrawn;
     // The terminal style's exit characters, made by renderConnections() for renderRooms() to draw with their levels' rooms
     QList<ExitScene::Glyph> mExitGlyphs;
+    // The exits as last built and what they were built from. Building them walks every room and exit of the area,
+    // which costs more than drawing them, and only a change to the map or to these options changes them
+    struct ExitSceneCache
+    {
+        bool valid = false;
+        quint64 mapRevision = 0;
+        ExitScene::Options options;
+        ExitScene::Scene scene;
+    };
+    ExitSceneCache mExitSceneCache;
+    // How many times the exits have been built, for tests
+    int mExitSceneBuilds = 0;
+    // What the diorama's pieces were last laid out from, as above; the pieces too change only with the map, the
+    // levels shown and the style, and both passes of a frame and picking a room ask for them
+    struct DioramaPiecesCache
+    {
+        bool valid = false;
+        quint64 mapRevision = 0;
+        int areaId = 0;
+        int centerZ = 0;
+        int levelsAbove = 0;
+        int levelsBelow = 0;
+        QString styleId;
+        QHash<int, DioramaLayout::Piece> pieces;
+    };
+    DioramaPiecesCache mDioramaPiecesCache;
+    int mDioramaLayouts = 0;
 
     // Private methods for modern OpenGL
     void updateMatrices();
@@ -510,8 +532,10 @@ private:
     void applyTiltShift();
     // Worked out afresh, as the view can move under a pointer that stays still
     int roomUnderPointer();
-    // What the diorama style builds each of the area's shown rooms as
-    QHash<int, DioramaLayout::Piece> dioramaPieces(const TArea& area) const;
+    // What the diorama style builds each of the area's shown rooms as, laid out again only when that would differ
+    const QHash<int, DioramaLayout::Piece>& dioramaPieces(const TArea& area);
+    // The exits of the area shown, built again only when the map or the options they are built from change
+    const ExitScene::Scene& exitScene(const ExitScene::Options& options);
     void endPan();
     void renderCube(float x, float y, float z, float size, float r, float g, float b, float a);
     void renderText(const QString& text, float x, float y);

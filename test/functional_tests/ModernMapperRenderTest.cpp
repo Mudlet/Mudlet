@@ -959,6 +959,148 @@ private slots:
         QCOMPARE(after, before);
     }
 
+    // The x of the middle of each exit bar queued: an instanced box far longer than it is thick
+    static QList<float> exitBarMiddles(const ModernGLWidget& widget)
+    {
+        QList<float> middles;
+        for (const auto& command : widget.mRenderCommandQueue.commands()) {
+            const auto* cubes = dynamic_cast<const RenderInstancedCubesCommand*>(command.get());
+            if (!cubes || cubes->shape() != GeometryManager::InstanceShape::Box) {
+                continue;
+            }
+            for (const CubeInstanceData& cube : cubes->instances()) {
+                QList<float> extents;
+                for (int axis = 0; axis < 3; ++axis) {
+                    extents.append(cube.transform.column(axis).toVector3D().length());
+                }
+                std::sort(extents.begin(), extents.end());
+                if (extents.at(1) < 0.1f && extents.at(2) > 0.3f) {
+                    middles.append(cube.transform.column(3).x());
+                }
+            }
+        }
+        std::sort(middles.begin(), middles.end());
+        return middles;
+    }
+
+    // Another frame from where the camera is now, turned a little, without queueFrame() resetting the camera
+    static void queueTurnedFrame(ModernGLWidget& widget)
+    {
+        widget.turnCamera(37.0f);
+        widget.updateMatrices();
+        widget.mRenderCommandQueue.clear();
+        widget.queueScene();
+    }
+
+    // The exits are built from the map once and drawn from that until the map, the area or level shown or the
+    // style changes; turning or zooming the camera draws the same exits again
+    void test_exitsAreBuiltAgainOnlyWhenTheMapOrTheirOptionsChangeWithoutGL()
+    {
+        const int areaId = addArea();
+        QVERIFY(areaId > 0);
+        QVERIFY(map()->setExit(kPlayerRoomId, kEastRoomId, DIR_EAST));
+        QVERIFY(map()->setExit(kEastRoomId, kPlayerRoomId, DIR_WEST));
+        const auto restore = qScopeGuard([this]() {
+            mpHost->setMapStyle(qsl("tiles"));
+        });
+        ModernGLWidget widget(map(), mpHost);
+        queueFrame(widget, areaId);
+        QCOMPARE(widget.mExitSceneBuilds, 1);
+        QCOMPARE(exitBarMiddles(widget), QList<float>{1.0f});
+
+        queueTurnedFrame(widget);
+        widget.setCameraDistance(3.0f);
+        queueTurnedFrame(widget);
+        QCOMPARE(widget.mExitSceneBuilds, 1);
+        QCOMPARE(exitBarMiddles(widget), QList<float>{1.0f});
+
+        // A room moved on the map takes its exit with it
+        const quint64 before = map()->revision();
+        QVERIFY(map()->setRoomCoordinates(kEastRoomId, 4, 0, 0));
+        QVERIFY(map()->revision() > before);
+        queueTurnedFrame(widget);
+        QCOMPARE(widget.mExitSceneBuilds, 2);
+        QCOMPARE(exitBarMiddles(widget), QList<float>{2.0f});
+
+        // A map a script changed and asked to see again, cleared or loaded, or the colors it is drawn in
+        quint64 revision = map()->revision();
+        map()->requestMapRepaint();
+        QVERIFY(map()->revision() > revision);
+        revision = map()->revision();
+        map()->refreshMapperColours();
+        QVERIFY(map()->revision() > revision);
+        revision = map()->revision();
+        map()->announceMapLoaded(false);
+        QVERIFY(map()->revision() > revision);
+        queueTurnedFrame(widget);
+        QCOMPARE(widget.mExitSceneBuilds, 3);
+
+        QVERIFY(mpHost->setMapStyle(qsl("blueprint")));
+        queueTurnedFrame(widget);
+        QCOMPARE(widget.mExitSceneBuilds, 4);
+        queueTurnedFrame(widget);
+        QCOMPARE(widget.mExitSceneBuilds, 4);
+
+        widget.slot_showLessUpperLevels();
+        queueTurnedFrame(widget);
+        QCOMPARE(widget.mExitSceneBuilds, 5);
+
+        // The level below, viewed, comes with its own exits
+        QVERIFY(map()->setExit(kLowerRoomId, kEastRoomId, DIR_UP));
+        queueTurnedFrame(widget);
+        QCOMPARE(widget.mExitSceneBuilds, 6);
+        widget.jumpTo(areaId, 0, 0, -1);
+        queueTurnedFrame(widget);
+        QCOMPARE(widget.mExitSceneBuilds, 7);
+        QVERIFY(widget.mExitSceneCache.scene.segments.size() > 1);
+    }
+
+    // The diorama's pieces are laid out once a frame at most, and again only when the map, the levels shown or the
+    // style changes
+    void test_dioramaPiecesAreLaidOutAgainOnlyWhenTheMapOrLevelsChangeWithoutGL()
+    {
+        const int areaId = addArea();
+        QVERIFY(areaId > 0);
+        QVERIFY(map()->setExit(kPlayerRoomId, kEastRoomId, DIR_EAST));
+        const auto restore = qScopeGuard([this]() {
+            mpHost->setMapStyle(qsl("tiles"));
+        });
+        QVERIFY(mpHost->setMapStyle(qsl("diorama")));
+        ModernGLWidget widget(map(), mpHost);
+        queueFrame(widget, areaId);
+        QCOMPARE(widget.mDioramaLayouts, 1);
+        queueTurnedFrame(widget);
+        widget.setCameraDistance(3.0f);
+        queueTurnedFrame(widget);
+        QCOMPARE(widget.mDioramaLayouts, 1);
+        QVERIFY(widget.mDioramaPiecesCache.pieces.contains(kEastRoomId));
+        const EnvironmentKit::Kit before = widget.mDioramaPiecesCache.pieces.value(kEastRoomId).kit;
+
+        // Water, by its color, as setRoomEnv() changes a room
+        const int water = 301;
+        map()->mCustomEnvColors[water] = QColor(30, 90, 220);
+        map()->mpRoomDB->getRoom(kEastRoomId)->environment = water;
+        map()->setUnsaved("test");
+        queueTurnedFrame(widget);
+        QCOMPARE(widget.mDioramaLayouts, 2);
+        QCOMPARE(widget.mDioramaPiecesCache.pieces.value(kEastRoomId).kit, EnvironmentKit::Kit::Water);
+        QVERIFY(widget.mDioramaPiecesCache.pieces.value(kEastRoomId).kit != before);
+        map()->mCustomEnvColors.remove(water);
+
+        widget.slot_showLessUpperLevels();
+        queueTurnedFrame(widget);
+        QCOMPARE(widget.mDioramaLayouts, 3);
+
+        // Another style has no pieces, and coming back to the diorama's finds them as they were
+        QVERIFY(mpHost->setMapStyle(qsl("tiles")));
+        queueTurnedFrame(widget);
+        QCOMPARE(widget.mDioramaLayouts, 3);
+        QVERIFY(mpHost->setMapStyle(qsl("diorama")));
+        queueTurnedFrame(widget);
+        QCOMPARE(widget.mDioramaLayouts, 3);
+        QVERIFY(widget.mDioramaPiecesCache.pieces.contains(kEastRoomId));
+    }
+
     // Transit's stations are white, ringed in their environment's color where it stands out on its paper
     void test_transitDrawsStations()
     {

@@ -238,11 +238,13 @@ bool TMap::menuItemShown(const QString& itemName) const
 
 void TMap::refreshMapperColours()
 {
+    ++mRevision;
     emit signal_mapperColoursChanged();
 }
 
 void TMap::mapClear()
 {
+    ++mRevision;
     mpRoomDB->clearMapDB();
     mEnvColors.clear();
     mRoomIdHash.clear();
@@ -3999,6 +4001,7 @@ void TMap::areasAboutToBeDeleted()
 
 void TMap::announceMapLoaded(const bool showPlayerArea)
 {
+    ++mRevision;
     emit signal_mapLoaded(showPlayerArea);
 }
 
@@ -4047,6 +4050,8 @@ QString TMap::zoomError(const qreal zoom)
 
 void TMap::requestMapRepaint()
 {
+    // A script's updateMap() may follow changes made without this map noticing
+    ++mRevision;
     emit signal_mapRepaintRequested();
 }
 
@@ -4185,6 +4190,7 @@ void TMap::setUnsaved(const char* fromWhere)
     qDebug().nospace().noquote() << "TMap::setUnsaved(...) INFO - called at: " << nowString << " from: " << fromWhere << ".";
 #endif
     mUnsavedMap = true;
+    ++mRevision;
 }
 
 void TMap::setSaveError(bool state)
