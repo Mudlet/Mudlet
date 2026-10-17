@@ -1953,14 +1953,54 @@ describe("Tests mapper functions against a shared fixture", function()
       assert.is_string(err)
     end)
 
-    it("createMapImageLabel creates a label (ID >= 0) even when the image is missing", function()
-      -- A missing image still creates a real (image-less) label; only an invalid
-      -- area returns -1, so pin ID >= 0 and its presence in the area.
-      local id = createMapImageLabel(areaAlpha, getMudletHomeDir() .. "/nonexistent.png", 0, 0, 0, 10, 10, 30.0, true)
-      assert.is_number(id)
-      assert.is_true(id >= 0)
-      assert.is_not_nil(getMapLabels(areaAlpha)[id])
-      deleteMapLabel(areaAlpha, id)
+    -- An XPM can be written from a spec as text; a "None" colour makes it a
+    -- transparent one, the yardstick for a label that drew nothing.
+    local function writeXpm(path, transparent)
+      local image = assert(io.open(path, "w"))
+      local colours = transparent and '"a c None",\n"b c None",\n' or '"a c #ff0000",\n"b c #0000ff",\n'
+      image:write('/* XPM */\nstatic char * spec_xpm[] = {\n"2 2 2 1",\n' .. colours .. '"ab",\n"ba"};\n')
+      image:close()
+    end
+
+    it("createMapImageLabel returns nil and a message for an image it cannot read", function()
+      local missing = getMudletHomeDir() .. "/nonexistent.png"
+      local garbage = getMudletHomeDir() .. "/mapper_spec_garbage.png"
+      local empty = getMudletHomeDir() .. "/mapper_spec_empty.png"
+      local labelsBefore = getMapLabels(areaAlpha)
+      finally(function()
+        for id in pairs(getMapLabels(areaAlpha)) do
+          if labelsBefore[id] == nil then
+            deleteMapLabel(areaAlpha, id)
+          end
+        end
+        os.remove(garbage)
+        os.remove(empty)
+      end)
+      os.remove(missing)
+      local file = assert(io.open(garbage, "w"))
+      file:write("not an image")
+      file:close()
+      assert(io.open(empty, "w")):close()
+      for _, path in ipairs({missing, garbage, empty}) do
+        local id, err = createMapImageLabel(areaAlpha, path, 0, 0, 0, 10, 10, 30.0, true)
+        assert.is_nil(id, path)
+        assert.are.equal(("image file '%s' could not be read"):format(path), err)
+      end
+      assert.are.same(labelsBefore, getMapLabels(areaAlpha))
+    end)
+
+    it("createMapImageLabel returns -1 for an unknown area, whatever the image", function()
+      local imagePath = getMudletHomeDir() .. "/mapper_spec_unknown_area_label.xpm"
+      writeXpm(imagePath)
+      finally(function() os.remove(imagePath) end)
+      assert.are.equal(-1, createMapImageLabel(missingAreaId, imagePath, 0, 0, 0, 10, 10, 30.0, true))
+      assert.are.equal(-1, createMapImageLabel(missingAreaId, getMudletHomeDir() .. "/nonexistent.png", 0, 0, 0, 10, 10, 30.0, true))
+    end)
+
+    it("createMapImageLabel names the temporary argument when it is not a boolean", function()
+      local ok, err = pcall(createMapImageLabel, areaAlpha, "", 0, 0, 0, 10, 10, 30.0, true, "yes")
+      assert.is_false(ok)
+      assert.truthy(err:find("bad argument #10 type (temporary as boolean", 1, true), err)
     end)
 
     -- Reads the width and height from the IHDR chunk of a base64-encoded PNG
@@ -1984,18 +2024,23 @@ describe("Tests mapper functions against a shared fixture", function()
 
     it("createMapImageLabel keeps the image of a huge label to a bounded size", function()
       local imagePath = getMudletHomeDir() .. "/mapper_spec_huge_label.xpm"
-      local image = assert(io.open(imagePath, "w"))
-      image:write('/* XPM */\nstatic char * spec_xpm[] = {\n"2 2 2 1",\n' ..
-                  '"a c #ff0000",\n"b c #0000ff",\n"ab",\n"ba"};\n')
-      image:close()
+      local blankPath = getMudletHomeDir() .. "/mapper_spec_huge_blank_label.xpm"
+      writeXpm(imagePath)
+      writeXpm(blankPath, true)
       -- 10000 by 2000 pixels at this zoom, over the 4096 x 4096 pixel budget
-      local id = createMapImageLabel(areaAlpha, imagePath, 0, 0, 0, 1000, 200, 10.0, true)
-      local blankId = createMapImageLabel(areaAlpha, getMudletHomeDir() .. "/nonexistent.png", 0, 0, 0, 1000, 200, 10.0, true)
+      local id, blankId
       finally(function()
-        deleteMapLabel(areaAlpha, id)
-        deleteMapLabel(areaAlpha, blankId)
+        if id then
+          deleteMapLabel(areaAlpha, id)
+        end
+        if blankId then
+          deleteMapLabel(areaAlpha, blankId)
+        end
         os.remove(imagePath)
+        os.remove(blankPath)
       end)
+      id = assert(createMapImageLabel(areaAlpha, imagePath, 0, 0, 0, 1000, 200, 10.0, true))
+      blankId = assert(createMapImageLabel(areaAlpha, blankPath, 0, 0, 0, 1000, 200, 10.0, true))
       local label = getMapLabel(areaAlpha, id)
       assert.are_not.equal(getMapLabel(areaAlpha, blankId).Pixmap, label.Pixmap)
       assert.are.same({1000, 200}, {label.Width, label.Height})
@@ -2006,8 +2051,16 @@ describe("Tests mapper functions against a shared fixture", function()
     end)
 
     it("createMapImageLabel draws an ordinary label at its full size", function()
-      local id = createMapImageLabel(areaAlpha, getMudletHomeDir() .. "/nonexistent.png", 0, 0, 0, 10, 4, 30.0, true)
-      finally(function() deleteMapLabel(areaAlpha, id) end)
+      local imagePath = getMudletHomeDir() .. "/mapper_spec_ordinary_label.xpm"
+      writeXpm(imagePath)
+      local id
+      finally(function()
+        if id then
+          deleteMapLabel(areaAlpha, id)
+        end
+        os.remove(imagePath)
+      end)
+      id = assert(createMapImageLabel(areaAlpha, imagePath, 0, 0, 0, 10, 4, 30.0, true))
       assert.are.same({300, 120}, {pngSize(getMapLabel(areaAlpha, id).Pixmap)})
     end)
 
@@ -3275,10 +3328,16 @@ describe("Tests mapper functions against a shared fixture", function()
       return written, removeAll
     end
 
-    -- Joined without separators because a long path wraps across console lines
-    local function mainConsoleCount(text)
-      local last = getLastLineNumber("main")
-      local recent = table.concat(getLines("main", math.max(0, last - 20), last + 1), "")
+    -- Joined without separators because a long path wraps across console lines.
+    -- Counted after a marker line, not from a line number: a full buffer drops
+    -- lines from its top, which renumbers the rest.
+    local function mainConsoleCountAfter(marker, text)
+      local lines = table.concat(getLines("main", 0, getLastLineNumber("main") + 1), "")
+      local markerAt = lines:find(marker, 1, true)
+      if not markerAt then
+        return 0
+      end
+      local recent = lines:sub(markerAt + #marker)
       local count, from = 0, 1
       while true do
         local at = recent:find(text, from, true)
@@ -3356,15 +3415,19 @@ describe("Tests mapper functions against a shared fixture", function()
       finally(removeAll)
       local badPath = exportPath("mapper_spec_no_such_dir/unsaved.png")
       assert.is_false(io.exists(exportPath("mapper_spec_no_such_dir")), "the spec needs a directory nothing has made")
+      -- Not the last few lines: the generic mapper prints its help on a timer
+      -- after the map opens, which can push the report out of them
+      local marker = "mapper spec failed-save marker " .. tostring({})
+      echo("main", marker .. "\n")
       assert.is_true(exportAreaImage(areaAlpha, badPath))
       assert.is_true(exportAreaImage(areaAlpha, exportPath("mapper_spec_export_ok.png")))
       assert.is_true(waitUntil(written, 5000))
-      assert.is_true(waitUntil(function() return mainConsoleCount("Failed to save image to ") > 0 end, 5000))
+      assert.is_true(waitUntil(function() return mainConsoleCountAfter(marker, "Failed to save image to ") > 0 end, 5000))
       -- Best effort: gives the good export time to report as well, before
       -- checking that only the bad one did
       pumpEvents(500)
-      assert.are.equal(1, mainConsoleCount("Failed to save image to "))
-      assert.are.equal(1, mainConsoleCount("Failed to save image to " .. badPath))
+      assert.are.equal(1, mainConsoleCountAfter(marker, "Failed to save image to "))
+      assert.are.equal(1, mainConsoleCountAfter(marker, "Failed to save image to " .. badPath))
     end)
 
     -- The first two exports are the control: with nothing changed they must match,
@@ -4901,12 +4964,17 @@ describe("Tests saveJsonMap and loadJsonMap", function()
       deleteMap()
       local area = addAreaName("MapperSpecJsonImageLabelArea")
       roomA = createRoomID(); addRoom(roomA); setRoomArea(roomA, area)
-      -- a label made from a file that is not there is a transparent rectangle of
-      -- the same size, so it is the yardstick for "the picture actually came back":
+      -- a label made from a transparent image is a transparent rectangle of the
+      -- same size, so it is the yardstick for "the picture actually came back":
       -- the encoded PNG drops its unused alpha channel on the way back in, so the
       -- two encodings of the same picture are not comparable byte for byte
-      local blankId = createMapImageLabel(area, absentPath, 0, 0, 3, 4, 5, 10.0, true)
-      local labelId = createMapImageLabel(area, imagePath, 1, 2, 3, 4, 5, 10.0, true)
+      local blankPath = getMudletHomeDir() .. "/mapper_spec_blank_label.xpm"
+      local blank = assert(io.open(blankPath, "w"))
+      blank:write('/* XPM */\nstatic char * spec_xpm[] = {\n"2 2 1 1",\n"a c None",\n"aa",\n"aa"};\n')
+      blank:close()
+      finally(function() os.remove(blankPath) end)
+      local blankId = assert(createMapImageLabel(area, blankPath, 0, 0, 3, 4, 5, 10.0, true))
+      local labelId = assert(createMapImageLabel(area, imagePath, 1, 2, 3, 4, 5, 10.0, true))
       assert.is_true(labelId >= 0)
       local before = getMapLabel(area, labelId)
       assert.are_not.equal(getMapLabel(area, blankId).Pixmap, before.Pixmap)
