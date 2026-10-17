@@ -1420,12 +1420,19 @@ private slots:
         QVERIFY(widget.mZoomHandover);
         QVERIFY(sameWeights(widget.zoomWeights(), wentIn));
         // However the zoom gets all the way in
-        widget.setCameraDistance(CameraController::scmMinDistance);
+        widget.slot_setScale(1000);
         widget.updateMatrices();
         widget.queueScene();
         QVERIFY(!widget.mZoomHandover);
 
-        // Taken to another area some other way, it goes by that area alone, on its rooms
+        // Framed, or taken to another area some other way, it goes by that area alone
+        queueFrame(widget, hamletId, 52.0f);
+        wheelAt(widget, overRoad, false);
+        widget.zoomIntoAreaAt(overRoad);
+        QVERIFY(widget.mZoomHandover);
+        widget.applyMapZoom(20.0, roadId);
+        QVERIFY(!widget.mZoomHandover);
+        QCOMPARE(widget.shownRadius(), radiusOf(roadId));
         queueFrame(widget, hamletId, 52.0f);
         wheelAt(widget, overRoad, false);
         widget.zoomIntoAreaAt(overRoad);
