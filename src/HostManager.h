@@ -81,6 +81,8 @@ public:
     QList<QSharedPointer<Host>> hostList() const { return mHostPool.values(); }
 
 private:
+    static void saveLayoutOfClosingProfile(const Host* pHost);
+
     inline static HostManager* smpSelf = nullptr;
 
     // Every profile obeys these switches, so whatever owns the profiles owns them too, and with no main

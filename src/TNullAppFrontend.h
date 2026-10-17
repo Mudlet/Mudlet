@@ -51,8 +51,8 @@ public:
     void setActiveProfileTab(const QString&) override {}
     void setAppStyleSheet(const QString&) override {}
     void resizeMainWindow(int, int) override {}
-    bool loadWindowLayout() override { return false; }
-    bool saveWindowLayoutForScript() override { return false; }
+    bool loadWindowLayout() override;
+    bool saveWindowLayoutForScript() override;
     bool quitting() const override { return false; }
     bool openProfile(const QString&, bool) override { return false; }
     bool requestProfileTabClose(const QString&) override { return false; }
@@ -85,6 +85,8 @@ private:
     // with no saved settings; nothing saves them.
     bool mDrawUpperLowerLevels = true;
     bool mShowTabConnectionIndicators = false;
+    // mudlet::mIsLoadingLayout: loadWindowLayout() is placing windows
+    bool mLoadingLayout = false;
 };
 
 #endif // MUDLET_TNULLAPPFRONTEND_H
