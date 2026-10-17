@@ -28,6 +28,7 @@
 #include <QSize>
 #include <QString>
 
+#include <functional>
 #include <optional>
 
 class Host;
@@ -52,6 +53,10 @@ struct TLabelModel
     bool namedByToolTip() const;
     // Whether a screen reader is told it is a button: as a script said, else when it has a click or release callback
     bool actsAsButton() const;
+    void setAccessibleButton(std::optional<bool> button);
+    // Set by the view, which has to change how the label takes the keyboard when actsAsButton() might have changed
+    std::function<void()> mAccessibilityChanged;
+    void accessibilityChanged() const;
 
     // Whether the SVG renderer is worth trying on a file, judged by its first bytes.
     static bool svgCandidate(const QString& path);

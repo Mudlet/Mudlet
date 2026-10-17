@@ -1858,6 +1858,7 @@ describe("Tests Other.lua functions", function()
         "mapperPanelVisible",
         "enableClosedCaption",
         "advertiseScreenReader",
+        "accessibleLabels",
         "announceIncomingText",
       }
 

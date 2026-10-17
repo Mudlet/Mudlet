@@ -60,6 +60,8 @@ public:
     // A screen reader's activation, delivered as the left click a mouse would make
     void press();
     void setAuthoredAccessibleName(const QString& name);
+    // Whether the player can reach and press it from the keyboard: a button, with the profile's accessibleLabels on
+    bool keyboardOperable() const;
     void mousePressEvent(QMouseEvent*) override;
     void mouseDoubleClickEvent(QMouseEvent*) override;
     void mouseReleaseEvent(QMouseEvent*) override;
@@ -69,6 +71,9 @@ public:
     void enterEvent(TEnterEvent*) override;
     void resizeEvent(QResizeEvent* event) override;
     void paintEvent(QPaintEvent* event) override;
+    void keyPressEvent(QKeyEvent* event) override;
+    void focusInEvent(QFocusEvent* event) override;
+    void focusOutEvent(QFocusEvent* event) override;
     void changeEvent(QEvent* event) override;
     bool event(QEvent* event) override;
     QSize sizeHint() const override;
@@ -122,6 +127,8 @@ private:
 
     bool carriesLink() const;
     void applyBackgroundColor();
+    // After every setTextInteractionFlags(), which resets the focus policy
+    void updateKeyboardAccess();
 
     QColor& mBackgroundColor;
     QPixmap mSvgPixmapCache;

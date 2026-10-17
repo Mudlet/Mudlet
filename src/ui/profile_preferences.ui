@@ -4743,6 +4743,19 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
+          <item row="7" column="0" colspan="2">
+           <widget class="QCheckBox" name="checkBox_accessibleLabels">
+            <property name="toolTip">
+             <string>&lt;p&gt;Lets you reach the buttons that scripts and packages make out of labels with the Tab key, and press them with Space or Enter. A focused button is outlined. This changes the Tab order in packages, so it is off unless you turn it on.&lt;/p&gt;</string>
+            </property>
+            <property name="accessibleDescription">
+             <string>When checked, buttons that scripts and packages make out of labels can be reached with the Tab key and pressed with Space or Enter, and a focused one is outlined.</string>
+            </property>
+            <property name="text">
+             <string>Make script buttons reachable with the keyboard</string>
+            </property>
+           </widget>
+          </item>
          </layout>
         </widget>
        </item>
@@ -5680,6 +5693,7 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>comboBox_caretModeKey</tabstop>
   <tabstop>checkBox_f3SearchEnabled</tabstop>
   <tabstop>checkBox_enableBlinkText</tabstop>
+  <tabstop>checkBox_accessibleLabels</tabstop>
   <tabstop>mFORCE_MCCP_OFF</tabstop>
   <tabstop>mFORCE_GA_OFF</tabstop>
   <tabstop>checkBox_mForceMXPProcessorOn</tabstop>

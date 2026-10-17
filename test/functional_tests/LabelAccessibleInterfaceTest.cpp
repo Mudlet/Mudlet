@@ -156,9 +156,10 @@ private slots:
 
     void init()
     {
-        QVERIFY(runLua(qsl("setLabelClickCallback('%1', nil); setLabelReleaseCallback('%1', nil); setLabelAccessibleName('%1', ''); setLabelAccessibleRole('%1', ''); "
-                           "echo('%1', 'plain'); accessibleLabelClicks = nil; accessibleLabelReleased = nil")
-                               .arg(mLabelName)));
+        QVERIFY(runLua(
+                qsl("setConfig('accessibleLabels', false); setLabelClickCallback('%1', nil); setLabelReleaseCallback('%1', nil); setLabelAccessibleName('%1', ''); setLabelAccessibleRole('%1', ''); "
+                    "echo('%1', 'plain'); accessibleLabelClicks = nil; accessibleLabelReleased = nil")
+                        .arg(mLabelName)));
     }
 
     void test_aLabelIsStaticTextUntilItHasAClickCallback()
@@ -241,6 +242,66 @@ private slots:
         accessible()->actionInterface()->doAction(QAccessibleActionInterface::pressAction());
         QVERIFY(luaHolds(qsl("accessibleLabelClicks == 1")));
         QVERIFY(luaHolds(qsl("accessibleLabelButton == 'LeftButton'")));
+    }
+
+    // Off by default: a button joining the Tab order changes how existing packages behave
+    void test_aButtonTakesTabFocusOnlyWhileAccessibleLabelsIsOn()
+    {
+        QVERIFY(runLua(qsl("setLabelClickCallback('%1', function() end)").arg(mLabelName)));
+        QCOMPARE(label()->focusPolicy(), Qt::NoFocus);
+
+        QVERIFY(runLua(qsl("setConfig('accessibleLabels', true)")));
+        QCOMPARE(label()->focusPolicy(), Qt::TabFocus);
+
+        QVERIFY(runLua(qsl("setLabelAccessibleRole('%1', 'text')").arg(mLabelName)));
+        QCOMPARE(label()->focusPolicy(), Qt::NoFocus);
+        QVERIFY(runLua(qsl("setLabelAccessibleRole('%1', '')").arg(mLabelName)));
+        QCOMPARE(label()->focusPolicy(), Qt::TabFocus);
+
+        QVERIFY(runLua(qsl("setLabelClickCallback('%1', nil)").arg(mLabelName)));
+        QCOMPARE(label()->focusPolicy(), Qt::NoFocus);
+
+        QVERIFY(runLua(qsl("setLabelReleaseCallback('%1', function() end)").arg(mLabelName)));
+        QCOMPARE(label()->focusPolicy(), Qt::TabFocus);
+        QVERIFY(runLua(qsl("setConfig('accessibleLabels', false)")));
+        QCOMPARE(label()->focusPolicy(), Qt::NoFocus);
+    }
+
+    void test_aButtonCreatedWhileAccessibleLabelsIsOnTakesTabFocus()
+    {
+        QVERIFY(runLua(qsl("setConfig('accessibleLabels', true)")));
+        const QString later = qsl("accessibleLabelLater");
+        auto [created, createMessage] = mpHost->createLabel(qsl("main"), later, 10, 110, 200, 40, true, false);
+        QVERIFY2(created, qPrintable(createMessage));
+        QVERIFY(runLua(qsl("setLabelClickCallback('%1', function() end)").arg(later)));
+        QCOMPARE(mpHost->mainConsoleView()->labelWidget(later)->focusPolicy(), Qt::TabFocus);
+        mpHost->deleteLabel(later);
+    }
+
+    // QLabel gives a label with a link focus of its own, for reaching the link
+    void test_aLabelWithALinkKeepsItsFocus()
+    {
+        QVERIFY(runLua(qsl("echo('%1', '<a href=\"send:look\">look</a>')").arg(mLabelName)));
+        QCOMPARE(label()->focusPolicy(), Qt::StrongFocus);
+        QVERIFY(runLua(qsl("setConfig('accessibleLabels', true); setConfig('accessibleLabels', false)")));
+        QCOMPARE(label()->focusPolicy(), Qt::StrongFocus);
+    }
+
+    void test_spaceAndEnterPressAFocusedButton()
+    {
+        QVERIFY(runLua(qsl("setLabelClickCallback('%1', function(event) accessibleLabelClicks = (accessibleLabelClicks or 0) + 1; accessibleLabelButton = event.button end)").arg(mLabelName)));
+        QTest::keyClick(label(), Qt::Key_Space);
+        QVERIFY2(luaHolds(qsl("accessibleLabelClicks == nil")), "Space pressed a button with accessibleLabels off");
+
+        QVERIFY(runLua(qsl("setConfig('accessibleLabels', true)")));
+        QTest::keyClick(label(), Qt::Key_Space);
+        QTest::keyClick(label(), Qt::Key_Return);
+        QTest::keyClick(label(), Qt::Key_Enter, Qt::KeypadModifier);
+        QVERIFY(luaHolds(qsl("accessibleLabelClicks == 3")));
+        QVERIFY(luaHolds(qsl("accessibleLabelButton == 'LeftButton'")));
+
+        QTest::keyClick(label(), Qt::Key_Space, Qt::ControlModifier);
+        QVERIFY2(luaHolds(qsl("accessibleLabelClicks == 3")), "Ctrl+Space pressed the button");
     }
 
     void test_aLabelThatDeletesItselfWhenPressedIsLeftAlone()

@@ -70,6 +70,10 @@ TLabel::TLabel(Host* pH, const QString& name, QWidget* pW)
     setTextFormat(Qt::RichText);
     setTextInteractionFlags(Qt::NoTextInteraction);
     setOpenExternalLinks(false);
+    mpModel->mAccessibilityChanged = [this]() {
+        updateKeyboardAccess();
+    };
+    updateKeyboardAccess();
 
     connect(this, &QLabel::linkActivated, this, &TLabel::slot_linkActivated);
 
@@ -99,6 +103,7 @@ void TLabel::setText(const QString& text)
     const bool hasAnchor = TLabelModel::containsAnchorTag(text);
 
     setTextInteractionFlags(hasAnchor ? scmLinkInteraction : Qt::TextInteractionFlags(Qt::NoTextInteraction));
+    updateKeyboardAccess();
 
     stopMovie();
     QLabel::setText(mpModel->linkStyledText(text));
@@ -116,11 +121,50 @@ void TLabel::press()
     // The click callback may delete the label: deleteLabel() deregisters it at once but destroys it later
     QPointer<TLabel> self(this);
     mousePressEvent(&pressEvent);
-    if (!self || mpHost->windowRegistry().labelModel(mName) != mpModel.get()) {
+    if (!self || !mpHost || mpHost->windowRegistry().labelModel(mName) != mpModel.get()) {
         return;
     }
     QMouseEvent releaseEvent(QEvent::MouseButtonRelease, centre, mapToGlobal(centre), Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
     mouseReleaseEvent(&releaseEvent);
+}
+
+bool TLabel::keyboardOperable() const
+{
+    return mpHost && mpHost->mAccessibleLabels && mpModel->actsAsButton();
+}
+
+void TLabel::updateKeyboardAccess()
+{
+    // A label with a link keeps the focus QLabel gives it for reaching the link. A button takes Tab
+    // focus only, or clicking it would take the focus from the command line.
+    const bool linksByKeyboard = textInteractionFlags().testFlag(Qt::LinksAccessibleByKeyboard);
+    setFocusPolicy(linksByKeyboard ? Qt::StrongFocus : keyboardOperable() ? Qt::TabFocus : Qt::NoFocus);
+    update();
+}
+
+void TLabel::keyPressEvent(QKeyEvent* event)
+{
+    const Qt::KeyboardModifiers modifiers = event->modifiers() & ~Qt::KeypadModifier;
+    const bool activationKey = event->key() == Qt::Key_Space || event->key() == Qt::Key_Return || event->key() == Qt::Key_Enter;
+    // A label with a link leaves the keys to QLabel, which activates the focused link with Return
+    if (keyboardOperable() && !carriesLink() && activationKey && modifiers == Qt::NoModifier && !event->isAutoRepeat()) {
+        event->accept();
+        press();
+        return;
+    }
+    QLabel::keyPressEvent(event);
+}
+
+void TLabel::focusInEvent(QFocusEvent* event)
+{
+    QLabel::focusInEvent(event);
+    update();
+}
+
+void TLabel::focusOutEvent(QFocusEvent* event)
+{
+    QLabel::focusOutEvent(event);
+    update();
 }
 
 void TLabel::setAuthoredAccessibleName(const QString& name)
@@ -255,6 +299,13 @@ void TLabel::paintEvent(QPaintEvent* event)
     }
 
     QLabel::paintEvent(event);
+
+    // Drawn here rather than left to the style: a script's stylesheet gives labels no focus style
+    if (hasFocus() && keyboardOperable()) {
+        QPainter painter(this);
+        painter.setPen(QPen(palette().color(QPalette::Highlight), 2));
+        painter.drawRect(QRectF(rect()).adjusted(1, 1, -1, -1));
+    }
 }
 
 // QLabel takes its hint from the text, pixmap or movie in its content slot, and
@@ -455,6 +506,7 @@ void TLabel::setClickThrough(bool clickthrough)
         // Re-enable text interaction only if the current text has hyperlinks
         setTextInteractionFlags(TLabelModel::containsAnchorTag(text()) ? scmLinkInteraction : Qt::TextInteractionFlags(Qt::NoTextInteraction));
     }
+    updateKeyboardAccess();
 }
 
 void TLabel::setBackgroundColor(const QColor& color)
