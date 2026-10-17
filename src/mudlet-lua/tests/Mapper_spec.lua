@@ -5938,10 +5938,181 @@ describe("Tests saveJsonMap and loadJsonMap", function()
     end)
 
     it("rebuilds an area whose name is empty in the file around the rooms that claim it", function()
-      -- driving this path leaks the rejected TArea, which turns the leak
-      -- detection half of the Linux CI job red (#10396)
-      pending("importing a blank-named area leaks it")
+      buildMap()
+      local area = getRoomArea(roomA)
+      assert.is_true(setAreaUserData(area, "mapper.spec.kept", "yes"))
+      local labelId = createMapLabel(area, "MapperSpecBlankAreaLabel", 2, -3, 0, 255, 255, 255, 0, 0, 0,
+                                     30.0, 50, true, true, "", 255, 50, false)
+      assert.is_true(labelId >= 0)
+      reimportWith(function(document)
+        for _, exportedArea in ipairs(document.areas) do
+          if exportedArea.id == area then
+            exportedArea.name = ""
+          end
+        end
+      end)
+
+      assert.are.equal(area, getRoomArea(roomA))
+      assert.are.equal(area, getRoomArea(roomB))
+      assert.are.same({["mapper.spec.kept"] = "yes"}, getAllAreaUserData(area))
+      local label = getMapLabel(area, labelId)
+      assert.is_table(label)
+      assert.are.equal("MapperSpecBlankAreaLabel", label.Text)
+      assert.are.same({2, -3, 0}, {label.X, label.Y, label.Z})
+      local name = getAreaTableSwap()[area]
+      assert.is_string(name)
+      assert.are_not.equal("", name)
     end)
+
+    it("names an area whose name is empty even when the file gives no name for unnamed areas", function()
+      buildMap()
+      local area = getRoomArea(roomA)
+      assert.is_true(setAreaUserData(area, "mapper.spec.kept", "yes"))
+      reimportWith(function(document)
+        document.anonymousAreaName = nil
+        for _, exportedArea in ipairs(document.areas) do
+          if exportedArea.id == area then
+            exportedArea.name = ""
+          end
+        end
+      end)
+
+      assert.are.same({["mapper.spec.kept"] = "yes"}, getAllAreaUserData(area))
+      assert.are_not.equal("", getAreaTableSwap()[area] or "")
+    end)
+
+    it("does not give an area whose name is empty the name of a later area in the file", function()
+      deleteMap()
+      local blankArea = addAreaName("MapperSpecJsonBlankFirstArea")
+      local namedArea = addAreaName("MapperSpecJsonNamedLaterArea")
+      roomA = createRoomID(); addRoom(roomA); setRoomArea(roomA, blankArea)
+      roomB = createRoomID(); addRoom(roomB); setRoomArea(roomB, namedArea)
+      assert.is_true(setAreaUserData(blankArea, "mapper.spec.kept", "yes"))
+      local namedAreaName
+      reimportWith(function(document)
+        -- the blank one first, ahead of the area holding the name it would get
+        table.sort(document.areas, function(a, b) return a.id == blankArea and b.id ~= blankArea end)
+        if (document.anonymousAreaName or "") == "" then
+          document.anonymousAreaName = "Unnamed Area"
+        end
+        namedAreaName = document.anonymousAreaName
+        for _, exportedArea in ipairs(document.areas) do
+          if exportedArea.id == blankArea then
+            exportedArea.name = ""
+          elseif exportedArea.id == namedArea then
+            exportedArea.name = document.anonymousAreaName
+          end
+        end
+      end)
+
+      local names = getAreaTableSwap()
+      assert.are.same({["mapper.spec.kept"] = "yes"}, getAllAreaUserData(blankArea))
+      assert.are.equal(namedAreaName, names[namedArea])
+      assert.is_string(names[blankArea])
+      assert.are_not.equal(names[blankArea], names[namedArea])
+    end)
+
+    it("gives each of several areas whose names are empty a name of its own", function()
+      deleteMap()
+      local firstArea = addAreaName("MapperSpecJsonBlankFirst")
+      local secondArea = addAreaName("MapperSpecJsonBlankSecond")
+      roomA = createRoomID(); addRoom(roomA); setRoomArea(roomA, firstArea)
+      roomB = createRoomID(); addRoom(roomB); setRoomArea(roomB, secondArea)
+      assert.is_true(setAreaUserData(firstArea, "mapper.spec.which", "first"))
+      assert.is_true(setAreaUserData(secondArea, "mapper.spec.which", "second"))
+      local unnamedAreaName
+      reimportWith(function(document)
+        unnamedAreaName = document.anonymousAreaName
+        for _, exportedArea in ipairs(document.areas) do
+          if exportedArea.id == firstArea or exportedArea.id == secondArea then
+            exportedArea.name = ""
+          end
+        end
+      end)
+
+      assert.are.same({["mapper.spec.which"] = "first"}, getAllAreaUserData(firstArea))
+      assert.are.same({["mapper.spec.which"] = "second"}, getAllAreaUserData(secondArea))
+      local names = getAreaTableSwap()
+      assert.are_not.equal(names[firstArea], names[secondArea])
+      for _, area in ipairs({firstArea, secondArea}) do
+        assert.are.equal(unnamedAreaName, names[area]:sub(1, #unnamedAreaName))
+      end
+    end)
+
+    it("keeps the default area's own name when its name is empty in the file", function()
+      buildMap()
+      local defaultAreaName = getAreaTableSwap()[-1]
+      reimportWith(function(document)
+        local found = false
+        for _, exportedArea in ipairs(document.areas) do
+          if exportedArea.id == -1 then
+            exportedArea.name = ""
+            found = true
+          end
+        end
+        assert.is_true(found, "the export has no default area to blank")
+      end)
+
+      assert.are.equal(defaultAreaName, getAreaTableSwap()[-1])
+      assert.are.equal(-1, getAreaTable()[defaultAreaName])
+    end)
+
+    it("does not give the default area a name another area in the file has when its own is empty", function()
+      buildMap()
+      local area = getRoomArea(roomA)
+      local defaultAreaName = getAreaTableSwap()[-1]
+      local unnamedAreaName
+      reimportWith(function(document)
+        unnamedAreaName = document.anonymousAreaName
+        local found = false
+        for _, exportedArea in ipairs(document.areas) do
+          if exportedArea.id == -1 then
+            exportedArea.name = ""
+            found = true
+          elseif exportedArea.id == area then
+            exportedArea.name = document.defaultAreaName
+          end
+        end
+        assert.is_true(found, "the export has no default area to blank")
+      end)
+
+      local names = getAreaTableSwap()
+      assert.are.equal(defaultAreaName, names[area])
+      assert.are.equal(unnamedAreaName, names[-1]:sub(1, #unnamedAreaName))
+    end)
+
+    it("keeps the default area's name when the file does not give one", function()
+      buildMap()
+      local defaultAreaName = getAreaTableSwap()[-1]
+      reimportWith(function(document)
+        document.defaultAreaName = nil
+      end)
+
+      -- the area -1 in the file still carries its name, so only a new map shows the one the import settled on
+      deleteMap()
+      assert.are.equal(defaultAreaName, getAreaTableSwap()[-1])
+    end)
+
+    for _, position in ipairs({"after", "before"}) do
+      it("keeps a named area when the file also lists its id with no name " .. position .. " it", function()
+        buildMap()
+        local area = getRoomArea(roomA)
+        assert.is_true(setAreaUserData(area, "mapper.spec.kept", "yes"))
+        reimportWith(function(document)
+          for index, exportedArea in ipairs(document.areas) do
+            if exportedArea.id == area then
+              table.insert(document.areas, position == "after" and #document.areas + 1 or index, {id = area, name = ""})
+              break
+            end
+          end
+        end)
+
+        assert.are.equal("MapperSpecJsonAuditArea", getAreaTableSwap()[area])
+        assert.are.same({["mapper.spec.kept"] = "yes"}, getAllAreaUserData(area))
+        assert.are.equal(area, getRoomArea(roomA))
+        assert.are.equal(area, getRoomArea(roomB))
+      end)
+    end
 
     local function readMapErrorLog()
       local file = io.open(getMudletHomeDir() .. "/log/errors.txt", "r")
