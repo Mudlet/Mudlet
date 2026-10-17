@@ -1258,6 +1258,11 @@ describe("Tests a double-byte character restyled between its bytes", function()
     assert.equals(replacement .. "X", decoded(bytes(0xA4) .. "\27[31m\27[2KX\27[0m"))
   end)
 
+  it("ends the character at a control sequence ending in m that is not SGR", function()
+    using("BIG5")
+    assert.equals(replacement .. "X", decoded(bytes(0xA4) .. "\27[1 mX\27[0m"))
+  end)
+
   it("ends the character at the end of the line", function()
     using("BIG5")
     assert.equals(replacement, decoded(bytes(0xA4) .. "\27[31m"))

@@ -316,6 +316,7 @@ bool TRoomDB::__removeRoom(int id)
             }
             deleteValuesFromEntranceMap(id); // Needed to remove matching values
         }
+        emit mpMap->signal_roomDeleted(id);
         // Because we clear the graph in initGraph which will be called
         // if mMapGraphNeedsUpdate is true -- we don't need to
         // remove the vertex using clear_vertex and remove_vertex here
@@ -534,20 +535,25 @@ bool TRoomDB::addArea(int id)
         areas[id] = new TArea(mpMap, this);
         if (!areaNamesMap.contains(id)) {
             // Must provide a name for this new area
-            QString newAreaName = mpMap->getUnnamedAreaName();
-            if (hasAreaName(newAreaName)) {
-                // We already have an "unnamed area"
-                uint deduplicateSuffix = 0;
-                do {
-                    newAreaName = qsl("%1_%2").arg(mpMap->getUnnamedAreaName()).arg(++deduplicateSuffix, 3, 10, QLatin1Char('0'));
-                } while (hasAreaName(newAreaName));
-            }
-            areaNamesMap.insert(id, newAreaName);
+            areaNamesMap.insert(id, unusedUnnamedAreaName());
         }
         return true;
     }
     mpMap->logError(tr("Area not added. An area with AreaID %1 already exists!").arg(QString::number(id)));
     return false;
+}
+
+QString TRoomDB::unusedUnnamedAreaName() const
+{
+    QString newAreaName = mpMap->getUnnamedAreaName();
+    if (hasAreaName(newAreaName)) {
+        // We already have an "unnamed area"
+        uint deduplicateSuffix = 0;
+        do {
+            newAreaName = qsl("%1_%2").arg(mpMap->getUnnamedAreaName()).arg(++deduplicateSuffix, 3, 10, QLatin1Char('0'));
+        } while (hasAreaName(newAreaName));
+    }
+    return newAreaName;
 }
 
 // Deliberately does not hand back an ID an area used to have but no longer

@@ -134,6 +134,7 @@ private:
     QListWidget* addedFiles() const { return mpExporter->findChild<QListWidget*>(qsl("listWidget_addedFiles")); }
     QLineEdit* nameField() const { return lineEditNamed(qsl("lineEdit_packageName")); }
     QString selectionTitle() const { return mpExporter->findChild<QGroupBox*>(qsl("groupBox_exportSelection"))->title(); }
+    static QString countedTitle(int items) { return dlgPackageExporter::tr("Select what to export (%n item(s))", nullptr, items); }
 
     // The Export button carries the ApplyRole so that pressing it does not close
     // the dialog, which is also how it is told apart from Close and Cancel.
@@ -456,9 +457,6 @@ private slots:
     void cleanup()
     {
         stopAnsweringMessageBoxes();
-        // slot_recountItems() arms a zero timer and holds a static flag until it
-        // runs, so let it run before the dialog that owns it goes away
-        QApplication::processEvents();
         delete mpExporter;
         mpExporter = nullptr;
         if (auto* self = mudlet::self()) {
@@ -545,7 +543,7 @@ private slots:
         QCOMPARE(groupItem->childCount(), 2);
 
         const QString emptyTitle = selectionTitle();
-        QVERIFY2(!emptyTitle.contains(QChar('3')), "the title already showed the count this test is about to produce");
+        QVERIFY2(emptyTitle != countedTitle(3), "the title already showed the count this test is about to produce");
         QCOMPARE(groupItem->child(0)->checkState(0), Qt::Unchecked);
         QCOMPARE(groupItem->child(1)->checkState(0), Qt::Unchecked);
 
@@ -562,7 +560,7 @@ private slots:
         QCOMPARE(itemNamed(triggersTop(), qsl("exporter loner"))->checkState(0), Qt::Unchecked);
         // three: the folder and both of its children, so counting only the
         // leaves or only the folder would each give a different answer
-        QVERIFY2(selectionTitle().contains(QChar('3')), qPrintable(qsl("The title has to count all three checked items, but said: \"%1\"").arg(selectionTitle())));
+        QCOMPARE(selectionTitle(), countedTitle(3));
     }
 
     // Right-clicking an item is the way to take a folder without its contents,
@@ -1531,6 +1529,86 @@ private slots:
         QVERIFY(waitForExportToSettle());
         QVERIFY2(infoLabel()->text().contains(qsl("Export cancelled.")), qPrintable(qsl("Cancelling did not stop the export; the dialog said: \"%1\"").arg(infoLabel()->text())));
         QVERIFY2(!QFileInfo::exists(packagePath(packageName)), "the package was written although the export was cancelled");
+    }
+
+    // The recount waits for a zero timer and only one is armed at a time, so a
+    // dialog gone before its timer ran must not stop the next one from counting.
+    void test_theCountKeepsUpAfterADialogClosedBeforeItCounted_10442()
+    {
+        makeTrigger(qsl("exporter early-closed count"), nullptr);
+        openExporter();
+        QVERIFY(checkItem(triggersTop(), qsl("exporter early-closed count")));
+        // replaced with no event loop run in between, so its recount is still pending
+        openExporter();
+        QVERIFY(checkItem(triggersTop(), qsl("exporter early-closed count")));
+
+        const QString expected = countedTitle(1);
+        QVERIFY2(QTest::qWaitFor(
+                         [this, expected]() {
+                             return selectionTitle() == expected;
+                         },
+                         2s),
+                 qPrintable(qsl("The title never took the count, and said: \"%1\"").arg(selectionTitle())));
+    }
+
+    // Each dialog has its own pending recount, so one exporter's pending
+    // recount must not hold back another dialog's checked in the same pass.
+    void test_twoOpenExportersEachKeepTheirOwnCount_10442()
+    {
+        makeTrigger(qsl("exporter twin count"), nullptr);
+        openExporter();
+        auto other = std::make_unique<dlgPackageExporter>(nullptr, mpHost);
+        auto* otherTree = other->findChild<QTreeWidget*>(qsl("treeWidget_exportSelection"));
+        auto* otherBox = other->findChild<QGroupBox*>(qsl("groupBox_exportSelection"));
+        QVERIFY(otherTree && otherBox);
+
+        QVERIFY(checkItem(triggersTop(), qsl("exporter twin count")));
+        QVERIFY(checkItem(otherTree->topLevelItem(0), qsl("exporter twin count")));
+
+        const QString expected = countedTitle(1);
+        QVERIFY2(QTest::qWaitFor(
+                         [this, expected, otherBox]() {
+                             return selectionTitle() == expected && otherBox->title() == expected;
+                         },
+                         2s),
+                 qPrintable(qsl("The titles said \"%1\" and \"%2\"").arg(selectionTitle(), otherBox->title())));
+    }
+
+    // Checking a folder changes every item under it, and those changes are
+    // folded into one recount rather than a tree walk for each of them.
+    void test_checkingAFolderRecountsOnce()
+    {
+        auto* folder = makeTrigger(qsl("exporter recount group"), nullptr, true);
+        makeTrigger(qsl("exporter recount one"), folder);
+        makeTrigger(qsl("exporter recount two"), folder);
+        makeTrigger(qsl("exporter recount three"), folder);
+        openExporter();
+
+        // The recount is a zero timer, which Qt posts to the dialog as a queued
+        // call; a recount delivered any other way would count 0 here, so expect 1
+        class QueuedCallCounter : public QObject
+        {
+        public:
+            int mCount = 0;
+            bool eventFilter(QObject*, QEvent* event) override
+            {
+                if (event->type() == QEvent::MetaCall) {
+                    ++mCount;
+                }
+                return false;
+            }
+        } counter;
+        mpExporter->installEventFilter(&counter);
+        itemNamed(triggersTop(), qsl("exporter recount group"))->setCheckState(0, Qt::Checked);
+        const QString expected = countedTitle(4);
+        QVERIFY2(QTest::qWaitFor(
+                         [this, expected]() {
+                             return selectionTitle() == expected;
+                         },
+                         2s),
+                 qPrintable(qsl("The title never took the count, and said: \"%1\"").arg(selectionTitle())));
+        mpExporter->removeEventFilter(&counter);
+        QVERIFY2(counter.mCount == 1, qPrintable(qsl("checking one folder queued %1 recounts to the dialog").arg(counter.mCount)));
     }
 };
 

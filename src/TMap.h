@@ -86,6 +86,8 @@ signals:
     void signal_areaChanged(int areaId);
     void signal_mmpMapLocationChanged();
     void signal_mapSymbolFontChanged();
+    // Reaches every 2D map showing this map, the mapper's and each secondary view's
+    void signal_roomDeleted(int roomId);
 
     // Cues for the mapper drawing this map (mpMapper); the colour and symbol
     // cache ones also reach every secondary map view, and with the 3D mapper

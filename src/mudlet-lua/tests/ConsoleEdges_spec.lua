@@ -271,11 +271,11 @@ describe("Console edges", function()
   describe("refuses names it cannot use", function()
     it("an empty name for a command line or a text edit", function()
       local ok, err = createCommandLine("", 0, 0, 100, 20)
-      assert.is_nil(ok)
+      assert.is_false(ok)
       assert.are.equal("a commandLine cannot have an empty string as its name", err)
 
       ok, err = createTextEdit("", 0, 0, 100, 20)
-      assert.is_nil(ok)
+      assert.is_false(ok)
       assert.are.equal("a text edit cannot have an empty string as its name", err)
     end)
 
@@ -290,11 +290,11 @@ describe("Console edges", function()
       assert.is_true(createTextEdit(textEdit, 0, 30, 100, 20))
 
       local ok, err = createCommandLine(cmdLine, 0, 0, 100, 20)
-      assert.is_nil(ok)
+      assert.is_false(ok)
       assert.are.equal("couldn't create commandLine", err)
 
       ok, err = createTextEdit(textEdit, 0, 0, 100, 20)
-      assert.is_nil(ok)
+      assert.is_false(ok)
       assert.are.equal("couldn't create text edit", err)
     end)
 
@@ -311,8 +311,8 @@ describe("Console edges", function()
       local taken = ("label with the name '%s' already exists"):format(label)
       assert.are.same({false, taken}, {createMiniConsole(label, 0, 30, 100, 50)})
       assert.are.same({false, taken}, {createScrollBox(label, 0, 30, 100, 50)})
-      assert.are.same({nil, taken}, {createCommandLine(label, 0, 30, 100, 20)})
-      assert.are.same({nil, taken}, {createTextEdit(label, 0, 30, 100, 20)})
+      assert.are.same({false, taken}, {createCommandLine(label, 0, 30, 100, 20)})
+      assert.are.same({false, taken}, {createTextEdit(label, 0, 30, 100, 20)})
       assert.are.equal("label", windowType(label))
     end)
 
@@ -548,8 +548,6 @@ describe("Console edges", function()
       assert.are.equal("label", windowType(console))
     end)
 
-    -- these two answer false rather than the nil the others give, which is the
-    -- API as it stands - change the API, not just this test
     it("an empty name to delete a miniconsole or a label", function()
       local ok, err = deleteMiniConsole("")
       assert.is_false(ok)

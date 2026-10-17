@@ -2121,11 +2121,10 @@ void dlgPackageExporter::displayResultMessage(const QString& html, const bool is
 void dlgPackageExporter::slot_recountItems(QTreeWidgetItem* item)
 {
     checkChildren(item);
-    static bool debounce;
-    if (!debounce) {
-        debounce = true;
+    if (!mRecountPending) {
+        mRecountPending = true;
         QTimer::singleShot(0ms, this, [this]() {
-            debounce = false;
+            mRecountPending = false;
 
             const int itemsToExport = countCheckedItems();
             if (itemsToExport) {
