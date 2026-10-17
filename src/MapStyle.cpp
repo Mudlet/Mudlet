@@ -123,6 +123,8 @@ QList<MapStyle> registeredStyles()
     // The ANSI palette's white, which a terminal draws its plain text in, so the rooms' colors stand out from the lines
     terminal.ink = QColor(170, 170, 170);
     terminal.labelFontFamily = qsl("Bitstream Vera Sans Mono");
+    // The ANSI palette's green, a dim tone of the names' bright green, so the lines between rooms sit back behind them
+    terminal.exitInk = QColor(0, 170, 0);
     terminal.exitWidthFactor = 0.5f;
     terminal.floorPlates = false;
     terminal.glyphs = MapStyle::Glyphs::Terminal;
@@ -525,6 +527,9 @@ QColor MapStyle::shownMapLabelColor(const QColor& profileBackground) const
 
 QColor MapStyle::exitColor(const QColor& profileExitColor) const
 {
+    if (exitInk.isValid()) {
+        return exitInk;
+    }
     return ink.isValid() ? ink : profileExitColor;
 }
 

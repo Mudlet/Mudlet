@@ -2640,6 +2640,49 @@ private slots:
         }
     }
 
+    // In terminal a straight exit's cells are dim dots across or up the screen alike, and a diagonal's slashes, all in a
+    // dim tone of the names' phosphor green rather than plain text's gray, so that the lines sit back behind the rooms
+    void test_terminalExitsAreDimPhosphorDotsWithoutGL()
+    {
+        const int areaId = addArea();
+        QVERIFY(areaId > 0);
+        constexpr int kNorthRoomId = 6;
+        constexpr int kNorthEastRoomId = 7;
+        QVERIFY(addRoomAt(kNorthRoomId, areaId, 0, 2, 0));
+        QVERIFY(addRoomAt(kNorthEastRoomId, areaId, 2, 2, 0));
+        TRoom* pPlayerRoom = map()->mpRoomDB->getRoom(kPlayerRoomId);
+        pPlayerRoom->setExit(kEastRoomId, DIR_EAST);
+        map()->mpRoomDB->getRoom(kEastRoomId)->setExit(kPlayerRoomId, DIR_WEST);
+        pPlayerRoom->setExit(kNorthRoomId, DIR_NORTH);
+        map()->mpRoomDB->getRoom(kNorthRoomId)->setExit(kPlayerRoomId, DIR_SOUTH);
+        pPlayerRoom->setExit(kNorthEastRoomId, DIR_NORTHEAST);
+        map()->mpRoomDB->getRoom(kNorthEastRoomId)->setExit(kPlayerRoomId, DIR_SOUTHWEST);
+        const auto restore = qScopeGuard([this]() {
+            mpHost->setMapStyle(qsl("tiles"));
+        });
+        QVERIFY(mpHost->setMapStyle(qsl("terminal")));
+        const QColor nameColor = mpHost->mapStylePreset().roomNameColor;
+        ModernGLWidget widget(map(), mpHost);
+        queueFrame(widget, areaId);
+        const QList<DrawnGlyph> glyphs = terminalGlyphs(widget, areaId);
+        const QList<std::pair<QPointF, QChar>> lineCells{{{0.5, 0.0}, QChar(0x00B7)},
+                                                         {{1.0, 0.0}, QChar(0x00B7)},
+                                                         {{1.5, 0.0}, QChar(0x00B7)},
+                                                         {{0.0, 0.5}, QChar(0x00B7)},
+                                                         {{0.0, 1.0}, QChar(0x00B7)},
+                                                         {{0.0, 1.5}, QChar(0x00B7)},
+                                                         {{0.5, 0.5}, QChar(u'/')},
+                                                         {{1.0, 1.0}, QChar(u'/')},
+                                                         {{1.5, 1.5}, QChar(u'/')}};
+        for (const auto& [cell, character] : lineCells) {
+            const DrawnGlyph glyph = glyphAt(glyphs, cell);
+            QVERIFY2(!glyph.text.isEmpty(), qPrintable(qsl("nothing drawn at (%1, %2)").arg(cell.x()).arg(cell.y())));
+            QCOMPARE(glyph.text, QString(character));
+            QVERIFY2(glyph.color.green() > 2 * qMax(glyph.color.red(), glyph.color.blue()) && glyph.color.value() < nameColor.value(),
+                     qPrintable(qsl("the exit at (%1, %2) is drawn in %3, not a dim tone of the names' %4").arg(cell.x()).arg(cell.y()).arg(glyph.color.name(), nameColor.name())));
+        }
+    }
+
     // The player is marked by a diamond of glowing lines over their room, in the player's color, not a column
     void test_hologramMarksThePlayerWithADiamondWithoutGL()
     {
