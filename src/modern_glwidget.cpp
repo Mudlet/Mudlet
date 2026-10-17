@@ -849,6 +849,13 @@ void ModernGLWidget::applyTiltShift()
 }
 
 namespace {
+// How a room's or exit's color shows on a level other than the viewed one
+QVector4D otherLevelColor(const MapStyle& style, const QColor& drawnColor, GeometryManager::LevelFade fade, const QColor& fadeTarget)
+{
+    fade.saturation = style.otherLevelSaturation(fade.saturation);
+    return GeometryManager::fadedColor(style.otherLevelColorFor(drawnColor), fade, fadeTarget);
+}
+
 // Texels across the textures drawn on room tops
 constexpr int scmRoomTextureSize = 128;
 // Past this many, textures this frame has not used yet are dropped to make room and remade if needed;
@@ -2072,7 +2079,8 @@ void ModernGLWidget::renderRooms()
             seeThroughLevels[pR->z()].tokenShadows.append(CubeInstanceData(tokenShadow, scmModelShadowColor.x(), scmModelShadowColor.y(), scmModelShadowColor.z(), scmModelShadowStrength));
         }
         if (wireframes) {
-            QVector4D wireTint = look.playerRoom ? roomTint : GeometryManager::fadedColor(style.wireColor(bordered ? pR->mBorderColor : QColor(), roomColor), fade, fadeTarget);
+            const QColor wireColor = style.wireColor(bordered ? pR->mBorderColor : QColor(), roomColor);
+            QVector4D wireTint = look.playerRoom ? roomTint : (look.onViewedLevel() ? GeometryManager::fadedColor(wireColor, fade, fadeTarget) : otherLevelColor(style, wireColor, fade, fadeTarget));
             if (hovered) {
                 wireTint = QVector4D(wireTint.toVector3D() * 0.5f + QVector3D(0.5f, 0.5f, 0.5f), wireTint.w());
             }
@@ -3206,7 +3214,15 @@ void ModernGLWidget::renderConnections()
     const MapStyle& style = mapStyle();
     const auto faded = [&](const QColor& color, const int level) {
         // A custom line's own color, added onto the dark background, could leave nothing to see
-        return GeometryManager::fadedColor(glowing ? style.wireColor(color, color) : color, GeometryManager::levelFade(level - mMapCenterZ, moreTransparent), levelFadeTarget(level));
+        const QColor drawn = glowing ? style.wireColor(color, color) : color;
+        if (level == mMapCenterZ) {
+            return GeometryManager::fadedColor(drawn, GeometryManager::levelFade(0, moreTransparent), levelFadeTarget(level));
+        }
+        // Another level's exits run in long lines across the viewed level's rooms, so they recede further than the
+        // rooms they join, which are enough to show the level is there
+        GeometryManager::LevelFade fade = GeometryManager::levelFade(level - mMapCenterZ, moreTransparent);
+        fade.opacity *= 0.5f;
+        return otherLevelColor(style, drawn, fade, levelFadeTarget(level));
     };
 
     mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::ENABLE_DEPTH_TEST));
