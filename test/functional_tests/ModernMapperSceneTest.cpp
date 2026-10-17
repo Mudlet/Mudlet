@@ -1824,7 +1824,11 @@ private slots:
         QCOMPARE(widget.mSearchResults.size(), 2);
         QCOMPARE(widget.mSearchResults.at(0).id, target);
         QCOMPARE(widget.mpSearchPanel->mpList->count(), 2);
-        QCOMPARE(widget.mpSearchPanel->mpList->item(0)->text(), qsl("Lighthouse in Eastvale (room %1)").arg(target));
+        const QListWidgetItem* pFirst = widget.mpSearchPanel->mpList->item(0);
+        QCOMPARE(pFirst->text(), qsl("Lighthouse"));
+        QCOMPARE(pFirst->data(MapSearchPanel::DetailRole).toString(), qsl("Eastvale · room %1").arg(target));
+        QCOMPARE(pFirst->data(Qt::AccessibleTextRole).toString(), qsl("Lighthouse in Eastvale (room %1)").arg(target));
+        QCOMPARE(pFirst->data(MapSearchPanel::ChipColorRole).value<QColor>(), RoomAppearance::environmentColor(*map(), *mpHost, map()->mpRoomDB->getRoom(target)->environment));
         QCOMPARE(widget.mpSearchPanel->currentRow(), 0);
 
         // Keys the box leaves, and the mouse over the panel, stay with it rather than reaching the map under it
@@ -1915,8 +1919,11 @@ private slots:
         QVERIFY(!widget.mFlight);
         QCOMPARE(widget.mSearchResults.size(), 1);
 
-        // Escape closes it
+        // Escape clears what was typed, then closes it
         QKeyEvent escape(QEvent::KeyPress, Qt::Key_Escape, Qt::NoModifier);
+        QCoreApplication::sendEvent(widget.mpSearchPanel->mpEdit, &escape);
+        QVERIFY(!widget.mpSearchPanel->isHidden());
+        QVERIFY(widget.mpSearchPanel->text().isEmpty());
         QCoreApplication::sendEvent(widget.mpSearchPanel->mpEdit, &escape);
         QVERIFY(widget.mpSearchPanel->isHidden());
         // Wherever in the panel the focus is
@@ -1925,6 +1932,89 @@ private slots:
         QVERIFY(widget.mpSearchPanel->isHidden());
 
         map()->mRoomIdHash[map()->mProfileName] = 0;
+    }
+
+    void test_theSearchPanelShowsWhatItFoundAndMovesThroughItWithoutGL()
+    {
+        const auto [westId, eastId] = addTwoAreas(6);
+        Q_UNUSED(eastId)
+        for (TRoom* pRoom : map()->mpRoomDB->getRoomMap()) {
+            pRoom->name = qsl("Hall %1").arg(pRoom->getId());
+        }
+        map()->mpRoomDB->getRoom(3)->name = qsl("Lighthouse");
+        map()->mpRoomDB->getRoom(4)->name = qsl("Lighthouse Keeper's Cottage");
+        map()->setUnsaved(__func__);
+        ModernGLWidget widget(map(), mpHost);
+        queueFrame(widget, westId, 1.5f);
+        widget.openSearch();
+        MapSearchPanel* pPanel = widget.mpSearchPanel;
+        QVERIFY(pPanel);
+
+        // Named for screen readers
+        const QStringList names{pPanel->mpEdit->accessibleName(), pPanel->mpList->accessibleName(), pPanel->mpLabels->accessibleName(), pPanel->mpClose->accessibleName()};
+        for (const QString& name : names) {
+            QVERIFY(!name.isEmpty());
+        }
+        QCOMPARE(QSet<QString>(names.cbegin(), names.cend()).size(), names.size());
+
+        // Before anything is typed, a hint and nothing counted
+        QVERIFY(!pPanel->mpMessage->isHidden());
+        QCOMPARE(pPanel->mpMessage->text(), qsl("Search the whole map"));
+        QVERIFY(pPanel->mpList->isHidden());
+        QVERIFY(pPanel->mpCount->text().isEmpty());
+
+        // What was typed is marked in each name, whatever its case
+        pPanel->mpEdit->setText(qsl("KEEPER"));
+        QCOMPARE(pPanel->mpList->count(), 1);
+        QCOMPARE(pPanel->mpList->item(0)->data(MapSearchPanel::MatchStartRole).toInt(), 11);
+        QCOMPARE(pPanel->mpList->item(0)->data(MapSearchPanel::MatchLengthRole).toInt(), 6);
+        // Not where it is found only by number
+        pPanel->mpEdit->setText(qsl("4"));
+        QCOMPARE(pPanel->mpList->item(0)->text(), qsl("Lighthouse Keeper's Cottage"));
+        QCOMPARE(pPanel->mpList->item(0)->data(MapSearchPanel::MatchStartRole).toInt(), -1);
+
+        // Counted, and the arrows go round
+        pPanel->mpEdit->setText(qsl("lighthouse"));
+        QVERIFY(pPanel->mpMessage->isHidden());
+        QCOMPARE(pPanel->mpCount->text(), qsl("2 found"));
+        QCOMPARE(pPanel->mpList->item(0)->data(MapSearchPanel::MatchStartRole).toInt(), 0);
+        QCOMPARE(pPanel->currentRow(), 0);
+        QKeyEvent down(QEvent::KeyPress, Qt::Key_Down, Qt::NoModifier);
+        QKeyEvent up(QEvent::KeyPress, Qt::Key_Up, Qt::NoModifier);
+        QCoreApplication::sendEvent(pPanel->mpEdit, &down);
+        QCOMPARE(pPanel->currentRow(), 1);
+        QCoreApplication::sendEvent(pPanel->mpEdit, &down);
+        QCOMPARE(pPanel->currentRow(), 0);
+        QCoreApplication::sendEvent(pPanel->mpEdit, &up);
+        QCOMPARE(pPanel->currentRow(), 1);
+
+        // More than are listed
+        pPanel->mpEdit->setText(qsl("hall"));
+        QCOMPARE(pPanel->mpList->count(), MapSearch::scmMaxResults);
+        QCOMPARE(pPanel->mpCount->text(), qsl("Showing the best %1 of 70").arg(MapSearch::scmMaxResults));
+
+        // Nothing at all
+        pPanel->mpEdit->setText(qsl("zzz"));
+        QVERIFY(pPanel->mpList->isHidden());
+        QVERIFY(!pPanel->mpMessage->isHidden());
+        QCOMPARE(pPanel->mpMessage->text(), qsl("No matches for “zzz”"));
+        QVERIFY(pPanel->mpCount->text().isEmpty());
+        const QString hint = pPanel->mpHint->text();
+        pPanel->mpLabels->setChecked(false);
+        QVERIFY(pPanel->mpHint->text() != hint);
+
+        // A key typed on the labels toggle goes to the search box
+        pPanel->mpEdit->clear();
+        QKeyEvent letter(QEvent::KeyPress, Qt::Key_L, Qt::NoModifier, qsl("l"));
+        QCoreApplication::sendEvent(pPanel->mpLabels, &letter);
+        QCOMPARE(pPanel->text(), qsl("l"));
+
+        // Ctrl+F in the open search selects what is typed, to be typed over
+        pPanel->mpEdit->setText(qsl("light"));
+        pPanel->mpEdit->deselect();
+        QKeyEvent find(QEvent::KeyPress, Qt::Key_F, Qt::ControlModifier);
+        QCoreApplication::sendEvent(pPanel->mpEdit, &find);
+        QCOMPARE(pPanel->mpEdit->selectedText(), qsl("light"));
     }
 
     void benchmark_worldSearch()

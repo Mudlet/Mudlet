@@ -20,13 +20,18 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-#include <QFrame>
-#include <QStringList>
+#include "MapSearch.h"
 
-class QCheckBox;
+#include <QColor>
+#include <QFrame>
+#include <QList>
+#include <QString>
+
+class QAction;
 class QLabel;
 class QLineEdit;
 class QListWidget;
+class QToolButton;
 
 // A search box over the modern 3D map, with the places found listed under it; what is searched, and what a
 // chosen place does, is left to the view
@@ -36,14 +41,33 @@ class MapSearchPanel : public QFrame
     friend class ModernMapperSceneTest;
 
 public:
+    // What each place listed carries for the list's delegate, beyond its title as the display text
+    enum ItemRole { DetailRole = Qt::UserRole + 1, KindRole, ChipColorRole, MatchStartRole, MatchLengthRole };
+
+    struct Row
+    {
+        MapSearch::Kind kind = MapSearch::Kind::Room;
+        QString title;
+        QString detail;
+        // Read out by a screen reader in place of the two lines drawn
+        QString spoken;
+        // A room's environment color; none for the others
+        QColor chip;
+    };
+
+    // The room around the card left for its shadow, which still belongs to the panel
+    static constexpr int scmShadowMargin = 12;
+
     explicit MapSearchPanel(QWidget* parent);
 
     // Shows it with what was typed last selected, ready to be typed over
     void open();
     QString text() const;
     bool labelsIncluded() const;
-    void setResults(const QStringList& lines, const QString& summary);
+    // total is how many places matched in all, of which rows are the best
+    void setResults(const QList<Row>& rows, qsizetype total);
     int currentRow() const;
+    int preferredWidth() const;
 
 signals:
     void queryChanged();
@@ -52,17 +76,29 @@ signals:
     void closed();
 
 protected:
+    void changeEvent(QEvent* event) override;
     bool event(QEvent* event) override;
     bool eventFilter(QObject* watched, QEvent* event) override;
     void keyPressEvent(QKeyEvent* event) override;
+    void paintEvent(QPaintEvent* event) override;
 
 private:
     void dismiss();
+    void escape();
+    void step(int rows);
+    void restyle();
+    void showState(qsizetype shown, qsizetype total);
 
     QLineEdit* mpEdit = nullptr;
-    QCheckBox* mpLabels = nullptr;
+    QAction* mpSearchIcon = nullptr;
+    QToolButton* mpLabels = nullptr;
+    QToolButton* mpClose = nullptr;
     QListWidget* mpList = nullptr;
-    QLabel* mpSummary = nullptr;
+    QLabel* mpMessage = nullptr;
+    QLabel* mpHint = nullptr;
+    QLabel* mpCount = nullptr;
+    QLabel* mpKeys = nullptr;
+    bool mRestyling = false;
 };
 
 #endif // MUDLET_MAPSEARCHPANEL_H

@@ -2788,20 +2788,40 @@ void ModernGLWidget::runSearch()
     mSearch.refresh(*mpMap);
     qsizetype total = 0;
     mSearchResults = mSearch.find(mpSearchPanel->text(), mAID, mpSearchPanel->labelsIncluded(), MapSearch::scmMaxResults, &total);
-    QStringList lines;
-    lines.reserve(mSearchResults.size());
+    QList<MapSearchPanel::Row> rows;
+    rows.reserve(mSearchResults.size());
     for (const MapSearch::Result& result : mSearchResults) {
-        lines.append(searchResultLine(result));
+        MapSearchPanel::Row row;
+        row.kind = result.kind;
+        row.title = result.name;
+        row.spoken = searchResultLine(result);
+        switch (result.kind) {
+        case MapSearch::Kind::Area:
+            if (const TArea* pArea = mpMap->mpRoomDB ? mpMap->mpRoomDB->getArea(result.id) : nullptr) {
+                //: Second line of an area found by the search over the 3D map: how many rooms it has
+                row.detail = tr("%n room(s)", nullptr, static_cast<int>(pArea->getAreaRooms().size()));
+            }
+            break;
+        case MapSearch::Kind::Label:
+            row.detail = areaName(result.areaId);
+            break;
+        case MapSearch::Kind::Room:
+            if (result.name.isEmpty()) {
+                //: First line of a room found by the search over the 3D map that has no name; %1 is its number
+                row.title = tr("Room %1").arg(result.id);
+                row.detail = areaName(result.areaId);
+            } else {
+                //: Second line of a room found by the search over the 3D map; %1 is the area it is in and %2 its number
+                row.detail = tr("%1 · room %2").arg(areaName(result.areaId), QString::number(result.id));
+            }
+            if (const TRoom* pRoom = mpMap->mpRoomDB ? mpMap->mpRoomDB->getRoom(result.id) : nullptr; pRoom && mpHost) {
+                row.chip = RoomAppearance::environmentColor(*mpMap, *mpHost, pRoom->environment);
+            }
+            break;
+        }
+        rows.append(row);
     }
-    QString summary;
-    if (!mpSearchPanel->text().trimmed().isEmpty() && !total) {
-        //: Shown under the search box over the 3D map when no room, area or label matches what was typed
-        summary = tr("Nothing found");
-    } else if (total > mSearchResults.size()) {
-        //: Shown under the search box over the 3D map when more places match than are listed; %1 is how many are listed and %n how many were found
-        summary = tr("The best %1 of %n place(s) found", nullptr, static_cast<int>(total)).arg(mSearchResults.size());
-    }
-    mpSearchPanel->setResults(lines, summary);
+    mpSearchPanel->setResults(rows, total);
     placeSearchPanel();
 }
 
@@ -2830,8 +2850,9 @@ void ModernGLWidget::placeSearchPanel()
     if (!mpSearchPanel) {
         return;
     }
-    constexpr int margin = 8;
-    const int panelWidth = std::max(0, std::min(420, width() - 2 * margin));
+    // From the view's edge to the card's, the panel's shadow lying in between
+    constexpr int margin = 12 - MapSearchPanel::scmShadowMargin;
+    const int panelWidth = std::max(0, std::min(mpSearchPanel->preferredWidth(), width() - 2 * margin));
     const int panelHeight = std::max(0, std::min(mpSearchPanel->sizeHint().height(), height() * 2 / 3));
     mpSearchPanel->setGeometry(width() - margin - panelWidth, margin, panelWidth, panelHeight);
 }

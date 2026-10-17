@@ -975,7 +975,11 @@ private slots:
         QTRY_VERIFY(pList->isVisible() && pList->count() > 0);
         QTest::mouseClick(pList->viewport(), Qt::LeftButton, Qt::NoModifier, pList->visualItemRect(pList->item(0)).center());
         QVERIFY2(pModern->mFlight, "a single click on a place found did not fly there");
+        // The first clears what was typed, the second closes it
         QTest::keyClick(pSearchBox, Qt::Key_Escape);
+        QVERIFY(pSearchBox->isVisible());
+        QTest::keyClick(pSearchBox, Qt::Key_Escape);
+        QVERIFY(!pSearchBox->isVisible());
     }
 
     // Ctrl+F is the console's after a click, which leaves the keys to the command line, and a Key bound to it wins
