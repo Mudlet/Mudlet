@@ -74,7 +74,7 @@ dlgMapper::dlgMapper(QWidget* parent, Host* pH, TMap* pM)
     setupUi(this);
 
 #if defined(INCLUDE_3DMAPPER)
-    QSurfaceFormat fmt;
+    QSurfaceFormat fmt = QSurfaceFormat::defaultFormat();
 #ifndef NDEBUG
     fmt.setOption(QSurfaceFormat::DebugContext);
 #endif
