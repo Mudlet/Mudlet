@@ -203,12 +203,15 @@ describe("Tests that the generic mapper follows a game in Swedish", function()
     assert.are.equal(2, table.size(getAreaRooms(areaId)))
   end)
 
-  it("announces a new room without waiting for a prompt it cannot recognise", function()
-    if not os.getenv("MUDLET_TEST_MODE") then
-      pending("needs MUDLET_TEST_MODE for waitForEvent")
-      return
-    end
-    local areaId = addAreaName("genericMapperSwedishEchoSpec")
+  it("learns the prompt from the template the game reports", function()
+    feedTriggers('\n52/52 52/52Du sätter din prompt till "<HP>/<MAXHP>hp <MP>/<MAXMP>mp".\n')
+    assert.are.equal("^%d+/%d+hp %d+/%d+mp", map.save.prompt_pattern[map.character])
+    feedTriggers('\n52/52hp 52/52mpDin nuvarande prompt är "[<HP>] (<NAMN>)".\n')
+    assert.are.equal("^%[%d+%] %(%S+%)", map.save.prompt_pattern[map.character])
+  end)
+
+  it("announces a new room at the changed prompt that follows it", function()
+    local areaId = addAreaName("genericMapperSwedishPromptSpec")
     finally(function() deleteArea(areaId) end)
     local start = createRoomID()
     addRoom(start)
@@ -216,7 +219,6 @@ describe("Tests that the generic mapper follows a game in Swedish", function()
     setRoomCoordinates(start, 0, 0, 0)
     setRoomName(start, "Du står vid sjön.")
     map.setLanguage("swedish")
-    map.save.prompt_pattern[map.character] = nil
     map.set("currentRoom", start)
     map.set("currentArea", areaId)
     map.set("currentName", "Du står vid sjön.")
@@ -234,14 +236,29 @@ describe("Tests that the generic mapper follows a game in Swedish", function()
       return false
     end
 
+    feedTriggers('\n52/52 52/52Du sätter din prompt till "<HP>/<MAXHP>hp <MP>/<MAXMP>mp".\n')
     captureMoveCmd("n")
-    feedTriggers("\n52/52 52/52Du står vid ängen. Söderut ligger sjön.\n   Det finns en synlig väg härifrån: söder\n52/52 52/52")
-    assert.are_not.equal(start, map.currentRoom)
-    for _ = 1, 5 do
-      if announced() then break end
-      tempTimer(0, function() raiseEvent("genericMapperSwedishEchoPump") end)
-      waitForEvent("genericMapperSwedishEchoPump", 2000)
-    end
+    feedTriggers("\n96/96hp 96/96mp\nDu står vid ängen. Söderut ligger sjön.\n   Det finns en synlig väg härifrån: söder\n")
+    assert.is_false(announced())
+    feedTriggers("96/96hp 96/96mp\n")
     assert.is_true(announced())
+  end)
+
+  it("asks the game for its prompt once when it has none", function()
+    local index = 1
+    while true do
+      local name = debug.getupvalue(map.captureUntitledRoom, index)
+      assert.is_not_nil(name, "the mapper keeps no asked_for_prompt flag")
+      if name == "asked_for_prompt" then break end
+      index = index + 1
+    end
+    debug.setupvalue(map.captureUntitledRoom, index, false)
+    map.save.prompt_pattern[map.character] = nil
+    stub(_G, "send")
+    finally(function() _G.send:revert() end)
+    feedTriggers(room)
+    feedTriggers(room)
+    assert.stub(_G.send).was.called_with("prompt", false)
+    assert.stub(_G.send).was.called(1)
   end)
 end)

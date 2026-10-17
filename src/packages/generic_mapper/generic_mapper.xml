@@ -395,6 +395,28 @@ end</script>
 					<integer>1</integer>
 				</regexCodePropertyList>
 			</Trigger>
+			<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+				<name>Swedish Prompt Trigger</name>
+				<script>map.learnPromptTemplate(matches[2])</script>
+				<triggerType>0</triggerType>
+				<conditonLineDelta>0</conditonLineDelta>
+				<mStayOpen>0</mStayOpen>
+				<mCommand></mCommand>
+				<packageName></packageName>
+				<mFgColor>#ff0000</mFgColor>
+				<mBgColor>#ffff00</mBgColor>
+				<mSoundFile></mSoundFile>
+				<colorTriggerFgColor>#000000</colorTriggerFgColor>
+				<colorTriggerBgColor>#000000</colorTriggerBgColor>
+				<regexCodeList>
+					<string>Din nuvarande prompt är "(.*)"\.?\s*$</string>
+					<string>Du sätter din prompt till "(.*)"\.?\s*$</string>
+				</regexCodeList>
+				<regexCodePropertyList>
+					<integer>1</integer>
+					<integer>1</integer>
+				</regexCodePropertyList>
+			</Trigger>
 		</TriggerGroup>
 	</TriggerPackage>
 	<TimerPackage />
@@ -1978,9 +2000,9 @@ map.help.language = [[
         itself, unless you have chosen a language or changed any translation.
 
         SvenskMUD rooms have no title, so the first sentence of the description
-        names the room. The game glues its prompt to the first line of the
-        description; if your prompt has letters in it, set it with
-        &lt;yellow&gt;map prompt&lt;reset&gt; to keep it out of the room name.
+        names the room. The mapper learns your prompt from the game: it asks
+        with 'prompt' when it has none, and follows along when you change it
+        with 'prompt &lt;template&gt;'.
 ]]
 map.help.quick_start = [[
     &lt;link: quick_start&gt;map basics&lt;/link&gt; (quick start guide)
@@ -2454,7 +2476,7 @@ local reverse_dirs = {
     eastup = "westdown", westdown = "eastup", westup = "eastdown", eastdown = "westup",
 }
 
-local wait_echo, wait_echo_timer = {}, nil
+local wait_echo = {}
 local mapper_tag = "&lt;112,229,0&gt;(&lt;73,149,0&gt;mapper&lt;112,229,0&gt;): &lt;255,255,255&gt;"
 local debug_tag = "&lt;255,165,0&gt;(&lt;200,120,0&gt;debug&lt;255,165,0&gt;): &lt;255,255,255&gt;"
 local err_tag = "&lt;255,0,0&gt;(&lt;178,34,34&gt;error&lt;255,0,0&gt;): &lt;255,255,255&gt;"
@@ -2677,10 +2699,6 @@ local function print_echoes(what, debug, err)
 end
 
 local function print_wait_echoes()
-    if wait_echo_timer then
-        killTimer(wait_echo_timer)
-        wait_echo_timer = nil
-    end
     for k,v in ipairs(wait_echo) do
         print_echoes(v[1],v[2],v[3])
     end
@@ -2692,11 +2710,6 @@ function map.echo(what, debug, err, wait)
     what = tostring(what) or ""
     if wait then
         table.insert(wait_echo,{what, debug, err})
-        -- held for the prompt, but a prompt the mapper cannot recognise would hold it until the next echo
-        wait_echo_timer = wait_echo_timer or tempTimer(0, function()
-            wait_echo_timer = nil
-            print_wait_echoes()
-        end)
         return
     end
     print_wait_echoes()
@@ -4083,6 +4096,18 @@ function map.setLanguage(name)
     map.echo("Directions now use " .. string.lower(name) .. " words.")
 end
 
+local numeric_prompt_tokens = {HP = true, MAXHP = true, MP = true, MAXMP = true}
+
+-- SvenskMUD names the template its prompt is built from, e.g. "&lt;HP&gt;/&lt;MAXHP&gt;hp &lt;MP&gt;/&lt;MAXMP&gt;mp"
+function map.learnPromptTemplate(template)
+    if not template or string.trim(template) == "" then return end
+    local pattern = string.gsub(template, "[%^%$%(%)%%%.%[%]%*%+%-%?]", "%%%0")
+    pattern = string.gsub(pattern, "&lt;([%w_]+)&gt;", function(token)
+        return numeric_prompt_tokens[string.upper(token)] and "%d+" or "%S+"
+    end)
+    map.make_prompt_pattern(pattern)
+end
+
 function map.promptOnly(text)
     local prompt = map.save.prompt_pattern[map.character]
     if prompt then
@@ -4090,6 +4115,8 @@ function map.promptOnly(text)
     end
     return not string.find(text, "%a")
 end
+
+local asked_for_prompt = false
 
 local function lang_dirs_untouched()
     for k, v in pairs(map.defaults.lang_dirs) do
@@ -4103,6 +4130,11 @@ function map.captureUntitledRoom(exits, language)
         map.setLanguage(language)
     end
     local name = untitled_room_name()
+    -- after the name is read: sending clears the lines it is read from
+    if language == "swedish" and not map.save.prompt_pattern[map.character] and not asked_for_prompt then
+        asked_for_prompt = true
+        send("prompt", false)
+    end
     if not name then
         map.echo("No room description before the exits line.", true)
         return
