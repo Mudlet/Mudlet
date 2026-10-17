@@ -9279,6 +9279,9 @@ void dlgProfilePreferences::closeEvent(QCloseEvent* event)
     }
 
     MudletApp::getQSettings()->setValue(qsl("profilePreferencesGeometry"), saveGeometry());
+    // Most application-wide settings reach Mudlet.ini only at quit, so an
+    // unclean exit would lose the ones changed here
+    mudlet::self()->writeSettings();
 
     if (mpHost) {
         emit preferencesClosing(mpHost->getName());
