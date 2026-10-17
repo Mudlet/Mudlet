@@ -182,26 +182,6 @@ QString currentTimeStamp()
     return cachedStamp;
 }
 
-// A wrap or hanging indent held to half the width: each wrapped segment pads indent columns per
-// (maxWidth - indent) of text, so one near the width exhausts memory. One at or past the width is dropped,
-// as is a negative one (the insert() applying it takes an unsigned count). Clamped at use, not in the
-// setters, as the wrap width can change after them.
-int clampedWrapIndent(const int indentSize, const int maxWidth)
-{
-    return (indentSize > 0 && indentSize < maxWidth) ? std::min(indentSize, maxWidth / 2) : 0;
-}
-
-// True only if getWrapInfo() would find no break, decided without its scan, the costliest part of appending
-// a line. No grapheme is wider than graphemeInfo::maxWidth columns or shorter than one QChar, and printable
-// ASCII (which excludes LineFeed and Tab) is one column per QChar.
-bool fitsUnwrapped(const QString& lineText, const qsizetype widthAvailable)
-{
-    if (lineText.size() * graphemeInfo::maxWidth <= widthAvailable) {
-        return !lineText.contains(QChar::LineFeed);
-    }
-    return lineText.size() <= widthAvailable && lineBreakInfo::printableAscii(lineText);
-}
-
 // Writes "rgb(r,g,b)" without the allocations QString::number() and arg() make
 void appendHtmlRgb(QString& s, const QRgb color)
 {
@@ -239,6 +219,26 @@ void appendHtmlEscaped(QString& s, const QChar* text, const qsizetype length)
         runStart = i + 1;
     }
     s.append(text + runStart, length - runStart);
+}
+
+// A wrap or hanging indent held to half the width: each wrapped segment pads indent columns per
+// (maxWidth - indent) of text, so one near the width exhausts memory. One at or past the width is dropped,
+// as is a negative one (the insert() applying it takes an unsigned count). Clamped at use, not in the
+// setters, as the wrap width can change after them.
+int clampedWrapIndent(const int indentSize, const int maxWidth)
+{
+    return (indentSize > 0 && indentSize < maxWidth) ? std::min(indentSize, maxWidth / 2) : 0;
+}
+
+// True only if getWrapInfo() would find no break, decided without its scan, the costliest part of appending
+// a line. No grapheme is wider than graphemeInfo::maxWidth columns or shorter than one QChar, and printable
+// ASCII (which excludes LineFeed and Tab) is one column per QChar.
+bool fitsUnwrapped(const QString& lineText, const qsizetype widthAvailable)
+{
+    if (lineText.size() * graphemeInfo::maxWidth <= widthAvailable) {
+        return !lineText.contains(QChar::LineFeed);
+    }
+    return lineText.size() <= widthAvailable && lineBreakInfo::printableAscii(lineText);
 }
 
 // Asks for the cache line holding the allocator's bookkeeping for a heap block,
