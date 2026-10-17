@@ -83,6 +83,7 @@ void TTreeWidget::getAllChildren(QTreeWidgetItem* pItem, QList<QTreeWidgetItem*>
 
 void TTreeWidget::mouseReleaseEvent(QMouseEvent* event)
 {
+    const bool pressHeldFromView = event->button() == Qt::LeftButton && std::exchange(mTickPressHeldFromView, false);
     QModelIndex indexClicked = indexAt(event->pos());
     if (mTreeType == TreeType::Var && indexClicked.isValid() && indexClicked.row() != 0 && mClickedItem == indexClicked) {
         QRect vrect = visualRect(indexClicked);
@@ -116,7 +117,22 @@ void TTreeWidget::mouseReleaseEvent(QMouseEvent* event)
             return;
         }
     }
+    // The view still holds an earlier press, which it would take this release as ending
+    if (pressHeldFromView) {
+        return;
+    }
     QTreeWidget::mouseReleaseEvent(event);
+}
+
+void TTreeWidget::mouseMoveEvent(QMouseEvent* event)
+{
+    if (mTickPressHeldFromView) {
+        if (event->buttons() & Qt::LeftButton) {
+            return;
+        }
+        mTickPressHeldFromView = false;
+    }
+    QTreeWidget::mouseMoveEvent(event);
 }
 
 void TTreeWidget::mousePressEvent(QMouseEvent* event)
@@ -128,6 +144,13 @@ void TTreeWidget::mousePressEvent(QMouseEvent* event)
         QRect rect = QRect(header()->sectionViewportPosition(0) + itemIndentation, vrect.y(), style()->pixelMetric(QStyle::PM_IndicatorWidth), vrect.height());
         if (rect.contains(event->pos())) {
             mClickedItem = indexClicked;
+            // Not passed on when the release will tick: the view would select the row, and saving the one
+            // left can move it into sorted place, sliding another row under the cursor before the release
+            const QTreeWidgetItem* pressed = itemFromIndex(indexClicked);
+            if (event->button() == Qt::LeftButton && indexClicked.row() != 0 && pressed && (pressed->flags() & Qt::ItemIsUserCheckable)) {
+                mTickPressHeldFromView = true;
+                return;
+            }
             QTreeWidget::mousePressEvent(event);
             return;
         }
