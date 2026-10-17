@@ -1604,6 +1604,8 @@ function Adjustable.Container:new(cons,container)
     me.adjLabel:setClickCallback("Adjustable.Container.onClick",me, me.adjLabel)
     me.adjLabel:setReleaseCallback("Adjustable.Container.onRelease",me, me.adjLabel)
     me.adjLabel:setMoveCallback("Adjustable.Container.onMove",me, me.adjLabel)
+    -- A drag handle: its callbacks start and end a move, which a screen reader's press cannot make
+    me.adjLabel:setAccessibleRole("text")
     me.minLabel:setClickCallback("Adjustable.Container.onClickMin", me)
     me.saveLabel:setClickCallback("Adjustable.Container.onClickSave", me)
     me.lockLabel:setClickCallback("Adjustable.Container.onClickL", me)
