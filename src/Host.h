@@ -777,6 +777,8 @@ public:
     void initMMCPServer();
     bool setMMCPChatName(const QString&);
     void setShowIdsInEditor(const bool isShown);
+    bool folderViewInEditor() const { return mFolderViewInEditor; }
+    void setFolderViewInEditor(const bool enabled);
     bool getF3SearchEnabled() const { return mF3SearchEnabled; }
     void setF3SearchEnabled(const bool enabled);
     bool getForceMXPProcessorOn() const { return mForceMXPProcessorOn; }
@@ -1245,6 +1247,7 @@ signals:
     void signal_editorSearchOptionsChanged(const enums::EditorSearchOptions);
     void signal_editorShowBidiChanged(const bool);
     void signal_showIdsInEditorChanged(const bool);
+    void signal_folderViewInEditorChanged(const bool);
     // The game's name or invite for Discord changed, which the Discord buttons show.
     void signal_discordGameChanged();
     // A reset is about to replace the Lua state, so whatever it placed in the frontend has to go.
@@ -1582,6 +1585,9 @@ private:
 
     // Whether to display each item's ID number in the editor:
     bool mShowIDsInEditor = false;
+
+    // Whether the editor offers its Folders view, which groups every item type by folder:
+    bool mFolderViewInEditor = false;
 
     // Whether F3 search functionality is enabled
     bool mF3SearchEnabled = false;

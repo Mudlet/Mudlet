@@ -541,6 +541,7 @@ private slots:
         // an import that leaves them alone cannot pass.
         mpSource->setSearchOptions(enums::EditorSearchOptionCaseSensitive | enums::EditorSearchOptionWholeWord);
         mpSource->setShowIdsInEditor(true);
+        mpSource->setFolderViewInEditor(true);
         mpSource->mMapInfoContributors.insert(scmContributorName);
         // Every one of these is off its default, and the legacy copy below
         // moves each enumerated one to a second value, so both reads count.
@@ -655,6 +656,7 @@ private slots:
     {
         QCOMPARE(mpTarget->mSearchOptions, enums::EditorSearchOptions(enums::EditorSearchOptionCaseSensitive | enums::EditorSearchOptionWholeWord));
         QVERIFY(mpTarget->showIdsInEditor());
+        QVERIFY(mpTarget->folderViewInEditor());
     }
 
     void test_triggersRoundTrip()

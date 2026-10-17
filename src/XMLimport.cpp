@@ -1126,6 +1126,8 @@ void XMLimport::readHost(Host* pHost)
         pHost->setShowIdsInEditor(false);
     }
 
+    pHost->setFolderViewInEditor(attributes().value(qsl("FolderViewInEditor")) == YES);
+
     if (attributes().hasAttribute(qsl("Large2DMapAreaExitArrows"))) {
         pHost->setLargeAreaExitArrows(attributes().value(qsl("Large2DMapAreaExitArrows")) == YES);
     } else {
