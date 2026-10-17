@@ -40,6 +40,7 @@
 #include <QLineEdit>
 #include <QListWidget>
 #include <QToolTip>
+#include <QWheelEvent>
 #include <QtMath>
 #include <QtTest/QtTest>
 
@@ -2089,6 +2090,58 @@ private slots:
         QCOMPARE(pMapper->comboBox_showArea->currentText(), qsl("Other Area"));
         pModern->stopFlight();
         pModern->followPlayer();
+    }
+
+    void test_theWheelGoesIntoTheAreaUnderThePointerAndCenteringOnThePlayerComesBack()
+    {
+        ModernGLWidget* pModern = viewAtThePlayer();
+        QVERIFY(pModern);
+        dlgMapper* pMapper = map()->mapper();
+        pMapper->comboBox_showArea->setCurrentText(qsl("Player Area"));
+        // Near enough for the two small areas to be apart on the screen, far enough for the world
+        pModern->setCameraDistance(20.0f);
+        pModern->updateMatrices();
+        QVERIFY(pModern->zoomWeights().nodesPicked());
+        const MapAtlas::Area* pOther = pModern->mAtlas.area(mOtherAreaId);
+        const MapAtlas::Area* pShown = pModern->mAtlas.area(mPlayerAreaId);
+        QVERIFY(pOther && pShown);
+        const QPointF otherMiddle = pOther->center - pShown->offset;
+        const std::optional<QPointF> pixel = pModern->mCameraController.pixelForPoint(QVector3D(static_cast<float>(otherMiddle.x()), static_cast<float>(otherMiddle.y()), pModern->atlasLevel()));
+        QVERIFY(pixel);
+        const QPoint over = pixel->toPoint();
+        QCOMPARE(pModern->areaAt(over), mOtherAreaId);
+        const int notch = mudlet::self()->invertMapZoom() ? -120 : 120;
+        QWheelEvent wheel(QPointF(over), pModern->mapToGlobal(QPointF(over)), QPoint(), QPoint(0, notch), Qt::NoButton, Qt::NoModifier, Qt::NoScrollPhase, false);
+        QCoreApplication::sendEvent(pModern, &wheel);
+        QCOMPARE(pModern->shownAreaId(), mOtherAreaId);
+        QCOMPARE(pMapper->comboBox_showArea->currentText(), qsl("Other Area"));
+        QCOMPARE(map()->mRoomIdHash.value(map()->mProfileName), kPlayerRoomId);
+        // Not taken back to the player's area by the next paint
+        pModern->repaint();
+        QCOMPARE(pModern->shownAreaId(), mOtherAreaId);
+
+        // As the mapper's button to center on the player does
+        pMapper->resetAreaComboBoxToPlayerRoomArea();
+        QTRY_COMPARE(pModern->shownAreaId(), mPlayerAreaId);
+        QCOMPARE(pMapper->comboBox_showArea->currentText(), qsl("Player Area"));
+
+        // Zoomed in a little beside the player's room, the view rests between rooms, and is brought back onto it
+        pModern->repaint();
+        pModern->setCameraDistance(1.0f);
+        pModern->updateMatrices();
+        const TRoom* pPlayerRoom = map()->mpRoomDB->getRoom(kPlayerRoomId);
+        QVERIFY(pPlayerRoom);
+        const QVector3D playerRoom(static_cast<float>(pPlayerRoom->x()), static_cast<float>(pPlayerRoom->y()), static_cast<float>(pPlayerRoom->z()));
+        const std::optional<QPointF> beside = pModern->mCameraController.pixelForPoint(playerRoom + QVector3D(2.0f, 0.0f, 0.0f));
+        QVERIFY(beside);
+        QWheelEvent nearer(*beside, pModern->mapToGlobal(*beside), QPoint(), QPoint(0, notch), Qt::NoButton, Qt::NoModifier, Qt::NoScrollPhase, false);
+        QCoreApplication::sendEvent(pModern, &nearer);
+        QCOMPARE(QPoint(pModern->mMapCenterX, pModern->mMapCenterY), QPoint(pPlayerRoom->x(), pPlayerRoom->y()));
+        QVERIFY(!pModern->followingPlayer());
+        pModern->repaint();
+        QVERIFY2(!pModern->mCameraSmoothAnimating && pModern->mCameraController.getTarget() != playerRoom, "the next paint took the view straight back to the player");
+        pModern->followPlayer();
+        QTRY_COMPARE(pModern->mCameraController.getTarget(), playerRoom);
     }
 
     // Closing the profile frees the Host and its TMap before the floating dock holding the view is

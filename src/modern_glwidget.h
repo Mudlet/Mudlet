@@ -197,7 +197,7 @@ signals:
     void cameraControlsChanged(int scale, int tilt, int roll, int azimuth);
     // The user asked to see this room on the 2D map, or this view's center when roomId is 0
     void editIn2DRequested(int roomId);
-    // A click on the world flew this view into another area, which the 2D map has not been switched to
+    // A click on the atlas, or zooming in on it, took this view into another area, which the 2D map has not been switched to
     void areaFlownInto(int areaId);
 
 private slots:
@@ -275,6 +275,8 @@ private:
     int mMapCenterX = 0;
     int mMapCenterY = 0;
     int mMapCenterZ = 0;
+    // How far off the grid point mMapCenterX/Y the camera looks, where zooming about a point can leave it
+    QPointF mViewCenterOffset;
     bool mShiftMode = false;
     int mFontHeight = 20;
 
@@ -434,6 +436,14 @@ private:
         MapAtlas::Weights fromWeights{1.0f, 1.0f};
     };
     std::optional<Flight> mFlight;
+    // Zoomed in from one area into another, see MapAtlas::handoverRadius()
+    struct ZoomHandover
+    {
+        float fromRadius = 0.0f;
+        float atDistance = 1.0f;
+        float span = 1.0f;
+    };
+    std::optional<ZoomHandover> mZoomHandover;
     MapRoute mRoute;
     // Everything the neighboring areas drawn past the shown area's edges were made from
     struct StitchInputs
@@ -502,7 +512,7 @@ private:
     float roomPixels() const;
     // How much this view, as of the last updateMatrices(), shows of the rooms, the footprints and the world graph
     MapAtlas::Weights zoomWeights();
-    // The radius of the area shown, or during a flight between it and the one left; 0 when none is shown
+    // The radius of the area shown, or during a flight or a zoom into it between it and the one left; 0 when none is shown
     float shownRadius() const;
     // The furthest out a view of the area shows its rooms alone, at most CameraController::scmMaxDistance
     float roomsAloneDistance(int areaId) const;
@@ -614,7 +624,17 @@ private:
     // What rooms and exits on level z recede toward: the mapper's upper or lower level color, or the background
     QColor levelFadeTarget(int z) const;
     ExitScene::Options exitSceneOptions() const;
-    void zoomBySteps(float steps);
+    // About the point at, else the view's center, keeping what is under it in place, which off the center stops following
+    // the player; zooming in while areas are picked goes into the area there
+    void zoomBySteps(float steps, std::optional<QPoint> at = std::nullopt);
+    // While areas are picked, makes the one under this point, or else the nearest, the area shown, keeping the view where it is
+    void zoomIntoAreaAt(const QPoint& position);
+    // As areaAt(), with this much slop in pixels
+    int areaAt(const QPoint& position, float slopPixels);
+    // Points the camera at this x and y exactly, on the nearest level
+    void centerViewOn(const QVector3D& point);
+    // Once zoomed in all the way through a handover, the zoom levels go by the area shown alone, zooming back out too
+    void settleZoomHandover();
     void panByRooms(int right, int up);
     void selectRoom(int roomId, Qt::KeyboardModifiers modifiers);
     bool editingMap() const;

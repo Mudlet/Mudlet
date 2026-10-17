@@ -102,6 +102,12 @@ public:
     // The most rooms across the view's shorter side, of this many pixels, that still show an area of this radius
     // with its rooms alone, while no further out than scmRoomsAloneDistance
     static float roomsAloneAcross(float radius, float shorterSide);
+    // Zoomed in from one area into another, how many times closer the zoom levels take to go over from one to the other:
+    // into a smaller area until it fills the view the other did, so no level is taken back out, but at most reach
+    static float handoverSpan(float fromRadius, float toRadius, float reach);
+    // The radius the zoom levels go by closer times nearer than where the area changed, so they carry on rather than jump
+    static float handoverRadius(float fromRadius, float toRadius, float closer, float span);
+    static constexpr float scmHandoverZoom = 2.0f;
     // The convex hull, counterclockwise, without repeated or collinear points
     static QPolygonF hull(QList<QPointF> points);
 
