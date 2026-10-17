@@ -4447,6 +4447,45 @@ describe("Tests saveMap and loadMap", function()
       assertMapRestored()
     end)
 
+    -- below format 21 the save puts the zoom and a named label font in the file's
+    -- copy of the area user data, so a save that writes the live data loses both
+    it("brings an area's zoom and a label's font back from the file", function()
+      local jsonPath = getMudletHomeDir() .. "/mapper_spec_label_font.json"
+      finally(function() os.remove(jsonPath) end)
+      -- no Lua getter reads a label's font back, but the JSON export writes it
+      local function exportedFont()
+        assert.is_true(saveJsonMap(jsonPath))
+        local file = assert(io.open(jsonPath, "r"))
+        local exported = json_to_value(file:read("*a"))
+        file:close()
+        for _, exportedArea in ipairs(exported.areas) do
+          for _, label in ipairs(exportedArea.labels or {}) do
+            if label.text == "Font Label" then
+              return label.font
+            end
+          end
+        end
+      end
+      local area = buildMap()
+      assert.is_true(setAreaUserData(area, "climate", "temperate"))
+      assert.is_true(setMapZoom(13, area))
+      assert.is_true(createMapLabel(area, "Font Label", 0, 0, 0, 255, 255, 255, 0, 0, 0,
+                                    30.0, 12, true, true, "DejaVu Sans", 255, 50, false) >= 0)
+      local font = exportedFont()
+      assert.are.equal("DejaVu Sans", font and font.family)
+      assert.are.equal(12, font.pointSize)
+
+      assert.is_true(saveMap(savePath, 20))
+      assert.are.same({climate = "temperate"}, getAllAreaUserData(area))
+      deleteMap()
+      assert.is_true(loadMap(savePath))
+      area = getAreaTable()["MapperSpecSaveArea"]
+
+      assert.are.equal(13, getMapZoom(area))
+      assert.are.same({climate = "temperate"}, getAllAreaUserData(area))
+      assert.are.same(font, exportedFont())
+    end)
+
     it("saves into the profile's own map folder when given no path", function()
       local before = mapFiles()
       finally(function() removeNewMapFiles(before) end)
