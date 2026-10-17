@@ -1360,6 +1360,14 @@ GLuint ModernGLWidget::selectionTexture(const bool round)
 
 GLuint ModernGLWidget::exitMarkerTexture(const TRoom& room, const QColor& roomColor)
 {
+    // Most rooms have none, and finding that out needs no key built for every room every frame
+    bool anyMarker = false;
+    for (const int direction : {DIR_UP, DIR_DOWN, DIR_IN, DIR_OUT}) {
+        anyMarker = anyMarker || room.getExit(direction) > 0 || room.exitStubs.contains(direction);
+    }
+    if (!anyMarker) {
+        return 0;
+    }
     const QString markers = exitMarkerKey(room);
     if (markers.count(QLatin1Char('0')) == markers.size()) {
         return 0;
