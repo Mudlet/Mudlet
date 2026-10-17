@@ -47,6 +47,10 @@
 #include <QListWidget>
 #include <QOpenGLContext>
 #include <QPainter>
+#include <QProxyStyle>
+#include <QScrollBar>
+#include <QStyleOptionViewItem>
+#include <QToolButton>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
@@ -1836,14 +1840,29 @@ private slots:
         QKeyEvent shift(QEvent::KeyPress, Qt::Key_Shift, Qt::ShiftModifier);
         QCoreApplication::sendEvent(widget.mpSearchPanel->mpEdit, &shift);
         QCOMPARE(keysToView.count, 0);
+        // Laid out, as it would be were the view shown
+        widget.mpSearchPanel->layout()->activate();
         EventCounter pressesToView(&widget, QEvent::MouseButtonPress);
-        QMouseEvent press(QEvent::MouseButtonPress, QPointF(2.0, 2.0), QPointF(2.0, 2.0), Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+        // In the card's padding, by the search box
+        const QPointF onCard(MapSearchPanel::scmShadowMargin + 4.0, widget.mpSearchPanel->mpEdit->geometry().center().y());
+        QMouseEvent press(QEvent::MouseButtonPress, onCard, widget.mpSearchPanel->mapToGlobal(onCard), Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
         QCoreApplication::sendEvent(widget.mpSearchPanel, &press);
         QCOMPARE(pressesToView.count, 0);
         EventCounter tooltipsToView(&widget, QEvent::ToolTip);
         QHelpEvent tooltip(QEvent::ToolTip, QPoint(2, 2), widget.mapToGlobal(QPoint(2, 2)));
         QCoreApplication::sendEvent(widget.mpSearchPanel->mpList->viewport(), &tooltip);
         QCOMPARE(tooltipsToView.count, 0);
+        // The shadow around the card is the map's
+        QMouseEvent pressOnShadow(QEvent::MouseButtonPress, QPointF(2.0, 2.0), widget.mpSearchPanel->mapToGlobal(QPointF(2.0, 2.0)), Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+        QCoreApplication::sendEvent(widget.mpSearchPanel, &pressOnShadow);
+        QCOMPARE(pressesToView.count, 1);
+        QMouseEvent releaseOnCard(QEvent::MouseButtonRelease, onCard, widget.mpSearchPanel->mapToGlobal(onCard), Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+        EventCounter releasesToView(&widget, QEvent::MouseButtonRelease);
+        QCoreApplication::sendEvent(widget.mpSearchPanel, &releaseOnCard);
+        QCOMPARE(releasesToView.count, 1);
+        QHelpEvent tooltipOnShadow(QEvent::ToolTip, QPoint(2, 2), widget.mpSearchPanel->mapToGlobal(QPoint(2, 2)));
+        QCoreApplication::sendEvent(widget.mpSearchPanel, &tooltipOnShadow);
+        QCOMPARE(tooltipsToView.count, 1);
 
         // Enter flies to the first, in the other area, and the area lists follow
         QKeyEvent enter(QEvent::KeyPress, Qt::Key_Return, Qt::NoModifier);
@@ -1895,11 +1914,25 @@ private slots:
         finishFlight(widget);
         widget.mpSearchPanel->mpEdit->setText(qsl("westmarch"));
         QCOMPARE(widget.mSearchResults.value(0).kind, MapSearch::Kind::Area);
+        const QListWidgetItem* pArea = widget.mpSearchPanel->mpList->item(0);
+        QCOMPARE(pArea->text(), qsl("Westmarch"));
+        QCOMPARE(pArea->data(MapSearchPanel::KindRole).toInt(), static_cast<int>(MapSearch::Kind::Area));
+        QCOMPARE(pArea->data(MapSearchPanel::DetailRole).toString(), ModernGLWidget::tr("%n room(s)", nullptr, 36));
+        QVERIFY(pArea->data(Qt::AccessibleTextRole).toString().contains(qsl("Westmarch")));
         widget.chooseSearchResult(0, false);
         QCOMPARE(widget.mAID, westId);
         QCOMPARE(widget.mSearchMarkedRoomId, 0);
         QCOMPARE(flownInto.size(), 3);
         finishFlight(widget);
+
+        // A room with no name goes by its number
+        widget.mpSearchPanel->mpEdit->setText(qsl("7"));
+        QCOMPARE(widget.mSearchResults.value(0).id, 7);
+        const QListWidgetItem* pNumbered = widget.mpSearchPanel->mpList->item(0);
+        QCOMPARE(pNumbered->text(), qsl("Room 7"));
+        QCOMPARE(pNumbered->data(MapSearchPanel::KindRole).toInt(), static_cast<int>(MapSearch::Kind::Room));
+        QCOMPARE(pNumbered->data(MapSearchPanel::DetailRole).toString(), qsl("Westmarch"));
+        QVERIFY(pNumbered->data(Qt::AccessibleTextRole).toString().contains(qsl("7")));
 
         // Nor one hidden since
         widget.mpSearchPanel->mpEdit->setText(qsl("lighthouse"));
@@ -1957,11 +1990,27 @@ private slots:
         }
         QCOMPARE(QSet<QString>(names.cbegin(), names.cend()).size(), names.size());
 
+        // Drawn, not taken from a theme, and sharp on a screen at twice the scale
+        for (const QIcon& icon : {pPanel->mpClose->icon(), pPanel->mpSearchIcon->icon()}) {
+            QVERIFY(!icon.isNull());
+            QCOMPARE(icon.pixmap(QSize(16, 16), 2.0).devicePixelRatio(), 2.0);
+            QVERIFY(icon.availableSizes().contains(QSize(32, 32)));
+        }
+
         // Before anything is typed, a hint and nothing counted
         QVERIFY(!pPanel->mpMessage->isHidden());
         QCOMPARE(pPanel->mpMessage->text(), qsl("Search the whole map"));
         QVERIFY(pPanel->mpList->isHidden());
         QVERIFY(pPanel->mpCount->text().isEmpty());
+        QCOMPARE(pPanel->mpKeys->text(), qsl("Esc close"));
+        // Nor is a query of spaces anything, for Escape too
+        pPanel->mpEdit->setText(qsl("   "));
+        QCOMPARE(pPanel->mpKeys->text(), qsl("Esc close"));
+        QKeyEvent escape(QEvent::KeyPress, Qt::Key_Escape, Qt::NoModifier);
+        QCoreApplication::sendEvent(pPanel->mpEdit, &escape);
+        QVERIFY(pPanel->isHidden());
+        widget.openSearch();
+        pPanel->mpEdit->clear();
 
         // What was typed is marked in each name, whatever its case
         pPanel->mpEdit->setText(qsl("KEEPER"));
@@ -1979,6 +2028,9 @@ private slots:
         QCOMPARE(pPanel->mpCount->text(), qsl("2 found"));
         QCOMPARE(pPanel->mpList->item(0)->data(MapSearchPanel::MatchStartRole).toInt(), 0);
         QCOMPARE(pPanel->currentRow(), 0);
+        const QString routeKeys = qsl("↑↓ choose · ↵ go · %1↵ route · Esc clear").arg(QKeySequence(Qt::CTRL).toString(QKeySequence::NativeText));
+        const QString goKeys = qsl("↑↓ choose · ↵ go · Esc clear");
+        QCOMPARE(pPanel->mpKeys->text(), routeKeys);
         QKeyEvent down(QEvent::KeyPress, Qt::Key_Down, Qt::NoModifier);
         QKeyEvent up(QEvent::KeyPress, Qt::Key_Up, Qt::NoModifier);
         QCoreApplication::sendEvent(pPanel->mpEdit, &down);
@@ -1987,11 +2039,34 @@ private slots:
         QCOMPARE(pPanel->currentRow(), 0);
         QCoreApplication::sendEvent(pPanel->mpEdit, &up);
         QCOMPARE(pPanel->currentRow(), 1);
+        // From the toggle or the close button too
+        QCoreApplication::sendEvent(pPanel->mpLabels, &down);
+        QCOMPARE(pPanel->currentRow(), 0);
+        QCoreApplication::sendEvent(pPanel->mpClose, &up);
+        QCOMPARE(pPanel->currentRow(), 1);
+        QSignalSpy chosen(pPanel, &MapSearchPanel::resultChosen);
+        QKeyEvent enter(QEvent::KeyPress, Qt::Key_Return, Qt::NoModifier);
+        QCoreApplication::sendEvent(pPanel->mpLabels, &enter);
+        QCOMPARE(chosen.size(), 1);
+        QCOMPARE(chosen.first().first().toInt(), 1);
+        finishFlight(widget);
+
+        // No route offered to where the player is
+        map()->mRoomIdHash[map()->mProfileName] = 3;
+        pPanel->mpEdit->setText(qsl("lighthouse "));
+        QCOMPARE(widget.mSearchResults.value(0).id, 3);
+        QCOMPARE(pPanel->mpKeys->text(), goKeys);
+        QCoreApplication::sendEvent(pPanel->mpEdit, &down);
+        QCOMPARE(pPanel->mpKeys->text(), routeKeys);
+        map()->mRoomIdHash[map()->mProfileName] = 0;
 
         // More than are listed
         pPanel->mpEdit->setText(qsl("hall"));
         QCOMPARE(pPanel->mpList->count(), MapSearch::scmMaxResults);
         QCOMPARE(pPanel->mpCount->text(), qsl("Showing the best %1 of 70").arg(MapSearch::scmMaxResults));
+        QKeyEvent pageDown(QEvent::KeyPress, Qt::Key_PageDown, Qt::NoModifier);
+        QCoreApplication::sendEvent(pPanel->mpLabels, &pageDown);
+        QVERIFY(pPanel->currentRow() > 0);
 
         // Nothing at all
         pPanel->mpEdit->setText(qsl("zzz"));
@@ -1999,6 +2074,7 @@ private slots:
         QVERIFY(!pPanel->mpMessage->isHidden());
         QCOMPARE(pPanel->mpMessage->text(), qsl("No matches for “zzz”"));
         QVERIFY(pPanel->mpCount->text().isEmpty());
+        QCOMPARE(pPanel->mpKeys->text(), qsl("Esc clear"));
         const QString hint = pPanel->mpHint->text();
         pPanel->mpLabels->setChecked(false);
         QVERIFY(pPanel->mpHint->text() != hint);
@@ -2015,6 +2091,143 @@ private slots:
         QKeyEvent find(QEvent::KeyPress, Qt::Key_F, Qt::ControlModifier);
         QCoreApplication::sendEvent(pPanel->mpEdit, &find);
         QCOMPARE(pPanel->mpEdit->selectedText(), qsl("light"));
+
+        // Escape on the toggle clears what was typed before it closes the search
+        QCoreApplication::sendEvent(pPanel->mpLabels, &escape);
+        QVERIFY(!pPanel->isHidden());
+        QVERIFY(pPanel->text().isEmpty());
+        QCoreApplication::sendEvent(pPanel->mpLabels, &escape);
+        QVERIFY(pPanel->isHidden());
+    }
+
+    void test_theSearchPanelDrawsEachKindOfPlaceWithoutGL()
+    {
+        const auto [westId, eastId] = addTwoAreas(6);
+        map()->mpRoomDB->getRoom(3)->name = qsl("Lighthouse");
+        map()->mpRoomDB->getRoom(4)->name = qsl("The Lighthouse Keeper's Long Forgotten Cottage Beyond The Northern Cliffs");
+        TMapLabel label;
+        label.text = qsl("Lighthouse district");
+        label.pos = QVector3D(1.0f, 2.0f, 0.0f);
+        label.size = QSizeF(4.0, 2.0);
+        TArea* pEast = map()->mpRoomDB->getArea(eastId);
+        pEast->mMapLabels.insert(pEast->createLabelId(), label);
+        map()->setUnsaved(__func__);
+        ModernGLWidget widget(map(), mpHost);
+        queueFrame(widget, westId, 1.5f);
+        widget.openSearch();
+        MapSearchPanel* pPanel = widget.mpSearchPanel;
+
+        // A map label, with where it is and no route offered to it
+        pPanel->mpEdit->setText(qsl("district"));
+        QCOMPARE(pPanel->mpList->count(), 1);
+        const QListWidgetItem* pLabel = pPanel->mpList->item(0);
+        QCOMPARE(pLabel->text(), qsl("Lighthouse district"));
+        QCOMPARE(pLabel->data(MapSearchPanel::KindRole).toInt(), static_cast<int>(MapSearch::Kind::Label));
+        QCOMPARE(pLabel->data(MapSearchPanel::DetailRole).toString(), qsl("Eastvale"));
+        QVERIFY(pLabel->data(Qt::AccessibleTextRole).toString().contains(qsl("Lighthouse district")));
+        QCOMPARE(pPanel->mpKeys->text(), qsl("↑↓ choose · ↵ go · Esc clear"));
+
+        // Each kind drawn, and drawn differently hovered and chosen
+        pPanel->mpEdit->setText(qsl("l"));
+        QAbstractItemDelegate* pDelegate = pPanel->mpList->itemDelegate();
+        const auto drawn = [&](const QModelIndex& index, const QStyle::State state, const int width) {
+            QStyleOptionViewItem option;
+            option.font = pPanel->mpList->font();
+            option.state = QStyle::State_Enabled | state;
+            option.rect = QRect(0, 0, width, pDelegate->sizeHint(option, index).height());
+            QImage image(option.rect.size(), QImage::Format_ARGB32_Premultiplied);
+            image.fill(Qt::transparent);
+            QPainter painter(&image);
+            pDelegate->paint(&painter, option, index);
+            painter.end();
+            return image;
+        };
+        QSet<int> kinds;
+        for (int row = 0; row < pPanel->mpList->count(); ++row) {
+            const QModelIndex index = pPanel->mpList->model()->index(row, 0);
+            kinds.insert(index.data(MapSearchPanel::KindRole).toInt());
+            const QImage plain = drawn(index, QStyle::State_None, 360);
+            const QImage hovered = drawn(index, QStyle::State_MouseOver, 360);
+            const QImage chosen = drawn(index, QStyle::State_Selected, 360);
+            QVERIFY(plain != QImage(plain.size(), plain.format()));
+            QVERIFY(hovered != plain);
+            QVERIFY(chosen != hovered);
+            // A long name in a narrow list
+            QVERIFY(!drawn(index, QStyle::State_Selected, 120).isNull());
+        }
+        QCOMPARE(kinds.size(), 3);
+        pPanel->resize(240, pPanel->sizeHint().height());
+        QVERIFY(!pPanel->grab().isNull());
+    }
+
+    void test_theSearchPanelKeepsItsLookUnderAProfileStyleSheetWithoutGL()
+    {
+        // The panel on its own, under a window with a profile's dark style sheet as it reaches the map
+        QWidget window;
+        window.setStyleSheet(qsl("QWidget { background-color: #1e1e1e; color: #dddddd; }"));
+        window.resize(900, 700);
+        auto* pPanel = new MapSearchPanel(&window);
+        const auto fit = [pPanel]() {
+            pPanel->setGeometry(0, 0, pPanel->preferredWidth(), pPanel->sizeHint().height());
+        };
+        fit();
+        window.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&window));
+        const QColor card = QApplication::palette().color(QPalette::Window);
+        const auto colorAt = [pPanel](const QImage& image, const QWidget* pChild, const QPoint& where) {
+            return image.pixelColor(pChild->mapTo(pPanel, where));
+        };
+        QImage image = pPanel->grab().toImage();
+        // Its shadow, not the sheet's background, around the card
+        QVERIFY(image.pixelColor(1, 1).alpha() < 32);
+        QCOMPARE(colorAt(image, pPanel->mpMessage, QPoint(1, 1)), card);
+        QCOMPARE(colorAt(image, pPanel->mpHint, QPoint(1, 1)), card);
+        QCOMPARE(colorAt(image, pPanel->mpKeys, QPoint(1, 1)), card);
+
+        // Nor behind the list or its scroll bar
+        QList<MapSearchPanel::Row> rows;
+        for (int number = 1; number <= 50; ++number) {
+            MapSearchPanel::Row row;
+            row.title = qsl("Hall %1").arg(number);
+            row.detail = qsl("Westmarch · room %1").arg(number);
+            rows.append(row);
+        }
+        pPanel->setResults(rows, rows.size());
+        fit();
+        QCoreApplication::processEvents();
+        image = pPanel->grab().toImage();
+        const QWidget* pViewport = pPanel->mpList->viewport();
+        QCOMPARE(colorAt(image, pViewport, QPoint(pViewport->width() - 2, pViewport->height() - 2)), card);
+        const QScrollBar* pBar = pPanel->mpList->verticalScrollBar();
+        QVERIFY(pBar->isVisible());
+        QCOMPARE(colorAt(image, pBar->parentWidget(), QPoint(1, pBar->parentWidget()->height() - 2)), card);
+
+        // Colored from the application's palette, not the window's
+        QPalette windowPalette = window.palette();
+        windowPalette.setColor(QPalette::WindowText, QColor(255, 0, 0));
+        window.setPalette(windowPalette);
+        QVERIFY(!pPanel->mpMessage->styleSheet().contains(qsl("rgba(255, 0, 0")));
+        // And again once that changes, with a new style as Mudlet's light/dark switch sets; a palette change on its own
+        // Qt passes down only where no style sheet pins the palette
+        const QPalette before = QApplication::palette();
+        auto restore = qScopeGuard([&before]() {
+            QApplication::setPalette(before);
+        });
+        QPalette changed = before;
+        changed.setColor(QPalette::WindowText, QColor(18, 52, 86));
+        changed.setColor(QPalette::Highlight, QColor(101, 67, 33));
+        QApplication::setPalette(changed);
+        QStyle* pStyle = QApplication::style();
+        // Kept from being deleted with the one put in its place
+        pStyle->setParent(nullptr);
+        auto restoreStyle = qScopeGuard([pStyle]() {
+            QApplication::setStyle(pStyle);
+        });
+        QApplication::setStyle(new QProxyStyle(pStyle->name()));
+        QVERIFY(pPanel->mpMessage->styleSheet().contains(qsl("rgba(18, 52, 86, 255)")));
+        QVERIFY(pPanel->mpEdit->styleSheet().contains(qsl("rgba(101, 67, 33, 255)")));
+        QVERIFY(pPanel->mpLabels->styleSheet().contains(qsl("rgba(101, 67, 33, 255)")));
+        QVERIFY(!pPanel->mpMessage->styleSheet().contains(qsl("rgba(255, 0, 0")));
     }
 
     void benchmark_worldSearch()
