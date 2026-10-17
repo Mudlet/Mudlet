@@ -52,12 +52,14 @@ public:
     // stt.init() switch engines when it is handed another engine's model.
     void initSpeechRecognition(SpeechRecognizerFactory::Backend backend = SpeechRecognizerFactory::Backend::Auto);
     SpeechRecognizer* speechRecognizer() const;
-    // Raise one sysSTT* event on the profile holding the microphone, or on the
-    // active one when nobody holds it. Public because the stt.* bindings refuse
-    // before a recognizer exists - with no engine installed there is no object
-    // to emit through, and "refusals speak" has to hold there too or a consumer
-    // cannot tell "no engine" from "nothing said yet".
-    void raiseSpeechEvent(const QString& name, const QString& value);
+    // Raise one sysSTT* event on the profile holding the microphone, else the one
+    // whose session just ended, else the active one, else pCaller, else
+    // setLastCaller()'s; profileClosing() silences the owner it is ending. Public
+    // because the stt.* bindings refuse before a recognizer exists - with no engine
+    // installed there is no object to emit through, and "refusals speak" has to
+    // hold there too or a consumer cannot tell "no engine" from "nothing said yet".
+    void raiseSpeechEvent(const QString& name, const QString& value, Host* pCaller = nullptr);
+    void setLastCaller(Host* pHost) { mpLastCaller = pHost; }
     // Take the microphone for this profile, stopping whoever held it. There is
     // one recognizer for the whole application, so a second profile asking to
     // listen is a handover rather than a second session - and the profile that
@@ -120,6 +122,9 @@ private:
     // without this the sentence that matters most goes to whichever profile
     // happens to be in front. See raiseSpeechEvent().
     QPointer<Host> mpMicrophoneOwnerEnding;
+    QPointer<Host> mpLastCaller;
+    // See profileClosing()
+    Host* mpSilencedProfile = nullptr;
     // How deep the delivery of a recognised phrase is - see the finalResult
     // connection in initSpeechRecognition(), and deliveringSpeechResult()
     int mSpeechResultsBeingDelivered = 0;
