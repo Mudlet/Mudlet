@@ -5498,7 +5498,11 @@ void Host::securedPasswordAnswered(bool success, const QString& password, const 
     mSecuredPasswordPending = !success && timedOut;
 
     if (success && !password.isEmpty()) {
-        setPass(password);
+        // Not over one given for this connection meanwhile, as the connection dialog's field or a headless
+        // frontend's option is; the stored one was only ever the fallback for it
+        if (mPass.isEmpty()) {
+            setPass(password);
+        }
         // The auto-login is timer based, so a password this slow (the user answering the
         // keychain prompt after the game had reached its password prompt) has already missed
         // its turn. The telnet side knows whether the game is still waiting for it:

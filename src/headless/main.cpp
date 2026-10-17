@@ -21,6 +21,7 @@
 // alone, so it is also the check that the core runs without Qt Widgets.
 
 #include "MudletApp.h"
+#include "SecureStringUtils.h"
 #include "THeadlessSession.h"
 #include "TriggerMatchPool.h"
 #include "utils.h"
@@ -481,6 +482,18 @@ QString helpText()
                                        "\n"
                                        "Options:\n"
                                        "  -p, --profile <profile>  the profile to open and connect.\n"
+                                       "  --host <host>            the game server to connect to, stored in the profile as\n"
+                                       "                           the connection dialog stores it; a profile there is\n"
+                                       "                           none of is made, and set up as the dialog sets one up.\n"
+                                       "  --port <port>            the game server's port, stored likewise.\n"
+                                       "  --tls, --no-tls          connects with TLS, or without it, stored likewise.\n"
+                                       "  --login <name>           the character name to log in with, stored likewise.\n"
+                                       "  --password-env <var>     the environment variable holding the character's\n"
+                                       "                           password, for this run only; it is not stored.\n"
+                                       "  --offline                opens the profile without connecting, as the dialog's\n"
+                                       "                           Offline button does.\n"
+                                       "  --package <file>         installs a package once the profile has loaded; give it\n"
+                                       "                           more than once to install several.\n"
                                        "  -e, --exec <lua>         runs Lua code once the profile has loaded; give it more\n"
                                        "                           than once to run several pieces in order.\n"
                                        "  --no-stdin               does not read standard input, as for a background run.\n"
@@ -492,8 +505,8 @@ QString helpText()
                                        "\"Auto save on exit\" setting is on. Exit status:\n"
                                        "  0      the profile closed, as closeMudlet() or closeProfile() do, or standard\n"
                                        "         input ended.\n"
-                                       "  1      the profile could not be opened or saved, Lua given with -e failed, or\n"
-                                       "         standard input could not be read.\n"
+                                       "  1      the profile could not be opened or saved, a package could not be\n"
+                                       "         installed, Lua given with -e failed, or standard input could not be read.\n"
                                        "  2      the command line was wrong.\n"
                                        "  3      standard output could not be written.\n"
                                        "  4      the connection ended or could not be made, with --exit-on-disconnect;\n"
@@ -561,6 +574,22 @@ int main(int argc, char* argv[])
     parser.addOption(noStdinOption);
     const QCommandLineOption exitOnDisconnectOption(qsl("exit-on-disconnect"), qsl("Exit once the connection ends"));
     parser.addOption(exitOnDisconnectOption);
+    const QCommandLineOption hostOption(qsl("host"), qsl("Game server to connect to"), qsl("host"));
+    parser.addOption(hostOption);
+    const QCommandLineOption portOption(qsl("port"), qsl("Port of the game server"), qsl("port"));
+    parser.addOption(portOption);
+    const QCommandLineOption tlsOption(qsl("tls"), qsl("Connect with TLS"));
+    parser.addOption(tlsOption);
+    const QCommandLineOption noTlsOption(qsl("no-tls"), qsl("Connect without TLS"));
+    parser.addOption(noTlsOption);
+    const QCommandLineOption loginOption(qsl("login"), qsl("Character name to log in with"), qsl("name"));
+    parser.addOption(loginOption);
+    const QCommandLineOption passwordEnvOption(qsl("password-env"), qsl("Environment variable holding the character's password"), qsl("variable"));
+    parser.addOption(passwordEnvOption);
+    const QCommandLineOption offlineOption(qsl("offline"), qsl("Open the profile without connecting"));
+    parser.addOption(offlineOption);
+    const QCommandLineOption packageOption(qsl("package"), qsl("Package to install once the profile has loaded"), qsl("file"));
+    parser.addOption(packageOption);
 
     // Help and version need no platform plugin, so they are answered before there is one. Qt's own options
     // are still in this list, so it is read leniently, and single-dash words whole, as main.cpp does.
@@ -610,6 +639,26 @@ int main(int argc, char* argv[])
     } else if (parser.value(profileOption).isEmpty()) {
         //: Command line error of the headless runner; -p is the option that names the profile to run
         exitCode = usageError(QCoreApplication::translate("headless", "No profile was given; name one with -p."));
+    }
+    THeadlessSession::Options options{.profile = parser.value(profileOption), .connect = !parser.isSet(offlineOption), .host = parser.value(hostOption), .login = parser.value(loginOption)};
+    if (parser.isSet(tlsOption) || parser.isSet(noTlsOption)) {
+        options.tls = parser.isSet(tlsOption);
+    }
+    if (bool isNumber = false; exitCode == exitOk && parser.isSet(portOption)) {
+        options.port = parser.value(portOption).toInt(&isNumber);
+        if (!isNumber || options.port < 1 || options.port > 65535) {
+            //: Command line error of the headless runner; %1 is what was given as the port
+            exitCode = usageError(QCoreApplication::translate("headless", "The port must be a number from 1 to 65535, not '%1'.").arg(parser.value(portOption)));
+        }
+    }
+    if (exitCode == exitOk && parser.isSet(passwordEnvOption)) {
+        // Read, never shown: the variable's name is all that is ever reported
+        options.password = qEnvironmentVariable(parser.value(passwordEnvOption).toLocal8Bit().constData());
+        if (options.password.isEmpty()) {
+            //: Command line error of the headless runner; %1 is the name of an environment variable
+            exitCode = usageError(
+                    QCoreApplication::translate("headless", "The environment variable %1 is not set or is empty, so there is no password to log in with.").arg(parser.value(passwordEnvOption)));
+        }
     }
     if (exitCode != exitOk) {
         delete app;
@@ -722,8 +771,21 @@ int main(int argc, char* argv[])
     };
 
     bool luaFailed = false;
-    const THeadlessSession::StartResult started = session->start({.profile = parser.value(profileOption), .connect = true});
+    bool packageFailed = false;
+    const THeadlessSession::StartResult started = session->start(options);
+    // The profile holds its own copy now
+    SecureStringUtils::secureStringClear(options.password);
     if (started == THeadlessSession::StartResult::started) {
+        // Before the Lua, which may count on them
+        for (const QString& package : parser.values(packageOption)) {
+            if (quitAsked || !session->host()) {
+                break;
+            }
+            if (!session->installPackage(package)) {
+                packageFailed = true;
+                errors.report(session->errorString());
+            }
+        }
         for (const QString& code : parser.values(execOption)) {
             if (quitAsked || !session->host()) {
                 break;
@@ -773,16 +835,19 @@ int main(int argc, char* argv[])
             exitCode = exitOutputFailed;
         } else if (disconnected) {
             exitCode = exitDisconnected;
-        } else if (luaFailed || inputFailed) {
+        } else if (luaFailed || packageFailed || inputFailed) {
             exitCode = exitFailed;
         }
     } else {
-        errors.report(session->errorString());
+        // A name for a new profile that the connection dialog would not take came from the command line
+        exitCode = started == THeadlessSession::StartResult::invalidName ? usageError(session->errorString()) : exitFailed;
+        if (exitCode == exitFailed) {
+            errors.report(session->errorString());
+        }
         // A profile that did not load is not saved over its last good save
         if (!session->shutdown(false)) {
             errors.report(session->errorString());
         }
-        exitCode = exitFailed;
     }
     errors.endLine();
     session.reset();

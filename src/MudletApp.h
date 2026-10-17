@@ -132,6 +132,14 @@ public:
     // a digest of the whole input, as callers file data (e.g. passwords) under it and must not collide.
     static QString sanitizeForPath(const QString& input);
 
+    // What a new profile may be named: a sub-set of ASCII, as the name is also a folder's on every OS, with
+    // parentheses for the copies a file manager makes ("profile (2)"). firstInvalidProfileNameChar() gives the
+    // first character outside it, or a null QChar. profileNameUsableAsIs() is the weaker test for a name that
+    // already exists on disk: not one that sanitizeForPath() would rewrite or CredentialManager refuses.
+    static const QString scmAllowedProfileNameChars;
+    static QChar firstInvalidProfileNameChar(const QString& name);
+    static bool profileNameUsableAsIs(const QString& name);
+
     static QString readProfileData(const QString& profile, const QString& item);
 
     // Creates the profile's directory if missing, so writing for a nonexistent profile brings it into being
@@ -224,6 +232,7 @@ private:
     friend class FeatureCalloutTest;
     // Sets the password preference as Mudlet.ini would, with no main window and no pool
     friend class CredentialManagerKeychainTest;
+    friend class HeadlessSessionTest;
     // Discards any settings store built under the previous root - and with it any
     // pointer a caller cached, so this must not run once init() has handed the
     // store to the Updater. portable says whether the root came from a

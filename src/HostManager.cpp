@@ -27,12 +27,14 @@
 #include "Host.h"
 #include "MudletApp.h"
 #include "MudletMedia.h"
+#include "TGameDetails.h"
 #include "TMap.h"
 #include "TSpeechBridge.h"
 #include "discord.h"
 #include "utils.h"
 
 #include <QDebug>
+#include <QHash>
 #include <QScopeGuard>
 #include <QSettings>
 #include <QTimer>
@@ -168,7 +170,7 @@ bool HostManager::addHost(const QString& hostname, const QString& port, const QS
     return true;
 }
 
-Host* HostManager::openProfile(const QString& name, const bool connect, const std::function<void(Host*)>& beforeLoad)
+Host* HostManager::openProfile(const QString& name, const bool connect, const std::function<void(Host*)>& beforeLoad, const std::function<void(Host*)>& afterLoad)
 {
     if (mGoingDown || !addHost(name, QString(), QString(), QString())) {
         return nullptr;
@@ -181,12 +183,103 @@ Host* HostManager::openProfile(const QString& name, const bool connect, const st
     if (beforeLoad) {
         beforeLoad(pHost);
     }
-    pHost->loadProfileSave(QString());
+    const bool firstLoad = pHost->loadProfileSave(QString());
+    // Chosen as the GUI chooses them, from the address the load leaves, before a frontend's own goes over it
+    const QStringList packages = firstLoad ? defaultPackages(pHost->getUrl().toLower(), name, pHost->mAcceptServerGUI && pHost->mEnableGMCP) : QStringList();
+    if (afterLoad) {
+        afterLoad(pHost);
+    }
     pHost->mIsProfileLoadingSequence = true;
     pHost->startProfileScripts();
+    for (const QString& package : packages) {
+        pHost->installPackage(package, enums::PackageModuleType::Package);
+    }
     pHost->loadMapAndConnect(connect);
     pHost->finishProfileLoad();
     return pHost;
+}
+
+// The packages the GUI installs into a profile on its first load, for its game
+QStringList HostManager::defaultPackages(const QString& gameUrl, const QString& profileName, const bool serverGuiAccepted)
+{
+    QStringList packages;
+    const QHash<QString, QStringList> defaultScripts = {
+            // clang-format off
+        // scripts to pre-install for a profile      games this applies to, * means all games
+        {qsl(":/packages/run-lua-code/run-lua-code.mpackage"), {qsl("*")}},
+        {qsl(":/packages/echo/echo.mpackage"), {qsl("*")}},
+        {qsl(":/packages/deleteOldProfiles/deleteOldProfiles.mpackage"), {qsl("*")}},
+        {qsl(":/packages/enable-accessibility/enable-accessibility.mpackage"), {qsl("*")}},
+        {qsl(":/packages/mpkg/mpkg.mpackage"), {qsl("*")}},
+        {qsl(":/packages/gui-drop/gui-drop.mpackage"), {qsl("*")}},
+        {qsl(":/packages/CF-loader/CF-loader.mpackage"), {qsl("carrionfields.net")}},
+        {qsl(":/packages/icesus-loader/icesus-loader.mpackage"), {qsl("icesus.org")}},
+        {qsl(":/packages/mg-loader/mg-loader.mpackage"), {qsl("mg.mud.de"),
+                                                          qsl("mud.morgengrauen.info"),
+                                                          qsl("mg.morgengrauen.info"),
+                                                          qsl("morgengrauen.info")}},
+        {qsl(":/packages/run-tests/run-tests.mpackage"), {qsl("mudlet.org")}},
+        {qsl(":/packages/StressinatorDisplayBench/StressinatorDisplayBench.mpackage"), {qsl("mudlet.org")}},
+        // the IRE mapper is maintained upstream and published as an xml, so it
+        // is the one preinstall that is not packaged - see update-3rdparty.yml
+        {qsl(":/mudlet-mapper.xml"), {qsl("aetolia.com"),
+                                      qsl("achaea.com"),
+                                      qsl("lusternia.com"),
+                                      qsl("imperian.com"),
+                                      qsl("starmourn.com"),
+                                      qsl("stickmud.com")}},
+        {qsl(":/packages/MedBootstrap/MedBootstrap.mpackage"), {qsl("medievia.com")}}
+            // clang-format on
+    };
+
+    // mpkg fetches the package listing as it loads and, when the repository carries a
+    // newer mpkg than the bundled one, uninstalls itself at once and reinstalls two
+    // seconds plus a download later. Each of those calls doCleanReset() if an editor is
+    // open, which queues a clear of its tree widgets onto the next event loop turn and
+    // frees every item a test is holding, and each announces itself in the main console.
+    // Whether it lands mid-test is down to how fast the download is.
+    //
+    // generic_mapper below can self-update the same way, but its upstream is this repo's
+    // own development branch, so bundled and remote move together; mpkg is published from
+    // a separate repository on its own schedule, which is what leaves a released Mudlet
+    // upgrading itself mid-test for days at a time.
+    const bool skipSelfUpgradingPackage = qEnvironmentVariableIsSet("MUDLET_TEST_MODE");
+
+    QHashIterator<QString, QStringList> i(defaultScripts);
+    while (i.hasNext()) {
+        i.next();
+        if (skipSelfUpgradingPackage && i.key() == qsl(":/packages/mpkg/mpkg.mpackage")) {
+            continue;
+        }
+        if (i.value().first() == QLatin1String("*") || i.value().contains(gameUrl)) {
+            packages.append(i.key());
+        }
+    }
+
+    if (!packages.contains(qsl(":/mudlet-mapper.xml"))) {
+        packages.append(qsl(":/packages/generic_mapper/generic_mapper.mpackage"));
+    }
+
+    // A modest starter UI that adapts to whatever any game provides.
+    // Games known to install their own full interface, by a bundled loader
+    // above or by Client.GUI (flagged in TGameDetails), are skipped: the
+    // starter UI would only fight it for the same screen space, and would
+    // build and announce itself before a post-login Client.GUI package lands.
+    // Other games that push a GUI via Client.GUI are handled at runtime
+    // instead - the starter UI stands aside when one installs.
+    // A Client.GUI package only arrives if the profile lets it in, and a
+    // profile copied with its settings can already refuse it.
+    const auto ownUi = TGameDetails::gameOwnUi(gameUrl);
+    const bool ownUiArrives = ownUi == GameDetail::OwnUi::BundledLoader || (ownUi == GameDetail::OwnUi::ClientGui && serverGuiAccepted);
+    if (!ownUiArrives) {
+        packages.append(qsl(":/packages/mudlet-base-ui/mudlet-base-ui.mpackage"));
+    }
+
+    // Don't play tutorial for every connection to localhost. There are legit other reasons to connect there.
+    if (profileName == qsl("Mudlet Tutorial") && gameUrl == qsl("localhost")) {
+        packages.append(qsl(":/packages/mudlet-tutorial/mudlet-tutorial.mpackage"));
+    }
+    return packages;
 }
 
 bool HostManager::requestProfileClose(const QString& name)

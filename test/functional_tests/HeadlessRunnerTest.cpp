@@ -171,6 +171,19 @@ registerAnonymousEventHandler("sysExitEvent", function() record("sysExitEvent") 
                                     .arg(recordPath, script));
     }
 
+    QString readProfileData(const QString& name, const QString& item) const
+    {
+        QFile file(qsl("%1/%2").arg(profileFolder(name), item));
+        if (!file.open(QIODevice::ReadOnly)) {
+            return QString();
+        }
+        QDataStream in(&file);
+        in.setVersion(QDataStream::Qt_5_12);
+        QString value;
+        in >> value;
+        return value;
+    }
+
     bool connectTo(const QString& name, const RecordingGame& game) const
     {
         return writeProfileData(name, qsl("url"), qsl("127.0.0.1")) && writeProfileData(name, qsl("port"), QString::number(game.port()));
@@ -220,6 +233,10 @@ private slots:
         QTest::newRow("no profile") << QStringList() << 2 << QString() << qsl("-p");
         QTest::newRow("stray argument") << QStringList{qsl("-p"), qsl("a"), qsl("b")} << 2 << QString() << qsl("'b'");
         QTest::newRow("unknown profile") << QStringList{qsl("-p"), qsl("No Such Runner Profile")} << 1 << QString() << qsl("No Such Runner Profile");
+        QTest::newRow("port out of range") << QStringList{qsl("-p"), qsl("a"), qsl("--port"), qsl("70000")} << 2 << QString() << qsl("1 to 65535");
+        QTest::newRow("password variable unset") << QStringList{qsl("-p"), qsl("a"), qsl("--password-env"), qsl("HEADLESS_RUNNER_NO_SUCH_VARIABLE")} << 2 << QString()
+                                                 << qsl("HEADLESS_RUNNER_NO_SUCH_VARIABLE");
+        QTest::newRow("a name the dialog refuses") << QStringList{qsl("-p"), qsl("Runner:Refused"), qsl("--host"), qsl("127.0.0.1")} << 2 << QString() << qsl("the : character is not permitted");
     }
 
     void test_exitCodes()
@@ -645,6 +662,134 @@ registerAnonymousEventHandler("sysExitEvent", function() send("exit event", fals
         const QString standardError = QString::fromUtf8(child.readAllStandardError());
         QVERIFY2(child.exitCode() == 0, qPrintable(standardError));
         QCOMPARE(readFile(recordPath), record);
+    }
+
+    void test_hostLoginAndPasswordConnect_data()
+    {
+        QTest::addColumn<bool>("newProfile");
+        QTest::newRow("a profile made for the host") << true;
+        QTest::newRow("an existing profile") << false;
+    }
+
+    // The details are stored as the connection dialog stores what is typed into it, which makes the profile and
+    // sets it up as the dialog does; the password is for the run alone and never shown
+    void test_hostLoginAndPasswordConnect()
+    {
+        QFETCH(bool, newProfile);
+        const QString name = newProfile ? qsl("Headless Runner Made") : qsl("Headless Runner Detailed");
+        const QString recordPath = qsl("%1/%2.record").arg(mSandbox.path(), name);
+        if (newProfile) {
+            QVERIFY(!QDir(profileFolder(name)).exists());
+        } else {
+            QString ignored;
+            QVERIFY(writeRecordingProfile(name, QString(), ignored));
+            QVERIFY(writeProfileData(name, qsl("url"), qsl("game.example")) && writeProfileData(name, qsl("port"), qsl("4000")));
+        }
+        RecordingGame game;
+        QVERIFY(game.start());
+        const QString password = qsl("s3cret-headless-pw");
+
+        QProcess child;
+        QProcessEnvironment environment = childEnvironment(mSandbox.path());
+        environment.insert(qsl("HEADLESS_RUNNER_PASSWORD"), password);
+        child.setProcessEnvironment(environment);
+        child.setProgram(headlessBinary());
+        // Opened binary so Windows writes no \r
+        child.setArguments({qsl("-p"),
+                            name,
+                            qsl("--host"),
+                            qsl("127.0.0.1"),
+                            qsl("--port"),
+                            QString::number(game.port()),
+                            qsl("--login"),
+                            qsl("bob"),
+                            qsl("--password-env"),
+                            qsl("HEADLESS_RUNNER_PASSWORD"),
+                            qsl("--exit-on-disconnect"),
+                            qsl("-e"),
+                            qsl(R"lua(local file = io.open([[%1]], "wb") file:write(table.concat(getPackages(), " ")) file:close())lua").arg(recordPath)});
+        child.start();
+        QTRY_VERIFY_WITH_TIMEOUT(game.connected(), scmFinishTimeoutMs);
+        QTRY_VERIFY_WITH_TIMEOUT(game.received().contains("bob") && game.received().contains(password.toUtf8()), scmFinishTimeoutMs);
+        game.hangUp();
+        QTRY_COMPARE_WITH_TIMEOUT(child.state(), QProcess::NotRunning, scmFinishTimeoutMs);
+        const QString standardOutput = QString::fromUtf8(child.readAllStandardOutput());
+        const QString standardError = QString::fromUtf8(child.readAllStandardError());
+        QCOMPARE(child.exitStatus(), QProcess::NormalExit);
+        QVERIFY2(child.exitCode() == 4, qPrintable(qsl("exit code %1, stderr: %2").arg(child.exitCode()).arg(standardError)));
+        QVERIFY2(!standardOutput.contains(password) && !standardError.contains(password), "The password was shown.");
+        QCOMPARE(readProfileData(name, qsl("url")), qsl("127.0.0.1"));
+        QCOMPARE(readProfileData(name, qsl("port")), QString::number(game.port()));
+        QCOMPARE(readProfileData(name, qsl("login")), qsl("bob"));
+        // A new profile's TLS box is stored as it stands, an existing profile's setting is left alone
+        QCOMPARE(readProfileData(name, qsl("ssl_tsl")), newProfile ? QString::number(Qt::Unchecked) : QString());
+        QVERIFY2(!QFileInfo::exists(qsl("%1/password").arg(profileFolder(name))), "The password for the run was stored.");
+        QCOMPARE(saveCount(name), newProfile ? 1 : 2);
+        // The dialog's first load installs the game's default packages
+        const QString packages = readFile(recordPath);
+        QCOMPARE(packages.contains(qsl("echo")) && packages.contains(qsl("generic_mapper")), newProfile);
+    }
+
+    void test_tlsAndOfflineAreStored_data()
+    {
+        QTest::addColumn<QString>("option");
+        QTest::addColumn<int>("stored");
+        QTest::newRow("--tls") << qsl("--tls") << static_cast<int>(Qt::Checked);
+        QTest::newRow("--no-tls") << qsl("--no-tls") << static_cast<int>(Qt::Unchecked);
+    }
+
+    // As the dialog's Offline button: the details are stored, the game is left alone
+    void test_tlsAndOfflineAreStored()
+    {
+        QFETCH(QString, option);
+        QFETCH(int, stored);
+        const QString name = qsl("Headless Runner Offline %1").arg(option.mid(2));
+        QString recordPath;
+        QVERIFY(writeRecordingProfile(name, QString(), recordPath));
+        RecordingGame game;
+        QVERIFY(game.start());
+
+        QProcess child;
+        startChild(child, {qsl("-p"), name, qsl("--host"), qsl("127.0.0.1"), qsl("--port"), QString::number(game.port()), option, qsl("--offline"), qsl("-e"), qsl("closeMudlet()")});
+        QTRY_COMPARE_WITH_TIMEOUT(child.state(), QProcess::NotRunning, scmFinishTimeoutMs);
+        const QString standardError = QString::fromUtf8(child.readAllStandardError());
+        QCOMPARE(child.exitStatus(), QProcess::NormalExit);
+        QVERIFY2(child.exitCode() == 0, qPrintable(standardError));
+        QVERIFY2(standardError.contains(qsl("loaded in offline mode")), qPrintable(standardError));
+        QVERIFY(!game.connected() && game.received().isEmpty());
+        QCOMPARE(readProfileData(name, qsl("url")), qsl("127.0.0.1"));
+        QCOMPARE(readProfileData(name, qsl("port")), QString::number(game.port()));
+        QCOMPARE(readProfileData(name, qsl("ssl_tsl")), QString::number(stored));
+        QCOMPARE(readFile(recordPath), qsl("sysExitEvent\n"));
+    }
+
+    // Packages go in before the Lua, as the GUI installs those on its command line as the profile opens; one
+    // that cannot be is reported as there, and fails the run
+    void test_packagesAreInstalledBeforeTheLua()
+    {
+        const QString name = qsl("Headless Runner Package");
+        QString recordPath;
+        QVERIFY(writeRecordingProfile(name, QString(), recordPath));
+        const QString packagePath = qsl("%1/runnerPackage.xml").arg(mSandbox.path());
+        QFile packageFile(packagePath);
+        QVERIFY(packageFile.open(QIODevice::WriteOnly));
+        packageFile.write(R"(<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE MudletPackage>
+<MudletPackage version="1.001">
+<ScriptPackage><Script isActive="yes" isFolder="no"><name>fromPackage</name><packageName></packageName><script>headlessPackageRan = "yes"</script><eventHandlerList/></Script></ScriptPackage>
+</MudletPackage>
+)");
+        packageFile.close();
+        const QString missing = qsl("%1/missing.mpackage").arg(mSandbox.path());
+
+        QProcess child;
+        startChild(child, {qsl("-p"), name, qsl("--package"), packagePath, qsl("--package"), missing, qsl("-e"), qsl(R"lua(record(tostring(headlessPackageRan)) closeMudlet())lua")});
+        QTRY_COMPARE_WITH_TIMEOUT(child.state(), QProcess::NotRunning, scmFinishTimeoutMs);
+        const QString standardError = QString::fromUtf8(child.readAllStandardError());
+        QCOMPARE(child.exitStatus(), QProcess::NormalExit);
+        QVERIFY2(child.exitCode() == 1, qPrintable(qsl("exit code %1, stderr: %2").arg(child.exitCode()).arg(standardError)));
+        QCOMPARE(readFile(recordPath), qsl("yes\nsysExitEvent\n"));
+        QVERIFY2(standardError.count(qsl("could not be installed")) == 1 && standardError.contains(missing), qPrintable(standardError));
     }
 
     // Every -e runs, in order, though one fails; the failure is on standard error and in the exit code, as is

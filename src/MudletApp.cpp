@@ -589,6 +589,27 @@ QString MudletApp::getMudletPath(const enums::mudletPathType mode, const QString
     return QString();
 }
 
+const QString MudletApp::scmAllowedProfileNameChars = qsl(". _()0123456789-#&aAbBcCdDeEfFgGhHiIjJkKlLmMnNoOpPqQrRsStTuUvVwWxXyYzZ");
+
+// An embedded U+0000 is indistinguishable from the all-clear sentinel, but a QLineEdit never lets one through
+QChar MudletApp::firstInvalidProfileNameChar(const QString& name)
+{
+    for (const QChar& c : name) {
+        if (!scmAllowedProfileNameChars.contains(c)) {
+            return c;
+        }
+    }
+    return {};
+}
+
+// A lone "." is made entirely of permitted characters, yet every path built from it addresses the profiles
+// directory rather than a profile of its own, as does ".."
+bool MudletApp::profileNameUsableAsIs(const QString& name)
+{
+    static const QRegularExpression unusableChars{qsl(R"REGEX(\.\.|[/\\<>:"|?*\x00-\x1f])REGEX")};
+    return !name.isEmpty() && name != qsl(".") && !name.contains(unusableChars);
+}
+
 QString MudletApp::readProfileData(const QString& profile, const QString& item)
 {
     QFile file(MudletApp::getMudletPath(enums::profileDataItemPath, profile, item));

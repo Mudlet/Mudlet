@@ -28,6 +28,7 @@
 
 #include <QDir>
 #include <QFile>
+#include <QScopeGuard>
 #include <QSignalSpy>
 #include <QTcpServer>
 #include <QTcpSocket>
@@ -37,11 +38,13 @@
 #include <memory>
 #include <optional>
 
+#include "CredentialManager.h"
 #include "Host.h"
 #include "HostManager.h"
 #include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "TAppFrontend.h"
+#include "TGameDetails.h"
 #include "THeadlessSession.h"
 #include "TLuaInterpreter.h"
 #include "TMap.h"
@@ -175,15 +178,15 @@ private slots:
         QVERIFY2(!TAppFrontend::hasView(), "A main window exists, so this run is not headless.");
     }
 
-    void test_aProfileNeverSavedIsRefused_data()
+    void test_aFirstLoadInstallsTheDefaultPackages_data()
     {
         QTest::addColumn<QString>("save");
         QTest::newRow("no save") << QString();
         QTest::newRow("settings copied") << qsl("Copied profile (settings only).xml");
     }
 
-    // The GUI installs a game's default packages on the first load, and a save made here would stop it
-    void test_aProfileNeverSavedIsRefused()
+    // As the GUI's first load of a profile does; a later load leaves them be
+    void test_aFirstLoadInstallsTheDefaultPackages()
     {
         QFETCH(QString, save);
         const QString name = save.isEmpty() ? qsl("Headless Never Saved") : qsl("Headless Settings Copied");
@@ -194,13 +197,163 @@ private slots:
             QVERIFY(copied.open(QIODevice::WriteOnly));
             copied.write(R"(<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE MudletPackage><MudletPackage version="1.001"><HostPackage><Host></Host></HostPackage></MudletPackage>)");
         }
-        const qsizetype savesBefore = saveCount(name);
         THeadlessSession session;
-        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::notSetUp);
-        QVERIFY(!session.errorString().isEmpty());
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY(session.host());
+        const QStringList installed = session.host()->mInstalledPackages;
+        QVERIFY2(installed.contains(qsl("echo")) && installed.contains(qsl("generic_mapper")) && installed.contains(qsl("mudlet-base-ui")), qPrintable(installed.join(QLatin1Char(' '))));
+        QVERIFY(session.shutdown(true));
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QCOMPARE(session.host()->mInstalledPackages, installed);
+    }
+
+    // What the connection dialog stores as it is typed into, and Host reads as it is made; a new profile is
+    // made for a host, its TLS box stored as it stands, an existing one keeps what is not given
+    void test_connectionDetailsAreStored()
+    {
+        const QString name = qsl("Headless Details");
+        QVERIFY(!QDir(MudletApp::getMudletPath(enums::profileHomePath, name)).exists());
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false, .host = qsl("game.example"), .port = 4000, .tls = true, .login = qsl("bob"), .password = qsl("hunter2")}),
+                 THeadlessSession::StartResult::started);
+        QCOMPARE(MudletApp::readProfileData(name, qsl("url")), qsl("game.example"));
+        QCOMPARE(MudletApp::readProfileData(name, qsl("port")), qsl("4000"));
+        QCOMPARE(MudletApp::readProfileData(name, qsl("ssl_tsl")), QString::number(Qt::Checked));
+        QCOMPARE(MudletApp::readProfileData(name, qsl("login")), qsl("bob"));
+        QVERIFY2(!QFileInfo::exists(MudletApp::getMudletPath(enums::profileDataItemPath, name, qsl("password"))), "The password for the run was stored.");
+        QCOMPARE(session.host()->getUrl(), qsl("game.example"));
+        QCOMPARE(session.host()->getPort(), 4000);
+        QVERIFY(session.host()->mSslTsl);
+        QCOMPARE(session.host()->getLogin(), qsl("bob"));
+        QCOMPARE(session.host()->getPass(), qsl("hunter2"));
+        QVERIFY(session.shutdown(true));
+
+        QCOMPARE(session.start({.profile = name, .connect = false, .port = 4001}), THeadlessSession::StartResult::started);
+        QCOMPARE(MudletApp::readProfileData(name, qsl("url")), qsl("game.example"));
+        QCOMPARE(MudletApp::readProfileData(name, qsl("port")), qsl("4001"));
+        QCOMPARE(MudletApp::readProfileData(name, qsl("ssl_tsl")), QString::number(Qt::Checked));
+        QCOMPARE(session.host()->getLogin(), qsl("bob"));
+        QVERIFY(session.host()->getPass().isEmpty());
+        QVERIFY(session.shutdown(true));
+        QCOMPARE(session.start({.profile = name, .connect = false, .tls = false}), THeadlessSession::StartResult::started);
+        QCOMPARE(MudletApp::readProfileData(name, qsl("ssl_tsl")), QString::number(Qt::Unchecked));
+        QVERIFY(!session.host()->mSslTsl);
+        QVERIFY(session.shutdown(true));
+        QCOMPARE(session.start({.profile = name, .connect = false, .port = 70000}), THeadlessSession::StartResult::notOpened);
+        QVERIFY2(session.errorString().contains(qsl("70000")), qPrintable(session.errorString()));
+        QCOMPARE(MudletApp::readProfileData(name, qsl("port")), qsl("4001"));
+
+        const QString plain = qsl("Headless Plain Details");
+        QCOMPARE(session.start({.profile = plain, .connect = false, .host = qsl(" game.example ")}), THeadlessSession::StartResult::started);
+        QCOMPARE(MudletApp::readProfileData(plain, qsl("url")), qsl("game.example"));
+        QCOMPARE(MudletApp::readProfileData(plain, qsl("ssl_tsl")), QString::number(Qt::Unchecked));
+        QVERIFY(!session.host()->mSslTsl);
+        QCOMPARE(session.host()->getPort(), 23);
+        QVERIFY(session.shutdown(true));
+
+        // A predefined game's load sets its own address and TLS over the stored ones; what is given wins, as
+        // the dialog's fields do, and its TLS box stands as the dialog ticks it for the game. The load's scripts
+        // already see the given address, as the dialog's do.
+        const bool gameTls = TGameDetails::findGame(qsl("Achaea"))->tlsEnabled;
+        QCOMPARE(session.start({.profile = qsl("achaea"), .connect = false, .host = qsl("127.0.0.1"), .port = 4000}), THeadlessSession::StartResult::started);
+        QCOMPARE(session.host()->getName(), qsl("Achaea"));
+        QCOMPARE(session.host()->getUrl(), qsl("127.0.0.1"));
+        QCOMPARE(session.host()->getPort(), 4000);
+        QCOMPARE(session.host()->mSslTsl, gameTls);
+        QCOMPARE(MudletApp::readProfileData(qsl("Achaea"), qsl("ssl_tsl")), QString::number(gameTls ? Qt::Checked : Qt::Unchecked));
+        QVERIFY(session.runLua(qsl("headlessLoadHost = select(1, getConnectionInfo())")));
+        QVERIFY(session.shutdown(true));
+
+        const QString scripted = qsl("Headless Load Sees Details");
+        QVERIFY(writeProfile(scripted, qsl("headlessLoadHost = select(1, getConnectionInfo())")));
+        QCOMPARE(session.start({.profile = scripted, .connect = false, .host = qsl("game.example")}), THeadlessSession::StartResult::started);
+        QCOMPARE(luaGlobalString(session.host(), "headlessLoadHost"), qsl("game.example"));
+    }
+
+    void test_aNewProfileNeedsAUsableName_data()
+    {
+        QTest::addColumn<QString>("name");
+        QTest::addColumn<QString>("host");
+        QTest::addColumn<int>("result");
+        QTest::newRow("no host") << qsl("Headless Unmade") << QString() << static_cast<int>(THeadlessSession::StartResult::noSuchProfile);
+        QTest::newRow("a character the dialog refuses") << qsl("Headless/Unmade") << qsl("game.example") << static_cast<int>(THeadlessSession::StartResult::invalidName);
+        QTest::newRow("the profiles folder itself") << qsl(".") << qsl("game.example") << static_cast<int>(THeadlessSession::StartResult::invalidName);
+    }
+
+    void test_aNewProfileNeedsAUsableName()
+    {
+        QFETCH(QString, name);
+        QFETCH(QString, host);
+        QFETCH(int, result);
+        const QStringList profilesBefore = QDir(MudletApp::getMudletPath(enums::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot);
+        THeadlessSession session;
+        QCOMPARE(static_cast<int>(session.start({.profile = name, .connect = false, .host = host})), result);
+        QVERIFY2(session.errorString().contains(name), qPrintable(session.errorString()));
         QVERIFY(!HostManager::self());
-        session.shutdown(true);
-        QCOMPARE(saveCount(name), savesBefore);
+        QCOMPARE(QDir(MudletApp::getMudletPath(enums::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot), profilesBefore);
+    }
+
+    // The stored one answers from the credential store once the profile is made; one given for the run stands
+    void test_aPasswordForTheRunOutlivesTheStoredOne()
+    {
+        const QString name = qsl("Headless Stored Secret");
+        QVERIFY(writeProfile(name, QString()));
+        // The first pool of the process reads the setting from Mudlet.ini, over anything set before it
+        {
+            const HostManager firstPool;
+        }
+        const bool storedSecurely = MudletApp::storingPasswordsSecurely();
+        MudletApp::setStorePasswordsSecurely(true);
+        const auto restore = qScopeGuard([storedSecurely]() {
+            MudletApp::setStorePasswordsSecurely(storedSecurely);
+        });
+        CredentialManager store;
+        std::optional<bool> stored;
+        store.storePassword(name, qsl("character"), qsl("stored"), [&stored](const bool success, const QString&) {
+            stored = success;
+        });
+        QTRY_VERIFY_WITH_TIMEOUT(stored.has_value(), 10000);
+        QVERIFY(*stored);
+
+        THeadlessSession session;
+        QCOMPARE(session.start({.profile = name, .connect = false, .password = qsl("given")}), THeadlessSession::StartResult::started);
+        // The profile's own lookup went to the same store first, so it has answered once this one has
+        std::optional<bool> answered;
+        store.retrievePassword(name, qsl("character"), [&answered](const bool success, QString, const QString&) {
+            answered = success;
+        });
+        QTRY_VERIFY_WITH_TIMEOUT(answered.has_value(), 10000);
+        QVERIFY(*answered);
+        QCOMPARE(session.host()->getPass(), qsl("given"));
+        QVERIFY(session.shutdown(false));
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QTRY_COMPARE_WITH_TIMEOUT(session.host()->getPass(), qsl("stored"), 10000);
+    }
+
+    void test_installPackage()
+    {
+        const QString name = qsl("Headless Package");
+        QVERIFY(writeProfile(name, QString()));
+        const QString packagePath = mConfigDir.filePath(qsl("headlessPackage.xml"));
+        QFile packageFile(packagePath);
+        QVERIFY(packageFile.open(QIODevice::WriteOnly));
+        packageFile.write(R"(<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE MudletPackage>
+<MudletPackage version="1.001">
+<ScriptPackage><Script isActive="yes" isFolder="no"><name>fromPackage</name><packageName></packageName><script>headlessPackageRan = "yes"</script><eventHandlerList/></Script></ScriptPackage>
+</MudletPackage>
+)");
+        packageFile.close();
+        THeadlessSession session;
+        QVERIFY(!session.installPackage(packagePath));
+        QCOMPARE(session.errorString(), qsl("No profile is open."));
+        QCOMPARE(session.start({.profile = name, .connect = false}), THeadlessSession::StartResult::started);
+        QVERIFY2(session.installPackage(packagePath), qPrintable(session.errorString()));
+        QVERIFY(session.host()->mInstalledPackages.contains(qsl("headlessPackage")));
+        QCOMPARE(luaGlobalString(session.host(), "headlessPackageRan"), qsl("yes"));
+        const QString missing = mConfigDir.filePath(qsl("missing.mpackage"));
+        QVERIFY(!session.installPackage(missing));
+        QVERIFY2(session.errorString().contains(missing), qPrintable(session.errorString()));
     }
 
     void test_aSecondPoolIsRefused()

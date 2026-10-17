@@ -25,6 +25,7 @@
 #include <QString>
 
 #include <memory>
+#include <optional>
 
 class Host;
 class HostManager;
@@ -41,12 +42,22 @@ public:
         // Matched as the GUI's --profile is, ignoring case
         QString profile;
         bool connect = true;
+        // Stored in the profile before the load, as the connection dialog stores what is typed into it, one
+        // left empty keeping what is stored; a host makes a profile there is none of, as the dialog does. A
+        // new profile's tls is stored as it stands: as given, else as the dialog ticks it, on for a predefined
+        // game that uses it; an existing profile's only when given. A port outside 1 to 65535 is refused.
+        QString host;
+        int port = 0;
+        std::optional<bool> tls;
+        QString login;
+        // For this run only; nothing stores it
+        QString password;
     };
 
-    // notSetUp: the profile has no save, or only a settings-only copy, so the GUI has not yet installed its
-    // default packages. poolClosing: the profiles of a session, this one or another, are still closing, from
-    // its shutdown() or, once it is deleted, from the event loop.
-    enum class StartResult { started, noSuchProfile, notSetUp, notOpened, loadFailed, poolClosing };
+    // invalidName: a profile was to be made under a name the connection dialog would not take. poolClosing:
+    // the profiles of a session, this one or another, are still closing, from its shutdown() or, once it is
+    // deleted, from the event loop.
+    enum class StartResult { started, noSuchProfile, invalidName, notOpened, loadFailed, poolClosing };
 
     explicit THeadlessSession(QObject* parent = nullptr);
     // Closes the profiles unsaved, at once or, while one is busy as for shutdown(), a reset is pending or a
@@ -58,7 +69,8 @@ public:
     ~THeadlessSession() override;
 
     // After the application's organisation and name are set, as it reads Mudlet.ini. Refused while a pool
-    // of profiles exists. On loadFailed the profile stays open for the frontend to close, its connect called off.
+    // of profiles exists. A profile loaded for the first time gets its game's default packages, as in the GUI.
+    // On loadFailed the profile stays open for the frontend to close, its connect called off.
     StartResult start(const Options&);
     // Why the last call that failed did
     QString errorString() const { return mErrorString; }
@@ -73,6 +85,9 @@ public:
     // of a paste as a call.
     bool submit(const QString& line);
     bool runLua(const QString& code);
+    // As the GUI installs a package given on its command line, but quietly: what went wrong is errorString()'s
+    // to tell, not the main console's
+    bool installPackage(const QString& path);
 
     // sysExitEvent and, if asked, a save for every profile, then the pool goes. Refused while a profile
     // loads or runs a script, nested event loop or map operation, and during another shutdown(). It may run
@@ -101,6 +116,7 @@ signals:
     void quitRequested();
 
 private:
+    bool storeConnectionDetails(const Options&, std::optional<bool> tls);
     void lineCommitted(int lineIndex);
     bool refused();
     bool usable();

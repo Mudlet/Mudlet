@@ -23,6 +23,7 @@
 #include "HostManager.h"
 #include "MudletApp.h"
 #include "TConsoleModel.h"
+#include "TGameDetails.h"
 #include "TLuaInterpreter.h"
 #include "TMap.h"
 
@@ -31,6 +32,8 @@
 #include <QDir>
 #include <QEventLoop>
 #include <QTimer>
+
+#include <utility>
 
 using namespace std::chrono_literals;
 
@@ -124,63 +127,100 @@ THeadlessSession::StartResult THeadlessSession::start(const Options& options)
     // Before the lookup, as making it settles the config root and reports profiles that the lookup cannot see
     mpPool = std::make_unique<HostManager>();
     mProfileName = MudletApp::getCanonicalProfileName(options.profile);
-    if (mProfileName.isEmpty()) {
+    if (mProfileName.isEmpty() && options.host.isEmpty()) {
         mpPool.reset();
         //: %1 is the profile name given on the command line
         mErrorString = tr("There is no profile named \"%1\".").arg(options.profile);
         return StartResult::noSuchProfile;
     }
-
-    // A profile's first load is where the GUI installs the game's default packages, which nothing here does
-    // yet, and a save made here would keep the GUI from ever doing so
-    const QStringList saves = QDir(MudletApp::getMudletPath(enums::profileXmlFilesPath, mProfileName)).entryList(QStringList{qsl("*.xml")}, QDir::Files);
-    if (saves.isEmpty() || saves == QStringList{qsl("Copied profile (settings only).xml")}) {
+    if (mProfileName.isEmpty()) {
+        // As the dialog takes a new name
+        const QString name = options.profile.trimmed();
+        const QChar invalidChar = MudletApp::firstInvalidProfileNameChar(name);
+        if (!invalidChar.isNull()) {
+            mpPool.reset();
+            //: %1 is the name given for a new profile, %2 a character in it; %3 lists the characters a profile name may have
+            mErrorString = tr("\"%1\" cannot be the name of a profile: the %2 character is not permitted. Use one of the following: %3")
+                                   .arg(name, QString(invalidChar), MudletApp::scmAllowedProfileNameChars);
+            return StartResult::invalidName;
+        }
+        if (!MudletApp::profileNameUsableAsIs(name)) {
+            mpPool.reset();
+            //: %1 is the name given for a new profile, which names no folder of its own, such as "."
+            mErrorString = tr("\"%1\" cannot be the name of a profile.").arg(name);
+            return StartResult::invalidName;
+        }
+        mProfileName = name;
+    }
+    // A new profile's TLS box stands as the dialog ticks it for one: on for a predefined game that uses TLS
+    std::optional<bool> tls = options.tls;
+    if (!tls.has_value() && !options.host.isEmpty() && !QDir(MudletApp::getMudletPath(enums::profileHomePath, mProfileName)).exists()) {
+        const auto game = TGameDetails::findGame(mProfileName);
+        tls = game != TGameDetails::scmDefaultGames.constEnd() && game->tlsEnabled;
+    }
+    if (!storeConnectionDetails(options, tls)) {
         mpPool.reset();
-        //: %1 is a profile name
-        mErrorString = tr("The profile \"%1\" has not been opened in Mudlet yet; open it there once first, so that it is set up.").arg(mProfileName);
-        return StartResult::notSetUp;
+        return StartResult::notOpened;
     }
 
     // The load runs the event loop, where the frontend may delete the session
     const QPointer<THeadlessSession> self(this);
     const unsigned int run = ++mRun;
     mSaveFailed = false;
-    Host* pHost = mpPool->openProfile(mProfileName, options.connect, [this, run](Host* pNewHost) {
-        mpHost = pNewHost;
-        connect(&pNewHost->mainConsoleModel().mNotifier, &TConsoleModelNotifier::lineCommitted, this, &THeadlessSession::lineCommitted);
-        connect(&pNewHost->mainConsoleModel().mNotifier, &TConsoleModelNotifier::textPrinted, this, [this](const QString& text) {
-            emit localText(mProfileName, text);
-        });
-        connect(pNewHost, &Host::signal_errorConsolePrint, this, [this](const QString& text) {
-            emit errorConsoleText(mProfileName, text);
-        });
-        connect(pNewHost, &Host::closeSaveFailed, this, [this]() {
-            mSaveFailed = true;
-        });
-        connect(
-                &pNewHost->mTelnet,
-                &cTelnet::signal_disconnected,
-                this,
-                [this, run]() {
-                    if (run == mRun) {
-                        const QString profile = mProfileName;
-                        emit disconnected(profile);
-                    }
-                },
-                Qt::QueuedConnection);
-        // Queued, so a close during the load is seen once the event loop runs, where quitting can end it; one
-        // that arrives after a later start(), or after the shutdown() that closed this profile, is dropped
-        connect(
-                pNewHost,
-                &QObject::destroyed,
-                this,
-                [this, run]() {
-                    if (run == mRun) {
-                        emit quitRequested();
-                    }
-                },
-                Qt::QueuedConnection);
-    });
+    Host* pHost = mpPool->openProfile(
+            mProfileName,
+            options.connect,
+            [this, run, &options](Host* pNewHost) {
+                mpHost = pNewHost;
+                if (!options.password.isEmpty()) {
+                    pNewHost->setPass(options.password);
+                }
+                connect(&pNewHost->mainConsoleModel().mNotifier, &TConsoleModelNotifier::lineCommitted, this, &THeadlessSession::lineCommitted);
+                connect(&pNewHost->mainConsoleModel().mNotifier, &TConsoleModelNotifier::textPrinted, this, [this](const QString& text) {
+                    emit localText(mProfileName, text);
+                });
+                connect(pNewHost, &Host::signal_errorConsolePrint, this, [this](const QString& text) {
+                    emit errorConsoleText(mProfileName, text);
+                });
+                connect(pNewHost, &Host::closeSaveFailed, this, [this]() {
+                    mSaveFailed = true;
+                });
+                connect(
+                        &pNewHost->mTelnet,
+                        &cTelnet::signal_disconnected,
+                        this,
+                        [this, run]() {
+                            if (run == mRun) {
+                                const QString profile = mProfileName;
+                                emit disconnected(profile);
+                            }
+                        },
+                        Qt::QueuedConnection);
+                // Queued, so a close during the load is seen once the event loop runs, where quitting can end it; one
+                // that arrives after a later start(), or after the shutdown() that closed this profile, is dropped
+                connect(
+                        pNewHost,
+                        &QObject::destroyed,
+                        this,
+                        [this, run]() {
+                            if (run == mRun) {
+                                emit quitRequested();
+                            }
+                        },
+                        Qt::QueuedConnection);
+            },
+            [&options, tls](Host* pNewHost) {
+                // As the dialog's load puts its fields over what the load set, a predefined game's own above all
+                if (!options.host.isEmpty()) {
+                    pNewHost->setUrl(options.host.trimmed());
+                }
+                if (options.port > 0) {
+                    pNewHost->setPort(options.port);
+                }
+                if (tls.has_value()) {
+                    pNewHost->mSslTsl = *tls;
+                }
+            });
     // The GUI connects a profile whose save failed too, but there the player sees why it has no scripts. Unless
     // a script that did load ran the event loop for long enough, the address is still being looked up.
     if (pHost && options.connect && (!self || !pHost->mLoadedOk)) {
@@ -206,6 +246,38 @@ THeadlessSession::StartResult THeadlessSession::start(const Options& options)
     emit profileLoaded(profile);
     return StartResult::started;
 }
+
+// What the connection dialog writes as it is typed into, and Host reads as it is made
+bool THeadlessSession::storeConnectionDetails(const Options& options, const std::optional<bool> tls)
+{
+    QList<std::pair<QString, QString>> items;
+    if (!options.host.isEmpty()) {
+        items.append({qsl("url"), options.host.trimmed()});
+    }
+    if (options.port < 0 || options.port > 65535) {
+        //: %1 is the port number given for a game server
+        mErrorString = tr("The port %1 is not one a game server can be reached on; it must be from 1 to 65535.").arg(options.port);
+        return false;
+    }
+    if (options.port > 0) {
+        items.append({qsl("port"), QString::number(options.port)});
+    }
+    if (tls.has_value()) {
+        items.append({qsl("ssl_tsl"), QString::number(*tls ? Qt::Checked : Qt::Unchecked)});
+    }
+    if (!options.login.isEmpty()) {
+        items.append({qsl("login"), options.login});
+    }
+    for (const auto& [item, value] : items) {
+        if (const auto [stored, reason] = MudletApp::writeProfileData(mProfileName, item, value); !stored) {
+            //: %1 is the internal name of a profile setting, such as url or port, %2 a profile name, %3 the reason it could not be written
+            mErrorString = tr("The %1 of the profile \"%2\" could not be stored: %3").arg(item, mProfileName, reason);
+            return false;
+        }
+    }
+    return true;
+}
+
 Host* THeadlessSession::host() const
 {
     return mpHost.data();
@@ -266,6 +338,21 @@ bool THeadlessSession::runLua(const QString& code)
         }
     }
     return ran;
+}
+
+bool THeadlessSession::installPackage(const QString& path)
+{
+    if (!usable()) {
+        return false;
+    }
+    // The install may run the event loop, where the frontend may delete the session
+    const QPointer<THeadlessSession> self(this);
+    const auto [installed, reason] = mpHost->installPackage(path, enums::PackageModuleType::Package, true);
+    if (!installed && self) {
+        //: %1 is the path of a package file, %2 is why it could not be installed
+        mErrorString = tr("The package \"%1\" could not be installed: %2").arg(path, reason);
+    }
+    return installed;
 }
 
 bool THeadlessSession::shutdown(const bool save)
