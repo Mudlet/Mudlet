@@ -4756,7 +4756,7 @@ Se intentó en estas ubicaciones:
       <location filename="../src/TMCPLuaBridge.cpp" line="373"/>
       <source>Lua error: %1</source>
       <extracomment>Error shown to an AI model when the Lua code it sent failed. %1 is the message from Lua.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Error de Lua:</translation>
     </message>
     <message>
       <location filename="../src/TMCPLuaBridge.cpp" line="351"/>
@@ -4774,13 +4774,13 @@ Se intentó en estas ubicaciones:
       <location filename="../src/TMCPLuaBridge.cpp" line="407"/>
       <source>&lt;too much data, the rest was left out&gt;</source>
       <extracomment>Stands in for the rest of a Lua value that was too big to send to an AI model.</extracomment>
-      <translation type="unfinished"/>
+      <translation>&lt;too much data, the rest was left out&gt;</translation>
     </message>
     <message>
       <location filename="../src/TMCPLuaBridge.cpp" line="556"/>
       <source>&lt;too many keys, the rest were left out&gt;</source>
       <extracomment>Stands in for the keys of a Lua table that were too many to send to an AI model.</extracomment>
-      <translation type="unfinished"/>
+      <translation>&lt;too many keys, the rest were left out&gt;</translation>
     </message>
     <message>
       <location filename="../src/TMCPLuaBridge.cpp" line="579"/>
@@ -5669,7 +5669,7 @@ en la consola principal!</translation>
       <location filename="../src/TMapView.cpp" line="155"/>
       <source>3D</source>
       <extracomment>Button in a secondary map window that shows its map in 3D</extracomment>
-      <translation type="unfinished"/>
+      <translation>3D</translation>
     </message>
     <message>
       <location filename="../src/TMapView.cpp" line="433"/>
@@ -5778,13 +5778,13 @@ Se eliminó al jugador activo más antiguo.</translation>
       <location filename="../src/TPasswordEntry.cpp" line="102"/>
       <source>Hide password</source>
       <extracomment>Name and tooltip of the button that hides the text typed into the hidden-input box again</extracomment>
-      <translation type="unfinished"/>
+      <translation>Ocultar contraseña</translation>
     </message>
     <message>
       <location filename="../src/TPasswordEntry.cpp" line="106"/>
       <source>Show password</source>
       <extracomment>Name and tooltip of the button that shows the text typed into the hidden-input box</extracomment>
-      <translation type="unfinished"/>
+      <translation>Mostrar contraseña</translation>
     </message>
     <message>
       <location filename="../src/TPasswordEntry.cpp" line="115"/>
@@ -5832,7 +5832,7 @@ Se eliminó al jugador activo más antiguo.</translation>
       <location filename="../src/TPasswordEntry.cpp" line="362"/>
       <source>Paste</source>
       <extracomment>Context menu entry of the hidden-input box</extracomment>
-      <translation type="unfinished"/>
+      <translation>Pegar</translation>
     </message>
   </context>
   <context>
@@ -9071,7 +9071,7 @@ Error shown when the update server response cannot be understood</extracomment>
       <location filename="../src/updater/UpdateDialog.cpp" line="649"/>
       <source>Update Error</source>
       <extracomment>Title for the warning dialog shown when the downloaded update could not be started</extracomment>
-      <translation type="unfinished"/>
+      <translation>Error de la actualización</translation>
     </message>
     <message>
       <location filename="../src/updater/UpdateDialog.cpp" line="651"/>
@@ -20883,7 +20883,7 @@ puedes usarla, pero podría haber problemas al alinear columnas de texto</transl
       <location filename="../src/ui/profile_preferences.ui" line="5082"/>
       <source>Copy</source>
       <extracomment>Label of the button that copies the MCP server&apos;s address to the clipboard.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Copiar</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="5127"/>
@@ -20907,7 +20907,7 @@ puedes usarla, pero podría haber problemas al alinear columnas de texto</transl
       <location filename="../src/ui/profile_preferences.ui" line="5185"/>
       <source>Port:</source>
       <extracomment>Label in front of the number entry for the network port the MCP server listens on.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Puerto:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="5195"/>
