@@ -4747,7 +4747,7 @@ Diese Orte wurden ausprobiert:
       <location filename="../src/TMCPLuaBridge.cpp" line="373"/>
       <source>Lua error: %1</source>
       <extracomment>Error shown to an AI model when the Lua code it sent failed. %1 is the message from Lua.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Lua-Fehler: %1</translation>
     </message>
     <message>
       <location filename="../src/TMCPLuaBridge.cpp" line="351"/>
@@ -5651,7 +5651,7 @@ in main console!</source>
       <location filename="../src/TMapView.cpp" line="155"/>
       <source>3D</source>
       <extracomment>Button in a secondary map window that shows its map in 3D</extracomment>
-      <translation type="unfinished"/>
+      <translation>3D</translation>
     </message>
     <message>
       <location filename="../src/TMapView.cpp" line="433"/>
@@ -5759,13 +5759,13 @@ in main console!</source>
       <location filename="../src/TPasswordEntry.cpp" line="102"/>
       <source>Hide password</source>
       <extracomment>Name and tooltip of the button that hides the text typed into the hidden-input box again</extracomment>
-      <translation type="unfinished"/>
+      <translation>Passwort verbergen</translation>
     </message>
     <message>
       <location filename="../src/TPasswordEntry.cpp" line="106"/>
       <source>Show password</source>
       <extracomment>Name and tooltip of the button that shows the text typed into the hidden-input box</extracomment>
-      <translation type="unfinished"/>
+      <translation>Passwort anzeigen</translation>
     </message>
     <message>
       <location filename="../src/TPasswordEntry.cpp" line="115"/>
@@ -5813,7 +5813,7 @@ in main console!</source>
       <location filename="../src/TPasswordEntry.cpp" line="362"/>
       <source>Paste</source>
       <extracomment>Context menu entry of the hidden-input box</extracomment>
-      <translation type="unfinished"/>
+      <translation>Einfügen</translation>
     </message>
   </context>
   <context>
@@ -9039,7 +9039,7 @@ Error shown when the update server response cannot be understood</extracomment>
       <location filename="../src/updater/UpdateDialog.cpp" line="649"/>
       <source>Update Error</source>
       <extracomment>Title for the warning dialog shown when the downloaded update could not be started</extracomment>
-      <translation type="unfinished"/>
+      <translation>Fehler beim Aktualisieren</translation>
     </message>
     <message>
       <location filename="../src/updater/UpdateDialog.cpp" line="651"/>
@@ -20825,7 +20825,7 @@ Du kannst sie verwenden, aber es könnte Probleme mit der Ausrichtung von Textsp
       <location filename="../src/ui/profile_preferences.ui" line="5082"/>
       <source>Copy</source>
       <extracomment>Label of the button that copies the MCP server&apos;s address to the clipboard.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Kopieren</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="5127"/>
@@ -20843,13 +20843,13 @@ Du kannst sie verwenden, aber es könnte Probleme mit der Ausrichtung von Textsp
       <location filename="../src/ui/profile_preferences.ui" line="5145"/>
       <source>Advanced</source>
       <extracomment>Label of the button that folds out the MCP server&apos;s less commonly needed settings.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Fortgeschrittene Einstellungen</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="5185"/>
       <source>Port:</source>
       <extracomment>Label in front of the number entry for the network port the MCP server listens on.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Port:</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="5195"/>
