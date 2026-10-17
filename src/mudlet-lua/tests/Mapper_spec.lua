@@ -5216,18 +5216,43 @@ describe("Tests saveJsonMap and loadJsonMap", function()
       assert.are.equal(2, doors["wriggle"])
     end)
 
-    it("keeps a stub exit's door where the long and short direction names match", function()
+    -- the eight compass directions are the ones whose long and short names differ
+    it("puts a stub exit's door and lock back in each of the twelve directions", function()
+      local directions = {{"north", "n"}, {"northeast", "ne"}, {"northwest", "nw"}, {"east", "e"},
+                          {"west", "w"}, {"south", "s"}, {"southeast", "se"}, {"southwest", "sw"},
+                          {"up", "up"}, {"down", "down"}, {"in", "in"}, {"out", "out"}}
       deleteMap()
       local area = addAreaName("MapperSpecJsonStubDoorArea")
-      roomA = createRoomID(); addRoom(roomA); setRoomArea(roomA, area)
-      setExitStub(roomA, "up", true)
-      setDoor(roomA, "up", 2)
+      -- each direction has a door in one room and locks in the rooms set by its index's bits,
+      -- so a door or lock that came back under another direction's name shows
+      local rooms, expected, locked = {}, {}, {}
+      for roomIndex = 1, 4 do
+        local room = createRoomID(); addRoom(room); setRoomArea(room, area)
+        rooms[roomIndex] = room
+        expected[room], locked[room] = {}, {}
+        for index, direction in ipairs(directions) do
+          setExitStub(room, direction[1], true)
+          if math.ceil(index / 3) == roomIndex then
+            expected[room][direction[2]] = (index - 1) % 3 + 1
+            assert.is_true(setDoor(room, direction[2], expected[room][direction[2]]), direction[1])
+          end
+          locked[room][direction[1]] = math.floor(index / 2 ^ (roomIndex - 1)) % 2 == 1
+          if locked[room][direction[1]] then
+            lockExit(room, direction[1], true)
+          end
+        end
+      end
+      roomA = rooms[1]
 
       roundTrip()
 
-      -- the eight compass directions lose this:
-      -- https://github.com/Mudlet/Mudlet/issues/10369
-      assert.are.equal(2, getDoors(roomA)["up"])
+      for _, room in ipairs(rooms) do
+        local doors = getDoors(room)
+        for _, direction in ipairs(directions) do
+          assert.are.equal(expected[room][direction[2]], doors[direction[2]], direction[1])
+          assert.are.equal(locked[room][direction[1]], hasExitLock(room, direction[1]), direction[1])
+        end
+      end
     end)
 
     it("puts a custom environment colour back", function()
@@ -5679,12 +5704,6 @@ describe("Tests saveJsonMap and loadJsonMap", function()
       assert.are.same({40, 50, 60, 77}, reexported.playerRoomColors[2].color32RGBA)
     end)
 
-    -- TRoom::writeJsonExitStubs looks the stub's door up under the long
-    -- direction name while TRoom::doors is keyed by the short one, so a door on
-    -- a stub survives only for up, down, in and out, whose two spellings match
-    -- https://github.com/Mudlet/Mudlet/issues/10369
-    pending("a stub exit's door is dropped on export in the eight compass directions")
-
     it("replaces the map user data of the map it replaces", function()
       deleteMap()
       local area = addAreaName("MapperSpecJsonMapDataReplacedArea")
@@ -5824,9 +5843,9 @@ describe("Tests saveJsonMap and loadJsonMap", function()
   end)
 
   -- Every import ends in an audit that repairs data no mapper call can produce,
-  -- so these plant the fault into an exported file and read it back in. The last
-  -- one plants valid data rather than a fault, because the export cannot write a
-  -- compass stub's door at all: https://github.com/Mudlet/Mudlet/issues/10369
+  -- so these plant the fault into an exported file and read it back in. The stub
+  -- door and lock test plants valid data rather than a fault, so it pins the
+  -- reader's handling of a stub's door and lock apart from the writer's.
   describe("Tests the audit of an imported JSON map", function()
     local function buildMap()
       deleteMap()
