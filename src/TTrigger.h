@@ -368,27 +368,24 @@ public:
     // trigger, which with no state in progress tests nothing else. Empty, with false, when the line's
     // text cannot rule the trigger out.
     bool treeIndexGrams(std::vector<quint64>& grams) const;
-    // Whether match() would do nothing on this line, so need not be entered: the line held none of
-    // the grams the tree index filed it under, and nothing makes it act on a line it does not match.
-    // One-sided like the index: false leaves match() to decide. mTreeFilterable is only ever true for
-    // a trigger the index files as its patterns now are, so a trigger changed or created mid-line is
-    // visited until the next rebuild; mKeepFiring and the multiline states are read live.
-    bool skippableForLine() const { return mTreeFilterable && mLineStamp != smLineStamp && mKeepFiring <= 0 && mConditionMap.empty(); }
+    // Whether match() would do nothing on this line, so need not be entered: the tree index filed this
+    // trigger and the line held none of its grams, and nothing makes it act on a line it does not
+    // match. One-sided like the index: false leaves match() to decide. A trigger changed or created
+    // mid-line is unfiled until the next rebuild; mKeepFiring and the multiline states are read live.
+    bool skippableForLine() const { return mTreeIndexPosition >= 0 && mLineStamp != smLineStamp && mKeepFiring <= 0 && mConditionMap.empty(); }
     // MUDLET_TREE_INDEX=verify: runs a trigger skippableForLine() would skip and reports it if it acted
     bool verifySkippable(const TUtf8Subject& subject, const QString& haystack, int line, int posOffset, const TBigramFilter* pLineBigrams);
-    static quint64 treeVerifiedSkips() { return smTreeVerifiedSkips; }
     // Stamp of the outermost pass in flight anywhere, which nested passes (a script feeding text back,
     // from any profile) share: a nested line only adds stamps, so nothing the outer line stamped is lost.
     static quint32 lineStamp() { return smLineStamp; }
-    static bool enterPass()
+    static void enterPass()
     {
         if (++smPassDepth != 1) {
-            return false;
+            return;
         }
         if (++smLineStamp == 0) {
             ++smLineStamp;
         }
-        return true;
     }
     static void leavePass() { --smPassDepth; }
     // What a line can dismiss this trigger by without calling into it - the cases cannotMatch() and
@@ -467,10 +464,8 @@ public:
     int mColorTriggerFgAnsi = scmIgnored;
     int mColorTriggerBgAnsi = scmIgnored;
     int mKeepFiring = 0;
-    // Set by TriggerUnit's tree index: the stamp of the last line that held one of this trigger's grams,
-    // and whether the index files this trigger as it now is - see skippableForLine()
+    // Written by TriggerUnit's tree index - see skippableForLine(); the position is -1 while unfiled
     quint32 mLineStamp = 0;
-    bool mTreeFilterable = false;
     int mTreeIndexPosition = -1;
     QPointer<Host> mpHost;
     QString mName;
@@ -595,7 +590,6 @@ private:
     static quint32 smPrescanPassIdCounter;
     static quint32 smLineStamp;
     static int smPassDepth;
-    static quint64 smTreeVerifiedSkips;
     quint32 mPrescanPassId = 0;
     bool mPrescanMayFire = true;
 };

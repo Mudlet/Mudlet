@@ -139,36 +139,22 @@ void TTriggerPrescan::unfileSlot(const int position)
 
 void TTriggerPrescan::rebuild(const std::vector<TTrigger*>& roots)
 {
-    beginRebuild(static_cast<int>(roots.size()));
-    for (TTrigger* root : roots) {
-        fileNextSlot(root->prescanGrams());
-    }
-    endRebuild();
-}
-
-void TTriggerPrescan::beginRebuild(const int slotCount)
-{
     mIndex.clear();
     mUnfiltered.clear();
     mGramPool.clear();
-    mSlotGrams.assign(slotCount, GramRange{});
+    mSlotGrams.assign(roots.size(), GramRange{});
     mGramBits.assign((1u << scmGramBitsLog) / 64, 0);
     mLengthUse.fill(0);
-    mSeen.assign(slotCount, 0);
+    mSeen.assign(roots.size(), 0);
     mGeneration = 0;
     mIndexedSlots = 0;
-    mLiveSlots = slotCount;
+    mLiveSlots = static_cast<int>(roots.size());
     mMutations = 0;
-    mNextRebuildSlot = 0;
-}
 
-void TTriggerPrescan::fileNextSlot(const std::vector<quint64>& grams)
-{
-    fileSlot(mNextRebuildSlot++, grams);
-}
-
-void TTriggerPrescan::endRebuild()
-{
+    const int rootCount = static_cast<int>(roots.size());
+    for (int position = 0; position < rootCount; ++position) {
+        fileSlot(position, roots[position]->prescanGrams());
+    }
     mActive = mIndexedSlots >= scmMinimumIndexedTriggers;
 }
 

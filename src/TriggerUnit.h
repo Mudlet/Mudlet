@@ -99,17 +99,15 @@ public:
     // Both paths build the same index, so this is how a test checks the incremental path keeps full
     // rebuilds flat.
     quint64 prescanRebuildCount() const { return mPrescanRebuilds; }
-    // The whole-tree index files every trigger below a root by its grams, so a line stamps the few it
-    // can reach and match() skips the rest of each folder - see TTrigger::skippableForLine().
-    // MUDLET_TREE_INDEX=0 switches it off; =verify runs what it would skip and reports any that acted.
+    // The whole-tree index - see TTrigger::skippableForLine() and docs/platform-builds.md
     enum class TreeIndexMode { Off, On, Verify };
     static TreeIndexMode treeIndexMode() { return smTreeIndexMode; }
     static bool treeIndexVerifying() { return smTreeIndexMode == TreeIndexMode::Verify; }
-    // Call on any change to a trigger's place below a root or to what its treeIndexGrams() answers
-    void markTreeIndexStale() { mTreeIndexStale = true; }
-    quint64 treeIndexRebuildCount() const { return mTreeIndexRebuilds; }
+    // Call on any change to a trigger's place below a root or to what its treeIndexGrams() answers:
+    // the trigger is visited until the next rebuild files it again
+    void unfileTreeNode(TTrigger* pT);
     // Triggers the last rebuild filed, so a spec can tell the index is armed before it relies on it
-    int treeIndexFiledCount() const { return mTreeIndexFiled; }
+    int treeIndexFiledCount() const { return static_cast<int>(mTreeNodes.size()); }
     void doCleanup();
     void uninstall(const QString&);
     void _uninstall(TTrigger* pChild, const QString& packageName);
@@ -176,7 +174,8 @@ private:
     void collectPrescanTasks(TTrigger* pT);
     void rebuildPrescanTasksIfStale();
     static TreeIndexMode readTreeIndexMode();
-    void collectTreeNodes(TTrigger* pT);
+    void fileTreeNodes(TTrigger* pT, std::vector<quint64>& grams);
+    void clearTreeNodes();
     void rebuildTreeIndex();
     void stampTreeCandidates(const QString& line);
     void stopSameLineCreationLoop(const int chainId);
@@ -231,16 +230,12 @@ private:
     std::vector<int> mCandidates;
     quint64 mPrescanRebuilds = 0;
     static TreeIndexMode smTreeIndexMode;
-    // Every trigger below a root, in walk order, at the last rebuild; a slot is nulled when its trigger
-    // goes, as that can happen mid-pass and a nested pass stamps from this list
+    // Every filed trigger, in walk order, at the last rebuild; a slot is nulled when its trigger goes:
+    // the next rebuild and any nested pass still read this list
     std::vector<TTrigger*> mTreeNodes;
     std::vector<int> mTreeHits;
     TTriggerPrescan mTreeIndex;
     bool mTreeIndexStale = true;
-    int mTreeIndexFiled = 0;
-    quint64 mTreeIndexRebuilds = 0;
-    quint64 mTreeStamps = 0;
-    quint64 mOutermostLines = 0;
     quint32 mUnfilterableEpoch = 0;
     // Moves whenever a trigger changes in a way its TRootTriggerFilter copies,
     // which a pass that has pinned those copies has no other way to hear of

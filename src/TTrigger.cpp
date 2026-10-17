@@ -567,7 +567,6 @@ static void pcre2_match_data_deleter(pcre2_match_data* pointer)
 quint64 TTrigger::smStructureGeneration = 0;
 quint32 TTrigger::smLineStamp = 0;
 int TTrigger::smPassDepth = 0;
-quint64 TTrigger::smTreeVerifiedSkips = 0;
 quint64 TTrigger::smRegexSearches = 0;
 quint32 TTrigger::smPrescanPassId = 0;
 quint32 TTrigger::smPrescanPassIdCounter = 0;
@@ -804,19 +803,17 @@ void TTrigger::rebuildPrescanGrams()
 
 void TTrigger::invalidateTreeIndex()
 {
-    // Visited until the index files the trigger again, which only a rebuild does. A root is never
-    // filed, so the temporary triggers scripts arm every line cost no rebuild.
-    mTreeFilterable = false;
-    if (mpHost && getParent()) {
+    // A root is never filed, so the temporary triggers scripts arm every line cost no rebuild
+    if (mpHost && (mTreeIndexPosition >= 0 || getParent())) {
         if (auto* unit = mpHost->getTriggerUnit()) {
-            unit->markTreeIndexStale();
+            unit->unfileTreeNode(this);
         }
     }
 }
 
 bool TTrigger::verifySkippable(const TUtf8Subject& subject, const QString& haystack, const int line, const int posOffset, const TBigramFilter* pLineBigrams)
 {
-    ++smTreeVerifiedSkips;
+    // A multiline trigger can act by opening a state without firing
     const size_t statesBefore = mConditionMap.size();
     const bool fired = match(subject, haystack, line, posOffset, pLineBigrams, false);
     if (fired || mConditionMap.size() != statesBefore) {
@@ -1981,10 +1978,7 @@ bool TTrigger::match(const TUtf8Subject& subject, const QString& haystack, int l
                     // Only against the line itself: a filter chain's children see its captures, and
                     // the index was built from the text a dropping subject does not carry
                     if (pLineBigrams && !haystackIsCapture && trigger->skippableForLine() && !subject.dropsText()) {
-                        if (Q_LIKELY(!TriggerUnit::treeIndexVerifying())) {
-                            continue;
-                        }
-                        if (trigger->verifySkippable(subject, haystack, line, posOffset, pLineBigrams)) {
+                        if (Q_UNLIKELY(TriggerUnit::treeIndexVerifying()) && trigger->verifySkippable(subject, haystack, line, posOffset, pLineBigrams)) {
                             conditionMet = true;
                         }
                         continue;
