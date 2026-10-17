@@ -152,7 +152,7 @@ public:
     std::pair<bool, QString> deleteCommandLine(const QString& name) override;
     bool setCommandLineAction(const QString& name, int func) override;
     bool resetCommandLineAction(const QString& name) override;
-    std::pair<bool, QString> setCmdLineStyleSheet(const QString&, const QString&) override { return noView(); }
+    std::pair<bool, QString> setCmdLineStyleSheet(const QString& name, const QString& styleSheet) override;
     bool replaceCommandLineText(const QString& name, const QString& text) override;
     bool appendCommandLineText(const QString& name, const QString& text) override;
     bool clearCommandLine(const QString& name) override { return replaceCommandLineText(name, QString()); }
@@ -343,7 +343,7 @@ private:
         // Whether the console holding its own command line shows, once that console has left the registry
         bool consoleShown = true;
         SizeLimits limits;
-        // A text box's QPlainTextEdit::isReadOnly() and own sheet, which its limits depend on
+        // QPlainTextEdit::isReadOnly() and the window's own sheet, which its limits depend on
         bool readOnly = false;
         QString styleSheet;
     };
@@ -399,7 +399,7 @@ private:
     QMovie* shownMovie(const QString& name) const;
     void setLabelVisible(Label& label, bool visible);
     void setLabelSize(Label& label, const QSize& size);
-    void restyleTextBox(const QString& name, PlainWindow& textBox);
+    void restylePlainWindow(const QString& name, PlainWindow& window, bool commandLine);
     void clearLabelContents(Label& label);
 
     TConsoleModel& addSubConsole(const QString& name, TWindowRegistry::SubConsoleKind kind, const QString& windowname);
