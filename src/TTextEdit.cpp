@@ -571,7 +571,7 @@ void TTextEdit::layoutLine(int lineNumber, int lineOfScreen, const TChar& timeSt
     }
     int currentSize = lineText.size();
     if (mpConsole->showTimeStamps()) {
-        const QString& timestamp = mpBuffer->timeBuffer.at(lineNumber);
+        const QString timestamp = mpBuffer->timeStampText(lineNumber);
         for (qsizetype i = 0, total = timestamp.size(); i < total; ++i) {
             // The column argument is not incremented here (is fixed at 0) so
             // the timestamp does not take up any places when it is clicked on
@@ -2906,7 +2906,7 @@ QString TTextEdit::getSelectedText(const QChar& newlineChar, const bool showTime
                 text.append(newlineChar);
             }
             if (showTimestamps) {
-                text.append(mpBuffer->timeBuffer.at(y));
+                text.append(mpBuffer->timeStampText(y));
             }
         }
         text.append(line);
