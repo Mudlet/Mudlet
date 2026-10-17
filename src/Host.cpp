@@ -7084,7 +7084,6 @@ std::pair<bool, QString> Host::setExperimentEnabled(const QString& experimentKey
             }
             mpMap->mapViewsFrontend()->update3DViewAvailability();
         }
-        // Refresh maps if any experiments changed the 3D map
         consoleFrontend()->requestMapRepaint();
     }
 #endif

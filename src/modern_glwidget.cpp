@@ -442,8 +442,8 @@ void ModernGLWidget::showFailure(const QString& message, const QString& advice)
         layout->setContentsMargins(0, 0, 0, 0);
         layout->addWidget(mpFailureLabel);
     }
-    //: Second paragraph of the message shown in place of the 3D map when the modern 3D mapper cannot run; "Use the modern 3D mapper" is the checkbox on the Mapper page of Preferences, so translate it the same way, and keep the <a href="preferences"> and </a> tags, which make Preferences a link that opens it
-    const QString tryClassic = tr("Turn off \"Use the modern 3D mapper\" in <a href=\"preferences\">Preferences</a> to try the classic 3D view; if that stays blank too, use the 2D map.");
+    //: Second paragraph of the message shown in place of the 3D map when the modern 3D mapper cannot run; "Use the modern 3D mapper" is the checkbox on the Mapper page of Settings, so translate both as they appear there, and keep the <a href="settings"> and </a> tags, which make Settings a link that opens the Mapper page at that checkbox
+    const QString tryClassic = tr("Turn off \"Use the modern 3D mapper\" in <a href=\"settings\">Settings</a> to try the classic 3D view; if that stays blank too, use the 2D map.");
     mpFailureLabel->setText(qsl("<p>%1</p><p>%2</p>").arg(message.toHtmlEscaped(), advice.isEmpty() ? tryClassic : advice.toHtmlEscaped()));
     mpFailureLabel->show();
 }
