@@ -144,9 +144,30 @@ THeadlessSession::StartResult THeadlessSession::start(const Options& options)
     // The load runs the event loop, where the frontend may delete the session
     const QPointer<THeadlessSession> self(this);
     const unsigned int run = ++mRun;
+    mSaveFailed = false;
     Host* pHost = mpPool->openProfile(mProfileName, options.connect, [this, run](Host* pNewHost) {
         mpHost = pNewHost;
         connect(&pNewHost->mainConsoleModel().mNotifier, &TConsoleModelNotifier::lineCommitted, this, &THeadlessSession::lineCommitted);
+        connect(&pNewHost->mainConsoleModel().mNotifier, &TConsoleModelNotifier::textPrinted, this, [this](const QString& text) {
+            emit localText(mProfileName, text);
+        });
+        connect(pNewHost, &Host::signal_errorConsolePrint, this, [this](const QString& text) {
+            emit errorConsoleText(mProfileName, text);
+        });
+        connect(pNewHost, &Host::closeSaveFailed, this, [this]() {
+            mSaveFailed = true;
+        });
+        connect(
+                &pNewHost->mTelnet,
+                &cTelnet::signal_disconnected,
+                this,
+                [this, run]() {
+                    if (run == mRun) {
+                        const QString profile = mProfileName;
+                        emit disconnected(profile);
+                    }
+                },
+                Qt::QueuedConnection);
         // Queued, so a close during the load is seen once the event loop runs, where quitting can end it; one
         // that arrives after a later start(), or after the shutdown() that closed this profile, is dropped
         connect(
@@ -350,8 +371,9 @@ bool THeadlessSession::usable()
     if (refused()) {
         return false;
     }
-    // Its aliases and connection stop then, though it is deleted only later
-    if (mpHost->isClosingDown()) {
+    // Refused from the start of a close, while sysExitEvent and the save still run with the connection up, so
+    // nothing reaches the game after sysExitEvent, as the GUI's closing window takes no more typing
+    if (mpHost->closeStarted()) {
         //: Error from a frontend with no window that was given a command or Lua for a profile that had closed
         mErrorString = tr("The profile has closed, so it takes no more commands.");
         return false;

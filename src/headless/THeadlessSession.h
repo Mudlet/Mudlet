@@ -69,7 +69,7 @@ public:
 
     // As typed on the command line; one sent while not connected is reported on the main console, as in the
     // GUI. Both are refused while a profile loads or shutdown() runs, and from an outputLine handler, which
-    // runs mid-commit, and fail once a close has run the profile's exit handlers; submit() checks each line
+    // runs mid-commit, and fail once a close of the profile has begun; submit() checks each line
     // of a paste as a call.
     bool submit(const QString& line);
     bool runLua(const QString& code);
@@ -79,6 +79,8 @@ public:
     // the event loop; a session the frontend deletes there returns at once, false if the save asked for was
     // not yet made.
     bool shutdown(bool save);
+    // Whether a close of the profile, from a script or shutdown(), could not save it
+    bool saveFailed() const { return mSaveFailed; }
 
 signals:
     void profileLoaded(const QString& profile);
@@ -87,6 +89,14 @@ signals:
     // handler must not run the event loop, as a modal dialog does: the profile's own timers may commit
     // another line or close the profile there, in the middle of this line's commit.
     void outputLine(const QString& profile, const QString& text, bool isPrompt);
+    // What the GUI shows only on the profile's own screen, in pieces that need not end a line: text
+    // written to the main console that the game did not send (echo(), print(), commands, Mudlet's
+    // messages), and the error console. Sent as written, so a handler may neither call the session nor
+    // run the event loop.
+    void localText(const QString& profile, const QString& text);
+    void errorConsoleText(const QString& profile, const QString& text);
+    // The connection ended, or could not be made; from the event loop
+    void disconnected(const QString& profile);
     // The session's profile closed; any other profile its scripts opened runs on until shutdown()
     void quitRequested();
 
@@ -99,6 +109,7 @@ private:
     QString mProfileName;
     QString mErrorString;
     bool mShuttingDown = false;
+    bool mSaveFailed = false;
     // Bumped by each start(), and by a shutdown() that closes the profile, to drop a queued quitRequested
     // owed to the one before
     unsigned int mRun = 0;
