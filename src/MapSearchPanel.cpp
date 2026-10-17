@@ -22,6 +22,7 @@
 #include "utils.h"
 
 #include <QApplication>
+#include <QContextMenuEvent>
 #include <QHBoxLayout>
 #include <QKeyEvent>
 #include <QKeySequence>
@@ -35,6 +36,7 @@
 #include <QVBoxLayout>
 
 #include <algorithm>
+#include <utility>
 
 namespace {
 
@@ -255,8 +257,11 @@ MapSearchPanel::MapSearchPanel(QWidget* parent)
 {
     setObjectName(qsl("mapSearchPanel"));
     setFrameShape(QFrame::NoFrame);
-    // The card and its shadow are painted, leaving the corners to the map under them
+    // The card and its shadow are painted, leaving the corners to the map under them. The attribute keeps a profile's
+    // style sheet from painting a background there, which a sheet of the panel's own would do too, but cut it off from
+    // the map's font
     setAutoFillBackground(false);
+    setAttribute(Qt::WA_NoSystemBackground);
     // So that moving over the shadow reaches the map, see event()
     setMouseTracking(true);
 
@@ -315,21 +320,14 @@ MapSearchPanel::MapSearchPanel(QWidget* parent)
 
     mpMessage = new QLabel(this);
     mpMessage->setTextFormat(Qt::PlainText);
-    QFont headingFont = font();
-    headingFont.setWeight(QFont::DemiBold);
-    mpMessage->setFont(headingFont);
     mpMessage->setContentsMargins(4, 6, 4, 0);
     mpHint = new QLabel(this);
     mpHint->setTextFormat(Qt::PlainText);
     mpHint->setWordWrap(true);
     mpHint->setContentsMargins(4, 0, 4, 6);
     mpCount = new QLabel(this);
-    mpCount->setFont(scaled(font(), 0.85));
     mpKeys = new QLabel(this);
-    mpKeys->setFont(scaled(font(), 0.85));
     mpKeys->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
-
-    mpEdit->setFont(scaled(font(), 1.1));
 
     auto* top = new QHBoxLayout();
     top->setContentsMargins(0, 0, 0, 0);
@@ -371,9 +369,6 @@ MapSearchPanel::MapSearchPanel(QWidget* parent)
     // A button takes the arrows itself, to move the focus on
     mpLabels->installEventFilter(this);
     mpClose->installEventFilter(this);
-    // A profile's style sheet reaches the panel through the map's; the card is painted, and the shadow is the map's.
-    // Set once the widgets are made, for the style change it brings restyles them
-    setStyleSheet(qsl("MapSearchPanel#mapSearchPanel { background: transparent; border: none; }"));
     restyle();
     setResults({}, 0);
 }
@@ -406,6 +401,12 @@ int MapSearchPanel::preferredWidth() const
     return std::clamp(fontMetrics().averageCharWidth() * 64, 400, 720) + 2 * scmShadowMargin;
 }
 
+void MapSearchPanel::setRoutable(std::function<bool(int row)> routable)
+{
+    mRoutable = std::move(routable);
+    showKeys();
+}
+
 void MapSearchPanel::setResults(const QList<Row>& rows, const qsizetype total)
 {
     const QString query = mpEdit->text().simplified();
@@ -416,7 +417,6 @@ void MapSearchPanel::setResults(const QList<Row>& rows, const qsizetype total)
         item->setData(KindRole, static_cast<int>(row.kind));
         item->setData(ChipColorRole, row.chip);
         item->setData(Qt::AccessibleTextRole, row.spoken);
-        item->setData(RoutableRole, row.routable);
         const qsizetype start = query.isEmpty() ? -1 : row.title.indexOf(query, 0, Qt::CaseInsensitive);
         item->setData(MatchStartRole, static_cast<int>(start));
         item->setData(MatchLengthRole, start < 0 ? 0 : static_cast<int>(query.size()));
@@ -478,8 +478,8 @@ void MapSearchPanel::showKeys()
                                 : tr("Esc clear"));
         return;
     }
-    const QListWidgetItem* pCurrent = mpList->currentItem();
-    if (!pCurrent || !pCurrent->data(RoutableRole).toBool()) {
+    const int row = mpList->currentRow();
+    if (row < 0 || !mRoutable || !mRoutable(row)) {
         //: Key hints at the foot of the search over the 3D map when no route can be planned to the place chosen, such as a map label
         mpKeys->setText(tr("↑↓ choose · ↵ go · Esc clear"));
         return;
@@ -490,13 +490,25 @@ void MapSearchPanel::showKeys()
 
 void MapSearchPanel::restyle()
 {
-    if (mRestyling) {
-        return;
-    }
-    mRestyling = true;
     // The application's rather than the panel's own, which the style sheets of the consoles around the map turn
     // to its background color
     const QPalette colors = QApplication::palette();
+    if (mStyled && colors == mStyledPalette && font() == mStyledFont) {
+        return;
+    }
+    mStyled = true;
+    mStyledPalette = colors;
+    mStyledFont = font();
+    QFont headingFont = font();
+    headingFont.setWeight(QFont::DemiBold);
+    mpMessage->setFont(headingFont);
+    mpCount->setFont(scaled(font(), 0.85));
+    mpKeys->setFont(scaled(font(), 0.85));
+    mpEdit->setFont(scaled(font(), 1.1));
+    // Each has a style sheet of its own, which keeps the panel's font from reaching it
+    for (QWidget* pWidget : std::initializer_list<QWidget*>{mpLabels, mpList, mpHint}) {
+        pWidget->setFont(font());
+    }
     const QColor window = colors.color(QPalette::Window);
     const QColor text = colors.color(QPalette::WindowText);
     const QColor accent = colors.color(QPalette::Highlight);
@@ -531,8 +543,8 @@ void MapSearchPanel::restyle()
     mpKeys->setStyleSheet(mutedText);
     mpHint->setStyleSheet(mutedText);
     mpMessage->setStyleSheet(qsl("QLabel { background: transparent; color: %1; }").arg(css(text)));
+    mBackdrop = QPixmap();
     update();
-    mRestyling = false;
 }
 
 QRectF MapSearchPanel::card() const
@@ -543,27 +555,39 @@ QRectF MapSearchPanel::card() const
 void MapSearchPanel::paintEvent(QPaintEvent* event)
 {
     Q_UNUSED(event)
-    QPainter painter(this);
-    painter.setRenderHint(QPainter::Antialiasing);
-    const QRectF card = this->card();
-    painter.setPen(Qt::NoPen);
-    // Layered, so that it fades out to nothing; a QGraphicsDropShadowEffect would draw the whole panel off screen first
-    for (int spread = scmShadowMargin; spread > 0; --spread) {
-        const qreal nearness = 1.0 - static_cast<qreal>(spread) / scmShadowMargin;
-        painter.setBrush(QColor(0, 0, 0, qRound(1 + 6 * nearness * nearness)));
-        painter.drawRoundedRect(card.translated(0.0, scmShadowDrop).adjusted(-spread, -spread, spread, spread), scmCardRadius + spread, scmCardRadius + spread);
-    }
+    const qreal ratio = devicePixelRatioF();
     const QPalette colors = QApplication::palette();
-    const QColor window = colors.color(QPalette::Window);
-    painter.setBrush(window);
-    painter.setPen(QPen(mixed(colors.color(QPalette::WindowText), window, 0.78), 1.0));
-    painter.drawRoundedRect(card, scmCardRadius, scmCardRadius);
+    // A caret blink or a hover repaints only its own rectangle, but a list growing as letters are typed repaints all of
+    // it, which took the twelve layers of shadow some 8ms
+    if (mBackdrop.isNull() || mBackdrop.deviceIndependentSize().toSize() != size() || !qFuzzyCompare(mBackdrop.devicePixelRatio(), ratio) || mBackdropPaletteKey != colors.cacheKey()) {
+        mBackdrop = QPixmap((QSizeF(size()) * ratio).toSize());
+        mBackdrop.setDevicePixelRatio(ratio);
+        mBackdrop.fill(Qt::transparent);
+        mBackdropPaletteKey = colors.cacheKey();
+        QPainter painter(&mBackdrop);
+        painter.setRenderHint(QPainter::Antialiasing);
+        const QRectF card = this->card();
+        painter.setPen(Qt::NoPen);
+        // Layered, so that it fades out to nothing; a QGraphicsDropShadowEffect would draw the whole panel off screen first
+        for (int spread = scmShadowMargin; spread > 0; --spread) {
+            const qreal nearness = 1.0 - static_cast<qreal>(spread) / scmShadowMargin;
+            painter.setBrush(QColor(0, 0, 0, qRound(1 + 6 * nearness * nearness)));
+            painter.drawRoundedRect(card.translated(0.0, scmShadowDrop).adjusted(-spread, -spread, spread, spread), scmCardRadius + spread, scmCardRadius + spread);
+        }
+        const QColor window = colors.color(QPalette::Window);
+        painter.setBrush(window);
+        painter.setPen(QPen(mixed(colors.color(QPalette::WindowText), window, 0.78), 1.0));
+        painter.drawRoundedRect(card, scmCardRadius, scmCardRadius);
+    }
+    QPainter painter(this);
+    painter.drawPixmap(0, 0, mBackdrop);
 }
 
 void MapSearchPanel::keyPressEvent(QKeyEvent* event)
 {
     // Typed on the toggle or the close button, which leave it to the panel
-    if (!(event->modifiers() & (Qt::ControlModifier | Qt::AltModifier | Qt::MetaModifier)) && !event->text().isEmpty() && event->text().at(0).isPrint()) {
+    // Not one the box itself left, such as while it is read only, which would come straight back here
+    if (focusWidget() != mpEdit && !(event->modifiers() & (Qt::ControlModifier | Qt::AltModifier | Qt::MetaModifier)) && !event->text().isEmpty() && event->text().at(0).isPrint()) {
         mpEdit->setFocus(Qt::OtherFocusReason);
         QApplication::sendEvent(mpEdit, event);
     }
@@ -606,6 +630,17 @@ bool MapSearchPanel::event(QEvent* event)
             return false;
         }
         break;
+    case QEvent::ContextMenu: {
+        // The map opens its own menu on a right-button release, but would answer the Menu key or a menu a widget
+        // here leaves, such as the toggle's, with it too
+        const auto* menuEvent = static_cast<QContextMenuEvent*>(event);
+        if (menuEvent->reason() == QContextMenuEvent::Mouse && !card().contains(menuEvent->pos())) {
+            event->ignore();
+            return false;
+        }
+        break;
+    }
+    case QEvent::FontChange:
     case QEvent::PaletteChange:
     case QEvent::StyleChange: {
         // Not in changeEvent(), which a style sheet around the panel keeps the palette change from; Mudlet's light/dark
@@ -617,7 +652,7 @@ bool MapSearchPanel::event(QEvent* event)
     default:
         return QFrame::event(event);
     }
-    // Or a tooltip none of the panel's widgets has would be the map's, for whatever lies under the card
+    // Or a tooltip or a menu none of the panel's widgets has would be the map's, for whatever lies under the card
     QFrame::event(event);
     event->accept();
     return true;
@@ -667,6 +702,15 @@ bool MapSearchPanel::eventFilter(QObject* watched, QEvent* event)
         return true;
     case Qt::Key_Return:
     case Qt::Key_Enter:
+        // As a button's own Space does, rather than choosing what is listed
+        if (watched == mpClose) {
+            dismiss();
+            return true;
+        }
+        if (watched == mpLabels) {
+            mpLabels->toggle();
+            return true;
+        }
         if (mpList->currentRow() >= 0) {
             emit resultChosen(mpList->currentRow(), keyEvent->modifiers().testFlag(Qt::ControlModifier));
         }

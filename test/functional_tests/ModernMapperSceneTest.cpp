@@ -2044,9 +2044,28 @@ private slots:
         QCOMPARE(pPanel->currentRow(), 0);
         QCoreApplication::sendEvent(pPanel->mpClose, &up);
         QCOMPARE(pPanel->currentRow(), 1);
+        // Enter on the toggle turns it, and on the close button closes; only the box chooses a place
         QSignalSpy chosen(pPanel, &MapSearchPanel::resultChosen);
         QKeyEvent enter(QEvent::KeyPress, Qt::Key_Return, Qt::NoModifier);
         QCoreApplication::sendEvent(pPanel->mpLabels, &enter);
+        QVERIFY(!pPanel->labelsIncluded());
+        QCOMPARE(chosen.size(), 0);
+        QCoreApplication::sendEvent(pPanel->mpLabels, &enter);
+        QVERIFY(pPanel->labelsIncluded());
+        QCOMPARE(pPanel->currentRow(), 0);
+        QCoreApplication::sendEvent(pPanel->mpEdit, &down);
+        QCoreApplication::sendEvent(pPanel->mpClose, &enter);
+        QVERIFY(pPanel->isHidden());
+        QCOMPARE(chosen.size(), 0);
+        widget.openSearch();
+        QKeyEvent space(QEvent::KeyPress, Qt::Key_Space, Qt::NoModifier, qsl(" "));
+        QKeyEvent spaceUp(QEvent::KeyRelease, Qt::Key_Space, Qt::NoModifier, qsl(" "));
+        QCoreApplication::sendEvent(pPanel->mpClose, &space);
+        QCoreApplication::sendEvent(pPanel->mpClose, &spaceUp);
+        QVERIFY(pPanel->isHidden());
+        widget.openSearch();
+        QCoreApplication::sendEvent(pPanel->mpEdit, &down);
+        QCoreApplication::sendEvent(pPanel->mpEdit, &enter);
         QCOMPARE(chosen.size(), 1);
         QCOMPARE(chosen.first().first().toInt(), 1);
         finishFlight(widget);
@@ -2228,6 +2247,160 @@ private slots:
         QVERIFY(pPanel->mpEdit->styleSheet().contains(qsl("rgba(101, 67, 33, 255)")));
         QVERIFY(pPanel->mpLabels->styleSheet().contains(qsl("rgba(101, 67, 33, 255)")));
         QVERIFY(!pPanel->mpMessage->styleSheet().contains(qsl("rgba(255, 0, 0")));
+    }
+
+    void test_theSearchPanelsCardFollowsItsSizeAndColorsWithoutGL()
+    {
+        QWidget window;
+        auto* pPanel = new MapSearchPanel(&window);
+        const auto backdrop = [](MapSearchPanel* pWhich) {
+            QImage image(pWhich->size(), QImage::Format_ARGB32_Premultiplied);
+            image.fill(Qt::transparent);
+            pWhich->render(&image, {}, {}, QWidget::RenderFlags());
+            return image;
+        };
+        pPanel->resize(400, 200);
+        backdrop(pPanel);
+        pPanel->resize(300, 260);
+        auto* pFresh = new MapSearchPanel(&window);
+        pFresh->resize(300, 260);
+        QCOMPARE(backdrop(pPanel), backdrop(pFresh));
+
+        const QPalette before = QApplication::palette();
+        auto restore = qScopeGuard([&before]() {
+            QApplication::setPalette(before);
+        });
+        QPalette changed = before;
+        changed.setColor(QPalette::Window, QColor(12, 120, 34));
+        QApplication::setPalette(changed);
+        QCOMPARE(backdrop(pPanel).pixelColor(150, 130), QColor(12, 120, 34));
+    }
+
+    void test_theSearchPanelKeepsItsInputFromTheMapWithoutGL()
+    {
+        // The window stands in for the map under the panel
+        QWidget window;
+        window.resize(900, 700);
+        auto* pPanel = new MapSearchPanel(&window);
+        pPanel->setGeometry(0, 0, pPanel->preferredWidth(), pPanel->sizeHint().height());
+        window.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&window));
+        EventCounter menus(&window, QEvent::ContextMenu);
+        EventCounter presses(&window, QEvent::MouseButtonPress);
+        // What Qt makes of a second touch so soon after the first
+        EventCounter doublePresses(&window, QEvent::MouseButtonDblClick);
+        EventCounter keys(&window, QEvent::KeyPress);
+        const auto menuOn = [](QWidget* pWidget, const QPoint& where, const QContextMenuEvent::Reason reason) {
+            QContextMenuEvent event(reason, where, pWidget->mapToGlobal(where));
+            QCoreApplication::sendEvent(pWidget, &event);
+        };
+
+        // A right click or the Menu key anywhere on the card is the panel's
+        for (QWidget* pWidget : std::initializer_list<QWidget*>{pPanel->mpLabels, pPanel->mpClose, pPanel->mpMessage, pPanel->mpHint, pPanel->mpKeys}) {
+            menuOn(pWidget, pWidget->rect().center(), QContextMenuEvent::Mouse);
+        }
+        menuOn(pPanel->mpLabels, pPanel->mpLabels->rect().center(), QContextMenuEvent::Keyboard);
+        menuOn(pPanel, QPoint(MapSearchPanel::scmShadowMargin + 4, pPanel->height() / 2), QContextMenuEvent::Mouse);
+        QCOMPARE(menus.count, 0);
+        // But on the shadow around it, the map's
+        menuOn(pPanel, QPoint(2, 2), QContextMenuEvent::Mouse);
+        QCOMPARE(menus.count, 1);
+
+        // A touch on the card works its buttons and goes no further; on the shadow, it reaches the map
+        QPointingDevice* pTouch = QTest::createTouchDevice();
+        const QPoint onLabels = pPanel->mpLabels->mapTo(&window, pPanel->mpLabels->rect().center());
+        QTest::touchEvent(&window, pTouch).press(0, onLabels);
+        QTest::touchEvent(&window, pTouch).release(0, onLabels);
+        QCoreApplication::processEvents();
+        QVERIFY(!pPanel->labelsIncluded());
+        QCOMPARE(presses.count + doublePresses.count, 0);
+        QTest::touchEvent(&window, pTouch).press(0, QPoint(2, 2));
+        QTest::touchEvent(&window, pTouch).release(0, QPoint(2, 2));
+        QCoreApplication::processEvents();
+        QCOMPARE(presses.count + doublePresses.count, 1);
+
+        // A key the box leaves is not handed back to it, over and over
+        pPanel->mpEdit->setReadOnly(true);
+        pPanel->mpLabels->setFocus(Qt::OtherFocusReason);
+        QKeyEvent letter(QEvent::KeyPress, Qt::Key_L, Qt::NoModifier, qsl("l"));
+        QCoreApplication::sendEvent(pPanel->mpLabels, &letter);
+        QVERIFY(pPanel->text().isEmpty());
+        QCOMPARE(keys.count, 0);
+        pPanel->mpEdit->setReadOnly(false);
+
+        // Not restyled by a change that leaves its colors and font as they were
+        pPanel->mpCount->setStyleSheet(qsl("QLabel { }"));
+        QEvent styleChange(QEvent::StyleChange);
+        QCoreApplication::sendEvent(pPanel, &styleChange);
+        QEvent paletteChange(QEvent::PaletteChange);
+        QCoreApplication::sendEvent(pPanel, &paletteChange);
+        QCOMPARE(pPanel->mpCount->styleSheet(), qsl("QLabel { }"));
+
+        // Sized from the font the profile gives it, as that changes
+        QFont larger = window.font();
+        larger.setPointSizeF(21.0);
+        window.setFont(larger);
+        QCOMPARE(pPanel->mpMessage->font().pointSizeF(), 21.0);
+        QCOMPARE(pPanel->mpMessage->font().weight(), QFont::DemiBold);
+        QCOMPARE(pPanel->mpEdit->font().pointSizeF(), 21.0 * 1.1);
+        QCOMPARE(pPanel->mpCount->font().pointSizeF(), 21.0 * 0.85);
+        QCOMPARE(pPanel->mpHint->font().pointSizeF(), 21.0);
+        QCOMPARE(pPanel->mpList->font().pointSizeF(), 21.0);
+        QCOMPARE(pPanel->mpLabels->font().pointSizeF(), 21.0);
+        QCOMPARE(pPanel->mpKeys->font().pointSizeF(), 21.0 * 0.85);
+        QVERIFY(pPanel->mpCount->styleSheet() != qsl("QLabel { }"));
+    }
+
+    void test_theSearchPanelIsTallEnoughForItsHintInANarrowViewWithoutGL()
+    {
+        const auto [westId, eastId] = addTwoAreas(6);
+        Q_UNUSED(eastId)
+        ModernGLWidget widget(map(), mpHost);
+        queueFrame(widget, westId, 1.5f);
+        widget.openSearch();
+        MapSearchPanel* pPanel = widget.mpSearchPanel;
+        QVERIFY(!pPanel->mpHint->isHidden());
+        // The hint wraps onto more lines than the panel's size hint allows for
+        widget.resize(240, 700);
+        widget.placeSearchPanel();
+        QCOMPARE(pPanel->width(), 240);
+        QVERIFY(pPanel->heightForWidth(240) > pPanel->sizeHint().height());
+        QCOMPARE(pPanel->height(), pPanel->heightForWidth(240));
+        pPanel->layout()->setGeometry(pPanel->rect());
+        QVERIFY(pPanel->mpHint->height() >= pPanel->mpHint->heightForWidth(pPanel->mpHint->width()));
+        QVERIFY(pPanel->mpHint->geometry().bottom() < pPanel->mpKeys->geometry().top());
+        QVERIFY(pPanel->mpMessage->geometry().bottom() < pPanel->mpHint->geometry().top());
+    }
+
+    void test_theSearchOffersARouteOnlyWhileThePlayerIsElsewhere()
+    {
+        if (!glAvailable()) {
+            QSKIP("no OpenGL context on this platform");
+        }
+        const auto [westId, eastId] = addTwoAreas(6);
+        Q_UNUSED(westId)
+        Q_UNUSED(eastId)
+        map()->mpRoomDB->getRoom(3)->name = qsl("Lighthouse");
+        map()->setUnsaved(__func__);
+        ModernGLWidget widget(map(), mpHost);
+        widget.resize(800, 600);
+        widget.grabFramebuffer();
+        if (!widget.isValid() || !widget.failureMessage().isEmpty()) {
+            QSKIP("no OpenGL context on this platform");
+        }
+        widget.openSearch();
+        MapSearchPanel* pPanel = widget.mpSearchPanel;
+        pPanel->mpEdit->setText(qsl("lighthouse"));
+        QCOMPARE(widget.mSearchResults.value(0).id, 3);
+        const QString routeKeys = qsl("↑↓ choose · ↵ go · %1↵ route · Esc clear").arg(QKeySequence(Qt::CTRL).toString(QKeySequence::NativeText));
+        QCOMPARE(pPanel->mpKeys->text(), routeKeys);
+        // The player walks into it, and the map is drawn again as it always is for a move
+        map()->mRoomIdHash[map()->mProfileName] = 3;
+        widget.grabFramebuffer();
+        QCOMPARE(pPanel->mpKeys->text(), qsl("↑↓ choose · ↵ go · Esc clear"));
+        map()->mRoomIdHash[map()->mProfileName] = 0;
+        widget.grabFramebuffer();
+        QCOMPARE(pPanel->mpKeys->text(), routeKeys);
     }
 
     void benchmark_worldSearch()

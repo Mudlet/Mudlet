@@ -23,10 +23,15 @@
 #include "MapSearch.h"
 
 #include <QColor>
+#include <QFont>
 #include <QFrame>
 #include <QList>
+#include <QPalette>
+#include <QPixmap>
 #include <QRectF>
 #include <QString>
+
+#include <functional>
 
 class QAction;
 class QLabel;
@@ -43,7 +48,7 @@ class MapSearchPanel : public QFrame
 
 public:
     // What each place listed carries for the list's delegate, beyond its title as the display text
-    enum ItemRole { DetailRole = Qt::UserRole + 1, KindRole, ChipColorRole, MatchStartRole, MatchLengthRole, RoutableRole };
+    enum ItemRole { DetailRole = Qt::UserRole + 1, KindRole, ChipColorRole, MatchStartRole, MatchLengthRole };
 
     struct Row
     {
@@ -54,8 +59,6 @@ public:
         QString spoken;
         // A room's environment color; none for the others
         QColor chip;
-        // Whether Ctrl+Enter can plan a route to it
-        bool routable = false;
     };
 
     // The room around the card left for its shadow, which still belongs to the panel
@@ -71,6 +74,10 @@ public:
     void setResults(const QList<Row>& rows, qsizetype total);
     int currentRow() const;
     int preferredWidth() const;
+    // Whether Ctrl+Enter can plan a route to a row listed, asked again whenever the key hints are shown
+    void setRoutable(std::function<bool(int row)> routable);
+    // For when the answer may have changed, such as the player having moved
+    void showKeys();
 
 signals:
     void queryChanged();
@@ -90,7 +97,6 @@ private:
     void step(int rows);
     void restyle();
     void showState(qsizetype shown, qsizetype total);
-    void showKeys();
     QRectF card() const;
 
     QLineEdit* mpEdit = nullptr;
@@ -102,7 +108,14 @@ private:
     QLabel* mpHint = nullptr;
     QLabel* mpCount = nullptr;
     QLabel* mpKeys = nullptr;
-    bool mRestyling = false;
+    std::function<bool(int row)> mRoutable;
+    // What the widgets were last styled for, as a light/dark switch brings both a palette and a style change
+    QPalette mStyledPalette;
+    QFont mStyledFont;
+    bool mStyled = false;
+    // The shadow and the card under the widgets, drawn again only when the panel's size or look changes
+    QPixmap mBackdrop;
+    qint64 mBackdropPaletteKey = 0;
     // A press on the shadow around the card, whose drag and release go on to the map with it
     bool mPassingThrough = false;
 };
