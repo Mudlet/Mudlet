@@ -67,6 +67,8 @@ public:
     ~TTextEdit();
     void paintEvent(QPaintEvent*) override;
     void contextMenuEvent(QContextMenuEvent* event) override;
+    // The console's own menu, without anything for a link at that position
+    void showContextMenu(const QPoint& globalPosition);
     void drawForeground(QPainter&, const QRect&);
     void showNewLines();
     void forceUpdate();
