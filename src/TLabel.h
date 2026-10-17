@@ -71,6 +71,7 @@ public:
     QSize sizeHint() const override;
     void contextMenuEvent(QContextMenuEvent*) override;
     void setClickThrough(bool clickthrough);
+    void endLinkHover();
     void setBackgroundColor(const QColor& color);
     bool restyle(const QString& sheet);
     void setLinkStyle(const QString& linkColor, const QString& linkVisitedColor, bool underline = true);
@@ -119,6 +120,8 @@ private:
 
     bool carriesLink() const;
     void applyBackgroundColor();
+    void showLinkStyledText(const QString& text);
+    void reapplyLinkStyle();
 
     QColor& mBackgroundColor;
     QPixmap mSvgPixmapCache;

@@ -89,7 +89,7 @@ private:
         return QFileInfo::exists(qsl("%1/portable.txt").arg(QFileInfo(appBinary()).absolutePath())) || QFileInfo::exists(qsl("%1/.config/mudlet/portable.txt").arg(QDir::homePath()));
     }
 
-    static QProcessEnvironment childEnvironment(const QTemporaryDir& sandbox, const QString& platformPlugin)
+    static QProcessEnvironment childEnvironment(const QTemporaryDir& sandbox, const QString& platformPlugin, const QString& systemLocale)
     {
         QProcessEnvironment environment = QProcessEnvironment::systemEnvironment();
         // ctest sets QT_QPA_PLATFORM=offscreen for every functional test and the
@@ -104,8 +104,11 @@ private:
         // in English. The C locale also makes loadTranslationsForCommandLine()
         // return early, rather than the rows depending on which catalogues this
         // build ships.
-        environment.insert(qsl("LC_ALL"), qsl("C"));
-        environment.insert(qsl("LANG"), qsl("C"));
+        environment.insert(qsl("LC_ALL"), systemLocale);
+        environment.insert(qsl("LANG"), systemLocale);
+        // Set, it stops applyHighDpiRoundingPolicyFromConfig() reading Mudlet.ini,
+        // and so changes which reader is first to parse it and hear of its errors
+        environment.remove(qsl("QT_SCALE_FACTOR_ROUNDING_POLICY"));
         // A root of its own per run, so the child reads none of the developer's
         // profiles and leaves nothing behind.
         environment.insert(qsl("XDG_CONFIG_HOME"), qsl("%1/config").arg(sandbox.path()));
@@ -117,8 +120,16 @@ private:
     }
 
     // Reports rather than asserts: a QVERIFY2 in a helper returns from the
-    // helper only, which would let a failing row carry on into its later checks
-    static RunOutcome runChild(const QStringList& arguments, const QString& platformPlugin, const QString& settingsLanguage)
+    // helper only, which would let a failing row carry on into its later checks.
+    // An unreadable settings file is a directory in its place, as a test run as
+    // root reads a file whatever its permissions say. Raw settings contents are
+    // written byte for byte, for a file QSettings itself would never write.
+    static RunOutcome runChild(const QStringList& arguments,
+                               const QString& platformPlugin,
+                               const QString& settingsLanguage,
+                               const bool settingsUnreadable = false,
+                               const QByteArray& settingsContents = QByteArray(),
+                               const QString& systemLocale = qsl("C"))
     {
         RunOutcome outcome;
 
@@ -133,6 +144,17 @@ private:
             outcome.processFailure = qsl("could not make a config root under %1").arg(sandbox.path());
             return outcome;
         }
+        if (settingsUnreadable && !QDir().mkpath(qsl("%1/config/mudlet/Mudlet.ini").arg(sandbox.path()))) {
+            outcome.processFailure = qsl("could not put a directory where the settings file goes under %1").arg(sandbox.path());
+            return outcome;
+        }
+        if (!settingsContents.isEmpty()) {
+            QFile settingsFile(qsl("%1/config/mudlet/Mudlet.ini").arg(sandbox.path()));
+            if (!settingsFile.open(QIODevice::WriteOnly) || settingsFile.write(settingsContents) != settingsContents.size()) {
+                outcome.processFailure = qsl("could not write the settings file under %1").arg(sandbox.path());
+                return outcome;
+            }
+        }
         if (!settingsLanguage.isEmpty()) {
             QSettings settings(qsl("%1/config/mudlet/Mudlet.ini").arg(sandbox.path()), QSettings::IniFormat);
             settings.setValue(qsl("interfaceLanguage"), settingsLanguage);
@@ -144,7 +166,7 @@ private:
         }
 
         QProcess mudlet;
-        mudlet.setProcessEnvironment(childEnvironment(sandbox, platformPlugin));
+        mudlet.setProcessEnvironment(childEnvironment(sandbox, platformPlugin, systemLocale));
         mudlet.setProgram(appBinary());
         mudlet.setArguments(arguments);
         mudlet.start();
@@ -205,16 +227,14 @@ private slots:
         QTest::newRow("-mp -h") << QStringList{qsl("-mp"), qsl("-h")} << bogusPlatformPlugin() << QString() << helpMarker << versionMarker;
 
         // Qt's own options are still in the list such a run is read from, so
-        // they must neither be compacted into a letter that means something to
-        // Mudlet - the 'h' of -stylesheet answering with the help page - nor be
-        // reported as unknown
+        // they must not be compacted into a letter that means something to
+        // Mudlet - the 'h' of -stylesheet answering with the help page. That
+        // they are not called unknown either is checked on standard error, by
+        // diagnosticsStayOffStandardOutput()
         QTest::newRow("-stylesheet, then --version") << QStringList{qsl("-stylesheet"), qsl("headless-version-test.qss"), qsl("--version")} << bogusPlatformPlugin() << QString() << versionMarker
                                                      << QStringList{qsl("Report bugs to"), qsl("Warning:")};
         QTest::newRow("--reverse --version") << QStringList{qsl("--reverse"), qsl("--version")} << bogusPlatformPlugin() << QString() << versionMarker
                                              << QStringList{qsl("Report bugs to"), qsl("Warning:")};
-
-        // An option that really is unknown is still tolerated, and still said so
-        QTest::newRow("--bogus --version") << QStringList{qsl("--bogus"), qsl("--version")} << bogusPlatformPlugin() << QString() << QStringList{qsl("GPLv3"), qsl("Warning:")} << helpMarker;
 
         // These texts are translated before they are printed, and the interface
         // language is read from the settings file without setupConfig() having
@@ -256,6 +276,242 @@ private slots:
         }
         for (const QString& unwanted : mustNotContain) {
             QVERIFY2(!outcome.standardOutput.contains(unwanted), qPrintable(qsl("mudlet %1 answered with \"%2\" in it; %3").arg(where, unwanted, diagnostics)));
+        }
+    }
+
+    // Standard output is what a script reading --version parses, so anything
+    // said about the command line goes to standard error instead
+    void diagnosticsStayOffStandardOutput_data()
+    {
+        QTest::addColumn<QStringList>("arguments");
+        // Text only the page asked for prints, and text only the other page
+        // prints, so a run that printed nothing, the other page or both fails
+        QTest::addColumn<QString>("outputMarker");
+        QTest::addColumn<QString>("otherPageMarker");
+        QTest::addColumn<QStringList>("errorMustContain");
+        QTest::addColumn<QStringList>("errorMustNotContain");
+
+        const QString versionMarker{qsl("GPLv3")};
+        const QString helpMarker{qsl("Report bugs to")};
+        QTest::newRow("--bogus --version") << QStringList{qsl("--bogus"), qsl("--version")} << versionMarker << helpMarker << QStringList{qsl("Unknown option 'bogus'")} << QStringList();
+        QTest::newRow("--bogus --help") << QStringList{qsl("--bogus"), qsl("--help")} << helpMarker << versionMarker << QStringList{qsl("Unknown option 'bogus'")} << QStringList();
+
+        // Qt's own options that the help text does not document are still
+        // Qt's, and not unknown
+        const QStringList notUnknown{qsl("Unknown option")};
+        // A real plugin here would outrank the bogus one in the environment, so
+        // a run that built a QApplication would start and pass
+        QTest::newRow("-platform <bogus> --version") << QStringList{qsl("-platform"), bogusPlatformPlugin(), qsl("--version")} << versionMarker << helpMarker << QStringList() << notUnknown;
+        QTest::newRow("-session x --version") << QStringList{qsl("-session"), qsl("x"), qsl("--version")} << versionMarker << helpMarker << QStringList() << notUnknown;
+        QTest::newRow("-qwindowgeometry 100x100 --help") << QStringList{qsl("-qwindowgeometry"), qsl("100x100"), qsl("--help")} << helpMarker << versionMarker << QStringList() << notUnknown;
+        // Should a Qt option take the -h as its value, the run is still answered,
+        // as though Qt's options were unknown
+        QTest::newRow("--name --help") << QStringList{qsl("--name"), qsl("--help")} << helpMarker << versionMarker << QStringList{qsl("Unknown option 'name'")} << QStringList();
+        QTest::newRow("-qwindowtitle t -display :0 --version") << QStringList{qsl("-qwindowtitle"), qsl("t"), qsl("-display"), qsl(":0"), qsl("--version")} << versionMarker << helpMarker
+                                                               << QStringList() << notUnknown;
+
+        // Each flag main() knows as Qt's, sync included: one declared as taking
+        // a value would take the --version as it
+        for (const QString& flag : {qsl("dograb"), qsl("nograb"), qsl("qdebug"), qsl("qdevel"), qsl("reverse"), qsl("sync"), qsl("testability"), qsl("widgetcount")}) {
+            for (const QString& spelling : {qsl("-%1").arg(flag), qsl("--%1").arg(flag)}) {
+                QTest::newRow(qPrintable(qsl("%1 --version").arg(spelling))) << QStringList{spelling, qsl("--version")} << versionMarker << helpMarker << QStringList() << notUnknown;
+            }
+        }
+        // Declared as a flag, one would leave the -h after it asking for the
+        // help page, so only an option that takes it as its value prints the version alone
+        for (const QString& valued : {qsl("style"),
+                                      qsl("stylesheet"),
+                                      qsl("qmljsdebugger"),
+                                      qsl("platform"),
+                                      qsl("platformpluginpath"),
+                                      qsl("platformtheme"),
+                                      qsl("plugin"),
+                                      qsl("qwindowgeometry"),
+                                      qsl("qwindowicon"),
+                                      qsl("qwindowtitle"),
+                                      qsl("session"),
+                                      qsl("display"),
+                                      qsl("geometry"),
+                                      qsl("icon"),
+                                      qsl("name"),
+                                      qsl("title"),
+                                      qsl("visual")}) {
+            QTest::newRow(qPrintable(qsl("-%1 -h --version").arg(valued)))
+                    << QStringList{qsl("-%1").arg(valued), qsl("-h"), qsl("--version")} << versionMarker << helpMarker << QStringList() << notUnknown;
+            QTest::newRow(qPrintable(qsl("--%1=v --version").arg(valued))) << QStringList{qsl("--%1=v").arg(valued), qsl("--version")} << versionMarker << helpMarker << QStringList() << notUnknown;
+        }
+    }
+
+    void diagnosticsStayOffStandardOutput()
+    {
+        QFETCH(QStringList, arguments);
+        QFETCH(QString, outputMarker);
+        QFETCH(QString, otherPageMarker);
+        QFETCH(QStringList, errorMustContain);
+        QFETCH(QStringList, errorMustNotContain);
+
+        QVERIFY2(QFileInfo::exists(appBinary()), qPrintable(qsl("no application binary at %1").arg(appBinary())));
+        if (portableMarkerWouldWin()) {
+            QSKIP("a portable.txt would send the child at the real config instead of the sandbox");
+        }
+
+        const RunOutcome outcome = runChild(arguments, bogusPlatformPlugin(), QString());
+        const QString where = arguments.join(QChar::Space);
+        QVERIFY2(outcome.processFailure.isEmpty(), qPrintable(qsl("mudlet %1: %2").arg(where, outcome.processFailure)));
+
+        const QString diagnostics = qsl("%1, stdout:\n%2\nstderr:\n%3").arg(where, outcome.standardOutput, outcome.standardError);
+        QVERIFY2(!outcome.standardError.contains(qsl("QGuiApplication")), qPrintable(qsl("main() reached GUI code with no QApplication; %1").arg(diagnostics)));
+        QVERIFY2(outcome.exitStatus == QProcess::NormalExit && outcome.exitCode == 0, qPrintable(qsl("mudlet %1 did not exit cleanly; %2").arg(where, diagnostics)));
+        QVERIFY2(!outcome.standardOutput.contains(qsl("Warning:")), qPrintable(qsl("mudlet %1 warned on standard output; %2").arg(where, diagnostics)));
+        QVERIFY2(outcome.standardOutput.contains(outputMarker), qPrintable(qsl("mudlet %1 printed nothing that says \"%2\"; %3").arg(where, outputMarker, diagnostics)));
+        QVERIFY2(!outcome.standardOutput.contains(otherPageMarker), qPrintable(qsl("mudlet %1 printed the other page too, with \"%2\"; %3").arg(where, otherPageMarker, diagnostics)));
+
+        for (const QString& expected : errorMustContain) {
+            QVERIFY2(outcome.standardError.contains(expected), qPrintable(qsl("mudlet %1 said nothing on standard error that says \"%2\"; %3").arg(where, expected, diagnostics)));
+        }
+        for (const QString& unwanted : errorMustNotContain) {
+            QVERIFY2(!outcome.standardError.contains(unwanted), qPrintable(qsl("mudlet %1 said \"%2\" on standard error; %3").arg(where, unwanted, diagnostics)));
+        }
+    }
+
+    // A GUI run reparses the list its QApplication has tidied, so it must call
+    // unknown whatever Qt left there. The child is stopped once mudlet::init() runs.
+    void guiRunWarnsOnStandardError_data()
+    {
+        QTest::addColumn<QStringList>("arguments");
+        QTest::addColumn<QStringList>("errorMustContain");
+        QTest::addColumn<QStringList>("errorMustNotContain");
+
+        // The '=' rows leave no value over as a package to open, and Qt reads the
+        // '=' form of neither option, on xcb or elsewhere
+        QTest::newRow("--bogus") << QStringList{qsl("--bogus")} << QStringList{qsl("Unknown option 'bogus'")} << QStringList();
+        QTest::newRow("--title=t") << QStringList{qsl("--title=t")} << QStringList{qsl("Unknown option 'title'")} << QStringList();
+        QTest::newRow("--qwindowtitle=t") << QStringList{qsl("--qwindowtitle=t")} << QStringList{qsl("Unknown option 'qwindowtitle'")} << QStringList();
+        QTest::newRow("-qwindowtitle t -qdevel") << QStringList{qsl("-qwindowtitle"), qsl("t"), qsl("-qdevel")} << QStringList() << QStringList{qsl("Unknown option")};
+    }
+
+    void guiRunWarnsOnStandardError()
+    {
+        QFETCH(QStringList, arguments);
+        QFETCH(QStringList, errorMustContain);
+        QFETCH(QStringList, errorMustNotContain);
+
+#if !defined(Q_OS_LINUX)
+        // On Windows main() reattaches a GUI run's streams to the parent's
+        // console, and Qt logs a GUI application to the debugger there
+        QSKIP("a GUI run's standard error only reaches this test on Linux");
+#endif
+        QVERIFY2(QFileInfo::exists(appBinary()), qPrintable(qsl("no application binary at %1").arg(appBinary())));
+        if (portableMarkerWouldWin()) {
+            QSKIP("a portable.txt would send the child at the real config instead of the sandbox");
+        }
+
+        QTemporaryDir sandbox;
+        QVERIFY2(sandbox.isValid(), qPrintable(sandbox.errorString()));
+        QVERIFY(QDir().mkpath(qsl("%1/config/mudlet/profiles").arg(sandbox.path())));
+        QVERIFY(QDir().mkpath(qsl("%1/tmp").arg(sandbox.path())));
+
+        QProcessEnvironment environment = childEnvironment(sandbox, qsl("offscreen"), qsl("C"));
+        // A killed child leaves its instance socket behind in the temp directory,
+        // which would stop the next real Mudlet listening there
+        environment.insert(qsl("TMPDIR"), qsl("%1/tmp").arg(sandbox.path()));
+        // Keeps it from registering itself as the telnet handler should it run on
+        environment.insert(qsl("CI"), qsl("1"));
+        // The start marker is a qDebug(), which logging rules or journald could swallow
+        environment.insert(qsl("QT_LOGGING_RULES"), qsl("default.debug=true"));
+        environment.insert(qsl("QT_FORCE_STDERR_LOGGING"), qsl("1"));
+        QProcess mudlet;
+        mudlet.setProcessEnvironment(environment);
+        mudlet.setProgram(appBinary());
+        mudlet.setArguments(arguments);
+        // So that waitForReadyRead() returns as soon as the child writes there
+        mudlet.setReadChannel(QProcess::StandardError);
+        mudlet.start();
+        const QString where = arguments.join(QChar::Space);
+        QVERIFY2(mudlet.waitForStarted(scmStartTimeoutMs), qPrintable(qsl("mudlet %1: %2").arg(where, mudlet.errorString())));
+
+        // Logged by mudlet::init(), which main() calls after it has warned of the command line
+        const QString startedMarker{qsl("has been detected as the style factory in use")};
+        QString standardError;
+        QElapsedTimer waited;
+        waited.start();
+        while (!standardError.contains(startedMarker) && mudlet.state() == QProcess::Running && waited.elapsed() < 2 * scmFinishTimeoutMs) {
+            mudlet.waitForReadyRead(1000);
+            standardError += QString::fromUtf8(mudlet.readAllStandardError());
+        }
+        mudlet.kill();
+        mudlet.waitForFinished(scmFinishTimeoutMs);
+        standardError += QString::fromUtf8(mudlet.readAllStandardError());
+
+        // Standard output is not checked: the kill loses whatever its buffer held
+        const QString diagnostics = qsl("%1, stderr:\n%2").arg(where, standardError);
+        QVERIFY2(standardError.contains(startedMarker), qPrintable(qsl("mudlet %1 never got as far as its main window; %2").arg(where, diagnostics)));
+        for (const QString& expected : errorMustContain) {
+            QVERIFY2(standardError.contains(expected), qPrintable(qsl("mudlet %1 said nothing on standard error that says \"%2\"; %3").arg(where, expected, diagnostics)));
+        }
+        for (const QString& unwanted : errorMustNotContain) {
+            QVERIFY2(!standardError.contains(unwanted), qPrintable(qsl("mudlet %1 said \"%2\" on standard error; %3").arg(where, unwanted, diagnostics)));
+        }
+    }
+
+    // A language asked for and not given has to say so, on standard error, or
+    // English help reads as though none had been set
+    void languageProblemsAreReported_data()
+    {
+        QTest::addColumn<QStringList>("arguments");
+        QTest::addColumn<QString>("settingsLanguage");
+        QTest::addColumn<bool>("settingsUnreadable");
+        QTest::addColumn<QByteArray>("settingsContents");
+        QTest::addColumn<QString>("systemLocale");
+        QTest::addColumn<QStringList>("errorMustContain");
+        QTest::addColumn<QStringList>("errorMustNotContain");
+
+        const QStringList help{qsl("--help")};
+        const QByteArray notIni("[General]\ninterfaceLanguage=de_DE\n[Broken\n");
+
+        QTest::newRow("--help, settings ask for a language with no translation") << help << qsl("sw_KE") << false << QByteArray() << qsl("C") << QStringList{qsl("\"sw_KE\"")} << QStringList();
+        QTest::newRow("--help, settings ask for no locale at all") << help << qsl("xx-not-a-locale") << false << QByteArray() << qsl("C") << QStringList{qsl("\"xx-not-a-locale\"")} << QStringList();
+        QTest::newRow("--help, settings file unreadable") << help << QString() << true << QByteArray() << qsl("C") << QStringList{qsl("Mudlet.ini\" is not readable")} << QStringList();
+        // Qt keeps the keys it could parse, so the German asked for here may
+        // still be applied, and the warning must not say otherwise
+        QTest::newRow("--help, settings file not valid INI") << help << QString() << false << notIni << qsl("C") << QStringList{qsl("Mudlet.ini\" is not valid INI")}
+                                                             << QStringList{qsl("is not used")};
+        QTest::newRow("--version, settings file not valid INI") << QStringList{qsl("--version")} << QString() << false << notIni << qsl("C") << QStringList{qsl("Mudlet.ini\" is not valid INI")}
+                                                                << QStringList();
+        // A language nobody set is not worth a warning, even when the system's
+        // has no translation
+        QTest::newRow("--help, system locale with no translation") << help << QString() << false << QByteArray() << qsl("sw_KE.UTF-8") << QStringList() << QStringList{qsl("WARNING")};
+        QTest::newRow("--help, settings ask for German") << help << qsl("de_DE") << false << QByteArray() << qsl("C") << QStringList() << QStringList{qsl("WARNING")};
+    }
+
+    void languageProblemsAreReported()
+    {
+        QFETCH(QStringList, arguments);
+        QFETCH(QString, settingsLanguage);
+        QFETCH(bool, settingsUnreadable);
+        QFETCH(QByteArray, settingsContents);
+        QFETCH(QString, systemLocale);
+        QFETCH(QStringList, errorMustContain);
+        QFETCH(QStringList, errorMustNotContain);
+
+        QVERIFY2(QFileInfo::exists(appBinary()), qPrintable(qsl("no application binary at %1").arg(appBinary())));
+        if (portableMarkerWouldWin()) {
+            QSKIP("a portable.txt would send the child at the real config instead of the sandbox");
+        }
+
+        const RunOutcome outcome = runChild(arguments, bogusPlatformPlugin(), settingsLanguage, settingsUnreadable, settingsContents, systemLocale);
+        const QString where = arguments.join(QChar::Space);
+        QVERIFY2(outcome.processFailure.isEmpty(), qPrintable(qsl("mudlet %1: %2").arg(where, outcome.processFailure)));
+
+        const QString diagnostics = qsl("%1, stdout:\n%2\nstderr:\n%3").arg(where, outcome.standardOutput, outcome.standardError);
+        QVERIFY2(!outcome.standardError.contains(qsl("QGuiApplication")), qPrintable(qsl("main() reached GUI code with no QApplication; %1").arg(diagnostics)));
+        QVERIFY2(outcome.exitStatus == QProcess::NormalExit && outcome.exitCode == 0, qPrintable(qsl("mudlet %1 did not exit cleanly; %2").arg(where, diagnostics)));
+
+        for (const QString& expected : errorMustContain) {
+            QVERIFY2(outcome.standardError.contains(expected), qPrintable(qsl("mudlet %1 said nothing on standard error that says \"%2\"; %3").arg(where, expected, diagnostics)));
+        }
+        for (const QString& unwanted : errorMustNotContain) {
+            QVERIFY2(!outcome.standardError.contains(unwanted), qPrintable(qsl("mudlet %1 said \"%2\" on standard error; %3").arg(where, unwanted, diagnostics)));
         }
     }
 };
