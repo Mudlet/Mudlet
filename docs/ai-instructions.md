@@ -19,7 +19,7 @@ All files should end with a newline character at the end of the file.
 
 ### Script backwards compatibility
 
-Never break existing scripts. Scripts in the wild depend on everything observable in the Lua API: return values and their count, whether an error raises or returns `nil` plus a message, where output lands, and lenient or silent handling of bad input - even when the current behaviour is plainly a bug. Changes like these need the maintainers' explicit approval, ideally backed by a scan of real packages showing nothing relies on the old behaviour. Improving the text of an error that already raises is safe.
+Never break existing scripts. Scripts in the wild depend on what the Lua API observably does: the values a function already returns, whether a failure raises an error, where output lands, and lenient handling of bad input - even when the current behaviour is plainly a bug. Changing these needs the maintainers' explicit approval, ideally backed by a scan of real packages showing nothing relies on the old behaviour. Adding return values to a function that returned nothing, including `nil` plus a message on failure, is not a break, and neither is improving the text of an error that already raises.
 
 ### C++ Conventions
 In general: write modern C++20 code, but avoid C++ exceptions, templates, and concepts as those have performance/complexity considerations, avoiding which has made Mudlet the success it is today.
