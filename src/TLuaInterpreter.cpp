@@ -9163,7 +9163,9 @@ int TLuaInterpreter::setConfig(lua_State* L)
         return 2;
     };
 
-    if (host.mapOpen()) {
+    // These settings live on the Host or on mudlet and a mapper picks them up
+    // when it is made, so none of them needs one to exist already:
+    if (host.mpMap) {
         if (key == qsl("mapRoomSize")) {
             const int size = getVerifiedInt(L, __func__, 2, "value");
             if (size < 1) {
@@ -9211,8 +9213,13 @@ int TLuaInterpreter::setConfig(lua_State* L)
             return success();
         }
 #if defined(INCLUDE_3DMAPPER)
-        if (key == qsl("show3dMapView") && host.mpMap->mapViewFrontend()) {
-            host.mpMap->mapViewFrontend()->show3DView(getVerifiedBool(L, __func__, 2, "value"));
+        if (key == qsl("show3dMapView")) {
+            const bool show = getVerifiedBool(L, __func__, 2, "value");
+            // getConfig reads this back while the mapper is hidden, whichever frontend shows it
+            host.mShow3DView = show;
+            if (auto* mapper = host.mpMap->mapViewFrontend()) {
+                mapper->show3DView(show);
+            }
             return success();
         }
 #endif
@@ -9444,9 +9451,6 @@ int TLuaInterpreter::setConfig(lua_State* L)
         host.mEnableNEWENVIRON = getVerifiedBool(L, __func__, 2, "value");
         return success();
     }
-    // The 2D map room symbol settings live on the map rather than the profile,
-    // so unlike the map keys above they do not need an open mapper - a script
-    // can pick the font before the mapper is ever shown:
     if (key == qsl("mapSymbolFont")) {
         const QString fontName = getVerifiedString(L, __func__, 2, "value");
         if (fontName.trimmed().isEmpty()) {
@@ -9788,12 +9792,15 @@ int TLuaInterpreter::getConfig(lua_State* L)
             {qsl("show3dMapView"),
              [&]() {
 #if defined(INCLUDE_3DMAPPER)
-                 if (auto* mapper = host.mpMap ? host.mpMap->mapViewFrontend() : nullptr) {
+                 // A mapper hidden by closeMapWidget() shows no 3D view, but reopens in the stored mode
+                 if (auto* mapper = host.mpMap ? host.mpMap->mapViewFrontend() : nullptr; mapper && mapper->onScreen()) {
                      lua_pushboolean(L, mapper->showing3DView());
                      return;
                  }
-#endif
+                 lua_pushboolean(L, host.mShow3DView);
+#else
                  lua_pushboolean(L, false);
+#endif
              }},
             {qsl("mapperPanelVisible"),
              [&]() {
