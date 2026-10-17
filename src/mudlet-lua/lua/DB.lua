@@ -280,12 +280,12 @@ local VALIDATION_OPTIONS = {
 ---@return string msg
 function db:_validate_validations(validations)
   if type(validations) ~= "string" then
-    return false, "_validations must be a string. Received "..type(validations)
+    return false, "_violations must be a string. Received "..type(validations)
   elseif table.contains(VALIDATION_OPTIONS, validations) then
     return true, ""
   end
 
-  return false, '_validations must be one of: {"ABORT", "FAIL", "IGNORE", "REPLACE", "ROLLBACK"}.  Received: '..validations
+  return false, '_violations must be one of: {"ABORT", "FAIL", "IGNORE", "REPLACE", "ROLLBACK"}.  Received: '..validations
 end
 
 
@@ -467,6 +467,8 @@ local lua_reserved_words = {
 ---   _violations among them, until the entry is spelled right. A db:create that
 ---   loses the sheet nothing is applied as usual, and one that also drops a column
 ---   does lose the rule, since removing a column is a rebuild in its own right.
+---   A key starting with an underscore that is not _index, _unique or _violations
+---   is warned about and ignored, so a typo such as _indexes is not taken silently.
 ---   Naming _row_id in a _unique entry written as a list is warned about but kept,
 ---   since a sheet's _row_id is unique on its own and the constraint is therefore
 ---   one that can never refuse a row.
@@ -494,8 +496,8 @@ function db:create(db_name, sheets, force)
     -- the sheet was provided in {"column1", "column2"} format
     if sheet[1] ~= nil then
       -- The list holds the column names, which are text defaulting to "". A key
-      -- is a sheet option when it starts with an underscore and an error
-      -- otherwise: sweeping keys in with the column names would make a column
+      -- is taken as a sheet option when it starts with an underscore and is an
+      -- error otherwise: sweeping keys in with the column names would make a column
       -- out of an index definition. Numeric keys are checked against #sheet so
       -- that a stray [7] in a two-item list is not taken for a column name.
       -- These stay hard errors rather than being skipped the way an unusable
@@ -576,6 +578,19 @@ function db:create(db_name, sheets, force)
           columns[key] = value
         end
       end
+    end
+
+    -- a typo such as _indexes would otherwise leave the sheet without what it asked for, silently
+    local unknown_options = {}
+    for key in pairs(options) do
+      if key ~= "_index" and key ~= "_unique" and key ~= "_violations" then
+        unknown_options[#unknown_options + 1] = key
+      end
+    end
+    table.sort(unknown_options)
+    for _, key in ipairs(unknown_options) do
+      table.insert(warnings, "db:create - "..sheet_name.." - \""..key.."\" is not a sheet option "..
+        "(those are _index, _unique and _violations): it is ignored.")
     end
 
     if options._violations then

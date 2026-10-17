@@ -2704,7 +2704,7 @@ describe("Tests DB.lua functions", function()
         })
       end)
       assert.is_false(ok)
-      assert.is_true(string.find(err, "_validations must be one of", 1, true) ~= nil)
+      assert.is_true(string.find(err, "_violations must be one of", 1, true) ~= nil)
     end)
 
     it("errors on a non-string _violations option", function()
@@ -2714,7 +2714,7 @@ describe("Tests DB.lua functions", function()
         })
       end)
       assert.is_false(ok)
-      assert.is_true(string.find(err, "_validations must be a string", 1, true) ~= nil)
+      assert.is_true(string.find(err, "_violations must be a string", 1, true) ~= nil)
     end)
 
     it("errors on a malformed _unique constraint", function()
@@ -3027,14 +3027,14 @@ describe("Tests db's internal SQL helpers", function()
     it("rejects an option it does not know and says what it wanted", function()
       local valid, msg = db:_validate_validations("NONSENSE")
       assert.is_false(valid)
-      assert.is_truthy(string.find(msg, "_validations must be one of", 1, true))
+      assert.is_truthy(string.find(msg, "_violations must be one of", 1, true))
       assert.is_truthy(string.find(msg, "NONSENSE", 1, true))
     end)
 
     it("rejects a non-string and names the type it got", function()
       local valid, msg = db:_validate_validations(42)
       assert.is_false(valid)
-      assert.are.equal("_validations must be a string. Received number", msg)
+      assert.are.equal("_violations must be a string. Received number", msg)
     end)
 
     it("is case sensitive", function()
@@ -3645,6 +3645,101 @@ describe("Tests db's internals against a real database", function()
       db:_migrate_indexes(conn, "people", {columns = {}, options = {_index = {"city"}}}, columns)
       assert.are.same({db:_index_name("people", "city")}, indexNames("people"))
     end)
+  end)
+end)
+
+describe("Tests db:create on underscored keys that are not sheet options", function()
+  local dbName = "sheetoptionstestingonly"
+  local dbFile = getMudletHomeDir() .. "/Database_" .. dbName .. ".db"
+
+  local function collectingWarnings(fn)
+    local collected = {}
+    -- through _G: a spec file's globals are its own
+    local originalPrintError = _G.printError
+    _G.printError = function(msg) collected[#collected + 1] = msg end
+    finally(function() _G.printError = originalPrintError end)
+
+    local result = fn()
+    _G.printError = originalPrintError
+    return result, table.concat(collected, "\n")
+  end
+
+  local function createCollectingWarnings(sheets)
+    return collectingWarnings(function() return db:create(dbName, sheets) end)
+  end
+
+  after_each(function()
+    if not pcall(function() db:close(dbName) end) then
+      db.__conn[dbName] = nil
+    end
+    os.remove(dbFile)
+  end)
+
+  it("warns about an underscored key that is not a sheet option, in either form of sheet", function()
+    local mydb, warnings = createCollectingWarnings({
+      people = {name = "", _indexes = {"name"}},
+      places = {"name", _uniqe = {"name"}},
+    })
+    assert.is_table(mydb)
+    assert.is_truthy(string.find(warnings, 'db:create - people - "_indexes" is not a sheet option', 1, true))
+    assert.is_truthy(string.find(warnings, 'db:create - places - "_uniqe" is not a sheet option', 1, true))
+    assert.is_true(db:add(mydb.people, {name = "Bob"}))
+    assert.is_true(db:add(mydb.places, {name = "Lancre"}))
+  end)
+
+  it("says nothing about the sheet options it knows", function()
+    local _, warnings = createCollectingWarnings({
+      people = {name = "", city = "", _index = {"city"}, _unique = {"name"}, _violations = "IGNORE"},
+    })
+    assert.are.equal("", warnings)
+  end)
+
+  it("says nothing about the sheet options it knows in a sheet given as a list", function()
+    local _, warnings = createCollectingWarnings({
+      people = {"name", "city", _index = "city", _unique = "name", _violations = "IGNORE"},
+    })
+    assert.are.equal("", warnings)
+  end)
+
+  it("ignores the key it warns about", function()
+    local mydb, warnings = createCollectingWarnings({
+      people = {name = "", _indexes = {"name"}},
+      places = {"name", _uniqe = {"name"}},
+    })
+    -- db:create warns sheet by sheet in pairs() order, which the spec must not rely on
+    local _, lines = warnings:gsub("is not a sheet option", "")
+    assert.are.equal(2, lines)
+    assert.is_truthy(string.find(warnings,
+      'db:create - people - "_indexes" is not a sheet option (those are _index, _unique and _violations): it is ignored.', 1, true))
+    assert.is_truthy(string.find(warnings,
+      'db:create - places - "_uniqe" is not a sheet option (those are _index, _unique and _violations): it is ignored.', 1, true))
+    assert.is_true(db:add(mydb.places, {name = "Lancre"}))
+    assert.is_true(db:add(mydb.places, {name = "Lancre"}))
+    assert.are.equal(2, #db:fetch(mydb.places))
+
+    local cursor = db.__conn[dbName]:execute("SELECT name FROM sqlite_master WHERE type = 'index' AND tbl_name = 'people'")
+    local index = cursor:fetch()
+    cursor:close()
+    assert.is_nil(index)
+  end)
+
+  it("warns about each unknown key in order, telling a capitalised option from the real one", function()
+    local _, warnings = createCollectingWarnings({
+      people = {name = "", _zeta = 1, _UNIQUE = {"name"}, _alpha = 2, _Index = {"name"}},
+    })
+    local named = {}
+    for key in warnings:gmatch('"(_%w+)" is not a sheet option') do
+      named[#named + 1] = key
+    end
+    assert.are.same({"_Index", "_UNIQUE", "_alpha", "_zeta"}, named)
+  end)
+
+  it("names _violations when its value is refused, the key the unknown-key warning sends the user back to", function()
+    local ok, err = pcall(function()
+      return createCollectingWarnings({people = {name = "", _unique = {"name"}, _violations = "SKIP"}})
+    end)
+    assert.is_false(ok)
+    assert.is_truthy(string.find(err, "_violations must be one of", 1, true))
   end)
 end)
 
