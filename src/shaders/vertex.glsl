@@ -29,6 +29,8 @@ out float eyeDepth;
 // The untransformed template vertex, so a wireframe can find the shape's edges
 out vec3 localPosition;
 out vec3 localNormal;
+// Where an instance stands, the same for all of its fragments, so that ink can be uneven in a way of its own
+flat out vec3 instanceOrigin;
 
 void main()
 {
@@ -58,6 +60,7 @@ void main()
     texCoord = aTexCoord;
     localPosition = aPos;
     localNormal = aNormal;
+    instanceOrigin = uUseInstancing ? aInstanceTransform[3].xyz : vec3(0.0);
     
     gl_Position = uMVP * finalPos;
     eyeDepth = gl_Position.w;
