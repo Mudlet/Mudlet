@@ -720,7 +720,7 @@ nullViewActionKept = next(nullViewActions) ~= nil
 
         // A profile made the ordinary way comes with a mapping script already
         // installed - the generic mapper, or the one the games listed in
-        // mudlet::setupPreInstallPackages() use - so the state the reminder
+        // HostManager::defaultPackages() use - so the state the reminder
         // exists for has to be arranged. What the engine reads is a boolean flag
         // those scripts set in the profile's own Lua state, and only a boolean
         // counts: check_for_mappingscript() ignores any other type.

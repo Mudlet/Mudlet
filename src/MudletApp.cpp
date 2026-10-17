@@ -29,6 +29,7 @@
 
 #include "SecureStringUtils.h"
 #include "TGameDetails.h"
+#include "ctelnet.h"
 #include "utils.h"
 
 #include <QCoreApplication>
@@ -50,6 +51,9 @@
 #include <QSaveFile>
 #include <QSettings>
 #include <QSslConfiguration>
+#if !defined(QT_NO_SSL)
+#include <QSslSocket>
+#endif
 #include <QTextStream>
 #include <QTranslator>
 #include <QUrl>
@@ -594,6 +598,61 @@ bool MudletApp::profileDataItemHoldsSecret(const QString& item)
 {
     // "irc_password" is TIrcClient::PasswordCfgItem
     return item == qsl("password") || item == qsl("irc_password");
+}
+
+const QString MudletApp::scmAllowedProfileNameChars = qsl(". _()0123456789-#&aAbBcCdDeEfFgGhHiIjJkKlLmMnNoOpPqQrRsStTuUvVwWxXyYzZ");
+
+// An embedded U+0000 is indistinguishable from the all-clear sentinel; profileNameUsableAsIs(), which every
+// caller also applies, refuses it
+QChar MudletApp::firstInvalidProfileNameChar(const QString& name)
+{
+    for (const QChar& c : name) {
+        if (!scmAllowedProfileNameChars.contains(c)) {
+            return c;
+        }
+    }
+    return {};
+}
+
+// A lone "." is made entirely of permitted characters, yet every path built from it addresses the profiles
+// directory rather than a profile of its own, as does ".."
+bool MudletApp::profileNameUsableAsIs(const QString& name)
+{
+    static const QRegularExpression unusableChars{qsl(R"REGEX(\.\.|[/\\<>:"|?*\x00-\x1f])REGEX")};
+    return !name.isEmpty() && name != qsl(".") && !name.contains(unusableChars);
+}
+
+QString MudletApp::connectionDetailsProblem(const QString& givenHost, const int port, const bool tls)
+{
+    if (port && !gamePortUsable(port)) {
+        //: %1 is the port number given for a game server
+        return QCoreApplication::translate("MudletApp", "The port %1 is not one a game server can be reached on; it must be from 1 to 65535.").arg(port);
+    }
+    if (tls) {
+#if defined(QT_NO_SSL)
+        // The dialog's own words, which are translated already
+        return QCoreApplication::translate("dlgConnectionProfiles", "Mudlet is not configured for secure connections.");
+#else
+        if (!QSslSocket::supportsSsl()) {
+            return QCoreApplication::translate("dlgConnectionProfiles", "Mudlet can not load support for secure connections.");
+        }
+#endif
+    }
+    const QString host = givenHost.trimmed();
+    if (host.isEmpty()) {
+        return {};
+    }
+    QUrl check;
+    check.setHost(host);
+    if (!check.isValid()) {
+        //: %1 is the game server address given for a profile, %2 why it is not one
+        return QCoreApplication::translate("MudletApp", "\"%1\" is not the address of a game server: %2").arg(host, check.errorString());
+    }
+    if (tls && (cTelnet::isRawIPv4Address(host) || cTelnet::isRawIPv6Address(host))) {
+        //: %1 is the IP address given for a game server that a secure connection was asked for
+        return QCoreApplication::translate("MudletApp", "A secure connection needs the game server's name, not an IP address such as %1, as the server's certificate names it.").arg(host);
+    }
+    return {};
 }
 
 QString MudletApp::readProfileData(const QString& profile, const QString& item)

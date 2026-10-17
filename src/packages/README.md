@@ -32,5 +32,5 @@ and the [IRE mapper](https://github.com/IRE-Mudlet-Mapping/ire-mapping-script),
 which upstream publishes as a bare `src/mudlet-mapper.xml` rather than a
 package. Change them upstream: the next sync PR reverts any edit made only here.
 
-Which games get which package is decided in `mudlet::setupPreInstallPackages()`,
+Which games get which package is decided in `HostManager::defaultPackages()`,
 and every archive needs an entry in `src/mudlet.qrc` to be compiled into Mudlet.
