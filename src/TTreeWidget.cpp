@@ -322,7 +322,7 @@ void TTreeWidget::rowsInserted(const QModelIndex& parent, int start, int end)
                             if (pTChild->ancestorsActive()) {
                                 icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox.png")), QIcon::Normal, QIcon::Off);
                             } else {
-                                icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox_grey.png")), QIcon::Normal, QIcon::Off);
+                                icon.addPixmap(QPixmap(qsl(":/icons/tag_checkbox-grey.png")), QIcon::Normal, QIcon::Off);
                             }
                         }
                     }
@@ -524,6 +524,8 @@ void TTreeWidget::addVariableRows(VarUnit* pVarUnit, QTreeWidgetItem* pParent, T
     pParent->addChildren(cList);
 }
 
+TTreeWidget::~TTreeWidget() = default;
+
 void TTreeWidget::clearVariableRows()
 {
     mVariableForRow.clear();
@@ -554,7 +556,11 @@ TVar* TTreeWidget::variableForRow(VarUnit* pVarUnit, QTreeWidgetItem* pItem) con
 
 TVar* TTreeWidget::newVariableForRow(VarUnit* pVarUnit, QTreeWidgetItem* pItem) const
 {
-    return rowsStandForCurrentVariables(pVarUnit) ? mNewVariableForRow.value(pItem) : nullptr;
+    if (!rowsStandForCurrentVariables(pVarUnit)) {
+        return nullptr;
+    }
+    const auto it = mNewVariableForRow.find(pItem);
+    return it == mNewVariableForRow.end() ? nullptr : it->second.get();
 }
 
 void TTreeWidget::setVariableForRow(VarUnit* pVarUnit, QTreeWidgetItem* pItem, TVar* pVariable)
@@ -563,21 +569,26 @@ void TTreeWidget::setVariableForRow(VarUnit* pVarUnit, QTreeWidgetItem* pItem, T
     mVariableForRow.insert(pItem, pVariable);
 }
 
-void TTreeWidget::setNewVariableForRow(VarUnit* pVarUnit, QTreeWidgetItem* pItem, TVar* pVariable)
+void TTreeWidget::setNewVariableForRow(VarUnit* pVarUnit, QTreeWidgetItem* pItem, std::unique_ptr<TVar> pVariable)
 {
     adoptVariableTree(pVarUnit);
-    mNewVariableForRow.insert(pItem, pVariable);
+    mNewVariableForRow.insert_or_assign(pItem, std::move(pVariable));
 }
 
 void TTreeWidget::forgetRow(QTreeWidgetItem* pItem)
 {
     mVariableForRow.remove(pItem);
-    mNewVariableForRow.remove(pItem);
+    mNewVariableForRow.erase(pItem);
 }
 
 void TTreeWidget::forgetNewVariableForRow(QTreeWidgetItem* pItem)
 {
-    mNewVariableForRow.remove(pItem);
+    const auto it = mNewVariableForRow.find(pItem);
+    if (it == mNewVariableForRow.end()) {
+        return;
+    }
+    static_cast<void>(it->second.release());
+    mNewVariableForRow.erase(it);
 }
 
 // The same question VarUnit::shouldSave() answers for a variable, asked of the

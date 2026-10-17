@@ -5614,7 +5614,7 @@ function map.areaLabels(where, exact)
       echoLink(
         'delete',
         string.format(
-          'deleteMapLabel(%d, %d); map.echo("Deleted label #' .. labelid .. '")', areaid, labelid
+          'local ok, err = deleteMapLabel(%d, %d); if ok then map.echo("Deleted label #' .. labelid .. '") else map.echo(err, false, true) end', areaid, labelid
         ),
         "Delete label #" .. labelid .. " from " .. getRoomAreaName(areaid)
       )

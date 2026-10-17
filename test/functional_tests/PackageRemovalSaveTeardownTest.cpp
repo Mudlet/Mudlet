@@ -292,6 +292,21 @@ private slots:
         QCOMPARE(saveSpy.count(), 1);
     }
 
+    // A profile that never loaded turns the package change's save away, and that has to leave a trace somewhere
+    void test_aSaveTurnedAwayAfterAPackageChangeIsLogged()
+    {
+        mpHost->waitForProfileSave();
+        mpHost->mLoadedOk = false;
+        const auto restore = qScopeGuard([this]() {
+            mpHost->mLoadedOk = true;
+        });
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("profile was not loaded correctly to begin with")));
+
+        uninstallPackageOwingASave(qsl("uninstall-save-not-loaded"));
+
+        QTRY_VERIFY_WITH_TIMEOUT(!mpHost->hasPendingProfileSave(), 5s);
+    }
+
     // ...and so does a batch of installs. One that saved on the spot left that
     // save in flight, which put the next install off until it had finished, so
     // the Package Manager's multi-file install queued behind a save per package.
@@ -552,12 +567,12 @@ private slots:
     // of that save behind: it would run on a destroyed Host.
     // A package installs into <profile>/<its name>, and the profile keeps its own
     // map, logs and downloaded media in folders right beside those - so a manifest
-    // can ask for one of their names. Three of them are made when the profile is,
-    // so an install asking for those is refused outright; the media folder is only
-    // made the first time something is downloaded into it, which can be long after
-    // a module took that name. From then on the two share a folder, and the module's
-    // next sync unpacks under the archive's file name, cannot rename that onto the
-    // folder it already owns, and clears the way by deleting what is there.
+    // can ask for one of their names. An install asking for one is refused, but a
+    // profile from an older Mudlet can still hold a module that took the media
+    // folder's name before anything was downloaded into it. From then on the two
+    // share a folder, and the module's next sync unpacks under the archive's file
+    // name, cannot rename that onto the folder it already owns, and clears the way
+    // by deleting what is there.
     void test_aModuleSyncDoesNotDeleteTheProfilesOwnFolder()
     {
         QTemporaryDir archiveDir;
@@ -568,7 +583,10 @@ private slots:
 
         mpHost->waitForProfileSave();
         QVERIFY2(!QDir(profileFilePath(sharedName)).exists(), "SETUP: the profile has that folder already, so the install below could not take the name");
+        // Reinstalling what a profile already holds is not refused, which is how an older Mudlet's module gets in
+        mpHost->mIsProfileLoadingSequence = true;
         auto [installed, message] = mpHost->installPackage(archivePath, enums::PackageModuleType::ModuleFromUI, true);
+        mpHost->mIsProfileLoadingSequence = false;
         QVERIFY2(installed, qPrintable(message));
         QVERIFY2(mpHost->mModuleInfo.contains(sharedName), "SETUP: the module did not register under the name its config.lua asked for");
         QVERIFY2(QDir(profileFilePath(sharedName)).exists(), "SETUP: the module did not land in the folder the profile downloads media into");
@@ -583,6 +601,57 @@ private slots:
         mpHost->waitForProfileSave();
         mpHost->installPackage(archivePath, enums::PackageModuleType::ModuleSync, true);
         QVERIFY2(QFile::exists(downloadedFile), "The module's sync deleted the profile's downloaded media");
+    }
+
+    // A module an older Mudlet let in under the name of one of the profile's folders, with no config.lua to rename
+    // it, has always been unpacked straight into that folder. Its syncs have to go on updating it there, or it
+    // never takes up a newer archive again.
+    void test_aModuleSyncUnderAProfileFolderNameTakesUpTheNewerArchive()
+    {
+        QTemporaryDir archiveDir;
+        QVERIFY(archiveDir.isValid());
+        const QString sharedName = qsl("log");
+        const QString archivePath = qsl("%1/%2.mpackage").arg(archiveDir.path(), sharedName);
+        auto moduleXml = [](const QString& aliasName) {
+            return qsl("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE MudletPackage>\n<MudletPackage version=\"1.001\">\n"
+                       "<AliasPackage><Alias isActive=\"yes\" isFolder=\"no\"><name>%1</name><script></script><command></command>"
+                       "<packageName></packageName><regex>^%1$</regex></Alias></AliasPackage>\n</MudletPackage>\n")
+                    .arg(aliasName)
+                    .toUtf8();
+        };
+        QVERIFY2(writeArchive(archivePath, qsl("%1.xml").arg(sharedName), moduleXml(qsl("legacy-module-v1"))), "Could not write the module archive");
+
+        mpHost->waitForProfileSave();
+        QVERIFY2(QDir().mkpath(profileFilePath(sharedName)), "SETUP: could not make the profile's log folder");
+        const QString profilesOwnFile = profileFilePath(qsl("%1/the-profiles-own.txt").arg(sharedName));
+        QFile ownFile(profilesOwnFile);
+        QVERIFY2(ownFile.open(QIODevice::WriteOnly), "SETUP: could not write into the profile's log folder");
+        ownFile.write("the profile's, not the module's");
+        ownFile.close();
+        // Where the older Mudlet unpacked the module
+        QFile unpacked(profileFilePath(qsl("%1/%1.xml").arg(sharedName)));
+        QVERIFY2(unpacked.open(QIODevice::WriteOnly), "SETUP: could not write the module's XML into the profile's log folder");
+        unpacked.write(moduleXml(qsl("legacy-module-v1")));
+        unpacked.close();
+        mpHost->mIsProfileLoadingSequence = true;
+        auto [installed, message] = mpHost->installPackage(archivePath, enums::PackageModuleType::ModuleFromUI, true);
+        mpHost->mIsProfileLoadingSequence = false;
+        QVERIFY2(installed, qPrintable(message));
+        QVERIFY2(mpHost->getAliasUnit()->findFirstAlias(qsl("legacy-module-v1")), "SETUP: the module's alias was not installed");
+
+        QVERIFY2(writeArchive(archivePath, qsl("%1.xml").arg(sharedName), moduleXml(qsl("legacy-module-v2"))), "Could not write the newer module archive");
+        mpHost->waitForProfileSave();
+        mpHost->reloadModule(sharedName);
+
+        QVERIFY2(mpHost->mInstalledModules.contains(sharedName), "The sync lost the module");
+        QVERIFY2(mpHost->getAliasUnit()->findFirstAlias(qsl("legacy-module-v2")), "The sync did not take up the module's newer archive");
+        QVERIFY2(!mpHost->getAliasUnit()->findFirstAlias(qsl("legacy-module-v1")), "The sync put back what the module held before");
+        QVERIFY2(QFile::exists(profilesOwnFile), "The module's sync deleted the profile's own files");
+
+        mpHost->waitForProfileSave();
+        QVERIFY2(mpHost->uninstallPackage(sharedName, enums::PackageModuleType::ModuleFromScript), "The module could not be uninstalled");
+        QFile::remove(profileFilePath(qsl("%1/%1.xml").arg(sharedName)));
+        QFile::remove(profilesOwnFile);
     }
 
     void test_deferredSaveDoesNotOutliveTheProfile()
