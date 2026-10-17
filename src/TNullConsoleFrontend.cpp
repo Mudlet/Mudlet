@@ -1265,11 +1265,39 @@ bool TNullConsoleFrontend::setSubConsoleShown(const QString& name, const bool sh
     }
     it->second.shown = shown;
     if (mpHost->windowRegistry().subConsoleKind(name) == TWindowRegistry::SubConsoleKind::UserWindow) {
+        // Qt sends a shown dock its pending resize before the show that makes it visible
+        reportUserWindowSize(name);
         reportVisibility();
     } else {
         reportWindowVisibility(name);
     }
     return true;
+}
+
+// As TConsole::resizeEvent() reports a user window: Qt resizes a hidden one only as it next shows
+void TNullConsoleFrontend::reportUserWindowSize(const QString& name)
+{
+    const auto it = mSubConsoles.find(name);
+    if (it == mSubConsoles.end() || !it->second.shown || mpHost->windowRegistry().subConsoleKind(name) != TWindowRegistry::SubConsoleKind::UserWindow) {
+        return;
+    }
+    const QSize size = mpHost->windowRegistry().subConsoleGeometry(name).value_or(QRect()).size();
+    if (it->second.reportedSize == size) {
+        return;
+    }
+    it->second.reportedSize = size;
+    mpHost->getLuaInterpreter()->call(qsl("handleWindowResizeEvent"), qsl("WindowResizeEvent"));
+
+    TEvent event{};
+    event.mArgumentList.append(qsl("sysUserWindowResizeEvent"));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    event.mArgumentList.append(QString::number(size.width()));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+    event.mArgumentList.append(QString::number(size.height()));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+    event.mArgumentList.append(name);
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    mpHost->raiseEvent(event);
 }
 
 // QWidget::isVisibleTo() the main console, for which a window inside a hidden user window or scroll
@@ -2445,6 +2473,7 @@ bool TNullConsoleFrontend::resizeSubConsole(const QString& name, const int width
     registry.setSubConsoleGeometry(name, geometry);
     registry.setUserWindowSize(name, geometry.size());
     reportGridSize(name);
+    reportUserWindowSize(name);
     return true;
 }
 

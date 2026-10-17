@@ -371,6 +371,8 @@ private:
         QPointer<QObject> holder;
         // TConsole::mpCommandLine, which still holds a deleted command line until deferred deletes run
         QPointer<HistoryWriter> ownLine;
+        // A user window's size as sysUserWindowResizeEvent last gave it
+        std::optional<QSize> reportedSize;
     };
     // As TConsole::mpCommandLine tells a console's own command line from another of its name
     static bool ownsLine(const SubConsole& console, const PlainWindow& commandLine) { return commandLine.writer && commandLine.writer == console.ownLine; }
@@ -461,6 +463,7 @@ private:
     void polishLabel(Label& label);
     void restyleLabel(Label& label, const QString& sheet);
     bool setSubConsoleShown(const QString& name, bool shown);
+    void reportUserWindowSize(const QString& name);
     void reportVisibility();
     void reportWindowVisibility(const QString& name);
     std::optional<QFont> consoleFont(const QString& name) const;
