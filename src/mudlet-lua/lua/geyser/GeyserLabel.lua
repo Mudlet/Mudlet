@@ -1671,10 +1671,21 @@ function Geyser.Label:showMenuLabel(name)
   self:createMenuItems()
 end
 
+local function menuIndexProblem(index, count)
+  if type(index) ~= "number" or index ~= math.floor(index) then
+    return string.format("index must be a whole number, got %s (%s)", tostring(index), type(index))
+  end
+  if index < 1 or index > count then
+    return string.format("index %s out of range (1-%d)", tostring(index), count)
+  end
+end
+
 --- adds a new item to the right click menu
 -- @param name Name of the new menu item.
 -- @param parent name of the parent where the new item will be created in (optional)
--- @param index of the new menu item (optional). Not usable together with a nested
+-- @param index of the new menu item (optional), a whole number from 1 to the number of
+--        items at that level once it is added; any other index adds nothing and returns
+--        false plus a message. Not usable together with a nested
 --        parent: an item is named for the parent it sits in, so the index lookup
 --        misses and raises.
 -- @return true, or false plus a message when the item cannot be added
@@ -1696,6 +1707,18 @@ function Geyser.Label:addMenuLabel(name, parent, index)
 
   menuElement = menuElement or self.rightClickMenu
   menuParent = menuParent or self.rightClickMenu.MenuItems
+
+  if index then
+    local count = #(menuElement.nestedLabels or {})
+    local existing = menuElement.MenuLabels[name]
+    if not existing or existing.ignore then
+      count = count + 1
+    end
+    local problem = menuIndexProblem(index, count)
+    if problem then
+      return false, "addMenuLabel: "..problem
+    end
+  end
 
   if parent then
     parent = parent.."."
@@ -1720,7 +1743,8 @@ end
 
 --- changes a right click menu items index
 -- @param name Name of the menu item. If the menu item has a parent name needs to be given as "Parent.MenuItemName"
--- @param index the new index
+-- @param index the new position among the item's siblings, a whole number from 1 to the
+--        number of items at that level; any other index raises an error and leaves the menu as it was
 function Geyser.Label:changeMenuIndex(name, index)
   local menuElement, menuTable = self:findMenuElement(name, self.rightClickMenu)
 
@@ -1729,6 +1753,10 @@ function Geyser.Label:changeMenuIndex(name, index)
   end
 
   local nestTable = menuElement.nestParent.nestedLabels
+  local problem = menuIndexProblem(index, #nestTable)
+  if problem then
+    error("changeMenuIndex: "..problem)
+  end
   local newindex = nestTable[index].tblIndex
 
   -- table index is not the same as index
