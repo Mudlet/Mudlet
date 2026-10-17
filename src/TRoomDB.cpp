@@ -316,6 +316,7 @@ bool TRoomDB::__removeRoom(int id)
             }
             deleteValuesFromEntranceMap(id); // Needed to remove matching values
         }
+        emit mpMap->signal_roomDeleted(id);
         // Because we clear the graph in initGraph which will be called
         // if mMapGraphNeedsUpdate is true -- we don't need to
         // remove the vertex using clear_vertex and remove_vertex here

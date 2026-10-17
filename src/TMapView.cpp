@@ -84,6 +84,7 @@ TMapView::TMapView(int viewId, Host* pHost, TMap* pMap, QWidget* parent)
     connect(mpMap, &TMap::signal_mapperColoursChanged, this, [this]() {
         setPalette(QApplication::palette());
     });
+    connect(mpMap, &TMap::signal_roomDeleted, mp2dMap, &T2DMap::forgetDeletedRoom);
 
     setFont(qApp->font());
     setPalette(QApplication::palette());
