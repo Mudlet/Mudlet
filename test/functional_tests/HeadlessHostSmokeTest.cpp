@@ -54,6 +54,7 @@
 #include "TMap.h"
 #include "TRoomDB.h"
 #include "XMLimport.h"
+#include "discord.h"
 
 #include "GroupedTest.h"
 
@@ -160,6 +161,10 @@ private slots:
 
         QVERIFY2(!HostManager::self(), "A profile pool already exists, so this run is not headless.");
         mpHostManager = std::make_unique<HostManager>();
+        // Skipped as a whole, so a failure in one of its tests cannot hide behind the skip
+        if (qgetenv("MUDLET_TEST_DISCORD_LIBRARY") == "present" && !Discord::self()->libraryLoaded()) {
+            QSKIP("The bundled Discord library cannot be loaded here");
+        }
     }
 
     void cleanupTestCase()
@@ -4425,6 +4430,239 @@ headlessFrames = ok and 'ok' or tostring(err)
         host->mTelnet.disconnectIt();
         QTRY_COMPARE_WITH_TIMEOUT(host->mTelnet.getConnectionState(), QAbstractSocket::UnconnectedState, 10000);
         QVERIFY2(QApplication::topLevelWidgets().isEmpty(), "Connecting the profile created a widget.");
+    }
+
+    void test_gameReachesDiscordOverGmcpWithNoMainWindow()
+    {
+        QVERIFY2(!TAppFrontend::hasView(), "A main window exists, so this run is not headless.");
+        Discord* discord = Discord::self();
+        QVERIFY2(discord, "The profile pool has no Discord presence.");
+
+        const auto gmcp = [](const QByteArray& message) {
+            return QByteArrayLiteral("\xff\xfa\xc9") + message + QByteArrayLiteral("\xff\xf0");
+        };
+        QTcpServer server;
+        QVERIFY2(server.listen(QHostAddress::LocalHost), "Could not start the local test server.");
+        QByteArray received;
+        QTcpSocket* client = nullptr;
+        connect(&server, &QTcpServer::newConnection, this, [&]() {
+            client = server.nextPendingConnection();
+            connect(client, &QTcpSocket::readyRead, this, [&]() {
+                received.append(client->readAll());
+            });
+            // IAC WILL GMCP
+            client->write(QByteArrayLiteral("\xff\xfb\xc9"));
+        });
+
+        const QString hostname = qsl("Test-Headless-Host-Discord");
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = HostManager::self()->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+        QCOMPARE(host->mDiscordMode, Host::DiscordShowGameDetails);
+
+        host->mTelnet.connectIt(qsl("127.0.0.1"), server.serverPort());
+        QTRY_VERIFY_WITH_TIMEOUT(received.contains("Core.Supports.Set"), 10000);
+        const bool loaded = discord->libraryLoaded();
+        if (loaded && qgetenv("MUDLET_TEST_DISCORD_LIBRARY") == "absent") {
+            qWarning() << "A Discord library is installed here, so this run checks the answers with one, not without";
+        }
+        // Offered, as in the GUI, only when the Discord library could be loaded
+        QCOMPARE(received.contains("External.Discord 1"), loaded);
+        QCOMPARE(received.contains("External.Discord.Hello"), loaded);
+
+        client->write(gmcp("External.Discord.Status {\"details\": \"Headless details\", \"state\": \"Headless state\"}"));
+        client->write(gmcp("External.Discord.Info {\"inviteurl\": \"https://discord.gg/headless\", \"applicationid\": \"123456789012345678\"}"));
+        QTRY_COMPARE_WITH_TIMEOUT(host->getDiscordInviteURL(), qsl("https://discord.gg/headless"), 10000);
+        QCOMPARE(discord->getDetailText(host), qsl("Headless details"));
+        QCOMPARE(discord->getStateText(host), qsl("Headless state"));
+        QCOMPARE(discord->getApplicationId(host), qsl("123456789012345678"));
+
+        const bool ran = host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+local ok, err = pcall(function()
+  local function answer(...)
+    local results = {...}
+    return tostring(results[1]) .. "|" .. tostring(results[2])
+  end
+  headlessDiscordAnswers = table.concat({answer(getDiscordDetail()), answer(setDiscordState("Lua state")), answer(getDiscordState()), answer(usingMudletsDiscordID())}, ";")
+end)
+headlessDiscord = ok and 'ok' or tostring(err)
+)lua"));
+        QVERIFY2(ran, "The Lua chunk did not run.");
+        QCOMPARE(luaGlobalString(host, "headlessDiscord"), qsl("ok"));
+        const QString unavailable = qsl("nil|Discord API is not available");
+        QCOMPARE(luaGlobalString(host, "headlessDiscordAnswers"), loaded ? qsl("Headless details|nil;true|nil;Lua state|nil;false|nil") : QStringList(4, unavailable).join(QChar(';')));
+
+        host->mTelnet.disconnectIt();
+        QTRY_COMPARE_WITH_TIMEOUT(host->mTelnet.getConnectionState(), QAbstractSocket::UnconnectedState, 10000);
+
+        // As closing its tab does: the data is keyed by Host*, so a profile made later at that address would inherit it
+        QString detailAtTeardown = qsl("not torn down");
+        // Scoped to this test, should the profile outlive it
+        QObject receiver;
+        connect(host, &QObject::destroyed, &receiver, [&detailAtTeardown, discord, host]() {
+            detailAtTeardown = discord->getDetailText(host);
+        });
+        HostManager::self()->deleteHost(hostname);
+        QCOMPARE(detailAtTeardown, QString());
+        QVERIFY2(QApplication::topLevelWidgets().isEmpty(), "Driving Discord over GMCP created a widget.");
+    }
+
+    // Its profiles keep their presence in the first pool's Discord, so have to clear it from there
+    void test_aSecondPoolLeavesNoDiscordDataBehind()
+    {
+        QVERIFY2(!TAppFrontend::hasView(), "A main window exists, so this run is not headless.");
+
+        const QString deletedHostname = qsl("Test-Headless-Host-Discord-Deleted");
+        const QString droppedHostname = qsl("Test-Headless-Host-Discord-Dropped");
+        // Declared first, so it outlives the pool should the test return early
+        QStringList detailsAtTeardown;
+        auto pool = std::make_unique<HostManager>();
+        for (const QString& hostname : {deletedHostname, droppedHostname}) {
+            QVERIFY2(pool->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+            Host* host = pool->getHost(hostname);
+            host->processDiscordGMCP(qsl("External.Discord.Status"), qsl("{\"details\": \"Second pool details\"}"));
+            QCOMPARE(Discord::self()->getDetailText(host), qsl("Second pool details"));
+            connect(host, &QObject::destroyed, this, [&detailsAtTeardown, host]() {
+                detailsAtTeardown << Discord::self()->getDetailText(host);
+            });
+        }
+
+        pool->deleteHost(deletedHostname);
+        pool.reset();
+        QCOMPARE(detailsAtTeardown, QStringList({QString(), QString()}));
+    }
+
+    // A later profile's exit handler can close an earlier one, then let its game reach it again
+    void test_aSecondPoolForgetsDiscordDataAfterEveryExitEvent()
+    {
+        QVERIFY2(!TAppFrontend::hasView(), "A main window exists, so this run is not headless.");
+
+        const auto gmcp = [](const QByteArray& message) {
+            return QByteArrayLiteral("\xff\xfa\xc9") + message + QByteArrayLiteral("\xff\xf0");
+        };
+        QTcpServer server;
+        QVERIFY2(server.listen(QHostAddress::LocalHost), "Could not start the local test server.");
+        QByteArray received;
+        QTcpSocket* client = nullptr;
+        connect(&server, &QTcpServer::newConnection, this, [&]() {
+            client = server.nextPendingConnection();
+            connect(client, &QTcpSocket::readyRead, this, [&]() {
+                received.append(client->readAll());
+            });
+            // IAC WILL GMCP
+            client->write(QByteArrayLiteral("\xff\xfb\xc9"));
+        });
+
+        // Declared first, so they outlive the pool should the test return early
+        QString detailAtTeardown = qsl("not torn down");
+        bool statusRead = false;
+        QObject receiver;
+        // Named so the connected profile's exit event comes first, before the other's handler gives it more
+        const QString connectedHostname = qsl("Test-Headless-Host-Discord-Exit-A");
+        const QString pumpingHostname = qsl("Test-Headless-Host-Discord-Exit-B");
+        auto pool = std::make_unique<HostManager>();
+        QVERIFY2(pool->addHost(connectedHostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        QVERIFY2(pool->addHost(pumpingHostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* connected = pool->getHost(connectedHostname);
+        Host* pumping = pool->getHost(pumpingHostname);
+        QVERIFY2(connected && pumping, "The profiles are not in the pool.");
+        // Stands in for an embedder's slot that closes a profile while the exit handlers run
+        static HostManager* spPool = nullptr;
+        spPool = pool.get();
+        lua_register(pumping->getLuaInterpreter()->getLuaGlobalState(), "dropProfile", [](lua_State* L) -> int {
+            spPool->deleteHost(QString::fromUtf8(lua_tostring(L, 1)));
+            return 0;
+        });
+        // saveJsonMap() pumps events while it writes
+        const QString mapPath = mConfigDir.filePath(qsl("headless-exit-pump.json"));
+        QVERIFY(pumping->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(function onHeadlessExitPump() dropProfile([[%1]]) saveJsonMap([[%2]]) end)lua").arg(connectedHostname, mapPath)));
+        pumping->registerAnonymousEventHandler(qsl("sysExitEvent"), qsl("onHeadlessExitPump"));
+
+        connected->mTelnet.connectIt(qsl("127.0.0.1"), server.serverPort());
+        QTRY_VERIFY_WITH_TIMEOUT(received.contains("Core.Supports.Set"), 10000);
+        connect(connected, &QObject::destroyed, &receiver, [&detailAtTeardown, connected]() {
+            detailAtTeardown = Discord::self()->getDetailText(connected);
+        });
+        connect(connected, &Host::signal_discordGameChanged, &receiver, [&statusRead]() {
+            statusRead = true;
+        });
+        // Sent now, but only read once something pumps events: the other profile's exit handler
+        client->write(gmcp("External.Discord.Status {\"game\": \"Headless Game\", \"details\": \"Sent while closing\"}"));
+        QVERIFY(client->flush());
+        pool.reset();
+
+        QVERIFY2(QFileInfo::exists(mapPath), "The exit handler that pumps events never ran.");
+        QVERIFY2(statusRead, "The game's Discord status was never read while the pool went.");
+        QCOMPARE(detailAtTeardown, QString());
+    }
+
+    // An exit handler can reopen its own profile and still be given Discord data by the pump it runs
+    void test_deleteHostForgetsDiscordDataOfAProfileReopenedUnderItsExitHandler()
+    {
+        QVERIFY2(!TAppFrontend::hasView(), "A main window exists, so this run is not headless.");
+
+        const QString hostname = qsl("Test-Headless-Host-Discord-Reopened");
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = HostManager::self()->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+        // Stand in for an embedder's slot, then for the game's data, both run while the handler pumps events
+        lua_State* state = host->getLuaInterpreter()->getLuaGlobalState();
+        lua_register(state, "reopenProfile", [](lua_State* L) -> int {
+            const QString name = QString::fromUtf8(lua_tostring(L, 1));
+            HostManager::self()->deleteHost(name);
+            lua_pushboolean(L, HostManager::self()->addHost(name, QString(), QString(), QString()));
+            return 1;
+        });
+        lua_register(state, "gameSendsDiscordDetail", [](lua_State* L) -> int {
+            getHostFromLua(L).processDiscordGMCP(qsl("External.Discord.Status"), qsl("{\"details\": \"Sent after reopening\"}"));
+            return 0;
+        });
+        host->registerAnonymousEventHandler(qsl("sysExitEvent"), qsl("onDiscordReopenExit"));
+        QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(qsl("function onDiscordReopenExit() assert(reopenProfile(getProfileName())) gameSendsDiscordDetail() end")),
+                 "The Lua chunk did not run.");
+
+        QString detailAtTeardown = qsl("not torn down");
+        QObject receiver;
+        connect(host, &QObject::destroyed, &receiver, [&detailAtTeardown, host]() {
+            detailAtTeardown = Discord::self()->getDetailText(host);
+        });
+        HostManager::self()->deleteHost(hostname);
+        QCOMPARE(detailAtTeardown, QString());
+        QVERIFY2(HostManager::self()->getHost(hostname), "The profile reopened under the exit handler is gone.");
+        HostManager::self()->deleteHost(hostname);
+    }
+
+    // The profile an exit handler reopens is not one the pool going away knew of
+    void test_aSecondPoolForgetsDiscordDataOfAProfileReopenedUnderItsExitHandler()
+    {
+        QVERIFY2(!TAppFrontend::hasView(), "A main window exists, so this run is not headless.");
+
+        static HostManager* spPool = nullptr;
+        static QString sDetailAtTeardown;
+        sDetailAtTeardown = qsl("not torn down");
+        const QString hostname = qsl("Test-Headless-Host-Discord-Pool-Reopened");
+        auto pool = std::make_unique<HostManager>();
+        spPool = pool.get();
+        QVERIFY2(pool->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = pool->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+        // Stands in for an embedder's slot that reopens the profile, and for the new one's game, while the handler pumps events
+        lua_register(host->getLuaInterpreter()->getLuaGlobalState(), "reopenAndFeedProfile", [](lua_State* L) -> int {
+            const QString name = QString::fromUtf8(lua_tostring(L, 1));
+            spPool->deleteHost(name);
+            spPool->addHost(name, QString(), QString(), QString());
+            Host* reopened = spPool->getHost(name);
+            reopened->processDiscordGMCP(qsl("External.Discord.Status"), qsl("{\"details\": \"Sent to the reopened profile\"}"));
+            QObject::connect(reopened, &QObject::destroyed, [reopened]() {
+                sDetailAtTeardown = Discord::self()->getDetailText(reopened);
+            });
+            return 0;
+        });
+        host->registerAnonymousEventHandler(qsl("sysExitEvent"), qsl("onPoolReopenExit"));
+        QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(qsl("function onPoolReopenExit() reopenAndFeedProfile(getProfileName()) end")), "The Lua chunk did not run.");
+
+        pool.reset();
+        QCOMPARE(sDetailAtTeardown, QString());
     }
 
     void test_heldLineCommitsBeforeDisconnectWithNoMainWindow()

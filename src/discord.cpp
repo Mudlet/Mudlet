@@ -64,6 +64,11 @@ Discord::Discord(QObject* parent)
           {"asteria", {"asteriamud.com"}},
   }
 {
+    // The RPC library is one per process, so a second instance stays unloaded
+    if (smpSelf) {
+        qWarning() << "Discord::Discord() WARNING - a Discord already exists, so self() keeps pointing at that one.";
+        return;
+    }
     // Before the library probe below, which returns early when the Discord RPC
     // library is absent - self() must still answer in that case.
     smpSelf = this;
@@ -156,7 +161,9 @@ Discord::~Discord()
     // Clear out the localDiscordPresence collection:
     mPresencePtrs.clear();
 
-    smpSelf = nullptr;
+    if (smpSelf == this) {
+        smpSelf = nullptr;
+    }
 }
 
 // For all the setters below the caller is supposed to check that they have the
