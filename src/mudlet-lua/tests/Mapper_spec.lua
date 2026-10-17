@@ -5671,6 +5671,10 @@ describe("Tests saveJsonMap and loadJsonMap", function()
       rewriteExport(function(document)
         for _, exportedArea in ipairs(document.areas) do
           if exportedArea.id == area then
+            -- an older export has no outline color field on the label
+            for _, label in ipairs(exportedArea.labels or {}) do
+              label.outlineColor = nil
+            end
             exportedArea.userData = exportedArea.userData or {}
             exportedArea.userData[outlineKey] = "1|2|3|255"
             -- the label's own "font" object says what its font is
@@ -5946,6 +5950,143 @@ describe("Tests saveJsonMap and loadJsonMap", function()
       assert.is_true(loadJsonMap(jsonPath))
 
       assert.are.same({}, getAllMapUserData())
+      end)
+
+    local function exportedLabels(area)
+      assert.is_true(saveJsonMap(jsonPath))
+      local file = assert(io.open(jsonPath, "r"))
+      local document = yajl.to_value(file:read("*a"))
+      file:close()
+      for _, exportedArea in ipairs(document.areas) do
+        if exportedArea.id == area then
+          local labels = {}
+          for _, label in ipairs(exportedArea.labels or {}) do
+            labels[label.id] = label
+          end
+          return labels
+        end
+      end
+      error("area " .. tostring(area) .. " is not in the exported document")
+    end
+
+    -- getMapLabel() reports neither the outline nor the font, so they are
+    -- read from what a second export makes of the imported labels
+    it("puts a map label's outline colour back, and no font on a label that had none", function()
+      deleteMap()
+      local area = addAreaName("MapperSpecJsonLabelOutlineArea")
+      roomA = createRoomID(); addRoom(roomA); setRoomArea(roomA, area)
+      local outlinedId = createMapLabel(area, "Outlined", 0, 0, 0, 255, 255, 255, 0, 0, 0,
+                                        30.0, 12, true, false, "Bitstream Vera Sans", 255, 50, false, 255, 255, 0)
+      local fontlessId = createMapLabel(area, "Fontless", 1, 1, 0, 255, 255, 255, 0, 0, 0,
+                                        30.0, 12, true, false, "", 255, 50, false)
+      local before = exportedLabels(area)
+      assert.is_nil(before[fontlessId].font)
+
+      roundTrip()
+
+      local after = exportedLabels(area)
+      assert.is_table(after[outlinedId].outlineColor)
+      assert.are.same({255, 255, 0}, after[outlinedId].outlineColor.color24RGB)
+      assert.are.equal("Bitstream Vera Sans", after[outlinedId].font.family)
+      assert.is_nil(after[fontlessId].font)
+    end)
+
+    local function rewriteExportedArea(area, edit)
+      assert.is_true(saveJsonMap(jsonPath))
+      local file = assert(io.open(jsonPath, "r"))
+      local document = yajl.to_value(file:read("*a"))
+      file:close()
+      for _, exportedArea in ipairs(document.areas) do
+        if exportedArea.id == area then
+          exportedArea.userData = exportedArea.userData or {}
+          edit(exportedArea)
+        end
+      end
+      file = assert(io.open(jsonPath, "w"))
+      file:write(yajl.to_string(document))
+      file:close()
+      deleteMap()
+      assert.is_true(loadJsonMap(jsonPath))
+    end
+
+    it("takes a label's outline colour from the area user data of a file that has it only there", function()
+      deleteMap()
+      local area = addAreaName("MapperSpecJsonLabelFallbackArea")
+      roomA = createRoomID(); addRoom(roomA); setRoomArea(roomA, area)
+      local labelId = createMapLabel(area, "Fallback", 0, 0, 0, 255, 255, 255, 0, 0, 0,
+                                     30.0, 12, true, false, "", 255, 50, false)
+      -- an older Mudlet's export after a binary save: outline colours only in
+      -- the area user data, beside a font key left over from a deleted label
+      rewriteExportedArea(area, function(exportedArea)
+        for _, label in ipairs(exportedArea.labels) do
+          label.outlineColor = nil
+        end
+        exportedArea.userData["system.labelOutlineColor_" .. labelId] = "0|128|255|255"
+        exportedArea.userData["system.labelFont_" .. labelId] = "Bitstream Vera Sans|12|400|0"
+      end)
+
+      local after = exportedLabels(area)
+      assert.are.same({0, 128, 255}, after[labelId].outlineColor.color24RGB)
+      -- every writer leaves "font" out exactly when the label has none, so a
+      -- font key beside such a label belonged to an earlier one with its id
+      assert.is_nil(after[labelId].font)
+      assert.is_nil(getAllAreaUserData(area)["system.labelOutlineColor_" .. labelId])
+      assert.is_nil(getAllAreaUserData(area)["system.labelFont_" .. labelId])
+    end)
+
+    it("takes a label's outline colour from the area user data when the file's own is unreadable", function()
+      deleteMap()
+      local area = addAreaName("MapperSpecJsonLabelBadOutlineArea")
+      roomA = createRoomID(); addRoom(roomA); setRoomArea(roomA, area)
+      local labelId = createMapLabel(area, "Unreadable", 0, 0, 0, 255, 255, 255, 0, 0, 0,
+                                     30.0, 12, true, false, "Bitstream Vera Sans", 255, 50, false, 0, 128, 255)
+      rewriteExportedArea(area, function(exportedArea)
+        for _, label in ipairs(exportedArea.labels) do
+          label.outlineColor = {color24RGB = {255, 255}}
+        end
+        exportedArea.userData["system.labelOutlineColor_" .. labelId] = "255|0|0|255"
+      end)
+
+      assert.are.same({255, 0, 0}, exportedLabels(area)[labelId].outlineColor.color24RGB)
+      assert.is_nil(getAllAreaUserData(area)["system.labelOutlineColor_" .. labelId])
+    end)
+
+    it("keeps a label without a font fontless through a binary save and load", function()
+      local binaryPath = getMudletHomeDir() .. "/mapper_spec_label_fontless.dat"
+      finally(function() os.remove(binaryPath) end)
+      deleteMap()
+      local area = addAreaName("MapperSpecBinaryFontlessLabelArea")
+      roomA = createRoomID(); addRoom(roomA); setRoomArea(roomA, area)
+      local fontedId = createMapLabel(area, "Fonted", 0, 0, 0, 255, 255, 255, 0, 0, 0,
+                                      30.0, 12, true, false, "Bitstream Vera Sans", 255, 50, false)
+      local fontlessId = createMapLabel(area, "Fontless", 1, 1, 0, 255, 255, 255, 0, 0, 0,
+                                        30.0, 12, true, false, "", 255, 50, false)
+      assert.is_true(saveMap(binaryPath))
+      deleteMap()
+      assert.is_true(loadMap(binaryPath))
+
+      local after = exportedLabels(area)
+      assert.are.equal("Bitstream Vera Sans", after[fontedId].font.family)
+      assert.is_nil(after[fontlessId].font)
+    end)
+
+    it("does not give a deleted label's font to a later label given its id", function()
+      local binaryPath = getMudletHomeDir() .. "/mapper_spec_label_reused_id.dat"
+      finally(function() os.remove(binaryPath) end)
+      deleteMap()
+      local area = addAreaName("MapperSpecJsonLabelReusedIdArea")
+      roomA = createRoomID(); addRoom(roomA); setRoomArea(roomA, area)
+      local deletedId = createMapLabel(area, "Deleted", 0, 0, 0, 255, 255, 255, 0, 0, 0,
+                                       30.0, 12, true, false, "Bitstream Vera Sans", 255, 50, false)
+      assert.is_true(saveMap(binaryPath))
+      deleteMapLabel(area, deletedId)
+      local reusedId = createMapLabel(area, "Fontless", 0, 0, 0, 255, 255, 255, 0, 0, 0,
+                                      30.0, 12, true, false, "", 255, 50, false)
+      assert.are.equal(deletedId, reusedId)
+
+      roundTrip()
+
+      assert.is_nil(exportedLabels(area)[reusedId].font)
     end)
 
   end)
