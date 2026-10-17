@@ -27,6 +27,7 @@
 #include <QPointF>
 #include <QString>
 
+class TArea;
 class TMap;
 
 /*
@@ -79,6 +80,9 @@ public:
     };
 
     explicit TAreaGraph(TMap*);
+
+    // A node's radius for the area, without laying anything out
+    static double radiusOf(const TArea&);
 
     // Cheap when nothing changed since the last call; does nothing while a map is being loaded.
     void refresh();

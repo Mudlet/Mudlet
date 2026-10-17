@@ -80,12 +80,24 @@ qreal distanceToSegment(const QPointF& point, const QPointF& a, const QPointF& b
 }
 } // namespace
 
-MapAtlas::Weights MapAtlas::weightsFor(const float roomPixels, const float areaPixels, const float distance)
+float MapAtlas::footprintFor(const float roomPixels, const float distance, const float shownShare)
+{
+    const float bySize = std::min(1.0f - smoothStep(scmFootprintsOnlyPixels, scmRoomsAlonePixels, roomPixels), smoothStep(scmRoomsAloneDistance, scmFootprintsOnlyDistance, distance));
+    const float byShare = std::min(1.0f - smoothStep(scmFootprintsOnlyShare, scmFootprintsFromShare, shownShare), 1.0f - smoothStep(scmRoomsUnreadablePixels, scmRoomsReadablePixels, roomPixels));
+    return std::max(bySize, byShare);
+}
+
+MapAtlas::Weights MapAtlas::weightsFor(const float roomPixels, const float areaPixels, const float distance, const float shownShare)
 {
     Weights weights;
-    weights.footprint = std::min(1.0f - smoothStep(scmFootprintsOnlyPixels, scmRoomsAlonePixels, roomPixels), smoothStep(scmRoomsAloneDistance, scmFootprintsOnlyDistance, distance));
-    weights.world = 1.0f - smoothStep(scmWorldOnlyPixels, scmWorldFromPixels, areaPixels);
+    weights.footprint = footprintFor(roomPixels, distance, shownShare);
+    weights.world = std::max(1.0f - smoothStep(scmWorldOnlyPixels, scmWorldFromPixels, areaPixels), 1.0f - smoothStep(scmWorldOnlyShare, scmWorldFromShare, shownShare));
     return weights;
+}
+
+float MapAtlas::roomsAloneAcross(const float radius, const float shorterSide)
+{
+    return std::max(shorterSide / scmRoomsReadablePixels, 2.0f * radius / scmFootprintsFromShare);
 }
 
 QPolygonF MapAtlas::hull(QList<QPointF> points)

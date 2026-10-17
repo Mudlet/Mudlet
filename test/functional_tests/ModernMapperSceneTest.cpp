@@ -39,6 +39,7 @@
  */
 
 #include <ctime>
+#include <limits>
 
 #include <QDir>
 #include <QFile>
@@ -448,6 +449,18 @@ private:
         return {map()->mpRoomDB->getRoom(1)->getArea(), map()->mpRoomDB->getRoom(next)->getArea()};
     }
 
+    // A hamlet of 5 by 5 rooms joined to a road two rooms wide and length long; returns their IDs
+    std::pair<int, int> addHamletAndRoad(const int length) const
+    {
+        map()->mapClear();
+        map()->mUserData.remove(TAreaGraph::cLayoutUserDataKey);
+        const int next = addGridArea(qsl("Hamlet"), 1, 5, 5, 1, 0);
+        addGridArea(qsl("Long Road"), next, length, 2, 1, 0);
+        map()->setExit(1, next, DIR_EAST);
+        map()->mRoomIdHash[map()->mProfileName] = 0;
+        return {map()->mpRoomDB->getRoom(1)->getArea(), map()->mpRoomDB->getRoom(next)->getArea()};
+    }
+
     // The opacities of the layers the atlas queued, in order
     static QList<float> atlasLayerOpacities(const ModernGLWidget& widget)
     {
@@ -637,7 +650,9 @@ private slots:
         QVERIFY2(texturedCommands(widget) > 0, "near rooms show their symbols and exit markers");
         QVERIFY2(!drawnCubes(widget, levelOutline).isEmpty(), "near rooms are outlined");
 
-        queueFrame(widget, areaId, 100.0f);
+        // Far enough out for the rooms to lose their detail, not so far that the area gives way to its footprint
+        queueFrame(widget, areaId, 12.0f);
+        QCOMPARE(widget.mZoomWeights.footprint, 0.0f);
         const float roomPixels = 0.5f / widget.mCameraController.worldUnitsPerPixel(QVector3D(0.0f, 0.0f, 0.0f));
         QVERIFY2(roomPixels < widget.mDetailPixels, qPrintable(qsl("rooms %1 pixels across are not too small to see").arg(roomPixels)));
         QCOMPARE(drawnRooms(widget).size(), 64 * 64);
@@ -675,7 +690,8 @@ private slots:
             return count;
         };
 
-        queueFrame(widget, areaId, 100.0f);
+        queueFrame(widget, areaId, 12.0f);
+        QCOMPARE(widget.mZoomWeights.footprint, 0.0f);
         const float roomPixels = 0.5f / widget.mCameraController.worldUnitsPerPixel(QVector3D(0.0f, 0.0f, 0.0f));
         QVERIFY2(roomPixels < widget.mDetailPixels, qPrintable(qsl("rooms %1 pixels across are not too small to see").arg(roomPixels)));
         QCOMPARE(texturedCommands(widget), 0);
@@ -855,27 +871,29 @@ private slots:
             return qAbs(a - b) < 1e-5f;
         };
         const float farOut = MapAtlas::scmFootprintsOnlyDistance;
-        MapAtlas::Weights weights = MapAtlas::weightsFor(MapAtlas::scmRoomsAlonePixels, 100.0f, farOut);
+        // With no area shown, the size of the rooms and of a typical area is all there is to go by
+        const float noArea = std::numeric_limits<float>::infinity();
+        MapAtlas::Weights weights = MapAtlas::weightsFor(MapAtlas::scmRoomsAlonePixels, 100.0f, farOut, noArea);
         QVERIFY(roughly(weights.footprint, 0.0f) && roughly(weights.world, 0.0f));
         QVERIFY(weights.roomsShown() && !weights.areasPicked());
-        weights = MapAtlas::weightsFor((MapAtlas::scmRoomsAlonePixels + MapAtlas::scmFootprintsOnlyPixels) / 2.0f, 100.0f, farOut);
+        weights = MapAtlas::weightsFor((MapAtlas::scmRoomsAlonePixels + MapAtlas::scmFootprintsOnlyPixels) / 2.0f, 100.0f, farOut, noArea);
         QVERIFY2(roughly(weights.footprint, 0.5f), qPrintable(qsl("half way the footprints are %1 in").arg(weights.footprint)));
         QVERIFY(weights.roomsShown() && weights.areasPicked());
-        weights = MapAtlas::weightsFor(MapAtlas::scmFootprintsOnlyPixels, MapAtlas::scmWorldFromPixels, farOut);
+        weights = MapAtlas::weightsFor(MapAtlas::scmFootprintsOnlyPixels, MapAtlas::scmWorldFromPixels, farOut, noArea);
         QVERIFY(roughly(weights.footprint, 1.0f) && roughly(weights.world, 0.0f));
         QVERIFY(!weights.roomsShown() && weights.areasPicked() && !weights.nodesPicked());
-        weights = MapAtlas::weightsFor(0.1f, MapAtlas::scmWorldOnlyPixels, farOut);
+        weights = MapAtlas::weightsFor(0.1f, MapAtlas::scmWorldOnlyPixels, farOut, noArea);
         QVERIFY(roughly(weights.footprint, 1.0f) && roughly(weights.world, 1.0f));
         QVERIFY(weights.nodesPicked());
         // However small the rooms, as far as the camera could go before the atlas they show alone
-        weights = MapAtlas::weightsFor(0.1f, 100.0f, CameraController::scmMaxDistance);
+        weights = MapAtlas::weightsFor(0.1f, 100.0f, CameraController::scmMaxDistance, noArea);
         QVERIFY(roughly(weights.footprint, 0.0f));
-        weights = MapAtlas::weightsFor(0.1f, 100.0f, (MapAtlas::scmRoomsAloneDistance + MapAtlas::scmFootprintsOnlyDistance) / 2.0f);
+        weights = MapAtlas::weightsFor(0.1f, 100.0f, (MapAtlas::scmRoomsAloneDistance + MapAtlas::scmFootprintsOnlyDistance) / 2.0f, noArea);
         QVERIFY2(roughly(weights.footprint, 0.5f), qPrintable(qsl("half way out the footprints are %1 in").arg(weights.footprint)));
         float lastFootprint = 0.0f;
         float lastWorld = 0.0f;
         for (float roomPixels = 4.0f; roomPixels > 0.05f; roomPixels *= 0.9f) {
-            weights = MapAtlas::weightsFor(roomPixels, roomPixels * 10.0f, 100.0f / roomPixels);
+            weights = MapAtlas::weightsFor(roomPixels, roomPixels * 10.0f, 100.0f / roomPixels, noArea);
             QVERIFY2(weights.footprint >= lastFootprint && weights.world >= lastWorld, "zooming out took a level back out");
             lastFootprint = weights.footprint;
             lastWorld = weights.world;
@@ -883,8 +901,8 @@ private slots:
 
         const auto [westId, eastId] = addTwoAreas(60);
         ModernGLWidget widget(map(), mpHost);
-        // The 2D map's usual framing, and as far out as the zoom slider goes, at 600 pixels high
-        for (const float distance : {1.5f, 20.0f, CameraController::scmMaxDistance}) {
+        // The 2D map's usual framing, and further out while the area still spans most of the view, at 600 pixels high
+        for (const float distance : {1.5f, 8.0f}) {
             queueFrame(widget, westId, distance);
             QVERIFY2(atlasLayerOpacities(widget).isEmpty(), qPrintable(qsl("the atlas is drawn at distance %1").arg(distance)));
             QVERIFY(!drawnRooms(widget).isEmpty());
@@ -893,13 +911,13 @@ private slots:
         QVERIFY(widget.mAtlas.areas().isEmpty());
 
         // Fading in over the rooms
-        queueFrame(widget, westId, 150.0f);
+        queueFrame(widget, westId, 20.0f);
         QList<float> opacities = atlasLayerOpacities(widget);
         QVERIFY(!drawnRooms(widget).isEmpty());
         QVERIFY2(opacities.size() == 1 && opacities.first() > 0.0f && opacities.first() < 1.0f, qPrintable(qsl("%1 layers queued").arg(opacities.size())));
         QCOMPARE(widget.mAtlas.areas().size(), 2);
 
-        queueFrame(widget, westId, 200.0f);
+        queueFrame(widget, westId, 40.0f);
         QVERIFY(drawnRooms(widget).isEmpty());
         QCOMPARE(atlasLayerOpacities(widget), QList<float>{1.0f});
 
@@ -917,6 +935,201 @@ private slots:
         QVERIFY(world);
         QCOMPARE(world->vertices().size(), widget.mAtlas.worldVertices().size());
         QVERIFY(widget.mAtlas.area(eastId));
+    }
+
+    void test_aSmallAreaGivesWayToTheWorldSoonerThanAHugeOneWithoutGL()
+    {
+        // At 600 pixels high, beside a typical area of radius 8: the hamlet and a road of 300 rooms below
+        const float shorterSide = 600.0f;
+        const float typicalRadius = 8.0f;
+        QList<float> footprintsFrom;
+        QList<float> worldFrom;
+        for (const float radius : {3.5f, 150.0f}) {
+            MapAtlas::Weights last;
+            float footprints = 0.0f;
+            float world = 0.0f;
+            for (float roomPixels = 30.0f; roomPixels > 0.01f; roomPixels *= 0.97f) {
+                const MapAtlas::Weights weights = MapAtlas::weightsFor(roomPixels, roomPixels * typicalRadius, 52.0f / roomPixels, 2.0f * radius * roomPixels / shorterSide);
+                QVERIFY2(weights.footprint >= last.footprint && weights.world >= last.world, qPrintable(qsl("zooming out on an area of radius %1 took a level back out").arg(radius)));
+                if (footprints == 0.0f && weights.areasPicked()) {
+                    footprints = roomPixels;
+                }
+                if (world == 0.0f && weights.areasPicked() && weights.nodesPicked()) {
+                    world = roomPixels;
+                }
+                last = weights;
+            }
+            footprintsFrom.append(footprints);
+            worldFrom.append(world);
+        }
+        QVERIFY2(footprintsFrom.first() > 2.0f * footprintsFrom.last(), qPrintable(qsl("footprints from rooms %1 and %2 pixels apart").arg(footprintsFrom.first()).arg(footprintsFrom.last())));
+        QVERIFY2(worldFrom.first() > 2.0f * worldFrom.last(), qPrintable(qsl("the world from rooms %1 and %2 pixels apart").arg(worldFrom.first()).arg(worldFrom.last())));
+        // However little of the view an area spans, rooms this far apart show alone
+        QCOMPARE(MapAtlas::weightsFor(MapAtlas::scmRoomsReadablePixels, 100.0f, 5.0f, 0.001f).footprint, 0.0f);
+
+        const auto [hamletId, roadId] = addHamletAndRoad(300);
+        ModernGLWidget widget(map(), mpHost);
+        queueFrame(widget, roadId, 30.0f);
+        QCOMPARE(widget.mZoomWeights.footprint, 0.0f);
+        QVERIFY(atlasLayerOpacities(widget).isEmpty());
+        QVERIFY(!drawnRooms(widget).isEmpty());
+        queueFrame(widget, hamletId, 30.0f);
+        QCOMPARE(widget.mZoomWeights.footprint, 1.0f);
+        QVERIFY(widget.mZoomWeights.nodesPicked());
+        QVERIFY(drawnRooms(widget).isEmpty());
+        QCOMPARE(widget.roomAt(QPoint(400, 300)), 0);
+        QCOMPARE(widget.areaAt(pixelOfArea(widget, hamletId)), hamletId);
+    }
+
+    void test_anAreaTooBigToLeaveTheViewKeepsItsRoomsWithoutGL()
+    {
+        const auto roughly = [](const float a, const float b) {
+            return qAbs(a - b) < 1e-4f;
+        };
+        // Twice across the view, its rooms show alone as far out as the slider goes, then give way as they shrink
+        const float overTheView = 2.0f;
+        QCOMPARE(MapAtlas::weightsFor(0.1f, 100.0f, CameraController::scmMaxDistance, overTheView).footprint, 0.0f);
+        QVERIFY(roughly(MapAtlas::weightsFor(0.1f, 100.0f, (MapAtlas::scmRoomsAloneDistance + MapAtlas::scmFootprintsOnlyDistance) / 2.0f, overTheView).footprint, 0.5f));
+        QVERIFY(roughly(MapAtlas::weightsFor((MapAtlas::scmRoomsAlonePixels + MapAtlas::scmFootprintsOnlyPixels) / 2.0f, 100.0f, MapAtlas::scmFootprintsOnlyDistance, overTheView).footprint, 0.5f));
+        // Once a typical area is too small to see, the world comes in however big this one is
+        QVERIFY(roughly(MapAtlas::weightsFor(0.1f, MapAtlas::scmWorldOnlyPixels, MapAtlas::scmFootprintsOnlyDistance, overTheView).world, 1.0f));
+        const MapAtlas::Weights hamlet = MapAtlas::weightsFor(0.1f, 100.0f, CameraController::scmMaxDistance, 0.01f);
+        QVERIFY(roughly(hamlet.footprint, 1.0f) && roughly(hamlet.world, 1.0f));
+
+        const auto [hamletId, roadId] = addHamletAndRoad(1000);
+        ModernGLWidget widget(map(), mpHost);
+        queueFrame(widget, roadId, CameraController::scmMaxDistance);
+        QCOMPARE(widget.mZoomWeights.footprint, 0.0f);
+        QVERIFY(atlasLayerOpacities(widget).isEmpty());
+        QVERIFY(!drawnRooms(widget).isEmpty());
+        QVERIFY2(widget.mAtlas.areas().isEmpty(), "the atlas was made without zooming out to it");
+        queueFrame(widget, hamletId, CameraController::scmMaxDistance);
+        QVERIFY(roughly(widget.mZoomWeights.footprint, 1.0f) && widget.mZoomWeights.nodesPicked());
+        queueFrame(widget, roadId, (MapAtlas::scmRoomsAloneDistance + MapAtlas::scmFootprintsOnlyDistance) / 2.0f);
+        QVERIFY2(roughly(widget.mZoomWeights.footprint, 0.5f), qPrintable(qsl("half way out the footprints are %1 in").arg(widget.mZoomWeights.footprint)));
+        queueFrame(widget, roadId, MapAtlas::scmFootprintsOnlyDistance);
+        QVERIFY(roughly(widget.mZoomWeights.footprint, 1.0f));
+    }
+
+    void test_withNoAreaToGoByTheZoomGoesByRoomSizeAndDistanceWithoutGL()
+    {
+        map()->mapClear();
+        map()->mUserData.remove(TAreaGraph::cLayoutUserDataKey);
+        const int hiddenFirst = addGridArea(qsl("Hamlet"), 1, 5, 5, 1, 0);
+        addGridArea(qsl("Hidden"), hiddenFirst, 5, 5, 1, 0);
+        for (int id = hiddenFirst; id < hiddenFirst + 5 * 5; ++id) {
+            map()->mpRoomDB->getRoom(id)->setHidden(true);
+        }
+        const int hamletId = map()->mpRoomDB->getRoom(1)->getArea();
+        const int hiddenId = map()->mpRoomDB->getRoom(hiddenFirst)->getArea();
+        const int emptyId = map()->mpRoomDB->addArea(qsl("Empty"));
+        map()->mRoomIdHash[map()->mProfileName] = 0;
+        ModernGLWidget widget(map(), mpHost);
+        const float distance = (MapAtlas::scmRoomsAloneDistance + MapAtlas::scmFootprintsOnlyDistance) / 2.0f;
+        queueFrame(widget, hamletId, distance);
+        QCOMPARE(widget.mZoomWeights.footprint, 1.0f);
+        QVERIFY(widget.mZoomWeights.nodesPicked());
+        for (const int areaId : {hiddenId, emptyId}) {
+            queueFrame(widget, areaId, distance);
+            QVERIFY(!widget.mAtlas.areas().isEmpty() && !widget.mAtlas.area(areaId));
+            const float pixels = widget.roomPixels();
+            const MapAtlas::Weights bySize = MapAtlas::weightsFor(pixels, pixels * widget.mAtlas.typicalRadius(), distance, std::numeric_limits<float>::infinity());
+            QVERIFY2(qAbs(bySize.footprint - 0.5f) < 1e-4f, qPrintable(qsl("half way out the footprints are %1 in").arg(bySize.footprint)));
+            QCOMPARE(widget.mZoomWeights.footprint, bySize.footprint);
+            QCOMPARE(widget.mZoomWeights.world, bySize.world);
+        }
+    }
+
+    void test_aViewIntoASmallAreaComesInWhereItsRoomsShowWithoutGL()
+    {
+        const auto [hamletId, roadId] = addHamletAndRoad(300);
+        // Where the 2D map was zoomed out on it, so far that it is a speck
+        QVERIFY(map()->mpRoomDB->set2DMapZoom(hamletId, 200.0));
+        ModernGLWidget widget(map(), mpHost);
+        const auto footprintsBeginJustBeyond = [&widget](const float distance) {
+            widget.setCameraDistance(distance);
+            widget.updateMatrices();
+            const float alone = widget.zoomWeights().footprint;
+            widget.setCameraDistance(distance * 1.1f);
+            widget.updateMatrices();
+            return alone == 0.0f && widget.zoomWeights().footprint > 0.0f;
+        };
+        // The road gives way by how much of the view it spans, the hamlet by how far apart its rooms are
+        queueFrame(widget, roadId, 1.0f);
+        QVERIFY2(footprintsBeginJustBeyond(widget.roomsAloneDistance(roadId)), "the road's footprint does not begin just beyond where its rooms show alone");
+        queueFrame(widget, hamletId, 1.0f);
+        const float roomsAlone = widget.roomsAloneDistance(hamletId);
+        QVERIFY2(footprintsBeginJustBeyond(roomsAlone), "the hamlet's footprint does not begin just beyond where its rooms show alone");
+        widget.resize(450, 800);
+        widget.mCameraController.setViewportSize(widget.width(), widget.height());
+        QVERIFY2(footprintsBeginJustBeyond(widget.roomsAloneDistance(hamletId)), "upright, the hamlet's footprint does not begin just beyond where its rooms show alone");
+
+        queueFrame(widget, roadId, 30.0f);
+        widget.mSavedCameras.clear();
+        widget.jumpTo(hamletId, 0, 0, 0);
+        widget.frameArea();
+        QCOMPARE(widget.mCameraController.getScale(), roomsAlone);
+
+        // From the road's rooms, which more than span the view, to the hamlet, which at that distance is a speck
+        queueFrame(widget, roadId, 30.0f);
+        widget.mSavedCameras.remove(hamletId);
+        QCOMPARE(widget.zoomWeights().footprint, 0.0f);
+        widget.flyToArea(hamletId);
+        QVERIFY(widget.mFlight);
+        for (int tick = 0; tick < 1000 && widget.mFlight; ++tick) {
+            widget.updateMatrices();
+            QVERIFY2(widget.zoomWeights().footprint == 0.0f, qPrintable(qsl("the footprints came in %1 of the way there").arg(widget.mFlight->progress)));
+            widget.onCameraAnimationTick();
+        }
+        QCOMPARE(widget.mCameraController.getScale(), roomsAlone);
+        widget.updateMatrices();
+        QCOMPARE(widget.zoomWeights().footprint, 0.0f);
+
+        // Back from the world around the hamlet to the road, whose rooms at that distance would show at once
+        queueFrame(widget, hamletId, 30.0f);
+        QCOMPARE(widget.mZoomWeights.footprint, 1.0f);
+        widget.mSavedCameras.remove(roadId);
+        widget.flyToArea(roadId);
+        widget.updateMatrices();
+        QCOMPARE(widget.zoomWeights().footprint, 1.0f);
+        widget.onCameraAnimationTick();
+        widget.updateMatrices();
+        QVERIFY2(widget.zoomWeights().footprint > 0.95f, qPrintable(qsl("the footprints dropped to %1 as the flight set off").arg(widget.zoomWeights().footprint)));
+        finishFlight(widget);
+        widget.updateMatrices();
+        QCOMPARE(widget.zoomWeights().footprint, 0.0f);
+    }
+
+    void test_aSavedDistanceOutlastsAViewNotYetLaidOutWithoutGL()
+    {
+        const auto [hamletId, roadId] = addHamletAndRoad(300);
+        ModernGLWidget widget(map(), mpHost);
+        queueFrame(widget, hamletId, 1.0f);
+        const float roomsAlone = widget.roomsAloneDistance(hamletId);
+        widget.setCameraDistance(roomsAlone * 0.8f);
+        // As the paint after it would
+        widget.mFramePending = false;
+        widget.jumpTo(roadId, 0, 0, 0);
+        const float saved = widget.mSavedCameras.value(hamletId).distance;
+        QCOMPARE(saved, roomsAlone * 0.8f);
+
+        // As small as a view is before its layout, where the hamlet's rooms would show alone only further in
+        widget.resize(100, 30);
+        QVERIFY(widget.roomsAloneDistance(hamletId) < saved);
+        widget.jumpTo(hamletId, 0, 0, 0);
+        QCOMPARE(widget.mCameraController.getScale(), widget.roomsAloneDistance(hamletId));
+        widget.jumpTo(roadId, 0, 0, 0);
+        QCOMPARE(widget.mSavedCameras.value(hamletId).distance, saved);
+        widget.jumpTo(hamletId, 0, 0, 0);
+        // As the view's first resize or paint once shown does
+        widget.resize(800, 600);
+        widget.settleCamera();
+        QCOMPARE(widget.mCameraController.getScale(), saved);
+
+        // A script's zoom of the 2D map frames the area where its rooms show
+        widget.applyMapZoom(200.0, hamletId);
+        QCOMPARE(widget.mCameraController.getScale(), roomsAlone);
+        QVERIFY(!widget.mSavedCameras.contains(hamletId));
     }
 
     void test_anAreaFootprintCoversItsRoomsWithoutGL()
@@ -1003,7 +1216,8 @@ private slots:
         QVERIFY2(widget.roomAt(QPoint(400, 300)), "no room in the middle of the view");
         QCOMPARE(widget.areaAt(QPoint(400, 300)), 0);
 
-        queueFrame(widget, westId, 200.0f);
+        queueFrame(widget, westId, 40.0f);
+        QVERIFY(widget.mZoomWeights.areasPicked() && !widget.mZoomWeights.nodesPicked());
         const MapAtlas::Area* pWest = widget.mAtlas.area(westId);
         const MapAtlas::Area* pEast = widget.mAtlas.area(eastId);
         QVERIFY(pWest && pEast);
@@ -1350,13 +1564,13 @@ private slots:
 
     void test_theRouteIsDrawnAtEveryZoomOnlyWhileThereIsOneWithoutGL()
     {
-        // Large enough for the footprints to show before the world graph takes over, and far enough apart for every name to
+        // Near enough for every name to show while the footprints do, and far enough apart for none to overlap
         const int side = 41;
         const ThreeAreas areas = addThreeAreas(side);
         map()->areaGraph()->refresh();
         QVERIFY(map()->areaGraph()->setPosition(areas.west, QPointF(0.0, 0.0)));
-        QVERIFY(map()->areaGraph()->setPosition(areas.middle, QPointF(0.0, 400.0)));
-        QVERIFY(map()->areaGraph()->setPosition(areas.east, QPointF(0.0, 800.0)));
+        QVERIFY(map()->areaGraph()->setPosition(areas.middle, QPointF(0.0, 150.0)));
+        QVERIFY(map()->areaGraph()->setPosition(areas.east, QPointF(0.0, -150.0)));
         ModernGLWidget widget(map(), mpHost);
         const auto labelTexts = [&widget]() {
             QStringList texts;
@@ -1370,7 +1584,7 @@ private slots:
             const MapAtlas::Weights& weights = widget.mZoomWeights;
             return (weights.footprint * (1.0f - weights.world) > 0.0f ? 1 : 0) + (weights.footprint * weights.world > 0.0f ? 1 : 0);
         };
-        const QList<float> distances{160.0f, 200.0f, 800.0f};
+        const QList<float> distances{30.0f, 50.0f, 120.0f};
         QList<qsizetype> layersWithout;
         queueFrame(widget, areas.west, 1.5f);
         QVERIFY(drawnRoute(widget).isEmpty());
@@ -1656,7 +1870,8 @@ private slots:
         widget.mPointerInView = false;
 
         // Not drawn while the rooms are too small to read it by
-        queueFrameAt(widget, westId, 60.0f, QPoint(-8, -8));
+        queueFrameAt(widget, westId, 5.5f, QPoint(-8, -8));
+        QVERIFY(widget.mZoomWeights.footprint == 0.0f && widget.roomPixels() < 10.0f);
         QVERIFY(widget.portalCards().isEmpty());
 
         queueFrameAt(widget, westId, 2.0f, QPoint(-8, -8));

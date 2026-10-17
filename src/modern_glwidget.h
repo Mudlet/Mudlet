@@ -316,8 +316,9 @@ private:
     bool mCameraSmoothAnimating = false; // Dedicated flag for smooth camera animation
     int mPreviousRID = 0;                // Track previous room ID to detect changes
     bool mFramePending = true;
-    // Set by a zoom or a change of area while hidden: the shown area is framed at its stored zoom, read then so a later
-    // 2D zoom counts, for the size the view is first seen at, unless a camera distance is set first
+    // Set by a zoom or a change of area while hidden: the shown area is brought back to its saved distance, or else framed
+    // at its stored zoom, read then so a later 2D zoom counts, for the size the view is first seen at, unless a camera
+    // distance is set first
     bool mFrameWhenShown = false;
     // A distance a script asked for since the last paint wins over framing a newly shown area
     bool mDistanceRequested = false;
@@ -444,6 +445,10 @@ private:
         float fromDistance = 1.0f;
         float toDistance = 1.0f;
         qreal progress = 0.0;
+        // The radius of the area it left, or 0
+        float fromRadius = 0.0f;
+        // A flight only zooms in, so it shows nothing further out than these
+        MapAtlas::Weights fromWeights{1.0f, 1.0f};
     };
     std::optional<Flight> mFlight;
     MapRoute mRoute;
@@ -514,6 +519,10 @@ private:
     float roomPixels() const;
     // How much this view, as of the last updateMatrices(), shows of the rooms, the footprints and the world graph
     MapAtlas::Weights zoomWeights();
+    // The radius of the area shown, or during a flight between it and the one left; 0 when none is shown
+    float shownRadius() const;
+    // The furthest out a view of the area shows its rooms alone, at most CameraController::scmMaxDistance
+    float roomsAloneDistance(int areaId) const;
     void refreshAtlas();
     // Where the atlas lies: the plane the camera looks at, under its rooms
     float atlasLevel() const;
@@ -558,7 +567,7 @@ private:
     // The name an area is shown by
     QString areaName(int areaId) const;
     // A flight into the area, begun from where flight.from is
-    void startFlight(int areaId, const Flight& flight);
+    void startFlight(int areaId, Flight flight);
     // How far from the area a view coming into it looks from: as it last did, or else as its 2D zoom shows it
     float arrivalDistance(int areaId) const;
     // A flight to this point of the area, from wherever the view is now, coming no further out than distance
@@ -611,7 +620,9 @@ private:
     void stopSmoothTransition();
     void jumpTo(int areaId, int x, int y, int z);
     void frameArea();
-    void frameRooms(qreal zoom);
+    // The area's saved distance, or else its framing, for the size the view has now
+    void settleCamera();
+    void frameRooms(qreal zoom, float furthest = CameraController::scmMaxDistance);
     void emitCameraControls();
     void setOrientationKeepingRoll(float theta, float phi);
     // Turns the camera around the view's center, by degrees of azimuth
