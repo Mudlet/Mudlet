@@ -1786,6 +1786,78 @@ ubActionsKept = table.concat(kept, ",")
         QCOMPARE(luaGlobalString(host, "ubActionsKept"), QString());
     }
 
+    // As the GUI self-test profile answers, but for the frame and extra open-time resizes its window manager
+    // adds: a user window tells scripts each new size it is shown at, one resized hidden or closed as it shows
+    void test_headlessUserWindowResizeEventContract()
+    {
+        const QString hostname = qsl("Test-Headless-Host-User-Window-Resize");
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = HostManager::self()->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+        QVERIFY(!host->hasConsoleView());
+        host->registerAnonymousEventHandler(qsl("sysUserWindowResizeEvent"), qsl("onUwResize"));
+
+        const bool ran = host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+uwResize = "not run"
+local ok, err = pcall(function()
+  local events = {}
+  function onUwResize(event, width, height, name)
+    events[#events + 1] = table.concat({type(width), width, type(height), height, type(name), name, tostring(windowVisible(name))}, ":")
+  end
+  -- The older hook for the same resizes, which a script may still define
+  local legacy = handleWindowResizeEvent
+  function handleWindowResizeEvent()
+    events[#events + 1] = "hook"
+  end
+  local answers = {}
+  local function step(label, f, ...)
+    f(...)
+    answers[#answers + 1] = label .. "=" .. table.concat(events, ";")
+    events = {}
+  end
+  step("open", openUserWindow, "uwr", false, false, "f")
+  step("resize", resizeWindow, "uwr", 300, 200)
+  step("resizeSame", resizeWindow, "uwr", 300, 200)
+  step("hide", hideWindow, "uwr")
+  step("hiddenResize", resizeWindow, "uwr", 250, 150)
+  step("show", showWindow, "uwr")
+  step("hideAgain", hideWindow, "uwr")
+  step("showUnchanged", showWindow, "uwr")
+  step("reopenShown", openUserWindow, "uwr", false, false, "f")
+  step("close", closeUserWindow, "uwr")
+  step("closedResize", resizeWindow, "uwr", 280, 180)
+  step("reopen", openUserWindow, "uwr", false, false, "f")
+  step("negative", resizeWindow, "uwr", -5, -7)
+  createMiniConsole("uwr", "uwrMini", 0, 0, 100, 100)
+  step("innerMini", resizeWindow, "uwrMini", 50, 50)
+  createMiniConsole("uwrMainMini", 0, 0, 100, 100)
+  step("mainMini", resizeWindow, "uwrMainMini", 50, 50)
+  handleWindowResizeEvent = legacy
+  uwResizeAnswers = table.concat(answers, "\n")
+end)
+uwResize = ok and "ok" or tostring(err)
+)lua"));
+        QVERIFY2(ran, "The Lua chunk did not run.");
+        QCOMPARE(luaGlobalString(host, "uwResize"), qsl("ok"));
+        const QSize opened = host->mainWindowSize().value_or(QSize());
+        const QStringList answers{qsl("open=hook;number:%1:number:%2:string:uwr:false").arg(opened.width()).arg(opened.height()),
+                                  qsl("resize=hook;number:300:number:200:string:uwr:true"),
+                                  qsl("resizeSame="),
+                                  qsl("hide="),
+                                  qsl("hiddenResize="),
+                                  qsl("show=hook;number:250:number:150:string:uwr:false"),
+                                  qsl("hideAgain="),
+                                  qsl("showUnchanged="),
+                                  qsl("reopenShown="),
+                                  qsl("close="),
+                                  qsl("closedResize="),
+                                  qsl("reopen=hook;number:280:number:180:string:uwr:false"),
+                                  qsl("negative=hook;number:0:number:0:string:uwr:true"),
+                                  qsl("innerMini="),
+                                  qsl("mainMini=")};
+        QCOMPARE(luaGlobalString(host, "uwResizeAnswers"), answers.join(QLatin1Char('\n')));
+    }
+
     // The answers are those of the same Lua run in the GUI self-test profile
     void test_headlessWindowSizesContract()
     {
