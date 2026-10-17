@@ -34,7 +34,10 @@
 #include <QRegularExpression>
 #include <QVector2D>
 
+#include <algorithm>
+
 #include "GeometryManager.h"
+#include "Host.h"
 #include "LabelTextureCache.h"
 #include "MapStyle.h"
 
@@ -343,8 +346,8 @@ private slots:
         QVERIFY(GeometryManager::levelFade(2, false).opacity < GeometryManager::levelFade(1, false).opacity);
     }
 
-    // Every level above or below is tinted by the upper or lower level color, a share of it by its alpha, so that the
-    // levels still sink into the background
+    // Every level above or below fades toward the upper or lower level color, covering the background as far as its
+    // alpha, as the 2D map draws it
     void test_levelsFadeTowardTheUpperAndLowerLevelColors()
     {
         const QColor background(Qt::black);
@@ -353,11 +356,27 @@ private slots:
         QCOMPARE(GeometryManager::levelFadeTarget(0, background, upper, lower), background);
         const QColor above = GeometryManager::levelFadeTarget(1, background, upper, lower);
         QCOMPARE(GeometryManager::levelFadeTarget(3, background, upper, lower), above);
-        QVERIFY2(above.red() == above.green() && above.green() == above.blue(), qPrintable(above.name()));
-        QVERIFY2(above.red() > 0 && above.red() < 128, qPrintable(qsl("the level above fades toward %1, not toward a little of the white").arg(above.name())));
+        QCOMPARE(above, upper);
         const QColor below = GeometryManager::levelFadeTarget(-2, background, upper, lower);
-        QVERIFY2(below.red() > 0 && below.red() < above.red() && below.green() == 0 && below.blue() == 0, qPrintable(below.name()));
+        QVERIFY2(below.red() >= 126 && below.red() <= 130 && below.green() == 0 && below.blue() == 0, qPrintable(below.name()));
         QCOMPARE(below.alpha(), 255);
+    }
+
+    // The profile's default level colors are only a hint of above and below, so that the levels still sink into the
+    // background, while one the user chose takes its full effect
+    void test_onlyTheDefaultLevelColorsAreCalmed()
+    {
+        const QColor background(30, 30, 40);
+        for (const QColor& defaultColor : {Host::scmDefaultUpperLevelColor, Host::scmDefaultLowerLevelColor}) {
+            const QColor calmed = GeometryManager::calmedLevelColor(defaultColor, defaultColor);
+            QCOMPARE(calmed.rgb(), defaultColor.rgb());
+            QVERIFY2(calmed.alphaF() < 0.5f * defaultColor.alphaF(), qPrintable(qsl("the default %1 is kept at alpha %2").arg(defaultColor.name()).arg(calmed.alpha())));
+            const QColor target = GeometryManager::levelFadeTarget(1, background, calmed, calmed);
+            QVERIFY2(target.red() < (background.red() + defaultColor.red()) / 2, qPrintable(qsl("the default %1 lights the level up to %2").arg(defaultColor.name(), target.name())));
+            const QColor chosen(255, 0, 0);
+            QCOMPARE(GeometryManager::calmedLevelColor(chosen, defaultColor), chosen);
+            QCOMPARE(GeometryManager::levelFadeTarget(-1, background, calmed, GeometryManager::calmedLevelColor(chosen, defaultColor)), chosen);
+        }
     }
 
     // Another level's rooms lose their hue and sink toward the background the further they are from the viewed one,
@@ -421,8 +440,8 @@ private slots:
                     GeometryManager::LevelFade fade = GeometryManager::levelFade(levelsAbove, false);
                     QColor ghostColor = mark;
                     if (glowing) {
-                        ghostColor = style.otherLevelColorFor(mark);
-                        fade.saturation = style.otherLevelSaturation(fade.saturation);
+                        ghostColor = style.otherLevelColorFor(mark, levelsAbove > 0);
+                        fade.saturation = style.otherLevelSaturation(fade.saturation, levelsAbove > 0);
                     }
                     const QVector4D faded = GeometryManager::fadedColor(ghostColor, fade, background) * QVector4D(line, line, line, 1.0f);
                     QColor ghost;
@@ -449,17 +468,44 @@ private slots:
     {
         const MapStyle* hologram = MapStyle::find(qsl("hologram"));
         QVERIFY(hologram);
-        const QColor red = hologram->roomColor(QColor(200, 30, 30));
+        QColor red = hologram->roomColor(QColor(200, 30, 30));
+        red.setAlpha(100);
         QVERIFY(red.hslHue() < 20 || red.hslHue() > 340);
-        const QColor ghost = hologram->otherLevelColorFor(red);
-        QVERIFY2(ghost.hslHue() >= 175 && ghost.hslHue() <= 200, qPrintable(qsl("a level off glows in hue %1").arg(ghost.hslHue())));
-        QCOMPARE(ghost.alpha(), red.alpha());
+        for (const bool above : {true, false}) {
+            const QColor ghost = hologram->otherLevelColorFor(red, above);
+            QVERIFY2(ghost.hslHue() >= 175 && ghost.hslHue() <= 225, qPrintable(qsl("a level off glows in hue %1").arg(ghost.hslHue())));
+            QVERIFY2(std::abs(ghost.alpha() - red.alpha()) <= 1, qPrintable(qsl("a level off is drawn at alpha %1 for %2").arg(ghost.alpha()).arg(red.alpha())));
+        }
         // Kept vivid rather than grayed, as it is the one hue those levels share
-        QCOMPARE(hologram->otherLevelSaturation(0.4f), 1.0f);
+        QCOMPARE(hologram->otherLevelSaturation(0.4f, true), 1.0f);
+        QCOMPARE(hologram->otherLevelSaturation(0.4f, false), 1.0f);
         const MapStyle* tiles = MapStyle::find(qsl("tiles"));
         QVERIFY(tiles);
-        QCOMPARE(tiles->otherLevelColorFor(red), red);
-        QCOMPARE(tiles->otherLevelSaturation(0.4f), 0.4f);
+        QCOMPARE(tiles->otherLevelColorFor(red, true), red);
+        QCOMPARE(tiles->otherLevelColorFor(red, false), red);
+        QCOMPARE(tiles->otherLevelSaturation(0.4f, true), 0.4f);
+    }
+
+    // The levels above and below are told apart in a hologram even where they are faded alike, as when they are made
+    // more transparent
+    void test_hologramTellsTheLevelsAboveFromThoseBelow()
+    {
+        const MapStyle* hologram = MapStyle::find(qsl("hologram"));
+        QVERIFY(hologram);
+        const QColor background = hologram->backgroundColor(QColor(Qt::black));
+        const QColor drawn = hologram->wireColor(QColor(), hologram->roomColor(QColor(200, 30, 30)));
+        for (const bool moreTransparent : {false, true}) {
+            const auto shown = [&](const int levelsAbove) {
+                GeometryManager::LevelFade fade = GeometryManager::levelFade(levelsAbove, moreTransparent);
+                fade.saturation = hologram->otherLevelSaturation(fade.saturation, levelsAbove > 0);
+                const QVector4D color = GeometryManager::fadedColor(hologram->otherLevelColorFor(drawn, levelsAbove > 0), fade, background);
+                return QColor::fromRgbF(color.x(), color.y(), color.z());
+            };
+            const QColor above = shown(1);
+            const QColor below = shown(-1);
+            QVERIFY2(std::abs(above.hsvHue() - below.hsvHue()) >= 20,
+                     qPrintable(qsl("above %1 and below %2 look alike%3").arg(above.name(), below.name(), moreTransparent ? qsl(" made more transparent") : QString())));
+        }
     }
 
     void test_gridLinesRunThroughEveryWholeCoordinate()
