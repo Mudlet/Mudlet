@@ -224,10 +224,11 @@ constexpr float scmFogMax = 0.6f;
 
 void ModernGLWidget::saveCamera()
 {
-    // While a frame is pending the camera is still the one set up for the area shown before
+    // While a frame is pending the camera is still the one set up for the area shown before, and until the view is
+    // seen it is set for a size the view may not have
     // A floating view is hidden while its dock is torn down, after the Host and its TMap are freed
     // A map window's view would overwrite the cameras the mapper's view keeps for the profile
-    if (mSecondaryView || !mpHost || !mAID || mFramePending || !mpMap || !mpMap->mpRoomDB || !mpMap->mpRoomDB->getArea(mAID)) {
+    if (mSecondaryView || !mpHost || !mAID || mFramePending || mFrameWhenShown || !mpMap || !mpMap->mpRoomDB || !mpMap->mpRoomDB->getArea(mAID)) {
         return;
     }
     const QVector3D position = mCameraController.getPosition();
@@ -248,7 +249,7 @@ bool ModernGLWidget::restoreCamera(const bool distanceOnly)
     if (it == mSavedCameras.cend()) {
         return false;
     }
-    mCameraController.setScale(it->distance);
+    mCameraController.setScale(std::min(it->distance, roomsAloneDistance(mAID)));
     if (!distanceOnly) {
         mCameraController.setOrientation(it->tilt, it->azimuth, it->roll);
     }
@@ -438,7 +439,7 @@ void ModernGLWidget::resizeEvent(QResizeEvent* event)
     // Framed before the base class, whose resize paints at once. A visible resize settles it, since
     // with no context no paint follows to do it
     if (mFrameWhenShown) {
-        frameArea();
+        settleCamera();
         if (isVisible()) {
             mFrameWhenShown = false;
         }
@@ -688,7 +689,7 @@ void ModernGLWidget::paintGL()
     // QOpenGLWidget paints inside a resize sent before the view is marked visible, at a size the
     // layout may change again once the 3D controls appear, so only a visible paint settles the framing
     if (mFrameWhenShown && isVisible()) {
-        frameArea();
+        settleCamera();
         mFrameWhenShown = false;
     }
     mDistanceRequested = false;
@@ -1923,28 +1924,35 @@ void ModernGLWidget::frameArea()
     if (!mpMap || !mpMap->mpRoomDB) {
         return;
     }
-    frameRooms(mpMap->mpRoomDB->get2DMapZoom(mAID));
+    frameRooms(mpMap->mpRoomDB->get2DMapZoom(mAID), roomsAloneDistance(mAID));
 }
 
-// The same span of rooms the 2D map shows at this zoom
-void ModernGLWidget::frameRooms(const qreal zoom)
+void ModernGLWidget::settleCamera()
+{
+    if (!restoreCamera(true)) {
+        frameArea();
+    }
+}
+
+// The same span of rooms the 2D map shows at this zoom, no further out than furthest
+void ModernGLWidget::frameRooms(const qreal zoom, const float furthest)
 {
     const float aspectRatio = height() > 0 ? static_cast<float>(width()) / static_cast<float>(height()) : 1.0f;
-    mCameraController.setScale(CameraController::distanceToShow(static_cast<float>(zoom), aspectRatio));
+    mCameraController.setScale(std::min(CameraController::distanceToShow(static_cast<float>(zoom), aspectRatio), furthest));
     emitCameraControls();
 }
 
 void ModernGLWidget::applyMapZoom(const qreal zoom, const int areaId)
 {
+    // So that the area is framed for this zoom when it is next shown
+    if (mSavedCameras.remove(areaId)) {
+        writeSavedCameras();
+    }
     if (areaId != mAID) {
-        // So that the area is framed for this zoom when it is next shown
-        if (mSavedCameras.remove(areaId)) {
-            writeSavedCameras();
-        }
         return;
     }
     stopFlight();
-    frameRooms(zoom);
+    frameRooms(zoom, roomsAloneDistance(mAID));
     mFrameWhenShown = !isVisible();
     mDistanceRequested = false;
     update();
@@ -2202,7 +2210,7 @@ void ModernGLWidget::jumpTo(int areaId, int x, int y, int z)
         mAID = areaId;
         const TArea* pArea = mpMap && mpMap->mpRoomDB ? mpMap->mpRoomDB->getArea(areaId) : nullptr;
         mFramePending = !restoreCamera(pArea && pArea->gridMode);
-        mFrameWhenShown = mFramePending && !isVisible();
+        mFrameWhenShown = !isVisible();
         // As the 2D map does on changing area, so that room actions never reach rooms out of sight
         if (mp2DMap) {
             mp2DMap->pruneRoomSelectionToArea(areaId);
@@ -2440,20 +2448,52 @@ float ModernGLWidget::roomPixels() const
     return unitsPerPixel > 0.0f ? 1.0f / unitsPerPixel : std::numeric_limits<float>::max();
 }
 
+float ModernGLWidget::shownRadius() const
+{
+    const TArea* pArea = mpMap && mpMap->mpRoomDB ? mpMap->mpRoomDB->getArea(mAID) : nullptr;
+    if (!pArea || pArea->getAreaRooms().isEmpty()) {
+        return 0.0f;
+    }
+    const auto radius = static_cast<float>(TAreaGraph::radiusOf(*pArea));
+    if (!mFlight || mFlight->fromRadius <= 0.0f) {
+        return radius;
+    }
+    // Evenly in scale through the flight, so the areas' sizes do not swap at once as it sets off
+    const auto progress = static_cast<float>(QEasingCurve(QEasingCurve::InOutCubic).valueForProgress(mFlight->progress));
+    return mFlight->fromRadius * std::pow(radius / mFlight->fromRadius, progress);
+}
+
 MapAtlas::Weights ModernGLWidget::zoomWeights()
 {
     static_assert(MapAtlas::scmRoomsAloneDistance >= CameraController::scmMaxDistance);
     const float pixels = roomPixels();
     const float distance = mCameraController.getScale();
+    const float radius = shownRadius();
+    const int shorterSide = std::min(width(), height());
+    const float share = radius > 0.0f && shorterSide > 0 ? 2.0f * radius * pixels / static_cast<float>(shorterSide) : std::numeric_limits<float>::infinity();
+    const MapAtlas::Weights furthest = mFlight ? mFlight->fromWeights : MapAtlas::Weights{1.0f, 1.0f};
     // Not made until first needed, as laying out the area graph can store its positions in the map
-    if (pixels >= MapAtlas::scmRoomsAlonePixels || distance <= MapAtlas::scmRoomsAloneDistance) {
+    if (std::min(MapAtlas::footprintFor(pixels, distance, share), furthest.footprint) <= 0.0f) {
         return {};
     }
     refreshAtlas();
     if (mAtlas.areas().isEmpty()) {
         return {};
     }
-    return MapAtlas::weightsFor(pixels, pixels * mAtlas.typicalRadius(), distance);
+    const MapAtlas::Weights weights = MapAtlas::weightsFor(pixels, pixels * mAtlas.typicalRadius(), distance, mAtlas.area(mAID) ? share : std::numeric_limits<float>::infinity());
+    return {std::min(weights.footprint, furthest.footprint), std::min(weights.world, furthest.world)};
+}
+
+float ModernGLWidget::roomsAloneDistance(const int areaId) const
+{
+    const TArea* pArea = mpMap && mpMap->mpRoomDB ? mpMap->mpRoomDB->getArea(areaId) : nullptr;
+    if (!pArea || pArea->getAreaRooms().isEmpty() || width() <= 0 || height() <= 0) {
+        return CameraController::scmMaxDistance;
+    }
+    const float aspectRatio = static_cast<float>(width()) / static_cast<float>(height());
+    const float across = MapAtlas::roomsAloneAcross(static_cast<float>(TAreaGraph::radiusOf(*pArea)), static_cast<float>(std::min(width(), height())));
+    // A hair inside, so that rounding never leaves a trace of the footprints over the rooms
+    return CameraController::distanceToShow(across * 0.99f, aspectRatio);
 }
 
 void ModernGLWidget::refreshAtlas()
@@ -2707,8 +2747,12 @@ void ModernGLWidget::flyToArea(const int areaId, const int landingRoomId)
     startFlight(areaId, flight);
 }
 
-void ModernGLWidget::startFlight(const int areaId, const Flight& flight)
+void ModernGLWidget::startFlight(const int areaId, Flight flight)
 {
+    flight.fromRadius = shownRadius();
+    flight.fromWeights = zoomWeights();
+    // Down where the area's rooms show, however small it is
+    flight.toDistance = std::min(flight.toDistance, roomsAloneDistance(areaId));
     stopSmoothTransition();
     if (areaId != mAID && mp2DMap) {
         mp2DMap->pruneRoomSelectionToArea(areaId);
