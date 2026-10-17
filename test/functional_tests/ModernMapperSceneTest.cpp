@@ -1074,10 +1074,61 @@ private slots:
         widget.settleCamera();
         QCOMPARE(widget.mCameraController.getScale(), saved);
 
-        // A script's zoom of the 2D map frames the area where its rooms show
+        // A script's zoom of the 2D map frames the area where its rooms show, which is what it comes back to
         widget.applyMapZoom(200.0, hamletId);
         QCOMPARE(widget.mCameraController.getScale(), roomsAlone);
         QVERIFY(!widget.mSavedCameras.contains(hamletId));
+        widget.jumpTo(roadId, 0, 0, 0);
+        QVERIFY(widget.mSavedCameras.contains(hamletId));
+        QCOMPARE(widget.mSavedCameras.value(hamletId).distance, roomsAlone);
+    }
+
+    void test_aMapWindowsViewLeavesTheSavedCamerasAloneWithoutGL()
+    {
+        const auto [hamletId, roadId] = addHamletAndRoad(300);
+        const QString item = qsl("3dmapper_cameras");
+        mpHost->writeProfileData(item, qsl(R"({"%1":[5,1,2,0]})").arg(hamletId));
+        ModernGLWidget widget(map(), mpHost);
+        widget.setSecondaryView(true);
+        queueFrame(widget, hamletId, 1.0f);
+        // Saved by the mapper's view since this one was made
+        const QString newer = qsl(R"({"%1":[7,1,2,0]})").arg(roadId);
+        mpHost->writeProfileData(item, newer);
+        widget.applyMapZoom(20.0, hamletId);
+        QCOMPARE(mpHost->readProfileData(item), newer);
+        mpHost->writeProfileData(item, QString());
+    }
+
+    void test_aFlightCutShortAmongRoomsStaysAmongThemWithoutGL()
+    {
+        const auto [hamletId, roadId] = addHamletAndRoad(300);
+        // So that the flight comes in no further than where the hamlet's rooms show
+        QVERIFY(map()->mpRoomDB->set2DMapZoom(hamletId, 200.0));
+        ModernGLWidget widget(map(), mpHost);
+        // Past the glide, while still zooming in on the hamlet from the road's rooms
+        const auto flyMostOfTheWay = [&widget, hamletId = hamletId, roadId = roadId]() {
+            queueFrame(widget, roadId, 30.0f);
+            widget.mSavedCameras.remove(hamletId);
+            widget.flyToArea(hamletId);
+            while (widget.mFlight && widget.mFlight->progress < 0.65) {
+                widget.onCameraAnimationTick();
+            }
+            widget.updateMatrices();
+            return widget.mFlight && widget.mCameraController.getScale() > widget.roomsAloneDistance(hamletId) && widget.zoomWeights().footprint == 0.0f;
+        };
+
+        // As a press, a wheel step or a script moving the camera stops it
+        QVERIFY(flyMostOfTheWay());
+        widget.stopFlight();
+        QVERIFY(widget.roomAt(QPoint(400, 300)));
+        QCOMPARE(widget.zoomWeights().footprint, 0.0f);
+
+        // As the player moving on does
+        QVERIFY(flyMostOfTheWay());
+        widget.startSmoothTransition(hamletId, 1, 1, 0);
+        QVERIFY(!widget.mFlight);
+        widget.updateMatrices();
+        QCOMPARE(widget.zoomWeights().footprint, 0.0f);
     }
 
     void test_anAreaFootprintCoversItsRoomsWithoutGL()

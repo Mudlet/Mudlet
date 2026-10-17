@@ -224,18 +224,18 @@ constexpr float scmFogMax = 0.6f;
 
 void ModernGLWidget::saveCamera()
 {
-    // While a frame is pending the camera is still the one set up for the area shown before, and until the view is
-    // seen it is set for a size the view may not have
+    // While a frame is pending the camera is still the one set up for the area shown before
     // A floating view is hidden while its dock is torn down, after the Host and its TMap are freed
     // A map window's view would overwrite the cameras the mapper's view keeps for the profile
-    if (mSecondaryView || !mpHost || !mAID || mFramePending || mFrameWhenShown || !mpMap || !mpMap->mpRoomDB || !mpMap->mpRoomDB->getArea(mAID)) {
+    if (mSecondaryView || !mpHost || !mAID || mFramePending || !mpMap || !mpMap->mpRoomDB || !mpMap->mpRoomDB->getArea(mAID)) {
         return;
     }
     const QVector3D position = mCameraController.getPosition();
-    // Pulled back to the world it shows no rooms, which is no way to come back to an area
-    const float distance = std::min(mCameraController.getScale(), CameraController::scmMaxDistance);
-    const SavedCamera camera{distance, position.y(), position.z(), mCameraController.getRoll()};
     const auto it = mSavedCameras.constFind(mAID);
+    // Until the view is seen its distance is set for a size it may not have, so one saved before stands. Pulled back
+    // to the world it shows no rooms, which is no way to come back to an area
+    const float distance = mFrameWhenShown && it != mSavedCameras.cend() ? it->distance : std::min(mCameraController.getScale(), CameraController::scmMaxDistance);
+    const SavedCamera camera{distance, position.y(), position.z(), mCameraController.getRoll()};
     if (it != mSavedCameras.cend() && it->distance == camera.distance && it->tilt == camera.tilt && it->azimuth == camera.azimuth && it->roll == camera.roll) {
         return;
     }
@@ -278,7 +278,8 @@ void ModernGLWidget::loadSavedCameras()
 
 void ModernGLWidget::writeSavedCameras() const
 {
-    if (!mpHost) {
+    // A map window's view has only a copy, from when it was made, of the cameras the mapper's view keeps
+    if (!mpHost || mSecondaryView) {
         return;
     }
     QJsonObject cameras;
@@ -3050,11 +3051,25 @@ void ModernGLWidget::stopFlight()
     if (!mFlight) {
         return;
     }
+    closeInOnRooms();
     stopSmoothTransition();
     // Held where it got to rather than jumping on to where it was going
     mMapCenterX = qRound(mCurrentAnimationX);
     mMapCenterY = qRound(mCurrentAnimationY);
     mMapCenterZ = qRound(mCurrentAnimationZ);
+}
+
+void ModernGLWidget::closeInOnRooms()
+{
+    // Without the flight's hold on the zoom levels, a small area's rooms would give way to the world at once
+    if (!mFlight || mFlight->fromWeights.footprint > 0.0f) {
+        return;
+    }
+    const float distance = roomsAloneDistance(mAID);
+    if (mCameraController.getScale() > distance) {
+        mCameraController.setScale(distance);
+        emitCameraControls();
+    }
 }
 
 QString ModernGLWidget::planRouteToRoom(const int roomId)
@@ -4373,6 +4388,7 @@ void ModernGLWidget::renderLabels(const bool onTop, const int lowestLevel, const
 void ModernGLWidget::startSmoothTransition(int targetAID, int targetX, int targetY, int targetZ)
 {
     // Glides on from wherever a flight got to, as the flight would otherwise keep the camera
+    closeInOnRooms();
     mFlight.reset();
     // Set up animation parameters
     mTargetAID = targetAID;

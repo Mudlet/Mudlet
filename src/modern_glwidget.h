@@ -517,6 +517,8 @@ private:
     void paintAtlasLabels(QPainter& painter);
     // Ends a flight into an area where it got to
     void stopFlight();
+    // A flight that set off among rooms, cut short, comes in to where the area's rooms show
+    void closeInOnRooms();
     void flightTick();
     // Finds the route again if the player moved or the map changed since it was found
     void refreshRoute();
