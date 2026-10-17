@@ -55,8 +55,12 @@ class HostManager
 
 
 public:
+    // Every profile reads Mudlet.ini as it is made, so the config root has to be settled first. The main
+    // window settles it itself, after it is built, and a pool made with no main window as it is made.
+    enum class ConfigRoot { settledHere, leftToMainWindow };
+
     Q_DISABLE_COPY(HostManager)
-    HostManager();
+    explicit HostManager(ConfigRoot = ConfigRoot::settledHere);
     ~HostManager();
 
     // A value member of the application object, so valid from that object's constructor body until its
