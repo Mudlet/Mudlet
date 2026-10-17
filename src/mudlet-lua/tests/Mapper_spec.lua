@@ -5436,6 +5436,10 @@ describe("Tests saveJsonMap and loadJsonMap", function()
       rewriteExport(function(document)
         for _, exportedArea in ipairs(document.areas) do
           if exportedArea.id == area then
+            -- an older export has no outline color field on the label
+            for _, label in ipairs(exportedArea.labels or {}) do
+              label.outlineColor = nil
+            end
             exportedArea.userData = exportedArea.userData or {}
             exportedArea.userData[outlineKey] = "1|2|3|255"
             -- the label's own "font" object says what its font is
