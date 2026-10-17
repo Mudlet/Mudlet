@@ -1251,6 +1251,44 @@ describe("Tests Other.lua functions", function()
       assert.is_boolean(cfg.editorAutoComplete)
     end)
 
+    -- the no-argument table is built from a list kept in Other.lua, which has
+    -- to be told about every key the C++ side gains
+    it("includes the IRC and the CHARSET/NEW-ENVIRON keys in the table", function()
+      local cfg = getConfig()
+      for _, key in ipairs({"enableCHARSET", "enableNEWENVIRON", "ircChannels", "ircHostName",
+                            "ircHostPort", "ircHostSecure"}) do
+        assert.is_not_nil(cfg[key], "getConfig() left out " .. key)
+        assert.equals(getConfig(key), cfg[key], "getConfig() disagrees with getConfig('" .. key .. "')")
+      end
+      -- by name only: an unset nick reads as a random one, and the password is a credential
+      assert.is_nil(cfg.ircNickName)
+      assert.is_nil(cfg.ircPassword)
+    end)
+
+    it("restores the IRC server settings from a getConfig() snapshot", function()
+      local keys = {"ircHostName", "ircHostPort", "ircChannels"}
+      -- cleanup reads the originals by name: a snapshot missing the keys must not leave the test values behind
+      for _, key in ipairs(keys) do
+        snapshot(key)
+      end
+      finally(function()
+        for _, key in ipairs(keys) do
+          restore(key)
+        end
+      end)
+      local saved = getConfig()
+      assert.is_true(setConfig("ircHostName", "irc.example.org"))
+      assert.is_true(setConfig("ircHostPort", saved.ircHostPort == 5499 and 5498 or 5499))
+      assert.is_true(setConfig("ircChannels", "#mudletspec"))
+      -- only these: the snapshot's boolean showSentText would turn "always" into "script"
+      for _, key in ipairs(keys) do
+        assert.is_true(setConfig(key, saved[key]))
+      end
+      assert.equals(saved.ircHostName, getConfig("ircHostName"))
+      assert.equals(saved.ircHostPort, getConfig("ircHostPort"))
+      assert.equals(saved.ircChannels, getConfig("ircChannels"))
+    end)
+
     it("round-trips every boolean configuration option", function()
       local settable = 0
       for key, value in pairs(getConfig()) do
@@ -1558,6 +1596,25 @@ describe("Tests Other.lua functions", function()
       restore("commandLineHistorySaveSize")
     end)
 
+    -- 1000000 is Host::scmMaxCommandLineHistorySaveSize: the save adds one to the
+    -- size, so INT_MAX would overflow every time the profile closes; 0 is how
+    -- saving the history is turned off
+    it("refuses a commandLineHistorySaveSize below 0 or above 1000000", function()
+      snapshot("commandLineHistorySaveSize")
+      finally(function() restore("commandLineHistorySaveSize") end)
+      assert.is_true(setConfig("commandLineHistorySaveSize", 42))
+      for _, size in ipairs({-5, -1, 1000001, 2147483647}) do
+        local ok, err = setConfig("commandLineHistorySaveSize", size)
+        assert.is_nil(ok, "a size of " .. size .. " was taken")
+        assert.equals("commandLineHistorySaveSize " .. size .. " is outside of the supported range of 0 to 1000000", err)
+        assert.equals(42, getConfig("commandLineHistorySaveSize"))
+      end
+      assert.is_true(setConfig("commandLineHistorySaveSize", 0))
+      assert.equals(0, getConfig("commandLineHistorySaveSize"))
+      assert.is_true(setConfig("commandLineHistorySaveSize", 1000000))
+      assert.equals(1000000, getConfig("commandLineHistorySaveSize"))
+    end)
+
     -- A script saving the settings it changes and putting them back afterwards
     -- hands getConfig()'s answer straight back to setConfig(), so both have to
     -- speak the same unit - otherwise the rooms shrink every time it does.
@@ -1676,8 +1733,7 @@ describe("Tests Other.lua functions", function()
 
     -- The modern key and the negotiation-off key it replaced are two spellings
     -- of one flag, so a script written against either has to see what the other
-    -- one did. getConfig() with no arguments does not list the modern spellings,
-    -- so the generic round-trip loop above never reaches them.
+    -- one did.
     it("keeps enableCHARSET the exact inverse of specialForceCharsetNegotiationOff", function()
       snapshot("enableCHARSET")
       assert.is_boolean(getConfig("enableCHARSET"))
@@ -2147,6 +2203,234 @@ describe("Tests Other.lua functions", function()
 
       assert.same(rooms, loaded)
     end)
+
+    it("should bring back boolean keys and leave out keys and values it cannot write", function()
+      local original = { flags = { [true] = "on", [false] = "off" }, [print] = "a function key", fn = print, keep = 1 }
+
+      assert.is_true(table.save(path, original))
+      local loaded = {}
+      table.load(path, loaded)
+
+      assert.same({ flags = { [true] = "on", [false] = "off" }, keep = 1 }, loaded)
+    end)
+
+    it("should leave the file as it was when saving fails part way through", function()
+      table.save(path, { keep = "the previous save" })
+      local realPickle = table.pickle
+      finally(function() table.pickle = realPickle end)
+      table.pickle = function() error("pickling failed") end
+
+      assert.has_error(function() table.save(path, { keep = "never written" }) end)
+      table.pickle = realPickle
+
+      local loaded = {}
+      table.load(path, loaded)
+      assert.same({ keep = "the previous save" }, loaded)
+    end)
+
+    it("should leave the file as it was when joining what it serialised fails", function()
+      table.save(path, { keep = "the previous save" })
+      local realPickle = table.pickle
+      finally(function() table.pickle = realPickle end)
+      -- a chunk table.concat cannot join
+      table.pickle = function(_, file) file:write({}) end
+
+      assert.has_error(function() table.save(path, { keep = "never written" }) end)
+      table.pickle = realPickle
+
+      local loaded = {}
+      table.load(path, loaded)
+      assert.same({ keep = "the previous save" }, loaded)
+    end)
+
+    it("should bring back infinities and NaN", function()
+      table.save(path, { inf = 1 / 0, neginf = -1 / 0, nan = 0 / 0, keep = 1 })
+      local loaded = {}
+      table.load(path, loaded)
+
+      assert.equals(math.huge, loaded.inf)
+      assert.equals(-math.huge, loaded.neginf)
+      assert.is_true(loaded.nan ~= loaded.nan)
+      assert.equals(1, loaded.keep)
+    end)
+
+    it("should keep the sign of zero and of the infinities, whichever is written first", function()
+      -- built at run time: a -0 literal would share this function's constant slot for 0
+      local negativeZero, zero = tonumber("-0"), tonumber("0")
+      local loaded = {}
+
+      table.save(path, { negativeZero, math.huge, -math.huge, zero })
+      table.load(path, loaded)
+      assert.is_true(1 / loaded[1] < 0)
+      assert.equals(math.huge, loaded[2])
+      assert.equals(-math.huge, loaded[3])
+      assert.is_true(1 / loaded[4] > 0)
+
+      loaded = {}
+      table.save(path, { zero, negativeZero, [math.huge] = "inf key", [-math.huge] = "negative inf key" })
+      table.load(path, loaded)
+      assert.is_true(1 / loaded[1] > 0)
+      assert.is_true(1 / loaded[2] < 0)
+      assert.equals("inf key", loaded[math.huge])
+      assert.equals("negative inf key", loaded[-math.huge])
+    end)
+
+    it("should keep members named after a Lua library, at any depth", function()
+      local original = { math = 1, os = 2, io = 3, string = 4, table = 5, debug = 6, coroutine = 7,
+        package = 8, _G = 9, _VERSION = 10, xpcall = 11, keep = 12, inner = { string = 3, math = 4 } }
+
+      table.save(path, original)
+      local loaded = {}
+      table.load(path, loaded)
+
+      assert.same(original, loaded)
+    end)
+
+    it("should save the globals table without the Lua libraries", function()
+      _G.tableSaveSpecMarker = "saved from _G"
+      finally(function() _G.tableSaveSpecMarker = nil end)
+
+      assert.is_true(table.save(path, _G))
+      local loaded = {}
+      table.load(path, loaded)
+
+      assert.equals("saved from _G", loaded.tableSaveSpecMarker)
+      for _, name in ipairs({ "string", "table", "math", "os", "io", "debug", "coroutine", "package", "_G",
+        "_VERSION", "xpcall" }) do
+        assert.is_nil(loaded[name], name)
+      end
+    end)
+
+    it("should leave out what a script put in place of a Lua library at the root of _G", function()
+      -- only names table.save itself does not look up while it runs: string, table, io, math and _G are
+      local names = { "os", "debug", "coroutine", "package", "xpcall" }
+      local real = {}
+      for _, name in ipairs(names) do
+        real[name] = rawget(_G, name)
+      end
+      local function restore()
+        for _, name in ipairs(names) do
+          rawset(_G, name, real[name])
+        end
+      end
+      finally(restore)
+
+      for _, name in ipairs(names) do
+        rawset(_G, name, { replacedBy = "a script" })
+      end
+      local ok = table.save(path, _G)
+      restore()
+      assert.is_true(ok)
+      local loaded = {}
+      table.load(path, loaded)
+
+      for _, name in ipairs(names) do
+        assert.is_nil(loaded[name], name)
+      end
+    end)
+
+    it("should leave out a Lua library or _G reached from a data table", function()
+      assert.is_true(table.save(path, { helpers = { text = string, env = _G }, keep = 1 }))
+      local loaded = {}
+      table.load(path, loaded)
+
+      assert.same({ helpers = {}, keep = 1 }, loaded)
+    end)
+
+    it("should refuse to save without a table, and write nothing", function()
+      assert.has_error(function() table.save(path) end, "table.save requires a table to save")
+      assert.is_false(io.exists(path))
+    end)
+
+    it("should report a write or a close that fails", function()
+      if not io.exists("/dev/full") then
+        pending("needs /dev/full")
+        return
+      end
+      -- more than the stdio buffer holds fails in the write, a few bytes only when closing
+      for _, payload in ipairs({ string.rep("x", 10000), "x" }) do
+        local ok, msg = table.save("/dev/full", { keep = payload })
+        assert.is_nil(ok)
+        assert.is_string(msg)
+      end
+    end)
+
+    it("should leave out coroutine and userdata keys and values", function()
+      local co = coroutine.create(function() end)
+      local original = { co = co, out = io.stdout, [co] = "a coroutine key", [io.stdout] = "a userdata key", keep = 1 }
+
+      assert.is_true(table.save(path, original))
+      local loaded = {}
+      table.load(path, loaded)
+
+      assert.same({ keep = 1 }, loaded)
+    end)
+
+    it("should keep fractional numeric keys apart from the integer ones and keep every digit", function()
+      local original = { [1] = "one", [1.5] = "float", [2.5] = "only", [-3.25] = "negative", precise = 0.1 + 0.2 }
+
+      table.save(path, original)
+      local loaded = {}
+      table.load(path, loaded)
+
+      assert.same(original, loaded)
+      assert.equals(0.1 + 0.2, loaded.precise)
+    end)
+
+    it("should bring back every byte of a string key or value", function()
+      local original = {
+        leadingNewline = "\nleading newline",
+        leadingCrlf = "\r\nleading crlf",
+        loneReturn = "x\ry",
+        nul = "a\0b",
+        brackets = "]] and ]=] and [[",
+        quote = 'say "hi"',
+        backslash = "C:\\path\\",
+        ["\nkey"] = 1,
+        ["]]"] = 2,
+        ['a "quoted" key'] = 3,
+      }
+
+      table.save(path, original)
+      local loaded = {}
+      table.load(path, loaded)
+
+      assert.same(original, loaded)
+    end)
+  end)
+
+  describe("Tests saveVars", function()
+    it("should report whether it could write the store", function()
+      local store = getMudletHomeDir() .. "/SavedVariables.lua"
+      -- a name no file holds yet: a backup a killed run left behind may be the only copy of the store
+      local backup
+      repeat
+        backup = string.format("%s.saveVars-spec-%d", store, math.random(1e9))
+      until not io.exists(backup)
+      local hadStore = io.exists(store)
+      if hadStore then
+        assert(os.rename(store, backup))
+      end
+      local savedTable = _G._saveTable
+      finally(function()
+        lfs.rmdir(store)
+        os.remove(store)
+        if hadStore then
+          os.rename(backup, store)
+        end
+        _G._saveTable = savedTable
+      end)
+      _G._saveTable = {}
+
+      -- a directory in its place: unlike a read-only file, that cannot be opened by root either
+      lfs.mkdir(store)
+      local ok, msg = saveVars()
+      assert.is_nil(ok)
+      assert.is_string(msg)
+
+      lfs.rmdir(store)
+      assert.is_true(saveVars())
+    end)
   end)
 
     --[[
@@ -2201,6 +2485,17 @@ describe("Tests the timer API", function()
     local name, message = waitForEvent(eventName, 5000)
     assert.equals(eventName, name, "waiting for " .. eventName .. ": " .. tostring(message))
     return name
+  end
+
+  -- installPackage() answers true but holds the install over while a profile save runs
+  local function waitForPackage(name)
+    for _ = 1, 100 do
+      if table.contains(getPackages(), name) then
+        return true
+      end
+      pumpEvents(50)
+    end
+    return false
   end
 
   -- Returns once `seconds` of real time have passed, by waiting for an event
@@ -2413,6 +2708,7 @@ describe("Tests the timer API", function()
 ]])
         file:close()
         assert.is_true(installPackage(path))
+        assert.is_true(waitForPackage(packageName), "the " .. packageName .. " package was not installed")
         return path
       end
 
@@ -2751,6 +3047,7 @@ describe("Tests the timer API", function()
 ]])
       file:close()
       assert.is_true(installPackage(path))
+      assert.is_true(waitForPackage("w2a-zero-timer"), "the zero timer package was not installed")
 
       -- the sibling shows that a package's timers do get switched on as they arrive
       assert.equals(1, isActive("W2aLiveFromPackage", "timer"))

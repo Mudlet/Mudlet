@@ -111,6 +111,53 @@ describe("Tests functionality of Adjustable.Container", function()
 
       ac:delete()
     end)
+
+    -- registered before new() so a constructor that raises part way still
+    -- takes its half built container out of Geyser
+    local function deleteOnFinish(name)
+      finally(function()
+        if Geyser.windowList[name] then
+          Geyser.windowList[name]:delete()
+        end
+      end)
+    end
+
+    it("comes up collapsed to its title bar when created minimized", function()
+      deleteOnFinish("testMinimizedContainer")
+      local ac = Adjustable.Container:new({
+        name = "testMinimizedContainer",
+        x = 0, y = 0, width = 200, height = 200,
+        minimized = true,
+        autoLoad = false,
+        autoSave = false
+      })
+
+      assert.is_true(ac.minimized)
+      assert.equals(tonumber(ac.buttonsize) + 10, ac:get_height())
+      assert.is_true(ac.Inside.hidden)
+      ac:restore()
+      assert.equals(200, ac:get_height())
+    end)
+
+    it("comes up collapsed and locked when created minimized and locked", function()
+      deleteOnFinish("testMinimizedLockedContainer")
+      local ac = Adjustable.Container:new({
+        name = "testMinimizedLockedContainer",
+        x = 0, y = 0, width = 200, height = 200,
+        minimized = true,
+        locked = true,
+        autoLoad = false,
+        autoSave = false
+      })
+
+      assert.equals(tonumber(ac.buttonsize) + 10, ac:get_height())
+      assert.is_true(ac.locked)
+      assert.is_false(windowVisible(ac.exitLabel.name))
+      assert.is_false(windowVisible(ac.minimizeLabel.name))
+      ac:restore()
+      assert.equals(200, ac:get_height())
+      assert.is_false(windowVisible(ac.exitLabel.name))
+    end)
   end)
 
   -- Geometry, visibility and title readback, asserted on the widgets the
@@ -228,6 +275,58 @@ describe("Tests functionality of Adjustable.Container", function()
       assert.are.same({x = 50, y = 90, width = 140, height = 110}, geometry("gasPaddedChild"))
     end)
 
+    it("setPadding refuses a negative, non-numeric or huge padding and leaves the container usable", function()
+      Geyser.Label:new({name = "gasBadPaddingChild", x = 0, y = 0, width = "100%", height = "100%"}, container)
+      -- 25 rather than the default 10, so that falling back to the default shows
+      assert.is_true(container:setPadding(25))
+      -- 1e305 and up overflow to inf when rounded to 4 decimal places; the extra pass is setPadding(nil)
+      local paddings = {-5, "nonsense", false, 0 / 0, "nan", math.huge, "inf", 1e20, 1e13, 1e305, "1e305", 1.7e308}
+      for i = 1, #paddings + 1 do
+        local padding = paddings[i]
+        local ok, message
+        assert.has_no.errors(function() ok, message = container:setPadding(padding) end)
+        assert.is_nil(ok, tostring(padding))
+        assert.is_truthy(message:find("padding as a number of 0 or more and below 1e13 expected", 1, true))
+        assert.are.equal(25, container.padding, tostring(padding))
+        container:move(20, 30)
+        container:unlockContainer()
+        assert.are.same({x = 45, y = 80, width = 150, height = 125}, geometry("gasBadPaddingChild"))
+      end
+    end)
+
+    it("ignores an invalid padding given to new() and says so", function()
+      local messages = {}
+      -- busted runs a spec in its own environment, so the stub has to go into _G to reach Geyser
+      local realDebugc = _G.debugc
+      _G.debugc = function(message) messages[#messages + 1] = message end
+      finally(function() _G.debugc = realDebugc end)
+      for _, padding in ipairs({-5, "nonsense", math.huge}) do
+        local made
+        assert.has_no.errors(function()
+          made = Adjustable.Container:new({name = "gasBadNewPadding", x = 20, y = 30, width = 200, height = 200,
+                                           padding = padding, autoLoad = false, autoSave = false})
+        end)
+        Geyser.Label:new({name = "gasBadNewPaddingChild", x = 0, y = 0, width = "100%", height = "100%"}, made)
+        assert.are.equal(10, made.padding)
+        made:unlockContainer()
+        assert.are.same({x = 30, y = 50, width = 180, height = 170}, geometry("gasBadNewPaddingChild"))
+        made:delete()
+        assert.is_truthy(table.concat(messages, "\n"):find("ignored the invalid padding " .. tostring(padding), 1, true), table.concat(messages, "\n"))
+      end
+    end)
+
+    it("setPadding takes a padding too small to print without an exponent", function()
+      Geyser.Label:new({name = "gasTinyPaddingChild", x = 0, y = 0, width = "100%", height = "100%"}, container)
+      for _, padding in ipairs({"0.00001", 0.00001}) do
+        assert.has_no.errors(function() assert.is_true(container:setPadding(padding)) end)
+        assert.are.equal(0, container.padding)
+        container:move(20, 30)
+        container:unlockContainer()
+        assert.are.same({x = 20, y = 30, width = 200, height = 200}, geometry("gasTinyPaddingChild"))
+      end
+      container:setPadding(10)
+    end)
+
     it("hides and shows every widget it owns", function()
       container:hide()
       assert.is_false(windowVisible("gasContaineradjLabel"))
@@ -277,6 +376,39 @@ describe("Tests functionality of Adjustable.Container", function()
       container:restore()
       assert.is_false(container.minimized)
       assert.are.same({x = 20, y = 30, width = 200, height = 200}, geometry("gasContaineradjLabel"))
+    end)
+
+    it("keeps the height to restore to when minimized twice", function()
+      container:minimize()
+      local origh = container.origh
+      container:minimize()
+      assert.are.equal(origh, container.origh)
+      assert.is_true(container.Inside.hidden)
+      assert.are.equal(tonumber(container.buttonsize) + 10, geometry("gasContaineradjLabel").height)
+      container:restore()
+      assert.is_false(container.minimized)
+      assert.are.same({x = 20, y = 30, width = 200, height = 200}, geometry("gasContaineradjLabel"))
+    end)
+
+    it("minimizes and restores when its minimized flag is truthy but not true", function()
+      container.minimized = 1
+      container:minimize()
+      assert.is_true(container.minimized)
+      assert.are.equal(tonumber(container.buttonsize) + 10, geometry("gasContaineradjLabel").height)
+      container:restore()
+      assert.are.equal(200, geometry("gasContaineradjLabel").height)
+    end)
+
+    it("minimizes from its button and locks when its minimized flag is truthy but not true", function()
+      container.minimized = 1
+      container:onClickMin()
+      assert.is_true(container.minimized)
+      assert.are.equal(tonumber(container.buttonsize) + 10, geometry("gasContaineradjLabel").height)
+      container:onClickMin()
+      assert.are.equal(200, geometry("gasContaineradjLabel").height)
+      container.minimized = 1
+      container:lockContainer()
+      assert.is_true(container.locked)
     end)
 
     it("titles itself after its name again after resetTitle", function()
@@ -1207,6 +1339,17 @@ describe("Tests dragging an Adjustable.Container out of its parent", function()
     assert.is_false(child.minimized)
     -- the height it restores to was a share of the parent it has left
     assertNear(child:get_height(), height, "restored height")
+  end)
+
+  it("names the container when the height it restores to cannot be read", function()
+    makeChild({dragOut = true})
+    child:minimize()
+    child.origh = "50 %"
+
+    local ok, message = pcall(function() child:dragOutOfParent(0, 0) end)
+
+    assert.is_false(ok)
+    assert.is_truthy(tostring(message):find("element '" .. childName .. "' has an invalid height constraint", 1, true), tostring(message))
   end)
 
   it("does nothing for a container that is not nested in another one", function()
@@ -2247,6 +2390,48 @@ describe("Tests Adjustable.Container borders, persistence and menu items", funct
       assert.is_truthy(message:find("Couldn't load settings from", 1, true))
     end)
 
+    it("keeps its padding when the saved one is invalid, and says so", function()
+      local container = make("gapSavedBadPadding")
+      Geyser.Label:new({name = "gapSavedBadPaddingChild", x = 0, y = 0, width = "100%", height = "100%"}, container)
+      container:setPadding(25)
+      container:save(nil, scratchDir)
+      local messages = {}
+      -- busted runs a spec in its own environment, so the stub has to go into _G to reach Geyser
+      local realDebugc = _G.debugc
+      _G.debugc = function(message) messages[#messages + 1] = message end
+      finally(function() _G.debugc = realDebugc end)
+      for _, padding in ipairs({-5, "nonsense", 1e20}) do
+        local saved = {}
+        table.load(scratchDir .. "gapSavedBadPadding.lua", saved)
+        saved.padding = padding
+        table.save(scratchDir .. "gapSavedBadPadding.lua", saved)
+
+        assert.has_no.errors(function() container:load(nil, scratchDir) end)
+        assert.are.equal(25, container.padding)
+        assert.is_truthy(table.concat(messages, "\n"):find("ignored the invalid padding " .. tostring(padding), 1, true), table.concat(messages, "\n"))
+        container:unlockContainer()
+        assert.are.same({25, 50, 150, 25}, {getWindowGeometry("gapSavedBadPaddingChild")})
+      end
+    end)
+
+    it("names the padding it ends up with when new() ignores one and a saved padding is loaded", function()
+      local saving = make("gapNewBadPaddingLoaded", {defaultDir = scratchDir})
+      saving:setPadding(25)
+      assert.is_true(saving:save())
+      saving:delete()
+      local messages = {}
+      -- busted runs a spec in its own environment, so the stub has to go into _G to reach Geyser
+      local realDebugc = _G.debugc
+      _G.debugc = function(message) messages[#messages + 1] = message end
+      finally(function() _G.debugc = realDebugc end)
+      local made = Adjustable.Container:new({name = "gapNewBadPaddingLoaded", x = 0, y = 0, width = 200, height = 100,
+                                             padding = -5, defaultDir = scratchDir, autoSave = false})
+      containers[#containers + 1] = made
+      assert.are.equal(25, made.padding)
+      local log = table.concat(messages, "\n")
+      assert.is_truthy(log:find("ignored the invalid padding -5 given for gapNewBadPaddingLoaded, using 25", 1, true), log)
+    end)
+
     it("brings back the padding, lock style and border margin", function()
       local container = make("gapSavedFields")
       container:setPadding(25)
@@ -2264,6 +2449,40 @@ describe("Tests Adjustable.Container borders, persistence and menu items", funct
       assert.are.equal(12, container.attachedMargin)
       assert.are.equal("full", container.lockStyle)
       assert.is_true(container.locked)
+    end)
+
+    it("saves the full height to restore to after being minimized twice", function()
+      local container = make("gapSavedMinimized", {height = 200})
+      container:minimize()
+      container:minimize()
+      container:save(nil, scratchDir)
+      container:delete()
+      local saved = {}
+      table.load(scratchDir .. "gapSavedMinimized.lua", saved)
+      assert.are.equal("200px", saved.origh)
+
+      -- reloaded at another height, so only the saved origh can give back 200
+      local reloaded = make("gapSavedMinimized", {height = 300})
+      reloaded:load(nil, scratchDir)
+      reloaded:restore()
+      assert.are.equal(200, reloaded:get_height())
+    end)
+
+    it("restores a layout saved with the collapsed height as the one to restore to", function()
+      local container = make("gapSavedCollapsed", {height = 200})
+      container:minimize()
+      container:save(nil, scratchDir)
+      local saved = {}
+      table.load(scratchDir .. "gapSavedCollapsed.lua", saved)
+      saved.origh = saved.height
+      table.save(scratchDir .. "gapSavedCollapsed.lua", saved)
+      container:delete()
+
+      local reloaded = make("gapSavedCollapsed", {height = 200})
+      reloaded:load(nil, scratchDir)
+      assert.are.equal(tonumber(reloaded.buttonsize) + 10, reloaded:get_height())
+      reloaded:restore()
+      assert.are.equal(200, reloaded:get_height())
     end)
 
     it("rejects a slot or a directory of the wrong type", function()
@@ -2638,6 +2857,23 @@ describe("Tests Adjustable.Container borders, persistence and menu items", funct
 
       assert.is_truthy(tostring(container.x):find("px$"))
       assert.are.equal("20%", container.width)
+    end)
+
+    it("turns the axis its container has a size on into percentages", function()
+      local flat = Geyser.Container:new({name = "gapFlatParent", x = 0, y = 0, width = 300, height = 0})
+      finally(function() flat:delete() end)
+      local container = Adjustable.Container:new({name = "gapFlat", x = 30, y = 0, width = 150, height = 0, autoLoad = false, autoSave = false}, flat)
+      containers[#containers + 1] = container
+
+      container:setPercent(true, true)
+
+      local function percent(value)
+        return tonumber(tostring(value):match("^(.-)%%$"))
+      end
+      assert.are.equal(10, percent(container.x))
+      assert.are.equal(50, percent(container.width))
+      assert.are.equal("0px", container.y)
+      assert.are.equal("0px", container.height)
     end)
   end)
 

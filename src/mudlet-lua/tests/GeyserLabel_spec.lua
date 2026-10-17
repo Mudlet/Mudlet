@@ -1050,6 +1050,141 @@ describe("Tests functionality of Geyser.Label widget state", function()
       label:setTiledBackgroundImage("/tmp/whatever.png")
       assert.are.equal("background-image: url(/tmp/whatever.png);", getLabelStyleSheet("glsTiled"))
     end)
+
+    it("resetBackgroundImage takes a tiled image away, and only the image", function()
+      local label = track(Geyser.Label:new({name = "glsTiledReset", x = 0, y = 0, width = 40, height = 20}))
+      setLabelStyleSheet("glsTiledReset", "border: 1px solid red; background-image: url(data:image/png;base64,AAAA); color: blue;")
+      assert.is_true(resetBackgroundImage("glsTiledReset"))
+      assert.are.equal("border: 1px solid red;  color: blue;", getLabelStyleSheet("glsTiledReset"))
+
+      label:setTiledBackgroundImage(":/icons/mudlet.png")
+      assert.is_true(resetBackgroundImage("glsTiledReset"))
+      assert.are.equal("", getLabelStyleSheet("glsTiledReset"))
+    end)
+
+    it("resetBackgroundImage leaves an image inside a rule of the stylesheet alone", function()
+      track(Geyser.Label:new({name = "glsHoverImage", x = 0, y = 0, width = 40, height = 20}))
+      local sheet = "QLabel{color: red;} QLabel::hover{background-image: url(hover.png);}"
+      setLabelStyleSheet("glsHoverImage", sheet)
+      assert.is_true(resetBackgroundImage("glsHoverImage"))
+      assert.are.equal(sheet, getLabelStyleSheet("glsHoverImage"))
+    end)
+
+    it("resetBackgroundImage passes over comments and quoted text in the stylesheet", function()
+      track(Geyser.Label:new({name = "glsCommentedImage", x = 0, y = 0, width = 40, height = 20}))
+      setLabelStyleSheet("glsCommentedImage", "/* background-image: url(old.png) */ color: blue; background-image: url(current.png);")
+      assert.is_true(resetBackgroundImage("glsCommentedImage"))
+      assert.are.equal("/* background-image: url(old.png) */ color: blue; ", getLabelStyleSheet("glsCommentedImage"))
+
+      setLabelStyleSheet("glsCommentedImage", [[background-image: url("image (1); copy.png"); color: blue;]])
+      assert.is_true(resetBackgroundImage("glsCommentedImage"))
+      assert.are.equal(" color: blue;", getLabelStyleSheet("glsCommentedImage"))
+
+      setLabelStyleSheet("glsCommentedImage", "/* { */ background-image: url(current.png);")
+      assert.is_true(resetBackgroundImage("glsCommentedImage"))
+      assert.are.equal("/* { */ ", getLabelStyleSheet("glsCommentedImage"))
+
+      -- the '(' in the quotes would otherwise leave the url open
+      setLabelStyleSheet("glsCommentedImage", [[background-image: url("a(.png"); color: blue;]])
+      assert.is_true(resetBackgroundImage("glsCommentedImage"))
+      assert.are.equal(" color: blue;", getLabelStyleSheet("glsCommentedImage"))
+    end)
+
+    it("resetBackgroundImage takes the image away whatever case its property is written in", function()
+      track(Geyser.Label:new({name = "glsCasedImage", x = 0, y = 0, width = 40, height = 20}))
+      setLabelStyleSheet("glsCasedImage", "Background-Image: url(:/icons/mudlet.png); color: blue;")
+      assert.is_true(resetBackgroundImage("glsCasedImage"))
+      assert.are.equal(" color: blue;", getLabelStyleSheet("glsCasedImage"))
+
+      setLabelStyleSheet("glsCasedImage", "BACKGROUND-IMAGE: url(:/icons/mudlet.png);")
+      assert.is_true(resetBackgroundImage("glsCasedImage"))
+      assert.are.equal("", getLabelStyleSheet("glsCasedImage"))
+    end)
+
+    it("resetBackgroundImage leaves a selector that names background-image alone", function()
+      track(Geyser.Label:new({name = "glsImageSelector", x = 0, y = 0, width = 40, height = 20}))
+      local sheet = "QLabel#background-image:hover { color: red; }"
+      setLabelStyleSheet("glsImageSelector", sheet)
+      assert.is_true(resetBackgroundImage("glsImageSelector"))
+      assert.are.equal(sheet, getLabelStyleSheet("glsImageSelector"))
+    end)
+
+    it("Geyser.Label:resetBackgroundImage takes a tiled image away for good", function()
+      local label = track(Geyser.Label:new({name = "glsTiledGeyserReset", x = 0, y = 0, width = 40, height = 20}))
+      label:setTiledBackgroundImage(":/icons/mudlet.png")
+      assert.is_true(label:resetBackgroundImage())
+      -- with no argument, setStyleSheet puts back the sheet the label remembers
+      label:setStyleSheet()
+      assert.are.equal("", getLabelStyleSheet("glsTiledGeyserReset"))
+      assert.are.equal("", label.stylesheet)
+    end)
+
+    it("Geyser.Label:resetBackgroundImage keeps the rest of the stylesheet it remembers", function()
+      local label = track(Geyser.Label:new({name = "glsRememberedReset", x = 0, y = 0, width = 40, height = 20}))
+      label:setStyleSheet("border: 1px solid red; background-image: url(:/icons/mudlet.png);")
+      assert.is_true(label:resetBackgroundImage())
+      label:setStyleSheet()
+      assert.are.equal("border: 1px solid red; ", getLabelStyleSheet("glsRememberedReset"))
+    end)
+
+    it("Geyser.Label:resetBackgroundImage does not remember the colour the label's stylesheet was given", function()
+      local label = track(Geyser.Label:new({name = "glsColouredReset", x = 0, y = 0, width = 40, height = 20}))
+      label:setStyleSheet("border: 1px solid red; background-image: url(:/icons/mudlet.png);")
+      setBackgroundColor("glsColouredReset", 255, 0, 0, 255)
+      assert.is_true(label:resetBackgroundImage())
+      assert.are.equal("border: 1px solid red; ", label.stylesheet)
+      assert.are.equal("border: 1px solid red; \nbackground-color: rgba(255, 0, 0, 255);", getLabelStyleSheet("glsColouredReset"))
+
+      label:setStyleSheet("border: 1px solid red;")
+      setBackgroundColor("glsColouredReset", 0, 0, 255, 255)
+      assert.is_true(label:resetBackgroundImage())
+      assert.are.equal("border: 1px solid red;", label.stylesheet)
+    end)
+
+    it("Geyser.Label:resetBackgroundImage answers nil and a message for a deleted label", function()
+      local label = track(Geyser.Label:new({name = "glsDeletedReset", x = 0, y = 0, width = 40, height = 20}))
+      label:delete()
+      local ok, err = label:resetBackgroundImage()
+      assert.is_nil(ok)
+      assert.are.equal("console 'glsDeletedReset' not found", err)
+    end)
+
+    it("Geyser.Label:resetBackgroundImage does not apply the stylesheet it remembers to the label", function()
+      local label = track(Geyser.Label:new({name = "glsStaleReset", x = 0, y = 0, width = 40, height = 20}))
+      label:setStyleSheet("qproperty-text: 'stale'; background-image: url(:/icons/mudlet.png);")
+      setLabelStyleSheet("glsStaleReset", "color: red;")
+      label:echo("current")
+      assert.is_true(label:resetBackgroundImage())
+      assert.are.equal("qproperty-text: 'stale'; ", label.stylesheet)
+      assert.are.equal("color: red;", getLabelStyleSheet("glsStaleReset"))
+      assert.truthy(getLabelText("glsStaleReset"):find("current", 1, true))
+    end)
+
+    it("Geyser.Label:resetBackgroundImage takes from the stylesheet it remembers what resetBackgroundImage takes from the label's", function()
+      local label = track(Geyser.Label:new({name = "glsResetParity", x = 0, y = 0, width = 40, height = 20}))
+      for _, sheet in ipairs({
+        "border: 1px solid red; background-image: url(data:image/png;base64,AAAA); color: blue;",
+        "QLabel{color: red;} QLabel::hover{background-image: url(hover.png);}",
+        "/* background-image: url(old.png) */ color: blue; background-image: url(current.png);",
+        [[background-image: url("image (1); copy.png"); color: blue;]],
+        "/* { */ background-image: url(current.png);",
+        [[background-image: url("a(.png"); color: blue;]],
+        [[background-image: url('a\'b.png'); color: blue;]],
+        "Background-Image: url(:/icons/mudlet.png); color: blue;",
+        "BACKGROUND-IMAGE : url(:/icons/mudlet.png)",
+        "QLabel#background-image:hover { color: red; }",
+        "background-imagex: foo; color: blue;",
+        "color: blue; background-image: url(a.png) /* unterminated",
+        "color: blue;background-image:url(a.png);font-size: 12px;",
+      }) do
+        setLabelStyleSheet("glsResetParity", sheet)
+        assert.is_true(resetBackgroundImage("glsResetParity"))
+        local expected = getLabelStyleSheet("glsResetParity")
+        label.stylesheet = sheet
+        assert.is_true(label:resetBackgroundImage())
+        assert.are.equal(expected, label.stylesheet, sheet)
+      end
+    end)
   end)
 end)
 
@@ -2385,5 +2520,82 @@ describe("Tests Geyser.Label right click menus", function()
       assert.are.equal(label:get_x() + 8, label.rightClickMenu:get_x())
       assert.are.equal(label:get_y() + 12, label.rightClickMenu:get_y())
     end)
+  end)
+end)
+
+-- a label inside a scroll box carries the scroll box's name as its windowname,
+-- which getUserWindowSize refuses as no user window
+describe("Tests Geyser.Label nests and menus inside a Geyser.ScrollBox", function()
+  local scrollBox
+  local topLevelBefore
+
+  before_each(function()
+    topLevelBefore = {}
+    for name in pairs(Geyser.windowList) do
+      topLevelBefore[name] = true
+    end
+    scrollBox = Geyser.ScrollBox:new({name = "glsbBox", x = 0, y = 0, width = 300, height = 300})
+  end)
+
+  after_each(function()
+    if Geyser.Label.closeAllTimer then
+      killTimer(Geyser.Label.closeAllTimer)
+      Geyser.Label.closeAllTimer = nil
+    end
+    scrollBox:delete()
+    for name, object in pairs(Geyser.windowList) do
+      if not topLevelBefore[name] then
+        Geyser.Label.scrollV[object] = nil
+        Geyser.Label.scrollH[object] = nil
+        object:delete()
+      end
+    end
+  end)
+
+  it("opens a right click menu", function()
+    local label = Geyser.Label:new({name = "glsbMenuHost", x = 10, y = 10, width = 100, height = 30}, scrollBox)
+    label:createRightClickMenu({MenuItems = {"First"}})
+    label:onRightClick({button = "RightButton", buttons = {"RightButton"}, x = 1, y = 1, globalX = 1, globalY = 1})
+    assert.is_true(windowVisible(label:findMenuElement("First").name))
+  end)
+
+  it("displays a nest", function()
+    local parent = Geyser.Label:new({name = "glsbNestParent", x = 10, y = 10, width = 50, height = 20}, scrollBox)
+    local child = parent:addChild({name = "glsbNestChild", width = 50, height = 20, layoutDir = "RV"}, scrollBox)
+    parent:displayNest()
+    assert.is_true(windowVisible(child.name))
+  end)
+
+  -- every refusal is a warning in the Central Debug Console
+  it("does not ask getUserWindowSize about the scroll box", function()
+    local label = Geyser.Label:new({name = "glsbAskMenu", x = 10, y = 10, width = 100, height = 30}, scrollBox)
+    label:createRightClickMenu({MenuItems = {"First"}})
+    local parent = Geyser.Label:new({name = "glsbAskNest", x = 10, y = 50, width = 50, height = 20}, scrollBox)
+    parent:addChild({name = "glsbAskNestChild", width = 50, height = 20, layoutDir = "RV"}, scrollBox)
+    local sizeSpy = spy.on(_G, "getUserWindowSize")
+    finally(function() sizeSpy:revert() end)
+    label:onRightClick({button = "RightButton", buttons = {"RightButton"}, x = 1, y = 1, globalX = 1, globalY = 1})
+    parent:displayNest()
+    assert.spy(sizeSpy).was_not_called()
+  end)
+end)
+
+describe("Tests a Geyser.Label right click menu in a user window deleted behind Geyser's back", function()
+  it("does not ask getUserWindowSize about the window that is gone", function()
+    local userWindow = Geyser.UserWindow:new({name = "glGoneUW", x = 10, y = 20, width = 200, height = 150})
+    finally(function()
+      if Geyser.Label.closeAllTimer then
+        killTimer(Geyser.Label.closeAllTimer)
+        Geyser.Label.closeAllTimer = nil
+      end
+      userWindow:delete()
+    end)
+    local label = Geyser.Label:new({name = "glGoneUWLabel", x = 0, y = 0, width = 50, height = 20}, userWindow)
+    label:createRightClickMenu({MenuItems = {"First"}})
+    deleteMiniConsole("glGoneUW")
+    local sizeSpy = spy.on(_G, "getUserWindowSize")
+    finally(function() sizeSpy:revert() end)
+    label:onRightClick({button = "RightButton", buttons = {"RightButton"}, x = 1, y = 1, globalX = 1, globalY = 1})
+    assert.spy(sizeSpy).was_not_called()
   end)
 end)
