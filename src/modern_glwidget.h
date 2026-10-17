@@ -33,6 +33,7 @@
 
 #include <QElapsedTimer>
 #include <QHash>
+#include <QImage>
 #include <QMap>
 #include <QMatrix4x4>
 #include <QVector3D>
@@ -419,6 +420,22 @@ private:
         QRectF rect;
         bool shownArea = false;
     };
+    // By text, plain then in bold for the area shown: the names atlasLabels() last measured, as boundingRect() gives them
+    std::array<QHash<QString, QRectF>, 2> mAtlasLabelBounds;
+    // Halos are slow to stroke every frame. One sheet, not an image per name: the GL paint engine caches a texture per
+    // image, and the driver gives each far more memory than a name takes
+    struct AtlasLabelSheet
+    {
+        QImage image;
+        // Where each name is in the image, in its pixels, by text, plain then in bold
+        std::array<QHash<QString, QRect>, 2> places;
+    };
+    AtlasLabelSheet mAtlasLabelSheet;
+    QFont mAtlasLabelFont;
+    QColor mAtlasLabelBackground;
+    qreal mAtlasLabelPixelRatio = 0.0;
+    std::shared_ptr<RetainedTriangles> mAtlasFootprints = std::make_shared<RetainedTriangles>();
+    std::shared_ptr<RetainedTriangles> mAtlasWorld = std::make_shared<RetainedTriangles>();
     // A view flying into an area: it glides across the map, then zooms in, in the new area's coordinates
     struct Flight
     {
@@ -505,6 +522,8 @@ private:
     void queueAtlas(const MapAtlas::Weights& weights);
     // The area names to draw over the view, largest areas first, none overlapping another
     QList<AtlasLabel> atlasLabels(const MapAtlas::Weights& weights);
+    // Lays the names out in a new sheet, copying those the old one has and drawing the rest
+    void paintAtlasLabelSheet(const QList<AtlasLabel>& labels, qreal pixelRatio);
     void paintAtlasLabels(QPainter& painter);
     // Ends a flight into an area where it got to
     void stopFlight();
