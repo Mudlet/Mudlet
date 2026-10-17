@@ -303,8 +303,13 @@ private slots:
         svg.close();
         QVERIFY(runLua(qsl("echo('%1', 'Map'); assert(setBackgroundImage('%1', [[%2]]))").arg(mLabelName, svg.fileName())));
         QCOMPARE(accessible()->role(), QAccessible::StaticText);
+        listenTo(label());
+        auto restore = qScopeGuard([this]() {
+            stopListening();
+        });
         QVERIFY(runLua(qsl("echo('%1', '')").arg(mLabelName)));
         QCOMPARE(accessible()->role(), QAccessible::Graphic);
+        QVERIFY2(smEvents.contains(QAccessible::ActionChanged), "emptying the text over an SVG was not announced as a role change");
     }
 
     void test_aPressLeavesALinkUnderTheLabelAlone()
@@ -359,6 +364,21 @@ private slots:
         QVERIFY(runLua(qsl("assert(setBackgroundImage('%1', [[%2]]))").arg(mLabelName, path)));
         QVERIFY2(smEvents.contains(QAccessible::NameChanged), "the text an image replaced was not announced");
         QVERIFY2(smEvents.contains(QAccessible::ActionChanged), "a label becoming a graphic was not announced");
+
+        QVERIFY(runLua(qsl("resetBackgroundImage('%1'); setLabelToolTip('%1', 'Map')").arg(mLabelName)));
+        smEvents.clear();
+        QVERIFY(runLua(qsl("resetBackgroundImage('%1'); setLabelToolTip('%1', 'Map')").arg(mLabelName)));
+        QVERIFY2(smEvents.isEmpty(), "removing an image that was not there, or repeating a tooltip, was announced");
+
+        QVERIFY(runLua(qsl("resetLabelToolTip('%1'); setLabelAccessibleName('%1', 'Open the map')").arg(mLabelName)));
+        smEvents.clear();
+        QVERIFY(runLua(qsl("echo('%1', 'North')").arg(mLabelName)));
+        QVERIFY2(!smEvents.contains(QAccessible::NameChanged), "new text was announced as a new name for a label a script named");
+
+        QVERIFY(runLua(qsl("setLabelAccessibleName('%1', '')").arg(mLabelName)));
+        smEvents.clear();
+        QVERIFY(runLua(qsl("echo('%1', 'South')").arg(mLabelName)));
+        QCOMPARE(smEvents.count(QAccessible::NameChanged), 1);
     }
 
     void test_aLabelThatDeletesItselfWhenPressedIsLeftAlone()
