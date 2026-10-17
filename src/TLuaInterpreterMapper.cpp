@@ -4313,15 +4313,30 @@ int TLuaInterpreter::setRoomIDbyHash(lua_State* L)
     const int id = getVerifiedInt(L, __func__, 1, "roomID");
     const QString hash = getVerifiedString(L, __func__, 2, "hash");
     const Host& host = getHostFromLua(L);
-    if (host.mpMap->mpRoomDB->roomIDToHash.contains(id)) {
-        host.mpMap->mpRoomDB->hashToRoomID.remove(host.mpMap->mpRoomDB->roomIDToHash[id]);
+    if (!host.mpMap || !host.mpMap->mpRoomDB) {
+        return warnArgumentValue(L, __func__, "no map present or loaded");
     }
-    if (host.mpMap->mpRoomDB->hashToRoomID.contains(hash)) {
-        host.mpMap->mpRoomDB->roomIDToHash.remove(host.mpMap->mpRoomDB->hashToRoomID[hash]);
+    TRoomDB* pRoomDB = host.mpMap->mpRoomDB.get();
+    if (!pRoomDB->getRoom(id)) {
+        return warnArgumentValue(L, __func__, csmInvalidRoomID.arg(id));
     }
-    host.mpMap->mpRoomDB->hashToRoomID[hash] = id;
-    host.mpMap->mpRoomDB->roomIDToHash[id] = hash;
-    return 0;
+    if (pRoomDB->roomIDToHash.value(id) == hash && (hash.isEmpty() || pRoomDB->hashToRoomID.value(hash, -1) == id)) {
+        lua_pushboolean(L, true);
+        return 1;
+    }
+    if (pRoomDB->roomIDToHash.contains(id)) {
+        pRoomDB->hashToRoomID.remove(pRoomDB->roomIDToHash.take(id));
+    }
+    if (!hash.isEmpty()) {
+        if (pRoomDB->hashToRoomID.contains(hash)) {
+            pRoomDB->roomIDToHash.remove(pRoomDB->hashToRoomID[hash]);
+        }
+        pRoomDB->hashToRoomID[hash] = id;
+        pRoomDB->roomIDToHash[id] = hash;
+    }
+    host.mpMap->setUnsaved(__func__);
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setRoomName
