@@ -527,12 +527,98 @@ local speedwalkTimerID
 local speedwalkDelay
 local speedwalkList
 local speedwalkShow
+local speedwalkPaused = false
+-- the walklists whose send() of a step, or whose sysSpeedwalkStarted, is still running:
+-- that caller takes its walk on once the handlers return
+local speedwalkSending
+local speedwalkStarting
+local speedwalkCount = 0
 
---- Stops a speedwalk and clears the walklist
+local function speedwalkInProgress()
+  return speedwalkList ~= nil and #speedwalkList > 0
+end
+
+local function cancelSpeedwalkTimer()
+  if speedwalkTimerID then
+    killTimer(speedwalkTimerID)
+    speedwalkTimerID = false
+  end
+end
+
+local function checkedSpeedwalkDelay(delay, caller, argument)
+  local seconds = tonumber(delay)
+  assert(seconds, string.format("%s: bad argument #%d type (delay in seconds as number expected, got %s!)", caller, argument, type(delay)))
+  -- tempTimer() bounds the delay once rounded to whole milliseconds; checked here so a bad one cannot half-start a walk
+  local milliseconds = math.floor(seconds * 1000 + 0.5)
+  assert(milliseconds >= 0 and milliseconds < 86400000, string.format("%s: bad argument #%d value (delay in seconds must be at least 0 and less than 86400, got %s)", caller, argument, tostring(delay)))
+  return seconds
+end
+
+-- false when a sysSpeedwalkStopped handler of the walk it stopped has started another
+local function makeWayForSpeedwalk()
+  local walksBefore = speedwalkCount
+  stopSpeedwalk()
+  return speedwalkCount == walksBefore
+end
+
+local function beginSpeedwalk(walklist, delay, show)
+  cancelSpeedwalkTimer()
+  speedwalkList = walklist
+  speedwalkDelay = delay
+  speedwalkShow = show
+  speedwalkPaused = false
+  speedwalkCount = speedwalkCount + 1
+end
+
+local function speedwalkStep()
+  local walklist = speedwalkList
+  local outerSending = speedwalkSending
+  speedwalkSending = walklist
+  local sent, sendError = pcall(send, walklist[1], speedwalkShow)
+  speedwalkSending = outerSending
+  if not sent then
+    -- a step send() refuses ends the walk rather than leaving it stuck on that step
+    if speedwalkList == walklist then
+      stopSpeedwalk()
+    end
+    error(sendError, 0)
+  end
+  -- a sysDataSendRequest handler may have stopped this walk or started another
+  if speedwalkList ~= walklist then
+    return
+  end
+  table.remove(walklist, 1)
+  if #walklist == 0 then
+    speedwalkPaused = false
+    raiseEvent("sysSpeedwalkFinished")
+  elseif speedwalkDelay and not speedwalkPaused then
+    speedwalkTimerID = tempTimer(speedwalkDelay, function()
+      speedwalkTimerID = false
+      if speedwalkList == walklist and not speedwalkPaused then
+        speedwalkStep()
+      end
+    end)
+  end
+end
+
+local function continueSpeedwalk()
+  if speedwalkDelay then
+    speedwalkStep()
+    return
+  end
+  local walklist = speedwalkList
+  while speedwalkList == walklist and #walklist > 0 and not speedwalkPaused do
+    speedwalkStep()
+  end
+end
+
+--- Stops the running or paused speedwalk, so there is nothing left to resume, and raises sysSpeedwalkStopped.
+--- @return true, or nil and a message when no speedwalk is running or paused
 function stopSpeedwalk()
-  local active = pauseSpeedwalk()
-  if active then
+  if speedwalkInProgress() then
+    cancelSpeedwalkTimer()
     speedwalkList = {}
+    speedwalkPaused = false
     raiseEvent("sysSpeedwalkStopped")
     return true
   end
@@ -541,11 +627,13 @@ end
 
 
 
---- pauses a running speedwalk, but leaves the walklist intact in case you want to resume
+--- Pauses the running speedwalk, leaving the steps still to take for resumeSpeedwalk(), and raises sysSpeedwalkPaused.
+--- @return true, or nil and a message when no speedwalk is running, or its last step is being sent
 function pauseSpeedwalk()
-  if speedwalkTimerID then
-    killTimer(speedwalkTimerID)
-    speedwalkTimerID = false
+  -- the walk finishes once the last step's send() returns, leaving nothing to resume
+  if speedwalkInProgress() and not speedwalkPaused and not (speedwalkSending == speedwalkList and #speedwalkList == 1) then
+    cancelSpeedwalkTimer()
+    speedwalkPaused = true
     raiseEvent("sysSpeedwalkPaused")
     return true
   end
@@ -554,42 +642,65 @@ end
 
 
 
---- Resumes a paused speedwalk
+--- Raises sysSpeedwalkResumed and carries on with the paused speedwalk from its next step.
+--- @return true, or nil and a message when the speedwalk is not paused or there is none
 function resumeSpeedwalk()
-  if speedwalkTimerID then
-    return nil, "resumeSpeedwalk(): attempted to resume an already running speedwalk"
-  end
-  if not speedwalkList or table.is_empty(speedwalkList) then
+  if not speedwalkInProgress() then
     return nil, "resumeSpeedwalk(): attempted to resume a speedwalk but no active speedwalk found"
   end
-  speedwalktimer(speedwalkList, speedwalkDelay, speedwalkShow)
+  if not speedwalkPaused then
+    return nil, "resumeSpeedwalk(): attempted to resume an already running speedwalk"
+  end
+  local walklist = speedwalkList
+  speedwalkPaused = false
   raiseEvent("sysSpeedwalkResumed")
+  if speedwalkList == walklist and not speedwalkPaused and speedwalkSending ~= walklist and speedwalkStarting ~= walklist then
+    continueSpeedwalk()
+  end
   return true
 end
 
 
---- <b><u>TODO</u></b> speedwalktimer()
+--- Makes walklist the current speedwalk and sends its first step, then the rest one every walkdelay seconds
+--- (all at once without a walkdelay), removing each step from walklist as it is sent.
+--- speedwalk() is the usual way to start a walk: this raises no sysSpeedwalkStarted, though it does raise
+--- sysSpeedwalkFinished after the last step. A different running or paused walk is stopped first.
+---
+--- @return nil and a message when a sysSpeedwalkStopped handler of the walk it stopped has started another
 function speedwalktimer(walklist, walkdelay, show)
-  send(walklist[1], show)
-  table.remove(walklist, 1)
-  if #walklist > 0 then
-    speedwalkTimerID = tempTimer(walkdelay, function()
-      speedwalktimer(walklist, walkdelay, show)
-    end)
-  else
-    raiseEvent("sysSpeedwalkFinished")
+  if walkdelay then
+    walkdelay = checkedSpeedwalkDelay(walkdelay, "speedwalktimer", 2)
   end
+  if #walklist == 0 then
+    return
+  end
+  if walklist ~= speedwalkList and not makeWayForSpeedwalk() then
+    return nil, "speedwalktimer(): a sysSpeedwalkStopped handler started another speedwalk"
+  end
+  beginSpeedwalk(walklist, walkdelay, show)
+  continueSpeedwalk()
 end
 
 
 
---- <b><u>TODO</u></b> speedwalk(dirString, backwards, delay, optional show)
+--- Walks the directions in dirString, such as "3n2e" or "north, 2ne, u", sending one command per step.
+--- Only one speedwalk runs at a time: a running or paused one is stopped first, whatever its delay.
+--- Raises sysSpeedwalkStarted, then sysSpeedwalkFinished once the last step has been sent.
+---
+--- @param dirString the directions to walk
+--- @param backwards true to walk the directions in reverse, back to where they start
+--- @param delay seconds between steps, as a number or a string holding one; without one every step is sent straight away
+--- @param show false to not echo the commands sent
+---
+--- @return true once the walk has started, or nil and a message when there is nothing to walk
+---   or a sysSpeedwalkStopped handler of the walk it stopped has started another
 function speedwalk(dirString, backwards, delay, show)
+  assert(type(dirString) == "string", string.format("speedwalk: bad argument #1 type (directions as string expected, got %s!)", type(dirString)))
+  if delay then
+    delay = checkedSpeedwalkDelay(delay, "speedwalk", 3)
+  end
   dirString = dirString:lower()
-  local walkdelay = delay
   if show ~= false then show = true end
-  speedwalkShow = show
-  speedwalkDelay = delay
   local walklist = {}
   local long_dir = {north = 'n', south = 's', east = 'e', west = 'w', up = 'u', down = 'd'}
   for k,v in pairs(long_dir) do
@@ -609,34 +720,37 @@ function speedwalk(dirString, backwards, delay, show)
     ni = "out",
     tuo = "in"
   }
-  raiseEvent("sysSpeedwalkStarted")
   if not backwards then
     for count, direction in string.gmatch(dirString, "([0-9]*)([neswudio][ewnu]?t?)") do
       count = (count == "" and 1 or count)
       for i = 1, count do
-        if delay then
-          walklist[#walklist + 1] = direction
-        else
-          send(direction, show)
-        end
+        walklist[#walklist + 1] = direction
       end
     end
   else
     for direction, count in string.gmatch(dirString:reverse(), "(t?[ewnu]?[neswudio])([0-9]*)") do
       count = (count == "" and 1 or count:reverse())
       for i = 1, count do
-        if delay then
-          walklist[#walklist + 1] = reversedir[direction]
-        else
-          send(reversedir[direction], show)
-        end
+        walklist[#walklist + 1] = reversedir[direction]
       end
     end
   end
-  if walkdelay then
-    speedwalkList = walklist
-    speedwalktimer(walklist, walkdelay, show)
+  if #walklist == 0 then
+    return nil, "speedwalk(): no directions found in the walk to take"
   end
+  if not makeWayForSpeedwalk() then
+    return nil, "speedwalk(): a sysSpeedwalkStopped handler started another speedwalk"
+  end
+  beginSpeedwalk(walklist, delay or nil, show)
+  local outerStarting = speedwalkStarting
+  speedwalkStarting = walklist
+  raiseEvent("sysSpeedwalkStarted")
+  speedwalkStarting = outerStarting
+  -- a sysSpeedwalkStarted handler may have paused or stopped this walk, or started another
+  if speedwalkList == walklist and not speedwalkPaused then
+    continueSpeedwalk()
+  end
+  return true
 end
 
 
