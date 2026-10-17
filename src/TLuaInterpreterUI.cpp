@@ -849,6 +849,11 @@ int TLuaInterpreter::setTextEditFont(lua_State* L)
         return lua_error(L);
     }
     const QString fontName = getVerifiedString(L, __func__, 2, "font name");
+    size_t fontNameLength = 0;
+    // As in setFont(): the QString ends at an embedded NUL, so only the family named before it would be set
+    if (const char* rawFontName = lua_tolstring(L, 2, &fontNameLength); qstrlen(rawFontName) != fontNameLength) {
+        return warnArgumentValue(L, __func__, "font name must not contain a NUL character");
+    }
     const QString textEditName{lua_tostring(L, 1)};
 
     const Host& host = getHostFromLua(L);
@@ -3365,6 +3370,11 @@ int TLuaInterpreter::setFont(lua_State* L)
     }
 
     const QString fontName = getVerifiedString(L, __func__, s, "name");
+    size_t fontNameLength = 0;
+    // The QString is built from the bare char*, so it ends at an embedded NUL and only the family named before it would be set
+    if (const char* rawFontName = lua_tolstring(L, s, &fontNameLength); qstrlen(rawFontName) != fontNameLength) {
+        return warnArgumentValue(L, __func__, "font name must not contain a NUL character");
+    }
 
     if (fontName.trimmed().isEmpty()) {
         return warnArgumentValue(L, __func__, "font must not be empty");
