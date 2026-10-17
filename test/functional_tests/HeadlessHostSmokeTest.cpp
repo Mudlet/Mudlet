@@ -72,6 +72,7 @@
 #include "TRoomDB.h"
 #include "TSpeechBridge.h"
 #include "TriggerMatchPool.h"
+#include "XMLexport.h"
 #include "XMLimport.h"
 #include "discord.h"
 
@@ -6438,6 +6439,41 @@ headlessRecord("finished")
         QVERIFY2(saveEnded, qPrintable(qsl("The wait gave up on a save that had ended, after %1 ms.").arg(waitMs)));
         QVERIFY2(waitMs < 10000, qPrintable(qsl("The wait took %1 ms.").arg(waitMs)));
         HostManager::self()->deleteHost(hostname);
+    }
+
+    // A close save turned away because the wait gave up on an earlier save, which may predate the session's last
+    // changes, fails the close rather than counting that earlier save as written
+    void test_aCloseSaveTurnedAwayFailsTheClose()
+    {
+        QTemporaryDir recordDir;
+        QVERIFY(recordDir.isValid());
+        const QString hostname = qsl("Test-Headless-Host-Close-Save-Turned-Away");
+        QVERIFY(writeRecordingProfile(hostname, true, recordDir.filePath(qsl("record.txt"))));
+        Host* host = HostManager::self()->openProfile(hostname, false);
+        QVERIFY2(host, "The saved profile did not open.");
+        host->waitForProfileSave();
+        const qsizetype savesBefore = saveCount(hostname);
+        const QPointer<Host> pHost(host);
+
+        // A save that has written everything but never reports itself finished, given up on quickly
+        const QString stuck = qsl("never reports");
+        host->writers.insert(stuck, std::make_shared<XMLexport>(host));
+        host->mProfileSaveNotificationTimeout = std::chrono::milliseconds(50);
+        const auto unstick = qScopeGuard([pHost, stuck]() {
+            if (pHost) {
+                pHost->writers.remove(stuck);
+            }
+        });
+        bool closeSaveFailed = false;
+        connect(host, &Host::closeSaveFailed, host, [host, stuck, &closeSaveFailed]() {
+            closeSaveFailed = true;
+            host->writers.remove(stuck);
+        });
+
+        QVERIFY(HostManager::self()->requestProfileClose(hostname));
+        QVERIFY2(closeSaveFailed, "A close whose own save was turned away was not reported as failed.");
+        QCOMPARE(saveCount(hostname), savesBefore);
+        QTRY_VERIFY_WITH_TIMEOUT(!pHost, 5000);
     }
 
     void test_deleteHostKeepsAProfileReopenedUnderItsExitHandler()

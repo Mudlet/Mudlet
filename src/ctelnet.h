@@ -255,6 +255,8 @@ public:
     QString decodeOption(const unsigned char) const;
     QString formatShortTelnetCommand(const std::string& telnetCommand, const QString& commandName) const;
     QAbstractSocket::SocketState getConnectionState() const;
+    // Game commands sendData() could not write, as with no connection, over the profile's life
+    int gameCommandsNotWritten() const { return mGameCommandsNotWritten; }
     std::tuple<QString, int, bool> getConnectionInfo() const;
     void setPostingTimeout(const int);
     int getPostingTimeout() const { return mTimeOut; }
@@ -687,6 +689,7 @@ private:
     bool mEncodingWarningIssued = false;
     // Same sort of thing if an encoder fails to be found/loaded:
     bool mEncoderFailureNoticeIssued = false;
+    int mGameCommandsNotWritten = 0;
 
     // Set if the current connection is via a proxy
     bool mConnectViaProxy = false;

@@ -195,6 +195,9 @@ Host* HostManager::openProfile(const QString& name, const bool connect, const st
         --mProfileLoadsInProgress;
     });
     Host* pHost = getHost(name);
+    if (mProfileOpenedHook) {
+        mProfileOpenedHook(pHost);
+    }
     if (beforeLoad) {
         beforeLoad(pHost);
     }

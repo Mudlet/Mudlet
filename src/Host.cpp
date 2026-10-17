@@ -602,7 +602,7 @@ void Host::markClosingForced()
 
 bool Host::closeWithNoView()
 {
-    if (mIsClosingDown || mClosingWithNoView) {
+    if (closeStarted()) {
         return false;
     }
     mClosingWithNoView = true;
@@ -611,7 +611,8 @@ bool Host::closeWithNoView()
     mLuaInterpreter.enterNestedEventLoop();
     raiseExitEventIfOwed();
     if ((mFORCE_SAVE_ON_EXIT || mForcedClose) && !saveForClose()) {
-        qWarning().nospace().noquote() << "Host::closeWithNoView() WARNING - the map of \"" << getName() << "\" could not be saved.";
+        qWarning().nospace().noquote() << "Host::closeWithNoView() WARNING - \"" << getName() << "\" could not be saved.";
+        emit closeSaveFailed();
     }
     mLuaInterpreter.leaveNestedEventLoop();
     closeChildren();
@@ -639,7 +640,10 @@ bool Host::saveForClose()
     modulesToWrite.clear();
     // A save still running would turn this one away, and it may predate the session's last changes
     waitForProfileSave();
-    saveProfileReportingFailure();
+    // Refused when the wait gave up on a save, which may predate the session's last changes, so the close fails
+    bool xmlWritten = saveProfileReportingFailure();
+    // Taken now, as a writer leaves pendingXmlSaveFutures() once it has written
+    const QList<QFuture<bool>> xmlWrites = pendingXmlSaveFutures();
     // Other profiles can keep Mudlet running long after this one closes
     if (auto* frontend = TAppFrontend::instance()) {
         frontend->writeSettings();
@@ -647,7 +651,10 @@ bool Host::saveForClose()
     // A loaded map is saved even with no rooms in it
     const bool mapSaved = !mpMap || !mpMap->mpRoomDB || saveMapFile(QString());
     waitForProfileSave();
-    return mapSaved;
+    for (const auto& write : xmlWrites) {
+        xmlWritten = xmlWritten && write.isFinished() && write.result();
+    }
+    return xmlWritten && mapSaved;
 }
 
 bool Host::loadProfileSave(const QString& saveFileName)
@@ -1637,17 +1644,18 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
 
 // For callers with nowhere to show a failure, such as the editor's autosave; on a close only the warning outlives
 // the console. A save turned away because one is running, or because the profile never loaded, is only logged.
-void Host::saveProfileReportingFailure(const QString& saveName)
+bool Host::saveProfileReportingFailure(const QString& saveName)
 {
     auto [ok, filename, error] = saveProfile(QString(), saveName);
     if (ok) {
-        return;
+        return true;
     }
     qWarning().noquote().nospace() << "Host::saveProfileReportingFailure() WARNING - could not save the profile to \"" << filename << "\": " << error;
     if (!filename.isEmpty() && mLoadedOk && !mIsProfileLoadingSequence) {
         //: %1 is the file the profile was being saved to, %2 is the reason it could not be
         postMessage(tr("[ ERROR ] - The profile could not be saved to \"%1\": %2").arg(filename, error));
     }
+    return false;
 }
 
 // exports without the host settings for some reason
@@ -1708,9 +1716,7 @@ void Host::waitForProfileSave()
     // Only the notification below is on a clock - in wall-clock time, because a cap on
     // event loop passes is no wait at all on a fast machine (#9807) - and only because
     // a save that has written everything and still says it is running cannot be waited
-    // out. Long enough that reaching it means something is wrong, not that a disk is
-    // busy.
-    constexpr auto notificationTimeout = 30s;
+    // out.
     QElapsedTimer waitedForNotification;
     // A QEventLoop's processEvents() rather than QCoreApplication's only for its "did anything
     // happen" answer - nothing is exec()ed here. No user input either: all it is here to
@@ -1739,9 +1745,9 @@ void Host::waitForProfileSave()
         if (!pump.processEvents(QEventLoop::ExcludeUserInputEvents)) {
             QThread::sleep(1ms);
         }
-        if (waitedForNotification.durationElapsed() > notificationTimeout) {
-            qWarning().nospace() << "Host::waitForProfileSave() WARNING - the save of \"" << getName() << "\" has not reported itself finished within " << notificationTimeout.count()
-                                 << " seconds of its writes completing, so giving up on it. State: mWritingHostAndModules=" << mWritingHostAndModules << ", writers pending=" << writers.size()
+        if (waitedForNotification.durationElapsed() > mProfileSaveNotificationTimeout) {
+            qWarning().nospace() << "Host::waitForProfileSave() WARNING - the save of \"" << getName() << "\" has not reported itself finished within " << mProfileSaveNotificationTimeout.count()
+                                 << " ms of its writes completing, so giving up on it. State: mWritingHostAndModules=" << mWritingHostAndModules << ", writers pending=" << writers.size()
                                  << ", module write still running=" << mModuleFuture.isRunning() << ".";
             break;
         }

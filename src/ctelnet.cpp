@@ -353,6 +353,8 @@ cTelnet::~cTelnet()
     if (mpSocket && mpSocket->state() != QAbstractSocket::UnconnectedState) {
         // Block all signals from the socket first
         mpSocket->blockSignals(true);
+        // What was sent last, as from sysExitEvent, waits for the event loop, which may not run again first
+        mpSocket->flush();
         mpSocket->disconnectFromHost();
         // Force immediate closure without waiting
         mpSocket->abort();
@@ -825,6 +827,18 @@ void cTelnet::terminateConnection()
         abortConnection();
     } else {
 #endif
+        // The reads below re-enter the socket's slots, which return early once the profile is closing down
+        Q_ASSERT(!mpHost || mpHost->isClosingDown());
+        // ConnectedState only: Qt reads nothing from a closing socket
+        if (mpSocket && mpSocket->state() == QAbstractSocket::ConnectedState) {
+            // What was sent last, as from sysExitEvent, waits for the event loop, which may not run again first
+            mpSocket->flush();
+            // Unread incoming data makes our close a reset, and a Windows peer then discards what it has received
+            // but not read, the line just sent included. Bounded, as a game may never stop sending.
+            for (int reads = 0; reads < 16 && mpSocket->state() == QAbstractSocket::ConnectedState && (mpSocket->bytesAvailable() > 0 || mpSocket->waitForReadyRead(0)); ++reads) {
+                mpSocket->readAll();
+            }
+        }
         disconnectIt();
 #if !defined(QT_NO_SSL)
     }
@@ -1855,6 +1869,9 @@ bool cTelnet::sendData(QString& data, const bool permitDataSendRequestEvent, con
         const bool armCharacterModeDetection = isGameCommand && !mCharacterModeDetected && mServerRequestedSGA && mpHost->isRemoteEchoingActive();
 
         const bool sent = socketOutRaw(outData);
+        if (!sent && isGameCommand) {
+            ++mGameCommandsNotWritten;
+        }
 
         if (sent && armCharacterModeDetection) {
             if (!mTimerCharacterModeDetect) {
