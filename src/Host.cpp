@@ -5242,9 +5242,11 @@ void Host::setMMCPShowSnoopInMainConsole(const bool showSnoop)
 
 QString Host::getSpellDic() const
 {
-    if (!mSpellDic.isEmpty()) {
-        return mSpellDic;
-    }
+    return mSpellDic.isEmpty() ? startingSpellDic() : mSpellDic;
+}
+
+QString Host::startingSpellDic()
+{
 #if defined(Q_OS_OPENBSD)
     // OpenBSD does not ship a USA dictionary so we will have to use
     // a different starting one to try and locate system ones
@@ -5256,7 +5258,8 @@ QString Host::getSpellDic() const
 
 void Host::setSpellDic(const QString& newDict)
 {
-    if (newDict.isEmpty() || mSpellDic == newDict) {
+    // The same name again is a retry when it could not be found the last time
+    if (newDict.isEmpty() || (mSpellDic == newDict && !mSpellChecker.systemDictionaryMissing())) {
         return;
     }
     mSpellDic = newDict;

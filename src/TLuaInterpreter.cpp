@@ -8452,6 +8452,9 @@ int TLuaInterpreter::spellCheckWord(lua_State* L)
         encodedText = text.toUtf8();
     } else {
         handle = host.spellChecker().systemHandle();
+        if (!handle && host.spellChecker().systemDictionaryMissing()) {
+            return warnArgumentValue(L, __func__, qsl("the \"%1\" dictionary this profile uses is not available on this computer so is unable to check your word").arg(host.getSpellDic()));
+        }
         if (!handle) {
             return warnArgumentValue(L, __func__, "no main dictionaries found: Mudlet has not been able to find any dictionary files to use so is unable to check your word");
         }
@@ -8499,6 +8502,10 @@ int TLuaInterpreter::spellSuggestWord(lua_State* L)
         encodedText = text.toUtf8();
     } else {
         handle = host.spellChecker().systemHandle();
+        if (!handle && host.spellChecker().systemDictionaryMissing()) {
+            return warnArgumentValue(
+                    L, __func__, qsl("the \"%1\" dictionary this profile uses is not available on this computer so is unable to make suggestions for your word").arg(host.getSpellDic()));
+        }
         if (!handle) {
             return warnArgumentValue(L, __func__, "no main dictionaries found: Mudlet has not been able to find any dictionary files to use so is unable to make suggestions for your word");
         }
