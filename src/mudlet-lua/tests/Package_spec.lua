@@ -751,8 +751,9 @@ describe("Tests the functionality of installPackage", function()
     writeArchiveOfEmptyFiles(notAPackage, {"mudlet-spec-stray.txt"})
     copyFile(fixtureDirectory .. "/mudlet-spec-noconfig.mpackage", aPackage)
 
+    -- turned away for its name before anything is read out of it
     local reason = installUntilRefused(installPackage, notAPackage)
-    assert.is_true(contains(reason, "no package found"), tostring(reason))
+    assert.is_true(contains(reason, "keeps its own files"), tostring(reason))
     assert.is_false(fileExists(mapFolder .. "/mudlet-spec-stray.txt"), "the refused archive left its file in the profile's map folder")
 
     reason = installUntilRefused(installPackage, aPackage)
