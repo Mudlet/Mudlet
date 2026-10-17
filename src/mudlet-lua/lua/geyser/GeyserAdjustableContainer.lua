@@ -1285,7 +1285,8 @@ end
 
 -- internal function to delete the labels of a right click menu and of all its submenus.
 -- Menu labels are created as top level Geyser objects rather than as children of
--- the menu they belong to, so Geyser.Container:delete()'s cascade never reaches them.
+-- the menu they belong to. Geyser.Label:type_delete deletes them when the
+-- container's cascade reaches the menu, so this normally finds none left.
 -- @param menu the menu label whose MenuLabels are to be deleted
 local function deleteMenuLabels(menu)
     if not menu or not menu.MenuLabels then
@@ -1301,9 +1302,9 @@ local function deleteMenuLabels(menu)
 end
 
 -- internal function called by Geyser.Container:delete() to clean up what the
--- delete cascade cannot reach: the right click menu labels, the event handlers
--- that keep firing on a deleted container, and the container's entries in
--- Adjustable.Container's own bookkeeping
+-- delete cascade does not: the event handlers that keep firing on a deleted
+-- container and the container's entries in Adjustable.Container's own
+-- bookkeeping, along with any right click menu label the cascade left
 function Adjustable.Container:type_delete()
     deleteMenuLabels(self.adjLabel and self.adjLabel.rightClickMenu)
     -- detach() also kills the resize handler and drops the container out of
