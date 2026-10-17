@@ -41,7 +41,7 @@ QAccessible::Role TAccessibleLabel::role() const
     if (actsAsButton()) {
         return QAccessible::Button;
     }
-    // As Qt's own interface for a QLabel reports them
+    // As Qt's own QLabel interface reports a pixmap or movie; Mudlet's SVG layer counts as a pixmap
     if (label()->movie()) {
         return QAccessible::Animation;
     }

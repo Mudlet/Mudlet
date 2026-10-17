@@ -26,6 +26,7 @@
  */
 
 #include <QAccessible>
+#include <QFile>
 #include <QImage>
 #include <QSignalSpy>
 #include <QtTest/QtTest>
@@ -394,6 +395,19 @@ private slots:
         QCOMPARE(accessible()->role(), QAccessible::Graphic);
     }
 
+    // The SVG is a layer under the text, so a label with text over it shows text
+    void test_anSvgLabelIsAGraphicOnlyWithoutText()
+    {
+        QFile svg(mConfigDir.filePath(qsl("accessible-label.svg")));
+        QVERIFY(svg.open(QIODevice::WriteOnly));
+        svg.write("<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16'><rect width='16' height='16' fill='red'/></svg>");
+        svg.close();
+        QVERIFY(runLua(qsl("echo('%1', 'Map'); assert(setBackgroundImage('%1', [[%2]]))").arg(mLabelName, svg.fileName())));
+        QCOMPARE(accessible()->role(), QAccessible::StaticText);
+        QVERIFY(runLua(qsl("echo('%1', '')").arg(mLabelName)));
+        QCOMPARE(accessible()->role(), QAccessible::Graphic);
+    }
+
     void test_aPressLeavesALinkUnderTheLabelAlone()
     {
         QVERIFY(runLua(qsl("echo('%1', '<a href=\"accessibleLinkHit = true\">' .. string.rep('W', 60) .. '</a>')").arg(mLabelName)));
@@ -421,6 +435,31 @@ private slots:
         smEvents.clear();
         QVERIFY(runLua(qsl("setLabelAccessibleName('%1', ''); echo('%1', ''); setLabelToolTip('%1', 'Map')").arg(mLabelName)));
         QVERIFY2(smEvents.contains(QAccessible::NameChanged), "a tooltip naming the label was not announced");
+
+        QVERIFY(runLua(qsl("resetLabelToolTip('%1')").arg(mLabelName)));
+
+        smEvents.clear();
+        QVERIFY(runLua(qsl("enableClickthrough('%1')").arg(mLabelName)));
+        QVERIFY2(smEvents.contains(QAccessible::ActionChanged), "turning click-through on was not announced");
+#if QT_VERSION >= QT_VERSION_CHECK(6, 11, 0)
+        QVERIFY2(smEvents.contains(QAccessible::RoleChanged), "a button becoming text was not announced as a role change");
+#endif
+
+        // a screen reader may say the label again on hearing of a change that changed nothing
+        smEvents.clear();
+        QVERIFY(runLua(qsl("enableClickthrough('%1'); setLabelAccessibleRole('%1', ''); setLabelAccessibleName('%1', '')").arg(mLabelName)));
+        QVERIFY2(smEvents.isEmpty(), "settings that did not change were announced");
+
+        smEvents.clear();
+        QImage image(16, 16, QImage::Format_RGB32);
+        image.fill(Qt::blue);
+        const QString path = mConfigDir.filePath(qsl("accessible-label-event.png"));
+        QVERIFY(image.save(path));
+        QVERIFY(runLua(qsl("disableClickthrough('%1'); setLabelClickCallback('%1', nil); echo('%1', 'Map')").arg(mLabelName)));
+        smEvents.clear();
+        QVERIFY(runLua(qsl("assert(setBackgroundImage('%1', [[%2]]))").arg(mLabelName, path)));
+        QVERIFY2(smEvents.contains(QAccessible::NameChanged), "the text an image replaced was not announced");
+        QVERIFY2(smEvents.contains(QAccessible::ActionChanged), "a label becoming a graphic was not announced");
     }
 
     void test_aLabelThatDeletesItselfWhenPressedIsLeftAlone()
