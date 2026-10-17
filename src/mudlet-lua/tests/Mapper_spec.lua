@@ -2011,6 +2011,30 @@ describe("Tests mapper functions against a shared fixture", function()
       assert.is_string(err)
     end)
 
+    it("addCustomLine refuses a colour table missing its red, green or blue entry", function()
+      local cases = {
+        {{}, "red", 1},
+        {{12}, "green", 2},
+        {{0, 255}, "blue", 3},
+        {{0, 255, alpha = 128}, "blue", 3},
+        {{[1] = 0, [2] = 255, [5] = 9}, "blue", 3},
+        {{255, nil, 0, 7}, "green", 2},
+        {{r = 255, g = 128, b = 0}, "red", 1},
+      }
+      for _, case in ipairs(cases) do
+        local ok, err = addCustomLine(rSandA, {{2, 2, 0}}, "e", "solid line", case[1], false)
+        assert.is_nil(ok)
+        assert.are.equal(("the color table in the fifth argument has no %s color component (item #%d) but red, green and blue are all needed"):format(case[2], case[3]), err)
+      end
+      assert.is_nil(getCustomLines1(rSandA)["e"])
+    end)
+
+    it("addCustomLine takes the first three entries of a longer colour table as red, green and blue", function()
+      assert.is_true(addCustomLine(rSandA, {{2, 2, 0}}, "e", "solid line", {10, 20, 30, 128}, false))
+      assert.are.same({10, 20, 30}, getCustomLines1(rSandA)["e"]["attributes"]["color"])
+      assert.is_true(removeCustomLine(rSandA, "e"))
+    end)
+
     it("addCustomLine hard-errors when the second argument is neither number nor table", function()
       assert.has_error(function() addCustomLine(rSandA, "notvalid", "e", "solid line", {0, 0, 0}, false) end)
     end)
