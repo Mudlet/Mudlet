@@ -4343,7 +4343,7 @@ private slots:
         const QStringList styles = chosen("MUDLET_MAPPER_BENCH_STYLES", MapStyle::ids());
         const QStringList maps = chosen("MUDLET_MAPPER_BENCH_MAPS", {qsl("small"), qsl("dense")});
         const QStringList views = chosen("MUDLET_MAPPER_BENCH_VIEWS", {qsl("default"), qsl("top")});
-        const QStringList motions = chosen("MUDLET_MAPPER_BENCH_MOTIONS", {qsl("orbit"), qsl("pan"), qsl("zoom")});
+        const QStringList motions = chosen("MUDLET_MAPPER_BENCH_MOTIONS", {qsl("orbit"), qsl("pan"), qsl("zoom"), qsl("walk")});
         const int frames = qMax(5, qEnvironmentVariableIntValue("MUDLET_MAPPER_BENCH_FRAMES"));
         constexpr int warmUp = 3;
         const bool gl = glAvailable();
@@ -4361,7 +4361,8 @@ private slots:
             const int side = mapName == qsl("dense") ? 40 : 8;
             const int areaId = addBenchArea(side);
             QVERIFY(areaId > 0);
-            const TRoom* playerRoom = map()->mpRoomDB->getRoom(map()->mRoomIdHash.value(map()->mProfileName));
+            const int playerRoomId = map()->mRoomIdHash.value(map()->mProfileName);
+            const TRoom* playerRoom = map()->mpRoomDB->getRoom(playerRoomId);
             QVERIFY(playerRoom);
             QVERIFY(mpHost->setMapStyle(qsl("tiles")));
             ModernGLWidget widget(map(), mpHost);
@@ -4422,6 +4423,14 @@ private slots:
                                 const int reach = side / 2;
                                 const int phase = along % (4 * reach);
                                 centerX += phase < 2 * reach ? phase - reach : 3 * reach - phase;
+                            } else if (motion == qsl("walk")) {
+                                // The player steps a room east or west each frame, as a mapping script follows them
+                                const int reach = side / 4;
+                                const int phase = along % (4 * reach);
+                                const int step = phase < 2 * reach ? phase - reach : 3 * reach - phase;
+                                const int roomId = playerRoomId + step;
+                                QVERIFY(mpHost->mLuaInterpreter.compileAndExecuteScript(qsl("centerview(%1)").arg(roomId)));
+                                centerX = map()->mpRoomDB->getRoom(roomId)->x();
                             } else {
                                 r = distance * (1.0f + 0.5f * std::sin(0.15f * static_cast<float>(along)));
                             }
@@ -4445,6 +4454,9 @@ private slots:
                                             static_cast<long long>(widget.mRoomTexturesInUse.size()),
                                             widget.mRenderCommandQueue.getCommandCount());
                             }
+                        }
+                        if (motion == qsl("walk")) {
+                            QVERIFY(mpHost->mLuaInterpreter.compileAndExecuteScript(qsl("centerview(%1)").arg(playerRoomId)));
                         }
                         std::sort(times.begin(), times.end());
                         const QString name = qsl("bench_3d_%1_%2_%3_%4").arg(styleId, mapName, view, motion);
