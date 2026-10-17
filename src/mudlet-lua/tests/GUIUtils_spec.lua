@@ -3512,13 +3512,32 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
     end)
 
     it("Should map a cursor name to the id the C++ layer wants", function()
-      -- the name to id mapping is the Lua half of this function; the C++ half
-      -- only accepts a number, so a name that is not in mudlet.cursor has to
-      -- reach it as nil and be refused
+      -- the name to id mapping is the Lua half of this function; a name that is
+      -- not in mudlet.cursor is left for the C++ half to refuse
       assert.is_true(setLabelCursor(labelName, "OpenHand"))
       assert.is_true(setLabelCursor(labelName, mudlet.cursor.OpenHand))
       assert.is_nil(mudlet.cursor.definitelyNotACursor)
-      assert.has_error(function() setLabelCursor(labelName, "definitelyNotACursor") end)
+      local ok, err = setLabelCursor(labelName, "definitelyNotACursor")
+      assert.is_nil(ok)
+      assert.are.equal("cursor shape 'definitelyNotACursor' not found. see https://wiki.mudlet.org/w/CursorShapes", err)
+    end)
+
+    it("Should refuse a bad label before an unknown cursor name, as it does before an unknown number", function()
+      assert.has_error(function() setLabelCursor(nil, "definitelyNotACursor") end,
+        "setLabelCursor: bad argument #1 type (label name as string expected, got nil!)")
+      local ok, err = setLabelCursor("guiUtilsNoSuchCursorLabel", "definitelyNotACursor")
+      assert.is_nil(ok)
+      assert.are.equal("label name 'guiUtilsNoSuchCursorLabel' not found", err)
+      assert.are.same({setLabelCursor("guiUtilsNoSuchCursorLabel", 9999)}, {ok, err})
+      ok, err = setLabelCursor("", "definitelyNotACursor")
+      assert.is_nil(ok)
+      assert.are.equal("a label cannot have an empty string as its name", err)
+    end)
+
+    it("Should take a shape number given as a string as that number", function()
+      assert.is_true(setLabelCursor(labelName, tostring(mudlet.cursor.OpenHand)))
+      assert.is_true(setLabelCursor(labelName, "-1"))
+      assert.are.same({setLabelCursor(labelName, 9999)}, {setLabelCursor(labelName, "9999")})
     end)
 
     it("Should reset the cursor by asking for shape -1", function()
