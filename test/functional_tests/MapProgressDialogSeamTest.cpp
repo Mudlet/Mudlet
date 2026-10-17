@@ -236,12 +236,20 @@ private slots:
         // frontend, so the engine's "nobody is showing this" warning stays quiet:
         QSignalSpy exportStartSpy(pSourceMap, &TMap::signal_mapJsonProgressStart);
         QSignalSpy exportCloseSpy(pSourceMap, &TMap::signal_mapProgressClose);
+        TMap* pTargetMap = mpTarget->mpMap.data();
+        // Both hosts are shared by every later test function:
+        const auto clearUserData = qScopeGuard([pSourceMap, pTargetMap]() {
+            pSourceMap->mUserData.clear();
+            pTargetMap->mUserData.clear();
+        });
+        pSourceMap->mUserData = {{qsl("incoming"), qsl("2")}};
         const auto [wrote, writeMsg] = pSourceMap->writeJsonMapFile(file);
         QVERIFY2(wrote, qPrintable(writeMsg));
         QCOMPARE(exportStartSpy.count(), 1);
         QCOMPARE(exportCloseSpy.count(), 1);
 
-        TMap* pTargetMap = mpTarget->mpMap.data();
+        const QMap<QString, QString> targetUserData{{qsl("keep"), qsl("1")}};
+        pTargetMap->mUserData = targetUserData;
         QSignalSpy importCloseSpy(pTargetMap, &TMap::signal_mapProgressClose);
         const QMetaObject::Connection cancelOnStart = connect(pTargetMap, &TMap::signal_mapJsonProgressStart, pTargetMap, [pTargetMap]() {
             pTargetMap->slot_mapProgressDialogCancelled();
@@ -251,6 +259,7 @@ private slots:
 
         QVERIFY(!read);
         QCOMPARE(readMsg, qsl("aborted by user"));
+        QCOMPARE(pTargetMap->mUserData, targetUserData);
         // An aborted import must still take its progress dialog down with it:
         QCOMPARE(importCloseSpy.count(), 1);
         QVERIFY(!pTargetMap->hasActiveTransferProgress());
