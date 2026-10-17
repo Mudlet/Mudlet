@@ -55,8 +55,18 @@ namespace {
 // to delete) and NoBackendAvailable/NotImplemented (the keychain isn't the store here, so the
 // file fallback is authoritative) are not failures; anything else is a genuine failure to remove
 // an entry that may still exist.
-bool keychainDeleteSucceeded(QKeychain::Error error)
+bool keychainDeleteSucceeded(const QKeychain::Job& job)
 {
+    const QKeychain::Error error = job.error();
+#if !defined(Q_OS_MACOS) && !defined(Q_OS_WIN)
+    // libsecret reports a Secret Service missing from D-Bus as OtherError, where KWallet says
+    // NoBackendAvailable; on macOS and Windows the store is part of the OS, so there it is the entry's own failure
+    if (error == QKeychain::OtherError) {
+        // Logged all the same: an entry saved in a session that had the keychain is still in it
+        qWarning().noquote() << "CredentialManager: could not reach the keychain to remove an entry, so taking it to hold none:" << job.errorString();
+        return true;
+    }
+#endif
     return error == QKeychain::NoError || error == QKeychain::EntryNotFound || error == QKeychain::NoBackendAvailable || error == QKeychain::NotImplemented;
 }
 
@@ -1293,7 +1303,7 @@ void CredentialManager::removeCredential(const QString& service, const QString& 
 
                 cleanupTimeout();
 
-                const bool primarySuccess = keychainDeleteSucceeded(deleteJob->error());
+                const bool primarySuccess = keychainDeleteSucceeded(*deleteJob);
                 const QString primaryError = primarySuccess ? QString() : deleteJob->errorString();
                 deleteJob->deleteLater();
 
@@ -1329,7 +1339,7 @@ void CredentialManager::removeCredential(const QString& service, const QString& 
 
                             cleanupTimeout();
 
-                            const bool bareSuccess = keychainDeleteSucceeded(bareJob->error());
+                            const bool bareSuccess = keychainDeleteSucceeded(*bareJob);
                             const QString bareError = bareSuccess ? QString() : bareJob->errorString();
                             bareJob->deleteLater();
 
