@@ -6246,7 +6246,7 @@ bool Host::setLabelAccessibleButton(const QString& name, std::optional<bool> but
 
     auto* pModel = mWindowRegistry.labelModel(name);
     if (pModel) {
-        pModel->mAccessibleButton = button;
+        pModel->setAccessibleButton(button);
         return true;
     }
     return false;

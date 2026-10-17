@@ -121,8 +121,7 @@ void TLabel::showLinkStyledText(const QString& text)
 
     stopMovie();
     QLabel::setText(text);
-    mpModel->mText = QLabel::text();
-    derivedNameMayHaveChanged();
+    mpModel->setText(QLabel::text());
 }
 
 void TLabel::press()
@@ -145,14 +144,13 @@ void TLabel::press()
 
 bool TLabel::showsImage() const
 {
-    return !pixmap().isNull() || mpSvgRenderer;
+    // A raster replaces the text, but text drawn over the SVG layer is what the label then shows
+    return !pixmap().isNull() || (mpSvgRenderer && QTextDocumentFragment::fromHtml(text()).toPlainText().trimmed().isEmpty());
 }
 
-void TLabel::derivedNameMayHaveChanged()
+void TLabel::imageMayHaveChanged()
 {
-    if (mpModel->mAccessibleName.isEmpty()) {
-        notifyAccessibility(this, QAccessible::NameChanged);
-    }
+    mpModel->accessibilityChanged(TLabelModel::AccessibilityChange::Role);
 }
 
 void TLabel::accessibilityChanged(TLabelModel::AccessibilityChange change)
@@ -392,8 +390,8 @@ bool TLabel::setBackgroundImage(const QString& path)
     stopMovie();
     setPixmap(raster);
     // setPixmap() empties the text
-    mpModel->mText = text();
-    derivedNameMayHaveChanged();
+    mpModel->setText(text());
+    imageMayHaveChanged();
     return true;
 }
 
@@ -419,6 +417,7 @@ bool TLabel::setSvgImage(const QString& path)
     }
     refreshSvg();
     updateGeometry();
+    imageMayHaveChanged();
     return true;
 }
 
@@ -430,10 +429,12 @@ void TLabel::resetBackgroundImage()
     if (!pixmap().isNull() || movie()) {
         stopMovie();
         clear();
+        mpModel->setText(text());
     }
     if (const QString sheet = styleSheet(), withoutImage = TLabelModel::styleSheetWithoutBackgroundImage(sheet); withoutImage != sheet) {
         restyle(withoutImage);
     }
+    imageMayHaveChanged();
 }
 
 void TLabel::stopMovie()
@@ -600,13 +601,12 @@ void TLabel::changeEvent(QEvent* event)
 bool TLabel::event(QEvent* event)
 {
     if (event->type() == QEvent::ToolTipChange) {
-        mpModel->mToolTip = toolTip();
-        derivedNameMayHaveChanged();
+        mpModel->setToolTip(toolTip());
     }
     const bool handled = QLabel::event(event);
     // A qproperty-text in a style sheet reaches QLabel::setText() directly, as the style is applied
     if (event->type() == QEvent::Polish || event->type() == QEvent::StyleChange) {
-        mpModel->mText = text();
+        mpModel->setText(text());
     }
     return handled;
 }

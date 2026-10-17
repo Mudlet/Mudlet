@@ -59,10 +59,11 @@ public:
     void setText(const QString& text);
     // A screen reader's activation, delivered as the left click a mouse would make
     void press();
-    // Its image or SVG background, which a screen reader is told is a graphic
+    // Whether what it shows is an image - a raster, or an SVG with no text over it - which a screen reader
+    // is told is a graphic unless the label is a button
     bool showsImage() const;
-    // After a change to the text or tooltip, which name the label unless a script named it
-    void derivedNameMayHaveChanged();
+    // After its image or movie changes, which can make it a graphic, an animation or text
+    void imageMayHaveChanged();
     void mousePressEvent(QMouseEvent*) override;
     void mouseDoubleClickEvent(QMouseEvent*) override;
     void mouseReleaseEvent(QMouseEvent*) override;
