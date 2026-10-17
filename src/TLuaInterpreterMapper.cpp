@@ -4369,6 +4369,10 @@ int TLuaInterpreter::setRoomUserData(lua_State* L)
     if (!pR) {
         return warnArgumentValue(L, __func__, csmInvalidRoomID.arg(roomId));
     }
+    // A save writes the room's border under these and a load takes them back out
+    if (key == ROOM_UI_BORDERCOLOR || key == ROOM_UI_BORDERTHICKNESS) {
+        return warnArgumentValue(L, __func__, qsl("key '%1' is reserved for the room's border, use setRoomBorderColor() or setRoomBorderThickness()").arg(key));
+    }
     pR->userData[key] = value;
     host.mpMap->setUnsaved(__func__);
     host.mpMap->updateArea(pR->getArea());

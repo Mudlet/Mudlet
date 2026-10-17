@@ -135,6 +135,7 @@ public:
     void set2DMapZoom(const qreal zoom);
     void clean();
     static void dropFileOnlyUserData(QMap<QString, QString>& userData);
+    static void restoreLabelOutlineColorFromUserData(TMapLabel& label, int labelId, QMap<QString, QString>& userData);
 
 
     QSet<int> rooms; // rooms of this area

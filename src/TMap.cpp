@@ -100,20 +100,6 @@ void restoreLabelFontFromUserData(TMapLabel& label, int labelId, QMap<QString, Q
     }
 }
 
-// Outline color data is stored as "r|g|b|a" to avoid binary format version changes.
-void restoreLabelOutlineColorFromUserData(TMapLabel& label, int labelId, QMap<QString, QString>& userData)
-{
-    const QString colorKey = qsl("system.labelOutlineColor_%1").arg(labelId);
-    if (userData.contains(colorKey)) {
-        const QStringList colorParts = userData.take(colorKey).split(QLatin1Char('|'));
-        if (colorParts.size() == 4) {
-            label.outlineColor = QColor(colorParts.at(0).toInt(), colorParts.at(1).toInt(), colorParts.at(2).toInt(), colorParts.at(3).toInt());
-        } else {
-            qWarning("TMap: Failed to parse outline color data for label %d, expected 4 parts but got %lld", labelId, colorParts.size());
-        }
-    }
-}
-
 enum class MapFileCheckResult { ValidMap, NotAMap, ParseError };
 
 struct MapFileCheck
@@ -1597,18 +1583,6 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
             ofs << pR->mSymbolColor;
         }
 
-        // Border properties are stored in userData (not binary stream) to avoid map bloat
-        if (pR->mBorderColor.isValid()) {
-            pR->userData.insert(ROOM_UI_BORDERCOLOR, pR->mBorderColor.name(QColor::HexArgb));
-        } else {
-            pR->userData.remove(ROOM_UI_BORDERCOLOR);
-        }
-        if (pR->mBorderThickness > 0) {
-            pR->userData.insert(ROOM_UI_BORDERTHICKNESS, QString::number(pR->mBorderThickness));
-        } else {
-            pR->userData.remove(ROOM_UI_BORDERTHICKNESS);
-        }
-
         // Formats before 21 carry the hidden flag and symbol color - and
         // formats before 19 the symbol - as user data fallbacks; use a local
         // copy so that saving does not modify the live room's user data.
@@ -1626,6 +1600,17 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
         }
         if (mSaveVersion < 19 && !pR->mSymbol.isEmpty()) {
             userData.insert(QLatin1String("system.fallback_symbol"), pR->mSymbol);
+        }
+        // Border properties are stored in userData (not binary stream) to avoid map bloat, in every format
+        if (pR->mBorderColor.isValid()) {
+            userData.insert(ROOM_UI_BORDERCOLOR, pR->mBorderColor.name(QColor::HexArgb));
+        } else {
+            userData.remove(ROOM_UI_BORDERCOLOR);
+        }
+        if (pR->mBorderThickness > 0) {
+            userData.insert(ROOM_UI_BORDERTHICKNESS, QString::number(pR->mBorderThickness));
+        } else {
+            userData.remove(ROOM_UI_BORDERTHICKNESS);
         }
         ofs << userData;
         if (mSaveVersion >= 20) {
@@ -2072,7 +2057,7 @@ bool TMap::restore(QString location)
                         ifs >> label.noScaling;
                         ifs >> label.showOnTop;
                         restoreLabelFontFromUserData(label, labelId, pA->mUserData);
-                        restoreLabelOutlineColorFromUserData(label, labelId, pA->mUserData);
+                        TArea::restoreLabelOutlineColorFromUserData(label, labelId, pA->mUserData);
                         pA->mMapLabels.insert(labelId, label);
                     }
                 }
@@ -2142,7 +2127,7 @@ bool TMap::restore(QString location)
                     }
                     if (pA) {
                         restoreLabelFontFromUserData(label, labelID, pA->mUserData);
-                        restoreLabelOutlineColorFromUserData(label, labelID, pA->mUserData);
+                        TArea::restoreLabelOutlineColorFromUserData(label, labelID, pA->mUserData);
                         pA->mMapLabels.insert(labelID, label);
                     }
                     ++areaLabelCounter;

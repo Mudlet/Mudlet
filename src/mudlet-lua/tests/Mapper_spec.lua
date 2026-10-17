@@ -4267,6 +4267,64 @@ describe("Tests saveMap and loadMap", function()
       assertMapRestored()
     end)
 
+    it("leaves the live area user data alone when saving", function()
+      deleteMap()
+      local area = addAreaName("MapperSpecSaveAreaDataArea")
+      local room = createRoomID(); addRoom(room); setRoomArea(room, area)
+      assert.is_true(setAreaUserData(area, "area.key", "mine"))
+      assert.is_true(setMapZoom(33, area))
+      local labelId = createMapLabel(area, "Label", 0, 0, 0, 255, 255, 255, 0, 0, 0,
+                                     30.0, 12, true, false, "Bitstream Vera Sans", 255, 50, false, 255, 255, 0)
+      assert.is_true(labelId >= 0)
+
+      assert.is_true(saveMap(savePath))
+      assert.are.same({["area.key"] = "mine"}, getAllAreaUserData(area))
+
+      assert.is_true(loadMap(savePath))
+      assert.are.same({["area.key"] = "mine"}, getAllAreaUserData(area))
+      assert.are.equal(33, getMapZoom(area))
+    end)
+
+    it("leaves the live room user data alone when saving a room border", function()
+      deleteMap()
+      local area = addAreaName("MapperSpecSaveRoomBorderArea")
+      local room = createRoomID(); addRoom(room); setRoomArea(room, area)
+      assert.is_true(setRoomBorderColor(room, 40, 50, 60, 255))
+      assert.is_true(setRoomBorderThickness(room, 3))
+      assert.is_true(setRoomUserData(room, "ukey", "uval"))
+
+      assert.is_true(saveMap(savePath))
+      assert.are.same({ukey = "uval"}, getAllRoomUserData(room))
+
+      assert.is_true(loadMap(savePath))
+      assert.are.same({ukey = "uval"}, getAllRoomUserData(room))
+      assert.are.same({40, 50, 60, 255}, {getRoomBorderColor(room)})
+      assert.are.equal(3, getRoomBorderThickness(room))
+    end)
+
+    it("refuses a script's own value for a room border key, which a save would replace", function()
+      deleteMap()
+      local area = addAreaName("MapperSpecRoomBorderKeyArea")
+      local room = createRoomID(); addRoom(room); setRoomArea(room, area)
+      assert.is_true(setRoomBorderThickness(room, 3))
+
+      for _, key in ipairs({"room.ui_borderColor", "room.ui_borderThickness"}) do
+        local ok, err = setRoomUserData(room, key, "9")
+        assert.is_nil(ok)
+        assert.is_truthy(err:find(key, 1, true))
+      end
+
+      assert.are.same({}, getAllRoomUserData(room))
+      assert.are.equal(3, getRoomBorderThickness(room))
+    end)
+
+    it("names the missing room before the reserved key in setRoomUserData", function()
+      deleteMap()
+      local ok, err = setRoomUserData(999999, "room.ui_borderColor", "x")
+      assert.is_nil(ok)
+      assert.is_truthy(err:find("999999 is not a valid roomID", 1, true))
+    end)
+
     it("lists each entrance into a room once after a reload", function()
       buildMap()
       assert.are.same({roomA}, getAllRoomEntrances(roomB))
@@ -5232,6 +5290,110 @@ describe("Tests saveJsonMap and loadJsonMap", function()
       assert.are.same({climate = "temperate", ruler = "nobody"}, getAllAreaUserData(area))
     end)
 
+    local function rewriteExport(edit)
+      assert.is_true(saveJsonMap(jsonPath))
+      local file = assert(io.open(jsonPath, "r"))
+      local document = yajl.to_value(file:read("*a"))
+      file:close()
+      edit(document)
+      file = assert(io.open(jsonPath, "w"))
+      file:write(yajl.to_string(document))
+      file:close()
+      deleteMap()
+      assert.is_true(loadJsonMap(jsonPath))
+    end
+
+    it("takes the binary format's fallbacks out of the user data of a file that has them", function()
+      deleteMap()
+      local area = addAreaName("MapperSpecJsonLeakedKeysArea")
+      roomA = createRoomID(); addRoom(roomA); setRoomArea(roomA, area)
+      assert.is_true(setAreaUserData(area, "climate", "temperate"))
+      assert.is_true(setRoomUserData(roomA, "kind", "cave"))
+      rewriteExport(function(document)
+        for _, exportedArea in ipairs(document.areas) do
+          if exportedArea.id == area then
+            exportedArea.userData["system.fallback_map2DZoom"] = "27"
+            exportedArea.userData["system.labelOutlineColor_77"] = "1|2|3|255"
+            exportedArea.userData["system.labelFont_78"] = "Sans|10|50|0"
+            for _, room in ipairs(exportedArea.rooms) do
+              -- a border cleared after the save that wrote these, as every
+              -- exporter that wrote them also wrote a "border" object
+              room.border = nil
+              room.userData["room.ui_borderColor"] = "#ff0a141e"
+              room.userData["room.ui_borderThickness"] = "4"
+            end
+          end
+        end
+      end)
+
+      assert.are.same({climate = "temperate"}, getAllAreaUserData(area))
+      assert.are.equal(27, getMapZoom(area))
+      assert.are.same({kind = "cave"}, getAllRoomUserData(roomA))
+      assert.is_nil(getRoomBorderColor(roomA))
+      assert.is_nil(getRoomBorderThickness(roomA))
+    end)
+
+    it("gives a label the outline color an older export keeps for it in the area's user data", function()
+      deleteMap()
+      local area = addAreaName("MapperSpecJsonKeptLabelKeysArea")
+      roomA = createRoomID(); addRoom(roomA); setRoomArea(roomA, area)
+      local labelId = createMapLabel(area, "Label", 0, 0, 0, 255, 255, 255, 0, 0, 0,
+                                     30.0, 12, true, false, "Bitstream Vera Sans", 255, 50, false)
+      local outlineKey = "system.labelOutlineColor_" .. labelId
+      rewriteExport(function(document)
+        for _, exportedArea in ipairs(document.areas) do
+          if exportedArea.id == area then
+            exportedArea.userData = exportedArea.userData or {}
+            exportedArea.userData[outlineKey] = "1|2|3|255"
+            -- the label's own "font" object says what its font is
+            exportedArea.userData["system.labelFont_" .. labelId] = "Other Font|20|700|1"
+          end
+        end
+      end)
+
+      assert.are.same({}, getAllAreaUserData(area))
+      -- no Lua call reads a label's outline color or font, but a binary save
+      -- writes both, as UTF-16 strings, into the area's user data in the file
+      local datPath = mapDirectory .. "/mapper_spec_json_label.dat"
+      finally(function() os.remove(datPath) end)
+      assert.is_true(saveMap(datPath))
+      local file = assert(io.open(datPath, "rb"))
+      local data = file:read("*a")
+      file:close()
+      local function savedValue(key)
+        local _, keyEnd = data:find((key:gsub(".", "\0%0")), 1, true)
+        if not keyEnd then
+          return nil
+        end
+        local b1, b2, b3, b4 = data:byte(keyEnd + 1, keyEnd + 4)
+        local length = ((b1 * 256 + b2) * 256 + b3) * 256 + b4
+        return (data:sub(keyEnd + 5, keyEnd + 4 + length):gsub("%z(.)", "%1"))
+      end
+      assert.are.equal("1|2|3|255", savedValue(outlineKey))
+      assert.are.equal("Bitstream Vera Sans|12|", savedValue("system.labelFont_" .. labelId):match("^[^|]+|%d+|"))
+    end)
+
+    it("leaves out a stale border thickness in the user data of a file with a border object", function()
+      deleteMap()
+      local area = addAreaName("MapperSpecJsonStaleBorderArea")
+      roomA = createRoomID(); addRoom(roomA); setRoomArea(roomA, area)
+      assert.is_true(setRoomBorderColor(roomA, 40, 50, 60, 255))
+      rewriteExport(function(document)
+        for _, exportedArea in ipairs(document.areas) do
+          for _, room in ipairs(exportedArea.rooms or {}) do
+            if room.id == roomA then
+              room.userData = room.userData or {}
+              room.userData["room.ui_borderThickness"] = "4"
+            end
+          end
+        end
+      end)
+
+      assert.are.same({40, 50, 60, 255}, {getRoomBorderColor(roomA)})
+      assert.is_nil(getRoomBorderThickness(roomA))
+      assert.is_nil(getAllRoomUserData(roomA)["room.ui_borderThickness"])
+    end)
+
     it("leaves out the label keys a binary save keeps as area user data", function()
       deleteMap()
       local area = addAreaName("MapperSpecJsonLabelKeysArea")
@@ -5253,6 +5415,27 @@ describe("Tests saveJsonMap and loadJsonMap", function()
       assert.are.same({climate = "temperate", ["system.labelFont_default"] = "kept", ["system.labelFont_007"] = "kept",
                        ["system.labelOutlineColor_+5"] = "kept"},
                       getAllAreaUserData(area))
+    end)
+
+    it("keeps a label's own outline color over a script's key for it, as a binary save does", function()
+      deleteMap()
+      local area = addAreaName("MapperSpecJsonScriptOutlineKeyArea")
+      roomA = createRoomID(); addRoom(roomA); setRoomArea(roomA, area)
+      local labelId = createMapLabel(area, "Label", 0, 0, 0, 255, 255, 255, 0, 0, 0,
+                                     30.0, 12, true, false, "Bitstream Vera Sans", 255, 50, false)
+      local outlineKey = "system.labelOutlineColor_" .. labelId
+      assert.is_true(setAreaUserData(area, outlineKey, "255|0|0|255"))
+
+      roundTrip()
+
+      assert.are.same({}, getAllAreaUserData(area))
+      local datPath = mapDirectory .. "/mapper_spec_json_script_outline.dat"
+      finally(function() os.remove(datPath) end)
+      assert.is_true(saveMap(datPath))
+      local file = assert(io.open(datPath, "rb"))
+      local data = file:read("*a")
+      file:close()
+      assert.is_nil(data:find(("255|0|0|255"):gsub(".", "\0%0"), 1, true))
     end)
 
     -- TMap::readJsonColor returns QColor(red, green, blue) for a colour array of
