@@ -206,6 +206,9 @@ public:
     static bool outranks(const NamePriority& first, const NamePriority& second);
     // An opacity moved toward target by the part of fadeMilliseconds that has elapsed; at once for no fade
     static float steppedOpacity(float opacity, float target, qint64 elapsedMilliseconds, int fadeMilliseconds);
+    // How many times a name's usual resolution to draw it at, so that it stays sharp zoomed in or on a high resolution
+    // screen: as many texels as the device pixels it covers, from 1 to 3, and no wider than a texture can be
+    static int textSharpness(qreal pixelsPerTexel, qreal devicePixelRatio, qreal widthTexels, int maxTextureSize);
 
     // How a level other than the viewed one recedes: how far its colors go toward the background, and
     // how opaque it stays

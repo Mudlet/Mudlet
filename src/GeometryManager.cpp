@@ -25,6 +25,7 @@
 #include <QFile>
 #include <QHash>
 #include <QImage>
+#include <QtMath>
 
 #include <algorithm>
 #include <cmath>
@@ -454,6 +455,15 @@ float GeometryManager::steppedOpacity(const float opacity, const float target, c
     }
     const float step = static_cast<float>(qMax(qint64{0}, elapsedMilliseconds)) / static_cast<float>(fadeMilliseconds);
     return opacity < target ? qMin(target, opacity + step) : qMax(target, opacity - step);
+}
+
+int GeometryManager::textSharpness(const qreal pixelsPerTexel, const qreal devicePixelRatio, const qreal widthTexels, const int maxTextureSize)
+{
+    // A quarter pixel's slack, so that a name drawn at very nearly its size is not drawn twice as large for it
+    const int wanted = qBound(1, qCeil(pixelsPerTexel * devicePixelRatio - 0.25), 3);
+    // With a tenth to spare, as a font made larger is not hinted to exactly that many times as wide
+    const int fitting = widthTexels > 0.0 ? qMax(1, qFloor(maxTextureSize / (1.1 * widthTexels))) : wanted;
+    return qMin(wanted, fitting);
 }
 
 GeometryManager::LevelFade GeometryManager::levelFade(const int levelsAbove, const bool moreTransparent)

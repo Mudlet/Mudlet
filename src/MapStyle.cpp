@@ -135,7 +135,8 @@ QList<MapStyle> registeredStyles()
     terminal.mapLabelColor = QColor(170, 170, 170);
     terminal.mapLabelHalo = QColor(0, 0, 0, 220);
     terminal.mapLabelMaxHeight = 0.6f;
-    terminal.roomNameColor = QColor(215, 215, 215);
+    // The ANSI palette's bright green, as a green phosphor screen draws its text
+    terminal.roomNameColor = QColor(85, 255, 85);
     terminal.roomNameScale = 0.7f;
     terminal.uprightNames = true;
     terminal.nameHalos = true;
@@ -247,6 +248,8 @@ QList<MapStyle> registeredStyles()
     inkwash.themedMapLabels = true;
     inkwash.mapLabelColor = QColor(74, 62, 50);
     inkwash.mapLabelKnockout = QColor(244, 237, 220, 235);
+    // For a label in a light color of its own, which the paper would lose: a rim of ink round its letters
+    inkwash.mapLabelHalo = QColor(38, 34, 32, 200);
     inkwash.mapLabelMaxHeight = 0.7f;
     inkwash.roomNameColor = QColor(92, 80, 66);
     inkwash.roomNameScale = 0.85f;
@@ -615,11 +618,18 @@ QColor MapStyle::roomBorderColor(const QColor& profileBorder, const QColor& room
 QColor MapStyle::roomNameColorFor(const QString& roomColorData, const QColor& background) const
 {
     if (roomNameColor.isValid() && !QColor(roomColorData).isValid()) {
+        const auto contrast = [this, &background](const QColor& color) {
+            const QColor backing = backingFor(roomNameHaloFor(color), labelTint, background);
+            return contrastRatio(over(tinted(color, labelTint), backing), backing);
+        };
         // Kept to a background it was chosen for: on one the profile picked, a pale name could vanish
-        const QColor backing = backingFor(roomNameHaloFor(roomNameColor), labelTint, background);
-        if (contrastRatio(over(tinted(roomNameColor, labelTint), backing), backing) >= scmLeastTextContrast) {
+        if (contrast(roomNameColor) >= scmLeastTextContrast) {
             return roomNameColor;
         }
+        // Measured, not judged by lightness as contrastColor() does, which puts white on a saturated yellow or green
+        const QColor black(Qt::black);
+        const QColor white(Qt::white);
+        return contrast(black) >= contrast(white) ? black : white;
     }
     return RoomAppearance::nameColor(roomColorData, background);
 }
