@@ -36,12 +36,10 @@
 #include <QApplication>
 #include <QComboBox>
 #include <QDir>
-#include <QImage>
 #include <QMenu>
 #include <QMouseEvent>
 #include <QPixmap>
 #include <QSignalSpy>
-#include <QStyle>
 #include <QStringList>
 #include <QTemporaryDir>
 #include <QTimer>
@@ -52,7 +50,6 @@
 #include <utility>
 
 #include "Host.h"
-#include "MapStyle.h"
 #include "MudletInstanceCoordinator.h"
 #include "MudletApp.h"
 #include "PortableModeTestHelper.h"
@@ -282,22 +279,6 @@ private:
         return worked && picked;
     }
 
-    // Opens the mapper menu and hands its 3D map style submenu to work(); false
-    // if the menu did not come up or has no such submenu.
-    bool workStyleMenu(const std::function<void(QMenu*)>& work)
-    {
-        bool found = false;
-        const bool worked = workMenuBehind(mpMapper->toolButton_mapperMenu, [&found, work](QMenu* pMenu) {
-            QAction* pSubmenu = menuAction(pMenu, qsl("3D map style"));
-            if (!pSubmenu || !pSubmenu->menu()) {
-                return;
-            }
-            found = true;
-            work(pSubmenu->menu());
-        });
-        return worked && found;
-    }
-
     // Opens the mapper menu and checks each item named in expected is a
     // checkable one ticked as given.
     void expectMapperMenuChecks(const QMap<QString, bool>& expected)
@@ -457,7 +438,6 @@ private slots:
         }
         if (mpHost) {
             map()->setSaveError(false);
-            mpHost->setMapStyle(MapStyle::defaultId());
         }
     }
 
@@ -574,86 +554,6 @@ private slots:
         QVERIFY(pickInfoOverlay(qsl("None")));
         QVERIFY2(mpHost->mMapInfoContributors.isEmpty(), qPrintable(qsl("still showing: %1").arg(QStringList(mpHost->mMapInfoContributors.values()).join(qsl(", ")))));
     }
-
-#if defined(INCLUDE_3DMAPPER)
-    void test_theStyleSubmenuOffersEveryStyleWithItsPictureAndTicksTheOneInUse()
-    {
-        QVERIFY(mpHost->setMapStyle(qsl("transit")));
-        QStringList names;
-        QStringList ticked;
-        int iconSize = 0;
-        bool everyItemHasAPicture = true;
-        QVERIFY2(workStyleMenu([&](QMenu* pStyleMenu) {
-                     for (QAction* pAction : pStyleMenu->actions()) {
-                         names << pAction->text();
-                         if (pAction->isChecked()) {
-                             ticked << pAction->data().toString();
-                         }
-                         everyItemHasAPicture = everyItemHasAPicture && !pAction->icon().isNull() && pAction->isIconVisibleInMenu();
-                     }
-                     iconSize = pStyleMenu->style()->pixelMetric(QStyle::PM_SmallIconSize, nullptr, pStyleMenu);
-                 }),
-                 "no 3D map style submenu in the mapper menu");
-
-        QStringList expected;
-        for (const MapStyle& style : MapStyle::all()) {
-            expected << style.displayName();
-        }
-        QCOMPARE(names, expected);
-        QCOMPARE(ticked, QStringList{qsl("transit")});
-        QVERIFY2(everyItemHasAPicture, "a style is listed without its picture");
-        QVERIFY2(iconSize >= 32, qPrintable(qsl("the pictures are drawn at %1 pixels, too small to show the rooms").arg(iconSize)));
-    }
-
-    void test_pickingAStyleInTheSubmenuSetsItOnTheProfileAndTellsTheViews()
-    {
-        QVERIFY(mpHost->setMapStyle(MapStyle::defaultId()));
-        QList<TMap::MapperSetting> announced;
-        const auto connection = connect(map(), &TMap::signal_mapperSettingChanged, this, [&announced](TMap::MapperSetting setting) {
-            announced << setting;
-        });
-        bool picked = false;
-        const bool worked = workStyleMenu([&picked](QMenu* pStyleMenu) {
-            if (QAction* pAction = menuAction(pStyleMenu, qsl("Ink wash"))) {
-                pAction->trigger();
-                picked = true;
-            }
-        });
-        disconnect(connection);
-
-        QVERIFY2(worked && picked, "no Ink wash item in the 3D map style submenu");
-        QCOMPARE(mpHost->mapStyle(), qsl("inkwash"));
-        QVERIFY2(announced.contains(TMap::MapperSetting::Style), "the views were not told the style changed");
-    }
-
-    void test_aStylePreviewIsSharpAtTheScreensRatioAndEveryStyleLooksDifferent()
-    {
-        QList<QImage> previews;
-        for (const MapStyle& style : MapStyle::all()) {
-            const QPixmap preview = style.previewPixmap(QSize(32, 32), 2.0);
-            QCOMPARE(preview.size(), QSize(64, 64));
-            QCOMPARE(preview.devicePixelRatio(), 2.0);
-            const QImage image = preview.toImage();
-            for (int i = 0; i < previews.size(); ++i) {
-                const QImage& other = previews.at(i);
-                int differing = 0;
-                for (int y = 0; y < image.height(); ++y) {
-                    for (int x = 0; x < image.width(); ++x) {
-                        differing += image.pixel(x, y) != other.pixel(x, y);
-                    }
-                }
-                // Each pair differs over nine tenths of the picture, so a quarter is a long way from two that look alike
-                QVERIFY2(differing > image.width() * image.height() / 4,
-                         qPrintable(qsl("%1 looks like %2: only %3 pixels differ").arg(style.displayName(), MapStyle::all().at(i).displayName()).arg(differing)));
-            }
-            previews << image;
-        }
-        // An empty size steps across a grid by nothing at a time unless it is turned away
-        for (const MapStyle& style : MapStyle::all()) {
-            QVERIFY2(style.previewPixmap(QSize(32, 0), 1.0).isNull(), qPrintable(qsl("%1 drew a preview with no room to draw in").arg(style.displayName())));
-        }
-    }
-#endif
 
     void test_theSaveWarningComesUpWhenTheMapCannotBeSavedAndDismissTakesItDown()
     {

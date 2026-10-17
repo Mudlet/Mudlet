@@ -25,7 +25,6 @@
 #include "dlgMapper.h"
 
 #include "Host.h"
-#include "MapStyle.h"
 #include "MudletApp.h"
 #include "TConsole.h"
 #include "TMainConsole.h"
@@ -34,7 +33,6 @@
 #include "mapInfoContributorManager.h"
 #include "mudlet.h"
 
-#include <QActionGroup>
 #include <QApplication>
 #include <QElapsedTimer>
 #include <QEvent>
@@ -47,49 +45,15 @@
 #include <QMenu>
 #include <QMessageBox>
 #include <QPainter>
-#include <QProxyStyle>
 #include <QProgressBar>
 #include <QProgressDialog>
 #include <QPushButton>
 #include <QSettings>
 #include <QSignalBlocker>
-#include <QStyleFactory>
 #include <QTimer>
 #include <QVBoxLayout>
 
 using namespace std::chrono_literals;
-
-#if defined(INCLUDE_3DMAPPER)
-namespace {
-// Big enough for a style's preview to show its rooms; a menu otherwise draws its icons at the small icon size
-constexpr QSize scmStylePreviewSize{32, 32};
-
-class StylePreviewMenuStyle : public QProxyStyle
-{
-public:
-    using QProxyStyle::QProxyStyle;
-
-    int pixelMetric(PixelMetric metric, const QStyleOption* option = nullptr, const QWidget* widget = nullptr) const override
-    {
-        if (metric == PM_SmallIconSize) {
-            return scmStylePreviewSize.width();
-        }
-        return QProxyStyle::pixelMetric(metric, option, widget);
-    }
-};
-
-// A proxy style takes ownership of the style it wraps, so it is given a fresh one of the kind the application's own
-// proxies wrap rather than the application's style itself
-QStyle* stylePreviewMenuStyle()
-{
-    const QStyle* pBase = QApplication::style();
-    while (const auto* pProxy = qobject_cast<const QProxyStyle*>(pBase)) {
-        pBase = pProxy->baseStyle();
-    }
-    return new StylePreviewMenuStyle(pBase ? QStyleFactory::create(pBase->name()) : nullptr);
-}
-} // namespace
-#endif
 
 dlgMapper* TMap::mapper() const
 {
@@ -1335,25 +1299,6 @@ void dlgMapper::slot_setupMapperMenu()
     show3DMapAction->setToolTip(tr("When enabled, the map will be displayed in 3D mode."));
     connect(show3DMapAction, &QAction::toggled, this, &dlgMapper::slot_toggle3DView);
     menu->addAction(show3DMapAction);
-
-    //: Submenu of the mapper's options menu listing the looks the modern 3D map can be drawn in, each shown with a small picture of it; the same choice as "Modern 3D map style" in the Mapper preferences
-    auto* pStyleMenu = menu->addMenu(tr("3D map style"));
-    QStyle* pPreviewStyle = stylePreviewMenuStyle();
-    pPreviewStyle->setParent(pStyleMenu);
-    pStyleMenu->setStyle(pPreviewStyle);
-    auto* pStyleGroup = new QActionGroup(pStyleMenu);
-    for (const MapStyle& style : MapStyle::all()) {
-        auto* pAction = pStyleMenu->addAction(style.previewIcon(scmStylePreviewSize), style.displayName());
-        // The picture is what the item offers, so it shows even where menus are set to show no icons
-        pAction->setIconVisibleInMenu(true);
-        pAction->setCheckable(true);
-        pAction->setChecked(style.id == mpHost->mapStyle());
-        pAction->setData(style.id);
-        pStyleGroup->addAction(pAction);
-        connect(pAction, &QAction::triggered, this, [this, id = style.id]() {
-            mpHost->setMapStyle(id);
-        });
-    }
 #endif
 
     // Add separator and Info submenu

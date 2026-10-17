@@ -19,6 +19,7 @@
 
 #include "MapStyle.h"
 
+#include "EnvironmentKit.h"
 #include "ExitAppearance.h"
 #include "Host.h"
 #include "RoomAppearance.h"
@@ -36,6 +37,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <utility>
 
 namespace {
@@ -605,18 +607,75 @@ qreal MapStyle::roomNameSpan(const qreal nameWidth, const qreal spaceWidth) cons
 }
 
 namespace {
-// Six rooms, three across and two down, and the exits between them: a forest, a road, water and a town, so that a
-// style's palette shows how it tells areas apart
+// Six rooms, three across and two down, and the exits between them: a forest, a road, water and a town of rose roofs,
+// so that a style's palette shows how it tells areas apart
 constexpr int scmPreviewColumns = 3;
 constexpr int scmPreviewRows = 2;
 constexpr std::array<QColor, scmPreviewColumns * scmPreviewRows> scmPreviewEnvironments{
-        QColor(40, 160, 60), QColor(40, 160, 60), QColor(50, 90, 200), QColor(150, 150, 150), QColor(200, 120, 40), QColor(50, 90, 200)};
+        QColor(40, 160, 60), QColor(40, 160, 60), QColor(50, 90, 200), QColor(150, 150, 150), QColor(205, 85, 105), QColor(50, 90, 200)};
 constexpr std::array<std::pair<int, int>, 6> scmPreviewExits{{{0, 1}, {1, 2}, {3, 4}, {4, 5}, {0, 3}, {2, 5}}};
 constexpr int scmPreviewPlayerRoom = 1;
 // The 2D map's defaults, which a profile keeps unless it was given its own
 constexpr QColor scmPreviewProfileBackground(QColorConstants::Black);
 constexpr QColor scmPreviewProfileExits(QColorConstants::LightGray);
 constexpr QColor scmPreviewProfilePlayer(QColorConstants::Red);
+
+// A room as a diorama builds it for its kit: water sunk into the board, paving, grass under a tree (none where the
+// player stands, so as not to hide the pawn) or a plastered house under a roof
+void drawPreviewKit(QPainter& painter, const EnvironmentKit::Kit kit, const QColor& fill, const QRectF& room, const bool player)
+{
+    const qreal side = room.width();
+    painter.setPen(Qt::NoPen);
+    switch (kit) {
+    case EnvironmentKit::Kit::Water: {
+        painter.setBrush(fill.darker(115));
+        painter.drawRect(room.adjusted(-side * 0.1, -side * 0.1, side * 0.1, side * 0.1));
+        painter.setPen(QPen(QColor(255, 255, 255, 170), std::max(0.6, side * 0.08), Qt::SolidLine, Qt::RoundCap));
+        painter.drawLine(room.topLeft() + QPointF(side * 0.2, side * 0.35), room.topLeft() + QPointF(side * 0.7, side * 0.25));
+        return;
+    }
+    case EnvironmentKit::Kit::Road:
+        painter.setBrush(fill);
+        painter.drawRect(room);
+        return;
+    case EnvironmentKit::Kit::Forest: {
+        painter.setBrush(fill);
+        painter.drawRect(room);
+        if (player) {
+            return;
+        }
+        const QPointF foot(room.center().x(), room.center().y() + side * 0.2);
+        painter.setBrush(QColor(0, 0, 0, 50));
+        painter.drawEllipse(foot + QPointF(side * 0.15, 0.0), side * 0.35, side * 0.12);
+        painter.setBrush(MapStyle::scmTrunkColor);
+        painter.drawRect(QRectF(foot.x() - side * 0.07, foot.y() - side * 0.2, side * 0.14, side * 0.2));
+        const QColor crown = QColor::fromRgbF(fill.redF() * MapStyle::scmCrownDarkening, fill.greenF() * MapStyle::scmCrownDarkening, fill.blueF() * MapStyle::scmCrownDarkening);
+        painter.setBrush(crown);
+        painter.drawPolygon(QPolygonF{foot + QPointF(-side * 0.38, -side * 0.15), foot + QPointF(side * 0.38, -side * 0.15), foot + QPointF(0.0, -side * 1.15)});
+        return;
+    }
+    case EnvironmentKit::Kit::Building: {
+        const QColor walls = QColor::fromRgbF(fill.redF() + (MapStyle::scmPlaster.redF() - fill.redF()) * MapStyle::scmToPlaster,
+                                              fill.greenF() + (MapStyle::scmPlaster.greenF() - fill.greenF()) * MapStyle::scmToPlaster,
+                                              fill.blueF() + (MapStyle::scmPlaster.blueF() - fill.blueF()) * MapStyle::scmToPlaster);
+        const QRectF wall(room.left(), room.top() + side * 0.25, side, side * 0.75);
+        painter.setBrush(QColor(0, 0, 0, 50));
+        painter.drawEllipse(QPointF(wall.center().x() + side * 0.2, wall.bottom()), side * 0.6, side * 0.15);
+        painter.setBrush(walls);
+        painter.drawRect(wall);
+        painter.setBrush(walls.darker(115));
+        painter.drawRect(QRectF(wall.center().x() - side * 0.12, wall.bottom() - side * 0.35, side * 0.24, side * 0.35));
+        painter.setBrush(fill);
+        const qreal eaves = side * 0.12;
+        painter.drawPolygon(QPolygonF{QPointF(wall.left() - eaves, wall.top()), QPointF(wall.right() + eaves, wall.top()), QPointF(wall.center().x(), room.top() - side * 0.35)});
+        return;
+    }
+    case EnvironmentKit::Kit::Plain:
+        painter.setBrush(fill);
+        painter.drawRect(room);
+        return;
+    }
+}
 
 QPainterPath previewRoomPath(const QRectF& room, const bool round)
 {
@@ -672,33 +731,57 @@ QPixmap MapStyle::previewPixmap(const QSize& size, const qreal devicePixelRatio)
         return QRectF(middle.x() - side / 2.0, middle.y() - side / 2.0, side, side);
     };
 
+    if (environmentKits) {
+        // The board the rooms stand on, seen from above and in front: narrower at the back, over its thick front edge
+        const qreal back = origin.y() - pitch * 0.2;
+        const qreal front = origin.y() + pitch * (scmPreviewRows + 0.1);
+        const qreal inset = pitch * 0.3;
+        painter.setPen(Qt::NoPen);
+        painter.setBrush(scmBoardTop);
+        painter.drawPolygon(QPolygonF{QPointF(inset, back), QPointF(bounds.width() - inset, back), QPointF(bounds.width(), front), QPointF(0.0, front)});
+        painter.setBrush(scmBoardFront);
+        painter.drawRect(QRectF(0.0, front, bounds.width(), pitch * 0.35));
+    }
+
     if (gridColor.isValid()) {
         QColor line = gridColor;
         line.setAlpha(std::min(255, line.alpha() * 3));
         painter.setPen(QPen(line, 0.0));
-        for (qreal x = origin.x(); x < bounds.width(); x += pitch) {
+        // From the line before the rooms, so the margins either side of them are ruled alike
+        for (qreal x = std::fmod(origin.x(), pitch); x < bounds.width(); x += pitch) {
             painter.drawLine(QPointF(x, 0.0), QPointF(x, bounds.height()));
         }
-        for (qreal y = origin.y(); y < bounds.height(); y += pitch) {
+        for (qreal y = std::fmod(origin.y(), pitch); y < bounds.height(); y += pitch) {
             painter.drawLine(QPointF(0.0, y), QPointF(bounds.width(), y));
         }
     }
 
     if (washReach > 0.0f) {
+        // Each wash a few overlapping blots with soft edges, as paint spreads on wet paper, and stronger than the map
+        // lays it down, so that it still shows at the size of an icon
+        constexpr std::array<QPointF, 3> blots{QPointF(0.0, 0.0), QPointF(0.22, -0.16), QPointF(-0.18, 0.2)};
         painter.setPen(Qt::NoPen);
         for (int room = 0; room < static_cast<int>(scmPreviewEnvironments.size()); ++room) {
             QColor wash = washColor(scmPreviewEnvironments.at(room));
-            QRadialGradient blot(centre(room), pitch * 0.75);
-            blot.setColorAt(0.0, wash);
-            wash.setAlpha(0);
-            blot.setColorAt(1.0, wash);
-            painter.setBrush(blot);
-            painter.drawEllipse(centre(room), pitch * 0.75, pitch * 0.75);
+            wash.setAlphaF(std::min(1.0f, wash.alphaF() * 1.3f));
+            for (int blot = 0; blot < static_cast<int>(blots.size()); ++blot) {
+                const QPointF at = centre(room) + blots.at((blot + room) % blots.size()) * pitch;
+                const qreal reach = pitch * (blot == 0 ? 0.55 : 0.4);
+                QRadialGradient spread(at, reach);
+                spread.setColorAt(0.0, wash);
+                spread.setColorAt(0.55, wash);
+                QColor edge = wash;
+                edge.setAlpha(0);
+                spread.setColorAt(1.0, edge);
+                painter.setBrush(spread);
+                painter.drawEllipse(at, reach, reach);
+            }
         }
     }
 
     const bool terminalGlyphs = glyphs == Glyphs::Terminal;
-    const qreal exitWidth = std::clamp(pitch * 0.07 * exitWidthFactor, 0.75, pitch * 0.22);
+    // Not std::clamp, whose bounds cross on a preview small enough that a quarter of its pitch is under a pixel
+    const qreal exitWidth = std::min(std::max(pitch * 0.07 * exitWidthFactor, 0.75), pitch * 0.22);
     for (const auto& [from, to] : scmPreviewExits) {
         const QColor fromEnvironment = scmPreviewEnvironments.at(from);
         QColor line = exitColor(scmPreviewProfileExits);
@@ -778,13 +861,31 @@ QPixmap MapStyle::previewPixmap(const QSize& size, const qreal devicePixelRatio)
             break;
         }
         case Edges::InkLozenges: {
-            const qreal lozenge = side * 0.2;
-            painter.setBrush(fill);
-            painter.setPen(QPen(ink.isValid() ? ink : scmPreviewProfileExits, 1.0));
-            painter.drawRoundedRect(rect, lozenge, lozenge);
+            // Drawn by hand: the wash shows through, inside two pen strokes that do not quite meet
+            QColor tint = fill;
+            tint.setAlpha(110);
+            painter.setPen(Qt::NoPen);
+            painter.setBrush(tint);
+            painter.drawRect(rect);
+            painter.setBrush(Qt::NoBrush);
+            const QColor penColor = ink.isValid() ? ink : scmPreviewProfileExits;
+            const qreal wobble = side * 0.07;
+            for (const qreal turn : {1.0, -1.0}) {
+                const QPolygonF stroke{rect.topLeft() + QPointF(-wobble, wobble * turn),
+                                       rect.topRight() + QPointF(wobble * turn, -wobble),
+                                       rect.bottomRight() + QPointF(wobble, -wobble * turn),
+                                       rect.bottomLeft() + QPointF(-wobble * turn, wobble),
+                                       rect.topLeft() + QPointF(wobble * turn, -wobble)};
+                painter.setPen(QPen(penColor, turn > 0.0 ? 1.0 : 0.6, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+                painter.drawPolyline(stroke);
+            }
             break;
         }
         case Edges::ModelBlocks: {
+            if (environmentKits) {
+                drawPreviewKit(painter, EnvironmentKit::guess(environment), fill, rect, player);
+                break;
+            }
             painter.setPen(Qt::NoPen);
             painter.setBrush(QColor(0, 0, 0, 50));
             painter.drawEllipse(rect.translated(side * 0.2, side * 0.35));
@@ -844,7 +945,7 @@ QPixmap MapStyle::previewPixmap(const QSize& size, const qreal devicePixelRatio)
         QColor fill = playerRoomColor();
         fill.setAlpha(110);
         painter.setBrush(fill);
-        painter.drawPath(previewRoomPath(playerRect, roundRooms(false)));
+        painter.drawPath(previewRoomPath(playerRect, round));
         const qreal half = side * 0.3;
         const QPointF top = playerCentre - QPointF(0.0, side * 1.05);
         painter.setPen(Qt::NoPen);

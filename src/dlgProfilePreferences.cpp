@@ -4390,6 +4390,12 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         connect(fontComboBox_mapSymbols, &QFontComboBox::currentFontChanged, this, &dlgProfilePreferences::slot_setMapSymbolFont, Qt::UniqueConnection);
         connect(checkBox_isOnlyMapSymbolFontToBeUsed, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setMapSymbolFontStrategy, Qt::UniqueConnection);
         connect(pHost->mpMap.data(), &TMap::signal_mapSymbolFontChanged, this, &dlgProfilePreferences::slot_mapSymbolFontChanged, Qt::UniqueConnection);
+        disconnect(mMapStyleConnection);
+        mMapStyleConnection = connect(pHost->mpMap.data(), &TMap::signal_mapperSettingChanged, this, [this](const TMap::MapperSetting setting) {
+            if (setting == TMap::MapperSetting::Style) {
+                followMapStyle();
+            }
+        });
 
         groupBox_playerRoomStyle->setEnabled(true);
         comboBox_playerRoomStyle->setCurrentIndex(pHost->mpMap->mPlayerRoomStyle);
@@ -4653,12 +4659,16 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     checkBox_largeAreaExitArrows->setChecked(pHost->getLargeAreaExitArrows());
     {
         const QSignalBlocker blocker(comboBox_mapStyle);
-        comboBox_mapStyle->clear();
-        // Wider than tall, as the combo box has room across for the preview's rooms to show
-        const QSize previewSize(48, 32);
-        comboBox_mapStyle->setIconSize(previewSize);
-        for (const MapStyle& style : MapStyle::all()) {
-            comboBox_mapStyle->addItem(style.previewIcon(previewSize), style.displayName(), style.id);
+        // Kept from the last time round, as this runs again each time the dialog is activated and the pictures
+        // take a few milliseconds to paint; clearHostDetails() empties it
+        if (comboBox_mapStyle->count() != MapStyle::all().size()) {
+            comboBox_mapStyle->clear();
+            // Wider than tall, as the combo box has room across for the preview's rooms to show
+            const QSize previewSize(72, 48);
+            comboBox_mapStyle->setIconSize(previewSize);
+            for (const MapStyle& style : MapStyle::all()) {
+                comboBox_mapStyle->addItem(style.previewIcon(previewSize), style.displayName(), style.id);
+            }
         }
         comboBox_mapStyle->setCurrentIndex(comboBox_mapStyle->findData(pHost->mapStyle()));
     }
@@ -5069,6 +5079,7 @@ void dlgProfilePreferences::clearHostDetails()
 
     comboBox_mapFileSaveFormatVersion->clear();
     comboBox_mapFileSaveFormatVersion->setEnabled(true);
+    disconnect(mMapStyleConnection);
     comboBox_mapStyle->clear();
     label_mapFileSaveFormatVersion->setEnabled(false);
     checkBox_showDefaultArea->setChecked(false);
@@ -8063,6 +8074,22 @@ void dlgProfilePreferences::slot_setMapSymbolFont(const QFont& font)
     }
 
     pHost->mpMap->setSymbolFont(font);
+}
+
+// A style set while the dialog is open, such as by a script, replaces any pick
+// not yet applied, so that Save does not write the older pick back over it
+void dlgProfilePreferences::followMapStyle()
+{
+    Host* pHost = mpHost;
+    if (!pHost) {
+        return;
+    }
+    const int index = comboBox_mapStyle->findData(pHost->mapStyle());
+    if (index != comboBox_mapStyle->currentIndex()) {
+        const QSignalBlocker blocker(comboBox_mapStyle);
+        comboBox_mapStyle->setCurrentIndex(index);
+    }
+    mSnapshot.take(comboBox_mapStyle);
 }
 
 // Keeps the controls (and the glyph usage dialog, when open) in step with the

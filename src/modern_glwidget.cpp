@@ -914,17 +914,12 @@ constexpr std::array<TokenPiece, 3> scmTokenPieces{{
 constexpr float scmTokenShadowReach = 0.9f;
 // How strongly the pawn shows through what stands between it and the camera
 constexpr float scmTokenGhost = 0.35f;
-// A building's walls, its environment's color washed toward this plaster, under a roof in the color itself; its roof
-// reaches out past the walls by this much
-constexpr QColor scmPlaster(236, 224, 200);
-constexpr float scmToPlaster = 0.6f;
+// A building's roof reaches out past its walls by this much
 constexpr float scmEaves = 1.12f;
-// A forest's trees: a trunk and a crown of leaves, in rooms' spacing, the crown's color its environment's darkened
-constexpr QColor scmTrunkColor(107, 74, 42);
+// A forest's trees: a trunk and a crown of leaves, in rooms' spacing
 constexpr float scmTrunkRadius = 0.025f;
 constexpr float scmTrunkHeight = 0.05f;
 constexpr float scmCrownRadius = 0.12f;
-constexpr float scmCrownDarkening = 0.6f;
 // Where a forest tile's one, two or three trees stand, before each is nudged by its room
 constexpr std::array<std::array<QPointF, 3>, 3> scmTreeSpots{{
         {{QPointF(0.0, 0.0), QPointF(), QPointF()}},
@@ -934,8 +929,6 @@ constexpr std::array<std::array<QPointF, 3>, 3> scmTreeSpots{{
 // The board under the map: how far it reaches past the rooms and how thick it is, in rooms' spacing, and its wood
 constexpr float scmBoardMargin = 0.6f;
 constexpr float scmBoardThickness = 0.35f;
-constexpr QColor scmBoardTop(203, 194, 164);
-constexpr QColor scmBoardFront(160, 138, 102);
 constexpr QColor scmBoardSide(138, 118, 86);
 // How many pixels across a room is on screen, at the least, for MapStyle::environmentMarks to draw on it
 constexpr float scmEnvironmentMarkPixels = 24.0f;
@@ -1087,7 +1080,7 @@ FlatLines boardMesh(const QRectF& extent, const float z, const float roomHeight,
     const auto back = static_cast<float>(board.bottom());
     const float under = z - scmBoardThickness;
     const auto flat = [&mesh, z](const float x0, const float y0, const float x1, const float y1) {
-        appendBoardQuad(mesh, {QVector3D(x0, y0, z), QVector3D(x1, y0, z), QVector3D(x1, y1, z), QVector3D(x0, y1, z)}, scmBoardTop);
+        appendBoardQuad(mesh, {QVector3D(x0, y0, z), QVector3D(x1, y0, z), QVector3D(x1, y1, z), QVector3D(x0, y1, z)}, MapStyle::scmBoardTop);
     };
     QMap<int, QList<int>> waterRows;
     for (const auto& [x, y] : waterCells) {
@@ -1138,8 +1131,8 @@ FlatLines boardMesh(const QRectF& extent, const float z, const float roomHeight,
             appendBoardQuad(mesh, {QVector3D(x1, y0, pit), QVector3D(x1, y1, pit), QVector3D(x1, y1, z), QVector3D(x1, y0, z)}, pitColor);
         }
     }
-    appendBoardQuad(mesh, {QVector3D(left, front, under), QVector3D(right, front, under), QVector3D(right, front, z), QVector3D(left, front, z)}, scmBoardFront);
-    appendBoardQuad(mesh, {QVector3D(left, back, under), QVector3D(right, back, under), QVector3D(right, back, z), QVector3D(left, back, z)}, scmBoardFront);
+    appendBoardQuad(mesh, {QVector3D(left, front, under), QVector3D(right, front, under), QVector3D(right, front, z), QVector3D(left, front, z)}, MapStyle::scmBoardFront);
+    appendBoardQuad(mesh, {QVector3D(left, back, under), QVector3D(right, back, under), QVector3D(right, back, z), QVector3D(left, back, z)}, MapStyle::scmBoardFront);
     appendBoardQuad(mesh, {QVector3D(left, front, under), QVector3D(left, back, under), QVector3D(left, back, z), QVector3D(left, front, z)}, scmBoardSide);
     appendBoardQuad(mesh, {QVector3D(right, front, under), QVector3D(right, back, under), QVector3D(right, back, z), QVector3D(right, front, z)}, scmBoardSide);
     appendBoardQuad(mesh, {QVector3D(left, front, under), QVector3D(right, front, under), QVector3D(right, back, under), QVector3D(left, back, under)}, scmBoardSide.darker(130));
@@ -1882,8 +1875,8 @@ void ModernGLWidget::renderRooms()
             seed = (seed ^ (seed >> 15)) * 0x846ca68bU;
             seed ^= seed >> 16;
             const int trees = 1 + static_cast<int>(seed % 3);
-            const QVector3D crown = color * scmCrownDarkening;
-            const QVector3D trunk(scmTrunkColor.redF(), scmTrunkColor.greenF(), scmTrunkColor.blueF());
+            const QVector3D crown = color * MapStyle::scmCrownDarkening;
+            const QVector3D trunk(MapStyle::scmTrunkColor.redF(), MapStyle::scmTrunkColor.greenF(), MapStyle::scmTrunkColor.blueF());
             for (int tree = 0; tree < trees; ++tree) {
                 const quint32 bits = seed >> (4 + 8 * tree);
                 const QPointF spot = scmTreeSpots.at(trees - 1).at(tree);
@@ -1902,8 +1895,8 @@ void ModernGLWidget::renderRooms()
             break;
         }
         case EnvironmentKit::Kit::Building: {
-            const QVector3D plaster(scmPlaster.redF(), scmPlaster.greenF(), scmPlaster.blueF());
-            shape(GeometryManager::InstanceShape::Box).append(block(bottom, top, half, half, color + (plaster - color) * scmToPlaster));
+            const QVector3D plaster(MapStyle::scmPlaster.redF(), MapStyle::scmPlaster.greenF(), MapStyle::scmPlaster.blueF());
+            shape(GeometryManager::InstanceShape::Box).append(block(bottom, top, half, half, color + (plaster - color) * MapStyle::scmToPlaster));
             if (peak > top) {
                 shape(GeometryManager::InstanceShape::Pyramid).append(block(top, peak, half * scmEaves, half * scmEaves, color));
             }

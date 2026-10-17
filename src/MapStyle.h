@@ -372,6 +372,15 @@ struct MapStyle
     // The Sky post effect's colors at the view's top and foot
     static constexpr QColor scmSkyTop{207, 226, 238};
     static constexpr QColor scmSkyFoot{239, 233, 220};
+    // With environmentKits: a building's walls are its environment's color washed this far toward plaster, under a roof
+    // in the color itself; a tree's crown is its environment's color darkened by this much over a trunk of wood; and
+    // the board under the viewed level has a top and a front edge of these
+    static constexpr QColor scmPlaster{236, 224, 200};
+    static constexpr float scmToPlaster = 0.6f;
+    static constexpr QColor scmTrunkColor{107, 74, 42};
+    static constexpr float scmCrownDarkening = 0.6f;
+    static constexpr QColor scmBoardTop{203, 194, 164};
+    static constexpr QColor scmBoardFront{160, 138, 102};
 
     static QString defaultId();
     // In the order the preferences list them
