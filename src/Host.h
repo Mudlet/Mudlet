@@ -688,6 +688,7 @@ public:
     bool setLabelOnLeave(const QString&, const int);
     // std::nullopt goes back to deciding by the label's callbacks
     bool setLabelAccessibleButton(const QString& name, std::optional<bool> button);
+    bool setLabelAccessibleName(const QString& name, const QString& accessibleName);
     std::pair<bool, QString> setMovie(const QString& labelName, const QString& moviePath);
     bool setBackgroundColor(const QString& name, int r, int g, int b, int alpha);
     bool setCommandBackgroundColor(const QString& name, int r, int g, int b, int alpha);

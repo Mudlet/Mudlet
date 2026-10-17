@@ -52,7 +52,6 @@ public:
     virtual std::pair<bool, QString> setLabelStyleSheet(const QString& name, const QString& stylesheet) = 0;
     virtual std::optional<QSize> getLabelSizeHint(const QString& name) const = 0;
     virtual std::pair<bool, QString> setLabelToolTip(const QString& name, const QString& text, double duration) = 0;
-    virtual std::pair<bool, QString> setLabelAccessibleName(const QString& name, const QString& accessibleName) = 0;
     virtual std::pair<bool, QString> setLabelCursor(const QString& name, int shape) = 0;
     virtual std::pair<bool, QString> setLabelCustomCursor(const QString& name, const QString& pixMapLocation, int hotX, int hotY) = 0;
     virtual bool setLabelClickThrough(const QString& name, bool clickThrough) = 0;

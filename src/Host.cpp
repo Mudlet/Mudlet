@@ -6224,6 +6224,20 @@ bool Host::setLabelClickCallback(const QString& name, const int func)
     return false;
 }
 
+bool Host::setLabelAccessibleName(const QString& name, const QString& accessibleName)
+{
+    if (!hasConsoleView()) {
+        return false;
+    }
+
+    auto* pModel = mWindowRegistry.labelModel(name);
+    if (pModel) {
+        pModel->setAccessibleName(accessibleName);
+        return true;
+    }
+    return false;
+}
+
 bool Host::setLabelAccessibleButton(const QString& name, std::optional<bool> button)
 {
     if (!hasConsoleView()) {

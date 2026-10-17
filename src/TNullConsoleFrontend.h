@@ -116,7 +116,6 @@ public:
     std::pair<bool, QString> setLabelStyleSheet(const QString& name, const QString& stylesheet) override;
     std::optional<QSize> getLabelSizeHint(const QString& name) const override;
     std::pair<bool, QString> setLabelToolTip(const QString& name, const QString& text, double duration) override;
-    std::pair<bool, QString> setLabelAccessibleName(const QString&, const QString&) override { return noView(); }
     std::pair<bool, QString> setLabelCursor(const QString& name, int shape) override;
     std::pair<bool, QString> setLabelCustomCursor(const QString& name, const QString& pixMapLocation, int hotX, int hotY) override;
     bool setLabelClickThrough(const QString& name, bool) override { return labelModel(name) != nullptr; }

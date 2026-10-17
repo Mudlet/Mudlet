@@ -52,6 +52,7 @@ void TLabelModel::setClick(const int func)
 {
     releaseFunc(mClickFunction, func);
     mClickFunction = func;
+    accessibilityChanged(AccessibilityChange::Role);
 }
 
 void TLabelModel::setDoubleClick(const int func)
@@ -64,6 +65,7 @@ void TLabelModel::setRelease(const int func)
 {
     releaseFunc(mReleaseFunction, func);
     mReleaseFunction = func;
+    accessibilityChanged(AccessibilityChange::Role);
 }
 
 void TLabelModel::setMove(const int func)
@@ -501,5 +503,30 @@ bool TLabelModel::namedByToolTip() const
 
 bool TLabelModel::actsAsButton() const
 {
-    return mAccessibleButton.value_or(mClickFunction != 0 || mReleaseFunction != 0);
+    return !mClickThrough && mAccessibleButton.value_or(mClickFunction != 0 || mReleaseFunction != 0);
+}
+
+void TLabelModel::setAccessibleName(const QString& name)
+{
+    mAccessibleName = name;
+    accessibilityChanged(AccessibilityChange::Name);
+}
+
+void TLabelModel::setAccessibleButton(std::optional<bool> button)
+{
+    mAccessibleButton = button;
+    accessibilityChanged(AccessibilityChange::Role);
+}
+
+void TLabelModel::setClickThrough(bool clickThrough)
+{
+    mClickThrough = clickThrough;
+    accessibilityChanged(AccessibilityChange::Role);
+}
+
+void TLabelModel::accessibilityChanged(AccessibilityChange change) const
+{
+    if (mAccessibilityChanged) {
+        mAccessibilityChanged(change);
+    }
 }

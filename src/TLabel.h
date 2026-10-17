@@ -59,7 +59,10 @@ public:
     void setText(const QString& text);
     // A screen reader's activation, delivered as the left click a mouse would make
     void press();
-    void setAuthoredAccessibleName(const QString& name);
+    // Its image or SVG background, which a screen reader is told is a graphic
+    bool showsImage() const;
+    // After a change to the text or tooltip, which name the label unless a script named it
+    void derivedNameMayHaveChanged();
     void mousePressEvent(QMouseEvent*) override;
     void mouseDoubleClickEvent(QMouseEvent*) override;
     void mouseReleaseEvent(QMouseEvent*) override;
@@ -121,6 +124,9 @@ private:
     // links in reach of Tab and Return via the focus policy QLabel derives from these flags.
     static constexpr Qt::TextInteractionFlags scmLinkInteraction = Qt::LinksAccessibleByMouse | Qt::LinksAccessibleByKeyboard;
 
+    void accessibilityChanged(TLabelModel::AccessibilityChange change);
+    // A screen reader's press is the label's, not one of a link that happens to sit under its centre
+    bool mScreenReaderPress = false;
     bool carriesLink() const;
     bool forwardRightClickToConsole(QMouseEvent* event);
     void applyBackgroundColor();

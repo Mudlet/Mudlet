@@ -29,6 +29,7 @@
 #include <QSize>
 #include <QString>
 
+#include <functional>
 #include <optional>
 
 class Host;
@@ -51,8 +52,17 @@ struct TLabelModel
     // The name a screen reader hears: the one a script gave it, else its text, else its tooltip
     QString effectiveAccessibleName() const;
     bool namedByToolTip() const;
-    // Whether a screen reader is told it is a button: as a script said, else when it has a click or release callback
+    // Whether a screen reader is told it is a button: as a script said, else when it has a click or release
+    // callback - never when the mouse passes through it
     bool actsAsButton() const;
+    void setAccessibleName(const QString& name);
+    void setAccessibleButton(std::optional<bool> button);
+    void setClickThrough(bool clickThrough);
+
+    enum class AccessibilityChange { Name, Role };
+    // Set by the view, which tells assistive technology; the core changes these without a widget
+    std::function<void(AccessibilityChange)> mAccessibilityChanged;
+    void accessibilityChanged(AccessibilityChange change) const;
 
     // Whether the SVG renderer is worth trying on a file, judged by its first bytes.
     static bool svgCandidate(const QString& path);
@@ -118,6 +128,7 @@ struct TLabelModel
     QString mAccessibleName;
     // Set by a script whose label's callbacks are not a button's, such as a drag handle; empty means automatic
     std::optional<bool> mAccessibleButton;
+    bool mClickThrough = false;
     QFont mFont;
     // QLabel::text(), which a pixmap or movie empties, written by the view after each change.
     QString mText;

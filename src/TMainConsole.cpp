@@ -1534,21 +1534,6 @@ std::pair<bool, QString> TMainConsole::deleteScrollBox(const QString& name)
     return {false, qsl("scrollbox name '%1' not found").arg(name)};
 }
 
-std::pair<bool, QString> TMainConsole::setLabelAccessibleName(const QString& name, const QString& accessibleName)
-{
-    if (name.isEmpty()) {
-        return {false, qsl("a label cannot have an empty string as its name")};
-    }
-
-    if (auto pL = mLabelMap.value(name)) {
-        pL->setAuthoredAccessibleName(accessibleName);
-        return {true, QString()};
-    }
-
-    // Message is of the form needed for a Lua API function call run-time error
-    return {false, qsl("label name '%1' not found").arg(name)};
-}
-
 std::pair<bool, QString> TMainConsole::setLabelToolTip(const QString& name, const QString& text, double duration)
 {
     if (name.isEmpty()) {
@@ -2595,6 +2580,7 @@ std::pair<bool, QString> TMainConsole::setLabelMovie(const QString& name, const 
     myMovie->stop();
     pL->setMovie(myMovie);
     pL->model().mText = pL->text();
+    pL->derivedNameMayHaveChanged();
     myMovie->start();
     return {true, QString()};
 }

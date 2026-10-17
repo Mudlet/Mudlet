@@ -26,6 +26,7 @@
  */
 
 #include <QAccessible>
+#include <QImage>
 #include <QSignalSpy>
 #include <QtTest/QtTest>
 #include <chrono>
@@ -69,6 +70,32 @@ private:
     bool runLua(const QString& script) const { return mpHost->getLuaInterpreter()->compileAndExecuteScript(script); }
 
     bool luaHolds(const QString& condition) const { return runLua(qsl("assert(%1)").arg(condition)); }
+
+    inline static QList<QAccessible::Event> smEvents;
+    inline static QObject* smWatched = nullptr;
+
+    static void recordEvent(QAccessibleEvent* event)
+    {
+        if (event->object() == smWatched) {
+            smEvents.append(event->type());
+        }
+    }
+
+    // Qt only hands events to the handler while accessibility is active, which no screen reader makes it here
+    void listenTo(QObject* object)
+    {
+        smEvents.clear();
+        smWatched = object;
+        QAccessible::installUpdateHandler(recordEvent);
+        QAccessible::setActive(true);
+    }
+
+    void stopListening()
+    {
+        QAccessible::setActive(false);
+        QAccessible::installUpdateHandler(nullptr);
+        smWatched = nullptr;
+    }
 
 private slots:
     void initTestCase()
@@ -158,7 +185,8 @@ private slots:
     void init()
     {
         QVERIFY(runLua(qsl("setLabelClickCallback('%1', nil); setLabelReleaseCallback('%1', nil); setLabelAccessibleName('%1', ''); setLabelAccessibleRole('%1', ''); "
-                           "echo('%1', 'plain'); accessibleLabelClicks = nil; accessibleLabelReleased = nil")
+                           "disableClickthrough('%1'); resetBackgroundImage('%1'); resetLabelToolTip('%1'); "
+                           "echo('%1', 'plain'); accessibleLabelClicks = nil; accessibleLabelReleased = nil; accessibleLinkHit = nil")
                                .arg(mLabelName)));
     }
 
@@ -242,6 +270,56 @@ private slots:
         accessible()->actionInterface()->doAction(QAccessibleActionInterface::pressAction());
         QVERIFY(luaHolds(qsl("accessibleLabelClicks == 1")));
         QVERIFY(luaHolds(qsl("accessibleLabelButton == 'LeftButton'")));
+    }
+
+    // A mouse click passes through it to what is underneath, so a screen reader cannot press it either
+    void test_aClickThroughLabelIsNotAButton()
+    {
+        QVERIFY(runLua(qsl("setLabelClickCallback('%1', function() accessibleLabelClicks = 1 end); enableClickthrough('%1')").arg(mLabelName)));
+        QCOMPARE(accessible()->role(), QAccessible::StaticText);
+        QVERIFY(luaHolds(qsl("getLabelAccessibleRole('%1') == 'text'").arg(mLabelName)));
+        QVERIFY(runLua(qsl("disableClickthrough('%1')").arg(mLabelName)));
+        QCOMPARE(accessible()->role(), QAccessible::Button);
+    }
+
+    // As Qt's own interface for a QLabel says of one
+    void test_anImageLabelIsAGraphic()
+    {
+        QImage image(16, 16, QImage::Format_RGB32);
+        image.fill(Qt::red);
+        const QString path = mConfigDir.filePath(qsl("accessible-label.png"));
+        QVERIFY(image.save(path));
+        QVERIFY(runLua(qsl("assert(setBackgroundImage('%1', [[%2]]))").arg(mLabelName, path)));
+        QCOMPARE(accessible()->role(), QAccessible::Graphic);
+    }
+
+    void test_aPressLeavesALinkUnderTheLabelAlone()
+    {
+        QVERIFY(runLua(qsl("echo('%1', '<a href=\"accessibleLinkHit = true\">' .. string.rep('W', 60) .. '</a>')").arg(mLabelName)));
+        QVERIFY(runLua(qsl("setLabelClickCallback('%1', function() accessibleLabelClicks = 1 end)").arg(mLabelName)));
+        accessible()->actionInterface()->doAction(QAccessibleActionInterface::pressAction());
+        QVERIFY(luaHolds(qsl("accessibleLabelClicks == 1")));
+        QVERIFY2(luaHolds(qsl("accessibleLinkHit == nil")), "the press activated the link under the label's centre");
+    }
+
+    // A screen reader keeps what it was told about a control until it hears it changed
+    void test_changesAreAnnounced()
+    {
+        listenTo(label());
+        auto restore = qScopeGuard([this]() {
+            stopListening();
+        });
+
+        QVERIFY(runLua(qsl("setLabelClickCallback('%1', function() end)").arg(mLabelName)));
+        QVERIFY2(smEvents.contains(QAccessible::ActionChanged), "gaining a click callback was not announced");
+
+        smEvents.clear();
+        QVERIFY(runLua(qsl("setLabelAccessibleName('%1', 'Open the map')").arg(mLabelName)));
+        QVERIFY2(smEvents.contains(QAccessible::NameChanged), "an authored name was not announced");
+
+        smEvents.clear();
+        QVERIFY(runLua(qsl("setLabelAccessibleName('%1', ''); echo('%1', ''); setLabelToolTip('%1', 'Map')").arg(mLabelName)));
+        QVERIFY2(smEvents.contains(QAccessible::NameChanged), "a tooltip naming the label was not announced");
     }
 
     void test_aLabelThatDeletesItselfWhenPressedIsLeftAlone()
