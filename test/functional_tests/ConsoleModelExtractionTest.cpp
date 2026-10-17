@@ -1627,7 +1627,17 @@ mainNamedSheets = getCmdLineStyleSheet() .. "|" .. getCmdLineStyleSheet("main")
         QVERIFY2(host, "No active host available for the test.");
         QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
         QVERIFY2(!FontManager::availableFonts().isEmpty(), "No font is installed, so setFont() refuses every family before it looks for a console.");
+        runLua(host, qsl("setSaveCommandHistory(false)"));
         destroyTheView(host);
+        // The key is set the other way before each save, so the save is seen to write it. The view's setting goes on without it.
+        const QString key = qsl("CommandLines/SaveHistory/main");
+        host->writeProfileIniData(key, qsl("true"));
+        QTRY_VERIFY(!host->currentlySavingProfile());
+        QVERIFY(std::get<0>(host->saveProfile()));
+        QCOMPARE(host->readProfileIniData(key), qsl("false"));
+        QTRY_VERIFY(!host->currentlySavingProfile());
+        // So the save below is seen to write what the Lua sets
+        host->writeProfileIniData(key, qsl("false"));
 
         runLua(host, qsl(R"LUA(
 noViewProblems = {}
@@ -1696,25 +1706,28 @@ expectRefusal('pauseMovie', pauseMovie('noViewLbl'))
 expectRefusal('setMovieFrame', setMovieFrame('noViewLbl', 0))
 expectRefusal('setMovieSpeed', setMovieSpeed('noViewLbl', 100))
 expectRefusal('scaleMovie', scaleMovie('noViewLbl'))
-expectRefusal('clearCmdLine', clearCmdLine())
-expectRefusal('getCmdLine', getCmdLine())
-expectRefusal('printCmdLine', printCmdLine('main', 'x'))
-expectRefusal('appendCmdLine', appendCmdLine('main', 'x'))
-expectRefusal('selectCmdLineText', selectCmdLineText())
-expectRefusal('addCmdLineSuggestion', addCmdLineSuggestion('main', 'x'))
-expectRefusal('removeCmdLineSuggestion', removeCmdLineSuggestion('main', 'x'))
-expectRefusal('clearCmdLineSuggestions', clearCmdLineSuggestions())
-expectRefusal('addCmdLineBlacklist', addCmdLineBlacklist('main', 'x'))
-expectRefusal('removeCmdLineBlacklist', removeCmdLineBlacklist('main', 'x'))
-expectRefusal('clearCmdLineBlacklist', clearCmdLineBlacklist())
-expectRefusal('addCommandLineMenuEvent', addCommandLineMenuEvent('l', 'e'))
-expectRefusal('removeCommandLineMenuEvent', removeCommandLineMenuEvent('l'))
-expectRefusal('getSaveCommandHistory', getSaveCommandHistory())
-expectRefusal('setSaveCommandHistory', setSaveCommandHistory(true))
+-- the main command line goes on without its view, its setting written by a save, so it answers as a real one does
+expectAnswer('clearCmdLine', '[0]nil', clearCmdLine())
+expectValue('getCmdLine', '', getCmdLine())
+expectAnswer('printCmdLine', '[0]nil', printCmdLine('main', 'x'))
+expectAnswer('appendCmdLine', '[0]nil', appendCmdLine('main', 'y'))
+expectValue('getCmdLine after printing', 'xy', getCmdLine())
+expectValue('selectCmdLineText', true, selectCmdLineText())
+expectAnswer('addCmdLineSuggestion', '[0]nil', addCmdLineSuggestion('main', 'x'))
+expectAnswer('removeCmdLineSuggestion', '[0]nil', removeCmdLineSuggestion('main', 'x'))
+expectAnswer('clearCmdLineSuggestions', '[0]nil', clearCmdLineSuggestions())
+expectAnswer('addCmdLineBlacklist', '[0]nil', addCmdLineBlacklist('main', 'x'))
+expectAnswer('removeCmdLineBlacklist', '[0]nil', removeCmdLineBlacklist('main', 'x'))
+expectAnswer('clearCmdLineBlacklist', '[0]nil', clearCmdLineBlacklist())
+expectValue('addCommandLineMenuEvent', true, addCommandLineMenuEvent('l', 'e'))
+expectValue('removeCommandLineMenuEvent', true, removeCommandLineMenuEvent('l'))
+expectValue('getSaveCommandHistory', false, getSaveCommandHistory())
+expectValue('setSaveCommandHistory', true, setSaveCommandHistory(true))
+expectValue('getSaveCommandHistory after setting it', true, getSaveCommandHistory())
 expectRefusal('enableCommandLine', enableCommandLine('noViewCl'))
 expectRefusal('disableCommandLine', disableCommandLine('noViewCl'))
-expectRefusal('getCmdLineStyleSheet', getCmdLineStyleSheet())
-expectRefusal('setCmdLineStyleSheet', setCmdLineStyleSheet(''))
+expectValue('setCmdLineStyleSheet', true, setCmdLineStyleSheet('color: red;'))
+expectValue('getCmdLineStyleSheet', 'color: red;', getCmdLineStyleSheet())
 expectRefusal('getMousePosition', getMousePosition())
 -- the main console is the character grid NAWS reports; a name with no user window has no size of its own
 expectValue('getMainWindowSize', 'number', type(getMainWindowSize()))
@@ -1789,6 +1802,10 @@ noViewReport = table.concat(noViewProblems, '; ')
 )LUA"));
 
         QCOMPARE(luaGlobalString(host, "noViewReport"), QString());
+        QTRY_VERIFY(!host->currentlySavingProfile());
+        QVERIFY(std::get<0>(host->saveProfile()));
+        QCOMPARE(host->readProfileIniData(key), qsl("true"));
+        QTRY_VERIFY(!host->currentlySavingProfile());
     }
 
     // echo(), insertHTML() and isPrompt() on the main console are its model's
