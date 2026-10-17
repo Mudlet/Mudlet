@@ -257,8 +257,8 @@ MapSearchPanel::MapSearchPanel(QWidget* parent)
     setFrameShape(QFrame::NoFrame);
     // The card and its shadow are painted, leaving the corners to the map under them
     setAutoFillBackground(false);
-    // Or a click, a drag or the wheel the panel's own widgets leave would reach the map under it
-    setAttribute(Qt::WA_NoMousePropagation);
+    // So that moving over the shadow reaches the map, see event()
+    setMouseTracking(true);
 
     mpEdit = new QLineEdit(this);
     //: Placeholder of the search box over the 3D map
@@ -271,8 +271,8 @@ MapSearchPanel::MapSearchPanel(QWidget* parent)
     mpEdit->setClearButtonEnabled(true);
     mpSearchIcon = mpEdit->addAction(QIcon(), QLineEdit::LeadingPosition);
 
-    //: Toggle by the search box over the 3D map: whether map labels are searched too
     mpLabels = new QToolButton(this);
+    //: Toggle by the search box over the 3D map: whether map labels are searched too
     mpLabels->setText(tr("Labels"));
     mpLabels->setCheckable(true);
     mpLabels->setChecked(true);
@@ -355,6 +355,7 @@ MapSearchPanel::MapSearchPanel(QWidget* parent)
     connect(mpEdit, &QLineEdit::textChanged, this, &MapSearchPanel::queryChanged);
     connect(mpLabels, &QToolButton::toggled, this, &MapSearchPanel::queryChanged);
     connect(mpClose, &QToolButton::clicked, this, &MapSearchPanel::dismiss);
+    connect(mpList, &QListWidget::currentRowChanged, this, &MapSearchPanel::showKeys);
     // Clicked, not activated, which most styles keep for a double click
     connect(mpList, &QListWidget::itemClicked, this, [this]() {
         emit resultChosen(mpList->currentRow(), false);
@@ -367,6 +368,12 @@ MapSearchPanel::MapSearchPanel(QWidget* parent)
     });
     mpEdit->installEventFilter(this);
     mpList->installEventFilter(this);
+    // A button takes the arrows itself, to move the focus on
+    mpLabels->installEventFilter(this);
+    mpClose->installEventFilter(this);
+    // A profile's style sheet reaches the panel through the map's; the card is painted, and the shadow is the map's.
+    // Set once the widgets are made, for the style change it brings restyles them
+    setStyleSheet(qsl("MapSearchPanel#mapSearchPanel { background: transparent; border: none; }"));
     restyle();
     setResults({}, 0);
 }
@@ -409,6 +416,7 @@ void MapSearchPanel::setResults(const QList<Row>& rows, const qsizetype total)
         item->setData(KindRole, static_cast<int>(row.kind));
         item->setData(ChipColorRole, row.chip);
         item->setData(Qt::AccessibleTextRole, row.spoken);
+        item->setData(RoutableRole, row.routable);
         const qsizetype start = query.isEmpty() ? -1 : row.title.indexOf(query, 0, Qt::CaseInsensitive);
         item->setData(MatchStartRole, static_cast<int>(start));
         item->setData(MatchLengthRole, start < 0 ? 0 : static_cast<int>(query.size()));
@@ -457,12 +465,23 @@ void MapSearchPanel::showState(const qsizetype shown, const qsizetype total)
         //: Count of the places found by the search over the 3D map when only the best are listed; %1 is how many are listed and %n how many were found
         mpCount->setText(tr("Showing the best %1 of %n", nullptr, static_cast<int>(total)).arg(shown));
     }
-    if (!shown) {
-        mpKeys->setText(query.isEmpty()
+    showKeys();
+}
+
+void MapSearchPanel::showKeys()
+{
+    if (!mpList->count()) {
+        mpKeys->setText(mpEdit->text().simplified().isEmpty()
                                 //: Key hint at the foot of the search over the 3D map while nothing is typed
                                 ? tr("Esc close")
                                 //: Key hint at the foot of the search over the 3D map when nothing matches what was typed
                                 : tr("Esc clear"));
+        return;
+    }
+    const QListWidgetItem* pCurrent = mpList->currentItem();
+    if (!pCurrent || !pCurrent->data(RoutableRole).toBool()) {
+        //: Key hints at the foot of the search over the 3D map when no route can be planned to the place chosen, such as a map label
+        mpKeys->setText(tr("↑↓ choose · ↵ go · Esc clear"));
         return;
     }
     //: Key hints at the foot of the search over the 3D map with places listed; %1 is the modifier key, such as Ctrl+ or ⌘
@@ -498,20 +517,27 @@ void MapSearchPanel::restyle()
                                    .arg(css(withAlpha(text, dark ? 0.14 : 0.08)), css(accent)));
     mpSearchIcon->setIcon(drawnIcon(muted, false));
     mpClose->setIcon(drawnIcon(muted, true));
-    mpList->setStyleSheet(qsl("QListWidget { background: transparent; border: none; }"
+    // Every widget in the list, its viewport and its scroll bar's container among them
+    mpList->setStyleSheet(qsl("QWidget { background: transparent; }"
+                              "QListWidget { border: none; }"
                               "QScrollBar:vertical { background: transparent; width: 10px; margin: 2px 0 2px 2px; }"
                               "QScrollBar::handle:vertical { background: %1; border-radius: 4px; min-height: 24px; }"
                               "QScrollBar::handle:vertical:hover { background: %2; }"
                               "QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }"
                               "QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical { background: none; }")
                                   .arg(css(withAlpha(text, dark ? 0.28 : 0.22)), css(withAlpha(text, dark ? 0.45 : 0.38))));
-    const QString mutedText = qsl("QLabel { color: %1; }").arg(css(muted));
+    const QString mutedText = qsl("QLabel { background: transparent; color: %1; }").arg(css(muted));
     mpCount->setStyleSheet(mutedText);
     mpKeys->setStyleSheet(mutedText);
     mpHint->setStyleSheet(mutedText);
-    mpMessage->setStyleSheet(qsl("QLabel { color: %1; }").arg(css(text)));
+    mpMessage->setStyleSheet(qsl("QLabel { background: transparent; color: %1; }").arg(css(text)));
     update();
     mRestyling = false;
+}
+
+QRectF MapSearchPanel::card() const
+{
+    return QRectF(rect()).adjusted(scmShadowMargin + 0.5, scmShadowMargin - scmShadowDrop + 0.5, -scmShadowMargin - 0.5, -scmShadowMargin - scmShadowDrop - 0.5);
 }
 
 void MapSearchPanel::paintEvent(QPaintEvent* event)
@@ -519,7 +545,7 @@ void MapSearchPanel::paintEvent(QPaintEvent* event)
     Q_UNUSED(event)
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing);
-    const QRectF card = QRectF(rect()).adjusted(scmShadowMargin + 0.5, scmShadowMargin - scmShadowDrop + 0.5, -scmShadowMargin - 0.5, -scmShadowMargin - scmShadowDrop - 0.5);
+    const QRectF card = this->card();
     painter.setPen(Qt::NoPen);
     // Layered, so that it fades out to nothing; a QGraphicsDropShadowEffect would draw the whole panel off screen first
     for (int spread = scmShadowMargin; spread > 0; --spread) {
@@ -534,20 +560,10 @@ void MapSearchPanel::paintEvent(QPaintEvent* event)
     painter.drawRoundedRect(card, scmCardRadius, scmCardRadius);
 }
 
-void MapSearchPanel::changeEvent(QEvent* event)
-{
-    QFrame::changeEvent(event);
-    if (event->type() == QEvent::ApplicationPaletteChange || event->type() == QEvent::StyleChange) {
-        restyle();
-    }
-}
-
 void MapSearchPanel::keyPressEvent(QKeyEvent* event)
 {
-    // From the toggle or the close button, which leave it to the panel
-    if (event->key() == Qt::Key_Escape) {
-        escape();
-    } else if (!(event->modifiers() & (Qt::ControlModifier | Qt::AltModifier | Qt::MetaModifier)) && !event->text().isEmpty() && event->text().at(0).isPrint()) {
+    // Typed on the toggle or the close button, which leave it to the panel
+    if (!(event->modifiers() & (Qt::ControlModifier | Qt::AltModifier | Qt::MetaModifier)) && !event->text().isEmpty() && event->text().at(0).isPrint()) {
         mpEdit->setFocus(Qt::OtherFocusReason);
         QApplication::sendEvent(mpEdit, event);
     }
@@ -557,13 +573,54 @@ void MapSearchPanel::keyPressEvent(QKeyEvent* event)
 
 bool MapSearchPanel::event(QEvent* event)
 {
-    if (event->type() == QEvent::ToolTip) {
-        // Or a tooltip none of the panel's widgets has would be the map's, for whatever lies under the panel
+    switch (event->type()) {
+    case QEvent::MouseButtonPress:
+    case QEvent::MouseButtonDblClick:
+    case QEvent::MouseButtonRelease:
+    case QEvent::MouseMove:
+    case QEvent::Wheel: {
+        const auto* pointer = static_cast<QSinglePointEvent*>(event);
+        const bool outside = !card().contains(pointer->position());
+        bool passOn = outside;
+        if (event->type() == QEvent::MouseButtonPress || event->type() == QEvent::MouseButtonDblClick) {
+            mPassingThrough = outside;
+        } else if (event->type() == QEvent::MouseButtonRelease) {
+            passOn = mPassingThrough;
+            mPassingThrough = false;
+        } else if (event->type() == QEvent::MouseMove && pointer->buttons() != Qt::NoButton) {
+            passOn = mPassingThrough;
+        }
+        if (passOn) {
+            // Ignored, Qt hands it on to the map under the shadow
+            event->ignore();
+            return false;
+        }
+        // Or a click, a drag or the wheel the panel's own widgets leave would reach the map under the card
         QFrame::event(event);
         event->accept();
         return true;
     }
-    return QFrame::event(event);
+    case QEvent::ToolTip:
+        if (!card().contains(static_cast<QHelpEvent*>(event)->pos())) {
+            event->ignore();
+            return false;
+        }
+        break;
+    case QEvent::PaletteChange:
+    case QEvent::StyleChange: {
+        // Not in changeEvent(), which a style sheet around the panel keeps the palette change from; Mudlet's light/dark
+        // switch sets a new style, and Qt sends ApplicationPaletteChange only to windows
+        const bool result = QFrame::event(event);
+        restyle();
+        return result;
+    }
+    default:
+        return QFrame::event(event);
+    }
+    // Or a tooltip none of the panel's widgets has would be the map's, for whatever lies under the card
+    QFrame::event(event);
+    event->accept();
+    return true;
 }
 
 void MapSearchPanel::dismiss()
@@ -574,7 +631,7 @@ void MapSearchPanel::dismiss()
 
 void MapSearchPanel::escape()
 {
-    if (mpEdit->text().isEmpty()) {
+    if (mpEdit->text().simplified().isEmpty()) {
         dismiss();
     } else {
         mpEdit->clear();
@@ -622,7 +679,7 @@ bool MapSearchPanel::eventFilter(QObject* watched, QEvent* event)
         return true;
     case Qt::Key_PageUp:
     case Qt::Key_PageDown:
-        if (watched == mpEdit) {
+        if (watched != mpList) {
             QApplication::sendEvent(mpList, event);
             return true;
         }

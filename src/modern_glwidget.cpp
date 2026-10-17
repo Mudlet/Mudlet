@@ -2795,6 +2795,7 @@ void ModernGLWidget::runSearch()
         row.kind = result.kind;
         row.title = result.name;
         row.spoken = searchResultLine(result);
+        row.routable = routableSearchResult(result);
         switch (result.kind) {
         case MapSearch::Kind::Area:
             if (const TArea* pArea = mpMap->mpRoomDB ? mpMap->mpRoomDB->getArea(result.id) : nullptr) {

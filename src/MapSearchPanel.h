@@ -25,6 +25,7 @@
 #include <QColor>
 #include <QFrame>
 #include <QList>
+#include <QRectF>
 #include <QString>
 
 class QAction;
@@ -42,7 +43,7 @@ class MapSearchPanel : public QFrame
 
 public:
     // What each place listed carries for the list's delegate, beyond its title as the display text
-    enum ItemRole { DetailRole = Qt::UserRole + 1, KindRole, ChipColorRole, MatchStartRole, MatchLengthRole };
+    enum ItemRole { DetailRole = Qt::UserRole + 1, KindRole, ChipColorRole, MatchStartRole, MatchLengthRole, RoutableRole };
 
     struct Row
     {
@@ -53,6 +54,8 @@ public:
         QString spoken;
         // A room's environment color; none for the others
         QColor chip;
+        // Whether Ctrl+Enter can plan a route to it
+        bool routable = false;
     };
 
     // The room around the card left for its shadow, which still belongs to the panel
@@ -76,7 +79,6 @@ signals:
     void closed();
 
 protected:
-    void changeEvent(QEvent* event) override;
     bool event(QEvent* event) override;
     bool eventFilter(QObject* watched, QEvent* event) override;
     void keyPressEvent(QKeyEvent* event) override;
@@ -88,6 +90,8 @@ private:
     void step(int rows);
     void restyle();
     void showState(qsizetype shown, qsizetype total);
+    void showKeys();
+    QRectF card() const;
 
     QLineEdit* mpEdit = nullptr;
     QAction* mpSearchIcon = nullptr;
@@ -99,6 +103,8 @@ private:
     QLabel* mpCount = nullptr;
     QLabel* mpKeys = nullptr;
     bool mRestyling = false;
+    // A press on the shadow around the card, whose drag and release go on to the map with it
+    bool mPassingThrough = false;
 };
 
 #endif // MUDLET_MAPSEARCHPANEL_H
