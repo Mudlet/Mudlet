@@ -41,17 +41,20 @@
 
 #include <memory>
 
+#include "EventLoopPump.h"
 #include "FontManager.h"
 #include "Host.h"
 #include "HostManager.h"
 #include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "TAppFrontend.h"
+#include "TConsoleFrontend.h"
 #include "TConsoleModel.h"
 #include "TLabel.h"
 #include "TLabelModel.h"
 #include "TLuaInterpreter.h"
 #include "TMap.h"
+#include "TMxpFrameFrontend.h"
 #include "TRoomDB.h"
 #include "XMLimport.h"
 
@@ -2616,6 +2619,891 @@ end
                 qsl("clMain:nil"), qsl("clInMain:nil"), qsl("clWin:commandline"), qsl("clBoxed:nil"), qsl("clBox:nil"), qsl("clWindow:userwindow"), qsl("clNested:commandline:11,12,40,20:true")};
         QCOMPARE(luaGlobalString(host, "headlessCommandLineAfterAnswers"), after.join(QLatin1Char('\n')));
         QVERIFY2(QApplication::topLevelWidgets().isEmpty(), "Making the command lines created a widget.");
+    }
+
+    // The answers are those of the same Lua run in the GUI self-test profile, but for those about the main command line
+    void test_headlessCommandLineSettingsContract()
+    {
+        const QString hostname = qsl("Test-Headless-Host-Command-Line-Settings");
+        // Opened rather than added, as saveProfile() refuses a profile that was never loaded
+        Host* host = HostManager::self()->openProfile(hostname, false);
+        QVERIFY2(host, "The profile did not open.");
+        QVERIFY(!host->hasConsoleView());
+        QVERIFY2(host->mLoadedOk, qPrintable(host->mProfileLoadError));
+
+        // pumpEvents() takes a profile with no main window for one that is closing, so the waits for a save
+        // use the pump it would
+        lua_register(host->getLuaInterpreter()->getLuaGlobalState(), "pumpEvents", [](lua_State* L) -> int {
+            static_cast<void>(EventLoopPump::pumpFor(static_cast<int>(lua_tointeger(L, 1))));
+            return 0;
+        });
+        // Run from the event loop, as a script in the GUI is, so the saves it waits out deliver no deferred deletes
+        bool ran = false;
+        bool pendingDeleteHeld = false;
+        QEventLoop loop;
+        QTimer::singleShot(0, &loop, [&ran, &pendingDeleteHeld, &loop, host]() {
+            // The rows rely on the waits for a save delivering no deferred delete posted here, as in the GUI
+            QPointer<QObject> pPending = new QObject();
+            pPending->deleteLater();
+            ran = host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+headlessCommandLineSettings = "not run"
+-- A save still running refuses the next one until the event loop has finished it
+function headlessCommandLineSave(...)
+  local saved, message
+  for _ = 1, 100 do
+    saved, message = saveProfile(...)
+    if saved or not tostring(message):find("a save is already in progress", 1, true) then
+      break
+    end
+    pumpEvents(50)
+  end
+  if not saved then
+    error("the profile was not saved: " .. tostring(message))
+  end
+  return saved
+end
+-- What a save wrote to profile.ini, once the event loop has written it out
+function headlessCommandLineIni(name)
+  pumpEvents(300)
+  local file = io.open(getMudletHomeDir() .. "/profile.ini", "r")
+  if not file then
+    return nil
+  end
+  local text = file:read("*a")
+  file:close()
+  local key = "SaveHistory\\" .. name .. "="
+  local at = text:find(key, 1, true)
+  return at and text:sub(at + #key):match("^%a+")
+end
+local ok, err = pcall(function()
+  local function described(called, ...)
+    if not called then
+      return "raised:" .. tostring((...))
+    end
+    local count = select("#", ...)
+    local values = {}
+    for i = 1, count do
+      values[i] = tostring((select(i, ...)))
+    end
+    return "[" .. count .. "]" .. table.concat(values, ":")
+  end
+  local answers = {}
+  local function step(label, f, ...)
+    answers[#answers + 1] = label .. "=" .. described(pcall(f, ...))
+  end
+  local function look(label, name)
+    answers[#answers + 1] = label .. ":type=" .. described(pcall(windowType, name)) .. ",visible=" .. described(pcall(windowVisible, name))
+  end
+  local save = headlessCommandLineSave
+  step("create", createCommandLine, "csLine", 10, 20, 200, 30)
+
+  step("suggest", addCmdLineSuggestion, "csLine", "word")
+  step("suggestAgain", addCmdLineSuggestion, "csLine", "word")
+  step("unsuggest", removeCmdLineSuggestion, "csLine", "word")
+  step("unsuggestAbsent", removeCmdLineSuggestion, "csLine", "absent")
+  step("clearSuggestions", clearCmdLineSuggestions, "csLine")
+  step("suggestMissing", addCmdLineSuggestion, "csNoSuch", "word")
+  step("unsuggestMissing", removeCmdLineSuggestion, "csNoSuch", "word")
+  step("clearSuggestionsMissing", clearCmdLineSuggestions, "csNoSuch")
+  step("suggestEmpty", addCmdLineSuggestion, "csLine", "")
+  step("suggestBadText", addCmdLineSuggestion, "csLine", {})
+
+  step("blacklist", addCmdLineBlacklist, "csLine", "word")
+  step("unblacklist", removeCmdLineBlacklist, "csLine", "word")
+  step("unblacklistAbsent", removeCmdLineBlacklist, "csLine", "absent")
+  step("clearBlacklist", clearCmdLineBlacklist, "csLine")
+  step("blacklistMissing", addCmdLineBlacklist, "csNoSuch", "word")
+  step("unblacklistMissing", removeCmdLineBlacklist, "csNoSuch", "word")
+  step("clearBlacklistMissing", clearCmdLineBlacklist, "csNoSuch")
+
+  step("menu", addCommandLineMenuEvent, "csLine", "Item", "csEvent")
+  step("menuAgain", addCommandLineMenuEvent, "csLine", "Item", "csOtherEvent")
+  step("menuOther", addCommandLineMenuEvent, "csLine", "Other", "csEvent")
+  step("unmenu", removeCommandLineMenuEvent, "csLine", "Item")
+  step("unmenuAgain", removeCommandLineMenuEvent, "csLine", "Item")
+  step("unmenuOther", removeCommandLineMenuEvent, "csLine", "Other")
+  step("menuMissing", addCommandLineMenuEvent, "csNoSuch", "Item", "csEvent")
+  step("unmenuMissing", removeCommandLineMenuEvent, "csNoSuch", "Item")
+
+  step("select", selectCmdLineText, "csLine")
+  printCmdLine("csLine", "some text")
+  step("selectText", selectCmdLineText, "csLine")
+  step("textAfterSelect", getCmdLine, "csLine")
+  step("selectMissing", selectCmdLineText, "csNoSuch")
+
+  step("history", getSaveCommandHistory, "csLine")
+  step("historyOff", setSaveCommandHistory, "csLine", false)
+  step("historyAfterOff", getSaveCommandHistory, "csLine")
+  step("historyOn", setSaveCommandHistory, "csLine", true)
+  step("historyAfterOn", getSaveCommandHistory, "csLine")
+  step("historyOffMissing", setSaveCommandHistory, "csNoSuch", false)
+  step("historyMissing", getSaveCommandHistory, "csNoSuch")
+
+  step("disable", disableCommandLine, "csLine")
+  look("disabled", "csLine")
+  step("disableAgain", disableCommandLine, "csLine")
+  step("enable", enableCommandLine, "csLine")
+  look("enabled", "csLine")
+  step("disableMissing", disableCommandLine, "csNoSuch")
+  step("enableMissing", enableCommandLine, "csNoSuch")
+  step("disableMain", disableCommandLine, "main")
+  step("enableEmpty", enableCommandLine, "")
+  hideWindow("csLine")
+  step("enableHidden", enableCommandLine, "csLine")
+  look("enabledAfterHide", "csLine")
+  step("disableShown", disableCommandLine, "csLine")
+  step("showDisabled", showWindow, "csLine")
+  look("shownAfterDisable", "csLine")
+
+  -- A command line in a hidden user window stays out of sight when enabled
+  assert(openUserWindow("csWindow", false, false, "f") == true, "openUserWindow did not answer true")
+  createCommandLine("csWindow", "csWin", 1, 1, 50, 20)
+  disableCommandLine("csWin")
+  hideWindow("csWindow")
+  step("enableInHidden", enableCommandLine, "csWin")
+  look("enabledInHidden", "csWin")
+  showWindow("csWindow")
+  look("windowShown", "csWin")
+
+  -- The name reads as the scroll box while there is one, but these act on the command line
+  assert(createScrollBox("csShared", 1, 2, 100, 100))
+  createCommandLine("csShared", 5, 6, 40, 20)
+  step("disableShared", disableCommandLine, "csShared")
+  look("sharedDisabled", "csShared")
+  step("menuShared", addCommandLineMenuEvent, "csShared", "Item", "csEvent")
+  step("historyShared", setSaveCommandHistory, "csShared", false)
+  step("historySharedAfter", getSaveCommandHistory, "csShared")
+  deleteScrollBox("csShared")
+  look("sharedBoxDeleted", "csShared")
+  step("unmenuShared", removeCommandLineMenuEvent, "csShared", "Item")
+
+  -- A text edit is not a command line
+  createTextEdit("csEdit", 0, 0, 50, 50)
+  step("suggestEdit", addCmdLineSuggestion, "csEdit", "word")
+  step("menuEdit", addCommandLineMenuEvent, "csEdit", "Item", "csEvent")
+  step("unmenuEdit", removeCommandLineMenuEvent, "csEdit", "Item")
+  step("selectEdit", selectCmdLineText, "csEdit")
+  step("historyEdit", setSaveCommandHistory, "csEdit", false)
+  step("enableEdit", enableCommandLine, "csEdit")
+  step("disableEdit", disableCommandLine, "csEdit")
+  look("editAfterDisable", "csEdit")
+
+  -- What is set goes with a deleted command line
+  addCommandLineMenuEvent("csLine", "Kept", "csEvent")
+  setSaveCommandHistory("csLine", false)
+  deleteCommandLine("csLine")
+  step("suggestDeleted", addCmdLineSuggestion, "csLine", "word")
+  step("blacklistDeleted", addCmdLineBlacklist, "csLine", "word")
+  step("unmenuDeleted", removeCommandLineMenuEvent, "csLine", "Kept")
+  step("selectDeleted", selectCmdLineText, "csLine")
+  step("historyDeleted", setSaveCommandHistory, "csLine", true)
+  step("getHistoryDeleted", getSaveCommandHistory, "csLine")
+  step("enableDeleted", enableCommandLine, "csLine")
+  createCommandLine("csLine", 10, 20, 200, 30)
+  step("unmenuRecreated", removeCommandLineMenuEvent, "csLine", "Kept")
+  step("historyRecreated", getSaveCommandHistory, "csLine")
+
+  -- The history setting a profile save writes is the one a command line of the name is made with
+  setSaveCommandHistory("csLine", false)
+  step("save", save)
+  deleteCommandLine("csLine")
+  createCommandLine("csLine", 10, 20, 200, 30)
+  step("historyAfterSave", getSaveCommandHistory, "csLine")
+  setSaveCommandHistory("csLine", true)
+  deleteCommandLine("csLine")
+  createCommandLine("csLine", 10, 20, 200, 30)
+  step("historyNotSaved", getSaveCommandHistory, "csLine")
+  setSaveCommandHistory("csLine", true)
+  step("saveTrue", save)
+  deleteCommandLine("csLine")
+  createCommandLine("csLine", 10, 20, 200, 30)
+  step("historyAfterSavedTrue", getSaveCommandHistory, "csLine")
+  -- Only a save with no folder or name is the end of session save that writes the setting
+  setSaveCommandHistory("csLine", false)
+  step("saveElsewhere", save, getMudletHomeDir() .. "/csElsewhere")
+  deleteCommandLine("csLine")
+  createCommandLine("csLine", 10, 20, 200, 30)
+  step("historyAfterSaveElsewhere", getSaveCommandHistory, "csLine")
+  setSaveCommandHistory("csLine", false)
+  deleteCommandLine("csLine")
+  step("saveAfterDelete", save)
+  createCommandLine("csLine", 10, 20, 200, 30)
+  step("historyDeletedBeforeSave", getSaveCommandHistory, "csLine")
+  -- The command line made last writes last, as the GUI connects them to the save in the order they are made
+  openUserWindow("csOrder", false, false, "f")
+  step("createOrder", createCommandLine, "csOrder", "csOrder", 0, 0, 50, 20)
+  setSaveCommandHistory("csOrder", false)
+  step("enableOrder", enableCommandLine, "csOrder")
+  deleteMiniConsole("csOrder")
+  step("saveOrder", save)
+  step("iniOrder", headlessCommandLineIni, "csOrder")
+  createCommandLine("csKey_b", 0, 0, 50, 20)
+  setSaveCommandHistory("csKey_b", false)
+  createCommandLine("csKey/b", 0, 0, 50, 20)
+  step("saveKey", save)
+  step("iniKey", headlessCommandLineIni, "csKey_b")
+  deleteCommandLine("csKey_b")
+  deleteCommandLine("csKey/b")
+  -- An MXP frame goes at once, its command line with it
+  setConfig("specialForceMXPProcessorOn", true)
+  feedTriggers([[<FRAME Name="csFrame" Align="right" Width="20%" Height="30%">]] .. "\n")
+  step("enableFrame", enableCommandLine, "csFrame")
+  setSaveCommandHistory("csFrame", false)
+  feedTriggers([[<FRAME csFrame ACTION="close">]] .. "\n")
+  setConfig("specialForceMXPProcessorOn", false)
+  step("frameClosed", windowType, "csFrame")
+  step("saveFrame", save)
+  step("iniFrame", headlessCommandLineIni, "csFrame")
+  -- A closed frame takes a command line deleted from it at once, as does one whose console was deleted
+  setConfig("specialForceMXPProcessorOn", true)
+  feedTriggers([[<FRAME Name="csFrameLine" Align="right" Width="20%" Height="30%">]] .. "\n")
+  enableCommandLine("csFrameLine")
+  setSaveCommandHistory("csFrameLine", false)
+  deleteCommandLine("csFrameLine")
+  feedTriggers([[<FRAME csFrameLine ACTION="close">]] .. "\n")
+  feedTriggers([[<FRAME Name="csFrameConsole" Align="right" Width="20%" Height="30%">]] .. "\n")
+  enableCommandLine("csFrameConsole")
+  setSaveCommandHistory("csFrameConsole", false)
+  deleteMiniConsole("csFrameConsole")
+  feedTriggers([[<FRAME csFrameConsole ACTION="close">]] .. "\n")
+  setConfig("specialForceMXPProcessorOn", false)
+  step("saveFrames", save)
+  step("iniFrameLine", headlessCommandLineIni, "csFrameLine")
+  step("iniFrameConsole", headlessCommandLineIni, "csFrameConsole")
+  -- A frame's console moved out of the frame outlives it, out of the registry, with its command line
+  setConfig("specialForceMXPProcessorOn", true)
+  openUserWindow("csFrameHome", false, false, "f")
+  feedTriggers([[<FRAME Name="csMovedFrame" Align="right" Width="20%" Height="30%">]] .. "\n")
+  enableCommandLine("csMovedFrame")
+  setSaveCommandHistory("csMovedFrame", false)
+  step("moveFrameConsole", setWindow, "csFrameHome", "csMovedFrame", 0, 0, true)
+  feedTriggers([[<FRAME csMovedFrame ACTION="close">]] .. "\n")
+  setConfig("specialForceMXPProcessorOn", false)
+  step("movedFrameType", windowType, "csMovedFrame")
+  step("movedFrameHistory", getSaveCommandHistory, "csMovedFrame")
+  step("movedFrameText", getCmdLine, "csMovedFrame")
+  step("movedFrameVisible", windowVisible, "csMovedFrame")
+  setConfig("specialForceMXPProcessorOn", true)
+  feedTriggers([[<FRAME Name="csHiddenFrame" Align="right" Width="20%" Height="30%">]] .. "\n")
+  enableCommandLine("csHiddenFrame")
+  setWindow("csFrameHome", "csHiddenFrame", 0, 0, true)
+  disableCommandLine("csHiddenFrame")
+  feedTriggers([[<FRAME csHiddenFrame ACTION="close">]] .. "\n")
+  setConfig("specialForceMXPProcessorOn", false)
+  step("hiddenFrameLineVisible", windowVisible, "csHiddenFrame")
+  step("hiddenFrameLineEnable", enableCommandLine, "csHiddenFrame")
+  step("hiddenFrameLineShown", windowVisible, "csHiddenFrame")
+  setConfig("specialForceMXPProcessorOn", true)
+  feedTriggers([[<FRAME Name="csLateFrame" Align="right" Width="20%" Height="30%">]] .. "\n")
+  setWindow("csFrameHome", "csLateFrame", 0, 0, true)
+  enableCommandLine("csLateFrame")
+  feedTriggers([[<FRAME csLateFrame ACTION="close">]] .. "\n")
+  step("lateFrameLineVisibleAtOnce", windowVisible, "csLateFrame")
+  feedTriggers([[<FRAME Name="csHiddenConsole" Align="right" Width="20%" Height="30%">]] .. "\n")
+  setWindow("csFrameHome", "csHiddenConsole", 0, 0, true)
+  enableCommandLine("csHiddenConsole")
+  hideWindow("csHiddenConsole")
+  feedTriggers([[<FRAME csHiddenConsole ACTION="close">]] .. "\n")
+  step("hiddenConsoleLineVisibleAtOnce", windowVisible, "csHiddenConsole")
+  setConfig("specialForceMXPProcessorOn", false)
+  hideWindow("csFrameHome")
+  showWindow("csFrameHome")
+  step("lateFrameLineVisible", windowVisible, "csLateFrame")
+  step("hiddenConsoleLineVisible", windowVisible, "csHiddenConsole")
+  -- Moving a frame's console into the main window takes it out of the frame, which hides it
+  setConfig("specialForceMXPProcessorOn", true)
+  feedTriggers([[<FRAME Name="csMainFrame" Align="right" Width="20%" Height="30%">]] .. "\n")
+  enableCommandLine("csMainFrame")
+  showWindow("csMainFrame")
+  step("moveFrameToMain", setWindow, "main", "csMainFrame", 0, 0, false)
+  step("frameInMainVisible", windowVisible, "csMainFrame")
+  feedTriggers([[<FRAME csMainFrame ACTION="close">]] .. "\n")
+  setConfig("specialForceMXPProcessorOn", false)
+  step("frameInMainLineVisible", windowVisible, "csMainFrame")
+  -- Moving a console's command line out of the console takes it out of the console's layer
+  step("moveHiddenFrameLine", setWindow, "main", "csHiddenFrame", 0, 0, true)
+  step("hiddenFrameLineMovedVisible", windowVisible, "csHiddenFrame")
+  step("moveLateFrameLine", setWindow, "csFrameHome", "csLateFrame", 5, 5, false)
+  step("lateFrameLineMovedVisible", windowVisible, "csLateFrame")
+  -- An external frame is its console, which goes with it wherever it was moved
+  setConfig("specialForceMXPProcessorOn", true)
+  feedTriggers([[<FRAME Name="csExternal" EXTERNAL Width="20%" Height="30%">]] .. "\n")
+  enableCommandLine("csExternal")
+  setSaveCommandHistory("csExternal", false)
+  step("moveExternal", setWindow, "csFrameHome", "csExternal", 0, 0, true)
+  feedTriggers([[<FRAME csExternal ACTION="close">]] .. "\n")
+  step("externalType", windowType, "csExternal")
+  step("externalHistory", getSaveCommandHistory, "csExternal")
+  -- An external frame is not made over a script's console of its name
+  createMiniConsole("csClaimed", 0, 0, 50, 50)
+  enableCommandLine("csClaimed")
+  printCmdLine("csClaimed", "mine")
+  feedTriggers([[<FRAME Name="csClaimed" EXTERNAL Width="20%" Height="30%">]] .. "\n")
+  feedTriggers([[<FRAME csClaimed ACTION="close">]] .. "\n")
+  setConfig("specialForceMXPProcessorOn", false)
+  step("claimedType", windowType, "csClaimed")
+  step("claimedText", getCmdLine, "csClaimed")
+  step("claimedDisable", disableCommandLine, "csClaimed")
+  step("claimedTextAfter", getCmdLine, "csClaimed")
+  deleteMiniConsole("csClaimed")
+  -- A command line a console's own one took the name from keeps its Lua function
+  local held = setmetatable({}, {__mode = "k"})
+  local action = function() end
+  held[action] = true
+  createCommandLine("csHeldAction", 0, 0, 50, 20)
+  setCmdLineAction("csHeldAction", action)
+  action = nil
+  createMiniConsole("csHeldAction", 0, 0, 50, 50)
+  enableCommandLine("csHeldAction")
+  collectgarbage()
+  collectgarbage()
+  step("displacedAction", function()
+    return next(held) and "kept" or "freed"
+  end)
+  deleteMiniConsole("csHeldAction")
+  -- One deleted in an event loop run from a script goes as that loop delivers deferred deletes
+  createCommandLine("csOuter", 0, 0, 50, 20)
+  createCommandLine("csNested", 0, 30, 50, 20)
+  deleteCommandLine("csOuter")
+  tempTimer(0, function()
+    setSaveCommandHistory("csNested", false)
+    deleteCommandLine("csNested")
+  end)
+  pumpEvents(300)
+  step("saveNested", save)
+  step("iniNested", headlessCommandLineIni, "csNested")
+
+  -- A console's own command line answers to the console's name, and is made the first time it is shown
+  createMiniConsole("csMini", 0, 0, 100, 100)
+  step("disableMini", disableCommandLine, "csMini")
+  step("getMini", getCmdLine, "csMini")
+  step("suggestMini", addCmdLineSuggestion, "csMini", "word")
+  step("enableMini", enableCommandLine, "csMini")
+  look("miniEnabled", "csMini")
+  step("getMiniEnabled", getCmdLine, "csMini")
+  step("printMini", printCmdLine, "csMini", "mini text")
+  step("getMiniPrinted", getCmdLine, "csMini")
+  step("suggestMiniEnabled", addCmdLineSuggestion, "csMini", "word")
+  step("menuMini", addCommandLineMenuEvent, "csMini", "Item", "csEvent")
+  step("historyMini", getSaveCommandHistory, "csMini")
+  step("disableMiniEnabled", disableCommandLine, "csMini")
+  look("miniDisabled", "csMini")
+  step("getMiniDisabled", getCmdLine, "csMini")
+  step("createOverMini", createCommandLine, "csMini", 0, 0, 10, 10)
+  step("deleteMiniLine", deleteCommandLine, "csMini")
+  step("getMiniLineDeleted", getCmdLine, "csMini")
+  step("deleteMini", deleteMiniConsole, "csMini")
+  step("enableMiniDeleted", enableCommandLine, "csMini")
+  -- Until deferred deletes run a deleted console's command line still writes its setting on a save
+  createMiniConsole("csGone", 0, 0, 100, 100)
+  enableCommandLine("csGone")
+  setSaveCommandHistory("csGone", false)
+  deleteMiniConsole("csGone")
+  step("saveGone", save)
+  createMiniConsole("csGone", 0, 0, 100, 100)
+  step("enableGoneRemade", enableCommandLine, "csGone")
+  step("historyGoneRemade", getSaveCommandHistory, "csGone")
+  deleteMiniConsole("csGone")
+  -- A deleted console's command line is not made again until deferred deletes run
+  createMiniConsole("csDying", 0, 0, 100, 100)
+  enableCommandLine("csDying")
+  deleteCommandLine("csDying")
+  step("enableDying", enableCommandLine, "csDying")
+  step("getDying", getCmdLine, "csDying")
+  step("createOverDying", createCommandLine, "csDying", 5, 6, 50, 20)
+  printCmdLine("csDying", "standalone")
+  step("enableOverDying", enableCommandLine, "csDying")
+  step("getOverDying", getCmdLine, "csDying")
+  step("disableOverDying", disableCommandLine, "csDying")
+  deleteMiniConsole("csDying")
+  look("dyingMiniDeleted", "csDying")
+  deleteCommandLine("csDying")
+  -- A console made again under the name has none yet
+  createMiniConsole("csDying", 0, 0, 100, 100)
+  step("enableRemadeDying", enableCommandLine, "csDying")
+  step("getRemadeDying", getCmdLine, "csDying")
+  deleteMiniConsole("csDying")
+  -- Hiding a console's command line it never showed leaves a command line of the same name alone
+  createMiniConsole("csTwin", 0, 0, 100, 100)
+  createCommandLine("csTwin", 5, 6, 50, 20)
+  step("disableTwin", disableCommandLine, "csTwin")
+  look("twinDisabled", "csTwin")
+  deleteMiniConsole("csTwin")
+  look("twinMiniDeleted", "csTwin")
+  step("disableTwinLine", disableCommandLine, "csTwin")
+  look("twinLineDisabled", "csTwin")
+  deleteCommandLine("csTwin")
+  -- Showing it takes the name from a command line of the same name
+  createMiniConsole("csChat", 0, 0, 100, 100)
+  createCommandLine("csChat", 5, 6, 50, 20)
+  printCmdLine("csChat", "standalone")
+  addCommandLineMenuEvent("csChat", "Item", "csEvent")
+  step("enableChat", enableCommandLine, "csChat")
+  step("getChat", getCmdLine, "csChat")
+  step("unmenuChat", removeCommandLineMenuEvent, "csChat", "Item")
+  step("deleteChatLine", deleteCommandLine, "csChat")
+  step("getChatLineDeleted", getCmdLine, "csChat")
+  deleteMiniConsole("csChat")
+  look("chatDeleted", "csChat")
+  -- A user window and a buffer are consoles too, a label is not
+  step("disableWindow", disableCommandLine, "csWindow")
+  step("enableWindow", enableCommandLine, "csWindow")
+  step("getWindow", getCmdLine, "csWindow")
+  look("windowEnabled", "csWindow")
+  createBuffer("csBuffer")
+  step("disableBuffer", disableCommandLine, "csBuffer")
+  createLabel("csLabel", 0, 0, 10, 10, 1)
+  step("disableLabel", disableCommandLine, "csLabel")
+  deleteLabel("csLabel")
+
+  deleteCommandLine("csLine")
+  deleteCommandLine("csShared")
+  deleteTextEdit("csEdit")
+  closeUserWindow("csWindow")
+  headlessCommandLineSettingsAnswers = table.concat(answers, "\n")
+
+  -- The main command line, which a view has
+  answers = {}
+  step("historyNoName", getSaveCommandHistory)
+  step("historyMain", getSaveCommandHistory, "main")
+  step("setHistoryNoName", setSaveCommandHistory, false)
+  step("setHistoryMain", setSaveCommandHistory, "main", false)
+  setSaveCommandHistory("main", true)
+  step("suggestMain", addCmdLineSuggestion, "main", "word")
+  step("suggestNoName", addCmdLineSuggestion, "", "word")
+  step("blacklistMain", addCmdLineBlacklist, "main", "word")
+  step("selectMain", selectCmdLineText, "main")
+  step("menuMain", addCommandLineMenuEvent, "main", "Item", "csEvent")
+  step("unmenuMain", removeCommandLineMenuEvent, "main", "Item")
+  headlessCommandLineMainAnswers = table.concat(answers, "\n")
+end)
+headlessCommandLineSettings = ok and "ok" or tostring(err)
+)lua"));
+            pendingDeleteHeld = !pPending.isNull();
+            loop.quit();
+        });
+        loop.exec();
+        QVERIFY2(ran, "The Lua chunk did not run.");
+        QVERIFY2(pendingDeleteHeld, "Waiting for a save delivered a deferred delete, which the GUI's waits do not.");
+        QCOMPARE(luaGlobalString(host, "headlessCommandLineSettings"), qsl("ok"));
+        const QStringList answers{qsl("create=[1]true"),
+                                  qsl("suggest=[0]"),
+                                  qsl("suggestAgain=[0]"),
+                                  qsl("unsuggest=[0]"),
+                                  qsl("unsuggestAbsent=[0]"),
+                                  qsl("clearSuggestions=[0]"),
+                                  qsl("suggestMissing=[2]nil:command line \"csNoSuch\" not found"),
+                                  qsl("unsuggestMissing=[2]nil:command line \"csNoSuch\" not found"),
+                                  qsl("clearSuggestionsMissing=[2]nil:command line \"csNoSuch\" not found"),
+                                  qsl("suggestEmpty=[0]"),
+                                  qsl("suggestBadText=raised:addCmdLineSuggestion: bad argument #2 type (suggestion text as string expected, got table!)"),
+                                  qsl("blacklist=[0]"),
+                                  qsl("unblacklist=[0]"),
+                                  qsl("unblacklistAbsent=[0]"),
+                                  qsl("clearBlacklist=[0]"),
+                                  qsl("blacklistMissing=[2]nil:command line \"csNoSuch\" not found"),
+                                  qsl("unblacklistMissing=[2]nil:command line \"csNoSuch\" not found"),
+                                  qsl("clearBlacklistMissing=[2]nil:command line \"csNoSuch\" not found"),
+                                  qsl("menu=[1]true"),
+                                  qsl("menuAgain=[1]true"),
+                                  qsl("menuOther=[1]true"),
+                                  qsl("unmenu=[1]true"),
+                                  qsl("unmenuAgain=[2]nil:cannot remove 'Item', menu item does not exist"),
+                                  qsl("unmenuOther=[1]true"),
+                                  qsl("menuMissing=[2]nil:command line \"csNoSuch\" not found"),
+                                  qsl("unmenuMissing=[2]nil:command line \"csNoSuch\" not found"),
+                                  qsl("select=[1]true"),
+                                  qsl("selectText=[1]true"),
+                                  qsl("textAfterSelect=[1]some text"),
+                                  qsl("selectMissing=[2]nil:command line \"csNoSuch\" not found"),
+                                  qsl("history=[2]true:enabled (500 lines will be saved)"),
+                                  qsl("historyOff=[1]true"),
+                                  qsl("historyAfterOff=[2]false:disabled"),
+                                  qsl("historyOn=[1]true"),
+                                  qsl("historyAfterOn=[2]true:enabled (500 lines will be saved)"),
+                                  qsl("historyOffMissing=[2]nil:command line \"csNoSuch\" not found"),
+                                  qsl("historyMissing=[2]nil:command line \"csNoSuch\" not found"),
+                                  qsl("disable=[1]true"),
+                                  qsl("disabled:type=[1]commandline,visible=[1]false"),
+                                  qsl("disableAgain=[1]true"),
+                                  qsl("enable=[1]true"),
+                                  qsl("enabled:type=[1]commandline,visible=[1]true"),
+                                  qsl("disableMissing=[2]nil:command line \"csNoSuch\" not found"),
+                                  qsl("enableMissing=[2]nil:command line \"csNoSuch\" not found"),
+                                  qsl("disableMain=[2]nil:this function is not permitted on the main command line"),
+                                  qsl("enableEmpty=[2]nil:this function is not permitted on the main command line"),
+                                  qsl("enableHidden=[1]true"),
+                                  qsl("enabledAfterHide:type=[1]commandline,visible=[1]true"),
+                                  qsl("disableShown=[1]true"),
+                                  qsl("showDisabled=[1]true"),
+                                  qsl("shownAfterDisable:type=[1]commandline,visible=[1]true"),
+                                  qsl("enableInHidden=[1]true"),
+                                  qsl("enabledInHidden:type=[1]commandline,visible=[1]false"),
+                                  qsl("windowShown:type=[1]commandline,visible=[1]true"),
+                                  qsl("disableShared=[1]true"),
+                                  qsl("sharedDisabled:type=[1]scrollbox,visible=[1]true"),
+                                  qsl("menuShared=[1]true"),
+                                  qsl("historyShared=[1]true"),
+                                  qsl("historySharedAfter=[2]false:disabled"),
+                                  qsl("sharedBoxDeleted:type=[1]commandline,visible=[1]false"),
+                                  qsl("unmenuShared=[1]true"),
+                                  qsl("suggestEdit=[2]nil:command line \"csEdit\" not found"),
+                                  qsl("menuEdit=[2]nil:command line \"csEdit\" not found"),
+                                  qsl("unmenuEdit=[2]nil:command line \"csEdit\" not found"),
+                                  qsl("selectEdit=[2]nil:command line \"csEdit\" not found"),
+                                  qsl("historyEdit=[2]nil:command line \"csEdit\" not found"),
+                                  qsl("enableEdit=[2]nil:command line \"csEdit\" not found"),
+                                  qsl("disableEdit=[2]nil:command line \"csEdit\" not found"),
+                                  qsl("editAfterDisable:type=[1]textedit,visible=[1]true"),
+                                  qsl("suggestDeleted=[2]nil:command line \"csLine\" not found"),
+                                  qsl("blacklistDeleted=[2]nil:command line \"csLine\" not found"),
+                                  qsl("unmenuDeleted=[2]nil:command line \"csLine\" not found"),
+                                  qsl("selectDeleted=[2]nil:command line \"csLine\" not found"),
+                                  qsl("historyDeleted=[2]nil:command line \"csLine\" not found"),
+                                  qsl("getHistoryDeleted=[2]nil:command line \"csLine\" not found"),
+                                  qsl("enableDeleted=[2]nil:command line \"csLine\" not found"),
+                                  qsl("unmenuRecreated=[2]nil:cannot remove 'Kept', menu item does not exist"),
+                                  qsl("historyRecreated=[2]true:enabled (500 lines will be saved)"),
+                                  qsl("save=[1]true"),
+                                  qsl("historyAfterSave=[2]false:disabled"),
+                                  qsl("historyNotSaved=[2]false:disabled"),
+                                  qsl("saveTrue=[1]true"),
+                                  qsl("historyAfterSavedTrue=[2]true:enabled (500 lines will be saved)"),
+                                  qsl("saveElsewhere=[1]true"),
+                                  qsl("historyAfterSaveElsewhere=[2]true:enabled (500 lines will be saved)"),
+                                  qsl("saveAfterDelete=[1]true"),
+                                  qsl("historyDeletedBeforeSave=[2]false:disabled"),
+                                  qsl("createOrder=[1]true"),
+                                  qsl("enableOrder=[1]true"),
+                                  qsl("saveOrder=[1]true"),
+                                  qsl("iniOrder=[1]true"),
+                                  qsl("saveKey=[1]true"),
+                                  qsl("iniKey=[1]true"),
+                                  qsl("enableFrame=[1]true"),
+                                  qsl("frameClosed=[2]nil:'csFrame' is not a known label, any type of console, command line, text edit, nor scroll box"),
+                                  qsl("saveFrame=[1]true"),
+                                  qsl("iniFrame=[1]true"),
+                                  qsl("saveFrames=[1]true"),
+                                  qsl("iniFrameLine=[1]true"),
+                                  qsl("iniFrameConsole=[1]true"),
+                                  qsl("moveFrameConsole=[1]true"),
+                                  qsl("movedFrameType=[1]commandline"),
+                                  qsl("movedFrameHistory=[2]false:disabled"),
+                                  qsl("movedFrameText=[1]"),
+                                  qsl("movedFrameVisible=[1]true"),
+                                  qsl("hiddenFrameLineVisible=[1]false"),
+                                  qsl("hiddenFrameLineEnable=[1]true"),
+                                  qsl("hiddenFrameLineShown=[1]false"),
+                                  qsl("lateFrameLineVisibleAtOnce=[1]true"),
+                                  qsl("hiddenConsoleLineVisibleAtOnce=[1]false"),
+                                  qsl("lateFrameLineVisible=[1]true"),
+                                  qsl("hiddenConsoleLineVisible=[1]false"),
+                                  qsl("moveFrameToMain=[1]true"),
+                                  qsl("frameInMainVisible=[1]false"),
+                                  qsl("frameInMainLineVisible=[1]false"),
+                                  qsl("moveHiddenFrameLine=[1]true"),
+                                  qsl("hiddenFrameLineMovedVisible=[1]true"),
+                                  qsl("moveLateFrameLine=[1]true"),
+                                  qsl("lateFrameLineMovedVisible=[1]false"),
+                                  qsl("moveExternal=[1]true"),
+                                  qsl("externalType=[2]nil:'csExternal' is not a known label, any type of console, command line, text edit, nor scroll box"),
+                                  qsl("externalHistory=[2]nil:command line \"csExternal\" not found"),
+                                  qsl("claimedType=[1]miniconsole"),
+                                  qsl("claimedText=[1]mine"),
+                                  qsl("claimedDisable=[1]true"),
+                                  qsl("claimedTextAfter=[1]mine"),
+                                  qsl("displacedAction=[1]kept"),
+                                  qsl("saveNested=[1]true"),
+                                  qsl("iniNested=[1]true"),
+                                  qsl("disableMini=[1]true"),
+                                  qsl("getMini=[2]nil:command line \"csMini\" not found"),
+                                  qsl("suggestMini=[2]nil:command line \"csMini\" not found"),
+                                  qsl("enableMini=[1]true"),
+                                  qsl("miniEnabled:type=[1]miniconsole,visible=[1]true"),
+                                  qsl("getMiniEnabled=[1]"),
+                                  qsl("printMini=[0]"),
+                                  qsl("getMiniPrinted=[1]mini text"),
+                                  qsl("suggestMiniEnabled=[0]"),
+                                  qsl("menuMini=[1]true"),
+                                  qsl("historyMini=[2]true:enabled (500 lines will be saved)"),
+                                  qsl("disableMiniEnabled=[1]true"),
+                                  qsl("miniDisabled:type=[1]miniconsole,visible=[1]true"),
+                                  qsl("getMiniDisabled=[1]mini text"),
+                                  qsl("createOverMini=[2]nil:couldn't create commandLine"),
+                                  qsl("deleteMiniLine=[1]true"),
+                                  qsl("getMiniLineDeleted=[2]nil:command line \"csMini\" not found"),
+                                  qsl("deleteMini=[1]true"),
+                                  qsl("enableMiniDeleted=[2]nil:command line \"csMini\" not found"),
+                                  qsl("saveGone=[1]true"),
+                                  qsl("enableGoneRemade=[1]true"),
+                                  qsl("historyGoneRemade=[2]false:disabled"),
+                                  qsl("enableDying=[1]true"),
+                                  qsl("getDying=[2]nil:command line \"csDying\" not found"),
+                                  qsl("createOverDying=[1]true"),
+                                  qsl("enableOverDying=[1]true"),
+                                  qsl("getOverDying=[1]standalone"),
+                                  qsl("disableOverDying=[1]true"),
+                                  qsl("dyingMiniDeleted:type=[1]commandline,visible=[1]true"),
+                                  qsl("enableRemadeDying=[1]true"),
+                                  qsl("getRemadeDying=[1]"),
+                                  qsl("disableTwin=[1]true"),
+                                  qsl("twinDisabled:type=[1]miniconsole,visible=[1]true"),
+                                  qsl("twinMiniDeleted:type=[1]commandline,visible=[1]true"),
+                                  qsl("disableTwinLine=[1]true"),
+                                  qsl("twinLineDisabled:type=[1]commandline,visible=[1]false"),
+                                  qsl("enableChat=[1]true"),
+                                  qsl("getChat=[1]"),
+                                  qsl("unmenuChat=[2]nil:cannot remove 'Item', menu item does not exist"),
+                                  qsl("deleteChatLine=[1]true"),
+                                  qsl("getChatLineDeleted=[2]nil:command line \"csChat\" not found"),
+                                  qsl("chatDeleted:type=[2]nil:'csChat' is not a known label, any type of console, command line, text edit, nor scroll box,visible=[2]nil:window \"csChat\" not found"),
+                                  qsl("disableWindow=[1]true"),
+                                  qsl("enableWindow=[1]true"),
+                                  qsl("getWindow=[1]"),
+                                  qsl("windowEnabled:type=[1]userwindow,visible=[1]true"),
+                                  qsl("disableBuffer=[1]true"),
+                                  qsl("disableLabel=[2]nil:command line \"csLabel\" not found")};
+        QCOMPARE(luaGlobalString(host, "headlessCommandLineSettingsAnswers"), answers.join(QLatin1Char('\n')));
+        // The main command line's text and settings are a view's, so it is not found here where the GUI answers for it
+        const QStringList mainAnswers{qsl("historyNoName=[2]nil:command line \"main\" not found"),
+                                      qsl("historyMain=[2]nil:command line \"main\" not found"),
+                                      qsl("setHistoryNoName=[2]nil:command line \"main\" not found"),
+                                      qsl("setHistoryMain=[2]nil:command line \"main\" not found"),
+                                      qsl("suggestMain=[2]nil:command line \"main\" not found"),
+                                      qsl("suggestNoName=[2]nil:command line \"\" not found"),
+                                      qsl("blacklistMain=[2]nil:command line \"main\" not found"),
+                                      qsl("selectMain=[2]nil:command line \"main\" not found"),
+                                      qsl("menuMain=[2]nil:command line \"main\" not found"),
+                                      qsl("unmenuMain=[2]nil:command line \"main\" not found")};
+        QCOMPARE(luaGlobalString(host, "headlessCommandLineMainAnswers"), mainAnswers.join(QLatin1Char('\n')));
+
+        // A command line removed before deferred deletes run still writes its setting, as its TCommandLine
+        // does until then, and one removed after does not
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+        ran = host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+createCommandLine("csLine", 10, 20, 200, 30)
+setSaveCommandHistory("csLine", true)
+headlessCommandLineSave()
+setSaveCommandHistory("csLine", false)
+deleteCommandLine("csLine")
+createCommandLine("csSavedLater", 0, 0, 50, 20)
+setSaveCommandHistory("csSavedLater", false)
+)lua"));
+        QVERIFY2(ran, "The Lua chunk deleting the command line did not run.");
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+        ran = host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+headlessCommandLineSave()
+createCommandLine("csLine", 10, 20, 200, 30)
+headlessCommandLineDeferred = tostring(getSaveCommandHistory("csLine"))
+deleteCommandLine("csLine")
+)lua"));
+        QVERIFY2(ran, "The Lua chunk after the deferred deletes did not run.");
+        QCOMPARE(luaGlobalString(host, "headlessCommandLineDeferred"), qsl("true"));
+        QCOMPARE(host->readProfileIniData(qsl("CommandLines/SaveHistory/csSavedLater")), qsl("false"));
+
+        // A console's own command line goes with the console, even one moved out of a closed frame, and one in a
+        // deleted user window writes its setting until deferred deletes run
+        QTRY_VERIFY(!host->currentlySavingProfile());
+        ran = host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+createMiniConsole("csGone", 0, 0, 100, 100)
+enableCommandLine("csGone")
+deleteMiniConsole("csGone")
+createMiniConsole("csRevived", 0, 0, 100, 100)
+enableCommandLine("csRevived")
+deleteCommandLine("csRevived")
+openUserWindow("csGoneWindow", false, false, "f")
+createCommandLine("csGoneWindow", "csInGoneWindow", 0, 0, 50, 20)
+setSaveCommandHistory("csInGoneWindow", false)
+deleteMiniConsole("csGoneWindow")
+setConfig("specialForceMXPProcessorOn", true)
+openUserWindow("csOrphanHome", false, false, "f")
+feedTriggers([[<FRAME Name="csOrphanA" Align="right" Width="20%" Height="30%">]] .. "\n")
+enableCommandLine("csOrphanA")
+setWindow("csOrphanHome", "csOrphanA", 0, 0, true)
+feedTriggers([[<FRAME Name="csOrphanB" Align="right" Width="20%" Height="30%">]] .. "\n")
+setWindow("csOrphanHome", "csOrphanB", 0, 0, true)
+enableCommandLine("csOrphanB")
+feedTriggers([[<FRAME csOrphanA ACTION="close">]] .. "\n")
+feedTriggers([[<FRAME csOrphanB ACTION="close">]] .. "\n")
+setConfig("specialForceMXPProcessorOn", false)
+deleteMiniConsole("csOrphanHome")
+headlessCommandLineSave()
+)lua"));
+        QVERIFY2(ran, "The Lua chunk deleting the consoles did not run.");
+        QTRY_VERIFY(!host->currentlySavingProfile());
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+        ran = host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+headlessCommandLineGone = tostring(getCmdLine("csGone")) .. ":" .. tostring(windowType("csGone"))
+headlessCommandLineOrphans = tostring(windowType("csOrphanA")) .. ":" .. tostring(windowType("csOrphanB"))
+enableCommandLine("csRevived")
+headlessCommandLineRevived = tostring(getCmdLine("csRevived"))
+deleteMiniConsole("csRevived")
+createCommandLine("csInGoneWindow", 0, 0, 50, 20)
+headlessCommandLineRemade = tostring(getSaveCommandHistory("csInGoneWindow"))
+deleteCommandLine("csInGoneWindow")
+)lua"));
+        QVERIFY2(ran, "The Lua chunk after the consoles went did not run.");
+        QCOMPARE(luaGlobalString(host, "headlessCommandLineGone"), qsl("nil:nil"));
+        QCOMPARE(luaGlobalString(host, "headlessCommandLineOrphans"), qsl("nil:nil"));
+        QCOMPARE(luaGlobalString(host, "headlessCommandLineRevived"), QString());
+        QCOMPARE(luaGlobalString(host, "headlessCommandLineRemade"), qsl("false"));
+
+        // A command line a console's own one took the name from goes on writing its setting, and a text edit of
+        // the name reads as itself again once the console goes
+        ran = host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+createMiniConsole("csDisplaced", 0, 0, 100, 100)
+createCommandLine("csDisplaced", 5, 5, 50, 20)
+setSaveCommandHistory("csDisplaced", false)
+enableCommandLine("csDisplaced")
+deleteMiniConsole("csDisplaced")
+createTextEdit("csShadowed", 1, 2, 50, 50)
+createMiniConsole("csShadowed", 0, 0, 100, 100)
+enableCommandLine("csShadowed")
+disableCommandLine("csShadowed")
+openUserWindow("csShadowWindow", false, false, "f")
+hideWindow("csShadowWindow")
+showWindow("csShadowWindow")
+deleteMiniConsole("csShadowed")
+)lua"));
+        QVERIFY2(ran, "The Lua chunk displacing the command line did not run.");
+        QTRY_VERIFY(!host->currentlySavingProfile());
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+        ran = host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+headlessCommandLineSave()
+headlessCommandLineShadowed = table.concat({tostring(windowType("csShadowed")), tostring(windowVisible("csShadowed")), table.concat({getWindowGeometry("csShadowed")}, ",")}, ":")
+deleteTextEdit("csShadowed")
+)lua"));
+        QVERIFY2(ran, "The Lua chunk after the console went did not run.");
+        QTRY_VERIFY(!host->currentlySavingProfile());
+        QCOMPARE(host->readProfileIniData(qsl("CommandLines/SaveHistory/csDisplaced")), qsl("false"));
+        QCOMPARE(luaGlobalString(host, "headlessCommandLineShadowed"), qsl("textedit:true:1,2,50,50"));
+
+        // Once deferred deletes run, a command line in a deleted window writes nothing more, wherever it was
+        // moved, and so does one a console's own one took the name from
+        ran = host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+createScrollBox("csBoxed", 0, 0, 100, 100)
+createMiniConsole("csBoxed", "csBoxedMini", 0, 0, 50, 50)
+enableCommandLine("csBoxedMini")
+setSaveCommandHistory("csBoxedMini", false)
+createCommandLine("csBoxed", "csBoxedLine", 0, 60, 50, 20)
+setSaveCommandHistory("csBoxedLine", false)
+deleteScrollBox("csBoxed")
+createScrollBox("csMoved", 0, 0, 100, 100)
+createCommandLine("csMoved", "csMovedLine", 0, 0, 50, 20)
+setSaveCommandHistory("csMovedLine", false)
+createMiniConsole("csMovedLine", 0, 0, 50, 50)
+enableCommandLine("csMovedLine")
+openUserWindow("csMovedWindow", false, false, "f")
+setWindow("csMovedWindow", "csMoved", 0, 0, true)
+deleteMiniConsole("csMovedLine")
+deleteMiniConsole("csMovedWindow")
+createMiniConsole("csOwnGone", 0, 0, 50, 50)
+enableCommandLine("csOwnGone")
+setSaveCommandHistory("csOwnGone", false)
+deleteMiniConsole("csOwnGone")
+setSaveCommandHistory("csSavedLater", true)
+)lua"));
+        QVERIFY2(ran, "The Lua chunk deleting the windows did not run.");
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+        ran = host->getLuaInterpreter()->compileAndExecuteScript(qsl("headlessCommandLineSave()"));
+        QVERIFY2(ran, "The save after the windows went did not run.");
+        QTRY_VERIFY(!host->currentlySavingProfile());
+        for (const QString& name : {qsl("csBoxedMini"), qsl("csBoxedLine"), qsl("csMovedLine"), qsl("csOwnGone"), qsl("csSavedLater")}) {
+            QCOMPARE(host->readProfileIniData(qsl("CommandLines/SaveHistory/%1").arg(name)), qsl("true"));
+        }
+
+        // A frame nested in another goes with it as deferred deletes run, with its command line
+        TMxpFrameFrontend& frames = host->consoleFrontend()->mxpFrames();
+        QVERIFY(frames.createExternalFrame(qsl("csHostFrame"), qsl("Host"), QSize(200, 200), true));
+        frames.createInternalFrame(qsl("csNestedFrame"), qsl("csHostFrame"), qsl("Nested"), QRect(0, 0, 100, 100), false, true);
+        ran = host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+headlessCommandLineNested = tostring(windowType("csNestedFrame"))
+enableCommandLine("csNestedFrame")
+setSaveCommandHistory("csNestedFrame", false)
+deleteMiniConsole("csHostFrame")
+setSaveCommandHistory("csSavedLater", false)
+)lua"));
+        QVERIFY2(ran, "The Lua chunk deleting the host frame did not run.");
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+        QTRY_VERIFY(!host->currentlySavingProfile());
+        ran = host->getLuaInterpreter()->compileAndExecuteScript(
+                qsl(R"lua(headlessCommandLineNested = headlessCommandLineNested .. ":" .. tostring(windowType("csNestedFrame")) headlessCommandLineSave())lua"));
+        QVERIFY2(ran, "The save after the host frame went did not run.");
+        QTRY_VERIFY(!host->currentlySavingProfile());
+        QCOMPARE(luaGlobalString(host, "headlessCommandLineNested"), qsl("miniconsole:nil"));
+        QCOMPARE(host->readProfileIniData(qsl("CommandLines/SaveHistory/csNestedFrame")), qsl("true"));
+        QCOMPARE(host->readProfileIniData(qsl("CommandLines/SaveHistory/csSavedLater")), qsl("false"));
+        // An external frame's widget is its console, which a script's deletion leaves until deferred deletes run
+        QVERIFY(frames.createExternalFrame(qsl("csDeletedFrame"), qsl("Deleted"), QSize(200, 200), true));
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(deleteMiniConsole("csDeletedFrame"))lua")));
+        QVERIFY2(frames.hasFrameWidget(qsl("csDeletedFrame")), "A deleted external frame's console went before deferred deletes ran.");
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+        QVERIFY2(!frames.hasFrameWidget(qsl("csDeletedFrame")), "A deleted external frame's console outlived deferred deletes.");
+        // Closing a frame deletes a frame nested in it at once, with its command line
+        frames.createInternalFrame(qsl("csOuterFrame"), QString(), qsl("Outer"), QRect(0, 0, 200, 200), false, true);
+        frames.createInternalFrame(qsl("csInnerFrame"), qsl("csOuterFrame"), qsl("Inner"), QRect(0, 0, 100, 100), false, true);
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+enableCommandLine("csInnerFrame")
+setSaveCommandHistory("csInnerFrame", false)
+setSaveCommandHistory("csSavedLater", true)
+)lua")));
+        frames.destroyFrame(qsl("csOuterFrame"));
+        QTRY_VERIFY(!host->currentlySavingProfile());
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+headlessCommandLineInner = tostring(windowType("csInnerFrame")) .. ":" .. tostring(getCmdLine("csInnerFrame"))
+headlessCommandLineSave()
+)lua")));
+        QTRY_VERIFY(!host->currentlySavingProfile());
+        QCOMPARE(luaGlobalString(host, "headlessCommandLineInner"), qsl("nil:nil"));
+        QCOMPARE(host->readProfileIniData(qsl("CommandLines/SaveHistory/csInnerFrame")), qsl("true"));
+        QCOMPARE(host->readProfileIniData(qsl("CommandLines/SaveHistory/csSavedLater")), qsl("true"));
+        // Nothing is built in a frame that has no widget
+        frames.createInternalFrame(qsl("csHostlessFrame"), qsl("csDeletedFrame"), qsl("Hostless"), QRect(0, 0, 100, 100), false, true);
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(headlessCommandLineHostless = tostring(windowType("csHostlessFrame")))lua")));
+        QCOMPARE(luaGlobalString(host, "headlessCommandLineHostless"), qsl("nil"));
+
+        // A command line named "main" writes the main command line's key with the setting it was made with, as
+        // in the GUI
+        host->writeProfileIniData(qsl("CommandLines/SaveHistory/main"), qsl("false"));
+        ran = host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(headlessCommandLineMainMade = tostring(createCommandLine("main", 0, 0, 10, 10)))lua"));
+        QVERIFY2(ran, "The Lua chunk making a command line named main did not run.");
+        QCOMPARE(luaGlobalString(host, "headlessCommandLineMainMade"), qsl("true"));
+        host->writeProfileIniData(qsl("CommandLines/SaveHistory/main"), qsl("true"));
+        QTRY_VERIFY(!host->currentlySavingProfile());
+        QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(qsl("headlessCommandLineSave()")), "The save with a command line named main failed.");
+        QCOMPARE(host->readProfileIniData(qsl("CommandLines/SaveHistory/main")), qsl("false"));
+
+        // TMainConsole::resetMainConsole() deletes the command lines and scroll boxes, but not a command line
+        // displaced in the main window, which goes on writing its setting
+        ran = host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+createCommandLine("csResetLine", 0, 0, 50, 20)
+setSaveCommandHistory("csResetLine", false)
+createScrollBox("csResetBox", 0, 0, 100, 100)
+createCommandLine("csResetBox", "csResetBoxed", 0, 0, 50, 20)
+setSaveCommandHistory("csResetBoxed", false)
+createMiniConsole("csResetBoxed", 0, 0, 50, 50)
+enableCommandLine("csResetBoxed")
+deleteMiniConsole("csResetBoxed")
+createMiniConsole("csReset", 0, 0, 100, 100)
+createCommandLine("csReset", 5, 5, 50, 20)
+setSaveCommandHistory("csReset", false)
+enableCommandLine("csReset")
+deleteMiniConsole("csReset")
+)lua"));
+        QVERIFY2(ran, "The Lua chunk displacing a command line before the reset did not run.");
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+        QTRY_VERIFY(!host->currentlySavingProfile());
+        QVERIFY2(host->resetProfile_phase1(), "The profile reset did not start.");
+        QTRY_VERIFY(!host->profileResetInProgress());
+        QTRY_VERIFY(!host->currentlySavingProfile());
+        ran = host->getLuaInterpreter()->compileAndExecuteScript(qsl("assert(saveProfile())"));
+        QVERIFY2(ran, "The save after the reset failed.");
+        QTRY_VERIFY(!host->currentlySavingProfile());
+        QCOMPARE(host->readProfileIniData(qsl("CommandLines/SaveHistory/csReset")), qsl("false"));
+        QCOMPARE(host->readProfileIniData(qsl("CommandLines/SaveHistory/csResetLine")), qsl("true"));
+        QCOMPARE(host->readProfileIniData(qsl("CommandLines/SaveHistory/csResetBoxed")), qsl("true"));
+        QVERIFY2(QApplication::topLevelWidgets().isEmpty(), "Using the command lines created a widget.");
+        HostManager::self()->deleteHost(hostname);
     }
 
     // The answers are those of the same Lua run in the GUI self-test profile, but for the last ones,
