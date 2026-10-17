@@ -514,6 +514,47 @@ private slots:
         QTRY_VERIFY(!QToolTip::isVisible());
     }
 
+    // An edit press part-way through a flight in from a big area's rooms leaves the small area's rooms shown, as the flight did
+    void test_anEditPressPartWayThroughAFlightKeepsTheRoomsShown()
+    {
+        ModernGLWidget* pModern = viewAtThePlayer();
+        QVERIFY(pModern);
+        T2DMap* p2dMap = map()->mapper()->mp2dMap;
+        const int roadId = map()->mpRoomDB->addArea(qsl("Long Road"));
+        const qreal playerZoom = map()->mpRoomDB->get2DMapZoom(mPlayerAreaId);
+        const auto restore = qScopeGuard([this, p2dMap, roadId, playerZoom]() {
+            p2dMap->mMapViewOnly = true;
+            map()->mpRoomDB->set2DMapZoom(mPlayerAreaId, playerZoom);
+            map()->mpRoomDB->removeArea(roadId);
+        });
+        // Too long to leave the view from where the flight sets off
+        for (int x = 0; x < 300; ++x) {
+            QVERIFY(addRoomAt(1000 + x, roadId, x, 0));
+        }
+        // So that the flight comes in no further than where the player area's rooms show
+        QVERIFY(map()->mpRoomDB->set2DMapZoom(mPlayerAreaId, 200.0));
+        pModern->setViewCenter(roadId, 150, 0, 0);
+        pModern->setCameraDistance(30.0f);
+        pModern->updateMatrices();
+        QCOMPARE(pModern->zoomWeights().footprint, 0.0f);
+        pModern->mSavedCameras.remove(mPlayerAreaId);
+        pModern->flyToArea(mPlayerAreaId);
+        while (pModern->mFlight && pModern->mFlight->progress < 0.65) {
+            pModern->onCameraAnimationTick();
+        }
+        pModern->updateMatrices();
+        QVERIFY(pModern->mFlight && pModern->mCameraController.getScale() > pModern->roomsAloneDistance(mPlayerAreaId));
+        QCOMPARE(pModern->zoomWeights().footprint, 0.0f);
+
+        p2dMap->mMapViewOnly = false;
+        const QPoint middle(pModern->width() / 2, pModern->height() / 2);
+        QTest::mousePress(pModern, Qt::LeftButton, Qt::NoModifier, middle);
+        QVERIFY(!pModern->mFlight);
+        pModern->updateMatrices();
+        QCOMPARE(pModern->zoomWeights().footprint, 0.0f);
+        QTest::mouseRelease(pModern, Qt::LeftButton, Qt::NoModifier, middle);
+    }
+
     void test_aRightClickOffersThe2DRoomMenuAndEditIn2D()
     {
         ModernGLWidget* pModern = viewAtThePlayer();
