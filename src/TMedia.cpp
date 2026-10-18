@@ -2296,10 +2296,10 @@ int TMedia::parseJSONByMediaInput(QJsonObject& json)
 
     auto mediaInputJSON = json.value(qsl("stream"));
 
-    if (mediaInputJSON != QJsonValue::Undefined && mediaInputJSON.isString() && !mediaInputJSON.toString().isEmpty()) {
-        if (mediaInputJSON.toString().toLower() == "true") {
-            mediaInput = TMediaData::MediaInputStream;
-        }
+    if (mediaInputJSON.isString() && mediaInputJSON.toString().toLower() == qsl("true")) {
+        mediaInput = TMediaData::MediaInputStream;
+    } else if (mediaInputJSON.isBool() && mediaInputJSON.toBool()) {
+        mediaInput = TMediaData::MediaInputStream;
     }
 
     return mediaInput;
@@ -2565,6 +2565,7 @@ void TMedia::parseJSONForMediaPlay(QJsonObject& json)
     mediaData.setMediaContinue(TMedia::parseJSONByMediaContinue(json));
     mediaData.setMediaClose(TMedia::parseJSONByMediaClose(json));
     mediaData.setMediaCaption(TMedia::parseJSONByMediaCaption(json));
+    mediaData.setMediaInput(TMedia::parseJSONByMediaInput(json));
 
     if (mediaData.mediaFileName().isEmpty()) {
         // An empty name resolves to the media directory, which playMedia() would try to download
@@ -2574,6 +2575,17 @@ void TMedia::parseJSONForMediaPlay(QJsonObject& json)
         }
 
         return;
+    }
+
+    if (mediaData.mediaInput() == TMediaData::MediaInputStream) {
+        // Resolved as a download's url is, so a stream plays from wherever the same message would download from
+        mediaData.setMediaUrl(TMedia::parseUrl(mediaData).toString());
+        // Streams never reach downloadFile()'s http(s)-only check, so it is repeated here: a game must not get Mudlet to play a local file
+        const QString scheme = QUrl(TMedia::getStreamUrl(mediaData)).scheme();
+        if (scheme != qsl("http") && scheme != qsl("https")) {
+            qWarning() << qsl("TMedia::parseJSONForMediaPlay() WARNING - refused to stream media from a non-HTTP(S) URL: %1").arg(TMedia::getStreamUrl(mediaData));
+            return;
+        }
     }
 
     TMedia::playMedia(mediaData);

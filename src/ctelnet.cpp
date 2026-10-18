@@ -4757,8 +4757,13 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
     }
 
     if (data.trimmed().isEmpty()) { // Example: Core.Ping
+        data = qsl("{}");
+        // A bare Client.Media.Stop or Pause means all of the game's media, so TMedia gets the empty object too
+        if (mpHost->mAcceptServerMedia && packageMessage.startsWith(qsl("Client.Media"), Qt::CaseInsensitive)) {
+            mpHost->mpMedia->parseGMCP(packageMessage, data);
+        }
         // Pass empty table/object to Lua
-        mpHost->mLuaInterpreter.setGMCPTable(packageMessage, qsl("{}"));
+        mpHost->mLuaInterpreter.setGMCPTable(packageMessage, data);
         return;
     }
 
