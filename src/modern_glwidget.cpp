@@ -1003,8 +1003,9 @@ constexpr float scmFloorPlateOpacity = 0.07f;
 // The terminal style's glyph atlas: cells of this many texels, this many to a side
 constexpr int scmGlyphCellTexels = 64;
 constexpr int scmGlyphAtlasColumns = 16;
-// The block, the printable ASCII characters and the three ground characters past them, which the atlas always holds first
-constexpr qsizetype scmGlyphAtlasPreloaded = 1 + (u'~' - u'!' + 1) + 3;
+// The block, the printable ASCII characters, the exit dot and the three ground characters past them, which the atlas
+// always holds first
+constexpr qsizetype scmGlyphAtlasPreloaded = 1 + (u'~' - u'!' + 1) + 1 + 3;
 // Clear around a character in its atlas cell, so that the smaller mipmaps of a cell do not take in its neighbors
 constexpr int scmGlyphCellInset = scmGlyphCellTexels / 16;
 // A character cell's side on the map: half rooms' spacing, so that an exit's line has a cell between two rooms side by side
@@ -1511,6 +1512,7 @@ qsizetype ModernGLWidget::glyphAtlasCell(const QString& text, const bool add)
         for (char16_t character = u'!'; character <= u'~'; ++character) {
             preloaded.append(QString(QChar(character)));
         }
+        preloaded.append(QString(RoomAppearance::terminalExitDot));
         // So that a room past a full atlas still shows its ground
         for (const QString& kitName : EnvironmentKit::names()) {
             if (const QString ground = RoomAppearance::groundGlyph(*EnvironmentKit::fromName(kitName), false); !preloaded.contains(ground)) {
