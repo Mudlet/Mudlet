@@ -1,9 +1,10 @@
 #!/bin/bash
-# Cuts a changelog on stdin to <max-bytes> for GitHub, which refuses a release
-# body over 125000 characters. Whole lines go from the end, where the changelog
-# keeps its Infrastructure and Other sections, and a closing line says how many
-# entries are missing and links to <more-url>. Bytes are never fewer than the
-# characters GitHub counts, and LC_ALL=C makes every awk count bytes.
+# Fits a changelog on stdin into <max-bytes> for GitHub, which refuses a release
+# body over 125000 characters, by dropping whole lines from the end, where the
+# Infrastructure and Other sections are, and closing with a count of what is missing
+# and a link to <more-url>. That closing line is printed even when it alone is over
+# <max-bytes>. Bytes are never fewer than the characters GitHub counts, and
+# LC_ALL=C makes every awk count bytes.
 #
 # Usage: fit-release-notes.sh <max-bytes> <more-url>
 
@@ -19,7 +20,7 @@ fi
 
 LC_ALL=C awk -v max="${MAX_BYTES}" -v url="${MORE_URL}" '
   function footer(count) {
-    return sprintf("_%d more %s not listed here, as GitHub limits how long release notes can be - see [every pull request merged in this period](%s)._", count, count == 1 ? "change is" : "changes are", url)
+    return sprintf("_%d more %s not listed here, as GitHub limits how long release notes can be - see [the pull requests merged in this period](%s)._", count, count == 1 ? "change is" : "changes are", url)
   }
   { line[NR] = $0; size += length($0) + 1 }
   END {
@@ -33,9 +34,8 @@ LC_ALL=C awk -v max="${MAX_BYTES}" -v url="${MORE_URL}" '
       if (line[i] ~ /^\\- /) entries++
     }
 
-    # Sized for the most entries the footer could report, so keeping some never
-    # makes it longer than was reserved for it - bar "1 ... change is", shorter
-    # than the "0 ... changes are" that keeping that one entry would print
+    # The longest footer the cut can print: the most digits, or "0 ... changes are",
+    # which outgrows "1 ... change is" when the one entry is kept
     reserve = length(footer(entries))
     if (length(footer(0)) > reserve) reserve = length(footer(0))
     budget = max - reserve - 2
@@ -47,7 +47,7 @@ LC_ALL=C awk -v max="${MAX_BYTES}" -v url="${MORE_URL}" '
       used += length(line[i]) + 1
       kept = i
     }
-    # A heading left with none of its entries under it
+    # Trailing blank lines, and any heading left with none of its entries
     while (kept > 0 && (line[kept] == "" || line[kept] ~ /^#/)) kept--
 
     listed = 0

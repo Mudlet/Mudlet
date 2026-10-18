@@ -367,7 +367,7 @@ if(NOT WIN32)
 endif()
 
 # GitHub refuses release notes over its size limit, and a refused release publishes
-# nothing - which stopped every PTB once the changelog since 5.0.1 outgrew it
+# nothing at all
 if(NOT WIN32)
     add_test(NAME ReleaseNotesFitTest
         COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/ci/release-notes-fit-test.sh

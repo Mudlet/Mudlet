@@ -1,6 +1,6 @@
 #!/bin/bash
-# Tests CI/fit-release-notes.sh, which keeps release notes under the size GitHub
-# accepts - over it, the release is refused and nothing is published at all.
+# Tests CI/fit-release-notes.sh and the release workflow's changelog step that uses
+# it: over GitHub's size limit, the release is refused and nothing is published.
 
 set -uo pipefail
 
@@ -119,8 +119,8 @@ esac
 # Lands the budget just past a heading, where a cut by size alone would keep it
 heading_end=$(grep -n '^##### Improved:' "${IN}" | cut -d: -f1)
 heading_bytes=$(head -n "${heading_end}" "${IN}" | wc -c | tr -d ' ')
-footer_room=$(printf '\n_%d more changes are not listed here, as GitHub limits how long release notes can be - see [every pull request merged in this period](%s)._\n' \
-  "$(entries_in "${IN}")" "${URL}" | wc -c | tr -d ' ')
+# A budget of 0 prints only the closing line; the room for it is that and a blank line
+footer_room=$(( $(bash "${FIT}" 0 "${URL}" < "${IN}" | wc -c | tr -d ' ') + 1 ))
 assert_status 0 "$(run_fit $((heading_bytes + footer_room)) "${URL}")"
 if grep -q '^##### Improved:' "${OUT}"; then
   fail "the Improved heading was kept without any of its entries"
@@ -153,7 +153,7 @@ if [ "$(wc -l < "${OUT}" | tr -d ' ')" -ne 1 ]; then
   fail "expected only the closing line"
 fi
 
-start_test "a changelog the size the 5.0.1 PTBs reached fits the workflow's limit"
+start_test "a changelog over GitHub's limit fits the workflow's limit"
 write_changelog 600
 if [ "$(wc -c < "${IN}" | tr -d ' ')" -le 125000 ]; then
   fail "the generated changelog is too small to exercise the cut"
@@ -200,16 +200,24 @@ STUB
 chmod +x "${STUB_DIR}/lua"
 
 REPO="${WORK_DIR}/repo"
-make_commit() {
-  GIT_COMMITTER_DATE="$1" GIT_AUTHOR_DATE="$1" git -C "${REPO}" commit -q --allow-empty -m "$2"
+# A developer's own signing or hooks settings must not reach the scratch repository
+repo_git() {
+  git -C "${REPO}" -c commit.gpgSign=false -c tag.gpgSign=false -c core.hooksPath=/dev/null \
+    -c user.name="Release notes test" -c user.email="test@example.com" "$@"
 }
-git init -q "${REPO}"
-git -C "${REPO}" config user.email "test@example.com"
-git -C "${REPO}" config user.name "Release notes test"
+make_commit() {
+  GIT_COMMITTER_DATE="$1" GIT_AUTHOR_DATE="$1" repo_git commit -q --allow-empty -m "$2"
+}
+git init -q --template= "${REPO}"
+# As in Mudlet, the stable tag is on a release branch that forked from development
+# before the tag was made, so development's changes since then predate the tag
+make_commit "2026-08-20T04:35:53Z" "Release branch point"
+repo_git checkout -q -b release
 make_commit "2026-09-02T20:31:46Z" "Release 5.0.1"
-git -C "${REPO}" tag Mudlet-5.0.1
+repo_git tag Mudlet-5.0.1
+repo_git checkout -q -
 make_commit "2026-10-15T07:00:00Z" "Previous PTB"
-git -C "${REPO}" tag Mudlet-5.0.0-ptb-2026-10-15-aaaaaaa
+repo_git tag Mudlet-5.0.0-ptb-2026-10-15-aaaaaaa
 make_commit "2026-10-18T06:00:00Z" "This PTB"
 ln -s "${REPO_DIR}" "${REPO}/release-scripts"
 
@@ -235,22 +243,22 @@ assert_status 0 "$(run_step ptb Mudlet-5.0.0-ptb-2026-10-18-bbbbbbb 600)"
 assert_at_most_bytes "${REPO}/changelog.md" 125000
 assert_contains "${REPO}/changelog.md" "#### Changes in this build since the previous PTB (Mudlet-5.0.0-ptb-2026-10-15-aaaaaaa)"
 assert_contains "${REPO}/changelog.md" "($(prs_since 2026-10-15T07%3A00%3A00Z))"
-assert_contains "${REPO}/changelog.md" "($(prs_since 2026-09-02T20%3A31%3A46Z))"
+assert_contains "${REPO}/changelog.md" "($(prs_since 2026-08-20T04%3A35%3A53Z))"
 if [ "$(tail -1 "${REPO}/changelog.md")" != "</details>" ]; then
   fail "the full changelog's <details> is not closed at the end"
 fi
 
 start_test "the first PTB after a release stays under GitHub's limit"
-git -C "${REPO}" tag -d Mudlet-5.0.0-ptb-2026-10-15-aaaaaaa > /dev/null
+repo_git tag -d Mudlet-5.0.0-ptb-2026-10-15-aaaaaaa > /dev/null
 assert_status 0 "$(run_step ptb Mudlet-5.0.0-ptb-2026-10-18-bbbbbbb 600)"
 assert_at_most_bytes "${REPO}/changelog.md" 125000
-assert_contains "${REPO}/changelog.md" "($(prs_since 2026-09-02T20%3A31%3A46Z))"
+assert_contains "${REPO}/changelog.md" "($(prs_since 2026-08-20T04%3A35%3A53Z))"
 
 start_test "a release's notes stay under GitHub's limit"
-git -C "${REPO}" tag Mudlet-5.1.0
+repo_git tag Mudlet-5.1.0
 assert_status 0 "$(run_step release Mudlet-5.1.0 600)"
 assert_at_most_bytes "${REPO}/changelog.md" 125000
-assert_contains "${REPO}/changelog.md" "($(prs_since 2026-09-02T20%3A31%3A46Z))"
+assert_contains "${REPO}/changelog.md" "($(prs_since 2026-08-20T04%3A35%3A53Z))"
 
 start_test "notes that fit are published whole"
 assert_status 0 "$(run_step release Mudlet-5.1.0 3)"
