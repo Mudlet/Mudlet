@@ -272,12 +272,20 @@ function xor(a, b)
 end
 
 
---- This function flags a variable to be saved by Mudlet's variable persistence system.
---- Variables are automatically unpacked into the global namespace when the profile is loaded.
---- They are saved to "SavedVariables.lua" when the profile is closed or saved.
+--- Flags a global variable to be written to "SavedVariables.lua" in the profile directory by saveVars().
+--- Nothing is saved or restored automatically: saveVars() and loadVars() have to be called by a script,
+--- for example from sysExitEvent and sysLoadEvent handlers. resetProfile() raises sysLoadEvent but not
+--- sysExitEvent, so call saveVars() before resetting or the changes since the last save are lost.
+--- loadVars() flags the variables it restores, so they need no new remember() call.
+---
+--- A variable that is nil when remember() or saveVars() runs is neither flagged nor saved: give it a
+--- value first, and call remember() again once it has been nil. That is also how to stop saving one,
+--- such as a variable a script no longer uses that loadVars() keeps restoring: set it to nil and call
+--- saveVars(). Functions, userdata and coroutines are not saved, inside a table or on their own.
 ---
 --- @usage remember("varName")
 ---
+--- @see saveVars
 --- @see loadVars
 function remember(varName)
   if not _saveTable then
@@ -288,10 +296,15 @@ end
 
 
 
---- This function should be primarily used by Mudlet. It loads saved settings in from the Mudlet home directory
---- and unpacks them into the global namespace.
+--- Reads the variables saveVars() wrote to "SavedVariables.lua" in the profile directory back into the
+--- global namespace. Mudlet does not call it, so call it when the variables are needed, for example
+--- from a sysLoadEvent handler. The variables it restores are flagged as remember() would, so the next
+--- saveVars() keeps them. The file is run as Lua code: without a "SavedVariables.lua", or with one that
+--- returns nothing, it restores nothing, and it raises an error when the file cannot be parsed or
+--- returns something other than what table.save() writes.
 ---
 --- @see remember
+--- @see saveVars
 function loadVars()
   local _sep = ""
   if string.char(getMudletHomeDir():byte()) == "/" then
@@ -305,15 +318,21 @@ function loadVars()
     table.load(l_SettingsFile, lt_VariableHolder)
     for k, v in pairs(lt_VariableHolder) do
       _G[k] = v
+      remember(k)
     end
   end
 end
 
 
 
---- This function should primarily be used by Mudlet. It saves the contents of _saveTable into a file for persistence.
+--- Writes the current values of the variables flagged with remember() to "SavedVariables.lua" in the
+--- profile directory, replacing what the file held. Mudlet does not call it, so call it whenever the
+--- variables should be kept, for example from a sysExitEvent handler. A flagged variable that is now nil
+--- is left out of the file and is no longer flagged.
 ---
---- @return true, or nil and an error message if the file could not be written
+--- @return true on success, or nil and a message when no variable has been flagged (the file is then
+---   left as it was) or the file could not be written
+--- @see remember
 --- @see loadVars
 function saveVars()
   local _sep = ""
@@ -323,6 +342,11 @@ function saveVars()
     _sep = "\\"
   end
   local l_SettingsFile = getMudletHomeDir() .. _sep .. "SavedVariables.lua"
+  -- checked before the refresh: empty here means only nil variables were remembered, and writing that
+  -- would wipe an earlier session's store, while a flagged variable that is nil now is meant to be dropped
+  if not _saveTable or next(_saveTable) == nil then
+    return nil, "saveVars: no variable has been flagged with remember(), so "..l_SettingsFile.." is left as it was"
+  end
   for k, _ in pairs(_saveTable) do
     remember(k)
   end
@@ -467,7 +491,7 @@ end
 
 --- Restores a Lua table from a data file that has been saved with table.save().
 ---
---- @usage Loads a serialized file into the globals table (only Mudlet should use this).
+--- @usage Loads a serialized file into the globals table, replacing any global of the same name.
 ---   <pre>
 ---   table.load(file)
 ---   </pre>

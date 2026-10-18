@@ -3003,25 +3003,149 @@ describe("Tests Other.lua functions", function()
           os.rename(backup, store)
         end
         _G._saveTable = savedTable
+        _G.saveVarsSpecValue = nil
       end)
-      _G._saveTable = {}
+      _G._saveTable = nil
+      _G.saveVarsSpecValue = "kept"
+      remember("saveVarsSpecValue")
 
       -- a directory in its place: unlike a read-only file, that cannot be opened by root either
       lfs.mkdir(store)
       local ok, msg = saveVars()
       assert.is_nil(ok)
       assert.is_string(msg)
+      assert.is_falsy(msg:find("flagged", 1, true))
 
       lfs.rmdir(store)
       assert.is_true(saveVars())
     end)
   end)
 
+  describe("Tests remember, saveVars and loadVars", function()
+    local storePath = getMudletHomeDir() .. "/SavedVariables.lua"
+    local previousStore, previousSaveTable
+
+    before_each(function()
+      local file = io.open(storePath, "rb")
+      previousStore = file and file:read("*a")
+      if file then
+        file:close()
+      end
+      previousSaveTable = _G._saveTable
+      _G._saveTable = nil
+    end)
+
+    after_each(function()
+      _G._saveTable = previousSaveTable
+      _G.saveVarsSpecValue = nil
+      _G.saveVarsSpecOther = nil
+      if previousStore then
+        local file = assert(io.open(storePath, "wb"))
+        file:write(previousStore)
+        file:close()
+      else
+        os.remove(storePath)
+      end
+    end)
+
+    it("should leave the file as it was, and say so, when nothing was remembered", function()
+      _G._saveTable = nil
+      _G.saveVarsSpecValue = "kept"
+      remember("saveVarsSpecValue")
+      assert.is_true(saveVars())
+
+      _G._saveTable = nil
+      _G.saveVarsSpecValue = nil
+      local saved, msg = saveVars()
+      assert.is_nil(saved)
+      assert.is_truthy(msg:find("no variable has been flagged with remember()", 1, true))
+
+      loadVars()
+      assert.equals("kept", _G.saveVarsSpecValue)
+    end)
+
+    it("should leave the file as it was when the remembered variable was still nil", function()
+      _G.saveVarsSpecValue = "kept"
+      remember("saveVarsSpecValue")
+      assert.is_true(saveVars())
+
+      _G._saveTable = nil
+      _G.saveVarsSpecValue = nil
+      remember("saveVarsSpecValue")
+      local saved, msg = saveVars()
+      assert.is_nil(saved)
+      assert.is_string(msg)
+
+      loadVars()
+      assert.equals("kept", _G.saveVarsSpecValue)
+    end)
+
+    it("should keep saving what loadVars restored without a new remember()", function()
+      _G.saveVarsSpecValue = 1
+      _G.saveVarsSpecOther = 2
+      remember("saveVarsSpecValue")
+      remember("saveVarsSpecOther")
+      assert.is_true(saveVars())
+
+      _G._saveTable = nil
+      _G.saveVarsSpecValue = nil
+      _G.saveVarsSpecOther = nil
+      loadVars()
+      _G.saveVarsSpecValue = 5
+      assert.is_true(saveVars())
+
+      _G.saveVarsSpecValue = nil
+      _G.saveVarsSpecOther = nil
+      loadVars()
+      assert.equals(5, _G.saveVarsSpecValue)
+      assert.equals(2, _G.saveVarsSpecOther)
+    end)
+
+    it("should stop saving a restored variable once it is set to nil, even the last one", function()
+      _G.saveVarsSpecValue = "kept"
+      remember("saveVarsSpecValue")
+      assert.is_true(saveVars())
+
+      _G._saveTable = nil
+      _G.saveVarsSpecValue = nil
+      loadVars()
+      _G.saveVarsSpecValue = nil
+      assert.is_true(saveVars())
+
+      _G._saveTable = nil
+      loadVars()
+      assert.is_nil(_G.saveVarsSpecValue)
+    end)
+
+    it("should save the remembered variable as it is at save time and load it back", function()
+      _G.saveVarsSpecValue = { a = 1 }
+      remember("saveVarsSpecValue")
+      _G.saveVarsSpecValue = { a = 1, b = 2 }
+
+      assert.is_true(saveVars())
+      _G.saveVarsSpecValue = nil
+      loadVars()
+
+      assert.same({ a = 1, b = 2 }, _G.saveVarsSpecValue)
+    end)
+
+    it("should hand back what table.save reports when the write fails", function()
+      _G.saveVarsSpecValue = "kept"
+      remember("saveVarsSpecValue")
+      local realSave = table.save
+      finally(function() table.save = realSave end)
+      table.save = function() return nil, "SavedVariables.lua: No space left on device" end
+
+      local saved, msg = saveVars()
+      table.save = realSave
+
+      assert.is_nil(saved)
+      assert.equals("SavedVariables.lua: No space left on device", msg)
+    end)
+  end)
+
     --[[
     TODO:
-      remember()
-      loadVars()
-      saveVars()
       getColorWildcard()
       lockExit()
       hasExitLock()
