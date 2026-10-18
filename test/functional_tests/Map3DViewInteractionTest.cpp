@@ -2124,6 +2124,11 @@ private slots:
         pModern->grabFramebuffer();
         QCOMPARE(pModern->shownAreaId(), mOtherAreaId);
 
+        // Following the player again takes effect in paintGL()
+        if (!pModern->isValid()) {
+            QSKIP("no OpenGL context on this platform, so the 3D view does not paint");
+        }
+
         // As the mapper's button to center on the player does
         pMapper->resetAreaComboBoxToPlayerRoomArea();
         pModern->grabFramebuffer();
