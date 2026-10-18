@@ -27,9 +27,12 @@
  * Run with: ctest -R ExitSceneTest -V
  */
 
+#include <algorithm>
+
 #include <QFileInfo>
 #include <QImage>
 #include <QPainter>
+#include <QScopeGuard>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
@@ -234,6 +237,28 @@ private slots:
         QCOMPARE(lines.first().level, 0);
     }
 
+    void test_straightStairsAreDashedWhereTheStyleAsks()
+    {
+        TRoom* pHigh = addRoomAt(1, mAreaId, 0, 0, 1);
+        TRoom* pLow = addRoomAt(2, mAreaId, 0, 0, 0);
+        QVERIFY(pLow && pHigh);
+        pLow->setExit(1, DIR_UP);
+        pHigh->setExit(2, DIR_DOWN);
+
+        QCOMPARE(segmentsIn(build(), mExitColor).size(), 1);
+        ExitScene::Options sceneOptions = options();
+        sceneOptions.dashedStairs = true;
+        const QList<ExitScene::Segment> dashes = segmentsIn(build(sceneOptions), mExitColor);
+        QVERIFY2(dashes.size() > 1, qPrintable(qsl("%1 pieces").arg(dashes.size())));
+        float drawn = 0.0f;
+        for (const ExitScene::Segment& dash : dashes) {
+            QCOMPARE(dash.from.x(), 0.0f);
+            QCOMPARE(dash.to.y(), 0.0f);
+            drawn += (dash.to - dash.from).length();
+        }
+        QVERIFY2(drawn < 0.9f, "the gaps between dashes are left open");
+    }
+
     // The lower-numbered room draws its two-way exits, but dots them all when it has a one-way one to the same room
     void test_twoWayExitIsDrawnWhenTheOtherEndDotsItsLine()
     {
@@ -351,6 +376,39 @@ private slots:
         QCOMPARE(scene.solidDashRoomId, 1);
     }
 
+    void test_onlyWholeExitLinesAreStrokes()
+    {
+        const QColor cyan(Qt::cyan);
+        TRoom* pWest = addRoomAt(1, mAreaId, 0, 0);
+        TRoom* pEast = addRoomAt(2, mAreaId, 1, 0);
+        QVERIFY(pWest && pEast && addRoomAt(3, mAreaId, 0, 1) && addRoomAt(4, mAreaId, 1, 2));
+        pWest->setExit(2, DIR_EAST);
+        pEast->setExit(1, DIR_WEST);
+        pWest->setDoor(qsl("e"), 2);
+        pWest->setExit(3, DIR_NORTH);
+        pWest->setExitStub(DIR_SOUTH, true);
+        pEast->setExit(4, DIR_NORTH);
+        pEast->customLines.insert(qsl("n"), {QPointF(1.5, 1.0), QPointF(1.0, 2.0)});
+        pEast->customLinesColor.insert(qsl("n"), cyan);
+        pEast->customLinesStyle.insert(qsl("n"), Qt::SolidLine);
+
+        const ExitScene::Scene scene = build();
+        int strokes = 0;
+        for (const ExitScene::Segment& line : segmentsIn(scene, mExitColor)) {
+            const bool whole = joins(line, QVector2D(0, 0), QVector2D(1, 0)) || joins(line, QVector2D(0, 0), QVector2D(0, -0.5f));
+            QVERIFY2(line.stroke == whole, qPrintable(qsl("the line from (%1, %2) to (%3, %4)").arg(line.from.x()).arg(line.from.y()).arg(line.to.x()).arg(line.to.y())));
+            strokes += line.stroke ? 1 : 0;
+        }
+        QCOMPARE(strokes, 2);
+        const QList<ExitScene::Segment> door = segmentsIn(scene, ExitAppearance::doorColor(2));
+        QVERIFY(!door.isEmpty());
+        const QList<ExitScene::Segment> custom = segmentsIn(scene, cyan);
+        QVERIFY(custom.size() > 1);
+        for (const ExitScene::Segment& piece : door + custom) {
+            QVERIFY2(!piece.stroke, "a door or a piece of a custom line would taper as a stroke");
+        }
+    }
+
     void test_oneWayExitIsDottedWithAnArrowInTheMiddle()
     {
         TRoom* pWest = addRoomAt(1, mAreaId, 0, 0);
@@ -408,6 +466,330 @@ private slots:
         QVERIFY(qAbs(strokes.at(0).from.y()) > scmTolerance);
     }
 
+    void test_doorSwingsAreAPlansDoor_data()
+    {
+        QTest::addColumn<int>("status");
+        QTest::addColumn<int>("distance");
+        QTest::newRow("open, next door") << 1 << 1;
+        QTest::newRow("closed, next door") << 2 << 1;
+        QTest::newRow("locked, next door") << 3 << 1;
+        QTest::newRow("open, far apart") << 1 << 4;
+        QTest::newRow("closed, far apart") << 2 << 4;
+        QTest::newRow("locked, far apart") << 3 << 4;
+    }
+
+    void test_doorSwingsAreAPlansDoor()
+    {
+        QFETCH(int, status);
+        QFETCH(int, distance);
+        TRoom* pWest = addRoomAt(1, mAreaId, 0, 0);
+        TRoom* pEast = addRoomAt(2, mAreaId, distance, 0);
+        QVERIFY(pWest && pEast);
+        pWest->setExit(2, DIR_EAST);
+        pEast->setExit(1, DIR_WEST);
+        pWest->setDoor(qsl("e"), status);
+        ExitScene::Options swings = options();
+        swings.doorSwings = true;
+
+        QList<ExitScene::Segment> door;
+        float widest = 0.0f;
+        for (const ExitScene::Segment& segment : build(swings).segments) {
+            if (segment.color != mExitColor) {
+                door.append(segment);
+                widest = qMax(widest, segment.width);
+            }
+        }
+        // The leaf (and a locked door's bolt) and the arc it sweeps through
+        QCOMPARE(door.size(), status == 3 ? 10 : 9);
+        const float half = static_cast<float>(distance) / 2.0f;
+        QList<ExitScene::Segment> heavy;
+        for (const ExitScene::Segment& segment : door) {
+            QCOMPARE(segment.color, door.first().color);
+            for (const QVector3D& end : {segment.from, segment.to}) {
+                QVERIFY2(end.x() > 0.0f && end.x() < half, qPrintable(qsl("the swing reaches x %1, outside its half of the exit").arg(end.x())));
+            }
+            QVERIFY2(segment.height > options().lineHeight, "the door does not stand above the line");
+            if (qFuzzyCompare(segment.width, widest)) {
+                heavy.append(segment);
+            }
+        }
+        QCOMPARE(heavy.size(), status == 3 ? 2 : 1);
+        if (status == 1) {
+            const ExitScene::Segment& leaf = heavy.first();
+            const bool besideTheLine = qAbs(leaf.from.y() - leaf.to.y()) < scmTolerance && qAbs(leaf.from.y()) > scmTolerance;
+            QVERIFY2(besideTheLine, "an open door's leaf is not swung back beside the line");
+        } else {
+            const ExitScene::Segment& leaf = heavy.first();
+            const bool acrossTheLine = qAbs(leaf.from.x() - leaf.to.x()) < scmTolerance && leaf.from.y() * leaf.to.y() < 0.0f;
+            QVERIFY2(acrossTheLine, "a shut door's leaf does not close the opening");
+        }
+        if (status == 3) {
+            const ExitScene::Segment& bolt = heavy.last();
+            QVERIFY2(qAbs(bolt.from.y()) < scmTolerance && qAbs(bolt.to.y()) < scmTolerance, "a locked door has no bolt along the line");
+        }
+    }
+
+    void test_doorSwingsClearTheirRoom_data()
+    {
+        QTest::addColumn<int>("eastward");
+        QTest::addColumn<int>("northward");
+        QTest::addColumn<bool>("round");
+        QTest::newRow("east, square") << 1 << 0 << false;
+        QTest::newRow("northeast, square") << 1 << 1 << false;
+        QTest::newRow("northeast, round") << 1 << 1 << true;
+        QTest::newRow("southeast, square, further") << 2 << -2 << false;
+    }
+
+    // A room hides whatever of a door is inside it, which on a diagonal from a square room is further out
+    void test_doorSwingsClearTheirRoom()
+    {
+        QFETCH(int, eastward);
+        QFETCH(int, northward);
+        QFETCH(bool, round);
+        TRoom* pFrom = addRoomAt(1, mAreaId, 0, 0);
+        TRoom* pTo = addRoomAt(2, mAreaId, eastward, northward);
+        QVERIFY(pFrom && pTo);
+        const int direction = northward == 0 ? DIR_EAST : (northward > 0 ? DIR_NORTHEAST : DIR_SOUTHEAST);
+        pFrom->setExit(2, direction);
+        pTo->setExit(1, TMap::scmReverseDirections.value(direction));
+        pFrom->setDoor(TRoom::dirCodeToShortString(direction), 3);
+        ExitScene::Options swings = options();
+        swings.doorSwings = true;
+        swings.roomSize = 0.5f;
+        swings.roundRooms = round;
+        const float half = swings.roomSize / 2.0f;
+        const auto inside = [half, round](const QVector3D& point) {
+            return round ? std::hypot(point.x(), point.y()) < half : qMax(std::abs(point.x()), std::abs(point.y())) < half;
+        };
+
+        int doorSegments = 0;
+        for (const ExitScene::Segment& segment : build(swings).segments) {
+            if (segment.color == mExitColor) {
+                continue;
+            }
+            ++doorSegments;
+            for (const QVector3D& point : {segment.from, segment.to, (segment.from + segment.to) / 2.0f}) {
+                QVERIFY2(!inside(point), qPrintable(qsl("the door reaches (%1, %2), inside its room").arg(point.x()).arg(point.y())));
+            }
+        }
+        QCOMPARE(doorSegments, 10);
+    }
+
+    void test_doorSwingsOfEachStatusDiffer()
+    {
+        TRoom* pWest = addRoomAt(1, mAreaId, 0, 0);
+        TRoom* pEast = addRoomAt(2, mAreaId, 1, 0);
+        QVERIFY(pWest && pEast);
+        pWest->setExit(2, DIR_EAST);
+        pEast->setExit(1, DIR_WEST);
+        ExitScene::Options swings = options();
+        swings.doorSwings = true;
+        QSet<QRgb> colors;
+        for (const int status : {1, 2, 3}) {
+            pWest->setDoor(qsl("e"), status);
+            for (const ExitScene::Segment& segment : build(swings).segments) {
+                if (segment.color != mExitColor) {
+                    colors.insert(segment.color.rgba());
+                }
+            }
+        }
+        QCOMPARE(colors.size(), 3);
+    }
+
+    void test_doorBarCrossesTheLineInItsStatusColor_data()
+    {
+        QTest::addColumn<int>("status");
+        QTest::addColumn<int>("distance");
+        QTest::newRow("open, next door") << 1 << 1;
+        QTest::newRow("locked, next door") << 3 << 1;
+        QTest::newRow("closed, far apart") << 2 << 4;
+    }
+
+    void test_doorBarCrossesTheLineInItsStatusColor()
+    {
+        QFETCH(int, status);
+        QFETCH(int, distance);
+        TRoom* pWest = addRoomAt(1, mAreaId, 0, 0);
+        TRoom* pEast = addRoomAt(2, mAreaId, distance, 0);
+        QVERIFY(pWest && pEast);
+        pWest->setExit(2, DIR_EAST);
+        pEast->setExit(1, DIR_WEST);
+        pWest->setDoor(qsl("e"), status);
+        ExitScene::Options bars = options();
+        bars.doorBars = true;
+
+        const ExitScene::Scene scene = build(bars);
+        QList<ExitScene::Segment> door;
+        for (const ExitScene::Segment& segment : scene.segments) {
+            if (segment.color != mExitColor) {
+                door.append(segment);
+            }
+        }
+        QCOMPARE(door.size(), 1);
+        const ExitScene::Segment& bar = door.first();
+        QCOMPARE(bar.color, ExitAppearance::doorColor(status));
+        QVERIFY2(qAbs(bar.from.x() - bar.to.x()) < scmTolerance, "the bar does not run across the line");
+        QVERIFY2(bar.from.y() * bar.to.y() < 0.0f, "the bar does not cross the line");
+        QVERIFY2(qAbs(bar.from.y() - bar.to.y()) > bars.lineWidth, "the bar is no wider than the line");
+        QVERIFY2(bar.from.x() > 0.0f && bar.from.x() < distance / 2.0f, "the bar is not on its room's half of the exit");
+        QVERIFY2(bar.height > bars.lineHeight, "the bar does not stand above the line");
+        QVERIFY2(scene.triangles.isEmpty(), "a door bar has no swing or stroke");
+    }
+
+    void test_environmentLinesTakeTheirRoomsColorUnlessTheyJoinTwo()
+    {
+        const QColor red(200, 30, 30);
+        const QColor blue(30, 60, 220);
+        map()->mCustomEnvColors[301] = red;
+        map()->mCustomEnvColors[302] = blue;
+        auto restore = qScopeGuard([this] {
+            map()->mCustomEnvColors.remove(301);
+            map()->mCustomEnvColors.remove(302);
+        });
+        TRoom* pWest = addRoomAt(1, mAreaId, 0, 0);
+        TRoom* pMiddle = addRoomAt(2, mAreaId, 1, 0);
+        TRoom* pEast = addRoomAt(3, mAreaId, 2, 0);
+        QVERIFY(pWest && pMiddle && pEast);
+        pWest->environment = 301;
+        pMiddle->environment = 301;
+        pEast->environment = 302;
+        pWest->setExit(2, DIR_EAST);
+        pMiddle->setExit(1, DIR_WEST);
+        pMiddle->setExit(3, DIR_EAST);
+        pEast->setExit(2, DIR_WEST);
+        pEast->setExitStub(DIR_NORTH, true);
+        ExitScene::Options lines = options();
+        lines.environmentLines = true;
+
+        const ExitScene::Scene scene = build(lines);
+        const QColor redLine = ExitAppearance::standOutColor(red, lines.background);
+        const QColor blueLine = ExitAppearance::standOutColor(blue, lines.background);
+        const QList<ExitScene::Segment> sameLine = segmentsIn(scene, redLine);
+        QCOMPARE(sameLine.size(), 1);
+        QVERIFY(joins(sameLine.first(), QVector2D(0, 0), QVector2D(1, 0)));
+        const QList<ExitScene::Segment> mixedLine = segmentsIn(scene, mExitColor);
+        QCOMPARE(mixedLine.size(), 1);
+        QVERIFY(joins(mixedLine.first(), QVector2D(1, 0), QVector2D(2, 0)));
+        const QList<ExitScene::Segment> stub = segmentsIn(scene, blueLine);
+        QCOMPARE(stub.size(), 1);
+        QVERIFY(joins(stub.first(), QVector2D(2, 0), QVector2D(2, 0.5f)));
+        QVERIFY2(!trianglesIn(scene, blueLine).isEmpty(), "the stub's dot is not in its room's color");
+    }
+
+    // Stairs that are shafts and in/out stubs between rooms of one environment are in its line, as straight stairs are
+    void test_environmentLinesColorShaftsAndStubs()
+    {
+        const QColor red(200, 30, 30);
+        map()->mCustomEnvColors[301] = red;
+        auto restore = qScopeGuard([this] {
+            map()->mCustomEnvColors.remove(301);
+        });
+        TRoom* pLow = addRoomAt(1, mAreaId, 0, 0, 0);
+        TRoom* pHigh = addRoomAt(2, mAreaId, 3, 2, 1);
+        TRoom* pOneWay = addRoomAt(3, mAreaId, 6, 0, 1);
+        TRoom* pInside = addRoomAt(4, mAreaId, 0, 4, 0);
+        QVERIFY(pLow && pHigh && pOneWay && pInside);
+        for (TRoom* pRoom : {pLow, pHigh, pOneWay, pInside}) {
+            pRoom->environment = 301;
+        }
+        pLow->setExit(2, DIR_UP);
+        pHigh->setExit(1, DIR_DOWN);
+        pOneWay->setExit(1, DIR_DOWN);
+        pLow->setExit(4, DIR_IN);
+        pInside->setExit(1, DIR_OUT);
+        ExitScene::Options lines = options();
+        lines.environmentLines = true;
+        lines.inOutStubs = true;
+
+        const ExitScene::Scene scene = build(lines);
+        const QColor redLine = ExitAppearance::standOutColor(red, lines.background);
+
+        QCOMPARE(segmentsIn(scene, mExitColor).size(), 0);
+        QCOMPARE(segmentsIn(scene, redLine).size(), 5);
+        QCOMPARE(segmentsIn(scene, ExitAppearance::oneWayArrowColor()).size(), 1);
+    }
+
+    void test_linesJoiningTwoEnvironmentsTakeTheMixedColorWhereGiven()
+    {
+        map()->mCustomEnvColors[301] = QColor(200, 30, 30);
+        map()->mCustomEnvColors[302] = QColor(30, 60, 220);
+        auto restore = qScopeGuard([this] {
+            map()->mCustomEnvColors.remove(301);
+            map()->mCustomEnvColors.remove(302);
+        });
+        TRoom* pWest = addRoomAt(1, mAreaId, 0, 0);
+        TRoom* pEast = addRoomAt(2, mAreaId, 1, 0);
+        QVERIFY(pWest && pEast);
+        pWest->environment = 301;
+        pEast->environment = 302;
+        pWest->setExit(2, DIR_EAST);
+        pEast->setExit(1, DIR_WEST);
+        ExitScene::Options lines = options();
+        lines.environmentLines = true;
+        const QColor gray(178, 178, 178);
+        lines.mixedLineColor = gray;
+
+        const ExitScene::Scene scene = build(lines);
+
+        QCOMPARE(segmentsIn(scene, gray).size(), 1);
+        QCOMPARE(segmentsIn(scene, mExitColor).size(), 0);
+    }
+
+    // A station is on a line of its own environment only where an exit on its level joins it to a room of it that shows
+    void test_onEnvironmentLineTakesOnlyALevelExitToItsOwnEnvironment()
+    {
+        TRoom* pRoom = addRoomAt(1, mAreaId, 0, 0, 0);
+        TRoom* pOther = addRoomAt(2, mAreaId, 1, 0, 0);
+        TRoom* pAbove = addRoomAt(3, mAreaId, 0, 0, 1);
+        QVERIFY(pRoom && pOther && pAbove);
+        pRoom->environment = 301;
+        pOther->environment = 302;
+        pAbove->environment = 301;
+        pRoom->setExit(3, DIR_UP);
+        pRoom->setExit(2, DIR_EAST);
+        QVERIFY(!RoomAppearance::onEnvironmentLine(*map(), *pRoom));
+        pOther->environment = 301;
+        QVERIFY(RoomAppearance::onEnvironmentLine(*map(), *pRoom));
+        QVERIFY2(RoomAppearance::onEnvironmentLine(*map(), *pOther), "a one-way exit into the room does not put it on a line");
+        pOther->setHidden(true);
+        QVERIFY2(!RoomAppearance::onEnvironmentLine(*map(), *pRoom), "a line to a hidden room counts");
+        pOther->setHidden(false);
+        pRoom->customLines.insert(qsl("e"), {QPointF(0.5, 0.5), QPointF(1.0, 0.0)});
+        QVERIFY2(!RoomAppearance::onEnvironmentLine(*map(), *pRoom), "an exit drawn as a custom line counts as a line of its environment");
+        QVERIFY2(!RoomAppearance::onEnvironmentLine(*map(), *pOther), "an entrance drawn as a custom line counts as a line of its environment");
+    }
+
+    void test_environmentLinesAreOffUnlessAsked()
+    {
+        map()->mCustomEnvColors[301] = QColor(200, 30, 30);
+        auto restore = qScopeGuard([this] {
+            map()->mCustomEnvColors.remove(301);
+        });
+        TRoom* pWest = addRoomAt(1, mAreaId, 0, 0);
+        TRoom* pEast = addRoomAt(2, mAreaId, 1, 0);
+        QVERIFY(pWest && pEast);
+        pWest->environment = 301;
+        pEast->environment = 301;
+        pWest->setExit(2, DIR_EAST);
+        pEast->setExit(1, DIR_WEST);
+
+        QCOMPARE(segmentsIn(build(), mExitColor).size(), 1);
+    }
+
+    void test_exitCountTakesEveryRealExit()
+    {
+        TRoom* pRoom = addRoomAt(1, mAreaId, 0, 0);
+        TRoom* pOther = addRoomAt(2, mAreaId, 1, 0);
+        QVERIFY(pRoom && pOther);
+        QCOMPARE(RoomAppearance::exitCount(*pRoom), 0);
+        pRoom->setExit(2, DIR_EAST);
+        pRoom->setExit(2, DIR_UP);
+        pRoom->setExit(2, DIR_OUT);
+        pRoom->setSpecialExit(2, qsl("climb ladder"));
+        pRoom->setExitStub(DIR_NORTH, true);
+        QCOMPARE(RoomAppearance::exitCount(*pRoom), 4);
+    }
+
     void test_stubIsAHalfLineEndingInADot()
     {
         TRoom* pRoom = addRoomAt(1, mAreaId, 3, 4);
@@ -427,6 +809,208 @@ private slots:
             }
         }
         QCOMPARE(segmentsIn(scene, ExitAppearance::doorColor(2)).size(), 2);
+    }
+
+    void test_glyphsFillTheCellsBetweenRoomsWithTheDoorNextToItsRoom()
+    {
+        TRoom* pWest = addRoomAt(1, mAreaId, 0, 0);
+        TRoom* pEast = addRoomAt(2, mAreaId, 2, 0);
+        QVERIFY(pWest && pEast);
+        pWest->setExit(2, DIR_EAST);
+        pEast->setExit(1, DIR_WEST);
+        pWest->setDoor(qsl("e"), 2);
+        ExitScene::Options glyphOptions = options();
+        glyphOptions.glyphs = true;
+
+        const ExitScene::Scene scene = build(glyphOptions);
+        QVERIFY(segmentsIn(scene, mExitColor).isEmpty());
+        QCOMPARE(scene.glyphs.size(), 3);
+        for (const ExitScene::Glyph& glyph : scene.glyphs) {
+            QVERIFY(qAbs(glyph.at.y()) < scmTolerance);
+            if (qAbs(glyph.at.x() - 0.5f) < scmTolerance) {
+                QCOMPARE(glyph.character, QChar(u'+'));
+                QCOMPARE(glyph.color, ExitAppearance::doorColor(2));
+            } else {
+                QVERIFY2(qAbs(glyph.at.x() - 1.0f) < scmTolerance || qAbs(glyph.at.x() - 1.5f) < scmTolerance, "a line's character is outside the cells between the rooms");
+                QVERIFY(glyph.character.isNull());
+                QCOMPARE(glyph.color, mExitColor);
+            }
+        }
+    }
+
+    // A room misplaced far along its exit's line must not make a character for every cell of it, which froze the view
+    void test_aGlyphLineTooLongIsDrawnAsABar()
+    {
+        TRoom* pWest = addRoomAt(1, mAreaId, 0, 0);
+        TRoom* pEast = addRoomAt(2, mAreaId, 1000000, 0);
+        QVERIFY(pWest && pEast);
+        pWest->setExit(2, DIR_EAST);
+        pEast->setExit(1, DIR_WEST);
+        ExitScene::Options glyphOptions = options();
+        glyphOptions.glyphs = true;
+
+        const ExitScene::Scene scene = build(glyphOptions);
+        QVERIFY2(scene.glyphs.size() < 10000, qPrintable(qsl("%1 characters for one line").arg(scene.glyphs.size())));
+        QVERIFY2(!segmentsIn(scene, mExitColor).isEmpty(), "the line is not drawn at all");
+    }
+
+    void test_glyphDoorStaysOnASlantedLine()
+    {
+        TRoom* pWest = addRoomAt(1, mAreaId, 0, 0);
+        TRoom* pEast = addRoomAt(2, mAreaId, 4, 2);
+        QVERIFY(pWest && pEast);
+        pWest->setExit(2, DIR_EAST);
+        pEast->setExit(1, DIR_WEST);
+        ExitScene::Options glyphOptions = options();
+        glyphOptions.glyphs = true;
+        QList<QVector2D> lineCells;
+        for (const ExitScene::Glyph& glyph : build(glyphOptions).glyphs) {
+            lineCells.append(flat(glyph.at));
+        }
+
+        pWest->setDoor(qsl("e"), 1);
+        const ExitScene::Scene scene = build(glyphOptions);
+        QCOMPARE(scene.glyphs.size(), lineCells.size());
+        int doors = 0;
+        for (const ExitScene::Glyph& glyph : scene.glyphs) {
+            if (glyph.character == QChar(u'+')) {
+                ++doors;
+                QVERIFY2(std::any_of(lineCells.cbegin(),
+                                     lineCells.cend(),
+                                     [&glyph](const QVector2D& cell) {
+                                         return closeTo(cell, flat(glyph.at));
+                                     }),
+                         "the door is off its line");
+            }
+        }
+        QCOMPARE(doors, 1);
+    }
+
+    void test_glyphStubIsOneCharacterAtItsEnd()
+    {
+        TRoom* pRoom = addRoomAt(1, mAreaId, 3, 4);
+        QVERIFY(pRoom);
+        pRoom->setExitStub(DIR_NORTH, true);
+        ExitScene::Options glyphOptions = options();
+        glyphOptions.glyphs = true;
+
+        const ExitScene::Scene scene = build(glyphOptions);
+        QVERIFY(segmentsIn(scene, mExitColor).isEmpty());
+        QVERIFY(trianglesIn(scene, mExitColor).isEmpty());
+        QCOMPARE(scene.glyphs.size(), 1);
+        QVERIFY(closeTo(flat(scene.glyphs.first().at), QVector2D(3, 4.5f)));
+        QVERIFY(scene.glyphs.first().character.isNull());
+    }
+
+    void test_terminalGlyphMarksThePlayerStairsAndSymbol()
+    {
+        TRoom* pRoom = addRoomAt(1, mAreaId, 0, 0);
+        TRoom* pAbove = addRoomAt(2, mAreaId, 0, 0, 1);
+        TRoom* pBelow = addRoomAt(3, mAreaId, 0, 0, -1);
+        QVERIFY(pRoom && pAbove && pBelow);
+        RoomAppearance::Look look;
+        QCOMPARE(RoomAppearance::terminalGlyph(*pRoom, look, false), qsl("#"));
+        QCOMPARE(RoomAppearance::terminalGlyph(*pRoom, look, true), qsl("."));
+        pRoom->setExit(2, DIR_UP);
+        QCOMPARE(RoomAppearance::terminalGlyph(*pRoom, look, false), qsl("<"));
+        pRoom->setExitStub(DIR_DOWN, true);
+        QCOMPARE(RoomAppearance::terminalGlyph(*pRoom, look, false), qsl("X"));
+        pRoom->setExit(-1, DIR_UP);
+        QCOMPARE(RoomAppearance::terminalGlyph(*pRoom, look, false), qsl(">"));
+        look.symbol = qsl("$");
+        QCOMPARE(RoomAppearance::terminalGlyph(*pRoom, look, false), qsl("$"));
+        look.playerRoom = true;
+        QCOMPARE(RoomAppearance::terminalGlyph(*pRoom, look, false), qsl("@"));
+    }
+
+    void test_terminalGlyphShowsTheGroundUnlessThereIsMoreToSay()
+    {
+        TRoom* pRoom = addRoomAt(1, mAreaId, 0, 0);
+        TRoom* pAbove = addRoomAt(2, mAreaId, 0, 0, 1);
+        QVERIFY(pRoom && pAbove);
+        RoomAppearance::Look look;
+        QCOMPARE(RoomAppearance::terminalGlyph(*pRoom, look, false, EnvironmentKit::Kit::Water), QString(QChar(0x2248)));
+        QCOMPARE(RoomAppearance::terminalGlyph(*pRoom, look, false, EnvironmentKit::Kit::Forest), QString(QChar(0x2663)));
+        QCOMPARE(RoomAppearance::terminalGlyph(*pRoom, look, false, EnvironmentKit::Kit::Building), QString(QChar(0x25A0)));
+        QCOMPARE(RoomAppearance::terminalGlyph(*pRoom, look, false, EnvironmentKit::Kit::Road), qsl("#"));
+        QCOMPARE(RoomAppearance::terminalGlyph(*pRoom, look, false, EnvironmentKit::Kit::Plain), qsl("\""));
+        QCOMPARE(RoomAppearance::terminalGlyph(*pRoom, look, true, EnvironmentKit::Kit::Plain), qsl("."));
+        QCOMPARE(RoomAppearance::terminalGlyph(*pRoom, look, true, EnvironmentKit::Kit::Water), QString(QChar(0x2248)));
+        pRoom->setExit(2, DIR_UP);
+        QCOMPARE(RoomAppearance::terminalGlyph(*pRoom, look, false, EnvironmentKit::Kit::Water), qsl("<"));
+        look.symbol = qsl("$");
+        QCOMPARE(RoomAppearance::terminalGlyph(*pRoom, look, false, EnvironmentKit::Kit::Water), qsl("$"));
+    }
+
+    // A map that never defined an environment draws it in the default red, which is no kind of ground
+    void test_onlyADefinedEnvironmentHasAGround()
+    {
+        constexpr int kEnvironment = 9999;
+        const QColor blue(50, 90, 200);
+        const auto restore = qScopeGuard([this, kEnvironment]() {
+            map()->mCustomEnvColors.remove(kEnvironment);
+        });
+        QVERIFY(!EnvironmentKit::forDefinedEnvironment({}, *map(), kEnvironment, blue));
+        QCOMPARE(EnvironmentKit::forDefinedEnvironment({{kEnvironment, EnvironmentKit::Kit::Forest}}, *map(), kEnvironment, blue), EnvironmentKit::Kit::Forest);
+        map()->mCustomEnvColors[kEnvironment] = blue;
+        QCOMPARE(EnvironmentKit::forDefinedEnvironment({}, *map(), kEnvironment, blue), EnvironmentKit::Kit::Water);
+    }
+
+    // An environment mapped onto a color the map does not have is drawn in the default red, like an undefined one
+    void test_anEnvironmentMappedOntoNoColorHasNoGround()
+    {
+        constexpr int kEnvironment = 9998;
+        constexpr int kMissing = 9997;
+        const QColor blue(50, 90, 200);
+        const auto restore = qScopeGuard([this, kEnvironment]() {
+            map()->mEnvColors.remove(kEnvironment);
+        });
+        map()->mEnvColors[kEnvironment] = kMissing;
+        QVERIFY(!map()->mCustomEnvColors.contains(kMissing));
+        QVERIFY(!RoomAppearance::environmentDefined(*map(), kEnvironment));
+        QVERIFY(!EnvironmentKit::forDefinedEnvironment({}, *map(), kEnvironment, blue));
+        QCOMPARE(RoomAppearance::environmentColor(*map(), *mpHost, kEnvironment), mpHost->mRed_2);
+        map()->mEnvColors[kEnvironment] = 4;
+        QVERIFY(RoomAppearance::environmentDefined(*map(), kEnvironment));
+        QCOMPARE(RoomAppearance::environmentColor(*map(), *mpHost, kEnvironment), mpHost->mBlue_2);
+        QCOMPARE(EnvironmentKit::forDefinedEnvironment({}, *map(), kEnvironment, blue), EnvironmentKit::Kit::Water);
+    }
+
+    // Two profiles' maps with different unreadable kits, read in turn on every repaint, warn once each
+    void test_unreadableKitsWarnOnceForEachSavedValue()
+    {
+        QMap<QString, QString> first{{EnvironmentKit::userDataKey(), qsl("{\"1\": \"lava\"}")}};
+        QMap<QString, QString> second{{EnvironmentKit::userDataKey(), qsl("not json")}};
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("EnvironmentKit: .*lava")));
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("EnvironmentKit: .*not json")));
+        QTest::failOnWarning(QRegularExpression(qsl("EnvironmentKit: ")));
+        for (int frame = 0; frame < 3; ++frame) {
+            QVERIFY(EnvironmentKit::stored(first).isEmpty());
+            QVERIFY(EnvironmentKit::stored(second).isEmpty());
+        }
+    }
+
+    void test_groundFallsBackToAsciiForAFontWithoutIt()
+    {
+        QCOMPARE(RoomAppearance::groundGlyph(EnvironmentKit::Kit::Water, false, true), qsl("~"));
+        QCOMPARE(RoomAppearance::groundGlyph(EnvironmentKit::Kit::Forest, false, true), qsl("*"));
+        QCOMPARE(RoomAppearance::groundGlyph(EnvironmentKit::Kit::Building, false, true), qsl("="));
+        QCOMPARE(RoomAppearance::groundGlyph(EnvironmentKit::Kit::Road, false, true), qsl("#"));
+        QCOMPARE(RoomAppearance::groundGlyph(EnvironmentKit::Kit::Plain, true, true), qsl("."));
+        for (const QString& kitName : EnvironmentKit::names()) {
+            const QString ascii = RoomAppearance::groundGlyph(*EnvironmentKit::fromName(kitName), false, true);
+            QVERIFY2(ascii.size() == 1 && ascii.at(0).unicode() >= u'!' && ascii.at(0).unicode() <= u'~', qPrintable(ascii));
+        }
+        TRoom* pRoom = addRoomAt(1, mAreaId, 0, 0);
+        QVERIFY(pRoom);
+        const RoomAppearance::Look look;
+        QCOMPARE(RoomAppearance::terminalGlyph(*pRoom, look, false, EnvironmentKit::Kit::Forest, true), qsl("*"));
+
+        const QFont font(qsl("Bitstream Vera Sans Mono"));
+        QVERIFY(RoomAppearance::fontShows(font, qsl("#")));
+        // A noncharacter, which no font draws
+        QVERIFY(!RoomAppearance::fontShows(font, QString(QChar(0xFFFF))));
+        QVERIFY(!RoomAppearance::fontShows(font, QString()));
     }
 
     void test_areaExitPointsOutOfTheArea_data()

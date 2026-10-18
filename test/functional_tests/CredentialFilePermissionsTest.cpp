@@ -176,6 +176,10 @@ private slots:
         QVERIFY(mConfigDir.isValid());
         mSavedXdgConfigHome = qgetenv("XDG_CONFIG_HOME");
         qputenv("XDG_CONFIG_HOME", mConfigDir.path().toUtf8());
+        // MudletApp's paths only follow XDG_CONFIG_HOME once it holds a profiles/ folder; until then
+        // a ~/.config/mudlet that Mudlet has used wins, and the plain-text case would write there
+        QVERIFY(QDir().mkpath(qsl("%1/mudlet/profiles").arg(mConfigDir.path())));
+        QVERIFY2(MudletApp::getMudletPath(enums::profilesPath).startsWith(mConfigDir.path()), "MudletApp is not using the redirected config root");
 
         // The log cases read a qDebug() line, which a rule in the environment would filter
         // out before it ever reached them
@@ -286,6 +290,25 @@ private slots:
         QCOMPARE(CredentialManager::retrieveCredential(mLongProfile, mKey), mPassword);
 
         QVERIFY2(!reachableByOthers(legacyPath), "reading the copy left by the earlier naming scheme left it readable by other accounts on this machine");
+    }
+
+    // With "store passwords securely" off, the profile's password is kept in plain text in its
+    // "password" data file, which must be owner-only after a save or a read
+    void test_thePlainTextProfilePasswordIsOwnerOnly()
+    {
+#if !defined(Q_OS_UNIX)
+        QSKIP("there are no POSIX permission bits to check on this platform");
+#endif
+        const QString item = qsl("password");
+        const QString path = MudletApp::getMudletPath(enums::profileDataItemPath, mProfile, item);
+        // A replacement takes the mode of the file it replaces, so one left owner-only would pass on its own
+        QVERIFY2(!QFileInfo::exists(path), "this case started on a config root an earlier run left behind, so it would prove nothing");
+        QVERIFY(MudletApp::writeProfileData(mProfile, item, mPassword).first);
+        QVERIFY2(!reachableByOthers(path), "saving the profile's password left a file other accounts on this machine can read");
+
+        QVERIFY(openToEveryone(path));
+        QCOMPARE(MudletApp::readProfileData(mProfile, item), mPassword);
+        QVERIFY2(!reachableByOthers(path), "reading the profile's password left it readable by other accounts on this machine");
     }
 
     // The passwords/<key>.dat pair SecureStringUtils offers on its own, which has no caller

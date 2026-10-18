@@ -133,6 +133,15 @@ public:
     static bool restrictDirectoryToOwner(const QString& path);
 
     /**
+     * @brief Check, without changing them, that a file holding a secret has owner-only permissions
+     *
+     * For a file narrowed before the secret went into it. Warns and reports as restrictFileToOwner() does.
+     * @param path Path of the file to check
+     * @return false when other accounts on the machine can read the file
+     */
+    static bool confirmFileIsOwnerOnly(const QString& path);
+
+    /**
      * @brief The secret that could not be narrowed, forgetting it as it is handed over
      *
      * Lets a caller warn that a password it just saved is readable by other accounts. Process-wide, so

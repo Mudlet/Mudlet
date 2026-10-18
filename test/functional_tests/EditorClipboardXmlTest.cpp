@@ -26,10 +26,14 @@
  */
 
 #include <QClipboard>
+#include <QMessageBox>
+#include <QScopeGuard>
+#include <QSignalBlocker>
 #include <QTemporaryDir>
 #include <QTreeWidget>
 #include <QtTest/QtTest>
 #include <chrono>
+#include <functional>
 
 #include "ActionUnit.h"
 #include "AliasUnit.h"
@@ -208,6 +212,38 @@ private:
         mpHost->getActionUnit()->registerAction(pAction);
     }
 
+    int countBoxesOpenedBy(const std::function<void()>& action, QStringList* pTexts = nullptr)
+    {
+        int boxesOpened = 0;
+        // closes any box that does open, so a failure does not hang the run
+        QTimer closer;
+        connect(&closer, &QTimer::timeout, &closer, [&boxesOpened, pTexts]() {
+            if (QWidget* pModal = QApplication::activeModalWidget()) {
+                ++boxesOpened;
+                // The text, not the title: QMessageBox drops its title on macOS
+                if (auto* pBox = qobject_cast<QMessageBox*>(pModal); pTexts && pBox) {
+                    *pTexts << pBox->text();
+                }
+                pModal->close();
+            }
+        });
+        closer.start(20ms);
+        action();
+        closer.stop();
+        return boxesOpened;
+    }
+
+    QAction* copyActionOf(QTreeWidget* tree) const
+    {
+        const QList<QAction*> actions = tree->actions();
+        for (QAction* pAction : actions) {
+            if (pAction->shortcut() == QKeySequence(QKeySequence::Copy)) {
+                return pAction;
+            }
+        }
+        return nullptr;
+    }
+
 private slots:
     void initTestCase()
     {
@@ -298,6 +334,91 @@ private slots:
         QVERIFY2(clipboard.contains(qsl("<MudletPackage")), qPrintable(qsl("the clipboard does not hold a Mudlet package: %1").arg(clipboard.left(120))));
         QVERIFY2(clipboard.contains(qsl("<%1>").arg(packageTag)), qPrintable(qsl("the clipboard does not hold a %1").arg(packageTag)));
         QVERIFY2(clipboard.contains(itemName), "the copied XML does not name the item that was copied");
+    }
+
+    void test_copyWithNothingSelectedOpensNoMessageBox_data() { test_copyPutsTheItemsOwnXmlOnTheClipboard_data(); }
+
+    void test_copyWithNothingSelectedOpensNoMessageBox()
+    {
+        QFETCH(int, view);
+        const auto viewType = static_cast<EditorViewType>(view);
+        showView(viewType);
+        QTreeWidget* tree = treeFor(viewType);
+        QVERIFY(tree);
+        QAction* pCopy = copyActionOf(tree);
+        QVERIFY2(pCopy, "the tree offers no Copy action");
+
+        // a row standing for an item that is gone is the other way to have nothing to copy
+        auto* pStaleItem = new QTreeWidgetItem(QStringList{qsl("qaClipStaleRow")});
+        pStaleItem->setData(0, Qt::UserRole, -1);
+        // Signals blocked: selecting the row would make it the editor's current item, left dangling once it is deleted
+        const QSignalBlocker blockTreeSignals(tree);
+        tree->addTopLevelItem(pStaleItem);
+        const auto removeStaleItem = qScopeGuard([pStaleItem]() {
+            delete pStaleItem;
+        });
+
+        for (const bool withStaleRow : {false, true}) {
+            tree->clearSelection();
+            pStaleItem->setSelected(withStaleRow);
+            const QString untouched = qsl("qaClipUntouched");
+            QApplication::clipboard()->setText(untouched);
+
+            const int boxesOpened = countBoxesOpenedBy([pCopy]() {
+                pCopy->trigger();
+            });
+
+            QVERIFY2(boxesOpened == 0, withStaleRow ? "copying a row whose item is gone opened a message box" : "copying with nothing selected opened a message box");
+            QCOMPARE(QApplication::clipboard()->text(), untouched);
+        }
+    }
+
+    void test_exportWithNothingSelectedStillWarns_data() { test_copyPutsTheItemsOwnXmlOnTheClipboard_data(); }
+
+    // Unlike Copy, Export was asked for a file, so it says why none was written
+    void test_exportWithNothingSelectedStillWarns()
+    {
+        QFETCH(int, view);
+        const auto viewType = static_cast<EditorViewType>(view);
+        showView(viewType);
+        QTreeWidget* tree = treeFor(viewType);
+        QVERIFY(tree);
+        tree->clearSelection();
+        tree->setCurrentItem(nullptr);
+        const QString fileName = mConfigDir.filePath(qsl("qaExportNothing.xml"));
+
+        QStringList texts;
+        const int boxesOpened = countBoxesOpenedBy(
+                [this, viewType, &fileName]() {
+                    switch (viewType) {
+                    case EditorViewType::cmTriggerView:
+                        mpEditor->exportTrigger(fileName);
+                        break;
+                    case EditorViewType::cmTimerView:
+                        mpEditor->exportTimer(fileName);
+                        break;
+                    case EditorViewType::cmAliasView:
+                        mpEditor->exportAlias(fileName);
+                        break;
+                    case EditorViewType::cmScriptView:
+                        mpEditor->exportScript(fileName);
+                        break;
+                    case EditorViewType::cmActionView:
+                        mpEditor->exportAction(fileName);
+                        break;
+                    case EditorViewType::cmKeysView:
+                        mpEditor->exportKey(fileName);
+                        break;
+                    default:
+                        break;
+                    }
+                },
+                &texts);
+
+        QCOMPARE(boxesOpened, 1);
+        QCOMPARE(texts.size(), 1);
+        QVERIFY2(texts.first().startsWith(qsl("You have to choose an item for export first.")), qPrintable(texts.first()));
+        QVERIFY2(!QFile::exists(fileName), "exporting with nothing selected wrote a file");
     }
 
     void test_pastingACopiedItemAddsASecondOne_data() { test_copyPutsTheItemsOwnXmlOnTheClipboard_data(); }
