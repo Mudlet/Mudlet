@@ -938,6 +938,8 @@ void cTelnet::slot_send_login()
     const bool passwordStepArmed = mpHost->hasAutoLoginCredentials();
     if (passwordStepArmed) {
         mTimerPass->start(autoLoginDelay(qsl("autoLoginPasswordDelay"), AUTO_LOGIN_PASSWORD_DELAY_MS));
+    } else {
+        mpHost->reportUnreadableSavedPassword();
     }
     setAutoLoginPending(passwordStepArmed);
 }
@@ -968,6 +970,8 @@ void cTelnet::slot_send_pass()
     // The box may open for the player; their first character cancels a late send
     setAutoLoginPending(false);
     qDebug() << "Auto-login: reached the password step with no password yet - holding the place for one that arrives later";
+    // A lookup still out at the login step may have been refused since
+    mpHost->reportUnreadableSavedPassword();
 }
 
 // A password that turned up after the auto-login had already passed the password step, which is
@@ -4757,8 +4761,14 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
     }
 
     if (data.trimmed().isEmpty()) { // Example: Core.Ping
+        data = qsl("{}");
+        // A bare Client.Media.Stop or Pause means all of the game's media, so TMedia gets the empty object too
+        const bool allMedia = !packageMessage.compare(qsl("Client.Media.Stop"), Qt::CaseInsensitive) || !packageMessage.compare(qsl("Client.Media.Pause"), Qt::CaseInsensitive);
+        if (mpHost->mAcceptServerMedia && allMedia) {
+            mpHost->mpMedia->parseGMCP(packageMessage, data);
+        }
         // Pass empty table/object to Lua
-        mpHost->mLuaInterpreter.setGMCPTable(packageMessage, qsl("{}"));
+        mpHost->mLuaInterpreter.setGMCPTable(packageMessage, data);
         return;
     }
 

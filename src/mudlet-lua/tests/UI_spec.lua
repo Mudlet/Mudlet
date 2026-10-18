@@ -2505,6 +2505,125 @@ describe("Tests UI functions", function()
       assert.is_false(BaseUI.dormant())
     end)
 
+    -- A profile has one map widget, and a game's Client.GUI package that embeds a
+    -- mapper opens it before sysServerGuiInstalled has stood this UI aside
+    describe("when the map opens with map data in the profile", function()
+      local saved, createMapper
+
+      before_each(function()
+        saved = { container = BaseUI.container, map = BaseUI.map, placeholder = BaseUI.mapPlaceholder }
+        BaseUI.container = BaseUI.container or { hide = function() end, adjustBorder = function() end }
+        BaseUI.map, BaseUI.mapPlaceholder = nil, nil
+        BaseUI.settings.hidden, BaseUI.settings.standingAside = nil, nil
+        stub(BaseUI, "mapHasData", true)
+        stub(BaseUI, "layoutDock")
+        createMapper = stub(BaseUI, "createMapper")
+      end)
+
+      after_each(function()
+        BaseUI.mapHasData:revert()
+        BaseUI.layoutDock:revert()
+        BaseUI.createMapper:revert()
+        BaseUI.container, BaseUI.map, BaseUI.mapPlaceholder = saved.container, saved.map, saved.placeholder
+      end)
+
+      it("should not look again once the starter UI has been uninstalled", function()
+        local timer = stub(_G, "tempTimer")
+        -- busted leaves a stub in place when the spec that made it raises
+        local looked, lookError = pcall(BaseUI.checkMapData, "mapOpenEvent")
+        _G.tempTimer:revert()
+        assert.is_true(looked, tostring(lookError))
+        assert.stub(timer).was_called(1)
+        local lookAgain = timer.calls[1].vals[2]
+        local ui = BaseUI
+        _G.BaseUI = nil
+        local ok, err = pcall(lookAgain)
+        _G.BaseUI = ui
+        assert.is_true(ok, tostring(err))
+      end)
+
+      if not os.getenv("MUDLET_TEST_MODE") then
+        it("needs test mode", function()
+          pending("the map is taken on a timer, which only pumpEvents() runs")
+        end)
+        return
+      end
+
+      -- raised, not called, so the handlers are shown passing the event on; centerview()
+      -- raises sysMapAreaChanged at once, so a package loading its map raises it mid-install
+      for _, event in ipairs({ "mapOpenEvent", "sysMapAreaChanged", "sysMapDownloadEvent", "gmcp.Room.Info", "gmcp.room.info" }) do
+        it("should leave the map to a game interface that raises " .. event .. " while being installed", function()
+          raiseEvent(event)
+          BaseUI.standAside("sysServerGuiInstalled", "SomeGameUI")
+          pumpEvents(100)
+          assert.stub(createMapper).was_not_called()
+        end)
+
+        it("should still take the map on " .. event .. " when no game interface claims it", function()
+          raiseEvent(event)
+          pumpEvents(100)
+          assert.stub(createMapper).was_called(1)
+        end)
+      end
+    end)
+
+    -- the game's interface can be drawing on the profile's one map widget by the
+    -- time this UI stands aside holding it, and hiding an embedded mapper shrinks it.
+    -- Returns whether the game's geometry was applied again after the last shrink.
+    local function standAsideHoldingMap(floating)
+      local saved = { container = BaseUI.container, map = BaseUI.map }
+      -- a section dragged out of the dock is hidden by layoutDock(), not with the dock
+      stub(BaseUI, "layoutDock", function()
+        if floating then
+          BaseUI.map:hide()
+        end
+      end)
+      local applied = stub(_G, "createMapper")
+      stub(_G, "closeMapWidget")
+      local dock, map, game, appliedCount
+      -- busted leaves a stub in place when the spec that made it raises
+      local ok, err = pcall(function()
+        dock = Geyser.Container:new({ name = "BaseUI_spec_dock", x = 0, y = 0, width = 400, height = 400 })
+        dock.adjustBorder = function() end
+        BaseUI.container = dock
+        map = floating and Geyser.Mapper:new({ name = "BaseUI_spec_map", x = 500, y = 0, width = 200, height = 200 })
+          or Geyser.Mapper:new({ name = "BaseUI_spec_map", x = 0, y = 0, width = "100%", height = "100%" }, dock)
+        BaseUI.map = map
+        game = Geyser.Mapper:new({ name = "BaseUI_spec_gameMap", x = 10, y = 10, width = 300, height = 200 })
+        BaseUI.standAside("sysServerGuiInstalled", "SomeGameUI")
+        appliedCount = #applied.calls
+      end)
+      -- a window left unmade by a raise is a nil the table never holds
+      for _, window in pairs({ game = game, map = map, dock = dock }) do
+        pcall(window.delete, window)
+      end
+      _G.createMapper:revert()
+      _G.closeMapWidget:revert()
+      BaseUI.layoutDock:revert()
+      BaseUI.container, BaseUI.map = saved.container, saved.map
+      assert.is_true(ok, tostring(err))
+      -- every other visible embedded mapper in the profile is put back too, in no set order
+      local shrunkAt, restored = nil, false
+      for i = 1, appliedCount do
+        local x, y, width, height = unpack(applied.calls[i].vals, 2, 5)
+        if width == 0 and height == 0 then
+          shrunkAt, restored = i, false
+        elseif shrunkAt and x == 10 and y == 10 and width == 300 and height == 200 then
+          restored = true
+        end
+      end
+      assert.is_not_nil(shrunkAt, "the starter UI's mapper was never hidden")
+      return restored
+    end
+
+    it("should leave the map widget to the game's own mapper when it stands aside holding the map", function()
+      assert.is_true(standAsideHoldingMap(false))
+    end)
+
+    it("should leave the map widget to the game's own mapper when its map section is out of the dock", function()
+      assert.is_true(standAsideHoldingMap(true))
+    end)
+
     -- runs after the after_each of every spec above it
     it("should leave the main console's borders as it found them", function()
       if dockWasShowing then
