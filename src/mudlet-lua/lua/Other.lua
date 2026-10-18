@@ -1587,6 +1587,7 @@ local configOptions = {
   "mapRoundRooms",
   "mapShowGrid",
   "mapShowRoomBorders",
+  "mapStyle",
   "mapSymbolFont",
   "mapSymbolFontOnlyUseSelected",
   "mapSymbolFontScaling",
