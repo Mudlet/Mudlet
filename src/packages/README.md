@@ -31,5 +31,5 @@ Two packages here are maintained elsewhere and synced in by
 and the IRE mapper, which upstream publishes as a bare `src/mudlet-mapper.xml`
 rather than a package.
 
-Which games get which package is decided in `mudlet::setupPreInstallPackages()`,
+Which games get which package is decided in `HostManager::defaultPackages()`,
 and every archive needs an entry in `src/mudlet.qrc` to be compiled into Mudlet.

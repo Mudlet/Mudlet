@@ -132,6 +132,20 @@ public:
     // a digest of the whole input, as callers file data (e.g. passwords) under it and must not collide.
     static QString sanitizeForPath(const QString& input);
 
+    // What a new profile may be named: ASCII a folder can have on every OS, with the parentheses of a file
+    // manager's copies ("profile (2)"); firstInvalidProfileNameChar() gives the first character outside it,
+    // or a null QChar. profileNameUsableAsIs() is required of every name, those already on disk too: it must
+    // name a folder of its own and have none of the characters sanitizeForPath() rewrites, which
+    // CredentialManager::generateFilePath() refuses, so its password could never be stored.
+    static const QString scmAllowedProfileNameChars;
+    static QChar firstInvalidProfileNameChar(const QString& name);
+    static bool profileNameUsableAsIs(const QString& name);
+    static bool gamePortUsable(int port) { return port >= 1 && port <= 65535; }
+    // Why the connection dialog would not take this game server address and port with TLS as given (which
+    // needs SSL support), translated, or an empty string. The host is trimmed here; none at all, like a port
+    // of 0, is left for the connect to report.
+    static QString connectionDetailsProblem(const QString& host, int port, bool tls);
+
     static QString readProfileData(const QString& profile, const QString& item);
 
     // Creates the profile's directory if missing, so writing for a nonexistent profile brings it into being
@@ -224,6 +238,7 @@ private:
     friend class FeatureCalloutTest;
     // Sets the password preference as Mudlet.ini would, with no main window and no pool
     friend class CredentialManagerKeychainTest;
+    friend class HeadlessSessionTest;
     // Discards any settings store built under the previous root - and with it any
     // pointer a caller cached, so this must not run once init() has handed the
     // store to the Updater. portable says whether the root came from a

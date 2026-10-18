@@ -171,6 +171,7 @@ class Host : public QObject
     friend class TelnetLatePasswordTest;
     friend class PasswordEntryPolicyTest;
     friend class PasswordEntryTest;
+    friend class HeadlessSessionTest;
     // Allows the functional test to size its archives past the unpacking dialog's threshold:
     friend class PackageRemovalSaveTeardownTest;
     // Allows the functional test to put a recording view in place of the null one:
@@ -217,6 +218,17 @@ public:
     void setLogin(const QString& login) { mLogin = login; }
     QString& getPass() { return mPass; }
     void setPass(const QString& password) { mPass = password; }
+    // One given for this run, as a headless frontend's option is, which the stored one does not replace; an
+    // empty one is none. Copied whole, as the caller's secureStringClear() zeroes its own only while nothing
+    // shares it.
+    void givePass(const QString& password)
+    {
+        if (password.isEmpty()) {
+            return;
+        }
+        mPass = QString(password.constData(), password.size());
+        mPassGiven = true;
+    }
     // A password still being fetched from the keychain counts: the auto-login is timer based, so
     // the password step has to be armed before the read that answers it comes back, or there is
     // no prompt left for a late answer to be typed at.
@@ -297,8 +309,9 @@ public:
     // What deletionMustWait() answers, without asking anything to stop
     bool deletionWouldWait() const;
 
-    // The profile load, in this order, with the GUI doing its window work between the steps. The first
-    // returns true when the profile has no save of its own yet, so the GUI adds the default packages.
+    // The profile load, in this order, as the GUI and HostManager::openProfile() run it, the GUI doing its
+    // window work between the steps. The first returns true when the profile has no save of its own yet,
+    // so the default packages are added.
     bool loadProfileSave(const QString& saveFileName);
     void startProfileScripts();
     void loadMapAndConnect(bool connect);
@@ -477,12 +490,16 @@ public:
 
     void updateDisplayDimensions();
 
-    // false: the string is why the install was refused. true: installed, or queued if a profile save was
-    // running, and the string lists "<item name>: <error>" per item whose Lua failed. Empty with true is
-    // not "all well": a queued install, an unreadable config.lua and an
-    // XML that stopped part-way report themselves on the console instead.
-    std::pair<bool, QString> installPackage(const QString& fileName, enums::PackageModuleType thing, bool quiet = false);
+    // false: the string is why the install was refused. true: installed, or queued behind a profile save,
+    // with "<item name>: <error>" for each item whose Lua failed, as Lua's installPackage() hands it to
+    // scripts. An unreadable config.lua (not said during a module sync) or XML that stopped part-way goes to the
+    // console and, when given, problems, not the string; a queued install reports nothing.
+    std::pair<bool, QString> installPackage(const QString& fileName, enums::PackageModuleType thing, bool quiet = false, QStringList* problems = nullptr);
+    // installPackage()'s reason for refusing a package under a name a package already has
+    static QString packageAlreadyInstalledReason(const QString& packageName) { return qsl("package %1 is already installed").arg(packageName); }
     bool uninstallPackage(const QString&, enums::PackageModuleType thing);
+    // The name a package file is installed under, unless its manifest renames it
+    QString sanitizePackageName(const QString packageName) const;
     bool removeDir(const QString&, const QString&);
     // whyNotRead, when given, is set to why no manifest came back - telling a
     // config.lua that would not run apart from one that simply names no package
@@ -1395,7 +1412,6 @@ private:
     void startMapAutosave(const int interval);
     void timerEvent(QTimerEvent* event) override;
     void autoSaveMap();
-    QString sanitizePackageName(const QString packageName) const;
     void closeChildren();
     void installModulesList(const QStringList&);
     void setupSandboxedLuaState(lua_State* L);
@@ -1467,6 +1483,7 @@ private:
     QString mTriggerHaystack;
     QString mLogin;
     QString mPass;
+    bool mPassGiven = false;
     bool mSecuredPasswordPending = false;
 
     int mPort;

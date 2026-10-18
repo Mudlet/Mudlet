@@ -22,6 +22,7 @@
 
 #include "Host.h"
 #include "MudletApp.h"
+#include "SecureStringUtils.h"
 #include "THeadlessSession.h"
 #include "TriggerMatchPool.h"
 #include "utils.h"
@@ -515,7 +516,24 @@ QString helpText()
                                        "the commands sent and the error console, goes to standard error.\n"
                                        "\n"
                                        "Options:\n"
-                                       "  -p, --profile <profile>  the profile to open and connect.\n"
+                                       "  -p, --profile <profile>  the profile to open, and connect unless --offline is\n"
+                                       "                           given; with --host, it is made if there is none.\n"
+                                       "  --host <host>            the game server to connect to, stored in the profile\n"
+                                       "                           as the connection dialog stores it; a profile that\n"
+                                       "                           does not exist yet is made, and set up as the dialog\n"
+                                       "                           sets one up.\n"
+                                       "  --port <port>            the game server's port, stored likewise.\n"
+                                       "  --tls, --no-tls          connects with TLS, or without it, stored likewise.\n"
+                                       "  --login <name>           the character name to log in with, stored likewise.\n"
+                                       "  --password-env <var>     the environment variable holding the character's\n"
+                                       "                           password, for this run only; it is not stored. One\n"
+                                       "                           that is not set or is empty is a command line error.\n"
+                                       "  --offline                opens the profile without connecting, as the dialog's\n"
+                                       "                           Offline button does.\n"
+                                       "  --package <file>         installs a package once the profile has loaded; give\n"
+                                       "                           it more than once to install several. One already\n"
+                                       "                           installed under the same name is left as it is,\n"
+                                       "                           working or not, and said so on standard error.\n"
                                        "  -e, --exec <lua>         runs Lua code once the profile has loaded; give it\n"
                                        "                           more than once to run several pieces in order.\n"
                                        "  --no-stdin               does not read standard input, as for a background\n"
@@ -528,21 +546,26 @@ QString helpText()
                                        "\n"
                                        "Standard input is read once the connection is made, so that no line of it goes\n"
                                        "before the game can take it; one read while there is no connection, as after it\n"
-                                       "failed or ended, runs the profile's aliases but is not sent.\n"
+                                       "failed or ended, runs the profile's aliases but is not sent. With --offline it\n"
+                                       "is read at once.\n"
                                        "\n"
-                                       "Lua given with -e runs before the connection is made, so a command it sends\n"
-                                       "the game is lost; send it from a sysConnectionEvent handler instead.\n"
+                                       "Packages and -e Lua usually run before the connection is made, so a command\n"
+                                       "they send the game may be lost; send it from a sysConnectionEvent handler\n"
+                                       "instead.\n"
                                        "\n"
                                        "The profile is saved as it closes; when closeProfile() closes it, only if its\n"
                                        "\"Auto save on exit\" setting is on. Exit status:\n"
                                        "  0      the profile closed, as closeMudlet() or closeProfile() do, standard\n"
                                        "         input ended, or standard output's reader went away.\n"
                                        "  1      the profile could not be opened, it, or a profile one of its scripts\n"
-                                       "         opened, could not be saved, Lua given with -e failed or sent the game\n"
-                                       "         something before the connection was made, standard input could not be\n"
-                                       "         read, or a line of it was refused while another profile loaded or sent\n"
-                                       "         the game something while there was no connection.\n"
-                                       "  2      the command line was wrong.\n"
+                                       "         opened, could not be saved, a package could not be installed or not\n"
+                                       "         all of it works, Lua given with -e failed, without --offline a\n"
+                                       "         package or -e Lua sent the game something before the connection was\n"
+                                       "         made, standard input could not be read, or a line of it was refused\n"
+                                       "         while another profile loaded or, without --offline, sent the game\n"
+                                       "         something while there was no connection.\n"
+                                       "  2      the command line was wrong, such as a new profile's name, or\n"
+                                       "         connection details, the connection dialog would not take.\n"
                                        "  3      standard output was closed when the run began, or could not be\n"
                                        "         written, other than by its reader going away, as `| head` does.\n"
                                        "  4      the connection ended or could not be made, with --exit-on-disconnect;\n"
@@ -550,7 +573,7 @@ QString helpText()
                                        "  128+n  signal n (SIGHUP, SIGINT or SIGTERM) ended the run.\n"
                                        "Where more than one applies, the first of these is given: 1 for a profile that\n"
                                        "could not be saved, then 128+n, 3, 4, and 1 for the rest. A profile that could\n"
-                                       "not be opened always gives 1.\n"
+                                       "not be opened always gives 1, or 2 as above.\n"
                                        "Report bugs to: https://github.com/Mudlet/Mudlet/issues")
             .arg(QLatin1String(APP_TARGET));
 }
@@ -629,6 +652,22 @@ int main(int argc, char* argv[])
     parser.addOption(noStdinOption);
     const QCommandLineOption exitOnDisconnectOption(qsl("exit-on-disconnect"), qsl("Exit once the connection ends"));
     parser.addOption(exitOnDisconnectOption);
+    const QCommandLineOption hostOption(qsl("host"), qsl("Game server to connect to"), qsl("host"));
+    parser.addOption(hostOption);
+    const QCommandLineOption portOption(qsl("port"), qsl("Port of the game server"), qsl("port"));
+    parser.addOption(portOption);
+    const QCommandLineOption tlsOption(qsl("tls"), qsl("Connect with TLS"));
+    parser.addOption(tlsOption);
+    const QCommandLineOption noTlsOption(qsl("no-tls"), qsl("Connect without TLS"));
+    parser.addOption(noTlsOption);
+    const QCommandLineOption loginOption(qsl("login"), qsl("Character name to log in with"), qsl("name"));
+    parser.addOption(loginOption);
+    const QCommandLineOption passwordEnvOption(qsl("password-env"), qsl("Environment variable holding the character's password"), qsl("variable"));
+    parser.addOption(passwordEnvOption);
+    const QCommandLineOption offlineOption(qsl("offline"), qsl("Open the profile without connecting"));
+    parser.addOption(offlineOption);
+    const QCommandLineOption packageOption(qsl("package"), qsl("Package to install once the profile has loaded"), qsl("file"));
+    parser.addOption(packageOption);
 
     // Help and version need no platform plugin, so they are answered before there is one. Qt's own options
     // are still in this list, so it is read leniently, and single-dash words whole, as the GUI's src/main.cpp
@@ -682,13 +721,50 @@ int main(int argc, char* argv[])
     } else if (!parser.positionalArguments().isEmpty()) {
         //: %1 is what was given on the command line that is not an option
         exitCode = usageError(QCoreApplication::translate("headless", "Unexpected argument '%1'.").arg(parser.positionalArguments().constFirst()));
-    } else if (parser.value(profileOption).isEmpty()) {
+    } else if (parser.value(profileOption).trimmed().isEmpty()) {
         //: Command line error of the headless runner; -p is the option that names the profile to run
         exitCode = usageError(QCoreApplication::translate("headless", "No profile was given; name one with -p."));
-    } else if (parser.values(profileOption).size() > 1) {
-        // Last-wins would quietly drop one, where the GUI opens every -p it is given
-        //: Command line error of the headless runner; %1 is an option, such as --profile
-        exitCode = usageError(QCoreApplication::translate("headless", "%1 was given more than once.").arg(qsl("--profile")));
+    } else if (parser.isSet(tlsOption) && parser.isSet(noTlsOption)) {
+        //: Command line error of the headless runner
+        exitCode = usageError(QCoreApplication::translate("headless", "--tls and --no-tls cannot both be given."));
+    }
+    // Last-wins would quietly drop one; for -p the GUI would open each
+    for (const QCommandLineOption* option : {&profileOption, &hostOption, &portOption, &loginOption, &passwordEnvOption}) {
+        if (exitCode == exitOk && parser.values(*option).size() > 1) {
+            //: Command line error of the headless runner; %1 is an option, such as --host
+            exitCode = usageError(QCoreApplication::translate("headless", "%1 was given more than once.").arg(qsl("--") + option->names().constLast()));
+        }
+    }
+    // Empty, as from a variable that is not set, is refused rather than taken for not given, which is leaving it out
+    for (const auto& [option, given] : {std::pair{&hostOption, parser.value(hostOption).trimmed()}, std::pair{&loginOption, parser.value(loginOption).trimmed()}}) {
+        if (exitCode == exitOk && parser.isSet(*option) && given.isEmpty()) {
+            //: Command line error of the headless runner; %1 is an option, such as --host
+            exitCode = usageError(QCoreApplication::translate("headless", "%1 was given nothing; leave it out to keep what the profile has stored.").arg(qsl("--") + option->names().constFirst()));
+        }
+    }
+    THeadlessSession::Options options{.profile = parser.value(profileOption), .connect = !parser.isSet(offlineOption), .host = parser.value(hostOption), .login = parser.value(loginOption)};
+    if (parser.isSet(tlsOption) || parser.isSet(noTlsOption)) {
+        options.tls = parser.isSet(tlsOption);
+    }
+    if (bool isNumber = false; exitCode == exitOk && parser.isSet(portOption)) {
+        options.port = parser.value(portOption).toInt(&isNumber);
+        // Its range is the session's to check, as for any frontend; 0 there keeps what is stored
+        if (!isNumber || !options.port) {
+            //: Command line error of the headless runner; %1 is what was given as the port
+            exitCode = usageError(QCoreApplication::translate("headless", "The port must be a number from 1 to 65535, not '%1'.").arg(parser.value(portOption)));
+        }
+    }
+    if (exitCode == exitOk && parser.isSet(passwordEnvOption)) {
+        // Read, never shown: the variable's name is all that is ever reported
+        const QByteArray variable = parser.value(passwordEnvOption).toLocal8Bit();
+        options.password = qEnvironmentVariable(variable.constData());
+        // Before any script runs, as os.getenv() and the programs os.execute() starts would read it
+        qunsetenv(variable.constData());
+        if (options.password.isEmpty()) {
+            //: Command line error of the headless runner; %1 is the name of an environment variable
+            exitCode = usageError(
+                    QCoreApplication::translate("headless", "The environment variable %1 is not set or is empty, so there is no password to log in with.").arg(parser.value(passwordEnvOption)));
+        }
     }
     if (exitCode == exitOk && standardOutputClosed) {
         writeLine(stderr, outputErrorMessage(EBADF));
@@ -797,14 +873,14 @@ int main(int argc, char* argv[])
     bool inputDropped = false;
     // The GUI runs the aliases of a command typed while there is no connection, then echoes it and drops it
     // with nothing said. Here a line that sent the game something so lost, read before the connection was made,
-    // after it ended or when it could not be made, is counted and fails the run. A timer's or event
-    // handler's send lost while the line's aliases run an event loop is counted against the line too.
+    // after it ended or when it could not be made, is counted and fails the run, unless --offline was given. A
+    // timer's or event handler's send lost while the line's aliases run an event loop is counted against the line too.
     bool everConnected = false;
     int linesNotSent = 0;
     // Commands lost by lines handled inside the running one, as when its alias runs an event loop, so it is not
     // charged for them too
     int nestedNotWritten = 0;
-    input->onLine = [&session, &errors, &inputClosedReported, &inputDropped, &linesNotSent, &nestedNotWritten](const QString& line) {
+    input->onLine = [&session, &errors, &inputClosedReported, &inputDropped, &linesNotSent, &nestedNotWritten, &options](const QString& line) {
         const QPointer<const Host> pSending = session->host();
         const int notWrittenBefore = pSending ? pSending->mTelnet.gameCommandsNotWritten() : 0;
         const int outerNested = std::exchange(nestedNotWritten, 0);
@@ -813,7 +889,7 @@ int main(int argc, char* argv[])
         const int ownLost = lost - nestedNotWritten;
         nestedNotWritten = outerNested + lost;
         if (submitted) {
-            if (ownLost > 0) {
+            if (options.connect && ownLost > 0) {
                 ++linesNotSent;
                 inputDropped = true;
             }
@@ -838,8 +914,8 @@ int main(int argc, char* argv[])
         quit();
     };
 
-    // Started after the -e steps, once the connection is made or the attempt fails, so nothing typed goes before
-    // the game can take it
+    // Started after the --package and -e steps, once the connection is made or the attempt fails, so nothing
+    // typed goes before the game can take it
     bool stepsRun = false;
     bool attemptEnded = false;
     bool readerStarted = false;
@@ -861,17 +937,29 @@ int main(int argc, char* argv[])
     });
 
     bool luaFailed = false;
-    const THeadlessSession::Options options{.profile = parser.value(profileOption), .connect = true};
+    bool packageFailed = false;
     const THeadlessSession::StartResult started = session->start(options);
+    SecureStringUtils::secureStringClear(options.password);
     if (started == THeadlessSession::StartResult::started) {
         // Not ended by output that cannot be written, which leaves the profile running and its steps to do
         const auto stepsEnded = [&]() {
             drainStopSignals();
             return stopSignal || disconnected || !session->host() || session->host()->closeStarted();
         };
-        // It runs before the connection is made, so what it sends the game is lost
+        // They usually run before the connection is made, so what they send the game may be lost
         const QPointer<const Host> pStepsHost = session->host();
         const int notWrittenBeforeSteps = pStepsHost ? pStepsHost->mTelnet.gameCommandsNotWritten() : 0;
+        // Before the Lua, which may count on them and on what their install handlers set up
+        for (const QString& package : parser.values(packageOption)) {
+            if (stepsEnded()) {
+                break;
+            }
+            const THeadlessSession::PackageResult result = session->installPackage(package);
+            if (result != THeadlessSession::PackageResult::installed) {
+                packageFailed = packageFailed || result != THeadlessSession::PackageResult::alreadyInstalled;
+                errors.report(session->errorString());
+            }
+        }
         for (const QString& code : parser.values(execOption)) {
             if (stepsEnded()) {
                 break;
@@ -885,17 +973,17 @@ int main(int argc, char* argv[])
                 }
             }
         }
-        const int stepsNotSent = pStepsHost ? pStepsHost->mTelnet.gameCommandsNotWritten() - notWrittenBeforeSteps : 0;
+        const int stepsNotSent = options.connect && pStepsHost ? pStepsHost->mTelnet.gameCommandsNotWritten() - notWrittenBeforeSteps : 0;
         if (stepsNotSent > 0) {
-            //: Error from the headless runner; %1 is how many commands Lua given with -e sent the game before the connection was made, which were lost
+            //: Error from the headless runner; %1 is how many commands packages and Lua given with -e sent the game before the connection was made, which were lost
             errors.report(QCoreApplication::translate("headless",
-                                                      "Lua given with -e sent the game commands before there was a connection to send them to; send from a sysConnectionEvent handler "
+                                                      "a package or Lua given with -e sent the game commands before there was a connection to send them to; send from a sysConnectionEvent handler "
                                                       "instead; commands not sent: %1")
                                   .arg(stepsNotSent));
         }
         drainStopSignals();
         stepsRun = true;
-        // Its signal may still be queued
+        // --offline has no connection to wait for; one already made may still have its signal queued
         if (!options.connect || (session->host() && session->host()->mTelnet.getConnectionState() == QAbstractSocket::ConnectedState)) {
             everConnected = true;
         }
@@ -934,11 +1022,16 @@ int main(int argc, char* argv[])
             exitCode = exitOutputFailed;
         } else if (disconnected) {
             exitCode = exitDisconnected;
-        } else if (luaFailed || stepsNotSent > 0 || inputFailed || inputDropped) {
+        } else if (luaFailed || packageFailed || stepsNotSent > 0 || inputFailed || inputDropped) {
             exitCode = exitFailed;
         }
     } else {
-        errors.report(session->errorString());
+        // A new profile's name, or connection details, that the connection dialog would not take came from the
+        // command line
+        exitCode = started == THeadlessSession::StartResult::invalidName || started == THeadlessSession::StartResult::invalidConnectionDetails ? usageError(session->errorString()) : exitFailed;
+        if (exitCode == exitFailed) {
+            errors.report(session->errorString());
+        }
         // One whose save did not load keeps its last good save; any other its scripts opened is saved
         if (!session->shutdown(true)) {
             errors.report(session->errorString());
@@ -947,7 +1040,6 @@ int main(int argc, char* argv[])
             //: Error from the headless runner when a profile it closed could not be saved; %1 is its name
             errors.report(QCoreApplication::translate("headless", "The profile \"%1\" could not be saved.").arg(profile));
         }
-        exitCode = exitFailed;
     }
     errors.endLine();
     session.reset();

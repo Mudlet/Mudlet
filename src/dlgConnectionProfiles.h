@@ -27,7 +27,6 @@
 #include <functional>
 #include <optional>
 #include <QHash>
-#include <QRegularExpression>
 #include <QTimer>
 #include <QKeyEvent>
 
@@ -59,11 +58,7 @@ public:
     QList<QListWidgetItem*> findData(const QListWidget& listWidget, const QVariant& what, const int role = Qt::UserRole) const;
     QList<int> findProfilesBeginningWith(const QString&) const;
     static const int csmNameRole{Qt::UserRole};
-    static QChar firstInvalidProfileNameChar(const QString& name);
-    static bool profileNameUsableAsIs(const QString& name);
     static QString profileFolderPath(const QString& profilesPath, const QString& profile);
-    static const QString scmAllowedProfileNameChars;
-    static const QRegularExpression scmUnusableProfileNameChars;
     // files whose presence alone does not warrant confirming a profile's removal
     static const QStringList scmConnectionDetailFiles;
     // a testing aid rather than a game, and the one list entry that is offered
