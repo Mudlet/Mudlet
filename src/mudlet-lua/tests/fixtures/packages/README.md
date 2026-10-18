@@ -37,6 +37,9 @@ deliberately.
 | `mudlet-spec-manifestonly` | archive with a `config.lua` and no package XML, so its details are filed before it is refused |
 | `mudlet-spec-notazip.mpackage` | not a zip archive at all, for the unpacking error path |
 | `mudlet-spec-badxml` | archive whose package XML is truncated, so the import fails after the package is registered |
+| `mudlet-spec-unreadablexml` | archive whose package file is plain text, so nothing can be read out of it and the package is refused |
+| `mudlet-spec-straynotes` | archive whose valid package XML has a plain-text `a-notes.xml` beside it that is read first, so the stray file alone must not get the package refused |
+| `mudlet-spec-emptywithstray` | archive whose package XML is valid but empty, with the same plain-text `a-notes.xml` beside it, so it is installed with a warning rather than refused |
 | `mudlet-spec-partialxml` | archive whose package XML stops after one alias and one script, so those items import and the load still fails |
 | `mudlet-spec-emptyname` | archive whose `config.lua` asks for a name that trims away to nothing, so there is no name to install under |
 | `mudlet-spec-badconfig` | archive whose `config.lua` names the package and then raises, so the whole manifest is lost and the file name is used |
@@ -46,6 +49,7 @@ deliberately.
 | `mudlet-spec-renamer` | archive whose `config.lua` installs it under a different name (`mudlet-spec-renamed`) than the file it came in |
 | `mudlet-spec-dotted` | archive whose `config.lua` names it with a `.xml` on the end, which is trimmed off before it is installed |
 | `mudlet-spec-nested` | archive whose `config.lua` name hides a second ending under the first, so one pass over it and two give different answers |
+| `mudlet-spec-claimsmedia` | archive whose `config.lua` asks to be installed as `media`, the folder the profile keeps downloaded sounds in, which is refused whether that folder exists yet or not |
 | `mudlet-spec-renamer2` | the same installed name as `mudlet-spec-renamer` but different details, so a refused install's effect on them is observable |
 | `mudlet-spec-varsonly` | archive holding one variable and no items at all, so a module of it installs and runs while every unit an uninstall clears stays empty |
 | `sources/mudlet-spec-badxml-bare` | bare package XML that is truncated, for the same failure reached without an archive around it |

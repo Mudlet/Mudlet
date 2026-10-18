@@ -152,10 +152,11 @@ void TEasyButtonBar::addActionButtons(TAction* pAction)
         // This applies the CSS for THIS TAction to a CHILD's representation on the Toolbar
         pTFlipButton->setStyleSheet(pAction->css);
 
-        //FIXME: Heiko April 2012: only run checkbox button scripts, but run them even if unchecked
+        // Restoring a push-down button runs its script whether it is up or down, but
+        // neither of its commands is sent: they belong to a click
         if (pTAction->isPushDownButton() && pAction->mpHost->mIsProfileLoadingSequence) {
             qDebug() << "addActionButtons() name=" << pTAction->getName() << " executing script";
-            pTAction->execute();
+            pTAction->runScript();
         }
 
 
@@ -208,9 +209,9 @@ void TEasyButtonBar::fillMenu(TAction* pAction, QMenu* pMenu)
 
         mpTAction->mpHost->mainConsoleView()->replaceActionMenuEntry(pTAction, pEAction);
 
-        //FIXME: Heiko April 2012 -> addActionButtons()
+        // See addActionButtons()
         if (pTAction->isPushDownButton() && pAction->mpHost->mIsProfileLoadingSequence) {
-            pTAction->execute();
+            pTAction->runScript();
         }
 
         if (pTAction->isFolder()) {
