@@ -4313,8 +4313,8 @@ private slots:
         QVERIFY2(diorama.labels > 0 && diorama.names > 0, qPrintable(qsl("%1 labels and %2 names drawn").arg(diorama.labels).arg(diorama.names)));
         QCOMPARE(diorama.deferredLabels, diorama.labels);
         QCOMPARE(diorama.deferredNames, diorama.names);
-        const int near = widget.mThemedLabels.value({areaId, labelId}).sharpness;
-        QVERIFY2(near > 1, qPrintable(qsl("a label shown larger than its picture is drawn at %1 times it").arg(near)));
+        const int closeUp = widget.mThemedLabels.value({areaId, labelId}).sharpness;
+        QVERIFY2(closeUp > 1, qPrintable(qsl("a label shown larger than its picture is drawn at %1 times it").arg(closeUp)));
         widget.setCameraPosition(8.0f, 40.0f, CameraController::scmNorthUpAzimuth);
         widget.updateMatrices();
         widget.mRenderCommandQueue.clear();

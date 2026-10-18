@@ -269,9 +269,9 @@ private slots:
     {
         QCOMPARE(MapDecals::outlineWidth(1000.0), MapDecals::scmOutlineWidth);
         QCOMPARE(MapDecals::outlineWidth(0.0), MapDecals::scmOutlineWidth);
-        const qreal far = MapDecals::outlineWidth(20.0);
-        QVERIFY2(far * 20.0 >= MapDecals::scmOutlineMinPixels, qPrintable(qsl("%1 pixels").arg(far * 20.0)));
-        QVERIFY(far < MapDecals::scmOutlineMaxWidth);
+        const qreal farOff = MapDecals::outlineWidth(20.0);
+        QVERIFY2(farOff * 20.0 >= MapDecals::scmOutlineMinPixels, qPrintable(qsl("%1 pixels").arg(farOff * 20.0)));
+        QVERIFY(farOff < MapDecals::scmOutlineMaxWidth);
         QCOMPARE(MapDecals::outlineWidth(5.0), MapDecals::scmOutlineMaxWidth);
         // At its widest, its glow still fades out inside its picture rather than being cut off by its edge
         const QImage widest = MapDecals::highlight(MapStyle::HighlightShape::Outline, Qt::red, Qt::white, false, scmSize, MapDecals::scmOutlineMaxWidth);
