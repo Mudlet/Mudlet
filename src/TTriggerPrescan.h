@@ -60,6 +60,9 @@ public:
     // Fills `out` in root-list order. `scratch` is caller-owned so a trigger script feeding text back
     // through the pipeline cannot disturb an outer pass.
     void candidates(const QString& line, std::vector<int>& scratch, std::vector<int>& out) const;
+    // Only the filed slots the line's n-grams hit, in no particular order and without the unfilterable
+    // ones, for a caller that marks slots rather than walks them.
+    void hits(const QString& line, std::vector<int>& out) const;
 
 private:
     // Below this the plain walk is cheaper than filtering it.

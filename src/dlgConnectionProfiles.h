@@ -27,6 +27,7 @@
 #include <functional>
 #include <optional>
 #include <QHash>
+#include <QPointer>
 #include <QRegularExpression>
 #include <QTimer>
 #include <QKeyEvent>
@@ -61,6 +62,9 @@ public:
     static const int csmNameRole{Qt::UserRole};
     static QChar firstInvalidProfileNameChar(const QString& name);
     static bool profileNameUsableAsIs(const QString& name);
+    // Whether a removed profile's saved sign-in is still being deleted under this name; see
+    // namesWithSignInBeingRemoved(). For anything that creates a profile outside this dialog, such as a telnet:// link.
+    static bool signInRemovalPending(const QString& name);
     static QString profileFolderPath(const QString& profilesPath, const QString& profile);
     static const QString scmAllowedProfileNameChars;
     static const QRegularExpression scmUnusableProfileNameChars;
@@ -151,8 +155,8 @@ private:
     // counted, because the same name can be removed again before the first removal answers.
     static QHash<QString, int>& namesWithSignInBeingRemoved();
     static QString removalKey(const QString& name);
-    static bool signInRemovalPending(const QString& name);
-    static void forgetSignInOfRemovedProfile(const QString& profile);
+    // passwordsRemoved: whether the profile's saved passwords were deleted; the player is told if they or the sign-in were not
+    static void forgetSignInOfRemovedProfile(const QString& profile, QPointer<dlgConnectionProfiles> dialog, bool passwordsRemoved);
     // Test-only: when set, it is handed each removal of a removed profile's sign-in to start, so a test
     // can hold one back the way a slow keychain does
     static std::function<void(std::function<void()> startRemoval)>& signInRemovalStarterForTesting();

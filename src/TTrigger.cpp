@@ -565,6 +565,8 @@ static void pcre2_match_data_deleter(pcre2_match_data* pointer)
 }
 
 quint64 TTrigger::smStructureGeneration = 0;
+quint32 TTrigger::smLineStamp = 0;
+int TTrigger::smPassDepth = 0;
 quint64 TTrigger::smRegexSearches = 0;
 quint32 TTrigger::smPrescanPassId = 0;
 quint32 TTrigger::smPrescanPassIdCounter = 0;
@@ -796,6 +798,61 @@ void TTrigger::rebuildPrescanGrams()
     }
     mPatternBigrams = std::move(patternBigrams);
     invalidatePrescan();
+    invalidateTreeIndex();
+}
+
+void TTrigger::invalidateTreeIndex()
+{
+    // A root is never filed, so the temporary triggers scripts arm every line cost no rebuild
+    if (mpHost && (mTreeIndexPosition >= 0 || getParent())) {
+        if (auto* unit = mpHost->getTriggerUnit()) {
+            unit->unfileTreeNode(this);
+        }
+    }
+}
+
+bool TTrigger::verifySkippable(const TUtf8Subject& subject, const QString& haystack, const int line, const int posOffset, const TBigramFilter* pLineBigrams)
+{
+    // A multiline trigger can act by opening a state without firing
+    const size_t statesBefore = mConditionMap.size();
+    const bool fired = match(subject, haystack, line, posOffset, pLineBigrams, false);
+    if (fired || mConditionMap.size() != statesBefore) {
+        qWarning().nospace() << "TTrigger tree index MISS: trigger " << mName << " (id " << mID << ", patterns " << mPatterns << ") acted on line " << line << ": " << haystack.left(160);
+    }
+    return fired;
+}
+
+bool TTrigger::treeIndexGrams(std::vector<quint64>& grams) const
+{
+    grams.clear();
+    // A line trigger fires on a count, and a trigger without patterns passes every line to its children
+    if (mIsLineTrigger || mPatterns.isEmpty()) {
+        return false;
+    }
+    const int count = mIsMultiline ? 1 : static_cast<int>(mPatterns.size());
+    for (int i = 0; i < count; ++i) {
+        quint64 gram = 0;
+        switch (mPatternKinds.at(i)) {
+        case REGEX_SUBSTRING:
+        case REGEX_BEGIN_OF_LINE_SUBSTRING:
+        case REGEX_EXACT_MATCH:
+            gram = TTriggerPrescan::patternGram(mPatterns.at(i));
+            break;
+        case REGEX_PERL:
+            if (mRegexLiterals[i].matcher) {
+                gram = TTriggerPrescan::patternGram(mRegexLiterals[i].matcher->pattern());
+            }
+            break;
+        default:
+            break;
+        }
+        if (!gram) {
+            grams.clear();
+            return false;
+        }
+        grams.push_back(gram);
+    }
+    return true;
 }
 
 // Call on anything that changes whether or how the trigger can be filtered; the unit refiles it from
@@ -1918,6 +1975,14 @@ bool TTrigger::match(const TUtf8Subject& subject, const QString& haystack, int l
             if (conditionMet || (mPatterns.empty())) {
                 for (auto* triggerNode : *mpMyChildrenList) {
                     auto* trigger = static_cast<TTrigger*>(triggerNode);
+                    // Only against the line itself: a filter chain's children see its captures, and
+                    // the index was built from the text a dropping subject does not carry
+                    if (pLineBigrams && !haystackIsCapture && trigger->skippableForLine() && !subject.dropsText()) {
+                        if (Q_UNLIKELY(TriggerUnit::treeIndexVerifying()) && trigger->verifySkippable(subject, haystack, line, posOffset, pLineBigrams)) {
+                            conditionMet = true;
+                        }
+                        continue;
+                    }
                     if (pLineBigrams && trigger->cannotMatch(*pLineBigrams, haystack) && !subject.dropsText()) {
                         continue;
                     }

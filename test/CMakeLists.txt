@@ -366,6 +366,14 @@ if(NOT WIN32)
     )
 endif()
 
+# GitHub refuses release notes over its size limit, and a refused release publishes
+# nothing at all
+if(NOT WIN32)
+    add_test(NAME ReleaseNotesFitTest
+        COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/ci/release-notes-fit-test.sh
+    )
+endif()
+
 # Checks the milestone lookup that add-milestone runs - the one that matched a
 # title that no longer existed and assigned nothing for months, without ever
 # failing. gh is stubbed, so there is no network and no token
