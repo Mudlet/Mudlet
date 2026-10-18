@@ -129,8 +129,6 @@ private:
     // After QLabel::setText(), which has told a screen reader of the new text already
     void syncTextAnnouncedByQt();
     bool mTextAnnouncedByQt = false;
-    enum class ShownContent { Text, Graphic, Animation };
-    ShownContent mShownContent = ShownContent::Text;
     // A screen reader's press is the label's, not one of a link that happens to sit under its centre
     bool mScreenReaderPress = false;
     bool carriesLink() const;
