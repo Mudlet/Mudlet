@@ -2343,6 +2343,9 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
         }
     }
     const int lineIndex = lineBuffer.size() - 1;
+    if (Q_LIKELY(mpModel)) {
+        emit mpModel->mNotifier.lineCommitted(lineIndex);
+    }
     mCommitLineIndices.append(lineIndex);
     if (!mPendingSelectionStyling.isEmpty() || selectionLinkOpen()) {
         mSelectionStylingFromLine = (mSelectionStylingFromLine < 0) ? lineIndex : std::min(mSelectionStylingFromLine, lineIndex);

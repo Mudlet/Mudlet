@@ -291,6 +291,8 @@ public:
     // Whether deleting the profile now would pull its Lua state or map from under code still running
     // on them; asks a map operation to stop, so the wait ends.
     bool deletionMustWait();
+    // What deletionMustWait() answers, without asking anything to stop
+    bool deletionWouldWait() const;
 
     // The profile load, in this order, with the GUI doing its window work between the steps. The first
     // returns true when the profile has no save of its own yet, so the GUI adds the default packages.

@@ -29,6 +29,7 @@
 #include <QSharedPointer>
 
 #include <chrono>
+#include <functional>
 #include <memory>
 
 class Discord;
@@ -76,7 +77,8 @@ public:
     bool addHost(const QString& name, const QString& port, const QString& login, const QString& pass);
     // Loads and starts a saved profile with no window: what the GUI's load gives, less the default
     // packages a new profile gets. Null when that profile is already open, or the pool is going.
-    Host* openProfile(const QString& name, bool connect);
+    // beforeLoad is handed the profile before its save loads, so a frontend can watch it from the first line.
+    Host* openProfile(const QString& name, bool connect, const std::function<void(Host*)>& beforeLoad = nullptr);
     // A profile tab's close button, with no window: sysExitEvent and the save now, out of the pool once
     // no script of its own is running. False if no such profile is open.
     bool requestProfileClose(const QString& name);

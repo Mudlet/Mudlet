@@ -39,6 +39,7 @@
 #include <QFileInfo>
 #include <QHash>
 #include <QLibraryInfo>
+#include <QLocale>
 #include <QMutex>
 #include <atomic>
 #include <QNetworkRequest>
@@ -49,6 +50,7 @@
 #include <QSettings>
 #include <QSslConfiguration>
 #include <QTextStream>
+#include <QTranslator>
 #include <QUrl>
 
 #if defined(Q_OS_UNIX)
@@ -750,6 +752,80 @@ QSettings::Status MudletApp::earlySettingsStatus(const QString& fileName)
 {
     const QMutexLocker locker(&settingsMutex);
     return smEarlySettingsErrors.value(fileName, QSettings::NoError);
+}
+
+QTranslator* MudletApp::loadTranslationsForCommandLine(const bool printAndExitRun)
+{
+    // Not MudletApp::getQSettings(): it stays null until setupConfig(), which a --help or --version run never
+    // reaches. Same file and format as setupConfig() opens - keep the spellings in step.
+    QSettings settings(qsl("%1/Mudlet.ini").arg(MudletApp::getMudletPath(enums::mainPath)), QSettings::IniFormat);
+    noteEarlySettingsStatus(settings);
+    // By name: only the first reader to parse a file is told of a format error, and the reader before this
+    // one, applyHighDpiRoundingPolicyFromConfig()'s, finds its root from argv[0] so it can have parsed another file
+    const QSettings::Status settingsStatus = earlySettingsStatus(settings.fileName());
+    // Other runs have getQSettings() report this, which a print-and-exit run never calls
+    if (printAndExitRun && settingsStatus == QSettings::FormatError) {
+        // Qt keeps every key it could parse, so a language set there may still be in use
+        qWarning().nospace().noquote() << "MudletApp::loadTranslationsForCommandLine() WARNING - \"" << settings.fileName()
+                                       << "\" is not valid INI, so an interface language set in it may have been read wrongly or not at all.";
+    } else if (printAndExitRun && settingsStatus != QSettings::NoError) {
+        qWarning().nospace().noquote() << "MudletApp::loadTranslationsForCommandLine() WARNING - \"" << settings.fileName()
+                                       << "\" is not readable, so any interface language set in it is not used for this text.";
+    }
+    auto interfaceLanguage = settings.value(QLatin1String("interfaceLanguage")).toString();
+    auto userLocale = interfaceLanguage.isEmpty() ? QLocale::system() : QLocale(interfaceLanguage);
+    if (userLocale == QLocale::c()) {
+        // Other runs have mudlet::readEarlySettings() report a code that names no locale
+        if (printAndExitRun && !interfaceLanguage.isEmpty()) {
+            qWarning().nospace().noquote() << "MudletApp::loadTranslationsForCommandLine() WARNING - the interface language \"" << interfaceLanguage
+                                           << "\" is not a recognised locale, so the command line text is in English.";
+        }
+        return nullptr;
+    }
+    // We only need the Mudlet translations for the Command Line texts, no need
+    // for any Qt ones. Parented to QCoreApplication::instance(), not qApp, which static-casts
+    // to a QApplication that a print-and-exit run has not created.
+    QTranslator* pMudletTranslator = new QTranslator(QCoreApplication::instance());
+    // If we allow the translations to be outside of the resource file inside
+    // the application executable then this will have to be revised to handle
+    // it:
+    const bool isOk = pMudletTranslator->load(userLocale, qsl("mudlet"), QString("_"), qsl(":/lang"), qsl(".qm"));
+    if (!isOk) {
+        // Only a print-and-exit run prints the text this is about
+        if (printAndExitRun && !interfaceLanguage.isEmpty()) {
+            qWarning().nospace().noquote() << "MudletApp::loadTranslationsForCommandLine() WARNING - no translation could be loaded for the interface language \"" << interfaceLanguage
+                                           << "\", so the command line text is in English.";
+        }
+        delete pMudletTranslator;
+        return nullptr;
+    }
+    QCoreApplication::installTranslator(pMudletTranslator);
+    return pMudletTranslator;
+}
+
+void MudletApp::setDefaultMediaBackend()
+{
+    // On Windows, use FFmpeg which supports .ogg/.opus (native backend doesn't).
+    // On macOS, use darwin (AVFoundation) which works better than FFmpeg.
+#if defined(Q_OS_WINDOWS)
+    const QByteArray defaultMediaBackend("ffmpeg");
+#elif defined(Q_OS_MACOS)
+    const QByteArray defaultMediaBackend("darwin");
+#else
+    const QByteArray defaultMediaBackend;
+#endif
+    if (defaultMediaBackend.isEmpty()) {
+        return;
+    }
+    if (!qEnvironmentVariableIsEmpty("QT_MEDIA_BACKEND")) {
+        qDebug().noquote().nospace() << "MudletApp::setDefaultMediaBackend() INFO - QT_MEDIA_BACKEND environmental variable is set to: \"" << qgetenv("QT_MEDIA_BACKEND") << "\".";
+        return;
+    }
+    if (qputenv("QT_MEDIA_BACKEND", defaultMediaBackend)) {
+        qDebug().noquote() << "MudletApp::setDefaultMediaBackend() INFO - setting QT_MEDIA_BACKEND environmental variable to:" << defaultMediaBackend;
+    } else {
+        qWarning().noquote() << "MudletApp::setDefaultMediaBackend() WARNING - failed to set QT_MEDIA_BACKEND environmental variable to:" << defaultMediaBackend << ", sound may not work.";
+    }
 }
 
 bool MudletApp::portableRootInUse()
