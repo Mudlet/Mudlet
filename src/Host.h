@@ -217,6 +217,8 @@ public:
     // the password step has to be armed before the read that answers it comes back, or there is
     // no prompt left for a late answer to be typed at.
     bool hasAutoLoginCredentials() const { return !mLogin.isEmpty() && (!mPass.isEmpty() || mSecuredPasswordPending); }
+    // At the auto-login's password step, by when the connection dialog has handed over any password typed into it
+    void reportUnreadableSavedPassword();
     // True once the user has sent any command to the game on the current connection. It gates whether
     // an unsolicited GMCP sign-in address may auto-open the browser: one that arrives only after the
     // player acted (e.g. chose a provider on the game's own sign-in screen) is a consequence of their
@@ -1453,6 +1455,8 @@ private:
     QString mLogin;
     QString mPass;
     bool mSecuredPasswordPending = false;
+    // The store refused the saved password, as against having none or not being there at all
+    bool mSecuredPasswordUnreadable = false;
 
     int mPort;
 

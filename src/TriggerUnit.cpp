@@ -172,6 +172,7 @@ void TriggerUnit::reParentTrigger(int childID, int oldParentID, int newParentID,
 
     // Changes the prescan list: a trigger under a chain matches its parent's capture, not the line
     TTrigger::bumpStructureGeneration();
+    unfileTreeNode(pChild);
 
     if (pOldParent) {
         pOldParent->popChild(pChild);
@@ -290,6 +291,9 @@ void TriggerUnit::unregisterTrigger(TTrigger* pT)
     // of the end-of-pass reset, so drop its lineage here instead.
     std::replace(mRootNodesAddedWhileProcessing.begin(), mRootNodesAddedWhileProcessing.end(), pT, static_cast<TTrigger*>(nullptr));
     pT->setSameLineChain(0, 0);
+    if (pT->mTreeIndexPosition >= 0) {
+        unfileTreeNode(pT);
+    }
     if (pT->getParent()) {
         removeTrigger(pT);
         return;
@@ -309,6 +313,7 @@ void TriggerUnit::addTrigger(TTrigger* pT)
     }
 
     mTriggerMap.insert(pT->getID(), pT);
+    mTreeIndexStale = true;
 }
 
 void TriggerUnit::removeTrigger(TTrigger* pT)
@@ -454,6 +459,88 @@ void TriggerUnit::rebuildPrescanTasksIfStale()
         collectPrescanTasks(trigger);
     }
     mPrescanTasksGeneration = generation;
+}
+
+TriggerUnit::TreeIndexMode TriggerUnit::smTreeIndexMode = TriggerUnit::readTreeIndexMode();
+
+TriggerUnit::TreeIndexMode TriggerUnit::readTreeIndexMode()
+{
+    const QString value = qEnvironmentVariable("MUDLET_TREE_INDEX");
+    if (value == QLatin1String("0")) {
+        return TreeIndexMode::Off;
+    }
+    if (value == QLatin1String("verify")) {
+        return TreeIndexMode::Verify;
+    }
+    return TreeIndexMode::On;
+}
+
+void TriggerUnit::fileTreeNodes(TTrigger* pT, std::vector<quint64>& grams)
+{
+    for (auto* childNode : *pT->mpMyChildrenList) {
+        auto* child = static_cast<TTrigger*>(childNode);
+        if (child->treeIndexGrams(grams)) {
+            child->mTreeIndexPosition = static_cast<int>(mTreeNodes.size());
+            mTreeNodes.push_back(child);
+            mTreeIndex.appendSlot(grams);
+        }
+        fileTreeNodes(child, grams);
+    }
+}
+
+void TriggerUnit::clearTreeNodes()
+{
+    for (TTrigger* node : mTreeNodes) {
+        if (node) {
+            node->mTreeIndexPosition = -1;
+        }
+    }
+    mTreeNodes.clear();
+}
+
+void TriggerUnit::rebuildTreeIndex()
+{
+    clearTreeNodes();
+    mTreeIndex.rebuild({});
+    std::vector<quint64> grams;
+    for (auto* root : mTriggerRootNodeList) {
+        fileTreeNodes(root, grams);
+    }
+    if (!mTreeIndex.active()) {
+        // Nothing stamps, so nothing may be skipped
+        clearTreeNodes();
+    }
+    mTreeIndexStale = false;
+}
+
+void TriggerUnit::unfileTreeNode(TTrigger* pT)
+{
+    const int position = pT->mTreeIndexPosition;
+    if (position >= 0 && position < static_cast<int>(mTreeNodes.size()) && mTreeNodes[position] == pT) {
+        mTreeNodes[position] = nullptr;
+    }
+    pT->mTreeIndexPosition = -1;
+    mTreeIndexStale = true;
+}
+
+// Rebuilt only by this unit's outermost pass: a nested rebuild would file a trigger the outer line's
+// stamping never saw, and the outer walk would then skip it on a line it matches. Until then a
+// changed or new trigger is unfiled, so it is visited.
+void TriggerUnit::stampTreeCandidates(const QString& line)
+{
+    if (mTreeIndexStale && mProcessingDepth == 1) {
+        rebuildTreeIndex();
+    }
+    if (!mTreeIndex.active()) {
+        return;
+    }
+    mTreeIndex.hits(line, mTreeHits);
+    const quint32 stamp = TTrigger::lineStamp();
+    for (const int position : mTreeHits) {
+        if (TTrigger* node = mTreeNodes[position]) {
+            node->mLineStamp = stamp;
+        }
+    }
 }
 
 void TriggerUnit::markPrescanStale(TTrigger* pT)
@@ -627,6 +714,14 @@ void TriggerUnit::processDataStream(const QString& data, int line)
     }
     const auto pinnedSnapshot = mpRootNodeSnapshot;
     const std::vector<TTrigger*>& pinnedNodeList = pinnedSnapshot->mNodes;
+    TTrigger::enterPass();
+    const auto passGuard = qScopeGuard([] {
+        TTrigger::leavePass();
+    });
+    if (smTreeIndexMode != TreeIndexMode::Off) {
+        // After enterPass(): the stamps have to carry this line's stamp
+        stampTreeCandidates(data);
+    }
     // Triggers registered by a script during this pass (tempTrigger() & Co.)
     // are missing from the snapshot but must still match the current line:
     // before the snapshot the loop walked the live std::list, which a push_back

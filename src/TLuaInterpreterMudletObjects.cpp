@@ -688,6 +688,12 @@ int TLuaInterpreter::getProfileStats(lua_State* L)
         lua_pushstring(L, "rootFilterEpoch");
         lua_pushnumber(L, static_cast<double>(host.getTriggerUnit()->rootFilterEpoch()));
         lua_settable(L, -3);
+
+        if (TriggerUnit::treeIndexMode() != TriggerUnit::TreeIndexMode::Off) {
+            lua_pushstring(L, "treeIndexFiled");
+            lua_pushnumber(L, host.getTriggerUnit()->treeIndexFiledCount());
+            lua_settable(L, -3);
+        }
     }
 
     lua_settable(L, -3); // triggers
