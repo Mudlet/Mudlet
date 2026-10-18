@@ -624,6 +624,55 @@ describe("Trigger processing", function()
             assert.is_false(matchedStale, "The green text pulled left must not be matched as red")
         end)
 
+        -- Here the run under test is the one recolored, so only the saved original
+        -- colors, edited in step with the line, can still show it as red.
+        for _, edit in ipairs({
+            {"text is inserted", {"EEEE"}, function()
+                moveCursor(0, getLineNumber())
+                insertText("ZZZZ")
+            end},
+            {"part of the line is deleted", {"EEEE"}, function()
+                if selectString("FF", 1) > -1 then
+                    replace("")
+                end
+            end},
+            {"part of the line is replaced", {"EEEE"}, function()
+                if selectString("FF", 1) > -1 then
+                    replace("XXXXXX")
+                end
+            end},
+            {"the start of the line is replaced", {"EE"}, function()
+                if selectString("EE", 1) > -1 then
+                    replace("Q")
+                end
+            end},
+        }) do
+            it("should keep the original colors of a recolored run after " .. edit[1], function()
+                _G.recolorEditMatches = {}
+
+                local editor = tempRegexTrigger("^EEEEFFFF$", function()
+                    if selectString("EEEE", 1) > -1 then
+                        setFgColor(0, 0, 255)
+                    end
+                    resetFormat()
+                    deselect()
+                    edit[3]()
+                    resetFormat()
+                end)
+                local colorTrigger = tempAnsiColorTrigger(1, -1,
+                    [[table.insert(_G.recolorEditMatches, matches[1])]])
+
+                feedTriggers("\n\27[31mEEEE\27[32mFFFF\27[0m\n")
+
+                local matches = _G.recolorEditMatches
+                killTrigger(editor)
+                killTrigger(colorTrigger)
+                _G.recolorEditMatches = nil
+
+                assert.are.same(edit[2], matches, "only the recolored red run should be matched as red")
+            end)
+        end
+
         it("should match colors an earlier trigger pushed past the line's original end", function()
             _G.pushedColorMatches = {}
             local lengthened = false
@@ -735,6 +784,168 @@ describe("Trigger processing", function()
             _G.wrapPassMatches = nil
 
             assert.is_true(matchedAny, "the red text should still be matched after the line was wrapped")
+        end)
+
+        -- An indent shifts the line's first segment right, so the original colors
+        -- have to shift with it, and stay shifted for an edit made after the wrap.
+        for _, recolor in ipairs({false, true}) do
+            for _, edit in ipairs({
+                {"", function() end},
+                {" and then inserts text", function()
+                    moveCursor(0, getLineNumber())
+                    insertText("Z")
+                end},
+            }) do
+                local recolored = recolor and " recolored" or ""
+                it("should match original colors past the indent when a trigger wraps the" .. recolored .. " line" .. edit[1], function()
+                    _G.wrapIndentMatches = {}
+                    local savedWrap = getWindowWrap("main")
+                    finally(function()
+                        setWindowWrap("main", savedWrap)
+                        setWindowWrapIndent("main", 0)
+                        _G.wrapIndentMatches = nil
+                    end)
+                    setWindowWrap("main", 40)
+                    setWindowWrapIndent("main", 2)
+
+                    local wrapper = tempRegexTrigger("^AAAA WRAPINDENT ", function()
+                        if recolor and selectString("AAAA", 1) > -1 then
+                            setFgColor(0, 0, 255)
+                        end
+                        deselect()
+                        resetFormat()
+                        wrapLine("main", getLineNumber())
+                        edit[2]()
+                        resetFormat()
+                    end)
+                    local colorTrigger = tempAnsiColorTrigger(1, -1,
+                        [[table.insert(_G.wrapIndentMatches, table.concat(matches, ","))]])
+
+                    feedTriggers("\n\27[31mAAAA\27[32m WRAPINDENT bbbb cccc dddd eeee ffff gggg hhhh\27[0m\n")
+
+                    killTrigger(wrapper)
+                    killTrigger(colorTrigger)
+
+                    -- the indent takes the color of the red text it precedes
+                    assert.are.same({"  AAAA"}, _G.wrapIndentMatches)
+                end)
+            end
+        end
+
+        -- Splitting the line above the one being processed pushes it down, so what
+        -- is left at its old line number is other text, which has no original colors.
+        local function recolorAbove()
+            if selectString("ABOVE", 1) > -1 then
+                setFgColor(0, 0, 255)
+            end
+            deselect()
+            resetFormat()
+        end
+        local function insertAtStart()
+            moveCursor(0, getLineNumber())
+            insertText("Z")
+            resetFormat()
+        end
+        for _, edit in ipairs({
+            {"", function() end, function() end},
+            {" of a recolored line", recolorAbove, function() end},
+            {" of a recolored line and then inserts text", recolorAbove, insertAtStart},
+        }) do
+            it("should not match colors at the old line number after a trigger wraps the line above" .. edit[1], function()
+                _G.wrapAboveMatches = {}
+                local savedWrap = getWindowWrap("main")
+                finally(function()
+                    setWindowWrap("main", savedWrap)
+                    _G.wrapAboveMatches = nil
+                end)
+
+                local wrappedAbove
+                local wrapper = tempRegexTrigger("^WRAPABOVE$", function()
+                    edit[2]()
+                    setWindowWrap("main", 20)
+                    wrapLine("main", getLineNumber() - 1)
+                    wrappedAbove = getLines(getLineNumber() - 1, getLineNumber() + 1)
+                    edit[3]()
+                end)
+                local colorTrigger = tempAnsiColorTrigger(1, -1,
+                    [[table.insert(_G.wrapAboveMatches, matches[1])]])
+
+                feedTriggers("\n\27[32mgggggggggg hhhhhhhhhh iiiiiiiiii\27[0m\n\27[31mWRAP\27[32mABOVE\27[0m\n")
+
+                killTrigger(wrapper)
+                killTrigger(colorTrigger)
+
+                assert.are.same({"gggggggggg ", "hhhhhhhhhh "}, wrappedAbove)
+                for _, matched in ipairs(_G.wrapAboveMatches) do
+                    assert.are.equal("WRAP", matched, "only the red text the game sent should be matched as red")
+                end
+            end)
+        end
+
+        it("should match the colors of a line a trigger rewraps from the unsplit line above it", function()
+            _G.wrapFromAboveMatches = {}
+            local savedWrap = getWindowWrap("main")
+            finally(function()
+                setWindowWrap("main", savedWrap)
+                _G.wrapFromAboveMatches = nil
+            end)
+
+            local wrapped
+            local wrapper = tempRegexTrigger("^WRAPFROMABOVE ", function()
+                setWindowWrap("main", 20)
+                wrapLine("main", getLineNumber() - 1)
+                wrapped = getLines(getLineNumber(), getLineNumber() + 2)
+            end)
+            local colorTrigger = tempAnsiColorTrigger(1, -1,
+                [[table.insert(_G.wrapFromAboveMatches, matches[1])]])
+
+            feedTriggers("\n\27[32mgggg\27[0m\n\27[31mWRAP\27[32mFROMABOVE xxxxxxx yyyyyyyyyy\27[0m\n")
+
+            killTrigger(wrapper)
+            killTrigger(colorTrigger)
+
+            assert.are.same({"WRAPFROMABOVE ", "xxxxxxx yyyyyyyyyy"}, wrapped)
+            assert.are.same({"WRAP"}, _G.wrapFromAboveMatches)
+        end)
+
+        it("should not match colors at the old line number after a nested trigger pass wraps the line above", function()
+            _G.wrapNestedMatches = {}
+            local savedWrap = getWindowWrap("main")
+            finally(function()
+                setWindowWrap("main", savedWrap)
+                _G.wrapNestedMatches = nil
+            end)
+
+            local outerLine, wrappedAbove
+            local inner = tempRegexTrigger("^WRAPNESTED$", function()
+                setWindowWrap("main", 20)
+                wrapLine("main", outerLine - 1)
+                wrappedAbove = getLines(outerLine - 1, outerLine + 1)
+            end)
+            local outer = tempRegexTrigger("^WRAPOUTER$", function()
+                outerLine = getLineNumber()
+                if selectString("OUTER", 1) > -1 then
+                    setFgColor(0, 0, 255)
+                end
+                deselect()
+                resetFormat()
+                feedTriggers("\nWRAPNESTED\n")
+                _G.wrapNestedMatches = {}
+            end)
+            local colorTrigger = tempAnsiColorTrigger(1, -1,
+                [[table.insert(_G.wrapNestedMatches, matches[1])]])
+
+            feedTriggers("\n\27[32mgggggggggg hhhhhhhhhh iiiiiiiiii\27[0m\n\27[31mWRAP\27[32mOUTER\27[0m\n")
+
+            killTrigger(inner)
+            killTrigger(outer)
+            killTrigger(colorTrigger)
+
+            assert.are.same({"gggggggggg ", "hhhhhhhhhh "}, wrappedAbove)
+            -- only the outer pass's matches, which run after the nested pass returns
+            for _, matched in ipairs(_G.wrapNestedMatches) do
+                assert.are.equal("WRAP", matched, "only the red text the game sent should be matched as red")
+            end
         end)
 
     end)
@@ -1893,6 +2104,8 @@ describe("Trigger processing", function()
                 -- divide by. Feeding until the run is clear of that floor and
                 -- dividing by the number of feeds keeps both measurements
                 -- per-feed and comparable.
+                -- It is wall time there too, so a run also carries any 15.6 ms
+                -- scheduler tick taken from it, under a fifth of a 0.1s run.
                 --
                 -- a collection cycle landing in one line's runs and not the
                 -- other's skews the ratio by whatever it costs
@@ -1905,10 +2118,10 @@ describe("Trigger processing", function()
                     feeds = feeds + 1
                     taken = os.clock() - started
                 -- a clock that never advances would spin here forever and hang
-                -- CI with no diagnostic. 100 feeds is far more than any platform
-                -- needs, so giving up past it leaves the short > 0 assertion
-                -- below to report the dead clock.
-                until taken >= 0.02 or feeds >= 100
+                -- CI with no diagnostic: 100 feeds that leave it at 0 hand that
+                -- to the short > 0 assertion below, and 1000 feeds bound any
+                -- other run that never reaches the floor.
+                until taken >= 0.1 or feeds >= 1000 or (taken == 0 and feeds >= 100)
                 collectgarbage("restart")
                 return taken / feeds
             end

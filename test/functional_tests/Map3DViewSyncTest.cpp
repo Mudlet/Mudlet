@@ -174,8 +174,13 @@ private slots:
         QVERIFY(addRoomAt(kMovedToRoomId, mPlayerAreaId, 5, 5));
         map()->mRoomIdHash[map()->mProfileName] = kPlayerRoomId;
 
+        // A profile saved in 3D mode: the mapper builds its 3D view only on the next event loop pass
+        mpHost->mShow3DView = true;
         mpHost->showHideOrCreateMapper(false);
         QVERIFY2(map()->mapper(), "the profile's mapper could not be created");
+        QVERIFY(map()->mapper()->onScreen());
+        QVERIFY2(map()->mapper()->showing3DView(), "a mapper just made in 3D mode did not answer that it shows the 3D view");
+        QTRY_VERIFY(map()->mapper()->glWidget && map()->mapper()->glWidget->isVisible());
         dlgMapper* pMapper = mapperShowing2DAtThePlayer();
         QVERIFY(pMapper);
         pMapper->show3DView(true);

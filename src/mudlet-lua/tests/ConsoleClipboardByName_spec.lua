@@ -71,8 +71,8 @@ describe("Tests that the clipboard and buffer size functions find their console 
     return last, getLines("main", last, last + 1)[1]
   end
 
-  it("answers nothing to pasteWindow() of a name that is no window at all", function()
-    assert.are.equal(0, select("#", pasteWindow(unknown)))
+  it("refuses pasteWindow() of a name that is no window at all", function()
+    assert.are.same({nil, ('window "%s" not found'):format(unknown)}, {pasteWindow(unknown)})
   end)
 
   it("refuses a name that is no window at all", function()
@@ -227,7 +227,7 @@ describe("Tests that the clipboard and buffer size functions find their console 
           copyToClipboard("zeta")
           echo(window, "xxx\nyyy\n")
           moveCursor(window, 0, 0)
-          assert.are.equal(0, select("#", pasteWindow(window)))
+          assert.are.same({true}, {pasteWindow(window)})
           assert.are.same({"zetaxxx", "yyy"}, getLines(window, 0, 2))
         end)
 
@@ -345,12 +345,16 @@ describe("Tests that the clipboard and buffer size functions find their console 
     end
 
     -- pasteWindow() only ever pastes into a sub-console
+    local pasteRefusals = {
+      [""] = 'window "" not found',
+      main = 'window "main" is of type "main", which this function cannot use',
+    }
     for _, name in ipairs({"", "main"}) do
       it(("leaves the main console alone given pasteWindow(%q)"):format(name), function()
         copyToClipboard("specClipboardByNamePasteWindow" .. suffix)
         moveCursorEnd("main")
         local last, line = mainTail()
-        assert.are.equal(0, select("#", pasteWindow(name)))
+        assert.are.same({nil, pasteRefusals[name]}, {pasteWindow(name)})
         assert.are.same({last, line}, {mainTail()})
       end)
     end
