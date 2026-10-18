@@ -29,15 +29,24 @@ describe("Tests that the generic mapper follows a game in Swedish", function()
 
   local mapperState = {"mapping", "currentRoom", "currentArea", "currentName", "currentExits", "prevRoom", "prevName", "prevExits"}
   local configKeys = {"lang_dirs", "translate", "language", "use_translation", "clear_lines_on_send"}
-  local saved, savedPrompt, savedConfigs, savedQueue, dockWasShowing
+  local saved, savedPrompt, savedConfigs, savedQueue, dockWasShowing, savedCreateMapper
 
   -- the base UI reads the prompts fed here as vitals and docks itself on the right
   -- border, leaving the main console narrower for every later spec
+  -- prompts with hp/mp labels make the base UI embed a mapper once rooms exist, and an
+  -- embedded mapper cannot be closed, so every later openMapWidget() would fail
   setup(function()
     dockWasShowing = BaseUI ~= nil and BaseUI.container ~= nil and not BaseUI.container.hidden
+    if BaseUI then
+      savedCreateMapper = BaseUI.createMapper
+      BaseUI.createMapper = function() end
+    end
   end)
 
   teardown(function()
+    if BaseUI then
+      BaseUI.createMapper = savedCreateMapper
+    end
     if BaseUI and not dockWasShowing and BaseUI.container and not BaseUI.container.hidden then
       BaseUI.container:hide()
       BaseUI.container:adjustBorder()
