@@ -791,6 +791,10 @@ void TArea::writeJsonArea(QJsonArray& array) const
         areaObj.insert(QLatin1String("gridMode"), true);
     }
 
+    if (mLast2DMapZoom != TMap::scmDefaultXYZoom) {
+        areaObj.insert(QLatin1String("zoom2D"), static_cast<double>(mLast2DMapZoom));
+    }
+
     writeJsonUserData(areaObj);
 
     QList<int> roomList{rooms.begin(), rooms.end()};
@@ -832,13 +836,22 @@ void TArea::writeJsonArea(QJsonArray& array) const
     array.append(areaValue);
 }
 
-std::pair<int, QString> TArea::readJsonArea(const QJsonArray& array, const int areaIndex)
+std::pair<int, QString> TArea::readJsonArea(const QJsonArray& array, const int areaIndex, QStringList& droppedRoomWarnings)
 {
     const QJsonObject areaObj{array.at(areaIndex).toObject()};
     const int id = areaObj.value(QLatin1String("id")).toInt();
     const QString name{areaObj.value(QLatin1String("name")).toString()};
     gridMode = areaObj.value(QLatin1String("gridMode")).toBool();
     readJsonUserData(areaObj.value(QLatin1String("userData")).toObject());
+    // An export by an older Mudlet can have the binary format's fallbacks in the user data
+    const QString fallbackZoom = mUserData.take(QLatin1String("system.fallback_map2DZoom"));
+    const QJsonValue zoomValue{areaObj.value(QLatin1String("zoom2D"))};
+    if (zoomValue.isDouble()) {
+        set2DMapZoom(zoomValue.toDouble());
+    } else if (!fallbackZoom.isEmpty()) {
+        // an export by Mudlet 5.0.1 or older after a format 20 binary save holds the zoom only here
+        set2DMapZoom(fallbackZoom.toDouble());
+    }
     int roomCount = 0;
     for (int roomIndex = 0, total = areaObj.value(QLatin1String("rooms")).toArray().count(); roomIndex < total; ++roomIndex) {
         TRoom* pR = new TRoom(mpRoomDB);
@@ -847,6 +860,17 @@ std::pair<int, QString> TArea::readJsonArea(const QJsonArray& array, const int a
         // one for the audit to renumber and frees one whose id is taken:
         if (mpRoomDB->restoreSingleRoom(roomId, pR)) {
             rooms.insert(roomId);
+        } else {
+            // A missing or non-integer id reads as 0, so a clash on 0 may be with a room the file gives no id:
+            const QJsonValue idValue = areaObj.value(QLatin1String("rooms")).toArray().at(roomIndex).toObject().value(QLatin1String("id"));
+            if (roomId != 0 && idValue.isDouble() && idValue.toDouble() == roomId) {
+                //: Shown when a JSON map file holds two rooms with the same id. %1 is the room id, %2 the id of the area the dropped room was in.
+                droppedRoomWarnings.append(
+                        tr("[ WARN ]  - The map file has more than one room with id %1, so the one in area %2 has been left out.").arg(QString::number(roomId), QString::number(id)));
+            } else {
+                //: Shown when a JSON map file holds more than one room whose "id" is missing, not a whole number or 0; only the first is kept. %1 is the id of the area the dropped room was in.
+                droppedRoomWarnings.append(tr("[ WARN ]  - The map file has more than one room without a valid id, so one in area %1 has been left out.").arg(QString::number(id)));
+            }
         }
         if (++roomCount % 10 == 0) {
             if (mpMap->incrementJsonProgressDialog(false, true, 10)) {
@@ -863,17 +887,22 @@ std::pair<int, QString> TArea::readJsonArea(const QJsonArray& array, const int a
     if (areaObj.contains(QLatin1String("labels")) && areaObj.value(QLatin1String("labels")).isArray()) {
         readJsonLabels(areaObj);
     }
+    // only once the labels have taken the outline colors an older export left here
+    dropFileOnlyUserData(mUserData);
     return {id, name};
 }
 
 void TArea::writeJsonUserData(QJsonObject& obj) const
 {
     QJsonObject userDataObj;
-    if (mUserData.isEmpty()) {
+    // A binary save replaces a script's value under these keys, so an import must not apply it to a label or read it back as the zoom
+    QMap<QString, QString> userData{mUserData};
+    dropFileOnlyUserData(userData);
+    if (userData.isEmpty()) {
         // Skip creating a user data array if it will be empty:
         return;
     }
-    QMapIterator<QString, QString> itDataItem(mUserData);
+    QMapIterator<QString, QString> itDataItem(userData);
     while (itDataItem.hasNext()) {
         itDataItem.next();
         const QJsonValue userDataValue{itDataItem.value()};
@@ -916,8 +945,6 @@ void TArea::readJsonUserData(const QJsonObject& obj)
             mUserData.insert(key, obj.value(key).toString());
         }
     }
-    // a JSON label keeps its font in its own fields and nothing reads these
-    dropFileOnlyUserData(mUserData);
 }
 
 void TArea::writeJsonLabels(QJsonObject& obj) const
@@ -1014,6 +1041,10 @@ void TArea::writeJsonLabel(QJsonArray& array, const int id, const TMapLabel* pLa
     // Invert the logic here as we are saying "scaled" rather than "unscaled":
     labelObj.insert(QLatin1String("scaledels"), !pLabel->noScaling);
 
+    QJsonObject outlineColorObj;
+    TMap::writeJsonColor(outlineColorObj, pLabel->outlineColor);
+    labelObj.insert(QLatin1String("outlineColor"), outlineColorObj);
+
     if (!pLabel->font.family().isEmpty()) {
         QJsonObject fontObj;
         fontObj.insert(QLatin1String("family"), pLabel->font.family());
@@ -1065,12 +1096,26 @@ void TArea::readJsonLabel(const QJsonObject& labelObj)
 
     label.noScaling = !labelObj.value(QLatin1String("scaledels")).toBool(true);
 
+    const QColor outlineColor = TMap::readJsonColor(labelObj.value(QLatin1String("outlineColor")).toObject());
+    if (outlineColor.isValid()) {
+        label.outlineColor = outlineColor;
+    } else {
+        // The field is missing (older Mudlet wrote none) or unreadable: exports
+        // after a binary save carried the binary format's copy in the user data
+        TMap::restoreLabelOutlineColorFromUserData(label, labelId, mUserData);
+    }
+
     if (labelObj.contains(QLatin1String("font"))) {
         const QJsonObject fontObj = labelObj.value(QLatin1String("font")).toObject();
         label.font = QFont(fontObj.value(QLatin1String("family")).toString(),
                            fontObj.value(QLatin1String("pointSize")).toInt(),
                            fontObj.value(QLatin1String("weight")).toInt(),
                            fontObj.value(QLatin1String("italic")).toBool());
+    } else {
+        // A default QFont has the application's family, which would give the
+        // label a font it never had. Every writer emits a font only for a label
+        // with a family, so a font key in the area's user data is an earlier label's.
+        label.font = QFont(QString());
     }
 
     mMapLabels.insert(labelId, label);

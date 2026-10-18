@@ -201,7 +201,8 @@ struct TConsoleModel
     // Whether the selection is still valid, its text (else why not), its start and its length. The text
     // is read from the cursor's line, not the selection's, at the selection's columns.
     std::tuple<bool, QString, int, int> selection();
-    // The selected character's format, or the cursor's with no selection; first is 2 when there is none.
+    // The selected character's format, or the cursor's when the selection is empty; first is 2 when a non-empty
+    // selection starts off the buffer's text, 1 when the selection is empty and no character is under the cursor.
     QPair<quint8, TChar> textAttributes() const;
     // The character the selection starts on, or nullptr when that is off the buffer. With no selection
     // that is the buffer's first character: unlike textAttributes(), this does not fall back to the cursor.
@@ -216,8 +217,8 @@ struct TConsoleModel
     // Client output, appended at the end of the buffer and copied to --mirror. The view showing the
     // model brings the new lines into view (TConsole::showNewLines()).
     void print(const QString& msg);
-    // timeStampOverride keeps the arrival time for held-back content being replayed.
-    void print(const QString& msg, const QColor& fgColor, const QColor& bgColor, const QString& timeStampOverride = QString());
+    // timeStampOverride keeps the arrival time for held-back content being replayed; csmNoTimeStamp stamps it now.
+    void print(const QString& msg, const QColor& fgColor, const QColor& bgColor, qint64 timeStampOverride = TBuffer::csmNoTimeStamp);
     void printSystemMessage(const QString& msg);
 
     // What printCommand() did to the buffer, which decides what the view repaints.

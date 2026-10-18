@@ -270,6 +270,7 @@ void cTelnet::reset()
     abandonNetworkLatencyMeasurement();
     command = "";
     mMudData = "";
+    mMxpDetectionTail.clear();
     mDeferredInput.clear();
 
     mServerRequestedSGA = false;
@@ -1081,6 +1082,13 @@ void cTelnet::slot_socketConnected()
     }
 
     mpSocket->setSocketOption(QAbstractSocket::LowDelayOption, 1);
+#if defined(Q_OS_WINDOWS)
+    // Windows fixes a socket's receive buffer at 64 KB, so a burst of game text refills it every
+    // 64 KB with a notifier round trip each time; other platforms size it themselves. The cap on
+    // Qt's own buffer leaves what the queued reads have not caught up with in the socket instead
+    mpSocket->setSocketOption(QAbstractSocket::ReceiveBufferSizeSocketOption, 1024 * 1024);
+    mpSocket->setReadBufferSize(1024 * 1024);
+#endif
     reset();
     setKeepAlive(mpSocket->socketDescriptor());
 
@@ -3162,6 +3170,19 @@ void cTelnet::autoEnableTTYPEVersion()
     });
 }
 
+// Each time the game switches MXP on, it starts in open mode (the spec's initial default) over whatever an
+// earlier game or autoEnableMXPProcessor() left, though Force MXP keeps its secure default; a mode the game
+// locks in after that holds when it repeats the switch-on
+void cTelnet::switchMxpOn()
+{
+    if (!enableMXP || mMxpAutoEnabled) {
+        mpHost->mMxpProcessor.setMode(MXP_MODE_CODE_LOCK_OPEN);
+    }
+    enableMXP = true;
+    mMxpAutoEnabled = false;
+    mpHost->mMxpProcessor.enable();
+}
+
 // Auto-enable MXP processor when indicators are detected
 void cTelnet::autoEnableMXPProcessor()
 {
@@ -3169,6 +3190,7 @@ void cTelnet::autoEnableMXPProcessor()
 
     // Automatically enable MXP processing
     enableMXP = true;
+    mMxpAutoEnabled = true;
     mpHost->setForceMXPProcessorOn(true);
 
     // Games that auto-enable MXP (without telnet negotiation) typically use
@@ -3549,9 +3571,8 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                 break;
             }
 
-            enableMXP = true;
+            switchMxpOn();
             sendTelnetOption(TN_DO, OPT_MXP);
-            mpHost->mMxpProcessor.enable();
 
             qDebug() << "MXP enabled";
             raiseProtocolEvent("sysProtocolEnabled", "MXP");
@@ -3926,9 +3947,8 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
 
         if (option == OPT_MXP) {
             if (mpHost->mEnableMXP) {
-                enableMXP = true;
+                switchMxpOn();
                 sendTelnetOption(TN_WILL, OPT_MXP);
-                mpHost->mMxpProcessor.enable();
                 raiseProtocolEvent("sysProtocolEnabled", "MXP");
             } else {
                 sendTelnetOption(TN_WONT, OPT_MXP);
@@ -4355,10 +4375,8 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
         // Some servers require this subnegotiation before processing MXP escape sequences
         if (option == OPT_MXP) {
             if (mpHost->mEnableMXP) {
-                enableMXP = true;
+                switchMxpOn();
                 qDebug() << "MXP enabled via subnegotiation";
-                mpHost->mMxpProcessor.enable();
-                mpHost->mMxpProcessor.setMode(MXP_MODE_CODE_LOCK_LOCKED);
                 raiseProtocolEvent("sysProtocolEnabled", "MXP");
             }
             return;
@@ -5289,8 +5307,12 @@ void cTelnet::gotPrompt(std::string& mud_data)
 
     mMudData += mud_data;
 
-    if (!mpHost->mPromptedForMXPProcessorOn && !mpHost->getForceMXPProcessorOn() && !isMXPEnabled()) {
+    // Scanned as gotRest() scans, or a forced processor misses a re-initialisation that arrives with a prompt
+    if (mpHost->getForceMXPProcessorOn() || (!mpHost->mPromptedForMXPProcessorOn && !isMXPEnabled())) {
         trackMXPElementDetection(mud_data);
+    } else {
+        // gotRest() may scan again once that changes, and must not join its next read to one this read came between
+        mMxpDetectionTail.clear();
     }
 
     // Patch for servers that need GA/EOR for prompt fixups
@@ -5352,7 +5374,16 @@ void cTelnet::trackMXPElementDetection(const std::string& line)
         return;
     }
 
-    if (!containsMxpModeSwitch(line)) {
+    // ESC[#z is four bytes, so three carried over from the last read are enough to complete one
+    constexpr size_t tailLength = 3;
+    const bool found = containsMxpModeSwitch(line) || (!mMxpDetectionTail.empty() && containsMxpModeSwitch(mMxpDetectionTail + line.substr(0, tailLength)));
+    if (line.size() >= tailLength) {
+        mMxpDetectionTail.assign(line, line.size() - tailLength, tailLength);
+    } else {
+        mMxpDetectionTail += line;
+        mMxpDetectionTail.erase(0, mMxpDetectionTail.size() > tailLength ? mMxpDetectionTail.size() - tailLength : 0);
+    }
+    if (!found) {
         return;
     }
 
@@ -5368,6 +5399,14 @@ void cTelnet::trackMXPElementDetection(const std::string& line)
 
 void cTelnet::gotRest(std::string& mud_data)
 {
+    // An escape this read leaves unfinished is joined to the next read (in mMudData, or by TBuffer once mGA_Driver is set),
+    // not to what a trigger feedTelnet()s while this read is posted, so that must neither be joined to this read's tail nor replace it
+    const auto postKeepingDetectionTail = [this]() {
+        const std::string tail = std::exchange(mMxpDetectionTail, std::string());
+        postData();
+        mMxpDetectionTail = tail;
+    };
+
     if (mud_data.empty()) {
         return;
     }
@@ -5377,6 +5416,9 @@ void cTelnet::gotRest(std::string& mud_data)
     // Otherwise, only scan if MXP hasn't been prompted for and isn't telnet-negotiated
     if (mpHost->getForceMXPProcessorOn() || (!mpHost->mPromptedForMXPProcessorOn && !isMXPEnabled())) {
         trackMXPElementDetection(mud_data);
+    } else {
+        // As in gotPrompt(): the next scanned read must not be joined to one from before this one
+        mMxpDetectionTail.clear();
     }
 
     if (!mGA_Driver) {
@@ -5384,7 +5426,7 @@ void cTelnet::gotRest(std::string& mud_data)
 
         if (i != std::string::npos) {
             mMudData.append(mud_data, 0, i + 1);
-            postData();
+            postKeepingDetectionTail();
 
             if (!mIsTimerPosting && (mpPostingTimer->interval() != mTimeOut)) {
                 mpPostingTimer->setInterval(mTimeOut);
@@ -5408,7 +5450,7 @@ void cTelnet::gotRest(std::string& mud_data)
         }
     } else {
         mMudData += mud_data;
-        postData();
+        postKeepingDetectionTail();
         mMudData = "";
     }
 }
@@ -5419,11 +5461,9 @@ void cTelnet::slot_timerPosting()
         return;
     }
 
+    // Not scanned for MXP: gotRest() saw these bytes as they came in, and scanning them again with the
+    // flush marker would put that, not the read's last bytes, in the tail the next read is joined to
     mMudData += "\r";
-
-    if (!mpHost->mPromptedForMXPProcessorOn && !mpHost->getForceMXPProcessorOn() && !isMXPEnabled()) {
-        trackMXPElementDetection(mMudData);
-    }
 
     postData();
     mMudData = "";
@@ -5922,6 +5962,14 @@ void cTelnet::slot_socketReadyToBeRead()
         finishNetworkLatencyMeasurement();
     }
 
+#if defined(Q_OS_WINDOWS)
+    // This runs inside the socket notifier, which Qt's Windows dispatcher serves ahead of every
+    // timer: reading here as well as in the queued chain would hold the timers off until a flood
+    // was all in. The Unix dispatcher runs timers every turn; there the skip only slows a burst
+    if (mReadPending) {
+        return;
+    }
+#endif
     readPendingSocketData();
 }
 
@@ -5931,11 +5979,13 @@ void cTelnet::slot_socketReadyToBeRead()
 // them as that command's reply would report a latency of nearly nothing.
 void cTelnet::readPendingSocketData()
 {
+    mReadPending = false;
     if (!mpHost || mpHost->isClosingDown() || !mpSocket || mDeferredReconnect) {
         return;
     }
 
     if (readSocketDataOnce()) {
+        mReadPending = true;
         QMetaObject::invokeMethod(this, &cTelnet::readPendingSocketData, Qt::QueuedConnection);
     }
 }

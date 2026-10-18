@@ -74,12 +74,16 @@ end
 
 --- Prints a message to the label with decho color formatting, preserving label's font size and formatting.
 -- @param message The message to print. Uses decho color codes like "<255,0,0>text" for colors.
+-- @return true, or nil and an error message if the label no longer exists
 function Geyser.Label:decho(message)
   message = message or self.message
-  self.message = message
 
   -- Build resetFormat table using label's actual fgColor, not just stylesheet
-  local resetFormat = getLabelFormat(self.name)
+  local resetFormat, err = getLabelFormat(self.name)
+  if not resetFormat then
+    return nil, err
+  end
+  self.message = message
   -- Override foreground with label's fgColor property if set
   if self.fgColor and self.fgColor ~= "" then
     resetFormat.foreground = Geyser.Color.hex(self.fgColor)
@@ -118,16 +122,21 @@ function Geyser.Label:decho(message)
   [[">]] .. htmlContent .. [[</div>]]
   echo(self.name, htmlContent)
   self:autoAdjustSize()
+  return true
 end
 
 --- Prints a message to the label with hecho color formatting, preserving label's font size and formatting.
 -- @param message The message to print. Uses hecho color codes like "|cff0000text" for colors.
+-- @return true, or nil and an error message if the label no longer exists
 function Geyser.Label:hecho(message)
   message = message or self.message
-  self.message = message
 
   -- Build resetFormat table using label's actual fgColor, not just stylesheet
-  local resetFormat = getLabelFormat(self.name)
+  local resetFormat, err = getLabelFormat(self.name)
+  if not resetFormat then
+    return nil, err
+  end
+  self.message = message
   -- Override foreground with label's fgColor property if set
   if self.fgColor and self.fgColor ~= "" then
     resetFormat.foreground = Geyser.Color.hex(self.fgColor)
@@ -166,16 +175,21 @@ function Geyser.Label:hecho(message)
   [[">]] .. htmlContent .. [[</div>]]
   echo(self.name, htmlContent)
   self:autoAdjustSize()
+  return true
 end
 
 --- Prints a message to the label with cecho color formatting, preserving label's font size and formatting.
 -- @param message The message to print. Uses cecho color codes like "<red>text" for colors.
+-- @return true, or nil and an error message if the label no longer exists
 function Geyser.Label:cecho(message)
   message = message or self.message
-  self.message = message
 
   -- Build resetFormat table using label's actual fgColor, not just stylesheet
-  local resetFormat = getLabelFormat(self.name)
+  local resetFormat, err = getLabelFormat(self.name)
+  if not resetFormat then
+    return nil, err
+  end
+  self.message = message
   -- Override foreground with label's fgColor property if set
   if self.fgColor and self.fgColor ~= "" then
     resetFormat.foreground = Geyser.Color.hex(self.fgColor)
@@ -214,6 +228,7 @@ function Geyser.Label:cecho(message)
   [[">]] .. htmlContent .. [[</div>]]
   echo(self.name, htmlContent)
   self:autoAdjustSize()
+  return true
 end
 
 --- sets the color of the text on the label
@@ -842,10 +857,14 @@ function Geyser.Label:resetToolTip()
 end
 
 --- Set a predefined mouse cursor shape for this label
--- @param cursorShape the predefined cursorshape as a string
+-- @param cursorShape the name of a predefined cursor shape, or its number in mudlet.cursor
 -- See: <a href="https://wiki.mudlet.org/w/CursorShapes">https://wiki.mudlet.org/w/CursorShapes</a>
+-- @return true, or nil and a message when the label or the shape is refused, leaving cursorShape as it was
 function Geyser.Label:setCursor(cursorShape)
-  setLabelCursor(self.name, cursorShape)
+  local ok, err = setLabelCursor(self.name, cursorShape)
+  if not ok then
+    return nil, err
+  end
   -- Get cursorShape as string
   for k,v in pairs(mudlet.cursor) do
     if cursorShape == v then
@@ -854,6 +873,7 @@ function Geyser.Label:setCursor(cursorShape)
   end
 
   self.cursorShape = cursorShape
+  return true
 end
 
 --- Set a custom mouse cursor shape for this label.
@@ -902,17 +922,20 @@ function closeNestChildren(label)
   local nLabels = label.nestedLabels
   if nLabels then
     for i, v in pairs(nLabels) do
-      v:hide()
-      if v.nestedLabels then
-        closeNestChildren(v)
-      end
-      if Geyser.Label.scrollV[v.nestParent] then
-        Geyser.Label.scrollV[v.nestParent][1]:hide()
-        Geyser.Label.scrollV[v.nestParent][2]:hide()
-      end
-      if Geyser.Label.scrollH[v.nestParent] then
-        Geyser.Label.scrollH[v.nestParent][1]:hide()
-        Geyser.Label.scrollH[v.nestParent][2]:hide()
+      if type(v) == "table" and v.hide then
+        v:hide()
+        -- a Geyser.Label's hide() closes its own nest, an override of hide() may not
+        if v.nestedLabels and v.hide ~= Geyser.Label.hide then
+          closeNestChildren(v)
+        end
+        if Geyser.Label.scrollV[v.nestParent] then
+          Geyser.Label.scrollV[v.nestParent][1]:hide()
+          Geyser.Label.scrollV[v.nestParent][2]:hide()
+        end
+        if Geyser.Label.scrollH[v.nestParent] then
+          Geyser.Label.scrollH[v.nestParent][1]:hide()
+          Geyser.Label.scrollH[v.nestParent][2]:hide()
+        end
       end
     end
   end
@@ -1225,12 +1248,11 @@ function Geyser.Label:new (cons, container)
   -- workaround for createLabel possibly being overwritten and not understanding the new parent argument
   -- see https://github.com/Mudlet/Mudlet/issues/3393
   local ok, err
+  local x, y, width, height = me:pixel_geometry()
   if me.windowname == "main" then
-    ok, err = createLabel(me.name, me:get_x(), me:get_y(),
-      me:get_width(), me:get_height(), me.fillBg)
+    ok, err = createLabel(me.name, x, y, width, height, me.fillBg)
   else
-    ok, err = createLabel(me.windowname, me.name, me:get_x(), me:get_y(),
-      me:get_width(), me:get_height(), me.fillBg)
+    ok, err = createLabel(me.windowname, me.name, x, y, width, height, me.fillBg)
   end
   if not mudlet.elementCreated(me.windowname, me.name, ok, err, "label") then
     printError(string.format("Geyser.Label '%s' was not created: %s", me.name, err or "unknown error"), false, false)
@@ -1351,15 +1373,154 @@ function Geyser.Label:new (cons, container)
   return me
 end
 
---- Deletes the label using the C++ deleteLabel function
--- Note: Nested labels (in nestedLabels array) have their own containers
--- and will be deleted through their container's cascading delete mechanism.
--- The nestedLabels array is for organizational purposes only.
-function Geyser.Label:type_delete()
-  -- Clean up nested label references to avoid dangling references
-  if self.nestedLabels then
-    self.nestedLabels = {}
+-- internal function: hides or shows a label's nested labels and its "More..."
+-- scroll labels along with the label itself, when its container hides or shows it
+local function cascadeToNest(label, method)
+  for _, v in pairs(label.nestedLabels or {}) do
+    if type(v) == "table" and v[method] then
+      v[method](v, true)
+    end
   end
+  for _, scrolls in ipairs({Geyser.Label.scrollV, Geyser.Label.scrollH}) do
+    if scrolls[label] then
+      scrolls[label][1][method](scrolls[label][1], true)
+      scrolls[label][2][method](scrolls[label][2], true)
+    end
+  end
+end
+
+--- Hides the label and closes its open nest. Hidden because its container was,
+-- the nest is hidden along with it instead, and comes back when the container is shown.
+-- @param auto true when the label is hidden because its container was hidden
+function Geyser.Label:hide(auto)
+  if auto then
+    cascadeToNest(self, "hide")
+  elseif self.nestedLabels then
+    closeNestChildren(self)
+  end
+  Geyser.Container.hide(self, auto)
+end
+
+--- Shows the label. Shown because its container was, it also brings back the
+-- nested labels that were hidden along with it.
+-- @param auto true when the label is shown because its container was shown
+function Geyser.Label:show(auto)
+  -- the nest parent's container may still be hidden when this label's own one comes
+  -- back; showing the parent again brings this label back with it
+  local parent = self.nestParent
+  if auto and parent and (parent.hidden or parent.auto_hidden) then
+    return false
+  end
+  if Geyser.Container.show(self, auto) == false then
+    return false
+  end
+  if auto then
+    cascadeToNest(self, "show")
+  end
+end
+
+-- internal function: a label deleted on its own may share its name with a newer
+-- label by now, and deleting it again would take that label with it
+local function stillRegistered(label)
+  return type(label) == "table" and label.delete and label.container
+    and label.container.windowList[label.name] == label
+end
+
+-- internal function: forgets the "More..." scroll labels a nest keeps in scrolls
+-- (Geyser.Label.scrollV or scrollH) and deletes the ones still registered
+local function deleteScrollLabels(scrolls, owner)
+  local scrollLabels = scrolls[owner]
+  if scrollLabels then
+    scrolls[owner] = nil
+    for _, scrollLabel in ipairs(scrollLabels) do
+      if stillRegistered(scrollLabel) then
+        scrollLabel:delete()
+      end
+    end
+  end
+end
+
+-- internal function: takes a deleted item out of its menu's MenuItems, so that the
+-- next rebuild does not bring it back as a new label without its action or style
+local function forgetMenuItem(menu, item)
+  local items = menu.MenuItems
+  local at = type(items) == "table" and table.index_of(items, item.menuName)
+  if not at then
+    return
+  end
+  table.remove(items, at)
+  if type(items[at]) == "table" then
+    table.remove(items, at)
+  end
+  -- changeMenuIndex goes by these without rebuilding the menu first
+  for i, name in ipairs(items) do
+    if type(name) == "string" and menu.MenuLabels[name] then
+      menu.MenuLabels[name].tblIndex = i
+    end
+  end
+  for i, label in ipairs(menu.nestedLabels) do
+    label.index = i
+  end
+end
+
+--- Deletes the label using the C++ deleteLabel function, along with its nested
+-- labels, its own "More..." scroll labels and its right click menu items.
+-- Nested labels sit in the container addChild was given (by default this label's
+-- user window, or the Geyser root for a label in the main window), so the
+-- cascading delete of this label's container may not reach them.
+function Geyser.Label:type_delete()
+  local parent = self.nestParent
+  local siblings = parent and parent.nestedLabels
+  if siblings then
+    -- a new list rather than table.remove(), so that a script deleting a nest from
+    -- an ipairs() loop over it does not skip every other label
+    local kept, found = {}, false
+    for i = 1, table.maxn(siblings) do
+      if siblings[i] == self then
+        found = true
+      elseif siblings[i] ~= nil then
+        kept[#kept + 1] = siblings[i]
+      end
+    end
+    if found then
+      parent.nestedLabels = kept
+    end
+    if parent.MenuLabels and parent.MenuLabels[self.menuName] == self then
+      parent.MenuLabels[self.menuName] = nil
+      forgetMenuItem(parent, self)
+    end
+  end
+  -- a scroll label deleted on its own, or by the cascade of the container it was
+  -- made in, must not stay cached: the nest would reuse it, and hiding or showing
+  -- the nest parent would act on whichever label has its name now
+  for _, scrolls in ipairs({Geyser.Label.scrollV, Geyser.Label.scrollH}) do
+    local pair = parent and scrolls[parent]
+    if pair and (pair[1] == self or pair[2] == self) then
+      deleteScrollLabels(scrolls, parent)
+    end
+  end
+  if self.nestedLabels then
+    local nested = self.nestedLabels
+    self.nestedLabels = {}
+    -- a menu item can leave nestedLabels and still be a label of this menu: a
+    -- hidden one, or an attach label Adjustable.Container:onEnterAtt left out.
+    -- Emptied first so that its items, going with the whole menu, leave the
+    -- MenuItems list the script handed in as it was.
+    local menuLabels = self.MenuLabels
+    if menuLabels then
+      self.MenuLabels = {}
+    end
+    for _, item in pairs(menuLabels or {}) do
+      nested[#nested + 1] = item
+    end
+    for _, child in pairs(nested) do
+      if stillRegistered(child) then
+        child:delete()
+      end
+    end
+  end
+  deleteScrollLabels(Geyser.Label.scrollV, self)
+  deleteScrollLabels(Geyser.Label.scrollH, self)
   deleteLabel(self.name)
 end
 
@@ -1454,15 +1615,17 @@ function Geyser.Label:addChild(cons, container)
 end
 
 --- Sets label to no longer intercept mouse events
+--- @return true, or nil and an error message if the label no longer exists
 function Geyser.Label:enableClickthrough()
-  enableClickthrough(self.name)
   self.clickthrough = true
+  return enableClickthrough(self.name)
 end
 
 --- Sets label to once again intercept mouse events
+--- @return true, or nil and an error message if the label no longer exists
 function Geyser.Label:disableClickthrough()
-  disableClickthrough(self.name)
   self.clickthrough = false
+  return disableClickthrough(self.name)
 end
 
 -- internal function to change the layout of the rightClick menu if we are at the right edge
@@ -1539,11 +1702,15 @@ function Geyser.Label:createMenuItems(restyle, MenuItems, configLabel, myMenu, d
 
   for i = 1, #MenuItems do
     -- an item another kind of element holds the name of is left out, Geyser.Label:new having said why
-    if type(MenuItems[i]) == "string" and not MenuItems[i].ignore
+    if type(MenuItems[i]) == "string"
       and addElement(self, MenuItems[i], configLabel, myMenu, depth, index, restyle) then
-      myMenu.MenuLabels[MenuItems[i]].index = index
-      myMenu.MenuLabels[MenuItems[i]].tblIndex = i
-      index = index + 1
+      local item = myMenu.MenuLabels[MenuItems[i]]
+      item.index = index
+      item.tblIndex = i
+      -- a hidden item is out of nestedLabels, so the items after it move up
+      if not item.ignore then
+        index = index + 1
+      end
     end
     --Ignore all children if parent is hidden
     if type(MenuItems[i]) == "table" and not MenuItems[i - 1].ignore and myMenu.MenuLabels[MenuItems[i - 1]] then
@@ -1662,14 +1829,27 @@ function Geyser.Label:showMenuLabel(name)
     return
   end
   menuElement.ignore = false
-  table.insert(menuElement.MenuNestTable, menuElement.MenuIndex, menuElement)
+  -- the parent's list, not the one it was hidden from: deleting a sibling replaces it
+  local nestTable = menuElement.nestParent.nestedLabels
+  table.insert(nestTable, math.min(menuElement.MenuIndex, #nestTable + 1), menuElement)
   self:createMenuItems()
+end
+
+local function menuIndexProblem(index, count)
+  if type(index) ~= "number" or index ~= math.floor(index) then
+    return string.format("index must be a whole number, got %s (%s)", tostring(index), type(index))
+  end
+  if index < 1 or index > count then
+    return string.format("index %s out of range (1-%d)", tostring(index), count)
+  end
 end
 
 --- adds a new item to the right click menu
 -- @param name Name of the new menu item.
 -- @param parent name of the parent where the new item will be created in (optional)
--- @param index of the new menu item (optional). Not usable together with a nested
+-- @param index of the new menu item (optional), a whole number from 1 to the number of
+--        items at that level once it is added; any other index adds nothing and returns
+--        false plus a message. Not usable together with a nested
 --        parent: an item is named for the parent it sits in, so the index lookup
 --        misses and raises.
 -- @return true, or false plus a message when the item cannot be added
@@ -1691,6 +1871,18 @@ function Geyser.Label:addMenuLabel(name, parent, index)
 
   menuElement = menuElement or self.rightClickMenu
   menuParent = menuParent or self.rightClickMenu.MenuItems
+
+  if index then
+    local count = #(menuElement.nestedLabels or {})
+    local existing = menuElement.MenuLabels[name]
+    if not existing or existing.ignore then
+      count = count + 1
+    end
+    local problem = menuIndexProblem(index, count)
+    if problem then
+      return false, "addMenuLabel: "..problem
+    end
+  end
 
   if parent then
     parent = parent.."."
@@ -1715,7 +1907,8 @@ end
 
 --- changes a right click menu items index
 -- @param name Name of the menu item. If the menu item has a parent name needs to be given as "Parent.MenuItemName"
--- @param index the new index
+-- @param index the new position among the item's siblings, a whole number from 1 to the
+--        number of items at that level; any other index raises an error and leaves the menu as it was
 function Geyser.Label:changeMenuIndex(name, index)
   local menuElement, menuTable = self:findMenuElement(name, self.rightClickMenu)
 
@@ -1724,6 +1917,10 @@ function Geyser.Label:changeMenuIndex(name, index)
   end
 
   local nestTable = menuElement.nestParent.nestedLabels
+  local problem = menuIndexProblem(index, #nestTable)
+  if problem then
+    error("changeMenuIndex: "..problem)
+  end
   local newindex = nestTable[index].tblIndex
 
   -- table index is not the same as index
@@ -1810,7 +2007,7 @@ end
 -- @table mouseWheelEvent
 
 --- Returns a table in the format of getTextFormat which describes the default formatting created by any stylesheets.
--- which are applied to the label.
+-- which are applied to the label, or nil and an error message if the label no longer exists.
 -- See: <a href="https://wiki.mudlet.org/w/Manual:Lua_Functions#getLabelFormat">https://wiki.mudlet.org/w/Manual:Lua_Functions#getLabelFormat</a>
 -- See: <a href="https://wiki.mudlet.org/w/Manual:Lua_Functions#getTextFormat">https://wiki.mudlet.org/w/Manual:Lua_Functions#getLabelFormat</a>
 function Geyser.Label:getFormat()

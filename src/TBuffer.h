@@ -385,10 +385,16 @@ public:
     // As per QDateTime::toString(). Translatable, so overwritten once at startup and fixed thereafter:
     static inline QString smTimeStampFormat = qsl("hh:mm:ss.zzz ");
 
-    // Marks continuation lines and detects paragraph starts, so must differ from any smTimeStampFormat
-    // output yet match its width: layoutLine() advances columns by smTimeStampFormat.size() whatever it
-    // paints, so another width shifts the text origin and the mouse-to-column mapping:
+    // Shown for continuation lines. Must match smTimeStampFormat's width: layoutLine() advances columns by
+    // smTimeStampFormat.size() whatever it paints, so another width shifts the text origin and the
+    // mouse-to-column mapping:
     static inline QString smBlankTimeStamp = qsl("------------ ");
+    // timeBuffer entries: arrival time in milliseconds since the epoch, or csmNoTimeStamp (timeStampText()
+    // shows nothing) or csmWrappedLineTimeStamp (a line wrapping split off the one above; shows smBlankTimeStamp)
+    static constexpr qint64 csmNoTimeStamp = -1;
+    static constexpr qint64 csmWrappedLineTimeStamp = -2;
+    static QString formatTimeStamp(qint64 msecs);
+    QString timeStampText(const int line) const { return formatTimeStamp(timeBuffer.at(line)); }
 
     explicit TBuffer(Host* pH);
     ~TBuffer();
@@ -458,7 +464,7 @@ public:
     // packets relies on that state surviving between calls to
     // translateToPlainText():
     void resetSequenceParserState();
-    // timeStampOverride keeps the arrival time for held-back content being replayed:
+    // timeStampOverride keeps the arrival time for held-back content being replayed; csmNoTimeStamp stamps it now:
     void append(const QString& chunk,
                 int sub_start,
                 int sub_end,
@@ -466,7 +472,7 @@ public:
                 const QColor& bg,
                 const TChar::AttributeFlags flags = TChar::None,
                 const int linkID = 0,
-                const QString& timeStampOverride = QString());
+                const qint64 timeStampOverride = csmNoTimeStamp);
     // Only the bits within TChar::TestMask are considered for formatting:
     void append(const QString& chunk, const int sub_start, const int sub_end, const TChar& format, const int linkID = 0);
     void appendFormatted(const QString& text, const std::vector<TChar>& formatting, const TLinkStore& sourceLinkStore);
@@ -477,7 +483,7 @@ public:
                     const QColor& bg,
                     TChar::AttributeFlags flags = TChar::None,
                     const int linkID = 0,
-                    const QString& timeStampOverride = QString());
+                    const qint64 timeStampOverride = csmNoTimeStamp);
     void appendEmptyLine();
     void setWrapAt(int i) { mWrapAt = i; }
     void setWrapIndent(int i) { mWrapIndent = i; }
@@ -514,8 +520,8 @@ public:
     std::deque<std::vector<TChar>> buffer;
     // stores the actual content of lines
     QStringList lineBuffer;
-    // stores timestamps associated with lines
-    QStringList timeBuffer;
+    // each line's arrival time, see csmNoTimeStamp
+    QList<qint64> timeBuffer;
     // stores a boolean whenever the line is a prompt one
     QList<bool> promptBuffer;
     // stores, for a line that word wrapping split off the one before it, how
@@ -720,9 +726,8 @@ private:
     QString mServerWrapPendingSegmentStart;
     // Used to hold the unprocessed bytes that could be left at the end of a
     // packet if we detect that there should be more - will be prepended to the
-    // next chunk of data - PROVIDED it is flagged as coming from the MUD Server
-    // and is not generated locally {because both pass through
-    // translateToPlainText()}:
+    // next chunk of data on the same channel. On the local one that is whatever
+    // local source feeds next (a script, MMCP, MXP), as they all share it:
     std::string mIncompleteSequenceBytes;
     // The lead byte of a double-byte character that the game restyled before
     // sending its trail byte, with the rendition that paints its left half;

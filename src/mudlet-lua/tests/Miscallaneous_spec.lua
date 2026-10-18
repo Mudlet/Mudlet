@@ -177,6 +177,37 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         assert.is_nil(getTimestamp(win, 1))
       end)
 
+      it("gives a line the local time it arrived at, as hh:mm:ss.zzz and a space", function()
+        echo("\n")
+        local line = getLastLineNumber("main")
+        local before = os.date("%H:%M:%S")
+        feedTriggers("getTimestamp arrival line\n")
+        local after = os.date("%H:%M:%S")
+        local timestamp = getTimestamp(line)
+        assert.matches("^%d%d:%d%d:%d%d%.%d%d%d $", timestamp)
+        local second = timestamp:sub(1, 8)
+        assert.is_true(second == before or second == after, timestamp)
+      end)
+
+      it("gives the line the game has not written to yet no timestamp", function()
+        echo("\n")
+        feedTriggers("getTimestamp line before the open one\n")
+        assert.are.equal("", getTimestamp(getLastLineNumber("main")))
+      end)
+
+      -- a timestamp becomes text when it is read, so reading one line must not answer for another
+      it("gives each of two lines read in turn its own time", function()
+        echo("\n")
+        local first = getLastLineNumber("main")
+        feedTriggers("getTimestamp first of two\n")
+        local start = getEpoch()
+        repeat until getEpoch() - start >= 0.005
+        feedTriggers("getTimestamp second of two\n")
+        local a, b = getTimestamp(first), getTimestamp(first + 1)
+        assert.are_not.equal(a, b)
+        assert.are.equal(a, getTimestamp(first))
+      end)
+
       it("should return nil+msg for a negative line number", function()
         local timestamp, err = getTimestamp(-1)
         assert.is_nil(timestamp)
@@ -939,6 +970,42 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         assert.is_false(fileExists(escapee), "the save landed at " .. escapee)
       end)
 
+      -- changing most application-wide settings does not write Mudlet.ini, so a
+      -- save has to, or a crash after it loses the change
+      it("writes the application-wide settings to Mudlet.ini as well", function()
+        if not testMode then
+          pending("only test mode can wait out this test's save, so the save putting Mudlet.ini back would be refused")
+          return
+        end
+        local iniFile = getMudletHomeDir():match("^(.*)/profiles/[^/]+$") .. "/Mudlet.ini"
+        local function onDisk()
+          local file = io.open(iniFile, "r")
+          if not file then
+            return nil
+          end
+          local value
+          for line in file:lines() do
+            value = line:match("^showTabConnectionIndicators=(.*)$") or value
+          end
+          file:close()
+          return value
+        end
+        local original = getConfig("showTabConnectionIndicators")
+        -- the opposite of what the file holds, so only this save can put it there
+        local wanted = onDisk() ~= "true"
+        finally(function()
+          setConfig("showTabConnectionIndicators", original)
+          local restored, why = saveWaitingOutAnyOtherSave()
+          assert.is_true(restored, "Mudlet.ini keeps the test's value: " .. tostring(why))
+        end)
+        assert.is_true(setConfig("showTabConnectionIndicators", wanted))
+
+        local saved, message = saveWaitingOutAnyOtherSave()
+        assert.is_true(saved, tostring(message))
+
+        assert.are.equal(tostring(wanted), onDisk(), "Mudlet.ini at " .. iniFile .. " did not get the new value")
+      end)
+
       -- Only nil stands for no folder: any other folder that is not a string
       -- raises, as a file name that is not a string does
       it("raises for a folder that is not a string", function()
@@ -1649,7 +1716,7 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         it("answers from the system dictionary, or says it has none", function()
           local known, err = spellCheckWord("hello")
           if known == nil then
-            assert.is_true(contains(err, "no main dictionaries found"), tostring(err))
+            assert.is_true(contains(err, "no main dictionaries found") or contains(err, "dictionary this profile uses is not available"), tostring(err))
             return
           end
           assert.is_boolean(known)
@@ -1680,7 +1747,7 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         it("returns a table from the system dictionary, or says it has none", function()
           local suggestions, err = spellSuggestWord("helo")
           if suggestions == nil then
-            assert.is_true(contains(err, "no main dictionaries found"), tostring(err))
+            assert.is_true(contains(err, "no main dictionaries found") or contains(err, "dictionary this profile uses is not available"), tostring(err))
             return
           end
           assert.is_table(suggestions)

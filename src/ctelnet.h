@@ -485,6 +485,7 @@ private:
 
     void trackKaVirNegotiation(unsigned char option);
     void autoEnableMXPProcessor();
+    void switchMxpOn();
     void autoEnableTTYPEVersion();
     QByteArray encodingForCharacterSet(const QByteArray& characterSet) const;
 
@@ -601,6 +602,8 @@ private:
 
     std::string mMudData;
     bool mIsTimerPosting = false;
+    // The last bytes trackMXPElementDetection() saw, so an ESC[#z split between two reads is found
+    std::string mMxpDetectionTail;
     // Beats while a write waits on its reply - see NETWORK_LATENCY_BEAT in
     // ctelnet.cpp:
     QTimer* mpNetworkLatencyBeatTimer = nullptr;
@@ -643,6 +646,8 @@ private:
     bool enableMSDP = false;
     bool enableMSP = false;
     bool enableMXP = false;
+    // enableMXP was set by autoEnableMXPProcessor() rather than by the game switching MXP on
+    bool mMxpAutoEnabled = false;
     bool enableChannel102 = false;
     // Inhibit mAutoReconnect from taking effect for one connection cycle,
     // either because the user wanted to disconnect or an SSL/TLS error occurred:
@@ -653,6 +658,8 @@ private:
     // Set while what the game sent before closing is still being taken in, one
     // read per event-loop turn; the disconnect is finished once it is all in.
     bool mDisconnectionPending = false;
+    // A readPendingSocketData() is queued for the rest of a burst; only Windows acts on it
+    bool mReadPending = false;
     bool mAutoReconnect = false;
     QStringList messageStack;
     // True if THIS profile is playing a replay, does not know about any OTHER

@@ -26,8 +26,8 @@
  *
  * The stranding only happens where the host's socket receive buffer swallows the
  * whole burst, so the test only discriminates there - on Linux, which autotunes to
- * tens of MB. Elsewhere it passes without discriminating; see the note on the test
- * itself.
+ * tens of MB, and on Windows, where Mudlet asks for 1 MB. Elsewhere it passes
+ * without discriminating; see the note on the test itself.
  *
  * Run with: ctest -R TelnetLargeBurstTest -V
  */
@@ -281,10 +281,11 @@ private slots:
         // strands too, 260 KB already completes unfixed - and it leaves the wait
         // below with several times the margin it needs. This only strands on a host
         // whose socket receive buffer swallows the whole burst, so that one
-        // readyRead() covers it all - Linux autotunes to tens of MB and does. Where
-        // the buffer is smaller the sender dribbles, readyRead() keeps firing and
-        // even the unfixed code finishes, so there the test passes without
-        // discriminating rather than failing spuriously.
+        // readyRead() covers it all - Linux autotunes to tens of MB and does, and
+        // Windows is asked for 1 MB. Where the buffer is smaller the sender
+        // dribbles, readyRead() keeps firing and even the unfixed code finishes,
+        // so there the test passes without discriminating rather than failing
+        // spuriously.
         constexpr int lineCount = 12000;
         mpHost->mainConsoleView()->buffer.clear();
 

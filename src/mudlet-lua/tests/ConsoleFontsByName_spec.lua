@@ -125,23 +125,17 @@ describe("Tests that the font functions find their console by name", function()
     end)
   end)
 
-  it("lets a console win a name a label also carries", function()
-    local shared = "specFontsByNameShared" .. suffix
-    assert.is_true(createLabel(shared, 0, 0, 50, 20, 1))
+  -- "main" is the one name a console can still share with a label
+  it("lets the main console win the name of a label called main", function()
     finally(function()
-      deleteMiniConsole(shared)
-      deleteLabel(shared)
+      deleteLabel("main")
     end)
-    assert.are.same({true}, {setFontSize(shared, 17)})
-    -- a new mini console starts at 12
-    assert.is_true(createMiniConsole(shared, 0, 0, 300, 200))
-    assert.are.same({12}, {getFontSize(shared)})
-
-    assert.are.same({true}, {setFontSize(shared, 21)})
-    assert.are.same({21}, {getFontSize(shared)})
-    -- with the console gone the name reaches the label again, at its own size
-    assert.is_true(deleteMiniConsole(shared))
-    assert.are.same({17}, {getFontSize(shared)})
+    local size = getFontSize("main") == 17 and 19 or 17
+    assert.is_true(createLabel("main", 0, 0, 50, 20, 1))
+    assert.are.same({true}, {setFontSize("main", size)})
+    assert.are.same({size}, {getFontSize("main")})
+    assert.is_true(deleteLabel("main"))
+    assert.are.same({size}, {getFontSize("main")})
   end)
 
   it("checks the arguments before it looks for the console", function()
@@ -165,6 +159,23 @@ describe("Tests that the font functions find their console by name", function()
       assert.are.same({nil, ("font '%s' is not available"):format(name)}, {setFont(unknown, name)})
     end
     assert.are.same({nil, "size cannot be 0 or negative"}, {setFontSize(unknown, 0)})
+    assert.are.same({nil, "size 999999 is too large, it cannot be more than 1000"}, {setFontSize(unknown, 999999)})
+    assert.are.same({nil, "size 1001 is too large, it cannot be more than 1000"}, {setFontSize(unknown, 1001)})
+    assert.are.same({nil, "font name must not contain a NUL character"}, {setFont(unknown, families[1] .. "\0Garbage")})
+  end)
+
+  it("refuses a font name with a NUL in it rather than set the family before the NUL", function()
+    local before = getFont("main")
+    local prefix = otherFamily(before)
+    for _, call in ipairs({
+      function() return setFont("main", prefix .. "\0Garbage") end,
+      function() return setFont(prefix .. "\0Garbage") end,
+      -- a NUL, not an empty name
+      function() return setFont("main", "\0" .. prefix) end,
+    }) do
+      assert.are.same({nil, "font name must not contain a NUL character"}, {call()})
+      assert.are.equal(before, getFont("main"))
+    end
   end)
 
   describe("with a sub-console's name", function()
@@ -204,6 +215,18 @@ describe("Tests that the font functions find their console by name", function()
           assert.are.equal(size, getFontSize(window))
           assert.are.same({}, events)
           assert.are.equal(mainSize, getFontSize("main"))
+        end)
+
+        it("takes the largest size it allows and refuses one past it", function()
+          local family, size = getFont(window), getFontSize(window)
+          finally(function()
+            setFontSize(window, size)
+          end)
+          assert.are.same({true}, {setFontSize(window, 1000)})
+          assert.are.equal(1000, getFontSize(window))
+          assert.are.equal(family, getFont(window))
+          assert.are.same({nil, "size 1001 is too large, it cannot be more than 1000"}, {setFontSize(window, 1001)})
+          assert.are.equal(1000, getFontSize(window))
         end)
 
         it("sets and reads that console's font, keeping its size", function()
@@ -321,6 +344,18 @@ describe("Tests that the font functions find their console by name", function()
       assert.are.equal(size, getFontSize("main"))
       assert.are.same({true}, {setFont(family)})
       assert.are.equal(family, getFont("main"))
+    end)
+
+    it("takes the largest size it allows for the main console and refuses one past it", function()
+      local family, size = getFont("main"), getFontSize("main")
+      finally(function()
+        setFontSize("main", size)
+      end)
+      assert.are.same({true}, {setFontSize("main", 1000)})
+      assert.are.equal(1000, getFontSize("main"))
+      assert.are.equal(family, getFont("main"))
+      assert.are.same({nil, "size 1001 is too large, it cannot be more than 1000"}, {setFontSize("main", 1001)})
+      assert.are.equal(1000, getFontSize("main"))
     end)
 
     it("refuses the main console's command line", function()

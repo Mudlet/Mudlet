@@ -61,7 +61,7 @@ public:
         QString text;
         QColor foreground;
         QColor background;
-        QString timeStamp;
+        qint64 arrivalMSecs;
     };
     QList<Line> lines;
 
@@ -72,7 +72,7 @@ public:
         }
     }
 
-    void printDebugLine(const QString& text, const QColor& foreground, const QColor& background, const QString& timeStamp) override { lines.append(Line{text, foreground, background, timeStamp}); }
+    void printDebugLine(const QString& text, const QColor& foreground, const QColor& background, const qint64 arrivalMSecs) override { lines.append(Line{text, foreground, background, arrivalMSecs}); }
 };
 
 class RecordingProfileObserver : public TDebug::ProfileObserver
@@ -392,7 +392,7 @@ private slots:
         QVERIFY2(lineOfMessage >= 0, "Held-back message never arrived on resume");
         // Same second, rather than the same millisecond, to stay clear of the
         // wait's own jitter:
-        QCOMPARE(console->buffer.timeBuffer.at(lineOfMessage).left(8), arrivalTime.left(8));
+        QCOMPARE(console->buffer.timeStampText(lineOfMessage).left(8), arrivalTime.left(8));
     }
 
     // Narrowing to one trigger is the point of the item filter, so anything
@@ -553,13 +553,15 @@ private slots:
         installSink(sink);
         TDebug::setEnabledCategories(TDebug::csmAllCategories);
 
+        const qint64 before = QDateTime::currentMSecsSinceEpoch();
         TDebug(Qt::red, Qt::yellow, TDebug::Category::TriggerMatch) << "one line\n" >> nullptr;
+        const qint64 after = QDateTime::currentMSecsSinceEpoch();
 
         QCOMPARE(sink.lines.size(), 1);
         QVERIFY2(sink.lines.at(0).text.endsWith(qsl("one line\n")), qPrintable(sink.lines.at(0).text));
         QCOMPARE(sink.lines.at(0).foreground, QColor(Qt::red));
         QCOMPARE(sink.lines.at(0).background, QColor(Qt::yellow));
-        QVERIFY2(sink.lines.at(0).timeStamp.isEmpty(), "A line shown as it arrived was handed a time stamp to replay");
+        QVERIFY2(before <= sink.lines.at(0).arrivalMSecs && sink.lines.at(0).arrivalMSecs <= after, "A line shown as it arrived was not stamped with its arrival time");
     }
 
     // A profile can start, and say so, before anyone has opened the console.
@@ -594,9 +596,9 @@ private slots:
         TDebug::setEnabledCategories(TDebug::csmAllCategories);
         TDebug::setSink(nullptr);
 
-        const QDateTime before = QDateTime::currentDateTime();
+        const qint64 before = QDateTime::currentMSecsSinceEpoch();
         TDebug(Qt::blue, Qt::black, TDebug::Category::TriggerMatch) << "written with no sink\n" >> nullptr;
-        const QDateTime after = QDateTime::currentDateTime();
+        const qint64 after = QDateTime::currentMSecsSinceEpoch();
         QVERIFY2(sink.lines.isEmpty(), "A line written with no sink installed reached one anyway");
 
         // Long enough that a stamp taken when the sink arrives cannot land
@@ -607,16 +609,8 @@ private slots:
 
         QCOMPARE(sink.lines.size(), 2);
         QVERIFY2(sink.lines.at(0).text.contains(qsl("written with no sink")), qPrintable(sink.lines.at(0).text));
-        const QTime stampedTime = QTime::fromString(sink.lines.at(0).timeStamp, TBuffer::smTimeStampFormat);
-        QVERIFY2(stampedTime.isValid(), qPrintable(qsl("Replayed backlog line carried no usable time stamp: '%1'").arg(sink.lines.at(0).timeStamp)));
-        // The stamp carries no date, so a window that straddles midnight has to
-        // read a small stamp as the next day rather than as the past:
-        QDateTime stamped(before.date(), stampedTime);
-        if (stamped < before) {
-            stamped = stamped.addDays(1);
-        }
-        const QString window = qsl("%1- %2").arg(before.time().toString(TBuffer::smTimeStampFormat), after.time().toString(TBuffer::smTimeStampFormat));
-        QVERIFY2(before <= stamped && stamped <= after, qPrintable(qsl("Backlog line was stamped %1, outside its arrival window %2").arg(sink.lines.at(0).timeStamp, window)));
+        const qint64 stamped = sink.lines.at(0).arrivalMSecs;
+        QVERIFY2(before <= stamped && stamped <= after, qPrintable(qsl("Backlog line was stamped %1, outside its arrival window %2 - %3").arg(stamped).arg(before).arg(after)));
     }
 
     // Lines written with no sink wait for one, but only as many as the console
@@ -671,7 +665,8 @@ private slots:
         TDebug::flushMessageQueue();
 
         QVERIFY2(debugBufferContains(qsl("backlog message %1").arg(limit + 1)), "The newest backlog line did not reach the console");
-        QVERIFY2(debugBufferContains(qsl("2 older message(s) were dropped while the Central Debug Console was closed")), "The dropped-message notice was pushed out of the console by the backlog it introduces");
+        QVERIFY2(debugBufferContains(qsl("2 older message(s) were dropped while the Central Debug Console was closed")),
+                 "The dropped-message notice was pushed out of the console by the backlog it introduces");
     }
 
     // Resuming hands each held line to the sink stamped with the time it
@@ -683,10 +678,10 @@ private slots:
         TDebug::setEnabledCategories(TDebug::csmAllCategories);
 
         TDebug::setPaused(true);
-        const QDateTime before = QDateTime::currentDateTime();
+        const qint64 before = QDateTime::currentMSecsSinceEpoch();
         TDebug(Qt::blue, Qt::black, TDebug::Category::TriggerMatch) << "held first\n" >> nullptr;
         TDebug(Qt::blue, Qt::black, TDebug::Category::TriggerMatch) << "held second\n" >> nullptr;
-        const QDateTime after = QDateTime::currentDateTime();
+        const qint64 after = QDateTime::currentMSecsSinceEpoch();
         QVERIFY2(sink.lines.isEmpty(), "A line arriving while paused reached the sink");
         QCOMPARE(TDebug::pausedMessageCount(), 2);
 
@@ -699,16 +694,8 @@ private slots:
         QVERIFY2(sink.lines.at(0).text.contains(qsl("held first")), qPrintable(sink.lines.at(0).text));
         QVERIFY2(sink.lines.at(1).text.contains(qsl("held second")), qPrintable(sink.lines.at(1).text));
         for (const auto& line : sink.lines) {
-            const QTime stampedTime = QTime::fromString(line.timeStamp, TBuffer::smTimeStampFormat);
-            QVERIFY2(stampedTime.isValid(), qPrintable(qsl("Replayed line carried no usable time stamp: '%1'").arg(line.timeStamp)));
-            // The stamp carries no date, so a window that straddles midnight has
-            // to read a small stamp as the next day rather than as the past:
-            QDateTime stamped(before.date(), stampedTime);
-            if (stamped < before) {
-                stamped = stamped.addDays(1);
-            }
-            const QString window = qsl("%1- %2").arg(before.time().toString(TBuffer::smTimeStampFormat), after.time().toString(TBuffer::smTimeStampFormat));
-            QVERIFY2(before <= stamped && stamped <= after, qPrintable(qsl("Replayed line was stamped %1, outside its arrival window %2").arg(line.timeStamp, window)));
+            QVERIFY2(before <= line.arrivalMSecs && line.arrivalMSecs <= after,
+                     qPrintable(qsl("Replayed line was stamped %1, outside its arrival window %2 - %3").arg(line.arrivalMSecs).arg(before).arg(after)));
         }
     }
 
@@ -995,10 +982,7 @@ private:
         });
     }
 
-    void deleteProfileDirectory(const QString& profileName)
-    {
-        TestProfile::removeProfileDirectory(profileName);
-    }
+    void deleteProfileDirectory(const QString& profileName) { TestProfile::removeProfileDirectory(profileName); }
 
     // Starts a profile by driving the connection dialog, as a user would.
     void startProfile(const QString& hostname, const QString& address, const QString& port)

@@ -78,6 +78,7 @@ public:
     // Whether an area is already using this name, without areaNamesMap.values()'s
     // full copy of every area name just to scan it once.
     bool hasAreaName(const QString& name) const;
+    QString unusedUnnamedAreaName() const;
     void updateEntranceMap(TRoom*, bool isMapLoading = false);
     void updateEntranceMap(int);
     const QMultiHash<int, int>& getEntranceHash() const { return entranceMap; }
@@ -86,9 +87,11 @@ public:
 
     void buildAreas();
     void clearMapDB();
-    // Bumped on every clear. Holders of room/area/label ids that can outlive one (e.g. a dialog open
-    // across loadMap()) compare it to detect stale ids, since the next map reuses them.
+    // Bumped on every clear; a database that replaces another starts one past that one's. Holders of room/area/label ids that
+    // can outlive either (e.g. a dialog open across loadMap()) compare it to detect stale ids, since the next map reuses them.
     unsigned int mapGeneration() const { return mMapGeneration; }
+    // For one that replaces another, so that the ids held from that one read as stale here too
+    void continueGenerationOf(const TRoomDB& previous) { mMapGeneration = previous.mMapGeneration + 1; }
     void auditRooms(QHash<int, int>&, QHash<int, int>&);
     bool addRoom(int id, TRoom* pR, bool isMapLoading = false);
     int getAreaID(TArea* pA);

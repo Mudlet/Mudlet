@@ -204,6 +204,7 @@ private:
     QFutureWatcher<std::pair<bool, QString>>* mpZipWatcher = nullptr;
     // Read on the zip's worker thread by libzip's cancel callback
     std::shared_ptr<std::atomic<bool>> mpZipCancelled;
+    bool mRecountPending = false;
 
 signals:
     void signal_exportLocationChanged(const QString& location);

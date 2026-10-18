@@ -83,6 +83,7 @@ void TTreeWidget::getAllChildren(QTreeWidgetItem* pItem, QList<QTreeWidgetItem*>
 
 void TTreeWidget::mouseReleaseEvent(QMouseEvent* event)
 {
+    const bool pressHeldFromView = event->button() == Qt::LeftButton && std::exchange(mTickPressHeldFromView, false);
     QModelIndex indexClicked = indexAt(event->pos());
     if (mTreeType == TreeType::Var && indexClicked.isValid() && indexClicked.row() != 0 && mClickedItem == indexClicked) {
         QRect vrect = visualRect(indexClicked);
@@ -116,7 +117,22 @@ void TTreeWidget::mouseReleaseEvent(QMouseEvent* event)
             return;
         }
     }
+    // The view still holds an earlier press, which it would take this release as ending
+    if (pressHeldFromView) {
+        return;
+    }
     QTreeWidget::mouseReleaseEvent(event);
+}
+
+void TTreeWidget::mouseMoveEvent(QMouseEvent* event)
+{
+    if (mTickPressHeldFromView) {
+        if (event->buttons() & Qt::LeftButton) {
+            return;
+        }
+        mTickPressHeldFromView = false;
+    }
+    QTreeWidget::mouseMoveEvent(event);
 }
 
 void TTreeWidget::mousePressEvent(QMouseEvent* event)
@@ -128,6 +144,13 @@ void TTreeWidget::mousePressEvent(QMouseEvent* event)
         QRect rect = QRect(header()->sectionViewportPosition(0) + itemIndentation, vrect.y(), style()->pixelMetric(QStyle::PM_IndicatorWidth), vrect.height());
         if (rect.contains(event->pos())) {
             mClickedItem = indexClicked;
+            // Not passed on when the release will tick: the view would select the row, and saving the one
+            // left can move it into sorted place, sliding another row under the cursor before the release
+            const QTreeWidgetItem* pressed = itemFromIndex(indexClicked);
+            if (event->button() == Qt::LeftButton && indexClicked.row() != 0 && pressed && (pressed->flags() & Qt::ItemIsUserCheckable)) {
+                mTickPressHeldFromView = true;
+                return;
+            }
             QTreeWidget::mousePressEvent(event);
             return;
         }
@@ -524,6 +547,8 @@ void TTreeWidget::addVariableRows(VarUnit* pVarUnit, QTreeWidgetItem* pParent, T
     pParent->addChildren(cList);
 }
 
+TTreeWidget::~TTreeWidget() = default;
+
 void TTreeWidget::clearVariableRows()
 {
     mVariableForRow.clear();
@@ -554,7 +579,11 @@ TVar* TTreeWidget::variableForRow(VarUnit* pVarUnit, QTreeWidgetItem* pItem) con
 
 TVar* TTreeWidget::newVariableForRow(VarUnit* pVarUnit, QTreeWidgetItem* pItem) const
 {
-    return rowsStandForCurrentVariables(pVarUnit) ? mNewVariableForRow.value(pItem) : nullptr;
+    if (!rowsStandForCurrentVariables(pVarUnit)) {
+        return nullptr;
+    }
+    const auto it = mNewVariableForRow.find(pItem);
+    return it == mNewVariableForRow.end() ? nullptr : it->second.get();
 }
 
 void TTreeWidget::setVariableForRow(VarUnit* pVarUnit, QTreeWidgetItem* pItem, TVar* pVariable)
@@ -563,21 +592,26 @@ void TTreeWidget::setVariableForRow(VarUnit* pVarUnit, QTreeWidgetItem* pItem, T
     mVariableForRow.insert(pItem, pVariable);
 }
 
-void TTreeWidget::setNewVariableForRow(VarUnit* pVarUnit, QTreeWidgetItem* pItem, TVar* pVariable)
+void TTreeWidget::setNewVariableForRow(VarUnit* pVarUnit, QTreeWidgetItem* pItem, std::unique_ptr<TVar> pVariable)
 {
     adoptVariableTree(pVarUnit);
-    mNewVariableForRow.insert(pItem, pVariable);
+    mNewVariableForRow.insert_or_assign(pItem, std::move(pVariable));
 }
 
 void TTreeWidget::forgetRow(QTreeWidgetItem* pItem)
 {
     mVariableForRow.remove(pItem);
-    mNewVariableForRow.remove(pItem);
+    mNewVariableForRow.erase(pItem);
 }
 
 void TTreeWidget::forgetNewVariableForRow(QTreeWidgetItem* pItem)
 {
-    mNewVariableForRow.remove(pItem);
+    const auto it = mNewVariableForRow.find(pItem);
+    if (it == mNewVariableForRow.end()) {
+        return;
+    }
+    static_cast<void>(it->second.release());
+    mNewVariableForRow.erase(it);
 }
 
 // The same question VarUnit::shouldSave() answers for a variable, asked of the

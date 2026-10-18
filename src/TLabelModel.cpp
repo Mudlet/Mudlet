@@ -250,11 +250,91 @@ bool TLabelModel::containsAnchorTag(const QString& text)
     return false;
 }
 
+// The closing quote has to be the one that opened the value: a Lua command link holds the other kind.
+static const QRegularExpression& anchorTag()
+{
+    static const QRegularExpression anchor(qsl("<a\\s+href=(\"[^\"]*\"|'[^']*')([^>]*)>"));
+    return anchor;
+}
+
+// One attribute with the whitespace before it, if any: Qt also reads one written straight after a quote
+static const QRegularExpression& anchorAttribute()
+{
+    static const QRegularExpression attribute(qsl("\\s*([^\\s=>\"']+)(?:\\s*=\\s*(?:\"[^\"]*\"|'[^']*'|[^\\s>\"']*))?"));
+    return attribute;
+}
+
+// The attributes are read one after another from the start, so that neither data-style= nor a value
+// holding "style=" is taken for a style attribute; reading stops at the first thing that is not one.
+static QString withoutStyleAttributes(const QString& attributes)
+{
+    QString result;
+    qsizetype at = 0;
+    while (at < attributes.size()) {
+        const QRegularExpressionMatch attribute = anchorAttribute().match(attributes, at, QRegularExpression::NormalMatch, QRegularExpression::AnchorAtOffsetMatchOption);
+        if (!attribute.hasMatch()) {
+            break;
+        }
+        if (attribute.captured(1).compare(qsl("style"), Qt::CaseInsensitive) != 0) {
+            result += attribute.captured(0);
+        }
+        at = attribute.capturedEnd();
+    }
+    result += QStringView(attributes).mid(at);
+    return result;
+}
+
+// Text read back with getLabelText() carries the anchor tags the last pass rewrote; each is put back as
+// it was given, so resetLinkStyle() can take the styling away again. Any other tag is the script's own.
+QString TLabelModel::withoutInjectedLinkStyles(const QString& text) const
+{
+    // a pixmap, a movie or a style sheet's qproperty-text has taken the place of what the last pass showed
+    if (mStyledAnchors.isEmpty() || mText != mStyledText) {
+        return text;
+    }
+
+    QString result;
+    qsizetype copied = 0;
+    QList<bool> restored(mStyledAnchors.size(), false);
+    QRegularExpressionMatchIterator it = anchorTag().globalMatch(text);
+    while (it.hasNext()) {
+        const QRegularExpressionMatch match = it.next();
+        for (qsizetype i = 0; i < mStyledAnchors.size(); ++i) {
+            if (!restored.at(i) && mStyledAnchors.at(i).styled == match.captured(0)) {
+                result += QStringView(text).mid(copied, match.capturedStart() - copied);
+                result += mStyledAnchors.at(i).original;
+                copied = match.capturedEnd();
+                restored[i] = true;
+                break;
+            }
+        }
+    }
+    result += QStringView(text).mid(copied);
+    return result;
+}
+
+QString TLabelModel::linkStyledText(const QString& text)
+{
+    return styleLinks(withoutInjectedLinkStyles(text));
+}
+
+// Re-styles from mUnstyledText, not mText: that already carries the styling of the last pass.
+QString TLabelModel::restyledText()
+{
+    return styleLinks(mUnstyledText);
+}
+
 // If we have link styling configured and the text contains HTML links,
 // we need to inject inline styles because QTextDocument doesn't use
 // widget stylesheets or QPalette for link colors when a stylesheet exists
-QString TLabelModel::linkStyledText(const QString& text) const
+QString TLabelModel::styleLinks(const QString& text)
 {
+    mUnstyledText = text;
+    // Only the tags shown now are recognised when read back, and only unchanged: text a script kept from
+    // an earlier pass, or an anchor it edited, comes back as its own, as nothing tells it apart from a
+    // style the script wrote that way.
+    mStyledAnchors.clear();
+    mStyledText = text;
     if ((mLinkColor.isEmpty() && mLinkVisitedColor.isEmpty()) || !containsAnchorTag(text)) {
         return text;
     }
@@ -265,8 +345,7 @@ QString TLabelModel::linkStyledText(const QString& text) const
     // because Mudlet's HTML generation (via echo(), setLabelText(), etc.) consistently
     // uses this format. User-provided HTML outside this pattern will still render as
     // clickable links (Qt handles that), but won't receive custom styling.
-    static const QRegularExpression anchorRegex(qsl("<a\\s+href=([\"'][^\"']*[\"'])([^>]*)>"));
-    QRegularExpressionMatchIterator it = anchorRegex.globalMatch(styledText);
+    QRegularExpressionMatchIterator it = anchorTag().globalMatch(styledText);
 
     // Process matches in reverse order to avoid offset issues
     QList<QRegularExpressionMatch> matches;
@@ -288,9 +367,9 @@ QString TLabelModel::linkStyledText(const QString& text) const
 
         QString linkStyle;
         if (isVisited && !mLinkVisitedColor.isEmpty()) {
-            linkStyle += qsl("color: %1; ").arg(mLinkVisitedColor);
+            linkStyle += qsl("color: %1; ").arg(mLinkVisitedColor.toHtmlEscaped());
         } else if (!mLinkColor.isEmpty()) {
-            linkStyle += qsl("color: %1; ").arg(mLinkColor);
+            linkStyle += qsl("color: %1; ").arg(mLinkColor.toHtmlEscaped());
         }
 
         if (!mLinkUnderline) {
@@ -300,22 +379,15 @@ QString TLabelModel::linkStyledText(const QString& text) const
         if (!linkStyle.isEmpty()) {
             linkStyle = linkStyle.trimmed();
 
-            QString replacement;
-            if (otherAttrs.contains(qsl("style="))) {
-                // Already has a style attribute - merge our styles
-                // This is complex, so for now just prepend our styles
-                replacement = qsl("<a href=%1 style=\"%2\"").arg(hrefPart, linkStyle);
-                // Intentionally overwrites any existing style attribute rather than merging
-                // to keep implementation simple for the common case (labels without pre-existing inline styles)
-                otherAttrs.remove(QRegularExpression(qsl("style=([\"'][^\"']*[\"'])")));
-                replacement += otherAttrs + qsl(">");
-            } else {
-                replacement = qsl("<a href=%1 style=\"%2\"%3>").arg(hrefPart, linkStyle, otherAttrs);
-            }
+            // Intentionally overwrites any existing style attribute rather than merging
+            // to keep implementation simple for the common case (labels without pre-existing inline styles)
+            const QString replacement = qsl("<a href=%1 style=\"%2\"%3>").arg(hrefPart, linkStyle, withoutStyleAttributes(otherAttrs));
 
             styledText.replace(match.capturedStart(), match.capturedLength(), replacement);
+            mStyledAnchors.prepend({replacement, match.captured(0)});
         }
     }
+    mStyledText = styledText;
     return styledText;
 }
 
