@@ -374,8 +374,9 @@ private:
             qWarning() << "the main window never became active";
             return false;
         }
-        // Handing the focus to the command line retries on timers up to 50ms long, which would take it back
-        QTest::qWait(80ms);
+        // Handing the focus to the command line retries on timers up to 50ms long, which would take it back,
+        // and a loaded CI runner fires them late
+        QTest::qWait(300ms);
         mpHost->setCaretEnabled(true);
         return QTest::qWaitFor(
                 [this]() {
