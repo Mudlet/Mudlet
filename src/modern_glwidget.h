@@ -50,6 +50,7 @@
 #include <QTimer>
 #include <QEasingCurve>
 
+#include "BloomPass.h"
 #include "GeometryManager.h"
 #include "LabelTextureCache.h"
 #include "RenderCommandQueue.h"
@@ -230,6 +231,7 @@ private:
 
     // Label texture cache
     LabelTextureCache mLabelTextureCache;
+    BloomPass mBloom;
     // Room textures this frame has used so far, which making room for another must keep
     QSet<QString> mRoomTexturesInUse;
     // The text in each cell of the terminal style's glyph atlas, in order, and how many of them and in which font
@@ -348,6 +350,14 @@ private:
     QEasingCurve mEasingCurve;
     bool mCameraSmoothAnimating = false; // Dedicated flag for smooth camera animation
     int mPreviousRID = 0;                // Track previous room ID to detect changes
+    // Apart from mPreviousRID, which a view moved by hand or a second map window stops following
+    int mPulsedRoomId = 0;
+    // The pulse the hologram style sends out from the player's room when the player moves: when it began on
+    // mPulseReference, none when none is under way, and what repaints the view while it spreads
+    static constexpr qint64 scmPulseMilliseconds = 1200;
+    QElapsedTimer mPulseReference;
+    std::optional<qint64> mPulseStartedAt;
+    QTimer* mPulseTimer = nullptr;
     bool mFramePending = true;
     // Set by a zoom or a change of area while hidden: the shown area is framed at its stored zoom, read then so a later
     // 2D zoom counts, for the size the view is first seen at, unless a camera distance is set first
@@ -414,6 +424,8 @@ private:
     void renderLabels(bool onTop, int lowestLevel, int highestLevel);
     // A column of light over the player's room, seen faintly through anything in front of it
     void renderPlayerBeacon();
+    // A style with a pulse's marker: an outlined diamond of light hovering over the player's room, on a stem from its top
+    void renderPlayerDiamond(const QVector3D& roomTop, float roomSize);
     void paintCompass(QPainter& painter);
     // A run of the status line's text in one color
     struct StatusLinePart
@@ -423,6 +435,8 @@ private:
     };
     QList<StatusLinePart> statusLineParts() const;
     void paintStatusLine(QPainter& painter);
+    // A style with a scanner overlay's corner brackets and readout, the readout starting top pixels down
+    void paintScannerOverlay(QPainter& painter, int top);
     // The style's lettering at the size of the text drawn over the view
     QFont sheetFont() const;
     // Where it was drawn, below top, or an empty rectangle where the style draws none or the view has no room for it
@@ -522,6 +536,7 @@ private:
     QColor levelFadeTarget(int z) const;
     const MapStyle& mapStyle() const;
     void applyStyleGeometry();
+    void stopPulse();
     // The style's background, else the profile's mapper background color
     QColor backgroundColor() const;
     // Of the beacon over the player's room, and of the style's thin ring around it

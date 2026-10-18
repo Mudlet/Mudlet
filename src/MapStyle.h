@@ -46,7 +46,7 @@ struct MapStyle
         Halo,
         // The room's own square or circle filled, as a text screen's cursor fills its cell
         Cell,
-        // Two bright rings with a faint glow between them
+        // Two bright rings with a faint glow between them, on the ground round the room
         Rings
     };
 
@@ -72,7 +72,10 @@ struct MapStyle
         Stations,
         // Each room in its environment's color, softened toward a lit pastel: less saturated, and kept from the
         // darkest and lightest
-        Soft
+        Soft,
+        // Projected light: every room glowing in its environment's hue, at full strength and kept bright enough to
+        // glow on the dark background; a gray environment glows in the style's ink
+        Light
     };
 
     enum class Shape {
@@ -93,7 +96,10 @@ struct MapStyle
         StationRings,
         // A base around each room on the viewed level, halfway from the room's color to the background, so the
         // room reads as a block with shaded sides
-        ViewedLevelBase
+        ViewedLevelBase,
+        // A hologram: no fill, every edge of each room's block and of each exit's bar a glowing line, all added onto what
+        // is behind rather than covering it, so that rooms and levels show through each other
+        GlowingWireframes
     };
 
     enum class Doors {
@@ -111,7 +117,10 @@ struct MapStyle
         Ring,
         // A bullseye on the player's room, and beside it a pill in the style's ink reading "YOU" on a leader to it,
         // as on a map at a station's entrance
-        Pill
+        Pill,
+        // The player's room drawn in playerRoomColor(), with a diamond of light in that color hovering over it and
+        // sending out a ring of light each time the player arrives
+        Pulse
     };
 
     enum class Glyphs {
@@ -122,7 +131,13 @@ struct MapStyle
         Terminal
     };
 
-    enum class PostEffect { NoPostEffects = 0x0 };
+    enum class PostEffect {
+        NoPostEffects = 0x0,
+        // Every few rows of pixels of what is drawn on the map dimmed, as on a projected image
+        Scanlines = 0x1,
+        // The brightest of what is drawn blurred and added back, so that lines of light glow softly
+        Bloom = 0x2
+    };
     Q_DECLARE_FLAGS(PostEffects, PostEffect)
 
     QString id;
@@ -232,6 +247,10 @@ struct MapStyle
     // Room names and map labels drawn with a rim of the background around them, so that lines under them do not
     // run through the text
     bool labelHalos = false;
+    // Room names and map labels multiplied by this color, to sit back in the scene; invalid for their own colors
+    QColor labelTint;
+    // Brackets in the view's corners and, in its top left, the area's name, levels and rooms, as on a scanner's display
+    bool scannerOverlay = false;
 
     QString displayName() const;
     // Whether this style's player ring and color take the place of the profile's player room marker
@@ -260,6 +279,8 @@ struct MapStyle
     QColor symbolColor(const QColor& roomSymbolColor, const QColor& drawnRoomColor) const;
     QColor exitColor(const QColor& profileExitColor) const;
     QColor roomIdColor(const QColor& drawnRoomColor) const;
+    // roomBorderColor is the room's own, invalid unless one was set; drawnRoomColor is roomColor()'s
+    QColor wireColor(const QColor& roomBorderColor, const QColor& drawnRoomColor) const;
     // The player's room, where its marker could not be made
     QColor playerRoomColor() const;
     // A ring or a line in an environment's color, made darker or lighter where it would not stand out on backgroundColor()

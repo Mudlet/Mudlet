@@ -21,6 +21,11 @@
 
 #include <QDebug>
 
+namespace {
+// How much of a wireframe's color fills its faces, between the edges
+constexpr float scmWireFill = 0.06f;
+} // namespace
+
 RenderCubeCommand::RenderCubeCommand(
         float x, float y, float z, float size, float r, float g, float b, float a, const QMatrix4x4& projectionMatrix, const QMatrix4x4& viewMatrix, const QMatrix4x4& modelMatrix)
 : mX(x)
@@ -277,15 +282,25 @@ void RenderInstancedCubesCommand::execute(QOpenGLFunctions* gl,
     QMatrix3x3 normalMatrix = mModelMatrix.normalMatrix();
     shader->setUniformValue("uNormalMatrix", normalMatrix);
 
-    const bool unlit = mShading == Shading::Unlit;
+    const bool unlit = mShading != Shading::Lit;
+    const bool wireframe = mShading == Shading::Wireframe;
     if (unlit) {
         shader->setUniformValue("uDisableLighting", true);
+    }
+    if (wireframe) {
+        shader->setUniformValue("uWireframe", true);
+        shader->setUniformValue("uWireRound", mShape == GeometryManager::InstanceShape::Cylinder);
+        shader->setUniformValue("uWireSides", static_cast<float>(GeometryManager::scmCylinderSegments));
+        shader->setUniformValue("uWireFill", scmWireFill);
     }
 
     geometryManager->renderInstancedCubes(mInstances, vao, vertexBuffer, colorBuffer, normalBuffer, indexBuffer, resourceManager, GL_TRIANGLES, mShape);
 
     if (unlit) {
         shader->setUniformValue("uDisableLighting", false);
+    }
+    if (wireframe) {
+        shader->setUniformValue("uWireframe", false);
     }
 }
 
@@ -357,6 +372,12 @@ void GLStateCommand::execute(QOpenGLFunctions* gl,
     case DEPTH_FUNC_LESS:
         gl->glDepthFunc(GL_LESS);
         break;
+    case ADDITIVE_BLEND:
+        gl->glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+        break;
+    case ALPHA_BLEND:
+        gl->glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        break;
     }
 }
 
@@ -365,7 +386,7 @@ RenderLabelCommand::RenderLabelCommand(float centerX, float centerY, float cente
                                        GLuint textureId,
                                        const QVector3D& cameraRight,
                                        const QVector3D& cameraUp,
-                                       bool highlight,
+                                       const QVector4D& tint,
                                        const QMatrix4x4& projectionMatrix,
                                        const QMatrix4x4& viewMatrix,
                                        const QMatrix4x4& modelMatrix)
@@ -373,7 +394,7 @@ RenderLabelCommand::RenderLabelCommand(float centerX, float centerY, float cente
     , mWidth(width), mHeight(height)
     , mTextureId(textureId)
     , mCameraRight(cameraRight), mCameraUp(cameraUp)
-    , mHighlight(highlight)
+    , mTint(tint)
     , mProjectionMatrix(projectionMatrix), mViewMatrix(viewMatrix), mModelMatrix(modelMatrix)
 {
 }
@@ -406,14 +427,9 @@ void RenderLabelCommand::execute(QOpenGLFunctions* gl,
         return;
     }
 
-    // If highlighted, modify colors to add orange overlay
-    if (mHighlight) {
-        for (int i = 0; i < labelGeometry.colors.size(); i += 4) {
-            // Mix with orange (1.0, 0.5, 0.0)
-            labelGeometry.colors[i] = 1.0f;     // R
-            labelGeometry.colors[i + 1] = 0.65f; // G
-            labelGeometry.colors[i + 2] = 0.0f;  // B
-            // Keep alpha
+    for (int i = 0; i < labelGeometry.colors.size(); i += 4) {
+        for (int channel = 0; channel < 4; ++channel) {
+            labelGeometry.colors[i + channel] *= mTint[channel];
         }
     }
 
