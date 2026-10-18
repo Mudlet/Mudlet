@@ -62,6 +62,20 @@
 
 #include <zip.h>
 
+#if defined(Q_OS_LINUX)
+#include <arpa/inet.h>
+#include <cerrno>
+#include <cstring>
+#include <fcntl.h>
+#include <linux/sockios.h>
+#include <netinet/in.h>
+#include <poll.h>
+#include <sys/ioctl.h>
+#include <sys/socket.h>
+#include <thread>
+#include <unistd.h>
+#endif
+
 extern "C" {
 #if defined(INCLUDE_VERSIONED_LUA_HEADERS)
 #include <lua5.1/lua.h>
@@ -1395,6 +1409,97 @@ nullViewActionKept = next(nullViewActions) ~= nil
         QVERIFY2(!mapper->widget_panel->isHidden(), "Showing the mapper panel did not reach the mapper drawing the map.");
         host->setMapperPanelVisible(false);
         QVERIFY2(mapper->widget_panel->isHidden(), "Hiding the mapper panel did not reach the mapper drawing the map.");
+    }
+
+    // What the game sent that the closing profile never read would make its close a reset, which on Windows
+    // loses the line sent just before it. Linux still delivers that line, so what is checked is how the
+    // connection ends, and that the line is on the wire (written by the drain or the flush) before the event
+    // loop could write it. A raw listener, as Qt reports a reset as the same RemoteHostClosedError as a clean
+    // close.
+    void test_closingAPlainConnectionWithUnreadDataEndsItCleanly()
+    {
+#if !defined(Q_OS_LINUX)
+        QSKIP("needs Linux: SIOCOUTQ, and telling a reset from a clean close on a raw socket");
+#else
+        const int listener = ::socket(AF_INET, SOCK_STREAM, 0);
+        QVERIFY(listener != -1);
+        int game = -1;
+        const auto closeSockets = qScopeGuard([&listener, &game]() {
+            ::close(listener);
+            if (game != -1) {
+                ::close(game);
+            }
+        });
+        sockaddr_in address{};
+        address.sin_family = AF_INET;
+        address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+        socklen_t addressLength = sizeof(address);
+        QVERIFY(::bind(listener, reinterpret_cast<sockaddr*>(&address), sizeof(address)) == 0);
+        QVERIFY(::listen(listener, 1) == 0);
+        QVERIFY(::getsockname(listener, reinterpret_cast<sockaddr*>(&address), &addressLength) == 0);
+
+        startProfile(mHostname, qsl("127.0.0.1"), QString::number(ntohs(address.sin_port)));
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        Host* host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        pollfd pending{listener, POLLIN, 0};
+        QVERIFY2(::poll(&pending, 1, 5000) == 1, "The profile's connection never reached the listener.");
+        game = ::accept(listener, nullptr, nullptr);
+        QVERIFY(game != -1);
+        QVERIFY(::fcntl(game, F_SETFL, ::fcntl(game, F_GETFL) | O_NONBLOCK) == 0);
+
+        // From here until the close, no event loop turn, so that the profile has not read this
+        const QByteArray welcome("Welcome, unread.\n");
+        QCOMPARE(::send(game, welcome.constData(), welcome.size(), 0), static_cast<ssize_t>(welcome.size()));
+        // Acknowledged, so in the profile's receive buffer
+        int unacknowledged = -1;
+        int queryError = 0;
+        for (const QDeadlineTimer deadline(5000); !deadline.hasExpired();) {
+            if (::ioctl(game, SIOCOUTQ, &unacknowledged) != 0) {
+                queryError = errno;
+                break;
+            }
+            if (unacknowledged == 0) {
+                break;
+            }
+            std::this_thread::sleep_for(1ms);
+        }
+        QVERIFY2(queryError == 0, qPrintable(qsl("SIOCOUTQ failed: %1").arg(QString::fromLatin1(::strerror(queryError)))));
+        QVERIFY2(unacknowledged == 0, qPrintable(qsl("The welcome never reached the profile: %1 bytes still unacknowledged.").arg(unacknowledged)));
+        QVERIFY2(!host->mainConsoleModel().buffer.lineBuffer.join(QChar::LineFeed).contains(qsl("Welcome, unread")),
+                 "The profile read the welcome before the close, so nothing was left unread for it to drain.");
+        host->send(qsl("last"), false, true);
+        host->closeChildren();
+
+        // Still no event loop turn: it would write anything the close left buffered and finish a pending close,
+        // hiding a missing write
+        QByteArray received;
+        int endedWith = -1;
+        char chunk[4096];
+        pollfd readable{game, POLLIN, 0};
+        for (const QDeadlineTimer deadline(5000); endedWith == -1 && !deadline.hasExpired();) {
+            const int ready = ::poll(&readable, 1, static_cast<int>(deadline.remainingTime()));
+            if (ready < 0 && errno != EINTR) {
+                endedWith = errno;
+            } else if (ready > 0) {
+                const ssize_t got = ::recv(game, chunk, sizeof(chunk), 0);
+                if (got > 0) {
+                    received.append(chunk, got);
+                } else if (got == 0 || (errno != EAGAIN && errno != EINTR)) {
+                    endedWith = got == 0 ? 0 : errno;
+                }
+            }
+        }
+        const QString outcome = qsl("the connection %1; the game got: %2")
+                                        .arg(endedWith == -1  ? qsl("was still open")
+                                             : endedWith == 0 ? qsl("ended cleanly")
+                                                              : qsl("ended with %1").arg(QString::fromLatin1(::strerror(endedWith))),
+                                             QString::fromLatin1(received.toHex(' ')));
+        QVERIFY2(endedWith == 0, qPrintable(qsl("Not a clean close: %1").arg(outcome)));
+        QVERIFY2(received.contains("last"), qPrintable(qsl("The line sent before the close never arrived: %1").arg(outcome)));
+#endif
     }
 
     void cleanup()

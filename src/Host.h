@@ -53,6 +53,7 @@
 #include <QTextStream>
 #include <QTimer>
 
+#include <chrono>
 #include <memory>
 #include <string>
 
@@ -176,7 +177,7 @@ class Host : public QObject
     friend class FrontendRoutingContractTest;
     // Only callers that hold the profile alive through its handlers may close it with no view:
     friend class HostManager;
-    // Allows the functional test to close a profile with no view:
+    // Allows the functional test to close a profile with no view, and to hold a save open past a shortened wait:
     friend class HeadlessHostSmokeTest;
 
 public:
@@ -281,12 +282,14 @@ public:
     void markClosingForced();
     bool profileResetInProgress() const { return mResetProfile; }
     bool isClosingDown() const { return mIsClosingDown; }
+    // Also true while a close with no view runs sysExitEvent and its save, before isClosingDown()
+    bool closeStarted() const { return mIsClosingDown || mClosingWithNoView; }
     bool isClosingForced() const { return mForcedClose; }
     bool requestClose();
     // A main console raises sysExitEvent as it closes; a profile that never had one gets it from this.
     void raiseExitEventIfOwed();
     // The save a close makes without asking: the profile, Mudlet's settings and the map, waited for; false if
-    // the map failed
+    // either the profile or the map failed
     bool saveForClose();
     // Whether deleting the profile now would pull its Lua state or map from under code still running
     // on them; asks a map operation to stop, so the wait ends.
@@ -459,7 +462,7 @@ public:
     void resetProfile_phase2();
     std::tuple<bool, QString, QString> saveProfile(const QString& saveLocation = QString(), const QString& saveName = QString(), bool syncModules = false);
     std::tuple<bool, QString, QString> saveProfileAs(const QString& fileName);
-    void saveProfileReportingFailure(const QString& saveName = QString());
+    bool saveProfileReportingFailure(const QString& saveName = QString());
     void stopAllTriggers();
     void reenableAllTriggers();
 
@@ -1242,6 +1245,8 @@ signals:
     void signal_changeEnableBlinkText(bool);
     void profileSaveStarted();
     void profileSaveFinished();
+    // From a close with no main console, which has nobody to show it to
+    void closeSaveFailed();
     void signal_changeSpellDict(const QString&);
     // Spell check has just been turned on, so the system dictionary is wanted
     // where it was not before. The main console reads it off the event loop.
@@ -1437,6 +1442,8 @@ private:
     QTimer mDeferredSaveTimer;
     // A counter, not a flag: a timer in one wait's pump can start another
     int mProfileSaveWaitDepth = 0;
+    // Long enough that reaching it means something is wrong, not that a disk is busy
+    std::chrono::milliseconds mProfileSaveNotificationTimeout = std::chrono::seconds(30);
 
     QFile mErrorLogFile;
 
