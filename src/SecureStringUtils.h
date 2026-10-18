@@ -45,6 +45,8 @@
  */
 class SecureStringUtils
 {
+    friend class SecureStringUtilsTest;
+
 public:
     /**
      * @brief Encrypt a string using a profile-specific encryption key
