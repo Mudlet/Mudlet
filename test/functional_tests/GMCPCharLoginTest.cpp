@@ -742,6 +742,7 @@ private slots:
     {
         Host* host = connectAndNegotiate();
         QVERIFY(host);
+        markSignInOffered(host);
         mpServer->sendGmcp(qsl("Char.Login.Token {\"account\": \"acct:char\", \"token\": \"opaque-token\"}"));
         QVERIFY2(waitForConsoleContains(host, qsl("signed in automatically next time")), "saving a reconnect token should be announced once");
         // Asserted separately rather than as one sentence, which the console wraps across lines. The page
@@ -761,10 +762,126 @@ private slots:
         QCOMPARE(consoleOccurrences(host, qsl("signed in automatically next time")), 1);
     }
 
+    // A token is kept only from a game that offered Char.Login on this connection: from any other,
+    // nothing would ever replay it, so keeping it - and promising an automatic sign-in - would put a
+    // value of the server's choosing in the profile's store for nothing (#10963).
+    void testATokenIsKeptOnlyWhenThisConnectionOfferedASignIn_data()
+    {
+        QTest::addColumn<QString>("offer");
+        QTest::addColumn<bool>("offerOnAnEarlierConnection");
+
+        QTest::newRow("no Char.Login.Default") << QString() << false;
+        QTest::newRow("a Default naming no way to sign in") << qsl("Char.Login.Default {\"version\": 2, \"type\": []}") << false;
+        QTest::newRow("an offer made on an earlier connection") << qsl("Char.Login.Default {\"version\": 2, \"type\": [\"password-credentials\"]}") << true;
+    }
+
+    void testATokenIsKeptOnlyWhenThisConnectionOfferedASignIn()
+    {
+        QFETCH(QString, offer);
+        QFETCH(bool, offerOnAnEarlierConnection);
+
+        Host* host = connectAndNegotiate();
+        QVERIFY(host);
+        host->setLogin(QString());
+        host->setPass(QString());
+        if (!offer.isEmpty()) {
+            mpServer->sendGmcp(offer);
+            QVERIFY2(waitForGmcpProcessed(host), "the offer never reached the client");
+        }
+        if (offerOnAnEarlierConnection) {
+            const int connections = mpServer->connectionCount();
+            host->mTelnet.reconnect();
+            QVERIFY(waitForNegotiatedConnection(connections));
+        }
+
+        mpServer->sendGmcp(qsl("Char.Login.Token {\"account\": \"acct:char\", \"token\": \"unsolicited-token\"}"));
+        QVERIFY2(waitForGmcpProcessed(host), "the token never reached the client");
+        QVERIFY(waitForStoreSettled(host));
+
+        QVERIFY2(CredentialManager::retrieveCredential(host->getName(), qsl("reconnect-token")).isEmpty(), "a token no sign-in on this connection asked for was kept");
+        QVERIFY2(!consoleContains(host, qsl("signed in automatically next time")), "a token that will never be replayed was promised as an automatic sign-in");
+    }
+
+    // The offer already told the game token_storage: true, so a later Default naming no way to sign in
+    // must not drop the token that follows - least of all a rotated one, or the stale one is replayed.
+    void testATokenIsKeptAfterALaterDefaultNamingNoWayToSignIn_data()
+    {
+        QTest::addColumn<QString>("laterDefault");
+        QTest::addColumn<QString>("earlierToken");
+
+        QTest::newRow("no type") << qsl("Char.Login.Default {\"version\": 2}") << QString();
+        QTest::newRow("an empty type") << qsl("Char.Login.Default {\"version\": 2, \"type\": []}") << QString();
+        QTest::newRow("JSON that does not parse") << qsl("Char.Login.Default {\"version\": 2, \"type\": [") << QString();
+        QTest::newRow("a rotated token") << qsl("Char.Login.Default {\"version\": 2}") << qsl("token-A");
+    }
+
+    void testATokenIsKeptAfterALaterDefaultNamingNoWayToSignIn()
+    {
+        QFETCH(QString, laterDefault);
+        QFETCH(QString, earlierToken);
+
+        Host* host = connectAndNegotiate();
+        QVERIFY(host);
+        host->setLogin(QString());
+        host->setPass(QString());
+        if (!earlierToken.isEmpty()) {
+            QVERIFY(seedSplitSignIn(host->getName(), qsl("{\"account\": \"acct:char\", \"secure_only\": false}"), earlierToken));
+        }
+        mpServer->clearReceived();
+        mpServer->sendGmcp(qsl("Char.Login.Default {\"version\": 2, \"type\": [\"password-credentials\"]}"));
+        if (earlierToken.isEmpty()) {
+            QVERIFY2(waitForGmcpProcessed(host), "the offer never reached the client");
+            mpServer->sendGmcp(laterDefault);
+            QVERIFY2(waitForGmcpProcessed(host), "the later Default never reached the client");
+        } else {
+            // A rotation arrives while the replay is under way, which the marker waitForGmcpProcessed() sends
+            // would end, so the game's messages follow the replay with nothing between them
+            QJsonObject replayed;
+            QVERIFY2(waitForClientGmcp(qsl("Char.Login.Reconnect"), replayed), "the earlier token was not replayed");
+            QCOMPARE(replayed.value(qsl("token")).toString(), earlierToken);
+            mpServer->sendGmcp(laterDefault);
+        }
+
+        mpServer->sendGmcp(qsl("Char.Login.Token {\"account\": \"acct:char\", \"token\": \"token-B\", \"secure_only\": false}"));
+        QVERIFY2(waitForStoredToken(host, qsl("token-B")), "the token sent after token_storage was promised was dropped");
+        QVERIFY(waitForStoreSettled(host));
+    }
+
+    // A saved name and password sign the player in ahead of a token, so the token is kept - for when
+    // they are removed - but not announced: the player is signed in automatically already, and a game
+    // minting on every sign-in would otherwise repeat the promise on every connection (#10963).
+    void testATokenIsPromisedOnlyWhenItWillBeTheSignIn_data()
+    {
+        QTest::addColumn<QString>("savedPassword");
+        QTest::addColumn<bool>("announced");
+
+        QTest::newRow("a saved name and password sign in first") << qsl("secret") << false;
+        QTest::newRow("a saved name alone does not") << QString() << true;
+    }
+
+    void testATokenIsPromisedOnlyWhenItWillBeTheSignIn()
+    {
+        QFETCH(QString, savedPassword);
+        QFETCH(bool, announced);
+
+        Host* host = connectAndNegotiate();
+        QVERIFY(host);
+        host->setLogin(qsl("char"));
+        host->setPass(savedPassword);
+        mpServer->sendGmcp(qsl("Char.Login.Default {\"version\": 2, \"type\": [\"password-credentials\"]}"));
+        QVERIFY2(waitForGmcpProcessed(host), "the offer never reached the client");
+
+        mpServer->sendGmcp(qsl("Char.Login.Token {\"account\": \"acct:char\", \"token\": \"minted-token\"}"));
+        QVERIFY2(waitForStoredToken(host, qsl("minted-token")), "the token should be kept either way");
+        QVERIFY(waitForStoreSettled(host));
+        QCOMPARE(consoleContains(host, qsl("signed in automatically next time")), announced);
+    }
+
     void testASavedTokenGoesToItsOwnKey()
     {
         Host* host = connectAndNegotiate();
         QVERIFY(host);
+        markSignInOffered(host);
         mpServer->sendGmcp(qsl("Char.Login.Token {\"account\": \"acct:char\", \"token\": \"opaque-token\"}"));
 
         QVERIFY2(QTest::qWaitFor(
@@ -786,6 +903,7 @@ private slots:
         // than promised an automatic sign-in that could never happen.
         Host* host = connectAndNegotiate();
         QVERIFY(host);
+        markSignInOffered(host);
         mpServer->sendGmcp(qsl("Char.Login.URL {\"url\": \"https://example.com/signin\", \"provider\": \"discord\"}"));
         QVERIFY(waitForConsoleContains(host, qsl("To sign in, open this link")));
 
@@ -816,6 +934,7 @@ private slots:
         // ones and the notice could stop appearing on TLS entirely without anything noticing.
         Host* host = connectAndNegotiate(true);
         QVERIFY(host);
+        markSignInOffered(host);
         QVERIFY2(host->mTelnet.currentlySecure(), "precondition: this connection is encrypted");
 
         mpServer->sendGmcp(qsl("Char.Login.Token {\"account\": \"acct:char\", \"token\": \"opaque-token\"}"));
@@ -836,6 +955,7 @@ private slots:
         // be met by some future connection.
         Host* host = connectAndNegotiate();
         QVERIFY(host);
+        markSignInOffered(host);
         QVERIFY2(!host->mTelnet.currentlySecure(), "precondition: this connection is unencrypted");
 
         mpServer->sendGmcp(qsl("Char.Login.Token {\"account\": \"acct:char\", \"token\": \"opaque-token\", \"secure_only\": true}"));
@@ -854,6 +974,7 @@ private slots:
     {
         Host* host = connectAndNegotiate();
         QVERIFY(host);
+        markSignInOffered(host);
 
         // Block the save by putting a directory exactly where the credential file has to be written -
         // surgical, removed again by cleanup(), and behaves the same on every platform, unlike revoking
@@ -887,6 +1008,7 @@ private slots:
         // found this (LDMud) has no JSON boolean to send.
         Host* host = connectAndNegotiate();
         QVERIFY(host);
+        markSignInOffered(host);
         QVERIFY2(!host->mTelnet.currentlySecure(), "precondition: this connection is unencrypted");
         host->setLogin(QString());
         host->setPass(QString());
@@ -919,6 +1041,7 @@ private slots:
         QFETCH(bool, encrypted);
         Host* host = connectAndNegotiate(encrypted);
         QVERIFY(host);
+        markSignInOffered(host);
         QCOMPARE(host->mTelnet.currentlySecure(), encrypted);
 
         mpServer->sendGmcp(qsl("Char.Login.Token {\"account\": \"acct:char\", \"token\": \"opaque-token\"}"));
@@ -978,6 +1101,7 @@ private slots:
         // and a fresh Mudlet and profile was nearly all of what each form cost.
         Host* host = connectAndNegotiate(encrypted);
         QVERIFY(host);
+        markSignInOffered(host);
         QCOMPARE(host->mTelnet.currentlySecure(), encrypted);
 
         int sent = 0;
@@ -1895,6 +2019,7 @@ private slots:
     {
         Host* host = connectAndNegotiate();
         QVERIFY(host);
+        markSignInOffered(host);
         // The provider named on Char.Login.URL must be remembered and stored with the token that
         // follows, so a later connection can resume this provider's sign-in.
         mpServer->sendGmcp(qsl("Char.Login.URL {\"url\": \"https://example.com/signin\", \"provider\": \"discord\"}"));
@@ -2467,6 +2592,7 @@ private slots:
         // the old one must keep saying so - both while the save is part way through and after it fails.
         Host* host = connectAndNegotiate();
         QVERIFY(host);
+        markSignInOffered(host);
         QVERIFY(seedSplitSignIn(host->getName(), qsl("{\"account\": \"acct:char\", \"provider\": \"discord\", \"secure_only\": true}"), qsl("encrypted-only-token")));
         holdStoreOperations(host);
 
@@ -2586,6 +2712,7 @@ private slots:
     {
         Host* host = connectAndNegotiate();
         QVERIFY(host);
+        markSignInOffered(host);
         QVERIFY(seedSplitSignIn(host->getName(), qsl("{\"account\": \"acct:char\", \"provider\": \"discord\", \"secure_only\": false}"), qsl("forget-me")));
         holdStoreOperations(host);
 
@@ -2610,6 +2737,7 @@ private slots:
     {
         Host* host = connectAndNegotiate();
         QVERIFY(host);
+        markSignInOffered(host);
         holdStoreOperations(host);
 
         mpServer->sendGmcp(qsl("Char.Login.Token {\"account\": \"acct:char\", \"token\": \"first-token\", \"secure_only\": false}"));
@@ -2643,6 +2771,8 @@ private slots:
         QVERIFY(waitForConsoleContains(host, qsl("saved sign-in has expired")));
         QVERIFY2(waitForHeldStoreOperations(1), "the resume hint never reached the store");
         QVERIFY(waitForNegotiatedConnection(connections));
+        // The new connection's Char.Login.Default, which a token needs before it is kept
+        markSignInOffered(host);
 
         // A fresh token arrives before the hint has finished, and takes over from it.
         mpServer->sendGmcp(qsl("Char.Login.Token {\"account\": \"acct:char\", \"token\": \"fresh-token\", \"secure_only\": false}"));
@@ -2838,6 +2968,7 @@ private slots:
         // read in between must not pair the new account with the old account's token.
         Host* host = connectAndNegotiate(true);
         QVERIFY(host);
+        markSignInOffered(host);
         host->setLogin(QString());
         host->setPass(QString());
         QVERIFY(seedSplitSignIn(host->getName(), qsl("{\"account\": \"acct:old\", \"provider\": \"discord\", \"secure_only\": false}"), qsl("old-account-token")));
@@ -2997,6 +3128,14 @@ private:
     // Drive the GUI to create/connect a profile, then wait for GMCP to negotiate. Reaching TLS by
     // reconnecting rather than creating the profile encrypted is what makes this deterministic:
     // mSslTsl and mSslIgnoreAll are set on a live Host, before the attempt that reads them starts.
+    // These tests are about what becomes of a token, not how the connection got there. A game sends
+    // Char.Login.Default before any token, and only then is one kept; this stands in for it without
+    // starting the sign-in a real Default would.
+    void markSignInOffered(Host* host)
+    {
+        host->mpAuth->mSignInOffered = true;
+    }
+
     Host* connectAndNegotiate(bool secure = false)
     {
         Host* host = createProfileAndConnect();
