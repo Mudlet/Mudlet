@@ -225,13 +225,15 @@ make_commit() {
 }
 git init -q --template= "${REPO}"
 # As in Mudlet, the stable tag is on a release branch that forked from development
-# before the tag was made, so development's changes since then predate the tag.
-# The commits carry the offsets Mudlet's do, and the last is on the 17th in UTC
+# before the tag was made, so the changelog since it starts with a development
+# change older than the tag. The commits carry the offsets Mudlet's do, and the
+# last is on the 17th in UTC
 make_commit "2026-08-20T06:35:53+02:00" "Release branch point"
 repo_git checkout -q -b release
 make_commit "2026-09-02T22:31:46+02:00" "Release 5.0.1"
 repo_git tag Mudlet-5.0.1
 repo_git checkout -q -
+make_commit "2026-08-25T12:00:00+02:00" "Development change made before the release"
 make_commit "2026-10-15T09:00:00+02:00" "Previous PTB"
 repo_git tag Mudlet-5.0.0-ptb-2026-10-15-aaaaaaa
 make_commit "2026-10-18T01:00:00+02:00" "This PTB"
@@ -248,8 +250,9 @@ run_step() {
 }
 
 NOTES="${REPO}/changelog.md"
-PTB_PRS="https://github.com/Mudlet/Mudlet/pulls?q=is%3Apr+is%3Amerged+merged%3A%3E2026-10-15T07%3A00%3A00Z+merged%3A%3C%3D2026-10-17"
-FULL_PRS="https://github.com/Mudlet/Mudlet/pulls?q=is%3Apr+is%3Amerged+merged%3A%3E2026-08-20T04%3A35%3A53Z+merged%3A%3C%3D2026-10-17"
+PRS="https://github.com/Mudlet/Mudlet/pulls?q=is%3Apr+is%3Amerged"
+PTB_PRS="${PRS}+merged%3A%3E%3D2026-10-17T23%3A00%3A00Z+merged%3A%3C%3D2026-10-17"
+FULL_PRS="${PRS}+merged%3A%3E%3D2026-08-25T10%3A00%3A00Z+merged%3A%3C%3D2026-10-17"
 
 line_of() {
   grep -nF -- "$2" "$1" | head -1 | cut -d: -f1
@@ -308,6 +311,17 @@ fi
 start_test "a release whose changelog cannot be generated fails rather than publishing it empty"
 assert_status 1 "$(run_step release Mudlet-5.1.0 3 3 fail)"
 assert_contains "${OUT}" "::error::Changelog generation failed"
+
+start_test "a link that cannot be dated falls back to every merged pull request, with a warning"
+FUNCTION="${WORK_DIR}/merged-prs-url.sh"
+sed -n '/^merged_prs_url() {/,/^}/p' "${STEP}" > "${FUNCTION}"
+url=$(cd "${REPO}" && GITHUB_SERVER_URL="https://github.com" GITHUB_REPOSITORY="Mudlet/Mudlet" \
+  bash -e -c '. "$1" && merged_prs_url Mudlet-no-such-tag HEAD' _ "${FUNCTION}" 2> "${OUT}")
+assert_status 0 "$?"
+if [ "${url}" != "${PRS}" ]; then
+  fail "expected the link to fall back to ${PRS}, got '${url}'"
+fi
+assert_contains "${OUT}" "::warning::Could not date Mudlet-no-such-tag..HEAD"
 
 if [ "${FAILURES}" -gt 0 ]; then
   echo "${FAILURES} check(s) failed"
