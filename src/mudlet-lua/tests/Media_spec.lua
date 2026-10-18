@@ -3088,7 +3088,10 @@ describe("Media playback effects with a generated sound file", function()
       return handle ~= nil
     end
 
-    for _, form in ipairs({{name = "busted-gmcp-stream-bool.wav", fields = '"url": "' .. startingLocation .. '/", "stream": true', streamed = true},
+    local finished = {}
+    collect("sysMediaFinished", finished)
+
+    for index, form in ipairs({{name = "busted-gmcp-stream-bool.wav", fields = '"url": "' .. startingLocation .. '/", "stream": true', streamed = true},
                            {name = "busted-gmcp-stream-string.wav", fields = '"stream": "true"', streamed = true},
                            {name = "busted-gmcp-stream-false.wav", fields = '"url": "' .. startingLocation .. '/", "stream": false', streamed = false},
                            {name = "busted-gmcp-stream-false-string.wav", fields = '"stream": "false"', streamed = false}}) do
@@ -3096,7 +3099,8 @@ describe("Media playback effects with a generated sound file", function()
       os.remove(copy)
       onCleanup(function() os.remove(copy) end)
 
-      feedGmcp('Client.Media.Play {"name": "' .. form.name .. '", "key": "busted-gmcp-stream", ' .. form.fields .. '}')
+      local key = "busted-gmcp-stream-" .. index
+      feedGmcp('Client.Media.Play {"name": "' .. form.name .. '", "key": "' .. key .. '", ' .. form.fields .. '}')
       local event = waitForEvent("sysMediaStarted", 5000)
       assert.equals("sysMediaStarted", event, "a Client.Media.Play with " .. form.fields .. " did not play: " .. gmcpRefused)
       if form.streamed then
@@ -3104,7 +3108,10 @@ describe("Media playback effects with a generated sound file", function()
       else
         assert.is_true(exists(copy), "a file not asked to stream was not downloaded")
       end
-      feedGmcp('Client.Media.Stop {"key": "busted-gmcp-stream"}')
+      -- Ended before the next form, so its events cannot be mistaken for this one's
+      feedGmcp('Client.Media.Stop {"key": "' .. key .. '"}')
+      waitForCount("sysMediaFinished", finished, index)
+      assert.equals(key, finished[index].key)
     end
   end)
 

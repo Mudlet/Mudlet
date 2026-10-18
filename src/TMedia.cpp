@@ -2585,9 +2585,10 @@ void TMedia::parseJSONForMediaPlay(QJsonObject& json)
         // Resolved as a download's url is, so a stream plays from wherever the same message would download from
         mediaData.setMediaUrl(TMedia::parseUrl(mediaData).toString());
         // Streams never reach downloadFile()'s http(s)-only check, so it is repeated here: a game must not get Mudlet to play a local file
-        const QString scheme = QUrl(TMedia::getStreamUrl(mediaData)).scheme();
+        const QString streamUrl = TMedia::getStreamUrl(mediaData);
+        const QString scheme = QUrl(streamUrl).scheme();
         if (scheme != qsl("http") && scheme != qsl("https")) {
-            qWarning() << qsl("TMedia::parseJSONForMediaPlay() WARNING - refused to stream media from a non-HTTP(S) URL: %1").arg(TMedia::getStreamUrl(mediaData));
+            qWarning() << qsl("TMedia::parseJSONForMediaPlay() WARNING - refused to stream media from a non-HTTP(S) URL: %1").arg(streamUrl);
             return;
         }
     }
