@@ -937,6 +937,37 @@ private slots:
         QCOMPARE(smAnnouncements.size(), 2);
     }
 
+    void test_aNamedLiveLabelAnnouncesItsText()
+    {
+        listenTo(label());
+        auto restore = qScopeGuard([this]() {
+            stopListening();
+        });
+        QVERIFY(runLua(qsl("setConfig('accessibleLabels', true); setLabelAccessibleName('%1', 'Health'); assert(setLabelLiveRegion('%1', 'polite'))").arg(mLabelName)));
+
+        QVERIFY(runLua(qsl("echo('%1', 'HP 50')").arg(mLabelName)));
+        QVERIFY(runLua(qsl("echo('%1', 'HP 40')").arg(mLabelName)));
+        QCOMPARE(smAnnouncements.size(), 2);
+        QCOMPARE(smAnnouncements.at(0).first, qsl("HP 50"));
+        QCOMPARE(smAnnouncements.at(1).first, qsl("HP 40"));
+    }
+
+    void test_aHiddenLiveLabelIsQuiet()
+    {
+        listenTo(label());
+        auto restore = qScopeGuard([this]() {
+            stopListening();
+            runLua(qsl("showWindow('%1')").arg(mLabelName));
+        });
+        QVERIFY(runLua(qsl("setConfig('accessibleLabels', true); assert(setLabelLiveRegion('%1', 'polite')); hideWindow('%1')").arg(mLabelName)));
+
+        QVERIFY(runLua(qsl("echo('%1', 'HP 50')").arg(mLabelName)));
+        QCOMPARE(smAnnouncements.size(), 0);
+
+        QVERIFY(runLua(qsl("showWindow('%1'); echo('%1', 'HP 40')").arg(mLabelName)));
+        QCOMPARE(smAnnouncements.size(), 1);
+    }
+
     void test_aLabelIsQuietUnlessLiveWithAccessibleLabelsOn()
     {
         listenTo(label());

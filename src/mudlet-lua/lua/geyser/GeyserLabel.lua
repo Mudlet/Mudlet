@@ -1437,7 +1437,13 @@ function Geyser.Label:new (cons, container)
   end
 
   if liveRegion then
-    local ok, err = me:setLiveRegion(liveRegion)
+    -- setLabelLiveRegion raises on a non-string, which would leave this label half built
+    local ok, err
+    if type(liveRegion) == "string" then
+      ok, err = me:setLiveRegion(liveRegion)
+    else
+      err = string.format("liveRegion must be a string, got %s", type(liveRegion))
+    end
     if not ok then
       debugc(string.format("Geyser.Label:new(): liveRegion refused for '%s': %s", me.name, tostring(err)))
     end

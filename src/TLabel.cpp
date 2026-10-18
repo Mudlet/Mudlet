@@ -231,7 +231,8 @@ void TLabel::updateKeyboardAccess()
 
 bool TLabel::announcesTextChanges() const
 {
-    return mpHost && mpHost->mAccessibleLabels && mpModel->mLiveRegion != TLabelLiveRegion::Off;
+    // Hidden, as on a tab not showing or in a background profile, it would talk over the game in view
+    return mpHost && mpHost->mAccessibleLabels && mpModel->mLiveRegion != TLabelLiveRegion::Off && isVisible() && QAccessible::isActive();
 }
 
 void TLabel::announceTextChange(const QString& spokenBefore)

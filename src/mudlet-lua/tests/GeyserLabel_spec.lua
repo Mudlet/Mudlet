@@ -2336,6 +2336,13 @@ describe("Tests Geyser.Label font, link style and tooltip", function()
       assert.are.equal("off", getLabelLiveRegion("glfLiveRegionRefused"))
     end)
 
+    it("is still built in full when the constructor is given a live region that is not a string", function()
+      local label = track(Geyser.Label:new({name = "glfLiveRegionNotString", x = 0, y = 0, width = 200, height = 50, liveRegion = true, stylesheet = "color: red;"}))
+      assert.is_nil(label.liveRegion)
+      assert.are.equal("off", getLabelLiveRegion("glfLiveRegionNotString"))
+      assert.are.equal("color: red;", getLabelStyleSheet("glfLiveRegionNotString"))
+    end)
+
     it("is given the live region when created with one", function()
       track(Geyser.Label:new({name = "glfLiveRegionAtStart", x = 0, y = 0, width = 200, height = 50, liveRegion = "polite"}))
       assert.are.equal("polite", getLabelLiveRegion("glfLiveRegionAtStart"))
