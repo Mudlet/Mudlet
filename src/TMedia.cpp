@@ -2578,6 +2578,10 @@ void TMedia::parseJSONForMediaPlay(QJsonObject& json)
     }
 
     if (mediaData.mediaInput() == TMediaData::MediaInputStream) {
+        // Volume 0 asks for the file ahead of time, and a stream has none to fetch: it would only play silently
+        if (mediaData.mediaVolume() == TMediaData::MediaVolumePreload) {
+            return;
+        }
         // Resolved as a download's url is, so a stream plays from wherever the same message would download from
         mediaData.setMediaUrl(TMedia::parseUrl(mediaData).toString());
         // Streams never reach downloadFile()'s http(s)-only check, so it is repeated here: a game must not get Mudlet to play a local file

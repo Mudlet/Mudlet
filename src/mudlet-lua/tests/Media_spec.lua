@@ -3108,6 +3108,25 @@ describe("Media playback effects with a generated sound file", function()
     end
   end)
 
+  it("a Client.Media.Play message asking to preload a stream plays nothing", function()
+    if noFixtureServer() then
+      return
+    end
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    stopGmcpMediaAfterwards()
+    local finished = {}
+    collect("sysMediaFinished", finished)
+
+    -- A preload raises no sysMediaStarted, so the stop is what would show a silent stream had begun
+    feedGmcp('Client.Media.Play {"name": "busted-gmcp-stream-preload.wav", "url": "' .. fixtureUrl() .. '/media/", "stream": true, "volume": 0, "key": "busted-gmcp-stream-preload"}')
+    pumpEvents(1000)
+    feedGmcp('Client.Media.Stop {"key": "busted-gmcp-stream-preload"}')
+    pumpEvents(500)
+    assert.equals(0, #finished, "a preload of a stream started a silent stream")
+  end)
+
   it("a Client.Media.Play message will not stream from anything but http or https", function()
     if mediaPlaybackUnavailable() then
       return
