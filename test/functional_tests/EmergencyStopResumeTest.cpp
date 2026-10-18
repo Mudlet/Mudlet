@@ -85,7 +85,7 @@ public:
         TDebug::setSink(mpPreviousSink);
     }
 
-    void printDebugLine(const QString& text, const QColor&, const QColor&, const QString&) override { mLines << text; }
+    void printDebugLine(const QString& text, const QColor&, const QColor&, qint64) override { mLines << text; }
 
     QStringList linesContaining(const QString& text) const { return mLines.filter(text); }
 
