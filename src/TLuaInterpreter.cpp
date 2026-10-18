@@ -31,6 +31,7 @@
 
 #include "FontManager.h"
 #include "Host.h"
+#include "MapStyle.h"
 #include "MudletApp.h"
 #include "MudletMedia.h"
 #include "MudletReplay.h"
@@ -402,10 +403,13 @@ int TLuaInterpreter::warnArgumentValue(lua_State* L, const char* functionName, c
 // place a script can read what the set is, so it lists every accepted value
 int TLuaInterpreter::warnArgumentChoice(lua_State* L, const char* functionName, const QString& argumentName, const QStringList& accepted, const QString& value)
 {
-    Q_ASSERT(accepted.size() > 1);
+    Q_ASSERT(!accepted.isEmpty());
     QStringList quoted;
     for (const auto& choice : accepted) {
         quoted << qsl("\"%1\"").arg(choice);
+    }
+    if (quoted.size() == 1) {
+        return warnArgumentValue(L, functionName, qsl("%1 must be %2, got \"%3\"").arg(argumentName, quoted.constFirst(), value));
     }
     const QString lastChoice = quoted.takeLast();
     return warnArgumentValue(L, functionName, qsl("%1 must be %2 or %3, got \"%4\"").arg(argumentName, quoted.join(qsl(", ")), lastChoice, value));
@@ -906,10 +910,10 @@ int TLuaInterpreter::loadReplay(lua_State* L)
     return warnArgumentValue(L, __func__, qsl("unable to start replay, reason: '%1'").arg(errMsg));
 }
 
-// Internal helper for feedTelnet(...) and socketRaw(...) that enables the
-// construction of data with bytes that cannot be prepared by normal means
-// - including embedded nulls - for testing off-line and for writing protocol
-// handlers for those that Mudlet does not provide itself respectively:
+// Internal helper for feedTelnet(...) and sendSocket(...) that turns "<..>" codes
+// into the telnet and control bytes they name, so that such data can be written
+// readably - for testing off-line and for writing protocol handlers for those
+// that Mudlet does not provide itself respectively:
 // Note: although "<<" and ">>" are extra codes that convert to '<' and '>'
 // respectively this looks as though singular instances of either - or
 // unrecognised "tags" with unknown other characters between them will still be
@@ -1169,7 +1173,9 @@ int TLuaInterpreter::feedTelnet(lua_State* L)
         return lua_error(L);
     }
 
-    const QByteArray rawData{lua_tostring(L, 1)};
+    size_t rawLength = 0;
+    const char* rawBytes = lua_tolstring(L, 1, &rawLength);
+    const QByteArray rawData{rawBytes, static_cast<qsizetype>(rawLength)};
     // We need to convert any "<*>" codes to their raw byte forms:
     QByteArray cookedData{parseTelnetCodes(rawData)};
     if (rawData.isEmpty()) {
@@ -1224,7 +1230,11 @@ int TLuaInterpreter::feedTriggers(lua_State* L)
     if (lua_gettop(L) > 1) {
         dataIsUtf8Encoded = getVerifiedBool(L, __func__, 2, "Utf8Encoded", true);
     }
-    const QByteArray data{lua_tostring(L, 1)};
+    size_t length = 0;
+    const char* bytes = lua_tolstring(L, 1, &length);
+    QByteArray data{bytes, static_cast<qsizetype>(length)};
+    // cTelnet::processSocketData() drops a NUL from a game's text, so drop it here too
+    data.replace('\0', QByteArray());
     // Not from inside a trigger: that would announce the line it is handling to
     // screen readers before the rest of the pass can gag or rewrite it.
     auto feed = [L, &host, triggerUnit](std::string& text) {
@@ -1461,6 +1471,11 @@ int TLuaInterpreter::saveProfile(lua_State* L)
     auto [ok, filename, error] = saveAsFile.isNull() ? host.saveProfile(saveToDir) : host.saveProfileAs(saveAsPathFileName);
 
     if (ok) {
+        // Most application-wide settings reach Mudlet.ini only at quit, so an
+        // unclean exit would lose the ones this save is meant to keep
+        if (auto* frontend = TAppFrontend::instance()) {
+            frontend->writeSettings();
+        }
         lua_pushboolean(L, true);
         lua_pushstring(L, (filename.toUtf8().constData()));
         return 2;
@@ -2379,7 +2394,7 @@ int TLuaInterpreter::getTimestamp(lua_State* L)
         return warnArgumentValue(L, __func__, qsl("mini console, user window or buffer '%1' not found").arg(name));
     }
     if (luaLine < pModel->buffer.timeBuffer.size()) {
-        lua_pushstring(L, pModel->buffer.timeBuffer.at(luaLine).toUtf8().constData());
+        lua_pushstring(L, pModel->buffer.timeStampText(luaLine).toUtf8().constData());
         return 1;
     }
     return warnArgumentValue(L, __func__, qsl("line number %1 invalid, it is beyond the last line of the buffer").arg(luaLine));
@@ -3176,10 +3191,6 @@ int TLuaInterpreter::sendRaw(lua_State* L)
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#sendSocket
-// The data can, theoretically, contain embedded ASCII NUL characters, but they
-// cannot be entered directly as they immediately terminate the string. Instead
-// provide a true as a second argument and use the appropriate "code" value
-// defined in the parseTelnetCodes() function:
 int TLuaInterpreter::sendSocket(lua_State* L)
 {
     if (!lua_isstring(L, 1)) {
@@ -3190,7 +3201,9 @@ int TLuaInterpreter::sendSocket(lua_State* L)
     if (lua_gettop(L) > 1) {
         parseCodes = getVerifiedBool(L, __func__, 2, "parse telnet codes {default = false}", true);
     }
-    const QByteArray data{lua_tostring(L, 1)};
+    size_t length = 0;
+    const char* bytes = lua_tolstring(L, 1, &length);
+    const QByteArray data{bytes, static_cast<qsizetype>(length)};
     std::string dataStdString{parseCodes ? parseTelnetCodes(data).toStdString() : data.toStdString()};
 
     Host& host = getHostFromLua(L);
@@ -7038,6 +7051,9 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "addMapEvent", TLuaInterpreter::addMapEvent);
     lua_register(pGlobalLua, "removeMapEvent", TLuaInterpreter::removeMapEvent);
     lua_register(pGlobalLua, "getMapEvents", TLuaInterpreter::getMapEvents);
+    lua_register(pGlobalLua, "getMapEnvironmentKit", TLuaInterpreter::getMapEnvironmentKit);
+    lua_register(pGlobalLua, "getMapEnvironmentKits", TLuaInterpreter::getMapEnvironmentKits);
+    lua_register(pGlobalLua, "setMapEnvironmentKit", TLuaInterpreter::setMapEnvironmentKit);
     lua_register(pGlobalLua, "addMapMenu", TLuaInterpreter::addMapMenu);
     lua_register(pGlobalLua, "removeMapMenu", TLuaInterpreter::removeMapMenu);
     lua_register(pGlobalLua, "getMapMenus", TLuaInterpreter::getMapMenus);
@@ -9317,6 +9333,13 @@ int TLuaInterpreter::setConfig(lua_State* L)
         TAppFrontend::instance()->updateMapActionAvailability();
         return success();
     }
+    if (key == qsl("mapStyle")) {
+        const QString value = getVerifiedString(L, __func__, 2, "value");
+        if (!host.setMapStyle(value)) {
+            return warnArgumentChoice(L, __func__, qsl("mapStyle"), MapStyle::ids(), value);
+        }
+        return success();
+    }
     if (key == qsl("enableGMCP")) {
         host.mEnableGMCP = getVerifiedBool(L, __func__, 2, "value");
         return success();
@@ -9777,6 +9800,10 @@ int TLuaInterpreter::getConfig(lua_State* L)
             {qsl("mapRoundRooms"),
              [&]() {
                  lua_pushboolean(L, host.mBubbleMode);
+             }},
+            {qsl("mapStyle"),
+             [&]() {
+                 lua_pushstring(L, host.mapStyle().toUtf8().constData());
              }},
             {qsl("mapperButton"),
              [&]() {

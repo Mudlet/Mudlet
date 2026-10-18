@@ -153,7 +153,7 @@ describe("Tests that the selection and format functions find their console by na
           assert.is_true(setReverse(window, true))
           assert.is_true(setStrikeOut(window, true))
           assert.is_true(setUnderline(window, true))
-          assert.are.equal(0, select("#", setFgColor(window, 10, 20, 30)))
+          assert.is_true(setFgColor(window, 10, 20, 30))
           assert.is_true(setBgColor(window, 40, 50, 60))
 
           local after = getTextFormat(window)
@@ -255,7 +255,7 @@ describe("Tests that the selection and format functions find their console by na
         assert.are.same({marker, 0, #marker}, {getSelection(other)})
 
         assert.is_true(setBold(name, true))
-        assert.are.equal(0, select("#", setFgColor(name, 10, 20, 30)))
+        assert.is_true(setFgColor(name, 10, 20, 30))
         assert.is_true(setBgColor(name, 40, 50, 60))
         local format = getTextFormat(other)
         assert.is_true(format.bold)

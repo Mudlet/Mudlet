@@ -1199,6 +1199,51 @@ if false then
 
 
 
+  --- Names the kind of ground an environment is, for the 3D map styles that draw terrain: diorama builds the
+  --- environment's rooms as it, and terminal and ink wash mark them by it. Without one, the kind is guessed from
+  --- the environment's color: blue is water, green forest, grey, brown and tan road, and any other color a
+  --- building. The kits are saved with the map.
+  ---
+  --- @param environmentID the environment, as setRoomEnv() takes it
+  --- @param kitName one of "plain", "water", "road", "forest" or "building"; nil or "" goes back to guessing
+  --- @return true, or nil and an error message for a kit name it does not know, or when the kits saved in the
+  ---   map user data "system.mapStyle.environmentKits" are not a JSON object, which it leaves alone
+  ---
+  --- @usage Show the lava environment as water, and forget that the swamp environment was named
+  ---   <pre>
+  ---   setMapEnvironmentKit(301, "water")
+  ---   setMapEnvironmentKit(302, nil)
+  ---   </pre>
+  ---
+  --- @see getMapEnvironmentKit, getMapEnvironmentKits
+  function setMapEnvironmentKit(environmentID, kitName)
+  end
+
+
+
+  --- The kind of ground an environment is, for use by 3D map styles that draw terrain.
+  ---
+  --- @param environmentID the environment, as setRoomEnv() takes it
+  --- @return the kit's name, and true when setMapEnvironmentKit() named it or false when it is guessed
+  ---   from the environment's color
+  ---
+  --- @see setMapEnvironmentKit, getMapEnvironmentKits
+  function getMapEnvironmentKit(environmentID)
+  end
+
+
+
+  --- The kits setMapEnvironmentKit() has named, leaving out those guessed from environments' colors and any saved
+  --- entry that cannot be read.
+  ---
+  --- @return a table of kit names keyed by environment ID
+  ---
+  --- @see setMapEnvironmentKit, getMapEnvironmentKit
+  function getMapEnvironmentKits()
+  end
+
+
+
   --- Wrap line lineNumber of mini console (window) windowName. This function will interpret \n characters,
   --- apply word wrap and display the new lines on the screen. This function may be necessary if you use
   --- deleteLine() and thus erase the entire current line in the buffer, but you want to do some further

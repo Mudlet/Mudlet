@@ -2315,6 +2315,93 @@ describe("Tests UI functions", function()
     end)
   end)
 
+  -- raised rather than called, so the handler registration is tested as well
+  describe("Test BaseUI.updateVitals", function()
+    if not (type(BaseUI) == "table" and type(BaseUI.updateVitals) == "function") then
+      it("needs the base UI package installed", function()
+        pending("BaseUI.updateVitals is unavailable in this profile")
+      end)
+      return
+    end
+
+    local saved, applied
+
+    before_each(function()
+      saved = {
+        applyVitals = BaseUI.applyVitals,
+        build = BaseUI.build,
+        checkMapData = BaseUI.checkMapData,
+        dormant = BaseUI.dormant,
+        sawGmcpVitals = BaseUI.sawGmcpVitals,
+        gmcp = _G.gmcp,
+      }
+      applied = {}
+      BaseUI.applyVitals = function(_, readings)
+        applied[#applied + 1] = readings
+      end
+      BaseUI.build = function() end
+      BaseUI.checkMapData = function() end
+      BaseUI.dormant = function() return false end
+    end)
+
+    after_each(function()
+      BaseUI.applyVitals = saved.applyVitals
+      BaseUI.build = saved.build
+      BaseUI.checkMapData = saved.checkMapData
+      BaseUI.dormant = saved.dormant
+      BaseUI.sawGmcpVitals = saved.sawGmcpVitals
+      _G.gmcp = saved.gmcp
+    end)
+
+    it("should merge the currents from Char.Vitals with the maxima from Char.MaxStats", function()
+      _G.gmcp = { Char = { Vitals = { hp = 50, mp = 20, mv = 30 }, MaxStats = { maxhp = 100, maxmp = 40, maxmv = 60 } } }
+      raiseEvent("gmcp.Char.MaxStats")
+      assert.are.equal(1, #applied)
+      assert.are.same({ current = 50, max = 100 }, applied[1].hp)
+      assert.are.same({ current = 20, max = 40 }, applied[1].mp)
+      assert.are.same({ current = 30, max = 60 }, applied[1].mv)
+    end)
+
+    -- GMCP package and message names are case-insensitive
+    it("should read a vitals node sent in any casing", function()
+      for _, spelling in ipairs({ { "char", "MaxStats" }, { "Char", "maxStats" }, { "CHAR", "MAXSTATS" }, { "Char", "vitals" } }) do
+        applied = {}
+        local namespace, message = spelling[1], spelling[2]
+        _G.gmcp = { [namespace] = { [message] = { hp = 50, maxhp = 100 } } }
+        raiseEvent("gmcp." .. namespace .. "." .. message)
+        assert.are.equal(1, #applied, namespace .. "." .. message)
+        assert.are.same({ current = 50, max = 100 }, applied[1].hp, namespace .. "." .. message)
+      end
+    end)
+
+    it("should read the capitalised spelling first when a node is present in two casings", function()
+      _G.gmcp = { Char = { Vitals = { hp = 50 }, Maxstats = { maxhp = 300 }, MaxStats = { maxhp = 100 } } }
+      raiseEvent("gmcp.Char.Maxstats")
+      assert.are.equal(1, #applied)
+      assert.are.same({ current = 50, max = 300 }, applied[1].hp)
+    end)
+
+    it("should update before a handler registered later for the same message", function()
+      _G.gmcp = { Char = { Vitals = { hp = 50, maxhp = 100 } } }
+      local seen
+      local id = registerAnonymousEventHandler("gmcp.Char.Vitals", function()
+        seen = #applied
+      end)
+      raiseEvent("gmcp.Char.Vitals")
+      killAnonymousEventHandler(id)
+      assert.are.equal(1, seen)
+      assert.are.equal(1, #applied)
+    end)
+
+    it("should only update for a vitals message", function()
+      _G.gmcp = { Char = { Vitals = { hp = 50, maxhp = 100 }, Items = { List = {} } } }
+      raiseEvent("gmcp.Char")
+      raiseEvent("gmcp.Char.Items.List")
+      raiseEvent("Char.Vitals")
+      assert.are.equal(0, #applied)
+    end)
+  end)
+
   -- when a game installs its own interface (a Client.GUI package), the
   -- starter UI stands aside rather than fight it for screen space
   describe("Test the starter UI standing aside for a game's own interface", function()
@@ -2416,6 +2503,125 @@ describe("Tests UI functions", function()
       BaseUI.show()
       assert.is_nil(BaseUI.settings.standingAside)
       assert.is_false(BaseUI.dormant())
+    end)
+
+    -- A profile has one map widget, and a game's Client.GUI package that embeds a
+    -- mapper opens it before sysServerGuiInstalled has stood this UI aside
+    describe("when the map opens with map data in the profile", function()
+      local saved, createMapper
+
+      before_each(function()
+        saved = { container = BaseUI.container, map = BaseUI.map, placeholder = BaseUI.mapPlaceholder }
+        BaseUI.container = BaseUI.container or { hide = function() end, adjustBorder = function() end }
+        BaseUI.map, BaseUI.mapPlaceholder = nil, nil
+        BaseUI.settings.hidden, BaseUI.settings.standingAside = nil, nil
+        stub(BaseUI, "mapHasData", true)
+        stub(BaseUI, "layoutDock")
+        createMapper = stub(BaseUI, "createMapper")
+      end)
+
+      after_each(function()
+        BaseUI.mapHasData:revert()
+        BaseUI.layoutDock:revert()
+        BaseUI.createMapper:revert()
+        BaseUI.container, BaseUI.map, BaseUI.mapPlaceholder = saved.container, saved.map, saved.placeholder
+      end)
+
+      it("should not look again once the starter UI has been uninstalled", function()
+        local timer = stub(_G, "tempTimer")
+        -- busted leaves a stub in place when the spec that made it raises
+        local looked, lookError = pcall(BaseUI.checkMapData, "mapOpenEvent")
+        _G.tempTimer:revert()
+        assert.is_true(looked, tostring(lookError))
+        assert.stub(timer).was_called(1)
+        local lookAgain = timer.calls[1].vals[2]
+        local ui = BaseUI
+        _G.BaseUI = nil
+        local ok, err = pcall(lookAgain)
+        _G.BaseUI = ui
+        assert.is_true(ok, tostring(err))
+      end)
+
+      if not os.getenv("MUDLET_TEST_MODE") then
+        it("needs test mode", function()
+          pending("the map is taken on a timer, which only pumpEvents() runs")
+        end)
+        return
+      end
+
+      -- raised, not called, so the handlers are shown passing the event on; centerview()
+      -- raises sysMapAreaChanged at once, so a package loading its map raises it mid-install
+      for _, event in ipairs({ "mapOpenEvent", "sysMapAreaChanged", "sysMapDownloadEvent", "gmcp.Room.Info", "gmcp.room.info" }) do
+        it("should leave the map to a game interface that raises " .. event .. " while being installed", function()
+          raiseEvent(event)
+          BaseUI.standAside("sysServerGuiInstalled", "SomeGameUI")
+          pumpEvents(100)
+          assert.stub(createMapper).was_not_called()
+        end)
+
+        it("should still take the map on " .. event .. " when no game interface claims it", function()
+          raiseEvent(event)
+          pumpEvents(100)
+          assert.stub(createMapper).was_called(1)
+        end)
+      end
+    end)
+
+    -- the game's interface can be drawing on the profile's one map widget by the
+    -- time this UI stands aside holding it, and hiding an embedded mapper shrinks it.
+    -- Returns whether the game's geometry was applied again after the last shrink.
+    local function standAsideHoldingMap(floating)
+      local saved = { container = BaseUI.container, map = BaseUI.map }
+      -- a section dragged out of the dock is hidden by layoutDock(), not with the dock
+      stub(BaseUI, "layoutDock", function()
+        if floating then
+          BaseUI.map:hide()
+        end
+      end)
+      local applied = stub(_G, "createMapper")
+      stub(_G, "closeMapWidget")
+      local dock, map, game, appliedCount
+      -- busted leaves a stub in place when the spec that made it raises
+      local ok, err = pcall(function()
+        dock = Geyser.Container:new({ name = "BaseUI_spec_dock", x = 0, y = 0, width = 400, height = 400 })
+        dock.adjustBorder = function() end
+        BaseUI.container = dock
+        map = floating and Geyser.Mapper:new({ name = "BaseUI_spec_map", x = 500, y = 0, width = 200, height = 200 })
+          or Geyser.Mapper:new({ name = "BaseUI_spec_map", x = 0, y = 0, width = "100%", height = "100%" }, dock)
+        BaseUI.map = map
+        game = Geyser.Mapper:new({ name = "BaseUI_spec_gameMap", x = 10, y = 10, width = 300, height = 200 })
+        BaseUI.standAside("sysServerGuiInstalled", "SomeGameUI")
+        appliedCount = #applied.calls
+      end)
+      -- a window left unmade by a raise is a nil the table never holds
+      for _, window in pairs({ game = game, map = map, dock = dock }) do
+        pcall(window.delete, window)
+      end
+      _G.createMapper:revert()
+      _G.closeMapWidget:revert()
+      BaseUI.layoutDock:revert()
+      BaseUI.container, BaseUI.map = saved.container, saved.map
+      assert.is_true(ok, tostring(err))
+      -- every other visible embedded mapper in the profile is put back too, in no set order
+      local shrunkAt, restored = nil, false
+      for i = 1, appliedCount do
+        local x, y, width, height = unpack(applied.calls[i].vals, 2, 5)
+        if width == 0 and height == 0 then
+          shrunkAt, restored = i, false
+        elseif shrunkAt and x == 10 and y == 10 and width == 300 and height == 200 then
+          restored = true
+        end
+      end
+      assert.is_not_nil(shrunkAt, "the starter UI's mapper was never hidden")
+      return restored
+    end
+
+    it("should leave the map widget to the game's own mapper when it stands aside holding the map", function()
+      assert.is_true(standAsideHoldingMap(false))
+    end)
+
+    it("should leave the map widget to the game's own mapper when its map section is out of the dock", function()
+      assert.is_true(standAsideHoldingMap(true))
     end)
 
     -- runs after the after_each of every spec above it
@@ -3273,6 +3479,49 @@ describe("Tests UI functions", function()
       local ok, err = setBackgroundColor("uiReadbackNoSuchWindow", 1, 2, 3)
       assert.is_nil(ok)
       assert.are.equal("window/label 'uiReadbackNoSuchWindow' not found", err)
+    end)
+
+    it("setBackgroundColor says why it refuses a window it has no colour for, rather than that it is not there", function()
+      local scrollBox, textEdit, cmdLine = "uiReadbackPrimBgScroll", "uiReadbackPrimBgText", "uiReadbackPrimBgCmd"
+      finally(function()
+        deleteScrollBox(scrollBox)
+        deleteTextEdit(textEdit)
+        deleteCommandLine(cmdLine)
+      end)
+      assert.is_true(createScrollBox(scrollBox, 0, 0, 100, 50))
+      assert.is_true(createTextEdit(textEdit, 0, 60, 100, 50))
+      assert.is_true(createCommandLine(cmdLine, 0, 120, 100, 30))
+      assert.are.same({nil, "'uiReadbackPrimBgScroll' is a scroll box, use setProfileStyleSheet() to set its background"}, {setBackgroundColor(scrollBox, 1, 2, 3)})
+      assert.are.same({nil, "'uiReadbackPrimBgText' is a text edit, use setTextEditStyleSheet() to set its background"}, {setBackgroundColor(textEdit, 1, 2, 3)})
+      assert.are.same({nil, "'uiReadbackPrimBgCmd' is a command line, use setCmdLineStyleSheet() to set its background"}, {setBackgroundColor(cmdLine, 1, 2, 3, 4)})
+    end)
+
+    it("getBackgroundColor says why it cannot read a window it has no colour for, rather than that it is not there", function()
+      local scrollBox, textEdit, cmdLine = "uiReadbackPrimGetBgScroll", "uiReadbackPrimGetBgText", "uiReadbackPrimGetBgCmd"
+      finally(function()
+        deleteScrollBox(scrollBox)
+        deleteTextEdit(textEdit)
+        deleteCommandLine(cmdLine)
+      end)
+      assert.is_true(createScrollBox(scrollBox, 0, 0, 100, 50))
+      assert.is_true(createTextEdit(textEdit, 0, 60, 100, 50))
+      assert.is_true(createCommandLine(cmdLine, 0, 120, 100, 30))
+      assert.are.same({nil, "'uiReadbackPrimGetBgScroll' is a scroll box, whose background color cannot be read back"}, {getBackgroundColor(scrollBox)})
+      assert.are.same({nil, "'uiReadbackPrimGetBgText' is a text edit, whose background color cannot be read back"}, {getBackgroundColor(textEdit)})
+      assert.are.same({nil, "'uiReadbackPrimGetBgCmd' is a command line, whose background color cannot be read back"}, {getBackgroundColor(cmdLine)})
+    end)
+
+    it("setBackgroundColor names every kind of widget a shared name belongs to", function()
+      local name = "uiReadbackPrimBgShared"
+      finally(function()
+        deleteScrollBox(name)
+        deleteTextEdit(name)
+        deleteCommandLine(name)
+      end)
+      assert.is_true(createScrollBox(name, 0, 0, 50, 50))
+      assert.is_true(createTextEdit(name, 0, 60, 50, 50))
+      assert.is_true(createCommandLine(name, 0, 120, 50, 30))
+      assert.are.same({nil, "'uiReadbackPrimBgShared' is a scroll box and a text edit and a command line, use setProfileStyleSheet() or setTextEditStyleSheet() or setCmdLineStyleSheet() to set its background"}, {setBackgroundColor(name, 1, 2, 3)})
     end)
 
     it("getBackgroundColor reports an unknown window", function()
@@ -4145,11 +4394,10 @@ describe("Window and label state", function()
       assert.are.same({70, 80}, {x, y})
     end)
 
-    it("moveWindow and resizeWindow return no values for an unknown window", function()
-      -- both silently ignore names they cannot resolve, returning nothing at
-      -- all rather than nil - so count the returns instead of reading one
-      assert.are.equal(0, select("#", moveWindow(name("wlsNoSuchWindow"), 1, 2)))
-      assert.are.equal(0, select("#", resizeWindow(name("wlsNoSuchWindow"), 1, 2)))
+    it("moveWindow and resizeWindow refuse an unknown window", function()
+      local notFound = ('window "%s" not found'):format(name("wlsNoSuchWindow"))
+      assert.are.same({nil, notFound}, {moveWindow(name("wlsNoSuchWindow"), 1, 2)})
+      assert.are.same({nil, notFound}, {resizeWindow(name("wlsNoSuchWindow"), 1, 2)})
     end)
 
     it("moveWindow and resizeWindow hard-error without arguments", function()
@@ -4189,15 +4437,15 @@ describe("Window and label state", function()
       assert.is_false(showWindow("main"))
     end)
 
-    it("hideWindow returns no value but does hide the element", function()
-      assert.are.equal(0, select("#", hideWindow(label)))
+    it("hideWindow returns true and does hide the element", function()
+      assert.are.same({true}, {hideWindow(label)})
       assert.is_false(windowVisible(label))
       showWindow(label)
       assert.is_true(windowVisible(label))
     end)
 
-    it("hideWindow returns no value for an unknown name", function()
-      assert.are.equal(0, select("#", hideWindow(name("wlsNoSuchWindow"))))
+    it("hideWindow refuses an unknown name", function()
+      assert.are.same({nil, ('window "%s" not found'):format(name("wlsNoSuchWindow"))}, {hideWindow(name("wlsNoSuchWindow"))})
     end)
 
     it("hides and shows a text edit", function()
@@ -4681,8 +4929,8 @@ describe("Window and label state", function()
       assert.is_true(largeHeight > smallHeight)
     end)
 
-    it("calcFontSize returns nil for an unknown window", function()
-      assert.is_nil(calcFontSize(name("wlsNoSuchWindow")))
+    it("calcFontSize refuses an unknown window", function()
+      assert.are.same({nil, ('window "%s" not found'):format(name("wlsNoSuchWindow"))}, {calcFontSize(name("wlsNoSuchWindow"))})
     end)
 
     -- Scripts compensate for the width of a "W" by hand, so the cell width is opt-in
@@ -7575,10 +7823,9 @@ describe("Command line actions and suggestions", function()
     end)
 
     it("refuses the main command line, which takes no action", function()
-      -- only command lines made with createCommandLine can carry an action
       local ok, err = setCmdLineAction("main", function() end)
       assert.is_nil(ok)
-      assert.are.equal("command line name 'main' not found", err)
+      assert.are.equal("the main command line's action cannot be changed, use an alias to act on what is typed there", err)
     end)
 
     it("returns nil and a message for an empty command line name", function()
@@ -7831,8 +8078,7 @@ describe("Labels inside a user window", function()
   end)
 
   it("hideWindow and showWindow work on it", function()
-    -- hideWindow answers nothing at all where showWindow answers a boolean
-    assert.are.equal(0, select("#", hideWindow(label)))
+    assert.is_true(hideWindow(label))
     assert.is_false(windowVisible(label))
     assert.is_true(showWindow(label))
     assert.is_true(windowVisible(label))
@@ -8187,10 +8433,10 @@ describe("Colour getters and setTextFormat by window name", function()
     assert.are.equal(0, select("#", getBgColor(console)))
   end)
 
-  it("answer nothing for a window that does not exist", function()
+  it("refuse a window that does not exist", function()
     local unknown = "colourByNameMissing" .. suffix
-    assert.are.equal(0, select("#", getFgColor(unknown)))
-    assert.are.equal(0, select("#", getBgColor(unknown)))
+    assert.are.same({nil, ('window "%s" not found'):format(unknown)}, {getFgColor(unknown)})
+    assert.are.same({nil, ('window "%s" not found'):format(unknown)}, {getBgColor(unknown)})
   end)
 
   it("setTextFormat changes what is written next and leaves what is there alone", function()
@@ -8504,8 +8750,8 @@ describe("calcFontSize on the main window", function()
     assert.are.same({width, height}, {calcFontSize()})
   end)
 
-  it("answers nil for a console name nothing is registered under", function()
-    assert.is_nil(calcFontSize("calcFontSizeAbsent"))
+  it("answers nil and why for a console name nothing is registered under", function()
+    assert.are.same({nil, 'window "calcFontSizeAbsent" not found'}, {calcFontSize("calcFontSizeAbsent")})
   end)
 
   it("measures a miniconsole separately from the main window", function()

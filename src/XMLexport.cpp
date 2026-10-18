@@ -345,7 +345,21 @@ std::string XMLexport::serializeForQxml(const pugi::xml_document& doc)
     StringXmlWriter writer(output);
     doc.save(writer);
     sanitizeForQxml(output);
-    return output;
+    // pugixml writes a carriage return in text raw, which an XML reader turns into a
+    // line feed; its own markup never holds one, so each is data
+    std::size_t carriageReturn = output.find('\r');
+    if (carriageReturn == std::string::npos) {
+        return output;
+    }
+    std::string encoded;
+    encoded.reserve(output.size() + output.size() / 64);
+    std::size_t copiedUpTo = 0;
+    for (; carriageReturn != std::string::npos; carriageReturn = output.find('\r', copiedUpTo)) {
+        encoded.append(output, copiedUpTo, carriageReturn - copiedUpTo).append("&#13;");
+        copiedUpTo = carriageReturn + 1;
+    }
+    encoded.append(output, copiedUpTo);
+    return encoded;
 }
 
 bool XMLexport::saveXml(const QString& fileName)
@@ -380,7 +394,7 @@ bool XMLexport::saveXmlDocToFile(const QString& fileName, const pugi::xml_docume
     QSaveFile file(fileName);
 
     // The reason goes on to a translated console line, so the stage stays in the log
-    auto printErrorMessage = [&](const QString& reason, const char* stage = "save package") {
+    auto printErrorMessage = [&](const QString& reason, const char* stage = "save file") {
         qDebug().noquote().nospace() << "XMLexport::saveXmlDocToFile(\"" << fileName << "\") ERROR - failed to " << stage << ", reason: " << reason << ".";
         if (errorString) {
             *errorString = reason;
@@ -511,6 +525,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("mShowRoomIDs") = pHost->mShowRoomID ? "yes" : "no";
     host.append_attribute("mShowPanel") = pHost->mShowPanel ? "yes" : "no";
     host.append_attribute("mShow3DView") = pHost->mShow3DView ? "yes" : "no";
+    host.append_attribute("mapStyle") = pHost->mapStyle().toUtf8().constData();
     host.append_attribute("mHaveMapperScript") = pHost->mHaveMapperScript ? "yes" : "no";
     host.append_attribute("mEditorAutoComplete") = pHost->mEditorAutoComplete ? "yes" : "no";
     host.append_attribute("mEditorShowBidi") = pHost->getEditorShowBidi() ? "yes" : "no";

@@ -1,14 +1,36 @@
 -- Geyser resolves its constraints against the live main window, whose size
 -- differs between machines, so expectations are computed from
--- getMainWindowSize() at assert time rather than hardcoded. Mudlet truncates
--- the doubles handed to moveWindow()/resizeWindow() (static_cast<int>), which
--- for the positive geometry used here is math.floor.
+-- getMainWindowSize() at assert time rather than hardcoded. Geyser places a
+-- widget at its edges rounded to whole pixels, so a position is
+-- math.floor(x + 0.5) and a size is the difference between its two rounded edges.
 --
 -- Containers themselves have no Mudlet widget, so geometry is read back from a
 -- child label - the widget Geyser actually moves and resizes.
 local function geometry(name)
   local x, y, width, height = getWindowGeometry(name)
   return {x = x, y = y, width = width, height = height}
+end
+
+local function upvalue(fn, name)
+  if type(fn) ~= "function" then
+    return nil
+  end
+  local index = 1
+  while true do
+    local upvalueName, value = debug.getupvalue(fn, index)
+    if not upvalueName then
+      return nil
+    end
+    if upvalueName == name then
+      return value, index
+    end
+    index = index + 1
+  end
+end
+
+local function pixelSpan(start, length)
+  local first = math.floor(start + 0.5)
+  return first, math.floor(start + length + 0.5) - first
 end
 
 describe("Tests functionality of Geyser.Container", function()
@@ -49,6 +71,15 @@ describe("Tests functionality of Geyser.Container", function()
       assert.is_truthy(container.name:find("^anon_window_%d+$"))
       assert.are.same({}, container.windows)
     end)
+
+    -- edges at 33.4 and 66.8 round to 33 and 67, and at 10.4 and 31 to 10 and 31
+    for _, kind in ipairs({"Label", "MiniConsole", "CommandLine", "TextEdit", "ScrollBox"}) do
+      it("creates a " .. kind .. " at the pixels its fractional geometry rounds to", function()
+        local name = "gcsCreate" .. kind
+        track(Geyser[kind]:new({name = name, x = "33.4px", y = "10.4px", width = "33.4px", height = "20.6px"}))
+        assert.are.same({x = 33, y = 10, width = 34, height = 21}, geometry(name))
+      end)
+    end
 
     it("registers a top level container with the root Geyser window list", function()
       local container = track(Geyser.Container:new({name = "gcsRegistered"}))
@@ -129,20 +160,18 @@ describe("Tests functionality of Geyser.Container", function()
     it("resolves percentages against the main window", function()
       local mainWidth, mainHeight = getMainWindowSize()
       track(Geyser.Label:new({name = "gcsPercent", x = "10%", y = "20%", width = "50%", height = "25%"}))
-      assert.are.same({
-        x = math.floor(0.1 * mainWidth),
-        y = math.floor(0.2 * mainHeight),
-        width = math.floor(0.5 * mainWidth),
-        height = math.floor(0.25 * mainHeight),
-      }, geometry("gcsPercent"))
+      local x, width = pixelSpan(0.1 * mainWidth, 0.5 * mainWidth)
+      local y, height = pixelSpan(0.2 * mainHeight, 0.25 * mainHeight)
+      assert.are.same({x = x, y = y, width = width, height = height}, geometry("gcsPercent"))
     end)
 
     it("adds a pixel offset to a percentage constraint", function()
       local mainWidth = getMainWindowSize()
       track(Geyser.Label:new({name = "gcsOffset", x = "50%+10", y = 0, width = "10%-5", height = 20}))
       local actual = geometry("gcsOffset")
-      assert.are.equal(math.floor(0.5 * mainWidth + 10), actual.x)
-      assert.are.equal(math.floor(0.1 * mainWidth - 5), actual.width)
+      local x, width = pixelSpan(0.5 * mainWidth + 10, 0.1 * mainWidth - 5)
+      assert.are.equal(x, actual.x)
+      assert.are.equal(width, actual.width)
     end)
 
     it("measures negative pixel constraints from the far edge", function()
@@ -691,6 +720,14 @@ describe("Tests functionality of Geyser.Container", function()
     end)
 
     it("lays out a child of a container whose reposition does not recurse", function()
+      -- the session's first mapper raises mapOpenEvent, which leaves the generic mapper
+      -- waiting, with no time limit, to learn a later spec's GA/EOR prompt as the game's
+      local grabLine = type(map) == "table" and upvalue(map.eventHandler, "grab_line")
+      local _, awaitPromptIndex = upvalue(grabLine, "await_prompt")
+      if awaitPromptIndex then
+        local awaiting = select(2, debug.getupvalue(grabLine, awaitPromptIndex))
+        finally(function() debug.setupvalue(grabLine, awaitPromptIndex, awaiting) end)
+      end
       local root = track(Geyser.Container:new({name = "gcsMapRoot", x = 0, y = 0, width = "60%", height = "60%"}))
       -- Geyser.Mapper:reposition places the map widget and stops, so its children
       -- are laid out only because set_constraints visits them
@@ -1006,6 +1043,14 @@ describe("Tests functionality of Geyser.Container", function()
       assert.is_true(windowVisible("gcsFlash_dimensions_flash"))
     end)
 
+    it("puts a flash label over the pixels a fractional geometry rounds to", function()
+      local label = track(Geyser.Label:new({name = "gcsFlashFraction", x = "33.4px", y = "10.4px", width = "33.4px", height = "20.6px"}))
+      finally(function() deleteLabel("gcsFlashFraction_dimensions_flash") end)
+      label:flash(0.1)
+      assert.are.same({x = 33, y = 10, width = 34, height = 21}, geometry("gcsFlashFraction"))
+      assert.are.same(geometry("gcsFlashFraction"), geometry("gcsFlashFraction_dimensions_flash"))
+    end)
+
     it("creates nothing for a hidden container when told not to flash hidden ones", function()
       local container = track(Geyser.Container:new({name = "gcsNoFlash", x = 20, y = 30, width = 80, height = 40}))
       finally(function() deleteLabel("gcsNoFlash_dimensions_flash") end)
@@ -1169,7 +1214,7 @@ describe("Tests functionality of Geyser.Container", function()
       local label = track(Geyser.Label:new({name = "gcsBackToMain", x = "50%", y = 0, width = 10, height = 10}, from))
       label:changeContainer("main")
       assert.are.equal(Geyser, label.container)
-      assert.are.equal(math.floor(0.5 * getMainWindowSize()), geometry("gcsBackToMain").x)
+      assert.are.equal(math.floor(0.5 * getMainWindowSize() + 0.5), geometry("gcsBackToMain").x)
     end)
   end)
 
@@ -1337,21 +1382,23 @@ describe("Tests functionality of Geyser.Container", function()
         Header = {x = 100, y = 80, width = 500, height = 40},
         Footer = {x = 100, y = 420, width = 500, height = 60},
         Tag = {x = 100, y = 120, width = 100, height = 300},
-        Wide = {x = 333, y = 120, width = 266, height = 300},
+        -- the inner column and Wide split 400px a third to two thirds, so each
+        -- edge is rounded and between them they still fill the row
+        Wide = {x = 333, y = 120, width = 267, height = 300},
         Top = {x = 200, y = 120, width = 133, height = 50},
-        -- 250 in exact arithmetic, but the share is handed on as a percentage
-        -- string and comes back a hair under, which the widget truncates
-        Rest = {x = 200, y = 170, width = 133, height = 249},
+        -- the share is handed on as a percentage string and comes back a hair
+        -- under 250, which rounds back to it
+        Rest = {x = 200, y = 170, width = 133, height = 250},
       }
       local small = {
         Header = {x = 80, y = 60, width = 400, height = 40},
         Footer = {x = 80, y = 300, width = 400, height = 60},
         -- the row starts 40/300ths of the way down, which comes back a hair
         -- under 100 the same way
-        Tag = {x = 80, y = 99, width = 100, height = 200},
-        Wide = {x = 280, y = 99, width = 200, height = 200},
-        Top = {x = 180, y = 99, width = 100, height = 50},
-        Rest = {x = 180, y = 149, width = 100, height = 150},
+        Tag = {x = 80, y = 100, width = 100, height = 200},
+        Wide = {x = 280, y = 100, width = 200, height = 200},
+        Top = {x = 180, y = 100, width = 100, height = 50},
+        Rest = {x = 180, y = 150, width = 100, height = 150},
       }
       assert.are.same(big, layout())
       mainWindow(800, 600)

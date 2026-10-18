@@ -31,7 +31,9 @@
 #include "Host.h"
 #include "HostDialogs.h"
 #include "HostManager.h"
+#include "MapStyle.h"
 #include "MudletApp.h"
+#include "MudletProxyStyle.h"
 #include "TAction.h"
 #include "TAlias.h"
 #include "TConsole.h"
@@ -876,6 +878,12 @@ void dlgProfilePreferences::buildShell()
     moveIntoCard(pCard_captions, {checkBox_enableBlinkText, checkBox_enableClosedCaption});
     auto* pCard_keyboard = createCard(qsl("card_accessibilityKeyboard"));
     addCardRow(pCard_keyboard, label_caretModeKey, comboBox_caretModeKey);
+    addCardRow(pCard_keyboard, label_menuBarAltKeyNavigation, comboBox_menuBarAltKeyNavigation);
+#if defined(Q_OS_MACOS)
+    // The native menu bar takes no part in Alt key navigation
+    label_menuBarAltKeyNavigation->hide();
+    comboBox_menuBarAltKeyNavigation->hide();
+#endif
     moveIntoCard(pCard_keyboard, {checkBox_f3SearchEnabled});
     buildCategoryPage(scmCategory_accessibility, {groupBox_accessibility, pCard_captions, pCard_keyboard});
 
@@ -1286,6 +1294,8 @@ void dlgProfilePreferences::setSearchKeywords()
     synonyms.append({checkBox_advertiseScreenReader, tr("screen reader, NVDA, JAWS, VoiceOver, Orca, accessibility")});
     //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for reading incoming text out loud.
     synonyms.append({checkBox_announceIncomingText, tr("text to speech, TTS, speech, spoken, screen reader")});
+    //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for whether pressing Alt on its own moves focus to the menu bar.
+    synonyms.append({label_menuBarAltKeyNavigation, tr("Alt key, menu bar, menus, keyboard, screen reader")});
     //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for putting the time in front of each logged line.
     synonyms.append({mIsLoggingTimestamps, tr("timestamps, time, date, transcript")});
     //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for the format logs are written in.
@@ -1983,12 +1993,22 @@ void dlgProfilePreferences::reflowWideCards()
 
     const QList<QWidget*> mapViewOptions{
             mMapperUseAntiAlias, checkBox_drawUpperLowerLevels, checkbox_mMapperShowRoomBorders, checkBox_invertMapZoom, checkBox_largeAreaExitArrows, checkBox_showDefaultArea};
-    takeOutOfLayout(gridLayout_groupBox_mapViewOptions, mapViewOptions + QList<QWidget*>{gridGroupBox, groupBox_mapSymbols});
+    takeOutOfLayout(gridLayout_groupBox_mapViewOptions, mapViewOptions + QList<QWidget*>{label_mapStyle, comboBox_mapStyle, gridGroupBox, groupBox_mapSymbols});
     for (int i = 0, total = mapViewOptions.size(); i < total; ++i) {
         gridLayout_groupBox_mapViewOptions->addWidget(mapViewOptions.at(i), i / 2, i % 2);
     }
-    gridLayout_groupBox_mapViewOptions->addWidget(gridGroupBox, 3, 0, 1, 2);
-    gridLayout_groupBox_mapViewOptions->addWidget(groupBox_mapSymbols, 4, 0, 1, 2);
+#if defined(INCLUDE_3DMAPPER)
+    auto* pMapStyleRow = new QHBoxLayout();
+    pMapStyleRow->addWidget(label_mapStyle);
+    pMapStyleRow->addWidget(comboBox_mapStyle);
+    pMapStyleRow->addStretch(1);
+    gridLayout_groupBox_mapViewOptions->addLayout(pMapStyleRow, 3, 0, 1, 2);
+#else
+    label_mapStyle->hide();
+    comboBox_mapStyle->hide();
+#endif
+    gridLayout_groupBox_mapViewOptions->addWidget(gridGroupBox, 4, 0, 1, 2);
+    gridLayout_groupBox_mapViewOptions->addWidget(groupBox_mapSymbols, 5, 0, 1, 2);
 
     // A column of three, leaving free the two cells initWithHost() appends the scaling factor to
     const QList<QWidget*> mapSymbolRows{label_mapSymbolsFont, fontComboBox_mapSymbols, pushButton_showGlyphUsage, checkBox_isOnlyMapSymbolFontToBeUsed};
@@ -3839,6 +3859,7 @@ void dlgProfilePreferences::populateApplicationSettings()
         const QSignalBlocker blocker(comboBox_appearance);
         comboBox_appearance->setCurrentIndex(pMudlet->mAppearance);
     }
+    comboBox_menuBarAltKeyNavigation->setCurrentIndex(static_cast<int>(MudletProxyStyle::altKeyNavigation()));
     {
         const QSignalBlocker blocker(telnetHandlerEnabled);
         telnetHandlerEnabled->setChecked(MudletApp::getQSettings()->value("telnetHandlerEnabled", false).toBool());
@@ -3874,6 +3895,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     loadEditorTab();
 
     fontComboBox_displayFont->setCurrentFont(pHost->getDisplayFont());
+    rememberDisplayFontFamilyShown();
     // Accommodate an initial font size being larger than expected - and ensure
     // it is a positive value:
     spinBox_displayFontSize->setMaximum(std::max(pHost->getDisplayFont().pointSize(), 40));
@@ -3886,6 +3908,8 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     connect(fontComboBox_displayFont, &QComboBox::activated, this, &dlgProfilePreferences::slot_displayFontChanged, Qt::UniqueConnection);
     connect(spinBox_displayFontSize, qOverload<int>(&QSpinBox::valueChanged), this, &dlgProfilePreferences::slot_displayFontSizeChanged, Qt::UniqueConnection);
     connect(checkBox_antiAlias, &QCheckBox::clicked, this, &dlgProfilePreferences::slot_displayFontAliasingChanged, Qt::UniqueConnection);
+
+    connect(pHost, &Host::signal_consoleFontChanged, this, &dlgProfilePreferences::slot_hostDisplayFontChanged, Qt::UniqueConnection);
 
     // Emptied first so a second run replaces the list
     {
@@ -4366,6 +4390,12 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         connect(fontComboBox_mapSymbols, &QFontComboBox::currentFontChanged, this, &dlgProfilePreferences::slot_setMapSymbolFont, Qt::UniqueConnection);
         connect(checkBox_isOnlyMapSymbolFontToBeUsed, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_setMapSymbolFontStrategy, Qt::UniqueConnection);
         connect(pHost->mpMap.data(), &TMap::signal_mapSymbolFontChanged, this, &dlgProfilePreferences::slot_mapSymbolFontChanged, Qt::UniqueConnection);
+        disconnect(mMapStyleConnection);
+        mMapStyleConnection = connect(pHost->mpMap.data(), &TMap::signal_mapperSettingChanged, this, [this](const TMap::MapperSetting setting) {
+            if (setting == TMap::MapperSetting::Style) {
+                followMapStyle();
+            }
+        });
 
         groupBox_playerRoomStyle->setEnabled(true);
         comboBox_playerRoomStyle->setCurrentIndex(pHost->mpMap->mPlayerRoomStyle);
@@ -4518,7 +4548,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
                         break;
                     default: {
                     } // There are a significant number of other errors
-                        // that are not handled here!
+                    // that are not handled here!
                     }
                 }
             }
@@ -4627,6 +4657,21 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         comboBox_caretModeKey->setCurrentIndex(static_cast<int>(pHost->mCaretShortcut));
     }
     checkBox_largeAreaExitArrows->setChecked(pHost->getLargeAreaExitArrows());
+    {
+        const QSignalBlocker blocker(comboBox_mapStyle);
+        // Kept from the last time round, as this runs again each time the dialog is activated and the pictures
+        // take a few milliseconds to paint; clearHostDetails() empties it
+        if (comboBox_mapStyle->count() != MapStyle::all().size()) {
+            comboBox_mapStyle->clear();
+            // Wider than tall, as the combo box has room across for the preview's rooms to show
+            const QSize previewSize(72, 48);
+            comboBox_mapStyle->setIconSize(previewSize);
+            for (const MapStyle& style : MapStyle::all()) {
+                comboBox_mapStyle->addItem(style.previewIcon(previewSize), style.displayName(), style.id);
+            }
+        }
+        comboBox_mapStyle->setCurrentIndex(comboBox_mapStyle->findData(pHost->mapStyle()));
+    }
     checkBox_invertMapZoom->setChecked(mudlet::self()->invertMapZoom());
     comboBox_blankLinesBehaviour->setCurrentIndex(static_cast<int>(pHost->mBlankLineBehaviour));
 
@@ -5034,6 +5079,8 @@ void dlgProfilePreferences::clearHostDetails()
 
     comboBox_mapFileSaveFormatVersion->clear();
     comboBox_mapFileSaveFormatVersion->setEnabled(true);
+    disconnect(mMapStyleConnection);
+    comboBox_mapStyle->clear();
     label_mapFileSaveFormatVersion->setEnabled(false);
     checkBox_showDefaultArea->setChecked(false);
     checkBox_showDefaultArea->hide();
@@ -5389,9 +5436,9 @@ void dlgProfilePreferences::slot_resetMapColors()
     // As per values in Host.h:
     pHost->mFgColor_2 = QColorConstants::LightGray;
     pHost->mBgColor_2 = QColorConstants::Black;
-    pHost->mLowerLevelColor = QColorConstants::DarkGray;
-    pHost->mUpperLevelColor = QColorConstants::White;
-    pHost->mRoomBorderColor = QColorConstants::LightGray;
+    pHost->mLowerLevelColor = Host::scmDefaultLowerLevelColor;
+    pHost->mUpperLevelColor = Host::scmDefaultUpperLevelColor;
+    pHost->mRoomBorderColor = Host::scmDefaultRoomBorderColor;
     pHost->mRoomCollisionBorderColor = QColorConstants::Yellow;
     pHost->mBlack_2 = QColorConstants::Black;
     pHost->mLightBlack_2 = QColorConstants::DarkGray;
@@ -5409,7 +5456,7 @@ void dlgProfilePreferences::slot_resetMapColors()
     pHost->mLightMagenta_2 = QColorConstants::Magenta;
     pHost->mWhite_2 = QColorConstants::LightGray;
     pHost->mLightWhite_2 = QColorConstants::White;
-    pHost->mMapInfoBg = QColor(150, 150, 150, 120);
+    pHost->mMapInfoBg = Host::scmDefaultMapInfoBg;
     pHost->mMapGridColor = QColor(211, 211, 211, 64);
 
     // This aplies the above colors to the buttons on display:
@@ -5670,7 +5717,10 @@ void dlgProfilePreferences::slot_setMapBgColor()
 #if defined(INCLUDE_3DMAPPER)
         if (pHost->mpMap->mapper()->glWidget) {
             QOpenGLWidget* map = pHost->mpMap->mapper()->glWidget;
-            if (pHost->mBgColor_2.alpha() < 255) {
+            if (auto* modernMap = qobject_cast<ModernGLWidget*>(map)) {
+                // Its style may paint its own background, whatever the profile's is
+                modernMap->applyStyle();
+            } else if (pHost->mBgColor_2.alpha() < 255) {
                 map->setAttribute(Qt::WA_OpaquePaintEvent, false);
                 map->setAttribute(Qt::WA_AlwaysStackOnTop, true);
             } else {
@@ -6952,6 +7002,9 @@ void dlgProfilePreferences::applyAll()
         if (mSnapshot.dirty(comboBox_caretModeKey)) {
             pHost->mCaretShortcut = static_cast<Host::CaretShortcut>(comboBox_caretModeKey->currentIndex());
         }
+        if (mSnapshot.dirty(comboBox_mapStyle) && comboBox_mapStyle->currentIndex() >= 0) {
+            pHost->setMapStyle(comboBox_mapStyle->currentData().toString());
+        }
         if (groupBox_playerRoomStyle->isEnabled() && mSnapshot.anyDirty({comboBox_playerRoomStyle, spinBox_playerRoomOuterDiameter, spinBox_playerRoomInnerDiameter})) {
             // Although the controls have been interactively modifying the
             // TMap cached values for these, they were not being committed to
@@ -7059,6 +7112,9 @@ void dlgProfilePreferences::applyAll()
     }
     if (mSnapshot.dirty(comboBox_appearance)) {
         pMudlet->setAppearance(static_cast<enums::Appearance>(comboBox_appearance->currentIndex()));
+    }
+    if (mSnapshot.dirty(comboBox_menuBarAltKeyNavigation)) {
+        MudletProxyStyle::setAltKeyNavigation(static_cast<enums::MenuBarAltKeyNavigation>(comboBox_menuBarAltKeyNavigation->currentIndex()));
     }
     if (mSnapshot.dirty(telnetHandlerEnabled)) {
         QSettings* settings = MudletApp::getQSettings();
@@ -8018,6 +8074,22 @@ void dlgProfilePreferences::slot_setMapSymbolFont(const QFont& font)
     }
 
     pHost->mpMap->setSymbolFont(font);
+}
+
+// A style set while the dialog is open, such as by a script, replaces any pick
+// not yet applied, so that Save does not write the older pick back over it
+void dlgProfilePreferences::followMapStyle()
+{
+    Host* pHost = mpHost;
+    if (!pHost) {
+        return;
+    }
+    const int index = comboBox_mapStyle->findData(pHost->mapStyle());
+    if (index != comboBox_mapStyle->currentIndex()) {
+        const QSignalBlocker blocker(comboBox_mapStyle);
+        comboBox_mapStyle->setCurrentIndex(index);
+    }
+    mSnapshot.take(comboBox_mapStyle);
 }
 
 // Keeps the controls (and the glyph usage dialog, when open) in step with the
@@ -9140,12 +9212,24 @@ QString dlgProfilePreferences::dictionaryDisplayName(const QString& dictionary)
     return mudlet::self()->mDictionaryLanguageCodeMap.value(key, tr("%1 - not recognised").arg(dictionary));
 }
 
+void dlgProfilePreferences::rememberDisplayFontFamilyShown()
+{
+    const QString family = fontComboBox_displayFont->currentFont().family();
+    mDisplayFontFamilyShown = (mpHost && mpHost->resolveFontFamily(family).available) ? family : QString();
+}
+
 void dlgProfilePreferences::slot_displayFontChanged()
 {
-    // Only fires from QFontComboBox::currentFontChanged and QComboBox::activated,
-    // so the family really is one the user just picked out of the list. Picking a
-    // new family fires both, so a second run for the same font must change nothing
-    if (!mpHost.isNull() && updateDisplayFont(Host::DisplayFontChange::UserChoice)) {
+    // QFontComboBox moves off a family by itself when its package is uninstalled: no choice of the
+    // user's, and the profile's own check is about to put the stand-in up and say so
+    const QString shownBefore = mDisplayFontFamilyShown;
+    rememberDisplayFontFamilyShown();
+    if (mpHost.isNull() || (!shownBefore.isEmpty() && !mpHost->resolveFontFamily(shownBefore).available)) {
+        return;
+    }
+    // Past that, only a pick out of the list gets here (currentFontChanged and activated both land
+    // here, so a second run for the same font must change nothing), so the family really is the user's choice
+    if (updateDisplayFont(Host::DisplayFontChange::UserChoice)) {
         mpHost->mTelnet.sendInfoNewEnvironValue(qsl("FONT"));
     }
 }
@@ -9154,6 +9238,38 @@ void dlgProfilePreferences::slot_displayFontSizeChanged()
 {
     if (!mpHost.isNull() && updateDisplayFont(Host::DisplayFontChange::Adjustment)) {
         mpHost->mTelnet.sendInfoNewEnvironValue(qsl("FONT_SIZE"));
+    }
+}
+
+// The font can change behind the dialog, from a script or as a package brings a missing family
+// back, and the next edit here builds the whole font from these controls
+void dlgProfilePreferences::slot_hostDisplayFontChanged(const QFont& font)
+{
+    // The connection outlives slot_handleHostDeletion(), which has cleared these controls
+    if (mpHost.isNull()) {
+        return;
+    }
+    {
+        const QSignalBlocker comboBlocker(fontComboBox_displayFont);
+        const QSignalBlocker sizeBlocker(spinBox_displayFontSize);
+        const QSignalBlocker antiAliasBlocker(checkBox_antiAlias);
+        fontComboBox_displayFont->setCurrentFont(font);
+        spinBox_displayFontSize->setMaximum(std::max(font.pointSize(), spinBox_displayFontSize->maximum()));
+        spinBox_displayFontSize->setValue(std::max(1, font.pointSize()));
+        // Not fontsAntiAlias(): applyAll() writes that from this box only once the apply timer fires
+        checkBox_antiAlias->setChecked(!(font.styleStrategy() & QFont::NoAntialias));
+    }
+    rememberDisplayFontFamilyShown();
+    // Not the user's edits, so they must not keep refreshFromSettings() from re-reading the rest - nor
+    // the line edits inside the list and the spin box, which the snapshot holds as well. The anti-alias
+    // box stays dirty, as this runs for the dialog's own toggle too and applyAll() must still store it
+    for (QWidget* pControl : {static_cast<QWidget*>(fontComboBox_displayFont), static_cast<QWidget*>(spinBox_displayFontSize)}) {
+        mSnapshot.take(pControl);
+        for (const auto* pPart : pControl->findChildren<QWidget*>()) {
+            if (SettingsSnapshot::carriesValue(pPart)) {
+                mSnapshot.take(pPart);
+            }
+        }
     }
 }
 
@@ -9266,6 +9382,9 @@ void dlgProfilePreferences::closeEvent(QCloseEvent* event)
     }
 
     MudletApp::getQSettings()->setValue(qsl("profilePreferencesGeometry"), saveGeometry());
+    // Most application-wide settings reach Mudlet.ini only at quit, so an
+    // unclean exit would lose the ones changed here
+    mudlet::self()->writeSettings();
 
     if (mpHost) {
         emit preferencesClosing(mpHost->getName());

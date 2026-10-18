@@ -63,6 +63,7 @@
 #include <QCoreApplication>
 #include <QCursor>
 #include <QFutureWatcher>
+#include <QImageWriter>
 #if defined(Q_OS_LINUX) || defined(Q_OS_MACOS)
 /* The Devuan package for qt6-base-dev (for Qt 6.8.2) - and presumably
  * Debian and Ubuntu are missing the
@@ -4157,6 +4158,8 @@ void T2DMap::updateSelectionWidget()
         mIsSelectionSorting = mMultiSelectionListWidget.isSortingEnabled();
         mIsSelectionSortByNames = (mMultiSelectionListWidget.sortColumn() == 1);
         mMultiSelectionListWidget.clear();
+        // The rows are rebuilt from mMultiSelectionSet, which deleted rooms have already left
+        mRoomsToDropFromSelectionWidget.clear();
         // Do NOT sort while inserting items!
         mMultiSelectionListWidget.setSortingEnabled(false);
         QSetIterator<int> itRoom = mMultiSelectionSet;
@@ -4622,7 +4625,7 @@ void T2DMap::slot_setPlayerLocation()
         manualSetEvent.mArgumentList.append(QString::number(_newRoomId));
         manualSetEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
         mpHost->raiseEvent(manualSetEvent);
-        mpMap->updateArea(areaId);
+        mpMap->repaintArea(areaId);
     }
 }
 
@@ -6238,6 +6241,7 @@ void T2DMap::slot_setCustomLine2()
     //    qDebug("   LINE STYLE: %d", mCurrentLineStyle);
     room->customLinesArrow[mCustomLinesRoomExit] = mCurrentLineArrow;
     //    qDebug("   ARROW: %s", mCurrentLineArrow ? "Yes" : "No");
+    mpMap->setUnsaved(__func__);
 
     //: 2D Mapper big, bottom of screen help message
     mHelpMsg = tr("Left-click to add point, right-click to undo/change/finish...");
@@ -6275,6 +6279,7 @@ void T2DMap::slot_setCustomLine2B(QTreeWidgetItem* special_exit, int column)
     //    qDebug("   LINE STYLE: %d", mCurrentLineStyle);
     room->customLinesArrow[exit] = mCurrentLineArrow;
     //    qDebug("   ARROW: %s", mCurrentLineArrow ? "Yes" : "No");
+    mpMap->setUnsaved(__func__);
     //: 2D Mapper big, bottom of screen help message
     mHelpMsg = tr("Left-click to add point, right-click to undo/change/finish...");
     update();
@@ -6371,6 +6376,89 @@ void T2DMap::clearSelection()
     }
 }
 
+void T2DMap::forgetDeletedRoom(const int roomId)
+{
+    // A drag still in progress rebuilds the selection from these on its next move
+    mMultiSelectionBaseSet.remove(roomId);
+    mMultiSelectionAnchorSet.remove(roomId);
+    if (mCustomLinesRoomFrom == roomId || mCustomLinesRoomTo == roomId) {
+        // The id can be reused, and the next click would add a point to that room;
+        // deleting the room the line leads to has already removed its exit
+        if (mpCustomLinesDialog) {
+            mpCustomLinesDialog->reject();
+        } else {
+            mCustomLinesRoomFrom = 0;
+            mCustomLinesRoomTo = 0;
+            mCustomLinesRoomExit.clear();
+        }
+        mHelpMsg.clear();
+        update();
+    }
+    if (mCustomLineSelectedRoom == roomId) {
+        mCustomLineSelectedRoom = 0;
+        mCustomLineSelectedExit.clear();
+        mCustomLineSelectedPoint = -1;
+        update();
+    }
+    // Queued so that deleting many rooms walks the list once, not once per room.
+    // A hidden list is rebuilt before it is shown again.
+    if (!mMultiSelectionListWidget.isHidden() && mMultiSelectionListWidget.topLevelItemCount() > 0) {
+        if (mRoomsToDropFromSelectionWidget.isEmpty()) {
+            QTimer::singleShot(0, this, &T2DMap::pruneDeletedRoomsFromSelectionWidget);
+        }
+        mRoomsToDropFromSelectionWidget.insert(roomId);
+    }
+    if (!mMultiSelectionSet.remove(roomId)) {
+        return;
+    }
+    if (mMultiSelectionHighlightRoomId == roomId) {
+        switch (mMultiSelectionSet.size()) {
+        case 0:
+            mMultiSelectionHighlightRoomId = 0;
+            break;
+        case 1:
+            mMultiSelectionHighlightRoomId = *(mMultiSelectionSet.constBegin());
+            break;
+        default:
+            getCenterSelection();
+        }
+    }
+    update();
+}
+
+void T2DMap::pruneDeletedRoomsFromSelectionWidget()
+{
+    // By id, not by getRoom(): a script may already have made a new room with a deleted one's id
+    const QSet<int> deletedRoomIds = mRoomsToDropFromSelectionWidget;
+    mRoomsToDropFromSelectionWidget.clear();
+    bool rowsRemoved = false;
+    // Removing a selected row would otherwise rebuild mMultiSelectionSet from the rows left
+    mMultiSelectionListWidget.blockSignals(true);
+    for (int row = mMultiSelectionListWidget.topLevelItemCount() - 1; row >= 0; --row) {
+        if (deletedRoomIds.contains(mMultiSelectionListWidget.topLevelItem(row)->text(0).toInt())) {
+            delete mMultiSelectionListWidget.takeTopLevelItem(row);
+            rowsRemoved = true;
+        }
+    }
+    mMultiSelectionListWidget.blockSignals(false);
+    if (mMultiSelectionListWidget.topLevelItemCount() < 2) {
+        hideSelectionWidget();
+        return;
+    }
+    if (!rowsRemoved) {
+        return;
+    }
+    mIsSelectionUsingNames = false;
+    for (int row = 0; row < mMultiSelectionListWidget.topLevelItemCount(); ++row) {
+        if (!mMultiSelectionListWidget.topLevelItem(row)->text(1).isEmpty()) {
+            mIsSelectionUsingNames = true;
+            break;
+        }
+    }
+    mMultiSelectionListWidget.setColumnHidden(1, !mIsSelectionUsingNames);
+    resizeMultiSelectionWidget();
+}
+
 void T2DMap::hideSelectionWidget()
 {
     mMultiSelectionListWidget.hide();
@@ -6424,6 +6512,58 @@ void T2DMap::pruneRoomSelectionToArea(const int areaId)
     hideSelectionWidget();
 }
 
+namespace {
+QString exportImageFormat(const QString& filePath)
+{
+    const QString suffix = QFileInfo(filePath).suffix();
+    return suffix.isEmpty() ? qsl("png") : suffix.toLower();
+}
+
+// The image is written on another thread, too late for the caller to hear of a
+// failure, so the likely causes are checked first; others (a full disk, a name
+// the file system refuses) still only show on the console. A name template for
+// every z level is never written itself, so only what its level files share is
+// checked against it. Returns an empty string when nothing is wrong.
+QString exportTargetProblem(const QString& filePath, const bool nameTemplate)
+{
+    if (filePath.isEmpty()) {
+        return qsl("No file name given");
+    }
+    const QFileInfo targetFileInfo(filePath);
+    if (targetFileInfo.isDir() && (!nameTemplate || targetFileInfo.fileName().isEmpty())) {
+        return qsl("%1 is a directory").arg(targetFileInfo.absoluteFilePath());
+    }
+    const QString directory = targetFileInfo.absolutePath();
+    const QFileInfo directoryInfo(directory);
+    if (!directoryInfo.exists()) {
+        return qsl("Directory %1 does not exist").arg(directory);
+    }
+    if (!directoryInfo.isDir()) {
+        return qsl("%1 is not a directory").arg(directory);
+    }
+    if (targetFileInfo.fileName().isEmpty()) {
+        return qsl("No file name given");
+    }
+    if (!nameTemplate) {
+        if (targetFileInfo.exists() && !targetFileInfo.isWritable()) {
+            return qsl("File %1 is not writable").arg(targetFileInfo.absoluteFilePath());
+        }
+#if !defined(Q_OS_WIN)
+        // Not on Windows: there isWritable() reads a directory's read-only attribute,
+        // which shell folders such as Documents carry and which does not stop a write
+        if (!targetFileInfo.exists() && !directoryInfo.isWritable()) {
+            return qsl("Directory %1 is not writable").arg(directory);
+        }
+#endif
+    }
+    const QString format = exportImageFormat(filePath);
+    if (!QImageWriter::supportedImageFormats().contains(format.toLatin1())) {
+        return qsl("Image format \"%1\" is not supported").arg(format);
+    }
+    return {};
+}
+} // namespace
+
 std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& filePath, std::optional<int> zLevel, qreal zoom, bool exportAllZLevels)
 {
     // Validate zoom parameter
@@ -6433,6 +6573,10 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
 
     if (!mpMap || mpHost.isNull()) {
         return {false, qsl("Map not initialized")};
+    }
+
+    if (const QString problem = exportTargetProblem(filePath, exportAllZLevels); !problem.isEmpty()) {
+        return {false, problem};
     }
 
     TArea* pArea = mpMap->mpRoomDB->getArea(areaId);
@@ -6456,12 +6600,18 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
         QString extension = fileInfo.suffix();
         QString basePath = fileInfo.absolutePath();
 
-        // Iterates a copy: each export's calcSpan() replaces zLevels, which
-        // would free the list under this loop
-        const QList<int> zLevels = pArea->zLevels;
-        for (const int currentZLevel : zLevels) {
-            QString levelFileName = qsl("%1/%2_level_%3.%4").arg(basePath, baseFileName, QString::number(currentZLevel), extension.isEmpty() ? "png" : extension);
-
+        // Collected before any export runs: each export's calcSpan() replaces
+        // zLevels, which would free the list under a loop over it
+        QList<std::pair<int, QString>> levelExports;
+        for (const int currentZLevel : std::as_const(pArea->zLevels)) {
+            const QString levelFileName = qsl("%1/%2_level_%3.%4").arg(basePath, baseFileName, QString::number(currentZLevel), extension.isEmpty() ? "png" : extension);
+            // Every level is checked before any is queued, so a refusal leaves nothing written
+            if (const QString problem = exportTargetProblem(levelFileName, false); !problem.isEmpty()) {
+                return {false, qsl("Failed to export Z level %1: %2").arg(currentZLevel).arg(problem)};
+            }
+            levelExports.append({currentZLevel, levelFileName});
+        }
+        for (const auto& [currentZLevel, levelFileName] : levelExports) {
             // Recursively call this function for each Z level (without exportAllZLevels flag)
             auto [success, message] = exportAreaToImage(areaId, levelFileName, currentZLevel, zoom, false);
             if (!success) {
@@ -7149,13 +7299,6 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
     mRoomWidth = originalRoomWidth;
     mRoomHeight = originalRoomHeight;
 
-    // Prepare for async image save
-    QFileInfo fileInfo(filePath);
-    QString format = fileInfo.suffix().toLower();
-    if (format.isEmpty()) {
-        format = qsl("png");
-    }
-
     // Each export has a watcher of its own: several can be in flight at once,
     // from calls made back to back or one per z level
     auto* pWatcher = new QFutureWatcher<std::pair<bool, QString>>(this);
@@ -7172,7 +7315,7 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
         pWatcher->deleteLater();
     });
 
-    auto future = QtConcurrent::task(&T2DMap::performImageSave).withArguments(this, pixmap, filePath, format).spawn();
+    auto future = QtConcurrent::task(&T2DMap::performImageSave).withArguments(this, pixmap, filePath, exportImageFormat(filePath)).spawn();
     pWatcher->setFuture(future);
 
     return {true, {}};

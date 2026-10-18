@@ -161,27 +161,6 @@ int64_t physicalMemoryTotal()
 #endif
 }
 
-// QTime::currentTime() consults the timezone database per call (on glibc a stat() of /etc/localtime), so
-// reuse the stamp until the millisecond or the (translatable) format changes.
-QString currentTimeStamp()
-{
-    static qint64 cachedMSecs = 0;
-    static QString cachedFormat;
-    static QString cachedStamp;
-
-    // The cached format is a copy of the static, so until that is reassigned the two share one buffer
-    // and the characters need no comparing:
-    if (QDateTime::currentMSecsSinceEpoch() != cachedMSecs || cachedFormat.constData() != TBuffer::smTimeStampFormat.constData()) {
-        // Filed under the millisecond it was read in, which the clock may have moved past since the check
-        // above; the earlier one would stamp the rest of this millisecond's lines a millisecond early.
-        const QDateTime now = QDateTime::currentDateTime();
-        cachedMSecs = now.toMSecsSinceEpoch();
-        cachedFormat = TBuffer::smTimeStampFormat;
-        cachedStamp = now.time().toString(TBuffer::smTimeStampFormat);
-    }
-    return cachedStamp;
-}
-
 // Writes "rgb(r,g,b)" without the allocations QString::number() and arg() make
 void appendHtmlRgb(QString& s, const QRgb color)
 {
@@ -219,6 +198,26 @@ void appendHtmlEscaped(QString& s, const QChar* text, const qsizetype length)
         runStart = i + 1;
     }
     s.append(text + runStart, length - runStart);
+}
+
+// A wrap or hanging indent held to half the width: each wrapped segment pads indent columns per
+// (maxWidth - indent) of text, so one near the width exhausts memory. One at or past the width is dropped,
+// as is a negative one (the insert() applying it takes an unsigned count). Clamped at use, not in the
+// setters, as the wrap width can change after them.
+int clampedWrapIndent(const int indentSize, const int maxWidth)
+{
+    return (indentSize > 0 && indentSize < maxWidth) ? std::min(indentSize, maxWidth / 2) : 0;
+}
+
+// True only if getWrapInfo() would find no break, decided without its scan, the costliest part of appending
+// a line. No grapheme is wider than graphemeInfo::maxWidth columns or shorter than one QChar, and printable
+// ASCII (which excludes LineFeed and Tab) is one column per QChar.
+bool fitsUnwrapped(const QString& lineText, const qsizetype widthAvailable)
+{
+    if (lineText.size() * graphemeInfo::maxWidth <= widthAvailable) {
+        return !lineText.contains(QChar::LineFeed);
+    }
+    return lineText.size() <= widthAvailable && lineBreakInfo::printableAscii(lineText);
 }
 
 // Asks for the cache line holding the allocator's bookkeeping for a heap block,
@@ -364,10 +363,11 @@ bool sgrDigits(const QStringView parameter, int& value)
     return true;
 }
 
-// Maximum length for a CSI sequence's parameter string before aborting - a
-// valid one is only a handful of bytes, so this only trips on a malformed or
-// hostile sequence that never sends a final byte (defense against a server
-// growing mIncompleteSequenceBytes without bound across packets)
+// Maximum length of the bytes ahead of a CSI sequence's final byte before
+// aborting - a valid one is only a handful of bytes, so this only trips on a
+// malformed or hostile sequence, such as one that never sends a final byte
+// (defense against a server growing mIncompleteSequenceBytes without bound
+// across packets)
 constexpr size_t MAX_CSI_SEQUENCE_LENGTH = 4096;
 // Inline room for any SGR parameter string a game actually sends, avoiding the heap:
 constexpr qsizetype SGR_INLINE_CHARS = 64;
@@ -953,6 +953,25 @@ void TBuffer::setBufferSize(int requestedLinesLimit, int batch)
     mLinesUntilLinkSweep = 0;
 }
 
+/* static */ QString TBuffer::formatTimeStamp(const qint64 msecs)
+{
+    if (msecs == csmNoTimeStamp) {
+        return QString();
+    }
+    if (msecs == csmWrappedLineTimeStamp) {
+        return smBlankTimeStamp;
+    }
+    // The local-time conversion consults the timezone database on every call, so the last answer is kept for
+    // the run of lines a log or a paint reads that arrived within one millisecond
+    static qint64 lastMSecs = csmNoTimeStamp;
+    static QString lastText;
+    if (msecs != lastMSecs) {
+        lastMSecs = msecs;
+        lastText = QDateTime::fromMSecsSinceEpoch(msecs).time().toString(smTimeStampFormat);
+    }
+    return lastText;
+}
+
 // naive calculation to get a reasonable limit for a maximum buffer size
 int TBuffer::getMaxBufferSize()
 {
@@ -1253,6 +1272,11 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
     // swapping the server state back in part way through:
     if (isFromServer || mProcessingLocalFeed) {
         translateToPlainTextInner(incoming, isFromServer);
+        if (!isFromServer) {
+            // The outer feed scans on through its own text, so bytes held from this nested one would
+            // be prepended to whichever local feed comes next, inside an unrelated sequence
+            mIncompleteSequenceBytes.clear();
+        }
         return;
     }
 
@@ -1316,11 +1340,15 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
         mLocalPendingLead = 0;
     }
 
-    if (isFromServer && !mIncompleteSequenceBytes.empty()) {
+    if (!mIncompleteSequenceBytes.empty()) {
+        // On the local channel only while the sequence they came from is still open: without them its rest
+        // would be read as a sequence of its own
+        if (isFromServer || mGotCSI || mGotOSC) {
 #if defined(DEBUG_SGR_PROCESSING) || defined(DEBUG_OSC_PROCESSING) || defined(DEBUG_UTF8_PROCESSING) || defined(DEBUG_GB_PROCESSING) || defined(DEBUG_BIG5_PROCESSING)
-        qDebug() << "TBuffer::translateToPlainText(...) Prepending residual bytes onto incoming data!";
+            qDebug() << "TBuffer::translateToPlainText(...) Prepending residual bytes onto incoming data!";
 #endif
-        localBuffer.insert(0, mIncompleteSequenceBytes);
+            localBuffer.insert(0, mIncompleteSequenceBytes);
+        }
         mIncompleteSequenceBytes.clear();
     }
 
@@ -1472,21 +1500,28 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
         }
 
         if (mGotCSI) {
-            // Lookahead over the parameter string - see cParameter and cParameterPrivateIntroducer.
+            // Lookahead over the parameter string - see csiParameterByte() and csiPrivateIntroducerByte().
             size_t const spanStart = localBufferPosition;
             size_t spanEnd = spanStart;
             while (spanEnd < localBufferLength && csiParameterByte(localBuffer[spanEnd])) {
                 ++spanEnd;
             }
+            // Then over any intermediate bytes, and the parameter bytes a malformed sequence has after them,
+            // or that tail would reach the screen as game text:
+            size_t const parametersEnd = spanEnd;
+            while (spanEnd < localBufferLength && (csiIntermediateByte(localBuffer[spanEnd]) || csiParameterByte(localBuffer[spanEnd]))) {
+                ++spanEnd;
+            }
+            bool const hasIntermediateBytes = spanEnd != parametersEnd;
 
             if (spanEnd - spanStart >= MAX_CSI_SEQUENCE_LENGTH) {
-                // The parameter string is far longer than any valid CSI (which
-                // is only a handful of bytes): discard it instead of buffering
-                // it without bound while waiting for a final byte that a hostile
-                // server may never send.
-                qWarning().noquote().nospace() << "TBuffer::translateToPlainText(...) WARNING - CSI sequence exceeded " << MAX_CSI_SEQUENCE_LENGTH
-                                               << " bytes without a final byte, discarding it to recover.";
-                localBufferPosition += 1 + spanEnd - spanStart;
+                // The sequence is far longer than any valid CSI (which is only
+                // a handful of bytes): discard it, along with its final byte if
+                // that is what stopped the scan, instead of buffering it without
+                // bound while waiting for a final byte that a hostile server may
+                // never send.
+                qWarning().noquote().nospace() << "TBuffer::translateToPlainText(...) WARNING - CSI sequence reached " << MAX_CSI_SEQUENCE_LENGTH << " bytes, discarding it to recover.";
+                localBufferPosition += spanEnd - spanStart + (spanEnd < localBufferLength && csiFinalByte(localBuffer[spanEnd]) ? 1 : 0);
                 mGotCSI = false;
                 if (Q_UNLIKELY(mPendingLead)) {
                     flushPendingLead();
@@ -1512,9 +1547,14 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
                 return;
             }
 
-            if (Q_UNLIKELY(mPendingLead) && localBuffer[spanEnd] != 'm') {
+            if (Q_UNLIKELY(mPendingLead) && (hasIntermediateBytes || localBuffer[spanEnd] != 'm')) {
                 flushPendingLead();
             }
+
+            // Only a final byte belongs to the sequence: any other byte that cut one short, such as a newline,
+            // an escape or a character's lead byte, is left to be read, or eating it would join two lines, drop
+            // the next sequence or break a character
+            const bool hasFinalByte = csiFinalByte(localBuffer[spanEnd]);
 
             // Only now that a complete sequence is in hand, test whether the
             // first byte is within the usable subset of the allowed value - or
@@ -1528,42 +1568,23 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
                 qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - detected a private/reserved CSI sequence beginning with \"CSI"
                                              << localBuffer.substr(spanStart, spanEnd - spanStart).c_str() << "\" which Mudlet cannot interpret.";
 #endif
-                // So skip over it as far as we can - will still possibly have
-                // garbage beyond the end which will still be shown...
-                localBufferPosition += 1 + spanEnd - spanStart;
+                localBufferPosition += spanEnd - spanStart + (hasFinalByte ? 1 : 0);
                 mGotCSI = false;
                 // Go around while loop again:
                 continue;
             }
 
-            // Now we can take a peek at what the next character is, it could
-            // be an optional (and we are not expecting this) "intermediate
-            // byte" which is space or one of "!"#$%&'()*+,-./" or a "final
-            // byte" which is what determines what on earth the CSI is for, it
-            // should be in the (ASCII) range '@' to '~' and the end of that
-            // range 'p' to '~' is for "private" or "experimental" use.
+            // The final byte, in the (ASCII) range '@' to '~', is what
+            // determines what on earth the CSI is for; the end of that range,
+            // 'p' to '~', is for "private" or "experimental" use.
 
-            if (csiIntermediateByte(localBuffer[spanEnd])) {
-                // We do not handle any sequences with intermediate bytes
-                // Report it and then ignore it, try and find out what the byte
-                // afterwards is as it might help to debug things
-                if (spanEnd + 1 < localBufferLength) {
-                    // Yeah there is another byte we can report as the final byte
-                    qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - detected a CSI sequence with an 'intermediate' byte ('" << localBuffer[spanEnd]
-                                                 << "') and a 'final' byte ('" << localBuffer[spanEnd + 1] << "') which Mudlet cannot interpret.";
-                } else {
-                    qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - detected a CSI sequence with an 'intermediate' byte ('" << localBuffer[spanEnd]
-                                                 << "') which Mudlet cannot interpret.";
-                }
-                // So skip over it as far as we can - will still be possible to
-                // have garbage beyond the end which will still be shown...
-                localBufferPosition += 1 + spanEnd - spanStart;
-                mGotCSI = false;
-                // Go around while loop again:
-                continue;
-            }
-
-            if (csiFinalByte(localBuffer[spanEnd])) {
+            if (hasIntermediateBytes && hasFinalByte) {
+                // We do not handle any sequences with intermediate bytes, so
+                // report it and skip it along with its final byte - which the
+                // general step at the end of this block does
+                qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - detected a CSI sequence with an 'intermediate' byte ('" << localBuffer[parametersEnd]
+                                             << "') and a 'final' byte ('" << localBuffer[spanEnd] << "') which Mudlet cannot interpret.";
+            } else if (hasFinalByte) {
                 // We have a valid CSI sequence - but is it one we handle?
                 // We currently only handle the 'm' for SGR and the 'z' for
                 // Zuggsoft's MXP protocol:
@@ -1574,7 +1595,7 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
 #if defined(DEBUG_SGR_PROCESSING)
                     qDebug().nospace().noquote() << "    Consider the SGR sequence: \"" << localBuffer.substr(spanStart, spanEnd - spanStart).c_str() << "\"";
 #endif
-                    // Only non-private cParameter bytes get here, each a single UTF-16 unit, so no QString is needed:
+                    // Only non-private parameter bytes get here, each a single UTF-16 unit, so no QString is needed:
                     QVarLengthArray<char16_t, SGR_INLINE_CHARS> sgrChars(spanEnd - spanStart);
                     for (size_t i = spanStart; i < spanEnd; ++i) {
                         sgrChars[i - spanStart] = static_cast<unsigned char>(localBuffer[i]);
@@ -1672,10 +1693,7 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
             } // End of the isAValidFinalByte test
 
             mGotCSI = false;
-            // Step over the parameter string and final byte, unless that is a control byte: a sequence with no
-            // final byte doesn't own the newline or escape that stopped the scan, and eating it would join two
-            // lines or drop the next sequence:
-            localBufferPosition += spanEnd - spanStart + (static_cast<unsigned char>(localBuffer[spanEnd]) < ' ' ? 0 : 1);
+            localBufferPosition += spanEnd - spanStart + (hasFinalByte ? 1 : 0);
             // Go around while loop again:
             continue;
 
@@ -2279,7 +2297,7 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
             lineBuffer << QString();
         }
         buffer.push_back(std::move(chars));
-        timeBuffer << currentTimeStamp();
+        timeBuffer << QDateTime::currentMSecsSinceEpoch();
         if (ch == '\xff') {
             promptBuffer.append(true);
         } else {
@@ -2300,7 +2318,7 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
         // the one the enclosing pass is still running over:
         materialisePreTriggerPassLine(static_cast<int>(buffer.size()) - 1);
         buffer.back() = std::move(chars);
-        timeBuffer.back() = currentTimeStamp();
+        timeBuffer.back() = QDateTime::currentMSecsSinceEpoch();
         if (ch == '\xff') {
             promptBuffer.back() = true;
         } else {
@@ -2374,7 +2392,6 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
         mPreTriggerPassLineUniformity = savedPassLineUniformity;
     }
 
-    // Only use of TBuffer::wrap(), breaks up new text
     // NOTE: it MAY have been clobbered by the trigger engine!
     // If deleteLine() was called in a trigger, 'lineIndex' may now be past the
     // end of the buffer; clamp to the last valid line so that any text
@@ -2382,11 +2399,15 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
     // '\n' characters from insertInLine) is still wrapped correctly.
     const int lastValidLine = static_cast<int>(lineBuffer.size()) - 1;
     const int wrapStartLine = (lastValidLine >= 0) ? std::min(lineIndex, lastValidLine) : 0;
-    const int addedLines = wrapLine(wrapStartLine, mWrapAt, mWrapIndent, mWrapHangingIndent);
+    // Spares wrapLine()'s setup for the usual last line that fits; one with no text or no TChars still goes
+    // through, as wrapLine() rebuilds it. The width must stay getWrapInfo()'s widthAvailable for mWrapAt.
+    const bool fitsAsIs = wrapStartLine == lastValidLine && !lineBuffer.at(wrapStartLine).isEmpty() && !buffer[wrapStartLine].empty()
+                          && fitsUnwrapped(lineBuffer.at(wrapStartLine), wrapsFromPreviousLine(wrapStartLine) ? mWrapAt : mWrapAt - clampedWrapIndent(mWrapIndent, mWrapAt));
+    const int addedLines = fitsAsIs ? 0 : wrapLine(wrapStartLine, mWrapAt, mWrapIndent, mWrapHangingIndent);
     // The line feed ended this line, so an empty wrapped line left by the
     // spaces it ended on is where the next line starts, not more of this one
-    if (!lineBuffer.isEmpty() && lineBuffer.back().isEmpty() && timeBuffer.back() == TBuffer::smBlankTimeStamp) {
-        timeBuffer.back() = QString();
+    if (!lineBuffer.isEmpty() && lineBuffer.back().isEmpty() && timeBuffer.back() == csmWrappedLineTimeStamp) {
+        timeBuffer.back() = csmNoTimeStamp;
     }
 
     // Skip logging if a trigger deleted the line that was being committed;
@@ -2400,7 +2421,7 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
     if (addedLines == 0 || !lineBuffer.back().isEmpty()) {
         buffer.emplace_back();
         lineBuffer.push_back(QString());
-        timeBuffer.push_back(QString());
+        timeBuffer.push_back(csmNoTimeStamp);
         promptBuffer << false;
         wrapGapBuffer.append(0);
     }
@@ -5477,8 +5498,8 @@ void TBuffer::appendFormatted(const QString& text, const std::vector<TChar>& for
             chars.resize(first + runLength, defaultChar);
             if (firstChar) {
                 // an empty wrapped line is the rest of the line above it
-                if (timeBuffer.back() != TBuffer::smBlankTimeStamp) {
-                    timeBuffer.back() = currentTimeStamp();
+                if (timeBuffer.back() != TBuffer::csmWrappedLineTimeStamp) {
+                    timeBuffer.back() = QDateTime::currentMSecsSinceEpoch();
                 }
                 firstChar = false;
             }
@@ -5509,7 +5530,7 @@ void TBuffer::appendFormatted(const QString& text, const std::vector<TChar>& for
     }
 }
 
-void TBuffer::append(const QString& text, int sub_start, int sub_end, const QColor& fgColor, const QColor& bgColor, TChar::AttributeFlags flags, int linkID, const QString& timeStampOverride)
+void TBuffer::append(const QString& text, int sub_start, int sub_end, const QColor& fgColor, const QColor& bgColor, TChar::AttributeFlags flags, int linkID, const qint64 timeStampOverride)
 {
     if (buffer.empty()) {
         appendEmptyLine();
@@ -5541,14 +5562,8 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, const QCol
     }
 }
 
-void TBuffer::appendLine(const QString& text,
-                         const int sub_start,
-                         const int sub_end,
-                         const QColor& fgColor,
-                         const QColor& bgColor,
-                         const TChar::AttributeFlags flags,
-                         const int linkID,
-                         const QString& timeStampOverride)
+void TBuffer::appendLine(
+        const QString& text, const int sub_start, const int sub_end, const QColor& fgColor, const QColor& bgColor, const TChar::AttributeFlags flags, const int linkID, const qint64 timeStampOverride)
 {
     if (sub_end < 0) {
         return;
@@ -5622,8 +5637,8 @@ void TBuffer::appendLine(const QString& text,
         if (firstChar) {
             // Replayed held-back content supplies its arrival time, and an
             // empty wrapped line is the rest of the line above it:
-            if (timeBuffer.back() != TBuffer::smBlankTimeStamp) {
-                timeBuffer.back() = timeStampOverride.isEmpty() ? currentTimeStamp() : timeStampOverride;
+            if (timeBuffer.back() != TBuffer::csmWrappedLineTimeStamp) {
+                timeBuffer.back() = timeStampOverride == csmNoTimeStamp ? QDateTime::currentMSecsSinceEpoch() : timeStampOverride;
             }
             firstChar = false;
         }
@@ -5634,7 +5649,7 @@ void TBuffer::appendEmptyLine()
 {
     buffer.emplace_back();
     lineBuffer.push_back(QString());
-    timeBuffer << currentTimeStamp();
+    timeBuffer << QDateTime::currentMSecsSinceEpoch();
     promptBuffer << false;
     wrapGapBuffer.append(0);
 }
@@ -5805,19 +5820,11 @@ inline QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewl
         return output;
     }
 
-    // The boundary finders below run a full Unicode analysis, the costliest part of appending a line. Printable
-    // ASCII is one column per QChar, so such a line no wider than the wrap column has no break to find.
-    // LineFeed and Tab are outside that range, so embedded breaks never take this path.
     const qsizetype widthAvailable = std::min<qsizetype>(isNewline ? maxWidth - indent : maxWidth, mWrapAt);
+    if (fitsUnwrapped(lineText, widthAvailable)) {
+        return output;
+    }
     const bool plainAscii = lineBreakInfo::printableAscii(lineText);
-    if (plainAscii && lineText.size() <= widthAvailable) {
-        return output;
-    }
-    // No grapheme is wider than graphemeInfo::maxWidth columns or shorter than one QChar, so this line
-    // can't reach the wrap column; only an embedded line feed can break it.
-    if (lineText.size() * graphemeInfo::maxWidth <= widthAvailable && !lineText.contains(QChar::LineFeed)) {
-        return output;
-    }
 
     // Each finder runs its own analysis over the whole line. A plain-ASCII
     // line's grapheme clusters are its characters, each one column wide, so
@@ -5998,8 +6005,9 @@ QString TBuffer::assembleLog(int fromLine, int toLine)
             text.append(bufferToHtml(timestamps, i));
             continue;
         }
-        if (timestamps && !timeBuffer.at(i).isEmpty()) {
-            text.append(QStringView(timeBuffer.at(i)).left(TBuffer::smTimeStampFormat.length()));
+        if (timestamps) {
+            const QString timeStamp = timeStampText(i);
+            text.append(QStringView(timeStamp).left(TBuffer::smTimeStampFormat.length()));
         }
         text.append(lineBuffer.at(i));
         text.append(QChar::LineFeed);
@@ -6062,14 +6070,8 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
     // the line replaces the characters the pass is matching against:
     materialisePreTriggerPassLine(startLine);
 
-    // Checked here, not in the setters, as the wrap width can change after them.
-    // Each wrapped line pads indent columns per (maxWidth - indent) of text, so an
-    // indent is held to half the width: near the width a long line becomes one
-    // padded line per character and exhausts memory. One as wide as the width is
-    // dropped, and so is a negative one, as the insert() applying it takes an
-    // unsigned count.
-    const int indent = (indentSize > 0 && indentSize < maxWidth) ? std::min(indentSize, maxWidth / 2) : 0;
-    const int hangingIndent = (hangingIndentSize > 0 && hangingIndentSize < maxWidth) ? std::min(hangingIndentSize, maxWidth / 2) : 0;
+    const int indent = clampedWrapIndent(indentSize, maxWidth);
+    const int hangingIndent = clampedWrapIndent(hangingIndentSize, maxWidth);
     const int total = static_cast<int>(buffer.size());
 
     // Leading lines that getWrapInfo() finds no break points in stay where they
@@ -6084,8 +6086,7 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
         if (buffer[firstRewrappedLine].empty() || lineBuffer.at(firstRewrappedLine).isEmpty()) {
             break;
         }
-        // a blank timestamp indicates a wrapped line
-        lineBreaks = getWrapInfo(lineBuffer.at(firstRewrappedLine), timeBuffer.at(firstRewrappedLine) != TBuffer::smBlankTimeStamp, maxWidth, indent, hangingIndent);
+        lineBreaks = getWrapInfo(lineBuffer.at(firstRewrappedLine), timeBuffer.at(firstRewrappedLine) != TBuffer::csmWrappedLineTimeStamp, maxWidth, indent, hangingIndent);
         if (!lineBreaks.isEmpty()) {
             break;
         }
@@ -6104,7 +6105,7 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
 
     std::queue<std::vector<TChar>> queue;
     QStringList tempList;
-    QStringList timeList;
+    QList<qint64> timeList;
     QList<bool> promptList;
     QList<quint16> wrapGapList;
     int lineCount = 0;
@@ -6121,7 +6122,7 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
         lineCount++;
         std::vector<TChar> newBufferLine;
         QString newLineText;
-        const QString time = timeBuffer[i];
+        const qint64 time = timeBuffer[i];
         // trivial case
         if (buffer[i].empty()) {
             tempList.append(newLineText);
@@ -6136,8 +6137,7 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
         int newBufferCharPosition = 0;
         const bool isPrompt = promptBuffer[i];
         const QString lineText = lineBuffer[i];
-        // a blank timestamp indicates a wrapped line
-        const bool isNewline = (time != TBuffer::smBlankTimeStamp);
+        const bool isNewline = (time != TBuffer::csmWrappedLineTimeStamp);
         // The scan above computed this for the line it stopped on. It can also
         // stop before computing anything, but only on a line with no TChars
         // (which never reaches here) or with no text, and getWrapInfo() answers
@@ -6196,14 +6196,14 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
             // everything else
             newLineText.append(lineText.mid(w.firstChar, w.lastChar - w.firstChar));
             tempList.append(newLineText);
-            if (w.isNewline && previousSegmentEnd >= 0 && time == TBuffer::smBlankTimeStamp) {
+            if (w.isNewline && previousSegmentEnd >= 0 && time == TBuffer::csmWrappedLineTimeStamp) {
                 // A line feed inserted into a wrapped line starts a line of its
-                // own, which the blank timestamp would join back onto the last
-                timeList.append(currentTimeStamp());
+                // own, which csmWrappedLineTimeStamp would join back onto the last
+                timeList.append(QDateTime::currentMSecsSinceEpoch());
             } else if (w.isNewline) {
                 timeList.append(time);
             } else {
-                timeList.append(TBuffer::smBlankTimeStamp);
+                timeList.append(TBuffer::csmWrappedLineTimeStamp);
             }
             queue.push(std::move(newBufferLine));
             promptList.append(isPrompt);
@@ -6234,8 +6234,8 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
             appendEmptyLine();
             // A break that leaves only dropped spaces for the last line keeps
             // it wrapped, for whatever is echoed next to carry on from them
-            if (timeList[i] == TBuffer::smBlankTimeStamp) {
-                timeBuffer.back() = TBuffer::smBlankTimeStamp;
+            if (timeList[i] == TBuffer::csmWrappedLineTimeStamp) {
+                timeBuffer.back() = TBuffer::csmWrappedLineTimeStamp;
                 wrapGapBuffer.back() = wrapGapList[i];
             }
         } else {
@@ -6281,7 +6281,7 @@ QString badLineError = qsl("ERROR: invalid line number");
 // and counted for a copy to put back
 bool TBuffer::dropSpaceAtWrap(const QChar c)
 {
-    if (c != QChar::Space || !lineBuffer.back().isEmpty() || timeBuffer.back() != TBuffer::smBlankTimeStamp) {
+    if (c != QChar::Space || !lineBuffer.back().isEmpty() || timeBuffer.back() != TBuffer::csmWrappedLineTimeStamp) {
         return false;
     }
     if (wrapGapBuffer.back() < std::numeric_limits<quint16>::max()) {
@@ -6292,8 +6292,7 @@ bool TBuffer::dropSpaceAtWrap(const QChar c)
 
 bool TBuffer::wrapsFromPreviousLine(const int lineNumber) const
 {
-    // a blank timestamp is what marks a line wrapLine() split off another
-    return lineNumber > 0 && lineNumber < timeBuffer.size() && timeBuffer.at(lineNumber) == TBuffer::smBlankTimeStamp;
+    return lineNumber > 0 && lineNumber < timeBuffer.size() && timeBuffer.at(lineNumber) == TBuffer::csmWrappedLineTimeStamp;
 }
 
 // How many spaces word wrapping dropped at the break before this line - only
@@ -6621,7 +6620,7 @@ void TBuffer::clear()
 
     buffer.emplace_back();
     lineBuffer << QString();
-    timeBuffer << QString();
+    timeBuffer << csmNoTimeStamp;
     promptBuffer.push_back(false);
     wrapGapBuffer.append(0);
 }
@@ -6737,8 +6736,8 @@ void TBuffer::clearLastLine()
             lineBuffer.back().clear();
         }
         // what goes in its place starts a line rather than carrying on one
-        if (!timeBuffer.isEmpty() && timeBuffer.back() == TBuffer::smBlankTimeStamp) {
-            timeBuffer.back() = QString();
+        if (!timeBuffer.isEmpty() && timeBuffer.back() == csmWrappedLineTimeStamp) {
+            timeBuffer.back() = csmNoTimeStamp;
         }
     }
 }
@@ -7180,13 +7179,14 @@ QString TBuffer::bufferToHtml(const bool showTimeStamp /*= false*/, const int ro
     // <span timestamp format>Timestamp (13 chars)</span><span default>___padding spaces___</span><span first chunk style>first chunk...
     // we will NOT need a closing "</span>"
     const QColor consoleBgColor{mpModel ? mpModel->mBgColor : QColor(Qt::black)};
-    if (showTimeStamp && !timeBuffer.at(row).isEmpty()) {
+    if (showTimeStamp && timeBuffer.at(row) != csmNoTimeStamp) {
         // Use the console's background so the timestamp blends in with the
         // rest of the text, as done in TTextEdit::layoutLine(...).
         s.append(QLatin1StringView("<span style=\"color: rgb(200,150,0); background: "));
         s.append(consoleBgColor.name());
         s.append(QLatin1StringView("; \">"));
-        s.append(QStringView(timeBuffer.at(row)).left(TBuffer::smTimeStampFormat.length()));
+        const QString timeStamp = timeStampText(row);
+        s.append(QStringView(timeStamp).left(TBuffer::smTimeStampFormat.length()));
         // Set the current idea of what the formatting is so we can spot if it
         // changes:
         currentFgColor = qRgb(200, 150, 0);

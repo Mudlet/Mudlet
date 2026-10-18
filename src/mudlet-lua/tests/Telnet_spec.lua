@@ -462,6 +462,18 @@ describe("Tests the rest of the SGR decoder", function()
     end
   end)
 
+  -- a sequence with an intermediate byte is held over a split between two
+  -- reads like any other, rather than its tail reaching the screen
+  it("carries a sequence with an intermediate byte over to the next read", function()
+    for i, case in ipairs({{"\27[1 ", "qAB"}, {"\27[38;5;-", "1mAB"}}) do
+      local marker = ("SgrSplitInt%d"):format(i)
+      assert.is_true(feedTelnet(marker .. "(" .. case[1]))
+      assert.is_true(feedTelnet(case[2] .. ")" .. marker .. "\r\n"))
+      local line = lineNumberOf(marker)
+      assert.equals(marker .. "(AB)" .. marker, line and getLines("main", line, line + 1)[1])
+    end
+  end)
+
   it("ignores a sub-parameter colour type Mudlet does not render", function()
     feed("\27[31mSgrSubTypeA \27[38:1mSgrSubTypeB \27[38:3mSgrSubTypeC")
     selectMarker("SgrSubTypeB")
@@ -1835,11 +1847,10 @@ end)
 
 describe("Tests MCCP compressed streams", function()
 
-  -- feedTelnet() reads its argument as a C string and turns "<..>" tokens into
-  -- bytes, so a compressed stream has to reach it with its NULs written as the
-  -- token and its angle brackets doubled
+  -- feedTelnet() turns "<..>" tokens into bytes, so a compressed stream has to
+  -- reach it with its angle brackets doubled; its NULs go through as they are
   local function escaped(bytes)
-    return (bytes:gsub("[%z<>]", {["\0"] = "<00>", ["<"] = "<<", [">"] = ">>"}))
+    return (bytes:gsub("[<>]", {["<"] = "<<", [">"] = ">>"}))
   end
 
   local function feed(data)

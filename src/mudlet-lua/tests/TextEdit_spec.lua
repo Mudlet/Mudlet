@@ -107,6 +107,12 @@ describe("Tests TextEdit widget functions", function()
       assert.is_true(setTextEditFont(name, "Ubuntu Mono"))
     end)
 
+    it("Should refuse a font name with a NUL in it", function()
+      -- the family before the NUL would otherwise be set, and reported as done; it is not
+      -- the Ubuntu Mono the case before leaves set, so that change is a real one
+      assert.are.same({nil, "font name must not contain a NUL character"}, {setTextEditFont(name, "Bitstream Vera Sans Mono\0Garbage")})
+    end)
+
     it("Should set font size", function()
       assert.is_true(setTextEditFontSize(name, 14))
     end)

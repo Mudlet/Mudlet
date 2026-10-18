@@ -447,7 +447,7 @@
 			<name>Mudlet base UI</name>
 			<packageName></packageName>
 			<script>-- Mudlet base UI: a small starter interface that adapts to whatever the game
--- provides. Nothing is created until the game actually sends something:
+-- provides. Nothing is created until the game has actually sent something:
 -- vitals gauges are built from GMCP character data (normalised across the
 -- dialects games speak, and only for the fields that exist), with the map and
 -- chat windows alongside them. Chat comes from gmcp.Comm.Channel.Text when
@@ -668,19 +668,36 @@ local function rebuildCss()
   end
 end
 
--- GMCP vitals arrive in several dialects: lowercase namespaces, maxima inside
--- the vitals message or in a separate Maxstats one, and varying key names.
--- Every node listed here is scanned on each update (the gmcp table keeps the
--- latest message per node, so currents and maxima merge naturally even when
--- they arrive separately) - supporting another dialect is one more line
+-- GMCP vitals arrive in several dialects: maxima inside the vitals message or
+-- in a separate Maxstats one, and varying key names. GMCP names are
+-- case-insensitive, so each node here (written in lowercase) is matched in any
+-- casing, and so is the message that triggers an update. Every node listed is
+-- scanned on each update (the gmcp table keeps the latest message per node, so
+-- currents and maxima merge naturally even when they arrive separately) -
+-- supporting another dialect is one more line
 local vitalsNodes = {
-  { "Char", "Vitals" },
   { "char", "vitals" },
-  { "Char", "Maxstats" },
   { "char", "maxstats" },
-  { "Char", "Status" },
   { "char", "status" },
 }
+
+local vitalsEvents = {}
+for _, path in ipairs(vitalsNodes) do
+  vitalsEvents["gmcp." .. table.concat(path, ".")] = true
+end
+
+-- the spellings games are known to send get a handler of their own: "*"
+-- handlers run after every exact-name one, so routing these through "*" would
+-- update the gauges after other packages' handlers for the same message
+local knownVitalsEvents = {
+  "gmcp.Char.Vitals", "gmcp.char.vitals",
+  "gmcp.Char.Maxstats", "gmcp.Char.MaxStats", "gmcp.char.maxstats",
+  "gmcp.Char.Status", "gmcp.char.status",
+}
+local knownVitalsEvent = {}
+for _, event in ipairs(knownVitalsEvents) do
+  knownVitalsEvent[event] = true
+end
 
 -- one row per gauge; current/max/percent list every key spelling observed in
 -- the wild. A percent key is a ready 0-100 value and needs no max: nl (IRE
@@ -725,16 +742,43 @@ local msdpStats = {
   { key = "enemy", current = "OPPONENT_HEALTH", max = "OPPONENT_HEALTH_MAX", transient = true },
 }
 
-local function gmcpNode(path)
-  local node = gmcp
-  for _, key in ipairs(path) do
-    if type(node) ~= "table" then
-      return nil
-    end
-    node = node[key]
+-- the first value found for a stat wins, so when a node is present in two
+-- casings the conventional capitalised one (Char.Maxstats) is read first
+local function gmcpNameBefore(a, b)
+  local aCapitalised = a == a:sub(1, 1):upper() .. a:sub(2):lower()
+  local bCapitalised = b == b:sub(1, 1):upper() .. b:sub(2):lower()
+  if aCapitalised ~= bCapitalised then
+    return aCapitalised
   end
-  if type(node) == "table" then
-    return node
+  return a &lt; b
+end
+
+-- appends every table found at path in any casing; sorted, so a game sending
+-- two casings of one node has them read in the same order every time
+local function addGmcpNodes(path, found)
+  local level = { gmcp }
+  for _, key in ipairs(path) do
+    local nextLevel = {}
+    for _, node in ipairs(level) do
+      if type(node) == "table" then
+        local names = {}
+        for name in pairs(node) do
+          if type(name) == "string" and name:lower() == key then
+            names[#names + 1] = name
+          end
+        end
+        table.sort(names, gmcpNameBefore)
+        for _, name in ipairs(names) do
+          nextLevel[#nextLevel + 1] = node[name]
+        end
+      end
+    end
+    level = nextLevel
+  end
+  for _, node in ipairs(level) do
+    if type(node) == "table" then
+      found[#found + 1] = node
+    end
   end
 end
 
@@ -1661,7 +1705,7 @@ local function applyConsoleTint(giveBack)
   end
   -- A hidden UI, or one standing aside for the game's own interface, has no
   -- business colouring the game's text. Neither has one that does not exist yet:
-  -- the dock is built only once the game sends something to show, and a tint with
+  -- the dock is built only once the game has sent something to show, and a tint with
   -- no dock beside it is a recoloured window with nothing to show for it, so
   -- build() applies this once it has one.
   local tint = not giveBack and BaseUI.container and not BaseUI.dormant() and theme.console
@@ -1825,6 +1869,11 @@ function BaseUI.standAside(_, packageName)
   end
   -- a section dragged out of the dock is no longer its child to hide
   BaseUI.layoutDock()
+  -- hiding an embedded mapper shrinks the profile's one map widget to 0x0, and
+  -- the game's interface may have put a mapper of its own on that widget already
+  if BaseUI.map then
+    Geyser:reposition()
+  end
 end
 
 -- An uninstall of this package and one of the game's own interface arrive on the
@@ -1925,11 +1974,22 @@ end
 -- profile has no map data, so a placeholder holds its spot until the first
 -- room exists (made by a mapping script, a map download or a manual load).
 -- Cheap to poll: getRooms() stays empty right up until the swap happens.
-function BaseUI.checkMapData()
+function BaseUI.checkMapData(event)
   if not BaseUI.container or BaseUI.map or BaseUI.dormant() then
     return
   end
   if not BaseUI.mapHasData() then
+    return
+  end
+  -- a game's Client.GUI package opens or loads the map while it is being installed,
+  -- and sysServerGuiInstalled only stands this UI aside once that install returns
+  if event then
+    -- BaseUI is gone by then if this package was uninstalled in the meantime
+    tempTimer(0, function()
+      if BaseUI then
+        BaseUI.checkMapData()
+      end
+    end)
     return
   end
   if BaseUI.mapPlaceholder then
@@ -2018,6 +2078,7 @@ function BaseUI.build()
   BaseUI.chat = BaseUI.chats.all
   -- now that there is a dock to tint alongside, and panes to keep in step with it
   applyConsoleTint()
+  BaseUI.settings.built = true
   BaseUI.saveSettings()
   BaseUI.refreshChatTabs()
   BaseUI.chats.all:decho("&lt;150,158,167&gt;Tells, says and channel chat from the game will be collected here.\n")
@@ -2546,13 +2607,19 @@ function BaseUI.renderVitals()
   end
 end
 
+-- registered on "*": GMCP names are case-insensitive, so no list of event names
+-- is complete. The prefix test spares every non-GMCP event a lowercase copy.
+function BaseUI.routeGmcpVitals(event)
+  if type(event) == "string" and event:find("^gmcp%.") and not knownVitalsEvent[event]
+    and vitalsEvents[event:lower()] then
+    BaseUI.updateVitals()
+  end
+end
+
 function BaseUI.updateVitals()
   local sources = {}
   for _, path in ipairs(vitalsNodes) do
-    local node = gmcpNode(path)
-    if node then
-      sources[#sources + 1] = node
-    end
+    addGmcpNodes(path, sources)
   end
   if not sources[1] then
     return
@@ -2749,6 +2816,9 @@ function BaseUI.show()
   BaseUI.armChatTriggers()
   BaseUI.createVitalsTriggers()
   BaseUI.renderVitals()
+  if not BaseUI.container and BaseUI.settings.built then
+    BaseUI.build()
+  end
   if BaseUI.container then
     BaseUI.container:show()
     if not BaseUI.container.attached then
@@ -2835,12 +2905,10 @@ if not BaseUI.settings.msdpSeeded then
   setConfig("enableMSDP", true)
 end
 
-onEvent("gmcp.Char.Vitals", "BaseUI.updateVitals")
-onEvent("gmcp.char.vitals", "BaseUI.updateVitals")
-onEvent("gmcp.Char.Maxstats", "BaseUI.updateVitals")
-onEvent("gmcp.char.maxstats", "BaseUI.updateVitals")
-onEvent("gmcp.Char.Status", "BaseUI.updateVitals")
-onEvent("gmcp.char.status", "BaseUI.updateVitals")
+for _, event in ipairs(knownVitalsEvents) do
+  onEvent(event, "BaseUI.updateVitals")
+end
+onEvent("*", "BaseUI.routeGmcpVitals")
 onEvent("gmcp.Comm.Channel.Text", "BaseUI.addChatMessage")
 onEvent("sysProtocolEnabled", "BaseUI.enableChannelCapture")
 onEvent("sysProtocolEnabled", "BaseUI.enableMsdpVitals")
@@ -2858,6 +2926,8 @@ onEvent("sysMapDownloadEvent", "BaseUI.checkMapData")
 onEvent("sysMapAreaChanged", "BaseUI.checkMapData")
 onEvent("gmcp.Room.Info", "BaseUI.checkMapData")
 onEvent("gmcp.room.info", "BaseUI.checkMapData")
+-- a profile's saved map is loaded after its scripts have run
+onEvent("sysLoadEvent", "BaseUI.checkMapData")
 
 -- Everything above only reacts to what arrives next, which leaves the dock
 -- waiting on a game that has already spoken. Installing the package mid-session,
@@ -2869,7 +2939,7 @@ onEvent("gmcp.room.info", "BaseUI.checkMapData")
 -- the dock appearing at once and it appearing whenever the character next takes
 -- damage.
 --
--- On a fresh connection every branch below is a no-op, so this costs nothing and
+-- On a fresh connection every branch of this catch-up is a no-op, so it costs nothing and
 -- sends nothing: gmcp is created empty and only filled once data arrives, and
 -- msdp is not created at all until the first MSDP variable lands. What is sent
 -- is only what the handlers themselves would have sent.
@@ -2888,6 +2958,12 @@ if connected then
     BaseUI.enableMsdpVitals(nil, "MSDP")
     BaseUI.updateMsdpVitals()
   end
+end
+
+-- The profile restores the border the dock had at exit, so a dock this game has
+-- filled before is built now rather than leaving that border empty until it speaks
+if BaseUI.settings.built and not BaseUI.dormant() then
+  BaseUI.build()
 end</script>
 			<eventHandlerList />
 		</Script>

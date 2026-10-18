@@ -33,6 +33,7 @@
 #include "HostManager.h"
 #include "LuaInterface.h"
 #include "mapInfoContributorManager.h"
+#include "MapStyle.h"
 #include "MMCP.h"
 #include "MMCPServer.h"
 #include "TAction.h"
@@ -296,6 +297,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 , mPass(pass)
 , mPort(port)
 {
+    mpMapStyle = &MapStyle::findOrDefault(MapStyle::defaultId());
     // mTelnet is declared ahead of the members reset() clears (mMxpProcessor and friends),
     // so its own constructor can't do this.
     mTelnet.reset();
@@ -624,7 +626,8 @@ bool Host::loadProfileSave(const QString& saveFileName)
         mMapInfoContributors.insert(qsl("Short"));
     } else {
         QFile file(qsl("%1%2").arg(folder, saveFileName.isEmpty() ? entries.at(0) : saveFileName));
-        if (!file.open(QFile::ReadOnly | QFile::Text)) {
+        // Not QFile::Text: on read it deletes every carriage return, where the XML reader turns a raw one into a line feed
+        if (!file.open(QFile::ReadOnly)) {
             mProfileLoadError = QCoreApplication::translate("mudlet", "Could not open profile file: %1").arg(file.errorString());
             qWarning() << "mudlet: failed to open profile file for reading:" << file.fileName() << file.errorString();
         }
@@ -645,6 +648,7 @@ bool Host::loadProfileSave(const QString& saveFileName)
         }
 
         refreshPackageFonts();
+        restoreMissingDisplayFonts();
 
         // Is this a new profile created through 'copy profile (settings only)'? install default packages into it
         if (entries.size() == 1 && entries.first() == QLatin1String("Copied profile (settings only).xml")) {
@@ -726,6 +730,7 @@ void Host::loadMapAndConnect(const bool connect)
     // too, so a family the profile names can be told apart from one that is
     // merely not loaded yet - and in the GUI the real console exists, so the stand-in
     // this may pick lands on it and the warning reaches the player.
+    mDisplayFontCheckReached = true;
     substituteMissingDisplayFont();
 
     // Now load the default (latest stored) map file:
@@ -878,8 +883,6 @@ bool Host::loadMapFile(const QString& location)
     if (!prepareMapperForMapLoad()) {
         return false;
     }
-
-    mpMap->mapClear();
 
     // The same resolution saveMapFile and importMapFile use, so that a map
     // written under a bare name is looked for where it was written:
@@ -2028,6 +2031,8 @@ bool Host::substituteMissingDisplayFont()
     // Only this branch remembers anything: a "Family Style" name resolves to a
     // base family that IS installed, so saving that name is no loss.
     mMissingDisplayFontFamily = requestedFamily;
+    // Lost anew, so an unusable copy coming back is news again
+    mRefusedDisplayFontFamily.clear();
 
     qWarning().nospace().noquote() << "Host::substituteMissingDisplayFont() WARNING - the font \"" << requestedFamily << "\" this profile asks for is not installed, using \"" << scmDefaultFontFamily
                                    << "\" instead.";
@@ -3726,7 +3731,7 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         QStringList packageFileErrors;
         for (auto& entry : entries) {
             file2.setFileName(entry.absoluteFilePath());
-            if (!file2.open(QFile::ReadOnly | QFile::Text)) {
+            if (!file2.open(QFile::ReadOnly)) {
                 qWarning() << "Host: failed to open file for reading:" << entry.absoluteFilePath() << file2.errorString();
                 continue;
             }
@@ -3802,7 +3807,7 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         }
     } else {
         file2.setFileName(fileName);
-        if (!file2.open(QFile::ReadOnly | QFile::Text)) {
+        if (!file2.open(QFile::ReadOnly)) {
             return fail(qsl("could not open the package file: %1").arg(file2.errorString()));
         }
         XMLimport reader(this);
@@ -3939,6 +3944,18 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         }
         raiseEvent(detailedInstallEvent);
     });
+
+    // Queued behind the install events, the outermost install's included: putting a font back runs every
+    // profile's sysSettingChanged handlers, which must not hear of it before sysInstall. A sync brings no fonts.
+    if (thing != enums::PackageModuleType::ModuleSync) {
+        mDisplayFontRestoreOwed = true;
+    }
+    if (mPackagesBeingInstalled.isEmpty() && std::exchange(mDisplayFontRestoreOwed, false)) {
+        // Not this Host as the context: the restore is for every profile, and this one may close first
+        QTimer::singleShot(0ms, QCoreApplication::instance(), []() {
+            restoreMissingDisplayFonts();
+        });
+    }
 
     // An install's script asked to remove the package being read in. Queued after the install events so
     // handlers hear sysInstall before sysUninstall: zero timers fire in registration order, which Qt does
@@ -4299,14 +4316,9 @@ bool Host::uninstallPackage(const QString& packageName, enums::PackageModuleType
         removeDir(dest, dest);
     }
 
-    // The fonts this package brought went out with it, so a display font that
-    // came from it is now missing and Qt would quietly render some other family
-    // instead. It has to sit past the reinstall above: uninstalling a module
-    // that shares a package's name puts that package and its fonts straight
-    // back, and moving the profile off the font in between would stick, since
-    // nothing moves it back on again. Past removeDir() too, because changing the
-    // font runs the profile's sysSettingChanged handlers.
-    substituteMissingDisplayFont();
+    // Past the module reinstall above, which can put this package's fonts straight back, and past
+    // removeDir(), as changing the font runs every open profile's sysSettingChanged handlers
+    substituteMissingDisplayFonts();
 
     // save the profile on the next Qt main loop cycle in order for the asyncronous save mechanism
     // not to try to write to disk a package/module that just got uninstalled and removed from memory
@@ -4737,6 +4749,72 @@ void Host::refreshPackageFonts()
     for (const auto& package : std::as_const(mInstalledPackages)) {
         installPackageFonts(package);
     }
+}
+
+void Host::substituteMissingDisplayFonts()
+{
+    if (auto* hosts = HostManager::self()) {
+        for (const auto& pHost : hosts->hostList()) {
+            if (pHost && !pHost->isClosingDown() && pHost->mDisplayFontCheckReached) {
+                pHost->substituteMissingDisplayFont();
+            }
+        }
+    }
+}
+
+void Host::restoreMissingDisplayFonts()
+{
+    if (auto* hosts = HostManager::self()) {
+        for (const auto& pHost : hosts->hostList()) {
+            if (pHost && !pHost->isClosingDown()) {
+                pHost->restoreMissingDisplayFont();
+            }
+        }
+    }
+}
+
+bool Host::restoreMissingDisplayFont()
+{
+    if (mMissingDisplayFontFamily.isEmpty()) {
+        return false;
+    }
+
+    const auto resolved = resolveFontFamily(mMissingDisplayFontFamily);
+    if (!resolved.available) {
+        return false;
+    }
+
+    QFont font = getDisplayFont();
+    font.setFamily(resolved.family);
+    // An exact match resolves to a Normal weight, which is no reason to drop the saved one
+    if (resolved.family.compare(mMissingDisplayFontFamily, Qt::CaseInsensitive) != 0) {
+        font.setWeight(resolved.weight);
+    }
+    // Retired first: the change runs the sysSettingChanged handlers, and one that takes
+    // the package away again leaves the family missing anew rather than forgotten
+    const QString family = mMissingDisplayFontFamily;
+    mMissingDisplayFontFamily.clear();
+    if (const auto [applied, error] = setDisplayFont(font); !applied) {
+        mMissingDisplayFontFamily = family;
+        if (mRefusedDisplayFontFamily != family) {
+            mRefusedDisplayFontFamily = family;
+            qWarning().nospace().noquote() << "Host::restoreMissingDisplayFont() WARNING - the font \"" << family << "\" is available now but was refused: " << error;
+            //: %1 is the font family the profile asked for, which had been missing and has now been made available but cannot be drawn; %2 is the font Mudlet ships with and is still using instead
+            postMessage(tr("[ WARN ]  - The font \"%1\" that this profile uses is available now, but it cannot be used, so the default \"%2\" is still being used instead.")
+                                .arg(family, scmDefaultFontFamily));
+        }
+        return false;
+    }
+    mRefusedDisplayFontFamily.clear();
+    // A handler may have taken the font away again, or chosen another one
+    if (getDisplayFont().family() != resolved.family) {
+        return true;
+    }
+
+    mTelnet.sendInfoNewEnvironValue(qsl("FONT"));
+    //: %1 is the font family the profile asked for, which had been missing and has now been made available, by a package or module that this or another profile installed or opened
+    postMessage(tr("[ INFO ]  - The font \"%1\" that this profile uses is now available, so it is being used instead of the default.").arg(family));
+    return true;
 }
 
 void Host::setEnableBlinkText(const bool enable)
@@ -5416,6 +5494,9 @@ void Host::lookUpSecuredPassword(CredentialManager* credManager)
             "character",
             [this, credManager](bool success, const QString& password, const QString& errorMessage, CredentialManager::ReadOutcome outcome) {
                 securedPasswordAnswered(success, password, errorMessage, outcome == CredentialManager::ReadOutcome::TimedOut);
+                // Only a refusal: a timed-out read can still be answered late. Not for Unavailable: a desktop
+                // with no keychain service says so on every load, password or not.
+                mSecuredPasswordUnreadable = outcome == CredentialManager::ReadOutcome::Unreadable;
 
                 // Clean up the credential manager
                 credManager->deleteLater();
@@ -5424,6 +5505,19 @@ void Host::lookUpSecuredPassword(CredentialManager* credManager)
             [this](bool success, const QString& password, const QString& errorMessage) {
                 securedPasswordAnswered(success, password, errorMessage, false);
             });
+}
+
+void Host::reportUnreadableSavedPassword()
+{
+    // Once per load, as a reconnect has no more of a password than the first connection had
+    if (!mSecuredPasswordUnreadable || mLogin.isEmpty() || !mPass.isEmpty()) {
+        return;
+    }
+    mSecuredPasswordUnreadable = false;
+    // A refusal does not say a password is there, so the message doesn't either
+    //: Shown in the profile's console when the automatic login reaches its password step and Mudlet could not check for a saved character password, e.g. because the computer's password manager is locked, so none is sent
+    postMessage(tr("[ WARN ]  - Could not check for a saved password, so none will be sent automatically. "
+                   "If your computer's password manager is locked, unlock it and reopen the profile; otherwise type your password when the game asks for it."));
 }
 
 void Host::securedPasswordAnswered(bool success, const QString& password, const QString& errorMessage, bool timedOut)
@@ -6543,6 +6637,11 @@ void Host::setControlCharacterMode(const ControlCharacterMode mode)
     }
 }
 
+bool Host::windowOutOfReach(const QString& name) const
+{
+    return TAppFrontend::hasView() && !hasConsoleView() && windowType(name) && !mpNullConsoleFrontend->holdsWindow(name);
+}
+
 std::optional<QString> Host::windowType(const QString& name) const
 {
     if (Q_UNLIKELY(name == QLatin1String("main"))) {
@@ -6820,6 +6919,26 @@ void Host::setLargeAreaExitArrows(const bool state)
             consoleFrontend()->setMapLargeAreaExitArrows(state);
         }
     }
+}
+
+const QString& Host::mapStyle() const
+{
+    return mpMapStyle->id;
+}
+
+bool Host::setMapStyle(const QString& id)
+{
+    const MapStyle* style = MapStyle::find(id);
+    if (!style) {
+        return false;
+    }
+    if (mpMapStyle != style) {
+        mpMapStyle = style;
+        if (mpMap) {
+            mpMap->announceMapperSettingChanged(TMap::MapperSetting::Style);
+        }
+    }
+    return true;
 }
 
 void Host::setEditorShowBidi(const bool state)
