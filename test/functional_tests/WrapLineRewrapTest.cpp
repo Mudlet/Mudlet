@@ -563,7 +563,7 @@ private slots:
         echo(qsl("line one\\nline two\\nline three\\nline four\\nline five\\n"));
         TBuffer& buffer = console->buffer;
         QCOMPARE(buffer.lineBuffer.size(), 6);
-        buffer.timeBuffer[3] = qsl("sentinel");
+        buffer.timeBuffer[3] = 424242;
         buffer.promptBuffer[3] = true;
         buffer.wrapGapBuffer[3] = 7;
         QVERIFY(buffer.applyAttribute(QPoint(0, 3), QPoint(buffer.line(4).size(), 4), TChar::Found, true));
@@ -578,7 +578,7 @@ private slots:
         QCOMPARE(buffer.line(0), qsl("line four"));
         QCOMPARE(buffer.line(1), qsl("line five"));
         QCOMPARE(static_cast<qsizetype>(buffer.buffer.at(0).size()), buffer.line(0).size());
-        QCOMPARE(buffer.timeBuffer.at(0), qsl("sentinel"));
+        QCOMPARE(buffer.timeBuffer.at(0), qint64(424242));
         QVERIFY(buffer.promptBuffer.at(0));
         QVERIFY(!buffer.promptBuffer.at(1));
         QCOMPARE(buffer.wrapGapBuffer.at(0), 7);
@@ -599,19 +599,19 @@ private slots:
         echo(qsl("X\\nY\\nZ\\nW\\nV\\nU\\n"));
         TBuffer& buffer = console->buffer;
         QCOMPARE(buffer.lineBuffer.size(), 7);
-        const QStringList stamps{qsl("stamp X"), TBuffer::smBlankTimeStamp, qsl("stamp Z"), TBuffer::smBlankTimeStamp, TBuffer::smBlankTimeStamp, TBuffer::smBlankTimeStamp};
+        const QList<qint64> stamps{1000, TBuffer::csmWrappedLineTimeStamp, 3000, TBuffer::csmWrappedLineTimeStamp, TBuffer::csmWrappedLineTimeStamp, TBuffer::csmWrappedLineTimeStamp};
         for (int i = 0; i < stamps.size(); ++i) {
             buffer.timeBuffer[i] = stamps.at(i);
         }
 
         QVERIFY(buffer.deleteLines(4, 4));
         QCOMPARE(buffer.line(4), qsl("U"));
-        QCOMPARE(buffer.timeBuffer.at(4), TBuffer::smBlankTimeStamp);
+        QCOMPARE(buffer.timeBuffer.at(4), TBuffer::csmWrappedLineTimeStamp);
 
         QVERIFY(buffer.deleteLines(1, 2));
         QCOMPARE(buffer.line(1), qsl("W"));
-        QCOMPARE(buffer.timeBuffer.at(1), qsl("stamp Z"));
-        QCOMPARE(buffer.timeBuffer.at(2), TBuffer::smBlankTimeStamp);
+        QCOMPARE(buffer.timeBuffer.at(1), qint64(3000));
+        QCOMPARE(buffer.timeBuffer.at(2), TBuffer::csmWrappedLineTimeStamp);
     }
 
     // Only the last start in the range counts, wherever it sits in it, and a range
@@ -621,7 +621,7 @@ private slots:
         auto* console = consoleWithWrapWidth(200);
         QVERIFY(console);
         TBuffer& buffer = console->buffer;
-        const QStringList stamps{qsl("stamp X"), TBuffer::smBlankTimeStamp, qsl("stamp Z"), TBuffer::smBlankTimeStamp, TBuffer::smBlankTimeStamp, TBuffer::smBlankTimeStamp};
+        const QList<qint64> stamps{1000, TBuffer::csmWrappedLineTimeStamp, 3000, TBuffer::csmWrappedLineTimeStamp, TBuffer::csmWrappedLineTimeStamp, TBuffer::csmWrappedLineTimeStamp};
         const auto echoStampedLines = [&]() {
             const int first = buffer.lineBuffer.size() - 1;
             echo(qsl("X\\nY\\nZ\\nW\\nV\\nU\\n"));
@@ -635,18 +635,18 @@ private slots:
         QCOMPARE(first, 0);
         QVERIFY(buffer.deleteLines(0, 3));
         QCOMPARE(buffer.line(0), qsl("V"));
-        QCOMPARE(buffer.timeBuffer.at(0), qsl("stamp Z"));
-        QCOMPARE(buffer.timeBuffer.at(1), TBuffer::smBlankTimeStamp);
+        QCOMPARE(buffer.timeBuffer.at(0), qint64(3000));
+        QCOMPARE(buffer.timeBuffer.at(1), TBuffer::csmWrappedLineTimeStamp);
 
         first = echoStampedLines();
         QVERIFY(buffer.deleteLines(first + 2, first + 3));
         QCOMPARE(buffer.line(first + 2), qsl("V"));
-        QCOMPARE(buffer.timeBuffer.at(first + 2), qsl("stamp Z"));
+        QCOMPARE(buffer.timeBuffer.at(first + 2), qint64(3000));
 
         first = echoStampedLines();
         QVERIFY(buffer.deleteLines(first + 3, first + 4));
         QCOMPARE(buffer.line(first + 3), qsl("U"));
-        QCOMPARE(buffer.timeBuffer.at(first + 3), TBuffer::smBlankTimeStamp);
+        QCOMPARE(buffer.timeBuffer.at(first + 3), TBuffer::csmWrappedLineTimeStamp);
     }
 
     // Declared last: without the clamp this aborts, taking the rest of the run
