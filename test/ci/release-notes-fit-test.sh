@@ -57,6 +57,10 @@ assert_contains() {
 
 assert_at_most_bytes() {
   local file="$1" limit="$2" size
+  if [ ! -f "${file}" ]; then
+    fail "${file} was not written"
+    return
+  fi
   size=$(wc -c < "${file}" | tr -d ' ')
   if [ "${size}" -gt "${limit}" ]; then
     fail "${file} is ${size} bytes, over the ${limit} allowed"
@@ -142,7 +146,9 @@ printf '##### Fixed:\n' >> "${IN}"
 for i in $(seq 1 400); do
   printf '\\- SvenskMUD: färdas söderut, 地图 %d\n\n' "${i}" >> "${IN}"
 done
-assert_status 0 "$(run_fit 5000 "${URL}")"
+# Under a UTF-8 locale, where an awk that counts characters would undercount
+LC_ALL=C.UTF-8 bash "${FIT}" 5000 "${URL}" < "${IN}" > "${OUT}" 2> /dev/null
+assert_status 0 "$?"
 assert_at_most_bytes "${OUT}" 5000
 
 start_test "a budget with no room for any entry still says where they are"
@@ -188,12 +194,21 @@ STUB_DIR="${WORK_DIR}/bin"
 mkdir -p "${STUB_DIR}"
 cat > "${STUB_DIR}/lua" <<'STUB'
 #!/bin/bash
-# Stands in for CI/generate-changelog.lua: STUB_ENTRIES entries per section
+# Stands in for CI/generate-changelog.lua: STUB_PTB_ENTRIES entries per section for
+# a range starting at a PTB tag, STUB_ENTRIES for any other, or fails on STUB_FAIL
+[ -z "${STUB_FAIL}" ] || exit 1
+entries="${STUB_ENTRIES}" label="Full"
+while [ $# -gt 0 ]; do
+  if [ "$1" = "--start-commit" ]; then
+    case "$2" in *-ptb-*) entries="${STUB_PTB_ENTRIES}" label="PTB" ;; esac
+  fi
+  shift
+done
 for section in Added Improved Fixed Infrastructure; do
   printf '##### %s:\n' "${section}"
-  for i in $(seq 1 "${STUB_ENTRIES}"); do
-    printf '\\- %s change number %d, long enough to look like a real one [#%d](https://github.com/Mudlet/Mudlet/pull/%d)\n\n' \
-      "${section}" "${i}" "${i}" "${i}"
+  for i in $(seq 1 "${entries}"); do
+    printf '\\- %s %s change number %d, long enough to look like a real one [#%d](https://github.com/Mudlet/Mudlet/pull/%d)\n\n' \
+      "${label}" "${section}" "${i}" "${i}" "${i}"
   done
 done
 STUB
@@ -210,62 +225,89 @@ make_commit() {
 }
 git init -q --template= "${REPO}"
 # As in Mudlet, the stable tag is on a release branch that forked from development
-# before the tag was made, so development's changes since then predate the tag
-make_commit "2026-08-20T04:35:53Z" "Release branch point"
+# before the tag was made, so development's changes since then predate the tag.
+# The commits carry the offsets Mudlet's do, and the last is on the 17th in UTC
+make_commit "2026-08-20T06:35:53+02:00" "Release branch point"
 repo_git checkout -q -b release
-make_commit "2026-09-02T20:31:46Z" "Release 5.0.1"
+make_commit "2026-09-02T22:31:46+02:00" "Release 5.0.1"
 repo_git tag Mudlet-5.0.1
 repo_git checkout -q -
-make_commit "2026-10-15T07:00:00Z" "Previous PTB"
+make_commit "2026-10-15T09:00:00+02:00" "Previous PTB"
 repo_git tag Mudlet-5.0.0-ptb-2026-10-15-aaaaaaa
-make_commit "2026-10-18T06:00:00Z" "This PTB"
+make_commit "2026-10-18T01:00:00+02:00" "This PTB"
 ln -s "${REPO_DIR}" "${REPO}/release-scripts"
 
+# Usage: run_step <type> <tag> <entries> [ptb-entries] [fail]
+# Away from UTC, so the step has to ask for UTC itself
 run_step() {
-  local type="$1" tag="$2" entries="$3"
   rm -f "${REPO}/changelog.md"
-  (cd "${REPO}" && PATH="${STUB_DIR}:${PATH}" STUB_ENTRIES="${entries}" RELEASE_TYPE="${type}" RELEASE_TAG="${tag}" \
+  (cd "${REPO}" && PATH="${STUB_DIR}:${PATH}" TZ="Asia/Tokyo" \
+    STUB_ENTRIES="$3" STUB_PTB_ENTRIES="${4:-$3}" STUB_FAIL="${5:-}" RELEASE_TYPE="$1" RELEASE_TAG="$2" \
     GITHUB_SERVER_URL="https://github.com" GITHUB_REPOSITORY="Mudlet/Mudlet" bash -e "${STEP}") > "${OUT}" 2>&1
   echo $?
 }
 
-prs_since() {
-  echo "https://github.com/Mudlet/Mudlet/pulls?q=is%3Apr+is%3Amerged+merged%3A%3E$1+merged%3A%3C%3D2026-10-18"
+NOTES="${REPO}/changelog.md"
+PTB_PRS="https://github.com/Mudlet/Mudlet/pulls?q=is%3Apr+is%3Amerged+merged%3A%3E2026-10-15T07%3A00%3A00Z+merged%3A%3C%3D2026-10-17"
+FULL_PRS="https://github.com/Mudlet/Mudlet/pulls?q=is%3Apr+is%3Amerged+merged%3A%3E2026-08-20T04%3A35%3A53Z+merged%3A%3C%3D2026-10-17"
+
+line_of() {
+  grep -nF -- "$2" "$1" | head -1 | cut -d: -f1
 }
 
-start_test "the workflow's changelog step could be extracted"
-if ! grep -q 'fit_notes' "${STEP}"; then
-  fail "no Generate changelog step that fits its notes was found in create-github-release.yml"
+start_test "the workflow's changelog step could be extracted whole"
+if ! grep -q 'fit_notes' "${STEP}" || [ "$(grep -v '^$' "${STEP}" | tail -1)" != "head -20 changelog.md" ]; then
+  fail "the Generate changelog step of create-github-release.yml was not found, or not to its end"
 fi
 
-start_test "a PTB's notes stay under GitHub's limit when both changelogs are too long"
-assert_status 0 "$(run_step ptb Mudlet-5.0.0-ptb-2026-10-18-bbbbbbb 600)"
-assert_at_most_bytes "${REPO}/changelog.md" 125000
-assert_contains "${REPO}/changelog.md" "#### Changes in this build since the previous PTB (Mudlet-5.0.0-ptb-2026-10-15-aaaaaaa)"
-assert_contains "${REPO}/changelog.md" "($(prs_since 2026-10-15T07%3A00%3A00Z))"
-assert_contains "${REPO}/changelog.md" "($(prs_since 2026-08-20T04%3A35%3A53Z))"
-if [ "$(tail -1 "${REPO}/changelog.md")" != "</details>" ]; then
+start_test "a PTB's own changes are published whole while the full changelog gives way"
+assert_status 0 "$(run_step ptb Mudlet-5.0.0-ptb-2026-10-18-bbbbbbb 600 5)"
+assert_at_most_bytes "${NOTES}" 125000
+assert_contains "${NOTES}" "#### Changes in this build since the previous PTB (Mudlet-5.0.0-ptb-2026-10-15-aaaaaaa)"
+assert_contains "${NOTES}" "PTB Infrastructure change number 5,"
+if grep -qF "${PTB_PRS}" "${NOTES}"; then
+  fail "the PTB's own changes were cut although they fit"
+fi
+assert_contains "${NOTES}" "(${FULL_PRS})"
+if [ "$(tail -1 "${NOTES}")" != "</details>" ]; then
   fail "the full changelog's <details> is not closed at the end"
+fi
+
+start_test "each changelog links to its own period when both are cut"
+assert_status 0 "$(run_step ptb Mudlet-5.0.0-ptb-2026-10-18-bbbbbbb 600)"
+assert_at_most_bytes "${NOTES}" 125000
+ptb_link=$(line_of "${NOTES}" "(${PTB_PRS})")
+details=$(line_of "${NOTES}" "<details>")
+full_link=$(line_of "${NOTES}" "(${FULL_PRS})")
+if [ -z "${ptb_link}" ] || [ -z "${details}" ] || [ -z "${full_link}" ]; then
+  fail "expected a PTB link, then <details>, then a full changelog link"
+  sed 's/^/        /' "${OUT}" >&2
+elif [ "${ptb_link}" -gt "${details}" ] || [ "${full_link}" -lt "${details}" ]; then
+  fail "the PTB link is on line ${ptb_link} and the full one on ${full_link}, around <details> on ${details}"
 fi
 
 start_test "the first PTB after a release stays under GitHub's limit"
 repo_git tag -d Mudlet-5.0.0-ptb-2026-10-15-aaaaaaa > /dev/null
 assert_status 0 "$(run_step ptb Mudlet-5.0.0-ptb-2026-10-18-bbbbbbb 600)"
-assert_at_most_bytes "${REPO}/changelog.md" 125000
-assert_contains "${REPO}/changelog.md" "($(prs_since 2026-08-20T04%3A35%3A53Z))"
+assert_at_most_bytes "${NOTES}" 125000
+assert_contains "${NOTES}" "(${FULL_PRS})"
 
 start_test "a release's notes stay under GitHub's limit"
 repo_git tag Mudlet-5.1.0
 assert_status 0 "$(run_step release Mudlet-5.1.0 600)"
-assert_at_most_bytes "${REPO}/changelog.md" 125000
-assert_contains "${REPO}/changelog.md" "($(prs_since 2026-08-20T04%3A35%3A53Z))"
+assert_at_most_bytes "${NOTES}" 125000
+assert_contains "${NOTES}" "(${FULL_PRS})"
 
 start_test "notes that fit are published whole"
 assert_status 0 "$(run_step release Mudlet-5.1.0 3)"
-assert_contains "${REPO}/changelog.md" "Infrastructure change number 3"
-if grep -q 'more change' "${REPO}/changelog.md"; then
+assert_contains "${NOTES}" "Full Infrastructure change number 3,"
+if grep -q 'more change' "${NOTES}"; then
   fail "notes well within the limit were cut"
 fi
+
+start_test "a release whose changelog cannot be generated fails rather than publishing it empty"
+assert_status 1 "$(run_step release Mudlet-5.1.0 3 3 fail)"
+assert_contains "${OUT}" "::error::Changelog generation failed"
 
 if [ "${FAILURES}" -gt 0 ]; then
   echo "${FAILURES} check(s) failed"
