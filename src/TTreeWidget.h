@@ -27,6 +27,9 @@
 #include <QPointer>
 #include <QTreeWidget>
 
+#include <map>
+#include <memory>
+
 class Host;
 class TVar;
 class VarUnit;
@@ -49,6 +52,7 @@ class TTreeWidget : public QTreeWidget
 public:
     Q_DISABLE_COPY(TTreeWidget)
     explicit TTreeWidget(QWidget* pW);
+    ~TTreeWidget() override;
     Qt::DropActions supportedDropActions() const override;
     void dragEnterEvent(QDragEnterEvent* event) override;
     void dragLeaveEvent(QDragLeaveEvent* event) override;
@@ -60,6 +64,7 @@ public:
     void rowsInserted(const QModelIndex& parent, int start, int end) override;
     void mousePressEvent(QMouseEvent* event) override;
     void mouseReleaseEvent(QMouseEvent* event) override;
+    void mouseMoveEvent(QMouseEvent* event) override;
     void setHost(Host* pH);
     void setTreeType(TreeType type);
     void beginInsertRows(const QModelIndex& parent, int first, int last);
@@ -71,8 +76,9 @@ public:
     TVar* variableForRow(VarUnit* pVarUnit, QTreeWidgetItem* pItem) const;
     TVar* newVariableForRow(VarUnit* pVarUnit, QTreeWidgetItem* pItem) const;
     void setVariableForRow(VarUnit* pVarUnit, QTreeWidgetItem* pItem, TVar* pVariable);
-    void setNewVariableForRow(VarUnit* pVarUnit, QTreeWidgetItem* pItem, TVar* pVariable);
+    void setNewVariableForRow(VarUnit* pVarUnit, QTreeWidgetItem* pItem, std::unique_ptr<TVar> pVariable);
     void forgetRow(QTreeWidgetItem* pItem);
+    // Gives up the row's unsaved variable without deleting it, for when the variable tree adopts it
     void forgetNewVariableForRow(QTreeWidgetItem* pItem);
     bool rowCanBeSaved(VarUnit* pVarUnit, QTreeWidgetItem* pItem) const;
 
@@ -106,10 +112,12 @@ private:
     int mChildID;      // Deprecated: kept for compatibility, will be removed
     TreeType mTreeType = TreeType::None;
     QMap<QTreeWidgetItem*, TVar*> mVariableForRow;
-    QMap<QTreeWidgetItem*, TVar*> mNewVariableForRow;
+    // An unsaved new variable is in no table yet, so its row's entry is the only owner it has
+    std::map<QTreeWidgetItem*, std::unique_ptr<TVar>> mNewVariableForRow;
     quint64 mVariablesGeneration = 0;
     // CHECK: Should this actually be a: QPersistentModelIndex ?
     QModelIndex mClickedItem;
+    bool mTickPressHeldFromView = false;
 };
 
 #endif // MUDLET_TTREEWIDGET_H
