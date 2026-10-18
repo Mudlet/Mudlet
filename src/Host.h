@@ -70,6 +70,7 @@ class QSettings;
 
 class TEvent;
 class TArea;
+enum class TLabelLiveRegion : int;
 class LuaInterface;
 class XMLexport;
 class TMedia;
@@ -623,6 +624,7 @@ public:
     void raiseSettingChangedEvent(const QString& settingName, const bool value);
     void setEnableClosedCaption(const bool state);
     void setAdvertiseScreenReader(const bool state);
+    void setAccessibleLabels(const bool state);
     void setAnnounceIncomingText(const bool state);
     void setMapperPanelVisible(const bool state);
 
@@ -686,6 +688,10 @@ public:
     bool setLabelWheelCallback(const QString&, const int);
     bool setLabelOnEnter(const QString&, const int);
     bool setLabelOnLeave(const QString&, const int);
+    // std::nullopt goes back to deciding by the label's callbacks
+    bool setLabelAccessibleButton(const QString& name, std::optional<bool> button);
+    bool setLabelLiveRegion(const QString& name, TLabelLiveRegion liveRegion);
+    bool setLabelAccessibleName(const QString& name, const QString& accessibleName);
     std::pair<bool, QString> setMovie(const QString& labelName, const QString& moviePath);
     bool setBackgroundColor(const QString& name, int r, int g, int b, int alpha);
     bool setCommandBackgroundColor(const QString& name, int r, int g, int b, int alpha);
@@ -726,6 +732,9 @@ public:
     // {} for no such label.
     std::optional<QString> labelStyleSheet(const QString& name) const;
     std::optional<QString> labelToolTip(const QString& name) const;
+    std::optional<QString> labelAccessibleName(const QString& name) const;
+    std::optional<bool> labelActsAsButton(const QString& name) const;
+    std::optional<TLabelLiveRegion> labelLiveRegion(const QString& name) const;
     std::optional<QFont> labelFont(const QString& name) const;
     std::optional<QString> labelText(const QString& name) const;
     // The title in .second when .first is true, otherwise why there is none, in setUserWindowTitle()'s words.
@@ -1195,6 +1204,8 @@ public:
 
     bool mAnnounceIncomingText = true;
     bool mAdvertiseScreenReader = false;
+    // Button labels take Tab focus and Space/Enter; kept apart from mAdvertiseScreenReader, which tells games
+    bool mAccessibleLabels = false;
     bool mEnableClosedCaption = false;
 
     // Turning this off both ignores incoming OSC 8 sequences and advertises 0

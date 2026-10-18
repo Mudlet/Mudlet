@@ -2641,8 +2641,11 @@ void TConsole::setProxyForFocus(TCommandLine* pCommandLine)
         mLowerPane->setFocusProxy(pCommandLine);
         // The hidden-input box when it stands in, or a screen reader may speak typed characters
         QWidget* pFocusTarget = (pCommandLine && pCommandLine->focusProxy()) ? pCommandLine->focusProxy() : pCommandLine;
-        QAccessibleEvent event(pFocusTarget, QAccessible::Focus);
-        QAccessible::updateAccessibility(&event);
+        // Not when the focus has gone on to a script button, which Qt announces itself
+        if (!qobject_cast<TLabel*>(QApplication::focusWidget())) {
+            QAccessibleEvent event(pFocusTarget, QAccessible::Focus);
+            QAccessible::updateAccessibility(&event);
+        }
     } else if (mType == UserWindow) {
         if (pCommandLine && pCommandLine->isVisible()) {
             // Update all focus proxies to the UserWindow's command line

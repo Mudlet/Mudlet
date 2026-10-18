@@ -71,6 +71,7 @@
 #include <pthread.h>
 #endif
 #include "TAccessibleConsole.h"
+#include "TAccessibleLabel.h"
 #include "TAccessibleTextEdit.h"
 #include "FileOpenHandler.h"
 #include "SentryWrapper.h"
@@ -615,6 +616,7 @@ int main(int argc, char* argv[])
     if (app) {
         QAccessible::installFactory(TAccessibleConsole::consoleFactory);
         QAccessible::installFactory(TAccessibleTextEdit::textEditFactory);
+        QAccessible::installFactory(TAccessibleLabel::labelFactory);
 
         // Turn the cursor into the waiting one during startup, so something shows
         // activity even if the quiet, no splashscreen startup has been used

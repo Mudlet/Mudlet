@@ -1291,6 +1291,8 @@ void dlgProfilePreferences::setSearchKeywords()
     synonyms.append({disable_password_masking_checkbox, tr("password, masking, hidden characters")});
     //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for telling the game that a screen reader is in use.
     synonyms.append({checkBox_advertiseScreenReader, tr("screen reader, NVDA, JAWS, VoiceOver, Orca, accessibility")});
+    //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for reaching buttons in scripts and packages with the keyboard.
+    synonyms.append({checkBox_accessibleLabels, tr("keyboard, tab, focus, buttons, labels, screen reader, accessibility")});
     //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for reading incoming text out loud.
     synonyms.append({checkBox_announceIncomingText, tr("text to speech, TTS, speech, spoken, screen reader")});
     //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for whether pressing Alt on its own moves focus to the menu bar.
@@ -3643,6 +3645,7 @@ void dlgProfilePreferences::disableHostDetails()
     label_caretModeKey->setEnabled(false);
     checkBox_announceIncomingText->setEnabled(false);
     checkBox_advertiseScreenReader->setEnabled(false);
+    checkBox_accessibleLabels->setEnabled(false);
     checkBox_enableClosedCaption->setEnabled(false);
     checkBox_enableBlinkText->setEnabled(false);
     checkBox_f3SearchEnabled->setEnabled(false);
@@ -3767,6 +3770,7 @@ void dlgProfilePreferences::enableHostDetails()
     label_caretModeKey->setEnabled(true);
     checkBox_announceIncomingText->setEnabled(true);
     checkBox_advertiseScreenReader->setEnabled(true);
+    checkBox_accessibleLabels->setEnabled(true);
     checkBox_enableClosedCaption->setEnabled(true);
     checkBox_enableBlinkText->setEnabled(true);
     checkBox_f3SearchEnabled->setEnabled(true);
@@ -4045,6 +4049,8 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     checkBox_announceIncomingText->setChecked(pHost->mAnnounceIncomingText);
     checkBox_advertiseScreenReader->setChecked(pHost->mAdvertiseScreenReader);
     connect(checkBox_advertiseScreenReader, &QCheckBox::toggled, this, &dlgProfilePreferences::slot_toggleAdvertiseScreenReader, Qt::UniqueConnection);
+    checkBox_accessibleLabels->setChecked(pHost->mAccessibleLabels);
+    connect(checkBox_accessibleLabels, &QCheckBox::toggled, this, &dlgProfilePreferences::slot_toggleAccessibleLabels, Qt::UniqueConnection);
     checkBox_enableOSC8Hyperlinks->setChecked(pHost->mEnableOSC8Hyperlinks);
     connect(checkBox_enableOSC8Hyperlinks, &QCheckBox::toggled, this, &dlgProfilePreferences::slot_toggleEnableOSC8Hyperlinks, Qt::UniqueConnection);
 
@@ -5077,6 +5083,7 @@ void dlgProfilePreferences::clearHostDetails()
     checkBox_lazyCaptureGlobals->setChecked(true);
     checkBox_announceIncomingText->setChecked(false);
     checkBox_advertiseScreenReader->setChecked(false);
+    checkBox_accessibleLabels->setChecked(false);
     checkBox_enableClosedCaption->setChecked(false);
     checkBox_enableBlinkText->setChecked(false);
     comboBox_blankLinesBehaviour->setCurrentIndex(0);
@@ -7013,6 +7020,9 @@ void dlgProfilePreferences::applyAll()
         if (mSnapshot.dirty(checkBox_advertiseScreenReader)) {
             pHost->setAdvertiseScreenReader(checkBox_advertiseScreenReader->isChecked());
         }
+        if (mSnapshot.dirty(checkBox_accessibleLabels)) {
+            pHost->setAccessibleLabels(checkBox_accessibleLabels->isChecked());
+        }
         if (mSnapshot.dirty(checkBox_enableClosedCaption)) {
             pHost->setEnableClosedCaption(checkBox_enableClosedCaption->isChecked());
         }
@@ -8891,6 +8901,13 @@ void dlgProfilePreferences::slot_toggleAdvertiseScreenReader(const bool state)
 {
     if (mpHost) {
         mpHost->setAdvertiseScreenReader(state);
+    }
+}
+
+void dlgProfilePreferences::slot_toggleAccessibleLabels(const bool state)
+{
+    if (mpHost) {
+        mpHost->setAccessibleLabels(state);
     }
 }
 
