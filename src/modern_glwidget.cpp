@@ -4256,7 +4256,7 @@ void ModernGLWidget::refreshStitch()
         if (neighbour.placement != MapStitch::Placement::Stitched || found == nearRooms.cend()) {
             continue;
         }
-        const QSet<QPoint>& near = *found;
+        const QSet<QPoint>& keptCells = *found;
         const QVector3D shift = neighbour.offset.vector();
         // The cells of the shown area's own rooms too, so a neighbor's arrows back into it are left to the area's own
         QSet<QPoint> left = shownCells;
@@ -4265,7 +4265,7 @@ void ModernGLWidget::refreshStitch()
                 const TRoom* pRoom = mpMap->mpRoomDB->getRoom(roomId);
                 if (pRoom && !pRoom->isHidden() && pRoom->z() + neighbour.offset.z == mMapCenterZ) {
                     const QPoint at = square(static_cast<float>(pRoom->x() + neighbour.offset.x), static_cast<float>(pRoom->y() + neighbour.offset.y));
-                    if (!near.contains(at)) {
+                    if (!keptCells.contains(at)) {
                         left.insert(at);
                     }
                 }
@@ -4278,7 +4278,7 @@ void ModernGLWidget::refreshStitch()
                 if (left.contains(at)) {
                     return false;
                 }
-                touches = touches || near.contains(at);
+                touches = touches || keptCells.contains(at);
             }
             return touches;
         };
