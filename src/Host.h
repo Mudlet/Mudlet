@@ -733,7 +733,8 @@ public:
     std::optional<QString> labelStyleSheet(const QString& name) const;
     std::optional<QString> labelToolTip(const QString& name) const;
     std::optional<QString> labelAccessibleName(const QString& name) const;
-    std::optional<bool> labelActsAsButton(const QString& name) const;
+    // "button", "graphic", "animation" or "text": what a screen reader is told the label is
+    std::optional<QString> labelAccessibleRole(const QString& name) const;
     std::optional<TLabelLiveRegion> labelLiveRegion(const QString& name) const;
     std::optional<QFont> labelFont(const QString& name) const;
     std::optional<QString> labelText(const QString& name) const;

@@ -242,6 +242,11 @@ private slots:
         QCOMPARE(accessible()->text(QAccessible::Name), qsl("Open the map"));
         QVERIFY2(accessible()->text(QAccessible::Description).isEmpty(), "the tooltip is read twice, as the name and as the description");
 
+        // an inline image is text to Qt, one object replacement character, but nothing to read
+        QVERIFY(runLua(qsl("echo('%1', '<img src=\"nowhere.png\">'); setLabelToolTip('%1', 'Open the map')").arg(mLabelName)));
+        QCOMPARE(accessible()->text(QAccessible::Name), qsl("Open the map"));
+        QVERIFY(runLua(qsl("echo('%1', '')").arg(mLabelName)));
+
         // Qt shows this one as it is written, tags and all
         QVERIFY(runLua(qsl("setLabelToolTip('%1', 'Add one for <name> & more')").arg(mLabelName)));
         QCOMPARE(accessible()->text(QAccessible::Name), qsl("Add one for <name> & more"));
@@ -817,6 +822,7 @@ private slots:
         QVERIFY(image.save(path));
         QVERIFY(runLua(qsl("assert(setBackgroundImage('%1', [[%2]]))").arg(mLabelName, path)));
         QCOMPARE(accessible()->role(), QAccessible::Graphic);
+        QVERIFY2(luaHolds(qsl("getLabelAccessibleRole('%1') == 'graphic'").arg(mLabelName)), "a script was told an image label is something other than the graphic a screen reader hears");
     }
 
     // The SVG is a layer under the text, so a label with text over it shows text

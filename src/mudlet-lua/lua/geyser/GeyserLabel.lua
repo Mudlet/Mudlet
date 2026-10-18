@@ -740,10 +740,24 @@ end
 -- appended as the final argument (see @{mouseClickEvent})
 -- @param func The function to use.
 -- @param ... Parameters to pass to the function. Must be strings or numbers.
+-- A right-click menu's own click callback ignores a left click, which is all a screen reader's press is,
+-- so its label is a button only when a release callback or a click callback of the script's own can be pressed
+local function menuLabelAutomaticRole(label)
+  return (label.clickCallback == Geyser.Label.onRightClick and not label.releaseCallback) and "text" or ""
+end
+
+-- Applies that role to a menu's label, unless a script chose its role itself
+local function settleMenuLabelRole(label)
+  if label.rightClickMenu and (not label.accessibleRole or label.accessibleRole == "") then
+    setLabelAccessibleRole(label.name, menuLabelAutomaticRole(label))
+  end
+end
+
 function Geyser.Label:setClickCallback (func, ...)
   setLabelClickCallback(self.name, func, ...)
   self.clickCallback = func
   self.clickArgs = { ... }
+  settleMenuLabelRole(self)
 end
 
 --- Sets a callback to be used when this label is double clicked. When this
@@ -766,11 +780,7 @@ function Geyser.Label:setReleaseCallback (func, ...)
   setLabelReleaseCallback(self.name, func, ...)
   self.releaseCallback = func
   self.releaseArgs = { ... }
-  -- A right-click menu marks its label as text; a release callback makes it a button after all, and
-  -- clearing that callback makes it text again
-  if self.rightClickMenu and (not self.accessibleRole or self.accessibleRole == "") then
-    setLabelAccessibleRole(self.name, func and "" or "text")
-  end
+  settleMenuLabelRole(self)
 end
 
 --- Sets a callback to be used when the mouse cursor is moved over this label. When this
@@ -875,6 +885,7 @@ function Geyser.Label:setAccessibleRole(role)
   local ok, err = setLabelAccessibleRole(self.name, role)
   if ok then
     self.accessibleRole = role
+    settleMenuLabelRole(self)
   end
   return ok, err
 end
@@ -2044,16 +2055,16 @@ function Geyser.Label:createRightClickMenu(cons)
 
   cons.Style = cons.Style or "light"
 
-  if not(self.rightClickMenu) then
+  local firstMenu = not self.rightClickMenu
+  if firstMenu then
     self:setClickCallback(self.onRightClick, self)
-    -- A press is a left click, which this callback ignores, so only a release callback makes it a button
-    if (not self.accessibleRole or self.accessibleRole == "") and not self.releaseCallback then
-      setLabelAccessibleRole(self.name, "text")
-    end
   end
 
   -- create a label with a nestable=true property as base menu
   self.rightClickMenu = Geyser.Label:new(cons, self)
+  if firstMenu then
+    settleMenuLabelRole(self)
+  end
   self:createMenuItems(nil, cons.MenuItems)
 end
 

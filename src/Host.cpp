@@ -6757,15 +6757,27 @@ std::optional<TLabelLiveRegion> Host::labelLiveRegion(const QString& name) const
     return {};
 }
 
-std::optional<bool> Host::labelActsAsButton(const QString& name) const
+std::optional<QString> Host::labelAccessibleRole(const QString& name) const
 {
     if (!hasConsoleView()) {
         return {};
     }
-    if (const TLabelModel* pLabel = mWindowRegistry.labelModel(name)) {
-        return pLabel->actsAsButton();
+    const TLabelModel* pLabel = mWindowRegistry.labelModel(name);
+    if (!pLabel) {
+        return {};
     }
-    return {};
+    if (pLabel->actsAsButton()) {
+        return qsl("button");
+    }
+    switch (pLabel->mShownContent) {
+    case TLabelModel::ShownContent::Graphic:
+        return qsl("graphic");
+    case TLabelModel::ShownContent::Animation:
+        return qsl("animation");
+    case TLabelModel::ShownContent::Text:
+        break;
+    }
+    return qsl("text");
 }
 
 std::optional<QFont> Host::labelFont(const QString& name) const
