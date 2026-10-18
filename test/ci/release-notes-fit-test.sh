@@ -8,7 +8,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 FIT="${REPO_DIR}/CI/fit-release-notes.sh"
 RELEASE_WORKFLOW="${REPO_DIR}/.github/workflows/create-github-release.yml"
-URL="https://github.com/Mudlet/Mudlet/compare/Mudlet-5.0.1...abc1234"
+URL="https://github.com/Mudlet/Mudlet/pulls?q=is%3Apr+is%3Amerged"
 
 WORK_DIR="$(mktemp -d)"
 trap 'rm -rf "${WORK_DIR}"' EXIT
@@ -119,7 +119,7 @@ esac
 # Lands the budget just past a heading, where a cut by size alone would keep it
 heading_end=$(grep -n '^##### Improved:' "${IN}" | cut -d: -f1)
 heading_bytes=$(head -n "${heading_end}" "${IN}" | wc -c | tr -d ' ')
-footer_room=$(printf '\n_%d more changes are not listed here, as GitHub limits how long release notes can be - see %s for every commit._\n' \
+footer_room=$(printf '\n_%d more changes are not listed here, as GitHub limits how long release notes can be - see [every pull request merged in this period](%s)._\n' \
   "$(entries_in "${IN}")" "${URL}" | wc -c | tr -d ' ')
 assert_status 0 "$(run_fit $((heading_bytes + footer_room)) "${URL}")"
 if grep -q '^##### Improved:' "${OUT}"; then
@@ -170,26 +170,93 @@ assert_status 2 "$(run_fit "" "${URL}")"
 assert_status 2 "$(run_fit "12k" "${URL}")"
 assert_status 2 "$(run_fit 1000 "${URL}" extra)"
 
-start_test "the release workflow fits every changelog it publishes"
-# Keeps the line numbering, so a commented-out call cannot satisfy any of this
-UNCOMMENTED="${WORK_DIR}/workflow-without-comments"
-sed 's/^[[:space:]]*#.*$//' "${RELEASE_WORKFLOW}" > "${UNCOMMENTED}"
-written="${WORK_DIR}/changelog-writes"
-grep -nE 'echo "\$\{[A-Z_]*CHANGELOG\}"' "${UNCOMMENTED}" > "${written}"
-if [ ! -s "${written}" ]; then
-  fail "could not find where create-github-release.yml writes out its changelogs"
+# The rest runs the workflow's own changelog step, against a repository with the
+# tags it looks for and a generator stubbed to print as much as asked
+STEP="${WORK_DIR}/generate-changelog-step.sh"
+awk '
+  /^ *- name: Generate changelog$/ { in_step = 1; next }
+  in_step && /^ *run: [|]$/ { match($0, /^ */); indent = RLENGTH + 2; in_step = 0; in_run = 1; next }
+  in_run {
+    if ($0 ~ /^ *$/) { print ""; next }
+    match($0, /^ */)
+    if (RLENGTH < indent) exit
+    print substr($0, indent + 1)
+  }
+' "${RELEASE_WORKFLOW}" > "${STEP}"
+
+STUB_DIR="${WORK_DIR}/bin"
+mkdir -p "${STUB_DIR}"
+cat > "${STUB_DIR}/lua" <<'STUB'
+#!/bin/bash
+# Stands in for CI/generate-changelog.lua: STUB_ENTRIES entries per section
+for section in Added Improved Fixed Infrastructure; do
+  printf '##### %s:\n' "${section}"
+  for i in $(seq 1 "${STUB_ENTRIES}"); do
+    printf '\\- %s change number %d, long enough to look like a real one [#%d](https://github.com/Mudlet/Mudlet/pull/%d)\n\n' \
+      "${section}" "${i}" "${i}" "${i}"
+  done
+done
+STUB
+chmod +x "${STUB_DIR}/lua"
+
+REPO="${WORK_DIR}/repo"
+make_commit() {
+  GIT_COMMITTER_DATE="$1" GIT_AUTHOR_DATE="$1" git -C "${REPO}" commit -q --allow-empty -m "$2"
+}
+git init -q "${REPO}"
+git -C "${REPO}" config user.email "test@example.com"
+git -C "${REPO}" config user.name "Release notes test"
+make_commit "2026-09-02T20:31:46Z" "Release 5.0.1"
+git -C "${REPO}" tag Mudlet-5.0.1
+make_commit "2026-10-15T07:00:00Z" "Previous PTB"
+git -C "${REPO}" tag Mudlet-5.0.0-ptb-2026-10-15-aaaaaaa
+make_commit "2026-10-18T06:00:00Z" "This PTB"
+ln -s "${REPO_DIR}" "${REPO}/release-scripts"
+
+run_step() {
+  local type="$1" tag="$2" entries="$3"
+  rm -f "${REPO}/changelog.md"
+  (cd "${REPO}" && PATH="${STUB_DIR}:${PATH}" STUB_ENTRIES="${entries}" RELEASE_TYPE="${type}" RELEASE_TAG="${tag}" \
+    GITHUB_SERVER_URL="https://github.com" GITHUB_REPOSITORY="Mudlet/Mudlet" bash -e "${STEP}") > "${OUT}" 2>&1
+  echo $?
+}
+
+prs_since() {
+  echo "https://github.com/Mudlet/Mudlet/pulls?q=is%3Apr+is%3Amerged+merged%3A%3E$1+merged%3A%3C%3D2026-10-18"
+}
+
+start_test "the workflow's changelog step could be extracted"
+if ! grep -q 'fit_notes' "${STEP}"; then
+  fail "no Generate changelog step that fits its notes was found in create-github-release.yml"
 fi
-while IFS= read -r write; do
-  case "${write}" in
-    *'| fit_notes '*) ;;
-    *) fail "create-github-release.yml writes a changelog without fitting it: ${write}" ;;
-  esac
-done < "${written}"
-if grep -nE 'generate-changelog\.lua.*>' "${UNCOMMENTED}" | grep -q .; then
-  fail "create-github-release.yml writes generate-changelog.lua output straight to a file"
+
+start_test "a PTB's notes stay under GitHub's limit when both changelogs are too long"
+assert_status 0 "$(run_step ptb Mudlet-5.0.0-ptb-2026-10-18-bbbbbbb 600)"
+assert_at_most_bytes "${REPO}/changelog.md" 125000
+assert_contains "${REPO}/changelog.md" "#### Changes in this build since the previous PTB (Mudlet-5.0.0-ptb-2026-10-15-aaaaaaa)"
+assert_contains "${REPO}/changelog.md" "($(prs_since 2026-10-15T07%3A00%3A00Z))"
+assert_contains "${REPO}/changelog.md" "($(prs_since 2026-09-02T20%3A31%3A46Z))"
+if [ "$(tail -1 "${REPO}/changelog.md")" != "</details>" ]; then
+  fail "the full changelog's <details> is not closed at the end"
 fi
-if ! grep -q 'bash release-scripts/CI/fit-release-notes\.sh' "${UNCOMMENTED}"; then
-  fail "fit_notes no longer runs release-scripts/CI/fit-release-notes.sh"
+
+start_test "the first PTB after a release stays under GitHub's limit"
+git -C "${REPO}" tag -d Mudlet-5.0.0-ptb-2026-10-15-aaaaaaa > /dev/null
+assert_status 0 "$(run_step ptb Mudlet-5.0.0-ptb-2026-10-18-bbbbbbb 600)"
+assert_at_most_bytes "${REPO}/changelog.md" 125000
+assert_contains "${REPO}/changelog.md" "($(prs_since 2026-09-02T20%3A31%3A46Z))"
+
+start_test "a release's notes stay under GitHub's limit"
+git -C "${REPO}" tag Mudlet-5.1.0
+assert_status 0 "$(run_step release Mudlet-5.1.0 600)"
+assert_at_most_bytes "${REPO}/changelog.md" 125000
+assert_contains "${REPO}/changelog.md" "($(prs_since 2026-09-02T20%3A31%3A46Z))"
+
+start_test "notes that fit are published whole"
+assert_status 0 "$(run_step release Mudlet-5.1.0 3)"
+assert_contains "${REPO}/changelog.md" "Infrastructure change number 3"
+if grep -q 'more change' "${REPO}/changelog.md"; then
+  fail "notes well within the limit were cut"
 fi
 
 if [ "${FAILURES}" -gt 0 ]; then

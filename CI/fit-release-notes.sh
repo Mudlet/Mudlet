@@ -1,17 +1,9 @@
 #!/bin/bash
-# Shortens a generated changelog to fit a size budget, for the release notes that
-# create-github-release.yml publishes. GitHub refuses a release whose body is over
-# 125000 characters, and the PTB notes carry the full changelog since the last
-# stable release, which outgrew that within weeks of 5.0.1 and stopped every PTB
-# from being published.
-#
-# Reads the changelog on stdin and writes it to stdout. Input that fits passes
-# through untouched. Otherwise whole lines are kept from the top - the changelog
-# lists player-facing sections before Infrastructure and Other, so those go first -
-# and a closing line says how many entries were left out and links to <more-url>.
-#
-# The budget is in bytes, never fewer than the characters GitHub counts, with awk
-# run under LC_ALL=C so every awk measures bytes too.
+# Cuts a changelog on stdin to <max-bytes> for GitHub, which refuses a release
+# body over 125000 characters. Whole lines go from the end, where the changelog
+# keeps its Infrastructure and Other sections, and a closing line says how many
+# entries are missing and links to <more-url>. Bytes are never fewer than the
+# characters GitHub counts, and LC_ALL=C makes every awk count bytes.
 #
 # Usage: fit-release-notes.sh <max-bytes> <more-url>
 
@@ -27,7 +19,7 @@ fi
 
 LC_ALL=C awk -v max="${MAX_BYTES}" -v url="${MORE_URL}" '
   function footer(count) {
-    return sprintf("_%d more %s not listed here, as GitHub limits how long release notes can be - see %s for every commit._", count, count == 1 ? "change is" : "changes are", url)
+    return sprintf("_%d more %s not listed here, as GitHub limits how long release notes can be - see [every pull request merged in this period](%s)._", count, count == 1 ? "change is" : "changes are", url)
   }
   { line[NR] = $0; size += length($0) + 1 }
   END {

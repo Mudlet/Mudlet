@@ -269,14 +269,22 @@ jobs:
         env:
           RELEASE_TYPE: ${{ steps.release-type.outputs.type }}
           RELEASE_TAG: ${{ steps.release-type.outputs.tag }}
-          TARGET_SHA: ${{ github.event.workflow_run.head_sha }}
         run: |
           # GitHub refuses a release body over 125000 characters, and then publishes
           # nothing at all; the margin below that is headroom
           NOTES_LIMIT=120000
-          COMPARE_URL="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/compare"
           fit_notes() {
             bash release-scripts/CI/fit-release-notes.sh "$@"
+          }
+          # Pull requests merged after <from> up to the day of <to>. Not a compare
+          # link, which lists at most 250 commits, and not by tag, as the next PTB
+          # deletes this one's. A pull request's merge time can trail its commit's
+          # by a moment, hence the whole day at the end.
+          merged_prs_url() {
+            local from to
+            from=$(TZ=UTC git log -1 --date=format-local:%Y-%m-%dT%H:%M:%SZ --format=%cd "$1")
+            to=$(TZ=UTC git log -1 --date=format-local:%Y-%m-%d --format=%cd "$2")
+            echo "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/pulls?q=is%3Apr+is%3Amerged+merged%3A%3E${from//:/%3A}+merged%3A%3C%3D${to}"
           }
 
           if [[ "${RELEASE_TYPE}" == "release" ]]; then
@@ -290,7 +298,7 @@ jobs:
                 echo "::error::Changelog generation failed for stable release"
                 exit 1
               fi
-              echo "${RELEASE_CHANGELOG}" | fit_notes "${NOTES_LIMIT}" "${COMPARE_URL}/${PREV_TAG}...${RELEASE_TAG}" > changelog.md
+              echo "${RELEASE_CHANGELOG}" | fit_notes "${NOTES_LIMIT}" "$(merged_prs_url "${PREV_TAG}" "${RELEASE_TAG}")" > changelog.md
             else
               echo "::error::No previous release tag found - cannot generate changelog for stable release"
               exit 1
@@ -335,7 +343,7 @@ jobs:
               {
                 echo "#### Changes in this build since the previous PTB (${PTB_TAG})"
                 echo ""
-                echo "${PTB_CHANGELOG}" | fit_notes "$((NOTES_LIMIT - 2000))" "${COMPARE_URL}/${PTB_TAG}...${TARGET_SHA}"
+                echo "${PTB_CHANGELOG}" | fit_notes "$((NOTES_LIMIT - 2000))" "$(merged_prs_url "${PTB_TAG}" HEAD)"
                 echo ""
                 echo "<details>"
                 echo "<summary>Full changelog since last release (${STABLE_TAG})</summary>"
@@ -344,12 +352,12 @@ jobs:
               CLOSING=$'\n</details>\n'
               FULL_BUDGET=$((NOTES_LIMIT - $(wc -c < changelog.md) - ${#CLOSING}))
               {
-                echo "${FULL_CHANGELOG}" | fit_notes "${FULL_BUDGET}" "${COMPARE_URL}/${STABLE_TAG}...${TARGET_SHA}"
+                echo "${FULL_CHANGELOG}" | fit_notes "${FULL_BUDGET}" "$(merged_prs_url "${STABLE_TAG}" HEAD)"
                 printf '%s' "${CLOSING}"
               } >> changelog.md
             elif [[ -n "${FULL_CHANGELOG}" ]]; then
               # No previous PTB or first PTB after a release - just show full changelog
-              echo "${FULL_CHANGELOG}" | fit_notes "${NOTES_LIMIT}" "${COMPARE_URL}/${STABLE_TAG}...${TARGET_SHA}" > changelog.md
+              echo "${FULL_CHANGELOG}" | fit_notes "${NOTES_LIMIT}" "$(merged_prs_url "${STABLE_TAG}" HEAD)" > changelog.md
             else
               echo "::warning::Changelog generation failed, using placeholder"
               echo "See commit history for changes." > changelog.md
@@ -501,8 +509,9 @@ jobs:
           export BUNDLE_VERSION="${RELEASE_TAG#Mudlet-}"
           export RELEASE_VERSION
 
-          # Convert changelog to HTML for Sparkle's description field
-          export CHANGELOG_HTML=""
+          # Convert changelog to HTML for Sparkle's description field. Not exported:
+          # one environment variable over 128KB makes every later command fail
+          CHANGELOG_HTML=""
           if [[ -f changelog.md ]]; then
             CHANGELOG_HTML=$(pandoc changelog.md -f markdown -t html --no-highlight 2>/dev/null || true)
           fi
@@ -536,9 +545,9 @@ jobs:
               continue
             fi
 
-            # Use envsubst with quoted heredoc to safely handle special characters in changelog HTML
-            envsubst '$RELEASE_VERSION $BUNDLE_VERSION $PUB_DATE $DOWNLOAD_URL $FILE_SIZE $CHANGELOG_HTML' \
-              > "appcast/${CHANNEL}-${ARCH}.xml" << 'APPCAST_EOF'
+            # Unquoted, so the variables below expand - the values they expand to are
+            # never expanded again, so special characters in the changelog HTML are safe
+            cat > "appcast/${CHANNEL}-${ARCH}.xml" << APPCAST_EOF
           <?xml version="1.0" encoding="utf-8"?>
           <rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" xmlns:dc="http://purl.org/dc/elements/1.1/">
             <channel>
