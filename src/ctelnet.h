@@ -185,6 +185,7 @@ public:
     // auto-login credentials, so only game commands can arm character-at-a-time
     // detection:
     bool sendData(QString& data, bool permitDataSendRequestEvent = true, bool isGameCommand = false);
+    bool dispatchingSendRequest() const { return mSendRequestDispatchDepth > 0; }
     QMap<QString, QPair<bool, QString>> getNewEnvironDataMap();
     bool isMNESVariable(const QString&);
     void sendInfoNewEnvironValue(const QString&);
@@ -200,7 +201,6 @@ public:
     void atcpComposerSave(QString);
     void checkNAWS();
     void setAutoReconnect(bool status);
-    void encodingChanged(const QByteArray&);
     void set_USE_IRE_DRIVER_BUGFIX(bool b) { mUSE_IRE_DRIVER_BUGFIX = b; }
     void cacheHostSettings();
     void setDontReconnect(bool b) { mDontReconnect = b; }
@@ -450,6 +450,9 @@ private:
     void gotRest(std::string&);
     void gotPrompt(std::string&);
     void postData(bool endsWithPromptMarker = false);
+    void postHeldDataBeforeEncodingChange();
+    void processSubnegotiation(const std::string& subnegotiation, std::string& textAhead);
+    void encodingChanged(const QByteArray&);
     void raiseProtocolEvent(const QString& name, const QString& protocol);
     void beginNetworkLatencyMeasurement();
     void finishNetworkLatencyMeasurement();
@@ -561,6 +564,10 @@ private:
     // ahead of anything read after it
     QByteArray mDeferredInput;
     std::string command;
+    // The text of the read being parsed that is still ahead of the subnegotiation being handled
+    std::string* mpTextAheadOfSubnegotiation = nullptr;
+    // Whether the start of the prompt being received was posted ahead of an encoding change
+    bool mPromptStartPosted = false;
     bool iac = false;
     bool iac2 = false;
     bool insb = false;
@@ -681,6 +688,7 @@ private:
     // Used to disable the TConsole ending messages if run from lua:
     bool mIsReplayRunFromLua = false;
     QByteArrayList mAcceptableEncodings;
+    int mSendRequestDispatchDepth = 0;
     // Used to prevent more than one warning being shown in the event of a bad
     // encoding (when the user wants to use characters that cannot be encoded in
     // the current Server Encoding) - gets reset when the encoding is changed:

@@ -708,6 +708,19 @@ private slots:
         QCOMPARE(TDebug::sink(), static_cast<TDebug::Sink*>(mudlet::smpDebugConsole.data()));
     }
 
+    void test_spawnCallbackErrorReachesTheDebugConsole()
+    {
+#if defined(Q_OS_WIN)
+        QSKIP("no /bin/echo for the child");
+#endif
+        auto* host = startDebuggingProfile();
+        TDebug::setEnabledCategories({TDebug::Category::Error});
+
+        host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"(spawn(function() error("spawnCallbackBoom") end, "/bin/echo", "x"))"));
+
+        QTRY_VERIFY2_WITH_TIMEOUT(debugBufferContains(qsl("spawnCallbackBoom")), qPrintable(joinedDebugBuffer()), 5000);
+    }
+
     // ...and destroying it takes it back out, so nothing is left pointing at a
     // console that has gone. Closing its window is what destroys it, both when
     // the profile it belongs to closes and when Mudlet does.

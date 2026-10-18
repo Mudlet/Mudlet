@@ -30,6 +30,7 @@
 #include <QOpenGLFunctions>
 #include <QOpenGLContext>
 #include <QOpenGLTexture>
+#include <array>
 #include <optional>
 #include <utility>
 #include <assimp/Importer.hpp>
@@ -37,6 +38,7 @@
 #include <assimp/postprocess.h>
 
 class QColor;
+class QSize;
 
 struct GeometryData
 {
@@ -145,8 +147,9 @@ public:
     // Must match the layout location of aTexCoord in shaders/vertex.glsl
     static constexpr GLuint scmTexCoordLocation = 8;
 
-    // What each instance's transform places: the cube [-1, 1], or an upright cylinder of radius 1 from z -1 to 1
-    enum class InstanceShape { Box, Cylinder };
+    // What each instance's transform places: the cube [-1, 1], or an upright cylinder of radius 1 from z -1 to 1, or
+    // a cone, a square pyramid or a sphere filling the same space, the cone and pyramid with their tips at z 1
+    enum class InstanceShape { Box, Cylinder, Cone, Pyramid, Sphere };
 
     GeometryManager();
     ~GeometryManager();
@@ -166,12 +169,22 @@ public:
 
     // Appends a square lying flat on the map, centered on center, its texture's top turned toward the top of the
     // screen so that it is never upside down or mirrored; cameraRight and cameraUp as for a billboard
-    static void appendGroundQuad(GeometryData& batch, const QVector3D& center, float size, const QVector3D& cameraRight, const QVector3D& cameraUp, const QVector4D& color);
+    // textureRect is the part of the texture drawn, in texture coordinates: its y() is the lower edge
+    static void appendGroundQuad(GeometryData& batch,
+                                 const QVector3D& center,
+                                 float size,
+                                 const QVector3D& cameraRight,
+                                 const QVector3D& cameraUp,
+                                 const QVector4D& color,
+                                 const QRectF& textureRect = QRectF(0.0, 0.0, 1.0, 1.0));
     // The unit vectors on the map's plane that appendGroundQuad() turns a texture's right and top toward
     static std::pair<QVector3D, QVector3D> groundAxes(const QVector3D& cameraRight, const QVector3D& cameraUp);
+    // A block at a time rather than a float at a time, as a frame appends tens of thousands of quads
+    static void appendFloats(QVector<float>& to, const float* from, qsizetype count);
     // Appends a textured parallelogram: the texture's bottom-left at origin, its bottom edge along across
-    // and its left edge along upward
-    static void appendQuad(GeometryData& batch, const QVector3D& origin, const QVector3D& across, const QVector3D& upward, const QVector4D& color);
+    // and its left edge along upward; textureRect as for appendGroundQuad()
+    static void
+    appendQuad(GeometryData& batch, const QVector3D& origin, const QVector3D& across, const QVector3D& upward, const QVector4D& color, const QRectF& textureRect = QRectF(0.0, 0.0, 1.0, 1.0));
     // Appends a map label lying flat with its top-left corner at topLeft; turned, it is rotated half
     // around in place, so that it reads upright while the top of the screen faces south
     static void appendLabelQuad(GeometryData& batch, const QVector3D& topLeft, float width, float height, bool turned, const QVector4D& color);
@@ -184,24 +197,55 @@ public:
     // The indices of the screen rectangles to keep, taking them in the order given: one shorter than
     // minimumHeight, or overlapping one kept before it, is left out
     static QList<qsizetype> declutteredRects(const QList<QRectF>& rects, qreal minimumHeight);
+    // Where room names would overlap, which is kept: the player's room's, then a highlighted room's, then one round
+    // the player, the nearer first, then the one nearer the camera, as a printed map names what matters most
+    struct NamePriority
+    {
+        // 0 for the player's room, 1 for a highlighted one, 2 for one round the player, 3 for the rest
+        int rank = 3;
+        float playerDistance = 0.0f;
+        float cameraDistance = 0.0f;
+    };
+    static bool outranks(const NamePriority& first, const NamePriority& second);
+    // An opacity moved toward target by the part of fadeMilliseconds that has elapsed; at once for no fade
+    static float steppedOpacity(float opacity, float target, qint64 elapsedMilliseconds, int fadeMilliseconds);
+    // How many times a name's usual resolution to draw it at, so that it stays sharp zoomed in or on a high resolution
+    // screen: as many texels as the device pixels it covers, from 1 to 3, and no wider than a texture can be
+    static int textSharpness(qreal pixelsPerTexel, qreal devicePixelRatio, qreal widthTexels, int maxTextureSize);
+    // textSharpness for a map label canvas texels across, its halo reaching haloTexels past each side: no longer on
+    // its longer side than a texture can be, nor more than maxTexels in all
+    static int labelSharpness(qreal pixelsPerTexel, qreal devicePixelRatio, const QSize& canvas, int haloTexels, int maxTextureSize, qint64 maxTexels);
 
-    // How a level other than the viewed one recedes: how far its colors go toward the background, and
-    // how opaque it stays
+    // How a level other than the viewed one recedes: how far its colors go toward the background, how opaque it
+    // stays, and how much of their saturation they keep before they fade
     struct LevelFade
     {
         float towardBackground = 0.0f;
         float opacity = 1.0f;
+        float saturation = 1.0f;
     };
     // levelsAbove is how many levels above the viewed one, negative for below
     static LevelFade levelFade(int levelsAbove, bool moreTransparent);
     static QVector4D fadedColor(const QColor& color, const LevelFade& fade, const QColor& background);
     // What a level fades toward when the mapper draws the levels above and below in their own colors: the
-    // upper or lower level color laid over the background by its alpha, or the background on the viewed level
+    // background covered by the upper or lower level color as far as its alpha; the background on the viewed level
     static QColor levelFadeTarget(int levelsAbove, const QColor& background, const QColor& upperLevelColor, const QColor& lowerLevelColor);
+    // The upper or lower level color to fade toward: one the user chose as they chose it, as the 2D map draws it, but
+    // the profile's default at scmLevelColorShare of its alpha, as at full strength it would light the levels up
+    static QColor calmedLevelColor(const QColor& levelColor, const QColor& defaultColor);
+    // Enough of the default level color to tell the levels above from those below, little enough that they still
+    // sink into the background
+    static constexpr float scmLevelColorShare = 0.3f;
     // The map grid's lines across extent, one at each whole coordinate as the 2D map draws them, through rooms' centers
     static QList<QLineF> gridLines(const QRectF& extent);
     // An upright cylinder of radius 1 from z -1 to 1, its side smooth shaded, each face wound counterclockwise from outside
     static GeometryData cylinderMesh(int segments);
+    // A cone of radius 1 from its base at z -1 to its tip at z 1, its side smooth shaded
+    static GeometryData coneMesh(int segments);
+    // A pyramid on the square [-1, 1] at z -1, its tip at z 1, each face flat
+    static GeometryData pyramidMesh();
+    // A sphere of radius 1, smooth shaded
+    static GeometryData sphereMesh(int segments, int rings);
     // The sides of the cylinder a round room is drawn as; a box selection tests the corners of that same rim
     static constexpr int scmCylinderSegments = 24;
     // The tint for a texture drawn on a faded room, which can only make it more see-through
@@ -272,11 +316,14 @@ private:
 
     // Cached cube geometry template (will be transformed for each cube)
     GeometryData mCubeTemplate;
-    QOpenGLBuffer mCubeVertexBuffer{QOpenGLBuffer::VertexBuffer};
-    QOpenGLBuffer mCubeIndexBuffer{QOpenGLBuffer::IndexBuffer};
-    GeometryData mCylinderTemplate;
-    QOpenGLBuffer mCylinderVertexBuffer{QOpenGLBuffer::VertexBuffer};
-    QOpenGLBuffer mCylinderIndexBuffer{QOpenGLBuffer::IndexBuffer};
+    struct ShapeTemplate
+    {
+        GeometryData mesh;
+        QOpenGLBuffer vertexBuffer{QOpenGLBuffer::VertexBuffer};
+        QOpenGLBuffer indexBuffer{QOpenGLBuffer::IndexBuffer};
+    };
+    // By InstanceShape
+    std::array<ShapeTemplate, 5> mShapeTemplates;
     QOpenGLBuffer mInstanceBuffer{QOpenGLBuffer::VertexBuffer};
 
     // Cached player icon geometry

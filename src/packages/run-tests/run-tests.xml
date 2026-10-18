@@ -110,7 +110,9 @@ if (not matches[2]) or (#matches[2] == 0) then
 else
   bustedState.setup({matches[2]})
 end
-bustedState.runTests()</script>
+-- Not inside this alias: a nested feedTriggers() or expandAlias() in a spec would
+-- hand back this alias's captures, where the CI run starts the suite from a timer
+tempTimer(0, bustedState.runTests)</script>
 			<command></command>
 			<packageName></packageName>
 			<regex>^runTests(?: (.*))?$</regex>

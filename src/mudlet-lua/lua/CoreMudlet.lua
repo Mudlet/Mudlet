@@ -258,8 +258,13 @@ if false then
   --- to each alias it runs in "command", unless an earlier one of those aliases has set another command since, or its
   --- Command field or a script other than an alias that it set off has expanded or set one.
   ---
+  --- @param command text to process as if it was typed at the command line
+  --- @param echo optional boolean: false keeps the command from being shown; leaving it out or passing nil shows it.
+  ---   It only has an effect while "Show sent commands" is "Script controlled" (the default): "Always" and "Never"
+  ---   override it, as does a game that has taken over the echo (for a password, for instance)
+  ---
   --- @see send
-  function expandAlias(command, print=1)
+  function expandAlias(command, echo)
   end
 
 
@@ -1047,7 +1052,9 @@ if false then
   ---   </pre>
   ---
   --- @param echoTheValue optional boolean flag (default value is true) which determine if value should
-  ---   be echoed back on client.
+  ---   be echoed back on client. It only has an effect while "Show sent commands" is "Script controlled" (the
+  ---   default): "Always" and "Never" override it, as does a game that has taken over the echo (for a password,
+  ---   for instance)
   ---
   --- @see expandAlias
   --- @see sendAll
@@ -1196,6 +1203,51 @@ if false then
   ---
   --- @see tempTimer
   function wait(time)
+  end
+
+
+
+  --- Names the kind of ground an environment is, for the 3D map styles that draw terrain: diorama builds the
+  --- environment's rooms as it, and terminal and ink wash mark them by it. Without one, the kind is guessed from
+  --- the environment's color: blue is water, green forest, grey, brown and tan road, and any other color a
+  --- building. The kits are saved with the map.
+  ---
+  --- @param environmentID the environment, as setRoomEnv() takes it
+  --- @param kitName one of "plain", "water", "road", "forest" or "building"; nil or "" goes back to guessing
+  --- @return true, or nil and an error message for a kit name it does not know, or when the kits saved in the
+  ---   map user data "system.mapStyle.environmentKits" are not a JSON object, which it leaves alone
+  ---
+  --- @usage Show the lava environment as water, and forget that the swamp environment was named
+  ---   <pre>
+  ---   setMapEnvironmentKit(301, "water")
+  ---   setMapEnvironmentKit(302, nil)
+  ---   </pre>
+  ---
+  --- @see getMapEnvironmentKit, getMapEnvironmentKits
+  function setMapEnvironmentKit(environmentID, kitName)
+  end
+
+
+
+  --- The kind of ground an environment is, for use by 3D map styles that draw terrain.
+  ---
+  --- @param environmentID the environment, as setRoomEnv() takes it
+  --- @return the kit's name, and true when setMapEnvironmentKit() named it or false when it is guessed
+  ---   from the environment's color
+  ---
+  --- @see setMapEnvironmentKit, getMapEnvironmentKits
+  function getMapEnvironmentKit(environmentID)
+  end
+
+
+
+  --- The kits setMapEnvironmentKit() has named, leaving out those guessed from environments' colors and any saved
+  --- entry that cannot be read.
+  ---
+  --- @return a table of kit names keyed by environment ID
+  ---
+  --- @see setMapEnvironmentKit, getMapEnvironmentKit
+  function getMapEnvironmentKits()
   end
 
 

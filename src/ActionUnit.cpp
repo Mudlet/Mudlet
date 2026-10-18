@@ -171,6 +171,19 @@ std::vector<int> ActionUnit::findItems(const QString& name, const bool exactMatc
     return ids;
 }
 
+bool ActionUnit::pendingDeletion(TAction* pItem) const
+{
+    if (!hasPendingDeletes()) {
+        return false;
+    }
+    for (auto* pAncestor = pItem; pAncestor; pAncestor = pAncestor->getParent()) {
+        if (uninstallList.contains(pAncestor)) {
+            return true;
+        }
+    }
+    return false;
+}
+
 void ActionUnit::addActionRootNode(TAction* pT, int parentPosition, int childPosition)
 {
     if (!pT) {
@@ -204,6 +217,12 @@ void ActionUnit::reParentAction(int childID, int oldParentID, int newParentID, i
     if (!pChild) {
         return;
     }
+    // Only a root action, or one directly inside a package, is drawn as a bar of its own; deeper down it is a menu
+    auto ownsABarUnder = [](const TAction* pParent) {
+        return !pParent || (!pParent->getParent() && !pParent->mPackageName.isEmpty());
+    };
+    const bool hadABar = ownsABarUnder(pOldParent);
+    const bool wasAPackageRoot = !pOldParent && !pChild->mPackageName.isEmpty();
 
     if (pOldParent) {
         pChild->setDataChanged();
@@ -231,8 +250,14 @@ void ActionUnit::reParentAction(int childID, int oldParentID, int newParentID, i
 
     pChild->setDataChanged();
 
-    if ((!pOldParent) && (pNewParent)) {
-        mpHost->consoleFrontend()->detachActionBars(pChild);
+    if (hadABar && !ownsABarUnder(pNewParent)) {
+        mpHost->consoleFrontend()->disposeActionBars(pChild);
+    }
+    // Its children had bars of their own only while it was a root
+    if (wasAPackageRoot && pNewParent) {
+        for (auto* pPackaged : *pChild->mpMyChildrenList) {
+            mpHost->consoleFrontend()->disposeActionBars(static_cast<TAction*>(pPackaged));
+        }
     }
 }
 

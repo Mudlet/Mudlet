@@ -277,6 +277,50 @@ private slots:
         QVERIFY2(ok, qPrintable(qsl("the module did not install: %1").arg(reason)));
         QVERIFY2(said.contains(qsl("Module \"%1\" was installed, but these parts of it are not working").arg(name)), qPrintable(qsl("the console said: \"%1\"").arg(said)));
     }
+
+    // A pattern that does not compile is named just as a script is, and an item that is broken twice over
+    // is named once - even one whose <script> comes before its <name>, as a hand-written file can have it.
+    void test_aBrokenPatternIsNamedOnceByItsName()
+    {
+        Host* host = startProfile();
+        QVERIFY2(host, "no active host available for the test");
+        const QString name = qsl("broken-notice-pattern");
+        const QString path = mPackageDir.filePath(qsl("%1.xml").arg(name));
+        QFile file(path);
+        QVERIFY(file.open(QIODevice::WriteOnly));
+        file.write(qsl("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+                       "<!DOCTYPE MudletPackage>\n"
+                       "<MudletPackage version=\"1.001\">\n"
+                       "<TriggerPackage>\n"
+                       "<Trigger isActive=\"yes\" isFolder=\"no\" isTempTrigger=\"no\" isMultiline=\"no\" isPerlSlashGOption=\"no\"\n"
+                       "         isColorizerTrigger=\"no\" isFilterTrigger=\"no\" isSoundTrigger=\"no\" isColorTrigger=\"no\">\n"
+                       "<name>%1 trigger</name><script></script>\n"
+                       "<triggerType>0</triggerType><conditonLineDelta>0</conditonLineDelta><mStayOpen>0</mStayOpen>\n"
+                       "<mCommand></mCommand><packageName></packageName>\n"
+                       "<regexCodeList><string>*(unclosed</string></regexCodeList>\n"
+                       "<regexCodePropertyList><integer>1</integer></regexCodePropertyList>\n"
+                       "</Trigger>\n"
+                       "</TriggerPackage>\n"
+                       "<AliasPackage>\n"
+                       "<Alias isActive=\"yes\" isFolder=\"no\">\n"
+                       "<script>this is not lua(</script><regex>^(unclosed</regex><command></command>\n"
+                       "<name>%1 alias</name><packageName></packageName>\n"
+                       "</Alias>\n"
+                       "</AliasPackage>\n"
+                       "</MudletPackage>\n")
+                           .arg(name)
+                           .toUtf8());
+        file.close();
+
+        const int mark = consoleMark(host);
+        auto [ok, reason] = host->installPackage(path, enums::PackageModuleType::Package, false);
+        const QString said = consoleTextSince(host, mark);
+
+        QVERIFY2(ok, qPrintable(qsl("the package did not install: %1").arg(reason)));
+        QVERIFY2(said.contains(qsl("\"%1 trigger\"").arg(name)), qPrintable(qsl("the trigger whose pattern will not compile was not named: \"%1\"").arg(said)));
+        QVERIFY2(said.count(qsl("\"%1 alias\"").arg(name)) == 1, qPrintable(qsl("the alias broken twice over was not named once: \"%1\"").arg(said)));
+        QVERIFY2(!said.contains(qsl("\"\"")), qPrintable(qsl("a part was named with no name: \"%1\"").arg(said)));
+    }
 };
 
 #include "BrokenPackageNoticeTest.moc"
