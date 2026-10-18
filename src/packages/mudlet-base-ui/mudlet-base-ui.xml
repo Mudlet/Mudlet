@@ -733,12 +733,8 @@ local vitalsStats = {
 -- keeps them from fighting: the first source to produce a complete hp
 -- reading owns the gauges, and only a higher-ranked source can take them
 -- over - so gauges built from a prompt hand themselves to GMCP whenever it
--- turns up, however late.
--- Values a script feeds through BaseUI.setVital are a "script" source with no
--- rank: they sit in a store of their own, beside the lock rather than in it, so
--- they never take the lock from a protocol, are never dropped by a takeover or
--- a snapshot, and are painted over whatever the ranked sources hold for that
--- stat until BaseUI.clearVital lets them show through again
+-- turns up, however late. Values from BaseUI.setVital live outside the lock, in
+-- BaseUI.scriptVitals
 local sourceRanks = { gmcp = 3, msdp = 2, prompt = 1 }
 
 -- the vitalsStats rows again, keyed by the conventional MSDP variable names
@@ -2606,7 +2602,7 @@ function BaseUI.renderVitals()
         BaseUI.shownVitals[stat.key] = { value = value, max = max, text = text,
           current = data.current, percent = data.percent, source = data.source }
         changed = changed or {}
-        changed[#changed + 1] = stat.key
+        changed[#changed + 1] = { key = stat.key, shown = BaseUI.shownVitals[stat.key] }
       end
     elseif not value and BaseUI.gauges[stat.key] and not BaseUI.gauges[stat.key].hidden
       and (stat.transient or (shown and shown.source == "script")) then
@@ -2614,7 +2610,7 @@ function BaseUI.renderVitals()
       BaseUI.gauges[stat.key]:hide()
       BaseUI.shownVitals[stat.key] = nil
       changed = changed or {}
-      changed[#changed + 1] = stat.key
+      changed[#changed + 1] = { key = stat.key }
     end
   end
   -- The panel is built before there are any bars to put in it, so it starts
@@ -2630,10 +2626,12 @@ function BaseUI.renderVitals()
     BaseUI.layoutDock()
   end
   -- raised once every gauge is painted, so a handler that feeds a gauge from
-  -- here starts a fresh pass rather than cutting into this one
-  for _, key in ipairs(changed or {}) do
-    local shown = BaseUI.shownVitals[key]
-    raiseEvent("BaseUI.vitalsChanged", key, shown and table.deepcopy(shown))
+  -- here starts a fresh pass rather than cutting into this one. A gauge that
+  -- pass repainted has had its own event, and this one would be stale
+  for _, change in ipairs(changed or {}) do
+    if BaseUI.shownVitals[change.key] == change.shown then
+      raiseEvent("BaseUI.vitalsChanged", change.key, change.shown and table.deepcopy(change.shown))
+    end
   end
 end
 
@@ -2656,10 +2654,11 @@ end
 --
 -- What a script sets is painted over whatever GMCP, MSDP or the prompt says for
 -- that stat until it is cleared; it never takes the source lock and no protocol
--- update replaces it. A disconnect forgets it along with the rest.
+-- update replaces it. A disconnect clears it, as clearVital would.
 -- Every change to what a gauge shows raises "BaseUI.vitalsChanged" with the key
--- and { value, max, text, current, percent, source }, or nil once it is hidden;
--- source is "gmcp", "msdp", "prompt" or "script".
+-- and { value, max, text, current, percent, source }, or nil once the gauge is
+-- taken off the panel; source is "gmcp", "msdp", "prompt" or "script". Hiding
+-- the whole interface raises nothing.
 -- There are four gauge slots and a gauge keeps its slot for the session, so on
 -- a game already showing all of hp, mp, xp and mv an enemy gauge has nowhere to
 -- go: setVital still stores the values, and returns false.
@@ -2688,7 +2687,18 @@ function BaseUI.setVital(key, values, opts)
   if label ~= nil and type(label) ~= "string" then
     error("BaseUI.setVital: bad argument #3 (label must be a string, got " .. type(label) .. ")", 2)
   end
-  local percent, current, max = tonumber(values.percent), tonumber(values.current), tonumber(values.max)
+  local numbers = {}
+  for _, field in ipairs({ "percent", "current", "max" }) do
+    local raw = values[field]
+    local number = tonumber(raw)
+    -- NaN slips past every comparison below, and either it or an infinity
+    -- would print as garbage in the gauge's text
+    if raw ~= nil and not (number and number == number and math.abs(number) &lt; maxSaneVital) then
+      error(string.format("BaseUI.setVital: bad argument #2 (%s must be a finite number, got %s)", field, tostring(raw)), 2)
+    end
+    numbers[field] = number
+  end
+  local percent, current, max = numbers.percent, numbers.current, numbers.max
   if percent then
     if percent &lt; 0 or percent &gt; 100 then
       error("BaseUI.setVital: bad argument #2 (percent must be 0-100, got " .. percent .. ")", 2)
@@ -2801,7 +2811,12 @@ end
 -- fresh data arrives.
 function BaseUI.handleDisconnect()
   BaseUI.vitalsData = {}
+  local scripted = next(BaseUI.scriptVitals) ~= nil
   BaseUI.scriptVitals = {}
+  -- a script's gauges have no next protocol message to replace them
+  if scripted then
+    BaseUI.renderVitals()
+  end
   BaseUI.vitalsLock = 0
   BaseUI.shapeSightings = {}
   BaseUI.scoreRequested = false

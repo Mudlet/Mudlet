@@ -47,11 +47,13 @@ BaseUI.clearVital("enemy") -- the fight is over
 ```
 
 What a script sets wins over GMCP, MSDP and the prompt for that gauge
-until it is cleared, and a `label` stays until the next `setVital` or
-`clearVital`. `setVital` returns false when the gauge cannot be shown:
-the interface is hidden, or all four gauge slots are taken already.
-Every change to a gauge raises `BaseUI.vitalsChanged` with the key and
-`{ value, max, text, current, percent, source }`, or nil once it hides.
+until it is cleared or you disconnect, and a `label` stays until the
+next `setVital` or `clearVital`. `setVital` returns false when the gauge
+cannot be shown: the interface is hidden or standing aside, or all four
+gauge slots are taken already. Every change to a gauge raises
+`BaseUI.vitalsChanged` with the key and
+`{ value, max, text, current, percent, source }`, or nil once the gauge
+is taken off the panel.
 ]]
 version = [[1.8.0]]
 created = "2026-07-25T12:00:00+00:00"

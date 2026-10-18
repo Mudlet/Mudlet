@@ -2412,7 +2412,9 @@ describe("Tests UI functions", function()
 
     local saved, slotsLeft, events, handlerId
     local savedNames = { "vitalsData", "scriptVitals", "shownVitals", "vitalsLock", "gauges", "container", "build",
-                         "checkMapData", "layoutDock", "ensureGauge", "dormant", "killVitalsTriggers" }
+                         "checkMapData", "layoutDock", "ensureGauge", "dormant", "killVitalsTriggers",
+                         "armChatTriggers", "createVitalsTriggers", "shapeSightings", "scoreRequested",
+                         "scoreWindowUntil", "sawGmcpVitals", "sawMsdpVitals", "msdpReady", "gmcpChat" }
 
     local function fakeGauge()
       return {
@@ -2432,7 +2434,7 @@ describe("Tests UI functions", function()
       end
       BaseUI.vitalsData, BaseUI.scriptVitals, BaseUI.shownVitals, BaseUI.gauges = {}, {}, {}, {}
       BaseUI.vitalsLock = 0
-      -- what build() would have made; with no dock, renderVitals has nothing to hide
+      -- renderVitals skips its hide pass until a dock exists
       BaseUI.container = BaseUI.container or {}
       BaseUI.build = function() end
       BaseUI.checkMapData = function() end
@@ -2487,6 +2489,41 @@ describe("Tests UI functions", function()
       assert.are.equal("HP 3/7", BaseUI.gauges.hp.text)
       BaseUI.clearVital("hp")
       assert.are.equal("HP 50/100", BaseUI.gauges.hp.text)
+      assert.are.equal("gmcp", events[#events].data.source)
+    end)
+
+    it("should name the source of a prompt reading in the event", function()
+      BaseUI.applyVitals("prompt", { hp = { current = 5, max = 10 } })
+      assert.are.equal("prompt", events[#events].data.source)
+    end)
+
+    it("should drop scripted values on a disconnect", function()
+      BaseUI.armChatTriggers = function() end
+      BaseUI.createVitalsTriggers = function() end
+      BaseUI.setVital("enemy", { percent = 50 }, shaken)
+      BaseUI.setVital("hp", { current = 1, max = 2 }, { label = "scripted" })
+      BaseUI.handleDisconnect()
+      assert.is_true(BaseUI.gauges.enemy.hidden)
+      assert.is_nil(events[#events].data)
+      BaseUI.applyVitals("prompt", { hp = { current = 5, max = 10 } })
+      assert.are.equal("HP 5/10", BaseUI.gauges.hp.text)
+    end)
+
+    it("should raise each change once when a handler feeds a gauge from the event", function()
+      local fed = false
+      local feeder = registerAnonymousEventHandler("BaseUI.vitalsChanged", function(_, key)
+        if key == "hp" and not fed then
+          fed = true
+          BaseUI.setVital("enemy", { percent = 50 }, shaken)
+        end
+      end)
+      BaseUI.applyVitals("gmcp", { hp = { current = 50, max = 100 }, enemy = { percent = 30 } }, true)
+      killAnonymousEventHandler(feeder)
+      assert.are.equal(2, #events)
+      assert.are.equal("hp", events[1].key)
+      assert.are.equal("enemy", events[2].key)
+      assert.are.equal("Kaninen: shaken (4/7)", events[2].data.text)
+      assert.are.equal("Kaninen: shaken (4/7)", BaseUI.gauges.enemy.text)
     end)
 
     it("should hide the enemy gauge on clearVital, along with a protocol's enemy", function()
@@ -2528,8 +2565,10 @@ describe("Tests UI functions", function()
     end)
 
     it("should report false while the interface is hidden", function()
+      assert.is_true(BaseUI.setVital("enemy", { percent = 50 }))
       BaseUI.dormant = function() return true end
-      assert.is_false(BaseUI.setVital("enemy", { percent = 50 }))
+      assert.is_false(BaseUI.setVital("enemy", { percent = 60 }))
+      assert.are.equal(1, #events)
     end)
 
     it("should reject a key or values it cannot show", function()
@@ -2538,6 +2577,10 @@ describe("Tests UI functions", function()
       assert.has_error(function() BaseUI.setVital("enemy", { current = 1 }) end)
       assert.has_error(function() BaseUI.setVital("enemy", { current = 1, max = 0 }) end)
       assert.has_error(function() BaseUI.setVital("enemy", { percent = 1 }, { label = 3 }) end)
+      assert.has_error(function() BaseUI.setVital("enemy", { percent = 0 / 0 }) end)
+      assert.has_error(function() BaseUI.setVital("enemy", { current = 0 / 0, max = 10 }) end)
+      assert.has_error(function() BaseUI.setVital("enemy", { current = 1, max = 1 / 0 }) end)
+      assert.has_error(function() BaseUI.setVital("enemy", { percent = "50%", current = 1, max = 2 }) end)
       assert.has_error(function() BaseUI.clearVital("foo") end)
     end)
   end)
