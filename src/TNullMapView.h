@@ -53,8 +53,8 @@ public:
     int shownAreaId() const override { return mAreaId; }
     std::pair<bool, QString> setMapZoom(qreal zoom, int areaId) override;
     std::pair<bool, QString> exportAreaToImage(int, const QString&, std::optional<int>, qreal, bool) override { return {false, qsl("there is no main window to draw the map in")}; }
+    std::pair<bool, QString> show3DView(bool shown) override;
     // As dlgMapper answers while it shows its 2D map, the only one this keeps
-    void show3DView(bool) override {}
     bool showing3DView() const override { return false; }
     void recreate3DView() override {}
     std::pair<bool, QString> shift3DViewCamera(float, float, float) override { return {false, qsl("the modern 3D map view is not showing")}; }
