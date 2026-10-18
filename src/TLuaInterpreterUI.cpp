@@ -3670,8 +3670,8 @@ int TLuaInterpreter::getLabelAccessibleRole(lua_State* L)
     if (!host.hasConsoleView()) {
         return warnArgumentValue(L, __func__, no_main_window_value);
     }
-    if (auto button = host.labelActsAsButton(labelName)) {
-        lua_pushstring(L, *button ? "button" : "text");
+    if (auto role = host.labelAccessibleRole(labelName)) {
+        lua_pushstring(L, role->toUtf8().constData());
         return 1;
     }
 

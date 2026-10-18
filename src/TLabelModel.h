@@ -55,6 +55,9 @@ struct TLabelModel
     // Whether a screen reader is told it is a button: as a script said, else when it has a click or release
     // callback - never when the mouse passes through it
     bool actsAsButton() const;
+    // What it shows, which a screen reader is told unless it is a button. Kept by the view, which alone knows.
+    enum class ShownContent { Text, Graphic, Animation };
+    ShownContent mShownContent = ShownContent::Text;
     void setAccessibleName(const QString& name);
     void setAccessibleButton(std::optional<bool> button);
     void setClickThrough(bool clickThrough);

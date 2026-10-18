@@ -305,9 +305,10 @@ bool TLabel::showsImage() const
 
 void TLabel::imageMayHaveChanged()
 {
+    using ShownContent = TLabelModel::ShownContent;
     const ShownContent shown = movie() ? ShownContent::Animation : showsImage() ? ShownContent::Graphic : ShownContent::Text;
     // A button's role stays a button whatever it shows
-    if (std::exchange(mShownContent, shown) != shown && !mpModel->actsAsButton()) {
+    if (std::exchange(mpModel->mShownContent, shown) != shown && !mpModel->actsAsButton()) {
         mpModel->accessibilityChanged(TLabelModel::AccessibilityChange::Role);
     }
 }
