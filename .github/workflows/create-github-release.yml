@@ -270,17 +270,37 @@ jobs:
           RELEASE_TYPE: ${{ steps.release-type.outputs.type }}
           RELEASE_TAG: ${{ steps.release-type.outputs.tag }}
         run: |
+          # GitHub refuses a release body over 125000 characters, and then publishes
+          # nothing at all; the margin below that is headroom
+          NOTES_LIMIT=120000
+          fit_notes() {
+            bash release-scripts/CI/fit-release-notes.sh "$@"
+          }
+          # By merge date from the range's oldest commit, as a compare link lists only 250
+          # commits; a failure falls back to every merged PR rather than cost the release
+          merged_prs_url() {
+            local search="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/pulls?q=is%3Apr+is%3Amerged" from to
+            from=$(TZ=UTC git log --date=format-local:%Y-%m-%dT%H:%M:%SZ --format=%cd "$1..$2" | sort | head -1)
+            if [[ -n "${from}" ]] && to=$(TZ=UTC git log -1 --date=format-local:%Y-%m-%d --format=%cd "$2"); then
+              echo "${search}+merged%3A%3E%3D${from//:/%3A}+merged%3A%3C%3D${to}"
+            else
+              echo "::warning::Could not date $1..$2, so cut release notes link to every merged pull request" >&2
+              echo "${search}"
+            fi
+          }
+
           if [[ "${RELEASE_TYPE}" == "release" ]]; then
             # For release: changelog from previous stable release tag to this tag
             PREV_TAG=$(git tag --sort=-version:refname | grep '^Mudlet-' | grep -v -- '-ptb' | grep -v "^${RELEASE_TAG}$" | head -1)
 
             echo "Generating changelog from ${PREV_TAG} to ${RELEASE_TAG}"
             if [[ -n "${PREV_TAG}" ]]; then
-              if ! lua CI/generate-changelog.lua -f md -m release \
-                   --start-commit "${PREV_TAG}" --end-commit "${RELEASE_TAG}" > changelog.md; then
+              if ! RELEASE_CHANGELOG=$(lua CI/generate-changelog.lua -f md -m release \
+                   --start-commit "${PREV_TAG}" --end-commit "${RELEASE_TAG}"); then
                 echo "::error::Changelog generation failed for stable release"
                 exit 1
               fi
+              echo "${RELEASE_CHANGELOG}" | fit_notes "${NOTES_LIMIT}" "$(merged_prs_url "${PREV_TAG}" "${RELEASE_TAG}")" > changelog.md
             else
               echo "::error::No previous release tag found - cannot generate changelog for stable release"
               exit 1
@@ -320,21 +340,26 @@ jobs:
 
             # Assemble the combined changelog
             if [[ -n "${PTB_CHANGELOG}" && -n "${FULL_CHANGELOG}" ]]; then
+              # The PTB's own changes come first, the full changelog gets what is left.
+              # 2000 bytes keeps room for the wrapper and the full changelog's closing line
               {
                 echo "#### Changes in this build since the previous PTB (${PTB_TAG})"
                 echo ""
-                echo "${PTB_CHANGELOG}"
+                echo "${PTB_CHANGELOG}" | fit_notes "$((NOTES_LIMIT - 2000))" "$(merged_prs_url "${PTB_TAG}" HEAD)"
                 echo ""
                 echo "<details>"
                 echo "<summary>Full changelog since last release (${STABLE_TAG})</summary>"
                 echo ""
-                echo "${FULL_CHANGELOG}"
-                echo ""
-                echo "</details>"
               } > changelog.md
+              CLOSING=$'\n</details>\n'
+              FULL_BUDGET=$((NOTES_LIMIT - $(wc -c < changelog.md) - ${#CLOSING}))
+              {
+                echo "${FULL_CHANGELOG}" | fit_notes "${FULL_BUDGET}" "$(merged_prs_url "${STABLE_TAG}" HEAD)"
+                printf '%s' "${CLOSING}"
+              } >> changelog.md
             elif [[ -n "${FULL_CHANGELOG}" ]]; then
               # No previous PTB or first PTB after a release - just show full changelog
-              echo "${FULL_CHANGELOG}" > changelog.md
+              echo "${FULL_CHANGELOG}" | fit_notes "${NOTES_LIMIT}" "$(merged_prs_url "${STABLE_TAG}" HEAD)" > changelog.md
             else
               echo "::warning::Changelog generation failed, using placeholder"
               echo "See commit history for changes." > changelog.md
@@ -486,8 +511,9 @@ jobs:
           export BUNDLE_VERSION="${RELEASE_TAG#Mudlet-}"
           export RELEASE_VERSION
 
-          # Convert changelog to HTML for Sparkle's description field
-          export CHANGELOG_HTML=""
+          # Convert changelog to HTML for Sparkle's description field. Not exported:
+          # one environment variable over 128KB makes every later command fail
+          CHANGELOG_HTML=""
           if [[ -f changelog.md ]]; then
             CHANGELOG_HTML=$(pandoc changelog.md -f markdown -t html --no-highlight 2>/dev/null || true)
           fi
@@ -521,9 +547,9 @@ jobs:
               continue
             fi
 
-            # Use envsubst with quoted heredoc to safely handle special characters in changelog HTML
-            envsubst '$RELEASE_VERSION $BUNDLE_VERSION $PUB_DATE $DOWNLOAD_URL $FILE_SIZE $CHANGELOG_HTML' \
-              > "appcast/${CHANNEL}-${ARCH}.xml" << 'APPCAST_EOF'
+            # Unquoted: the values of the variables below are not expanded again, so the
+            # HTML is safe, but a literal $, ` or \ added to the template would be
+            cat > "appcast/${CHANNEL}-${ARCH}.xml" << APPCAST_EOF
           <?xml version="1.0" encoding="utf-8"?>
           <rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" xmlns:dc="http://purl.org/dc/elements/1.1/">
             <channel>
