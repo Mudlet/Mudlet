@@ -79,7 +79,7 @@ public:
     // Outside this class, install a source only through claimSource() or continuePlaying() -
     // never through mediaPlayer()->setSource() directly, since a missed bump lets that pending
     // release clear the new source again. As of Qt 6.9 that reproduces only on backends that
-    // load asynchronously, so it will not show up on a macOS-only test run.
+    // load asynchronously, such as FFmpeg; darwin does not.
     void claimSource(const QUrl& media)
     {
         // Bumped before the source is touched because setSource() can raise errorOccurred

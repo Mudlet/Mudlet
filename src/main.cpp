@@ -862,12 +862,9 @@ int main(int argc, char* argv[])
     }
 
     // Configure the media backend - does not work in mudlet class c'tor.
-    // On Windows, use FFmpeg which supports .ogg/.opus (native backend doesn't).
-    // On macOS, use darwin (AVFoundation) which works better than FFmpeg.
-#if defined(Q_OS_WINDOWS)
+    // FFmpeg plays .ogg/.opus, which the native Windows and macOS backends don't.
+#if defined(Q_OS_WINDOWS) || defined(Q_OS_MACOS)
     const QByteArray defaultMediaBackend("ffmpeg");
-#elif defined(Q_OS_MACOS)
-    const QByteArray defaultMediaBackend("darwin");
 #else
     const QByteArray defaultMediaBackend;
 #endif
