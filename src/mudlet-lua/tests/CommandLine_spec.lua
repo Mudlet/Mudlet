@@ -279,12 +279,12 @@ describe("Tests that the command line functions find their command line by name"
 
     assert.is_true(addCommandLineMenuEvent(cmdLine, menuLabel, "event"))
     local ok, err = removeCommandLineMenuEvent("main", menuLabel)
-    assert.is_false(ok)
-    assert.are.equal(("removeCommandLineMenuEvent: cannot remove '%s', menu item does not exist"):format(menuLabel), err)
+    assert.is_nil(ok)
+    assert.are.equal(("cannot remove '%s', menu item does not exist"):format(menuLabel), err)
     assert.is_true(removeCommandLineMenuEvent(cmdLine, menuLabel))
     ok, err = removeCommandLineMenuEvent(cmdLine, menuLabel)
-    assert.is_false(ok)
-    assert.are.equal(("removeCommandLineMenuEvent: cannot remove '%s', menu item does not exist"):format(menuLabel), err)
+    assert.is_nil(ok)
+    assert.are.equal(("cannot remove '%s', menu item does not exist"):format(menuLabel), err)
 
     local mainSaves = getSaveCommandHistory("main")
     assert.is_true(setSaveCommandHistory(cmdLine, false))
