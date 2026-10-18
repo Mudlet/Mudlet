@@ -912,6 +912,19 @@ std::vector<int> TriggerUnit::findItems(const QString& name, const bool exactMat
     return ids;
 }
 
+bool TriggerUnit::pendingDeletion(TTrigger* pItem) const
+{
+    if (!hasPendingDeletes()) {
+        return false;
+    }
+    for (auto* pAncestor = pItem; pAncestor; pAncestor = pAncestor->getParent()) {
+        if (mCleanupSet.contains(pAncestor) || uninstallList.contains(pAncestor)) {
+            return true;
+        }
+    }
+    return false;
+}
+
 bool TriggerUnit::enableTrigger(const QString& name)
 {
     bool found = false;
@@ -989,8 +1002,10 @@ bool TriggerUnit::killTrigger(const QString& name)
         // is on the call stack - so until then it is still findable by name.
         // tempComplexRegexTrigger() replaces a temporary trigger under the name it
         // was given, so a corpse and a live trigger can share one: keep looking
-        // rather than report a kill that would achieve nothing.
-        if (mCleanupSet.contains(pT)) {
+        // rather than report a kill that would achieve nothing. One a mid-pass
+        // uninstallPackage() queued must stay out of mCleanupSet too: doCleanup()
+        // would free its children twice.
+        if (pendingDeletion(pT)) {
             continue;
         }
         // Deactivating matters as much as queueing the delete: the trigger stays
