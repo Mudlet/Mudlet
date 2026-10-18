@@ -40,6 +40,7 @@
 
 #include <ctime>
 #include <limits>
+#include <memory>
 
 #include <QDir>
 #include <QFile>
@@ -1923,9 +1924,13 @@ private slots:
         const float edge = side / 2 + 0.7f;
         for (const DrawnCube& bar : bars) {
             const bool inWest = bar.center.x() < edge && bar.center.y() > -edge && bar.center.y() < 0.7f;
-            const bool inMiddle = std::abs(bar.center.y()) < 0.7f && std::any_of(widget.mStitch.rooms().cbegin(), widget.mStitch.rooms().cend(), [&](const MapStitch::Room& room) {
-                                      return std::abs(room.at.x() - bar.center.x()) <= 0.6f && std::abs(room.at.y() - bar.center.y()) <= 0.6f;
-                                  });
+            const bool inMiddle = std::abs(bar.center.y()) < 0.7f
+                                  && std::any_of(
+                                          widget.mStitch.rooms().cbegin(),
+                                          widget.mStitch.rooms().cend(),
+                                          [&](const MapStitch::Room& room) {
+                                              return std::abs(room.at.x() - bar.center.x()) <= 0.6f && std::abs(room.at.y() - bar.center.y()) <= 0.6f;
+                                          });
             QVERIFY2(inWest || inMiddle, qPrintable(qsl("a bar at %1, %2").arg(bar.center.x()).arg(bar.center.y())));
         }
         QVERIFY(std::any_of(bars.cbegin(), bars.cend(), [&](const DrawnCube& bar) {
@@ -2779,7 +2784,19 @@ private slots:
         QVERIFY(image.pixelColor(1, 1).alpha() < 32);
         QCOMPARE(colorAt(image, pPanel->mpMessage, QPoint(1, 1)), card);
         QCOMPARE(colorAt(image, pPanel->mpHint, QPoint(1, 1)), card);
-        QCOMPARE(colorAt(image, pPanel->mpKeys, QPoint(1, 1)), card);
+        // The hints are as wide as their text, so a glyph can sit at any one pixel of them
+        const QRect keysArea(pPanel->mpKeys->mapTo(pPanel, QPoint(0, 0)), pPanel->mpKeys->size());
+        int sheetPixels = 0;
+        int cardPixels = 0;
+        for (int y = keysArea.top(); y <= keysArea.bottom(); ++y) {
+            for (int x = keysArea.left(); x <= keysArea.right(); ++x) {
+                const QColor pixel = image.pixelColor(x, y);
+                sheetPixels += pixel == QColor(0x1e, 0x1e, 0x1e) ? 1 : 0;
+                cardPixels += pixel == card ? 1 : 0;
+            }
+        }
+        QCOMPARE(sheetPixels, 0);
+        QVERIFY(cardPixels > 0);
 
         // Nor behind the list or its scroll bar
         QList<MapSearchPanel::Row> rows;
@@ -2885,15 +2902,15 @@ private slots:
         QCOMPARE(menus.count, 1);
 
         // A touch on the card works its buttons and goes no further; on the shadow, it reaches the map
-        QPointingDevice* pTouch = QTest::createTouchDevice();
+        const std::unique_ptr<QPointingDevice> pTouch(QTest::createTouchDevice());
         const QPoint onLabels = pPanel->mpLabels->mapTo(&window, pPanel->mpLabels->rect().center());
-        QTest::touchEvent(&window, pTouch).press(0, onLabels);
-        QTest::touchEvent(&window, pTouch).release(0, onLabels);
+        QTest::touchEvent(&window, pTouch.get()).press(0, onLabels);
+        QTest::touchEvent(&window, pTouch.get()).release(0, onLabels);
         QCoreApplication::processEvents();
         QVERIFY(!pPanel->labelsIncluded());
         QCOMPARE(presses.count + doublePresses.count, 0);
-        QTest::touchEvent(&window, pTouch).press(0, QPoint(2, 2));
-        QTest::touchEvent(&window, pTouch).release(0, QPoint(2, 2));
+        QTest::touchEvent(&window, pTouch.get()).press(0, QPoint(2, 2));
+        QTest::touchEvent(&window, pTouch.get()).release(0, QPoint(2, 2));
         QCoreApplication::processEvents();
         QCOMPARE(presses.count + doublePresses.count, 1);
 
@@ -3324,19 +3341,19 @@ private slots:
             const QPoint pixel = pixelOfArea(widget, westId, QPointF(0.0, 20.0));
             return frame.rect().contains(pixel) ? frame.pixelColor(pixel) : QColor();
         };
-        const auto near = [](const QColor& a, const QColor& b) {
+        const auto closeTo = [](const QColor& a, const QColor& b) {
             return a.isValid() && qAbs(a.red() - b.red()) + qAbs(a.green() - b.green()) + qAbs(a.blue() - b.blue()) < 12;
         };
 
         QColor drawn = footprintColor();
-        QVERIFY2(near(drawn, QColor(10, 200, 30)), qPrintable(qsl("the footprint is drawn %1").arg(drawn.name())));
+        QVERIFY2(closeTo(drawn, QColor(10, 200, 30)), qPrintable(qsl("the footprint is drawn %1").arg(drawn.name())));
         QVERIFY(widget.mAtlasFootprints->written);
         drawn = footprintColor();
-        QVERIFY2(near(drawn, QColor(10, 200, 30)), qPrintable(qsl("the footprint kept on the GPU is drawn %1").arg(drawn.name())));
+        QVERIFY2(closeTo(drawn, QColor(10, 200, 30)), qPrintable(qsl("the footprint kept on the GPU is drawn %1").arg(drawn.name())));
 
         map()->mCustomEnvColors[300] = QColor(200, 10, 30);
         drawn = footprintColor();
-        QVERIFY2(near(drawn, QColor(200, 10, 30)), qPrintable(qsl("the footprint is drawn %1 after its color changed").arg(drawn.name())));
+        QVERIFY2(closeTo(drawn, QColor(200, 10, 30)), qPrintable(qsl("the footprint is drawn %1 after its color changed").arg(drawn.name())));
     }
 
     void test_areaNamesAreDrawnAgainWhenTheirLookChangesWithoutGL()
