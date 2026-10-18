@@ -20,6 +20,92 @@
 #include "RenderCommand.h"
 
 #include <QDebug>
+#include <QOpenGLContext>
+#include <QOpenGLExtraFunctions>
+#include <QOpenGLFramebufferObject>
+
+namespace {
+// The shader's uInk for a shading, 0 for none of the ink ones
+int inkMode(const RenderCommand::Shading shading)
+{
+    switch (shading) {
+    case RenderCommand::Shading::InkBlot:
+        return 1;
+    case RenderCommand::Shading::InkStroke:
+        return 2;
+    case RenderCommand::Shading::Seal:
+        return 3;
+    case RenderCommand::Shading::Paper:
+        return 4;
+    case RenderCommand::Shading::InkLozenge:
+        return 5;
+    case RenderCommand::Shading::InkHatched:
+        return 6;
+    case RenderCommand::Shading::InkDashed:
+        return 7;
+    case RenderCommand::Shading::Lit:
+    case RenderCommand::Shading::Unlit:
+    case RenderCommand::Shading::Wireframe:
+    case RenderCommand::Shading::ModelBlock:
+    case RenderCommand::Shading::ModelPath:
+    case RenderCommand::Shading::ModelShadow:
+    case RenderCommand::Shading::ModelWater:
+    case RenderCommand::Shading::Sky:
+        return 0;
+    }
+    return 0;
+}
+
+// The shader's uModelEdges for a template
+int modelEdges(const GeometryManager::InstanceShape shape)
+{
+    switch (shape) {
+    case GeometryManager::InstanceShape::Box:
+        return 1;
+    case GeometryManager::InstanceShape::Cylinder:
+        return 2;
+    case GeometryManager::InstanceShape::Pyramid:
+        return 3;
+    case GeometryManager::InstanceShape::Cone:
+        return 4;
+    case GeometryManager::InstanceShape::Sphere:
+        return 0;
+    }
+    return 0;
+}
+
+// The shader's uModelShading for a shading, 0 for none of the model ones
+int modelMode(const RenderCommand::Shading shading)
+{
+    switch (shading) {
+    case RenderCommand::Shading::ModelBlock:
+        return 1;
+    case RenderCommand::Shading::ModelPath:
+        return 2;
+    case RenderCommand::Shading::ModelShadow:
+        return 3;
+    case RenderCommand::Shading::Sky:
+        return 4;
+    case RenderCommand::Shading::ModelWater:
+        return 5;
+    case RenderCommand::Shading::Lit:
+    case RenderCommand::Shading::Unlit:
+    case RenderCommand::Shading::Wireframe:
+    case RenderCommand::Shading::InkBlot:
+    case RenderCommand::Shading::InkStroke:
+    case RenderCommand::Shading::Seal:
+    case RenderCommand::Shading::Paper:
+    case RenderCommand::Shading::InkLozenge:
+    case RenderCommand::Shading::InkHatched:
+    case RenderCommand::Shading::InkDashed:
+        return 0;
+    }
+    return 0;
+}
+
+// How much of a wireframe's color fills its faces, between the edges
+constexpr float scmWireFill = 0.06f;
+} // namespace
 
 RenderCubeCommand::RenderCubeCommand(
         float x, float y, float z, float size, float r, float g, float b, float a, const QMatrix4x4& projectionMatrix, const QMatrix4x4& viewMatrix, const QMatrix4x4& modelMatrix)
@@ -153,15 +239,29 @@ void RenderTrianglesCommand::execute(QOpenGLFunctions* gl,
     QMatrix3x3 normalMatrix = mModelMatrix.normalMatrix();
     shader->setUniformValue("uNormalMatrix", normalMatrix);
 
-    const bool unlit = mShading == Shading::Unlit;
+    const bool unlit = mShading == Shading::Unlit || mShading == Shading::Paper || mShading == Shading::Sky;
     if (unlit) {
         shader->setUniformValue("uDisableLighting", true);
+    }
+    const int ink = inkMode(mShading);
+    if (ink) {
+        shader->setUniformValue("uInk", ink);
+    }
+    const int model = modelMode(mShading);
+    if (model) {
+        shader->setUniformValue("uModelShading", model);
     }
 
     geometryManager->renderGeometry(triangleGeometry, vao, vertexBuffer, colorBuffer, normalBuffer, indexBuffer, resourceManager, GL_TRIANGLES);
 
     if (unlit) {
         shader->setUniformValue("uDisableLighting", false);
+    }
+    if (ink) {
+        shader->setUniformValue("uInk", 0);
+    }
+    if (model) {
+        shader->setUniformValue("uModelShading", 0);
     }
 }
 
@@ -309,9 +409,29 @@ void RenderInstancedCubesCommand::execute(QOpenGLFunctions* gl,
     QMatrix3x3 normalMatrix = mModelMatrix.normalMatrix();
     shader->setUniformValue("uNormalMatrix", normalMatrix);
 
-    const bool unlit = mShading == Shading::Unlit;
+    const bool unlit = mShading != Shading::Lit;
+    const bool wireframe = mShading == Shading::Wireframe;
     if (unlit) {
         shader->setUniformValue("uDisableLighting", true);
+    }
+    if (wireframe) {
+        shader->setUniformValue("uWireframe", true);
+        shader->setUniformValue("uWireRound", mShape == GeometryManager::InstanceShape::Cylinder);
+        shader->setUniformValue("uWireSides", static_cast<float>(GeometryManager::scmCylinderSegments));
+        shader->setUniformValue("uWireFill", scmWireFill);
+    }
+    const int ink = inkMode(mShading);
+    if (ink) {
+        shader->setUniformValue("uInk", ink);
+        shader->setUniformValue("uInkRound", mShape == GeometryManager::InstanceShape::Cylinder);
+    }
+    const int model = modelMode(mShading);
+    if (model) {
+        shader->setUniformValue("uModelShading", model);
+        shader->setUniformValue("uModelRound", mShape == GeometryManager::InstanceShape::Cylinder);
+        shader->setUniformValue("uModelBevel", mShape == GeometryManager::InstanceShape::Box || mShape == GeometryManager::InstanceShape::Cylinder);
+        shader->setUniformValue("uModelEdges", mEdges ? modelEdges(mShape) : 0);
+        shader->setUniformValue("uWireSides", static_cast<float>(GeometryManager::scmCylinderSegments));
     }
 
     if (mRetained) {
@@ -321,6 +441,16 @@ void RenderInstancedCubesCommand::execute(QOpenGLFunctions* gl,
 
     if (unlit) {
         shader->setUniformValue("uDisableLighting", false);
+    }
+    if (wireframe) {
+        shader->setUniformValue("uWireframe", false);
+    }
+    if (ink) {
+        shader->setUniformValue("uInk", 0);
+    }
+    if (model) {
+        shader->setUniformValue("uModelShading", 0);
+        shader->setUniformValue("uModelEdges", 0);
     }
 }
 
@@ -400,37 +530,55 @@ void GLStateCommand::execute(QOpenGLFunctions* gl,
     case BLEND_BY_SOURCE_ALPHA:
         gl->glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
         break;
+    case DEPTH_FUNC_GREATER:
+        gl->glDepthFunc(GL_GREATER);
+        break;
+    case ADDITIVE_BLEND:
+        gl->glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+        break;
+    case ALPHA_BLEND:
+        gl->glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        break;
     }
 }
 
-RenderLabelCommand::RenderLabelCommand(float centerX, float centerY, float centerZ,
-                                       float width, float height,
+RenderLabelCommand::RenderLabelCommand(float centerX,
+                                       float centerY,
+                                       float centerZ,
+                                       float width,
+                                       float height,
                                        GLuint textureId,
                                        const QVector3D& cameraRight,
                                        const QVector3D& cameraUp,
-                                       bool highlight,
+                                       const QVector4D& tint,
                                        const QMatrix4x4& projectionMatrix,
                                        const QMatrix4x4& viewMatrix,
                                        const QMatrix4x4& modelMatrix)
-    : mCenterX(centerX), mCenterY(centerY), mCenterZ(centerZ)
-    , mWidth(width), mHeight(height)
-    , mTextureId(textureId)
-    , mCameraRight(cameraRight), mCameraUp(cameraUp)
-    , mHighlight(highlight)
-    , mProjectionMatrix(projectionMatrix), mViewMatrix(viewMatrix), mModelMatrix(modelMatrix)
+: mCenterX(centerX)
+, mCenterY(centerY)
+, mCenterZ(centerZ)
+, mWidth(width)
+, mHeight(height)
+, mTextureId(textureId)
+, mCameraRight(cameraRight)
+, mCameraUp(cameraUp)
+, mTint(tint)
+, mProjectionMatrix(projectionMatrix)
+, mViewMatrix(viewMatrix)
+, mModelMatrix(modelMatrix)
 {
 }
 
 void RenderLabelCommand::execute(QOpenGLFunctions* gl,
-                                QOpenGLShaderProgram* shader,
-                                GeometryManager* geometryManager,
-                                ResourceManager* resourceManager,
-                                QOpenGLVertexArrayObject& vao,
-                                QOpenGLBuffer& vertexBuffer,
-                                QOpenGLBuffer& colorBuffer,
-                                QOpenGLBuffer& normalBuffer,
-                                QOpenGLBuffer& indexBuffer,
-                                QOpenGLBuffer& texCoordBuffer)
+                                 QOpenGLShaderProgram* shader,
+                                 GeometryManager* geometryManager,
+                                 ResourceManager* resourceManager,
+                                 QOpenGLVertexArrayObject& vao,
+                                 QOpenGLBuffer& vertexBuffer,
+                                 QOpenGLBuffer& colorBuffer,
+                                 QOpenGLBuffer& normalBuffer,
+                                 QOpenGLBuffer& indexBuffer,
+                                 QOpenGLBuffer& texCoordBuffer)
 {
     Q_UNUSED(gl)
 
@@ -439,24 +587,15 @@ void RenderLabelCommand::execute(QOpenGLFunctions* gl,
     }
 
     // Generate billboard geometry
-    GeometryData labelGeometry = geometryManager->generateBillboardGeometry(
-        mCenterX, mCenterY, mCenterZ,
-        mWidth, mHeight,
-        mCameraRight, mCameraUp,
-        mTextureId);
+    GeometryData labelGeometry = geometryManager->generateBillboardGeometry(mCenterX, mCenterY, mCenterZ, mWidth, mHeight, mCameraRight, mCameraUp, mTextureId);
 
     if (labelGeometry.isEmpty()) {
         return;
     }
 
-    // If highlighted, modify colors to add orange overlay
-    if (mHighlight) {
-        for (int i = 0; i < labelGeometry.colors.size(); i += 4) {
-            // Mix with orange (1.0, 0.5, 0.0)
-            labelGeometry.colors[i] = 1.0f;     // R
-            labelGeometry.colors[i + 1] = 0.65f; // G
-            labelGeometry.colors[i + 2] = 0.0f;  // B
-            // Keep alpha
+    for (int i = 0; i < labelGeometry.colors.size(); i += 4) {
+        for (int channel = 0; channel < 4; ++channel) {
+            labelGeometry.colors[i + channel] *= mTint[channel];
         }
     }
 
@@ -479,4 +618,100 @@ void RenderLabelCommand::execute(QOpenGLFunctions* gl,
 
     // Reset lighting for subsequent draw calls
     shader->setUniformValue("uDisableLighting", false);
+}
+
+DepthSnapshot::DepthSnapshot() = default;
+
+DepthSnapshot::~DepthSnapshot() = default;
+
+void DepthSnapshot::save()
+{
+    QOpenGLContext* context = QOpenGLContext::currentContext();
+    if (!context) {
+        return;
+    }
+    QOpenGLExtraFunctions* gl = context->extraFunctions();
+    GLint frame = 0;
+    gl->glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &frame);
+    GLint viewport[4] = {0, 0, 0, 0};
+    gl->glGetIntegerv(GL_VIEWPORT, viewport);
+    GLint samples = 0;
+    gl->glGetIntegerv(GL_SAMPLES, &samples);
+    const QSize size(viewport[2], viewport[3]);
+    if (size.isEmpty()) {
+        return;
+    }
+    // A blit between multisampled buffers wants the same samples and depth format at both ends
+    if (!mFrame || mFrame->size() != size || mFrame->format().samples() != samples) {
+        QOpenGLFramebufferObjectFormat format;
+        format.setAttachment(QOpenGLFramebufferObject::CombinedDepthStencil);
+        format.setSamples(samples);
+        mFrame = std::make_unique<QOpenGLFramebufferObject>(size, format);
+    }
+    gl->glBindFramebuffer(GL_READ_FRAMEBUFFER, static_cast<GLuint>(frame));
+    gl->glBindFramebuffer(GL_DRAW_FRAMEBUFFER, mFrame->handle());
+    gl->glBlitFramebuffer(0, 0, size.width(), size.height(), 0, 0, size.width(), size.height(), GL_DEPTH_BUFFER_BIT, GL_NEAREST);
+    gl->glBindFramebuffer(GL_FRAMEBUFFER, static_cast<GLuint>(frame));
+    mSaved = true;
+}
+
+void DepthSnapshot::restore()
+{
+    QOpenGLContext* context = QOpenGLContext::currentContext();
+    if (!mSaved || !mFrame || !context) {
+        return;
+    }
+    mSaved = false;
+    QOpenGLExtraFunctions* gl = context->extraFunctions();
+    GLint frame = 0;
+    gl->glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &frame);
+    const QSize size = mFrame->size();
+    gl->glBindFramebuffer(GL_READ_FRAMEBUFFER, mFrame->handle());
+    gl->glBindFramebuffer(GL_DRAW_FRAMEBUFFER, static_cast<GLuint>(frame));
+    gl->glBlitFramebuffer(0, 0, size.width(), size.height(), 0, 0, size.width(), size.height(), GL_DEPTH_BUFFER_BIT, GL_NEAREST);
+    gl->glBindFramebuffer(GL_FRAMEBUFFER, static_cast<GLuint>(frame));
+}
+
+void DepthSnapshot::cleanup()
+{
+    mFrame.reset();
+    mSaved = false;
+}
+
+DepthSnapshotCommand::DepthSnapshotCommand(DepthSnapshot* snapshot, const bool save)
+: mSnapshot(snapshot)
+, mSave(save)
+{
+}
+
+void DepthSnapshotCommand::execute(QOpenGLFunctions* gl,
+                                   QOpenGLShaderProgram* shader,
+                                   GeometryManager* geometryManager,
+                                   ResourceManager* resourceManager,
+                                   QOpenGLVertexArrayObject& vao,
+                                   QOpenGLBuffer& vertexBuffer,
+                                   QOpenGLBuffer& colorBuffer,
+                                   QOpenGLBuffer& normalBuffer,
+                                   QOpenGLBuffer& indexBuffer,
+                                   QOpenGLBuffer& texCoordBuffer)
+{
+    Q_UNUSED(gl)
+    Q_UNUSED(shader)
+    Q_UNUSED(geometryManager)
+    Q_UNUSED(resourceManager)
+    Q_UNUSED(vao)
+    Q_UNUSED(vertexBuffer)
+    Q_UNUSED(colorBuffer)
+    Q_UNUSED(normalBuffer)
+    Q_UNUSED(indexBuffer)
+    Q_UNUSED(texCoordBuffer)
+
+    if (!mSnapshot) {
+        return;
+    }
+    if (mSave) {
+        mSnapshot->save();
+    } else {
+        mSnapshot->restore();
+    }
 }

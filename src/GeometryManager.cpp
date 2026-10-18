@@ -25,6 +25,8 @@
 #include <QFile>
 #include <QHash>
 #include <QImage>
+#include <QSize>
+#include <QtMath>
 
 #include <algorithm>
 #include <cmath>
@@ -67,7 +69,11 @@ void GeometryManager::initialize()
     }
 
     generateCubeTemplate();
-    mCylinderTemplate = cylinderMesh(scmCylinderSegments);
+    mShapeTemplates[static_cast<size_t>(InstanceShape::Box)].mesh = mCubeTemplate;
+    mShapeTemplates[static_cast<size_t>(InstanceShape::Cylinder)].mesh = cylinderMesh(scmCylinderSegments);
+    mShapeTemplates[static_cast<size_t>(InstanceShape::Cone)].mesh = coneMesh(scmCylinderSegments);
+    mShapeTemplates[static_cast<size_t>(InstanceShape::Pyramid)].mesh = pyramidMesh();
+    mShapeTemplates[static_cast<size_t>(InstanceShape::Sphere)].mesh = sphereMesh(scmCylinderSegments, scmCylinderSegments / 2);
     mInitialized = true;
 }
 
@@ -77,13 +83,13 @@ void GeometryManager::cleanup()
         mPlayerIconTemplate->clearTexture();
     }
 
-    mCubeVertexBuffer.destroy();
-    mCubeIndexBuffer.destroy();
-    mCylinderVertexBuffer.destroy();
-    mCylinderIndexBuffer.destroy();
+    for (ShapeTemplate& shape : mShapeTemplates) {
+        shape.vertexBuffer.destroy();
+        shape.indexBuffer.destroy();
+        shape.mesh.clear();
+    }
     mInstanceBuffer.destroy();
     mCubeTemplate.clear();
-    mCylinderTemplate.clear();
     mPlayerIconTemplate.reset();
     mInitialized = false;
 }
@@ -345,20 +351,53 @@ std::pair<QVector3D, QVector3D> GeometryManager::groundAxes(const QVector3D& cam
     return {QVector3D(right.x(), right.y(), 0.0f), QVector3D(-right.y(), right.x(), 0.0f)};
 }
 
-void GeometryManager::appendQuad(GeometryData& batch, const QVector3D& origin, const QVector3D& across, const QVector3D& upward, const QVector4D& color)
+void GeometryManager::appendFloats(QVector<float>& to, const float* from, const qsizetype count)
+{
+    const qsizetype size = to.size();
+    to.resize(size + count);
+    std::copy_n(from, count, to.data() + size);
+}
+
+void GeometryManager::appendQuad(GeometryData& batch, const QVector3D& origin, const QVector3D& across, const QVector3D& upward, const QVector4D& color, const QRectF& textureRect)
 {
     const QVector3D bottomLeft = origin;
     const QVector3D bottomRight = origin + across;
     const QVector3D topRight = origin + across + upward;
     const QVector3D topLeft = origin + upward;
 
-    for (const QVector3D& corner : {bottomLeft, bottomRight, topRight, bottomLeft, topRight, topLeft}) {
-        batch.vertices << corner.x() << corner.y() << corner.z();
-        batch.normals << 0.0f << 0.0f << 1.0f;
-        batch.colors << color.x() << color.y() << color.z() << color.w();
-    }
-    batch.textureCoords << 0.0f << 0.0f << 1.0f << 0.0f << 1.0f << 1.0f;
-    batch.textureCoords << 0.0f << 0.0f << 1.0f << 1.0f << 0.0f << 1.0f;
+    const float vertices[18] = {bottomLeft.x(),
+                                bottomLeft.y(),
+                                bottomLeft.z(),
+                                bottomRight.x(),
+                                bottomRight.y(),
+                                bottomRight.z(),
+                                topRight.x(),
+                                topRight.y(),
+                                topRight.z(),
+                                bottomLeft.x(),
+                                bottomLeft.y(),
+                                bottomLeft.z(),
+                                topRight.x(),
+                                topRight.y(),
+                                topRight.z(),
+                                topLeft.x(),
+                                topLeft.y(),
+                                topLeft.z()};
+    appendFloats(batch.vertices, vertices, 18);
+    static constexpr float normals[18] = {0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f};
+    appendFloats(batch.normals, normals, 18);
+    const float r = color.x();
+    const float g = color.y();
+    const float b = color.z();
+    const float a = color.w();
+    const float colors[24] = {r, g, b, a, r, g, b, a, r, g, b, a, r, g, b, a, r, g, b, a, r, g, b, a};
+    appendFloats(batch.colors, colors, 24);
+    const auto left = static_cast<float>(textureRect.left());
+    const auto right = static_cast<float>(textureRect.right());
+    const auto bottom = static_cast<float>(textureRect.top());
+    const auto top = static_cast<float>(textureRect.bottom());
+    const float textureCoords[12] = {left, bottom, right, bottom, right, top, left, bottom, right, top, left, top};
+    appendFloats(batch.textureCoords, textureCoords, 12);
 }
 
 void GeometryManager::appendLabelQuad(GeometryData& batch, const QVector3D& topLeft, const float width, const float height, const bool turned, const QVector4D& color)
@@ -380,10 +419,11 @@ std::optional<int> GeometryManager::labelLevel(const qreal z)
     return static_cast<int>(rounded);
 }
 
-void GeometryManager::appendGroundQuad(GeometryData& batch, const QVector3D& center, const float size, const QVector3D& cameraRight, const QVector3D& cameraUp, const QVector4D& color)
+void GeometryManager::appendGroundQuad(
+        GeometryData& batch, const QVector3D& center, const float size, const QVector3D& cameraRight, const QVector3D& cameraUp, const QVector4D& color, const QRectF& textureRect)
 {
     const auto [right, up] = groundAxes(cameraRight, cameraUp);
-    appendQuad(batch, center - (right + up) * (size / 2.0f), right * size, up * size, color);
+    appendQuad(batch, center - (right + up) * (size / 2.0f), right * size, up * size, color, textureRect);
 }
 
 QList<qsizetype> GeometryManager::declutteredRects(const QList<QRectF>& rects, const qreal minimumHeight)
@@ -428,6 +468,45 @@ QList<qsizetype> GeometryManager::declutteredRects(const QList<QRectF>& rects, c
     return kept;
 }
 
+bool GeometryManager::outranks(const NamePriority& first, const NamePriority& second)
+{
+    if (first.rank != second.rank) {
+        return first.rank < second.rank;
+    }
+    if (first.playerDistance != second.playerDistance) {
+        return first.playerDistance < second.playerDistance;
+    }
+    return first.cameraDistance < second.cameraDistance;
+}
+
+float GeometryManager::steppedOpacity(const float opacity, const float target, const qint64 elapsedMilliseconds, const int fadeMilliseconds)
+{
+    if (fadeMilliseconds <= 0) {
+        return target;
+    }
+    const float step = static_cast<float>(qMax(qint64{0}, elapsedMilliseconds)) / static_cast<float>(fadeMilliseconds);
+    return opacity < target ? qMin(target, opacity + step) : qMax(target, opacity - step);
+}
+
+int GeometryManager::textSharpness(const qreal pixelsPerTexel, const qreal devicePixelRatio, const qreal widthTexels, const int maxTextureSize)
+{
+    // A quarter pixel's slack, so that a name drawn at very nearly its size is not drawn twice as large for it
+    const int wanted = qBound(1, qCeil(pixelsPerTexel * devicePixelRatio - 0.25), 3);
+    // With a tenth to spare, as a font made larger is not hinted to exactly that many times as wide
+    const int fitting = widthTexels > 0.0 ? qMax(1, qFloor(maxTextureSize / (1.1 * widthTexels))) : wanted;
+    return qMin(wanted, fitting);
+}
+
+int GeometryManager::labelSharpness(const qreal pixelsPerTexel, const qreal devicePixelRatio, const QSize& canvas, const int haloTexels, const int maxTextureSize, const qint64 maxTexels)
+{
+    const QSize haloed = canvas + QSize(2 * haloTexels, 2 * haloTexels);
+    int sharpness = textSharpness(pixelsPerTexel, devicePixelRatio, qMax(haloed.width(), haloed.height()), maxTextureSize);
+    while (sharpness > 1 && qint64{haloed.width()} * haloed.height() * sharpness * sharpness > maxTexels) {
+        --sharpness;
+    }
+    return sharpness;
+}
+
 GeometryManager::LevelFade GeometryManager::levelFade(const int levelsAbove, const bool moreTransparent)
 {
     const int distance = std::abs(levelsAbove);
@@ -435,25 +514,38 @@ GeometryManager::LevelFade GeometryManager::levelFade(const int levelsAbove, con
     if (distance == 0) {
         return fade;
     }
+    // Grayed before they fade, so that the viewed level's hues are the ones that catch the eye, while a level nearby
+    // keeps enough of its own to be told apart
+    const auto further = static_cast<float>(distance - 1);
+    fade.saturation = std::max(0.05f, 0.4f - 0.2f * further);
     if (moreTransparent) {
         fade.towardBackground = distance == 1 ? 0.5f : (distance == 2 ? 0.8f : 0.95f);
         return fade;
     }
     if (levelsAbove > 0) {
         // Above the viewed level, so see-through enough not to hide it
-        fade.towardBackground = std::min(0.8f, 0.35f + 0.15f * static_cast<float>(distance - 1));
-        fade.opacity = std::max(0.1f, 0.35f - 0.1f * static_cast<float>(distance - 1));
+        fade.towardBackground = std::min(0.85f, 0.35f + 0.15f * further);
+        fade.opacity = std::max(0.1f, 0.4f - 0.1f * further);
     } else {
-        fade.towardBackground = std::min(0.75f, 0.3f * static_cast<float>(distance));
+        fade.towardBackground = std::min(0.85f, 0.4f + 0.2f * further);
     }
     return fade;
 }
 
 QVector4D GeometryManager::fadedColor(const QColor& color, const LevelFade& fade, const QColor& background)
 {
+    float gray = 0.0f;
+    if (fade.saturation < 1.0f) {
+        // The gray as bright to the eye as the color: averaging the gamma-encoded channels would turn a saturated red
+        // or blue nearly black, and so lose the room against a dark background
+        const auto linear = [](const float channel) {
+            return std::pow(channel, 2.2f);
+        };
+        gray = std::pow(0.2126f * linear(color.redF()) + 0.7152f * linear(color.greenF()) + 0.0722f * linear(color.blueF()), 1.0f / 2.2f);
+    }
     const float keep = 1.0f - fade.towardBackground;
     const auto mixed = [&](const float own, const float back) {
-        return own * keep + back * fade.towardBackground;
+        return (gray + (own - gray) * fade.saturation) * keep + back * fade.towardBackground;
     };
     return QVector4D(mixed(color.redF(), background.redF()), mixed(color.greenF(), background.greenF()), mixed(color.blueF(), background.blueF()), color.alphaF() * fade.opacity);
 }
@@ -469,6 +561,16 @@ QColor GeometryManager::levelFadeTarget(const int levelsAbove, const QColor& bac
         return own * cover + back * (1.0f - cover);
     };
     return QColor::fromRgbF(over(levelColor.redF(), background.redF()), over(levelColor.greenF(), background.greenF()), over(levelColor.blueF(), background.blueF()));
+}
+
+QColor GeometryManager::calmedLevelColor(const QColor& levelColor, const QColor& defaultColor)
+{
+    if (levelColor.rgba() != defaultColor.rgba()) {
+        return levelColor;
+    }
+    QColor calmed = levelColor;
+    calmed.setAlphaF(levelColor.alphaF() * scmLevelColorShare);
+    return calmed;
 }
 
 QList<QLineF> GeometryManager::gridLines(const QRectF& extent)
@@ -532,6 +634,105 @@ GeometryData GeometryManager::cylinderMesh(const int segments)
                 mesh.indices << u(center) << u(here) << u(next);
             } else {
                 mesh.indices << u(center) << u(next) << u(here);
+            }
+        }
+    }
+    return mesh;
+}
+
+GeometryData GeometryManager::coneMesh(const int segments)
+{
+    GeometryData mesh;
+    const int count = qMax(3, segments);
+    const auto addVertex = [&mesh](const float x, const float y, const float z, const float nx, const float ny, const float nz) {
+        mesh.vertices << x << y << z;
+        mesh.normals << nx << ny << nz;
+    };
+    const auto u = [](const int index) {
+        return static_cast<unsigned int>(index);
+    };
+    // Twice as tall as it is wide, so the side leans out by half a unit for each unit it falls
+    const float slope = 1.0f / std::sqrt(5.0f);
+    for (int index = 0; index < count; ++index) {
+        const float angle = 2.0f * std::numbers::pi_v<float> * static_cast<float>(index) / static_cast<float>(count);
+        addVertex(std::cos(angle), std::sin(angle), -1.0f, 2.0f * slope * std::cos(angle), 2.0f * slope * std::sin(angle), slope);
+    }
+    // A tip of its own for each face, leaning as the middle of the face does, so the side shades smoothly up to it
+    for (int index = 0; index < count; ++index) {
+        const float angle = 2.0f * std::numbers::pi_v<float> * (static_cast<float>(index) + 0.5f) / static_cast<float>(count);
+        addVertex(0.0f, 0.0f, 1.0f, 2.0f * slope * std::cos(angle), 2.0f * slope * std::sin(angle), slope);
+    }
+    for (int index = 0; index < count; ++index) {
+        mesh.indices << u(index) << u((index + 1) % count) << u(count + index);
+    }
+    const int center = mesh.vertexCount();
+    addVertex(0.0f, 0.0f, -1.0f, 0.0f, 0.0f, -1.0f);
+    for (int index = 0; index < count; ++index) {
+        const float angle = 2.0f * std::numbers::pi_v<float> * static_cast<float>(index) / static_cast<float>(count);
+        addVertex(std::cos(angle), std::sin(angle), -1.0f, 0.0f, 0.0f, -1.0f);
+    }
+    for (int index = 0; index < count; ++index) {
+        mesh.indices << u(center) << u(center + 1 + (index + 1) % count) << u(center + 1 + index);
+    }
+    return mesh;
+}
+
+GeometryData GeometryManager::pyramidMesh()
+{
+    GeometryData mesh;
+    const auto addVertex = [&mesh](const QVector3D& at, const QVector3D& normal) {
+        mesh.vertices << at.x() << at.y() << at.z();
+        mesh.normals << normal.x() << normal.y() << normal.z();
+    };
+    const auto u = [](const int index) {
+        return static_cast<unsigned int>(index);
+    };
+    const std::array<QVector3D, 4> corners{QVector3D(-1.0f, -1.0f, -1.0f), QVector3D(1.0f, -1.0f, -1.0f), QVector3D(1.0f, 1.0f, -1.0f), QVector3D(-1.0f, 1.0f, -1.0f)};
+    const QVector3D tip(0.0f, 0.0f, 1.0f);
+    for (size_t index = 0; index < corners.size(); ++index) {
+        const QVector3D& from = corners.at(index);
+        const QVector3D& to = corners.at((index + 1) % corners.size());
+        const QVector3D normal = QVector3D::crossProduct(to - from, tip - from).normalized();
+        const int first = mesh.vertexCount();
+        addVertex(from, normal);
+        addVertex(to, normal);
+        addVertex(tip, normal);
+        mesh.indices << u(first) << u(first + 1) << u(first + 2);
+    }
+    const int base = mesh.vertexCount();
+    for (const QVector3D& corner : corners) {
+        addVertex(corner, QVector3D(0.0f, 0.0f, -1.0f));
+    }
+    mesh.indices << u(base) << u(base + 2) << u(base + 1) << u(base) << u(base + 3) << u(base + 2);
+    return mesh;
+}
+
+GeometryData GeometryManager::sphereMesh(const int segments, const int rings)
+{
+    GeometryData mesh;
+    const int around = qMax(3, segments);
+    const int down = qMax(2, rings);
+    for (int ring = 0; ring <= down; ++ring) {
+        const float polar = std::numbers::pi_v<float> * static_cast<float>(ring) / static_cast<float>(down);
+        for (int index = 0; index <= around; ++index) {
+            const float angle = 2.0f * std::numbers::pi_v<float> * static_cast<float>(index) / static_cast<float>(around);
+            const float x = std::sin(polar) * std::cos(angle);
+            const float y = std::sin(polar) * std::sin(angle);
+            const float z = std::cos(polar);
+            mesh.vertices << x << y << z;
+            mesh.normals << x << y << z;
+        }
+    }
+    const auto at = [around](const int ring, const int index) {
+        return static_cast<unsigned int>(ring * (around + 1) + index);
+    };
+    for (int ring = 0; ring < down; ++ring) {
+        for (int index = 0; index < around; ++index) {
+            if (ring > 0) {
+                mesh.indices << at(ring, index) << at(ring + 1, index) << at(ring, index + 1);
+            }
+            if (ring < down - 1) {
+                mesh.indices << at(ring, index + 1) << at(ring + 1, index) << at(ring + 1, index + 1);
             }
         }
     }
@@ -1042,7 +1243,7 @@ void GeometryManager::renderInstancedCubes(const QVector<CubeInstanceData>& inst
     // Check if instancing functions are available
     if (!glVertexAttribDivisor || !glDrawElementsInstanced) {
         qWarning() << "GeometryManager: Instancing functions not available, falling back to individual meshes";
-        const GeometryData& mesh = shape == InstanceShape::Cylinder ? mCylinderTemplate : mCubeTemplate;
+        const GeometryData& mesh = mShapeTemplates[static_cast<size_t>(shape)].mesh;
         for (const auto& instance : instances) {
             GeometryData cubeGeometry = transformTemplate(mesh, instance.transform, instance.color[0], instance.color[1], instance.color[2], instance.color[3]);
             renderGeometry(cubeGeometry, vao, vertexBuffer, colorBuffer, normalBuffer, indexBuffer, drawMode);
@@ -1069,10 +1270,10 @@ void GeometryManager::renderInstancedCubes(const QVector<CubeInstanceData>& inst
 
 const GeometryData& GeometryManager::bindInstanceMesh(const InstanceShape shape)
 {
-    const bool cylinder = shape == InstanceShape::Cylinder;
-    const GeometryData& mesh = cylinder ? mCylinderTemplate : mCubeTemplate;
-    QOpenGLBuffer& meshVertexBuffer = cylinder ? mCylinderVertexBuffer : mCubeVertexBuffer;
-    QOpenGLBuffer& meshIndexBuffer = cylinder ? mCylinderIndexBuffer : mCubeIndexBuffer;
+    ShapeTemplate& shapeTemplate = mShapeTemplates[static_cast<size_t>(shape)];
+    const GeometryData& mesh = shapeTemplate.mesh;
+    QOpenGLBuffer& meshVertexBuffer = shapeTemplate.vertexBuffer;
+    QOpenGLBuffer& meshIndexBuffer = shapeTemplate.indexBuffer;
     if (!meshVertexBuffer.isCreated()) {
         uploadTemplate(mesh, meshVertexBuffer, meshIndexBuffer);
     }
@@ -1175,7 +1376,7 @@ void GeometryManager::renderInstancedCubes(const QVector<CubeInstanceData>& inst
 
     // Track draw call statistics - one draw call for all instances
     if (resourceManager) {
-        const GeometryData& mesh = shape == InstanceShape::Cylinder ? mCylinderTemplate : mCubeTemplate;
+        const GeometryData& mesh = mShapeTemplates[static_cast<size_t>(shape)].mesh;
         resourceManager->onDrawCall(instances.size() * (mesh.indexCount() / 3)); // Count triangles for all instances
     }
 }

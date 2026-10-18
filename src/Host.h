@@ -81,6 +81,7 @@ class TConsoleFrontend;
 class TNullConsoleFrontend;
 class TMainConsole;
 struct TConsoleModel;
+struct MapStyle;
 class TMap;
 class MMCPServer;
 class dlgIRC;
@@ -263,6 +264,11 @@ public:
     ControlCharacterMode getControlCharacterMode() const { return mControlCharacter; }
     bool getLargeAreaExitArrows() const { return mLargeAreaExitArrows; }
     void setLargeAreaExitArrows(const bool);
+    // As setConfig("mapStyle") takes it
+    const QString& mapStyle() const;
+    const MapStyle& mapStylePreset() const { return *mpMapStyle; }
+    // False, changing nothing, when no style has that id
+    bool setMapStyle(const QString& id);
     bool getUseModern3DMapper() const { return experimentEnabled(qsl("experiment.3dmap.modernmapper")); }
 
     // Experiment system methods
@@ -1106,13 +1112,17 @@ public:
     QColor mWhite_2{QColorConstants::LightGray};
     QColor mFgColor_2{QColorConstants::LightGray};
     QColor mBgColor_2{QColorConstants::Black};
-    QColor mLowerLevelColor{QColorConstants::DarkGray};
-    QColor mUpperLevelColor{QColorConstants::White};
-    QColor mRoomBorderColor{QColorConstants::LightGray};
+    static constexpr QColor scmDefaultLowerLevelColor{QColorConstants::DarkGray};
+    static constexpr QColor scmDefaultUpperLevelColor{QColorConstants::White};
+    QColor mLowerLevelColor{scmDefaultLowerLevelColor};
+    QColor mUpperLevelColor{scmDefaultUpperLevelColor};
+    static constexpr QColor scmDefaultRoomBorderColor{QColorConstants::LightGray};
+    QColor mRoomBorderColor{scmDefaultRoomBorderColor};
     QColor mRoomCollisionBorderColor{QColorConstants::Yellow};
     QColor mMapGridColor{QColor(211, 211, 211, 64)};
 
-    QColor mMapInfoBg = QColor(150, 150, 150, 120);
+    static constexpr QColor scmDefaultMapInfoBg{150, 150, 150, 120};
+    QColor mMapInfoBg = scmDefaultMapInfoBg;
     bool mMapStrongHighlight = false;
     QStringList mGMCP_merge_table_keys;
     QStringList mInstalledPackages;
@@ -1568,6 +1578,8 @@ private:
     ControlCharacterMode mControlCharacter = ControlCharacterMode::AsIs;
 
     bool mLargeAreaExitArrows = false;
+    // Never null, so the renderer can read it per room without a lookup
+    const MapStyle* mpMapStyle = nullptr;
     bool mEditorShowBidi = true;
     // should focus should be on the main window with the caret enabled?
     bool mCaretEnabled = false;
