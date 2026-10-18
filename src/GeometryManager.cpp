@@ -344,7 +344,7 @@ std::pair<QVector3D, QVector3D> GeometryManager::groundAxes(const QVector3D& cam
     return {QVector3D(right.x(), right.y(), 0.0f), QVector3D(-right.y(), right.x(), 0.0f)};
 }
 
-void GeometryManager::appendQuad(GeometryData& batch, const QVector3D& origin, const QVector3D& across, const QVector3D& upward, const QVector4D& color)
+void GeometryManager::appendQuad(GeometryData& batch, const QVector3D& origin, const QVector3D& across, const QVector3D& upward, const QVector4D& color, const QRectF& textureRect)
 {
     const QVector3D bottomLeft = origin;
     const QVector3D bottomRight = origin + across;
@@ -356,8 +356,12 @@ void GeometryManager::appendQuad(GeometryData& batch, const QVector3D& origin, c
         batch.normals << 0.0f << 0.0f << 1.0f;
         batch.colors << color.x() << color.y() << color.z() << color.w();
     }
-    batch.textureCoords << 0.0f << 0.0f << 1.0f << 0.0f << 1.0f << 1.0f;
-    batch.textureCoords << 0.0f << 0.0f << 1.0f << 1.0f << 0.0f << 1.0f;
+    const auto left = static_cast<float>(textureRect.left());
+    const auto right = static_cast<float>(textureRect.right());
+    const auto bottom = static_cast<float>(textureRect.top());
+    const auto top = static_cast<float>(textureRect.bottom());
+    batch.textureCoords << left << bottom << right << bottom << right << top;
+    batch.textureCoords << left << bottom << right << top << left << top;
 }
 
 void GeometryManager::appendLabelQuad(GeometryData& batch, const QVector3D& topLeft, const float width, const float height, const bool turned, const QVector4D& color)
@@ -379,10 +383,11 @@ std::optional<int> GeometryManager::labelLevel(const qreal z)
     return static_cast<int>(rounded);
 }
 
-void GeometryManager::appendGroundQuad(GeometryData& batch, const QVector3D& center, const float size, const QVector3D& cameraRight, const QVector3D& cameraUp, const QVector4D& color)
+void GeometryManager::appendGroundQuad(
+        GeometryData& batch, const QVector3D& center, const float size, const QVector3D& cameraRight, const QVector3D& cameraUp, const QVector4D& color, const QRectF& textureRect)
 {
     const auto [right, up] = groundAxes(cameraRight, cameraUp);
-    appendQuad(batch, center - (right + up) * (size / 2.0f), right * size, up * size, color);
+    appendQuad(batch, center - (right + up) * (size / 2.0f), right * size, up * size, color, textureRect);
 }
 
 QList<qsizetype> GeometryManager::declutteredRects(const QList<QRectF>& rects, const qreal minimumHeight)

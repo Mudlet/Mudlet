@@ -71,6 +71,7 @@ class TRoom;
 struct MapInfoProperties;
 struct MapStyle;
 namespace ExitScene {
+struct Glyph;
 struct Options;
 }
 
@@ -133,6 +134,8 @@ public:
     void fitArea();
     // Where the compass is drawn, which turns the view north up when clicked; empty while the camera is fixed or the view is too small for it
     QRect compassRect() const;
+    // Where a style with a status line draws it, along the view's foot; empty for any other style
+    QRect statusLineRect() const;
 
     QSize minimumSizeHint() const override;
     QSize sizeHint() const override;
@@ -227,6 +230,15 @@ private:
     LabelTextureCache mLabelTextureCache;
     // Room textures this frame has used so far, which making room for another must keep
     QSet<QString> mRoomTexturesInUse;
+    // The text in each cell of the terminal style's glyph atlas, in order, and how many of them and in which font
+    // its texture was last drawn with
+    QStringList mGlyphAtlasCells;
+    QHash<QString, qsizetype> mGlyphAtlasIndex;
+    qsizetype mGlyphAtlasDrawnCells = 0;
+    QString mGlyphAtlasFontKey;
+    // Whether the glyph font, by its key, shows each ground's character, which a font without one would draw as a box
+    QString mGroundGlyphsFontKey;
+    QHash<QString, bool> mGroundGlyphShown;
     // A room's ink outline, by everything it is made from
     struct InkOutline
     {
@@ -374,6 +386,8 @@ private:
     // The rooms whose IDs the last room pass drew: those too small to read, or overlapping one kept before them
     // (the viewed level's first, then the nearest), are left out
     QSet<int> mRoomIdsDrawn;
+    // The terminal style's exit characters, made by renderConnections() for renderRooms() to draw with their levels' rooms
+    QList<ExitScene::Glyph> mExitGlyphs;
 
     // Private methods for modern OpenGL
     void updateMatrices();
@@ -389,6 +403,14 @@ private:
     // A column of light over the player's room, seen faintly through anything in front of it
     void renderPlayerBeacon();
     void paintCompass(QPainter& painter);
+    // A run of the status line's text in one color
+    struct StatusLinePart
+    {
+        QString text;
+        QColor color;
+    };
+    QList<StatusLinePart> statusLineParts() const;
+    void paintStatusLine(QPainter& painter);
     // The style's lettering at the size of the text drawn over the view
     QFont sheetFont() const;
     // Where it was drawn, below top, or an empty rectangle where the style draws none or the view has no room for it
@@ -420,6 +442,12 @@ private:
     GLuint exitMarkerTexture(const TRoom& room, const QColor& roomColor);
     // Text on a clear background; size is set to the texture's size in pixels
     GLuint textTexture(const QString& key, const QString& text, const QFont& font, const QFontMetricsF& metrics, const QColor& color, QSize& size);
+    // The cell of the glyph atlas holding text, added if there is room, else -1; with add false, -1 for any not in it
+    qsizetype glyphAtlasCell(const QString& text, bool add = true);
+    // Every cell's text in white on clear, to be tinted as drawn, in one texture; 0 if it could not be made
+    GLuint glyphAtlasTexture(const QFont& font);
+    QFont terminalGlyphFont(const MapStyle& style) const;
+    bool groundGlyphShown(const QFont& font, const QString& glyph);
     void reportContextCreationFailure();
     bool contextCreationFailed() const;
     void startSmoothTransition(int targetAID, int targetX, int targetY, int targetZ);

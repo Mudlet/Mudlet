@@ -44,11 +44,22 @@ describe("Tests the modern 3D mapper's style through setConfig and getConfig", f
     assert.equals("blueprint", getConfig("mapStyle"))
   end)
 
+  it("switches to the terminal style and back from either of the others", function()
+    for _, from in ipairs({"tiles", "blueprint"}) do
+      assert.is_true(setConfig("mapStyle", from))
+      assert.is_true(setConfig("mapStyle", "terminal"))
+      assert.equals("terminal", getConfig("mapStyle"))
+      assert.equals("terminal", getConfig()["mapStyle"])
+      assert.is_true(setConfig("mapStyle", from))
+      assert.equals(from, getConfig("mapStyle"))
+    end
+  end)
+
   it("refuses a style that does not exist, naming the ones that do, and keeps the one in use", function()
     assert.is_true(setConfig("mapStyle", "blueprint"))
     local ok, err = setConfig("mapStyle", "no such style")
     assert.is_nil(ok)
-    assert.equals('mapStyle must be "tiles" or "blueprint", got "no such style"', err)
+    assert.equals('mapStyle must be "tiles", "blueprint" or "terminal", got "no such style"', err)
     assert.equals("blueprint", getConfig("mapStyle"))
   end)
 
@@ -56,6 +67,8 @@ describe("Tests the modern 3D mapper's style through setConfig and getConfig", f
     assert.is_true(setConfig("mapStyle", "tiles"))
     assert.is_nil(setConfig("mapStyle", "Tiles"))
     assert.is_nil(setConfig("mapStyle", "Blueprint"))
+    assert.is_nil(setConfig("mapStyle", "Terminal"))
+    assert.is_nil(setConfig("mapStyle", "TERMINAL"))
     assert.equals("tiles", getConfig("mapStyle"))
   end)
 
@@ -78,7 +91,7 @@ describe("Tests the modern 3D mapper's style through setConfig and getConfig", f
     if not testMode then
       return
     end
-    assert.is_true(setConfig("mapStyle", "blueprint"))
+    assert.is_true(setConfig("mapStyle", "terminal"))
     local folder = getMudletHomeDir() .. "/mapstyle-spec"
     lfs.mkdir(folder)
     local saved, path
@@ -100,6 +113,6 @@ describe("Tests the modern 3D mapper's style through setConfig and getConfig", f
     end
     os.remove(path)
     lfs.rmdir(folder)
-    assert.is_truthy(contents and contents:find('mapStyle="blueprint"', 1, true), "the saved profile does not name the blueprint style")
+    assert.is_truthy(contents and contents:find('mapStyle="terminal"', 1, true), "the saved profile does not name the terminal style")
   end)
 end)

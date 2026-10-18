@@ -27,6 +27,7 @@
 #include <QDebug>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QSet>
 
 #include <array>
 
@@ -126,12 +127,16 @@ std::optional<QJsonObject> storedObject(const QMap<QString, QString>& mapUserDat
 
 void warnOnce(const QString& saved)
 {
-    // Read for every environment on every repaint, so only a change in what is saved is worth repeating
-    static QString lastWarned;
-    if (saved == lastWarned) {
+    // Read on every repaint, by every profile's map, so each saved value is only worth one warning; bounded, as a
+    // script could save a new one every time
+    static QSet<QString> warned;
+    if (warned.contains(saved)) {
         return;
     }
-    lastWarned = saved;
+    if (warned.size() >= 64) {
+        warned.clear();
+    }
+    warned.insert(saved);
     qWarning().noquote() << "EnvironmentKit: ignoring what cannot be read in the map user data" << userDataKey() << ":" << saved;
 }
 } // namespace
@@ -187,6 +192,17 @@ std::pair<Kit, bool> forEnvironment(const TMap& map, const Host& host, const int
         return {*found, true};
     }
     return {guess(RoomAppearance::environmentColor(map, host, environmentId)), false};
+}
+
+std::optional<Kit> forDefinedEnvironment(const QHash<int, Kit>& named, const TMap& map, const int environmentId, const QColor& environmentColor)
+{
+    if (const auto found = named.constFind(environmentId); found != named.cend()) {
+        return *found;
+    }
+    if (!RoomAppearance::environmentDefined(map, environmentId)) {
+        return std::nullopt;
+    }
+    return guess(environmentColor);
 }
 
 } // namespace EnvironmentKit
