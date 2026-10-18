@@ -77,11 +77,22 @@ describe("Tests the modern 3D mapper's style through setConfig and getConfig", f
     end
   end)
 
+  it("switches to the inkwash style and back from each of the others", function()
+    for _, from in ipairs({"tiles", "blueprint", "terminal", "transit", "hologram"}) do
+      assert.is_true(setConfig("mapStyle", from))
+      assert.is_true(setConfig("mapStyle", "inkwash"))
+      assert.equals("inkwash", getConfig("mapStyle"))
+      assert.equals("inkwash", getConfig()["mapStyle"])
+      assert.is_true(setConfig("mapStyle", from))
+      assert.equals(from, getConfig("mapStyle"))
+    end
+  end)
+
   it("refuses a style that does not exist, naming the ones that do, and keeps the one in use", function()
     assert.is_true(setConfig("mapStyle", "blueprint"))
     local ok, err = setConfig("mapStyle", "no such style")
     assert.is_nil(ok)
-    assert.equals('mapStyle must be "tiles", "blueprint", "terminal", "transit" or "hologram", got "no such style"', err)
+    assert.equals('mapStyle must be "tiles", "blueprint", "terminal", "transit", "hologram" or "inkwash", got "no such style"', err)
     assert.equals("blueprint", getConfig("mapStyle"))
   end)
 
@@ -93,6 +104,8 @@ describe("Tests the modern 3D mapper's style through setConfig and getConfig", f
     assert.is_nil(setConfig("mapStyle", "TERMINAL"))
     assert.is_nil(setConfig("mapStyle", "Transit"))
     assert.is_nil(setConfig("mapStyle", "Hologram"))
+    assert.is_nil(setConfig("mapStyle", "Inkwash"))
+    assert.is_nil(setConfig("mapStyle", "ink wash"))
     assert.equals("tiles", getConfig("mapStyle"))
   end)
 
@@ -111,7 +124,7 @@ describe("Tests the modern 3D mapper's style through setConfig and getConfig", f
   -- Only saveProfile() without a file name writes the profile's own settings. The write runs on a pool
   -- thread, so the file turns up after saveProfile() has answered, and only test mode can pump the
   -- event loop to wait for it
-  for _, style in ipairs({"terminal", "transit", "hologram"}) do
+  for _, style in ipairs({"terminal", "transit", "hologram", "inkwash"}) do
     it("saves the " .. style .. " style with the profile", function()
       if not testMode then
         return

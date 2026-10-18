@@ -75,7 +75,10 @@ struct MapStyle
         Soft,
         // Projected light: every room glowing in its environment's hue, at full strength and kept bright enough to
         // glow on the dark background; a gray environment glows in the style's ink
-        Light
+        Light,
+        // Watercolor on paper: every room the paper lightly washed with its environment's hue, so that the ink line
+        // around it and what is drawn on it read; the hue kept, so areas still tell apart
+        Wash
     };
 
     enum class Shape {
@@ -99,7 +102,11 @@ struct MapStyle
         ViewedLevelBase,
         // A hologram: no fill, every edge of each room's block and of each exit's bar a glowing line, all added onto what
         // is behind rather than covering it, so that rooms and levels show through each other
-        GlowingWireframes
+        GlowingWireframes,
+        // An ink sketch: each room's top a pale lozenge in a wobbly ink line, hatched on the levels above the viewed one
+        // and only dashed on those below, and each exit a brush stroke thinning toward its end, each uneven in a way it
+        // takes from where it stands so that it holds still
+        InkLozenges
     };
 
     enum class Doors {
@@ -120,7 +127,16 @@ struct MapStyle
         Pill,
         // The player's room drawn in playerRoomColor(), with a diamond of light in that color hovering over it and
         // sending out a ring of light each time the player arrives
-        Pulse
+        Pulse,
+        // The player's room stamped in playerRoomColor() as a seal on a painting, with a frame cut into it
+        Seal
+    };
+
+    enum class Compass {
+        // A disc with a needle in compassNeedle
+        Rose,
+        // An ink arrow with an N at its head, as drawn in a sketch map's corner
+        Arrow
     };
 
     enum class Glyphs {
@@ -135,8 +151,12 @@ struct MapStyle
         NoPostEffects = 0x0,
         // Every few rows of pixels of what is drawn on the map dimmed, as on a projected image
         Scanlines = 0x1,
+        // The background drawn as paper, with a faint grain that stays put on the screen
+        PaperGrain = 0x2,
         // The brightest of what is drawn blurred and added back, so that lines of light glow softly
-        Bloom = 0x2
+        Bloom = 0x4,
+        // The view darkened a little toward its edges and corners, as an old sheet is
+        Vignette = 0x8
     };
     Q_DECLARE_FLAGS(PostEffects, PostEffect)
 
@@ -251,6 +271,19 @@ struct MapStyle
     QColor labelTint;
     // Brackets in the view's corners and, in its top left, the area's name, levels and rooms, as on a scanner's display
     bool scannerOverlay = false;
+    // Each room on the viewed level laid in a watercolor wash of washColor() this many rooms' widths across, so that
+    // neighbors of one environment run together into a field of it; 0 for none
+    float washReach = 0.0f;
+    // A small drawing on each room of the viewed level by the kind of ground its environment is, as
+    // EnvironmentKit names it: trees in a forest, waves on water; left out while rooms are too small on screen for it
+    bool environmentMarks = false;
+    Compass compass = Compass::Rose;
+    // A bar along the view's foot showing how far a few rooms are at the view's center
+    bool scaleBar = false;
+    // A note beside the player's room, in playerRoomColor(), saying the player is there
+    bool playerNote = false;
+    // The style's lettering slanted
+    bool labelItalic = false;
 
     QString displayName() const;
     // Whether this style's player ring and color take the place of the profile's player room marker
@@ -285,6 +318,9 @@ struct MapStyle
     QColor playerRoomColor() const;
     // A ring or a line in an environment's color, made darker or lighter where it would not stand out on backgroundColor()
     QColor ringColor(const QColor& environmentColor, const QColor& profileBackground) const;
+    // The wash around rooms of an environment: its hue, soft and light enough for ink to read on, and fainter the
+    // grayer it is, as a gray has no color to lay down
+    QColor washColor(const QColor& environmentColor) const;
 
     static QString defaultId();
     // In the order the preferences list them

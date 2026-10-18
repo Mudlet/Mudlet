@@ -200,6 +200,40 @@ QList<MapStyle> registeredStyles()
     hologram.infoTextColor = QColor(127, 227, 255);
     styles.append(hologram);
 
+    MapStyle inkwash;
+    inkwash.id = qsl("inkwash");
+    inkwash.palette = MapStyle::Palette::Wash;
+    // Flat, as brushed onto the paper rather than standing on it
+    inkwash.roomFlattening = 32.0f;
+    inkwash.edges = MapStyle::Edges::InkLozenges;
+    inkwash.lit = false;
+    inkwash.background = QColor(241, 234, 218);
+    inkwash.ink = QColor(38, 34, 32);
+    inkwash.labelFontFamily = qsl("Bitstream Vera Serif");
+    // Fine, as a pen line on a sketch, yet wide enough for a stroke to show it thinning
+    inkwash.exitWidthFactor = 1.75f;
+    inkwash.postEffects = MapStyle::PostEffect::PaperGrain | MapStyle::PostEffect::Vignette;
+    inkwash.floorPlates = false;
+    inkwash.playerMarker = MapStyle::PlayerMarker::Seal;
+    inkwash.playerNote = true;
+    inkwash.washReach = 2.6f;
+    inkwash.environmentMarks = true;
+    inkwash.highlightShape = MapStyle::HighlightShape::DoubleEllipse;
+    inkwash.highlightColor = QColor(176, 124, 46);
+    inkwash.labelItalic = true;
+    inkwash.themedMapLabels = true;
+    inkwash.mapLabelColor = QColor(74, 62, 50);
+    inkwash.mapLabelHalo = QColor(241, 234, 218, 190);
+    inkwash.mapLabelMaxHeight = 0.7f;
+    inkwash.roomNameColor = QColor(92, 80, 66);
+    inkwash.roomNameScale = 0.85f;
+    inkwash.compass = MapStyle::Compass::Arrow;
+    inkwash.compassRim = QColor(38, 34, 32);
+    inkwash.scaleBar = true;
+    inkwash.infoBackground = QColor(241, 234, 218, 220);
+    inkwash.infoTextColor = QColor(38, 34, 32);
+    styles.append(inkwash);
+
     return styles;
 }
 } // namespace
@@ -225,6 +259,10 @@ QString MapStyle::displayName() const
     if (id == qsl("hologram")) {
         //: Name of the 3D map style that draws rooms and exits as glowing lines of light that every level shows through, as a science fiction hologram does, chosen in the Mapper preferences
         return QCoreApplication::translate("MapStyle", "Hologram");
+    }
+    if (id == qsl("inkwash")) {
+        //: Name of the 3D map style that draws rooms as blots and exits as brush strokes of ink on paper, as an East Asian ink wash painting does, chosen in the Mapper preferences
+        return QCoreApplication::translate("MapStyle", "Ink wash");
     }
     return id;
 }
@@ -284,6 +322,17 @@ QColor MapStyle::roomColor(const QColor& environmentColor) const
         }
         return QColor::fromHsl(environmentColor.hslHue(), 255, std::clamp(environmentColor.lightness(), dimmest, brightest), environmentColor.alpha());
     }
+    case Palette::Wash: {
+        // However strong or dark the color, the room stays pale enough for the ink drawn on it to read
+        const QColor paper = background.isValid() ? background : QColor(Qt::white);
+        const QColor wash = washColor(environmentColor);
+        constexpr float tint = 0.45f;
+        const float strength = tint * wash.alphaF();
+        return QColor::fromRgbF(paper.redF() + (wash.redF() - paper.redF()) * strength,
+                                paper.greenF() + (wash.greenF() - paper.greenF()) * strength,
+                                paper.blueF() + (wash.blueF() - paper.blueF()) * strength,
+                                environmentColor.alphaF());
+    }
     }
     return environmentColor;
 }
@@ -340,12 +389,24 @@ QColor MapStyle::playerRoomColor() const
         // Apart from the ink's cyan and the greens and blues most areas are drawn in
         return QColor(255, 79, 216);
     }
+    if (palette == Palette::Wash) {
+        // A seal's paste, a muted vermilion, the one color on an ink painting
+        return QColor(190, 66, 46);
+    }
     return QColor(Qt::red);
 }
 
 QColor MapStyle::ringColor(const QColor& environmentColor, const QColor& profileBackground) const
 {
     return ExitAppearance::standOutColor(environmentColor, backgroundColor(profileBackground));
+}
+
+QColor MapStyle::washColor(const QColor& environmentColor) const
+{
+    const float hue = environmentColor.hslHueF();
+    const float saturation = hue < 0.0f ? 0.0f : environmentColor.hslSaturationF();
+    const QColor wash = QColor::fromHslF(qMax(hue, 0.0f), qMin(saturation, 0.55f), 0.58f);
+    return QColor::fromRgbF(wash.redF(), wash.greenF(), wash.blueF(), 0.15f + 0.6f * saturation);
 }
 
 QColor MapStyle::backgroundColor(const QColor& profileBackground) const
@@ -437,12 +498,16 @@ void MapStyle::letter(QFont& font) const
     if (labelCapitals) {
         font.setCapitalization(QFont::AllUppercase);
     }
+    if (labelItalic) {
+        font.setItalic(true);
+    }
 }
 
 QFont MapStyle::roomIdFont(const QFont& mapSymbolFont) const
 {
     QFont font = labelFont(mapSymbolFont);
     font.setLetterSpacing(mapSymbolFont.letterSpacingType(), mapSymbolFont.letterSpacing());
+    font.setItalic(mapSymbolFont.italic());
     return font;
 }
 
