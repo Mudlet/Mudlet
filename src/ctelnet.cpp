@@ -938,6 +938,8 @@ void cTelnet::slot_send_login()
     const bool passwordStepArmed = mpHost->hasAutoLoginCredentials();
     if (passwordStepArmed) {
         mTimerPass->start(autoLoginDelay(qsl("autoLoginPasswordDelay"), AUTO_LOGIN_PASSWORD_DELAY_MS));
+    } else {
+        mpHost->reportUnreadableSavedPassword();
     }
     setAutoLoginPending(passwordStepArmed);
 }
@@ -968,6 +970,8 @@ void cTelnet::slot_send_pass()
     // The box may open for the player; their first character cancels a late send
     setAutoLoginPending(false);
     qDebug() << "Auto-login: reached the password step with no password yet - holding the place for one that arrives later";
+    // A lookup still out at the login step may have been refused since
+    mpHost->reportUnreadableSavedPassword();
 }
 
 // A password that turned up after the auto-login had already passed the password step, which is
