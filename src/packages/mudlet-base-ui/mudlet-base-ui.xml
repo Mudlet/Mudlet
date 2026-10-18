@@ -1590,7 +1590,7 @@ function BaseUI.maybeRequestScore()
   if BaseUI.scoreRequested or BaseUI.sawGmcpVitals or BaseUI.sawMsdpVitals then
     return
   end
-  local hp = BaseUI.scriptVitals.hp or BaseUI.vitalsData.hp
+  local hp = BaseUI.vitalsData.hp
   if hp and (hp.max or hp.percent) then
     return
   end

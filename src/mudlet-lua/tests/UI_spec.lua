@@ -2564,6 +2564,21 @@ describe("Tests UI functions", function()
       assert.is_nil(BaseUI.gauges.enemy)
     end)
 
+    -- mp and mv still need the maxima a score screen gives
+    it("should still ask for the score screen when a script feeds hp", function()
+      BaseUI.scoreRequested, BaseUI.sawGmcpVitals, BaseUI.sawMsdpVitals = false, false, false
+      BaseUI.setVital("hp", { current = 5, max = 10 })
+      local sent = {}
+      local savedSend, savedInfo, savedCecho = _G.send, _G.getConnectionInfo, _G.cecho
+      _G.send = function(command) sent[#sent + 1] = command end
+      _G.getConnectionInfo = function() return "localhost", 23, true end
+      _G.cecho = function() end
+      local ok, err = pcall(BaseUI.maybeRequestScore)
+      _G.send, _G.getConnectionInfo, _G.cecho = savedSend, savedInfo, savedCecho
+      assert.is_true(ok, tostring(err))
+      assert.are.same({ "score" }, sent)
+    end)
+
     it("should report false while the interface is hidden", function()
       assert.is_true(BaseUI.setVital("enemy", { percent = 50 }))
       BaseUI.dormant = function() return true end
