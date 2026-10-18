@@ -2116,17 +2116,19 @@ private slots:
         QCOMPARE(pModern->shownAreaId(), mOtherAreaId);
         QCOMPARE(pMapper->comboBox_showArea->currentText(), qsl("Other Area"));
         QCOMPARE(map()->mRoomIdHash.value(map()->mProfileName), kPlayerRoomId);
-        // Not taken back to the player's area by the next paint
-        pModern->repaint();
+        // Not taken back to the player's area by the next paint. Painted by a grab, not repaint(): offscreen, a view
+        // whose dock changed window has no framebuffer, so paintGL() never runs, until a grab makes a new one
+        pModern->grabFramebuffer();
         QCOMPARE(pModern->shownAreaId(), mOtherAreaId);
 
         // As the mapper's button to center on the player does
         pMapper->resetAreaComboBoxToPlayerRoomArea();
-        QTRY_COMPARE(pModern->shownAreaId(), mPlayerAreaId);
+        pModern->grabFramebuffer();
+        QCOMPARE(pModern->shownAreaId(), mPlayerAreaId);
         QCOMPARE(pMapper->comboBox_showArea->currentText(), qsl("Player Area"));
 
         // Zoomed in a little beside the player's room, the view rests between rooms, and is brought back onto it
-        pModern->repaint();
+        pModern->grabFramebuffer();
         pModern->setCameraDistance(1.0f);
         pModern->updateMatrices();
         const TRoom* pPlayerRoom = map()->mpRoomDB->getRoom(kPlayerRoomId);
@@ -2138,7 +2140,7 @@ private slots:
         QCoreApplication::sendEvent(pModern, &nearer);
         QCOMPARE(QPoint(pModern->mMapCenterX, pModern->mMapCenterY), QPoint(pPlayerRoom->x(), pPlayerRoom->y()));
         QVERIFY(!pModern->followingPlayer());
-        pModern->repaint();
+        pModern->grabFramebuffer();
         QVERIFY2(!pModern->mCameraSmoothAnimating && pModern->mCameraController.getTarget() != playerRoom, "the next paint took the view straight back to the player");
         pModern->followPlayer();
         QTRY_COMPARE(pModern->mCameraController.getTarget(), playerRoom);
