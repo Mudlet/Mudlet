@@ -269,18 +269,28 @@ jobs:
         env:
           RELEASE_TYPE: ${{ steps.release-type.outputs.type }}
           RELEASE_TAG: ${{ steps.release-type.outputs.tag }}
+          TARGET_SHA: ${{ github.event.workflow_run.head_sha }}
         run: |
+          # GitHub refuses a release body over 125000 characters, and then publishes
+          # nothing at all; the margin below that is headroom
+          NOTES_LIMIT=120000
+          COMPARE_URL="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/compare"
+          fit_notes() {
+            bash release-scripts/CI/fit-release-notes.sh "$@"
+          }
+
           if [[ "${RELEASE_TYPE}" == "release" ]]; then
             # For release: changelog from previous stable release tag to this tag
             PREV_TAG=$(git tag --sort=-version:refname | grep '^Mudlet-' | grep -v -- '-ptb' | grep -v "^${RELEASE_TAG}$" | head -1)
 
             echo "Generating changelog from ${PREV_TAG} to ${RELEASE_TAG}"
             if [[ -n "${PREV_TAG}" ]]; then
-              if ! lua CI/generate-changelog.lua -f md -m release \
-                   --start-commit "${PREV_TAG}" --end-commit "${RELEASE_TAG}" > changelog.md; then
+              if ! RELEASE_CHANGELOG=$(lua CI/generate-changelog.lua -f md -m release \
+                   --start-commit "${PREV_TAG}" --end-commit "${RELEASE_TAG}"); then
                 echo "::error::Changelog generation failed for stable release"
                 exit 1
               fi
+              echo "${RELEASE_CHANGELOG}" | fit_notes "${NOTES_LIMIT}" "${COMPARE_URL}/${PREV_TAG}...${RELEASE_TAG}" > changelog.md
             else
               echo "::error::No previous release tag found - cannot generate changelog for stable release"
               exit 1
@@ -320,21 +330,26 @@ jobs:
 
             # Assemble the combined changelog
             if [[ -n "${PTB_CHANGELOG}" && -n "${FULL_CHANGELOG}" ]]; then
+              # The PTB's own changes come first, the full changelog gets what is left.
+              # 2000 bytes keeps room for the wrapper and the full changelog's closing line
               {
                 echo "#### Changes in this build since the previous PTB (${PTB_TAG})"
                 echo ""
-                echo "${PTB_CHANGELOG}"
+                echo "${PTB_CHANGELOG}" | fit_notes "$((NOTES_LIMIT - 2000))" "${COMPARE_URL}/${PTB_TAG}...${TARGET_SHA}"
                 echo ""
                 echo "<details>"
                 echo "<summary>Full changelog since last release (${STABLE_TAG})</summary>"
                 echo ""
-                echo "${FULL_CHANGELOG}"
-                echo ""
-                echo "</details>"
               } > changelog.md
+              CLOSING=$'\n</details>\n'
+              FULL_BUDGET=$((NOTES_LIMIT - $(wc -c < changelog.md) - ${#CLOSING}))
+              {
+                echo "${FULL_CHANGELOG}" | fit_notes "${FULL_BUDGET}" "${COMPARE_URL}/${STABLE_TAG}...${TARGET_SHA}"
+                printf '%s' "${CLOSING}"
+              } >> changelog.md
             elif [[ -n "${FULL_CHANGELOG}" ]]; then
               # No previous PTB or first PTB after a release - just show full changelog
-              echo "${FULL_CHANGELOG}" > changelog.md
+              echo "${FULL_CHANGELOG}" | fit_notes "${NOTES_LIMIT}" "${COMPARE_URL}/${STABLE_TAG}...${TARGET_SHA}" > changelog.md
             else
               echo "::warning::Changelog generation failed, using placeholder"
               echo "See commit history for changes." > changelog.md
