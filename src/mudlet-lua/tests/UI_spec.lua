@@ -2402,6 +2402,146 @@ describe("Tests UI functions", function()
     end)
   end)
 
+  describe("Test the BaseUI vitals API", function()
+    if not (type(BaseUI) == "table" and type(BaseUI.setVital) == "function") then
+      it("needs the base UI package installed", function()
+        pending("BaseUI.setVital is unavailable in this profile")
+      end)
+      return
+    end
+
+    local saved, slotsLeft, events, handlerId
+    local savedNames = { "vitalsData", "scriptVitals", "shownVitals", "vitalsLock", "gauges", "container", "build",
+                         "checkMapData", "layoutDock", "ensureGauge", "dormant", "killVitalsTriggers" }
+
+    local function fakeGauge()
+      return {
+        hidden = false,
+        setValue = function(self, value, max, text)
+          self.value, self.max, self.text = value, max, text
+        end,
+        show = function(self) self.hidden = false end,
+        hide = function(self) self.hidden = true end,
+      }
+    end
+
+    before_each(function()
+      saved = {}
+      for _, name in ipairs(savedNames) do
+        saved[name] = BaseUI[name]
+      end
+      BaseUI.vitalsData, BaseUI.scriptVitals, BaseUI.shownVitals, BaseUI.gauges = {}, {}, {}, {}
+      BaseUI.vitalsLock = 0
+      -- what build() would have made; with no dock, renderVitals has nothing to hide
+      BaseUI.container = BaseUI.container or {}
+      BaseUI.build = function() end
+      BaseUI.checkMapData = function() end
+      BaseUI.layoutDock = function() end
+      BaseUI.killVitalsTriggers = function() end
+      BaseUI.dormant = function() return false end
+      slotsLeft = 4
+      BaseUI.ensureGauge = function(key)
+        if not BaseUI.gauges[key] and slotsLeft > 0 then
+          slotsLeft = slotsLeft - 1
+          BaseUI.gauges[key] = fakeGauge()
+        end
+        return BaseUI.gauges[key]
+      end
+      events = {}
+      handlerId = registerAnonymousEventHandler("BaseUI.vitalsChanged", function(_, key, data)
+        events[#events + 1] = { key = key, data = data }
+      end)
+    end)
+
+    after_each(function()
+      killAnonymousEventHandler(handlerId)
+      for _, name in ipairs(savedNames) do
+        BaseUI[name] = saved[name]
+      end
+    end)
+
+    local shaken = { label = "Kaninen: shaken (4/7)" }
+
+    it("should show a scripted enemy under its own label through later repaints", function()
+      assert.is_true(BaseUI.setVital("enemy", { percent = 4 / 7 * 100 }, shaken))
+      assert.are.equal("Kaninen: shaken (4/7)", BaseUI.gauges.enemy.text)
+      BaseUI.applyVitals("prompt", { hp = { current = 50, max = 100 } })
+      assert.are.equal("HP 50/100", BaseUI.gauges.hp.text)
+      assert.are.equal("Kaninen: shaken (4/7)", BaseUI.gauges.enemy.text)
+      assert.is_false(BaseUI.gauges.enemy.hidden)
+    end)
+
+    it("should keep scripted values through a protocol snapshot that does not report them", function()
+      BaseUI.setVital("enemy", { percent = 50 }, shaken)
+      BaseUI.applyVitals("gmcp", { hp = { current = 50, max = 100 } }, true)
+      assert.are.equal(3, BaseUI.vitalsLock)
+      assert.are.equal("Kaninen: shaken (4/7)", BaseUI.gauges.enemy.text)
+      assert.is_false(BaseUI.gauges.enemy.hidden)
+    end)
+
+    it("should paint over a protocol's value without taking the source lock", function()
+      BaseUI.setVital("hp", { current = "3", max = "7" })
+      assert.are.equal(0, BaseUI.vitalsLock)
+      BaseUI.applyVitals("gmcp", { hp = { current = 50, max = 100 } }, true)
+      assert.are.equal(3, BaseUI.vitalsLock)
+      assert.are.equal("HP 3/7", BaseUI.gauges.hp.text)
+      BaseUI.clearVital("hp")
+      assert.are.equal("HP 50/100", BaseUI.gauges.hp.text)
+    end)
+
+    it("should hide the enemy gauge on clearVital, along with a protocol's enemy", function()
+      BaseUI.applyVitals("gmcp", { hp = { current = 50, max = 100 }, enemy = { percent = 30 } }, true)
+      BaseUI.setVital("enemy", { percent = 50 }, shaken)
+      BaseUI.clearVital("enemy")
+      assert.is_true(BaseUI.gauges.enemy.hidden)
+      assert.is_nil(BaseUI.vitalsData.enemy)
+      BaseUI.applyVitals("gmcp", { hp = { current = 50, max = 100 }, enemy = { percent = 20 } }, true)
+      assert.is_false(BaseUI.gauges.enemy.hidden)
+      assert.are.equal("Enemy 20%", BaseUI.gauges.enemy.text)
+    end)
+
+    it("should hide a scripted gauge that nothing else reports once it is cleared", function()
+      BaseUI.setVital("hp", { percent = 50 })
+      BaseUI.clearVital("hp")
+      assert.is_true(BaseUI.gauges.hp.hidden)
+    end)
+
+    it("should raise BaseUI.vitalsChanged only when what a gauge shows changes", function()
+      BaseUI.setVital("enemy", { percent = 50 }, shaken)
+      BaseUI.setVital("enemy", { percent = 50 }, shaken)
+      BaseUI.setVital("enemy", { percent = 50 })
+      BaseUI.clearVital("enemy")
+      assert.are.equal(3, #events)
+      assert.are.equal("enemy", events[1].key)
+      assert.are.equal("Kaninen: shaken (4/7)", events[1].data.text)
+      assert.are.equal("script", events[1].data.source)
+      assert.are.equal(50, events[1].data.percent)
+      assert.are.equal("Enemy 50%", events[2].data.text)
+      assert.is_nil(events[3].data)
+    end)
+
+    it("should report false when every gauge slot is taken", function()
+      BaseUI.applyVitals("gmcp", { hp = { current = 1, max = 2 }, mp = { current = 1, max = 2 },
+                                   xp = { percent = 5 }, mv = { current = 1, max = 2 } }, true)
+      assert.is_false(BaseUI.setVital("enemy", { percent = 50 }, shaken))
+      assert.is_nil(BaseUI.gauges.enemy)
+    end)
+
+    it("should report false while the interface is hidden", function()
+      BaseUI.dormant = function() return true end
+      assert.is_false(BaseUI.setVital("enemy", { percent = 50 }))
+    end)
+
+    it("should reject a key or values it cannot show", function()
+      assert.has_error(function() BaseUI.setVital("foo", { percent = 1 }) end)
+      assert.has_error(function() BaseUI.setVital("enemy", { percent = 150 }) end)
+      assert.has_error(function() BaseUI.setVital("enemy", { current = 1 }) end)
+      assert.has_error(function() BaseUI.setVital("enemy", { current = 1, max = 0 }) end)
+      assert.has_error(function() BaseUI.setVital("enemy", { percent = 1 }, { label = 3 }) end)
+      assert.has_error(function() BaseUI.clearVital("foo") end)
+    end)
+  end)
+
   -- when a game installs its own interface (a Client.GUI package), the
   -- starter UI stands aside rather than fight it for screen space
   describe("Test the starter UI standing aside for a game's own interface", function()

@@ -34,6 +34,24 @@ Commands:
 
 When a game installs an interface of its own, this one quietly stands
 aside - `baseui show` brings it back if you prefer it.
+
+## For scripters
+
+A script can feed the gauges itself, for numbers your game only puts in
+words - an enemy described as "shaken", say:
+
+```lua
+-- key is hp, mp, xp, mv or enemy; give { current =, max = } or { percent = }
+BaseUI.setVital("enemy", { percent = 4 / 7 * 100 }, { label = "Kaninen: shaken (4/7)" })
+BaseUI.clearVital("enemy") -- the fight is over
+```
+
+What a script sets wins over GMCP, MSDP and the prompt for that gauge
+until it is cleared, and a `label` stays until the next `setVital` or
+`clearVital`. `setVital` returns false when the gauge cannot be shown:
+the interface is hidden, or all four gauge slots are taken already.
+Every change to a gauge raises `BaseUI.vitalsChanged` with the key and
+`{ value, max, text, current, percent, source }`, or nil once it hides.
 ]]
-version = [[1.7.8]]
+version = [[1.8.0]]
 created = "2026-07-25T12:00:00+00:00"
