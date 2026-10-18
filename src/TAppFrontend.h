@@ -47,6 +47,7 @@ public:
     virtual void handleTelnetUri(const QString& uri) = 0;
     // Only the profile in the active tab drives the menu's checkbox.
     virtual void setCompactInputLineChecked(Host* pHost, bool checked) = 0;
+    // closeMudlet(): asks, from the event loop, for every profile to close and save and then the application to quit
     virtual void armForceClose() = 0;
     virtual void writeSettings() = 0;
     virtual bool openWebPage(const QString& url) = 0;
@@ -68,10 +69,10 @@ public:
     // Saves even if quitting already saved the layout; if this save fails, quitting saves it again.
     virtual bool saveWindowLayoutForScript() = 0;
     virtual bool quitting() const = 0;
-    // Loads the profile into a new tab and, if connect, connects it; false if it could not be loaded.
+    // Loads and starts the profile and, if connect, connects it; false if it could not be loaded.
     virtual bool openProfile(const QString& profileName, bool connect) = 0;
-    // Asks the profile's tab to close, as its close button does; false if it has no tab.
-    virtual bool requestProfileTabClose(const QString& profileName) = 0;
+    // Asks the profile to close, as its tab's close button does; false if it is not open here.
+    virtual bool requestProfileClose(const QString& profileName) = 0;
     // Re-lays out the active profile's console from a short timer, e.g. after a toolbar is shown or hidden.
     virtual void processEventLoopHack() = 0;
     // Puts up the profile's composer showing title and text; the window deletes itself once closed.

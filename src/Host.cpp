@@ -542,8 +542,7 @@ void Host::forceClose()
         return;
     }
 
-    mForcedClose = true;
-    postMessage(tr("[ ALERT ] - This profile will now save and close."));
+    markClosingForced();
     // Ensure the above is displayed before proceeding...
     QCoreApplication::processEvents();
 
@@ -592,6 +591,59 @@ void Host::raiseExitEventIfOwed()
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     raiseEvent(event);
     mLuaInterpreter.leaveNestedEventLoop();
+}
+
+void Host::markClosingForced()
+{
+    mForcedClose = true;
+    //: Shown on a profile's main console as Mudlet closes, or a script's closeMudlet() closes, every profile
+    postMessage(tr("[ ALERT ] - This profile will now save and close."));
+}
+
+bool Host::closeWithNoView()
+{
+    if (mIsClosingDown || mClosingWithNoView) {
+        return false;
+    }
+    mClosingWithNoView = true;
+    // As in TMainConsole::closeEvent(): the handlers and the save wait run the event loop, and a close
+    // or reset of this profile reached from there meanwhile would delete it under this call
+    mLuaInterpreter.enterNestedEventLoop();
+    raiseExitEventIfOwed();
+    if ((mFORCE_SAVE_ON_EXIT || mForcedClose) && !saveForClose()) {
+        qWarning().nospace().noquote() << "Host::closeWithNoView() WARNING - the map of \"" << getName() << "\" could not be saved.";
+    }
+    mLuaInterpreter.leaveNestedEventLoop();
+    closeChildren();
+    return true;
+}
+
+bool Host::deletionMustWait()
+{
+    const bool mapOperationRunning = mpMap && mpMap->mapOperationInProgress();
+    if (mapOperationRunning) {
+        if (!mpMap->mapOperationAbortRequested()) {
+            qDebug().nospace().noquote() << "Host::deletionMustWait() INFO - a map operation of \"" << getName() << "\" is still running, so the profile will be deleted once it has stopped.";
+        }
+        mpMap->requestMapOperationAbort();
+    }
+    return mapOperationRunning || mLuaInterpreter.pumpingEvents() || mLuaInterpreter.luaOnStack() || waitingForProfileSave();
+}
+
+bool Host::saveForClose()
+{
+    modulesToWrite.clear();
+    // A save still running would turn this one away, and it may predate the session's last changes
+    waitForProfileSave();
+    saveProfileReportingFailure();
+    // Other profiles can keep Mudlet running long after this one closes
+    if (auto* frontend = TAppFrontend::instance()) {
+        frontend->writeSettings();
+    }
+    // A loaded map is saved even with no rooms in it
+    const bool mapSaved = !mpMap || !mpMap->mpRoomDB || saveMapFile(QString());
+    waitForProfileSave();
+    return mapSaved;
 }
 
 bool Host::loadProfileSave(const QString& saveFileName)
@@ -1332,15 +1384,17 @@ bool Host::resetProfile_phase1()
 
 void Host::resetProfile_phase2()
 {
+    // A close that has come in meanwhile makes the reset moot. With no main window
+    // nothing asks to save first, so the close can come before this.
+    if (mIsClosingDown) {
+        return;
+    }
     // A Lua API that spins a nested event loop delivers this while the script
     // that asked for the reset is still running on the state closed below, and
     // a save wait while its caller still uses the units reset below.
-    // A close that has come in meanwhile makes the reset moot.
     if (mLuaInterpreter.luaOnStack() || waitingForProfileSave()) {
         QTimer::singleShot(50ms, this, [this]() {
-            if (!mIsClosingDown) {
-                resetProfile_phase2();
-            }
+            resetProfile_phase2();
         });
         return;
     }
@@ -1671,6 +1725,12 @@ void Host::waitForProfileSave()
         }
         if (!waitedForNotification.isValid()) {
             waitedForNotification.start();
+        }
+        // Sent here, as an event loop pass run from a posted call, such as the close closeMudlet() posts, need
+        // not deliver what was posted before that call ran: glib's dispatcher sees nothing new to send
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::FutureCallOut);
+        if (!currentlySavingProfile()) {
+            break;
         }
         if (!pump.processEvents(QEventLoop::ExcludeUserInputEvents)) {
             QThread::sleep(1ms);
