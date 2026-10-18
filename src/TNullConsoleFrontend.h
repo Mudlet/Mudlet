@@ -104,6 +104,7 @@ public:
 
     void dropWindows();
     bool ownsContainer(const QString& windowname) const;
+    bool holdsWindow(const QString& name) const { return mLabels.contains(name) || subConsoleModel(name) || mScrollBoxes.contains(name) || mCommandLines.contains(name) || mTextBoxes.contains(name); }
     // A deleted window's model can still be in use, as a sysBufferShrinkEvent handler runs inside its
     // buffer's append(), so models are kept until deferred deletes next run, as a real view's widgets are
     // by deleteLater(). Host calls this itself as it goes, while its Lua interpreter is still alive, since
@@ -199,10 +200,7 @@ public:
     bool resizePlainWindow(const QString& name, int width, int height) override;
     bool movePlainWindow(const QString& name, int x, int y) override;
     // No Lua call reads the stacking order back, so these only answer whether the window exists
-    bool raiseWindow(const QString& name) override
-    {
-        return mLabels.contains(name) || subConsoleModel(name) || mScrollBoxes.contains(name) || mCommandLines.contains(name) || mTextBoxes.contains(name);
-    }
+    bool raiseWindow(const QString& name) override { return holdsWindow(name); }
     bool lowerWindow(const QString& name) override { return raiseWindow(name); }
     std::pair<bool, QString> reparentWindow(const QString& windowname, const QString& name, int x, int y, bool show) override;
     bool setWindowScrollBarVisible(const QString& name, bool visible) override;
@@ -253,6 +251,7 @@ public:
     void regenerateToolBars(const std::list<TAction*>&) override {}
     void regenerateEasyButtonBars(const std::list<TAction*>&) override {}
     void detachActionBars(TAction*) override {}
+    void disposeActionBars(TAction*) override {}
     bool hasEasyButtonBar(TAction*) const override { return false; }
     void setActionButtonChecked(TAction*, bool) override {}
     bool restyleActionButton(TAction*) override { return false; }

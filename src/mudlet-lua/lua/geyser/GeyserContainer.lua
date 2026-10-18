@@ -27,10 +27,15 @@
 --              container. This is not a number, but a constraint
 --              specification. To find out the numeric width in terms of
 --              pixels, use the get_width() method. Default is "300px".
+--              get_x() and get_width() can be fractional: a widget's edges
+--              are rounded to the nearest pixel, so it spans from
+--              round(get_x()) to round(get_x() + get_width()). A floating
+--              UserWindow is the exception: its position and size are truncated.
 -- @field height The height of this window, possibly relative to the window's
 --               container. This is not a number, but a constraint
---               specification. To find out the numeric width in terms of
---               pixels, use the get_width() method. Default is "200px".
+--               specification. To find out the numeric height in terms of
+--               pixels, use the get_height() method. Default is "200px".
+--               Its edges are rounded the same way as the width's.
 -- @field windowList This is a list of all windows held by this container. It
 --                   used to handle proper resizing of held windows as well as
 --                   during show()s and hide()s to recursive show and hide all
@@ -102,14 +107,32 @@ function Geyser.Container:calculate_dynamic_window_size()
   return ret_size
 end
 
+-- A neighbour computes the same edge by another sum, which can land a hair either
+-- side of a half pixel, so the tolerance rounds both alike.
+local function roundEdge(value)
+  return math.floor(value + 0.5 + 1e-6)
+end
+
+-- Internal function: this window's x, y, width and height in whole pixels. Each
+-- edge is rounded to the nearest pixel and the size is the distance between them,
+-- so windows whose edges meet at a fraction of a pixel, such as the children of an
+-- HBox, still tile.
+function Geyser.Container:pixel_geometry()
+  local x, y = self:get_x(), self:get_y()
+  local left, top = roundEdge(x), roundEdge(y)
+  local right, bottom = roundEdge(x + self:get_width()), roundEdge(y + self:get_height())
+  return left, top, right - left, bottom - top
+end
+
 --- Responsible for placing/moving/resizing this window to the correct place/size.
 -- Called on window resize events.
 -- @param skipChildren If true, place only this window, for a caller that walks
 --                     the children itself.
 function Geyser.Container:reposition (skipChildren)
   if self.type ~= "userwindow" then
-    moveWindow(self.name, self:get_x(), self:get_y())
-    resizeWindow(self.name, self:get_width(), self:get_height())
+    local x, y, width, height = self:pixel_geometry()
+    moveWindow(self.name, x, y)
+    resizeWindow(self.name, width, height)
   end
   -- deal with all children of this container
   if not skipChildren then
@@ -309,7 +332,7 @@ function Geyser.Container:flash (time, onHidden)
     return
   end
 
-  local x, y, width, height = self.get_x(), self.get_y(), self.get_width(), self.get_height()
+  local x, y, width, height = self:pixel_geometry()
   local name = self.name .. "_dimensions_flash"
   createLabel(self.windowname ,name, x, y, width, height, 1)
   resizeWindow(name, width, height)

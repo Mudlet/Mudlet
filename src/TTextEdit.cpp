@@ -571,7 +571,7 @@ void TTextEdit::layoutLine(int lineNumber, int lineOfScreen, const TChar& timeSt
     }
     int currentSize = lineText.size();
     if (mpConsole->showTimeStamps()) {
-        const QString& timestamp = mpBuffer->timeBuffer.at(lineNumber);
+        const QString& timestamp = mLaidOutTimeStamps.emplace_back(mpBuffer->timeStampText(lineNumber));
         for (qsizetype i = 0, total = timestamp.size(); i < total; ++i) {
             // The column argument is not incremented here (is fixed at 0) so
             // the timestamp does not take up any places when it is clicked on
@@ -1597,6 +1597,7 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
     mPreviousLineLayout.clear();
     mCurrentLineLayout.clear();
     mOverflowLineLayout.clear();
+    mLaidOutTimeStamps.clear();
 
     calculateHMaxRange();
     if (Q_UNLIKELY(mpConsole->mHScrollBarEnabled && mpConsole->mpHScrollBar)) {
@@ -1801,7 +1802,8 @@ void TTextEdit::highlightSelection()
     }
 
     if (QAccessible::isActive()) {
-        QAccessibleTextSelectionEvent event(this, offsetForPosition(mPA.y(), mPA.x()), offsetForPosition(mPB.y(), mPB.x()));
+        const auto [startOffset, endOffset] = accessibleSelection();
+        QAccessibleTextSelectionEvent event(this, startOffset, endOffset);
         QAccessible::updateAccessibility(&event);
     }
 }
@@ -1821,6 +1823,7 @@ void TTextEdit::unHighlight()
             }
         }
     }
+    mPBTakingNewline = QPoint(-1, -1);
     if (QAccessible::isActive()) {
         QAccessibleTextSelectionEvent event(this, -1, -1);
         QAccessible::updateAccessibility(&event);
@@ -2661,8 +2664,12 @@ void TTextEdit::slot_copySelectionToClipboardImage()
         // still finds the characters that are about to be drawn.
         const int shift = mpBuffer->mBatchDeleteSize;
         if (mPA.y() - shift >= 0 && mPB.y() - shift <= lastBufferLine) {
+            const bool takesNewline = mPB == mPBTakingNewline;
             mPA.ry() -= shift;
             mPB.ry() -= shift;
+            if (takesNewline) {
+                mPBTakingNewline = mPB;
+            }
         } else {
             // The selected lines are gone for good, so copy the visible area
             // rather than whatever has since taken their place in the buffer.
@@ -2734,6 +2741,8 @@ void TTextEdit::slot_copySelectionToClipboardImage()
         return;
     }
 
+    // unHighlight() forgets that the selection takes in a newline, but the same selection is put back below
+    const QPoint takingNewline = mPBTakingNewline;
     if (copyingSelection) {
         // deselect to prevent inverted colours in image
         unHighlight();
@@ -2743,6 +2752,7 @@ void TTextEdit::slot_copySelectionToClipboardImage()
     auto result = drawTextForClipboard(painter, rect, lineOffset);
 
     if (copyingSelection) {
+        mPBTakingNewline = takingNewline;
         highlightSelection();
     }
     // the pixmap cannot be read back while a painter is still active on it
@@ -2853,9 +2863,13 @@ QString TTextEdit::getSelectedText(const QChar& newlineChar, const bool showTime
     // mPA QPoint where selection started
     // mPB QPoint where selection ended
     // try to prevent crash if buffer is batch deleted
-    if (mPA.y() > mpBuffer->lineBuffer.size() - 1 || mPB.y() > mpBuffer->lineBuffer.size() - 1) {
-        mPA.ry() -= mpBuffer->mBatchDeleteSize;
-        mPB.ry() -= mpBuffer->mBatchDeleteSize;
+    if (const int trimmed = selectionLinesTrimmed()) {
+        const bool takesNewline = mPB == mPBTakingNewline;
+        mPA.ry() -= trimmed;
+        mPB.ry() -= trimmed;
+        if (takesNewline) {
+            mPBTakingNewline = mPB;
+        }
     }
     qsizetype startLine = std::max(0, mPA.y());
     qsizetype endLine = std::min<qsizetype>(mPB.y(), (mpBuffer->lineBuffer.size() - 1));
@@ -2906,10 +2920,13 @@ QString TTextEdit::getSelectedText(const QChar& newlineChar, const bool showTime
                 text.append(newlineChar);
             }
             if (showTimestamps) {
-                text.append(mpBuffer->timeBuffer.at(y));
+                text.append(mpBuffer->timeStampText(y));
             }
         }
         text.append(line);
+    }
+    if (mPB == mPBTakingNewline && !mpBuffer->wrapsFromPreviousLine(static_cast<int>(endLine) + 1)) {
+        text.append(newlineChar);
     }
     return text;
 }
@@ -3047,136 +3064,7 @@ void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
             }
         }
         mIsCommandPopup = false;
-
-
-        auto popup = new QMenu(this);
-        popup->setAttribute(Qt::WA_DeleteOnClose);
-        popup->setToolTipsVisible(true); // Not the default...
-
-        //: Tooltip shown on the console context menu's copy and search entries while they are disabled because nothing is selected
-        const QString noSelectionHint = utils::richText(tr("Select some text in the console first."));
-        const bool selectionAvailable = hasSelectedText();
-
-        QAction* action = new QAction(tr("Copy"), popup);
-        // According to the Qt Documentation:
-        // "This text is used for the tooltip."
-        // "If no tooltip is specified, the action's text is used."
-        // "By default, this property contains the action's text."
-        // So it seems that if we turn on tooltips (for all QAction) on a menu
-        // (with QMenu::setToolTipsVisible(true)) we should forcible clear
-        // the tooltip contents which are presumable filled with the default
-        // in the QAction constructor:
-        action->setToolTip(QString());
-        connect(action, &QAction::triggered, this, &TTextEdit::slot_copySelectionToClipboard);
-        QAction* action2 = new QAction(tr("Copy HTML"), popup);
-        action2->setToolTip(QString());
-        connect(action2, &QAction::triggered, this, &TTextEdit::slot_copySelectionToClipboardHTML);
-
-        auto* actionCopyImage = new QAction(tr("Copy as image"), popup);
-        actionCopyImage->setToolTip(QString());
-        connect(actionCopyImage, &QAction::triggered, this, &TTextEdit::slot_copySelectionToClipboardImage);
-
-        QAction* action3 = new QAction(tr("Select all"), popup);
-        action3->setToolTip(QString());
-        connect(action3, &QAction::triggered, this, &TTextEdit::slot_selectAll);
-
-        QString selectedEngine = mpHost ? mpHost->getSearchEngine().first : tr("Unknown");
-        QAction* action4 = new QAction(tr("Search on %1").arg(selectedEngine), popup);
-        action4->setToolTip(QString());
-        connect(action4, &QAction::triggered, this, &TTextEdit::slot_searchSelectionOnline);
-
-        // These have no sensible whole-console fallback, so they are disabled with
-        // a reason rather than left as entries that quietly do nothing. "Copy as
-        // image" is not among them: it falls back to the visible area (#9715).
-        // The object names let tests find each entry without matching translated text:
-        const QVector<std::pair<QAction*, QString>> selectionActions{{action, qsl("consoleCopy")}, {action2, qsl("consoleCopyHtml")}, {action4, qsl("consoleSearchOnline")}};
-        for (const auto& [selectionAction, objectName] : selectionActions) {
-            selectionAction->setObjectName(objectName);
-            selectionAction->setEnabled(selectionAvailable);
-            if (!selectionAvailable) {
-                selectionAction->setToolTip(noSelectionHint);
-            }
-        }
-        action3->setObjectName(qsl("consoleSelectAll"));
-
-        actionCopyImage->setObjectName(qsl("consoleCopyAsImage"));
-        if (mpBuffer->lineBuffer.isEmpty()) {
-            actionCopyImage->setEnabled(false);
-            //: Tooltip shown on the console context menu's "Copy as image" entry while it is disabled because the console holds no text at all
-            actionCopyImage->setToolTip(utils::richText(tr("This console is empty, there is nothing to copy.")));
-        }
-
-        if (!qApp->testAttribute(Qt::AA_DontShowIconsInMenus)) {
-            action->setIcon(QIcon::fromTheme(qsl("edit-copy"), QIcon(qsl(":/icons/edit-copy.png"))));
-            action3->setIcon(QIcon::fromTheme(qsl("edit-select-all"), QIcon(qsl(":/icons/edit-select-all.png"))));
-            action4->setIcon(QIcon::fromTheme(qsl("edit-web-search"), QIcon(qsl(":/icons/edit-web-search.png"))));
-        }
-        popup->addAction(action);
-        popup->addAction(action2);
-        popup->addAction(actionCopyImage);
-        popup->addSeparator();
-        popup->addAction(action3);
-
-        if (mDragStart != mDragSelectionEnd && mpHost->mEnableTextAnalyzer) {
-            mpContextMenuAnalyser = new QAction(tr("Analyse characters"), popup);
-            // NOTE: If running inside the Qt Creator IDE using the debugger with
-            // the hovered() signal can be *problematic* - as hitting a
-            // breakpoint - or getting an OS signal (like a Segment Violation)
-            // can hang not only Mudlet but also Qt Creator and possibly even
-            // your Desktop - though for *nix users switching to a console and
-            // killing the gdb debugger instance run by Qt Creator will restore
-            // normality.
-            connect(mpContextMenuAnalyser, &QAction::hovered, this, &TTextEdit::slot_analyseSelection);
-            mpContextMenuAnalyser->setToolTip(utils::richText(tr("Hover on this item to display the Unicode codepoints in the selection <i>(only the first line!)</i>")));
-            popup->addSeparator();
-            popup->addAction(mpContextMenuAnalyser);
-        }
-
-        popup->addSeparator();
-        popup->addAction(action4);
-
-        if (!mudlet::self()->isControlsVisible()) {
-            QAction* actionRestoreMainMenu = new QAction(tr("restore Main menu"), popup);
-            connect(actionRestoreMainMenu, &QAction::triggered, mudlet::self(), &mudlet::slot_restoreMainMenu);
-            actionRestoreMainMenu->setToolTip(utils::richText(tr("Use this to restore the Main menu to get access to controls.")));
-
-            QAction* actionRestoreMainToolBar = new QAction(tr("restore Main Toolbar"), popup);
-            connect(actionRestoreMainToolBar, &QAction::triggered, mudlet::self(), &mudlet::slot_restoreMainToolBar);
-            actionRestoreMainToolBar->setToolTip(utils::richText(tr("Use this to restore the Main Toolbar to get access to controls.")));
-
-            popup->addSeparator();
-            popup->addAction(actionRestoreMainMenu);
-            popup->addAction(actionRestoreMainToolBar);
-        }
-
-        if (mpConsole->getType() == TConsole::ErrorConsole) {
-            QAction* clearErrorConsole = new QAction(tr("Clear console"), popup);
-            connect(clearErrorConsole, &QAction::triggered, this, [=, this]() {
-                mpConsole->buffer.clear();
-                mpConsole->print(qsl("%1\n").arg(tr("*** starting new session ***")));
-            });
-            popup->addAction(clearErrorConsole);
-        }
-
-        // Add user actions
-        if (mpHost) {
-            QMapIterator<QString, QStringList> it(mpHost->mConsoleActions);
-
-            while (it.hasNext()) {
-                it.next();
-                QStringList actionInfo = it.value();
-                const QString& uniqueName = it.key();
-                const QString& actionName = actionInfo.at(1);
-                QAction* mouseAction = new QAction(actionName, popup);
-                mouseAction->setToolTip(actionInfo.at(2));
-                popup->addAction(mouseAction);
-                connect(mouseAction, &QAction::triggered, this, [this, uniqueName] {
-                    slot_mouseAction(uniqueName);
-                });
-            }
-        }
-
-        popup->popup(mapToGlobal(eventPos), action);
+        showContextMenu(mapToGlobal(eventPos));
         event->accept();
         return;
     }
@@ -3205,6 +3093,137 @@ void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
             mudlet::self()->activateProfile(mpHost);
         }
     });
+}
+
+void TTextEdit::showContextMenu(const QPoint& globalPosition)
+{
+    auto popup = new QMenu(this);
+    popup->setAttribute(Qt::WA_DeleteOnClose);
+    popup->setToolTipsVisible(true); // Not the default...
+
+    //: Tooltip shown on the console context menu's copy and search entries while they are disabled because nothing is selected
+    const QString noSelectionHint = utils::richText(tr("Select some text in the console first."));
+    const bool selectionAvailable = hasSelectedText();
+
+    QAction* action = new QAction(tr("Copy"), popup);
+    // According to the Qt Documentation:
+    // "This text is used for the tooltip."
+    // "If no tooltip is specified, the action's text is used."
+    // "By default, this property contains the action's text."
+    // So it seems that if we turn on tooltips (for all QAction) on a menu
+    // (with QMenu::setToolTipsVisible(true)) we should forcible clear
+    // the tooltip contents which are presumable filled with the default
+    // in the QAction constructor:
+    action->setToolTip(QString());
+    connect(action, &QAction::triggered, this, &TTextEdit::slot_copySelectionToClipboard);
+    QAction* action2 = new QAction(tr("Copy HTML"), popup);
+    action2->setToolTip(QString());
+    connect(action2, &QAction::triggered, this, &TTextEdit::slot_copySelectionToClipboardHTML);
+
+    auto* actionCopyImage = new QAction(tr("Copy as image"), popup);
+    actionCopyImage->setToolTip(QString());
+    connect(actionCopyImage, &QAction::triggered, this, &TTextEdit::slot_copySelectionToClipboardImage);
+
+    QAction* action3 = new QAction(tr("Select all"), popup);
+    action3->setToolTip(QString());
+    connect(action3, &QAction::triggered, this, &TTextEdit::slot_selectAll);
+
+    QString selectedEngine = mpHost ? mpHost->getSearchEngine().first : tr("Unknown");
+    QAction* action4 = new QAction(tr("Search on %1").arg(selectedEngine), popup);
+    action4->setToolTip(QString());
+    connect(action4, &QAction::triggered, this, &TTextEdit::slot_searchSelectionOnline);
+
+    // These have no sensible whole-console fallback, so they are disabled with
+    // a reason rather than left as entries that quietly do nothing. "Copy as
+    // image" is not among them: it falls back to the visible area (#9715).
+    // The object names let tests find each entry without matching translated text:
+    const QVector<std::pair<QAction*, QString>> selectionActions{{action, qsl("consoleCopy")}, {action2, qsl("consoleCopyHtml")}, {action4, qsl("consoleSearchOnline")}};
+    for (const auto& [selectionAction, objectName] : selectionActions) {
+        selectionAction->setObjectName(objectName);
+        selectionAction->setEnabled(selectionAvailable);
+        if (!selectionAvailable) {
+            selectionAction->setToolTip(noSelectionHint);
+        }
+    }
+    action3->setObjectName(qsl("consoleSelectAll"));
+
+    actionCopyImage->setObjectName(qsl("consoleCopyAsImage"));
+    if (mpBuffer->lineBuffer.isEmpty()) {
+        actionCopyImage->setEnabled(false);
+        //: Tooltip shown on the console context menu's "Copy as image" entry while it is disabled because the console holds no text at all
+        actionCopyImage->setToolTip(utils::richText(tr("This console is empty, there is nothing to copy.")));
+    }
+
+    if (!qApp->testAttribute(Qt::AA_DontShowIconsInMenus)) {
+        action->setIcon(QIcon::fromTheme(qsl("edit-copy"), QIcon(qsl(":/icons/edit-copy.png"))));
+        action3->setIcon(QIcon::fromTheme(qsl("edit-select-all"), QIcon(qsl(":/icons/edit-select-all.png"))));
+        action4->setIcon(QIcon::fromTheme(qsl("edit-web-search"), QIcon(qsl(":/icons/edit-web-search.png"))));
+    }
+    popup->addAction(action);
+    popup->addAction(action2);
+    popup->addAction(actionCopyImage);
+    popup->addSeparator();
+    popup->addAction(action3);
+
+    if (mDragStart != mDragSelectionEnd && mpHost->mEnableTextAnalyzer) {
+        mpContextMenuAnalyser = new QAction(tr("Analyse characters"), popup);
+        // NOTE: If running inside the Qt Creator IDE using the debugger with
+        // the hovered() signal can be *problematic* - as hitting a
+        // breakpoint - or getting an OS signal (like a Segment Violation)
+        // can hang not only Mudlet but also Qt Creator and possibly even
+        // your Desktop - though for *nix users switching to a console and
+        // killing the gdb debugger instance run by Qt Creator will restore
+        // normality.
+        connect(mpContextMenuAnalyser, &QAction::hovered, this, &TTextEdit::slot_analyseSelection);
+        mpContextMenuAnalyser->setToolTip(utils::richText(tr("Hover on this item to display the Unicode codepoints in the selection <i>(only the first line!)</i>")));
+        popup->addSeparator();
+        popup->addAction(mpContextMenuAnalyser);
+    }
+
+    popup->addSeparator();
+    popup->addAction(action4);
+
+    if (!mudlet::self()->isControlsVisible()) {
+        QAction* actionRestoreMainMenu = new QAction(tr("restore Main menu"), popup);
+        connect(actionRestoreMainMenu, &QAction::triggered, mudlet::self(), &mudlet::slot_restoreMainMenu);
+        actionRestoreMainMenu->setToolTip(utils::richText(tr("Use this to restore the Main menu to get access to controls.")));
+
+        QAction* actionRestoreMainToolBar = new QAction(tr("restore Main Toolbar"), popup);
+        connect(actionRestoreMainToolBar, &QAction::triggered, mudlet::self(), &mudlet::slot_restoreMainToolBar);
+        actionRestoreMainToolBar->setToolTip(utils::richText(tr("Use this to restore the Main Toolbar to get access to controls.")));
+
+        popup->addSeparator();
+        popup->addAction(actionRestoreMainMenu);
+        popup->addAction(actionRestoreMainToolBar);
+    }
+
+    if (mpConsole->getType() == TConsole::ErrorConsole) {
+        QAction* clearErrorConsole = new QAction(tr("Clear console"), popup);
+        connect(clearErrorConsole, &QAction::triggered, this, [=, this]() {
+            mpConsole->buffer.clear();
+            mpConsole->print(qsl("%1\n").arg(tr("*** starting new session ***")));
+        });
+        popup->addAction(clearErrorConsole);
+    }
+
+    if (mpHost) {
+        QMapIterator<QString, QStringList> it(mpHost->mConsoleActions);
+
+        while (it.hasNext()) {
+            it.next();
+            QStringList actionInfo = it.value();
+            const QString& uniqueName = it.key();
+            const QString& actionName = actionInfo.at(1);
+            QAction* mouseAction = new QAction(actionName, popup);
+            mouseAction->setToolTip(actionInfo.at(2));
+            popup->addAction(mouseAction);
+            connect(mouseAction, &QAction::triggered, this, [this, uniqueName] {
+                slot_mouseAction(uniqueName);
+            });
+        }
+    }
+
+    popup->popup(globalPosition, action);
 }
 
 void TTextEdit::showEvent(QShowEvent* event)
@@ -4807,4 +4826,53 @@ int TTextEdit::offsetForPosition(int line, int column) const
     ret += column;
 
     return ret;
+}
+
+// Lines lost off the front of a buffer at its limit shift every index down, while mPA and mPB
+// stay on the old indexes until getSelectedText() catches them up
+int TTextEdit::selectionLinesTrimmed() const
+{
+    const qsizetype lastLine = mpBuffer->lineBuffer.size() - 1;
+    return (mPA.y() > lastLine || mPB.y() > lastLine) ? mpBuffer->mBatchDeleteSize : 0;
+}
+
+// The characters of the accessible text the selection covers, 0 for none: a double-click on a
+// space or a triple-click on an empty line leaves a region but no cells. mPB is the last selected
+// cell, and a whole-line selection leaves it on the newline cell (x == line length), which counts
+// only when mPBTakingNewline says so. Walks just the selected lines, so it stays cheap however
+// long the buffer is.
+int TTextEdit::accessibleSelectionLength() const
+{
+    if (mSelectedRegion.isEmpty()) {
+        return 0;
+    }
+    const int trimmed = selectionLinesTrimmed();
+    const int firstLine = mPA.y() - trimmed;
+    const int lastLine = mPB.y() - trimmed;
+    const int lineCount = static_cast<int>(std::min(mpBuffer->lineBuffer.size(), static_cast<qsizetype>(mpBuffer->buffer.size())));
+    if (firstLine < 0 || firstLine > lastLine || lastLine >= lineCount) {
+        return 0;
+    }
+    const bool takesNewline = mPB == mPBTakingNewline;
+    // the text has no newline after its last line
+    if (takesNewline && lastLine == lineCount - 1) {
+        return 0;
+    }
+    const int lastLineLength = static_cast<int>(mpBuffer->buffer.at(lastLine).size());
+    int length = (takesNewline ? lastLineLength + 1 : std::min(mPB.x() + 1, lastLineLength)) - mPA.x();
+    for (int y = firstLine; y < lastLine; ++y) {
+        length += mpBuffer->line(y).length() + 1;
+    }
+    return std::max(length, 0);
+}
+
+// Start and one past the end, as the accessible text counts them, or (0, 0) for no selection
+std::pair<int, int> TTextEdit::accessibleSelection() const
+{
+    const int length = accessibleSelectionLength();
+    if (length == 0) {
+        return {0, 0};
+    }
+    const int start = offsetForPosition(mPA.y() - selectionLinesTrimmed(), mPA.x());
+    return {start, start + length};
 }

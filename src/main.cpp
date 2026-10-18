@@ -35,6 +35,7 @@
 #include "mudlet.h"
 #include "MudletInstanceCoordinator.h"
 #include "TriggerMatchPool.h"
+#include <algorithm>
 #include <chrono>
 #include <csignal>
 #include <QCheckBox>
@@ -63,13 +64,15 @@
 #include <QSplashScreen>
 #include <QSslConfiguration>
 #include <QStringList>
+#if defined(INCLUDE_3DMAPPER)
+#include <QSurfaceFormat>
+#endif
 #include <QTranslator>
 #if defined(Q_OS_WINDOWS)
 #include <QThread>
 #else
 #include <pthread.h>
 #endif
-#include "AltFocusMenuBarDisable.h"
 #include "TAccessibleConsole.h"
 #include "TAccessibleTextEdit.h"
 #include "FileOpenHandler.h"
@@ -477,10 +480,73 @@ int main(int argc, char* argv[])
 
     // Decides the kind of application object before there is one: --help and --version must work with no
     // display. Single-dash words are read whole, as Qt's own options are still in the list and compacting
-    // would find an 'h' in -stylesheet or a 'v' in -reverse. Known gap: -h/-v in a compacted group (-qv,
-    // -fh) isn't seen here, so such a run builds a QApplication and still needs a display.
+    // would find an 'h' in -stylesheet or a 'v' in -reverse.
     parser.setSingleDashWordOptionMode(QCommandLineParser::ParseAsLongOptions);
     bool commandLineReadOk = parser.parse(commandLineArguments);
+    // A word spelled as a group of Mudlet's short options (-qv, -vp Name) is split, so it answers as it would
+    // with a display. No undeclared Qt 6.9 option (-display, -visual...) is spelled as one. Keep both letter
+    // sets in step with the options above. Known gap: a letter outside them (-hx) could be such an option.
+    const QString noValueLetters{qsl("hvsfmq")};
+    const QString valueLetters{qsl("po")};
+    const auto spelledAsFlagGroup = [&noValueLetters, &valueLetters](const QString& name) {
+        if (name.size() < 2) {
+            return false;
+        }
+        for (const QChar letter : name) {
+            if (valueLetters.contains(letter)) {
+                return letter != name.front();
+            }
+            if (!noValueLetters.contains(letter)) {
+                return false;
+            }
+        }
+        return true;
+    };
+    QStringList flagGroups;
+    for (const QString& unknownName : parser.unknownOptionNames()) {
+        if (!spelledAsFlagGroup(unknownName)) {
+            continue;
+        }
+        // --qv reports the same unknown name as -qv; -vp=Name does too, and Qt's compacted reading gives -p
+        // the value after the '=', while -qv=x is an error there
+        const QString word = qsl("-%1").arg(unknownName);
+        const bool takesValue = std::any_of(unknownName.cbegin(), unknownName.cend(), [&valueLetters](const QChar letter) {
+            return valueLetters.contains(letter);
+        });
+        for (const QString& argument : commandLineArguments) {
+            if (argument == word || (takesValue && argument.startsWith(word + QLatin1Char('=')))) {
+                flagGroups << argument;
+            }
+        }
+    }
+    if (!flagGroups.isEmpty()) {
+        QStringList splitArguments;
+        for (qsizetype i = 0; i < commandLineArguments.size(); ++i) {
+            const QString& argument = commandLineArguments.at(i);
+            if (!flagGroups.contains(argument)) {
+                splitArguments << argument;
+                continue;
+            }
+            qsizetype valueLetterAt = 1;
+            while (valueLetterAt < argument.size() && !valueLetters.contains(argument.at(valueLetterAt))) {
+                ++valueLetterAt;
+            }
+            // A trailing -p/-o would take the option after it as its value (-sp --version, -hp --offline), so
+            // it is dropped: such a run only needs the flags read, and other runs are read again later
+            const bool valueLetterDropped = valueLetterAt == argument.size() - 1 && i + 1 < commandLineArguments.size() && commandLineArguments.at(i + 1).startsWith(QLatin1Char('-'));
+            const qsizetype letterCount = std::min(valueLetterAt, argument.size() - 1) - (valueLetterDropped ? 1 : 0);
+            for (const QChar letter : QStringView(argument).sliced(1, letterCount)) {
+                splitArguments << qsl("-%1").arg(letter);
+            }
+            if (valueLetterAt + 1 < argument.size()) {
+                const QString value = argument.sliced(valueLetterAt + 1);
+                splitArguments << (value.startsWith(QLatin1Char('=')) ? value.sliced(1) : value);
+            }
+        }
+        // The print-and-exit reading below has to see the groups split too
+        commandLineArguments = splitArguments;
+        commandLineReadOk = parser.parse(commandLineArguments);
+    }
     const bool printAndExitOption = parser.isSet(showHelp) || parser.isSet(showVersion);
     // No application object will strip Qt's options from a print-and-exit run, so it is answered by a parser
     // that knows all of them: QCoreApplication's, QGuiApplication's, QApplication's and the xcb plugin's.
@@ -536,6 +602,14 @@ int main(int argc, char* argv[])
     // before constructing QGuiApplication."
     QApplication::setAttribute(Qt::AA_ShareOpenGLContexts);
 #endif // INCLUDE_3DMAPPER
+#endif
+#if defined(INCLUDE_3DMAPPER)
+    {
+        // Qt's Wayland backend otherwise composes windows with OpenGL ES, which cannot share with the 3D views' desktop contexts
+        QSurfaceFormat format = QSurfaceFormat::defaultFormat();
+        format.setRenderableType(QSurfaceFormat::OpenGL);
+        QSurfaceFormat::setDefaultFormat(format);
+    }
 #endif
 
     // Loading a platform plugin with no display server aborts, so print-and-exit options get an

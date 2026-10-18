@@ -348,7 +348,7 @@ end)
 -- error console, a script's own logging, a scraper reading either - work a line
 -- at a time, so a newline inside one hides everything after it. The rest of the
 -- API keeps a bad-argument refusal to the single line that names what was
--- wanted and what arrived; these two feeding functions are the pair that did not.
+-- wanted and what arrived.
 describe("Tests the shape of the feeding functions' bad-argument errors", function()
 
   local feeders = {
@@ -371,6 +371,90 @@ describe("Tests the shape of the feeding functions' bad-argument errors", functi
       assert.is_true(contains(err, expected), feeder.name .. " did not say " .. expected .. " - it said: " .. tostring(err))
     end)
   end
+end)
+
+describe("Tests that the other bad-argument refusals stay on one line", function()
+
+  local cases = {
+    {label = "deleteArea", call = function() return deleteArea({}) end,
+      expected = "deleteArea: bad argument #1 type (area Id as number or area name as string expected, got table!)"},
+    {label = "getRoomAreaName", call = function() return getRoomAreaName({}) end,
+      expected = "getRoomAreaName: bad argument #1 type (area id as number or area name as string expected, got table!)"},
+    {label = "setAreaName", call = function() return setAreaName({}, "x") end,
+      expected = "setAreaName: bad argument #1 type (areaID as number or area name as string expected, got table!)"},
+    {label = "setRoomArea's room", call = function() return setRoomArea("nope", 1) end,
+      expected = "setRoomArea: bad argument #1 type (roomID as number or table of roomIDs expected, got string!)"},
+    {label = "raiseEvent", call = function() return raiseEvent("mudletSpecTwoLine", coroutine.create(function() end)) end,
+      expected = "raiseEvent: bad argument #2 type (string, number, boolean, table, function, or nil expected, got a thread!)"},
+    {label = "raiseGlobalEvent", call = function() return raiseGlobalEvent("mudletSpecTwoLine", {}) end,
+      expected = "raiseGlobalEvent: bad argument #2 type (boolean, number, string or nil expected, got a table!)"},
+    {label = "getMudletVersion's option", call = function() return getMudletVersion("bananas") end,
+      expected = 'getMudletVersion: takes one (optional) argument: "major", "minor", "revision", "build", "string" or "table".'},
+    {label = "getMudletVersion's argument count", call = function() return getMudletVersion("major", "minor") end,
+      expected = 'getMudletVersion: only takes one (optional) argument: "major", "minor", "revision", "build", "string" or "table".'},
+  }
+
+  for _, case in ipairs(cases) do
+    it(case.label .. " refuses on one line", function()
+      local ok, err = pcall(case.call)
+      assert.is_false(ok)
+      assert.is_string(err)
+      assert.is_false(contains(err, "\n"), "split over more than one line: " .. tostring(err))
+      assert.is_true(contains(err, case.expected), "expected " .. case.expected .. " - got: " .. tostring(err))
+    end)
+  end
+
+  it("setRoomArea's area refuses on one line", function()
+    local id = createRoomID()
+    assert.is_true(addRoom(id))
+    finally(function() deleteRoom(id) end)
+    local ok, err = pcall(setRoomArea, id, {})
+    assert.is_false(ok)
+    assert.is_string(err)
+    assert.is_false(contains(err, "\n"), "split over more than one line: " .. tostring(err))
+    local expected = "setRoomArea: bad argument #2 type (areaID as number or area name as string expected, got table!)"
+    assert.is_true(contains(err, expected), "expected " .. expected .. " - got: " .. tostring(err))
+  end)
+
+  it("loadMap's missing map file is reported on one line", function()
+    local ok, err = loadMap("/no/such/mudletSpecOneLine.xml")
+    assert.is_nil(ok)
+    assert.is_string(err)
+    assert.is_false(contains(err, "\n"), "split over more than one line: " .. tostring(err))
+    -- Windows reports the path made absolute, with a drive letter in front
+    local pattern = 'loadMap: bad argument #1 value %(filename used: "%a?:?/no/such/mudletSpecOneLine%.xml" was not found%)%.'
+    assert.is_truthy(err:find(pattern), "expected a match for " .. pattern .. " - got: " .. tostring(err))
+  end)
+end)
+
+describe("Tests that raiseEvent lets go of what it was handed when it refuses", function()
+
+  local function registryEntryCount()
+    local count = 0
+    for _ in pairs(debug.getregistry()) do
+      count = count + 1
+    end
+    return count
+  end
+
+  -- The arguments are taken from the last one down, so a bad argument below a
+  -- table and a function is only reached after both have been anchored.
+  it("keeps nothing in the registry when an earlier argument is refused", function()
+    local function refuse()
+      return pcall(raiseEvent, "mudletSpecRefusedEvent", coroutine.create(function() end), {}, function() end)
+    end
+    -- a warm-up refusal: the registry's free list is created by the first release
+    refuse()
+    collectgarbage()
+    local before = registryEntryCount()
+    for _ = 1, 20 do
+      local ok, err = refuse()
+      assert.is_false(ok)
+      assert.is_true(contains(err, "raiseEvent: bad argument #2 type"), tostring(err))
+    end
+    collectgarbage()
+    assert.are.equal(before, registryEntryCount())
+  end)
 end)
 
 describe("Tests announce and showNotification", function()
@@ -607,5 +691,156 @@ describe("Tests the raised errors for a wrongly typed argument", function()
 
   it("raises for a saveProfile file name that is not a string", function()
     assertArgError(function() return saveProfile(nil, {}) end, "saveProfile: bad argument #2 type")
+  end)
+end)
+
+describe("Tests that the window functions refuse a window that does not exist", function()
+  local unknown = ("specContractsNoSuchWindow-%d-%d"):format(os.time(), math.random(100000))
+  local notFound = ('window "%s" not found'):format(unknown)
+
+  -- an array rather than a keyed table so the specs are always generated in
+  -- the same order
+  local calls = {
+    {"cecho", function() return cecho(unknown, "<red>x\n") end},
+    {"decho", function() return decho(unknown, "<255,0,0>x\n") end},
+    {"hecho", function() return hecho(unknown, "#FF0000x\n") end},
+    {"cechoLink", function() return cechoLink(unknown, "<red>x", "", "") end},
+    {"dechoLink", function() return dechoLink(unknown, "<255,0,0>x", "", "") end},
+    {"hechoLink", function() return hechoLink(unknown, "#FF0000x", "", "") end},
+    {"cinsertLink", function() return cinsertLink(unknown, "<red>x", "", "") end},
+    {"dinsertLink", function() return dinsertLink(unknown, "<255,0,0>x", "", "") end},
+    {"hinsertLink", function() return hinsertLink(unknown, "#FF0000x", "", "") end},
+    {"cechoPopup", function() return cechoPopup(unknown, "<red>x", {""}, {""}) end},
+    {"dechoPopup", function() return dechoPopup(unknown, "<255,0,0>x", {""}, {""}) end},
+    {"hechoPopup", function() return hechoPopup(unknown, "#FF0000x", {""}, {""}) end},
+    {"cinsertPopup", function() return cinsertPopup(unknown, "<red>x", {""}, {""}) end},
+    {"dinsertPopup", function() return dinsertPopup(unknown, "<255,0,0>x", {""}, {""}) end},
+    {"hinsertPopup", function() return hinsertPopup(unknown, "#FF0000x", {""}, {""}) end},
+    {"cinsertText", function() return cinsertText(unknown, "<red>x") end},
+    {"replace", function() return replace(unknown, "x") end},
+    {"replace keepcolor", function() return replace(unknown, "x", true) end},
+    {"replaceLine", function() return replaceLine(unknown, "x") end},
+    {"gagLine", function() return gagLine(unknown) end},
+    {"setHexFgColor", function() return setHexFgColor(unknown, "FF0000") end},
+    {"setHexBgColor", function() return setHexBgColor(unknown, "FF0000") end},
+    {"clearUserWindow", function() return clearUserWindow(unknown) end},
+  }
+
+  for _, entry in ipairs(calls) do
+    local functionName, call = entry[1], entry[2]
+    it(functionName .. " answers nil and why, leaving the main console alone", function()
+      echo("main", "\nspecContracts line the call must not touch")
+      moveCursorEnd("main")
+      finally(function() echo("main", "\n") end)
+      local last = getLastLineNumber("main")
+      local line = getCurrentLine("main")
+      assert.are.same({nil, notFound}, {call()})
+      assert.are.equal(last, getLastLineNumber("main"))
+      assert.are.equal(line, getCurrentLine("main"))
+    end)
+  end
+
+  it("enableClickthrough and disableClickthrough answer nil and why", function()
+    local labelNotFound = ("label name '%s' not found"):format(unknown)
+    assert.are.same({nil, labelNotFound}, {enableClickthrough(unknown)})
+    assert.are.same({nil, labelNotFound}, {disableClickthrough(unknown)})
+  end)
+
+  it("hideWindow, moveWindow and resizeWindow name the main console as one they cannot use", function()
+    local refusal = 'window "main" is of type "main", which this function cannot use'
+    assert.are.same({nil, refusal}, {hideWindow("main")})
+    assert.are.same({nil, refusal}, {moveWindow("main", 1, 1)})
+    assert.are.same({nil, refusal}, {resizeWindow("main", 800, 600)})
+  end)
+end)
+
+describe("Tests that gagLine works on the window it is given", function()
+  it("deletes the line in that window and leaves the main console alone", function()
+    local window = ("specContractsGag-%d-%d"):format(os.time(), math.random(100000))
+    assert.is_true(createMiniConsole(window, 0, 0, 200, 100))
+    finally(function()
+      deleteMiniConsole(window)
+      echo("main", "\n")
+    end)
+    echo(window, "first in the window\nsecond in the window")
+    assert.is_true(moveCursor(window, 0, 0))
+    echo("main", "\nspecContracts line gagLine must not touch")
+    moveCursorEnd("main")
+    local last = getLastLineNumber("main")
+    local line = getCurrentLine("main")
+
+    assert.are.same({true}, {gagLine(window)})
+
+    assert.are.same({"second in the window"}, getLines(window, 0, 1))
+    assert.are.equal(last, getLastLineNumber("main"))
+    assert.are.equal(line, getCurrentLine("main"))
+  end)
+end)
+
+describe("Tests that the window functions answer true for a window that exists", function()
+  local suffix = ("-%d-%d"):format(os.time(), math.random(100000))
+  local window = "specContractsWindow" .. suffix
+  local label = "specContractsLabel" .. suffix
+
+  setup(function()
+    assert.is_true(createMiniConsole(window, 0, 0, 200, 100))
+    assert.is_true(createLabel(label, 0, 0, 50, 20, 1))
+  end)
+
+  teardown(function()
+    deleteMiniConsole(window)
+    deleteLabel(label)
+  end)
+
+  local calls = {
+    {"cecho", function() return cecho(window, "<red>x\n") end},
+    {"decho", function() return decho(window, "<255,0,0>x\n") end},
+    {"hecho", function() return hecho(window, "#FF0000x\n") end},
+    {"cecho to a label", function() return cecho(label, "<red>x") end},
+    {"cechoLink", function() return cechoLink(window, "<red>x", "", "") end},
+    {"dechoLink", function() return dechoLink(window, "<255,0,0>x", "", "") end},
+    {"hechoLink", function() return hechoLink(window, "#FF0000x", "", "") end},
+    {"cinsertLink", function() return cinsertLink(window, "<red>x", "", "") end},
+    {"dinsertLink", function() return dinsertLink(window, "<255,0,0>x", "", "") end},
+    {"hinsertLink", function() return hinsertLink(window, "#FF0000x", "", "") end},
+    {"cechoPopup", function() return cechoPopup(window, "<red>x", {""}, {""}) end},
+    {"dechoPopup", function() return dechoPopup(window, "<255,0,0>x", {""}, {""}) end},
+    {"hechoPopup", function() return hechoPopup(window, "#FF0000x", {""}, {""}) end},
+    {"cinsertPopup", function() return cinsertPopup(window, "<red>x", {""}, {""}) end},
+    {"dinsertPopup", function() return dinsertPopup(window, "<255,0,0>x", {""}, {""}) end},
+    {"hinsertPopup", function() return hinsertPopup(window, "#FF0000x", {""}, {""}) end},
+    {"cinsertText", function() return cinsertText(window, "<red>x") end},
+    {"dinsertText", function() return dinsertText(window, "<255,0,0>x") end},
+    {"hinsertText", function() return hinsertText(window, "#FF0000x") end},
+    {"echoUserWindow", function() return echoUserWindow(window, "x\n") end},
+    {"pasteWindow", function() return pasteWindow(window) end},
+    {"wrapLine", function() return wrapLine(window, 0) end},
+    {"moveWindow", function() return moveWindow(window, 1, 1) end},
+    {"resizeWindow", function() return resizeWindow(window, 200, 100) end},
+    {"hideWindow", function() return hideWindow(window) end},
+    {"setFgColor", function() return setFgColor(window, 255, 0, 0) end},
+    {"setHexFgColor", function() return setHexFgColor(window, "FF0000") end},
+    {"setHexBgColor", function() return setHexBgColor(window, "FF0000") end},
+    {"enableClickthrough", function() return enableClickthrough(label) end},
+    {"disableClickthrough", function() return disableClickthrough(label) end},
+  }
+
+  for _, entry in ipairs(calls) do
+    it(entry[1] .. " answers true", function()
+      assert.are.same({true}, {entry[2]()})
+    end)
+  end
+
+  it("replace and replaceLine answer true", function()
+    echo(window, "\nspecContracts replace me")
+    assert.is_true(moveCursor(window, 0, getLastLineNumber(window)))
+    assert.is_true(selectString(window, "replace", 1) > -1)
+    assert.are.same({true}, {replace(window, "swapped")})
+    assert.are.same({true}, {replaceLine(window, "whole line")})
+    assert.are.equal("whole line", getCurrentLine(window))
+  end)
+
+  it("clearWindow answers nothing, so clearing from the command line prints nothing", function()
+    assert.are.same({}, {clearWindow(window)})
   end)
 end)

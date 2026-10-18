@@ -85,21 +85,6 @@ qreal usableSymbolFontFudgeFactor(const qreal fromFile)
     return qBound(TMap::scmMinimumSymbolFontFudgeFactor, fromFile, TMap::scmMaximumSymbolFontFudgeFactor);
 }
 
-// Restores font information from userData that was stored during binary serialization.
-// Font data is stored as "family|pointSize|weight|italic" to avoid binary format version changes.
-void restoreLabelFontFromUserData(TMapLabel& label, int labelId, QMap<QString, QString>& userData)
-{
-    const QString fontKey = qsl("system.labelFont_%1").arg(labelId);
-    if (userData.contains(fontKey)) {
-        const QStringList fontParts = userData.take(fontKey).split(QLatin1Char('|'));
-        if (fontParts.size() == 4) {
-            label.font = QFont(fontParts.at(0), fontParts.at(1).toInt(), fontParts.at(2).toInt(), fontParts.at(3).toInt() != 0);
-        } else {
-            qWarning("TMap: Failed to parse font data for label %d, expected 4 parts but got %lld", labelId, fontParts.size());
-        }
-    }
-}
-
 enum class MapFileCheckResult { ValidMap, NotAMap, ParseError };
 
 struct MapFileCheck
@@ -152,6 +137,41 @@ public:
     void update3DViewAvailability() override {}
 };
 } // anonymous namespace
+
+// Restores font information from userData that was stored during binary serialization.
+// Font data is stored as "family|pointSize|weight|italic" to avoid binary format version changes.
+// Call before restoreLabelOutlineColorFromUserData(), which takes the outline key this reads
+// to tell a label that had no font, whose font it then clears to an empty family.
+void TMap::restoreLabelFontFromUserData(TMapLabel& label, int labelId, QMap<QString, QString>& userData)
+{
+    const QString fontKey = qsl("system.labelFont_%1").arg(labelId);
+    if (userData.contains(fontKey)) {
+        const QStringList fontParts = userData.take(fontKey).split(QLatin1Char('|'));
+        if (fontParts.size() == 4) {
+            label.font = QFont(fontParts.at(0), fontParts.at(1).toInt(), fontParts.at(2).toInt(), fontParts.at(3).toInt() != 0);
+        } else {
+            qWarning("TMap: Failed to parse font data for label %d, expected 4 parts but got %lld", labelId, fontParts.size());
+        }
+    } else if (userData.contains(qsl("system.labelOutlineColor_%1").arg(labelId))) {
+        // A file that keeps outline colors writes a font for every label with
+        // one, so this label had none, and a default QFont would invent one
+        label.font = QFont(QString());
+    }
+}
+
+// Outline color data is stored as "r|g|b|a" to avoid binary format version changes.
+void TMap::restoreLabelOutlineColorFromUserData(TMapLabel& label, int labelId, QMap<QString, QString>& userData)
+{
+    const QString colorKey = qsl("system.labelOutlineColor_%1").arg(labelId);
+    if (userData.contains(colorKey)) {
+        const QStringList colorParts = userData.take(colorKey).split(QLatin1Char('|'));
+        if (colorParts.size() == 4) {
+            label.outlineColor = QColor(colorParts.at(0).toInt(), colorParts.at(1).toInt(), colorParts.at(2).toInt(), colorParts.at(3).toInt());
+        } else {
+            qWarning("TMap: Failed to parse outline color data for label %d, expected 4 parts but got %lld", labelId, colorParts.size());
+        }
+    }
+}
 
 TMapViewsFrontend* TMap::mapViewsFrontend() const
 {
@@ -224,26 +244,20 @@ bool TMap::menuItemShown(const QString& itemName) const
 
 void TMap::refreshMapperColours()
 {
+    ++mRevision;
     emit signal_mapperColoursChanged();
 }
 
 void TMap::mapClear()
 {
+    ++mRevision;
     mpRoomDB->clearMapDB();
     mEnvColors.clear();
     mRoomIdHash.clear();
-    mTargetID = 0;
-    mPathList.clear();
-    mDirList.clear();
-    mWeightList.clear();
     mCustomEnvColors.clear();
     // Need to restore the default colours:
     restore16ColorSet();
-    roomidToIndex.clear();
-    edgeHash.clear();
-    locations.clear();
-    mMapGraphNeedsUpdate = true;
-    mNewMove = true;
+    clearRoutes();
     mVersion = mDefaultVersion;
     mUserData.clear();
 
@@ -253,6 +267,19 @@ void TMap::mapClear()
     // Must also reset the mapper area selection control to reflect that it now
     // only has the "Default Area" after TRoomDB::clearMapDB() has been run.
     emit signal_mapCleared();
+}
+
+void TMap::clearRoutes()
+{
+    mTargetID = 0;
+    mPathList.clear();
+    mDirList.clear();
+    mWeightList.clear();
+    roomidToIndex.clear();
+    edgeHash.clear();
+    locations.clear();
+    mMapGraphNeedsUpdate = true;
+    mNewMove = true;
 }
 
 // The supplied message should contain a localised message and no "WARNING:" or other prefixes:
@@ -761,6 +788,8 @@ void TMap::audit()
         appendErrorMsg(infoMsg);
     }
 
+    // It may have removed or renumbered rooms and areas, bypassing the setters that count changes
+    ++mRevision;
     mpHost->getLuaInterpreter()->condenseMapLoad();
 }
 
@@ -1840,92 +1869,102 @@ bool TMap::restore(QString location)
     const MapOperationScope operationScope(this);
     qDebug().noquote().nospace() << "TMap::restore(\"" << location << "\") INFO: restoring map of Profile: \"" << mProfileName << "\" URL: " << mpHost->getUrl();
 
-    QElapsedTimer _time;
-    _time.start();
-    QString folder;
-    QStringList entries;
-
     if (location.isEmpty()) {
-        folder = MudletApp::getMudletPath(enums::profileMapsPath, mProfileName);
-        const QDir dir(folder);
-        QStringList filters;
-        filters << qsl("*.[dD][aA][tT]");
-        filters << qsl("*.[jJ][sS][oO][nN]");
-        entries = dir.entryList(filters, QDir::Files, QDir::Time);
-    }
-
-    bool canRestore = true;
-    if (entries.empty() && location.isEmpty()) {
-        canRestore = false;
-    }
-
-    QDataStream ifs;
-    QFile file;
-    if (canRestore && (!entries.empty() || !location.isEmpty())) {
-        // We get to here if there is one or more entries OR location is
-        // supplied - if the latter then there is only one file to consider but
-        // if the former we may have to check more than one to find a valid
-        // map file:
-        bool foundValidFile = false;
-        if (location.isEmpty()) {
-            // Look through the entries:
-            QStringListIterator itFileName(entries);
-            auto fileName = qsl("%1/%2").arg(folder, itFileName.next());
+        // The newest file is not always one that loads - it can have been cut
+        // short or damaged outside Mudlet, or written by a newer Mudlet - so
+        // the next newest that does is the one to fall back on
+        const QString folder = MudletApp::getMudletPath(enums::profileMapsPath, mProfileName);
+        const QStringList entries = QDir(folder).entryList({qsl("*.[dD][aA][tT]"), qsl("*.[jJ][sS][oO][nN]")}, QDir::Files, QDir::Time);
+        for (const QString& entry : entries) {
+            // A closing profile asks for this, and the close waits on it
+            if (mapOperationAbortRequested()) {
+                return false;
+            }
+            const QString fileName = qsl("%1/%2").arg(folder, entry);
+            if (entry != entries.constFirst()) {
+                //: Shown before each older map file of a profile that is tried because a newer one could not be loaded. %1 is the older file's path and name.
+                const QString infoMsg = tr("[ INFO ]  - Trying the next newest map file instead:\n"
+                                           "\"%1\".")
+                                                .arg(fileName);
+                appendErrorMsgWithNoLf(infoMsg);
+                postMessage(infoMsg);
+            }
             if (!fileName.endsWith(qsl(".json"), Qt::CaseInsensitive)) {
-                file.setFileName(fileName);
-                if (validatePotentialMapFile(file, ifs)) {
-                    foundValidFile = true;
-                }
-
-            } else {
-                if (auto [isOk, message] = readJsonMapFile(fileName, true); !isOk) {
-                    // Failed to read the JSON file
-                    const QString errMsg = tr("[ ALERT ] - Failed to load a Mudlet JSON Map file, reason:\n"
-                                              "%1; the file is:\n"
-                                              "\"%2\".")
-                                                   .arg(message, fileName);
-                    appendErrorMsgWithNoLf(errMsg);
-                    postMessage(errMsg);
-                    const QString infoMsg = tr("[ INFO ]  - Ignoring this map file.");
-                    appendErrorMsgWithNoLf(infoMsg);
-                    postMessage(infoMsg);
-                } else {
-                    // immediately leave on success:
+                if (restore(fileName)) {
                     return true;
                 }
+            } else {
+                // readJsonMapFile() refuses to start while another JSON import or export, or a map download
+                // with no mapper on screen, is running
+                const bool mapProgressInUse = mMapProgressStandalone;
+                auto [isOk, message] = readJsonMapFile(fileName, true);
+                if (isOk) {
+                    return true;
+                }
+                //: Shown when a JSON map file of a profile could not be loaded. %1 is the reason, %2 the file's path and name.
+                const QString errMsg = tr("[ ALERT ] - Failed to load a Mudlet JSON Map file, reason:\n"
+                                          "%1; the file is:\n"
+                                          "\"%2\".")
+                                               .arg(message, fileName);
+                appendErrorMsgWithNoLf(errMsg);
+                postMessage(errMsg);
+                // Nothing wrong with the file then, so an older one is no better
+                if (mapProgressInUse || mapOperationAbortRequested() || message == tr("aborted by user")) {
+                    //: Shown after a JSON map file of a profile was stopped rather than found damaged, so no older map file is loaded in its place.
+                    const QString stopMsg = tr("[ INFO ]  - No older map file will be tried instead.");
+                    appendErrorMsgWithNoLf(stopMsg);
+                    postMessage(stopMsg);
+                    return false;
+                }
+                //: Shown after a JSON map file of a profile could not be loaded.
+                const QString infoMsg = tr("[ INFO ]  - Ignoring this map file.");
+                appendErrorMsgWithNoLf(infoMsg);
+                postMessage(infoMsg);
             }
-
             // Allow for somethings to be updated - especially on Windows?
             QCoreApplication::processEvents();
-        } else {
-            file.setFileName(location);
-            if (validatePotentialMapFile(file, ifs)) {
-                foundValidFile = true;
-            }
         }
-        if (!foundValidFile) {
-            canRestore = false;
-        }
-    } else if (canRestore && !location.isEmpty()) {
-        file.setFileName(location);
-        canRestore = validatePotentialMapFile(file, ifs);
+        return false;
     }
 
+    QElapsedTimer _time;
+    _time.start();
+    QDataStream ifs;
+    QFile file(location);
+    const int previousVersion = mVersion;
+    const int previousSaveVersion = mSaveVersion;
+    bool canRestore = validatePotentialMapFile(file, ifs);
+
+    // Read into a fresh room database, swapped in only once the whole file has
+    // been read, so that one which fails part way leaves the loaded map alone
+    std::unique_ptr<TRoomDB> pNewRoomDB;
+    QMap<int, int> previousEnvColors;
+    QMap<int, QColor> previousCustomEnvColors;
+    QMap<QString, QString> previousUserData;
+    QHash<QString, int> previousRoomIdHash;
+    const QFont previousSymbolFont = mMapSymbolFont;
+    const qreal previousSymbolFontFudgeFactor = mMapSymbolFontFudgeFactor;
+    const bool previousOnlySymbolFontUsed = mIsOnlyMapSymbolFontToBeUsed;
     if (canRestore) {
+        pNewRoomDB = std::make_unique<TRoomDB>(this);
+        previousEnvColors.swap(mEnvColors);
+        previousCustomEnvColors.swap(mCustomEnvColors);
+        previousUserData.swap(mUserData);
+        previousRoomIdHash.swap(mRoomIdHash);
+
         // As all but the room reading have version checks the fact that sub-4
         // files will still be parsed despite canRestore being false is probably OK
         if (mVersion >= 4) {
             ifs >> mEnvColors;
-            mpRoomDB->restoreAreaMap(ifs);
+            pNewRoomDB->restoreAreaMap(ifs);
         }
         if (mVersion >= 5) {
             ifs >> mCustomEnvColors;
         }
         if (mVersion >= 7) {
-            ifs >> mpRoomDB->hashToRoomID;
-            QMap<QString, int>::const_iterator i;
-            for (i = mpRoomDB->hashToRoomID.constBegin(); i != mpRoomDB->hashToRoomID.constEnd(); ++i) {
-                mpRoomDB->roomIDToHash.insert(i.value(), i.key());
+            ifs >> pNewRoomDB->hashToRoomID;
+            for (const auto& [hash, roomId] : pNewRoomDB->hashToRoomID.asKeyValueRange()) {
+                pNewRoomDB->roomIDToHash.insert(roomId, hash);
             }
         }
 
@@ -1988,7 +2027,7 @@ bool TMap::restore(QString location)
             ifs >> areaSize;
             // restore area table
             for (int i = 0; i < areaSize && ifs.status() == QDataStream::Ok; i++) {
-                auto pA = new TArea(this, mpRoomDB.get());
+                auto pA = new TArea(this, pNewRoomDB.get());
                 int areaID = 0;
                 ifs >> areaID;
                 if (mVersion >= 18) {
@@ -2057,17 +2096,17 @@ bool TMap::restore(QString location)
                         ifs >> label.noScaling;
                         ifs >> label.showOnTop;
                         restoreLabelFontFromUserData(label, labelId, pA->mUserData);
-                        TArea::restoreLabelOutlineColorFromUserData(label, labelId, pA->mUserData);
+                        restoreLabelOutlineColorFromUserData(label, labelId, pA->mUserData);
                         pA->mMapLabels.insert(labelId, label);
                     }
                 }
-                mpRoomDB->restoreSingleArea(areaID, pA);
+                pNewRoomDB->restoreSingleArea(areaID, pA);
             }
         }
 
-        if (!mpRoomDB->getAreaMap().keys().contains(-1)) {
-            auto pDefaultA = new TArea(this, mpRoomDB.get());
-            mpRoomDB->restoreSingleArea(-1, pDefaultA);
+        if (!pNewRoomDB->getAreaMap().keys().contains(-1)) {
+            auto pDefaultA = new TArea(this, pNewRoomDB.get());
+            pNewRoomDB->restoreSingleArea(-1, pDefaultA);
             const QString defaultAreaInsertionMsg = tr("[ INFO ]  - Default (reset) area (for rooms that have not been assigned to an\n"
                                                        "area) not found, adding reserved -1 id.");
             appendErrorMsgWithNoLf(defaultAreaInsertionMsg, false);
@@ -2099,7 +2138,7 @@ bool TMap::restore(QString location)
                 // Only used to identify the area for this batch of labels:
                 ifs >> areaID;
                 int areaLabelCounter = 0;
-                auto pA = mpRoomDB->getArea(areaID);
+                auto pA = pNewRoomDB->getArea(areaID);
                 while (!ifs.atEnd() && ifs.status() == QDataStream::Ok && areaLabelCounter < areaLabelsTotal) {
                     int labelID = 0;
                     ifs >> labelID;
@@ -2127,7 +2166,7 @@ bool TMap::restore(QString location)
                     }
                     if (pA) {
                         restoreLabelFontFromUserData(label, labelID, pA->mUserData);
-                        TArea::restoreLabelOutlineColorFromUserData(label, labelID, pA->mUserData);
+                        restoreLabelOutlineColorFromUserData(label, labelID, pA->mUserData);
                         pA->mMapLabels.insert(labelID, label);
                     }
                     ++areaLabelCounter;
@@ -2140,7 +2179,7 @@ bool TMap::restore(QString location)
         }
 
         // whatever the labels did not take is for labels that no longer exist
-        for (auto* pA : mpRoomDB->getAreaMap()) {
+        for (auto* pA : pNewRoomDB->getAreaMap()) {
             TArea::dropFileOnlyUserData(pA->mUserData);
         }
 
@@ -2149,10 +2188,36 @@ bool TMap::restore(QString location)
         while (!ifs.atEnd() && ifs.status() == QDataStream::Ok) {
             int i = 0;
             ifs >> i;
-            auto pT = new TRoom(mpRoomDB.get());
+            auto pT = new TRoom(pNewRoomDB.get());
             pT->restore(ifs, i, mVersion);
-            mpRoomDB->restoreSingleRoom(i, pT);
+            pNewRoomDB->restoreSingleRoom(i, pT);
         }
+
+        if (ifs.status() != QDataStream::Ok) {
+            //: Shown when a binary map file ends, or stops making sense, part way through. %1 is the file's path and name.
+            const QString errMsg = tr("[ ALERT ] - The map file is truncated or damaged, so it could not be read completely. The file is:\n"
+                                      "\"%1\".")
+                                           .arg(file.fileName());
+            appendErrorMsgWithNoLf(errMsg);
+            postMessage(errMsg);
+            mEnvColors.swap(previousEnvColors);
+            mCustomEnvColors.swap(previousCustomEnvColors);
+            mUserData.swap(previousUserData);
+            mRoomIdHash.swap(previousRoomIdHash);
+            mMapSymbolFont = previousSymbolFont;
+            mMapSymbolFontFudgeFactor = previousSymbolFontFudgeFactor;
+            mIsOnlyMapSymbolFontToBeUsed = previousOnlySymbolFontUsed;
+            mVersion = previousVersion;
+            mSaveVersion = previousSaveVersion;
+            return false;
+        }
+
+        areasAboutToBeDeleted();
+        std::unique_ptr<TRoomDB> previousRoomDB = std::exchange(mpRoomDB, std::move(pNewRoomDB));
+        mpRoomDB->continueGenerationOf(*previousRoomDB);
+        previousRoomDB.reset();
+        clearRoutes();
+        emit signal_mapCleared();
 
         restore16ColorSet();
 
@@ -3720,8 +3785,17 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
     emit signal_mapProgressSetValue(0);
     QCoreApplication::processEvents();
 
+    // A file not written by Mudlet may not give these, and an empty one cannot name an area
     mDefaultAreaName = mapObj[QLatin1String("defaultAreaName")].toString();
+    if (mDefaultAreaName.isEmpty()) {
+        //: Name of the map's default area, the one with id -1, used when a JSON map file does not give one
+        mDefaultAreaName = tr("Default Area");
+    }
     mUnnamedAreaName = mapObj[QLatin1String("anonymousAreaName")].toString();
+    if (mUnnamedAreaName.isEmpty()) {
+        //: Name given to an area that has none, used when a JSON map file does not give one; further such areas get "_001", "_002" and so on appended to it
+        mUnnamedAreaName = tr("Unnamed Area");
+    }
     QMap<QString, QString> userData;
     if (mapObj.contains(QLatin1String("userData"))) {
         userData = readJsonUserData(mapObj[QLatin1String("userData")].toObject());
@@ -3795,6 +3869,9 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
 
     auto pNewRoomDB = std::make_unique<TRoomDB>(this);
     bool abort = false;
+    // Named once every other area is in, so that the name given cannot be one a later area has
+    std::vector<std::pair<int, std::unique_ptr<TArea>>> unnamedAreas;
+    QSet<int> namedAreaIds;
     // Held back until the new map replaces the old one, as an aborted import drops nothing:
     QStringList droppedRoomWarnings;
     for (int i = 0, total = mapObj.value(QLatin1String("areas")).toArray().count(); i < total; ++i) {
@@ -3805,15 +3882,53 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
             abort = true;
             break;
         }
+        if (name.isEmpty()) {
+            unnamedAreas.emplace_back(id, std::move(pArea));
+            continue;
+        }
         // This will populate the TRoomDB::areas and TRoomDB::areaNameMap:
-        pNewRoomDB->addArea(pArea.release(), id, name);
+        if (pNewRoomDB->addArea(pArea.get(), id, name)) {
+            pArea.release();
+            namedAreaIds.insert(id);
+        }
     }
     if (abort) {
+        for (auto& unnamedArea : unnamedAreas) {
+            // Never added to pNewRoomDB, so ~TArea() must not try to remove it from there
+            unnamedArea.second->mpRoomDB = nullptr;
+        }
         emit signal_mapProgressClose();
         mMapProgressStandalone = false;
         mDefaultAreaName = oldDefaultAreaName;
         mUnnamedAreaName = oldUnnamedName;
         return {false, (translatableTexts ? tr("aborted by user") : qsl("aborted by user"))};
+    }
+    for (auto& [id, pArea] : unnamedAreas) {
+        if (namedAreaIds.contains(id)) {
+            // Added after every named area, it would otherwise displace the named one wherever the file lists it
+            pArea->mpRoomDB = nullptr;
+            //: Shown when a JSON map file has two areas with the same id, one of them with an empty name. %1 is the area's id.
+            const QString dropMsg = tr("[ WARN ]  - The map file has an area with id %1 and no name as well as a named one with that id, only the named one has been kept.").arg(id);
+            appendErrorMsgWithNoLf(dropMsg, false);
+            postMessage(dropMsg);
+            continue;
+        }
+        // TRoomDB::addArea() refuses a blank name, which would lose the area's user data and labels
+        bool defaultAreaNameFree = false;
+        if (id == -1) {
+            // The new TRoomDB's own placeholder -1 already holds the default name, so only another id taking it counts
+            QList<int> idsWithDefaultAreaName = pNewRoomDB->getAreaNamesMap().keys(mDefaultAreaName);
+            idsWithDefaultAreaName.removeAll(-1);
+            defaultAreaNameFree = idsWithDefaultAreaName.isEmpty();
+        }
+        const QString name = defaultAreaNameFree ? mDefaultAreaName : pNewRoomDB->unusedUnnamedAreaName();
+        //: Shown when an area in a JSON map file has an empty name. %1 is the area's id, %2 the name it is given instead.
+        const QString warnMsg = tr(R"([ WARN ]  - The area with id %1 has no name in the map file, so it has been called "%2".)").arg(QString::number(id), name);
+        appendErrorMsgWithNoLf(warnMsg, false);
+        postMessage(warnMsg);
+        if (pNewRoomDB->addArea(pArea.get(), id, name)) {
+            pArea.release();
+        }
     }
 
     // Not before the abort check above, so a cancelled import leaves the live map alone:
@@ -3837,19 +3952,22 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
     qDebug().nospace().noquote() << "TMap::readJsonMapFile(...) INFO - parsed a file (version: " << formatVersion << ") containing " << mProgressDialogRoomsCount << " rooms.";
 
     // This is it - the point at which the new map gets activated:
-    mpRoomDB = std::move(pNewRoomDB);
+    std::unique_ptr<TRoomDB> previousRoomDB = std::exchange(mpRoomDB, std::move(pNewRoomDB));
+    mpRoomDB->continueGenerationOf(*previousRoomDB);
+    previousRoomDB.reset();
+    ++mRevision;
     for (const auto& warning : std::as_const(droppedRoomWarnings)) {
         appendErrorMsgWithNoLf(warning, true);
         if (smShowMapAuditErrors) {
             postMessage(warning);
         }
     }
-    // The routing graph holds pointers to the rooms just destroyed, and the bulk
-    // deletion skipped the per-room cleanup that would otherwise have flagged it:
-    roomidToIndex.clear();
-    edgeHash.clear();
-    locations.clear();
-    mMapGraphNeedsUpdate = true;
+    // The route and the routing graph hold ids and pointers into the rooms just
+    // destroyed, and the bulk deletion skipped the per-room cleanup that flags them
+    clearRoutes();
+    // A JSON file has no binary format version, and audit() converts maps older than 16
+    mVersion = mDefaultVersion;
+    emit signal_mapCleared();
     // Need to update the master copy of these details in the Host class:
     mpHost->setPlayerRoomStyleDetails(mPlayerRoomStyle, mPlayerRoomOuterDiameterPercentage, mPlayerRoomInnerDiameterPercentage, mPlayerRoomOuterColor, mPlayerRoomInnerColor);
     // And redraw the indicator if a 2D map is being shown:
@@ -3930,16 +4048,25 @@ QColor TMap::readJsonColor(const QJsonObject& obj)
     } else {
         colorRGBAArray = obj.value(QLatin1String("color24RGB")).toArray();
     }
+    // Checked before rounding, as rounding a double beyond the range of int is undefined
+    const auto component = [&colorRGBAArray](const int index) {
+        const double value = colorRGBAArray.at(index).toDouble();
+        return (value > -0.5 && value < 255.5) ? qRound(value) : -1;
+    };
     const int size = colorRGBAArray.size();
     if ((size == 3 || size == 4) && colorRGBAArray.at(0).isDouble() && colorRGBAArray.at(1).isDouble() && colorRGBAArray.at(2).isDouble()) {
-        red = qRound(colorRGBAArray.at(0).toDouble());
-        green = qRound(colorRGBAArray.at(1).toDouble());
-        blue = qRound(colorRGBAArray.at(2).toDouble());
-        return QColor(red, green, blue);
-    }
-
-    if (hasAlpha && size == 4 && colorRGBAArray.at(3).isDouble()) {
-        alpha = qRound(colorRGBAArray.at(3).toDouble());
+        red = component(0);
+        green = component(1);
+        blue = component(2);
+        if (red < 0 || green < 0 || blue < 0) {
+            return QColor();
+        }
+        if (hasAlpha && size == 4 && colorRGBAArray.at(3).isDouble()) {
+            // QColor refuses the whole colour for an alpha out of range
+            if (const int value = component(3); value >= 0) {
+                alpha = value;
+            }
+        }
         return QColor(red, green, blue, alpha);
     }
 
@@ -4001,6 +4128,7 @@ void TMap::areasAboutToBeDeleted()
 
 void TMap::announceMapLoaded(const bool showPlayerArea)
 {
+    ++mRevision;
     emit signal_mapLoaded(showPlayerArea);
 }
 
@@ -4049,6 +4177,8 @@ QString TMap::zoomError(const qreal zoom)
 
 void TMap::requestMapRepaint()
 {
+    // Asked for when a mapper setting changes, which what a view keeps between frames may be made from
+    ++mRevision;
     emit signal_mapRepaintRequested();
 }
 
@@ -4058,6 +4188,12 @@ void TMap::announceMapperSettingChanged(const MapperSetting setting)
 }
 
 void TMap::updateArea(int areaId)
+{
+    ++mRevision;
+    repaintArea(areaId);
+}
+
+void TMap::repaintArea(int areaId)
 {
     static bool debounce;
     if (!debounce) {
@@ -4160,6 +4296,7 @@ QColor TMap::getColor(int id)
 
 void TMap::restore16ColorSet()
 {
+    ++mRevision;
     mCustomEnvColors[257] = mpHost->mRed_2;
     mCustomEnvColors[258] = mpHost->mGreen_2;
     mCustomEnvColors[259] = mpHost->mYellow_2;
@@ -4187,6 +4324,7 @@ void TMap::setUnsaved(const char* fromWhere)
     qDebug().nospace().noquote() << "TMap::setUnsaved(...) INFO - called at: " << nowString << " from: " << fromWhere << ".";
 #endif
     mUnsavedMap = true;
+    ++mRevision;
 }
 
 void TMap::setSaveError(bool state)

@@ -65,6 +65,7 @@ class TArea;
 class TMapViewManager;
 class TRoom;
 class TRoomDB;
+class TMapLabel;
 class QFile;
 class QNetworkAccessManager;
 class MapInfoContributorManager;
@@ -77,14 +78,16 @@ class TMap : public QObject
     friend class FrontendRoutingContractTest;
 
 public:
-    // Host settings the 2D map keeps a copy of to draw with
-    enum class MapperSetting { RoomSize, ExitSize, RoundRooms, ShowRoomIds, ShowGrid };
+    // Host settings the 2D map keeps a copy of to draw with, and the 3D view's style
+    enum class MapperSetting { RoomSize, ExitSize, RoundRooms, ShowRoomIds, ShowGrid, Style };
 
 signals:
     void signal_saveErrorChanged(bool hasError);
     void signal_areaChanged(int areaId);
     void signal_mmpMapLocationChanged();
     void signal_mapSymbolFontChanged();
+    // Reaches every 2D map showing this map, the mapper's and each secondary view's
+    void signal_roomDeleted(int roomId);
 
     // Cues for the mapper drawing this map (mpMapper); the colour and symbol
     // cache ones also reach every secondary map view, and with the 3D mapper
@@ -152,7 +155,10 @@ public:
     void logError(const QString&);
     bool setExit(int from, int to, int dir);
     bool setRoomCoordinates(int id, int x, int y, int z);
+    // After a change to the map: also counts its revision up
     void updateArea(int areaId);
+    // For what only moves the view or the player, which every move of the player asks for
+    void repaintArea(int areaId);
     // For a whole map read in outside TMap, as XMLimport does:
     void announceMapLoaded(bool showPlayerArea);
     void requestMapperShown();
@@ -176,6 +182,8 @@ public:
     bool serialize(QDataStream&, int saveVersion = 0);
     static bool listLengthFits(QDataStream&, qint64 minBytesPerElement);
     bool restore(QString location);
+    static void restoreLabelFontFromUserData(TMapLabel&, int labelId, QMap<QString, QString>& userData);
+    static void restoreLabelOutlineColorFromUserData(TMapLabel&, int labelId, QMap<QString, QString>& userData);
     bool retrieveMapFileStats(QString, QString*, int*, int*, qsizetype*, qsizetype*);
     void initGraph();
     QString connectExitStubByDirection(const int fromRoomId, const int dirType);
@@ -314,6 +322,9 @@ public:
     // determine which bit of code is responsible for changing the flag!)
     void setUnsaved(const char*);
     void resetUnsaved() { mUnsavedMap = false; }
+    // Counts up on every change to the map's contents or to the colors it is drawn in, so that a view can tell
+    // whether what it worked out from them last frame still holds
+    quint64 revision() const { return mRevision; }
     bool isUnsaved() const { return mUnsavedMap; }
     void setSaveError(bool state);
     bool hasSaveError() const { return mSaveError; }
@@ -495,6 +506,7 @@ public slots:
 
 
 private:
+    void clearRoutes();
     void resetSearchState(const std::size_t roomCount);
 
     // The same object as mpViewManager, set with it by setViewManager().
@@ -605,6 +617,7 @@ private:
 
     // Used to flag whether the map auto-save needs to be done after the next interval:
     bool mUnsavedMap = false;
+    quint64 mRevision = 0;
     // Used to indicate that the last map save attempt failed:
     bool mSaveError = false;
     // Used to hide the default area from casual viewing for those MUDs that

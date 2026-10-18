@@ -187,7 +187,14 @@ void TTriggerPrescan::refileSlot(const int position, const std::vector<quint64>&
 
 void TTriggerPrescan::candidates(const QString& line, std::vector<int>& scratch, std::vector<int>& out) const
 {
-    scratch.clear();
+    hits(line, scratch);
+    std::sort(scratch.begin(), scratch.end());
+    out.resize(scratch.size() + mUnfiltered.size());
+    std::merge(mUnfiltered.cbegin(), mUnfiltered.cend(), scratch.cbegin(), scratch.cend(), out.begin());
+}
+
+void TTriggerPrescan::hits(const QString& line, std::vector<int>& out) const
+{
     out.clear();
     if (++mGeneration == 0) {
         // Wrapped: old stamps would otherwise read as "this line"
@@ -216,12 +223,8 @@ void TTriggerPrescan::candidates(const QString& line, std::vector<int>& scratch,
                     continue;
                 }
                 mSeen[position] = mGeneration;
-                scratch.push_back(position);
+                out.push_back(position);
             }
         }
     }
-
-    std::sort(scratch.begin(), scratch.end());
-    out.resize(scratch.size() + mUnfiltered.size());
-    std::merge(mUnfiltered.cbegin(), mUnfiltered.cend(), scratch.cbegin(), scratch.cend(), out.begin());
 }
