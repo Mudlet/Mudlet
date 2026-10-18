@@ -906,10 +906,10 @@ int TLuaInterpreter::loadReplay(lua_State* L)
     return warnArgumentValue(L, __func__, qsl("unable to start replay, reason: '%1'").arg(errMsg));
 }
 
-// Internal helper for feedTelnet(...) and socketRaw(...) that enables the
-// construction of data with bytes that cannot be prepared by normal means
-// - including embedded nulls - for testing off-line and for writing protocol
-// handlers for those that Mudlet does not provide itself respectively:
+// Internal helper for feedTelnet(...) and sendSocket(...) that turns "<..>" codes
+// into the telnet and control bytes they name, so that such data can be written
+// readably - for testing off-line and for writing protocol handlers for those
+// that Mudlet does not provide itself respectively:
 // Note: although "<<" and ">>" are extra codes that convert to '<' and '>'
 // respectively this looks as though singular instances of either - or
 // unrecognised "tags" with unknown other characters between them will still be
@@ -1169,7 +1169,9 @@ int TLuaInterpreter::feedTelnet(lua_State* L)
         return lua_error(L);
     }
 
-    const QByteArray rawData{lua_tostring(L, 1)};
+    size_t rawLength = 0;
+    const char* rawBytes = lua_tolstring(L, 1, &rawLength);
+    const QByteArray rawData{rawBytes, static_cast<qsizetype>(rawLength)};
     // We need to convert any "<*>" codes to their raw byte forms:
     QByteArray cookedData{parseTelnetCodes(rawData)};
     if (rawData.isEmpty()) {
@@ -1224,7 +1226,11 @@ int TLuaInterpreter::feedTriggers(lua_State* L)
     if (lua_gettop(L) > 1) {
         dataIsUtf8Encoded = getVerifiedBool(L, __func__, 2, "Utf8Encoded", true);
     }
-    const QByteArray data{lua_tostring(L, 1)};
+    size_t length = 0;
+    const char* bytes = lua_tolstring(L, 1, &length);
+    QByteArray data{bytes, static_cast<qsizetype>(length)};
+    // cTelnet::processSocketData() drops a NUL from a game's text, so drop it here too
+    data.replace('\0', QByteArray());
     // Not from inside a trigger: that would announce the line it is handling to
     // screen readers before the rest of the pass can gag or rewrite it.
     auto feed = [L, &host, triggerUnit](std::string& text) {
@@ -1425,11 +1431,14 @@ int TLuaInterpreter::saveProfile(lua_State* L)
 {
     Host& host = getHostFromLua(L);
 
+    if (!lua_isnoneornil(L, 1) && !checkStringArg(L, __func__, 1, "folder", true)) {
+        return lua_error(L);
+    }
     if (!lua_isnoneornil(L, 2) && !checkStringArg(L, __func__, 2, "file name", true)) {
         return lua_error(L);
     }
     QString saveToDir;
-    if (lua_isstring(L, 1)) {
+    if (!lua_isnoneornil(L, 1)) {
         saveToDir = lua_tostring(L, 1);
     }
     QString saveAsFile;
@@ -1458,6 +1467,11 @@ int TLuaInterpreter::saveProfile(lua_State* L)
     auto [ok, filename, error] = saveAsFile.isNull() ? host.saveProfile(saveToDir) : host.saveProfileAs(saveAsPathFileName);
 
     if (ok) {
+        // Most application-wide settings reach Mudlet.ini only at quit, so an
+        // unclean exit would lose the ones this save is meant to keep
+        if (auto* frontend = TAppFrontend::instance()) {
+            frontend->writeSettings();
+        }
         lua_pushboolean(L, true);
         lua_pushstring(L, (filename.toUtf8().constData()));
         return 2;
@@ -2376,7 +2390,7 @@ int TLuaInterpreter::getTimestamp(lua_State* L)
         return warnArgumentValue(L, __func__, qsl("mini console, user window or buffer '%1' not found").arg(name));
     }
     if (luaLine < pModel->buffer.timeBuffer.size()) {
-        lua_pushstring(L, pModel->buffer.timeBuffer.at(luaLine).toUtf8().constData());
+        lua_pushstring(L, pModel->buffer.timeStampText(luaLine).toUtf8().constData());
         return 1;
     }
     return warnArgumentValue(L, __func__, qsl("line number %1 invalid, it is beyond the last line of the buffer").arg(luaLine));
@@ -2837,12 +2851,14 @@ int TLuaInterpreter::uninstallPackage(lua_State* L)
 {
     const QString packageName = getVerifiedString(L, __func__, 1, "package name");
     Host& host = getHostFromLua(L);
-    const bool result = host.uninstallPackage(packageName, enums::PackageModuleType::Package);
-    if (!result) {
-        lua_pushnil(L);
-    } else {
-        lua_pushboolean(L, result);
+    if (!host.mInstalledPackages.contains(packageName)) {
+        return warnArgumentValue(L, __func__, qsl("package '%1' is not installed").arg(packageName));
     }
+    if (!host.uninstallPackage(packageName, enums::PackageModuleType::Package)) {
+        // An installed package is only refused while a profile save is running
+        return warnArgumentValue(L, __func__, qsl("a profile save is in progress, try again once it has finished"));
+    }
+    lua_pushboolean(L, true);
     return 1;
 }
 
@@ -3024,7 +3040,19 @@ int TLuaInterpreter::setModuleInfo(lua_State* L)
     if (!checkStringArg(L, __func__, 1, "module name") || !checkStringArg(L, __func__, 2, "info") || !checkStringArg(L, __func__, 3, "value")) {
         return lua_error(L);
     }
-    host.mModuleInfo[QString{lua_tostring(L, 1)}][QString{lua_tostring(L, 2)}] = QString{lua_tostring(L, 3)};
+    const QString moduleName{lua_tostring(L, 1)};
+    // A module being read in is listed already, so its own scripts can still describe it
+    if (!host.mInstalledModules.contains(moduleName)) {
+        return warnArgumentValue(L, __func__, qsl("module '%1' not found").arg(moduleName));
+    }
+    const QString info{lua_tostring(L, 2)};
+    const QString value{lua_tostring(L, 3)};
+    // The installed name is still accepted: a module without a config.lua has no detail to start with, and the
+    // install sanitizes config.lua's name (folders, file extensions, backslashes) but stores it unchanged
+    if (info == qsl("mpackage") && value != moduleName) {
+        return warnArgumentValue(L, __func__, qsl("'mpackage' is the name module '%1' is installed under and cannot be changed").arg(moduleName));
+    }
+    host.mModuleInfo[moduleName][info] = value;
     lua_pushboolean(L, true);
     return 1;
 }
@@ -3036,7 +3064,19 @@ int TLuaInterpreter::setPackageInfo(lua_State* L)
     if (!checkStringArg(L, __func__, 1, "package name") || !checkStringArg(L, __func__, 2, "info") || !checkStringArg(L, __func__, 3, "value")) {
         return lua_error(L);
     }
-    host.mPackageInfo[QString{lua_tostring(L, 1)}][QString{lua_tostring(L, 2)}] = QString{lua_tostring(L, 3)};
+    const QString packageName{lua_tostring(L, 1)};
+    // A package being read in is listed already, so its own scripts can still describe it
+    if (!host.mInstalledPackages.contains(packageName)) {
+        return warnArgumentValue(L, __func__, qsl("package '%1' not found").arg(packageName));
+    }
+    const QString info{lua_tostring(L, 2)};
+    const QString value{lua_tostring(L, 3)};
+    // The installed name is still accepted: a package without a config.lua has no detail to start with, and the
+    // install sanitizes config.lua's name (folders, file extensions, backslashes) but stores it unchanged
+    if (info == qsl("mpackage") && value != packageName) {
+        return warnArgumentValue(L, __func__, qsl("'mpackage' is the name package '%1' is installed under and cannot be changed").arg(packageName));
+    }
+    host.mPackageInfo[packageName][info] = value;
     lua_pushboolean(L, true);
     return 1;
 }
@@ -3147,10 +3187,6 @@ int TLuaInterpreter::sendRaw(lua_State* L)
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#sendSocket
-// The data can, theoretically, contain embedded ASCII NUL characters, but they
-// cannot be entered directly as they immediately terminate the string. Instead
-// provide a true as a second argument and use the appropriate "code" value
-// defined in the parseTelnetCodes() function:
 int TLuaInterpreter::sendSocket(lua_State* L)
 {
     if (!lua_isstring(L, 1)) {
@@ -3161,7 +3197,9 @@ int TLuaInterpreter::sendSocket(lua_State* L)
     if (lua_gettop(L) > 1) {
         parseCodes = getVerifiedBool(L, __func__, 2, "parse telnet codes {default = false}", true);
     }
-    const QByteArray data{lua_tostring(L, 1)};
+    size_t length = 0;
+    const char* bytes = lua_tolstring(L, 1, &length);
+    const QByteArray data{bytes, static_cast<qsizetype>(length)};
     std::string dataStdString{parseCodes ? parseTelnetCodes(data).toStdString() : data.toStdString()};
 
     Host& host = getHostFromLua(L);
@@ -3439,13 +3477,15 @@ bool TLuaInterpreter::compile(const QString& code, QString& errorMsg, const QStr
     const int callerStackTop = lua_gettop(L);
 
     const QByteArray utf8Code = code.toUtf8();
-    const int error = (luaL_loadbuffer(L, utf8Code.constData(), utf8Code.size(), name.toUtf8().constData()) || lua_pcall(L, 0, 0, 0));
+    const int loadStatus = luaL_loadbuffer(L, utf8Code.constData(), utf8Code.size(), name.toUtf8().constData());
+    const bool error = loadStatus != 0 || lua_pcall(L, 0, 0, 0);
 
     if (error) {
         // The error object is on the top of the stack. Absolute slot 1 - which
         // this used to read - is the calling C function's first argument, which
         // is how a failure came to be reported as the script's own name.
-        std::string e = "Lua syntax error:";
+        // A load can also fail for want of memory, which is no syntax error
+        std::string e = loadStatus == LUA_ERRSYNTAX ? "Lua syntax error:" : "Lua error:";
         if (lua_isstring(L, -1)) {
             e.append(lua_tostring(L, -1));
         } else {
@@ -3463,6 +3503,21 @@ bool TLuaInterpreter::compile(const QString& code, QString& errorMsg, const QStr
     lua_settop(L, callerStackTop);
 
     return !error;
+}
+
+// No documentation available in wiki - internal function
+// Undoes compile()'s rich-text markup (kept in step by hand). The tags go before the entities, or
+// a script's own "<b>" is stripped, and "&amp;" goes last, or its "&lt;b&gt;" comes back as "<b>".
+QString TLuaInterpreter::compileErrorAsPlainText(const QString& error)
+{
+    QString plainText = error;
+    plainText.remove(qsl("<b>"));
+    plainText.remove(qsl("</b>"));
+    plainText.replace(qsl("&quot;"), qsl("\""));
+    plainText.replace(qsl("&lt;"), qsl("<"));
+    plainText.replace(qsl("&gt;"), qsl(">"));
+    plainText.replace(qsl("&amp;"), qsl("&"));
+    return plainText;
 }
 
 // No documentation available in wiki - internal function
@@ -6202,6 +6257,9 @@ int TLuaInterpreter::performHttpRequest(lua_State* L, const char* functionName, 
     if (!url.isValid()) {
         return warnArgumentValue(L, functionName, qsl("url is invalid, reason: %1.").arg(url.errorString()));
     }
+    if (!httpSchemeAllowed(url)) {
+        return warnArgumentValue(L, functionName, qsl("url is invalid, reason: unsupported scheme '%1', only http and https are allowed.").arg(url.scheme()));
+    }
 
     QNetworkRequest request = QNetworkRequest(url);
     MudletApp::setNetworkRequestDefaults(url, request);
@@ -7821,7 +7879,7 @@ std::pair<int, QString> TLuaInterpreter::createPermScript(const QString& name, c
     // This will lead to the generation of the ID number:
     mpHost->getScriptUnit()->registerScript(pS);
     if (!pS->setScript(luaCode)) {
-        const QString errMsg = pS->getError();
+        const QString errMsg = compileErrorAsPlainText(pS->getError());
         delete pS;
         return {-1, qsl("unable to compile \"%1\", reason: %2").arg(luaCode, errMsg)};
     }
@@ -7854,7 +7912,7 @@ std::pair<int, QString> TLuaInterpreter::setScriptCode(const QString& name, cons
     }
     const auto oldCode = pS->getScript();
     if (!pS->setScript(luaCode)) {
-        const QString errMsg = pS->getError();
+        const QString errMsg = compileErrorAsPlainText(pS->getError());
         pS->setScript(oldCode);
         return {-1, qsl("unable to compile \"%1\" for the script \"%2\" at position %3, reason: %4").arg(luaCode, name, QString::number(pos + 1), errMsg)};
     }
@@ -7889,7 +7947,7 @@ std::pair<int, QString> TLuaInterpreter::startPermTimer(const QString& name, con
     // This will lead to the generation of the ID number:
     mpHost->getTimerUnit()->registerTimer(pT);
     if (!pT->setScript(function)) {
-        const QString errMsg = pT->getError();
+        const QString errMsg = compileErrorAsPlainText(pT->getError());
         // Apparently this will call the TTimer::unregisterTimer(...) method:
         delete pT;
         return {-1, qsl("unable to compile \"%1\", reason: %2").arg(function, errMsg)};
@@ -7912,7 +7970,7 @@ QPair<int, QString> TLuaInterpreter::startTempTimer(double timeout, const QStrin
     // name for temporary timers:
     mpHost->getTimerUnit()->registerTimer(pT);
     if (!pT->setScript(function)) {
-        const QString errMsg = pT->getError();
+        const QString errMsg = compileErrorAsPlainText(pT->getError());
         // Apparently this will call the TTimer::unregisterTimer(...) method:
         delete pT;
         return qMakePair(-1, qsl("unable to compile \"%1\", reason: %2").arg(function, errMsg));
@@ -8420,6 +8478,9 @@ int TLuaInterpreter::spellCheckWord(lua_State* L)
         encodedText = text.toUtf8();
     } else {
         handle = host.spellChecker().systemHandle();
+        if (!handle && host.spellChecker().systemDictionaryMissing()) {
+            return warnArgumentValue(L, __func__, qsl("the \"%1\" dictionary this profile uses is not available on this computer so is unable to check your word").arg(host.getSpellDic()));
+        }
         if (!handle) {
             return warnArgumentValue(L, __func__, "no main dictionaries found: Mudlet has not been able to find any dictionary files to use so is unable to check your word");
         }
@@ -8467,6 +8528,10 @@ int TLuaInterpreter::spellSuggestWord(lua_State* L)
         encodedText = text.toUtf8();
     } else {
         handle = host.spellChecker().systemHandle();
+        if (!handle && host.spellChecker().systemDictionaryMissing()) {
+            return warnArgumentValue(
+                    L, __func__, qsl("the \"%1\" dictionary this profile uses is not available on this computer so is unable to make suggestions for your word").arg(host.getSpellDic()));
+        }
         if (!handle) {
             return warnArgumentValue(L, __func__, "no main dictionaries found: Mudlet has not been able to find any dictionary files to use so is unable to make suggestions for your word");
         }
@@ -9114,7 +9179,9 @@ int TLuaInterpreter::setConfig(lua_State* L)
         return 2;
     };
 
-    if (host.mapOpen()) {
+    // These settings live on the Host or on mudlet and a mapper picks them up
+    // when it is made, so none of them needs one to exist already:
+    if (host.mpMap) {
         if (key == qsl("mapRoomSize")) {
             const int size = getVerifiedInt(L, __func__, 2, "value");
             if (size < 1) {
@@ -9162,8 +9229,13 @@ int TLuaInterpreter::setConfig(lua_State* L)
             return success();
         }
 #if defined(INCLUDE_3DMAPPER)
-        if (key == qsl("show3dMapView") && host.mpMap->mapViewFrontend()) {
-            host.mpMap->mapViewFrontend()->show3DView(getVerifiedBool(L, __func__, 2, "value"));
+        if (key == qsl("show3dMapView")) {
+            const bool show = getVerifiedBool(L, __func__, 2, "value");
+            // getConfig reads this back while the mapper is hidden, whichever frontend shows it
+            host.mShow3DView = show;
+            if (auto* mapper = host.mpMap->mapViewFrontend()) {
+                mapper->show3DView(show);
+            }
             return success();
         }
 #endif
@@ -9395,9 +9467,6 @@ int TLuaInterpreter::setConfig(lua_State* L)
         host.mEnableNEWENVIRON = getVerifiedBool(L, __func__, 2, "value");
         return success();
     }
-    // The 2D map room symbol settings live on the map rather than the profile,
-    // so unlike the map keys above they do not need an open mapper - a script
-    // can pick the font before the mapper is ever shown:
     if (key == qsl("mapSymbolFont")) {
         const QString fontName = getVerifiedString(L, __func__, 2, "value");
         if (fontName.trimmed().isEmpty()) {
@@ -9521,6 +9590,9 @@ int TLuaInterpreter::setConfig(lua_State* L)
     }
     if (key == qsl("commandLineHistorySaveSize")) {
         const auto value = getVerifiedInt(L, __func__, 2, "value");
+        if (value < 0 || value > Host::scmMaxCommandLineHistorySaveSize) {
+            return warnArgumentValue(L, __func__, qsl("commandLineHistorySaveSize %1 is outside of the supported range of 0 to %2").arg(value).arg(Host::scmMaxCommandLineHistorySaveSize));
+        }
         host.setCommandLineHistorySaveSize(value);
         return success();
     }
@@ -9736,12 +9808,15 @@ int TLuaInterpreter::getConfig(lua_State* L)
             {qsl("show3dMapView"),
              [&]() {
 #if defined(INCLUDE_3DMAPPER)
-                 if (auto* mapper = host.mpMap ? host.mpMap->mapViewFrontend() : nullptr) {
+                 // A mapper hidden by closeMapWidget() shows no 3D view, but reopens in the stored mode
+                 if (auto* mapper = host.mpMap ? host.mpMap->mapViewFrontend() : nullptr; mapper && mapper->onScreen()) {
                      lua_pushboolean(L, mapper->showing3DView());
                      return;
                  }
-#endif
+                 lua_pushboolean(L, host.mShow3DView);
+#else
                  lua_pushboolean(L, false);
+#endif
              }},
             {qsl("mapperPanelVisible"),
              [&]() {

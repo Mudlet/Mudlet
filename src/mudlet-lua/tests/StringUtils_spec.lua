@@ -25,6 +25,35 @@ describe("Tests StringUtils.lua functions", function()
       assert.equals("", ("This is a test"):cut(0))
       assert.equals("", (""):cut(0))
     end)
+
+    it("should count characters rather than bytes, never splitting a multi-byte one", function()
+      assert.equals("hé", ("héllo"):cut(2))
+      assert.equals("héllo", ("héllo"):cut(5))
+      assert.equals("日本", ("日本語"):cut(2))
+      assert.equals("日本語", ("日本語"):cut(6))
+    end)
+
+    it("should keep valid multi-byte characters whole in a string that is not valid UTF-8", function()
+      assert.equals("a\255", ("a\255bc"):cut(2))
+      assert.equals("\255é", ("\255é"):cut(2))
+      assert.equals("hé", ("héllo\255"):cut(2))
+      assert.equals("é", ("é\255x"):cut(1))
+    end)
+
+    it("should count each stray continuation byte as one character", function()
+      assert.equals(("\128"):rep(3), ("\128"):rep(20):cut(3))
+      assert.equals("\255", ("\255\128\128x"):cut(1))
+      assert.equals("\133", ("\133\148abc"):cut(1))
+      assert.equals("\176\177x", ("\176\177xyz"):cut(3))
+    end)
+
+    it("should not need the utf8 library", function()
+      local savedUtf8 = _G.utf8
+      finally(function() _G.utf8 = savedUtf8 end)
+      _G.utf8 = nil
+      assert.equals("ab", ("abc"):cut(2))
+      assert.equals("hé", ("héllo"):cut(2))
+    end)
   end)
 
   describe("Tests the functionality of string.enclose", function()
@@ -576,6 +605,216 @@ describe("Tests StringUtils.lua functions", function()
       assert.equals("fresh", f("{fstringSpecStale}"))
     end)
 
+    it("should interpolate several plain names, with text around and between them", function()
+      local first, second = "one", 2
+      local result = f("[{first}]{second}{first} and {second}!")
+      assert.equals("[one]2one and 2!", result)
+    end)
+
+    it("should resolve several names in one string from locals, globals and nil", function()
+      _G.fstringSpecMixed = "global"
+      local fromLocal = "local"
+      local result = f("{fromLocal} {fstringSpecMixed} {fstringSpecAbsent}")
+      _G.fstringSpecMixed = nil
+      assert.equals("local global nil", result)
+    end)
+
+    it("should render a local holding nil as nil even when a global shares its name", function()
+      _G.fstringSpecShadowed = "global"
+      local fstringSpecShadowed = nil
+      local result = f("{fstringSpecShadowed}")
+      _G.fstringSpecShadowed = nil
+      assert.equals("nil", result)
+    end)
+
+    it("should render locals holding nil and false as such in a template of several names", function()
+      _G.fstringSpecShadowedPair = "global"
+      local fstringSpecShadowedPair, other = nil, false
+      local result = f("{fstringSpecShadowedPair}{other}")
+      _G.fstringSpecShadowedPair = nil
+      assert.equals("nilfalse", result)
+    end)
+
+    it("should take a name's locals from the caller's callers as well", function()
+      local fromOuter = "outer"
+      local function middle()
+        local fromMiddle = "middle"
+        local function inner()
+          local result = f("{fromMiddle} {fromOuter}")
+          return result
+        end
+        return (inner())
+      end
+      assert.equals("middle outer", middle())
+    end)
+
+    it("should find a single name in a caller's caller", function()
+      local fromOuter = "outer"
+      local function inner()
+        local result = f("{fromOuter}")
+        return result
+      end
+      local function middle()
+        local result = inner()
+        return result
+      end
+      assert.equals("outer", middle())
+    end)
+
+    it("should let a function inside an expression read the caller's locals, whatever f calls its own", function()
+      local i, out, code, part = "i", "out", "code", "part"
+      local function pick(name)
+        return name
+      end
+      assert.equals("i", f("{(function() return i end)()}"))
+      assert.equals("out", f("{(function() return out end)()}"))
+      assert.equals("code", f("{(function() return code end)()}"))
+      assert.equals("part", f("{(function() return part end)()}"))
+      assert.equals("i", f("{pick((function() return i end)())}"))
+    end)
+
+    it("should read each name when its block runs, so an earlier block can change it", function()
+      local n, m = 0, "m"
+      local function inc()
+        n = n + 1
+        return n
+      end
+      local result = f("{inc()} {n} {m}")
+      assert.equals("1 1 m", result)
+    end)
+
+    it("should not let a nested f see the outer f's internal locals", function()
+      local i, out, parts = "mine", "mine2", "mine3"
+      local result = f("{f('{i}')}|{f('{out}')}|{f('{parts}')}")
+      assert.equals("mine|mine2|mine3", result)
+    end)
+
+    it("should reuse a template with fresh locals on every call", function()
+      local results = {}
+      for _, v in ipairs({"a", "b", "c"}) do
+        local item = v
+        local n = #results
+        results[n + 1] = f("{item}-{item}/{n}")
+      end
+      assert.same({"a-a/0", "b-b/1", "c-c/2"}, results)
+    end)
+
+    it("should render a name repeated in one template", function()
+      local a = 1
+      local result = f("{a}{a}{a}")
+      assert.equals("111", result)
+    end)
+
+    it("should not let a nested f with several names see the outer f's internal locals", function()
+      local i, out, parts = "mine", "mine2", "mine3"
+      local result = f("{f('{i}{out}')}|{f('{parts}{i}')}")
+      assert.equals("minemine2|mine3mine", result)
+    end)
+
+    it("should not let a nested f read the outer f's template through its parameter", function()
+      local result = f("{f('{supersecretstringvariablenocollision}')}")
+      assert.equals("nil", result)
+    end)
+
+    it("should see a local that a __tostring changes before a later name is read", function()
+      local n = 0
+      local counter = setmetatable({}, { __tostring = function()
+        n = n + 1
+        return "o"
+      end })
+      local result = f("{counter}{n}")
+      assert.equals("o1", result)
+    end)
+
+    it("should read the caller's locals from a callback that other functions call", function()
+      local function each(t, fn)
+        local r = {}
+        for i, v in ipairs(t) do
+          r[i] = fn(v)
+        end
+        return r
+      end
+      local function helper(t, fn)
+        local factor = "helper's"
+        local r = each(t, fn)
+        return r
+      end
+      local factor = 3
+      local result = f("{table.concat(helper({1, 2}, function(x) return x * factor end), ',')}")
+      assert.equals("3,6", result)
+    end)
+
+    it("should take each name from the innermost frame that has it", function()
+      local function outer()
+        local x, y = "outer-x", "outer-y"
+        local function inner()
+          local x = "inner-x"
+          local result = f("{x}{y}")
+          return result
+        end
+        local result = inner()
+        return result
+      end
+      assert.equals("inner-xouter-y", outer())
+    end)
+
+    it("should prefer the innermost local when a name exists at several depths", function()
+      local x, y = "outer-x", "outer-y"
+      local function inner()
+        local x, y = "inner-x", "inner-y"
+        local both = f("{x}{y}")
+        local single = f("{x}{x}")
+        return both, single
+      end
+      local both, single = inner()
+      assert.equals("inner-xinner-y", both)
+      assert.equals("inner-xinner-x", single)
+    end)
+
+    it("should mix plain names and expressions, with text after the last block", function()
+      local a, b = 1, 2
+      local result = f("{a}+{b}={a + b} {a}{(b * 2)}-tail")
+      assert.equals("1+2=3 14-tail", result)
+    end)
+
+    it("should leave a template with no complete block untouched", function()
+      assert.equals("a{b", f("a{b"))
+    end)
+
+    it("should read line and matches through a plain name", function()
+      _G.line = "hello"
+      local plain = f("{line}")
+      local shadowed
+      do
+        local line = "local"
+        shadowed = f("{line}")
+      end
+      _G.line = nil
+      assert.equals("hello", plain)
+      assert.equals("local", shadowed)
+    end)
+
+    it("should read a plain name's global from the environment f itself is given", function()
+      local sandbox = setmetatable({fstringSpecPlainSandboxed = "inside"}, {__index = _G})
+      local original = getfenv(f)
+      setfenv(f, sandbox)
+      local ok, plain, pair = pcall(function()
+        return f("{fstringSpecPlainSandboxed}"), f("{fstringSpecPlainSandboxed}{fstringSpecPlainSandboxed}")
+      end)
+      setfenv(f, original)
+      assert.is_true(ok)
+      assert.equals("inside", plain)
+      assert.equals("insideinside", pair)
+    end)
+
+    it("should treat a Lua keyword in braces as an expression, not a name", function()
+      assert.equals("nil true false", f("{nil} {true} {false}"))
+    end)
+
+    it("should evaluate a block whose expression holds braces of its own", function()
+      assert.equals("2", f("{({1, 2})[2]}"))
+    end)
+
     it("should keep an expression's globals through an f nested inside it", function()
       assert.equals("1", f("{(function() fstringSpecNested = 1 local _ = f('{2}') return fstringSpecNested end)()}"))
     end)
@@ -635,6 +874,34 @@ describe("Tests StringUtils.lua functions", function()
       assert.is_true(ok, tostring(inside))
       assert.equals("inside", inside)
       assert.equals("nil", outside)
+    end)
+
+    it("should read a global from a coroutine an expression starts", function()
+      _G.fstringSpecCoroutine = "global"
+      local result = f("{coroutine.wrap(function() return fstringSpecCoroutine end)()}")
+      _G.fstringSpecCoroutine = nil
+      assert.equals("global", result)
+    end)
+
+    it("should leave a block as written when its __tostring gives nil or false", function()
+      local none = setmetatable({}, { __tostring = function() return nil end })
+      local no = setmetatable({}, { __tostring = function() return false end })
+      assert.equals("<{none}> tail", f("<{none}> tail"))
+      assert.equals("<{none}{no}> tail", f("<{none}{no}> tail"))
+      assert.equals("<{no or 1}> tail", f("<{no or 1}> tail"))
+    end)
+
+    it("should see a local that an overridden tostring changes before a later name is read", function()
+      local first, second = 1, 0
+      local original = _G.tostring
+      _G.tostring = function(value)
+        second = second + 1
+        return original(value)
+      end
+      local ok, result = pcall(f, "{first}{second}")
+      _G.tostring = original
+      assert.is_true(ok, result)
+      assert.equals("11", result)
     end)
 
     it("should not treat % as a format directive", function()
