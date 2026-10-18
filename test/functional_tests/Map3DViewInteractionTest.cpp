@@ -34,6 +34,7 @@
 #include <QAction>
 #include <QDockWidget>
 #include <QMenu>
+#include <QOpenGLContext>
 #include <QScopeGuard>
 #include <QSignalSpy>
 #include <QTemporaryDir>
@@ -2119,15 +2120,14 @@ private slots:
         QCOMPARE(pModern->shownAreaId(), mOtherAreaId);
         QCOMPARE(pMapper->comboBox_showArea->currentText(), qsl("Other Area"));
         QCOMPARE(map()->mRoomIdHash.value(map()->mProfileName), kPlayerRoomId);
+        // The rest is checked by painting, and grabbing a view that has no context leaks its QOpenGLContext
+        if (QOpenGLContext probe; !probe.create()) {
+            QSKIP("no OpenGL context on this platform, so the 3D view does not paint");
+        }
         // Not taken back to the player's area by the next paint. Painted by a grab, not repaint(): offscreen, a view
         // whose dock changed window has no framebuffer, so paintGL() never runs, until a grab makes a new one
         pModern->grabFramebuffer();
         QCOMPARE(pModern->shownAreaId(), mOtherAreaId);
-
-        // Following the player again takes effect in paintGL()
-        if (!pModern->isValid()) {
-            QSKIP("no OpenGL context on this platform, so the 3D view does not paint");
-        }
 
         // As the mapper's button to center on the player does
         pMapper->resetAreaComboBoxToPlayerRoomArea();
