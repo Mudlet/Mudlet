@@ -1010,7 +1010,8 @@ local labelFirstGuard = [=[(?&lt;![\d%])(?&lt;!\d[ ]|\d[ ]{2}|\d[ ]{3}|\d[ ]{4}|
 -- is built from these tables, and a spelling that only exists inline is missing
 -- from the prefilter, so the shape never sees a line to read.
 local promptLabels = {
-  hp = [=[hp|health|hits?]=],
+  -- lk/livskraft: Swedish games' health ("LK:  74/114  MP:   34/98")
+  hp = [=[hp|health|hits?|lk|livskraft]=],
   mp = [=[mp|mana|sp|magic|energy]=],
   mv = [=[mv|moves?|movement|end(?:urance)?|st(?:amina)?]=],
   xp = [=[xp|exp|tnl]=],
