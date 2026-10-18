@@ -525,6 +525,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("mShowRoomIDs") = pHost->mShowRoomID ? "yes" : "no";
     host.append_attribute("mShowPanel") = pHost->mShowPanel ? "yes" : "no";
     host.append_attribute("mShow3DView") = pHost->mShow3DView ? "yes" : "no";
+    host.append_attribute("mapStyle") = pHost->mapStyle().toUtf8().constData();
     host.append_attribute("mHaveMapperScript") = pHost->mHaveMapperScript ? "yes" : "no";
     host.append_attribute("mEditorAutoComplete") = pHost->mEditorAutoComplete ? "yes" : "no";
     host.append_attribute("mEditorShowBidi") = pHost->getEditorShowBidi() ? "yes" : "no";

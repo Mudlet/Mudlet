@@ -79,8 +79,8 @@ class TMap : public QObject
     friend class FrontendRoutingContractTest;
 
 public:
-    // Host settings the 2D map keeps a copy of to draw with
-    enum class MapperSetting { RoomSize, ExitSize, RoundRooms, ShowRoomIds, ShowGrid };
+    // Host settings the 2D map keeps a copy of to draw with, and the 3D view's style
+    enum class MapperSetting { RoomSize, ExitSize, RoundRooms, ShowRoomIds, ShowGrid, Style };
 
 signals:
     void signal_saveErrorChanged(bool hasError);
@@ -156,7 +156,10 @@ public:
     void logError(const QString&);
     bool setExit(int from, int to, int dir);
     bool setRoomCoordinates(int id, int x, int y, int z);
+    // After a change to the map: also counts its revision up
     void updateArea(int areaId);
+    // For what only moves the view or the player, which every move of the player asks for
+    void repaintArea(int areaId);
     // For a whole map read in outside TMap, as XMLimport does:
     void announceMapLoaded(bool showPlayerArea);
     void requestMapperShown();
@@ -320,6 +323,9 @@ public:
     // determine which bit of code is responsible for changing the flag!)
     void setUnsaved(const char*);
     void resetUnsaved() { mUnsavedMap = false; }
+    // Counts up on every change to the map's contents or to the colors it is drawn in, so that a view can tell
+    // whether what it worked out from them last frame still holds
+    quint64 revision() const { return mRevision; }
     bool isUnsaved() const { return mUnsavedMap; }
     // Bumped by setUnsaved() and whenever the whole map is replaced, so a cache can tell it is stale.
     quint64 mapRevision() const { return mMapRevision; }
@@ -623,6 +629,7 @@ private:
 
     // Used to flag whether the map auto-save needs to be done after the next interval:
     bool mUnsavedMap = false;
+    quint64 mRevision = 0;
     // Used to indicate that the last map save attempt failed:
     bool mSaveError = false;
     // Used to hide the default area from casual viewing for those MUDs that
