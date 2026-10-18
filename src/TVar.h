@@ -82,6 +82,8 @@ private:
     QString nName;
 };
 
+bool TVarLessThan(TVar*, TVar*);
+
 #ifndef QT_NO_DEBUG_STREAM
 inline QDebug& operator<<(QDebug& debug, const TVar* var)
 {

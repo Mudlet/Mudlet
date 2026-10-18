@@ -213,6 +213,9 @@ public:
     void recordActiveCommandLine(TCommandLine*);
     void forgetCommandLine(TCommandLine*);
     void focusActiveCommandLine() override;
+    // Raises and focuses that command line, or this console's own when none is on record or when the one
+    // on record is outside pWindow; in that last case this console's own also becomes the one on record.
+    void focusActiveCommandLine(const QWidget* pWindow);
     bool replaceCommandLineText(const QString& name, const QString& text) override;
     bool appendCommandLineText(const QString& name, const QString& text) override;
     bool clearCommandLine(const QString& name) override;
@@ -281,6 +284,7 @@ public:
     void regenerateToolBars(const std::list<TAction*>& rootActions) override;
     void regenerateEasyButtonBars(const std::list<TAction*>& rootActions) override;
     void detachActionBars(TAction* pAction) override;
+    void disposeActionBars(TAction* pAction) override;
     // Each action's bars, looked up by the action. An action shown as a menu on
     // another's bar (on a floating toolbar, any entry of such a menu) is
     // recorded against that bar too, so what is asked of its bar here is done

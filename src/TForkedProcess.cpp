@@ -74,13 +74,17 @@ void TForkedProcess::slot_finished(int exitCode, QProcess::ExitStatus exitStatus
 
 void TForkedProcess::slot_receivedData()
 {
+    lua_State* L = mpInterpreter->pGlobalLua;
     while (canReadLine()) {
-        QByteArray line = readLine();
-        // Call lua function by stored Reference
-        const TLuaInterpreter::ScriptCallerScope callerScope(*mpInterpreter, false);
-        lua_rawgeti(mpInterpreter->pGlobalLua, LUA_REGISTRYINDEX, callBackFunctionRef);
-        lua_pushstring(mpInterpreter->pGlobalLua, line.data());
-        lua_pcall(mpInterpreter->pGlobalLua, 1, 0, 0);
+        // Checked before the line is read, so a line that cannot be handed over stays buffered
+        if (!lua_checkstack(L, 2)) {
+            std::string e = "not enough Lua stack space to call it with the process's next line of output";
+            mpInterpreter->logError(e, qsl("spawn() callback"), qsl("anonymous Lua function"));
+            return;
+        }
+        lua_rawgeti(L, LUA_REGISTRYINDEX, callBackFunctionRef);
+        lua_pushstring(L, readLine().constData());
+        mpInterpreter->callReference(L, qsl("spawn() callback"), 1);
     }
 }
 
