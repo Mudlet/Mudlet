@@ -978,24 +978,29 @@ void TMainConsole::regenerateToolBars(const std::list<TAction*>& rootActions)
 
 void TMainConsole::regenerateEasyButtonBars(const std::list<TAction*>& rootActions)
 {
+    // A floating/dockable bar is a TToolBar, so drop any TEasyButtonBar the
+    // action had before it was made one
+    auto releaseEasyButtonBar = [this](TAction* pAction) {
+        if (TEasyButtonBar* pOldBar = actionEasyButtonBar(pAction)) {
+            mEasyButtonBarList.remove(pOldBar);
+            pOldBar->deleteLater();
+            setActionEasyButtonBar(pAction, nullptr);
+        }
+    };
     for (auto& rootAction : rootActions) {
         if (rootAction->mLocation == 4) {
-            // This TAction is set to be a floating/dockable widget
-            if (TEasyButtonBar* pOldBar = actionEasyButtonBar(rootAction)) {
-                // But it has a TEasyButtonBar type toolbar so we need to
-                // remove the TEasyButtonBar from the list of TEasyButtonBars:
-                mEasyButtonBarList.remove(pOldBar);
-                // And destroy it:
-                pOldBar->deleteLater();
-                setActionEasyButtonBar(rootAction, nullptr);
-            }
-            continue; // skip over any root action node that IS going to be a TToolBar.
+            releaseEasyButtonBar(rootAction);
+            continue;
         }
         if (!rootAction->mPackageName.isEmpty()) {
             // It has a package name so it is actually the parent
             // module/package item rather than the actual ToolBar
             for (auto* childActionNode : *rootAction->mpMyChildrenList) {
                 auto* childAction = static_cast<TAction*>(childActionNode);
+                if (childAction->mLocation == 4) {
+                    releaseEasyButtonBar(childAction);
+                    continue;
+                }
                 TEasyButtonBar* pTB = nullptr;
                 for (auto& easyButtonBar : mEasyButtonBarList) {
                     if (easyButtonBar == actionEasyButtonBar(childAction)) {
@@ -1004,7 +1009,7 @@ void TMainConsole::regenerateEasyButtonBars(const std::list<TAction*>& rootActio
                     }
                 }
                 if (!pTB) {
-                    pTB = createEasyButtonBar(rootAction, childAction->getName());
+                    pTB = createEasyButtonBar(childAction, childAction->getName());
                     mEasyButtonBarList.emplace_back(pTB);
                     setActionEasyButtonBar(childAction, pTB); // needed for drag&drop
                 }
@@ -1157,6 +1162,25 @@ void TMainConsole::detachActionBars(TAction* pAction)
     if (TToolBar* pToolBar = actionToolBar(pAction); pToolBar && pAction->mLocation == 4) {
         pToolBar->setFloating(false);
         undockToolBar(pToolBar);
+    }
+}
+
+void TMainConsole::disposeActionBars(TAction* pAction)
+{
+    if (TEasyButtonBar* pBar = actionEasyButtonBar(pAction)) {
+        detachEasyButtonBar(pBar, pAction->mLocation);
+        mEasyButtonBarList.remove(pBar);
+        pBar->hide();
+        pBar->deleteLater();
+        setActionEasyButtonBar(pAction, nullptr);
+    }
+    if (TToolBar* pToolBar = actionToolBar(pAction)) {
+        pToolBar->setFloating(false);
+        undockToolBar(pToolBar);
+        mToolBarList.remove(pToolBar);
+        pToolBar->hide();
+        pToolBar->deleteLater();
+        setActionToolBar(pAction, nullptr);
     }
 }
 
@@ -1415,6 +1439,10 @@ void TMainConsole::deleteMiniConsole(const QString& name)
     auto pConsole = deregisterSubConsole(name);
     if (pConsole) {
         mpHost->windowRegistry().forgetUserWindowSize(name);
+        // Its command line is registered under its name and would hold that name until the deferred delete
+        if (pConsole->mpCommandLine) {
+            deregisterSubCommandLine(pConsole->mpCommandLine);
+        }
 
         // A UserWindow's TConsole lives *inside* a TDockWidget. Deleting only the
         // console (as for an ordinary miniconsole) leaves the dock orphaned in
@@ -1557,8 +1585,10 @@ std::pair<bool, QString> TMainConsole::setLabelCursor(const QString& name, int s
     auto pL = mLabelMap.value(name);
     if (pL) {
         if (shape > -1 && shape < 22) {
+            pL->endLinkHover();
             pL->setCursor(static_cast<Qt::CursorShape>(shape));
         } else if (shape == -1) {
+            pL->endLinkHover();
             pL->unsetCursor();
         } else {
             return {false, qsl("cursor shape '%1' not found. see https://doc.qt.io/qt-5/qt.html#CursorShape-enum").arg(shape)};
@@ -1585,6 +1615,7 @@ std::pair<bool, QString> TMainConsole::setLabelCustomCursor(const QString& name,
             return {false, qsl("couldn't find custom cursor, is the location \"%1\" correct?").arg(pixMapLocation)};
         }
         const QCursor custom_cursor = QCursor(cursor_pixmap, hotX, hotY);
+        pL->endLinkHover();
         pL->setCursor(custom_cursor);
         return {true, QString()};
     }
@@ -1694,6 +1725,10 @@ std::pair<bool, QString> TMainConsole::createCommandLine(const QString& windowna
     // No Host::createCommandLine() wrapper makes this check, unlike the other creators.
     if (mpHost->parentWindowMissing(windowname)) {
         return {false, qsl("window '%1' not found").arg(windowname)};
+    }
+
+    if (mpHost->windowRegistry().hasLabel(name)) {
+        return {false, qsl("label with the name '%1' already exists").arg(name)};
     }
 
     auto pN = mSubCommandLineMap.value(name);
@@ -1957,9 +1992,20 @@ TCommandLine* TMainConsole::activeCommandLine()
 
 void TMainConsole::focusActiveCommandLine()
 {
+    focusActiveCommandLine(nullptr);
+}
+
+void TMainConsole::focusActiveCommandLine(const QWidget* pWindow)
+{
     using namespace std::chrono_literals;
 
     TCommandLine* pCommandLine = activeCommandLine();
+    if (pCommandLine && pWindow && pCommandLine->window() != pWindow) {
+        pCommandLine = nullptr;
+        // The setFocus() below can land only once pWindow activates, as a Qt::ActiveWindowFocusReason
+        // focus-in that TCommandLine does not record, so record the line it gives the keyboard here
+        recordActiveCommandLine(mpCommandLine);
+    }
     TCommandLine* targetCommandLine = pCommandLine ? pCommandLine : mpCommandLine.data();
     if (!targetCommandLine) {
         return;
@@ -2309,6 +2355,10 @@ std::pair<bool, QString> TMainConsole::createTextBox(const QString& windowname, 
     // No Host::createTextEdit() wrapper makes this check, unlike the other creators.
     if (mpHost->parentWindowMissing(windowname)) {
         return {false, qsl("window '%1' not found").arg(windowname)};
+    }
+
+    if (mpHost->windowRegistry().hasLabel(name)) {
+        return {false, qsl("label with the name '%1' already exists").arg(name)};
     }
 
     auto pT = mTextBoxMap.value(name);
@@ -4099,6 +4149,12 @@ void TMainConsole::closeEvent(QCloseEvent* event)
             pHost->getLuaInterpreter()->leaveNestedEventLoop();
         }
     });
+    mpHost->pauseServerWrapFlush();
+    const auto serverWrapFlushGuard = qScopeGuard([pHost = QPointer<Host>(mpHost), event]() {
+        if (pHost && !event->isAccepted()) {
+            pHost->resumeServerWrapFlush();
+        }
+    });
     TEvent conCloseEvent{};
     conCloseEvent.mArgumentList.append(qsl("sysExitEvent"));
     conCloseEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
@@ -4107,8 +4163,11 @@ void TMainConsole::closeEvent(QCloseEvent* event)
     if (mpHost->mFORCE_SAVE_ON_EXIT || mpHost->isClosingForced()) {
         mudlet::self()->saveWindowLayout();
         mpHost->modulesToWrite.clear();
-        // We are not checking the status result from here!
-        mpHost->saveProfile();
+        // A save still running would turn this one away, and it may predate the session's last changes
+        mpHost->waitForProfileSave();
+        mpHost->saveProfileReportingFailure();
+        // Other profiles can keep Mudlet running long after this one closes
+        mudlet::self()->writeSettings();
 
         if (mpHost->mpMap && mpHost->mpMap->mpRoomDB) {
             // There is a map loaded - but it *could* have no rooms at all!
@@ -4141,6 +4200,7 @@ void TMainConsole::closeEvent(QCloseEvent* event)
                         this, tr("Could not save profile"), tr("Sorry, could not save your profile as \"%1\" - got the following error: \"%2\".").arg(filename, error), QMessageBox::Retry);
                 goto ASK_PROFILE;
             }
+            mudlet::self()->writeSettings();
 
             if (mpHost->mpMap && mpHost->mpMap->mpRoomDB) {
                 // There is a map loaded - but it *could* have no rooms at all!

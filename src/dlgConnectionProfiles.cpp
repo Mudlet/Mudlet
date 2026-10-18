@@ -32,6 +32,7 @@
 #include "LuaInterface.h"
 #include "MudletApp.h"
 #include "TGameDetails.h"
+#include "XMLexport.h"
 #include "XMLimport.h"
 #include "discord.h"
 #include "mudlet.h"
@@ -56,7 +57,6 @@
 #include <QTabBar>
 #include <QTime>
 #include <chrono>
-#include <sstream>
 
 using namespace std::chrono_literals;
 
@@ -673,9 +673,11 @@ void dlgConnectionProfiles::slot_updatePassword(const QString& pass)
             writeSecurePassword(profileName, pass);
         }
     } else {
-        auto result = MudletApp::writeProfileData(profileName, qsl("password"), pass);
-        if (!result.first) {
-            qWarning().noquote().nospace() << "dlgConnectionProfiles::slot_updatePassword() ERROR - failed to save password for profile \"" << profileName << "\": " << result.second;
+        // Recorded process-wide, so an earlier failure is cleared before this save is asked about
+        SecureStringUtils::takeUnprotectedSecretPath();
+        if (saveProfileDetail(profileName, qsl("password"), pass).first && !SecureStringUtils::takeUnprotectedSecretPath().isEmpty()) {
+            //: Shown in the connection dialog when a password was saved but its file could not be made unreadable to other users of the computer. %1 is a profile name.
+            showNotification(tr("The password for '%1' was saved, but other accounts on this computer can still read it.").arg(profileName), notificationAreaIconLabelWarning);
         }
     }
 }
@@ -733,12 +735,7 @@ void dlgConnectionProfiles::slot_updateLogin(const QString& login)
 {
     QListWidgetItem* pItem = listWidget_profiles->currentItem();
     if (pItem) {
-        const QString profileName = pItem->data(csmNameRole).toString();
-        auto result = MudletApp::writeProfileData(profileName, qsl("login"), login);
-        if (!result.first) {
-            qWarning().noquote().nospace() << "dlgConnectionProfiles::slot_updateLogin() ERROR - failed to save character name for profile \"" << profileName << "\": " << result.second;
-            // Could optionally show user notification here
-        }
+        saveProfileDetail(pItem->data(csmNameRole).toString(), qsl("login"), login);
     }
 }
 
@@ -804,7 +801,9 @@ void dlgConnectionProfiles::slot_updateSslTslPort(int state)
         if (!pItem) {
             return;
         }
-        writeProfileData(pItem->data(csmNameRole).toString(), qsl("ssl_tsl"), QString::number(state));
+        if (writeProfileData(pItem->data(csmNameRole).toString(), qsl("ssl_tsl"), QString::number(state)).first) {
+            mSslTslSeen = QString::number(state);
+        }
     }
 }
 
@@ -1126,6 +1125,7 @@ void dlgConnectionProfiles::showRemovalNotice(const QString& message)
 
 void dlgConnectionProfiles::showNotification(const QString& message, QLabel* pIcon)
 {
+    mUnsavedChange = {};
     notificationArea->show();
     for (auto* pCandidate : {notificationAreaIconLabelWarning, notificationAreaIconLabelError, notificationAreaIconLabelInformation}) {
         pCandidate->setVisible(pCandidate == pIcon);
@@ -1198,6 +1198,9 @@ void dlgConnectionProfiles::reallyDeleteProfile(const QString& profile)
         return;
     }
 
+    ++namesWithSignInBeingRemoved()[removalKey(profile)];
+    QPointer<dlgConnectionProfiles> safeThis = this;
+
     // Clean up keychain entries for the deleted profile
     // Note: CredentialManager only supports one operation at a time, so we must
     // chain the operations - the second removal starts only after the first completes.
@@ -1208,7 +1211,7 @@ void dlgConnectionProfiles::reallyDeleteProfile(const QString& profile)
         QPointer<CredentialManager> safeCredManager = new CredentialManager(nullptr);
 
         // Clean up character password entry first, then chain proxy cleanup
-        safeCredManager->removePassword(profile, "character", [safeCredManager, profile](bool success, const QString& errorMessage) {
+        safeCredManager->removePassword(profile, "character", [safeCredManager, profile, safeThis](bool success, const QString& errorMessage) {
             if (!success) {
                 qWarning() << "dlgConnectionProfiles: Failed to clean up character password for deleted profile" << profile << ":" << errorMessage;
             }
@@ -1216,11 +1219,12 @@ void dlgConnectionProfiles::reallyDeleteProfile(const QString& profile)
             // Check if credManager was destroyed before chaining next operation
             if (!safeCredManager) {
                 qWarning() << "dlgConnectionProfiles: CredentialManager destroyed, cannot clean up proxy password";
+                forgetSignInOfRemovedProfile(profile, safeThis, false);
                 return;
             }
 
             // Now clean up proxy password entry (chained after character password removal completes)
-            safeCredManager->removePassword(profile, "proxy", [safeCredManager, profile](bool proxySuccess, const QString& proxyErrorMessage) {
+            safeCredManager->removePassword(profile, "proxy", [safeCredManager, profile, safeThis, characterRemoved = success](bool proxySuccess, const QString& proxyErrorMessage) {
                 if (!proxySuccess) {
                     qWarning() << "dlgConnectionProfiles: Failed to clean up proxy password for deleted profile" << profile << ":" << proxyErrorMessage;
                 }
@@ -1229,8 +1233,14 @@ void dlgConnectionProfiles::reallyDeleteProfile(const QString& profile)
                 if (safeCredManager) {
                     safeCredManager->deleteLater();
                 }
+
+                // Only now: keychain jobs run one at a time, and each times out while it waits its turn
+                forgetSignInOfRemovedProfile(profile, safeThis, characterRemoved && proxySuccess);
             });
         });
+    } else {
+        // Passwords stored with the profile went with its folder; the sign-in never lives there
+        forgetSignInOfRemovedProfile(profile, safeThis, true);
     }
 
     // only the self-test entry needs its removal recorded: fillout_form() lists
@@ -1260,6 +1270,73 @@ void dlgConnectionProfiles::reallyDeleteProfile(const QString& profile)
             //: %1 is a game name, e.g. Achaea, that has never been played and so has nothing saved to remove
             showRemovalNotice(tr("Nothing has been saved for '%1' yet, so there was nothing to remove.").arg(profile));
         }
+    }
+}
+
+/*static*/ QHash<QString, int>& dlgConnectionProfiles::namesWithSignInBeingRemoved()
+{
+    static QHash<QString, int> names;
+    return names;
+}
+
+/*static*/ bool dlgConnectionProfiles::signInRemovalPending(const QString& name)
+{
+    return namesWithSignInBeingRemoved().contains(removalKey(name));
+}
+
+/*static*/ QString dlgConnectionProfiles::removalKey(const QString& name)
+{
+    // Folded only where profile folders, and the credential files beside them, ignore case: elsewhere a
+    // name differing in case is another profile, with a sign-in of its own
+#if defined(Q_OS_WINDOWS) || defined(Q_OS_MACOS)
+    return name.trimmed().toCaseFolded();
+#else
+    return name.trimmed();
+#endif
+}
+
+/*static*/ std::function<void(std::function<void()> startRemoval)>& dlgConnectionProfiles::signInRemovalStarterForTesting()
+{
+    static std::function<void(std::function<void()>)> starter;
+    return starter;
+}
+
+/*static*/ void dlgConnectionProfiles::forgetSignInOfRemovedProfile(const QString& profile, QPointer<dlgConnectionProfiles> dialog, bool passwordsRemoved)
+{
+    auto startRemoval = [profile, dialog, passwordsRemoved]() {
+        GMCPAuthenticator::forgetSavedSignInOfRemovedProfile(profile, [profile, dialog, passwordsRemoved](bool signInRemoved) {
+            const QString key = removalKey(profile);
+            auto& pending = namesWithSignInBeingRemoved();
+            if (--pending[key] <= 0) {
+                pending.remove(key);
+                // Every connection dialog, not just the one that removed it: one opened since would otherwise
+                // stay refused until a field is edited. Only where it is the form being refused, as
+                // revalidating clears the notification area, which may be saying the removal went through.
+                for (auto* window : QApplication::topLevelWidgets()) {
+                    auto* openDialog = qobject_cast<dlgConnectionProfiles*>(window);
+                    if (openDialog && removalKey(openDialog->profile_name_entry->text()) == key) {
+                        openDialog->validateProfile();
+                    }
+                }
+            }
+            if (dialog && !(passwordsRemoved && signInRemoved)) {
+                // Next turn of the event loop: without a keychain this answers before the removal has put up
+                // its own notice, which would otherwise replace this one
+                QTimer::singleShot(0, dialog.data(), [dialog, profile]() {
+                    if (dialog) {
+                        //: %1 is a profile name. Shown when the profile was removed but its saved password or sign-in could not be deleted from where it is kept, e.g. the computer's password manager was locked
+                        dialog->showRemovalProblem(tr("'%1' was removed, but its saved password or sign-in could not be deleted, so it is still stored on this computer. "
+                                                      "Don't make a new profile called '%1' until it has been removed.")
+                                                           .arg(profile));
+                    }
+                });
+            }
+        });
+    };
+    if (auto& starter = signInRemovalStarterForTesting()) {
+        starter(std::move(startRemoval));
+    } else {
+        startRemoval();
     }
 }
 
@@ -1346,17 +1423,7 @@ void dlgConnectionProfiles::slot_deleteProfile()
 
 QString dlgConnectionProfiles::readProfileData(const QString& profile, const QString& item) const
 {
-    QFile file(MudletApp::getMudletPath(enums::profileDataItemPath, profile, item));
-    const bool success = file.open(QIODevice::ReadOnly);
-    QString ret;
-    if (success) {
-        QDataStream ifs(&file);
-        ifs.setVersion(QDataStream::Qt_5_12);
-        ifs >> ret;
-        file.close();
-    }
-
-    return ret;
+    return MudletApp::readProfileData(profile, item);
 }
 
 // A new item here may need adding to scmConnectionDetailFiles above. Unlike
@@ -1364,21 +1431,30 @@ QString dlgConnectionProfiles::readProfileData(const QString& profile, const QSt
 // write before there is one is quietly dropped.
 QPair<bool, QString> dlgConnectionProfiles::writeProfileData(const QString& profile, const QString& item, const QString& what)
 {
-    QSaveFile file(MudletApp::getMudletPath(enums::profileDataItemPath, profile, item));
-    if (file.open(QIODevice::WriteOnly | QIODevice::Unbuffered)) {
-        QDataStream ofs(&file);
-        ofs.setVersion(QDataStream::Qt_5_12);
-        ofs << what;
-        if (!file.commit()) {
-            qDebug().noquote().nospace() << "dlgConnectionProfiles::writeProfileData(...) ERROR - writing profile: \"" << profile << "\", item: \"" << item << "\", reason: \"" << file.errorString()
-                                         << "\".";
-        }
+    if (!QDir(MudletApp::getMudletPath(enums::profileHomePath, profile)).exists()) {
+        return {false, qsl("there is no folder for the %1 profile").arg(profile)};
     }
+    return saveProfileDetail(profile, item, what);
+}
 
-    if (file.error() == QFileDevice::NoError) {
-        return {true, QString()};
+// Selecting a profile sets every field, and each one writes itself back: skipping a value that is
+// already stored keeps a profile that cannot be written from raising a notice about a change nobody made
+QPair<bool, QString> dlgConnectionProfiles::saveProfileDetail(const QString& profile, const QString& item, const QString& what)
+{
+    const auto result = readProfileData(profile, item) == what ? qMakePair(true, QString()) : MudletApp::writeProfileData(profile, item, what);
+    if (!result.first) {
+        //: Shown in the connection dialog when a change to a profile's details could not be saved; %1 is the profile name, %2 the reason, e.g. "No space left on device"
+        showUnsavedChange(tr("Could not save this change to %1: %2").arg(profile, result.second), profile, item);
+    } else if (mUnsavedChange == qMakePair(profile, item)) {
+        clearNotificationArea();
     }
-    return {false, file.errorString()};
+    return result;
+}
+
+void dlgConnectionProfiles::showUnsavedChange(const QString& message, const QString& profile, const QString& item)
+{
+    showNotification(message, notificationAreaIconLabelError);
+    mUnsavedChange = {profile, item};
 }
 
 QString dlgConnectionProfiles::getDescription(const QString& profile_name) const
@@ -1443,6 +1519,7 @@ void dlgConnectionProfiles::slot_itemClicked(QListWidgetItem* pItem)
 
     QString host_port = readProfileData(profile_name, qsl("port"));
     QString val = readProfileData(profile_name, qsl("ssl_tsl"));
+    mSslTslSeen = val;
     if (val.toInt() == Qt::Checked) {
         port_ssl_tsl->setChecked(true);
     } else {
@@ -1453,7 +1530,10 @@ void dlgConnectionProfiles::slot_itemClicked(QListWidgetItem* pItem)
         auto it = TGameDetails::findGame(profile_name);
         if (it != TGameDetails::scmDefaultGames.end()) {
             host_port = QString::number((*it).port);
-            port_ssl_tsl->setChecked((*it).tlsEnabled);
+            // the game's default must not override a choice already saved, e.g. from Preferences
+            if (val.isEmpty()) {
+                port_ssl_tsl->setChecked((*it).tlsEnabled);
+            }
         }
     }
 
@@ -2047,6 +2127,18 @@ void dlgConnectionProfiles::slot_cancel()
     QDialog::done(QDialog::Rejected);
 }
 
+// QFile::copy() keeps the source's mode, so the copy of a password file left open to other
+// accounts would be open too
+static void narrowCopiedSecrets(const QString& profile)
+{
+    const QDir profileDir(MudletApp::getMudletPath(enums::profileHomePath, profile));
+    for (const QString& item : profileDir.entryList(QDir::Files | QDir::Hidden)) {
+        if (MudletApp::profileDataItemHoldsSecret(item)) {
+            SecureStringUtils::restrictFileToOwner(profileDir.filePath(item));
+        }
+    }
+}
+
 void dlgConnectionProfiles::slot_copyProfile()
 {
     mCopyingProfile = true;
@@ -2077,6 +2169,8 @@ void dlgConnectionProfiles::slot_copyProfile()
     auto future = QtConcurrent::run(dlgConnectionProfiles::copyFolder, MudletApp::getMudletPath(enums::profileHomePath, oldname), MudletApp::getMudletPath(enums::profileHomePath, profile_name));
     auto watcher = new QFutureWatcher<bool>(this);
     connect(watcher, &QFutureWatcher<bool>::finished, this, [this, profile_name, oldPassword, watcher]() {
+        narrowCopiedSecrets(profile_name);
+
         if (!mProfileList.contains(profile_name)) {
             mProfileList << profile_name;
         }
@@ -2204,7 +2298,12 @@ void dlgConnectionProfiles::saveDefaultProfileCopy(const QString& profileName, c
         writeSecurePassword(profileName, oldPassword);
     }
     mCopyingProfile = false;
-    validateProfile();
+    // validateProfile() clears the notification area, which would hide a detail of the copy that could not be saved
+    const auto unsavedChange = mUnsavedChange;
+    const QString unsavedMessage = notificationAreaMessageBox->text();
+    if (validateProfile() && !unsavedChange.first.isEmpty()) {
+        showUnsavedChange(unsavedMessage, unsavedChange.first, unsavedChange.second);
+    }
 }
 
 void dlgConnectionProfiles::slot_copyOnlySettingsOfProfile()
@@ -2235,6 +2334,7 @@ void dlgConnectionProfiles::slot_copyOnlySettingsOfProfile()
         auto newFilePath = qsl("%1/%2").arg(MudletApp::getMudletPath(enums::profileHomePath, profile_name), file);
         QFile::copy(filePath, newFilePath);
     }
+    narrowCopiedSecrets(profile_name);
 
     copyProfileSettingsOnly(oldname, profile_name);
 
@@ -2255,13 +2355,13 @@ bool dlgConnectionProfiles::copyProfileWidget(QString& profile_name, QString& ol
         int i = 1;
         do {
             profile_name = profile_name.left(profile_name.size() - 1) + QString::number(profile_name.at(profile_name.size() - 1).digitValue() + i++);
-        } while (mProfileList.contains(profile_name));
+        } while (mProfileList.contains(profile_name) || signInRemovalPending(profile_name));
     } else {
         int i = 1;
         QString profile_name2;
         do {
             profile_name2 = profile_name + QString::number(i++);
-        } while (mProfileList.contains(profile_name2));
+        } while (mProfileList.contains(profile_name2) || signInRemovalPending(profile_name2));
         profile_name = profile_name2;
     }
 
@@ -2342,22 +2442,11 @@ bool dlgConnectionProfiles::extractSettingsFromProfile(pugi::xml_document& newPr
     return true;
 }
 
-// save profile using Qt's API's which handle non-ASCII characters in Windows paths fine
+// The writer a profile save uses: pugixml's own save leaves a carriage return raw, which the reader takes for a line ending.
+// It logs a failure with the file name and the reason itself.
 void dlgConnectionProfiles::saveProfileCopy(const QDir& newProfiledir, const pugi::xml_document& newProfileXml) const
 {
-    QSaveFile file(newProfiledir.absoluteFilePath(qsl("Copied profile (settings only).xml")));
-    if (!file.open(QFile::WriteOnly)) {
-        qDebug() << "dlgConnectionProfiles::copyProfileSettingsOnly ERROR - couldn't create new profile file:" << file.fileName() << "-" << file.errorString();
-        return;
-    }
-
-    std::stringstream saveStringStream(std::ios::out);
-    newProfileXml.save(saveStringStream);
-    std::string output(saveStringStream.str());
-    file.write(output.data());
-    if (!file.commit()) {
-        qDebug() << "dlgConnectionProfiles::saveProfileCopy: error copying profile: " << file.errorString();
-    }
+    XMLexport::saveXmlDocToFile(newProfiledir.absoluteFilePath(qsl("Copied profile (settings only).xml")), newProfileXml);
 }
 
 void dlgConnectionProfiles::loadProfile(bool alsoConnect)
@@ -2410,6 +2499,10 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
             slot_updatePort(QString::number(pHost->getPort()));
         }
 
+        if (const QString saved = readProfileData(profile_name, qsl("ssl_tsl")); saved != mSslTslSeen) {
+            port_ssl_tsl->setChecked(saved.toInt() == Qt::Checked);
+            mSslTslSeen = saved;
+        }
         pHost->mSslTsl = port_ssl_tsl->isChecked();
 
         if (!character_password_entry->text().trimmed().isEmpty()) {
@@ -2510,6 +2603,16 @@ bool dlgConnectionProfiles::validateProfile()
         if ((QString::compare(pItem->data(csmNameRole).toString(), name, Qt::CaseInsensitive) != 0) && mProfileList.contains(name, Qt::CaseInsensitive)) {
             notificationAreaIconLabelError->show();
             notificationAreaMessageBox->setText(qsl("%1\n%2").arg(notificationAreaMessageBox->text(), tr("This profile name is already in use.")));
+            validName = false;
+            valid = false;
+        }
+
+        if (signInRemovalPending(name)) {
+            notificationAreaIconLabelError->show();
+            notificationAreaMessageBox->setText(
+                    qsl("%1\n%2").arg(notificationAreaMessageBox->text(),
+                                      //: Shown after a profile is removed, while its saved sign-in is still being deleted from the password store; it clears by itself when that finishes
+                                      tr("A profile with this name was just removed, and its saved sign-in is still being deleted. This will clear on its own in a moment.")));
             validName = false;
             valid = false;
         }
@@ -2804,6 +2907,7 @@ QIcon dlgConnectionProfiles::customIcon(const QString& text, const std::optional
 
 void dlgConnectionProfiles::clearNotificationArea()
 {
+    mUnsavedChange = {};
     notificationArea->hide();
     notificationAreaIconLabelWarning->hide();
     notificationAreaIconLabelError->hide();
