@@ -673,7 +673,12 @@ void dlgConnectionProfiles::slot_updatePassword(const QString& pass)
             writeSecurePassword(profileName, pass);
         }
     } else {
-        saveProfileDetail(profileName, qsl("password"), pass);
+        // Recorded process-wide, so an earlier failure is cleared before this save is asked about
+        SecureStringUtils::takeUnprotectedSecretPath();
+        if (saveProfileDetail(profileName, qsl("password"), pass).first && !SecureStringUtils::takeUnprotectedSecretPath().isEmpty()) {
+            //: Shown in the connection dialog when a password was saved but its file could not be made unreadable to other users of the computer. %1 is a profile name.
+            showNotification(tr("The password for '%1' was saved, but other accounts on this computer can still read it.").arg(profileName), notificationAreaIconLabelWarning);
+        }
     }
 }
 
@@ -1416,17 +1421,7 @@ void dlgConnectionProfiles::slot_deleteProfile()
 
 QString dlgConnectionProfiles::readProfileData(const QString& profile, const QString& item) const
 {
-    QFile file(MudletApp::getMudletPath(enums::profileDataItemPath, profile, item));
-    const bool success = file.open(QIODevice::ReadOnly);
-    QString ret;
-    if (success) {
-        QDataStream ifs(&file);
-        ifs.setVersion(QDataStream::Qt_5_12);
-        ifs >> ret;
-        file.close();
-    }
-
-    return ret;
+    return MudletApp::readProfileData(profile, item);
 }
 
 // A new item here may need adding to scmConnectionDetailFiles above. Unlike
@@ -2126,6 +2121,18 @@ void dlgConnectionProfiles::slot_cancel()
     QDialog::done(QDialog::Rejected);
 }
 
+// QFile::copy() keeps the source's mode, so the copy of a password file left open to other
+// accounts would be open too
+static void narrowCopiedSecrets(const QString& profile)
+{
+    const QDir profileDir(MudletApp::getMudletPath(enums::profileHomePath, profile));
+    for (const QString& item : profileDir.entryList(QDir::Files | QDir::Hidden)) {
+        if (MudletApp::profileDataItemHoldsSecret(item)) {
+            SecureStringUtils::restrictFileToOwner(profileDir.filePath(item));
+        }
+    }
+}
+
 void dlgConnectionProfiles::slot_copyProfile()
 {
     mCopyingProfile = true;
@@ -2156,6 +2163,8 @@ void dlgConnectionProfiles::slot_copyProfile()
     auto future = QtConcurrent::run(dlgConnectionProfiles::copyFolder, MudletApp::getMudletPath(enums::profileHomePath, oldname), MudletApp::getMudletPath(enums::profileHomePath, profile_name));
     auto watcher = new QFutureWatcher<bool>(this);
     connect(watcher, &QFutureWatcher<bool>::finished, this, [this, profile_name, oldPassword, watcher]() {
+        narrowCopiedSecrets(profile_name);
+
         if (!mProfileList.contains(profile_name)) {
             mProfileList << profile_name;
         }
@@ -2319,6 +2328,7 @@ void dlgConnectionProfiles::slot_copyOnlySettingsOfProfile()
         auto newFilePath = qsl("%1/%2").arg(MudletApp::getMudletPath(enums::profileHomePath, profile_name), file);
         QFile::copy(filePath, newFilePath);
     }
+    narrowCopiedSecrets(profile_name);
 
     copyProfileSettingsOnly(oldname, profile_name);
 
