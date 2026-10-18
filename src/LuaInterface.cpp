@@ -26,7 +26,10 @@
 #include "VarUnit.h"
 #include "utils.h"
 
+#include <cmath>
 #include <csetjmp>
+#include <limits>
+#include <optional>
 
 extern "C" {
 #if defined(INCLUDE_VERSIONED_LUA_HEADERS)
@@ -41,6 +44,27 @@ extern "C" {
 }
 
 static jmp_buf buf;
+
+// lua_tostring() writes %.14g, which does not round-trip every double;
+// adding digits only until it does keeps a number like 0.1 written as 0.1.
+static QString numberToText(const lua_Number number)
+{
+    // QString::number() writes -0 as "0", and a NaN never equals what it reads back as
+    if (number == 0) {
+        return std::signbit(number) ? qsl("-0") : qsl("0");
+    }
+    if (std::isnan(number)) {
+        return qsl("nan");
+    }
+    QString text;
+    for (int precision = 14; precision <= 17; ++precision) {
+        text = QString::number(number, 'g', precision);
+        if (text.toDouble() == number) {
+            break;
+        }
+    }
+    return text;
+}
 
 LuaInterface::LuaInterface(lua_State* L)
 : mL(L)
@@ -93,6 +117,30 @@ std::pair<bool, QString> LuaInterface::validMove(TVar* pNewParent) const
     return {true, QString()};
 }
 
+// Lua saves numbers with printf, so a save holds whichever NaN/infinity spelling its platform uses;
+// toDouble() reads only "nan", "inf" and "-inf", not glibc's "-nan", UCRT's "-nan(ind)" or msvcrt's "1.#INF".
+static std::optional<lua_Number> numberFromText(const QString& text)
+{
+    bool ok = false;
+    const double number = text.toDouble(&ok);
+    if (ok) {
+        return number;
+    }
+    const QString spelling = text.trimmed();
+    static const QStringList nanSpellings{
+            qsl("-nan"), qsl("nan(ind)"), qsl("-nan(ind)"), qsl("nan(snan)"), qsl("-nan(snan)"), qsl("1.#QNAN"), qsl("-1.#QNAN"), qsl("1.#IND"), qsl("-1.#IND"), qsl("1.#SNAN"), qsl("-1.#SNAN")};
+    if (nanSpellings.contains(spelling, Qt::CaseInsensitive)) {
+        return std::numeric_limits<lua_Number>::quiet_NaN();
+    }
+    if (spelling.compare(qsl("1.#INF"), Qt::CaseInsensitive) == 0) {
+        return std::numeric_limits<lua_Number>::infinity();
+    }
+    if (spelling.compare(qsl("-1.#INF"), Qt::CaseInsensitive) == 0) {
+        return -std::numeric_limits<lua_Number>::infinity();
+    }
+    return std::nullopt;
+}
+
 bool LuaInterface::loadKey(lua_State* L, TVar* var)
 {
     if (setjmp(buf) == 0) {
@@ -101,7 +149,7 @@ bool LuaInterface::loadKey(lua_State* L, TVar* var)
             lua_rawgeti(L, LUA_REGISTRYINDEX, var->getName().toInt());
         } else {
             if (keyType == LUA_TNUMBER) {
-                lua_pushnumber(L, var->getName().toDouble());
+                lua_pushnumber(L, numberFromText(var->getName()).value_or(0));
             } else if (keyType == LUA_TTABLE) {
             } else if (keyType == LUA_TBOOLEAN) {
                 lua_pushboolean(L, var->getName().toLower() == "true" ? 1 : 0);
@@ -343,7 +391,7 @@ bool LuaInterface::pushKey(TVar* var, const QString& name, const int keyType)
         return true;
     }
     if (keyType == LUA_TNUMBER) {
-        lua_pushnumber(mL, name.toDouble());
+        lua_pushnumber(mL, numberFromText(name).value_or(0));
         return true;
     }
     if (keyType == LUA_TBOOLEAN) {
@@ -409,15 +457,23 @@ bool LuaInterface::setValue(TVar* var)
             lua_settop(mL, stackTop);
             return false;
         }
+        if (var->getKeyType() == LUA_TNUMBER && !var->isReference() && !numberFromText(var->getName())) {
+            qWarning().noquote().nospace() << "LuaInterface::setValue(...) WARNING - the key \"" << var->getName() << "\" is not a number, so it is being written as the key 0.";
+        }
         switch (var->getValueType()) {
         case LUA_TSTRING: {
             const QByteArray value = var->getValue().toUtf8();
             lua_pushlstring(mL, value.constData(), value.length());
             break;
         }
-        case LUA_TNUMBER:
-            lua_pushnumber(mL, var->getValue().toDouble());
+        case LUA_TNUMBER: {
+            const std::optional<lua_Number> number = numberFromText(var->getValue());
+            if (!number) {
+                qWarning().noquote().nospace() << "LuaInterface::setValue(...) WARNING - \"" << var->getValue() << "\" is not a number, so \"" << var->getName() << "\" is being set to 0.";
+            }
+            lua_pushnumber(mL, number.value_or(0));
             break;
+        }
         case LUA_TBOOLEAN:
             lua_pushboolean(mL, var->getValue().toLower() == QLatin1String("true") ? 1 : 0);
             break;
@@ -627,7 +683,7 @@ QString LuaInterface::getValue(TVar* var)
         if (firstVariable->getKeyType() == LUA_TSTRING) {
             lua_getglobal(mL, (firstVariable->getName()).toUtf8().constData());
         } else if (firstVariable->getKeyType() == LUA_TNUMBER) {
-            lua_pushnumber(mL, firstVariable->getName().toDouble());
+            lua_pushnumber(mL, numberFromText(firstVariable->getName()).value_or(0));
             lua_gettable(mL, LUA_GLOBALSINDEX);
         } else if (firstVariable->getKeyType() == LUA_TBOOLEAN) {
             lua_pushboolean(mL, firstVariable->getName().toLower() == "true" ? 1 : 0);
@@ -656,7 +712,9 @@ QString LuaInterface::getValue(TVar* var)
         QString value;
         if (valueType == LUA_TBOOLEAN) {
             value = lua_toboolean(mL, -1) == 0 ? QLatin1String("false") : QLatin1String("true");
-        } else if (valueType == LUA_TNUMBER || valueType == LUA_TSTRING) {
+        } else if (valueType == LUA_TNUMBER) {
+            value = numberToText(lua_tonumber(mL, -1));
+        } else if (valueType == LUA_TSTRING) {
             value = lua_tostring(mL, -1);
         }
         lua_settop(mL, entryTop);
@@ -784,7 +842,9 @@ void LuaInterface::iterateTable(lua_State* L, int index, TVar* tVar, bool hide)
                     mTruncatedSavedTables.append(variableName);
                 }
             }
-        } else if (vType == LUA_TSTRING || vType == LUA_TNUMBER) {
+        } else if (vType == LUA_TNUMBER) {
+            var->setValue(numberToText(lua_tonumber(L, -1)));
+        } else if (vType == LUA_TSTRING) {
             lua_pushvalue(L, -1);
             valueName = lua_tostring(L, -1);
             var->setValue(valueName);

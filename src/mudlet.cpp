@@ -30,7 +30,6 @@
 #include "MudletApp.h"
 #include "MudletMedia.h"
 
-#include "AltFocusMenuBarDisable.h"
 #include "CredentialManager.h"
 #include "DarkTheme.h"
 #include "FontManager.h"
@@ -41,6 +40,7 @@
 #include "TDebug.h"
 #include "TDebugFilterBar.h"
 #include "MudletInstanceCoordinator.h"
+#include "MudletProxyStyle.h"
 #include "TDetachedWindow.h"
 #include "TDockWidget.h"
 #include "TEvent.h"
@@ -3016,6 +3016,16 @@ void mudlet::slot_closeProfileRequested(int tab)
         return;
     }
 
+    if (pH->waitingForProfileSave()) {
+        QTimer::singleShot(50ms, this, [this, name, pClosingHost = QPointer<Host>(pH)]() {
+            const int retryTab = mpTabBar->tabIndex(name);
+            if (retryTab >= 0 && mHostManager.getHost(name) == pClosingHost) {
+                slot_closeProfileRequested(retryTab);
+            }
+        });
+        return;
+    }
+
     if (closeHeldOffByEventPump(pH)) {
         return;
     }
@@ -3038,7 +3048,8 @@ void mudlet::slot_closeProfileRequested(int tab)
 
 // Closing a profile destroys the lua_State the pump is still executing on.
 // closeMudlet() waits for the pump instead, as refusing would cancel a shutdown
-// nobody would retry.
+// nobody would retry. A Host::waitForProfileSave() is not one of these: it ends
+// on its own, so the callers retry a close asked for during it.
 bool mudlet::closeHeldOffByEventPump(Host* pHost) const
 {
     if (!pHost->getLuaInterpreter()->pumpingEvents()) {
@@ -3052,6 +3063,15 @@ void mudlet::slot_closeProfileByName(const QString& profileName)
 {
     Host* pH = mHostManager.getHost(profileName);
     if (!pH) {
+        return;
+    }
+
+    if (pH->waitingForProfileSave()) {
+        QTimer::singleShot(50ms, this, [this, profileName, pClosingHost = QPointer<Host>(pH)]() {
+            if (mHostManager.getHost(profileName) == pClosingHost) {
+                slot_closeProfileByName(profileName);
+            }
+        });
         return;
     }
 
@@ -3361,10 +3381,12 @@ void mudlet::closeHost(const QString& name)
     // event loop - loading or closing another profile, a modal dialog, a
     // reconnect - after the profile's own script asked for the close: the
     // script is still running, and destroying the Host would lua_close() the
-    // state under it. Retried on a timer rather than immediately: the retry
-    // would otherwise land back in the same pump, spinning until the operation
-    // ends instead of letting it get there.
-    if (mapOperationRunning || pH->getLuaInterpreter()->luaOnStack()) {
+    // state under it. Likewise a Host::waitForProfileSave(), whose pump runs
+    // with the Host it waits on - and its caller - still on the stack. Retried
+    // on a timer rather than immediately: the retry would otherwise land back
+    // in the same pump, spinning until the operation ends instead of letting
+    // it get there.
+    if (mapOperationRunning || pH->getLuaInterpreter()->luaOnStack() || pH->waitingForProfileSave()) {
         if (mapOperationRunning) {
             if (!pH->mpMap->mapOperationAbortRequested()) {
                 qDebug().nospace().noquote() << "mudlet::closeHost(\"" << name << "\") INFO - a map operation is still running, so the profile will be closed once it has stopped.";
@@ -4207,7 +4229,7 @@ bool mudlet::saveWindowLayout()
         ofs.setVersion(QDataStream::Qt_5_12);
         ofs << layoutData;
         if (!layoutFile.commit()) {
-            qDebug() << "mudlet::saveWindowLayout: error saving window layout: " << layoutFile.errorString();
+            qWarning() << "mudlet::saveWindowLayout: error saving window layout file:" << layoutFilePath << layoutFile.errorString();
             return false;
         }
 
@@ -4218,6 +4240,7 @@ bool mudlet::saveWindowLayout()
         mHasSavedLayout = true;
         return true;
     }
+    qWarning() << "mudlet::saveWindowLayout: error opening window layout file for writing:" << layoutFilePath << layoutFile.errorString();
     return false;
 }
 
@@ -4492,6 +4515,18 @@ void mudlet::closeEvent(QCloseEvent* event)
     }
 
     for (auto pHost : mHostManager) {
+        // Its caller still uses the profile once the wait returns, and the
+        // wait ends on its own, so ask again then
+        if (pHost->waitingForProfileSave()) {
+            event->ignore();
+            QTimer::singleShot(50ms, this, [this]() {
+                close();
+            });
+            return;
+        }
+    }
+
+    for (auto pHost : mHostManager) {
         // A profile already in its save question would be asked again, and
         // closed under that question's loop; the tray's Quit stays usable then
         if (pHost->getLuaInterpreter()->pumpingEvents()) {
@@ -4682,6 +4717,9 @@ void mudlet::readEarlySettings(const QSettings& settings)
     } else {
         mAppearance = static_cast<enums::Appearance>(appearance);
     }
+
+    MudletProxyStyle::setAltKeyNavigation(
+            static_cast<enums::MenuBarAltKeyNavigation>(settings.value(qsl("menuBarAltKeyNavigation"), static_cast<int>(enums::MenuBarAltKeyNavigation::WhenScreenReaderRunning)).toInt()));
 
     const QString interfaceLanguage = settings.value("interfaceLanguage", autodetectPreferredLanguage()).toString();
     MudletApp::setInterfaceLanguage(interfaceLanguage);
@@ -5109,6 +5147,7 @@ void mudlet::writeSettings()
     // 'darkTheme' value was only used during PTBs, remove it to reduce confusion in the future
     settings.remove("darkTheme");
     settings.setValue("appearance", mAppearance);
+    settings.setValue(qsl("menuBarAltKeyNavigation"), static_cast<int>(MudletProxyStyle::altKeyNavigation()));
 
     settings.setValue("minLengthForSpellCheck", mMinLengthForSpellCheck);
     settings.setValue(qsl("enableMultiViewMode"), mMultiView);
@@ -7598,6 +7637,7 @@ bool mudlet::migratePasswordsToProfileStorage()
         return false;
     }
     MudletApp::setStorePasswordsSecurely(false);
+    mPasswordsNotMigratedToProfiles.clear();
 
     const QStringList profiles = QDir(MudletApp::getMudletPath(enums::profilesPath)).entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
 
@@ -7606,12 +7646,13 @@ bool mudlet::migratePasswordsToProfileStorage()
         QString password = CredentialManager::retrieveCredential(profile, "character");
 
         if (!password.isEmpty()) {
-            // Store in profile data
-            MudletApp::writeProfileData(profile, qsl("password"), password);
-
-            // Only remove from secure storage if this version is >= 4.20.0
+            // Only remove from secure storage once it is saved here, and only if this version is >= 4.20.0
             // This prevents breaking compatibility with older Mudlet versions
-            if (isVersionAtLeast(qsl("4.20.0"))) {
+            if (!MudletApp::writeProfileData(profile, qsl("password"), password).first) {
+                qWarning().nospace().noquote() << "mudlet::migratePasswordsToProfileStorage() WARNING - could not migrate the password for profile \"" << profile
+                                               << "\", so it stays in secure storage.";
+                mPasswordsNotMigratedToProfiles.append(profile);
+            } else if (isVersionAtLeast(qsl("4.20.0"))) {
                 CredentialManager::removeCredential(profile, "character");
                 qDebug().nospace().noquote() << "mudlet::migratePasswordsToProfileStorage() INFO - migrated password for profile \"" << profile
                                              << "\" to profile storage and cleaned up secure storage.";
@@ -7656,11 +7697,15 @@ void mudlet::slot_passwordMigratedToPortableStorage(QKeychain::Job* job)
 
     } else {
         auto readJob = static_cast<QKeychain::ReadPasswordJob*>(job);
-        MudletApp::writeProfileData(profileName, qsl("password"), readJob->textData());
-
-        // Only delete from secure storage if this version is >= 4.20.0
+        // Only delete from secure storage once it is saved here, and only if this version is >= 4.20.0
         // This prevents breaking compatibility with older Mudlet versions
-        if (isVersionAtLeast(qsl("4.20.0"))) {
+        if (!MudletApp::writeProfileData(profileName, qsl("password"), readJob->textData()).first) {
+            qWarning().nospace().noquote() << "mudlet::slot_passwordMigratedToPortableStorage(...) WARNING - could not migrate the password for profile \"" << profileName
+                                           << "\", so it stays in the legacy keychain storage.";
+            if (!mPasswordsNotMigratedToProfiles.contains(profileName)) {
+                mPasswordsNotMigratedToProfiles.append(profileName);
+            }
+        } else if (isVersionAtLeast(qsl("4.20.0"))) {
             auto* deleteJob = new QKeychain::DeletePasswordJob(qsl("Mudlet profile"));
             deleteJob->setAutoDelete(true);
             deleteJob->setKey(profileName);
@@ -7815,11 +7860,11 @@ void mudlet::setAppearance(const enums::Appearance state, const bool& loading)
             qApp->setStyle(new DarkTheme);
         } else {
             // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks)
-            qApp->setStyle(new AltFocusMenuBarDisable(mDefaultStyle));
+            qApp->setStyle(new MudletProxyStyle(mDefaultStyle));
         }
     } else {
         // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks)
-        qApp->setStyle(new AltFocusMenuBarDisable(mDefaultStyle));
+        qApp->setStyle(new MudletProxyStyle(mDefaultStyle));
     }
 
     refreshTabBarsAfterStyleChange();
@@ -8363,12 +8408,16 @@ void mudlet::armForceClose()
         for (auto pHost : mHostManager) {
             if (pHost->getLuaInterpreter()->pumpingEvents()) {
                 qWarning() << "mudlet::armForceClose() - a nested event loop is running, waiting for it to finish";
-                QTimer::singleShot(50ms, this, [this]() {
-                    mForceClosePending = false;
-                    armForceClose();
-                });
-                return;
+            } else if (pHost->waitingForProfileSave()) {
+                qWarning() << "mudlet::armForceClose() - profile" << pHost->getName() << "is waiting for its save to finish, waiting for it";
+            } else {
+                continue;
             }
+            QTimer::singleShot(50ms, this, [this]() {
+                mForceClosePending = false;
+                armForceClose();
+            });
+            return;
         }
         forceClose();
         // Not left set: closeEvent() can still refuse the close, and a later
@@ -8601,7 +8650,7 @@ void mudlet::closeHostOfClosedDetachedWindow(const QString& profileName)
         return;
     }
 
-    if (closeHeldOffByEventPump(pHost)) {
+    if (pHost->waitingForProfileSave() || closeHeldOffByEventPump(pHost)) {
         QTimer::singleShot(50ms, this, [this, profileName]() {
             closeHostOfClosedDetachedWindow(profileName);
         });
@@ -8716,9 +8765,14 @@ void mudlet::detachTab(int tabIndex, const QPoint& position)
     // moment control returns to the event loop. Ours is queued later so it runs
     // later; the 10ms and 50ms retries behind it only setFocus(), which cannot
     // activate an inactive window.
-    QTimer::singleShot(0ms, detachedWindow, [detachedWindow]() {
+    QTimer::singleShot(0ms, detachedWindow, [detachedWindow, pDetachedHost = QPointer<Host>(pHost)]() {
         detachedWindow->raise();
         detachedWindow->activateWindow();
+        if (pDetachedHost && pDetachedHost->mainConsoleView()) {
+            // Without this no command line in the new window has the keyboard. User windows do not
+            // move with the profile, and focusing a command line in one would take the keyboard away
+            pDetachedHost->mainConsoleView()->focusActiveCommandLine(detachedWindow);
+        }
     });
 
     // Update multi-view controls
