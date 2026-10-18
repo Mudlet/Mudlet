@@ -4625,7 +4625,7 @@ void T2DMap::slot_setPlayerLocation()
         manualSetEvent.mArgumentList.append(QString::number(_newRoomId));
         manualSetEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
         mpHost->raiseEvent(manualSetEvent);
-        mpMap->updateArea(areaId);
+        mpMap->repaintArea(areaId);
     }
 }
 
@@ -6241,6 +6241,7 @@ void T2DMap::slot_setCustomLine2()
     //    qDebug("   LINE STYLE: %d", mCurrentLineStyle);
     room->customLinesArrow[mCustomLinesRoomExit] = mCurrentLineArrow;
     //    qDebug("   ARROW: %s", mCurrentLineArrow ? "Yes" : "No");
+    mpMap->setUnsaved(__func__);
 
     //: 2D Mapper big, bottom of screen help message
     mHelpMsg = tr("Left-click to add point, right-click to undo/change/finish...");
@@ -6278,6 +6279,7 @@ void T2DMap::slot_setCustomLine2B(QTreeWidgetItem* special_exit, int column)
     //    qDebug("   LINE STYLE: %d", mCurrentLineStyle);
     room->customLinesArrow[exit] = mCurrentLineArrow;
     //    qDebug("   ARROW: %s", mCurrentLineArrow ? "Yes" : "No");
+    mpMap->setUnsaved(__func__);
     //: 2D Mapper big, bottom of screen help message
     mHelpMsg = tr("Left-click to add point, right-click to undo/change/finish...");
     update();

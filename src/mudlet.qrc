@@ -38,6 +38,7 @@
         <file>icons/badge.png</file>
         <file>icons/banner_astaria.png</file>
         <file>icons/banner_darkmists.png</file>
+        <file>icons/banner_dreamland.png</file>
         <file>icons/banner_petria.jpg</file>
         <file>icons/banner_ropmud.png</file>
         <file>icons/batmud_mud.png</file>
@@ -252,6 +253,10 @@
         <file>packages/run-tests/run-tests.mpackage</file>
         <file>shaders/vertex.glsl</file>
         <file>shaders/fragment.glsl</file>
+        <file>shaders/tiltshift-fragment.glsl</file>
+        <file>shaders/tiltshift-vertex.glsl</file>
+        <file>shaders/bloom_vertex.glsl</file>
+        <file>shaders/bloom_fragment.glsl</file>
         <file>packages/mudlet-tutorial/mudlet-tutorial.mpackage</file>
         <file>ui/custom_lines.ui</file>
         <file>ui/custom_lines_properties.ui</file>

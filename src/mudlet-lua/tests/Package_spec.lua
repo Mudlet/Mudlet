@@ -208,7 +208,7 @@ end
 -- Every install and uninstall here owes an asynchronous profile save, and
 -- while one is running the package API stops doing what it is told: an install
 -- is postponed and answered with a bare true (see the pending spec at the end
--- of this file), an uninstall is refused, and a module reload is dropped. Lua
+-- of this file), an uninstall is refused, and a module reload is put off. Lua
 -- cannot ask whether a save is running, so each of the helpers below asks again
 -- until what it wanted has actually happened. They wait longer between tries
 -- than they need to on a fast machine on purpose: each postponed call queues
@@ -265,8 +265,8 @@ local function installUntilRefused(install, path)
   assert.is_true(false, "the install was never refused - it was carried out, or postponed three times over")
 end
 
--- reloadModule() is postponed the same way and then quietly dropped, so ask
--- until the reload is observable.
+-- reloadModule() is postponed the same way and only carried out once the save
+-- has finished, so ask until the reload is observable.
 local function reloadModuleUntil(name, reloaded)
   for attempt = 1, 3 do
     reloadModule(name)
@@ -365,10 +365,18 @@ end
 
 describe("Tests the functionality of installPackage", function()
   it("raises a Lua error when called with no arguments", function()
-    -- the Lua wrapper that lets installPackage() take a URL indexes its
-    -- argument before the C++ side gets to report a "bad argument #1", so the
-    -- call fails less clearly than its siblings do
-    assert.has_error(function() installPackage() end)
+    assertArgError(function() installPackage() end, "installPackage: bad argument #1 type")
+    assertArgError(function() installPackage() end, "got nil!")
+  end)
+
+  it("raises the same argument error for a table or boolean as its siblings do", function()
+    -- the Lua wrapper that lets installPackage() take a URL must not try to
+    -- read a URL out of something that is not a string, and must pass on
+    -- what it was given so the error names the right type
+    assertArgError(function() installPackage({}) end, "installPackage: bad argument #1 type")
+    assertArgError(function() installPackage({}) end, "got table!")
+    assertArgError(function() installPackage(true) end, "installPackage: bad argument #1 type")
+    assertArgError(function() installPackage(true) end, "got boolean!")
   end)
 
   it("returns nil+msg when given an empty path", function()
@@ -1177,14 +1185,17 @@ describe("Tests the functionality of reloadModule", function()
     assertArgError(function() reloadModule() end, "reloadModule: bad argument #1 type")
   end)
 
-  it("returns no values and does nothing for a module that is not installed", function()
-    assert.equals(0, select('#', reloadModule("mudlet-spec-never-installed")))
+  it("returns nil and a message, and does nothing, for a module that is not installed", function()
+    local ok, err = reloadModule("mudlet-spec-never-installed")
+    assert.is_nil(ok)
+    assert.equals("module doesn't exist", err)
     assert.is_false(moduleInstalled("mudlet-spec-never-installed"))
   end)
 
   describe("with the fixture module installed", function()
+    local modulePath
     setup(function()
-      installFixtureModule(moduleName)
+      modulePath = installFixtureModule(moduleName)
     end)
     teardown(function()
       removeFixtureModule(moduleName)
@@ -1197,6 +1208,108 @@ describe("Tests the functionality of reloadModule", function()
 
       assert.is_true(moduleInstalled(moduleName))
       assert.equals(1, exists(moduleName .. " alias", "alias"))
+    end)
+
+    it("returns true for a reload it carries out", function()
+      assert.is_true(waitForProfileSaveToPass(), "a profile save was still running, so the reload would be postponed")
+      local runsBefore = mudletSpecModuleRuns
+      assert.is_true(reloadModule(moduleName))
+      assert.is_true(mudletSpecModuleRuns > runsBefore, "the reload answered true without being carried out")
+    end)
+
+    -- The reload takes the module apart before reading its file back in, so a
+    -- file that has gone would leave the module listed with nothing in it. The
+    -- reason goes back to the script rather than onto the console.
+    it("keeps the module's items and returns why when its file cannot be read", function()
+      local awayPath = modulePath .. ".away"
+      assert.is_true(os.rename(modulePath, awayPath))
+      defer(function() os.rename(awayPath, modulePath) end)
+      assert.is_true(waitForProfileSaveToPass(), "a profile save was still running, so the reload would be postponed")
+      local mark = getLastLineNumber("main")
+
+      local ok, err = reloadModule(moduleName)
+
+      assert.is_nil(ok)
+      assert.is_true(contains(err, "cannot be read"), tostring(err))
+      assert.is_true(moduleInstalled(moduleName))
+      assert.equals(1, exists(moduleName .. " alias", "alias"), "the module was emptied by a reload that could not read its file")
+      assert.is_false(containsWrapped(textFrom(mark), moduleName), textFrom(mark))
+    end)
+
+    -- A reload asked for during a save is put off until it has finished, and the
+    -- answer given now is all the script will ever hear.
+    it("returns why straight away when its file cannot be read while a save is running", function()
+      local awayPath = modulePath .. ".away"
+      assert.is_true(os.rename(modulePath, awayPath))
+      defer(function() os.rename(awayPath, modulePath) end)
+      assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+      assert.is_true(saveProfile())
+
+      local ok, err = reloadModule(moduleName)
+
+      assert.is_nil(ok)
+      assert.is_true(contains(err, "cannot be read"), tostring(err))
+      assert.is_true(waitForProfileSaveToPass(), "the profile save never finished")
+      assert.equals(1, exists(moduleName .. " alias", "alias"), "the module was emptied by a reload that could not read its file")
+    end)
+
+    -- Puts the module's own archive back and reloads it, for the specs that
+    -- follow, which share it.
+    local function restoreTheModule(backupPath)
+      copyFile(backupPath, modulePath)
+      os.remove(backupPath)
+      reloadModuleUntil(moduleName, function() return exists(moduleName .. " alias", "alias") == 1 and getModuleInfo(moduleName, "title") == "Module fixture for Package_spec.lua" end)
+    end
+
+    it("returns why when the module could not be read back in after it was taken apart", function()
+      local backupPath = modulePath .. ".backup"
+      copyFile(modulePath, backupPath)
+      defer(function() restoreTheModule(backupPath) end)
+      copyFile(fixtureDirectory .. "/mudlet-spec-notazip.mpackage", modulePath)
+      assert.is_true(waitForProfileSaveToPass(), "a profile save was still running, so the reload would be postponed")
+
+      local ok, err = reloadModule(moduleName)
+
+      assert.is_nil(ok)
+      assert.is_true(contains(err, "could not unzip package"), tostring(err))
+      assert.is_true(contains(err, "now empty"), "the reason did not say the module lost its items: " .. tostring(err))
+    end)
+
+    -- A reload asked for during a save is carried out once the save is done, and
+    -- by then the script has its answer, so a failure is only reported on the
+    -- console. A module whose XML stopped part-way is not counted as loaded but
+    -- still has the items read before that, which the failed reload takes away.
+    it("says so on the console when a reload put off by a save fails afterwards", function()
+      local backupPath = modulePath .. ".backup"
+      copyFile(modulePath, backupPath)
+      defer(function() restoreTheModule(backupPath) end)
+      copyFile(fixtureDirectory .. "/mudlet-spec-badmodule.mpackage", modulePath)
+      assert.is_true(waitForProfileSaveToPass(), "a profile save was still running, so the reload would be postponed")
+      assert.is_nil(reloadModule(moduleName), "SETUP: the module's XML was read in after all")
+      assert.equals(1, exists(moduleName .. " alias", "alias"), "SETUP: the module did not load part-way")
+      copyFile(fixtureDirectory .. "/mudlet-spec-notazip.mpackage", modulePath)
+      assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+      local mark = getLastLineNumber("main")
+      assert.is_true(saveProfile())
+
+      assert.is_true(reloadModule(moduleName), "the reload was not put off until the save had finished")
+
+      assert.is_true(waitForProfileSaveToPass(), "the profile save never finished")
+      pumpEvents(200)
+      assert.is_true(containsWrapped(textFrom(mark), 'Module "' .. moduleName .. '" could not be reloaded: could not unzip package, so the module is now empty'), textFrom(mark))
+    end)
+
+    it("returns why when the module's XML could not be imported", function()
+      local backupPath = modulePath .. ".backup"
+      copyFile(modulePath, backupPath)
+      defer(function() restoreTheModule(backupPath) end)
+      copyFile(fixtureDirectory .. "/mudlet-spec-badmodule.mpackage", modulePath)
+      assert.is_true(waitForProfileSaveToPass(), "a profile save was still running, so the reload would be postponed")
+
+      local ok, err = reloadModule(moduleName)
+
+      assert.is_nil(ok)
+      assert.is_true(contains(err, "could not be loaded"), tostring(err))
     end)
 
     it("re-reads the module's info from its config.lua", function()
@@ -1219,6 +1332,36 @@ describe("Tests the functionality of reloadModule", function()
       assert.equals(4, getModulePriority(moduleName))
       assert.is_true(getModuleSync(moduleName))
     end)
+  end)
+
+  -- installModule() hands back what the module's scripts got wrong alongside its
+  -- true, and a reload of the same archive has the same to tell.
+  it("returns true and what went wrong for a module whose scripts do not work", function()
+    local brokenModule = "mudlet-spec-brokenscripts"
+    withFixtureModule(brokenModule)
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running, so the reload would be postponed")
+
+    local ok, err = reloadModule(brokenModule)
+
+    assert.is_true(ok)
+    assert.is_true(contains(err, "mudlet-spec-brokenscripts first"), tostring(err))
+  end)
+
+  -- The script was answered before a reload put off by a save is carried out, so
+  -- what its scripts got wrong can only go on the console.
+  it("says on the console what went wrong in a module whose reload was put off by a save", function()
+    local brokenModule = "mudlet-spec-brokenscripts"
+    withFixtureModule(brokenModule)
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+    local mark = getLastLineNumber("main")
+    assert.is_true(saveProfile())
+
+    assert.is_true(reloadModule(brokenModule), "the reload was not put off until the save had finished")
+
+    assert.is_true(waitForProfileSaveToPass(), "the profile save never finished")
+    pumpEvents(200)
+    assert.is_true(containsWrapped(textFrom(mark), 'Module "' .. brokenModule .. '" was reloaded, but parts of it are not working'), textFrom(mark))
+    assert.is_true(containsWrapped(textFrom(mark), "mudlet-spec-brokenscripts first"), textFrom(mark))
   end)
 end)
 
@@ -1270,6 +1413,170 @@ describe("Tests a package that uninstalls itself", function()
     raiseEvent("mudletSpecSelfUninstall")
     pumpEvents(100)
     assert.is_false(packageInstalled("mudlet-spec-selfuninstall"))
+  end)
+end)
+
+-- Regression #10739: what a package uninstalls mid-pass is only queued, and
+-- exists()/findItems() must not count it - nor must that hide which package the
+-- code still running belongs to.
+describe("Tests what a package that uninstalls itself mid-pass can still see", function()
+  local function triggerXml(name, pattern, code)
+    return table.concat({
+      '<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no"',
+      '         isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no">',
+      "<name>" .. name .. "</name>",
+      "<script>" .. code .. "</script>",
+      "<triggerType>0</triggerType><conditonLineDelta>0</conditonLineDelta><mStayOpen>0</mStayOpen>",
+      "<mCommand></mCommand><packageName></packageName>",
+      "<regexCodeList><string>" .. pattern .. "</string></regexCodeList>",
+      "<regexCodePropertyList><integer>0</integer></regexCodePropertyList>",
+      "</Trigger>"}, "\n")
+  end
+
+  local function scriptXml(name, code, eventName)
+    return '<Script isActive="yes" isFolder="no"><name>' .. name .. '</name><packageName></packageName>'
+      .. "<script>" .. code .. "</script><eventHandlerList>"
+      .. (eventName and ("<string>" .. eventName .. "</string>") or "") .. "</eventHandlerList></Script>"
+  end
+
+  local function withScratchPackage(name, body)
+    lfs.mkdir(scratchDirectory)
+    local path = scratchDirectory .. "/" .. name .. ".xml"
+    writePackageXml(path, body)
+    defer(function()
+      removeFixturePackage(name)
+      os.remove(path)
+      lfs.rmdir(scratchDirectory)
+    end)
+    installUntilConfirmed(installPackage, path, function() return packageInstalled(name) end, "the package " .. name)
+    return path
+  end
+
+  it("stops counting its own trigger once its trigger has asked for the uninstall", function()
+    local name = "mudlet-spec-midpass-trigger"
+    local trigger = name .. " trigger"
+    local path = withScratchPackage(name, table.concat({
+      "<TriggerPackage>",
+      triggerXml(trigger, "mudlet_spec_midpass_fire", table.concat({
+        -- not the trigger's main chunk, so addCommand() has to look the chunk's owner up
+        'local function late() return addCommand{name = "mudlet-spec midpass command", menuPath = "MudletSpec"} end',
+        'mudletSpecMidpassRemoved = uninstallPackage("' .. name .. '")',
+        'if mudletSpecMidpassRemoved then',
+        '  mudletSpecMidpassSeen = {exists("' .. trigger .. '", "trigger"), #findItems("' .. trigger .. '", "trigger"), isActive("' .. trigger .. '", "trigger")}',
+        '  mudletSpecMidpassCommand = late()',
+        'end'}, "\n")),
+      "</TriggerPackage>",
+    }, "\n"))
+    defer(function()
+      if type(_G.mudletSpecMidpassCommand) == "number" then
+        removeCommand(_G.mudletSpecMidpassCommand)
+      end
+      _G.mudletSpecMidpassRemoved, _G.mudletSpecMidpassSeen, _G.mudletSpecMidpassCommand = nil, nil, nil
+    end)
+
+    -- the uninstall is refused while the install's profile save runs, so fire until it takes
+    assert.is_true(waitUntil(function()
+      assert.is_true(waitForProfileSaveToPass(), "a profile save was still running after 5s")
+      feedTriggers("\nmudlet_spec_midpass_fire\n")
+      return _G.mudletSpecMidpassRemoved == true
+    end, 8000), "the package's trigger could not uninstall it")
+    assert.are.same({0, 0, 0}, _G.mudletSpecMidpassSeen, "exists, findItems and isActive for the trigger queued for removal")
+    assert.is_number(_G.mudletSpecMidpassCommand, "the package's code could not place its command")
+
+    -- the command still belongs to the package, so the package's next uninstall takes it
+    installUntilConfirmed(installPackage, path, function() return packageInstalled(name) end, "the package " .. name .. ", again")
+    removeFixturePackage(name)
+    assert.is_false(removeCommand(_G.mudletSpecMidpassCommand), "the command was not filed under the package whose code placed it")
+  end)
+
+  it("stops counting its own script once its event handler has asked for the uninstall", function()
+    local name = "mudlet-spec-midpass-script"
+    local handler = "mudletSpecMidpassHandler"
+    withScratchPackage(name, table.concat({
+      "<ScriptPackage>",
+      scriptXml(handler, table.concat({
+        "function " .. handler .. "()",
+        '  mudletSpecMidpassRemoved = uninstallPackage("' .. name .. '")',
+        '  if mudletSpecMidpassRemoved then',
+        '    mudletSpecMidpassSeen = {exists("' .. handler .. '", "script"), #findItems("' .. handler .. '", "script"), isActive("' .. handler .. '", "script")}',
+        '  end',
+        "end"}, "\n"), "mudletSpecMidpassEvent"),
+      "</ScriptPackage>",
+    }, "\n"))
+    defer(function()
+      _G.mudletSpecMidpassRemoved, _G.mudletSpecMidpassSeen = nil, nil
+      _G[handler] = nil
+    end)
+
+    assert.is_true(waitUntil(function()
+      assert.is_true(waitForProfileSaveToPass(), "a profile save was still running after 5s")
+      raiseEvent("mudletSpecMidpassEvent")
+      return _G.mudletSpecMidpassRemoved == true
+    end, 8000), "the package's handler could not uninstall it")
+    assert.are.same({0, 0, 0}, _G.mudletSpecMidpassSeen, "exists, findItems and isActive for the script queued for removal")
+  end)
+
+  it("stops counting its own alias and timer once its alias has asked for the uninstall", function()
+    local name = "mudlet-spec-midpass-alias"
+    local alias, timer = "mudlet-spec midpass alias", "mudlet-spec midpass timer"
+    local function seen(item, itemType)
+      return ('exists("%s", "%s"), #findItems("%s", "%s"), isActive("%s", "%s")'):format(item, itemType, item, itemType, item, itemType)
+    end
+    -- only an uninstall from within the unit's own pass is deferred, so the alias asks for it
+    withScratchPackage(name, table.concat({
+      '<AliasPackage><Alias isActive="yes" isFolder="no"><name>' .. alias .. '</name><packageName></packageName>',
+      "<script>" .. table.concat({
+        'mudletSpecMidpassRemoved = uninstallPackage("' .. name .. '")',
+        'if mudletSpecMidpassRemoved then',
+        '  mudletSpecMidpassSeen = {' .. seen(alias, "alias") .. ', ' .. seen(timer, "timer") .. '}',
+        'end'}, "\n") .. "</script>",
+      "<command></command><regex>^mudlet_spec_midpass_alias$</regex></Alias></AliasPackage>",
+      '<TimerPackage><Timer isActive="yes" isFolder="no" isTempTimer="no" isOffsetTimer="no"><name>' .. timer .. '</name>',
+      "<packageName></packageName><script></script><command></command><time>00:10:00.000</time></Timer></TimerPackage>",
+    }, "\n"))
+    defer(function()
+      _G.mudletSpecMidpassRemoved, _G.mudletSpecMidpassSeen = nil, nil
+    end)
+    assert.are.same({1, 1, 1, 1}, {exists(alias, "alias"), #findItems(alias, "alias"), exists(timer, "timer"), #findItems(timer, "timer")},
+      "the package's alias and timer before the uninstall")
+
+    assert.is_true(waitUntil(function()
+      assert.is_true(waitForProfileSaveToPass(), "a profile save was still running after 5s")
+      expandAlias("mudlet_spec_midpass_alias", false)
+      return _G.mudletSpecMidpassRemoved == true
+    end, 8000), "the package's alias could not uninstall it")
+    assert.are.same({0, 0, 0, 0, 0, 0}, _G.mudletSpecMidpassSeen, "exists, findItems and isActive for the alias and timer queued for removal")
+  end)
+
+  it("does not kill a temporary trigger group its package has just queued for removal", function()
+    local name = "mudlet-spec-midpass-tempgroup"
+    local group = "mudlet-spec midpass temporary group"
+    local child = triggerXml("mudlet-spec midpass child", "^mudlet_spec_midpass_never$", "")
+    withScratchPackage(name, table.concat({
+      "<TriggerPackage>",
+      -- a package may carry a temporary trigger, and this one has a child for doCleanup() to free with it
+      (triggerXml(group, "", ""):gsub('isTempTrigger="no"', 'isTempTrigger="yes"'):gsub('isFolder="no"', 'isFolder="yes"')
+        :gsub("</Trigger>$", child .. "\n</Trigger>")),
+      triggerXml("mudlet-spec midpass killer", "mudlet_spec_midpass_kill", table.concat({
+        'mudletSpecMidpassRemoved = uninstallPackage("' .. name .. '")',
+        'if mudletSpecMidpassRemoved then mudletSpecMidpassSeen = killTrigger("' .. group .. '") end'}, "\n")),
+      "</TriggerPackage>",
+    }, "\n"))
+    defer(function()
+      _G.mudletSpecMidpassRemoved, _G.mudletSpecMidpassSeen = nil, nil
+    end)
+    assert.are.equal(1, exists("mudlet-spec midpass child", "trigger"), "the group's child before the uninstall")
+
+    assert.is_true(waitUntil(function()
+      assert.is_true(waitForProfileSaveToPass(), "a profile save was still running after 5s")
+      feedTriggers("\nmudlet_spec_midpass_kill\n")
+      return _G.mudletSpecMidpassRemoved == true
+    end, 8000), "the package's trigger could not uninstall it")
+    assert.is_false(_G.mudletSpecMidpassSeen, "the uninstall has already taken the group, so killing it achieves nothing")
+    -- the line runs the cleanup that frees the group and its child
+    feedTriggers("\nmudlet_spec_midpass_after\n")
+    assert.are.equal(0, exists(group, "trigger"))
+    assert.are.equal(0, exists("mudlet-spec midpass child", "trigger"))
   end)
 end)
 
@@ -1713,9 +2020,9 @@ describe("Tests installing one name as both a package and a module", function()
     -- like from here. This one installs under the same name and different items.
     copyFile(otherRenamerArchive, path)
 
-    -- a postponed reload is dropped rather than carried out later, and a dropped
-    -- one would leave everything below true without the reload ever happening
-    assert.is_true(waitForProfileSaveToPass(), "SETUP: a save was still running, so the reload would have been dropped")
+    -- a postponed reload is only carried out once the save has finished, which
+    -- could be after the checks below
+    assert.is_true(waitForProfileSaveToPass(), "SETUP: a save was still running, so the reload would have been put off")
     reloadModule(renamedTo)
     pumpEvents(1000)
 
@@ -1724,6 +2031,33 @@ describe("Tests installing one name as both a package and a module", function()
     assert.equals(0, exists(renamedTo .. " alias", "alias"), "the items of the archive that was replaced are still installed")
     assert.is_false(fileExists(getMudletHomeDir() .. "/mudlet-spec-renamer"),
                     "the reload left the folder it unpacked into in the profile, under the archive's file name")
+  end)
+
+  -- The archive a module was installed from can be replaced by one whose
+  -- config.lua names it differently, and what it holds then goes in under that
+  -- name: the reload worked, and the old name, which holds nothing any more, is
+  -- no longer listed beside the module that now has its archive.
+  it("answers true when it reloads a module from an archive that now installs under another name", function()
+    lfs.mkdir(scratchDirectory)
+    local path = scratchDirectory .. "/mudlet-spec-renamer.mpackage"
+    defer(function()
+      os.remove(path)
+      lfs.rmdir(scratchDirectory)
+    end)
+    copyFile(fixtureDirectory .. "/mudlet-spec-noconfig.mpackage", path)
+    defer(function() removeFixtureModule("mudlet-spec-renamer") end)
+    installUntilConfirmed(installModule, path, function() return moduleInstalled("mudlet-spec-renamer") end,
+                          "a module under the renaming archive's file name")
+    defer(function() removeFixtureModule(renamedTo) end)
+    copyFile(renamerArchive, path)
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running, so the reload would be postponed")
+
+    local ok, err = reloadModule("mudlet-spec-renamer")
+
+    assert.is_true(ok, tostring(err))
+    assert.is_true(moduleInstalled(renamedTo), "the archive's module was not installed")
+    assert.equals(1, exists(renamedTo .. " alias", "alias"), "the archive's items were not installed")
+    assert.is_false(moduleInstalled("mudlet-spec-renamer"), "the old name is still listed, with nothing in it")
   end)
 
   -- "x.mudlet-installing" is a name a package can have, so a folder of that name
@@ -2187,14 +2521,39 @@ describe("Tests installing an archive whose package XML cannot be read", functio
   -- unreadable one turns the package away must not depend on what it is called
   it("installs an archive whose unreadable stray file is read before its package file", function()
     local name = "mudlet-spec-straynotes"
+    local installEvents = collectEventsForSpec("sysInstall")
     defer(function() removeFixturePackage(name) end)
     assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
 
     local mark = getLastLineNumber("main")
-    installFixturePackage(name)
+    local ok, reason = installUntilConfirmed(installPackage, fixtureDirectory .. "/" .. name .. ".mpackage",
+                                             function() return packageInstalled(name) end, "the package with a stray file")
 
     assert.equals(1, exists(name .. " alias", "alias"), "the package file beside the stray one was not read")
     assert.is_true(containsWrapped(textFrom(mark), 'Failed to load package "' .. name .. '"'), textFrom(mark))
+    -- named by the file, so a script can tell the stray one from the package file
+    assert.is_true(ok)
+    assert.equals(name .. "/a-notes.xml: Start tag expected.", reason)
+    assert.is_true(waitUntil(function() return #installEvents > 0 end, 2000), "the install events never came")
+    assert.equals(reason, installEvents[1][2])
+  end)
+
+  it("tells the script and the install events that a package's XML stopped part-way", function()
+    local name = "mudlet-spec-partialxml"
+    local installEvents = collectEventsForSpec("sysInstall")
+    local packageEvents = collectEventsForSpec("sysInstallPackage")
+    defer(function() removeFixturePackage(name) end)
+
+    local ok, reason = installUntilConfirmed(installPackage, fixtureDirectory .. "/" .. name .. ".mpackage",
+                                             function() return packageInstalled(name) end, "the package whose XML stopped part-way")
+    assert.equals(1, exists(name .. " alias", "alias"), "SETUP: the fixture no longer imports items before its XML breaks")
+
+    assert.is_true(ok)
+    assert.equals(name .. "/" .. name .. ".xml: Premature end of document.", reason)
+    assert.is_true(waitUntil(function() return #installEvents > 0 and #packageEvents > 0 end, 2000),
+                   "the install events never came")
+    assert.equals(reason, installEvents[1][2])
+    assert.equals(reason, packageEvents[1][3])
   end)
 
   -- A package file that was read through without a fault is the package, even an empty one
@@ -2231,6 +2590,8 @@ describe("Tests installing an archive whose package XML cannot be read", functio
   it("keeps a package XML that broke after setting a variable", function()
     local name = "mudlet-spec-cutaftervariable"
     local xml = getMudletHomeDir() .. "/" .. name .. ".xml"
+    local installEvents = collectEventsForSpec("sysInstall")
+    local packageEvents = collectEventsForSpec("sysInstallPackage")
     defer(function()
       removeFixturePackage(name)
       os.remove(xml)
@@ -2250,9 +2611,15 @@ describe("Tests installing an archive whose package XML cannot be read", functio
     file:close()
     mudletSpecCutAfterVariable = nil
 
-    installUntilConfirmed(installPackage, xml, function() return packageInstalled(name) end, "the package XML cut off after its variable")
+    local ok, reason = installUntilConfirmed(installPackage, xml, function() return packageInstalled(name) end, "the package XML cut off after its variable")
 
     assert.equals(5, mudletSpecCutAfterVariable)
+    assert.is_true(ok)
+    assert.equals(name .. ": Premature end of document.", reason)
+    assert.is_true(waitUntil(function() return #installEvents > 0 and #packageEvents > 0 end, 2000),
+                   "the install events never came")
+    assert.equals(reason, installEvents[1][2])
+    assert.equals(reason, packageEvents[1][3])
   end)
 end)
 
@@ -3279,11 +3646,14 @@ describe("Tests installing a package file from a later Mudlet", function()
     lfs.mkdir(scratchDirectory)
     writeLaterMudletXml(path, moduleFromTheFuture)
     assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+    local installEvents = collectEventsForSpec("sysInstall")
 
     installUntilConfirmed(installModule, path, function() return moduleInstalled(moduleFromTheFuture) end, "the module from a later Mudlet")
+    pumpEvents(300)
 
     assert.equals(0, exists(moduleFromTheFuture .. " trigger", "trigger"), "an unreadable file's trigger was installed anyway")
     assertNoFoldersNamed(moduleFromTheFuture)
+    assert.same({}, installEvents, "a module nothing could be read out of was announced as installed")
   end)
 end)
 
@@ -3493,6 +3863,218 @@ describe("Tests installing a package whose Lua does not work", function()
     assert.equals(1, #packageEvents)
     assert.equals(name, packageEvents[1][1])
     assert.is_true(contains(packageEvents[1][3], "mudletSpecBrokenScriptMissing"), tostring(packageEvents[1][3]))
+  end)
+end)
+
+-- A script whose body fails as the profile opens, or is reset, is reported each
+-- time, not only when its package was installed. The suite's own profile cannot be
+-- reopened from inside it, so this loads a second one, which reads its own
+-- console back from a script of its own.
+describe("Tests opening a profile whose script fails as it loads", function()
+  local name = "mudlet-spec-load-broken-script"
+  local moduleName = "mudlet-spec-load-broken-module"
+  local packageName = "mudlet-spec-load-broken-package"
+  local directory = getMudletHomeDir():match("^(.*)[/\\]") .. "/" .. name
+  -- written into the profile made here, so a profile of the same name that
+  -- this spec did not make is never deleted
+  local markerName = "mudlet-spec-fixture"
+  local marker = directory .. "/" .. markerName
+  local reportPhrase = "failed to run when the profile loaded"
+
+  local function removeTree(path)
+    if lfs.attributes(path, "mode") ~= "directory" then
+      os.remove(path)
+      return
+    end
+    for entry in lfs.dir(path) do
+      if entry ~= "." and entry ~= ".." then
+        removeTree(path .. "/" .. entry)
+      end
+    end
+    lfs.rmdir(path)
+  end
+
+  -- The marker goes only once everything else has, so a file that cannot be
+  -- deleted yet leaves the directory still owned by this spec for the next run
+  -- to finish off
+  local function removeOwnedProfile()
+    if not lfs.attributes(marker) then
+      return
+    end
+    for entry in lfs.dir(directory) do
+      if entry ~= "." and entry ~= ".." and entry ~= markerName then
+        removeTree(directory .. "/" .. entry)
+      end
+    end
+    for entry in lfs.dir(directory) do
+      if entry ~= "." and entry ~= ".." and entry ~= markerName then
+        return
+      end
+    end
+    os.remove(marker)
+    lfs.rmdir(directory)
+  end
+
+  local function loaded()
+    local entry = getProfiles()[name]
+    return entry ~= nil and entry.loaded
+  end
+
+  local function scriptXml(scriptName, body, attributes)
+    attributes = attributes or {}
+    return table.concat({
+      '<Script isActive="', attributes.inactive and "no" or "yes", '" isFolder="', attributes.children and "yes" or "no", '">',
+      '<name>', scriptName, '</name><packageName>', attributes.package or "", '</packageName>',
+      '<script>', body, '</script>',
+      '<eventHandlerList>', attributes.handler and ('<string>' .. attributes.handler .. '</string>') or "", '</eventHandlerList>',
+      table.concat(attributes.children or {}),
+      '</Script>',
+    })
+  end
+
+  local function countReports(text)
+    local count = 0
+    for _ in (tostring(text):gsub("%s+", "")):gmatch((reportPhrase:gsub("%s+", ""))) do
+      count = count + 1
+    end
+    return count
+  end
+
+  -- Opens the profile and returns a table that gains that profile's console
+  -- text each time its reporter script's body runs: once as it opens, and again
+  -- after every reset. A profile saved before installPackage() refused it can
+  -- hold one name as both a package and a module, which sharedName sets up.
+  local function openFixtureProfile(sharedName)
+    local packageName = sharedName and moduleName or packageName
+    assert.is_true(lfs.attributes(directory) == nil or lfs.attributes(marker) ~= nil,
+      "a profile named " .. name .. " already exists and is not this spec's to delete")
+    -- left behind by a run that crashed or was killed
+    removeOwnedProfile()
+    assert.is_nil(lfs.attributes(directory), "could not remove " .. directory .. " left behind by an earlier run")
+
+    -- closing a profile saves the shared window layout beside the profiles
+    -- directory, which the next Mudlet start reads, so put it back afterwards
+    local configurationDirectory = directory:match("^(.*)[/\\][^/\\]+[/\\][^/\\]+$")
+    local layoutFiles = {
+      configurationDirectory .. "/windowLayout.dat",
+      configurationDirectory .. "/windowLayoutGeometry.dat",
+    }
+    local layoutBefore = {}
+    for _, path in ipairs(layoutFiles) do
+      local handle = io.open(path, "rb")
+      if handle then
+        layoutBefore[path] = handle:read("*a")
+        handle:close()
+      end
+    end
+    defer(function()
+      for _, path in ipairs(layoutFiles) do
+        if layoutBefore[path] then
+          local handle = assert(io.open(path, "wb"))
+          handle:write(layoutBefore[path])
+          handle:close()
+        else
+          os.remove(path)
+        end
+      end
+    end)
+
+    local consoleTexts = {}
+    local handler = registerAnonymousEventHandler("mudletSpecLoadBrokenConsole", function(_, text)
+      consoleTexts[#consoleTexts + 1] = text
+    end)
+    defer(function()
+      killAnonymousEventHandler(handler)
+    end)
+    defer(function()
+      if loaded() then
+        closeProfile(name)
+      end
+      assert.is_true(waitUntil(function() return not loaded() end, 5000), "the profile " .. name .. " did not close, so it is left on disk")
+      removeOwnedProfile()
+      assert.is_nil(lfs.attributes(directory), "could not remove " .. directory)
+    end)
+
+    local made, whyNot = lfs.mkdir(directory)
+    assert.is_true(made, "could not make " .. directory .. ": " .. tostring(whyNot))
+    local markerFile, whyNotMarked = io.open(marker, "w")
+    assert.is_not_nil(markerFile, "could not write " .. marker .. ": " .. tostring(whyNotMarked))
+    markerFile:close()
+    made, whyNot = lfs.mkdir(directory .. "/current")
+    assert.is_true(made, "could not make " .. directory .. "/current: " .. tostring(whyNot))
+
+    -- the module's file is read again on every open, so its script fails on
+    -- every open too
+    local moduleFile = directory .. "/" .. moduleName .. ".xml"
+    writePackageXml(moduleFile, table.concat({
+      '<ScriptPackage>',
+      scriptXml("mudlet-spec-load-module-script", "mudletSpecMissingInModule()"),
+      '</ScriptPackage>',
+    }))
+    writePackageXml(directory .. "/current/2026-01-01#00-00-00.xml", table.concat({
+      '<HostPackage><Host>',
+      '<mInstalledPackages><string>', packageName, '</string></mInstalledPackages>',
+      '<mInstalledModules><key>', moduleName, '</key><filepath>', moduleFile, '</filepath>',
+      '<globalSave>0</globalSave><priority>-1</priority></mInstalledModules>',
+      '</Host></HostPackage>',
+      '<ScriptPackage>',
+      scriptXml("mudlet-spec-fails-at-load", "mudletSpecMissingAtLoad()"),
+      scriptXml("mudlet-spec-fixed-before-reset", "mudletSpecMissingUntilFixed()"),
+      scriptXml("mudlet-spec-disabled-before-reset", "mudletSpecMissingUntilDisabled()"),
+      scriptXml("mudlet-spec-inactive-fails", "mudletSpecMissingButInactive()", {inactive = true}),
+      scriptXml(packageName, "", {package = packageName, children = {
+        scriptXml("mudlet-spec-load-package-script", "mudletSpecMissingInPackage()"),
+      }}),
+      scriptXml("mudlet-spec-load-folder", "", {children = {
+        scriptXml("mudlet-spec-load-folder-script", "mudletSpecMissingInFolder()"),
+      }}),
+      scriptXml("mudletSpecLoadResetter",
+        'function mudletSpecLoadResetter() setScript("mudlet-spec-fixed-before-reset", "mudletSpecFixed = true") disableScript("mudlet-spec-disabled-before-reset") clearWindow() resetProfile() end',
+        {handler = "mudletSpecLoadBrokenReset"}),
+      scriptXml("mudlet-spec-load-reporter",
+        'tempTimer(0, function() raiseGlobalEvent("mudletSpecLoadBrokenConsole", table.concat(getLines("main", 0, getLastLineNumber("main") + 1), "\\n")) end)'),
+      '</ScriptPackage>',
+    }))
+
+    assert.is_true(loadProfile(name, true))
+    assert.is_true(waitUntil(function() return #consoleTexts >= 1 end, 5000), "the other profile never reported its console")
+    return consoleTexts
+  end
+
+  it("names the scripts that failed on that profile's console, once", function()
+    local consoleText = openFixtureProfile()[1]
+
+    assert.equals(1, countReports(consoleText), consoleText)
+    assert.is_true(containsWrapped(consoleText, '"mudlet-spec-fails-at-load"'), consoleText)
+    assert.is_true(containsWrapped(consoleText, '"mudlet-spec-fixed-before-reset"'), consoleText)
+    assert.is_true(containsWrapped(consoleText, '"mudlet-spec-load-package-script"'), "a package's script was not reported: " .. consoleText)
+    assert.is_true(containsWrapped(consoleText, '"mudlet-spec-load-folder-script"'), "a script inside a folder was not reported: " .. consoleText)
+    assert.is_false(containsWrapped(consoleText, '"mudlet-spec-load-reporter"'), "a script that ran fine was reported too: " .. consoleText)
+    assert.is_false(containsWrapped(consoleText, '"mudlet-spec-inactive-fails"'), "an inactive script was reported: " .. consoleText)
+    assert.is_false(containsWrapped(consoleText, '"mudlet-spec-load-module-script"'), "a module's script was reported: " .. consoleText)
+  end)
+
+  it("names them again after a reset, leaving out those fixed or disabled since", function()
+    local consoleTexts = openFixtureProfile()
+    assert.is_true(containsWrapped(consoleTexts[1], '"mudlet-spec-fixed-before-reset"'), consoleTexts[1])
+    assert.is_true(containsWrapped(consoleTexts[1], '"mudlet-spec-disabled-before-reset"'), consoleTexts[1])
+    raiseGlobalEvent("mudletSpecLoadBrokenReset")
+    assert.is_true(waitUntil(function() return #consoleTexts >= 2 end, 5000), "the other profile never reported its console after the reset")
+    local consoleText = consoleTexts[2]
+
+    assert.equals(1, countReports(consoleText), consoleText)
+    assert.is_true(containsWrapped(consoleText, '"mudlet-spec-fails-at-load"'), consoleText)
+    assert.is_true(containsWrapped(consoleText, '"mudlet-spec-load-folder-script"'), "a body that failed again in the reset was not reported: " .. consoleText)
+    assert.is_false(containsWrapped(consoleText, '"mudlet-spec-fixed-before-reset"'), "a script fixed before the reset was still reported: " .. consoleText)
+    assert.is_false(containsWrapped(consoleText, '"mudlet-spec-disabled-before-reset"'), "a script disabled before the reset was still reported: " .. consoleText)
+    assert.is_false(containsWrapped(consoleText, '"mudlet-spec-load-module-script"'), "a module's script was reported: " .. consoleText)
+  end)
+
+  it("names a package's script when a module has the package's name too", function()
+    local consoleText = openFixtureProfile(true)[1]
+
+    assert.is_true(containsWrapped(consoleText, '"mudlet-spec-load-package-script"'), "a package's script was not reported: " .. consoleText)
+    assert.is_false(containsWrapped(consoleText, '"mudlet-spec-load-module-script"'), "a module's script was reported: " .. consoleText)
   end)
 end)
 
@@ -4711,6 +5293,219 @@ describe("Tests installing a package whose timer, alias, button and key do not c
   end)
 end)
 
+describe("Tests installing a package whose trigger pattern does not compile", function()
+  local name = "mudlet-spec-broken-pattern"
+  local xml = getMudletHomeDir() .. "/" .. name .. ".xml"
+  local perl, luaCode, colour = 1, 4, 6
+
+  -- patterns is a list of {pattern, kind}
+  local function trigger(itemName, options)
+    local strings, kinds = {}, {}
+    for _, pattern in ipairs(options.patterns or {}) do
+      strings[#strings + 1] = '<string>' .. pattern[1] .. '</string>'
+      kinds[#kinds + 1] = '<integer>' .. pattern[2] .. '</integer>'
+    end
+    local tag = options.isFolder and 'TriggerGroup' or 'Trigger'
+    return table.concat({
+      '<' .. tag .. ' isActive="yes" isFolder="' .. (options.isFolder and 'yes' or 'no') .. '" isTempTrigger="no" isMultiline="no"',
+      '         isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="' .. (options.isColor and 'yes' or 'no') .. '">',
+      '<name>' .. itemName .. '</name><script>' .. (options.script or '') .. '</script>',
+      '<triggerType>0</triggerType><conditonLineDelta>0</conditonLineDelta><mStayOpen>0</mStayOpen>',
+      '<mCommand></mCommand><packageName></packageName>',
+      '<regexCodeList>' .. table.concat(strings) .. '</regexCodeList>',
+      '<regexCodePropertyList>' .. table.concat(kinds) .. '</regexCodePropertyList>',
+      options.children or '',
+      '</' .. tag .. '>',
+    }, "\n")
+  end
+
+  local function install(body)
+    defer(function()
+      removeFixturePackage(name)
+      os.remove(xml)
+    end)
+    writePackageXml(xml, '<TriggerPackage>\n' .. body .. '\n</TriggerPackage>')
+    local ok, reason = installUntilConfirmed(installPackage, xml, function() return packageInstalled(name) end, "the package " .. name)
+    assert.is_true(ok)
+    return reason
+  end
+
+  -- the item names in the reason, in order, from its "<name>: <error>; " entries
+  local function namesIn(reason)
+    local names = {}
+    for entry in (tostring(reason) .. "; "):gmatch("(.-); ") do
+      names[#names + 1] = entry:match("^(.-): ")
+    end
+    return names
+  end
+
+  it("installs it and names the trigger in the reason installPackage() hands back", function()
+    -- a trigger kept only for its script has no patterns either, and is just as legitimate
+    local reason = install(trigger(name .. " group", {isFolder = true, children = trigger(name .. " placeholder", {})
+                                                                           .. trigger(name .. " trigger", {patterns = {{"*(unclosed", perl}}})}))
+
+    assert.equals(1, exists(name .. " trigger", "trigger"), "the broken trigger was not kept for fixing in the editor")
+    assert.is_true(contains(reason, name .. " trigger: "), "the broken pattern was not reported: " .. tostring(reason))
+    assert.is_true(contains(reason, '*(unclosed'), "the pattern that failed was not named: " .. tostring(reason))
+    assert.is_false(contains(reason, name .. " group"), "the group was blamed for its child's pattern: " .. tostring(reason))
+    assert.is_false(contains(reason, name .. " placeholder"), "a trigger with no patterns was reported as broken: " .. tostring(reason))
+  end)
+
+  it("names every pattern that does not compile, of each kind, as plain text", function()
+    local reason = install(trigger(name .. " perl", {patterns = {{"*(first", perl}, {"fine", perl}, {"*(third", perl}}}) .. '\n'
+                           .. trigger(name .. " lua", {patterns = {{"if then", luaCode}}}) .. '\n'
+                           .. trigger(name .. " no colour", {isColor = true, patterns = {{"ANSI_COLORS_F{IGNORE}_B{IGNORE}", colour}}}) .. '\n'
+                           .. trigger(name .. " unknown colour", {isColor = true, patterns = {{"ANSI_COLORS_F{300}_B{IGNORE}", colour}}}))
+
+    assert.is_true(contains(reason, '*(first'), "only the last broken pattern was reported: " .. tostring(reason))
+    assert.is_true(contains(reason, '*(third'), tostring(reason))
+    assert.is_true(contains(reason, name .. ' lua: '), "a Lua condition that does not compile was not reported: " .. tostring(reason))
+    assert.is_true(contains(reason, 'if then'), tostring(reason))
+    assert.is_true(contains(reason, name .. ' no colour: '), "a colour pattern with no colours was not reported: " .. tostring(reason))
+    assert.is_true(contains(reason, 'ANSI_COLORS_F{300}_B{IGNORE}'), "a colour pattern with no colour Mudlet knows was not reported: " .. tostring(reason))
+    assert.is_nil(tostring(reason):find("<%/?%a+%s*%/?>"), "the reason carries the editor's markup: " .. tostring(reason))
+  end)
+
+  it("reports both the script and the pattern of a trigger where both fail, together", function()
+    local reason = install(trigger(name .. " group", {isFolder = true, script = "if then", patterns = {{"*(group", perl}},
+                                                      children = trigger(name .. " child", {script = "if then", patterns = {{"fine", 0}}})}))
+
+    local names = namesIn(reason)
+    local groupEntries = {}
+    for index, entryName in ipairs(names) do
+      if entryName == name .. " group" then
+        groupEntries[#groupEntries + 1] = index
+      end
+    end
+    assert.equals(2, #groupEntries, "the group's script and pattern were not both reported: " .. tostring(reason))
+    assert.equals(groupEntries[1] + 1, groupEntries[2], "the group's errors were split up: " .. tostring(reason))
+    assert.is_true(contains(reason, '*(group'), tostring(reason))
+    assert.is_true(listContains(names, name .. " child"), tostring(reason))
+  end)
+
+  it("lists a group before the triggers in it, as the editor does", function()
+    local reason = install(trigger(name .. " group", {isFolder = true, script = "if then",
+                                                      children = trigger(name .. " child", {script = "if then", patterns = {{"*(child", perl}}})}))
+
+    local names = namesIn(reason)
+    assert.same({name .. " group", name .. " child", name .. " child"}, names, "the errors are not in document order: " .. tostring(reason))
+  end)
+end)
+
+describe("Tests installing a package whose alias pattern does not compile", function()
+  it("installs it and names the alias in the reason installPackage() hands back", function()
+    local name = "mudlet-spec-broken-alias-pattern"
+    local xml = getMudletHomeDir() .. "/" .. name .. ".xml"
+    defer(function()
+      removeFixturePackage(name)
+      os.remove(xml)
+    end)
+    writePackageXml(xml, table.concat({
+      '<AliasPackage>',
+      '<Alias isActive="yes" isFolder="no">',
+      '<name>' .. name .. ' alias</name><packageName></packageName><script></script>',
+      '<command></command><regex>^(unclosed</regex>',
+      '</Alias>',
+      '<Alias isActive="yes" isFolder="no">',
+      '<name>' .. name .. ' working alias</name><packageName></packageName><script></script>',
+      '<command></command><regex>^' .. name .. '$</regex>',
+      '</Alias>',
+      '</AliasPackage>',
+    }, "\n"))
+
+    local ok, reason = installUntilConfirmed(installPackage, xml, function() return packageInstalled(name) end, "the package " .. name)
+
+    assert.is_true(ok)
+    assert.equals(1, exists(name .. " alias", "alias"), "the broken alias was not kept for fixing in the editor")
+    assert.is_true(contains(reason, name .. " alias: "), "the broken pattern was not reported: " .. tostring(reason))
+    assert.is_false(contains(reason, name .. " working alias"), "an alias whose pattern compiles was reported as broken: " .. tostring(reason))
+  end)
+
+  it("names an alias whose pattern comes before its name", function()
+    local name = "mudlet-spec-broken-alias-pattern-first"
+    local xml = getMudletHomeDir() .. "/" .. name .. ".xml"
+    defer(function()
+      removeFixturePackage(name)
+      os.remove(xml)
+    end)
+    writePackageXml(xml, table.concat({
+      '<AliasPackage>',
+      '<Alias isActive="yes" isFolder="no">',
+      '<regex>^(unclosed</regex><command></command>',
+      '<name>' .. name .. ' alias</name><packageName></packageName><script></script>',
+      '</Alias>',
+      '</AliasPackage>',
+    }, "\n"))
+
+    local ok, reason = installUntilConfirmed(installPackage, xml, function() return packageInstalled(name) end, "the package " .. name)
+
+    assert.is_true(ok)
+    assert.is_true(contains(reason, name .. " alias: "), "the broken pattern was not reported under the alias's name: " .. tostring(reason))
+  end)
+
+  it("reports both the script and the pattern of an alias where both fail, under its name", function()
+    local name = "mudlet-spec-broken-alias-pattern-and-script"
+    local xml = getMudletHomeDir() .. "/" .. name .. ".xml"
+    defer(function()
+      removeFixturePackage(name)
+      os.remove(xml)
+    end)
+    writePackageXml(xml, table.concat({
+      '<AliasPackage>',
+      '<Alias isActive="yes" isFolder="no">',
+      '<name>' .. name .. ' regex first</name><packageName></packageName><command></command>',
+      '<regex>^(first</regex><script>if then</script>',
+      '</Alias>',
+      '<Alias isActive="yes" isFolder="no">',
+      '<script>if then</script><regex>^(second</regex><command></command>',
+      '<name>' .. name .. ' name last</name><packageName></packageName>',
+      '</Alias>',
+      '</AliasPackage>',
+    }, "\n"))
+
+    local ok, reason = installUntilConfirmed(installPackage, xml, function() return packageInstalled(name) end, "the package " .. name)
+
+    assert.is_true(ok)
+    local function entriesFor(aliasName)
+      local _, count = tostring(reason):gsub((aliasName .. ": "):gsub("%p", "%%%0"), "")
+      return count
+    end
+    local _, scriptErrors = tostring(reason):gsub("near 'then'", "")
+    assert.equals(2, scriptErrors, "a script error was reported more or less than once: " .. tostring(reason))
+    assert.equals(2, entriesFor(name .. " regex first"), "a pattern error was lost to the script error after it: " .. tostring(reason))
+    assert.equals(2, entriesFor(name .. " name last"), "the alias whose name comes last was not named for both its errors: " .. tostring(reason))
+    assert.is_nil(("; " .. tostring(reason)):find("; : "), "an error was reported without the alias's name: " .. tostring(reason))
+  end)
+
+  it("lists a group before the aliases in it, as the editor does", function()
+    local name = "mudlet-spec-broken-alias-group"
+    local xml = getMudletHomeDir() .. "/" .. name .. ".xml"
+    defer(function()
+      removeFixturePackage(name)
+      os.remove(xml)
+    end)
+    writePackageXml(xml, table.concat({
+      '<AliasPackage>',
+      '<AliasGroup isActive="yes" isFolder="yes">',
+      '<name>' .. name .. ' group</name><packageName></packageName><script>if then</script><command></command><regex></regex>',
+      '<Alias isActive="yes" isFolder="no">',
+      '<name>' .. name .. ' child</name><packageName></packageName><script>if then</script><command></command><regex>^(child</regex>',
+      '</Alias>',
+      '</AliasGroup>',
+      '</AliasPackage>',
+    }, "\n"))
+
+    local ok, reason = installUntilConfirmed(installPackage, xml, function() return packageInstalled(name) end, "the package " .. name)
+
+    assert.is_true(ok)
+    local names = {}
+    for entry in (tostring(reason) .. "; "):gmatch("(.-); ") do
+      names[#names + 1] = entry:match("^(.-): ")
+    end
+    assert.same({name .. " group", name .. " child", name .. " child"}, names, "the errors are not in document order: " .. tostring(reason))
+  end)
+end)
+
 -- A save file numbers the sixteen basic colours its own way and the reader maps
 -- them back to ANSI. Anything past sixteen has no old number, so it is taken as
 -- the 256-colour index it already is - which is what lets a colour trigger on an
@@ -5121,6 +5916,292 @@ describe("Tests installing a module whose XML cannot be read", function()
     assert.is_true(containsWrapped(text, 'Failed to load module "' .. name .. '"'), text)
   end)
 
+  it("announces a module whose XML stopped part-way, as its items are running", function()
+    local name = "mudlet-spec-partialxml"
+    local installEvents = collectEventsForSpec("sysInstall")
+    local moduleEvents = collectEventsForSpec("sysLuaInstallModule")
+    local _, ok, reason = withFixtureModule(name)
+    assert.equals(1, exists(name .. " alias", "alias"), "SETUP: the fixture no longer imports items before its XML breaks")
+    assert.is_true(ok)
+    -- the reader's own message, as an item of the same name whose Lua failed would also give "<name>: "
+    assert.is_true(contains(reason, name .. "/" .. name .. ".xml: Premature end of document."), tostring(reason))
+
+    assert.is_true(waitUntil(function() return #installEvents > 0 and #moduleEvents > 0 end, 2000),
+                   "the install events never came for a module whose items are running")
+    assert.equals(name, installEvents[1][1])
+    -- the trailing argument tells a handler the module did not load in full, as the script that asked was
+    assert.equals(reason, installEvents[1][2])
+    assert.equals(name, moduleEvents[1][1])
+    assert.equals(reason, moduleEvents[1][3])
+  end)
+
+  it("announces a module whose XML stopped part-way after setting only a variable", function()
+    local name = "mudlet-spec-cutaftervariablemodule"
+    local path = scratchDirectory .. "/" .. name .. ".xml"
+    local installEvents = collectEventsForSpec("sysInstall")
+    defer(function()
+      removeFixtureModule(name)
+      os.remove(path)
+      lfs.rmdir(scratchDirectory)
+      mudletSpecCutAfterVariableModule = nil
+    end)
+    lfs.mkdir(scratchDirectory)
+    local file = io.open(path, "wb")
+    assert.is_not_nil(file, "could not write " .. path)
+    file:write(table.concat({
+      '<?xml version="1.0" encoding="UTF-8"?>',
+      '<!DOCTYPE MudletPackage>',
+      '<MudletPackage version="1.001">',
+      '<VariablePackage>',
+      '<Variable><name>mudletSpecCutAfterVariableModule</name><keyType>4</keyType><value>5</value><valueType>3</valueType></Variable>',
+      '</VariablePackage>',
+      '<AliasPack',
+    }, "\n"))
+    file:close()
+    mudletSpecCutAfterVariableModule = nil
+
+    installUntilConfirmed(installModule, path, function() return moduleInstalled(name) end, "the module cut off after its variable")
+    assert.equals(5, mudletSpecCutAfterVariableModule, "SETUP: the variable before the break was not set")
+
+    assert.is_true(waitUntil(function() return #installEvents > 0 end, 2000),
+                   "a module whose variable is set was never announced")
+    assert.equals(name, installEvents[1][1])
+    assert.is_true(contains(installEvents[1][2], name .. ": Premature end of document."), tostring(installEvents[1][2]))
+  end)
+
+  it("tells of every file of a module archive that stopped part-way", function()
+    local name = "mudlet-spec-twobrokenxml"
+    local installEvents = collectEventsForSpec("sysInstall")
+    local _, ok, reason = withFixtureModule(name)
+    assert.equals(1, exists(name .. " alias a", "alias"), "SETUP: the first file no longer imports its alias")
+    assert.equals(1, exists(name .. " alias b", "alias"), "SETUP: the second file no longer imports its alias")
+
+    assert.is_true(ok)
+    -- each named by its file, as both carry the module's name
+    assert.is_true(contains(reason, name .. "/a.xml: Premature end of document."), tostring(reason))
+    assert.is_true(contains(reason, name .. "/b.xml: Opening and ending tag mismatch."), tostring(reason))
+    assert.is_true(waitUntil(function() return #installEvents > 0 end, 2000), "the module was never announced")
+    assert.equals(reason, installEvents[1][2])
+  end)
+
+  it("tells of a module's broken Lua and its broken XML together", function()
+    local name = "mudlet-spec-brokenluaandxml"
+    local path = scratchDirectory .. "/" .. name .. ".xml"
+    local installEvents = collectEventsForSpec("sysInstall")
+    defer(function()
+      removeFixtureModule(name)
+      os.remove(path)
+      lfs.rmdir(scratchDirectory)
+    end)
+    lfs.mkdir(scratchDirectory)
+    local file = io.open(path, "wb")
+    assert.is_not_nil(file, "could not write " .. path)
+    file:write(table.concat({
+      '<?xml version="1.0" encoding="UTF-8"?>',
+      '<!DOCTYPE MudletPackage>',
+      '<MudletPackage version="1.001">',
+      '<ScriptPackage>',
+      '<Script isActive="yes" isFolder="no"><name>brokenLuaAndXml</name><packageName></packageName><script>this is not lua</script><eventHandlerList/></Script>',
+      '</ScriptPackage>',
+      '<AliasPack',
+    }, "\n"))
+    file:close()
+
+    local ok, reason = installUntilConfirmed(installModule, path, function() return moduleInstalled(name) end, "the module with broken Lua and XML")
+
+    assert.is_true(ok)
+    assert.is_true(contains(reason, "brokenLuaAndXml: "), tostring(reason))
+    assert.is_true(contains(reason, "; " .. name .. ": Premature end of document."), tostring(reason))
+    assert.is_true(waitUntil(function() return #installEvents > 0 end, 2000), "the module was never announced")
+    assert.equals(reason, installEvents[1][2])
+  end)
+
+  it("tells a reload's handlers that the module's XML stopped part-way", function()
+    local name = "mudlet-spec-partialxml"
+    withFixtureModule(name)
+    local syncEvents = collectEventsForSpec("sysSyncInstallModule")
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+
+    reloadModuleUntil(name, function() return #syncEvents > 0 end)
+
+    assert.equals(name, syncEvents[1][1])
+    assert.equals(name .. "/" .. name .. ".xml: Premature end of document.", syncEvents[1][3])
+  end)
+
+  it("announces only the latest of a module installed, uninstalled and installed again before its events", function()
+    local name = "mudlet-spec-partialxml"
+    local brokenPath = scratchDirectory .. "/" .. name .. ".mpackage"
+    local fixedFolder = scratchDirectory .. "/fixed"
+    local fixedPath = fixedFolder .. "/" .. name .. ".xml"
+    defer(function()
+      removeFixtureModule(name)
+      os.remove(fixedPath)
+      lfs.rmdir(fixedFolder)
+      lfs.rmdir(scratchDirectory)
+    end)
+    lfs.mkdir(scratchDirectory)
+    lfs.mkdir(fixedFolder)
+    copyFile(fixtureDirectory .. "/" .. name .. ".mpackage", brokenPath)
+    writePackageXml(fixedPath, '<AliasPackage><Alias isActive="yes" isFolder="no"><name>' .. name .. ' alias</name>'
+      .. '<script></script><command></command><packageName></packageName><regex>^fixed$</regex></Alias></AliasPackage>')
+    local installEvents = collectEventsForSpec("sysInstall")
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+
+    -- back to back, with no event loop pass between them, so the first install's events are still queued
+    local brokenOk = installModule(brokenPath)
+    local uninstalled = uninstallModule(name)
+    local fixedOk, fixedReason = installModule(fixedPath)
+    pumpEvents(300)
+
+    assert.is_true(brokenOk and uninstalled and fixedOk, "SETUP: the module could not be installed, uninstalled and installed again")
+    assert.is_nil(fixedReason)
+    assert.equals(1, #installEvents, "the undone install was announced as well")
+    assert.same({name}, installEvents[1], "the healthy module was announced with the undone install's errors")
+  end)
+
+  -- A reload takes the module apart and puts the same one straight back, which undoes nothing
+  local function collectModuleEventsFor(name)
+    local seen = {}
+    for _, eventName in ipairs({"sysInstall", "sysLuaInstallModule", "sysSyncInstallModule"}) do
+      local handler = registerAnonymousEventHandler(eventName, function(event, installed)
+        if installed == name then
+          seen[#seen + 1] = event
+        end
+      end)
+      defer(function() killAnonymousEventHandler(handler) end)
+    end
+    return seen
+  end
+
+  local function withReloadableModule(name)
+    local path = scratchDirectory .. "/" .. name .. ".xml"
+    defer(function()
+      removeFixtureModule(name)
+      os.remove(path)
+      lfs.rmdir(scratchDirectory)
+    end)
+    lfs.mkdir(scratchDirectory)
+    writePackageXml(path, '<AliasPackage><Alias isActive="yes" isFolder="no"><name>' .. name .. ' alias</name>'
+      .. '<script></script><command></command><packageName></packageName><regex>^' .. name .. '$</regex></Alias></AliasPackage>')
+    return path
+  end
+
+  it("still announces a script's install of a module that was reloaded before its events", function()
+    local name = "mudlet-spec-reloadedbeforeevents"
+    local path = withReloadableModule(name)
+    local seen = collectModuleEventsFor(name)
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+
+    -- back to back: the install's own save is not running yet, so the reload is carried out at once
+    assert.is_true(installModule(path))
+    reloadModule(name)
+    pumpEvents(300)
+
+    assert.is_true(moduleInstalled(name))
+    assert.same({"sysInstall", "sysLuaInstallModule", "sysInstall", "sysSyncInstallModule"}, seen)
+  end)
+
+  it("still raises the detailed install event when a sysInstall handler reloads the module", function()
+    local name = "mudlet-spec-reloadedbyhandler"
+    local path = withReloadableModule(name)
+    local seen = collectModuleEventsFor(name)
+    local reloaded = false
+    local handler = registerAnonymousEventHandler("sysInstall", function(_, installed)
+      if installed == name and not reloaded then
+        reloaded = true
+        reloadModule(name)
+      end
+    end)
+    defer(function() killAnonymousEventHandler(handler) end)
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+
+    assert.is_true(installModule(path))
+    pumpEvents(300)
+
+    assert.is_true(reloaded, "SETUP: the module was never announced, so nothing reloaded it")
+    assert.is_true(moduleInstalled(name))
+    assert.same({"sysInstall", "sysLuaInstallModule", "sysInstall", "sysSyncInstallModule"}, seen)
+  end)
+
+  it("does not announce a module whose XML broke before anything was read in", function()
+    local name = "mudlet-spec-brokenatonce"
+    local path = scratchDirectory .. "/" .. name .. ".xml"
+    local installEvents = collectEventsForSpec("sysInstall")
+    defer(function()
+      removeFixtureModule(name)
+      os.remove(path)
+      lfs.rmdir(scratchDirectory)
+    end)
+    lfs.mkdir(scratchDirectory)
+    local file = io.open(path, "wb")
+    assert.is_not_nil(file, "could not write " .. path)
+    file:write('<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE MudletPackage>\n<MudletPackage version="1.001">\n<AliasPa')
+    file:close()
+
+    installUntilConfirmed(installModule, path, function() return moduleInstalled(name) end, "the module that broke at once")
+    pumpEvents(300)
+
+    assert.same({}, installEvents, "a module with nothing running was announced as installed")
+  end)
+
+  -- Back to back, with no event loop pass between them, so the install events are still queued
+  local function installThenUninstall(install, uninstall, path, name, installed)
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+    install(path)
+    return installed(name) and uninstall(name) == true
+  end
+
+  it("does not announce a module that was uninstalled before its install events were raised", function()
+    local path = scratchDirectory .. "/" .. minimalPackage .. ".mpackage"
+    lfs.mkdir(scratchDirectory)
+    copyFile(fixtureDirectory .. "/" .. minimalPackage .. ".mpackage", path)
+    defer(function() removeFixtureModule(minimalPackage) end)
+    local installEvents = collectEventsForSpec("sysInstall")
+    local moduleEvents = collectEventsForSpec("sysLuaInstallModule")
+
+    local uninstalled = installThenUninstall(installModule, uninstallModule, path, minimalPackage, moduleInstalled)
+    pumpEvents(300)
+
+    assert.is_true(uninstalled, "SETUP: the module could not be installed and uninstalled back to back")
+    assert.is_false(moduleInstalled(minimalPackage))
+    assert.same({}, installEvents, "a module that was already gone was announced as installed")
+    assert.same({}, moduleEvents, "a module that was already gone was announced as installed")
+  end)
+
+  it("does not announce a package that was uninstalled before its install events were raised", function()
+    defer(function() removeFixturePackage(minimalPackage) end)
+    local installEvents = collectEventsForSpec("sysInstall")
+    local packageEvents = collectEventsForSpec("sysInstallPackage")
+
+    local uninstalled = installThenUninstall(installPackage, uninstallPackage, fixtureDirectory .. "/" .. minimalPackage .. ".mpackage", minimalPackage, packageInstalled)
+    pumpEvents(300)
+
+    assert.is_true(uninstalled, "SETUP: the package could not be installed and uninstalled back to back")
+    assert.is_false(packageInstalled(minimalPackage))
+    assert.same({}, installEvents, "a package that was already gone was announced as installed")
+    assert.same({}, packageEvents, "a package that was already gone was announced as installed")
+  end)
+
+  it("does not raise the detailed install event for a package a sysInstall handler took away", function()
+    local packageEvents = collectEventsForSpec("sysInstallPackage")
+    local remover = registerAnonymousEventHandler("sysInstall", function(_, installed)
+      if installed == minimalPackage then
+        uninstallPackage(minimalPackage)
+      end
+    end)
+    defer(function()
+      killAnonymousEventHandler(remover)
+      removeFixturePackage(minimalPackage)
+    end)
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+
+    installPackage(fixtureDirectory .. "/" .. minimalPackage .. ".mpackage")
+    pumpEvents(300)
+
+    assert.is_false(packageInstalled(minimalPackage), "SETUP: the sysInstall handler did not uninstall the package")
+    assert.same({}, packageEvents, "a package that was already gone was announced as installed")
+  end)
+
   it("says so for a bare XML module too", function()
     local name = "mudlet-spec-badxml-bare"
     local path = scratchDirectory .. "/" .. name .. ".xml"
@@ -5133,10 +6214,16 @@ describe("Tests installing a module whose XML cannot be read", function()
     copyFile(fixtureDirectory .. "/sources/" .. name .. "/" .. name .. ".xml", path)
     assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
 
+    local installEvents = collectEventsForSpec("sysInstall")
+
     local mark = getLastLineNumber("main")
-    installUntilConfirmed(installModule, path, function() return moduleInstalled(name) end, "the truncated bare XML module")
+    local ok, reason = installUntilConfirmed(installModule, path, function() return moduleInstalled(name) end, "the truncated bare XML module")
 
     assert.is_true(containsWrapped(textFrom(mark), 'Failed to load module "' .. name .. '"'), textFrom(mark))
+    assert.is_true(ok)
+    assert.equals(name .. ": Opening and ending tag mismatch.", reason)
+    assert.is_true(waitUntil(function() return #installEvents > 0 end, 2000), "the module was never announced")
+    assert.equals(reason, installEvents[1][2])
   end)
 end)
 
