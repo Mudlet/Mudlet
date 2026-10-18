@@ -272,12 +272,20 @@ function xor(a, b)
 end
 
 
---- This function flags a variable to be saved by Mudlet's variable persistence system.
---- Variables are automatically unpacked into the global namespace when the profile is loaded.
---- They are saved to "SavedVariables.lua" when the profile is closed or saved.
+--- Flags a global variable to be written to "SavedVariables.lua" in the profile directory by saveVars().
+--- Nothing is saved or restored automatically: saveVars() and loadVars() have to be called by a script,
+--- for example from sysExitEvent and sysLoadEvent handlers. resetProfile() raises sysLoadEvent but not
+--- sysExitEvent, so call saveVars() before resetting or the changes since the last save are lost.
+--- loadVars() flags the variables it restores, so they need no new remember() call.
+---
+--- A variable that is nil when remember() or saveVars() runs is neither flagged nor saved: give it a
+--- value first, and call remember() again once it has been nil. That is also how to stop saving one,
+--- such as a variable a script no longer uses that loadVars() keeps restoring: set it to nil and call
+--- saveVars(). Functions, userdata and coroutines are not saved, inside a table or on their own.
 ---
 --- @usage remember("varName")
 ---
+--- @see saveVars
 --- @see loadVars
 function remember(varName)
   if not _saveTable then
@@ -288,10 +296,15 @@ end
 
 
 
---- This function should be primarily used by Mudlet. It loads saved settings in from the Mudlet home directory
---- and unpacks them into the global namespace.
+--- Reads the variables saveVars() wrote to "SavedVariables.lua" in the profile directory back into the
+--- global namespace. Mudlet does not call it, so call it when the variables are needed, for example
+--- from a sysLoadEvent handler. The variables it restores are flagged as remember() would, so the next
+--- saveVars() keeps them. The file is run as Lua code: without a "SavedVariables.lua", or with one that
+--- returns nothing, it restores nothing, and it raises an error when the file cannot be parsed or
+--- returns something other than what table.save() writes.
 ---
 --- @see remember
+--- @see saveVars
 function loadVars()
   local _sep = ""
   if string.char(getMudletHomeDir():byte()) == "/" then
@@ -305,14 +318,21 @@ function loadVars()
     table.load(l_SettingsFile, lt_VariableHolder)
     for k, v in pairs(lt_VariableHolder) do
       _G[k] = v
+      remember(k)
     end
   end
 end
 
 
 
---- This function should primarily be used by Mudlet. It saves the contents of _saveTable into a file for persistence.
+--- Writes the current values of the variables flagged with remember() to "SavedVariables.lua" in the
+--- profile directory, replacing what the file held. Mudlet does not call it, so call it whenever the
+--- variables should be kept, for example from a sysExitEvent handler. A flagged variable that is now nil
+--- is left out of the file and is no longer flagged.
 ---
+--- @return true on success, or nil and a message when no variable has been flagged (the file is then
+---   left as it was) or the file could not be written
+--- @see remember
 --- @see loadVars
 function saveVars()
   local _sep = ""
@@ -322,29 +342,33 @@ function saveVars()
     _sep = "\\"
   end
   local l_SettingsFile = getMudletHomeDir() .. _sep .. "SavedVariables.lua"
+  -- checked before the refresh: empty here means only nil variables were remembered, and writing that
+  -- would wipe an earlier session's store, while a flagged variable that is nil now is meant to be dropped
+  if not _saveTable or next(_saveTable) == nil then
+    return nil, "saveVars: no variable has been flagged with remember(), so "..l_SettingsFile.." is left as it was"
+  end
   for k, _ in pairs(_saveTable) do
     remember(k)
   end
-  table.save(l_SettingsFile, _saveTable)
+  return table.save(l_SettingsFile, _saveTable)
 end
 
 
 
 --- The below functions (table.save, table.load) can be used to save individual Lua tables to disc and load
 --- them again at a later time e.g. make a database, collect statistical information etc.
---- These functions are also used by Mudlet to load & save the entire Lua session variables. <br/><br/>
+--- saveVars() and loadVars() use them to keep the variables flagged with remember(). <br/><br/>
 ---
 --- Original code written by CHILLCODE™ on https://board.ptokax.ch, distributed under the same terms as Lua itself. <br/><br/>
 ---
 --- Notes: <br/>
----  Userdata and indices of these are not saved <br/>
----  Functions are saved via string.dump, so make sure it has no upvalues <br/>
+---  Functions, userdata and coroutines are not saved, whether as a key or as a value <br/>
+---  The standard Lua libraries and _G are not saved, wherever they are reached; other library tables,
+---  such as lfs or utf8, are saved without their functions <br/>
 ---  References are saved <br/>
 ---
---- @usage Saves the globals table (minus some lua environment stuff) into a file (only Mudlet should use this).
----   <pre>
----   table.save(file)
----   </pre>
+--- @return true, or nil and an error message if the file could not be written. It raises an error,
+---   leaving the file as it was, when t is not a table.
 --- @usage Saves the given table into the given file.
 ---   <pre>
 ---   table.save(file, table)
@@ -353,17 +377,78 @@ end
 --- @see table.load
 function table.save( sfile, t )
   assert(type(sfile) == "string", "table.save requires a file path to save to")
+  -- no default of _G: table.load(file) would then overwrite db, Geyser and the rest with copies
+  -- that lost their functions
+  assert(type(t) == "table", "table.save requires a table to save")
   local tables = {}
   table.insert( tables, t )
   local lookup = { [t] = 1 }
+  -- serialised in full before the file is opened, so an error while serialising leaves the previous
+  -- contents in place; a write that fails, such as on a full disk, still loses them
+  local chunks = {}
+  local buffer = { write = function(_, text) chunks[#chunks + 1] = text end }
+  buffer:write( "return {" )
+  for i, v in ipairs( tables ) do
+    table.pickle( v, buffer, tables, lookup )
+  end
+  buffer:write( "}" )
+  local text = table.concat( chunks )
   local file, msg = io.open( sfile, "w" )
   if not file then return nil, msg end
-  file:write( "return {" )
-  for i, v in ipairs( tables ) do
-    table.pickle( v, file, tables, lookup )
+  local written, write_msg = file:write( text )
+  local closed, close_msg = file:close()
+  if not written then return nil, write_msg end
+  if not closed then return nil, close_msg end
+  return true
+end
+
+
+
+-- these names are left out when saving _G itself, not when a data table merely has a member of
+-- the same name
+local libraryNames = {
+  string = true, xpcall = true, package = true, os = true, io = true, math = true, debug = true,
+  coroutine = true, _G = true, _VERSION = true, table = true
+}
+
+-- and these tables wherever they are reached: without their functions, what would come back is an
+-- empty table, a partial copy of package, or for _G a copy of every global
+local libraryTables = {
+  [_G] = true, [string] = true, [table] = true, [math] = true, [os] = true, [io] = true,
+  [debug] = true, [coroutine] = true, [package] = true
+}
+
+-- tostring() gives inf, -inf and nan, which are not Lua literals, and only 14 significant digits.
+-- A chunk keeps 0 and -0 in one constant slot, whichever comes first, so -0 is negated from a
+-- string at load time and the infinities have no 0 in them: (1/0) after a -0 loads as -inf
+local function numberLiteral(n)
+  if n ~= n then
+    return "(0/0)"
+  elseif n == math.huge then
+    return "1e999"
+  elseif n == -math.huge then
+    return "-1e999"
+  elseif n == 0 and 1 / n < 0 then
+    return '(-"0")'
   end
-  file:write( "}" )
-  file:close()
+  local short = tostring( n )
+  if tonumber( short ) == n then
+    return short
+  end
+  return string.format( "%.17g", n )
+end
+
+-- %q rather than a long bracket, which drops a leading newline and turns a lone \r into \n
+local function literal(v)
+  local kind = type( v )
+  if kind == "string" then
+    return string.format( "%q", v )
+  elseif kind == "number" then
+    return numberLiteral( v )
+  elseif kind == "boolean" then
+    return tostring( v )
+  end
+  return nil
 end
 
 
@@ -372,8 +457,10 @@ end
 function table.pickle( t, file, tables, lookup )
   file:write( "{" )
   for i, v in pairs( t ) do
-    -- escape functions
-    if type( v ) ~= "function" and type( v ) ~= "userdata" and (i ~= "string" and i ~= "xpcall" and i ~= "package" and i ~= "os" and i ~= "io" and i ~= "math" and i ~= "debug" and i ~= "coroutine" and i ~= "_G" and i ~= "_VERSION" and i ~= "table") then
+    -- functions, userdata and threads have no literal to be written as, as a key or as a value
+    local index = type( i ) == "table" or literal( i )
+    local value = type( v ) == "table" or literal( v )
+    if index and value and not (libraryTables[i] or libraryTables[v] or (rawequal( t, _G ) and libraryNames[i])) then
       -- handle index
       if type( i ) == "table" then
         if not lookup[i] then
@@ -383,8 +470,7 @@ function table.pickle( t, file, tables, lookup )
         end
         file:write( "[{" .. lookup[i] .. "}] = " )
       else
-        local index = ( type( i ) == "string" and "[ " .. string.enclose( i, 50 ) .. " ]" ) or string.format( "[%d]", i )
-        file:write( index .. " = " )
+        file:write( "[" .. index .. "] = " )
       end
       -- handle value
       if type( v ) == "table" then
@@ -394,7 +480,6 @@ function table.pickle( t, file, tables, lookup )
         end
         file:write( "{" .. lookup[v] .. "}," )
       else
-        local value = ( type( v ) == "string" and string.enclose( v, 50 ) ) or tostring( v )
         file:write( value .. "," )
       end
     end
@@ -406,7 +491,7 @@ end
 
 --- Restores a Lua table from a data file that has been saved with table.save().
 ---
---- @usage Loads a serialized file into the globals table (only Mudlet should use this).
+--- @usage Loads a serialized file into the globals table, replacing any global of the same name.
 ---   <pre>
 ---   table.load(file)
 ---   </pre>
@@ -466,12 +551,98 @@ local speedwalkTimerID
 local speedwalkDelay
 local speedwalkList
 local speedwalkShow
+local speedwalkPaused = false
+-- the walklists whose send() of a step, or whose sysSpeedwalkStarted, is still running:
+-- that caller takes its walk on once the handlers return
+local speedwalkSending
+local speedwalkStarting
+local speedwalkCount = 0
 
---- Stops a speedwalk and clears the walklist
+local function speedwalkInProgress()
+  return speedwalkList ~= nil and #speedwalkList > 0
+end
+
+local function cancelSpeedwalkTimer()
+  if speedwalkTimerID then
+    killTimer(speedwalkTimerID)
+    speedwalkTimerID = false
+  end
+end
+
+local function checkedSpeedwalkDelay(delay, caller, argument)
+  local seconds = tonumber(delay)
+  assert(seconds, string.format("%s: bad argument #%d type (delay in seconds as number expected, got %s!)", caller, argument, type(delay)))
+  -- tempTimer() bounds the delay once rounded to whole milliseconds; checked here so a bad one cannot half-start a walk
+  local milliseconds = math.floor(seconds * 1000 + 0.5)
+  assert(milliseconds >= 0 and milliseconds < 86400000, string.format("%s: bad argument #%d value (delay in seconds must be at least 0 and less than 86400, got %s)", caller, argument, tostring(delay)))
+  return seconds
+end
+
+-- false when a sysSpeedwalkStopped handler of the walk it stopped has started another
+local function makeWayForSpeedwalk()
+  local walksBefore = speedwalkCount
+  stopSpeedwalk()
+  return speedwalkCount == walksBefore
+end
+
+local function beginSpeedwalk(walklist, delay, show)
+  cancelSpeedwalkTimer()
+  speedwalkList = walklist
+  speedwalkDelay = delay
+  speedwalkShow = show
+  speedwalkPaused = false
+  speedwalkCount = speedwalkCount + 1
+end
+
+local function speedwalkStep()
+  local walklist = speedwalkList
+  local outerSending = speedwalkSending
+  speedwalkSending = walklist
+  local sent, sendError = pcall(send, walklist[1], speedwalkShow)
+  speedwalkSending = outerSending
+  if not sent then
+    -- a step send() refuses ends the walk rather than leaving it stuck on that step
+    if speedwalkList == walklist then
+      stopSpeedwalk()
+    end
+    error(sendError, 0)
+  end
+  -- a sysDataSendRequest handler may have stopped this walk or started another
+  if speedwalkList ~= walklist then
+    return
+  end
+  table.remove(walklist, 1)
+  if #walklist == 0 then
+    speedwalkPaused = false
+    raiseEvent("sysSpeedwalkFinished")
+  elseif speedwalkDelay and not speedwalkPaused then
+    speedwalkTimerID = tempTimer(speedwalkDelay, function()
+      speedwalkTimerID = false
+      if speedwalkList == walklist and not speedwalkPaused then
+        speedwalkStep()
+      end
+    end)
+  end
+end
+
+local function continueSpeedwalk()
+  if speedwalkDelay then
+    speedwalkStep()
+    return
+  end
+  local walklist = speedwalkList
+  while speedwalkList == walklist and #walklist > 0 and not speedwalkPaused do
+    speedwalkStep()
+  end
+end
+
+--- Stops the running or paused speedwalk, so there is nothing left to resume, and raises sysSpeedwalkStopped.
+--- @return true, or nil and a message when no speedwalk is running or paused
 function stopSpeedwalk()
-  local active = pauseSpeedwalk()
-  if active then
+  if speedwalkInProgress() then
+    cancelSpeedwalkTimer()
     speedwalkList = {}
+    speedwalkPaused = false
     raiseEvent("sysSpeedwalkStopped")
     return true
   end
@@ -480,11 +651,13 @@ end
 
 
 
---- pauses a running speedwalk, but leaves the walklist intact in case you want to resume
+--- Pauses the running speedwalk, leaving the steps still to take for resumeSpeedwalk(), and raises sysSpeedwalkPaused.
+--- @return true, or nil and a message when no speedwalk is running, or its last step is being sent
 function pauseSpeedwalk()
-  if speedwalkTimerID then
-    killTimer(speedwalkTimerID)
-    speedwalkTimerID = false
+  -- the walk finishes once the last step's send() returns, leaving nothing to resume
+  if speedwalkInProgress() and not speedwalkPaused and not (speedwalkSending == speedwalkList and #speedwalkList == 1) then
+    cancelSpeedwalkTimer()
+    speedwalkPaused = true
     raiseEvent("sysSpeedwalkPaused")
     return true
   end
@@ -493,42 +666,65 @@ end
 
 
 
---- Resumes a paused speedwalk
+--- Raises sysSpeedwalkResumed and carries on with the paused speedwalk from its next step.
+--- @return true, or nil and a message when the speedwalk is not paused or there is none
 function resumeSpeedwalk()
-  if speedwalkTimerID then
-    return nil, "resumeSpeedwalk(): attempted to resume an already running speedwalk"
-  end
-  if not speedwalkList or table.is_empty(speedwalkList) then
+  if not speedwalkInProgress() then
     return nil, "resumeSpeedwalk(): attempted to resume a speedwalk but no active speedwalk found"
   end
-  speedwalktimer(speedwalkList, speedwalkDelay, speedwalkShow)
+  if not speedwalkPaused then
+    return nil, "resumeSpeedwalk(): attempted to resume an already running speedwalk"
+  end
+  local walklist = speedwalkList
+  speedwalkPaused = false
   raiseEvent("sysSpeedwalkResumed")
+  if speedwalkList == walklist and not speedwalkPaused and speedwalkSending ~= walklist and speedwalkStarting ~= walklist then
+    continueSpeedwalk()
+  end
   return true
 end
 
 
---- <b><u>TODO</u></b> speedwalktimer()
+--- Makes walklist the current speedwalk and sends its first step, then the rest one every walkdelay seconds
+--- (all at once without a walkdelay), removing each step from walklist as it is sent.
+--- speedwalk() is the usual way to start a walk: this raises no sysSpeedwalkStarted, though it does raise
+--- sysSpeedwalkFinished after the last step. A different running or paused walk is stopped first.
+---
+--- @return nil and a message when a sysSpeedwalkStopped handler of the walk it stopped has started another
 function speedwalktimer(walklist, walkdelay, show)
-  send(walklist[1], show)
-  table.remove(walklist, 1)
-  if #walklist > 0 then
-    speedwalkTimerID = tempTimer(walkdelay, function()
-      speedwalktimer(walklist, walkdelay, show)
-    end)
-  else
-    raiseEvent("sysSpeedwalkFinished")
+  if walkdelay then
+    walkdelay = checkedSpeedwalkDelay(walkdelay, "speedwalktimer", 2)
   end
+  if #walklist == 0 then
+    return
+  end
+  if walklist ~= speedwalkList and not makeWayForSpeedwalk() then
+    return nil, "speedwalktimer(): a sysSpeedwalkStopped handler started another speedwalk"
+  end
+  beginSpeedwalk(walklist, walkdelay, show)
+  continueSpeedwalk()
 end
 
 
 
---- <b><u>TODO</u></b> speedwalk(dirString, backwards, delay, optional show)
+--- Walks the directions in dirString, such as "3n2e" or "north, 2ne, u", sending one command per step.
+--- Only one speedwalk runs at a time: a running or paused one is stopped first, whatever its delay.
+--- Raises sysSpeedwalkStarted, then sysSpeedwalkFinished once the last step has been sent.
+---
+--- @param dirString the directions to walk
+--- @param backwards true to walk the directions in reverse, back to where they start
+--- @param delay seconds between steps, as a number or a string holding one; without one every step is sent straight away
+--- @param show false to not echo the commands sent
+---
+--- @return true once the walk has started, or nil and a message when there is nothing to walk
+---   or a sysSpeedwalkStopped handler of the walk it stopped has started another
 function speedwalk(dirString, backwards, delay, show)
+  assert(type(dirString) == "string", string.format("speedwalk: bad argument #1 type (directions as string expected, got %s!)", type(dirString)))
+  if delay then
+    delay = checkedSpeedwalkDelay(delay, "speedwalk", 3)
+  end
   dirString = dirString:lower()
-  local walkdelay = delay
   if show ~= false then show = true end
-  speedwalkShow = show
-  speedwalkDelay = delay
   local walklist = {}
   local long_dir = {north = 'n', south = 's', east = 'e', west = 'w', up = 'u', down = 'd'}
   for k,v in pairs(long_dir) do
@@ -548,34 +744,37 @@ function speedwalk(dirString, backwards, delay, show)
     ni = "out",
     tuo = "in"
   }
-  raiseEvent("sysSpeedwalkStarted")
   if not backwards then
     for count, direction in string.gmatch(dirString, "([0-9]*)([neswudio][ewnu]?t?)") do
       count = (count == "" and 1 or count)
       for i = 1, count do
-        if delay then
-          walklist[#walklist + 1] = direction
-        else
-          send(direction, show)
-        end
+        walklist[#walklist + 1] = direction
       end
     end
   else
     for direction, count in string.gmatch(dirString:reverse(), "(t?[ewnu]?[neswudio])([0-9]*)") do
       count = (count == "" and 1 or count:reverse())
       for i = 1, count do
-        if delay then
-          walklist[#walklist + 1] = reversedir[direction]
-        else
-          send(reversedir[direction], show)
-        end
+        walklist[#walklist + 1] = reversedir[direction]
       end
     end
   end
-  if walkdelay then
-    speedwalkList = walklist
-    speedwalktimer(walklist, walkdelay, show)
+  if #walklist == 0 then
+    return nil, "speedwalk(): no directions found in the walk to take"
   end
+  if not makeWayForSpeedwalk() then
+    return nil, "speedwalk(): a sysSpeedwalkStopped handler started another speedwalk"
+  end
+  beginSpeedwalk(walklist, delay or nil, show)
+  local outerStarting = speedwalkStarting
+  speedwalkStarting = walklist
+  raiseEvent("sysSpeedwalkStarted")
+  speedwalkStarting = outerStarting
+  -- a sysSpeedwalkStarted handler may have paused or stopped this walk, or started another
+  if speedwalkList == walklist and not speedwalkPaused then
+    continueSpeedwalk()
+  end
+  return true
 end
 
 
@@ -711,23 +910,34 @@ do
     d = 10,
     down = 10,
     ["in"] = 11,
-    out = 12
+    i = 11,
+    out = 12,
+    o = 12
   }
 
+  local function exitNumber(direction)
+    if type(direction) == "string" then
+      return exitmap[direction:lower()]
+    end
+    return direction
+  end
+
   function lockExit(from, direction, status)
-    if type(direction) == "string" and not exitmap[direction] then
-      return false
+    local number = exitNumber(direction)
+    if type(direction) == "string" and not number then
+      return nil, ("%q is not a valid direction"):format(direction)
     end
 
-    return oldlockExit(from, type(direction) == "string" and exitmap[direction] or direction, status)
+    return oldlockExit(from, number, status)
   end
 
   function hasExitLock(from, direction)
-    if type(direction) == "string" and not exitmap[direction] then
-      return false
+    local number = exitNumber(direction)
+    if type(direction) == "string" and not number then
+      return nil, ("%q is not a valid direction"):format(direction)
     end
 
-    return oldhasExitLock(from, type(direction) == "string" and exitmap[direction] or direction)
+    return oldhasExitLock(from, number)
   end
 end
 
@@ -1139,8 +1349,22 @@ end
 
 local acceptableSuffix = {"xml", "mpackage", "zip", "trigger"}
 
+-- the file name installPackage() downloads a package URL under, or nil when target is not one
+local function packageFileFromUrl(target)
+  if target:starts("http://") or target:starts("https://") then
+    local fileName, suffix = target:gmatch("([^/]+)%.([^.]+)$")()
+    if suffix and table.contains(acceptableSuffix, suffix) then
+      return string.format("%s.%s", fileName, suffix)
+    end
+  end
+end
+
 function verbosePackageInstall(fileName)
   local ok, reason = installPackage(fileName)
+  -- a URL has only started downloading: installPackageFromUrl() reports that, and the install once it is done
+  if packageFileFromUrl(fileName) then
+    return
+  end
   -- this has to stay a literal prefix strip: as a Lua pattern the profile path's
   -- magic characters bite, and a "-" (as in "Mudlet self-test") stops it
   -- matching at all
@@ -1149,7 +1373,8 @@ function verbosePackageInstall(fileName)
   -- That is all for installing, now to announce the result to the user:
   mudlet.Locale = mudlet.Locale or loadTranslations("Mudlet")
   if ok and reason and reason ~= "" then
-    -- installPackage() asks for a quiet install, so nothing else puts the reason on the console
+    -- A quiet install keeps a broken item's error off the console, so it is shown here; a file that did not
+    -- load in full was already warned of, and is named again as a reason the package is not all working
     local partialText = mudlet.Locale.packageInstallPartial.message
     partialText = string.format(partialText, packageName, reason)
     local warnPrefix = mudlet.Locale.prefixWarn.message
@@ -1206,39 +1431,98 @@ local oldInstallPackage = installPackage
 -- Override of original installPackage to allow installs from URL
 -- @param target - file path or url (starting with http(s):// and ending with package file extensions)
 function installPackage(target)
-  if target:starts("http://") or target:starts("https://") then
-    local fileName, suffix = target:gmatch("([^/]+)%.([^.]+)$")()
-    if suffix and table.contains(acceptableSuffix, suffix) then
-      local file = string.format("%s.%s", fileName, suffix)
-      return installPackageFromUrl(file, target)
-    end
+  -- the C++ side is what reports a bad argument in the same words as its siblings
+  if type(target) ~= "string" then
+    return oldInstallPackage(target)
+  end
+  local file = packageFileFromUrl(target)
+  if file then
+    return installPackageFromUrl(file, target)
   end
   return oldInstallPackage(target)
 end
 
---- Installs package from url
--- @param url
+-- downloadFile() sets no transfer timeout, so a stalled download may never end: one that
+-- has shown no progress for this long no longer keeps a retry of its file out
+local packageDownloadStallSeconds = 30
+local packageDownloadsPending = {}
+
+--- Downloads a package into the profile folder, then installs it and removes the download.
+-- @param file the name the download is saved under in the profile folder
+-- @param url where to download the package from
+-- @return true once the download is queued (the install follows when it finishes),
+-- or nil and the reason when the download was not started
 function installPackageFromUrl(file, url)
   local destination = string.format("%s/%s", getMudletHomeDir(), file)
-
-  registerAnonymousEventHandler("sysDownloadDone", function(_, saveTo)
-    if saveTo ~= destination then return end
-    verbosePackageInstall(destination)
-    os.remove(destination)
-  end, true)
-
   mudlet.Locale = mudlet.Locale or loadTranslations("Mudlet")
 
-  registerAnonymousEventHandler("sysDownloadError", function(_, errorFound, saveTo)
+  local function warn(text)
+    decho('<0,150,190>' .. mudlet.Locale.prefixWarn.message)
+    -- echo, as decho would take a tag such as <b> in the reason as formatting
+    setFgColor(190, 150, 0)
+    echo(text .. '\n')
+    resetFormat()
+  end
+
+  -- a second download would overwrite the same file, and both installs would claim the first to finish
+  local earlier = packageDownloadsPending[destination]
+  if earlier and os.time() - earlier.lastProgress < packageDownloadStallSeconds then
+    local refusal = string.format(mudlet.Locale.packageDownloadPending.message, file)
+    warn(refusal)
+    return nil, refusal
+  end
+
+  -- queued first: a download that never starts would leave the handlers below armed for good,
+  -- and its events only arrive once this script has returned
+  local queued, refusal = downloadFile(destination, url)
+  if not queued then
+    refusal = string.format(mudlet.Locale.packageDownloadRefused.message, url, tostring(refusal))
+    warn(refusal)
+    return nil, refusal
+  end
+  if earlier then
+    earlier.disarm()
+  end
+
+  local doneHandler, errorHandler, progressHandler
+  local pending = {lastProgress = os.time()}
+  function pending.disarm()
+    killAnonymousEventHandler(doneHandler)
+    killAnonymousEventHandler(errorHandler)
+    killAnonymousEventHandler(progressHandler)
+    packageDownloadsPending[destination] = nil
+  end
+  packageDownloadsPending[destination] = pending
+
+  progressHandler = registerAnonymousEventHandler("sysDownloadFileProgress", function(_, progressUrl)
+    if progressUrl == url then
+      pending.lastProgress = os.time()
+    end
+  end)
+
+  doneHandler = registerAnonymousEventHandler("sysDownloadDone", function(_, saveTo)
     if saveTo ~= destination then return end
+    -- before installing: the package's own scripts run during the install, and one that
+    -- downloads this file again (an updater, say) would otherwise be refused as still pending
+    pending.disarm()
+    local ok, err = pcall(verbosePackageInstall, destination)
+    os.remove(destination)
+    if not ok then
+      error(err, 0)
+    end
+  end)
+
+  errorHandler = registerAnonymousEventHandler("sysDownloadError", function(_, errorFound, saveTo)
+    if saveTo ~= destination then return end
+    pending.disarm()
     local warnPrefix = mudlet.Locale.prefixWarn.message
     decho('<0,150,190>' .. warnPrefix .. '<190,150,0>' .. errorFound .. '\n')
-  end, true)
+  end)
 
-  downloadFile(destination, url)
   local infoMessage = mudlet.Locale.packageDownloading.message
   local infoPrefix = mudlet.Locale.prefixInfo.message
     decho('<0,150,190>' ..infoPrefix .. '<190,100,50>' .. string.format(infoMessage, url) .. '\n')
+  return true
 end
 
 --- Installs packages which are dropped on MainConsole or UserWindow
@@ -1281,6 +1565,111 @@ if not ttsSpeak then --check if ttsSpeak is defined, if not then Mudlet lacks TT
   end
 end
 
+local oldgetConfig = getConfig
+
+-- Please sort this list alphabetically (case insensitive) as it helps to follow changes:
+-- This list contains all configuration options that are available in both getConfig and setConfig
+-- NOTE: Some options like "showMapInfo", "hideMapInfo" are setConfig-only write operations
+-- "logDirectory" is a getConfig-only read operation
+-- Left out on purpose: "ircNickName" (with no nick stored it reads as a new random one, and writing it
+-- back also replaces the app-wide nick) and "ircPassword" (it would show up in every dump of the table)
+local configOptions = {
+  "advertiseScreenReader",
+  "ambiguousEAsianWidthCharacters",
+  "announceIncomingText",
+  "askTlsAvailable", 
+  "autoClearInputLine",
+  "blankLinesBehaviour",
+  "caretShortcut",
+  "commandLineHistorySaveSize",
+  "compactInputLine",
+  "controlCharacterHandling",
+  "editorAutoComplete",
+  "enableBlinkText",
+  "enableCHARSET",
+  "enableClosedCaption",
+  "enableGMCP",
+  "enableMNES",
+  "enableMSDP", 
+  "enableMSP",
+  "enableMSSP",
+  "enableMTTS",
+  "enableMXP",
+  "enableNAWS",
+  "enableNEWENVIRON",
+  "f3SearchEnabled",
+  "fixUnnecessaryLinebreaks",
+  "forceNewEnvironNegotiationOff",
+  "inputLineStrictUnixEndings",
+  "ircChannels",
+  "ircHostName",
+  "ircHostPort",
+  "ircHostSecure",
+  "lazyCaptureGlobals",
+  "logDirectory",                    -- read-only in getConfig
+  "logInHTML",
+  "mapExitSize",
+  "mapInfoColor",
+  "mapperButton",
+  "mapperPanelVisible",
+  "mapRoomSize",
+  "mapRoundRooms",
+  "mapShowGrid",
+  "mapShowRoomBorders",
+  "mapStyle",
+  "mapSymbolFont",
+  "mapSymbolFontOnlyUseSelected",
+  "mapSymbolFontScaling",
+  "muteMediaAPI",
+  "muteMediaGame",
+  "promptForMXPProcessorOn",
+  "promptForVersionInTTYPE",
+  "show3dMapView",
+  "showRoomIdsOnMap", 
+  "showSentText",
+  "showTabConnectionIndicators",
+  "showUpperLowerLevels",
+  "specialForceCharsetNegotiationOff",
+  "specialForceCompressionOff",
+  "specialForceGAOff",
+  "specialForceMxpNegotiationOff",
+  "specialForceMXPProcessorOn",
+  "undoServerWrap",
+  "undoServerWrapWidth",
+  "versionInTTYPE",
+}
+local isConfigOption = {}
+for _, key in ipairs(configOptions) do
+  isConfigOption[key] = true
+end
+
+-- one level deep, which covers the colour tables getConfig() hands back
+local function sameConfigValue(key, wanted, current)
+  -- read mapInfoColor as setConfig() does: components cut to whole numbers, and an alpha
+  -- that isn't a number is opaque
+  if key == "mapInfoColor" and type(wanted) == "table" then
+    local function component(value)
+      value = tonumber(value)
+      return value and (value < 0 and math.ceil(value) or math.floor(value))
+    end
+    wanted = {component(wanted[1]), component(wanted[2]), component(wanted[3]), component(wanted[4]) or 255}
+  end
+  if type(wanted) ~= "table" or type(current) ~= "table" then
+    return wanted == current
+  end
+  for k, v in pairs(wanted) do
+    if current[k] ~= v then
+      return false
+    end
+  end
+  for k, v in pairs(current) do
+    if wanted[k] ~= v then
+      return false
+    end
+  end
+  return true
+end
+
 local oldsetConfig = setConfig
 function setConfig(...)
   local args = {...}
@@ -1289,80 +1678,64 @@ function setConfig(...)
     return oldsetConfig(...)
   end
 
+  -- every key is tried before anything is reported, so one refusal - or a raised
+  -- bad-argument error - does not leave the rest unapplied
+  local failures, warnings, raised = {}, {}, false
   for k,v in pairs(args[1]) do
-    oldsetConfig(k, v)
+    local called, ok, message = pcall(oldsetConfig, k, v)
+    if not called then
+      ok, message = nil, ok
+    end
+    -- C++ refuses logDirectory, and the map keys while no mapper is open, so a
+    -- listed option already at the value asked for counts as applied
+    if not ok and isConfigOption[k] and sameConfigValue(k, v, oldgetConfig(k)) then
+      ok, message = true, nil
+    end
+    if not ok and not called then
+      raised = true
+    end
+    if not ok or message then
+      local key, text = tostring(k), tostring(message)
+      -- most C++ messages already lead with the key; elsewhere it may only be part of the value asked for
+      if text:sub(1, #key) ~= key and text:sub(1, #key + 2) ~= "'" .. key .. "'" then
+        text = string.format("%s: %s", key, text)
+      end
+      local list = ok and warnings or failures
+      list[#list + 1] = {key = key, text = text}
+    end
   end
+
+  local function report(entries)
+    table.sort(entries, function(a, b) return a.key < b.key end)
+    local texts = {}
+    for _, entry in ipairs(entries) do
+      texts[#texts + 1] = entry.text
+    end
+    return table.concat(texts, "; ")
+  end
+  if #failures > 0 then
+    local text = report(failures)
+    -- an applied key's warning still matters, but must not read as one more refusal
+    if #warnings > 0 then
+      text = text .. "; applied with warnings: " .. report(warnings)
+    end
+    if raised then
+      error(text, 2)
+    end
+    return nil, text
+  end
+  if #warnings > 0 then
+    return true, report(warnings)
+  end
+  return true
 end
 
-local oldgetConfig = getConfig
 function getConfig(...)
   local args = {...}
   local result = {}
 
   if #args == 0 then
-    -- Please sort this list alphabetically (case insensitive) as it helps to follow changes:
-    -- This list contains all configuration options that are available in both getConfig and setConfig
-    -- NOTE: Some options like "showMapInfo", "hideMapInfo" are setConfig-only write operations
-    -- Some options like "logDirectory", "specialForceMXPProcessorOn" are getConfig-only read operations  
-    local list = {
-      "advertiseScreenReader",
-      "ambiguousEAsianWidthCharacters",
-      "announceIncomingText",
-      "askTlsAvailable", 
-      "autoClearInputLine",
-      "blankLinesBehaviour",
-      "caretShortcut",
-      "commandLineHistorySaveSize",
-      "compactInputLine",
-      "controlCharacterHandling",
-      "editorAutoComplete",
-      "enableBlinkText",
-      "enableClosedCaption",
-      "enableGMCP",
-      "enableMNES",
-      "enableMSDP", 
-      "enableMSP",
-      "enableMSSP",
-      "enableMTTS",
-      "enableMXP",
-      "enableNAWS",
-      "f3SearchEnabled",
-      "fixUnnecessaryLinebreaks",
-      "forceNewEnvironNegotiationOff",
-      "inputLineStrictUnixEndings",
-      "lazyCaptureGlobals",
-      "logDirectory",                    -- read-only in getConfig
-      "logInHTML",
-      "mapExitSize",
-      "mapInfoColor",
-      "mapperButton",
-      "mapperPanelVisible",
-      "mapRoomSize",
-      "mapRoundRooms",
-      "mapShowGrid",
-      "mapShowRoomBorders",
-      "mapSymbolFont",
-      "mapSymbolFontOnlyUseSelected",
-      "mapSymbolFontScaling",
-      "muteMediaAPI",
-      "muteMediaGame",
-      "promptForMXPProcessorOn",
-      "promptForVersionInTTYPE",
-      "show3dMapView",
-      "showRoomIdsOnMap", 
-      "showSentText",
-      "showTabConnectionIndicators",
-      "showUpperLowerLevels",
-      "specialForceCharsetNegotiationOff",
-      "specialForceCompressionOff",
-      "specialForceGAOff",
-      "specialForceMxpNegotiationOff",
-      "specialForceMXPProcessorOn",      -- read-only in getConfig
-      "undoServerWrap",
-      "undoServerWrapWidth",
-      "versionInTTYPE",
-    }
-    for _,v in ipairs(list) do
+    for _,v in ipairs(configOptions) do
       result[v] = oldgetConfig(v)
     end
     return result
