@@ -210,6 +210,7 @@ private slots:
 
         QVERIFY(ok);
         QVERIFY2(!said.contains(qsl("Lua syntax error")), qPrintable(qsl("the console repeated the Lua error text: \"%1\"").arg(said)));
+        QVERIFY2(!said.contains(qsl("Lua error")), qPrintable(qsl("the console repeated the Lua error text: \"%1\"").arg(said)));
         QVERIFY2(!said.contains(qsl("[string \"")), qPrintable(qsl("the console repeated the Lua error text: \"%1\"").arg(said)));
         QVERIFY2(reason.contains(qsl("brokenPackageNoticeMissingFunction")), qPrintable(qsl("the caller was not given the reason: \"%1\"").arg(reason)));
         QVERIFY2(reason.contains(qsl("%1 trigger").arg(name)), qPrintable(qsl("the caller was not told about the trigger: \"%1\"").arg(reason)));

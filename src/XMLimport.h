@@ -62,6 +62,8 @@ public:
     const QStringList& itemsWithErrors() const { return mItemsWithErrors; }
     // Each of those items once, by name only, for the console: the error is for the item's author, not the installer.
     const QStringList& itemsWithErrorNames() const { return mItemsWithErrorNames; }
+    // Whether the file got as far as an item (even one it broke inside), a variable, a help URL or profile settings
+    bool readAnything() const { return gotTrigger || gotTimer || gotAlias || gotKey || gotAction || gotScript || gotOtherContent; }
     // A save file numbers the sixteen basic colours of a colour pattern its own
     // way (see XMLexport::remapAnsiToColorNumber()), this turns them back.
     static void remapColorsToAnsiNumber(QStringList&, const QList<int>&);
@@ -137,6 +139,8 @@ private:
     bool gotKey = false;
     bool gotAction = false;
     bool gotScript = false;
+    // A variable, help URL or profile setting is applied as it is read, so it is there even if the file breaks later
+    bool gotOtherContent = false;
     int module = 0;
     int mMaxRoomId = 0;
     QElapsedTimer mMapProgressTimer;

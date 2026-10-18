@@ -192,3 +192,28 @@ describe("Tests the 3D map perspective functions with the modern 3D view showing
     assert.are.equal("the area shown in the 3D view is in grid mode, which always looks straight down", err)
   end)
 end)
+
+-- closeMapWidget() only hides the mapper, which reopens in the mode it had
+describe("Tests show3dMapView with the mapper hidden", function()
+  it("reads back the mode the hidden mapper will reopen in", function()
+    if type(setMapPerspective) ~= "function" then
+      pending("needs a Mudlet built with the 3D mapper")
+      return
+    end
+    -- a GL context leaks in the leak-checking job's GL driver, as Media_spec explains
+    if (os.getenv("ASAN_OPTIONS") or ""):find("detect_leaks=1", 1, true) then
+      pending("a 3D view's GL context leaks in this job's GL driver")
+      return
+    end
+    local was3d = getConfig("show3dMapView")
+    finally(function()
+      setConfig("show3dMapView", was3d == true)
+    end)
+    assert.is_true(openMapWidget())
+    assert.is_true(closeMapWidget())
+    assert.is_true(setConfig("show3dMapView", true))
+    assert.is_true(getConfig("show3dMapView"), "the hidden mapper will reopen in 3D")
+    assert.is_true(setConfig("show3dMapView", false))
+    assert.is_false(getConfig("show3dMapView"))
+  end)
+end)
