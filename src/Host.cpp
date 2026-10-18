@@ -6838,7 +6838,8 @@ std::optional<QString> Host::commandLineStyleSheet(const QString& name) const
 
 std::optional<bool> Host::commandLineSavesHistory(const QString& name) const
 {
-    if (!hasConsoleView()) {
+    // The main command line's setting is a view's
+    if (!hasConsoleView() && (name.isEmpty() || name == QLatin1String("main"))) {
         return {};
     }
     return mWindowRegistry.commandLineSavesHistory(name);
