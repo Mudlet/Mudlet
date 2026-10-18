@@ -428,7 +428,7 @@ void SecureStringUtilsTest::testTheDerivedKeyNeverChanges()
 {
     const QByteArray salt = QByteArray::fromHex("000102030405060708090a0b0c0d0e0f");
     QCOMPARE(SecureStringUtils::generateKey(QByteArrayLiteral("a profile's key"), salt, SecureStringUtils::PBKDF2_ITERATIONS).toHex(),
-             QByteArray("41a61c18713aa2ea5fa8218d19f71d8dd25772c304cf197471c68d08ef75d4bf"));
+             QByteArrayLiteral("41a61c18713aa2ea5fa8218d19f71d8dd25772c304cf197471c68d08ef75d4bf"));
 }
 
 #include "SecureStringUtilsTest.moc"
