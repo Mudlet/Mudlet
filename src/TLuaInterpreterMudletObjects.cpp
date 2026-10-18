@@ -2378,11 +2378,15 @@ int TLuaInterpreter::tempButton(lua_State* L)
     Host& host = getHostFromLua(L);
     TAction* pP = host.getActionUnit()->findAction(toolbar);
     if (!pP) {
-        return 0;
+        return warnArgumentValue(L, __func__, qsl("toolbar '%1' not found").arg(toolbar));
+    }
+    // a button under a plain button is never put on any toolbar
+    if (!pP->isFolder()) {
+        return warnArgumentValue(L, __func__, qsl("'%1' is a button, not a toolbar or menu").arg(toolbar));
     }
     TAction* pT = host.getActionUnit()->findAction(name);
     if (pT) {
-        return 0;
+        return warnArgumentValue(L, __func__, qsl("a button or toolbar named '%1' already exists").arg(name));
     }
     pT = new TAction(pP, &host);
     pT->setName(name);
@@ -2439,7 +2443,7 @@ int TLuaInterpreter::tempButtonToolbar(lua_State* L)
     Host& host = getHostFromLua(L);
     TAction* pT = host.getActionUnit()->findAction(name);
     if (pT) {
-        return 0;
+        return warnArgumentValue(L, __func__, qsl("a button or toolbar named '%1' already exists").arg(name));
     }
 
     //insert a new root item
