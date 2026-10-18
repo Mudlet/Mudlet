@@ -2745,6 +2745,31 @@ describe("The IRC configuration functions round-trip through the profile", funct
       assert.equals("BustedKeptSecret", getConfig("ircPassword"))
     end)
 
+    it("keeps the stored password readable by its owner only", function()
+      if getOS() == "windows" then
+        pending("there are no POSIX permission bits to narrow")
+        return
+      end
+      restoreIrcConfigurationWithPassword()
+      local path = getMudletHomeDir() .. "/irc_password"
+      local function openToEveryone()
+        os.execute("chmod 644 '" .. (path:gsub("'", "'\\''")) .. "'")
+        assert.equals("rw-r--r--", lfs.attributes(path, "permissions"), "could not stage a file open to everyone")
+      end
+
+      -- A save takes the mode of the file it replaces, whatever the umask, so
+      -- saving over an open one shows whether the save itself narrows
+      assert.is_true(setConfig("ircPassword", "BustedStaging"))
+      openToEveryone()
+      assert.is_true(setIrcServer("irc.busted-owneronly.invalid", 6667, false, "BustedOwnerSecret"))
+      assert.equals("rw-------", lfs.attributes(path, "permissions"))
+
+      -- and reading one that is open narrows it
+      openToEveryone()
+      assert.equals("BustedOwnerSecret", getConfig("ircPassword"))
+      assert.equals("rw-------", lfs.attributes(path, "permissions"))
+    end)
+
     it("falls back to port 6667 and an insecure connection when only a hostname is given", function()
       restoreIrcConfiguration()
       assert.is_true(setIrcServer("irc.busted-secure.invalid", 6697, true))

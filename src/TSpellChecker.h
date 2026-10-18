@@ -95,11 +95,13 @@ private:
     // The paths are taken by value because the Windows build rewrites them to an
     // ASCII-only copy before handing them to Hunspell.
     static Hunhandle* openDictionary(QString dictionaryPath, QString affixPath, QSet<QString>&);
-    // This will save and replace the .dic file with just the words in the
-    // supplied second argument and update the .aff file as appropriate. It is
-    // to be used at the end of a session to store away the user's changes:
+    // This replaces the .dic file with the words in the second argument, plus
+    // those of a .dic with no count, which only a hand edit since the load leaves,
+    // and updates the .aff file to match. A word removed this session that such a
+    // file still lists is kept, as nothing tells it from one typed in by hand. It
+    // is to be used at the end of a session to store away the user's changes:
     static bool saveDictionary(const QString&, QSet<QString>&);
-    static int getDictionaryWordCount(const QString& dictionaryPath);
+    static int getDictionaryWordCount(const QString& dictionaryPath, QStringList& uncountedWords);
     static bool overwriteAffixFile(const QString& affixPath, const QHash<QString, unsigned int>&);
     static bool overwriteDictionaryFile(const QString& dictionaryPath, const QStringList&);
     static bool scanDictionaryFile(const QString& dictionaryPath, int&, QHash<QString, unsigned int>&, QStringList&);
