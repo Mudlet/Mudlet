@@ -31,6 +31,9 @@
  * and the distance is the only thing that can differ between a detach and no
  * detach; the cases named after a gate of their own are the exceptions.
  *
+ * The cases at the end check which tab a detach names, when the bar has been
+ * reordered or a tab opened or closed between the press and the detach.
+ *
  * Run with: ctest -R TabDetachThresholdTest -V
  */
 
@@ -271,6 +274,74 @@ private slots:
                 qPrintable(qsl("the same %1px of vertical travel with %2px of sideways travel beside it did not reach the threshold").arg(mDiagonalVerticalDistance).arg(mDiagonalHorizontalDistance)));
     }
 
+    // Sliding a tab past its neighbour is Qt reordering the bar, and the drag
+    // that then leaves the bar downwards tears out the tab being dragged - which
+    // no longer sits at the index the press landed on
+    void test_aTabDraggedPastItsNeighbourDetachesItself() { dragSidewaysThenDetach(0, 1); }
+
+    // Qt reports a leftward slide as tabMoved(neighbour, pressed) the other way
+    // round from a rightward one
+    void test_aTabDraggedLeftPastItsNeighbourDetachesItself() { dragSidewaysThenDetach(mpTabBar->count() - 1, mpTabBar->count() - 2); }
+
+    // One tabMoved per neighbour passed, so the second has to be followed too
+    void test_aTabDraggedPastTwoNeighboursDetachesItself() { dragSidewaysThenDetach(0, 2); }
+
+    // A profile closing while a tab is held shifts every tab after it down one
+    // without any tabMoved
+    void test_aTabHeldWhileAnEarlierTabClosesDetachesItself()
+    {
+        const QSignalSpy detachSpy(mpTabBar, &TTabBar::tabDetachRequested);
+        const QPoint press = mpTabBar->tabRect(2).center();
+        const QString draggedProfile = mpTabBar->tabData(2).toString();
+        pressAt(press);
+
+        mpTabBar->removeTab(0);
+        moveTo(press + QPoint(0, mPastThresholdDistance));
+
+        QCOMPARE(detachSpy.count(), 1);
+        QCOMPARE(mpTabBar->tabData(detachSpy.at(0).at(0).toInt()).toString(), draggedProfile);
+    }
+
+    void test_aTabHeldWhileATabOpensBeforeItDetachesItself()
+    {
+        const QSignalSpy detachSpy(mpTabBar, &TTabBar::tabDetachRequested);
+        const QPoint press = mpTabBar->tabRect(1).center();
+        const QString draggedProfile = mpTabBar->tabData(1).toString();
+        pressAt(press);
+
+        mpTabBar->setTabData(mpTabBar->insertTab(0, qsl("Echo")), qsl("Echo"));
+        moveTo(press + QPoint(0, mPastThresholdDistance));
+
+        QCOMPARE(detachSpy.count(), 1);
+        QCOMPARE(mpTabBar->tabData(detachSpy.at(0).at(0).toInt()).toString(), draggedProfile);
+    }
+
+    // The profile that was held is gone, so there is nothing left to detach
+    void test_aTabThatClosesWhileHeldDetachesNothing()
+    {
+        const QSignalSpy detachSpy(mpTabBar, &TTabBar::tabDetachRequested);
+        const QPoint press = mpTabBar->tabRect(1).center();
+        pressAt(press);
+
+        mpTabBar->removeTab(1);
+        moveTo(press + QPoint(0, mPastThresholdDistance));
+
+        QVERIFY(detachSpy.isEmpty());
+    }
+
+    // A move with the button held that follows a release, not a press on the bar
+    void test_aDragAfterTheReleaseDetachesNothing()
+    {
+        const QSignalSpy detachSpy(mpTabBar, &TTabBar::tabDetachRequested);
+        const QPoint press = mpTabBar->tabRect(0).center();
+        pressAt(press);
+        sendMouse(QEvent::MouseButtonRelease, Qt::LeftButton, Qt::NoButton, press);
+
+        moveTo(press + QPoint(0, mPastThresholdDistance));
+
+        QVERIFY(detachSpy.isEmpty());
+    }
+
 private:
     // mouseMoveEvent() maps the local position to global itself rather than
     // reading the event's, so the two are kept consistent here
@@ -304,6 +375,37 @@ private:
     }
 
     void moveTo(const QPoint& position) { sendMouse(QEvent::MouseMove, Qt::NoButton, Qt::LeftButton, position); }
+
+    // Presses tab `from`, slides it sideways in steps until it sits at `to`,
+    // then pulls it down out of the bar
+    void dragSidewaysThenDetach(int from, int to)
+    {
+        const QSignalSpy detachSpy(mpTabBar, &TTabBar::tabDetachRequested);
+        const QPoint press = mpTabBar->tabRect(from).center();
+        QCOMPARE(mpTabBar->tabAt(press), from);
+        const QString draggedProfile = mpTabBar->tabData(from).toString();
+        pressAt(press);
+
+        // Over the whole of the destination tab and none of the one beyond it.
+        // Read after the press: pressing a tab the bar has no room to show in
+        // full lays the tabs out again
+        const int across = mpTabBar->tabRect(to).center().x() - mpTabBar->tabRect(from).center().x();
+        for (int step = 1; step <= 8; ++step) {
+            moveTo(press + QPoint(across * step / 8, 0));
+        }
+        QVERIFY2(mpTabBar->tabData(to).toString() == draggedProfile,
+                 qPrintable(qsl("Qt left the dragged tab at %1 instead of %2, so this case cannot tell the indices apart").arg(mpTabBar->tabNames().indexOf(draggedProfile)).arg(to)));
+        QVERIFY(detachSpy.isEmpty());
+
+        // Measured from the press, so the sideways leg counts against the
+        // vertical share the detach asks for
+        const QPoint below = press + QPoint(across, qMax(mPastThresholdDistance, qAbs(across) * 3));
+        moveTo(below);
+
+        QCOMPARE(detachSpy.count(), 1);
+        QCOMPARE(mpTabBar->tabData(detachSpy.at(0).at(0).toInt()).toString(), draggedProfile);
+        sendMouse(QEvent::MouseButtonRelease, Qt::LeftButton, Qt::NoButton, below);
+    }
 
     QPoint dragTarget(int distance) const { return mpTabBar->rect().center() + QPoint(0, distance); }
 

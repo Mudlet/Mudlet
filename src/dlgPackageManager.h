@@ -80,6 +80,7 @@ private:
     void populatePackagesWithUpdates();
     void setupNavigationButtons();
     void showImportStatus(const QString& message);
+    void showMissingFromIndex(const QString& packageName);
     void updateUpdatesBadge();
 
     Host* mpHost = nullptr;
