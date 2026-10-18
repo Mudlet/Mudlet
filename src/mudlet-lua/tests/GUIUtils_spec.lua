@@ -1,5 +1,11 @@
 describe("Tests the GUI utilities as far as possible without mudlet", function()
 
+  -- the "file:line: " prefix error() gives for a call made on the line after the one calling this
+  local function nextLinePosition()
+    local info = debug.getinfo(2, "Sl")
+    return info.short_src .. ":" .. (info.currentline + 1) .. ": "
+  end
+
   describe("Tests the functionality of ansi2decho", function()
 
     it("Should have loaded the function successfully", function()
@@ -113,7 +119,7 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       end
     end)
 
-    it("Should leave normal text and other escape sequences alone", function()
+    it("Should leave normal text and MXP line mode sequences alone", function()
       local sequences = {
         {"Hello World", "Hello World"},
         {"[Something in braces]", "[Something in braces]"},
@@ -511,6 +517,86 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       it("Should copy a substring from the far end of the line", function()
         assert.equals("<198,100,200:0,0,198>中198 <r><199,100,200:0,0,199>é×<r>", copy2decho(windowName, "中198 é×"))
         assert.equals("<span style='color: rgb(200,100,200);background: rgb(0,0,200);'>中200</span>", copy2html(windowName, "中200"))
+      end)
+    end)
+
+    describe("on a line with characters beyond the BMP", function()
+      local windowName = "guiUtilsCopyDechoEmoji"
+
+      setup(function()
+        createBuffer(windowName)
+      end)
+
+      teardown(function()
+        deleteMiniConsole(windowName)
+      end)
+
+      before_each(function()
+        clearWindow(windowName)
+        decho(windowName, "<0,255,0:0,0,0>😀abc<255,0,0:0,0,0>😀de\n")
+        moveCursor(windowName, 0, 0)
+      end)
+
+      it("Should copy every character of a match that follows one", function()
+        assert.equals("<0,255,0:0,0,0>abc<r>", copy2decho(windowName, "abc"))
+        assert.equals("<0,255,0:0,0,0>c<r><255,0,0:0,0,0>😀d<r>", copy2decho(windowName, "c😀d"))
+        assert.equals("<span style='color: rgb(0,255,0);background: rgb(0,0,0);'>abc</span>", copy2html(windowName, "abc"))
+      end)
+
+      it("Should copy the whole line", function()
+        assert.equals("<0,255,0:0,0,0>😀abc<r><255,0,0:0,0,0>😀de<r>", copy2decho(windowName))
+        assert.equals("<span style='color: rgb(0,255,0);background: rgb(0,0,0);'>😀abc</span><span style='color: rgb(255,0,0);background: rgb(0,0,0);'>😀de</span>", copy2html(windowName))
+      end)
+
+      it("Should copy a match that starts with one", function()
+        assert.equals("<255,0,0:0,0,0>😀de<r>", copy2decho(windowName, "😀de"))
+      end)
+
+      it("Should copy a later instance of a match that follows one", function()
+        clearWindow(windowName)
+        decho(windowName, "<0,255,0:0,0,0>ab<255,0,0:0,0,0>😀ab\n")
+        moveCursor(windowName, 0, 0)
+        assert.equals("<255,0,0:0,0,0>ab<r>", copy2decho(windowName, "ab", 2))
+      end)
+
+      it("Should copy from the main window", function()
+        finally(function() moveCursorEnd("main") end)
+        decho("main", "\n<0,255,0:0,0,0>😀abc<255,0,0:0,0,0>😀de\n")
+        moveCursor("main", 0, getLastLineNumber("main") - 1)
+        assert.equals("<0,255,0:0,0,0>abc<r>", copy2decho("abc"))
+        assert.equals("<0,255,0:0,0,0>😀abc<r><255,0,0:0,0,0>😀de<r>", copy2decho())
+      end)
+    end)
+
+    describe("given text that is not a plain UTF-8 string", function()
+      local windowName = "guiUtilsCopyDechoNotString"
+
+      setup(function()
+        createBuffer(windowName)
+      end)
+
+      teardown(function()
+        deleteMiniConsole(windowName)
+      end)
+
+      local function showLine(text)
+        clearWindow(windowName)
+        decho(windowName, "<0,255,0:0,0,0>" .. text .. "\n")
+        moveCursor(windowName, 0, 0)
+      end
+
+      it("Should copy a number the way selectString() finds it", function()
+        showLine("HP 42")
+        assert.equals("<0,255,0:0,0,0>42<r>", copy2decho(windowName, 42))
+        assert.equals("", copy2decho(windowName, 7))
+      end)
+
+      -- selectString() decodes a malformed byte to U+FFFD, as the line already holds it
+      it("Should copy all of what selectString() matched for malformed UTF-8", function()
+        showLine("a\239\191\189bc")
+        assert.equals("<0,255,0:0,0,0>\239\191\189bc<r>", copy2decho(windowName, "\128bc"))
+        showLine("\239\191\189x")
+        assert.equals("<0,255,0:0,0,0>\239\191\189<r>", copy2decho(windowName, "\240"))
       end)
     end)
   end)
@@ -1092,8 +1178,71 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       assert.are.equal("red", getLabelFormat(labelName).foreground)
     end)
 
-    it("Should error for a label that does not exist", function()
-      assert.has_error(function() getLabelFormat("gldfNoSuchLabel") end)
+    it("Should refuse a label that does not exist, or a window that is not a label", function()
+      local ok, err = getLabelFormat("gldfNoSuchLabel")
+      assert.is_nil(ok)
+      assert.are.equal("label 'gldfNoSuchLabel' does not exist", err)
+      ok, err = getLabelFormat("main")
+      assert.is_nil(ok)
+      assert.are.equal("label 'main' does not exist", err)
+    end)
+
+    it("Should refuse a label deleted after it was read, and read it afresh once recreated", function()
+      finally(function() deleteLabel("gldfGone") end)
+      createLabel("gldfGone", 0, 0, 10, 10, 1)
+      setLabelStyleSheet("gldfGone", "color: red;")
+      assert.are.equal("red", getLabelFormat("gldfGone").foreground)
+      deleteLabel("gldfGone")
+      local ok, err = getLabelFormat("gldfGone")
+      assert.is_nil(ok)
+      assert.are.equal("label 'gldfGone' does not exist", err)
+      createLabel("gldfGone", 0, 0, 10, 10, 1)
+      setLabelStyleSheet("gldfGone", "color: blue;")
+      assert.are.equal("blue", getLabelFormat("gldfGone").foreground)
+    end)
+
+    describe("its cache of what it read", function()
+      local function cache()
+        for i = 1, math.huge do
+          local name, value = debug.getupvalue(getLabelFormat, i)
+          if not name then
+            return nil
+          end
+          if name == "labelStyleSheetFormats" then
+            return value
+          end
+        end
+      end
+
+      it("Should forget a label once it is deleted, by whatever type of name it was read", function()
+        finally(function()
+          deleteLabel("gldfCached")
+          deleteLabel("4711")
+        end)
+        createLabel("gldfCached", 0, 0, 10, 10, 1)
+        cecho("gldfCached", "<red>x")
+        createLabel("4711", 0, 0, 10, 10, 1)
+        getLabelFormat(4711)
+        getLabelFormat("4711")
+        assert.is_not_nil(cache()["gldfCached"])
+        assert.is_not_nil(cache()["4711"])
+        assert.is_nil(rawget(cache(), 4711))
+
+        deleteLabel("gldfCached")
+        deleteLabel("4711")
+        assert.is_nil(cache()["gldfCached"])
+        assert.is_nil(cache()["4711"])
+      end)
+
+      it("Should forget a name it is asked about once that is no label", function()
+        cache()["gldfStale"] = { stylesheet = "color: red;", parsed = {} }
+        assert.is_nil(getLabelFormat("gldfStale"))
+        assert.is_nil(cache()["gldfStale"])
+      end)
+    end)
+
+    it("Should name itself when given a name that is not a string", function()
+      assert.has_error(function() getLabelFormat({}) end, "getLabelFormat: bad argument #1 type (label as string expected, got table!)")
     end)
 
     it("Should start an echo to the label from its stylesheet, and pick up a new one", function()
@@ -1174,7 +1323,7 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
 
       it("Should replace the selected text", function()
         selectString(windowName, "world", 1)
-        assert.equals(0, select("#", replace(windowName, "there")))
+        assert.are.same({true}, {replace(windowName, "there")})
         assert.equals("hello there", firstLine())
       end)
 
@@ -1205,18 +1354,18 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
         selectString(windowName, "hello", 1)
         clearWindow(windowName)
         assert.are.same({"", 0, 5}, {getSelection(windowName)})
-        assert.equals(0, select("#", replace(windowName, "x")))
+        assert.are.same({true}, {replace(windowName, "x")})
       end)
 
       it("Should not take a selection that is no longer valid for an empty one", function()
         selectString(windowName, "world", 1)
         clearWindow(windowName)
         assert.are.same({nil, "the selection is no longer valid"}, {getSelection(windowName)})
-        assert.equals(0, select("#", replace(windowName, "x")))
+        assert.are.same({true}, {replace(windowName, "x")})
       end)
 
-      it("Should not complain about the selection of a window that does not exist", function()
-        assert.equals(0, select("#", replace("guiUtilsNoSuchWindow", "x")))
+      it("Should refuse a window that does not exist", function()
+        assert.are.same({nil, 'window "guiUtilsNoSuchWindow" not found'}, {replace("guiUtilsNoSuchWindow", "x")})
       end)
     end)
   end)
@@ -1262,6 +1411,10 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
         local expected = hechoString
         local actual = decho2hecho(dechoString)
         assert.equal(expected, actual)
+      end)
+
+      it('clamps an out of range component rather than writing more than two hex digits', function()
+        assert.equal("#ff0000,00ff00x", decho2hecho("<999,0,0:0,300,0>x"))
       end)
     end)
 
@@ -1398,8 +1551,8 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       { "<255,0,0:>trail", string = "trail", ansi = "\27[38:2::255:0:0m\27[48:2:::0:0mtrail", cecho = "<ansi_light_red>trail", hecho = "#ff0000trail" },
       { "</b>x</i>y", string = "xy", ansi = "\27[22mx\27[23my", cecho = "</b>x</i>y", hecho = "#/bx#/iy" },
       { "</r>x", string = "x", ansi = raises, cecho = "x", hecho = "x" },
-      { "<300,0,0>over", string = "over", ansi = "\27[38:2::300:0:0mover", cecho = raises, hecho = "#12c0000over" },
-      { "<0,0,0:300,0,0>bgover", string = "bgover", ansi = "\27[38:2::0:0:0m\27[48:2::300:0:0mbgover", cecho = raises, hecho = "#000000,12c0000bgover" },
+      { "<300,0,0>over", string = "over", ansi = "\27[38:2::300:0:0mover", cecho = raises, hecho = "#ff0000over" },
+      { "<0,0,0:300,0,0>bgover", string = "bgover", ansi = "\27[38:2::0:0:0m\27[48:2::300:0:0mbgover", cecho = raises, hecho = "#000000,ff0000bgover" },
       { "a<0,0,0:1,2,3,4>b<9,9,9,999>c", string = "ab<9,9,9,999>c", ansi = "a\27[38:2::0:0:0m\27[48:2::1:2:3mb\27[38:2::9:9:9mc", cecho = "a<ansi_black:ansi_black>b<9,9,9,999>c", hecho = "a#000000,010203b<9,9,9,999>c" },
     }
     local hechoCases = {
@@ -1437,6 +1590,29 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       { "\27[38;5mtrunc", string = "trunc", decho = "trunc" },
       { "\27[38;2;1mtrunc2", string = "trunc2", decho = "<1,0,0>trunc2" },
       { "\27[1;30mdark\27[0;30mblack", string = "darkblack", decho = "<128,128,128>dark<r><0,0,0>black", lastColour = 0 },
+      -- other escape sequences go as the console drops them; a cursor forward becomes spaces
+      { "\27[?25hVISIBLE", string = "VISIBLE", decho = "VISIBLE" },
+      { "A\27[5CB", string = "A     B", decho = "A     B" },
+      { "A\27[CB\27[0CC\27[2;3CD", string = "ABCD", decho = "ABCD" },
+      { "A\27[3", string = "A", decho = "A" },
+      { "\27[3\nB\27[1\27[32mC", string = "\nBC", decho = "\nB<0,128,0>C", lastColour = 2 },
+      { "X\27]8;;http://a", string = "X", decho = "X" },
+      { "\27]0;title\nline\7", string = "\nline\7", decho = "\nline\7" },
+      { "A\27]title\4B\27]x\255C", string = "A\4B\255C", decho = "A\4B\255C" },
+      { "A\27(\nB\27)", string = "A\nB", decho = "A\nB" },
+      { "X\27]8;;http://a\27\\L\27]8;;\27\\Y", string = "XLY", decho = "XLY" },
+      { "\27]0;title\7\27[31mred", string = "red", decho = "<128,0,0>red", lastColour = 1 },
+      { "\27[1 qA\27[38;5;-1mB\27(BC\27cD\27E", string = "ABCDE", decho = "ABCDE" },
+      { "\27]0;t\rmore\7text", string = "text", decho = "text" },
+      { "A\27[999CB", string = "A" .. string.rep(" ", 998) .. "B", decho = "A" .. string.rep(" ", 998) .. "B" },
+      { string.rep("\27[999C", 3) .. "Z\nA\27[2CB", string = string.rep(" ", 999) .. "Z\nA  B", decho = string.rep(" ", 999) .. "Z\nA  B" },
+      { "a\27[99999999999999999999Cb", string = "ab", decho = "ab" },
+      { "\27[1zHello\27[zA\27[1;2zB", string = "HelloAB", decho = "\27[1zHello\27[zA\27[1;2zB" },
+      { "\27[4mA\27[3CB\27[9mC\27[2CD\27[24;29mE\27[1CF", string = "A   BC  DE F", decho = "<u>A</u>   <u>B<s>C</u></s>  <u><s>D</u></s>E F" },
+      { "\27Pdata\27\\X\27Xs\27\\Y\27^p\27\\Z\27_a\27\\W", string = "XYZW", decho = "XYZW" },
+      { "A\27]a\27[31mb\7X", string = "AX", decho = "AX" },
+      { "A\0277B\0278C\27\\D", string = "ABCD", decho = "ABCD" },
+      { "\27é", string = "é", decho = "é" },
     }
 
     -- a case leaves out what it does not pin, such as output that comes from a known bug
@@ -1490,6 +1666,12 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
           assert.are.equal(case.lastColour, lastColour, string.format("last colour of ansi2decho(%q)", case[1]))
         end
       end
+    end)
+
+    it("drops a string sequence too long to match by backtracking", function()
+      local long = "A\27P" .. string.rep("a", 5000000) .. "\27\\B"
+      assert.are.equal("AB", ansi2string(long))
+      assert.are.equal("AB", ansi2decho(long))
     end)
 
     it("raises the same error for a reset tag ANSI has no code for", function()
@@ -1743,6 +1925,17 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       assert.has_error(function() RGB2Hex() end)
     end)
 
+    it("Should error naming the colour when given an unknown colour name", function()
+      assert.error_matches(function() RGB2Hex("notacolour") end, 'unknown color name "notacolour"', 1, true)
+    end)
+
+    it("Should blame the caller's line for an unknown colour name", function()
+      local position = nextLinePosition()
+      local ok, err = pcall(function() RGB2Hex("notacolour") end)
+      assert.is_false(ok)
+      assert.equals(position, err:sub(1, #position))
+    end)
+
     it("Should produce six hex digits for every component below sixteen", function()
       assert.equals("0A0B0C", RGB2Hex(10, 11, 12))
       assert.equals("0A0A0A", RGB2Hex(10, 10, 10))
@@ -1755,8 +1948,6 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       assert.equals("FF0000", RGB2Hex(255, 0, 0))
     end)
 
-    -- in 0-255 only: RGB2Hex range-checks nothing, so an out of range component
-    -- still produces a longer string. That is a separate defect from the padding
     it("Should return six hex digits for every component value in 0-255", function()
       for _, component in ipairs({0, 1, 9, 10, 15, 16, 17, 128, 255}) do
         local hex = RGB2Hex(component, component, component)
@@ -1765,6 +1956,26 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
           assert.equals(component, tonumber(hex:sub(position, position + 1), 16))
         end
       end
+    end)
+
+    it("Should clamp an out of range component to 0-255", function()
+      assert.equals("FF0000", RGB2Hex(300, -5, 0))
+      assert.equals("FFFF00", RGB2Hex(255.5, 256, 0))
+      assert.equals("FF0000", RGB2Hex(1/0, 0, 0))
+      assert.equals("000000", RGB2Hex(0/0, 0, 0))
+      assert.equals("7F0000", RGB2Hex(127.9, 0, 0))
+    end)
+
+    it("Should say which component is missing or not a number", function()
+      assert.error_matches(function() RGB2Hex(255, 0) end, "RGB2Hex: bad argument #3 type %(number expected, got nil!%)")
+      assert.error_matches(function() RGB2Hex(1, "x", 3) end, "RGB2Hex: bad argument #2 type %(number expected, got string!%)")
+      assert.equals("0A0B0C", RGB2Hex("10", "11", "12"))
+    end)
+
+    it("Should name the component a colour name lacks rather than an argument position", function()
+      color_table.rgb2HexSpecIncomplete = {255, 0}
+      finally(function() color_table.rgb2HexSpecIncomplete = nil end)
+      assert.error_matches(function() RGB2Hex("rgb2HexSpecIncomplete") end, 'RGB2Hex: colour "rgb2HexSpecIncomplete" has a bad blue component %(number expected, got nil!%)')
     end)
   end)
 
@@ -1784,11 +1995,31 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
     end)
 
     it("Should error when not given a string", function()
-      assert.has_error(function() getRGB(42) end)
+      assert.error_matches(function() getRGB(42) end, 'getRGB: bad argument #1 type (expected string, got number!)', 1, true)
     end)
 
-    it("Should error for a colour name that does not exist", function()
-      assert.has_error(function() getRGB("definitelyNotAColour") end)
+    it("Should error for a colour name that does not exist, naming the colour", function()
+      assert.error_matches(function() getRGB("definitelyNotAColour") end, 'getRGB: bad argument #1 value (unknown color name "definitelyNotAColour")', 1, true)
+      assert.error_matches(function() getRGB("") end, 'getRGB: bad argument #1 value (unknown color name "")', 1, true)
+    end)
+
+    it("Should blame the caller's line, not GUIUtils.lua, for a bad argument", function()
+      for _, badArgument in ipairs({"definitelyNotAColour", 42}) do
+        local position = nextLinePosition()
+        local ok, err = pcall(function() getRGB(badArgument) end)
+        assert.is_false(ok)
+        assert.equals(position, err:sub(1, #position))
+      end
+    end)
+
+    it("Should still give a position when its caller has no line of its own", function()
+      local ok, err = pcall(getRGB, "definitelyNotAColour")
+      assert.is_false(ok)
+      assert.is_truthy(err:find("^.-:%d+: getRGB: bad argument #1 value"))
+      local function tailCaller(name) return getRGB(name) end
+      ok, err = pcall(function() local _ = tailCaller("definitelyNotAColour") end)
+      assert.is_false(ok)
+      assert.is_truthy(err:find("^.-:%d+: getRGB: bad argument #1 value"))
     end)
   end)
 
@@ -1868,6 +2099,13 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
         createGauge("colourNameGauge", 100, 10, 0, 0, nil, "green")
         assert.are.same({0, 255, 0}, {gaugesTable.colourNameGauge.r, gaugesTable.colourNameGauge.g, gaugesTable.colourNameGauge.b})
         assert.equals("horizontal", gaugesTable.colourNameGauge.orientation)
+      end)
+
+      it("Should blame the caller's line for an unknown colour name", function()
+        local position = nextLinePosition()
+        local ok, err = pcall(function() createGauge("unknownColourGauge", 100, 10, 0, 0, nil, "notacolour") end)
+        assert.is_false(ok)
+        assert.equals(position, err:sub(1, #position))
       end)
 
       it("Should reject an unknown orientation", function()
@@ -1996,6 +2234,13 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       it("Should accept a colour name", function()
         setGaugeText(gaugeName, "hurt", "red")
         assert.equals([[<font color="#FF0000">hurt</font>]], gaugesTable[gaugeName].text)
+      end)
+
+      it("Should blame the caller's line for an unknown colour name", function()
+        local position = nextLinePosition()
+        local ok, err = pcall(function() setGaugeText(gaugeName, "hurt", "notacolour") end)
+        assert.is_false(ok)
+        assert.equals(position, err:sub(1, #position))
       end)
 
       it("Should accept an r, g, b triple", function()
@@ -2672,14 +2917,14 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
         local ok, result, message = pcall(insert[1], "guiUtilsNoSuchWindow", insert[2])
         assert.is_true(ok, result)
         assert.is_nil(result)
-        assert.equals("window does not exist", message)
+        assert.equals('window "guiUtilsNoSuchWindow" not found', message)
       end
     end)
 
-    it("Should return nothing", function()
-      assert.equals(0, select("#", cecho(windowName, "<red>x")))
-      assert.equals(0, select("#", xEcho("Color", "echo", windowName, "<red>x")))
-      assert.equals(0, select("#", xEcho("Hex", "insertText", windowName, "#ff0000x")))
+    it("Should answer true, as echo does", function()
+      assert.are.same({true}, {cecho(windowName, "<red>x")})
+      assert.are.same({true}, {xEcho("Color", "echo", windowName, "<red>x")})
+      assert.are.same({true}, {xEcho("Hex", "insertText", windowName, "#ff0000x")})
     end)
 
     it("Should report a text that is not a string from one line inside xEcho", function()
@@ -3036,6 +3281,15 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       assert.are_not.same(color_table["blue"], getTextFormat(windowName).background)
     end)
 
+    it("Should put text after the last character of a line holding an emoji", function()
+      clearWindow(windowName)
+      moveCursor(windowName, 0, 0)
+      echo(windowName, "\240\159\152\128abc\n")
+      moveCursor(windowName, 0, 0)
+      suffix("X", nil, nil, nil, windowName)
+      assert.equals("\240\159\152\128abcX", currentLine())
+    end)
+
     it("Should suffix onto an empty line", function()
       clearWindow(windowName)
       moveCursor(windowName, 0, 0)
@@ -3343,13 +3597,32 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
     end)
 
     it("Should map a cursor name to the id the C++ layer wants", function()
-      -- the name to id mapping is the Lua half of this function; the C++ half
-      -- only accepts a number, so a name that is not in mudlet.cursor has to
-      -- reach it as nil and be refused
+      -- the name to id mapping is the Lua half of this function; a name that is
+      -- not in mudlet.cursor is left for the C++ half to refuse
       assert.is_true(setLabelCursor(labelName, "OpenHand"))
       assert.is_true(setLabelCursor(labelName, mudlet.cursor.OpenHand))
       assert.is_nil(mudlet.cursor.definitelyNotACursor)
-      assert.has_error(function() setLabelCursor(labelName, "definitelyNotACursor") end)
+      local ok, err = setLabelCursor(labelName, "definitelyNotACursor")
+      assert.is_nil(ok)
+      assert.are.equal("cursor shape 'definitelyNotACursor' not found. see https://wiki.mudlet.org/w/CursorShapes", err)
+    end)
+
+    it("Should refuse a bad label before an unknown cursor name, as it does before an unknown number", function()
+      assert.has_error(function() setLabelCursor(nil, "definitelyNotACursor") end,
+        "setLabelCursor: bad argument #1 type (label name as string expected, got nil!)")
+      local ok, err = setLabelCursor("guiUtilsNoSuchCursorLabel", "definitelyNotACursor")
+      assert.is_nil(ok)
+      assert.are.equal("label name 'guiUtilsNoSuchCursorLabel' not found", err)
+      assert.are.same({setLabelCursor("guiUtilsNoSuchCursorLabel", 9999)}, {ok, err})
+      ok, err = setLabelCursor("", "definitelyNotACursor")
+      assert.is_nil(ok)
+      assert.are.equal("a label cannot have an empty string as its name", err)
+    end)
+
+    it("Should take a shape number given as a string as that number", function()
+      assert.is_true(setLabelCursor(labelName, tostring(mudlet.cursor.OpenHand)))
+      assert.is_true(setLabelCursor(labelName, "-1"))
+      assert.are.same({setLabelCursor(labelName, 9999)}, {setLabelCursor(labelName, "9999")})
     end)
 
     it("Should reset the cursor by asking for shape -1", function()
@@ -3413,6 +3686,15 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
           assert.is_truthy(err:find(setter .. ": bad argument #2 type (function expected, got number!)", 1, true))
         end)
 
+        it(setter .. " reports why a string that does not compile was refused", function()
+          local callback = "not valid lua("
+          local _, compileError = loadstring("return " .. callback .. "(...)", callback)
+          local ok, err = pcall(_G[setter], labelName, callback)
+          assert.is_false(ok)
+          assert.is_truthy(err:find(setter .. ": bad argument #2 value (" .. compileError .. ")", 1, true))
+          assert.is_truthy(err:find('[string "' .. callback .. '"]', 1, true))
+        end)
+
         it(setter .. " reports a label it cannot find and rejects an empty name", function()
           local ok, err = _G[setter]("guiUtilsNoSuchLabel", function() end)
           assert.is_nil(ok)
@@ -3457,6 +3739,15 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
         assert.is_truthy(err:find("setCmdLineAction: bad argument #2 type (function expected, got number!)", 1, true))
       end)
 
+      it("Should report why a string that does not compile was refused", function()
+        local callback = "not valid lua("
+        local _, compileError = loadstring("return " .. callback .. "(...)", callback)
+        local ok, err = pcall(setCmdLineAction, cmdLineName, callback)
+        assert.is_false(ok)
+        assert.is_truthy(err:find("setCmdLineAction: bad argument #2 value (" .. compileError .. ")", 1, true))
+        assert.is_truthy(err:find('[string "' .. callback .. '"]', 1, true))
+      end)
+
       it("Should report a command line it cannot find", function()
         local ok, err = setCmdLineAction("guiUtilsNoSuchCommandLine", function() end)
         assert.is_nil(ok)
@@ -3477,6 +3768,16 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
         local ok, err = resetCmdLineAction("guiUtilsNoSuchCommandLine")
         assert.is_nil(ok)
         assert.are.equal("command line name 'guiUtilsNoSuchCommandLine' not found", err)
+      end)
+
+      it("Should say the main command line's action cannot be changed, rather than that it is not there", function()
+        local refusal = "the main command line's action cannot be changed, use an alias to act on what is typed there"
+        local ok, err = setCmdLineAction("main", function() end)
+        assert.is_nil(ok)
+        assert.are.equal(refusal, err)
+        ok, err = resetCmdLineAction("main")
+        assert.is_nil(ok)
+        assert.are.equal(refusal, err)
       end)
     end)
   end)
