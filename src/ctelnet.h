@@ -658,6 +658,8 @@ private:
     // Set while what the game sent before closing is still being taken in, one
     // read per event-loop turn; the disconnect is finished once it is all in.
     bool mDisconnectionPending = false;
+    // A readPendingSocketData() is queued for the rest of a burst; only Windows acts on it
+    bool mReadPending = false;
     bool mAutoReconnect = false;
     QStringList messageStack;
     // True if THIS profile is playing a replay, does not know about any OTHER
