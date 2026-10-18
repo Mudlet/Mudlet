@@ -38,6 +38,7 @@ public:
     void handleTelnetUri(const QString&) override {}
     void setCompactInputLineChecked(Host*, bool) override {}
     void armForceClose() override {}
+    void writeSettings() override {}
     bool openWebPage(const QString&) override { return false; }
     void showNotification(const QString&, const QString&, std::optional<int>) override {}
     bool drawUpperLowerLevels() const override { return mDrawUpperLowerLevels; }
