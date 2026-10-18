@@ -46,6 +46,7 @@ set(mudlet_SRCS
     AliasUnit.cpp
     CredentialManager.cpp
     ctelnet.cpp
+    DioramaLayout.cpp
     discord.cpp
     EditorAddItemCommand.cpp
     EditorDeleteItemCommand.cpp
@@ -54,6 +55,7 @@ set(mudlet_SRCS
     EditorMoveItemCommand.cpp
     EditorToggleActiveCommand.cpp
     EditorUndoStack.cpp
+    EnvironmentKit.cpp
     EventLoopPump.cpp
     ExitAppearance.cpp
     FontManager.cpp
@@ -66,6 +68,8 @@ set(mudlet_SRCS
     LuaInterface.cpp
     LuaLiteral.cpp
     mapInfoContributorManager.cpp
+    MapDecals.cpp
+    MapStyle.cpp
     MMCPClient.cpp
     MMCPServer.cpp
     MudletApp.cpp
@@ -174,7 +178,6 @@ set(mudlet_SRCS
 # Every .cpp source file that needs Qt Widgets goes here instead, in mudlet_app, kept
 # in alphabetical order (case-insensitive).
 set(mudlet_app_SRCS
-    AltFocusMenuBarDisable.cpp
     CustomLineDrawContextMenuHandler.cpp
     CustomLineDrawHandler.cpp
     CustomLineEditContextMenuHandler.cpp
@@ -215,6 +218,7 @@ set(mudlet_app_SRCS
     LabelInteractionHandler.cpp
     MiddleMousePanHandler.cpp
     mudlet.cpp
+    MudletProxyStyle.cpp
     PackageItemDelegate.cpp
     PanInteractionHandler.cpp
     RoomContextMenuHandler.cpp
@@ -335,6 +339,7 @@ set(mudlet_HDRS
     AliasUnit.h
     CredentialManager.h
     ctelnet.h
+    DioramaLayout.h
     discord.h
     EditorAddItemCommand.h
     EditorCommand.h
@@ -344,6 +349,7 @@ set(mudlet_HDRS
     EditorMoveItemCommand.h
     EditorToggleActiveCommand.h
     EditorUndoStack.h
+    EnvironmentKit.h
     enums.h
     EventLoopPump.h
     ExitAppearance.h
@@ -358,6 +364,8 @@ set(mudlet_HDRS
     LuaLiteral.h
     MacMicrophonePermission.h
     mapInfoContributorManager.h
+    MapDecals.h
+    MapStyle.h
     MMCP.h
     MMCPClient.h
     MMCPServer.h
@@ -480,7 +488,6 @@ set(mudlet_HDRS
 # Every .h header file that needs Qt Widgets goes here instead, in mudlet_app, kept
 # in alphabetical order (case-insensitive).
 set(mudlet_app_HDRS
-    AltFocusMenuBarDisable.h
     CustomLineDrawContextMenuHandler.h
     CustomLineDrawHandler.h
     CustomLineEditContextMenuHandler.h
@@ -521,6 +528,7 @@ set(mudlet_app_HDRS
     LabelInteractionHandler.h
     MiddleMousePanHandler.h
     mudlet.h
+    MudletProxyStyle.h
     PackageItemDelegate.h
     PanInteractionHandler.h
     RoomContextMenuHandler.h
@@ -587,6 +595,8 @@ if(USE_3DMAPPER)
   list(APPEND mudlet_app_HDRS glwidget.h)
   list(APPEND mudlet_app_SRCS modern_glwidget.cpp)
   list(APPEND mudlet_app_HDRS modern_glwidget.h)
+  list(APPEND mudlet_SRCS BloomPass.cpp)
+  list(APPEND mudlet_HDRS BloomPass.h)
   list(APPEND mudlet_SRCS CameraController.cpp)
   list(APPEND mudlet_HDRS CameraController.h)
   list(APPEND mudlet_SRCS ExitScene.cpp)
@@ -666,6 +676,12 @@ endif()
 if(Qt6TextToSpeech_FOUND)
   list(APPEND QT_LIBS Qt6::TextToSpeech)
   message(STATUS "Using TextToSpeech module")
+endif()
+
+# MudletProxyStyle reads the AT-SPI screen reader status over D-Bus
+if(UNIX AND NOT APPLE)
+  find_package(Qt6 COMPONENTS DBus REQUIRED)
+  list(APPEND QT_APP_LIBS Qt6::DBus)
 endif()
 
 message(STATUS "Using ${CMAKE_CXX_COMPILER_ID} compiler")

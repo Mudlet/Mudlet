@@ -364,9 +364,10 @@ if false then
 
 
   --- Returns a Lua table with the content of the lines on a per line basis. Absolute line numbers are used.
-  --- For from_line_number < to_line_number, lines outside the buffer are left out, so t[1] is the first requested
-  --- line that exists: getLines(-5, 2) returns lines 0 and 1 as t[1] and t[2], and a range wholly outside the buffer
-  --- returns an empty table. A reversed range is read forward from from_line_number instead.
+  --- Reads from from_line_number up to, but not including, to_line_number. Lines outside the buffer are left out,
+  --- so t[1] is the first requested line that exists: getLines(-5, 2) returns lines 0 and 1 as t[1] and t[2], and a
+  --- range wholly outside the buffer returns an empty table. A reversed range reads downward the same way:
+  --- getLines(3, 1) returns lines 3 and 2 as t[1] and t[2].
   ---
   --- @return section of the content of the screen text buffer. The form of the return value is: Lua_table[relative_linenumber, content]
   function getLines(from_line_number, to_line_number)
@@ -454,8 +455,15 @@ if false then
 
 
 
-  --- <b><u>TODO</u></b>  insertHTML - TLuaInterpreter::insertHTML
-  function insertHTML()
+  --- Inserts text at the cursor position of the main console, like insertText() without a window name.
+  --- The markup is inserted verbatim: HTML is not interpreted. Unlike insertText() it takes no window
+  --- name (a first argument such as "myMiniConsole" is inserted into the main console as text and any
+  --- further arguments are ignored) and it returns nothing.
+  ---
+  --- @param text the text to insert
+  ---
+  --- @see insertText
+  function insertHTML(text)
   end
 
 
@@ -1187,6 +1195,51 @@ if false then
   ---
   --- @see tempTimer
   function wait(time)
+  end
+
+
+
+  --- Names the kind of ground an environment is, for the 3D map styles that draw terrain: diorama builds the
+  --- environment's rooms as it, and terminal and ink wash mark them by it. Without one, the kind is guessed from
+  --- the environment's color: blue is water, green forest, grey, brown and tan road, and any other color a
+  --- building. The kits are saved with the map.
+  ---
+  --- @param environmentID the environment, as setRoomEnv() takes it
+  --- @param kitName one of "plain", "water", "road", "forest" or "building"; nil or "" goes back to guessing
+  --- @return true, or nil and an error message for a kit name it does not know, or when the kits saved in the
+  ---   map user data "system.mapStyle.environmentKits" are not a JSON object, which it leaves alone
+  ---
+  --- @usage Show the lava environment as water, and forget that the swamp environment was named
+  ---   <pre>
+  ---   setMapEnvironmentKit(301, "water")
+  ---   setMapEnvironmentKit(302, nil)
+  ---   </pre>
+  ---
+  --- @see getMapEnvironmentKit, getMapEnvironmentKits
+  function setMapEnvironmentKit(environmentID, kitName)
+  end
+
+
+
+  --- The kind of ground an environment is, for use by 3D map styles that draw terrain.
+  ---
+  --- @param environmentID the environment, as setRoomEnv() takes it
+  --- @return the kit's name, and true when setMapEnvironmentKit() named it or false when it is guessed
+  ---   from the environment's color
+  ---
+  --- @see setMapEnvironmentKit, getMapEnvironmentKits
+  function getMapEnvironmentKit(environmentID)
+  end
+
+
+
+  --- The kits setMapEnvironmentKit() has named, leaving out those guessed from environments' colors and any saved
+  --- entry that cannot be read.
+  ---
+  --- @return a table of kit names keyed by environment ID
+  ---
+  --- @see setMapEnvironmentKit, getMapEnvironmentKit
+  function getMapEnvironmentKits()
   end
 
 

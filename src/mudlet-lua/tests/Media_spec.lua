@@ -2615,11 +2615,67 @@ describe("Media playback effects with a generated sound file", function()
   it("a Client.Media.Pause message with no fields pauses everything the server started", function()
     -- #10043. Every field parseJSONForMediaPause() reads is optional, and a
     -- request with none of them set pauses all of the server's media - which is
-    -- what Client.Media.Stop with no fields does for stopping. It never gets
-    -- there: parseGMCP() answers "client.media.stop" above its empty-object
-    -- guard and everything else below it, so an empty Client.Media.Pause is
-    -- dropped without being read at all.
-    pending("#10043: Client.Media.Pause {} is discarded by the empty-object guard in TMedia::parseGMCP()")
+    -- what Client.Media.Stop with no fields does for stopping.
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    writeSoundFiles()
+    stopGmcpMediaAfterwards()
+
+    local started, paused = {}, {}
+    collect("sysMediaStarted", started)
+    collect("sysMediaPaused", paused)
+
+    feedGmcp('Client.Media.Play {"name": "' .. longSoundFile .. '", "key": "busted-gmcp-pause-all-sound"}')
+    feedGmcp('Client.Media.Play {"name": "' .. otherLongSoundFile .. '", "type": "music", "key": "busted-gmcp-pause-all-music"}')
+    waitForCount("sysMediaStarted", started, 2)
+    assert.equals(2, #started, gmcpRefused)
+
+    feedGmcp("Client.Media.Pause {}")
+    waitForCount("sysMediaPaused", paused, 2)
+    assert.equals(2, #paused, "an empty Client.Media.Pause did not pause every playback the server started")
+  end)
+
+  -- #10808. An absent type is the wildcard; a type that names nothing Mudlet
+  -- knows is a server mistake, and taking it as the wildcard would let a typo
+  -- stop or pause every kind of media at once.
+  local function unknownTypeActsOnNothing(command, eventName)
+    writeSoundFiles()
+    stopGmcpMediaAfterwards()
+
+    local started, acted = {}, {}
+    collect("sysMediaStarted", started)
+    collect(eventName, acted)
+
+    feedGmcp('Client.Media.Play {"name": "' .. longSoundFile .. '", "key": "busted-gmcp-typo-sound"}')
+    feedGmcp('Client.Media.Play {"name": "' .. otherLongSoundFile .. '", "type": "music", "key": "busted-gmcp-typo-music"}')
+    waitForCount("sysMediaStarted", started, 2)
+    assert.equals(2, #started, gmcpRefused)
+
+    feedGmcp('Client.Media.' .. command .. ' {"type": "musci"}')
+    pumpEvents(500)
+    assert.equals(0, #acted, "a Client.Media." .. command .. " naming an unknown type acted on the media anyway")
+
+    -- the same message naming the type properly reaches only the music
+    feedGmcp('Client.Media.' .. command .. ' {"type": "music"}')
+    waitForCount(eventName, acted, 1)
+    pumpEvents(250)
+    assert.equals(1, #acted)
+    assert.equals("busted-gmcp-typo-music", acted[1].key)
+  end
+
+  it("a Client.Media.Stop message naming an unknown type stops nothing", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    unknownTypeActsOnNothing("Stop", "sysMediaFinished")
+  end)
+
+  it("a Client.Media.Pause message naming an unknown type pauses nothing", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    unknownTypeActsOnNothing("Pause", "sysMediaPaused")
   end)
 
   it("a Client.Media.Load message fetches the file without playing it", function()
@@ -2813,11 +2869,115 @@ describe("Media playback effects with a generated sound file", function()
 
   it("a Client.Media.Play message with a numeric volume of zero preloads the file too", function()
     -- #10404. The media protocol allows a field either way round, and the
-    -- string form above preloads. The number form does not:
-    -- parseJSONByMediaVolume() uses the value itself as the test for whether
-    -- the field was given, so a volume of 0 reads as absent and the request is
-    -- played at the default volume instead of being readied silently.
-    pending("#10404: Client.Media.Play with a numeric volume of 0 plays at the default volume instead of preloading")
+    -- string form above preloads, so a number 0 must not read as an absent
+    -- volume and be played at the default one.
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    writeSoundFiles()
+    stopGmcpMediaAfterwards()
+
+    local started = {}
+    collect("sysMediaStarted", started)
+
+    feedGmcp('Client.Media.Play {"name": "' .. longSoundFile .. '", "key": "busted-gmcp-preload-number", "volume": 0}')
+    pumpEvents(1000)
+    assert.equals(0, #started, "a request made at a numeric volume of 0 was played")
+
+    feedGmcp('Client.Media.Play {"name": "' .. longSoundFile .. '", "key": "busted-gmcp-preload-number", "volume": 60}')
+    waitForCount("sysMediaStarted", started, 1)
+    assert.equals(1, #started, gmcpRefused)
+  end)
+
+  it("a Client.Media.Play message with a fractional numeric volume plays the file", function()
+    -- only a volume of 0 asks for a preload, so one that is not a whole number
+    -- must not be read as 0
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    writeSoundFiles()
+    stopGmcpMediaAfterwards()
+
+    local started = {}
+    collect("sysMediaStarted", started)
+
+    feedGmcp('Client.Media.Play {"name": "' .. longSoundFile .. '", "key": "busted-gmcp-fractional-volume", "volume": 50.6}')
+    waitForCount("sysMediaStarted", started, 1)
+    assert.equals(1, #started, "a request made at a numeric volume of 50.6 was not played")
+  end)
+
+  it("a Client.Media.Play message with a volume given as a string reads it as the number it names", function()
+    -- the same rule as for a number: a fractional one is rounded, and one that
+    -- is no number at all is absent - neither is the 0 that asks for a preload
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    writeSoundFiles()
+    stopGmcpMediaAfterwards()
+
+    local started = {}
+    collect("sysMediaStarted", started)
+
+    feedGmcp('Client.Media.Play {"name": "' .. longSoundFile .. '", "key": "busted-gmcp-string-fractional-volume", "volume": "50.6"}')
+    waitForCount("sysMediaStarted", started, 1)
+    assert.equals(1, #started, "a request made at a volume of \"50.6\" was not played")
+
+    feedGmcp('Client.Media.Play {"name": "' .. otherLongSoundFile .. '", "key": "busted-gmcp-string-unreadable-volume", "volume": "loud"}')
+    waitForCount("sysMediaStarted", started, 2)
+    assert.equals(2, #started, "a request made at a volume of \"loud\" was not played")
+  end)
+
+  it("a Client.Media.Play message with a fractional loop count plays the rounded number of times", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    writeSoundFiles()
+    stopGmcpMediaAfterwards()
+
+    for _, loops in ipairs({"2.6", '"2.6"'}) do
+      local started = {}
+      collect("sysMediaStarted", started)
+      feedGmcp('Client.Media.Play {"name": "' .. soundFile .. '", "key": "busted-gmcp-fractional-loops", "loops": ' .. loops .. '}')
+      waitForCount("sysMediaStarted", started, 3)
+      pumpEvents(500)
+      assert.equals(3, #started, "a request made with " .. loops .. " loops was not played three times")
+      feedGmcp("Client.Media.Stop {}")
+    end
+  end)
+
+  it("a Client.Media.Play message with a negative fractional loop count plays once rather than forever", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    writeSoundFiles()
+    stopGmcpMediaAfterwards()
+
+    for _, loops in ipairs({"-0.6", "-1.4", '"-0.6"'}) do
+      local started = {}
+      collect("sysMediaStarted", started)
+      feedGmcp('Client.Media.Play {"name": "' .. soundFile .. '", "key": "busted-gmcp-negative-fractional-loops", "loops": ' .. loops .. '}')
+      waitForCount("sysMediaStarted", started, 1)
+      pumpEvents(1500)
+      assert.equals(1, #started, "a request made with " .. loops .. " loops was not played exactly once")
+      feedGmcp("Client.Media.Stop {}")
+    end
+  end)
+
+  it("a Client.Media.Play message with the largest loop count there is keeps playing", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    writeSoundFiles()
+    stopGmcpMediaAfterwards()
+
+    for _, loops in ipairs({"2147483647", '"2147483647"', "1e10"}) do
+      local started = {}
+      collect("sysMediaStarted", started)
+      feedGmcp('Client.Media.Play {"name": "' .. soundFile .. '", "key": "busted-gmcp-huge-loops", "loops": ' .. loops .. '}')
+      waitForCount("sysMediaStarted", started, 3)
+      assert.is_true(#started >= 3, "a request made with " .. loops .. " loops was played only " .. #started .. " times")
+      feedGmcp("Client.Media.Stop {}")
+    end
   end)
 
   it("a Client.Media.Default message sets the url the messages after it fetch from", function()
@@ -2864,6 +3024,133 @@ describe("Media playback effects with a generated sound file", function()
     waitForCount("sysDownloadDone", done, 1)
     assert.equals(1, #done)
     assert.equals(fixtureBody, readFile(downloaded))
+  end)
+
+  it("a Client.Media.Stop message with no body stops all of the game's media", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    writeSoundFiles()
+    stopGmcpMediaAfterwards()
+    local finished = {}
+    collect("sysMediaFinished", finished)
+
+    feedGmcp('Client.Media.Play {"name": "' .. longSoundFile .. '", "key": "busted-gmcp-bare-stop"}')
+    local event = waitForEvent("sysMediaStarted", 5000)
+    assert.equals("sysMediaStarted", event, gmcpRefused)
+
+    -- the standard's "an empty body will stop all media": no {} after the name
+    feedGmcp("Client.Media.Stop")
+    waitForCount("sysMediaFinished", finished, 1)
+    assert.equals(1, #finished, "a Client.Media.Stop with no body stopped nothing")
+    assert.equals("busted-gmcp-bare-stop", finished[1].key)
+  end)
+
+  it("a Client.Media.Pause message with no body pauses all of the game's media", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    writeSoundFiles()
+    stopGmcpMediaAfterwards()
+    local paused = {}
+    collect("sysMediaPaused", paused)
+
+    feedGmcp('Client.Media.Play {"name": "' .. longSoundFile .. '", "key": "busted-gmcp-bare-pause"}')
+    assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)), gmcpRefused)
+
+    feedGmcp("Client.Media.Pause")
+    waitForCount("sysMediaPaused", paused, 1)
+    assert.equals(1, #paused, "a Client.Media.Pause with no body paused nothing")
+    assert.equals("busted-gmcp-bare-pause", paused[1].key)
+  end)
+
+  it("a Client.Media.Play message streams from the url only when stream is true", function()
+    if noFixtureServer() then
+      return
+    end
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    stopGmcpMediaAfterwards()
+    -- Both forms the standard allows for a boolean, and the default url when the message names none.
+    -- Set and undone as in the Default spec above: the string form streams from it.
+    local startingLocation = fixtureUrl() .. "/media"
+    feedGmcp('Client.Media.Default {"url": "' .. startingLocation .. '"}')
+    onCleanup(function()
+      feedTelnet('<T_IAC><T_SB><O_GMCP>Client.Media.Default {"url": "' .. startingLocation .. '"}<T_IAC><T_SE>')
+    end)
+
+    local function exists(path)
+      local handle = io.open(path, "rb")
+      if handle then
+        handle:close()
+      end
+      return handle ~= nil
+    end
+
+    local finished = {}
+    collect("sysMediaFinished", finished)
+
+    for index, form in ipairs({{name = "busted-gmcp-stream-bool.wav", fields = '"url": "' .. startingLocation .. '/", "stream": true', streamed = true},
+                           {name = "busted-gmcp-stream-string.wav", fields = '"stream": "true"', streamed = true},
+                           {name = "busted-gmcp-stream-false.wav", fields = '"url": "' .. startingLocation .. '/", "stream": false', streamed = false},
+                           {name = "busted-gmcp-stream-false-string.wav", fields = '"stream": "false"', streamed = false}}) do
+      local copy = mediaDirectory .. "/" .. form.name
+      os.remove(copy)
+      onCleanup(function() os.remove(copy) end)
+
+      local key = "busted-gmcp-stream-" .. index
+      feedGmcp('Client.Media.Play {"name": "' .. form.name .. '", "key": "' .. key .. '", ' .. form.fields .. '}')
+      local event = waitForEvent("sysMediaStarted", 5000)
+      assert.equals("sysMediaStarted", event, "a Client.Media.Play with " .. form.fields .. " did not play: " .. gmcpRefused)
+      if form.streamed then
+        assert.is_false(exists(copy), "a streamed file was downloaded into the profile's media folder")
+      else
+        assert.is_true(exists(copy), "a file not asked to stream was not downloaded")
+      end
+      -- Ended before the next form, so its events cannot be mistaken for this one's
+      feedGmcp('Client.Media.Stop {"key": "' .. key .. '"}')
+      waitForCount("sysMediaFinished", finished, index)
+      assert.equals(key, finished[index].key)
+    end
+  end)
+
+  it("a Client.Media.Play message asking to preload a stream plays nothing", function()
+    if noFixtureServer() then
+      return
+    end
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    stopGmcpMediaAfterwards()
+    local finished = {}
+    collect("sysMediaFinished", finished)
+
+    -- A preload raises no sysMediaStarted, so the stop is what would show a silent stream had begun
+    feedGmcp('Client.Media.Play {"name": "busted-gmcp-stream-preload.wav", "url": "' .. fixtureUrl() .. '/media/", "stream": true, "volume": 0, "key": "busted-gmcp-stream-preload"}')
+    pumpEvents(1000)
+    feedGmcp('Client.Media.Stop {"key": "busted-gmcp-stream-preload"}')
+    pumpEvents(500)
+    assert.equals(0, #finished, "a preload of a stream started a silent stream")
+  end)
+
+  it("a Client.Media.Play message will not stream from anything but http or https", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    writeSoundFiles()
+    stopGmcpMediaAfterwards()
+    local started = {}
+    collect("sysMediaStarted", started)
+
+    -- a file this profile does have, so only the refusal can keep it from playing
+    feedGmcp('Client.Media.Play {"name": "' .. longSoundFile .. '", "url": "file://' .. mediaDirectory .. '/", "stream": true, "key": "busted-gmcp-local-stream"}')
+    pumpEvents(500)
+    -- the same file, asked for without the stream, does play: so nothing else kept the first from it
+    feedGmcp('Client.Media.Play {"name": "' .. longSoundFile .. '", "key": "busted-gmcp-local-control"}')
+    waitForCount("sysMediaStarted", started, 1)
+    assert.equals(1, #started)
+    assert.equals("busted-gmcp-local-control", started[1].key, "a game had Mudlet stream a local file")
   end)
 
   it("both play calls clamp a volume outside 1 to 100 in both argument forms", function()

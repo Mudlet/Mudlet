@@ -24,7 +24,10 @@
  ***************************************************************************/
 
 #include "ui_connection_profiles.h"
+#include <functional>
 #include <optional>
+#include <QHash>
+#include <QPointer>
 #include <QRegularExpression>
 #include <QTimer>
 #include <QKeyEvent>
@@ -43,6 +46,7 @@ class dlgConnectionProfiles : public QDialog, public Ui::connection_profiles
     friend class ConnectionDialogKeychainWaitTest;
     friend class ConnectionDialogOfflineProfileTest;
     friend class SelfTestProfileIconTest;
+    friend class ProfileDeletionSafetyTest;
 
 public:
     Q_DISABLE_COPY(dlgConnectionProfiles)
@@ -58,6 +62,9 @@ public:
     static const int csmNameRole{Qt::UserRole};
     static QChar firstInvalidProfileNameChar(const QString& name);
     static bool profileNameUsableAsIs(const QString& name);
+    // Whether a removed profile's saved sign-in is still being deleted under this name; see
+    // namesWithSignInBeingRemoved(). For anything that creates a profile outside this dialog, such as a telnet:// link.
+    static bool signInRemovalPending(const QString& name);
     static QString profileFolderPath(const QString& profilesPath, const QString& profile);
     static const QString scmAllowedProfileNameChars;
     static const QRegularExpression scmUnusableProfileNameChars;
@@ -142,11 +149,25 @@ private:
     void deleteSecurePassword(const QString& profile);
     void setupMudProfile(QListWidgetItem*, const QString& mudServer, const QString& serverDescription, const QString& iconFileName);
     void reallyDeleteProfile(const QString& profile);
+    // A removed profile's name is refused until the removal of its saved sign-in has answered, since a
+    // profile made or connected under it meanwhile would read it. Process-wide: the removal outlives the
+    // dialog. Held as removalKey()s, because a case-insensitive disk files a variant in the same place, and
+    // counted, because the same name can be removed again before the first removal answers.
+    static QHash<QString, int>& namesWithSignInBeingRemoved();
+    static QString removalKey(const QString& name);
+    // passwordsRemoved: whether the profile's saved passwords were deleted; the player is told if they or the sign-in were not
+    static void forgetSignInOfRemovedProfile(const QString& profile, QPointer<dlgConnectionProfiles> dialog, bool passwordsRemoved);
+    // Test-only: when set, it is handed each removal of a removed profile's sign-in to start, so a test
+    // can hold one back the way a slow keychain does
+    static std::function<void(std::function<void()> startRemoval)>& signInRemovalStarterForTesting();
     bool profileRemovable(const QString& profile) const;
     void updateRemoveButtonState(const QString& profile);
     void showRemovalProblem(const QString& message);
     void showRemovalNotice(const QString& message);
     void showNotification(const QString& message, QLabel* pIcon);
+    // writeProfileData() less its folder check, as a login or password typed for a game never played makes the folder
+    QPair<bool, QString> saveProfileDetail(const QString& profile, const QString& item, const QString& what);
+    void showUnsavedChange(const QString& message, const QString& profile, const QString& item);
     void fitWelcomeMessageToContents();
     void continueProfileSave(QListWidgetItem* pItem, const QString& newProfileName, const QString& newProfileHost, const QString& newProfilePort, const int newProfileSslTsl);
     void setItemName(QListWidgetItem*, const QString&) const;
@@ -217,6 +238,8 @@ private:
     bool mPendingConnect = false;      // Whether to connect (true) or just load (false)
     QString mKeychainOperationProfile; // Whose password a keychain read is fetching, if any
     bool mKeychainWaitShown = false;   // Whether the dialog is showing the keychain wait
+    // The profile and item a shown notice says could not be saved, so saving that one later clears it
+    QPair<QString, QString> mUnsavedChange;
 
 
 private slots:
