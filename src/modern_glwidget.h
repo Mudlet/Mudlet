@@ -43,6 +43,8 @@
 #include <QOpenGLShaderProgram>
 #include <QOpenGLVertexArrayObject>
 #include <QOpenGLWidget>
+#include <QPixmap>
+#include <QPointF>
 #include <QPointer>
 #include <QSet>
 #include <QTimer>
@@ -263,6 +265,16 @@ private:
         QVector<int> ends;
     };
     QHash<int, InkOutlineLevel> mInkOutlines;
+    // A map label's image with a halo around it, by its area and ID, and what it was made from
+    struct HaloedLabel
+    {
+        qint64 sourceKey = 0;
+        QRgb halo = 0;
+        QPixmap pixmap;
+        // How far the halo reaches past each side of the label, as a part of its width and height
+        QPointF margin;
+    };
+    QHash<std::pair<int, int>, HaloedLabel> mHaloedLabels;
     bool mRoomTextureLimitWarned = false;
     // A map label drawn again in the map style's font and color, by area and label ID
     struct ThemedLabel
@@ -417,6 +429,47 @@ private:
     QRect paintTitleBlock(QPainter& painter, const TArea& area, int top);
     // Below top, and above the title block
     void paintLevelCallouts(QPainter& painter, const TArea& area, int top, const QRect& titleBlock);
+    // A row of the line legend: a line's kind of ground in the color of its most used line, or a door's status
+    struct LegendEntry
+    {
+        QString text;
+        QColor color;
+        // 1 to 3 for a door's entry, drawn as a bar in color across a line; 0 for a line's
+        int doorStatus = 0;
+    };
+    // For the lines and doors on the viewed level, the most used ground first; empty where the style draws no legend
+    QList<LegendEntry> lineLegend(const TArea& area) const;
+    // Below top; empty where there is no legend or the view has no room for it
+    QRect lineLegendRect(const TArea& area, int top) const;
+    QRect lineLegendRect(const QList<LegendEntry>& entries, int top) const;
+    void paintLineLegend(QPainter& painter, const TArea& area, int top);
+    struct LevelPlatform
+    {
+        int level = 0;
+        int rooms = 0;
+        // The level's name, and the name of the room the stair reaches on it where it has one
+        QString label;
+        // The line through its stations, in the color of its most used environment
+        QColor lineColor;
+        QRectF pill;
+        // How many stations it shows, and the width of the count of those it leaves out
+        int stations = 0;
+        qreal moreWidth = 0.0;
+        QPointF station(int index) const;
+    };
+    // Platforms on one side of the viewed level, listed top to bottom, on a shaft rising or falling from the stair
+    // that reaches them, if the view shows one
+    struct PlatformShaft
+    {
+        std::optional<QPointF> stair;
+        qreal x = 0.0;
+        QList<LevelPlatform> platforms;
+    };
+    // Above and below the viewed level, below top; empty where the style has no platforms
+    std::pair<PlatformShaft, PlatformShaft> levelPlatforms(const TArea& area, int top) const;
+    void paintLevelPlatforms(QPainter& painter, const std::pair<PlatformShaft, PlatformShaft>& shafts);
+    // On the player's station, or the first station of the platform of the level the player is on
+    void paintPlayerPill(QPainter& painter, int top, const std::pair<PlatformShaft, PlatformShaft>& shafts);
     void turnNorthUp();
     void setHoveredRoom(int roomId);
     // Worked out afresh, as the view can move under a pointer that stays still
@@ -440,8 +493,10 @@ private:
     const QPixmap* themedLabel(int labelId, const TMapLabel& label, const MapStyle& style);
     // The 2D map's up/down/in/out markers for the room, or 0 when it has none
     GLuint exitMarkerTexture(const TRoom& room, const QColor& roomColor);
-    // Text on a clear background; size is set to the texture's size in pixels
-    GLuint textTexture(const QString& key, const QString& text, const QFont& font, const QFontMetricsF& metrics, const QColor& color, QSize& size);
+    // Text on a clear background, with a rim of halo around it if that is valid; size is set to the texture's size in pixels
+    GLuint textTexture(const QString& key, const QString& text, const QFont& font, const QFontMetricsF& metrics, const QColor& color, QSize& size, const QColor& halo = QColor());
+    // The label's image with a halo around it, made again only when the label or the halo changes
+    const HaloedLabel& haloedLabel(int labelId, const QPixmap& pixmap, const QColor& halo, int backgroundAlpha);
     // The cell of the glyph atlas holding text, added if there is room, else -1; with add false, -1 for any not in it
     qsizetype glyphAtlasCell(const QString& text, bool add = true);
     // Every cell's text in white on clear, to be tinted as drawn, in one texture; 0 if it could not be made
@@ -459,6 +514,9 @@ private:
     void setOrientationKeepingRoll(float theta, float phi);
     // Turns the camera around the view's center, by degrees of azimuth
     void turnCamera(float degrees);
+    // Within the levels shown above and below the viewed one
+    bool levelInRange(int z) const;
+    // Drawn in place: in range, and the viewed level where the style puts the others on platforms
     bool levelShown(int z) const;
     // What rooms and exits on level z recede toward: the mapper's upper or lower level color, or the background
     QColor levelFadeTarget(int z) const;

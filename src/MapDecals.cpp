@@ -203,14 +203,54 @@ QList<int> calloutLevels(const QList<int>& levels, const int shownLevel, const i
     return named;
 }
 
+QString levelName(const int level)
+{
+    return level < 0
+                   //: A level below ground, named in a callout by the blueprint style or on a platform by the transit style of the 3D map, as B1 for the first basement
+                   ? QCoreApplication::translate("ModernGLWidget", "B%1").arg(-level)
+                   //: A level at or above ground, named in a callout by the blueprint style or on a platform by the transit style of the 3D map, as L1 for the first floor up
+                   : QCoreApplication::translate("ModernGLWidget", "L%1").arg(level);
+}
+
 QString levelCallout(const int level, const int rooms)
 {
-    const QString name = level < 0
-                                 //: A level below ground, named in a callout by the blueprint style of the 3D map, as B1 for the first basement
-                                 ? QCoreApplication::translate("ModernGLWidget", "B%1").arg(-level)
-                                 //: A level at or above ground, named in a callout by the blueprint style of the 3D map, as L1 for the first floor up
-                                 : QCoreApplication::translate("ModernGLWidget", "L%1").arg(level);
-    return qsl("%1 · %2").arg(name, QString::number(rooms));
+    return qsl("%1 · %2").arg(levelName(level), QString::number(rooms));
+}
+
+QList<qreal> stackPlatforms(const int count, const qreal anchor, const qreal spacing, const qreal top, const qreal bottom)
+{
+    QList<qreal> wanted;
+    if (count <= 0) {
+        return wanted;
+    }
+    const bool upward = spacing < 0.0;
+    const qreal step = std::abs(spacing);
+    // Listed top to bottom: upward the farthest first, downward the nearest
+    for (int i = 0; i < count; ++i) {
+        wanted.append(upward ? anchor - (count - i) * step : anchor + (i + 1) * step);
+    }
+    // Kept to their own side of the anchor, and in the view where there is room for them all
+    const qreal sideTop = upward ? top : std::max(top, anchor + step);
+    const qreal sideBottom = upward ? std::min(bottom, anchor - step) : bottom;
+    return spreadCallouts(wanted, step, sideTop, std::max(sideBottom, sideTop + (count - 1) * step));
+}
+
+QImage bullseye(const QColor& color, const int size)
+{
+    QImage image = clearImage(QSize(size, size), color);
+    QPainter painter(&image);
+    painter.setRenderHint(QPainter::Antialiasing);
+    const qreal half = size / 2.0;
+    const QPointF center(half, half);
+    painter.setPen(Qt::NoPen);
+    painter.setBrush(Qt::white);
+    painter.drawEllipse(center, half * 0.96, half * 0.96);
+    ring(painter, center, half * 0.82, color, size * 0.13);
+    painter.setPen(Qt::NoPen);
+    painter.setBrush(color);
+    painter.drawEllipse(center, half * 0.36, half * 0.36);
+    painter.end();
+    return image;
 }
 
 QString titleLevelLine(const int shownLevel, const QList<int>& areaLevels)
@@ -270,6 +310,11 @@ QImage blockShadow(const bool round, const int size)
     return image;
 }
 
+bool keepsLabelBox(const TMapLabel& label)
+{
+    return !neutral(label.bgColor) && label.bgColor.alpha() > 0;
+}
+
 QImage themedLabel(const TMapLabel& label, const MapStyle& style)
 {
     const QSize canvas = label.pix.size();
@@ -283,7 +328,7 @@ QImage themedLabel(const TMapLabel& label, const MapStyle& style)
     }
     const bool ownTextColor = !neutral(label.fgColor) || !style.mapLabelColor.isValid();
     const QColor textColor = ownTextColor ? label.fgColor : withAlpha(style.mapLabelColor, label.fgColor.alpha());
-    const bool box = !neutral(label.bgColor) && label.bgColor.alpha() > 0;
+    const bool box = keepsLabelBox(label);
     const bool outline = !neutral(label.outlineColor) && label.outlineColor != label.fgColor;
     const bool halo = !box && !outline && style.mapLabelHalo.isValid();
 

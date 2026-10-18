@@ -48,6 +48,13 @@ struct Options
     bool largeAreaExitArrows = false;
     // Doors drawn as a plan's door swing, as MapStyle::Doors::Swings says, rather than the 2D map's strokes
     bool doorSwings = false;
+    // Doors drawn as a bar across the line, as MapStyle::Doors::Bars says
+    bool doorBars = false;
+    // Lines between rooms of one environment, and stubs, drawn in its color made to stand out on background, as
+    // MapStyle::environmentLines says, rather than in exitColor
+    bool environmentLines = false;
+    // With environmentLines, the color of a line between rooms of two environments; invalid for exitColor
+    QColor mixedLineColor;
     // Exit lines between rooms on one level, their stubs and doors drawn as Glyphs, as MapStyle::Glyphs::Terminal says
     bool glyphs = false;
     // A room's width, in rooms' spacing, and whether it is round, so that a door swing clears its room

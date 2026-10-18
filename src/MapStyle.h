@@ -68,6 +68,8 @@ struct MapStyle
         // A text screen: each room's character in its environment's color, lifted where that would vanish into the
         // dark background, as a terminal shows its black as dark gray
         Terminal,
+        // A metro map: every room filled white as a station is, its environment's color going to the ring around it
+        Stations,
         // Each room in its environment's color, softened toward a lit pastel: less saturated, and kept from the
         // darkest and lightest
         Soft
@@ -75,7 +77,9 @@ struct MapStyle
 
     enum class Shape {
         // Round where the profile has round rooms, else square
-        Profile
+        Profile,
+        // Always round, whatever the profile says
+        Round
     };
 
     enum class Edges {
@@ -84,6 +88,9 @@ struct MapStyle
         // A thin line around each room's top in the style's ink: solid on the viewed level, dashed and dimmed
         // with no fill on the others
         InkOutlines,
+        // A metro map's station: a ring just inside each room's edge in ringColor(), and a heavier one in the style's ink
+        // around an interchange, a room with interchangeExits or more exits
+        StationRings,
         // A base around each room on the viewed level, halfway from the room's color to the background, so the
         // room reads as a block with shaded sides
         ViewedLevelBase
@@ -94,7 +101,17 @@ struct MapStyle
         Strokes,
         // A plan's door: a leaf hinged at the side of the opening and the arc it swings through,
         // swung open for an open door and shut across the opening for a closed or locked one
-        Swings
+        Swings,
+        // A short bar across the line just outside the room, in the door's status color
+        Bars
+    };
+
+    enum class PlayerMarker {
+        // The profile's ring around the player's room, and a column of light over it
+        Ring,
+        // A bullseye on the player's room, and beside it a pill in the style's ink reading "YOU" on a leader to it,
+        // as on a map at a station's entrance
+        Pill
     };
 
     enum class Glyphs {
@@ -194,6 +211,27 @@ struct MapStyle
     // A line along the view's foot naming the area, the player's room and the ways out of it, and the room under the
     // mouse pointer, as a terminal's status line in the profile's ANSI colors
     bool statusLine = false;
+    PlayerMarker playerMarker = PlayerMarker::Ring;
+    // Exit lines between two rooms of one environment drawn in ringColor() of it, as a metro map draws its lines,
+    // and the rest in exitColor()
+    bool environmentLines = false;
+    // With environmentLines, lines between rooms of two environments; invalid for exitColor()
+    QColor mixedLineColor;
+    // With Edges::StationRings, a station that a line of its own environment reaches ringed in ink, as that line
+    // already shows its environment
+    bool inkRimsOnLines = false;
+    // With Edges::StationRings, a station's ring as a share of its width; an interchange's is wider
+    float stationRing = 0.2f;
+    // Other levels drawn not in place but as platforms over and under the view, each named and showing a few of its
+    // stations, on a dotted shaft from the stair that reaches them
+    bool levelPlatforms = false;
+    // A key to the lines' colors, by the kind of ground each environment is, and to the doors
+    bool lineLegend = false;
+    // The fewest exits that make a room an interchange, as Edges::StationRings draws one; 0 for none
+    int interchangeExits = 0;
+    // Room names and map labels drawn with a rim of the background around them, so that lines under them do not
+    // run through the text
+    bool labelHalos = false;
 
     QString displayName() const;
     // Whether this style's player ring and color take the place of the profile's player room marker
@@ -224,6 +262,8 @@ struct MapStyle
     QColor roomIdColor(const QColor& drawnRoomColor) const;
     // The player's room, where its marker could not be made
     QColor playerRoomColor() const;
+    // A ring or a line in an environment's color, made darker or lighter where it would not stand out on backgroundColor()
+    QColor ringColor(const QColor& environmentColor, const QColor& profileBackground) const;
 
     static QString defaultId();
     // In the order the preferences list them

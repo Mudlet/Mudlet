@@ -41,6 +41,11 @@ constexpr int scmDirections[] = {DIR_NORTH, DIR_NORTHEAST, DIR_EAST, DIR_SOUTHEA
 constexpr qreal scmDoorRoomSpan = 2.0;
 // A door swing's widest opening, in rooms' spacing
 constexpr qreal scmDoorSwingWidth = 0.3;
+// A door bar's distance along its exit line from the room's center, in rooms' spacing, and its length across the line
+// and width along it, in lines' widths
+constexpr float scmDoorBarInset = 0.32f;
+constexpr float scmDoorBarLength = 2.2f;
+constexpr float scmDoorBarWidth = 0.5f;
 constexpr int scmDiscSides = 16;
 // Qt's dash stroker's limit, QDashStroker::repetitionLimit()
 constexpr qreal scmMaxDashRepetitions = 10000.0;
@@ -102,6 +107,8 @@ private:
     // Along the exit line from its start, across it to the side
     void doorSwing(int status, const QVector3D& from, const QVector3D& along, const QVector3D& side, float length, float height, int level);
     void customLine(const TRoom& room, const QString& key, const QList<QPointF>& points);
+    // The color of a line from room to pOther, or of a stub without pOther
+    QColor lineColor(const TRoom& room, const TRoom* pOther);
     void glyph(const QVector3D& at, const QVector3D& along, QChar character, const QColor& color, int level);
     // A line's characters in the cells between its ends, which its rooms are drawn in; false, drawing nothing, for
     // a line too long to draw so
@@ -115,6 +122,8 @@ private:
     int mRoomId = 0;
     // Index into mScene.glyphs by cell, as doubled coordinates, and level
     QHash<std::pair<std::pair<qint64, qint64>, int>, qsizetype> mGlyphCells;
+    // lineColor() by environment
+    QHash<int, QColor> mEnvironmentLineColors;
 };
 
 bool Builder::levelShown(const int z) const
@@ -310,6 +319,13 @@ void Builder::door(const TRoom& room, const QString& key, const QVector3D& from,
     };
     // A little taller than the line, so that it shows over it
     const float height = mHeight * 1.2f;
+    if (mOptions.doorBars) {
+        // Within the exit's half, so that it does not meet a door drawn from the other end
+        const QVector3D middle = from + along * qMin(scmDoorBarInset, length * 0.7f);
+        const QVector3D across = side * (mWidth * scmDoorBarLength / 2.0f);
+        bar(middle - across, middle + across, mWidth * scmDoorBarWidth, height, ExitAppearance::doorColor(status), level);
+        return;
+    }
     if (mOptions.doorSwings) {
         doorSwing(status, from, along, side, length, height, level);
         return;
@@ -425,6 +441,22 @@ void Builder::customLine(const TRoom& room, const QString& key, const QList<QPoi
     }
 }
 
+QColor Builder::lineColor(const TRoom& room, const TRoom* pOther)
+{
+    if (!mOptions.environmentLines) {
+        return mOptions.exitColor;
+    }
+    if (pOther && pOther->environment != room.environment) {
+        return mOptions.mixedLineColor.isValid() ? mOptions.mixedLineColor : mOptions.exitColor;
+    }
+    if (const auto found = mEnvironmentLineColors.constFind(room.environment); found != mEnvironmentLineColors.cend()) {
+        return *found;
+    }
+    const QColor color = ExitAppearance::standOutColor(RoomAppearance::environmentColor(mMap, mHost, room.environment), mOptions.background);
+    mEnvironmentLineColors.insert(room.environment, color);
+    return color;
+}
+
 void Builder::addRoom(const int roomId, const TRoom& room)
 {
     const auto rz = static_cast<float>(room.z());
@@ -448,8 +480,9 @@ void Builder::addRoom(const int roomId, const TRoom& room)
                 glyph(end, step(direction).normalized(), QChar(), exitColor, level);
                 continue;
             }
-            bar(center, end, mWidth, mHeight, exitColor, level);
-            disc(QVector3D(end.x(), end.y(), top(rz)), 0.1f, exitColor, level);
+            const QColor stubColor = lineColor(room, nullptr);
+            bar(center, end, mWidth, mHeight, stubColor, level);
+            disc(QVector3D(end.x(), end.y(), top(rz)), 0.1f, stubColor, level);
         }
     }
 
@@ -462,14 +495,11 @@ void Builder::addRoom(const int roomId, const TRoom& room)
     };
     QList<Exit> exits;
     for (const int direction : scmDirections) {
+        const TRoom* pDestination = RoomAppearance::drawnExit(mMap, room, direction);
+        if (!pDestination || (mOptions.areaExitsOnly && pDestination->getArea() == mOptions.areaId)) {
+            continue;
+        }
         const int destinationId = room.getExit(direction);
-        if (destinationId <= 0 || room.customLines.contains(TRoom::dirCodeToShortString(direction))) {
-            continue;
-        }
-        const TRoom* pDestination = mMap.mpRoomDB->getRoom(destinationId);
-        if (!pDestination || pDestination->isHidden() || (mOptions.areaExitsOnly && pDestination->getArea() == mOptions.areaId)) {
-            continue;
-        }
         const bool oneWay = pDestination->getExit(TMap::scmReverseDirections.value(direction)) != roomId;
         exits.append({direction, pDestination, destinationId, oneWay});
     }
@@ -511,7 +541,7 @@ void Builder::addRoom(const int roomId, const TRoom& room)
         }
 
         if (inOrOut && mOptions.inOutStubs) {
-            bar(center, center + (destination - center) / 4.0f, mWidth, mHeight, exitColor, level);
+            bar(center, center + (destination - center) / 4.0f, mWidth, mHeight, lineColor(room, exit.pDestination), level);
             continue;
         }
 
@@ -522,11 +552,11 @@ void Builder::addRoom(const int roomId, const TRoom& room)
         if (upOrDown && (exit.pDestination->x() != room.x() || exit.pDestination->y() != room.y())) {
             const QVector3D shaftEnd = center + QVector3D(0.0f, 0.0f, std::copysign(scmShaftLength, rise));
             if (!exit.oneWay) {
-                bar(center, shaftEnd, mWidth, mHeight, exitColor, level);
+                bar(center, shaftEnd, mWidth, mHeight, lineColor(room, exit.pDestination), level);
                 continue;
             }
             const QVector3D tipStart = shaftEnd + (center - shaftEnd) * scmShaftTip;
-            bar(center, tipStart, mWidth, mHeight, exitColor, level);
+            bar(center, tipStart, mWidth, mHeight, lineColor(room, exit.pDestination), level);
             bar(tipStart, shaftEnd, mWidth, mHeight, ExitAppearance::oneWayArrowColor(), level);
             continue;
         }
@@ -551,14 +581,14 @@ void Builder::addRoom(const int roomId, const TRoom& room)
                 continue;
             }
             if (!mOptions.glyphs || rise != 0.0f || !glyphRun(center, destination, exitColor, lineLevel)) {
-                bar(center, destination, mWidth, mHeight, exitColor, lineLevel);
+                bar(center, destination, mWidth, mHeight, lineColor(room, exit.pDestination), lineLevel);
             }
             continue;
         }
 
         if (!mOptions.glyphs || rise != 0.0f || !glyphRun(center, destination, exitColor, lineLevel)) {
             qreal phase = 0.0;
-            dashedBar(center, destination, ExitAppearance::visibleDashes(Qt::DotLine), phase, exitColor, lineLevel);
+            dashedBar(center, destination, ExitAppearance::visibleDashes(Qt::DotLine), phase, lineColor(room, exit.pDestination), lineLevel);
         }
         const QVector3D line = destination - center;
         if (line.lengthSquared() > 1e-10f) {

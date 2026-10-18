@@ -23,6 +23,7 @@
 #include "Host.h"
 #include "TMap.h"
 #include "TRoom.h"
+#include "TRoomDB.h"
 #include "utils.h"
 
 #include <QFontMetrics>
@@ -131,6 +132,61 @@ QChar terminalLineGlyph(const qreal degrees)
         return QLatin1Char('|');
     }
     return QLatin1Char('\\');
+}
+
+int exitCount(const TRoom& room)
+{
+    int count = 0;
+    for (int direction = DIR_NORTH; direction <= DIR_OUT; ++direction) {
+        if (room.getExit(direction) > 0) {
+            ++count;
+        }
+    }
+    for (const int destination : room.getSpecialExits()) {
+        if (destination > 0) {
+            ++count;
+        }
+    }
+    return count;
+}
+
+const TRoom* drawnExit(const TMap& map, const TRoom& room, const int direction)
+{
+    const int destination = room.getExit(direction);
+    if (destination <= 0 || room.customLines.contains(TRoom::dirCodeToShortString(direction))) {
+        return nullptr;
+    }
+    const TRoom* pDestination = map.mpRoomDB->getRoom(destination);
+    return pDestination && !pDestination->isHidden() ? pDestination : nullptr;
+}
+
+bool onEnvironmentLine(const TMap& map, const TRoom& room)
+{
+    if (room.isHidden()) {
+        return false;
+    }
+    const auto sameLine = [&room](const TRoom* pOther) {
+        return pOther && pOther->environment == room.environment && pOther->z() == room.z() && pOther->getArea() == room.getArea();
+    };
+    for (int direction = DIR_NORTH; direction <= DIR_SOUTHWEST; ++direction) {
+        if (sameLine(drawnExit(map, room, direction))) {
+            return true;
+        }
+    }
+    // A one-way exit into the room draws a line to it as well
+    const QMultiHash<int, int>& entrances = map.mpRoomDB->getEntranceHash();
+    for (auto it = entrances.constFind(room.getId()); it != entrances.cend() && it.key() == room.getId(); ++it) {
+        const TRoom* pFrom = map.mpRoomDB->getRoom(it.value());
+        if (!pFrom || pFrom->isHidden() || !sameLine(pFrom)) {
+            continue;
+        }
+        for (int direction = DIR_NORTH; direction <= DIR_SOUTHWEST; ++direction) {
+            if (const TRoom* pTo = drawnExit(map, *pFrom, direction); pTo && pTo->getId() == room.getId()) {
+                return true;
+            }
+        }
+    }
+    return false;
 }
 
 namespace {

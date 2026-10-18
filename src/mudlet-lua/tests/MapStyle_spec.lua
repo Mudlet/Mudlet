@@ -55,11 +55,22 @@ describe("Tests the modern 3D mapper's style through setConfig and getConfig", f
     end
   end)
 
+  it("switches to the transit style and back from each of the others", function()
+    for _, from in ipairs({"tiles", "blueprint", "terminal"}) do
+      assert.is_true(setConfig("mapStyle", from))
+      assert.is_true(setConfig("mapStyle", "transit"))
+      assert.equals("transit", getConfig("mapStyle"))
+      assert.equals("transit", getConfig()["mapStyle"])
+      assert.is_true(setConfig("mapStyle", from))
+      assert.equals(from, getConfig("mapStyle"))
+    end
+  end)
+
   it("refuses a style that does not exist, naming the ones that do, and keeps the one in use", function()
     assert.is_true(setConfig("mapStyle", "blueprint"))
     local ok, err = setConfig("mapStyle", "no such style")
     assert.is_nil(ok)
-    assert.equals('mapStyle must be "tiles", "blueprint" or "terminal", got "no such style"', err)
+    assert.equals('mapStyle must be "tiles", "blueprint", "terminal" or "transit", got "no such style"', err)
     assert.equals("blueprint", getConfig("mapStyle"))
   end)
 
@@ -69,6 +80,7 @@ describe("Tests the modern 3D mapper's style through setConfig and getConfig", f
     assert.is_nil(setConfig("mapStyle", "Blueprint"))
     assert.is_nil(setConfig("mapStyle", "Terminal"))
     assert.is_nil(setConfig("mapStyle", "TERMINAL"))
+    assert.is_nil(setConfig("mapStyle", "Transit"))
     assert.equals("tiles", getConfig("mapStyle"))
   end)
 
@@ -87,32 +99,34 @@ describe("Tests the modern 3D mapper's style through setConfig and getConfig", f
   -- Only saveProfile() without a file name writes the profile's own settings. The write runs on a pool
   -- thread, so the file turns up after saveProfile() has answered, and only test mode can pump the
   -- event loop to wait for it
-  it("saves the style with the profile", function()
-    if not testMode then
-      return
-    end
-    assert.is_true(setConfig("mapStyle", "terminal"))
-    local folder = getMudletHomeDir() .. "/mapstyle-spec"
-    lfs.mkdir(folder)
-    local saved, path
-    for _ = 1, 100 do
-      saved, path = saveProfile(folder)
-      if saved or not tostring(path):find("a save is already in progress", 1, true) then
-        break
+  for _, style in ipairs({"terminal", "transit"}) do
+    it("saves the " .. style .. " style with the profile", function()
+      if not testMode then
+        return
       end
-      pumpEvents(50)
-    end
-    assert.is_true(saved, path)
-    local contents
-    for _ = 1, 200 do
-      contents = readFile(path)
-      if contents and contents:find("</MudletPackage>", 1, true) then
-        break
+      assert.is_true(setConfig("mapStyle", style))
+      local folder = getMudletHomeDir() .. "/mapstyle-spec"
+      lfs.mkdir(folder)
+      local saved, path
+      for _ = 1, 100 do
+        saved, path = saveProfile(folder)
+        if saved or not tostring(path):find("a save is already in progress", 1, true) then
+          break
+        end
+        pumpEvents(50)
       end
-      pumpEvents(50)
-    end
-    os.remove(path)
-    lfs.rmdir(folder)
-    assert.is_truthy(contents and contents:find('mapStyle="terminal"', 1, true), "the saved profile does not name the terminal style")
-  end)
+      assert.is_true(saved, path)
+      local contents
+      for _ = 1, 200 do
+        contents = readFile(path)
+        if contents and contents:find("</MudletPackage>", 1, true) then
+          break
+        end
+        pumpEvents(50)
+      end
+      os.remove(path)
+      lfs.rmdir(folder)
+      assert.is_truthy(contents and contents:find('mapStyle="' .. style .. '"', 1, true), "the saved profile does not name the " .. style .. " style")
+    end)
+  end
 end)

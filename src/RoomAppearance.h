@@ -79,6 +79,15 @@ bool fontShows(const QFont& font, const QString& text);
 // The line character - | / or \ that reads as a line running at degrees, counterclockwise from rightward
 QChar terminalLineGlyph(qreal degrees);
 
+// The room's exits in every direction and its special exits, wherever they lead; stubs are not exits
+int exitCount(const TRoom& room);
+// The room an exit draws its line to on the 3D map, else none: an exit drawn as a custom line has that instead,
+// and no line leads to a hidden room
+const TRoom* drawnExit(const TMap& map, const TRoom& room, int direction);
+// Whether a line drawn on the room's own level leads to a room of the same environment, which draws the line between
+// them in its color where the style colors lines by environment
+bool onEnvironmentLine(const TMap& map, const TRoom& room);
+
 // roomSymbolColor is the room's own, which is invalid unless one was set
 QColor symbolColor(const QColor& roomSymbolColor, const QColor& roomColor);
 
