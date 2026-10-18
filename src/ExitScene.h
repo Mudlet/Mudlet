@@ -67,6 +67,7 @@ struct Options
     QColor exitColor;
     // The map's background, against which area exits are outlined
     QColor background;
+    bool operator==(const Options&) const = default;
 };
 
 // A straight bar, width across and height tall, centered on the line from -> to;

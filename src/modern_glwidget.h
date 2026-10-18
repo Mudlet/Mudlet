@@ -51,6 +51,8 @@
 #include <QEasingCurve>
 
 #include "BloomPass.h"
+#include "DioramaLayout.h"
+#include "ExitScene.h"
 #include "GeometryManager.h"
 #include "LabelTextureCache.h"
 #include "RenderCommandQueue.h"
@@ -75,13 +77,6 @@ class TMapLabel;
 class TRoom;
 struct MapInfoProperties;
 struct MapStyle;
-namespace DioramaLayout {
-struct Piece;
-}
-namespace ExitScene {
-struct Glyph;
-struct Options;
-}
 
 class ModernGLWidget : public QOpenGLWidget, protected QOpenGLFunctions
 {
@@ -243,8 +238,15 @@ private:
     // Label texture cache
     LabelTextureCache mLabelTextureCache;
     BloomPass mBloom;
-    // Room textures this frame has used so far, which making room for another must keep
+    // Room textures this frame has used so far and the last frame used, which making room for another must keep
     QSet<QString> mRoomTexturesInUse;
+    QSet<QString> mRoomTexturesKept;
+    // Past this many, room textures neither this frame nor the last used are dropped to make room for another, and
+    // past this frame's own the rest are not drawn. It must hold the names, IDs and symbols a dense area seen from
+    // above shows at once, or a turn of the view would drop textures it asks for again a moment later
+    static constexpr qsizetype scmMaxRoomTextures = 1024;
+    // Lowered by tests
+    qsizetype mMaxRoomTextures = scmMaxRoomTextures;
     // The text in each cell of the terminal style's glyph atlas, in order, and how many of them and in which font
     // its texture was last drawn with
     QStringList mGlyphAtlasCells;
@@ -257,6 +259,7 @@ private:
     // A room's ink outline, by everything it is made from
     struct InkOutline
     {
+        int roomId = 0;
         float x = 0.0f;
         float y = 0.0f;
         float top = 0.0f;
@@ -274,8 +277,9 @@ private:
         bool round = false;
         QVector<float> vertices;
         QVector<float> colors;
-        // Where each outline's vertices end
+        // Where each outline's vertices end, and which outline is each room's
         QVector<int> ends;
+        QHash<int, int> indexOfRoom;
     };
     QHash<int, InkOutlineLevel> mInkOutlines;
     // A map label's image with a halo around it, by its area and ID, and what it was made from
@@ -423,6 +427,59 @@ private:
     QSet<int> mRoomIdsDrawn;
     // The terminal style's exit characters, made by renderConnections() for renderRooms() to draw with their levels' rooms
     QList<ExitScene::Glyph> mExitGlyphs;
+    // The exits as last built and what they were built from. Building them walks every room and exit of the area,
+    // which costs more than drawing them, and only a change to the map or to these options changes them
+    struct ExitSceneCache
+    {
+        bool valid = false;
+        quint64 mapRevision = 0;
+        ExitScene::Options options;
+        ExitScene::Scene scene;
+    };
+    ExitSceneCache mExitSceneCache;
+    // How many times the exits have been built: what is made from them is made again whenever this changes
+    int mExitSceneBuilds = 0;
+    // The bars, strokes and triangles renderConnections() makes from the exits, kept until the exits or anything else
+    // they are made from changes, as none of it depends on the camera
+    struct ExitGeometry
+    {
+        struct Inputs
+        {
+            int sceneBuilds = 0;
+            QString styleId;
+            bool moreTransparent = false;
+            bool upperLowerLevels = false;
+            QColor upperLevelColor;
+            QColor lowerLevelColor;
+            int levelsAbove = 0;
+            int levelsBelow = 0;
+            bool operator==(const Inputs&) const = default;
+        };
+        bool valid = false;
+        Inputs inputs;
+        QVector<CubeInstanceData> bars;
+        QVector<CubeInstanceData> strokes;
+        QVector<float> vertices;
+        QVector<float> colors;
+        QMap<int, LevelExits> seeThrough;
+    };
+    ExitGeometry mExitGeometry;
+    int mExitGeometryBuilds = 0;
+    // What the diorama's pieces were last laid out from, as above; the pieces too change only with the map, the
+    // levels shown and the style, and both passes of a frame and picking a room ask for them
+    struct DioramaPiecesCache
+    {
+        bool valid = false;
+        quint64 mapRevision = 0;
+        int areaId = 0;
+        int centerZ = 0;
+        int levelsAbove = 0;
+        int levelsBelow = 0;
+        QString styleId;
+        QHash<int, DioramaLayout::Piece> pieces;
+    };
+    DioramaPiecesCache mDioramaPiecesCache;
+    int mDioramaLayouts = 0;
 
     // Private methods for modern OpenGL
     void updateMatrices();
@@ -510,8 +567,11 @@ private:
     void applyTiltShift();
     // Worked out afresh, as the view can move under a pointer that stays still
     int roomUnderPointer();
-    // What the diorama style builds each of the area's shown rooms as
-    QHash<int, DioramaLayout::Piece> dioramaPieces(const TArea& area) const;
+    // What the diorama style builds each of the area's shown rooms as, laid out again only when that would differ
+    const QHash<int, DioramaLayout::Piece>& dioramaPieces(const TArea& area);
+    // The exits of the area shown, built again only when the map or the options they are built from change
+    const ExitScene::Scene& exitScene(const ExitScene::Options& options);
+    void buildExitGeometry(const ExitScene::Scene& scene, const ExitScene::Options& options, bool moreTransparent);
     void endPan();
     void renderCube(float x, float y, float z, float size, float r, float g, float b, float a);
     void renderText(const QString& text, float x, float y);

@@ -672,6 +672,7 @@ int TLuaInterpreter::auditAreas(lua_State* L)
 {
     const Host& host = getHostFromLua(L);
     host.mpMap->audit();
+    host.mpMap->updateArea(-1);
     return 0;
 }
 
@@ -762,7 +763,7 @@ int TLuaInterpreter::centerview(lua_State* L)
 
     host.mpMap->mRoomIdHash[host.getName()] = roomId;
     host.mpMap->mNewMove = true;
-    host.mpMap->updateArea(pR->getArea());
+    host.mpMap->repaintArea(pR->getArea());
     host.mpMap->requestPlayerAreaShown();
     lua_pushboolean(L, true);
     return 1;
@@ -869,7 +870,11 @@ int TLuaInterpreter::clearMapUserDataItem(lua_State* L)
     if (key.isEmpty()) {
         return warnArgumentValue(L, __func__, "key can not be an empty string");
     }
-    lua_pushboolean(L, (host.mpMap->mUserData.remove(key) > 0));
+    const bool removed = host.mpMap->mUserData.remove(key) > 0;
+    if (removed) {
+        host.mpMap->setUnsaved(__func__);
+    }
+    lua_pushboolean(L, removed);
     return 1;
 }
 
@@ -2714,7 +2719,7 @@ int TLuaInterpreter::gotoRoom(lua_State* L)
     host.startSpeedWalk();
     lua_pushboolean(L, true);
     if (auto* pR = host.mpMap->mpRoomDB->getRoom(targetRoomId)) {
-        host.mpMap->updateArea(pR->getArea());
+        host.mpMap->repaintArea(pR->getArea());
     }
     return 1;
 }
@@ -4724,7 +4729,7 @@ int TLuaInterpreter::updateMap(lua_State* L)
 {
     const Host& host = getHostFromLua(L);
     if (host.mpMap) {
-        host.mpMap->updateArea(-1);
+        host.mpMap->repaintArea(-1);
     }
     return 0;
 }

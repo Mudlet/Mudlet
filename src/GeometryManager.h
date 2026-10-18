@@ -178,6 +178,8 @@ public:
                                  const QRectF& textureRect = QRectF(0.0, 0.0, 1.0, 1.0));
     // The unit vectors on the map's plane that appendGroundQuad() turns a texture's right and top toward
     static std::pair<QVector3D, QVector3D> groundAxes(const QVector3D& cameraRight, const QVector3D& cameraUp);
+    // A block at a time rather than a float at a time, as a frame appends tens of thousands of quads
+    static void appendFloats(QVector<float>& to, const float* from, qsizetype count);
     // Appends a textured parallelogram: the texture's bottom-left at origin, its bottom edge along across
     // and its left edge along upward; textureRect as for appendGroundQuad()
     static void

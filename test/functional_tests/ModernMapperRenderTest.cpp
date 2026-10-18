@@ -31,6 +31,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdio>
 #include <memory>
 #include <numbers>
 
@@ -77,6 +78,7 @@ private:
     static constexpr int kPlayerRoomId = 1;
     static constexpr int kEastRoomId = 2;
     static constexpr int kLowerRoomId = 3;
+    static constexpr int kKeptOutputEnvironment = 300;
     // As renderRooms sizes it: 2 / scale (4) / zFlattening (8)
     static constexpr float kRoomHeight = 2.0f / 4.0f / 8.0f;
     // As renderRooms sizes a style's rooms, the default style's unless named
@@ -360,6 +362,92 @@ private:
             }
         }
         return found;
+    }
+
+    // What a view keeps from one frame to the next, written out so that two views can be compared
+    static QStringList keptSnapshot(const ModernGLWidget& widget)
+    {
+        QStringList lines;
+        const auto cubes = [&lines](const QString& what, const QVector<CubeInstanceData>& instances) {
+            for (const CubeInstanceData& cube : instances) {
+                QString line = what;
+                for (int i = 0; i < 16; ++i) {
+                    line += qsl(" %1").arg(cube.transform.constData()[i]);
+                }
+                for (int i = 0; i < 4; ++i) {
+                    line += qsl(" %1").arg(cube.color[i]);
+                }
+                lines.append(line);
+            }
+        };
+        const auto floats = [&lines](const QString& what, const QVector<float>& values) {
+            QString line = what;
+            for (const float value : values) {
+                line += qsl(" %1").arg(value);
+            }
+            lines.append(line);
+        };
+        const ExitScene::Scene& scene = widget.mExitSceneCache.scene;
+        // With no exits nothing is made from them, whatever is left over from before
+        if (!scene.segments.isEmpty() || !scene.triangles.isEmpty()) {
+            cubes(qsl("bar"), widget.mExitGeometry.bars);
+            cubes(qsl("stroke"), widget.mExitGeometry.strokes);
+            floats(qsl("vertices"), widget.mExitGeometry.vertices);
+            floats(qsl("colors"), widget.mExitGeometry.colors);
+            for (auto level = widget.mExitGeometry.seeThrough.cbegin(); level != widget.mExitGeometry.seeThrough.cend(); ++level) {
+                cubes(qsl("see-through %1 bar").arg(level.key()), level->bars);
+                cubes(qsl("see-through %1 stroke").arg(level.key()), level->strokes);
+                floats(qsl("see-through %1 vertices").arg(level.key()), level->vertices);
+                floats(qsl("see-through %1 colors").arg(level.key()), level->colors);
+            }
+        }
+        for (const ExitScene::Glyph& glyph : widget.mExitGlyphs) {
+            lines.append(qsl("glyph %1 %2 %3 %4 %5 %6 %7 %8")
+                                 .arg(glyph.at.x())
+                                 .arg(glyph.at.y())
+                                 .arg(glyph.at.z())
+                                 .arg(glyph.along.x())
+                                 .arg(glyph.along.y())
+                                 .arg(glyph.character.isNull() ? qsl("-") : QString(glyph.character))
+                                 .arg(glyph.color.name(QColor::HexArgb))
+                                 .arg(glyph.level));
+        }
+        if (widget.mapStyle().environmentKits) {
+            QList<int> roomIds = widget.mDioramaPiecesCache.pieces.keys();
+            std::sort(roomIds.begin(), roomIds.end());
+            for (const int roomId : std::as_const(roomIds)) {
+                const DioramaLayout::Piece& piece = widget.mDioramaPiecesCache.pieces.value(roomId);
+                lines.append(qsl("piece %1 %2 %3 %4 %5 %6 %7 %8")
+                                     .arg(roomId)
+                                     .arg(static_cast<int>(piece.kit))
+                                     .arg(piece.storey)
+                                     .arg(piece.storeys)
+                                     .arg(piece.bottom)
+                                     .arg(piece.top)
+                                     .arg(piece.peak)
+                                     .arg(piece.halfWidth));
+            }
+        }
+        return lines;
+    }
+
+    // The three rooms of addArea() joined by exits, the east one in an environment of its own with a custom line,
+    // and another area to move rooms to; that area's ID
+    int addKeptOutputArea(const int areaId) const
+    {
+        if (!(map()->setExit(kPlayerRoomId, kEastRoomId, DIR_EAST) && map()->setExit(kEastRoomId, kPlayerRoomId, DIR_WEST) && map()->setExit(kPlayerRoomId, kLowerRoomId, DIR_DOWN)
+              && map()->setExit(kLowerRoomId, kPlayerRoomId, DIR_UP) && map()->setExit(kEastRoomId, kPlayerRoomId, DIR_IN))) {
+            return 0;
+        }
+        TRoom* pEast = map()->mpRoomDB->getRoom(kEastRoomId);
+        pEast->environment = kKeptOutputEnvironment;
+        map()->mCustomEnvColors[kKeptOutputEnvironment] = QColor(200, 120, 40);
+        pEast->customLines[qsl("w")] = QList<QPointF>{QPointF(1.0, 1.0)};
+        pEast->customLinesColor[qsl("w")] = QColor(Qt::green);
+        pEast->customLinesStyle[qsl("w")] = Qt::SolidLine;
+        pEast->customLinesArrow[qsl("w")] = false;
+        Q_UNUSED(areaId)
+        return map()->mpRoomDB->addArea(qsl("Kept Output Other Area"));
     }
 
 private slots:
@@ -903,6 +991,13 @@ private slots:
         QVERIFY(pFirst);
         pFirst->mBorderColor = QColor(120, 255, 120);
         QVERIFY2(keptMatchesMade(), "after the first room's border color changed, the outlines differ from a fresh widget's");
+
+        // Each room's outline is found by its room, so rooms coming and going leave the others' in other places
+        constexpr int kWestRoomId = 6;
+        QVERIFY(addRoomAt(kWestRoomId, areaId, -2, 0, 0));
+        QVERIFY2(keptMatchesMade(), "after a room was added, the outlines differ from a fresh widget's");
+        QVERIFY(map()->mpRoomDB->removeRoom(kEastRoomId));
+        QVERIFY2(keptMatchesMade(), "after a room was removed, the outlines differ from a fresh widget's");
     }
 
     // Going to another style and back leaves tiles queueing just what it did before
@@ -956,6 +1051,696 @@ private slots:
         QVERIFY(before != inkwash);
         QVERIFY(before != diorama);
         QCOMPARE(after, before);
+    }
+
+    // The x of the middle of each exit bar queued: an instanced box far longer than it is thick
+    static QList<float> exitBarMiddles(const ModernGLWidget& widget)
+    {
+        QList<float> middles;
+        for (const auto& command : widget.mRenderCommandQueue.commands()) {
+            const auto* cubes = dynamic_cast<const RenderInstancedCubesCommand*>(command.get());
+            if (!cubes || cubes->shape() != GeometryManager::InstanceShape::Box) {
+                continue;
+            }
+            for (const CubeInstanceData& cube : cubes->instances()) {
+                QList<float> extents;
+                for (int axis = 0; axis < 3; ++axis) {
+                    extents.append(cube.transform.column(axis).toVector3D().length());
+                }
+                std::sort(extents.begin(), extents.end());
+                if (extents.at(1) < 0.1f && extents.at(2) > 0.3f) {
+                    middles.append(cube.transform.column(3).x());
+                }
+            }
+        }
+        std::sort(middles.begin(), middles.end());
+        return middles;
+    }
+
+    // Another frame from where the camera is now, turned a little, without queueFrame() resetting the camera
+    static void queueTurnedFrame(ModernGLWidget& widget)
+    {
+        widget.turnCamera(37.0f);
+        widget.updateMatrices();
+        widget.mRenderCommandQueue.clear();
+        widget.queueScene();
+    }
+
+    // The exits are built from the map once and drawn from that until the map, the area or level shown or the
+    // style changes; turning or zooming the camera draws the same exits again
+    void test_exitsAreBuiltAgainOnlyWhenTheMapOrTheirOptionsChangeWithoutGL()
+    {
+        const int areaId = addArea();
+        QVERIFY(areaId > 0);
+        QVERIFY(map()->setExit(kPlayerRoomId, kEastRoomId, DIR_EAST));
+        QVERIFY(map()->setExit(kEastRoomId, kPlayerRoomId, DIR_WEST));
+        const auto restore = qScopeGuard([this]() {
+            mpHost->setMapStyle(qsl("tiles"));
+        });
+        ModernGLWidget widget(map(), mpHost);
+        queueFrame(widget, areaId);
+        QCOMPARE(widget.mExitSceneBuilds, 1);
+        QCOMPARE(exitBarMiddles(widget), QList<float>{1.0f});
+
+        queueTurnedFrame(widget);
+        widget.setCameraDistance(3.0f);
+        queueTurnedFrame(widget);
+        QCOMPARE(widget.mExitSceneBuilds, 1);
+        QCOMPARE(exitBarMiddles(widget), QList<float>{1.0f});
+
+        // A room moved on the map takes its exit with it
+        const quint64 before = map()->revision();
+        QVERIFY(map()->setRoomCoordinates(kEastRoomId, 4, 0, 0));
+        QVERIFY(map()->revision() > before);
+        queueTurnedFrame(widget);
+        QCOMPARE(widget.mExitSceneBuilds, 2);
+        QCOMPARE(exitBarMiddles(widget), QList<float>{2.0f});
+
+        // A map a script changed and asked to see again, cleared or loaded, or the colors it is drawn in
+        quint64 revision = map()->revision();
+        map()->requestMapRepaint();
+        QVERIFY(map()->revision() > revision);
+        revision = map()->revision();
+        map()->refreshMapperColours();
+        QVERIFY(map()->revision() > revision);
+        revision = map()->revision();
+        map()->announceMapLoaded(false);
+        QVERIFY(map()->revision() > revision);
+        queueTurnedFrame(widget);
+        QCOMPARE(widget.mExitSceneBuilds, 3);
+
+        QVERIFY(mpHost->setMapStyle(qsl("blueprint")));
+        queueTurnedFrame(widget);
+        QCOMPARE(widget.mExitSceneBuilds, 4);
+        queueTurnedFrame(widget);
+        QCOMPARE(widget.mExitSceneBuilds, 4);
+
+        widget.slot_showLessUpperLevels();
+        queueTurnedFrame(widget);
+        QCOMPARE(widget.mExitSceneBuilds, 5);
+
+        // The level below, viewed, comes with its own exits
+        QVERIFY(map()->setExit(kLowerRoomId, kEastRoomId, DIR_UP));
+        queueTurnedFrame(widget);
+        QCOMPARE(widget.mExitSceneBuilds, 6);
+        widget.jumpTo(areaId, 0, 0, -1);
+        queueTurnedFrame(widget);
+        QCOMPARE(widget.mExitSceneBuilds, 7);
+        QVERIFY(widget.mExitSceneCache.scene.segments.size() > 1);
+    }
+
+    // Past the cap on room textures, one the last frame used is kept where there is anything else to drop, so a view
+    // turning back and forth does not make the same textures again and again
+    void test_texturesUsedLastFrameAreKeptPastTheCapWithoutGL()
+    {
+        ModernGLWidget widget(map(), mpHost);
+        widget.mLabelTextureCache.useTextureStandIn(
+                [lastTexture = GLuint{0}](const QImage&) mutable {
+                    return ++lastTexture;
+                },
+                [](GLuint) {});
+        widget.mMaxRoomTextures = 12;
+        const auto make = [&widget](const QString& key) {
+            return widget.imageTexture(key, [] {
+                return QImage(4, 4, QImage::Format_ARGB32);
+            });
+        };
+        QStringList lastFrames;
+        for (int i = 0; i < 8; ++i) {
+            lastFrames.append(qsl("last|%1").arg(i));
+            QVERIFY(make(lastFrames.constLast()));
+        }
+        for (int i = 0; i < 4; ++i) {
+            QVERIFY(make(qsl("unused|%1").arg(i)));
+        }
+        // A new frame, after one that used only the first eight
+        widget.mRoomTexturesKept = QSet<QString>(lastFrames.cbegin(), lastFrames.cend());
+        widget.mRoomTexturesInUse.clear();
+        for (int i = 0; i < 4; ++i) {
+            QVERIFY(make(qsl("new|%1").arg(i)));
+        }
+        for (const QString& key : std::as_const(lastFrames)) {
+            QVERIFY2(widget.mLabelTextureCache.imageTexture(key), qPrintable(qsl("%1, which the last frame used, was dropped").arg(key)));
+        }
+    }
+
+    // Where the last frame's and this one's together pass the cap, the last frame's go, so this frame still shows as
+    // many as fit rather than leaving out what it needs
+    void test_aFrameStillFillsTheCapAfterOneThatUsedOthersWithoutGL()
+    {
+        map()->mapClear();
+        const int areaId = map()->mpRoomDB->addArea(qsl("Named Area"));
+        for (int i = 0; i < 30; ++i) {
+            const int roomId = 100 + i;
+            QVERIFY(addRoomAt(roomId, areaId, (i % 6) * 2, (i / 6) * 2, 0));
+            map()->mpRoomDB->getRoom(roomId)->name = qsl("Room %1").arg(i);
+        }
+        map()->mRoomIdHash[map()->mProfileName] = 100;
+        map()->setRoomNamesShown(true);
+        const auto restore = qScopeGuard([this]() {
+            map()->setRoomNamesShown(false);
+        });
+        ModernGLWidget widget(map(), mpHost);
+        widget.mMaxRoomTextures = 12;
+        queueFrame(widget, areaId);
+        QCOMPARE(widget.mRoomTexturesInUse.size(), widget.mMaxRoomTextures);
+        for (int i = 0; i < 30; ++i) {
+            map()->mpRoomDB->getRoom(100 + i)->name = qsl("Other %1").arg(i);
+        }
+        queueTurnedFrame(widget);
+        QCOMPARE(widget.mRoomTexturesInUse.size(), widget.mMaxRoomTextures);
+    }
+
+    // The redness of the exit bar between the two rooms of the level below, which fades toward the lower level color
+    static float lowerExitRedness(const ModernGLWidget& widget)
+    {
+        float redness = std::numeric_limits<float>::lowest();
+        const auto check = [&redness](const QVector<CubeInstanceData>& bars) {
+            for (const CubeInstanceData& bar : bars) {
+                const QVector4D middle = bar.transform.column(3);
+                if (qAbs(middle.y() - 2.0f) < 0.01f && qAbs(middle.x() - 1.0f) < 0.01f && middle.z() < -0.5f) {
+                    redness = qMax(redness, bar.color[0] - bar.color[1]);
+                }
+            }
+        };
+        check(widget.mExitGeometry.bars);
+        for (const ModernGLWidget::LevelExits& exits : widget.mExitGeometry.seeThrough) {
+            check(exits.bars);
+        }
+        return redness;
+    }
+
+    // What the exits are drawn as is made once and kept while the camera moves, and made again when anything it is
+    // made from changes: the map, the level colors and whether they are drawn, the style or the levels shown
+    void test_exitGeometryIsMadeAgainOnlyWhenWhatItIsMadeFromChangesWithoutGL()
+    {
+        const int areaId = addArea();
+        QVERIFY(areaId > 0);
+        constexpr int lowerEastRoomId = 4;
+        QVERIFY(addRoomAt(lowerEastRoomId, areaId, 2, 2, -1));
+        QVERIFY(map()->setExit(kLowerRoomId, lowerEastRoomId, DIR_EAST));
+        QVERIFY(map()->setExit(lowerEastRoomId, kLowerRoomId, DIR_WEST));
+        const QColor savedLower = mpHost->mLowerLevelColor;
+        const bool savedShown = mudlet::self()->drawUpperLowerLevels();
+        const auto restore = qScopeGuard([this, savedLower, savedShown]() {
+            mpHost->mLowerLevelColor = savedLower;
+            mudlet::self()->setDrawUpperLowerLevels(savedShown);
+            mpHost->setMapStyle(qsl("tiles"));
+        });
+        mudlet::self()->setDrawUpperLowerLevels(true);
+        mpHost->mLowerLevelColor = QColor(0, 0, 255, 128);
+        ModernGLWidget widget(map(), mpHost);
+        queueFrame(widget, areaId);
+        QCOMPARE(widget.mExitGeometryBuilds, 1);
+        const float blue = lowerExitRedness(widget);
+        QVERIFY2(blue > std::numeric_limits<float>::lowest(), "no exit was drawn on the level below");
+        queueTurnedFrame(widget);
+        widget.setCameraDistance(3.0f);
+        queueTurnedFrame(widget);
+        QCOMPARE(widget.mExitGeometryBuilds, 1);
+
+        mpHost->mLowerLevelColor = QColor(255, 0, 0, 128);
+        queueTurnedFrame(widget);
+        QCOMPARE(widget.mExitGeometryBuilds, 2);
+        QVERIFY2(lowerExitRedness(widget) > blue + 0.1f, qPrintable(qsl("the exit below is %1 red after the lower level turned red, %2 before").arg(lowerExitRedness(widget)).arg(blue)));
+
+        mudlet::self()->setDrawUpperLowerLevels(false);
+        queueTurnedFrame(widget);
+        QCOMPARE(widget.mExitGeometryBuilds, 3);
+
+        QVERIFY(mpHost->setMapStyle(qsl("inkwash")));
+        queueTurnedFrame(widget);
+        QCOMPARE(widget.mExitGeometryBuilds, 4);
+
+        widget.slot_showLessLowerLevels();
+        queueTurnedFrame(widget);
+        QCOMPARE(widget.mExitGeometryBuilds, 5);
+
+        // The mapper's colors set in the preferences, which only ask for the map to be drawn again
+        const quint64 revision = map()->revision();
+        map()->updateArea(-1);
+        QVERIFY(map()->revision() > revision);
+        queueTurnedFrame(widget);
+        QCOMPARE(widget.mExitGeometryBuilds, 6);
+        const quint64 restored = map()->revision();
+        map()->restore16ColorSet();
+        QVERIFY(map()->revision() > restored);
+        queueTurnedFrame(widget);
+        QCOMPARE(widget.mExitGeometryBuilds, 7);
+    }
+
+    // The hologram's exits glow, so all of them are drawn with their level's see-through rooms: from what was kept, on
+    // a frame that makes nothing again, as on the one that made it
+    void test_keptExitsAreStillDrawnSeeThroughWithoutGL()
+    {
+        const int areaId = addArea();
+        QVERIFY(areaId > 0);
+        QVERIFY(map()->setExit(kPlayerRoomId, kEastRoomId, DIR_EAST));
+        QVERIFY(map()->setExit(kEastRoomId, kPlayerRoomId, DIR_WEST));
+        const auto restore = qScopeGuard([this]() {
+            mpHost->setMapStyle(qsl("tiles"));
+        });
+        QVERIFY(mpHost->setMapStyle(qsl("hologram")));
+        ModernGLWidget widget(map(), mpHost);
+        queueFrame(widget, areaId);
+        QCOMPARE(widget.mExitGeometryBuilds, 1);
+        QVERIFY(widget.mExitGeometry.bars.isEmpty());
+        QCOMPARE(exitBarMiddles(widget), QList<float>{1.0f});
+        queueTurnedFrame(widget);
+        QCOMPARE(widget.mExitGeometryBuilds, 1);
+        QCOMPARE(exitBarMiddles(widget), QList<float>{1.0f});
+    }
+
+    // Rooms well outside the view are left out of the frame, but a room just past its edge is drawn whole, and the
+    // level's floor plate still reaches under every room
+    void test_roomsWellOutsideTheViewAreLeftOutWithoutGL()
+    {
+        const int areaId = addArea();
+        QVERIFY(areaId > 0);
+        constexpr int farRoomId = 9;
+        QVERIFY(addRoomAt(farRoomId, areaId, 200, 0, 0));
+        ModernGLWidget widget(map(), mpHost);
+        const auto roomQueuedAt = [&widget](const QPointF& place) {
+            for (const auto& command : widget.mRenderCommandQueue.commands()) {
+                if (const auto* cubes = dynamic_cast<const RenderInstancedCubesCommand*>(command.get()); cubes && !roomInstances(*cubes, place).isEmpty()) {
+                    return true;
+                }
+            }
+            return false;
+        };
+        const auto plateReach = [&widget]() {
+            float reach = std::numeric_limits<float>::lowest();
+            for (const auto& command : widget.mRenderCommandQueue.commands()) {
+                if (const auto* triangles = dynamic_cast<const RenderTrianglesCommand*>(command.get()); triangles && triangles->vertices().size() == 18) {
+                    for (qsizetype i = 0; i < 18; i += 3) {
+                        reach = qMax(reach, triangles->vertices().at(i));
+                    }
+                }
+            }
+            return reach;
+        };
+        queueFrame(widget, areaId);
+        QVERIFY(roomQueuedAt(QPointF(2.0, 0.0)));
+        QVERIFY2(!roomQueuedAt(QPointF(200.0, 0.0)), "a room far outside the view was queued");
+        QVERIFY2(plateReach() > 200.0f, qPrintable(qsl("the floor plate reaches only to x %1, short of the room at 200").arg(plateReach())));
+
+        // East along the row, the first place whose middle shows just past the view's right edge
+        int justOutside = 0;
+        for (int x = 4; x < 200 && !justOutside; ++x) {
+            const std::optional<QPointF> pixel = widget.mCameraController.pixelForPoint(QVector3D(static_cast<float>(x), 0.0f, 0.0f));
+            if (pixel && pixel->x() > widget.width() + 10.0) {
+                justOutside = x;
+            }
+        }
+        QVERIFY(justOutside > 0);
+        constexpr int edgeRoomId = 10;
+        QVERIFY(addRoomAt(edgeRoomId, areaId, justOutside, 0, 0));
+        queueFrame(widget, areaId);
+        QVERIFY2(roomQueuedAt(QPointF(justOutside, 0.0)), "a room just past the view's edge was left out");
+    }
+
+    // A diorama's pieces are laid out again for another area, or another level of it
+    void test_dioramaPiecesFollowTheAreaAndLevelShownWithoutGL()
+    {
+        const int areaId = addArea();
+        QVERIFY(areaId > 0);
+        const int otherAreaId = map()->mpRoomDB->addArea(qsl("Other Area"));
+        constexpr int otherRoomId = 11;
+        QVERIFY(addRoomAt(otherRoomId, otherAreaId, 0, 0, 0));
+        const auto restore = qScopeGuard([this]() {
+            mpHost->setMapStyle(qsl("tiles"));
+        });
+        QVERIFY(mpHost->setMapStyle(qsl("diorama")));
+        ModernGLWidget widget(map(), mpHost);
+        queueFrame(widget, areaId);
+        QCOMPARE(widget.mDioramaLayouts, 1);
+        QVERIFY(!widget.mDioramaPiecesCache.pieces.contains(otherRoomId));
+        queueFrame(widget, otherAreaId);
+        QCOMPARE(widget.mDioramaLayouts, 2);
+        QVERIFY(widget.mDioramaPiecesCache.pieces.contains(otherRoomId));
+        queueFrame(widget, areaId, -1);
+        QCOMPARE(widget.mDioramaLayouts, 3);
+        QCOMPARE(widget.mDioramaPiecesCache.centerZ, -1);
+    }
+
+    // Only a change to the map counts its revision up, not the repaint every move of the player asks for, so what the
+    // view keeps is not made again on every move; a map read in, or user data a script clears, does
+    void test_theMapsRevisionCountsChangesNotMovesWithoutGL()
+    {
+        const int areaId = addArea();
+        QVERIFY(areaId > 0);
+        QVERIFY(map()->setExit(kPlayerRoomId, kEastRoomId, DIR_EAST));
+        ModernGLWidget widget(map(), mpHost);
+        queueFrame(widget, areaId);
+        QCOMPARE(widget.mExitSceneBuilds, 1);
+
+        quint64 revision = map()->revision();
+        map()->repaintArea(areaId);
+        QCOMPARE(map()->revision(), revision);
+        QVERIFY(mpHost->mLuaInterpreter.compileAndExecuteScript(qsl("centerview(%1) updateMap()").arg(kEastRoomId)));
+        QCOMPARE(map()->revision(), revision);
+        queueTurnedFrame(widget);
+        QCOMPARE(widget.mExitSceneBuilds, 1);
+
+        map()->mUserData.insert(qsl("perf.test.item"), qsl("1"));
+        revision = map()->revision();
+        QVERIFY(mpHost->mLuaInterpreter.compileAndExecuteScript(qsl("clearMapUserDataItem('perf.test.item')")));
+        QVERIFY2(map()->revision() > revision, "clearing a map user data item left the revision as it was");
+
+        QTemporaryDir directory;
+        QVERIFY(directory.isValid());
+        const QString file = directory.filePath(qsl("map.json"));
+        QVERIFY(map()->writeJsonMapFile(file).first);
+        revision = map()->revision();
+        QVERIFY(map()->readJsonMapFile(file).first);
+        QVERIFY2(map()->revision() > revision, "reading a map in left the revision as it was");
+    }
+
+    void test_keptOutputMatchesAFreshViewAfterAnEditWithoutGL_data()
+    {
+        QTest::addColumn<QString>("style");
+        QTest::addColumn<QString>("edit");
+        const QList<std::pair<QString, QString>> edits{{qsl("setDoor"), qsl("setDoor(1, 'e', 2)")},
+                                                       {qsl("lockExit"), qsl("lockExit(1, 'east', true)")},
+                                                       {qsl("addCustomLine"), qsl("addCustomLine(1, {{1, 1, 0}, {2, 1, 0}}, 'e', 'dash line', {255, 0, 0}, true)")},
+                                                       {qsl("removeCustomLine"), qsl("removeCustomLine(2, 'w')")},
+                                                       {qsl("setExitStub"), qsl("setExitStub(2, 'n', true)")},
+                                                       {qsl("addSpecialExit"), qsl("addSpecialExit(1, 3, 'jump')")},
+                                                       {qsl("setRoomEnv"), qsl("setRoomEnv(2, 5)")},
+                                                       {qsl("setCustomEnvColor"), qsl("setCustomEnvColor(300, 10, 200, 10, 255)")},
+                                                       {qsl("setRoomCoordinates"), qsl("setRoomCoordinates(2, 4, 2, 0)")},
+                                                       {qsl("deleteRoom"), qsl("deleteRoom(2)")},
+                                                       {qsl("setRoomArea"), qsl("setRoomArea(2, %1)")},
+                                                       {qsl("setMapEnvironmentKit"), qsl("setMapEnvironmentKit(300, 'water')")},
+                                                       {qsl("setMapBackgroundColor"), qsl("setMapBackgroundColor(20, 40, 60)")},
+                                                       {qsl("setMapRoomExitsColor"), qsl("setMapRoomExitsColor(200, 30, 30)")},
+                                                       {qsl("highlightRoom"), qsl("highlightRoom(2, 255, 0, 0, 0, 0, 255, 1, 255, 255)")},
+                                                       {qsl("auditAreas"), qsl("auditAreas()")},
+                                                       {qsl("in-out stubs"), qsl("setConfig('experiment.render-in-out-exits', true)")},
+                                                       {qsl("more transparent"), qsl("setConfig('experiment.rendering.more-transparent', true)")}};
+        for (const QString& style : {qsl("tiles"), qsl("inkwash"), qsl("diorama"), qsl("hologram"), qsl("terminal"), qsl("transit")}) {
+            for (const auto& [name, edit] : edits) {
+                QTest::newRow(qPrintable(qsl("%1 %2").arg(style, name))) << style << edit;
+            }
+        }
+    }
+
+    // Whatever a script changes, a view that kept what it made from the map draws the same as one made afresh
+    void test_keptOutputMatchesAFreshViewAfterAnEditWithoutGL()
+    {
+        QFETCH(QString, style);
+        QFETCH(QString, edit);
+        const int areaId = addArea();
+        QVERIFY(areaId > 0);
+        const int otherAreaId = addKeptOutputArea(areaId);
+        QVERIFY(otherAreaId > 0);
+        const QColor savedBackground = mpHost->mBgColor_2;
+        const QColor savedExits = mpHost->mFgColor_2;
+        const auto restore = qScopeGuard([this, savedBackground, savedExits]() {
+            mpHost->setMapStyle(qsl("tiles"));
+            mpHost->mBgColor_2 = savedBackground;
+            mpHost->mFgColor_2 = savedExits;
+            mpHost->setExperimentEnabled(qsl("experiment.render-in-out-exits"), false);
+            mpHost->setExperimentEnabled(qsl("experiment.rendering.more-transparent"), false);
+        });
+        QVERIFY(mpHost->setMapStyle(style));
+        ModernGLWidget kept(map(), mpHost);
+        queueFrame(kept, areaId);
+        QVERIFY(mpHost->mLuaInterpreter.compileAndExecuteScript(edit.arg(otherAreaId)));
+        queueTurnedFrame(kept);
+        ModernGLWidget fresh(map(), mpHost);
+        queueFrame(fresh, areaId);
+        QCOMPARE(keptSnapshot(kept), keptSnapshot(fresh));
+    }
+
+    // An audit may put rooms back in the area they name, bypassing the setters; what the view kept follows it
+    void test_keptOutputFollowsAnAuditWithoutGL()
+    {
+        const int areaId = addArea();
+        QVERIFY(areaId > 0);
+        QVERIFY(addKeptOutputArea(areaId) > 0);
+        TRoom* pEast = map()->mpRoomDB->getRoom(kEastRoomId);
+        pEast->setExitStub(DIR_NORTH, true);
+        // The area forgets the room, which still names it, so the room's stub is not drawn
+        map()->mpRoomDB->getArea(areaId)->rooms.remove(kEastRoomId);
+        ModernGLWidget kept(map(), mpHost);
+        queueFrame(kept, areaId);
+        const QStringList before = keptSnapshot(kept);
+        map()->audit();
+        queueTurnedFrame(kept);
+        ModernGLWidget fresh(map(), mpHost);
+        queueFrame(fresh, areaId);
+        QVERIFY(keptSnapshot(fresh) != before);
+        QCOMPARE(keptSnapshot(kept), keptSnapshot(fresh));
+    }
+
+    // Textures the last frame used survive making those of a frame that needs others, so going back to the last
+    // frame's makes none again
+    void test_goingBackToTheLastFramesNamesMakesNoTexturesWithoutGL()
+    {
+        map()->mapClear();
+        const int areaId = map()->mpRoomDB->addArea(qsl("Renamed Area"));
+        for (int i = 0; i < 6; ++i) {
+            QVERIFY(addRoomAt(100 + i, areaId, (i % 3) * 3, (i / 3) * 3, 0));
+        }
+        map()->mRoomIdHash[map()->mProfileName] = 100;
+        map()->setRoomNamesShown(true);
+        const auto restore = qScopeGuard([this]() {
+            map()->setRoomNamesShown(false);
+        });
+        const auto name = [this](const QString& set) {
+            for (int i = 0; i < 6; ++i) {
+                map()->mpRoomDB->getRoom(100 + i)->name = qsl("%1 %2").arg(set).arg(i);
+            }
+        };
+        ModernGLWidget widget(map(), mpHost);
+        widget.mMaxRoomTextures = 16;
+        name(qsl("Alpha"));
+        queueFrame(widget, areaId);
+        const qint64 afterAlpha = widget.mLabelTextureCache.imageTexturesMade();
+        name(qsl("Bravo"));
+        queueFrame(widget, areaId);
+        QCOMPARE(widget.mLabelTextureCache.imageTexturesMade(), afterAlpha + 6);
+        name(qsl("Charlie"));
+        queueFrame(widget, areaId);
+        const qint64 afterCharlie = widget.mLabelTextureCache.imageTexturesMade();
+        QCOMPARE(afterCharlie, afterAlpha + 12);
+        name(qsl("Bravo"));
+        queueFrame(widget, areaId);
+        QCOMPARE(widget.mLabelTextureCache.imageTexturesMade(), afterCharlie);
+    }
+
+    // From above, at a slant from several sides, and from close to the horizon with rooms behind the camera, every
+    // room any corner of which shows in the view is drawn
+    void test_everyRoomShowingInTheViewIsDrawnWithoutGL()
+    {
+        map()->mapClear();
+        const int areaId = map()->mpRoomDB->addArea(qsl("Culled Area"));
+        constexpr int side = 24;
+        for (int y = 0; y < side; ++y) {
+            for (int x = 0; x < side; ++x) {
+                QVERIFY(addRoomAt(1000 + y * side + x, areaId, (x - side / 2) * 2, (y - side / 2) * 2, 0));
+            }
+        }
+        map()->mRoomIdHash[map()->mProfileName] = 1000 + (side / 2) * side + side / 2;
+        ModernGLWidget widget(map(), mpHost);
+        widget.mLabelTextureCache.useTextureStandIn(
+                [lastTexture = GLuint{0}](const QImage&) mutable {
+                    return ++lastTexture;
+                },
+                [](GLuint) {});
+        widget.resize(800, 600);
+        widget.mCameraController.setViewportSize(widget.width(), widget.height());
+        widget.setViewCenter(areaId, 0, 0, 0);
+        struct Pose
+        {
+            float distance;
+            float tilt;
+            float azimuth;
+        };
+        const QList<Pose> poses{{1.0f, CameraController::scmMinTilt, CameraController::scmNorthUpAzimuth},
+                                {1.0f, CameraController::scmDefaultTilt, CameraController::scmNorthUpAzimuth},
+                                {1.0f, CameraController::scmDefaultTilt, 20.0f},
+                                {1.0f, CameraController::scmDefaultTilt, 135.0f},
+                                {0.3f, CameraController::scmMaxTilt, 200.0f}};
+        for (const Pose& pose : poses) {
+            widget.setCameraPosition(pose.distance, pose.tilt, pose.azimuth);
+            widget.updateMatrices();
+            widget.mRenderCommandQueue.clear();
+            widget.queueScene();
+            QSet<std::pair<float, float>> queued;
+            for (const auto& command : widget.mRenderCommandQueue.commands()) {
+                if (const auto* cubes = dynamic_cast<const RenderInstancedCubesCommand*>(command.get())) {
+                    for (const CubeInstanceData& cube : cubes->instances()) {
+                        if (cube.transform.column(0).toVector3D().length() > 0.2f) {
+                            queued.insert({cube.transform.column(3).x(), cube.transform.column(3).y()});
+                        }
+                    }
+                }
+            }
+            int showing = 0;
+            int left = 0;
+            for (int y = 0; y < side; ++y) {
+                for (int x = 0; x < side; ++x) {
+                    const auto rx = static_cast<float>((x - side / 2) * 2);
+                    const auto ry = static_cast<float>((y - side / 2) * 2);
+                    bool shows = false;
+                    for (const QVector3D& corner :
+                         {QVector3D(rx - 0.5f, ry - 0.5f, 0.0f), QVector3D(rx + 0.5f, ry - 0.5f, 0.0f), QVector3D(rx - 0.5f, ry + 0.5f, 0.0f), QVector3D(rx + 0.5f, ry + 0.5f, 0.0f)}) {
+                        const std::optional<QPointF> pixel = widget.mCameraController.pixelForPoint(corner);
+                        shows = shows || (pixel && QRectF(widget.rect()).contains(*pixel));
+                    }
+                    if (shows) {
+                        ++showing;
+                        QVERIFY2(queued.contains({rx, ry}), qPrintable(qsl("the room at %1,%2 shows from tilt %3, azimuth %4 but was not drawn").arg(rx).arg(ry).arg(pose.tilt).arg(pose.azimuth)));
+                    } else if (!queued.contains({rx, ry})) {
+                        ++left;
+                    }
+                }
+            }
+            QVERIFY(showing > 0);
+            if (pose.tilt > CameraController::scmDefaultTilt) {
+                QVERIFY2(left > 0, "close to the horizon, no room behind the camera was left out");
+            }
+        }
+    }
+
+    void test_whatARoomOutOfViewDrawsIntoTheViewIsDrawnWithoutGL_data()
+    {
+        QTest::addColumn<int>("roomX");
+        QTest::addColumn<QString>("edit");
+        QTest::newRow("name moved into the view") << 60 << qsl("setRoomName(7000, 'Far Name') setRoomUserData(7000, 'room.ui_nameOffset', '-60 0')");
+        QTest::newRow("highlight reaching into the view") << 60 << qsl("highlightRoom(7000, 255, 0, 0, 0, 0, 255, 80, 255, 255)");
+        QTest::newRow("name of a room in view") << 1 << qsl("setRoomName(7000, 'Near Name')");
+    }
+
+    // A room's name may be moved far from it, and its highlight reach far around it: either is drawn while it shows
+    void test_whatARoomOutOfViewDrawsIntoTheViewIsDrawnWithoutGL()
+    {
+        QFETCH(int, roomX);
+        QFETCH(QString, edit);
+        map()->mapClear();
+        const int areaId = map()->mpRoomDB->addArea(qsl("Far Decal Area"));
+        QVERIFY(addRoomAt(7000, areaId, roomX, 0, 0));
+        map()->setRoomNamesShown(true);
+        const auto restore = qScopeGuard([this]() {
+            map()->setRoomNamesShown(false);
+        });
+        QVERIFY(mpHost->mLuaInterpreter.compileAndExecuteScript(edit));
+        ModernGLWidget widget(map(), mpHost);
+        widget.mLabelTextureCache.useTextureStandIn(
+                [lastTexture = GLuint{0}](const QImage&) mutable {
+                    return ++lastTexture;
+                },
+                [](GLuint) {});
+        widget.resize(800, 600);
+        widget.mCameraController.setViewportSize(widget.width(), widget.height());
+        widget.setViewCenter(areaId, 0, 0, 0);
+        widget.setCameraPosition(0.3f, CameraController::scmMinTilt, CameraController::scmNorthUpAzimuth);
+        widget.updateMatrices();
+        const std::optional<QPointF> room = widget.mCameraController.pixelForPoint(QVector3D(static_cast<float>(roomX), 0.0f, 0.0f));
+        QVERIFY(room);
+        QCOMPARE(QRectF(widget.rect()).adjusted(-800.0, -600.0, 800.0, 600.0).contains(*room), roomX < 10);
+        widget.mRenderCommandQueue.clear();
+        widget.queueScene();
+        bool drawnAtTheCenter = false;
+        for (const auto& command : widget.mRenderCommandQueue.commands()) {
+            if (const auto* textured = dynamic_cast<const RenderTexturedTrianglesCommand*>(command.get())) {
+                const QVector<float>& vertices = textured->geometry().vertices;
+                QRectF spans;
+                for (qsizetype i = 0; i + 2 < vertices.size(); i += 3) {
+                    spans = spans.united(QRectF(vertices.at(i), vertices.at(i + 1), 0.001, 0.001));
+                }
+                drawnAtTheCenter = drawnAtTheCenter || spans.intersects(QRectF(-0.5, -1.5, 1.0, 2.0));
+            }
+        }
+        QVERIFY2(drawnAtTheCenter, "what the room draws at the view's center was left out");
+    }
+
+    // The terminal style's exit characters showing in the view are all drawn, as are their rooms
+    void test_everyTerminalExitShowingInTheViewIsDrawnWithoutGL()
+    {
+        map()->mapClear();
+        const int areaId = map()->mpRoomDB->addArea(qsl("Terminal Culled Area"));
+        constexpr int side = 16;
+        for (int y = 0; y < side; ++y) {
+            for (int x = 0; x < side; ++x) {
+                const int roomId = 1000 + y * side + x;
+                QVERIFY(addRoomAt(roomId, areaId, (x - side / 2) * 3, (y - side / 2) * 3, 0));
+                if (x > 0) {
+                    QVERIFY(map()->setExit(roomId, roomId - 1, DIR_WEST));
+                    QVERIFY(map()->setExit(roomId - 1, roomId, DIR_EAST));
+                }
+            }
+        }
+        map()->mRoomIdHash[map()->mProfileName] = 1000 + (side / 2) * side + side / 2;
+        const auto restore = qScopeGuard([this]() {
+            mpHost->setMapStyle(qsl("tiles"));
+        });
+        QVERIFY(mpHost->setMapStyle(qsl("terminal")));
+        ModernGLWidget widget(map(), mpHost);
+        // A whole frame first, as the exit characters come from the exits
+        queueFrame(widget, areaId);
+        const QList<DrawnGlyph> drawn = terminalGlyphs(widget, areaId);
+        int showing = 0;
+        for (const ExitScene::Glyph& glyph : std::as_const(widget.mExitGlyphs)) {
+            const std::optional<QPointF> pixel = widget.mCameraController.pixelForPoint(glyph.at);
+            if (!pixel || !QRectF(widget.rect()).contains(*pixel)) {
+                continue;
+            }
+            ++showing;
+            const bool found = std::any_of(drawn.cbegin(), drawn.cend(), [&glyph](const DrawnGlyph& each) {
+                return QLineF(each.center, glyph.at.toPointF()).length() < 0.05;
+            });
+            QVERIFY2(found, qPrintable(qsl("the exit character at %1,%2 shows but was not drawn").arg(glyph.at.x()).arg(glyph.at.y())));
+        }
+        QVERIFY(showing > 0);
+    }
+
+    // The diorama's pieces are laid out once a frame at most, and again only when the map, the levels shown or the
+    // style changes
+    void test_dioramaPiecesAreLaidOutAgainOnlyWhenTheMapOrLevelsChangeWithoutGL()
+    {
+        const int areaId = addArea();
+        QVERIFY(areaId > 0);
+        QVERIFY(map()->setExit(kPlayerRoomId, kEastRoomId, DIR_EAST));
+        const auto restore = qScopeGuard([this]() {
+            mpHost->setMapStyle(qsl("tiles"));
+        });
+        QVERIFY(mpHost->setMapStyle(qsl("diorama")));
+        ModernGLWidget widget(map(), mpHost);
+        queueFrame(widget, areaId);
+        QCOMPARE(widget.mDioramaLayouts, 1);
+        queueTurnedFrame(widget);
+        widget.setCameraDistance(3.0f);
+        queueTurnedFrame(widget);
+        QCOMPARE(widget.mDioramaLayouts, 1);
+        QVERIFY(widget.mDioramaPiecesCache.pieces.contains(kEastRoomId));
+        const EnvironmentKit::Kit before = widget.mDioramaPiecesCache.pieces.value(kEastRoomId).kit;
+
+        // Water, by its color
+        const int water = 301;
+        const auto forgetWater = qScopeGuard([this, water]() {
+            map()->mCustomEnvColors.remove(water);
+        });
+        QVERIFY(mpHost->mLuaInterpreter.compileAndExecuteScript(qsl("setCustomEnvColor(%1, 30, 90, 220, 255) setRoomEnv(%2, %1)").arg(water).arg(kEastRoomId)));
+        queueTurnedFrame(widget);
+        QCOMPARE(widget.mDioramaLayouts, 2);
+        QCOMPARE(widget.mDioramaPiecesCache.pieces.value(kEastRoomId).kit, EnvironmentKit::Kit::Water);
+        QVERIFY(widget.mDioramaPiecesCache.pieces.value(kEastRoomId).kit != before);
+
+        widget.slot_showLessUpperLevels();
+        queueTurnedFrame(widget);
+        QCOMPARE(widget.mDioramaLayouts, 3);
+
+        // Another style has no pieces, and coming back to the diorama's finds them as they were
+        QVERIFY(mpHost->setMapStyle(qsl("tiles")));
+        queueTurnedFrame(widget);
+        QCOMPARE(widget.mDioramaLayouts, 3);
+        QVERIFY(mpHost->setMapStyle(qsl("diorama")));
+        queueTurnedFrame(widget);
+        QCOMPARE(widget.mDioramaLayouts, 3);
+        QVERIFY(widget.mDioramaPiecesCache.pieces.contains(kEastRoomId));
     }
 
     // Transit's stations are white, ringed in their environment's color where it stands out on its paper
@@ -2943,7 +3728,7 @@ private slots:
         QVERIFY2(qAbs(*storeyGlow - ground) < 1e-4f, qPrintable(qsl("a storey's glow is at height %1, not on the board at %2").arg(*storeyGlow).arg(ground)));
 
         // Named a road, the water's room is paved instead
-        QVERIFY(EnvironmentKit::store(map()->mUserData, kWater, EnvironmentKit::Kit::Road));
+        QVERIFY(mpHost->mLuaInterpreter.compileAndExecuteScript(qsl("setMapEnvironmentKit(%1, 'road')").arg(kWater)));
         queueFrame(widget, areaId);
         QVERIFY(shapesAt(RenderCommand::Shading::ModelWater, GeometryManager::InstanceShape::Box, QPointF(4.0, 0.0)).isEmpty());
         const QList<CubeInstanceData> paving = shapesAt(RenderCommand::Shading::ModelBlock, GeometryManager::InstanceShape::Box, QPointF(4.0, 0.0));
@@ -3837,6 +4622,223 @@ private slots:
         const DrawnGlyph symbol = glyphAt(terminalGlyphs(widget, areaId), QPointF(2, 0));
         QCOMPARE(symbol.text, qsl("$"));
         QCOMPARE(symbol.color.rgb(), ExitAppearance::contrastColor(navy).rgb());
+    }
+
+    // A grid of side by side rooms on three levels, joined by exits, with names, environments, some symbols, a few
+    // doors and text labels, the player in the middle of the viewed level
+    int addBenchArea(const int side) const
+    {
+        map()->mapClear();
+        const int areaId = map()->mpRoomDB->addArea(qsl("Bench Area"));
+        int id = 0;
+        for (int z = -1; z <= 1; ++z) {
+            for (int y = 0; y < side; ++y) {
+                for (int x = 0; x < side; ++x) {
+                    ++id;
+                    if (!addRoomAt(id, areaId, x * 2, y * 2, z)) {
+                        return 0;
+                    }
+                    TRoom* room = map()->mpRoomDB->getRoom(id);
+                    room->name = qsl("Room %1").arg(id);
+                    room->environment = (x + y) % 8 + 1;
+                    if ((x * 7 + y) % 5 == 0) {
+                        room->mSymbol = QString(QChar(u'A' + static_cast<char16_t>((x + y) % 26)));
+                    }
+                    if (x > 0) {
+                        map()->setExit(id, id - 1, DIR_WEST);
+                        map()->setExit(id - 1, id, DIR_EAST);
+                        if ((x + y) % 11 == 0) {
+                            room->setDoor(qsl("west"), (x + y) % 3 + 1);
+                        }
+                    }
+                    if (y > 0) {
+                        map()->setExit(id, id - side, DIR_NORTH);
+                        map()->setExit(id - side, id, DIR_SOUTH);
+                    }
+                    if (z > -1 && (x + y) % 6 == 0) {
+                        map()->setExit(id, id - side * side, DIR_DOWN);
+                        map()->setExit(id - side * side, id, DIR_UP);
+                    }
+                }
+            }
+        }
+        for (int label = 0; label < qMax(2, side / 2); ++label) {
+            const float x = static_cast<float>((label * 7) % side) * 2.0f;
+            const float y = static_cast<float>((label * 3) % side) * 2.0f;
+            map()->createMapLabel(areaId, qsl("Label %1").arg(label), x, y, 0.0f, QColor(Qt::white), QColor(0, 0, 0, 0), label % 2 == 0, false);
+        }
+        map()->setRoomNamesShown(true);
+        map()->mRoomIdHash[map()->mProfileName] = side * side + (side / 2) * side + side / 2;
+        map()->mNewMove = false;
+        return areaId;
+    }
+
+    static double percentile(const QList<double>& sorted, const double fraction)
+    {
+        const qsizetype index = qBound<qsizetype>(0, static_cast<qsizetype>(std::ceil(fraction * static_cast<double>(sorted.size()))) - 1, sorted.size() - 1);
+        return sorted.at(index);
+    }
+
+    static void emitMetric(const QString& name, const double value) { std::printf("METRIC %s %.3f\n", qPrintable(name), value); }
+
+    // Frame times per map style, as METRIC lines in milliseconds: on a small map and a dense one, at a slant and
+    // looking down, while orbiting, panning and zooming, and the first frame after switching to the style. Whole
+    // frames where there is GL, else only the commands a frame queues, with stand-in textures. Report-only and long,
+    // so it runs only when asked:
+    //   MUDLET_MAPPER_BENCH=1 QT_QPA_PLATFORM=xcb ./functional_map_tests ModernMapperRenderTest bench_frameTimesPerStyle
+    // MUDLET_MAPPER_BENCH_STYLES, _MAPS, _VIEWS and _MOTIONS take comma-separated subsets, _FRAMES the frames per run,
+    // and with GL, _DUMP a directory to write each run's last frame into, for comparing builds pixel by pixel;
+    // _TRACE prints every frame's time and the textures it made, to see what a slow frame did
+    void bench_frameTimesPerStyle()
+    {
+        if (!qEnvironmentVariableIsSet("MUDLET_MAPPER_BENCH")) {
+            QSKIP("set MUDLET_MAPPER_BENCH=1 to run the frame-time benchmark");
+        }
+        const auto chosen = [](const char* variable, const QStringList& all) {
+            const QString value = qEnvironmentVariable(variable);
+            if (value.isEmpty()) {
+                return all;
+            }
+            QStringList picked;
+            for (const QString& id : value.split(QLatin1Char(','), Qt::SkipEmptyParts)) {
+                if (all.contains(id)) {
+                    picked.append(id);
+                }
+            }
+            return picked;
+        };
+        const QStringList styles = chosen("MUDLET_MAPPER_BENCH_STYLES", MapStyle::ids());
+        const QStringList maps = chosen("MUDLET_MAPPER_BENCH_MAPS", {qsl("small"), qsl("dense")});
+        const QStringList views = chosen("MUDLET_MAPPER_BENCH_VIEWS", {qsl("default"), qsl("top")});
+        const QStringList motions = chosen("MUDLET_MAPPER_BENCH_MOTIONS", {qsl("orbit"), qsl("pan"), qsl("zoom"), qsl("walk")});
+        const int frames = qMax(5, qEnvironmentVariableIntValue("MUDLET_MAPPER_BENCH_FRAMES"));
+        constexpr int warmUp = 3;
+        const bool gl = glAvailable();
+        const QString dumpDirectory = qEnvironmentVariable("MUDLET_MAPPER_BENCH_DUMP");
+        const bool trace = qEnvironmentVariableIsSet("MUDLET_MAPPER_BENCH_TRACE");
+        if (gl && !dumpDirectory.isEmpty()) {
+            QVERIFY(QDir().mkpath(dumpDirectory));
+        }
+        std::printf("METRIC bench_3d_whole_frames %d\n", gl ? 1 : 0);
+        const auto restoreStyle = qScopeGuard([this] {
+            mpHost->setMapStyle(qsl("tiles"));
+        });
+
+        for (const QString& mapName : maps) {
+            const int side = mapName == qsl("dense") ? 40 : 8;
+            const int areaId = addBenchArea(side);
+            QVERIFY(areaId > 0);
+            const int playerRoomId = map()->mRoomIdHash.value(map()->mProfileName);
+            const TRoom* playerRoom = map()->mpRoomDB->getRoom(playerRoomId);
+            QVERIFY(playerRoom);
+            QVERIFY(mpHost->setMapStyle(qsl("tiles")));
+            ModernGLWidget widget(map(), mpHost);
+            widget.setSecondaryView(true);
+            widget.resize(800, 600);
+            if (gl) {
+                widget.grabFramebuffer();
+                if (!widget.isValid()) {
+                    QSKIP("no OpenGL context on this platform");
+                }
+                QVERIFY2(widget.failureMessage().isEmpty(), qPrintable(widget.failureMessage()));
+            } else {
+                widget.mLabelTextureCache.useTextureStandIn(
+                        [lastTexture = GLuint{0}](const QImage&) mutable {
+                            return ++lastTexture;
+                        },
+                        [](GLuint) {});
+            }
+            widget.mCameraController.setViewportSize(widget.width(), widget.height());
+            widget.setViewCenter(areaId, playerRoom->x(), playerRoom->y(), playerRoom->z());
+            const float aspect = static_cast<float>(widget.width()) / static_cast<float>(widget.height());
+            const float distance = CameraController::distanceToShow(mapName == qsl("dense") ? 24.0f : 10.0f, aspect);
+            QImage lastFrame;
+            const auto frame = [&widget, &lastFrame, gl] {
+                QElapsedTimer timer;
+                timer.start();
+                if (gl) {
+                    lastFrame = widget.grabFramebuffer();
+                } else {
+                    widget.updateMatrices();
+                    widget.mRenderCommandQueue.clear();
+                    widget.queueScene();
+                }
+                return static_cast<double>(timer.nsecsElapsed()) / 1.0e6;
+            };
+
+            for (const QString& styleId : styles) {
+                widget.jumpTo(areaId, playerRoom->x(), playerRoom->y(), playerRoom->z());
+                widget.setCameraPosition(distance, CameraController::scmDefaultTilt, CameraController::scmNorthUpAzimuth);
+                frame();
+                QVERIFY(mpHost->setMapStyle(styleId));
+                emitMetric(qsl("bench_3d_%1_%2_switch_ms").arg(styleId, mapName), frame());
+
+                for (const QString& view : views) {
+                    const float tilt = view == qsl("top") ? CameraController::scmMinTilt : CameraController::scmDefaultTilt;
+                    for (const QString& motion : motions) {
+                        QList<double> times;
+                        qint64 texturesMade = 0;
+                        for (int step = -warmUp; step < frames; ++step) {
+                            const int along = step + warmUp;
+                            float azimuth = CameraController::scmNorthUpAzimuth;
+                            float r = distance;
+                            int centerX = playerRoom->x();
+                            if (motion == qsl("orbit")) {
+                                azimuth += 4.0f * static_cast<float>(along);
+                            } else if (motion == qsl("pan")) {
+                                // Back and forth across the middle half of the map, so the view never leaves it
+                                const int reach = side / 2;
+                                const int phase = along % (4 * reach);
+                                centerX += phase < 2 * reach ? phase - reach : 3 * reach - phase;
+                            } else if (motion == qsl("walk")) {
+                                // The player steps a room east or west each frame, as a mapping script follows them
+                                const int reach = side / 4;
+                                const int phase = along % (4 * reach);
+                                const int step = phase < 2 * reach ? phase - reach : 3 * reach - phase;
+                                const int roomId = playerRoomId + step;
+                                QVERIFY(mpHost->mLuaInterpreter.compileAndExecuteScript(qsl("centerview(%1)").arg(roomId)));
+                                centerX = map()->mpRoomDB->getRoom(roomId)->x();
+                            } else {
+                                r = distance * (1.0f + 0.5f * std::sin(0.15f * static_cast<float>(along)));
+                            }
+                            widget.jumpTo(areaId, centerX, playerRoom->y(), playerRoom->z());
+                            widget.setCameraPosition(r, tilt, azimuth);
+                            const qint64 madeBefore = widget.mLabelTextureCache.imageTexturesMade();
+                            const double ms = frame();
+                            if (step >= 0) {
+                                times.append(ms);
+                                texturesMade += widget.mLabelTextureCache.imageTexturesMade() - madeBefore;
+                            }
+                            if (trace) {
+                                std::printf("TRACE %s %s %s %s frame %d %.3f ms, %lld textures made, %lld in use, %zu commands\n",
+                                            qPrintable(styleId),
+                                            qPrintable(mapName),
+                                            qPrintable(view),
+                                            qPrintable(motion),
+                                            step,
+                                            ms,
+                                            static_cast<long long>(widget.mLabelTextureCache.imageTexturesMade() - madeBefore),
+                                            static_cast<long long>(widget.mRoomTexturesInUse.size()),
+                                            widget.mRenderCommandQueue.getCommandCount());
+                            }
+                        }
+                        if (motion == qsl("walk")) {
+                            QVERIFY(mpHost->mLuaInterpreter.compileAndExecuteScript(qsl("centerview(%1)").arg(playerRoomId)));
+                        }
+                        std::sort(times.begin(), times.end());
+                        const QString name = qsl("bench_3d_%1_%2_%3_%4").arg(styleId, mapName, view, motion);
+                        if (gl && !dumpDirectory.isEmpty()) {
+                            QVERIFY(lastFrame.save(qsl("%1/%2.png").arg(dumpDirectory, name)));
+                        }
+                        emitMetric(name + qsl("_p50_ms"), percentile(times, 0.5));
+                        emitMetric(name + qsl("_p95_ms"), percentile(times, 0.95));
+                        emitMetric(name + qsl("_p99_ms"), percentile(times, 0.99));
+                        emitMetric(name + qsl("_max_ms"), times.last());
+                        emitMetric(name + qsl("_textures_made"), static_cast<double>(texturesMade));
+                    }
+                }
+            }
+        }
     }
 };
 
