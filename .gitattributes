@@ -11,3 +11,8 @@ CI/linux-packages/mudlet.asc -text
 # Each .mpackage archive stores a copy of the sources beside it, byte for byte,
 # so a Windows checkout must not rewrite the newlines of one and not the other.
 src/packages/** -text
+
+# The unzip specs compare these sources byte for byte against the copies inside
+# mudlet-spec-resources.mpackage, so a Windows checkout must not turn their
+# newlines into CRLF.
+src/mudlet-lua/tests/fixtures/packages/sources/** -text

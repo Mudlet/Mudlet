@@ -95,6 +95,14 @@
     "message":"Downloading package from %s.",
     "description": "Download package from Url for installation - %s is source url"
   },
+  "Mudlet.packageDownloadRefused": {
+    "message":"Could not download package from %s: %s",
+    "description":"Warning when a package download from a URL could not even be started - the first %s is the source url, the second the reason"
+  },
+  "Mudlet.packageDownloadPending": {
+    "message":"Package '%s' is already being downloaded.",
+    "description":"Warning when a package is asked to be downloaded from a URL while an earlier download of it has not finished yet - %s is the file name"
+  },
   "Mudlet.prefixOk": {
     "message":"[  OK  ]  - ",
     "description":"Start of the line for messages telling the player something is okay. Keep at 12 characters length for nice alignment!"

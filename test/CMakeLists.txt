@@ -214,15 +214,19 @@ set_tests_properties(IrcMessageComposerTest PROPERTIES
 )
 
 # The application style's kept Fusion title bar icons. Built from the one source it
-# covers, which needs nothing but Qt Widgets.
-add_executable(AltFocusMenuBarDisableTest
-    AltFocusMenuBarDisableTest.cpp
-    ${CMAKE_SOURCE_DIR}/src/AltFocusMenuBarDisable.cpp
+# covers, which needs nothing but Qt Widgets, and Qt D-Bus where it detects screen readers.
+add_executable(MudletProxyStyleDockTitleTest
+    MudletProxyStyleDockTitleTest.cpp
+    ${CMAKE_SOURCE_DIR}/src/MudletProxyStyle.cpp
 )
-target_include_directories(AltFocusMenuBarDisableTest PRIVATE ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(AltFocusMenuBarDisableTest PRIVATE Qt6::Test Qt6::Widgets)
-add_test(NAME AltFocusMenuBarDisableTest COMMAND $<TARGET_FILE:AltFocusMenuBarDisableTest>)
-set_tests_properties(AltFocusMenuBarDisableTest PROPERTIES
+target_include_directories(MudletProxyStyleDockTitleTest PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(MudletProxyStyleDockTitleTest PRIVATE Qt6::Test Qt6::Widgets)
+if(UNIX AND NOT APPLE)
+  find_package(Qt6 COMPONENTS DBus REQUIRED)
+  target_link_libraries(MudletProxyStyleDockTitleTest PRIVATE Qt6::DBus)
+endif()
+add_test(NAME MudletProxyStyleDockTitleTest COMMAND $<TARGET_FILE:MudletProxyStyleDockTitleTest>)
+set_tests_properties(MudletProxyStyleDockTitleTest PROPERTIES
     ENVIRONMENT "ASAN_OPTIONS=detect_leaks=0;QT_QPA_PLATFORM=offscreen"
 )
 
