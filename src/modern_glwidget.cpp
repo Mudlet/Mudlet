@@ -119,6 +119,11 @@ ModernGLWidget::ModernGLWidget(TMap* pMap, Host* pHost, QWidget* parent)
         update();
     });
 
+    mNameFadeTimer = new QTimer(this);
+    mNameFadeTimer->setSingleShot(true);
+    mNameFadeTimer->setInterval(16ms);
+    connect(mNameFadeTimer, &QTimer::timeout, this, qOverload<>(&QWidget::update));
+
     // A click takes focus only so that a floating view can pass typed keys on to the command line; focus from
     // Tab also lets the view pan and zoom with keys
     setFocusPolicy(Qt::StrongFocus);
@@ -495,6 +500,8 @@ void ModernGLWidget::initializeGL()
     qDebug().nospace() << "ModernGLWidget: OpenGL " << actualFormat.majorVersion() << "." << actualFormat.minorVersion()
                        << (actualFormat.profile() == QSurfaceFormat::CoreProfile ? " core" : " compatibility") << " on " << reinterpret_cast<const char*>(glGetString(GL_RENDERER));
 
+    glGetIntegerv(GL_MAX_TEXTURE_SIZE, &mMaxTextureSize);
+
     const QColor color(backgroundColor());
     glClearColor(color.redF(), color.greenF(), color.blueF(), color.alphaF());
 
@@ -864,6 +871,8 @@ constexpr int scmTextTexelsPerRoom = 48;
 
 // Names and IDs drawn shorter than this on screen are left out, as unreadable
 constexpr qreal scmMinimumTextPixels = 7.0;
+// Within this many rooms' spacing of the player, a room's name is kept over its neighbors', the nearer first
+constexpr float scmNamesRoundPlayer = 2.5f;
 // As on the 2D map, what is drawn on a round room's top is shrunk to fit inside its circle
 constexpr float scmRoundRoomInset = 0.707f;
 
@@ -950,10 +959,10 @@ constexpr qreal scmLabelHalo = 0.12;
 // A map label's halo's greatest reach, in texels
 constexpr int scmMaxLabelHalo = 16;
 
-// A text texture's halo's width in texels, on each side
-int textHaloWidth(const QFontMetricsF& metrics, const bool haloed)
+// A text texture's halo's width in texels, on each side; a soft one reaches further, as it fades out on its way
+int textHaloWidth(const QFontMetricsF& metrics, const bool haloed, const bool soft = false)
 {
-    return haloed ? qMax(1, qCeil(metrics.height() * scmLabelHalo)) : 0;
+    return haloed ? qMax(1, qCeil(metrics.height() * scmLabelHalo * (soft ? 1.75 : 1.0))) : 0;
 }
 // How strongly a level's floor plate shows
 constexpr float scmFloorPlateOpacity = 0.07f;
@@ -1370,9 +1379,9 @@ GLuint ModernGLWidget::exitMarkerTexture(const TRoom& room, const QColor& roomCo
     return addRoomTexture(key, image);
 }
 
-GLuint ModernGLWidget::textTexture(const QString& key, const QString& text, const QFont& font, const QFontMetricsF& metrics, const QColor& color, QSize& size, const QColor& halo)
+GLuint ModernGLWidget::textTexture(const QString& key, const QString& text, const QFont& font, const QFontMetricsF& metrics, const QColor& color, QSize& size, const QColor& halo, const bool softHalo)
 {
-    const int haloWidth = textHaloWidth(metrics, halo.isValid());
+    const int haloWidth = textHaloWidth(metrics, halo.isValid(), softHalo);
     size = QSize(qMax(1, qCeil(metrics.horizontalAdvance(text))) + 2 * haloWidth, qMax(1, qCeil(metrics.height())) + 2 * haloWidth);
     if (const GLuint texture = cachedRoomTexture(key)) {
         return texture;
@@ -1389,7 +1398,19 @@ GLuint ModernGLWidget::textTexture(const QString& key, const QString& text, cons
         QPainterPath path;
         path.addText(haloWidth, haloWidth + metrics.ascent(), font, text);
         painter.setRenderHint(QPainter::Antialiasing);
-        painter.strokePath(path, QPen(halo, 2.0 * haloWidth, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+        if (softHalo) {
+            // Rims ever wider, each laid over the narrower ones, so that by the letters they add up to nearly the
+            // halo's own opacity and it fades out from there; an opaque one could not fade
+            // Enough rims to look smooth, but no more, as each is a stroke of the whole text
+            const int rims = qBound(2, haloWidth, 8);
+            QColor rim = halo;
+            rim.setAlphaF(1.0 - std::pow(1.0 - 0.97 * halo.alphaF(), 1.0 / rims));
+            for (int index = rims; index >= 1; --index) {
+                painter.strokePath(path, QPen(rim, 2.0 * haloWidth * index / rims, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+            }
+        } else {
+            painter.strokePath(path, QPen(halo, 2.0 * haloWidth, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+        }
         painter.fillPath(path, color);
     } else {
         painter.setPen(color);
@@ -1673,12 +1694,17 @@ void ModernGLWidget::renderRooms()
     const QVector4D nameTint = labelTint(style);
     struct RoomName
     {
+        // On the map, where a name lying on it is centered, or the top middle of one standing up
         QVector3D center;
         QColor color;
         QString name;
         QVector4D tint;
         RoomDecals* decals;
+        int roomId;
+        GeometryManager::NamePriority priority;
     };
+    const TRoom* playerRoom = mpMap->mpRoomDB->getRoom(playerRoomId);
+    const std::optional<QVector3D> playerSpot = playerRoom && playerRoom->getArea() == mAID ? std::optional<QVector3D>(QVector3D(playerRoom->x(), playerRoom->y(), playerRoom->z())) : std::nullopt;
     QList<RoomName> roomNames;
     const float textTexel = roomSize / scmTextTexelsPerRoom;
     const float nameTexel = textTexel * (namesGivenFont ? 1.0f : style.roomNameScale);
@@ -2249,9 +2275,21 @@ void ModernGLWidget::renderRooms()
 
         // Only the viewed level's, as only the 2D map's are
         if (showRoomNames && look.onViewedLevel() && !pR->name.isEmpty()) {
-            // One room's size below the room on screen, then moved by its offset along the map, in rooms' spacing, y downward
-            const QVector3D center = roomTop - groundUp * roomSize + QVector3D(static_cast<float>(nameOffset.x()), -static_cast<float>(nameOffset.y()), 0.0f);
-            roomNames.append({center, style.roomNameColorFor(pR->userData.value(ROOM_UI_NAMECOLOR), background), pR->name, decalTint * nameTint, &decals});
+            // One room's size below the room on screen, or standing up just under its front edge, then moved by its
+            // offset along the map, in rooms' spacing, y downward
+            const QVector3D shift(static_cast<float>(nameOffset.x()), -static_cast<float>(nameOffset.y()), 0.0f);
+            const QVector3D center = style.uprightNames ? roomFoot - groundUp * (roomSize / 2.0f) + shift : roomTop - groundUp * roomSize + shift;
+            GeometryManager::NamePriority priority;
+            const float playerDistance = playerSpot ? (QVector3D(pR->x(), pR->y(), pR->z()) - *playerSpot).length() : std::numeric_limits<float>::max();
+            if (look.playerRoom) {
+                priority.rank = 0;
+            } else if (look.highlighted) {
+                priority.rank = 1;
+            } else if (playerDistance <= scmNamesRoundPlayer) {
+                priority.rank = 2;
+                priority.playerDistance = playerDistance;
+            }
+            roomNames.append({center, style.roomNameColorFor(pR->userData.value(ROOM_UI_NAMECOLOR), background), pR->name, decalTint * nameTint, &decals, pR->getId(), priority});
         }
 
         // A terminal's room is only its character, and a wireframe has no fill, so their markers stand out from the background instead
@@ -2460,45 +2498,141 @@ void ModernGLWidget::renderRooms()
         }
     }
 
-    // Names come after every symbol and marker, so that a view short of room for textures loses names first
+    // Names come after every symbol and marker, so that a view short of room for textures loses names first. Those
+    // standing up or haloed are drawn over the viewed level, as a printed map's lettering is, so that neither its lines
+    // nor the ground a standing name would reach into cut through them
+    const bool namesLast = style.uprightNames || style.nameHalos;
+    RoomDecals lastNames;
     if (!roomNames.isEmpty()) {
         const QString nameFontKey = nameFont.key();
         const QFontMetricsF nameMetrics = imageFontMetrics(nameFont);
-        // Nearest first, so that where names overlap the one in front is the one kept
-        std::stable_sort(roomNames.begin(), roomNames.end(), [&viewModel](const RoomName& a, const RoomName& b) {
-            return viewModel.map(a.center).z() > viewModel.map(b.center).z();
+        for (RoomName& roomName : roomNames) {
+            roomName.priority.cameraDistance = -viewModel.map(roomName.center).z();
+        }
+        std::stable_sort(roomNames.begin(), roomNames.end(), [](const RoomName& a, const RoomName& b) {
+            return GeometryManager::outranks(a.priority, b.priority);
         });
-        const QColor backgroundHalo = style.labelHalos ? background : QColor();
+        const QColor backgroundHalo = style.labelHalos || style.nameHalos ? background : QColor();
         const auto haloFor = [&style, &backgroundHalo](const QColor& color) {
             const QColor halo = style.roomNameHaloFor(color);
             return halo.isValid() ? halo : backgroundHalo;
         };
+        const bool upright = style.uprightNames;
+        // A name standing up hangs this far, as a part of a room's size, below the room it names
+        constexpr float uprightGap = 0.08f;
+        // Where a name of this many texels is drawn: its bottom-left corner and its edges
+        const auto nameQuad = [&](const RoomName& roomName, const QSizeF& texels, const float texel) {
+            const auto width = static_cast<float>(texels.width()) * texel;
+            const auto height = static_cast<float>(texels.height()) * texel;
+            if (!upright) {
+                const QVector3D across = groundRight * width;
+                const QVector3D upward = groundUp * height;
+                return std::array<QVector3D, 3>{roomName.center - across / 2.0f - upward / 2.0f, across, upward};
+            }
+            const QVector3D top = roomName.center - screenUp * (uprightGap * roomSize);
+            const QVector3D across = screenRight * width;
+            const QVector3D upward = screenUp * height;
+            const QVector3D corner = top - across / 2.0f - upward;
+            return std::array<QVector3D, 3>{corner, across, upward};
+        };
         const qreal spaceWidth = nameMetrics.horizontalAdvance(QLatin1Char(' '));
         QList<QRectF> nameRects;
         nameRects.reserve(roomNames.size());
+        QList<int> sharpness;
+        sharpness.reserve(roomNames.size());
         for (const RoomName& roomName : std::as_const(roomNames)) {
             // A halo covers what it overlaps as the text does
-            const int nameHaloWidth = textHaloWidth(nameMetrics, haloFor(roomName.color).isValid());
+            const int nameHaloWidth = textHaloWidth(nameMetrics, haloFor(roomName.color).isValid(), style.softNameHalos);
             const QSizeF size(qMax(1, qCeil(style.roomNameSpan(nameMetrics.horizontalAdvance(roomName.name), spaceWidth))) + 2 * nameHaloWidth,
                               qMax(1, qCeil(nameMetrics.height())) + 2 * nameHaloWidth);
-            const QVector3D across = groundRight * static_cast<float>(size.width() * nameTexel);
-            const QVector3D upward = groundUp * static_cast<float>(size.height() * nameTexel);
-            nameRects.append(screenRect(roomName.center - across / 2.0f - upward / 2.0f, across, upward));
+            const auto [corner, across, upward] = nameQuad(roomName, size, nameTexel);
+            const QRectF rect = screenRect(corner, across, upward);
+            nameRects.append(rect);
+            // Up the text, not across the box round it, which a name lying on a turned map makes taller than the text
+            qreal pixelsPerTexel = 0.0;
+            if (rect.isValid()) {
+                const std::optional<QPointF> foot = mCameraController.pixelForPoint(corner);
+                const std::optional<QPointF> head = mCameraController.pixelForPoint(corner + upward);
+                if (foot && head) {
+                    pixelsPerTexel = QLineF(*foot, *head).length() / size.height();
+                }
+            }
+            sharpness.append(GeometryManager::textSharpness(pixelsPerTexel, devicePixelRatioF(), size.width(), mMaxTextureSize));
         }
-        for (const qsizetype index : GeometryManager::declutteredRects(nameRects, scmMinimumTextPixels)) {
+        // By sharpness, less one: the font a name is drawn in, its metrics and its key, made when first needed
+        struct DrawnFont
+        {
+            QFont font;
+            std::optional<QFontMetricsF> metrics;
+            QString key;
+        };
+        std::array<DrawnFont, 3> drawnFonts;
+        const auto drawnFont = [&](const int times) -> const DrawnFont& {
+            DrawnFont& drawn = drawnFonts.at(times - 1);
+            if (!drawn.metrics) {
+                drawn.font = nameFont;
+                drawn.font.setPointSizeF(nameFont.pointSizeF() * times);
+                drawn.metrics = times == 1 ? nameMetrics : imageFontMetrics(drawn.font);
+                drawn.key = times == 1 ? nameFontKey : drawn.font.key();
+            }
+            return drawn;
+        };
+
+        const QList<qsizetype> kept = GeometryManager::declutteredRects(nameRects, scmMinimumTextPixels);
+        const QSet<qsizetype> winners(kept.cbegin(), kept.cend());
+        // No more than a frame's worth, so that the first frame after the view was left still starts each fade
+        const qint64 elapsed = mNameFadeClock.isValid() ? qMin(mNameFadeClock.restart(), qint64{33}) : 0;
+        if (!mNameFadeClock.isValid()) {
+            mNameFadeClock.start();
+        }
+        // An area jumped to shows its names at once
+        const bool snap = mNameFadeArea != mAID;
+        mNameFadeArea = mAID;
+        QHash<int, float> opacities;
+        bool settled = true;
+        QList<std::pair<qsizetype, float>> shown;
+        for (qsizetype index = 0; index < roomNames.size(); ++index) {
             const RoomName& roomName = roomNames.at(index);
+            if (!nameRects.at(index).isValid() || nameRects.at(index).height() < scmMinimumTextPixels) {
+                continue;
+            }
+            const float target = winners.contains(index) ? 1.0f : 0.0f;
+            const auto previous = mNameOpacity.constFind(roomName.roomId);
+            const float opacity = snap || previous == mNameOpacity.cend() ? target : GeometryManager::steppedOpacity(*previous, target, elapsed, mNameFadeMilliseconds);
+            settled = settled && opacity == target;
+            opacities.insert(roomName.roomId, opacity);
+            if (opacity > 0.0f) {
+                shown.append({index, opacity});
+            }
+        }
+        mNameOpacity = opacities;
+        if (!settled) {
+            // Not restarted by each frame, which would put it off for as long as frames come quicker than it
+            if (!mNameFadeTimer->isActive()) {
+                mNameFadeTimer->start();
+            }
+        }
+
+        for (const auto& [index, opacity] : std::as_const(shown)) {
+            const RoomName& roomName = roomNames.at(index);
+            const int times = sharpness.at(index);
+            const DrawnFont& drawn = drawnFont(times);
             QSize size;
-            QString key = qsl("name|%1|%2|%3").arg(roomName.color.name(QColor::HexArgb), nameFontKey, roomName.name);
+            QString key = qsl("name|%1|%2|%3").arg(roomName.color.name(QColor::HexArgb), drawn.key, roomName.name);
             const QColor halo = haloFor(roomName.color);
             if (halo.isValid()) {
                 key.append(qsl("|halo|%1").arg(halo.name(QColor::HexArgb)));
+                if (style.softNameHalos) {
+                    key.append(qsl("|soft"));
+                }
             }
-            if (const GLuint texture = textTexture(key, roomName.name, nameFont, nameMetrics, roomName.color, size, halo)) {
-                const QVector3D across = groundRight * (size.width() * nameTexel);
-                const QVector3D upward = groundUp * (size.height() * nameTexel);
-                GeometryData& batch = roomName.decals->text[texture];
+            if (const GLuint texture = textTexture(key, roomName.name, drawn.font, *drawn.metrics, roomName.color, size, halo, style.softNameHalos)) {
+                const auto [corner, across, upward] = nameQuad(roomName, size, nameTexel / static_cast<float>(times));
+                QVector4D tint = roomName.tint;
+                tint.setW(tint.w() * opacity);
+                GeometryData& batch = (namesLast ? lastNames : *roomName.decals).text[texture];
                 batch.textureId = texture;
-                GeometryManager::appendQuad(batch, roomName.center - across / 2.0f - upward / 2.0f, across, upward, roomName.tint);
+                GeometryManager::appendQuad(batch, corner, across, upward, tint);
             }
         }
     }
@@ -2668,12 +2802,35 @@ void ModernGLWidget::renderRooms()
     std::sort(levels.begin(), levels.end());
     levels.erase(std::unique(levels.begin(), levels.end()), levels.end());
     qint64 unlabeledFrom = std::numeric_limits<int>::lowest();
+    // The viewed level's names standing up or haloed, after everything else on it and over its rooms in front of them,
+    // but under its labels shown on top, as on the 2D map
+    bool namesQueued = false;
+    const auto queueNames = [&]() {
+        namesQueued = true;
+        if (lastNames.text.isEmpty()) {
+            return;
+        }
+        mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::DISABLE_DEPTH_TEST));
+        queueDecals(lastNames);
+        mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::ENABLE_DEPTH_TEST));
+    };
+    const auto queueOnTopLabels = [&](const qint64 lowest, const qint64 highest) {
+        if (!namesQueued && lowest <= mMapCenterZ && mMapCenterZ <= highest) {
+            if (lowest < mMapCenterZ) {
+                renderLabels(true, static_cast<int>(lowest), mMapCenterZ - 1);
+            }
+            queueNames();
+            renderLabels(true, mMapCenterZ, static_cast<int>(highest));
+        } else {
+            renderLabels(true, static_cast<int>(lowest), static_cast<int>(highest));
+        }
+    };
     // The viewed level's washes go over the levels below, which would otherwise show through them unwashed
     bool washed = false;
     for (const int level : std::as_const(levels)) {
         // Those on levels with nothing else shown, under this one
         if (level > unlabeledFrom) {
-            renderLabels(true, static_cast<int>(unlabeledFrom), level - 1);
+            queueOnTopLabels(unlabeledFrom, level - 1);
         }
         if (!washed && level >= mMapCenterZ) {
             queueWashes();
@@ -2780,14 +2937,17 @@ void ModernGLWidget::renderRooms()
         if (seeThrough != seeThroughLevels.cend()) {
             queueDecals(seeThrough->decals);
         }
-        renderLabels(true, level, level);
+        queueOnTopLabels(level, level);
         unlabeledFrom = qint64{level} + 1;
     }
     if (!washed) {
         queueWashes();
     }
     if (unlabeledFrom <= std::numeric_limits<int>::max()) {
-        renderLabels(true, static_cast<int>(unlabeledFrom), std::numeric_limits<int>::max());
+        queueOnTopLabels(unlabeledFrom, std::numeric_limits<int>::max());
+    }
+    if (!namesQueued) {
+        queueNames();
     }
     // Faintly, where anything stands between the pawn and the camera, so it is not lost inside a building
     if (std::any_of(tokenInstances.cbegin(), tokenInstances.cend(), [](const QVector<CubeInstanceData>& instances) {

@@ -240,6 +240,58 @@ private slots:
         QVERIFY(GeometryManager::declutteredRects({}, 7.0).isEmpty());
     }
 
+    // Where names overlap: the player's room's first, then a highlighted room's, then those round the player, the
+    // nearer first, then the nearer the camera
+    void test_namesRankByWhatMattersBeforeByNearness()
+    {
+        using Priority = GeometryManager::NamePriority;
+        const Priority player{0, 0.0f, 9.0f};
+        const Priority highlighted{1, 0.0f, 8.0f};
+        const Priority besidePlayer{2, 1.0f, 7.0f};
+        const Priority twoAway{2, 2.0f, 1.0f};
+        const Priority nearCamera{3, 0.0f, 0.5f};
+        const Priority farCamera{3, 0.0f, 5.0f};
+        const QList<Priority> order{player, highlighted, besidePlayer, twoAway, nearCamera, farCamera};
+        for (qsizetype first = 0; first < order.size(); ++first) {
+            QVERIFY2(!GeometryManager::outranks(order.at(first), order.at(first)), "a name outranks itself");
+            for (qsizetype second = first + 1; second < order.size(); ++second) {
+                QVERIFY2(GeometryManager::outranks(order.at(first), order.at(second)), qPrintable(qsl("%1 does not outrank %2").arg(first).arg(second)));
+                QVERIFY2(!GeometryManager::outranks(order.at(second), order.at(first)), qPrintable(qsl("%1 outranks %2").arg(second).arg(first)));
+            }
+        }
+    }
+
+    // A name's opacity moves toward where it is going by the part of the fade that has passed, and no further
+    void test_namesFadeByTheTimePassed()
+    {
+        QCOMPARE(GeometryManager::steppedOpacity(1.0f, 0.0f, 50, 200), 0.75f);
+        QCOMPARE(GeometryManager::steppedOpacity(0.25f, 1.0f, 50, 200), 0.5f);
+        QCOMPARE(GeometryManager::steppedOpacity(0.1f, 0.0f, 50, 200), 0.0f);
+        QCOMPARE(GeometryManager::steppedOpacity(0.9f, 1.0f, 500, 200), 1.0f);
+        QCOMPARE(GeometryManager::steppedOpacity(0.5f, 1.0f, -5, 200), 0.5f);
+        QCOMPARE(GeometryManager::steppedOpacity(0.5f, 0.0f, 0, 0), 0.0f);
+    }
+
+    // A name drawn at as many texels as the device pixels it covers, from once to three times its usual resolution,
+    // counting the screen's pixel ratio, and never wider than a texture can be
+    void test_namesAreDrawnAsSharpAsTheyAreSeen()
+    {
+        QCOMPARE(GeometryManager::textSharpness(0.0, 1.0, 100.0, 4096), 1);
+        QCOMPARE(GeometryManager::textSharpness(0.6, 1.0, 100.0, 4096), 1);
+        QCOMPARE(GeometryManager::textSharpness(1.2, 1.0, 100.0, 4096), 1);
+        QCOMPARE(GeometryManager::textSharpness(1.3, 1.0, 100.0, 4096), 2);
+        QCOMPARE(GeometryManager::textSharpness(2.5, 1.0, 100.0, 4096), 3);
+        QCOMPARE(GeometryManager::textSharpness(9.0, 1.0, 100.0, 4096), 3);
+        // A high resolution screen's name covers twice the device pixels
+        QCOMPARE(GeometryManager::textSharpness(0.6, 2.0, 100.0, 4096), 1);
+        QCOMPARE(GeometryManager::textSharpness(1.0, 2.0, 100.0, 4096), 2);
+        QCOMPARE(GeometryManager::textSharpness(1.2, 2.0, 100.0, 4096), 3);
+        // A long name is drawn no sharper than a texture can hold it
+        QCOMPARE(GeometryManager::textSharpness(9.0, 2.0, 1500.0, 4096), 2);
+        QCOMPARE(GeometryManager::textSharpness(9.0, 2.0, 3000.0, 4096), 1);
+        QCOMPARE(GeometryManager::textSharpness(9.0, 2.0, 9000.0, 4096), 1);
+    }
+
     // Two rooms whose names just fit side by side: spaced capitals run together there, so blueprint keeps a space
     // between names and drops one, where every other style keeps both as before
     void test_onlySpacedNamesAreKeptASpaceApart()

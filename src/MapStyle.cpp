@@ -60,8 +60,10 @@ QList<MapStyle> registeredStyles()
     tiles.mapLabelColor = QColor(150, 190, 225);
     tiles.mapLabelHalo = QColor(16, 22, 32, 200);
     tiles.mapLabelMaxHeight = 0.9f;
-    tiles.roomNameColor = QColor(185, 205, 225, 230);
-    tiles.roomNameScale = 0.6f;
+    tiles.roomNameColor = QColor(214, 226, 240);
+    tiles.roomNameScale = 0.62f;
+    tiles.uprightNames = true;
+    tiles.nameHalos = true;
     tiles.compassFace = QColor(18, 26, 38, 210);
     tiles.compassRim = QColor(110, 140, 170);
     tiles.compassNeedle = QColor(235, 96, 80);
@@ -100,8 +102,10 @@ QList<MapStyle> registeredStyles()
     blueprint.mapLabelColor = QColor(225, 242, 255);
     blueprint.mapLabelHalo = QColor(18, 60, 110, 210);
     blueprint.mapLabelMaxHeight = 0.6f;
-    blueprint.roomNameColor = QColor(210, 232, 252, 235);
-    blueprint.roomNameScale = 0.6f;
+    blueprint.roomNameColor = QColor(232, 244, 255);
+    blueprint.roomNameScale = 0.62f;
+    blueprint.uprightNames = true;
+    blueprint.nameHalos = true;
     blueprint.compassFace = QColor(18, 60, 110, 220);
     blueprint.compassRim = QColor(225, 242, 255);
     blueprint.compassNeedle = QColor(255, 112, 90);
@@ -131,8 +135,11 @@ QList<MapStyle> registeredStyles()
     terminal.mapLabelColor = QColor(170, 170, 170);
     terminal.mapLabelHalo = QColor(0, 0, 0, 220);
     terminal.mapLabelMaxHeight = 0.6f;
-    terminal.roomNameColor = QColor(170, 170, 170, 220);
-    terminal.roomNameScale = 0.6f;
+    // The ANSI palette's bright green, as a green phosphor screen draws its text
+    terminal.roomNameColor = QColor(85, 255, 85);
+    terminal.roomNameScale = 0.7f;
+    terminal.uprightNames = true;
+    terminal.nameHalos = true;
     terminal.compassFace = QColor(0, 0, 0, 220);
     terminal.compassRim = QColor(170, 170, 170);
     terminal.compassNeedle = QColor(255, 85, 85);
@@ -162,6 +169,9 @@ QList<MapStyle> registeredStyles()
     transit.stationRing = 0.13f;
     transit.interchangeExits = 5;
     transit.labelHalos = true;
+    transit.roomNameColor = QColor(35, 35, 40);
+    transit.roomNameScale = 0.7f;
+    transit.uprightNames = true;
     transit.levelPlatforms = true;
     transit.lineLegend = true;
     transit.highlightShape = MapStyle::HighlightShape::Halo;
@@ -191,7 +201,7 @@ QList<MapStyle> registeredStyles()
     hologram.postEffects = MapStyle::PostEffect::Scanlines | MapStyle::PostEffect::Bloom;
     hologram.floorPlates = false;
     hologram.playerMarker = MapStyle::PlayerMarker::Pulse;
-    hologram.labelTint = QColor(127, 227, 255, 160);
+    hologram.labelTint = QColor(150, 235, 255, 230);
     hologram.scannerOverlay = true;
     hologram.highlightShape = MapStyle::HighlightShape::Rings;
     hologram.highlightColor = QColor(255, 214, 90);
@@ -204,6 +214,9 @@ QList<MapStyle> registeredStyles()
     hologram.mapLabelMaxHeight = 0.6f;
     hologram.roomNameColor = QColor(Qt::white);
     hologram.roomNameScale = 0.75f;
+    hologram.uprightNames = true;
+    hologram.nameHalos = true;
+    hologram.softNameHalos = true;
     hologram.compassFace = QColor(3, 9, 18, 200);
     hologram.compassRim = QColor(70, 225, 255);
     hologram.compassNeedle = QColor(255, 79, 216);
@@ -234,10 +247,14 @@ QList<MapStyle> registeredStyles()
     inkwash.labelItalic = true;
     inkwash.themedMapLabels = true;
     inkwash.mapLabelColor = QColor(74, 62, 50);
-    inkwash.mapLabelHalo = QColor(241, 234, 218, 190);
+    inkwash.mapLabelKnockout = QColor(244, 237, 220, 235);
+    // For a label in a light color of its own, which the paper would lose: a rim of ink round its letters
+    inkwash.mapLabelHalo = QColor(38, 34, 32, 200);
     inkwash.mapLabelMaxHeight = 0.7f;
     inkwash.roomNameColor = QColor(92, 80, 66);
     inkwash.roomNameScale = 0.85f;
+    inkwash.nameHalos = true;
+    inkwash.softNameHalos = true;
     inkwash.compass = MapStyle::Compass::Arrow;
     inkwash.compassRim = QColor(38, 34, 32);
     inkwash.scaleBar = true;
@@ -437,6 +454,70 @@ QColor MapStyle::roomNameHaloFor(const QColor& nameColor) const
     return readsOnPlate(nameColor, rim) ? rim : QColor();
 }
 
+QColor MapStyle::over(const QColor& top, const QColor& under)
+{
+    const float alpha = top.alphaF();
+    return QColor::fromRgbF(under.redF() + (top.redF() - under.redF()) * alpha, under.greenF() + (top.greenF() - under.greenF()) * alpha, under.blueF() + (top.blueF() - under.blueF()) * alpha);
+}
+
+qreal MapStyle::contrastRatio(const QColor& first, const QColor& second)
+{
+    const auto luminance = [](const QColor& color) {
+        const auto linear = [](const qreal channel) {
+            return channel <= 0.04045 ? channel / 12.92 : std::pow((channel + 0.055) / 1.055, 2.4);
+        };
+        return 0.2126 * linear(color.redF()) + 0.7152 * linear(color.greenF()) + 0.0722 * linear(color.blueF());
+    };
+    const qreal a = luminance(first);
+    const qreal b = luminance(second);
+    return (qMax(a, b) + 0.05) / (qMin(a, b) + 0.05);
+}
+
+namespace {
+QColor tinted(const QColor& color, const QColor& tint)
+{
+    if (!tint.isValid()) {
+        return color;
+    }
+    return QColor::fromRgbF(color.redF() * tint.redF(), color.greenF() * tint.greenF(), color.blueF() * tint.blueF(), color.alphaF() * tint.alphaF());
+}
+
+// What text is seen against: its rim or plate, tinted as the text is, over the background, or the background alone
+QColor backingFor(const QColor& rim, const QColor& tint, const QColor& background)
+{
+    return rim.isValid() ? MapStyle::over(tinted(rim, tint), background) : background;
+}
+} // namespace
+
+QColor MapStyle::roomNameBacking(const QColor& profileBackground) const
+{
+    const QColor background = backgroundColor(profileBackground);
+    return backingFor(roomNameHaloFor(roomNameColorFor(QString(), background)), labelTint, background);
+}
+
+QColor MapStyle::shownRoomNameColor(const QColor& profileBackground) const
+{
+    const QColor background = backgroundColor(profileBackground);
+    return over(tinted(roomNameColorFor(QString(), background), labelTint), roomNameBacking(profileBackground));
+}
+
+QColor MapStyle::mapLabelBacking(const QColor& profileBackground) const
+{
+    const QColor background = backgroundColor(profileBackground);
+    if (mapLabelPlate.isValid() && readsOnPlate(mapLabelColor, mapLabelPlate)) {
+        return backingFor(mapLabelPlate, labelTint, background);
+    }
+    if (mapLabelKnockout.isValid() && readsOnPlate(mapLabelColor, mapLabelKnockout)) {
+        return backingFor(mapLabelKnockout, labelTint, background);
+    }
+    return backingFor(mapLabelHalo, labelTint, background);
+}
+
+QColor MapStyle::shownMapLabelColor(const QColor& profileBackground) const
+{
+    return over(tinted(mapLabelColor, labelTint), mapLabelBacking(profileBackground));
+}
+
 QColor MapStyle::exitColor(const QColor& profileExitColor) const
 {
     return ink.isValid() ? ink : profileExitColor;
@@ -537,7 +618,18 @@ QColor MapStyle::roomBorderColor(const QColor& profileBorder, const QColor& room
 QColor MapStyle::roomNameColorFor(const QString& roomColorData, const QColor& background) const
 {
     if (roomNameColor.isValid() && !QColor(roomColorData).isValid()) {
-        return roomNameColor;
+        const auto contrast = [this, &background](const QColor& color) {
+            const QColor backing = backingFor(roomNameHaloFor(color), labelTint, background);
+            return contrastRatio(over(tinted(color, labelTint), backing), backing);
+        };
+        // Kept to a background it was chosen for: on one the profile picked, a pale name could vanish
+        if (contrast(roomNameColor) >= scmLeastTextContrast) {
+            return roomNameColor;
+        }
+        // Measured, not judged by lightness as contrastColor() does, which puts white on a saturated yellow or green
+        const QColor black(Qt::black);
+        const QColor white(Qt::white);
+        return contrast(black) >= contrast(white) ? black : white;
     }
     return RoomAppearance::nameColor(roomColorData, background);
 }

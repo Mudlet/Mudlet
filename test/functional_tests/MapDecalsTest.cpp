@@ -128,7 +128,7 @@ private slots:
     {
         const QColor background(16, 22, 32);
         QCOMPARE(tiles().roomNameColorFor(QString(), background), tiles().roomNameColor);
-        QVERIFY(tiles().roomNameColor.alpha() < 255);
+        QVERIFY(tiles().roomNameColor != QColor(Qt::white));
         QVERIFY(tiles().roomNameScale < 1.0f);
         QCOMPARE(tiles().roomNameColorFor(qsl("#ff8000"), background), QColor(255, 128, 0));
         QCOMPARE(MapStyle().roomNameColorFor(QString(), background), QColor(Qt::white));
@@ -260,6 +260,106 @@ private slots:
         const QImage shadow = MapDecals::blockShadow(true, scmSize);
         QVERIFY(alphaAt(shadow, scmSize / 2, scmSize / 2) > alphaAt(shadow, scmSize / 2, scmSize / 6));
         QCOMPARE(alphaAt(shadow, 0, 0), 0);
+    }
+
+    void test_everyStyleWritesNamesAndLabelsThatStandOutFromWhatIsBehindThem()
+    {
+        // The profile's own background as well, which a style without one of its own draws on
+        // Saturated yellow and green are light though their HSL lightness is middling, and #777777 is where neither black
+        // nor white clears the least contrast by much
+        const QList<QColor> backgrounds{Qt::black,
+                                        Qt::white,
+                                        QColor(16, 22, 32),
+                                        QColor(128, 128, 128),
+                                        QColor(245, 243, 236),
+                                        QColor(0, 0, 80),
+                                        QColor(255, 255, 0),
+                                        QColor(0, 255, 0),
+                                        QColor(0, 200, 0),
+                                        QColor(0x77, 0x77, 0x77)};
+        for (const MapStyle& style : MapStyle::all()) {
+            for (const QColor& background : backgrounds) {
+                const qreal name = MapStyle::contrastRatio(style.shownRoomNameColor(background), style.roomNameBacking(background));
+                QVERIFY2(name >= MapStyle::scmLeastTextContrast, qPrintable(qsl("%1's room names on %2: %3 to 1").arg(style.id, background.name(), QString::number(name, 'f', 2))));
+                if (style.themedMapLabels && style.mapLabelColor.isValid()) {
+                    const qreal label = MapStyle::contrastRatio(style.shownMapLabelColor(background), style.mapLabelBacking(background));
+                    QVERIFY2(label >= MapStyle::scmLeastTextContrast, qPrintable(qsl("%1's map labels on %2: %3 to 1").arg(style.id, background.name(), QString::number(label, 'f', 2))));
+                }
+            }
+        }
+    }
+
+    // The audit above measures a name after any fallback; a style's own color must read on its own background
+    // without one
+    void test_everyStyleChoseANameColorForItsOwnBackground()
+    {
+        for (const MapStyle& style : MapStyle::all()) {
+            if (!style.roomNameColor.isValid() || !(style.background.isValid() || style.defaultBackground.isValid())) {
+                continue;
+            }
+            const QColor own = style.backgroundColor(Qt::black);
+            QVERIFY2(style.roomNameColorFor(QString(), own) == style.roomNameColor, qPrintable(qsl("%1's name color gives way on its own background %2").arg(style.id, own.name())));
+        }
+    }
+
+    void test_contrastIsMeasuredAsTheWebsGuidelinesMeasureIt()
+    {
+        QCOMPARE(MapStyle::contrastRatio(Qt::black, Qt::white), 21.0);
+        QCOMPARE(MapStyle::contrastRatio(Qt::white, Qt::white), 1.0);
+        QVERIFY(qAbs(MapStyle::contrastRatio(QColor(118, 118, 118), Qt::white) - 4.54) < 0.01);
+        QCOMPARE(MapStyle::over(QColor(255, 255, 255, 0), Qt::black), QColor(Qt::black));
+        QCOMPARE(MapStyle::over(QColor(255, 255, 255, 255), Qt::black), QColor(Qt::white));
+    }
+
+    void test_aPaleNameGivesWayOnABackgroundItWasNotChosenFor()
+    {
+        QCOMPARE(tiles().roomNameColorFor(QString(), QColor(16, 22, 32)), tiles().roomNameColor);
+        const QColor onWhite = tiles().roomNameColorFor(QString(), Qt::white);
+        QVERIFY2(MapStyle::contrastRatio(onWhite, Qt::white) >= MapStyle::scmLeastTextContrast, qPrintable(onWhite.name()));
+        // Black on a saturated green, which judged by its lightness alone would have white
+        QCOMPARE(tiles().roomNameColorFor(QString(), QColor(0, 200, 0)), QColor(Qt::black));
+    }
+
+    void test_inkwashScrapesThePaperCleanBehindALabel()
+    {
+        const MapStyle& inkwash = *MapStyle::find(qsl("inkwash"));
+        QVERIFY(inkwash.mapLabelKnockout.isValid());
+        const TMapLabel label = textLabel(Qt::white, QColor(0, 0, 0, 50));
+        const QImage image = MapDecals::themedLabel(label, inkwash);
+        QCOMPARE(image.size(), label.pix.size());
+        // Paper behind the text, fading out toward the picture's edge, and nothing in its corners
+        const QColor middle = QColor::fromRgba(image.pixel(image.width() / 2, 2 * image.height() / 3));
+        QVERIFY2(middle.alpha() > 200, qPrintable(QString::number(middle.alpha())));
+        QCOMPARE(alphaAt(image, 0, 0), 0);
+        const int text = paintedArea(image).width();
+        int paper = 0;
+        for (int x = 0; x < image.width(); ++x) {
+            paper += alphaAt(image, x, image.height() / 2) > 0 ? 1 : 0;
+        }
+        QVERIFY2(paper > text / 2, "the paper reaches along the text");
+        const int edge = alphaAt(image, image.width() / 2, 1);
+        QVERIFY2(edge < middle.alpha(), "the paper thins out toward its edge");
+
+        // A label in its own light color, which would be lost on the paper, has a halo round its letters instead
+        const auto covered = [](const QImage& drawn) {
+            int pixels = 0;
+            for (int y = 0; y < drawn.height(); ++y) {
+                for (int x = 0; x < drawn.width(); ++x) {
+                    pixels += alphaAt(drawn, x, y) > 0 ? 1 : 0;
+                }
+            }
+            return pixels;
+        };
+        const QImage light = MapDecals::themedLabel(textLabel(QColor(255, 240, 120), QColor(0, 0, 0, 50)), inkwash);
+        QVERIFY2(2 * covered(light) < covered(image), qPrintable(qsl("a light label covers %1 pixels and one on paper %2").arg(covered(light)).arg(covered(image))));
+        int inked = 0;
+        for (int y = 0; y < light.height(); ++y) {
+            for (int x = 0; x < light.width(); ++x) {
+                const QColor pixel = light.pixelColor(x, y);
+                inked += pixel.alpha() > 100 && MapStyle::contrastRatio(pixel, QColor(255, 240, 120)) >= MapStyle::scmLeastTextContrast ? 1 : 0;
+            }
+        }
+        QVERIFY2(inked > 20, qPrintable(qsl("a light label has %1 pixels of a rim it reads on").arg(inked)));
     }
 
     void test_defaultLabelIsDrawnInTheStyleColorWithoutItsBox()
