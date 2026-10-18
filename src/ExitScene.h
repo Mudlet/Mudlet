@@ -20,6 +20,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include <QChar>
 #include <QColor>
 #include <QList>
 #include <QVector3D>
@@ -45,11 +46,28 @@ struct Options
     // In and out exits drawn as a short stub from their room, rather than all the way
     bool inOutStubs = false;
     bool largeAreaExitArrows = false;
+    // Doors drawn as a plan's door swing, as MapStyle::Doors::Swings says, rather than the 2D map's strokes
+    bool doorSwings = false;
+    // Doors drawn as a bar across the line, as MapStyle::Doors::Bars says
+    bool doorBars = false;
+    // Lines between rooms of one environment, and stubs, drawn in its color made to stand out on background, as
+    // MapStyle::environmentLines says, rather than in exitColor
+    bool environmentLines = false;
+    // With environmentLines, the color of a line between rooms of two environments; invalid for exitColor
+    QColor mixedLineColor;
+    // Exit lines between rooms on one level, their stubs and doors drawn as Glyphs, as MapStyle::Glyphs::Terminal says
+    bool glyphs = false;
+    // A room's width, in rooms' spacing, and whether it is round, so that a door swing clears its room
+    float roomSize = 0.0f;
+    bool roundRooms = false;
+    // Exits straight up or down drawn dashed
+    bool dashedStairs = false;
     // Only where area exits can be clicked, with nothing to draw, for picking without the cost of the whole scene
     bool areaExitsOnly = false;
     QColor exitColor;
     // The map's background, against which area exits are outlined
     QColor background;
+    bool operator==(const Options&) const = default;
 };
 
 // A straight bar, width across and height tall, centered on the line from -> to;
@@ -62,6 +80,8 @@ struct Segment
     float height = 0.0f;
     QColor color;
     int level = 0;
+    // A whole exit line out of its room, that a brush may taper; not a door, a dash or a piece of a custom line
+    bool stroke = false;
 };
 
 // A flat filled triangle
@@ -74,6 +94,18 @@ struct Triangle
     int level = 0;
     // Sized to stay readable when the rooms are too small to see, so drawn at any distance
     bool distant = false;
+};
+
+// A character in a cell of the grid, half a room's spacing across, that a map drawn as text is laid out on
+struct Glyph
+{
+    QVector3D at;
+    // The line it is part of runs this way, so that the one drawing it can pick the character that reads so on screen
+    QVector3D along;
+    // Null for a line's character
+    QChar character;
+    QColor color;
+    int level = 0;
 };
 
 // An area exit's arrow, from its room's center to its tip, for clicking through to destinationId
@@ -91,6 +123,8 @@ struct Scene
 {
     QList<Segment> segments;
     QList<Triangle> triangles;
+    // At most one in a cell, a door's over a line's
+    QList<Glyph> glyphs;
     // Not drawn: where an area exit can be clicked
     QList<AreaExit> areaExits;
     // The first room with a dotted or dashed line drawn solid, as its pattern would repeat too often along it; 0 if none
