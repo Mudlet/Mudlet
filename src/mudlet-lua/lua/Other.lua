@@ -1406,6 +1406,10 @@ local oldInstallPackage = installPackage
 -- Override of original installPackage to allow installs from URL
 -- @param target - file path or url (starting with http(s):// and ending with package file extensions)
 function installPackage(target)
+  -- the C++ side is what reports a bad argument in the same words as its siblings
+  if type(target) ~= "string" then
+    return oldInstallPackage(target)
+  end
   local file = packageFileFromUrl(target)
   if file then
     return installPackageFromUrl(file, target)
