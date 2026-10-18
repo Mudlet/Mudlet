@@ -212,19 +212,26 @@ public:
     // screen: as many texels as the device pixels it covers, from 1 to 3, and no wider than a texture can be
     static int textSharpness(qreal pixelsPerTexel, qreal devicePixelRatio, qreal widthTexels, int maxTextureSize);
 
-    // How a level other than the viewed one recedes: how far its colors go toward the background, and
-    // how opaque it stays
+    // How a level other than the viewed one recedes: how far its colors go toward the background, how opaque it
+    // stays, and how much of their saturation they keep before they fade
     struct LevelFade
     {
         float towardBackground = 0.0f;
         float opacity = 1.0f;
+        float saturation = 1.0f;
     };
     // levelsAbove is how many levels above the viewed one, negative for below
     static LevelFade levelFade(int levelsAbove, bool moreTransparent);
     static QVector4D fadedColor(const QColor& color, const LevelFade& fade, const QColor& background);
     // What a level fades toward when the mapper draws the levels above and below in their own colors: the
-    // upper or lower level color laid over the background by its alpha, or the background on the viewed level
+    // background covered by the upper or lower level color as far as its alpha; the background on the viewed level
     static QColor levelFadeTarget(int levelsAbove, const QColor& background, const QColor& upperLevelColor, const QColor& lowerLevelColor);
+    // The upper or lower level color to fade toward: one the user chose as they chose it, as the 2D map draws it, but
+    // the profile's default at scmLevelColorShare of its alpha, as at full strength it would light the levels up
+    static QColor calmedLevelColor(const QColor& levelColor, const QColor& defaultColor);
+    // Enough of the default level color to tell the levels above from those below, little enough that they still
+    // sink into the background
+    static constexpr float scmLevelColorShare = 0.3f;
     // The map grid's lines across extent, one at each whole coordinate as the 2D map draws them, through rooms' centers
     static QList<QLineF> gridLines(const QRectF& extent);
     // An upright cylinder of radius 1 from z -1 to 1, its side smooth shaded, each face wound counterclockwise from outside
