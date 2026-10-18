@@ -40,7 +40,18 @@ end
 
 local parse
 
+local componentNames = {"red", "green", "blue", "alpha"}
+
+-- %02x of an out of range component is more than two digits
+local function hexByte(value, component, caller)
+  if not tonumber(value) then
+    error(string.format("%s: bad %s component (number expected, got %s!)", caller, componentNames[component], type(value)), 3)
+  end
+  return math.min(255, math.max(0, math.floor(value)))
+end
+
 --- Converts color to 3 hex values as a string, no alpha, css style
+-- Components are rounded down and clamped to 0-255.
 -- @return The color formatted as a hex string, as accepted by html/css
 function Geyser.Color.hex (r, g, b)
   -- the caches are what parse() made of the string, so not for a parse()
@@ -49,30 +60,37 @@ function Geyser.Color.hex (r, g, b)
   if known then
     local hex = known[5]
     if not hex then
-      hex = string.format("#%02x%02x%02x", known[1], known[2], known[3])
+      hex = string.format("#%02x%02x%02x", hexByte(known[1], 1, "Geyser.Color.hex"), hexByte(known[2], 2, "Geyser.Color.hex"), hexByte(known[3], 3, "Geyser.Color.hex"))
       known[5] = hex
     end
     return hex
   end
-  return string.format("#%02x%02x%02x", Geyser.Color.parse(r, g, b))
+  local red, green, blue = Geyser.Color.parse(r, g, b)
+  return string.format("#%02x%02x%02x", hexByte(red, 1, "Geyser.Color.hex"), hexByte(green, 2, "Geyser.Color.hex"), hexByte(blue, 3, "Geyser.Color.hex"))
 end
 
 --- Converts color to 4 hex values as a string, with alpha, css style
+-- Components are rounded down and clamped to 0-255.
 -- @return The color formatted as a hex string, as accepted by html/css
 function Geyser.Color.hexa (r, g, b, a)
-  return string.format("#%02x%02x%02x%02x", Geyser.Color.parse(r, g, b, a))
+  local red, green, blue, alpha = Geyser.Color.parse(r, g, b, a)
+  return string.format("#%02x%02x%02x%02x", hexByte(red, 1, "Geyser.Color.hexa"), hexByte(green, 2, "Geyser.Color.hexa"), hexByte(blue, 3, "Geyser.Color.hexa"), hexByte(alpha, 4, "Geyser.Color.hexa"))
 end
 
 --- Converts color to 3 hex values as a string, no alpha, hecho style
+-- Components are rounded down and clamped to 0-255.
 -- @return The color formatted as a hex string, as accepted by hecho
 function Geyser.Color.hhex (r, g, b)
-  return string.format("|c%02x%02x%02x", Geyser.Color.parse(r, g, b))
+  local red, green, blue = Geyser.Color.parse(r, g, b)
+  return string.format("|c%02x%02x%02x", hexByte(red, 1, "Geyser.Color.hhex"), hexByte(green, 2, "Geyser.Color.hhex"), hexByte(blue, 3, "Geyser.Color.hhex"))
 end
 
 --- Converts color to 4 hex values as a string, with alpha, hecho style
+-- Components are rounded down and clamped to 0-255.
 -- @return The color formatted as a hex string, as accepted by hecho
 function Geyser.Color.hhexa (r, g, b, a)
-  return string.format("|c%02x%02x%02x%02x", Geyser.Color.parse(r, g, b, a))
+  local red, green, blue, alpha = Geyser.Color.parse(r, g, b, a)
+  return string.format("|c%02x%02x%02x%02x", hexByte(red, 1, "Geyser.Color.hhexa"), hexByte(green, 2, "Geyser.Color.hhexa"), hexByte(blue, 3, "Geyser.Color.hhexa"), hexByte(alpha, 4, "Geyser.Color.hhexa"))
 end
 
 --- Converts color to 3 decimal values as a string, no alpha, decho style

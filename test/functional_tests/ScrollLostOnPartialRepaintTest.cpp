@@ -250,8 +250,8 @@ private slots:
     // pacer, and a full repaint landing first must not take that with it
     void test_aRepaintBeforeThePacerFiresLeavesTheScrollBarCurrent()
     {
-        // the welcome lands 100ms after connecting, and output arriving during
-        // the wait below refreshes the scrollbar and hides the loss
+        // the welcome would land mid-case, and its output arms the pacer and
+        // refreshes the scrollbar too
         mpServer->setSendsWelcome(false);
         startProfile(mpHostname, mpLocalhost, mpPort);
         auto host = mudlet::self()->getActiveHost();
@@ -263,31 +263,29 @@ private slots:
         auto* lua = host->getLuaInterpreter();
 
         lua->compileAndExecuteScript(qsl("for i = 1, 200 do echo('FILLER ' .. i .. '\\n') end\n"));
-        qApp->processEvents();
-        pane->repaint();
-        // The paint window runs from the start of a paint, so on a loaded runner
-        // the paint alone could use it up; time it from the end instead
-        pane->mSincePaint.restart();
-        lua->compileAndExecuteScript(qsl("echo('PACED_LINE\\n')\n"));
-        // Only the paint window starts the pacer with an interval; a late echo
-        // can still start it at 0 through the whole-pane path, which is not the
-        // case under test
-        const bool paced = pane->mpPaintPacer->isActive() && pane->mpPaintPacer->interval() > 0;
-        // As in FramePacingTest: an echo that took the whole window means the
-        // runner stalled mid-echo, and the case under test never arose
-        const qint64 sincePaintMs = pane->mSincePaint.elapsed();
-        if (!paced && sincePaintMs >= TTextEdit::csmPaintPaceMs) {
-            QSKIP(qPrintable(qsl("the echo took %1ms, past the %2ms paint window it had to land inside - the runner stalled mid-echo, so the pacer was not exercised")
-                                     .arg(sincePaintMs)
-                                     .arg(TTextEdit::csmPaintPaceMs)));
+        // the filler can leave the pacer running, and the one below has to be the echo's
+        QTRY_VERIFY(!pane->mpPaintPacer->isActive());
+
+        // The paint window is wall-clock time, so a runner that stalls mid-echo
+        // closes it first; each attempt paints again to open a new one
+        bool paced = false;
+        for (int attempt = 0; attempt < 20 && !paced; ++attempt) {
+            pane->repaint();
+            // timed from the end of the paint, which on a loaded runner can use
+            // the whole window by itself
+            pane->mSincePaint.restart();
+            lua->compileAndExecuteScript(qsl("echo('PACED_LINE\\n')\n"));
+            // the whole-pane path arms it at 0 and leaves no region for a paint to cover
+            paced = pane->mpPaintPacer->isActive() && pane->mpPaintPacer->interval() > 0;
         }
-        QVERIFY2(paced, "the line arrived inside the paint window but the pacer never started");
+        QVERIFY2(paced, "twenty lines in a row arrived after their paint window closed, so the pacer never started");
         pane->forceUpdate();
         pane->repaint();
 
-        // not QTRY: a refresh from anywhere within its retry window would hide
-        // the loss
-        QTest::qWait(100ms);
+        // A stalled runner can outlast any fixed wait before the timer gets its
+        // turn. Not a QTRY on the scrollbar, as a refresh from anywhere within
+        // its retry window would hide the loss.
+        QTRY_VERIFY(!pane->mpPaintPacer->isActive());
         QCOMPARE(scrollBar->maximum(), host->mainConsoleView()->buffer.getLastLineNumber() + 1);
     }
 

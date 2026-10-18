@@ -53,6 +53,7 @@
 #include "SettingsTestHelper.h"
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
+#include "MudletProxyStyle.h"
 #include "TelnetServerStub.h"
 #include "dlgProfilePreferences.h"
 #include "mudlet.h"
@@ -242,6 +243,26 @@ private slots:
 
         QVERIFY2(applied, "the debounce never wrote the settings back");
         QVERIFY2(!stored, "unticking the telnet:// handler option with no profile open was not saved");
+    }
+
+    // So is whether Alt on its own moves focus to the menu bar, and a screen
+    // reader user whose reader goes undetected needs it before any profile is open
+    void test_theAltKeyMenuBarOptionWorksWithNoProfile()
+    {
+        MudletProxyStyle::setAltKeyNavigation(enums::MenuBarAltKeyNavigation::Never);
+        openPreferences(mpPreferences, nullptr);
+        QComboBox* pAltKey = mpPreferences->comboBox_menuBarAltKeyNavigation;
+        QVERIFY2(pAltKey->isEnabled(), "the Alt key menu bar option is not a profile setting and must stay usable");
+        QCOMPARE(pAltKey->currentIndex(), static_cast<int>(enums::MenuBarAltKeyNavigation::Never));
+
+        QSignalSpy applySpy(mpPreferences, &dlgProfilePreferences::signal_preferencesSaved);
+        pAltKey->setCurrentIndex(static_cast<int>(enums::MenuBarAltKeyNavigation::Always));
+        const bool applied = TestSettings::waitForApply(applySpy);
+        const enums::MenuBarAltKeyNavigation stored = MudletProxyStyle::altKeyNavigation();
+        MudletProxyStyle::setAltKeyNavigation(enums::MenuBarAltKeyNavigation::WhenScreenReaderRunning);
+
+        QVERIFY2(applied, "the debounce never wrote the settings back");
+        QCOMPARE(stored, enums::MenuBarAltKeyNavigation::Always);
     }
 
     // The notice is also the dialog's description, which has to follow it into
