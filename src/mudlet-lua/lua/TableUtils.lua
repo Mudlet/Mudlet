@@ -700,21 +700,84 @@ function table.index_of(table, element)
   return nil
 end
 
+-- Both walks keep their own stack instead of recursing, so a long chain such as a linked list
+-- cannot overflow the Lua stack.
+local function reachesItself(root)
+  local onPath, finished = { [root] = true }, {}
+  local path, resumeKey, depth = { root }, {}, 1
+  while depth > 0 do
+    local t = path[depth]
+    local k, v = next(t, resumeKey[depth])
+    while k ~= nil and type(v) ~= 'table' do
+      k, v = next(t, k)
+    end
+    if k == nil then
+      onPath[t], finished[t] = nil, true
+      path[depth], resumeKey[depth] = nil, nil
+      depth = depth - 1
+    else
+      resumeKey[depth] = k
+      if onPath[v] then
+        return true
+      end
+      if not finished[v] then
+        depth = depth + 1
+        path[depth], onPath[v] = v, true
+      end
+    end
+  end
+  return false
+end
+
+-- held here so a script that later removes debug cannot break table.deepcopy
+local metatableOf = getRawMetatable or getmetatable
+
+-- A cycle copied once per path is copied again for every way into it, exponentially, so each
+-- table in it gets one copy; acyclic input gets one per reference, as callers edit them apart.
+local function deepcopy(root, oncePerTable)
+  local rootCopy = {}
+  local copies = oncePerTable and { [root] = rootCopy }
+  local pending, count = { root, rootCopy }, 2
+  while count > 0 do
+    local t, res = pending[count - 1], pending[count]
+    pending[count - 1], pending[count], count = nil, nil, count - 2
+    for k, v in pairs(t) do
+      if type(v) == 'table' then
+        local copy = copies and copies[v]
+        if not copy then
+          copy = {}
+          if copies then
+            copies[v] = copy
+          end
+          pending[count + 1], pending[count + 2], count = v, copy, count + 2
+        end
+        v = copy
+      end
+      res[k] = v
+    end
+    -- after the fields, so a __newindex in it never sees them
+    setmetatable(res, metatableOf(t))
+  end
+  return rootCopy
+end
+
 -- returns a deep copy of the table with the metatable intact. Credit to Steve Donovan of Penlight.
+-- Keys are not copied. If any table reachable from t reaches itself (t.parent.child == t, or a
+-- cache.self == cache anywhere inside), every table gets one copy, so references that met at one
+-- table still do. Otherwise a table referenced from two places gets a separate copy for each.
 function table.deepcopy(t)
   if type(t) ~= 'table' then
     return t
   end
-  local mt = getmetatable(t)
-  local res = {}
+  -- the flat tables most callers pass need neither walk
+  local copy = {}
   for k, v in pairs(t) do
     if type(v) == 'table' then
-      v = table.deepcopy(v)
+      return deepcopy(t, reachesItself(t))
     end
-    res[k] = v
+    copy[k] = v
   end
-  setmetatable(res, mt)
-  return res
+  return setmetatable(copy, metatableOf(t))
 end
 
 -- Table keys

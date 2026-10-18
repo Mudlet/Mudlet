@@ -200,6 +200,7 @@ public:
     void switchArea(const QString& newAreaName);
     void switchArea(int areaId);
     void clearSelection();
+    void forgetDeletedRoom(int roomId);
     void pruneRoomSelectionToArea(int areaId);
     void initiateSpeedWalk(const int speedWalkStartRoomId, const int speedWalkTargetRoomId);
 
@@ -437,6 +438,7 @@ private:
 
     void resizeMultiSelectionWidget();
     void hideSelectionWidget();
+    void pruneDeletedRoomsFromSelectionWidget();
     std::pair<int, int> getMousePosition();
     std::pair<bool, QString> performImageSave(const QPixmap& pixmap, const QString& filePath, const QString& format);
     bool isSnapCustomLinePointsToGridEnabled() const;
@@ -483,6 +485,8 @@ private:
         // The destination's reverse exit doesn't lead back. Not the sole arrow test: an exit also gets
         // an arrow when a sibling exit to the same room is one-way.
         bool oneWay = false;
+        // A straight custom line between the two rooms draws this exit's line, but not this room's door on it.
+        bool drawnByCustomLine = false;
     };
     void paintRoomExits(QPainter&, QPen&, QList<ExitToPaint>& exitList, const TArea*, int zLevel, const QRect& roomBounds, const QList<int>& viewportRooms, float exitWidth, QMap<int, QPointF>&);
     void resolveAreaExitClick(QPainter&, const QMap<int, QPointF>& areaExitsMap, const int speedWalkStartRoomId);
@@ -512,6 +516,7 @@ private:
 
     bool mIsSelectionSorting = true;
     bool mIsSelectionSortByNames = false;
+    QSet<int> mRoomsToDropFromSelectionWidget;
 
     // Used to keep track of if sorting the multiple
     // room listing/selection widget, and by what,
