@@ -76,9 +76,11 @@ public:
     using CredentialCallback = std::function<void(bool success, const QString& errorMessage)>;
     using CredentialRetrievalCallback = std::function<void(bool success, QString password, const QString& errorMessage)>;
     // Why a read came back without a password; success is always outcome == Found. After NothingStored the
-    // store has answered, so a caller may remove or replace what it holds, which it cannot after Unreadable
-    // (also a read refused before it started) or TimedOut, the lookup's deadline answering.
-    enum class ReadOutcome { Found, NothingStored, Unreadable, TimedOut };
+    // store has answered, so a caller may remove or replace what it holds, which it cannot after Unreadable,
+    // Unavailable or TimedOut, the lookup's deadline answering. Unreadable is a store saying no - the keychain
+    // refusing the read, or a file that is there but will not read; Unavailable is a store that could not be
+    // asked at all - no keychain service, a name no file can be made for, or a read refused before it started.
+    enum class ReadOutcome { Found, NothingStored, Unreadable, Unavailable, TimedOut };
     using TimedRetrievalCallback = std::function<void(bool success, QString password, const QString& errorMessage, ReadOutcome outcome)>;
     using AvailabilityCallback = std::function<void(bool available, const QString& message)>;
 
@@ -161,7 +163,8 @@ private:
     // Static utility methods for fallback storage
     static QString generateFilePath(const QString& profileName, const QString& key);
     static QString generateLegacyFilePath(const QString& profileName, const QString& key);
-    static QString readLegacyFileCredential(const QString& profileName, const QString& key);
+    // unreadable, when given, is set when the older-named file is there but cannot be opened
+    static QString readLegacyFileCredential(const QString& profileName, const QString& key, bool* unreadable = nullptr);
     static QString ourLegacyFilePath(const QString& profileName, const QString& key);
     static void refreshLegacyFileCredential(const QString& profileName, const QString& key, const QString& credential);
     static void removeLegacyFileCredential(const QString& profileName, const QString& key);
@@ -170,9 +173,9 @@ private:
     static bool isValidKeyName(const QString& key);
     static bool storeCredentialToFile(const QString& profileName, const QString& key, const QString& credential);
     bool storeCredentialToFileForThisOperation(const QString& profileName, const QString& key, const QString& credential);
-    // unreadable, when given, is set when the file could not be consulted: no valid path, or a file there
-    // that cannot be opened or decrypted
-    static QString retrieveCredentialFromFile(const QString& profileName, const QString& key, bool* unreadable = nullptr);
+    // failure, when given, says why nothing came back: NothingStored, Unreadable for a file there that
+    // cannot be opened or decrypted, or Unavailable when no valid path can be made
+    static QString retrieveCredentialFromFile(const QString& profileName, const QString& key, ReadOutcome* failure = nullptr);
     static bool removeCredentialFromFile(const QString& profileName, const QString& key);
 
     // One place a lookup may find the password: a keychain entry, or the encrypted file. recover
@@ -212,8 +215,11 @@ private:
         // refusal after it is that entry's own, however many of them there are, and the chain runs
         // to the end: the password may be in a layout behind them.
         bool storeHasAnswered = false;
-        // The encrypted file could not be consulted, so finding nothing is not proof of absence
-        bool fileUnreadable = false;
+        // Why the encrypted file gave nothing; anything but NothingStored means it is not proof of absence
+        ReadOutcome fileOutcome = ReadOutcome::NothingStored;
+        // Whether the keychain refused any read, now or within the refusal window, as opposed to
+        // failing for want of a service to ask
+        bool keychainRefused = false;
         // Set when the store has refused scmRefusalsBeforeGivingUpOnTheStore reads in a row without
         // answering any: every remaining keychain read would ask it the same question, and be
         // refused the same way, at the cost of another prompt. Only the file is read from then on.

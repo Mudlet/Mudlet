@@ -23,6 +23,20 @@ with a red outline, and this user data:
 Label 0 claims its outline key and the zoom key is read as the zoom, so loading
 it should leave only `climate` behind.
 
+## `phantom-room-hashes.dat`
+
+A binary map from a build whose `setRoomIDbyHash()` accepted any room id and an
+empty hash. Its one area, `PhantomHashArea`, holds rooms 1 and 2, and its hash
+table holds:
+
+| Hash | Room |
+| --- | --- |
+| `phantom-hash` | 999999, which does not exist |
+| (empty) | 1 |
+| `real-hash` | 2 |
+
+Loading it should leave only `real-hash` behind.
+
 ## `achaea-map.zip`
 
 A verbatim snapshot of the MMP map Iron Realms publishes for Achaea, used by

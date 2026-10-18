@@ -184,7 +184,8 @@ struct TConsoleModel
     // no longer valid, so replace() does not take it for no selection at all.
     void clear();
 
-    // Half-open: lines(n, n) is empty. Lines outside the buffer are left out.
+    // Half-open from `from`: lines(n, n) is empty, lines(2, 0) is lines 2 and 1 in that order.
+    // Lines outside the buffer are left out.
     QStringList lines(int from, int to) const;
 
     // Selecting a run of the cursor's line, painting it and restoring the format, for colorizer triggers
@@ -200,7 +201,8 @@ struct TConsoleModel
     // Whether the selection is still valid, its text (else why not), its start and its length. The text
     // is read from the cursor's line, not the selection's, at the selection's columns.
     std::tuple<bool, QString, int, int> selection();
-    // The selected character's format, or the cursor's with no selection; first is 2 when there is none.
+    // The selected character's format, or the cursor's when the selection is empty; first is 2 when a non-empty
+    // selection starts off the buffer's text, 1 when the selection is empty and no character is under the cursor.
     QPair<quint8, TChar> textAttributes() const;
     // The character the selection starts on, or nullptr when that is off the buffer. With no selection
     // that is the buffer's first character: unlike textAttributes(), this does not fall back to the cursor.
@@ -215,8 +217,8 @@ struct TConsoleModel
     // Client output, appended at the end of the buffer and copied to --mirror. The view showing the
     // model brings the new lines into view (TConsole::showNewLines()).
     void print(const QString& msg);
-    // timeStampOverride keeps the arrival time for held-back content being replayed.
-    void print(const QString& msg, const QColor& fgColor, const QColor& bgColor, const QString& timeStampOverride = QString());
+    // timeStampOverride keeps the arrival time for held-back content being replayed; csmNoTimeStamp stamps it now.
+    void print(const QString& msg, const QColor& fgColor, const QColor& bgColor, qint64 timeStampOverride = TBuffer::csmNoTimeStamp);
     void printSystemMessage(const QString& msg);
 
     // What printCommand() did to the buffer, which decides what the view repaints.
@@ -241,15 +243,40 @@ struct TConsoleModel
     // For --mirror: copies text to stdout prefixed with the profile and console names. Text may be a
     // line fragment, so what follows the last line feed is held until one arrives.
     void mirrorToStdOut(const QString& text);
+    // mirrorToStdOut() without first writing out what triggers wrote and is still held
+    void writeMirrorFragments(const QString& text);
     // For a complete line: TBuffer::commitLineData() passes it as sent, before triggers can gag or rewrite it.
     void mirrorLineToStdOut(const QString& line);
+    // For text written while triggers run: it lands in a line already mirrored as sent, so it is held
+    // and goes out after that line as lines of its own, ahead of any later output. Take a mark just
+    // before the write and hand it to holdTriggerWriteForMirror() after; what the write put into the
+    // buffer is read back out of it, so text the console capped or dropped is not copied.
+    struct MirrorMark
+    {
+        QPoint start{-1, -1};
+        // The line's length before a write into it, or -1 for a write appended to the buffer
+        int lineLength = -1;
+        int linesCommitted = 0;
+    };
+    MirrorMark markTriggerWriteForMirror(const QPoint& at) const;
+    MirrorMark markTriggerAppendForMirror() const;
+    void holdTriggerWriteForMirror(const MirrorMark& mark);
+    // Drops what was held for a line a trigger deleted, which the console no longer shows
+    void forgetHeldMirrorTextOnLine(int line);
+    // At the end of a trigger pass
+    void flushMirroredTriggerText();
+    // This console's held text and, for a sub-console, the main console's
+    void flushHeldMirrorText();
+    void writeHeldMirrorRuns();
     // What a write at mUserCursor leaves the view to do: show the lines it
     // appended, or repaint firstLine..lastLine, which it changed in place.
+    // linkDropped: insertLink() put its link on no text, so it took no luaReferences.
     struct WriteResult
     {
         bool appended = false;
         int firstLine = -1;
         int lastLine = -1;
+        bool linkDropped = false;
     };
     // echoLink() appends; the inserts go in at mUserCursor, text in
     // mFormatCurrent. While triggers run over this console's line, a write
@@ -357,6 +384,22 @@ struct TConsoleModel
     QString mProfileName;
     // --mirror text not yet ended by a line feed.
     QString mMirrorPendingLine;
+    // --mirror text written while triggers run, not yet flushed: a run for each stretch of it that
+    // sits together on screen, in the order written.
+    struct MirrorRun
+    {
+        QString text;
+        int firstLine = 0;
+        int lastLine = 0;
+        // What precedes its first line feed is a line of its own rather than the end of one
+        bool startsLine = false;
+    };
+    QList<MirrorRun> mMirrorTriggerRuns;
+    // Where the last held write ended, so that one carrying straight on from it joins its run
+    QPoint mMirrorTriggerWriteEnd{-1, -1};
+    bool mMirrorTriggerWriteEndedLine = false;
+    // Lines mirrored as committed, so a write that committed some (the OSC 8 documentation) is known
+    int mMirrorLinesCommitted = 0;
     bool mScriptAddressable = false;
     // The line on which the current search result has been found, or the next
     // one is to start (currently only for the main console). An index into the

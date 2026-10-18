@@ -540,7 +540,8 @@ private slots:
     }
 
     // A profile opened without the dialog - at start-up, or from the command line - has only its
-    // console to say why the game is not sent the password. Last, as the profile stays open.
+    // console to say why the game is not sent the password, which the auto-login does at its password
+    // step. Last, as the profile stays open.
     void test_aProfileOpenedWithADamagedPasswordFileSaysSo()
     {
         const QString profile = qsl("ConnDialogUnreadableOpened-Test");
@@ -559,7 +560,13 @@ private slots:
         const auto consoleText = [pHost]() {
             return pHost->mainConsoleView()->buffer.lineBuffer.join(QChar::Space).simplified();
         };
-        QTRY_VERIFY2(consoleText().contains(qsl("saved password for this profile could not be read")), qPrintable(consoleText()));
+        pHost->setLogin(qsl("player"));
+        // Polled, as the lookup may still be out: until it answers there is nothing to report
+        const auto reportedAtThePasswordStep = [pHost, &consoleText]() {
+            pHost->reportUnreadableSavedPassword();
+            return consoleText().contains(qsl("Could not check for a saved password"));
+        };
+        QTRY_VERIFY2(reportedAtThePasswordStep(), qPrintable(consoleText()));
     }
 };
 
