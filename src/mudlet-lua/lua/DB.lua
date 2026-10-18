@@ -523,6 +523,14 @@ end
 ---   _violations among them, until the entry is spelled right. A db:create that
 ---   loses the sheet nothing is applied as usual, and one that also drops a column
 ---   does lose the rule, since removing a column is a rebuild in its own right.
+---   Moving a single-column _unique entry to another column rebuilds the sheet so
+---   the rule moves with it. A move onto a column whose rows hold the same value
+---   more than once cannot be applied as it stands, and neither can one onto a
+---   column this db:create adds while the sheet has more than one row, as each row
+---   takes its default. The sheet then keeps the uniqueness it already enforces and
+---   a warning is printed, so a script that loaded before still loads. With
+---   _violations = "IGNORE" or "REPLACE", given force, db:create applies the move
+---   and deletes all but one of the rows sharing a value.
 ---   A key starting with an underscore that is not _index, _unique or _violations
 ---   is warned about and ignored, so a typo such as _indexes is not taken silently.
 ---   Naming _row_id in a _unique entry written as a list is warned about but kept,
@@ -898,21 +906,23 @@ local function normalize_sql(sql)
 end
 
 
--- Blanks each quoted part, '...' or "...", in one pass: a text default may hold the other kind of
--- quote, which a pass per kind would pair with the next column name's. A doubled quote is an escaped
--- one. Same-length blanks keep every offset lined up with the text itself.
+local closing_quote = { ['"'] = '"', ["'"] = "'", ["`"] = "`", ["["] = "]" }
+
+-- Blanks every "quoted", 'quoted', [bracketed] and `backquoted` part in one pass from the left, as a
+-- name or a default may hold a comma, a bracket, the word unique or another kind of quote. A doubled
+-- quote is an escaped one. Same-length blanks keep every offset lined up with the text itself.
 local function blank_quoted(text)
-  local pieces = {}
-  local position = 1
+  local pieces, position = {}, 1
   while true do
-    local start = text:find("[\"']", position)
+    local start = text:find("[\"'`%[]", position)
     if not start then
       break
     end
-    local quote = text:sub(start, start)
-    local stop = text:find(quote, start + 1, true)
-    while stop and text:sub(stop + 1, stop + 1) == quote do
-      stop = text:find(quote, stop + 2, true)
+    local close = closing_quote[text:sub(start, start)]
+    local stop = text:find(close, start + 1, true)
+    -- a bracket has no escape
+    while stop and close ~= "]" and text:sub(stop + 1, stop + 1) == close do
+      stop = text:find(close, stop + 2, true)
     end
     stop = stop or #text
     pieces[#pieces + 1] = text:sub(position, start - 1)
@@ -930,7 +940,8 @@ end
 -- and table-level constraints (e.g., UNIQUE("col1", "col2") ON CONFLICT FAIL), each of
 -- which may come without its ON CONFLICT clause (e.g., "col1" TEXT UNIQUE).
 -- This allows us to detect when constraint definitions have changed without being affected by
--- column additions/removals.
+-- column additions/removals, but not which column a column-level UNIQUE sits on: unique_targets
+-- below reads that.
 function db:_extract_table_constraints(sql)
   if not sql or sql == "" then
     return ""
@@ -1021,13 +1032,13 @@ local function split_on_commas(text, searchable)
 end
 
 
--- Bare names are read too: a table this module didn't write may not quote them, and reading them
--- as empty would make all its UNIQUEs look alike. Other forms ([name]) do come back empty, which no
--- expected CREATE TABLE holds, so that sheet is left alone rather than losing a rule.
+-- Bare, [bracketed] and `backquoted` names are read too, as a table this module didn't write may use
+-- them. Other forms come back empty, which unique_targets reports as unreadable.
 local function leading_column_name(text)
   local trimmed = text:match("^%s*(.-)%s*$")
 
-  return trimmed:match('^"([^"]*)"') or trimmed:match("^([%w_$]+)") or ""
+  return trimmed:match('^"([^"]*)"') or trimmed:match("^%[([^%]]*)%]") or trimmed:match("^`([^`]*)`")
+    or trimmed:match("^([%w_$]+)") or ""
 end
 
 
@@ -1035,10 +1046,10 @@ end
 -- (a _violations change costs no uniqueness). Not db:_extract_table_constraints: it drops a
 -- column-level UNIQUE's column name, so a rule moving between columns would look unchanged.
 local function unique_targets(sql)
-  local counts = {}
+  local counts, unreadable = {}, false
   local content = normalize_sql(sql or ""):match("^create table [^(]+%((.+)%)$")
   if not content then
-    return counts
+    return counts, unreadable
   end
 
   -- quoted names and defaults may hold a comma, a bracket or "unique", so scan a copy with them blanked
@@ -1068,6 +1079,9 @@ local function unique_targets(sql)
         columns[1] = leading_column_name(text)
       end
 
+      for _, column in ipairs(columns) do
+        unreadable = unreadable or column == ""
+      end
       table.sort(columns)
       -- not a comma, or a column called a,b would equal a UNIQUE over a and b
       local target = table.concat(columns, "\0")
@@ -1075,7 +1089,29 @@ local function unique_targets(sql)
     end
   end
 
-  return counts
+  return counts, unreadable
+end
+
+
+local function same_unique_targets(expected_sql, actual_sql)
+  local expected = unique_targets(expected_sql)
+  local actual, unreadable = unique_targets(actual_sql)
+  -- a name that can't be read can't be compared, so the constraint fingerprint decides alone
+  if unreadable then
+    return true
+  end
+  for target, count in pairs(expected) do
+    if actual[target] ~= count then
+      return false
+    end
+  end
+  for target in pairs(actual) do
+    if expected[target] == nil then
+      return false
+    end
+  end
+
+  return true
 end
 
 
@@ -1106,6 +1142,57 @@ local function count_rows(conn, s_name)
   count_cursor:close();
 
   return count, nil;
+end
+
+
+-- The first _unique entry the sheet's rows would break, worded for a message, or nil when none does.
+-- A column this db:create adds holds its default in every row, so it is left out of the grouping.
+local function unique_move_clash(conn, s_name, schema, current_columns)
+  for _, entry in ipairs(schema.options._unique or {}) do
+    local columns = type(entry) == "table" and entry or { entry }
+    local grouped, conditions, can_clash, added = {}, {}, true, nil
+    for _, column in ipairs(columns) do
+      local quoted = '"' .. column .. '"'
+      if current_columns[column] ~= nil and column ~= "_row_id" then
+        grouped[#grouped + 1] = quoted
+        conditions[#conditions + 1] = quoted .. " IS NOT NULL"
+      elseif column == "_row_id" or db:_sql_convert(schema.columns[column]) == "NULL" then
+        -- _row_id is unique on its own, and any number of rows may share a NULL
+        can_clash = false
+      else
+        added = added or quoted
+      end
+    end
+
+    if can_clash then
+      local sql
+      if #grouped == 0 then
+        sql = "SELECT 1 FROM " .. s_name .. " LIMIT 1 OFFSET 1"
+      else
+        sql = "SELECT 1 FROM " .. s_name .. " WHERE " .. table.concat(conditions, " AND ") ..
+          " GROUP BY " .. table.concat(grouped, ", ") .. " HAVING COUNT(*) > 1 LIMIT 1"
+      end
+      db:echo_sql(sql)
+      local cur = conn:execute(sql)
+      -- a check that could not run can't clear the move either
+      local clashes = true
+      if type(cur) == "userdata" then
+        clashes = cur:fetch({}, "a") ~= nil
+        cur:close()
+      end
+
+      if clashes then
+        local names = {}
+        for i, column in ipairs(columns) do
+          names[i] = '"' .. column .. '"'
+        end
+        return table.concat(names, ", ") .. (#columns > 1 and " to be unique together" or " to be unique") ..
+          (added and " (" .. added .. " is added by this db:create, so every row takes its default)" or "")
+      end
+    end
+  end
+
+  return nil
 end
 
 
@@ -1185,8 +1272,8 @@ function db:_migrate(db_name, s_name, force)
     -- At this point we know that the sheet already exists, but we are concerned if the current
     -- definition includes columns which may be added.
 
-    -- Check if the table-level constraints have changed (e.g., _violations option changed)
-    -- by comparing only the UNIQUE constraint definitions, not the column list
+    -- Check if the UNIQUE constraints have changed (e.g., _violations option changed, or a
+    -- _unique entry moved to another column), leaving aside columns that are only added
     local expected_sql = db:_build_create_table_sql(schema, s_name)
     local get_actual_sql = "SELECT sql FROM sqlite_master " ..
                            "WHERE type = 'table' AND name = '" .. s_name .. "'"
@@ -1195,6 +1282,7 @@ function db:_migrate(db_name, s_name, force)
     local table_constraints_changed = false
     local would_drop_a_unique = false
     local unique_lost_to_column_removal = false
+    local unique_only_moved = false
 
     if sql_cur and type(sql_cur) ~= "number" then
       local sql_row = sql_cur:fetch({}, "a")
@@ -1205,8 +1293,10 @@ function db:_migrate(db_name, s_name, force)
         local expected_constraints = db:_extract_table_constraints(expected_sql)
         local actual_constraints = db:_extract_table_constraints(actual_sql)
 
-        if expected_constraints ~= actual_constraints then
+        -- both: the fingerprint carries ON CONFLICT but not which column a column-level UNIQUE is on
+        if expected_constraints ~= actual_constraints or not same_unique_targets(expected_sql, actual_sql) then
           table_constraints_changed = true
+          unique_only_moved = expected_constraints == actual_constraints
           -- a skipped _unique entry is likely a typo, and once fixed its rule can't be restored over
           -- duplicates let in meanwhile, so hold back only a rebuild that would drop an enforced rule
           if schema.has_skipped_unique and drops_a_unique(expected_sql, actual_sql) then
@@ -1236,7 +1326,25 @@ function db:_migrate(db_name, s_name, force)
       end
     end
 
-    if table_constraints_changed and not would_drop_a_unique then
+    -- reported, not raised: a moved UNIQUE went unnoticed, so a sheet whose rows the move can't take
+    -- loaded fine, and raising would stop every script after its unguarded db:create
+    local keeps_moved_unique = false
+    if table_constraints_changed and not would_drop_a_unique and unique_only_moved then
+      local violations = schema.options._violations
+      local drops_clashing_rows = force and (violations == "IGNORE" or violations == "REPLACE")
+      local clash = not drops_clashing_rows and unique_move_clash(conn, s_name, schema, current_columns)
+      if clash then
+        keeps_moved_unique = true
+        printError("db:create - "..s_name.." - _unique now asks for "..clash..", but the sheet's rows "..
+          "hold the same value there more than once, so the sheet keeps the uniqueness it already "..
+          "enforces: remove the duplicates"..
+          ((violations == "IGNORE" or violations == "REPLACE") and
+            ", or pass force to db:create to delete all but one of the rows sharing a value," or "")..
+          " and the move is applied then.", true, false)
+      end
+    end
+
+    if table_constraints_changed and not would_drop_a_unique and not keeps_moved_unique then
       -- Commit any pending transaction before table recreation
       db:echo_sql("COMMIT")
       conn:commit()
@@ -1289,83 +1397,68 @@ function db:_migrate(db_name, s_name, force)
       end
       local fields_sql = table.concat(fields, ", ")
 
-      -- Get the current CREATE TABLE statement to use for the backup
-      local get_create = "SELECT sql FROM sqlite_master " ..
-                        "WHERE type = 'table' AND name = '" .. s_name .. "'"
-      db:echo_sql(get_create)
-      local create_cur, create_err = conn:execute(get_create)
-      assert(create_cur, create_err)
+      local original_count, og_count_err = count_rows(conn, s_name);
+      assert(original_count, og_count_err);
 
-      if type(create_cur) ~= "number" then
-        local row = create_cur:fetch({}, "a")
-        create_cur:close()
+      -- the backup copies the data rather than renaming the sheet in its CREATE TABLE, which renames
+      -- a column such as people_id too, and sqlite reads an unknown "people_id" as a string literal
+      local sql_chunks = {}
+      sql_chunks[#sql_chunks + 1] = "CREATE TEMPORARY TABLE " .. s_name .. "_bak AS SELECT * FROM " .. s_name .. ";"
+      sql_chunks[#sql_chunks + 1] = "DROP TABLE " .. s_name .. ";"
 
-        -- Ensure we got a result
-        if not row or not row.sql then
-          error("Unable to fetch CREATE TABLE statement for table: " .. s_name)
-        end
+      local new_create_sql = db:_build_create_table_sql(schema, s_name)
 
-        local original_count, og_count_err = count_rows(conn, s_name);
-        assert(original_count, og_count_err);
+      sql_chunks[#sql_chunks + 1] = new_create_sql .. ";"
+      -- named on both sides: the new table also has the columns this create adds, which take their default
+      sql_chunks[#sql_chunks + 1] =
+        string.format("INSERT INTO %s (%s) SELECT %s FROM %s_bak;", s_name, fields_sql, fields_sql, s_name)
+      local copy_back_chunk = #sql_chunks
+      sql_chunks[#sql_chunks + 1] = "DROP TABLE " .. s_name .. "_bak;"
 
-        -- Create temporary backup table, recreate main table, copy data
-        local create_tmp = row.sql:gsub(s_name, s_name .. "_bak")
-        create_tmp = create_tmp:gsub("TABLE", "TEMPORARY TABLE")
+      for i, sql in ipairs(sql_chunks) do
+        db:echo_sql(sql)
+        local ret, str = conn:execute(sql)
 
-        local sql_chunks = {}
-        sql_chunks[#sql_chunks + 1] = create_tmp .. ";"
-        sql_chunks[#sql_chunks + 1] = "INSERT INTO " .. s_name .. "_bak SELECT * FROM " .. s_name .. ";"
-        sql_chunks[#sql_chunks + 1] = "DROP TABLE " .. s_name .. ";"
-
-        local new_create_sql = db:_build_create_table_sql(schema, s_name)
-
-        sql_chunks[#sql_chunks + 1] = new_create_sql .. ";"
-        sql_chunks[#sql_chunks + 1] = string.format("INSERT INTO %s SELECT %s FROM %s_bak;", s_name, fields_sql, s_name)
-        sql_chunks[#sql_chunks + 1] = "DROP TABLE " .. s_name .. "_bak;"
-
-        for i, sql in ipairs(sql_chunks) do
-          db:echo_sql(sql)
-          local ret, str = conn:execute(sql)
-
-          if not ret then
-            conn:rollback()
-            error("Migration failed at chunk " .. i .. ": " .. tostring(str))
-          end
-        end
-
-        local migrated_count, migrated_count_err = count_rows(conn, s_name)
-        if migrated_count_err then
+        if not ret then
           conn:rollback()
-          error(migrated_count_err);
-        end
-
-        if (original_count ~= migrated_count and not force) then
-            conn:rollback()
-            error(
-               "db:_migrate halted for ".. s_name .." during constraint migrations due to data loss."
-               .."\n\t".. (original_count - migrated_count) .." rows would be lost with new constraints."
-               .."\nUse force option to migrate anyway."
-            )
-        end
-
-        -- Commit the migration transaction
-        db:echo_sql("COMMIT")
-        conn:commit()
-
-        -- After recreating the table with new constraints, add any new columns that didn't exist before
-        for k, v in pairs(schema.columns) do
-          if not current_columns[k] then
-            local sql_add = 'ALTER TABLE %s ADD COLUMN "%s" %s NULL DEFAULT %s'
-            local t = db:_sql_type(v)
-            local def = db:_sql_convert(v)
-            local sql = sql_add:format(s_name, k, t, def)
-            db:echo_sql(sql)
-            conn:execute(sql)
-            -- Update current_columns to reflect the newly added column
-            current_columns[k] = ""
+          local unique_columns = i == copy_back_chunk and tostring(str):match("UNIQUE constraint failed: (.+)$")
+          if unique_columns then
+            local columns, added = {}, nil
+            for column in (unique_columns .. ", "):gmatch("(.-), ") do
+              columns[#columns + 1] = column
+              local name = column:sub(#s_name + 2)
+              if not added and schema.columns[name] ~= nil and current_columns[name] == nil then
+                added = column
+              end
+            end
+            -- level 3: the script's call to db:create
+            error("db:create - " .. s_name .. " - _unique now asks for " .. unique_columns .. " to be unique" ..
+              (#columns > 1 and " together" or "") .. ", but the sheet's rows hold the same value there more " ..
+              "than once" .. (added and " (" .. added .. " is added by this db:create, so every row takes its " ..
+              "default)" or "") .. ", so the sheet is left as it was.", 3)
           end
+          error("Migration failed at chunk " .. i .. ": " .. tostring(str))
         end
       end
+
+      local migrated_count, migrated_count_err = count_rows(conn, s_name)
+      if migrated_count_err then
+        conn:rollback()
+        error(migrated_count_err);
+      end
+
+      if (original_count ~= migrated_count and not force) then
+          conn:rollback()
+          error(
+             "db:_migrate halted for ".. s_name .." during constraint migrations due to data loss."
+             .."\n\t".. (original_count - migrated_count) .." rows would be lost with new constraints."
+             .."\nUse force option to migrate anyway."
+          )
+      end
+
+      -- Commit the migration transaction
+      db:echo_sql("COMMIT")
+      conn:commit()
     else
       -- also reached when the rebuild was held back to keep a uniqueness rule
       local missing = {}

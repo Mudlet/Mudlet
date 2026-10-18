@@ -81,6 +81,7 @@ class TConsoleFrontend;
 class TNullConsoleFrontend;
 class TMainConsole;
 struct TConsoleModel;
+struct MapStyle;
 class TMap;
 class MMCPServer;
 class dlgIRC;
@@ -216,6 +217,8 @@ public:
     // the password step has to be armed before the read that answers it comes back, or there is
     // no prompt left for a late answer to be typed at.
     bool hasAutoLoginCredentials() const { return !mLogin.isEmpty() && (!mPass.isEmpty() || mSecuredPasswordPending); }
+    // At the auto-login's password step, by when the connection dialog has handed over any password typed into it
+    void reportUnreadableSavedPassword();
     // True once the user has sent any command to the game on the current connection. It gates whether
     // an unsolicited GMCP sign-in address may auto-open the browser: one that arrives only after the
     // player acted (e.g. chose a provider on the game's own sign-in screen) is a consequence of their
@@ -263,6 +266,11 @@ public:
     ControlCharacterMode getControlCharacterMode() const { return mControlCharacter; }
     bool getLargeAreaExitArrows() const { return mLargeAreaExitArrows; }
     void setLargeAreaExitArrows(const bool);
+    // As setConfig("mapStyle") takes it
+    const QString& mapStyle() const;
+    const MapStyle& mapStylePreset() const { return *mpMapStyle; }
+    // False, changing nothing, when no style has that id
+    bool setMapStyle(const QString& id);
     bool getUseModern3DMapper() const { return experimentEnabled(qsl("experiment.3dmap.modernmapper")); }
 
     // Experiment system methods
@@ -423,7 +431,7 @@ public:
 
     void startSpeedWalk();
     void startSpeedWalk(int sourceRoom, int targetRoom);
-    void reloadModule(const QString& reloadModuleName, const QString& syncingFromHost = QString());
+    std::pair<bool, QString> reloadModule(const QString& reloadModuleName, const QString& syncingFromHost = QString());
     std::pair<bool, QString> changeModuleSync(const QString& enableModuleName, const QLatin1String& value);
     std::pair<bool, QString> getModuleSync(const QString& moduleName);
     bool blockScripts() { return mBlockScriptCompile; }
@@ -465,6 +473,7 @@ public:
     // not "all well": a queued install, an unreadable config.lua and an
     // XML that stopped part-way report themselves on the console instead.
     std::pair<bool, QString> installPackage(const QString& fileName, enums::PackageModuleType thing, bool quiet = false);
+    void reportScriptsThatFailedToLoad();
     bool uninstallPackage(const QString&, enums::PackageModuleType thing);
     bool removeDir(const QString&, const QString&);
     // whyNotRead, when given, is set to why no manifest came back - telling a
@@ -840,6 +849,7 @@ private:
     // function, which reads members declared much later - mBgColor among them. Same
     // class of bug as #10229, which had to move a call rather than a declaration.
     bool mIsClosingDown = false;
+    bool mServerWrapFlushPaused = false;
     // Its font is the "reference" or "master" font for the whole profile.
     // Clears itself when the view is destroyed, which is what makes handing
     // out mpConsoleFrontend safe.
@@ -1034,6 +1044,12 @@ public:
     // quiet without sending one. Here rather than on the view because the
     // flush runs the trigger pipeline, which is the core's work.
     QTimer mServerWrapFlushTimer;
+    // While the close asks whether to save, or waits for the save, neither timer
+    // commits a held line, as the profile may be about to go: Cancel resumes the
+    // flush, a close drops it. Text from the game still commits it, keeping order.
+    void pauseServerWrapFlush();
+    void resumeServerWrapFlush();
+    bool serverWrapLineHeldForClose() const;
 
     int mConsoleBufferSize = 100000;
     bool mUseMaxConsoleBufferSize = false;
@@ -1106,13 +1122,17 @@ public:
     QColor mWhite_2{QColorConstants::LightGray};
     QColor mFgColor_2{QColorConstants::LightGray};
     QColor mBgColor_2{QColorConstants::Black};
-    QColor mLowerLevelColor{QColorConstants::DarkGray};
-    QColor mUpperLevelColor{QColorConstants::White};
-    QColor mRoomBorderColor{QColorConstants::LightGray};
+    static constexpr QColor scmDefaultLowerLevelColor{QColorConstants::DarkGray};
+    static constexpr QColor scmDefaultUpperLevelColor{QColorConstants::White};
+    QColor mLowerLevelColor{scmDefaultLowerLevelColor};
+    QColor mUpperLevelColor{scmDefaultUpperLevelColor};
+    static constexpr QColor scmDefaultRoomBorderColor{QColorConstants::LightGray};
+    QColor mRoomBorderColor{scmDefaultRoomBorderColor};
     QColor mRoomCollisionBorderColor{QColorConstants::Yellow};
     QColor mMapGridColor{QColor(211, 211, 211, 64)};
 
-    QColor mMapInfoBg = QColor(150, 150, 150, 120);
+    static constexpr QColor scmDefaultMapInfoBg{150, 150, 150, 120};
+    QColor mMapInfoBg = scmDefaultMapInfoBg;
     bool mMapStrongHighlight = false;
     QStringList mGMCP_merge_table_keys;
     QStringList mInstalledPackages;
@@ -1309,7 +1329,8 @@ private:
     void changeSetting(bool& setting, const bool state, const QString& settingName);
     void setBorders(const QMargins);
     void recheckCommandLineSpelling();
-    void installPackageFonts(const QString& packageName);
+    // Whether any font of the package is registered afterwards
+    bool installPackageFonts(const QString& packageName);
     void processGMCPDiscordStatus(const QJsonObject& discordInfo);
     void processGMCPDiscordInfo(const QJsonObject& discordInfo);
     void loadSecuredPassword();
@@ -1391,6 +1412,8 @@ private:
     // runUninstallsDeferredByAnInstall() once the outermost install has finished
     // and the install events it queued have gone out.
     QList<DeferredUninstall> mUninstallsDeferredByAnInstall;
+    // How often each name was uninstalled, so the queued install events of an install undone since are dropped
+    QMap<QString, quint64> mRemovalsOf;
     // A nested install's fonts are put back only once the outermost install has queued its own events
     bool mDisplayFontRestoreOwed = false;
     QScopedPointer<LuaInterface> mLuaInterface;
@@ -1443,6 +1466,8 @@ private:
     QString mLogin;
     QString mPass;
     bool mSecuredPasswordPending = false;
+    // The store refused the saved password, as against having none or not being there at all
+    bool mSecuredPasswordUnreadable = false;
 
     int mPort;
 
@@ -1568,6 +1593,8 @@ private:
     ControlCharacterMode mControlCharacter = ControlCharacterMode::AsIs;
 
     bool mLargeAreaExitArrows = false;
+    // Never null, so the renderer can read it per room without a lookup
+    const MapStyle* mpMapStyle = nullptr;
     bool mEditorShowBidi = true;
     // should focus should be on the main window with the caret enabled?
     bool mCaretEnabled = false;

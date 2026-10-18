@@ -37,6 +37,7 @@
 #include <QContextMenuEvent>
 #include <QMenu>
 #include <QPushButton>
+#include <QScopeGuard>
 #include <QTabBar>
 #include <chrono>
 
@@ -352,6 +353,95 @@ private slots:
         QDir(MudletApp::getMudletPath(enums::profileHomePath, mQuietProfileName)).removeRecursively();
         dialog->fillout_form();
         QTest::qWait(100ms);
+    }
+
+    // QFile::copy() keeps a file's mode, and a password file saved with the umask is open to every account
+    void test_aCopiedProfilesPasswordsAreOwnerOnly()
+    {
+#if !defined(Q_OS_UNIX)
+        QSKIP("there are no POSIX permission bits to check on this platform");
+#endif
+        auto* dialog = mudlet::self()->mpConnectionDialog.data();
+        QVERIFY2(dialog, "No connection dialog to test against");
+
+        const QString source = qsl("ConnDialogCrash-Secrets");
+        const QString fullCopy = qsl("ConnDialogCrash-Secrets1");
+        const QString settingsCopy = qsl("ConnDialogCrash-Secrets2");
+        const QStringList secrets{qsl("password"), qsl("irc_password")};
+        const auto removeProfiles = [&]() {
+            for (const QString& profile : {source, fullCopy, settingsCopy}) {
+                QDir(MudletApp::getMudletPath(enums::profileHomePath, profile)).removeRecursively();
+            }
+        };
+        const auto pathOf = [](const QString& profile, const QString& item) {
+            return MudletApp::getMudletPath(enums::profileDataItemPath, profile, item);
+        };
+        const auto reachableByOthers = [](const QString& path) {
+            return QFileInfo(path).permissions().testAnyFlags(QFileDevice::ReadGroup | QFileDevice::WriteGroup | QFileDevice::ExeGroup | QFileDevice::ReadOther | QFileDevice::WriteOther
+                                                              | QFileDevice::ExeOther);
+        };
+        auto* copyAction = dialog->findChild<QAction*>(qsl("copyProfile"));
+        QVERIFY(copyAction);
+        // Also on a failed check: a copy still running would leave the busy cursor up for the tests after this one
+        const auto cleanUp = qScopeGuard([&]() {
+            QTest::qWaitFor(
+                    [copyAction]() {
+                        return copyAction->isEnabled();
+                    },
+                    15s);
+            removeProfiles();
+            dialog->fillout_form();
+            QTest::qWait(100ms);
+        });
+        const auto openToEveryone = [&](const QString& path) {
+            return QFile::setPermissions(path, QFileDevice::ReadOwner | QFileDevice::WriteOwner | QFileDevice::ReadGroup | QFileDevice::ReadOther) && reachableByOthers(path);
+        };
+        const auto selectSource = [&]() {
+            dialog->fillout_form();
+            QTest::qWait(100ms);
+            const auto items = dialog->findData(*dialog->listWidget_profiles, source, dlgConnectionProfiles::csmNameRole);
+            QVERIFY2(!items.isEmpty(), "The test profile is not listed in the dialog");
+            dialog->listWidget_profiles->setCurrentItem(items.first());
+            dialog->slot_itemClicked(items.first());
+            // With passwords kept in the profile, the password is read, and so its file narrowed, by a
+            // load slot_itemClicked() queues rather than runs
+            QTest::qWait(400ms);
+        };
+
+        removeProfiles();
+        QVERIFY(makeProfileFolder(source));
+        for (const QString& item : secrets) {
+            QVERIFY(MudletApp::writeProfileData(source, item, mProfileUrl).first);
+        }
+
+        selectSource();
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        for (const QString& item : secrets) {
+            QVERIFY2(openToEveryone(pathOf(source, item)), "could not stage a password file open to everyone");
+        }
+        dialog->slot_copyProfile();
+        QVERIFY2(QTest::qWaitFor(
+                         [copyAction]() {
+                             return copyAction->isEnabled();
+                         },
+                         15s),
+                 "The copy never completed");
+        for (const QString& item : secrets) {
+            QVERIFY2(QFileInfo::exists(pathOf(fullCopy, item)), qPrintable(qsl("the copy has no %1 file").arg(item)));
+            QVERIFY2(!reachableByOthers(pathOf(fullCopy, item)), qPrintable(qsl("copying the profile left its %1 file readable by other accounts").arg(item)));
+        }
+
+        selectSource();
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        QVERIFY2(openToEveryone(pathOf(source, qsl("password"))), "could not stage a password file open to everyone");
+        dialog->slot_copyOnlySettingsOfProfile();
+        // before the copy's own selection reads, and so narrows, its password
+        QVERIFY2(QFileInfo::exists(pathOf(settingsCopy, qsl("password"))), "the settings-only copy has no password file");
+        QVERIFY2(!reachableByOthers(pathOf(settingsCopy, qsl("password"))), "copying only the settings left the password file readable by other accounts");
     }
 
     // Must stay last: leaves the main window hidden and no connection dialog,

@@ -244,11 +244,13 @@ bool TMap::menuItemShown(const QString& itemName) const
 
 void TMap::refreshMapperColours()
 {
+    ++mRevision;
     emit signal_mapperColoursChanged();
 }
 
 void TMap::mapClear()
 {
+    ++mRevision;
     mpRoomDB->clearMapDB();
     mEnvColors.clear();
     mRoomIdHash.clear();
@@ -786,6 +788,8 @@ void TMap::audit()
         appendErrorMsg(infoMsg);
     }
 
+    // It may have removed or renumbered rooms and areas, bypassing the setters that count changes
+    ++mRevision;
     mpHost->getLuaInterpreter()->condenseMapLoad();
 }
 
@@ -3951,6 +3955,7 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
     std::unique_ptr<TRoomDB> previousRoomDB = std::exchange(mpRoomDB, std::move(pNewRoomDB));
     mpRoomDB->continueGenerationOf(*previousRoomDB);
     previousRoomDB.reset();
+    ++mRevision;
     for (const auto& warning : std::as_const(droppedRoomWarnings)) {
         appendErrorMsgWithNoLf(warning, true);
         if (smShowMapAuditErrors) {
@@ -4123,6 +4128,7 @@ void TMap::areasAboutToBeDeleted()
 
 void TMap::announceMapLoaded(const bool showPlayerArea)
 {
+    ++mRevision;
     emit signal_mapLoaded(showPlayerArea);
 }
 
@@ -4171,6 +4177,8 @@ QString TMap::zoomError(const qreal zoom)
 
 void TMap::requestMapRepaint()
 {
+    // Asked for when a mapper setting changes, which what a view keeps between frames may be made from
+    ++mRevision;
     emit signal_mapRepaintRequested();
 }
 
@@ -4180,6 +4188,12 @@ void TMap::announceMapperSettingChanged(const MapperSetting setting)
 }
 
 void TMap::updateArea(int areaId)
+{
+    ++mRevision;
+    repaintArea(areaId);
+}
+
+void TMap::repaintArea(int areaId)
 {
     static bool debounce;
     if (!debounce) {
@@ -4282,6 +4296,7 @@ QColor TMap::getColor(int id)
 
 void TMap::restore16ColorSet()
 {
+    ++mRevision;
     mCustomEnvColors[257] = mpHost->mRed_2;
     mCustomEnvColors[258] = mpHost->mGreen_2;
     mCustomEnvColors[259] = mpHost->mYellow_2;
@@ -4309,6 +4324,7 @@ void TMap::setUnsaved(const char* fromWhere)
     qDebug().nospace().noquote() << "TMap::setUnsaved(...) INFO - called at: " << nowString << " from: " << fromWhere << ".";
 #endif
     mUnsavedMap = true;
+    ++mRevision;
 }
 
 void TMap::setSaveError(bool state)
