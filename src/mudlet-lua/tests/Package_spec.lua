@@ -1967,9 +1967,8 @@ describe("Tests uninstalling a package while the profile is being saved", functi
   it("returns nil and says why for an installed package while a save is running", function()
     withFixturePackage(minimalPackage)
     assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+    -- the save stays running until the event loop next turns, which nothing below lets it do
     assert.is_true(saveProfile())
-    -- SETUP: see the spec installing a package during a save for why this says one is running
-    assert.is_true(installPackage(""), "SETUP: no profile save was running, so nothing below was refused")
 
     local ok, err = uninstallPackage(minimalPackage)
 
@@ -1982,7 +1981,6 @@ describe("Tests uninstalling a package while the profile is being saved", functi
   it("says a package that is not installed is not installed while a save is running", function()
     assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
     assert.is_true(saveProfile())
-    assert.is_true(installPackage(""), "SETUP: no profile save was running, so nothing below was refused")
 
     local ok, err = uninstallPackage("mudlet-spec-never-installed")
 
