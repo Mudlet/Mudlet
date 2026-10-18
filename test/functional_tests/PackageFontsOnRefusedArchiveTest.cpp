@@ -350,6 +350,43 @@ private slots:
         pSecondHost->waitForProfileSave();
         HostManager::self()->deleteHost(secondProfileName);
     }
+
+    // A module stays installed whatever its XML did, so one that broke before an item was read in still has
+    // the font it brought in use, and its handlers have to hear of it
+    void test_aModuleThatBroughtOnlyAFontBeforeItsXmlBrokeIsAnnounced()
+    {
+        QVERIFY2(!QFontDatabase::families().contains(mFontFamily), "the font was already registered before this case installed anything, so nothing below can be told apart");
+
+        const QString moduleName = qsl("font-brokenxml-module");
+        const QString archivePath = mArchiveDir.filePath(qsl("%1.mpackage").arg(moduleName));
+        const QByteArray brokenAtOnce("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE MudletPackage>\n<MudletPackage version=\"1.001\">\n<AliasPa");
+        const QList<std::pair<QString, QByteArray>> entries{{qsl("VeraMono.ttf"), bundledFontBytes()}, {qsl("%1.xml").arg(moduleName), brokenAtOnce}};
+        QVERIFY2(writeArchive(archivePath, entries), "could not write the test archive");
+
+        auto* lua = mpHost->getLuaInterpreter();
+        QVERIFY(lua->compileAndExecuteScript(qsl("fontModuleAnnounced = nil; function recordFontModuleInstall(_, name) fontModuleAnnounced = name end")));
+        mpHost->registerAnonymousEventHandler(qsl("sysInstall"), qsl("recordFontModuleInstall"));
+
+        auto [ok, message] = mpHost->installPackage(archivePath, enums::PackageModuleType::ModuleFromScript, true);
+        QVERIFY2(ok, qPrintable(message));
+        QVERIFY2(mpHost->mInstalledModules.contains(moduleName), "SETUP: the module was not kept installed");
+        QVERIFY2(QFontDatabase::families().contains(mFontFamily), "SETUP: the module's font was not registered");
+
+        lua_State* L = lua->getLuaGlobalState();
+        auto announcedName = [L]() {
+            lua_getglobal(L, "fontModuleAnnounced");
+            const QString name = lua_isstring(L, -1) ? QString::fromUtf8(lua_tostring(L, -1)) : QString();
+            lua_pop(L, 1);
+            return name;
+        };
+        // the install events are raised from a zero timer
+        QTRY_COMPARE_WITH_TIMEOUT(announcedName(), moduleName, 2000);
+
+        // the install's deferred profile save may be running by now, and an uninstall is refused during one
+        mpHost->waitForProfileSave();
+        QVERIFY2(mpHost->uninstallPackage(moduleName, enums::PackageModuleType::ModuleFromScript), "the module could not be uninstalled");
+        QVERIFY2(!QFontDatabase::families().contains(mFontFamily), "uninstalling the module left its font registered");
+    }
 };
 
 #include "PackageFontsOnRefusedArchiveTest.moc"

@@ -42,6 +42,7 @@ deliberately.
 | `mudlet-spec-emptywithstray` | archive whose package XML is valid but empty, with the same plain-text `a-notes.xml` beside it, so it is installed with a warning rather than refused |
 | `mudlet-spec-badmodule` | archive whose `config.lua` and XML file are named as `mudlet-spec-module`'s and whose XML stops after an alias named as that module's, copied over that module's archive so its reload unpacks, imports the alias and then fails, leaving the module loaded part-way |
 | `mudlet-spec-partialxml` | archive whose package XML stops after one alias and one script, so those items import and the load still fails |
+| `mudlet-spec-twobrokenxml` | archive with two package XML files, each stopping after one alias with a different error, so both load errors have to be reported |
 | `mudlet-spec-emptyname` | archive whose `config.lua` asks for a name that trims away to nothing, so there is no name to install under |
 | `mudlet-spec-badconfig` | archive whose `config.lua` names the package and then raises, so the whole manifest is lost and the file name is used |
 | `mudlet-spec-silentconfig` | archive whose `config.lua` names the package and then raises an error with no message (`error()`), so there is not even a message to report |
