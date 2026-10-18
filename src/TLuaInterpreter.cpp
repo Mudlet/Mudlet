@@ -31,6 +31,7 @@
 
 #include "FontManager.h"
 #include "Host.h"
+#include "MapStyle.h"
 #include "MudletApp.h"
 #include "MudletMedia.h"
 #include "MudletReplay.h"
@@ -402,10 +403,13 @@ int TLuaInterpreter::warnArgumentValue(lua_State* L, const char* functionName, c
 // place a script can read what the set is, so it lists every accepted value
 int TLuaInterpreter::warnArgumentChoice(lua_State* L, const char* functionName, const QString& argumentName, const QStringList& accepted, const QString& value)
 {
-    Q_ASSERT(accepted.size() > 1);
+    Q_ASSERT(!accepted.isEmpty());
     QStringList quoted;
     for (const auto& choice : accepted) {
         quoted << qsl("\"%1\"").arg(choice);
+    }
+    if (quoted.size() == 1) {
+        return warnArgumentValue(L, functionName, qsl("%1 must be %2, got \"%3\"").arg(argumentName, quoted.constFirst(), value));
     }
     const QString lastChoice = quoted.takeLast();
     return warnArgumentValue(L, functionName, qsl("%1 must be %2 or %3, got \"%4\"").arg(argumentName, quoted.join(qsl(", ")), lastChoice, value));
@@ -1231,10 +1235,19 @@ int TLuaInterpreter::feedTriggers(lua_State* L)
     QByteArray data{bytes, static_cast<qsizetype>(length)};
     // cTelnet::processSocketData() drops a NUL from a game's text, so drop it here too
     data.replace('\0', QByteArray());
-    // Not from inside a trigger: that would announce the line it is handling to
-    // screen readers before the rest of the pass can gag or rewrite it.
-    auto feed = [L, &host, triggerUnit](std::string& text) {
+    // During a trigger or alias pass this runs a whole trigger pass inside the calling script, so park
+    // its captures for it. Not "command": a fed trigger's Command field or script may expand a command,
+    // and the caller reads that back as the last command sent.
+    TLuaInterpreter* pL = host.getLuaInterpreter();
+    const bool nested = triggerUnit->processingDepth() > 0 || host.getAliasUnit()->processingDepth() > 0;
+    auto feed = [L, &host, triggerUnit, pL, nested](std::string& text) {
+        const int dispatchDepth = nested ? pL->pushNestedDispatchState(false) : -1;
         host.printOnDisplay(text, false);
+        if (dispatchDepth >= 0) {
+            pL->popNestedDispatchState(dispatchDepth);
+        }
+        // Not from inside a trigger: that would announce the line it is handling to
+        // screen readers before the rest of the pass can gag or rewrite it.
         if (!triggerUnit->processingDepth()) {
             host.finalizeMainConsole();
         }
@@ -1922,32 +1935,56 @@ int TLuaInterpreter::findItems(lua_State* L)
         }
     };
     if (!type.compare(QLatin1String("timer"), Qt::CaseInsensitive)) {
-        const auto itemList = host.getTimerUnit()->findItems(name, exactMatch, caseSensitive);
+        auto* pUnit = host.getTimerUnit();
+        auto itemList = pUnit->findItems(name, exactMatch, caseSensitive);
+        std::erase_if(itemList, [pUnit](const int id) {
+            return pUnit->pendingDeletion(pUnit->getTimer(id));
+        });
         generateList(itemList, L);
         return 1;
     }
     if (!type.compare(QLatin1String("trigger"), Qt::CaseInsensitive)) {
-        const auto itemList = host.getTriggerUnit()->findItems(name, exactMatch, caseSensitive);
+        auto* pUnit = host.getTriggerUnit();
+        auto itemList = pUnit->findItems(name, exactMatch, caseSensitive);
+        std::erase_if(itemList, [pUnit](const int id) {
+            return pUnit->pendingDeletion(pUnit->getTrigger(id));
+        });
         generateList(itemList, L);
         return 1;
     }
     if (!type.compare(QLatin1String("alias"), Qt::CaseInsensitive)) {
-        const auto itemList = host.getAliasUnit()->findItems(name, exactMatch, caseSensitive);
+        auto* pUnit = host.getAliasUnit();
+        auto itemList = pUnit->findItems(name, exactMatch, caseSensitive);
+        std::erase_if(itemList, [pUnit](const int id) {
+            return pUnit->pendingDeletion(pUnit->getAlias(id));
+        });
         generateList(itemList, L);
         return 1;
     }
     if (!type.compare(QLatin1String("keybind"), Qt::CaseInsensitive)) {
-        const auto itemList = host.getKeyUnit()->findItems(name, exactMatch, caseSensitive);
+        auto* pUnit = host.getKeyUnit();
+        auto itemList = pUnit->findItems(name, exactMatch, caseSensitive);
+        std::erase_if(itemList, [pUnit](const int id) {
+            return pUnit->pendingDeletion(pUnit->getKey(id));
+        });
         generateList(itemList, L);
         return 1;
     }
     if (!type.compare(QLatin1String("button"), Qt::CaseInsensitive)) {
-        const auto itemList = host.getActionUnit()->findItems(name, exactMatch, caseSensitive);
+        auto* pUnit = host.getActionUnit();
+        auto itemList = pUnit->findItems(name, exactMatch, caseSensitive);
+        std::erase_if(itemList, [pUnit](const int id) {
+            return pUnit->pendingDeletion(pUnit->getAction(id));
+        });
         generateList(itemList, L);
         return 1;
     }
     if (!type.compare(QLatin1String("script"), Qt::CaseInsensitive)) {
-        const auto itemList = host.getScriptUnit()->findItems(name, exactMatch, caseSensitive);
+        auto* pUnit = host.getScriptUnit();
+        auto itemList = pUnit->findItems(name, exactMatch, caseSensitive);
+        std::erase_if(itemList, [pUnit](const int id) {
+            return pUnit->pendingDeletion(pUnit->getScript(id));
+        });
         generateList(itemList, L);
         return 1;
     }
@@ -2721,9 +2758,7 @@ int TLuaInterpreter::getMudletVersion(lua_State* L)
                 }
                 return 4;
             } else { // NOLINT(readability-else-after-return)
-                lua_pushstring(L,
-                               "getMudletVersion: takes one (optional) argument:\n"
-                               "   \"major\", \"minor\", \"revision\", \"build\", \"string\" or \"table\".");
+                lua_pushstring(L, "getMudletVersion: takes one (optional) argument: \"major\", \"minor\", \"revision\", \"build\", \"string\" or \"table\".");
                 return csmErrorAlreadyPushed;
             }
         } else if (n == 0) { // NOLINT(readability-else-after-return)
@@ -2741,9 +2776,7 @@ int TLuaInterpreter::getMudletVersion(lua_State* L)
             lua_pushstring(L, MudletApp::buildSuffix().trimmed().toUtf8().constData());
             lua_settable(L, -3);
         } else { // NOLINT(readability-else-after-return)
-            lua_pushstring(L,
-                           "getMudletVersion: only takes one (optional) argument:\n"
-                           "   \"major\", \"minor\", \"revision\", \"build\", \"string\" or \"table\".");
+            lua_pushstring(L, "getMudletVersion: only takes one (optional) argument: \"major\", \"minor\", \"revision\", \"build\", \"string\" or \"table\".");
             return csmErrorAlreadyPushed;
         }
         return 1;
@@ -2818,12 +2851,8 @@ int TLuaInterpreter::getEpoch(lua_State* L)
 }
 
 
-// An install that went through, with or without something to own up to: the
-// install did succeed, so the answer stays true rather than nil plus a message,
-// and a part of the package whose Lua did not work rides along as a second
-// value only when there is one - the way setConfig()'s successWithWarning()
-// reports a setting that was made with a consequence a script has no other way
-// of learning about.
+// The install did succeed, so the answer stays true; what did not work (a part whose Lua failed, or a file
+// that did not load in full) is a second value only when there is one, as with setConfig()'s successWithWarning().
 static int pushInstallSucceeded(lua_State* L, const QString& warning)
 {
     lua_pushboolean(L, true);
@@ -2896,8 +2925,11 @@ int TLuaInterpreter::reloadModule(lua_State* L)
 {
     const QString module = getVerifiedString(L, __func__, 1, "module name");
     Host& host = getHostFromLua(L);
-    host.reloadModule(module);
-    return 0;
+    auto [success, message] = host.reloadModule(module);
+    if (!success) {
+        return warnArgumentValue(L, __func__, message);
+    }
+    return pushInstallSucceeded(L, message);
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#enableModuleSync
@@ -3122,14 +3154,9 @@ int TLuaInterpreter::expandAlias(lua_State* L)
         return lua_error(L);
     }
     bool wantPrint = true;
-    if (lua_gettop(L) > 1) {
-        // check if the 2nd argument is a 'false', but don't match if it is 'nil'
-        // because expandAlias("command") should be the same as expandAlias("command", nil)
-        if (lua_isnil(L, 2)) {
-            wantPrint = false;
-        } else {
-            wantPrint = getVerifiedBool(L, __func__, 2, "echo", true);
-        }
+    // expandAlias("command", nil) must behave like expandAlias("command")
+    if (lua_gettop(L) > 1 && !lua_isnil(L, 2)) {
+        wantPrint = getVerifiedBool(L, __func__, 2, "echo", true);
     }
     const QString payload{lua_tostring(L, 1)};
     Host& host = getHostFromLua(L);
@@ -3506,13 +3533,17 @@ bool TLuaInterpreter::compile(const QString& code, QString& errorMsg, const QStr
 }
 
 // No documentation available in wiki - internal function
-// Undoes compile()'s rich-text markup (kept in step by hand). The tags go before the entities, or
-// a script's own "<b>" is stripped, and "&amp;" goes last, or its "&lt;b&gt;" comes back as "<b>".
+// Undoes the rich-text markup of compile(), TTrigger::setRegexCodeList() and TAlias::setRegexCode()
+// (kept in step by hand). The tags go before the entities, or a script's own "<b>" is stripped, and
+// "&amp;" goes last, or its "&lt;b&gt;" comes back as "<b>".
 QString TLuaInterpreter::compileErrorAsPlainText(const QString& error)
 {
     QString plainText = error;
     plainText.remove(qsl("<b>"));
     plainText.remove(qsl("</b>"));
+    plainText.remove(qsl("<i>"));
+    plainText.remove(qsl("</i>"));
+    plainText.replace(qsl("<br>"), qsl(" "));
     plainText.replace(qsl("&quot;"), qsl("\""));
     plainText.replace(qsl("&lt;"), qsl("<"));
     plainText.replace(qsl("&gt;"), qsl(">"));
@@ -5754,6 +5785,8 @@ bool TLuaInterpreter::callReference(lua_State* L, QString name, int parameters)
         std::string err = "";
         if (lua_isstring(L, -1)) {
             err += lua_tostring(L, -1);
+        } else {
+            err.append("error object is a ").append(luaL_typename(L, -1)).append(" value");
         }
         logError(err, name, qsl("anonymous Lua function"));
         if (TDebug::wants(TDebug::Category::Error)) {
@@ -7047,6 +7080,9 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "addMapEvent", TLuaInterpreter::addMapEvent);
     lua_register(pGlobalLua, "removeMapEvent", TLuaInterpreter::removeMapEvent);
     lua_register(pGlobalLua, "getMapEvents", TLuaInterpreter::getMapEvents);
+    lua_register(pGlobalLua, "getMapEnvironmentKit", TLuaInterpreter::getMapEnvironmentKit);
+    lua_register(pGlobalLua, "getMapEnvironmentKits", TLuaInterpreter::getMapEnvironmentKits);
+    lua_register(pGlobalLua, "setMapEnvironmentKit", TLuaInterpreter::setMapEnvironmentKit);
     lua_register(pGlobalLua, "addMapMenu", TLuaInterpreter::addMapMenu);
     lua_register(pGlobalLua, "removeMapMenu", TLuaInterpreter::removeMapMenu);
     lua_register(pGlobalLua, "getMapMenus", TLuaInterpreter::getMapMenus);
@@ -9326,6 +9362,13 @@ int TLuaInterpreter::setConfig(lua_State* L)
         TAppFrontend::instance()->updateMapActionAvailability();
         return success();
     }
+    if (key == qsl("mapStyle")) {
+        const QString value = getVerifiedString(L, __func__, 2, "value");
+        if (!host.setMapStyle(value)) {
+            return warnArgumentChoice(L, __func__, qsl("mapStyle"), MapStyle::ids(), value);
+        }
+        return success();
+    }
     if (key == qsl("enableGMCP")) {
         host.mEnableGMCP = getVerifiedBool(L, __func__, 2, "value");
         return success();
@@ -9786,6 +9829,10 @@ int TLuaInterpreter::getConfig(lua_State* L)
             {qsl("mapRoundRooms"),
              [&]() {
                  lua_pushboolean(L, host.mBubbleMode);
+             }},
+            {qsl("mapStyle"),
+             [&]() {
+                 lua_pushstring(L, host.mapStyle().toUtf8().constData());
              }},
             {qsl("mapperButton"),
              [&]() {

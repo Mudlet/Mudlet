@@ -190,7 +190,13 @@ private slots:
         QVERIFY(runLua(host, qsl("addRoom(1)")));
         QVERIFY2(luaTrue(host, qsl("BaseUI.map == nil")), "precondition: nothing has swapped the map in yet");
         QVERIFY(runLua(host, qsl("raiseEvent('sysLoadEvent')")));
-        QVERIFY2(luaTrue(host, qsl("BaseUI.map ~= nil")), "the map loaded after the dock was rebuilt stays behind its placeholder");
+        // swapped in on the next turn of the event loop, so a game interface installing at the time can take the map first
+        QVERIFY2(QTest::qWaitFor(
+                         [this, host]() {
+                             return luaTrue(host, qsl("BaseUI.map ~= nil"));
+                         },
+                         3s),
+                 "the map loaded after the dock was rebuilt stays behind its placeholder");
     }
 
     void test_loadingAProfileThatHidTheDockLeavesItUnbuiltUntilShown()

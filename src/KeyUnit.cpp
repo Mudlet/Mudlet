@@ -238,6 +238,19 @@ std::vector<int> KeyUnit::findItems(const QString& name, const bool exactMatch, 
     return ids;
 }
 
+bool KeyUnit::pendingDeletion(TKey* pItem) const
+{
+    if (!hasPendingDeletes()) {
+        return false;
+    }
+    for (auto* pAncestor = pItem; pAncestor; pAncestor = pAncestor->getParent()) {
+        if (mCleanupSet.contains(pAncestor) || uninstallList.contains(pAncestor)) {
+            return true;
+        }
+    }
+    return false;
+}
+
 bool KeyUnit::enableKey(const QString& name)
 {
     bool found = false;

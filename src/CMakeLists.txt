@@ -46,6 +46,7 @@ set(mudlet_SRCS
     AliasUnit.cpp
     CredentialManager.cpp
     ctelnet.cpp
+    DioramaLayout.cpp
     discord.cpp
     EditorAddItemCommand.cpp
     EditorDeleteItemCommand.cpp
@@ -54,6 +55,7 @@ set(mudlet_SRCS
     EditorMoveItemCommand.cpp
     EditorToggleActiveCommand.cpp
     EditorUndoStack.cpp
+    EnvironmentKit.cpp
     EventLoopPump.cpp
     ExitAppearance.cpp
     FontManager.cpp
@@ -66,6 +68,8 @@ set(mudlet_SRCS
     LuaInterface.cpp
     LuaLiteral.cpp
     mapInfoContributorManager.cpp
+    MapDecals.cpp
+    MapStyle.cpp
     MMCPClient.cpp
     MMCPServer.cpp
     MudletApp.cpp
@@ -174,6 +178,7 @@ set(mudlet_SRCS
 # Every .cpp source file that needs Qt Widgets goes here instead, in mudlet_app, kept
 # in alphabetical order (case-insensitive).
 set(mudlet_app_SRCS
+    ../3rdparty/qt-tags-widget/src/qtagedit.cpp
     CustomLineDrawContextMenuHandler.cpp
     CustomLineDrawHandler.cpp
     CustomLineEditContextMenuHandler.cpp
@@ -335,6 +340,7 @@ set(mudlet_HDRS
     AliasUnit.h
     CredentialManager.h
     ctelnet.h
+    DioramaLayout.h
     discord.h
     EditorAddItemCommand.h
     EditorCommand.h
@@ -344,6 +350,7 @@ set(mudlet_HDRS
     EditorMoveItemCommand.h
     EditorToggleActiveCommand.h
     EditorUndoStack.h
+    EnvironmentKit.h
     enums.h
     EventLoopPump.h
     ExitAppearance.h
@@ -358,6 +365,8 @@ set(mudlet_HDRS
     LuaLiteral.h
     MacMicrophonePermission.h
     mapInfoContributorManager.h
+    MapDecals.h
+    MapStyle.h
     MMCP.h
     MMCPClient.h
     MMCPServer.h
@@ -480,6 +489,7 @@ set(mudlet_HDRS
 # Every .h header file that needs Qt Widgets goes here instead, in mudlet_app, kept
 # in alphabetical order (case-insensitive).
 set(mudlet_app_HDRS
+    ../3rdparty/qt-tags-widget/include/QTagEdit/qtagedit.hpp
     CustomLineDrawContextMenuHandler.h
     CustomLineDrawHandler.h
     CustomLineEditContextMenuHandler.h
@@ -587,6 +597,8 @@ if(USE_3DMAPPER)
   list(APPEND mudlet_app_HDRS glwidget.h)
   list(APPEND mudlet_app_SRCS modern_glwidget.cpp)
   list(APPEND mudlet_app_HDRS modern_glwidget.h)
+  list(APPEND mudlet_SRCS BloomPass.cpp)
+  list(APPEND mudlet_HDRS BloomPass.h)
   list(APPEND mudlet_SRCS CameraController.cpp)
   list(APPEND mudlet_HDRS CameraController.h)
   list(APPEND mudlet_SRCS ExitScene.cpp)
@@ -1008,9 +1020,13 @@ target_include_directories(${LIB_MUDLET_APP_TARGET} INTERFACE
 # would otherwise be found in the system Qt rather than beside Qt6Gui.
 target_link_libraries(${LIB_MUDLET_APP_TARGET} PUBLIC
     edbee-lib
-    QTagEdit
     ${QT_APP_LIBS}
     ${LIB_MUDLET_TARGET})
+
+# qt-tags-widget is listed in mudlet_app_SRCS/HDRS, not add_subdirectory()'d, as its own
+# project has install() rules; a file upstream adds or renames has to be listed there too.
+set_property(SOURCE ../3rdparty/qt-tags-widget/src/qtagedit.cpp APPEND PROPERTY
+  INCLUDE_DIRECTORIES ${CMAKE_CURRENT_SOURCE_DIR}/../3rdparty/qt-tags-widget/include/QTagEdit)
 
 # main() stays out of the libraries: a test that links them brings its own, and
 # the linker can pull main.cpp's object in for any inline function it defines.
@@ -1190,8 +1206,28 @@ if(UNIX AND NOT APPLE)
   install(
     DIRECTORY "../3rdparty/lcf"
     DESTINATION "share/mudlet/lua"
-    PATTERN ".git" EXCLUDE PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ
-                                       WORLD_READ)
+    FILES_MATCHING
+    PATTERN "*.lua" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
+    PATTERN "LICENSE*" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
+    PATTERN "COPYING*" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
+    PATTERN ".*" EXCLUDE)
+  # FILES_MATCHING still creates every directory it walks, so a directory holding no Lua would ship
+  # empty; EXCLUDE_EMPTY_DIRECTORIES would do this but needs CMake 3.31
+  install(
+    CODE [[
+    file(GLOB_RECURSE lcfEntries LIST_DIRECTORIES true
+         "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/share/mudlet/lua/lcf/*")
+    # deepest first, so a parent left empty by removing its children goes too
+    list(SORT lcfEntries ORDER DESCENDING)
+    foreach(lcfEntry IN LISTS lcfEntries)
+      if(IS_DIRECTORY "${lcfEntry}")
+        file(GLOB lcfChildren "${lcfEntry}/*")
+        if(NOT lcfChildren)
+          file(REMOVE_RECURSE "${lcfEntry}")
+        endif()
+      endif()
+    endforeach()
+  ]])
 
   install(
     FILES "../mudlet.desktop"

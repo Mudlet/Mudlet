@@ -1322,20 +1322,19 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
     const QByteArray usedEncoding = mpHost->mTelnet.getEncoding();
     if (mEncoding != usedEncoding) {
         encodingChanged(usedEncoding);
-        // Will have to dump any stored bytes as they will be in the old
-        // encoding and the following code block to prepend them is used for
-        // both bytes that are held over as part of a multi-byte encoding that
-        // was incomplete at the end of the last packet AND ALSO for ANSI code
-        // sequences that were not complete at the end of the last packet:
-        if (!mIncompleteSequenceBytes.empty()) {
+        // A held character is in the old encoding but a held CSI or OSC (payload read as UTF-8) is not;
+        // only the game's bytes are carried across feeds, and a local feed has the channels swapped
+        std::string& serverHeldBytes = isFromServer ? mIncompleteSequenceBytes : mLocalIncompleteSequenceBytes;
+        const bool serverHoldsSequence = isFromServer ? (mGotCSI || mGotOSC) : (mLocalGotCSI || mLocalGotOSC);
+        if (!serverHeldBytes.empty() && !serverHoldsSequence) {
 #if defined(DEBUG_SGR_PROCESSING) || defined(DEBUG_OSC_PROCESSING) || defined(DEBUG_UTF8_PROCESSING) || defined(DEBUG_GB_PROCESSING) || defined(DEBUG_BIG5_PROCESSING)
             qDebug() << "TBuffer::translateToPlainText(...) WARNING - Dumping residual bytes that were carried over from previous packet onto incoming data - the encoding has changed and they may no "
                         "longer be usable!";
 #endif
-            mIncompleteSequenceBytes.clear();
+            serverHeldBytes.clear();
+            appendReplacementCharacter(TChar((!mIsDefaultColor && mBold) ? mForeGroundColorLight : mForeGroundColor, mBackGroundColor, computeCurrentAttributeFlags()));
         }
-        // The other channel's held-over bytes are equally stale:
-        mLocalIncompleteSequenceBytes.clear();
+        (isFromServer ? mLocalIncompleteSequenceBytes : mIncompleteSequenceBytes).clear();
         mPendingLead = 0;
         mLocalPendingLead = 0;
     }
@@ -2266,6 +2265,11 @@ bool TBuffer::commitLine(char ch, size_t& localBufferPosition, const bool isFrom
 
 void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char ch)
 {
+    // An empty '\r' commit, such as the posting timer's flush, ends no line of text: drop it before the
+    // blank-line setting below can turn it into a line of one space
+    if (line.isEmpty() && ch == '\r') {
+        return;
+    }
     // Qt struggles to report blank lines on Windows to screen readers, this is a workaround
     // https://bugreports.qt.io/browse/QTBUG-105035
     if (Q_UNLIKELY(line.isEmpty())) {
@@ -2291,9 +2295,6 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
         if (!line.isEmpty()) {
             lineBuffer << std::move(line);
         } else {
-            if (ch == '\r') {
-                return; //empty timer posting
-            }
             lineBuffer << QString();
         }
         buffer.push_back(std::move(chars));
@@ -2309,9 +2310,6 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
             // The last line is empty, so this is the whole of it
             lineBuffer.back() = std::move(line);
         } else {
-            if (ch == '\r') {
-                return; //empty timer posting
-            }
             lineBuffer.back().append(QString());
         }
         // A commit re-entered from a pass (feedTriggers(), MXP) fills the empty last line, which may be
@@ -2327,7 +2325,8 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
     }
     // Every game line passes here (TConsoleModel::print() sees only client output). Mirroring before runTriggers()
     // keeps arrival order, so script output in response follows it, but lines that triggers gag or rewrite
-    // are still mirrored as sent. Mirroring at log() below would trade the other way and copy wrapLine()'s
+    // are still mirrored as sent; what triggers write into them is held and follows as lines of its own,
+    // ahead of any later output. Mirroring at log() below would trade the other way and copy wrapLine()'s
     // fragments instead of the line as sent.
     if (Q_UNLIKELY(MudletApp::smMirrorToStdOut)) {
         if (Q_LIKELY(mpModel)) {
@@ -2434,6 +2433,11 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
         // generate is NOT used for the TMainConsole case whereas this
         // (translateToPlainText(...)) method is ONLY for that one:
         shrinkBuffer();
+    }
+
+    // After shrinkBuffer(), whose sysBufferShrinkEvent handlers also run in trigger mode
+    if (Q_UNLIKELY(MudletApp::smMirrorToStdOut) && Q_LIKELY(mpModel)) {
+        mpModel->flushMirroredTriggerText();
     }
 
     applyPendingSelectionStyling();
@@ -6865,18 +6869,21 @@ bool TBuffer::deleteLines(int from, int to)
             noteRemovedLinks(buffer[i], mLinesRemovedTotal + i);
         }
 
-        // What was wrapped off a line that goes starts a line of its own now,
-        // rather than following on from whichever line is left above it
-        if (!wrapsFromPreviousLine(from) && wrapsFromPreviousLine(to + 1)) {
-            timeBuffer[to + 1] = timeBuffer.at(from);
+        // A line continuing a logical line that starts in the range takes the stamp of the last
+        // line there to start one; below a range of continuations alone it still continues the line above
+        if (wrapsFromPreviousLine(to + 1)) {
+            for (int i = to; i >= from; --i) {
+                if (!wrapsFromPreviousLine(i)) {
+                    timeBuffer[to + 1] = timeBuffer.at(i);
+                    break;
+                }
+            }
         }
 
-        for (int i = from, total = from + delta; i < total; ++i) {
-            lineBuffer.removeAt(i);
-            timeBuffer.removeAt(i);
-            promptBuffer.removeAt(i);
-            wrapGapBuffer.removeAt(i);
-        }
+        lineBuffer.remove(from, delta);
+        timeBuffer.remove(from, delta);
+        promptBuffer.remove(from, delta);
+        wrapGapBuffer.remove(from, delta);
 
         buffer.erase(buffer.begin() + from, buffer.begin() + to + 1);
         if (mPreTriggerPassLineNumber >= from) {
@@ -8461,8 +8468,12 @@ void TBuffer::flushPendingLead()
 {
     // What came after the lead byte was not its trail byte:
     mPendingLead = 0;
+    appendReplacementCharacter(mPendingLeadFormat);
+}
+
+void TBuffer::appendReplacementCharacter(TChar c)
+{
     mMudLine.append(QChar::ReplacementCharacter);
-    TChar c(mPendingLeadFormat);
     styleForCurrentLink(c);
     mMudBuffer.push_back(c);
     if (mHyperlinkActive) {

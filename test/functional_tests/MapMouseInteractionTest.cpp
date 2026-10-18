@@ -1705,8 +1705,13 @@ private slots:
         TRoom* pRoom = startDrawingALine(kPlayerRoomId, qsl("e"));
         QVERIFY(pRoom);
 
+        // Each point is a change to the map, which views keeping what they drew from it go by
+        quint64 revision = mpHost->mpMap->revision();
         clickAt(pointUnitsFromCentre(0.5, 0.5));
+        QVERIFY(mpHost->mpMap->revision() > revision);
+        revision = mpHost->mpMap->revision();
         clickAt(pointUnitsFromCentre(1.5, 0.5));
+        QVERIFY(mpHost->mpMap->revision() > revision);
 
         const QList<QPointF> expected{QPointF(0.5, 0.5), QPointF(1.5, 0.5)};
         QCOMPARE(pRoom->customLines.value(qsl("e")), expected);
