@@ -142,18 +142,18 @@ private slots:
         echo(qsl("a line that fits\\n"));
         QCOMPARE(console->buffer.lineBuffer.size(), 2);
 
-        console->buffer.timeBuffer[0] = qsl("11:22:33.444");
+        console->buffer.timeBuffer[0] = 1234567890123;
         console->buffer.promptBuffer[0] = true;
 
         console->buffer.wrapLine(0, 200, 0, 0);
 
         QCOMPARE(console->buffer.line(0), qsl("a line that fits"));
-        QCOMPARE(console->buffer.timeBuffer.at(0), qsl("11:22:33.444"));
+        QCOMPARE(console->buffer.timeBuffer.at(0), 1234567890123);
         QVERIFY(console->buffer.promptBuffer.at(0));
     }
 
-    // Continuation lines are marked by a blank timestamp, which is what tells a
-    // later rewrap not to indent them as though they started a line.
+    // Continuation lines are marked csmWrappedLineTimeStamp, which is what tells
+    // a later rewrap not to indent them as though they started a line.
     void test_aWrappedLineIsSplitAndItsContinuationsAreBlankStamped()
     {
         auto* console = consoleWithWrapWidth(10);
@@ -163,9 +163,9 @@ private slots:
         QCOMPARE(joinedText(console), qsl("abcdefghijklmnopqrstuvwxyz"));
         QCOMPARE(nonEmptyLineCount(console), 3);
         QCOMPARE(console->buffer.line(0), qsl("abcdefghij"));
-        QVERIFY2(console->buffer.timeBuffer.at(0) != TBuffer::smBlankTimeStamp, "the line that starts the paragraph lost its timestamp");
-        QCOMPARE(console->buffer.timeBuffer.at(1), TBuffer::smBlankTimeStamp);
-        QCOMPARE(console->buffer.timeBuffer.at(2), TBuffer::smBlankTimeStamp);
+        QVERIFY2(console->buffer.timeBuffer.at(0) != TBuffer::csmWrappedLineTimeStamp, "the line that starts the paragraph lost its timestamp");
+        QCOMPARE(console->buffer.timeBuffer.at(1), TBuffer::csmWrappedLineTimeStamp);
+        QCOMPARE(console->buffer.timeBuffer.at(2), TBuffer::csmWrappedLineTimeStamp);
     }
 
     // The shortcut stops at a blank line rather than keeping it: the rewrap
@@ -182,7 +182,7 @@ private slots:
         QCOMPARE(console->buffer.line(2), qsl("below"));
 
         console->buffer.promptBuffer[1] = true;
-        console->buffer.timeBuffer[1] = qsl("sentinel");
+        console->buffer.timeBuffer[1] = 42;
 
         QCOMPARE(console->buffer.wrapLine(0, 200, 0, 0), 3);
 
@@ -190,7 +190,7 @@ private slots:
         QVERIFY(console->buffer.line(1).isEmpty());
         QCOMPARE(console->buffer.line(2), qsl("below"));
         QVERIFY2(!console->buffer.promptBuffer.at(1), "the replacement blank line kept the old one's prompt flag");
-        QVERIFY2(console->buffer.timeBuffer.at(1) != qsl("sentinel"), "the replacement blank line kept the old one's timestamp");
+        QVERIFY2(console->buffer.timeBuffer.at(1) != 42, "the replacement blank line kept the old one's timestamp");
     }
 
     // A line whose text has gone but whose formatting has not is replaced by an
