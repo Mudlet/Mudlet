@@ -36,7 +36,6 @@
 #include <QHostAddress>
 #include <QHostInfo>
 #include <QPointer>
-#include <QScopeGuard>
 #include <QStringList>
 #if defined(QT_NO_SSL)
 #include <QTcpSocket>
@@ -186,6 +185,7 @@ public:
     // auto-login credentials, so only game commands can arm character-at-a-time
     // detection:
     bool sendData(QString& data, bool permitDataSendRequestEvent = true, bool isGameCommand = false);
+    bool dispatchingSendRequest() const { return mSendRequestDispatchDepth > 0; }
     QMap<QString, QPair<bool, QString>> getNewEnvironDataMap();
     bool isMNESVariable(const QString&);
     void sendInfoNewEnvironValue(const QString&);
@@ -201,7 +201,6 @@ public:
     void atcpComposerSave(QString);
     void checkNAWS();
     void setAutoReconnect(bool status);
-    void encodingChanged(const QByteArray&);
     void set_USE_IRE_DRIVER_BUGFIX(bool b) { mUSE_IRE_DRIVER_BUGFIX = b; }
     void cacheHostSettings();
     void setDontReconnect(bool b) { mDontReconnect = b; }
@@ -259,14 +258,7 @@ public:
     std::tuple<QString, int, bool> getConnectionInfo() const;
     void setPostingTimeout(const int);
     int getPostingTimeout() const { return mTimeOut; }
-    void loopbackTest(QByteArray& data)
-    {
-        ++mLoopbackProcessingDepth;
-        const auto loopbackGuard = qScopeGuard([this] {
-            --mLoopbackProcessingDepth;
-        });
-        processSocketData(data.data(), data.size(), true);
-    }
+    void loopbackTest(QByteArray& data);
     int loopbackProcessingDepth() const { return mLoopbackProcessingDepth; }
     // Every feedTelnet() level nests inside processSocketData(), so it also
     // counts against scmMaxDecompressionRecursion; keep this below it, or a
@@ -275,9 +267,9 @@ public:
     // How deep processSocketData() may nest (the outermost call counts as one)
     // while draining data left over after a decompression pass (compressed input that did not fit in one
     // output buffer, or plain data following the compressed stream). Each level
-    // inflates at most one output buffer, so this caps decompressed output at
-    // ~scmMaxDecompressionRecursion * BUFFER_SIZE per socket read, which bounds
-    // a decompression bomb.
+    // inflates at most one output buffer; what is left at the deepest level waits
+    // in mDeferredInput, so a socket's decompression bomb is worked through
+    // ~scmMaxDecompressionRecursion * BUFFER_SIZE per event-loop turn.
     inline static const int scmMaxDecompressionRecursion = 8;
     void cancelLoginTimers();
     // A flag rather than a timer query, so every transition makes the Host
@@ -315,6 +307,8 @@ public:
     QPointer<QObject> mpComposer;
     QNetworkAccessManager* mpDownloader = nullptr;
     QString mServerPackage;
+    // recorded as Host::mServerGUI_Package_version only once the download installs
+    QString mServerPackageVersion;
     QString mProfileName;
 
 
@@ -376,8 +370,8 @@ private:
 
     // Needs to call processSocketData() with a buffer it laid out itself, which
     // the public loopbackTest() cannot express - see issue #1065 - and to seed
-    // mDecompressionRecursionDepth so the over-limit refusal can be reached
-    // without a real decompression bomb.
+    // mDecompressionRecursionDepth so the over-limit refusal, which a drain
+    // never reaches itself, can be tested.
     friend class cTelnetBufferTest;
 
     // Reads the password-mode safety timer, the connection clock and the
@@ -456,6 +450,9 @@ private:
     void gotRest(std::string&);
     void gotPrompt(std::string&);
     void postData(bool endsWithPromptMarker = false);
+    void postHeldDataBeforeEncodingChange();
+    void processSubnegotiation(const std::string& subnegotiation, std::string& textAhead);
+    void encodingChanged(const QByteArray&);
     void raiseProtocolEvent(const QString& name, const QString& protocol);
     void beginNetworkLatencyMeasurement();
     void finishNetworkLatencyMeasurement();
@@ -477,16 +474,21 @@ private:
     void sendNAWS(int width, int height);
     void sendCurrentNAWS();
     void readPendingSocketData();
+    bool readSocketDataOnce();
+    void drainBeforeDisconnection();
+    void finishDisconnection();
     QString parseGUIVersionFromJSON(const QJsonObject& json);
     QString parseGUIUrlFromJSON(const QJsonObject& json);
     bool parseGUIBaseUiDeclinedFromJSON(const QJsonObject& json);
     void downloadAndInstallGUIPackage(const QString& packageName, const QString& fileName, const QString& url);
+    void installDownloadedGUIPackage(const QString& packagePath, const QString& packageVersion);
     void handleGUIPackageInstallationAndUpgrade(QJsonDocument document);
 
     static std::pair<bool, bool> testReadReplayFile();
 
     void trackKaVirNegotiation(unsigned char option);
     void autoEnableMXPProcessor();
+    void switchMxpOn();
     void autoEnableTTYPEVersion();
     QByteArray encodingForCharacterSet(const QByteArray& characterSet) const;
 
@@ -556,9 +558,16 @@ private:
     // Whether mUninflatedInput still holds every byte the stream has taken
     bool mUninflatedInputComplete = true;
     // Re-entry depth of processSocketData() while draining leftover
-    // (de)compressed data; bounds stack use and decompression-bomb output.
+    // (de)compressed data; bounds stack use.
     int mDecompressionRecursionDepth = 0;
+    // Input left over once a drain reached scmMaxDecompressionRecursion, processed
+    // ahead of anything read after it
+    QByteArray mDeferredInput;
     std::string command;
+    // The text of the read being parsed that is still ahead of the subnegotiation being handled
+    std::string* mpTextAheadOfSubnegotiation = nullptr;
+    // Whether the start of the prompt being received was posted ahead of an encoding change
+    bool mPromptStartPosted = false;
     bool iac = false;
     bool iac2 = false;
     bool insb = false;
@@ -600,6 +609,8 @@ private:
 
     std::string mMudData;
     bool mIsTimerPosting = false;
+    // The last bytes trackMXPElementDetection() saw, so an ESC[#z split between two reads is found
+    std::string mMxpDetectionTail;
     // Beats while a write waits on its reply - see NETWORK_LATENCY_BEAT in
     // ctelnet.cpp:
     QTimer* mpNetworkLatencyBeatTimer = nullptr;
@@ -642,10 +653,20 @@ private:
     bool enableMSDP = false;
     bool enableMSP = false;
     bool enableMXP = false;
+    // enableMXP was set by autoEnableMXPProcessor() rather than by the game switching MXP on
+    bool mMxpAutoEnabled = false;
     bool enableChannel102 = false;
     // Inhibit mAutoReconnect from taking effect for one connection cycle,
     // either because the user wanted to disconnect or an SSL/TLS error occurred:
     bool mDontReconnect = false;
+    // Set by disconnectIt() and abortConnection(): what the game sent after that
+    // is not wanted. Unlike mDontReconnect, nothing else sets it while connected.
+    bool mDisconnectRequested = false;
+    // Set while what the game sent before closing is still being taken in, one
+    // read per event-loop turn; the disconnect is finished once it is all in.
+    bool mDisconnectionPending = false;
+    // A readPendingSocketData() is queued for the rest of a burst; only Windows acts on it
+    bool mReadPending = false;
     bool mAutoReconnect = false;
     QStringList messageStack;
     // True if THIS profile is playing a replay, does not know about any OTHER
@@ -667,6 +688,7 @@ private:
     // Used to disable the TConsole ending messages if run from lua:
     bool mIsReplayRunFromLua = false;
     QByteArrayList mAcceptableEncodings;
+    int mSendRequestDispatchDepth = 0;
     // Used to prevent more than one warning being shown in the event of a bad
     // encoding (when the user wants to use characters that cannot be encoded in
     // the current Server Encoding) - gets reset when the encoding is changed:

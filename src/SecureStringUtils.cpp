@@ -49,13 +49,11 @@ namespace {
 QSet<QString> gPathsWarnedAbout;
 QString gUnprotectedSecretPath;
 
-bool restrictToOwner(const QString& path, const QFileDevice::Permissions ownerPermissions)
+bool ownerOnlyOrWarn(const QString& path)
 {
 #if defined(Q_OS_UNIX)
     const QFileDevice::Permissions reachableByOthers =
             QFileDevice::ReadGroup | QFileDevice::WriteGroup | QFileDevice::ExeGroup | QFileDevice::ReadOther | QFileDevice::WriteOther | QFileDevice::ExeOther;
-
-    QFile::setPermissions(path, ownerPermissions);
 
     // Read back: chmod reports success on a file system that can't store permission bits (FAT, or a
     // Windows drive mounted into WSL without metadata)
@@ -77,7 +75,6 @@ bool restrictToOwner(const QString& path, const QFileDevice::Permissions ownerPe
 #else
     // No POSIX permission bits here (setPermissions() only toggles read-only), so the secret is only as
     // protected as its directory - which for a portable install on removable media may be not at all.
-    Q_UNUSED(ownerPermissions)
     static bool warnedAboutTheAbsenceOfPermissionBits = false;
 
     if (!warnedAboutTheAbsenceOfPermissionBits) {
@@ -89,6 +86,16 @@ bool restrictToOwner(const QString& path, const QFileDevice::Permissions ownerPe
     return true;
 #endif
 }
+
+bool restrictToOwner(const QString& path, const QFileDevice::Permissions ownerPermissions)
+{
+#if defined(Q_OS_UNIX)
+    QFile::setPermissions(path, ownerPermissions);
+#else
+    Q_UNUSED(ownerPermissions)
+#endif
+    return ownerOnlyOrWarn(path);
+}
 } // namespace
 
 bool SecureStringUtils::restrictFileToOwner(const QString& path)
@@ -99,6 +106,11 @@ bool SecureStringUtils::restrictFileToOwner(const QString& path)
 bool SecureStringUtils::restrictDirectoryToOwner(const QString& path)
 {
     return restrictToOwner(path, QFileDevice::ReadOwner | QFileDevice::WriteOwner | QFileDevice::ExeOwner);
+}
+
+bool SecureStringUtils::confirmFileIsOwnerOnly(const QString& path)
+{
+    return ownerOnlyOrWarn(path);
 }
 
 QString SecureStringUtils::takeUnprotectedSecretPath()

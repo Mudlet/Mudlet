@@ -182,10 +182,9 @@ bool TTimer::setScript(const QString& script)
 {
     // Switching from a registered anonymous Lua function (set up by tempTimer with a
     // function argument) to a script string: release the old function from the Lua
-    // registry and leave callback mode. Unlike triggers/aliases/keys, TTimer::execute()
-    // keys off mScript rather than the flag, so the new script does run - but without
-    // this the registry entry still leaks, as the destructor would then take its
-    // mScript-based branch and delete the compiled function instead.
+    // registry and leave callback mode. TTimer::execute() picks a temporary timer's
+    // payload by the flag, so it has to be cleared for the new script to run at all,
+    // and the destructor's mScript-based branch would otherwise leak the registry entry.
     if (mRegisteredAnonymousLuaFunction) {
         if (mpHost) {
             mpHost->mLuaInterpreter.delete_luafunction(this);
@@ -254,9 +253,9 @@ void TTimer::execute()
     }
 
     if (isTemporary()) {
-        if (mScript.isEmpty()) {
+        if (mRegisteredAnonymousLuaFunction) {
             mpHost->mLuaInterpreter.call_luafunction(this, mName);
-        } else {
+        } else if (!mScript.isEmpty()) {
             mpHost->mLuaInterpreter.compileAndExecuteScript(mScript);
         }
 
@@ -274,9 +273,10 @@ void TTimer::execute()
                 timer->enableTimer(timer->getID());
             }
         }
+        // Not disableTimer(mID): that would also stop the offset children just armed above
         if (isOffsetTimer()) {
-            disableTimer(mID);
             deactivate();
+            mpQTimer->stop();
         }
     }
 
@@ -343,9 +343,11 @@ void TTimer::disableTimer(int id)
         mpQTimer->stop();
     }
 
+    // Including offset children: one its parent has already armed would still fire,
+    // and deactivate() leaves their shouldBeActive() alone for the parent to re-arm them
     for (auto* timerNode : *mpMyChildrenList) {
         auto* timer = static_cast<TTimer*>(timerNode);
-        if (!timer->isOffsetTimer() && timer->shouldBeActive()) {
+        if (timer->shouldBeActive()) {
             timer->disableTimer(timer->getID());
         }
     }

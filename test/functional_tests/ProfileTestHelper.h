@@ -29,6 +29,7 @@
 
 #include "Host.h"
 #include "MudletApp.h"
+#include "TUiTour.h"
 #include "dlgConnectionProfiles.h"
 #include "mudlet.h"
 
@@ -96,6 +97,13 @@ inline Host* create(const QString& profileName,
                     const QString& port,
                     const std::chrono::milliseconds timeout = std::chrono::seconds(15))
 {
+    if (!MudletApp::getQSettings()) {
+        qWarning() << "TestProfile::create() - called before mudlet::setupConfig(), so there are no settings to open a profile with";
+        return nullptr;
+    }
+    // A fresh config dir reads as a first run, whose tour opens a second after the profile loads and takes the
+    // keyboard. This stops only the tour: the rest of the first-run guidance needs a setting written before init().
+    TUiTour::rememberShown();
     mudlet::self()->startAutoLogin({});
 
     // Until the zero-timer in slot_showConnectionDialog() has shown and activated

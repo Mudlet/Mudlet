@@ -177,6 +177,41 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         assert.is_nil(getTimestamp(win, 1))
       end)
 
+      it("gives a line the local time it arrived at, as hh:mm:ss.zzz and a space", function()
+        echo("\n")
+        local line = getLastLineNumber("main")
+        local before = os.date("%H:%M:%S")
+        feedTriggers("getTimestamp arrival line\n")
+        local after = os.time()
+        local timestamp = getTimestamp(line)
+        assert.matches("^%d%d:%d%d:%d%d%.%d%d%d $", timestamp)
+        -- os.time() reads a coarser clock that can still be on the last second
+        -- for a few milliseconds after the line's timestamp has moved on
+        local second = timestamp:sub(1, 8)
+        local latest = os.date("%H:%M:%S", after + 1)
+        local inTime = second == before or second == os.date("%H:%M:%S", after) or second == latest
+        assert.is_true(inTime, string.format("%s is not between %s and %s", timestamp, before, latest))
+      end)
+
+      it("gives the line the game has not written to yet no timestamp", function()
+        echo("\n")
+        feedTriggers("getTimestamp line before the open one\n")
+        assert.are.equal("", getTimestamp(getLastLineNumber("main")))
+      end)
+
+      -- a timestamp becomes text when it is read, so reading one line must not answer for another
+      it("gives each of two lines read in turn its own time", function()
+        echo("\n")
+        local first = getLastLineNumber("main")
+        feedTriggers("getTimestamp first of two\n")
+        local start = getEpoch()
+        repeat until getEpoch() - start >= 0.005
+        feedTriggers("getTimestamp second of two\n")
+        local a, b = getTimestamp(first), getTimestamp(first + 1)
+        assert.are_not.equal(a, b)
+        assert.are.equal(a, getTimestamp(first))
+      end)
+
       it("should return nil+msg for a negative line number", function()
         local timestamp, err = getTimestamp(-1)
         assert.is_nil(timestamp)
@@ -939,6 +974,42 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         assert.is_false(fileExists(escapee), "the save landed at " .. escapee)
       end)
 
+      -- changing most application-wide settings does not write Mudlet.ini, so a
+      -- save has to, or a crash after it loses the change
+      it("writes the application-wide settings to Mudlet.ini as well", function()
+        if not testMode then
+          pending("only test mode can wait out this test's save, so the save putting Mudlet.ini back would be refused")
+          return
+        end
+        local iniFile = getMudletHomeDir():match("^(.*)/profiles/[^/]+$") .. "/Mudlet.ini"
+        local function onDisk()
+          local file = io.open(iniFile, "r")
+          if not file then
+            return nil
+          end
+          local value
+          for line in file:lines() do
+            value = line:match("^showTabConnectionIndicators=(.*)$") or value
+          end
+          file:close()
+          return value
+        end
+        local original = getConfig("showTabConnectionIndicators")
+        -- the opposite of what the file holds, so only this save can put it there
+        local wanted = onDisk() ~= "true"
+        finally(function()
+          setConfig("showTabConnectionIndicators", original)
+          local restored, why = saveWaitingOutAnyOtherSave()
+          assert.is_true(restored, "Mudlet.ini keeps the test's value: " .. tostring(why))
+        end)
+        assert.is_true(setConfig("showTabConnectionIndicators", wanted))
+
+        local saved, message = saveWaitingOutAnyOtherSave()
+        assert.is_true(saved, tostring(message))
+
+        assert.are.equal(tostring(wanted), onDisk(), "Mudlet.ini at " .. iniFile .. " did not get the new value")
+      end)
+
       -- Only nil stands for no folder: any other folder that is not a string
       -- raises, as a file name that is not a string does
       it("raises for a folder that is not a string", function()
@@ -1649,7 +1720,7 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         it("answers from the system dictionary, or says it has none", function()
           local known, err = spellCheckWord("hello")
           if known == nil then
-            assert.is_true(contains(err, "no main dictionaries found"), tostring(err))
+            assert.is_true(contains(err, "no main dictionaries found") or contains(err, "dictionary this profile uses is not available"), tostring(err))
             return
           end
           assert.is_boolean(known)
@@ -1680,7 +1751,7 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         it("returns a table from the system dictionary, or says it has none", function()
           local suggestions, err = spellSuggestWord("helo")
           if suggestions == nil then
-            assert.is_true(contains(err, "no main dictionaries found"), tostring(err))
+            assert.is_true(contains(err, "no main dictionaries found") or contains(err, "dictionary this profile uses is not available"), tostring(err))
             return
           end
           assert.is_table(suggestions)
@@ -1745,6 +1816,263 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         assert.equals("sysUnzipError", event)
         assert.equals(notAnArchive, zipLocation)
         assert.is_false(fileExists(extractDirectory .. "/readme.txt"))
+      end)
+
+      -- Stored, empty entries all have a CRC-32 of 0, so the archive can be written here with each
+      -- name exactly as given, including ones that climb out of the folder it is unpacked into.
+      local function writeArchiveOfEmptyFiles(path, entries)
+        local function le(value, bytes)
+          local out = {}
+          for i = 1, bytes do
+            out[i] = string.char(value % 256)
+            value = math.floor(value / 256)
+          end
+          return table.concat(out)
+        end
+        local localHeaders, centralDirectory, offset = {}, {}, 0
+        for i, entry in ipairs(entries) do
+          local common = le(20, 2) .. le(0, 2) .. le(0, 2) .. le(0, 2) .. le(0x21, 2) .. le(0, 4) .. le(0, 4) .. le(0, 4) .. le(#entry, 2) .. le(0, 2)
+          local header = le(0x04034b50, 4) .. common .. entry
+          localHeaders[i] = header
+          centralDirectory[i] = le(0x02014b50, 4) .. le(20, 2) .. common .. le(0, 2) .. le(0, 2) .. le(0, 2) .. le(0, 4) .. le(offset, 4) .. entry
+          offset = offset + #header
+        end
+        local directory = table.concat(centralDirectory)
+        writeFile(path, table.concat(localHeaders) .. directory .. le(0x06054b50, 4) .. le(0, 2) .. le(0, 2) .. le(#entries, 2) .. le(#entries, 2) .. le(#directory, 4) .. le(offset, 4) .. le(0, 2))
+      end
+
+      -- safe.txt goes first, so finding it unpacked means entries were written before the refusal
+      local function assertRefusesEscapingArchive(escapingEntries, outsideNames)
+        local base = getMudletHomeDir() .. "/mudlet-spec-unzipslip"
+        local inside = base .. "/inside"
+        local archive = base .. "/slip.zip"
+        local entries = {"safe.txt", unpack(escapingEntries)}
+        local outside = {}
+        for i, name in ipairs(outsideNames) do
+          outside[i] = base .. "/" .. name
+        end
+        finally(function()
+          for _, path in ipairs(outside) do
+            os.remove(path)
+            lfs.rmdir(path)
+          end
+          os.remove(inside .. "/safe.txt")
+          for _, entry in ipairs(entries) do
+            os.remove(inside .. "/" .. entry)
+          end
+          lfs.rmdir(inside .. "/sub")
+          lfs.rmdir(inside)
+          os.remove(archive)
+          lfs.rmdir(base)
+        end)
+        lfs.mkdir(base)
+        writeArchiveOfEmptyFiles(archive, entries)
+
+        assert.is_true(unzipAsync(archive, inside))
+
+        local event, zipLocation = waitForEvent("sysUnzipError", 10000)
+        assert.equals("sysUnzipError", event)
+        assert.equals(archive, zipLocation)
+        for _, path in ipairs(outside) do
+          assert.is_false(fileExists(path), path .. " was written outside the extract location")
+        end
+        assert.is_false(fileExists(inside .. "/safe.txt"), "part of the refused archive was unpacked before it was refused")
+      end
+
+      it("refuses an archive whose entries would be written outside the extract location", function()
+        if not testMode then
+          pending("waiting for sysUnzipError needs MUDLET_TEST_MODE")
+          return
+        end
+        assertRefusesEscapingArchive({"../mudlet-spec-escaped.txt", "sub/../../mudlet-spec-escaped-too.txt"},
+                                     {"mudlet-spec-escaped.txt", "mudlet-spec-escaped-too.txt"})
+      end)
+
+      it("refuses an archive with a folder entry outside the extract location", function()
+        if not testMode then
+          pending("waiting for sysUnzipError needs MUDLET_TEST_MODE")
+          return
+        end
+        assertRefusesEscapingArchive({"../mudlet-spec-escaped-folder/"}, {"mudlet-spec-escaped-folder"})
+      end)
+
+      it("refuses an archive that climbs out of the extract location with a backslash", function()
+        if not testMode then
+          pending("waiting for sysUnzipError needs MUDLET_TEST_MODE")
+          return
+        end
+        -- Windows takes a backslash as a separator, so this escapes there; elsewhere it is still refused
+        assertRefusesEscapingArchive({"..\\mudlet-spec-escaped-back.txt"}, {"mudlet-spec-escaped-back.txt"})
+      end)
+
+      it("unpacks a name mixing both separators where it was checked to go", function()
+        if not testMode then
+          pending("waiting for sysUnzipDone needs MUDLET_TEST_MODE")
+          return
+        end
+        -- Read with backslashes as separators this stays inside, but outside Windows "a\b" is
+        -- one folder, so the ".." pair would climb out of the extract location from there
+        local base = getMudletHomeDir() .. "/mudlet-spec-unzipmixed"
+        local inside = base .. "/inside"
+        local archive = base .. "/mixed.zip"
+        local outside = base .. "/mudlet-spec-escaped-mixed.txt"
+        finally(function()
+          os.remove(outside)
+          os.remove(inside .. "/mudlet-spec-escaped-mixed.txt")
+          lfs.rmdir(inside .. "/a/b")
+          lfs.rmdir(inside .. "/a")
+          lfs.rmdir(inside .. "/a\\b")
+          lfs.rmdir(inside)
+          os.remove(archive)
+          lfs.rmdir(base)
+        end)
+        lfs.mkdir(base)
+        writeArchiveOfEmptyFiles(archive, {"a\\b/", "a\\b/../../mudlet-spec-escaped-mixed.txt"})
+
+        assert.is_true(unzipAsync(archive, inside))
+
+        local event, zipLocation = waitForEvent("sysUnzipDone", 10000)
+        assert.equals("sysUnzipDone", event)
+        assert.equals(archive, zipLocation)
+        assert.is_false(fileExists(outside), outside .. " was written outside the extract location")
+        assert.is_true(fileExists(inside .. "/mudlet-spec-escaped-mixed.txt"), "the entry was not unpacked where its name, read with backslashes as separators, puts it")
+      end)
+
+      it("refuses an archive that a symbolic link in the extract location would carry outside it", function()
+        if not testMode then
+          pending("waiting for sysUnzipError needs MUDLET_TEST_MODE")
+          return
+        end
+        local base = getMudletHomeDir() .. "/mudlet-spec-unziplink"
+        local inside = base .. "/inside"
+        local elsewhere = base .. "/elsewhere"
+        local archive = base .. "/link.zip"
+        finally(function()
+          os.remove(elsewhere .. "/mudlet-spec-through-link.txt")
+          -- a link to a folder is a file to remove on Linux and macOS, a folder on Windows
+          os.remove(inside .. "/link")
+          lfs.rmdir(inside .. "/link")
+          os.remove(inside .. "/safe.txt")
+          lfs.rmdir(inside)
+          lfs.rmdir(elsewhere)
+          os.remove(archive)
+          lfs.rmdir(base)
+        end)
+        lfs.mkdir(base)
+        lfs.mkdir(inside)
+        lfs.mkdir(elsewhere)
+        if not lfs.link(elsewhere, inside .. "/link", true) then
+          pending("this system would not make a symbolic link here")
+          return
+        end
+        writeArchiveOfEmptyFiles(archive, {"safe.txt", "link/mudlet-spec-through-link.txt"})
+
+        assert.is_true(unzipAsync(archive, inside))
+
+        local event, zipLocation = waitForEvent("sysUnzipError", 10000)
+        assert.equals("sysUnzipError", event)
+        assert.equals(archive, zipLocation)
+        assert.is_false(fileExists(elsewhere .. "/mudlet-spec-through-link.txt"), "the archive was written through the link, outside the extract location")
+        assert.is_false(fileExists(inside .. "/safe.txt"), "part of the refused archive was unpacked before it was refused")
+      end)
+
+      it("refuses an archive that would overwrite a file outside the extract location through a link", function()
+        if not testMode then
+          pending("waiting for sysUnzipError needs MUDLET_TEST_MODE")
+          return
+        end
+        local base = getMudletHomeDir() .. "/mudlet-spec-unzipfilelink"
+        local inside = base .. "/inside"
+        local kept = base .. "/kept.txt"
+        local nowhere = base .. "/nowhere.txt"
+        local archive = base .. "/filelink.zip"
+        finally(function()
+          os.remove(inside .. "/settings.lua")
+          os.remove(inside .. "/dangling.lua")
+          lfs.rmdir(inside)
+          os.remove(kept)
+          os.remove(nowhere)
+          os.remove(archive)
+          lfs.rmdir(base)
+        end)
+        lfs.mkdir(base)
+        lfs.mkdir(inside)
+        writeFile(kept, "keep")
+        if not lfs.link(kept, inside .. "/settings.lua", true) or not lfs.link(nowhere, inside .. "/dangling.lua", true) then
+          pending("this system would not make a symbolic link here")
+          return
+        end
+
+        for _, entry in ipairs({"settings.lua", "dangling.lua"}) do
+          writeArchiveOfEmptyFiles(archive, {entry})
+          assert.is_true(unzipAsync(archive, inside))
+          local event, zipLocation = waitForEvent("sysUnzipError", 10000)
+          assert.equals("sysUnzipError", event, entry)
+          assert.equals(archive, zipLocation)
+        end
+        assert.equals(4, lfs.attributes(kept, "size"), "the archive emptied a file outside the extract location through a link")
+        assert.is_false(fileExists(nowhere), "the archive made a file outside the extract location through a link")
+      end)
+
+      it("unpacks a nested file whose folders have no entries of their own", function()
+        if not testMode then
+          pending("waiting for sysUnzipDone needs MUDLET_TEST_MODE")
+          return
+        end
+        local base = getMudletHomeDir() .. "/mudlet-spec-unzipnested"
+        local archive = base .. "/nested.zip"
+        local unpacked = base .. "/inside/dir/sub/file.txt"
+        finally(function()
+          os.remove(unpacked)
+          lfs.rmdir(base .. "/inside/dir/sub")
+          lfs.rmdir(base .. "/inside/dir")
+          lfs.rmdir(base .. "/inside")
+          os.remove(archive)
+          lfs.rmdir(base)
+        end)
+        lfs.mkdir(base)
+        writeArchiveOfEmptyFiles(archive, {"dir/sub/file.txt"})
+
+        assert.is_true(unzipAsync(archive, base .. "/inside"))
+
+        local event, zipLocation = waitForEvent("sysUnzipDone", 10000)
+        assert.equals("sysUnzipDone", event)
+        assert.equals(archive, zipLocation)
+        assert.is_true(fileExists(unpacked), "the folders the file needed were not made")
+      end)
+
+      it("unpacks into an extract location reached through a symbolic link", function()
+        if not testMode then
+          pending("waiting for sysUnzipDone needs MUDLET_TEST_MODE")
+          return
+        end
+        local base = getMudletHomeDir() .. "/mudlet-spec-unzipvialink"
+        local real = base .. "/real"
+        local link = base .. "/link"
+        local archive = base .. "/vialink.zip"
+        finally(function()
+          os.remove(real .. "/a/b.txt")
+          lfs.rmdir(real .. "/a")
+          os.remove(link)
+          lfs.rmdir(link)
+          lfs.rmdir(real)
+          os.remove(archive)
+          lfs.rmdir(base)
+        end)
+        lfs.mkdir(base)
+        lfs.mkdir(real)
+        if not lfs.link(real, link, true) then
+          pending("this system would not make a symbolic link here")
+          return
+        end
+        writeArchiveOfEmptyFiles(archive, {"a/b.txt"})
+
+        assert.is_true(unzipAsync(archive, link))
+
+        local event, zipLocation = waitForEvent("sysUnzipDone", 10000)
+        assert.equals("sysUnzipDone", event)
+        assert.equals(archive, zipLocation)
+        assert.is_true(fileExists(real .. "/a/b.txt"), "the archive was not unpacked through the linked extract location")
       end)
 
       it("survives the profile that asked for it closing before the extraction reports back", function()
@@ -2249,19 +2577,31 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         assert.equals("mudlet-spec-insertedmudlet-spec-insert-target", getCurrentLine())
       end)
 
-      it("renders the markup it is given", function()
-        -- BUG: insertHTML() hands the text straight to insertText(), so the
-        -- markup its name and the wiki both promise is put on the line as
-        -- literal characters. Left pending rather than pinning that as the
-        -- contract.
-        pending("insertHTML() does not interpret HTML, it is an alias for insertText")
+      -- Inserting the markup verbatim is the contract ruled on in #9805
+      it("inserts the markup verbatim without interpreting it", function()
         finally(function() moveCursorEnd() end)
         echo("mudlet-spec-html-target\n")
         moveCursor(0, getLastLineNumber("main") - 1)
 
         insertHTML("<b>mudlet-spec-bold</b>")
 
-        assert.equals("mudlet-spec-boldmudlet-spec-html-target", getCurrentLine())
+        assert.equals("<b>mudlet-spec-bold</b>mudlet-spec-html-target", getCurrentLine())
+      end)
+
+      it("takes no window name, inserting its first argument into the main console", function()
+        local name = "mudlet-spec-inserthtml-miniconsole"
+        createMiniConsole(name, 0, 0, 200, 100)
+        finally(function()
+          moveCursorEnd()
+          deleteMiniConsole(name)
+        end)
+        echo("mudlet-spec-html-window-target\n")
+        moveCursor(0, getLastLineNumber("main") - 1)
+
+        insertHTML(name, "mudlet-spec-html-dropped")
+
+        assert.equals(name .. "mudlet-spec-html-window-target", getCurrentLine("main"))
+        assert.equals("", getCurrentLine(name))
       end)
     end)
 
@@ -2422,6 +2762,189 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         -- warning had stopped being posted at all
         assert.is_true(contains(afterAllow, "mudletSpecAllowed"), "the allowed send was not reported, so this spec cannot tell the two apart")
         assert.is_false(contains(afterDeny, "mudletSpecDenied"), "the denied command was sent anyway")
+      end)
+
+      describe("when raised by an alias", function()
+        -- as above, but matching the warning's text: the echo of a blocked command
+        -- must not pass for a sent one
+        local unencodable = "\228\184\128"
+        local restore, originalMode
+
+        local function clearWarning()
+          assert.is_true(setServerEncoding(getServerEncoding() == "ISO 8859-1" and "ISO 8859-2" or "ISO 8859-1"))
+        end
+
+        local function sentSince(mark, command)
+          return containsWrapped(textFrom(mark), "Tried to send '" .. command)
+        end
+
+        before_each(function()
+          restore = restoreServerEncoding()
+          originalMode = getConfig("showSentText", true)
+          assert.is_true(setConfig("showSentText", "script"))
+          clearWarning()
+        end)
+
+        after_each(function()
+          -- a deny left over by a failure here would block the following specs' sends
+          send("", false)
+          setConfig("showSentText", originalMode)
+          restore()
+        end)
+
+        it("is spent by the alias pass it was raised in", function()
+          local denyOnly = tempAlias("^mudletSpecDenyNoSend$", function() denyCurrentSend() end)
+          local denyAndSend = tempAlias("^mudletSpecDenyAndSend$", function()
+            denyCurrentSend()
+            send("mudletSpecDeniedInAlias" .. unencodable, false)
+          end)
+          finally(function()
+            killAlias(denyOnly)
+            killAlias(denyAndSend)
+          end)
+
+          expandAlias("mudletSpecDenyNoSend", false)
+          local mark = getLastLineNumber("main")
+          send("mudletSpecAfterDenyOnly" .. unencodable, false)
+          assert.is_true(sentSince(mark, "mudletSpecAfterDenyOnly"), "an alias that denied and sent nothing swallowed the next command")
+
+          clearWarning()
+          mark = getLastLineNumber("main")
+          expandAlias("mudletSpecDenyAndSend", false)
+          assert.is_false(sentSince(mark, "mudletSpecDeniedInAlias"), "the alias's own send was not denied")
+          send("mudletSpecAfterDenyAndSend" .. unencodable, false)
+          assert.is_true(sentSince(mark, "mudletSpecAfterDenyAndSend"), "the command after the alias was swallowed")
+        end)
+
+        it("is spent by each command of a line split by the command separator", function()
+          local separator = getCommandSeparator()
+          assert.is_true(separator ~= "", "the profile has no command separator, so nothing gets split")
+          local denyOnly = tempAlias("^mudletSpecDenyNoSend$", function() denyCurrentSend() end)
+          finally(function() killAlias(denyOnly) end)
+
+          local mark = getLastLineNumber("main")
+          expandAlias("mudletSpecDenyNoSend" .. separator .. "mudletSpecAfterSeparator" .. unencodable, false)
+          assert.is_true(sentSince(mark, "mudletSpecAfterSeparator"), "the command after the separator was swallowed")
+        end)
+
+        it("is spent even when an earlier deny was spent in the same pass", function()
+          local sendThenDeny = tempAlias("^mudletSpecSendThenDeny$", function()
+            send("mudletSpecInner", false)
+            denyCurrentSend()
+          end)
+          finally(function() killAlias(sendThenDeny) end)
+
+          denyCurrentSend()
+          expandAlias("mudletSpecSendThenDeny", false)
+          local mark = getLastLineNumber("main")
+          send("mudletSpecAfterReDeny" .. unencodable, false)
+          assert.is_true(sentSince(mark, "mudletSpecAfterReDeny"), "the deny raised after the alias's send swallowed the next command")
+        end)
+
+        it("is spent by a nested alias pass, not left for the outer alias's next send", function()
+          local inner = tempAlias("^mudletSpecDenyInner$", function() denyCurrentSend() end)
+          local outer = tempAlias("^mudletSpecOuter$", function()
+            expandAlias("mudletSpecDenyInner", false)
+            send("mudletSpecAfterNested" .. unencodable, false)
+          end)
+          finally(function()
+            killAlias(outer)
+            killAlias(inner)
+          end)
+
+          local mark = getLastLineNumber("main")
+          expandAlias("mudletSpecOuter", false)
+          assert.is_true(sentSince(mark, "mudletSpecAfterNested"), "the inner alias's deny blocked the outer alias's send")
+        end)
+
+        -- a sysDataSendRequest handler can deny a command and expand an alias in
+        -- its place: that alias's pass must not spend the deny meant for the command
+        it("still stops a command whose send request handler expands an alias that sends nothing", function()
+          local silent = tempAlias("^mudletSpecSilentReplacement$", function() end)
+          local handler = registerAnonymousEventHandler("sysDataSendRequest", function(_, sending)
+            if sending:find("mudletSpecReplaced", 1, true) then
+              denyCurrentSend()
+              expandAlias("mudletSpecSilentReplacement", false)
+            end
+          end)
+          finally(function()
+            killAlias(silent)
+            killAnonymousEventHandler(handler)
+          end)
+
+          local mark = getLastLineNumber("main")
+          send("mudletSpecReplaced" .. unencodable, false)
+          local deniedSent = sentSince(mark, "mudletSpecReplaced")
+
+          clearWarning()
+          mark = getLastLineNumber("main")
+          send("mudletSpecAllowedAfterReplace" .. unencodable, false)
+          assert.is_true(sentSince(mark, "mudletSpecAllowedAfterReplace"), "the allowed send was not reported, so this spec cannot tell the two apart")
+          assert.is_false(deniedSent, "the denied command was sent anyway")
+        end)
+
+        it("stops a command whose send request handler expands an alias that denies it", function()
+          local guard = tempAlias("^mudletSpecGuard (.*)$", function()
+            if matches[2]:find("mudletSpecGuarded", 1, true) then
+              denyCurrentSend()
+            end
+          end)
+          local handler = registerAnonymousEventHandler("sysDataSendRequest", function(_, sending)
+            if sending:find("^mudletSpecGuarded") then
+              expandAlias("mudletSpecGuard " .. sending, false)
+            end
+          end)
+          finally(function()
+            killAlias(guard)
+            killAnonymousEventHandler(handler)
+          end)
+
+          local mark = getLastLineNumber("main")
+          send("mudletSpecGuarded" .. unencodable, false)
+          local scriptSendSent = sentSince(mark, "mudletSpecGuarded")
+          clearWarning()
+          mark = getLastLineNumber("main")
+          expandAlias("mudletSpecGuardedTyped" .. unencodable, false)
+          local typedSent = sentSince(mark, "mudletSpecGuardedTyped")
+
+          clearWarning()
+          mark = getLastLineNumber("main")
+          send("mudletSpecAllowedAfterGuard" .. unencodable, false)
+          assert.is_true(sentSince(mark, "mudletSpecAllowedAfterGuard"), "the allowed send was not reported, so this spec cannot tell the two apart")
+          assert.is_false(scriptSendSent, "the command the guard alias denied was sent anyway")
+          assert.is_false(typedSent, "the typed command the guard alias denied was sent anyway")
+        end)
+
+        it("stops a command whose send request handler expands an alias that leaves the deny to a nested alias", function()
+          local rule = tempAlias("^mudletSpecRule (.*)$", function()
+            if matches[2]:find("mudletSpecDelegated", 1, true) then
+              denyCurrentSend()
+            end
+          end)
+          local check = tempAlias("^mudletSpecCheck (.*)$", function()
+            expandAlias("mudletSpecRule " .. matches[2], false)
+          end)
+          local handler = registerAnonymousEventHandler("sysDataSendRequest", function(_, sending)
+            if sending:find("^mudletSpecDelegated") then
+              expandAlias("mudletSpecCheck " .. sending, false)
+            end
+          end)
+          finally(function()
+            killAlias(rule)
+            killAlias(check)
+            killAnonymousEventHandler(handler)
+          end)
+
+          local mark = getLastLineNumber("main")
+          send("mudletSpecDelegated" .. unencodable, false)
+          local delegatedSent = sentSince(mark, "mudletSpecDelegated")
+
+          clearWarning()
+          mark = getLastLineNumber("main")
+          send("mudletSpecAllowedAfterDelegated" .. unencodable, false)
+          assert.is_true(sentSince(mark, "mudletSpecAllowedAfterDelegated"), "the allowed send was not reported, so this spec cannot tell the two apart")
+          assert.is_false(delegatedSent, "the command the nested alias denied was sent anyway")
+        end)
       end)
     end)
 
@@ -3143,14 +3666,14 @@ tempTimer(0.05, resetOnceConnected)]], port))
       end)
 
       it("raises a Lua error for a first argument it cannot carry", function()
-        assertArgError(function() raiseGlobalEvent({}) end, "raiseGlobalEvent: bad argument type #1")
+        assertArgError(function() raiseGlobalEvent({}) end, "raiseGlobalEvent: bad argument #1 type")
       end)
 
       it("raises a Lua error for a later argument it cannot carry", function()
         -- the arguments are all vetted before the TEvent is built, so this raise
         -- has nothing to strand; the leak-checking CI job is what would notice
         -- if that changed
-        assertArgError(function() raiseGlobalEvent("mudletSpecGlobalEvent", {}) end, "raiseGlobalEvent: bad argument type #2")
+        assertArgError(function() raiseGlobalEvent("mudletSpecGlobalEvent", {}) end, "raiseGlobalEvent: bad argument #2 type")
       end)
 
       it("does not deliver the event back to the profile that sent it", function()
