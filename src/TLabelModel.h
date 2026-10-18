@@ -29,6 +29,7 @@
 #include <QSize>
 #include <QString>
 
+#include <functional>
 #include <optional>
 
 class Host;
@@ -47,6 +48,25 @@ struct TLabelModel
     // A copy would free the same Lua registry indexes twice. This also suppresses the implicit moves.
     TLabelModel(const TLabelModel&) = delete;
     TLabelModel& operator=(const TLabelModel&) = delete;
+
+    // The name a screen reader hears: the one a script gave it, else its text, else its tooltip
+    QString effectiveAccessibleName() const;
+    bool namedByToolTip() const;
+    // Whether a screen reader is told it is a button: as a script said, else when it has a click or release
+    // callback - never when the mouse passes through it
+    bool actsAsButton() const;
+    void setAccessibleName(const QString& name);
+    void setAccessibleButton(std::optional<bool> button);
+    void setClickThrough(bool clickThrough);
+    // The view's copies of what the label shows, which name it unless a script named it
+    void setText(const QString& text);
+    void setToolTip(const QString& toolTip);
+
+    // KeyboardAccess: the profile's accessibleLabels setting changed
+    enum class AccessibilityChange { Name, Role, KeyboardAccess };
+    // Set by the widget, if there is one, to update its focus policy and tell assistive technology of a change
+    std::function<void(AccessibilityChange)> mAccessibilityChanged;
+    void accessibilityChanged(AccessibilityChange change) const;
 
     // Whether the SVG renderer is worth trying on a file, judged by its first bytes.
     static bool svgCandidate(const QString& path);
@@ -108,6 +128,11 @@ struct TLabelModel
     // The widget's own styleSheet(), toolTip() and font(), kept current by the view.
     QString mStyleSheet;
     QString mToolTip;
+    // What a script named the label for screen readers; empty means its text is used, else its tooltip
+    QString mAccessibleName;
+    // Set by a script whose label's callbacks are not a button's, such as a drag handle; empty means automatic
+    std::optional<bool> mAccessibleButton;
+    bool mClickThrough = false;
     QFont mFont;
     // QLabel::text(), which a pixmap or movie empties, written by the view after each change.
     QString mText;

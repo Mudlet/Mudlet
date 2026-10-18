@@ -6735,6 +6735,10 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "deleteScrollBox", TLuaInterpreter::deleteScrollBox);
     lua_register(pGlobalLua, "setLabelToolTip", TLuaInterpreter::setLabelToolTip);
     lua_register(pGlobalLua, "getLabelToolTip", TLuaInterpreter::getLabelToolTip);
+    lua_register(pGlobalLua, "setLabelAccessibleName", TLuaInterpreter::setLabelAccessibleName);
+    lua_register(pGlobalLua, "getLabelAccessibleName", TLuaInterpreter::getLabelAccessibleName);
+    lua_register(pGlobalLua, "setLabelAccessibleRole", TLuaInterpreter::setLabelAccessibleRole);
+    lua_register(pGlobalLua, "getLabelAccessibleRole", TLuaInterpreter::getLabelAccessibleRole);
     lua_register(pGlobalLua, "setLabelCursor", TLuaInterpreter::setLabelCursor);
     lua_register(pGlobalLua, "setLabelCustomCursor", TLuaInterpreter::setLabelCustomCursor);
     lua_register(pGlobalLua, "raiseWindow", TLuaInterpreter::raiseWindow);
@@ -9548,6 +9552,10 @@ int TLuaInterpreter::setConfig(lua_State* L)
         host.setAdvertiseScreenReader(getVerifiedBool(L, __func__, 2, "value"));
         return success();
     }
+    if (key == qsl("accessibleLabels")) {
+        host.setAccessibleLabels(getVerifiedBool(L, __func__, 2, "value"));
+        return success();
+    }
     if (key == qsl("enableClosedCaption")) {
         host.setEnableClosedCaption(getVerifiedBool(L, __func__, 2, "value"));
         return success();
@@ -10060,6 +10068,10 @@ int TLuaInterpreter::getConfig(lua_State* L)
             {qsl("advertiseScreenReader"),
              [&]() {
                  lua_pushboolean(L, host.mAdvertiseScreenReader);
+             }},
+            {qsl("accessibleLabels"),
+             [&]() {
+                 lua_pushboolean(L, host.mAccessibleLabels);
              }},
             {qsl("ambiguousEAsianWidthCharacters"),
              [&]() {

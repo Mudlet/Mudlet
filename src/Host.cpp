@@ -5675,6 +5675,18 @@ void Host::setEnableClosedCaption(const bool state)
     changeSetting(mEnableClosedCaption, state, qsl("enableClosedCaption"));
 }
 
+void Host::setAccessibleLabels(const bool state)
+{
+    if (mAccessibleLabels == state) {
+        return;
+    }
+    mAccessibleLabels = state;
+    for (const TLabelModel* pModel : mWindowRegistry.labelModels()) {
+        pModel->accessibilityChanged(TLabelModel::AccessibilityChange::KeyboardAccess);
+    }
+    raiseSettingChangedEvent(qsl("accessibleLabels"), state);
+}
+
 void Host::setAdvertiseScreenReader(const bool state)
 {
     if (mAdvertiseScreenReader == state) {
@@ -6222,6 +6234,34 @@ bool Host::setLabelClickCallback(const QString& name, const int func)
     return false;
 }
 
+bool Host::setLabelAccessibleName(const QString& name, const QString& accessibleName)
+{
+    if (!hasConsoleView()) {
+        return false;
+    }
+
+    auto* pModel = mWindowRegistry.labelModel(name);
+    if (pModel) {
+        pModel->setAccessibleName(accessibleName);
+        return true;
+    }
+    return false;
+}
+
+bool Host::setLabelAccessibleButton(const QString& name, std::optional<bool> button)
+{
+    if (!hasConsoleView()) {
+        return false;
+    }
+
+    auto* pModel = mWindowRegistry.labelModel(name);
+    if (pModel) {
+        pModel->setAccessibleButton(button);
+        return true;
+    }
+    return false;
+}
+
 bool Host::setLabelDoubleClickCallback(const QString& name, const int func)
 {
     auto* pModel = mWindowRegistry.labelModel(name);
@@ -6675,6 +6715,28 @@ std::optional<QString> Host::labelToolTip(const QString& name) const
 {
     if (const TLabelModel* pLabel = mWindowRegistry.labelModel(name)) {
         return pLabel->mToolTip;
+    }
+    return {};
+}
+
+std::optional<QString> Host::labelAccessibleName(const QString& name) const
+{
+    if (!hasConsoleView()) {
+        return {};
+    }
+    if (const TLabelModel* pLabel = mWindowRegistry.labelModel(name)) {
+        return pLabel->effectiveAccessibleName();
+    }
+    return {};
+}
+
+std::optional<bool> Host::labelActsAsButton(const QString& name) const
+{
+    if (!hasConsoleView()) {
+        return {};
+    }
+    if (const TLabelModel* pLabel = mWindowRegistry.labelModel(name)) {
+        return pLabel->actsAsButton();
     }
     return {};
 }
