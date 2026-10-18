@@ -4016,12 +4016,12 @@ private slots:
             return 0.0;
         };
         queueFrame(widget, areaId);
-        const qreal far = nameFontSize(1.0f);
+        const qreal farSize = nameFontSize(1.0f);
         const float farWidth = nameWidth();
-        const qreal near = nameFontSize(0.25f);
+        const qreal nearSize = nameFontSize(0.25f);
         const float nearWidth = nameWidth();
-        QVERIFY2(far > 0.0 && near >= 2.0 * far, qPrintable(qsl("a name is drawn at %1 points far off and %2 close up").arg(far).arg(near)));
-        QVERIFY2(near <= 3.0 * far, "a name close up is drawn sharper than it can be seen");
+        QVERIFY2(farSize > 0.0 && nearSize >= 2.0 * farSize, qPrintable(qsl("a name is drawn at %1 points far off and %2 close up").arg(farSize).arg(nearSize)));
+        QVERIFY2(nearSize <= 3.0 * farSize, "a name close up is drawn sharper than it can be seen");
         // Sharper, not larger: the same size on the map, but for rounding to whole texels
         QVERIFY2(farWidth > 0.0f && qAbs(nearWidth - farWidth) < 0.05f * farWidth, qPrintable(qsl("a name is %1 wide far off and %2 close up").arg(farWidth).arg(nearWidth)));
 
