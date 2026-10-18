@@ -856,7 +856,12 @@ private slots:
         QVERIFY(pCombat);
         QTreeWidgetItem* pBelow = mpEditor->mpFolderTree->itemBelow(pCombat);
         QVERIFY(pBelow);
+#if defined(Q_OS_MACOS)
+        // A macOS item view takes Return as "edit", and its Cmd+O activation is Mudlet's package manager shortcut
+        emit mpEditor->mpFolderTree->itemActivated(mpEditor->mpFolderTree->currentItem(), 0);
+#else
         QTest::keyClick(mpEditor->mpFolderTree, Qt::Key_Return);
+#endif
         QVERIFY2(noFormShown(), "Enter on a merged folder over one of its folders' forms did nothing");
         QTest::keyClick(mpEditor->mpFolderTree, Qt::Key_Down);
         QVERIFY2(mpEditor->mpFolderTree->currentItem() == pBelow, "Down from a merged folder did not move to the row below it");
