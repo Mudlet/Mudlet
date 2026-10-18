@@ -24,7 +24,9 @@
  ***************************************************************************/
 
 #include "ui_connection_profiles.h"
+#include <functional>
 #include <optional>
+#include <QHash>
 #include <QRegularExpression>
 #include <QTimer>
 #include <QKeyEvent>
@@ -43,6 +45,7 @@ class dlgConnectionProfiles : public QDialog, public Ui::connection_profiles
     friend class ConnectionDialogKeychainWaitTest;
     friend class ConnectionDialogOfflineProfileTest;
     friend class SelfTestProfileIconTest;
+    friend class ProfileDeletionSafetyTest;
 
 public:
     Q_DISABLE_COPY(dlgConnectionProfiles)
@@ -142,6 +145,17 @@ private:
     void deleteSecurePassword(const QString& profile);
     void setupMudProfile(QListWidgetItem*, const QString& mudServer, const QString& serverDescription, const QString& iconFileName);
     void reallyDeleteProfile(const QString& profile);
+    // A removed profile's name is refused until the removal of its saved sign-in has answered, since a
+    // profile made or connected under it meanwhile would read it. Process-wide: the removal outlives the
+    // dialog. Held as removalKey()s, because a case-insensitive disk files a variant in the same place, and
+    // counted, because the same name can be removed again before the first removal answers.
+    static QHash<QString, int>& namesWithSignInBeingRemoved();
+    static QString removalKey(const QString& name);
+    static bool signInRemovalPending(const QString& name);
+    static void forgetSignInOfRemovedProfile(const QString& profile);
+    // Test-only: when set, it is handed each removal of a removed profile's sign-in to start, so a test
+    // can hold one back the way a slow keychain does
+    static std::function<void(std::function<void()> startRemoval)>& signInRemovalStarterForTesting();
     bool profileRemovable(const QString& profile) const;
     void updateRemoveButtonState(const QString& profile);
     void showRemovalProblem(const QString& message);

@@ -143,9 +143,6 @@ void dlgComposer::spellCheckWord(QTextCursor& c)
     }
 
     Hunhandle* systemDictionaryHandle = mpHost->spellChecker().systemHandle();
-    if (!systemDictionaryHandle) {
-        return;
-    }
 
     QTextCharFormat f;
     // Use StartOfWord/EndOfWord for precise selection without whitespace
@@ -153,7 +150,8 @@ void dlgComposer::spellCheckWord(QTextCursor& c)
     c.movePosition(QTextCursor::EndOfWord, QTextCursor::KeepAnchor);
     const QString spellCheckedWord = c.selectedText();
 
-    const bool wantSpellCheck = TBuffer::lengthInGraphemes(spellCheckedWord) >= mudlet::self()->mMinLengthForSpellCheck;
+    // With no dictionary nothing is marked, which may mean undoing a mark the one before made
+    const bool wantSpellCheck = systemDictionaryHandle && TBuffer::lengthInGraphemes(spellCheckedWord) >= mudlet::self()->mMinLengthForSpellCheck;
     if (!wantSpellCheck) {
         f.setFontUnderline(false);
         c.setCharFormat(f);

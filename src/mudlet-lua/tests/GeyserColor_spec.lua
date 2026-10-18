@@ -194,6 +194,28 @@ describe("Tests functionality of Geyser.Color", function()
       assert.are.equal("|c0a141e28", Geyser.Color.hhexa(10, 20, 30, 40))
       assert.are.equal("<10,20,30,40>", Geyser.Color.hdeca(10, 20, 30, 40))
     end)
+
+    it("clamps an out of range component rather than writing more than two hex digits", function()
+      assert.are.equal("#ff0000", Geyser.Color.hex(300, -5, 0))
+      assert.are.equal("|cff0000", Geyser.Color.hhex(999, 0, 0))
+      assert.are.equal("#ff0000ff", Geyser.Color.hexa(300, 0, 0, 999))
+      assert.are.equal("|cff000000", Geyser.Color.hhexa(300, 0, 0, -1))
+      assert.are.equal("#7f0000", Geyser.Color.hex(127.9, 0, 0))
+      color_table.geyserColorSpecOverRange = {300, -5, 0}
+      finally(function() color_table.geyserColorSpecOverRange = nil end)
+      -- asked twice, as the second answer comes from what the first remembered
+      assert.are.equal("#ff0000", Geyser.Color.hex("geyserColorSpecOverRange"))
+      assert.are.equal("#ff0000", Geyser.Color.hex("geyserColorSpecOverRange"))
+    end)
+
+    it("says which component is missing or not a number", function()
+      assert.error_matches(function() Geyser.Color.hex(1, "x", 3) end, "Geyser.Color.hex: bad green component %(number expected, got nil!%)")
+      assert.error_matches(function() Geyser.Color.hexa(255, 0, 0, "x") end, "Geyser.Color.hexa: bad alpha component %(number expected, got nil!%)")
+      assert.error_matches(function() Geyser.Color.hhex("geyserColorSpecNoSuchColour") end, "Geyser.Color.hhex: bad red component %(number expected, got nil!%)")
+      color_table.geyserColorSpecIncomplete = {255, 0}
+      finally(function() color_table.geyserColorSpecIncomplete = nil end)
+      assert.error_matches(function() Geyser.Color.hex("geyserColorSpecIncomplete") end, "Geyser.Color.hex: bad blue component %(number expected, got nil!%)")
+    end)
   end)
 
   -- applyColors is what the label, miniconsole, mapper and user window
