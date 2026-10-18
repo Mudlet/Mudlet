@@ -1666,6 +1666,20 @@ describe("Tests UI functions", function()
       assert.are.equal(250, mp.max)
     end)
 
+    it("should parse a Swedish LK/MP prompt with aligned numbers", function()
+      local hits = BaseUI.parseVitalsLine("LK:  74/114  MP:   34/98")
+      local hp = reading(hits, "hp", "curmax")
+      assert.is_not_nil(hp)
+      assert.are.equal(74, hp.current)
+      assert.are.equal(114, hp.max)
+      for _, hit in ipairs(hits) do
+        if hit.stat == "mp" then
+          assert.are.equal(34, hit.current)
+          assert.are.equal(98, hit.max)
+        end
+      end
+    end)
+
     it("should read each line's own numbers when lines differ only in them", function()
       -- a max of zero drops the first line's readings, the others still have theirs
       assert.are.same({}, BaseUI.parseVitalsLine("HP: 523/000 MP: 210/000 [same shape]"))
