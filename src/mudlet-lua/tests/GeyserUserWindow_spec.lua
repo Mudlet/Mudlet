@@ -250,11 +250,16 @@ describe("Tests functionality of Geyser.UserWindow", function()
     it("re-resolves the size of percentage children when it is resized", function()
       track(Geyser.Label:new({name = "guwMoveChild", x = 0, y = 0, width = "50%", height = "100%"}, userWindow))
       local firstWidth, firstHeight = getUserWindowSize("guwMove")
-      assert.are.same({x = 0, y = 0, width = math.floor(firstWidth / 2), height = firstHeight}, geometry("guwMoveChild"))
+      assert.are.same({x = 0, y = 0, width = math.floor(firstWidth / 2 + 0.5), height = firstHeight}, geometry("guwMoveChild"))
       userWindow:resize(400, 260)
       local secondWidth, secondHeight = getUserWindowSize("guwMove")
       assert.is_true(secondWidth > firstWidth)
-      assert.are.same({x = 0, y = 0, width = math.floor(secondWidth / 2), height = secondHeight}, geometry("guwMoveChild"))
+      assert.are.same({x = 0, y = 0, width = math.floor(secondWidth / 2 + 0.5), height = secondHeight}, geometry("guwMoveChild"))
+      -- one of 400 and 401 leaves an odd usable width, whatever the window frame
+      userWindow:resize(401, 260)
+      local thirdWidth, thirdHeight = getUserWindowSize("guwMove")
+      assert.are.equal(secondWidth + 1, thirdWidth)
+      assert.are.same({x = 0, y = 0, width = math.floor(thirdWidth / 2 + 0.5), height = thirdHeight}, geometry("guwMoveChild"))
     end)
   end)
 
@@ -268,13 +273,17 @@ describe("Tests functionality of Geyser.UserWindow", function()
     it("creates children inside the user window, sized against its usable area", function()
       local label = track(Geyser.Label:new({name = "guwLabel", x = "50%", y = 0, width = "50%", height = "100%"}, userWindow))
       assert.are.equal("guwHolder", label.windowname)
-      local usableWidth, usableHeight = getUserWindowSize("guwHolder")
-      assert.are.same({
-        x = math.floor(usableWidth / 2),
-        y = 0,
-        width = math.floor(usableWidth / 2),
-        height = usableHeight,
-      }, geometry("guwLabel"))
+      local function expected()
+        local usableWidth, usableHeight = getUserWindowSize("guwHolder")
+        local half = math.floor(usableWidth / 2 + 0.5)
+        return {x = half, y = 0, width = usableWidth - half, height = usableHeight}
+      end
+      local firstWidth = getUserWindowSize("guwHolder")
+      assert.are.same(expected(), geometry("guwLabel"))
+      -- one of the two widths leaves an odd usable width, whatever the window frame
+      userWindow:resize(301, 200)
+      assert.are.equal(firstWidth + 1, getUserWindowSize("guwHolder"))
+      assert.are.same(expected(), geometry("guwLabel"))
       assert.is_true(windowVisible("guwLabel"))
     end)
 
@@ -291,11 +300,11 @@ describe("Tests functionality of Geyser.UserWindow", function()
       assert.are.equal("guwScrollBox", scrollBox.windowname)
       assert.are.equal("guwHolder", scrollBox.parentWindowName)
       local usableWidth, usableHeight = getUserWindowSize("guwHolder")
-      assert.are.same({x = 0, y = 0, width = usableWidth, height = math.floor(usableHeight / 2)}, geometry("guwScrollBox"))
+      assert.are.same({x = 0, y = 0, width = usableWidth, height = math.floor(usableHeight / 2 + 0.5)}, geometry("guwScrollBox"))
       -- and a child of the scroll box is placed in the scroll box's own space
       local label = track(Geyser.Label:new({name = "guwScrollBoxLabel", x = 0, y = 0, width = "50%", height = "100%"}, scrollBox))
       assert.are.equal("guwScrollBox", label.windowname)
-      assert.are.equal(math.floor(usableWidth / 2), geometry("guwScrollBoxLabel").width)
+      assert.are.equal(math.floor(usableWidth / 2 + 0.5), geometry("guwScrollBoxLabel").width)
     end)
 
     it("deletes its children with itself", function()
@@ -644,32 +653,30 @@ describe("Tests functionality of Geyser.UserWindow", function()
     -- console inside it. That the name can be used again is covered by
     -- "reopens a user window that was opened under the same name before"; what
     -- is read here is the dock itself. getUserWindowSize answers from the dock
-    -- registry, falling back to the main window size when the name is not in
-    -- it, so a dock left behind gives itself away by answering with its own
-    -- size instead.
+    -- registry, refusing a name that is not in it, so a dock left behind gives
+    -- itself away by answering with its own size instead.
     it("takes its dock widget with it, so nothing stale answers for the name", function()
       local mainWidth = getMainWindowSize()
       local userWindow = track(Geyser.UserWindow:new({name = "guwReopen", x = 10, y = 20, width = 200, height = 150}))
-      assert.is_true(getUserWindowSize("guwReopen") < mainWidth, "a user window that reports the main window's size has no dock of its own")
+      assert.is_number(getUserWindowSize("guwReopen"), "the user window has no dock of its own")
+      assert.is_true(getUserWindowSize("guwReopen") < mainWidth, "the user window measures the main window, not its own dock")
 
       userWindow:delete()
       assert.is_nil(windowType("guwReopen"))
       -- a dock left behind is still holding a live widget here, so it would
-      -- answer with its own size rather than the fallback
-      assert.are.same({getMainWindowSize()}, {getUserWindowSize("guwReopen")})
+      -- answer with its own size rather than refuse
+      assert.are.same({nil, "user window name 'guwReopen' not found"}, {getUserWindowSize("guwReopen")})
       pumpEvents(50)
 
       track(Geyser.UserWindow:new({name = "guwReopen", x = 10, y = 20, width = 200, height = 150}))
       assert.are.equal("userwindow", windowType("guwReopen"))
-      assert.is_true(getUserWindowSize("guwReopen") < mainWidth, "the reopened window has no dock of its own")
+      assert.is_number(getUserWindowSize("guwReopen"), "the reopened window has no dock of its own")
+      assert.is_true(getUserWindowSize("guwReopen") < mainWidth, "the reopened window measures the main window, not its own dock")
     end)
   end)
 
   -- Geyser.Container:new makes the "<name>Container" root container for a user
-  -- window. An orphaned one is not inert: its get_width/get_height ask
-  -- getUserWindowSize for a window that is gone, which falls back to the main
-  -- window size, so every leftover claims the whole main window in every
-  -- layout pass.
+  -- window, which measures the window by its name.
   describe("Geyser.UserWindow root container cleanup", function()
     it("removes the root container it created", function()
       local trackedWindows = #Geyser.windows
@@ -698,8 +705,53 @@ describe("Tests functionality of Geyser.UserWindow", function()
       userWindow:delete()
       assert.are.equal(root, Geyser.windowList.guwRootSharedContainer)
       assert.are.equal(lodger, root.windowList.guwRootLodger)
+      -- the window it measured is gone, so it has no size to lay anything out in
+      assert.are.equal(0, root:get_width())
+      assert.are.equal(0, root:get_height())
+      assert.has_no.errors(function() root:reposition() end)
       root:delete()
       assert.is_nil(Geyser.windowList.guwRootSharedContainer)
+    end)
+
+    -- getUserWindowSize refuses the name of the window that is gone, and every
+    -- refusal is a warning in the Central Debug Console
+    it("does not ask about the deleted user window in a layout pass", function()
+      local userWindow = track(Geyser.UserWindow:new({name = "guwRootAsks", x = 10, y = 20, width = 200, height = 150}))
+      local root = userWindow.container
+      track(Geyser.Label:new({name = "guwRootAsksLodger", x = 0, y = 0, width = 20, height = 20}, root))
+      track(root)
+      userWindow:delete()
+      local sizeSpy = spy.on(_G, "getUserWindowSize")
+      finally(function() sizeSpy:revert() end)
+      root:reposition()
+      assert.are.equal(0, root:get_width())
+      assert.are.equal(0, root:get_height())
+      assert.spy(sizeSpy).was_not_called()
+    end)
+
+    it("does not ask about a user window deleted behind Geyser's back", function()
+      local userWindow = track(Geyser.UserWindow:new({name = "guwRootBehind", x = 10, y = 20, width = 200, height = 150}))
+      local root = userWindow.container
+      track(Geyser.Label:new({name = "guwRootBehindLodger", x = 0, y = 0, width = 20, height = 20}, root))
+      track(root)
+      deleteMiniConsole("guwRootBehind")
+      local sizeSpy = spy.on(_G, "getUserWindowSize")
+      finally(function() sizeSpy:revert() end)
+      root:reposition()
+      assert.are.equal(0, root:get_width())
+      assert.are.equal(0, root:get_height())
+      assert.spy(sizeSpy).was_not_called()
+    end)
+
+    it("leaves an Adjustable.Container in it as it was when asked for percentages", function()
+      local userWindow = track(Geyser.UserWindow:new({name = "guwRootAdj", x = 10, y = 20, width = 200, height = 150}))
+      local root = userWindow.container
+      local adjustable = track(Adjustable.Container:new({name = "guwRootAdjustable", x = 0, y = 0, width = 100, height = 100, autoLoad = false, autoSave = false}, root))
+      track(root)
+      userWindow:delete()
+      local x, y, width, height = adjustable.x, adjustable.y, adjustable.width, adjustable.height
+      assert.has_no.errors(function() adjustable:setPercent(true, true) end)
+      assert.are.same({x, y, width, height}, {adjustable.x, adjustable.y, adjustable.width, adjustable.height})
     end)
 
     -- a user window moved out of the root container Geyser made for it still

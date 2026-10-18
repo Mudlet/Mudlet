@@ -21,7 +21,7 @@ function Geyser.Mapper:reposition()
     return
   end
   if self.embedded then
-    createMapper(self.windowname, self:get_x(), self:get_y(), self:get_width(), self:get_height())
+    createMapper(self.windowname, self:pixel_geometry())
   end
 end
 
@@ -56,7 +56,7 @@ end
 
 function Geyser.Mapper:show_impl()
   if self.embedded then
-    createMapper(self.windowname, self:get_x(), self:get_y(), self:get_width(), self:get_height())
+    createMapper(self.windowname, self:pixel_geometry())
   else
     openMapWidget()
     -- A title only reaches a map window that is on screen, so one this mapper
@@ -126,8 +126,7 @@ function Geyser.Mapper:new (cons, container)
     me.dockPosition = "f"
   end
   if me.embedded then
-    createMapper(me.windowname, me:get_x(), me:get_y(),
-    me:get_width(), me:get_height())
+    createMapper(me.windowname, me:pixel_geometry())
   else
     me.embedded = false
     if me.dockPosition and me.dockPosition ~= "f" then

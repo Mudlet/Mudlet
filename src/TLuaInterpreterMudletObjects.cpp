@@ -995,7 +995,7 @@ int TLuaInterpreter::isActive(lua_State* L)
     } else if (!type.compare(QLatin1String("trigger"), Qt::CaseInsensitive)) {
         if (isId) {
             auto pT = host.getTriggerUnit()->getTrigger(id);
-            cnt = (pT && !host.getTriggerUnit()->pendingDeletion(pT) && pT->isActive()) ? 1 : 0;
+            cnt = (pT && !host.getTriggerUnit()->pendingDeletion(pT) && pT->isActive() && (!checkAncestors || pT->ancestorsActive())) ? 1 : 0;
         } else {
             const auto [begin, end] = host.getTriggerUnit()->mLookupTable.equal_range(nameOrId);
             for (auto itpItem = begin; itpItem != end; ++itpItem) {
@@ -1009,7 +1009,7 @@ int TLuaInterpreter::isActive(lua_State* L)
     } else if (!type.compare(QLatin1String("alias"), Qt::CaseInsensitive)) {
         if (isId) {
             auto pT = host.getAliasUnit()->getAlias(id);
-            cnt = (pT && !host.getAliasUnit()->pendingDeletion(pT) && pT->isActive()) ? 1 : 0;
+            cnt = (pT && !host.getAliasUnit()->pendingDeletion(pT) && pT->isActive() && (!checkAncestors || pT->ancestorsActive())) ? 1 : 0;
         } else {
             const auto [begin, end] = host.getAliasUnit()->mLookupTable.equal_range(nameOrId);
             for (auto itpItem = begin; itpItem != end; ++itpItem) {
@@ -1023,7 +1023,7 @@ int TLuaInterpreter::isActive(lua_State* L)
     } else if (!type.compare(QLatin1String("keybind"), Qt::CaseInsensitive)) {
         if (isId) {
             auto pT = host.getKeyUnit()->getKey(id);
-            cnt = (pT && !host.getKeyUnit()->pendingDeletion(pT) && pT->isActive()) ? 1 : 0;
+            cnt = (pT && !host.getKeyUnit()->pendingDeletion(pT) && pT->isActive() && (!checkAncestors || pT->ancestorsActive())) ? 1 : 0;
         } else {
             const auto [begin, end] = host.getKeyUnit()->mLookupTable.equal_range(nameOrId);
             for (auto itpItem = begin; itpItem != end; ++itpItem) {
@@ -1037,7 +1037,7 @@ int TLuaInterpreter::isActive(lua_State* L)
     } else if (!type.compare(QLatin1String("button"), Qt::CaseInsensitive)) {
         if (isId) {
             auto pT = host.getActionUnit()->getAction(id);
-            cnt = (pT && !host.getActionUnit()->pendingDeletion(pT) && pT->isActive()) ? 1 : 0;
+            cnt = (pT && !host.getActionUnit()->pendingDeletion(pT) && pT->isActive() && (!checkAncestors || pT->ancestorsActive())) ? 1 : 0;
         } else {
             QMap<int, TAction*> const actions = host.getActionUnit()->getActionList();
             for (auto action : actions) {
@@ -1050,7 +1050,7 @@ int TLuaInterpreter::isActive(lua_State* L)
     } else if (!type.compare(QLatin1String("script"), Qt::CaseInsensitive)) {
         if (isId) {
             auto pT = host.getScriptUnit()->getScript(id);
-            cnt = (pT && !host.getScriptUnit()->pendingDeletion(pT) && pT->isActive()) ? 1 : 0;
+            cnt = (pT && !host.getScriptUnit()->pendingDeletion(pT) && pT->isActive() && (!checkAncestors || pT->ancestorsActive())) ? 1 : 0;
         } else {
             QMap<int, TScript*> const scripts = host.getScriptUnit()->getScriptList();
             for (auto script : scripts) {
@@ -1440,11 +1440,17 @@ int TLuaInterpreter::permKey(lua_State* L)
         keyModifier = getVerifiedInt(L, __func__, 3, "key modifier", true);
         argIndex++;
     }
-    int keyCode = getVerifiedInt(L, __func__, argIndex, "key code");
+    const int keyCodeIndex = argIndex;
+    int keyCode = getVerifiedInt(L, __func__, keyCodeIndex, "key code");
 
     Host& host = getHostFromLua(L);
     TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
     if (pLuaInterpreter->reportInvalidLuaCodeParam(L, "permKey", ++argIndex)) {
+        return lua_error(L);
+    }
+    // -1 is how permGroup() asks for a group
+    if (keyCode != -1 && (keyCode < 0 || keyCode > Qt::Key_unknown)) {
+        lua_pushfstring(L, "permKey: bad argument #%d (%d is not a key code)", keyCodeIndex, keyCode);
         return lua_error(L);
     }
 
@@ -2782,6 +2788,9 @@ int TLuaInterpreter::tempKey(lua_State* L)
         argIndex++;
     }
     int keyCode = getVerifiedInt(L, __func__, argIndex, "key code");
+    if (keyCode < 0 || keyCode > Qt::Key_unknown) {
+        return warnArgumentValue(L, __func__, qsl("%1 is not a key code").arg(keyCode));
+    }
 
     Host& host = getHostFromLua(L);
     TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();

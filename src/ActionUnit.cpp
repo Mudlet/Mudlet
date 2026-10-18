@@ -84,7 +84,7 @@ void ActionUnit::uninstall(const QString& packageName)
     }
     // Re-entrant uninstall (#9337): a button's own script (e.g. a package
     // auto-updater calling uninstallPackage()) is removing its package while
-    // TAction::execute() is still on the call stack for that button. Deleting
+    // TAction::runScript() is still on the call stack for that button. Deleting
     // now would be a use-after-free, so defer to doCleanup() at depth 0.
     // Deactivating stops the buttons from firing again in the meantime.
     if (mProcessingDepth > 0) {
