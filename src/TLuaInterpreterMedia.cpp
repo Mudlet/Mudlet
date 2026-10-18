@@ -35,6 +35,50 @@
 
 #include <QDir>
 
+#include <algorithm>
+#include <cmath>
+#include <optional>
+
+namespace {
+// The value on top of the stack as a direction - a word or degrees - spelled as TMedia keeps it.
+// On failure the message is pushed for the caller to raise once its parsing scope is left.
+bool mediaDirectionArg(lua_State* L, const char* func, QString& direction)
+{
+    if (lua_type(L, -1) == LUA_TNUMBER) {
+        direction = TMedia::canonicalMediaDirection(lua_tonumber(L, -1));
+    } else if (lua_type(L, -1) == LUA_TSTRING) {
+        direction = TMedia::canonicalMediaDirection(QString::fromUtf8(lua_tostring(L, -1)));
+    } else {
+        lua_pushfstring(L, "%s: bad argument type for direction (string or number expected, got %s)", func, luaL_typename(L, -1));
+        return false;
+    }
+
+    if (direction.isEmpty()) {
+        lua_pushfstring(L,
+                        "%s: bad argument value for direction (a compass direction such as \"north\" or \"ne\", up, down, in, out, ahead, behind, left, right or degrees expected, got \"%s\")",
+                        func,
+                        lua_tostring(L, -1));
+        return false;
+    }
+
+    return true;
+}
+
+// -100 (left) to 100 (right), rounded and held to that range. On failure the message is
+// pushed for the caller to raise.
+bool mediaPanArg(lua_State* L, const char* func, int& pan)
+{
+    const double value = lua_tonumber(L, -1);
+    if (std::isnan(value)) {
+        lua_pushfstring(L, "%s: bad argument value for pan (a number from -100 to 100 expected, got nan)", func);
+        return false;
+    }
+    // Clamped before rounding: rounding a number outside int's range is undefined
+    pan = static_cast<int>(std::lround(std::clamp(value, static_cast<double>(TMediaData::MediaPanLeft), static_cast<double>(TMediaData::MediaPanRight))));
+    return true;
+}
+} // namespace
+
 // The argument parsers below hold QStrings and TMediaData while they run, so
 // they type-check with TLuaInterpreter::check...Arg() and leave the raise until
 // the parsing scope has been left - see checkStringArg()
@@ -920,6 +964,28 @@ int TLuaInterpreter::playSoundFileAsTableArgument(lua_State* L, const char* func
 
                     mediaData.setMediaPriority(value);
                 }
+            } else if (key == QLatin1String("pan")) {
+                if (!checkNumberArg(L, func, -1, "value for pan")) {
+                    errorPushed = true;
+                    break;
+                }
+
+                int pan = 0;
+                if (!mediaPanArg(L, func, pan)) {
+                    errorPushed = true;
+                    break;
+                }
+
+                mediaData.setMediaPan(pan);
+            } else if (key == QLatin1String("direction")) {
+                QString direction;
+
+                if (!mediaDirectionArg(L, func, direction)) {
+                    errorPushed = true;
+                    break;
+                }
+
+                mediaData.setMediaDirection(direction);
             }
 
             // removes value, but keeps key for next iteration
@@ -1104,6 +1170,172 @@ int TLuaInterpreter::playVideoFileAsTableArgument(lua_State* L, const char* func
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#updateSounds
+int TLuaInterpreter::updateSounds(lua_State* L)
+{
+    if (!lua_istable(L, 1)) {
+        lua_pushfstring(L, "%s: needs to be a table", __func__);
+        return lua_error(L);
+    }
+
+    const Host& host = getHostFromLua(L);
+    const char* func = __func__;
+
+    bool errorPushed = false;
+    {
+        TMediaData mediaData{};
+        std::optional<int> volume;
+        std::optional<int> pan;
+        QString direction;
+        int glideMilliseconds = TMedia::defaultGlideMilliseconds;
+
+        lua_pushnil(L);
+        while (lua_next(L, 1) != 0) {
+            // key at index -2 and value at index -1
+            if (!checkStringArg(L, func, -2, "table keys")) {
+                errorPushed = true;
+                break;
+            }
+
+            lua_pushvalue(L, -2);
+            const QString key = QString{lua_tostring(L, -1)}.toLower();
+            lua_pop(L, 1);
+
+            if (key == QLatin1String("name") || key == QLatin1String("key") || key == QLatin1String("tag")) {
+                if (!checkStringArg(L, func, -1, key == QLatin1String("name") ? "value for name" : key == QLatin1String("key") ? "value for key" : "value for tag")) {
+                    errorPushed = true;
+                    break;
+                }
+
+                QString value{lua_tostring(L, -1)};
+
+                if (key == QLatin1String("name") && !value.isEmpty()) {
+                    if (QDir::homePath().contains('\\')) {
+                        value.replace('/', R"(\)");
+                    } else {
+                        value.replace('\\', "/");
+                    }
+
+                    mediaData.setMediaFileName(value);
+                } else if (key == QLatin1String("key") && !value.isEmpty()) {
+                    mediaData.setMediaKey(value);
+                } else if (key == QLatin1String("tag") && !value.isEmpty()) {
+                    mediaData.setMediaTag(value);
+                }
+            } else if (key == QLatin1String("volume") || key == QLatin1String("duration")) {
+                if (!checkIntArg(L, func, -1, key == QLatin1String("volume") ? "value for volume" : "value for duration")) {
+                    errorPushed = true;
+                    break;
+                }
+
+                const int value = static_cast<int>(lua_tointeger(L, -1));
+
+                if (key == QLatin1String("volume")) {
+                    volume = qBound(static_cast<int>(TMediaData::MediaVolumeMin), value, static_cast<int>(TMediaData::MediaVolumeMax));
+                } else if (value < 0) {
+                    lua_pushfstring(L, "%s: bad argument range for %s (values must be greater than or equal to 0, got value: %d)", func, "duration", value);
+                    errorPushed = true;
+                    break;
+                } else {
+                    glideMilliseconds = value;
+                }
+            } else if (key == QLatin1String("pan")) {
+                if (!checkNumberArg(L, func, -1, "value for pan")) {
+                    errorPushed = true;
+                    break;
+                }
+
+                int value = 0;
+                if (!mediaPanArg(L, func, value)) {
+                    errorPushed = true;
+                    break;
+                }
+
+                pan = value;
+            } else if (key == QLatin1String("direction")) {
+                if (!mediaDirectionArg(L, func, direction)) {
+                    errorPushed = true;
+                    break;
+                }
+            }
+
+            // removes value, but keeps key for next iteration
+            lua_pop(L, 1);
+        }
+
+        if (!errorPushed) {
+            mediaData.setMediaProtocol(TMediaData::MediaProtocolAPI);
+            mediaData.setMediaType(TMediaData::MediaTypeSound);
+
+            host.mpMedia->updateMedia(mediaData, volume, pan, direction, glideMilliseconds);
+        }
+    }
+
+    if (errorPushed) {
+        return lua_error(L);
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMediaListener
+int TLuaInterpreter::setMediaListener(lua_State* L)
+{
+    if (!lua_istable(L, 1)) {
+        lua_pushfstring(L, "%s: needs to be a table", __func__);
+        return lua_error(L);
+    }
+
+    const Host& host = getHostFromLua(L);
+    const char* func = __func__;
+
+    bool errorPushed = false;
+    {
+        lua_getfield(L, 1, "facing");
+
+        if (lua_isnil(L, -1)) {
+            lua_pushfstring(L, R"(%s: missing facing (add facing = "east" or a number of degrees))", func);
+            errorPushed = true;
+        } else {
+            QString facing;
+
+            if (lua_type(L, -1) == LUA_TNUMBER) {
+                facing = TMedia::canonicalMediaDirection(lua_tonumber(L, -1));
+            } else if (lua_type(L, -1) == LUA_TSTRING) {
+                facing = TMedia::canonicalMediaDirection(QString::fromUtf8(lua_tostring(L, -1)));
+            } else {
+                lua_pushfstring(L, "%s: bad argument type for facing (string or number expected, got %s)", func, luaL_typename(L, -1));
+                errorPushed = true;
+            }
+
+            if (!errorPushed && (facing.isEmpty() || !host.mpMedia->setListenerFacing(facing))) {
+                lua_pushfstring(L, "%s: bad argument value for facing (a compass direction or degrees expected, got \"%s\")", func, lua_tostring(L, -1));
+                errorPushed = true;
+            }
+        }
+    }
+
+    if (errorPushed) {
+        return lua_error(L);
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getMediaListener
+int TLuaInterpreter::getMediaListener(lua_State* L)
+{
+    const Host& host = getHostFromLua(L);
+
+    lua_newtable(L);
+    lua_pushstring(L, "facing");
+    lua_pushstring(L, host.mpMedia->listenerFacing().toUtf8().constData());
+    lua_settable(L, -3);
+    return 1;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#playVideoFile
 int TLuaInterpreter::playVideoFile(lua_State* L)
 {
@@ -1163,6 +1395,18 @@ void TLuaInterpreter::processPlayingMediaTable(lua_State* L, TMediaData& mediaDa
         if (!matchedMediaData.mediaKey().isEmpty()) {
             lua_pushstring(L, "key");
             lua_pushstring(L, matchedMediaData.mediaKey().toUtf8().constData());
+            lua_settable(L, -3);
+        }
+
+        if (matchedMediaData.mediaPan()) {
+            lua_pushstring(L, "pan");
+            lua_pushinteger(L, *matchedMediaData.mediaPan());
+            lua_settable(L, -3);
+        }
+
+        if (!matchedMediaData.mediaDirection().isEmpty()) {
+            lua_pushstring(L, "direction");
+            lua_pushstring(L, matchedMediaData.mediaDirection().toUtf8().constData());
             lua_settable(L, -3);
         }
 
@@ -1620,6 +1864,18 @@ void TLuaInterpreter::processPausedMediaTable(lua_State* L, TMediaData& mediaDat
         if (!matchedMediaData.mediaKey().isEmpty()) {
             lua_pushstring(L, "key");
             lua_pushstring(L, matchedMediaData.mediaKey().toUtf8().constData());
+            lua_settable(L, -3);
+        }
+
+        if (matchedMediaData.mediaPan()) {
+            lua_pushstring(L, "pan");
+            lua_pushinteger(L, *matchedMediaData.mediaPan());
+            lua_settable(L, -3);
+        }
+
+        if (!matchedMediaData.mediaDirection().isEmpty()) {
+            lua_pushstring(L, "direction");
+            lua_pushstring(L, matchedMediaData.mediaDirection().toUtf8().constData());
             lua_settable(L, -3);
         }
 

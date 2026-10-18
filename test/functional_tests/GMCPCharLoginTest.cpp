@@ -465,6 +465,27 @@ private slots:
         deleteProfileDirectory(mHostname);
     }
 
+    // A game reads these versions to decide what it may send: Client.Media 2 placement, Char.Login 2 sign-in
+    void testSupportsAdvertisesTheVersionsMudletSpeaks()
+    {
+        QVERIFY(connectAndNegotiate());
+        QString supports;
+        QVERIFY2(QTest::qWaitFor(
+                         [this, &supports]() {
+                             for (const QString& message : mpServer->receivedGmcp()) {
+                                 if (message.startsWith(qsl("Core.Supports.Set"))) {
+                                     supports = message;
+                                     return true;
+                                 }
+                             }
+                             return false;
+                         },
+                         5000),
+                 "the client never sent Core.Supports.Set");
+        QVERIFY2(supports.contains(qsl(R"("Client.Media 2")")), qPrintable(supports));
+        QVERIFY2(supports.contains(qsl(R"("Char.Login 2")")), qPrintable(supports));
+    }
+
     // ---- Char.Login.Credentials / hand-off ---------------------------------
 
     void testStoredCredentialsAutofillWithVersionEcho()
