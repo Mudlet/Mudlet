@@ -70,7 +70,7 @@ void ring(QPainter& painter, const QPointF& center, const qreal radius, const QC
 }
 } // namespace
 
-QImage highlight(const MapStyle::HighlightShape shape, const QColor& color, const QColor& centerColor, const bool round, const int size)
+QImage highlight(const MapStyle::HighlightShape shape, const QColor& color, const QColor& centerColor, const bool round, const int size, const qreal lineWidth)
 {
     QImage image = clearImage(QSize(size, size), color);
     QPainter painter(&image);
@@ -115,6 +115,30 @@ QImage highlight(const MapStyle::HighlightShape shape, const QColor& color, cons
         ring(painter, center, radius * 0.92, color, size * 0.03);
         ring(painter, center, radius * 0.68, color, size * 0.03);
         break;
+    case MapStyle::HighlightShape::Outline: {
+        const qreal reach = radius * 0.78;
+        const QRectF line(center.x() - reach, center.y() - reach, 2.0 * reach, 2.0 * reach);
+        painter.setBrush(Qt::NoBrush);
+        const qreal opacity = color.alphaF();
+        // A faint glow either side, then a dark rim, so a light color still reads on a light board, then the line itself
+        struct Stroke
+        {
+            qreal width;
+            QColor color;
+            int alpha;
+        };
+        const QColor rim = color.darker(300);
+        for (const Stroke& stroke : {Stroke{lineWidth * 4.0, color, 25}, Stroke{lineWidth * 2.2, color, 45}, Stroke{lineWidth * 2.0, rim, 170}, Stroke{lineWidth, color, 255}}) {
+            // Short of the picture's edge, which would cut a wide glow off square
+            painter.setPen(QPen(withAlpha(stroke.color, qRound(stroke.alpha * opacity)), size * qMin(stroke.width, 0.18)));
+            if (round) {
+                painter.drawEllipse(line);
+            } else {
+                painter.drawRoundedRect(line, reach * 0.3, reach * 0.3);
+            }
+        }
+        break;
+    }
     }
     painter.end();
     return image;
@@ -126,6 +150,7 @@ bool highlightOnGround(const MapStyle::HighlightShape shape)
     case MapStyle::HighlightShape::Halo:
     case MapStyle::HighlightShape::Glow:
     case MapStyle::HighlightShape::Rings:
+    case MapStyle::HighlightShape::Outline:
         return true;
     case MapStyle::HighlightShape::Disc:
     case MapStyle::HighlightShape::DashedEllipse:
@@ -139,6 +164,29 @@ bool highlightOnGround(const MapStyle::HighlightShape shape)
 bool highlightFillsRoom(const MapStyle::HighlightShape shape)
 {
     return shape == MapStyle::HighlightShape::Cell;
+}
+
+qreal highlightSize(const MapStyle::HighlightShape shape, const qreal radius, const qreal scale, const qreal roomSize)
+{
+    if (highlightFillsRoom(shape)) {
+        return roomSize;
+    }
+    // In the gap round the room's piece whatever radius the script gave it: any other puts the line under a building
+    if (shape == MapStyle::HighlightShape::Outline) {
+        return scale;
+    }
+    return radius * scale;
+}
+
+qreal outlineWidth(const qreal pixelsAcross)
+{
+    if (pixelsAcross <= 0.0) {
+        return scmOutlineWidth;
+    }
+    // In steps, so that a zoom makes few textures
+    constexpr qreal step = 0.01;
+    const qreal wanted = std::ceil(scmOutlineMinPixels / pixelsAcross / step) * step;
+    return std::clamp(wanted, scmOutlineWidth, scmOutlineMaxWidth);
 }
 
 QImage registrationMark(const QColor& color, const int size)
@@ -333,7 +381,7 @@ bool keepsLabelBox(const TMapLabel& label)
     return !neutral(label.bgColor) && label.bgColor.alpha() > 0;
 }
 
-QImage themedLabel(const TMapLabel& label, const MapStyle& style)
+QImage themedLabel(const TMapLabel& label, const MapStyle& style, const int sharpness)
 {
     // A tag's margin round the text, above and below it and twice that at its ends, as a part of the text's height
     constexpr qreal platePad = 0.3;
@@ -381,15 +429,17 @@ QImage themedLabel(const TMapLabel& label, const MapStyle& style)
         }
     }
 
-    QImage image = clearImage(canvas, textColor);
+    const int times = qMax(1, sharpness);
+    QImage image = clearImage(canvas * times, textColor);
     if (box) {
         image.fill(label.bgColor);
     }
     QPainter painter(&image);
+    painter.scale(times, times);
     painter.setRenderHint(QPainter::Antialiasing);
     painter.setRenderHint(QPainter::TextAntialiasing);
     painter.setFont(font);
-    const QRectF textRect(image.rect());
+    const QRectF textRect{QPointF(), QSizeF(canvas)};
     if (plate) {
         const QRectF text = QFontMetricsF(font, &metricsDevice).boundingRect(textRect, flags, label.text);
         const qreal pad = text.height() * platePad;
@@ -429,7 +479,7 @@ QImage themedLabel(const TMapLabel& label, const MapStyle& style)
     painter.setPen(textColor);
     painter.drawText(textRect, flags, label.text);
     painter.end();
-    image.setDevicePixelRatio(label.pix.devicePixelRatio());
+    image.setDevicePixelRatio(label.pix.devicePixelRatio() * times);
     return image;
 }
 

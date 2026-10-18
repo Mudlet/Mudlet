@@ -29,8 +29,11 @@
 
 #include "GeometryManager.h"
 
+#include <memory>
+
 // Forward declarations
 class GeometryManager;
+class QOpenGLFramebufferObject;
 class ResourceManager;
 
 // Base class for all render commands
@@ -204,6 +207,9 @@ public:
     const QVector<CubeInstanceData>& instances() const { return mInstances; }
     GeometryManager::InstanceShape shape() const { return mShape; }
     Shading shading() const { return mShading; }
+    // A ModelBlock's edges drawn solid where it is see-through
+    void setEdges(bool edges) { mEdges = edges; }
+    bool edges() const { return mEdges; }
 
 private:
     QVector<CubeInstanceData> mInstances;
@@ -212,6 +218,7 @@ private:
     QMatrix4x4 mModelMatrix;
     Shading mShading;
     GeometryManager::InstanceShape mShape;
+    bool mEdges = false;
 };
 
 // Command to change OpenGL state
@@ -303,6 +310,49 @@ private:
     QMatrix4x4 mProjectionMatrix;
     QMatrix4x4 mViewMatrix;
     QMatrix4x4 mModelMatrix;
+};
+
+// The bound framebuffer's depth at one point of a frame, to be put back later in it, so that what is drawn after a pass
+// over the whole frame is hidden only by what was drawn before that point
+class DepthSnapshot
+{
+public:
+    DepthSnapshot();
+    ~DepthSnapshot();
+
+    void save();
+    // Nothing where nothing was saved since the last restore
+    void restore();
+    // With the context current
+    void cleanup();
+
+private:
+    std::unique_ptr<QOpenGLFramebufferObject> mFrame;
+    bool mSaved = false;
+};
+
+class DepthSnapshotCommand : public RenderCommand
+{
+public:
+    DepthSnapshotCommand(DepthSnapshot* snapshot, bool save);
+
+    void execute(QOpenGLFunctions* gl,
+                 QOpenGLShaderProgram* shader,
+                 GeometryManager* geometryManager,
+                 ResourceManager* resourceManager,
+                 QOpenGLVertexArrayObject& vao,
+                 QOpenGLBuffer& vertexBuffer,
+                 QOpenGLBuffer& colorBuffer,
+                 QOpenGLBuffer& normalBuffer,
+                 QOpenGLBuffer& indexBuffer,
+                 QOpenGLBuffer& texCoordBuffer) override;
+
+    const char* getCommandName() const override { return "DepthSnapshot"; }
+    bool saves() const { return mSave; }
+
+private:
+    DepthSnapshot* mSnapshot;
+    bool mSave;
 };
 
 #endif // MUDLET_RENDER_COMMAND_H
