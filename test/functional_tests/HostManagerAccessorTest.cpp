@@ -34,6 +34,7 @@
 #include "HostManager.h"
 #include "MudletInstanceCoordinator.h"
 #include "PortableModeTestHelper.h"
+#include "discord.h"
 #include "mudlet.h"
 
 #include <QDir>
@@ -61,14 +62,19 @@ private slots:
     {
         HostManager first;
         QCOMPARE(HostManager::self(), &first);
+        Discord* const firstDiscord = Discord::self();
+        QVERIFY(firstDiscord);
         {
             QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("a MudletMedia already exists")));
             QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("a FontManager already exists")));
+            QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("a Discord already exists")));
             QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("a HostManager already exists")));
             HostManager second;
             QCOMPARE(HostManager::self(), &first);
+            QCOMPARE(Discord::self(), firstDiscord);
         }
         QCOMPARE(HostManager::self(), &first);
+        QCOMPARE(Discord::self(), firstDiscord);
     }
 
     // Last, because it builds the application object - and with it the one

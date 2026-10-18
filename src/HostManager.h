@@ -30,6 +30,7 @@
 
 #include <memory>
 
+class Discord;
 class FontManager;
 class Host;
 class MudletMedia;
@@ -88,6 +89,8 @@ private:
     std::unique_ptr<MudletMedia> mpMedia;
     // Before mHostPool too, as the profiles reach it through FontManager::self()
     std::unique_ptr<FontManager> mpFonts;
+    // Before mHostPool too, as the profiles reach it through Discord::self(); a second pool's goes unused
+    std::unique_ptr<Discord> mpDiscord;
     HostMap mHostPool;
 };
 
