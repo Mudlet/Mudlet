@@ -40,6 +40,7 @@
 #include "GeometryManager.h"
 #include "Host.h"
 #include "HostManager.h"
+#include "MapStyle.h"
 #include "MudletApp.h"
 #include "MudletInstanceCoordinator.h"
 #include "RenderCommand.h"
@@ -493,10 +494,11 @@ private slots:
         mudlet::self()->setDrawUpperLowerLevels(savedShown);
         mpHost->mLowerLevelColor = savedLower;
 
-        QCOMPARE(plainTarget, mpHost->mBgColor_2);
-        QCOMPARE(lowerTarget, GeometryManager::levelFadeTarget(-1, mpHost->mBgColor_2, mpHost->mUpperLevelColor, QColor(255, 0, 0, 64)));
-        QCOMPARE(upperTarget, GeometryManager::levelFadeTarget(1, mpHost->mBgColor_2, mpHost->mUpperLevelColor, QColor(255, 0, 0, 64)));
-        QCOMPARE(viewedTarget, mpHost->mBgColor_2);
+        const QColor background = mpHost->mapStylePreset().backgroundColor(mpHost->mBgColor_2);
+        QCOMPARE(plainTarget, background);
+        QCOMPARE(lowerTarget, GeometryManager::levelFadeTarget(-1, background, mpHost->mUpperLevelColor, QColor(255, 0, 0, 64)));
+        QCOMPARE(upperTarget, GeometryManager::levelFadeTarget(1, background, mpHost->mUpperLevelColor, QColor(255, 0, 0, 64)));
+        QCOMPARE(viewedTarget, background);
         QVERIFY2(plainRoom > std::numeric_limits<float>::lowest() && plainFloor > std::numeric_limits<float>::lowest(), "the room or floor below was not drawn");
         QVERIFY2(coloredRoom > plainRoom + 0.02f, qPrintable(qsl("the room below is %1 red with the levels' colors and %2 without").arg(coloredRoom).arg(plainRoom)));
         QVERIFY2(coloredFloor > plainFloor + 0.002f, qPrintable(qsl("the floor below is %1 red with the levels' colors and %2 without").arg(coloredFloor).arg(plainFloor)));
@@ -557,6 +559,39 @@ private slots:
         QVERIFY2(!symbolWithAnId, "a room showing its ID shows its symbol too");
         QVERIFY2(tooSmall.isEmpty(), "IDs too small to read were drawn");
         QVERIFY2(symbolsWithoutIds, "rooms whose IDs are too small to read show no symbols");
+    }
+
+    // A script may fade a 2D highlight out from its center with a clear outer color, which a one-color shape would draw unseen
+    void test_aClearHighlightColorGivesWayToItsCenterColorWithoutGL()
+    {
+        const int areaId = addArea();
+        QVERIFY(areaId > 0);
+        QVERIFY(mpHost->mapStylePreset().highlightShape != MapStyle::HighlightShape::Disc);
+        TRoom* pEast = map()->mpRoomDB->getRoom(kEastRoomId);
+        const auto restore = qScopeGuard([pEast]() {
+            pEast->highlight = false;
+        });
+        pEast->highlight = true;
+        pEast->highlightRadius = 1.0f;
+        const QColor blue(0, 0, 255);
+        pEast->highlightColor = QColor(255, 0, 0, 0);
+        pEast->highlightColor2 = blue;
+        const auto drawnColors = [this, areaId]() {
+            ModernGLWidget widget(map(), mpHost);
+            queueFrame(widget, areaId);
+            QStringList colors;
+            for (const QString& key : std::as_const(widget.mRoomTexturesInUse)) {
+                if (key.startsWith(qsl("highlight|"))) {
+                    colors.append(key.section(QLatin1Char('|'), 2, 2));
+                }
+            }
+            return colors;
+        };
+        QCOMPARE(drawnColors(), QStringList{blue.name(QColor::HexArgb)});
+
+        pEast->highlightColor = blue;
+        pEast->highlightColor2 = QColor(255, 0, 0, 0);
+        QCOMPARE(drawnColors(), QStringList{blue.name(QColor::HexArgb)});
     }
 };
 

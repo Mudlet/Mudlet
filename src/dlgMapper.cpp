@@ -38,6 +38,7 @@
 #include <QEvent>
 #include <QFileDialog>
 #include <QFileInfo>
+#include <QFontMetrics>
 #include <QFrame>
 #include <QLabel>
 #include <QListWidget>
@@ -291,6 +292,9 @@ void dlgMapper::connectMapCues()
             break;
         case TMap::MapperSetting::ShowGrid:
             slot_setShowGrid(mpHost->mMapperShowGrid);
+            break;
+        case TMap::MapperSetting::Style:
+            update3DView();
             break;
         }
     });
@@ -1143,7 +1147,9 @@ void dlgMapper::paintMapInfo(const QElapsedTimer& renderTimer,
                              int xOffset,
                              int yOffset,
                              int widgetWidth,
-                             int fontHeight)
+                             int fontHeight,
+                             const QColor& background,
+                             const QString& fontFamily)
 {
     if (!pMap || !pMap->mMapInfoContributorManager || !pHost) {
         return;
@@ -1161,9 +1167,15 @@ void dlgMapper::paintMapInfo(const QElapsedTimer& renderTimer,
     }
 
     const int initialYOffset = yOffset;
+    const QColor infoBackground = background.isValid() ? background : pHost->mMapInfoBg;
 
     painter.save();
-    painter.setFont(pHost->getDisplayFont());
+    QFont font = pHost->getDisplayFont();
+    if (!fontFamily.isEmpty()) {
+        font.setFamily(fontFamily);
+        fontHeight = QFontMetrics(font).height();
+    }
+    painter.setFont(font);
 
     // The caller holds raw TRoom/TArea pointers across this, and a Lua contributor can
     // register or kill contributors, so walk a copy and skip any that went away.
@@ -1179,13 +1191,13 @@ void dlgMapper::paintMapInfo(const QElapsedTimer& renderTimer,
             if (!properties.color.isValid()) {
                 properties.color = infoColor;
             }
-            yOffset += paintMapInfoContributor(painter, xOffset, yOffset, properties, pHost->mMapInfoBg, fontHeight, widgetWidth);
+            yOffset += paintMapInfoContributor(painter, xOffset, yOffset, properties, infoBackground, fontHeight, widgetWidth);
         }
     }
 
 #ifdef QT_DEBUG
     yOffset += paintMapInfoContributor(
-            painter, xOffset, yOffset, {false, false, QObject::tr("render time: %1S").arg(renderTimer.nsecsElapsed() * 1.0e-9, 0, 'f', 3), infoColor}, pHost->mMapInfoBg, fontHeight, widgetWidth);
+            painter, xOffset, yOffset, {false, false, QObject::tr("render time: %1S").arg(renderTimer.nsecsElapsed() * 1.0e-9, 0, 'f', 3), infoColor}, infoBackground, fontHeight, widgetWidth);
 #else
     Q_UNUSED(renderTimer)
 #endif
@@ -1193,7 +1205,7 @@ void dlgMapper::paintMapInfo(const QElapsedTimer& renderTimer,
     painter.restore();
 
     if (yOffset > initialYOffset) {
-        painter.fillRect(xOffset, initialYOffset - 10, widgetWidth - 10 - xOffset, 10, pHost->mMapInfoBg);
+        painter.fillRect(xOffset, initialYOffset - 10, widgetWidth - 10 - xOffset, 10, infoBackground);
     }
 }
 
