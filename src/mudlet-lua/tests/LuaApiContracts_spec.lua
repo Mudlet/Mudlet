@@ -653,3 +653,154 @@ describe("Tests the raised errors for a wrongly typed argument", function()
     assertArgError(function() return saveProfile(nil, {}) end, "saveProfile: bad argument #2 type")
   end)
 end)
+
+describe("Tests that the window functions refuse a window that does not exist", function()
+  local unknown = ("specContractsNoSuchWindow-%d-%d"):format(os.time(), math.random(100000))
+  local notFound = ('window "%s" not found'):format(unknown)
+
+  -- an array rather than a keyed table so the specs are always generated in
+  -- the same order
+  local calls = {
+    {"cecho", function() return cecho(unknown, "<red>x\n") end},
+    {"decho", function() return decho(unknown, "<255,0,0>x\n") end},
+    {"hecho", function() return hecho(unknown, "#FF0000x\n") end},
+    {"cechoLink", function() return cechoLink(unknown, "<red>x", "", "") end},
+    {"dechoLink", function() return dechoLink(unknown, "<255,0,0>x", "", "") end},
+    {"hechoLink", function() return hechoLink(unknown, "#FF0000x", "", "") end},
+    {"cinsertLink", function() return cinsertLink(unknown, "<red>x", "", "") end},
+    {"dinsertLink", function() return dinsertLink(unknown, "<255,0,0>x", "", "") end},
+    {"hinsertLink", function() return hinsertLink(unknown, "#FF0000x", "", "") end},
+    {"cechoPopup", function() return cechoPopup(unknown, "<red>x", {""}, {""}) end},
+    {"dechoPopup", function() return dechoPopup(unknown, "<255,0,0>x", {""}, {""}) end},
+    {"hechoPopup", function() return hechoPopup(unknown, "#FF0000x", {""}, {""}) end},
+    {"cinsertPopup", function() return cinsertPopup(unknown, "<red>x", {""}, {""}) end},
+    {"dinsertPopup", function() return dinsertPopup(unknown, "<255,0,0>x", {""}, {""}) end},
+    {"hinsertPopup", function() return hinsertPopup(unknown, "#FF0000x", {""}, {""}) end},
+    {"cinsertText", function() return cinsertText(unknown, "<red>x") end},
+    {"replace", function() return replace(unknown, "x") end},
+    {"replace keepcolor", function() return replace(unknown, "x", true) end},
+    {"replaceLine", function() return replaceLine(unknown, "x") end},
+    {"gagLine", function() return gagLine(unknown) end},
+    {"setHexFgColor", function() return setHexFgColor(unknown, "FF0000") end},
+    {"setHexBgColor", function() return setHexBgColor(unknown, "FF0000") end},
+    {"clearUserWindow", function() return clearUserWindow(unknown) end},
+  }
+
+  for _, entry in ipairs(calls) do
+    local functionName, call = entry[1], entry[2]
+    it(functionName .. " answers nil and why, leaving the main console alone", function()
+      echo("main", "\nspecContracts line the call must not touch")
+      moveCursorEnd("main")
+      finally(function() echo("main", "\n") end)
+      local last = getLastLineNumber("main")
+      local line = getCurrentLine("main")
+      assert.are.same({nil, notFound}, {call()})
+      assert.are.equal(last, getLastLineNumber("main"))
+      assert.are.equal(line, getCurrentLine("main"))
+    end)
+  end
+
+  it("enableClickthrough and disableClickthrough answer nil and why", function()
+    local labelNotFound = ("label name '%s' not found"):format(unknown)
+    assert.are.same({nil, labelNotFound}, {enableClickthrough(unknown)})
+    assert.are.same({nil, labelNotFound}, {disableClickthrough(unknown)})
+  end)
+
+  it("hideWindow, moveWindow and resizeWindow name the main console as one they cannot use", function()
+    local refusal = 'window "main" is of type "main", which this function cannot use'
+    assert.are.same({nil, refusal}, {hideWindow("main")})
+    assert.are.same({nil, refusal}, {moveWindow("main", 1, 1)})
+    assert.are.same({nil, refusal}, {resizeWindow("main", 800, 600)})
+  end)
+end)
+
+describe("Tests that gagLine works on the window it is given", function()
+  it("deletes the line in that window and leaves the main console alone", function()
+    local window = ("specContractsGag-%d-%d"):format(os.time(), math.random(100000))
+    assert.is_true(createMiniConsole(window, 0, 0, 200, 100))
+    finally(function()
+      deleteMiniConsole(window)
+      echo("main", "\n")
+    end)
+    echo(window, "first in the window\nsecond in the window")
+    assert.is_true(moveCursor(window, 0, 0))
+    echo("main", "\nspecContracts line gagLine must not touch")
+    moveCursorEnd("main")
+    local last = getLastLineNumber("main")
+    local line = getCurrentLine("main")
+
+    assert.are.same({true}, {gagLine(window)})
+
+    assert.are.same({"second in the window"}, getLines(window, 0, 1))
+    assert.are.equal(last, getLastLineNumber("main"))
+    assert.are.equal(line, getCurrentLine("main"))
+  end)
+end)
+
+describe("Tests that the window functions answer true for a window that exists", function()
+  local suffix = ("-%d-%d"):format(os.time(), math.random(100000))
+  local window = "specContractsWindow" .. suffix
+  local label = "specContractsLabel" .. suffix
+
+  setup(function()
+    assert.is_true(createMiniConsole(window, 0, 0, 200, 100))
+    assert.is_true(createLabel(label, 0, 0, 50, 20, 1))
+  end)
+
+  teardown(function()
+    deleteMiniConsole(window)
+    deleteLabel(label)
+  end)
+
+  local calls = {
+    {"cecho", function() return cecho(window, "<red>x\n") end},
+    {"decho", function() return decho(window, "<255,0,0>x\n") end},
+    {"hecho", function() return hecho(window, "#FF0000x\n") end},
+    {"cecho to a label", function() return cecho(label, "<red>x") end},
+    {"cechoLink", function() return cechoLink(window, "<red>x", "", "") end},
+    {"dechoLink", function() return dechoLink(window, "<255,0,0>x", "", "") end},
+    {"hechoLink", function() return hechoLink(window, "#FF0000x", "", "") end},
+    {"cinsertLink", function() return cinsertLink(window, "<red>x", "", "") end},
+    {"dinsertLink", function() return dinsertLink(window, "<255,0,0>x", "", "") end},
+    {"hinsertLink", function() return hinsertLink(window, "#FF0000x", "", "") end},
+    {"cechoPopup", function() return cechoPopup(window, "<red>x", {""}, {""}) end},
+    {"dechoPopup", function() return dechoPopup(window, "<255,0,0>x", {""}, {""}) end},
+    {"hechoPopup", function() return hechoPopup(window, "#FF0000x", {""}, {""}) end},
+    {"cinsertPopup", function() return cinsertPopup(window, "<red>x", {""}, {""}) end},
+    {"dinsertPopup", function() return dinsertPopup(window, "<255,0,0>x", {""}, {""}) end},
+    {"hinsertPopup", function() return hinsertPopup(window, "#FF0000x", {""}, {""}) end},
+    {"cinsertText", function() return cinsertText(window, "<red>x") end},
+    {"dinsertText", function() return dinsertText(window, "<255,0,0>x") end},
+    {"hinsertText", function() return hinsertText(window, "#FF0000x") end},
+    {"echoUserWindow", function() return echoUserWindow(window, "x\n") end},
+    {"pasteWindow", function() return pasteWindow(window) end},
+    {"wrapLine", function() return wrapLine(window, 0) end},
+    {"moveWindow", function() return moveWindow(window, 1, 1) end},
+    {"resizeWindow", function() return resizeWindow(window, 200, 100) end},
+    {"hideWindow", function() return hideWindow(window) end},
+    {"setFgColor", function() return setFgColor(window, 255, 0, 0) end},
+    {"setHexFgColor", function() return setHexFgColor(window, "FF0000") end},
+    {"setHexBgColor", function() return setHexBgColor(window, "FF0000") end},
+    {"enableClickthrough", function() return enableClickthrough(label) end},
+    {"disableClickthrough", function() return disableClickthrough(label) end},
+  }
+
+  for _, entry in ipairs(calls) do
+    it(entry[1] .. " answers true", function()
+      assert.are.same({true}, {entry[2]()})
+    end)
+  end
+
+  it("replace and replaceLine answer true", function()
+    echo(window, "\nspecContracts replace me")
+    assert.is_true(moveCursor(window, 0, getLastLineNumber(window)))
+    assert.is_true(selectString(window, "replace", 1) > -1)
+    assert.are.same({true}, {replace(window, "swapped")})
+    assert.are.same({true}, {replaceLine(window, "whole line")})
+    assert.are.equal("whole line", getCurrentLine(window))
+  end)
+
+  it("clearWindow answers nothing, so clearing from the command line prints nothing", function()
+    assert.are.same({}, {clearWindow(window)})
+  end)
+end)

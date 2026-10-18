@@ -55,9 +55,6 @@ private slots:
 
             player.refreshAudioOutput();
 
-            // Ownership rather than QMediaPlayer::audioOutput(), which reports no output at all
-            // from here on - that is #11012, still open, so asserting it would pin the bug
-            // rather than the fix.
             const auto owned = player.mediaPlayer()->findChildren<QAudioOutput*>(Qt::FindDirectChildrenOnly);
             QCOMPARE(owned.size(), 1);
             QVERIFY2(owned.constFirst() != displaced, "The player still owns the output it was refreshed away from, which is already queued for deletion.");
@@ -73,6 +70,56 @@ private slots:
         }
 
         QVERIFY2(replacement.isNull(), "The audio output a device change installed outlived the player that was using it, so nothing will ever delete it.");
+    }
+
+    // Read off the outputs the player owns rather than QMediaPlayer::audioOutput(), so a player
+    // that stops reporting its output (#11012) still shows the full-volume output that follows
+    // on the next change instead of only the missing pointer.
+    void test_repeatedDeviceChangesCarryVolumeAndMuteAndLeaveOneLiveAudioOutput()
+    {
+        TMediaData mediaData{};
+        TMediaPlayer player(nullptr, mediaData);
+        QAudioOutput* original = player.mediaPlayer()->audioOutput();
+        QVERIFY(original);
+        original->setVolume(0.25f);
+        original->setMuted(true);
+        QList<QPointer<QAudioOutput>> displaced{original};
+
+        for (int change = 1; change <= 3; ++change) {
+            player.refreshAudioOutput();
+            QTest::qWait(1ms); // runs the deleteLater() each displaced output was handed to
+
+            const auto owned = player.mediaPlayer()->findChildren<QAudioOutput*>(Qt::FindDirectChildrenOnly);
+            for (const auto* output : owned) {
+                QVERIFY2(qFuzzyCompare(output->volume(), 0.25f), qPrintable(qsl("Device change %1 left an output at volume %2 instead of carrying over 0.25.").arg(change).arg(output->volume())));
+                QVERIFY2(output->isMuted(), qPrintable(qsl("Device change %1 left an output unmuted instead of carrying over the mute.").arg(change)));
+            }
+            QVERIFY2(owned.size() == 1, qPrintable(qsl("The player owns %1 audio outputs after device change %2.").arg(owned.size()).arg(change)));
+            for (const auto& output : std::as_const(displaced)) {
+                QVERIFY2(output.isNull(), qPrintable(qsl("An output displaced by device change %1 or earlier was never deleted.").arg(change)));
+            }
+            displaced.append(owned.constFirst());
+        }
+    }
+
+    // Volume reaches the output through QMediaPlayer::audioOutput(), so that has to be the output
+    // the player owns after every device change, not null or one already displaced (#11012).
+    void test_volumeChangesReachTheAudioOutputAfterEachDeviceChange()
+    {
+        TMediaData mediaData{};
+        TMediaPlayer player(nullptr, mediaData);
+
+        for (int change = 1; change <= 3; ++change) {
+            player.refreshAudioOutput();
+
+            const auto owned = player.mediaPlayer()->findChildren<QAudioOutput*>(Qt::FindDirectChildrenOnly);
+            QVERIFY(!owned.isEmpty());
+            QVERIFY2(player.mediaPlayer()->audioOutput() == owned.constLast(), qPrintable(qsl("The player does not report the audio output it installed on device change %1.").arg(change)));
+
+            const int volume = 20 + 10 * change;
+            player.setVolume(volume);
+            QVERIFY2(qFuzzyCompare(owned.constLast()->volume(), volume / 100.0f), qPrintable(qsl("setVolume(%1) after device change %2 did not reach the playing output.").arg(volume).arg(change)));
+        }
     }
 };
 
