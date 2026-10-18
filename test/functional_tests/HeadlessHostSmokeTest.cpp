@@ -17,6 +17,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include <QAbstractEventDispatcher>
 #include <QApplication>
 #include <QDataStream>
 #include <QDir>
@@ -28,8 +29,11 @@
 #include <QImage>
 #include <QPointer>
 #include <QScopeGuard>
+#include <QSettings>
 #include <QSvgRenderer>
 #include <QTemporaryDir>
+#include <QThread>
+#include <QTimer>
 #include <QWidget>
 #include <QtNetwork/QTcpServer>
 #include <QtNetwork/QTcpSocket>
@@ -41,6 +45,8 @@
 #endif
 #include <QtTest/QtTest>
 
+#include <algorithm>
+#include <chrono>
 #include <memory>
 
 #include "FontManager.h"
@@ -58,6 +64,7 @@
 #include "TMap.h"
 #include "TRoomDB.h"
 #include "TSpeechBridge.h"
+#include "TriggerMatchPool.h"
 #include "XMLimport.h"
 #include "discord.h"
 
@@ -123,6 +130,15 @@ private:
     const QString mSecureHostname = qsl("Test-Headless-Host-Secure");
     const QString mHeldLineHostname = qsl("Test-Headless-Host-Held-Line");
     const QString mWindowsHostname = qsl("Test-Headless-Host-Windows");
+    // What initTestCase() writes to Mudlet.ini when MUDLET_TEST_MUDLET_INI is "present", each unlike its
+    // default. Five threads give a worker count unlike min(4, cores / 2)'s on any machine of two cores or more.
+    static constexpr int scmAutosaveMinutes = 7;
+    static constexpr int scmUsernameDelayMs = 173;
+    static constexpr int scmPasswordDelayMs = 241;
+    static constexpr int scmMatchThreads = 5;
+    static constexpr int scmMatchThreshold = 1000;
+
+    static bool mudletIniWritten() { return qgetenv("MUDLET_TEST_MUDLET_INI") == "present"; }
 
     static QString luaGlobalString(Host* host, const char* name)
     {
@@ -227,6 +243,26 @@ private slots:
 
         QVERIFY(mConfigDir.isValid());
         QVERIFY(QDir().mkpath(qsl("%1/mudlet/profiles").arg(mConfigDir.path())));
+        // Before the pool exists, as a player's own Mudlet.ini would be, and only for the run of its own that
+        // CMakeLists.txt makes: the trigger match pool reads it once, and every other test here wants the defaults
+        if (mudletIniWritten()) {
+            QFile ini(qsl("%1/mudlet/Mudlet.ini").arg(mConfigDir.path()));
+            QVERIFY(ini.open(QIODevice::WriteOnly | QIODevice::Text));
+            ini.write(qsl("[General]\n"
+                          "autosaveIntervalMinutes=%1\n"
+                          "mapCenterSmallAreas=true\n"
+                          "autoLoginUsernameDelay=%2\n"
+                          "autoLoginPasswordDelay=%3\n"
+                          "triggerMatchThreads=%4\n"
+                          "triggerMatchThreshold=%5\n")
+                              .arg(scmAutosaveMinutes)
+                              .arg(scmUsernameDelayMs)
+                              .arg(scmPasswordDelayMs)
+                              .arg(scmMatchThreads)
+                              .arg(scmMatchThreshold)
+                              .toUtf8());
+            ini.close();
+        }
         mSavedXdg = qgetenv("XDG_CONFIG_HOME");
         qputenv("XDG_CONFIG_HOME", mConfigDir.path().toUtf8());
         QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
@@ -4942,6 +4978,72 @@ headlessDiscord = ok and 'ok' or tostring(err)
         QCOMPARE(sEvents, QStringList());
     }
 
+    // Run twice: here, where Mudlet.ini holds none of these keys, and by HeadlessHostSmokeTestWithMudletIni,
+    // where initTestCase() wrote each of them before the pool existed
+    void test_profileWithNoMainWindowTakesItsSettingsFromMudletIni()
+    {
+        QVERIFY2(!TAppFrontend::hasView(), "A main window exists, so this run is not headless.");
+        QSettings* settings = MudletApp::getQSettings();
+        QVERIFY2(settings, "No settings store exists with no main window.");
+        QCOMPARE(settings->fileName(), qsl("%1/mudlet/Mudlet.ini").arg(mConfigDir.path()));
+        const bool fromIni = mudletIniWritten();
+        const QStringList keys{
+                qsl("autosaveIntervalMinutes"), qsl("mapCenterSmallAreas"), qsl("autoLoginUsernameDelay"), qsl("autoLoginPasswordDelay"), qsl("triggerMatchThreads"), qsl("triggerMatchThreshold")};
+        for (const QString& key : keys) {
+            QVERIFY2(settings->contains(key) == fromIni, qPrintable(key));
+        }
+
+        const QString hostname = qsl("Test-Headless-Host-Mudlet-Ini");
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = HostManager::self()->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+        const auto deleteHost = qScopeGuard([&hostname]() {
+            HostManager::self()->deleteHost(hostname);
+        });
+        QCOMPARE(host->mMapperCenterSmallAreas, fromIni);
+        // The map autosave is a timer the profile starts on itself
+        const std::chrono::minutes autosave(fromIni ? scmAutosaveMinutes : 2);
+        const auto timers = QAbstractEventDispatcher::instance()->timersForObject(host);
+        QVERIFY2(std::any_of(timers.cbegin(),
+                             timers.cend(),
+                             [&autosave](const auto& timer) {
+                                 return timer.interval == autosave;
+                             }),
+                 "The map autosave did not take autosaveIntervalMinutes.");
+
+        QTcpServer server;
+        QVERIFY2(server.listen(QHostAddress::LocalHost), "Could not start the local test server.");
+        QByteArray received;
+        connect(&server, &QTcpServer::newConnection, this, [&]() {
+            QTcpSocket* client = server.nextPendingConnection();
+            connect(client, &QTcpSocket::readyRead, this, [&received, client]() {
+                received.append(client->readAll());
+            });
+        });
+        host->setLogin(qsl("inihero"));
+        host->setPass(qsl("inisecret"));
+        host->mTelnet.connectIt(qsl("127.0.0.1"), server.serverPort());
+        QTRY_VERIFY_WITH_TIMEOUT(received.contains("inihero") && received.contains("inisecret"), 10000);
+        QList<int> intervals;
+        for (const auto* timer : host->mTelnet.findChildren<QTimer*>()) {
+            intervals << timer->interval();
+        }
+        QVERIFY2(intervals.contains(fromIni ? scmUsernameDelayMs : 2000), "The login did not wait autoLoginUsernameDelay.");
+        QVERIFY2(intervals.contains(fromIni ? scmPasswordDelayMs : 1000), "The password did not wait autoLoginPasswordDelay.");
+        host->mTelnet.disconnectIt();
+        QTRY_COMPARE_WITH_TIMEOUT(host->mTelnet.getConnectionState(), QAbstractSocket::UnconnectedState, 10000);
+
+        // The environment outranks Mudlet.ini, so a developer pinning the pool for a run gets what they asked for
+        if (qEnvironmentVariableIsSet("MUDLET_MATCH_THREADS") || qEnvironmentVariableIsSet("MUDLET_MATCH_THRESHOLD")) {
+            QSKIP("A MUDLET_MATCH_* variable outranks Mudlet.ini for the trigger match pool.");
+        }
+        const TriggerMatchPool& pool = TriggerMatchPool::instance();
+        const int cores = std::max(1, QThread::idealThreadCount());
+        const int threads = std::min(fromIni ? scmMatchThreads : std::min(4, cores / 2), cores);
+        QCOMPARE(pool.threshold(), fromIni ? scmMatchThreshold : 128);
+        QCOMPARE(pool.workerCount(), threads < 2 ? 0 : threads);
+    }
+
     void test_heldLineCommitsBeforeDisconnectWithNoMainWindow()
     {
         QVERIFY2(!TAppFrontend::hasView(), "A main window exists, so this run is not headless.");
@@ -5465,19 +5567,6 @@ headlessImageSize = ok and 'ok' or tostring(err)
         QSvgRenderer renderer;
         QVERIFY(TLabelModel::loadSvg(renderer, images.filePath(qsl("gzipped.svg"))));
         QCOMPARE(renderer.defaultSize(), QSize(40, 30));
-    }
-
-    void test_profileWithNoSettingsStoreTakesTheDefaults()
-    {
-        if (MudletApp::getQSettings()) {
-            QSKIP("A settings store exists with no main window, so there are no defaults for having none to check.");
-        }
-
-        const QString hostname = qsl("Test-Headless-Host-Defaults");
-        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no settings store.");
-        Host* host = HostManager::self()->getHost(hostname);
-        QVERIFY2(host, "The profile is not in the pool.");
-        QVERIFY(!host->mMapperCenterSmallAreas);
     }
 
     // Text echoed to main takes the profile's colours from birth, as the view applies them when it is
