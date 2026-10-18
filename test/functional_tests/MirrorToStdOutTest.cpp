@@ -472,18 +472,15 @@ private slots:
     }
 
     // The third blank-line setting turns the line into a single space, and the
-    // copy follows what the console was given. That setting also turns the
-    // posting timer's empty flush into a line of its own, which is why the two
-    // sides are compared rather than a line count being asserted.
+    // copy follows what the console was given. The wait lets the posting timer
+    // flush, which must not add a line of its own.
     void test_aBlankLineReplacedWithASpaceIsMirroredAsOne()
     {
         mpHost->mBlankLineBehaviour = Host::BlankLineBehaviour::ReplaceWithSpace;
 
-        feedLineFromServer("before the gap\r\n\r\nafter the gap");
+        feedFromServer("before the gap\r\n\r\nafter the gap\r\n", 6 * csmPostingTimeoutMs);
 
-        QCOMPARE(timesMirrored(qsl("before the gap")), 1);
-        QCOMPARE(timesMirrored(qsl("after the gap")), 1);
-        QVERIFY(mirroredLines().contains(qsl(" ")));
+        QCOMPARE(mirroredLines(), QStringList({qsl("before the gap"), qsl(" "), qsl("after the gap")}));
         QCOMPARE(mirroredLines(), shownLines());
     }
 
