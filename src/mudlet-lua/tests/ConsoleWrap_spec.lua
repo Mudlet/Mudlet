@@ -6,9 +6,11 @@
 -- wrapping is applied - all read back out of the buffer, which is what the
 -- console draws from.
 --
--- A miniconsole is used throughout: it wraps with the same code as the main
--- console but its width is ours to set, while the main console's belongs to
--- the profile and is recomputed whenever the window is resized.
+-- A miniconsole is used wherever one will do: it wraps with the same code as
+-- the main console but its width is ours to set, while the main console's
+-- belongs to the profile and is recomputed whenever the window is resized.
+-- Text from the game only ever reaches the main console, so the specs for
+-- that route set its width and put it back.
 
 local win = "consoleWrapSpecWindow"
 
@@ -230,6 +232,76 @@ describe("Tests how a console wraps the lines it is given", function()
       assert.matches("^%d%d:%d%d:%d%d%.%d%d%d $", getTimestamp(win, 0))
       assert.matches("^%-+%s*$", getTimestamp(win, 1))
       assert.are.equal(#getTimestamp(win, 0), #getTimestamp(win, 1))
+    end)
+  end)
+
+  -- A line from the game reaches the buffer by a different route from echo(),
+  -- one that decides for itself whether the line needs wrapping at all.
+  describe("Tests how a line arriving from the game is wrapped", function()
+    local savedWrap, triggerId
+
+    before_each(function()
+      savedWrap = getWindowWrap("main")
+    end)
+
+    after_each(function()
+      if triggerId then
+        killTrigger(triggerId)
+        triggerId = nil
+      end
+      setWindowWrap("main", savedWrap)
+      setWindowWrapIndent("main", 0)
+    end)
+
+    -- the lines one game line became, read back after the line before it is closed
+    local function fed(text)
+      feedTriggers("\n")
+      local from = getLineCount("main")
+      feedTriggers(text .. "\n")
+      return getLines("main", from, getLineCount("main"))
+    end
+
+    local function lastLines(count)
+      local all = getLines("main", 0, getLineCount("main"))
+      local out = {}
+      for index = #all - count + 1, #all do
+        out[#out + 1] = all[index]
+      end
+      return out
+    end
+
+    it("wraps a line that fits the width but not the width less the indent", function()
+      setWindowWrap("main", 20)
+      setWindowWrapIndent("main", 4)
+      feedTriggers("\naaaaaaaaaaaaaa bbbbb\n")
+      assert.are.same({"    aaaaaaaaaaaaaa ", "bbbbb"}, lastLines(2))
+    end)
+
+    it("leaves a line that fits the width less the indent alone", function()
+      setWindowWrap("main", 20)
+      setWindowWrapIndent("main", 4)
+      feedTriggers("\naaaaaaaaaa bbbbb\n")
+      assert.are.same({"aaaaaaaaaa bbbbb"}, lastLines(1))
+    end)
+
+    it("wraps a line one column wider than the width", function()
+      setWindowWrap("main", 20)
+      feedTriggers("\naaaaaaaaaaaaaa bbbbbb\n")
+      assert.are.same({"aaaaaaaaaaaaaa ", "bbbbbb"}, lastLines(2))
+    end)
+
+    -- in a trigger echo() adds to the line without wrapping it, so the wrap
+    -- that follows the triggers has to take in what they added
+    it("wraps a line a trigger's echo() made too long", function()
+      setWindowWrap("main", 20)
+      triggerId = tempExactMatchTrigger("GLGROW", function() echo(" " .. string.rep("x", 30)) end)
+      assert.are.same({"GLGROW ", string.rep("x", 20), string.rep("x", 10)}, fed("GLGROW"))
+    end)
+
+    it("leaves no blank line after a line a trigger fed in", function()
+      setWindowWrap("main", 80)
+      triggerId = tempExactMatchTrigger("GLOUTER", function() feedTriggers("GLINNER\n") end)
+      assert.are.same({"GLOUTER", "GLINNER"}, fed("GLOUTER"))
     end)
   end)
 
