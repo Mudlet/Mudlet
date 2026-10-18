@@ -616,6 +616,90 @@ private slots:
         QVERIFY2(commandLine()->toPlainText().isEmpty(), "part of a password came back into view");
     }
 
+    // A command given back is still the player's, so the next prompt takes it whole
+    void test_aCommandGivenBackGoesIntoTheNextBox()
+    {
+        QVERIFY2(tripEchoAnomaly(), "the toggling did not trip the anomaly detector, so this case proves nothing");
+        QTRY_COMPARE(focusWidget(), commandLine());
+
+        typeIntoWindow(qsl("sec"));
+        serverSaysEcho(TN_WILL);
+        QVERIFY(box());
+        serverSaysEcho(TN_WONT);
+        QVERIFY(!box());
+        QCOMPARE(commandLine()->toPlainText(), qsl("sec"));
+        serverSaysEcho(TN_WILL);
+        QVERIFY(box());
+        QCOMPARE(box()->text(), qsl("sec"));
+        QVERIFY(commandLine()->toPlainText().isEmpty());
+
+        QTRY_COMPARE(focusWidget(), box());
+        typeIntoWindow(qsl("ret"));
+        pressInWindow(Qt::Key_Return);
+        QVERIFY2(waitForServerToReceive(asSent({qsl("secret")})), "a password was split across the game's toggling");
+    }
+
+    void test_aCommandGivenBackGoesIntoABoxOpenedInTheSameRead()
+    {
+        QVERIFY2(tripEchoAnomaly(), "the toggling did not trip the anomaly detector, so this case proves nothing");
+        QTRY_COMPARE(focusWidget(), commandLine());
+
+        typeIntoWindow(qsl("sec"));
+        serverSaysEcho(TN_WILL);
+        QVERIFY(box());
+        QByteArray toggle;
+        toggle.append(TN_IAC).append(TN_WONT).append(OPT_ECHO).append(TN_IAC).append(TN_WILL).append(OPT_ECHO);
+        serverSends(toggle);
+        QVERIFY(box());
+        QCOMPARE(box()->text(), qsl("sec"));
+        QVERIFY(commandLine()->toPlainText().isEmpty());
+    }
+
+    // Text typed ahead of a slow prompt may be the password: only the game's own WONT gives it back
+    void test_aBoxClosedByMudletKeepsWhatItTookOutOfView_data()
+    {
+        QTest::addColumn<int>("closer");
+        QTest::newRow("disconnect") << 0;
+        QTest::newRow("mask timeout") << 1;
+        QTest::newRow("preference") << 2;
+    }
+
+    void test_aBoxClosedByMudletKeepsWhatItTookOutOfView()
+    {
+        QFETCH(int, closer);
+        typeIntoWindow(qsl("hunter2"));
+        serverSaysEcho(TN_WILL);
+        QVERIFY(box());
+        QCOMPARE(box()->text(), qsl("hunter2"));
+
+        switch (closer) {
+        case 0:
+            mpHost->mTelnet.reset();
+            break;
+        case 1:
+            mpHost->mTelnet.slot_passwordMaskTimeout();
+            break;
+        default:
+            mpHost->setDisablePasswordMasking(true);
+        }
+        QVERIFY(!box());
+        QVERIFY2(commandLine()->toPlainText().isEmpty(), "a password typed ahead of the prompt came back into view");
+    }
+
+    void test_aSubmittedBoxIsNotGivenBack()
+    {
+        typeIntoWindow(qsl("hunter2"));
+        serverSaysEcho(TN_WILL);
+        QVERIFY(box());
+        QTRY_COMPARE(focusWidget(), box());
+        pressInWindow(Qt::Key_Return);
+        QVERIFY(waitForServerToReceive(asSent({qsl("hunter2")})));
+
+        serverSaysEcho(TN_WONT);
+        QVERIFY(!box());
+        QVERIFY2(commandLine()->toPlainText().isEmpty(), "a sent password came back into view");
+    }
+
     // An Esc on a toggling game's box lasts only to its WONT: what comes next may be a real prompt
     void test_aPasswordPromptAfterAnEscOnATogglingGameGetsTheBox()
     {

@@ -146,6 +146,16 @@ TCommandLine::UserEditScope::~UserEditScope()
     mLine.mUserEditInProgress = false;
 }
 
+void TCommandLine::restorePlayerTypedLine(const QString& text)
+{
+    {
+        const UserEditScope userEdit(*this);
+        setPlainText(text);
+    }
+    moveCursor(QTextCursor::End);
+    adjustHeight();
+}
+
 void TCommandLine::slot_contentsChange()
 {
     const QString text = toPlainText();

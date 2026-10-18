@@ -6595,6 +6595,13 @@ void Host::setRemoteEchoingActive(bool active)
     mPasswordEntryOpensWithThePrompt = false;
 }
 
+void Host::gameReleasedRemoteEcho()
+{
+    mPasswordEntryClosedByTheGame = true;
+    setRemoteEchoingActive(false);
+    mPasswordEntryClosedByTheGame = false;
+}
+
 void Host::recomputePasswordEntryWanted()
 {
     const bool wanted = mIsRemoteEchoingActive && !mDisablePasswordMasking && !mPasswordEntrySuppressed && !mPasswordEntryDismissed && !mTelnet.autoLoginPending();

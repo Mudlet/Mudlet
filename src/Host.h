@@ -923,6 +923,10 @@ public:
     // Only the box the prompt itself opens takes text the player was typing in
     // the command line, not one that comes back later in the hold
     bool passwordEntryOpensWithThePrompt() const { return mPasswordEntryOpensWithThePrompt; }
+    // The game's WONT ECHO; a disconnect, the mask timeout and the preference release ECHO too
+    void gameReleasedRemoteEcho();
+    // Only a box the game itself closes gives back a command it took from the command line
+    bool passwordEntryClosedByTheGame() const { return mPasswordEntryClosedByTheGame; }
     // No box until the game answers the masked send; a re-prompt under the held
     // ECHO then gets one for the retry
     void autoLoginPasswordSent();
@@ -1530,6 +1534,7 @@ private:
     bool mPasswordEntryDismissalEnding = false;
     // Set around the recompute a WILL ECHO makes, see passwordEntryOpensWithThePrompt().
     bool mPasswordEntryOpensWithThePrompt = false;
+    bool mPasswordEntryClosedByTheGame = false;
 
     // ensures that only one "zero-time" timer is created by the lambda in
     // setFocusOnHostActiveCommandLine(), even when it is called multiple

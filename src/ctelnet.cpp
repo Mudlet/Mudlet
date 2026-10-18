@@ -3652,7 +3652,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                     if (mTimerCharacterModeDetect) {
                         mTimerCharacterModeDetect->stop();
                     }
-                    mpHost->setRemoteEchoingActive(false);
+                    mpHost->gameReleasedRemoteEcho();
                     qDebug() << "ECHO: Server ending password mode - restoring normal operation and preserved content";
                 }
 
