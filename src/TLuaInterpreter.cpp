@@ -3513,13 +3513,17 @@ bool TLuaInterpreter::compile(const QString& code, QString& errorMsg, const QStr
 }
 
 // No documentation available in wiki - internal function
-// Undoes compile()'s rich-text markup (kept in step by hand). The tags go before the entities, or
-// a script's own "<b>" is stripped, and "&amp;" goes last, or its "&lt;b&gt;" comes back as "<b>".
+// Undoes the rich-text markup of compile(), TTrigger::setRegexCodeList() and TAlias::setRegexCode()
+// (kept in step by hand). The tags go before the entities, or a script's own "<b>" is stripped, and
+// "&amp;" goes last, or its "&lt;b&gt;" comes back as "<b>".
 QString TLuaInterpreter::compileErrorAsPlainText(const QString& error)
 {
     QString plainText = error;
     plainText.remove(qsl("<b>"));
     plainText.remove(qsl("</b>"));
+    plainText.remove(qsl("<i>"));
+    plainText.remove(qsl("</i>"));
+    plainText.replace(qsl("<br>"), qsl(" "));
     plainText.replace(qsl("&quot;"), qsl("\""));
     plainText.replace(qsl("&lt;"), qsl("<"));
     plainText.replace(qsl("&gt;"), qsl(">"));

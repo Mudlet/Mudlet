@@ -4873,6 +4873,219 @@ describe("Tests installing a package whose timer, alias, button and key do not c
   end)
 end)
 
+describe("Tests installing a package whose trigger pattern does not compile", function()
+  local name = "mudlet-spec-broken-pattern"
+  local xml = getMudletHomeDir() .. "/" .. name .. ".xml"
+  local perl, luaCode, colour = 1, 4, 6
+
+  -- patterns is a list of {pattern, kind}
+  local function trigger(itemName, options)
+    local strings, kinds = {}, {}
+    for _, pattern in ipairs(options.patterns or {}) do
+      strings[#strings + 1] = '<string>' .. pattern[1] .. '</string>'
+      kinds[#kinds + 1] = '<integer>' .. pattern[2] .. '</integer>'
+    end
+    local tag = options.isFolder and 'TriggerGroup' or 'Trigger'
+    return table.concat({
+      '<' .. tag .. ' isActive="yes" isFolder="' .. (options.isFolder and 'yes' or 'no') .. '" isTempTrigger="no" isMultiline="no"',
+      '         isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="' .. (options.isColor and 'yes' or 'no') .. '">',
+      '<name>' .. itemName .. '</name><script>' .. (options.script or '') .. '</script>',
+      '<triggerType>0</triggerType><conditonLineDelta>0</conditonLineDelta><mStayOpen>0</mStayOpen>',
+      '<mCommand></mCommand><packageName></packageName>',
+      '<regexCodeList>' .. table.concat(strings) .. '</regexCodeList>',
+      '<regexCodePropertyList>' .. table.concat(kinds) .. '</regexCodePropertyList>',
+      options.children or '',
+      '</' .. tag .. '>',
+    }, "\n")
+  end
+
+  local function install(body)
+    defer(function()
+      removeFixturePackage(name)
+      os.remove(xml)
+    end)
+    writePackageXml(xml, '<TriggerPackage>\n' .. body .. '\n</TriggerPackage>')
+    local ok, reason = installUntilConfirmed(installPackage, xml, function() return packageInstalled(name) end, "the package " .. name)
+    assert.is_true(ok)
+    return reason
+  end
+
+  -- the item names in the reason, in order, from its "<name>: <error>; " entries
+  local function namesIn(reason)
+    local names = {}
+    for entry in (tostring(reason) .. "; "):gmatch("(.-); ") do
+      names[#names + 1] = entry:match("^(.-): ")
+    end
+    return names
+  end
+
+  it("installs it and names the trigger in the reason installPackage() hands back", function()
+    -- a trigger kept only for its script has no patterns either, and is just as legitimate
+    local reason = install(trigger(name .. " group", {isFolder = true, children = trigger(name .. " placeholder", {})
+                                                                           .. trigger(name .. " trigger", {patterns = {{"*(unclosed", perl}}})}))
+
+    assert.equals(1, exists(name .. " trigger", "trigger"), "the broken trigger was not kept for fixing in the editor")
+    assert.is_true(contains(reason, name .. " trigger: "), "the broken pattern was not reported: " .. tostring(reason))
+    assert.is_true(contains(reason, '*(unclosed'), "the pattern that failed was not named: " .. tostring(reason))
+    assert.is_false(contains(reason, name .. " group"), "the group was blamed for its child's pattern: " .. tostring(reason))
+    assert.is_false(contains(reason, name .. " placeholder"), "a trigger with no patterns was reported as broken: " .. tostring(reason))
+  end)
+
+  it("names every pattern that does not compile, of each kind, as plain text", function()
+    local reason = install(trigger(name .. " perl", {patterns = {{"*(first", perl}, {"fine", perl}, {"*(third", perl}}}) .. '\n'
+                           .. trigger(name .. " lua", {patterns = {{"if then", luaCode}}}) .. '\n'
+                           .. trigger(name .. " no colour", {isColor = true, patterns = {{"ANSI_COLORS_F{IGNORE}_B{IGNORE}", colour}}}) .. '\n'
+                           .. trigger(name .. " unknown colour", {isColor = true, patterns = {{"ANSI_COLORS_F{300}_B{IGNORE}", colour}}}))
+
+    assert.is_true(contains(reason, '*(first'), "only the last broken pattern was reported: " .. tostring(reason))
+    assert.is_true(contains(reason, '*(third'), tostring(reason))
+    assert.is_true(contains(reason, name .. ' lua: '), "a Lua condition that does not compile was not reported: " .. tostring(reason))
+    assert.is_true(contains(reason, 'if then'), tostring(reason))
+    assert.is_true(contains(reason, name .. ' no colour: '), "a colour pattern with no colours was not reported: " .. tostring(reason))
+    assert.is_true(contains(reason, 'ANSI_COLORS_F{300}_B{IGNORE}'), "a colour pattern with no colour Mudlet knows was not reported: " .. tostring(reason))
+    assert.is_nil(tostring(reason):find("<%/?%a+%s*%/?>"), "the reason carries the editor's markup: " .. tostring(reason))
+  end)
+
+  it("reports both the script and the pattern of a trigger where both fail, together", function()
+    local reason = install(trigger(name .. " group", {isFolder = true, script = "if then", patterns = {{"*(group", perl}},
+                                                      children = trigger(name .. " child", {script = "if then", patterns = {{"fine", 0}}})}))
+
+    local names = namesIn(reason)
+    local groupEntries = {}
+    for index, entryName in ipairs(names) do
+      if entryName == name .. " group" then
+        groupEntries[#groupEntries + 1] = index
+      end
+    end
+    assert.equals(2, #groupEntries, "the group's script and pattern were not both reported: " .. tostring(reason))
+    assert.equals(groupEntries[1] + 1, groupEntries[2], "the group's errors were split up: " .. tostring(reason))
+    assert.is_true(contains(reason, '*(group'), tostring(reason))
+    assert.is_true(listContains(names, name .. " child"), tostring(reason))
+  end)
+
+  it("lists a group before the triggers in it, as the editor does", function()
+    local reason = install(trigger(name .. " group", {isFolder = true, script = "if then",
+                                                      children = trigger(name .. " child", {script = "if then", patterns = {{"*(child", perl}}})}))
+
+    local names = namesIn(reason)
+    assert.same({name .. " group", name .. " child", name .. " child"}, names, "the errors are not in document order: " .. tostring(reason))
+  end)
+end)
+
+describe("Tests installing a package whose alias pattern does not compile", function()
+  it("installs it and names the alias in the reason installPackage() hands back", function()
+    local name = "mudlet-spec-broken-alias-pattern"
+    local xml = getMudletHomeDir() .. "/" .. name .. ".xml"
+    defer(function()
+      removeFixturePackage(name)
+      os.remove(xml)
+    end)
+    writePackageXml(xml, table.concat({
+      '<AliasPackage>',
+      '<Alias isActive="yes" isFolder="no">',
+      '<name>' .. name .. ' alias</name><packageName></packageName><script></script>',
+      '<command></command><regex>^(unclosed</regex>',
+      '</Alias>',
+      '<Alias isActive="yes" isFolder="no">',
+      '<name>' .. name .. ' working alias</name><packageName></packageName><script></script>',
+      '<command></command><regex>^' .. name .. '$</regex>',
+      '</Alias>',
+      '</AliasPackage>',
+    }, "\n"))
+
+    local ok, reason = installUntilConfirmed(installPackage, xml, function() return packageInstalled(name) end, "the package " .. name)
+
+    assert.is_true(ok)
+    assert.equals(1, exists(name .. " alias", "alias"), "the broken alias was not kept for fixing in the editor")
+    assert.is_true(contains(reason, name .. " alias: "), "the broken pattern was not reported: " .. tostring(reason))
+    assert.is_false(contains(reason, name .. " working alias"), "an alias whose pattern compiles was reported as broken: " .. tostring(reason))
+  end)
+
+  it("names an alias whose pattern comes before its name", function()
+    local name = "mudlet-spec-broken-alias-pattern-first"
+    local xml = getMudletHomeDir() .. "/" .. name .. ".xml"
+    defer(function()
+      removeFixturePackage(name)
+      os.remove(xml)
+    end)
+    writePackageXml(xml, table.concat({
+      '<AliasPackage>',
+      '<Alias isActive="yes" isFolder="no">',
+      '<regex>^(unclosed</regex><command></command>',
+      '<name>' .. name .. ' alias</name><packageName></packageName><script></script>',
+      '</Alias>',
+      '</AliasPackage>',
+    }, "\n"))
+
+    local ok, reason = installUntilConfirmed(installPackage, xml, function() return packageInstalled(name) end, "the package " .. name)
+
+    assert.is_true(ok)
+    assert.is_true(contains(reason, name .. " alias: "), "the broken pattern was not reported under the alias's name: " .. tostring(reason))
+  end)
+
+  it("reports both the script and the pattern of an alias where both fail, under its name", function()
+    local name = "mudlet-spec-broken-alias-pattern-and-script"
+    local xml = getMudletHomeDir() .. "/" .. name .. ".xml"
+    defer(function()
+      removeFixturePackage(name)
+      os.remove(xml)
+    end)
+    writePackageXml(xml, table.concat({
+      '<AliasPackage>',
+      '<Alias isActive="yes" isFolder="no">',
+      '<name>' .. name .. ' regex first</name><packageName></packageName><command></command>',
+      '<regex>^(first</regex><script>if then</script>',
+      '</Alias>',
+      '<Alias isActive="yes" isFolder="no">',
+      '<script>if then</script><regex>^(second</regex><command></command>',
+      '<name>' .. name .. ' name last</name><packageName></packageName>',
+      '</Alias>',
+      '</AliasPackage>',
+    }, "\n"))
+
+    local ok, reason = installUntilConfirmed(installPackage, xml, function() return packageInstalled(name) end, "the package " .. name)
+
+    assert.is_true(ok)
+    local function entriesFor(aliasName)
+      local _, count = tostring(reason):gsub((aliasName .. ": "):gsub("%p", "%%%0"), "")
+      return count
+    end
+    local _, scriptErrors = tostring(reason):gsub("near 'then'", "")
+    assert.equals(2, scriptErrors, "a script error was reported more or less than once: " .. tostring(reason))
+    assert.equals(2, entriesFor(name .. " regex first"), "a pattern error was lost to the script error after it: " .. tostring(reason))
+    assert.equals(2, entriesFor(name .. " name last"), "the alias whose name comes last was not named for both its errors: " .. tostring(reason))
+    assert.is_nil(("; " .. tostring(reason)):find("; : "), "an error was reported without the alias's name: " .. tostring(reason))
+  end)
+
+  it("lists a group before the aliases in it, as the editor does", function()
+    local name = "mudlet-spec-broken-alias-group"
+    local xml = getMudletHomeDir() .. "/" .. name .. ".xml"
+    defer(function()
+      removeFixturePackage(name)
+      os.remove(xml)
+    end)
+    writePackageXml(xml, table.concat({
+      '<AliasPackage>',
+      '<AliasGroup isActive="yes" isFolder="yes">',
+      '<name>' .. name .. ' group</name><packageName></packageName><script>if then</script><command></command><regex></regex>',
+      '<Alias isActive="yes" isFolder="no">',
+      '<name>' .. name .. ' child</name><packageName></packageName><script>if then</script><command></command><regex>^(child</regex>',
+      '</Alias>',
+      '</AliasGroup>',
+      '</AliasPackage>',
+    }, "\n"))
+
+    local ok, reason = installUntilConfirmed(installPackage, xml, function() return packageInstalled(name) end, "the package " .. name)
+
+    assert.is_true(ok)
+    local names = {}
+    for entry in (tostring(reason) .. "; "):gmatch("(.-); ") do
+      names[#names + 1] = entry:match("^(.-): ")
+    end
+    assert.same({name .. " group", name .. " child", name .. " child"}, names, "the errors are not in document order: " .. tostring(reason))
+  end)
+end)
+
 -- A save file numbers the sixteen basic colours its own way and the reader maps
 -- them back to ANSI. Anything past sixteen has no old number, so it is taken as
 -- the 256-colour index it already is - which is what lets a colour trigger on an
