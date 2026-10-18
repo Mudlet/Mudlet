@@ -179,6 +179,7 @@ void dlgMapper::connectMapCues()
             update3DView();
         }
     });
+    connect(mpMap, &TMap::signal_roomDeleted, mp2dMap, &T2DMap::forgetDeletedRoom);
     connect(mpMap, &TMap::signal_mapCleared, this, [this]() {
         if (!drawsTheMap()) {
             return;
@@ -519,10 +520,11 @@ void dlgMapper::loadMapFromFile()
             return;
         }
         bool success = false;
+        const bool isJson = fileName.endsWith(qsl(".json"), Qt::CaseInsensitive);
         if (fileName.endsWith(qsl(".xml"), Qt::CaseInsensitive)) {
             success = pHost->importMapFile(fileName);
-        } else if (fileName.endsWith(qsl(".json"), Qt::CaseInsensitive)) {
-            auto [ok, errorMessage] = pHost->mpMap->readJsonMapFile(fileName);
+        } else if (isJson) {
+            auto [ok, errorMessage] = pHost->mpMap->importJsonMapFile(fileName);
             success = ok;
             if (!ok) {
                 pHost->postMessage(tr("[ ERROR ] - Unable to load JSON map file: %1\nreason: %2.").arg(fileName, errorMessage));
@@ -531,7 +533,9 @@ void dlgMapper::loadMapFromFile()
             success = pHost->loadMapFile(fileName);
         }
         if (success) {
-            pHost->mpMap->audit();
+            if (!isJson) {
+                pHost->mpMap->audit();
+            }
             mEmptyStateDismissed = true;
             MudletApp::getQSettings()->setValue(qsl("lastFileDialogLocation"), QFileInfo(fileName).absolutePath());
         }
@@ -731,7 +735,11 @@ int dlgMapper::shownAreaId() const
 bool dlgMapper::showing3DView() const
 {
 #if defined(INCLUDE_3DMAPPER)
-    return glWidget && glWidget->isVisible();
+    // The constructor builds the 3D view on the next event loop pass, so until then answer the mode it will show
+    if (!glWidget) {
+        return mIs3DMode;
+    }
+    return glWidget->isVisible();
 #else
     return false;
 #endif

@@ -36,7 +36,7 @@
 
 namespace graphemeInfo {
 
-// Most columns one grapheme cluster can take. TBuffer::getWrapInfo() multiplies a line's QChar count by
+// Most columns one grapheme cluster can take. fitsUnwrapped() in TBuffer.cpp multiplies a line's QChar count by
 // this to rule out wrapping without Unicode analysis, so a wider value would silently stop short lines of wide characters wrapping.
 inline constexpr int maxWidth = 2;
 
