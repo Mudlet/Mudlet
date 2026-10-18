@@ -5509,6 +5509,12 @@ void cTelnet::slot_timerPosting()
     if (!mIsTimerPosting) {
         return;
     }
+    // The flush marker would commit a line held for server-wrap joining just as
+    // the flush itself does, so it waits out the pause too:
+    if (mpHost && mpHost->serverWrapLineHeldForClose()) {
+        mpPostingTimer->start();
+        return;
+    }
 
     // Not scanned for MXP: gotRest() saw these bytes as they came in, and scanning them again with the
     // flush marker would put that, not the read's last bytes, in the tail the next read is joined to
