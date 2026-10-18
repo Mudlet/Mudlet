@@ -34,17 +34,28 @@ describe("Tests the modern 3D mapper's style through setConfig and getConfig", f
     assert.equals("tiles", getConfig("mapStyle"))
   end)
 
-  it("refuses a style that does not exist, naming the ones that do, and keeps the one in use", function()
+  it("switches between the tiles and blueprint styles", function()
+    assert.is_true(setConfig("mapStyle", "blueprint"))
+    assert.equals("blueprint", getConfig("mapStyle"))
+    assert.equals("blueprint", getConfig()["mapStyle"])
     assert.is_true(setConfig("mapStyle", "tiles"))
+    assert.equals("tiles", getConfig("mapStyle"))
+    assert.is_true(setConfig("mapStyle", "blueprint"))
+    assert.equals("blueprint", getConfig("mapStyle"))
+  end)
+
+  it("refuses a style that does not exist, naming the ones that do, and keeps the one in use", function()
+    assert.is_true(setConfig("mapStyle", "blueprint"))
     local ok, err = setConfig("mapStyle", "no such style")
     assert.is_nil(ok)
-    assert.equals('mapStyle must be "tiles", got "no such style"', err)
-    assert.equals("tiles", getConfig("mapStyle"))
+    assert.equals('mapStyle must be "tiles" or "blueprint", got "no such style"', err)
+    assert.equals("blueprint", getConfig("mapStyle"))
   end)
 
   it("matches style names exactly", function()
-    local ok = setConfig("mapStyle", "Tiles")
-    assert.is_nil(ok)
+    assert.is_true(setConfig("mapStyle", "tiles"))
+    assert.is_nil(setConfig("mapStyle", "Tiles"))
+    assert.is_nil(setConfig("mapStyle", "Blueprint"))
     assert.equals("tiles", getConfig("mapStyle"))
   end)
 
@@ -53,10 +64,10 @@ describe("Tests the modern 3D mapper's style through setConfig and getConfig", f
   end)
 
   it("keeps the style while the map widget closes and opens", function()
-    assert.is_true(setConfig("mapStyle", "tiles"))
+    assert.is_true(setConfig("mapStyle", "blueprint"))
     closeMapWidget()
     assert.is_true(openMapWidget())
-    assert.equals("tiles", getConfig("mapStyle"))
+    assert.equals("blueprint", getConfig("mapStyle"))
     closeMapWidget()
   end)
 
@@ -67,7 +78,7 @@ describe("Tests the modern 3D mapper's style through setConfig and getConfig", f
     if not testMode then
       return
     end
-    assert.is_true(setConfig("mapStyle", "tiles"))
+    assert.is_true(setConfig("mapStyle", "blueprint"))
     local folder = getMudletHomeDir() .. "/mapstyle-spec"
     lfs.mkdir(folder)
     local saved, path
@@ -89,6 +100,6 @@ describe("Tests the modern 3D mapper's style through setConfig and getConfig", f
     end
     os.remove(path)
     lfs.rmdir(folder)
-    assert.is_truthy(contents and contents:find('mapStyle="tiles"', 1, true), "the saved profile has no mapStyle")
+    assert.is_truthy(contents and contents:find('mapStyle="blueprint"', 1, true), "the saved profile does not name the blueprint style")
   end)
 end)

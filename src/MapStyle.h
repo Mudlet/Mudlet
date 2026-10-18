@@ -55,12 +55,16 @@ struct MapStyle
         // That marker
         Profile,
         // A thin ring in playerColor
-        Thin
+        Thin,
+        // A registration mark in playerColor: a thin ring crossed by two lines that run on past it
+        Crosshair
     };
 
     enum class Palette {
         // Each room in its environment's color, as on the 2D map
         Environment,
+        // A drafting sheet: rooms filled with the style's background, only faintly tinted by their environment's color, and drawn in its ink
+        Ink,
         // Each room in its environment's color, softened toward a lit pastel: less saturated, and kept from the
         // darkest and lightest
         Soft
@@ -74,9 +78,20 @@ struct MapStyle
     enum class Edges {
         // A rim around each room on the viewed level, so that level stands apart from the others
         ViewedLevelRim,
+        // A thin line around each room's top in the style's ink: solid on the viewed level, dashed and dimmed
+        // with no fill on the others
+        InkOutlines,
         // A base around each room on the viewed level, halfway from the room's color to the background, so the
         // room reads as a block with shaded sides
         ViewedLevelBase
+    };
+
+    enum class Doors {
+        // The 2D map's door strokes in the door's status color
+        Strokes,
+        // A plan's door: a leaf hinged at the side of the opening and the arc it swings through,
+        // swung open for an open door and shut across the opening for a closed or locked one
+        Swings
     };
 
     enum class Glyphs {
@@ -139,6 +154,34 @@ struct MapStyle
     bool dashedStairs = false;
     PostEffects postEffects;
     Glyphs glyphs = Glyphs::RoomSymbols;
+    // The Ink palette's lines and text; invalid for the profile's exit color
+    QColor ink;
+    // How much of its environment's color the Ink palette fills a room with, from none to all of it
+    float inkTint = 0.18f;
+    // The least lightness the Ink palette lifts an environment's color to before tinting with it, so that dark
+    // environments still read as pale washes of their color on the sheet
+    float inkLightness = 0.0f;
+    // The InkOutlines edges' line width, as a part of a room's width
+    float inkOutlineWidth = 0.035f;
+    // A column rising from the player's room
+    bool playerBeacon = true;
+    // The style's lettering: its spacing as a percentage of the font's usual, and whether it is set in capitals
+    qreal labelLetterSpacing = 100.0;
+    bool labelCapitals = false;
+    // Room names side by side are kept only this many spaces apart, which spaced capitals need not to run together
+    qreal roomNameGap = 0.0;
+    // A drafting sheet's title block in a corner of the view: the area's name, and which of its levels is shown
+    bool titleBlock = false;
+    // Each other level shown named, with its count of rooms, beside it at the end of a leader line
+    bool levelCallouts = false;
+    // Invalid to draw the profile's grid, when it shows one; else the style's own, always shown, with its lines
+    // between the rooms and every fifth one stronger
+    QColor gridColor;
+    // Exit lines' width, as a part of the width the profile's exit size gives
+    float exitWidthFactor = 1.0f;
+    Doors doors = Doors::Strokes;
+    // A faint plate under each level's rooms, which tints the background behind rooms filled with it
+    bool floorPlates = true;
 
     QString displayName() const;
     // Whether this style's player ring and color take the place of the profile's player room marker
@@ -157,6 +200,18 @@ struct MapStyle
     QColor backgroundColor(const QColor& profileBackground) const;
     bool roundRooms(bool profileRoundRooms) const;
     QFont labelFont(const QFont& mapSymbolFont) const;
+    // Sets the style's lettering on a font that has its family
+    void letter(QFont& font) const;
+    // Room IDs are drawn a digit at a time, which letter spacing would leave a gap after
+    QFont roomIdFont(const QFont& mapSymbolFont) const;
+    // How wide a room name is kept clear, given how wide it and a space are drawn
+    qreal roomNameSpan(qreal nameWidth, qreal spaceWidth) const;
+    // roomSymbolColor is the room's own, invalid unless one was set; drawnRoomColor is roomColor()'s
+    QColor symbolColor(const QColor& roomSymbolColor, const QColor& drawnRoomColor) const;
+    QColor exitColor(const QColor& profileExitColor) const;
+    QColor roomIdColor(const QColor& drawnRoomColor) const;
+    // The player's room, where its marker could not be made
+    QColor playerRoomColor() const;
 
     static QString defaultId();
     // In the order the preferences list them

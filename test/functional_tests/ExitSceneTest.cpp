@@ -430,6 +430,136 @@ private slots:
         QVERIFY(qAbs(strokes.at(0).from.y()) > scmTolerance);
     }
 
+    void test_doorSwingsAreAPlansDoor_data()
+    {
+        QTest::addColumn<int>("status");
+        QTest::addColumn<int>("distance");
+        QTest::newRow("open, next door") << 1 << 1;
+        QTest::newRow("closed, next door") << 2 << 1;
+        QTest::newRow("locked, next door") << 3 << 1;
+        QTest::newRow("open, far apart") << 1 << 4;
+        QTest::newRow("closed, far apart") << 2 << 4;
+        QTest::newRow("locked, far apart") << 3 << 4;
+    }
+
+    void test_doorSwingsAreAPlansDoor()
+    {
+        QFETCH(int, status);
+        QFETCH(int, distance);
+        TRoom* pWest = addRoomAt(1, mAreaId, 0, 0);
+        TRoom* pEast = addRoomAt(2, mAreaId, distance, 0);
+        QVERIFY(pWest && pEast);
+        pWest->setExit(2, DIR_EAST);
+        pEast->setExit(1, DIR_WEST);
+        pWest->setDoor(qsl("e"), status);
+        ExitScene::Options swings = options();
+        swings.doorSwings = true;
+
+        QList<ExitScene::Segment> door;
+        float widest = 0.0f;
+        for (const ExitScene::Segment& segment : build(swings).segments) {
+            if (segment.color != mExitColor) {
+                door.append(segment);
+                widest = qMax(widest, segment.width);
+            }
+        }
+        // The leaf (and a locked door's bolt) and the arc it sweeps through
+        QCOMPARE(door.size(), status == 3 ? 10 : 9);
+        const float half = static_cast<float>(distance) / 2.0f;
+        QList<ExitScene::Segment> heavy;
+        for (const ExitScene::Segment& segment : door) {
+            QCOMPARE(segment.color, door.first().color);
+            for (const QVector3D& end : {segment.from, segment.to}) {
+                QVERIFY2(end.x() > 0.0f && end.x() < half, qPrintable(qsl("the swing reaches x %1, outside its half of the exit").arg(end.x())));
+            }
+            QVERIFY2(segment.height > options().lineHeight, "the door does not stand above the line");
+            if (qFuzzyCompare(segment.width, widest)) {
+                heavy.append(segment);
+            }
+        }
+        QCOMPARE(heavy.size(), status == 3 ? 2 : 1);
+        if (status == 1) {
+            const ExitScene::Segment& leaf = heavy.first();
+            const bool besideTheLine = qAbs(leaf.from.y() - leaf.to.y()) < scmTolerance && qAbs(leaf.from.y()) > scmTolerance;
+            QVERIFY2(besideTheLine, "an open door's leaf is not swung back beside the line");
+        } else {
+            const ExitScene::Segment& leaf = heavy.first();
+            const bool acrossTheLine = qAbs(leaf.from.x() - leaf.to.x()) < scmTolerance && leaf.from.y() * leaf.to.y() < 0.0f;
+            QVERIFY2(acrossTheLine, "a shut door's leaf does not close the opening");
+        }
+        if (status == 3) {
+            const ExitScene::Segment& bolt = heavy.last();
+            QVERIFY2(qAbs(bolt.from.y()) < scmTolerance && qAbs(bolt.to.y()) < scmTolerance, "a locked door has no bolt along the line");
+        }
+    }
+
+    void test_doorSwingsClearTheirRoom_data()
+    {
+        QTest::addColumn<int>("eastward");
+        QTest::addColumn<int>("northward");
+        QTest::addColumn<bool>("round");
+        QTest::newRow("east, square") << 1 << 0 << false;
+        QTest::newRow("northeast, square") << 1 << 1 << false;
+        QTest::newRow("northeast, round") << 1 << 1 << true;
+        QTest::newRow("southeast, square, further") << 2 << -2 << false;
+    }
+
+    // A room hides whatever of a door is inside it, which on a diagonal from a square room is further out
+    void test_doorSwingsClearTheirRoom()
+    {
+        QFETCH(int, eastward);
+        QFETCH(int, northward);
+        QFETCH(bool, round);
+        TRoom* pFrom = addRoomAt(1, mAreaId, 0, 0);
+        TRoom* pTo = addRoomAt(2, mAreaId, eastward, northward);
+        QVERIFY(pFrom && pTo);
+        const int direction = northward == 0 ? DIR_EAST : (northward > 0 ? DIR_NORTHEAST : DIR_SOUTHEAST);
+        pFrom->setExit(2, direction);
+        pTo->setExit(1, TMap::scmReverseDirections.value(direction));
+        pFrom->setDoor(TRoom::dirCodeToShortString(direction), 3);
+        ExitScene::Options swings = options();
+        swings.doorSwings = true;
+        swings.roomSize = 0.5f;
+        swings.roundRooms = round;
+        const float half = swings.roomSize / 2.0f;
+        const auto inside = [half, round](const QVector3D& point) {
+            return round ? std::hypot(point.x(), point.y()) < half : qMax(std::abs(point.x()), std::abs(point.y())) < half;
+        };
+
+        int doorSegments = 0;
+        for (const ExitScene::Segment& segment : build(swings).segments) {
+            if (segment.color == mExitColor) {
+                continue;
+            }
+            ++doorSegments;
+            for (const QVector3D& point : {segment.from, segment.to, (segment.from + segment.to) / 2.0f}) {
+                QVERIFY2(!inside(point), qPrintable(qsl("the door reaches (%1, %2), inside its room").arg(point.x()).arg(point.y())));
+            }
+        }
+        QCOMPARE(doorSegments, 10);
+    }
+
+    void test_doorSwingsOfEachStatusDiffer()
+    {
+        TRoom* pWest = addRoomAt(1, mAreaId, 0, 0);
+        TRoom* pEast = addRoomAt(2, mAreaId, 1, 0);
+        QVERIFY(pWest && pEast);
+        pWest->setExit(2, DIR_EAST);
+        pEast->setExit(1, DIR_WEST);
+        ExitScene::Options swings = options();
+        swings.doorSwings = true;
+        QSet<QRgb> colors;
+        for (const int status : {1, 2, 3}) {
+            pWest->setDoor(qsl("e"), status);
+            for (const ExitScene::Segment& segment : build(swings).segments) {
+                if (segment.color != mExitColor) {
+                    colors.insert(segment.color.rgba());
+                }
+            }
+        }
+        QCOMPARE(colors.size(), 3);
+    }
+
     void test_stubIsAHalfLineEndingInADot()
     {
         TRoom* pRoom = addRoomAt(1, mAreaId, 3, 4);
