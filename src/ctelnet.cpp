@@ -1780,7 +1780,9 @@ bool cTelnet::sendData(QString& data, const bool permitDataSendRequestEvent, con
         event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         event.mArgumentList.append(data);
         event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        ++mSendRequestDispatchDepth;
         mpHost->raiseEvent(event);
+        --mSendRequestDispatchDepth;
     }
 
     if (mpHost->mAllowToSendCommand) {
