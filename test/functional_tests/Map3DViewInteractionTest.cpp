@@ -45,6 +45,7 @@
 #include <QtTest/QtTest>
 
 #include "Host.h"
+#include "MapStyle.h"
 #include "MudletApp.h"
 #include "MudletInstanceCoordinator.h"
 #include "PortableModeTestHelper.h"
@@ -1832,8 +1833,10 @@ private slots:
         const QPoint playerRoom = pixelOfRoom(pModern, kPlayerRoomId);
         QPoint eastRoom = pixelOfRoom(pModern, kEastRoomId);
         const int pixelsPerRoom = (eastRoom.x() - playerRoom.x()) / 2;
-        // Just under a quarter of a room spacing up and across is inside a room's square (half a spacing wide) but outside its circle
-        const QPoint corner = eastRoom + QPoint(pixelsPerRoom * 23 / 100, -pixelsPerRoom * 23 / 100);
+        const float halfRoom = 1.0f / MapStyle::find(qsl("tiles"))->roomScale;
+        // Up and across to just short of the square's corner is inside the square but outside its circle
+        const int towardsTheCorner = qRound(pixelsPerRoom * halfRoom * 0.92f);
+        const QPoint corner = eastRoom + QPoint(towardsTheCorner, -towardsTheCorner);
         const int squarePick = pModern->roomAt(corner);
         mpHost->mBubbleMode = true;
         const int roundPick = pModern->roomAt(corner);
@@ -1843,7 +1846,7 @@ private slots:
         // Turned an eighth, a box around the circle leaves out the square's corners
         pModern->setCameraPosition(1.0f, CameraController::scmMinTilt, CameraController::scmNorthUpAzimuth + 45.0f);
         eastRoom = pixelOfRoom(pModern, kEastRoomId);
-        const int aroundTheCircle = pixelsPerRoom * 3 / 10;
+        const int aroundTheCircle = qRound(pixelsPerRoom * halfRoom * 1.2f);
         const QRect box(eastRoom - QPoint(aroundTheCircle, aroundTheCircle), eastRoom + QPoint(aroundTheCircle, aroundTheCircle));
         const QSet<int> squareBoxed = pModern->roomsInRectangle(box, false);
         mpHost->mBubbleMode = true;

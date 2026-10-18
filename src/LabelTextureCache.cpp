@@ -110,6 +110,7 @@ GLuint LabelTextureCache::addImageTexture(const QString& key, const QImage& imag
     const GLuint textureId = createTextureFromImage(image, true);
     if (textureId) {
         mImageCache.insert(key, textureId);
+        ++mImageTexturesMade;
     } else {
         mImageCache.remove(key);
         mFailedImageKeys.insert(key);
@@ -201,8 +202,7 @@ GLuint LabelTextureCache::createTextureFromImage(const QImage& image, const bool
     }
     glBindTexture(GL_TEXTURE_2D, textureId);
 
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, glImage.width(), glImage.height(),
-                 0, GL_RGBA, GL_UNSIGNED_BYTE, glImage.constBits());
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, glImage.width(), glImage.height(), 0, GL_RGBA, GL_UNSIGNED_BYTE, glImage.constBits());
 
     if (mipmapped) {
         glGenerateMipmap(GL_TEXTURE_2D);

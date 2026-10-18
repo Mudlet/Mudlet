@@ -44,8 +44,8 @@
 class RetainedMapScene
 {
 public:
-    enum class Layer { Borders, Outlines, Rooms, SeeThroughCubes, ExitBars, SeeThroughExitBars };
-    static constexpr int scmLayerCount = 6;
+    enum class Layer { Borders, Outlines, Rooms, SeeThroughCubes, ExitBars, SeeThroughExitBars, ExitStrokes, SeeThroughExitStrokes };
+    static constexpr int scmLayerCount = 8;
     // In map units
     static constexpr int scmTileSize = 16;
 
@@ -105,7 +105,7 @@ public:
 
     std::shared_ptr<RetainedInstances> instances(Layer layer) const { return mInstances.at(static_cast<int>(layer)); }
     const QMap<int, QRectF>& levelExtents() const { return mLevelExtents; }
-    // Levels with see-through exit bars or triangles, lowest first
+    // Levels with see-through exit bars, strokes or triangles, lowest first
     const QList<int>& seeThroughExitLevels() const { return mSeeThroughExitLevels; }
     bool hasExits() const;
     bool contains(int roomId) const { return mRoomIndex.contains(roomId); }
@@ -161,7 +161,7 @@ private:
 
     int pendingTile(int level, const QPointF& anchor);
     // See-through layers blend in the order they are drawn, so they are filed by level alone, in the order they were added
-    static bool keepsOrder(Layer layer) { return layer == Layer::SeeThroughCubes || layer == Layer::SeeThroughExitBars; }
+    static bool keepsOrder(Layer layer) { return layer == Layer::SeeThroughCubes || layer == Layer::SeeThroughExitBars || layer == Layer::SeeThroughExitStrokes; }
     // Where the items of the level, or of all levels, are among items filed by level
     std::pair<qsizetype, qsizetype> levelSpan(const QVector<int>& tiles, std::optional<int> level) const;
 
