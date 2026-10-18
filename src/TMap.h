@@ -57,6 +57,7 @@
 class dlgMapper;
 class TMapViewFrontend;
 class TMapViewsFrontend;
+class TNullMapViews;
 class Host;
 #if defined(INCLUDE_3DMAPPER)
 class QOpenGLWidget;
@@ -337,8 +338,8 @@ public:
     TMapViewManager* getViewManager() { return mpViewManager; }
     // Defined in TMapViewManager.cpp, which can see that TMapViewManager is a TMapViewsFrontend.
     void setViewManager(TMapViewManager* pViewManager);
-    // mpViewManager as core code drives it. Never null: with no manager, as in a profile with no
-    // console view, a frontend that has no views and can make none.
+    // mpViewManager as core code drives it. Never null: with no manager, mpNullViews, or in the GUI a
+    // frontend that has no views and can make none.
     TMapViewsFrontend* mapViewsFrontend() const;
 
     // Was a single int mRoomId but that breaks things when maps are
@@ -505,6 +506,8 @@ private:
 
     // The same object as mpViewManager, set with it by setViewManager().
     TMapViewsFrontend* mpViewsFrontend = nullptr;
+    // The secondary views of a profile made with no main window, else null. A child, so Qt deletes it.
+    TNullMapViews* mpNullViews = nullptr;
     QPointer<dlgMapper> mpMapper;
     // The same object as mpMapper, set with it by setMapper(); read only while mpMapViewObject is set.
     TMapViewFrontend* mpMapViewFrontend = nullptr;
