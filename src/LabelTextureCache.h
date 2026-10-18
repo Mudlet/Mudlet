@@ -30,7 +30,8 @@
 #include <functional>
 
 // Cache entry storing OpenGL texture ID and pixmap cache key for change detection
-struct LabelTextureCacheEntry {
+struct LabelTextureCacheEntry
+{
     GLuint textureId = 0;
     qint64 pixmapCacheKey = 0;
 };
@@ -60,6 +61,8 @@ public:
     GLuint imageTexture(const QString& key) const { return mImageCache.value(key); }
     // Returns 0 if the texture could not be made; a key that failed once is not tried again until clearAll()
     GLuint addImageTexture(const QString& key, const QImage& image);
+    // How many image textures have been made so far, for tests and benchmarks of what a frame makes afresh
+    qint64 imageTexturesMade() const { return mImageTexturesMade; }
     bool imageTextureFailed(const QString& key) const { return mFailedImageKeys.contains(key); }
     // Drops image textures not in keep until one more fits under maximum, and says whether it does.
     // keep must hold every image texture queued for drawing, as a dropped one is gone at once.
@@ -89,6 +92,7 @@ private:
     QSet<QString> mFailedImageKeys;
 
     bool mInitialized = false;
+    qint64 mImageTexturesMade = 0;
     std::function<GLuint(const QImage&)> mMakeStandIn;
     std::function<void(GLuint)> mRemoveStandIn;
 };

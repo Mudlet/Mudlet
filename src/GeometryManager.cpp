@@ -66,7 +66,11 @@ void GeometryManager::initialize()
     }
 
     generateCubeTemplate();
-    mCylinderTemplate = cylinderMesh(scmCylinderSegments);
+    mShapeTemplates[static_cast<size_t>(InstanceShape::Box)].mesh = mCubeTemplate;
+    mShapeTemplates[static_cast<size_t>(InstanceShape::Cylinder)].mesh = cylinderMesh(scmCylinderSegments);
+    mShapeTemplates[static_cast<size_t>(InstanceShape::Cone)].mesh = coneMesh(scmCylinderSegments);
+    mShapeTemplates[static_cast<size_t>(InstanceShape::Pyramid)].mesh = pyramidMesh();
+    mShapeTemplates[static_cast<size_t>(InstanceShape::Sphere)].mesh = sphereMesh(scmCylinderSegments, scmCylinderSegments / 2);
     mInitialized = true;
 }
 
@@ -76,13 +80,13 @@ void GeometryManager::cleanup()
         mPlayerIconTemplate->clearTexture();
     }
 
-    mCubeVertexBuffer.destroy();
-    mCubeIndexBuffer.destroy();
-    mCylinderVertexBuffer.destroy();
-    mCylinderIndexBuffer.destroy();
+    for (ShapeTemplate& shape : mShapeTemplates) {
+        shape.vertexBuffer.destroy();
+        shape.indexBuffer.destroy();
+        shape.mesh.clear();
+    }
     mInstanceBuffer.destroy();
     mCubeTemplate.clear();
-    mCylinderTemplate.clear();
     mPlayerIconTemplate.reset();
     mInitialized = false;
 }
@@ -344,6 +348,13 @@ std::pair<QVector3D, QVector3D> GeometryManager::groundAxes(const QVector3D& cam
     return {QVector3D(right.x(), right.y(), 0.0f), QVector3D(-right.y(), right.x(), 0.0f)};
 }
 
+void GeometryManager::appendFloats(QVector<float>& to, const float* from, const qsizetype count)
+{
+    const qsizetype size = to.size();
+    to.resize(size + count);
+    std::copy_n(from, count, to.data() + size);
+}
+
 void GeometryManager::appendQuad(GeometryData& batch, const QVector3D& origin, const QVector3D& across, const QVector3D& upward, const QVector4D& color, const QRectF& textureRect)
 {
     const QVector3D bottomLeft = origin;
@@ -351,17 +362,39 @@ void GeometryManager::appendQuad(GeometryData& batch, const QVector3D& origin, c
     const QVector3D topRight = origin + across + upward;
     const QVector3D topLeft = origin + upward;
 
-    for (const QVector3D& corner : {bottomLeft, bottomRight, topRight, bottomLeft, topRight, topLeft}) {
-        batch.vertices << corner.x() << corner.y() << corner.z();
-        batch.normals << 0.0f << 0.0f << 1.0f;
-        batch.colors << color.x() << color.y() << color.z() << color.w();
-    }
+    const float vertices[18] = {bottomLeft.x(),
+                                bottomLeft.y(),
+                                bottomLeft.z(),
+                                bottomRight.x(),
+                                bottomRight.y(),
+                                bottomRight.z(),
+                                topRight.x(),
+                                topRight.y(),
+                                topRight.z(),
+                                bottomLeft.x(),
+                                bottomLeft.y(),
+                                bottomLeft.z(),
+                                topRight.x(),
+                                topRight.y(),
+                                topRight.z(),
+                                topLeft.x(),
+                                topLeft.y(),
+                                topLeft.z()};
+    appendFloats(batch.vertices, vertices, 18);
+    static constexpr float normals[18] = {0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f};
+    appendFloats(batch.normals, normals, 18);
+    const float r = color.x();
+    const float g = color.y();
+    const float b = color.z();
+    const float a = color.w();
+    const float colors[24] = {r, g, b, a, r, g, b, a, r, g, b, a, r, g, b, a, r, g, b, a, r, g, b, a};
+    appendFloats(batch.colors, colors, 24);
     const auto left = static_cast<float>(textureRect.left());
     const auto right = static_cast<float>(textureRect.right());
     const auto bottom = static_cast<float>(textureRect.top());
     const auto top = static_cast<float>(textureRect.bottom());
-    batch.textureCoords << left << bottom << right << bottom << right << top;
-    batch.textureCoords << left << bottom << right << top << left << top;
+    const float textureCoords[12] = {left, bottom, right, bottom, right, top, left, bottom, right, top, left, top};
+    appendFloats(batch.textureCoords, textureCoords, 12);
 }
 
 void GeometryManager::appendLabelQuad(GeometryData& batch, const QVector3D& topLeft, const float width, const float height, const bool turned, const QVector4D& color)
@@ -536,6 +569,105 @@ GeometryData GeometryManager::cylinderMesh(const int segments)
                 mesh.indices << u(center) << u(here) << u(next);
             } else {
                 mesh.indices << u(center) << u(next) << u(here);
+            }
+        }
+    }
+    return mesh;
+}
+
+GeometryData GeometryManager::coneMesh(const int segments)
+{
+    GeometryData mesh;
+    const int count = qMax(3, segments);
+    const auto addVertex = [&mesh](const float x, const float y, const float z, const float nx, const float ny, const float nz) {
+        mesh.vertices << x << y << z;
+        mesh.normals << nx << ny << nz;
+    };
+    const auto u = [](const int index) {
+        return static_cast<unsigned int>(index);
+    };
+    // Twice as tall as it is wide, so the side leans out by half a unit for each unit it falls
+    const float slope = 1.0f / std::sqrt(5.0f);
+    for (int index = 0; index < count; ++index) {
+        const float angle = 2.0f * std::numbers::pi_v<float> * static_cast<float>(index) / static_cast<float>(count);
+        addVertex(std::cos(angle), std::sin(angle), -1.0f, 2.0f * slope * std::cos(angle), 2.0f * slope * std::sin(angle), slope);
+    }
+    // A tip of its own for each face, leaning as the middle of the face does, so the side shades smoothly up to it
+    for (int index = 0; index < count; ++index) {
+        const float angle = 2.0f * std::numbers::pi_v<float> * (static_cast<float>(index) + 0.5f) / static_cast<float>(count);
+        addVertex(0.0f, 0.0f, 1.0f, 2.0f * slope * std::cos(angle), 2.0f * slope * std::sin(angle), slope);
+    }
+    for (int index = 0; index < count; ++index) {
+        mesh.indices << u(index) << u((index + 1) % count) << u(count + index);
+    }
+    const int center = mesh.vertexCount();
+    addVertex(0.0f, 0.0f, -1.0f, 0.0f, 0.0f, -1.0f);
+    for (int index = 0; index < count; ++index) {
+        const float angle = 2.0f * std::numbers::pi_v<float> * static_cast<float>(index) / static_cast<float>(count);
+        addVertex(std::cos(angle), std::sin(angle), -1.0f, 0.0f, 0.0f, -1.0f);
+    }
+    for (int index = 0; index < count; ++index) {
+        mesh.indices << u(center) << u(center + 1 + (index + 1) % count) << u(center + 1 + index);
+    }
+    return mesh;
+}
+
+GeometryData GeometryManager::pyramidMesh()
+{
+    GeometryData mesh;
+    const auto addVertex = [&mesh](const QVector3D& at, const QVector3D& normal) {
+        mesh.vertices << at.x() << at.y() << at.z();
+        mesh.normals << normal.x() << normal.y() << normal.z();
+    };
+    const auto u = [](const int index) {
+        return static_cast<unsigned int>(index);
+    };
+    const std::array<QVector3D, 4> corners{QVector3D(-1.0f, -1.0f, -1.0f), QVector3D(1.0f, -1.0f, -1.0f), QVector3D(1.0f, 1.0f, -1.0f), QVector3D(-1.0f, 1.0f, -1.0f)};
+    const QVector3D tip(0.0f, 0.0f, 1.0f);
+    for (size_t index = 0; index < corners.size(); ++index) {
+        const QVector3D& from = corners.at(index);
+        const QVector3D& to = corners.at((index + 1) % corners.size());
+        const QVector3D normal = QVector3D::crossProduct(to - from, tip - from).normalized();
+        const int first = mesh.vertexCount();
+        addVertex(from, normal);
+        addVertex(to, normal);
+        addVertex(tip, normal);
+        mesh.indices << u(first) << u(first + 1) << u(first + 2);
+    }
+    const int base = mesh.vertexCount();
+    for (const QVector3D& corner : corners) {
+        addVertex(corner, QVector3D(0.0f, 0.0f, -1.0f));
+    }
+    mesh.indices << u(base) << u(base + 2) << u(base + 1) << u(base) << u(base + 3) << u(base + 2);
+    return mesh;
+}
+
+GeometryData GeometryManager::sphereMesh(const int segments, const int rings)
+{
+    GeometryData mesh;
+    const int around = qMax(3, segments);
+    const int down = qMax(2, rings);
+    for (int ring = 0; ring <= down; ++ring) {
+        const float polar = std::numbers::pi_v<float> * static_cast<float>(ring) / static_cast<float>(down);
+        for (int index = 0; index <= around; ++index) {
+            const float angle = 2.0f * std::numbers::pi_v<float> * static_cast<float>(index) / static_cast<float>(around);
+            const float x = std::sin(polar) * std::cos(angle);
+            const float y = std::sin(polar) * std::sin(angle);
+            const float z = std::cos(polar);
+            mesh.vertices << x << y << z;
+            mesh.normals << x << y << z;
+        }
+    }
+    const auto at = [around](const int ring, const int index) {
+        return static_cast<unsigned int>(ring * (around + 1) + index);
+    };
+    for (int ring = 0; ring < down; ++ring) {
+        for (int index = 0; index < around; ++index) {
+            if (ring > 0) {
+                mesh.indices << at(ring, index) << at(ring + 1, index) << at(ring, index + 1);
+            }
+            if (ring < down - 1) {
+                mesh.indices << at(ring, index + 1) << at(ring + 1, index) << at(ring + 1, index + 1);
             }
         }
     }
@@ -1043,10 +1175,10 @@ void GeometryManager::renderInstancedCubes(const QVector<CubeInstanceData>& inst
     if (!mInitialized || instances.isEmpty()) {
         return;
     }
-    const bool cylinder = shape == InstanceShape::Cylinder;
-    const GeometryData& mesh = cylinder ? mCylinderTemplate : mCubeTemplate;
-    QOpenGLBuffer& meshVertexBuffer = cylinder ? mCylinderVertexBuffer : mCubeVertexBuffer;
-    QOpenGLBuffer& meshIndexBuffer = cylinder ? mCylinderIndexBuffer : mCubeIndexBuffer;
+    ShapeTemplate& shapeTemplate = mShapeTemplates[static_cast<size_t>(shape)];
+    const GeometryData& mesh = shapeTemplate.mesh;
+    QOpenGLBuffer& meshVertexBuffer = shapeTemplate.vertexBuffer;
+    QOpenGLBuffer& meshIndexBuffer = shapeTemplate.indexBuffer;
 
     // Check if instancing functions are available
     if (!glVertexAttribDivisor || !glDrawElementsInstanced) {
@@ -1155,7 +1287,7 @@ void GeometryManager::renderInstancedCubes(const QVector<CubeInstanceData>& inst
 
     // Track draw call statistics - one draw call for all instances
     if (resourceManager) {
-        const GeometryData& mesh = shape == InstanceShape::Cylinder ? mCylinderTemplate : mCubeTemplate;
+        const GeometryData& mesh = mShapeTemplates[static_cast<size_t>(shape)].mesh;
         resourceManager->onDrawCall(instances.size() * (mesh.indexCount() / 3)); // Count triangles for all instances
     }
 }

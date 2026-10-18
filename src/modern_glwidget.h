@@ -51,6 +51,8 @@
 #include <QEasingCurve>
 
 #include "BloomPass.h"
+#include "DioramaLayout.h"
+#include "ExitScene.h"
 #include "GeometryManager.h"
 #include "LabelTextureCache.h"
 #include "RenderCommandQueue.h"
@@ -59,11 +61,13 @@
 #include "CameraController.h"
 
 #include <functional>
+#include <memory>
 #include <optional>
 
 class Host;
 class QFontMetricsF;
 class QLabel;
+class QOpenGLFramebufferObject;
 class QPainter;
 class T2DMap;
 class TArea;
@@ -73,10 +77,6 @@ class TMapLabel;
 class TRoom;
 struct MapInfoProperties;
 struct MapStyle;
-namespace ExitScene {
-struct Glyph;
-struct Options;
-}
 
 class ModernGLWidget : public QOpenGLWidget, protected QOpenGLFunctions
 {
@@ -216,6 +216,12 @@ private:
     QOpenGLBuffer mIndexBuffer;
     QOpenGLBuffer mTexCoordBuffer;
     QOpenGLVertexArrayObject mVAO;
+    // The diorama's tilt-shift blur: the frame is copied out of the view's framebuffer, which may be multisampled and
+    // so cannot be read as a texture, then blurred back into it
+    std::unique_ptr<QOpenGLFramebufferObject> mTiltShiftScene;
+    std::unique_ptr<QOpenGLShaderProgram> mTiltShiftProgram;
+    QOpenGLVertexArrayObject mTiltShiftVAO;
+    bool mTiltShiftFailed = false;
 
     // Geometry management
     GeometryManager mGeometryManager;
@@ -232,8 +238,15 @@ private:
     // Label texture cache
     LabelTextureCache mLabelTextureCache;
     BloomPass mBloom;
-    // Room textures this frame has used so far, which making room for another must keep
+    // Room textures this frame has used so far and the last frame used, which making room for another must keep
     QSet<QString> mRoomTexturesInUse;
+    QSet<QString> mRoomTexturesKept;
+    // Past this many, room textures neither this frame nor the last used are dropped to make room for another, and
+    // past this frame's own the rest are not drawn. It must hold the names, IDs and symbols a dense area seen from
+    // above shows at once, or a turn of the view would drop textures it asks for again a moment later
+    static constexpr qsizetype scmMaxRoomTextures = 1024;
+    // Lowered by tests
+    qsizetype mMaxRoomTextures = scmMaxRoomTextures;
     // The text in each cell of the terminal style's glyph atlas, in order, and how many of them and in which font
     // its texture was last drawn with
     QStringList mGlyphAtlasCells;
@@ -246,6 +259,7 @@ private:
     // A room's ink outline, by everything it is made from
     struct InkOutline
     {
+        int roomId = 0;
         float x = 0.0f;
         float y = 0.0f;
         float top = 0.0f;
@@ -263,8 +277,9 @@ private:
         bool round = false;
         QVector<float> vertices;
         QVector<float> colors;
-        // Where each outline's vertices end
+        // Where each outline's vertices end, and which outline is each room's
         QVector<int> ends;
+        QHash<int, int> indexOfRoom;
     };
     QHash<int, InkOutlineLevel> mInkOutlines;
     // A map label's image with a halo around it, by its area and ID, and what it was made from
@@ -412,13 +427,66 @@ private:
     QSet<int> mRoomIdsDrawn;
     // The terminal style's exit characters, made by renderConnections() for renderRooms() to draw with their levels' rooms
     QList<ExitScene::Glyph> mExitGlyphs;
+    // The exits as last built and what they were built from. Building them walks every room and exit of the area,
+    // which costs more than drawing them, and only a change to the map or to these options changes them
+    struct ExitSceneCache
+    {
+        bool valid = false;
+        quint64 mapRevision = 0;
+        ExitScene::Options options;
+        ExitScene::Scene scene;
+    };
+    ExitSceneCache mExitSceneCache;
+    // How many times the exits have been built: what is made from them is made again whenever this changes
+    int mExitSceneBuilds = 0;
+    // The bars, strokes and triangles renderConnections() makes from the exits, kept until the exits or anything else
+    // they are made from changes, as none of it depends on the camera
+    struct ExitGeometry
+    {
+        struct Inputs
+        {
+            int sceneBuilds = 0;
+            QString styleId;
+            bool moreTransparent = false;
+            bool upperLowerLevels = false;
+            QColor upperLevelColor;
+            QColor lowerLevelColor;
+            int levelsAbove = 0;
+            int levelsBelow = 0;
+            bool operator==(const Inputs&) const = default;
+        };
+        bool valid = false;
+        Inputs inputs;
+        QVector<CubeInstanceData> bars;
+        QVector<CubeInstanceData> strokes;
+        QVector<float> vertices;
+        QVector<float> colors;
+        QMap<int, LevelExits> seeThrough;
+    };
+    ExitGeometry mExitGeometry;
+    int mExitGeometryBuilds = 0;
+    // What the diorama's pieces were last laid out from, as above; the pieces too change only with the map, the
+    // levels shown and the style, and both passes of a frame and picking a room ask for them
+    struct DioramaPiecesCache
+    {
+        bool valid = false;
+        quint64 mapRevision = 0;
+        int areaId = 0;
+        int centerZ = 0;
+        int levelsAbove = 0;
+        int levelsBelow = 0;
+        QString styleId;
+        QHash<int, DioramaLayout::Piece> pieces;
+    };
+    DioramaPiecesCache mDioramaPiecesCache;
+    int mDioramaLayouts = 0;
 
     // Private methods for modern OpenGL
     void updateMatrices();
     void renderRooms();
     void renderConnections();
-    // The paper behind the map, for a style drawn on paper
-    void queuePaper();
+    // The paper or the felt behind the map, for a style drawn on either
+    void queueBackdrop();
     // The 2D map's grid, at the viewed level's room bottoms, writing no depth
     void queueGrid();
     // MapStyle::washReach's washes under the viewed level's rooms, writing no depth, under the exits and labels
@@ -496,8 +564,14 @@ private:
     void paintPlayerPill(QPainter& painter, int top, const std::pair<PlatformShaft, PlatformShaft>& shafts);
     void turnNorthUp();
     void setHoveredRoom(int roomId);
+    void applyTiltShift();
     // Worked out afresh, as the view can move under a pointer that stays still
     int roomUnderPointer();
+    // What the diorama style builds each of the area's shown rooms as, laid out again only when that would differ
+    const QHash<int, DioramaLayout::Piece>& dioramaPieces(const TArea& area);
+    // The exits of the area shown, built again only when the map or the options they are built from change
+    const ExitScene::Scene& exitScene(const ExitScene::Options& options);
+    void buildExitGeometry(const ExitScene::Scene& scene, const ExitScene::Options& options, bool moreTransparent);
     void endPan();
     void renderCube(float x, float y, float z, float size, float r, float g, float b, float a);
     void renderText(const QString& text, float x, float y);
@@ -552,6 +626,10 @@ private:
     // Of the beacon over the player's room, and of the style's thin ring around it
     QColor playerMarkerColor() const;
     ExitScene::Options exitSceneOptions() const;
+    // The shading of the exits not brushed on as strokes
+    RenderCommand::Shading exitShading() const;
+    // How far below where ExitScene puts them exits are drawn, so that a model's paths lie on the ground
+    float exitSink(const ExitScene::Options&) const;
     void zoomBySteps(float steps);
     void panByRooms(int right, int up);
     void selectRoom(int roomId, Qt::KeyboardModifiers modifiers);

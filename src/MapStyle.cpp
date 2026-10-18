@@ -234,6 +234,46 @@ QList<MapStyle> registeredStyles()
     inkwash.infoTextColor = QColor(38, 34, 32);
     styles.append(inkwash);
 
+    MapStyle diorama;
+    diorama.id = qsl("diorama");
+    diorama.palette = MapStyle::Palette::Painted;
+    // Chunky blocks, wider and much taller than tiles', that still leave room between them for the paths
+    diorama.roomScale = 3.0f;
+    diorama.roomFlattening = 2.0f;
+    diorama.edges = MapStyle::Edges::ModelBlocks;
+    // Between the sky's blue and its warm haze, for what fades into it
+    diorama.background = QColor(222, 230, 228);
+    // The paths' trodden earth, darker than the board they cross
+    diorama.ink = QColor(168, 146, 110);
+    diorama.exitWidthFactor = 2.0f;
+    diorama.postEffects = MapStyle::PostEffect::Sky | MapStyle::PostEffect::TiltShift;
+    // The board is the floor
+    diorama.floorPlates = false;
+    diorama.environmentKits = true;
+    diorama.pavedPathStrength = 0.3f;
+    diorama.playerMarker = MapStyle::PlayerMarker::Token;
+    // A warm glow on the board round the room, in the script's color, and in lamplight where it gave none
+    diorama.highlightShape = MapStyle::HighlightShape::Glow;
+    diorama.highlightColor = QColor(255, 214, 79);
+    diorama.highlightScale = 1.7f;
+    // Map labels on white card tags, as a model's are
+    diorama.labelFontFamily = qsl("Bitstream Vera Sans");
+    diorama.themedMapLabels = true;
+    diorama.mapLabelColor = QColor(38, 56, 92);
+    diorama.mapLabelPlate = QColor(255, 255, 255, 235);
+    diorama.mapLabelMaxHeight = 0.7f;
+    diorama.symbolPlate = QColor(255, 255, 255, 235);
+    diorama.roomNameColor = QColor(46, 60, 88);
+    diorama.roomNameScale = 0.75f;
+    diorama.roomNameBold = true;
+    diorama.roomNameHalo = QColor(255, 255, 255, 235);
+    diorama.compassFace = QColor(255, 255, 255, 220);
+    diorama.compassRim = QColor(138, 118, 86);
+    diorama.compassNeedle = QColor(214, 58, 48);
+    diorama.infoBackground = QColor(255, 255, 255, 220);
+    diorama.infoTextColor = QColor(38, 56, 92);
+    styles.append(diorama);
+
     return styles;
 }
 } // namespace
@@ -263,6 +303,10 @@ QString MapStyle::displayName() const
     if (id == qsl("inkwash")) {
         //: Name of the 3D map style that draws rooms as blots and exits as brush strokes of ink on paper, as an East Asian ink wash painting does, chosen in the Mapper preferences
         return QCoreApplication::translate("MapStyle", "Ink wash");
+    }
+    if (id == qsl("diorama")) {
+        //: Name of the 3D map style that draws rooms as painted blocks standing on a tabletop with a game token on the player's room, as a miniature model of the map does, chosen in the Mapper preferences
+        return QCoreApplication::translate("MapStyle", "Diorama");
     }
     return id;
 }
@@ -333,6 +377,19 @@ QColor MapStyle::roomColor(const QColor& environmentColor) const
                                 paper.blueF() + (wash.blueF() - paper.blueF()) * strength,
                                 environmentColor.alphaF());
     }
+    case Palette::Painted: {
+        // A model paint is never as strong, as dark or as bright as a screen's color, and a warm light falls on it
+        const float hue = environmentColor.hslHueF();
+        const float saturation = hue < 0.0f ? 0.0f : environmentColor.hslSaturationF() * 0.7f;
+        const float lightness = 0.28f + 0.5f * environmentColor.lightnessF();
+        const QColor paint = QColor::fromHslF(qMax(hue, 0.0f), saturation, lightness);
+        const QColor warm(222, 184, 140);
+        constexpr float toWarm = 0.12f;
+        return QColor::fromRgbF(paint.redF() + (warm.redF() - paint.redF()) * toWarm,
+                                paint.greenF() + (warm.greenF() - paint.greenF()) * toWarm,
+                                paint.blueF() + (warm.blueF() - paint.blueF()) * toWarm,
+                                environmentColor.alphaF());
+    }
     }
     return environmentColor;
 }
@@ -348,7 +405,25 @@ QColor MapStyle::symbolColor(const QColor& roomSymbolColor, const QColor& drawnR
     if (palette == Palette::Terminal || palette == Palette::Light) {
         return roomSymbolColor.isValid() ? roomColor(roomSymbolColor) : drawnRoomColor;
     }
-    return RoomAppearance::symbolColor(roomSymbolColor, drawnRoomColor);
+    return RoomAppearance::symbolColor(roomSymbolColor, symbolPlate.isValid() ? symbolPlate : drawnRoomColor);
+}
+
+bool MapStyle::readsOnPlate(const QColor& color, const QColor& plate)
+{
+    // Faint as it is, a color shows mostly what is under it rather than how it differs from the tag
+    constexpr int faintest = 64;
+    return color.alpha() >= faintest && qAbs(qGray(color.rgb()) - qGray(plate.rgb())) >= 96;
+}
+
+QColor MapStyle::roomNameHaloFor(const QColor& nameColor) const
+{
+    if (!roomNameHalo.isValid() || readsOnPlate(nameColor, roomNameHalo)) {
+        return roomNameHalo;
+    }
+    // Judged as readsOnPlate judges, by gray, so that a yellow is rimmed in black
+    QColor rim = qGray(nameColor.rgb()) > 127 ? QColor(Qt::black) : QColor(Qt::white);
+    rim.setAlpha(roomNameHalo.alpha());
+    return readsOnPlate(nameColor, rim) ? rim : QColor();
 }
 
 QColor MapStyle::exitColor(const QColor& profileExitColor) const
@@ -392,6 +467,10 @@ QColor MapStyle::playerRoomColor() const
     if (palette == Palette::Wash) {
         // A seal's paste, a muted vermilion, the one color on an ink painting
         return QColor(190, 66, 46);
+    }
+    if (palette == Palette::Painted) {
+        // A game token's glossy red, brighter than any room's paint so that it stands out among them
+        return QColor(214, 48, 40);
     }
     return QColor(Qt::red);
 }

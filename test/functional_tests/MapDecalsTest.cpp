@@ -318,6 +318,95 @@ private slots:
         QVERIFY2(qAbs(cappedText.center().x() - fullText.center().x()) <= 3, "the text stays centered where the label was put");
     }
 
+    void test_dioramaLabelsSitOnARoundedTagThatFitsTheirPicture()
+    {
+        const MapStyle& diorama = *MapStyle::find(qsl("diorama"));
+        QVERIFY(diorama.themedMapLabels && diorama.mapLabelPlate.isValid());
+        QVERIFY(diorama.roomNameColor.isValid() && diorama.compassFace.isValid() && diorama.infoBackground.isValid() && diorama.infoTextColor.isValid());
+        const TMapLabel label = textLabel(Qt::white, QColor(0, 0, 0, 50));
+        const QImage image = MapDecals::themedLabel(label, diorama);
+        QCOMPARE(image.size(), label.pix.size());
+        // The tag's rounded ends leave the corners clear
+        QCOMPARE(alphaAt(image, 0, 0), 0);
+        QCOMPARE(alphaAt(image, image.width() - 1, image.height() - 1), 0);
+        // The tag shows round the letters: in the tag's color across the middle, before the first letter
+        const QRect tag = paintedArea(image);
+        QVERIFY(!tag.isEmpty());
+        const int y = tag.center().y();
+        int tagged = 0;
+        for (int x = tag.left(); x < tag.left() + tag.height() / 2; ++x) {
+            tagged += QColor::fromRgba(image.pixel(x, y)).rgb() == diorama.mapLabelPlate.rgb();
+        }
+        QVERIFY2(tagged > 0, "no tag before the text");
+        bool text = false;
+        for (int x = tag.left(); x <= tag.right() && !text; ++x) {
+            text = QColor::fromRgba(image.pixel(x, y)).rgb() == diorama.mapLabelColor.rgb();
+        }
+        QVERIFY2(text, "the text is not on the tag");
+
+        // A light color of the label's own would be lost on the tag, so it goes without
+        const QImage yellow = MapDecals::themedLabel(textLabel(QColor(255, 255, 0), QColor(0, 0, 0, 50)), diorama);
+        QVERIFY(!yellow.isNull());
+        bool yellowText = false;
+        for (int x = 0; x < yellow.width(); ++x) {
+            const QRgb pixel = yellow.pixel(x, yellow.height() / 2);
+            QVERIFY2(qAlpha(pixel) < 200 || qBlue(pixel) < 200, "a light label is put on a white tag");
+            yellowText = yellowText || (qAlpha(pixel) > 200 && qRed(pixel) > 200 && qGreen(pixel) > 200 && qBlue(pixel) < 60);
+        }
+        QVERIFY2(yellowText, "a light label has no text");
+    }
+
+    // Names stand out in bold with a white rim round them, which their usual ink reads on; no other style's change
+    void test_dioramaNamesAreBoldInAWhiteHalo()
+    {
+        const MapStyle& diorama = *MapStyle::find(qsl("diorama"));
+        QVERIFY(diorama.roomNameBold);
+        QCOMPARE(diorama.roomNameHalo, QColor(255, 255, 255, 235));
+        QVERIFY(MapStyle::readsOnPlate(diorama.roomNameColor, diorama.roomNameHalo));
+        QCOMPARE(diorama.roomNameHaloFor(diorama.roomNameColor), diorama.roomNameHalo);
+        // A script's light color would be lost on the white, so it is rimmed in a dark one it reads on
+        for (const QColor& light : {QColor(250, 250, 210), QColor(255, 255, 0), QColor(255, 165, 0), QColor(192, 192, 192)}) {
+            QVERIFY(!MapStyle::readsOnPlate(light, diorama.roomNameHalo));
+            const QColor rim = diorama.roomNameHaloFor(light);
+            QVERIFY2(rim.isValid() && MapStyle::readsOnPlate(light, rim), qPrintable(light.name()));
+            QVERIFY2(qGray(rim.rgb()) < 64, qPrintable(qsl("%1 has a rim of %2").arg(light.name(), rim.name())));
+        }
+        // Too faint to read on any rim
+        QVERIFY(!diorama.roomNameHaloFor(QColor(0, 0, 0, 40)).isValid());
+        for (const MapStyle& style : MapStyle::all()) {
+            if (style.id != diorama.id) {
+                QVERIFY2(!style.roomNameBold && !style.roomNameHalo.isValid() && !style.roomNameHaloFor(QColor(250, 250, 210)).isValid(), qPrintable(style.id));
+            }
+        }
+    }
+
+    void test_dioramaSymbolsStandOnATagInAColorThatShowsOnIt()
+    {
+        const MapStyle& diorama = *MapStyle::find(qsl("diorama"));
+        QVERIFY(diorama.symbolPlate.isValid());
+        const QColor darkPurple(60, 30, 90);
+        QCOMPARE(diorama.symbolColor(QColor(), darkPurple), QColor(Qt::black));
+        QCOMPARE(tiles().symbolColor(QColor(), darkPurple), QColor(Qt::white));
+        QCOMPARE(diorama.symbolColor(QColor(200, 30, 30), darkPurple), QColor(200, 30, 30));
+        QVERIFY(MapStyle::readsOnPlate(Qt::black, diorama.symbolPlate));
+        QVERIFY(!MapStyle::readsOnPlate(QColor(250, 250, 210), diorama.symbolPlate));
+        // So faint that the tag would show through it rather than it showing on the tag
+        QVERIFY(!MapStyle::readsOnPlate(QColor(0, 0, 0, 40), diorama.symbolPlate));
+
+        const QImage image = MapDecals::taggedSymbol(qsl("$"), Qt::black, diorama.symbolPlate, QFont(QString(), 20), 1.0, scmSize);
+        QCOMPARE(image.size(), QSize(scmSize, scmSize));
+        QCOMPARE(alphaAt(image, 0, 0), 0);
+        QCOMPARE(alphaAt(image, scmSize / 2, 2), 0);
+        QVERIFY2(qGray(image.pixel(scmSize / 2, scmSize / 6)) > 240 && alphaAt(image, scmSize / 2, scmSize / 6) > 200, "no tag round the symbol");
+        bool glyph = false;
+        for (int y = scmSize / 4; y < 3 * scmSize / 4 && !glyph; ++y) {
+            for (int x = scmSize / 4; x < 3 * scmSize / 4 && !glyph; ++x) {
+                glyph = qGray(image.pixel(x, y)) < 60 && alphaAt(image, x, y) > 200;
+            }
+        }
+        QVERIFY2(glyph, "no symbol on the tag");
+    }
+
     void test_registrationMarkCrossesItsRingAndRunsPastIt()
     {
         const QImage mark = MapDecals::registrationMark(QColor(255, 112, 90), scmSize);
@@ -478,6 +567,19 @@ private slots:
             inRing = painted;
         }
         QCOMPARE(rings, 2);
+    }
+
+    void test_dioramaGlowsAColorlessRoomInLamplightAndAScriptsColorWins()
+    {
+        const MapStyle& diorama = *MapStyle::find(qsl("diorama"));
+        QCOMPARE(diorama.highlightShape, MapStyle::HighlightShape::Glow);
+        QVERIFY(MapDecals::highlightOnGround(diorama.highlightShape));
+        const QColor lamplight = diorama.highlightColorFor(QColor());
+        QVERIFY(lamplight.isValid());
+        QVERIFY(lamplight.hue() >= 40 && lamplight.hue() <= 55);
+        const QColor blue(0, 0, 255);
+        QCOMPARE(diorama.highlightColorFor(blue, blue), blue);
+        QCOMPARE(diorama.highlightColorFor(QColor(255, 0, 0, 0), blue), blue);
     }
 
     void test_inkwashWashesAreSoftEdgedAndDifferPerVariant()

@@ -236,6 +236,7 @@ set(MAP_GROUP_TEST_SOURCES
     LuaMapperCueTest.cpp
     MapLockNoOpTest.cpp
     MapLabelDeleteTest.cpp
+    MapRevisionTest.cpp
     RoomPropertiesDialogTest.cpp
     MapperButtonConfigTest.cpp
     MapperPanelTest.cpp
@@ -244,6 +245,7 @@ set(MAP_GROUP_TEST_SOURCES
     MapAreaImageExportTest.cpp
     MapRoundTripTest.cpp
     MapSymbolFontTest.cpp
+    DioramaLayoutTest.cpp
     RoomAppearanceTest.cpp
     RoomExitsDeletedEditItemTest.cpp
 )

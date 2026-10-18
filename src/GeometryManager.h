@@ -30,6 +30,7 @@
 #include <QOpenGLFunctions>
 #include <QOpenGLContext>
 #include <QOpenGLTexture>
+#include <array>
 #include <optional>
 #include <utility>
 #include <assimp/Importer.hpp>
@@ -145,8 +146,9 @@ public:
     // Must match the layout location of aTexCoord in shaders/vertex.glsl
     static constexpr GLuint scmTexCoordLocation = 8;
 
-    // What each instance's transform places: the cube [-1, 1], or an upright cylinder of radius 1 from z -1 to 1
-    enum class InstanceShape { Box, Cylinder };
+    // What each instance's transform places: the cube [-1, 1], or an upright cylinder of radius 1 from z -1 to 1, or
+    // a cone, a square pyramid or a sphere filling the same space, the cone and pyramid with their tips at z 1
+    enum class InstanceShape { Box, Cylinder, Cone, Pyramid, Sphere };
 
     GeometryManager();
     ~GeometryManager();
@@ -176,6 +178,8 @@ public:
                                  const QRectF& textureRect = QRectF(0.0, 0.0, 1.0, 1.0));
     // The unit vectors on the map's plane that appendGroundQuad() turns a texture's right and top toward
     static std::pair<QVector3D, QVector3D> groundAxes(const QVector3D& cameraRight, const QVector3D& cameraUp);
+    // A block at a time rather than a float at a time, as a frame appends tens of thousands of quads
+    static void appendFloats(QVector<float>& to, const float* from, qsizetype count);
     // Appends a textured parallelogram: the texture's bottom-left at origin, its bottom edge along across
     // and its left edge along upward; textureRect as for appendGroundQuad()
     static void
@@ -210,6 +214,12 @@ public:
     static QList<QLineF> gridLines(const QRectF& extent);
     // An upright cylinder of radius 1 from z -1 to 1, its side smooth shaded, each face wound counterclockwise from outside
     static GeometryData cylinderMesh(int segments);
+    // A cone of radius 1 from its base at z -1 to its tip at z 1, its side smooth shaded
+    static GeometryData coneMesh(int segments);
+    // A pyramid on the square [-1, 1] at z -1, its tip at z 1, each face flat
+    static GeometryData pyramidMesh();
+    // A sphere of radius 1, smooth shaded
+    static GeometryData sphereMesh(int segments, int rings);
     // The sides of the cylinder a round room is drawn as; a box selection tests the corners of that same rim
     static constexpr int scmCylinderSegments = 24;
     // The tint for a texture drawn on a faded room, which can only make it more see-through
@@ -280,11 +290,14 @@ private:
 
     // Cached cube geometry template (will be transformed for each cube)
     GeometryData mCubeTemplate;
-    QOpenGLBuffer mCubeVertexBuffer{QOpenGLBuffer::VertexBuffer};
-    QOpenGLBuffer mCubeIndexBuffer{QOpenGLBuffer::IndexBuffer};
-    GeometryData mCylinderTemplate;
-    QOpenGLBuffer mCylinderVertexBuffer{QOpenGLBuffer::VertexBuffer};
-    QOpenGLBuffer mCylinderIndexBuffer{QOpenGLBuffer::IndexBuffer};
+    struct ShapeTemplate
+    {
+        GeometryData mesh;
+        QOpenGLBuffer vertexBuffer{QOpenGLBuffer::VertexBuffer};
+        QOpenGLBuffer indexBuffer{QOpenGLBuffer::IndexBuffer};
+    };
+    // By InstanceShape
+    std::array<ShapeTemplate, 5> mShapeTemplates;
     QOpenGLBuffer mInstanceBuffer{QOpenGLBuffer::VertexBuffer};
 
     // Cached player icon geometry

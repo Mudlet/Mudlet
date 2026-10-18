@@ -46,6 +46,7 @@ set(mudlet_SRCS
     AliasUnit.cpp
     CredentialManager.cpp
     ctelnet.cpp
+    DioramaLayout.cpp
     discord.cpp
     EditorAddItemCommand.cpp
     EditorDeleteItemCommand.cpp
@@ -338,6 +339,7 @@ set(mudlet_HDRS
     AliasUnit.h
     CredentialManager.h
     ctelnet.h
+    DioramaLayout.h
     discord.h
     EditorAddItemCommand.h
     EditorCommand.h
