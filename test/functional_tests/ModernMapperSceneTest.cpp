@@ -57,6 +57,7 @@
 
 #include "Host.h"
 #include "HostManager.h"
+#include "MapStyle.h"
 #include "MudletApp.h"
 #include "MudletInstanceCoordinator.h"
 #include "RenderCommand.h"
@@ -410,7 +411,10 @@ private:
         return found;
     }
 
-    static QList<DrawnCube> drawnRooms(const ModernGLWidget& widget) { return drawnCubes(widget, 1.0f / 32.0f); }
+    // A room block's z scale: half its height, which the map style sets
+    static float halfHeight(const ModernGLWidget& widget) { return 1.0f / widget.scale / widget.zFlattening; }
+
+    static QList<DrawnCube> drawnRooms(const ModernGLWidget& widget) { return drawnCubes(widget, halfHeight(widget)); }
 
     // The color the room standing at x, y on level 0 is drawn in, or a null vector unless it is drawn just once
     static QVector4D roomColorAt(const ModernGLWidget& widget, const int x, const int y)
@@ -424,7 +428,12 @@ private:
         return colors.size() == 1 ? colors.first() : QVector4D();
     }
 
-    static QVector4D tintOf(const QColor& color) { return QVector4D(color.redF(), color.greenF(), color.blueF(), color.alphaF()); }
+    // A room of this color as the map style draws it
+    static QVector4D tintOf(const ModernGLWidget& widget, const QColor& color)
+    {
+        const QColor drawn = widget.mapStyle().roomColor(color);
+        return QVector4D(drawn.redF(), drawn.greenF(), drawn.blueF(), drawn.alphaF());
+    }
 
     static int texturedCommands(const ModernGLWidget& widget)
     {
@@ -511,7 +520,20 @@ private:
     }
 
     // The route's bars over the rooms, which are a quarter as tall as a room
-    static QList<DrawnCube> drawnRoute(const ModernGLWidget& widget) { return drawnCubes(widget, 1.0f / 128.0f); }
+    // Exit bars can be as thick as the route's, so its colors tell them apart
+    static QList<DrawnCube> drawnRoute(const ModernGLWidget& widget)
+    {
+        const auto vector = [](const QColor& color) {
+            return QVector4D(color.redF(), color.greenF(), color.blueF(), 1.0f);
+        };
+        const QVector4D line = vector(widget.routeColor());
+        const QVector4D halo = vector(widget.routeHaloColor());
+        QList<DrawnCube> found = drawnCubes(widget, halfHeight(widget) / 4.0f);
+        found.removeIf([&](const DrawnCube& cube) {
+            return cube.color != line && cube.color != halo;
+        });
+        return found;
+    }
 
     // MUDLET_BENCH_3D_STITCH=0 turns stitching off for the report-only cases, to compare with a build without it
     void applyBenchStitching() const { mpHost->mMapperStitchAreas = qEnvironmentVariable("MUDLET_BENCH_3D_STITCH") != qsl("0"); }
@@ -557,8 +579,21 @@ private:
         return names;
     }
 
-    // The search's mark around a room, whose bars are a third as tall as a room
-    static QList<DrawnCube> drawnSearchMark(const ModernGLWidget& widget) { return drawnCubes(widget, 1.0f / 96.0f); }
+    // The search's mark around a room, whose bars are a third as tall as a room; exit bars can be as thick, so its
+    // colors tell them apart, whatever it has faded to
+    static QList<DrawnCube> drawnSearchMark(const ModernGLWidget& widget)
+    {
+        const auto rgb = [](const QColor& color) {
+            return QVector3D(color.redF(), color.greenF(), color.blueF());
+        };
+        const QVector3D line = rgb(widget.mpHost->mLightCyan_2);
+        const QVector3D halo = rgb(widget.routeHaloColor());
+        QList<DrawnCube> found = drawnCubes(widget, halfHeight(widget) / 3.0f);
+        found.removeIf([&](const DrawnCube& cube) {
+            return cube.color.toVector3D() != line && cube.color.toVector3D() != halo;
+        });
+        return found;
+    }
 
 private slots:
     void initTestCase()
@@ -632,7 +667,7 @@ private slots:
         ModernGLWidget widget(map(), mpHost);
         const bool savedBorders = mpHost->mMapperShowRoomBorders;
         mpHost->mMapperShowRoomBorders = false;
-        const float levelOutline = 0.6f / 32.0f;
+        const float levelOutline = 0.6f * halfHeight(widget);
 
         queueFrame(widget, areaId, 1.0f);
         QVERIFY2(texturedCommands(widget) > 0, "near rooms show their symbols and exit markers");
@@ -731,7 +766,7 @@ private slots:
         const QVector4D before = roomColorAt(widget, 2, 0);
         QVERIFY(!before.isNull());
         room->environment = room->environment == 257 ? 258 : 257;
-        const QVector4D after = tintOf(RoomAppearance::environmentColor(*map(), *mpHost, room->environment));
+        const QVector4D after = tintOf(widget, RoomAppearance::environmentColor(*map(), *mpHost, room->environment));
         QVERIFY(after != before);
 
         queueFrame(widget, areaId, 1.5f);
@@ -754,13 +789,13 @@ private slots:
         map()->updateArea(areaId);
         QCoreApplication::processEvents();
         queueFrame(widget, areaId, 1.5f);
-        QCOMPARE(roomColorAt(widget, 2, 0), tintOf(RoomAppearance::environmentColor(*map(), *mpHost, room->environment)));
+        QCOMPARE(roomColorAt(widget, 2, 0), tintOf(widget, RoomAppearance::environmentColor(*map(), *mpHost, room->environment)));
 
         // A custom environment color, set by setCustomEnvColor() without announcing it
         const QColor savedColor = map()->mCustomEnvColors.value(room->environment);
         map()->mCustomEnvColors[room->environment] = QColor(12, 34, 56);
         queueFrame(widget, areaId, 1.5f);
-        QCOMPARE(roomColorAt(widget, 2, 0), tintOf(QColor(12, 34, 56)));
+        QCOMPARE(roomColorAt(widget, 2, 0), tintOf(widget, QColor(12, 34, 56)));
         map()->mCustomEnvColors[room->environment] = savedColor;
         queueFrame(widget, areaId, 1.5f);
 
@@ -768,7 +803,7 @@ private slots:
         queueFrame(widget, areaId, 1.5f, true, 1);
         const QVector4D faded = roomColorAt(widget, 2, 0);
         QVERIFY(!faded.isNull());
-        QVERIFY(faded != tintOf(RoomAppearance::environmentColor(*map(), *mpHost, room->environment)));
+        QVERIFY(faded != tintOf(widget, RoomAppearance::environmentColor(*map(), *mpHost, room->environment)));
     }
 
     void test_theHoveredRoomIsDrawnRaisedJustOnceWithoutGL()
@@ -793,9 +828,9 @@ private slots:
             }
         }
         QCOMPARE(heights.size(), 1);
-        // A room's height, 2 / scale / zFlattening
-        QCOMPARE(heights.first(), 0.0625f);
-        QCOMPARE(drawnCubes(widget, 0.75f / 32.0f).size(), 1);
+        // Raised by a room's height
+        QCOMPARE(heights.first(), 2.0f * halfHeight(widget));
+        QCOMPARE(drawnCubes(widget, 0.75f * halfHeight(widget)).size(), 1);
         QVERIFY2(widget.mScene.instances(RetainedMapScene::Layer::Rooms)->instances.constData() == keptRooms, "hovering made the rooms again");
         widget.mPointerInView = false;
     }
@@ -1392,7 +1427,7 @@ private slots:
         QVERIFY(!bars.isEmpty());
         const QColor routeColor = mpHost->mLightYellow_2;
         QVERIFY(std::any_of(bars.cbegin(), bars.cend(), [&](const DrawnCube& bar) {
-            return bar.color == tintOf(routeColor);
+            return bar.color == QVector4D(routeColor.redF(), routeColor.greenF(), routeColor.blueF(), routeColor.alphaF());
         }));
         // Only on the rooms on the way that are drawn: the west area's, from its southwest corner to the way out in
         // the middle of its east side, then the middle area's rooms drawn beside it, along its middle row
@@ -1471,7 +1506,7 @@ private slots:
             QVERIFY2(bar.transform.column(3).x() > 2.9f, qPrintable(qsl("an exit bar at x %1").arg(bar.transform.column(3).x())));
         }
         // Muted toward the background, so the area shown stands out from those around it
-        const QVector4D plain = tintOf(RoomAppearance::environmentColor(*map(), *mpHost, map()->mpRoomDB->getRoom(areas.middleFirst + 10)->environment));
+        const QVector4D plain = tintOf(widget, RoomAppearance::environmentColor(*map(), *mpHost, map()->mpRoomDB->getRoom(areas.middleFirst + 10)->environment));
         bool mutedWayIn = false;
         for (const DrawnCube& room : rooms) {
             if (qFuzzyCompare(room.center.x(), 3.0f) && qFuzzyIsNull(room.center.y())) {
@@ -1941,8 +1976,9 @@ private slots:
         widget.queueScene();
         QList<DrawnCube> mark = drawnSearchMark(widget);
         QCOMPARE(mark.size(), 8);
+        const float roomSize = 2.0f / widget.scale;
         for (const DrawnCube& bar : mark) {
-            QVERIFY(qAbs(bar.center.x() - pTarget->x()) <= 0.5f && qAbs(bar.center.y() - pTarget->y()) <= 0.5f);
+            QVERIFY(qAbs(bar.center.x() - pTarget->x()) <= roomSize && qAbs(bar.center.y() - pTarget->y()) <= roomSize);
         }
         QTRY_COMPARE_WITH_TIMEOUT(widget.mSearchMarkedRoomId, 0, 5000);
         QVERIFY(!widget.mSearchMarkTimer->isActive());
@@ -2466,9 +2502,11 @@ private slots:
         QCOMPARE(pPanel->mpKeys->geometry().top(), pPanel->mpCount->geometry().top());
         QCOMPARE(pPanel->mpKeys->width(), pPanel->mpKeys->sizeHint().width());
         QVERIFY(pPanel->mpCount->geometry().right() < pPanel->mpKeys->geometry().left());
+        const int footerWidth = pPanel->mpKeys->geometry().right() + 1 - pPanel->mpCount->geometry().left();
 
-        // Then the hints on a line of their own under the count, still whole
-        laidOutAt(300);
+        // Then the hints on a line of their own under the count, still whole: a footer wide enough for them and half
+        // the count, as wide as the fonts on this system make them
+        laidOutAt(pPanel->preferredWidth() - footerWidth + pPanel->mpKeys->sizeHint().width() + pPanel->mpCount->sizeHint().width() / 2);
         QVERIFY(pPanel->mpKeys->geometry().top() > pPanel->mpCount->geometry().bottom());
         QCOMPARE(pPanel->mpKeys->width(), pPanel->mpKeys->sizeHint().width());
         QCOMPARE(pPanel->mpCount->width(), pPanel->mpCount->sizeHint().width());

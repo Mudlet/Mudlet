@@ -1588,6 +1588,7 @@ local configOptions = {
   "mapShowGrid",
   "mapShowRoomBorders",
   "mapStitchAreas",
+  "mapStyle",
   "mapSymbolFont",
   "mapSymbolFontOnlyUseSelected",
   "mapSymbolFontScaling",

@@ -300,7 +300,8 @@ void RetainedMapScene::finish()
     }
 
     mSeeThroughExitLevels.clear();
-    for (const QVector<int>* seeThroughTiles : {&mInstanceTiles.at(static_cast<int>(Layer::SeeThroughExitBars)), &mTriangleTiles.at(1)}) {
+    for (const QVector<int>* seeThroughTiles :
+         {&mInstanceTiles.at(static_cast<int>(Layer::SeeThroughExitBars)), &mInstanceTiles.at(static_cast<int>(Layer::SeeThroughExitStrokes)), &mTriangleTiles.at(1)}) {
         for (const int tile : *seeThroughTiles) {
             const int level = mTiles.at(tile).level;
             if (!mSeeThroughExitLevels.contains(level)) {
@@ -519,8 +520,12 @@ std::pair<qsizetype, qsizetype> RetainedMapScene::levelSpan(const QVector<int>& 
 
 bool RetainedMapScene::hasExits() const
 {
-    return !mInstances.at(static_cast<int>(Layer::ExitBars))->instances.isEmpty() || !mInstances.at(static_cast<int>(Layer::SeeThroughExitBars))->instances.isEmpty()
-           || !mTriangleVertices.at(0).isEmpty() || !mTriangleVertices.at(1).isEmpty();
+    for (const Layer layer : {Layer::ExitBars, Layer::SeeThroughExitBars, Layer::ExitStrokes, Layer::SeeThroughExitStrokes}) {
+        if (!mInstances.at(static_cast<int>(layer))->instances.isEmpty()) {
+            return true;
+        }
+    }
+    return !mTriangleVertices.at(0).isEmpty() || !mTriangleVertices.at(1).isEmpty();
 }
 
 int RetainedMapScene::tilesDrawn() const
