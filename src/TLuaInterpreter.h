@@ -112,6 +112,7 @@ public:
     std::pair<bool, bool> callLuaFunctionReturnBool(void* pT, const QString& itemName = QString());
     double condenseMapLoad();
     bool compile(const QString& code, QString& error, const QString& name);
+    static QString compileErrorAsPlainText(const QString& error);
     void setAtcpTable(const QString&, const QString&);
     void signalMXPEvent(const QString& type, const QMap<QString, QString>& attrs, const QStringList& actions, const QString& caption = QString());
     void setGMCPTable(QString&, const QString&);
@@ -710,6 +711,9 @@ public:
     static int addMapEvent(lua_State*);
     static int removeMapEvent(lua_State*);
     static int getMapEvents(lua_State*);
+    static int getMapEnvironmentKit(lua_State*);
+    static int getMapEnvironmentKits(lua_State*);
+    static int setMapEnvironmentKit(lua_State*);
     static int addMapMenu(lua_State*);
     static int removeMapMenu(lua_State*);
     static int getMapMenus(lua_State*);
@@ -876,7 +880,7 @@ public:
     int duplicateLuaRegistryIndex(int index);
     void freeAllInLuaRegistry(TEvent);
     // For C++ that runs a nested event loop for this profile outside a Lua call,
-    // so pumpingEvents() holds off a reset or close until it returns.
+    // so pumpingEvents() refuses a reset or a profile close while it runs.
     void enterNestedEventLoop() { ++mEventPumpDepth; }
     void leaveNestedEventLoop() { --mEventPumpDepth; }
 
@@ -943,6 +947,7 @@ private:
     static std::pair<bool, QString> discordApiEnabled(lua_State*, bool writeAccess = false);
     static void setRequestDefaults(const QUrl& url, QNetworkRequest& request);
     static int performHttpRequest(lua_State*, const char* functionName, const int pos, QNetworkAccessManager::Operation operation, const char* verb);
+    static bool httpSchemeAllowed(const QUrl&);
     static void validateHttpHeaders(lua_State*, const int index, const char* functionName);
     static void applyHttpHeaders(lua_State*, const int index, QNetworkRequest& request);
     // The last argument is only needed if the third one is true:
@@ -1113,8 +1118,9 @@ private:
     bool mGlobalsHandlersLinger = false;
     int mIndexHandlerRef = LUA_NOREF;
     int mNewindexHandlerRef = LUA_NOREF;
-    // expandAlias() overwrites "command" and the captures; the caller's are saved here (one entry per
-    // nesting level) and restored when the pass returns - "command" only for an alias script.
+    // A nested expandAlias() or feedTriggers() overwrites the captures, and either can overwrite "command"; the caller's
+    // captures are saved here (one entry per nesting level) and restored when the pass returns - "command" only for an
+    // alias script's expandAlias().
     struct NestedDispatchState
     {
         std::vector<std::string> captureGroupList;
