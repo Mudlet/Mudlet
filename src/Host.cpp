@@ -6830,7 +6830,8 @@ std::optional<QString> Host::commandLineText(const QString& name) const
 
 std::optional<QString> Host::commandLineStyleSheet(const QString& name) const
 {
-    if (!hasConsoleView()) {
+    // The main command line's sheet is a view's
+    if (!hasConsoleView() && (name.isEmpty() || name == QLatin1String("main"))) {
         return {};
     }
     return mWindowRegistry.commandLineStyleSheet(name);
