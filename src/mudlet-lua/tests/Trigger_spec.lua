@@ -2115,8 +2115,7 @@ describe("Trigger processing", function()
                 -- dividing by the number of feeds keeps both measurements
                 -- per-feed and comparable.
                 -- It is wall time there too, so a run also carries any 15.6 ms
-                -- scheduler tick taken from it: enough to double the 64 kB
-                -- line's cost over a 0.02s run, a sixth of it over 0.1s.
+                -- scheduler tick taken from it, under a fifth of a 0.1s run.
                 --
                 -- a collection cycle landing in one line's runs and not the
                 -- other's skews the ratio by whatever it costs
@@ -2129,10 +2128,10 @@ describe("Trigger processing", function()
                     feeds = feeds + 1
                     taken = os.clock() - started
                 -- a clock that never advances would spin here forever and hang
-                -- CI with no diagnostic. 1000 feeds is far more than any platform
-                -- needs, so giving up past it leaves the short > 0 assertion
-                -- below to report the dead clock.
-                until taken >= 0.1 or feeds >= 1000
+                -- CI with no diagnostic: 100 feeds that leave it at 0 hand that
+                -- to the short > 0 assertion below, and 1000 feeds bound any
+                -- other run that never reaches the floor.
+                until taken >= 0.1 or feeds >= 1000 or (taken == 0 and feeds >= 100)
                 collectgarbage("restart")
                 return taken / feeds
             end

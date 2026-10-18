@@ -217,8 +217,8 @@ struct TConsoleModel
     // Client output, appended at the end of the buffer and copied to --mirror. The view showing the
     // model brings the new lines into view (TConsole::showNewLines()).
     void print(const QString& msg);
-    // timeStampOverride keeps the arrival time for held-back content being replayed.
-    void print(const QString& msg, const QColor& fgColor, const QColor& bgColor, const QString& timeStampOverride = QString());
+    // timeStampOverride keeps the arrival time for held-back content being replayed; csmNoTimeStamp stamps it now.
+    void print(const QString& msg, const QColor& fgColor, const QColor& bgColor, qint64 timeStampOverride = TBuffer::csmNoTimeStamp);
     void printSystemMessage(const QString& msg);
 
     // What printCommand() did to the buffer, which decides what the view repaints.

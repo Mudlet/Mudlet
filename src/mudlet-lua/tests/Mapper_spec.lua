@@ -4386,28 +4386,99 @@ describe("Tests saveMap and loadMap", function()
     end)
   end)
 
-  -- Careful with the order of anything added here: a load that fails can still
-  -- have emptied the map first, both for a missing binary file
-  -- (Host::loadMapFile clears before it restores) and for a map document
-  -- that will not parse (TMap::readXmlMapFile clears before it parses), so most
-  -- of these leave no map behind for the next spec. A file that is not a map
-  -- document at all is the exception: it is refused before the clear.
+  -- Careful with the order of anything added here: a map document that will
+  -- not parse has emptied the map first (TMap::readXmlMapFile clears before it
+  -- parses), so it leaves no map behind for the next spec. A file that is not
+  -- a map document at all is refused before the clear, and a binary map file
+  -- that cannot be read leaves the loaded map alone.
   describe("Tests the loadMap argument contract", function()
     it("hard-errors on a path that is not a string", function()
       assert.has_error(function() loadMap({}) end)
     end)
 
-    it("returns false for a binary map file that is not there", function()
+    local function keeperMap(areaName)
+      deleteMap()
+      local area = addAreaName(areaName)
+      local rooms = {}
+      for i = 1, 17 do
+        local id = createRoomID()
+        addRoom(id)
+        setRoomArea(id, area)
+        setRoomCoordinates(id, i, 0, 0)
+        setRoomName(id, "room number " .. i)
+        rooms[i] = id
+      end
+      return rooms, area
+    end
+
+    local function assertKept(rooms, area, firstName)
+      assert.are.equal(#rooms, table.size(getRooms()))
+      assert.are.equal(firstName, getRoomName(rooms[1]))
+      assert.are.equal(area, getRoomArea(rooms[#rooms]))
+      assert.are.equal("room number " .. #rooms, getRoomName(rooms[#rooms]))
+    end
+
+    local function readFile(path)
+      local file = assert(io.open(path, "rb"))
+      local data = file:read("*a")
+      file:close()
+      return data
+    end
+
+    local function writeFile(path, data)
+      local file = assert(io.open(path, "wb"))
+      file:write(data)
+      file:close()
+    end
+
+    -- The profile's own map files, and those of earlier specs, go aside for
+    -- the length of a spec that needs every file in the folder to be its own
+    local function onlyTheseMapFiles()
+      local aside = getMudletHomeDir() .. "/mapper_spec_map_aside"
+      lfs.mkdir(aside)
+      local moved = {}
+      local function putBack()
+        local failed = {}
+        for _, entry in ipairs(moved) do
+          local ok, message = os.rename(aside .. "/" .. entry, mapDirectory .. "/" .. entry)
+          if not ok then
+            failed[#failed + 1] = message
+          end
+        end
+        moved = {}
+        lfs.rmdir(aside)
+        assert(#failed == 0, "map files left in " .. aside .. ": " .. table.concat(failed, "; "))
+      end
+      local entries = {}
+      for entry in lfs.dir(mapDirectory) do
+        if lfs.attributes(mapDirectory .. "/" .. entry, "mode") == "file" then
+          entries[#entries + 1] = entry
+        end
+      end
+      for _, entry in ipairs(entries) do
+        local ok, message = os.rename(mapDirectory .. "/" .. entry, aside .. "/" .. entry)
+        if not ok then
+          putBack()
+          error(message)
+        end
+        moved[#moved + 1] = entry
+      end
+      return putBack
+    end
+
+    it("returns false for a binary map file that is not there, keeping the loaded map", function()
+      local rooms, area = keeperMap("MapperSpecMissingFileKeepArea")
+
       assert.is_false(loadMap(mapDirectory .. "/nosuchmapfile.dat"))
+
+      assertKept(rooms, area, "room number 1")
     end)
 
     -- A binary map file opens with its format version as a four byte big endian
-    -- int, which is all these two files carry: the reader gives up on the
-    -- version alone and never reaches the rest.
+    -- int, which is all the files written by this carry: the reader gives up on
+    -- the version alone and never reaches the rest.
     local function writeBinaryMapVersion(path, version)
-      local file = assert(io.open(path, "wb"))
-      file:write(string.char(0, 0, math.floor(version / 256), version % 256))
-      file:close()
+      writeFile(path, string.char(0, 0, math.floor(version / 256), version % 256))
     end
 
     it("refuses a binary map file whose format version makes no sense", function()
@@ -4418,19 +4489,235 @@ describe("Tests saveMap and loadMap", function()
       assert.is_false(loadMap(path))
     end)
 
-    it("refuses a binary map file written by a newer Mudlet", function()
+    it("refuses a binary map file written by a newer Mudlet, keeping the loaded map", function()
       local path = getMudletHomeDir() .. "/mapper_spec_future_version.dat"
       finally(function() os.remove(path) end)
+      local rooms, area = keeperMap("MapperSpecFutureVersionKeepArea")
       -- inside the 1 to 127 range that passes for a version, but beyond the
       -- highest format this Mudlet knows how to read
       writeBinaryMapVersion(path, 127)
 
       assert.is_false(loadMap(path))
+
+      assertKept(rooms, area, "room number 1")
     end)
 
-    -- loadMap() clears the map before it reads the file, so an unreadable one
-    -- destroys the map that was loaded (#10394) - unlike the XML path above.
-    pending("a binary map file that cannot be read leaves the loaded map alone")
+    it("keeps the loaded map when a binary map file cannot be read (#10394)", function()
+      local path = getMudletHomeDir() .. "/mapper_spec_unreadable.dat"
+      finally(function() os.remove(path) end)
+      local rooms, area = keeperMap("MapperSpecUnreadableKeepArea")
+      writeBinaryMapVersion(path, 0)
+
+      assert.is_false(loadMap(path))
+
+      assertKept(rooms, area, "room number 1")
+    end)
+
+    it("keeps a temporary map label when a binary map file cannot be read", function()
+      local path = getMudletHomeDir() .. "/mapper_spec_unreadable.dat"
+      finally(function() os.remove(path) end)
+      local _, area = keeperMap("MapperSpecUnreadableLabelArea")
+      local temporaryId = createMapLabel(area, "Temporary", 1, 1, 0, 255, 255, 255, 0, 0, 0,
+                                         30.0, 50, true, true, "", 255, 50, true)
+      writeBinaryMapVersion(path, 0)
+
+      assert.is_false(loadMap(path))
+
+      assert.are.equal("Temporary", getMapLabels(area)[temporaryId])
+    end)
+
+    it("falls back to the next newest map file when the newest is cut short", function()
+      local olderPath = mapDirectory .. "/mapper_spec_older_whole.dat"
+      local newerPath = getMudletHomeDir() .. "/mapper_spec_newer_whole.dat"
+      local newestPath = mapDirectory .. "/mapper_spec_newest_cut_short.dat"
+      finally(function()
+        os.remove(olderPath)
+        os.remove(newerPath)
+        os.remove(newestPath)
+      end)
+      local rooms, area = keeperMap("MapperSpecNewestCutShortArea")
+      assert.is_true(saveMap(olderPath))
+      -- the newest file is of a map of its own, so that reading what there is
+      -- of it cannot pass for the older one
+      setRoomName(rooms[1], "Only In The Newest File")
+      assert.is_true(saveMap(newerPath))
+      local data = readFile(newerPath)
+      writeFile(newestPath, data:sub(1, #data - 3))
+      -- ahead of any other file in the folder, the cut one first
+      assert.is_true(lfs.touch(olderPath, os.time() + 60, os.time() + 60))
+      assert.is_true(lfs.touch(newestPath, os.time() + 120, os.time() + 120))
+      deleteMap()
+
+      -- with no file named, loadMap() looks for the newest one, as at profile start
+      assert.is_true(loadMap())
+
+      assertKept(rooms, area, "room number 1")
+    end)
+
+    it("replaces the map user data when the newest map file is a JSON one", function()
+      local jsonPath = mapDirectory .. "/mapper_spec_newest.json"
+      finally(function() os.remove(jsonPath) end)
+      local rooms, area = keeperMap("MapperSpecNewestJsonArea")
+      setMapUserData("mapper.spec.in.the.file", "from the file")
+      assert.is_true(saveJsonMap(jsonPath))
+      assert.is_true(lfs.touch(jsonPath, os.time() + 120, os.time() + 120))
+      clearMapUserData()
+      setMapUserData("mapper.spec.only.in.the.loaded.map", "from the loaded map")
+
+      assert.is_true(loadMap())
+
+      assertKept(rooms, area, "room number 1")
+      assert.are.equal("from the file", getMapUserData("mapper.spec.in.the.file"))
+      assert.is_nil(getMapUserData("mapper.spec.only.in.the.loaded.map"))
+    end)
+
+    it("replaces the map user data on falling back past a JSON map file that will not parse", function()
+      local olderPath = mapDirectory .. "/mapper_spec_older_whole.json"
+      local newestPath = mapDirectory .. "/mapper_spec_newest_broken.json"
+      finally(function()
+        os.remove(olderPath)
+        os.remove(newestPath)
+      end)
+      local rooms, area = keeperMap("MapperSpecOlderJsonArea")
+      setMapUserData("mapper.spec.in.the.file", "from the file")
+      assert.is_true(saveJsonMap(olderPath))
+      writeFile(newestPath, "{ this is not JSON")
+      assert.is_true(lfs.touch(olderPath, os.time() + 60, os.time() + 60))
+      assert.is_true(lfs.touch(newestPath, os.time() + 120, os.time() + 120))
+      clearMapUserData()
+      setMapUserData("mapper.spec.only.in.the.loaded.map", "from the loaded map")
+
+      assert.is_true(loadMap())
+
+      assertKept(rooms, area, "room number 1")
+      assert.are.equal("from the file", getMapUserData("mapper.spec.in.the.file"))
+      assert.is_nil(getMapUserData("mapper.spec.only.in.the.loaded.map"))
+    end)
+
+    it("keeps the map user data when the only map file is a JSON one that will not parse", function()
+      local brokenPath = mapDirectory .. "/mapper_spec_only_broken.json"
+      local putBack = onlyTheseMapFiles()
+      finally(function()
+        os.remove(brokenPath)
+        putBack()
+      end)
+      local rooms, area = keeperMap("MapperSpecOnlyBrokenJsonArea")
+      clearMapUserData()
+      setMapUserData("mapper.spec.in.the.loaded.map", "from the loaded map")
+      writeFile(brokenPath, "{ this is not JSON")
+
+      assert.is_false(loadMap())
+
+      assertKept(rooms, area, "room number 1")
+      assert.are.equal("from the loaded map", getMapUserData("mapper.spec.in.the.loaded.map"))
+    end)
+
+    it("refuses a binary map file cut short, keeping the loaded map", function()
+      local wholePath = getMudletHomeDir() .. "/mapper_spec_whole.dat"
+      local cutPath = getMudletHomeDir() .. "/mapper_spec_cut_short.dat"
+      finally(function()
+        os.remove(wholePath)
+        os.remove(cutPath)
+      end)
+      local rooms, area = keeperMap("MapperSpecCutShortKeepArea")
+      clearMapUserData()
+      setMapUserData("mapper.spec.key", "in the file")
+      assert.is_true(saveMap(wholePath))
+      local data = readFile(wholePath)
+      -- so that only the map from before the load can pass, not the file's
+      setRoomName(rooms[1], "Only In The Loaded Map")
+      setMapUserData("mapper.spec.key", "only in the loaded map")
+      setCustomEnvColor(300, 10, 20, 30, 255)
+      centerview(rooms[5])
+
+      -- one cut inside the header, one inside the last room
+      for _, length in ipairs({40, #data - 3}) do
+        writeFile(cutPath, data:sub(1, length))
+
+        assert.is_false(loadMap(cutPath), "cut to " .. length .. " bytes")
+        assertKept(rooms, area, "Only In The Loaded Map")
+        assert.are.equal("only in the loaded map", getMapUserData("mapper.spec.key"))
+        assert.are.same({10, 20, 30, 255}, getCustomEnvColorTable()[300])
+        assert.are.equal(rooms[5], getPlayerRoom())
+      end
+    end)
+
+    -- #10678: a format version below 4 reads the rest of the file as rooms
+    it("refuses a binary map file whose format version was changed to 3, keeping the loaded map", function()
+      local wholePath = getMudletHomeDir() .. "/mapper_spec_whole.dat"
+      local patchedPath = getMudletHomeDir() .. "/mapper_spec_version_three.dat"
+      finally(function()
+        os.remove(wholePath)
+        os.remove(patchedPath)
+      end)
+      local rooms, area = keeperMap("MapperSpecVersionThreeKeepArea")
+      assert.is_true(saveMap(wholePath))
+      setRoomName(rooms[1], "Only In The Loaded Map")
+      writeFile(patchedPath, string.char(0, 0, 0, 3) .. readFile(wholePath):sub(5))
+
+      assert.is_false(loadMap(patchedPath))
+
+      assertKept(rooms, area, "Only In The Loaded Map")
+    end)
+
+    -- A JSON export pumps the event loop as it goes, which runs timers - and
+    -- whatever they load - in the middle of it
+    local function loadDuringJsonExport(load)
+      local exportPath = getMudletHomeDir() .. "/mapper_spec_export_under_load.json"
+      local loadResult = "never ran"
+      local timer = tempTimer(0, function()
+        loadResult = load()
+      end)
+      local exported, message = saveJsonMap(exportPath)
+      -- An export that never pumped would leave the load to fire in a later spec
+      killTimer(timer)
+      os.remove(exportPath)
+      return exported, message, loadResult
+    end
+
+    it("lets a JSON export finish past a binary map file it refused", function()
+      local wholePath = getMudletHomeDir() .. "/mapper_spec_whole.dat"
+      local cutPath = getMudletHomeDir() .. "/mapper_spec_cut_short.dat"
+      finally(function()
+        os.remove(wholePath)
+        os.remove(cutPath)
+      end)
+      local rooms, area = keeperMap("MapperSpecExportPastRefusedArea")
+      assert.is_true(saveMap(wholePath))
+      local data = readFile(wholePath)
+      writeFile(cutPath, data:sub(1, #data - 3))
+
+      local exported, message, loaded = loadDuringJsonExport(function() return loadMap(cutPath) end)
+
+      assert.is_false(loaded)
+      assert.is_true(exported, message)
+      assertKept(rooms, area, "room number 1")
+    end)
+
+    it("does not fall back past a newest JSON map file refused because a JSON export is running", function()
+      local olderPath = mapDirectory .. "/mapper_spec_older_whole.dat"
+      local newestPath = mapDirectory .. "/mapper_spec_newest_while_exporting.json"
+      finally(function()
+        os.remove(olderPath)
+        os.remove(newestPath)
+      end)
+      local rooms, area = keeperMap("MapperSpecNewestJsonWhileExportingArea")
+      setRoomName(rooms[1], "Only In The Older File")
+      assert.is_true(saveMap(olderPath))
+      assert.is_true(saveJsonMap(newestPath))
+      assert.is_true(lfs.touch(olderPath, os.time() + 60, os.time() + 60))
+      assert.is_true(lfs.touch(newestPath, os.time() + 120, os.time() + 120))
+      setRoomName(rooms[1], "room number 1")
+
+      local exported, message, loaded = loadDuringJsonExport(function() return loadMap() end)
+
+      assert.is_false(loaded)
+      assert.is_true(exported, message)
+      assertKept(rooms, area, "room number 1")
+      local lineCount = getLineCount("main")
+      local console = table.concat(getLines("main", math.max(0, lineCount - 10), lineCount), "\n")
+      assert.is_truthy(console:find("No older map file will be tried instead.", 1, true), console)
+    end)
 
     it("returns nil and a message naming the missing XML file", function()
       local ok, message = loadMap(mapDirectory .. "/nosuchmapfile.xml")
@@ -5279,6 +5566,19 @@ describe("Tests saveJsonMap and loadJsonMap", function()
       assert.is_true(loadJsonMap(jsonPath))
     end
 
+    it("replaces the map user data with the file's, as it does the rest of the map", function()
+      buildMap()
+      clearMapUserData()
+      setMapUserData("mapper.spec.in.the.file", "from the file")
+      assert.is_true(saveJsonMap(jsonPath))
+      setMapUserData("mapper.spec.only.in.the.loaded.map", "from the loaded map")
+
+      assert.is_true(loadJsonMap(jsonPath))
+
+      assert.are.equal("from the file", getMapUserData("mapper.spec.in.the.file"))
+      assert.is_nil(getMapUserData("mapper.spec.only.in.the.loaded.map"))
+    end)
+
     it("puts every kind of room data back exactly as it was saved", function()
       buildMap()
       roundTrip()
@@ -5671,6 +5971,10 @@ describe("Tests saveJsonMap and loadJsonMap", function()
       rewriteExport(function(document)
         for _, exportedArea in ipairs(document.areas) do
           if exportedArea.id == area then
+            -- an older export has no outline color field on the label
+            for _, label in ipairs(exportedArea.labels or {}) do
+              label.outlineColor = nil
+            end
             exportedArea.userData = exportedArea.userData or {}
             exportedArea.userData[outlineKey] = "1|2|3|255"
             -- the label's own "font" object says what its font is
@@ -5946,8 +6250,227 @@ describe("Tests saveJsonMap and loadJsonMap", function()
       assert.is_true(loadJsonMap(jsonPath))
 
       assert.are.same({}, getAllMapUserData())
+      end)
+
+    local function exportedLabels(area)
+      assert.is_true(saveJsonMap(jsonPath))
+      local file = assert(io.open(jsonPath, "r"))
+      local document = yajl.to_value(file:read("*a"))
+      file:close()
+      for _, exportedArea in ipairs(document.areas) do
+        if exportedArea.id == area then
+          local labels = {}
+          for _, label in ipairs(exportedArea.labels or {}) do
+            labels[label.id] = label
+          end
+          return labels
+        end
+      end
+      error("area " .. tostring(area) .. " is not in the exported document")
+    end
+
+    -- getMapLabel() reports neither the outline nor the font, so they are
+    -- read from what a second export makes of the imported labels
+    it("puts a map label's outline colour back, and no font on a label that had none", function()
+      deleteMap()
+      local area = addAreaName("MapperSpecJsonLabelOutlineArea")
+      roomA = createRoomID(); addRoom(roomA); setRoomArea(roomA, area)
+      local outlinedId = createMapLabel(area, "Outlined", 0, 0, 0, 255, 255, 255, 0, 0, 0,
+                                        30.0, 12, true, false, "Bitstream Vera Sans", 255, 50, false, 255, 255, 0)
+      local fontlessId = createMapLabel(area, "Fontless", 1, 1, 0, 255, 255, 255, 0, 0, 0,
+                                        30.0, 12, true, false, "", 255, 50, false)
+      local before = exportedLabels(area)
+      assert.is_nil(before[fontlessId].font)
+
+      roundTrip()
+
+      local after = exportedLabels(area)
+      assert.is_table(after[outlinedId].outlineColor)
+      assert.are.same({255, 255, 0}, after[outlinedId].outlineColor.color24RGB)
+      assert.are.equal("Bitstream Vera Sans", after[outlinedId].font.family)
+      assert.is_nil(after[fontlessId].font)
     end)
 
+    local function rewriteExportedArea(area, edit)
+      assert.is_true(saveJsonMap(jsonPath))
+      local file = assert(io.open(jsonPath, "r"))
+      local document = yajl.to_value(file:read("*a"))
+      file:close()
+      for _, exportedArea in ipairs(document.areas) do
+        if exportedArea.id == area then
+          exportedArea.userData = exportedArea.userData or {}
+          edit(exportedArea)
+        end
+      end
+      file = assert(io.open(jsonPath, "w"))
+      file:write(yajl.to_string(document))
+      file:close()
+      deleteMap()
+      assert.is_true(loadJsonMap(jsonPath))
+    end
+
+    it("takes a label's outline colour from the area user data of a file that has it only there", function()
+      deleteMap()
+      local area = addAreaName("MapperSpecJsonLabelFallbackArea")
+      roomA = createRoomID(); addRoom(roomA); setRoomArea(roomA, area)
+      local labelId = createMapLabel(area, "Fallback", 0, 0, 0, 255, 255, 255, 0, 0, 0,
+                                     30.0, 12, true, false, "", 255, 50, false)
+      -- an older Mudlet's export after a binary save: outline colours only in
+      -- the area user data, beside a font key left over from a deleted label
+      rewriteExportedArea(area, function(exportedArea)
+        for _, label in ipairs(exportedArea.labels) do
+          label.outlineColor = nil
+        end
+        exportedArea.userData["system.labelOutlineColor_" .. labelId] = "0|128|255|255"
+        exportedArea.userData["system.labelFont_" .. labelId] = "Bitstream Vera Sans|12|400|0"
+      end)
+
+      local after = exportedLabels(area)
+      assert.are.same({0, 128, 255}, after[labelId].outlineColor.color24RGB)
+      -- every writer leaves "font" out exactly when the label has none, so a
+      -- font key beside such a label belonged to an earlier one with its id
+      assert.is_nil(after[labelId].font)
+      assert.is_nil(getAllAreaUserData(area)["system.labelOutlineColor_" .. labelId])
+      assert.is_nil(getAllAreaUserData(area)["system.labelFont_" .. labelId])
+    end)
+
+    it("takes a label's outline colour from the area user data when the file's own is unreadable", function()
+      deleteMap()
+      local area = addAreaName("MapperSpecJsonLabelBadOutlineArea")
+      roomA = createRoomID(); addRoom(roomA); setRoomArea(roomA, area)
+      local labelId = createMapLabel(area, "Unreadable", 0, 0, 0, 255, 255, 255, 0, 0, 0,
+                                     30.0, 12, true, false, "Bitstream Vera Sans", 255, 50, false, 0, 128, 255)
+      rewriteExportedArea(area, function(exportedArea)
+        for _, label in ipairs(exportedArea.labels) do
+          label.outlineColor = {color24RGB = {255, 255}}
+        end
+        exportedArea.userData["system.labelOutlineColor_" .. labelId] = "255|0|0|255"
+      end)
+
+      assert.are.same({255, 0, 0}, exportedLabels(area)[labelId].outlineColor.color24RGB)
+      assert.is_nil(getAllAreaUserData(area)["system.labelOutlineColor_" .. labelId])
+    end)
+
+    it("keeps a label without a font fontless through a binary save and load", function()
+      local binaryPath = getMudletHomeDir() .. "/mapper_spec_label_fontless.dat"
+      finally(function() os.remove(binaryPath) end)
+      deleteMap()
+      local area = addAreaName("MapperSpecBinaryFontlessLabelArea")
+      roomA = createRoomID(); addRoom(roomA); setRoomArea(roomA, area)
+      local fontedId = createMapLabel(area, "Fonted", 0, 0, 0, 255, 255, 255, 0, 0, 0,
+                                      30.0, 12, true, false, "Bitstream Vera Sans", 255, 50, false)
+      local fontlessId = createMapLabel(area, "Fontless", 1, 1, 0, 255, 255, 255, 0, 0, 0,
+                                        30.0, 12, true, false, "", 255, 50, false)
+      assert.is_true(saveMap(binaryPath))
+      deleteMap()
+      assert.is_true(loadMap(binaryPath))
+
+      local after = exportedLabels(area)
+      assert.are.equal("Bitstream Vera Sans", after[fontedId].font.family)
+      assert.is_nil(after[fontlessId].font)
+    end)
+
+    it("does not give a deleted label's font to a later label given its id", function()
+      local binaryPath = getMudletHomeDir() .. "/mapper_spec_label_reused_id.dat"
+      finally(function() os.remove(binaryPath) end)
+      deleteMap()
+      local area = addAreaName("MapperSpecJsonLabelReusedIdArea")
+      roomA = createRoomID(); addRoom(roomA); setRoomArea(roomA, area)
+      local deletedId = createMapLabel(area, "Deleted", 0, 0, 0, 255, 255, 255, 0, 0, 0,
+                                       30.0, 12, true, false, "Bitstream Vera Sans", 255, 50, false)
+      assert.is_true(saveMap(binaryPath))
+      deleteMapLabel(area, deletedId)
+      local reusedId = createMapLabel(area, "Fontless", 0, 0, 0, 255, 255, 255, 0, 0, 0,
+                                      30.0, 12, true, false, "", 255, 50, false)
+      assert.are.equal(deletedId, reusedId)
+
+      roundTrip()
+
+      assert.is_nil(exportedLabels(area)[reusedId].font)
+    end)
+
+    it("puts each area's 2D map zoom back", function()
+      deleteMap()
+      local zooms = {MapperSpecJsonZoomA = 33, MapperSpecJsonZoomB = 44.5, MapperSpecJsonZoomC = 1234}
+      local areas = {}
+      for name, zoom in pairs(zooms) do
+        local area = addAreaName(name)
+        local room = createRoomID(); addRoom(room); setRoomArea(room, area)
+        roomA = room
+        assert.is_true(setMapZoom(zoom, area))
+        areas[name] = area
+      end
+
+      roundTrip()
+
+      for name, zoom in pairs(zooms) do
+        assert.are.equal(zoom, getMapZoom(areas[name]), name)
+      end
+    end)
+
+    it("keeps an area's default zoom over a script's legacy fallback key, as a binary save does", function()
+      deleteMap()
+      local area = addAreaName("MapperSpecJsonZoomScriptKey")
+      roomA = createRoomID(); addRoom(roomA); setRoomArea(roomA, area)
+      assert.is_true(setAreaUserData(area, "system.fallback_map2DZoom", "50"))
+
+      roundTrip()
+
+      assert.are.equal(20, getMapZoom(area))
+    end)
+
+    describe("an area's 2D map zoom in an edited JSON file", function()
+      local editedPath = getMudletHomeDir() .. "/mapper_spec_zoom_edited.json"
+
+      after_each(function()
+        os.remove(editedPath)
+      end)
+
+      -- exports one area at zoom 33, swaps its zoom2D member for replacement, imports that
+      local function importWithZoom(replacement)
+        deleteMap()
+        local area = addAreaName("MapperSpecJsonZoomEdited")
+        local room = createRoomID(); addRoom(room); setRoomArea(room, area)
+        assert.is_true(setMapZoom(33, area))
+        assert.is_true(saveJsonMap(jsonPath))
+        local file = assert(io.open(jsonPath, "r"))
+        local text = file:read("*a")
+        file:close()
+        local edited, count = text:gsub(',%s*"zoom2D": 33', replacement)
+        assert.are.equal(1, count, "the export should hold the area's zoom2D member")
+        file = assert(io.open(editedPath, "w"))
+        file:write(edited)
+        file:close()
+        deleteMap()
+        assert.is_true(loadJsonMap(editedPath))
+        return area
+      end
+
+      it("is the default zoom when the area has no zoom2D member", function()
+        assert.are.equal(20, getMapZoom(importWithZoom("")))
+      end)
+
+      it("is refused below the mapper's minimum zoom", function()
+        assert.are.equal(20, getMapZoom(importWithZoom(', "zoom2D": 1')))
+      end)
+
+      it("is ignored when it is not a number", function()
+        assert.are.equal(20, getMapZoom(importWithZoom(', "zoom2D": "33"')))
+      end)
+
+      -- a format 20 binary save by Mudlet 5.0.1 or older put this key into the
+      -- live area user data, so that build's JSON export carried it
+      it("is taken from the legacy fallback user data key of an older export", function()
+        local area = importWithZoom(', "userData": {"system.fallback_map2DZoom": "33"}')
+        assert.are.equal(33, getMapZoom(area))
+        assert.is_nil(getAllAreaUserData(area)["system.fallback_map2DZoom"])
+      end)
+
+      it("is the zoom2D member when the file also holds the legacy fallback key", function()
+        local area = importWithZoom(', "zoom2D": 44, "userData": {"system.fallback_map2DZoom": "33"}')
+        assert.are.equal(44, getMapZoom(area))
+      end)
+    end)
   end)
 
   describe("Tests the saveJsonMap and loadJsonMap argument contract", function()

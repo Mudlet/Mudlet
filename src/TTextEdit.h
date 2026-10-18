@@ -276,6 +276,9 @@ private:
     mutable LineLayout mPreviousLineLayout;
     mutable LineLayout mCurrentLineLayout;
     mutable LineLayout mOverflowLineLayout;
+    // Owns the timestamp text the layouts' graphemes view; formatTimeStamp()
+    // keeps only its latest result, and the line text itself lives in TBuffer.
+    mutable std::vector<QString> mLaidOutTimeStamps;
     std::unique_ptr<TGlyphCache> mpGlyphCache;
     int mFontHeight;
     int mFontWidth;

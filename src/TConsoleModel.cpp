@@ -299,7 +299,7 @@ void TConsoleModel::print(const QString& msg)
     mirrorToStdOut(msg);
 }
 
-void TConsoleModel::print(const QString& msg, const QColor& fgColor, const QColor& bgColor, const QString& timeStampOverride)
+void TConsoleModel::print(const QString& msg, const QColor& fgColor, const QColor& bgColor, const qint64 timeStampOverride)
 {
     buffer.append(msg, 0, msg.size(), fgColor, bgColor, TChar::None, 0, timeStampOverride);
     mirrorToStdOut(msg);

@@ -2390,7 +2390,7 @@ int TLuaInterpreter::getTimestamp(lua_State* L)
         return warnArgumentValue(L, __func__, qsl("mini console, user window or buffer '%1' not found").arg(name));
     }
     if (luaLine < pModel->buffer.timeBuffer.size()) {
-        lua_pushstring(L, pModel->buffer.timeBuffer.at(luaLine).toUtf8().constData());
+        lua_pushstring(L, pModel->buffer.timeStampText(luaLine).toUtf8().constData());
         return 1;
     }
     return warnArgumentValue(L, __func__, qsl("line number %1 invalid, it is beyond the last line of the buffer").arg(luaLine));
