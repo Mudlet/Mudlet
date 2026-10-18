@@ -152,8 +152,9 @@ public:
 
     // Makes the user window unless one has that name and shows it, then floats it ("f") or docks it
     // ("r", "l", "t", "b"), each also accepted as the word it stands for; an empty or unknown area leaves
-    // it where it is. Host refuses a name that is some other window's.
-    virtual void openUserWindow(const QString& name, bool loadLayout, bool autoDock, const QString& area) = 0;
+    // it where it is. Host refuses a name that is some other window's. False when a handler it runs deletes the window
+    // or puts another in its place, so the call goes no further.
+    virtual bool openUserWindow(const QString& name, bool loadLayout, bool autoDock, const QString& area) = 0;
     // These fail for a name that is not a user window's; an empty text restores the default title.
     virtual std::pair<bool, QString> setUserWindowStyleSheet(const QString& name, const QString& userWindowStyleSheet) = 0;
     virtual std::pair<bool, QString> setUserWindowTitle(const QString& name, const QString& text) = 0;

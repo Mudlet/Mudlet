@@ -20,11 +20,13 @@
 #include "TNullConsoleFrontend.h"
 
 #include "Host.h"
+#include "TAppFrontend.h"
 #include "TEvent.h"
 #include "TLabelModel.h"
 #include "TMap.h"
 
 #include <QCoreApplication>
+#include <QDataStream>
 #include <QFontMetrics>
 #include <QFontMetricsF>
 #include <QGuiApplication>
@@ -590,6 +592,17 @@ TPrintSink* TNullMxpFrameFrontend::sink(const QString& name) const
     return mView.frameSink(name);
 }
 
+// Geometry then shown, as a std::pair<QRect, bool> streams: this order is the file format
+QDataStream& operator<<(QDataStream& out, const TNullConsoleFrontend::Placement& placement)
+{
+    return out << placement.geometry << placement.shown;
+}
+
+QDataStream& operator>>(QDataStream& in, TNullConsoleFrontend::Placement& placement)
+{
+    return in >> placement.geometry >> placement.shown;
+}
+
 TNullConsoleFrontend::TNullConsoleFrontend(Host* pHost)
 : mpHost(pHost)
 {
@@ -600,7 +613,10 @@ TNullConsoleFrontend::~TNullConsoleFrontend() = default;
 // For a view taking over, whose command lines are its own: nothing here writes a setting again
 void TNullConsoleFrontend::dropWindows()
 {
-    dropModels();
+    {
+        const QScopedValueRollback dropping(mDroppingWindows, true);
+        dropModels();
+    }
     mpMainHolder = std::make_unique<QObject>();
     mFrameHolders.clear();
     // The view's TCommandLine has its own menu items, which go with it
@@ -931,6 +947,11 @@ void TNullConsoleFrontend::removeSubConsole(const QString& name, const bool keep
     const bool userWindow = registry.subConsoleKind(name) == TWindowRegistry::SubConsoleKind::UserWindow;
     const bool shown = it->second.shown;
     if (userWindow) {
+        // Not as the profile goes, where its close has already saved or held where its windows were, nor as a view
+        // takes over, which no script asked for
+        if (!mpHost->isClosingDown() && !mDroppingWindows) {
+            TAppFrontend::instance()->userWindowRemoved(mpHost, name);
+        }
         // removeDockWidget() hides a shown dock, which reports what it holds, but a hidden one's report waits for its
         // deferred deletes
         QStringList deferred;
@@ -1091,13 +1112,14 @@ void TNullConsoleFrontend::closeSubConsole(const QString& name)
     }
 }
 
-void TNullConsoleFrontend::openUserWindow(const QString& name, bool, bool, const QString&)
+bool TNullConsoleFrontend::openUserWindow(const QString& name, const bool loadLayout, bool, const QString&)
 {
     TWindowRegistry& registry = mpHost->windowRegistry();
-    if (!mSubConsoles.count(name)) {
+    const bool make = !mSubConsoles.count(name);
+    if (make) {
         if (registry.hasSubConsole(name)) {
             // A detached view's, which this has no dock for
-            return;
+            return true;
         }
         addSubConsole(name, TWindowRegistry::SubConsoleKind::UserWindow, QString());
         registry.registerDockWidget(name);
@@ -1107,10 +1129,32 @@ void TNullConsoleFrontend::openUserWindow(const QString& name, bool, bool, const
         const QSize size = mpHost->mainWindowSize().value_or(QSize());
         registry.setSubConsoleGeometry(name, QRect(QPoint(0, 0), size));
         registry.setUserWindowSize(name, size);
+    }
+    const QPointer<const QObject> window = &mSubConsoles.at(name).pModel->mNotifier;
+    // A handler run as it is made, as the layout loads or as it shows can delete it, or open another of its name in its
+    // place, as TMainConsole::placeUserWindow() finds
+    const auto gone = [this, &name, &window]() {
+        const auto it = mSubConsoles.find(name);
+        return !window || it == mSubConsoles.end() || &it->second.pModel->mNotifier != window;
+    };
+    if (make) {
         // As TMainConsole::createUserWindow() sizes its font, which raises sysFontChangeEvent
         setWindowFontSize(name, 10);
+        if (gone()) {
+            return false;
+        }
+    }
+    // As TMainConsole::placeUserWindow(): once per window and before its show, so the first show after it, the load's or
+    // this one, reports the size restored
+    if (bool& layoutRequested = mSubConsoles.at(name).layoutRequested; loadLayout && !layoutRequested) {
+        layoutRequested = true;
+        TAppFrontend::instance()->loadWindowLayout();
+        if (gone()) {
+            return false;
+        }
     }
     setSubConsoleShown(name, true);
+    return !gone();
 }
 
 void TNullConsoleFrontend::setProfileStyleSheet(const QString& styleSheet)
@@ -1137,7 +1181,11 @@ std::pair<bool, QString> TNullConsoleFrontend::createMapper(const QString& windo
         // A detached view's user window, which only that view could make a mapper in
         return noView();
     }
-    mMapWidget.reset();
+    if (mMapWidget) {
+        // As TMainConsole::createMapper() deleting the hidden map dock leaves QMainWindow its placeholder
+        TAppFrontend::instance()->mapWidgetRemoved(mpHost);
+        mMapWidget.reset();
+    }
     if (!mpEmbeddedMapper) {
         mpEmbeddedMapper = new TNullMapView(mpHost, holderFor(windowname, nullptr));
         mEmbeddedMapperWindow = userWindowOrMain(windowname);
@@ -1185,6 +1233,16 @@ void TNullConsoleFrontend::copyPlayerRoomStyleToMap()
             pMap->mPlayerRoomStyle, pMap->mPlayerRoomOuterDiameterPercentage, pMap->mPlayerRoomInnerDiameterPercentage, pMap->mPlayerRoomOuterColor, pMap->mPlayerRoomInnerColor);
 }
 
+// Docked, then the layout loaded, then shown, as TMainConsole::showNewMapperDock() does, so a load's handler that
+// places the map widget leaves it where it put it
+void TNullConsoleFrontend::showNewMapperDock()
+{
+    if (mMapWidget) {
+        mMapWidget->geometry = QRect(QPoint(0, 0), mpHost->mainWindowSize().value_or(QSize()));
+    }
+    TAppFrontend::instance()->loadWindowLayout();
+    placeMapWidget(QString(), -1, -1, -1, -1);
+}
 
 std::pair<bool, QString> TNullConsoleFrontend::placeMapWidget(const QString& area, const int x, const int y, const int width, const int height)
 {
@@ -1241,6 +1299,24 @@ std::optional<QRect> TNullConsoleFrontend::mapWidgetGeometry() const
     return mMapWidget->geometry;
 }
 
+std::optional<TNullConsoleFrontend::Placement> TNullConsoleFrontend::mapWidgetPlacement() const
+{
+    if (!mMapWidget) {
+        return std::nullopt;
+    }
+    return Placement{mMapWidget->geometry, mMapWidget->shown};
+}
+
+void TNullConsoleFrontend::restoreMapWidgetPlacement(const Placement& placement)
+{
+    if (!mMapWidget) {
+        return;
+    }
+    mMapWidget->geometry = placement.geometry;
+    mMapWidget->shown = placement.shown;
+    mMapWidget->pView->setShown(placement.shown);
+}
+
 bool TNullConsoleFrontend::hideMapWidget()
 {
     if (!mMapWidget || !mMapWidget->shown) {
@@ -1277,6 +1353,23 @@ bool TNullConsoleFrontend::setLabelShown(const QString& name, const bool shown)
     it->second.shown = shown;
     reportWindowVisibility(name);
     return true;
+}
+
+bool TNullConsoleFrontend::subConsoleShown(const QString& name) const
+{
+    const auto it = mSubConsoles.find(name);
+    return it != mSubConsoles.end() && it->second.shown;
+}
+
+// As TMainConsole::reportDockGeometry() reports each dock's name, leaving alone what it holds
+void TNullConsoleFrontend::reportUserWindowVisibility()
+{
+    const TWindowRegistry& registry = mpHost->windowRegistry();
+    for (const auto& [name, subConsole] : mSubConsoles) {
+        if (registry.subConsoleKind(name) == TWindowRegistry::SubConsoleKind::UserWindow) {
+            reportWindowVisibility(name);
+        }
+    }
 }
 
 bool TNullConsoleFrontend::setSubConsoleShown(const QString& name, const bool shown)

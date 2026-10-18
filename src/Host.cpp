@@ -5809,7 +5809,11 @@ std::pair<bool, QString> Host::openWindow(const QString& name, bool loadLayout, 
                "An existing console with a dock was expected to be a User Window but it isn't");
 
     // An unknown area still opens the window, just where it already was
-    consoleFrontend()->openUserWindow(name, loadLayout, autoDock, area);
+    // A handler this call runs, as the window is made, as the layout loads or as it shows, can delete it or put another in
+    // its place: either way, the window this call opened is gone
+    if (!consoleFrontend()->openUserWindow(name, loadLayout, autoDock, area) || mWindowRegistry.subConsoleKind(name) != TWindowRegistry::SubConsoleKind::UserWindow) {
+        return {false, qsl("userwindow '%1' was deleted while it was being opened").arg(name)};
+    }
     static const QStringList knownAreas{qsl("f"), qsl("floating"), qsl("r"), qsl("right"), qsl("l"), qsl("left"), qsl("t"), qsl("top"), qsl("b"), qsl("bottom")};
     if (!area.isEmpty() && !knownAreas.contains(area)) {
         return {false, qsl(R"(docking option "%1" not available. available docking options are "t" top, "b" bottom, "r" right, "l" left and "f" floating)").arg(area)};
