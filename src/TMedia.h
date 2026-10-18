@@ -275,7 +275,9 @@ private slots:
 private:
     bool isMediaProtocolAllowed(const TMediaData& mediaData) const;
     QList<std::shared_ptr<TMediaPlayer>> findMediaPlayersByCriteria(const TMediaData& mediaData);
-    bool isMediaMatch(const std::shared_ptr<TMediaPlayer>& player, const TMediaData& mediaData);
+    // resume() keeps MatchesCacheNameOnly, so a bare name never resumes another folder's copy of a same-named file
+    enum class BareName { MatchesCacheNameOnly, AlsoMatchesSourceFile };
+    bool isMediaMatch(const std::shared_ptr<TMediaPlayer>& player, const TMediaData& mediaData, BareName bareName = BareName::MatchesCacheNameOnly);
     TMediaData requestForFilePlayers(const TMediaData& mediaData) const;
     QString mediaCacheFileName(const QString& absolutePath) const;
     bool resume(TMediaData mediaData);

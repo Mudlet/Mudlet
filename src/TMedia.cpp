@@ -267,7 +267,7 @@ QList<TMediaData> TMedia::playingMedia(TMediaData& mediaData)
             continue;
         }
 
-        if (!isMediaMatch(pPlayer, mediaData)) {
+        if (!isMediaMatch(pPlayer, mediaData, BareName::AlsoMatchesSourceFile)) {
             continue;
         }
 
@@ -317,7 +317,7 @@ QList<TMediaData> TMedia::pausedMedia(TMediaData& mediaData)
             continue;
         }
 
-        if (!isMediaMatch(pPlayer, mediaData)) {
+        if (!isMediaMatch(pPlayer, mediaData, BareName::AlsoMatchesSourceFile)) {
             continue;
         }
 
@@ -363,7 +363,7 @@ void TMedia::pauseMedia(TMediaData& mediaData)
             continue;
         }
 
-        if (!isMediaMatch(pPlayer, pPlayer->mediaData().mediaInput() == TMediaData::MediaInputFile ? fileRequest : mediaData)) {
+        if (!isMediaMatch(pPlayer, pPlayer->mediaData().mediaInput() == TMediaData::MediaInputFile ? fileRequest : mediaData, BareName::AlsoMatchesSourceFile)) {
             continue;
         }
 
@@ -410,7 +410,7 @@ void TMedia::stopMedia(TMediaData& mediaData)
             continue;
         }
 
-        if (!isMediaMatch(pPlayer, pPlayer->mediaData().mediaInput() == TMediaData::MediaInputFile ? fileRequest : mediaData)) {
+        if (!isMediaMatch(pPlayer, pPlayer->mediaData().mediaInput() == TMediaData::MediaInputFile ? fileRequest : mediaData, BareName::AlsoMatchesSourceFile)) {
             continue;
         }
 
@@ -713,7 +713,7 @@ QString TMedia::mediaCacheFileName(const QString& absolutePath) const
     return firstFolder.compare(qsl("_profile"), Qt::CaseInsensitive) == 0 || firstFolder.compare(qsl("_absolute"), Qt::CaseInsensitive) == 0;
 }
 
-bool TMedia::isMediaMatch(const std::shared_ptr<TMediaPlayer>& player, const TMediaData& mediaData)
+bool TMedia::isMediaMatch(const std::shared_ptr<TMediaPlayer>& player, const TMediaData& mediaData, BareName bareName)
 {
     if (!player) {
         return false;
@@ -725,7 +725,11 @@ bool TMedia::isMediaMatch(const std::shared_ptr<TMediaPlayer>& player, const TMe
 
     // The path a file was played from still names it after the symlink it was resolved through changes
     const bool sameSource = !mediaData.mediaSourcePath().isEmpty() && player->mediaData().mediaSourcePath() == mediaData.mediaSourcePath();
-    if (!sameSource && !mediaData.mediaFileName().isEmpty() && !player->mediaData().mediaFileName().isEmpty() && player->mediaData().mediaFileName() != mediaData.mediaFileName()) {
+    // So stopSounds({name = "rain.wav"}) finds a rain.wav played from an absolute path, whose copy is filed
+    // under the folders it came from
+    const bool sameBareName = bareName == BareName::AlsoMatchesSourceFile && !mediaData.mediaFileName().contains(QLatin1Char('/')) && !player->mediaData().mediaSourcePath().isEmpty()
+                              && QFileInfo(player->mediaData().mediaSourcePath()).fileName() == mediaData.mediaFileName();
+    if (!sameSource && !sameBareName && !mediaData.mediaFileName().isEmpty() && !player->mediaData().mediaFileName().isEmpty() && player->mediaData().mediaFileName() != mediaData.mediaFileName()) {
         return false;
     }
 
@@ -2699,7 +2703,8 @@ void TMedia::printClosedCaption(const TMediaData& mediaData, const QString& acti
                                                                                               //: This word is part of a sentence like "Sound stops" when Mudlet handles neither music nor video.
                                                                                               : tr("sound");
         const QString mediaKey = mediaData.mediaKey();
-        const QString mediaFileName = mediaData.mediaFileName();
+        // The file's own name, not the name of its copy in the cache
+        const QString mediaFileName = mediaData.mediaSourcePath().isEmpty() ? mediaData.mediaFileName() : QFileInfo(mediaData.mediaSourcePath()).fileName();
         if (mediaKey.isEmpty()) {
             message = qsl("[%1 \"%2\" %3]\n").arg(mediaType, mediaFileName, action);
         } else {

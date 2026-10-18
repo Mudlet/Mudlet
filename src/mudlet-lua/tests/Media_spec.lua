@@ -2056,6 +2056,69 @@ describe("Media playback effects with a generated sound file", function()
     assert.equals(0, #getPausedSounds({key = "busted-shared-paused-sand"}))
   end)
 
+  -- A script can name the file alone, though its copy is filed under the folders it came from
+  it("a sound played from an absolute path is found by its bare name, and captioned with it", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    local key = "busted-absolute-bare-name"
+    local wasCaptioned = getConfig("enableClosedCaption")
+    onCleanup(function() setConfig("enableClosedCaption", wasCaptioned) end)
+    assert.is_true(setConfig("enableClosedCaption", true))
+    local outsideName = "busted-media-bare-name.wav"
+    local outside = writeOutsideFile(outsideName, "busted-media-bare-dir")
+    onCleanup(function() stopSounds() end)
+    local finished = {}
+    collect("sysMediaFinished", finished)
+
+    local mark = getLastLineNumber("main")
+    assert.is_true(playSoundFile({name = outside, key = key}))
+    assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)))
+    -- as in the closing-caption spec above, let the turn that printed the caption run out before reading it
+    pumpEvents(250)
+    local caption
+    for _, line in ipairs(getLines("main", mark, getLastLineNumber("main") + 1)) do
+      if line:find(key, 1, true) then
+        caption = line
+      end
+    end
+    assert.is_truthy(caption and caption:find('"' .. outsideName .. '"', 1, true), "the caption did not name the file itself: " .. tostring(caption))
+
+    assert.equals(1, #getPlayingSounds({name = outsideName}), "the bare name did not find the sound played from an absolute path")
+    assert.is_true(pauseSounds({name = outsideName}))
+    assert.equals(1, #getPausedSounds({name = outsideName}), "the bare name did not pause the sound played from an absolute path")
+    assert.is_true(stopSounds({name = outsideName}))
+    waitForCount("sysMediaFinished", finished, 1)
+    assert.equals(1, #finished, "the bare name did not stop the sound played from an absolute path")
+    assert.equals(key, finished[1].key)
+  end)
+
+  -- Stops and queries match a bare name to a file played from an absolute path; a play must not, or a
+  -- media-folder file would resume another folder's paused file of the same name
+  it("playing a media-folder file by its bare name does not resume a paused file of that name from elsewhere", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    local sharedName = "busted-media-bare-resume.wav"
+    local outside = writeOutsideFile(sharedName, "busted-media-bare-resume-dir")
+    local inMedia = mediaDirectory .. "/" .. sharedName
+    local handle = io.open(inMedia, "wb")
+    assert.is_not_nil(handle, "could not write the media fixture " .. inMedia)
+    handle:write(silentWav(10000))
+    handle:close()
+    onCleanup(function() os.remove(inMedia) end)
+    onCleanup(function() stopSounds() end)
+
+    assert.is_true(playSoundFile({name = outside, key = "busted-bare-resume-outside"}))
+    assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)))
+    assert.is_true(pauseSounds({key = "busted-bare-resume-outside"}))
+
+    assert.is_true(playSoundFile({name = sharedName, key = "busted-bare-resume-media"}))
+    local _, _, path, _, key = waitForEvent("sysMediaStarted", 5000)
+    assert.equals("busted-bare-resume-media", key, "playing the media-folder file resumed the other folder's paused copy")
+    assert.equals(inMedia, eventPath(path))
+  end)
+
   it("a sound named by a path through a symlink is matched by its real path", function()
     if mediaPlaybackUnavailable() then
       return
@@ -2488,6 +2551,40 @@ describe("Media playback effects with a generated sound file", function()
     feedGmcp('Client.Media.Play {"name": "_PROFILE/busted-gmcp-reserved.wav", "key": "busted-gmcp-reserved-case"}')
     pumpEvents(500)
     assert.equals(0, #started, "a game played a file from the folder kept for scripts' copies")
+  end)
+
+  -- A Load goes straight to the download, so only its own check keeps a game out of this folder. An ftp
+  -- url raises sysDownloadError only after that check, so the error count shows which Loads reached it.
+  it("a Client.Media.Load message cannot download into a folder kept for scripts' copies", function()
+    local errors = {}
+    collect("sysDownloadError", errors)
+    local reserved = mediaDirectory .. "/_profile/busted-gmcp-reserved-load.wav"
+    onCleanup(function() os.remove(reserved) end)
+
+    feedGmcp('Client.Media.Load {"name": "busted-gmcp-unreserved-load.wav", "url": "ftp://example.invalid/"}')
+    pumpEvents(250)
+    assert.equals(1, #errors, "a Load naming an ordinary file never reached the download, so this proves nothing")
+
+    feedGmcp('Client.Media.Load {"name": "_profile/busted-gmcp-reserved-load.wav", "url": "ftp://example.invalid/"}')
+    feedGmcp('Client.Media.Load {"name": "_PROFILE/busted-gmcp-reserved-load.wav", "url": "ftp://example.invalid/"}')
+    pumpEvents(250)
+    assert.equals(1, #errors, "a Load naming the folder kept for scripts' copies reached the download")
+    assert.is_nil(io.open(reserved, "rb"))
+  end)
+
+  it("an MSP sound cannot name a file in a folder kept for scripts' copies", function()
+    local errors = {}
+    collect("sysDownloadError", errors)
+    feedTelnet("<T_IAC><T_DO><O_MSP>")
+    onCleanup(function() feedTelnet("<T_IAC><T_DONT><O_MSP>") end)
+
+    assert.is_true(receiveMSP("!!SOUND(busted-msp-unreserved.wav U=ftp://example.invalid/)"))
+    pumpEvents(250)
+    assert.equals(1, #errors, "an MSP sound naming an ordinary file never reached the download, so this proves nothing")
+
+    assert.is_true(receiveMSP("!!SOUND(_profile/busted-msp-reserved.wav U=ftp://example.invalid/)"))
+    pumpEvents(250)
+    assert.equals(1, #errors, "an MSP sound naming the folder kept for scripts' copies reached the download")
   end)
 
   it("a Client.Media.Play message that names a type is played as that type", function()
