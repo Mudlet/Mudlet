@@ -148,14 +148,24 @@ describe("Tests that the scroll bar and scrolling functions find their console b
           assert.are.equal(0, select("#", disableHorizontalScrollBar(window)))
         end)
 
-        it("turns that console's scrolling off and on", function()
-          assert.is_true(disableScrolling(window))
-          -- a buffer cannot be scrolled, so it is always left scrolling
-          assert.are.equal(isBuffer, scrollingActive(window))
-          assert.is_true(scrollingActive("main"))
-          assert.is_true(enableScrolling(window))
-          assert.is_true(scrollingActive(window))
-        end)
+        if isBuffer then
+          -- a buffer is never drawn, so it is always left scrolling
+          it("will not turn that console's scrolling off or on", function()
+            local bufferOnly = ('scrolling cannot be enabled/disabled for buffer "%s"'):format(window)
+            assert.are.same({nil, bufferOnly}, {disableScrolling(window)})
+            assert.is_true(scrollingActive(window))
+            assert.are.same({nil, bufferOnly}, {enableScrolling(window)})
+            assert.is_true(scrollingActive(window))
+          end)
+        else
+          it("turns that console's scrolling off and on", function()
+            assert.is_true(disableScrolling(window))
+            assert.is_false(scrollingActive(window))
+            assert.is_true(scrollingActive("main"))
+            assert.is_true(enableScrolling(window))
+            assert.is_true(scrollingActive(window))
+          end)
+        end
 
         if isBuffer then
           it("reports and moves that console's scroll position", function()
@@ -232,13 +242,16 @@ describe("Tests that the scroll bar and scrolling functions find their console b
       assert.is_true(scrollingActive("main"))
     end)
 
-    -- the main console is always scrolling, and an empty name is let through
-    -- to it and answered by it, rather than turned away as "main" is
-    it("leaves the main console scrolling when given an empty name", function()
-      assert.is_true(disableScrolling(""))
+    -- the main console is always scrolling, so every name for it is turned away
+    it("will not turn scrolling off or on with an empty name or none", function()
+      assert.are.same({nil, mainOnly}, {disableScrolling("")})
+      assert.are.same({nil, mainOnly}, {enableScrolling("")})
+      assert.are.same({nil, mainOnly}, {disableScrolling()})
+      assert.are.same({nil, mainOnly}, {enableScrolling()})
+      assert.are.same({nil, mainOnly}, {disableScrolling(nil)})
+      assert.are.same({nil, mainOnly}, {enableScrolling(nil)})
       assert.is_true(scrollingActive(""))
-      assert.is_true(enableScrolling(""))
-      assert.is_true(scrollingActive(""))
+      assert.is_true(scrollingActive())
     end)
   end)
 end)

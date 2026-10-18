@@ -288,6 +288,23 @@ private slots:
         QCOMPARE(mpHost->userBorders().top(), typedIn);
     }
 
+    void test_theBorderSpinBoxesOfferTheRangeTheHostAccepts()
+    {
+        openPreferences();
+        for (const QSpinBox* pSpinBox : {mpPreferences->topBorderHeight, mpPreferences->rightBorderWidth, mpPreferences->bottomBorderHeight, mpPreferences->leftBorderWidth}) {
+            QCOMPARE(pSpinBox->minimum(), -Host::scmMaxBorderSize);
+            QCOMPARE(pSpinBox->maximum(), Host::scmMaxBorderSize);
+        }
+    }
+
+    // what an older build could have saved in a profile or package
+    void test_anOutOfRangeStoredBorderIsBoundedWithAWarning()
+    {
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("^Host::setUserBorders\\(.*\\) WARNING - .*outside of the supported range")));
+        mpHost->setUserBorders(QMargins(-2147483640, 2147483640, -1000000, 7));
+        QCOMPARE(mpHost->userBorders(), QMargins(-Host::scmMaxBorderSize, Host::scmMaxBorderSize, -1000000, 7));
+    }
+
     // A script's change is per component, so a guard that is only per group is
     // not enough: editing one border must not carry the other three's controls
     // - one of which is showing what a script has already moved on from - back
