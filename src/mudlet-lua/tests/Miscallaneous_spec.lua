@@ -182,11 +182,15 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         local line = getLastLineNumber("main")
         local before = os.date("%H:%M:%S")
         feedTriggers("getTimestamp arrival line\n")
-        local after = os.date("%H:%M:%S")
+        local after = os.time()
         local timestamp = getTimestamp(line)
         assert.matches("^%d%d:%d%d:%d%d%.%d%d%d $", timestamp)
+        -- os.time() reads a coarser clock that can still be on the last second
+        -- for a few milliseconds after the line's timestamp has moved on
         local second = timestamp:sub(1, 8)
-        assert.is_true(second == before or second == after, timestamp)
+        local latest = os.date("%H:%M:%S", after + 1)
+        local inTime = second == before or second == os.date("%H:%M:%S", after) or second == latest
+        assert.is_true(inTime, string.format("%s is not between %s and %s", timestamp, before, latest))
       end)
 
       it("gives the line the game has not written to yet no timestamp", function()
