@@ -150,10 +150,13 @@ TriggerMatchPool::TriggerMatchPool()
     // Past four threads the fork-join tail grows faster than each thread's share of work shrinks.
     // Zero turns the pool off.
     const int wanted = std::min(knobOr("MUDLET_MATCH_THREADS", qsl("triggerMatchThreads"), std::min(4, cores / 2), 0), cores);
-    // Two-thread break-even on a Release build, in regex searches per line: below it the fork-join costs
-    // the main thread as much as it hands away, while the helper spins a core for nothing.
+    // Two-thread break-even on a Release build, measured on lines where every regex search failed: below it
+    // the fork-join costs the main thread as much as it hands away, while the helper spins a core for nothing.
     mThreshold = knobOr("MUDLET_MATCH_THRESHOLD", qsl("triggerMatchThreshold"), 128, 1);
     mFloodChunkLines = knobOr("MUDLET_MATCH_FLOOD_LINES", qsl("triggerMatchFloodLines"), 8, 1);
+    // About 1.4 measured on a 4-core Linux machine, rounded up so a line near the break-even stays on the
+    // main thread
+    mMissesPerMatch = knobOr("MUDLET_MATCH_MISSES_PER_MATCH", qsl("triggerMatchMissesPerMatch"), 2, 0);
     // Zero parks a helper as soon as a batch is exhausted, putting a wake-up under every line of a burst
     mSpinBudget = std::chrono::microseconds(knobOr("MUDLET_MATCH_SPIN_US", qsl("triggerMatchSpinMicroseconds"), 100, 0));
     if (wanted < 2) {
@@ -162,9 +165,9 @@ TriggerMatchPool::TriggerMatchPool()
 
     mScratch.resize(wanted, nullptr);
     for (int i = 0; i < wanted; ++i) {
-        // One ovector pair serves every pattern for a yes/no answer: PCRE2 returns 0, not failure,
-        // for a match it had no room to record.
-        mScratch[i] = pcre2_match_data_create(1, nullptr);
+        // Room for the captures of most patterns, so a match can be copied out for the main thread to
+        // reuse; PCRE2 returns 0, not failure, for a match it had no room to record.
+        mScratch[i] = pcre2_match_data_create(scmScratchOvectorPairs, nullptr);
         if (!mScratch[i]) {
             // A slot without scratch cannot answer for regex triggers; declining every batch is only
             // slower, while a slot that lies is wrong.
@@ -246,9 +249,13 @@ uint32_t TriggerMatchPool::runChunks(const int slot)
         const int begin = chunk * mJob.chunkSize;
         const int end = std::min(begin + mJob.chunkSize, mJob.count);
         int searches = 0;
+        int matches = 0;
         for (int i = begin; i < end; ++i) {
             TTrigger* trigger = mJob.triggers[i];
-            trigger->setPrescanVerdict(mJob.passId, trigger->prescanMayFire(mJob.subject, mJob.subjectLength, *mJob.haystack, *mJob.lineBigrams, mJob.dropsText, scratch, searches));
+            trigger->setPrescanVerdict(mJob.passId, trigger->prescanMayFire(mJob.subject, mJob.subjectLength, *mJob.haystack, *mJob.lineBigrams, mJob.dropsText, scratch, searches, matches));
+        }
+        if (matches) {
+            mMatchesDone.fetch_add(static_cast<uint32_t>(matches), std::memory_order_relaxed);
         }
         mDone.fetch_add(packDone(searches), std::memory_order_release);
     }
@@ -306,6 +313,7 @@ bool TriggerMatchPool::prescan(
     mJob.dropsText = dropsText;
 
     mDone.store(0, std::memory_order_relaxed);
+    mMatchesDone.store(0, std::memory_order_relaxed);
     publish(chunkCount);
 
     runChunks(0);
@@ -332,6 +340,7 @@ bool TriggerMatchPool::prescan(
         done = mDone.load(std::memory_order_acquire);
     }
     mRegexSearchesInLastBatch = searchesOf(done);
+    mRegexMatchesInLastBatch = static_cast<int>(mMatchesDone.load(std::memory_order_relaxed));
     Q_ASSERT(chunkIndexOf(mCursor.load(std::memory_order_relaxed)) >= chunkCount);
     return true;
 }
