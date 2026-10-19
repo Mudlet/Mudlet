@@ -123,6 +123,7 @@ private:
     // Hides the non-virtual Tree<TTimer>::activate(); Tree's call in setIsActive() skips the time
     // validation, so setIsActive() validates for itself
     bool activate();
+    bool keepArmedWithBrokenScript();
 
     QString mName;
     QString mScript;

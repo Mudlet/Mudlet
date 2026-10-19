@@ -284,6 +284,7 @@ public:
     void regenerateToolBars(const std::list<TAction*>& rootActions) override;
     void regenerateEasyButtonBars(const std::list<TAction*>& rootActions) override;
     void detachActionBars(TAction* pAction) override;
+    void disposeActionBars(TAction* pAction) override;
     // Each action's bars, looked up by the action. An action shown as a menu on
     // another's bar (on a floating toolbar, any entry of such a menu) is
     // recorded against that bar too, so what is asked of its bar here is done
@@ -452,6 +453,8 @@ private:
     QList<QPointer<TToolBar>> mToolBarLayoutChanges;
 
     QPointer<TPasswordEntry> mpPasswordEntry;
+    // What the open box took from the command line, not yet the player's hidden input
+    QString mPasswordEntryTypedAhead;
 
     bool mEnableClose = false;
     std::unique_ptr<TMxpFrameWidgets> mpMxpFrameWidgets;

@@ -6419,11 +6419,7 @@ do
 
   function setRoomIDbyHash(roomNumber, hash, ...)
     local results = pack(original.setRoomIDbyHash(roomNumber, hash, ...))
-    -- older Mudlets return nothing here, even for a room that does not exist,
-    -- so reading the binding back is all that can be done there
-    local applied = results[1]
-    if results.n == 0 then applied = getRoomIDbyHash(hash) == tonumber(roomNumber) end
-    if applied then
+    if getRoomIDbyHash(hash) == tonumber(roomNumber) then
       service.submit({ type = "set-room-hash", roomNumber = tonumber(roomNumber), hash = hash })
     end
     return unpackResults(results)
@@ -11246,9 +11242,6 @@ end
 -- at the same time, it'll mark the userdata "hashonly" as "true" so mmp.roomExists won't say this room exists
 -- this preserves the same logic in the code as non-hash games
 function mmp.roomidFromHash(hash)
-  -- setRoomIDbyHash(id, "") clears a hash rather than binding it, so a placeholder
-  -- made for an empty hash would never be found again and one would pile up per call
-  if hash == "" then return -1 end
   local id = getRoomIDbyHash(hash)
   if id == -1 then 
     id = createRoomID()
@@ -11286,8 +11279,6 @@ function mmp.mappingNewroom(_, num)
         local num = tonumber(num) or tonumber(gmcp.Room.Info.num)
         if not num and gmcp.Room.Info.roomhash then
           num = mmp.roomidFromHash(gmcp.Room.Info.roomhash)
-          -- the game gave this room an empty hash, so there is no room to map it to
-          if num == -1 then return end
         end
         local currentexits = gmcp.Room.Info.exits
         local s = ""
@@ -11325,9 +11316,7 @@ function mmp.mappingNewroom(_, num)
                 id = mmp.roomidFromHash(id)
               end
               
-              if id == -1 then
-                -- an exit with an empty hash leads to no room that can be linked
-              elseif id == 0 then
+              if id == 0 then
                 s =
                   s ..
                   (#s &gt; 0 and " " or "") ..

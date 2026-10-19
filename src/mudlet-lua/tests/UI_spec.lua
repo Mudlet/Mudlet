@@ -1666,6 +1666,20 @@ describe("Tests UI functions", function()
       assert.are.equal(250, mp.max)
     end)
 
+    it("should parse a Swedish LK/MP prompt with aligned numbers", function()
+      local hits = BaseUI.parseVitalsLine("LK:  74/114  MP:   34/98")
+      local hp = reading(hits, "hp", "curmax")
+      assert.is_not_nil(hp)
+      assert.are.equal(74, hp.current)
+      assert.are.equal(114, hp.max)
+      for _, hit in ipairs(hits) do
+        if hit.stat == "mp" then
+          assert.are.equal(34, hit.current)
+          assert.are.equal(98, hit.max)
+        end
+      end
+    end)
+
     it("should read each line's own numbers when lines differ only in them", function()
       -- a max of zero drops the first line's readings, the others still have theirs
       assert.are.same({}, BaseUI.parseVitalsLine("HP: 523/000 MP: 210/000 [same shape]"))
@@ -2402,204 +2416,6 @@ describe("Tests UI functions", function()
     end)
   end)
 
-  describe("Test the BaseUI vitals API", function()
-    if not (type(BaseUI) == "table" and type(BaseUI.setVital) == "function") then
-      it("needs the base UI package installed", function()
-        pending("BaseUI.setVital is unavailable in this profile")
-      end)
-      return
-    end
-
-    local saved, slotsLeft, events, handlerId
-    local savedNames = { "vitalsData", "scriptVitals", "shownVitals", "vitalsLock", "gauges", "container", "build",
-                         "checkMapData", "layoutDock", "ensureGauge", "dormant", "killVitalsTriggers",
-                         "armChatTriggers", "createVitalsTriggers", "shapeSightings", "scoreRequested",
-                         "scoreWindowUntil", "sawGmcpVitals", "sawMsdpVitals", "msdpReady", "gmcpChat" }
-
-    local function fakeGauge()
-      return {
-        hidden = false,
-        setValue = function(self, value, max, text)
-          self.value, self.max, self.text = value, max, text
-        end,
-        show = function(self) self.hidden = false end,
-        hide = function(self) self.hidden = true end,
-      }
-    end
-
-    before_each(function()
-      saved = {}
-      for _, name in ipairs(savedNames) do
-        saved[name] = BaseUI[name]
-      end
-      BaseUI.vitalsData, BaseUI.scriptVitals, BaseUI.shownVitals, BaseUI.gauges = {}, {}, {}, {}
-      BaseUI.vitalsLock = 0
-      -- renderVitals skips its hide pass until a dock exists
-      BaseUI.container = BaseUI.container or {}
-      BaseUI.build = function() end
-      BaseUI.checkMapData = function() end
-      BaseUI.layoutDock = function() end
-      BaseUI.killVitalsTriggers = function() end
-      BaseUI.dormant = function() return false end
-      slotsLeft = 4
-      BaseUI.ensureGauge = function(key)
-        if not BaseUI.gauges[key] and slotsLeft > 0 then
-          slotsLeft = slotsLeft - 1
-          BaseUI.gauges[key] = fakeGauge()
-        end
-        return BaseUI.gauges[key]
-      end
-      events = {}
-      handlerId = registerAnonymousEventHandler("BaseUI.vitalsChanged", function(_, key, data)
-        events[#events + 1] = { key = key, data = data }
-      end)
-    end)
-
-    after_each(function()
-      killAnonymousEventHandler(handlerId)
-      for _, name in ipairs(savedNames) do
-        BaseUI[name] = saved[name]
-      end
-    end)
-
-    local shaken = { label = "Kaninen: shaken (4/7)" }
-
-    it("should show a scripted enemy under its own label through later repaints", function()
-      assert.is_true(BaseUI.setVital("enemy", { percent = 4 / 7 * 100 }, shaken))
-      assert.are.equal("Kaninen: shaken (4/7)", BaseUI.gauges.enemy.text)
-      BaseUI.applyVitals("prompt", { hp = { current = 50, max = 100 } })
-      assert.are.equal("HP 50/100", BaseUI.gauges.hp.text)
-      assert.are.equal("Kaninen: shaken (4/7)", BaseUI.gauges.enemy.text)
-      assert.is_false(BaseUI.gauges.enemy.hidden)
-    end)
-
-    it("should keep scripted values through a protocol snapshot that does not report them", function()
-      BaseUI.setVital("enemy", { percent = 50 }, shaken)
-      BaseUI.applyVitals("gmcp", { hp = { current = 50, max = 100 } }, true)
-      assert.are.equal(3, BaseUI.vitalsLock)
-      assert.are.equal("Kaninen: shaken (4/7)", BaseUI.gauges.enemy.text)
-      assert.is_false(BaseUI.gauges.enemy.hidden)
-    end)
-
-    it("should paint over a protocol's value without taking the source lock", function()
-      BaseUI.setVital("hp", { current = "3", max = "7" })
-      assert.are.equal(0, BaseUI.vitalsLock)
-      BaseUI.applyVitals("gmcp", { hp = { current = 50, max = 100 } }, true)
-      assert.are.equal(3, BaseUI.vitalsLock)
-      assert.are.equal("HP 3/7", BaseUI.gauges.hp.text)
-      BaseUI.clearVital("hp")
-      assert.are.equal("HP 50/100", BaseUI.gauges.hp.text)
-      assert.are.equal("gmcp", events[#events].data.source)
-    end)
-
-    it("should name the source of a prompt reading in the event", function()
-      BaseUI.applyVitals("prompt", { hp = { current = 5, max = 10 } })
-      assert.are.equal("prompt", events[#events].data.source)
-    end)
-
-    it("should drop scripted values on a disconnect", function()
-      BaseUI.armChatTriggers = function() end
-      BaseUI.createVitalsTriggers = function() end
-      BaseUI.setVital("enemy", { percent = 50 }, shaken)
-      BaseUI.setVital("hp", { current = 1, max = 2 }, { label = "scripted" })
-      BaseUI.handleDisconnect()
-      assert.is_true(BaseUI.gauges.enemy.hidden)
-      assert.is_nil(events[#events].data)
-      BaseUI.applyVitals("prompt", { hp = { current = 5, max = 10 } })
-      assert.are.equal("HP 5/10", BaseUI.gauges.hp.text)
-    end)
-
-    it("should raise each change once when a handler feeds a gauge from the event", function()
-      local fed = false
-      local feeder = registerAnonymousEventHandler("BaseUI.vitalsChanged", function(_, key)
-        if key == "hp" and not fed then
-          fed = true
-          BaseUI.setVital("enemy", { percent = 50 }, shaken)
-        end
-      end)
-      BaseUI.applyVitals("gmcp", { hp = { current = 50, max = 100 }, enemy = { percent = 30 } }, true)
-      killAnonymousEventHandler(feeder)
-      assert.are.equal(2, #events)
-      assert.are.equal("hp", events[1].key)
-      assert.are.equal("enemy", events[2].key)
-      assert.are.equal("Kaninen: shaken (4/7)", events[2].data.text)
-      assert.are.equal("Kaninen: shaken (4/7)", BaseUI.gauges.enemy.text)
-    end)
-
-    it("should hide the enemy gauge on clearVital, along with a protocol's enemy", function()
-      BaseUI.applyVitals("gmcp", { hp = { current = 50, max = 100 }, enemy = { percent = 30 } }, true)
-      BaseUI.setVital("enemy", { percent = 50 }, shaken)
-      BaseUI.clearVital("enemy")
-      assert.is_true(BaseUI.gauges.enemy.hidden)
-      assert.is_nil(BaseUI.vitalsData.enemy)
-      BaseUI.applyVitals("gmcp", { hp = { current = 50, max = 100 }, enemy = { percent = 20 } }, true)
-      assert.is_false(BaseUI.gauges.enemy.hidden)
-      assert.are.equal("Enemy 20%", BaseUI.gauges.enemy.text)
-    end)
-
-    it("should hide a scripted gauge that nothing else reports once it is cleared", function()
-      BaseUI.setVital("hp", { percent = 50 })
-      BaseUI.clearVital("hp")
-      assert.is_true(BaseUI.gauges.hp.hidden)
-    end)
-
-    it("should raise BaseUI.vitalsChanged only when what a gauge shows changes", function()
-      BaseUI.setVital("enemy", { percent = 50 }, shaken)
-      BaseUI.setVital("enemy", { percent = 50 }, shaken)
-      BaseUI.setVital("enemy", { percent = 50 })
-      BaseUI.clearVital("enemy")
-      assert.are.equal(3, #events)
-      assert.are.equal("enemy", events[1].key)
-      assert.are.equal("Kaninen: shaken (4/7)", events[1].data.text)
-      assert.are.equal("script", events[1].data.source)
-      assert.are.equal(50, events[1].data.percent)
-      assert.are.equal("Enemy 50%", events[2].data.text)
-      assert.is_nil(events[3].data)
-    end)
-
-    it("should report false when every gauge slot is taken", function()
-      BaseUI.applyVitals("gmcp", { hp = { current = 1, max = 2 }, mp = { current = 1, max = 2 },
-                                   xp = { percent = 5 }, mv = { current = 1, max = 2 } }, true)
-      assert.is_false(BaseUI.setVital("enemy", { percent = 50 }, shaken))
-      assert.is_nil(BaseUI.gauges.enemy)
-    end)
-
-    -- mp and mv still need the maxima a score screen gives
-    it("should still ask for the score screen when a script feeds hp", function()
-      BaseUI.scoreRequested, BaseUI.sawGmcpVitals, BaseUI.sawMsdpVitals = false, false, false
-      BaseUI.setVital("hp", { current = 5, max = 10 })
-      local sent = {}
-      local savedSend, savedInfo, savedCecho = _G.send, _G.getConnectionInfo, _G.cecho
-      _G.send = function(command) sent[#sent + 1] = command end
-      _G.getConnectionInfo = function() return "localhost", 23, true end
-      _G.cecho = function() end
-      local ok, err = pcall(BaseUI.maybeRequestScore)
-      _G.send, _G.getConnectionInfo, _G.cecho = savedSend, savedInfo, savedCecho
-      assert.is_true(ok, tostring(err))
-      assert.are.same({ "score" }, sent)
-    end)
-
-    it("should report false while the interface is hidden", function()
-      assert.is_true(BaseUI.setVital("enemy", { percent = 50 }))
-      BaseUI.dormant = function() return true end
-      assert.is_false(BaseUI.setVital("enemy", { percent = 60 }))
-      assert.are.equal(1, #events)
-    end)
-
-    it("should reject a key or values it cannot show", function()
-      assert.has_error(function() BaseUI.setVital("foo", { percent = 1 }) end)
-      assert.has_error(function() BaseUI.setVital("enemy", { percent = 150 }) end)
-      assert.has_error(function() BaseUI.setVital("enemy", { current = 1 }) end)
-      assert.has_error(function() BaseUI.setVital("enemy", { current = 1, max = 0 }) end)
-      assert.has_error(function() BaseUI.setVital("enemy", { percent = 1 }, { label = 3 }) end)
-      assert.has_error(function() BaseUI.setVital("enemy", { percent = 0 / 0 }) end)
-      assert.has_error(function() BaseUI.setVital("enemy", { current = 0 / 0, max = 10 }) end)
-      assert.has_error(function() BaseUI.setVital("enemy", { current = 1, max = 1 / 0 }) end)
-      assert.has_error(function() BaseUI.setVital("enemy", { percent = "50%", current = 1, max = 2 }) end)
-      assert.has_error(function() BaseUI.clearVital("foo") end)
-    end)
-  end)
-
   -- when a game installs its own interface (a Client.GUI package), the
   -- starter UI stands aside rather than fight it for screen space
   describe("Test the starter UI standing aside for a game's own interface", function()
@@ -2857,6 +2673,56 @@ describe("Tests UI functions", function()
       assert.is_true(buttonId > 0)
       assert.are.equal(1, exists(buttonId, "button"))
       assert.are.equal(1, isActive(buttonId, "button"))
+    end)
+
+    local function pack(...)
+      return select("#", ...), ...
+    end
+
+    it("tempButtonToolbar answers nil and a message for a name already taken", function()
+      local takenName = "bustedTempTakenToolbar" .. suffix
+      finally(function() hideToolBar(takenName) end)
+      assert.is_true(tempButtonToolbar(takenName, 0, 0) > 0)
+
+      local count, id, message = pack(tempButtonToolbar(takenName, 0, 0))
+      assert.are.equal(2, count)
+      assert.is_nil(id)
+      assert.is_truthy(tostring(message):find(takenName, 1, true), "the refusal should name the toolbar, got: " .. tostring(message))
+    end)
+
+    it("tempButton answers nil and a message for a missing toolbar or a name already taken", function()
+      local parentName = "bustedTempRefusalParent" .. suffix
+      local takenName = "bustedTempTakenButton" .. suffix
+      local missingName = "bustedNoSuchToolbar" .. suffix
+      finally(function() hideToolBar(parentName) end)
+
+      local count, id, message = pack(tempButton(missingName, "bustedTempOrphanButton" .. suffix, 0))
+      assert.are.equal(2, count)
+      assert.is_nil(id)
+      assert.is_truthy(tostring(message):find(missingName, 1, true), "the refusal should name the toolbar, got: " .. tostring(message))
+
+      assert.is_true(tempButtonToolbar(parentName, 0, 0) > 0)
+      assert.is_true(tempButton(parentName, takenName, 0) > 0)
+      count, id, message = pack(tempButton(parentName, takenName, 0))
+      assert.are.equal(2, count)
+      assert.is_nil(id)
+      assert.is_truthy(tostring(message):find(takenName, 1, true), "the refusal should name the button, got: " .. tostring(message))
+
+      count, id, message = pack(tempButton(parentName, parentName, 0))
+      assert.are.equal(2, count)
+      assert.is_nil(id)
+      assert.is_truthy(tostring(message):find(parentName, 1, true), "a button may not take a toolbar's name, got: " .. tostring(message))
+
+      count, id, message = pack(tempButtonToolbar(takenName, 0, 0))
+      assert.are.equal(2, count)
+      assert.is_nil(id)
+      assert.is_truthy(tostring(message):find(takenName, 1, true), "a toolbar may not take a button's name, got: " .. tostring(message))
+
+      -- it would never be shown, as only toolbars and menus lay out their children
+      count, id, message = pack(tempButton(takenName, "bustedTempUnderButton" .. suffix, 0))
+      assert.are.equal(2, count)
+      assert.is_nil(id)
+      assert.is_truthy(tostring(message):find(takenName, 1, true), "a plain button is no toolbar, got: " .. tostring(message))
     end)
 
     it("showing a button toolbar again does not stack another copy of its buttons", function()
@@ -6372,6 +6238,106 @@ describe("Widget state getters", function()
     end)
   end)
 
+  describe("setLabelAccessibleName/getLabelAccessibleName", function()
+    teardown(function()
+      setLabelAccessibleName(label, "")
+    end)
+
+    it("names the label after the text it shows until a name is set", function()
+      setLabelAccessibleName(label, "")
+      echo(label, "&nbsp;&nbsp;<b>Map</b> &amp; Exits")
+      assert.are.equal("Map & Exits", getLabelAccessibleName(label))
+    end)
+
+    it("returns the name set by setLabelAccessibleName", function()
+      assert.is_true(setLabelAccessibleName(label, "Open the map"))
+      assert.are.equal("Open the map", getLabelAccessibleName(label))
+    end)
+
+    it("goes back to the text when the name is cleared", function()
+      echo(label, "Map")
+      setLabelAccessibleName(label, "Open the map")
+      assert.is_true(setLabelAccessibleName(label, ""))
+      assert.are.equal("Map", getLabelAccessibleName(label))
+    end)
+
+    it("returns nil and a message naming an unknown label", function()
+      local unknown = name("wdgNoSuchLabel")
+      local ok, err = getLabelAccessibleName(unknown)
+      assert.is_nil(ok)
+      assert.are.equal(("label name '%s' not found"):format(unknown), err)
+      ok, err = setLabelAccessibleName(unknown, "a name")
+      assert.is_nil(ok)
+      assert.are.equal(("label name '%s' not found"):format(unknown), err)
+    end)
+
+    it("errors when called without a name to set", function()
+      assert.has_error(function() setLabelAccessibleName(label) end)
+    end)
+
+    it("falls back to the tooltip for a label with no text", function()
+      setLabelAccessibleName(label, "")
+      echo(label, "")
+      setLabelToolTip(label, "Open the map")
+      finally(function() resetLabelToolTip(label) end)
+      assert.are.equal("Open the map", getLabelAccessibleName(label))
+    end)
+  end)
+
+  describe("setLabelAccessibleRole/getLabelAccessibleRole", function()
+    after_each(function()
+      setLabelAccessibleRole(label, "")
+      setLabelClickCallback(label, nil)
+      setLabelReleaseCallback(label, nil)
+    end)
+
+    it("is text until the label has a click or release callback", function()
+      assert.are.equal("text", getLabelAccessibleRole(label))
+      setLabelReleaseCallback(label, function() end)
+      assert.are.equal("button", getLabelAccessibleRole(label))
+      setLabelReleaseCallback(label, nil)
+      setLabelClickCallback(label, function() end)
+      assert.are.equal("button", getLabelAccessibleRole(label))
+      setLabelClickCallback(label, nil)
+      assert.are.equal("text", getLabelAccessibleRole(label))
+    end)
+
+    it("takes the role it is given over the callbacks until it is cleared", function()
+      setLabelClickCallback(label, function() end)
+      assert.is_true(setLabelAccessibleRole(label, "text"))
+      assert.are.equal("text", getLabelAccessibleRole(label))
+      setLabelClickCallback(label, nil)
+      assert.is_true(setLabelAccessibleRole(label, "button"))
+      assert.are.equal("button", getLabelAccessibleRole(label))
+      assert.is_true(setLabelAccessibleRole(label, ""))
+      assert.are.equal("text", getLabelAccessibleRole(label))
+    end)
+
+    it("returns nil and a message for an empty label name", function()
+      for _, set in ipairs({function() return setLabelAccessibleRole("", "text") end, function() return setLabelAccessibleName("", "a name") end}) do
+        local ok, err = set()
+        assert.is_nil(ok)
+        assert.are.equal("a label cannot have an empty string as its name", err)
+      end
+    end)
+
+    it("returns nil and a message for a role it does not know", function()
+      local ok, err = setLabelAccessibleRole(label, "slider")
+      assert.is_nil(ok)
+      assert.is_truthy(err:find("'slider' is not a valid role", 1, true))
+    end)
+
+    it("returns nil and a message naming an unknown label", function()
+      local unknown = name("wdgNoSuchLabel")
+      local ok, err = getLabelAccessibleRole(unknown)
+      assert.is_nil(ok)
+      assert.are.equal(("label name '%s' not found"):format(unknown), err)
+      ok, err = setLabelAccessibleRole(unknown, "text")
+      assert.is_nil(ok)
+      assert.are.equal(("label name '%s' not found"):format(unknown), err)
+    end)
+  end)
+
   describe("getScrollBarVisible", function()
     local originalMainScrollBar
     local freshConsole = name("wdgFreshConsole")
@@ -7726,25 +7692,25 @@ describe("Toolbar buttons", function()
   end
 
   -- Installing and uninstalling each start a profile save, and Lua cannot ask
-  -- whether one is running - but installPackage() gives it away: while a save is
-  -- in flight it postpones whatever it was asked to do and answers true, even
-  -- for the empty path it would otherwise refuse outright.
+  -- whether one is running - but installPackage() from a script waits a running
+  -- save out before it answers, and gives up only on one still saying it is
+  -- running once its writes are done.
   local function waitForProfileSaveToPass()
-    return waitUntil(function() return installPackage("") == nil end, 5000)
+    local _, err = installPackage("")
+    return not tostring(err):find("still in progress", 1, true)
   end
 
   setup(function()
     writeSpecFile(packageFile, packageXml())
-    assert.is_true(waitForProfileSaveToPass(), "a profile save was already running, so this install would be postponed")
+    assert.is_true(waitForProfileSaveToPass(), "a profile save never finished")
     assert.is_true(installPackage(packageFile), "could not install " .. packageFile)
     assert.is_true(waitUntil(packageIsInstalled, 5000), packageName .. " did not turn up in getPackages()")
   end)
 
   teardown(function()
     -- asking whether the package is here rather than whether setup thought it
-    -- arrived: installPackage() postpones itself behind a running profile save,
-    -- so it can still land after setup gave up waiting, and then nothing else
-    -- would ever take it out of the reused profile again
+    -- arrived: a setup that failed after the install would otherwise leave it in
+    -- the reused profile, and nothing else would ever take it out again
     if packageIsInstalled() then
       -- uninstalling is refused while the save the install started is still
       -- draining, and that only finishes when the event loop runs

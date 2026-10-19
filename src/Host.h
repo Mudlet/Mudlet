@@ -81,6 +81,7 @@ class TConsoleFrontend;
 class TNullConsoleFrontend;
 class TMainConsole;
 struct TConsoleModel;
+struct MapStyle;
 class TMap;
 class MMCPServer;
 class dlgIRC;
@@ -265,6 +266,11 @@ public:
     ControlCharacterMode getControlCharacterMode() const { return mControlCharacter; }
     bool getLargeAreaExitArrows() const { return mLargeAreaExitArrows; }
     void setLargeAreaExitArrows(const bool);
+    // As setConfig("mapStyle") takes it
+    const QString& mapStyle() const;
+    const MapStyle& mapStylePreset() const { return *mpMapStyle; }
+    // False, changing nothing, when no style has that id
+    bool setMapStyle(const QString& id);
     bool getUseModern3DMapper() const { return experimentEnabled(qsl("experiment.3dmap.modernmapper")); }
 
     // Experiment system methods
@@ -272,7 +278,10 @@ public:
     std::pair<bool, QString> setExperimentEnabled(const QString& experimentKey, bool enabled);
     QString getActiveExperimentInGroup(const QString& group) const;
     QStringList getAllExperiments() const;
-    QStringList getValidExperiments() const;
+    // Sorted, so the members of a group are listed together
+    static QStringList getValidExperiments();
+    // Experiments sharing a group are mutually exclusive; empty for one in no group
+    static QString experimentGroup(const QString& experimentKey);
 
     void forceClose();
     bool profileResetInProgress() const { return mResetProfile; }
@@ -425,7 +434,7 @@ public:
 
     void startSpeedWalk();
     void startSpeedWalk(int sourceRoom, int targetRoom);
-    void reloadModule(const QString& reloadModuleName, const QString& syncingFromHost = QString());
+    std::pair<bool, QString> reloadModule(const QString& reloadModuleName, const QString& syncingFromHost = QString());
     std::pair<bool, QString> changeModuleSync(const QString& enableModuleName, const QLatin1String& value);
     std::pair<bool, QString> getModuleSync(const QString& moduleName);
     bool blockScripts() { return mBlockScriptCompile; }
@@ -467,6 +476,7 @@ public:
     // not "all well": a queued install, an unreadable config.lua and an
     // XML that stopped part-way report themselves on the console instead.
     std::pair<bool, QString> installPackage(const QString& fileName, enums::PackageModuleType thing, bool quiet = false);
+    void reportScriptsThatFailedToLoad();
     bool uninstallPackage(const QString&, enums::PackageModuleType thing);
     bool removeDir(const QString&, const QString&);
     // whyNotRead, when given, is set to why no manifest came back - telling a
@@ -493,11 +503,19 @@ public:
     QString readProfileIniData(const QString& item);
     void xmlSaved(const QString& xmlName);
     bool currentlySavingProfile();
+    // Whether the end of a save is reloading its synced modules in the other profiles, whose scripts
+    // can reach back into this one while that save still reads as running
+    bool syncingModulesAfterSave() const { return mSyncingModulesAfterSave; }
     // Whether a package install or uninstall still owes the profile a save - see
     // mDeferredSaveTimer.
     bool hasPendingProfileSave() const { return mDeferredSaveTimer.isActive(); }
     void processDiscordGMCP(const QString& packageMessage, const QString& data);
-    void waitForProfileSave();
+    // A script waits with onlyTheSavesOwnEvents: only the completions of the watchers named
+    // scmProfileSaveWatcherName are delivered, so no timer, incoming line or other background task runs
+    // nested in the waiting script. A save that syncs modules still reloads them in the other profiles as
+    // it ends, and their scripts can raise a global event that reaches this profile's handlers.
+    void waitForProfileSave(bool onlyTheSavesOwnEvents = false);
+    inline static const QString scmProfileSaveWatcherName = qsl("profileSaveWatcher");
     // waitForProfileSave() pumps the event loop with this Host still in use on the stack below it
     bool waitingForProfileSave() const { return mProfileSaveWaitDepth > 0; }
     void clearDiscordData();
@@ -688,6 +706,9 @@ public:
     bool setLabelWheelCallback(const QString&, const int);
     bool setLabelOnEnter(const QString&, const int);
     bool setLabelOnLeave(const QString&, const int);
+    // std::nullopt goes back to deciding by the label's callbacks
+    bool setLabelAccessibleButton(const QString& name, std::optional<bool> button);
+    bool setLabelAccessibleName(const QString& name, const QString& accessibleName);
     std::pair<bool, QString> setMovie(const QString& labelName, const QString& moviePath);
     bool setBackgroundColor(const QString& name, int r, int g, int b, int alpha);
     bool setCommandBackgroundColor(const QString& name, int r, int g, int b, int alpha);
@@ -728,6 +749,9 @@ public:
     // {} for no such label.
     std::optional<QString> labelStyleSheet(const QString& name) const;
     std::optional<QString> labelToolTip(const QString& name) const;
+    std::optional<QString> labelAccessibleName(const QString& name) const;
+    // "button", "graphic", "animation" or "text": what a screen reader is told the label is
+    std::optional<QString> labelAccessibleRole(const QString& name) const;
     std::optional<QFont> labelFont(const QString& name) const;
     std::optional<QString> labelText(const QString& name) const;
     // The title in .second when .first is true, otherwise why there is none, in setUserWindowTitle()'s words.
@@ -788,6 +812,8 @@ public:
     void initMMCPServer();
     bool setMMCPChatName(const QString&);
     void setShowIdsInEditor(const bool isShown);
+    bool folderViewInEditor() const { return mFolderViewInEditor; }
+    void setFolderViewInEditor(const bool enabled);
     bool getF3SearchEnabled() const { return mF3SearchEnabled; }
     void setF3SearchEnabled(const bool enabled);
     bool getForceMXPProcessorOn() const { return mForceMXPProcessorOn; }
@@ -842,6 +868,7 @@ private:
     // function, which reads members declared much later - mBgColor among them. Same
     // class of bug as #10229, which had to move a call rather than a declaration.
     bool mIsClosingDown = false;
+    bool mServerWrapFlushPaused = false;
     // Its font is the "reference" or "master" font for the whole profile.
     // Clears itself when the view is destroyed, which is what makes handing
     // out mpConsoleFrontend safe.
@@ -971,6 +998,10 @@ public:
     // Only the box the prompt itself opens takes text the player was typing in
     // the command line, not one that comes back later in the hold
     bool passwordEntryOpensWithThePrompt() const { return mPasswordEntryOpensWithThePrompt; }
+    // The game's WONT ECHO; a disconnect, the mask timeout and the preference release ECHO too
+    void gameReleasedRemoteEcho();
+    // Only a box the game itself closes gives back a command it took from the command line
+    bool passwordEntryClosedByTheGame() const { return mPasswordEntryClosedByTheGame; }
     // No box until the game answers the masked send; a re-prompt under the held
     // ECHO then gets one for the retry
     void autoLoginPasswordSent();
@@ -1036,6 +1067,12 @@ public:
     // quiet without sending one. Here rather than on the view because the
     // flush runs the trigger pipeline, which is the core's work.
     QTimer mServerWrapFlushTimer;
+    // While the close asks whether to save, or waits for the save, neither timer
+    // commits a held line, as the profile may be about to go: Cancel resumes the
+    // flush, a close drops it. Text from the game still commits it, keeping order.
+    void pauseServerWrapFlush();
+    void resumeServerWrapFlush();
+    bool serverWrapLineHeldForClose() const;
 
     int mConsoleBufferSize = 100000;
     bool mUseMaxConsoleBufferSize = false;
@@ -1108,13 +1145,17 @@ public:
     QColor mWhite_2{QColorConstants::LightGray};
     QColor mFgColor_2{QColorConstants::LightGray};
     QColor mBgColor_2{QColorConstants::Black};
-    QColor mLowerLevelColor{QColorConstants::DarkGray};
-    QColor mUpperLevelColor{QColorConstants::White};
-    QColor mRoomBorderColor{QColorConstants::LightGray};
+    static constexpr QColor scmDefaultLowerLevelColor{QColorConstants::DarkGray};
+    static constexpr QColor scmDefaultUpperLevelColor{QColorConstants::White};
+    QColor mLowerLevelColor{scmDefaultLowerLevelColor};
+    QColor mUpperLevelColor{scmDefaultUpperLevelColor};
+    static constexpr QColor scmDefaultRoomBorderColor{QColorConstants::LightGray};
+    QColor mRoomBorderColor{scmDefaultRoomBorderColor};
     QColor mRoomCollisionBorderColor{QColorConstants::Yellow};
     QColor mMapGridColor{QColor(211, 211, 211, 64)};
 
-    QColor mMapInfoBg = QColor(150, 150, 150, 120);
+    static constexpr QColor scmDefaultMapInfoBg{150, 150, 150, 120};
+    QColor mMapInfoBg = scmDefaultMapInfoBg;
     bool mMapStrongHighlight = false;
     QStringList mGMCP_merge_table_keys;
     QStringList mInstalledPackages;
@@ -1158,6 +1199,8 @@ public:
     bool mMapperUseAntiAlias = true;
     bool mMapperShowRoomBorders = true;
     bool mMapperShowGrid = false;
+    // The modern 3D view draws the areas next to the one shown past its edges, and previews of those it cannot place
+    bool mMapperStitchAreas = true;
     // What the built-in map buttons (main toolbar, Show Map menu entry and its
     // shortcut, detached window toolbar) do for this profile; scripts set it
     // through setConfig("mapperButton", ...). Deliberately not saved with the
@@ -1173,6 +1216,7 @@ public:
     QSet<QChar> mDoubleClickIgnore;
     bool mEnableTextAnalyzer = false;
     bool mWritingHostAndModules = false;
+    bool mSyncingModulesAfterSave = false;
     // Set from profile preferences, if the timer interval is less
     // than this then the normal reoccuring debug output of the entire command
     // and script for any timer with a timeout LESS than this is NOT shown
@@ -1262,6 +1306,7 @@ signals:
     void signal_editorSearchOptionsChanged(const enums::EditorSearchOptions);
     void signal_editorShowBidiChanged(const bool);
     void signal_showIdsInEditorChanged(const bool);
+    void signal_folderViewInEditorChanged(const bool);
     // The game's name or invite for Discord changed, which the Discord buttons show.
     void signal_discordGameChanged();
     // A reset is about to replace the Lua state, so whatever it placed in the frontend has to go.
@@ -1311,7 +1356,8 @@ private:
     void changeSetting(bool& setting, const bool state, const QString& settingName);
     void setBorders(const QMargins);
     void recheckCommandLineSpelling();
-    void installPackageFonts(const QString& packageName);
+    // Whether any font of the package is registered afterwards
+    bool installPackageFonts(const QString& packageName);
     void processGMCPDiscordStatus(const QJsonObject& discordInfo);
     void processGMCPDiscordInfo(const QJsonObject& discordInfo);
     void loadSecuredPassword();
@@ -1393,6 +1439,8 @@ private:
     // runUninstallsDeferredByAnInstall() once the outermost install has finished
     // and the install events it queued have gone out.
     QList<DeferredUninstall> mUninstallsDeferredByAnInstall;
+    // How often each name was uninstalled, so the queued install events of an install undone since are dropped
+    QMap<QString, quint64> mRemovalsOf;
     // A nested install's fonts are put back only once the outermost install has queued its own events
     bool mDisplayFontRestoreOwed = false;
     QScopedPointer<LuaInterface> mLuaInterface;
@@ -1572,6 +1620,8 @@ private:
     ControlCharacterMode mControlCharacter = ControlCharacterMode::AsIs;
 
     bool mLargeAreaExitArrows = false;
+    // Never null, so the renderer can read it per room without a lookup
+    const MapStyle* mpMapStyle = nullptr;
     bool mEditorShowBidi = true;
     // should focus should be on the main window with the caret enabled?
     bool mCaretEnabled = false;
@@ -1587,6 +1637,7 @@ private:
     bool mPasswordEntryDismissalEnding = false;
     // Set around the recompute a WILL ECHO makes, see passwordEntryOpensWithThePrompt().
     bool mPasswordEntryOpensWithThePrompt = false;
+    bool mPasswordEntryClosedByTheGame = false;
 
     // ensures that only one "zero-time" timer is created by the lambda in
     // setFocusOnHostActiveCommandLine(), even when it is called multiple
@@ -1603,6 +1654,9 @@ private:
 
     // Whether to display each item's ID number in the editor:
     bool mShowIDsInEditor = false;
+
+    // Whether the editor offers its Folders view, which groups every item type by folder:
+    bool mFolderViewInEditor = false;
 
     // Whether F3 search functionality is enabled
     bool mF3SearchEnabled = false;

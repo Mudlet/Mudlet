@@ -62,6 +62,7 @@ class Host;
 class QOpenGLWidget;
 #endif
 class TArea;
+class TAreaGraph;
 class TMapViewManager;
 class TRoom;
 class TRoomDB;
@@ -78,8 +79,8 @@ class TMap : public QObject
     friend class FrontendRoutingContractTest;
 
 public:
-    // Host settings the 2D map keeps a copy of to draw with
-    enum class MapperSetting { RoomSize, ExitSize, RoundRooms, ShowRoomIds, ShowGrid };
+    // Host settings the 2D map keeps a copy of to draw with, and the 3D view's style
+    enum class MapperSetting { RoomSize, ExitSize, RoundRooms, ShowRoomIds, ShowGrid, Style };
 
 signals:
     void signal_saveErrorChanged(bool hasError);
@@ -155,7 +156,14 @@ public:
     void logError(const QString&);
     bool setExit(int from, int to, int dir);
     bool setRoomCoordinates(int id, int x, int y, int z);
+    // After a change to the map: also counts its revision up
     void updateArea(int areaId);
+    // For when only the player's room changed, which views read afresh anyway: unlike updateArea(), not taken
+    // as a change to how the area looks, so a view need not remake what it keeps of it
+    void updatePlayerArea(int areaId);
+    // For updateMap() and a new speedwalk: what a view keeps of the area's look is remade, but the map's revision
+    // stays, as the rooms and exits themselves did not change
+    void refreshArea(int areaId);
     // For a whole map read in outside TMap, as XMLimport does:
     void announceMapLoaded(bool showPlayerArea);
     void requestMapperShown();
@@ -319,7 +327,18 @@ public:
     // determine which bit of code is responsible for changing the flag!)
     void setUnsaved(const char*);
     void resetUnsaved() { mUnsavedMap = false; }
+    // Counts up on every change to the map's contents or to the colors it is drawn in, so that a view can tell
+    // whether what it worked out from them last frame still holds
+    quint64 revision() const { return mRevision; }
     bool isUnsaved() const { return mUnsavedMap; }
+    // Bumped by setUnsaved() and whenever the whole map is replaced, so a cache can tell it is stale.
+    quint64 mapRevision() const { return mMapRevision; }
+    // Bumped by updateArea(), for changes such as a room highlighted that mapRevision() misses
+    quint64 appearanceRevision() const { return mAppearanceRevision; }
+    // Bumped by initGraph(), as room locks and exit weights change what findPath() finds without bumping mapRevision()
+    quint64 pathGraphRevision() const { return mPathGraphRevision; }
+    // Call TAreaGraph::refresh() before reading it.
+    TAreaGraph* areaGraph() const { return mpAreaGraph.get(); }
     void setSaveError(bool state);
     bool hasSaveError() const { return mSaveError; }
     void setDefaultAreaShown(bool);
@@ -537,7 +556,12 @@ private:
             }
             ++mpMap->mMapOperationDepth;
         }
-        ~MapOperationScope() { --mpMap->mMapOperationDepth; }
+        // A load replaces rooms and user data without going through setUnsaved().
+        ~MapOperationScope()
+        {
+            --mpMap->mMapOperationDepth;
+            ++mpMap->mMapRevision;
+        }
         MapOperationScope(const MapOperationScope&) = delete;
         MapOperationScope& operator=(const MapOperationScope&) = delete;
 
@@ -551,6 +575,12 @@ private:
     bool mMapOperationAbortRequested = false;
     int mScriptCallbackDepth = 0;
     bool mGraphBuildInProgress = false;
+    quint64 mMapRevision = 0;
+    quint64 mAppearanceRevision = 0;
+    quint64 mPathGraphRevision = 0;
+    // Per map, not per process, or one profile's pending update swallows another's
+    std::optional<int> mPendingAreaId;
+    std::unique_ptr<TAreaGraph> mpAreaGraph;
 
     void addDirectionalRoute(std::vector<std::pair<unsigned int, route>>& bestRoutes,
                              const QMap<QString, int>& exitWeights,
@@ -611,6 +641,7 @@ private:
 
     // Used to flag whether the map auto-save needs to be done after the next interval:
     bool mUnsavedMap = false;
+    quint64 mRevision = 0;
     // Used to indicate that the last map save attempt failed:
     bool mSaveError = false;
     // Used to hide the default area from casual viewing for those MUDs that

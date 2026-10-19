@@ -74,13 +74,17 @@ void TForkedProcess::slot_finished(int exitCode, QProcess::ExitStatus exitStatus
 
 void TForkedProcess::slot_receivedData()
 {
+    lua_State* L = mpInterpreter->pGlobalLua;
     while (canReadLine()) {
-        QByteArray line = readLine();
-        // Call lua function by stored Reference
-        const TLuaInterpreter::ScriptCallerScope callerScope(*mpInterpreter, false);
-        lua_rawgeti(mpInterpreter->pGlobalLua, LUA_REGISTRYINDEX, callBackFunctionRef);
-        lua_pushstring(mpInterpreter->pGlobalLua, line.data());
-        lua_pcall(mpInterpreter->pGlobalLua, 1, 0, 0);
+        // Checked before the line is read, so a line that cannot be handed over stays buffered
+        if (!lua_checkstack(L, 2)) {
+            std::string e = "not enough Lua stack space to call it with the process's next line of output";
+            mpInterpreter->logError(e, qsl("spawn() callback"), qsl("anonymous Lua function"));
+            return;
+        }
+        lua_rawgeti(L, LUA_REGISTRYINDEX, callBackFunctionRef);
+        lua_pushstring(L, readLine().constData());
+        mpInterpreter->callReference(L, qsl("spawn() callback"), 1);
     }
 }
 
@@ -145,17 +149,19 @@ int TForkedProcess::startProcess(TLuaInterpreter* pInterpreter, lua_State* L)
 {
     const int n = lua_gettop(L);
     if (n < 2) {
-        lua_pushstring(L, "Need read function and process name as parameters.");
+        lua_pushstring(L, "spawn: need read function and process name as parameters.");
         return lua_error(L);
     }
     if (!lua_isfunction(L, 1)) {
-        lua_pushstring(L, "Need read function as first parameter.");
+        lua_pushstring(L, "spawn: need read function as first parameter.");
         return lua_error(L);
     }
     for (int i = 2; i <= n; ++i) {
-        // the same raise these used to make from inside the constructor, but
-        // while nothing of ours is alive for the longjmp to strand
-        static_cast<void>(luaL_checkstring(L, i));
+        // raised while nothing of ours is alive for the longjmp to strand
+        if (!lua_isstring(L, i)) {
+            lua_pushfstring(L, "spawn: bad argument #%d type (%s as string expected, got %s!)", i, i == 2 ? "process name" : "process argument", luaL_typename(L, i));
+            return lua_error(L);
+        }
     }
 
     TForkedProcess* process = nullptr;
@@ -171,7 +177,7 @@ int TForkedProcess::startProcess(TLuaInterpreter* pInterpreter, lua_State* L)
         process = new TForkedProcess(pInterpreter, program, arguments, callBackReference);
         if (!process->running) {
             lua_pushstring(L,
-                           qsl("Failed to start process '%1': %2. Working directory: '%3'. PATH: '%4'")
+                           qsl("spawn: Failed to start process '%1': %2. Working directory: '%3'. PATH: '%4'")
                                    .arg(program, process->errorString(), QDir::currentPath(), qEnvironmentVariable("PATH"))
                                    .toUtf8()
                                    .constData());
