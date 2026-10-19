@@ -34,12 +34,14 @@
 #include <QAction>
 #include <QDockWidget>
 #include <QMenu>
+#include <QOpenGLContext>
 #include <QScopeGuard>
 #include <QSignalSpy>
 #include <QTemporaryDir>
 #include <QLineEdit>
 #include <QListWidget>
 #include <QToolTip>
+#include <QWheelEvent>
 #include <QtMath>
 #include <QtTest/QtTest>
 
@@ -513,6 +515,47 @@ private slots:
         QHelpEvent overNothing(QEvent::ToolTip, QPoint(2, 2), pModern->mapToGlobal(QPoint(2, 2)));
         QCoreApplication::sendEvent(pModern, &overNothing);
         QTRY_VERIFY(!QToolTip::isVisible());
+    }
+
+    // An edit press part-way through a flight in from a big area's rooms leaves the small area's rooms shown, as the flight did
+    void test_anEditPressPartWayThroughAFlightKeepsTheRoomsShown()
+    {
+        ModernGLWidget* pModern = viewAtThePlayer();
+        QVERIFY(pModern);
+        T2DMap* p2dMap = map()->mapper()->mp2dMap;
+        const int roadId = map()->mpRoomDB->addArea(qsl("Long Road"));
+        const qreal playerZoom = map()->mpRoomDB->get2DMapZoom(mPlayerAreaId);
+        const auto restore = qScopeGuard([this, p2dMap, roadId, playerZoom]() {
+            p2dMap->mMapViewOnly = true;
+            map()->mpRoomDB->set2DMapZoom(mPlayerAreaId, playerZoom);
+            map()->mpRoomDB->removeArea(roadId);
+        });
+        // Too long to leave the view from where the flight sets off
+        for (int x = 0; x < 300; ++x) {
+            QVERIFY(addRoomAt(1000 + x, roadId, x, 0));
+        }
+        // So that the flight comes in no further than where the player area's rooms show
+        QVERIFY(map()->mpRoomDB->set2DMapZoom(mPlayerAreaId, 200.0));
+        pModern->setViewCenter(roadId, 150, 0, 0);
+        pModern->setCameraDistance(30.0f);
+        pModern->updateMatrices();
+        QCOMPARE(pModern->zoomWeights().footprint, 0.0f);
+        pModern->mSavedCameras.remove(mPlayerAreaId);
+        pModern->flyToArea(mPlayerAreaId);
+        while (pModern->mFlight && pModern->mFlight->progress < 0.65) {
+            pModern->onCameraAnimationTick();
+        }
+        pModern->updateMatrices();
+        QVERIFY(pModern->mFlight && pModern->mCameraController.getScale() > pModern->roomsAloneDistance(mPlayerAreaId));
+        QCOMPARE(pModern->zoomWeights().footprint, 0.0f);
+
+        p2dMap->mMapViewOnly = false;
+        const QPoint middle(pModern->width() / 2, pModern->height() / 2);
+        QTest::mousePress(pModern, Qt::LeftButton, Qt::NoModifier, middle);
+        QVERIFY(!pModern->mFlight);
+        pModern->updateMatrices();
+        QCOMPARE(pModern->zoomWeights().footprint, 0.0f);
+        QTest::mouseRelease(pModern, Qt::LeftButton, Qt::NoModifier, middle);
     }
 
     void test_aRightClickOffersThe2DRoomMenuAndEditIn2D()
@@ -2051,6 +2094,64 @@ private slots:
         QCOMPARE(pMapper->comboBox_showArea->currentText(), qsl("Other Area"));
         pModern->stopFlight();
         pModern->followPlayer();
+    }
+
+    void test_theWheelGoesIntoTheAreaUnderThePointerAndCenteringOnThePlayerComesBack()
+    {
+        ModernGLWidget* pModern = viewAtThePlayer();
+        QVERIFY(pModern);
+        dlgMapper* pMapper = map()->mapper();
+        pMapper->comboBox_showArea->setCurrentText(qsl("Player Area"));
+        // Near enough for the two small areas to be apart on the screen, far enough for the world
+        pModern->setCameraDistance(20.0f);
+        pModern->updateMatrices();
+        QVERIFY(pModern->zoomWeights().nodesPicked());
+        const MapAtlas::Area* pOther = pModern->mAtlas.area(mOtherAreaId);
+        const MapAtlas::Area* pShown = pModern->mAtlas.area(mPlayerAreaId);
+        QVERIFY(pOther && pShown);
+        const QPointF otherMiddle = pOther->center - pShown->offset;
+        const std::optional<QPointF> pixel = pModern->mCameraController.pixelForPoint(QVector3D(static_cast<float>(otherMiddle.x()), static_cast<float>(otherMiddle.y()), pModern->atlasLevel()));
+        QVERIFY(pixel);
+        const QPoint over = pixel->toPoint();
+        QCOMPARE(pModern->areaAt(over), mOtherAreaId);
+        const int notch = mudlet::self()->invertMapZoom() ? -120 : 120;
+        QWheelEvent wheel(QPointF(over), pModern->mapToGlobal(QPointF(over)), QPoint(), QPoint(0, notch), Qt::NoButton, Qt::NoModifier, Qt::NoScrollPhase, false);
+        QCoreApplication::sendEvent(pModern, &wheel);
+        QCOMPARE(pModern->shownAreaId(), mOtherAreaId);
+        QCOMPARE(pMapper->comboBox_showArea->currentText(), qsl("Other Area"));
+        QCOMPARE(map()->mRoomIdHash.value(map()->mProfileName), kPlayerRoomId);
+        // The rest is checked by painting, and grabbing a view that has no context leaks its QOpenGLContext
+        if (QOpenGLContext probe; !probe.create()) {
+            QSKIP("no OpenGL context on this platform, so the 3D view does not paint");
+        }
+        // Not taken back to the player's area by the next paint. Painted by a grab, not repaint(): offscreen, a view
+        // whose dock changed window has no framebuffer, so paintGL() never runs, until a grab makes a new one
+        pModern->grabFramebuffer();
+        QCOMPARE(pModern->shownAreaId(), mOtherAreaId);
+
+        // As the mapper's button to center on the player does
+        pMapper->resetAreaComboBoxToPlayerRoomArea();
+        pModern->grabFramebuffer();
+        QCOMPARE(pModern->shownAreaId(), mPlayerAreaId);
+        QCOMPARE(pMapper->comboBox_showArea->currentText(), qsl("Player Area"));
+
+        // Zoomed in a little beside the player's room, the view rests between rooms, and is brought back onto it
+        pModern->grabFramebuffer();
+        pModern->setCameraDistance(1.0f);
+        pModern->updateMatrices();
+        const TRoom* pPlayerRoom = map()->mpRoomDB->getRoom(kPlayerRoomId);
+        QVERIFY(pPlayerRoom);
+        const QVector3D playerRoom(static_cast<float>(pPlayerRoom->x()), static_cast<float>(pPlayerRoom->y()), static_cast<float>(pPlayerRoom->z()));
+        const std::optional<QPointF> beside = pModern->mCameraController.pixelForPoint(playerRoom + QVector3D(2.0f, 0.0f, 0.0f));
+        QVERIFY(beside);
+        QWheelEvent nearer(*beside, pModern->mapToGlobal(*beside), QPoint(), QPoint(0, notch), Qt::NoButton, Qt::NoModifier, Qt::NoScrollPhase, false);
+        QCoreApplication::sendEvent(pModern, &nearer);
+        QCOMPARE(QPoint(pModern->mMapCenterX, pModern->mMapCenterY), QPoint(pPlayerRoom->x(), pPlayerRoom->y()));
+        QVERIFY(!pModern->followingPlayer());
+        pModern->grabFramebuffer();
+        QVERIFY2(!pModern->mCameraSmoothAnimating && pModern->mCameraController.getTarget() != playerRoom, "the next paint took the view straight back to the player");
+        pModern->followPlayer();
+        QTRY_COMPARE(pModern->mCameraController.getTarget(), playerRoom);
     }
 
     // Closing the profile frees the Host and its TMap before the floating dock holding the view is

@@ -169,6 +169,14 @@ TAreaGraph::TAreaGraph(TMap* pMap)
 {
 }
 
+double TAreaGraph::radiusOf(const TArea& area)
+{
+    // In double: the span of int room coordinates can overflow an int.
+    const double width = static_cast<double>(area.max_x) - area.min_x + 1.0;
+    const double height = static_cast<double>(area.max_y) - area.min_y + 1.0;
+    return std::max(cMinRadius, 0.5 * std::hypot(width, height));
+}
+
 void TAreaGraph::refresh()
 {
     // A load pumps events part way through; laying out a half-loaded map would fix those positions for good.
@@ -231,10 +239,7 @@ bool TAreaGraph::rebuildGraph()
             node.maxY = -pA->min_y;
             node.minZ = pA->min_z;
             node.maxZ = pA->max_z;
-            // In double: the span of int room coordinates can overflow an int.
-            const double width = static_cast<double>(node.maxX) - node.minX + 1.0;
-            const double height = static_cast<double>(node.maxY) - node.minY + 1.0;
-            node.radius = std::max(cMinRadius, 0.5 * std::hypot(width, height));
+            node.radius = radiusOf(*pA);
         }
         nodes.insert(it.key(), node);
     }

@@ -210,7 +210,7 @@ signals:
     void cameraControlsChanged(int scale, int tilt, int roll, int azimuth);
     // The user asked to see this room on the 2D map, or this view's center when roomId is 0
     void editIn2DRequested(int roomId);
-    // A click on the world flew this view into another area, which the 2D map has not been switched to
+    // A click on the atlas, or zooming in on it, took this view into another area, which the 2D map has not been switched to
     void areaFlownInto(int areaId);
 
 private slots:
@@ -361,6 +361,8 @@ private:
     int mMapCenterX = 0;
     int mMapCenterY = 0;
     int mMapCenterZ = 0;
+    // How far off the grid point mMapCenterX/Y the camera looks, where zooming about a point can leave it
+    QPointF mViewCenterOffset;
     bool mShiftMode = false;
     int mFontHeight = 20;
 
@@ -425,8 +427,9 @@ private:
     // Read from the context once it is made; the least any OpenGL 3.3 driver offers until then
     int mMaxTextureSize = 1024;
     bool mFramePending = true;
-    // Set by a zoom or a change of area while hidden: the shown area is framed at its stored zoom, read then so a later
-    // 2D zoom counts, for the size the view is first seen at, unless a camera distance is set first
+    // Set by a zoom or a change of area while hidden: the shown area is brought back to its saved distance, or else framed
+    // at its stored zoom, read then so a later 2D zoom counts, for the size the view is first seen at, unless a camera
+    // distance is set first
     bool mFrameWhenShown = false;
     // A distance a script asked for since the last paint wins over framing a newly shown area
     bool mDistanceRequested = false;
@@ -566,8 +569,20 @@ private:
         float fromDistance = 1.0f;
         float toDistance = 1.0f;
         qreal progress = 0.0;
+        // The radius of the area it left, or 0
+        float fromRadius = 0.0f;
+        // A flight only zooms in, so it shows nothing further out than these
+        MapAtlas::Weights fromWeights{1.0f, 1.0f};
     };
     std::optional<Flight> mFlight;
+    // Zoomed in from one area into another, see MapAtlas::handoverRadius()
+    struct ZoomHandover
+    {
+        float fromRadius = 0.0f;
+        float atDistance = 1.0f;
+        float span = 1.0f;
+    };
+    std::optional<ZoomHandover> mZoomHandover;
     MapRoute mRoute;
     // Everything the neighboring areas drawn past the shown area's edges were made from
     struct StitchInputs
@@ -696,6 +711,10 @@ private:
     float roomPixels() const;
     // How much this view, as of the last updateMatrices(), shows of the rooms, the footprints and the world graph
     MapAtlas::Weights zoomWeights();
+    // The radius of the area shown, or during a flight or a zoom into it between it and the one left; 0 when none is shown
+    float shownRadius() const;
+    // The furthest out a view of the area shows its rooms alone, at most CameraController::scmMaxDistance
+    float roomsAloneDistance(int areaId) const;
     void refreshAtlas();
     // Where the atlas lies: the plane the camera looks at, under its rooms
     float atlasLevel() const;
@@ -709,6 +728,8 @@ private:
     void paintAtlasLabels(QPainter& painter);
     // Ends a flight into an area where it got to
     void stopFlight();
+    // A flight that set off among rooms, cut short, comes in to where the area's rooms show
+    void closeInOnRooms();
     void flightTick();
     // Finds the route again if the player moved or the map changed since it was found
     void refreshRoute();
@@ -740,7 +761,7 @@ private:
     // The name an area is shown by
     QString areaName(int areaId) const;
     // A flight into the area, begun from where flight.from is
-    void startFlight(int areaId, const Flight& flight);
+    void startFlight(int areaId, Flight flight);
     // How far from the area a view coming into it looks from: as it last did, or else as its 2D zoom shows it
     float arrivalDistance(int areaId) const;
     // A flight to this point of the area, from wherever the view is now, coming no further out than distance
@@ -881,7 +902,9 @@ private:
     void stopSmoothTransition();
     void jumpTo(int areaId, int x, int y, int z);
     void frameArea();
-    void frameRooms(qreal zoom);
+    // The area's saved distance, or else its framing, for the size the view has now
+    void settleCamera();
+    void frameRooms(qreal zoom, float furthest = CameraController::scmMaxDistance);
     void emitCameraControls();
     void setOrientationKeepingRoll(float theta, float phi);
     // Turns the camera around the view's center, by degrees of azimuth
@@ -904,7 +927,17 @@ private:
     RenderCommand::Shading exitShading() const;
     // How far below where ExitScene puts them exits are drawn, so that a model's paths lie on the ground
     float exitSink(const ExitScene::Options&) const;
-    void zoomBySteps(float steps);
+    // About the point at, else the view's center, keeping what is under it in place, which off the center stops following
+    // the player; zooming in while areas are picked goes into the area there
+    void zoomBySteps(float steps, std::optional<QPoint> at = std::nullopt);
+    // While areas are picked, makes the one under this point, or else the nearest, the area shown, keeping the view where it is
+    void zoomIntoAreaAt(const QPoint& position);
+    // As areaAt(), with this much slop in pixels
+    int areaAt(const QPoint& position, float slopPixels);
+    // Points the camera at this x and y exactly, on the nearest level
+    void centerViewOn(const QVector3D& point);
+    // Once zoomed in all the way through a handover, the zoom levels go by the area shown alone, zooming back out too
+    void settleZoomHandover();
     void panByRooms(int right, int up);
     void selectRoom(int roomId, Qt::KeyboardModifiers modifiers);
     bool editingMap() const;
