@@ -35,6 +35,7 @@
 #include "RoomContextMenuHandler.h"
 #include "T2DMap.h"
 #include "TArea.h"
+#include "TAreaGraph.h"
 #include "TCommandLine.h"
 #include "TEvent.h"
 #include "TMainConsole.h"
@@ -242,7 +243,9 @@ void ModernGLWidget::saveCamera()
         return;
     }
     const QVector3D position = mCameraController.getPosition();
-    const SavedCamera camera{mCameraController.getScale(), position.y(), position.z(), mCameraController.getRoll()};
+    // Pulled back to the world it shows no rooms, which is no way to come back to an area
+    const float distance = std::min(mCameraController.getScale(), CameraController::scmMaxDistance);
+    const SavedCamera camera{distance, position.y(), position.z(), mCameraController.getRoll()};
     const auto it = mSavedCameras.constFind(mAID);
     if (it != mSavedCameras.cend() && it->distance == camera.distance && it->tilt == camera.tilt && it->azimuth == camera.azimuth && it->roll == camera.roll) {
         return;
@@ -755,6 +758,7 @@ void ModernGLWidget::paintGL()
     QPainter painter(this);
     const MapStyle& style = mapStyle();
     paintVignette(painter);
+    paintAtlasLabels(painter);
     paintPlayerNote(painter);
 
     // Draw map info using contributor manager
@@ -3644,6 +3648,29 @@ void ModernGLWidget::buildExitGeometry(const ExitScene::Scene& scene, const Exit
     }
 }
 
+namespace {
+// The colors environments 1 to 16 are drawn in
+std::array<QColor, 16> mapperHostColors(const Host& host)
+{
+    return {host.mRed_2,
+            host.mGreen_2,
+            host.mYellow_2,
+            host.mBlue_2,
+            host.mMagenta_2,
+            host.mCyan_2,
+            host.mWhite_2,
+            host.mBlack_2,
+            host.mLightRed_2,
+            host.mLightGreen_2,
+            host.mLightYellow_2,
+            host.mLightBlue_2,
+            host.mLightMagenta_2,
+            host.mLightCyan_2,
+            host.mLightWhite_2,
+            host.mLightBlack_2};
+}
+} // namespace
+
 ModernGLWidget::SceneInputs ModernGLWidget::sceneInputs() const
 {
     SceneInputs inputs;
@@ -3672,22 +3699,7 @@ ModernGLWidget::SceneInputs ModernGLWidget::sceneInputs() const
     inputs.foreground = mpHost->mFgColor_2;
     inputs.upperLevelColor = mpHost->mUpperLevelColor;
     inputs.lowerLevelColor = mpHost->mLowerLevelColor;
-    inputs.hostColors = {mpHost->mRed_2,
-                         mpHost->mGreen_2,
-                         mpHost->mYellow_2,
-                         mpHost->mBlue_2,
-                         mpHost->mMagenta_2,
-                         mpHost->mCyan_2,
-                         mpHost->mWhite_2,
-                         mpHost->mBlack_2,
-                         mpHost->mLightRed_2,
-                         mpHost->mLightGreen_2,
-                         mpHost->mLightYellow_2,
-                         mpHost->mLightBlue_2,
-                         mpHost->mLightMagenta_2,
-                         mpHost->mLightCyan_2,
-                         mpHost->mLightWhite_2,
-                         mpHost->mLightBlack_2};
+    inputs.hostColors = mapperHostColors(*mpHost);
     inputs.envColors = mpMap->mEnvColors;
     inputs.customEnvColors = mpMap->mCustomEnvColors;
     inputs.styleId = mapStyle().id;
@@ -3895,6 +3907,7 @@ int ModernGLWidget::areaShownNext() const
 
 void ModernGLWidget::setCameraDistance(float r)
 {
+    stopFlight();
     mCameraController.setScale(r);
     mDistanceRequested = true;
     mFrameWhenShown = false;
@@ -3904,6 +3917,7 @@ void ModernGLWidget::setCameraDistance(float r)
 
 void ModernGLWidget::setCameraPosition(float r, float theta, float phi)
 {
+    stopFlight();
     mCameraController.setPosition(r, theta, phi);
     mDistanceRequested = true;
     // Set for the area on view, so it is that area's camera now even before a paint
@@ -3988,6 +4002,7 @@ void ModernGLWidget::applyMapZoom(const qreal zoom, const int areaId)
         }
         return;
     }
+    stopFlight();
     frameRooms(zoom);
     mFrameWhenShown = !isVisible();
     mDistanceRequested = false;
@@ -4109,6 +4124,7 @@ void ModernGLWidget::slot_topView()
 
 void ModernGLWidget::slot_setScale(int value)
 {
+    stopFlight();
     mCameraController.setScale(distanceForScaleSlider(value));
     mFrameWhenShown = false;
     update();
@@ -4271,6 +4287,7 @@ void ModernGLWidget::wheelEvent(QWheelEvent* e)
 
 void ModernGLWidget::zoomBySteps(const float steps)
 {
+    stopFlight();
     mCameraController.zoomBy(steps);
     mFrameWhenShown = false;
     emitCameraControls();
@@ -4538,6 +4555,10 @@ int ModernGLWidget::roomAt(const QPoint& position, const bool orNear, const std:
     }
 
     updateMatrices();
+    // Zoomed out this far, a click picks an area instead, see areaAt()
+    if (zoomWeights().areasPicked()) {
+        return 0;
+    }
     const auto [origin, direction] = mCameraController.rayThroughPixel(QPointF(position));
     const QVector3D halfSize(1.0f / scale, 1.0f / scale, 1.0f / scale / zFlattening);
     const bool round = mpHost && mapStyle().roundRooms(mpHost->mBubbleMode);
@@ -4602,6 +4623,9 @@ int ModernGLWidget::areaExitAt(const QPoint& position)
         return 0;
     }
     updateMatrices();
+    if (zoomWeights().areasPicked()) {
+        return 0;
+    }
     const QPointF pointer(position);
     int nearestExit = 0;
     qreal nearestPixels = std::numeric_limits<qreal>::max();
@@ -4645,6 +4669,267 @@ int ModernGLWidget::roomPickedAt(const QPoint& position, const bool orNear, cons
         }
     }
     return roomAt(position, orNear);
+}
+
+float ModernGLWidget::roomPixels() const
+{
+    const float unitsPerPixel = mCameraController.worldUnitsPerPixel(mCameraController.getTarget());
+    return unitsPerPixel > 0.0f ? 1.0f / unitsPerPixel : std::numeric_limits<float>::max();
+}
+
+MapAtlas::Weights ModernGLWidget::zoomWeights()
+{
+    static_assert(MapAtlas::scmRoomsAloneDistance >= CameraController::scmMaxDistance);
+    const float pixels = roomPixels();
+    const float distance = mCameraController.getScale();
+    // Not made until first needed, as laying out the area graph can store its positions in the map
+    if (pixels >= MapAtlas::scmRoomsAlonePixels || distance <= MapAtlas::scmRoomsAloneDistance) {
+        return {};
+    }
+    refreshAtlas();
+    if (mAtlas.areas().isEmpty()) {
+        return {};
+    }
+    return MapAtlas::weightsFor(pixels, pixels * mAtlas.typicalRadius(), distance);
+}
+
+void ModernGLWidget::refreshAtlas()
+{
+    TAreaGraph* pGraph = mpMap && mpMap->mpRoomDB && mpHost ? mpMap->areaGraph() : nullptr;
+    if (!pGraph) {
+        mAtlas.clear();
+        mAtlasInputs.reset();
+        return;
+    }
+    pGraph->refresh();
+    AtlasInputs inputs;
+    inputs.mapRevision = mpMap->mapRevision();
+    inputs.appearanceRevision = mpMap->appearanceRevision();
+    inputs.exitsRevision = mpMap->mpRoomDB->exitsRevision();
+    inputs.mapGeneration = mpMap->mpRoomDB->mapGeneration();
+    for (const TArea* pArea : mpMap->mpRoomDB->getAreaMap()) {
+        inputs.roomsVersions = inputs.roomsVersions * 31 + pArea->getRoomsVersion();
+    }
+    inputs.layout = mpMap->mUserData.value(TAreaGraph::cLayoutUserDataKey);
+    inputs.foreground = mpHost->mFgColor_2;
+    inputs.hostColors = mapperHostColors(*mpHost);
+    inputs.envColors = mpMap->mEnvColors;
+    inputs.customEnvColors = mpMap->mCustomEnvColors;
+    if (mAtlasInputs == inputs) {
+        return;
+    }
+    mAtlasInputs = inputs;
+    mAtlas.build(
+            *mpMap,
+            [this](const int environment) {
+                return RoomAppearance::environmentColor(*mpMap, *mpHost, environment);
+            },
+            mpHost->mFgColor_2);
+}
+
+float ModernGLWidget::atlasLevel() const
+{
+    // At the rooms' bottoms, as the grid is; a flight shows its destination level at once, but the camera climbs to it
+    const float level = mFlight ? mCurrentAnimationZ : static_cast<float>(mMapCenterZ);
+    return level - 1.0f / scale / zFlattening;
+}
+
+QMatrix4x4 ModernGLWidget::atlasModelMatrix() const
+{
+    const MapAtlas::Area* pShown = mAtlas.area(mAID);
+    const QPointF offset = pShown ? pShown->offset : QPointF();
+    QMatrix4x4 model;
+    model.translate(static_cast<float>(-offset.x()), static_cast<float>(-offset.y()), atlasLevel());
+    return model;
+}
+
+void ModernGLWidget::queueAtlas(const MapAtlas::Weights& weights)
+{
+    const QMatrix4x4 model = atlasModelMatrix();
+    const auto queueLayer = [&](const QVector<float>& vertices, const QVector<float>& colors, const float opacity) {
+        if (opacity <= 0.0f || vertices.isEmpty()) {
+            return;
+        }
+        mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::BLEND_BY_OPACITY, opacity));
+        mRenderCommandQueue.addCommand(
+                std::make_unique<RenderTrianglesCommand>(vertices, colors, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), model, RenderCommand::Shading::Unlit));
+    };
+    // Flat on one plane, each layer over the last and over the rooms it fades in on
+    mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::DISABLE_DEPTH_TEST));
+    mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::DISABLE_DEPTH_WRITE));
+    queueLayer(mAtlas.footprintVertices(), mAtlas.footprintColors(), weights.footprint * (1.0f - weights.world));
+    const float worldOpacity = weights.footprint * weights.world;
+    queueLayer(mAtlas.worldVertices(), mAtlas.worldColors(), worldOpacity);
+    QVector<float> ringVertices;
+    QVector<float> ringColors;
+    mAtlas.appendRing(mAID, ExitAppearance::contrastColor(mpHost->mBgColor_2), ringVertices, ringColors);
+    queueLayer(ringVertices, ringColors, worldOpacity);
+    mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::BLEND_BY_SOURCE_ALPHA));
+    mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::ENABLE_DEPTH_WRITE));
+    mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::ENABLE_DEPTH_TEST));
+}
+
+QList<ModernGLWidget::AtlasLabel> ModernGLWidget::atlasLabels(const MapAtlas::Weights& weights)
+{
+    QList<AtlasLabel> labels;
+    if (weights.footprint <= 0.0f) {
+        return labels;
+    }
+    QList<const MapAtlas::Area*> areas;
+    for (const MapAtlas::Area& area : mAtlas.areas()) {
+        areas.append(&area);
+    }
+    // The area shown first, then the larger ones, which keep their names where the names would overlap
+    std::stable_sort(areas.begin(), areas.end(), [this](const MapAtlas::Area* a, const MapAtlas::Area* b) {
+        if ((a->id == mAID) != (b->id == mAID)) {
+            return a->id == mAID;
+        }
+        return a->roomCount > b->roomCount;
+    });
+    const MapAtlas::Area* pShown = mAtlas.area(mAID);
+    const QPointF shownOffset = pShown ? pShown->offset : QPointF();
+    const float level = atlasLevel();
+    QFont boldFont = font();
+    boldFont.setBold(true);
+    const QFontMetricsF metrics(font());
+    const QFontMetricsF boldMetrics(boldFont);
+    const QRectF view(0.0, 0.0, width(), height());
+    QList<AtlasLabel> candidates;
+    QList<QRectF> rects;
+    for (const MapAtlas::Area* pArea : std::as_const(areas)) {
+        const QPointF middle = pArea->center - shownOffset;
+        const std::optional<QPointF> pixel = mCameraController.pixelForPoint(QVector3D(static_cast<float>(middle.x()), static_cast<float>(middle.y()), level));
+        if (!pixel) {
+            continue;
+        }
+        AtlasLabel label;
+        label.shownArea = pArea->id == mAID;
+        //: Name shown on the 3D map's world view for an area that has no name, %1 is the area's number
+        label.text = pArea->name.isEmpty() ? tr("Area %1").arg(pArea->id) : pArea->name;
+        label.rect = (label.shownArea ? boldMetrics : metrics).boundingRect(label.text);
+        label.rect.moveCenter(*pixel);
+        if (!view.intersects(label.rect)) {
+            continue;
+        }
+        candidates.append(label);
+        rects.append(label.rect);
+    }
+    for (const qsizetype index : GeometryManager::declutteredRects(rects, 0.0)) {
+        labels.append(candidates.at(index));
+    }
+    return labels;
+}
+
+void ModernGLWidget::paintAtlasLabels(QPainter& painter)
+{
+    const QList<AtlasLabel> labels = atlasLabels(mZoomWeights);
+    if (labels.isEmpty()) {
+        return;
+    }
+    const QColor background = mpHost->mBgColor_2;
+    const QColor textColor = ExitAppearance::contrastColor(background);
+    QFont boldFont = font();
+    boldFont.setBold(true);
+    painter.save();
+    painter.setOpacity(mZoomWeights.footprint);
+    painter.setRenderHints(QPainter::Antialiasing | QPainter::TextAntialiasing);
+    // A halo of the background keeps a name readable over the areas' colors and the links
+    const QPen halo(background, 3.0, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin);
+    for (const AtlasLabel& label : labels) {
+        const QFont& labelFont = label.shownArea ? boldFont : font();
+        const QRectF bounds = QFontMetricsF(labelFont).boundingRect(label.text);
+        QPainterPath path;
+        path.addText(label.rect.topLeft() - bounds.topLeft(), labelFont, label.text);
+        painter.strokePath(path, halo);
+        painter.fillPath(path, textColor);
+    }
+    painter.restore();
+}
+
+int ModernGLWidget::areaAt(const QPoint& position)
+{
+    if (!mpMap || !mpMap->mpRoomDB) {
+        return 0;
+    }
+    updateMatrices();
+    const MapAtlas::Weights weights = zoomWeights();
+    if (!weights.areasPicked()) {
+        return 0;
+    }
+    const auto [origin, direction] = mCameraController.rayThroughPixel(QPointF(position));
+    if (std::abs(direction.z()) < 1e-6f) {
+        return 0;
+    }
+    const float along = (atlasLevel() - origin.z()) / direction.z();
+    if (along <= 0.0f) {
+        return 0;
+    }
+    const QVector3D point = origin + direction * along;
+    const MapAtlas::Area* pShown = mAtlas.area(mAID);
+    const QPointF inWorld = QPointF(point.x(), point.y()) + (pShown ? pShown->offset : QPointF());
+    const float slop = static_cast<float>(scmPickSlopPixels) * mCameraController.worldUnitsPerPixel(point);
+    return mAtlas.areaAt(inWorld, weights.nodesPicked(), slop);
+}
+
+void ModernGLWidget::flyToArea(const int areaId)
+{
+    if (!mpMap || !mpMap->mpRoomDB) {
+        return;
+    }
+    refreshAtlas();
+    const MapAtlas::Area* pTo = mAtlas.area(areaId);
+    if (!pTo) {
+        return;
+    }
+    const MapAtlas::Area* pFrom = mAtlas.area(mAID);
+    // The flight is in the new area's coordinates from the start, where the old area's rooms lie by this much
+    const QPointF shift = (pFrom ? pFrom->offset : QPointF()) - pTo->offset;
+    const QVector3D target = mCameraController.getTarget();
+    Flight flight;
+    flight.from = QVector3D(target.x() + static_cast<float>(shift.x()), target.y() + static_cast<float>(shift.y()), target.z());
+    flight.to = QVector3D(static_cast<float>(pTo->landing.x()), static_cast<float>(pTo->landing.y()), static_cast<float>(pTo->landingLevel));
+    flight.fromDistance = mCameraController.getScale();
+    const auto saved = mSavedCameras.constFind(areaId);
+    if (saved != mSavedCameras.cend()) {
+        flight.toDistance = saved->distance;
+    } else {
+        const float aspectRatio = height() > 0 ? static_cast<float>(width()) / static_cast<float>(height()) : 1.0f;
+        flight.toDistance = CameraController::distanceToShow(static_cast<float>(mpMap->mpRoomDB->get2DMapZoom(areaId)), aspectRatio);
+    }
+
+    stopSmoothTransition();
+    // The camera is not saved for the area left, as it was looking at the whole world
+    if (areaId != mAID && mp2DMap) {
+        mp2DMap->pruneRoomSelectionToArea(areaId);
+    }
+    mAID = areaId;
+    mMapCenterX = pTo->landing.x();
+    mMapCenterY = pTo->landing.y();
+    mMapCenterZ = pTo->landingLevel;
+    mFramePending = false;
+    mFrameWhenShown = false;
+    holdView();
+    mCurrentAnimationX = flight.from.x();
+    mCurrentAnimationY = flight.from.y();
+    mCurrentAnimationZ = flight.from.z();
+    mCameraController.setTarget(flight.from.x(), flight.from.y(), flight.from.z());
+    mFlight = flight;
+    mCameraSmoothAnimating = true;
+    mCameraAnimationTimer->start();
+    emit areaFlownInto(areaId);
+    update();
+}
+
+void ModernGLWidget::stopFlight()
+{
+    if (!mFlight) {
+        return;
+    }
+    stopSmoothTransition();
+    // Held where it got to rather than jumping on to where it was going
+    mMapCenterX = qRound(mCurrentAnimationX);
+    mMapCenterY = qRound(mCurrentAnimationY);
+    mMapCenterZ = qRound(mCurrentAnimationZ);
 }
 
 QString ModernGLWidget::roomToolTip(const int roomId) const
@@ -4853,12 +5138,21 @@ void ModernGLWidget::mousePressEvent(QMouseEvent* event)
     // A release that went elsewhere, such as to a menu opened mid-drag, must not leave the last drag running
     endEditGesture();
     if (event->button() == Qt::LeftButton && compassRect().contains(mPressPosition)) {
+        stopFlight();
         turnNorthUp();
         return;
     }
+    updateMatrices();
+    // Zoomed out to the areas, a click flies into one rather than starting an edit
+    const bool pickingAreas = zoomWeights().areasPicked();
     // As on the 2D map in editing mode: a drag from a room moves the selection and one from empty space,
     // or with Ctrl or Shift, draws a selection rectangle; Alt keeps the viewing mode's drags to pan and orbit
-    if (event->button() == Qt::LeftButton && editingMap() && !event->modifiers().testFlag(Qt::AltModifier)) {
+    const bool editPress = event->button() == Qt::LeftButton && editingMap() && !event->modifiers().testFlag(Qt::AltModifier) && !pickingAreas;
+    // An edit press stops a flight itself, after picking what was under the pointer before the stop snapped the view
+    if (!editPress) {
+        stopFlight();
+    }
+    if (editPress) {
         // Picked before a glide stops, as stopping it snaps the view to whole grid steps away from what was seen.
         // Only a room right under the pointer is picked up, so a drag beside rooms seen small draws a rectangle
         const int roomId = roomPickedAt(mPressPosition, false);
@@ -5035,7 +5329,12 @@ void ModernGLWidget::mouseReleaseEvent(QMouseEvent* event)
     endPan();
     if (event->button() == Qt::LeftButton && mClickPending) {
         mClickPending = false;
-        selectRoom(roomPickedAt(event->position().toPoint()), event->modifiers());
+        const QPoint position = event->position().toPoint();
+        if (const int areaId = event->modifiers() == Qt::NoModifier ? areaAt(position) : 0) {
+            flyToArea(areaId);
+        } else {
+            selectRoom(roomPickedAt(position), event->modifiers());
+        }
     } else if (event->button() == Qt::RightButton && mpMap && mpMap->mpRoomDB) {
         showContextMenu(event->position().toPoint());
     }
@@ -6563,14 +6862,20 @@ void ModernGLWidget::slot_resetPlayerIcon()
 void ModernGLWidget::queueScene()
 {
     queueBackdrop();
-    // First, as on the 2D map, where the other levels, the labels and everything else paint over it
-    queueGrid();
-    renderConnections();
-    // Labels beneath the rooms come before them without writing depth, so that the translucent rooms
-    // of other levels show over them rather than cutting holes in them
-    renderLabels(false, std::numeric_limits<int>::lowest(), std::numeric_limits<int>::max());
-    renderRooms();
-    renderPlayerBeacon();
+    mZoomWeights = zoomWeights();
+    if (mZoomWeights.roomsShown()) {
+        // First, as on the 2D map, where the other levels, the labels and everything else paint over it
+        queueGrid();
+        renderConnections();
+        // Labels beneath the rooms come before them without writing depth, so that the translucent rooms
+        // of other levels show over them rather than cutting holes in them
+        renderLabels(false, std::numeric_limits<int>::lowest(), std::numeric_limits<int>::max());
+        renderRooms();
+        renderPlayerBeacon();
+    }
+    if (mZoomWeights.footprint > 0.0f) {
+        queueAtlas(mZoomWeights);
+    }
 }
 
 void ModernGLWidget::renderLabels(const bool onTop, const int lowestLevel, const int highestLevel)
@@ -6741,6 +7046,8 @@ const QPixmap* ModernGLWidget::themedLabel(const int labelId, const TMapLabel& l
 
 void ModernGLWidget::startSmoothTransition(int targetAID, int targetX, int targetY, int targetZ)
 {
+    // Glides on from wherever a flight got to, as the flight would otherwise keep the camera
+    mFlight.reset();
     // Set up animation parameters
     mTargetAID = targetAID;
     mTargetMapCenterX = static_cast<float>(targetX);
@@ -6782,10 +7089,15 @@ void ModernGLWidget::stopSmoothTransition()
 {
     mCameraAnimationTimer->stop();
     mCameraSmoothAnimating = false;
+    mFlight.reset();
 }
 
 void ModernGLWidget::onCameraAnimationTick()
 {
+    if (mFlight) {
+        flightTick();
+        return;
+    }
     // Update animation progress
     mAnimationProgress += static_cast<qreal>(mCameraAnimationTimer->interval()) / mAnimationDuration;
 
@@ -6819,5 +7131,34 @@ void ModernGLWidget::onCameraAnimationTick()
     mCameraController.setTarget(mCurrentAnimationX, mCurrentAnimationY, mCurrentAnimationZ);
 
     // Trigger a repaint
+    update();
+}
+
+namespace {
+constexpr qreal scmFlightMilliseconds = 1000.0;
+// A flight glides across the map until this far through, and zooms in from this far on
+constexpr qreal scmFlightGlideEnd = 0.62;
+constexpr qreal scmFlightZoomStart = 0.3;
+} // namespace
+
+void ModernGLWidget::flightTick()
+{
+    Flight& flight = *mFlight;
+    flight.progress = qMin(1.0, flight.progress + static_cast<qreal>(mCameraAnimationTimer->interval()) / scmFlightMilliseconds);
+    const QEasingCurve curve(QEasingCurve::InOutCubic);
+    const auto glide = static_cast<float>(curve.valueForProgress(qMin(1.0, flight.progress / scmFlightGlideEnd)));
+    const auto zoom = static_cast<float>(curve.valueForProgress(std::clamp((flight.progress - scmFlightZoomStart) / (1.0 - scmFlightZoomStart), 0.0, 1.0)));
+    const bool landed = flight.progress >= 1.0;
+    const QVector3D at = landed ? flight.to : flight.from + (flight.to - flight.from) * glide;
+    mCurrentAnimationX = at.x();
+    mCurrentAnimationY = at.y();
+    mCurrentAnimationZ = at.z();
+    mCameraController.setTarget(at.x(), at.y(), at.z());
+    // Evenly in scale, which zooming by steps is too
+    mCameraController.setScale(landed ? flight.toDistance : flight.fromDistance * std::pow(flight.toDistance / flight.fromDistance, zoom));
+    if (landed) {
+        stopSmoothTransition();
+    }
+    emitCameraControls();
     update();
 }

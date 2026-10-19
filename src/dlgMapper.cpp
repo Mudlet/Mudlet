@@ -851,6 +851,12 @@ void dlgMapper::connect3DViewControls()
     }
 
     modernWidget->setCompanion2DMap(mp2dMap);
+    connect(modernWidget, &ModernGLWidget::areaFlownInto, this, [this](const int areaId) {
+        const QString areaName = mpMap->mpRoomDB->getAreaNamesMap().value(areaId);
+        if (!areaName.isEmpty()) {
+            comboBox_showArea->setCurrentText(areaName);
+        }
+    });
     connect(modernWidget, &ModernGLWidget::editIn2DRequested, this, [this, modernWidget](const int roomId) {
         // Held on the room, as a view moved by hand is, so that switching views carries it to the 2D map
         if (const TRoom* pRoom = mpMap->mpRoomDB->getRoom(roomId)) {

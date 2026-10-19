@@ -454,8 +454,9 @@ void RenderInstancedCubesCommand::execute(QOpenGLFunctions* gl,
     }
 }
 
-GLStateCommand::GLStateCommand(StateType stateType)
+GLStateCommand::GLStateCommand(StateType stateType, const float opacity)
 : mStateType(stateType)
+, mOpacity(opacity)
 {
 }
 
@@ -521,6 +522,13 @@ void GLStateCommand::execute(QOpenGLFunctions* gl,
         break;
     case DEPTH_FUNC_LESS:
         gl->glDepthFunc(GL_LESS);
+        break;
+    case BLEND_BY_OPACITY:
+        gl->glBlendColor(0.0f, 0.0f, 0.0f, mOpacity);
+        gl->glBlendFunc(GL_CONSTANT_ALPHA, GL_ONE_MINUS_CONSTANT_ALPHA);
+        break;
+    case BLEND_BY_SOURCE_ALPHA:
+        gl->glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
         break;
     case DEPTH_FUNC_GREATER:
         gl->glDepthFunc(GL_GREATER);
