@@ -42,6 +42,7 @@ private slots:
     void testNonDeterministicEncryption();
     void testSpecialCharacters();
     void testSecureMemoryClearing();
+    void testTheDerivedKeyNeverChanges();
     void testProfileKeyPersistence();
     void testPortableModeFileStorage();
     void testInvalidInputHandling();
@@ -728,6 +729,14 @@ void SecureStringUtilsTest::testReadingAnOldLegacyCopyReencryptsItToo()
 
 void SecureStringUtilsTest::cleanupTestCase()
 {
+}
+
+// Saved credentials were encrypted with keys derived this way, so generateKey() must keep producing this value
+void SecureStringUtilsTest::testTheDerivedKeyNeverChanges()
+{
+    const QByteArray salt = QByteArray::fromHex("000102030405060708090a0b0c0d0e0f");
+    QCOMPARE(SecureStringUtils::generateKey(QByteArrayLiteral("a profile's key"), salt, SecureStringUtils::PBKDF2_ITERATIONS).toHex(),
+             QByteArrayLiteral("41a61c18713aa2ea5fa8218d19f71d8dd25772c304cf197471c68d08ef75d4bf"));
 }
 
 #include "SecureStringUtilsTest.moc"
