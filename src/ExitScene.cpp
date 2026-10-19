@@ -527,7 +527,11 @@ void Builder::addRoom(const int roomId, const TRoom& room)
             bar(center, outer, mWidth, mHeight, color, level);
             const float length = mOptions.largeAreaExitArrows ? 0.8f : mWidth * 5.0f;
             const float halfWidth = mOptions.largeAreaExitArrows ? 0.3f : mWidth * 2.0f;
+            const qsizetype firstHeadTriangle = mScene.triangles.size();
             arrowhead(QVector3D(outer.x(), outer.y(), top(outer.z())), along, length, halfWidth, color, level, outlineColor);
+            for (qsizetype index = firstHeadTriangle; mOptions.largeAreaExitArrows && index < mScene.triangles.size(); ++index) {
+                mScene.triangles[index].distant = true;
+            }
             if (onCompass(exit.direction)) {
                 door(room, key, center, center + (outer - center) / 2.0f, level);
             }

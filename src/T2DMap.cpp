@@ -4625,7 +4625,7 @@ void T2DMap::slot_setPlayerLocation()
         manualSetEvent.mArgumentList.append(QString::number(_newRoomId));
         manualSetEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
         mpHost->raiseEvent(manualSetEvent);
-        mpMap->repaintArea(areaId);
+        mpMap->updatePlayerArea(areaId);
     }
 }
 
@@ -5049,6 +5049,8 @@ void T2DMap::slot_previewBorderProperties(QSet<int> roomIds)
     Q_UNUSED(roomIds)
     repaint();
     update();
+    // The 3D view keeps what it drew of the area until told the area changed
+    mpMap->updateArea(-1);
 }
 
 void T2DMap::slot_setImage() {}

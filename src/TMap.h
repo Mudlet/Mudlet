@@ -158,8 +158,12 @@ public:
     bool setRoomCoordinates(int id, int x, int y, int z);
     // After a change to the map: also counts its revision up
     void updateArea(int areaId);
-    // For what only moves the view or the player, which every move of the player asks for
-    void repaintArea(int areaId);
+    // For when only the player's room changed, which views read afresh anyway: unlike updateArea(), not taken
+    // as a change to how the area looks, so a view need not remake what it keeps of it
+    void updatePlayerArea(int areaId);
+    // For updateMap() and a new speedwalk: what a view keeps of the area's look is remade, but the map's revision
+    // stays, as the rooms and exits themselves did not change
+    void refreshArea(int areaId);
     // For a whole map read in outside TMap, as XMLimport does:
     void announceMapLoaded(bool showPlayerArea);
     void requestMapperShown();
@@ -329,6 +333,8 @@ public:
     bool isUnsaved() const { return mUnsavedMap; }
     // Bumped by setUnsaved() and whenever the whole map is replaced, so a cache can tell it is stale.
     quint64 mapRevision() const { return mMapRevision; }
+    // Bumped by updateArea(), for changes such as a room highlighted that mapRevision() misses
+    quint64 appearanceRevision() const { return mAppearanceRevision; }
     // Call TAreaGraph::refresh() before reading it.
     TAreaGraph* areaGraph() const { return mpAreaGraph.get(); }
     void setSaveError(bool state);
@@ -568,6 +574,9 @@ private:
     int mScriptCallbackDepth = 0;
     bool mGraphBuildInProgress = false;
     quint64 mMapRevision = 0;
+    quint64 mAppearanceRevision = 0;
+    // Per map, not per process, or one profile's pending update swallows another's
+    std::optional<int> mPendingAreaId;
     std::unique_ptr<TAreaGraph> mpAreaGraph;
 
     void addDirectionalRoute(std::vector<std::pair<unsigned int, route>>& bestRoutes,

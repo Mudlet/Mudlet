@@ -141,6 +141,26 @@ struct CubeInstanceData
     }
 };
 
+// A stretch of a RetainedInstances' instances, drawn in one call
+struct InstanceRun
+{
+    qsizetype first = 0;
+    qsizetype count = 0;
+};
+
+// Instances kept in a buffer on the GPU from frame to frame, so that a frame uploads only what changed
+struct RetainedInstances
+{
+    QVector<CubeInstanceData> instances;
+    QOpenGLBuffer buffer{QOpenGLBuffer::VertexBuffer};
+    // The buffer is allocated again when the count changes, otherwise just these instances are written again
+    bool resized = true;
+    qsizetype changedFrom = 0;
+    qsizetype changedTo = 0;
+
+    void setInstances(QVector<CubeInstanceData>&& fresh);
+};
+
 class GeometryManager : protected QOpenGLFunctions
 {
 public:
@@ -311,6 +331,18 @@ public:
                               GLenum drawMode = GL_TRIANGLES,
                               InstanceShape shape = InstanceShape::Box);
 
+    // Draws runs of retained instances, first writing to its buffer whatever changed since it was last drawn
+    void renderInstancedRuns(RetainedInstances& retained,
+                             const QList<InstanceRun>& runs,
+                             QOpenGLVertexArrayObject& vao,
+                             QOpenGLBuffer& vertexBuffer,
+                             QOpenGLBuffer& colorBuffer,
+                             QOpenGLBuffer& normalBuffer,
+                             QOpenGLBuffer& indexBuffer,
+                             class ResourceManager* resourceManager,
+                             GLenum drawMode = GL_TRIANGLES,
+                             InstanceShape shape = InstanceShape::Box);
+
 private:
     bool mInitialized = false;
 
@@ -337,6 +369,11 @@ private:
     PFNGLDRAWELEMENTSINSTANCEDPROC glDrawElementsInstanced = nullptr;
 
     void generateCubeTemplate();
+    // Binds the shape's mesh to the bound vertex array, leaving its instance attributes to be pointed
+    const GeometryData& bindInstanceMesh(InstanceShape shape);
+    // Points the instance attributes at the bound buffer's instances, from offset bytes in
+    void pointInstanceAttributes(quintptr offset);
+    void releaseInstanceAttributes();
     static void uploadTemplate(const GeometryData& geometry, QOpenGLBuffer& vertexBuffer, QOpenGLBuffer& indexBuffer);
     static GeometryData transformTemplate(const GeometryData& geometry, const QMatrix4x4& transform, float r, float g, float b, float a);
 

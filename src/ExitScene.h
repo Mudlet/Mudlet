@@ -92,6 +92,8 @@ struct Triangle
     QVector3D c;
     QColor color;
     int level = 0;
+    // Sized to stay readable when the rooms are too small to see, so drawn at any distance
+    bool distant = false;
 };
 
 // A character in a cell of the grid, half a room's spacing across, that a map drawn as text is laid out on

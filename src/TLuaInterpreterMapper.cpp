@@ -764,7 +764,7 @@ int TLuaInterpreter::centerview(lua_State* L)
 
     host.mpMap->mRoomIdHash[host.getName()] = roomId;
     host.mpMap->mNewMove = true;
-    host.mpMap->repaintArea(pR->getArea());
+    host.mpMap->updatePlayerArea(pR->getArea());
     host.mpMap->requestPlayerAreaShown();
     lua_pushboolean(L, true);
     return 1;
@@ -2765,7 +2765,7 @@ int TLuaInterpreter::gotoRoom(lua_State* L)
     host.startSpeedWalk();
     lua_pushboolean(L, true);
     if (auto* pR = host.mpMap->mpRoomDB->getRoom(targetRoomId)) {
-        host.mpMap->repaintArea(pR->getArea());
+        host.mpMap->refreshArea(pR->getArea());
     }
     return 1;
 }
@@ -4805,7 +4805,7 @@ int TLuaInterpreter::updateMap(lua_State* L)
 {
     const Host& host = getHostFromLua(L);
     if (host.mpMap) {
-        host.mpMap->repaintArea(-1);
+        host.mpMap->refreshArea(-1);
     }
     return 0;
 }

@@ -191,6 +191,15 @@ public:
                                 const QMatrix4x4& modelMatrix,
                                 Shading shading = Shading::Lit,
                                 GeometryManager::InstanceShape shape = GeometryManager::InstanceShape::Box);
+    // Runs of instances kept on the GPU between frames, then extras made for this frame only
+    RenderInstancedCubesCommand(std::shared_ptr<RetainedInstances> retained,
+                                const QList<InstanceRun>& runs,
+                                const QVector<CubeInstanceData>& extras,
+                                const QMatrix4x4& projectionMatrix,
+                                const QMatrix4x4& viewMatrix,
+                                const QMatrix4x4& modelMatrix,
+                                Shading shading = Shading::Lit,
+                                GeometryManager::InstanceShape shape = GeometryManager::InstanceShape::Box);
 
     void execute(QOpenGLFunctions* gl,
                  QOpenGLShaderProgram* shader,
@@ -204,7 +213,8 @@ public:
                  QOpenGLBuffer& texCoordBuffer) override;
 
     const char* getCommandName() const override { return "RenderInstancedCubes"; }
-    const QVector<CubeInstanceData>& instances() const { return mInstances; }
+    // Every instance drawn, in the order drawn
+    const QVector<CubeInstanceData>& instances() const;
     GeometryManager::InstanceShape shape() const { return mShape; }
     Shading shading() const { return mShading; }
     // A ModelBlock's edges drawn solid where it is see-through
@@ -212,7 +222,12 @@ public:
     bool edges() const { return mEdges; }
 
 private:
-    QVector<CubeInstanceData> mInstances;
+    // Gathered from the retained runs only when asked for
+    mutable QVector<CubeInstanceData> mInstances;
+    mutable bool mGathered = true;
+    std::shared_ptr<RetainedInstances> mRetained;
+    QList<InstanceRun> mRuns;
+    QVector<CubeInstanceData> mExtras;
     QMatrix4x4 mProjectionMatrix;
     QMatrix4x4 mViewMatrix;
     QMatrix4x4 mModelMatrix;

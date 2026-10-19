@@ -30,6 +30,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstring>
 #include <limits>
 #include <numbers>
 
@@ -1239,14 +1240,10 @@ void GeometryManager::renderInstancedCubes(const QVector<CubeInstanceData>& inst
     if (!mInitialized || instances.isEmpty()) {
         return;
     }
-    ShapeTemplate& shapeTemplate = mShapeTemplates[static_cast<size_t>(shape)];
-    const GeometryData& mesh = shapeTemplate.mesh;
-    QOpenGLBuffer& meshVertexBuffer = shapeTemplate.vertexBuffer;
-    QOpenGLBuffer& meshIndexBuffer = shapeTemplate.indexBuffer;
-
     // Check if instancing functions are available
     if (!glVertexAttribDivisor || !glDrawElementsInstanced) {
         qWarning() << "GeometryManager: Instancing functions not available, falling back to individual meshes";
+        const GeometryData& mesh = mShapeTemplates[static_cast<size_t>(shape)].mesh;
         for (const auto& instance : instances) {
             GeometryData cubeGeometry = transformTemplate(mesh, instance.transform, instance.color[0], instance.color[1], instance.color[2], instance.color[3]);
             renderGeometry(cubeGeometry, vao, vertexBuffer, colorBuffer, normalBuffer, indexBuffer, drawMode);
@@ -1255,13 +1252,30 @@ void GeometryManager::renderInstancedCubes(const QVector<CubeInstanceData>& inst
     }
 
     QOpenGLVertexArrayObject::Binder vaoBinder(&vao);
+    const GeometryData& mesh = bindInstanceMesh(shape);
 
-    if (!meshVertexBuffer.isCreated()) {
-        uploadTemplate(mesh, meshVertexBuffer, meshIndexBuffer);
-    }
     if (!mInstanceBuffer.isCreated()) {
         mInstanceBuffer.create();
         mInstanceBuffer.setUsagePattern(QOpenGLBuffer::StreamDraw);
+    }
+    mInstanceBuffer.bind();
+    mInstanceBuffer.allocate(instances.data(), static_cast<int>(instances.size() * sizeof(CubeInstanceData)));
+    pointInstanceAttributes(0);
+
+    // Draw all instances with a single call
+    glDrawElementsInstanced(drawMode, mesh.indexCount(), GL_UNSIGNED_INT, nullptr, instances.size());
+
+    releaseInstanceAttributes();
+}
+
+const GeometryData& GeometryManager::bindInstanceMesh(const InstanceShape shape)
+{
+    ShapeTemplate& shapeTemplate = mShapeTemplates[static_cast<size_t>(shape)];
+    const GeometryData& mesh = shapeTemplate.mesh;
+    QOpenGLBuffer& meshVertexBuffer = shapeTemplate.vertexBuffer;
+    QOpenGLBuffer& meshIndexBuffer = shapeTemplate.indexBuffer;
+    if (!meshVertexBuffer.isCreated()) {
+        uploadTemplate(mesh, meshVertexBuffer, meshIndexBuffer);
     }
 
     const int positionBytes = static_cast<int>(mesh.vertices.size() * sizeof(float));
@@ -1275,44 +1289,55 @@ void GeometryManager::renderInstancedCubes(const QVector<CubeInstanceData>& inst
     // The shader takes color from the instance; a stale per-vertex color array may be shorter than the mesh
     glDisableVertexAttribArray(2);
     glDisableVertexAttribArray(scmTexCoordLocation);
+    return mesh;
+}
 
-    mInstanceBuffer.bind();
-    mInstanceBuffer.allocate(instances.data(), static_cast<int>(instances.size() * sizeof(CubeInstanceData)));
-
-    // Set up instance attributes
+void GeometryManager::pointInstanceAttributes(const quintptr offset)
+{
     // Color: location 3
     glEnableVertexAttribArray(3);
-    glVertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, sizeof(CubeInstanceData), reinterpret_cast<void*>(0));
+    glVertexAttribPointer(3, 4, GL_FLOAT, GL_FALSE, sizeof(CubeInstanceData), reinterpret_cast<void*>(offset));
     glVertexAttribDivisor(3, 1);
 
     // Transform matrix: location 4-7
-    glEnableVertexAttribArray(4);
-    glVertexAttribPointer(4, 4, GL_FLOAT, GL_FALSE, sizeof(CubeInstanceData), reinterpret_cast<void*>(4 * sizeof(float)));
-    glVertexAttribDivisor(4, 1);
-    glEnableVertexAttribArray(5);
-    glVertexAttribPointer(5, 4, GL_FLOAT, GL_FALSE, sizeof(CubeInstanceData), reinterpret_cast<void*>(8 * sizeof(float)));
-    glVertexAttribDivisor(5, 1);
-    glEnableVertexAttribArray(6);
-    glVertexAttribPointer(6, 4, GL_FLOAT, GL_FALSE, sizeof(CubeInstanceData), reinterpret_cast<void*>(12 * sizeof(float)));
-    glVertexAttribDivisor(6, 1);
-    glEnableVertexAttribArray(7);
-    glVertexAttribPointer(7, 4, GL_FLOAT, GL_FALSE, sizeof(CubeInstanceData), reinterpret_cast<void*>(16 * sizeof(float)));
-    glVertexAttribDivisor(7, 1);
+    for (GLuint column = 0; column < 4; ++column) {
+        glEnableVertexAttribArray(4 + column);
+        glVertexAttribPointer(4 + column, 4, GL_FLOAT, GL_FALSE, sizeof(CubeInstanceData), reinterpret_cast<void*>(offset + (4 + 4 * column) * sizeof(float)));
+        glVertexAttribDivisor(4 + column, 1);
+    }
+}
 
-    // Draw all instances with a single call
-    glDrawElementsInstanced(drawMode, mesh.indexCount(), GL_UNSIGNED_INT, nullptr, instances.size());
+void GeometryManager::releaseInstanceAttributes()
+{
+    for (GLuint location = 3; location <= 7; ++location) {
+        glVertexAttribDivisor(location, 0);
+        glDisableVertexAttribArray(location);
+    }
+}
 
-    // Clean up instance attributes
-    glVertexAttribDivisor(3, 0);
-    glVertexAttribDivisor(4, 0);
-    glVertexAttribDivisor(5, 0);
-    glVertexAttribDivisor(6, 0);
-    glVertexAttribDivisor(7, 0);
-    glDisableVertexAttribArray(3);
-    glDisableVertexAttribArray(4);
-    glDisableVertexAttribArray(5);
-    glDisableVertexAttribArray(6);
-    glDisableVertexAttribArray(7);
+void RetainedInstances::setInstances(QVector<CubeInstanceData>&& fresh)
+{
+    if (fresh.size() != instances.size()) {
+        resized = true;
+    } else if (!resized) {
+        // Instances made the same way are the same bytes, so the changed stretch is where the bytes differ
+        const auto same = [&](const qsizetype index) {
+            return std::memcmp(fresh.constData() + index, instances.constData() + index, sizeof(CubeInstanceData)) == 0;
+        };
+        qsizetype first = 0;
+        while (first < fresh.size() && same(first)) {
+            ++first;
+        }
+        qsizetype last = fresh.size();
+        while (last > first && same(last - 1)) {
+            --last;
+        }
+        if (first < last) {
+            changedFrom = changedFrom < changedTo ? qMin(changedFrom, first) : first;
+            changedTo = qMax(changedTo, last);
+        }
+    }
+    instances = std::move(fresh);
 }
 
 void GeometryManager::uploadTemplate(const GeometryData& geometry, QOpenGLBuffer& vertexBuffer, QOpenGLBuffer& indexBuffer)
@@ -1354,4 +1379,56 @@ void GeometryManager::renderInstancedCubes(const QVector<CubeInstanceData>& inst
         const GeometryData& mesh = mShapeTemplates[static_cast<size_t>(shape)].mesh;
         resourceManager->onDrawCall(instances.size() * (mesh.indexCount() / 3)); // Count triangles for all instances
     }
+}
+
+void GeometryManager::renderInstancedRuns(RetainedInstances& retained,
+                                          const QList<InstanceRun>& runs,
+                                          QOpenGLVertexArrayObject& vao,
+                                          QOpenGLBuffer& vertexBuffer,
+                                          QOpenGLBuffer& colorBuffer,
+                                          QOpenGLBuffer& normalBuffer,
+                                          QOpenGLBuffer& indexBuffer,
+                                          ResourceManager* resourceManager,
+                                          GLenum drawMode,
+                                          const InstanceShape shape)
+{
+    if (!mInitialized || runs.isEmpty() || retained.instances.isEmpty()) {
+        return;
+    }
+    if (!glVertexAttribDivisor || !glDrawElementsInstanced) {
+        for (const InstanceRun& run : runs) {
+            renderInstancedCubes(retained.instances.mid(run.first, run.count), vao, vertexBuffer, colorBuffer, normalBuffer, indexBuffer, resourceManager, drawMode, shape);
+        }
+        return;
+    }
+
+    QOpenGLVertexArrayObject::Binder vaoBinder(&vao);
+    const GeometryData& mesh = bindInstanceMesh(shape);
+
+    constexpr qsizetype stride = sizeof(CubeInstanceData);
+    if (!retained.buffer.isCreated()) {
+        retained.buffer.create();
+        retained.buffer.setUsagePattern(QOpenGLBuffer::StaticDraw);
+        retained.resized = true;
+    }
+    retained.buffer.bind();
+    if (retained.resized) {
+        retained.buffer.allocate(retained.instances.constData(), static_cast<int>(retained.instances.size() * stride));
+        retained.resized = false;
+        retained.changedFrom = retained.changedTo = 0;
+    } else if (retained.changedFrom < retained.changedTo) {
+        retained.buffer.write(
+                static_cast<int>(retained.changedFrom * stride), retained.instances.constData() + retained.changedFrom, static_cast<int>((retained.changedTo - retained.changedFrom) * stride));
+        retained.changedFrom = retained.changedTo = 0;
+    }
+
+    // OpenGL 3.3 has no base instance to draw from, so each run points the instance attributes at where it starts
+    for (const InstanceRun& run : runs) {
+        pointInstanceAttributes(static_cast<quintptr>(run.first * stride));
+        glDrawElementsInstanced(drawMode, mesh.indexCount(), GL_UNSIGNED_INT, nullptr, static_cast<GLsizei>(run.count));
+        if (resourceManager) {
+            resourceManager->onDrawCall(run.count * (mesh.indexCount() / 3));
+        }
+    }
+    releaseInstanceAttributes();
 }

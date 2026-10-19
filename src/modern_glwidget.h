@@ -57,9 +57,11 @@
 #include "LabelTextureCache.h"
 #include "RenderCommandQueue.h"
 #include "ResourceManager.h"
+#include "RetainedMapScene.h"
 #include "ShaderManager.h"
 #include "CameraController.h"
 
+#include <array>
 #include <functional>
 #include <memory>
 #include <optional>
@@ -84,6 +86,7 @@ class ModernGLWidget : public QOpenGLWidget, protected QOpenGLFunctions
     friend class ModernRoomTextureTest;
     friend class Map3DViewInteractionTest;
     friend class ModernMapperRenderTest;
+    friend class ModernMapperSceneTest;
 
 public:
     Q_DISABLE_COPY(ModernGLWidget)
@@ -430,8 +433,7 @@ private:
     QPoint mPointerPosition;
     bool mPointerInView = false;
     Qt::MouseButtons mPointerButtons;
-    // The exit lines and arrowheads of see-through levels, made by renderConnections() for renderRooms()
-    // to draw with their levels' rooms, lowest level first
+    // A see-through level's exit lines and arrowheads, drawn with its rooms
     struct LevelExits
     {
         QVector<CubeInstanceData> bars;
@@ -439,8 +441,58 @@ private:
         QVector<CubeInstanceData> strokes;
         QVector<float> vertices;
         QVector<float> colors;
+        // Whether each triangle shows in a tile too far away for detail
+        QVector<bool> distant;
     };
-    QMap<int, LevelExits> mSeeThroughExits;
+    // What of a see-through level's exits this frame shows, drawn by renderRooms() with the level's rooms
+    struct LevelExitRuns
+    {
+        QList<InstanceRun> bars;
+        QList<InstanceRun> strokes;
+        QVector<float> vertices;
+        QVector<float> colors;
+    };
+    // Made by renderConnections() for renderRooms(), lowest level first
+    QMap<int, LevelExitRuns> mSeeThroughExits;
+    // Everything the kept scene's rooms and exits were made from; when any of it differs, the scene is made again
+    struct SceneInputs
+    {
+        int areaId = 0;
+        quint64 mapRevision = 0;
+        quint64 exitsRevision = 0;
+        quint32 roomsVersion = 0;
+        quint64 appearanceRevision = 0;
+        int centerZ = 0;
+        int levelsAbove = 0;
+        int levelsBelow = 0;
+        float scale = 0.0f;
+        float zFlattening = 0.0f;
+        bool gridMode = false;
+        bool showBorders = false;
+        double borderSize = 0.0;
+        double lineSize = 0.0;
+        bool moreTransparent = false;
+        bool drawUpperLowerLevels = false;
+        bool inOutStubs = false;
+        bool largeAreaExitArrows = false;
+        QColor borderColor;
+        QColor background;
+        QColor foreground;
+        QColor upperLevelColor;
+        QColor lowerLevelColor;
+        std::array<QColor, 16> hostColors;
+        QMap<int, int> envColors;
+        QMap<int, QColor> customEnvColors;
+        QString styleId;
+        int exitGeometryBuilds = 0;
+        bool operator==(const SceneInputs&) const = default;
+    };
+    std::optional<SceneInputs> mSceneInputs;
+    RetainedMapScene mScene;
+    int mSceneMaxRoomId = 0;
+    // Rooms whose blocks are drawn narrower than this many pixels, in tiles of the scene so far away, are drawn
+    // without what is on them; such marks would be a pixel or less across
+    float mDetailPixels = 3.0f;
     // The rooms whose IDs the last room pass drew: those too small to read, or overlapping one kept before them
     // (the viewed level's first, then the nearest), are left out
     QSet<int> mRoomIdsDrawn;
@@ -481,6 +533,11 @@ private:
         QVector<float> vertices;
         QVector<float> colors;
         QMap<int, LevelExits> seeThrough;
+        // The level of each opaque bar, stroke and triangle, for the kept scene to file them by
+        QVector<int> barLevels;
+        QVector<int> strokeLevels;
+        QVector<int> triangleLevels;
+        QVector<bool> distant;
     };
     ExitGeometry mExitGeometry;
     int mExitGeometryBuilds = 0;
@@ -504,6 +561,11 @@ private:
     void updateMatrices();
     void renderRooms();
     void renderConnections();
+    SceneInputs sceneInputs() const;
+    // Makes the kept scene again if anything it was made from changed, then sees what of it this frame shows
+    void refreshScene();
+    // The blocks drawn for a room: its border, its outline, then the room itself, each with the layer it is drawn in
+    void addRoomCubes(const TRoom& room, bool hovered, bool solidPlayer, const std::function<void(RetainedMapScene::Layer, const CubeInstanceData&)>& add) const;
     // The paper or the felt behind the map, for a style drawn on either
     void queueBackdrop();
     // The 2D map's grid, at the viewed level's room bottoms, writing no depth
