@@ -1359,7 +1359,7 @@ void dlgProfilePreferences::retranslateTriggerMatchPoolControls()
     //: Label of a number field in the Performance settings: how many lines must arrive at once to count as a flood
     mpLabel_triggerMatchFloodLines->setText(tr("Lines arriving at once that make a flood:"));
     //: Tooltip of the lines that make a flood
-    mpSpinBox_triggerMatchFloodLines->setToolTip(tr("<p>The threads only help while text arrives faster than it can be matched; at normal game speed they would use CPU for nothing.</p>"));
+    mpSpinBox_triggerMatchFloodLines->setToolTip(tr("<p>The threads only help when the game sends many lines at once; for a line or two at a time they would use CPU for nothing.</p>"));
     //: Label of a number field in the Performance settings: how long, in microseconds, the helper threads stay awake waiting for the next line
     mpLabel_triggerMatchSpin->setText(tr("Microseconds the threads stay awake for the next line:"));
     //: Tooltip of the helper threads' spin time
