@@ -138,13 +138,30 @@ private slots:
     void test_anUnplacedSoundIsMovedByAnUpdate()
     {
         SKIP_OR_FAIL_WITHOUT(backendPlaces() ? QString() : noPanningReason());
-        const QString fileName = writeClip(qsl("unplaced.wav"));
+        TAudioMixer* mixer = TAudioMixer::self();
+        mixer->setOutputSuspended(true);
+        auto resume = qScopeGuard([mixer]() {
+            mixer->setOutputSuspended(false);
+        });
+        const QString fileName = writeClip(qsl("unplaced.wav"), clipMs, 8000);
         TMediaData data = soundData(fileName);
         data.setMediaKey(qsl("unplaced"));
+        data.setMediaVolume(100);
         media()->playMedia(data);
 
         QVERIFY2(waitForStarted(), "The unplaced sound never started playing.");
         QCOMPARE(media()->playersPlaced(), 0);
+        // Heard first, so the update finds it playing rather than still loading
+        float left = 0.0F;
+        float right = 0.0F;
+        QVERIFY2(QTest::qWaitFor(
+                         [&]() {
+                             std::tie(left, right) = loudestOnEachSide(20);
+                             return left > 0.1F;
+                         },
+                         QDeadlineTimer(5s)),
+                 "The unplaced sound's audio never reached the shared output.");
+        QVERIFY2(std::abs(left - right) < 1e-3F, qPrintable(qsl("Unplaced, the mono sound came out at %1 left and %2 right.").arg(left).arg(right)));
 
         TMediaData selection;
         selection.setMediaProtocol(TMediaData::MediaProtocolAPI);
@@ -154,9 +171,12 @@ private slots:
 
         QCOMPARE(media()->playersPlaced(), 1);
         QCOMPARE(media()->placedSound(qsl("unplaced"))->pan(), -1.0F);
-        SKIP_OR_FAIL_WITHOUT(waitForPlacedAudio() ? QString() : noPanningReason());
         QVERIFY2(stillPlaying(fileName), "Moving a playing sound stopped it.");
         QCOMPARE(playingData(fileName).mediaDirection(), qsl("west"));
+        // What was queued before the move is dropped oldest first as the voice's cap is reached
+        QTest::qWait(700ms);
+        std::tie(left, right) = loudestOnEachSide(20);
+        QVERIFY2(left > 0.1F && right < 1e-3F, qPrintable(qsl("Moved west, the sound came out at %1 left and %2 right.").arg(left).arg(right)));
     }
 
     // Every pass of a loop is a new source on the same player, and each has to reach the voice
@@ -282,8 +302,8 @@ private slots:
         selection.setMediaProtocol(TMediaData::MediaProtocolAPI);
         selection.setMediaType(TMediaData::MediaTypeSound);
         selection.setMediaKey(qsl("faded"));
-        media()->updateMedia(selection, 10, std::nullopt, QString(), 0);
-        QVERIFY2(media()->placedSound(qsl("faded"))->gain() <= 0.1F + 1e-5F, "An update's volume never reached the placed sound.");
+        media()->updateMedia(selection, 90, std::nullopt, QString(), 0);
+        QVERIFY2(media()->placedSound(qsl("faded"))->gain() >= 0.9F - 1e-5F, "An update's volume never reached the placed sound.");
     }
 
     // A placed sound on a pooled player must still be cut by a stop: reusing the player reconnects TMedia's handlers
@@ -433,6 +453,104 @@ private slots:
         QTest::qWait(700ms);
         std::tie(left, right) = loudestOnEachSide(20);
         QVERIFY2(right > 0.1F && left < 1e-3F, qPrintable(qsl("Moved east, the tone came out at %1 left and %2 right.").arg(left).arg(right)));
+    }
+
+    // A game moves a sound by sending its play and an update together, before any of it is heard
+    void test_anUpdateSentWithThePlayMovesFromWhereItWasPlayed()
+    {
+        SKIP_OR_FAIL_WITHOUT(backendPlaces() ? QString() : noPanningReason());
+        TAudioMixer* mixer = TAudioMixer::self();
+        mixer->setOutputSuspended(true);
+        auto resume = qScopeGuard([mixer]() {
+            mixer->setOutputSuspended(false);
+        });
+
+        TMediaData data = soundData(writeClip(qsl("passing.wav"), clipMs, 8000));
+        data.setMediaKey(qsl("passing"));
+        data.setMediaVolume(100);
+        data.setMediaDirection(qsl("east"));
+        media()->playMedia(data);
+        TMediaData selection;
+        selection.setMediaProtocol(TMediaData::MediaProtocolAPI);
+        selection.setMediaType(TMediaData::MediaTypeSound);
+        selection.setMediaKey(qsl("passing"));
+        media()->updateMedia(selection, 20, std::nullopt, qsl("west"), 5000);
+
+        QVERIFY2(waitForStarted(), "The sound never started playing.");
+        SKIP_OR_FAIL_WITHOUT(waitForPlacedAudio() ? QString() : noPanningReason());
+        const int voice = media()->placedSound(qsl("passing"))->mixerVoice();
+        QVERIFY2(QTest::qWaitFor(
+                         [&]() {
+                             return mixer->queuedSamples(voice) >= 200 * 48 * 2;
+                         },
+                         QDeadlineTimer(5s)),
+                 "The sound's audio never reached the shared output.");
+
+        // Its first moments, still close to where it was played: on the right, and loud
+        const auto [left, right] = loudestOnEachSide(20);
+        QVERIFY2(right > left && right > 0.1F, qPrintable(qsl("Played east and moved west over 5 s, it began at %1 left and %2 right.").arg(left).arg(right)));
+    }
+
+    // Overhead and then off to one side: placed again before it has finished blending back, it still glides
+    void test_aSoundPlacedAgainWhileLeavingItsPlaceGlidesThere()
+    {
+        SKIP_OR_FAIL_WITHOUT(backendPlaces() ? QString() : noPanningReason());
+        TAudioMixer* mixer = TAudioMixer::self();
+        mixer->setOutputSuspended(true);
+        auto resume = qScopeGuard([mixer]() {
+            mixer->setOutputSuspended(false);
+        });
+
+        TMediaData data = soundData(writeClip(qsl("bird.wav"), clipMs, 8000));
+        data.setMediaKey(qsl("bird"));
+        data.setMediaVolume(100);
+        data.setMediaDirection(qsl("east"));
+        media()->playMedia(data);
+        QVERIFY2(waitForStarted(), "The sound never started playing.");
+        SKIP_OR_FAIL_WITHOUT(waitForPlacedAudio() ? QString() : noPanningReason());
+        const int voice = media()->placedSound(qsl("bird"))->mixerVoice();
+        QVERIFY2(QTest::qWaitFor(
+                         [&]() {
+                             return mixer->queuedSamples(voice) >= 200 * 48 * 2;
+                         },
+                         QDeadlineTimer(5s)),
+                 "The sound's audio never reached the shared output.");
+
+        TMediaData selection;
+        selection.setMediaProtocol(TMediaData::MediaProtocolAPI);
+        selection.setMediaType(TMediaData::MediaTypeSound);
+        selection.setMediaKey(qsl("bird"));
+        media()->updateMedia(selection, std::nullopt, std::nullopt, qsl("up"), 5000);
+        QTest::qWait(100ms);
+        media()->updateMedia(selection, std::nullopt, std::nullopt, qsl("west"), 5000);
+        QTest::qWait(700ms);
+
+        const auto [left, right] = loudestOnEachSide(20);
+        QVERIFY2(right > left, qPrintable(qsl("Moved from east to west over 5 s, a moment in it was at %1 left and %2 right.").arg(left).arg(right)));
+    }
+
+    // An output of its own glides its volume on a timer, which must not outlive the track it was for
+    void test_aVolumeGlideOnAnOutputOfItsOwnEndsWithItsTrack()
+    {
+        TMediaData data = soundData(writeClip(qsl("glide.wav"), shortClipMs, 8000));
+        TMediaPlayer player(mpHost, data);
+        QAudioOutput* output = player.mediaPlayer()->audioOutput();
+        QVERIFY(output);
+        player.setVolume(10);
+        player.glideVolume(80, 10000);
+        QTest::qWait(100ms);
+        player.claimSource(QUrl::fromLocalFile(qsl("%1/glide.wav").arg(MudletApp::getMudletPath(enums::profileMediaPath, mHostname))));
+        player.setVolume(80);
+        QTest::qWait(100ms);
+        QVERIFY2(std::abs(output->volume() - 0.8F) < 0.01F, qPrintable(qsl("A new track set to 80 played at %1.").arg(output->volume())));
+
+        SKIP_OR_FAIL_WITHOUT(backendPlaces() ? QString() : noPanningReason());
+        player.setVolume(10);
+        player.glideVolume(80, 10000);
+        QTest::qWait(100ms);
+        QVERIFY(player.setMixed(true));
+        player.setVolume(80);
+        QVERIFY2(std::abs(player.voice()->gain() - 0.8F) < 0.01F, qPrintable(qsl("Mixed and set to 80, the sound played at %1.").arg(player.voice()->gain())));
     }
 
     // A pooled player stopped part way into a long glide starts its next sound at that sound's own volume

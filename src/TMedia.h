@@ -90,6 +90,7 @@ public:
         // synchronously, and that handler snapshots these counters to arm its own release.
         ++mClaimGeneration;
         mEndAnnounced = false;
+        stopVolumeGlide();
         if (mMediaPlayer) {
             // A stopped player still holding anything has that media loaded, so handing it a
             // source now starts playback synchronously and raises sysMediaStarted inside the
@@ -168,12 +169,10 @@ public:
         if (mpVolumeGlide && mpVolumeGlide->isActive() && volume == mVolumeGlideTarget) {
             return;
         }
-        if (mpVolumeGlide) {
-            mpVolumeGlide->stop();
-        }
+        stopVolumeGlide();
         if (mpVoice) {
-            // Fades step the volume a little at a time; a short glide keeps each step from clicking
-            mpVoice->setGain(volume / 100.0f, 20);
+            // Glides only for the moment that keeps a fade's steps from clicking once the sound plays
+            mpVoice->setGain(volume / 100.0f, 0);
             return;
         }
         if (!mMediaPlayer) {
@@ -187,12 +186,16 @@ public:
         }
         audioOutput->setVolume(volume / 100.0f);
     }
+    void stopVolumeGlide()
+    {
+        if (mpVolumeGlide) {
+            mpVolumeGlide->stop();
+        }
+    }
     void glideVolume(int volume, int milliseconds)
     {
         if (mpVoice) {
-            if (mpVolumeGlide) {
-                mpVolumeGlide->stop();
-            }
+            stopVolumeGlide();
             mpVoice->setGain(volume / 100.0f, milliseconds);
             return;
         }
@@ -248,6 +251,8 @@ public:
         if (!mMediaPlayer || mixed == (mpVoice != nullptr)) {
             return mpVoice != nullptr;
         }
+        // Its timer steps the output being replaced
+        stopVolumeGlide();
         if (mixed) {
             if (TMediaVoice::unsupported()) {
                 return false;

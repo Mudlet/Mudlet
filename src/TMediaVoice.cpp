@@ -91,17 +91,42 @@ float TMediaVoice::Glide::step()
     return current;
 }
 
-void TMediaVoice::Request::set(const float value, const qint64 frames)
+void TMediaVoice::Request::set(const float value, const int glideMilliseconds, const bool playing)
+{
+    const std::optional<float> from = playing ? std::nullopt : waitingStart();
+    const bool glides = playing || (from && glideMilliseconds > 0);
+    target = value;
+    glideFrames = glides ? glideFramesFor(glideMilliseconds) : 0;
+    start = glides ? from : std::nullopt;
+    ++serial;
+}
+
+void TMediaVoice::Request::jumpTo(const float value)
 {
     target = value;
-    glideFrames = frames;
+    glideFrames = 0;
+    start.reset();
     ++serial;
+}
+
+std::optional<float> TMediaVoice::Request::waitingStart() const
+{
+    if (applied == serial) {
+        return std::nullopt;
+    }
+    if (start) {
+        return start;
+    }
+    return glideFrames == 0 ? std::optional<float>(target) : std::nullopt;
 }
 
 void TMediaVoice::Request::applyTo(Glide& glide)
 {
     if (applied != serial) {
         applied = serial;
+        if (start) {
+            glide.glideTo(*start, 0);
+        }
         glide.glideTo(target, glideFrames);
     }
 }
@@ -257,16 +282,14 @@ void TMediaVoice::checkForSilence()
 void TMediaVoice::setGain(const float gain, const int glideMilliseconds)
 {
     const float level = std::clamp(gain, 0.0F, 1.0F);
+    const QMutexLocker lock(&mRequestMutex);
     // A fade sets the same level on every tick, which must not cut short a longer glide to it. A new
     // track, with no audio yet, starts at its own level, not part way into the last one's glide.
     if (level == mRequestedGain && mReceivedAudio) {
         return;
     }
     mRequestedGain = level;
-    // Before any audio there is nothing to glide from
-    const qint64 frames = mReceivedAudio ? glideFramesFor(glideMilliseconds) : 0;
-    const QMutexLocker lock(&mRequestMutex);
-    mGainRequest.set(level, frames);
+    mGainRequest.set(level, glideMilliseconds, mReceivedAudio);
 }
 
 qint64 TMediaVoice::glideFramesFor(const int milliseconds)
@@ -277,15 +300,19 @@ qint64 TMediaVoice::glideFramesFor(const int milliseconds)
 void TMediaVoice::setPan(const float pan, const int glideMilliseconds)
 {
     const float position = std::clamp(pan, -1.0F, 1.0F);
-    const qint64 frames = mReceivedAudio ? glideFramesFor(glideMilliseconds) : 0;
     const QMutexLocker lock(&mRequestMutex);
-    // A sound placed as it plays moves out of its own stereo image to the pan, not in from the centre. A
-    // new track starts fully placed, even on a player whose last track was stopped part way into a glide.
-    if (mPlaced && mReceivedAudio) {
-        mPanRequest.set(position, frames);
+    const bool playing = mReceivedAudio;
+    // A sound placed as it plays moves out of its own stereo image to the pan, not in from the centre,
+    // while one still partly heard at its last pan moves on from there. A new track starts fully placed,
+    // even on a player whose last track was stopped part way into a glide.
+    if (playing ? (mPlaced || mPanHeard) : (mPlaced && mPanRequest.waitingStart())) {
+        mPanRequest.set(position, glideMilliseconds, playing);
+        if (!mPlaced) {
+            mPlacementRequest.set(1.0F, glideMilliseconds, playing);
+        }
     } else {
-        mPanRequest.set(position, 0);
-        mPlacementRequest.set(1.0F, frames);
+        mPanRequest.jumpTo(position);
+        mPlacementRequest.set(1.0F, glideMilliseconds, playing);
     }
     mRequestedPan = position;
     mPlaced = true;
@@ -293,9 +320,8 @@ void TMediaVoice::setPan(const float pan, const int glideMilliseconds)
 
 void TMediaVoice::unplace(const int glideMilliseconds)
 {
-    const qint64 frames = mReceivedAudio ? glideFramesFor(glideMilliseconds) : 0;
     const QMutexLocker lock(&mRequestMutex);
-    mPlacementRequest.set(0.0F, frames);
+    mPlacementRequest.set(0.0F, glideMilliseconds, mReceivedAudio);
     mPlaced = false;
 }
 
@@ -350,15 +376,17 @@ void TMediaVoice::audioBufferReceived(const QAudioBuffer& buffer)
     }
 
     {
+        // Under the lock, so a change asked for now is either applied here or made knowing audio plays
         const QMutexLocker lock(&mRequestMutex);
         mGainRequest.applyTo(mGain);
         mPanRequest.applyTo(mPan);
         mPlacementRequest.applyTo(mPlacement);
+        mReceivedAudio = true;
     }
 
-    mReceivedAudio = true;
     const qint64 frames = buffer.frameCount();
     std::vector<float> rendered(static_cast<size_t>(frames * 2));
     render(buffer.constData<float>(), rendered.data(), frames, mGain, mPan, mPlacement);
+    mPanHeard = mPlacement.current > 0.0F || mPlacement.target > 0.0F;
     TAudioMixer::self()->queue(mVoice, rendered.data(), frames);
 }

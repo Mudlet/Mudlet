@@ -25,6 +25,7 @@
 #include <QPointer>
 
 #include <atomic>
+#include <optional>
 
 class QAudioBuffer;
 class QAudioBufferOutput;
@@ -98,10 +99,16 @@ private:
     {
         float target = 0.0F;
         qint64 glideFrames = 0;
+        // Where a glide asked for before any audio sets out from
+        std::optional<float> start;
         quint64 serial = 0;
         quint64 applied = 0;
 
-        void set(float value, qint64 frames);
+        // Once audio plays, every change glides. Before then one jumps, unless it follows a jump not
+        // yet made, as a Play and an Update sent together ask: it then glides from where that lands.
+        void set(float value, int glideMilliseconds, bool playing);
+        void jumpTo(float value);
+        std::optional<float> waitingStart() const;
         void applyTo(Glide& glide);
     };
 
@@ -123,6 +130,8 @@ private:
     std::atomic<float> mRequestedGain = 1.0F;
     std::atomic<float> mRequestedPan = 0.0F;
     std::atomic<bool> mPlaced = false;
+    // Set on the decoding thread: the last audio rendered was placed at all, if only while blending out
+    std::atomic<bool> mPanHeard = false;
     std::atomic<bool> mMuted = false;
     std::atomic<bool> mReceivedAudio = false;
     // Stopped on request rather than at the end, so audio still arriving is stale
