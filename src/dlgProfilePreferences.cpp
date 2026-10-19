@@ -1341,7 +1341,7 @@ void dlgProfilePreferences::retranslateTriggerMatchPoolControls()
     mpCheckBox_triggerMatchPool->setToolTip(tr("<p>While a flood of game text arrives, other CPU cores rule out the regex triggers that cannot match each line, so this one has fewer to try.</p>"
                                                "<p>It helps profiles where many regex triggers are searched on every line and few of them match. On most profiles it makes no difference and uses more "
                                                "CPU, so it is off unless you switch it on. Once it is on, the Statistics report in the trigger editor (Ctrl+9) says whether it has been worth it "
-                                               "on your own profile.</p><p>The <tt>MUDLET_MATCH_*</tt> environment variables, if set, override these settings.</p>"));
+                                               "on your own profile.</p>"));
     //: Label of a number field in the Performance settings: how many threads help the main one match triggers
     mpLabel_triggerMatchThreads->setText(tr("Extra threads helping the main one:"));
     //: Tooltip of the number of extra threads that match triggers
