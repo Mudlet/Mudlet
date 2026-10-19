@@ -3739,7 +3739,7 @@ function map.merge_rooms()
     -- used to combine essentially identical rooms with the same coordinates
     -- typically, these are generated due to mapping errors
     if map.mapping then
-        map.echo("Merging rooms")
+        map.echo("Merging rooms named " .. getRoomName(map.currentRoom))
         local x,y,z = getRoomCoordinates(map.currentRoom)
         local rooms = getRoomsByPosition(map.currentArea,x,y,z)
         local exits, portals, room, cmd, curportals
