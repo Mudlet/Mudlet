@@ -111,6 +111,7 @@ set(PROFILE_GROUP_TEST_SOURCES
     ConnectionDialogNewProfileTest.cpp
     ConnectionDialogOfflineProfileTest.cpp
     ConnectionDialogOpenProfileTest.cpp
+    ConnectionDialogSecureSettingTest.cpp
     CredentialFilePermissionsTest.cpp
     DefaultGameDeleteTest.cpp
     DictionaryRoundTripTest.cpp
@@ -131,6 +132,7 @@ set(PROFILE_GROUP_TEST_SOURCES
     SavedVariableFenceTest.cpp
     SelfTestProfileIconTest.cpp
     SpellDictionaryFailureTest.cpp
+    TestProfileFirstRunTourTest.cpp
     XMLexportVariablesTest.cpp
 )
 
@@ -184,6 +186,7 @@ set(TRIGGER_GROUP_TEST_SOURCES
     TFeedTriggersRecursionTest.cpp
     TriggerMatchPoolTest.cpp
     TreeChildTeardownTest.cpp
+    TriggerSoundArgumentTest.cpp
     UnitDeferredDeleteTest.cpp
     UnitProcessingDepthTest.cpp
     UnitsReachHostTest.cpp
@@ -231,10 +234,12 @@ set(MAP_GROUP_TEST_SOURCES
     MapTextLabelCacheTest.cpp
     MapViewAreaListTest.cpp
     MapLabelRenderTest.cpp
+    MapDecalsTest.cpp
     MapViewCueTest.cpp
     LuaMapperCueTest.cpp
     MapLockNoOpTest.cpp
     MapLabelDeleteTest.cpp
+    MapRevisionTest.cpp
     RoomPropertiesDialogTest.cpp
     MapperButtonConfigTest.cpp
     MapperPanelTest.cpp
@@ -243,13 +248,14 @@ set(MAP_GROUP_TEST_SOURCES
     MapAreaImageExportTest.cpp
     MapRoundTripTest.cpp
     MapSymbolFontTest.cpp
+    DioramaLayoutTest.cpp
     RoomAppearanceTest.cpp
     RoomExitsDeletedEditItemTest.cpp
 )
 
 # CameraController and GeometryManager are only compiled into the library with the 3D mapper
 if(USE_3DMAPPER)
-    list(APPEND MAP_GROUP_TEST_SOURCES CameraAngleLimitTest.cpp CameraViewTest.cpp ExitSceneTest.cpp LabelTextureCacheTest.cpp Map3DViewEditingTest.cpp Map3DViewInteractionTest.cpp Map3DViewSyncTest.cpp ModernMapperGeometryTest.cpp ModernMapperRenderTest.cpp ModernRoomTextureTest.cpp)
+    list(APPEND MAP_GROUP_TEST_SOURCES CameraAngleLimitTest.cpp CameraViewTest.cpp ExitSceneTest.cpp LabelTextureCacheTest.cpp Map3DViewEditingTest.cpp Map3DViewInteractionTest.cpp Map3DViewSyncTest.cpp ModernMapperGeometryTest.cpp ModernMapperRenderTest.cpp ModernMapperSceneTest.cpp ModernRoomTextureTest.cpp)
 endif()
 
 # Packages and modules: installing them, saving them and removing them
@@ -262,6 +268,8 @@ set(PACKAGE_GROUP_TEST_SOURCES
     DualPackageModuleTest.cpp
     ModuleManagerListingTest.cpp
     ModuleSaveTeardownTest.cpp
+    ModuleSyncReloadTest.cpp
+    ModuleSyncSaveReentryTest.cpp
     PackageDownloadDialogRestyleTest.cpp
     PackageExporterDialogTest.cpp
     PackageFolderRemovalTest.cpp
@@ -296,6 +304,7 @@ set(SETTINGS_GROUP_TEST_SOURCES
     SettingsBannerTest.cpp
     SettingsDeepLinkTest.cpp
     SettingsDirtyApplyTest.cpp
+    SettingsExperimentsTest.cpp
     SettingsHostLifecycleTest.cpp
     SettingsInstantApplyTest.cpp
     SettingsLiveSyncTest.cpp

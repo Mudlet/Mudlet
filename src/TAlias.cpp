@@ -384,7 +384,14 @@ bool TAlias::compileScript()
 void TAlias::execute()
 {
     if (!mCommand.isEmpty()) {
+        // Sending runs a whole alias pass, and any alias it matches empties the
+        // captures. "command" is left as that pass sets it, as it is for every
+        // script but an alias script's own expandAlias().
+        const int dispatchDepth = mpHost->mLuaInterpreter.pushNestedDispatchState(false);
         mpHost->send(mCommand);
+        if (dispatchDepth >= 0) {
+            mpHost->mLuaInterpreter.popNestedDispatchState(dispatchDepth);
+        }
     }
     if (mNeedsToBeCompiled) {
         if (!compileScript()) {

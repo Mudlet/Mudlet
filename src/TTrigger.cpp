@@ -565,6 +565,8 @@ static void pcre2_match_data_deleter(pcre2_match_data* pointer)
 }
 
 quint64 TTrigger::smStructureGeneration = 0;
+quint32 TTrigger::smLineStamp = 0;
+int TTrigger::smPassDepth = 0;
 quint64 TTrigger::smRegexSearches = 0;
 quint32 TTrigger::smPrescanPassId = 0;
 quint32 TTrigger::smPrescanPassIdCounter = 0;
@@ -618,6 +620,8 @@ bool TTrigger::setRegexCodeList(QStringList patterns, QList<int> patternKinds, b
     }
 
     bool state = true;
+    // Collected, as setError() replaces the previous error
+    QStringList patternErrors;
 
     if (existingTrigger) {
         for (int i = 0; i < patterns.size(); i++) {
@@ -675,9 +679,9 @@ bool TTrigger::setRegexCodeList(QStringList patterns, QList<int> patternKinds, b
                         TDebug(Qt::white, Qt::red, TDebug::Category::Error, mName) << "REGEX ERROR: failed to compile, reason:\n" << error << "\n" >> mpHost;
                         TDebug(Qt::red, Qt::gray, TDebug::Category::Error, mName) << TDebug::csmContinue << R"(in: ")" << regexp.constData() << "\"\n" >> mpHost;
                     }
-                    setError(qsl("<b>%1</b>")
-                                     .arg(tr(R"(Error: in item %1, perl regex "%2" failed to compile, reason: "%3".)")
-                                                  .arg(QString::number(i + 1), QString(regexp.constData()).toHtmlEscaped(), QString(error).toHtmlEscaped())));
+                    patternErrors.append(qsl("<b>%1</b>")
+                                                 .arg(tr(R"(Error: in item %1, perl regex "%2" failed to compile, reason: "%3".)")
+                                                              .arg(QString::number(i + 1), QString(regexp.constData()).toHtmlEscaped(), QString(error).toHtmlEscaped())));
                     state = false;
                 } else {
                     // A (*NO_JIT) pattern compiles "successfully" to no JIT code, and pcre2_jit_match() then fails every subject
@@ -700,8 +704,9 @@ bool TTrigger::setRegexCodeList(QStringList patterns, QList<int> patternKinds, b
                 const QString code = qsl("function %1() %2\nend").arg(funcName.c_str(), patterns[i]);
                 QString error;
                 if (!mpLua->compile(code, error, QString::fromStdString(funcName))) {
-                    setError(qsl("<b>%1</b>")
-                                     .arg(tr(R"(Error: in item %1, lua function "%2" failed to compile, reason: "%3".)").arg(QString::number(i + 1), patterns.at(i).toHtmlEscaped(), QString(error))));
+                    patternErrors.append(
+                            qsl("<b>%1</b>")
+                                    .arg(tr(R"(Error: in item %1, lua function "%2" failed to compile, reason: "%3".)").arg(QString::number(i + 1), patterns.at(i).toHtmlEscaped(), QString(error))));
                     state = false;
                     if (TDebug::wants(TDebug::Category::Error)) {
                         TDebug(Qt::white, Qt::red, TDebug::Category::Error, mName) << "LUA ERROR: failed to compile, reason:\n" << error << "\n" >> mpHost;
@@ -719,9 +724,9 @@ bool TTrigger::setRegexCodeList(QStringList patterns, QList<int> patternKinds, b
                 TTrigger::decodeColorPatternText(patterns.at(i), textAnsiFg, textAnsiBg);
 
                 if (textAnsiBg == scmIgnored && textAnsiFg == scmIgnored) {
-                    setError(qsl("<b>%1</b>")
-                                     .arg(tr("Error: in item %1, no colors to match were set - at least <i>one</i> of the foreground or background must not be <i>ignored</i>.")
-                                                  .arg(QString::number(i + 1))));
+                    patternErrors.append(qsl("<b>%1</b>")
+                                                 .arg(tr("Error: in item %1, no colors to match were set - at least <i>one</i> of the foreground or background must not be <i>ignored</i>.")
+                                                              .arg(QString::number(i + 1))));
                     state = false;
                     mColorPatternList.emplace_back(nullptr);
                     continue;
@@ -730,6 +735,9 @@ bool TTrigger::setRegexCodeList(QStringList patterns, QList<int> patternKinds, b
                 // The setupColorTrigger(...) method will push_back the created
                 // TColorTable instance if it is successful:
                 if (!setupColorTrigger(textAnsiFg, textAnsiBg)) {
+                    //: %1 is the number of the pattern in the trigger's list, %2 is the color pattern as saved
+                    patternErrors.append(
+                            qsl("<b>%1</b>").arg(tr(R"(Error: in item %1, color pattern "%2" names no color that can be matched.)").arg(QString::number(i + 1), patterns.at(i).toHtmlEscaped())));
                     mColorPatternList.emplace_back(nullptr);
                     state = false;
                     continue;
@@ -740,6 +748,9 @@ bool TTrigger::setRegexCodeList(QStringList patterns, QList<int> patternKinds, b
         }
     }
 
+    if (!state) {
+        setError(patternErrors.join(qsl("<br>")));
+    }
     mOK_init = state;
     rebuildPrescanGrams();
     return state;
@@ -796,6 +807,61 @@ void TTrigger::rebuildPrescanGrams()
     }
     mPatternBigrams = std::move(patternBigrams);
     invalidatePrescan();
+    invalidateTreeIndex();
+}
+
+void TTrigger::invalidateTreeIndex()
+{
+    // A root is never filed, so the temporary triggers scripts arm every line cost no rebuild
+    if (mpHost && (mTreeIndexPosition >= 0 || getParent())) {
+        if (auto* unit = mpHost->getTriggerUnit()) {
+            unit->unfileTreeNode(this);
+        }
+    }
+}
+
+bool TTrigger::verifySkippable(const TUtf8Subject& subject, const QString& haystack, const int line, const int posOffset, const TBigramFilter* pLineBigrams)
+{
+    // A multiline trigger can act by opening a state without firing
+    const size_t statesBefore = mConditionMap.size();
+    const bool fired = match(subject, haystack, line, posOffset, pLineBigrams, false);
+    if (fired || mConditionMap.size() != statesBefore) {
+        qWarning().nospace() << "TTrigger tree index MISS: trigger " << mName << " (id " << mID << ", patterns " << mPatterns << ") acted on line " << line << ": " << haystack.left(160);
+    }
+    return fired;
+}
+
+bool TTrigger::treeIndexGrams(std::vector<quint64>& grams) const
+{
+    grams.clear();
+    // A line trigger fires on a count, and a trigger without patterns passes every line to its children
+    if (mIsLineTrigger || mPatterns.isEmpty()) {
+        return false;
+    }
+    const int count = mIsMultiline ? 1 : static_cast<int>(mPatterns.size());
+    for (int i = 0; i < count; ++i) {
+        quint64 gram = 0;
+        switch (mPatternKinds.at(i)) {
+        case REGEX_SUBSTRING:
+        case REGEX_BEGIN_OF_LINE_SUBSTRING:
+        case REGEX_EXACT_MATCH:
+            gram = TTriggerPrescan::patternGram(mPatterns.at(i));
+            break;
+        case REGEX_PERL:
+            if (mRegexLiterals[i].matcher) {
+                gram = TTriggerPrescan::patternGram(mRegexLiterals[i].matcher->pattern());
+            }
+            break;
+        default:
+            break;
+        }
+        if (!gram) {
+            grams.clear();
+            return false;
+        }
+        grams.push_back(gram);
+    }
+    return true;
 }
 
 // Call on anything that changes whether or how the trigger can be filtered; the unit refiles it from
@@ -1918,6 +1984,14 @@ bool TTrigger::match(const TUtf8Subject& subject, const QString& haystack, int l
             if (conditionMet || (mPatterns.empty())) {
                 for (auto* triggerNode : *mpMyChildrenList) {
                     auto* trigger = static_cast<TTrigger*>(triggerNode);
+                    // Only against the line itself: a filter chain's children see its captures, and
+                    // the index was built from the text a dropping subject does not carry
+                    if (pLineBigrams && !haystackIsCapture && trigger->skippableForLine() && !subject.dropsText()) {
+                        if (Q_UNLIKELY(TriggerUnit::treeIndexVerifying()) && trigger->verifySkippable(subject, haystack, line, posOffset, pLineBigrams)) {
+                            conditionMet = true;
+                        }
+                        continue;
+                    }
                     if (pLineBigrams && trigger->cannotMatch(*pLineBigrams, haystack) && !subject.dropsText()) {
                         continue;
                     }
@@ -2203,7 +2277,15 @@ private:
 // send and a sound's playback can raise events as well as the script can.
 bool TTrigger::fireReachesLua() const
 {
-    return mRegisteredAnonymousLuaFunction || !mScript.isEmpty() || !mCommand.isEmpty() || mSoundTrigger;
+    return mRegisteredAnonymousLuaFunction || !mScript.isEmpty() || !mCommand.isEmpty() || playsSound();
+}
+
+// The trigger editor and a package can both leave the sound box ticked with no
+// file named, and a blank name names no file in the profile's media directory,
+// which TMedia can only fail to play.
+bool TTrigger::playsSound() const
+{
+    return mSoundTrigger && !mSoundFile.trimmed().isEmpty();
 }
 
 // Only Lua reads a fire's captures, and handing them over and back costs more
@@ -2236,7 +2318,7 @@ void TTrigger::execute()
     }
     const ExecutingTriggerGuard executingTriggerGuard(mpHost->getTriggerUnit(), &mName, pRoot->sameLineChainId(), pRoot->sameLineGeneration());
 
-    if (mSoundTrigger) { /* eventually something should be added to the gui to change sound volumes. 100=full volume */
+    if (playsSound()) { /* eventually something should be added to the gui to change sound volumes. 100=full volume */
         QString mediaFileName = mSoundFile;
 
         if (QDir::homePath().contains('\\')) {
@@ -2253,7 +2335,16 @@ void TTrigger::execute()
         mpHost->mpMedia->playMedia(mediaData);
     }
     if (!mCommand.isEmpty()) {
+        // Sending runs a whole alias pass, and any alias it matches empties the
+        // captures before this trigger's script has read them; "command" is left
+        // as that pass sets it. Only the script reads them back, so a trigger
+        // without one does not pay for parking them on the flood path.
+        const bool scriptReadsCaptures = mRegisteredAnonymousLuaFunction || !mScript.isEmpty();
+        const int dispatchDepth = scriptReadsCaptures ? mpLua->pushNestedDispatchState(false) : -1;
         mpHost->send(mCommand);
+        if (dispatchDepth >= 0) {
+            mpLua->popNestedDispatchState(dispatchDepth);
+        }
     }
     if (mNeedsToBeCompiled) {
         if (!compileScript()) {

@@ -2433,6 +2433,30 @@ describe("Tests Other.lua functions", function()
         assert.is_true(setConfig(second, false))
         assert.is_nil(getConfig(group .. ".active"))
       end)
+
+      it("lists the experiments sorted, so a group's members sit together", function()
+        local list = getConfig("experiment.list")
+        local sorted = table.deepcopy(list)
+        table.sort(sorted)
+        assert.are.same(sorted, list)
+      end)
+
+      -- "experiment.3d-player-icon" is in no group, and "experiment.3dmap"
+      -- is not a prefix of it, so it and the modern mapper can both be on
+      it("lets experiments outside a shared group be on together", function()
+        local mapper = "experiment.3dmap.modernmapper"
+        local icon = "experiment.3d-player-icon"
+        local mapperWas, iconWas = getConfig(mapper), getConfig(icon)
+        finally(function()
+          setConfig(mapper, mapperWas)
+          setConfig(icon, iconWas)
+        end)
+
+        assert.is_true(setConfig(mapper, true))
+        assert.is_true(setConfig(icon, true))
+        assert.is_true(getConfig(mapper), "switching on " .. icon .. " switched off " .. mapper)
+        assert.is_true(getConfig(icon))
+      end)
     end)
 
     describe("IRC keys", function()
@@ -3003,25 +3027,149 @@ describe("Tests Other.lua functions", function()
           os.rename(backup, store)
         end
         _G._saveTable = savedTable
+        _G.saveVarsSpecValue = nil
       end)
-      _G._saveTable = {}
+      _G._saveTable = nil
+      _G.saveVarsSpecValue = "kept"
+      remember("saveVarsSpecValue")
 
       -- a directory in its place: unlike a read-only file, that cannot be opened by root either
       lfs.mkdir(store)
       local ok, msg = saveVars()
       assert.is_nil(ok)
       assert.is_string(msg)
+      assert.is_falsy(msg:find("flagged", 1, true))
 
       lfs.rmdir(store)
       assert.is_true(saveVars())
     end)
   end)
 
+  describe("Tests remember, saveVars and loadVars", function()
+    local storePath = getMudletHomeDir() .. "/SavedVariables.lua"
+    local previousStore, previousSaveTable
+
+    before_each(function()
+      local file = io.open(storePath, "rb")
+      previousStore = file and file:read("*a")
+      if file then
+        file:close()
+      end
+      previousSaveTable = _G._saveTable
+      _G._saveTable = nil
+    end)
+
+    after_each(function()
+      _G._saveTable = previousSaveTable
+      _G.saveVarsSpecValue = nil
+      _G.saveVarsSpecOther = nil
+      if previousStore then
+        local file = assert(io.open(storePath, "wb"))
+        file:write(previousStore)
+        file:close()
+      else
+        os.remove(storePath)
+      end
+    end)
+
+    it("should leave the file as it was, and say so, when nothing was remembered", function()
+      _G._saveTable = nil
+      _G.saveVarsSpecValue = "kept"
+      remember("saveVarsSpecValue")
+      assert.is_true(saveVars())
+
+      _G._saveTable = nil
+      _G.saveVarsSpecValue = nil
+      local saved, msg = saveVars()
+      assert.is_nil(saved)
+      assert.is_truthy(msg:find("no variable has been flagged with remember()", 1, true))
+
+      loadVars()
+      assert.equals("kept", _G.saveVarsSpecValue)
+    end)
+
+    it("should leave the file as it was when the remembered variable was still nil", function()
+      _G.saveVarsSpecValue = "kept"
+      remember("saveVarsSpecValue")
+      assert.is_true(saveVars())
+
+      _G._saveTable = nil
+      _G.saveVarsSpecValue = nil
+      remember("saveVarsSpecValue")
+      local saved, msg = saveVars()
+      assert.is_nil(saved)
+      assert.is_string(msg)
+
+      loadVars()
+      assert.equals("kept", _G.saveVarsSpecValue)
+    end)
+
+    it("should keep saving what loadVars restored without a new remember()", function()
+      _G.saveVarsSpecValue = 1
+      _G.saveVarsSpecOther = 2
+      remember("saveVarsSpecValue")
+      remember("saveVarsSpecOther")
+      assert.is_true(saveVars())
+
+      _G._saveTable = nil
+      _G.saveVarsSpecValue = nil
+      _G.saveVarsSpecOther = nil
+      loadVars()
+      _G.saveVarsSpecValue = 5
+      assert.is_true(saveVars())
+
+      _G.saveVarsSpecValue = nil
+      _G.saveVarsSpecOther = nil
+      loadVars()
+      assert.equals(5, _G.saveVarsSpecValue)
+      assert.equals(2, _G.saveVarsSpecOther)
+    end)
+
+    it("should stop saving a restored variable once it is set to nil, even the last one", function()
+      _G.saveVarsSpecValue = "kept"
+      remember("saveVarsSpecValue")
+      assert.is_true(saveVars())
+
+      _G._saveTable = nil
+      _G.saveVarsSpecValue = nil
+      loadVars()
+      _G.saveVarsSpecValue = nil
+      assert.is_true(saveVars())
+
+      _G._saveTable = nil
+      loadVars()
+      assert.is_nil(_G.saveVarsSpecValue)
+    end)
+
+    it("should save the remembered variable as it is at save time and load it back", function()
+      _G.saveVarsSpecValue = { a = 1 }
+      remember("saveVarsSpecValue")
+      _G.saveVarsSpecValue = { a = 1, b = 2 }
+
+      assert.is_true(saveVars())
+      _G.saveVarsSpecValue = nil
+      loadVars()
+
+      assert.same({ a = 1, b = 2 }, _G.saveVarsSpecValue)
+    end)
+
+    it("should hand back what table.save reports when the write fails", function()
+      _G.saveVarsSpecValue = "kept"
+      remember("saveVarsSpecValue")
+      local realSave = table.save
+      finally(function() table.save = realSave end)
+      table.save = function() return nil, "SavedVariables.lua: No space left on device" end
+
+      local saved, msg = saveVars()
+      table.save = realSave
+
+      assert.is_nil(saved)
+      assert.equals("SavedVariables.lua: No space left on device", msg)
+    end)
+  end)
+
     --[[
     TODO:
-      remember()
-      loadVars()
-      saveVars()
       getColorWildcard()
       lockExit()
       hasExitLock()
@@ -3221,6 +3369,138 @@ describe("Tests the timer API", function()
 
     it("errors when the repeating argument is not a boolean", function()
       assert.has_error(function() tempTimer(0.1, [[]], "w2aNotABoolean") end)
+    end)
+
+    -- Nothing in Lua can turn on echoing Lua errors to the main console, so this
+    -- loads a profile that has it on and reads that profile's console back
+    it("runs nothing and reports nothing for a timer with no code", function()
+      if not os.getenv("MUDLET_TEST_MODE") then
+        pending("waiting for the other profile needs pumpEvents(), which is refused outside MUDLET_TEST_MODE")
+        return
+      end
+      local name = "mudlet-spec-empty-code-timer"
+      local directory = getMudletHomeDir():match("^(.*)[/\\]") .. "/" .. name
+      local marker = directory .. "/mudlet-spec-fixture"
+      local function removeTree(path)
+        if lfs.attributes(path, "mode") ~= "directory" then
+          os.remove(path)
+          return
+        end
+        for entry in lfs.dir(path) do
+          if entry ~= "." and entry ~= ".." then
+            removeTree(path .. "/" .. entry)
+          end
+        end
+        lfs.rmdir(path)
+      end
+      -- the marker goes last, so a fixture that could not be fully deleted is
+      -- still known to be this spec's and the next run can finish the job
+      local function removeFixture()
+        for entry in lfs.dir(directory) do
+          if entry ~= "." and entry ~= ".." and entry ~= "mudlet-spec-fixture" then
+            removeTree(directory .. "/" .. entry)
+          end
+        end
+        local remaining = 0
+        for _ in lfs.dir(directory) do
+          remaining = remaining + 1
+        end
+        if remaining == 3 then
+          os.remove(marker)
+          lfs.rmdir(directory)
+        end
+      end
+      local function loaded()
+        local entry = getProfiles()[name]
+        return entry ~= nil and entry.loaded
+      end
+      if lfs.attributes(marker) then
+        removeFixture()
+      end
+      assert.is_nil(lfs.attributes(marker), "could not delete this spec's leftover profile at " .. directory)
+      assert.is_nil(lfs.attributes(directory), "a profile named " .. name .. " already exists and is not this spec's to delete")
+      -- closing a profile saves the shared window layout beside the profiles
+      -- directory, which the next Mudlet start reads, so put it back afterwards
+      local configurationDirectory = directory:match("^(.*)[/\\]profiles[/\\]")
+      local layoutFiles = {
+        configurationDirectory .. "/windowLayout.dat",
+        configurationDirectory .. "/windowLayoutGeometry.dat",
+      }
+      local layoutBefore = {}
+      for _, path in ipairs(layoutFiles) do
+        local handle = io.open(path, "rb")
+        if handle then
+          layoutBefore[path] = handle:read("*a")
+          handle:close()
+        end
+      end
+      local consoleText
+      local handler = registerAnonymousEventHandler("mudletSpecEmptyTimerConsole", function(_, text)
+        consoleText = text
+      end)
+      finally(function()
+        killAnonymousEventHandler(handler)
+        if loaded() then
+          closeProfile(name)
+        end
+        for _ = 1, 100 do
+          if not loaded() then
+            break
+          end
+          pumpEvents(50)
+        end
+        if lfs.attributes(marker) then
+          removeFixture()
+        end
+        for _, path in ipairs(layoutFiles) do
+          if layoutBefore[path] then
+            local handle = assert(io.open(path, "wb"))
+            handle:write(layoutBefore[path])
+            handle:close()
+          else
+            os.remove(path)
+          end
+        end
+      end)
+      assert(lfs.mkdir(directory), "could not create " .. directory)
+      assert(io.open(marker, "w"), "could not create " .. marker):close()
+      assert(lfs.mkdir(directory .. "/current"), "could not create " .. directory .. "/current")
+      -- the raising timer shows that this profile does put Lua errors on its console
+      local script = [[
+tempTimer(0.05, "", true)
+tempTimer(0.05, "")
+tempTimer(0.1, function() error("mudletSpecEmptyTimer" .. "Control") end)
+tempTimer(0.5, function() raiseGlobalEvent("mudletSpecEmptyTimerConsole", table.concat(getLines("main", 0, getLastLineNumber("main") + 1), "\n")) end)]]
+      local file = assert(io.open(directory .. "/current/2026-01-01#00-00-00.xml", "w"))
+      file:write([[<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE MudletPackage>
+<MudletPackage version="1.001">
+  <HostPackage><Host mEchoLuaErrors="yes"></Host></HostPackage>
+  <ScriptPackage>
+    <Script isActive="yes" isFolder="no">
+      <name>mudlet-spec-empty-code-timer</name>
+      <packageName></packageName>
+      <script>]] .. script .. [[</script>
+      <eventHandlerList />
+    </Script>
+  </ScriptPackage>
+</MudletPackage>
+]])
+      file:close()
+
+      assert.is_true(loadProfile(name, true))
+      for _ = 1, 100 do
+        if consoleText then
+          break
+        end
+        pumpEvents(50)
+      end
+
+      assert.is_string(consoleText, "the other profile never reported its console")
+      assert.is_truthy(consoleText:find("mudletSpecEmptyTimerControl", 1, true), "the other profile did not show its Lua errors, so this spec cannot see one: " .. consoleText)
+      -- word wrap breaks a long error line across console lines
+      local unwrapped = consoleText:gsub("\n", "")
+      assert.is_falsy(unwrapped:find("func reference not found", 1, true), "a timer with no code tried to call a Lua function: " .. consoleText)
     end)
 
     it("repeats until killed when the repeating argument is true", function()

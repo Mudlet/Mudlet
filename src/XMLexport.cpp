@@ -230,6 +230,7 @@ void XMLexport::runAsyncSave(const QString& fileName, const QString& xmlSavedKey
     // deleteLater() below needs an event loop that is still running to be delivered,
     // and the save that matters most here is the one on the way out.
     auto watcher = new QFutureWatcher<bool>(host);
+    watcher->setObjectName(Host::scmProfileSaveWatcherName);
     connect(watcher, &QFutureWatcher<bool>::finished, host, [host, xmlSavedKey, fileName, watcher, reason]() {
         if (!host) {
             return;
@@ -510,6 +511,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("mAcceptServerMedia") = pHost->mAcceptServerMedia ? "yes" : "no";
     host.append_attribute("mMapperUseAntiAlias") = pHost->mMapperUseAntiAlias ? "yes" : "no";
     host.append_attribute("mMapperShowGrid") = pHost->mMapperShowGrid ? "yes" : "no";
+    host.append_attribute("mMapperStitchAreas") = pHost->mMapperStitchAreas ? "yes" : "no";
     host.append_attribute("mMapperShowRoomBorders") = pHost->mMapperShowRoomBorders ? "yes" : "no";
     host.append_attribute("mVersionInTTYPE") = pHost->mVersionInTTYPE ? "yes" : "no";
     host.append_attribute("mPromptedForVersionInTTYPE") = pHost->mPromptedForVersionInTTYPE ? "yes" : "no";
@@ -525,6 +527,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("mShowRoomIDs") = pHost->mShowRoomID ? "yes" : "no";
     host.append_attribute("mShowPanel") = pHost->mShowPanel ? "yes" : "no";
     host.append_attribute("mShow3DView") = pHost->mShow3DView ? "yes" : "no";
+    host.append_attribute("mapStyle") = pHost->mapStyle().toUtf8().constData();
     host.append_attribute("mHaveMapperScript") = pHost->mHaveMapperScript ? "yes" : "no";
     host.append_attribute("mEditorAutoComplete") = pHost->mEditorAutoComplete ? "yes" : "no";
     host.append_attribute("mEditorShowBidi") = pHost->getEditorShowBidi() ? "yes" : "no";
