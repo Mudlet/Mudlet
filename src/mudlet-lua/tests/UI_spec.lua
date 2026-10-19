@@ -2648,6 +2648,115 @@ describe("Tests UI functions", function()
     end)
   end)
 
+  describe("Test the starter UI's background picture", function()
+    if not (type(BaseUI) == "table" and type(BaseUI.setBackground) == "function") then
+      it("needs the base UI package installed", function()
+        pending("BaseUI.setBackground is unavailable in this profile")
+      end)
+      return
+    end
+
+    local specDirectory = debug.getinfo(1, "S").source:match("^@(.*)[/\\]")
+    local image = specDirectory .. "/fixtures/images/solid-magenta-4x4.png"
+    local savedSettings, savedTheme, savedMain, savedMap, dockWasShowing, originalBorders
+
+    local function alpha(window)
+      return select(4, getBackgroundColor(window))
+    end
+
+    local function dockCss()
+      return getLabelStyleSheet(BaseUI.container.adjLabel.name)
+    end
+
+    before_each(function()
+      savedSettings = table.deepcopy(BaseUI.settings)
+      savedTheme = BaseUI.themeName
+      savedMain = { getBackgroundColor("main") }
+      savedMap = { getMapBackgroundColor() }
+      dockWasShowing = BaseUI.container ~= nil and not BaseUI.container.hidden
+      originalBorders = getBorderSizes()
+      BaseUI.settings.hidden, BaseUI.settings.standingAside = nil, nil
+      BaseUI.build()
+      BaseUI.setTheme("midnight", true)
+    end)
+
+    after_each(function()
+      BaseUI.setBackground(nil)
+      setBackgroundColor("main", unpack(savedMain))
+      setMapBackgroundColor(unpack(savedMap))
+      BaseUI.settings = savedSettings
+      BaseUI.setTheme(savedTheme or "midnight", true)
+      BaseUI.saveSettings()
+      if not dockWasShowing and BaseUI.container and not BaseUI.container.hidden then
+        BaseUI.container:hide()
+        BaseUI.container:adjustBorder()
+        BaseUI.layoutDock()
+      end
+      assert.are.same(originalBorders, getBorderSizes())
+    end)
+
+    it("should let the picture through the console, the chat panes, the docked map and the dock", function()
+      local plainDock = dockCss()
+      assert.is_true(BaseUI.setBackground(image))
+      assert.is_true(BaseUI.backgroundShown)
+      assert.are.equal(0, alpha("main"))
+      assert.are.equal(0, alpha("BaseUI_chat_all"))
+      assert.are.equal(26, select(4, getMapBackgroundColor()))
+      assert.are_not.equal(plainDock, dockCss())
+      assert.truthy(dockCss():find("10%)", 1, true), dockCss())
+      assert.truthy(getLabelStyleSheet("BaseUI_tab_all"):find("10%)", 1, true))
+    end)
+
+    it("should stay see-through across every look", function()
+      BaseUI.setBackground(image)
+      for _ = 1, 3 do
+        BaseUI.cycleTheme()
+        assert.are.equal(0, alpha("main"), BaseUI.themeName)
+        assert.are.equal(0, alpha("BaseUI_chat_all"), BaseUI.themeName)
+        assert.truthy(dockCss():find("10%)", 1, true), BaseUI.themeName)
+      end
+    end)
+
+    it("should give the picture and the colours back while hidden", function()
+      BaseUI.setBackground(image)
+      BaseUI.hide()
+      assert.is_false(BaseUI.backgroundShown)
+      assert.are.equal(255, alpha("main"))
+      assert.are.equal(255, select(4, getMapBackgroundColor()))
+      BaseUI.show()
+      assert.is_true(BaseUI.backgroundShown)
+      assert.are.equal(0, alpha("main"))
+    end)
+
+    it("should put everything back as it was when turned off", function()
+      local before = { main = { getBackgroundColor("main") }, map = { getMapBackgroundColor() },
+                       chat = { getBackgroundColor("BaseUI_chat_all") }, dock = dockCss() }
+      BaseUI.setBackground(image)
+      BaseUI.setBackground(nil)
+      assert.is_false(BaseUI.backgroundShown)
+      assert.are.same(before.main, { getBackgroundColor("main") })
+      assert.are.same(before.map, { getMapBackgroundColor() })
+      assert.are.same(before.chat, { getBackgroundColor("BaseUI_chat_all") })
+      assert.are.equal(before.dock, dockCss())
+    end)
+
+    it("should keep a player's own colour and only borrow its alpha", function()
+      setBackgroundColor("main", 30, 40, 60, 255)
+      BaseUI.setBackground(image)
+      BaseUI.cycleTheme()
+      assert.are.same({ 30, 40, 60, 0 }, { getBackgroundColor("main") })
+      BaseUI.setBackground(nil)
+      assert.are.same({ 30, 40, 60, 255 }, { getBackgroundColor("main") })
+    end)
+
+    it("should refuse a picture it cannot show and keep the one before", function()
+      BaseUI.setBackground(image)
+      assert.is_false(BaseUI.setBackground(specDirectory .. "/fixtures/images/no-such-picture.png"))
+      assert.are.equal(image, BaseUI.settings.background)
+      assert.is_true(BaseUI.backgroundShown)
+    end)
+  end)
+
   describe("tempButtonToolbar and tempButton return values", function()
     -- unique names as the items cannot be deleted, and would collide on re-runs
     -- against the same profile otherwise

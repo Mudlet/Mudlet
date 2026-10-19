@@ -435,10 +435,10 @@
 	<AliasPackage>
 		<Alias isActive="yes" isFolder="no">
 			<name>baseui</name>
-			<script>BaseUI.alias(matches[2])</script>
+			<script>BaseUI.alias(matches[2], matches[3])</script>
 			<command></command>
 			<packageName></packageName>
-			<regex>^baseui(?:\s+(\w+))?$</regex>
+			<regex>^baseui(?:\s+(\w+)(?:\s+(.+))?)?$</regex>
 		</Alias>
 	</AliasPackage>
 	<ActionPackage />
@@ -634,6 +634,7 @@ local gaugeText = [[background-color: transparent; padding-left: 8px; padding-bo
 -- Written as the character rather than as an HTML entity because it goes into
 -- console text as well as into a label, and cecho prints an entity literally.
 local paletteGlyph = "◐"
+local pictureGlyph = "▣"
 
 local mapPlaceholderText = "Your map will appear&lt;br&gt;here as you explore"
 
@@ -642,26 +643,42 @@ local mapPlaceholderText = "Your map will appear&lt;br&gt;here as you explore"
 local css = {}
 local gaugeDefs = { hp = {}, mp = {}, xp = {}, mv = {}, enemy = {} }
 
-local function rebuildCss()
+-- How much of a background picture the dock's own surfaces hide while one is
+-- showing: a stylesheet percentage, and the same as the 0-255 a map colour takes.
+-- Floating sections keep their full colour, since they sit over the game's text.
+local panelOpacity = 10
+local mapAlpha = 26
+
+-- a look's "#rrggbb" with an opacity, or the colour exactly as written when there
+-- is none, so a profile with no picture is painted with the same stylesheets as ever
+local function shade(color, opacity)
+  if not opacity then
+    return color
+  end
+  local red, green, blue = color:match("^#(%x%x)(%x%x)(%x%x)$")
+  return string.format("rgba(%d,%d,%d,%d%%)", tonumber(red, 16), tonumber(green, 16), tonumber(blue, 16), opacity)
+end
+
+local function rebuildCss(opacity)
   css.placeholder = string.format(
     [[background-color: %s; border: 1px solid %s; border-radius: 6px;]],
-    theme.panel, theme.borderSoft)
+    shade(theme.panel, opacity), theme.borderSoft)
   css.sectionFloating = string.format(
     [[background-color: %s; border: 1px solid %s; border-radius: 6px; padding-left: 2px; qproperty-alignment: 'AlignLeft | AlignTop';]],
     theme.bg, theme.border)
   -- the line closing off a header row. It sits on the row's own bottom pixel, so
   -- it is click-through and takes none of the strip a drag has to land on.
-  css.headerRule = string.format([[background-color: %s; border: 0px;]], theme.borderSoft)
+  css.headerRule = string.format([[background-color: %s; border: 0px;]], shade(theme.borderSoft, opacity))
   css.button = string.format(
     [[QLabel{ border-color: %s; background-color: %s; } QLabel::hover{ background-color: %s; }]],
-    theme.border, theme.bg, theme.hover)
-  css.dock = string.format("background-color: %s; border: 1px solid %s;", theme.bg, theme.border)
+    theme.border, shade(theme.bg, opacity), theme.hover)
+  css.dock = string.format("background-color: %s; border: 1px solid %s;", shade(theme.bg, opacity), theme.border)
   css.tabActive = string.format(
     [[background-color: %s; border: 1px solid %s; border-bottom: 2px solid %s; border-top-left-radius: 4px; border-top-right-radius: 4px;]],
-    theme.tabActive, theme.border, theme.accent)
+    shade(theme.tabActive, opacity), theme.border, theme.accent)
   css.tabInactive = string.format(
     [[background-color: %s; border: 1px solid %s; border-bottom: 2px solid %s; border-top-left-radius: 4px; border-top-right-radius: 4px;]],
-    theme.tabInactive, theme.borderSoft, theme.borderSoft)
+    shade(theme.tabInactive, opacity), theme.borderSoft, theme.borderSoft)
   css.gaugeBack = gaugeStyle(theme.gaugeBack)
   for key, color in pairs(theme.gauges) do
     gaugeDefs[key].front = gaugeStyle(color)
@@ -1664,8 +1681,21 @@ end
 -- plain black as ours as well would undo the most likely reaction to a tint someone
 -- dislikes and cannot place: Preferences has a "Reset colours" button that sets the
 -- background back to black, and we would put our own colour straight back.
-function BaseUI.consoleTintIsOurs()
+
+-- The background colour as the player has it. While a background picture shows, the
+-- console has that colour with its alpha taken to 0, and the alpha it had is kept in
+-- settings.consoleAlpha to give back. Any other alpha means the player has picked a
+-- colour since, and theirs stands.
+local function playerConsoleColor()
   local current = { getBackgroundColor("main") }
+  if BaseUI.settings.consoleAlpha and current[4] == 0 then
+    current[4] = BaseUI.settings.consoleAlpha
+  end
+  return current
+end
+
+function BaseUI.consoleTintIsOurs()
+  local current = playerConsoleColor()
   if BaseUI.settings.consoleTint then
     return sameTint(current, BaseUI.settings.consoleTint)
   end
@@ -1682,51 +1712,126 @@ local function matchChatPanesToConsole()
   if not BaseUI.chats then
     return
   end
-  local red, green, blue = getBackgroundColor("main")
+  local red, green, blue, alpha = getBackgroundColor("main")
   for _, tab in ipairs(chatTabs) do
     local console = BaseUI.chats[tab.key]
     if console then
-      setBackgroundColor(console.name, red, green, blue)
+      setBackgroundColor(console.name, red, green, blue, BaseUI.backgroundShown and alpha or 255)
     end
   end
 end
 
--- Writes BaseUI.settings.consoleTint, so a caller that also saves has to run this
--- before its saveSettings or it persists the tint from before. Returns whether the
--- background is ours to colour, which is not the same as having changed it.
--- giveBack asks for the untinted colour whatever the look wants, for the one caller
--- that is on its way out and has no dormant flag to set
+-- Writes BaseUI.settings.consoleTint and consoleAlpha, so a caller that also saves
+-- has to run this before its saveSettings or it persists the ones from before.
+-- Returns whether the background is ours to colour, which is not the same as having
+-- changed it. giveBack asks for the untinted, opaque colour whatever the look wants,
+-- for the one caller that is on its way out and has no dormant flag to set
 local function applyConsoleTint(giveBack)
-  if not BaseUI.consoleTintIsOurs() then
-    -- the player has a background of their own: stop tinting, but keep the panes
-    -- in step with the colour they chose
+  local ours = BaseUI.consoleTintIsOurs()
+  local wanted = playerConsoleColor()
+  if ours then
+    -- A hidden UI, or one standing aside for the game's own interface, has no
+    -- business colouring the game's text. Neither has one that does not exist yet:
+    -- the dock is built only once the game has sent something to show, and a tint
+    -- with no dock beside it is a recoloured window with nothing to show for it, so
+    -- build() applies this once it has one.
+    local tint = not giveBack and BaseUI.container and not BaseUI.dormant() and theme.console
+    -- the player's own transparency is left as it is: a look picks a hue, not
+    -- whether the window can be seen through
+    wanted = { tint and tint[1] or defaultConsoleTint[1],
+               tint and tint[2] or defaultConsoleTint[2],
+               tint and tint[3] or defaultConsoleTint[3], wanted[4] }
+    -- copied rather than referenced, and with the player's alpha rather than the
+    -- one a background picture puts in force, so the next session recognises it
+    BaseUI.settings.consoleTint = tint and { wanted[1], wanted[2], wanted[3], wanted[4] } or nil
+  else
+    -- the player has a background of their own: stop tinting, but still let a
+    -- background picture through it, and keep the panes in step with it
     BaseUI.settings.consoleTint = nil
-    matchChatPanesToConsole()
-    return false
   end
-  -- A hidden UI, or one standing aside for the game's own interface, has no
-  -- business colouring the game's text. Neither has one that does not exist yet:
-  -- the dock is built only once the game has sent something to show, and a tint with
-  -- no dock beside it is a recoloured window with nothing to show for it, so
-  -- build() applies this once it has one.
-  local tint = not giveBack and BaseUI.container and not BaseUI.dormant() and theme.console
-  -- the player's own transparency is left as it is: a look picks a hue, not
-  -- whether the window can be seen through
-  local alpha = select(4, getBackgroundColor("main"))
-  local wanted = { tint and tint[1] or defaultConsoleTint[1],
-                   tint and tint[2] or defaultConsoleTint[2],
-                   tint and tint[3] or defaultConsoleTint[3], alpha }
+  -- a background picture only shows through a console that lets all of it through
+  local seeThrough = not giveBack and BaseUI.backgroundShown
+  BaseUI.settings.consoleAlpha = seeThrough and wanted[4] or nil
+  local applied = { wanted[1], wanted[2], wanted[3], seeThrough and 0 or wanted[4] }
   -- Only when it would actually differ. Untinted looks want plain black, which is
   -- already what an untouched profile has - writing it anyway would put every
   -- profile's background through a needless change on every single load.
-  if not sameTint({ getBackgroundColor("main") }, wanted) then
-    setBackgroundColor("main", wanted[1], wanted[2], wanted[3], wanted[4])
+  if not sameTint({ getBackgroundColor("main") }, applied) then
+    setBackgroundColor("main", applied[1], applied[2], applied[3], applied[4])
   end
-  -- copied rather than referenced, and with the alpha actually in force, so the
-  -- next session recognises this as ours
-  BaseUI.settings.consoleTint = tint and { wanted[1], wanted[2], wanted[3], wanted[4] } or nil
   matchChatPanesToConsole()
-  return true
+  return ours
+end
+
+-- The picture "baseui background" puts behind the whole window, while the UI is
+-- neither hidden nor standing aside. A path that cannot be shown is tried once,
+-- not again on every repaint that comes through here.
+local function applyBackground(giveBack)
+  local path = not giveBack and not BaseUI.dormant() and BaseUI.settings.background or nil
+  if path == BaseUI.backgroundTried then
+    return
+  end
+  BaseUI.backgroundTried = path
+  if path then
+    BaseUI.backgroundShown = setBackgroundImage("main", path, 5, true) == true
+    if not BaseUI.backgroundShown then
+      cecho("\n&lt;dim_grey&gt;[ Mudlet UI ] Could not show this as a background picture: ")
+      echo(path)
+      cecho("&lt;reset&gt;\n")
+    end
+  elseif BaseUI.backgroundShown then
+    resetBackgroundImage("main", true)
+    BaseUI.backgroundShown = false
+  end
+end
+
+-- The map's background colour is the profile's own and saved with it, so as with the
+-- console's it is given back only while it is still the one put there. Only a docked
+-- map lets the picture through: a floating one sits over the game's text.
+local function syncMapBackground(giveBack)
+  -- the colour put there last session stays until the dock it was for is back
+  if not giveBack and BaseUI.backgroundShown and not BaseUI.sections.map then
+    return
+  end
+  local held = BaseUI.settings.mapBackground
+  local current = { getMapBackgroundColor() }
+  if held and not sameTint(current, held.set) then
+    held = nil
+  end
+  local wanted = not giveBack and BaseUI.backgroundShown and BaseUI.sections.map ~= nil
+    and not BaseUI.sectionFloating("map")
+  local before = BaseUI.settings.mapBackground
+  if wanted and not held then
+    local set = { current[1], current[2], current[3], math.min(current[4], mapAlpha) }
+    held = { before = current, set = set }
+    setMapBackgroundColor(set[1], set[2], set[3], set[4])
+  elseif not wanted and held then
+    setMapBackgroundColor(held.before[1], held.before[2], held.before[3], held.before[4])
+    held = nil
+  end
+  BaseUI.settings.mapBackground = held
+  if held ~= before then
+    BaseUI.saveSettings()
+  end
+end
+
+-- Everything a background picture changes, in the order it depends on: the picture
+-- first, since whether it is up decides how see-through the rest is painted. The dock
+-- is repainted only when that changes, or when the look did and asks for it.
+local function applyBackdrop(giveBack, newLook)
+  applyBackground(giveBack)
+  local opacity = BaseUI.backgroundShown and panelOpacity or nil
+  local repaint = newLook or opacity ~= BaseUI.paintedOpacity
+  if repaint then
+    rebuildCss(opacity)
+    BaseUI.paintedOpacity = opacity
+  end
+  local tookBackground = applyConsoleTint(giveBack)
+  if repaint then
+    BaseUI.restyle()
+  end
+  syncMapBackground(giveBack)
+  return tookBackground
 end
 
 local function paintPaletteButton()
@@ -1737,6 +1842,17 @@ local function paintPaletteButton()
   BaseUI.paletteButton:echo(paletteGlyph, theme.textDim, "c")
   BaseUI.paletteButton:setToolTip(
     string.format("Change the look - now %s, %s", theme.label, theme.blurb), 0)
+end
+
+local function paintPictureButton()
+  if not BaseUI.pictureButton then
+    return
+  end
+  BaseUI.pictureButton:setStyleSheet(css.button)
+  BaseUI.pictureButton:echo(pictureGlyph, BaseUI.settings.background and theme.accent or theme.textDim, "c")
+  BaseUI.pictureButton:setToolTip(BaseUI.settings.background
+    and "Choose another background picture - right-click to remove it"
+    or "Put a picture behind the whole window", 0)
 end
 
 -- Repaints what is already on screen from the refilled css table and `theme`. Everything
@@ -1754,6 +1870,7 @@ function BaseUI.restyle()
   BaseUI.container.titleTxtColor = theme.text
   BaseUI.container:setTitle()
   paintPaletteButton()
+  paintPictureButton()
   if BaseUI.mapPlaceholder then
     BaseUI.mapPlaceholder:setStyleSheet(css.placeholder)
     BaseUI.mapPlaceholder:setFont(theme.font)
@@ -1815,9 +1932,7 @@ function BaseUI.setTheme(name, quiet)
     theme[field] = value
   end
   BaseUI.themeName = name
-  rebuildCss()
-  local tookBackground = applyConsoleTint()
-  BaseUI.restyle()
+  local tookBackground = applyBackdrop(false, true)
   -- unconditionally: applyConsoleTint moves settings.consoleTint even on a look
   -- that is already in force, and that has to be remembered too
   BaseUI.settings.theme = name
@@ -1860,7 +1975,7 @@ end
 function BaseUI.standAside(_, packageName)
   BaseUI.settings.standingAside = packageName or "the game's interface"
   -- the game's own interface brings its own colours; give the background back
-  applyConsoleTint()
+  applyBackdrop()
   BaseUI.saveSettings()
   BaseUI.disarmChatTriggers()
   BaseUI.killVitalsTriggers()
@@ -1909,7 +2024,7 @@ function BaseUI.uninstall()
   end
   -- before the settings that record the tint as ours are thrown away, and while
   -- the chat panes it also matches are still there
-  applyConsoleTint(true)
+  applyBackdrop(true)
   -- the game was asked for its channel text on this interface's behalf
   if type(gmcp) == "table" and next(gmcp) then
     pcall(gmod.disableModule, "BaseUI", "Comm.Channel")
@@ -1944,7 +2059,7 @@ function BaseUI.serverGuiRemoved(_, packageName)
       return
     end
     BaseUI.settings.standingAside = nil
-    applyConsoleTint()
+    applyBackdrop()
     BaseUI.saveSettings()
     BaseUI.armChatTriggers()
     BaseUI.createVitalsTriggers()
@@ -2031,9 +2146,16 @@ function BaseUI.build()
     x = -(buttonSize * 3.8), y = 4, width = buttonSize, height = buttonSize,
     fontSize = BaseUI.container.buttonFontSize,
   }, BaseUI.container)
+  BaseUI.pictureButton = Geyser.Label:new({
+    name = "BaseUI_picture",
+    x = -(buttonSize * 5.0), y = 4, width = buttonSize, height = buttonSize,
+    fontSize = BaseUI.container.buttonFontSize,
+  }, BaseUI.container)
   BaseUI.container.goInside = true
   paintPaletteButton()
   BaseUI.paletteButton:setClickCallback(BaseUI.cycleTheme)
+  paintPictureButton()
+  BaseUI.pictureButton:setClickCallback(BaseUI.pictureClicked)
   BaseUI.createSection("map")
   if BaseUI.mapHasData() then
     BaseUI.createMapper()
@@ -2356,6 +2478,8 @@ function BaseUI.layoutDock()
   for _, key in ipairs(sectionOrder) do
     BaseUI.placeSection(key, places[key])
   end
+  -- the map lets a background picture through only while it is in the dock
+  syncMapBackground()
 end
 
 -- Geyser has no dragging back into a parent, so this is the way back. It is
@@ -2789,7 +2913,7 @@ end
 function BaseUI.hide()
   BaseUI.settings.hidden = true
   -- before the save, so the tint it gives back is what gets remembered
-  applyConsoleTint()
+  applyBackdrop()
   BaseUI.saveSettings()
   BaseUI.disarmChatTriggers()
   BaseUI.killVitalsTriggers()
@@ -2804,7 +2928,7 @@ end
 function BaseUI.show()
   BaseUI.settings.hidden = false
   BaseUI.settings.standingAside = nil
-  applyConsoleTint()
+  applyBackdrop()
   BaseUI.saveSettings()
   if type(gmcp) == "table" and next(gmcp) then
     gmod.enableModule("BaseUI", "Comm.Channel")
@@ -2835,8 +2959,76 @@ function BaseUI.show()
   end
 end
 
-function BaseUI.alias(input)
+-- Scriptable as well as typed: a path to show behind the whole window, or nil to stop.
+-- Returns false, leaving the picture before in place, for one that cannot be shown.
+function BaseUI.setBackground(path)
+  local previous = BaseUI.settings.background
+  BaseUI.settings.background = path
+  applyBackdrop()
+  if path and not BaseUI.dormant() and not BaseUI.backgroundShown then
+    BaseUI.settings.background = previous
+    applyBackdrop()
+    return false
+  end
+  BaseUI.saveSettings()
+  paintPictureButton()
+  if not path then
+    cecho(previous and "\n&lt;cyan&gt;[ Mudlet UI ] Background picture removed.&lt;reset&gt;\n"
+      or "\n&lt;cyan&gt;[ Mudlet UI ] There is no background picture to remove.&lt;reset&gt;\n")
+    return true
+  end
+  -- the path through echo rather than cecho, which would read a "&lt;" in it as a colour
+  cecho("\n&lt;cyan&gt;[ Mudlet UI ] Background picture: &lt;yellow&gt;")
+  echo(path)
+  if BaseUI.dormant() then
+    cecho("&lt;cyan&gt; - it will show once the interface is back (&lt;yellow&gt;baseui show&lt;cyan&gt;).&lt;reset&gt;\n")
+  else
+    cecho("&lt;cyan&gt; - &lt;yellow&gt;baseui background off&lt;cyan&gt; removes it.&lt;reset&gt;\n")
+  end
+  return true
+end
+
+-- the button beside the palette one: a click picks a picture, a right-click removes it
+function BaseUI.pictureClicked(event)
+  if event and event.button == "RightButton" then
+    if BaseUI.settings.background then
+      BaseUI.setBackground(nil)
+    end
+    return
+  end
+  local path = invokeFileDialog(true, "Choose a background picture")
+  if path and path ~= "" then
+    BaseUI.setBackground(path)
+  end
+end
+
+local function backgroundCommand(argument)
+  argument = (argument or ""):trim()
+  -- a path pasted from a file manager often comes quoted
+  argument = argument:match('^"(.*)"$') or argument:match("^'(.*)'$") or argument
+  if argument:lower() == "off" then
+    BaseUI.setBackground(nil)
+  elseif argument ~= "" then
+    BaseUI.setBackground(argument)
+  elseif BaseUI.settings.background then
+    cecho("\n&lt;cyan&gt;[ Mudlet UI ] Background picture: &lt;yellow&gt;")
+    echo(BaseUI.settings.background)
+    cecho("&lt;cyan&gt; - &lt;yellow&gt;baseui background off&lt;cyan&gt; removes it.&lt;reset&gt;\n")
+  else
+    cecho("\n&lt;cyan&gt;[ Mudlet UI ] Type &lt;yellow&gt;baseui background (file)&lt;cyan&gt; to put a picture behind the whole window.&lt;reset&gt;\n")
+  end
+end
+
+function BaseUI.alias(input, argument)
   input = (input or ""):trim():lower()
+  if input == "background" then
+    backgroundCommand(argument)
+    return
+  end
+  -- only "background" takes anything after it
+  if argument and argument:trim() ~= "" then
+    input = ""
+  end
   -- looks are matched after the commands, so naming one "hide" could never take
   -- that command away from the player
   if input == "hide" then
@@ -2869,6 +3061,12 @@ function BaseUI.alias(input)
     cecho("&lt;cyan&gt;[ Mudlet UI ]   &lt;yellow&gt;baseui hide&lt;cyan&gt; - hide it (remembered between sessions)\n")
     cecho("&lt;cyan&gt;[ Mudlet UI ]   &lt;yellow&gt;baseui show&lt;cyan&gt; - bring it back\n")
     cecho("&lt;cyan&gt;[ Mudlet UI ]   &lt;yellow&gt;baseui dock&lt;cyan&gt; - put every section back in the dock, if you dragged any out\n")
+    cecho("&lt;cyan&gt;[ Mudlet UI ]   &lt;yellow&gt;baseui background (file)&lt;cyan&gt; - put a picture behind the whole window, or click the &lt;yellow&gt;" .. pictureGlyph .. "&lt;cyan&gt; in its title bar\n")
+    if BaseUI.settings.background then
+      cecho("&lt;cyan&gt;[ Mudlet UI ]   &lt;yellow&gt;baseui background off&lt;cyan&gt; - remove the picture, now ")
+      echo(BaseUI.settings.background)
+      echo("\n")
+    end
     cecho("&lt;cyan&gt;[ Mudlet UI ] Looks - or click the &lt;yellow&gt;" .. paletteGlyph .. "&lt;cyan&gt; in its title bar to try each in turn:\n")
     for _, name in ipairs(themeOrder) do
       cecho(string.format("&lt;cyan&gt;[ Mudlet UI ]   &lt;yellow&gt;baseui %s&lt;cyan&gt; - %s%s\n",

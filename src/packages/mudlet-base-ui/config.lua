@@ -30,10 +30,16 @@ Commands:
 > baseui show      -- bring it back
 > baseui dock      -- put every section back in the dock
 > baseui ember     -- change the look (midnight, ember or hardlight)
+> baseui background <file>  -- put a picture behind the whole window
+> baseui background off     -- take it away again
 ```
+
+The ▣ beside the ◐ picks a background picture too; right-click it to
+remove the picture. While a picture is up, the game's text and the dock
+let it show through.
 
 When a game installs an interface of its own, this one quietly stands
 aside - `baseui show` brings it back if you prefer it.
 ]]
-version = [[1.7.9]]
+version = [[1.8.0]]
 created = "2026-07-25T12:00:00+00:00"
