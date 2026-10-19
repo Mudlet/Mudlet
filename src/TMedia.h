@@ -271,7 +271,7 @@ public:
                 oldOutput->deleteLater();
             }
             QObject::connect(mpVoice.get(), &TMediaVoice::signal_unsupported, mpVoice.get(), [this]() {
-                setMixed(false);
+                moveOffTheMix();
             });
             return true;
         }
@@ -281,6 +281,7 @@ public:
         // Detached now, or the sound plays through both until the voice goes; deleted later, as this
         // can be reached from the voice's own signal
         mMediaPlayer->setAudioBufferOutput(nullptr);
+        QObject::disconnect(mMediaPlayer.get(), nullptr, mpVoice.get(), nullptr);
         mpVoice.release()->deleteLater();
         mMediaPlayer->setAudioOutput(output);
         return false;
@@ -323,6 +324,23 @@ public:
     }
 
 private:
+    // Given an output while it plays, FFmpeg rebuilds the player's pipeline, and one rebuilt before the
+    // first audio reaches the voice was seen never to end. So the track starts over instead, where it
+    // was; blocked, so scripts are not told it stopped and started again.
+    void moveOffTheMix()
+    {
+        if (mMediaPlayer->playbackState() != QMediaPlayer::PlayingState) {
+            setMixed(false);
+            return;
+        }
+        const qint64 position = mMediaPlayer->position();
+        const QSignalBlocker unannounced(mMediaPlayer.get());
+        mMediaPlayer->stop();
+        setMixed(false);
+        mMediaPlayer->setPosition(position);
+        mMediaPlayer->play();
+    }
+
     QPointer<Host> mpHost;
     TMediaData mMediaData;
     std::unique_ptr<QMediaPlayer> mMediaPlayer;

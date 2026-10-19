@@ -297,6 +297,50 @@ private slots:
         QCOMPARE(TAudioMixer::self()->queuedSamples(), 0);
     }
 
+    void test_aSoundMovedOffTheMixAsItStartsStillEndsOnce_data()
+    {
+        QTest::addColumn<int>("passes");
+        QTest::newRow("once") << 1;
+        QTest::newRow("looped") << 2;
+    }
+
+    // A sound the backend hands no audio for is moved to an output of its own. Moved at any moment
+    // around its start, before or after its first audio, it must still play every pass and be
+    // reported ending once. Signalled by hand, as no backend can be made to stall on cue.
+    void test_aSoundMovedOffTheMixAsItStartsStillEndsOnce()
+    {
+        QFETCH(const int, passes);
+        SKIP_OR_FAIL_WITHOUT(backendFeedsTheMix() ? QString() : noMixingReason());
+        QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("registerAnonymousEventHandler('sysMediaStarted', function() started = started + 1 end)\n"
+                                                                         "registerAnonymousEventHandler('sysMediaFinished', function() finished = finished + 1 end)")));
+        const QString fileName = writeClip(qsl("stalls.wav"), 300);
+
+        // The move that matters lands after the decoder starts and before the first audio reaches the
+        // voice, and when that is varies from run to run
+        for (const int delayMs : {0, 5, 10, 15, 20, 30, 45}) {
+            QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("started, finished = 0, 0")));
+            TMediaData data = clipData(fileName, TMediaData::MediaTypeSound);
+            data.setMediaLoops(passes);
+            media()->playMedia(data);
+            QTest::qWait(delayMs);
+            const TMediaVoice* voice = mixedVoice();
+            QVERIFY2(voice, "The sound was not played through the shared output.");
+            emit const_cast<TMediaVoice*>(voice)->signal_unsupported();
+            QCOMPARE(media()->playersMixed(), 0);
+
+            const QString when = qsl("moved off the shared output %1 ms after it was played").arg(delayMs);
+            QVERIFY2(QTest::qWaitFor(
+                             [&]() {
+                                 return media()->playersInPlayingState() == 0 && luaHolds(qsl("finished >= %1").arg(passes));
+                             },
+                             QDeadlineTimer(10s)),
+                     qPrintable(qsl("A sound %1 never ended.").arg(when)));
+            QTest::qWait(200ms);
+            QVERIFY2(luaHolds(qsl("finished == %1").arg(passes)), qPrintable(qsl("A sound %1 was reported ending more than once a pass.").arg(when)));
+            QVERIFY2(luaHolds(qsl("started == %1").arg(passes)), qPrintable(qsl("A sound %1 was reported starting again.").arg(when)));
+        }
+    }
+
     // The mute switch applies to a sound from its start, not only when it is next flipped
     void test_aSoundStartedWhileMutedStartsMuted()
     {
@@ -452,6 +496,9 @@ private:
         data.setMediaVolume(1); // quiet enough not to disturb a desktop run
         return data;
     }
+
+    // compileAndExecuteScript() reports a raised error as false, so a failed assert() comes back as one
+    bool luaHolds(const QString& condition) const { return mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("assert(%1)").arg(condition)); }
 
     bool waitForPlaying(const int players) const
     {
