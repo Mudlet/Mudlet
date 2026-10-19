@@ -64,6 +64,18 @@ bool mediaDirectionArg(lua_State* L, const char* func, QString& direction)
     return true;
 }
 
+// Degrees go back as a number and a named way as its word, as a script can give either.
+void pushMediaDirection(lua_State* L, const QString& direction)
+{
+    bool degrees = false;
+    const int value = direction.toInt(&degrees);
+    if (degrees) {
+        lua_pushinteger(L, value);
+    } else {
+        lua_pushstring(L, direction.toUtf8().constData());
+    }
+}
+
 // -100 (left) to 100 (right), rounded and held to that range. On failure the message is
 // pushed for the caller to raise.
 bool mediaPanArg(lua_State* L, const char* func, int& pan)
@@ -1344,7 +1356,7 @@ int TLuaInterpreter::getMediaListener(lua_State* L)
 
     lua_newtable(L);
     lua_pushstring(L, "facing");
-    lua_pushstring(L, host.mpMedia->listenerFacing().toUtf8().constData());
+    pushMediaDirection(L, host.mpMedia->listenerFacing());
     lua_settable(L, -3);
     return 1;
 }
@@ -1419,7 +1431,7 @@ void TLuaInterpreter::processPlayingMediaTable(lua_State* L, TMediaData& mediaDa
 
         if (!matchedMediaData.mediaDirection().isEmpty()) {
             lua_pushstring(L, "direction");
-            lua_pushstring(L, matchedMediaData.mediaDirection().toUtf8().constData());
+            pushMediaDirection(L, matchedMediaData.mediaDirection());
             lua_settable(L, -3);
         }
 
@@ -1888,7 +1900,7 @@ void TLuaInterpreter::processPausedMediaTable(lua_State* L, TMediaData& mediaDat
 
         if (!matchedMediaData.mediaDirection().isEmpty()) {
             lua_pushstring(L, "direction");
-            lua_pushstring(L, matchedMediaData.mediaDirection().toUtf8().constData());
+            pushMediaDirection(L, matchedMediaData.mediaDirection());
             lua_settable(L, -3);
         }
 
