@@ -27,6 +27,7 @@
 #include <chrono>
 #include <cmath>
 #include <functional>
+#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -944,6 +945,46 @@ private slots:
         QCOMPARE(media()->playingMedia(criteria).at(0).mediaPan(), std::nullopt);
     }
 
+    // As a stop's, an update's tag chooses the sounds and its type narrows them
+    void test_aGmcpUpdateChoosesByTagAndType()
+    {
+        QString package = qsl("Client.Media.Play");
+        for (const auto& [key, tag, type] :
+             {std::tuple{qsl("rain"), qsl("Weather"), qsl("sound")}, std::tuple{qsl("sword"), qsl("combat"), qsl("sound")}, std::tuple{qsl("storm"), qsl("weather"), qsl("music")}}) {
+            QString message = qsl(R"({"name": "%1", "key": "%2", "tag": "%3", "type": "%4", "volume": 5})").arg(writeClip(key + qsl(".wav")), key, tag, type);
+            media()->parseGMCP(package, message);
+            QVERIFY2(QTest::qWaitFor(
+                             [&]() {
+                                 return gmcpPlaying(key).mediaKey() == key;
+                             },
+                             QDeadlineTimer(10s)),
+                     qPrintable(qsl("The Client.Media.Play of %1 never started playing.").arg(key)));
+        }
+
+        package = qsl("Client.Media.Update");
+        QString message = qsl(R"({"tag": "WEATHER", "pan": 40, "volume": 7, "duration": 0})");
+        media()->parseGMCP(package, message);
+        QCOMPARE(gmcpPlaying(qsl("rain")).mediaPan(), std::optional<int>(40));
+        QCOMPARE(gmcpPlaying(qsl("rain")).mediaVolume(), 7);
+        QCOMPARE(gmcpPlaying(qsl("storm")).mediaVolume(), 7);
+        QCOMPARE(gmcpPlaying(qsl("storm")).mediaPan(), std::nullopt);
+        QCOMPARE(gmcpPlaying(qsl("sword")).mediaPan(), std::nullopt);
+        QCOMPARE(gmcpPlaying(qsl("sword")).mediaVolume(), 5);
+
+        message = qsl(R"({"tag": "weather", "type": "sound", "volume": 9, "duration": 0})");
+        media()->parseGMCP(package, message);
+        QCOMPARE(gmcpPlaying(qsl("rain")).mediaVolume(), 9);
+        QCOMPARE(gmcpPlaying(qsl("storm")).mediaVolume(), 7);
+
+        // An unknown type is refused rather than read as every type, and a type alone chooses nothing
+        for (const auto& refused : {qsl(R"({"tag": "weather", "type": "film", "volume": 3, "duration": 0})"), qsl(R"({"type": "sound", "volume": 3, "duration": 0})")}) {
+            message = refused;
+            media()->parseGMCP(package, message);
+            QCOMPARE(gmcpPlaying(qsl("rain")).mediaVolume(), 9);
+            QCOMPARE(gmcpPlaying(qsl("sword")).mediaVolume(), 5);
+        }
+    }
+
     // A game can pass any exit name: one that is no direction plays the sound as with none
     void test_aGmcpPlayWithAnUnknownDirectionStillPlays()
     {
@@ -1064,6 +1105,19 @@ private:
         TMediaData criteria = soundData(fileName);
         const QList<TMediaData> playing = media()->playingMedia(criteria);
         return playing.isEmpty() ? TMediaData() : playing.at(0);
+    }
+
+    TMediaData gmcpPlaying(const QString& key) const
+    {
+        TMediaData criteria;
+        criteria.setMediaProtocol(TMediaData::MediaProtocolGMCP);
+        criteria.setMediaKey(key);
+        for (const TMediaData& playing : media()->playingMedia(criteria)) {
+            if (playing.mediaKey() == key) {
+                return playing;
+            }
+        }
+        return {};
     }
 
     bool stillPlaying(const QString& fileName) const

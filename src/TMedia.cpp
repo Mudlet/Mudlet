@@ -2936,12 +2936,20 @@ void TMedia::parseJSONForMediaUpdate(QJsonObject& json)
     TMediaData mediaData{};
 
     mediaData.setMediaProtocol(TMediaData::MediaProtocolGMCP);
+    mediaData.setMediaType(TMedia::parseJSONByMediaType(json));
+
+    if (unknownMediaTypeRefused(json, mediaData, qsl("Client.Media.Update"))) {
+        return;
+    }
+
     mediaData.setMediaFileName(TMedia::parseJSONByMediaFileName(json));
     mediaData.setMediaKey(TMedia::parseJSONByMediaKey(json));
+    mediaData.setMediaTag(TMedia::parseJSONByMediaTag(json));
 
-    // Unlike a stop, an update with nothing to select it by would move every sound the game has
-    if (mediaData.mediaFileName().isEmpty() && mediaData.mediaKey().isEmpty()) {
-        qWarning() << qsl("TMedia::parseJSONForMediaUpdate() WARNING - ignored a Client.Media.Update naming neither a key nor a name.");
+    // Unlike a stop, an update with nothing to select it by would move every sound the game has. A type
+    // only narrows a selection, as it would otherwise move every sound of that type.
+    if (mediaData.mediaFileName().isEmpty() && mediaData.mediaKey().isEmpty() && mediaData.mediaTag().isEmpty()) {
+        qWarning() << qsl("TMedia::parseJSONForMediaUpdate() WARNING - ignored a Client.Media.Update naming no key, name or tag.");
         return;
     }
 
