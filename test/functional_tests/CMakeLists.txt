@@ -269,6 +269,7 @@ set(PACKAGE_GROUP_TEST_SOURCES
     ModuleManagerListingTest.cpp
     ModuleSaveTeardownTest.cpp
     ModuleSyncReloadTest.cpp
+    ModuleSyncSaveReentryTest.cpp
     PackageDownloadDialogRestyleTest.cpp
     PackageExporterDialogTest.cpp
     PackageFolderRemovalTest.cpp

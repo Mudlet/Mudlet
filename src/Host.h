@@ -500,11 +500,19 @@ public:
     QString readProfileIniData(const QString& item);
     void xmlSaved(const QString& xmlName);
     bool currentlySavingProfile();
+    // Whether the end of a save is reloading its synced modules in the other profiles, whose scripts
+    // can reach back into this one while that save still reads as running
+    bool syncingModulesAfterSave() const { return mSyncingModulesAfterSave; }
     // Whether a package install or uninstall still owes the profile a save - see
     // mDeferredSaveTimer.
     bool hasPendingProfileSave() const { return mDeferredSaveTimer.isActive(); }
     void processDiscordGMCP(const QString& packageMessage, const QString& data);
-    void waitForProfileSave();
+    // A script waits with onlyTheSavesOwnEvents: only the completions of the watchers named
+    // scmProfileSaveWatcherName are delivered, so no timer, incoming line or other background task runs
+    // nested in the waiting script. A save that syncs modules still reloads them in the other profiles as
+    // it ends, and their scripts can raise a global event that reaches this profile's handlers.
+    void waitForProfileSave(bool onlyTheSavesOwnEvents = false);
+    inline static const QString scmProfileSaveWatcherName = qsl("profileSaveWatcher");
     // waitForProfileSave() pumps the event loop with this Host still in use on the stack below it
     bool waitingForProfileSave() const { return mProfileSaveWaitDepth > 0; }
     void clearDiscordData();
@@ -1191,6 +1199,7 @@ public:
     QSet<QChar> mDoubleClickIgnore;
     bool mEnableTextAnalyzer = false;
     bool mWritingHostAndModules = false;
+    bool mSyncingModulesAfterSave = false;
     // Set from profile preferences, if the timer interval is less
     // than this then the normal reoccuring debug output of the entire command
     // and script for any timer with a timeout LESS than this is NOT shown

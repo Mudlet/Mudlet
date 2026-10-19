@@ -2863,11 +2863,29 @@ static int pushInstallSucceeded(lua_State* L, const QString& warning)
     return 2;
 }
 
+// Host::installPackage() puts an install asked for during a profile save off until the save is done and
+// answers true at once, so a script would be told it had installed before it was even tried. Wait the
+// save out instead, so the answer is the real one - except from inside the save's own module sync, below;
+// false when the save never finished.
+static bool waitOutAProfileSave(Host& host)
+{
+    // From another profile's module reload at the end of this save, which cannot finish until this
+    // returns: the install is left for Host::installPackage() to put off until the save is done
+    if (host.syncingModulesAfterSave()) {
+        return true;
+    }
+    host.waitForProfileSave(true);
+    return !host.currentlySavingProfile();
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#installPackage
 int TLuaInterpreter::installPackage(lua_State* L)
 {
     const QString location = getVerifiedString(L, __func__, 1, "package location path and file name");
     Host& host = getHostFromLua(L);
+    if (!waitOutAProfileSave(host)) {
+        return warnArgumentValue(L, __func__, "a profile save is still in progress, try again later");
+    }
     auto [success, message] = host.installPackage(location, enums::PackageModuleType::Package, true);
     if (!success) {
         return warnArgumentValue(L, __func__, message);
@@ -2898,6 +2916,9 @@ int TLuaInterpreter::installModule(lua_State* L)
     Host& host = getHostFromLua(L);
     const QString module = QDir::fromNativeSeparators(modName);
 
+    if (!waitOutAProfileSave(host)) {
+        return warnArgumentValue(L, __func__, "a profile save is still in progress, try again later");
+    }
     auto [success, message] = host.installPackage(module, enums::PackageModuleType::ModuleFromScript, true);
     if (!success) {
         return warnArgumentValue(L, __func__, message);

@@ -1587,6 +1587,7 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
     // deferred delete, which on the way out it does not - and a Host destroyed while
     // the write is still queued would leave the watcher with no owner at all.
     auto watcher = new QFutureWatcher<void>(this);
+    watcher->setObjectName(scmProfileSaveWatcherName);
     // Captures values only, never `this`: no wait for this task is guaranteed, so the
     // Host can be destroyed while it is still queued or running.
     mModuleFuture = QtConcurrent::run([xmlSaveFutures, moduleJobs]() {
@@ -1611,7 +1612,9 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
         // save that clears/replaces mModulesToSync, making this save skip the module
         // sync it owes to other profiles.
         if (syncModules) {
+            mSyncingModulesAfterSave = true;
             reloadModules();
+            mSyncingModulesAfterSave = false;
         }
         mWritingHostAndModules = false;
         // Drop each module writer from `writers`; the last removal emits
@@ -1687,7 +1690,7 @@ bool Host::currentlySavingProfile()
     return (mWritingHostAndModules || !writers.empty());
 }
 
-void Host::waitForProfileSave()
+void Host::waitForProfileSave(const bool onlyTheSavesOwnEvents)
 {
     if (!currentlySavingProfile()) {
         return;
@@ -1705,7 +1708,9 @@ void Host::waitForProfileSave()
     // a save that has written everything and still says it is running cannot be waited
     // out. Long enough that reaching it means something is wrong, not that a disk is
     // busy.
-    constexpr auto notificationTimeout = 30s;
+    // A script's wait delivers the save's completions itself, and those are already queued once its writes are
+    // done, so one still running a moment later never finishes - and nothing repaints while it waits.
+    const auto notificationTimeout = onlyTheSavesOwnEvents ? 1s : 30s;
     QElapsedTimer waitedForNotification;
     // A QEventLoop's processEvents() rather than QCoreApplication's only for its "did anything
     // happen" answer - nothing is exec()ed here. No user input either: all it is here to
@@ -1725,10 +1730,22 @@ void Host::waitForProfileSave()
         if (!waitedForNotification.isValid()) {
             waitedForNotification.start();
         }
-        if (!pump.processEvents(QEventLoop::ExcludeUserInputEvents)) {
+        if (onlyTheSavesOwnEvents) {
+            // Every write's end reaches the main thread as a QFutureWatcher's posted FutureCallOut. Only this
+            // save's: an unzipAsync() or another profile's save has a watcher too, and theirs run Lua.
+            const auto watchers = findChildren<QFutureWatcherBase*>(scmProfileSaveWatcherName, Qt::FindDirectChildrenOnly);
+            for (const QPointer<QFutureWatcherBase> watcher : watchers) {
+                if (watcher) {
+                    QCoreApplication::sendPostedEvents(watcher, QEvent::FutureCallOut);
+                }
+            }
+            if (currentlySavingProfile()) {
+                QThread::sleep(1ms);
+            }
+        } else if (!pump.processEvents(QEventLoop::ExcludeUserInputEvents)) {
             QThread::sleep(1ms);
         }
-        if (waitedForNotification.durationElapsed() > notificationTimeout) {
+        if (currentlySavingProfile() && waitedForNotification.durationElapsed() > notificationTimeout) {
             qWarning().nospace() << "Host::waitForProfileSave() WARNING - the save of \"" << getName() << "\" has not reported itself finished within " << notificationTimeout.count()
                                  << " seconds of its writes completing, so giving up on it. State: mWritingHostAndModules=" << mWritingHostAndModules << ", writers pending=" << writers.size()
                                  << ", module write still running=" << mModuleFuture.isRunning() << ".";
@@ -3395,6 +3412,10 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
                 obj,
                 [=, this]() {
                     auto [ok, msg] = installPackage(fileName, thing, quiet);
+                    if (ok && thing == enums::PackageModuleType::ModuleFromScript) {
+                        // installModule() announced the change when it was put off, before there was anything to list
+                        emit signal_moduleListChangedByScript();
+                    }
                     if (!ok) {
                         qWarning() << "Host::installPackage() deferred install of" << fileName << "failed:" << msg;
                         // A non-quiet install has already been reported by fail() inside the
