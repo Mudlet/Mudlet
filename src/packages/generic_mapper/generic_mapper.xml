@@ -3739,15 +3739,14 @@ function map.merge_rooms()
     -- used to combine essentially identical rooms with the same coordinates
     -- typically, these are generated due to mapping errors
     if map.mapping then
-        map.echo("Merging rooms named " .. getRoomName(map.currentRoom))
         local x,y,z = getRoomCoordinates(map.currentRoom)
         local rooms = getRoomsByPosition(map.currentArea,x,y,z)
         local exits, portals, room, cmd, curportals
-        local room_count = 1
+        local merged = {}
         for k,v in pairs(rooms) do
             if v ~= map.currentRoom then
                 if getRoomName(v) == getRoomName(map.currentRoom) then
-                    room_count = room_count + 1
+                    merged[#merged + 1] = string.format("%s (#%d)", getRoomName(v), v)
                     for k1,v1 in pairs(getRoomExits(v)) do
                         setExit(map.currentRoom,v1,stubmap[k1])
                         exits = getRoomExits(v1)
@@ -3794,8 +3793,10 @@ function map.merge_rooms()
                 end
             end
         end
-        if room_count &gt; 1 then
-            map.echo(room_count .. " rooms merged", true)
+        if #merged &gt; 0 then
+            map.echo(string.format("Merged %s into %s (#%d)", table.concat(merged, ", "), getRoomName(map.currentRoom), map.currentRoom))
+        else
+            map.echo("No rooms to merge here")
         end
     else
         map.echo("Not mapping",false,true)
