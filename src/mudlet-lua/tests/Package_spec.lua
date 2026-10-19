@@ -130,6 +130,19 @@ local function containsWrapped(haystack, needle)
   return contains((tostring(haystack):gsub("%s+", "")), (needle:gsub("%s+", "")))
 end
 
+-- An archive whose name a folder in the profile already has unpacks into a "mudlet-installing-" folder beside it.
+-- One that was there before these specs ran is no spec's leavings, so only the rest are counted.
+local foldersBeforeTheInstallSpecs = {}
+local function aStagingFolderIsLeft()
+  local prefix = "mudlet-installing-"
+  for entry in lfs.dir(getMudletHomeDir()) do
+    if entry:sub(1, #prefix) == prefix and not foldersBeforeTheInstallSpecs[entry] then
+      return true
+    end
+  end
+  return false
+end
+
 -- A file: URL for a local path, in the three-slash form that keeps a Windows
 -- drive letter from being read as the host name. The checkout these fixtures
 -- live in can sit anywhere, so the characters that would otherwise end the path
@@ -332,6 +345,12 @@ local function collectEventsForSpec(eventName)
 end
 
 describe("Tests the functionality of installPackage", function()
+  setup(function()
+    for entry in lfs.dir(getMudletHomeDir()) do
+      foldersBeforeTheInstallSpecs[entry] = true
+    end
+  end)
+
   it("raises a Lua error when called with no arguments", function()
     assertArgError(function() installPackage() end, "installPackage: bad argument #1 type")
     assertArgError(function() installPackage() end, "got nil!")
@@ -371,11 +390,408 @@ describe("Tests the functionality of installPackage", function()
                     "the failed unpacking stranded the folder it had made in the profile")
   end)
 
+  it("leaves nothing of a refused archive in a folder that was already in the profile", function()
+    local name = "mudlet-spec-occupied"
+    local standIn = getMudletHomeDir() .. "/" .. name
+    local occupant = standIn .. "/please-do-not-delete-me.txt"
+    local stray = standIn .. "/mudlet-spec-stray.txt"
+    local archive = getMudletHomeDir() .. "/" .. name .. ".mpackage"
+    lfs.mkdir(standIn)
+    local file = io.open(occupant, "w")
+    assert.is_not_nil(file, "could not write to " .. occupant)
+    file:write("the install did not make this folder, so it may not write into it")
+    file:close()
+    defer(function()
+      os.remove(stray)
+      os.remove(occupant)
+      lfs.rmdir(standIn)
+      os.remove(archive)
+    end)
+    -- no package XML in it, so the install is refused once it has been unpacked
+    writeArchiveOfEmptyFiles(archive, {"mudlet-spec-stray.txt"})
+
+    local reason = installUntilRefused(installPackage, archive)
+
+    assert.is_true(contains(reason, "no package found"), tostring(reason))
+    assert.is_false(packageInstalled(name))
+    assert.is_true(fileExists(occupant), "the refused install deleted a folder that was in the profile before it ran")
+    assert.is_false(fileExists(stray), "the refused install left its files in a folder that was in the profile before it ran")
+    assert.is_false(aStagingFolderIsLeft(), "the refused install left the folder it unpacked into")
+  end)
+
+  it("installs a package over a folder of its name that was left in the profile", function()
+    -- left by a crash before the profile was saved, or an uninstall that could not remove every file
+    local leftover = getMudletHomeDir() .. "/" .. minimalPackage
+    local oldFile = leftover .. "/mudlet-spec-left-over.txt"
+    lfs.mkdir(leftover)
+    local file = io.open(oldFile, "w")
+    assert.is_not_nil(file, "could not write to " .. oldFile)
+    file:write("left behind by an earlier install")
+    file:close()
+    local staleXml = leftover .. "/" .. minimalPackage .. ".xml"
+    file = io.open(staleXml, "w")
+    assert.is_not_nil(file, "could not write to " .. staleXml)
+    file:write("not the package's XML, which the archive's own copy replaces")
+    file:close()
+    defer(function()
+      removeFixturePackage(minimalPackage)
+      os.remove(staleXml)
+      os.remove(oldFile)
+      lfs.rmdir(leftover)
+    end)
+
+    local ok, err = installUntilConfirmed(installPackage, fixtureDirectory .. "/" .. minimalPackage .. ".mpackage",
+                                          function() return packageInstalled(minimalPackage) end, "the fixture package over its leftover folder")
+
+    assert.is_true(ok, tostring(err))
+    assert.is_true(packageInstalled(minimalPackage))
+    assert.equals(1, exists(minimalPackage .. " alias", "alias"))
+    assert.are_not.equal("not the package's XML, which the archive's own copy replaces", readFile(staleXml), "the archive's XML did not replace the stale one")
+    assert.is_true(fileExists(oldFile), "the install took away a file of the folder it installed over")
+    assert.is_false(aStagingFolderIsLeft(), "the install left the folder it unpacked into")
+  end)
+
+  it("keeps the links, empty folders and permissions of a folder it installs over, and uninstalls without following the links", function()
+    local leftover = getMudletHomeDir() .. "/" .. minimalPackage
+    local outside = getMudletHomeDir() .. "/mudlet-spec-outside"
+    local keptOutside = outside .. "/please-do-not-delete-me.txt"
+    lfs.mkdir(outside)
+    local file = io.open(keptOutside, "w")
+    assert.is_not_nil(file, "could not write to " .. keptOutside)
+    file:write("only linked to from the folder the package installs over")
+    file:close()
+    lfs.mkdir(leftover)
+    lfs.mkdir(leftover .. "/saves")
+    defer(function()
+      removeFixturePackage(minimalPackage)
+      lfs.rmdir(leftover .. "/saves")
+      lfs.rmdir(leftover)
+      os.remove(keptOutside)
+      lfs.rmdir(outside)
+    end)
+    local permissions = lfs.attributes(leftover, "permissions")
+    if not lfs.link(outside, leftover .. "/sounds", true) or not lfs.link(outside .. "/nothing-here", leftover .. "/dangling", true) then
+      pending("this system will not let the profile make symbolic links")
+      return
+    end
+
+    local ok, err = installUntilConfirmed(installPackage, fixtureDirectory .. "/" .. minimalPackage .. ".mpackage",
+                                          function() return packageInstalled(minimalPackage) end, "the fixture package over its leftover folder")
+
+    assert.is_true(ok, tostring(err))
+    assert.is_true(fileExists(keptOutside), "the install deleted a file outside the profile that the folder only linked to")
+    assert.equals("link", lfs.symlinkattributes(leftover .. "/sounds", "mode"), "the install took away a link of the folder it installed over")
+    assert.equals("link", lfs.symlinkattributes(leftover .. "/dangling", "mode"), "the install took away a link to nothing of the folder it installed over")
+    assert.equals("directory", lfs.attributes(leftover .. "/saves", "mode"), "the install took away an empty folder of the folder it installed over")
+    assert.equals(permissions, lfs.attributes(leftover, "permissions"), "the install changed who may read the folder it installed over")
+    assert.is_false(aStagingFolderIsLeft(), "the install left the folder it unpacked into")
+
+    removeFixturePackage(minimalPackage)
+    assert.is_true(fileExists(keptOutside), "the uninstall deleted a file outside the profile that the package's folder only linked to")
+    assert.is_nil(lfs.symlinkattributes(leftover .. "/sounds"), "the uninstall left a link of the package's folder behind")
+  end)
+
+  local strangersPackage = [[
+	<TriggerPackage />
+	<TimerPackage />
+	<AliasPackage>
+		<Alias isActive="yes" isFolder="no">
+			<name>mudlet-spec-stranger alias</name>
+			<script></script>
+			<command></command>
+			<packageName></packageName>
+			<regex>^mudlet-spec-stranger$</regex>
+		</Alias>
+	</AliasPackage>
+	<ActionPackage />
+	<ScriptPackage />
+	<KeyPackage />
+	<VariablePackage>
+		<HiddenVariables />
+	</VariablePackage>]]
+
+  it("does not read in another package's file left in the folder it installs over", function()
+    local leftover = getMudletHomeDir() .. "/" .. minimalPackage
+    local strangersXml = leftover .. "/mudlet-spec-stranger.xml"
+    lfs.mkdir(leftover)
+    writePackageXml(strangersXml, strangersPackage)
+    defer(function()
+      removeFixturePackage(minimalPackage)
+      os.remove(strangersXml)
+      lfs.rmdir(leftover)
+    end)
+
+    installUntilConfirmed(installPackage, fixtureDirectory .. "/" .. minimalPackage .. ".mpackage",
+                          function() return packageInstalled(minimalPackage) end, "the fixture package over its leftover folder")
+
+    assert.equals(1, exists(minimalPackage .. " alias", "alias"))
+    assert.equals(0, exists("mudlet-spec-stranger alias", "alias"), "a package file that was in the folder before was read in as part of this package")
+  end)
+
+  it("does not read in another package's file left in a module's folder when the module is reloaded", function()
+    local leftover = getMudletHomeDir() .. "/" .. minimalPackage
+    local strangersXml = leftover .. "/mudlet-spec-stranger.xml"
+    lfs.mkdir(leftover)
+    writePackageXml(strangersXml, strangersPackage)
+    defer(function()
+      os.remove(strangersXml)
+      lfs.rmdir(leftover)
+    end)
+    withFixtureModule(minimalPackage)
+    assert.equals(0, exists("mudlet-spec-stranger alias", "alias"), "a package file that was in the folder before was read in as part of this module")
+
+    -- unzipped into the module's own folder again, as every profile load does too
+    local runsBefore = mudletSpecMinimalRuns or 0
+    reloadModuleUntil(minimalPackage, function() return (mudletSpecMinimalRuns or 0) > runsBefore end)
+
+    assert.equals(1, exists(minimalPackage .. " alias", "alias"))
+    assert.equals(0, exists("mudlet-spec-stranger alias", "alias"), "a package file that was in the module's folder before was read in when the module was reloaded")
+  end)
+
+  it("refuses an archive with a file where the folder it installs over has a folder", function()
+    local name = "mudlet-spec-fileorfolder"
+    local leftover = getMudletHomeDir() .. "/" .. name
+    local kept = leftover .. "/notes/please-do-not-delete-me.txt"
+    lfs.mkdir(leftover)
+    lfs.mkdir(leftover .. "/notes")
+    local file = io.open(kept, "w")
+    assert.is_not_nil(file, "could not write to " .. kept)
+    file:write("unzipping over this folder could not have replaced it with a file")
+    file:close()
+    lfs.mkdir(scratchDirectory)
+    local archive = scratchDirectory .. "/" .. name .. ".mpackage"
+    defer(function()
+      os.remove(archive)
+      lfs.rmdir(scratchDirectory)
+      os.remove(kept)
+      os.remove(leftover .. "/notes")
+      lfs.rmdir(leftover .. "/notes")
+      os.remove(leftover .. "/" .. name .. ".xml")
+      lfs.rmdir(leftover)
+    end)
+    defer(function() removeFixturePackage(name) end)
+    -- an empty package XML is still read in, so only the clash refuses this
+    writeArchiveOfEmptyFiles(archive, {name .. ".xml", "notes"})
+
+    local reason = installUntilRefused(installPackage, archive)
+
+    assert.is_true(contains(reason, "could not move the files"), tostring(reason))
+    assert.is_true(fileExists(kept), "the install took away a folder of the folder it installed over")
+    assert.is_false(fileExists(leftover .. "/" .. name .. ".xml"), "the refused install left its file in the folder that was already there")
+    assert.is_false(aStagingFolderIsLeft(), "the refused install left the folder it unpacked into")
+  end)
+
+  it("installs a folder of the archive through a folder in the way that links to another filesystem", function()
+    -- named after this run's profile, which concurrent runs do not share
+    local elsewhere = "/dev/shm/mudlet-spec-elsewhere-" .. getMudletHomeDir():gsub("[^%w]", "")
+    if lfs.attributes("/dev/shm", "mode") ~= "directory" or lfs.attributes("/dev/shm", "dev") == lfs.attributes(getMudletHomeDir(), "dev") then
+      pending("needs a /dev/shm on another filesystem than the profile")
+      return
+    end
+    local leftover = getMudletHomeDir() .. "/" .. resourcesPackage
+    local kept = elsewhere .. "/please-do-not-delete-me.txt"
+    local function removeBelow(folder)
+      if lfs.symlinkattributes(folder, "mode") ~= "directory" then
+        return
+      end
+      for entry in lfs.dir(folder) do
+        if entry ~= "." and entry ~= ".." then
+          local path = folder .. "/" .. entry
+          if lfs.symlinkattributes(path, "mode") == "directory" then
+            removeBelow(path)
+            lfs.rmdir(path)
+          else
+            os.remove(path)
+          end
+        end
+      end
+    end
+    lfs.mkdir(elsewhere)
+    defer(function()
+      removeBelow(elsewhere)
+      lfs.rmdir(elsewhere)
+    end)
+    local file = io.open(kept, "w")
+    assert.is_not_nil(file, "could not write to " .. kept)
+    file:write("in the folder the package's folder in the profile links to")
+    file:close()
+    defer(function() removeFixturePackage(resourcesPackage) end)
+    -- taken away before the uninstall, which would empty the folder it links to
+    defer(function() os.remove(leftover) end)
+    if not lfs.link(elsewhere, leftover, true) then
+      pending("this system will not let the profile make symbolic links")
+      return
+    end
+
+    installUntilConfirmed(installPackage, fixtureDirectory .. "/" .. resourcesPackage .. ".mpackage",
+                          function() return packageInstalled(resourcesPackage) end, "the resources fixture through a link to another filesystem")
+
+    assert.is_true(fileExists(elsewhere .. "/resources/spec-note.txt"), "the archive's folder did not reach the folder the link points to")
+    assert.is_true(fileExists(elsewhere .. "/resources/nested/spec-nested.txt"), "the archive's nested folder did not reach the folder the link points to")
+    assert.is_true(fileExists(kept), "the install took away a file of the folder it installed over")
+    assert.is_false(aStagingFolderIsLeft(), "the install left the folder it unpacked into")
+  end)
+
+  it("clears away a folder a crashed install was unpacking into, and only that", function()
+    local crashedInto = getMudletHomeDir() .. "/mudlet-installing-0badf00d"
+    local notMudlets = getMudletHomeDir() .. "/mudlet-installing-cafebabe"
+    -- holds what an archive replaced in a folder it was moved into, all that is left of those files after a crash
+    local holding = getMudletHomeDir() .. "/mudlet-installing-feedface"
+    lfs.mkdir(crashedInto)
+    lfs.mkdir(notMudlets)
+    lfs.mkdir(holding)
+    for _, path in ipairs({crashedInto .. "/.mudlet-unpacking", crashedInto .. "/half-an-archive.xml", notMudlets .. "/please-do-not-delete-me.txt",
+                           holding .. "/.mudlet-replaced", holding .. "/replaced.xml"}) do
+      local file = io.open(path, "w")
+      assert.is_not_nil(file, "could not write to " .. path)
+      file:close()
+    end
+    defer(function()
+      os.remove(holding .. "/replaced.xml")
+      os.remove(holding .. "/.mudlet-replaced")
+      lfs.rmdir(holding)
+      os.remove(notMudlets .. "/please-do-not-delete-me.txt")
+      lfs.rmdir(notMudlets)
+      os.remove(crashedInto .. "/half-an-archive.xml")
+      os.remove(crashedInto .. "/.mudlet-unpacking")
+      lfs.rmdir(crashedInto)
+    end)
+    local mark = getLastLineNumber("main")
+    withFixturePackage(minimalPackage)
+
+    assert.is_false(fileExists(crashedInto), "the folder a crashed install was unpacking into was left in the profile")
+    assert.is_true(fileExists(notMudlets .. "/please-do-not-delete-me.txt"), "the install deleted a folder that only looked like one it unpacks into")
+    assert.is_true(fileExists(holding .. "/replaced.xml"), "the install deleted the files a crashed install had moved out of the way")
+    assert.is_true(containsWrapped(textFrom(mark), "mudlet-installing-feedface"), "the install did not say where the files a crashed install had moved out of the way are")
+  end)
+
+  it("leaves a package's folder alone when the package is named like a folder an install unpacks into", function()
+    local name = "mudlet-installing-spec"
+    lfs.mkdir(scratchDirectory)
+    local archive = scratchDirectory .. "/" .. name .. ".mpackage"
+    local source = scratchDirectory .. "/" .. name
+    lfs.mkdir(source)
+    defer(function()
+      os.remove(archive)
+      os.remove(source .. "/" .. name .. ".xml")
+      os.remove(source .. "/.mudlet-unpacking")
+      lfs.rmdir(source)
+      lfs.rmdir(scratchDirectory)
+    end)
+    -- a package with no items is still read in, and the marker an install leaves in a folder it is unpacking into
+    -- comes with the archive
+    writePackageXml(source .. "/" .. name .. ".xml", "")
+    local marker = io.open(source .. "/.mudlet-unpacking", "wb")
+    assert.is_not_nil(marker, "could not write the archive's marker")
+    marker:close()
+    local zipped = os.execute("cd '" .. source .. "' && zip -q '" .. archive .. "' " .. name .. ".xml .mudlet-unpacking")
+    if zipped ~= 0 and zipped ~= true then
+      pending("the zip command is not available")
+      return
+    end
+    defer(function() removeFixturePackage(name) end)
+    installUntilConfirmed(installPackage, archive, function() return packageInstalled(name) end, "a package named like an unpacking folder")
+
+    withFixturePackage(minimalPackage)
+
+    assert.is_true(packageInstalled(name))
+    assert.is_true(fileExists(getMudletHomeDir() .. "/" .. name .. "/" .. name .. ".xml"), "an install cleared away the folder of an installed package")
+  end)
+
+  it("refuses an archive named after a folder the profile keeps its own data in", function()
+    -- every profile has a map folder from the start, which removing would take the map with it
+    local mapFolder = getMudletHomeDir() .. "/map"
+    local madeTheMapFolder = lfs.attributes(mapFolder, "mode") == nil
+    lfs.mkdir(mapFolder)
+    local mapFile = mapFolder .. "/mudlet-spec-map.dat"
+    local file = io.open(mapFile, "w")
+    assert.is_not_nil(file, "could not write to " .. mapFile)
+    file:write("the profile's own map")
+    file:close()
+    lfs.mkdir(scratchDirectory)
+    local notAPackage = scratchDirectory .. "/map.mpackage"
+    local noFolder = scratchDirectory .. "/no-package"
+    lfs.mkdir(noFolder)
+    local aPackage = noFolder .. "/map.mpackage"
+    defer(function()
+      os.remove(aPackage)
+      lfs.rmdir(noFolder)
+      os.remove(notAPackage)
+      lfs.rmdir(scratchDirectory)
+      os.remove(mapFolder .. "/mudlet-spec-stray.txt")
+      os.remove(mapFile)
+      if madeTheMapFolder then
+        lfs.rmdir(mapFolder)
+      end
+    end)
+    writeArchiveOfEmptyFiles(notAPackage, {"mudlet-spec-stray.txt"})
+    copyFile(fixtureDirectory .. "/mudlet-spec-noconfig.mpackage", aPackage)
+
+    -- turned away for its name before anything is read out of it
+    local reason = installUntilRefused(installPackage, notAPackage)
+    assert.is_true(contains(reason, "keeps its own files"), tostring(reason))
+    assert.is_false(fileExists(mapFolder .. "/mudlet-spec-stray.txt"), "the refused archive left its file in the profile's map folder")
+
+    reason = installUntilRefused(installPackage, aPackage)
+    assert.is_true(contains(reason, "keeps its own files"), tostring(reason))
+    assert.is_false(packageInstalled("map"))
+    assert.is_true(fileExists(mapFile), "the refused install took the profile's map")
+    assert.is_false(aStagingFolderIsLeft(), "the refused install left the folder it unpacked into")
+  end)
+
+  it("leaves a folder named after the archive alone when config.lua installs it under another name", function()
+    local renamedTo = "mudlet-spec-renamed"
+    local standIn = getMudletHomeDir() .. "/mudlet-spec-renamer"
+    local occupant = standIn .. "/please-do-not-delete-me.txt"
+    lfs.mkdir(standIn)
+    local file = io.open(occupant, "w")
+    assert.is_not_nil(file, "could not write to " .. occupant)
+    file:write("the install did not make this folder, so it may not carry it off")
+    file:close()
+    defer(function()
+      removeFixturePackage(renamedTo)
+      os.remove(occupant)
+      lfs.rmdir(standIn)
+    end)
+
+    installUntilConfirmed(installPackage, fixtureDirectory .. "/mudlet-spec-renamer.mpackage",
+                          function() return packageInstalled(renamedTo) end, "the renaming fixture past a folder of its file's name")
+
+    assert.is_true(fileExists(occupant), "the install carried off a folder that was in the profile before it ran")
+    assert.is_false(fileExists(getMudletHomeDir() .. "/" .. renamedTo .. "/please-do-not-delete-me.txt"), "the install moved a folder that was in the profile under its own name")
+    -- unpacked beside the folder in the way, in one the install made, and that is the one moved into place
+    assert.equals(lfs.attributes(standIn, "permissions"), lfs.attributes(getMudletHomeDir() .. "/" .. renamedTo, "permissions"),
+                  "the package's folder was not made with the permissions any other new folder gets")
+    assert.is_false(aStagingFolderIsLeft(), "the install left the folder it unpacked into")
+  end)
+
+  it("leaves alone a folder called after the package with .mudlet-installing on the end", function()
+    -- a name a package can have, so an install made to clash with the other kind's folder below may not take it
+    -- for a folder of its own to unpack into
+    local lookalike = getMudletHomeDir() .. "/" .. minimalPackage .. ".mudlet-installing"
+    local kept = lookalike .. "/please-do-not-delete-me.txt"
+    lfs.mkdir(lookalike)
+    local file = io.open(kept, "w")
+    assert.is_not_nil(file, "could not write to " .. kept)
+    file:write("this folder is not the install's to delete")
+    file:close()
+    defer(function()
+      os.remove(kept)
+      lfs.rmdir(lookalike)
+    end)
+    withFixtureModule(minimalPackage)
+
+    local reason = installUntilRefused(installPackage, fixtureDirectory .. "/" .. minimalPackage .. ".mpackage")
+
+    assert.is_true(contains(reason, "already installed"), tostring(reason))
+    assert.is_true(fileExists(kept), "the install deleted a folder it did not make")
+  end)
+
   it("leaves a folder that was already in the profile alone when the unpacking fails", function()
-    -- the archive's own file name decides where it unpacks, so an archive named
+    -- the archive's own file name decides where it unpacks, so it can be named
     -- after a folder the profile already has - "map", "log", or anything else
-    -- the user put there - unpacks straight into it. A failure that then cleans
-    -- up after itself must only take away a folder it made itself.
+    -- the user put there. A failure that then cleans up after itself must only
+    -- take away a folder it made itself.
     local standIn = getMudletHomeDir() .. "/mudlet-spec-notazip"
     local occupant = standIn .. "/please-do-not-delete-me.txt"
     lfs.mkdir(standIn)
@@ -2102,8 +2518,9 @@ describe("Tests installing one name as both a package and a module", function()
     installAndConfirm(installPackage, squatter, function() return packageInstalled("mudlet-spec-renamer") end,
                       "a package under the renaming archive's file name")
 
-    -- the module below is only staged because the package above holds its file
-    -- name; its staging folder gets a random suffix, so one without is no install's
+    -- the archive's file name with .mudlet-installing on the end, which the
+    -- clashing install must neither read in nor delete; the package above is
+    -- what makes the module below clash and unpack beside it
     local leftOver = getMudletHomeDir() .. "/mudlet-spec-renamer.mudlet-installing"
     lfs.mkdir(leftOver)
     defer(function()
