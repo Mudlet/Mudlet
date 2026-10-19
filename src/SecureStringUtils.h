@@ -45,6 +45,8 @@
  */
 class SecureStringUtils
 {
+    friend class SecureStringUtilsTest;
+
 public:
     /**
      * @brief Encrypt a string using a profile-specific encryption key
@@ -211,7 +213,7 @@ private:
      * @param iterations Number of PBKDF2 iterations
      * @return 32-byte key
      */
-    static QByteArray generateKey(const QByteArray& password, const QByteArray& salt, int iterations = 10000);
+    static QByteArray generateKey(const QByteArray& password, const QByteArray& salt, int iterations);
 
     /**
      * @brief Get or create a profile-specific encryption key

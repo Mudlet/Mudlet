@@ -216,8 +216,11 @@ QByteArray SecureStringUtils::generateKey(const QByteArray& password, const QByt
     // Use iterative SHA-256 hashing to implement PBKDF2-like key derivation
     QByteArray derivedKey = password + salt;
 
+    // Reused, not built each round: where Qt hashes through OpenSSL, every construction looks the
+    // algorithm up again, which over PBKDF2_ITERATIONS rounds takes seconds
+    QCryptographicHash hash(QCryptographicHash::Sha256);
     for (int i = 0; i < iterations; ++i) {
-        QCryptographicHash hash(QCryptographicHash::Sha256);
+        hash.reset();
         hash.addData(derivedKey);
         hash.addData(salt);
         derivedKey = hash.result();
@@ -229,7 +232,7 @@ QByteArray SecureStringUtils::generateKey(const QByteArray& password, const QByt
     } else if (derivedKey.size() < KEY_SIZE) {
         // Extend key if needed by hashing again
         while (derivedKey.size() < KEY_SIZE) {
-            QCryptographicHash hash(QCryptographicHash::Sha256);
+            hash.reset();
             hash.addData(derivedKey);
             derivedKey.append(hash.result());
         }
