@@ -68,6 +68,7 @@ public:
     void clearLoadingError();
     QString packageName(TScript* pScript);
     QString moduleName(TScript* pScript);
+    bool moduleMember() const { return mModuleMember; }
     bool checkIfNew();
     void unmarkAsNew();
 

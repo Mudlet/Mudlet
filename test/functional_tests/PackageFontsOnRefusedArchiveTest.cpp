@@ -20,18 +20,19 @@
 /*
  * A package's fonts are registered before its XML is imported, so that the
  * scripts in it - which run as they are read in - can already use a font the
- * package brought with it. That leaves one way out of installPackage() with
+ * package brought with it. That leaves two ways out of installPackage() with
  * fonts registered and nothing installed to own them: an archive that carries
- * fonts but no package XML or .trigger that could be read is refused, its
- * unpacked folder is taken away again, and it is never entered into
- * mInstalledPackages - so uninstallPackage(), the only thing that calls
- * FontManager::unloadFonts(), can never be asked to take those fonts back out.
- * They would stay registered with the process for as long as it runs.
+ * fonts but no package XML or .trigger that could be opened, and one whose
+ * package files nothing could be read out of. Either is refused, its unpacked
+ * folder is taken away again, and it is not left in mInstalledPackages - so
+ * uninstallPackage(), the only thing that calls FontManager::unloadFonts(), can
+ * never be asked to take those fonts back out. They would stay registered with
+ * the process for as long as it runs.
  *
- * The refusal path has to unload them itself, and that is what the first test
- * here pins. The second is the positive control: registering the fonts up front
- * still has to work for an archive that does install, and they still have to go
- * away when it is uninstalled. The third pins the reason the fonts go in first
+ * The refusal paths have to unload them themselves, and that is what the first
+ * two tests here pin. The third is the positive control: registering the fonts
+ * up front still has to work for an archive that does install, and they still
+ * have to go away when it is uninstalled. The fourth pins the reason the fonts go in first
  * at all - a script inside the package, running as the XML is read, can already
  * use the font its own archive carries. ErionMud-UI in the package repository
  * does exactly that with the Copperplate Gothic Light it ships.
@@ -219,6 +220,24 @@ private slots:
         QVERIFY2(!QDir(packageFolder(packageName)).exists(), "the refused package's folder was left behind");
     }
 
+    // The same for an archive whose package file is there but holds nothing that
+    // could be read, which is refused only once its XML has been tried.
+    void test_fontsFromAnArchiveWhosePackageFileCannotBeReadAreUnloaded()
+    {
+        const QString packageName = qsl("font-unreadable");
+        const QString archivePath = mArchiveDir.filePath(qsl("%1.mpackage").arg(packageName));
+        const QList<std::pair<QString, QByteArray>> entries{{qsl("VeraMono.ttf"), bundledFontBytes()}, {qsl("%1.xml").arg(packageName), QByteArray("plain text, not a Mudlet package")}};
+        QVERIFY2(writeArchive(archivePath, entries), "could not write the test archive");
+
+        auto [ok, message] = mpHost->installPackage(archivePath, enums::PackageModuleType::Package, true);
+        QVERIFY2(!ok, "an archive whose package file nothing could be read out of was installed");
+        QVERIFY2(message.contains(qsl("could not be read")), qPrintable(qsl("the archive was refused for another reason: %1").arg(message)));
+
+        QVERIFY2(!QFontDatabase::families().contains(mFontFamily), "the refused package's fonts are still registered with no installed package that could unload them");
+        QVERIFY2(!mpHost->mInstalledPackages.contains(packageName), "the refused package was registered as installed");
+        QVERIFY2(!QDir(packageFolder(packageName)).exists(), "the refused package's folder was left behind");
+    }
+
     // ...while an archive that does install keeps its fonts for as long as it is
     // installed, which is what registering them up front is for.
     void test_fontsFromAnInstalledPackageStayRegisteredUntilUninstall()
@@ -330,6 +349,43 @@ private slots:
         // this one there would change the shape of any case added after it
         pSecondHost->waitForProfileSave();
         HostManager::self()->deleteHost(secondProfileName);
+    }
+
+    // A module stays installed whatever its XML did, so one that broke before an item was read in still has
+    // the font it brought in use, and its handlers have to hear of it
+    void test_aModuleThatBroughtOnlyAFontBeforeItsXmlBrokeIsAnnounced()
+    {
+        QVERIFY2(!QFontDatabase::families().contains(mFontFamily), "the font was already registered before this case installed anything, so nothing below can be told apart");
+
+        const QString moduleName = qsl("font-brokenxml-module");
+        const QString archivePath = mArchiveDir.filePath(qsl("%1.mpackage").arg(moduleName));
+        const QByteArray brokenAtOnce("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE MudletPackage>\n<MudletPackage version=\"1.001\">\n<AliasPa");
+        const QList<std::pair<QString, QByteArray>> entries{{qsl("VeraMono.ttf"), bundledFontBytes()}, {qsl("%1.xml").arg(moduleName), brokenAtOnce}};
+        QVERIFY2(writeArchive(archivePath, entries), "could not write the test archive");
+
+        auto* lua = mpHost->getLuaInterpreter();
+        QVERIFY(lua->compileAndExecuteScript(qsl("fontModuleAnnounced = nil; function recordFontModuleInstall(_, name) fontModuleAnnounced = name end")));
+        mpHost->registerAnonymousEventHandler(qsl("sysInstall"), qsl("recordFontModuleInstall"));
+
+        auto [ok, message] = mpHost->installPackage(archivePath, enums::PackageModuleType::ModuleFromScript, true);
+        QVERIFY2(ok, qPrintable(message));
+        QVERIFY2(mpHost->mInstalledModules.contains(moduleName), "SETUP: the module was not kept installed");
+        QVERIFY2(QFontDatabase::families().contains(mFontFamily), "SETUP: the module's font was not registered");
+
+        lua_State* L = lua->getLuaGlobalState();
+        auto announcedName = [L]() {
+            lua_getglobal(L, "fontModuleAnnounced");
+            const QString name = lua_isstring(L, -1) ? QString::fromUtf8(lua_tostring(L, -1)) : QString();
+            lua_pop(L, 1);
+            return name;
+        };
+        // the install events are raised from a zero timer
+        QTRY_COMPARE_WITH_TIMEOUT(announcedName(), moduleName, 2000);
+
+        // the install's deferred profile save may be running by now, and an uninstall is refused during one
+        mpHost->waitForProfileSave();
+        QVERIFY2(mpHost->uninstallPackage(moduleName, enums::PackageModuleType::ModuleFromScript), "the module could not be uninstalled");
+        QVERIFY2(!QFontDatabase::families().contains(mFontFamily), "uninstalling the module left its font registered");
     }
 };
 

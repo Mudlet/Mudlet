@@ -19,7 +19,7 @@ function IDMgr:register(name, typ, object)
   local register = reg[typ]
   local previous = self[typ][name]
   -- an event handler is killed before its replacement is made: one given as a function name would
-  -- otherwise get the old handler's id back, and one made mid-dispatch would run in that dispatch
+  -- otherwise get the old handler's id back
   local restore = false
   if typ == "events" and previous then
     restore = previous.handlerID ~= -1 and killAnonymousEventHandler(previous.handlerID) == true

@@ -346,6 +346,8 @@ public:
     // which case TTriggerPrescan offers it every line.
     const std::vector<quint64>& prescanGrams() const;
     void invalidatePrescan(bool nowFiresWithoutMatching = false);
+    // Call on anything that changes what treeIndexGrams() answers
+    void invalidateTreeIndex();
     // Whether the line's bigram summary already rules this trigger out, so match() need not be entered.
     // One-sided like the summary: false leaves match() to decide. Only a trigger whose every pattern
     // matches by containing text, and that never fires on a line it does not match - the cases
@@ -362,6 +364,30 @@ public:
         }
         return true;
     }
+    // Grams for the whole-tree index: those of every pattern, or of the first alone for a multiline
+    // trigger, which with no state in progress tests nothing else. Empty, with false, when the line's
+    // text cannot rule the trigger out.
+    bool treeIndexGrams(std::vector<quint64>& grams) const;
+    // Whether match() would do nothing on this line, so need not be entered: the tree index filed this
+    // trigger and the line held none of its grams, and nothing makes it act on a line it does not
+    // match. One-sided like the index: false leaves match() to decide. A trigger changed or created
+    // mid-line is unfiled until the next rebuild; mKeepFiring and the multiline states are read live.
+    bool skippableForLine() const { return mTreeIndexPosition >= 0 && mLineStamp != smLineStamp && mKeepFiring <= 0 && mConditionMap.empty(); }
+    // MUDLET_TREE_INDEX=verify: runs a trigger skippableForLine() would skip and reports it if it acted
+    bool verifySkippable(const TUtf8Subject& subject, const QString& haystack, int line, int posOffset, const TBigramFilter* pLineBigrams);
+    // Stamp of the outermost pass in flight anywhere, which nested passes (a script feeding text back,
+    // from any profile) share: a nested line only adds stamps, so nothing the outer line stamped is lost.
+    static quint32 lineStamp() { return smLineStamp; }
+    static void enterPass()
+    {
+        if (++smPassDepth != 1) {
+            return;
+        }
+        if (++smLineStamp == 0) {
+            ++smLineStamp;
+        }
+    }
+    static void leavePass() { --smPassDepth; }
     // What a line can dismiss this trigger by without calling into it - the cases cannotMatch() and
     // match_color_pattern() decide, copied only for a single-pattern trigger that never fires on a
     // line it does not match.
@@ -387,6 +413,7 @@ public:
     {
         mIsLineTrigger = b;
         invalidatePrescan(b);
+        invalidateTreeIndex();
     }
     void setStartOfLineDelta(int b) { mStartOfLineDelta = b; }
     void setLineDelta(int b) { mLineDelta = b; }
@@ -395,6 +422,7 @@ public:
     {
         mIsMultiline = b;
         invalidatePrescan(b);
+        invalidateTreeIndex();
     }
     void enableTrigger(const QString&);
     void disableTrigger(const QString&);
@@ -436,6 +464,9 @@ public:
     int mColorTriggerFgAnsi = scmIgnored;
     int mColorTriggerBgAnsi = scmIgnored;
     int mKeepFiring = 0;
+    // Written by TriggerUnit's tree index - see skippableForLine(); the position is -1 while unfiled
+    quint32 mLineStamp = 0;
+    int mTreeIndexPosition = -1;
     QPointer<Host> mpHost;
     QString mName;
     QStringList mPatterns;
@@ -486,6 +517,7 @@ private:
     void processColorPattern(int patternNumber, std::list<std::string>& captureList, std::list<int>& posList, int lineNumber);
     void processPromptMatch(int patternNumber);
     bool fireReachesLua() const;
+    bool playsSound() const;
     void executeWithCaptures(const std::list<std::string>& captureList,
                              const std::list<int>& posList,
                              const NameGroupMatches* nameGroups = nullptr,
@@ -557,6 +589,8 @@ private:
     static quint64 smRegexSearches;
     static quint32 smPrescanPassId;
     static quint32 smPrescanPassIdCounter;
+    static quint32 smLineStamp;
+    static int smPassDepth;
     quint32 mPrescanPassId = 0;
     bool mPrescanMayFire = true;
 };

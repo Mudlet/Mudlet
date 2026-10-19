@@ -31,6 +31,7 @@
 
 #include <QDir>
 #include <QFileInfo>
+#include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonValue>
@@ -42,6 +43,9 @@
 #include <QTimer>
 
 #include <algorithm>
+#include <cmath>
+#include <limits>
+#include <optional>
 
 using namespace std::chrono_literals;
 
@@ -86,6 +90,42 @@ bool mediaTypeNamed(const QJsonObject& json)
     }
 
     return !mediaTypeJSON.isString() || !mediaTypeJSON.toString().isEmpty();
+}
+
+// An unknown type is refused, not read as an absent one: a Play would default to a sound that the
+// server's stop for the type it meant never reaches, and a Stop or Pause would act on every type.
+bool unknownMediaTypeRefused(const QJsonObject& json, const TMediaData& mediaData, const QString& request)
+{
+    if (mediaData.mediaType() != TMediaData::MediaTypeNotSet || !mediaTypeNamed(json)) {
+        return false;
+    }
+
+    const auto mediaTypeJSON = json.value(qsl("type"));
+    // toVariant().toString() gives nothing for an array or an object
+    const QString named = mediaTypeJSON.isArray()    ? QString::fromUtf8(QJsonDocument(mediaTypeJSON.toArray()).toJson(QJsonDocument::Compact))
+                          : mediaTypeJSON.isObject() ? QString::fromUtf8(QJsonDocument(mediaTypeJSON.toObject()).toJson(QJsonDocument::Compact))
+                                                     : mediaTypeJSON.toVariant().toString();
+    qWarning().noquote() << qsl("TMedia WARNING - ignored a %1 naming an unknown media type: %2.").arg(request, named);
+    return true;
+}
+
+// A number field may arrive as a JSON number or as a string, and need not be whole. Not toInt(),
+// which gives 0 for any number that is not whole - the preload volume, or the default elsewhere.
+std::optional<double> mediaNumber(const QJsonValue& value)
+{
+    bool isNumber = value.isDouble();
+    double number = value.toDouble();
+
+    if (value.isString()) {
+        number = value.toString().toDouble(&isNumber);
+    }
+
+    if (!isNumber || !std::isfinite(number)) {
+        return std::nullopt;
+    }
+
+    // qRound() of anything outside int's range is undefined
+    return std::clamp(number, static_cast<double>(std::numeric_limits<int>::min()), static_cast<double>(std::numeric_limits<int>::max()));
 }
 
 // Every pass is a playlist entry built up front, so a huge count from a game would hang Mudlet
@@ -143,6 +183,11 @@ void TMedia::playMedia(TMediaData& mediaData)
             return;
         }
 
+        if ((mediaData.mediaProtocol() == TMediaData::MediaProtocolMSP || mediaData.mediaProtocol() == TMediaData::MediaProtocolGMCP) && mediaFileNameReservedForCopies(mediaData.mediaFileName())) {
+            qWarning() << qsl("TMedia::playMedia() WARNING - rejected a media file name in a folder kept for scripts' copies: %1.").arg(mediaData.mediaFileName());
+            return;
+        }
+
         if (!mediaData.mediaFileName().contains(QLatin1Char('*')) && !mediaData.mediaFileName().contains(QLatin1Char('?'))) { // File path wildcards are * and ?
             // Append appropriate file extension for MSP files
             if (mediaData.mediaProtocol() == TMediaData::MediaProtocolMSP && !mediaData.mediaFileName().contains(QLatin1Char('.'))) {
@@ -156,8 +201,9 @@ void TMedia::playMedia(TMediaData& mediaData)
                 }
             }
 
-            if (!fileRelative) { // API files may start as absolute, but get copied into the media folder for processing.
-                TMedia::transitionNonRelativeFile(mediaData);
+            // API files may start as absolute, but get copied into the media folder for processing.
+            if (!fileRelative && !TMedia::transitionNonRelativeFile(mediaData)) {
+                return;
             }
 
             const QString absolutePathFileName = TMedia::setupMediaAbsolutePathFileName(mediaData);
@@ -207,9 +253,8 @@ QList<TMediaData> TMedia::playingMedia(TMediaData& mediaData)
             return matchingMediaDataList; // MSP and GMCP files should not have absolute paths.
         }
 
-        // API files may start as absolute, but get copied into the media folder for processing. Trim the path from the file name.
         if (!fileRelative) {
-            mediaData.setMediaFileName(mediaData.mediaFileName().section('/', -1));
+            mediaData = requestForFilePlayers(mediaData);
         }
     }
 
@@ -222,7 +267,7 @@ QList<TMediaData> TMedia::playingMedia(TMediaData& mediaData)
             continue;
         }
 
-        if (!isMediaMatch(pPlayer, mediaData)) {
+        if (!isMediaMatch(pPlayer, mediaData, BareName::AlsoMatchesSourceFile)) {
             continue;
         }
 
@@ -258,9 +303,8 @@ QList<TMediaData> TMedia::pausedMedia(TMediaData& mediaData)
             return matchingMediaDataList; // MSP and GMCP files should not have absolute paths.
         }
 
-        // API files may start as absolute but get copied into the media folder. Trim the path.
         if (!fileRelative) {
-            mediaData.setMediaFileName(mediaData.mediaFileName().section('/', -1));
+            mediaData = requestForFilePlayers(mediaData);
         }
     }
 
@@ -273,7 +317,7 @@ QList<TMediaData> TMedia::pausedMedia(TMediaData& mediaData)
             continue;
         }
 
-        if (!isMediaMatch(pPlayer, mediaData)) {
+        if (!isMediaMatch(pPlayer, mediaData, BareName::AlsoMatchesSourceFile)) {
             continue;
         }
 
@@ -306,11 +350,6 @@ void TMedia::pauseMedia(TMediaData& mediaData)
         if (!fileRelative && (mediaData.mediaProtocol() == TMediaData::MediaProtocolMSP || mediaData.mediaProtocol() == TMediaData::MediaProtocolGMCP)) {
             return; // MSP and GMCP files should not have absolute paths.
         }
-
-        // API files may start as absolute but get copied into the media folder. Trim the path.
-        if (!fileRelative) {
-            mediaData.setMediaFileName(mediaData.mediaFileName().section(QLatin1Char('/'), -1));
-        }
     }
 
     const TMediaData fileRequest = requestForFilePlayers(mediaData);
@@ -324,7 +363,7 @@ void TMedia::pauseMedia(TMediaData& mediaData)
             continue;
         }
 
-        if (!isMediaMatch(pPlayer, pPlayer->mediaData().mediaInput() == TMediaData::MediaInputFile ? fileRequest : mediaData)) {
+        if (!isMediaMatch(pPlayer, pPlayer->mediaData().mediaInput() == TMediaData::MediaInputFile ? fileRequest : mediaData, BareName::AlsoMatchesSourceFile)) {
             continue;
         }
 
@@ -362,11 +401,6 @@ void TMedia::stopMedia(TMediaData& mediaData)
         if (!fileRelative && (mediaData.mediaProtocol() == TMediaData::MediaProtocolMSP || mediaData.mediaProtocol() == TMediaData::MediaProtocolGMCP)) {
             return; // MSP and GMCP files should not have absolute paths.
         }
-
-        // API files may start as absolute but get copied into the media folder. Trim the path.
-        if (!fileRelative) {
-            mediaData.setMediaFileName(mediaData.mediaFileName().section(QLatin1Char('/'), -1));
-        }
     }
 
     const TMediaData fileRequest = requestForFilePlayers(mediaData);
@@ -376,7 +410,7 @@ void TMedia::stopMedia(TMediaData& mediaData)
             continue;
         }
 
-        if (!isMediaMatch(pPlayer, pPlayer->mediaData().mediaInput() == TMediaData::MediaInputFile ? fileRequest : mediaData)) {
+        if (!isMediaMatch(pPlayer, pPlayer->mediaData().mediaInput() == TMediaData::MediaInputFile ? fileRequest : mediaData, BareName::AlsoMatchesSourceFile)) {
             continue;
         }
 
@@ -469,8 +503,14 @@ void TMedia::parseGMCP(QString& packageMessage, QString& gmcp)
 
     const QString package = packageMessage.toLower(); // Don't change original variable
 
+    // Every field of a stop or pause is optional: an empty one means all of the server's media
     if (package == "client.media.stop") {
         TMedia::parseJSONForMediaStop(json);
+        return;
+    }
+
+    if (package == "client.media.pause") {
+        TMedia::parseJSONForMediaPause(json);
         return;
     }
 
@@ -484,8 +524,6 @@ void TMedia::parseGMCP(QString& packageMessage, QString& gmcp)
         TMedia::parseJSONForMediaLoad(json);
     } else if (package == "client.media.play") {
         TMedia::parseJSONForMediaPlay(json);
-    } else if (package == "client.media.pause") {
-        TMedia::parseJSONForMediaPause(json);
     }
 }
 
@@ -598,11 +636,10 @@ QList<std::shared_ptr<TMediaPlayer>> TMedia::findMediaPlayersByCriteria(const TM
     return {}; // Default empty list fallback
 }
 
-// A pause, stop or resume carries no input type of its own. An absolute path an API call names plays
-// from the copy transitionNonRelativeFile() made under its bare file name, its directories dropped,
-// so that is what a player of a file is matched against; a stream keeps the name it was given and
-// is matched against it as asked.
-TMediaData TMedia::requestForFilePlayers(const TMediaData& mediaData)
+// A pause, stop, resume or query carries no input type of its own. An absolute path an API call names plays
+// from the copy transitionNonRelativeFile() made of it, so that is what a player of a file is matched
+// against; a stream keeps the name it was given and is matched against it as asked.
+TMediaData TMedia::requestForFilePlayers(const TMediaData& mediaData) const
 {
     TMediaData fileRequest = mediaData;
     const QString& fileName = mediaData.mediaFileName();
@@ -611,18 +648,72 @@ TMediaData TMedia::requestForFilePlayers(const TMediaData& mediaData)
         return fileRequest;
     }
 
-    // A name ending in a separator has no file name to trim to, and an empty one would match every
-    // player, so it is left as given to match none.
-    const QString bareName = fileName.section(QLatin1Char('/'), -1);
-
-    if (!bareName.isEmpty()) {
-        fileRequest.setMediaFileName(bareName);
+    // A name ending in a separator names no file, and cleanPath() would drop the separator and make it
+    // look like one, so it is left as given to match none.
+    if (!fileName.endsWith(QLatin1Char('/'))) {
+        fileRequest.setMediaFileName(mediaCacheFileName(fileName));
+        fileRequest.setMediaSourcePath(QDir::cleanPath(fileName));
     }
 
     return fileRequest;
 }
 
-bool TMedia::isMediaMatch(const std::shared_ptr<TMediaPlayer>& player, const TMediaData& mediaData)
+QString TMedia::mediaCacheFileName(const QString& absolutePath) const
+{
+    // Resolved, so a symlinked or differently cased spelling of a path still names the same copy
+    const auto resolved = [](const QString& path) {
+        const QString canonical = QFileInfo(path).canonicalFilePath();
+        return canonical.isEmpty() ? QDir::cleanPath(path) : canonical;
+    };
+    return mediaCacheFileName(
+            resolved(MudletApp::getMudletPath(enums::profileHomePath, mpHost->getName())), resolved(MudletApp::getMudletPath(enums::profileMediaPath, mpHost->getName())), resolved(absolutePath));
+}
+
+// Keeps the source's folders so same-named files in different folders get separate copies, under
+// folders mediaFileNameReservedForCopies() keeps games out of.
+/*static*/ QString TMedia::mediaCacheFileName(const QString& profileHome, const QString& mediaRoot, const QString& absolutePath)
+{
+    const QString source = QDir::cleanPath(absolutePath);
+    const auto relativeTo = [&source](const QString& root) -> QString {
+        const QString relative = QDir(QDir::cleanPath(root)).relativeFilePath(source);
+        if (relative.isEmpty() || relative == qsl("..") || relative.startsWith(qsl("../")) || !QFileInfo(relative).isRelative()) {
+            return {};
+        }
+        return relative;
+    };
+
+    if (const QString inMedia = relativeTo(mediaRoot); !inMedia.isEmpty()) {
+        return inMedia;
+    }
+    if (const QString inProfile = relativeTo(profileHome); !inProfile.isEmpty()) {
+        return qsl("_profile/%1").arg(inProfile);
+    }
+
+    QString mirrored = source;
+    // ':' cannot be in a Windows folder name, so "c:/sounds" is filed under "C/sounds"
+    if (mirrored.size() > 1 && mirrored.at(0).isLetter() && mirrored.at(1) == QLatin1Char(':')) {
+        mirrored.replace(0, 2, mirrored.at(0).toUpper());
+    }
+#if defined(Q_OS_WINDOWS)
+    // A share, "//server/share", apart from the drive folders, which are one letter long
+    if (mirrored.startsWith(qsl("//"))) {
+        mirrored = qsl("UNC/%1").arg(mirrored.mid(2));
+    }
+#endif
+    while (mirrored.startsWith(QLatin1Char('/'))) {
+        mirrored.remove(0, 1);
+    }
+    return qsl("_absolute/%1").arg(mirrored);
+}
+
+/*static*/ bool TMedia::mediaFileNameReservedForCopies(const QString& mediaFileName)
+{
+    // Case-insensitive: on macOS and Windows "_PROFILE" is the same folder
+    const QString firstFolder = QDir::cleanPath(mediaFileName).section(QLatin1Char('/'), 0, 0);
+    return firstFolder.compare(qsl("_profile"), Qt::CaseInsensitive) == 0 || firstFolder.compare(qsl("_absolute"), Qt::CaseInsensitive) == 0;
+}
+
+bool TMedia::isMediaMatch(const std::shared_ptr<TMediaPlayer>& player, const TMediaData& mediaData, BareName bareName)
 {
     if (!player) {
         return false;
@@ -632,7 +723,13 @@ bool TMedia::isMediaMatch(const std::shared_ptr<TMediaPlayer>& player, const TMe
         return false;
     }
 
-    if (!mediaData.mediaFileName().isEmpty() && !player->mediaData().mediaFileName().isEmpty() && player->mediaData().mediaFileName() != mediaData.mediaFileName()) {
+    // The path a file was played from still names it after the symlink it was resolved through changes
+    const bool sameSource = !mediaData.mediaSourcePath().isEmpty() && player->mediaData().mediaSourcePath() == mediaData.mediaSourcePath();
+    // So stopSounds({name = "rain.wav"}) finds a rain.wav played from an absolute path, whose copy is filed
+    // under the folders it came from
+    const bool sameBareName = bareName == BareName::AlsoMatchesSourceFile && !mediaData.mediaFileName().contains(QLatin1Char('/')) && !player->mediaData().mediaSourcePath().isEmpty()
+                              && QFileInfo(player->mediaData().mediaSourcePath()).fileName() == mediaData.mediaFileName();
+    if (!sameSource && !sameBareName && !mediaData.mediaFileName().isEmpty() && !player->mediaData().mediaFileName().isEmpty() && player->mediaData().mediaFileName() != mediaData.mediaFileName()) {
         return false;
     }
 
@@ -662,11 +759,6 @@ bool TMedia::resume(TMediaData mediaData)
 
         if (!fileRelative && (mediaData.mediaProtocol() == TMediaData::MediaProtocolMSP || mediaData.mediaProtocol() == TMediaData::MediaProtocolGMCP)) {
             return resumed; // MSP and GMCP files will not have absolute paths. Something is wrong.
-        }
-
-        // API files may start as absolute, but get copied into the media folder for processing. Trim the path from the file name.
-        if (!fileRelative) {
-            mediaData.setMediaFileName(mediaData.mediaFileName().section(QLatin1Char('/'), -1));
         }
     }
 
@@ -807,23 +899,33 @@ void TMedia::setMediaPlayersMuted(const TMediaData::MediaProtocol mediaProtocol,
     }
 }
 
-void TMedia::transitionNonRelativeFile(TMediaData& mediaData)
+bool TMedia::transitionNonRelativeFile(TMediaData& mediaData)
 {
-    const QString mediaPath = MudletApp::getMudletPath(enums::profileMediaPath, mpHost->getName());
-    const QDir mediaDir(mediaPath);
+    const QString source = mediaData.mediaFileName();
+    // Checked first, or a mistyped path would leave its folders behind in the media directory
+    if (!QFileInfo(source).isFile()) {
+        qWarning() << qsl("TMedia::transitionNonRelativeFile() WARNING - there is no file to play at %1.").arg(source);
+        return false;
+    }
 
-    if (!mediaDir.mkpath(mediaPath)) {
-        qWarning() << qsl("TMedia::playMedia() WARNING - attempt made to create a directory failed: %1").arg(MudletApp::getMudletPath(enums::profileMediaPath, mpHost->getName()));
-    } else {
-        const QString mediaFilePath = qsl("%1/%2").arg(MudletApp::getMudletPath(enums::profileMediaPath, mpHost->getName()), mediaData.mediaFileName().section(QLatin1Char('/'), -1));
-        const QFile mediaFile(mediaFilePath);
+    const QString cacheFileName = mediaCacheFileName(source);
+    const QString mediaFilePath = qsl("%1/%2").arg(MudletApp::getMudletPath(enums::profileMediaPath, mpHost->getName()), cacheFileName);
 
-        if (!mediaFile.exists() && !QFile::copy(mediaData.mediaFileName(), mediaFilePath)) {
-            qWarning() << qsl("TMedia::playMedia() WARNING - attempt made to copy file %1 to a directory %2 failed.").arg(mediaData.mediaFileName(), mediaFilePath);
-        } else {
-            mediaData.setMediaFileName(mediaData.mediaFileName().section(QLatin1Char('/'), -1));
+    if (!QFile::exists(mediaFilePath)) {
+        const QString folder = QFileInfo(mediaFilePath).path();
+        if (!QDir().mkpath(folder)) {
+            qWarning() << qsl("TMedia::transitionNonRelativeFile() WARNING - could not create the folder %1 to copy %2 into.").arg(folder, source);
+            return false;
+        }
+        if (!QFile::copy(source, mediaFilePath)) {
+            qWarning() << qsl("TMedia::transitionNonRelativeFile() WARNING - could not copy %1 to %2.").arg(source, mediaFilePath);
+            return false;
         }
     }
+
+    mediaData.setMediaFileName(cacheFileName);
+    mediaData.setMediaSourcePath(QDir::cleanPath(source));
+    return true;
 }
 
 QString TMedia::getStreamUrl(const TMediaData& mediaData)
@@ -1194,6 +1296,12 @@ void TMedia::downloadFile(TMediaData& mediaData)
     // directory through ".." segments.
     if (mediaFilePathEscapesMediaDir(mediaData)) {
         qWarning() << qsl("TMedia::downloadFile() WARNING - refused a media file name that escapes the profile media directory: %1.").arg(mediaData.mediaFileName());
+        return;
+    }
+
+    // A game's file there would be played in place of the script's copy of its own file
+    if ((mediaData.mediaProtocol() == TMediaData::MediaProtocolMSP || mediaData.mediaProtocol() == TMediaData::MediaProtocolGMCP) && mediaFileNameReservedForCopies(mediaData.mediaFileName())) {
+        qWarning() << qsl("TMedia::downloadFile() WARNING - refused a media file name in a folder kept for scripts' copies: %1.").arg(mediaData.mediaFileName());
         return;
     }
 
@@ -2252,10 +2360,10 @@ int TMedia::parseJSONByMediaInput(QJsonObject& json)
 
     auto mediaInputJSON = json.value(qsl("stream"));
 
-    if (mediaInputJSON != QJsonValue::Undefined && mediaInputJSON.isString() && !mediaInputJSON.toString().isEmpty()) {
-        if (mediaInputJSON.toString().toLower() == "true") {
-            mediaInput = TMediaData::MediaInputStream;
-        }
+    if (mediaInputJSON.isString() && mediaInputJSON.toString().toLower() == qsl("true")) {
+        mediaInput = TMediaData::MediaInputStream;
+    } else if (mediaInputJSON.isBool() && mediaInputJSON.toBool()) {
+        mediaInput = TMediaData::MediaInputStream;
     }
 
     return mediaInput;
@@ -2278,113 +2386,65 @@ QString TMedia::parseJSONByMediaFileName(QJsonObject& json)
 // Documentation: https://wiki.mudlet.org/w/Manual:Scripting#volume:_1_to_100
 int TMedia::parseJSONByMediaVolume(QJsonObject& json)
 {
-    int mediaVolume = TMediaData::MediaVolumeDefault;
+    const auto volume = mediaNumber(json.value(qsl("volume")));
 
-    auto mediaVolumeJSON = json.value(qsl("volume"));
-
-    if (mediaVolumeJSON != QJsonValue::Undefined && mediaVolumeJSON.isString() && !mediaVolumeJSON.toString().isEmpty()) {
-        mediaVolume = mediaVolumeJSON.toString().toInt();
-    } else if (mediaVolumeJSON != QJsonValue::Undefined && mediaVolumeJSON.toInt()) {
-        mediaVolume = mediaVolumeJSON.toInt();
+    if (!volume) {
+        return TMediaData::MediaVolumeDefault;
     }
 
-    return mediaVolume;
+    return *volume == 0.0 ? TMediaData::MediaVolumePreload : qRound(qBound(static_cast<double>(TMediaData::MediaVolumeMin), *volume, static_cast<double>(TMediaData::MediaVolumeMax)));
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Scripting#fadein
 int TMedia::parseJSONByMediaFadeIn(QJsonObject& json)
 {
-    int mediaFadeIn = TMediaData::MediaFadeNotSet;
-
-    auto mediaFadeInJSON = json.value(qsl("fadein"));
-
-    if (mediaFadeInJSON != QJsonValue::Undefined && mediaFadeInJSON.isString() && !mediaFadeInJSON.toString().isEmpty()) {
-        mediaFadeIn = mediaFadeInJSON.toString().toInt();
-    } else if (mediaFadeInJSON != QJsonValue::Undefined && mediaFadeInJSON.toInt()) {
-        mediaFadeIn = mediaFadeInJSON.toInt();
-    }
-
-    return mediaFadeIn;
+    const auto fadeIn = mediaNumber(json.value(qsl("fadein")));
+    return fadeIn ? qRound(*fadeIn) : TMediaData::MediaFadeNotSet;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Scripting#fadeout
 int TMedia::parseJSONByMediaFadeOut(QJsonObject& json)
 {
-    int mediaFadeOut = TMediaData::MediaFadeNotSet;
-
-    auto mediaFadeOutJSON = json.value(qsl("fadeout"));
-
-    if (mediaFadeOutJSON != QJsonValue::Undefined && mediaFadeOutJSON.isString() && !mediaFadeOutJSON.toString().isEmpty()) {
-        mediaFadeOut = mediaFadeOutJSON.toString().toInt();
-    } else if (mediaFadeOutJSON != QJsonValue::Undefined && mediaFadeOutJSON.toInt()) {
-        mediaFadeOut = mediaFadeOutJSON.toInt();
-    }
-
-    return mediaFadeOut;
+    const auto fadeOut = mediaNumber(json.value(qsl("fadeout")));
+    return fadeOut ? qRound(*fadeOut) : TMediaData::MediaFadeNotSet;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Scripting#start
 int TMedia::parseJSONByMediaStart(QJsonObject& json)
 {
-    int mediaStart = TMediaData::MediaStartDefault;
-
-    auto mediaStartJSON = json.value(qsl("start"));
-
-    if (mediaStartJSON != QJsonValue::Undefined && mediaStartJSON.isString() && !mediaStartJSON.toString().isEmpty()) {
-        mediaStart = mediaStartJSON.toString().toInt();
-    } else if (mediaStartJSON != QJsonValue::Undefined && mediaStartJSON.toInt()) {
-        mediaStart = mediaStartJSON.toInt();
-    }
-
-    return mediaStart;
+    const auto start = mediaNumber(json.value(qsl("start")));
+    return start ? qRound(*start) : TMediaData::MediaStartDefault;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Scripting#finish
 int TMedia::parseJSONByMediaFinish(QJsonObject& json)
 {
-    int mediaFinish = TMediaData::MediaFinishNotSet;
-
-    auto mediaFinishJSON = json.value(qsl("finish"));
-
-    if (mediaFinishJSON != QJsonValue::Undefined && mediaFinishJSON.isString() && !mediaFinishJSON.toString().isEmpty()) {
-        mediaFinish = mediaFinishJSON.toString().toInt();
-    } else if (mediaFinishJSON != QJsonValue::Undefined && mediaFinishJSON.toInt()) {
-        mediaFinish = mediaFinishJSON.toInt();
-    }
-
-    return mediaFinish;
+    const auto finish = mediaNumber(json.value(qsl("finish")));
+    return finish ? qRound(*finish) : TMediaData::MediaFinishNotSet;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Scripting#priority:_1_to_100
 int TMedia::parseJSONByMediaPriority(QJsonObject& json)
 {
-    int mediaPriority = TMediaData::MediaPriorityNotSet;
-
-    auto mediaPriorityJSON = json.value(qsl("priority"));
-
-    if (mediaPriorityJSON != QJsonValue::Undefined && mediaPriorityJSON.isString() && !mediaPriorityJSON.toString().isEmpty()) {
-        mediaPriority = mediaPriorityJSON.toString().toInt();
-    } else if (mediaPriorityJSON != QJsonValue::Undefined && mediaPriorityJSON.toInt()) {
-        mediaPriority = mediaPriorityJSON.toInt();
-    }
-
-    return mediaPriority;
+    const auto priority = mediaNumber(json.value(qsl("priority")));
+    return priority ? qRound(*priority) : TMediaData::MediaPriorityNotSet;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Scripting#loops:_-1.2C_1_or_more
 int TMedia::parseJSONByMediaLoops(QJsonObject& json)
 {
-    int mediaLoops = TMediaData::MediaLoopsDefault;
+    const auto loops = mediaNumber(json.value(qsl("loops")));
 
-    auto mediaLoopsJSON = json.value(qsl("loops"));
-
-    if (mediaLoopsJSON != QJsonValue::Undefined && mediaLoopsJSON.isString() && !mediaLoopsJSON.toString().isEmpty()) {
-        mediaLoops = mediaLoopsJSON.toString().toInt();
-    } else if (mediaLoopsJSON != QJsonValue::Undefined && mediaLoopsJSON.toInt()) {
-        mediaLoops = mediaLoopsJSON.toInt();
+    if (!loops) {
+        return TMediaData::MediaLoopsDefault;
     }
 
-    return mediaLoops;
+    // Only -1 itself repeats forever: a negative fraction rounded onto it would never stop
+    if (*loops < 0.0) {
+        return *loops == TMediaData::MediaLoopsRepeat ? TMediaData::MediaLoopsRepeat : TMediaData::MediaLoopsDefault;
+    }
+
+    return qRound(*loops);
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Scripting#continue:_true_or_false_.28for_music.29
@@ -2547,14 +2607,11 @@ void TMedia::parseJSONForMediaPlay(QJsonObject& json)
     mediaData.setMediaProtocol(TMediaData::MediaProtocolGMCP);
     mediaData.setMediaType(TMedia::parseJSONByMediaType(json));
 
-    if (mediaData.mediaType() == TMediaData::MediaTypeNotSet) {
-        if (mediaTypeNamed(json)) {
-            // An unknown type is refused, not played as the default sound: the server's stop for
-            // the type it meant would never reach it.
-            qWarning() << qsl("TMedia::parseJSONForMediaPlay() WARNING - rejected a Client.Media.Play naming an unknown media type: %1.").arg(json.value(qsl("type")).toVariant().toString());
-            return;
-        }
+    if (unknownMediaTypeRefused(json, mediaData, qsl("Client.Media.Play"))) {
+        return;
+    }
 
+    if (mediaData.mediaType() == TMediaData::MediaTypeNotSet) {
         mediaData.setMediaType(TMediaData::MediaTypeSound);
     }
 
@@ -2572,6 +2629,7 @@ void TMedia::parseJSONForMediaPlay(QJsonObject& json)
     mediaData.setMediaContinue(TMedia::parseJSONByMediaContinue(json));
     mediaData.setMediaClose(TMedia::parseJSONByMediaClose(json));
     mediaData.setMediaCaption(TMedia::parseJSONByMediaCaption(json));
+    mediaData.setMediaInput(TMedia::parseJSONByMediaInput(json));
 
     if (mediaData.mediaFileName().isEmpty()) {
         // An empty name resolves to the media directory, which playMedia() would try to download
@@ -2581,6 +2639,22 @@ void TMedia::parseJSONForMediaPlay(QJsonObject& json)
         }
 
         return;
+    }
+
+    if (mediaData.mediaInput() == TMediaData::MediaInputStream) {
+        // Volume 0 asks for the file ahead of time, and a stream has none to fetch: it would only play silently
+        if (mediaData.mediaVolume() == TMediaData::MediaVolumePreload) {
+            return;
+        }
+        // Resolved as a download's url is, so a stream plays from wherever the same message would download from
+        mediaData.setMediaUrl(TMedia::parseUrl(mediaData).toString());
+        // Streams never reach downloadFile()'s http(s)-only check, so it is repeated here: a game must not get Mudlet to play a local file
+        const QString streamUrl = TMedia::getStreamUrl(mediaData);
+        const QString scheme = QUrl(streamUrl).scheme();
+        if (scheme != qsl("http") && scheme != qsl("https")) {
+            qWarning() << qsl("TMedia::parseJSONForMediaPlay() WARNING - refused to stream media from a non-HTTP(S) URL: %1").arg(streamUrl);
+            return;
+        }
     }
 
     TMedia::playMedia(mediaData);
@@ -2593,6 +2667,11 @@ void TMedia::parseJSONForMediaPause(QJsonObject& json)
 
     mediaData.setMediaProtocol(TMediaData::MediaProtocolGMCP);
     mediaData.setMediaType(TMedia::parseJSONByMediaType(json));
+
+    if (unknownMediaTypeRefused(json, mediaData, qsl("Client.Media.Pause"))) {
+        return;
+    }
+
     mediaData.setMediaFileName(TMedia::parseJSONByMediaFileName(json));
     mediaData.setMediaKey(TMedia::parseJSONByMediaKey(json));
     mediaData.setMediaTag(TMedia::parseJSONByMediaTag(json));
@@ -2608,6 +2687,11 @@ void TMedia::parseJSONForMediaStop(QJsonObject& json)
 
     mediaData.setMediaProtocol(TMediaData::MediaProtocolGMCP);
     mediaData.setMediaType(TMedia::parseJSONByMediaType(json));
+
+    if (unknownMediaTypeRefused(json, mediaData, qsl("Client.Media.Stop"))) {
+        return;
+    }
+
     mediaData.setMediaFileName(TMedia::parseJSONByMediaFileName(json));
     mediaData.setMediaKey(TMedia::parseJSONByMediaKey(json));
     mediaData.setMediaTag(TMedia::parseJSONByMediaTag(json));
@@ -2636,7 +2720,8 @@ void TMedia::printClosedCaption(const TMediaData& mediaData, const QString& acti
                                                                                               //: This word is part of a sentence like "Sound stops" when Mudlet handles neither music nor video.
                                                                                               : tr("sound");
         const QString mediaKey = mediaData.mediaKey();
-        const QString mediaFileName = mediaData.mediaFileName();
+        // The file's own name, not the name of its copy in the cache
+        const QString mediaFileName = mediaData.mediaSourcePath().isEmpty() ? mediaData.mediaFileName() : QFileInfo(mediaData.mediaSourcePath()).fileName();
         if (mediaKey.isEmpty()) {
             message = qsl("[%1 \"%2\" %3]\n").arg(mediaType, mediaFileName, action);
         } else {
