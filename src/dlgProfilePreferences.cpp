@@ -1309,7 +1309,7 @@ void dlgProfilePreferences::createTriggerMatchPoolControls(QGroupBox* pCard)
         pGrid->addWidget(pLabel, row, 0);
         pGrid->addWidget(pSpinBox, row, 1);
     };
-    addRow(mpLabel_triggerMatchThreads, mpSpinBox_triggerMatchThreads, qsl("triggerMatchThreads"), 2, std::max(2, QThread::idealThreadCount()));
+    addRow(mpLabel_triggerMatchThreads, mpSpinBox_triggerMatchThreads, qsl("triggerMatchThreads"), 1, std::max(1, QThread::idealThreadCount() - 1));
     addRow(mpLabel_triggerMatchThreshold, mpSpinBox_triggerMatchThreshold, qsl("triggerMatchThreshold"), 1, 100000);
     addRow(mpLabel_triggerMatchMissesPerMatch, mpSpinBox_triggerMatchMissesPerMatch, qsl("triggerMatchMissesPerMatch"), 0, 1000);
     addRow(mpLabel_triggerMatchFloodLines, mpSpinBox_triggerMatchFloodLines, qsl("triggerMatchFloodLines"), 1, 100000);
@@ -1342,10 +1342,10 @@ void dlgProfilePreferences::retranslateTriggerMatchPoolControls()
                                                "<p>It helps profiles where many regex triggers are searched on every line and few of them match. On most profiles it makes no difference and uses more "
                                                "CPU, so it is off unless you switch it on. Once it is on, the Statistics report in the trigger editor (Ctrl+9) says whether it has been worth it "
                                                "on your own profile.</p><p>The <tt>MUDLET_MATCH_*</tt> environment variables, if set, override these settings.</p>"));
-    //: Label of a number field in the Performance settings: how many threads match triggers, the main one included
-    mpLabel_triggerMatchThreads->setText(tr("Threads, the main one included:"));
-    //: Tooltip of the number of threads that match triggers
-    mpSpinBox_triggerMatchThreads->setToolTip(tr("<p>More than four rarely helps: the threads then spend longer waiting for each other than matching.</p>"));
+    //: Label of a number field in the Performance settings: how many threads help the main one match triggers
+    mpLabel_triggerMatchThreads->setText(tr("Extra threads helping the main one:"));
+    //: Tooltip of the number of extra threads that match triggers
+    mpSpinBox_triggerMatchThreads->setToolTip(tr("<p>More than three rarely helps: the threads then spend longer waiting for each other than matching.</p>"));
     //: Label of a number field in the Performance settings: how many regex searches that find nothing a line needs before other threads help with it
     mpLabel_triggerMatchThreshold->setText(tr("Failed regex searches a line needs before the threads help:"));
     //: Tooltip of the threshold of failed regex searches per line
@@ -1379,7 +1379,7 @@ void dlgProfilePreferences::populateTriggerMatchPoolSettings()
     enableTriggerMatchPoolTuning(enabled);
     // One core leaves no other thread to share the matching with
     mpCheckBox_triggerMatchPool->setEnabled(QThread::idealThreadCount() >= 2 || enabled);
-    for (const auto& [pSpinBox, value] : std::initializer_list<std::pair<QSpinBox*, int>>{{mpSpinBox_triggerMatchThreads, enabled ? saved.threads : TriggerMatchPool::automaticThreads()},
+    for (const auto& [pSpinBox, value] : std::initializer_list<std::pair<QSpinBox*, int>>{{mpSpinBox_triggerMatchThreads, (enabled ? saved.threads : TriggerMatchPool::automaticThreads()) - 1},
                                                                                           {mpSpinBox_triggerMatchThreshold, saved.threshold},
                                                                                           {mpSpinBox_triggerMatchMissesPerMatch, saved.missesPerMatch},
                                                                                           {mpSpinBox_triggerMatchFloodLines, saved.floodChunkLines},
@@ -1395,7 +1395,7 @@ void dlgProfilePreferences::applyTriggerMatchPoolSettings()
     QSettings* settings = MudletApp::getQSettings();
     bool changed = false;
     if (mSnapshot.anyDirty({mpCheckBox_triggerMatchPool, mpSpinBox_triggerMatchThreads})) {
-        settings->setValue(qsl("triggerMatchThreads"), mpCheckBox_triggerMatchPool->isChecked() ? mpSpinBox_triggerMatchThreads->value() : 0);
+        settings->setValue(qsl("triggerMatchThreads"), mpCheckBox_triggerMatchPool->isChecked() ? mpSpinBox_triggerMatchThreads->value() + 1 : 0);
         changed = true;
     }
     for (const auto& [pSpinBox, key] : std::initializer_list<std::pair<QSpinBox*, QString>>{{mpSpinBox_triggerMatchThreshold, qsl("triggerMatchThreshold")},

@@ -1085,7 +1085,7 @@ private slots:
         QVERIFY(!pEnable->isChecked());
         QVERIFY2(!pThreshold->isEnabled(), "tuning a pool that is off should not be offered");
         QCOMPARE(pThreshold->value(), 77);
-        QCOMPARE(pThreads->value(), TriggerMatchPool::automaticThreads());
+        QCOMPARE(pThreads->value(), TriggerMatchPool::automaticThreads() - 1);
         const TriggerMatchPool::Settings defaults;
         QCOMPARE(pMissesPerMatch->value(), defaults.missesPerMatch);
         QCOMPARE(pFloodLines->value(), defaults.floodChunkLines);
@@ -1102,6 +1102,13 @@ private slots:
         }
         QCOMPARE(settings->value(qsl("triggerMatchFloodLines")).toInt(), 0);
         QCOMPARE(pool.floodChunkLines(), defaults.floodChunkLines);
+
+        // The field counts the helpers; the setting counts the main thread too
+        applySpy.clear();
+        pThreads->setValue(1);
+        QVERIFY(applyAndWait(applySpy));
+        QCOMPARE(settings->value(qsl("triggerMatchThreads")).toInt(), 2);
+        QCOMPARE(pool.workerCount(), 2);
 
         applySpy.clear();
         pThreshold->setValue(64);
