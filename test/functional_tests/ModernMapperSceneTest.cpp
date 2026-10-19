@@ -51,6 +51,7 @@
 #include "MudletApp.h"
 #include "MudletInstanceCoordinator.h"
 #include "RenderCommand.h"
+#include "MapRoute.h"
 #include "RetainedMapScene.h"
 #include "RoomAppearance.h"
 #include "TArea.h"
@@ -386,6 +387,58 @@ private:
         const QPointF local = pArea->center + fromMiddle - pShown->offset;
         const std::optional<QPointF> pixel = widget.mCameraController.pixelForPoint(QVector3D(static_cast<float>(local.x()), static_cast<float>(local.y()), widget.atlasLevel()));
         return pixel ? pixel->toPoint() : QPoint(-1, -1);
+    }
+
+
+    struct ThreeAreas
+    {
+        int west = 0;
+        int middle = 0;
+        int east = 0;
+        // The first room of each, at its southwest corner; rooms run west to east then north, five to a row
+        int westFirst = 0;
+        int middleFirst = 0;
+        int eastFirst = 0;
+    };
+
+    // Three areas of side by side rooms in a row, each joined to the next both ways from the middle of its east side to
+    // the middle of the next one's west side, with the player in the west area's first room
+    ThreeAreas addThreeAreas(const int side = 5) const
+    {
+        map()->mapClear();
+        map()->mUserData.remove(TAreaGraph::cLayoutUserDataKey);
+        ThreeAreas areas;
+        areas.westFirst = 1;
+        areas.middleFirst = addGridArea(qsl("Westmarch"), areas.westFirst, side, side, 1, 0);
+        areas.eastFirst = addGridArea(qsl("Midlands"), areas.middleFirst, side, side, 1, 0);
+        addGridArea(qsl("Eastvale"), areas.eastFirst, side, side, 1, 0);
+        const int wayIn = side / 2 * side;
+        const int wayOut = wayIn + side - 1;
+        for (const auto& [from, to] : {std::pair{areas.westFirst, areas.middleFirst}, std::pair{areas.middleFirst, areas.eastFirst}}) {
+            map()->setExit(from + wayOut, to + wayIn, DIR_EAST);
+            map()->setExit(to + wayIn, from + wayOut, DIR_WEST);
+        }
+        areas.west = map()->mpRoomDB->getRoom(areas.westFirst)->getArea();
+        areas.middle = map()->mpRoomDB->getRoom(areas.middleFirst)->getArea();
+        areas.east = map()->mpRoomDB->getRoom(areas.eastFirst)->getArea();
+        map()->mRoomIdHash[map()->mProfileName] = areas.westFirst;
+        return areas;
+    }
+
+    // The route's bars over the rooms, which are a quarter as tall as a room
+    // Exit bars can be as thick as the route's, so its colors tell them apart
+    static QList<DrawnCube> drawnRoute(const ModernGLWidget& widget)
+    {
+        const auto vector = [](const QColor& color) {
+            return QVector4D(color.redF(), color.greenF(), color.blueF(), 1.0f);
+        };
+        const QVector4D line = vector(widget.routeColor());
+        const QVector4D halo = vector(widget.routeHaloColor());
+        QList<DrawnCube> found = drawnCubes(widget, halfHeight(widget) / 4.0f);
+        found.removeIf([&](const DrawnCube& cube) {
+            return cube.color != line && cube.color != halo;
+        });
+        return found;
     }
 
 private slots:
@@ -941,6 +994,316 @@ private slots:
         QCOMPARE(widget.mCameraController.getTarget(), QVector3D(2.0f, 3.0f, 0.0f));
     }
 
+    void test_aRouteIsFoundAcrossAreasWithTheMapsOwnPathfindingWithoutGL()
+    {
+        const ThreeAreas areas = addThreeAreas();
+        // What a speedwalk or getPath() found last stays as it was
+        map()->mPathList = {7, 8};
+        map()->mDirList = {qsl("n")};
+        ModernGLWidget widget(map(), mpHost);
+        const int destination = areas.eastFirst + 24;
+        QCOMPARE(widget.planRouteToRoom(destination), QString());
+        const MapRoute& route = widget.route();
+        QCOMPARE(route.status(), MapRoute::Status::Found);
+        QCOMPARE(route.rooms().first(), areas.westFirst);
+        QCOMPARE(route.rooms().last(), destination);
+        // Six steps across the west area to its way out, one into the middle and four across it, then one in and six across the east
+        QCOMPARE(route.steps(), 18);
+        QCOMPARE(route.totalWeight(), 18);
+        QCOMPARE(route.areaRuns(), (QList<MapRoute::AreaRun>{{areas.west, 6}, {areas.middle, 5}, {areas.east, 7}}));
+        QCOMPARE(route.stepsByArea().value(areas.middle), 5);
+        QCOMPARE(map()->mPathList, (QList<int>{7, 8}));
+        QCOMPARE(map()->mDirList, QList<QString>{qsl("n")});
+
+        // A locked room is kept out of the way, as a speedwalk would; locking it changes no revision, only the graph
+        map()->mpRoomDB->getRoom(areas.middleFirst + 10)->isLocked = true;
+        map()->mMapGraphNeedsUpdate = true;
+        QVERIFY(route.stale(*map()));
+        widget.refreshRoute();
+        QCOMPARE(widget.route().status(), MapRoute::Status::Unreachable);
+        QVERIFY(widget.route().rooms().isEmpty());
+        QVERIFY(widget.route().hasDestination());
+        map()->mpRoomDB->getRoom(areas.middleFirst + 10)->isLocked = false;
+        map()->mMapGraphNeedsUpdate = true;
+        widget.refreshRoute();
+        QCOMPARE(widget.route().status(), MapRoute::Status::Found);
+        QCOMPARE(widget.route().steps(), 18);
+    }
+
+    void test_theAreasARoutePassesThroughAreTakenInOrderWithoutGL()
+    {
+        const ThreeAreas areas = addThreeAreas();
+        TRoomDB& roomDB = *map()->mpRoomDB;
+        const int w = areas.westFirst;
+        const int m = areas.middleFirst;
+        const int e = areas.eastFirst;
+        QCOMPARE(MapRoute::areaRunsOf(roomDB, {w}), (QList<MapRoute::AreaRun>{{areas.west, 0}}));
+        // Out of the west area, back into it and on to the east; a room no longer in the map is passed over
+        QCOMPARE(MapRoute::areaRunsOf(roomDB, {w, w + 1, m, m + 1, 99999, w + 2, e}), (QList<MapRoute::AreaRun>{{areas.west, 1}, {areas.middle, 2}, {areas.west, 1}, {areas.east, 1}}));
+        QVERIFY(MapRoute::areaRunsOf(roomDB, {}).isEmpty());
+    }
+
+    void test_aRouteToAnAreaEndsAtTheNearestOfItsRoomsWithoutGL()
+    {
+        const ThreeAreas areas = addThreeAreas();
+        // A one-way shortcut from the west area's northeast corner straight into the east area's northwest corner
+        map()->setExit(areas.westFirst + 24, areas.eastFirst + 20, DIR_NORTHEAST);
+        ModernGLWidget widget(map(), mpHost);
+        QCOMPARE(widget.planRouteToArea(areas.east), QString());
+        QCOMPARE(widget.route().status(), MapRoute::Status::Found);
+        QCOMPARE(widget.route().endRoomId(), areas.eastFirst + 20);
+        QCOMPARE(widget.route().steps(), 9);
+        QCOMPARE(widget.route().areaRuns(), (QList<MapRoute::AreaRun>{{areas.west, 8}, {areas.east, 1}}));
+
+        // Without it, by way of the middle
+        QVERIFY(map()->setExit(areas.westFirst + 24, -1, DIR_NORTHEAST));
+        widget.refreshRoute();
+        QCOMPARE(widget.route().endRoomId(), areas.eastFirst + 10);
+        QCOMPARE(widget.route().steps(), 12);
+
+        // Already in the area: nothing to show, and the user is told so
+        QVERIFY(!widget.planRouteToArea(areas.west).isEmpty());
+        QVERIFY(!widget.route().hasDestination());
+    }
+
+    void test_theRouteIsFoundAgainOnlyWhenThePlayerMovesOrTheMapChangesWithoutGL()
+    {
+        const ThreeAreas areas = addThreeAreas();
+        ModernGLWidget widget(map(), mpHost);
+        const int destination = areas.eastFirst + 24;
+        widget.planRouteToRoom(destination);
+        QCOMPARE(widget.route().steps(), 18);
+
+        // Frames that change nothing leave it alone
+        widget.mRouteRefreshTimer->stop();
+        queueFrame(widget, areas.west, 1.5f);
+        queueFrame(widget, areas.west, 1.5f);
+        QVERIFY2(!widget.mRouteRefreshTimer->isActive(), "a frame would find the route again though nothing changed");
+        QVERIFY(!widget.mRoute.refresh(*map()));
+
+        // A move: the next frame has it found again, outside painting
+        map()->mRoomIdHash[map()->mProfileName] = areas.westFirst + 14;
+        widget.updateMatrices();
+        widget.mRenderCommandQueue.clear();
+        widget.queueScene();
+        QVERIFY(widget.mRouteRefreshTimer->isActive());
+        QCOMPARE(widget.route().rooms().first(), areas.westFirst);
+        widget.mRouteRefreshTimer->stop();
+        widget.refreshRoute();
+        QCOMPARE(widget.route().rooms().first(), areas.westFirst + 14);
+        QCOMPARE(widget.route().steps(), 12);
+
+        // A change to the map
+        map()->setUnsaved(__func__);
+        QVERIFY(widget.route().stale(*map()));
+        widget.refreshRoute();
+        QVERIFY(!widget.route().stale(*map()));
+
+        // Arriving ends it
+        map()->mRoomIdHash[map()->mProfileName] = destination;
+        widget.refreshRoute();
+        QVERIFY(!widget.route().hasDestination());
+        QCOMPARE(widget.route().status(), MapRoute::Status::NoDestination);
+
+        // As does a new map, whose room IDs are not the old one's
+        map()->mRoomIdHash[map()->mProfileName] = areas.westFirst;
+        widget.planRouteToRoom(destination);
+        QVERIFY(widget.route().hasDestination());
+        addThreeAreas();
+        widget.refreshRoute();
+        QVERIFY(!widget.route().hasDestination());
+    }
+
+    void test_editsToTheMapWaitBeforeTheRouteRebuildsThePathGraphWithoutGL()
+    {
+        const ThreeAreas areas = addThreeAreas();
+        ModernGLWidget widget(map(), mpHost);
+        widget.planRouteToRoom(areas.eastFirst + 24);
+        QVERIFY(widget.mRouteGraphBuilt.isValid());
+        QVERIFY(!map()->mMapGraphNeedsUpdate);
+        widget.mRouteRefreshTimer->stop();
+        const auto queueScene = [&widget]() {
+            widget.updateMatrices();
+            widget.mRenderCommandQueue.clear();
+            widget.queueScene();
+        };
+
+        // A move alone is found again straight away
+        map()->mRoomIdHash[map()->mProfileName] = areas.westFirst + 1;
+        queueScene();
+        QVERIFY(widget.mRouteRefreshTimer->isActive());
+        QCOMPARE(widget.mRouteRefreshTimer->interval(), 0);
+        widget.mRouteRefreshTimer->stop();
+        widget.refreshRoute();
+
+        // An exit added, as a mapping script does on each move, waits at least a second after the graph was built
+        map()->setExit(areas.westFirst + 1, areas.westFirst + 7, DIR_NORTHEAST);
+        queueScene();
+        QVERIFY(widget.mRouteRefreshTimer->isActive());
+        QVERIFY2(widget.mRouteRefreshTimer->interval() > 500, "an edit to the exits rebuilt the path graph straight away");
+        const int remaining = widget.mRouteRefreshTimer->remainingTime();
+
+        // Further edits leave that wait as it is, rather than putting the route off for as long as they come
+        map()->setExit(areas.westFirst + 7, areas.westFirst + 1, DIR_SOUTHWEST);
+        queueScene();
+        QVERIFY(widget.mRouteRefreshTimer->remainingTime() <= remaining);
+
+        // Built long enough ago, the graph is built again straight away
+        widget.mRouteRefreshTimer->stop();
+        widget.mRouteGraphBuilt.invalidate();
+        queueScene();
+        QCOMPARE(widget.mRouteRefreshTimer->interval(), 0);
+        widget.mRouteRefreshTimer->stop();
+        widget.refreshRoute();
+        QVERIFY(!map()->mMapGraphNeedsUpdate);
+        QVERIFY(widget.mRouteGraphBuilt.isValid());
+        QCOMPARE(widget.route().status(), MapRoute::Status::Found);
+    }
+
+    void test_aRouteIsDroppedWhenAMapIsImportedWithoutGL()
+    {
+        const ThreeAreas areas = addThreeAreas();
+        QTemporaryDir directory;
+        QVERIFY(directory.isValid());
+        const QString file = directory.filePath(qsl("map.json"));
+        QVERIFY(map()->writeJsonMapFile(file).first);
+        // Imported twice, as a map only ever imported over has the same generation as the map it replaces
+        QVERIFY(map()->readJsonMapFile(file).first);
+        ModernGLWidget widget(map(), mpHost);
+        QVERIFY(widget.planRouteToRoom(areas.eastFirst).isEmpty());
+        QCOMPARE(widget.route().status(), MapRoute::Status::Found);
+        QVERIFY(map()->readJsonMapFile(file).first);
+        widget.refreshRoute();
+        QVERIFY(!widget.route().hasDestination());
+    }
+
+    void test_aRouteToAnAreaWeighsEntrancesBeyondTheRangeOfAnIntWithoutGL()
+    {
+        map()->mapClear();
+        map()->mUserData.remove(TAreaGraph::cLayoutUserDataKey);
+        addGridArea(qsl("Westmarch"), 1, 3, 1, 1, 0);
+        addGridArea(qsl("Highvale"), 10, 2, 1, 1, 0);
+        QVERIFY(map()->setExit(10, -1, DIR_EAST));
+        QVERIFY(map()->setExit(11, -1, DIR_WEST));
+        // From the middle room: east through two rooms each weighted two billion, or west through two of weight one
+        QVERIFY(map()->setExit(3, 10, DIR_NORTH));
+        QVERIFY(map()->setExit(1, 11, DIR_NORTH));
+        map()->mpRoomDB->getRoom(3)->setWeight(2000000000);
+        map()->mpRoomDB->getRoom(10)->setWeight(2000000000);
+        map()->mRoomIdHash[map()->mProfileName] = 2;
+        ModernGLWidget widget(map(), mpHost);
+        QCOMPARE(widget.planRouteToArea(map()->mpRoomDB->getRoom(10)->getArea()), QString());
+        QCOMPARE(widget.route().endRoomId(), 11);
+        QCOMPARE(widget.route().totalWeight(), 2);
+    }
+
+    void test_aPlaceThatCannotBeReachedIsReportedWithoutGL()
+    {
+        const ThreeAreas areas = addThreeAreas();
+        const int islandArea = map()->mpRoomDB->addArea(qsl("Island"));
+        const int island = 900;
+        map()->addRoom(island);
+        map()->setRoomArea(island, islandArea);
+        map()->setRoomCoordinates(island, 0, 0, 0);
+        ModernGLWidget widget(map(), mpHost);
+        QString message = widget.planRouteToRoom(island);
+        QVERIFY2(message.contains(qsl("room 900")), qPrintable(message));
+        QCOMPARE(widget.route().status(), MapRoute::Status::Unreachable);
+        message = widget.planRouteToArea(islandArea);
+        QVERIFY2(message.contains(qsl("Island")), qPrintable(message));
+        queueFrame(widget, areas.west, 1.5f);
+        QVERIFY(drawnRoute(widget).isEmpty());
+        queueFrame(widget, areas.west, 800.0f);
+        const qsizetype layers = atlasLayerOpacities(widget).size();
+        widget.clearRoute();
+        queueFrame(widget, areas.west, 800.0f);
+        QCOMPARE(atlasLayerOpacities(widget).size(), layers);
+
+        QVERIFY(!widget.planRouteToRoom(424242).isEmpty());
+        QVERIFY(!widget.route().hasDestination());
+        QVERIFY(widget.planRouteToRoom(areas.eastFirst + 1).isEmpty());
+        map()->mpRoomDB->removeRoom(areas.eastFirst + 1);
+        widget.refreshRoute();
+        QVERIFY(!widget.route().hasDestination());
+        map()->mRoomIdHash[map()->mProfileName] = 0;
+        QVERIFY(!widget.planRouteToRoom(areas.eastFirst).isEmpty());
+        QVERIFY(!widget.route().hasDestination());
+    }
+
+    void test_theRouteIsDrawnAtEveryZoomOnlyWhileThereIsOneWithoutGL()
+    {
+        // Large enough for the footprints to show before the world graph takes over, and far enough apart for every name to
+        const int side = 41;
+        const ThreeAreas areas = addThreeAreas(side);
+        map()->areaGraph()->refresh();
+        QVERIFY(map()->areaGraph()->setPosition(areas.west, QPointF(0.0, 0.0)));
+        QVERIFY(map()->areaGraph()->setPosition(areas.middle, QPointF(0.0, 400.0)));
+        QVERIFY(map()->areaGraph()->setPosition(areas.east, QPointF(0.0, 800.0)));
+        ModernGLWidget widget(map(), mpHost);
+        const auto labelTexts = [&widget]() {
+            QStringList texts;
+            for (const ModernGLWidget::AtlasLabel& label : widget.atlasLabels(widget.mZoomWeights)) {
+                texts.append(label.text);
+            }
+            return texts;
+        };
+        // The layers a route adds: one over the footprints and one along the world graph, for each that shows
+        const auto routeLayers = [&widget]() {
+            const MapAtlas::Weights& weights = widget.mZoomWeights;
+            return (weights.footprint * (1.0f - weights.world) > 0.0f ? 1 : 0) + (weights.footprint * weights.world > 0.0f ? 1 : 0);
+        };
+        const QList<float> distances{160.0f, 200.0f, 800.0f};
+        QList<qsizetype> layersWithout;
+        queueFrame(widget, areas.west, 1.5f);
+        QVERIFY(drawnRoute(widget).isEmpty());
+        const qsizetype roomsWithout = drawnRooms(widget).size();
+        for (const float distance : distances) {
+            queueFrame(widget, areas.west, distance);
+            layersWithout.append(atlasLayerOpacities(widget).size());
+            QCOMPARE(labelTexts().size(), 3);
+            for (const QString& text : labelTexts()) {
+                QVERIFY2(!text.contains(qsl("step")), qPrintable(text));
+            }
+        }
+
+        widget.planRouteToRoom(areas.eastFirst + side * side - 1);
+        QCOMPARE(widget.route().status(), MapRoute::Status::Found);
+        queueFrame(widget, areas.west, 1.5f);
+        const QList<DrawnCube> bars = drawnRoute(widget);
+        QVERIFY(!bars.isEmpty());
+        const QColor routeColor = mpHost->mLightYellow_2;
+        QVERIFY(std::any_of(bars.cbegin(), bars.cend(), [&](const DrawnCube& bar) {
+            return bar.color == QVector4D(routeColor.redF(), routeColor.greenF(), routeColor.blueF(), routeColor.alphaF());
+        }));
+        // Only on the west area's rooms on the way, from its southwest corner to the way out in the middle of its east side
+        const float edge = side / 2 + 0.7f;
+        for (const DrawnCube& bar : bars) {
+            QVERIFY2(bar.center.x() < edge && bar.center.y() > -edge && bar.center.y() < 0.7f, qPrintable(qsl("a bar at %1, %2").arg(bar.center.x()).arg(bar.center.y())));
+        }
+        QCOMPARE(drawnRooms(widget).size(), roomsWithout);
+
+        bool sawFootprints = false;
+        bool sawWorld = false;
+        for (qsizetype i = 0; i < distances.size(); ++i) {
+            queueFrame(widget, areas.west, distances.at(i));
+            QVERIFY(routeLayers() > 0);
+            sawFootprints = sawFootprints || widget.mZoomWeights.world < 1.0f;
+            sawWorld = sawWorld || widget.mZoomWeights.world > 0.0f;
+            QCOMPARE(atlasLayerOpacities(widget).size(), layersWithout.at(i) + routeLayers());
+            const QString steps = qsl("Midlands (%1 step").arg(side);
+            QVERIFY2(labelTexts().filter(steps).size() == 1, qPrintable(labelTexts().join(qsl(", "))));
+        }
+        QVERIFY(sawFootprints && sawWorld);
+
+        widget.clearRoute();
+        queueFrame(widget, areas.west, 1.5f);
+        QVERIFY(drawnRoute(widget).isEmpty());
+        for (qsizetype i = 0; i < distances.size(); ++i) {
+            queueFrame(widget, areas.west, distances.at(i));
+            QCOMPARE(atlasLayerOpacities(widget).size(), layersWithout.at(i));
+        }
+    }
+
     void test_theWorldStaysPutAsAFlightToAnotherLevelSetsOffWithoutGL()
     {
         map()->mapClear();
@@ -997,6 +1360,15 @@ private slots:
         }
         widget.mShiftMode = true;
         widget.jumpTo(areaId, 0, 0, 0);
+        const bool routed = !qEnvironmentVariableIsEmpty("MUDLET_BENCH_3D_ROUTE");
+        if (routed) {
+            // Across the metropolis to its corner, found again on every move of the walk below
+            QElapsedTimer routeTimer;
+            routeTimer.start();
+            widget.planRouteToRoom(1 + 141 * 141);
+            std::printf("METRIC route_find_ms %lld\n", routeTimer.elapsed());
+            std::printf("METRIC route_steps %d\n", widget.route().steps());
+        }
 
         struct Scenario
         {
@@ -1064,6 +1436,9 @@ private slots:
             map()->mRoomIdHash[map()->mProfileName] = walkStart + frame + 1;
             widget.jumpTo(areaId, room->x(), room->y(), room->z());
             widget.grabFramebuffer();
+            if (routed) {
+                widget.refreshRoute();
+            }
         }
         std::printf("METRIC walk_frame_ms %.2f\n", static_cast<double>(walk.nsecsElapsed()) / 1.0e6 / frames);
         std::printf("METRIC walk_frame_cpu_ms %.2f\n", (processCpuMs() - walkCpuBefore) / frames);
@@ -1080,6 +1455,30 @@ private slots:
         }
         std::printf("METRIC edit_frame_ms %.2f\n", static_cast<double>(edit.nsecsElapsed()) / 1.0e6 / frames);
         std::printf("METRIC edit_frame_cpu_ms %.2f\n", (processCpuMs() - editCpuBefore) / frames);
+
+        // Mapping: as a mapping script does on each move, a room is added east of the metropolis, joined to the last
+        // and the player moved into it, then the frame is drawn and its events run
+        widget.mCameraController.setDefaultView();
+        widget.setCameraDistance(8.0f);
+        int mappedFrom = 1 + (141 + 70) * 141 + 140;
+        QElapsedTimer mapping;
+        const double mappingCpuBefore = processCpuMs();
+        mapping.start();
+        for (int frame = 0; frame < frames; ++frame) {
+            const int roomId = 500000 + frame;
+            map()->addRoom(roomId);
+            map()->setRoomArea(roomId, areaId);
+            map()->setRoomCoordinates(roomId, 71 + frame, 0, 0);
+            map()->setExit(mappedFrom, roomId, DIR_EAST);
+            map()->setExit(roomId, mappedFrom, DIR_WEST);
+            map()->setUnsaved(__func__);
+            map()->mRoomIdHash[map()->mProfileName] = roomId;
+            mappedFrom = roomId;
+            widget.grabFramebuffer();
+            QCoreApplication::processEvents();
+        }
+        std::printf("METRIC mapping_frame_ms %.2f\n", static_cast<double>(mapping.nsecsElapsed()) / 1.0e6 / frames);
+        std::printf("METRIC mapping_frame_cpu_ms %.2f\n", (processCpuMs() - mappingCpuBefore) / frames);
 
         std::printf("METRIC rss_end_mib %.1f\n", memoryMiB("VmRSS"));
         std::printf("METRIC rss_peak_mib %.1f\n", memoryMiB("VmHWM"));
