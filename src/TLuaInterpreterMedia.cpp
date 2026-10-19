@@ -1276,6 +1276,10 @@ int TLuaInterpreter::updateSounds(lua_State* L)
         }
 
         if (!errorPushed) {
+            if (mediaData.mediaFileName().isEmpty() && mediaData.mediaKey().isEmpty() && mediaData.mediaTag().isEmpty()) {
+                return warnArgumentValue(L, __func__, "no key, name or tag to choose the sounds to update by");
+            }
+
             mediaData.setMediaProtocol(TMediaData::MediaProtocolAPI);
             mediaData.setMediaType(TMediaData::MediaTypeSound);
 

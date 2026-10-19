@@ -3777,10 +3777,12 @@ describe("Media playback effects with a generated sound file", function()
     assert.equals(50, named.pan)
     assert.is_nil(keyless.pan, "a sound played without a key moved with the one named")
 
-    -- naming nothing, like stopSounds(), takes every sound
-    assert.is_true(updateSounds({pan = -20}))
+    -- naming no sound is refused, as a game's Client.Media.Update is, rather than moving every one
+    local ok, err = updateSounds({pan = -20})
+    assert.is_nil(ok)
+    assert.equals("no key, name or tag to choose the sounds to update by", err)
     for _, sound in ipairs(getPlayingSounds()) do
-      assert.equals(-20, sound.pan)
+      assert.equals(sound.key == "busted-named" and 50 or nil, sound.pan)
     end
     assert.is_true(stopSounds())
   end)
