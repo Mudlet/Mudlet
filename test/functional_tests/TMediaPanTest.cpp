@@ -694,9 +694,17 @@ private slots:
                  qPrintable(qsl("Moved west between passes, the loop ended up at %1 left and %2 right.").arg(heard.first).arg(heard.second)));
     }
 
+    void test_eachPassOfALoopThatFadesInStartsSilent_data()
+    {
+        QTest::addColumn<int>("fadeOut");
+        QTest::newRow("fading in") << static_cast<int>(TMediaData::MediaFadeNotSet);
+        QTest::newRow("fading in and out") << 200;
+    }
+
     // Each pass of a loop that fades in starts silent, not from the level the last pass ended at
     void test_eachPassOfALoopThatFadesInStartsSilent()
     {
+        QFETCH(int, fadeOut);
         SKIP_OR_FAIL_WITHOUT(backendPlaces() ? QString() : noPanningReason());
         TAudioMixer* mixer = TAudioMixer::self();
         mixer->setOutputSuspended(true);
@@ -707,6 +715,7 @@ private slots:
         TMediaData data = soundData(writeClip(qsl("swell.wav"), shortClipMs, 8000));
         data.setMediaVolume(100);
         data.setMediaFadeIn(100);
+        data.setMediaFadeOut(fadeOut);
         data.setMediaLoops(-1);
         media()->playMedia(data);
         QVERIFY2(waitForStarted(), "The looping sound never started playing.");
@@ -739,15 +748,23 @@ private slots:
             emptiedInTheGap = !voice->receivedAudio() && mixer->queuedSamples(mixerVoice) == 0;
         }
         QVERIFY2(emptiedInTheGap, "Never emptied the shared output between two passes.");
+        // Just past the head start the mixer waits for, so a stall has the most room before its cap drops the pass's start
         QVERIFY2(QTest::qWaitFor(
                          [&]() {
-                             return mixer->queuedSamples(mixerVoice) >= 200 * 48 * 2;
+                             return mixer->queuedSamples(mixerVoice) >= 110 * 48 * 2;
                          },
                          QDeadlineTimer(5s)),
                  "The loop's next pass never reached the shared output.");
 
         const auto [left, right] = loudestOnEachSide(5);
-        QVERIFY2(left < 0.05F && right < 0.05F, qPrintable(qsl("Fading in from silence, the next pass began at %1 left and %2 right.").arg(left).arg(right)));
+        QVERIFY2(left < 0.02F && right < 0.02F, qPrintable(qsl("Fading in from silence, the next pass began at %1 left and %2 right.").arg(left).arg(right)));
+        std::pair<float, float> heard;
+        QVERIFY2(comesOut(
+                         [](const float l, const float r) {
+                             return l > 0.1F && r > 0.1F;
+                         },
+                         heard),
+                 qPrintable(qsl("Faded in, the next pass rose only to %1 left and %2 right.").arg(heard.first).arg(heard.second)));
     }
 
     // Overhead and then off to one side: placed again before it has finished blending back, it still glides

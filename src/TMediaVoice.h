@@ -106,8 +106,8 @@ private:
         quint64 serial = 0;
         quint64 applied = 0;
 
-        // Glides once the track has been heard. Before then it jumps, unless it follows a change still
-        // waiting to be made, as a Play and an Update sent together ask: it then glides on from there.
+        // Glides when heard. Otherwise it jumps, unless it follows a change still waiting to be made, as
+        // a Play and an Update sent together ask: it then glides on from there.
         void set(float value, int glideMilliseconds, bool heard);
         void jumpTo(float value);
         std::optional<float> waitingStart() const;

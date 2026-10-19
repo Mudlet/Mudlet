@@ -285,12 +285,13 @@ void TMediaVoice::setGain(const float gain, const int glideMilliseconds)
     const float level = std::clamp(gain, 0.0F, 1.0F);
     const QMutexLocker lock(&mRequestMutex);
     // A fade sets the same level on every tick, which must not cut short a longer glide to it. A new
-    // track, with no audio yet, starts at its own level, not part way into the last one's glide.
-    if (level == mRequestedGain && mTrackHeard) {
+    // track or loop pass, with no audio yet, starts at its own level, not part way into the last one's glide.
+    const bool heard = heardFor(glideMilliseconds);
+    if (level == mRequestedGain && heard) {
         return;
     }
     mRequestedGain = level;
-    mGainRequest.set(level, glideMilliseconds, heardFor(glideMilliseconds));
+    mGainRequest.set(level, glideMilliseconds, heard);
 }
 
 // Under mRequestMutex. Between a loop's passes only a change given time glides on from the last pass:
@@ -319,7 +320,8 @@ void TMediaVoice::setPan(const float pan, const int glideMilliseconds)
     } else {
         mPanRequest.jumpTo(position);
     }
-    // A new track starts fully placed, even on a player whose last track stopped part way into a glide
+    // A new track starts fully placed, even on a player whose last track stopped part way into a glide,
+    // but a blend into place asked for before its audio is left to run
     if (!mPlaced || (!mTrackHeard && !mPlacementRequest.waitingStart())) {
         mPlacementRequest.set(1.0F, glideMilliseconds, heard);
     }
