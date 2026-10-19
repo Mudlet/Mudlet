@@ -3894,6 +3894,9 @@ describe("Client.Media 2 functions validate their parameters", function()
 
     assert.is_true(setMediaListener({facing = "NE"}))
     assert.equals("northeast", getMediaListener().facing)
+    -- keys match in any case, as every other media function's do
+    assert.is_true(setMediaListener({Facing = "South"}))
+    assert.equals("south", getMediaListener().facing)
     assert.is_true(setMediaListener({facing = 450}))
     assert.equals("90", getMediaListener().facing)
 

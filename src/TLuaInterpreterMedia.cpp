@@ -1292,7 +1292,20 @@ int TLuaInterpreter::setMediaListener(lua_State* L)
 
     bool errorPushed = false;
     {
-        lua_getfield(L, 1, "facing");
+        // In any case, as every other media function's keys are
+        lua_pushnil(L);
+        bool found = false;
+        while (lua_next(L, 1) != 0) {
+            if (lua_type(L, -2) == LUA_TSTRING && QString::fromUtf8(lua_tostring(L, -2)).toLower() == QLatin1String("facing")) {
+                lua_remove(L, -2);
+                found = true;
+                break;
+            }
+            lua_pop(L, 1);
+        }
+        if (!found) {
+            lua_pushnil(L);
+        }
 
         if (lua_isnil(L, -1)) {
             lua_pushfstring(L, R"(%s: missing facing (add facing = "east" or a number of degrees))", func);
