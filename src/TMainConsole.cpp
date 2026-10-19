@@ -70,12 +70,14 @@
 #include <QShortcut>
 #include <QSizePolicy>
 #include <QTextCodec>
+#include <QTextCursor>
 #include <QTimer>
 #include <QPainter>
 #include <QResizeEvent>
 #include <QVideoWidget>
 
 #include <chrono>
+#include <utility>
 
 namespace {
 // See TWindowRegistry::SubConsoleKind for what Other is for.
@@ -1902,7 +1904,8 @@ void TMainConsole::openPasswordEntry()
         typedAhead.remove(QChar::CarriageReturn);
         typedAhead.remove(QChar::LineFeed);
         if (!typedAhead.isEmpty()) {
-            mpPasswordEntry->setText(typedAhead);
+            mpPasswordEntry->takeTypedAhead(typedAhead);
+            mPasswordEntryTypedAhead = typedAhead;
             mpCommandLine->clear();
             mpHost->passwordEntryEdited();
         }
@@ -1942,6 +1945,15 @@ void TMainConsole::closePasswordEntry()
         mpCommandLine->setFocus(Qt::OtherFocusReason);
     }
     mpCommandLine->removeEventFilter(this);
+    // A game toggling ECHO takes the box away before the player has finished typing a command into the
+    // command line. What they typed there goes back; what they typed into the box may be a password, and
+    // so may text typed ahead of a slow prompt when the connection drops instead.
+    QString typedAhead = std::exchange(mPasswordEntryTypedAhead, QString());
+    if (mpHost->passwordEntryClosedByTheGame() && pEntry->holdsOnlyTypedAhead() && mpCommandLine->toPlainText().isEmpty()) {
+        mpCommandLine->restorePlayerTypedLine(typedAhead);
+    } else {
+        typedAhead.fill(QChar::Null);
+    }
     // Hidden before the deferred delete, or a WONT and a WILL in one read leave
     // two boxes alive. Qt zero-fills only a password-mode line edit's text.
     pEntry->setEchoMode(QLineEdit::Password);
