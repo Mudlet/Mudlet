@@ -332,9 +332,7 @@ private slots:
         QCOMPARE(TAudioMixer::self()->timesRanDry(), ranDryBefore);
     }
 
-    // A backend that is known not to feed a voice keeps every player on an output of its own
-    // What main() starts as Mudlet opens: once the check of a backend nobody named has answered, even
-    // the first sound is mixed
+    // Once the check of a backend nobody named has answered, every sound is mixed
     void test_aCheckedBackendMixesTheFirstSound()
     {
         if (!qEnvironmentVariable("QT_MEDIA_BACKEND").isEmpty()) {
@@ -355,6 +353,7 @@ private slots:
         QCOMPARE(media()->playersMixed(), 1);
     }
 
+    // A backend that is known not to feed a voice keeps every player on an output of its own
     void test_aBackendThatCannotFeedTheMixKeepsOutputsOfItsOwn()
     {
         if (backendFeedsTheMix()) {

@@ -34,7 +34,6 @@
 #include "MudletApp.h"
 #include "mudlet.h"
 #include "MudletInstanceCoordinator.h"
-#include "TMediaVoice.h"
 #include "TriggerMatchPool.h"
 #include <algorithm>
 #include <chrono>
@@ -893,10 +892,6 @@ int main(int argc, char* argv[])
             qDebug().noquote().nospace() << "main(...) INFO - QT_MEDIA_BACKEND environmental variable is set to: \"" << qgetenv("QT_MEDIA_BACKEND") << "\".";
         }
     }
-    // Where no backend is named, sounds played before this check answers keep outputs of their own, so it
-    // runs now, long before a game's first sound. Not per profile: a check still running when a short-lived
-    // process ends leaves Qt's player threads behind.
-    TMediaVoice::probeBackend();
 
     QStringList cliProfiles = parser.values(profileToOpen);
 
