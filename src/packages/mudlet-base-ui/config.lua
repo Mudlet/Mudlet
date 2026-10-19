@@ -10,7 +10,10 @@ A modest starter interface for new profiles: an adjustable dock with
 your map, tabbed chat (All/Tells/Channels with unread counters) and
 health, mana, movement and experience gauges - built only from data your
 game actually provides (GMCP, MSDP, or recognisable prompt and score
-lines). Nothing appears until your game has sent something to show.
+lines). An enemy bar follows your opponent's health, from GMCP or
+MSDP or from the sentence some games print describing it ("The orc
+has a few scratches."). Nothing appears until your game has sent
+something to show.
 
 No section is stuck in the dock: drag the map, the chat window or the
 health bars out by its header row and it will sit wherever you drop it
@@ -41,5 +44,5 @@ let it show through.
 When a game installs an interface of its own, this one quietly stands
 aside - `baseui show` brings it back if you prefer it.
 ]]
-version = [[1.8.0]]
+version = [[1.9.0]]
 created = "2026-07-25T12:00:00+00:00"
