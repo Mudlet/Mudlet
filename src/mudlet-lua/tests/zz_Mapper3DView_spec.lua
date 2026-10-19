@@ -217,3 +217,53 @@ describe("Tests show3dMapView with the mapper hidden", function()
     assert.is_false(getConfig("show3dMapView"))
   end)
 end)
+
+-- Blueprint paints a callout per level and a title block over the 3D view; an area spread over
+-- levels above and below the shown one exercises both
+describe("Tests the blueprint style on an area spread over several levels", function()
+  it("paints a multi-level area in blueprint and switches back to tiles", function()
+    if type(setMapPerspective) ~= "function" then
+      pending("needs a Mudlet built with the 3D mapper")
+      return
+    end
+    if (os.getenv("ASAN_OPTIONS") or ""):find("detect_leaks=1", 1, true) then
+      pending("a 3D view's GL context leaks in this job's GL driver")
+      return
+    end
+    local wasModern = getConfig("experiment.3dmap.modernmapper")
+    local wasStyle = getConfig("mapStyle")
+    local area = addAreaName("blueprint levels spec")
+    local rooms = {}
+    finally(function()
+      setConfig("show3dMapView", false)
+      setConfig("experiment.3dmap.modernmapper", wasModern == true)
+      setConfig("mapStyle", wasStyle)
+      for _, room in ipairs(rooms) do
+        deleteRoom(room)
+      end
+      deleteArea(area)
+    end)
+    assert.is_number(area)
+    for z = -2, 2 do
+      for x = 0, 2 do
+        local room = createRoomID()
+        assert.is_true(addRoom(room))
+        rooms[#rooms + 1] = room
+        setRoomArea(room, area)
+        setRoomCoordinates(room, x, 0, z)
+        setRoomName(room, "Level " .. z .. " room " .. x)
+      end
+    end
+    assert.is_true(centerview(rooms[7]))
+    assert.is_true(setConfig("experiment.3dmap.modernmapper", true))
+    assert.is_true(setConfig("show3dMapView", true))
+    assert.is_true(setConfig("mapStyle", "blueprint"))
+    pumpEvents(200)
+    assert.equals("blueprint", getConfig("mapStyle"))
+    assert.is_true(centerview(rooms[1]))
+    pumpEvents(100)
+    assert.is_true(setConfig("mapStyle", "tiles"))
+    pumpEvents(100)
+    assert.equals("tiles", getConfig("mapStyle"))
+  end)
+end)

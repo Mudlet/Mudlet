@@ -57,6 +57,13 @@ public:
     ~TLabel();
 
     void setText(const QString& text);
+    // A screen reader's activation, delivered as the left click a mouse would make
+    void press();
+    // Whether what it shows is an image - a raster, or an SVG with no text over it - which a screen reader
+    // is told is a graphic unless the label is a button
+    bool showsImage() const;
+    // After its image or movie changes, which can make it a graphic, an animation or text
+    void imageMayHaveChanged();
     void mousePressEvent(QMouseEvent*) override;
     void mouseDoubleClickEvent(QMouseEvent*) override;
     void mouseReleaseEvent(QMouseEvent*) override;
@@ -118,6 +125,12 @@ private:
     // links in reach of Tab and Return via the focus policy QLabel derives from these flags.
     static constexpr Qt::TextInteractionFlags scmLinkInteraction = Qt::LinksAccessibleByMouse | Qt::LinksAccessibleByKeyboard;
 
+    void accessibilityChanged(TLabelModel::AccessibilityChange change);
+    // After QLabel::setText(), which has told a screen reader of the new text already
+    void syncTextAnnouncedByQt();
+    bool mTextAnnouncedByQt = false;
+    // A screen reader's press is the label's, not one of a link that happens to sit under its centre
+    bool mScreenReaderPress = false;
     bool carriesLink() const;
     bool forwardRightClickToConsole(QMouseEvent* event);
     void applyBackgroundColor();

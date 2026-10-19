@@ -209,6 +209,10 @@ public:
     QString mediaCaption() const { return mMediaCaption; }
     void setMediaCaption(QString mediaCaption) { mMediaCaption = mediaCaption; }
 
+    // The full path an API call named a file by, before it became the name of its copy
+    QString mediaSourcePath() const { return mMediaSourcePath; }
+    void setMediaSourcePath(QString mediaSourcePath) { mMediaSourcePath = mediaSourcePath; }
+
 private:
     int mMediaProtocol = MediaProtocolNotSet;
     int mMediaType = MediaTypeNotSet;
@@ -231,6 +235,7 @@ private:
     QString mMediaWidget = MediaWidgetLabel;
     QString mMediaAbsolutePathFileName;
     QString mMediaCaption;
+    QString mMediaSourcePath;
 };
 
 #endif // MUDLET_TMEDIA_DATA_H

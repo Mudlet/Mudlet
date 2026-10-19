@@ -387,6 +387,31 @@ describe("Alias processing", function()
             assert.are.equal(1, sends, "the command never reached the game")
         end)
 
+        it("echoes the command for a nil echo flag just as it does with none (#10749)", function()
+            -- "always" and "never" ignore the echo flag, so the spec needs the mode that honours it
+            local savedEchoMode = getConfig("showSentText", true)
+            setConfig("showSentText", "script")
+            finally(function() setConfig("showSentText", savedEchoMode) end)
+
+            local function echoed(...)
+                -- an echo after a prompt line is appended to that line, the one before the last
+                local mark = math.max(0, getLastLineNumber("main") - 1)
+                expandAlias(...)
+                return table.concat(getLines("main", mark, getLastLineNumber("main") + 1), "")
+            end
+
+            -- checked first: while the game has taken over the echo (remote echo, as for a password) both would be silent
+            assert.is_truthy(echoed("expand_alias_echo_absent"):find("expand_alias_echo_absent", 1, true), "commands are not being echoed (is remote echo active?), so the spec cannot tell the two apart")
+            assert.is_truthy(echoed("expand_alias_echo_nil", nil):find("expand_alias_echo_nil", 1, true), "a nil echo flag suppressed the echo")
+            assert.is_truthy(echoed("expand_alias_echo_true", true):find("expand_alias_echo_true", 1, true), "an explicit true suppressed the echo")
+            assert.is_falsy(echoed("expand_alias_echo_false", false):find("expand_alias_echo_false", 1, true), "an explicit false should still suppress the echo")
+        end)
+
+        it("still refuses an echo flag that is neither a boolean nor nil", function()
+            assert.has_error(function() expandAlias("expand_alias_echo_string", "yes") end, "expandAlias: bad argument #2 type (echo as boolean is optional, got string!)")
+            assert.has_error(function() expandAlias("expand_alias_echo_number", 1) end, "expandAlias: bad argument #2 type (echo as boolean is optional, got number!)")
+        end)
+
     end)
 
     -- A nested expandAlias() runs a whole alias pass inside the caller's script,
@@ -449,6 +474,46 @@ describe("Alias processing", function()
             assert.are.equal("deeper", seen.aliasMatch, "the alias should see its own capture")
             assert.are.equal("nested_state_trigger thing", seen.afterFullMatch, "matches[1] was emptied by the nested expansion")
             assert.are.equal("thing", seen.afterMatch, "the trigger's capture was emptied by the nested expansion")
+        end)
+
+        -- feedTriggers() nests the same way, only with a trigger pass inside the alias
+        it("gives an alias that feeds the triggers back its matches", function()
+            local seen = {}
+            local triggerId = tempRegexTrigger([[^alias_feeds_trigger (\w+)$]], function()
+                seen.triggerMatch = matches[2]
+            end)
+            local aliasId = tempAlias([[^alias_feeds_outer (\w+)$]], function()
+                feedTriggers("\nalias_feeds_trigger deeper\n")
+                seen.afterFullMatch = matches[1]
+                seen.afterMatch = matches[2]
+            end)
+            finally(function()
+                killAlias(aliasId)
+                killTrigger(triggerId)
+            end)
+
+            expandAlias("alias_feeds_outer thing", false)
+
+            assert.are.equal("deeper", seen.triggerMatch, "the fed line should have fired the trigger")
+            assert.are.equal("alias_feeds_outer thing", seen.afterFullMatch, "matches[1] was emptied by the nested feed")
+            assert.are.equal("thing", seen.afterMatch, "the alias's capture was emptied by the nested feed")
+        end)
+
+        it("leaves an alias that feeds the triggers the command a fed trigger's script set", function()
+            local seen = {}
+            local triggerId = tempTrigger("alias_feeds_command", [==[command = "set by the trigger"]==])
+            local aliasId = tempAlias([[^alias_feeds_command_outer$]], function()
+                feedTriggers("\nalias_feeds_command\n")
+                seen.command = rawget(_G, "command")
+            end)
+            finally(function()
+                killAlias(aliasId)
+                killTrigger(triggerId)
+            end)
+
+            expandAlias("alias_feeds_command_outer", false)
+
+            assert.are.equal("set by the trigger", seen.command, "feedTriggers() does not park command, so what the fed trigger's script put there should stay")
         end)
 
         -- "command" is set before any pattern is tried, so the commonest shape of
@@ -571,6 +636,80 @@ describe("Alias processing", function()
 
             assert.are.equal("erroring_outer thing", seen.command, "an erroring nested alias left the caller its command")
             assert.are.equal("thing", seen.match, "an erroring nested alias left the caller its captures")
+        end)
+
+        -- An alias's command field goes through the alias pass before its
+        -- script runs, and that pass empties the captures
+        it("gives an alias whose command expands into another alias its own matches back (#10797)", function()
+            if not os.getenv("MUDLET_TEST_MODE") then
+                pending("uninstalling the fixture needs pumpEvents(), which does nothing outside MUDLET_TEST_MODE")
+                return
+            end
+            local path = getMudletHomeDir() .. "/alias-command-nests.xml"
+            local seen = {}
+            local ids = {}
+            ids[#ids + 1] = tempAlias([[^command_nests_inner (\w+)$]], function()
+                seen.innerCommand = command
+                seen.innerMatch = matches[2]
+            end)
+            _G.AliasCommandNestsSpec = seen
+            finally(function()
+                for _, id in ipairs(ids) do
+                    killAlias(id)
+                end
+                _G.AliasCommandNestsSpec = nil
+                -- uninstallPackage() refuses while the profile save the install
+                -- started is still running
+                local removed = false
+                for _ = 1, 100 do
+                    if uninstallPackage("alias-command-nests") == true then
+                        removed = true
+                        break
+                    end
+                    pumpEvents(50)
+                end
+                os.remove(path)
+                -- let the save the uninstall queues run now rather than during
+                -- the next spec
+                pumpEvents(200)
+                assert.is_true(removed, "could not uninstall the alias package")
+            end)
+            local file = assert(io.open(path, "w"))
+            file:write([[<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE MudletPackage>
+<MudletPackage version="1.001">
+	<AliasPackage>
+		<Alias isActive="yes" isFolder="no">
+			<name>command_nests_outer</name>
+			<script>AliasCommandNestsSpec.command = command
+AliasCommandNestsSpec.fullMatch = matches[1]
+AliasCommandNestsSpec.match = matches[2]</script>
+			<command>command_nests_inner deeper</command>
+			<packageName></packageName>
+			<regex>^command_nests_outer (\w+)$</regex>
+		</Alias>
+	</AliasPackage>
+</MudletPackage>
+]])
+            file:close()
+            assert.is_true(installPackage(path))
+            -- installPackage() only queues the install while a profile save is running
+            for _ = 1, 100 do
+                if exists("command_nests_outer", "alias") > 0 then
+                    break
+                end
+                pumpEvents(50)
+            end
+            assert.are.equal(1, exists("command_nests_outer", "alias"), "the alias package was not installed")
+
+            expandAlias("command_nests_outer thing", false)
+
+            assert.are.equal("deeper", seen.innerMatch, "the alias's command should have reached the inner alias")
+            assert.are.equal("command_nests_inner deeper", seen.innerCommand, "the inner alias should see the command it matched")
+            -- "command" is left as the last command expanded, as for any command field
+            assert.are.equal("command_nests_inner deeper", seen.command, "the alias's script should see the last command expanded")
+            assert.are.equal("command_nests_outer thing", seen.fullMatch, "matches[1] was emptied by the alias's own command")
+            assert.are.equal("thing", seen.match, "the alias's capture was emptied by its own command")
         end)
 
         -- multimatches goes the same way as matches, which only a multiline
@@ -704,8 +843,8 @@ describe("Alias processing", function()
 
         -- Packages such as Repeater read "command" after an expandAlias() as the last command sent
         describe("command around expandAlias()", function()
-            -- Not straight from the spec: run through the runTests alias, that would
-            -- be an alias script, which gets its own "command" back
+            -- From an event handler, which is never an alias script, so the expansion
+            -- keeps its "command" even when the suite is started from inside an alias
             local function expandFromHandler(text)
                 local handlerId = registerAnonymousEventHandler("aliasSpecExpandFromHandler", function()
                     expandAlias(text, false)
@@ -1691,19 +1830,35 @@ describe("Alias processing", function()
         end)
 
         it("killAlias returns false the second time, as the alias is already dead", function()
+            -- earlier specs' killed items would be freed by the flush below too, so free them first
+            feedTriggers("\nspec_alias_kill_settle\n")
             local id = tempAlias("^spec_double_kill_alias$", [[]])
             assert.is_true(killAlias(id), "killing a live temporary alias should report success")
-            -- the alias is still present here: only the deferred cleanup frees it, so
-            -- the second kill really is being told about a corpse it can find
-            assert.are.equal(1, exists(id, "alias"), "the killed alias is still present until cleanup runs")
+            -- only the deferred cleanup frees it, so the second kill is told about a
+            -- corpse it can still find: exists() does not count it, but the profile still holds it
+            local held = getProfileStats().aliases.temp
+            assert.are.equal(0, exists(id, "alias"), "a killed alias waiting for cleanup should not be counted")
             assert.are.equal(0, isActive(id, "alias"), "a killed alias is no longer active")
             assert.is_false(killAlias(id),
                 "killing an already killed alias achieves nothing and has to say so")
             -- an incoming line runs every unit's deferred cleanup, which is what
             -- finally frees the alias; the answer has to be the same after it
             feedTriggers("\nspec_alias_kill_flush\n")
+            assert.are.equal(held - 1, getProfileStats().aliases.temp, "the cleanup should have freed the killed alias")
             assert.are.equal(0, exists(id, "alias"), "the alias should be gone after kill and cleanup")
             assert.is_false(killAlias(id), "a freed alias cannot be killed either")
+        end)
+
+        it("does not count an alias its own script has just killed", function()
+            _G.AliasSelfKillExistsSpec = nil
+            finally(function() _G.AliasSelfKillExistsSpec = nil end)
+            local id
+            id = tempAlias("^spec_self_kill_exists_alias$", function()
+                killAlias(id)
+                _G.AliasSelfKillExistsSpec = {exists(id, "alias"), isActive(id, "alias"), #findItems(tostring(id), "alias")}
+            end)
+            expandAlias("spec_self_kill_exists_alias", false)
+            assert.are.same({0, 0, 0}, _G.AliasSelfKillExistsSpec, "exists, isActive and findItems inside the alias's own pass")
         end)
 
         it("killAlias returns false the second time inside the alias's own script", function()

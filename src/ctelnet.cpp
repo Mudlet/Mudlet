@@ -65,6 +65,7 @@
 
 #include <array>
 #include <memory>
+#include <utility>
 
 using namespace std::chrono_literals;
 
@@ -508,6 +509,60 @@ QString cTelnet::errorString()
     return mpSocket->errorString();
 }
 
+// search for leading <LF> but skip leading ANSI control sequences
+static void removeLeadingLineFeed(std::string& data)
+{
+    int j = 0;
+    int s = data.size();
+
+    while (j < s) {
+        if (data[j] == 0x1B) {
+            while (j < s) {
+                if (data[j] == 'm') {
+                    goto NEXT;
+                }
+                ++j;
+            }
+        }
+
+        if (data[j] == '\n') {
+            data.erase(j, 1);
+            break;
+        }
+        break;
+    NEXT:
+        ++j;
+    }
+}
+
+// Text not yet handed to TBuffer is in the encoding being replaced, and only
+// TBuffer can drop a character the change leaves incomplete
+void cTelnet::postHeldDataBeforeEncodingChange()
+{
+    if (mpTextAheadOfSubnegotiation && !mpTextAheadOfSubnegotiation->empty()) {
+        std::string textAhead;
+        textAhead.swap(*mpTextAheadOfSubnegotiation);
+        // It may open a prompt, whose leading <LF> gotPrompt() can then no longer see
+        if (mUSE_IRE_DRIVER_BUGFIX && mGA_Driver) {
+            removeLeadingLineFeed(textAhead);
+            mPromptStartPosted = true;
+        }
+        gotRest(textAhead);
+    }
+    if (!mMudData.empty()) {
+        postData();
+    }
+}
+
+// Its handler (a CHARSET request, or a script's for another protocol) can change
+// the encoding, which has to post the text ahead of it in the same read first
+void cTelnet::processSubnegotiation(const std::string& subnegotiation, std::string& textAhead)
+{
+    std::string* const outerTextAhead = std::exchange(mpTextAheadOfSubnegotiation, &textAhead);
+    processTelnetCommand(subnegotiation);
+    mpTextAheadOfSubnegotiation = outerTextAhead;
+}
+
 // newEncoding must be EITHER: one of the FIXED non-translatable values in
 // cTelnet::csmAcceptableEncodings
 // OR "ASCII"
@@ -523,6 +578,7 @@ QPair<bool, QString> cTelnet::setEncoding(const QByteArray& newEncoding, const b
     if (newEncoding.isEmpty() || newEncoding == "ASCII") {
         reportedEncoding = "ASCII";
         if (!mEncoding.isEmpty()) {
+            postHeldDataBeforeEncodingChange();
             // This will disable transcoding on:
             // input in TBuffer::translateToPlainText(...)
             // incoming OOB in TLuaInterpreter::encodeBytes(...)
@@ -557,6 +613,7 @@ QPair<bool, QString> cTelnet::setEncoding(const QByteArray& newEncoding, const b
                          QLatin1String(R"(Encoding ")") % newEncoding % QLatin1String("\" does not exist;\nuse one of the following:\n\"ASCII\", \"") % QLatin1String(fixedUpEncodings.join(R"(", ")"))
                                  % QLatin1String(R"(".)"));
     } else if (mEncoding != newEncoding && ("M_" + mEncoding) != newEncoding) {
+        postHeldDataBeforeEncodingChange();
         encodingChanged(newEncoding);
 
         if (saveValue) {
@@ -938,6 +995,8 @@ void cTelnet::slot_send_login()
     const bool passwordStepArmed = mpHost->hasAutoLoginCredentials();
     if (passwordStepArmed) {
         mTimerPass->start(autoLoginDelay(qsl("autoLoginPasswordDelay"), AUTO_LOGIN_PASSWORD_DELAY_MS));
+    } else {
+        mpHost->reportUnreadableSavedPassword();
     }
     setAutoLoginPending(passwordStepArmed);
 }
@@ -968,6 +1027,8 @@ void cTelnet::slot_send_pass()
     // The box may open for the player; their first character cancels a late send
     setAutoLoginPending(false);
     qDebug() << "Auto-login: reached the password step with no password yet - holding the place for one that arrives later";
+    // A lookup still out at the login step may have been refused since
+    mpHost->reportUnreadableSavedPassword();
 }
 
 // A password that turned up after the auto-login had already passed the password step, which is
@@ -1776,7 +1837,9 @@ bool cTelnet::sendData(QString& data, const bool permitDataSendRequestEvent, con
         event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         event.mArgumentList.append(data);
         event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        ++mSendRequestDispatchDepth;
         mpHost->raiseEvent(event);
+        --mSendRequestDispatchDepth;
     }
 
     if (mpHost->mAllowToSendCommand) {
@@ -3616,20 +3679,16 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                 //unless explicitly requested)
 
                 if (option == OPT_ECHO) {
-                    if (checkEchoAnomalyPattern()) {
-                        sendTelnetOption(TN_DONT, option);
-                        hisOptionState[idxOption] = false;
-                        qDebug() << "ECHO: Rejecting due to anomaly pattern detection";
-                    } else {
-                        sendTelnetOption(TN_DO, option);
-                        hisOptionState[idxOption] = true;
-                        mpHost->setRemoteEchoingActive(true);
-                        qDebug() << "ECHO: Server requesting password mode - enabling content preservation";
+                    // Counted, never refused: refusing ECHO is what keeps the password box shut
+                    checkEchoAnomalyPattern();
+                    sendTelnetOption(TN_DO, option);
+                    hisOptionState[idxOption] = true;
+                    mpHost->setRemoteEchoingActive(true);
+                    qDebug() << "ECHO: Server requesting password mode - enabling content preservation";
 
-                        // The safety timeout against a game that never sends WONT ECHO is
-                        // started by the masked line the player sends, not by this prompt -
-                        // see restartPasswordMaskTimeout().
-                    }
+                    // The safety timeout against a game that never sends WONT ECHO is
+                    // started by the masked line the player sends, not by this prompt -
+                    // see restartPasswordMaskTimeout().
                 } else if (option == OPT_STATUS || option == OPT_TERMINAL_TYPE) {
                     sendTelnetOption(TN_DO, option);
                     hisOptionState.set(idxOption);
@@ -3762,25 +3821,20 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
 
                 if (option == OPT_ECHO) {
                     // Whatever prompt the auto-login's password step found masked is over with
-                    // this, whether or not the release is honoured below - see
-                    // sendOutstandingAutoLoginPassword()
+                    // this - see sendOutstandingAutoLoginPassword()
                     mAutoLoginPasswordMaskWithdrawn = true;
-                    if (mEchoAnomalyDetected) {
-                        qDebug() << "ECHO: Ignoring WONT due to anomaly pattern";
-                    } else {
-                        checkEchoAnomalyPattern();
-                        // Cancel any pending password mode timeout since we got the proper WONT ECHO
-                        if (mTimerPasswordModeTimeout) {
-                            mTimerPasswordModeTimeout->stop();
-                        }
-                        // The server released ECHO right after the masked line, so this was a
-                        // transient password prompt, not character-at-a-time mode: cancel detection.
-                        if (mTimerCharacterModeDetect) {
-                            mTimerCharacterModeDetect->stop();
-                        }
-                        mpHost->setRemoteEchoingActive(false);
-                        qDebug() << "ECHO: Server ending password mode - restoring normal operation and preserved content";
+                    checkEchoAnomalyPattern();
+                    // Cancel any pending password mode timeout since we got the proper WONT ECHO
+                    if (mTimerPasswordModeTimeout) {
+                        mTimerPasswordModeTimeout->stop();
                     }
+                    // The server released ECHO right after the masked line, so this was a
+                    // transient password prompt, not character-at-a-time mode: cancel detection.
+                    if (mTimerCharacterModeDetect) {
+                        mTimerCharacterModeDetect->stop();
+                    }
+                    mpHost->gameReleasedRemoteEcho();
+                    qDebug() << "ECHO: Server ending password mode - restoring normal operation and preserved content";
                 }
 
                 if (option == OPT_COMPRESS) {
@@ -4517,9 +4571,15 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
             const auto type = static_cast<unsigned char>(data[1]);
             // Only access telnetCommand[2] if it exists
             const auto telnetOption = telnetCommand.size() > 2 ? static_cast<unsigned char>(data[2]) : 0;
-            QString msg = telnetCommand.c_str();
-            if (telnetCommand.size() >= 6) {
-                msg = msg.mid(3, telnetCommand.size() - 5);
+            // A subnegotiation can carry any bytes at all, so its payload (unescaped, without the
+            // IAC SB <option> and IAC SE framing) goes over byte for byte; other commands go whole
+            QByteArray payload;
+            if (type == static_cast<unsigned char>(TN_SB)) {
+                if (telnetCommand.size() >= 5) {
+                    payload = QByteArray(data + 3, static_cast<qsizetype>(telnetCommand.size() - 5));
+                }
+            } else {
+                payload = QByteArray(data, static_cast<qsizetype>(telnetCommand.size()));
             }
 
             TEvent event{};
@@ -4529,8 +4589,8 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
             event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
             event.mArgumentList.append(QString::number(telnetOption));
             event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-            event.mArgumentList.append(msg);
-            event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+            event.mArgumentList.append(QString::fromLatin1(payload));
+            event.mArgumentTypeList.append(ARGUMENT_TYPE_BYTES);
             mpHost->raiseEvent(event);
         }
     }
@@ -4598,9 +4658,9 @@ void cTelnet::setATCPVariables(const QByteArray& msg)
             const int roomId = arg.toInt();
             mpHost->mpMap->mRoomIdHash[mProfileName] = roomId;
             if (auto* pR = mpHost->mpMap->mpRoomDB->getRoom(roomId)) {
-                mpHost->mpMap->updateArea(pR->getArea());
+                mpHost->mpMap->updatePlayerArea(pR->getArea());
             } else {
-                mpHost->mpMap->updateArea(-1);
+                mpHost->mpMap->updatePlayerArea(-1);
             }
         }
     }
@@ -4757,8 +4817,14 @@ void cTelnet::setGMCPVariables(const QByteArray& msg)
     }
 
     if (data.trimmed().isEmpty()) { // Example: Core.Ping
+        data = qsl("{}");
+        // A bare Client.Media.Stop or Pause means all of the game's media, so TMedia gets the empty object too
+        const bool allMedia = !packageMessage.compare(qsl("Client.Media.Stop"), Qt::CaseInsensitive) || !packageMessage.compare(qsl("Client.Media.Pause"), Qt::CaseInsensitive);
+        if (mpHost->mAcceptServerMedia && allMedia) {
+            mpHost->mpMedia->parseGMCP(packageMessage, data);
+        }
         // Pass empty table/object to Lua
-        mpHost->mLuaInterpreter.setGMCPTable(packageMessage, qsl("{}"));
+        mpHost->mLuaInterpreter.setGMCPTable(packageMessage, data);
         return;
     }
 
@@ -5316,30 +5382,10 @@ void cTelnet::gotPrompt(std::string& mud_data)
     }
 
     // Patch for servers that need GA/EOR for prompt fixups
-    if (mUSE_IRE_DRIVER_BUGFIX && mGA_Driver) {
-        int j = 0;
-        int s = mMudData.size();
-
-        while (j < s) {
-            // search for leading <LF> but skip leading ANSI control sequences
-            if (mMudData[j] == 0x1B) {
-                while (j < s) {
-                    if (mMudData[j] == 'm') {
-                        goto NEXT;
-                    }
-                    ++j;
-                }
-            }
-
-            if (mMudData[j] == '\n') {
-                mMudData.erase(j, 1);
-                break;
-            }
-            break;
-        NEXT:
-            ++j;
-        }
+    if (mUSE_IRE_DRIVER_BUGFIX && mGA_Driver && !mPromptStartPosted) {
+        removeLeadingLineFeed(mMudData);
     }
+    mPromptStartPosted = false;
 
     postData(true);
     mMudData = "";
@@ -5458,6 +5504,12 @@ void cTelnet::gotRest(std::string& mud_data)
 void cTelnet::slot_timerPosting()
 {
     if (!mIsTimerPosting) {
+        return;
+    }
+    // The flush marker would commit a line held for server-wrap joining just as
+    // the flush itself does, so it waits out the pause too:
+    if (mpHost && mpHost->serverWrapLineHeldForClose()) {
+        mpPostingTimer->start();
         return;
     }
 
@@ -5891,14 +5943,16 @@ void cTelnet::slot_processReplayChunk()
             } else if (insb) {
                 //7. inside IAC SB
                 command += ch;
-                if (iac && (ch == TN_SE)) //IAC SE - end of subcommand
-                {
-                    processTelnetCommand(command);
-                    command = "";
+                if (iac && (ch == TN_SE)) { //IAC SE - end of subcommand
+                    std::string subnegotiation;
+                    subnegotiation.swap(command);
                     iac = false;
                     insb = false;
-                }
-                if (iac) {
+                    processSubnegotiation(subnegotiation, cleandata);
+                } else if (iac) {
+                    if (ch == TN_IAC) { // escaped TN_IAC, as the socket path unescapes it
+                        command.pop_back();
+                    }
                     iac = false;
                 } else if (ch == TN_IAC) {
                     iac = true;
@@ -5937,6 +5991,7 @@ void cTelnet::slot_processReplayChunk()
     if (!cleandata.empty()) {
         gotRest(cleandata);
     }
+    mPromptStartPosted = false;
 
     if (mpHost) {
         mpHost->finalizeMainConsole();
@@ -6290,10 +6345,13 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
                 }
 
                 if (iac && (ch == TN_SE)) { //IAC SE - end of subcommand
-                    processTelnetCommand(command);
-                    command = "";
+                    // The parser is reset first: what the handler posts can run
+                    // triggers that feedTelnet() back in here
+                    std::string subnegotiation;
+                    subnegotiation.swap(command);
                     iac = false;
                     insb = false;
+                    processSubnegotiation(subnegotiation, cleandata);
                 } else if (iac && (ch == TN_IAC)) { // escaped TN_IAC
                     command.pop_back();
                     iac = false;
@@ -6304,13 +6362,17 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
                     // Cf. https://github.com/Mudlet/Mudlet/issues/4385
                     command.pop_back();
                     command += TN_SE;
-                    processTelnetCommand(command);
+                    std::string subnegotiation;
+                    subnegotiation.swap(command);
+                    iac = false;
+                    insb = false;
+                    processSubnegotiation(subnegotiation, cleandata);
 
                     if (!mIncompleteSB) {
                         mIncompleteSB = true;
                         qWarning(R"("TELNET: the server did not properly complete a subnegotiation (code %02x).
 Some data loss is likely - please mention this problem to the game admins.)",
-                                 command[2]);
+                                 subnegotiation[2]);
                     }
 
                     // Re-enter the state machine.
@@ -6362,6 +6424,7 @@ Some data loss is likely - please mention this problem to the game admins.)",
         gameSpoke = true;
         gotRest(cleandata);
     }
+    mPromptStartPosted = false;
 
     // Reprocess data left over after this decompression pass (more compressed
     // data than fit in one output buffer, or plain data past the end of the
@@ -6781,7 +6844,7 @@ bool cTelnet::checkEchoAnomalyPattern()
             mEchoAnomalyDetected = true;
 
             raiseProtocolEvent("sysEchoAnomalyDetected", "");
-            qWarning() << "ECHO anomaly pattern detected - disabling ECHO response to protect TCommandLine";
+            qWarning() << "ECHO anomaly pattern detected - the game is toggling ECHO rapidly; still honoring it so passwords stay hidden";
             return true;
         }
     } else {

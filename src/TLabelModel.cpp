@@ -25,6 +25,8 @@
 #include <QImage>
 #include <QRegularExpression>
 #include <QSvgRenderer>
+#include <QTextDocument>
+#include <QTextDocumentFragment>
 
 TLabelModel::TLabelModel(Host* pHost, const QString& name)
 : mpHost(pHost)
@@ -50,6 +52,7 @@ void TLabelModel::setClick(const int func)
 {
     releaseFunc(mClickFunction, func);
     mClickFunction = func;
+    accessibilityChanged(AccessibilityChange::Role);
 }
 
 void TLabelModel::setDoubleClick(const int func)
@@ -62,6 +65,7 @@ void TLabelModel::setRelease(const int func)
 {
     releaseFunc(mReleaseFunction, func);
     mReleaseFunction = func;
+    accessibilityChanged(AccessibilityChange::Role);
 }
 
 void TLabelModel::setMove(const int func)
@@ -467,4 +471,94 @@ std::optional<QSize> TLabelModel::imageSize(const QString& path)
     }
 
     return image.size();
+}
+
+namespace {
+QString plainName(const QString& labelText)
+{
+    // Labels carry markup and entities such as &nbsp;, and an image leaves an object
+    // replacement character behind, so the text is rendered rather than stripped
+    QString plain = QTextDocumentFragment::fromHtml(labelText).toPlainText();
+    plain.remove(QChar::ObjectReplacementCharacter);
+    return plain.simplified();
+}
+} // namespace
+
+QString TLabelModel::effectiveAccessibleName() const
+{
+    if (!mAccessibleName.isEmpty()) {
+        return mAccessibleName;
+    }
+    if (QString name = plainName(mText); !name.isEmpty()) {
+        return name;
+    }
+    // Qt shows a tooltip that is not rich text literally, so it is read that way too
+    return Qt::mightBeRichText(mToolTip) ? plainName(mToolTip) : mToolTip.simplified();
+}
+
+bool TLabelModel::namedByToolTip() const
+{
+    return mAccessibleName.isEmpty() && plainName(mText).isEmpty() && !mToolTip.isEmpty();
+}
+
+bool TLabelModel::actsAsButton() const
+{
+    return !mClickThrough && mAccessibleButton.value_or(mClickFunction != 0 || mReleaseFunction != 0);
+}
+
+// Each setter tells the view only of a real change, as a screen reader may say the label again on hearing of one
+void TLabelModel::setAccessibleName(const QString& name)
+{
+    if (mAccessibleName == name) {
+        return;
+    }
+    mAccessibleName = name;
+    accessibilityChanged(AccessibilityChange::Name);
+}
+
+void TLabelModel::setAccessibleButton(std::optional<bool> button)
+{
+    if (mAccessibleButton == button) {
+        return;
+    }
+    mAccessibleButton = button;
+    accessibilityChanged(AccessibilityChange::Role);
+}
+
+void TLabelModel::setClickThrough(bool clickThrough)
+{
+    if (mClickThrough == clickThrough) {
+        return;
+    }
+    mClickThrough = clickThrough;
+    accessibilityChanged(AccessibilityChange::Role);
+}
+
+void TLabelModel::setText(const QString& text)
+{
+    if (mText == text) {
+        return;
+    }
+    mText = text;
+    if (mAccessibleName.isEmpty()) {
+        accessibilityChanged(AccessibilityChange::Name);
+    }
+}
+
+void TLabelModel::setToolTip(const QString& toolTip)
+{
+    if (mToolTip == toolTip) {
+        return;
+    }
+    mToolTip = toolTip;
+    if (mAccessibleName.isEmpty()) {
+        accessibilityChanged(AccessibilityChange::Name);
+    }
+}
+
+void TLabelModel::accessibilityChanged(AccessibilityChange change) const
+{
+    if (mAccessibilityChanged) {
+        mAccessibilityChanged(change);
+    }
 }

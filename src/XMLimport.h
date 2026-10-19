@@ -56,10 +56,11 @@ public:
     virtual ~XMLimport() {}
     std::pair<bool, QString> importPackage(QFile*, QString packageName = QString(), int moduleFlag = 0, QString* pVersionString = nullptr);
     std::pair<EditorViewType, int> importFromClipboard();
-    // Items whose Lua body failed to compile or run, as "<item name>: <error>". They are still
-    // imported so they can be fixed, so importPackage()'s result says nothing about them.
+    // Every error in an item whose Lua body or pattern failed to compile or run, as "<item name>: <error>",
+    // so one item can have several. They are still imported so they can be fixed, so importPackage()'s
+    // result says nothing about them.
     const QStringList& itemsWithErrors() const { return mItemsWithErrors; }
-    // The same items by name only, for the console: the Lua error is for the item's author, not the installer.
+    // Each of those items once, by name only, for the console: the error is for the item's author, not the installer.
     const QStringList& itemsWithErrorNames() const { return mItemsWithErrorNames; }
     // Whether the file got as far as an item (even one it broke inside), a variable, a help URL or profile settings
     bool readAnything() const { return gotTrigger || gotTimer || gotAlias || gotKey || gotAction || gotScript || gotOtherContent; }
@@ -94,6 +95,7 @@ private:
     void readHelpPackage();
 
     void readUnknownElement(const QString&);
+    void recordItemErrors(const QString& itemName, const QStringList& errors, qsizetype errorsAt, qsizetype namesAt);
 
     void readHost(Host*);
     bool readHostColorElement(Host*, QStringView elementName);

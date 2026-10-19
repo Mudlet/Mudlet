@@ -1826,6 +1826,19 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
+          <item row="2" column="0" colspan="2">
+           <widget class="QCheckBox" name="checkBox_folderView">
+            <property name="toolTip">
+             <string>&lt;p&gt;Adds a &lt;b&gt;Folders&lt;/b&gt; button to the editor's item toolbar. It shows triggers, aliases, scripts, timers, keys and buttons together, grouped by folder. Folders with the same name in different item types are shown as one folder.&lt;/p&gt;</string>
+            </property>
+            <property name="accessibleDescription">
+             <string>Adds a Folders button to the editor's item toolbar. It shows triggers, aliases, scripts, timers, keys and buttons together, grouped by folder. Folders with the same name in different item types are shown as one folder.</string>
+            </property>
+            <property name="text">
+             <string>Show a Folders view of all item types</string>
+            </property>
+           </widget>
+          </item>
          </layout>
         </widget>
        </item>
@@ -3002,6 +3015,26 @@ you can use it but there could be issues with aligning columns of text</string>
               </widget>
              </item>
             </layout>
+           </widget>
+          </item>
+          <item row="4" column="0">
+           <widget class="QLabel" name="label_mapStyle">
+            <property name="text">
+             <string>Modern 3D map style:</string>
+            </property>
+            <property name="buddy">
+             <cstring>comboBox_mapStyle</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="1">
+           <widget class="QComboBox" name="comboBox_mapStyle">
+            <property name="toolTip">
+             <string>&lt;p&gt;How the modern 3D mapper draws the map. Scripts can set it with setConfig(&quot;mapStyle&quot;, name).&lt;/p&gt;</string>
+            </property>
+            <property name="accessibleDescription">
+             <string>How the modern 3D mapper draws the map. Scripts can set it with setConfig("mapStyle", name).</string>
+            </property>
            </widget>
           </item>
          </layout>
@@ -5603,6 +5636,7 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>checkBox_showBidi</tabstop>
   <tabstop>checkBox_showLineFeedsAndParagraphs</tabstop>
   <tabstop>checkBox_showIdNumbers</tabstop>
+  <tabstop>checkBox_folderView</tabstop>
   <tabstop>pushButton_foreground_color</tabstop>
   <tabstop>pushButton_command_line_foreground_color</tabstop>
   <tabstop>pushButton_command_foreground_color</tabstop>
