@@ -221,14 +221,11 @@ TAudioMixer::TAudioMixer()
 
 TAudioMixer::~TAudioMixer()
 {
-    QMetaObject::invokeMethod(
-            mpOutput,
-            [this]() {
-                mpOutput->close();
-            },
-            Qt::BlockingQueuedConnection);
+    // Closed from here once the thread has finished: this goes as the application closes, when Qt
+    // delivers no more events, so a close queued to the thread would never run
     mThread.quit();
     mThread.wait();
+    mpOutput->close();
     delete mpOutput;
 }
 
