@@ -87,6 +87,7 @@ private slots:
         qputenv("MUDLET_MATCH_THRESHOLD", "1");
         qputenv("MUDLET_MATCH_FLOOD_LINES", "1");
         qputenv("MUDLET_MATCH_SPIN_US", "0");
+        qputenv("MUDLET_MATCH_SAMPLE_EVERY", "0");
 
         mudlet::start();
         mudlet::self()->setupConfig();
@@ -141,13 +142,135 @@ private slots:
         const quint32 passId = TTrigger::nextPrescanPassId();
         QVERIFY(pool.prescan(&trigger, 1, passId, subject.constData(), static_cast<int>(subject.size()), line, unprepared, false));
 
-        TTrigger::setPrescanPassId(passId);
+        TTrigger::setPrescanPass(passId, subject.constData(), static_cast<int>(subject.size()));
         const TUtf8Subject matchSubject(subject.constData(), static_cast<int>(subject.size()));
         const bool matched = trigger->match(matchSubject, line, 0, 0, &unprepared);
-        TTrigger::setPrescanPassId(0);
+        TTrigger::setPrescanPass(0, nullptr, 0);
         QVERIFY(matched);
         QCOMPARE(luaInteger(mpHost, "bigramHits"), 1);
         mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("killTrigger(bigramTriggerId)"));
+    }
+
+    // The verdict the statistics report gives on whether the pool has paid for itself
+    void reportVerdictNeedsEnoughSamplesAndAClearDifference()
+    {
+        using Report = TriggerMatchPool::Report;
+        Report report;
+        QCOMPARE(report.verdict(), Report::Verdict::NotEnoughData);
+
+        report.pooledLines = 1000;
+        report.pooledNanoseconds = 1000 * 50'000;
+        report.sampledLines = Report::scmSampledLinesForVerdict - 1;
+        report.sampledNanoseconds = static_cast<qint64>(report.sampledLines) * 100'000;
+        QCOMPARE(report.verdict(), Report::Verdict::NotEnoughData);
+
+        report.sampledLines = Report::scmSampledLinesForVerdict;
+        report.sampledNanoseconds = static_cast<qint64>(report.sampledLines) * 100'000;
+        QCOMPARE(report.verdict(), Report::Verdict::WorthIt);
+        // 50 µs a line saved on 1000 lines
+        QCOMPARE(report.savedNanoseconds(), 1000 * 50'000);
+
+        report.sampledNanoseconds = static_cast<qint64>(report.sampledLines) * 51'000;
+        QCOMPARE(report.verdict(), Report::Verdict::AboutEven);
+
+        report.sampledNanoseconds = static_cast<qint64>(report.sampledLines) * 25'000;
+        QCOMPARE(report.verdict(), Report::Verdict::NotWorthIt);
+        QVERIFY(report.savedNanoseconds() < 0);
+
+        report.pooledLines = 0;
+        report.pooledNanoseconds = 0;
+        QCOMPARE(report.verdict(), Report::Verdict::NotEnoughData);
+    }
+
+    // One slow line - a garbage collection, a slow script - must not decide the verdict on its own
+    void reportCountsAnOutlyingLineAtFourTimesTheAverage()
+    {
+        TriggerMatchPool& pool = TriggerMatchPool::instance();
+        if (pool.workerCount() == 0) {
+            QSKIP("the pool needs a second core before it starts a helper");
+        }
+        const TriggerMatchPool::Settings original = pool.settings();
+        TriggerMatchPool::Settings fresh = original;
+        fresh.threshold = original.threshold + 1;
+        pool.configure(fresh);
+        for (int i = 0; i < 8; ++i) {
+            pool.recordLine(false, 10'000);
+        }
+        pool.recordLine(false, 10'000'000);
+        QCOMPARE(pool.report().sampledNanoseconds, qint64{8 * 10'000 + 40'000});
+
+        // Before there is an average to compare with as well: the first few are capped by their median
+        pool.recordLine(true, 10'000'000);
+        for (int i = 0; i < 7; ++i) {
+            pool.recordLine(true, 10'000);
+        }
+        QCOMPARE(pool.report().pooledNanoseconds, qint64{40'000 + 7 * 10'000});
+        pool.configure(original);
+    }
+
+    // Lines the pool would take are matched without it once in sampleEvery, still firing their triggers
+    void sampledLinesAreMatchedWithoutThePool()
+    {
+        TriggerMatchPool& pool = TriggerMatchPool::instance();
+        if (pool.workerCount() == 0) {
+            QSKIP("the pool needs a second core before it starts a helper");
+        }
+        const TriggerMatchPool::Settings original = pool.settings();
+        TriggerMatchPool::Settings everyLine = original;
+        // A line is judged by the searches of the one before, so only a line after a miss is one the pool takes
+        everyLine.sampleEvery = 1;
+        pool.configure(everyLine);
+        const quint64 prescansBefore = pool.prescanCount();
+        mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("sampleCount = 0\n"
+                                                                 "sampleTrigger = tempRegexTrigger('^sample$', [[sampleCount = sampleCount + 1]])\n"
+                                                                 "feedTriggers('a sample in the middle\\n')\n"
+                                                                 "feedTriggers('sample\\n')\n"
+                                                                 "feedTriggers('a sample in the middle\\n')\n"
+                                                                 "feedTriggers('sample\\n')\n"
+                                                                 "killTrigger(sampleTrigger)\n"));
+        QCOMPARE(luaInteger(mpHost, "sampleCount"), 2);
+        QCOMPARE(pool.prescanCount(), prescansBefore);
+        QCOMPARE(pool.report().pooledLines, quint64{0});
+        QVERIFY2(pool.report().sampledLines >= 2, "the lines the pool would have taken were not sampled");
+        pool.configure(original);
+    }
+
+    // The settings dialog switches the pool on and off while Mudlet runs
+    void configureStopsAndRestartsTheHelpers()
+    {
+        TriggerMatchPool& pool = TriggerMatchPool::instance();
+        if (pool.workerCount() == 0) {
+            QSKIP("the pool needs a second core before it starts a helper");
+        }
+        const TriggerMatchPool::Settings original = pool.settings();
+        TriggerMatchPool::Settings off = original;
+        off.threads = 0;
+        pool.configure(off);
+        QCOMPARE(pool.workerCount(), 0);
+
+        const quint64 prescansBefore = pool.prescanCount();
+        mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("restartCount = 0\n"
+                                                                 "restartTrigger = tempRegexTrigger('^restart$', [[restartCount = restartCount + 1]])\n"
+                                                                 "feedTriggers('a restart in the middle\\n')\n"
+                                                                 "feedTriggers('restart\\n')\n"));
+        QCOMPARE(pool.prescanCount(), prescansBefore);
+        QCOMPARE(luaInteger(mpHost, "restartCount"), 1);
+
+        pool.configure(original);
+        QCOMPARE(pool.workerCount(), 2);
+        QCOMPARE(pool.report().pooledLines + pool.report().sampledLines, quint64{0});
+        // The main thread would run every chunk itself if the new helper had quit at once, so ask it
+        QThread::sleep(50ms);
+        QCOMPARE(pool.runningHelperCount(), 1);
+        mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("feedTriggers('a restart in the middle\\n')\n"
+                                                                 "feedTriggers('restart\\n')\n"
+                                                                 "killTrigger(restartTrigger)\n"));
+        QVERIFY2(pool.prescanCount() > prescansBefore, "the restarted helpers never took a line");
+        QCOMPARE(luaInteger(mpHost, "restartCount"), 2);
+        QVERIFY2(pool.report().pooledLines >= 1, "a line the pool took was not timed for the statistics");
+
+        pool.configure(pool.settings());
+        QVERIFY2(pool.report().pooledLines >= 1, "configuring the settings it already had restarted the statistics");
     }
 
     void shutdownWakesParkedHelper()
@@ -184,6 +307,12 @@ private slots:
         QCOMPARE(luaInteger(mpHost, "needleCount"), 2);
 
         TriggerMatchPool::shutdown();
+        QCOMPARE(pool.workerCount(), 0);
+
+        TriggerMatchPool::Settings restart = pool.settings();
+        restart.threads = 2;
+        restart.threshold += 1;
+        pool.configure(restart);
         QCOMPARE(pool.workerCount(), 0);
     }
 };
