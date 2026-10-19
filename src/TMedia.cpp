@@ -140,9 +140,6 @@ TMedia::TMedia(Host* pHost, const QString& profileName)
 
     mpNetworkAccessManager = new QNetworkAccessManager(this);
     connect(mpNetworkAccessManager, &QNetworkAccessManager::finished, this, &TMedia::slot_writeFile);
-
-    // Until the check answers, sounds play unmixed for good; a game's first ones come once it connects
-    TMediaVoice::probeBackend();
 }
 
 void TMedia::playMedia(TMediaData& mediaData)

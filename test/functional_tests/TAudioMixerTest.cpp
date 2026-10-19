@@ -311,13 +311,15 @@ private slots:
     }
 
     // A backend that is known not to feed a voice keeps every player on an output of its own
-    // A backend nobody named is checked as the profile loads, so the profile's first sound need not wait for it
-    void test_aProfilesFirstSoundIsMixed()
+    // What main() starts as Mudlet opens: once the check of a backend nobody named has answered, even
+    // the first sound is mixed
+    void test_aCheckedBackendMixesTheFirstSound()
     {
         if (!qEnvironmentVariable("QT_MEDIA_BACKEND").isEmpty()) {
             QSKIP("A backend is named, so there is nothing to check before the first sound.");
         }
-        QVERIFY2(TMediaVoice::probeStarted(), "Loading a profile did not start checking the media backend.");
+        TMediaVoice::probeBackend();
+        QVERIFY(TMediaVoice::probeStarted());
         SKIP_OR_FAIL_WITHOUT(QTest::qWaitFor(
                                      []() {
                                          return TMediaVoice::probePassed();
