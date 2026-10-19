@@ -57,8 +57,9 @@ private:
     const QString mLocalhost = qsl("localhost");
     quint16 mPort = 0;
 
-    // A full default-package profile measures 3: the starter UI's chat capture
-    // tree and its vitals prefilter, plus one folder from another package.
+    // A full default-package profile measures 4: the starter UI's chat capture
+    // tree, its vitals prefilter and its enemy condition trigger, plus one
+    // folder from another package.
     // Nesting hides growth from this count, so kMaxGatePatterns is what tracks
     // the per-line cost.
     static constexpr int kMaxRootTriggers = 5;

@@ -2329,6 +2329,161 @@ describe("Tests UI functions", function()
     end)
   end)
 
+  describe("Test the starter UI's enemy from fight sentences", function()
+    if not (type(BaseUI) == "table" and type(BaseUI.readCondition) == "function") then
+      it("needs the base UI package installed", function()
+        pending("BaseUI.readCondition is unavailable in this profile")
+      end)
+      return
+    end
+
+    local saved, renders
+
+    before_each(function()
+      saved = {
+        renderVitals = BaseUI.renderVitals,
+        dormant = BaseUI.dormant,
+        lastCondition = BaseUI.lastCondition,
+      }
+      renders = 0
+      BaseUI.renderVitals = function()
+        renders = renders + 1
+      end
+      BaseUI.dormant = function() return false end
+      BaseUI.forgetTextEnemy()
+      BaseUI.lastCondition = nil
+      renders = 0
+    end)
+
+    after_each(function()
+      BaseUI.forgetTextEnemy()
+      BaseUI.renderVitals = saved.renderVitals
+      BaseUI.dormant = saved.dormant
+      BaseUI.lastCondition = saved.lastCondition
+    end)
+
+    local function see(text)
+      local subject, phrase = rex.match(text, BaseUI.conditionPattern)
+      if subject then
+        BaseUI.readCondition(subject, phrase)
+      end
+      return subject, phrase
+    end
+
+    it("should read SvenskMUD's seven-step scale from its second sentence on", function()
+      see("Kaninen är i toppform.")
+      assert.is_nil(BaseUI.textEnemy)
+      assert.are.equal(0, renders)
+      see("Kaninen är i toppform.")
+      assert.are.same({ name = "Kaninen", percent = 100, label = "Kaninen är i toppform" }, BaseUI.textEnemy)
+      see("Kaninen är tagen.")
+      assert.are.equal(4 / 7 * 100, BaseUI.textEnemy.percent)
+      assert.are.equal("Kaninen är tagen", BaseUI.textEnemy.label)
+      see("Kaninen är nästan DÖD.")
+      assert.are.equal(1 / 7 * 100, BaseUI.textEnemy.percent)
+      assert.is_not_nil(BaseUI.textEnemyTimer)
+    end)
+
+    it("should read the CircleMUD and ROM diagnose sentences", function()
+      see("The cityguard has a few scratches.")
+      see("The cityguard looks pretty hurt.")
+      assert.are.same({ name = "The cityguard", percent = 2 / 7 * 100, label = "The cityguard looks pretty hurt" },
+        BaseUI.textEnemy)
+    end)
+
+    it("should drop the enemy when the game reports it dead", function()
+      see("Älgen är sliten.")
+      see("Älgen är tagen.")
+      assert.is_not_nil(BaseUI.textEnemy)
+      see("Kaninen dog.")
+      assert.is_not_nil(BaseUI.textEnemy)
+      see("Älgen dog.")
+      assert.is_nil(BaseUI.textEnemy)
+      assert.is_nil(BaseUI.textEnemyTimer)
+    end)
+
+    it("should keep the enemy through a single sentence about someone else", function()
+      see("Svartalfen är sliten.")
+      see("Svartalfen är tagen.")
+      see("Odöd är i toppform.")
+      assert.are.equal("Svartalfen", BaseUI.textEnemy.name)
+    end)
+
+    it("should never take the player's own condition for an enemy", function()
+      see("Du är sliten.")
+      see("Du är sliten.")
+      see("You are in excellent condition.")
+      assert.is_nil(BaseUI.textEnemy)
+    end)
+
+    it("should leave chat, markup and longer sentences alone", function()
+      for _, text in ipairs({
+        "Bob says, 'The orc is in awful condition.'",
+        "[vind]: Istel är tagen.",
+        "<b>Orc</b> is in awful condition.",
+        "The orc has a few scratches and limps away.",
+        "Kaninen är tagen av vargen.",
+      }) do
+        assert.is_nil(see(text), text)
+      end
+    end)
+
+    it("should be what a fed line reaches through the trigger", function()
+      local created = not BaseUI.conditionTriggerId
+      BaseUI.createConditionTrigger()
+      finally(function()
+        if created then
+          BaseUI.killConditionTrigger()
+        end
+      end)
+      feedTriggers("Kaninen är tagen.\n")
+      feedTriggers("Kaninen är illa tilltygad.\n")
+      assert.are.equal("Kaninen är illa tilltygad", BaseUI.textEnemy and BaseUI.textEnemy.label)
+    end)
+
+    describe("painted", function()
+      local painted, paintSaved
+
+      before_each(function()
+        paintSaved = {
+          build = BaseUI.build,
+          checkMapData = BaseUI.checkMapData,
+          layoutDock = BaseUI.layoutDock,
+          ensureGauge = BaseUI.ensureGauge,
+          vitalsData = BaseUI.vitalsData,
+          gauges = BaseUI.gauges,
+        }
+        BaseUI.renderVitals = saved.renderVitals
+        BaseUI.build = function() end
+        BaseUI.checkMapData = function() end
+        BaseUI.layoutDock = function() end
+        BaseUI.vitalsData, BaseUI.gauges, painted = {}, {}, {}
+        BaseUI.ensureGauge = function(key)
+          return { setValue = function(_, value, max, text)
+            painted[key] = { value, max, text }
+          end }
+        end
+      end)
+
+      after_each(function()
+        -- the outer teardown would otherwise repaint the real dock
+        BaseUI.textEnemy = nil
+        for key, value in pairs(paintSaved) do
+          BaseUI[key] = value
+        end
+      end)
+
+      it("should label the enemy bar with the game's sentence until a protocol reports one", function()
+        BaseUI.textEnemy = { name = "Kaninen", percent = 4 / 7 * 100, label = "Kaninen är tagen" }
+        BaseUI.renderVitals()
+        assert.are.same({ 4 / 7 * 100, 100, "Kaninen är tagen" }, painted.enemy)
+        BaseUI.vitalsData.enemy = { percent = 30 }
+        BaseUI.renderVitals()
+        assert.are.same({ 30, 100, "Enemy 30%" }, painted.enemy)
+      end)
+    end)
+  end)
+
   -- raised rather than called, so the handler registration is tested as well
   describe("Test BaseUI.updateVitals", function()
     if not (type(BaseUI) == "table" and type(BaseUI.updateVitals) == "function") then
