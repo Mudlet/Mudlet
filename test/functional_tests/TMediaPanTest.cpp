@@ -550,6 +550,49 @@ private slots:
                  qPrintable(qsl("Moved left, the sound ended at %1 left and %2 right.").arg(heard.first).arg(heard.second)));
     }
 
+    // Turning before any audio leaves an update's blend out of the sound's own image to run its course
+    void test_aTurnBeforeAnyAudioLeavesAnUpdatesBlendRunning()
+    {
+        SKIP_OR_FAIL_WITHOUT(backendPlaces() ? QString() : noPanningReason());
+        TAudioMixer* mixer = TAudioMixer::self();
+        mixer->setOutputSuspended(true);
+        auto resume = qScopeGuard([mixer]() {
+            mixer->setOutputSuspended(false);
+        });
+
+        TMediaData data = soundData(writeClip(qsl("overhead.wav"), clipMs, 8000));
+        data.setMediaKey(qsl("overhead"));
+        data.setMediaVolume(100);
+        media()->playMedia(data);
+        TMediaData selection;
+        selection.setMediaProtocol(TMediaData::MediaProtocolAPI);
+        selection.setMediaType(TMediaData::MediaTypeSound);
+        selection.setMediaKey(qsl("overhead"));
+        media()->updateMedia(selection, std::nullopt, std::nullopt, qsl("east"), 3000);
+        QVERIFY(media()->setListenerFacing(qsl("north")));
+
+        QVERIFY2(waitForStarted(), "The sound never started playing.");
+        SKIP_OR_FAIL_WITHOUT(waitForPlacedAudio() ? QString() : noPanningReason());
+        const int voice = media()->placedSound(qsl("overhead"))->mixerVoice();
+        QVERIFY2(QTest::qWaitFor(
+                         [&]() {
+                             return mixer->queuedSamples(voice) >= 200 * 48 * 2;
+                         },
+                         QDeadlineTimer(5s)),
+                 "The sound's audio never reached the shared output.");
+
+        const auto [left, right] = loudestOnEachSide(20);
+        QVERIFY2(left > 0.1F, qPrintable(qsl("Blending east over 3 s from as it was recorded, it began at %1 left and %2 right.").arg(left).arg(right)));
+        std::pair<float, float> heard;
+        QVERIFY2(comesOut(
+                         [](const float l, const float r) {
+                             return l < 1e-3F && r > 0.1F;
+                         },
+                         heard,
+                         6s),
+                 qPrintable(qsl("Moved east, the sound ended at %1 left and %2 right.").arg(heard.first).arg(heard.second)));
+    }
+
     // A track stopped before it was heard leaves no glide behind for the next one on its player
     void test_theNextSoundOnAPlayerWhoseTrackWasNeverHeardStartsPlaced()
     {
@@ -641,6 +684,70 @@ private slots:
 
         const auto [left, right] = loudestOnEachSide(20);
         QVERIFY2(right > left, qPrintable(qsl("Moved from east to west over 3 s between passes, the next pass began at %1 left and %2 right.").arg(left).arg(right)));
+        std::pair<float, float> heard;
+        QVERIFY2(comesOut(
+                         [](const float l, const float r) {
+                             return l > 0.1F && r < 1e-3F;
+                         },
+                         heard,
+                         6s),
+                 qPrintable(qsl("Moved west between passes, the loop ended up at %1 left and %2 right.").arg(heard.first).arg(heard.second)));
+    }
+
+    // Each pass of a loop that fades in starts silent, not from the level the last pass ended at
+    void test_eachPassOfALoopThatFadesInStartsSilent()
+    {
+        SKIP_OR_FAIL_WITHOUT(backendPlaces() ? QString() : noPanningReason());
+        TAudioMixer* mixer = TAudioMixer::self();
+        mixer->setOutputSuspended(true);
+        auto resume = qScopeGuard([mixer]() {
+            mixer->setOutputSuspended(false);
+        });
+
+        TMediaData data = soundData(writeClip(qsl("swell.wav"), shortClipMs, 8000));
+        data.setMediaVolume(100);
+        data.setMediaFadeIn(100);
+        data.setMediaLoops(-1);
+        media()->playMedia(data);
+        QVERIFY2(waitForStarted(), "The looping sound never started playing.");
+        QVERIFY2(QTest::qWaitFor(
+                         [&]() {
+                             return media()->firstMixedVoice() && media()->firstMixedVoice()->receivedAudio();
+                         },
+                         QDeadlineTimer(5s)),
+                 "The looping sound's audio never reached its voice.");
+        const TMediaVoice* voice = media()->firstMixedVoice();
+        const int mixerVoice = voice->mixerVoice();
+
+        // Mixed away during the gap, so what is queued next is only the new pass
+        bool emptiedInTheGap = false;
+        for (int attempt = 0; attempt < 5 && !emptiedInTheGap; ++attempt) {
+            QVERIFY2(QTest::qWaitFor(
+                             [&]() {
+                                 return voice->receivedAudio();
+                             },
+                             QDeadlineTimer(5s)),
+                     "The loop's pass never reached the voice.");
+            QVERIFY2(QTest::qWaitFor(
+                             [&]() {
+                                 return !voice->receivedAudio();
+                             },
+                             QDeadlineTimer(5s)),
+                     "The loop never reached the gap between two passes.");
+            std::vector<float> lastPass(static_cast<size_t>(mixer->queuedSamples(mixerVoice)));
+            mixer->mixForTests(lastPass.data(), static_cast<qint64>(lastPass.size()));
+            emptiedInTheGap = !voice->receivedAudio() && mixer->queuedSamples(mixerVoice) == 0;
+        }
+        QVERIFY2(emptiedInTheGap, "Never emptied the shared output between two passes.");
+        QVERIFY2(QTest::qWaitFor(
+                         [&]() {
+                             return mixer->queuedSamples(mixerVoice) >= 200 * 48 * 2;
+                         },
+                         QDeadlineTimer(5s)),
+                 "The loop's next pass never reached the shared output.");
+
+        const auto [left, right] = loudestOnEachSide(5);
+        QVERIFY2(left < 0.05F && right < 0.05F, qPrintable(qsl("Fading in from silence, the next pass began at %1 left and %2 right.").arg(left).arg(right)));
     }
 
     // Overhead and then off to one side: placed again before it has finished blending back, it still glides

@@ -67,7 +67,7 @@ public:
     float pan() const { return mRequestedPan; }
     bool placed() const { return mPlaced; }
     void unplace(int glideMilliseconds);
-    // A new track, not a loop's next pass: changes jump until it is heard
+    // A new track, not a loop's next pass: drops whatever the last one still had waiting
     void beginTrack();
     void setMuted(bool muted);
     bool muted() const { return mMuted; }
@@ -114,6 +114,7 @@ private:
         void applyTo(Glide& glide);
     };
 
+    bool heardFor(int glideMilliseconds) const;
     void audioBufferReceived(const QAudioBuffer& buffer);
     void checkForSilence();
     static void probeUnnamedBackend();

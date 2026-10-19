@@ -289,7 +289,14 @@ void TMediaVoice::setGain(const float gain, const int glideMilliseconds)
         return;
     }
     mRequestedGain = level;
-    mGainRequest.set(level, glideMilliseconds, mTrackHeard);
+    mGainRequest.set(level, glideMilliseconds, heardFor(glideMilliseconds));
+}
+
+// Under mRequestMutex. Between a loop's passes only a change given time glides on from the last pass:
+// one asked for at once, as a fade's first tick, is where the next pass starts.
+bool TMediaVoice::heardFor(const int glideMilliseconds) const
+{
+    return mTrackHeard && (mReceivedAudio || glideMilliseconds > 0);
 }
 
 qint64 TMediaVoice::glideFramesFor(const int milliseconds)
@@ -301,18 +308,18 @@ void TMediaVoice::setPan(const float pan, const int glideMilliseconds)
 {
     const float position = std::clamp(pan, -1.0F, 1.0F);
     const QMutexLocker lock(&mRequestMutex);
-    const bool heard = mTrackHeard;
+    const bool heard = heardFor(glideMilliseconds);
     // A sound moves on from its last pan where that is heard: placed or blending out as it plays, or,
     // before any audio, where a pan still to be applied starts it placed. Otherwise it moves out of its
     // own stereo image to the pan, not in from the centre.
-    const bool panHeard = heard ? (mPlaced || mPanHeard) : (mPanRequest.waitingStart() && mPlacementRequest.waitingStart().value_or(0.0F) > 0.0F);
-    if (panHeard) {
+    const bool movesOn = heard ? (mPlaced || mPanHeard) : (mPanRequest.waitingStart() && mPlacementRequest.waitingStart().value_or(0.0F) > 0.0F);
+    if (movesOn) {
         mPanRequest.set(position, glideMilliseconds, heard);
     } else {
         mPanRequest.jumpTo(position);
     }
     // A new track starts fully placed, even on a player whose last track stopped part way into a glide
-    if (!heard || !mPlaced) {
+    if (!mPlaced || (!mTrackHeard && !mPlacementRequest.waitingStart())) {
         mPlacementRequest.set(1.0F, glideMilliseconds, heard);
     }
     mRequestedPan = position;
@@ -322,7 +329,7 @@ void TMediaVoice::setPan(const float pan, const int glideMilliseconds)
 void TMediaVoice::unplace(const int glideMilliseconds)
 {
     const QMutexLocker lock(&mRequestMutex);
-    mPlacementRequest.set(0.0F, glideMilliseconds, mTrackHeard);
+    mPlacementRequest.set(0.0F, glideMilliseconds, heardFor(glideMilliseconds));
     mPlaced = false;
 }
 
@@ -330,7 +337,9 @@ void TMediaVoice::beginTrack()
 {
     const QMutexLocker lock(&mRequestMutex);
     mTrackHeard = false;
-    mPanHeard = false;
+    for (Request* request : {&mGainRequest, &mPanRequest, &mPlacementRequest}) {
+        request->applied = request->serial;
+    }
 }
 
 void TMediaVoice::setMuted(const bool muted)
