@@ -99,6 +99,13 @@ bool TMediaVoice::unsupported()
     return false;
 }
 
+void TMediaVoice::probeBackend()
+{
+    if (qEnvironmentVariable("QT_MEDIA_BACKEND").isEmpty()) {
+        probeUnnamedBackend();
+    }
+}
+
 // Plays the probe sound once, through a buffer output alone: if any audio comes out, the backend
 // feeds the shared output and later players are mixed. Until then they keep outputs of their own.
 void TMediaVoice::probeUnnamedBackend()

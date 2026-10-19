@@ -71,6 +71,11 @@ public:
     // Whether the backend cannot feed the shared output. QAudioBufferOutput only delivers audio on Qt's
     // FFmpeg backend: so when another is named, and while one nobody named has not yet been seen to.
     static bool unsupported();
+    // Starts the one-time check of a backend nobody named, so it has answered before the first sound
+    static void probeBackend();
+    // For the media tests
+    static bool probeStarted() { return smProbeStarted; }
+    static bool probePassed() { return smProbePassed; }
 
 signals:
     // The player has played for a while without handing over any audio. Whoever owns this voice

@@ -311,6 +311,26 @@ private slots:
     }
 
     // A backend that is known not to feed a voice keeps every player on an output of its own
+    // A backend nobody named is checked as the profile loads, so the profile's first sound need not wait for it
+    void test_aProfilesFirstSoundIsMixed()
+    {
+        if (!qEnvironmentVariable("QT_MEDIA_BACKEND").isEmpty()) {
+            QSKIP("A backend is named, so there is nothing to check before the first sound.");
+        }
+        QVERIFY2(TMediaVoice::probeStarted(), "Loading a profile did not start checking the media backend.");
+        SKIP_OR_FAIL_WITHOUT(QTest::qWaitFor(
+                                     []() {
+                                         return TMediaVoice::probePassed();
+                                     },
+                                     QDeadlineTimer(6s))
+                                     ? QString()
+                                     : noMixingReason());
+
+        TMediaData first = clipData(writeClip(qsl("first.wav"), 3000), TMediaData::MediaTypeSound);
+        media()->playMedia(first);
+        QCOMPARE(media()->playersMixed(), 1);
+    }
+
     void test_aBackendThatCannotFeedTheMixKeepsOutputsOfItsOwn()
     {
         if (backendFeedsTheMix()) {
