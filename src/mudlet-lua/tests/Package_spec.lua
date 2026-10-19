@@ -410,7 +410,7 @@ describe("Tests the functionality of installPackage", function()
     -- no package XML in it, so the install is refused once it has been unpacked
     writeArchiveOfEmptyFiles(archive, {"mudlet-spec-stray.txt"})
 
-    local reason = installUntilRefused(installPackage, archive)
+    local reason = installExpectingRefusal(installPackage, archive)
 
     assert.is_true(contains(reason, "no package found"), tostring(reason))
     assert.is_false(packageInstalled(name))
@@ -440,7 +440,7 @@ describe("Tests the functionality of installPackage", function()
       lfs.rmdir(leftover)
     end)
 
-    local ok, err = installUntilConfirmed(installPackage, fixtureDirectory .. "/" .. minimalPackage .. ".mpackage",
+    local ok, err = installAndConfirm(installPackage, fixtureDirectory .. "/" .. minimalPackage .. ".mpackage",
                                           function() return packageInstalled(minimalPackage) end, "the fixture package over its leftover folder")
 
     assert.is_true(ok, tostring(err))
@@ -475,7 +475,7 @@ describe("Tests the functionality of installPackage", function()
       return
     end
 
-    local ok, err = installUntilConfirmed(installPackage, fixtureDirectory .. "/" .. minimalPackage .. ".mpackage",
+    local ok, err = installAndConfirm(installPackage, fixtureDirectory .. "/" .. minimalPackage .. ".mpackage",
                                           function() return packageInstalled(minimalPackage) end, "the fixture package over its leftover folder")
 
     assert.is_true(ok, tostring(err))
@@ -521,7 +521,7 @@ describe("Tests the functionality of installPackage", function()
       lfs.rmdir(leftover)
     end)
 
-    installUntilConfirmed(installPackage, fixtureDirectory .. "/" .. minimalPackage .. ".mpackage",
+    installAndConfirm(installPackage, fixtureDirectory .. "/" .. minimalPackage .. ".mpackage",
                           function() return packageInstalled(minimalPackage) end, "the fixture package over its leftover folder")
 
     assert.equals(1, exists(minimalPackage .. " alias", "alias"))
@@ -573,7 +573,7 @@ describe("Tests the functionality of installPackage", function()
     -- an empty package XML is still read in, so only the clash refuses this
     writeArchiveOfEmptyFiles(archive, {name .. ".xml", "notes"})
 
-    local reason = installUntilRefused(installPackage, archive)
+    local reason = installExpectingRefusal(installPackage, archive)
 
     assert.is_true(contains(reason, "could not move the files"), tostring(reason))
     assert.is_true(fileExists(kept), "the install took away a folder of the folder it installed over")
@@ -623,7 +623,7 @@ describe("Tests the functionality of installPackage", function()
       return
     end
 
-    installUntilConfirmed(installPackage, fixtureDirectory .. "/" .. resourcesPackage .. ".mpackage",
+    installAndConfirm(installPackage, fixtureDirectory .. "/" .. resourcesPackage .. ".mpackage",
                           function() return packageInstalled(resourcesPackage) end, "the resources fixture through a link to another filesystem")
 
     assert.is_true(fileExists(elsewhere .. "/resources/spec-note.txt"), "the archive's folder did not reach the folder the link points to")
@@ -690,7 +690,7 @@ describe("Tests the functionality of installPackage", function()
       return
     end
     defer(function() removeFixturePackage(name) end)
-    installUntilConfirmed(installPackage, archive, function() return packageInstalled(name) end, "a package named like an unpacking folder")
+    installAndConfirm(installPackage, archive, function() return packageInstalled(name) end, "a package named like an unpacking folder")
 
     withFixturePackage(minimalPackage)
 
@@ -728,11 +728,11 @@ describe("Tests the functionality of installPackage", function()
     copyFile(fixtureDirectory .. "/mudlet-spec-noconfig.mpackage", aPackage)
 
     -- turned away for its name before anything is read out of it
-    local reason = installUntilRefused(installPackage, notAPackage)
+    local reason = installExpectingRefusal(installPackage, notAPackage)
     assert.is_true(contains(reason, "keeps its own files"), tostring(reason))
     assert.is_false(fileExists(mapFolder .. "/mudlet-spec-stray.txt"), "the refused archive left its file in the profile's map folder")
 
-    reason = installUntilRefused(installPackage, aPackage)
+    reason = installExpectingRefusal(installPackage, aPackage)
     assert.is_true(contains(reason, "keeps its own files"), tostring(reason))
     assert.is_false(packageInstalled("map"))
     assert.is_true(fileExists(mapFile), "the refused install took the profile's map")
@@ -754,7 +754,7 @@ describe("Tests the functionality of installPackage", function()
       lfs.rmdir(standIn)
     end)
 
-    installUntilConfirmed(installPackage, fixtureDirectory .. "/mudlet-spec-renamer.mpackage",
+    installAndConfirm(installPackage, fixtureDirectory .. "/mudlet-spec-renamer.mpackage",
                           function() return packageInstalled(renamedTo) end, "the renaming fixture past a folder of its file's name")
 
     assert.is_true(fileExists(occupant), "the install carried off a folder that was in the profile before it ran")
@@ -781,7 +781,7 @@ describe("Tests the functionality of installPackage", function()
     end)
     withFixtureModule(minimalPackage)
 
-    local reason = installUntilRefused(installPackage, fixtureDirectory .. "/" .. minimalPackage .. ".mpackage")
+    local reason = installExpectingRefusal(installPackage, fixtureDirectory .. "/" .. minimalPackage .. ".mpackage")
 
     assert.is_true(contains(reason, "already installed"), tostring(reason))
     assert.is_true(fileExists(kept), "the install deleted a folder it did not make")
