@@ -1208,7 +1208,10 @@ describe("Tests a character whose bytes are split by the posting timeout", funct
     setConfig("blankLinesBehaviour", "replacewithspace")
 
     local mark = getLastLineNumber("main")
-    feedTriggers("x\r\ry\n")
+    -- One call each: feedTriggers() keeps only a carriage return that ends what it is given
+    feedTriggers("x\r")
+    feedTriggers("\r")
+    feedTriggers("y\n")
     assert.same({"x", "y", ""}, getLines("main", mark, getLastLineNumber("main") + 1))
   end)
 
