@@ -252,8 +252,9 @@ void TMediaVoice::checkForSilence()
 void TMediaVoice::setGain(const float gain, const int glideMilliseconds)
 {
     const float level = std::clamp(gain, 0.0F, 1.0F);
-    // A fade sets the same level on every tick, which must not cut short a longer glide to it
-    if (level == mRequestedGain) {
+    // A fade sets the same level on every tick, which must not cut short a longer glide to it. A new
+    // track, with no audio yet, starts at its own level, not part way into the last one's glide.
+    if (level == mRequestedGain && mReceivedAudio) {
         return;
     }
     mRequestedGain = level;

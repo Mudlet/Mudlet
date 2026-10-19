@@ -1273,10 +1273,10 @@ void cTelnet::finishDisconnection()
         }
     }
 
-    emit signal_disconnected(mpHost);
-    if (mpHost->mpMedia) {
+    if (mpHost && mpHost->mpMedia) {
         mpHost->mpMedia->resetListenerFacing();
     }
+    emit signal_disconnected(mpHost);
 
     // Double-check Host is still valid before raising event
     if (mpHost && !mpHost->isClosingDown()) {

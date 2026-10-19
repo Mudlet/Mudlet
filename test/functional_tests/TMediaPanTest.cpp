@@ -414,6 +414,63 @@ private slots:
         QVERIFY2(right > 0.1F && left < 1e-3F, qPrintable(qsl("Moved east, the tone came out at %1 left and %2 right.").arg(left).arg(right)));
     }
 
+    // A pooled player stopped part way into a long glide starts its next sound at that sound's own volume
+    void test_aReusedPlayerStartsItsNextSoundAtItsOwnVolume()
+    {
+        SKIP_OR_FAIL_WITHOUT(backendPlaces() ? QString() : noPanningReason());
+        TAudioMixer* mixer = TAudioMixer::self();
+        mixer->setOutputSuspended(true);
+        auto resume = qScopeGuard([mixer]() {
+            mixer->setOutputSuspended(false);
+        });
+
+        TMediaData first = soundData(writeClip(qsl("gliding.wav"), clipMs, 8000));
+        first.setMediaKey(qsl("gliding"));
+        first.setMediaVolume(100);
+        media()->playMedia(first);
+        QVERIFY2(waitForStarted(), "The first tone never started playing.");
+        // Only a sound that is heard glides; before its first audio a change is made at once
+        SKIP_OR_FAIL_WITHOUT(QTest::qWaitFor(
+                                     [this]() {
+                                         return media()->firstMixedVoice() && media()->firstMixedVoice()->receivedAudio();
+                                     },
+                                     QDeadlineTimer(5s))
+                                     ? QString()
+                                     : noPanningReason());
+        TMediaData selection;
+        selection.setMediaProtocol(TMediaData::MediaProtocolAPI);
+        selection.setMediaType(TMediaData::MediaTypeSound);
+        selection.setMediaKey(qsl("gliding"));
+        media()->updateMedia(selection, 20, std::nullopt, QString(), 10000);
+        QTest::qWait(200ms);
+        TMediaData stop = soundData(qsl("gliding.wav"));
+        media()->stopMedia(stop);
+        QVERIFY2(QTest::qWaitFor(
+                         [this]() {
+                             return media()->playersHoldingSource() == 0;
+                         },
+                         QDeadlineTimer(5s)),
+                 "The stopped tone never let go of its player.");
+
+        TMediaData second = soundData(writeClip(qsl("steady-tone.wav"), clipMs, 8000));
+        second.setMediaVolume(20);
+        media()->playMedia(second);
+        QVERIFY2(waitForStarted(), "The second tone never started playing.");
+        QCOMPARE(media()->mediaPlayerCount(), 1);
+        SKIP_OR_FAIL_WITHOUT(media()->firstMixedVoice() ? QString() : noPanningReason());
+        const int voice = media()->firstMixedVoice()->mixerVoice();
+        QVERIFY2(QTest::qWaitFor(
+                         [&]() {
+                             return mixer->queuedSamples(voice) >= 200 * 48 * 2;
+                         },
+                         QDeadlineTimer(5s)),
+                 "The second tone's audio never reached the shared output.");
+
+        // The tone is about 0.24 at full volume, so about 0.05 at 20
+        const auto [left, right] = loudestOnEachSide(20);
+        QVERIFY2(left < 0.07F && left > 0.03F, qPrintable(qsl("Played at volume 20 on a reused player, the tone came out at %1.").arg(left)));
+    }
+
     // The protocol lets a client ignore placement for music and video, and Mudlet does
     void test_musicIsNeverPanned()
     {
