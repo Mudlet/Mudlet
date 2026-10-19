@@ -348,6 +348,9 @@ private:
     void setCardDescriptions();
     void buildProtocolsSubpage();
     void updateProtocolSummary();
+    // One checkbox per experiment the Host accepts, so a new one needs no work here
+    void buildExperimentsCard();
+    void retranslateExperiments();
     void buildDiscordSummaryCard();
     void updateDiscordSummary();
 #ifdef INCLUDE_MCPSERVER
@@ -424,6 +427,9 @@ private:
     // the other symbol settings changing does not cost a rebuild:
     QFont mGlyphDisplayFont;
     QPointer<QDoubleSpinBox> mpDoubleSpinBox_mapSymbolFontFudge;
+    // Kept so that initWithHost(), which runs again for each profile, can replace it rather than stack another
+    QMetaObject::Connection mMapStyleConnection;
+    void followMapStyle();
     std::unique_ptr<QTimer> hidePasswordMigrationLabelTimer;
     QMap<QString, QKeySequence> currentShortcuts;
     // Must be declared after currentShortcuts, which it references
@@ -493,6 +499,9 @@ private:
     // The card on the parent category page that opens each subpage
     QMap<QString, QPointer<QWidget>> mSubpageOpeners;
     QPointer<QGroupBox> mpCard_protocolList;
+    QPointer<QGroupBox> mpCard_experiments;
+    // Keyed by experiment, e.g. "experiment.3dmap.modernmapper"
+    QMap<QString, QPointer<QCheckBox>> mExperimentCheckBoxes;
     QPointer<QGroupBox> mpCard_discord;
     QPointer<QPushButton> mpButton_discordSubpage;
     QPointer<QGroupBox> mpCard_securityStatus;

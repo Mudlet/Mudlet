@@ -1864,8 +1864,8 @@ describe("Media playback effects with a generated sound file", function()
       return
     end
     -- Only the API may name a file outside the media directory. TMedia copies
-    -- it in and plays the copy, and every later request for it is answered
-    -- under the bare name the copy has.
+    -- it in under _profile/ and the folders it came from, plays the copy, and
+    -- answers every later request for it under the name the copy has.
     local outsideName = "busted-media-outside.wav"
     local outside = getMudletHomeDir() .. "/" .. outsideName
     local handle = io.open(outside, "wb")
@@ -1874,8 +1874,9 @@ describe("Media playback effects with a generated sound file", function()
     handle:close()
     onCleanup(function() os.remove(outside) end)
 
-    local copied = mediaDirectory .. "/" .. outsideName
+    local copied = mediaDirectory .. "/_profile/" .. outsideName
     lfs.mkdir(mediaDirectory)
+    onCleanup(function() lfs.rmdir(mediaDirectory .. "/_profile") end)
     os.remove(copied)
     onCleanup(function() os.remove(copied) end)
 
@@ -1888,30 +1889,35 @@ describe("Media playback effects with a generated sound file", function()
 
     local playing = getPlayingSounds({name = outside})
     assert.equals(1, #playing)
-    assert.equals(outsideName, playing[1].name)
+    assert.equals("_profile/" .. outsideName, playing[1].name)
   end)
 
   -- An absolute path plays from the copy made of it in the media directory,
-  -- under its bare name, so every call that names the absolute path again has
-  -- to trim it to match. Each of the three below reaches one of those calls
-  -- only, the others naming the playback by its key.
-  local function writeOutsideFile(fileName, subdirectory)
+  -- so every call that names the absolute path again has to turn it into the
+  -- copy's name to match. The pause, resume and stop tests below each reach
+  -- one of those calls only, naming the playback by its key everywhere else.
+  local function writeOutsideFile(fileName, subdirectory, milliseconds)
     local directory = getMudletHomeDir() .. (subdirectory and ("/" .. subdirectory) or "")
     lfs.mkdir(directory)
-    local path = directory .. "/" .. fileName
-    local handle = io.open(path, "wb")
-    assert.is_not_nil(handle, "could not write the media fixture " .. fileName)
-    handle:write(silentWav(10000))
-    handle:close()
-    onCleanup(function() os.remove(path) end)
+    -- registered first, so it runs after the file in it has gone
     if subdirectory then
       onCleanup(function() lfs.rmdir(directory) end)
     end
-    local copied = mediaDirectory .. "/" .. fileName
+    local path = directory .. "/" .. fileName
+    local handle = io.open(path, "wb")
+    assert.is_not_nil(handle, "could not write the media fixture " .. fileName)
+    handle:write(silentWav(milliseconds or 10000))
+    handle:close()
+    onCleanup(function() os.remove(path) end)
+    local copied = mediaDirectory .. "/_profile/" .. (subdirectory and (subdirectory .. "/") or "") .. fileName
     lfs.mkdir(mediaDirectory)
+    onCleanup(function() lfs.rmdir(mediaDirectory .. "/_profile") end)
+    if subdirectory then
+      onCleanup(function() lfs.rmdir(mediaDirectory .. "/_profile/" .. subdirectory) end)
+    end
     os.remove(copied)
     onCleanup(function() os.remove(copied) end)
-    return path
+    return path, copied
   end
 
   it("pauseSounds pauses a sound named by the absolute path it was played from", function()
@@ -1928,7 +1934,8 @@ describe("Media playback effects with a generated sound file", function()
     assert.is_true(pauseSounds({name = outside}))
     local paused = getPausedSounds({key = "busted-absolute-pause"})
     assert.equals(1, #paused, "pausing by the absolute path left the copy playing")
-    assert.equals(outsideName, paused[1].name)
+    assert.equals(1, #getPausedSounds({name = outside}), "the paused copy was not found by the absolute path")
+    assert.equals("_profile/" .. outsideName, paused[1].name)
   end)
 
   it("playing a paused sound's absolute path again resumes it", function()
@@ -1984,7 +1991,7 @@ describe("Media playback effects with a generated sound file", function()
     end
     -- the Lua functions turn a backslash into a slash before the media engine
     -- sees the name, so play and stop both get the plain absolute path and the
-    -- stop has to trim it to the copy's bare name as the one above does
+    -- stop has to turn it into the copy's name as the one above does
     local outsideName = "busted-media-outside-backslash.wav"
     local outside = writeOutsideFile(outsideName, "busted-media-outside-dir")
     local asWritten = outside:gsub("/(busted%-media%-outside%-backslash%.wav)$", "\\%1")
@@ -2001,6 +2008,198 @@ describe("Media playback effects with a generated sound file", function()
     assert.equals(1, #finished, "stopping by the path given with a backslash left the copy playing")
   end)
 
+  it("two files sharing a name in different folders each play their own copy", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    local sand, sandCopy = writeOutsideFile("busted-media-shared.wav", "busted-media-sand")
+    -- a longer file, so the two copies can be told apart by size
+    local sword, swordCopy = writeOutsideFile("busted-media-shared.wav", "busted-media-sword", 20000)
+    onCleanup(function() stopSounds() end)
+    local finished = {}
+    collect("sysMediaFinished", finished)
+
+    assert.is_true(playSoundFile({name = sand, key = "busted-shared-sand"}))
+    local _, _, sandPath = waitForEvent("sysMediaStarted", 5000)
+    assert.is_true(playSoundFile({name = sword, key = "busted-shared-sword"}))
+    local _, _, swordPath = waitForEvent("sysMediaStarted", 5000)
+
+    assert.equals(sandCopy, eventPath(sandPath))
+    assert.equals(swordCopy, eventPath(swordPath), "the second file played the first one's copy")
+    assert.are_not.equals(lfs.attributes(sandCopy, "size"), lfs.attributes(swordCopy, "size"))
+
+    assert.equals(1, #getPlayingSounds({name = sand}))
+    assert.is_true(stopSounds({name = sand}))
+    waitForCount("sysMediaFinished", finished, 1)
+    pumpEvents(250)
+    assert.equals(1, #finished, "stopping one file stopped the other one sharing its name")
+    assert.equals("busted-shared-sand", finished[1].key)
+    assert.equals(1, #getPlayingSounds({name = sword}))
+  end)
+
+  it("playing a file does not resume a paused one sharing its name", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    local sand = writeOutsideFile("busted-media-shared-paused.wav", "busted-media-sand-paused")
+    local sword, swordCopy = writeOutsideFile("busted-media-shared-paused.wav", "busted-media-sword-paused")
+    onCleanup(function() stopSounds() end)
+
+    assert.is_true(playSoundFile({name = sand, key = "busted-shared-paused-sand"}))
+    assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)))
+    assert.is_true(pauseSounds({key = "busted-shared-paused-sand"}))
+
+    assert.is_true(playSoundFile({name = sword, key = "busted-shared-paused-sword"}))
+    local _, _, path = waitForEvent("sysMediaStarted", 5000)
+    assert.equals(swordCopy, eventPath(path), "playing the second file resumed the first")
+    -- as playing any other sound does, it ended the paused one
+    assert.equals(0, #getPausedSounds({key = "busted-shared-paused-sand"}))
+  end)
+
+  -- A script can name the file alone, though its copy is filed under the folders it came from
+  it("a sound played from an absolute path is found by its bare name, and captioned with it", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    local key = "busted-absolute-bare-name"
+    local wasCaptioned = getConfig("enableClosedCaption")
+    onCleanup(function() setConfig("enableClosedCaption", wasCaptioned) end)
+    assert.is_true(setConfig("enableClosedCaption", true))
+    local outsideName = "busted-media-bare-name.wav"
+    local outside = writeOutsideFile(outsideName, "busted-media-bare-dir")
+    onCleanup(function() stopSounds() end)
+    local finished = {}
+    collect("sysMediaFinished", finished)
+
+    local mark = getLastLineNumber("main")
+    assert.is_true(playSoundFile({name = outside, key = key}))
+    assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)))
+    -- as in the closing-caption spec above, let the turn that printed the caption run out before reading it
+    pumpEvents(250)
+    local caption
+    for _, line in ipairs(getLines("main", mark, getLastLineNumber("main") + 1)) do
+      if line:find(key, 1, true) then
+        caption = line
+      end
+    end
+    assert.is_truthy(caption and caption:find('"' .. outsideName .. '"', 1, true), "the caption did not name the file itself: " .. tostring(caption))
+
+    assert.equals(1, #getPlayingSounds({name = outsideName}), "the bare name did not find the sound played from an absolute path")
+    assert.is_true(pauseSounds({name = outsideName}))
+    assert.equals(1, #getPausedSounds({name = outsideName}), "the bare name did not pause the sound played from an absolute path")
+    assert.is_true(stopSounds({name = outsideName}))
+    waitForCount("sysMediaFinished", finished, 1)
+    assert.equals(1, #finished, "the bare name did not stop the sound played from an absolute path")
+    assert.equals(key, finished[1].key)
+  end)
+
+  -- Stops and queries match a bare name to a file played from an absolute path; a play must not, or a
+  -- media-folder file would resume another folder's paused file of the same name
+  it("playing a media-folder file by its bare name does not resume a paused file of that name from elsewhere", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    local sharedName = "busted-media-bare-resume.wav"
+    local outside = writeOutsideFile(sharedName, "busted-media-bare-resume-dir")
+    local inMedia = mediaDirectory .. "/" .. sharedName
+    local handle = io.open(inMedia, "wb")
+    assert.is_not_nil(handle, "could not write the media fixture " .. inMedia)
+    handle:write(silentWav(10000))
+    handle:close()
+    onCleanup(function() os.remove(inMedia) end)
+    onCleanup(function() stopSounds() end)
+
+    assert.is_true(playSoundFile({name = outside, key = "busted-bare-resume-outside"}))
+    assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)))
+    assert.is_true(pauseSounds({key = "busted-bare-resume-outside"}))
+
+    assert.is_true(playSoundFile({name = sharedName, key = "busted-bare-resume-media"}))
+    local _, _, path, _, key = waitForEvent("sysMediaStarted", 5000)
+    assert.equals("busted-bare-resume-media", key, "playing the media-folder file resumed the other folder's paused copy")
+    assert.equals(inMedia, eventPath(path))
+  end)
+
+  it("a sound named by a path through a symlink is matched by its real path", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    if not lfs.link then
+      pending("this lfs has no link()")
+      return
+    end
+    local real = writeOutsideFile("busted-media-linked.wav", "busted-media-real")
+    local linkDirectory = getMudletHomeDir() .. "/busted-media-link"
+    -- a Windows directory link is removed with rmdir, anything else with remove
+    local function removeLink()
+      os.remove(linkDirectory)
+      lfs.rmdir(linkDirectory)
+    end
+    removeLink()
+    if not lfs.link(getMudletHomeDir() .. "/busted-media-real", linkDirectory, true) then
+      pending("this system would not make a symbolic link here")
+      return
+    end
+    onCleanup(removeLink)
+    onCleanup(function() stopSounds() end)
+    local finished = {}
+    collect("sysMediaFinished", finished)
+    local throughLink = linkDirectory .. "/busted-media-linked.wav"
+
+    assert.is_true(playSoundFile({name = throughLink, key = "busted-linked"}))
+    assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)))
+    assert.is_true(stopSounds({name = real}))
+    waitForCount("sysMediaFinished", finished, 1)
+    assert.equals(1, #finished, "stopping by the real path left the sound played through the symlink playing")
+
+    -- and by the path it was played from once that no longer leads to it
+    assert.is_true(playSoundFile({name = throughLink, key = "busted-linked-gone"}))
+    assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)))
+    removeLink()
+    assert.is_true(stopSounds({name = throughLink}))
+    waitForCount("sysMediaFinished", finished, 2)
+    assert.equals(2, #finished, "the path a sound was played from stopped matching once its symlink was removed")
+  end)
+
+  it("a file already in the media directory plays where it is", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    local subdirectory = mediaDirectory .. "/busted-media-in-media"
+    lfs.mkdir(mediaDirectory)
+    lfs.mkdir(subdirectory)
+    onCleanup(function() lfs.rmdir(subdirectory) end)
+    local inMedia = subdirectory .. "/busted-media-in-media.wav"
+    local handle = io.open(inMedia, "wb")
+    assert.is_not_nil(handle, "could not write the media fixture " .. inMedia)
+    handle:write(silentWav(10000))
+    handle:close()
+    onCleanup(function() os.remove(inMedia) end)
+    onCleanup(function() stopSounds() end)
+    local finished = {}
+    collect("sysMediaFinished", finished)
+
+    assert.is_true(playSoundFile({name = inMedia, key = "busted-in-media"}))
+    local _, _, path = waitForEvent("sysMediaStarted", 5000)
+    assert.equals(inMedia, eventPath(path))
+    assert.is_nil(lfs.attributes(mediaDirectory .. "/busted-media-in-media.wav"), "a file already in the media directory was copied")
+    assert.equals("busted-media-in-media/busted-media-in-media.wav", getPlayingSounds({name = inMedia})[1].name)
+
+    assert.is_true(stopSounds({name = "busted-media-in-media/busted-media-in-media.wav"}))
+    waitForCount("sysMediaFinished", finished, 1)
+    assert.equals(1, #finished, "the relative name did not stop the file played by its absolute path")
+  end)
+
+  it("a missing absolute path plays nothing and leaves no folders behind", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    local missing = getMudletHomeDir() .. "/busted-media-no-such-folder/busted-media-missing.wav"
+    assert.is_true(playSoundFile({name = missing, key = "busted-missing"}))
+    pumpEvents(250)
+    assert.equals(0, #getPlayingSounds({key = "busted-missing"}))
+    assert.is_nil(lfs.attributes(mediaDirectory .. "/_profile/busted-media-no-such-folder"), "a missing file had folders made for its copy")
+  end)
+
   it("an absolute path that ends in a separator names no file and matches none", function()
     if mediaPlaybackUnavailable() then
       return
@@ -2010,8 +2209,8 @@ describe("Media playback effects with a generated sound file", function()
     local finished = {}
     collect("sysMediaFinished", finished)
 
-    -- such a path has no bare file name to trim to, and an empty name would
-    -- match every playback there is
+    -- such a path names no file, and must not be turned into a name that
+    -- matches a playback
     local directory = getMudletHomeDir() .. "/busted-media-no-such-dir/"
     assert.is_true(playSoundFile({name = longSoundFile, key = "busted-directory-one"}))
     assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)))
@@ -2328,6 +2527,64 @@ describe("Media playback effects with a generated sound file", function()
     -- all. Unifying the lists one day would fail this deliberately.
     assert.equals(0, #getPlayingSounds())
     assert.equals(0, #getPlayingMusic())
+  end)
+
+  it("a Client.Media.Play message cannot name a file in a folder kept for scripts' copies", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    -- a game's file there would be played in place of a script's own file
+    local reserved = mediaDirectory .. "/_profile/busted-gmcp-reserved.wav"
+    lfs.mkdir(mediaDirectory)
+    lfs.mkdir(mediaDirectory .. "/_profile")
+    onCleanup(function() lfs.rmdir(mediaDirectory .. "/_profile") end)
+    local handle = io.open(reserved, "wb")
+    assert.is_not_nil(handle, "could not write the media fixture " .. reserved)
+    handle:write(silentWav(10000))
+    handle:close()
+    onCleanup(function() os.remove(reserved) end)
+    stopGmcpMediaAfterwards()
+    local started = {}
+    collect("sysMediaStarted", started)
+
+    feedGmcp('Client.Media.Play {"name": "_profile/busted-gmcp-reserved.wav", "key": "busted-gmcp-reserved"}')
+    feedGmcp('Client.Media.Play {"name": "_PROFILE/busted-gmcp-reserved.wav", "key": "busted-gmcp-reserved-case"}')
+    pumpEvents(500)
+    assert.equals(0, #started, "a game played a file from the folder kept for scripts' copies")
+  end)
+
+  -- A Load goes straight to the download, so only its own check keeps a game out of this folder. An ftp
+  -- url raises sysDownloadError only after that check, so the error count shows which Loads reached it.
+  it("a Client.Media.Load message cannot download into a folder kept for scripts' copies", function()
+    local errors = {}
+    collect("sysDownloadError", errors)
+    local reserved = mediaDirectory .. "/_profile/busted-gmcp-reserved-load.wav"
+    onCleanup(function() os.remove(reserved) end)
+
+    feedGmcp('Client.Media.Load {"name": "busted-gmcp-unreserved-load.wav", "url": "ftp://example.invalid/"}')
+    pumpEvents(250)
+    assert.equals(1, #errors, "a Load naming an ordinary file never reached the download, so this proves nothing")
+
+    feedGmcp('Client.Media.Load {"name": "_profile/busted-gmcp-reserved-load.wav", "url": "ftp://example.invalid/"}')
+    feedGmcp('Client.Media.Load {"name": "_PROFILE/busted-gmcp-reserved-load.wav", "url": "ftp://example.invalid/"}')
+    pumpEvents(250)
+    assert.equals(1, #errors, "a Load naming the folder kept for scripts' copies reached the download")
+    assert.is_nil(io.open(reserved, "rb"))
+  end)
+
+  it("an MSP sound cannot name a file in a folder kept for scripts' copies", function()
+    local errors = {}
+    collect("sysDownloadError", errors)
+    feedTelnet("<T_IAC><T_DO><O_MSP>")
+    onCleanup(function() feedTelnet("<T_IAC><T_DONT><O_MSP>") end)
+
+    assert.is_true(receiveMSP("!!SOUND(busted-msp-unreserved.wav U=ftp://example.invalid/)"))
+    pumpEvents(250)
+    assert.equals(1, #errors, "an MSP sound naming an ordinary file never reached the download, so this proves nothing")
+
+    assert.is_true(receiveMSP("!!SOUND(_profile/busted-msp-reserved.wav U=ftp://example.invalid/)"))
+    pumpEvents(250)
+    assert.equals(1, #errors, "an MSP sound naming the folder kept for scripts' copies reached the download")
   end)
 
   it("a Client.Media.Play message that names a type is played as that type", function()
@@ -3024,6 +3281,133 @@ describe("Media playback effects with a generated sound file", function()
     waitForCount("sysDownloadDone", done, 1)
     assert.equals(1, #done)
     assert.equals(fixtureBody, readFile(downloaded))
+  end)
+
+  it("a Client.Media.Stop message with no body stops all of the game's media", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    writeSoundFiles()
+    stopGmcpMediaAfterwards()
+    local finished = {}
+    collect("sysMediaFinished", finished)
+
+    feedGmcp('Client.Media.Play {"name": "' .. longSoundFile .. '", "key": "busted-gmcp-bare-stop"}')
+    local event = waitForEvent("sysMediaStarted", 5000)
+    assert.equals("sysMediaStarted", event, gmcpRefused)
+
+    -- the standard's "an empty body will stop all media": no {} after the name
+    feedGmcp("Client.Media.Stop")
+    waitForCount("sysMediaFinished", finished, 1)
+    assert.equals(1, #finished, "a Client.Media.Stop with no body stopped nothing")
+    assert.equals("busted-gmcp-bare-stop", finished[1].key)
+  end)
+
+  it("a Client.Media.Pause message with no body pauses all of the game's media", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    writeSoundFiles()
+    stopGmcpMediaAfterwards()
+    local paused = {}
+    collect("sysMediaPaused", paused)
+
+    feedGmcp('Client.Media.Play {"name": "' .. longSoundFile .. '", "key": "busted-gmcp-bare-pause"}')
+    assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)), gmcpRefused)
+
+    feedGmcp("Client.Media.Pause")
+    waitForCount("sysMediaPaused", paused, 1)
+    assert.equals(1, #paused, "a Client.Media.Pause with no body paused nothing")
+    assert.equals("busted-gmcp-bare-pause", paused[1].key)
+  end)
+
+  it("a Client.Media.Play message streams from the url only when stream is true", function()
+    if noFixtureServer() then
+      return
+    end
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    stopGmcpMediaAfterwards()
+    -- Both forms the standard allows for a boolean, and the default url when the message names none.
+    -- Set and undone as in the Default spec above: the string form streams from it.
+    local startingLocation = fixtureUrl() .. "/media"
+    feedGmcp('Client.Media.Default {"url": "' .. startingLocation .. '"}')
+    onCleanup(function()
+      feedTelnet('<T_IAC><T_SB><O_GMCP>Client.Media.Default {"url": "' .. startingLocation .. '"}<T_IAC><T_SE>')
+    end)
+
+    local function exists(path)
+      local handle = io.open(path, "rb")
+      if handle then
+        handle:close()
+      end
+      return handle ~= nil
+    end
+
+    local finished = {}
+    collect("sysMediaFinished", finished)
+
+    for index, form in ipairs({{name = "busted-gmcp-stream-bool.wav", fields = '"url": "' .. startingLocation .. '/", "stream": true', streamed = true},
+                           {name = "busted-gmcp-stream-string.wav", fields = '"stream": "true"', streamed = true},
+                           {name = "busted-gmcp-stream-false.wav", fields = '"url": "' .. startingLocation .. '/", "stream": false', streamed = false},
+                           {name = "busted-gmcp-stream-false-string.wav", fields = '"stream": "false"', streamed = false}}) do
+      local copy = mediaDirectory .. "/" .. form.name
+      os.remove(copy)
+      onCleanup(function() os.remove(copy) end)
+
+      local key = "busted-gmcp-stream-" .. index
+      feedGmcp('Client.Media.Play {"name": "' .. form.name .. '", "key": "' .. key .. '", ' .. form.fields .. '}')
+      local event = waitForEvent("sysMediaStarted", 5000)
+      assert.equals("sysMediaStarted", event, "a Client.Media.Play with " .. form.fields .. " did not play: " .. gmcpRefused)
+      if form.streamed then
+        assert.is_false(exists(copy), "a streamed file was downloaded into the profile's media folder")
+      else
+        assert.is_true(exists(copy), "a file not asked to stream was not downloaded")
+      end
+      -- Ended before the next form, so its events cannot be mistaken for this one's
+      feedGmcp('Client.Media.Stop {"key": "' .. key .. '"}')
+      waitForCount("sysMediaFinished", finished, index)
+      assert.equals(key, finished[index].key)
+    end
+  end)
+
+  it("a Client.Media.Play message asking to preload a stream plays nothing", function()
+    if noFixtureServer() then
+      return
+    end
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    stopGmcpMediaAfterwards()
+    local finished = {}
+    collect("sysMediaFinished", finished)
+
+    -- A preload raises no sysMediaStarted, so the stop is what would show a silent stream had begun
+    feedGmcp('Client.Media.Play {"name": "busted-gmcp-stream-preload.wav", "url": "' .. fixtureUrl() .. '/media/", "stream": true, "volume": 0, "key": "busted-gmcp-stream-preload"}')
+    pumpEvents(1000)
+    feedGmcp('Client.Media.Stop {"key": "busted-gmcp-stream-preload"}')
+    pumpEvents(500)
+    assert.equals(0, #finished, "a preload of a stream started a silent stream")
+  end)
+
+  it("a Client.Media.Play message will not stream from anything but http or https", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    writeSoundFiles()
+    stopGmcpMediaAfterwards()
+    local started = {}
+    collect("sysMediaStarted", started)
+
+    -- a file this profile does have, so only the refusal can keep it from playing
+    feedGmcp('Client.Media.Play {"name": "' .. longSoundFile .. '", "url": "file://' .. mediaDirectory .. '/", "stream": true, "key": "busted-gmcp-local-stream"}')
+    pumpEvents(500)
+    -- the same file, asked for without the stream, does play: so nothing else kept the first from it
+    feedGmcp('Client.Media.Play {"name": "' .. longSoundFile .. '", "key": "busted-gmcp-local-control"}')
+    waitForCount("sysMediaStarted", started, 1)
+    assert.equals(1, #started)
+    assert.equals("busted-gmcp-local-control", started[1].key, "a game had Mudlet stream a local file")
   end)
 
   it("both play calls clamp a volume outside 1 to 100 in both argument forms", function()

@@ -54,7 +54,7 @@ public:
         }
     }
 
-    void printDebugLine(const QString& text, const QColor&, const QColor&, const QString&) override { lines.append(text); }
+    void printDebugLine(const QString& text, const QColor&, const QColor&, qint64) override { lines.append(text); }
 };
 } // namespace
 

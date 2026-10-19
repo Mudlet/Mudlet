@@ -161,27 +161,6 @@ int64_t physicalMemoryTotal()
 #endif
 }
 
-// QTime::currentTime() consults the timezone database per call (on glibc a stat() of /etc/localtime), so
-// reuse the stamp until the millisecond or the (translatable) format changes.
-QString currentTimeStamp()
-{
-    static qint64 cachedMSecs = 0;
-    static QString cachedFormat;
-    static QString cachedStamp;
-
-    // The cached format is a copy of the static, so until that is reassigned the two share one buffer
-    // and the characters need no comparing:
-    if (QDateTime::currentMSecsSinceEpoch() != cachedMSecs || cachedFormat.constData() != TBuffer::smTimeStampFormat.constData()) {
-        // Filed under the millisecond it was read in, which the clock may have moved past since the check
-        // above; the earlier one would stamp the rest of this millisecond's lines a millisecond early.
-        const QDateTime now = QDateTime::currentDateTime();
-        cachedMSecs = now.toMSecsSinceEpoch();
-        cachedFormat = TBuffer::smTimeStampFormat;
-        cachedStamp = now.time().toString(TBuffer::smTimeStampFormat);
-    }
-    return cachedStamp;
-}
-
 // Writes "rgb(r,g,b)" without the allocations QString::number() and arg() make
 void appendHtmlRgb(QString& s, const QRgb color)
 {
@@ -219,6 +198,26 @@ void appendHtmlEscaped(QString& s, const QChar* text, const qsizetype length)
         runStart = i + 1;
     }
     s.append(text + runStart, length - runStart);
+}
+
+// A wrap or hanging indent held to half the width: each wrapped segment pads indent columns per
+// (maxWidth - indent) of text, so one near the width exhausts memory. One at or past the width is dropped,
+// as is a negative one (the insert() applying it takes an unsigned count). Clamped at use, not in the
+// setters, as the wrap width can change after them.
+int clampedWrapIndent(const int indentSize, const int maxWidth)
+{
+    return (indentSize > 0 && indentSize < maxWidth) ? std::min(indentSize, maxWidth / 2) : 0;
+}
+
+// True only if getWrapInfo() would find no break, decided without its scan, the costliest part of appending
+// a line. No grapheme is wider than graphemeInfo::maxWidth columns or shorter than one QChar, and printable
+// ASCII (which excludes LineFeed and Tab) is one column per QChar.
+bool fitsUnwrapped(const QString& lineText, const qsizetype widthAvailable)
+{
+    if (lineText.size() * graphemeInfo::maxWidth <= widthAvailable) {
+        return !lineText.contains(QChar::LineFeed);
+    }
+    return lineText.size() <= widthAvailable && lineBreakInfo::printableAscii(lineText);
 }
 
 // Asks for the cache line holding the allocator's bookkeeping for a heap block,
@@ -954,6 +953,25 @@ void TBuffer::setBufferSize(int requestedLinesLimit, int batch)
     mLinesUntilLinkSweep = 0;
 }
 
+/* static */ QString TBuffer::formatTimeStamp(const qint64 msecs)
+{
+    if (msecs == csmNoTimeStamp) {
+        return QString();
+    }
+    if (msecs == csmWrappedLineTimeStamp) {
+        return smBlankTimeStamp;
+    }
+    // The local-time conversion consults the timezone database on every call, so the last answer is kept for
+    // the run of lines a log or a paint reads that arrived within one millisecond
+    static qint64 lastMSecs = csmNoTimeStamp;
+    static QString lastText;
+    if (msecs != lastMSecs) {
+        lastMSecs = msecs;
+        lastText = QDateTime::fromMSecsSinceEpoch(msecs).time().toString(smTimeStampFormat);
+    }
+    return lastText;
+}
+
 // naive calculation to get a reasonable limit for a maximum buffer size
 int TBuffer::getMaxBufferSize()
 {
@@ -1304,20 +1322,19 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
     const QByteArray usedEncoding = mpHost->mTelnet.getEncoding();
     if (mEncoding != usedEncoding) {
         encodingChanged(usedEncoding);
-        // Will have to dump any stored bytes as they will be in the old
-        // encoding and the following code block to prepend them is used for
-        // both bytes that are held over as part of a multi-byte encoding that
-        // was incomplete at the end of the last packet AND ALSO for ANSI code
-        // sequences that were not complete at the end of the last packet:
-        if (!mIncompleteSequenceBytes.empty()) {
+        // A held character is in the old encoding but a held CSI or OSC (payload read as UTF-8) is not;
+        // only the game's bytes are carried across feeds, and a local feed has the channels swapped
+        std::string& serverHeldBytes = isFromServer ? mIncompleteSequenceBytes : mLocalIncompleteSequenceBytes;
+        const bool serverHoldsSequence = isFromServer ? (mGotCSI || mGotOSC) : (mLocalGotCSI || mLocalGotOSC);
+        if (!serverHeldBytes.empty() && !serverHoldsSequence) {
 #if defined(DEBUG_SGR_PROCESSING) || defined(DEBUG_OSC_PROCESSING) || defined(DEBUG_UTF8_PROCESSING) || defined(DEBUG_GB_PROCESSING) || defined(DEBUG_BIG5_PROCESSING)
             qDebug() << "TBuffer::translateToPlainText(...) WARNING - Dumping residual bytes that were carried over from previous packet onto incoming data - the encoding has changed and they may no "
                         "longer be usable!";
 #endif
-            mIncompleteSequenceBytes.clear();
+            serverHeldBytes.clear();
+            appendReplacementCharacter(TChar((!mIsDefaultColor && mBold) ? mForeGroundColorLight : mForeGroundColor, mBackGroundColor, computeCurrentAttributeFlags()));
         }
-        // The other channel's held-over bytes are equally stale:
-        mLocalIncompleteSequenceBytes.clear();
+        (isFromServer ? mLocalIncompleteSequenceBytes : mIncompleteSequenceBytes).clear();
         mPendingLead = 0;
         mLocalPendingLead = 0;
     }
@@ -2248,6 +2265,11 @@ bool TBuffer::commitLine(char ch, size_t& localBufferPosition, const bool isFrom
 
 void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char ch)
 {
+    // An empty '\r' commit, such as the posting timer's flush, ends no line of text: drop it before the
+    // blank-line setting below can turn it into a line of one space
+    if (line.isEmpty() && ch == '\r') {
+        return;
+    }
     // Qt struggles to report blank lines on Windows to screen readers, this is a workaround
     // https://bugreports.qt.io/browse/QTBUG-105035
     if (Q_UNLIKELY(line.isEmpty())) {
@@ -2273,13 +2295,10 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
         if (!line.isEmpty()) {
             lineBuffer << std::move(line);
         } else {
-            if (ch == '\r') {
-                return; //empty timer posting
-            }
             lineBuffer << QString();
         }
         buffer.push_back(std::move(chars));
-        timeBuffer << currentTimeStamp();
+        timeBuffer << QDateTime::currentMSecsSinceEpoch();
         if (ch == '\xff') {
             promptBuffer.append(true);
         } else {
@@ -2291,16 +2310,13 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
             // The last line is empty, so this is the whole of it
             lineBuffer.back() = std::move(line);
         } else {
-            if (ch == '\r') {
-                return; //empty timer posting
-            }
             lineBuffer.back().append(QString());
         }
         // A commit re-entered from a pass (feedTriggers(), MXP) fills the empty last line, which may be
         // the one the enclosing pass is still running over:
         materialisePreTriggerPassLine(static_cast<int>(buffer.size()) - 1);
         buffer.back() = std::move(chars);
-        timeBuffer.back() = currentTimeStamp();
+        timeBuffer.back() = QDateTime::currentMSecsSinceEpoch();
         if (ch == '\xff') {
             promptBuffer.back() = true;
         } else {
@@ -2309,7 +2325,8 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
     }
     // Every game line passes here (TConsoleModel::print() sees only client output). Mirroring before runTriggers()
     // keeps arrival order, so script output in response follows it, but lines that triggers gag or rewrite
-    // are still mirrored as sent. Mirroring at log() below would trade the other way and copy wrapLine()'s
+    // are still mirrored as sent; what triggers write into them is held and follows as lines of its own,
+    // ahead of any later output. Mirroring at log() below would trade the other way and copy wrapLine()'s
     // fragments instead of the line as sent.
     if (Q_UNLIKELY(MudletApp::smMirrorToStdOut)) {
         if (Q_LIKELY(mpModel)) {
@@ -2326,9 +2343,16 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
     }
     const int lineIndex = lineBuffer.size() - 1;
     mCommitLineIndices.append(lineIndex);
+    // A line committed from inside a pass (feedTriggers()) can delete, rewrap or trim lines above
+    // that pass's line; neither deleteLines() nor shrinkBuffer() moves a cursor, so one a script
+    // still has on that line is moved with it below
+    const int enclosingPassLine = mPreTriggerPassLineNumber;
+    const bool userCursorOnEnclosingPassLine = mpModel && enclosingPassLine >= 0 && mpModel->mUserCursor.y() == enclosingPassLine;
+    const bool engineCursorOnEnclosingPassLine = mpModel && enclosingPassLine >= 0 && mpModel->mEngineCursor == enclosingPassLine;
     if (!mPendingSelectionStyling.isEmpty() || selectionLinkOpen()) {
         mSelectionStylingFromLine = (mSelectionStylingFromLine < 0) ? lineIndex : std::min(mSelectionStylingFromLine, lineIndex);
     }
+    int passLineAfterTriggers = lineIndex;
     if (!mSkipTriggerProcessing) {
         // Color triggers match the colors as received, so a line recolored earlier in the pass keeps its
         // originals; materialisePreTriggerPassLine() copies them lazily as most lines are never touched.
@@ -2338,15 +2362,15 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
         // Save/restore gives each nested pass its own snapshot; the spare member recycles its allocation:
         std::vector<TChar> savedPassLine;
         savedPassLine.swap(mPreTriggerPassLine);
-        const int savedPassLineNumber = mPreTriggerPassLineNumber;
+        mEnclosingTriggerPasses.append({mPreTriggerPassLineNumber, std::exchange(mDetachedTriggerPassLineText, QString())});
+        const int savedPassLineAsCommitted = mTriggerPassLineAsCommitted;
         const bool savedPassSnapshotTaken = mPreTriggerPassSnapshotTaken;
         const PassLineUniformity savedPassLineUniformity = mPreTriggerPassLineUniformity;
-        const int savedFirstLineMovedDown = mFirstLineMovedDown;
-        mFirstLineMovedDown = -1;
         mPreTriggerPassLine.swap(mSpareTriggerPassLine);
         mPreTriggerPassLine.clear();
         mPreTriggerPassSnapshotTaken = false;
         mPreTriggerPassLineNumber = lineIndex;
+        mTriggerPassLineAsCommitted = lineIndex;
         mPreTriggerPassLineUniformity = PassLineUniformity::Unknown;
 #ifndef QT_NO_DEBUG
         const quint64 committedColors = colorFingerprint(buffer.back());
@@ -2354,39 +2378,44 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
         mpHost->runTriggers(lineIndex);
 #ifndef QT_NO_DEBUG
         // A write bypassing materialisePreTriggerPassLine() fails silently (color triggers match the
-        // recolored text), so catch it here:
-        if (!mPreTriggerPassSnapshotTaken && mPreTriggerPassLineNumber == lineIndex && lineIndex < static_cast<int>(buffer.size())) {
-            Q_ASSERT_X(colorFingerprint(buffer[lineIndex]) == committedColors, "TBuffer::commitLineData", "a trigger recolored the line without going through materialisePreTriggerPassLine()");
+        // recolored text), so catch it here, wherever earlier triggers moved the line to:
+        if (!mPreTriggerPassSnapshotTaken && mPreTriggerPassLineNumber >= 0 && mPreTriggerPassLineNumber < static_cast<int>(buffer.size())) {
+            Q_ASSERT_X(colorFingerprint(buffer[mPreTriggerPassLineNumber]) == committedColors,
+                       "TBuffer::commitLineData",
+                       "a trigger recolored the line without going through materialisePreTriggerPassLine()");
         }
 #endif
+        passLineAfterTriggers = (mPreTriggerPassLineNumber >= 0) ? mPreTriggerPassLineNumber : lineIndex;
         mSpareTriggerPassLine.swap(mPreTriggerPassLine);
         if (mSpareTriggerPassLine.capacity() > csmMaxRetainedLineCapacity) {
             std::vector<TChar>().swap(mSpareTriggerPassLine);
         }
         mPreTriggerPassLine.swap(savedPassLine);
-        // A wrap in this pass can move the enclosing pass's line, which wrapLine() cannot see parked here
-        const bool savedPassLineMoved = mFirstLineMovedDown >= 0 && savedPassLineNumber >= mFirstLineMovedDown;
-        mPreTriggerPassLineNumber = savedPassLineMoved ? -1 : savedPassLineNumber;
-        if (savedFirstLineMovedDown >= 0 && (mFirstLineMovedDown < 0 || savedFirstLineMovedDown < mFirstLineMovedDown)) {
-            mFirstLineMovedDown = savedFirstLineMovedDown;
-        }
+        EnclosingTriggerPass enclosing = mEnclosingTriggerPasses.takeLast();
+        mPreTriggerPassLineNumber = enclosing.lineNumber;
+        mDetachedTriggerPassLineText = std::move(enclosing.detachedText);
+        mTriggerPassLineAsCommitted = savedPassLineAsCommitted;
         mPreTriggerPassSnapshotTaken = savedPassSnapshotTaken;
         mPreTriggerPassLineUniformity = savedPassLineUniformity;
     }
 
-    // Only use of TBuffer::wrap(), breaks up new text
     // NOTE: it MAY have been clobbered by the trigger engine!
-    // If deleteLine() was called in a trigger, 'lineIndex' may now be past the
-    // end of the buffer; clamp to the last valid line so that any text
-    // inserted via echo() into the preceding line (which may contain embedded
-    // '\n' characters from insertInLine) is still wrapped correctly.
+    // Wrapping starts from wherever the triggers left the line. If deleteLine()
+    // removed it, 'lineIndex' may now be past the end of the buffer; clamp to the
+    // last valid line so that any text inserted via echo() into the preceding
+    // line (which may contain embedded '\n' characters from insertInLine) is
+    // still wrapped correctly.
     const int lastValidLine = static_cast<int>(lineBuffer.size()) - 1;
-    const int wrapStartLine = (lastValidLine >= 0) ? std::min(lineIndex, lastValidLine) : 0;
-    const int addedLines = wrapLine(wrapStartLine, mWrapAt, mWrapIndent, mWrapHangingIndent);
+    const int wrapStartLine = (lastValidLine >= 0) ? std::min(passLineAfterTriggers, lastValidLine) : 0;
+    // Spares wrapLine()'s setup for the usual last line that fits; one with no text or no TChars still goes
+    // through, as wrapLine() rebuilds it. The width must stay getWrapInfo()'s widthAvailable for mWrapAt.
+    const bool fitsAsIs = wrapStartLine == lastValidLine && !lineBuffer.at(wrapStartLine).isEmpty() && !buffer[wrapStartLine].empty()
+                          && fitsUnwrapped(lineBuffer.at(wrapStartLine), wrapsFromPreviousLine(wrapStartLine) ? mWrapAt : mWrapAt - clampedWrapIndent(mWrapIndent, mWrapAt));
+    const int addedLines = fitsAsIs ? 0 : wrapLine(wrapStartLine, mWrapAt, mWrapIndent, mWrapHangingIndent);
     // The line feed ended this line, so an empty wrapped line left by the
     // spaces it ended on is where the next line starts, not more of this one
-    if (!lineBuffer.isEmpty() && lineBuffer.back().isEmpty() && timeBuffer.back() == TBuffer::smBlankTimeStamp) {
-        timeBuffer.back() = QString();
+    if (!lineBuffer.isEmpty() && lineBuffer.back().isEmpty() && timeBuffer.back() == csmWrappedLineTimeStamp) {
+        timeBuffer.back() = csmNoTimeStamp;
     }
 
     // Skip logging if a trigger deleted the line that was being committed;
@@ -2400,7 +2429,7 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
     if (addedLines == 0 || !lineBuffer.back().isEmpty()) {
         buffer.emplace_back();
         lineBuffer.push_back(QString());
-        timeBuffer.push_back(QString());
+        timeBuffer.push_back(csmNoTimeStamp);
         promptBuffer << false;
         wrapGapBuffer.append(0);
     }
@@ -2413,6 +2442,20 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
         // generate is NOT used for the TMainConsole case whereas this
         // (translateToPlainText(...)) method is ONLY for that one:
         shrinkBuffer();
+    }
+
+    if (mPreTriggerPassLineNumber >= 0) {
+        if (userCursorOnEnclosingPassLine) {
+            mpModel->mUserCursor.setY(mPreTriggerPassLineNumber);
+        }
+        if (engineCursorOnEnclosingPassLine) {
+            mpModel->mEngineCursor = mPreTriggerPassLineNumber;
+        }
+    }
+
+    // After shrinkBuffer(), whose sysBufferShrinkEvent handlers also run in trigger mode
+    if (Q_UNLIKELY(MudletApp::smMirrorToStdOut) && Q_LIKELY(mpModel)) {
+        mpModel->flushMirroredTriggerText();
     }
 
     applyPendingSelectionStyling();
@@ -2683,6 +2726,40 @@ void TBuffer::flushPendingServerWrapJoin(const bool endsHyperlink)
     if (heldVisibility.linkId && heldVisibility.startsAfterHeldText) {
         registerLinkVisibility(heldVisibility.linkId, heldVisibility.startColumn, heldVisibility.continuationLength - heldVisibility.startColumn, heldVisibility.styling);
     }
+}
+
+// Called before the lines go, so that a pass line among them can be kept for
+// color matching to go on reading, as the text patterns go on reading the haystack
+void TBuffer::triggerPassLinesRemoved(const int from, const int to)
+{
+    const int delta = to - from + 1;
+    if (mPreTriggerPassLineNumber > to) {
+        mPreTriggerPassLineNumber -= delta;
+    } else if (mPreTriggerPassLineNumber >= from) {
+        // The snapshot, where taken, holds the colors as they arrived for as much of the line as it covers
+        std::vector<TChar> detached = std::move(buffer[mPreTriggerPassLineNumber]);
+        if (mPreTriggerPassSnapshotTaken) {
+            std::copy_n(mPreTriggerPassLine.cbegin(), std::min(mPreTriggerPassLine.size(), detached.size()), detached.begin());
+        }
+        mPreTriggerPassLine = std::move(detached);
+        mPreTriggerPassSnapshotTaken = true;
+        mDetachedTriggerPassLineText = lineBuffer.at(mPreTriggerPassLineNumber);
+        mPreTriggerPassLineNumber = csmDetachedTriggerPassLine;
+    }
+    for (EnclosingTriggerPass& enclosing : mEnclosingTriggerPasses) {
+        if (enclosing.lineNumber > to) {
+            enclosing.lineNumber -= delta;
+        } else if (enclosing.lineNumber >= from) {
+            // Its colors were copied out before the nested pass began
+            enclosing.detachedText = lineBuffer.at(enclosing.lineNumber);
+            enclosing.lineNumber = csmDetachedTriggerPassLine;
+        }
+    }
+}
+
+int TBuffer::triggerPassLineNow(int lineNumber) const
+{
+    return (lineNumber >= 0 && lineNumber == mTriggerPassLineAsCommitted) ? mPreTriggerPassLineNumber : lineNumber;
 }
 
 const std::vector<TChar>* TBuffer::preTriggerPassLine(int lineNumber) const
@@ -5477,8 +5554,8 @@ void TBuffer::appendFormatted(const QString& text, const std::vector<TChar>& for
             chars.resize(first + runLength, defaultChar);
             if (firstChar) {
                 // an empty wrapped line is the rest of the line above it
-                if (timeBuffer.back() != TBuffer::smBlankTimeStamp) {
-                    timeBuffer.back() = currentTimeStamp();
+                if (timeBuffer.back() != TBuffer::csmWrappedLineTimeStamp) {
+                    timeBuffer.back() = QDateTime::currentMSecsSinceEpoch();
                 }
                 firstChar = false;
             }
@@ -5509,7 +5586,7 @@ void TBuffer::appendFormatted(const QString& text, const std::vector<TChar>& for
     }
 }
 
-void TBuffer::append(const QString& text, int sub_start, int sub_end, const QColor& fgColor, const QColor& bgColor, TChar::AttributeFlags flags, int linkID, const QString& timeStampOverride)
+void TBuffer::append(const QString& text, int sub_start, int sub_end, const QColor& fgColor, const QColor& bgColor, TChar::AttributeFlags flags, int linkID, const qint64 timeStampOverride)
 {
     if (buffer.empty()) {
         appendEmptyLine();
@@ -5541,14 +5618,8 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, const QCol
     }
 }
 
-void TBuffer::appendLine(const QString& text,
-                         const int sub_start,
-                         const int sub_end,
-                         const QColor& fgColor,
-                         const QColor& bgColor,
-                         const TChar::AttributeFlags flags,
-                         const int linkID,
-                         const QString& timeStampOverride)
+void TBuffer::appendLine(
+        const QString& text, const int sub_start, const int sub_end, const QColor& fgColor, const QColor& bgColor, const TChar::AttributeFlags flags, const int linkID, const qint64 timeStampOverride)
 {
     if (sub_end < 0) {
         return;
@@ -5622,8 +5693,8 @@ void TBuffer::appendLine(const QString& text,
         if (firstChar) {
             // Replayed held-back content supplies its arrival time, and an
             // empty wrapped line is the rest of the line above it:
-            if (timeBuffer.back() != TBuffer::smBlankTimeStamp) {
-                timeBuffer.back() = timeStampOverride.isEmpty() ? currentTimeStamp() : timeStampOverride;
+            if (timeBuffer.back() != TBuffer::csmWrappedLineTimeStamp) {
+                timeBuffer.back() = timeStampOverride == csmNoTimeStamp ? QDateTime::currentMSecsSinceEpoch() : timeStampOverride;
             }
             firstChar = false;
         }
@@ -5634,7 +5705,7 @@ void TBuffer::appendEmptyLine()
 {
     buffer.emplace_back();
     lineBuffer.push_back(QString());
-    timeBuffer << currentTimeStamp();
+    timeBuffer << QDateTime::currentMSecsSinceEpoch();
     promptBuffer << false;
     wrapGapBuffer.append(0);
 }
@@ -5805,19 +5876,11 @@ inline QList<WrapInfo> TBuffer::getWrapInfo(const QString& lineText, bool isNewl
         return output;
     }
 
-    // The boundary finders below run a full Unicode analysis, the costliest part of appending a line. Printable
-    // ASCII is one column per QChar, so such a line no wider than the wrap column has no break to find.
-    // LineFeed and Tab are outside that range, so embedded breaks never take this path.
     const qsizetype widthAvailable = std::min<qsizetype>(isNewline ? maxWidth - indent : maxWidth, mWrapAt);
+    if (fitsUnwrapped(lineText, widthAvailable)) {
+        return output;
+    }
     const bool plainAscii = lineBreakInfo::printableAscii(lineText);
-    if (plainAscii && lineText.size() <= widthAvailable) {
-        return output;
-    }
-    // No grapheme is wider than graphemeInfo::maxWidth columns or shorter than one QChar, so this line
-    // can't reach the wrap column; only an embedded line feed can break it.
-    if (lineText.size() * graphemeInfo::maxWidth <= widthAvailable && !lineText.contains(QChar::LineFeed)) {
-        return output;
-    }
 
     // Each finder runs its own analysis over the whole line. A plain-ASCII
     // line's grapheme clusters are its characters, each one column wide, so
@@ -5998,8 +6061,9 @@ QString TBuffer::assembleLog(int fromLine, int toLine)
             text.append(bufferToHtml(timestamps, i));
             continue;
         }
-        if (timestamps && !timeBuffer.at(i).isEmpty()) {
-            text.append(QStringView(timeBuffer.at(i)).left(TBuffer::smTimeStampFormat.length()));
+        if (timestamps) {
+            const QString timeStamp = timeStampText(i);
+            text.append(QStringView(timeStamp).left(TBuffer::smTimeStampFormat.length()));
         }
         text.append(lineBuffer.at(i));
         text.append(QChar::LineFeed);
@@ -6060,17 +6124,24 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
 
     // The Lua wrapLine() reaches here from inside a trigger pass, and rebuilding
     // the line replaces the characters the pass is matching against:
-    materialisePreTriggerPassLine(startLine);
+    if (mPreTriggerPassLineNumber == startLine) {
+        materialisePreTriggerPassLine(startLine);
+    }
 
-    // Checked here, not in the setters, as the wrap width can change after them.
-    // Each wrapped line pads indent columns per (maxWidth - indent) of text, so an
-    // indent is held to half the width: near the width a long line becomes one
-    // padded line per character and exhausts memory. One as wide as the width is
-    // dropped, and so is a negative one, as the insert() applying it takes an
-    // unsigned count.
-    const int indent = (indentSize > 0 && indentSize < maxWidth) ? std::min(indentSize, maxWidth / 2) : 0;
-    const int hangingIndent = (hangingIndentSize > 0 && hangingIndentSize < maxWidth) ? std::min(hangingIndentSize, maxWidth / 2) : 0;
+    const int indent = clampedWrapIndent(indentSize, maxWidth);
+    const int hangingIndent = clampedWrapIndent(hangingIndentSize, maxWidth);
     const int total = static_cast<int>(buffer.size());
+    // A line a trigger pass is still running on is wrapped once its pass ends, so a wrap from above
+    // leaves it, and what follows it, whole: split now, color triggers and highlights would see only its first part
+    int wrapUpTo = total;
+    if (mPreTriggerPassLineNumber > startLine) {
+        wrapUpTo = mPreTriggerPassLineNumber;
+    }
+    for (const EnclosingTriggerPass& enclosing : std::as_const(mEnclosingTriggerPasses)) {
+        if (enclosing.lineNumber > startLine) {
+            wrapUpTo = std::min(wrapUpTo, enclosing.lineNumber);
+        }
+    }
 
     // Leading lines that getWrapInfo() finds no break points in stay where they
     // are. The loop below reproduces such a line unchanged, but only after
@@ -6080,12 +6151,11 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
     // drops its TChars, restamps it and clears its prompt flag.
     int firstRewrappedLine = startLine;
     QList<WrapInfo> lineBreaks;
-    while (firstRewrappedLine < total) {
+    while (firstRewrappedLine < wrapUpTo) {
         if (buffer[firstRewrappedLine].empty() || lineBuffer.at(firstRewrappedLine).isEmpty()) {
             break;
         }
-        // a blank timestamp indicates a wrapped line
-        lineBreaks = getWrapInfo(lineBuffer.at(firstRewrappedLine), timeBuffer.at(firstRewrappedLine) != TBuffer::smBlankTimeStamp, maxWidth, indent, hangingIndent);
+        lineBreaks = getWrapInfo(lineBuffer.at(firstRewrappedLine), timeBuffer.at(firstRewrappedLine) != TBuffer::csmWrappedLineTimeStamp, maxWidth, indent, hangingIndent);
         if (!lineBreaks.isEmpty()) {
             break;
         }
@@ -6102,26 +6172,40 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
         return 0;
     }
 
+    // Each trigger pass line rewrapped here moves down to where its first part lands.
+    // Matched against the indices they started at, as a line moved onto a later
+    // line's old index must not be moved again
+    struct MovingPassLine
+    {
+        int* pLineNumber;
+        int from;
+    };
+    QVarLengthArray<MovingPassLine, 2> passLines;
+    if (mPreTriggerPassLineNumber >= firstRewrappedLine) {
+        passLines.append({&mPreTriggerPassLineNumber, mPreTriggerPassLineNumber});
+    }
+    for (EnclosingTriggerPass& enclosing : mEnclosingTriggerPasses) {
+        if (enclosing.lineNumber >= firstRewrappedLine) {
+            passLines.append({&enclosing.lineNumber, enclosing.lineNumber});
+        }
+    }
+
     std::queue<std::vector<TChar>> queue;
     QStringList tempList;
-    QStringList timeList;
+    QList<qint64> timeList;
     QList<bool> promptList;
     QList<quint16> wrapGapList;
     int lineCount = 0;
     for (int i = firstRewrappedLine; i < total; ++i) {
-        // A line split above the pass line pushes it down, leaving its index naming other text
-        if (firstRewrappedLine + static_cast<int>(queue.size()) != i) {
-            if (mFirstLineMovedDown < 0 || i < mFirstLineMovedDown) {
-                mFirstLineMovedDown = i;
-            }
-            if (i == mPreTriggerPassLineNumber) {
-                mPreTriggerPassLineNumber = -1;
+        lineCount++;
+        for (const MovingPassLine& passLine : std::as_const(passLines)) {
+            if (passLine.from == i) {
+                *passLine.pLineNumber = firstRewrappedLine + static_cast<int>(tempList.size());
             }
         }
-        lineCount++;
         std::vector<TChar> newBufferLine;
         QString newLineText;
-        const QString time = timeBuffer[i];
+        const qint64 time = timeBuffer[i];
         // trivial case
         if (buffer[i].empty()) {
             tempList.append(newLineText);
@@ -6136,14 +6220,15 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
         int newBufferCharPosition = 0;
         const bool isPrompt = promptBuffer[i];
         const QString lineText = lineBuffer[i];
-        // a blank timestamp indicates a wrapped line
-        const bool isNewline = (time != TBuffer::smBlankTimeStamp);
+        const bool isNewline = (time != TBuffer::csmWrappedLineTimeStamp);
         // The scan above computed this for the line it stopped on. It can also
         // stop before computing anything, but only on a line with no TChars
         // (which never reaches here) or with no text, and getWrapInfo() answers
         // an empty list for empty text too - so the stale value is the right
         // one either way.
-        if (i != firstRewrappedLine) {
+        if (i >= wrapUpTo) {
+            lineBreaks.clear();
+        } else if (i != firstRewrappedLine) {
             lineBreaks = getWrapInfo(lineText, isNewline, maxWidth, indent, hangingIndent);
         }
         if (lineBreaks.isEmpty()) {
@@ -6155,7 +6240,7 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
             continue;
         }
         if (i == mPreTriggerPassLineNumber) {
-            // The wrap may have started above this line, so the snapshot at startLine was not this one
+            // Only a wrap starting on the pass line splits it, so its first segment stays in its place
             materialisePreTriggerPassLine(i);
             wrapPreTriggerPassLine(lineBreaks.first(), lineBreaks.first().isNewline ? indent : hangingIndent);
         }
@@ -6196,14 +6281,14 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
             // everything else
             newLineText.append(lineText.mid(w.firstChar, w.lastChar - w.firstChar));
             tempList.append(newLineText);
-            if (w.isNewline && previousSegmentEnd >= 0 && time == TBuffer::smBlankTimeStamp) {
+            if (w.isNewline && previousSegmentEnd >= 0 && time == TBuffer::csmWrappedLineTimeStamp) {
                 // A line feed inserted into a wrapped line starts a line of its
-                // own, which the blank timestamp would join back onto the last
-                timeList.append(currentTimeStamp());
+                // own, which csmWrappedLineTimeStamp would join back onto the last
+                timeList.append(QDateTime::currentMSecsSinceEpoch());
             } else if (w.isNewline) {
                 timeList.append(time);
             } else {
-                timeList.append(TBuffer::smBlankTimeStamp);
+                timeList.append(TBuffer::csmWrappedLineTimeStamp);
             }
             queue.push(std::move(newBufferLine));
             promptList.append(isPrompt);
@@ -6234,8 +6319,8 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
             appendEmptyLine();
             // A break that leaves only dropped spaces for the last line keeps
             // it wrapped, for whatever is echoed next to carry on from them
-            if (timeList[i] == TBuffer::smBlankTimeStamp) {
-                timeBuffer.back() = TBuffer::smBlankTimeStamp;
+            if (timeList[i] == TBuffer::csmWrappedLineTimeStamp) {
+                timeBuffer.back() = TBuffer::csmWrappedLineTimeStamp;
                 wrapGapBuffer.back() = wrapGapList[i];
             }
         } else {
@@ -6281,7 +6366,7 @@ QString badLineError = qsl("ERROR: invalid line number");
 // and counted for a copy to put back
 bool TBuffer::dropSpaceAtWrap(const QChar c)
 {
-    if (c != QChar::Space || !lineBuffer.back().isEmpty() || timeBuffer.back() != TBuffer::smBlankTimeStamp) {
+    if (c != QChar::Space || !lineBuffer.back().isEmpty() || timeBuffer.back() != TBuffer::csmWrappedLineTimeStamp) {
         return false;
     }
     if (wrapGapBuffer.back() < std::numeric_limits<quint16>::max()) {
@@ -6292,8 +6377,7 @@ bool TBuffer::dropSpaceAtWrap(const QChar c)
 
 bool TBuffer::wrapsFromPreviousLine(const int lineNumber) const
 {
-    // a blank timestamp is what marks a line wrapLine() split off another
-    return lineNumber > 0 && lineNumber < timeBuffer.size() && timeBuffer.at(lineNumber) == TBuffer::smBlankTimeStamp;
+    return lineNumber > 0 && lineNumber < timeBuffer.size() && timeBuffer.at(lineNumber) == TBuffer::csmWrappedLineTimeStamp;
 }
 
 // How many spaces word wrapping dropped at the break before this line - only
@@ -6621,7 +6705,7 @@ void TBuffer::clear()
 
     buffer.emplace_back();
     lineBuffer << QString();
-    timeBuffer << QString();
+    timeBuffer << csmNoTimeStamp;
     promptBuffer.push_back(false);
     wrapGapBuffer.append(0);
 }
@@ -6737,8 +6821,8 @@ void TBuffer::clearLastLine()
             lineBuffer.back().clear();
         }
         // what goes in its place starts a line rather than carrying on one
-        if (!timeBuffer.isEmpty() && timeBuffer.back() == TBuffer::smBlankTimeStamp) {
-            timeBuffer.back() = QString();
+        if (!timeBuffer.isEmpty() && timeBuffer.back() == csmWrappedLineTimeStamp) {
+            timeBuffer.back() = csmNoTimeStamp;
         }
     }
 }
@@ -6761,6 +6845,7 @@ void TBuffer::shrinkBuffer()
         }
     }
 
+    triggerPassLinesRemoved(0, mBatchDeleteSize - 1);
     for (int i = 0; i < mBatchDeleteSize; ++i) {
         // The lines going away were written a whole buffer ago, so freeing each
         // one stalls on a cache miss for its allocator header. Asking for the
@@ -6787,7 +6872,6 @@ void TBuffer::shrinkBuffer()
             mpModel->mScrolledBackTo = std::max(0, *mpModel->mScrolledBackTo - mBatchDeleteSize);
         }
     }
-    mPreTriggerPassLineNumber = -1;
     if (mLastFoundLine >= mBatchDeleteSize) {
         mFirstFoundLine = std::max(0, mFirstFoundLine - mBatchDeleteSize);
         mLastFoundLine -= mBatchDeleteSize;
@@ -6866,23 +6950,24 @@ bool TBuffer::deleteLines(int from, int to)
             noteRemovedLinks(buffer[i], mLinesRemovedTotal + i);
         }
 
-        // What was wrapped off a line that goes starts a line of its own now,
-        // rather than following on from whichever line is left above it
-        if (!wrapsFromPreviousLine(from) && wrapsFromPreviousLine(to + 1)) {
-            timeBuffer[to + 1] = timeBuffer.at(from);
+        // A line continuing a logical line that starts in the range takes the stamp of the last
+        // line there to start one; below a range of continuations alone it still continues the line above
+        if (wrapsFromPreviousLine(to + 1)) {
+            for (int i = to; i >= from; --i) {
+                if (!wrapsFromPreviousLine(i)) {
+                    timeBuffer[to + 1] = timeBuffer.at(i);
+                    break;
+                }
+            }
         }
 
-        for (int i = from, total = from + delta; i < total; ++i) {
-            lineBuffer.removeAt(i);
-            timeBuffer.removeAt(i);
-            promptBuffer.removeAt(i);
-            wrapGapBuffer.removeAt(i);
-        }
+        triggerPassLinesRemoved(from, to);
+        lineBuffer.remove(from, delta);
+        timeBuffer.remove(from, delta);
+        promptBuffer.remove(from, delta);
+        wrapGapBuffer.remove(from, delta);
 
         buffer.erase(buffer.begin() + from, buffer.begin() + to + 1);
-        if (mPreTriggerPassLineNumber >= from) {
-            mPreTriggerPassLineNumber = -1;
-        }
         if (mLastFoundLine >= from) {
             mLastFoundLine = (mLastFoundLine > to) ? mLastFoundLine - delta : from - 1;
             if (mFirstFoundLine > to) {
@@ -7180,13 +7265,14 @@ QString TBuffer::bufferToHtml(const bool showTimeStamp /*= false*/, const int ro
     // <span timestamp format>Timestamp (13 chars)</span><span default>___padding spaces___</span><span first chunk style>first chunk...
     // we will NOT need a closing "</span>"
     const QColor consoleBgColor{mpModel ? mpModel->mBgColor : QColor(Qt::black)};
-    if (showTimeStamp && !timeBuffer.at(row).isEmpty()) {
+    if (showTimeStamp && timeBuffer.at(row) != csmNoTimeStamp) {
         // Use the console's background so the timestamp blends in with the
         // rest of the text, as done in TTextEdit::layoutLine(...).
         s.append(QLatin1StringView("<span style=\"color: rgb(200,150,0); background: "));
         s.append(consoleBgColor.name());
         s.append(QLatin1StringView("; \">"));
-        s.append(QStringView(timeBuffer.at(row)).left(TBuffer::smTimeStampFormat.length()));
+        const QString timeStamp = timeStampText(row);
+        s.append(QStringView(timeStamp).left(TBuffer::smTimeStampFormat.length()));
         // Set the current idea of what the formatting is so we can spot if it
         // changes:
         currentFgColor = qRgb(200, 150, 0);
@@ -8461,8 +8547,12 @@ void TBuffer::flushPendingLead()
 {
     // What came after the lead byte was not its trail byte:
     mPendingLead = 0;
+    appendReplacementCharacter(mPendingLeadFormat);
+}
+
+void TBuffer::appendReplacementCharacter(TChar c)
+{
     mMudLine.append(QChar::ReplacementCharacter);
-    TChar c(mPendingLeadFormat);
     styleForCurrentLink(c);
     mMudBuffer.push_back(c);
     if (mHyperlinkActive) {

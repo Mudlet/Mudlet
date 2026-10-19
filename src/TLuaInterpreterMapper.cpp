@@ -32,8 +32,10 @@
 
 #include "TLuaInterpreter.h"
 
+#include "EnvironmentKit.h"
 #include "Host.h"
 #include "TArea.h"
+#include "TAreaGraph.h"
 #include "TConsoleFrontend.h"
 #include "TDebug.h"
 #include "TEvent.h"
@@ -671,6 +673,7 @@ int TLuaInterpreter::auditAreas(lua_State* L)
 {
     const Host& host = getHostFromLua(L);
     host.mpMap->audit();
+    host.mpMap->updateArea(-1);
     return 0;
 }
 
@@ -761,7 +764,7 @@ int TLuaInterpreter::centerview(lua_State* L)
 
     host.mpMap->mRoomIdHash[host.getName()] = roomId;
     host.mpMap->mNewMove = true;
-    host.mpMap->updateArea(pR->getArea());
+    host.mpMap->updatePlayerArea(pR->getArea());
     host.mpMap->requestPlayerAreaShown();
     lua_pushboolean(L, true);
     return 1;
@@ -868,7 +871,11 @@ int TLuaInterpreter::clearMapUserDataItem(lua_State* L)
     if (key.isEmpty()) {
         return warnArgumentValue(L, __func__, "key can not be an empty string");
     }
-    lua_pushboolean(L, (host.mpMap->mUserData.remove(key) > 0));
+    const bool removed = host.mpMap->mUserData.remove(key) > 0;
+    if (removed) {
+        host.mpMap->setUnsaved(__func__);
+    }
+    lua_pushboolean(L, removed);
     return 1;
 }
 
@@ -1285,10 +1292,7 @@ int TLuaInterpreter::deleteArea(lua_State* L)
             return warnArgumentValue(L, __func__, "you can't delete the default area");
         }
     } else {
-        lua_pushfstring(L,
-                        "deleteArea: bad argument #1 type (area Id as number or area name as string\n"
-                        "expected, got %s!)",
-                        luaL_typename(L, 1));
+        lua_pushfstring(L, "deleteArea: bad argument #1 type (area Id as number or area name as string expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
     }
 
@@ -1549,6 +1553,57 @@ int TLuaInterpreter::getAreaExits(lua_State* L)
             lua_settable(L, -3);
         }
     }
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getAreaGraph
+int TLuaInterpreter::getAreaGraph(lua_State* L)
+{
+    const Host& host = getHostFromLua(L);
+    if (!host.mpMap || !host.mpMap->mpRoomDB) {
+        return warnArgumentValue(L, __func__, "no map present or loaded");
+    }
+    if (host.mpMap->mapOperationInProgress()) {
+        return warnArgumentValue(L, __func__, "a map is being loaded");
+    }
+    TAreaGraph* pGraph = host.mpMap->areaGraph();
+    pGraph->refresh();
+
+    lua_newtable(L);
+    lua_newtable(L);
+    for (const auto& node : pGraph->nodes()) {
+        lua_pushnumber(L, node.areaId);
+        lua_newtable(L);
+        lua_pushstring(L, node.name.toUtf8().constData());
+        lua_setfield(L, -2, "name");
+        lua_pushnumber(L, node.position.x());
+        lua_setfield(L, -2, "x");
+        lua_pushnumber(L, node.position.y());
+        lua_setfield(L, -2, "y");
+        lua_pushnumber(L, node.roomCount);
+        lua_setfield(L, -2, "rooms");
+        lua_pushnumber(L, node.radius);
+        lua_setfield(L, -2, "radius");
+        lua_pushboolean(L, node.pinned);
+        lua_setfield(L, -2, "pinned");
+        lua_settable(L, -3);
+    }
+    lua_setfield(L, -2, "areas");
+
+    lua_newtable(L);
+    int index = 0;
+    for (const auto& link : pGraph->links()) {
+        lua_pushnumber(L, ++index);
+        lua_newtable(L);
+        lua_pushnumber(L, link.fromArea);
+        lua_setfield(L, -2, "from");
+        lua_pushnumber(L, link.toArea);
+        lua_setfield(L, -2, "to");
+        lua_pushnumber(L, link.exitCount);
+        lua_setfield(L, -2, "exits");
+        lua_settable(L, -3);
+    }
+    lua_setfield(L, -2, "links");
     return 1;
 }
 
@@ -1816,6 +1871,31 @@ int TLuaInterpreter::getGridMode(lua_State* L)
         return warnArgumentValue(L, __func__, csmInvalidAreaID.arg(id));
     }
     lua_pushboolean(L, area->gridMode);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getMapEnvironmentKit
+int TLuaInterpreter::getMapEnvironmentKit(lua_State* L)
+{
+    const int environmentId = getVerifiedInt(L, __func__, 1, "environmentID");
+    const Host& host = getHostFromLua(L);
+    const auto [kit, named] = EnvironmentKit::forEnvironment(*host.mpMap, host, environmentId);
+    lua_pushstring(L, EnvironmentKit::name(kit).toUtf8().constData());
+    lua_pushboolean(L, named);
+    return 2;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getMapEnvironmentKits
+int TLuaInterpreter::getMapEnvironmentKits(lua_State* L)
+{
+    const Host& host = getHostFromLua(L);
+    const QHash<int, EnvironmentKit::Kit> kits = EnvironmentKit::stored(host.mpMap->mUserData);
+    lua_newtable(L);
+    for (const auto& [environmentId, kit] : kits.asKeyValueRange()) {
+        lua_pushnumber(L, environmentId);
+        lua_pushstring(L, EnvironmentKit::name(kit).toUtf8().constData());
+        lua_settable(L, -3);
+    }
     return 1;
 }
 
@@ -2203,10 +2283,7 @@ int TLuaInterpreter::getRoomAreaName(lua_State* L)
     QString name;
     if (!lua_isnumber(L, 1)) {
         if (!lua_isstring(L, 1)) {
-            lua_pushfstring(L,
-                            "getRoomAreaName: bad argument #1 type (area id as number or area name as string\n"
-                            "expected, got %s!)",
-                            luaL_typename(L, 1));
+            lua_pushfstring(L, "getRoomAreaName: bad argument #1 type (area id as number or area name as string expected, got %s!)", luaL_typename(L, 1));
             return lua_error(L);
         }
         name = lua_tostring(L, 1);
@@ -2688,7 +2765,7 @@ int TLuaInterpreter::gotoRoom(lua_State* L)
     host.startSpeedWalk();
     lua_pushboolean(L, true);
     if (auto* pR = host.mpMap->mpRoomDB->getRoom(targetRoomId)) {
-        host.mpMap->updateArea(pR->getArea());
+        host.mpMap->refreshArea(pR->getArea());
     }
     return 1;
 }
@@ -3155,6 +3232,22 @@ int TLuaInterpreter::removeSpecialExit(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#resetAreaGraphLayout
+int TLuaInterpreter::resetAreaGraphLayout(lua_State* L)
+{
+    const bool keepPinned = !lua_isnoneornil(L, 1) && getVerifiedBool(L, __func__, 1, "keep pinned areas", true);
+    const Host& host = getHostFromLua(L);
+    if (!host.mpMap || !host.mpMap->mpRoomDB) {
+        return warnArgumentValue(L, __func__, "no map present or loaded");
+    }
+    if (host.mpMap->mapOperationInProgress()) {
+        return warnArgumentValue(L, __func__, "a map is being loaded");
+    }
+    host.mpMap->areaGraph()->resetLayout(keepPinned);
+    lua_pushboolean(L, true);
+    return 1;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#resetRoomArea
 int TLuaInterpreter::resetRoomArea(lua_State* L)
 {
@@ -3552,6 +3645,29 @@ int TLuaInterpreter::searchRoomUserData(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setAreaGraphPosition
+int TLuaInterpreter::setAreaGraphPosition(lua_State* L)
+{
+    const int areaId = getVerifiedInt(L, __func__, 1, "areaID");
+    const double x = getVerifiedDouble(L, __func__, 2, "x");
+    const double y = getVerifiedDouble(L, __func__, 3, "y");
+    const Host& host = getHostFromLua(L);
+    if (!host.mpMap || !host.mpMap->mpRoomDB) {
+        return warnArgumentValue(L, __func__, "no map present or loaded");
+    }
+    if (host.mpMap->mapOperationInProgress()) {
+        return warnArgumentValue(L, __func__, "a map is being loaded");
+    }
+    if (!(std::abs(x) <= TAreaGraph::cMaxCoordinate) || !(std::abs(y) <= TAreaGraph::cMaxCoordinate)) {
+        return warnArgumentValue(L, __func__, qsl("x and y must be numbers between -%1 and %1").arg(TAreaGraph::cMaxCoordinate, 0, 'f', 0));
+    }
+    if (!host.mpMap->areaGraph()->setPosition(areaId, QPointF(x, y))) {
+        return warnArgumentValue(L, __func__, csmInvalidAreaID.arg(areaId));
+    }
+    lua_pushboolean(L, true);
+    return 1;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setAreaName
 int TLuaInterpreter::setAreaName(lua_State* L)
 {
@@ -3586,10 +3702,7 @@ int TLuaInterpreter::setAreaName(lua_State* L)
             return warnArgumentValue(L, __func__, qsl("area name '%1' is reserved and protected - it cannot be changed").arg(existingName));
         }
     } else {
-        lua_pushfstring(L,
-                        "setAreaName: bad argument #1 type (areaID as number or area name as string\n"
-                        "expected, got %s!)",
-                        luaL_typename(L, 1));
+        lua_pushfstring(L, "setAreaName: bad argument #1 type (areaID as number or area name as string expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
     }
 
@@ -4042,6 +4155,31 @@ int TLuaInterpreter::setGridMode(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMapEnvironmentKit
+int TLuaInterpreter::setMapEnvironmentKit(lua_State* L)
+{
+    const int environmentId = getVerifiedInt(L, __func__, 1, "environmentID");
+    QString kitName;
+    if (lua_gettop(L) > 1 && !lua_isnil(L, 2)) {
+        kitName = getVerifiedString(L, __func__, 2, "kit name", true).trimmed().toLower();
+    }
+    Host& host = getHostFromLua(L);
+    std::optional<EnvironmentKit::Kit> kit;
+    if (!kitName.isEmpty()) {
+        kit = EnvironmentKit::fromName(kitName);
+        if (!kit) {
+            return warnArgumentValue(L, __func__, qsl("kit name '%1' is not one of: %2").arg(kitName, EnvironmentKit::names().join(qsl(", "))));
+        }
+    }
+    if (!EnvironmentKit::store(host.mpMap->mUserData, environmentId, kit)) {
+        return warnArgumentValue(L, __func__, qsl("the map user data '%1' is not a JSON object, so is left alone; fix or remove it first").arg(EnvironmentKit::userDataKey()));
+    }
+    host.mpMap->setUnsaved(__func__);
+    host.mpMap->updateArea(-1);
+    lua_pushboolean(L, true);
+    return 1;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMapUserData
 int TLuaInterpreter::setMapUserData(lua_State* L)
 {
@@ -4156,10 +4294,7 @@ int TLuaInterpreter::setRoomArea(lua_State* L)
             lua_pop(L, 1);
         }
     } else {
-        lua_pushfstring(L,
-                        "setRoomArea: bad argument #1 type (roomID as number or table of roomIDs\n"
-                        "expected, got %s!)",
-                        luaL_typename(L, 1));
+        lua_pushfstring(L, "setRoomArea: bad argument #1 type (roomID as number or table of roomIDs expected, got %s!)", luaL_typename(L, 1));
         return lua_error(L);
     }
 
@@ -4187,10 +4322,7 @@ int TLuaInterpreter::setRoomArea(lua_State* L)
             return warnArgumentValue(L, __func__, qsl("area name '%1' does not exist").arg(areaName));
         }
     } else {
-        lua_pushfstring(L,
-                        "setRoomArea: bad argument #2 type (areaID as number or area name as string\n"
-                        "expected, got %s!)",
-                        luaL_typename(L, 2));
+        lua_pushfstring(L, "setRoomArea: bad argument #2 type (areaID as number or area name as string expected, got %s!)", luaL_typename(L, 2));
         return lua_error(L);
     }
 
@@ -4673,7 +4805,7 @@ int TLuaInterpreter::updateMap(lua_State* L)
 {
     const Host& host = getHostFromLua(L);
     if (host.mpMap) {
-        host.mpMap->updateArea(-1);
+        host.mpMap->refreshArea(-1);
     }
     return 0;
 }
