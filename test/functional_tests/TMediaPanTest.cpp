@@ -230,10 +230,10 @@ private slots:
                  "The placed sounds never started.");
         QCOMPARE(media()->placedSound(qsl("north"))->pan(), 0.0F);
 
-        QVERIFY(media()->setListenerFacing(qsl("east")));
+        QVERIFY(media()->setListenerFacing(qsl("east"), TMedia::FacingSetBy::Game));
         QCOMPARE(media()->placedSound(qsl("north"))->pan(), -1.0F);
         QCOMPARE(media()->placedSound(qsl("fixed"))->pan(), 0.4F);
-        QVERIFY(media()->setListenerFacing(qsl("north")));
+        QVERIFY(media()->setListenerFacing(qsl("north"), TMedia::FacingSetBy::Game));
     }
 
     // Muted before it was placed, a sound moved mid-play is still muted, and follows the switch after
@@ -570,7 +570,7 @@ private slots:
         selection.setMediaType(TMediaData::MediaTypeSound);
         selection.setMediaKey(qsl("overhead"));
         media()->updateMedia(selection, std::nullopt, std::nullopt, qsl("east"), 3000);
-        QVERIFY(media()->setListenerFacing(qsl("north")));
+        QVERIFY(media()->setListenerFacing(qsl("north"), TMedia::FacingSetBy::Game));
 
         QVERIFY2(waitForStarted(), "The sound never started playing.");
         SKIP_OR_FAIL_WITHOUT(waitForPlacedAudio() ? QString() : noPanningReason());
@@ -1027,8 +1027,23 @@ private slots:
         }
     }
 
-    void test_theFacingGoesBackToNorthWhenTheGameDisconnects()
+    void test_aFacingTheGameGaveEndsWithItsConnection_data()
     {
+        QTest::addColumn<QString>("scriptFacing");
+        QTest::addColumn<QString>("gameFacing");
+        QTest::addColumn<QString>("afterwards");
+        QTest::newRow("the game's") << QString() << qsl("east") << qsl("north");
+        QTest::newRow("a script's") << qsl("east") << QString() << qsl("east");
+        QTest::newRow("a script's, then the game's") << qsl("east") << qsl("200") << qsl("east");
+    }
+
+    // The game sends its facing again when it connects again, but nothing would give a script's back
+    void test_aFacingTheGameGaveEndsWithItsConnection()
+    {
+        QFETCH(QString, scriptFacing);
+        QFETCH(QString, gameFacing);
+        QFETCH(QString, afterwards);
+
         // Mudlet's side, not the server's: the server can see the connection before Mudlet has taken it up
         QVERIFY2(QTest::qWaitFor(
                          [this]() {
@@ -1036,7 +1051,12 @@ private slots:
                          },
                          QDeadlineTimer(5s)),
                  "The profile never connected to the test server.");
-        QVERIFY(media()->setListenerFacing(qsl("east")));
+        if (!scriptFacing.isEmpty()) {
+            QVERIFY(media()->setListenerFacing(scriptFacing, TMedia::FacingSetBy::Script));
+        }
+        if (!gameFacing.isEmpty()) {
+            QVERIFY(media()->setListenerFacing(gameFacing, TMedia::FacingSetBy::Game));
+        }
         QSignalSpy disconnected(&mpHost->mTelnet, &cTelnet::signal_disconnected);
         mpHost->mTelnet.disconnectIt();
         QVERIFY2(QTest::qWaitFor(
@@ -1045,7 +1065,7 @@ private slots:
                          },
                          QDeadlineTimer(8s)),
                  "The profile never noticed its own disconnect.");
-        QCOMPARE(media()->listenerFacing(), qsl("north"));
+        QCOMPARE(media()->listenerFacing(), afterwards);
     }
 
 private:

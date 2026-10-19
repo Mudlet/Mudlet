@@ -371,11 +371,13 @@ public:
     // Changes the volume, pan or direction of media already playing or paused, gliding there. Not
     // captioned: the play was, and an update only changes how that sound is heard.
     void updateMedia(TMediaData& mediaData, std::optional<int> volume, std::optional<int> pan, const QString& direction, int glideMilliseconds);
+    enum class FacingSetBy { Game, Script };
     // A compass word or degrees, which turns every compass direction with it; false for anything else
-    bool setListenerFacing(const QString& facing);
+    bool setListenerFacing(const QString& facing, FacingSetBy setBy);
     QString listenerFacing() const { return mListenerFacing; }
-    // A facing is the game's to give for one session: the next faces north until it says otherwise
-    void resetListenerFacing() { setListenerFacing(qsl("north")); }
+    // The game gives its facing again each session, so on a disconnect the player turns back to the
+    // last one a script gave, or north
+    void resetListenerFacing();
 
     // "north" for "n" or "North", whole degrees 0 to 359 for a number, empty for anything else
     static QString canonicalMediaDirection(const QString& direction);
@@ -431,6 +433,7 @@ private:
     bool isMediaMatch(const std::shared_ptr<TMediaPlayer>& player, const TMediaData& mediaData, BareName bareName = BareName::MatchesCacheNameOnly);
     static bool isMediaMatch(const TMediaData& playing, const TMediaData& mediaData, BareName bareName);
     TMediaData requestForFilePlayers(const TMediaData& mediaData) const;
+    void turnListener(const QString& facing);
     QString mediaCacheFileName(const QString& absolutePath) const;
     bool resume(TMediaData mediaData);
     void setMediaPlayersMuted(const TMediaData::MediaProtocol mediaProtocol, const bool state);
@@ -516,6 +519,7 @@ private:
 
     QNetworkAccessManager* mpNetworkAccessManager = nullptr;
     QString mListenerFacing = qsl("north");
+    QString mScriptListenerFacing;
     QMap<QNetworkReply*, TMediaData> mMediaDownloads;
 };
 #endif // MUDLET_TMEDIA_H

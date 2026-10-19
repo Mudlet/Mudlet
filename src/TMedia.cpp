@@ -920,7 +920,7 @@ void TMedia::updateMedia(TMediaData& mediaData, const std::optional<int> volume,
     }
 }
 
-bool TMedia::setListenerFacing(const QString& facing)
+bool TMedia::setListenerFacing(const QString& facing, const FacingSetBy setBy)
 {
     const QString canonical = canonicalMediaDirection(facing);
     bool relativeToPlayer = false;
@@ -930,7 +930,21 @@ bool TMedia::setListenerFacing(const QString& facing)
         return false;
     }
 
-    mListenerFacing = canonical;
+    if (setBy == FacingSetBy::Script) {
+        mScriptListenerFacing = canonical;
+    }
+    turnListener(canonical);
+    return true;
+}
+
+void TMedia::resetListenerFacing()
+{
+    turnListener(mScriptListenerFacing.isEmpty() ? qsl("north") : mScriptListenerFacing);
+}
+
+void TMedia::turnListener(const QString& facing)
+{
+    mListenerFacing = facing;
 
     for (const auto& list : {mGMCPSoundList, mAPISoundList}) {
         for (const auto& pPlayer : list) {
@@ -939,8 +953,6 @@ bool TMedia::setListenerFacing(const QString& facing)
             }
         }
     }
-
-    return true;
 }
 
 QString TMedia::canonicalMediaDirection(const QString& direction)
@@ -2972,7 +2984,7 @@ void TMedia::parseJSONForMediaListener(QJsonObject& json)
     const auto facing = json.value(qsl("facing"));
     const QString canonical = facing.isDouble() ? canonicalMediaDirection(facing.toDouble()) : canonicalMediaDirection(facing.toString());
 
-    if (!setListenerFacing(canonical)) {
+    if (!setListenerFacing(canonical, FacingSetBy::Game)) {
         qWarning() << qsl("TMedia::parseJSONForMediaListener() WARNING - ignored a Client.Media.Listener whose facing is not a compass direction or degrees.");
     }
 }

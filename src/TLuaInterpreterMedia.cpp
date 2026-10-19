@@ -1338,7 +1338,7 @@ int TLuaInterpreter::setMediaListener(lua_State* L)
                 errorPushed = true;
             }
 
-            if (!errorPushed && (facing.isEmpty() || !host.mpMedia->setListenerFacing(facing))) {
+            if (!errorPushed && (facing.isEmpty() || !host.mpMedia->setListenerFacing(facing, TMedia::FacingSetBy::Script))) {
                 lua_pushfstring(L, "%s: bad argument value for facing (a compass direction or degrees expected, got \"%s\")", func, lua_tostring(L, -1));
                 errorPushed = true;
             }
