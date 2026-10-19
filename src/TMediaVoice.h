@@ -98,13 +98,16 @@ private:
     std::atomic<bool> mReceivedAudio = false;
     // Stopped on request rather than at the end, so audio still arriving is stale
     std::atomic<bool> mStopped = false;
+    // Held by a decoding thread while it hands audio over, so the destructor can wait out one in progress
+    QMutex mDeliveryMutex;
+    std::atomic<bool> mShuttingDown = false;
     std::atomic<bool> mFormatRefusalReported = false;
     // The position has reached the duration: a stop that follows is the track ending, not a request
     bool mReachedEnd = false;
     QTimer* mpSilenceTimer = nullptr;
 
     static inline std::atomic<bool> smProbePassed = false;
-    static inline bool smProbeStarted = false;
+    static inline std::atomic<bool> smProbeStarted = false;
 };
 
 #endif // MUDLET_TMEDIAVOICE_H

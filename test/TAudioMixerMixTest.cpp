@@ -179,6 +179,17 @@ private slots:
         QCOMPARE(mix(50), 0.5F);
     }
 
+    // A stop drops what a voice queued, not its mute
+    void aStoppedVoiceStaysMuted()
+    {
+        const int id = voice();
+        TAudioMixer::self()->setMuted(id, true);
+        queue(id, 150);
+        TAudioMixer::self()->clear(id);
+        queue(id, 150);
+        QCOMPARE(mix(50), 0.0F);
+    }
+
     // A paused sound holds its audio unheard, and must not keep the output open
     void aHeldVoiceDoesNotCountAsWaitingToBeHeard()
     {

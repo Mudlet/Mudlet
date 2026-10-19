@@ -234,9 +234,13 @@ TAudioMixer::~TAudioMixer()
 
 int TAudioMixer::addVoice()
 {
+    Voice added;
+    // Room for its fullest queue and a piece more, so a decoding thread appending never reallocates
+    // while it holds the lock the output is waiting on
+    added.samples.reserve(static_cast<size_t>(format().framesForDuration(2 * maxQueuedMicroseconds) * 2));
     QMutexLocker lock(&mMutex);
     const int voice = mNextVoice++;
-    mVoices.emplace(voice, Voice());
+    mVoices.emplace(voice, std::move(added));
     return voice;
 }
 
@@ -272,7 +276,13 @@ void TAudioMixer::clear(const int voice)
     QMutexLocker lock(&mMutex);
     const auto found = mVoices.find(voice);
     if (found != mVoices.end()) {
-        found->second = Voice();
+        // Keeps its mute, and the room reserved for its queue
+        Voice& cleared = found->second;
+        cleared.samples.clear();
+        cleared.readPosition = 0;
+        cleared.started = false;
+        cleared.draining = false;
+        cleared.held = false;
     }
 }
 

@@ -103,10 +103,9 @@ bool TMediaVoice::unsupported()
 // feeds the shared output and later players are mixed. Until then they keep outputs of their own.
 void TMediaVoice::probeUnnamedBackend()
 {
-    if (smProbeStarted) {
+    if (smProbeStarted.exchange(true)) {
         return;
     }
-    smProbeStarted = true;
 
     auto* player = new QMediaPlayer(QCoreApplication::instance());
     auto* output = new QAudioBufferOutput(TAudioMixer::format(), player);
@@ -198,7 +197,12 @@ TMediaVoice::TMediaVoice(QMediaPlayer* player)
 
 TMediaVoice::~TMediaVoice()
 {
-    // Detached first, which waits for the decoding thread to finish with this voice
+    // No new delivery can start after the disconnect, and the lock waits out one already under way
+    disconnect(mpBufferOutput, nullptr, this, nullptr);
+    mShuttingDown = true;
+    {
+        const QMutexLocker delivery(&mDeliveryMutex);
+    }
     if (mpPlayer && mpPlayer->audioBufferOutput() == mpBufferOutput) {
         mpPlayer->setAudioBufferOutput(nullptr);
     }
@@ -266,8 +270,9 @@ void TMediaVoice::audioBufferReceived(const QAudioBuffer& buffer)
         return;
     }
 
-    // Decoded before a stop and delivered after it
-    if (mStopped) {
+    const QMutexLocker delivery(&mDeliveryMutex);
+    // Decoded before a stop and delivered after it, or arriving as this voice goes
+    if (mStopped || mShuttingDown) {
         return;
     }
 
