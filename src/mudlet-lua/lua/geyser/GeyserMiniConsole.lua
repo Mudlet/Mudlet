@@ -606,6 +606,12 @@ function Geyser.MiniConsole:new (cons, container)
   -- Initiate and set gauge specific things
   cons = cons or {}
   cons.type = cons.type or "miniConsole"
+  -- Geyser.UserWindow's class is made from this while the Lua library loads, before GUIUtils.lua is in
+  local taken = mudlet.nameTakenByOtherKind and mudlet.nameTakenByOtherKind(cons.name, "miniconsole", cons.windowname or (container or Geyser).windowname)
+  if taken then
+    printError(string.format("Geyser.MiniConsole '%s' was not created: %s", cons.name, taken), false, false)
+    return nil, taken
+  end
 
   -- Call parent's constructor
   local me = self.parent:new(cons, container)
@@ -617,9 +623,8 @@ function Geyser.MiniConsole:new (cons, container)
   -- Now create the MiniConsole using primitives
   if not string.find(me.name, ".+Class$") then
     me.windowname = me.windowname or me.container.windowname or "main"
-    local ok, err = createMiniConsole(me.windowname,me.name, me:get_x(), me:get_y(),
-    me:get_width(), me:get_height())
-    if not mudlet.elementCreated(me.windowname, me.name, ok, err) then
+    local ok, err = createMiniConsole(me.windowname,me.name, me:pixel_geometry())
+    if not mudlet.elementCreated(me.windowname, me.name, ok, err, "miniconsole") then
       printError(string.format("Geyser.MiniConsole '%s' was not created: %s", me.name, err or "unknown error"), false, false)
     end
 
@@ -688,6 +693,5 @@ end
 function Geyser.MiniConsole:new2 (cons, container)
   cons = cons or {}
   cons.useAdd2 = true
-  local me = self:new(cons, container)
-  return me
+  return self:new(cons, container)
 end

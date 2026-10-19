@@ -26,9 +26,11 @@
 #include "TCommandLine.h"
 #include "TConsole.h"
 #include "TDockWidget.h"
+#include "TTextEdit.h"
 #include "mudlet.h"
 #include "TMainConsole.h"
 
+#include <QAccessible>
 #include <QDesktopServices>
 #include <QPainter>
 #include <QSvgRenderer>
@@ -38,8 +40,18 @@
 #include <QUrl>
 #include <QtEvents>
 #include <chrono>
+#include <utility>
 
 using namespace std::chrono_literals;
+
+namespace {
+void notifyAccessibility(QWidget* widget, QAccessible::Event type)
+{
+    // updateAccessibility() does nothing while no screen reader has made accessibility active
+    QAccessibleEvent event(widget, type);
+    QAccessible::updateAccessibility(&event);
+}
+} // namespace
 
 TLabel::TLabel(Host* pH, const QString& name, QWidget* pW)
 : QLabel(pW)
@@ -69,6 +81,9 @@ TLabel::TLabel(Host* pH, const QString& name, QWidget* pW)
     setTextFormat(Qt::RichText);
     setTextInteractionFlags(Qt::NoTextInteraction);
     setOpenExternalLinks(false);
+    mpModel->mAccessibilityChanged = [this](TLabelModel::AccessibilityChange change) {
+        accessibilityChanged(change);
+    };
 
     connect(this, &QLabel::linkActivated, this, &TLabel::slot_linkActivated);
 
@@ -95,13 +110,80 @@ TLabel::~TLabel()
 
 void TLabel::setText(const QString& text)
 {
-    const bool hasAnchor = TLabelModel::containsAnchorTag(text);
+    showLinkStyledText(mpModel->linkStyledText(text));
+}
 
-    setTextInteractionFlags(hasAnchor ? scmLinkInteraction : Qt::TextInteractionFlags(Qt::NoTextInteraction));
+void TLabel::showLinkStyledText(const QString& text)
+{
+    // a click-through label passes the mouse on, so its links stay out of reach of the keyboard too
+    const bool linksReachable = TLabelModel::containsAnchorTag(text) && !testAttribute(Qt::WA_TransparentForMouseEvents);
+
+    setTextInteractionFlags(linksReachable ? scmLinkInteraction : Qt::TextInteractionFlags(Qt::NoTextInteraction));
 
     stopMovie();
-    QLabel::setText(mpModel->linkStyledText(text));
-    mpModel->mText = QLabel::text();
+    QLabel::setText(text);
+    syncTextAnnouncedByQt();
+    // Text over an SVG hides it, and new text replaces a raster or movie
+    imageMayHaveChanged();
+}
+
+void TLabel::press()
+{
+    const QPointF centre = QRectF(rect()).center();
+    QMouseEvent pressEvent(QEvent::MouseButtonPress, centre, mapToGlobal(centre), Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+    // The click callback may delete the label: deleteLabel() deregisters it at once but destroys it later
+    QPointer<TLabel> self(this);
+    mScreenReaderPress = true;
+    mousePressEvent(&pressEvent);
+    if (!self) {
+        return;
+    }
+    if (mpHost && mpHost->windowRegistry().labelModel(mName) == mpModel.get()) {
+        QMouseEvent releaseEvent(QEvent::MouseButtonRelease, centre, mapToGlobal(centre), Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+        mouseReleaseEvent(&releaseEvent);
+    }
+    mScreenReaderPress = false;
+}
+
+bool TLabel::showsImage() const
+{
+    // A raster replaces the text, but text drawn over the SVG layer is what the label then shows
+    return !pixmap().isNull() || (mpSvgRenderer && QTextDocumentFragment::fromHtml(text()).toPlainText().trimmed().isEmpty());
+}
+
+void TLabel::imageMayHaveChanged()
+{
+    using ShownContent = TLabelModel::ShownContent;
+    const ShownContent shown = movie() ? ShownContent::Animation : showsImage() ? ShownContent::Graphic : ShownContent::Text;
+    // A button's role stays a button whatever it shows
+    if (std::exchange(mpModel->mShownContent, shown) != shown && !mpModel->actsAsButton()) {
+        mpModel->accessibilityChanged(TLabelModel::AccessibilityChange::Role);
+    }
+}
+
+void TLabel::syncTextAnnouncedByQt()
+{
+    mTextAnnouncedByQt = true;
+    mpModel->setText(QLabel::text());
+    mTextAnnouncedByQt = false;
+}
+
+void TLabel::accessibilityChanged(TLabelModel::AccessibilityChange change)
+{
+    if (change == TLabelModel::AccessibilityChange::Name) {
+        // QLabel::setText() announces the text as the new name whenever the widget's own name is empty,
+        // so the widget carries a script's name too, and an unnamed label's text is announced once
+        if (const QString& name = mpModel->mAccessibleName; name != accessibleName()) {
+            setAccessibleName(name);
+        } else if (!mTextAnnouncedByQt) {
+            notifyAccessibility(this, QAccessible::NameChanged);
+        }
+        return;
+    }
+#if QT_VERSION >= QT_VERSION_CHECK(6, 11, 0)
+    notifyAccessibility(this, QAccessible::RoleChanged);
+#endif
+    notifyAccessibility(this, QAccessible::ActionChanged);
 }
 
 bool TLabel::carriesLink() const
@@ -114,7 +196,7 @@ void TLabel::mousePressEvent(QMouseEvent* event)
     // QLabel needs the press to note the link so the release can activate it; with links-only flags it
     // leaves the press ignored, so the label's own click callback still runs.
     bool takenByQt = false;
-    if (carriesLink()) {
+    if (carriesLink() && !mScreenReaderPress) {
         QLabel::mousePressEvent(event);
         takenByQt = event->isAccepted();
     }
@@ -143,7 +225,7 @@ void TLabel::mouseDoubleClickEvent(QMouseEvent* event)
 void TLabel::mouseReleaseEvent(QMouseEvent* event)
 {
     bool takenByQt = false;
-    if (carriesLink()) {
+    if (carriesLink() && !mScreenReaderPress) {
         QLabel::mouseReleaseEvent(event);
         takenByQt = event->isAccepted();
     }
@@ -157,13 +239,56 @@ void TLabel::mouseReleaseEvent(QMouseEvent* event)
     if (mpHost && mReleaseFunction) {
         mpHost->getLuaInterpreter()->callLabelCallbackEvent(mReleaseFunction, event);
         event->accept();
+    } else if (!takenByQt && !mClickFunction && event->button() == Qt::RightButton && forwardRightClickToConsole(event)) {
+        event->accept();
     } else if (!takenByQt) {
         QWidget::mouseReleaseEvent(event);
     }
 }
 
+// The console builds its context menu in its text pane, which the label covers but is not
+// inside, so an ignored right-click, offered only to the label's ancestors, never reaches it
+bool TLabel::forwardRightClickToConsole(QMouseEvent* event)
+{
+    QWidget* pParent = parentWidget();
+    if (!pParent) {
+        return false;
+    }
+    // This label, and any other without a click or release callback stacked under it, is left
+    // out of the hit test for a moment, so that it finds what they cover
+    const QPoint where = pParent->mapFromGlobal(event->globalPosition().toPoint());
+    QList<TLabel*> skipped;
+    QWidget* pHit = nullptr;
+    for (TLabel* pLabel = this; pLabel; pLabel = qobject_cast<TLabel*>(pHit)) {
+        if (pLabel->mClickFunction || pLabel->mReleaseFunction) {
+            break;
+        }
+        pLabel->setAttribute(Qt::WA_TransparentForMouseEvents, true);
+        skipped.append(pLabel);
+        pHit = pParent->childAt(where);
+    }
+    for (auto* pLabel : skipped) {
+        pLabel->setAttribute(Qt::WA_TransparentForMouseEvents, false);
+    }
+    auto* pPane = qobject_cast<TTextEdit*>(pHit);
+    if (!pPane) {
+        return false;
+    }
+    // Not the pane's own right-click handling: that acts on a link the label hides
+    pPane->showContextMenu(event->globalPosition().toPoint());
+    return true;
+}
+
 void TLabel::mouseMoveEvent(QMouseEvent* event)
 {
+    // QLabel is what switches to the pointing hand over a link. The flag answers what carriesLink() does
+    // without scanning the whole text on every move. With no move callback the move is ignored below, so
+    // one with a button held (or any, if the parent tracks the mouse) goes on to the label's parent - not
+    // to a sibling such as an embedded map.
+    if (textInteractionFlags() & Qt::LinksAccessibleByMouse) {
+        QLabel::mouseMoveEvent(event);
+    }
+
     if (mpHost && mMoveFunction) {
         mpHost->getLuaInterpreter()->callLabelCallbackEvent(mMoveFunction, event);
         event->accept();
@@ -182,8 +307,21 @@ void TLabel::wheelEvent(QWheelEvent* event)
     }
 }
 
+// QLabel only notices the pointer leaving a link from a move, and then restores the cursor it saved when
+// the hover began. A made-up move where no link can be ends the hover once the pointer has left the label,
+// or before a script sets a cursor that the saved copy would later overwrite.
+void TLabel::endLinkHover()
+{
+    if (textInteractionFlags() & Qt::LinksAccessibleByMouse) {
+        const QPointF nowhere(-1, -1);
+        QMouseEvent away(QEvent::MouseMove, nowhere, mapToGlobal(nowhere), Qt::NoButton, Qt::NoButton, Qt::NoModifier);
+        QLabel::mouseMoveEvent(&away);
+    }
+}
+
 void TLabel::leaveEvent(QEvent* event)
 {
+    endLinkHover();
     if (mpHost && mLeaveFunction) {
         mpHost->getLuaInterpreter()->callLabelCallbackEvent(mLeaveFunction, event);
         event->accept();
@@ -273,7 +411,8 @@ bool TLabel::setBackgroundImage(const QString& path)
     stopMovie();
     setPixmap(raster);
     // setPixmap() empties the text
-    mpModel->mText = text();
+    mpModel->setText(text());
+    imageMayHaveChanged();
     return true;
 }
 
@@ -299,6 +438,7 @@ bool TLabel::setSvgImage(const QString& path)
     }
     refreshSvg();
     updateGeometry();
+    imageMayHaveChanged();
     return true;
 }
 
@@ -310,7 +450,12 @@ void TLabel::resetBackgroundImage()
     if (!pixmap().isNull() || movie()) {
         stopMovie();
         clear();
+        mpModel->setText(text());
     }
+    if (const QString sheet = styleSheet(), withoutImage = TLabelModel::styleSheetWithoutBackgroundImage(sheet); withoutImage != sheet) {
+        restyle(withoutImage);
+    }
+    imageMayHaveChanged();
 }
 
 void TLabel::stopMovie()
@@ -421,6 +566,7 @@ void TLabel::contextMenuEvent(QContextMenuEvent* event)
 void TLabel::setClickThrough(bool clickthrough)
 {
     setAttribute(Qt::WA_TransparentForMouseEvents, clickthrough);
+    mpModel->setClickThrough(clickthrough);
 
     // If clickthrough is enabled, text interaction (including hyperlinks) won't work
     // So we need to disable text interaction when clickthrough is on
@@ -476,12 +622,12 @@ void TLabel::changeEvent(QEvent* event)
 bool TLabel::event(QEvent* event)
 {
     if (event->type() == QEvent::ToolTipChange) {
-        mpModel->mToolTip = toolTip();
+        mpModel->setToolTip(toolTip());
     }
     const bool handled = QLabel::event(event);
     // A qproperty-text in a style sheet reaches QLabel::setText() directly, as the style is applied
     if (event->type() == QEvent::Polish || event->type() == QEvent::StyleChange) {
-        mpModel->mText = text();
+        syncTextAnnouncedByQt();
     }
     return handled;
 }
@@ -523,10 +669,8 @@ void TLabel::setLinkStyle(const QString& linkColor, const QString& linkVisitedCo
     setPalette(palette);
     mPaletteSetSinceStyled = true;
 
-    // Note: Widget stylesheets don't affect QTextDocument rendering
-    // Link colors are applied via inline styles in setText()
-
-    // Force update to re-render with new styles
+    // Widget stylesheets don't affect QTextDocument rendering, so links already shown are re-styled inline
+    reapplyLinkStyle();
     update();
 }
 
@@ -544,17 +688,22 @@ void TLabel::resetLinkStyle()
     mLinkVisitedColor.clear();
     mLinkUnderline = true;
 
-    // Force update to re-render with new styles
+    // the styles written into the anchors would otherwise stay
+    reapplyLinkStyle();
     update();
 }
 
 void TLabel::clearVisitedLinks()
 {
     mVisitedLinks.clear();
+    reapplyLinkStyle();
+}
 
-    QString currentText = text();
-    if (!currentText.isEmpty() && TLabelModel::containsAnchorTag(currentText)) {
-        setText(currentText);
+void TLabel::reapplyLinkStyle()
+{
+    // a pixmap or movie takes the text out of QLabel's content slot
+    if (const QString currentText = text(); !currentText.isEmpty() && TLabelModel::containsAnchorTag(currentText)) {
+        showLinkStyledText(mpModel->restyledText());
     }
 }
 
@@ -566,21 +715,18 @@ void TLabel::slot_linkActivated(const QString& link)
 
     if (!mLinkVisitedColor.isEmpty()) {
         mVisitedLinks.insert(link);
-
-        // Refresh the label to update link colors
-        // We need to re-apply the current text to trigger the styling update
-        QString currentText = text();
-        if (!currentText.isEmpty() && TLabelModel::containsAnchorTag(currentText)) {
-            setText(currentText);
-        }
+        reapplyLinkStyle();
     }
 
-    // Check for custom schemes by looking for the colon separator
-    const int colonPos = link.indexOf(':');
+    // Check for custom schemes by looking for the colon separator; a browser
+    // also drops the whitespace around an href before reading its scheme
+    const QString href = link.trimmed();
+    const int colonPos = href.indexOf(':');
 
     if (colonPos > 0) {
-        const QString scheme = link.left(colonPos).toLower(); // RFC 3986: schemes are case-insensitive
-        const QString payload = link.mid(colonPos + 1);       // Everything after the colon
+        const QString scheme = href.left(colonPos).toLower(); // RFC 3986: schemes are case-insensitive
+        // Untrimmed: a prompt: or send: payload can end in a space the player means to keep
+        const QString payload = link.mid(link.indexOf(':') + 1);
 
         // Handle custom Mudlet URL schemes for Lua commands
         if (scheme == qsl("send")) {
@@ -606,15 +752,22 @@ void TLabel::slot_linkActivated(const QString& link)
         }
 
         if (scheme == qsl("http") || scheme == qsl("https")) {
-            QDesktopServices::openUrl(QUrl(link));
+            QDesktopServices::openUrl(QUrl(href));
             return;
         }
 
-        // Unknown scheme - ignore safely to prevent unintended Lua execution
-        // Only links without a scheme should be treated as Lua code
-        return;
+        // After a scheme-shaped prefix only a Lua method call - tel:go(), pkg.ui:show "x" - is Lua;
+        // ftp://host, mailto:a@b.c or about:blank are URLs that Lua would only report as syntax errors.
+        static const QRegularExpression schemeName(qsl("^[a-z][a-z0-9+.-]*$"));
+        // Lua allows whitespace and --[[ ]] comments on either side of the method name
+        static const QRegularExpression methodCall(qsl("^(?:\\s|--\\[(=*)\\[.*?\\]\\1\\])*[A-Za-z_][A-Za-z0-9_]*(?:\\s|--\\[(=*)\\[.*?\\]\\2\\])*[(\"'{[]"));
+        if (scheme == qsl("javascript") || (schemeName.match(scheme).hasMatch() && !methodCall.match(payload).hasMatch())) {
+            //: Printed in the Errors console when a link in a label is clicked but neither handled nor run; %1 is the link, %2 its scheme
+            const QString note = tr("[LINK:] The label link \"%1\" was not run: %2: is not a scheme Mudlet handles, and the link is not a Lua command.").arg(link, scheme);
+            emit mpHost->signal_errorConsolePrint(note + QChar::LineFeed, QColor(255, 128, 0), QColor(Qt::black));
+            return;
+        }
     }
 
-    // No scheme - treat as Lua code to execute
     mpHost->mLuaInterpreter.compileAndExecuteScript(link);
 }

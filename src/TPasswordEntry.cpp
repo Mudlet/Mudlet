@@ -59,6 +59,9 @@ TPasswordEntry::TPasswordEntry(Host* pHost, TCommandLine* pCommandLine, QWidget*
         setRevealed(echoMode() != QLineEdit::Normal);
     });
     setRevealed(false);
+    connect(this, &QLineEdit::textChanged, this, [this]() {
+        mHoldsOnlyTypedAhead = false;
+    });
 
     //: Placeholder text of the box the game's request for hidden input is answered with
     setPlaceholderText(tr("Enter password"));
@@ -106,6 +109,12 @@ void TPasswordEntry::setRevealed(const bool revealed)
         mpRevealAction->setText(tr("Show password"));
     }
     mpRevealAction->setToolTip(mpRevealAction->text());
+}
+
+void TPasswordEntry::takeTypedAhead(const QString& typedAhead)
+{
+    setText(typedAhead);
+    mHoldsOnlyTypedAhead = true;
 }
 
 void TPasswordEntry::setReopened()

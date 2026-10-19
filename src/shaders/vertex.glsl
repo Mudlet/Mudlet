@@ -26,6 +26,14 @@ out vec4 vertexColor;
 out vec2 texCoord;
 // How far in front of the camera, for the fog
 out float eyeDepth;
+// The untransformed template vertex, so a wireframe can find the shape's edges
+out vec3 localPosition;
+out vec3 localNormal;
+// Where an instance stands, the same for all of its fragments, so that ink can be uneven in a way of its own
+flat out vec3 instanceOrigin;
+// For a model's own light: the surface's normal, and the way an instance's template y axis runs, both in the map
+out vec3 surfaceNormal;
+flat out vec3 instanceSide;
 
 void main()
 {
@@ -53,6 +61,11 @@ void main()
     
     // Pass texture coordinates to fragment shader
     texCoord = aTexCoord;
+    localPosition = aPos;
+    localNormal = aNormal;
+    instanceOrigin = uUseInstancing ? aInstanceTransform[3].xyz : vec3(0.0);
+    surfaceNormal = worldNormal;
+    instanceSide = uUseInstancing ? normalize(uNormalMatrix * mat3(aInstanceTransform)[1]) : vec3(0.0, 1.0, 0.0);
     
     gl_Position = uMVP * finalPos;
     eyeDepth = gl_Position.w;

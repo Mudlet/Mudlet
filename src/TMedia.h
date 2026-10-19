@@ -190,6 +190,9 @@ public:
         auto* newOutput = new QAudioOutput(mMediaPlayer.get());
         newOutput->setVolume(volume);
         newOutput->setMuted(muted);
+        // Detach first: displacing an installed output runs its disconnect function, which
+        // would null the player's pointer to the replacement installed in the same call
+        mMediaPlayer->setAudioOutput(nullptr);
         mMediaPlayer->setAudioOutput(newOutput);
         if (oldOutput) {
             oldOutput->setParent(nullptr);
@@ -256,6 +259,11 @@ public:
     // lexically (e.g. via "../" traversal) or through a symlink component that already exists
     // under mediaRoot but points elsewhere. Static so it can be unit-tested without a Host.
     static bool mediaFilePathEscapesMediaDir(const QString& mediaRoot, const QString& mediaFileName);
+    // Where, relative to mediaRoot, a file an API call names by absolute path is played from: its copy,
+    // or the file itself when it is already under mediaRoot. Static so it can be unit-tested without a Host.
+    static QString mediaCacheFileName(const QString& profileHome, const QString& mediaRoot, const QString& absolutePath);
+    // Whether a name sits in a folder mediaCacheFileName() keeps for its copies, where a game must not reach
+    static bool mediaFileNameReservedForCopies(const QString& mediaFileName);
 
 signals:
     void signal_setupVideoOutput(TMediaPlayer* player, bool& setupSucceeded);
@@ -267,11 +275,14 @@ private slots:
 private:
     bool isMediaProtocolAllowed(const TMediaData& mediaData) const;
     QList<std::shared_ptr<TMediaPlayer>> findMediaPlayersByCriteria(const TMediaData& mediaData);
-    bool isMediaMatch(const std::shared_ptr<TMediaPlayer>& player, const TMediaData& mediaData);
-    static TMediaData requestForFilePlayers(const TMediaData& mediaData);
+    // resume() keeps MatchesCacheNameOnly, so a bare name never resumes another folder's copy of a same-named file
+    enum class BareName { MatchesCacheNameOnly, AlsoMatchesSourceFile };
+    bool isMediaMatch(const std::shared_ptr<TMediaPlayer>& player, const TMediaData& mediaData, BareName bareName = BareName::MatchesCacheNameOnly);
+    TMediaData requestForFilePlayers(const TMediaData& mediaData) const;
+    QString mediaCacheFileName(const QString& absolutePath) const;
     bool resume(TMediaData mediaData);
     void setMediaPlayersMuted(const TMediaData::MediaProtocol mediaProtocol, const bool state);
-    void transitionNonRelativeFile(TMediaData& mediaData);
+    bool transitionNonRelativeFile(TMediaData& mediaData);
     QString getStreamUrl(const TMediaData& mediaData);
     QUrl parseUrl(TMediaData& mediaData);
     static bool isValidUrl(QUrl& url);
