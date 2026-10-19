@@ -2579,6 +2579,46 @@ describe("Tests UI functions", function()
       assert.are.equal(4, BaseUI.usedGaugeSlots)
     end)
 
+    it("should paint xp in the slot of an enemy bar the same repaint hides", function()
+      if BaseUI.gauges.xp then
+        pending("the profile already has an xp bar, which this spec would replace")
+        return
+      end
+      local before = {
+        gauges = BaseUI.gauges,
+        usedGaugeSlots = BaseUI.usedGaugeSlots,
+        layoutGauges = BaseUI.layoutGauges,
+        layoutDock = BaseUI.layoutDock,
+        build = BaseUI.build,
+        checkMapData = BaseUI.checkMapData,
+        vitalsData = BaseUI.vitalsData,
+      }
+      local vitalsSection = BaseUI.sections.vitals
+      local panel = Geyser.Container:new({ name = "BaseUISpecVitals", x = 0, y = 0, width = 10, height = 10 })
+      panel:hide()
+      local enemy = { hidden = false, hide = function(self) self.hidden = true end, delete = function() end }
+      BaseUI.gauges = { hp = {}, mp = {}, mv = {}, enemy = enemy }
+      BaseUI.usedGaugeSlots = 4
+      BaseUI.sections.vitals = panel
+      BaseUI.vitalsData = { xp = { current = 10, max = 100 } }
+      for _, name in ipairs({ "layoutGauges", "layoutDock", "build", "checkMapData" }) do
+        BaseUI[name] = function() end
+      end
+      finally(function()
+        if BaseUI.gauges.xp then
+          BaseUI.gauges.xp:delete()
+        end
+        panel:delete()
+        BaseUI.sections.vitals = vitalsSection
+        for key, value in pairs(before) do
+          BaseUI[key] = value
+        end
+      end)
+      saved.renderVitals()
+      assert.is_not_nil(BaseUI.gauges.xp)
+      assert.is_nil(BaseUI.gauges.enemy)
+    end)
+
     describe("painted", function()
       local painted, paintSaved
 

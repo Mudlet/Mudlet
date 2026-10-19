@@ -2708,6 +2708,13 @@ function BaseUI.renderVitals()
   end
   BaseUI.build()
   BaseUI.checkMapData()
+  -- before painting, so a stat that needs an ended enemy's slot can take it
+  for _, stat in ipairs(vitalsStats) do
+    local gauge = BaseUI.gauges[stat.key]
+    if stat.transient and gauge and not gauge.hidden and not completeReading(shownVitals(stat)) then
+      gauge:hide()
+    end
+  end
   for _, stat in ipairs(vitalsStats) do
     -- a gauge is only painted once a full reading is known: either a ready
     -- percentage, or both a current and a max (maxima are never assumed, so
@@ -2729,8 +2736,6 @@ function BaseUI.renderVitals()
           gauge:show()
         end
       end
-    elseif stat.transient and BaseUI.gauges[stat.key] and not BaseUI.gauges[stat.key].hidden then
-      BaseUI.gauges[stat.key]:hide()
     end
   end
   -- The panel is built before there are any bars to put in it, so it starts
