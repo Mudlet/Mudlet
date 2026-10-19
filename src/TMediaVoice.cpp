@@ -44,6 +44,7 @@ namespace {
 // with none is a stall, and the sound is better heard through an output of its own
 constexpr auto silentPlayLimit = 500ms;
 constexpr auto probeLimit = 5s;
+constexpr int minimumGlideMilliseconds = 20;
 
 bool otherBackendNamed()
 {
@@ -257,15 +258,20 @@ void TMediaVoice::setGain(const float gain, const int glideMilliseconds)
     }
     mRequestedGain = level;
     // Before any audio there is nothing to glide from
-    const qint64 frames = mReceivedAudio ? TAudioMixer::format().framesForDuration(qint64{glideMilliseconds} * 1000) : 0;
+    const qint64 frames = mReceivedAudio ? glideFramesFor(glideMilliseconds) : 0;
     const QMutexLocker lock(&mRequestMutex);
     mGainRequest.set(level, frames);
+}
+
+qint64 TMediaVoice::glideFramesFor(const int milliseconds)
+{
+    return TAudioMixer::format().framesForDuration(qint64{std::max(milliseconds, minimumGlideMilliseconds)} * 1000);
 }
 
 void TMediaVoice::setPan(const float pan, const int glideMilliseconds)
 {
     const float position = std::clamp(pan, -1.0F, 1.0F);
-    const qint64 frames = mReceivedAudio ? TAudioMixer::format().framesForDuration(qint64{glideMilliseconds} * 1000) : 0;
+    const qint64 frames = mReceivedAudio ? glideFramesFor(glideMilliseconds) : 0;
     const QMutexLocker lock(&mRequestMutex);
     // A sound placed as it plays moves out of its own stereo image to the pan, not in from the centre. A
     // new track starts fully placed, even on a player whose last track was stopped part way into a glide.
@@ -281,7 +287,7 @@ void TMediaVoice::setPan(const float pan, const int glideMilliseconds)
 
 void TMediaVoice::unplace(const int glideMilliseconds)
 {
-    const qint64 frames = mReceivedAudio ? TAudioMixer::format().framesForDuration(qint64{glideMilliseconds} * 1000) : 0;
+    const qint64 frames = mReceivedAudio ? glideFramesFor(glideMilliseconds) : 0;
     const QMutexLocker lock(&mRequestMutex);
     mPlacementRequest.set(0.0F, frames);
     mPlaced = false;

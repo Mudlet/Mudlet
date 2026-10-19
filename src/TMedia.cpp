@@ -928,7 +928,7 @@ bool TMedia::setListenerFacing(const QString& facing)
     const QString canonical = canonicalMediaDirection(facing);
     bool relativeToPlayer = false;
 
-    // A facing is a way the player can turn to: up, down, in, out and the relative words are not
+    // A facing is a way the player can turn to: up, down and the relative words are not
     if (!mediaDirectionBearing(canonical, relativeToPlayer) || relativeToPlayer) {
         return false;
     }
@@ -949,13 +949,12 @@ bool TMedia::setListenerFacing(const QString& facing)
 QString TMedia::canonicalMediaDirection(const QString& direction)
 {
     static const QHash<QString, QString> words{
-            {qsl("n"), qsl("north")},   {qsl("north"), qsl("north")}, {qsl("ne"), qsl("northeast")}, {qsl("northeast"), qsl("northeast")},
-            {qsl("e"), qsl("east")},    {qsl("east"), qsl("east")},   {qsl("se"), qsl("southeast")}, {qsl("southeast"), qsl("southeast")},
-            {qsl("s"), qsl("south")},   {qsl("south"), qsl("south")}, {qsl("sw"), qsl("southwest")}, {qsl("southwest"), qsl("southwest")},
-            {qsl("w"), qsl("west")},    {qsl("west"), qsl("west")},   {qsl("nw"), qsl("northwest")}, {qsl("northwest"), qsl("northwest")},
-            {qsl("u"), qsl("up")},      {qsl("up"), qsl("up")},       {qsl("d"), qsl("down")},       {qsl("down"), qsl("down")},
-            {qsl("in"), qsl("in")},     {qsl("out"), qsl("out")},     {qsl("ahead"), qsl("ahead")},  {qsl("behind"), qsl("behind")},
-            {qsl("left"), qsl("left")}, {qsl("right"), qsl("right")},
+            {qsl("n"), qsl("north")},     {qsl("north"), qsl("north")},   {qsl("ne"), qsl("northeast")}, {qsl("northeast"), qsl("northeast")},
+            {qsl("e"), qsl("east")},      {qsl("east"), qsl("east")},     {qsl("se"), qsl("southeast")}, {qsl("southeast"), qsl("southeast")},
+            {qsl("s"), qsl("south")},     {qsl("south"), qsl("south")},   {qsl("sw"), qsl("southwest")}, {qsl("southwest"), qsl("southwest")},
+            {qsl("w"), qsl("west")},      {qsl("west"), qsl("west")},     {qsl("nw"), qsl("northwest")}, {qsl("northwest"), qsl("northwest")},
+            {qsl("u"), qsl("up")},        {qsl("up"), qsl("up")},         {qsl("d"), qsl("down")},       {qsl("down"), qsl("down")},
+            {qsl("ahead"), qsl("ahead")}, {qsl("behind"), qsl("behind")}, {qsl("left"), qsl("left")},    {qsl("right"), qsl("right")},
     };
 
     const QString key = direction.trimmed().toLower();
@@ -3063,14 +3062,6 @@ QString TMedia::mediaDirectionCaption(const QString& direction)
     //: A direction a sound comes from, shown in brackets after its caption, e.g. "[footsteps (down) plays]"
     if (direction == qsl("down")) {
         return tr("down");
-    }
-    //: The way a sound comes from, through an exit named "in", shown in brackets after its caption, e.g. "[footsteps (in) plays]"
-    if (direction == qsl("in")) {
-        return tr("in");
-    }
-    //: The way a sound comes from, through an exit named "out", shown in brackets after its caption, e.g. "[footsteps (out) plays]"
-    if (direction == qsl("out")) {
-        return tr("out");
     }
     //: A sound coming from straight ahead of the player, shown in brackets after its caption, e.g. "[a wolf howls (ahead) plays]"
     if (direction == qsl("ahead")) {

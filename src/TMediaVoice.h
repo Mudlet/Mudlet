@@ -71,6 +71,9 @@ public:
     bool receivedAudio() const { return mReceivedAudio; }
     int mixerVoice() const { return mVoice; }
 
+    // How many frames a change asked to take this long glides over, once a sound is playing: even one
+    // asked for at once takes a moment, as a jump clicks
+    static qint64 glideFramesFor(int milliseconds);
     // Interleaved stereo float in and out, which may be the same buffer. Placement blends the source's
     // own stereo image, at 0, into one point set at the pan with a constant-power pan, at 1.
     static void render(const float* in, float* out, qint64 frames, Glide& gain, Glide& pan, Glide& placement);

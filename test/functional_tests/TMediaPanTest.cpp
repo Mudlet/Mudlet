@@ -352,7 +352,7 @@ private slots:
         QCOMPARE(media()->playersPlaced(), 0);
     }
 
-    // Up, down, in and out name no side to put a sound on, so it plays as with no direction
+    // Up and down name no side to put a sound on, so it plays as with no direction
     void test_aDirectionWithNoBearingLeavesTheSoundUnplaced()
     {
         SKIP_OR_FAIL_WITHOUT(backendPlaces() ? QString() : noPanningReason());
@@ -370,7 +370,7 @@ private slots:
         selection.setMediaKey(qsl("upstairs"));
         media()->updateMedia(selection, std::nullopt, std::nullopt, qsl("east"), 0);
         QCOMPARE(media()->playersPlaced(), 1);
-        media()->updateMedia(selection, std::nullopt, std::nullopt, qsl("out"), 0);
+        media()->updateMedia(selection, std::nullopt, std::nullopt, qsl("down"), 0);
         QCOMPARE(media()->playersPlaced(), 0);
     }
 
@@ -462,6 +462,28 @@ private slots:
         message = qsl(R"({"pan": 50})");
         media()->parseGMCP(package, message);
         QCOMPARE(media()->playingMedia(criteria).at(0).mediaPan(), std::nullopt);
+    }
+
+    // A game can pass any exit name: one that is no direction plays the sound as with none
+    void test_aGmcpPlayWithAnUnknownDirectionStillPlays()
+    {
+        const QString fileName = writeClip(qsl("portal.wav"));
+        QString package = qsl("Client.Media.Play");
+        QString message = qsl(R"({"name": "%1", "key": "portal", "direction": "portal"})").arg(fileName);
+        media()->parseGMCP(package, message);
+
+        TMediaData criteria;
+        criteria.setMediaProtocol(TMediaData::MediaProtocolGMCP);
+        criteria.setMediaType(TMediaData::MediaTypeSound);
+        criteria.setMediaKey(qsl("portal"));
+        QVERIFY2(QTest::qWaitFor(
+                         [&]() {
+                             return !media()->playingMedia(criteria).isEmpty();
+                         },
+                         QDeadlineTimer(10s)),
+                 "A Client.Media.Play with a direction that is no direction never played.");
+        QVERIFY(media()->playingMedia(criteria).at(0).mediaDirection().isEmpty());
+        QCOMPARE(media()->playersPlaced(), 0);
     }
 
     void test_aGmcpListenerTurnsTheCompass()

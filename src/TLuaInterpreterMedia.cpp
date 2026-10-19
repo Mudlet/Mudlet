@@ -55,7 +55,7 @@ bool mediaDirectionArg(lua_State* L, const char* func, QString& direction)
 
     if (direction.isEmpty()) {
         lua_pushfstring(L,
-                        "%s: bad argument value for direction (a compass direction such as \"north\" or \"ne\", up, down, in, out, ahead, behind, left, right or degrees expected, got \"%s\")",
+                        "%s: bad argument value for direction (a compass direction such as \"north\" or \"ne\", up, down, ahead, behind, left, right or degrees expected, got \"%s\")",
                         func,
                         lua_tostring(L, -1));
         return false;

@@ -221,6 +221,13 @@ private slots:
         QVERIFY(!TAudioMixer::self()->silent());
     }
 
+    // A change asked for at once still takes 20 ms, or the jump clicks
+    void aChangeAskedForAtOnceStillGlides()
+    {
+        QCOMPARE(TMediaVoice::glideFramesFor(0), 20 * framesPerMs);
+        QCOMPARE(TMediaVoice::glideFramesFor(100), 100 * framesPerMs);
+    }
+
     void aGlideReachesItsTargetOnTheLastFrameAndNotBefore()
     {
         TMediaVoice::Glide glide;
@@ -346,8 +353,6 @@ private slots:
         QTest::newRow("ahead, facing west") << "ahead" << "west" << QVariant(0);
         QTest::newRow("up") << "up" << "north" << QVariant();
         QTest::newRow("down") << "down" << "east" << QVariant();
-        QTest::newRow("in") << "in" << "north" << QVariant();
-        QTest::newRow("out") << "out" << "east" << QVariant();
     }
 
     void aDirectionIsPlacedFromTheWayThePlayerFaces()
@@ -382,6 +387,9 @@ private slots:
         QCOMPARE(TMedia::canonicalMediaDirection(-90.0), QString("270"));
         QCOMPARE(TMedia::canonicalMediaDirection(359.6), QString("0"));
         QVERIFY(TMedia::canonicalMediaDirection(QString("sideways")).isEmpty());
+        // Exit names, not directions: a game says where such a sound comes from in its caption
+        QVERIFY(TMedia::canonicalMediaDirection(QString("in")).isEmpty());
+        QVERIFY(TMedia::canonicalMediaDirection(QString("out")).isEmpty());
         QVERIFY(TMedia::canonicalMediaDirection(QString()).isEmpty());
         QVERIFY(TMedia::canonicalMediaDirection(std::nan("")).isEmpty());
     }

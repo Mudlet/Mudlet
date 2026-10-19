@@ -371,8 +371,8 @@ public:
     // "north" for "n" or "North", whole degrees 0 to 359 for a number, empty for anything else
     static QString canonicalMediaDirection(const QString& direction);
     static QString canonicalMediaDirection(double degrees);
-    // A move that gives no time of its own still takes this long, as a jump clicks
-    static constexpr int defaultGlideMilliseconds = 100;
+    // A move that gives no time of its own happens at once; TMediaVoice smooths it so it does not click
+    static constexpr int defaultGlideMilliseconds = 0;
     // Where between -100 and 100 a stereo output places it, for a player facing that way: its pan if it
     // has one, else its direction. None for a direction with no bearing, which plays as with no direction.
     static std::optional<int> stereoPan(const TMediaData& mediaData, const QString& facing);
@@ -461,7 +461,7 @@ private:
     static QString mediaTypeToString(int mediaType);
 
     void play(TMediaData& mediaData);
-    // Degrees clockwise from north, or from straight ahead for a relative word; none for up, down, in and out
+    // Degrees clockwise from north, or from straight ahead for a relative word; none for up and down
     static std::optional<double> mediaDirectionBearing(const QString& direction, bool& relativeToPlayer);
     static QString mediaDirectionCaption(const QString& direction);
 
