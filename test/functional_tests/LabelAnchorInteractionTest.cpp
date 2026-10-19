@@ -37,6 +37,7 @@
 #include "PortableModeTestHelper.h"
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
+#include "TCommandLine.h"
 #include "TLabel.h"
 #include "TLuaInterpreter.h"
 #include "TMainConsole.h"
@@ -527,6 +528,136 @@ private slots:
         moveTo(linkCentre());
         QCOMPARE(label()->cursor().shape(), Qt::PointingHandCursor);
         QApplication::sendEvent(label(), &leave);
+    }
+
+    void cleanup()
+    {
+        if (mpHost) {
+            mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("anchorSchemeRan, anchorColon, anchorColonText, anchorSent, anchorSendHandler = nil\n"
+                                                                     "javascript, JAVASCRIPT, ftp, file, steam, about, magnet, data, mailto, tel, SMS = nil\n"));
+        }
+    }
+
+    void test_aLinkOfANonLuaSchemeIsNotRun_data()
+    {
+        QTest::addColumn<QString>("link");
+
+        QTest::newRow("javascript") << qsl("javascript:void(0)");
+        QTest::newRow("upper-case JAVASCRIPT") << qsl("JAVASCRIPT:void(0)");
+        QTest::newRow("javascript after a space") << qsl(" javascript:void(0)");
+        QTest::newRow("ftp") << qsl("ftp://host/x");
+        QTest::newRow("file") << qsl("file:///tmp/x");
+        QTest::newRow("steam") << qsl("steam://run/1");
+        QTest::newRow("about") << qsl("about:blank");
+        QTest::newRow("magnet") << qsl("magnet:?xt=urn:btih:abc");
+        QTest::newRow("data") << qsl("data:text/plain,hi");
+        QTest::newRow("mailto") << qsl("mailto:someone@example.com");
+        QTest::newRow("tel") << qsl("tel:+15551234");
+    }
+
+    // Each scheme is also a global whose every method sets a sentinel, which catches a javascript: link run as Lua;
+    // the other links do not parse as Lua, so only the [ERROR:] check would catch one being run
+    void test_aLinkOfANonLuaSchemeIsNotRun()
+    {
+        QFETCH(QString, link);
+
+        label()->resetLinkStyle();
+        label()->setText(qsl("<a href=\"%1\">go</a>").arg(link));
+        mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("anchorSchemeRan = false\n"
+                                                                 "local ran = function() anchorSchemeRan = true end\n"
+                                                                 "local scheme = setmetatable({}, {__index = function() return ran end})\n"
+                                                                 "javascript, JAVASCRIPT, ftp, file, steam = scheme, scheme, scheme, scheme, scheme\n"
+                                                                 "about, magnet, data, mailto, tel = scheme, scheme, scheme, scheme, scheme\n"));
+        QVERIFY2(centreIsOnTheLabel(), "the point this case clicks is outside the label, so it would miss the link");
+
+        QStringList errorsConsole;
+        auto collect = connect(mpHost, &Host::signal_errorConsolePrint, this, [&errorsConsole](const QString& text) {
+            errorsConsole << text;
+        });
+        QSignalSpy activated(label(), &QLabel::linkActivated);
+        QTest::mouseClick(label(), Qt::LeftButton, Qt::NoModifier, linkCentre());
+        disconnect(collect);
+
+        QCOMPARE(activated.count(), 1);
+        QVERIFY2(luaHolds(qsl("anchorSchemeRan == false")), "the link was run as Lua");
+        const QString printed = errorsConsole.join(QString());
+        QVERIFY2(!printed.contains(qsl("[ERROR:]")), qPrintable(qsl("the link was reported as a Lua error: %1").arg(printed)));
+        QVERIFY2(printed.contains(link), qPrintable(qsl("nothing in the Errors console names the ignored link: \"%1\"").arg(printed)));
+    }
+
+    void test_aLuaCommandLinkWithAColonRuns_data()
+    {
+        QTest::addColumn<QString>("command");
+        QTest::addColumn<QString>("ran");
+
+        QTest::newRow("method call") << qsl("anchorColon:go()") << qsl("anchorColon.ran == 1");
+        QTest::newRow("colon in a string") << qsl("anchorColonText = 'at 12:00'") << qsl("anchorColonText == 'at 12:00'");
+        QTest::newRow("URL-like string") << qsl("anchorColonText = 'at://home'") << qsl("anchorColonText == 'at://home'");
+        QTest::newRow("method of a table named tel") << qsl("tel:go()") << qsl("anchorColon.ran == 1");
+        QTest::newRow("method of a table named SMS") << qsl("SMS:go()") << qsl("anchorColon.ran == 1");
+        QTest::newRow("method of a table named data") << qsl("data:go()") << qsl("anchorColon.ran == 1");
+        QTest::newRow("method of a field") << qsl("anchorColon.inner:go()") << qsl("anchorColon.ran == 1");
+        QTest::newRow("method call with a string argument") << qsl("anchorColon:go 'x'") << qsl("anchorColon.ran == 1");
+        QTest::newRow("method call with a space after the colon") << qsl("anchorColon: go()") << qsl("anchorColon.ran == 1");
+        QTest::newRow("method call with a tab after the colon") << qsl("anchorColon:\tgo()") << qsl("anchorColon.ran == 1");
+        QTest::newRow("method call with a comment after the colon") << qsl("anchorColon:--[[c]]go()") << qsl("anchorColon.ran == 1");
+        QTest::newRow("method call with a comment before the arguments") << qsl("anchorColon:go --[==[c]==] ()") << qsl("anchorColon.ran == 1");
+    }
+
+    void test_aLuaCommandLinkWithAColonRuns()
+    {
+        QFETCH(QString, command);
+        QFETCH(QString, ran);
+
+        label()->resetLinkStyle();
+        label()->setText(qsl("<a href=\"%1\">go</a>").arg(command));
+        mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("anchorColon = {ran = 0}\n"
+                                                                 "function anchorColon:go() self.ran = self.ran + 1 end\n"
+                                                                 "anchorColon.inner, tel, SMS, data = anchorColon, anchorColon, anchorColon, anchorColon\n"
+                                                                 "anchorColonText = nil\n"));
+        QVERIFY2(centreIsOnTheLabel(), "the point this case clicks is outside the label, so it would miss the link");
+
+        QSignalSpy activated(label(), &QLabel::linkActivated);
+        QTest::mouseClick(label(), Qt::LeftButton, Qt::NoModifier, linkCentre());
+
+        QCOMPARE(activated.count(), 1);
+        QCOMPARE(activated.first().first().toString(), command);
+        QVERIFY2(luaHolds(ran), "the link's Lua command did not run");
+    }
+
+    void test_aPromptLinkKeepsItsTrailingSpace()
+    {
+        TCommandLine* commandLine = mpHost->mainConsoleView()->mpCommandLine;
+        QVERIFY(commandLine);
+        commandLine->clear();
+        label()->resetLinkStyle();
+        label()->setText(qsl("<a href=\"prompt:tell Bob \">go</a>"));
+        QVERIFY2(centreIsOnTheLabel(), "the point this case clicks is outside the label, so it would miss the link");
+
+        QSignalSpy activated(label(), &QLabel::linkActivated);
+        QTest::mouseClick(label(), Qt::LeftButton, Qt::NoModifier, linkCentre());
+
+        QCOMPARE(activated.count(), 1);
+        QCOMPARE(activated.first().first().toString(), qsl("prompt:tell Bob "));
+        QCOMPARE(commandLine->toPlainText(), qsl("tell Bob "));
+        commandLine->clear();
+    }
+
+    void test_aSendLinkKeepsItsTrailingSpace()
+    {
+        label()->resetLinkStyle();
+        label()->setText(qsl("<a href=\"send:say hi \">go</a>"));
+        mpHost->getLuaInterpreter()->compileAndExecuteScript(
+                qsl("anchorSent = {}\n"
+                    "anchorSendHandler = registerAnonymousEventHandler('sysDataSendRequest', function(_, command) anchorSent[#anchorSent + 1] = command end)\n"));
+        QVERIFY2(centreIsOnTheLabel(), "the point this case clicks is outside the label, so it would miss the link");
+
+        QSignalSpy activated(label(), &QLabel::linkActivated);
+        QTest::mouseClick(label(), Qt::LeftButton, Qt::NoModifier, linkCentre());
+        mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("killAnonymousEventHandler(anchorSendHandler)"));
+
+        QCOMPARE(activated.count(), 1);
+        QVERIFY2(luaHolds(qsl("#anchorSent == 1 and anchorSent[1] == 'say hi '")), "the send: link did not send its text with the trailing space kept");
     }
 
     void test_aRightClickOpensNoMenuOfQtsOwn_data()

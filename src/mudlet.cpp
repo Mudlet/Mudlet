@@ -6596,6 +6596,15 @@ QString mudlet::findMatchingProfile(const QString& host, int port)
     for (const auto& profileName : std::as_const(profileNames)) {
         QString profileHost = MudletApp::readProfileData(profileName, qsl("url"));
         QString profilePort = MudletApp::readProfileData(profileName, qsl("port"));
+        // A catalog game's folder can lack either file, as showing the game in the connection dialog writes neither
+        if (auto it = TGameDetails::findGame(profileName); it != TGameDetails::scmDefaultGames.end() && QFileInfo::exists(MudletApp::getMudletPath(enums::profileHomePath, profileName))) {
+            if (profileHost.isEmpty()) {
+                profileHost = (*it).hostUrl;
+            }
+            if (profilePort.isEmpty()) {
+                profilePort = QString::number((*it).port);
+            }
+        }
 
         if (!profileHost.compare(host, Qt::CaseInsensitive) && profilePort.toInt() == port) {
             QString profilePath = MudletApp::getMudletPath(enums::profileHomePath, profileName);
@@ -6633,11 +6642,16 @@ QString mudlet::createProfileForUri(const TelnetUriData& uriData)
 
     // Bounded loop to avoid hanging on unexpected collisions
     QString originalName = profileName;
-    for (int suffix = 2; suffix < 100 && profileExists(profileName); ++suffix) {
+    // A name whose removed profile's sign-in is still being deleted counts as taken: the new profile
+    // would read that sign-in and send its token to whatever server this link names
+    const auto taken = [this](const QString& name) {
+        return profileExists(name) || dlgConnectionProfiles::signInRemovalPending(name);
+    };
+    for (int suffix = 2; suffix < 100 && taken(profileName); ++suffix) {
         profileName = qsl("%1-%2").arg(originalName).arg(suffix);
     }
 
-    if (profileExists(profileName)) {
+    if (taken(profileName)) {
         qWarning() << "mudlet::createProfileForUri() - Could not find unique name for profile";
         return QString();
     }

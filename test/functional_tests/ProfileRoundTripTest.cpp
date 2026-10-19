@@ -51,6 +51,7 @@
 #include "ScriptUnit.h"
 #include "TAlias.h"
 #include "TKey.h"
+#include "TMap.h"
 #include "TScript.h"
 #include "TTimer.h"
 #include "TTrigger.h"
@@ -149,6 +150,27 @@ private:
     // apart from blanking it.
     inline static const QString scmTargetUrl = qsl("target.example.org");
     static const int scmTargetPort = 4321;
+
+    // In the order TMap::restore16ColorSet() files them as environments 257 to 272
+    inline static const QList<QColor Host::*> scmMapAnsiColors{&Host::mRed_2,
+                                                               &Host::mGreen_2,
+                                                               &Host::mYellow_2,
+                                                               &Host::mBlue_2,
+                                                               &Host::mMagenta_2,
+                                                               &Host::mCyan_2,
+                                                               &Host::mWhite_2,
+                                                               &Host::mBlack_2,
+                                                               &Host::mLightRed_2,
+                                                               &Host::mLightGreen_2,
+                                                               &Host::mLightYellow_2,
+                                                               &Host::mLightBlue_2,
+                                                               &Host::mLightMagenta_2,
+                                                               &Host::mLightCyan_2,
+                                                               &Host::mLightWhite_2,
+                                                               &Host::mLightBlack_2};
+
+    // Off every default and unlike each other, so a map left with the constructor's palette cannot pass
+    static QColor mapAnsiColor(int index) { return QColor(16 * index + 3, 200 - 9 * index, 40 + 11 * index); }
 
     // -----------------------------------------------------------------------
     // Tree builders - these mirror the construction order XMLimport uses
@@ -541,6 +563,7 @@ private slots:
         // an import that leaves them alone cannot pass.
         mpSource->setSearchOptions(enums::EditorSearchOptionCaseSensitive | enums::EditorSearchOptionWholeWord);
         mpSource->setShowIdsInEditor(true);
+        mpSource->setFolderViewInEditor(true);
         mpSource->mMapInfoContributors.insert(scmContributorName);
         // Every one of these is off its default, and the legacy copy below
         // moves each enumerated one to a second value, so both reads count.
@@ -549,8 +572,12 @@ private slots:
         mpSource->setControlCharacterMode(ControlCharacterMode::Picture);
         mpSource->setWideAmbiguousEAsianGlyphs(Qt::Checked);
         mpSource->setLargeAreaExitArrows(true);
+        QVERIFY(mpSource->setMapStyle(qsl("blueprint")));
         const auto [experimentSet, experimentError] = mpSource->setExperimentEnabled(scmExperiment, true);
         QVERIFY2(experimentSet, qPrintable(experimentError));
+        for (int i = 0; i < scmMapAnsiColors.size(); ++i) {
+            mpSource->*scmMapAnsiColors.at(i) = mapAnsiColor(i);
+        }
 
         const int runningWatch = mpSource->createStopWatch(scmRunningStopWatch).first;
         const int stoppedWatch = mpSource->createStopWatch(scmStoppedStopWatch).first;
@@ -611,7 +638,8 @@ private slots:
                                        std::pair{qsl("blankLineBehaviour=\"Hide\""), qsl("blankLineBehaviour=\"ReplaceWithSpace\"")},
                                        std::pair{qsl("ControlCharacterHandling=\"1\""), qsl("ControlCharacterHandling=\"2\"")},
                                        std::pair{qsl("AmbigousWidthGlyphsToBeWide=\"yes\""), qsl("AmbigousWidthGlyphsToBeWide=\"no\"")},
-                                       std::pair{qsl("Large2DMapAreaExitArrows=\"yes\""), qsl("Large2DMapAreaExitArrows=\"no\"")}}) {
+                                       std::pair{qsl("Large2DMapAreaExitArrows=\"yes\""), qsl("Large2DMapAreaExitArrows=\"no\"")},
+                                       std::pair{qsl("mapStyle=\"blueprint\""), qsl("mapStyle=\"no-such-style\"")}}) {
             QVERIFY2(legacyXml.count(from) == 1, qPrintable(qsl("the export does not hold %1 exactly once").arg(from)));
             legacyXml.replace(from, to);
         }
@@ -626,6 +654,8 @@ private slots:
 
         QFile legacyReadFile(legacyPath);
         QVERIFY2(legacyReadFile.open(QFile::ReadOnly | QFile::Text), qPrintable(legacyReadFile.errorString()));
+        // Off the default first, so only falling back to it can pass
+        QVERIFY(mpLegacyTarget->setMapStyle(qsl("blueprint")));
         XMLimport legacyImporter(mpLegacyTarget);
         auto [legacyImported, legacyImportError] = legacyImporter.importPackage(&legacyReadFile);
         QVERIFY2(legacyImported, qPrintable(legacyImportError));
@@ -655,6 +685,7 @@ private slots:
     {
         QCOMPARE(mpTarget->mSearchOptions, enums::EditorSearchOptions(enums::EditorSearchOptionCaseSensitive | enums::EditorSearchOptionWholeWord));
         QVERIFY(mpTarget->showIdsInEditor());
+        QVERIFY(mpTarget->folderViewInEditor());
     }
 
     void test_triggersRoundTrip()
@@ -777,6 +808,19 @@ private slots:
         QCOMPARE(mpLegacyTarget->mUpperLevelColor, QColor(200, 150, 100, 255));
     }
 
+    // The map's environments 257 to 272 are its own copy of the profile's ANSI colours, so they must be
+    // refreshed from the ones the import read, not left as the defaults the Host was built with
+    void test_mapAnsiColorsReachTheMapOnImport_10679()
+    {
+        QCOMPARE(scmMapAnsiColors.size(), qsizetype{16});
+        for (int i = 0; i < scmMapAnsiColors.size(); ++i) {
+            const int env = 257 + i;
+            QCOMPARE(mpTarget->*scmMapAnsiColors.at(i), mapAnsiColor(i));
+            QVERIFY2(mpTarget->mpMap->mCustomEnvColors.value(env) == mapAnsiColor(i),
+                     qPrintable(qsl("environment %1 is %2, not the imported %3").arg(QString::number(env), mpTarget->mpMap->mCustomEnvColors.value(env).name(), mapAnsiColor(i).name())));
+        }
+    }
+
     // Map info contributors are written one per element straight into <Host>
     // rather than wrapped in a container of their own (#5911). The container
     // still has to be read on the way in, for profiles saved while it was in
@@ -814,12 +858,15 @@ private slots:
         QCOMPARE(mpTarget->getWideAmbiguousEAsianGlyphsControlState(), Qt::Checked);
         QVERIFY(mpTarget->getLargeAreaExitArrows());
         QVERIFY(mpTarget->experimentEnabled(scmExperiment));
+        QCOMPARE(mpTarget->mapStyle(), qsl("blueprint"));
 
         QCOMPARE(mpLegacyTarget->mCaretShortcut, Host::CaretShortcut::CtrlTab);
         QCOMPARE(mpLegacyTarget->mBlankLineBehaviour, Host::BlankLineBehaviour::ReplaceWithSpace);
         QCOMPARE(mpLegacyTarget->getControlCharacterMode(), ControlCharacterMode::OEM);
         QCOMPARE(mpLegacyTarget->getWideAmbiguousEAsianGlyphsControlState(), Qt::Unchecked);
         QVERIFY(!mpLegacyTarget->getLargeAreaExitArrows());
+        // A style this version does not know falls back to the default one
+        QCOMPARE(mpLegacyTarget->mapStyle(), qsl("tiles"));
     }
 
     void test_commandLineHistorySaveSizeOnImport_data()
@@ -985,6 +1032,44 @@ private slots:
         QVERIFY2(onSource.text != qsl("ran here"), qPrintable(onSource.text));
     }
 #endif
+
+    // Last, as a package's bare <Host> resets every profile setting it leaves out. Nothing but
+    // signal_areaChanged prompts a mapper already on screen to repaint, so without it the
+    // mapper keeps the old colours (#10679)
+    void test_aHostPackageRepaintsTheMapWithItsAnsiColors_10679()
+    {
+        const QByteArray packageXml = "<?xml version=\"1.0\"?><MudletPackage version=\"1.001\"><HostPackage>"
+                                      "<Host><mRed2>#00ff00</mRed2></Host>"
+                                      "</HostPackage></MudletPackage>";
+        QTemporaryFile packageFile;
+        QVERIFY(packageFile.open());
+        QCOMPARE(packageFile.write(packageXml), static_cast<qint64>(packageXml.size()));
+        packageFile.close();
+        const auto importPackage = [this, &packageFile]() {
+            QFile file(packageFile.fileName());
+            if (!file.open(QFile::ReadOnly | QFile::Text)) {
+                return std::make_pair(false, file.errorString());
+            }
+            XMLimport importer(mpTarget);
+            return importer.importPackage(&file, qsl("ansiMapColorPackage"));
+        };
+
+        QCoreApplication::processEvents();
+        QSignalSpy areaChanged(mpTarget->mpMap.data(), &TMap::signal_areaChanged);
+        auto [imported, importError] = importPackage();
+        QVERIFY2(imported, qPrintable(importError));
+
+        QCOMPARE(mpTarget->mpMap->mCustomEnvColors.value(257), QColor(0, 255, 0));
+        QVERIFY2(areaChanged.count() || areaChanged.wait(1000), "the map was never told to repaint with the package's colours");
+        QCOMPARE(areaChanged.takeFirst().first().toInt(), -1);
+
+        // A view showing another area than the one already queued must repaint as well
+        mpTarget->mpMap->updateArea(5);
+        std::tie(imported, importError) = importPackage();
+        QVERIFY2(imported, qPrintable(importError));
+        QVERIFY2(areaChanged.count() || areaChanged.wait(1000), "the map was never told to repaint with the package's colours");
+        QCOMPARE(areaChanged.takeFirst().first().toInt(), -1);
+    }
 };
 
 #include "ProfileRoundTripTest.moc"

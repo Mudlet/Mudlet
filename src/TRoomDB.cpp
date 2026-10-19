@@ -24,6 +24,7 @@
 
 #include "Host.h"
 #include "TArea.h"
+#include "TAreaGraph.h"
 #include "TMap.h"
 
 #include <QDataStream>
@@ -151,6 +152,7 @@ void TRoomDB::updateEntranceMap(int id)
 
 void TRoomDB::updateEntranceMap(TRoom* pR, bool isMapLoading)
 {
+    ++mExitsRevision;
     static const bool showDebug = false; // Enable this at runtime (set a breakpoint on it) for debugging!
 
     // entranceMap maps the room to rooms it has a viable exit to. So if room b and c both have
@@ -394,6 +396,7 @@ bool TRoomDB::removeArea(int id)
 {
     if (TArea* pA = areas.value(id)) {
         mpMap->areasAboutToBeDeleted();
+        mpMap->areaGraph()->forgetArea(id);
         if (!rooms.isEmpty()) {
             // During map deletion rooms will already
             // have been cleared so this would not
@@ -417,6 +420,7 @@ bool TRoomDB::removeArea(int id)
     if (areaNamesMap.contains(id)) {
         // Handle corner case where the area name was created but not used
         areaNamesMap.remove(id);
+        mpMap->areaGraph()->forgetArea(id);
         return true;
     }
     return false;
@@ -1435,7 +1439,10 @@ void TRoomDB::deleteDisplacedArea(int areaID, TArea* pA)
     if (!pExisting || pExisting == pA) {
         return;
     }
-    mpMap->areasAboutToBeDeleted();
+    // A map file is read into a database that is not yet the map's, and nothing walks its areas
+    if (mpMap->mpRoomDB.get() == this) {
+        mpMap->areasAboutToBeDeleted();
+    }
     // Prevent TArea::~TArea() from re-entrantly calling removeArea(this),
     // mirroring the pattern in TRoomDB::removeArea(int)
     pExisting->mpRoomDB = nullptr;

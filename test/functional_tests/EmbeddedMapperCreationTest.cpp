@@ -487,7 +487,7 @@ private slots:
         QVERIFY2(!pSized->size().isEmpty(), "the 3D view had no size, so this case covers nothing");
         QVERIFY2(smModernViewWarnings.size() == 1 && smModernViewWarnings.filter(smFalseFailure).isEmpty(), warningsSoFar().constData());
         // Qt refuses the classic 3D view in this window too
-        const QString classicAdvice = qsl("experiment.3dmap.modernmapper");
+        const QString classicAdvice = qsl("href=\"settings\"");
         QVERIFY2(!pSized->findChild<QLabel*>()->text().contains(classicAdvice), qPrintable(pSized->findChild<QLabel*>()->text()));
 
         // Lets the deferred show checks run, as the notice above may have come from the resize that showing sends first

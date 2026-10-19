@@ -1893,15 +1893,15 @@ void TConsole::print(const QString& msg)
 
 // printDebug(QColor& c, QColor& d, const QString& msg) was functionally the
 // same as this method it was just that the arguments were in a different order
-void TConsole::print(const QString& msg, const QColor fgColor, const QColor bgColor, const QString& timeStampOverride)
+void TConsole::print(const QString& msg, const QColor fgColor, const QColor bgColor, const qint64 timeStampOverride)
 {
     mpModel->print(msg, fgColor, bgColor, timeStampOverride);
     showNewLines();
 }
 
-void TConsole::printDebugLine(const QString& text, const QColor& foreground, const QColor& background, const QString& timeStamp)
+void TConsole::printDebugLine(const QString& text, const QColor& foreground, const QColor& background, const qint64 arrivalMSecs)
 {
-    print(text, foreground, background, timeStamp);
+    print(text, foreground, background, arrivalMSecs);
 }
 
 void TConsole::printFormatted(const QString& text, const std::vector<TChar>& formatting, const TLinkStore& sourceLinkStore)

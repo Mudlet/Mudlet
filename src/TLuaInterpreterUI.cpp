@@ -3511,34 +3511,8 @@ int TLuaInterpreter::setFont(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setFontSize
 int TLuaInterpreter::setFontSize(lua_State* L)
 {
-    const char* windowName = "";
-    int s = 1;
-    if (lua_gettop(L) > 1) { // Have more than one argument so first must be a console name
-        windowName = WINDOW_NAME(L, s++);
-    }
-
-    const int size = getVerifiedInt(L, __func__, s, "size");
-    if (size <= 0) {
-        // just throw an error, no default needed.
-        return warnArgumentValue(L, __func__, "size cannot be 0 or negative");
-    }
-    if (size > Host::scmMaxFontSize) {
-        return warnArgumentValue(L, __func__, qsl("size %1 is too large, it cannot be more than %2").arg(size).arg(Host::scmMaxFontSize));
-    }
-
-    const QString consoleName{windowName};
-    const Host& host = getHostFromLua(L);
-    // a console wins a name a label also carries, as in setFont()
-    if (!host.consoleFrontend()->setWindowFontSize(consoleName, size)) {
-        auto labelFont = host.labelFont(consoleName);
-        if (!labelFont) {
-            return windowNotFound(L, consoleName);
-        }
-        labelFont->setPointSize(size);
-        host.consoleFrontend()->setLabelFont(consoleName, *labelFont);
-    }
-    lua_pushboolean(L, true);
-    return 1;
+    // Have more than one argument so first must be a console name
+    return setConsoleFontSize(L, __func__, lua_gettop(L) > 1);
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setItalics
@@ -4050,6 +4024,53 @@ int TLuaInterpreter::getMapWindowTitle(lua_State* L)
     }
 
     return warnArgumentValue(L, __func__, "no floating/dockable type map window found");
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMiniConsoleFontSize
+int TLuaInterpreter::setMiniConsoleFontSize(lua_State* L)
+{
+    // A size alone sets the main window's, as setFontSize() does
+    return setConsoleFontSize(L, __func__, lua_gettop(L) != 1);
+}
+
+// No documentation available in wiki - internal function
+int TLuaInterpreter::setConsoleFontSize(lua_State* L, const char* functionName, const bool windowNamed)
+{
+    const char* windowName = "";
+    int s = 1;
+    if (windowNamed) {
+        // Not WINDOW_NAME(), whose error would name this helper
+        if (!lua_isnoneornil(L, s)) {
+            if (!lua_isstring(L, s)) {
+                lua_pushfstring(L, bad_window_type, functionName, s, luaL_typename(L, s));
+                return lua_error(L);
+            }
+            windowName = lua_tostring(L, s);
+        }
+        ++s;
+    }
+
+    const int size = getVerifiedInt(L, functionName, s, "size");
+    if (size <= 0) {
+        return warnArgumentValue(L, functionName, "size cannot be 0 or negative");
+    }
+    if (size > Host::scmMaxFontSize) {
+        return warnArgumentValue(L, functionName, qsl("size %1 is too large, it cannot be more than %2").arg(size).arg(Host::scmMaxFontSize));
+    }
+
+    const QString consoleName{windowName};
+    const Host& host = getHostFromLua(L);
+    // a console wins a name a label also carries, as in setFont()
+    if (!host.consoleFrontend()->setWindowFontSize(consoleName, size)) {
+        auto labelFont = host.labelFont(consoleName);
+        if (!labelFont) {
+            return windowNotFound(L, consoleName);
+        }
+        labelFont->setPointSize(size);
+        host.consoleFrontend()->setLabelFont(consoleName, *labelFont);
+    }
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMovie
@@ -4624,7 +4645,7 @@ int TLuaInterpreter::setCommandBackgroundColor(lua_State* L)
             return warnArgumentValue(L, __func__, csmInvalidRedValue.arg(r));
         }
     } else {
-        lua_pushfstring(L, "setBackgroundColor: bad argument #%d type (window name as string, or red value 0-255 as number expected, got %s!)", s, luaL_typename(L, s));
+        lua_pushfstring(L, "setCommandBackgroundColor: bad argument #%d type (window name as string, or red value 0-255 as number expected, got %s!)", s, luaL_typename(L, s));
         return lua_error(L);
     }
 
@@ -4681,7 +4702,7 @@ int TLuaInterpreter::setCommandForegroundColor(lua_State* L)
             return warnArgumentValue(L, __func__, csmInvalidRedValue.arg(r));
         }
     } else {
-        lua_pushfstring(L, "setBackgroundColor: bad argument #%d type (window name as string, or red value 0-255 as number expected, got %s!)", s, luaL_typename(L, s));
+        lua_pushfstring(L, "setCommandForegroundColor: bad argument #%d type (window name as string, or red value 0-255 as number expected, got %s!)", s, luaL_typename(L, s));
         return lua_error(L);
     }
 

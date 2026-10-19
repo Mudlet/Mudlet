@@ -395,6 +395,28 @@ end</script>
 					<integer>1</integer>
 				</regexCodePropertyList>
 			</Trigger>
+			<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+				<name>Swedish Prompt Trigger</name>
+				<script>map.learnPromptTemplate(matches[2])</script>
+				<triggerType>0</triggerType>
+				<conditonLineDelta>0</conditonLineDelta>
+				<mStayOpen>0</mStayOpen>
+				<mCommand></mCommand>
+				<packageName></packageName>
+				<mFgColor>#ff0000</mFgColor>
+				<mBgColor>#ffff00</mBgColor>
+				<mSoundFile></mSoundFile>
+				<colorTriggerFgColor>#000000</colorTriggerFgColor>
+				<colorTriggerBgColor>#000000</colorTriggerBgColor>
+				<regexCodeList>
+					<string>Din nuvarande prompt är "(.*)"\.?\s*$</string>
+					<string>Du sätter din prompt till "(.*)"\.?\s*$</string>
+				</regexCodeList>
+				<regexCodePropertyList>
+					<integer>1</integer>
+					<integer>1</integer>
+				</regexCodePropertyList>
+			</Trigger>
 		</TriggerGroup>
 	</TriggerPackage>
 	<TimerPackage />
@@ -1568,12 +1590,13 @@ map.help.start_mapping = [[
         syntax: &lt;yellow&gt;start mapping [area name]&lt;reset&gt;
 
         This command instructs the script to add new content to the map when it
-        is seen. When first used, an area name is mandatory, so that an area is
-        created for new rooms to be placed in. If used with an area name while
-        the map shows the character within a room on the map, that room will be
-        moved to be in the named area, if it is not already in it. If used
-        without an area name, the room is not moved, and mapping begins in the
-        area the character is currently located in.
+        is seen. On an empty map the area name is optional: new rooms are placed
+        in an area called "New area", which you can rename later with area rename.
+        If used with an area name while the map shows the character within a
+        room on the map, that room will be moved to be in the named area, if it
+        is not already in it. If used without an area name, the room is not
+        moved, and mapping begins in the area the character is currently
+        located in.
 ]]
 map.help.stop_mapping = [[
     &lt;cyan&gt;Stop Mapping&lt;reset&gt;
@@ -1978,9 +2001,10 @@ map.help.language = [[
         itself, unless you have chosen a language or changed any translation.
 
         SvenskMUD rooms have no title, so the first sentence of the description
-        names the room. The game glues its prompt to the first line of the
-        description; if your prompt has letters in it, set it with
-        &lt;yellow&gt;map prompt&lt;reset&gt; to keep it out of the room name.
+        names the room. The mapper learns your prompt from the game: it asks
+        with 'prompt' when it has none or stops seeing it, and follows along
+        when you change it with 'prompt &lt;template&gt;'. If it still gets it
+        wrong, set it yourself with &lt;yellow&gt;map prompt&lt;reset&gt;.
 ]]
 map.help.quick_start = [[
     &lt;link: quick_start&gt;map basics&lt;/link&gt; (quick start guide)
@@ -1993,7 +2017,7 @@ map.help.quick_start = [[
 
     1. &lt;link: start mapping&gt;start mapping &lt;optional area name&gt;&lt;/link&gt;
        If both room name and exits are good, you can start mapping! Give it the
-       area name you're currently in, usually optional but required for the first one.
+       area name you're currently in, or leave it out on an empty map to start with "New area".
     2. &lt;link: find prompt&gt;find prompt&lt;/link&gt;
        Room name or exits aren't recognised? Try this command then. It will make
        the script start looking for a prompt using several standard prompt
@@ -2408,7 +2432,7 @@ local language_dirs = {
 }
 
 local move_queue, lines = {}, {}
-local find_portal, vision_fail, room_detected, random_move, force_portal, find_prompt, downloading, walking, help_shown
+local find_portal, vision_fail, room_detected, random_move, force_portal, find_prompt, await_prompt, downloading, walking, help_shown
 local mt = getmetatable(map) or {}
 
 local exitmap = {
@@ -2455,6 +2479,8 @@ local reverse_dirs = {
 }
 
 local wait_echo = {}
+-- what the game says about its prompt is only believed in reply to a prompt command, so another player cannot set it
+local awaiting_prompt_reply, prompt_seen, untitled_room_seen, asked_for_prompt = false, false, false, {}
 local mapper_tag = "&lt;112,229,0&gt;(&lt;73,149,0&gt;mapper&lt;112,229,0&gt;): &lt;255,255,255&gt;"
 local debug_tag = "&lt;255,165,0&gt;(&lt;200,120,0&gt;debug&lt;255,165,0&gt;): &lt;255,255,255&gt;"
 local err_tag = "&lt;255,0,0&gt;(&lt;178,34,34&gt;error&lt;255,0,0&gt;): &lt;255,255,255&gt;"
@@ -3477,9 +3503,14 @@ function map.start_mapping(area_name)
         area_name = areas[map.currentArea]
     end
     if not area_name then
-        show_err("You haven't started mapping yet, how should the first area be called? Set it with: &lt;yellow&gt;start mapping &lt;area name&gt;&lt;reset&gt;")
+        if not table.is_empty(getRooms()) then
+            show_err("Not sure where you are on the map yet. Try &lt;yellow&gt;map me&lt;reset&gt;, or name the area with: &lt;yellow&gt;start mapping &lt;area name&gt;&lt;reset&gt;")
+        end
+        area_name = "New area"
+        map.echo("Now mapping in area: " .. area_name .. ". Rename it any time with: &lt;yellow&gt;area rename &lt;new name&gt;&lt;reset&gt;")
+    else
+        map.echo("Now mapping in area: " .. area_name)
     end
-    map.echo("Now mapping in area: " .. area_name)
     map.set("mapping", true)
     find_area(area_name)
     rooms = find_room(map.currentName, map.currentArea)
@@ -3882,6 +3913,7 @@ function map.search_timer_check()
     if find_prompt then
         map.echo("Prompt not auto-detected, use 'map prompt' to set a prompt pattern.",false,true)
         find_prompt = false
+        await_prompt = false
     end
 end
 
@@ -3896,6 +3928,7 @@ function map.make_prompt_pattern(str)
     if not str:starts("^") then str = "^"..str end
     map.save.prompt_pattern[map.character] = str
     find_prompt = false
+    await_prompt = false
     table.save(profilePath .. "/map downloads/map_save.dat",map.save)
     map.echo("Prompt pattern set: " .. str)
 end
@@ -3924,25 +3957,37 @@ function map.make_move_method(str)
     table.save(profilePath .. "/map downloads/map_save.dat",map.save)
 end
 
+local function match_prompt_patterns()
+    for k,v in ipairs(map.configs.prompt_test_patterns) do
+        if string.match(line,v) then
+            map.save.prompt_pattern[map.character] = v
+            table.save(profilePath .. "/map downloads/map_save.dat",map.save)
+            find_prompt = false
+            await_prompt = false
+            map.echo("Prompt found")
+            break
+        end
+    end
+end
+
 local function grab_line()
     table.insert(lines,line)
+    -- unasked, only a line the game itself ends as a prompt (GA/EOR) is safe to test:
+    -- the loosest pattern also matches an ordinary "[ Exits: north ]" line. A status
+    -- prompt shows numbers; a login pager or menu line ended the same way does not
+    if await_prompt and not map.save.prompt_pattern[map.character] and isPrompt() and line:find("%d") then
+        match_prompt_patterns()
+    end
     if map.save.prompt_pattern[map.character] and string.match(line, map.save.prompt_pattern[map.character]) then
         if map.prompt.exits and map.prompt.exits ~= "" then
             raiseEvent("onNewRoom")
         end
+        prompt_seen = true
         print_wait_echoes()
         map.echo("Prompt captured",true)
     end
     if find_prompt then
-        for k,v in ipairs(map.configs.prompt_test_patterns) do
-            if string.match(line,v) then
-                map.save.prompt_pattern[map.character] = v
-                table.save(profilePath .. "/map downloads/map_save.dat",map.save)
-                find_prompt = false
-                map.echo("Prompt found")
-                break
-            end
-        end
+        match_prompt_patterns()
     end
 end
 
@@ -4074,6 +4119,30 @@ function map.setLanguage(name)
     map.echo("Directions now use " .. string.lower(name) .. " words.")
 end
 
+local numeric_prompt_tokens = {HP = true, MAXHP = true, MP = true, MAXMP = true}
+
+-- SvenskMUD names the template its prompt is built from, e.g. "&lt;HP&gt;/&lt;MAXHP&gt;hp &lt;MP&gt;/&lt;MAXMP&gt;mp"
+function map.learnPromptTemplate(template)
+    if not awaiting_prompt_reply then return end
+    awaiting_prompt_reply = false
+    if string.trim(template or "") == "" then
+        map.save.prompt_pattern[map.character] = nil
+        table.save(profilePath .. "/map downloads/map_save.dat", map.save)
+        map.echo("Prompt pattern cleared.")
+        return
+    end
+    local last_token = string.match(template, "&lt;([%w_]+)&gt;%s*$")
+    if last_token and not numeric_prompt_tokens[string.upper(last_token)] then
+        map.echo("Your prompt ends in " .. last_token .. ", which runs into the text after it. Set the prompt pattern with 'map prompt'.", false, true)
+        return
+    end
+    local pattern = string.gsub(template, "[%^%$%(%)%%%.%[%]%*%+%-%?]", "%%%0")
+    pattern = string.gsub(pattern, "&lt;([%w_]+)&gt;", function(token)
+        return numeric_prompt_tokens[string.upper(token)] and "%-?%d+" or "%S+"
+    end)
+    map.make_prompt_pattern(pattern)
+end
+
 function map.promptOnly(text)
     local prompt = map.save.prompt_pattern[map.character]
     if prompt then
@@ -4094,6 +4163,14 @@ function map.captureUntitledRoom(exits, language)
         map.setLanguage(language)
     end
     local name = untitled_room_name()
+    -- a room before this one was followed by a prompt, so not seeing one means the pattern is missing or out of date
+    local stale = untitled_room_seen and not prompt_seen
+    untitled_room_seen, prompt_seen = true, false
+    -- after the name is read: sending clears the lines it is read from
+    if language == "swedish" and not asked_for_prompt[map.character or ""] and (stale or not map.save.prompt_pattern[map.character]) then
+        asked_for_prompt[map.character or ""] = true
+        send("prompt", false)
+    end
     if not name then
         map.echo("No room description before the exits line.", true)
         return
@@ -4411,6 +4488,9 @@ function map.eventHandler(event, ...)
         map.echo("onForcedMove",true)
         capture_move_cmd(arg1,arg2=="true")
     elseif event == "sysDataSendRequest" then
+        if string.match(arg1, "^%s*(%S*)") == "prompt" then
+            awaiting_prompt_reply = true
+        end
         capture_move_cmd(arg1)
         -- check to prevent multiple version checks in a row without user intervention
         if map.update_waiting and map.update_timer then
@@ -4440,13 +4520,15 @@ function map.eventHandler(event, ...)
                 map.checkVersion()
             end
         end
+    elseif event == "sysConnectionEvent" then
+        awaiting_prompt_reply, prompt_seen, untitled_room_seen, asked_for_prompt = false, false, false, {}
     elseif event == "sysLoadEvent" or event == "sysInstall" then
         config()
         raiseEvent("mapperScriptLoaded", "generic_mapper")
     elseif event == "mapOpenEvent" then
+        -- nothing is sent: the map can open at a login screen, which takes any text as the character's name
         if not help_shown and not map.save.prompt_pattern[map.character or ""] then
-            map.find_prompt()
-            send(map.configs.lang_dirs['look'], true)
+            await_prompt = true
             tempTimer(3, function() map.show_help("quick_start"); help_shown = true end)
         end
     elseif event == "mapStop" then
