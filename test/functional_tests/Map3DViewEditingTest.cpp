@@ -29,6 +29,7 @@
  */
 
 #include <QAction>
+#include <QComboBox>
 #include <QDockWidget>
 #include <QMenu>
 #include <QSignalSpy>
@@ -951,6 +952,24 @@ private slots:
         }
         QCOMPARE(shownAreaId, mOtherAreaId);
         QCOMPARE(centerAfter, center);
+    }
+
+    void test_flyingAMapWindowIn3DIntoAnAreaShowsItInItsAreaList()
+    {
+        QVERIFY(viewAtThePlayer(false));
+        const auto [viewId, pWindow3D] = mapWindowIn3D();
+        QVERIFY2(pWindow3D, "the map window did not show its 3D view");
+        auto* pAreaList = map()->getViewManager()->getView(viewId)->findChild<QComboBox*>();
+        QVERIFY(pAreaList);
+        QCOMPARE(pAreaList->currentText(), qsl("Other Area"));
+        pWindow3D->flyToArea(mPlayerAreaId);
+        const int shownAreaId = pWindow3D->shownAreaId();
+        const QString listed = pAreaList->currentText();
+        pWindow3D->setCameraPosition(1.0f, CameraController::scmMinTilt, CameraController::scmNorthUpAzimuth);
+        QVERIFY(map()->getViewManager()->closeView(viewId).first);
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+        QCOMPARE(shownAreaId, mPlayerAreaId);
+        QCOMPARE(listed, qsl("Player Area"));
     }
 
     // Rooms moved in a map window's 3D view are redrawn in the other views, and closing the window while it shows

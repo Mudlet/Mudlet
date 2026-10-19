@@ -26,6 +26,7 @@
 #include "Host.h"
 #include "MudletApp.h"
 #include "TArea.h"
+#include "TAreaGraph.h"
 #include "TEvent.h"
 #include "TMapLabel.h"
 #include "TMapViewFrontend.h"
@@ -196,6 +197,7 @@ TMap::TMap(Host* pH, const QString& profileName)
     mpNetworkAccessManager = new QNetworkAccessManager(this);
 
     mMapInfoContributorManager = new MapInfoContributorManager(this, pH);
+    mpAreaGraph = std::make_unique<TAreaGraph>(this);
 
     connect(mpNetworkAccessManager, &QNetworkAccessManager::finished, this, &TMap::slot_replyFinished);
 }
@@ -260,6 +262,7 @@ void TMap::mapClear()
     clearRoutes();
     mVersion = mDefaultVersion;
     mUserData.clear();
+    ++mMapRevision;
 
     // mSaveVersion is not reset - so that any new Mudlet map file saves are to
     // whatever version was previously set/deduced
@@ -1039,6 +1042,7 @@ void TMap::initGraph()
 
     mGraphBuildInProgress = false;
     mMapGraphNeedsUpdate = false;
+    ++mPathGraphRevision;
     qDebug() << "TMap::initGraph() INFO: built graph with:" << locations.size() << "(" << roomCount << ") locations(roomCount), and discarded" << unUsableRoomSet.count()
              << "other NOT usable rooms and found:" << edgeCount << "distinct, usable edges in:" << _time.nsecsElapsed() * 1.0e-6 << "ms.";
 }
@@ -3955,6 +3959,7 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
     std::unique_ptr<TRoomDB> previousRoomDB = std::exchange(mpRoomDB, std::move(pNewRoomDB));
     mpRoomDB->continueGenerationOf(*previousRoomDB);
     previousRoomDB.reset();
+    ++mMapRevision;
     ++mRevision;
     for (const auto& warning : std::as_const(droppedRoomWarnings)) {
         appendErrorMsgWithNoLf(warning, true);
@@ -4189,20 +4194,32 @@ void TMap::announceMapperSettingChanged(const MapperSetting setting)
 
 void TMap::updateArea(int areaId)
 {
+    ++mAppearanceRevision;
     ++mRevision;
-    repaintArea(areaId);
+    updatePlayerArea(areaId);
 }
 
-void TMap::repaintArea(int areaId)
+void TMap::refreshArea(int areaId)
 {
-    static bool debounce;
-    if (!debounce) {
-        debounce = true;
-        QTimer::singleShot(0ms, this, [this, areaId]() {
-            debounce = false;
-            emit signal_areaChanged(areaId);
-        });
+    ++mAppearanceRevision;
+    updatePlayerArea(areaId);
+}
+
+void TMap::updatePlayerArea(int areaId)
+{
+    if (mPendingAreaId) {
+        // One announcement stands for all made before it goes out, so it names every area if they differ
+        if (*mPendingAreaId != areaId) {
+            mPendingAreaId = -1;
+        }
+        return;
     }
+    mPendingAreaId = areaId;
+    QTimer::singleShot(0ms, this, [this]() {
+        const int pendingAreaId = mPendingAreaId.value_or(-1);
+        mPendingAreaId.reset();
+        emit signal_areaChanged(pendingAreaId);
+    });
 }
 
 QColor TMap::getColor(int id)
@@ -4324,6 +4341,7 @@ void TMap::setUnsaved(const char* fromWhere)
     qDebug().nospace().noquote() << "TMap::setUnsaved(...) INFO - called at: " << nowString << " from: " << fromWhere << ".";
 #endif
     mUnsavedMap = true;
+    ++mMapRevision;
     ++mRevision;
 }
 

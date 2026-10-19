@@ -602,13 +602,19 @@ void CredentialManager::retrievePassword(
                 if (!lookup->stages[index].fromFile) {
                     continue;
                 }
-                if (QString password = retrieveCredentialFromFile(lookup->profileName, lookup->key); !password.isEmpty()) {
+                ReadOutcome failure = ReadOutcome::NothingStored;
+                if (QString password = retrieveCredentialFromFile(lookup->profileName, lookup->key, &failure); !password.isEmpty()) {
                     finishLookup(lookup, std::move(password), QString(), ReadOutcome::Found);
                     return;
                 }
+                if (lookup->fileOutcome != ReadOutcome::Unreadable && failure != ReadOutcome::NothingStored) {
+                    lookup->fileOutcome = failure;
+                }
                 break;
             }
-            finishLookup(lookup, QString(), qsl("Operation timed out"), ReadOutcome::TimedOut);
+            // Still a timeout when the file is unreadable: the read given up on may yet answer with the password
+            const QString error = lookup->fileOutcome == ReadOutcome::Unreadable ? unreadableFileError(lookup->profileName) : qsl("Operation timed out");
+            finishLookup(lookup, QString(), error, ReadOutcome::TimedOut);
         });
         deadline->start(mOperationTimeoutMs);
 
@@ -620,10 +626,19 @@ void CredentialManager::retrievePassword(
         bool success = !password.isEmpty();
 
         if (callback) {
-            // Empty password is normal for first-time profiles - not an error. Move the buffer so the
-            // receiver takes sole ownership and can scrub the secret in place.
+            // Nothing stored is normal for first-time profiles, so only an unreadable file is reported as
+            // one. Move the buffer so the receiver takes sole ownership and can scrub the secret in place.
             const ReadOutcome outcome = success ? ReadOutcome::Found : failure;
-            const QString error = success ? QString() : (failure != ReadOutcome::NothingStored ? qsl("Could not read encrypted file storage") : qsl("No password stored in encrypted file storage"));
+            QString error;
+            if (!success) {
+                if (failure == ReadOutcome::Unreadable) {
+                    error = unreadableFileError(profileName);
+                } else if (failure == ReadOutcome::NothingStored) {
+                    error = qsl("No password stored in encrypted file storage");
+                } else {
+                    error = qsl("Could not read encrypted file storage");
+                }
+            }
             callback(outcome == ReadOutcome::Found, std::move(password), error, outcome);
         }
     }
@@ -758,7 +773,11 @@ void CredentialManager::runLookupStage(const LookupPtr& lookup, std::size_t inde
         // A store that refused a read - keychain or file - may still hold the password, so say so rather
         // than reporting that nothing is stored.
         QString error = qsl("No stored credentials found for profile %1").arg(lookup->profileName);
-        if (!lookup->keychainError.isEmpty()) {
+        // The file first: the keychain's failure was logged when it happened, and an unreadable file is
+        // the one the player can put right, by typing the password again
+        if (lookup->fileOutcome == ReadOutcome::Unreadable) {
+            error = unreadableFileError(lookup->profileName);
+        } else if (!lookup->keychainError.isEmpty()) {
             error = qsl("Could not read the keychain: %1").arg(lookup->keychainError);
         } else if (lookup->fileOutcome != ReadOutcome::NothingStored) {
             error = qsl("Could not read the encrypted credential file for profile %1").arg(lookup->profileName);
@@ -1571,6 +1590,11 @@ bool CredentialManager::storeCredentialToFile(const QString& profileName, const 
     refreshLegacyFileCredential(profileName, key, credential);
 
     return true;
+}
+
+/*static*/ QString CredentialManager::unreadableFileError(const QString& profileName)
+{
+    return qsl("The saved password for profile %1 could not be read").arg(profileName);
 }
 
 QString CredentialManager::retrieveCredentialFromFile(const QString& profileName, const QString& key, ReadOutcome* failure)

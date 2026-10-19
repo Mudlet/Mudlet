@@ -208,6 +208,18 @@ RenderTrianglesCommand::RenderTrianglesCommand(
 {
 }
 
+RenderTrianglesCommand::RenderTrianglesCommand(
+        std::shared_ptr<RetainedTriangles> retained, const QMatrix4x4& projectionMatrix, const QMatrix4x4& viewMatrix, const QMatrix4x4& modelMatrix, const Shading shading)
+: mVertices(retained->vertices)
+, mColors(retained->colors)
+, mRetained(std::move(retained))
+, mProjectionMatrix(projectionMatrix)
+, mViewMatrix(viewMatrix)
+, mModelMatrix(modelMatrix)
+, mShading(shading)
+{
+}
+
 void RenderTrianglesCommand::execute(QOpenGLFunctions* gl,
                                      QOpenGLShaderProgram* shader,
                                      GeometryManager* geometryManager,
@@ -222,10 +234,12 @@ void RenderTrianglesCommand::execute(QOpenGLFunctions* gl,
     Q_UNUSED(gl)
     Q_UNUSED(texCoordBuffer)
 
-    GeometryData triangleGeometry = geometryManager->generateTriangleGeometry(mVertices, mColors);
-
-    if (triangleGeometry.isEmpty()) {
-        return;
+    GeometryData triangleGeometry;
+    if (!mRetained) {
+        triangleGeometry = geometryManager->generateTriangleGeometry(mVertices, mColors);
+        if (triangleGeometry.isEmpty()) {
+            return;
+        }
     }
 
     // Set uniforms
@@ -252,7 +266,11 @@ void RenderTrianglesCommand::execute(QOpenGLFunctions* gl,
         shader->setUniformValue("uModelShading", model);
     }
 
-    geometryManager->renderGeometry(triangleGeometry, vao, vertexBuffer, colorBuffer, normalBuffer, indexBuffer, resourceManager, GL_TRIANGLES);
+    if (mRetained) {
+        geometryManager->renderRetainedTriangles(*mRetained, vao, resourceManager);
+    } else {
+        geometryManager->renderGeometry(triangleGeometry, vao, vertexBuffer, colorBuffer, normalBuffer, indexBuffer, resourceManager, GL_TRIANGLES);
+    }
 
     if (unlit) {
         shader->setUniformValue("uDisableLighting", false);
@@ -348,6 +366,38 @@ RenderInstancedCubesCommand::RenderInstancedCubesCommand(const QVector<CubeInsta
 {
 }
 
+RenderInstancedCubesCommand::RenderInstancedCubesCommand(std::shared_ptr<RetainedInstances> retained,
+                                                         const QList<InstanceRun>& runs,
+                                                         const QVector<CubeInstanceData>& extras,
+                                                         const QMatrix4x4& projectionMatrix,
+                                                         const QMatrix4x4& viewMatrix,
+                                                         const QMatrix4x4& modelMatrix,
+                                                         const Shading shading,
+                                                         const GeometryManager::InstanceShape shape)
+: mGathered(false)
+, mRetained(std::move(retained))
+, mRuns(runs)
+, mExtras(extras)
+, mProjectionMatrix(projectionMatrix)
+, mViewMatrix(viewMatrix)
+, mModelMatrix(modelMatrix)
+, mShading(shading)
+, mShape(shape)
+{
+}
+
+const QVector<CubeInstanceData>& RenderInstancedCubesCommand::instances() const
+{
+    if (!mGathered) {
+        mGathered = true;
+        for (const InstanceRun& run : mRuns) {
+            mInstances.append(mRetained->instances.mid(run.first, run.count));
+        }
+        mInstances.append(mExtras);
+    }
+    return mInstances;
+}
+
 void RenderInstancedCubesCommand::execute(QOpenGLFunctions* gl,
                                           QOpenGLShaderProgram* shader,
                                           GeometryManager* geometryManager,
@@ -362,7 +412,7 @@ void RenderInstancedCubesCommand::execute(QOpenGLFunctions* gl,
     Q_UNUSED(gl)
     Q_UNUSED(texCoordBuffer)
 
-    if (mInstances.isEmpty()) {
+    if (mRetained ? mRuns.isEmpty() && mExtras.isEmpty() : mInstances.isEmpty()) {
         return;
     }
 
@@ -402,7 +452,10 @@ void RenderInstancedCubesCommand::execute(QOpenGLFunctions* gl,
         shader->setUniformValue("uWireSides", static_cast<float>(GeometryManager::scmCylinderSegments));
     }
 
-    geometryManager->renderInstancedCubes(mInstances, vao, vertexBuffer, colorBuffer, normalBuffer, indexBuffer, resourceManager, GL_TRIANGLES, mShape);
+    if (mRetained) {
+        geometryManager->renderInstancedRuns(*mRetained, mRuns, vao, vertexBuffer, colorBuffer, normalBuffer, indexBuffer, resourceManager, GL_TRIANGLES, mShape);
+    }
+    geometryManager->renderInstancedCubes(mRetained ? mExtras : mInstances, vao, vertexBuffer, colorBuffer, normalBuffer, indexBuffer, resourceManager, GL_TRIANGLES, mShape);
 
     if (unlit) {
         shader->setUniformValue("uDisableLighting", false);
@@ -419,8 +472,9 @@ void RenderInstancedCubesCommand::execute(QOpenGLFunctions* gl,
     }
 }
 
-GLStateCommand::GLStateCommand(StateType stateType)
+GLStateCommand::GLStateCommand(StateType stateType, const float opacity)
 : mStateType(stateType)
+, mOpacity(opacity)
 {
 }
 
@@ -486,6 +540,13 @@ void GLStateCommand::execute(QOpenGLFunctions* gl,
         break;
     case DEPTH_FUNC_LESS:
         gl->glDepthFunc(GL_LESS);
+        break;
+    case BLEND_BY_OPACITY:
+        gl->glBlendColor(0.0f, 0.0f, 0.0f, mOpacity);
+        gl->glBlendFunc(GL_CONSTANT_ALPHA, GL_ONE_MINUS_CONSTANT_ALPHA);
+        break;
+    case BLEND_BY_SOURCE_ALPHA:
+        gl->glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
         break;
     case DEPTH_FUNC_GREATER:
         gl->glDepthFunc(GL_GREATER);

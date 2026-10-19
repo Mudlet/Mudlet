@@ -2433,6 +2433,30 @@ describe("Tests Other.lua functions", function()
         assert.is_true(setConfig(second, false))
         assert.is_nil(getConfig(group .. ".active"))
       end)
+
+      it("lists the experiments sorted, so a group's members sit together", function()
+        local list = getConfig("experiment.list")
+        local sorted = table.deepcopy(list)
+        table.sort(sorted)
+        assert.are.same(sorted, list)
+      end)
+
+      -- "experiment.3d-player-icon" is in no group, and "experiment.3dmap"
+      -- is not a prefix of it, so it and the modern mapper can both be on
+      it("lets experiments outside a shared group be on together", function()
+        local mapper = "experiment.3dmap.modernmapper"
+        local icon = "experiment.3d-player-icon"
+        local mapperWas, iconWas = getConfig(mapper), getConfig(icon)
+        finally(function()
+          setConfig(mapper, mapperWas)
+          setConfig(icon, iconWas)
+        end)
+
+        assert.is_true(setConfig(mapper, true))
+        assert.is_true(setConfig(icon, true))
+        assert.is_true(getConfig(mapper), "switching on " .. icon .. " switched off " .. mapper)
+        assert.is_true(getConfig(icon))
+      end)
     end)
 
     describe("IRC keys", function()
@@ -4663,6 +4687,33 @@ describe("Tests how raiseEvent finds the Lua event dispatcher", function()
 
     assert.is_true(ok, tostring(message))
     assert.are.same({"otherSpecDispatchSupplied", "otherSpecDispatchSupplied"}, seen)
+  end)
+end)
+
+describe("Tests that raiseEvent hands strings over unchanged", function()
+  local function roundTrip(value)
+    local received
+    local id = registerAnonymousEventHandler("otherSpecStringRoundTrip", function(_, text)
+      received = text
+    end)
+    raiseEvent("otherSpecStringRoundTrip", value)
+    killAnonymousEventHandler(id)
+    return received
+  end
+
+  it("keeps text, including what is not ASCII", function()
+    for _, value in ipairs({"", "plain", "caf\195\169", "\226\130\172 and \240\159\152\128"}) do
+      assert.are.equal(value, roundTrip(value))
+    end
+  end)
+
+  -- a sysTelnetEvent handler passing a binary payload on to its own handlers
+  it("keeps NULs and bytes that are not UTF-8", function()
+    for _, value in ipairs({"A\0\200B", "\0", "\255\250\140", "AB\0CD\195\169\255EF"}) do
+      local received = roundTrip(value)
+      assert.are.equal(#value, #received)
+      assert.are.equal(value, received)
+    end
   end)
 end)
 

@@ -148,6 +148,7 @@ private slots:
     void testAsyncEmptyArgumentsAreReportedThroughTheCallback();
     void testAsyncApiRefusesTheKeysTheStaticApiRefuses();
     void testAStoreWithNowhereToKeepTheKeyFails();
+    void testAnUndecryptableFileIsNotReportedAsNoPassword();
     void cleanupTestCase();
 
 private:
@@ -1149,6 +1150,67 @@ void CredentialManagerTest::testAStoreWithNowhereToKeepTheKeyFails()
     QVERIFY2(answered, "the file store answered later than it returned, which MUDLET_TEST_MODE should never let it do");
     QVERIFY2(!stored, "the store reported a password saved that it had no key to protect");
     QVERIFY(CredentialManager::retrieveCredential(profile, qsl("character")).isEmpty());
+}
+
+// The dialog has to be able to tell the player a saved password is unreadable, rather than leave
+// them looking at an empty field as if none had been saved
+void CredentialManagerTest::testAnUndecryptableFileIsNotReportedAsNoPassword()
+{
+    CredentialManager manager;
+    const QString profile = qsl("UndecryptableProfile");
+    const QString key = qsl("character");
+
+    bool stored = false;
+    manager.storePassword(profile, key, qsl("soon_unreadable"), [&](bool success, const QString&) {
+        stored = success;
+    });
+    QVERIFY(stored);
+
+    QFile file(credentialPath(profile, key));
+    QVERIFY(file.open(QIODevice::ReadOnly));
+    const QByteArray saved = file.readAll();
+    file.close();
+    // One byte changed in a file that is otherwise well formed gets as far as the HMAC check, as a
+    // regenerated profile key does; text that is not Mudlet's at all is turned away before that
+    QByteArray flipped = QByteArray::fromBase64(saved.trimmed());
+    QVERIFY2(flipped.size() > 64, "the saved file is too short to get past the size check once a byte is flipped");
+    flipped[flipped.size() / 2] = static_cast<char>(flipped.at(flipped.size() / 2) ^ 0x01);
+    const QList<QPair<const char*, QByteArray>> damage = {{"one byte changed", flipped.toBase64()}, {"not Mudlet's at all", QByteArrayLiteral("this is not anything Mudlet encrypted")}};
+
+    for (const auto& [what, content] : damage) {
+        QVERIFY(file.open(QIODevice::WriteOnly | QIODevice::Truncate));
+        QVERIFY(file.write(content) > 0);
+        file.close();
+
+        bool retrieved = true;
+        QString retrieveError;
+        manager.retrievePassword(profile, key, [&](bool success, QString, const QString& error) {
+            retrieved = success;
+            retrieveError = error;
+        });
+        QVERIFY2(!retrieved, what);
+        QCOMPARE(retrieveError, CredentialManager::unreadableFileError(profile));
+    }
+
+    // ...while a profile that never had one saved still says so
+    bool retrieved = true;
+    QString retrieveError;
+    manager.retrievePassword(qsl("NeverSavedAnything"), key, [&](bool success, QString, const QString& error) {
+        retrieved = success;
+        retrieveError = error;
+    });
+    QVERIFY(!retrieved);
+    QCOMPARE(retrieveError, qsl("No password stored in encrypted file storage"));
+
+    // ...and so does one no file can be made for, with no saved password to ask for again
+    retrieveError.clear();
+    manager.retrievePassword(qsl("Realm..."), key, [&](bool, QString, const QString& error) {
+        retrieveError = error;
+    });
+    QVERIFY(!retrieveError.isEmpty());
+    QVERIFY2(retrieveError != CredentialManager::unreadableFileError(qsl("Realm...")), qPrintable(retrieveError));
+
+    CredentialManager::removeCredential(profile, key);
 }
 
 void CredentialManagerTest::cleanupTestCase()

@@ -127,6 +127,8 @@ public:
                            const QMatrix4x4& viewMatrix,
                            const QMatrix4x4& modelMatrix,
                            Shading shading = Shading::Lit);
+    RenderTrianglesCommand(
+            std::shared_ptr<RetainedTriangles> retained, const QMatrix4x4& projectionMatrix, const QMatrix4x4& viewMatrix, const QMatrix4x4& modelMatrix, Shading shading = Shading::Lit);
 
     void execute(QOpenGLFunctions* gl,
                  QOpenGLShaderProgram* shader,
@@ -148,6 +150,7 @@ public:
 private:
     QVector<float> mVertices;
     QVector<float> mColors;
+    std::shared_ptr<RetainedTriangles> mRetained;
     QMatrix4x4 mProjectionMatrix;
     QMatrix4x4 mViewMatrix;
     QMatrix4x4 mModelMatrix;
@@ -191,6 +194,15 @@ public:
                                 const QMatrix4x4& modelMatrix,
                                 Shading shading = Shading::Lit,
                                 GeometryManager::InstanceShape shape = GeometryManager::InstanceShape::Box);
+    // Runs of instances kept on the GPU between frames, then extras made for this frame only
+    RenderInstancedCubesCommand(std::shared_ptr<RetainedInstances> retained,
+                                const QList<InstanceRun>& runs,
+                                const QVector<CubeInstanceData>& extras,
+                                const QMatrix4x4& projectionMatrix,
+                                const QMatrix4x4& viewMatrix,
+                                const QMatrix4x4& modelMatrix,
+                                Shading shading = Shading::Lit,
+                                GeometryManager::InstanceShape shape = GeometryManager::InstanceShape::Box);
 
     void execute(QOpenGLFunctions* gl,
                  QOpenGLShaderProgram* shader,
@@ -204,7 +216,8 @@ public:
                  QOpenGLBuffer& texCoordBuffer) override;
 
     const char* getCommandName() const override { return "RenderInstancedCubes"; }
-    const QVector<CubeInstanceData>& instances() const { return mInstances; }
+    // Every instance drawn, in the order drawn
+    const QVector<CubeInstanceData>& instances() const;
     GeometryManager::InstanceShape shape() const { return mShape; }
     Shading shading() const { return mShading; }
     // A ModelBlock's edges drawn solid where it is see-through
@@ -212,7 +225,12 @@ public:
     bool edges() const { return mEdges; }
 
 private:
-    QVector<CubeInstanceData> mInstances;
+    // Gathered from the retained runs only when asked for
+    mutable QVector<CubeInstanceData> mInstances;
+    mutable bool mGathered = true;
+    std::shared_ptr<RetainedInstances> mRetained;
+    QList<InstanceRun> mRuns;
+    QVector<CubeInstanceData> mExtras;
     QMatrix4x4 mProjectionMatrix;
     QMatrix4x4 mViewMatrix;
     QMatrix4x4 mModelMatrix;
@@ -242,6 +260,10 @@ public:
         // Passes what is as near as what is already drawn, to color exactly what a depth-only pass laid down
         DEPTH_FUNC_LEQUAL,
         DEPTH_FUNC_LESS,
+        // Blends what follows by the command's opacity instead of its own alpha, so that a layer made of opaque
+        // pieces fades as one
+        BLEND_BY_OPACITY,
+        BLEND_BY_SOURCE_ALPHA,
         // Passes only what something already drawn hides, to show a piece through what stands in front of it
         DEPTH_FUNC_GREATER,
         // Adds what follows onto what is drawn, so overlapping glowing lines brighten rather than cover each other
@@ -249,7 +271,7 @@ public:
         ALPHA_BLEND
     };
 
-    explicit GLStateCommand(StateType stateType);
+    explicit GLStateCommand(StateType stateType, float opacity = 1.0f);
 
     void execute(QOpenGLFunctions* gl,
                  QOpenGLShaderProgram* shader,
@@ -264,9 +286,11 @@ public:
 
     const char* getCommandName() const override { return "GLState"; }
     StateType stateType() const { return mStateType; }
+    float opacity() const { return mOpacity; }
 
 private:
     StateType mStateType;
+    float mOpacity = 1.0f;
 };
 
 // Command to render a map label as a textured billboard

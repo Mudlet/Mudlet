@@ -336,6 +336,28 @@ void TTimer::enableTimer(int id)
     }
 }
 
+// Only for the resume, on a timer the emergency stop disarmed: Tree refuses to activate one
+// whose script does not compile, and leaving it disarmed would outlast fixing the script
+bool TTimer::keepArmedWithBrokenScript()
+{
+    if (!mOK_init || mOK_code) {
+        return false;
+    }
+    // Tree keeps mActive to itself and only sets it for a script that compiled
+    mOK_code = true;
+    Tree<TTimer>::activate();
+    mOK_code = false;
+    if (TDebug::wants(TDebug::Category::Error)) {
+        //: Central Debug Console line on resuming from the emergency stop; %1 is the timer's name, %2 the Lua compile error
+        TDebug(Qt::white,
+               Qt::red,
+               TDebug::Category::Error,
+               mName) << QObject::tr("ERROR: timer \"%1\" cannot run until its script compiles: %2\n").arg(mName, TLuaInterpreter::compileErrorAsPlainText(getError()))
+                >> mpHost;
+    }
+    return true;
+}
+
 void TTimer::disableTimer(int id)
 {
     if (mID == id) {

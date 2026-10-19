@@ -48,6 +48,7 @@
 #include "TKey.h"
 #include "TLabelModel.h"
 #include "TMap.h"
+#include "TMapViewFrontend.h"
 #include "TMapViewsFrontend.h"
 #include "TMedia.h"
 #include "TNullConsoleFrontend.h"
@@ -93,6 +94,7 @@
 #include <QUuid>
 #include <zip.h>
 #include <memory>
+#include <ranges>
 
 // We are now using code that won't work with really old versions of libzip;
 // some of the error handling was improved in 1.0 . Unfortunately libzip 1.7.0
@@ -621,7 +623,10 @@ bool Host::loadProfileSave(const QString& saveFileName)
     if (it != TGameDetails::scmDefaultGames.end()) {
         setUrl((*it).hostUrl);
         setPort((*it).port);
-        mSslTsl = (*it).tlsEnabled;
+        // A saved Secure choice is the player's own, which the connection dialog keeps over the catalog's too
+        if (MudletApp::readProfileData(profileName, qsl("ssl_tsl")).isEmpty()) {
+            mSslTsl = (*it).tlsEnabled;
+        }
     }
 
     const QString folder = MudletApp::getMudletPath(enums::profileXmlFilesPath, profileName);
@@ -686,12 +691,8 @@ bool Host::loadProfileSave(const QString& saveFileName)
     return preInstallPackages;
 }
 
-static void removeTheStagingFoldersInstallsLeftBehind(Host&);
-
 void Host::startProfileScripts()
 {
-    removeTheStagingFoldersInstallsLeftBehind(*this);
-
     // enable script compilation (which is off by default)
     mBlockScriptCompile = false;
     // This uses the external LuaGlobal.lua file to load all the other external
@@ -1587,6 +1588,7 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
     // deferred delete, which on the way out it does not - and a Host destroyed while
     // the write is still queued would leave the watcher with no owner at all.
     auto watcher = new QFutureWatcher<void>(this);
+    watcher->setObjectName(scmProfileSaveWatcherName);
     // Captures values only, never `this`: no wait for this task is guaranteed, so the
     // Host can be destroyed while it is still queued or running.
     mModuleFuture = QtConcurrent::run([xmlSaveFutures, moduleJobs]() {
@@ -1611,7 +1613,9 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
         // save that clears/replaces mModulesToSync, making this save skip the module
         // sync it owes to other profiles.
         if (syncModules) {
+            mSyncingModulesAfterSave = true;
             reloadModules();
+            mSyncingModulesAfterSave = false;
         }
         mWritingHostAndModules = false;
         // Drop each module writer from `writers`; the last removal emits
@@ -1687,7 +1691,7 @@ bool Host::currentlySavingProfile()
     return (mWritingHostAndModules || !writers.empty());
 }
 
-void Host::waitForProfileSave()
+void Host::waitForProfileSave(const bool onlyTheSavesOwnEvents)
 {
     if (!currentlySavingProfile()) {
         return;
@@ -1705,7 +1709,9 @@ void Host::waitForProfileSave()
     // a save that has written everything and still says it is running cannot be waited
     // out. Long enough that reaching it means something is wrong, not that a disk is
     // busy.
-    constexpr auto notificationTimeout = 30s;
+    // A script's wait delivers the save's completions itself, and those are already queued once its writes are
+    // done, so one still running a moment later never finishes - and nothing repaints while it waits.
+    const auto notificationTimeout = onlyTheSavesOwnEvents ? 1s : 30s;
     QElapsedTimer waitedForNotification;
     // A QEventLoop's processEvents() rather than QCoreApplication's only for its "did anything
     // happen" answer - nothing is exec()ed here. No user input either: all it is here to
@@ -1725,10 +1731,22 @@ void Host::waitForProfileSave()
         if (!waitedForNotification.isValid()) {
             waitedForNotification.start();
         }
-        if (!pump.processEvents(QEventLoop::ExcludeUserInputEvents)) {
+        if (onlyTheSavesOwnEvents) {
+            // Every write's end reaches the main thread as a QFutureWatcher's posted FutureCallOut. Only this
+            // save's: an unzipAsync() or another profile's save has a watcher too, and theirs run Lua.
+            const auto watchers = findChildren<QFutureWatcherBase*>(scmProfileSaveWatcherName, Qt::FindDirectChildrenOnly);
+            for (const QPointer<QFutureWatcherBase> watcher : watchers) {
+                if (watcher) {
+                    QCoreApplication::sendPostedEvents(watcher, QEvent::FutureCallOut);
+                }
+            }
+            if (currentlySavingProfile()) {
+                QThread::sleep(1ms);
+            }
+        } else if (!pump.processEvents(QEventLoop::ExcludeUserInputEvents)) {
             QThread::sleep(1ms);
         }
-        if (waitedForNotification.durationElapsed() > notificationTimeout) {
+        if (currentlySavingProfile() && waitedForNotification.durationElapsed() > notificationTimeout) {
             qWarning().nospace() << "Host::waitForProfileSave() WARNING - the save of \"" << getName() << "\" has not reported itself finished within " << notificationTimeout.count()
                                  << " seconds of its writes completing, so giving up on it. State: mWritingHostAndModules=" << mWritingHostAndModules << ", writers pending=" << writers.size()
                                  << ", module write still running=" << mModuleFuture.isRunning() << ".";
@@ -3337,49 +3355,159 @@ static bool theProfileKeepsItsOwnDataIn(const QString& name)
     return false;
 }
 
-static QString stagingFolderPrefix(const QString& packageName)
-{
-    return qsl("%1.mudlet-installing-").arg(packageName);
-}
+// Left in each folder installPackage() unpacks into until the archive is put in place, so that one a crash left
+// behind can be told from a package's own folder and removed
+static const QLatin1String scmUnpackingMarker(".mudlet-unpacking");
+// Left in a folder holding what an archive moved into a folder that was already there replaced. Never cleared away
+// after a crash, as it may be all that is left of the user's files: the next install says where they are instead.
+static const QLatin1String scmReplacedMarker(".mudlet-replaced");
 
-static constexpr int scmStagingFolderSuffixLength = 6;
-
-// A folder of its own to unpack an archive into beside the profile's package folders. Only a folder mkdir()
-// makes afresh is taken, so it is never one some package already owns; the random suffix just keeps the
-// tries few. Ends in a separator, as utils::unzip() expects. Not QTemporaryDir: it makes the folder 0700 on
-// Unix, and this one is renamed into place as the package's own.
-static QString aFreshFolderToUnpackInto(const QString& profileHome, const QString& packageName)
+// A folder of its own beside the profile's package folders, holding marker. mkdir() refuses a name that is already
+// taken, so this can never be a folder something else owns, and it gets the umask's permissions as any package
+// folder does - it may become one. Ends in a separator, as utils::unzip() expects; empty if none was made.
+static QString aFreshFolderToUnpackInto(const QString& profileHome, const QLatin1String marker = scmUnpackingMarker)
 {
-    static const QLatin1String characters("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789");
+    const QDir home(profileHome);
     for (int attempt = 0; attempt < 16; ++attempt) {
-        QString suffix;
-        for (int i = 0; i < scmStagingFolderSuffixLength; ++i) {
-            suffix.append(characters.at(QRandomGenerator::global()->bounded(static_cast<int>(characters.size()))));
+        const QString name = qsl("mudlet-installing-%1").arg(QRandomGenerator::global()->generate(), 8, 16, QLatin1Char('0'));
+        if (!home.mkdir(name)) {
+            continue;
         }
-        const QString folder = qsl("%1/%2%3").arg(profileHome, stagingFolderPrefix(packageName), suffix);
-        // Fails for a folder that is already there, so nothing in the profile is ever taken over
-        if (QDir().mkdir(folder)) {
-            return folder + QLatin1Char('/');
+        const QString folder = home.absoluteFilePath(name);
+        QFile markerFile(folder + QLatin1Char('/') + marker);
+        if (!markerFile.open(QIODevice::WriteOnly)) {
+            home.rmdir(name);
+            return QString();
         }
+        return folder + QLatin1Char('/');
     }
     return QString();
 }
 
-// Every way out of an install removes its staging folder, so one still here as the profile loads was stranded by
-// an install Mudlet was killed during. Not swept by installs: the unpacking dialog runs the event loop, so an
-// install can start while another one is still unpacking into a staging folder of the same name.
-static void removeTheStagingFoldersInstallsLeftBehind(Host& host)
+namespace {
+// One entry of an archive moved into a folder that was already there, and where what it replaced went
+struct MovedArchiveEntry
 {
-    static const QRegularExpression stagingFolderName(qsl("^.+%1[A-Za-z0-9]{%2}$").arg(QRegularExpression::escape(stagingFolderPrefix(QString())), QString::number(scmStagingFolderSuffixLength)));
-    const QString home = MudletApp::getMudletPath(enums::profileHomePath, host.getName());
-    const QStringList entries = QDir(home).entryList(QDir::Dirs | QDir::NoDotAndDotDot | QDir::Hidden);
-    for (const QString& entry : entries) {
-        // A name a package can have too, so one listed as a package or module is left be
-        if (stagingFolderName.match(entry).hasMatch() && !host.mInstalledPackages.contains(entry) && !host.mInstalledModules.contains(entry)) {
-            const QString leftOver = qsl("%1/%2").arg(home, entry);
-            host.removeDir(leftOver, leftOver);
+    QString unpackedAt;
+    QString movedTo;
+    QString replacedMovedTo;
+    bool madeFolder = false;
+};
+} // namespace
+
+// Puts what an archive unpacked into a folder that was already there, as unzipping into it would have, but by renames
+// alone: nothing is copied, and the folder's own files, folders and links stay as they are unless the archive has its
+// own copy. Those are moved into replacedFolder rather than deleted, so undoMovingTheArchiveIn() can put them back.
+static bool moveTheArchiveInto(const QString& unpackedFolder, const QString& existingFolder, const QString& replacedFolder, QList<MovedArchiveEntry>& moved)
+{
+    const QDir from(unpackedFolder);
+    for (const QFileInfo& entry : from.entryInfoList(QDir::AllEntries | QDir::Hidden | QDir::System | QDir::NoDotAndDotDot)) {
+        // Stays with the unpacking folder, so a crash before the install is done leaves that to be cleared away
+        if (entry.fileName() == scmUnpackingMarker) {
+            continue;
+        }
+        const QString target = existingFolder + QLatin1Char('/') + entry.fileName();
+        const QFileInfo inTheWay(target);
+        // Merged into rather than replaced, so what was put in it beside the archive's own files is kept
+        if (entry.isDir() && !entry.isSymLink() && inTheWay.isDir() && !inTheWay.isSymLink() && !inTheWay.isJunction()) {
+            if (!moveTheArchiveInto(entry.absoluteFilePath(), target, replacedFolder + QLatin1Char('/') + entry.fileName(), moved)) {
+                return false;
+            }
+            continue;
+        }
+        // Unzipping could not put a file where a folder is, or the other way round, and moving that aside would
+        // delete it with whatever else the archive replaced once the install succeeds
+        if (inTheWay.exists() && !inTheWay.isSymLink() && !inTheWay.isJunction() && inTheWay.isDir() != entry.isDir()) {
+            return false;
+        }
+        MovedArchiveEntry step{entry.absoluteFilePath(), target, QString()};
+        if (inTheWay.exists() || inTheWay.isSymLink()) {
+            step.replacedMovedTo = replacedFolder + QLatin1Char('/') + entry.fileName();
+            if (!QDir().mkpath(replacedFolder) || !QDir().rename(target, step.replacedMovedTo)) {
+                return false;
+            }
+        }
+        if (!QDir().rename(step.unpackedAt, target)) {
+            // QDir::rename() copies a file it cannot rename, as onto another filesystem through a folder in the way
+            // that is a link, but not a folder: that one is made in place and filled entry by entry
+            if (entry.isDir() && !entry.isSymLink() && step.replacedMovedTo.isEmpty() && QDir().mkdir(target)) {
+                moved.append({step.unpackedAt, target, QString(), true});
+                if (!moveTheArchiveInto(step.unpackedAt, target, replacedFolder + QLatin1Char('/') + entry.fileName(), moved)) {
+                    return false;
+                }
+                continue;
+            }
+            if (!step.replacedMovedTo.isEmpty() && !QDir().rename(step.replacedMovedTo, target)) {
+                qWarning() << "Host::installPackage() WARNING - could not put" << target << "back from" << step.replacedMovedTo;
+            }
+            return false;
+        }
+        moved.append(step);
+    }
+    return true;
+}
+
+// Hands back what of the archive is still in the folder, as it could not be taken back out
+static QStringList undoMovingTheArchiveIn(const QList<MovedArchiveEntry>& moved)
+{
+    QStringList leftIn;
+    // In reverse, so each replaced entry goes back once the archive's has made way for it, and a folder made for the
+    // archive's files has been emptied again by the time it is reached
+    for (const MovedArchiveEntry& step : std::views::reverse(moved)) {
+        if (step.madeFolder) {
+            QDir().rmdir(step.movedTo);
+            continue;
+        }
+        if (!QDir().rename(step.movedTo, step.unpackedAt)) {
+            qWarning() << "Host::installPackage() WARNING - could not take" << step.movedTo << "back out again";
+            leftIn << step.movedTo;
+            continue;
+        }
+        if (!step.replacedMovedTo.isEmpty() && !QDir().rename(step.replacedMovedTo, step.movedTo)) {
+            qWarning() << "Host::installPackage() WARNING - could not put" << step.movedTo << "back from" << step.replacedMovedTo;
         }
     }
+    return leftIn;
+}
+
+// Whether anything but empty folders and its own marker is left below folder, without following links out of it
+static bool holdsAnythingButFolders(const QString& folder)
+{
+    QDirIterator entries(folder, QDir::AllEntries | QDir::Hidden | QDir::System | QDir::NoDotAndDotDot, QDirIterator::Subdirectories);
+    while (entries.hasNext()) {
+        const QFileInfo entry = entries.nextFileInfo();
+        if (entry.fileName() == scmReplacedMarker && entry.absolutePath() == QDir(folder).absolutePath()) {
+            continue;
+        }
+        if (!entry.isDir() || entry.isSymLink() || entry.isJunction()) {
+            return true;
+        }
+    }
+    return false;
+}
+
+// The package files at the top of an archive, which are all an install of it reads in: the folder it is unpacked
+// into can hold others from before, as a module's own folder does when a sync or profile loading unzips into it
+static QStringList packageFilesInTheArchive(const QString& archivePath)
+{
+    QStringList names;
+    int err = 0;
+    zip* archive = zip_open(archivePath.toUtf8().constData(), 0, &err);
+    if (!archive) {
+        return names;
+    }
+    for (zip_int64_t i = 0, total = zip_get_num_entries(archive, 0); i < total; ++i) {
+        const char* name = zip_get_name(archive, static_cast<zip_uint64_t>(i), ZIP_FL_ENC_GUESS);
+        if (!name) {
+            continue;
+        }
+        const QString entry(name);
+        if (!entry.contains(QLatin1Char('/')) && (entry.endsWith(qsl(".xml"), Qt::CaseInsensitive) || entry.endsWith(qsl(".trigger"), Qt::CaseInsensitive))) {
+            names << entry;
+        }
+    }
+    zip_close(archive);
+    return names;
 }
 
 std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::PackageModuleType thing, bool quiet)
@@ -3395,6 +3523,10 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
                 obj,
                 [=, this]() {
                     auto [ok, msg] = installPackage(fileName, thing, quiet);
+                    if (ok && thing == enums::PackageModuleType::ModuleFromScript) {
+                        // installModule() announced the change when it was put off, before there was anything to list
+                        emit signal_moduleListChangedByScript();
+                    }
                     if (!ok) {
                         qWarning() << "Host::installPackage() deferred install of" << fileName << "failed:" << msg;
                         // A non-quiet install has already been reported by fail() inside the
@@ -3606,6 +3738,9 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         emit signal_editorCleanResetRequested();
     }
     QFile file2;
+    auto noPackageFoundReason = [&fileName]() {
+        return qsl("no package found in %1 - no Mudlet package file in it could be read").arg(fileName);
+    };
     // Filled per XML file by the archive branch, reported once both branches are done.
     QStringList itemsWithErrors;
     QStringList itemsWithErrorNames;
@@ -3632,21 +3767,51 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
     };
     if (packageUnpacksAFolder(fileName)) {
         const QString _home = MudletApp::getMudletPath(enums::profileHomePath, getName());
+        // A crash part-way through an install leaves the folder it unpacked into. Not while another install is under
+        // way in this profile (the unpacking dialog pumps events), as the folder could be that one's.
+        if (mPackageInstallsInProgress == 1) {
+            for (const QFileInfo& unpackedBefore : QDir(_home).entryInfoList({qsl("mudlet-installing-*")}, QDir::Dirs | QDir::NoDotAndDotDot)) {
+                // A package may be called this too, and its archive ship a marker of its own
+                if (unpackedBefore.isSymLink() || mInstalledPackages.contains(unpackedBefore.fileName()) || mInstalledModules.contains(unpackedBefore.fileName())) {
+                    continue;
+                }
+                const QString folder = unpackedBefore.absoluteFilePath();
+                if (QFileInfo::exists(folder + QLatin1Char('/') + scmUnpackingMarker)) {
+                    if (!removeDir(folder, folder)) {
+                        // removeDir() may have taken the marker before it stopped, and the next install is to try again
+                        QFile marker(folder + QLatin1Char('/') + scmUnpackingMarker);
+                        if (!marker.open(QIODevice::WriteOnly)) {
+                            qWarning() << "Host::installPackage() WARNING - could not mark" << folder << "to be cleared away again";
+                        }
+                        qWarning() << "Host::installPackage() WARNING - could not clear away" << folder << ", which an install that did not finish was unpacking into";
+                    }
+                } else if (thing != enums::PackageModuleType::ModuleSync && !mIsProfileLoadingSequence && QFileInfo::exists(folder + QLatin1Char('/') + scmReplacedMarker)) {
+                    // Said when the user installs something, not for every package and module a profile loads
+                    //: %1 is a folder in the profile holding files of the user's that could not be put back where they were after a package install was refused
+                    postMessage(tr("[ WARN ]  - Some files that were in the way of a package could not be put back, and are in \"%1\".").arg(folder));
+                }
+            }
+        }
         // A module sync and a profile load reinstall what the profile already has, which may predate this refusal
         const bool refuseTheProfilesOwnFolders = thing != enums::PackageModuleType::ModuleSync && !mIsProfileLoadingSequence;
         // Unpacking into a folder the other kind, or the profile itself, owns would overwrite its files, and the
         // rename below would carry it off - on a sync too. Such an archive unpacks beside it, moving in once its
-        // manifest's name proves free.
-        const bool unpackAside = !crossKindRefusalOnTheFileName.isEmpty() || theProfileKeepsItsOwnDataIn(packageName);
-        const QString _dest = !unpackAside ? MudletApp::getMudletPath(enums::profilePackagePath, getName(), packageName) : aFreshFolderToUnpackInto(_home, packageName);
+        // manifest's name proves free. So does one whose folder is already there for any other reason - one an
+        // uninstall left, say - or a refusal would leave the archive's files mixed into it. A sync and profile
+        // loading reuse the module's own folder on purpose.
+        const QString theFolderNamedAfterTheFile = MudletApp::getMudletPath(enums::profilePackagePath, getName(), packageName);
+        const bool aFolderIsNamedAfterTheFile = refuseTheProfilesOwnFolders && QDir(theFolderNamedAfterTheFile).exists();
+        const bool unpackBesideTheFolder = !crossKindRefusalOnTheFileName.isEmpty() || theProfileKeepsItsOwnDataIn(packageName) || aFolderIsNamedAfterTheFile;
+        const QString _dest = unpackBesideTheFolder ? aFreshFolderToUnpackInto(_home) : theFolderNamedAfterTheFile;
         if (_dest.isEmpty()) {
-            return fail(qsl("could not create destination folder"));
+            //: %1 is the folder of the profile in which a new folder to unpack the package into could not be made
+            return fail(tr("could not make a folder in %1 to unpack the package into").arg(_home));
         }
         // home directory for the PROFILE
         const QDir _tmpDir(_home);
-        // The only folder this install may ever delete again is one it made itself, so whether the destination
-        // was already here is noted before mkpath() below. A staging folder was made just now, by this install.
-        const bool destinationAlreadyExisted = !unpackAside && QDir(_dest).exists();
+        // A sync or profile loading unpacks into the module's folder even when it is already there, and a refusal may
+        // only take away a folder this install made, so this is asked before mkpath() below makes it
+        const bool destinationAlreadyExisted = !unpackBesideTheFolder && QDir(_dest).exists();
         const bool mkpathSuccessful = _tmpDir.mkpath(_dest);
         if (!mkpathSuccessful) {
             return fail(qsl("could not create destination folder"));
@@ -3662,6 +3827,36 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
             }
             removeDir(folderThisInstallMade, folderThisInstallMade);
             return true;
+        };
+        const QStringList packageFileFilter{qsl("*.xml"), qsl("*.trigger")};
+        // Opened as the import below opens them, so an archive that passes this is not then refused for want of one
+        auto aPackageFileCanBeReadIn = [&packageFileFilter](const QDir& folder) {
+            for (const QFileInfo& candidate : folder.entryInfoList(packageFileFilter, QDir::Files)) {
+                QFile packageFile(candidate.absoluteFilePath());
+                if (packageFile.open(QFile::ReadOnly | QFile::Text)) {
+                    return true;
+                }
+            }
+            return false;
+        };
+        bool movedIntoTheFolderInTheWay = false;
+        QList<MovedArchiveEntry> archiveEntriesMovedIn;
+        QString replacedFolder;
+        auto putTheFolderInTheWayBack = [this, &movedIntoTheFolderInTheWay, &archiveEntriesMovedIn, &replacedFolder, &theFolderNamedAfterTheFile]() {
+            const QStringList leftIn = undoMovingTheArchiveIn(archiveEntriesMovedIn);
+            archiveEntriesMovedIn.clear();
+            movedIntoTheFolderInTheWay = false;
+            if (!leftIn.isEmpty()) {
+                //: %1 is a folder that was already in the profile, %2 lists the files of a refused package that could not be taken back out of it
+                postMessage(tr("[ WARN ]  - Some files of a refused package could not be taken back out of \"%1\": %2").arg(QDir(theFolderNamedAfterTheFile).absolutePath(), leftIn.join(qsl(", "))));
+            }
+            if (holdsAnythingButFolders(replacedFolder)) {
+                qWarning() << "Host::installPackage() WARNING - keeping" << replacedFolder << ": it holds files that could not be put back where they were";
+                //: %1 is a folder in the profile holding files of the user's that could not be put back where they were after a package install was refused
+                postMessage(tr("[ WARN ]  - Some files that were in the way of a package could not be put back, and are in \"%1\".").arg(replacedFolder));
+            } else {
+                removeDir(replacedFolder, replacedFolder);
+            }
         };
 
         // Not for script installs (quiet): the dialog steals window-manager focus from the
@@ -3772,6 +3967,9 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         }
         // continuing, so update the folder name on disk
         const QString newpath(qsl("%1/%2").arg(_home, packageName));
+        if (unpackBesideTheFolder) {
+            QFile::remove(_dir.absoluteFilePath(scmUnpackingMarker));
+        }
         // Nothing to move, and renaming a folder onto itself fails and would trip the check below
         if (QDir(newpath).absolutePath() != _dir.absolutePath()) {
             bool movedIntoPlace = _dir.rename(_dir.absolutePath(), newpath);
@@ -3787,14 +3985,45 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
                     movedIntoPlace = _dir.rename(_dir.absolutePath(), newpath);
                 }
             }
+            // A folder named after the archive's file that nothing installed owns is left over - a crash before the
+            // profile was saved, an uninstall that could not remove every file - and the archive is moved into it as
+            // unzipping into it would have, but only once it has proved to hold a package, so a refusal leaves the
+            // folder as it was. Moved rather than swapped in: on Windows a folder with a file still open cannot be
+            // renamed, and that open file is the usual reason an uninstall left the folder.
+            const bool aFolderNamedAfterTheFileIsInTheWay =
+                    !movedIntoPlace && aFolderIsNamedAfterTheFile && crossKindRefusalOnTheFileName.isEmpty() && QDir(newpath).absolutePath() == QDir(theFolderNamedAfterTheFile).absolutePath();
+            if (aFolderNamedAfterTheFileIsInTheWay) {
+                if (!aPackageFileCanBeReadIn(_dir)) {
+                    return refuseTheRenamedInstall(noPackageFoundReason());
+                }
+                replacedFolder = aFreshFolderToUnpackInto(_home, scmReplacedMarker);
+                if (replacedFolder.isEmpty()) {
+                    //: %1 is the folder of the profile in which a new folder to unpack the package into could not be made
+                    return refuseTheRenamedInstall(tr("could not make a folder in %1 to unpack the package into").arg(_home));
+                }
+                // Marked again, so a crash before the install is done leaves the unpacking folder to be cleared away
+                QFile marker(_dir.absoluteFilePath(scmUnpackingMarker));
+                if (!marker.open(QIODevice::WriteOnly)) {
+                    qWarning() << "Host::installPackage() WARNING - could not mark" << _dir.absolutePath() << "as being unpacked into";
+                }
+                // Windows cannot delete a file that is still open, and a refusal below removes this folder
+                marker.close();
+                movedIntoTheFolderInTheWay = true;
+                if (!moveTheArchiveInto(_dir.absolutePath(), QDir(theFolderNamedAfterTheFile).absolutePath(), QDir(replacedFolder).absolutePath(), archiveEntriesMovedIn)) {
+                    putTheFolderInTheWayBack();
+                    //: %1 is the name of the package, which could not be moved into the folder of the same name that was already in the profile
+                    return refuseTheRenamedInstall(tr("could not move the files of package \"%1\" into the folder of that name already in the profile").arg(packageName));
+                }
+            }
             if (movedIntoPlace) {
                 if (!folderThisInstallMade.isEmpty()) {
                     folderThisInstallMade = QDir(newpath).absolutePath();
                 }
+            } else if (movedIntoTheFolderInTheWay) {
+                // folderThisInstallMade stays the emptied unpacking folder: the one the archive is now in was there before
             } else if (thing != enums::PackageModuleType::ModuleSync && !mIsProfileLoadingSequence) {
-                // A folder already at the requested name makes the rename fail, and going on would import its XML
-                // under this package's name and report success - a stranger's package passing as this one.
-                // Orphaned folders are common: #9654 leaves one, as does an uninstall whose removal failed.
+                // A folder already at the name config.lua asks for makes the rename fail, and going on would import
+                // its XML under this package's name and report success - a stranger's package passing as this one.
                 //: %1 is the name the package's config.lua asks to be installed under
                 return refuseTheRenamedInstall(
                         tr("A folder called \"%1\" is already in the profile, so the package could not be put in place. Please remove or rename that folder first.").arg(packageName));
@@ -3823,13 +4052,18 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
             }
         }
         fontsWereLoaded = installPackageFonts(packageName);
-        QStringList _filterList;
-        _filterList << qsl("*.xml") << qsl("*.trigger");
-        const QFileInfoList entries = _dir.entryInfoList(_filterList, QDir::Files);
+        const QFileInfoList entries = _dir.entryInfoList(packageFileFilter, QDir::Files);
+        // Case aside, as a file system that ignores it keeps the name of a file the archive overwrote
+        const QStringList theArchivesOwnPackageFiles = packageFilesInTheArchive(actualFileName);
         bool registeredFromArchive = false;
         bool aPackageFileWasReadWhole = false;
         QStringList packageFileErrors;
         for (auto& entry : entries) {
+            if (!theArchivesOwnPackageFiles.contains(entry.fileName(), Qt::CaseInsensitive)) {
+                // Another package's file left in the folder would otherwise be read in as part of this one
+                qWarning() << "Host::installPackage() WARNING - not reading in" << entry.absoluteFilePath() << "as part of" << packageName << ": it is not in the archive";
+                continue;
+            }
             file2.setFileName(entry.absoluteFilePath());
             if (!file2.open(QFile::ReadOnly)) {
                 qWarning() << "Host: failed to open file for reading:" << entry.absoluteFilePath() << file2.errorString();
@@ -3902,10 +4136,20 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
                 fonts->unloadFonts(getName(), packageName);
             }
             takeBackWhatTheManifestOverwrote();
+            if (movedIntoTheFolderInTheWay) {
+                putTheFolderInTheWayBack();
+            }
             if (!discardTheFolderThisInstallMade()) {
                 qWarning() << "Host::installPackage() WARNING - refused" << fileName << "as package" << packageName << "but leaving" << _dir.absolutePath() << "alone: this install did not make it";
             }
-            return fail(qsl("no package found in %1 - no Mudlet package file in it could be read").arg(fileName));
+            return fail(noPackageFoundReason());
+        }
+        if (movedIntoTheFolderInTheWay) {
+            for (const QString& emptied : {folderThisInstallMade, replacedFolder}) {
+                if (!removeDir(emptied, emptied)) {
+                    qWarning() << "Host::installPackage() WARNING - could not remove" << emptied << "after installing" << packageName;
+                }
+            }
         }
     } else {
         file2.setFileName(fileName);
@@ -4142,11 +4386,12 @@ bool Host::removeDir(const QString& dirName, const QString& originalPath)
     const QDir dir(dirName);
     if (dir.exists(dirName)) {
         for (QFileInfo const& info : dir.entryInfoList(QDir::NoDotAndDotDot | QDir::System | QDir::Hidden | QDir::AllDirs | QDir::Files, QDir::DirsFirst)) {
-            // prevent recursion outside of the original branch
-            if (info.isDir() && info.absoluteFilePath().startsWith(originalPath)) {
+            // prevent recursion outside of the original branch - a link to a folder is removed, never followed
+            if (info.isDir() && !info.isSymLink() && !info.isJunction() && info.absoluteFilePath().startsWith(originalPath)) {
                 result = removeDir(info.absoluteFilePath(), originalPath);
             } else {
-                result = QFile::remove(info.absoluteFilePath());
+                // Windows removes a link to a folder as a folder
+                result = QFile::remove(info.absoluteFilePath()) || ((info.isSymLink() || info.isJunction()) && dir.rmdir(info.absoluteFilePath()));
             }
 
             if (!result) {
@@ -5698,6 +5943,14 @@ void Host::setShowIdsInEditor(const bool isShown)
 {
     mShowIDsInEditor = isShown;
     emit signal_showIdsInEditorChanged(isShown);
+}
+
+void Host::setFolderViewInEditor(const bool enabled)
+{
+    if (mFolderViewInEditor != enabled) {
+        mFolderViewInEditor = enabled;
+        emit signal_folderViewInEditorChanged(enabled);
+    }
 }
 
 // Hands TMap::mpMapper back to this profile's own mapper. The map dock and the
@@ -7347,14 +7600,9 @@ std::pair<bool, QString> Host::setExperimentEnabled(const QString& experimentKey
     }
 
     if (enabled) {
-        // Check if this is a grouped experiment (contains dots beyond "experiment.")
-        if (experimentKey.count('.') >= 2) {
-            // Extract group (e.g., "experiment.rendering" from "experiment.rendering.originalish")
-            QString group = experimentKey.section('.', 0, 1);
-
-            // Disable all other experiments in the same group
+        if (const QString group = experimentGroup(experimentKey); !group.isEmpty()) {
             for (auto it = mExperiments.begin(); it != mExperiments.end(); ++it) {
-                if (it.key() != experimentKey && it.key().startsWith(group + ".")) {
+                if (it.key() != experimentKey && experimentGroup(it.key()) == group) {
                     it.value() = false;
                 }
             }
@@ -7368,10 +7616,27 @@ std::pair<bool, QString> Host::setExperimentEnabled(const QString& experimentKey
     // Refresh maps if any experiments changed the 3D map
     if (mpMap) {
         consoleFrontend()->requestMapRepaint();
+        if (experimentKey == qsl("experiment.3dmap.modernmapper")) {
+            // A no-op unless the 3D view exists and is the other renderer
+            if (mpMap->mapViewFrontend()) {
+                mpMap->mapViewFrontend()->recreate3DView();
+            }
+            // Map windows can only show 3D with the modern renderer
+            mpMap->mapViewsFrontend()->update3DViewAvailability();
+        }
     }
 #endif
 
     return {true, QString()};
+}
+
+QString Host::experimentGroup(const QString& experimentKey)
+{
+    // "experiment.rendering.originalish" is in "experiment.rendering"; "experiment.3d-player-icon" is in none
+    if (experimentKey.count(QLatin1Char('.')) < 2) {
+        return QString();
+    }
+    return experimentKey.section(QLatin1Char('.'), 0, 1);
 }
 
 QString Host::getActiveExperimentInGroup(const QString& group) const
@@ -7397,9 +7662,11 @@ QStringList Host::getAllExperiments() const
     return result;
 }
 
-QStringList Host::getValidExperiments() const
+QStringList Host::getValidExperiments()
 {
-    return QStringList(mValidExperiments.constBegin(), mValidExperiments.constEnd());
+    QStringList experiments(mValidExperiments.constBegin(), mValidExperiments.constEnd());
+    experiments.sort();
+    return experiments;
 }
 
 bool Host::shouldStripOscHyperlinkConfigParam()

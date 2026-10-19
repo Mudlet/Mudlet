@@ -10,29 +10,17 @@ describe("Trigger processing", function()
     end
 
     -- Both of the package fixtures below are installed at run time, and while a
-    -- profile save is running an uninstall is refused outright and an install is
-    -- postponed, so both are asked again until they take. A postponed install
-    -- answers even a path it would otherwise refuse with a bare true, which is
-    -- how a spec can tell a save is still going - at the price of one console
-    -- error line per probe when the save ends and the empty path is retried.
+    -- profile save is running an uninstall is refused outright, so it is asked
+    -- again until it takes. An install from a script waits a running save out
+    -- before it answers, and gives up only on one still saying it is running once
+    -- its writes are done, which is how a spec waits for a save to be over.
     local function packageInstalled(packageName)
         return contains(getPackages(), packageName)
     end
 
-    local function waitUntil(condition, milliseconds)
-        local waited = 0
-        while waited < milliseconds do
-            if condition() then
-                return true
-            end
-            pumpEvents(50)
-            waited = waited + 50
-        end
-        return condition() and true or false
-    end
-
     local function waitForProfileSaveToPass()
-        return waitUntil(function() return installPackage("") == nil end, 5000)
+        local _, err = installPackage("")
+        return not tostring(err):find("still in progress", 1, true)
     end
 
     -- The self-test profile is kept between runs, so a package under a fixture's
@@ -45,7 +33,9 @@ describe("Trigger processing", function()
             if not packageInstalled(packageName) then
                 break
             end
-            waitForProfileSaveToPass()
+            if not waitForProfileSaveToPass() then
+                reason = "a profile save was still running"
+            end
             local _, message = uninstallPackage(packageName)
             reason = message or reason
             pumpEvents(200)
@@ -3867,6 +3857,42 @@ describe("Trigger processing", function()
                 feedTriggers("tkcommand trigger\n")
                 assert.is_number(_G.TriggerKindsSpec.commandSelection, "sending the command should raise sysDataSendRequest")
                 assert.is_true(_G.TriggerKindsSpec.commandSelection >= 0, "the handler should be able to select the trigger's match")
+            end)
+        end)
+
+        -- The command is sent through the alias pass before the script runs
+        it("keeps its own matches when its command expands into an alias", function()
+            withTrigger("command and script", function(cleanup)
+                local aliasId = tempAlias([[^tkcmdscript inner (\w+)$]], function()
+                    _G.TriggerKindsSpec.commandScriptInner = {command = command, match = matches[2]}
+                end)
+                cleanup(function() killAlias(aliasId) end)
+
+                feedTriggers("tkcmdscript goblin\n")
+
+                assert.are.same({command = "tkcmdscript inner deeper", match = "deeper"}, _G.TriggerKindsSpec.commandScriptInner,
+                                "the trigger's command should have reached the alias")
+                local seen = _G.TriggerKindsSpec.commandScript or {}
+                assert.are.equal("tkcmdscript goblin", seen.fullMatch, "matches[1] was emptied by the trigger's own command")
+                assert.are.equal("goblin", seen.match, "the trigger's capture was emptied by its own command")
+                assert.are.equal("tkcmdscript inner deeper", seen.command, "the trigger's script should see the last command expanded")
+            end)
+        end)
+
+        it("keeps its capture positions right when its command's alias edits the line", function()
+            withTrigger("command edits line", function(cleanup)
+                local aliasId = tempAlias([[^tkcmdedit mark$]], function()
+                    moveCursor(0, getLineNumber())
+                    insertText("[!] ")
+                end)
+                cleanup(function() killAlias(aliasId) end)
+
+                feedTriggers("tkcmdedit goblin\n")
+
+                local seen = _G.TriggerKindsSpec.commandEdit or {}
+                assert.are.equal("[!] tkcmdedit goblin", seen.line, "the alias should have edited the trigger's line")
+                assert.are.equal(1, seen.selected, "the trigger's capture should still be selectable")
+                assert.are.equal("goblin", seen.selection, "the alias's insert should have moved the trigger's capture along")
             end)
         end)
 
