@@ -25,10 +25,11 @@
 
 #include <QAudioBuffer>
 #include <QAudioBufferOutput>
-#include <QBuffer>
 #include <QDataStream>
 #include <QDebug>
+#include <QDir>
 #include <QMediaPlayer>
+#include <QTemporaryFile>
 #include <QTimer>
 
 #include <algorithm>
@@ -49,7 +50,7 @@ bool otherBackendNamed()
     return named;
 }
 
-// A fifth of a second of silence, for the probe to play from memory
+// A fifth of a second of silence, for the probe to play
 QByteArray probeWav()
 {
     constexpr int sampleRate = 48000;
@@ -115,10 +116,14 @@ void TMediaVoice::probeUnnamedBackend()
     }
 
     auto* player = new QMediaPlayer(QCoreApplication::instance());
+    // A file, not a QBuffer: Qt before 6.12.1 never frees the 32 KB it reads a device through
+    auto* source = new QTemporaryFile(QDir::temp().filePath(qsl("mudlet-media-probe-XXXXXX.wav")), player);
+    if (!source->open() || source->write(probeWav()) == -1 || !source->flush()) {
+        qWarning().noquote() << "TMediaVoice WARNING - could not write the sound that checks the media backend, so each sound plays through an output of its own.";
+        player->deleteLater();
+        return;
+    }
     auto* output = new QAudioBufferOutput(TAudioMixer::format(), player);
-    auto* source = new QBuffer(player);
-    source->setData(probeWav());
-    source->open(QIODevice::ReadOnly);
     player->setAudioBufferOutput(output);
     connect(output, &QAudioBufferOutput::audioBufferReceived, player, [player](const QAudioBuffer& buffer) {
         if (buffer.isValid()) {
@@ -131,7 +136,7 @@ void TMediaVoice::probeUnnamedBackend()
         qWarning().noquote() << "TMediaVoice WARNING - this media backend hands over no audio to mix, so each sound plays through an output of its own.";
         player->deleteLater();
     });
-    player->setSourceDevice(source, QUrl(qsl("probe.wav")));
+    player->setSource(QUrl::fromLocalFile(source->fileName()));
     player->play();
 }
 
