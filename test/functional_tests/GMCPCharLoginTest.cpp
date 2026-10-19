@@ -2594,8 +2594,12 @@ private slots:
         host->setPass(QString());
         // Otherwise a token is ignored before it is parsed, so its parse diagnostics never show
         if (frame.startsWith(qsl("Char.Login.Token"))) {
+            mpServer->clearReceived();
             mpServer->sendGmcp(qsl("Char.Login.Default {\"version\": 2, \"type\": [\"password-credentials\"]}"));
-            QVERIFY2(waitForGmcpProcessed(host), "the offer never reached the client");
+            // With nothing saved the offer ends in a hand-off, sent after an asynchronous store read, so
+            // it must be in before the frame or it counts as the client answering the frame
+            QJsonObject handOff;
+            QVERIFY2(waitForClientGmcp(qsl("Char.Login"), handOff), "the offer was never answered with a hand-off");
         }
         const QStringList traces{qsl("sign in"), qsl("sign-in"), qsl("Could not log in")};
         QHash<QString, int> tracesBefore;
