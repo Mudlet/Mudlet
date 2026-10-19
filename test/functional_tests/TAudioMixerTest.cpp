@@ -1,0 +1,398 @@
+/***************************************************************************
+ *   Copyright (C) 2026 by Mike Conley - mike.conley@stickmud.com          *
+ *                                                                         *
+ *   This program is free software; you can redistribute it and/or modify  *
+ *   it under the terms of the GNU General Public License as published by  *
+ *   the Free Software Foundation; either version 2 of the License, or     *
+ *   (at your option) any later version.                                   *
+ *                                                                         *
+ *   This program is distributed in the hope that it will be useful,       *
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ *   GNU General Public License for more details.                          *
+ *                                                                         *
+ *   You should have received a copy of the GNU General Public License     *
+ *   along with this program; if not, write to the                         *
+ *   Free Software Foundation, Inc.,                                       *
+ *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+ ***************************************************************************/
+
+#include <QAudioDevice>
+#include <QDataStream>
+#include <QElapsedTimer>
+#include <QMediaDevices>
+#include <QDeadlineTimer>
+#include <QTemporaryDir>
+#include <QtTest/QtTest>
+
+#include <chrono>
+
+#include "Host.h"
+#include "MediaBackendTestHelper.h"
+#include "MudletApp.h"
+#include "MudletInstanceCoordinator.h"
+#include "PortableModeTestHelper.h"
+#include "ProfileTestHelper.h"
+#include "TAudioMixer.h"
+#include "MudletMedia.h"
+#include "TMedia.h"
+#include "TMediaData.h"
+#include "TMediaVoice.h"
+#include "TelnetServerStub.h"
+#include "mudlet.h"
+#include "utils.h"
+
+#include "GroupedTest.h"
+
+using namespace std::chrono_literals;
+
+// QSKIP and SKIP_OR_FAIL_WITHOUT return from the test case they are in, so this has to be a macro.
+// A machine with no audio output cannot have one opened, which is no fault of the backend.
+#define REQUIRE_MIXING()                                                                                                                                                                               \
+    do {                                                                                                                                                                                               \
+        if (QMediaDevices::audioOutputs().isEmpty()) {                                                                                                                                                 \
+            QSKIP("This machine has no audio output for the shared output to open.");                                                                                                                  \
+        }                                                                                                                                                                                              \
+        SKIP_OR_FAIL_WITHOUT(backendFeedsTheMix() ? QString() : noMixingReason());                                                                                                                     \
+    } while (false)
+
+/*
+ * Sounds and music play through one shared output, TAudioMixer. An output opened and closed for each
+ * sound makes macOS claim Bluetooth headphones for every one, which with AirPods breaks up other apps'
+ * audio and can leave Mudlet silent. These pin that a burst opens the output once, that it closes once
+ * nothing plays, that a stop silences a sound at once, and that mute reaches a mixed sound.
+ */
+class TAudioMixerTest : public QObject
+{
+    Q_OBJECT
+
+private:
+    QTemporaryDir mConfigDir;
+    QByteArray mSavedXdg;
+    TelnetServerStub* mpServer = nullptr;
+    Host* mpHost = nullptr;
+    const QString mHostname = "Test-Audio-Mixer";
+    const QString mLocalhost = "localhost";
+
+private slots:
+    void initTestCase()
+    {
+        if (portableMarkerPresent()) {
+            QSKIP("portable.txt present - it takes precedence over XDG_CONFIG_HOME, so the config dir cannot be redirected");
+        }
+        QVERIFY(mConfigDir.isValid());
+        QVERIFY(QDir().mkpath(qsl("%1/mudlet/profiles").arg(mConfigDir.path())));
+        mSavedXdg = qgetenv("XDG_CONFIG_HOME");
+        qputenv("XDG_CONFIG_HOME", mConfigDir.path().toUtf8());
+    }
+
+    void cleanupTestCase() { mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg); }
+
+    void init()
+    {
+        mpServer = new TelnetServerStub(qApp);
+        mpServer->start(mLocalhost, 0);
+        mudlet::start();
+        mudlet::self()->setupConfig();
+        mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
+        mudlet::self()->init();
+        mudlet::self()->setStorePasswordsSecurely(false);
+        TestProfile::removeProfileDirectory(mHostname);
+        if (!TestProfile::create(mHostname, mLocalhost, QString::number(mpServer->serverPort()))) {
+            QFAIL("Profile took too long to load.");
+        }
+        mpHost = mudlet::self()->getActiveHost();
+        QVERIFY(mpHost && mpHost->mpMedia);
+        TAudioMixer::self()->setIdleCloseDelay(10s);
+    }
+
+    void cleanup()
+    {
+        if (mpHost && mpHost->mpMedia) {
+            mpHost->mpMedia->stopAllMediaPlayers();
+        }
+        delete mpServer;
+        mpServer = nullptr;
+        mpHost = nullptr;
+        delete mudlet::self();
+        TestProfile::removeProfileDirectory(mHostname);
+    }
+
+    // Video keeps an output of its own, timed against its picture; the rest are mixed
+    void test_soundsAndMusicAreMixed()
+    {
+        REQUIRE_MIXING();
+        TMediaData sound = clipData(writeClip(qsl("sound.wav"), 3000), TMediaData::MediaTypeSound);
+        media()->playMedia(sound);
+        TMediaData music = clipData(writeClip(qsl("music.wav"), 3000), TMediaData::MediaTypeMusic);
+        media()->playMedia(music);
+        QVERIFY2(waitForPlaying(2), "The sound and the music never both started.");
+        QCOMPARE(media()->playersMixed(), 2);
+    }
+
+    // The whole point of sharing: however many sounds come and go, the headphones are claimed once
+    void test_aBurstOfSoundsOpensTheOutputOnce()
+    {
+        REQUIRE_MIXING();
+        const QString fileName = writeClip(qsl("hit.wav"), 150);
+        const int openedBefore = TAudioMixer::self()->timesOpened();
+
+        for (int hit = 0; hit < 20; ++hit) {
+            TMediaData data = clipData(fileName, TMediaData::MediaTypeSound);
+            data.setMediaKey(qsl("hit%1").arg(hit % 6));
+            media()->playMedia(data);
+            QTest::qWait(100ms);
+        }
+        QTest::qWait(500ms);
+
+        SKIP_OR_FAIL_WITHOUT(TAudioMixer::self()->timesOpened() > openedBefore || TAudioMixer::self()->outputOpen() ? QString() : noAudioReason());
+        QVERIFY2(TAudioMixer::self()->timesOpened() - openedBefore <= 1,
+                 qPrintable(qsl("A burst of 20 sounds opened the shared output %1 times.").arg(TAudioMixer::self()->timesOpened() - openedBefore)));
+        QVERIFY(TAudioMixer::self()->outputOpen());
+    }
+
+    // Held open while nothing plays, Mudlet would keep the headphones and count as playing audio
+    void test_theOutputClosesOnceNothingPlays()
+    {
+        REQUIRE_MIXING();
+        TAudioMixer::self()->setIdleCloseDelay(400ms);
+        TMediaData data = clipData(writeClip(qsl("short.wav"), 300), TMediaData::MediaTypeSound);
+        media()->playMedia(data);
+        SKIP_OR_FAIL_WITHOUT(QTest::qWaitFor(
+                                     []() {
+                                         return TAudioMixer::self()->outputOpen();
+                                     },
+                                     QDeadlineTimer(5s))
+                                     ? QString()
+                                     : noAudioReason());
+        QVERIFY2(QTest::qWaitFor(
+                         []() {
+                             return !TAudioMixer::self()->outputOpen();
+                         },
+                         QDeadlineTimer(5s)),
+                 "The shared output stayed open with nothing playing.");
+    }
+
+    // The mix holds a head start of each sound; a stop must not let that play on
+    void test_aStopDropsWhatASoundHasQueued()
+    {
+        REQUIRE_MIXING();
+        const QString fileName = writeClip(qsl("stopped.wav"), 5000);
+        TMediaData data = clipData(fileName, TMediaData::MediaTypeSound);
+        media()->playMedia(data);
+        SKIP_OR_FAIL_WITHOUT(QTest::qWaitFor(
+                                     []() {
+                                         return TAudioMixer::self()->queuedSamples() > 0;
+                                     },
+                                     QDeadlineTimer(5s))
+                                     ? QString()
+                                     : noAudioReason());
+
+        TMediaData stop = clipData(fileName, TMediaData::MediaTypeSound);
+        media()->stopMedia(stop);
+        QCOMPARE(TAudioMixer::self()->queuedSamples(), 0);
+    }
+
+    void test_muteReachesAMixedSound()
+    {
+        REQUIRE_MIXING();
+        TMediaData data = clipData(writeClip(qsl("muted.wav"), 3000), TMediaData::MediaTypeSound);
+        media()->playMedia(data);
+        QVERIFY2(waitForPlaying(1), "The sound never started.");
+        QVERIFY(media()->playersMixed() == 1);
+
+        media()->muteMedia(TMediaData::MediaProtocolAPI);
+        QVERIFY2(mixedVoice() && mixedVoice()->muted(), "Muting game and script media did not reach a mixed sound.");
+        media()->unmuteMedia(TMediaData::MediaProtocolAPI);
+        QVERIFY(!mixedVoice()->muted());
+    }
+
+    // A pooled player is handed back to TMedia's handlers for every track; its voice must stay connected too
+    void test_aReusedPlayerStillStopsAtOnce()
+    {
+        REQUIRE_MIXING();
+        const QString fileName = writeClip(qsl("reused.wav"), 3000);
+        TMediaData data = clipData(fileName, TMediaData::MediaTypeSound);
+        data.setMediaKey(qsl("reused"));
+        TMediaData stop = clipData(fileName, TMediaData::MediaTypeSound);
+
+        media()->playMedia(data);
+        SKIP_OR_FAIL_WITHOUT(waitForQueuedAudio() ? QString() : noAudioReason());
+        media()->stopMedia(stop);
+        QVERIFY2(QTest::qWaitFor(
+                         [&]() {
+                             return media()->playersHoldingSource() == 0;
+                         },
+                         QDeadlineTimer(5s)),
+                 "The stopped sound never let go of its source.");
+
+        media()->playMedia(data);
+        QCOMPARE(media()->mediaPlayerCount(), 1);
+        QVERIFY2(waitForQueuedAudio(), "A reused player's sound never reached the shared output.");
+        media()->stopMedia(stop);
+        QCOMPARE(TAudioMixer::self()->queuedSamples(), 0);
+    }
+
+    // The mute switch applies to a sound from its start, not only when it is next flipped
+    void test_aSoundStartedWhileMutedStartsMuted()
+    {
+        REQUIRE_MIXING();
+        MudletMedia::self()->setApiMuted(true);
+        auto restore = qScopeGuard([]() {
+            MudletMedia::self()->setApiMuted(false);
+        });
+        TMediaData data = clipData(writeClip(qsl("startsmuted.wav"), 3000), TMediaData::MediaTypeSound);
+        media()->playMedia(data);
+        QVERIFY2(waitForPlaying(1), "The sound never started.");
+        QVERIFY2(mixedVoice() && mixedVoice()->muted(), "A sound started while script media was muted was heard.");
+    }
+
+    // A pause keeps what a sound has queued, so it carries on from the same place when resumed
+    void test_aPausedSoundKeepsItsAudio()
+    {
+        REQUIRE_MIXING();
+        TMediaData data = clipData(writeClip(qsl("paused.wav"), 5000), TMediaData::MediaTypeSound);
+        media()->playMedia(data);
+        SKIP_OR_FAIL_WITHOUT(waitForQueuedAudio() ? QString() : noAudioReason());
+
+        TMediaData pause = clipData(qsl("paused.wav"), TMediaData::MediaTypeSound);
+        media()->pauseMedia(pause);
+        QTest::qWait(100ms);
+        const qint64 held = TAudioMixer::self()->queuedSamples();
+        QVERIFY2(held > 0, "A paused sound lost what it had queued.");
+        QTest::qWait(300ms);
+        QCOMPARE(TAudioMixer::self()->queuedSamples(), held);
+    }
+
+    // Mudlet's main thread runs scripts and triggers, and can be busy for a while; the sound must not wait on it
+    void test_aBusyMainThreadDoesNotCutTheSoundOut()
+    {
+        REQUIRE_MIXING();
+        TMediaData data = clipData(writeClip(qsl("steady.wav"), 5000), TMediaData::MediaTypeSound);
+        media()->playMedia(data);
+        SKIP_OR_FAIL_WITHOUT(waitForQueuedAudio() ? QString() : noAudioReason());
+        QTest::qWait(300ms);
+
+        const int ranDryBefore = TAudioMixer::self()->timesRanDry();
+        QElapsedTimer busy;
+        busy.start();
+        while (busy.elapsed() < 400) {
+            // Blocking on purpose, as a long script would: no events are processed
+        }
+        QTest::qWait(300ms);
+        QCOMPARE(TAudioMixer::self()->timesRanDry(), ranDryBefore);
+    }
+
+    // A backend that is known not to feed a voice keeps every player on an output of its own
+    void test_aBackendThatCannotFeedTheMixKeepsOutputsOfItsOwn()
+    {
+        if (backendFeedsTheMix()) {
+            QSKIP("This Qt Multimedia backend feeds the shared output, so there is no fallback to see.");
+        }
+        TMediaData data = clipData(writeClip(qsl("fallback.wav"), 3000), TMediaData::MediaTypeSound);
+        media()->playMedia(data);
+        QCOMPARE(media()->playersMixed(), 0);
+    }
+
+private:
+    TMedia* media() const { return mpHost->mpMedia.data(); }
+
+    // Only one sound plays where this is asked
+    const TMediaVoice* mixedVoice() const { return media()->firstMixedVoice(); }
+
+    QString noMixingReason() const
+    {
+        return qsl("This Qt Multimedia backend (\"%1\") does not feed the shared output, so every player keeps an output of its own. Needs Qt's FFmpeg backend.")
+                .arg(QString::fromLocal8Bit(qgetenv("QT_MEDIA_BACKEND")));
+    }
+
+    // Asking starts the one-time probe of a backend nobody named, which takes a moment to answer
+    static bool backendFeedsTheMix()
+    {
+        if (!qEnvironmentVariable("QT_MEDIA_BACKEND").isEmpty()) {
+            return !TMediaVoice::unsupported();
+        }
+        return QTest::qWaitFor(
+                []() {
+                    return !TMediaVoice::unsupported();
+                },
+                QDeadlineTimer(6s));
+    }
+
+    bool waitForQueuedAudio() const
+    {
+        return QTest::qWaitFor(
+                []() {
+                    return TAudioMixer::self()->queuedSamples() > 0;
+                },
+                QDeadlineTimer(5s));
+    }
+
+    QString noAudioReason() const { return qsl("No audio reached the shared output, so it never opened: this runner may have no audio device."); }
+
+    TMediaData clipData(const QString& fileName, const int type) const
+    {
+        TMediaData data;
+        data.setMediaProtocol(TMediaData::MediaProtocolAPI);
+        data.setMediaType(type);
+        data.setMediaInput(TMediaData::MediaInputFile);
+        data.setMediaFileName(fileName);
+        data.setMediaVolume(1); // quiet enough not to disturb a desktop run
+        return data;
+    }
+
+    bool waitForPlaying(const int players) const
+    {
+        return QTest::qWaitFor(
+                [&]() {
+                    return media()->playersInPlayingState() >= players;
+                },
+                QDeadlineTimer(10s));
+    }
+
+    QString writeClip(const QString& fileName, const int durationMs) const
+    {
+        const QString mediaPath = MudletApp::getMudletPath(enums::profileMediaPath, mHostname);
+        if (!QDir().mkpath(mediaPath)) {
+            QTest::qFail("Could not create the profile media directory.", __FILE__, __LINE__);
+            return {};
+        }
+        QFile file(qsl("%1/%2").arg(mediaPath, fileName));
+        if (!file.open(QIODevice::WriteOnly)) {
+            QTest::qFail("Could not write the test media file.", __FILE__, __LINE__);
+            return {};
+        }
+        file.write(wavBytes(durationMs));
+        return fileName;
+    }
+
+    // Silent 16-bit mono PCM: what is asserted is where the audio goes, not what it sounds like
+    static QByteArray wavBytes(const int durationMs)
+    {
+        constexpr int sampleRate = 8000;
+        constexpr int bytesPerSample = 2;
+        const int dataBytes = sampleRate * bytesPerSample * durationMs / 1000;
+
+        QByteArray wav;
+        QDataStream out(&wav, QIODevice::WriteOnly);
+        out.setByteOrder(QDataStream::LittleEndian);
+        out.writeRawData("RIFF", 4);
+        out << static_cast<quint32>(36 + dataBytes);
+        out.writeRawData("WAVE", 4);
+        out.writeRawData("fmt ", 4);
+        out << static_cast<quint32>(16);
+        out << static_cast<quint16>(1);
+        out << static_cast<quint16>(1);
+        out << static_cast<quint32>(sampleRate);
+        out << static_cast<quint32>(sampleRate * bytesPerSample);
+        out << static_cast<quint16>(bytesPerSample);
+        out << static_cast<quint16>(8 * bytesPerSample);
+        out.writeRawData("data", 4);
+        out << static_cast<quint32>(dataBytes);
+        wav.append(QByteArray(dataBytes, '\0'));
+        return wav;
+    }
+};
+
+#include "TAudioMixerTest.moc"
+MUDLET_GROUPED_TEST_MAIN(TAudioMixerTest)
