@@ -3555,6 +3555,103 @@ int TLuaInterpreter::setLabelToolTip(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setLabelAccessibleName
+int TLuaInterpreter::setLabelAccessibleName(lua_State* L)
+{
+    if (!checkStringArg(L, __func__, 1, "label name") || !checkStringArg(L, __func__, 2, "accessible name")) {
+        return lua_error(L);
+    }
+    const QString labelName{lua_tostring(L, 1)};
+    const QString accessibleName{lua_tostring(L, 2)};
+    if (labelName.isEmpty()) {
+        return warnArgumentValue(L, __func__, "a label cannot have an empty string as its name");
+    }
+
+    Host& host = getHostFromLua(L);
+    if (!host.hasConsoleView()) {
+        return warnArgumentValue(L, __func__, no_main_window_value);
+    }
+    if (!host.setLabelAccessibleName(labelName, accessibleName)) {
+        return warnArgumentValue(L, __func__, qsl("label name '%1' not found").arg(labelName));
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getLabelAccessibleName
+int TLuaInterpreter::getLabelAccessibleName(lua_State* L)
+{
+    const QString labelName = getVerifiedString(L, __func__, 1, "label name");
+    if (labelName.isEmpty()) {
+        return warnArgumentValue(L, __func__, "a label cannot have an empty string as its name");
+    }
+
+    const Host& host = getHostFromLua(L);
+    if (!host.hasConsoleView()) {
+        return warnArgumentValue(L, __func__, no_main_window_value);
+    }
+    if (auto accessibleName = host.labelAccessibleName(labelName)) {
+        lua_pushstring(L, accessibleName->toUtf8().constData());
+        return 1;
+    }
+
+    return warnArgumentValue(L, __func__, qsl("label name '%1' not found").arg(labelName));
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setLabelAccessibleRole
+int TLuaInterpreter::setLabelAccessibleRole(lua_State* L)
+{
+    if (!checkStringArg(L, __func__, 1, "label name") || !checkStringArg(L, __func__, 2, "role")) {
+        return lua_error(L);
+    }
+    const QString labelName{lua_tostring(L, 1)};
+    const QString role{lua_tostring(L, 2)};
+    if (labelName.isEmpty()) {
+        return warnArgumentValue(L, __func__, "a label cannot have an empty string as its name");
+    }
+
+    std::optional<bool> button;
+    if (role == qsl("button")) {
+        button = true;
+    } else if (role == qsl("text")) {
+        button = false;
+    } else if (!role.isEmpty()) {
+        return warnArgumentValue(L, __func__, qsl("'%1' is not a valid role - use 'button', 'text', or '' to decide by the label's callbacks").arg(role));
+    }
+
+    Host& host = getHostFromLua(L);
+    if (!host.hasConsoleView()) {
+        return warnArgumentValue(L, __func__, no_main_window_value);
+    }
+    if (!host.setLabelAccessibleButton(labelName, button)) {
+        return warnArgumentValue(L, __func__, qsl("label name '%1' not found").arg(labelName));
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getLabelAccessibleRole
+int TLuaInterpreter::getLabelAccessibleRole(lua_State* L)
+{
+    const QString labelName = getVerifiedString(L, __func__, 1, "label name");
+    if (labelName.isEmpty()) {
+        return warnArgumentValue(L, __func__, "a label cannot have an empty string as its name");
+    }
+
+    const Host& host = getHostFromLua(L);
+    if (!host.hasConsoleView()) {
+        return warnArgumentValue(L, __func__, no_main_window_value);
+    }
+    if (auto role = host.labelAccessibleRole(labelName)) {
+        lua_pushstring(L, role->toUtf8().constData());
+        return 1;
+    }
+
+    return warnArgumentValue(L, __func__, qsl("label name '%1' not found").arg(labelName));
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getLabelToolTip
 int TLuaInterpreter::getLabelToolTip(lua_State* L)
 {

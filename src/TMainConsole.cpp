@@ -2615,7 +2615,8 @@ std::pair<bool, QString> TMainConsole::setLabelMovie(const QString& name, const 
     myMovie->setFileName(moviePath);
     myMovie->stop();
     pL->setMovie(myMovie);
-    pL->model().mText = pL->text();
+    pL->model().setText(pL->text());
+    pL->imageMayHaveChanged();
     myMovie->start();
     return {true, QString()};
 }

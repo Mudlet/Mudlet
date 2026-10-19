@@ -740,10 +740,24 @@ end
 -- appended as the final argument (see @{mouseClickEvent})
 -- @param func The function to use.
 -- @param ... Parameters to pass to the function. Must be strings or numbers.
+-- A right-click menu's own click callback ignores a left click, which is all a screen reader's press is,
+-- so its label is a button only when a release callback or a click callback of the script's own can be pressed
+local function menuLabelAutomaticRole(label)
+  return (label.clickCallback == Geyser.Label.onRightClick and not label.releaseCallback) and "text" or ""
+end
+
+-- Applies that role to a menu's label, unless a script chose its role itself
+local function settleMenuLabelRole(label)
+  if label.rightClickMenu and (not label.accessibleRole or label.accessibleRole == "") then
+    setLabelAccessibleRole(label.name, menuLabelAutomaticRole(label))
+  end
+end
+
 function Geyser.Label:setClickCallback (func, ...)
   setLabelClickCallback(self.name, func, ...)
   self.clickCallback = func
   self.clickArgs = { ... }
+  settleMenuLabelRole(self)
 end
 
 --- Sets a callback to be used when this label is double clicked. When this
@@ -766,6 +780,7 @@ function Geyser.Label:setReleaseCallback (func, ...)
   setLabelReleaseCallback(self.name, func, ...)
   self.releaseCallback = func
   self.releaseArgs = { ... }
+  settleMenuLabelRole(self)
 end
 
 --- Sets a callback to be used when the mouse cursor is moved over this label. When this
@@ -847,6 +862,32 @@ function Geyser.Label:setToolTip(txt, duration)
   setLabelToolTip(self.name, txt, duration)
   self.toolTip = txt
   self.toolTipDuration = duration
+end
+
+--- Sets the name a screen reader announces for the label, in place of its text.
+-- Needed for a label that shows only an image or icon. Pass "" to announce its text again.
+-- @param name the name to announce
+-- @return true, or nil and why the label refused it
+function Geyser.Label:setAccessibleName(name)
+  local ok, err = setLabelAccessibleName(self.name, name)
+  if ok then
+    self.accessibleName = name
+  end
+  return ok, err
+end
+
+--- Sets whether a screen reader announces the label as a button or as text.
+-- By default it is a button when it has a click or release callback; use "text" for one whose
+-- callbacks are not a button's, such as a drag handle. Pass "" to decide by its callbacks again.
+-- @param role "button", "text" or ""
+-- @return true, or nil and why the label refused it
+function Geyser.Label:setAccessibleRole(role)
+  local ok, err = setLabelAccessibleRole(self.name, role)
+  if ok then
+    self.accessibleRole = role
+    settleMenuLabelRole(self)
+  end
+  return ok, err
 end
 
 --- Resets the tooltip of the label
@@ -1362,6 +1403,24 @@ function Geyser.Label:new (cons, container)
   if me.toolTip then
     me.toolTipDuration = me.toolTipDuration or 10
     me:setToolTip(me.toolTip, me.toolTipDuration)
+  end
+
+  -- The constraints were copied onto the label already, so each is cleared before its setter
+  -- applies it, or a value the label refused would stay on the object
+  local accessibleName, accessibleRole = me.accessibleName, me.accessibleRole
+  me.accessibleName, me.accessibleRole = nil, nil
+  if accessibleName then
+    local ok, err = me:setAccessibleName(accessibleName)
+    if not ok then
+      debugc(string.format("Geyser.Label:new(): accessibleName refused for '%s': %s", me.name, tostring(err)))
+    end
+  end
+
+  if accessibleRole then
+    local ok, err = me:setAccessibleRole(accessibleRole)
+    if not ok then
+      debugc(string.format("Geyser.Label:new(): accessibleRole refused for '%s': %s", me.name, tostring(err)))
+    end
   end
 
   -- Set clickthrough if included in constructor
@@ -1976,12 +2035,16 @@ function Geyser.Label:createRightClickMenu(cons)
 
   cons.Style = cons.Style or "light"
 
-  if not(self.rightClickMenu) then
+  local firstMenu = not self.rightClickMenu
+  if firstMenu then
     self:setClickCallback(self.onRightClick, self)
   end
 
   -- create a label with a nestable=true property as base menu
   self.rightClickMenu = Geyser.Label:new(cons, self)
+  if firstMenu then
+    settleMenuLabelRole(self)
+  end
   self:createMenuItems(nil, cons.MenuItems)
 end
 

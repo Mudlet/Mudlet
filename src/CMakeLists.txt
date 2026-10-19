@@ -229,6 +229,7 @@ set(mudlet_app_SRCS
     SelectionRectangleHandler.cpp
     SingleLineTextEdit.cpp
     T2DMap.cpp
+    TAccessibleLabel.cpp
     TAccessibleTextEdit.cpp
     TCommandLine.cpp
     TPasswordEntry.cpp
@@ -542,6 +543,7 @@ set(mudlet_app_HDRS
     SingleLineTextEdit.h
     T2DMap.h
     TAccessibleConsole.h
+    TAccessibleLabel.h
     TAccessibleTextEdit.h
     TCommandLine.h
     TPasswordEntry.h
