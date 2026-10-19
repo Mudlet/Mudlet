@@ -460,7 +460,11 @@
 -- negotiated quietly, self-sufficient prompt lines (labelled cur/max or
 -- percent) are trusted once they recur, score screens are read passively,
 -- and as a last resort "score" is sent once - visibly - to learn the maxima
--- on games whose prompt only carries current values.
+-- on games whose prompt only carries current values. When no protocol reports
+-- an enemy, the enemy bar can come from the sentence a fight prints each round
+-- ("Kaninen är tagen.").
+-- When a game's data is missed, teach this script its format; do not add
+-- functions for players' scripts to feed it (see docs/CONTRIBUTING.md).
 -- Every section starts in the dock but none is stuck there: dragging a header
 -- row pulls that section out to sit anywhere over the game's text, the sections
 -- left behind share out the space it had, and where each one was left is
@@ -477,6 +481,7 @@ BaseUI.shapeSightings = BaseUI.shapeSightings or {}
 BaseUI.vitalsData = BaseUI.vitalsData or {}
 BaseUI.vitalsLock = BaseUI.vitalsLock or 0
 BaseUI.eventHandlerIds = BaseUI.eventHandlerIds or {}
+BaseUI.conditionSightings = BaseUI.conditionSightings or {}
 
 -- An anonymous event handler belongs to the profile rather than to the package
 -- that registered it, so uninstalling has to take these with it. Every
@@ -1578,6 +1583,115 @@ function BaseUI.killVitalsTriggers()
   BaseUI.vitalsTriggerIds = {}
 end
 
+-- Enemy health from a sentence describing it, which some games print every round
+-- of a fight. A scale runs from unhurt to dying, each step an even share of the
+-- bar, and the bar's text is the game's own sentence. Add a game's wording here.
+local conditionScales = {
+  -- SvenskMUD: "Kaninen är tagen."
+  { "är i toppform.", "är i ganska bra form.", "är sliten.", "är tagen.", "är illa tilltygad.",
+    "är riktigt illa tilltygad.", "är nästan DÖD." },
+  -- the diagnose sentences of CircleMUD/tbaMUD and ROM: "The orc has a few scratches."
+  { "is in excellent condition.", "has a few scratches.", "has some small wounds and bruises.",
+    "has quite a few wounds.", "has some big nasty wounds and scratches.", "looks pretty hurt.",
+    "is in awful condition." },
+}
+-- below the bottom step: still fighting, on negative health (Circle, ROM)
+local conditionDying = { "is bleeding awfully from big wounds.", "is bleeding to death." }
+-- what ends a fight sooner than the timeout below would
+local conditionDeaths = { "dog.", "is DEAD!!", "is dead!  R.I.P." }
+-- SvenskMUD reports the player's own condition in the same shape
+local selfSubjects = { du = true }
+-- a fight reports a condition every round or two
+local enemyTimeout = 15
+
+local conditionPercent = {}
+local conditionAlternatives = {}
+for _, scale in ipairs(conditionScales) do
+  for step, phrase in ipairs(scale) do
+    conditionPercent[phrase] = (#scale - step + 1) / #scale * 100
+    conditionAlternatives[#conditionAlternatives + 1] = phrase
+  end
+end
+for _, phrase in ipairs(conditionDying) do
+  conditionPercent[phrase] = 0
+  conditionAlternatives[#conditionAlternatives + 1] = phrase
+end
+for _, phrase in ipairs(conditionDeaths) do
+  conditionAlternatives[#conditionAlternatives + 1] = phrase
+end
+for index, phrase in ipairs(conditionAlternatives) do
+  conditionAlternatives[index] = (phrase:gsub("[%.%!%?%*%+%(%)%[%]%^%$|\\]", "\\%0"))
+end
+-- the subject is short and free of the punctuation chat lines and markup bring
+BaseUI.conditionPattern = [=[^([^\s"'\[\]():,&lt;&gt;&amp;][^"'\[\]():,&lt;&gt;&amp;]{0,39}?) (]=]
+  .. table.concat(conditionAlternatives, "|") .. [=[)\s*$]=]
+
+function BaseUI.onConditionLine()
+  BaseUI.readCondition(matches[2], matches[3])
+end
+
+-- One sentence can be a look at someone, so a subject only becomes the enemy on
+-- its second sentence within the timeout; after that every sentence updates it.
+-- Sightings are per subject so two foes reported in turn still get there.
+function BaseUI.readCondition(subject, phrase)
+  if BaseUI.dormant() or selfSubjects[subject:lower()] then
+    return
+  end
+  local enemy = BaseUI.textEnemy
+  local percent = conditionPercent[phrase]
+  local sightings = BaseUI.conditionSightings
+  if not percent then
+    -- the next one of the same name is a new foe, and has to be seen twice again
+    sightings[subject] = nil
+    if enemy and enemy.name == subject then
+      BaseUI.forgetTextEnemy()
+    end
+    return
+  end
+  local now = getEpoch()
+  local last = sightings[subject]
+  sightings[subject] = now
+  if not (enemy and enemy.name == subject) and not (last and now - last &lt;= enemyTimeout) then
+    return
+  end
+  BaseUI.textEnemy = { name = subject, percent = percent, label = subject .. " " .. phrase:gsub("%.$", "") }
+  if BaseUI.textEnemyTimer then
+    killTimer(BaseUI.textEnemyTimer)
+  end
+  BaseUI.textEnemyTimer = tempTimer(enemyTimeout, function()
+    BaseUI.textEnemyTimer = nil
+    BaseUI.forgetTextEnemy()
+  end)
+  BaseUI.renderVitals()
+end
+
+function BaseUI.forgetTextEnemy()
+  if BaseUI.textEnemyTimer then
+    killTimer(BaseUI.textEnemyTimer)
+    BaseUI.textEnemyTimer = nil
+  end
+  if BaseUI.textEnemy then
+    BaseUI.textEnemy = nil
+    BaseUI.renderVitals()
+  end
+end
+
+-- unlike the vitals prefilter this stays on under GMCP and MSDP, which rarely
+-- carry an enemy's health
+function BaseUI.createConditionTrigger()
+  if BaseUI.dormant() or BaseUI.conditionTriggerId then
+    return
+  end
+  BaseUI.conditionTriggerId = tempRegexTrigger(BaseUI.conditionPattern, BaseUI.onConditionLine)
+end
+
+function BaseUI.killConditionTrigger()
+  if BaseUI.conditionTriggerId then
+    killTrigger(BaseUI.conditionTriggerId)
+    BaseUI.conditionTriggerId = nil
+  end
+end
+
 -- last rung of the ladder: a game whose prompt only carries currents gets
 -- asked for its score screen - once per session, visibly, and only when no
 -- protocol has offered vitals and no maximum is known yet. The score output
@@ -1864,6 +1978,7 @@ function BaseUI.standAside(_, packageName)
   BaseUI.saveSettings()
   BaseUI.disarmChatTriggers()
   BaseUI.killVitalsTriggers()
+  BaseUI.killConditionTrigger()
   if BaseUI.container then
     BaseUI.container:hide()
     BaseUI.container:adjustBorder()
@@ -1889,7 +2004,7 @@ end
 
 -- Uninstalling the package takes the alias, the chat trigger tree and this very
 -- script with it - and nothing else. The dock and everything in it are Geyser
--- objects made at runtime, the vitals prefilter is a temporary trigger and the
+-- objects made at runtime, the vitals and condition triggers are temporary and the
 -- handlers below are anonymous ones: all three belong to the profile rather than
 -- to the package, so they would be left on screen and still repainting from game
 -- text, with the "baseui" command that could have dismissed them gone. So the
@@ -1903,6 +2018,10 @@ function BaseUI.uninstall()
   end
   BaseUI.eventHandlerIds = {}
   BaseUI.killVitalsTriggers()
+  BaseUI.killConditionTrigger()
+  if BaseUI.textEnemyTimer then
+    killTimer(BaseUI.textEnemyTimer)
+  end
   if BaseUI.settleTimerId then
     killTimer(BaseUI.settleTimerId)
     BaseUI.settleTimerId = nil
@@ -1948,6 +2067,7 @@ function BaseUI.serverGuiRemoved(_, packageName)
     BaseUI.saveSettings()
     BaseUI.armChatTriggers()
     BaseUI.createVitalsTriggers()
+    BaseUI.createConditionTrigger()
     BaseUI.renderVitals()
     -- standing aside hid the dock, and a section is a window in its own right
     -- rather than a child widget of it, so showing the sections alone would
@@ -2486,7 +2606,17 @@ function BaseUI.ensureGauge(key)
   local def = gaugeDefs[key]
   -- without the panel a gauge would parent to the main window instead, where
   -- its panel-relative size would stretch it across the top of the screen
-  if not def or not BaseUI.sections.vitals or BaseUI.usedGaugeSlots &gt;= maxGaugeSlots then
+  if not def or not BaseUI.sections.vitals then
+    return nil
+  end
+  -- a hidden enemy bar gives its slot back, or one fight would cost the xp bar for good
+  local enemy = BaseUI.gauges.enemy
+  if BaseUI.usedGaugeSlots &gt;= maxGaugeSlots and key ~= "enemy" and enemy and enemy.hidden then
+    enemy:delete()
+    BaseUI.gauges.enemy = nil
+    BaseUI.usedGaugeSlots = BaseUI.usedGaugeSlots - 1
+  end
+  if BaseUI.usedGaugeSlots &gt;= maxGaugeSlots then
     return nil
   end
   BaseUI.usedGaugeSlots = BaseUI.usedGaugeSlots + 1
@@ -2505,6 +2635,11 @@ function BaseUI.ensureGauge(key)
   BaseUI.gauges[key] = gauge
   BaseUI.layoutGauges()
   return gauge
+end
+
+-- a protocol's enemy wins over the one read from a fight's sentences
+local function shownVitals(stat)
+  return BaseUI.vitalsData[stat.key] or (stat.key == "enemy" and BaseUI.textEnemy or nil)
 end
 
 local function completeReading(data)
@@ -2538,6 +2673,10 @@ function BaseUI.applyVitals(source, readings, snapshot)
       BaseUI.killVitalsTriggers()
     end
   end
+  -- the protocol saw the fight end, so the sentences read during it are stale
+  if snapshot and BaseUI.vitalsData.enemy and not readings.enemy then
+    BaseUI.forgetTextEnemy()
+  end
   for _, stat in ipairs(vitalsStats) do
     local reading = readings[stat.key]
     if snapshot then
@@ -2559,7 +2698,7 @@ function BaseUI.renderVitals()
   end
   local paintable = false
   for _, stat in ipairs(vitalsStats) do
-    if completeReading(BaseUI.vitalsData[stat.key]) then
+    if completeReading(shownVitals(stat)) then
       paintable = true
       break
     end
@@ -2569,15 +2708,22 @@ function BaseUI.renderVitals()
   end
   BaseUI.build()
   BaseUI.checkMapData()
+  -- before painting, so a stat that needs an ended enemy's slot can take it
+  for _, stat in ipairs(vitalsStats) do
+    local gauge = BaseUI.gauges[stat.key]
+    if stat.transient and gauge and not gauge.hidden and not completeReading(shownVitals(stat)) then
+      gauge:hide()
+    end
+  end
   for _, stat in ipairs(vitalsStats) do
     -- a gauge is only painted once a full reading is known: either a ready
     -- percentage, or both a current and a max (maxima are never assumed, so
     -- a stat may wait for a Maxstats message or a score screen)
-    local data = BaseUI.vitalsData[stat.key] or {}
+    local data = shownVitals(stat) or {}
     if data.percent then
       local gauge = BaseUI.ensureGauge(stat.key)
       if gauge then
-        gauge:setValue(data.percent, 100, string.format("%s %d%%", stat.label, math.floor(data.percent + 0.5)))
+        gauge:setValue(data.percent, 100, data.label or string.format("%s %d%%", stat.label, math.floor(data.percent + 0.5)))
         if gauge.hidden then
           gauge:show()
         end
@@ -2590,8 +2736,6 @@ function BaseUI.renderVitals()
           gauge:show()
         end
       end
-    elseif stat.transient and BaseUI.gauges[stat.key] and not BaseUI.gauges[stat.key].hidden then
-      BaseUI.gauges[stat.key]:hide()
     end
   end
   -- The panel is built before there are any bars to put in it, so it starts
@@ -2695,9 +2839,11 @@ end
 -- a reconnect (possibly to a different game or character) starts the ladder
 -- fresh: recurrence counters, the source lock and the one-time score request
 -- are all per-connection state. Painted gauges keep their last values until
--- fresh data arrives.
+-- fresh data arrives, except the enemy bar: its fight is over.
 function BaseUI.handleDisconnect()
   BaseUI.vitalsData = {}
+  BaseUI.conditionSightings = {}
+  BaseUI.forgetTextEnemy()
   BaseUI.vitalsLock = 0
   BaseUI.shapeSightings = {}
   BaseUI.scoreRequested = false
@@ -2793,6 +2939,7 @@ function BaseUI.hide()
   BaseUI.saveSettings()
   BaseUI.disarmChatTriggers()
   BaseUI.killVitalsTriggers()
+  BaseUI.killConditionTrigger()
   if BaseUI.container then
     BaseUI.container:hide()
     BaseUI.container:adjustBorder()
@@ -2816,6 +2963,7 @@ function BaseUI.show()
   BaseUI.updateMsdpVitals()
   BaseUI.armChatTriggers()
   BaseUI.createVitalsTriggers()
+  BaseUI.createConditionTrigger()
   BaseUI.renderVitals()
   if not BaseUI.container and BaseUI.settings.built then
     BaseUI.build()
@@ -2896,6 +3044,7 @@ end
 -- vitals layer gets a look at it
 BaseUI.armChatTriggers()
 BaseUI.createVitalsTriggers()
+BaseUI.createConditionTrigger()
 -- negotiate MSDP up front: it costs nothing on servers without it and gives
 -- gauges to games that have it but lack GMCP. Seeded once rather than asserted
 -- on every load: this script runs at every profile open, so setting it each time
