@@ -164,7 +164,7 @@ private:
     static QString generateFilePath(const QString& profileName, const QString& key);
     static QString generateLegacyFilePath(const QString& profileName, const QString& key);
     // unreadable, when given, is set when the older-named file is there but cannot be opened
-    static QString readLegacyFileCredential(const QString& profileName, const QString& key, bool* unreadable = nullptr);
+    static QString readLegacyFileCredential(const QString& profileName, const QString& key, bool* unreadable = nullptr, bool* usedDerivableKey = nullptr);
     static QString ourLegacyFilePath(const QString& profileName, const QString& key);
     static void refreshLegacyFileCredential(const QString& profileName, const QString& key, const QString& credential);
     static void removeLegacyFileCredential(const QString& profileName, const QString& key);

@@ -1619,9 +1619,15 @@ QString CredentialManager::retrieveCredentialFromFile(const QString& profileName
     // A copy under the old name that is newer but cannot be opened may hold the latest password
     bool legacyUnreadable = false;
     if (!legacyPath.isEmpty() && fileWrittenAfter(legacyPath, filePath)) {
-        const QString migrated = readLegacyFileCredential(profileName, key, &legacyUnreadable);
+        bool legacyUsedDerivableKey = false;
+        const QString migrated = readLegacyFileCredential(profileName, key, &legacyUnreadable, &legacyUsedDerivableKey);
 
         if (!migrated.isEmpty()) {
+            // Before the copy across, which then stays the newer one and is read from next time
+            if (legacyUsedDerivableKey && !writeCredentialFile(legacyPath, profileName, migrated)) {
+                qWarning() << "CredentialManager: could not re-encrypt the" << key << "credential saved under the derivable key at" << legacyPath << "for profile" << profileName;
+            }
+
             // Copied, not moved: an older Mudlet sharing this config directory looks only there
             if (!writeCredentialFile(filePath, profileName, migrated)) {
                 qWarning() << "CredentialManager: could not copy the newer credential at" << legacyPath << "across to" << filePath << "- it will be read from the older path again next time";
@@ -1698,8 +1704,17 @@ QString CredentialManager::retrieveCredentialFromFile(const QString& profileName
         return QString();
     }
 
-    // Decrypt credential using profile-specific key
-    QString decrypted = SecureStringUtils::decryptStringForProfile(encrypted, profileName);
+    bool usedDerivableKey = false;
+    QString decrypted = SecureStringUtils::decryptStringForProfile(encrypted, profileName, &usedDerivableKey);
+
+    if (usedDerivableKey) {
+        if (writeCredentialFile(filePath, profileName, decrypted)) {
+            // The legacy copy was most likely written alongside this one, so under the same key
+            refreshLegacyFileCredential(profileName, key, decrypted);
+        } else {
+            qWarning() << "CredentialManager: could not re-encrypt the" << key << "credential saved under the derivable key for profile" << profileName;
+        }
+    }
 
     if (decrypted.isEmpty()) {
         qWarning() << "CredentialManager: Failed to decrypt credential for profile" << profileName;
@@ -1840,7 +1855,7 @@ QString CredentialManager::generateLegacyFilePath(const QString& profileName, co
 
 // Empty when nothing there is this profile's. Decrypts rather than just reading: a file this profile
 // can't decrypt belongs to a profile it used to collide with.
-QString CredentialManager::readLegacyFileCredential(const QString& profileName, const QString& key, bool* unreadable)
+QString CredentialManager::readLegacyFileCredential(const QString& profileName, const QString& key, bool* unreadable, bool* usedDerivableKey)
 {
     const QString legacyPath = generateLegacyFilePath(profileName, key);
 
@@ -1879,7 +1894,7 @@ QString CredentialManager::readLegacyFileCredential(const QString& profileName, 
         return QString();
     }
 
-    return SecureStringUtils::decryptStringForProfile(encrypted, profileName);
+    return SecureStringUtils::decryptStringForProfile(encrypted, profileName, usedDerivableKey);
 }
 
 // Only decrypting tells our legacy file from one a formerly-colliding profile left, so refresh and
