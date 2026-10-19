@@ -3133,17 +3133,70 @@ describe("Tests UI functions", function()
       assert.is_true(BaseUI.backgroundShown)
     end)
 
-    it("should leave the console of a game's own interface as that interface set it", function()
-      BaseUI.setBackground(image)
-      setBackgroundColor("main", 10, 20, 30, 0)
-      BaseUI.standAside("sysServerGuiInstalled", "SomeGameUI")
-      assert.are.same({ 10, 20, 30, 0 }, { getBackgroundColor("main") })
-      assert.is_false(BaseUI.backgroundShown)
-      resetBackgroundImage("main", true)
+    local function countingResets()
+      local real = _G.resetBackgroundImage
+      local resets = { count = 0 }
+      -- through _G: busted gives each spec file globals of its own
+      _G.resetBackgroundImage = function(...)
+        resets.count = resets.count + 1
+        return real(...)
+      end
+      finally(function() _G.resetBackgroundImage = real end)
+      return resets
+    end
+
+    local function returnFromAside()
       BaseUI.settings.standingAside = nil
       BaseUI.armChatTriggers()
       BaseUI.createVitalsTriggers()
       BaseUI.createConditionTrigger()
+    end
+
+    it("should take its picture down and leave a game interface's own console alone", function()
+      BaseUI.setBackground(image)
+      local resets = countingResets()
+      setBackgroundColor("main", 10, 20, 30, 0)
+      BaseUI.standAside("sysServerGuiInstalled", "SomeGameUI")
+      assert.are.same({ 10, 20, 30, 0 }, { getBackgroundColor("main") })
+      assert.is_false(BaseUI.backgroundShown)
+      assert.are.equal(1, resets.count)
+      returnFromAside()
+    end)
+
+    it("should take its picture down for a game that declines it without an interface", function()
+      BaseUI.setBackground(image)
+      local resets = countingResets()
+      BaseUI.standAside("sysServerGuiInstalled")
+      assert.is_false(BaseUI.backgroundShown)
+      assert.are.equal(1, resets.count)
+      returnFromAside()
+    end)
+
+    it("should keep the picture before when a new one passes the check but cannot be shown", function()
+      BaseUI.setBackground(image)
+      local other = getMudletHomeDir() .. "/baseui-spec-other-picture.png"
+      local input = io.open(image, "rb")
+      local output = io.open(other, "wb")
+      output:write(input:read("*a"))
+      input:close()
+      output:close()
+      local real = _G.setBackgroundImage
+      _G.setBackgroundImage = function(window, path, ...)
+        if path == other then
+          return nil, "no plugin"
+        end
+        return real(window, path, ...)
+      end
+      -- one finally per spec: a second would replace this one
+      finally(function()
+        _G.setBackgroundImage = real
+        os.remove(other)
+      end)
+      local shown, problem = BaseUI.setBackground(other)
+      assert.is_false(shown)
+      assert.are.equal("no plugin", problem)
+      assert.are.equal(image, BaseUI.settings.background)
+      assert.is_true(BaseUI.backgroundShown)
     end)
 
     it("should only take what follows the background command", function()

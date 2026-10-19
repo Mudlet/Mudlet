@@ -1882,6 +1882,7 @@ end
 -- The picture "baseui background" puts behind the whole window, while the UI is
 -- neither hidden nor standing aside. A path that cannot be shown is tried once,
 -- not again on every repaint that comes through here.
+local choosingBackground = false
 local function applyBackground(giveBack)
   local path = not giveBack and not BaseUI.dormant() and BaseUI.settings.background or nil
   if path == BaseUI.backgroundTried then
@@ -1891,17 +1892,15 @@ local function applyBackground(giveBack)
   if path then
     local shown, problem = setBackgroundImage("main", path, 5, true)
     BaseUI.backgroundShown = shown == true
-    if not BaseUI.backgroundShown then
+    BaseUI.backgroundProblem = problem
+    -- one being chosen is reported, and taken back, by setBackground
+    if not BaseUI.backgroundShown and not choosingBackground then
       cecho("\n&lt;dim_grey&gt;[ Mudlet UI ] Could not show the background picture ")
       echo(path .. " (" .. tostring(problem) .. ")")
       cecho("&lt;dim_grey&gt; - &lt;yellow&gt;baseui background off&lt;dim_grey&gt; forgets it.&lt;reset&gt;\n")
     end
   elseif BaseUI.backgroundShown then
-    -- a game's own interface has already put up any picture of its own by the time
-    -- we stand aside for it, so ours is left for it to replace
-    if not BaseUI.settings.standingAside then
-      resetBackgroundImage("main", true)
-    end
+    resetBackgroundImage("main", true)
     BaseUI.backgroundShown = false
   end
 end
@@ -3117,6 +3116,13 @@ function BaseUI.show()
   end
 end
 
+local function refuseBackground(path, problem)
+  cecho("\n&lt;dim_grey&gt;[ Mudlet UI ] Could not use this as a background picture: ")
+  echo(path .. " (" .. tostring(problem) .. ")")
+  cecho("&lt;reset&gt;\n")
+  return false, problem
+end
+
 -- Scriptable as well as typed: a path to show behind the whole window, or nil to stop.
 -- Returns false and the reason, leaving the picture before in place, for one that
 -- cannot be shown.
@@ -3125,21 +3131,21 @@ function BaseUI.setBackground(path)
     -- checked even while hidden, when nothing would show it until a later session
     local width, problem = getImageSize(path)
     if not width then
-      cecho("\n&lt;dim_grey&gt;[ Mudlet UI ] Could not use this as a background picture: ")
-      echo(path .. " (" .. tostring(problem) .. ")")
-      cecho("&lt;reset&gt;\n")
-      return false, problem
+      return refuseBackground(path, problem)
     end
     -- chosen again after failing to show, it gets another try
     BaseUI.backgroundTried = nil
   end
   local previous = BaseUI.settings.background
   BaseUI.settings.background = path
+  choosingBackground = true
   applyBackdrop()
+  choosingBackground = false
   if path and not BaseUI.dormant() and not BaseUI.backgroundShown then
+    local problem = BaseUI.backgroundProblem
     BaseUI.settings.background = previous
     applyBackdrop()
-    return false
+    return refuseBackground(path, problem)
   end
   BaseUI.saveSettings()
   paintPictureButton()
