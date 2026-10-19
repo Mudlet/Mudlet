@@ -48,6 +48,7 @@
 #include "TKey.h"
 #include "TLabelModel.h"
 #include "TMap.h"
+#include "TMapViewFrontend.h"
 #include "TMapViewsFrontend.h"
 #include "TMedia.h"
 #include "TNullConsoleFrontend.h"
@@ -7368,14 +7369,9 @@ std::pair<bool, QString> Host::setExperimentEnabled(const QString& experimentKey
     }
 
     if (enabled) {
-        // Check if this is a grouped experiment (contains dots beyond "experiment.")
-        if (experimentKey.count('.') >= 2) {
-            // Extract group (e.g., "experiment.rendering" from "experiment.rendering.originalish")
-            QString group = experimentKey.section('.', 0, 1);
-
-            // Disable all other experiments in the same group
+        if (const QString group = experimentGroup(experimentKey); !group.isEmpty()) {
             for (auto it = mExperiments.begin(); it != mExperiments.end(); ++it) {
-                if (it.key() != experimentKey && it.key().startsWith(group + ".")) {
+                if (it.key() != experimentKey && experimentGroup(it.key()) == group) {
                     it.value() = false;
                 }
             }
@@ -7389,10 +7385,27 @@ std::pair<bool, QString> Host::setExperimentEnabled(const QString& experimentKey
     // Refresh maps if any experiments changed the 3D map
     if (mpMap) {
         consoleFrontend()->requestMapRepaint();
+        if (experimentKey == qsl("experiment.3dmap.modernmapper")) {
+            // A no-op unless the 3D view exists and is the other renderer
+            if (mpMap->mapViewFrontend()) {
+                mpMap->mapViewFrontend()->recreate3DView();
+            }
+            // Map windows can only show 3D with the modern renderer
+            mpMap->mapViewsFrontend()->update3DViewAvailability();
+        }
     }
 #endif
 
     return {true, QString()};
+}
+
+QString Host::experimentGroup(const QString& experimentKey)
+{
+    // "experiment.rendering.originalish" is in "experiment.rendering"; "experiment.3d-player-icon" is in none
+    if (experimentKey.count(QLatin1Char('.')) < 2) {
+        return QString();
+    }
+    return experimentKey.section(QLatin1Char('.'), 0, 1);
 }
 
 QString Host::getActiveExperimentInGroup(const QString& group) const
@@ -7418,9 +7431,11 @@ QStringList Host::getAllExperiments() const
     return result;
 }
 
-QStringList Host::getValidExperiments() const
+QStringList Host::getValidExperiments()
 {
-    return QStringList(mValidExperiments.constBegin(), mValidExperiments.constEnd());
+    QStringList experiments(mValidExperiments.constBegin(), mValidExperiments.constEnd());
+    experiments.sort();
+    return experiments;
 }
 
 bool Host::shouldStripOscHyperlinkConfigParam()
