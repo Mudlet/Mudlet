@@ -236,6 +236,12 @@ private slots:
     // The shared output holds audio ahead of what is heard; a stop must not leave that playing
     void test_aStopSilencesAPlacedSoundAtOnce()
     {
+        // Shut, so the queue holds steady: an output that cannot open drops everything queued
+        TAudioMixer* mixer = TAudioMixer::self();
+        mixer->setOutputSuspended(true);
+        auto resume = qScopeGuard([mixer]() {
+            mixer->setOutputSuspended(false);
+        });
         TMediaData data = soundData(writeClip(qsl("stopped.wav")));
         data.setMediaKey(qsl("stopped"));
         data.setMediaPan(-50);
@@ -246,11 +252,16 @@ private slots:
         const TMediaVoice* voice = media()->placedSound(qsl("stopped"));
         QVERIFY(voice);
         const int mixerVoice = voice->mixerVoice();
-        QVERIFY(TAudioMixer::self()->queuedSamples(mixerVoice) > 0);
+        QVERIFY2(QTest::qWaitFor(
+                         [&]() {
+                             return mixer->queuedSamples(mixerVoice) > 0;
+                         },
+                         QDeadlineTimer(3s)),
+                 "The placed sound's audio never reached the shared output.");
 
         TMediaData stop = soundData(qsl("stopped.wav"));
         media()->stopMedia(stop);
-        QVERIFY2(TAudioMixer::self()->queuedSamples(mixerVoice) == 0, "A stopped placed sound kept its queued audio playing.");
+        QVERIFY2(mixer->queuedSamples(mixerVoice) == 0, "A stopped placed sound kept its queued audio playing.");
     }
 
     // A fade steps the volume as the track plays, and an update moves it; both have to reach the voice
@@ -289,6 +300,11 @@ private slots:
                                      ? QString()
                                      : qsl("This Qt Multimedia backend never finished the clip, so no player comes free to reuse."));
 
+        TAudioMixer* mixer = TAudioMixer::self();
+        mixer->setOutputSuspended(true);
+        auto resume = qScopeGuard([mixer]() {
+            mixer->setOutputSuspended(false);
+        });
         TMediaData placed = soundData(writeClip(qsl("reused.wav")));
         placed.setMediaKey(qsl("reused"));
         placed.setMediaPan(70);
@@ -300,11 +316,16 @@ private slots:
         const TMediaVoice* voice = media()->placedSound(qsl("reused"));
         QVERIFY(voice);
         const int mixerVoice = voice->mixerVoice();
-        QVERIFY(TAudioMixer::self()->queuedSamples(mixerVoice) > 0);
+        QVERIFY2(QTest::qWaitFor(
+                         [&]() {
+                             return mixer->queuedSamples(mixerVoice) > 0;
+                         },
+                         QDeadlineTimer(3s)),
+                 "The placed sound's audio never reached the shared output.");
 
         TMediaData stop = soundData(qsl("reused.wav"));
         media()->stopMedia(stop);
-        QVERIFY2(TAudioMixer::self()->queuedSamples(mixerVoice) == 0, "A placed sound on a reused player kept playing its queued audio after a stop.");
+        QVERIFY2(mixer->queuedSamples(mixerVoice) == 0, "A placed sound on a reused player kept playing its queued audio after a stop.");
     }
 
     // A pooled player plays a sound that is not placed as it was recorded
