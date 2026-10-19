@@ -1171,6 +1171,165 @@ describe("Tests a character whose bytes are split by the posting timeout", funct
     assert.same({"", ":end"}, perLine)
   end)
 
+  it("keeps a private CSI sequence the marker lands inside", function()
+    if timerUnavailable() then return end
+    using("UTF-8")
+
+    -- Mudlet does not act on a private sequence, but it has to consume all of
+    -- it: had the private introducer been acted on before the sequence was
+    -- known to be complete, the "l" after the pause would have printed as text
+    local text, lines, perLine = splitAcrossTimeout("\27[?25", "l")
+    assert.equals(":end", text)
+    assert.equals(2, lines)
+    assert.same({"", ":end"}, perLine)
+  end)
+
+  it("keeps an APC string sequence the marker lands inside", function()
+    if timerUnavailable() then return end
+    using("UTF-8")
+
+    -- the payload is consumed, not decoded, but it is consumed through to the
+    -- terminator that arrives after the pause
+    local text, lines, perLine = splitAcrossTimeout("\27_first half ", "second half\27\\")
+    assert.equals(":end", text)
+    assert.equals(2, lines)
+    assert.same({"", ":end"}, perLine)
+  end)
+
+  -- The non-empty lines from mark on, read while the game may still be part
+  -- way through one
+  local function shownSince(mark)
+    local seen = {}
+    for _, line in ipairs(getLines("main", mark, getLastLineNumber("main") + 1)) do
+      if line ~= "" then
+        seen[#seen + 1] = line
+      end
+    end
+    return seen
+  end
+
+  it("keeps the game's held lead byte while a script feeds text during the pause", function()
+    if timerUnavailable() then return end
+    using("BIG5")
+
+    -- the end of the local feed gives up its own unfinished character, and must
+    -- not take the game's lead byte, still waiting for its trail, with it
+    local mark = getLastLineNumber("main")
+    feed("split:" .. bytes(0xA4) .. "\27[31m")
+    beQuiet()
+    assert.is_true(feedTriggers("interleaved\n", false))
+    feed(bytes(0xA4) .. ":end\n")
+    beQuiet()
+    assert.same({"split:", "interleaved", "\228\184\173:end"}, shownSince(mark))
+  end)
+
+  it("commits the text ahead of an operating system command the marker lands inside", function()
+    if timerUnavailable() then return end
+    using("UTF-8")
+
+    -- A prompt followed by a title the game has not finished sending: the
+    -- marker has to show the prompt during the pause, as it does ahead of a
+    -- split colour sequence
+    local mark = getLastLineNumber("main")
+    feed("split:HP:100 > \27]0;title")
+    beQuiet()
+    -- read now, but asserted once the sequence is over, so a failure does not
+    -- leave it open for the cases after this one
+    local duringPause = shownSince(mark)
+    feed("\27\\:end\n")
+    beQuiet()
+    assert.same({"split:HP:100 > "}, duringPause, "the prompt was not shown during the pause")
+    assert.same({"split:HP:100 > ", ":end"}, shownSince(mark))
+  end)
+
+  it("commits the text ahead of an operating system command that reaches the length cap at the marker", function()
+    if timerUnavailable() then return end
+    using("UTF-8")
+
+    -- "0;", the filler and the marker come to MAX_OSC_SEQUENCE_LENGTH (4096)
+    -- bytes: the marker is not payload, so this one is under the cap
+    local mark = getLastLineNumber("main")
+    feed("split:HP:100 > \27]0;" .. string.rep("a", 4093))
+    beQuiet()
+    local duringPause = shownSince(mark)
+    feed("\27\\:end\n")
+    beQuiet()
+    assert.same({"split:HP:100 > "}, duringPause, "the prompt was not shown during the pause")
+    assert.same({"split:HP:100 > ", ":end"}, shownSince(mark))
+  end)
+
+  it("fires a prompt trigger once, at the pause, wherever in the command the marker lands", function()
+    if timerUnavailable() then return end
+    using("UTF-8")
+
+    -- Right after the introducer only the OSC latch carries the sequence over
+    -- the commit; a held ESC has to stay the start of its String Terminator
+    local fires = 0
+    local id = tempRegexTrigger("^split:HP > $", function() fires = fires + 1 end)
+    finally(function() killTrigger(id) end)
+    for _, pieces in ipairs({{"\27]", "0;title\27\\"}, {"\27]0;title\27", "\\"}, {"\27]0;title", "\7"}}) do
+      fires = 0
+      local mark = getLastLineNumber("main")
+      feed("split:HP > " .. pieces[1])
+      beQuiet()
+      local duringPause, firesAtPause = shownSince(mark), fires
+      feed(pieces[2] .. ":end\n")
+      beQuiet()
+      local after = pieces[2]:gsub("\27", "ESC"):gsub("\7", "BEL")
+      assert.same({"split:HP > "}, duringPause, "the prompt was not shown during the pause, before " .. after)
+      assert.equals(1, firesAtPause, "the prompt trigger did not fire at the pause, before " .. after)
+      assert.same({"split:HP > ", ":end"}, shownSince(mark), "before " .. after)
+      assert.equals(1, fires, "the prompt trigger fired again, before " .. after)
+    end
+  end)
+
+  -- A link written concealed shows whether its settings were decoded: only a
+  -- whole OSC 8 payload carries them, and only a link that opens and closes on
+  -- one line is given them (TBuffer::finaliseActiveHyperlink())
+  local concealedLink = "\27]8;;send:look?config={\"visibility\":{\"action\":\"reveal\",\"delay\":3000}}"
+
+  it("keeps the rest of an operating system command it commits the text ahead of", function()
+    if timerUnavailable() then return end
+    using("UTF-8")
+
+    local mark = getLastLineNumber("main")
+    local opening = concealedLink .. "\27\\"
+    feed("split:" .. opening:sub(1, 30))
+    beQuiet()
+    feed(opening:sub(31) .. "LOOK\27]8;;\27\\\n")
+    beQuiet()
+    assert.same({"split:", "    "}, shownSince(mark))
+  end)
+
+  it("does not split a link at a marker that lands in its closing sequence", function()
+    if timerUnavailable() then return end
+    using("UTF-8")
+
+    local mark = getLastLineNumber("main")
+    feed("split:" .. concealedLink .. "\27\\LOOK\27]8;;")
+    beQuiet()
+    feed("\27\\\n")
+    beQuiet()
+    assert.same({"split:    "}, shownSince(mark))
+  end)
+
+  it("adds no blank line for a marker with no text ahead of a sequence", function()
+    if timerUnavailable() then return end
+    using("UTF-8")
+    local behaviour = getConfig("blankLinesBehaviour")
+    finally(function() setConfig("blankLinesBehaviour", behaviour) end)
+    setConfig("blankLinesBehaviour", "replacewithspace")
+
+    for _, pieces in ipairs({{"\27]0;ti", "tle\27\\"}, {"\27[3", "1m"}}) do
+      local mark = getLastLineNumber("main")
+      feed(pieces[1])
+      beQuiet()
+      feed(pieces[2] .. "Room\n")
+      beQuiet()
+      assert.equals("Room", getLines("main", mark, mark + 1)[1], "after " .. pieces[1]:sub(2))
+    end
+  end)
+
   it("adds no line for the marker when blank lines are replaced with a space", function()
     if timerUnavailable() then return end
     -- the text is ASCII, so the encoding can stay as it is and this test's one
@@ -1208,7 +1367,10 @@ describe("Tests a character whose bytes are split by the posting timeout", funct
     setConfig("blankLinesBehaviour", "replacewithspace")
 
     local mark = getLastLineNumber("main")
-    feedTriggers("x\r\ry\n")
+    -- One call each: feedTriggers() keeps only a carriage return that ends what it is given
+    feedTriggers("x\r")
+    feedTriggers("\r")
+    feedTriggers("y\n")
     assert.same({"x", "y", ""}, getLines("main", mark, getLastLineNumber("main") + 1))
   end)
 

@@ -70,6 +70,7 @@ class QSettings;
 
 class TEvent;
 class TArea;
+enum class TLabelLiveRegion : int;
 class LuaInterface;
 class XMLexport;
 class TMedia;
@@ -278,7 +279,10 @@ public:
     std::pair<bool, QString> setExperimentEnabled(const QString& experimentKey, bool enabled);
     QString getActiveExperimentInGroup(const QString& group) const;
     QStringList getAllExperiments() const;
-    QStringList getValidExperiments() const;
+    // Sorted, so the members of a group are listed together
+    static QStringList getValidExperiments();
+    // Experiments sharing a group are mutually exclusive; empty for one in no group
+    static QString experimentGroup(const QString& experimentKey);
 
     void forceClose();
     bool profileResetInProgress() const { return mResetProfile; }
@@ -500,11 +504,19 @@ public:
     QString readProfileIniData(const QString& item);
     void xmlSaved(const QString& xmlName);
     bool currentlySavingProfile();
+    // Whether the end of a save is reloading its synced modules in the other profiles, whose scripts
+    // can reach back into this one while that save still reads as running
+    bool syncingModulesAfterSave() const { return mSyncingModulesAfterSave; }
     // Whether a package install or uninstall still owes the profile a save - see
     // mDeferredSaveTimer.
     bool hasPendingProfileSave() const { return mDeferredSaveTimer.isActive(); }
     void processDiscordGMCP(const QString& packageMessage, const QString& data);
-    void waitForProfileSave();
+    // A script waits with onlyTheSavesOwnEvents: only the completions of the watchers named
+    // scmProfileSaveWatcherName are delivered, so no timer, incoming line or other background task runs
+    // nested in the waiting script. A save that syncs modules still reloads them in the other profiles as
+    // it ends, and their scripts can raise a global event that reaches this profile's handlers.
+    void waitForProfileSave(bool onlyTheSavesOwnEvents = false);
+    inline static const QString scmProfileSaveWatcherName = qsl("profileSaveWatcher");
     // waitForProfileSave() pumps the event loop with this Host still in use on the stack below it
     bool waitingForProfileSave() const { return mProfileSaveWaitDepth > 0; }
     void clearDiscordData();
@@ -632,6 +644,7 @@ public:
     void raiseSettingChangedEvent(const QString& settingName, const bool value);
     void setEnableClosedCaption(const bool state);
     void setAdvertiseScreenReader(const bool state);
+    void setAccessibleLabels(const bool state);
     void setAnnounceIncomingText(const bool state);
     void setMapperPanelVisible(const bool state);
 
@@ -695,6 +708,10 @@ public:
     bool setLabelWheelCallback(const QString&, const int);
     bool setLabelOnEnter(const QString&, const int);
     bool setLabelOnLeave(const QString&, const int);
+    // std::nullopt goes back to deciding by the label's callbacks
+    bool setLabelAccessibleButton(const QString& name, std::optional<bool> button);
+    bool setLabelLiveRegion(const QString& name, TLabelLiveRegion liveRegion);
+    bool setLabelAccessibleName(const QString& name, const QString& accessibleName);
     std::pair<bool, QString> setMovie(const QString& labelName, const QString& moviePath);
     bool setBackgroundColor(const QString& name, int r, int g, int b, int alpha);
     bool setCommandBackgroundColor(const QString& name, int r, int g, int b, int alpha);
@@ -735,6 +752,10 @@ public:
     // {} for no such label.
     std::optional<QString> labelStyleSheet(const QString& name) const;
     std::optional<QString> labelToolTip(const QString& name) const;
+    std::optional<QString> labelAccessibleName(const QString& name) const;
+    // "button", "graphic", "animation" or "text": what a screen reader is told the label is
+    std::optional<QString> labelAccessibleRole(const QString& name) const;
+    std::optional<TLabelLiveRegion> labelLiveRegion(const QString& name) const;
     std::optional<QFont> labelFont(const QString& name) const;
     std::optional<QString> labelText(const QString& name) const;
     // The title in .second when .first is true, otherwise why there is none, in setUserWindowTitle()'s words.
@@ -795,6 +816,8 @@ public:
     void initMMCPServer();
     bool setMMCPChatName(const QString&);
     void setShowIdsInEditor(const bool isShown);
+    bool folderViewInEditor() const { return mFolderViewInEditor; }
+    void setFolderViewInEditor(const bool enabled);
     bool getF3SearchEnabled() const { return mF3SearchEnabled; }
     void setF3SearchEnabled(const bool enabled);
     bool getForceMXPProcessorOn() const { return mForceMXPProcessorOn; }
@@ -979,6 +1002,10 @@ public:
     // Only the box the prompt itself opens takes text the player was typing in
     // the command line, not one that comes back later in the hold
     bool passwordEntryOpensWithThePrompt() const { return mPasswordEntryOpensWithThePrompt; }
+    // The game's WONT ECHO; a disconnect, the mask timeout and the preference release ECHO too
+    void gameReleasedRemoteEcho();
+    // Only a box the game itself closes gives back a command it took from the command line
+    bool passwordEntryClosedByTheGame() const { return mPasswordEntryClosedByTheGame; }
     // No box until the game answers the masked send; a re-prompt under the held
     // ECHO then gets one for the retry
     void autoLoginPasswordSent();
@@ -1176,6 +1203,8 @@ public:
     bool mMapperUseAntiAlias = true;
     bool mMapperShowRoomBorders = true;
     bool mMapperShowGrid = false;
+    // The modern 3D view draws the areas next to the one shown past its edges, and previews of those it cannot place
+    bool mMapperStitchAreas = true;
     // What the built-in map buttons (main toolbar, Show Map menu entry and its
     // shortcut, detached window toolbar) do for this profile; scripts set it
     // through setConfig("mapperButton", ...). Deliberately not saved with the
@@ -1191,6 +1220,7 @@ public:
     QSet<QChar> mDoubleClickIgnore;
     bool mEnableTextAnalyzer = false;
     bool mWritingHostAndModules = false;
+    bool mSyncingModulesAfterSave = false;
     // Set from profile preferences, if the timer interval is less
     // than this then the normal reoccuring debug output of the entire command
     // and script for any timer with a timeout LESS than this is NOT shown
@@ -1215,6 +1245,8 @@ public:
 
     bool mAnnounceIncomingText = true;
     bool mAdvertiseScreenReader = false;
+    // Button labels take Tab focus and Space/Enter; kept apart from mAdvertiseScreenReader, which tells games
+    bool mAccessibleLabels = false;
     bool mEnableClosedCaption = false;
 
     // Turning this off both ignores incoming OSC 8 sequences and advertises 0
@@ -1280,6 +1312,7 @@ signals:
     void signal_editorSearchOptionsChanged(const enums::EditorSearchOptions);
     void signal_editorShowBidiChanged(const bool);
     void signal_showIdsInEditorChanged(const bool);
+    void signal_folderViewInEditorChanged(const bool);
     // The game's name or invite for Discord changed, which the Discord buttons show.
     void signal_discordGameChanged();
     // A reset is about to replace the Lua state, so whatever it placed in the frontend has to go.
@@ -1610,6 +1643,7 @@ private:
     bool mPasswordEntryDismissalEnding = false;
     // Set around the recompute a WILL ECHO makes, see passwordEntryOpensWithThePrompt().
     bool mPasswordEntryOpensWithThePrompt = false;
+    bool mPasswordEntryClosedByTheGame = false;
 
     // ensures that only one "zero-time" timer is created by the lambda in
     // setFocusOnHostActiveCommandLine(), even when it is called multiple
@@ -1626,6 +1660,9 @@ private:
 
     // Whether to display each item's ID number in the editor:
     bool mShowIDsInEditor = false;
+
+    // Whether the editor offers its Folders view, which groups every item type by folder:
+    bool mFolderViewInEditor = false;
 
     // Whether F3 search functionality is enabled
     bool mF3SearchEnabled = false;

@@ -793,6 +793,11 @@ void XMLimport::readHost(Host* pHost)
 
     setBoolAttributeWithDefault(qsl("announceIncomingText"), pHost->mAnnounceIncomingText, true);
     setBoolAttributeWithDefault(qsl("advertiseScreenReader"), pHost->mAdvertiseScreenReader, false);
+    // Through the setter: a package carrying a host section is read into a profile whose labels already exist.
+    // Only when it is there, as a package from before the setting would otherwise turn the player's off.
+    if (attributes().hasAttribute(qsl("accessibleLabels"))) {
+        pHost->setAccessibleLabels(attributes().value(qsl("accessibleLabels")) == YES);
+    }
     setBoolAttributeWithDefault(qsl("enableOSC8Hyperlinks"), pHost->mEnableOSC8Hyperlinks, true);
     setBoolAttributeWithDefault(qsl("enableClosedCaption"), pHost->mEnableClosedCaption, false);
     setBoolAttributeWithDefault(qsl("mEnableMTTS"), pHost->mEnableMTTS, true);
@@ -852,6 +857,7 @@ void XMLimport::readHost(Host* pHost)
     setBoolAttribute(qsl("mAcceptServerMedia"), pHost->mAcceptServerMedia);
     setBoolAttribute(qsl("mMapperUseAntiAlias"), pHost->mMapperUseAntiAlias);
     setBoolAttribute(qsl("mMapperShowGrid"), pHost->mMapperShowGrid);
+    setBoolAttributeWithDefault(qsl("mMapperStitchAreas"), pHost->mMapperStitchAreas, true);
     setBoolAttribute(qsl("mEditorAutoComplete"), pHost->mEditorAutoComplete);
     setBoolAttribute(qsl("mVersionInTTYPE"), pHost->mVersionInTTYPE);
     setBoolAttribute(qsl("mPromptedForVersionInTTYPE"), pHost->mPromptedForVersionInTTYPE);
@@ -1145,6 +1151,7 @@ void XMLimport::readHost(Host* pHost)
     if (!attributes().hasAttribute(qsl("mapStyle")) || !pHost->setMapStyle(attributes().value(qsl("mapStyle")).toString())) {
         pHost->setMapStyle(MapStyle::defaultId());
     }
+    pHost->setFolderViewInEditor(attributes().value(qsl("FolderViewInEditor")) == YES);
 
     if (attributes().hasAttribute(qsl("Large2DMapAreaExitArrows"))) {
         pHost->setLargeAreaExitArrows(attributes().value(qsl("Large2DMapAreaExitArrows")) == YES);
@@ -1289,6 +1296,9 @@ void XMLimport::readHost(Host* pHost)
 
     pHost->setUserBorders(borders);
     pHost->loadPackageInfo();
+    // The map holds its own copy of the ANSI colours just read, for environments 257 to 272
+    pHost->mpMap->restore16ColorSet();
+    pHost->mpMap->updateArea(-1);
     // A package import comes through here too, into a profile that does have a
     // console - and that one needs the whole restyle, not just the model:
     pHost->applyMainConsoleColors();

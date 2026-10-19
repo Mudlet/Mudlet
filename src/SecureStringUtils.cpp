@@ -216,8 +216,11 @@ QByteArray SecureStringUtils::generateKey(const QByteArray& password, const QByt
     // Use iterative SHA-256 hashing to implement PBKDF2-like key derivation
     QByteArray derivedKey = password + salt;
 
+    // Reused, not built each round: where Qt hashes through OpenSSL, every construction looks the
+    // algorithm up again, which over PBKDF2_ITERATIONS rounds takes seconds
+    QCryptographicHash hash(QCryptographicHash::Sha256);
     for (int i = 0; i < iterations; ++i) {
-        QCryptographicHash hash(QCryptographicHash::Sha256);
+        hash.reset();
         hash.addData(derivedKey);
         hash.addData(salt);
         derivedKey = hash.result();
@@ -229,7 +232,7 @@ QByteArray SecureStringUtils::generateKey(const QByteArray& password, const QByt
     } else if (derivedKey.size() < KEY_SIZE) {
         // Extend key if needed by hashing again
         while (derivedKey.size() < KEY_SIZE) {
-            QCryptographicHash hash(QCryptographicHash::Sha256);
+            hash.reset();
             hash.addData(derivedKey);
             derivedKey.append(hash.result());
         }
@@ -317,8 +320,12 @@ QString SecureStringUtils::encryptStringForProfile(const QString& plaintext, con
     return base64Result;
 }
 
-QString SecureStringUtils::decryptStringForProfile(const QString& ciphertext, const QString& profileName)
+QString SecureStringUtils::decryptStringForProfile(const QString& ciphertext, const QString& profileName, bool* usedDerivableKey)
 {
+    if (usedDerivableKey) {
+        *usedDerivableKey = false;
+    }
+
     if (ciphertext.isEmpty() || profileName.isEmpty()) {
         return QString();
     }
@@ -337,27 +344,13 @@ QString SecureStringUtils::decryptStringForProfile(const QString& ciphertext, co
         return QString(); // Unsupported version
     }
 
-    // Extract salt (bytes 1-16)
-    QByteArray salt = encrypted.mid(1, SALT_SIZE);
-
-    // Get profile-specific encryption key
-    QByteArray profileKey = getProfileEncryptionKey(profileName);
-
-    if (profileKey.isEmpty()) {
-        return QString();
-    }
-
-    // Derive encryption key using PBKDF2
-    QByteArray derivedKey = generateKey(profileKey, salt, PBKDF2_ITERATIONS);
-
-    if (derivedKey.isEmpty()) {
-        return QString();
-    }
-
     // Current format: [VERSION:2][SALT:16][NONCE:16][HMAC:32][ENCRYPTED_DATA]
     if (encrypted.size() < 1 + SALT_SIZE + NONCE_SIZE + HMAC_SIZE) {
         return QString(); // Invalid format
     }
+
+    // Extract salt (bytes 1-16)
+    QByteArray salt = encrypted.mid(1, SALT_SIZE);
 
     // Extract nonce (bytes 17-32)
     QByteArray nonce = encrypted.mid(1 + SALT_SIZE, NONCE_SIZE);
@@ -368,13 +361,36 @@ QString SecureStringUtils::decryptStringForProfile(const QString& ciphertext, co
     // Extract encrypted data (bytes 65+)
     QByteArray encryptedData = encrypted.mid(1 + SALT_SIZE + NONCE_SIZE + HMAC_SIZE);
 
-    // Decrypt the data
-    QByteArray decrypted = decryptData(encryptedData, derivedKey, salt, nonce, hmac);
+    const auto decryptWith = [&](QByteArray profileKey) -> QByteArray {
+        if (profileKey.isEmpty()) {
+            return QByteArray();
+        }
+
+        // Derive encryption key using PBKDF2
+        QByteArray derivedKey = generateKey(profileKey, salt, PBKDF2_ITERATIONS);
+        secureByteArrayClear(profileKey);
+
+        if (derivedKey.isEmpty()) {
+            return QByteArray();
+        }
+
+        QByteArray plaintext = decryptData(encryptedData, derivedKey, salt, nonce, hmac);
+        secureByteArrayClear(derivedKey);
+        return plaintext;
+    };
+
+    // No key is created here, as a new one decrypts nothing; the derivable one only reads what older
+    // Mudlets wrote with it, and the HMAC check rejects whichever key is wrong
+    QByteArray decrypted = decryptWith(loadEncryptionKeyFromFile(profileName));
 
     if (decrypted.isEmpty()) {
-        // Securely clear sensitive data before returning
-        secureByteArrayClear(derivedKey);
-        secureByteArrayClear(profileKey);
+        decrypted = decryptWith(legacyProfileEncryptionKey(profileName));
+        if (!decrypted.isEmpty() && usedDerivableKey) {
+            *usedDerivableKey = true;
+        }
+    }
+
+    if (decrypted.isEmpty()) {
         return QString();
     }
 
@@ -384,8 +400,6 @@ QString SecureStringUtils::decryptStringForProfile(const QString& ciphertext, co
     // Clear sensitive data
     secureByteArrayClear(encrypted);
     secureByteArrayClear(salt);
-    secureByteArrayClear(profileKey);
-    secureByteArrayClear(derivedKey);
     secureByteArrayClear(decrypted);
 
     return result;
@@ -416,8 +430,15 @@ QByteArray SecureStringUtils::getProfileEncryptionKey(const QString& profileName
         return newKey;
     }
 
-    // Final fallback to deterministic key if all else fails
-    // This ensures compatibility when profile directory is read-only
+    // Not the derivable key: anyone who knows the profile name could decrypt what it encrypts
+    secureByteArrayClear(newKey);
+    qWarning().nospace().noquote() << "SecureStringUtils::getProfileEncryptionKey() WARNING - no encryption key could be stored for profile \"" << profileName
+                                   << "\", so passwords cannot be saved to its encrypted file.";
+    return QByteArray();
+}
+
+QByteArray SecureStringUtils::legacyProfileEncryptionKey(const QString& profileName)
+{
     QCryptographicHash hash(QCryptographicHash::Sha256);
 
     hash.addData(qsl("Mudlet").toUtf8());
@@ -475,8 +496,7 @@ bool SecureStringUtils::storeEncryptionKeyToFile(const QString& profileName, con
     QDir dir;
 
     if (!dir.mkpath(profileDir)) {
-        qDebug().nospace().noquote() << "SecureStringUtils::storeEncryptionKeyToFile() WARNING - could not create profile directory for \"" << profileName
-                                     << "\". Falling back to deterministic key derivation.";
+        qWarning().nospace().noquote() << "SecureStringUtils::storeEncryptionKeyToFile() WARNING - could not create profile directory for \"" << profileName << "\".";
         return false;
     }
 
@@ -487,8 +507,8 @@ bool SecureStringUtils::storeEncryptionKeyToFile(const QString& profileName, con
     QSaveFile file(keyFilePath);
 
     if (!file.open(QIODevice::WriteOnly | QIODevice::Unbuffered)) {
-        qDebug().nospace().noquote() << "SecureStringUtils::storeEncryptionKeyToFile() WARNING - could not create encryption key file for profile \"" << profileName
-                                     << "\", error: " << file.errorString() << ". Falling back to deterministic key derivation.";
+        qWarning().nospace().noquote() << "SecureStringUtils::storeEncryptionKeyToFile() WARNING - could not create encryption key file for profile \"" << profileName
+                                       << "\", error: " << file.errorString() << ".";
         return false;
     }
 
@@ -500,8 +520,8 @@ bool SecureStringUtils::storeEncryptionKeyToFile(const QString& profileName, con
     ofs << base64Key;
 
     if (!file.commit()) {
-        qDebug().nospace().noquote() << "SecureStringUtils::storeEncryptionKeyToFile() WARNING - could not save encryption key file for profile \"" << profileName
-                                     << "\", error: " << file.errorString() << ". Falling back to deterministic key derivation.";
+        qWarning().nospace().noquote() << "SecureStringUtils::storeEncryptionKeyToFile() WARNING - could not save encryption key file for profile \"" << profileName
+                                       << "\", error: " << file.errorString() << ".";
         return false;
     }
 
@@ -680,8 +700,14 @@ QString SecureStringUtils::retrievePassword(const QString& profileName, const QS
         return QString();
     }
 
-    // Decrypt the password
-    return decryptStringForProfile(encryptedPassword, profileName);
+    bool usedDerivableKey = false;
+    QString password = decryptStringForProfile(encryptedPassword, profileName, &usedDerivableKey);
+
+    if (usedDerivableKey && !storePassword(profileName, key, password)) {
+        qWarning() << "SecureStringUtils::retrievePassword() - could not re-encrypt the password saved under the derivable key for profile" << profileName;
+    }
+
+    return password;
 }
 
 bool SecureStringUtils::removePassword(const QString& profileName, const QString& key)

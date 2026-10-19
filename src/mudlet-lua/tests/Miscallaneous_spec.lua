@@ -491,6 +491,18 @@ describe("Tests C++ functions in the Miscallaneous category", function()
           assert.is_string(getProfileInformation())
           assert.equals(getProfileInformation(), getProfileInformation(getProfileName()))
         end)
+
+        -- the connection dialog shows a bundled game's blurb without saving it, so
+        -- its folder has no description file until the player sets one
+        it("gives the description a bundled game ships with when none is saved", function()
+          finally(restoreDescription())
+          os.remove(descriptionFile)
+
+          local shipped = getProfileInformation()
+          assert.is_true(contains(shipped, "Busted"), shipped)
+          assert.equals(shipped, getProfileInformation(getProfileName()))
+          assert.equals(shipped, getProfiles()[getProfileName()].description)
+        end)
       end)
 
       describe("Tests the functionality of setProfileInformation", function()
@@ -2695,14 +2707,14 @@ describe("Tests C++ functions in the Miscallaneous category", function()
     end)
 
     describe("Tests the functionality of send", function()
-      -- send() is registered from the C++ sendRaw(), which is the name its own
-      -- error messages use.
+      -- send() is registered from the C++ sendRaw(), so its errors must not
+      -- take that name from __func__
       it("raises a Lua error when called with no arguments", function()
-        assertArgError(function() send() end, "sendRaw: bad argument #1 type")
+        assertArgError(function() send() end, "send: bad argument #1 type")
       end)
 
       it("raises a Lua error when whether to show the command is not a boolean", function()
-        assertArgError(function() send("mudletSpecSend", "yes") end, "sendRaw: bad argument #2 type")
+        assertArgError(function() send("mudletSpecSend", "yes") end, "send: bad argument #2 type")
       end)
 
       it("shows the command on the main console, unless told not to", function()
@@ -3699,11 +3711,11 @@ tempTimer(0.05, resetOnceConnected)]], port))
 
     describe("Tests the functionality of wait", function()
       it("raises a Lua error when called with no arguments", function()
-        assertArgError(function() wait() end, "Wait: wrong number of arguments")
+        assertArgError(function() wait() end, "wait: wrong number of arguments")
       end)
 
       it("raises a Lua error when the delay is not a number", function()
-        assertArgError(function() wait("soon") end, "Wait: bad argument #1 type")
+        assertArgError(function() wait("soon") end, "wait: bad argument #1 type")
       end)
 
       it("returns nothing and blocks for at least as long as it was asked to", function()

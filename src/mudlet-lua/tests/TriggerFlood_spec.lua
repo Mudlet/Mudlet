@@ -282,12 +282,8 @@ describe("trigger matching under a flood", function()
         end
 
         local function waitForProfileSaveToPass()
-            for _ = 1, 100 do
-                if installPackage("") == nil then
-                    return
-                end
-                pumpEvents(50)
-            end
+            local _, err = installPackage("")
+            return not tostring(err):find("still in progress", 1, true)
         end
 
         local function removePackage()
@@ -296,7 +292,9 @@ describe("trigger matching under a flood", function()
                 if not packageInstalled() then
                     break
                 end
-                waitForProfileSaveToPass()
+                if not waitForProfileSaveToPass() then
+                    reason = "a profile save was still running"
+                end
                 local _, message = uninstallPackage(packageName)
                 reason = message or reason
                 pumpEvents(200)

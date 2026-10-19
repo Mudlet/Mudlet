@@ -123,6 +123,29 @@ static std::pair<bool, qint64> stopWatchAdjustmentAsMilliSeconds(const double ad
     return {true, static_cast<qint64>(milliSeconds)};
 }
 
+// Lets the creators refuse a pattern that would make an item which never matches; the
+// flags must stay those of TAlias::compileRegex() and TTrigger::setRegexCodeList()
+static QString perlRegexCompileError(const QString& pattern)
+{
+    int errorCode = 0;
+    PCRE2_SIZE errorOffset = 0;
+    const QByteArray utf8 = pattern.toUtf8();
+    pcre2_code* re = pcre2_compile(reinterpret_cast<PCRE2_SPTR>(utf8.constData()), PCRE2_ZERO_TERMINATED, PCRE2_UTF | PCRE2_UCP | PCRE2_MATCH_INVALID_UTF, &errorCode, &errorOffset, nullptr);
+    if (re) {
+        pcre2_code_free(re);
+        return QString();
+    }
+    PCRE2_UCHAR errorBuffer[256];
+    pcre2_get_error_message(errorCode, errorBuffer, sizeof(errorBuffer));
+    return qsl("regex pattern \"%1\" failed to compile at offset %2: %3").arg(pattern, QString::number(errorOffset), QString::fromUtf8(reinterpret_cast<const char*>(errorBuffer)));
+}
+
+// TTrigger::setRegexCodeList() removes every newline before it compiles a pattern
+static QString triggerRegexCompileError(QString pattern)
+{
+    return perlRegexCompileError(pattern.remove(QLatin1Char('\n')));
+}
+
 #define WINDOW_NAME(ARG_L, ARG_pos)                                                                                                                                                                    \
     ({                                                                                                                                                                                                 \
         int pos_ = (ARG_pos);                                                                                                                                                                          \
@@ -1148,6 +1171,9 @@ int TLuaInterpreter::permAlias(lua_State* L)
         const QString name{lua_tostring(L, 1)};
         const QString parent{lua_tostring(L, 2)};
         const QString regex{lua_tostring(L, 3)};
+        if (const QString error = perlRegexCompileError(regex); !error.isEmpty()) {
+            return warnArgumentValue(L, __func__, error);
+        }
         const QString script{lua_tostring(L, 4)};
         auto [aliasId, message] = pLuaInterpreter->startPermAlias(name, parent, regex, script);
         id = aliasId;
@@ -1219,6 +1245,11 @@ int TLuaInterpreter::permRegexTrigger(lua_State* L)
             }
             // removes value, but keeps key for next iteration
             lua_pop(L, 1);
+        }
+        for (const QString& pattern : regList) {
+            if (const QString error = triggerRegexCompileError(pattern); !error.isEmpty()) {
+                return warnArgumentValue(L, __func__, error);
+            }
         }
         const QString name{lua_tostring(L, 1)};
         const QString parent{lua_tostring(L, 2)};
@@ -1508,6 +1539,24 @@ static QString eventNumberText(const double number)
     return QString::number(number, 'g', 17);
 }
 
+// Text that would not come back from UTF-8 unchanged, or that holds a NUL, which
+// the text argument stops at, travels as bytes so a handler gets exactly what was raised.
+// The event name stays text: handlers are looked up by it.
+static std::pair<QString, int> eventStringArgument(lua_State* L, const int index, const bool eventName)
+{
+    if (eventName) {
+        return {QString::fromUtf8(lua_tostring(L, index)), ARGUMENT_TYPE_STRING};
+    }
+    size_t length = 0;
+    const char* text = lua_tolstring(L, index, &length);
+    const QByteArray bytes(text, static_cast<qsizetype>(length));
+    const QString utf8 = QString::fromUtf8(bytes);
+    if (bytes.contains('\0') || utf8.toUtf8() != bytes) {
+        return {QString::fromLatin1(bytes), ARGUMENT_TYPE_BYTES};
+    }
+    return {utf8, ARGUMENT_TYPE_STRING};
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#raiseEvent
 int TLuaInterpreter::raiseEvent(lua_State* L)
 {
@@ -1542,11 +1591,13 @@ int TLuaInterpreter::raiseEvent(lua_State* L)
             event.mArgumentTypeList.prepend(ARGUMENT_TYPE_NUMBER);
             lua_pop(L, 1);
             break;
-        case LUA_TSTRING:
-            event.mArgumentList.prepend(lua_tostring(L, -1));
-            event.mArgumentTypeList.prepend(ARGUMENT_TYPE_STRING);
+        case LUA_TSTRING: {
+            const auto [text, type] = eventStringArgument(L, -1, i == 1);
+            event.mArgumentList.prepend(text);
+            event.mArgumentTypeList.prepend(type);
             lua_pop(L, 1);
             break;
+        }
         case LUA_TBOOLEAN:
             event.mArgumentList.prepend(QString::number(lua_toboolean(L, -1)));
             event.mArgumentTypeList.prepend(ARGUMENT_TYPE_BOOLEAN);
@@ -1769,10 +1820,12 @@ int TLuaInterpreter::raiseGlobalEvent(lua_State* L)
             event.mArgumentList.append(eventNumberText(lua_tonumber(L, i)));
             event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
             break;
-        case LUA_TSTRING:
-            event.mArgumentList.append(lua_tostring(L, i));
-            event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        case LUA_TSTRING: {
+            const auto [text, type] = eventStringArgument(L, i, i == 1);
+            event.mArgumentList.append(text);
+            event.mArgumentTypeList.append(type);
             break;
+        }
         case LUA_TBOOLEAN:
             event.mArgumentList.append(QString::number(lua_toboolean(L, i)));
             event.mArgumentTypeList.append(ARGUMENT_TYPE_BOOLEAN);
@@ -2284,6 +2337,9 @@ int TLuaInterpreter::tempAlias(lua_State* L)
     }
 
     const QString regex{lua_tostring(L, 1)};
+    if (const QString error = perlRegexCompileError(regex); !error.isEmpty()) {
+        return warnArgumentValue(L, __func__, error);
+    }
     Host& host = getHostFromLua(L);
     TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
 
@@ -2651,6 +2707,12 @@ int TLuaInterpreter::tempComplexRegexTrigger(lua_State* L)
     } else {
         bgColor = lua_tostring(L, 6);
     }
+    // Before the trigger of that name is replaced, so a refusal costs it nothing
+    if (!colorTrigger) {
+        if (const QString error = triggerRegexCompileError(pattern); !error.isEmpty()) {
+            return warnArgumentValue(L, __func__, error);
+        }
+    }
 
     bool highlight;
     QColor hlFgColor;
@@ -2953,6 +3015,9 @@ int TLuaInterpreter::tempRegexTrigger(lua_State* L)
     }
 
     const QString regexPattern{lua_tostring(L, 1)};
+    if (const QString error = triggerRegexCompileError(regexPattern); !error.isEmpty()) {
+        return warnArgumentValue(L, __func__, error);
+    }
     if (lua_isstring(L, 2)) {
         triggerID = pLuaInterpreter->startTempRegexTrigger(regexPattern, lua_tostring(L, 2), expiryCount);
     } else {
@@ -3100,8 +3165,8 @@ int TLuaInterpreter::getProfiles(lua_State* L)
         QString port = MudletApp::readProfileData(profile, qsl("port"));
         QString description = MudletApp::readProfileData(profile, qsl("description"));
 
-        // if url/port haven't been written to disk yet (which is what happens
-        // when a default profile is opened for the first time), fetch this data from game details
+        // a game from the catalog keeps only the details the player changed on disk, so fetch the
+        // rest from the catalog
         if (url.isEmpty()) {
             auto it = TGameDetails::findGame(profile);
             if (it != TGameDetails::scmDefaultGames.end()) {
@@ -3112,6 +3177,12 @@ int TLuaInterpreter::getProfiles(lua_State* L)
             auto it = TGameDetails::findGame(profile);
             if (it != TGameDetails::scmDefaultGames.end()) {
                 port = QString::number((*it).port);
+            }
+        }
+        if (description.isEmpty()) {
+            auto it = TGameDetails::findGame(profile);
+            if (it != TGameDetails::scmDefaultGames.end()) {
+                description = (*it).description;
             }
         }
 

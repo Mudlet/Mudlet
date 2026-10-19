@@ -28,16 +28,25 @@ describe("Tests that the generic mapper follows a game in Swedish", function()
   end
 
   local mapperState = {"mapping", "currentRoom", "currentArea", "currentName", "currentExits", "prevRoom", "prevName", "prevExits"}
-  local configKeys = {"lang_dirs", "translate", "language", "use_translation"}
-  local saved, savedPrompt, savedConfigs, savedQueue, dockWasShowing
+  local configKeys = {"lang_dirs", "translate", "language", "use_translation", "clear_lines_on_send"}
+  local saved, savedPrompt, savedConfigs, savedQueue, dockWasShowing, savedCreateMapper
 
   -- the base UI reads the prompts fed here as vitals and docks itself on the right
   -- border, leaving the main console narrower for every later spec
+  -- prompts with hp/mp labels make the base UI embed a mapper once rooms exist, and an
+  -- embedded mapper cannot be closed, so every later openMapWidget() would fail
   setup(function()
     dockWasShowing = BaseUI ~= nil and BaseUI.container ~= nil and not BaseUI.container.hidden
+    if BaseUI then
+      savedCreateMapper = BaseUI.createMapper
+      BaseUI.createMapper = function() end
+    end
   end)
 
   teardown(function()
+    if BaseUI then
+      BaseUI.createMapper = savedCreateMapper
+    end
     if BaseUI and not dockWasShowing and BaseUI.container and not BaseUI.container.hidden then
       BaseUI.container:hide()
       BaseUI.container:adjustBorder()
@@ -201,5 +210,154 @@ describe("Tests that the generic mapper follows a game in Swedish", function()
     assert.are.equal(start, map.currentRoom)
     assert.are.equal(start, getRoomExits(village).south)
     assert.are.equal(2, table.size(getAreaRooms(areaId)))
+  end)
+
+  -- the prompt bookkeeping lives in upvalues that outlast a single spec
+  local function resetPromptState()
+    local function set(fn, name, value)
+      local index = 1
+      while true do
+        local upvalueName = debug.getupvalue(fn, index)
+        assert(upvalueName, "the mapper keeps no " .. name)
+        if upvalueName == name then
+          debug.setupvalue(fn, index, value)
+          return
+        end
+        index = index + 1
+      end
+    end
+    local function reset()
+      set(map.learnPromptTemplate, "awaiting_prompt_reply", false)
+      set(map.captureUntitledRoom, "untitled_room_seen", false)
+      upvalue(map.captureUntitledRoom, "asked_for_prompt")[map.character or ""] = nil
+    end
+    reset()
+    finally(reset)
+  end
+
+  local function countPromptSends()
+    local realSend = _G.send
+    local count = {prompt = 0}
+    _G.send = function(command, ...)
+      if command == "prompt" then
+        count.prompt = count.prompt + 1
+      end
+      return realSend(command, ...)
+    end
+    finally(function() _G.send = realSend end)
+    return count
+  end
+
+  it("learns the prompt from the template the game reports", function()
+    resetPromptState()
+    send("prompt", false)
+    feedTriggers('\n52/52 52/52Du sätter din prompt till "<HP>/<MAXHP>hp <MP>/<MAXMP>mp".\n')
+    local learned = map.save.prompt_pattern[map.character]
+    assert.truthy(string.match("96/96hp 96/96mp", learned))
+    assert.truthy(string.match("-5/96hp 96/96mp", learned))
+    assert.falsy(string.match("96/96 96/96", learned))
+
+    send("prompt", false)
+    feedTriggers('\n96/96hp 96/96mpDin nuvarande prompt är "[<HP>] (<NAMN>) 5%.".\n')
+    learned = map.save.prompt_pattern[map.character]
+    assert.truthy(string.match("[52] (Kalle) 5%.", learned))
+    assert.falsy(string.match("52 Kalle 5", learned))
+  end)
+
+  it("ignores the prompt reply when nobody asked for it", function()
+    resetPromptState()
+    feedTriggers('\nKalle säger: Du sätter din prompt till "<HP>".\n')
+    assert.are.equal("^%d+/%d+ %d+/%d+", map.save.prompt_pattern[map.character])
+  end)
+
+  it("forgets the prompt when the game reports an empty one", function()
+    resetPromptState()
+    send("prompt", false)
+    feedTriggers('\nDu sätter din prompt till "".\n')
+    assert.is_nil(map.save.prompt_pattern[map.character])
+  end)
+
+  it("keeps the saved prompt when the template ends in a word it cannot tell from the room", function()
+    resetPromptState()
+    send("prompt", false)
+    feedTriggers('\nDu sätter din prompt till "<HP> <NAMN>".\n')
+    assert.are.equal("^%d+/%d+ %d+/%d+", map.save.prompt_pattern[map.character])
+  end)
+
+  it("names a room when a learned prompt with letters is glued to it", function()
+    map.save.prompt_pattern[map.character] = "^%-?%d+/%-?%d+hp %-?%d+/%-?%d+mp"
+    feedTriggers("\n96/96hp 96/96mpDu står vid ängen. Söderut ligger sjön.\n   Det finns en synlig väg härifrån: söder\n")
+    assert.are.equal("Du står vid ängen.", map.currentName)
+  end)
+
+  it("announces a new room at the changed prompt that follows it", function()
+    resetPromptState()
+    local areaId = addAreaName("genericMapperSwedishPromptSpec")
+    finally(function() deleteArea(areaId) end)
+    local start = createRoomID()
+    addRoom(start)
+    setRoomArea(start, areaId)
+    setRoomCoordinates(start, 0, 0, 0)
+    setRoomName(start, "Du står vid sjön.")
+    map.setLanguage("swedish")
+    map.set("currentRoom", start)
+    map.set("currentArea", areaId)
+    map.set("currentName", "Du står vid sjön.")
+    map.set("currentExits", {"north"})
+    map.set("mapping", true)
+    map.prompt.hash = nil
+
+    local function announced()
+      local last = getLastLineNumber("main")
+      for _, text in ipairs(getLines("main", math.max(0, last - 10), last + 1)) do
+        if text:find("New Room: Du står vid ängen.", 1, true) then
+          return true
+        end
+      end
+      return false
+    end
+
+    send("prompt", false)
+    feedTriggers('\n52/52 52/52Du sätter din prompt till "<HP>/<MAXHP>hp <MP>/<MAXMP>mp".\n')
+    captureMoveCmd("n")
+    feedTriggers("\n96/96hp 96/96mp\nDu står vid ängen. Söderut ligger sjön.\n   Det finns en synlig väg härifrån: söder\n")
+    assert.is_false(announced())
+    feedTriggers("96/96hp 96/96mp\n")
+    assert.is_true(announced())
+  end)
+
+  it("asks the game for its prompt once when it has none, after naming the room", function()
+    resetPromptState()
+    map.save.prompt_pattern[map.character] = nil
+    map.configs.clear_lines_on_send = true
+    local sent = countPromptSends()
+    feedTriggers(room)
+    assert.are.equal("Du står vid sjön.", map.currentName)
+    feedTriggers(room)
+    assert.are.equal(1, sent.prompt)
+  end)
+
+  it("asks the game for its prompt again after reconnecting", function()
+    resetPromptState()
+    map.save.prompt_pattern[map.character] = nil
+    local sent = countPromptSends()
+    feedTriggers(room)
+    map.eventHandler("sysConnectionEvent")
+    feedTriggers(room)
+    assert.are.equal(2, sent.prompt)
+  end)
+
+  it("asks the game for its prompt again once the saved one stops showing", function()
+    resetPromptState()
+    local sent = countPromptSends()
+    local function walk(prompt)
+      feedTriggers("\nDu står vid sjön. Norrut ligger byn.\n   Det finns två synliga vägar härifrån: norr och söder\n" .. prompt .. "\n")
+    end
+    walk("52/52 52/52")
+    walk("52/52 52/52")
+    assert.are.equal(0, sent.prompt)
+    walk("96/96hp 96/96mp")
+    walk("96/96hp 96/96mp")
+    assert.are.equal(1, sent.prompt)
   end)
 end)

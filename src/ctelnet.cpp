@@ -3682,20 +3682,16 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                 //unless explicitly requested)
 
                 if (option == OPT_ECHO) {
-                    if (checkEchoAnomalyPattern()) {
-                        sendTelnetOption(TN_DONT, option);
-                        hisOptionState[idxOption] = false;
-                        qDebug() << "ECHO: Rejecting due to anomaly pattern detection";
-                    } else {
-                        sendTelnetOption(TN_DO, option);
-                        hisOptionState[idxOption] = true;
-                        mpHost->setRemoteEchoingActive(true);
-                        qDebug() << "ECHO: Server requesting password mode - enabling content preservation";
+                    // Counted, never refused: refusing ECHO is what keeps the password box shut
+                    checkEchoAnomalyPattern();
+                    sendTelnetOption(TN_DO, option);
+                    hisOptionState[idxOption] = true;
+                    mpHost->setRemoteEchoingActive(true);
+                    qDebug() << "ECHO: Server requesting password mode - enabling content preservation";
 
-                        // The safety timeout against a game that never sends WONT ECHO is
-                        // started by the masked line the player sends, not by this prompt -
-                        // see restartPasswordMaskTimeout().
-                    }
+                    // The safety timeout against a game that never sends WONT ECHO is
+                    // started by the masked line the player sends, not by this prompt -
+                    // see restartPasswordMaskTimeout().
                 } else if (option == OPT_STATUS || option == OPT_TERMINAL_TYPE) {
                     sendTelnetOption(TN_DO, option);
                     hisOptionState.set(idxOption);
@@ -3828,25 +3824,20 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
 
                 if (option == OPT_ECHO) {
                     // Whatever prompt the auto-login's password step found masked is over with
-                    // this, whether or not the release is honoured below - see
-                    // sendOutstandingAutoLoginPassword()
+                    // this - see sendOutstandingAutoLoginPassword()
                     mAutoLoginPasswordMaskWithdrawn = true;
-                    if (mEchoAnomalyDetected) {
-                        qDebug() << "ECHO: Ignoring WONT due to anomaly pattern";
-                    } else {
-                        checkEchoAnomalyPattern();
-                        // Cancel any pending password mode timeout since we got the proper WONT ECHO
-                        if (mTimerPasswordModeTimeout) {
-                            mTimerPasswordModeTimeout->stop();
-                        }
-                        // The server released ECHO right after the masked line, so this was a
-                        // transient password prompt, not character-at-a-time mode: cancel detection.
-                        if (mTimerCharacterModeDetect) {
-                            mTimerCharacterModeDetect->stop();
-                        }
-                        mpHost->setRemoteEchoingActive(false);
-                        qDebug() << "ECHO: Server ending password mode - restoring normal operation and preserved content";
+                    checkEchoAnomalyPattern();
+                    // Cancel any pending password mode timeout since we got the proper WONT ECHO
+                    if (mTimerPasswordModeTimeout) {
+                        mTimerPasswordModeTimeout->stop();
                     }
+                    // The server released ECHO right after the masked line, so this was a
+                    // transient password prompt, not character-at-a-time mode: cancel detection.
+                    if (mTimerCharacterModeDetect) {
+                        mTimerCharacterModeDetect->stop();
+                    }
+                    mpHost->gameReleasedRemoteEcho();
+                    qDebug() << "ECHO: Server ending password mode - restoring normal operation and preserved content";
                 }
 
                 if (option == OPT_COMPRESS) {
@@ -4583,9 +4574,15 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
             const auto type = static_cast<unsigned char>(data[1]);
             // Only access telnetCommand[2] if it exists
             const auto telnetOption = telnetCommand.size() > 2 ? static_cast<unsigned char>(data[2]) : 0;
-            QString msg = telnetCommand.c_str();
-            if (telnetCommand.size() >= 6) {
-                msg = msg.mid(3, telnetCommand.size() - 5);
+            // A subnegotiation can carry any bytes at all, so its payload (unescaped, without the
+            // IAC SB <option> and IAC SE framing) goes over byte for byte; other commands go whole
+            QByteArray payload;
+            if (type == static_cast<unsigned char>(TN_SB)) {
+                if (telnetCommand.size() >= 5) {
+                    payload = QByteArray(data + 3, static_cast<qsizetype>(telnetCommand.size() - 5));
+                }
+            } else {
+                payload = QByteArray(data, static_cast<qsizetype>(telnetCommand.size()));
             }
 
             TEvent event{};
@@ -4595,8 +4592,8 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
             event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
             event.mArgumentList.append(QString::number(telnetOption));
             event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-            event.mArgumentList.append(msg);
-            event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+            event.mArgumentList.append(QString::fromLatin1(payload));
+            event.mArgumentTypeList.append(ARGUMENT_TYPE_BYTES);
             mpHost->raiseEvent(event);
         }
     }
@@ -4664,9 +4661,9 @@ void cTelnet::setATCPVariables(const QByteArray& msg)
             const int roomId = arg.toInt();
             mpHost->mpMap->mRoomIdHash[mProfileName] = roomId;
             if (auto* pR = mpHost->mpMap->mpRoomDB->getRoom(roomId)) {
-                mpHost->mpMap->repaintArea(pR->getArea());
+                mpHost->mpMap->updatePlayerArea(pR->getArea());
             } else {
-                mpHost->mpMap->repaintArea(-1);
+                mpHost->mpMap->updatePlayerArea(-1);
             }
         }
     }
@@ -5956,6 +5953,9 @@ void cTelnet::slot_processReplayChunk()
                     insb = false;
                     processSubnegotiation(subnegotiation, cleandata);
                 } else if (iac) {
+                    if (ch == TN_IAC) { // escaped TN_IAC, as the socket path unescapes it
+                        command.pop_back();
+                    }
                     iac = false;
                 } else if (ch == TN_IAC) {
                     iac = true;
@@ -6847,7 +6847,7 @@ bool cTelnet::checkEchoAnomalyPattern()
             mEchoAnomalyDetected = true;
 
             raiseProtocolEvent("sysEchoAnomalyDetected", "");
-            qWarning() << "ECHO anomaly pattern detected - disabling ECHO response to protect TCommandLine";
+            qWarning() << "ECHO anomaly pattern detected - the game is toggling ECHO rapidly; still honoring it so passwords stay hidden";
             return true;
         }
     } else {

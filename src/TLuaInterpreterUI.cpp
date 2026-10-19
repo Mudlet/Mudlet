@@ -44,6 +44,7 @@
 #include "TConsoleFrontend.h"
 #include "TDebug.h"
 #include "TEvent.h"
+#include "TLabelModel.h"
 #include "TMap.h"
 #include "TMapLabel.h"
 #include "TMedia.h"
@@ -3511,34 +3512,8 @@ int TLuaInterpreter::setFont(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setFontSize
 int TLuaInterpreter::setFontSize(lua_State* L)
 {
-    const char* windowName = "";
-    int s = 1;
-    if (lua_gettop(L) > 1) { // Have more than one argument so first must be a console name
-        windowName = WINDOW_NAME(L, s++);
-    }
-
-    const int size = getVerifiedInt(L, __func__, s, "size");
-    if (size <= 0) {
-        // just throw an error, no default needed.
-        return warnArgumentValue(L, __func__, "size cannot be 0 or negative");
-    }
-    if (size > Host::scmMaxFontSize) {
-        return warnArgumentValue(L, __func__, qsl("size %1 is too large, it cannot be more than %2").arg(size).arg(Host::scmMaxFontSize));
-    }
-
-    const QString consoleName{windowName};
-    const Host& host = getHostFromLua(L);
-    // a console wins a name a label also carries, as in setFont()
-    if (!host.consoleFrontend()->setWindowFontSize(consoleName, size)) {
-        auto labelFont = host.labelFont(consoleName);
-        if (!labelFont) {
-            return windowNotFound(L, consoleName);
-        }
-        labelFont->setPointSize(size);
-        host.consoleFrontend()->setLabelFont(consoleName, *labelFont);
-    }
-    lua_pushboolean(L, true);
-    return 1;
+    // Have more than one argument so first must be a console name
+    return setConsoleFontSize(L, __func__, lua_gettop(L) > 1);
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setItalics
@@ -3579,6 +3554,168 @@ int TLuaInterpreter::setLabelToolTip(lua_State* L)
 
     lua_pushboolean(L, true);
     return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setLabelAccessibleName
+int TLuaInterpreter::setLabelAccessibleName(lua_State* L)
+{
+    if (!checkStringArg(L, __func__, 1, "label name") || !checkStringArg(L, __func__, 2, "accessible name")) {
+        return lua_error(L);
+    }
+    const QString labelName{lua_tostring(L, 1)};
+    const QString accessibleName{lua_tostring(L, 2)};
+    if (labelName.isEmpty()) {
+        return warnArgumentValue(L, __func__, "a label cannot have an empty string as its name");
+    }
+
+    Host& host = getHostFromLua(L);
+    if (!host.hasConsoleView()) {
+        return warnArgumentValue(L, __func__, no_main_window_value);
+    }
+    if (!host.setLabelAccessibleName(labelName, accessibleName)) {
+        return warnArgumentValue(L, __func__, qsl("label name '%1' not found").arg(labelName));
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getLabelAccessibleName
+int TLuaInterpreter::getLabelAccessibleName(lua_State* L)
+{
+    const QString labelName = getVerifiedString(L, __func__, 1, "label name");
+    if (labelName.isEmpty()) {
+        return warnArgumentValue(L, __func__, "a label cannot have an empty string as its name");
+    }
+
+    const Host& host = getHostFromLua(L);
+    if (!host.hasConsoleView()) {
+        return warnArgumentValue(L, __func__, no_main_window_value);
+    }
+    if (auto accessibleName = host.labelAccessibleName(labelName)) {
+        lua_pushstring(L, accessibleName->toUtf8().constData());
+        return 1;
+    }
+
+    return warnArgumentValue(L, __func__, qsl("label name '%1' not found").arg(labelName));
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setLabelAccessibleRole
+int TLuaInterpreter::setLabelAccessibleRole(lua_State* L)
+{
+    if (!checkStringArg(L, __func__, 1, "label name") || !checkStringArg(L, __func__, 2, "role")) {
+        return lua_error(L);
+    }
+    const QString labelName{lua_tostring(L, 1)};
+    const QString role{lua_tostring(L, 2)};
+    if (labelName.isEmpty()) {
+        return warnArgumentValue(L, __func__, "a label cannot have an empty string as its name");
+    }
+
+    std::optional<bool> button;
+    if (role == qsl("button")) {
+        button = true;
+    } else if (role == qsl("text")) {
+        button = false;
+    } else if (!role.isEmpty()) {
+        return warnArgumentValue(L, __func__, qsl("'%1' is not a valid role - use 'button', 'text', or '' to decide by the label's callbacks").arg(role));
+    }
+
+    Host& host = getHostFromLua(L);
+    if (!host.hasConsoleView()) {
+        return warnArgumentValue(L, __func__, no_main_window_value);
+    }
+    if (!host.setLabelAccessibleButton(labelName, button)) {
+        return warnArgumentValue(L, __func__, qsl("label name '%1' not found").arg(labelName));
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setLabelLiveRegion
+int TLuaInterpreter::setLabelLiveRegion(lua_State* L)
+{
+    if (!checkStringArg(L, __func__, 1, "label name") || !checkStringArg(L, __func__, 2, "live region")) {
+        return lua_error(L);
+    }
+    const QString labelName{lua_tostring(L, 1)};
+    const QString mode{lua_tostring(L, 2)};
+    if (labelName.isEmpty()) {
+        return warnArgumentValue(L, __func__, "a label cannot have an empty string as its name");
+    }
+
+    TLabelLiveRegion liveRegion;
+    if (mode == qsl("polite")) {
+        liveRegion = TLabelLiveRegion::Polite;
+    } else if (mode == qsl("assertive")) {
+        liveRegion = TLabelLiveRegion::Assertive;
+    } else if (mode == qsl("off")) {
+        liveRegion = TLabelLiveRegion::Off;
+    } else {
+        return warnArgumentValue(L, __func__, qsl("'%1' is not a valid live region - use 'polite', 'assertive' or 'off'").arg(mode));
+    }
+
+    Host& host = getHostFromLua(L);
+    if (!host.hasConsoleView()) {
+        return warnArgumentValue(L, __func__, no_main_window_value);
+    }
+    if (!host.setLabelLiveRegion(labelName, liveRegion)) {
+        return warnArgumentValue(L, __func__, qsl("label name '%1' not found").arg(labelName));
+    }
+
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getLabelLiveRegion
+int TLuaInterpreter::getLabelLiveRegion(lua_State* L)
+{
+    const QString labelName = getVerifiedString(L, __func__, 1, "label name");
+    if (labelName.isEmpty()) {
+        return warnArgumentValue(L, __func__, "a label cannot have an empty string as its name");
+    }
+
+    const Host& host = getHostFromLua(L);
+    if (!host.hasConsoleView()) {
+        return warnArgumentValue(L, __func__, no_main_window_value);
+    }
+    if (auto liveRegion = host.labelLiveRegion(labelName)) {
+        switch (*liveRegion) {
+        case TLabelLiveRegion::Polite:
+            lua_pushstring(L, "polite");
+            break;
+        case TLabelLiveRegion::Assertive:
+            lua_pushstring(L, "assertive");
+            break;
+        case TLabelLiveRegion::Off:
+            lua_pushstring(L, "off");
+            break;
+        }
+        return 1;
+    }
+
+    return warnArgumentValue(L, __func__, qsl("label name '%1' not found").arg(labelName));
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getLabelAccessibleRole
+int TLuaInterpreter::getLabelAccessibleRole(lua_State* L)
+{
+    const QString labelName = getVerifiedString(L, __func__, 1, "label name");
+    if (labelName.isEmpty()) {
+        return warnArgumentValue(L, __func__, "a label cannot have an empty string as its name");
+    }
+
+    const Host& host = getHostFromLua(L);
+    if (!host.hasConsoleView()) {
+        return warnArgumentValue(L, __func__, no_main_window_value);
+    }
+    if (auto role = host.labelAccessibleRole(labelName)) {
+        lua_pushstring(L, role->toUtf8().constData());
+        return 1;
+    }
+
+    return warnArgumentValue(L, __func__, qsl("label name '%1' not found").arg(labelName));
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getLabelToolTip
@@ -3953,6 +4090,53 @@ int TLuaInterpreter::getMapWindowTitle(lua_State* L)
     }
 
     return warnArgumentValue(L, __func__, "no floating/dockable type map window found");
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMiniConsoleFontSize
+int TLuaInterpreter::setMiniConsoleFontSize(lua_State* L)
+{
+    // A size alone sets the main window's, as setFontSize() does
+    return setConsoleFontSize(L, __func__, lua_gettop(L) != 1);
+}
+
+// No documentation available in wiki - internal function
+int TLuaInterpreter::setConsoleFontSize(lua_State* L, const char* functionName, const bool windowNamed)
+{
+    const char* windowName = "";
+    int s = 1;
+    if (windowNamed) {
+        // Not WINDOW_NAME(), whose error would name this helper
+        if (!lua_isnoneornil(L, s)) {
+            if (!lua_isstring(L, s)) {
+                lua_pushfstring(L, bad_window_type, functionName, s, luaL_typename(L, s));
+                return lua_error(L);
+            }
+            windowName = lua_tostring(L, s);
+        }
+        ++s;
+    }
+
+    const int size = getVerifiedInt(L, functionName, s, "size");
+    if (size <= 0) {
+        return warnArgumentValue(L, functionName, "size cannot be 0 or negative");
+    }
+    if (size > Host::scmMaxFontSize) {
+        return warnArgumentValue(L, functionName, qsl("size %1 is too large, it cannot be more than %2").arg(size).arg(Host::scmMaxFontSize));
+    }
+
+    const QString consoleName{windowName};
+    const Host& host = getHostFromLua(L);
+    // a console wins a name a label also carries, as in setFont()
+    if (!host.consoleFrontend()->setWindowFontSize(consoleName, size)) {
+        auto labelFont = host.labelFont(consoleName);
+        if (!labelFont) {
+            return windowNotFound(L, consoleName);
+        }
+        labelFont->setPointSize(size);
+        host.consoleFrontend()->setLabelFont(consoleName, *labelFont);
+    }
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMovie
@@ -4527,7 +4711,7 @@ int TLuaInterpreter::setCommandBackgroundColor(lua_State* L)
             return warnArgumentValue(L, __func__, csmInvalidRedValue.arg(r));
         }
     } else {
-        lua_pushfstring(L, "setBackgroundColor: bad argument #%d type (window name as string, or red value 0-255 as number expected, got %s!)", s, luaL_typename(L, s));
+        lua_pushfstring(L, "setCommandBackgroundColor: bad argument #%d type (window name as string, or red value 0-255 as number expected, got %s!)", s, luaL_typename(L, s));
         return lua_error(L);
     }
 
@@ -4584,7 +4768,7 @@ int TLuaInterpreter::setCommandForegroundColor(lua_State* L)
             return warnArgumentValue(L, __func__, csmInvalidRedValue.arg(r));
         }
     } else {
-        lua_pushfstring(L, "setBackgroundColor: bad argument #%d type (window name as string, or red value 0-255 as number expected, got %s!)", s, luaL_typename(L, s));
+        lua_pushfstring(L, "setCommandForegroundColor: bad argument #%d type (window name as string, or red value 0-255 as number expected, got %s!)", s, luaL_typename(L, s));
         return lua_error(L);
     }
 

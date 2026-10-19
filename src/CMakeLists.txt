@@ -90,6 +90,7 @@ set(mudlet_SRCS
     TAction.cpp
     TAlias.cpp
     TArea.cpp
+    TAreaGraph.cpp
     TAreaGridIndex.cpp
     TAreaLodExitIndex.cpp
     TAreaSpanIndex.cpp
@@ -230,6 +231,7 @@ set(mudlet_app_SRCS
     SelectionRectangleHandler.cpp
     SingleLineTextEdit.cpp
     T2DMap.cpp
+    TAccessibleLabel.cpp
     TAccessibleTextEdit.cpp
     TCommandLine.cpp
     TPasswordEntry.cpp
@@ -392,6 +394,7 @@ set(mudlet_HDRS
     TAlias.h
     TAppFrontend.h
     TArea.h
+    TAreaGraph.h
     TAreaGridIndex.h
     TAreaLodExitIndex.h
     TAreaSpanIndex.h
@@ -544,6 +547,7 @@ set(mudlet_app_HDRS
     SingleLineTextEdit.h
     T2DMap.h
     TAccessibleConsole.h
+    TAccessibleLabel.h
     TAccessibleTextEdit.h
     TCommandLine.h
     TPasswordEntry.h
@@ -601,6 +605,8 @@ if(USE_3DMAPPER)
   list(APPEND mudlet_app_HDRS glwidget.h)
   list(APPEND mudlet_app_SRCS modern_glwidget.cpp)
   list(APPEND mudlet_app_HDRS modern_glwidget.h)
+  list(APPEND mudlet_app_SRCS MapSearchPanel.cpp)
+  list(APPEND mudlet_app_HDRS MapSearchPanel.h)
   list(APPEND mudlet_SRCS BloomPass.cpp)
   list(APPEND mudlet_HDRS BloomPass.h)
   list(APPEND mudlet_SRCS CameraController.cpp)
@@ -611,12 +617,22 @@ if(USE_3DMAPPER)
   list(APPEND mudlet_HDRS GeometryManager.h)
   list(APPEND mudlet_SRCS LabelTextureCache.cpp)
   list(APPEND mudlet_HDRS LabelTextureCache.h)
+  list(APPEND mudlet_SRCS MapAtlas.cpp)
+  list(APPEND mudlet_HDRS MapAtlas.h)
+  list(APPEND mudlet_SRCS MapRoute.cpp)
+  list(APPEND mudlet_HDRS MapRoute.h)
+  list(APPEND mudlet_SRCS MapSearch.cpp)
+  list(APPEND mudlet_HDRS MapSearch.h)
+  list(APPEND mudlet_SRCS MapStitch.cpp)
+  list(APPEND mudlet_HDRS MapStitch.h)
   list(APPEND mudlet_SRCS RenderCommand.cpp)
   list(APPEND mudlet_HDRS RenderCommand.h)
   list(APPEND mudlet_SRCS RenderCommandQueue.cpp)
   list(APPEND mudlet_HDRS RenderCommandQueue.h)
   list(APPEND mudlet_SRCS ResourceManager.cpp)
   list(APPEND mudlet_HDRS ResourceManager.h)
+  list(APPEND mudlet_SRCS RetainedMapScene.cpp)
+  list(APPEND mudlet_HDRS RetainedMapScene.h)
   list(APPEND mudlet_SRCS ShaderManager.cpp)
   list(APPEND mudlet_HDRS ShaderManager.h)
   list(APPEND mudlet_app_HDRS glwidget_integration.h)

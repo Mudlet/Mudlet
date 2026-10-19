@@ -58,6 +58,7 @@ public:
     bool hasLabel(const QString& name) const { return mLabels.contains(name); }
     TLabelModel* labelModel(const QString& name) { return mLabels.value(name); }
     const TLabelModel* labelModel(const QString& name) const { return mLabels.value(name); }
+    QList<TLabelModel*> labelModels() const { return mLabels.values(); }
 
     void registerSubConsole(const QString& name, TConsoleModel* pModel, const SubConsoleKind kind) { mSubConsoles.insert(name, {pModel, kind}); }
 

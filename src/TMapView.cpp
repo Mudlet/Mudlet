@@ -385,6 +385,13 @@ void TMapView::show3DView(const bool show)
         view->setCompanion2DMap(mp2dMap);
         view->hide();
         static_cast<QVBoxLayout*>(layout())->insertWidget(0, view);
+        // Only the list follows: switching the 2D map now would recenter this view and end the flight
+        connect(view, &ModernGLWidget::areaFlownInto, this, [this](const int areaId) {
+            const int index = mpAreaComboBox->findText(mpMap ? mpMap->mpRoomDB->getAreaNamesMap().value(areaId) : QString());
+            if (index != -1) {
+                mpAreaComboBox->setCurrentIndex(index);
+            }
+        });
         connect(view, &ModernGLWidget::editIn2DRequested, this, [this, view](const int roomId) {
             if (const TRoom* pRoom = mpMap ? mpMap->mpRoomDB->getRoom(roomId) : nullptr) {
                 view->syncView(pRoom->getArea(), pRoom->x(), pRoom->y(), pRoom->z(), mp2dMap->getCenterRoomId());
@@ -433,8 +440,8 @@ void TMapView::update3DViewAvailability()
         //: Tooltip for the button in a secondary map window that switches it between the 2D and 3D map
         mp3DButton->setToolTip(tr("Show this window's map in 3D"));
     } else {
-        //: Tooltip for the disabled 3D button in a secondary map window; keep setConfig("experiment.3dmap.modernmapper", true) exactly as written, it is Lua code the user types
-        mp3DButton->setToolTip(tr("Map windows show the map in 3D with the modern 3D mapper only; use setConfig(\"experiment.3dmap.modernmapper\", true) to switch to it"));
+        //: Tooltip for the disabled 3D button in a secondary map window; "Modern 3D mapper" is the checkbox on the "Experiments (unsupported)" card of the Advanced page of Settings, so translate these as they appear there
+        mp3DButton->setToolTip(tr("Map windows show the map in 3D with the modern 3D mapper only; turn on \"Modern 3D mapper\" in Settings, Advanced, Experiments to switch to it"));
     }
     const QSignalBlocker blocker(mp3DButton);
     mp3DButton->setChecked(showing3DView());

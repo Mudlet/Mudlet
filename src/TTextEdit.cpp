@@ -4087,6 +4087,24 @@ void TTextEdit::reportCodepointErrors()
 }
 #endif
 
+void TTextEdit::moveCaretToLink(bool first)
+{
+    int line = 0;
+    int column = 0;
+    if (!mpBuffer || !mpBuffer->findNextLink(0, -1, line, column)) {
+        return;
+    }
+    // Walked forward rather than searched back from the end, which would skip a link the end sits on
+    int nextLine = line;
+    int nextColumn = column;
+    bool wrapped = false;
+    while (!first && mpBuffer->findNextLink(line, column, nextLine, nextColumn, &wrapped) && !wrapped) {
+        line = nextLine;
+        column = nextColumn;
+    }
+    setCaretPosition(line, column);
+}
+
 void TTextEdit::setCaretPosition(int line, int column)
 {
     mCaretLine = line;
@@ -4487,16 +4505,22 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
         }
     };
 
-    auto navigateToLink = [&](bool forward) {
+    // True when it handed the focus on to the script buttons, which the key press then belongs to
+    auto navigateToLink = [&](bool forward) -> bool {
         if (!mpBuffer) {
-            return;
+            return false;
         }
         int outLine = 0;
         int outCol = 0;
         bool wrapped = false;
         const bool found = forward ? mpBuffer->findNextLink(mCaretLine, mCaretColumn, outLine, outCol, &wrapped) : mpBuffer->findPreviousLink(mCaretLine, mCaretColumn, outLine, outCol, &wrapped);
+        // Past either end of the links, or with none, the focus goes on to the script buttons instead of wrapping,
+        // as a web page's controls follow its links
+        if ((!found || wrapped) && mpHost->mainConsoleView() && mpHost->mainConsoleView()->focusKeyboardButton(forward)) {
+            return true;
+        }
         if (!found) {
-            return;
+            return false;
         }
         newCaretLine = outLine;
         newCaretColumn = outCol;
@@ -4513,6 +4537,7 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
                 pMudlet->announce(message, QString(), true);
             }
         }
+        return false;
     };
 
     auto updateSelection = [&](bool useNewColumn) {
@@ -4753,25 +4778,37 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
         }
 
         if (!(event->modifiers() & (Qt::ShiftModifier | Qt::ControlModifier))) {
-            navigateToLink(true);
+            if (navigateToLink(true)) {
+                event->accept();
+                return;
+            }
         }
         break;
     }
     case Qt::Key_Backtab: {
-        navigateToLink(false);
+        if (navigateToLink(false)) {
+            event->accept();
+            return;
+        }
         break;
     }
     // Alternate forward/backward link navigation for cases where Tab or
     // Shift+Tab is consumed by the caret-mode toggle or reassigned by the user.
     case Qt::Key_BracketRight: {
         if (event->modifiers().testFlag(Qt::ControlModifier)) {
-            navigateToLink(true);
+            if (navigateToLink(true)) {
+                event->accept();
+                return;
+            }
         }
         break;
     }
     case Qt::Key_BracketLeft: {
         if (event->modifiers().testFlag(Qt::ControlModifier)) {
-            navigateToLink(false);
+            if (navigateToLink(false)) {
+                event->accept();
+                return;
+            }
         }
         break;
     }

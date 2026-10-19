@@ -126,6 +126,9 @@ private:
     // > 0 whilst a TTimer::execute() is on the call stack; uninstall() and
     // doCleanup() must not delete timers then - see the note above the class:
     int mProcessingDepth = 0;
+    // Ids of the timers with a script that does not compile whose QTimer the emergency stop stopped;
+    // the resume cannot activate() them, so it re-arms these and no others
+    QSet<int> mBrokenScriptTimersStopped;
     int statsActiveItems = 0;
     int statsItemsTotal = 0;
     int statsTempItems = 0;

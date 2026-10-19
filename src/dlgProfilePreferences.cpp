@@ -891,7 +891,8 @@ void dlgProfilePreferences::buildShell()
 
     auto* pCard_performance = createCard(qsl("card_performance"));
     moveIntoCard(pCard_performance, {checkBox_lazyCaptureGlobals});
-    buildCategoryPage(scmCategory_advanced, {pCard_performance, groupBox_debug});
+    buildExperimentsCard();
+    buildCategoryPage(scmCategory_advanced, {pCard_performance, groupBox_debug, mpCard_experiments});
 
     buildSearchResultsPage();
 
@@ -1168,6 +1169,8 @@ void dlgProfilePreferences::retranslateShell()
     cardTitles.append({qsl("card_crashReports"), tr("Crash reports")});
     //: Card title on the Advanced settings page, above options that trade compatibility for speed
     cardTitles.append({qsl("card_performance"), tr("Performance")});
+    //: Card title on the Advanced settings page, above the checkboxes that switch unfinished features on for this profile
+    cardTitles.append({qsl("card_experiments"), tr("Experiments (unsupported)")});
     //: Card title on the Chat and sharing settings page, above the row leading to the Discord Rich Presence settings
     cardTitles.append({qsl("card_discord"), tr("Discord Rich Presence")});
     //: Card title on the game protocols subpage, above the ten protocols Mudlet can offer the game
@@ -1242,6 +1245,7 @@ void dlgProfilePreferences::retranslateShell()
 #endif
     updateSecurityStatus();
     setCardDescriptions();
+    retranslateExperiments();
 
     if (mpFrame_migrationBanner) {
         //: Title of the banner explaining that the settings dialog has been reorganised
@@ -1292,6 +1296,8 @@ void dlgProfilePreferences::setSearchKeywords()
     synonyms.append({disable_password_masking_checkbox, tr("password, masking, hidden characters")});
     //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for telling the game that a screen reader is in use.
     synonyms.append({checkBox_advertiseScreenReader, tr("screen reader, NVDA, JAWS, VoiceOver, Orca, accessibility")});
+    //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for reaching buttons in scripts and packages with the keyboard.
+    synonyms.append({checkBox_accessibleLabels, tr("keyboard, tab, focus, buttons, labels, screen reader, accessibility")});
     //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for reading incoming text out loud.
     synonyms.append({checkBox_announceIncomingText, tr("text to speech, TTS, speech, spoken, screen reader")});
     //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for whether pressing Alt on its own moves focus to the menu bar.
@@ -1352,6 +1358,8 @@ void dlgProfilePreferences::setSearchKeywords()
     synonyms.append({groupBox_specialOptions, tr("special options, workaround, old game, compatibility")});
     //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for script debugging options, which used to be on a tab called "Special options".
     synonyms.append({groupBox_debug, tr("special options, advanced, debug, developer")});
+    //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for the unfinished features that can be switched on for a profile.
+    synonyms.append({mpCard_experiments.data(), tr("experiment, experimental, beta, preview, unsupported, 3D map, renderer")});
     for (const auto& [pControl, words] : synonyms) {
         pControl->setProperty(scmProp_searchKeywords, words);
     }
@@ -1692,6 +1700,10 @@ void dlgProfilePreferences::setCardDescriptions()
     setCardDescription(findChild<QGroupBox*>(qsl("card_performance")), tr("Ways Mudlet speeds up your scripts. Leave these on unless a script or package misbehaves."));
     //: Description line under the "Developer" card title on the Advanced settings page
     setCardDescription(groupBox_debug, tr("How much Mudlet's debugging tools report while you work on scripts."));
+    //: Description line under the "Experiments (unsupported)" card title on the Advanced settings page
+    setCardDescription(mpCard_experiments,
+                       tr("Unfinished features that are still being tried out. They are not supported: they may misbehave, change or be removed in any release. "
+                          "Each one is switched for this profile only."));
 }
 
 void dlgProfilePreferences::buildProtocolsSubpage()
@@ -1764,6 +1776,104 @@ void dlgProfilePreferences::buildProtocolsSubpage()
     connect(pushButton_chooseProtocols, &QAbstractButton::clicked, this, [this]() {
         showSubpage(scmCategory_connection, qsl("protocols"));
     });
+}
+
+void dlgProfilePreferences::buildExperimentsCard()
+{
+    mpCard_experiments = createCard(qsl("card_experiments"));
+    auto* pCardLayout = qobject_cast<QVBoxLayout*>(mpCard_experiments->layout());
+    pCardLayout->setSpacing(4);
+
+    for (const auto& key : Host::getValidExperiments()) {
+        auto* pCheckBox = new QCheckBox(mpCard_experiments);
+        pCheckBox->setObjectName(qsl("checkBox_%1").arg(key));
+        pCardLayout->addWidget(pCheckBox);
+        auto* pDescription = new QLabel(mpCard_experiments);
+        pDescription->setObjectName(qsl("checkBox_%1_description").arg(key));
+        pDescription->setProperty("settingsControlDescription", true);
+        pDescription->setWordWrap(true);
+        pCardLayout->addWidget(pDescription);
+        mExperimentCheckBoxes.insert(key, pCheckBox);
+    }
+#if !defined(INCLUDE_3DMAPPER)
+    // Every experiment so far only changes the 3D map, which this build leaves out
+    mpCard_experiments->hide();
+#endif
+
+    // Mirrors Host::setExperimentEnabled(), which switches the rest of a group off, so the
+    // dialog never shows two of one group ticked
+    for (const auto& [key, pCheckBox] : std::as_const(mExperimentCheckBoxes).asKeyValueRange()) {
+        const QString group = Host::experimentGroup(key);
+        if (group.isEmpty()) {
+            continue;
+        }
+        connect(pCheckBox, &QAbstractButton::toggled, this, [this, ownKey = key, group](const bool checked) {
+            if (mPopulating || !checked) {
+                return;
+            }
+            for (const auto& [siblingKey, pSibling] : std::as_const(mExperimentCheckBoxes).asKeyValueRange()) {
+                if (siblingKey != ownKey && pSibling && Host::experimentGroup(siblingKey) == group) {
+                    pSibling->setChecked(false);
+                }
+            }
+        });
+    }
+}
+
+void dlgProfilePreferences::retranslateExperiments()
+{
+    QHash<QString, QString> labels;
+    QHash<QString, QString> descriptions;
+    //: Checkbox on the "Experiments (unsupported)" card of the Advanced settings page
+    labels.insert(qsl("experiment.3dmap.modernmapper"), tr("Modern 3D mapper"));
+    //: Description under the "Modern 3D mapper" checkbox on the "Experiments (unsupported)" card of the Advanced settings page
+    descriptions.insert(qsl("experiment.3dmap.modernmapper"), tr("Draws the 3D map with the new renderer instead of the original one. The other 3D map experiments only work with it."));
+    //: Checkbox on the "Experiments (unsupported)" card of the Advanced settings page
+    labels.insert(qsl("experiment.3d-player-icon"), tr("3D player marker"));
+    //: Description under the "3D player marker" checkbox on the "Experiments (unsupported)" card of the Advanced settings page
+    descriptions.insert(qsl("experiment.3d-player-icon"), tr("Shows a marker above the room you are in on the modern 3D map."));
+    //: Checkbox on the "Experiments (unsupported)" card of the Advanced settings page
+    labels.insert(qsl("experiment.render-in-out-exits"), tr("In and out exits on the 3D map"));
+    //: Description under the "In and out exits on the 3D map" checkbox on the "Experiments (unsupported)" card of the Advanced settings page
+    descriptions.insert(qsl("experiment.render-in-out-exits"), tr("Draws in and out exits on the modern 3D map, and marks the rooms that have them with arrows."));
+    //: Checkbox on the "Experiments (unsupported)" card of the Advanced settings page
+    labels.insert(qsl("experiment.rendering.more-transparent"), tr("Darken other levels"));
+    //: Description under the "Darken other levels" checkbox on the "Experiments (unsupported)" card of the Advanced settings page
+    descriptions.insert(qsl("experiment.rendering.more-transparent"),
+                        tr("Draws rooms on the modern 3D map darker the further their level is from yours, instead of making the rooms above you see-through."));
+    //: Checkbox on the "Experiments (unsupported)" card of the Advanced settings page
+    labels.insert(qsl("experiment.rendering.originalish"), tr("Original level shading"));
+    //: Description under the "Original level shading" checkbox on the "Experiments (unsupported)" card of the Advanced settings page
+    descriptions.insert(qsl("experiment.rendering.originalish"), tr("Draws the rooms on other levels of the modern 3D map the usual way, with the rooms above you see-through."));
+
+    for (const auto& [key, pCheckBox] : std::as_const(mExperimentCheckBoxes).asKeyValueRange()) {
+        if (!pCheckBox) {
+            continue;
+        }
+        pCheckBox->setText(labels.value(key, key));
+
+        QStringList siblings;
+        const QString group = Host::experimentGroup(key);
+        for (const auto& siblingKey : mExperimentCheckBoxes.keys()) {
+            if (!group.isEmpty() && siblingKey != key && Host::experimentGroup(siblingKey) == group) {
+                siblings << labels.value(siblingKey, siblingKey);
+            }
+        }
+        QString description = descriptions.value(key);
+        if (!siblings.isEmpty()) {
+            //: Added to the description of an experiment on the Advanced settings page that cannot be on together with others; %1 is the list of their names
+            const QString exclusive = tr("Turning this on turns off: %1.").arg(siblings.join(qsl(", ")));
+            description = description.isEmpty() ? exclusive : qsl("%1 %2").arg(description, exclusive);
+        }
+        if (auto* pDescription = findChild<QLabel*>(qsl("%1_description").arg(pCheckBox->objectName())); pDescription) {
+            pDescription->setText(description);
+            pDescription->setVisible(!description.isEmpty());
+        }
+        pCheckBox->setAccessibleDescription(description);
+        //: Tooltip line on an experiment's checkbox on the Advanced settings page; %1 is the name a script passes to setConfig() to switch it, which is not translated
+        const QString scriptName = tr("Name for scripts: %1").arg(qsl("<tt>%1</tt>").arg(key.toHtmlEscaped()));
+        pCheckBox->setToolTip(description.isEmpty() ? qsl("<p>%1</p>").arg(scriptName) : qsl("<p>%1</p><p>%2</p>").arg(description.toHtmlEscaped(), scriptName));
+    }
 }
 
 void dlgProfilePreferences::updateProtocolSummary()
@@ -3654,6 +3764,7 @@ void dlgProfilePreferences::disableHostDetails()
     label_caretModeKey->setEnabled(false);
     checkBox_announceIncomingText->setEnabled(false);
     checkBox_advertiseScreenReader->setEnabled(false);
+    checkBox_accessibleLabels->setEnabled(false);
     checkBox_enableClosedCaption->setEnabled(false);
     checkBox_enableBlinkText->setEnabled(false);
     checkBox_f3SearchEnabled->setEnabled(false);
@@ -3673,6 +3784,7 @@ void dlgProfilePreferences::disableHostDetails()
     checkBox_debugShowAllCodepointProblems->setEnabled(false);
     widget_timerDebugOutputMinimumInterval->setEnabled(false);
     checkBox_lazyCaptureGlobals->setEnabled(false);
+    mpCard_experiments->setEnabled(false);
     label_networkPacketTimeout->setEnabled(false);
     doubleSpinBox_networkPacketTimeout->setEnabled(false);
 
@@ -3778,6 +3890,7 @@ void dlgProfilePreferences::enableHostDetails()
     label_caretModeKey->setEnabled(true);
     checkBox_announceIncomingText->setEnabled(true);
     checkBox_advertiseScreenReader->setEnabled(true);
+    checkBox_accessibleLabels->setEnabled(true);
     checkBox_enableClosedCaption->setEnabled(true);
     checkBox_enableBlinkText->setEnabled(true);
     checkBox_f3SearchEnabled->setEnabled(true);
@@ -3794,6 +3907,7 @@ void dlgProfilePreferences::enableHostDetails()
     widget_timerDebugOutputMinimumInterval->setEnabled(true);
     checkBox_debugShowAllCodepointProblems->setEnabled(true);
     checkBox_lazyCaptureGlobals->setEnabled(true);
+    mpCard_experiments->setEnabled(true);
     label_networkPacketTimeout->setEnabled(true);
     doubleSpinBox_networkPacketTimeout->setEnabled(true);
 
@@ -4056,6 +4170,8 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     checkBox_announceIncomingText->setChecked(pHost->mAnnounceIncomingText);
     checkBox_advertiseScreenReader->setChecked(pHost->mAdvertiseScreenReader);
     connect(checkBox_advertiseScreenReader, &QCheckBox::toggled, this, &dlgProfilePreferences::slot_toggleAdvertiseScreenReader, Qt::UniqueConnection);
+    checkBox_accessibleLabels->setChecked(pHost->mAccessibleLabels);
+    connect(checkBox_accessibleLabels, &QCheckBox::toggled, this, &dlgProfilePreferences::slot_toggleAccessibleLabels, Qt::UniqueConnection);
     checkBox_enableOSC8Hyperlinks->setChecked(pHost->mEnableOSC8Hyperlinks);
     connect(checkBox_enableOSC8Hyperlinks, &QCheckBox::toggled, this, &dlgProfilePreferences::slot_toggleEnableOSC8Hyperlinks, Qt::UniqueConnection);
 
@@ -4650,6 +4766,11 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
     checkBox_expectCSpaceIdInColonLessMColorCode->setChecked(pHost->getHaveColorSpaceId());
     checkBox_lazyCaptureGlobals->setChecked(pHost->lazyCaptureGlobals());
+    for (const auto& [key, pCheckBox] : std::as_const(mExperimentCheckBoxes).asKeyValueRange()) {
+        if (pCheckBox) {
+            pCheckBox->setChecked(pHost->experimentEnabled(key));
+        }
+    }
     checkBox_allowServerToRedefineColors->setChecked(pHost->getMayRedefineColors());
     doubleSpinBox_networkPacketTimeout->setValue(pHost->mTelnet.getPostingTimeout() / 1000.0);
     {
@@ -5109,8 +5230,14 @@ void dlgProfilePreferences::clearHostDetails()
 
     checkBox_debugShowAllCodepointProblems->setChecked(false);
     checkBox_lazyCaptureGlobals->setChecked(true);
+    for (const auto& pCheckBox : std::as_const(mExperimentCheckBoxes)) {
+        if (pCheckBox) {
+            pCheckBox->setChecked(false);
+        }
+    }
     checkBox_announceIncomingText->setChecked(false);
     checkBox_advertiseScreenReader->setChecked(false);
+    checkBox_accessibleLabels->setChecked(false);
     checkBox_enableClosedCaption->setChecked(false);
     checkBox_enableBlinkText->setChecked(false);
     comboBox_blankLinesBehaviour->setCurrentIndex(0);
@@ -5192,6 +5319,7 @@ void dlgProfilePreferences::loadEditorTab()
     checkBox_autocompleteLuaCode->setChecked(pHost->mEditorAutoComplete);
     checkBox_showBidi->setChecked(pHost->getEditorShowBidi());
     checkBox_showIdNumbers->setChecked(pHost->showIdsInEditor());
+    checkBox_folderView->setChecked(pHost->folderViewInEditor());
 
     // changes the theme being previewed
     connect(code_editor_theme_selection_combobox, static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_themeSelected, Qt::UniqueConnection);
@@ -5463,6 +5591,7 @@ void dlgProfilePreferences::slot_resetMapColors()
     setColors2();
 
     if (pHost->mpMap) {
+        pHost->mpMap->restore16ColorSet();
         pHost->mpMap->updateArea(-1);
     }
 }
@@ -6880,6 +7009,9 @@ void dlgProfilePreferences::applyAll()
         if (mSnapshot.dirty(checkBox_showIdNumbers)) {
             pHost->setShowIdsInEditor(checkBox_showIdNumbers->isChecked());
         }
+        if (mSnapshot.dirty(checkBox_folderView)) {
+            pHost->setFolderViewInEditor(checkBox_folderView->isChecked());
+        }
         // Re-theming an open script editor fully reconfigures edbee, so only when one of these changed
         auto* pDialogs = HostDialogs::find(pHost);
         if (auto* pEditor = pDialogs ? pDialogs->mpEditorDialog.data() : nullptr;
@@ -7007,6 +7139,11 @@ void dlgProfilePreferences::applyAll()
         if (mSnapshot.dirty(checkBox_lazyCaptureGlobals)) {
             pHost->setLazyCaptureGlobals(checkBox_lazyCaptureGlobals->isChecked());
         }
+        for (const auto& [key, pCheckBox] : std::as_const(mExperimentCheckBoxes).asKeyValueRange()) {
+            if (pCheckBox && mSnapshot.dirty(pCheckBox)) {
+                pHost->setExperimentEnabled(key, pCheckBox->isChecked());
+            }
+        }
         if (mSnapshot.dirty(comboBox_caretModeKey)) {
             pHost->mCaretShortcut = static_cast<Host::CaretShortcut>(comboBox_caretModeKey->currentIndex());
         }
@@ -7060,6 +7197,9 @@ void dlgProfilePreferences::applyAll()
         }
         if (mSnapshot.dirty(checkBox_advertiseScreenReader)) {
             pHost->setAdvertiseScreenReader(checkBox_advertiseScreenReader->isChecked());
+        }
+        if (mSnapshot.dirty(checkBox_accessibleLabels)) {
+            pHost->setAccessibleLabels(checkBox_accessibleLabels->isChecked());
         }
         if (mSnapshot.dirty(checkBox_enableClosedCaption)) {
             pHost->setEnableClosedCaption(checkBox_enableClosedCaption->isChecked());
@@ -8955,6 +9095,13 @@ void dlgProfilePreferences::slot_toggleAdvertiseScreenReader(const bool state)
 {
     if (mpHost) {
         mpHost->setAdvertiseScreenReader(state);
+    }
+}
+
+void dlgProfilePreferences::slot_toggleAccessibleLabels(const bool state)
+{
+    if (mpHost) {
+        mpHost->setAccessibleLabels(state);
     }
 }
 
