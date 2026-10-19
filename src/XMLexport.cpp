@@ -221,16 +221,24 @@ bool XMLexport::exportHost(const QString& filename_pugi_xml)
 void XMLexport::runAsyncSave(const QString& fileName, const QString& xmlSavedKey)
 {
     QPointer<Host> host = mpHost;
-    auto future = QtConcurrent::run([fileName, doc = takeExportDocument()]() {
-        return XMLexport::saveXmlDocToFile(fileName, *doc);
+    // Written on the pool thread before the future finishes, read only after it has
+    auto reason = std::make_shared<QString>();
+    auto future = QtConcurrent::run([fileName, doc = takeExportDocument(), reason]() {
+        return XMLexport::saveXmlDocToFile(fileName, *doc, reason.get());
     });
     // Parented to the profile for the same reason the module save's watcher is: the
     // deleteLater() below needs an event loop that is still running to be delivered,
     // and the save that matters most here is the one on the way out.
     auto watcher = new QFutureWatcher<bool>(host);
-    connect(watcher, &QFutureWatcher<bool>::finished, host, [host, xmlSavedKey]() {
+    watcher->setObjectName(Host::scmProfileSaveWatcherName);
+    connect(watcher, &QFutureWatcher<bool>::finished, host, [host, xmlSavedKey, fileName, watcher, reason]() {
         if (!host) {
             return;
+        }
+        // The caller was told the save had started long before this, so the console is the only place left to say it
+        if (!watcher->result()) {
+            //: %1 is the file the profile was being saved to, %2 is the reason it could not be
+            host->postMessage(tr("[ ERROR ] - The profile could not be saved to \"%1\": %2").arg(fileName, *reason));
         }
         host->xmlSaved(xmlSavedKey);
     });
@@ -338,7 +346,21 @@ std::string XMLexport::serializeForQxml(const pugi::xml_document& doc)
     StringXmlWriter writer(output);
     doc.save(writer);
     sanitizeForQxml(output);
-    return output;
+    // pugixml writes a carriage return in text raw, which an XML reader turns into a
+    // line feed; its own markup never holds one, so each is data
+    std::size_t carriageReturn = output.find('\r');
+    if (carriageReturn == std::string::npos) {
+        return output;
+    }
+    std::string encoded;
+    encoded.reserve(output.size() + output.size() / 64);
+    std::size_t copiedUpTo = 0;
+    for (; carriageReturn != std::string::npos; carriageReturn = output.find('\r', copiedUpTo)) {
+        encoded.append(output, copiedUpTo, carriageReturn - copiedUpTo).append("&#13;");
+        copiedUpTo = carriageReturn + 1;
+    }
+    encoded.append(output, copiedUpTo);
+    return encoded;
 }
 
 bool XMLexport::saveXml(const QString& fileName)
@@ -368,16 +390,20 @@ bool XMLexport::saveXml(const QString& fileName)
 // Callable from a background thread as long as nothing modifies the document
 // concurrently, which handing it over with takeExportDocument() ensures. Static so it
 // neither keeps the XMLexport alive nor touches any instance state.
-bool XMLexport::saveXmlDocToFile(const QString& fileName, const pugi::xml_document& doc)
+bool XMLexport::saveXmlDocToFile(const QString& fileName, const pugi::xml_document& doc, QString* errorString)
 {
     QSaveFile file(fileName);
 
-    auto printErrorMessage = [&](const QString& errorString) {
-        qDebug().noquote().nospace() << "XMLexport::saveXmlDocToFile(\"" << fileName << "\") ERROR - failed to save package, reason: " << errorString << ".";
+    // The reason goes on to a translated console line, so the stage stays in the log
+    auto printErrorMessage = [&](const QString& reason, const char* stage = "save file") {
+        qDebug().noquote().nospace() << "XMLexport::saveXmlDocToFile(\"" << fileName << "\") ERROR - failed to " << stage << ", reason: " << reason << ".";
+        if (errorString) {
+            *errorString = reason;
+        }
     };
 
     if (!file.open(QIODevice::WriteOnly)) {
-        printErrorMessage(file.errorString().prepend("failed to open file, "));
+        printErrorMessage(file.errorString(), "open file");
         return false;
     }
 
@@ -485,6 +511,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("mAcceptServerMedia") = pHost->mAcceptServerMedia ? "yes" : "no";
     host.append_attribute("mMapperUseAntiAlias") = pHost->mMapperUseAntiAlias ? "yes" : "no";
     host.append_attribute("mMapperShowGrid") = pHost->mMapperShowGrid ? "yes" : "no";
+    host.append_attribute("mMapperStitchAreas") = pHost->mMapperStitchAreas ? "yes" : "no";
     host.append_attribute("mMapperShowRoomBorders") = pHost->mMapperShowRoomBorders ? "yes" : "no";
     host.append_attribute("mVersionInTTYPE") = pHost->mVersionInTTYPE ? "yes" : "no";
     host.append_attribute("mPromptedForVersionInTTYPE") = pHost->mPromptedForVersionInTTYPE ? "yes" : "no";
@@ -500,6 +527,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("mShowRoomIDs") = pHost->mShowRoomID ? "yes" : "no";
     host.append_attribute("mShowPanel") = pHost->mShowPanel ? "yes" : "no";
     host.append_attribute("mShow3DView") = pHost->mShow3DView ? "yes" : "no";
+    host.append_attribute("mapStyle") = pHost->mapStyle().toUtf8().constData();
     host.append_attribute("mHaveMapperScript") = pHost->mHaveMapperScript ? "yes" : "no";
     host.append_attribute("mEditorAutoComplete") = pHost->mEditorAutoComplete ? "yes" : "no";
     host.append_attribute("mEditorShowBidi") = pHost->getEditorShowBidi() ? "yes" : "no";
@@ -525,8 +553,9 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
 
     if (useSecureStorage) {
         // Modern versions: store in secure storage, clear from XML
-        if (!pHost->mProxyPassword.isEmpty()) {
-            CredentialManager::storeCredential(pHost->getName(), "proxy", pHost->mProxyPassword);
+        if (!pHost->mProxyPassword.isEmpty() && !CredentialManager::storeCredential(pHost->getName(), "proxy", pHost->mProxyPassword)) {
+            //: Shown in the profile's main window when it is saved but its proxy password could not be, for example because there is nowhere to keep the key that encrypts it
+            pHost->postMessage(tr("[ WARN ]  - The proxy password could not be saved, so the next time this profile is loaded it will have whichever one was saved before, if any."));
         }
         host.append_attribute("mProxyPassword") = "";
     } else {
@@ -575,6 +604,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("blankLineBehaviour") = QMetaEnum::fromType<Host::BlankLineBehaviour>().valueToKey(static_cast<int>(pHost->mBlankLineBehaviour));
     host.append_attribute("NetworkPacketTimeout") = pHost->mTelnet.getPostingTimeout();
     host.append_attribute("ShowIDsInEditor") = pHost->showIdsInEditor() ? "yes" : "no";
+    host.append_attribute("FolderViewInEditor") = pHost->folderViewInEditor() ? "yes" : "no";
     if (const int mode = static_cast<int>(pHost->getControlCharacterMode()); mode) {
         // Don't bother to include the attribute if ignoreIterator is the default (zero)
         // value - and as ignoreIterator is an ASCII digit ignoreIterator only needs

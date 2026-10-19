@@ -17,9 +17,8 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-// Budget: 5 WILL/WONT ECHO toggles inside 5 seconds latch an anomaly that
-// refuses ECHO for good (cTelnet::checkEchoAnomalyPattern()). init() clears
-// the window, so each case may make at most 4 toggles of its own.
+// init() clears cTelnet's ECHO anomaly count, so no case's toggles raise
+// sysEchoAnomalyDetected in the next (cTelnet::checkEchoAnomalyPattern()).
 
 #include <QTemporaryDir>
 #include <QTimer>
@@ -208,6 +207,22 @@ private slots:
         QVERIFY2(!mpHost->passwordEntryWanted(), "WONT ECHO did not take the hidden-input box down");
         QCOMPARE(wanted.count(), 2);
         QCOMPARE(wanted.last().first().toBool(), false);
+    }
+
+    // A game that toggles ECHO quickly trips the anomaly detector, which must not be what keeps the box
+    // shut: refusing ECHO would leave the password typed into the command line in plain view
+    void test_aGameTogglingEchoQuicklyStillGetsTheBox()
+    {
+        for (int toggle = 0; toggle < 3; ++toggle) {
+            serverSaysEcho(TN_WILL);
+            serverSaysEcho(TN_WONT);
+        }
+        QVERIFY2(mpHost->mTelnet.mEchoAnomalyDetected, "the toggling did not trip the anomaly detector, so this case proves nothing");
+
+        serverSaysEcho(TN_WILL);
+        QVERIFY2(mpHost->passwordEntryWanted(), "a WILL ECHO after the anomaly was refused, leaving the password in plain view");
+        serverSaysEcho(TN_WONT);
+        QVERIFY2(!mpHost->passwordEntryWanted(), "a WONT ECHO after the anomaly did not take the box down");
     }
 
     void test_thePreferenceTurnsTheBoxOffAndOnMidPrompt()

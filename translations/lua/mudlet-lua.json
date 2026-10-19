@@ -73,7 +73,7 @@
   },
   "Mudlet.packageInstallPartial": {
     "message":"Package '%s' was installed, but not everything in it is working: %s",
-    "description":"Message after drag&drop of a package file onto Mudlet whose triggers or scripts have errors in them - the first %s is the file name, the second lists each part that is not working with its error, separated by \"; \""
+    "description":"Message after drag&drop of a package file onto Mudlet whose triggers or scripts have errors in them, or one of whose files did not load in full - the first %s is the file name, the second lists each part that is not working with its error, separated by \"; \""
   },
   "Mudlet.packageInstallFail": {
     "message":"Installing '%s' failed: %s",
@@ -85,7 +85,7 @@
   },
   "Mudlet.moduleInstallPartial": {
     "message":"Module '%s' was installed, but not everything in it is working: %s",
-    "description":"Message after drag&drop of a module file onto Mudlet whose triggers or scripts have errors in them - the first %s is the file name, the second lists each part that is not working with its error, separated by \"; \""
+    "description":"Message after drag&drop of a module file onto Mudlet whose triggers or scripts have errors in them, or one of whose files did not load in full - the first %s is the file name, the second lists each part that is not working with its error, separated by \"; \""
   },
   "Mudlet.moduleInstallFail": {
     "message":"Installing '%s' failed: %s",
@@ -94,6 +94,14 @@
   "Mudlet.packageDownloading": {
     "message":"Downloading package from %s.",
     "description": "Download package from Url for installation - %s is source url"
+  },
+  "Mudlet.packageDownloadRefused": {
+    "message":"Could not download package from %s: %s",
+    "description":"Warning when a package download from a URL could not even be started - the first %s is the source url, the second the reason"
+  },
+  "Mudlet.packageDownloadPending": {
+    "message":"Package '%s' is already being downloaded.",
+    "description":"Warning when a package is asked to be downloaded from a URL while an earlier download of it has not finished yet - %s is the file name"
   },
   "Mudlet.prefixOk": {
     "message":"[  OK  ]  - ",

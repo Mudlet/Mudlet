@@ -146,6 +146,16 @@ TCommandLine::UserEditScope::~UserEditScope()
     mLine.mUserEditInProgress = false;
 }
 
+void TCommandLine::restorePlayerTypedLine(const QString& text)
+{
+    {
+        const UserEditScope userEdit(*this);
+        setPlainText(text);
+    }
+    moveCursor(QTextCursor::End);
+    adjustHeight();
+}
+
 void TCommandLine::slot_contentsChange()
 {
     const QString text = toPlainText();
@@ -1357,18 +1367,15 @@ void TCommandLine::spellCheckWord(QTextCursor& c)
     }
 
     Hunhandle* systemDictionaryHandle = mpHost->spellChecker().systemHandle();
-    if (!systemDictionaryHandle) {
-        return;
-    }
 
     QTextCharFormat f;
     mSpellChecking = true;
     c.select(QTextCursor::WordUnderCursor);
     const QString spellCheckedWord = c.selectedText();
-    const bool wantSpellCheck = TBuffer::lengthInGraphemes(spellCheckedWord) >= mudlet::self()->mMinLengthForSpellCheck;
+    const bool wantSpellCheck = systemDictionaryHandle && TBuffer::lengthInGraphemes(spellCheckedWord) >= mudlet::self()->mMinLengthForSpellCheck;
     if (!wantSpellCheck) {
-        // We don't check when the word is too short, but may need to
-        // undo any prior underline, and we need to also reset the flag:
+        // We don't check when there is no dictionary or the word is too short,
+        // but may need to undo any prior underline, and we need to also reset the flag:
         f.setFontUnderline(false);
         c.setCharFormat(f);
         setTextCursor(c);

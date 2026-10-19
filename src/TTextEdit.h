@@ -67,6 +67,8 @@ public:
     ~TTextEdit();
     void paintEvent(QPaintEvent*) override;
     void contextMenuEvent(QContextMenuEvent* event) override;
+    // The console's own menu, without anything for a link at that position
+    void showContextMenu(const QPoint& globalPosition);
     void drawForeground(QPainter&, const QRect&);
     void showNewLines();
     void forceUpdate();
@@ -142,6 +144,7 @@ public:
     friend class FramePacingTest;
     friend class FrontendRefreshSeamTest;
     friend class MainConsoleSelectionTest;
+    friend class TextEditAccessibleInterfaceTest;
     friend class OpaqueConsolePaintTest;
     friend class ScrollLostOnPartialRepaintTest;
     friend class TTextEditBlinkTest;
@@ -229,6 +232,9 @@ private:
     inline void replaceControlCharacterWith_Picture(const uint, QStringView, const int, QStringView&, int&) const;
     inline void replaceControlCharacterWith_OEMFont(const uint, QStringView, const int, QStringView&, int&) const;
     int offsetForPosition(int line, int column) const;
+    int selectionLinesTrimmed() const;
+    int accessibleSelectionLength() const;
+    std::pair<int, int> accessibleSelection() const;
     bool hasBufferLine(int lineNumber) const;
     static int overflowRowsUsed(const QImage& image, const int fromRow, const QColor& background);
     TChar timeStampCharStyle() const;
@@ -274,6 +280,9 @@ private:
     mutable LineLayout mPreviousLineLayout;
     mutable LineLayout mCurrentLineLayout;
     mutable LineLayout mOverflowLineLayout;
+    // Owns the timestamp text the layouts' graphemes view; formatTimeStamp()
+    // keeps only its latest result, and the line text itself lives in TBuffer.
+    mutable std::vector<QString> mLaidOutTimeStamps;
     std::unique_ptr<TGlyphCache> mpGlyphCache;
     int mFontHeight;
     int mFontWidth;
@@ -303,6 +312,10 @@ private:
     QPoint mPA;
     // bottom-right point of the selection
     QPoint mPB;
+    // Equal to mPB while the selection includes the newline after mPB's line: an
+    // accessibility range ending there leaves mPB where a whole-line selection without
+    // the newline does. Meaningful only while it equals mPB; unHighlight() resets it to (-1, -1).
+    QPoint mPBTakingNewline{-1, -1};
     TBuffer* mpBuffer;
     // Needs to be a QPointer as is used in a couple of lambda functions:
     QPointer<TConsole> mpConsole;

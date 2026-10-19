@@ -746,6 +746,56 @@ private slots:
         QCOMPARE(data.mediaEnd(), TMediaData::MediaEndNotSet);
     }
 
+    // Only a volume of exactly 0 asks for a preload, so any other number, given as a number or as a
+    // string, is held to the 1 to 100 a player takes and then rounded; a string that is no number
+    // at all is no volume, and gets the default
+    void test_aFractionalGmcpVolumeIsRounded_data()
+    {
+        QTest::addColumn<QString>("volume");
+        QTest::addColumn<int>("expected");
+        QTest::newRow("50.6") << qsl("50.6") << 51;
+        QTest::newRow("0.4") << qsl("0.4") << 1;
+        QTest::newRow("-0.4") << qsl("-0.4") << 1;
+        QTest::newRow("100.4") << qsl("100.4") << 100;
+        QTest::newRow("150.7") << qsl("150.7") << 100;
+        QTest::newRow("string 50.6") << qsl("\"50.6\"") << 51;
+        QTest::newRow("string 0.4") << qsl("\"0.4\"") << 1;
+        QTest::newRow("unreadable string") << qsl("\"loud\"") << static_cast<int>(TMediaData::MediaVolumeDefault);
+        QTest::newRow("1e10") << qsl("1e10") << 100;
+        QTest::newRow("-1e10") << qsl("-1e10") << 1;
+        QTest::newRow("string 1e10") << qsl("\"1e10\"") << 100;
+    }
+
+    void test_aFractionalGmcpVolumeIsRounded()
+    {
+        SKIP_OR_FAIL_WITHOUT(mCannotStartReason);
+        QFETCH(QString, volume);
+        QFETCH(int, expected);
+
+        auto* media = startProfileAndGetMedia();
+        QVERIFY(media);
+        const QString fileName = writeClip(qsl("fractionalvolume.wav"), wavBytes(longClipMs));
+        QVERIFY(!fileName.isEmpty());
+
+        QString package = qsl("Client.Media.Play");
+        QString message = qsl(R"({"name": "%1", "type": "sound", "key": "qaFractionalVolume", "volume": %2})").arg(fileName, volume);
+        media->parseGMCP(package, message);
+
+        TMediaData criteria;
+        criteria.setMediaProtocol(TMediaData::MediaProtocolGMCP);
+        criteria.setMediaType(TMediaData::MediaTypeSound);
+        criteria.setMediaKey(qsl("qaFractionalVolume"));
+        QList<TMediaData> started;
+        QVERIFY2(QTest::qWaitFor(
+                         [&]() {
+                             started = media->playingMedia(criteria);
+                             return !started.isEmpty();
+                         },
+                         QDeadlineTimer(10s)),
+                 "the Client.Media.Play request never started playing");
+        QCOMPARE(started.at(0).mediaVolume(), expected);
+    }
+
     void cleanup()
     {
         delete mpServer;

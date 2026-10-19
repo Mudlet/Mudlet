@@ -22,12 +22,14 @@
 
 #include <QColor>
 #include <QFont>
+#include <QList>
 #include <QPointer>
 #include <QRect>
 #include <QSet>
 #include <QSize>
 #include <QString>
 
+#include <functional>
 #include <optional>
 
 class Host;
@@ -47,6 +49,27 @@ struct TLabelModel
     TLabelModel(const TLabelModel&) = delete;
     TLabelModel& operator=(const TLabelModel&) = delete;
 
+    // The name a screen reader hears: the one a script gave it, else its text, else its tooltip
+    QString effectiveAccessibleName() const;
+    bool namedByToolTip() const;
+    // Whether a screen reader is told it is a button: as a script said, else when it has a click or release
+    // callback - never when the mouse passes through it
+    bool actsAsButton() const;
+    // What it shows, which a screen reader is told unless it is a button. Kept by the view, which alone knows.
+    enum class ShownContent { Text, Graphic, Animation };
+    ShownContent mShownContent = ShownContent::Text;
+    void setAccessibleName(const QString& name);
+    void setAccessibleButton(std::optional<bool> button);
+    void setClickThrough(bool clickThrough);
+    // The view's copies of what the label shows, which name it unless a script named it
+    void setText(const QString& text);
+    void setToolTip(const QString& toolTip);
+
+    enum class AccessibilityChange { Name, Role };
+    // Set by the widget, if there is one, to tell assistive technology of a change made with or without it
+    std::function<void(AccessibilityChange)> mAccessibilityChanged;
+    void accessibilityChanged(AccessibilityChange change) const;
+
     // Whether the SVG renderer is worth trying on a file, judged by its first bytes.
     static bool svgCandidate(const QString& path);
     static bool loadSvg(QSvgRenderer& renderer, const QString& path);
@@ -65,10 +88,15 @@ struct TLabelModel
     // What TLabel::setBackgroundColor() restyles a label with: the sheet with its background-color
     // declarations given the colour, or the colour's appended.
     static QString styleSheetWithBackgroundColor(const QString& styleSheet, const QColor& color);
+    // What TLabel::resetBackgroundImage() restyles a label with: the sheet without its background-image
+    // declarations, but for those inside a {...} rule, such as a :hover image.
+    static QString styleSheetWithoutBackgroundImage(const QString& styleSheet);
     // Whether the text has an anchor tag, which makes the label's links clickable
     static bool containsAnchorTag(const QString& text);
     // What TLabel::setText() shows for the text: each anchor given the link style as an inline style
-    QString linkStyledText(const QString& text) const;
+    QString linkStyledText(const QString& text);
+    // What the label shows for its text once the link style or the visited links change
+    QString restyledText();
 
     // A QPointer because Host and view are torn down in either order: quitting
     // destroys every Host before the labels' deferred deletes run.
@@ -102,12 +130,32 @@ struct TLabelModel
     // The widget's own styleSheet(), toolTip() and font(), kept current by the view.
     QString mStyleSheet;
     QString mToolTip;
+    // What a script named the label for screen readers; empty means its text is used, else its tooltip
+    QString mAccessibleName;
+    // Set by a script whose label's callbacks are not a button's, such as a drag handle; empty means automatic
+    std::optional<bool> mAccessibleButton;
+    bool mClickThrough = false;
     QFont mFont;
     // QLabel::text(), which a pixmap or movie empties, written by the view after each change.
     QString mText;
 
 private:
     void releaseFunc(const int existingFunction, const int newFunction);
+    QString withoutInjectedLinkStyles(const QString& text) const;
+    QString styleLinks(const QString& text);
+
+    struct StyledAnchor
+    {
+        QString styled;
+        QString original;
+    };
+
+    // the text the last styling pass started from, with the anchor tags it rewrote put back
+    QString mUnstyledText;
+    // each anchor tag the last styling pass wrote and the one it replaced, in the order of the text
+    QList<StyledAnchor> mStyledAnchors;
+    // what the last styling pass gave the view to show
+    QString mStyledText;
 };
 
 #endif // MUDLET_TLABELMODEL_H

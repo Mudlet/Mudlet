@@ -238,9 +238,11 @@ rsync -avR "${GITHUB_WORKSPACE_UNIX_PATH}"/src/mudlet-lua/./* ./mudlet-lua/
 echo ""
 
 echo "Copying Lua code formatter Lua files in..."
-# As written it copies every file but it should be polished up to skip unneeded
-# ones:
-rsync -avR "${GITHUB_WORKSPACE_UNIX_PATH}"/3rdparty/lcf/./* ./lcf/
+# The same set as the lcf install() rule in src/CMakeLists.txt; the first
+# matching filter wins, and -m drops directories left with nothing in them:
+rsync -avR -m --exclude='.*' --include='*/' --include='*.lua' \
+    --include='LICENSE*' --include='COPYING*' --exclude='*' \
+    "${GITHUB_WORKSPACE_UNIX_PATH}"/3rdparty/lcf/./* ./lcf/
 echo ""
 
 echo "Copying Lua translation files in..."

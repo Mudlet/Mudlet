@@ -72,6 +72,8 @@ public:
     // from an empty or wholly selected line. A recalled, left-selected or
     // script-written command is not.
     bool playerTypedLine() const { return mPlayerTypedLine; }
+    // Puts back a line the player typed, still counted as theirs
+    void restorePlayerTypedLine(const QString& text);
     // So the hidden-input box can make the same claims
     bool claimsShortcutOverride(const QKeyEvent*) const;
 

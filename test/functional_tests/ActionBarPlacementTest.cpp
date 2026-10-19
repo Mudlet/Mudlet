@@ -27,6 +27,7 @@
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "ActionUnit.h"
+#include "EditorMoveItemCommand.h"
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
 #include "TAction.h"
@@ -361,6 +362,122 @@ private slots:
         QVERIFY(toolBar);
         QVERIFY(!toolBar->isFloating());
         QCOMPARE(mudlet::self()->dockWidgetArea(toolBar), Qt::NoDockWidgetArea);
+    }
+
+    // It is drawn as a menu on its new parent's bar from then on, so its own
+    // bar must not stay where it was
+    void test_aButtonBarMovedIntoAnotherBarIsTakenOffTheWindow()
+    {
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        auto* host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        auto* console = host->mainConsoleView();
+        QVERIFY(console);
+
+        auto* moved = makeRootBar(host, qsl("placementGhost"), 0);
+        auto* newParent = makeRootBar(host, qsl("placementGhostParent"), 0);
+        host->getActionUnit()->updateAllToolbars();
+        QPointer<TEasyButtonBar> bar = console->actionEasyButtonBar(moved);
+        QVERIFY(bar && !bar->isHidden());
+
+        // As the editor's drop does
+        host->getActionUnit()->reParentAction(moved->getID(), 0, newParent->getID(), -1, -1);
+        host->getActionUnit()->updateAllToolbars();
+
+        QVERIFY2(!bar || bar->isHidden(), "the moved bar's old bar is still showing");
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+        QVERIFY2(!bar, "the moved bar's old bar was kept");
+        QVERIFY(console->actionEasyButtonBar(newParent) && !console->actionEasyButtonBar(newParent)->isHidden());
+    }
+
+    void test_undoingAMoveIntoAnotherBarBringsTheBarBack()
+    {
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        auto* host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        auto* console = host->mainConsoleView();
+        QVERIFY(console);
+
+        auto* moved = makeRootBar(host, qsl("placementUndoneMove"), 0);
+        auto* newParent = makeRootBar(host, qsl("placementUndoneMoveParent"), 0);
+        host->getActionUnit()->updateAllToolbars();
+        QVERIFY(console->actionEasyButtonBar(moved) && !console->actionEasyButtonBar(moved)->isHidden());
+
+        host->getActionUnit()->reParentAction(moved->getID(), 0, newParent->getID(), -1, -1);
+        host->getActionUnit()->updateAllToolbars();
+        EditorMoveItemCommand move(EditorViewType::cmActionView, moved->getID(), 0, newParent->getID(), 0, 0, moved->getName(), host);
+        // The first redo() is QUndoStack::push()'s, made after the drop has already moved it
+        move.redo();
+        move.undo();
+
+        QVERIFY(!moved->getParent());
+        TEasyButtonBar* bar = console->actionEasyButtonBar(moved);
+        QVERIFY2(bar && !bar->isHidden(), "the bar moved back out by undo is not showing");
+        QVERIFY(laidOutIn(console->mpTopToolBar, bar));
+    }
+
+    void test_aButtonBarMovedOutOfAPackageIntoAnotherBarIsTakenOffTheWindow()
+    {
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        auto* host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        auto* console = host->mainConsoleView();
+        QVERIFY(console);
+
+        auto* package = makeRootBar(host, qsl("placementGhostPackage"), 0, false);
+        package->mPackageName = qsl("placementGhostPackage");
+        auto* moved = new TAction(package, host);
+        moved->setName(qsl("placementPackagedGhost"));
+        moved->setIsFolder(true);
+        moved->setIsActive(true);
+        host->getActionUnit()->registerAction(moved);
+        auto* button = new TAction(moved, host);
+        button->setName(qsl("placementPackagedGhost button"));
+        button->setIsActive(true);
+        host->getActionUnit()->registerAction(button);
+        auto* newParent = makeRootBar(host, qsl("placementPackagedGhostParent"), 0);
+        host->getActionUnit()->updateAllToolbars();
+        QPointer<TEasyButtonBar> bar = console->actionEasyButtonBar(moved);
+        QVERIFY2(bar && !bar->isHidden(), "a bar directly in a package has to be showing first, or moving it proves nothing");
+        QVERIFY(laidOutIn(console->mpTopToolBar, bar));
+
+        host->getActionUnit()->reParentAction(moved->getID(), package->getID(), newParent->getID(), -1, -1);
+        host->getActionUnit()->updateAllToolbars();
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+
+        QVERIFY2(!bar, "the bar it had in the package was kept");
+        QVERIFY(console->actionEasyButtonBar(newParent) && !console->actionEasyButtonBar(newParent)->isHidden());
+    }
+
+    void test_aPackageMovedIntoABarTakesItsBarsOffTheWindow()
+    {
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        auto* host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        auto* console = host->mainConsoleView();
+        QVERIFY(console);
+
+        auto* package = makeRootBar(host, qsl("placementMovedPackage"), 0, false);
+        package->mPackageName = qsl("placementMovedPackage");
+        auto* packaged = new TAction(package, host);
+        packaged->setName(qsl("placementMovedPackageBar"));
+        packaged->setIsFolder(true);
+        packaged->setIsActive(true);
+        host->getActionUnit()->registerAction(packaged);
+        auto* button = new TAction(packaged, host);
+        button->setName(qsl("placementMovedPackageBar button"));
+        button->setIsActive(true);
+        host->getActionUnit()->registerAction(button);
+        auto* newParent = makeRootBar(host, qsl("placementMovedPackageParent"), 0);
+        host->getActionUnit()->updateAllToolbars();
+        QPointer<TEasyButtonBar> bar = console->actionEasyButtonBar(packaged);
+        QVERIFY2(bar && !bar->isHidden(), "a bar directly in a package has to be showing first, or moving the package proves nothing");
+
+        host->getActionUnit()->reParentAction(package->getID(), 0, newParent->getID(), -1, -1);
+        host->getActionUnit()->updateAllToolbars();
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+
+        QVERIFY2(!bar, "the bar the package's toolbar had was kept");
     }
 
     void test_aRemovedButtonBarLeavesItsStrip()
@@ -878,6 +995,76 @@ private slots:
     void test_restylingAMenuToTheStylesheetTypedInTheEditorRestylesIt() { restyleAMenuToTheStylesheetTypedInTheEditorOn(0); }
 
     void test_restylingAMenuOnAFloatingToolbarToTheStylesheetTypedInTheEditorRestylesIt() { restyleAMenuToTheStylesheetTypedInTheEditorOn(4); }
+
+    // Its settings are its own, not those of the package it sits in
+    void test_aButtonBarInAPackageTakesItsOwnStyleSheetAndLayout()
+    {
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        auto* host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        auto* console = host->mainConsoleView();
+        QVERIFY(console);
+
+        auto* package = makeRootBar(host, qsl("placementStyledPackage"), 0, false);
+        package->mPackageName = qsl("placementStyledPackage");
+        auto* packaged = new TAction(package, host);
+        packaged->setName(qsl("placementStyledBar"));
+        packaged->setIsFolder(true);
+        packaged->setIsActive(true);
+        packaged->css = qsl("background-color: red;");
+        packaged->mUseCustomLayout = true;
+        packaged->setSizeX(200);
+        packaged->setSizeY(40);
+        host->getActionUnit()->registerAction(packaged);
+        auto* button = new TAction(packaged, host);
+        button->setName(qsl("placementStyledBar button"));
+        button->setIsActive(true);
+        host->getActionUnit()->registerAction(button);
+        host->getActionUnit()->updateAllToolbars();
+        QPointer<TEasyButtonBar> bar = console->actionEasyButtonBar(packaged);
+        QVERIFY2(bar, "a bar directly in a package should have been given a button bar");
+        QCOMPARE(bar->styleSheet(), qsl("background-color: red;"));
+        auto* buttonArea = bar->findChild<QWidget*>(qsl("easyButtonBar_Widget_%1_placementStyledBar").arg(host->getName()));
+        QVERIFY(buttonArea);
+        QCOMPARE(buttonArea->minimumSize(), QSize(200, 40));
+
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("setButtonStyleSheet('placementStyledBar', 'background-color: blue;')")));
+        QCOMPARE(console->actionEasyButtonBar(packaged), bar.data());
+        QCOMPARE(bar->styleSheet(), qsl("background-color: blue;"));
+    }
+
+    // A button bar takes its size from its own action, so a stray one made
+    // for a floating toolbar in a package would widen the top strip
+    void test_aFloatingToolbarInAPackageIsGivenNoButtonBar()
+    {
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        auto* host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        auto* console = host->mainConsoleView();
+        QVERIFY(console);
+
+        auto* package = makeRootBar(host, qsl("placementFloatingPackage"), 0, false);
+        package->mPackageName = qsl("placementFloatingPackage");
+        auto* floating = new TAction(package, host);
+        floating->setName(qsl("placementFloatingInPackage"));
+        floating->setIsFolder(true);
+        floating->setIsActive(true);
+        floating->mLocation = 4;
+        floating->mUseCustomLayout = true;
+        floating->setSizeX(200);
+        floating->setSizeY(80);
+        host->getActionUnit()->registerAction(floating);
+        auto* button = new TAction(floating, host);
+        button->setName(qsl("placementFloatingInPackage button"));
+        button->setIsActive(true);
+        host->getActionUnit()->registerAction(button);
+        host->getActionUnit()->updateAllToolbars();
+        host->getActionUnit()->updateAllToolbars();
+
+        QVERIFY(!console->hasEasyButtonBar(floating));
+        const auto strays = console->findChildren<TEasyButtonBar*>(qsl("easyButtonBar_%1_placementFloatingInPackage").arg(host->getName()));
+        QCOMPARE(strays.size(), 0);
+    }
 
     void cleanup()
     {

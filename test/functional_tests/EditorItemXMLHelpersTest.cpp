@@ -423,6 +423,22 @@ private slots:
         QVERIFY2(exportScriptToXML(script) == before, qPrintable(readable(exportScriptToXML(script)) + qsl("\n---- expected ----\n") + readable(before)));
     }
 
+    void test_scriptCarriageReturnSurvivesItsSnapshot()
+    {
+        const QString body = qsl("echo(\"a\")\recho(\"b\")\r\necho(\"c\")");
+        TScript* script = newScript(qsl("eixh script carriage return"));
+        script->setScript(body);
+        const QString before = exportScriptToXML(script);
+        script->setScript(qsl("-- edited"));
+
+        QVERIFY(updateScriptFromXML(script, before));
+        QCOMPARE(script->getScript().toUtf8().toHex(' '), body.toUtf8().toHex(' '));
+
+        TScript* restored = importScriptFromXML(before, nullptr, mpHost, 0);
+        QVERIFY(restored);
+        QCOMPARE(restored->getScript().toUtf8().toHex(' '), body.toUtf8().toHex(' '));
+    }
+
     void test_keyGroupIsRecreatedFromItsSnapshot()
     {
         TKey* group = newKey(qsl("eixh key group"));
