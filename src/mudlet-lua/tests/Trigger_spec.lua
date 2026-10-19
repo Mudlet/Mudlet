@@ -3860,6 +3860,42 @@ describe("Trigger processing", function()
             end)
         end)
 
+        -- The command is sent through the alias pass before the script runs
+        it("keeps its own matches when its command expands into an alias", function()
+            withTrigger("command and script", function(cleanup)
+                local aliasId = tempAlias([[^tkcmdscript inner (\w+)$]], function()
+                    _G.TriggerKindsSpec.commandScriptInner = {command = command, match = matches[2]}
+                end)
+                cleanup(function() killAlias(aliasId) end)
+
+                feedTriggers("tkcmdscript goblin\n")
+
+                assert.are.same({command = "tkcmdscript inner deeper", match = "deeper"}, _G.TriggerKindsSpec.commandScriptInner,
+                                "the trigger's command should have reached the alias")
+                local seen = _G.TriggerKindsSpec.commandScript or {}
+                assert.are.equal("tkcmdscript goblin", seen.fullMatch, "matches[1] was emptied by the trigger's own command")
+                assert.are.equal("goblin", seen.match, "the trigger's capture was emptied by its own command")
+                assert.are.equal("tkcmdscript inner deeper", seen.command, "the trigger's script should see the last command expanded")
+            end)
+        end)
+
+        it("keeps its capture positions right when its command's alias edits the line", function()
+            withTrigger("command edits line", function(cleanup)
+                local aliasId = tempAlias([[^tkcmdedit mark$]], function()
+                    moveCursor(0, getLineNumber())
+                    insertText("[!] ")
+                end)
+                cleanup(function() killAlias(aliasId) end)
+
+                feedTriggers("tkcmdedit goblin\n")
+
+                local seen = _G.TriggerKindsSpec.commandEdit or {}
+                assert.are.equal("[!] tkcmdedit goblin", seen.line, "the alias should have edited the trigger's line")
+                assert.are.equal(1, seen.selected, "the trigger's capture should still be selectable")
+                assert.are.equal("goblin", seen.selection, "the alias's insert should have moved the trigger's capture along")
+            end)
+        end)
+
         -- A filter ("only pass matches") parent hands its children the text it
         -- matched instead of the line, whatever kind of pattern did the matching.
         -- Each child below matches ^(.+)$ and records what it was given.
