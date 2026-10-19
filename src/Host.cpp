@@ -6619,6 +6619,20 @@ bool Host::setLabelClickCallback(const QString& name, const int func)
     return false;
 }
 
+bool Host::setLabelLiveRegion(const QString& name, TLabelLiveRegion liveRegion)
+{
+    if (!hasConsoleView()) {
+        return false;
+    }
+
+    auto* pModel = mWindowRegistry.labelModel(name);
+    if (pModel) {
+        pModel->setLiveRegion(liveRegion);
+        return true;
+    }
+    return false;
+}
+
 bool Host::setLabelAccessibleName(const QString& name, const QString& accessibleName)
 {
     if (!hasConsoleView()) {
@@ -7111,6 +7125,17 @@ std::optional<QString> Host::labelAccessibleName(const QString& name) const
     }
     if (const TLabelModel* pLabel = mWindowRegistry.labelModel(name)) {
         return pLabel->effectiveAccessibleName();
+    }
+    return {};
+}
+
+std::optional<TLabelLiveRegion> Host::labelLiveRegion(const QString& name) const
+{
+    if (!hasConsoleView()) {
+        return {};
+    }
+    if (const TLabelModel* pLabel = mWindowRegistry.labelModel(name)) {
+        return pLabel->mLiveRegion;
     }
     return {};
 }

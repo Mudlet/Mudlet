@@ -890,6 +890,19 @@ function Geyser.Label:setAccessibleRole(role)
   return ok, err
 end
 
+--- Sets whether a screen reader announces the label's new text when it changes, for a label
+-- showing something the player should hear about, such as a status or an alert. Only heard
+-- with the profile's accessibleLabels setting on; text that hasn't changed is not repeated.
+-- @param mode "polite" waits for the screen reader to finish, "assertive" interrupts it, "off" stops announcing
+-- @return true, or nil and why the label refused it
+function Geyser.Label:setLiveRegion(mode)
+  local ok, err = setLabelLiveRegion(self.name, mode)
+  if ok then
+    self.liveRegion = mode
+  end
+  return ok, err
+end
+
 --- Resets the tooltip of the label
 function Geyser.Label:resetToolTip()
   resetLabelToolTip(self.name)
@@ -1407,8 +1420,8 @@ function Geyser.Label:new (cons, container)
 
   -- The constraints were copied onto the label already, so each is cleared before its setter
   -- applies it, or a value the label refused would stay on the object
-  local accessibleName, accessibleRole = me.accessibleName, me.accessibleRole
-  me.accessibleName, me.accessibleRole = nil, nil
+  local accessibleName, accessibleRole, liveRegion = me.accessibleName, me.accessibleRole, me.liveRegion
+  me.accessibleName, me.accessibleRole, me.liveRegion = nil, nil, nil
   if accessibleName then
     local ok, err = me:setAccessibleName(accessibleName)
     if not ok then
@@ -1420,6 +1433,19 @@ function Geyser.Label:new (cons, container)
     local ok, err = me:setAccessibleRole(accessibleRole)
     if not ok then
       debugc(string.format("Geyser.Label:new(): accessibleRole refused for '%s': %s", me.name, tostring(err)))
+    end
+  end
+
+  if liveRegion then
+    -- setLabelLiveRegion raises on a non-string, which would leave this label half built
+    local ok, err
+    if type(liveRegion) == "string" then
+      ok, err = me:setLiveRegion(liveRegion)
+    else
+      err = string.format("liveRegion must be a string, got %s", type(liveRegion))
+    end
+    if not ok then
+      debugc(string.format("Geyser.Label:new(): liveRegion refused for '%s': %s", me.name, tostring(err)))
     end
   end
 

@@ -136,10 +136,16 @@ void TLabel::showLinkStyledText(const QString& text)
     updateKeyboardAccess();
 
     stopMovie();
+    // Rendering the text to plain is not free, and a gauge is redrawn on every prompt
+    const bool announcing = announcesTextChanges();
+    const QString spokenBefore = announcing ? mpModel->spokenText() : QString();
     QLabel::setText(text);
     syncTextAnnouncedByQt();
     // Text over an SVG hides it, and new text replaces a raster or movie
     imageMayHaveChanged();
+    if (announcing) {
+        announceTextChange(spokenBefore);
+    }
 }
 
 void TLabel::press()
@@ -221,6 +227,24 @@ void TLabel::updateKeyboardAccess()
         }
     }
     update();
+}
+
+bool TLabel::announcesTextChanges() const
+{
+    // Hidden, as on a tab not showing or in a background profile, it would talk over the game in view
+    return mpHost && mpHost->mAccessibleLabels && mpModel->mLiveRegion != TLabelLiveRegion::Off && isVisible() && QAccessible::isActive();
+}
+
+void TLabel::announceTextChange(const QString& spokenBefore)
+{
+    // A label redrawn with what it already said, as a gauge is on every prompt, would otherwise chatter
+    const QString spoken = mpModel->spokenText();
+    if (spoken.isEmpty() || spoken == spokenBefore) {
+        return;
+    }
+    QAccessibleAnnouncementEvent event(this, spoken);
+    event.setPoliteness(mpModel->mLiveRegion == TLabelLiveRegion::Assertive ? QAccessible::AnnouncementPoliteness::Assertive : QAccessible::AnnouncementPoliteness::Polite);
+    QAccessible::updateAccessibility(&event);
 }
 
 void TLabel::keyPressEvent(QKeyEvent* event)

@@ -4814,10 +4814,10 @@ you can use it but there could be issues with aligning columns of text</string>
           <item row="8" column="0" colspan="2">
            <widget class="QCheckBox" name="checkBox_accessibleLabels">
             <property name="toolTip">
-             <string>&lt;p&gt;Lets you reach the buttons that scripts and packages make out of labels with the Tab key, and press them with Space or Enter. A focused button is outlined. This changes the Tab order in packages, so it is off unless you turn it on.&lt;/p&gt;</string>
+             <string>&lt;p&gt;Lets you reach the buttons that scripts and packages make out of labels with the Tab key, and press them with Space or Enter. A focused button is outlined. This changes the Tab order in packages, so it is off unless you turn it on.&lt;/p&gt;&lt;p&gt;It also lets a screen reader read out the new text of labels that scripts mark as live, such as a health gauge.&lt;/p&gt;</string>
             </property>
             <property name="accessibleDescription">
-             <string>When checked, buttons that scripts and packages make out of labels can be reached with the Tab key and pressed with Space or Enter, and a focused one is outlined.</string>
+             <string>When checked, buttons that scripts and packages make out of labels can be reached with the Tab key and pressed with Space or Enter, and a focused one is outlined. A screen reader also reads out the new text of labels that scripts mark as live.</string>
             </property>
             <property name="text">
              <string>Make script buttons reachable with the keyboard</string>

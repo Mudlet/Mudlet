@@ -151,6 +151,8 @@ private:
     void reapplyLinkStyle();
     // After every setTextInteractionFlags(), which resets the focus policy
     void updateKeyboardAccess();
+    bool announcesTextChanges() const;
+    void announceTextChange(const QString& spokenBefore);
 
     QColor& mBackgroundColor;
     QPixmap mSvgPixmapCache;

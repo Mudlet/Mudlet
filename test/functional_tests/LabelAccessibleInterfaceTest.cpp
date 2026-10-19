@@ -75,12 +75,18 @@ private:
     bool luaHolds(const QString& condition) const { return runLua(qsl("assert(%1)").arg(condition)); }
 
     inline static QList<QAccessible::Event> smEvents;
+    inline static QList<std::pair<QString, QAccessible::AnnouncementPoliteness>> smAnnouncements;
     inline static QObject* smWatched = nullptr;
 
     static void recordEvent(QAccessibleEvent* event)
     {
-        if (event->object() == smWatched) {
-            smEvents.append(event->type());
+        if (event->object() != smWatched) {
+            return;
+        }
+        smEvents.append(event->type());
+        if (event->type() == QAccessible::Announcement) {
+            const auto* announcement = static_cast<QAccessibleAnnouncementEvent*>(event);
+            smAnnouncements.append({announcement->message(), announcement->politeness()});
         }
     }
 
@@ -88,6 +94,7 @@ private:
     void listenTo(QObject* object)
     {
         smEvents.clear();
+        smAnnouncements.clear();
         smWatched = object;
         QAccessible::installUpdateHandler(recordEvent);
         QAccessible::setActive(true);
@@ -189,7 +196,7 @@ private slots:
     {
         QVERIFY(runLua(
                 qsl("setConfig('accessibleLabels', false); setLabelClickCallback('%1', nil); setLabelReleaseCallback('%1', nil); setLabelAccessibleName('%1', ''); setLabelAccessibleRole('%1', ''); "
-                    "disableClickthrough('%1'); resetBackgroundImage('%1'); resetLabelToolTip('%1'); "
+                    "setLabelLiveRegion('%1', 'off'); disableClickthrough('%1'); resetBackgroundImage('%1'); resetLabelToolTip('%1'); "
                     "echo('%1', 'plain'); accessibleLabelClicks = nil; accessibleLabelReleased = nil; accessibleLinkHit = nil")
                         .arg(mLabelName)));
     }
@@ -903,6 +910,74 @@ private slots:
         smEvents.clear();
         QVERIFY(runLua(qsl("echo('%1', 'South')").arg(mLabelName)));
         QCOMPARE(smEvents.count(QAccessible::NameChanged), 1);
+    }
+
+    void test_aLiveLabelAnnouncesItsNewText()
+    {
+        listenTo(label());
+        auto restore = qScopeGuard([this]() {
+            stopListening();
+        });
+        QVERIFY(runLua(qsl("setConfig('accessibleLabels', true); assert(setLabelLiveRegion('%1', 'polite'))").arg(mLabelName)));
+
+        QVERIFY(runLua(qsl("echo('%1', '<b>HP</b> 50')").arg(mLabelName)));
+        QCOMPARE(smAnnouncements.size(), 1);
+        QCOMPARE(smAnnouncements.at(0).first, qsl("HP 50"));
+        QCOMPARE(smAnnouncements.at(0).second, QAccessible::AnnouncementPoliteness::Polite);
+
+        // a gauge redrawn every prompt with the same value
+        QVERIFY(runLua(qsl("echo('%1', 'HP 50')").arg(mLabelName)));
+        QCOMPARE(smAnnouncements.size(), 1);
+
+        QVERIFY(runLua(qsl("setLabelLiveRegion('%1', 'assertive'); echo('%1', 'You are bleeding')").arg(mLabelName)));
+        QCOMPARE(smAnnouncements.size(), 2);
+        QCOMPARE(smAnnouncements.at(1).second, QAccessible::AnnouncementPoliteness::Assertive);
+
+        QVERIFY(runLua(qsl("echo('%1', '')").arg(mLabelName)));
+        QCOMPARE(smAnnouncements.size(), 2);
+    }
+
+    void test_aNamedLiveLabelAnnouncesItsText()
+    {
+        listenTo(label());
+        auto restore = qScopeGuard([this]() {
+            stopListening();
+        });
+        QVERIFY(runLua(qsl("setConfig('accessibleLabels', true); setLabelAccessibleName('%1', 'Health'); assert(setLabelLiveRegion('%1', 'polite'))").arg(mLabelName)));
+
+        QVERIFY(runLua(qsl("echo('%1', 'HP 50')").arg(mLabelName)));
+        QVERIFY(runLua(qsl("echo('%1', 'HP 40')").arg(mLabelName)));
+        QCOMPARE(smAnnouncements.size(), 2);
+        QCOMPARE(smAnnouncements.at(0).first, qsl("HP 50"));
+        QCOMPARE(smAnnouncements.at(1).first, qsl("HP 40"));
+    }
+
+    void test_aHiddenLiveLabelIsQuiet()
+    {
+        listenTo(label());
+        auto restore = qScopeGuard([this]() {
+            stopListening();
+            runLua(qsl("showWindow('%1')").arg(mLabelName));
+        });
+        QVERIFY(runLua(qsl("setConfig('accessibleLabels', true); assert(setLabelLiveRegion('%1', 'polite')); hideWindow('%1')").arg(mLabelName)));
+
+        QVERIFY(runLua(qsl("echo('%1', 'HP 50')").arg(mLabelName)));
+        QCOMPARE(smAnnouncements.size(), 0);
+
+        QVERIFY(runLua(qsl("showWindow('%1'); echo('%1', 'HP 40')").arg(mLabelName)));
+        QCOMPARE(smAnnouncements.size(), 1);
+    }
+
+    void test_aLabelIsQuietUnlessLiveWithAccessibleLabelsOn()
+    {
+        listenTo(label());
+        auto restore = qScopeGuard([this]() {
+            stopListening();
+        });
+
+        QVERIFY(runLua(qsl("setConfig('accessibleLabels', true); echo('%1', 'not live')").arg(mLabelName)));
+        QVERIFY(runLua(qsl("setConfig('accessibleLabels', false); setLabelLiveRegion('%1', 'polite'); echo('%1', 'setting off')").arg(mLabelName)));
+        QCOMPARE(smAnnouncements.size(), 0);
     }
 
     void test_aLabelThatDeletesItselfWhenPressedIsLeftAlone()
