@@ -94,6 +94,7 @@ set(mudlet_SRCS
     TAreaLodExitIndex.cpp
     TAreaSpanIndex.cpp
     TAreaZLevelIndex.cpp
+    TAudioMixer.cpp
     TBuffer.cpp
     TConsoleModel.cpp
     TDebug.cpp
@@ -124,6 +125,7 @@ set(mudlet_SRCS
     TMap.cpp
     TMapLabel.cpp
     TMedia.cpp
+    TMediaVoice.cpp
     TMediaPlaylist.cpp
     TMxpBRTagHandler.cpp
     TMxpColorTagHandler.cpp
@@ -178,6 +180,7 @@ set(mudlet_SRCS
 # Every .cpp source file that needs Qt Widgets goes here instead, in mudlet_app, kept
 # in alphabetical order (case-insensitive).
 set(mudlet_app_SRCS
+    ../3rdparty/qt-tags-widget/src/qtagedit.cpp
     CustomLineDrawContextMenuHandler.cpp
     CustomLineDrawHandler.cpp
     CustomLineEditContextMenuHandler.cpp
@@ -394,6 +397,7 @@ set(mudlet_HDRS
     TAreaSpanIndex.h
     TAreaZLevelIndex.h
     TAstar.h
+    TAudioMixer.h
     TBuffer.h
     TConsoleFrontend.h
     TConsoleModel.h
@@ -423,6 +427,7 @@ set(mudlet_HDRS
     TMapViewsFrontend.h
     TMatchState.h
     TMedia.h
+    TMediaVoice.h
     TMediaData.h
     TMediaPlaylist.h
     TMxpBRTagHandler.h
@@ -488,6 +493,7 @@ set(mudlet_HDRS
 # Every .h header file that needs Qt Widgets goes here instead, in mudlet_app, kept
 # in alphabetical order (case-insensitive).
 set(mudlet_app_HDRS
+    ../3rdparty/qt-tags-widget/include/QTagEdit/qtagedit.hpp
     CustomLineDrawContextMenuHandler.h
     CustomLineDrawHandler.h
     CustomLineEditContextMenuHandler.h
@@ -1018,9 +1024,13 @@ target_include_directories(${LIB_MUDLET_APP_TARGET} INTERFACE
 # would otherwise be found in the system Qt rather than beside Qt6Gui.
 target_link_libraries(${LIB_MUDLET_APP_TARGET} PUBLIC
     edbee-lib
-    QTagEdit
     ${QT_APP_LIBS}
     ${LIB_MUDLET_TARGET})
+
+# qt-tags-widget is listed in mudlet_app_SRCS/HDRS, not add_subdirectory()'d, as its own
+# project has install() rules; a file upstream adds or renames has to be listed there too.
+set_property(SOURCE ../3rdparty/qt-tags-widget/src/qtagedit.cpp APPEND PROPERTY
+  INCLUDE_DIRECTORIES ${CMAKE_CURRENT_SOURCE_DIR}/../3rdparty/qt-tags-widget/include/QTagEdit)
 
 # main() stays out of the libraries: a test that links them brings its own, and
 # the linker can pull main.cpp's object in for any inline function it defines.
@@ -1200,8 +1210,28 @@ if(UNIX AND NOT APPLE)
   install(
     DIRECTORY "../3rdparty/lcf"
     DESTINATION "share/mudlet/lua"
-    PATTERN ".git" EXCLUDE PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ
-                                       WORLD_READ)
+    FILES_MATCHING
+    PATTERN "*.lua" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
+    PATTERN "LICENSE*" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
+    PATTERN "COPYING*" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
+    PATTERN ".*" EXCLUDE)
+  # FILES_MATCHING still creates every directory it walks, so a directory holding no Lua would ship
+  # empty; EXCLUDE_EMPTY_DIRECTORIES would do this but needs CMake 3.31
+  install(
+    CODE [[
+    file(GLOB_RECURSE lcfEntries LIST_DIRECTORIES true
+         "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/share/mudlet/lua/lcf/*")
+    # deepest first, so a parent left empty by removing its children goes too
+    list(SORT lcfEntries ORDER DESCENDING)
+    foreach(lcfEntry IN LISTS lcfEntries)
+      if(IS_DIRECTORY "${lcfEntry}")
+        file(GLOB lcfChildren "${lcfEntry}/*")
+        if(NOT lcfChildren)
+          file(REMOVE_RECURSE "${lcfEntry}")
+        endif()
+      endif()
+    endforeach()
+  ]])
 
   install(
     FILES "../mudlet.desktop"

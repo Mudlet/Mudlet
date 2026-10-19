@@ -1,0 +1,110 @@
+#ifndef MUDLET_TMEDIAVOICE_H
+#define MUDLET_TMEDIAVOICE_H
+
+/***************************************************************************
+ *   Copyright (C) 2026 by Mike Conley - mike.conley@stickmud.com          *
+ *                                                                         *
+ *   This program is free software; you can redistribute it and/or modify  *
+ *   it under the terms of the GNU General Public License as published by  *
+ *   the Free Software Foundation; either version 2 of the License, or     *
+ *   (at your option) any later version.                                   *
+ *                                                                         *
+ *   This program is distributed in the hope that it will be useful,       *
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ *   GNU General Public License for more details.                          *
+ *                                                                         *
+ *   You should have received a copy of the GNU General Public License     *
+ *   along with this program; if not, write to the                         *
+ *   Free Software Foundation, Inc.,                                       *
+ *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
+ ***************************************************************************/
+
+#include <QMutex>
+#include <QObject>
+#include <QPointer>
+
+#include <atomic>
+
+class QAudioBuffer;
+class QAudioBufferOutput;
+class QMediaPlayer;
+class QTimer;
+
+// Takes a QMediaPlayer's decoded sound into the shared output, TAudioMixer, in place of a
+// QAudioOutput of its own. The player still decodes, seeks, loops and reports its state.
+//
+// Audio arrives on the player's decoding thread and is rendered and queued there, so the main
+// thread being busy never holds it up; everything else happens on the main thread.
+class TMediaVoice : public QObject
+{
+    Q_OBJECT
+
+public:
+    Q_DISABLE_COPY(TMediaVoice)
+
+    // A level that moves to a new value over a number of frames, since a jump clicks
+    struct Glide
+    {
+        float current = 0.0F;
+        float target = 0.0F;
+        qint64 framesLeft = 0;
+
+        void glideTo(float value, qint64 frames);
+        float step();
+    };
+
+    explicit TMediaVoice(QMediaPlayer* player);
+    ~TMediaVoice() override;
+
+    // Linear, 0 to 1, as QAudioOutput's volume is
+    void setGain(float gain, int glideMilliseconds);
+    float gain() const { return mRequestedGain; }
+    void setMuted(const bool muted) { mMuted = muted; }
+    bool muted() const { return mMuted; }
+    bool receivedAudio() const { return mReceivedAudio; }
+    int mixerVoice() const { return mVoice; }
+
+    // Interleaved stereo float in and out, which may be the same buffer
+    static void render(const float* in, float* out, qint64 frames, Glide& gain, bool muted);
+
+    // Whether the backend cannot feed the shared output. QAudioBufferOutput only delivers audio on Qt's
+    // FFmpeg backend: so when another is named, and while one nobody named has not yet been seen to.
+    static bool unsupported();
+
+signals:
+    // The player has played for a while without handing over any audio. Whoever owns this voice
+    // should give the player a QAudioOutput back, so the sound is still heard.
+    void signal_unsupported();
+
+private:
+    void audioBufferReceived(const QAudioBuffer& buffer);
+    void checkForSilence();
+    static void probeUnnamedBackend();
+
+    QPointer<QMediaPlayer> mpPlayer;
+    QAudioBufferOutput* mpBufferOutput = nullptr;
+    const int mVoice;
+    // Rendering state, touched only on the decoding thread
+    Glide mGain{1.0F, 1.0F, 0};
+    // Set from the main thread, picked up by the decoding thread with the next audio
+    QMutex mGainMutex;
+    float mGainTarget = 1.0F;
+    qint64 mGainGlideFrames = 0;
+    quint64 mGainRequest = 0;
+    quint64 mGainRequestApplied = 0;
+    std::atomic<float> mRequestedGain = 1.0F;
+    std::atomic<bool> mMuted = false;
+    std::atomic<bool> mReceivedAudio = false;
+    // Stopped on request rather than at the end, so audio still arriving is stale
+    std::atomic<bool> mStopped = false;
+    std::atomic<bool> mFormatRefusalReported = false;
+    // The position has reached the duration: a stop that follows is the track ending, not a request
+    bool mReachedEnd = false;
+    QTimer* mpSilenceTimer = nullptr;
+
+    static inline std::atomic<bool> smProbePassed = false;
+    static inline bool smProbeStarted = false;
+};
+
+#endif // MUDLET_TMEDIAVOICE_H

@@ -431,7 +431,7 @@ public:
 
     void startSpeedWalk();
     void startSpeedWalk(int sourceRoom, int targetRoom);
-    void reloadModule(const QString& reloadModuleName, const QString& syncingFromHost = QString());
+    std::pair<bool, QString> reloadModule(const QString& reloadModuleName, const QString& syncingFromHost = QString());
     std::pair<bool, QString> changeModuleSync(const QString& enableModuleName, const QLatin1String& value);
     std::pair<bool, QString> getModuleSync(const QString& moduleName);
     bool blockScripts() { return mBlockScriptCompile; }
@@ -473,6 +473,7 @@ public:
     // not "all well": a queued install, an unreadable config.lua and an
     // XML that stopped part-way report themselves on the console instead.
     std::pair<bool, QString> installPackage(const QString& fileName, enums::PackageModuleType thing, bool quiet = false);
+    void reportScriptsThatFailedToLoad();
     bool uninstallPackage(const QString&, enums::PackageModuleType thing);
     bool removeDir(const QString&, const QString&);
     // whyNotRead, when given, is set to why no manifest came back - telling a
@@ -848,6 +849,7 @@ private:
     // function, which reads members declared much later - mBgColor among them. Same
     // class of bug as #10229, which had to move a call rather than a declaration.
     bool mIsClosingDown = false;
+    bool mServerWrapFlushPaused = false;
     // Its font is the "reference" or "master" font for the whole profile.
     // Clears itself when the view is destroyed, which is what makes handing
     // out mpConsoleFrontend safe.
@@ -1042,6 +1044,12 @@ public:
     // quiet without sending one. Here rather than on the view because the
     // flush runs the trigger pipeline, which is the core's work.
     QTimer mServerWrapFlushTimer;
+    // While the close asks whether to save, or waits for the save, neither timer
+    // commits a held line, as the profile may be about to go: Cancel resumes the
+    // flush, a close drops it. Text from the game still commits it, keeping order.
+    void pauseServerWrapFlush();
+    void resumeServerWrapFlush();
+    bool serverWrapLineHeldForClose() const;
 
     int mConsoleBufferSize = 100000;
     bool mUseMaxConsoleBufferSize = false;
@@ -1321,7 +1329,8 @@ private:
     void changeSetting(bool& setting, const bool state, const QString& settingName);
     void setBorders(const QMargins);
     void recheckCommandLineSpelling();
-    void installPackageFonts(const QString& packageName);
+    // Whether any font of the package is registered afterwards
+    bool installPackageFonts(const QString& packageName);
     void processGMCPDiscordStatus(const QJsonObject& discordInfo);
     void processGMCPDiscordInfo(const QJsonObject& discordInfo);
     void loadSecuredPassword();
@@ -1403,6 +1412,8 @@ private:
     // runUninstallsDeferredByAnInstall() once the outermost install has finished
     // and the install events it queued have gone out.
     QList<DeferredUninstall> mUninstallsDeferredByAnInstall;
+    // How often each name was uninstalled, so the queued install events of an install undone since are dropped
+    QMap<QString, quint64> mRemovalsOf;
     // A nested install's fonts are put back only once the outermost install has queued its own events
     bool mDisplayFontRestoreOwed = false;
     QScopedPointer<LuaInterface> mLuaInterface;

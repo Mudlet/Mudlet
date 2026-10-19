@@ -1666,6 +1666,20 @@ describe("Tests UI functions", function()
       assert.are.equal(250, mp.max)
     end)
 
+    it("should parse a Swedish LK/MP prompt with aligned numbers", function()
+      local hits = BaseUI.parseVitalsLine("LK:  74/114  MP:   34/98")
+      local hp = reading(hits, "hp", "curmax")
+      assert.is_not_nil(hp)
+      assert.are.equal(74, hp.current)
+      assert.are.equal(114, hp.max)
+      for _, hit in ipairs(hits) do
+        if hit.stat == "mp" then
+          assert.are.equal(34, hit.current)
+          assert.are.equal(98, hit.max)
+        end
+      end
+    end)
+
     it("should read each line's own numbers when lines differ only in them", function()
       -- a max of zero drops the first line's readings, the others still have theirs
       assert.are.same({}, BaseUI.parseVitalsLine("HP: 523/000 MP: 210/000 [same shape]"))
@@ -2659,6 +2673,56 @@ describe("Tests UI functions", function()
       assert.is_true(buttonId > 0)
       assert.are.equal(1, exists(buttonId, "button"))
       assert.are.equal(1, isActive(buttonId, "button"))
+    end)
+
+    local function pack(...)
+      return select("#", ...), ...
+    end
+
+    it("tempButtonToolbar answers nil and a message for a name already taken", function()
+      local takenName = "bustedTempTakenToolbar" .. suffix
+      finally(function() hideToolBar(takenName) end)
+      assert.is_true(tempButtonToolbar(takenName, 0, 0) > 0)
+
+      local count, id, message = pack(tempButtonToolbar(takenName, 0, 0))
+      assert.are.equal(2, count)
+      assert.is_nil(id)
+      assert.is_truthy(tostring(message):find(takenName, 1, true), "the refusal should name the toolbar, got: " .. tostring(message))
+    end)
+
+    it("tempButton answers nil and a message for a missing toolbar or a name already taken", function()
+      local parentName = "bustedTempRefusalParent" .. suffix
+      local takenName = "bustedTempTakenButton" .. suffix
+      local missingName = "bustedNoSuchToolbar" .. suffix
+      finally(function() hideToolBar(parentName) end)
+
+      local count, id, message = pack(tempButton(missingName, "bustedTempOrphanButton" .. suffix, 0))
+      assert.are.equal(2, count)
+      assert.is_nil(id)
+      assert.is_truthy(tostring(message):find(missingName, 1, true), "the refusal should name the toolbar, got: " .. tostring(message))
+
+      assert.is_true(tempButtonToolbar(parentName, 0, 0) > 0)
+      assert.is_true(tempButton(parentName, takenName, 0) > 0)
+      count, id, message = pack(tempButton(parentName, takenName, 0))
+      assert.are.equal(2, count)
+      assert.is_nil(id)
+      assert.is_truthy(tostring(message):find(takenName, 1, true), "the refusal should name the button, got: " .. tostring(message))
+
+      count, id, message = pack(tempButton(parentName, parentName, 0))
+      assert.are.equal(2, count)
+      assert.is_nil(id)
+      assert.is_truthy(tostring(message):find(parentName, 1, true), "a button may not take a toolbar's name, got: " .. tostring(message))
+
+      count, id, message = pack(tempButtonToolbar(takenName, 0, 0))
+      assert.are.equal(2, count)
+      assert.is_nil(id)
+      assert.is_truthy(tostring(message):find(takenName, 1, true), "a toolbar may not take a button's name, got: " .. tostring(message))
+
+      -- it would never be shown, as only toolbars and menus lay out their children
+      count, id, message = pack(tempButton(takenName, "bustedTempUnderButton" .. suffix, 0))
+      assert.are.equal(2, count)
+      assert.is_nil(id)
+      assert.is_truthy(tostring(message):find(takenName, 1, true), "a plain button is no toolbar, got: " .. tostring(message))
     end)
 
     it("showing a button toolbar again does not stack another copy of its buttons", function()

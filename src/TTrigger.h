@@ -517,6 +517,7 @@ private:
     void processColorPattern(int patternNumber, std::list<std::string>& captureList, std::list<int>& posList, int lineNumber);
     void processPromptMatch(int patternNumber);
     bool fireReachesLua() const;
+    bool playsSound() const;
     void executeWithCaptures(const std::list<std::string>& captureList,
                              const std::list<int>& posList,
                              const NameGroupMatches* nameGroups = nullptr,

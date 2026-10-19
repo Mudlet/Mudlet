@@ -29,6 +29,7 @@
 #include "TEvent.h"
 #include "TMediaData.h"
 #include "TMediaPlaylist.h"
+#include "TMediaVoice.h"
 
 #include <memory>
 #include <utility>
@@ -158,8 +159,13 @@ public:
         }
         return mMediaPlayer->playbackState();
     }
-    void setVolume(int volume) const
+    void setVolume(int volume)
     {
+        if (mpVoice) {
+            // Fades step the volume a little at a time; a short glide keeps each step from clicking
+            mpVoice->setGain(volume / 100.0f, 20);
+            return;
+        }
         if (!mMediaPlayer) {
             qWarning() << "TMediaPlayer::setVolume() - mMediaPlayer is nullptr!";
             return;
@@ -178,9 +184,59 @@ public:
             mPlaylist.reset(playlist);
         }
     }
+    void setMuted(bool muted)
+    {
+        if (mpVoice) {
+            mpVoice->setMuted(muted);
+        } else if (mMediaPlayer && mMediaPlayer->audioOutput()) {
+            mMediaPlayer->audioOutput()->setMuted(muted);
+        }
+    }
+
+    // Whether this player plays through the shared output rather than an output of its own
+    bool mixed() const { return mpVoice != nullptr; }
+    const TMediaVoice* voice() const { return mpVoice.get(); }
+    // Set before a track is played. Returns whether the player is mixed afterwards: a backend that
+    // hands over no audio keeps it on an output of its own.
+    bool setMixed(bool mixed)
+    {
+        if (!mMediaPlayer || mixed == (mpVoice != nullptr)) {
+            return mpVoice != nullptr;
+        }
+        if (mixed) {
+            if (TMediaVoice::unsupported()) {
+                return false;
+            }
+            QAudioOutput* oldOutput = mMediaPlayer->audioOutput();
+            mpVoice = std::make_unique<TMediaVoice>(mMediaPlayer.get());
+            mpVoice->setGain(oldOutput ? oldOutput->volume() : 1.0f, 0);
+            mpVoice->setMuted(oldOutput && oldOutput->isMuted());
+            // Without an output of its own the player only feeds the voice
+            mMediaPlayer->setAudioOutput(nullptr);
+            if (oldOutput) {
+                oldOutput->setParent(nullptr);
+                oldOutput->deleteLater();
+            }
+            QObject::connect(mpVoice.get(), &TMediaVoice::signal_unsupported, mpVoice.get(), [this]() {
+                setMixed(false);
+            });
+            return true;
+        }
+        auto* output = new QAudioOutput(mMediaPlayer.get());
+        output->setVolume(mpVoice->gain());
+        output->setMuted(mpVoice->muted());
+        // Detached now, or the sound plays through both until the voice goes; deleted later, as this
+        // can be reached from the voice's own signal
+        mMediaPlayer->setAudioBufferOutput(nullptr);
+        mpVoice.release()->deleteLater();
+        mMediaPlayer->setAudioOutput(output);
+        return false;
+    }
+
     void refreshAudioOutput()
     {
-        if (!mMediaPlayer) {
+        // The shared output follows the device itself
+        if (!mMediaPlayer || mpVoice) {
             return;
         }
         QAudioOutput* oldOutput = mMediaPlayer->audioOutput();
@@ -211,6 +267,8 @@ private:
     bool mEndAnnounced = false;
     bool mClaimingSource = false;
     bool mReservedForPlay = false;
+    // After mMediaPlayer, so it is destroyed first and can still detach itself from the player
+    std::unique_ptr<TMediaVoice> mpVoice;
 };
 
 class TMedia : public QObject
@@ -254,11 +312,19 @@ public:
     // a second one allocated alongside it. A player play() abandons before it finishes is never
     // registered and so is never counted.
     int mediaPlayerCount() const;
+    // Players playing through the shared output, and the voice of the first of them
+    int playersMixed() const;
+    const TMediaVoice* firstMixedVoice() const;
 
     // Returns true if mediaFileName would resolve to a location outside mediaRoot, either
     // lexically (e.g. via "../" traversal) or through a symlink component that already exists
     // under mediaRoot but points elsewhere. Static so it can be unit-tested without a Host.
     static bool mediaFilePathEscapesMediaDir(const QString& mediaRoot, const QString& mediaFileName);
+    // Where, relative to mediaRoot, a file an API call names by absolute path is played from: its copy,
+    // or the file itself when it is already under mediaRoot. Static so it can be unit-tested without a Host.
+    static QString mediaCacheFileName(const QString& profileHome, const QString& mediaRoot, const QString& absolutePath);
+    // Whether a name sits in a folder mediaCacheFileName() keeps for its copies, where a game must not reach
+    static bool mediaFileNameReservedForCopies(const QString& mediaFileName);
 
 signals:
     void signal_setupVideoOutput(TMediaPlayer* player, bool& setupSucceeded);
@@ -270,11 +336,14 @@ private slots:
 private:
     bool isMediaProtocolAllowed(const TMediaData& mediaData) const;
     QList<std::shared_ptr<TMediaPlayer>> findMediaPlayersByCriteria(const TMediaData& mediaData);
-    bool isMediaMatch(const std::shared_ptr<TMediaPlayer>& player, const TMediaData& mediaData);
-    static TMediaData requestForFilePlayers(const TMediaData& mediaData);
+    // resume() keeps MatchesCacheNameOnly, so a bare name never resumes another folder's copy of a same-named file
+    enum class BareName { MatchesCacheNameOnly, AlsoMatchesSourceFile };
+    bool isMediaMatch(const std::shared_ptr<TMediaPlayer>& player, const TMediaData& mediaData, BareName bareName = BareName::MatchesCacheNameOnly);
+    TMediaData requestForFilePlayers(const TMediaData& mediaData) const;
+    QString mediaCacheFileName(const QString& absolutePath) const;
     bool resume(TMediaData mediaData);
     void setMediaPlayersMuted(const TMediaData::MediaProtocol mediaProtocol, const bool state);
-    void transitionNonRelativeFile(TMediaData& mediaData);
+    bool transitionNonRelativeFile(TMediaData& mediaData);
     QString getStreamUrl(const TMediaData& mediaData);
     QUrl parseUrl(TMediaData& mediaData);
     static bool isValidUrl(QUrl& url);
