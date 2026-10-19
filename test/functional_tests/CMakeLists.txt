@@ -678,9 +678,7 @@ endif()
 # No test binary runs src/main.cpp, so pin QT_MEDIA_BACKEND for both, and for HeadlessMediaDebugTest and TAudioMixerTest,
 # to what main.cpp picks for the shipped application - otherwise the tests silently exercise Qt's default backend for
 # the platform rather than the one users actually get. It is empty, and so a no-op, on Linux.
-if(APPLE)
-    set(mediaLoopTestBackend "darwin")
-elseif(WIN32)
+if(APPLE OR WIN32)
     set(mediaLoopTestBackend "ffmpeg")
 else()
     set(mediaLoopTestBackend "")
