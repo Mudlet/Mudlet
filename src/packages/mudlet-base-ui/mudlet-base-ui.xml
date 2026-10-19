@@ -652,6 +652,8 @@ local gaugeDefs = { hp = {}, mp = {}, xp = {}, mv = {}, enemy = {} }
 -- showing, as a stylesheet percentage. Floating sections keep their full colour,
 -- since they sit over the game's text.
 local panelOpacity = 10
+-- the docked map's 0-255 alpha over it: darker than the dock, so the map stays readable
+local mapAlpha = 26
 
 -- a look's "#rrggbb" with an opacity, or the colour exactly as written when there
 -- is none, so a profile with no picture is painted with the same stylesheets as ever
@@ -1920,12 +1922,14 @@ local function syncMapBackground(giveBack)
   local wanted = not giveBack and BaseUI.backgroundShown and BaseUI.sections.map ~= nil
     and not BaseUI.sectionFloating("map")
   local before = BaseUI.settings.mapBackground
-  if wanted and not held then
-    -- clear, as the placeholder is: the dock behind the map already hides its share
-    local set = { current[1], current[2], current[3], 0 }
-    held = { before = current, set = set }
-    setMapBackgroundColor(set[1], set[2], set[3], set[4])
-  elseif not wanted and held then
+  if wanted then
+    local base = held and held.before or current
+    local set = { base[1], base[2], base[3], math.min(base[4], mapAlpha) }
+    if not (held and sameTint(held.set, set)) then
+      held = { before = base, set = set }
+      setMapBackgroundColor(set[1], set[2], set[3], set[4])
+    end
+  elseif held then
     setMapBackgroundColor(held.before[1], held.before[2], held.before[3], held.before[4])
     held = nil
   end
