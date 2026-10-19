@@ -126,6 +126,7 @@ private slots:
                                     .arg(rootTriggers)));
 
         QVERIFY(luaTrue(host, qsl("#BaseUI.vitalsTriggerIds == 1")));
+        QVERIFY(luaTrue(host, qsl("BaseUI.conditionTriggerId ~= nil")));
         QVERIFY2(luaTrue(host, qsl("BaseUI.chatTriggersArmed()")), "the chat capture tree's gates did not come up armed");
     }
 

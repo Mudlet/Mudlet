@@ -11,7 +11,7 @@ your map, tabbed chat (All/Tells/Channels with unread counters) and
 health, mana, movement and experience gauges - built only from data your
 game actually provides (GMCP, MSDP, or recognisable prompt and score
 lines). An enemy bar follows your opponent's health, from GMCP or
-MSDP or from the sentence many games print after each round ("The orc
+MSDP or from the sentence some games print describing it ("The orc
 has a few scratches."). Nothing appears until your game has sent
 something to show.
 

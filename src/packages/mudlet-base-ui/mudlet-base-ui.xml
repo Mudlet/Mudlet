@@ -460,8 +460,9 @@
 -- negotiated quietly, self-sufficient prompt lines (labelled cur/max or
 -- percent) are trusted once they recur, score screens are read passively,
 -- and as a last resort "score" is sent once - visibly - to learn the maxima
--- on games whose prompt only carries current values. The enemy bar can also
--- come from the sentence a fight prints each round ("Kaninen är tagen.").
+-- on games whose prompt only carries current values. When no protocol reports
+-- an enemy, the enemy bar can come from the sentence a fight prints each round
+-- ("Kaninen är tagen.").
 -- When a game's data is missed, teach this script its format; do not add
 -- functions for players' scripts to feed it (see docs/CONTRIBUTING.md).
 -- Every section starts in the dock but none is stuck there: dragging a header
@@ -480,6 +481,7 @@ BaseUI.shapeSightings = BaseUI.shapeSightings or {}
 BaseUI.vitalsData = BaseUI.vitalsData or {}
 BaseUI.vitalsLock = BaseUI.vitalsLock or 0
 BaseUI.eventHandlerIds = BaseUI.eventHandlerIds or {}
+BaseUI.conditionSightings = BaseUI.conditionSightings or {}
 
 -- An anonymous event handler belongs to the profile rather than to the package
 -- that registered it, so uninstalling has to take these with it. Every
@@ -1581,10 +1583,9 @@ function BaseUI.killVitalsTriggers()
   BaseUI.vitalsTriggerIds = {}
 end
 
--- Enemy health for games that only describe it, in a sentence after each round
--- of a fight. A scale runs from unhurt to dying and a phrase's step on it fills
--- the enemy bar, whose text is the game's own sentence. A game whose wording is
--- missing gets a scale here, not a hook for scripts to feed the bar.
+-- Enemy health from a sentence describing it, which some games print every round
+-- of a fight. A scale runs from unhurt to dying, each step an even share of the
+-- bar, and the bar's text is the game's own sentence. Add a game's wording here.
 local conditionScales = {
   -- SvenskMUD: "Kaninen är tagen."
   { "är i toppform.", "är i ganska bra form.", "är sliten.", "är tagen.", "är illa tilltygad.",
@@ -1594,10 +1595,12 @@ local conditionScales = {
     "has quite a few wounds.", "has some big nasty wounds and scratches.", "looks pretty hurt.",
     "is in awful condition." },
 }
+-- below the bottom step: still fighting, on negative health (Circle, ROM)
+local conditionDying = { "is bleeding awfully from big wounds.", "is bleeding to death." }
 -- what ends a fight sooner than the timeout below would
 local conditionDeaths = { "dog.", "is DEAD!!", "is dead!  R.I.P." }
--- the player's own condition comes in the same shape
-local selfSubjects = { du = true, you = true }
+-- SvenskMUD reports the player's own condition in the same shape
+local selfSubjects = { du = true }
 -- a fight reports a condition every round or two
 local enemyTimeout = 15
 
@@ -1608,6 +1611,10 @@ for _, scale in ipairs(conditionScales) do
     conditionPercent[phrase] = (#scale - step + 1) / #scale * 100
     conditionAlternatives[#conditionAlternatives + 1] = phrase
   end
+end
+for _, phrase in ipairs(conditionDying) do
+  conditionPercent[phrase] = 0
+  conditionAlternatives[#conditionAlternatives + 1] = phrase
 end
 for _, phrase in ipairs(conditionDeaths) do
   conditionAlternatives[#conditionAlternatives + 1] = phrase
@@ -1625,23 +1632,26 @@ end
 
 -- One sentence can be a look at someone, so a subject only becomes the enemy on
 -- its second sentence within the timeout; after that every sentence updates it.
+-- Sightings are per subject so two foes reported in turn still get there.
 function BaseUI.readCondition(subject, phrase)
   if BaseUI.dormant() or selfSubjects[subject:lower()] then
     return
   end
   local enemy = BaseUI.textEnemy
   local percent = conditionPercent[phrase]
+  local sightings = BaseUI.conditionSightings
   if not percent then
+    -- the next one of the same name is a new foe, and has to be seen twice again
+    sightings[subject] = nil
     if enemy and enemy.name == subject then
       BaseUI.forgetTextEnemy()
     end
     return
   end
   local now = getEpoch()
-  local last = BaseUI.lastCondition
-  BaseUI.lastCondition = { name = subject, time = now }
-  if not (enemy and enemy.name == subject)
-    and not (last and last.name == subject and now - last.time &lt;= enemyTimeout) then
+  local last = sightings[subject]
+  sightings[subject] = now
+  if not (enemy and enemy.name == subject) and not (last and now - last &lt;= enemyTimeout) then
     return
   end
   BaseUI.textEnemy = { name = subject, percent = percent, label = subject .. " " .. phrase:gsub("%.$", "") }
@@ -2596,7 +2606,17 @@ function BaseUI.ensureGauge(key)
   local def = gaugeDefs[key]
   -- without the panel a gauge would parent to the main window instead, where
   -- its panel-relative size would stretch it across the top of the screen
-  if not def or not BaseUI.sections.vitals or BaseUI.usedGaugeSlots &gt;= maxGaugeSlots then
+  if not def or not BaseUI.sections.vitals then
+    return nil
+  end
+  -- a hidden enemy bar gives its slot back, or one fight would cost the xp bar for good
+  local enemy = BaseUI.gauges.enemy
+  if BaseUI.usedGaugeSlots &gt;= maxGaugeSlots and key ~= "enemy" and enemy and enemy.hidden then
+    enemy:delete()
+    BaseUI.gauges.enemy = nil
+    BaseUI.usedGaugeSlots = BaseUI.usedGaugeSlots - 1
+  end
+  if BaseUI.usedGaugeSlots &gt;= maxGaugeSlots then
     return nil
   end
   BaseUI.usedGaugeSlots = BaseUI.usedGaugeSlots + 1
@@ -2652,6 +2672,10 @@ function BaseUI.applyVitals(source, readings, snapshot)
     if BaseUI.structuredVitalsOwnGauges() then
       BaseUI.killVitalsTriggers()
     end
+  end
+  -- the protocol saw the fight end, so the sentences read during it are stale
+  if snapshot and BaseUI.vitalsData.enemy and not readings.enemy then
+    BaseUI.forgetTextEnemy()
   end
   for _, stat in ipairs(vitalsStats) do
     local reading = readings[stat.key]
@@ -2810,10 +2834,10 @@ end
 -- a reconnect (possibly to a different game or character) starts the ladder
 -- fresh: recurrence counters, the source lock and the one-time score request
 -- are all per-connection state. Painted gauges keep their last values until
--- fresh data arrives.
+-- fresh data arrives, except the enemy bar: its fight is over.
 function BaseUI.handleDisconnect()
   BaseUI.vitalsData = {}
-  BaseUI.lastCondition = nil
+  BaseUI.conditionSightings = {}
   BaseUI.forgetTextEnemy()
   BaseUI.vitalsLock = 0
   BaseUI.shapeSightings = {}

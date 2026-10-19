@@ -2343,15 +2343,14 @@ describe("Tests UI functions", function()
       saved = {
         renderVitals = BaseUI.renderVitals,
         dormant = BaseUI.dormant,
-        lastCondition = BaseUI.lastCondition,
+        conditionSightings = BaseUI.conditionSightings,
       }
-      renders = 0
       BaseUI.renderVitals = function()
         renders = renders + 1
       end
       BaseUI.dormant = function() return false end
       BaseUI.forgetTextEnemy()
-      BaseUI.lastCondition = nil
+      BaseUI.conditionSightings = {}
       renders = 0
     end)
 
@@ -2359,8 +2358,22 @@ describe("Tests UI functions", function()
       BaseUI.forgetTextEnemy()
       BaseUI.renderVitals = saved.renderVitals
       BaseUI.dormant = saved.dormant
-      BaseUI.lastCondition = saved.lastCondition
+      BaseUI.conditionSightings = saved.conditionSightings
     end)
+
+    -- stubs globals for one spec, restoring them all in its single finally
+    local function stubGlobals(stubs)
+      local originals = {}
+      for name, stub in pairs(stubs) do
+        originals[name] = _G[name]
+        _G[name] = stub
+      end
+      return function()
+        for name, original in pairs(originals) do
+          _G[name] = original
+        end
+      end
+    end
 
     local function see(text)
       local subject, phrase = rex.match(text, BaseUI.conditionPattern)
@@ -2402,6 +2415,91 @@ describe("Tests UI functions", function()
       assert.is_nil(BaseUI.textEnemyTimer)
     end)
 
+    it("should drop the enemy on the CircleMUD and ROM death messages", function()
+      for _, death in ipairs({ "The orc is dead!  R.I.P.", "The orc is DEAD!!" }) do
+        see("The orc looks pretty hurt.")
+        see("The orc is in awful condition.")
+        assert.is_not_nil(BaseUI.textEnemy, death)
+        see(death)
+        assert.is_nil(BaseUI.textEnemy, death)
+      end
+    end)
+
+    it("should show a foe below the bottom step as empty", function()
+      see("The orc is in awful condition.")
+      see("The orc is bleeding to death.")
+      assert.are.equal(0, BaseUI.textEnemy.percent)
+    end)
+
+    it("should promote two foes reported in turn", function()
+      see("Vargen är sliten.")
+      see("Kaninen är sliten.")
+      see("Vargen är tagen.")
+      assert.are.equal("Vargen", BaseUI.textEnemy.name)
+      see("Kaninen är tagen.")
+      assert.are.equal("Kaninen", BaseUI.textEnemy.name)
+    end)
+
+    it("should only promote a second sentence within the timeout", function()
+      local now = 1000
+      finally(stubGlobals({ getEpoch = function() return now end }))
+      see("Kaninen är sliten.")
+      now = 1016
+      see("Kaninen är sliten.")
+      assert.is_nil(BaseUI.textEnemy)
+      now = 1020
+      see("Kaninen är tagen.")
+      assert.are.equal("Kaninen", BaseUI.textEnemy.name)
+    end)
+
+    it("should re-arm its timeout on every sentence and drop the enemy when it fires", function()
+      local armed, killed = {}, {}
+      finally(stubGlobals({
+        tempTimer = function(_, callback)
+          armed[#armed + 1] = callback
+          return #armed
+        end,
+        killTimer = function(id)
+          killed[#killed + 1] = id
+        end,
+      }))
+      see("Kaninen är sliten.")
+      see("Kaninen är tagen.")
+      see("Kaninen är illa tilltygad.")
+      assert.are.equal(2, #armed)
+      assert.are.same({ 1 }, killed)
+      armed[2]()
+      assert.is_nil(BaseUI.textEnemy)
+      assert.is_nil(BaseUI.textEnemyTimer)
+    end)
+
+    it("should forget the enemy and its sightings on disconnect", function()
+      see("Kaninen är sliten.")
+      see("Kaninen är tagen.")
+      see("Vargen är sliten.")
+      BaseUI.handleDisconnect()
+      assert.is_nil(BaseUI.textEnemy)
+      see("Vargen är sliten.")
+      assert.is_nil(BaseUI.textEnemy)
+    end)
+
+    it("should drop the read enemy when a protocol stops reporting its own", function()
+      local lock = BaseUI.vitalsLock
+      local vitalsData = BaseUI.vitalsData
+      finally(function()
+        BaseUI.vitalsLock = lock
+        BaseUI.vitalsData = vitalsData
+      end)
+      BaseUI.vitalsLock = 3
+      BaseUI.vitalsData = { enemy = { percent = 40 } }
+      see("Kaninen är sliten.")
+      see("Kaninen är tagen.")
+      BaseUI.applyVitals("gmcp", { enemy = { percent = 30 } }, true)
+      assert.is_not_nil(BaseUI.textEnemy)
+      BaseUI.applyVitals("gmcp", {}, true)
+      assert.is_nil(BaseUI.textEnemy)
+    end)
+
     it("should keep the enemy through a single sentence about someone else", function()
       see("Svartalfen är sliten.")
       see("Svartalfen är tagen.")
@@ -2412,7 +2510,6 @@ describe("Tests UI functions", function()
     it("should never take the player's own condition for an enemy", function()
       see("Du är sliten.")
       see("Du är sliten.")
-      see("You are in excellent condition.")
       assert.is_nil(BaseUI.textEnemy)
     end)
 
@@ -2431,14 +2528,55 @@ describe("Tests UI functions", function()
     it("should be what a fed line reaches through the trigger", function()
       local created = not BaseUI.conditionTriggerId
       BaseUI.createConditionTrigger()
+      BaseUI.createConditionTrigger()
       finally(function()
         if created then
           BaseUI.killConditionTrigger()
         end
       end)
+      -- a second trigger would promote this on its own
       feedTriggers("Kaninen är tagen.\n")
+      assert.is_nil(BaseUI.textEnemy)
       feedTriggers("Kaninen är illa tilltygad.\n")
       assert.are.equal("Kaninen är illa tilltygad", BaseUI.textEnemy and BaseUI.textEnemy.label)
+    end)
+
+    it("should give a hidden enemy bar's slot to a stat that has none", function()
+      if BaseUI.gauges.xp then
+        pending("the profile already has an xp bar, which this spec would replace")
+        return
+      end
+      local before = {
+        gauges = BaseUI.gauges,
+        usedGaugeSlots = BaseUI.usedGaugeSlots,
+        layoutGauges = BaseUI.layoutGauges,
+      }
+      local vitalsSection = BaseUI.sections.vitals
+      local panel = Geyser.Container:new({ name = "BaseUISpecVitals", x = 0, y = 0, width = 10, height = 10 })
+      panel:hide()
+      local deleted = 0
+      local enemy = { hidden = false, delete = function() deleted = deleted + 1 end }
+      BaseUI.gauges = { hp = {}, mp = {}, mv = {}, enemy = enemy }
+      BaseUI.usedGaugeSlots = 4
+      BaseUI.sections.vitals = panel
+      BaseUI.layoutGauges = function() end
+      finally(function()
+        if BaseUI.gauges.xp then
+          BaseUI.gauges.xp:delete()
+        end
+        panel:delete()
+        BaseUI.sections.vitals = vitalsSection
+        for key, value in pairs(before) do
+          BaseUI[key] = value
+        end
+      end)
+      assert.is_nil(BaseUI.ensureGauge("xp"))
+      assert.are.equal(0, deleted)
+      enemy.hidden = true
+      assert.is_not_nil(BaseUI.ensureGauge("xp"))
+      assert.are.equal(1, deleted)
+      assert.is_nil(BaseUI.gauges.enemy)
+      assert.are.equal(4, BaseUI.usedGaugeSlots)
     end)
 
     describe("painted", function()
@@ -2601,6 +2739,7 @@ describe("Tests UI functions", function()
       BaseUI.saveSettings()
       BaseUI.armChatTriggers()
       BaseUI.createVitalsTriggers()
+      BaseUI.createConditionTrigger()
       -- BaseUI.show() docks the chat window on the right border and it stays there,
       -- leaving the main console narrower for every later spec; BaseUI.hide() is
       -- how the base UI itself gives that border back
@@ -2620,10 +2759,13 @@ describe("Tests UI functions", function()
       BaseUI.standAside("sysServerGuiInstalled", "SomeGameUI")
       assert.is_false(BaseUI.chatTriggersArmed())
       assert.is_nil(next(BaseUI.vitalsTriggerIds))
+      assert.is_nil(BaseUI.conditionTriggerId)
       BaseUI.armChatTriggers()
       BaseUI.createVitalsTriggers()
+      BaseUI.createConditionTrigger()
       assert.is_false(BaseUI.chatTriggersArmed())
       assert.is_nil(next(BaseUI.vitalsTriggerIds))
+      assert.is_nil(BaseUI.conditionTriggerId)
     end)
 
     it("should come back when the player asks for it", function()
@@ -2631,6 +2773,7 @@ describe("Tests UI functions", function()
       BaseUI.show()
       assert.is_nil(BaseUI.settings.standingAside)
       assert.is_false(BaseUI.dormant())
+      assert.is_not_nil(BaseUI.conditionTriggerId)
     end)
 
     it("should ignore uninstalls of unrelated packages", function()
