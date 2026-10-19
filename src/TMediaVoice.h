@@ -83,10 +83,11 @@ public:
 
     // Whether the backend cannot feed the shared output. QAudioBufferOutput only delivers audio on Qt's
     // FFmpeg backend: so when another is named, and while one nobody named has not yet been seen to.
-    // Asking starts that check, so Qt Multimedia is only loaded once something is played.
+    // Asking starts that check, so FFmpeg is not loaded before it is needed.
     static bool unsupported();
-    // For the media tests
+    // Starts that check before anything is played, for a game that has said it sends media
     static void probeBackend();
+    // For the media tests
     static bool probeStarted() { return smProbeStarted; }
     static bool probePassed() { return smProbePassed; }
 
