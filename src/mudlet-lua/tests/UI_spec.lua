@@ -2986,6 +2986,234 @@ describe("Tests UI functions", function()
     end)
   end)
 
+  describe("Test the starter UI's background picture", function()
+    if not (type(BaseUI) == "table" and type(BaseUI.setBackground) == "function") then
+      it("needs the base UI package installed", function()
+        pending("BaseUI.setBackground is unavailable in this profile")
+      end)
+      return
+    end
+
+    local specDirectory = debug.getinfo(1, "S").source:match("^@(.*)[/\\]")
+    local image = specDirectory .. "/fixtures/images/solid-magenta-4x4.png"
+    local savedSettings, savedTheme, savedMain, savedMap, dockWasShowing, originalBorders
+
+    local function alpha(window)
+      return select(4, getBackgroundColor(window))
+    end
+
+    local function dockCss()
+      return getLabelStyleSheet(BaseUI.container.adjLabel.name)
+    end
+
+    before_each(function()
+      savedSettings = table.deepcopy(BaseUI.settings)
+      savedTheme = BaseUI.themeName
+      savedMain = { getBackgroundColor("main") }
+      savedMap = { getMapBackgroundColor() }
+      dockWasShowing = BaseUI.container ~= nil and not BaseUI.container.hidden
+      originalBorders = getBorderSizes()
+      BaseUI.settings.hidden, BaseUI.settings.standingAside = nil, nil
+      BaseUI.build()
+      BaseUI.setTheme("midnight", true)
+    end)
+
+    after_each(function()
+      BaseUI.setBackground(nil)
+      setBackgroundColor("main", unpack(savedMain))
+      setMapBackgroundColor(unpack(savedMap))
+      BaseUI.settings = savedSettings
+      BaseUI.setTheme(savedTheme or "midnight", true)
+      BaseUI.saveSettings()
+      if not dockWasShowing and BaseUI.container and not BaseUI.container.hidden then
+        BaseUI.container:hide()
+        BaseUI.container:adjustBorder()
+        BaseUI.layoutDock()
+      end
+      assert.are.same(originalBorders, getBorderSizes())
+    end)
+
+    it("should let the picture through the console, the chat panes, the docked map and the dock", function()
+      local plainDock = dockCss()
+      assert.is_true(BaseUI.setBackground(image))
+      assert.is_true(BaseUI.backgroundShown)
+      assert.are.equal(0, alpha("main"))
+      assert.are.equal(0, alpha("BaseUI_chat_all"))
+      assert.are.equal(26, select(4, getMapBackgroundColor()))
+      assert.are_not.equal(plainDock, dockCss())
+      assert.truthy(dockCss():find("10%)", 1, true), dockCss())
+      assert.truthy(getLabelStyleSheet("BaseUI_tab_all"):find("10%)", 1, true))
+    end)
+
+    it("should stay see-through across every look", function()
+      BaseUI.setBackground(image)
+      for _ = 1, 3 do
+        BaseUI.cycleTheme()
+        assert.are.equal(0, alpha("main"), BaseUI.themeName)
+        assert.are.equal(0, alpha("BaseUI_chat_all"), BaseUI.themeName)
+        assert.truthy(dockCss():find("10%)", 1, true), BaseUI.themeName)
+      end
+    end)
+
+    it("should give the picture and the colours back while hidden", function()
+      BaseUI.setBackground(image)
+      BaseUI.hide()
+      assert.is_false(BaseUI.backgroundShown)
+      assert.are.equal(255, alpha("main"))
+      assert.are.equal(255, select(4, getMapBackgroundColor()))
+      BaseUI.show()
+      assert.is_true(BaseUI.backgroundShown)
+      assert.are.equal(0, alpha("main"))
+    end)
+
+    it("should put everything back as it was when turned off", function()
+      local before = { main = { getBackgroundColor("main") }, map = { getMapBackgroundColor() },
+                       chat = { getBackgroundColor("BaseUI_chat_all") }, dock = dockCss() }
+      BaseUI.setBackground(image)
+      BaseUI.setBackground(nil)
+      assert.is_false(BaseUI.backgroundShown)
+      assert.are.same(before.main, { getBackgroundColor("main") })
+      assert.are.same(before.map, { getMapBackgroundColor() })
+      assert.are.same(before.chat, { getBackgroundColor("BaseUI_chat_all") })
+      assert.are.equal(before.dock, dockCss())
+    end)
+
+    it("should keep a player's own colour and only borrow its alpha", function()
+      setBackgroundColor("main", 30, 40, 60, 255)
+      BaseUI.setBackground(image)
+      BaseUI.cycleTheme()
+      assert.are.same({ 30, 40, 60, 0 }, { getBackgroundColor("main") })
+      BaseUI.setBackground(nil)
+      assert.are.same({ 30, 40, 60, 255 }, { getBackgroundColor("main") })
+    end)
+
+    it("should refuse a picture it cannot show and keep the one before", function()
+      BaseUI.setBackground(image)
+      assert.is_false(BaseUI.setBackground(specDirectory .. "/fixtures/images/no-such-picture.png"))
+      assert.are.equal(image, BaseUI.settings.background)
+      assert.is_true(BaseUI.backgroundShown)
+    end)
+
+    it("should bring a map cleared by an earlier version to its current see-through", function()
+      BaseUI.setBackground(image)
+      local held = BaseUI.settings.mapBackground
+      setMapBackgroundColor(held.set[1], held.set[2], held.set[3], 0)
+      held.set[4] = 0
+      BaseUI.setTheme("midnight", true)
+      assert.are.equal(math.min(held.before[4], 26), select(4, getMapBackgroundColor()))
+    end)
+
+    it("should refuse a file that is not a picture", function()
+      assert.is_false(BaseUI.setBackground(debug.getinfo(1, "S").source:sub(2)))
+      assert.is_nil(BaseUI.settings.background)
+      assert.is_false(BaseUI.backgroundShown == true)
+    end)
+
+    it("should refuse a picture it cannot show while hidden", function()
+      BaseUI.hide()
+      assert.is_false(BaseUI.setBackground(specDirectory .. "/fixtures/images/no-such-picture.png"))
+      assert.is_nil(BaseUI.settings.background)
+      BaseUI.show()
+    end)
+
+    it("should show a saved picture that went missing once it is chosen again", function()
+      local path = getMudletHomeDir() .. "/baseui-spec-picture.png"
+      os.remove(path)
+      finally(function() os.remove(path) end)
+      -- a reload with the saved file gone
+      BaseUI.settings.background = path
+      BaseUI.setTheme("midnight", true)
+      assert.is_false(BaseUI.backgroundShown)
+      local input = io.open(image, "rb")
+      local output = io.open(path, "wb")
+      output:write(input:read("*a"))
+      input:close()
+      output:close()
+      assert.is_true(BaseUI.setBackground(path))
+      assert.is_true(BaseUI.backgroundShown)
+    end)
+
+    local function countingResets()
+      local real = _G.resetBackgroundImage
+      local resets = { count = 0 }
+      -- through _G: busted gives each spec file globals of its own
+      _G.resetBackgroundImage = function(...)
+        resets.count = resets.count + 1
+        return real(...)
+      end
+      finally(function() _G.resetBackgroundImage = real end)
+      return resets
+    end
+
+    local function returnFromAside()
+      BaseUI.settings.standingAside = nil
+      BaseUI.armChatTriggers()
+      BaseUI.createVitalsTriggers()
+      BaseUI.createConditionTrigger()
+    end
+
+    it("should take its picture down and leave a game interface's own console alone", function()
+      BaseUI.setBackground(image)
+      local resets = countingResets()
+      setBackgroundColor("main", 10, 20, 30, 0)
+      BaseUI.standAside("sysServerGuiInstalled", "SomeGameUI")
+      assert.are.same({ 10, 20, 30, 0 }, { getBackgroundColor("main") })
+      assert.is_false(BaseUI.backgroundShown)
+      assert.are.equal(1, resets.count)
+      returnFromAside()
+    end)
+
+    it("should take its picture down for a game that declines it without an interface", function()
+      BaseUI.setBackground(image)
+      local resets = countingResets()
+      BaseUI.standAside("sysServerGuiInstalled")
+      assert.is_false(BaseUI.backgroundShown)
+      assert.are.equal(1, resets.count)
+      returnFromAside()
+    end)
+
+    it("should keep the picture before when a new one passes the check but cannot be shown", function()
+      BaseUI.setBackground(image)
+      local other = getMudletHomeDir() .. "/baseui-spec-other-picture.png"
+      local input = io.open(image, "rb")
+      local output = io.open(other, "wb")
+      output:write(input:read("*a"))
+      input:close()
+      output:close()
+      local real = _G.setBackgroundImage
+      _G.setBackgroundImage = function(window, path, ...)
+        if path == other then
+          return nil, "no plugin"
+        end
+        return real(window, path, ...)
+      end
+      -- one finally per spec: a second would replace this one
+      finally(function()
+        _G.setBackgroundImage = real
+        os.remove(other)
+      end)
+      local shown, problem = BaseUI.setBackground(other)
+      assert.is_false(shown)
+      assert.are.equal("no plugin", problem)
+      assert.are.equal(image, BaseUI.settings.background)
+      assert.is_true(BaseUI.backgroundShown)
+    end)
+
+    it("should only take what follows the background command", function()
+      local real = BaseUI.alias
+      local calls = {}
+      BaseUI.alias = function(command, argument)
+        calls[#calls + 1] = { command, argument }
+      end
+      finally(function() BaseUI.alias = real end)
+      expandAlias("baseui hide now", false)
+      expandAlias("baseui background /some where/picture.png", false)
+      expandAlias("baseui Background off", false)
+      expandAlias("baseui dock", false)
+      assert.are.same({ { "background", "/some where/picture.png" }, { "Background", "off" }, { "dock" } }, calls)
+    end)
+  end)
+
   describe("tempButtonToolbar and tempButton return values", function()
     -- unique names as the items cannot be deleted, and would collide on re-runs
     -- against the same profile otherwise
