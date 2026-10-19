@@ -91,10 +91,10 @@ float TMediaVoice::Glide::step()
     return current;
 }
 
-void TMediaVoice::Request::set(const float value, const int glideMilliseconds, const bool playing)
+void TMediaVoice::Request::set(const float value, const int glideMilliseconds, const bool heard)
 {
-    const std::optional<float> from = playing ? std::nullopt : waitingStart();
-    const bool glides = playing || (from && glideMilliseconds > 0);
+    const std::optional<float> from = heard ? std::nullopt : waitingStart();
+    const bool glides = heard || (from && glideMilliseconds > 0);
     target = value;
     glideFrames = glides ? glideFramesFor(glideMilliseconds) : 0;
     start = glides ? from : std::nullopt;
@@ -285,11 +285,11 @@ void TMediaVoice::setGain(const float gain, const int glideMilliseconds)
     const QMutexLocker lock(&mRequestMutex);
     // A fade sets the same level on every tick, which must not cut short a longer glide to it. A new
     // track, with no audio yet, starts at its own level, not part way into the last one's glide.
-    if (level == mRequestedGain && mReceivedAudio) {
+    if (level == mRequestedGain && mTrackHeard) {
         return;
     }
     mRequestedGain = level;
-    mGainRequest.set(level, glideMilliseconds, mReceivedAudio);
+    mGainRequest.set(level, glideMilliseconds, mTrackHeard);
 }
 
 qint64 TMediaVoice::glideFramesFor(const int milliseconds)
@@ -301,18 +301,19 @@ void TMediaVoice::setPan(const float pan, const int glideMilliseconds)
 {
     const float position = std::clamp(pan, -1.0F, 1.0F);
     const QMutexLocker lock(&mRequestMutex);
-    const bool playing = mReceivedAudio;
-    // A sound placed as it plays moves out of its own stereo image to the pan, not in from the centre,
-    // while one still partly heard at its last pan moves on from there. A new track starts fully placed,
-    // even on a player whose last track was stopped part way into a glide.
-    if (playing ? (mPlaced || mPanHeard) : (mPlaced && mPanRequest.waitingStart())) {
-        mPanRequest.set(position, glideMilliseconds, playing);
-        if (!mPlaced) {
-            mPlacementRequest.set(1.0F, glideMilliseconds, playing);
-        }
+    const bool heard = mTrackHeard;
+    // A sound moves on from its last pan where that is heard: placed or blending out as it plays, or,
+    // before any audio, where a pan still to be applied starts it placed. Otherwise it moves out of its
+    // own stereo image to the pan, not in from the centre.
+    const bool panHeard = heard ? (mPlaced || mPanHeard) : (mPanRequest.waitingStart() && mPlacementRequest.waitingStart().value_or(0.0F) > 0.0F);
+    if (panHeard) {
+        mPanRequest.set(position, glideMilliseconds, heard);
     } else {
         mPanRequest.jumpTo(position);
-        mPlacementRequest.set(1.0F, glideMilliseconds, playing);
+    }
+    // A new track starts fully placed, even on a player whose last track stopped part way into a glide
+    if (!heard || !mPlaced) {
+        mPlacementRequest.set(1.0F, glideMilliseconds, heard);
     }
     mRequestedPan = position;
     mPlaced = true;
@@ -321,8 +322,15 @@ void TMediaVoice::setPan(const float pan, const int glideMilliseconds)
 void TMediaVoice::unplace(const int glideMilliseconds)
 {
     const QMutexLocker lock(&mRequestMutex);
-    mPlacementRequest.set(0.0F, glideMilliseconds, mReceivedAudio);
+    mPlacementRequest.set(0.0F, glideMilliseconds, mTrackHeard);
     mPlaced = false;
+}
+
+void TMediaVoice::beginTrack()
+{
+    const QMutexLocker lock(&mRequestMutex);
+    mTrackHeard = false;
+    mPanHeard = false;
 }
 
 void TMediaVoice::setMuted(const bool muted)
@@ -381,12 +389,13 @@ void TMediaVoice::audioBufferReceived(const QAudioBuffer& buffer)
         mGainRequest.applyTo(mGain);
         mPanRequest.applyTo(mPan);
         mPlacementRequest.applyTo(mPlacement);
+        mPanHeard = mPlacement.current > 0.0F || mPlacement.target > 0.0F;
+        mTrackHeard = true;
         mReceivedAudio = true;
     }
 
     const qint64 frames = buffer.frameCount();
     std::vector<float> rendered(static_cast<size_t>(frames * 2));
     render(buffer.constData<float>(), rendered.data(), frames, mGain, mPan, mPlacement);
-    mPanHeard = mPlacement.current > 0.0F || mPlacement.target > 0.0F;
     TAudioMixer::self()->queue(mVoice, rendered.data(), frames);
 }

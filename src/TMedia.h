@@ -91,6 +91,9 @@ public:
         ++mClaimGeneration;
         mEndAnnounced = false;
         stopVolumeGlide();
+        if (mpVoice) {
+            mpVoice->beginTrack();
+        }
         if (mMediaPlayer) {
             // A stopped player still holding anything has that media loaded, so handing it a
             // source now starts playback synchronously and raises sysMediaStarted inside the

@@ -26,6 +26,7 @@
 #include <algorithm>
 #include <chrono>
 #include <cmath>
+#include <functional>
 #include <utility>
 #include <vector>
 
@@ -173,10 +174,13 @@ private slots:
         QCOMPARE(media()->placedSound(qsl("unplaced"))->pan(), -1.0F);
         QVERIFY2(stillPlaying(fileName), "Moving a playing sound stopped it.");
         QCOMPARE(playingData(fileName).mediaDirection(), qsl("west"));
-        // What was queued before the move is dropped oldest first as the voice's cap is reached
-        QTest::qWait(700ms);
-        std::tie(left, right) = loudestOnEachSide(20);
-        QVERIFY2(left > 0.1F && right < 1e-3F, qPrintable(qsl("Moved west, the sound came out at %1 left and %2 right.").arg(left).arg(right)));
+        std::pair<float, float> heard;
+        QVERIFY2(comesOut(
+                         [](const float l, const float r) {
+                             return l > 0.1F && r < 1e-3F;
+                         },
+                         heard),
+                 qPrintable(qsl("Moved west, the sound came out at %1 left and %2 right.").arg(heard.first).arg(heard.second)));
     }
 
     // Every pass of a loop is a new source on the same player, and each has to reach the voice
@@ -449,10 +453,13 @@ private slots:
         selection.setMediaType(TMediaData::MediaTypeSound);
         selection.setMediaKey(qsl("tone"));
         media()->updateMedia(selection, std::nullopt, std::nullopt, qsl("east"), 0);
-        // What was queued before the move is dropped oldest first as the voice's cap is reached
-        QTest::qWait(700ms);
-        std::tie(left, right) = loudestOnEachSide(20);
-        QVERIFY2(right > 0.1F && left < 1e-3F, qPrintable(qsl("Moved east, the tone came out at %1 left and %2 right.").arg(left).arg(right)));
+        std::pair<float, float> heard;
+        QVERIFY2(comesOut(
+                         [](const float l, const float r) {
+                             return r > 0.1F && l < 1e-3F;
+                         },
+                         heard),
+                 qPrintable(qsl("Moved east, the tone came out at %1 left and %2 right.").arg(heard.first).arg(heard.second)));
     }
 
     // A game moves a sound by sending its play and an update together, before any of it is heard
@@ -474,7 +481,7 @@ private slots:
         selection.setMediaProtocol(TMediaData::MediaProtocolAPI);
         selection.setMediaType(TMediaData::MediaTypeSound);
         selection.setMediaKey(qsl("passing"));
-        media()->updateMedia(selection, 20, std::nullopt, qsl("west"), 5000);
+        media()->updateMedia(selection, 20, std::nullopt, qsl("west"), 2000);
 
         QVERIFY2(waitForStarted(), "The sound never started playing.");
         SKIP_OR_FAIL_WITHOUT(waitForPlacedAudio() ? QString() : noPanningReason());
@@ -488,7 +495,152 @@ private slots:
 
         // Its first moments, still close to where it was played: on the right, and loud
         const auto [left, right] = loudestOnEachSide(20);
-        QVERIFY2(right > left && right > 0.1F, qPrintable(qsl("Played east and moved west over 5 s, it began at %1 left and %2 right.").arg(left).arg(right)));
+        QVERIFY2(right > left && right > 0.1F, qPrintable(qsl("Played east and moved west over 2 s, it began at %1 left and %2 right.").arg(left).arg(right)));
+        std::pair<float, float> heard;
+        QVERIFY2(comesOut(
+                         [](const float l, const float r) {
+                             return l > 0.03F && l < 0.04F && r < 1e-3F;
+                         },
+                         heard,
+                         5s),
+                 qPrintable(qsl("Moved west at volume 20, the sound ended at %1 left and %2 right.").arg(heard.first).arg(heard.second)));
+    }
+
+    // Two moves sent before any audio: the second sets out from where the first left the sound
+    void test_aSecondUpdateBeforeAnyAudioMovesFromWhereThePlayPutIt()
+    {
+        SKIP_OR_FAIL_WITHOUT(backendPlaces() ? QString() : noPanningReason());
+        TAudioMixer* mixer = TAudioMixer::self();
+        mixer->setOutputSuspended(true);
+        auto resume = qScopeGuard([mixer]() {
+            mixer->setOutputSuspended(false);
+        });
+
+        TMediaData data = soundData(writeClip(qsl("flier.wav"), clipMs, 8000));
+        data.setMediaKey(qsl("flier"));
+        data.setMediaVolume(100);
+        data.setMediaPan(100);
+        media()->playMedia(data);
+        TMediaData selection;
+        selection.setMediaProtocol(TMediaData::MediaProtocolAPI);
+        selection.setMediaType(TMediaData::MediaTypeSound);
+        selection.setMediaKey(qsl("flier"));
+        media()->updateMedia(selection, std::nullopt, std::nullopt, qsl("up"), 2000);
+        media()->updateMedia(selection, std::nullopt, -100, QString(), 2000);
+
+        QVERIFY2(waitForStarted(), "The sound never started playing.");
+        SKIP_OR_FAIL_WITHOUT(waitForPlacedAudio() ? QString() : noPanningReason());
+        const int voice = media()->placedSound(qsl("flier"))->mixerVoice();
+        QVERIFY2(QTest::qWaitFor(
+                         [&]() {
+                             return mixer->queuedSamples(voice) >= 200 * 48 * 2;
+                         },
+                         QDeadlineTimer(5s)),
+                 "The sound's audio never reached the shared output.");
+
+        const auto [left, right] = loudestOnEachSide(20);
+        QVERIFY2(right > left, qPrintable(qsl("Played right and moved left over 2 s, it began at %1 left and %2 right.").arg(left).arg(right)));
+        std::pair<float, float> heard;
+        QVERIFY2(comesOut(
+                         [](const float l, const float r) {
+                             return l > 0.1F && r < 1e-3F;
+                         },
+                         heard,
+                         5s),
+                 qPrintable(qsl("Moved left, the sound ended at %1 left and %2 right.").arg(heard.first).arg(heard.second)));
+    }
+
+    // A track stopped before it was heard leaves no glide behind for the next one on its player
+    void test_theNextSoundOnAPlayerWhoseTrackWasNeverHeardStartsPlaced()
+    {
+        SKIP_OR_FAIL_WITHOUT(backendPlaces() ? QString() : noPanningReason());
+        TAudioMixer* mixer = TAudioMixer::self();
+        mixer->setOutputSuspended(true);
+        auto resume = qScopeGuard([mixer]() {
+            mixer->setOutputSuspended(false);
+        });
+
+        TMediaData unheard = soundData(writeClip(qsl("unheard.wav"), clipMs, 8000));
+        unheard.setMediaKey(qsl("unheard"));
+        media()->playMedia(unheard);
+        TMediaData selection;
+        selection.setMediaProtocol(TMediaData::MediaProtocolAPI);
+        selection.setMediaType(TMediaData::MediaTypeSound);
+        selection.setMediaKey(qsl("unheard"));
+        media()->updateMedia(selection, std::nullopt, std::nullopt, qsl("east"), 5000);
+        media()->stopMedia(selection);
+        QVERIFY2(QTest::qWaitFor(
+                         [&]() {
+                             return media()->playersHoldingSource() == 0;
+                         },
+                         QDeadlineTimer(5s)),
+                 "The stopped sound never gave up its player.");
+
+        TMediaData next = soundData(writeClip(qsl("next.wav"), clipMs, 8000));
+        next.setMediaKey(qsl("next"));
+        next.setMediaVolume(100);
+        next.setMediaPan(-100);
+        media()->playMedia(next);
+        QCOMPARE(media()->mediaPlayerCount(), 1);
+        QVERIFY2(waitForStarted(), "The next sound never started playing.");
+        SKIP_OR_FAIL_WITHOUT(waitForPlacedAudio() ? QString() : noPanningReason());
+        const int voice = media()->placedSound(qsl("next"))->mixerVoice();
+        QVERIFY2(QTest::qWaitFor(
+                         [&]() {
+                             return mixer->queuedSamples(voice) >= 200 * 48 * 2;
+                         },
+                         QDeadlineTimer(5s)),
+                 "The next sound's audio never reached the shared output.");
+
+        const auto [left, right] = loudestOnEachSide(20);
+        QVERIFY2(left > 0.1F && right < 1e-3F, qPrintable(qsl("Panned hard left, the next sound began at %1 left and %2 right.").arg(left).arg(right)));
+    }
+
+    // A loop's next pass is the same track: a move sent between passes glides on into it
+    void test_aMoveSentBetweenPassesOfALoopGlides()
+    {
+        SKIP_OR_FAIL_WITHOUT(backendPlaces() ? QString() : noPanningReason());
+        TAudioMixer* mixer = TAudioMixer::self();
+        mixer->setOutputSuspended(true);
+        auto resume = qScopeGuard([mixer]() {
+            mixer->setOutputSuspended(false);
+        });
+
+        TMediaData data = soundData(writeClip(qsl("ambience.wav"), shortClipMs, 8000));
+        data.setMediaKey(qsl("ambience"));
+        data.setMediaVolume(100);
+        data.setMediaDirection(qsl("east"));
+        data.setMediaLoops(-1);
+        media()->playMedia(data);
+        QVERIFY2(waitForStarted(), "The looping sound never started playing.");
+        SKIP_OR_FAIL_WITHOUT(waitForPlacedAudio() ? QString() : noPanningReason());
+        const TMediaVoice* voice = media()->placedSound(qsl("ambience"));
+        QVERIFY(voice);
+        const int mixerVoice = voice->mixerVoice();
+
+        QVERIFY2(QTest::qWaitFor(
+                         [&]() {
+                             return !voice->receivedAudio();
+                         },
+                         QDeadlineTimer(5s)),
+                 "The loop never reached the gap between two passes.");
+        TMediaData selection;
+        selection.setMediaProtocol(TMediaData::MediaProtocolAPI);
+        selection.setMediaType(TMediaData::MediaTypeSound);
+        selection.setMediaKey(qsl("ambience"));
+        media()->updateMedia(selection, std::nullopt, std::nullopt, qsl("west"), 3000);
+        QVERIFY2(QTest::qWaitFor(
+                         [&]() {
+                             return voice->receivedAudio();
+                         },
+                         QDeadlineTimer(5s)),
+                 "The loop's next pass never reached the voice.");
+        // Long enough for the cap to drop the last pass's tail, short enough to still be on the right
+        QTest::qWait(400ms);
+        QVERIFY(mixer->queuedSamples(mixerVoice) > 0);
+
+        const auto [left, right] = loudestOnEachSide(20);
+        QVERIFY2(right > left, qPrintable(qsl("Moved from east to west over 3 s between passes, the next pass began at %1 left and %2 right.").arg(left).arg(right)));
     }
 
     // Overhead and then off to one side: placed again before it has finished blending back, it still glides
@@ -520,13 +672,21 @@ private slots:
         selection.setMediaProtocol(TMediaData::MediaProtocolAPI);
         selection.setMediaType(TMediaData::MediaTypeSound);
         selection.setMediaKey(qsl("bird"));
-        media()->updateMedia(selection, std::nullopt, std::nullopt, qsl("up"), 5000);
+        media()->updateMedia(selection, std::nullopt, std::nullopt, qsl("up"), 3000);
         QTest::qWait(100ms);
-        media()->updateMedia(selection, std::nullopt, std::nullopt, qsl("west"), 5000);
+        media()->updateMedia(selection, std::nullopt, std::nullopt, qsl("west"), 3000);
         QTest::qWait(700ms);
 
         const auto [left, right] = loudestOnEachSide(20);
-        QVERIFY2(right > left, qPrintable(qsl("Moved from east to west over 5 s, a moment in it was at %1 left and %2 right.").arg(left).arg(right)));
+        QVERIFY2(right > left, qPrintable(qsl("Moved from east to west over 3 s, a moment in it was at %1 left and %2 right.").arg(left).arg(right)));
+        std::pair<float, float> heard;
+        QVERIFY2(comesOut(
+                         [](const float l, const float r) {
+                             return l > 0.1F && r < 1e-3F;
+                         },
+                         heard,
+                         5s),
+                 qPrintable(qsl("Moved west, the sound ended at %1 left and %2 right.").arg(heard.first).arg(heard.second)));
     }
 
     // An output of its own glides its volume on a timer, which must not outlive the track it was for
@@ -786,6 +946,18 @@ private:
     {
         TMediaData criteria = soundData(fileName);
         return !media()->playingMedia(criteria).isEmpty();
+    }
+
+    // Mixes 20 ms at a time until the check passes. Polled rather than waited for, as a runner stalled past
+    // a fixed wait still holds audio from before a move.
+    static bool comesOut(const std::function<bool(float, float)>& where, std::pair<float, float>& heard, const std::chrono::milliseconds limit = 3s)
+    {
+        return QTest::qWaitFor(
+                [&]() {
+                    heard = loudestOnEachSide(20);
+                    return where(heard.first, heard.second);
+                },
+                QDeadlineTimer(limit));
     }
 
     // Mixes this many milliseconds by hand and returns the loudest sample on each side

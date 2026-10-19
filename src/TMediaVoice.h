@@ -67,6 +67,8 @@ public:
     float pan() const { return mRequestedPan; }
     bool placed() const { return mPlaced; }
     void unplace(int glideMilliseconds);
+    // A new track, not a loop's next pass: changes jump until it is heard
+    void beginTrack();
     void setMuted(bool muted);
     bool muted() const { return mMuted; }
     bool receivedAudio() const { return mReceivedAudio; }
@@ -104,9 +106,9 @@ private:
         quint64 serial = 0;
         quint64 applied = 0;
 
-        // Once audio plays, every change glides. Before then one jumps, unless it follows a jump not
-        // yet made, as a Play and an Update sent together ask: it then glides from where that lands.
-        void set(float value, int glideMilliseconds, bool playing);
+        // Glides once the track has been heard. Before then it jumps, unless it follows a change still
+        // waiting to be made, as a Play and an Update sent together ask: it then glides on from there.
+        void set(float value, int glideMilliseconds, bool heard);
         void jumpTo(float value);
         std::optional<float> waitingStart() const;
         void applyTo(Glide& glide);
@@ -127,11 +129,13 @@ private:
     Request mGainRequest{1.0F};
     Request mPanRequest;
     Request mPlacementRequest;
+    // Under mRequestMutex. A loop passes through a stop between passes, so this outlasts mReceivedAudio.
+    bool mTrackHeard = false;
+    // Under mRequestMutex: the audio last handed over was placed at all, if only while blending out
+    bool mPanHeard = false;
     std::atomic<float> mRequestedGain = 1.0F;
     std::atomic<float> mRequestedPan = 0.0F;
     std::atomic<bool> mPlaced = false;
-    // Set on the decoding thread: the last audio rendered was placed at all, if only while blending out
-    std::atomic<bool> mPanHeard = false;
     std::atomic<bool> mMuted = false;
     std::atomic<bool> mReceivedAudio = false;
     // Stopped on request rather than at the end, so audio still arriving is stale
