@@ -7108,6 +7108,49 @@ describe("Tests saveJsonMap and loadJsonMap", function()
       assert.are.same({tostring(rooms[2]), tostring(rooms[3])}, speedWalkPath)
     end)
   end)
+
+  -- 257 to 272 are the profile's sixteen ANSI map colours, which every map
+  -- loader puts back over whatever the file holds
+  describe("Tests environments 257 to 272 in a map read by loadJsonMap", function()
+    local function reimportWith(edit)
+      assert.is_true(saveJsonMap(jsonPath))
+      local file = assert(io.open(jsonPath, "r"))
+      local document = yajl.to_value(file:read("*a"))
+      file:close()
+      edit(document)
+      file = assert(io.open(jsonPath, "w"))
+      file:write(yajl.to_string(document))
+      file:close()
+      assert.is_true(loadJsonMap(jsonPath))
+    end
+
+    it("keeps the profile's colours rather than the ones the file holds", function()
+      deleteMap()
+      local profileColours = getCustomEnvColorTable()
+      local edited = false
+      reimportWith(function(document)
+        for _, entry in ipairs(document.customEnvColors) do
+          if entry.id == 257 then
+            entry.color24RGB = nil
+            entry.color32RGBA = {0, 0, 0, 248}
+            edited = true
+          end
+        end
+      end)
+      assert.is_true(edited, "the file held no environment 257 to change")
+      assert.are.same(profileColours[257], getCustomEnvColorTable()[257])
+    end)
+
+    it("keeps the profile's colours when the file has no custom environment colours", function()
+      deleteMap()
+      local profileColours = getCustomEnvColorTable()
+      reimportWith(function(document) document.customEnvColors = nil end)
+      local colours = getCustomEnvColorTable() or {}
+      for env = 257, 272 do
+        assert.are.same(profileColours[env], colours[env], "environment " .. env)
+      end
+    end)
+  end)
 end)
 
 -- Environment colours 257 to 272 are the profile's own copy of the map colour

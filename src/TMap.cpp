@@ -187,8 +187,6 @@ TMap::TMap(Host* pH, const QString& profileName)
 , mpHost(pH)
 , mProfileName(profileName)
 {
-    restore16ColorSet();
-
     // TODO: https://github.com/Mudlet/Mudlet/issues/6436
     // According to Qt Docs we should really only have one of these
     // (QNetworkAccessManager) for the whole application, but: each profile's
@@ -3937,6 +3935,8 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
 
     // Not before the abort check above, so a cancelled import leaves the live map alone:
     mCustomEnvColors.swap(customEnvColors);
+    // 257 to 272 belong to the profile, whatever the file says, as the binary loader also treats them
+    restore16ColorSet();
     mEnvColors.swap(envColors);
     mUserData.swap(userData);
     mIsOnlyMapSymbolFontToBeUsed = isOnlyMapSymbolFontToBeUsed;
