@@ -368,7 +368,8 @@ public:
     void unmuteMedia(const TMediaData::MediaProtocol mediaProtocol);
     void printClosedCaption(const TMediaData& mediaData, const QString& action) const;
     void stopAllMediaPlayers();
-    // Changes the volume, pan or direction of media already playing or paused, gliding there
+    // Changes the volume, pan or direction of media already playing or paused, gliding there. Not
+    // captioned: the play was, and an update only changes how that sound is heard.
     void updateMedia(TMediaData& mediaData, std::optional<int> volume, std::optional<int> pan, const QString& direction, int glideMilliseconds);
     // A compass word or degrees, which turns every compass direction with it; false for anything else
     bool setListenerFacing(const QString& facing);
