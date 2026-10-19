@@ -1103,12 +1103,16 @@ private slots:
         QCOMPARE(settings->value(qsl("triggerMatchFloodLines")).toInt(), 0);
         QCOMPARE(pool.floodChunkLines(), defaults.floodChunkLines);
 
-        // The field counts the helpers; the setting counts the main thread too
-        applySpy.clear();
-        pThreads->setValue(1);
-        QVERIFY(applyAndWait(applySpy));
-        QCOMPARE(settings->value(qsl("triggerMatchThreads")).toInt(), 2);
-        QCOMPARE(pool.workerCount(), 2);
+        // The field counts the helpers; the setting counts the main thread too. The default can sit at
+        // either end of the range, depending on the machine's cores.
+        if (pThreads->maximum() > pThreads->minimum()) {
+            const int helpers = pThreads->value() == pThreads->minimum() ? pThreads->maximum() : pThreads->minimum();
+            applySpy.clear();
+            pThreads->setValue(helpers);
+            QVERIFY(applyAndWait(applySpy));
+            QCOMPARE(settings->value(qsl("triggerMatchThreads")).toInt(), helpers + 1);
+            QCOMPARE(pool.workerCount(), helpers + 1);
+        }
 
         applySpy.clear();
         pThreshold->setValue(64);
