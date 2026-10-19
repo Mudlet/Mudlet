@@ -92,6 +92,8 @@ public:
     unsigned int mapGeneration() const { return mMapGeneration; }
     // For one that replaces another, so that the ids held from that one read as stale here too
     void continueGenerationOf(const TRoomDB& previous) { mMapGeneration = previous.mMapGeneration + 1; }
+    // Bumped whenever the entrance map is refreshed, which every exit change of a room in an area does.
+    quint64 exitsRevision() const { return mExitsRevision; }
     void auditRooms(QHash<int, int>&, QHash<int, int>&);
     bool addRoom(int id, TRoom* pR, bool isMapLoading = false);
     int getAreaID(TArea* pA);
@@ -147,6 +149,7 @@ private:
     // Flag to prevent expensive individual cleanup during bulk destruction
     bool mBulkDeletionMode = false;
     unsigned int mMapGeneration = 0;
+    quint64 mExitsRevision = 0;
 
     friend class TRoom;
     friend class TArea;

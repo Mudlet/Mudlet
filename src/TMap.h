@@ -62,6 +62,7 @@ class Host;
 class QOpenGLWidget;
 #endif
 class TArea;
+class TAreaGraph;
 class TMapViewManager;
 class TRoom;
 class TRoomDB;
@@ -326,6 +327,10 @@ public:
     // whether what it worked out from them last frame still holds
     quint64 revision() const { return mRevision; }
     bool isUnsaved() const { return mUnsavedMap; }
+    // Bumped by setUnsaved() and whenever the whole map is replaced, so a cache can tell it is stale.
+    quint64 mapRevision() const { return mMapRevision; }
+    // Call TAreaGraph::refresh() before reading it.
+    TAreaGraph* areaGraph() const { return mpAreaGraph.get(); }
     void setSaveError(bool state);
     bool hasSaveError() const { return mSaveError; }
     void setDefaultAreaShown(bool);
@@ -543,7 +548,12 @@ private:
             }
             ++mpMap->mMapOperationDepth;
         }
-        ~MapOperationScope() { --mpMap->mMapOperationDepth; }
+        // A load replaces rooms and user data without going through setUnsaved().
+        ~MapOperationScope()
+        {
+            --mpMap->mMapOperationDepth;
+            ++mpMap->mMapRevision;
+        }
         MapOperationScope(const MapOperationScope&) = delete;
         MapOperationScope& operator=(const MapOperationScope&) = delete;
 
@@ -557,6 +567,8 @@ private:
     bool mMapOperationAbortRequested = false;
     int mScriptCallbackDepth = 0;
     bool mGraphBuildInProgress = false;
+    quint64 mMapRevision = 0;
+    std::unique_ptr<TAreaGraph> mpAreaGraph;
 
     void addDirectionalRoute(std::vector<std::pair<unsigned int, route>>& bestRoutes,
                              const QMap<QString, int>& exitWeights,
