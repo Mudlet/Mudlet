@@ -1338,32 +1338,51 @@ void dlgProfilePreferences::retranslateTriggerMatchPoolControls()
     //: Check box in the Performance settings; the triggers' regular expressions are then searched on several CPU cores while game text floods in
     mpCheckBox_triggerMatchPool->setText(tr("Match triggers on several threads during floods of text (experimental)"));
     //: Tooltip of the check box that matches triggers on several threads
-    mpCheckBox_triggerMatchPool->setToolTip(tr("<p>While a flood of game text arrives, other CPU cores rule out the regex triggers that cannot match each line, so this one has fewer to try.</p>"
-                                               "<p>It helps profiles where many regex triggers are searched on every line and few of them match. On most profiles it makes no difference and uses more "
-                                               "CPU, so it is off unless you switch it on. Once it is on, the Statistics report in the trigger editor (Ctrl+9) says whether it has been worth it "
-                                               "on your own profile.</p>"));
+    mpCheckBox_triggerMatchPool->setToolTip(tr("<p>Mudlet checks each line of game text against your triggers one at a time. Regex triggers are the slow ones, and on a busy "
+                                               "profile most of them do not match most lines.</p>"
+                                               "<p>When the game sends many lines at once, this has other CPU cores check the regex triggers first and tell Mudlet which ones "
+                                               "cannot match, so it skips them. Your triggers still fire in the same order as before.</p>"
+                                               "<p>On most profiles it makes no difference and uses more CPU, so it is off unless you switch it on. Once it is on, the Statistics "
+                                               "report in the trigger editor (Ctrl+9) tells you whether it helps your profile.</p>"));
+    const TriggerMatchPool::Settings defaults;
     //: Label of a number field in the Performance settings: how many threads help the main one match triggers
     mpLabel_triggerMatchThreads->setText(tr("Extra threads helping the main one:"));
-    //: Tooltip of the number of extra threads that match triggers
-    mpSpinBox_triggerMatchThreads->setToolTip(tr("<p>More than three rarely helps: the threads then spend longer waiting for each other than matching.</p>"));
+    //: Tooltip of the number of extra threads that match triggers; %1 is the default number of them
+    mpSpinBox_triggerMatchThreads->setToolTip(tr("<p>How many other CPU cores help the main one check triggers. More than three rarely helps: they then spend longer "
+                                                 "waiting for each other than checking.</p><p>Default: %1</p>")
+                                                      .arg(TriggerMatchPool::automaticThreads() - 1));
     //: Label of a number field in the Performance settings: how many regex searches that find nothing a line needs before other threads help with it
     mpLabel_triggerMatchThreshold->setText(tr("Failed regex searches a line needs before the threads help:"));
-    //: Tooltip of the threshold of failed regex searches per line
-    mpSpinBox_triggerMatchThreshold->setToolTip(tr("<p>Judged on the line before. Only a search that finds nothing is work the other threads can take away, and below this "
-                                                   "many, sharing it out costs more than it saves.</p>"));
+    //: Tooltip of the threshold of failed regex searches per line; %1 is the default
+    mpSpinBox_triggerMatchThreshold->setToolTip(tr("<p>The extra threads help only if the previous line had at least this many regex triggers that did not match. "
+                                                   "With fewer, handing the work out costs more than it saves.</p><p>Default: %1</p>")
+                                                        .arg(defaults.threshold));
     //: Label of a number field in the Performance settings: how many failed regex searches a line needs for every one that matched
     mpLabel_triggerMatchMissesPerMatch->setText(tr("Failed searches needed for each one that matched:"));
-    //: Tooltip of the failed searches per match ratio
-    mpSpinBox_triggerMatchMissesPerMatch->setToolTip(tr("<p>A regex that matches still costs more with the threads than without, so a line where many match is quicker on "
-                                                        "one thread. 0 counts every search towards the threshold, matched or not.</p>"));
+    //: Tooltip of the failed searches per match ratio; %1 is the default
+    mpSpinBox_triggerMatchMissesPerMatch->setToolTip(tr("<p>The extra threads help only if, on the previous line, at least this many regex triggers did not match for "
+                                                        "each one that did. Lines where many triggers match are quicker on one thread. 0 turns this check off.</p>"
+                                                        "<p>Default: %1</p>")
+                                                             .arg(defaults.missesPerMatch));
     //: Label of a number field in the Performance settings: how many lines must arrive at once to count as a flood
     mpLabel_triggerMatchFloodLines->setText(tr("Lines arriving at once that make a flood:"));
-    //: Tooltip of the lines that make a flood
-    mpSpinBox_triggerMatchFloodLines->setToolTip(tr("<p>The threads only help when the game sends many lines at once; for a line or two at a time they would use CPU for nothing.</p>"));
+    //: Tooltip of the lines that make a flood; %1 is the default
+    mpSpinBox_triggerMatchFloodLines->setToolTip(tr("<p>The extra threads help only when the game sends at least this many lines at once. For a line or two at a time "
+                                                    "they would use CPU for nothing.</p><p>Default: %1</p>")
+                                                         .arg(defaults.floodChunkLines));
     //: Label of a number field in the Performance settings: how long, in microseconds, the helper threads stay awake waiting for the next line
     mpLabel_triggerMatchSpin->setText(tr("Microseconds the threads stay awake for the next line:"));
-    //: Tooltip of the helper threads' spin time
-    mpSpinBox_triggerMatchSpin->setToolTip(tr("<p>Waking a thread costs more than the work it is handed, so between lines of a flood they wait awake this long before sleeping.</p>"));
+    //: Tooltip of the helper threads' spin time; %1 is the default, in microseconds
+    mpSpinBox_triggerMatchSpin->setToolTip(tr("<p>After a line, the extra threads stay awake this long waiting for the next one before they go to sleep, because "
+                                              "waking a sleeping thread costs more than the work it is given.</p><p>Default: %1</p>")
+                                                   .arg(defaults.spinMicroseconds));
+    for (const auto& [pLabel, pSpinBox] : std::initializer_list<std::pair<QLabel*, QSpinBox*>>{{mpLabel_triggerMatchThreads, mpSpinBox_triggerMatchThreads},
+                                                                                               {mpLabel_triggerMatchThreshold, mpSpinBox_triggerMatchThreshold},
+                                                                                               {mpLabel_triggerMatchMissesPerMatch, mpSpinBox_triggerMatchMissesPerMatch},
+                                                                                               {mpLabel_triggerMatchFloodLines, mpSpinBox_triggerMatchFloodLines},
+                                                                                               {mpLabel_triggerMatchSpin, mpSpinBox_triggerMatchSpin}}) {
+        pLabel->setToolTip(pSpinBox->toolTip());
+    }
 }
 
 // App-wide like the pool, so read from Mudlet.ini with or without a profile
