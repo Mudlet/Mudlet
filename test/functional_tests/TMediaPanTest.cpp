@@ -565,9 +565,10 @@ private slots:
 
     void test_theFacingGoesBackToNorthWhenTheGameDisconnects()
     {
+        // Mudlet's side, not the server's: the server can see the connection before Mudlet has taken it up
         QVERIFY2(QTest::qWaitFor(
                          [this]() {
-                             return mpServer->clientConnected();
+                             return mpHost->mTelnet.getConnectionState() == QAbstractSocket::ConnectedState;
                          },
                          QDeadlineTimer(5s)),
                  "The profile never connected to the test server.");
