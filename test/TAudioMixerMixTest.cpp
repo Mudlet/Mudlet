@@ -18,13 +18,16 @@
  ***************************************************************************/
 
 #include "TAudioMixer.h"
+#include "TMedia.h"
 #include "TMediaVoice.h"
 
 #include <QtTest/QtTest>
 
+#include <cmath>
 #include <vector>
 
-// The mix itself, run by hand with the output kept shut, so none of this needs an audio device
+// The mix and how each sound is placed in it, run by hand with the output kept shut, so none of this
+// needs an audio device
 class TAudioMixerMixTest : public QObject
 {
     Q_OBJECT
@@ -52,6 +55,20 @@ private:
         std::vector<float> out(static_cast<size_t>(ms * framesPerMs * 2));
         TAudioMixer::self()->mixForTests(out.data(), static_cast<qint64>(out.size()));
         return *std::max_element(out.cbegin(), out.cend());
+    }
+
+    // Frames of the same sample on both sides, as a mono source arrives in the stereo format asked for
+    static std::vector<float> steady(const qint64 frames, const float sample) { return std::vector<float>(static_cast<size_t>(frames * 2), sample); }
+
+    static void renderAt(const float pan, std::vector<float>& audio)
+    {
+        TMediaVoice::Glide gain;
+        gain.glideTo(1.0F, 0);
+        TMediaVoice::Glide position;
+        position.glideTo(pan, 0);
+        TMediaVoice::Glide placement;
+        placement.glideTo(1.0F, 0);
+        TMediaVoice::render(audio.data(), audio.data(), static_cast<qint64>(audio.size() / 2), gain, position, placement);
     }
 
 private slots:
@@ -162,7 +179,9 @@ private slots:
         std::vector<float> out(4);
         TMediaVoice::Glide gain;
         gain.glideTo(0.5F, 0);
-        TMediaVoice::render(in.data(), out.data(), 2, gain);
+        TMediaVoice::Glide pan;
+        TMediaVoice::Glide placement;
+        TMediaVoice::render(in.data(), out.data(), 2, gain, pan, placement);
         QCOMPARE(out[0], 0.25F);
         QCOMPARE(out[1], -0.25F);
     }
@@ -202,6 +221,13 @@ private slots:
         QVERIFY(!TAudioMixer::self()->silent());
     }
 
+    // A change asked for at once still takes 20 ms, or the jump clicks
+    void aChangeAskedForAtOnceStillGlides()
+    {
+        QCOMPARE(TMediaVoice::glideFramesFor(0), 20 * framesPerMs);
+        QCOMPARE(TMediaVoice::glideFramesFor(100), 100 * framesPerMs);
+    }
+
     void aGlideReachesItsTargetOnTheLastFrameAndNotBefore()
     {
         TMediaVoice::Glide glide;
@@ -212,6 +238,160 @@ private slots:
         glide.step();
         QCOMPARE(glide.step(), 1.0F);
         QCOMPARE(glide.step(), 1.0F);
+    }
+
+    // Centred is 3 dB down on each side, so the same power as all on one side
+    void centredIsThreeDecibelsDownOnBothSides()
+    {
+        auto audio = steady(4, 0.5F);
+        renderAt(0.0F, audio);
+        QVERIFY(std::abs(audio[0] - 0.5F * std::sqrt(0.5F)) < 1e-5F);
+        QVERIFY(std::abs(audio[1] - 0.5F * std::sqrt(0.5F)) < 1e-5F);
+    }
+
+    // A loud sound panned hard to one side must not go past what it was, or past full scale
+    void aFullPanNeverRaisesTheSource()
+    {
+        auto audio = steady(4, 1.0F);
+        renderAt(1.0F, audio);
+        QVERIFY(audio[1] <= 1.0F + 1e-6F);
+    }
+
+    void aFullPanSilencesTheOtherSide()
+    {
+        auto left = steady(4, 0.5F);
+        renderAt(-1.0F, left);
+        QVERIFY(std::abs(left[0] - 0.5F) < 1e-5F);
+        QVERIFY(std::abs(left[1]) < 1e-5F);
+
+        auto right = steady(4, 0.5F);
+        renderAt(1.0F, right);
+        QVERIFY(std::abs(right[0]) < 1e-5F);
+        QVERIFY(std::abs(right[1] - 0.5F) < 1e-5F);
+    }
+
+    // The power across both sides is the same wherever the sound is, so moving it does not change how loud it is
+    void thePowerStaysTheSameAcrossThePan()
+    {
+        for (const float pan : {-1.0F, -0.6F, -0.2F, 0.0F, 0.3F, 0.8F, 1.0F}) {
+            auto audio = steady(1, 0.5F);
+            renderAt(pan, audio);
+            const float power = audio[0] * audio[0] + audio[1] * audio[1];
+            QVERIFY2(std::abs(power - 0.25F) < 1e-4F, qPrintable(QString("power %1 at pan %2").arg(power).arg(pan)));
+        }
+    }
+
+    // A stereo source is one point once placed, so a sound recorded off to one side can still be moved across
+    void aStereoSourceIsMixedToOnePoint()
+    {
+        std::vector<float> audio{1.0F, 0.0F};
+        renderAt(0.0F, audio);
+        QVERIFY(std::abs(audio[0] - audio[1]) < 1e-5F);
+        QVERIFY(audio[0] > 0.0F);
+    }
+
+    void aPanThatGlidesMovesAcrossTheBuffer()
+    {
+        auto audio = steady(100, 0.5F);
+        TMediaVoice::Glide gain;
+        gain.glideTo(1.0F, 0);
+        TMediaVoice::Glide position;
+        position.glideTo(-1.0F, 0);
+        position.glideTo(1.0F, 100);
+        TMediaVoice::Glide placement;
+        placement.glideTo(1.0F, 0);
+        TMediaVoice::render(audio.data(), audio.data(), 100, gain, position, placement);
+        QVERIFY(audio.front() > audio[1]);
+        QVERIFY(audio[198] < audio.back());
+    }
+
+    // Not placed, a sound keeps its own stereo image, at full level on each side
+    void anUnplacedSoundKeepsItsStereoImage()
+    {
+        std::vector<float> audio{0.8F, 0.2F};
+        TMediaVoice::Glide gain;
+        gain.glideTo(1.0F, 0);
+        TMediaVoice::Glide position;
+        position.glideTo(1.0F, 0);
+        TMediaVoice::Glide placement;
+        TMediaVoice::render(audio.data(), audio.data(), 1, gain, position, placement);
+        QCOMPARE(audio[0], 0.8F);
+        QCOMPARE(audio[1], 0.2F);
+    }
+
+    // Placed as it plays, a sound moves out of its stereo image rather than jumping, which clicks
+    void aSoundPlacedWhilePlayingMovesThereGradually()
+    {
+        auto audio = steady(100, 0.5F);
+        TMediaVoice::Glide gain;
+        gain.glideTo(1.0F, 0);
+        TMediaVoice::Glide position;
+        position.glideTo(-1.0F, 0);
+        TMediaVoice::Glide placement;
+        placement.glideTo(1.0F, 100);
+        TMediaVoice::render(audio.data(), audio.data(), 100, gain, position, placement);
+        QVERIFY(audio[1] > 0.45F);
+        QVERIFY(audio[101] > 0.0F && audio[101] < audio[1]);
+        QVERIFY(std::abs(audio[199]) < 1e-5F);
+    }
+
+    void aDirectionIsPlacedFromTheWayThePlayerFaces_data()
+    {
+        QTest::addColumn<QString>("direction");
+        QTest::addColumn<QString>("facing");
+        // An invalid QVariant for none: a direction with no bearing leaves the sound unplaced
+        QTest::addColumn<QVariant>("pan");
+        QTest::newRow("east, facing north") << "east" << "north" << QVariant(100);
+        QTest::newRow("west, facing north") << "west" << "north" << QVariant(-100);
+        QTest::newRow("north, facing north") << "north" << "north" << QVariant(0);
+        QTest::newRow("south, facing north") << "south" << "north" << QVariant(0);
+        QTest::newRow("45 degrees, facing north") << "45" << "north" << QVariant(71);
+        QTest::newRow("north, facing east") << "north" << "east" << QVariant(-100);
+        QTest::newRow("south, facing east") << "south" << "east" << QVariant(100);
+        QTest::newRow("left, facing east") << "left" << "east" << QVariant(-100);
+        QTest::newRow("right, facing south") << "right" << "south" << QVariant(100);
+        QTest::newRow("ahead, facing west") << "ahead" << "west" << QVariant(0);
+        QTest::newRow("up") << "up" << "north" << QVariant();
+        QTest::newRow("down") << "down" << "east" << QVariant();
+    }
+
+    void aDirectionIsPlacedFromTheWayThePlayerFaces()
+    {
+        QFETCH(QString, direction);
+        QFETCH(QString, facing);
+        QFETCH(QVariant, pan);
+        TMediaData data;
+        data.setMediaDirection(direction);
+        const std::optional<int> placed = TMedia::stereoPan(data, facing);
+        QCOMPARE(placed ? QVariant(*placed) : QVariant(), pan);
+    }
+
+    // A game that sends both tunes each kind of client: a stereo one uses the pan
+    void aPanTakesOverFromADirection()
+    {
+        TMediaData data;
+        data.setMediaDirection(qsl("east"));
+        data.setMediaPan(-30);
+        QCOMPARE(TMedia::stereoPan(data, qsl("north")), std::optional<int>(-30));
+        QCOMPARE(TMedia::stereoPan(TMediaData(), qsl("north")), std::nullopt);
+    }
+
+    void directionsAreKeptInOneSpelling()
+    {
+        QCOMPARE(TMedia::canonicalMediaDirection(QString("N")), QString("north"));
+        QCOMPARE(TMedia::canonicalMediaDirection(QString(" Southwest ")), QString("southwest"));
+        QCOMPARE(TMedia::canonicalMediaDirection(QString("u")), QString("up"));
+        QCOMPARE(TMedia::canonicalMediaDirection(QString("Behind")), QString("behind"));
+        QCOMPARE(TMedia::canonicalMediaDirection(QString("45")), QString("45"));
+        QCOMPARE(TMedia::canonicalMediaDirection(450.0), QString("90"));
+        QCOMPARE(TMedia::canonicalMediaDirection(-90.0), QString("270"));
+        QCOMPARE(TMedia::canonicalMediaDirection(359.6), QString("0"));
+        QVERIFY(TMedia::canonicalMediaDirection(QString("sideways")).isEmpty());
+        // Exit names, not directions: a game says where such a sound comes from in its caption
+        QVERIFY(TMedia::canonicalMediaDirection(QString("in")).isEmpty());
+        QVERIFY(TMedia::canonicalMediaDirection(QString("out")).isEmpty());
+        QVERIFY(TMedia::canonicalMediaDirection(QString()).isEmpty());
+        QVERIFY(TMedia::canonicalMediaDirection(std::nan("")).isEmpty());
     }
 };
 

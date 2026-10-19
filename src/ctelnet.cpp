@@ -1273,6 +1273,9 @@ void cTelnet::finishDisconnection()
         }
     }
 
+    if (mpHost && mpHost->mpMedia) {
+        mpHost->mpMedia->resetListenerFacing();
+    }
     emit signal_disconnected(mpHost);
 
     // Double-check Host is still valid before raising event
@@ -3564,7 +3567,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                 if (mpHost->mDiscordMode == Host::DiscordShowGameDetails && Discord::self()->libraryLoaded()) {
                     supportsList += R"(, "External.Discord 1")";
                 }
-                supportsList += R"(, "Client.Media 1", "Char.Login 2"])";
+                supportsList += R"(, "Client.Media 2", "Char.Login 2"])";
                 output += supportsList;
             }
             output += TN_IAC;

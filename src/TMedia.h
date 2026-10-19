@@ -31,10 +31,13 @@
 #include "TMediaPlaylist.h"
 #include "TMediaVoice.h"
 
+#include <algorithm>
 #include <memory>
 #include <utility>
 #include <QAudioOutput>
+#include <QElapsedTimer>
 #include <QMediaPlayer>
+#include <QTimer>
 #include <QUrl>
 
 class QJsonObject;
@@ -87,6 +90,10 @@ public:
         // synchronously, and that handler snapshots these counters to arm its own release.
         ++mClaimGeneration;
         mEndAnnounced = false;
+        stopVolumeGlide();
+        if (mpVoice) {
+            mpVoice->beginTrack();
+        }
         if (mMediaPlayer) {
             // A stopped player still holding anything has that media loaded, so handing it a
             // source now starts playback synchronously and raises sysMediaStarted inside the
@@ -161,9 +168,14 @@ public:
     }
     void setVolume(int volume)
     {
+        // A fade sets the same level on every tick, which must not cut short a longer glide to it
+        if (mpVolumeGlide && mpVolumeGlide->isActive() && volume == mVolumeGlideTarget) {
+            return;
+        }
+        stopVolumeGlide();
         if (mpVoice) {
-            // Fades step the volume a little at a time; a short glide keeps each step from clicking
-            mpVoice->setGain(volume / 100.0f, 20);
+            // Glides only for the moment that keeps a fade's steps from clicking once the sound plays
+            mpVoice->setGain(volume / 100.0f, 0);
             return;
         }
         if (!mMediaPlayer) {
@@ -176,6 +188,45 @@ public:
             return;
         }
         audioOutput->setVolume(volume / 100.0f);
+    }
+    void stopVolumeGlide()
+    {
+        if (mpVolumeGlide) {
+            mpVolumeGlide->stop();
+        }
+    }
+    void glideVolume(int volume, int milliseconds)
+    {
+        if (mpVoice) {
+            stopVolumeGlide();
+            mpVoice->setGain(volume / 100.0f, milliseconds);
+            return;
+        }
+        QAudioOutput* audioOutput = mMediaPlayer ? mMediaPlayer->audioOutput() : nullptr;
+        if (!audioOutput || milliseconds <= 0) {
+            setVolume(volume);
+            return;
+        }
+        if (!mpVolumeGlide) {
+            mpVolumeGlide = std::make_unique<QTimer>();
+            mpVolumeGlide->setInterval(20);
+        }
+        mpVolumeGlide->disconnect();
+        mVolumeGlideTarget = volume;
+        const float from = audioOutput->volume();
+        const float to = volume / 100.0f;
+        auto elapsed = std::make_shared<QElapsedTimer>();
+        elapsed->start();
+        QObject::connect(mpVolumeGlide.get(), &QTimer::timeout, mpVolumeGlide.get(), [this, from, to, milliseconds, elapsed]() {
+            const float progress = std::min(1.0f, static_cast<float>(elapsed->elapsed()) / static_cast<float>(milliseconds));
+            if (QAudioOutput* output = mMediaPlayer ? mMediaPlayer->audioOutput() : nullptr) {
+                output->setVolume(from + (to - from) * progress);
+            }
+            if (progress >= 1.0f) {
+                mpVolumeGlide->stop();
+            }
+        });
+        mpVolumeGlide->start();
     }
     TMediaPlaylist* playlist() const { return mPlaylist.get(); }
     void setPlaylist(TMediaPlaylist* playlist)
@@ -203,6 +254,8 @@ public:
         if (!mMediaPlayer || mixed == (mpVoice != nullptr)) {
             return mpVoice != nullptr;
         }
+        // Its timer steps the output being replaced
+        stopVolumeGlide();
         if (mixed) {
             if (TMediaVoice::unsupported()) {
                 return false;
@@ -233,6 +286,19 @@ public:
         mMediaPlayer->setAudioOutput(output);
         return false;
     }
+    // -100 is fully left, 100 fully right; none plays the sound as it was recorded
+    void setPan(std::optional<int> pan, int glideMilliseconds)
+    {
+        if (!mpVoice) {
+            return;
+        }
+        if (pan) {
+            mpVoice->setPan(*pan / 100.0f, glideMilliseconds);
+        } else {
+            mpVoice->unplace(glideMilliseconds);
+        }
+    }
+    bool placed() const { return mpVoice && mpVoice->placed(); }
 
     void refreshAudioOutput()
     {
@@ -285,6 +351,8 @@ private:
     bool mEndAnnounced = false;
     bool mClaimingSource = false;
     bool mReservedForPlay = false;
+    std::unique_ptr<QTimer> mpVolumeGlide;
+    int mVolumeGlideTarget = 0;
     // After mMediaPlayer, so it is destroyed first and can still detach itself from the player
     std::unique_ptr<TMediaVoice> mpVoice;
 };
@@ -318,6 +386,25 @@ public:
     void unmuteMedia(const TMediaData::MediaProtocol mediaProtocol);
     void printClosedCaption(const TMediaData& mediaData, const QString& action) const;
     void stopAllMediaPlayers();
+    // Changes the volume, pan or direction of media already playing or paused, gliding there. Not
+    // captioned: the play was, and an update only changes how that sound is heard.
+    void updateMedia(TMediaData& mediaData, std::optional<int> volume, std::optional<int> pan, const QString& direction, int glideMilliseconds);
+    enum class FacingSetBy { Game, Script };
+    // A compass word or degrees, which turns every compass direction with it; false for anything else
+    bool setListenerFacing(const QString& facing, FacingSetBy setBy);
+    QString listenerFacing() const { return mListenerFacing; }
+    // The game gives its facing again each session, so on a disconnect the player turns back to the
+    // last one a script gave, or north
+    void resetListenerFacing();
+
+    // "north" for "n" or "North", whole degrees 0 to 359 for a number, empty for anything else
+    static QString canonicalMediaDirection(const QString& direction);
+    static QString canonicalMediaDirection(double degrees);
+    // A move that gives no time of its own happens at once; TMediaVoice smooths it so it does not click
+    static constexpr int defaultGlideMilliseconds = 0;
+    // Where between -100 and 100 a stereo output places it, for a player facing that way: its pan if it
+    // has one, else its direction. None for a direction with no bearing, which plays as with no direction.
+    static std::optional<int> stereoPan(const TMediaData& mediaData, const QString& facing);
 
     // Read-only diagnostics for the media tests. A deferred release is otherwise hard to
     // observe: playingMedia() has already dropped the player, the closed caption needs captions
@@ -333,6 +420,11 @@ public:
     // Players playing through the shared output, and the voice of the first of them
     int playersMixed() const;
     const TMediaVoice* firstMixedVoice() const;
+    // Players placing their sound left or right, and of those the ones that have had audio
+    int playersPlaced() const;
+    int playersPlacedWithAudio() const;
+    // The voice of the playing sound with this key, if it is placed, for what it is applying
+    const TMediaVoice* placedSound(const QString& key) const;
 
     // Returns true if mediaFileName would resolve to a location outside mediaRoot, either
     // lexically (e.g. via "../" traversal) or through a symlink component that already exists
@@ -357,7 +449,9 @@ private:
     // resume() keeps MatchesCacheNameOnly, so a bare name never resumes another folder's copy of a same-named file
     enum class BareName { MatchesCacheNameOnly, AlsoMatchesSourceFile };
     bool isMediaMatch(const std::shared_ptr<TMediaPlayer>& player, const TMediaData& mediaData, BareName bareName = BareName::MatchesCacheNameOnly);
+    static bool isMediaMatch(const TMediaData& playing, const TMediaData& mediaData, BareName bareName);
     TMediaData requestForFilePlayers(const TMediaData& mediaData) const;
+    void turnListener(const QString& facing);
     QString mediaCacheFileName(const QString& absolutePath) const;
     bool resume(TMediaData mediaData);
     void setMediaPlayersMuted(const TMediaData::MediaProtocol mediaProtocol, const bool state);
@@ -397,6 +491,9 @@ private:
     static QString mediaTypeToString(int mediaType);
 
     void play(TMediaData& mediaData);
+    // Degrees clockwise from north, or from straight ahead for a relative word; none for up and down
+    static std::optional<double> mediaDirectionBearing(const QString& direction, bool& relativeToPlayer);
+    static QString mediaDirectionCaption(const QString& direction);
 
     static TMediaData::MediaType parseJSONByMediaType(QJsonObject& json);
     static int parseJSONByMediaInput(QJsonObject& json);
@@ -415,12 +512,16 @@ private:
     static TMediaData::MediaFadeAway parseJSONByMediaFadeAway(QJsonObject& json);
     static TMediaData::MediaClose parseJSONByMediaClose(QJsonObject& json);
     static QString parseJSONByMediaCaption(QJsonObject& json);
+    static std::optional<int> parseJSONByMediaPan(QJsonObject& json);
+    static QString parseJSONByMediaDirection(QJsonObject& json);
 
     void parseJSONForMediaDefault(QJsonObject& json);
     void parseJSONForMediaLoad(QJsonObject& json);
     void parseJSONForMediaPlay(QJsonObject& json);
     void parseJSONForMediaPause(QJsonObject& json);
     void parseJSONForMediaStop(QJsonObject& json);
+    void parseJSONForMediaUpdate(QJsonObject& json);
+    void parseJSONForMediaListener(QJsonObject& json);
 
     QPointer<Host> mpHost;
     QString mProfileName;
@@ -435,6 +536,8 @@ private:
     QList<std::shared_ptr<TMediaPlayer>> mAPIVideoList;
 
     QNetworkAccessManager* mpNetworkAccessManager = nullptr;
+    QString mListenerFacing = qsl("north");
+    QString mScriptListenerFacing;
     QMap<QNetworkReply*, TMediaData> mMediaDownloads;
 };
 #endif // MUDLET_TMEDIA_H

@@ -1318,6 +1318,31 @@ describe("Media playback effects with a generated sound file", function()
     assert.equals(downloadName, playing[1].name)
   end)
 
+  it("an update sent while the file is still downloading reaches the sound once it plays", function()
+    if noFixtureServer() then
+      return
+    end
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    local downloadName = "busted-media-update-download.wav"
+    local downloaded = mediaDirectory .. "/" .. downloadName
+    lfs.mkdir(mediaDirectory)
+    os.remove(downloaded)
+    onCleanup(function() os.remove(downloaded) end)
+    onCleanup(function() stopSounds() end)
+
+    assert.is_true(playSoundFile({name = downloadName, url = fixtureUrl() .. "/media", volume = 60, key = "busted-media-update-download"}))
+    -- a game sends its Play and the first Update together, well before the file can have arrived
+    assert.is_true(updateSounds({key = "busted-media-update-download", pan = 40, volume = 20}))
+    assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 10000)))
+
+    local playing = getPlayingSounds({key = "busted-media-update-download"})
+    assert.equals(1, #playing)
+    assert.equals(40, playing[1].pan)
+    assert.equals(20, playing[1].volume)
+  end)
+
   it("loadVideoFile reports a download error for a url it cannot fetch from", function()
     -- The preload reaches the same fetch as a play would, so the refusal of a
     -- url that is not http(s) is where a spec can see a load act on its url
@@ -1936,6 +1961,23 @@ describe("Media playback effects with a generated sound file", function()
     assert.equals(1, #paused, "pausing by the absolute path left the copy playing")
     assert.equals(1, #getPausedSounds({name = outside}), "the paused copy was not found by the absolute path")
     assert.equals("_profile/" .. outsideName, paused[1].name)
+  end)
+
+  it("updateSounds moves a sound named by the absolute path it was played from, or by its bare name", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    local outsideName = "busted-media-outside-update.wav"
+    local outside = writeOutsideFile(outsideName)
+    onCleanup(function() stopSounds() end)
+
+    assert.is_true(playSoundFile({name = outside, key = "busted-absolute-update"}))
+    assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)))
+
+    assert.is_true(updateSounds({name = outside, pan = 30}))
+    assert.equals(30, getPlayingSounds({key = "busted-absolute-update"})[1].pan, "updating by the absolute path left the copy where it was")
+    assert.is_true(updateSounds({name = outsideName, pan = -30}))
+    assert.equals(-30, getPlayingSounds({key = "busted-absolute-update"})[1].pan, "updating by the bare name left the copy where it was")
   end)
 
   it("playing a paused sound's absolute path again resumes it", function()
@@ -3677,6 +3719,200 @@ describe("Media playback effects with a generated sound file", function()
     feedGmcp('Client.Media.Stop {}')
     waitForCount("sysMediaFinished", finished, 1)
     assert.equals(1, #finished)
+  end)
+
+  it("a sound played with a pan and a direction reports both, and updateSounds moves it", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    writeSoundFiles()
+    assert.is_true(playSoundFile({name = longSoundFile, key = "busted-placed", pan = -140, direction = "NE"}))
+    assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)))
+
+    local playing = getPlayingSounds({key = "busted-placed"})
+    assert.equals(1, #playing)
+    -- held to the -100 to 100 a pan can be, as a volume is to 1 to 100
+    assert.equals(-100, playing[1].pan)
+    assert.equals("northeast", playing[1].direction)
+
+    assert.is_true(updateSounds({key = "busted-placed", direction = 450, volume = 20, duration = 0}))
+    playing = getPlayingSounds({key = "busted-placed"})
+    assert.equals(1, #playing, "moving a sound stopped it")
+    -- a new direction takes over from the pan given earlier, or it would never be heard
+    assert.is_nil(playing[1].pan)
+    -- degrees come back as a number, a named way as its word
+    assert.equals(90, playing[1].direction)
+    assert.equals(20, playing[1].volume)
+
+    assert.is_true(updateSounds({key = "busted-placed", pan = 35}))
+    assert.equals(35, getPlayingSounds({key = "busted-placed"})[1].pan)
+    assert.is_true(updateSounds({key = "busted-placed", pan = 140}))
+    assert.equals(100, getPlayingSounds({key = "busted-placed"})[1].pan)
+    assert.is_true(stopSounds())
+  end)
+
+  it("updateSounds moves only the sound it names, not one played without a key", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    writeSoundFiles()
+    local started = {}
+    collect("sysMediaStarted", started)
+    assert.is_true(playSoundFile({name = longSoundFile}))
+    assert.is_true(playSoundFile({name = longSoundFile, key = "busted-named"}))
+    waitForCount("sysMediaStarted", started, 2)
+    assert.equals(2, #started)
+    assert.is_true(updateSounds({key = "busted-named", pan = 50}))
+
+    local keyless, named
+    for _, sound in ipairs(getPlayingSounds()) do
+      if sound.key == "busted-named" then
+        named = sound
+      else
+        keyless = sound
+      end
+    end
+    assert.is_not_nil(named)
+    assert.is_not_nil(keyless)
+    assert.equals(50, named.pan)
+    assert.is_nil(keyless.pan, "a sound played without a key moved with the one named")
+
+    -- naming no sound is refused, as a game's Client.Media.Update is, rather than moving every one
+    local ok, err = updateSounds({pan = -20})
+    assert.is_nil(ok)
+    assert.equals("no key, name or tag to choose the sounds to update by", err)
+    for _, sound in ipairs(getPlayingSounds()) do
+      assert.equals(sound.key == "busted-named" and 50 or nil, sound.pan)
+    end
+    assert.is_true(stopSounds())
+  end)
+
+  it("a paused placed sound reports where it was placed, and can still be moved", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    writeSoundFiles()
+    assert.is_true(playSoundFile({name = longSoundFile, key = "busted-paused-placed", direction = "east"}))
+    assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)))
+    assert.is_true(pauseSounds({key = "busted-paused-placed"}))
+    pumpEvents(250)
+
+    local paused = getPausedSounds({key = "busted-paused-placed"})
+    assert.equals(1, #paused)
+    assert.equals("east", paused[1].direction)
+    assert.is_true(updateSounds({key = "busted-paused-placed", direction = "s"}))
+    assert.equals("south", getPausedSounds({key = "busted-paused-placed"})[1].direction)
+    assert.is_true(updateSounds({key = "busted-paused-placed", direction = 200}))
+    assert.equals(200, getPausedSounds({key = "busted-paused-placed"})[1].direction)
+    assert.is_true(stopSounds())
+  end)
+
+  it("a sound played with neither a pan nor a direction reports neither", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    writeSoundFiles()
+    assert.is_true(playSoundFile({name = longSoundFile, key = "busted-unplaced"}))
+    assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)))
+    local playing = getPlayingSounds({key = "busted-unplaced"})
+    assert.equals(1, #playing)
+    assert.is_nil(playing[1].pan)
+    assert.is_nil(playing[1].direction)
+    assert.is_true(stopSounds())
+  end)
+
+  it("the closed caption says which way a sound comes from", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    local wasCaptioned = getConfig("enableClosedCaption")
+    onCleanup(function() setConfig("enableClosedCaption", wasCaptioned) end)
+    assert.is_true(setConfig("enableClosedCaption", true))
+
+    local caption = "Busted placed caption"
+    local mark = getLastLineNumber("main")
+    writeSoundFiles()
+    assert.is_true(playSoundFile({name = longSoundFile, key = "busted-placed-caption", caption = caption, direction = "w"}))
+    assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)))
+    pumpEvents(250)
+
+    local captioned = false
+    for _, line in ipairs(getLines("main", mark, getLastLineNumber("main") + 1)) do
+      captioned = captioned or line:find(caption .. " (west)", 1, true) ~= nil
+    end
+    assert.is_true(captioned, "the caption did not say the sound came from the west")
+    assert.is_true(stopSounds())
+  end)
+
+  it("a Client.Media.Play direction reaches the caption, and a Client.Media.Listener turns the player", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    local wasCaptioned = getConfig("enableClosedCaption")
+    onCleanup(function() setConfig("enableClosedCaption", wasCaptioned) end)
+    onCleanup(function() setMediaListener({facing = "north"}) end)
+    assert.is_true(setConfig("enableClosedCaption", true))
+    writeSoundFiles()
+    stopGmcpMediaAfterwards()
+
+    local caption = "Busted gmcp placed"
+    local mark = getLastLineNumber("main")
+    feedGmcp('Client.Media.Play {"name": "' .. longSoundFile .. '", "key": "busted-gmcp-placed", "direction": "S", "pan": "-20", "caption": "' .. caption .. '"}')
+    assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)), gmcpRefused)
+    pumpEvents(250)
+
+    local captioned = false
+    for _, line in ipairs(getLines("main", mark, getLastLineNumber("main") + 1)) do
+      captioned = captioned or line:find(caption .. " (south)", 1, true) ~= nil
+    end
+    assert.is_true(captioned, "the caption did not say the sound came from the south")
+
+    feedGmcp('Client.Media.Listener {"facing": "w"}')
+    assert.equals("west", getMediaListener().facing)
+    -- up is no way to face, so the player stays turned west
+    feedGmcp('Client.Media.Listener {"facing": "up"}')
+    assert.equals("west", getMediaListener().facing)
+  end)
+end)
+
+describe("Client.Media 2 functions validate their parameters", function()
+  it("playSoundFile refuses a pan that is no number and a direction it does not know", function()
+    assertArgError(function() playSoundFile({name = "x.wav", pan = "left"}) end, "value for pan as number expected")
+    assertArgError(function() playSoundFile({name = "x.wav", direction = "sideways"}) end, "playSoundFile: bad argument value for direction")
+    assertArgError(function() playSoundFile({name = "x.wav", direction = true}) end, "playSoundFile: bad argument type for direction")
+  end)
+
+  it("updateSounds needs a table and refuses a negative duration or an unknown direction", function()
+    assertArgError(function() updateSounds() end, "updateSounds: needs to be a table")
+    assertArgError(function() updateSounds({duration = -1}) end, "updateSounds: bad argument range for duration")
+    assertArgError(function() updateSounds({direction = "sideways"}) end, "updateSounds: bad argument value for direction")
+    assertArgError(function() updateSounds({pan = {}}) end, "value for pan as number expected")
+    assertArgError(function() updateSounds({pan = 0/0}) end, "updateSounds: bad argument value for pan")
+    assertArgError(function() playSoundFile({name = "x.wav", pan = 0/0}) end, "playSoundFile: bad argument value for pan")
+    -- nothing to update is not an error, as stopping nothing is not
+    assert.is_true(updateSounds({key = "busted-nothing-playing", pan = 20}))
+  end)
+
+  it("setMediaListener turns to a compass direction or degrees and refuses anything else", function()
+    finally(function() setMediaListener({facing = "north"}) end)
+    assert.equals("north", getMediaListener().facing)
+
+    assert.is_true(setMediaListener({facing = "NE"}))
+    assert.equals("northeast", getMediaListener().facing)
+    -- keys match in any case, as every other media function's do
+    assert.is_true(setMediaListener({Facing = "South"}))
+    assert.equals("south", getMediaListener().facing)
+    assert.is_true(setMediaListener({facing = 450}))
+    assert.equals(90, getMediaListener().facing)
+
+    assertArgError(function() setMediaListener() end, "setMediaListener: needs to be a table")
+    assertArgError(function() setMediaListener({}) end, "setMediaListener: missing facing")
+    -- a player turns to face a way on the compass, not upwards or to their own left
+    assertArgError(function() setMediaListener({facing = "up"}) end, "setMediaListener: bad argument value for facing")
+    assertArgError(function() setMediaListener({facing = "left"}) end, "setMediaListener: bad argument value for facing")
+    assertArgError(function() setMediaListener({facing = "sideways"}) end, "setMediaListener: bad argument value for facing")
+    assertArgError(function() setMediaListener({facing = true}) end, "setMediaListener: bad argument type for facing")
+    assert.equals(90, getMediaListener().facing)
   end)
 end)
 

@@ -6949,6 +6949,9 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "pauseSounds", TLuaInterpreter::pauseSounds);
     lua_register(pGlobalLua, "pauseMusic", TLuaInterpreter::pauseMusic);
     lua_register(pGlobalLua, "pauseVideos", TLuaInterpreter::pauseVideos);
+    lua_register(pGlobalLua, "updateSounds", TLuaInterpreter::updateSounds);
+    lua_register(pGlobalLua, "setMediaListener", TLuaInterpreter::setMediaListener);
+    lua_register(pGlobalLua, "getMediaListener", TLuaInterpreter::getMediaListener);
     lua_register(pGlobalLua, "purgeMediaCache", TLuaInterpreter::purgeMediaCache);
     lua_register(pGlobalLua, "setBorderSizes", TLuaInterpreter::setBorderSizes);
     lua_register(pGlobalLua, "setBorderTop", TLuaInterpreter::setBorderTop);

@@ -25,6 +25,7 @@
 #include <QPointer>
 
 #include <atomic>
+#include <optional>
 
 class QAudioBuffer;
 class QAudioBufferOutput;
@@ -60,13 +61,25 @@ public:
     // Linear, 0 to 1, as QAudioOutput's volume is
     void setGain(float gain, int glideMilliseconds);
     float gain() const { return mRequestedGain; }
+    // -1 is fully left, 1 fully right. A placed sound is mixed down to one point and set there; an
+    // unplaced one keeps its own stereo image.
+    void setPan(float pan, int glideMilliseconds);
+    float pan() const { return mRequestedPan; }
+    bool placed() const { return mPlaced; }
+    void unplace(int glideMilliseconds);
+    // A new track, not a loop's next pass: drops whatever the last one still had waiting
+    void beginTrack();
     void setMuted(bool muted);
     bool muted() const { return mMuted; }
     bool receivedAudio() const { return mReceivedAudio; }
     int mixerVoice() const { return mVoice; }
 
-    // Interleaved stereo float in and out, which may be the same buffer
-    static void render(const float* in, float* out, qint64 frames, Glide& gain);
+    // How many frames a change asked to take this long glides over, once a sound is playing: even one
+    // asked for at once takes a moment, as a jump clicks
+    static qint64 glideFramesFor(int milliseconds);
+    // Interleaved stereo float in and out, which may be the same buffer. Placement blends the source's
+    // own stereo image, at 0, into one point set at the pan with a constant-power pan, at 1.
+    static void render(const float* in, float* out, qint64 frames, Glide& gain, Glide& pan, Glide& placement);
 
     // Whether the backend cannot feed the shared output. QAudioBufferOutput only delivers audio on Qt's
     // FFmpeg backend: so when another is named, and while one nobody named has not yet been seen to.
@@ -84,6 +97,25 @@ signals:
     void signal_unsupported();
 
 private:
+    // A target set from the main thread, which the decoding thread picks up with the next audio
+    struct Request
+    {
+        float target = 0.0F;
+        qint64 glideFrames = 0;
+        // Where a glide asked for before any audio sets out from
+        std::optional<float> start;
+        quint64 serial = 0;
+        quint64 applied = 0;
+
+        // Glides when heard. Otherwise it jumps, unless it follows a change still waiting to be made, as
+        // a Play and an Update sent together ask: it then glides on from there.
+        void set(float value, int glideMilliseconds, bool heard);
+        void jumpTo(float value);
+        std::optional<float> waitingStart() const;
+        void applyTo(Glide& glide);
+    };
+
+    bool heardFor(int glideMilliseconds) const;
     void audioBufferReceived(const QAudioBuffer& buffer);
     void checkForSilence();
     static void probeUnnamedBackend();
@@ -93,13 +125,19 @@ private:
     const int mVoice;
     // Rendering state, touched only on the decoding thread
     Glide mGain{1.0F, 1.0F, 0};
-    // Set from the main thread, picked up by the decoding thread with the next audio
-    QMutex mGainMutex;
-    float mGainTarget = 1.0F;
-    qint64 mGainGlideFrames = 0;
-    quint64 mGainRequest = 0;
-    quint64 mGainRequestApplied = 0;
+    Glide mPan;
+    Glide mPlacement;
+    QMutex mRequestMutex;
+    Request mGainRequest{1.0F};
+    Request mPanRequest;
+    Request mPlacementRequest;
+    // Under mRequestMutex. A loop passes through a stop between passes, so this outlasts mReceivedAudio.
+    bool mTrackHeard = false;
+    // Under mRequestMutex: the audio last handed over was placed at all, if only while blending out
+    bool mPanHeard = false;
     std::atomic<float> mRequestedGain = 1.0F;
+    std::atomic<float> mRequestedPan = 0.0F;
+    std::atomic<bool> mPlaced = false;
     std::atomic<bool> mMuted = false;
     std::atomic<bool> mReceivedAudio = false;
     // Stopped on request rather than at the end, so audio still arriving is stale
