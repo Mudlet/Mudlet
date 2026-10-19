@@ -585,6 +585,8 @@ private:
     static bool doubleByteTrail(Decoder, quint8);
     void styleForCurrentLink(TChar&);
     void flushPendingLead();
+    void clearSequenceLatches();
+    void endLocalFeedSequences();
     void appendReplacementCharacter(TChar);
     static QStringDecoder multibyteDecoderFor(Decoder, const QByteArray&);
     bool decodeMultibyteSequence(QByteArrayView, QString&);
@@ -749,8 +751,8 @@ private:
     QString mServerWrapPendingSegmentStart;
     // Used to hold the unprocessed bytes that could be left at the end of a
     // packet if we detect that there should be more - will be prepended to the
-    // next chunk of data on the same channel. On the local one that is whatever
-    // local source feeds next (a script, MMCP, MXP), as they all share it:
+    // next chunk of data from the Game Server. A local feed arrives whole, so
+    // it never carries any over (endLocalFeedSequences()):
     std::string mIncompleteSequenceBytes;
     // The lead byte of a double-byte character that the game restyled before
     // sending its trail byte, with the rendition that paints its left half;
@@ -758,12 +760,11 @@ private:
     char mPendingLead = 0;
     TChar mPendingLeadFormat;
 
-    // The parser sequence state (the mGot... latches and
-    // mIncompleteSequenceBytes) for whichever of the two data channels - Game
-    // Server stream or locally generated text - is not currently being
-    // processed; translateToPlainText() swaps it in around a local feed so
-    // that such text cannot consume or clear a latch belonging to a sequence
-    // split across Game Server packets (and vice versa):
+    // The Game Server stream's parser sequence state (the mGot... latches,
+    // mIncompleteSequenceBytes and the pending lead byte), parked here while
+    // translateToPlainText() runs a locally generated feed, which starts clean
+    // and ends whatever it left open, so that such text cannot consume or clear
+    // a latch belonging to a sequence split across Game Server packets:
     bool mLocalGotESC = false;
     bool mLocalGotEscCharset = false;
     bool mLocalGotCSI = false;
