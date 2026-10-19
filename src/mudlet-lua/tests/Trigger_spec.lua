@@ -2993,7 +2993,15 @@ describe("Trigger processing", function()
             file:close()
             assert.is_true(installPackage(path))
             -- an install made while a profile save runs waits for it to finish
-            assert.is_true(waitUntil(function() return exists("bad_pattern_package_trigger", "trigger") > 0 end, 5000), "the package should have brought the trigger in")
+            local installed = false
+            for _ = 1, 100 do
+                installed = exists("bad_pattern_package_trigger", "trigger") > 0
+                if installed then
+                    break
+                end
+                pumpEvents(50)
+            end
+            assert.is_true(installed, "the package should have brought the trigger in")
             feedTriggers("bad_pattern_package\n")
 
             assert.are.equal(1, _G.TrigBadPattern.good, "the control trigger shows the line does reach the trigger engine")
