@@ -43,6 +43,9 @@
 // Helper functions for XML serialization and compression
 // =============================================================================
 
+// Without parse_eol: the snapshot holds a carriage return raw, and parse_eol would turn it into a line feed
+static constexpr unsigned int scmSnapshotParseOptions = pugi::parse_default & ~pugi::parse_eol;
+
 // Internal helper functions for compression (static to keep them local to this file)
 static QString compressXML(const QString& xml)
 {
@@ -256,7 +259,7 @@ TTrigger* importTriggerFromXML(const QString& xmlSnapshot, TTrigger* pParent, Ho
     }
 
     pugi::xml_document doc;
-    pugi::xml_parse_result result = doc.load_string(xml.toStdString().c_str());
+    pugi::xml_parse_result result = doc.load_string(xml.toStdString().c_str(), scmSnapshotParseOptions);
     if (!result) {
         qWarning() << "importTriggerFromXML: Failed to parse XML:" << result.description();
         return nullptr;
@@ -388,7 +391,7 @@ bool updateTriggerFromXML(TTrigger* pT, const QString& xmlSnapshot)
     }
 
     pugi::xml_document doc;
-    pugi::xml_parse_result result = doc.load_string(xml.toStdString().c_str());
+    pugi::xml_parse_result result = doc.load_string(xml.toStdString().c_str(), scmSnapshotParseOptions);
     if (!result) {
         qWarning() << "updateTriggerFromXML: Failed to parse XML:" << result.description();
         return false;
@@ -489,7 +492,7 @@ TAlias* importAliasFromXML(const QString& xmlSnapshot, TAlias* pParent, Host* ho
     }
 
     pugi::xml_document doc;
-    pugi::xml_parse_result result = doc.load_string(xml.toStdString().c_str());
+    pugi::xml_parse_result result = doc.load_string(xml.toStdString().c_str(), scmSnapshotParseOptions);
     if (!result) {
         qWarning() << "importAliasFromXML: Failed to parse XML:" << result.description();
         return nullptr;
@@ -585,7 +588,7 @@ bool updateAliasFromXML(TAlias* pA, const QString& xmlSnapshot)
     }
 
     pugi::xml_document doc;
-    pugi::xml_parse_result result = doc.load_string(xml.toStdString().c_str());
+    pugi::xml_parse_result result = doc.load_string(xml.toStdString().c_str(), scmSnapshotParseOptions);
     if (!result) {
         qWarning() << "updateAliasFromXML: Failed to parse XML:" << result.description();
         return false;
@@ -652,7 +655,7 @@ TTimer* importTimerFromXML(const QString& xmlSnapshot, TTimer* pParent, Host* ho
     }
 
     pugi::xml_document doc;
-    pugi::xml_parse_result result = doc.load_string(xml.toStdString().c_str());
+    pugi::xml_parse_result result = doc.load_string(xml.toStdString().c_str(), scmSnapshotParseOptions);
     if (!result) {
         qWarning() << "importTimerFromXML: Failed to parse XML:" << result.description();
         return nullptr;
@@ -746,7 +749,7 @@ bool updateTimerFromXML(TTimer* pT, const QString& xmlSnapshot)
     }
 
     pugi::xml_document doc;
-    pugi::xml_parse_result result = doc.load_string(xml.toStdString().c_str());
+    pugi::xml_parse_result result = doc.load_string(xml.toStdString().c_str(), scmSnapshotParseOptions);
     if (!result) {
         qWarning() << "updateTimerFromXML: Failed to parse XML:" << result.description();
         return false;
@@ -812,7 +815,7 @@ TScript* importScriptFromXML(const QString& xmlSnapshot, TScript* pParent, Host*
     }
 
     pugi::xml_document doc;
-    pugi::xml_parse_result result = doc.load_string(xml.toStdString().c_str());
+    pugi::xml_parse_result result = doc.load_string(xml.toStdString().c_str(), scmSnapshotParseOptions);
     if (!result) {
         qWarning() << "importScriptFromXML: Failed to parse XML:" << result.description();
         return nullptr;
@@ -913,7 +916,7 @@ bool updateScriptFromXML(TScript* pS, const QString& xmlSnapshot)
     }
 
     pugi::xml_document doc;
-    pugi::xml_parse_result result = doc.load_string(xml.toStdString().c_str());
+    pugi::xml_parse_result result = doc.load_string(xml.toStdString().c_str(), scmSnapshotParseOptions);
     if (!result) {
         qWarning() << "updateScriptFromXML: Failed to parse XML:" << result.description();
         return false;
@@ -984,7 +987,7 @@ TKey* importKeyFromXML(const QString& xmlSnapshot, TKey* pParent, Host* host, in
     }
 
     pugi::xml_document doc;
-    pugi::xml_parse_result result = doc.load_string(xml.toStdString().c_str());
+    pugi::xml_parse_result result = doc.load_string(xml.toStdString().c_str(), scmSnapshotParseOptions);
     if (!result) {
         qWarning() << "importKeyFromXML: Failed to parse XML:" << result.description();
         return nullptr;
@@ -1081,7 +1084,7 @@ bool updateKeyFromXML(TKey* pK, const QString& xmlSnapshot)
     }
 
     pugi::xml_document doc;
-    pugi::xml_parse_result result = doc.load_string(xml.toStdString().c_str());
+    pugi::xml_parse_result result = doc.load_string(xml.toStdString().c_str(), scmSnapshotParseOptions);
     if (!result) {
         qWarning() << "updateKeyFromXML: Failed to parse XML:" << result.description();
         return false;
@@ -1149,7 +1152,7 @@ TAction* importActionFromXML(const QString& xmlSnapshot, TAction* pParent, Host*
     }
 
     pugi::xml_document doc;
-    pugi::xml_parse_result result = doc.load_string(xml.toStdString().c_str());
+    pugi::xml_parse_result result = doc.load_string(xml.toStdString().c_str(), scmSnapshotParseOptions);
     if (!result) {
         qWarning() << "importActionFromXML: Failed to parse XML:" << result.description();
         return nullptr;
@@ -1274,7 +1277,7 @@ bool updateActionFromXML(TAction* pA, const QString& xmlSnapshot)
     }
 
     pugi::xml_document doc;
-    pugi::xml_parse_result result = doc.load_string(xml.toStdString().c_str());
+    pugi::xml_parse_result result = doc.load_string(xml.toStdString().c_str(), scmSnapshotParseOptions);
     if (!result) {
         qWarning() << "updateActionFromXML: Failed to parse XML:" << result.description();
         return false;

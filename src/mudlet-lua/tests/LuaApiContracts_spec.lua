@@ -365,6 +365,76 @@ describe("Tests what feedTriggers will and will not carry", function()
     assert.same({"FeedHalfBig5 \239\191\189Z"}, linesFrom(mark))
   end)
 
+  -- A Lua string can hold a NUL and the text after it is still the caller's;
+  -- the NUL itself is dropped, as it is from a game
+  it("carries the text after an embedded NUL", function()
+    assert.is_true(setServerEncoding("UTF-8"))
+    -- end whatever line an earlier spec left open
+    assert.is_true(feedTriggers("\n"))
+    local mark = getLastLineNumber("main")
+
+    assert.is_true(feedTriggers("FeedNulHead\0FeedNulTail\n"))
+    assert.is_true(feedTriggers("FeedNulNext\n"))
+    local lines = getLines("main", mark, getLastLineNumber("main") + 1)
+    assert.same({"FeedNulHeadFeedNulTail", "FeedNulNext", ""}, lines)
+  end)
+
+  -- the transcoding and pre-encoded branches see the text after the NUL is dropped too
+  it("drops an embedded NUL from text it transcodes or takes pre-encoded", function()
+    assert.is_true(setServerEncoding("ISO 8859-1"))
+    assert.is_true(feedTriggers("\n"))
+    local mark = getLastLineNumber("main")
+
+    assert.is_true(feedTriggers("FeedNulLatin \195\169\0Tail\n"))
+    assert.is_true(feedTriggers("FeedNulRaw \233\0Tail\n", false))
+    local lines = getLines("main", mark, getLastLineNumber("main") + 1)
+    assert.same({"FeedNulLatin \195\169Tail", "FeedNulRaw \195\169Tail", ""}, lines)
+  end)
+
+  -- Mudlet drops every carriage return a game sends, so captured output
+  -- replayed through feedTriggers() has to come out the same. Blank lines are
+  -- shown for these, as hiding them would hide a stray one too.
+  local function linesFed(isUtf8, ...)
+    local blankLines = getConfig("blankLinesBehaviour")
+    setConfig("blankLinesBehaviour", "show")
+    finally(function() setConfig("blankLinesBehaviour", blankLines) end)
+    assert.is_true(feedTriggers("\n"))
+    local mark = getLastLineNumber("main")
+    for _, text in ipairs({...}) do
+      assert.is_true(feedTriggers(text, isUtf8))
+    end
+    return getLines("main", mark, getLastLineNumber("main") + 1)
+  end
+
+  it("takes a CR LF line ending as one line ending", function()
+    assert.is_true(setServerEncoding("UTF-8"))
+    assert.same({"FeedCrLfOne", "FeedCrLfTwo", ""}, linesFed(true, "FeedCrLfOne\r\nFeedCrLfTwo\r\n"))
+    assert.same({"FeedCrCrLfOne", "FeedCrCrLfTwo", ""}, linesFed(true, "FeedCrCrLfOne\r\r\nFeedCrCrLfTwo\r\r\n"))
+  end)
+
+  it("keeps a blank line that arrives as CR LF CR LF", function()
+    assert.is_true(setServerEncoding("UTF-8"))
+    assert.same({"FeedCrLfAbove", "", "FeedCrLfBelow", ""}, linesFed(true, "FeedCrLfAbove\r\n\r\nFeedCrLfBelow\r\n"))
+  end)
+
+  it("drops a carriage return part way through the text", function()
+    assert.is_true(setServerEncoding("UTF-8"))
+    assert.same({"FeedCrHeadFeedCrTail", ""}, linesFed(true, "FeedCrHead\rFeedCrTail\n"))
+  end)
+
+  -- a script feeding a line in parts flushes the part it has with one
+  it("keeps a carriage return that ends the text", function()
+    assert.is_true(setServerEncoding("UTF-8"))
+    assert.same({"FeedCrFlushed", ""}, linesFed(true, "FeedCrFlushed\r"))
+    assert.same({"FeedCrFlushedA", "FeedCrFlushedB", ""}, linesFed(true, "FeedCrFlushedA\r", "FeedCrFlushedB\n"))
+  end)
+
+  it("takes a CR LF line ending as one in text it transcodes or takes pre-encoded", function()
+    assert.is_true(setServerEncoding("ISO 8859-1"))
+    assert.same({"FeedCrLfLatin \195\169", "FeedCrLfLatinNext", ""}, linesFed(true, "FeedCrLfLatin \195\169\r\nFeedCrLfLatinNext\r\n"))
+    assert.same({"FeedCrLfRaw \195\169", "FeedCrLfRawNext", ""}, linesFed(false, "FeedCrLfRaw \233\r\nFeedCrLfRawNext\r\n"))
+  end)
+
   it("raises on arguments it cannot make sense of", function()
     assertArgError(function() return feedTriggers({}) end, "bad argument #1 type")
     assertArgError(function() return feedTriggers("FeedEncNever\n", "yes") end, "bad argument #2 type")
@@ -375,7 +445,7 @@ end)
 -- error console, a script's own logging, a scraper reading either - work a line
 -- at a time, so a newline inside one hides everything after it. The rest of the
 -- API keeps a bad-argument refusal to the single line that names what was
--- wanted and what arrived; these two feeding functions are the pair that did not.
+-- wanted and what arrived.
 describe("Tests the shape of the feeding functions' bad-argument errors", function()
 
   local feeders = {
@@ -396,6 +466,155 @@ describe("Tests the shape of the feeding functions' bad-argument errors", functi
       assert.is_false(contains(err, "\n"), feeder.name .. " split its refusal over more than one line: " .. tostring(err))
       local expected = feeder.name .. ": bad argument #1 type (" .. feeder.wanted .. " expected, got no value!)"
       assert.is_true(contains(err, expected), feeder.name .. " did not say " .. expected .. " - it said: " .. tostring(err))
+    end)
+  end
+end)
+
+describe("Tests that the other bad-argument refusals stay on one line", function()
+
+  local cases = {
+    {label = "deleteArea", call = function() return deleteArea({}) end,
+      expected = "deleteArea: bad argument #1 type (area Id as number or area name as string expected, got table!)"},
+    {label = "getRoomAreaName", call = function() return getRoomAreaName({}) end,
+      expected = "getRoomAreaName: bad argument #1 type (area id as number or area name as string expected, got table!)"},
+    {label = "setAreaName", call = function() return setAreaName({}, "x") end,
+      expected = "setAreaName: bad argument #1 type (areaID as number or area name as string expected, got table!)"},
+    {label = "setRoomArea's room", call = function() return setRoomArea("nope", 1) end,
+      expected = "setRoomArea: bad argument #1 type (roomID as number or table of roomIDs expected, got string!)"},
+    {label = "raiseEvent", call = function() return raiseEvent("mudletSpecTwoLine", coroutine.create(function() end)) end,
+      expected = "raiseEvent: bad argument #2 type (string, number, boolean, table, function, or nil expected, got a thread!)"},
+    {label = "raiseGlobalEvent", call = function() return raiseGlobalEvent("mudletSpecTwoLine", {}) end,
+      expected = "raiseGlobalEvent: bad argument #2 type (boolean, number, string or nil expected, got a table!)"},
+    {label = "getMudletVersion's option", call = function() return getMudletVersion("bananas") end,
+      expected = 'getMudletVersion: takes one (optional) argument: "major", "minor", "revision", "build", "string" or "table".'},
+    {label = "getMudletVersion's argument count", call = function() return getMudletVersion("major", "minor") end,
+      expected = 'getMudletVersion: only takes one (optional) argument: "major", "minor", "revision", "build", "string" or "table".'},
+  }
+
+  for _, case in ipairs(cases) do
+    it(case.label .. " refuses on one line", function()
+      local ok, err = pcall(case.call)
+      assert.is_false(ok)
+      assert.is_string(err)
+      assert.is_false(contains(err, "\n"), "split over more than one line: " .. tostring(err))
+      assert.is_true(contains(err, case.expected), "expected " .. case.expected .. " - got: " .. tostring(err))
+    end)
+  end
+
+  it("setRoomArea's area refuses on one line", function()
+    local id = createRoomID()
+    assert.is_true(addRoom(id))
+    finally(function() deleteRoom(id) end)
+    local ok, err = pcall(setRoomArea, id, {})
+    assert.is_false(ok)
+    assert.is_string(err)
+    assert.is_false(contains(err, "\n"), "split over more than one line: " .. tostring(err))
+    local expected = "setRoomArea: bad argument #2 type (areaID as number or area name as string expected, got table!)"
+    assert.is_true(contains(err, expected), "expected " .. expected .. " - got: " .. tostring(err))
+  end)
+
+  it("loadMap's missing map file is reported on one line", function()
+    local ok, err = loadMap("/no/such/mudletSpecOneLine.xml")
+    assert.is_nil(ok)
+    assert.is_string(err)
+    assert.is_false(contains(err, "\n"), "split over more than one line: " .. tostring(err))
+    -- Windows reports the path made absolute, with a drive letter in front
+    local pattern = 'loadMap: bad argument #1 value %(filename used: "%a?:?/no/such/mudletSpecOneLine%.xml" was not found%)%.'
+    assert.is_truthy(err:find(pattern), "expected a match for " .. pattern .. " - got: " .. tostring(err))
+  end)
+end)
+
+describe("Tests that raiseEvent lets go of what it was handed when it refuses", function()
+
+  local function registryEntryCount()
+    local count = 0
+    for _ in pairs(debug.getregistry()) do
+      count = count + 1
+    end
+    return count
+  end
+
+  -- The arguments are taken from the last one down, so a bad argument below a
+  -- table and a function is only reached after both have been anchored.
+  it("keeps nothing in the registry when an earlier argument is refused", function()
+    local function refuse()
+      return pcall(raiseEvent, "mudletSpecRefusedEvent", coroutine.create(function() end), {}, function() end)
+    end
+    -- a warm-up refusal: the registry's free list is created by the first release
+    refuse()
+    collectgarbage()
+    local before = registryEntryCount()
+    for _ = 1, 20 do
+      local ok, err = refuse()
+      assert.is_false(ok)
+      assert.is_true(contains(err, "raiseEvent: bad argument #2 type"), tostring(err))
+    end
+    collectgarbage()
+    assert.are.equal(before, registryEntryCount())
+  end)
+end)
+
+-- Each of these runs code shared with, or copied from, a function of another
+-- name, which is the name its errors would otherwise carry
+describe("Tests that functions sharing an implementation refuse under their own name", function()
+
+  local cases = {
+    {label = "setMiniConsoleFontSize with nothing", call = function() return setMiniConsoleFontSize() end,
+      expected = "setMiniConsoleFontSize: bad argument #2 type (size as number expected, got no value!)"},
+    {label = "setMiniConsoleFontSize with a bad size", call = function() return setMiniConsoleFontSize("main", {}) end,
+      expected = "setMiniConsoleFontSize: bad argument #2 type (size as number expected, got table!)"},
+    {label = "setCommandBackgroundColor", call = function() return setCommandBackgroundColor() end,
+      expected = "setCommandBackgroundColor: bad argument #1 type"},
+    {label = "setCommandForegroundColor", call = function() return setCommandForegroundColor() end,
+      expected = "setCommandForegroundColor: bad argument #1 type"},
+    {label = "loadRawFile", call = function() return loadRawFile(nil) end,
+      expected = "loadRawFile: bad argument #1 type (replay file name as string expected, got nil!)"},
+    {label = "resetLabelToolTip", call = function() return resetLabelToolTip() end,
+      expected = "resetLabelToolTip: bad argument #1 type"},
+    {label = "resetUserWindowTitle", call = function() return resetUserWindowTitle() end,
+      expected = "resetUserWindowTitle: bad argument #1 type"},
+    {label = "cechoPopup", call = function() return cechoPopup("main", "x", 3) end, expected = "cechoPopup: bad argument #2 type"},
+    {label = "dechoPopup", call = function() return dechoPopup("main", "x", 3) end, expected = "dechoPopup: bad argument #2 type"},
+    {label = "hechoPopup", call = function() return hechoPopup("main", "x", 3) end, expected = "hechoPopup: bad argument #2 type"},
+    {label = "cinsertPopup", call = function() return cinsertPopup("main", "x", 3) end, expected = "cinsertPopup: bad argument #2 type"},
+    {label = "dinsertPopup", call = function() return dinsertPopup("main", "x", 3) end, expected = "dinsertPopup: bad argument #2 type"},
+    {label = "hinsertPopup", call = function() return hinsertPopup("main", "x", 3) end, expected = "hinsertPopup: bad argument #2 type"},
+    {label = "cechoPopup given a window", call = function() return cechoPopup("main", "x", "notATable", {"hint"}) end,
+      expected = "cechoPopup: bad argument #3 type"},
+    {label = "cechoLink without a window", call = function() return cechoLink("x", {}, "hint") end, expected = "cechoLink: bad argument #2 type"},
+    {label = "cechoLink formatted, without a window", call = function() return cechoLink("x", "cmd", {}, true) end,
+      expected = "cechoLink: bad argument #3 type"},
+    {label = "cechoLink given a window", call = function() return cechoLink("main", "x", {}, "hint") end, expected = "cechoLink: bad argument #3 type"},
+    {label = "dechoLink", call = function() return dechoLink("x", {}, "hint") end, expected = "dechoLink: bad argument #2 type"},
+    {label = "hechoLink", call = function() return hechoLink("x", {}, "hint") end, expected = "hechoLink: bad argument #2 type"},
+    {label = "cinsertLink", call = function() return cinsertLink("x", {}, "hint") end, expected = "cinsertLink: bad argument #2 type"},
+    {label = "dinsertLink formatted, without a window", call = function() return dinsertLink("x", "cmd", {}, true) end,
+      expected = "dinsertLink: bad argument #3 type"},
+    {label = "hinsertLink given a window", call = function() return hinsertLink("main", "x", {}, "hint") end, expected = "hinsertLink: bad argument #3 type"},
+    {label = "cechoPopup formatted, without a window", call = function() return cechoPopup("x", {"cmd"}, 3, true) end,
+      expected = "cechoPopup: bad argument #3 type"},
+    {label = "cechoPopup with a bad command, without a window", call = function() return cechoPopup("x", {false}, {"hint"}) end,
+      expected = "cechoPopup: bad item #1 in table argument #2 "},
+    {label = "cechoPopup with a bad hint, without a window", call = function() return cechoPopup("x", {"cmd"}, {{}}) end,
+      expected = "cechoPopup: bad item #1 in table argument #3 "},
+    {label = "dinsertPopup with a bad command, given a window", call = function() return dinsertPopup("main", "x", {false}, {"hint"}) end,
+      expected = "dinsertPopup: bad item #1 in table argument #3 "},
+    {label = "cechoPopup short of arguments", call = function() return cechoPopup("x", {"cmd"}) end, expected = "cechoPopup: Insufficient arguments"},
+    {label = "cechoLink with a bad fourth argument", call = function() return cechoLink("w", "t", "c", 5) end, expected = "cechoLink: Improper arguments"},
+    {label = "loadReplay", call = function() return loadReplay(nil) end,
+      expected = "loadReplay: bad argument #1 type (replay file name as string expected, got nil!)"},
+    {label = "setFontSize", call = function() return setFontSize({}) end, expected = "setFontSize: bad argument #1 type (size as number expected, got table!)"},
+    {label = "setMiniConsoleFontSize with a bad window name", call = function() return setMiniConsoleFontSize({}, 10) end,
+      expected = "setMiniConsoleFontSize: bad argument #1 type (window name as string expected, got table)"},
+    {label = "setHexFgColor", call = function() return setHexFgColor("zzzzzz") end, expected = "setHexFgColor needs a 6 digit hex color code."},
+    {label = "setHexBgColor", call = function() return setHexBgColor("main", "zzzzzz") end, expected = "setHexBgColor needs a 6 digit hex color code."},
+  }
+
+  for _, case in ipairs(cases) do
+    it(case.label .. " names itself", function()
+      local ok, err = pcall(case.call)
+      assert.is_false(ok, "the call was accepted instead of raising")
+      assert.is_true(contains(err, case.expected), "expected " .. case.expected .. " - got: " .. tostring(err))
     end)
   end
 end)
@@ -477,6 +696,22 @@ describe("Tests feedTelnet's marker escapes", function()
     local last = getLastLineNumber("main")
     local line = getLines("main", last - 1, last)[1]
     assert.equals("FeedTelnetAfterVersion", line, "asking for the version fed something to the screen")
+  end)
+
+  -- A raw NUL in text reaches the telnet parser, which drops it as it does in a game's text
+  it("feeds the data after an embedded NUL", function()
+    assert.is_true(feedTelnet("\n"))
+    local mark = getLastLineNumber("main")
+    local ok, msg = feedTelnet("FeedTelnetNulHead\0FeedTelnetNulTail\r\n")
+    assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
+    assert.same({"FeedTelnetNulHeadFeedTelnetNulTail", ""}, getLines("main", mark, getLastLineNumber("main") + 1))
+  end)
+
+  -- only the empty string asks for the version: a lone NUL is data
+  it("feeds a lone NUL rather than answering the table version", function()
+    local ok, msg = feedTelnet("\0")
+    assert.is_true(ok)
+    assert.is_nil(msg, "a NUL was read as the empty string")
   end)
 
   it("reads doubled angle brackets as literal ones rather than as a marker", function()
@@ -618,5 +853,156 @@ describe("Tests the raised errors for a wrongly typed argument", function()
 
   it("raises for a saveProfile file name that is not a string", function()
     assertArgError(function() return saveProfile(nil, {}) end, "saveProfile: bad argument #2 type")
+  end)
+end)
+
+describe("Tests that the window functions refuse a window that does not exist", function()
+  local unknown = ("specContractsNoSuchWindow-%d-%d"):format(os.time(), math.random(100000))
+  local notFound = ('window "%s" not found'):format(unknown)
+
+  -- an array rather than a keyed table so the specs are always generated in
+  -- the same order
+  local calls = {
+    {"cecho", function() return cecho(unknown, "<red>x\n") end},
+    {"decho", function() return decho(unknown, "<255,0,0>x\n") end},
+    {"hecho", function() return hecho(unknown, "#FF0000x\n") end},
+    {"cechoLink", function() return cechoLink(unknown, "<red>x", "", "") end},
+    {"dechoLink", function() return dechoLink(unknown, "<255,0,0>x", "", "") end},
+    {"hechoLink", function() return hechoLink(unknown, "#FF0000x", "", "") end},
+    {"cinsertLink", function() return cinsertLink(unknown, "<red>x", "", "") end},
+    {"dinsertLink", function() return dinsertLink(unknown, "<255,0,0>x", "", "") end},
+    {"hinsertLink", function() return hinsertLink(unknown, "#FF0000x", "", "") end},
+    {"cechoPopup", function() return cechoPopup(unknown, "<red>x", {""}, {""}) end},
+    {"dechoPopup", function() return dechoPopup(unknown, "<255,0,0>x", {""}, {""}) end},
+    {"hechoPopup", function() return hechoPopup(unknown, "#FF0000x", {""}, {""}) end},
+    {"cinsertPopup", function() return cinsertPopup(unknown, "<red>x", {""}, {""}) end},
+    {"dinsertPopup", function() return dinsertPopup(unknown, "<255,0,0>x", {""}, {""}) end},
+    {"hinsertPopup", function() return hinsertPopup(unknown, "#FF0000x", {""}, {""}) end},
+    {"cinsertText", function() return cinsertText(unknown, "<red>x") end},
+    {"replace", function() return replace(unknown, "x") end},
+    {"replace keepcolor", function() return replace(unknown, "x", true) end},
+    {"replaceLine", function() return replaceLine(unknown, "x") end},
+    {"gagLine", function() return gagLine(unknown) end},
+    {"setHexFgColor", function() return setHexFgColor(unknown, "FF0000") end},
+    {"setHexBgColor", function() return setHexBgColor(unknown, "FF0000") end},
+    {"clearUserWindow", function() return clearUserWindow(unknown) end},
+  }
+
+  for _, entry in ipairs(calls) do
+    local functionName, call = entry[1], entry[2]
+    it(functionName .. " answers nil and why, leaving the main console alone", function()
+      echo("main", "\nspecContracts line the call must not touch")
+      moveCursorEnd("main")
+      finally(function() echo("main", "\n") end)
+      local last = getLastLineNumber("main")
+      local line = getCurrentLine("main")
+      assert.are.same({nil, notFound}, {call()})
+      assert.are.equal(last, getLastLineNumber("main"))
+      assert.are.equal(line, getCurrentLine("main"))
+    end)
+  end
+
+  it("enableClickthrough and disableClickthrough answer nil and why", function()
+    local labelNotFound = ("label name '%s' not found"):format(unknown)
+    assert.are.same({nil, labelNotFound}, {enableClickthrough(unknown)})
+    assert.are.same({nil, labelNotFound}, {disableClickthrough(unknown)})
+  end)
+
+  it("hideWindow, moveWindow and resizeWindow name the main console as one they cannot use", function()
+    local refusal = 'window "main" is of type "main", which this function cannot use'
+    assert.are.same({nil, refusal}, {hideWindow("main")})
+    assert.are.same({nil, refusal}, {moveWindow("main", 1, 1)})
+    assert.are.same({nil, refusal}, {resizeWindow("main", 800, 600)})
+  end)
+end)
+
+describe("Tests that gagLine works on the window it is given", function()
+  it("deletes the line in that window and leaves the main console alone", function()
+    local window = ("specContractsGag-%d-%d"):format(os.time(), math.random(100000))
+    assert.is_true(createMiniConsole(window, 0, 0, 200, 100))
+    finally(function()
+      deleteMiniConsole(window)
+      echo("main", "\n")
+    end)
+    echo(window, "first in the window\nsecond in the window")
+    assert.is_true(moveCursor(window, 0, 0))
+    echo("main", "\nspecContracts line gagLine must not touch")
+    moveCursorEnd("main")
+    local last = getLastLineNumber("main")
+    local line = getCurrentLine("main")
+
+    assert.are.same({true}, {gagLine(window)})
+
+    assert.are.same({"second in the window"}, getLines(window, 0, 1))
+    assert.are.equal(last, getLastLineNumber("main"))
+    assert.are.equal(line, getCurrentLine("main"))
+  end)
+end)
+
+describe("Tests that the window functions answer true for a window that exists", function()
+  local suffix = ("-%d-%d"):format(os.time(), math.random(100000))
+  local window = "specContractsWindow" .. suffix
+  local label = "specContractsLabel" .. suffix
+
+  setup(function()
+    assert.is_true(createMiniConsole(window, 0, 0, 200, 100))
+    assert.is_true(createLabel(label, 0, 0, 50, 20, 1))
+  end)
+
+  teardown(function()
+    deleteMiniConsole(window)
+    deleteLabel(label)
+  end)
+
+  local calls = {
+    {"cecho", function() return cecho(window, "<red>x\n") end},
+    {"decho", function() return decho(window, "<255,0,0>x\n") end},
+    {"hecho", function() return hecho(window, "#FF0000x\n") end},
+    {"cecho to a label", function() return cecho(label, "<red>x") end},
+    {"cechoLink", function() return cechoLink(window, "<red>x", "", "") end},
+    {"dechoLink", function() return dechoLink(window, "<255,0,0>x", "", "") end},
+    {"hechoLink", function() return hechoLink(window, "#FF0000x", "", "") end},
+    {"cinsertLink", function() return cinsertLink(window, "<red>x", "", "") end},
+    {"dinsertLink", function() return dinsertLink(window, "<255,0,0>x", "", "") end},
+    {"hinsertLink", function() return hinsertLink(window, "#FF0000x", "", "") end},
+    {"cechoPopup", function() return cechoPopup(window, "<red>x", {""}, {""}) end},
+    {"dechoPopup", function() return dechoPopup(window, "<255,0,0>x", {""}, {""}) end},
+    {"hechoPopup", function() return hechoPopup(window, "#FF0000x", {""}, {""}) end},
+    {"cinsertPopup", function() return cinsertPopup(window, "<red>x", {""}, {""}) end},
+    {"dinsertPopup", function() return dinsertPopup(window, "<255,0,0>x", {""}, {""}) end},
+    {"hinsertPopup", function() return hinsertPopup(window, "#FF0000x", {""}, {""}) end},
+    {"cinsertText", function() return cinsertText(window, "<red>x") end},
+    {"dinsertText", function() return dinsertText(window, "<255,0,0>x") end},
+    {"hinsertText", function() return hinsertText(window, "#FF0000x") end},
+    {"echoUserWindow", function() return echoUserWindow(window, "x\n") end},
+    {"pasteWindow", function() return pasteWindow(window) end},
+    {"wrapLine", function() return wrapLine(window, 0) end},
+    {"moveWindow", function() return moveWindow(window, 1, 1) end},
+    {"resizeWindow", function() return resizeWindow(window, 200, 100) end},
+    {"hideWindow", function() return hideWindow(window) end},
+    {"setFgColor", function() return setFgColor(window, 255, 0, 0) end},
+    {"setHexFgColor", function() return setHexFgColor(window, "FF0000") end},
+    {"setHexBgColor", function() return setHexBgColor(window, "FF0000") end},
+    {"enableClickthrough", function() return enableClickthrough(label) end},
+    {"disableClickthrough", function() return disableClickthrough(label) end},
+  }
+
+  for _, entry in ipairs(calls) do
+    it(entry[1] .. " answers true", function()
+      assert.are.same({true}, {entry[2]()})
+    end)
+  end
+
+  it("replace and replaceLine answer true", function()
+    echo(window, "\nspecContracts replace me")
+    assert.is_true(moveCursor(window, 0, getLastLineNumber(window)))
+    assert.is_true(selectString(window, "replace", 1) > -1)
+    assert.are.same({true}, {replace(window, "swapped")})
+    assert.are.same({true}, {replaceLine(window, "whole line")})
+    assert.are.equal("whole line", getCurrentLine(window))
+  end)
+
+  it("clearWindow answers nothing, so clearing from the command line prints nothing", function()
+    assert.are.same({}, {clearWindow(window)})
   end)
 end)

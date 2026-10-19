@@ -38,6 +38,7 @@
 #include <QEvent>
 #include <QFileDialog>
 #include <QFileInfo>
+#include <QFontMetrics>
 #include <QFrame>
 #include <QLabel>
 #include <QListWidget>
@@ -74,7 +75,7 @@ dlgMapper::dlgMapper(QWidget* parent, Host* pH, TMap* pM)
     setupUi(this);
 
 #if defined(INCLUDE_3DMAPPER)
-    QSurfaceFormat fmt;
+    QSurfaceFormat fmt = QSurfaceFormat::defaultFormat();
 #ifndef NDEBUG
     fmt.setOption(QSurfaceFormat::DebugContext);
 #endif
@@ -179,6 +180,7 @@ void dlgMapper::connectMapCues()
             update3DView();
         }
     });
+    connect(mpMap, &TMap::signal_roomDeleted, mp2dMap, &T2DMap::forgetDeletedRoom);
     connect(mpMap, &TMap::signal_mapCleared, this, [this]() {
         if (!drawsTheMap()) {
             return;
@@ -290,6 +292,9 @@ void dlgMapper::connectMapCues()
             break;
         case TMap::MapperSetting::ShowGrid:
             slot_setShowGrid(mpHost->mMapperShowGrid);
+            break;
+        case TMap::MapperSetting::Style:
+            update3DView();
             break;
         }
     });
@@ -519,10 +524,11 @@ void dlgMapper::loadMapFromFile()
             return;
         }
         bool success = false;
+        const bool isJson = fileName.endsWith(qsl(".json"), Qt::CaseInsensitive);
         if (fileName.endsWith(qsl(".xml"), Qt::CaseInsensitive)) {
             success = pHost->importMapFile(fileName);
-        } else if (fileName.endsWith(qsl(".json"), Qt::CaseInsensitive)) {
-            auto [ok, errorMessage] = pHost->mpMap->readJsonMapFile(fileName);
+        } else if (isJson) {
+            auto [ok, errorMessage] = pHost->mpMap->importJsonMapFile(fileName);
             success = ok;
             if (!ok) {
                 pHost->postMessage(tr("[ ERROR ] - Unable to load JSON map file: %1\nreason: %2.").arg(fileName, errorMessage));
@@ -531,7 +537,9 @@ void dlgMapper::loadMapFromFile()
             success = pHost->loadMapFile(fileName);
         }
         if (success) {
-            pHost->mpMap->audit();
+            if (!isJson) {
+                pHost->mpMap->audit();
+            }
             mEmptyStateDismissed = true;
             MudletApp::getQSettings()->setValue(qsl("lastFileDialogLocation"), QFileInfo(fileName).absolutePath());
         }
@@ -731,7 +739,11 @@ int dlgMapper::shownAreaId() const
 bool dlgMapper::showing3DView() const
 {
 #if defined(INCLUDE_3DMAPPER)
-    return glWidget && glWidget->isVisible();
+    // The constructor builds the 3D view on the next event loop pass, so until then answer the mode it will show
+    if (!glWidget) {
+        return mIs3DMode;
+    }
+    return glWidget->isVisible();
 #else
     return false;
 #endif
@@ -839,6 +851,12 @@ void dlgMapper::connect3DViewControls()
     }
 
     modernWidget->setCompanion2DMap(mp2dMap);
+    connect(modernWidget, &ModernGLWidget::areaFlownInto, this, [this](const int areaId) {
+        const QString areaName = mpMap->mpRoomDB->getAreaNamesMap().value(areaId);
+        if (!areaName.isEmpty()) {
+            comboBox_showArea->setCurrentText(areaName);
+        }
+    });
     connect(modernWidget, &ModernGLWidget::editIn2DRequested, this, [this, modernWidget](const int roomId) {
         // Held on the room, as a view moved by hand is, so that switching views carries it to the 2D map
         if (const TRoom* pRoom = mpMap->mpRoomDB->getRoom(roomId)) {
@@ -1124,38 +1142,46 @@ void dlgMapper::recreate3DWidget()
 #endif
 }
 
-void dlgMapper::paintMapInfo(const QElapsedTimer& renderTimer,
-                             QPainter& painter,
-                             Host* pHost,
-                             TMap* pMap,
-                             int roomID,
-                             int displayAreaId,
-                             int selectionSize,
-                             QColor& infoColor,
-                             int xOffset,
-                             int yOffset,
-                             int widgetWidth,
-                             int fontHeight)
+int dlgMapper::paintMapInfo(const QElapsedTimer& renderTimer,
+                            QPainter& painter,
+                            Host* pHost,
+                            TMap* pMap,
+                            int roomID,
+                            int displayAreaId,
+                            int selectionSize,
+                            QColor& infoColor,
+                            int xOffset,
+                            int yOffset,
+                            int widgetWidth,
+                            int fontHeight,
+                            const QColor& background,
+                            const QString& fontFamily)
 {
     if (!pMap || !pMap->mMapInfoContributorManager || !pHost) {
-        return;
+        return yOffset;
     }
 
     QList<QString> contributorList = pMap->mMapInfoContributorManager->getContributorKeys();
     QSet<QString> const contributorKeys{contributorList.begin(), contributorList.end()};
     if (!contributorKeys.intersects(pHost->mMapInfoContributors)) {
-        return;
+        return yOffset;
     }
 
     TRoom* pRoom = pMap->mpRoomDB->getRoom(roomID);
     if (!pRoom) {
-        return;
+        return yOffset;
     }
 
     const int initialYOffset = yOffset;
+    const QColor infoBackground = background.isValid() ? background : pHost->mMapInfoBg;
 
     painter.save();
-    painter.setFont(pHost->getDisplayFont());
+    QFont font = pHost->getDisplayFont();
+    if (!fontFamily.isEmpty()) {
+        font.setFamily(fontFamily);
+        fontHeight = QFontMetrics(font).height();
+    }
+    painter.setFont(font);
 
     // The caller holds raw TRoom/TArea pointers across this, and a Lua contributor can
     // register or kill contributors, so walk a copy and skip any that went away.
@@ -1171,13 +1197,13 @@ void dlgMapper::paintMapInfo(const QElapsedTimer& renderTimer,
             if (!properties.color.isValid()) {
                 properties.color = infoColor;
             }
-            yOffset += paintMapInfoContributor(painter, xOffset, yOffset, properties, pHost->mMapInfoBg, fontHeight, widgetWidth);
+            yOffset += paintMapInfoContributor(painter, xOffset, yOffset, properties, infoBackground, fontHeight, widgetWidth);
         }
     }
 
 #ifdef QT_DEBUG
     yOffset += paintMapInfoContributor(
-            painter, xOffset, yOffset, {false, false, QObject::tr("render time: %1S").arg(renderTimer.nsecsElapsed() * 1.0e-9, 0, 'f', 3), infoColor}, pHost->mMapInfoBg, fontHeight, widgetWidth);
+            painter, xOffset, yOffset, {false, false, QObject::tr("render time: %1S").arg(renderTimer.nsecsElapsed() * 1.0e-9, 0, 'f', 3), infoColor}, infoBackground, fontHeight, widgetWidth);
 #else
     Q_UNUSED(renderTimer)
 #endif
@@ -1185,8 +1211,9 @@ void dlgMapper::paintMapInfo(const QElapsedTimer& renderTimer,
     painter.restore();
 
     if (yOffset > initialYOffset) {
-        painter.fillRect(xOffset, initialYOffset - 10, widgetWidth - 10 - xOffset, 10, pHost->mMapInfoBg);
+        painter.fillRect(xOffset, initialYOffset - 10, widgetWidth - 10 - xOffset, 10, infoBackground);
     }
+    return yOffset;
 }
 
 int dlgMapper::paintMapInfoContributor(QPainter& painter, int xOffset, int yOffset, const MapInfoProperties& properties, QColor bgColor, int fontHeight, int widgetWidth)

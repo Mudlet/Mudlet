@@ -24,6 +24,7 @@
 
 #include "Host.h"
 #include "TArea.h"
+#include "TAreaGraph.h"
 #include "TMap.h"
 
 #include <QDataStream>
@@ -151,6 +152,7 @@ void TRoomDB::updateEntranceMap(int id)
 
 void TRoomDB::updateEntranceMap(TRoom* pR, bool isMapLoading)
 {
+    ++mExitsRevision;
     static const bool showDebug = false; // Enable this at runtime (set a breakpoint on it) for debugging!
 
     // entranceMap maps the room to rooms it has a viable exit to. So if room b and c both have
@@ -316,6 +318,7 @@ bool TRoomDB::__removeRoom(int id)
             }
             deleteValuesFromEntranceMap(id); // Needed to remove matching values
         }
+        emit mpMap->signal_roomDeleted(id);
         // Because we clear the graph in initGraph which will be called
         // if mMapGraphNeedsUpdate is true -- we don't need to
         // remove the vertex using clear_vertex and remove_vertex here
@@ -393,6 +396,7 @@ bool TRoomDB::removeArea(int id)
 {
     if (TArea* pA = areas.value(id)) {
         mpMap->areasAboutToBeDeleted();
+        mpMap->areaGraph()->forgetArea(id);
         if (!rooms.isEmpty()) {
             // During map deletion rooms will already
             // have been cleared so this would not
@@ -416,6 +420,7 @@ bool TRoomDB::removeArea(int id)
     if (areaNamesMap.contains(id)) {
         // Handle corner case where the area name was created but not used
         areaNamesMap.remove(id);
+        mpMap->areaGraph()->forgetArea(id);
         return true;
     }
     return false;
@@ -501,21 +506,6 @@ TArea* TRoomDB::getArea(int id)
     return nullptr;
 }
 
-// Used by TMap::audit() - can detect and return areas with normally invalids Id (less than -1 or zero)!
-TArea* TRoomDB::getRawArea(int id, bool* isValid = nullptr)
-{
-    if (areas.contains(id)) {
-        if (isValid) {
-            *isValid = true;
-        }
-        return areas.value(id);
-    }
-    if (isValid) {
-        *isValid = false;
-    }
-    return nullptr;
-}
-
 bool TRoomDB::setAreaName(int areaID, QString name)
 {
     if (areaID < 1) {
@@ -549,20 +539,25 @@ bool TRoomDB::addArea(int id)
         areas[id] = new TArea(mpMap, this);
         if (!areaNamesMap.contains(id)) {
             // Must provide a name for this new area
-            QString newAreaName = mpMap->getUnnamedAreaName();
-            if (hasAreaName(newAreaName)) {
-                // We already have an "unnamed area"
-                uint deduplicateSuffix = 0;
-                do {
-                    newAreaName = qsl("%1_%2").arg(mpMap->getUnnamedAreaName()).arg(++deduplicateSuffix, 3, 10, QLatin1Char('0'));
-                } while (hasAreaName(newAreaName));
-            }
-            areaNamesMap.insert(id, newAreaName);
+            areaNamesMap.insert(id, unusedUnnamedAreaName());
         }
         return true;
     }
     mpMap->logError(tr("Area not added. An area with AreaID %1 already exists!").arg(QString::number(id)));
     return false;
+}
+
+QString TRoomDB::unusedUnnamedAreaName() const
+{
+    QString newAreaName = mpMap->getUnnamedAreaName();
+    if (hasAreaName(newAreaName)) {
+        // We already have an "unnamed area"
+        uint deduplicateSuffix = 0;
+        do {
+            newAreaName = qsl("%1_%2").arg(mpMap->getUnnamedAreaName()).arg(++deduplicateSuffix, 3, 10, QLatin1Char('0'));
+        } while (hasAreaName(newAreaName));
+    }
+    return newAreaName;
 }
 
 // Deliberately does not hand back an ID an area used to have but no longer
@@ -1217,6 +1212,29 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
             updateEntranceMap(pR, true);
         }
     }
+
+    // Maps saved by a Mudlet whose setRoomIDbyHash() took any room id or an
+    // empty hash can still carry those entries
+    int droppedHashCount = 0;
+    QMutableMapIterator<QString, int> itHash(hashToRoomID);
+    while (itHash.hasNext()) {
+        itHash.next();
+        if (itHash.key().isEmpty() || !rooms.contains(itHash.value())) {
+            if (roomIDToHash.value(itHash.value()) == itHash.key()) {
+                roomIDToHash.remove(itHash.value());
+            }
+            itHash.remove();
+            ++droppedHashCount;
+        }
+    }
+    if (droppedHashCount) {
+        //: Map audit message, a room hash is the identifier a game gives a room so that a script can find it in the map
+        const QString infoMsg = tr("[ INFO ]  - %n room hash(es) that named a room which does not exist, or that were empty, have been removed.", nullptr, droppedHashCount);
+        if (TMap::smShowMapAuditErrors) {
+            mpMap->postMessage(infoMsg);
+        }
+        mpMap->appendErrorMsg(infoMsg, false);
+    }
 }
 
 void TRoomDB::clearMapDB()
@@ -1421,7 +1439,10 @@ void TRoomDB::deleteDisplacedArea(int areaID, TArea* pA)
     if (!pExisting || pExisting == pA) {
         return;
     }
-    mpMap->areasAboutToBeDeleted();
+    // A map file is read into a database that is not yet the map's, and nothing walks its areas
+    if (mpMap->mpRoomDB.get() == this) {
+        mpMap->areasAboutToBeDeleted();
+    }
     // Prevent TArea::~TArea() from re-entrantly calling removeArea(this),
     // mirroring the pattern in TRoomDB::removeArea(int)
     pExisting->mpRoomDB = nullptr;
@@ -1444,11 +1465,11 @@ bool TRoomDB::restoreSingleRoom(int i, TRoom* pT)
     }
 
     // addRoom() refuses an id that is already taken and takes no ownership when
-    // it does, so this room has to go here or it leaks - restoring onto a map
-    // that still holds rooms is the case that reaches this. TRoom::restore()
-    // has already put the colliding id on it, and ~TRoom() would use that id to
-    // remove the room legitimately holding it, so unhook it first - the same
-    // dance deleteDisplacedArea() does for an area.
+    // it does, so this room has to go here or it leaks - a file holding the same
+    // id twice, or restoring onto a map that still holds rooms, reaches this.
+    // TRoom::restore() or readJsonRoom() has already put the colliding id on it,
+    // and ~TRoom() would use that id to remove the room legitimately holding it,
+    // so unhook it first - the same dance deleteDisplacedArea() does for an area.
     pT->mpRoomDB = nullptr;
     delete pT;
     return false;
