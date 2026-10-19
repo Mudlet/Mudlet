@@ -233,6 +233,28 @@ private slots:
         QCOMPARE(TAudioMixer::self()->queuedSamples(), 0);
     }
 
+    // A new player's voice hears the end of each pass after TMedia has already started the next one.
+    // The output is kept shut, so what was queued stays to be seen and no audio device is needed.
+    void test_aLoopingSoundStillStopsAtOnceOnALaterPass()
+    {
+        SKIP_OR_FAIL_WITHOUT(backendFeedsTheMix() ? QString() : noMixingReason());
+        TAudioMixer::self()->setOutputSuspended(true);
+        auto resume = qScopeGuard([]() {
+            TAudioMixer::self()->setOutputSuspended(false);
+        });
+        const QString fileName = writeClip(qsl("looping.wav"), 300);
+        TMediaData data = clipData(fileName, TMediaData::MediaTypeSound);
+        data.setMediaLoops(TMediaData::MediaLoopsRepeat);
+        media()->playMedia(data);
+        QVERIFY2(waitForQueuedAudio(), "The looping sound never reached the shared output.");
+        QTest::qWait(800ms);
+        QVERIFY2(TAudioMixer::self()->queuedSamples() > 0, "The looping sound stopped reaching the shared output after its first pass.");
+
+        TMediaData stop = clipData(fileName, TMediaData::MediaTypeSound);
+        media()->stopMedia(stop);
+        QCOMPARE(TAudioMixer::self()->queuedSamples(), 0);
+    }
+
     // The mute switch applies to a sound from its start, not only when it is next flipped
     void test_aSoundStartedWhileMutedStartsMuted()
     {

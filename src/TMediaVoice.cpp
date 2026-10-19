@@ -171,7 +171,8 @@ TMediaVoice::TMediaVoice(QMediaPlayer* player)
         }
     });
     connect(mpPlayer, &QMediaPlayer::mediaStatusChanged, this, [this](const QMediaPlayer::MediaStatus status) {
-        if (status == QMediaPlayer::EndOfMedia) {
+        // TMedia's handler, connected first on a new player, may already have started the next loop pass
+        if (status == QMediaPlayer::EndOfMedia && mpPlayer && mpPlayer->mediaStatus() == QMediaPlayer::EndOfMedia) {
             mReachedEnd = true;
             TAudioMixer::self()->drain(mVoice);
         }
