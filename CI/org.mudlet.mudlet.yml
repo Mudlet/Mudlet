@@ -1,6 +1,6 @@
 id: org.mudlet.mudlet
 runtime: org.kde.Platform
-runtime-version: '6.8'
+runtime-version: '6.10'
 sdk: org.kde.Sdk
 command: mudlet
 rename-desktop-file: mudlet.desktop
@@ -53,13 +53,11 @@ modules:
       - -Dvapi=false
       - -Dgtk_doc=false
       - -Dintrospection=false
-      # https://gitlab.gnome.org/GNOME/libsecret/-/issues/49
-      - -Dgcrypt=false
+      - -Dcrypto=disabled
     sources:
-      - commit: 3fe635e64efd4b8dbc9ec3548b0bc8034c7665c4
-        tag: 0.20.4
-        type: git
-        url: https://gitlab.gnome.org/GNOME/libsecret.git
+      - type: archive
+        url: https://download.gnome.org/sources/libsecret/0.21/libsecret-0.21.7.tar.xz
+        sha256: 6b452e4750590a2b5617adc40026f28d2f4903de15f1250e1d1c40bfd68ed55e
     cleanup:
       - /bin/secret-tool
 
@@ -76,8 +74,8 @@ modules:
     - "/lib/*.la"
     sources:
     - type: archive
-      url: https://libzip.org/download/libzip-1.9.2.tar.xz
-      sha256: c93e9852b7b2dc931197831438fee5295976ee0ba24f8524a8907be5c2ba5937
+      url: https://libzip.org/download/libzip-1.11.4.tar.xz
+      sha256: 8a247f57d1e3e6f6d11413b12a6f28a9d388de110adc0ec608d893180ed7097b
 
   - name: pugixml
     buildsystem: cmake-ninja
@@ -85,18 +83,21 @@ modules:
       - -DBUILD_SHARED_LIBS=on .
     sources:
       - type: archive
-        url: https://github.com/zeux/pugixml/releases/download/v1.11.4/pugixml-1.11.4.tar.gz
-        sha256: 8ddf57b65fb860416979a3f0640c2ad45ddddbbafa82508ef0a0af3ce7061716
+        url: https://github.com/zeux/pugixml/releases/download/v1.15/pugixml-1.15.tar.gz
+        sha256: 655ade57fa703fb421c2eb9a0113b5064bddb145d415dd1f88c79353d90d511a
 
   - name: yajl
     buildsystem: cmake-ninja
     builddir: true
     config-opts:
       - '-DCMAKE_BUILD_TYPE=Release'
+      - '-DCMAKE_POLICY_VERSION_MINIMUM=3.5'
     sources:
       - type: archive
         url: 'https://github.com/lloyd/yajl/archive/refs/tags/2.1.0.tar.gz'
         sha256: 3fb73364a5a30efe615046d07e6db9d09fd2b41c763c5f7d3bfb121cd5c5ac5a
+      - type: patch
+        path: yajl-cmake-fix.patch
 
   - name: luarocks
     buildsystem: simple
@@ -112,8 +113,8 @@ modules:
       no-debuginfo-compression: true
     sources:
       - type: archive
-        url: 'https://github.com/luarocks/luarocks/archive/refs/tags/v3.9.2.tar.gz'
-        sha256: a0b36cd68586cd79966d0106bb2e5a4f5523327867995fd66bee4237062b3e3b
+        url: 'https://github.com/luarocks/luarocks/archive/refs/tags/v3.12.2.tar.gz'
+        sha256: 9c25fa7ab5017d60b25137ab1a4cb76e3185df1fe02df1f577f57d1a6b548a2a
     cleanup:
       - /bin/luarocks*
       - /share/luarocks
@@ -124,8 +125,8 @@ modules:
       - CFLAGS=-O2 -DSQLITE_ENABLE_FTS4 -DSQLITE_ENABLE_RTREE
     sources:
       - type: archive
-        url: 'https://www.sqlite.org/2021/sqlite-autoconf-3360000.tar.gz'
-        sha256: bd90c3eb96bee996206b83be7065c9ce19aef38c3f4fb53073ada0d0b69bbce3
+        url: 'https://sqlite.org/2026/sqlite-autoconf-3510200.tar.gz'
+        sha256: fbd89f866b1403bb66a143065440089dd76100f2238314d92274a082d4f2b7bb
     cleanup:
       - /bin/sqlite3
 
@@ -144,28 +145,79 @@ modules:
     - /bin/pcretest
 
   - name: boost
-    buildsystem: 'simple'
+    buildsystem: simple
     build-commands:
-      # we don't need to build boost, only using it for headers
-      - cp -r * /app/include
+      - cp -r boost /app/include/
     sources:
       - type: archive
-        url: 'https://sourceforge.net/projects/boost/files/boost/1.83.0/boost_1_83_0.tar.bz2'
-        sha256: 6478edfe2f3305127cffe8caf73ea0176c53769f4bf1585be237eb30798c3b8e
+        url: https://archives.boost.io/release/1.87.0/source/boost_1_87_0.tar.bz2
+        sha256: af57be25cb4c4f4b413ed692fe378affb4352ea50fbe294a11ef548f4d527d89
 
-  - name: luarucks-mods
+  - name: lua-yajl
     buildsystem: simple
-    build-options:
-      build-args:
-        - '--share=network'
     build-commands:
-      - luarocks install --tree="/app" lua-yajl YAJL_INCDIR="/app/include" YAJL_LIBDIR="/app/lib" LUA_INCDIR="/app/include"
-      - luarocks install --tree="/app" luautf8
-      - luarocks install --tree="/app" LuaFileSystem
-      - luarocks install --tree="/app" lpeg LUA_INCDIR="/app/include"
-      - luarocks install --tree="/app" lua-zip ZIP_INCDIR="/app/include" ZIP_LIBDIR="/app/lib" LUA_INCDIR="/app/include"
-      - luarocks install --tree="/app" LuaSQL-SQLite3 SQLITE_INCDIR="/app/include"
-      - luarocks install --tree="/app" lrexlib-pcre PCRE_INCDIR="/app/include" PCRE_LIBDIR="/app/lib"
+      - luarocks install --tree="/app" lua-yajl-2.0-1.src.rock YAJL_INCDIR="/app/include" YAJL_LIBDIR="/app/lib" LUA_INCDIR="/app/include"
+    sources:
+      - type: file
+        url: 'https://luarocks.org/manifests/brimworks/lua-yajl-2.0-1.src.rock'
+        sha256: 8e5c5bde4ae4aac336c5ce6da2aef94bf4f69f37e921d718647914bd5328552f
+
+  - name: luautf8
+    buildsystem: simple
+    build-commands:
+      - luarocks install --tree="/app" luautf8-0.2.0-1.src.rock
+    sources:
+      - type: file
+        url: 'https://luarocks.org/manifests/xavier-wang/luautf8-0.2.0-1.src.rock'
+        sha256: 36d930b3548d4b1bd87aa607e68b9aca08e23aa27309c34100e3b114d0f45b09
+
+  - name: luafilesystem
+    buildsystem: simple
+    build-commands:
+      - luarocks install --tree="/app" luafilesystem-1.9.0-1.src.rock
+    sources:
+      - type: file
+        url: 'https://luarocks.org/manifests/hisham/luafilesystem-1.9.0-1.src.rock'
+        sha256: 3de68d619f6ad95a27f4728814375447d921305194b7050dee6199057c31282f
+
+  - name: lpeg
+    buildsystem: simple
+    build-commands:
+      - luarocks install --tree="/app" lpeg-1.1.0-2.src.rock LUA_INCDIR="/app/include"
+    sources:
+      - type: file
+        url: 'https://luarocks.org/manifests/gvvaughan/lpeg-1.1.0-2.src.rock'
+        sha256: 836d315b920a5cdd62e21786c6c9fad547c4faa131d5583ebca64f0b6595ee76
+
+  - name: lua-zip
+    buildsystem: simple
+    build-commands:
+      - luarocks install --tree="/app" lua-zip-0.2-0.src.rock ZIP_INCDIR="/app/include" ZIP_LIBDIR="/app/lib" LUA_INCDIR="/app/include"
+    sources:
+      - type: file
+        url: 'https://luarocks.org/manifests/brimworks/lua-zip-0.2-0.src.rock'
+        sha256: 106cbef9aaac1742824bead6d2373adfe1f829a536eb0d3435d53ecf9af5b253
+
+  - name: luasql-sqlite3
+    buildsystem: simple
+    build-commands:
+      - luarocks make --tree="/app" luasql-sqlite3-2.7.0-1.rockspec SQLITE_INCDIR="/app/include"
+    sources:
+      - type: archive
+        url: 'https://github.com/lunarmodules/luasql/archive/refs/tags/2.7.0.tar.gz'
+        sha256: 15de59f0ea1a2ab205a11e0115d760f8e0c3fee0d3fcc37f52e326a53236e0c7
+      - type: file
+        url: 'https://luarocks.org/manifests/tomasguisasola/luasql-sqlite3-2.7.0-1.rockspec'
+        sha256: 8f7b5a86030e19135df9df65a47545a7003e84ad359f380ff07b3607431e5d3b
+
+  - name: lrexlib-pcre
+    buildsystem: simple
+    build-commands:
+      - luarocks install --tree="/app" lrexlib-pcre-2.9.2-1.src.rock PCRE_INCDIR="/app/include" PCRE_LIBDIR="/app/lib"
+    sources:
+      - type: file
+        url: 'https://luarocks.org/manifests/rrt/lrexlib-pcre-2.9.2-1.src.rock'
+        sha256: 55e01bc9eee32995eaf29cb8c12748b824ae1ff2be70dcd28f5579ce797db9e9
 
   - name: glu
     config-opts:
@@ -180,10 +232,26 @@ modules:
       - /lib/*.la
       - /lib/pkgconfig
 
+  - name: qtkeychain
+    buildsystem: cmake-ninja
+    config-opts:
+      - -DCMAKE_BUILD_TYPE=Release
+      - -DBUILD_WITH_QT6=ON
+      - -DCMAKE_INSTALL_LIBDIR=lib
+      - -DBUILD_TESTING=OFF
+    sources:
+      - type: git
+        url: https://github.com/frankosterfeld/qtkeychain.git
+        commit: 875f77d9f61bd97fd84cca47ce3bc71186dfbd09
+
   - name: mudlet
     buildsystem: cmake-ninja
     config-opts:
       - -DCMAKE_BUILD_TYPE=RelWithDebInfo
+      - -DUSE_3DMAPPER=OFF
     sources:
       - type: dir
         path: ../
+      - type: shell
+        commands:
+          - sed -i 's/find_package(Boost 1.44 CONFIG REQUIRED)/find_package(Boost 1.44 REQUIRED)/' src/CMakeLists.txt
