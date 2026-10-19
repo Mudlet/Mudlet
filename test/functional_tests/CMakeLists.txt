@@ -207,6 +207,7 @@ set(EDITOR_GROUP_TEST_SOURCES
     MissingEditorThemeTest.cpp
     ScriptEventHandlerLifetimeTest.cpp
     EditorAddItemTest.cpp
+    EditorFolderViewTest.cpp
     EditorSearchTest.cpp
     TreeWidgetItemMoveTest.cpp
     TriggerEditorDisclosureTest.cpp
