@@ -98,8 +98,11 @@ private slots:
         }
         mpHost = mudlet::self()->getActiveHost();
         QVERIFY(mpHost && mpHost->mpMedia);
-        // Settled first, or on a backend nobody named the first sound plays unmixed while the probe runs
-        backendPlaces();
+        // Settled first, or on a backend nobody named the first sound plays unmixed while the probe runs.
+        // Except in the test of what starts that probe.
+        if (qstrcmp(QTest::currentTestFunction(), "test_aGameThatSendsMediaHasItsFirstSoundPlaced") != 0) {
+            backendPlaces();
+        }
     }
 
     void cleanup()
@@ -112,6 +115,45 @@ private slots:
         mpHost = nullptr;
         delete mudlet::self();
         TestProfile::removeProfileDirectory(mHostname);
+    }
+
+    // First, so nothing has checked the backend yet. A game that sends media has it checked before its
+    // first sound, so even that one is placed.
+    void test_aGameThatSendsMediaHasItsFirstSoundPlaced()
+    {
+        if (!qEnvironmentVariable("QT_MEDIA_BACKEND").isEmpty()) {
+            QSKIP("A backend is named, so there is nothing to check before the first sound.");
+        }
+        QVERIFY2(!TMediaVoice::probeStarted(), "Something checked the backend before the game said anything.");
+        QString package = qsl("Client.Media.Default");
+        QString message = qsl("{\"url\": \"https://example.com/media/\"}");
+        media()->parseGMCP(package, message);
+        QVERIFY(TMediaVoice::probeStarted());
+        SKIP_OR_FAIL_WITHOUT(QTest::qWaitFor(
+                                     []() {
+                                         return TMediaVoice::probePassed();
+                                     },
+                                     QDeadlineTimer(6s))
+                                     ? QString()
+                                     : noPanningReason());
+
+        TAudioMixer* mixer = TAudioMixer::self();
+        mixer->setOutputSuspended(true);
+        auto resume = qScopeGuard([mixer]() {
+            mixer->setOutputSuspended(false);
+        });
+        package = qsl("Client.Media.Play");
+        message = qsl(R"({"name": "%1", "key": "first", "volume": 100, "direction": "east"})").arg(writeClip(qsl("first.wav"), clipMs, 8000));
+        media()->parseGMCP(package, message);
+        QVERIFY2(waitForStarted(), "The game's first sound never started playing.");
+        QCOMPARE(media()->playersPlaced(), 1);
+        std::pair<float, float> heard;
+        QVERIFY2(comesOut(
+                         [](const float l, const float r) {
+                             return r > 0.1F && l < 1e-3F;
+                         },
+                         heard),
+                 qPrintable(qsl("Played east, the game's first sound came out at %1 left and %2 right.").arg(heard.first).arg(heard.second)));
     }
 
     void test_aSoundGivenAPanIsHeardPlaced()
