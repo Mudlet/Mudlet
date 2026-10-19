@@ -34,6 +34,7 @@
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "TAudioMixer.h"
+#include "TMainConsole.h"
 #include "MudletMedia.h"
 #include "TMedia.h"
 #include "TMediaData.h"
@@ -116,6 +117,47 @@ private slots:
         mpHost = nullptr;
         delete mudlet::self();
         TestProfile::removeProfileDirectory(mHostname);
+    }
+
+    // First, so nothing has checked the backend yet. GMCP alone does not start the check, as Mudlet offers
+    // Client.Media to every game; a game that sends some has it checked before its first sound.
+    void test_aGameThatSendsMediaHasTheBackendCheckedBeforeItsFirstSound()
+    {
+        if (!qEnvironmentVariable("QT_MEDIA_BACKEND").isEmpty()) {
+            QSKIP("A backend is named, so there is nothing to check before the first sound.");
+        }
+        QVERIFY2(!TMediaVoice::probeStarted(), "Something checked the backend before the game said anything.");
+        QVERIFY2(QTest::qWaitFor(
+                         [this]() {
+                             return mpServer->clientConnected();
+                         },
+                         QDeadlineTimer(8s)),
+                 "The profile never connected to the game.");
+        mpServer->sendRaw(QByteArray("\xff\xfb\xc9", 3)); // IAC WILL GMCP
+        QVERIFY2(QTest::qWaitFor(
+                         [this]() {
+                             return mpServer->receivedSoFar().contains("Client.Media");
+                         },
+                         QDeadlineTimer(8s)),
+                 "Mudlet never offered Client.Media.");
+        const bool vitalsArrived = gameSays(qsl("Char.Vitals {\"hp\": \"100\"}"));
+        QVERIFY2(vitalsArrived, "The game's vitals never arrived.");
+        QVERIFY(!TMediaVoice::probeStarted());
+
+        const bool mediaArrived = gameSays(qsl("Client.Media.Default {\"url\": \"https://example.com/media/\"}"));
+        QVERIFY2(mediaArrived, "The game's Client.Media.Default never arrived.");
+        QVERIFY(TMediaVoice::probeStarted());
+        SKIP_OR_FAIL_WITHOUT(QTest::qWaitFor(
+                                     []() {
+                                         return TMediaVoice::probePassed();
+                                     },
+                                     QDeadlineTimer(6s))
+                                     ? QString()
+                                     : noMixingReason());
+
+        TMediaData first = clipData(writeClip(qsl("first.wav"), 3000), TMediaData::MediaTypeSound);
+        media()->playMedia(first);
+        QCOMPARE(media()->playersMixed(), 1);
     }
 
     // Video keeps an output of its own, timed against its picture; the rest are mixed
@@ -418,6 +460,25 @@ private:
                     return media()->playersInPlayingState() >= players;
                 },
                 QDeadlineTimer(10s));
+    }
+
+    // Sends a GMCP message and a line after it, and waits for the line: the message was handled first
+    bool gameSays(const QString& gmcp)
+    {
+        static int lines = 0;
+        const QString line = qsl("line %1 from the game").arg(++lines);
+        mpServer->sendRaw(QByteArray("\xff\xfa\xc9", 3) + gmcp.toUtf8() + QByteArray("\xff\xf0", 2) + line.toUtf8() + "\r\n");
+        return QTest::qWaitFor(
+                [&]() {
+                    TBuffer& buffer = mpHost->mainConsoleView()->buffer;
+                    for (int i = 0; i <= buffer.getLastLineNumber(); ++i) {
+                        if (buffer.line(i).contains(line)) {
+                            return true;
+                        }
+                    }
+                    return false;
+                },
+                QDeadlineTimer(8s));
     }
 
     QString writeClip(const QString& fileName, const int durationMs) const

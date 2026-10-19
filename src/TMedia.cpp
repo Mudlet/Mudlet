@@ -491,6 +491,9 @@ void TMedia::parseGMCP(QString& packageMessage, QString& gmcp)
     if (!mpHost->mAcceptServerMedia) {
         return;
     }
+    // Checked now, as the first sound played while the check runs keeps an output of its own. Not at
+    // launch or on GMCP alone: the check loads FFmpeg, which a game that sends no media never needs.
+    TMediaVoice::probeBackend();
 
     auto document = QJsonDocument::fromJson(gmcp.toUtf8());
 
