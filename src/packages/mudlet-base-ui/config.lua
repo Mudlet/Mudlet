@@ -38,8 +38,9 @@ Commands:
 ```
 
 The ▣ beside the ◐ picks a background picture too; right-click it to
-remove the picture. While a picture is up, the game's text and the dock
-let it show through.
+remove the picture. While a picture is up, the game's text, chat and
+docked sections let it show through; sections dragged out of the dock
+stay solid.
 
 When a game installs an interface of its own, this one quietly stands
 aside - `baseui show` brings it back if you prefer it.

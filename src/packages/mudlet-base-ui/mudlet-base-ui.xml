@@ -438,7 +438,7 @@
 			<script>BaseUI.alias(matches[2], matches[3])</script>
 			<command></command>
 			<packageName></packageName>
-			<regex>^baseui(?:\s+(\w+)(?:\s+(.+))?)?$</regex>
+			<regex>^baseui(?:\s+(\w+)(?:(?&lt;=\s(?i:background))\s+(.+))?)?$</regex>
 		</Alias>
 	</AliasPackage>
 	<ActionPackage />
@@ -1786,6 +1786,19 @@ local function sameTint(one, other)
     and one[3] == other[3] and one[4] == other[4]
 end
 
+-- The background colour as the player has it. While a picture shows, the console is
+-- exactly the colour in settings.seeThroughConsole with alpha 0, and that entry holds
+-- the alpha to give back. Anything else was set since, by the player or a game's own
+-- interface, and stands.
+local function playerConsoleColor()
+  local current = { getBackgroundColor("main") }
+  local held = BaseUI.settings.seeThroughConsole
+  if held and sameTint(current, { held[1], held[2], held[3], 0 }) then
+    current[4] = held[4]
+  end
+  return current
+end
+
 -- A look tints the background the game's own text sits on, which is the difference
 -- between a themed strip beside a black screen and a themed window. That colour
 -- belongs to the player though, so we only ever move one we can still account for.
@@ -1796,19 +1809,6 @@ end
 -- plain black as ours as well would undo the most likely reaction to a tint someone
 -- dislikes and cannot place: Preferences has a "Reset colours" button that sets the
 -- background back to black, and we would put our own colour straight back.
-
--- The background colour as the player has it. While a background picture shows, the
--- console has that colour with its alpha taken to 0, and the alpha it had is kept in
--- settings.consoleAlpha to give back. Any other alpha means the player has picked a
--- colour since, and theirs stands.
-local function playerConsoleColor()
-  local current = { getBackgroundColor("main") }
-  if BaseUI.settings.consoleAlpha and current[4] == 0 then
-    current[4] = BaseUI.settings.consoleAlpha
-  end
-  return current
-end
-
 function BaseUI.consoleTintIsOurs()
   local current = playerConsoleColor()
   if BaseUI.settings.consoleTint then
@@ -1836,7 +1836,7 @@ local function matchChatPanesToConsole()
   end
 end
 
--- Writes BaseUI.settings.consoleTint and consoleAlpha, so a caller that also saves
+-- Writes BaseUI.settings.consoleTint and seeThroughConsole, so a caller that also saves
 -- has to run this before its saveSettings or it persists the ones from before.
 -- Returns whether the background is ours to colour, which is not the same as having
 -- changed it. giveBack asks for the untinted, opaque colour whatever the look wants,
@@ -1856,8 +1856,7 @@ local function applyConsoleTint(giveBack)
     wanted = { tint and tint[1] or defaultConsoleTint[1],
                tint and tint[2] or defaultConsoleTint[2],
                tint and tint[3] or defaultConsoleTint[3], wanted[4] }
-    -- copied rather than referenced, and with the player's alpha rather than the
-    -- one a background picture puts in force, so the next session recognises it
+    -- with the player's alpha, not the picture's 0, so the next session recognises it
     BaseUI.settings.consoleTint = tint and { wanted[1], wanted[2], wanted[3], wanted[4] } or nil
   else
     -- the player has a background of their own: stop tinting, but still let a
@@ -1866,7 +1865,7 @@ local function applyConsoleTint(giveBack)
   end
   -- a background picture only shows through a console that lets all of it through
   local seeThrough = not giveBack and BaseUI.backgroundShown
-  BaseUI.settings.consoleAlpha = seeThrough and wanted[4] or nil
+  BaseUI.settings.seeThroughConsole = seeThrough and wanted or nil
   local applied = { wanted[1], wanted[2], wanted[3], seeThrough and 0 or wanted[4] }
   -- Only when it would actually differ. Untinted looks want plain black, which is
   -- already what an untouched profile has - writing it anyway would put every
@@ -1888,14 +1887,19 @@ local function applyBackground(giveBack)
   end
   BaseUI.backgroundTried = path
   if path then
-    BaseUI.backgroundShown = setBackgroundImage("main", path, 5, true) == true
+    local shown, problem = setBackgroundImage("main", path, 5, true)
+    BaseUI.backgroundShown = shown == true
     if not BaseUI.backgroundShown then
-      cecho("\n&lt;dim_grey&gt;[ Mudlet UI ] Could not show this as a background picture: ")
-      echo(path)
-      cecho("&lt;reset&gt;\n")
+      cecho("\n&lt;dim_grey&gt;[ Mudlet UI ] Could not show the background picture ")
+      echo(path .. " (" .. tostring(problem) .. ")")
+      cecho("&lt;dim_grey&gt; - &lt;yellow&gt;baseui background off&lt;dim_grey&gt; forgets it.&lt;reset&gt;\n")
     end
   elseif BaseUI.backgroundShown then
-    resetBackgroundImage("main", true)
+    -- a game's own interface has already put up any picture of its own by the time
+    -- we stand aside for it, so ours is left for it to replace
+    if not BaseUI.settings.standingAside then
+      resetBackgroundImage("main", true)
+    end
     BaseUI.backgroundShown = false
   end
 end
@@ -2145,7 +2149,7 @@ function BaseUI.uninstall()
   end
   -- before the settings that record the tint as ours are thrown away, and while
   -- the chat panes it also matches are still there
-  applyBackdrop(true)
+  pcall(applyBackdrop, true)
   -- the game was asked for its channel text on this interface's behalf
   if type(gmcp) == "table" and next(gmcp) then
     pcall(gmod.disableModule, "BaseUI", "Comm.Channel")
@@ -3110,8 +3114,21 @@ function BaseUI.show()
 end
 
 -- Scriptable as well as typed: a path to show behind the whole window, or nil to stop.
--- Returns false, leaving the picture before in place, for one that cannot be shown.
+-- Returns false and the reason, leaving the picture before in place, for one that
+-- cannot be shown.
 function BaseUI.setBackground(path)
+  if path then
+    -- checked even while hidden, when nothing would show it until a later session
+    local width, problem = getImageSize(path)
+    if not width then
+      cecho("\n&lt;dim_grey&gt;[ Mudlet UI ] Could not use this as a background picture: ")
+      echo(path .. " (" .. tostring(problem) .. ")")
+      cecho("&lt;reset&gt;\n")
+      return false, problem
+    end
+    -- chosen again after failing to show, it gets another try
+    BaseUI.backgroundTried = nil
+  end
   local previous = BaseUI.settings.background
   BaseUI.settings.background = path
   applyBackdrop()
@@ -3175,10 +3192,6 @@ function BaseUI.alias(input, argument)
     backgroundCommand(argument)
     return
   end
-  -- only "background" takes anything after it
-  if argument and argument:trim() ~= "" then
-    input = ""
-  end
   -- looks are matched after the commands, so naming one "hide" could never take
   -- that command away from the player
   if input == "hide" then
@@ -3213,9 +3226,8 @@ function BaseUI.alias(input, argument)
     cecho("&lt;cyan&gt;[ Mudlet UI ]   &lt;yellow&gt;baseui dock&lt;cyan&gt; - put every section back in the dock, if you dragged any out\n")
     cecho("&lt;cyan&gt;[ Mudlet UI ]   &lt;yellow&gt;baseui background (file)&lt;cyan&gt; - put a picture behind the whole window, or click the &lt;yellow&gt;" .. pictureGlyph .. "&lt;cyan&gt; in its title bar\n")
     if BaseUI.settings.background then
-      cecho("&lt;cyan&gt;[ Mudlet UI ]   &lt;yellow&gt;baseui background off&lt;cyan&gt; - remove the picture, now ")
-      echo(BaseUI.settings.background)
-      echo("\n")
+      cecho("&lt;cyan&gt;[ Mudlet UI ]   &lt;yellow&gt;baseui background off&lt;cyan&gt; - remove the picture (currently ")
+      echo(BaseUI.settings.background .. ")\n")
     end
     cecho("&lt;cyan&gt;[ Mudlet UI ] Looks - or click the &lt;yellow&gt;" .. paletteGlyph .. "&lt;cyan&gt; in its title bar to try each in turn:\n")
     for _, name in ipairs(themeOrder) do

@@ -3093,6 +3093,63 @@ describe("Tests UI functions", function()
       assert.are.equal(image, BaseUI.settings.background)
       assert.is_true(BaseUI.backgroundShown)
     end)
+
+    it("should refuse a file that is not a picture", function()
+      assert.is_false(BaseUI.setBackground(debug.getinfo(1, "S").source:sub(2)))
+      assert.is_nil(BaseUI.settings.background)
+      assert.is_false(BaseUI.backgroundShown == true)
+    end)
+
+    it("should refuse a picture it cannot show while hidden", function()
+      BaseUI.hide()
+      assert.is_false(BaseUI.setBackground(specDirectory .. "/fixtures/images/no-such-picture.png"))
+      assert.is_nil(BaseUI.settings.background)
+      BaseUI.show()
+    end)
+
+    it("should show a saved picture that went missing once it is chosen again", function()
+      local path = getMudletHomeDir() .. "/baseui-spec-picture.png"
+      os.remove(path)
+      finally(function() os.remove(path) end)
+      -- a reload with the saved file gone
+      BaseUI.settings.background = path
+      BaseUI.setTheme("midnight", true)
+      assert.is_false(BaseUI.backgroundShown)
+      local input = io.open(image, "rb")
+      local output = io.open(path, "wb")
+      output:write(input:read("*a"))
+      input:close()
+      output:close()
+      assert.is_true(BaseUI.setBackground(path))
+      assert.is_true(BaseUI.backgroundShown)
+    end)
+
+    it("should leave the console of a game's own interface as that interface set it", function()
+      BaseUI.setBackground(image)
+      setBackgroundColor("main", 10, 20, 30, 0)
+      BaseUI.standAside("sysServerGuiInstalled", "SomeGameUI")
+      assert.are.same({ 10, 20, 30, 0 }, { getBackgroundColor("main") })
+      assert.is_false(BaseUI.backgroundShown)
+      resetBackgroundImage("main", true)
+      BaseUI.settings.standingAside = nil
+      BaseUI.armChatTriggers()
+      BaseUI.createVitalsTriggers()
+      BaseUI.createConditionTrigger()
+    end)
+
+    it("should only take what follows the background command", function()
+      local real = BaseUI.alias
+      local calls = {}
+      BaseUI.alias = function(command, argument)
+        calls[#calls + 1] = { command, argument }
+      end
+      finally(function() BaseUI.alias = real end)
+      expandAlias("baseui hide now", false)
+      expandAlias("baseui background /some where/picture.png", false)
+      expandAlias("baseui Background off", false)
+      expandAlias("baseui dock", false)
+      assert.are.same({ { "background", "/some where/picture.png" }, { "Background", "off" }, { "dock" } }, calls)
+    end)
   end)
 
   describe("tempButtonToolbar and tempButton return values", function()
