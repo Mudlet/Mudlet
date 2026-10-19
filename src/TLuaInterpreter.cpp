@@ -9681,6 +9681,10 @@ int TLuaInterpreter::setConfig(lua_State* L)
         host.setAdvertiseScreenReader(getVerifiedBool(L, __func__, 2, "value"));
         return success();
     }
+    if (key == qsl("accessibleLabels")) {
+        host.setAccessibleLabels(getVerifiedBool(L, __func__, 2, "value"));
+        return success();
+    }
     if (key == qsl("enableClosedCaption")) {
         host.setEnableClosedCaption(getVerifiedBool(L, __func__, 2, "value"));
         return success();
@@ -10189,6 +10193,10 @@ int TLuaInterpreter::getConfig(lua_State* L)
             {qsl("advertiseScreenReader"),
              [&]() {
                  lua_pushboolean(L, host.mAdvertiseScreenReader);
+             }},
+            {qsl("accessibleLabels"),
+             [&]() {
+                 lua_pushboolean(L, host.mAccessibleLabels);
              }},
             {qsl("ambiguousEAsianWidthCharacters"),
              [&]() {

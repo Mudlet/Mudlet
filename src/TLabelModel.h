@@ -65,8 +65,9 @@ struct TLabelModel
     void setText(const QString& text);
     void setToolTip(const QString& toolTip);
 
-    enum class AccessibilityChange { Name, Role };
-    // Set by the widget, if there is one, to tell assistive technology of a change made with or without it
+    // KeyboardAccess: the profile's accessibleLabels setting changed
+    enum class AccessibilityChange { Name, Role, KeyboardAccess };
+    // Set by the widget, if there is one, to update its focus policy and tell assistive technology of a change
     std::function<void(AccessibilityChange)> mAccessibilityChanged;
     void accessibilityChanged(AccessibilityChange change) const;
 

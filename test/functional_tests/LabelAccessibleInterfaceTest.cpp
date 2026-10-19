@@ -37,8 +37,10 @@
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
 #include "TAccessibleLabel.h"
+#include "TCommandLine.h"
 #include "TLabel.h"
 #include "TLuaInterpreter.h"
+#include "TTextEdit.h"
 #include "TMainConsole.h"
 #include "TelnetServerStub.h"
 #include "dlgConnectionProfiles.h"
@@ -185,10 +187,11 @@ private slots:
 
     void init()
     {
-        QVERIFY(runLua(qsl("setLabelClickCallback('%1', nil); setLabelReleaseCallback('%1', nil); setLabelAccessibleName('%1', ''); setLabelAccessibleRole('%1', ''); "
-                           "disableClickthrough('%1'); resetBackgroundImage('%1'); resetLabelToolTip('%1'); "
-                           "echo('%1', 'plain'); accessibleLabelClicks = nil; accessibleLabelReleased = nil; accessibleLinkHit = nil")
-                               .arg(mLabelName)));
+        QVERIFY(runLua(
+                qsl("setConfig('accessibleLabels', false); setLabelClickCallback('%1', nil); setLabelReleaseCallback('%1', nil); setLabelAccessibleName('%1', ''); setLabelAccessibleRole('%1', ''); "
+                    "disableClickthrough('%1'); resetBackgroundImage('%1'); resetLabelToolTip('%1'); "
+                    "echo('%1', 'plain'); accessibleLabelClicks = nil; accessibleLabelReleased = nil; accessibleLinkHit = nil")
+                        .arg(mLabelName)));
     }
 
     void test_aLabelIsStaticTextUntilItHasAClickCallback()
@@ -276,6 +279,521 @@ private slots:
         accessible()->actionInterface()->doAction(QAccessibleActionInterface::pressAction());
         QVERIFY(luaHolds(qsl("accessibleLabelClicks == 1")));
         QVERIFY(luaHolds(qsl("accessibleLabelButton == 'LeftButton'")));
+    }
+
+    // Off by default: a button joining the Tab order changes how existing packages behave
+    void test_aButtonTakesTabFocusOnlyWhileAccessibleLabelsIsOn()
+    {
+        QVERIFY(runLua(qsl("setLabelClickCallback('%1', function() end)").arg(mLabelName)));
+        QCOMPARE(label()->focusPolicy(), Qt::NoFocus);
+
+        QVERIFY(runLua(qsl("setConfig('accessibleLabels', true)")));
+        QCOMPARE(label()->focusPolicy(), Qt::TabFocus);
+
+        QVERIFY(runLua(qsl("setLabelAccessibleRole('%1', 'text')").arg(mLabelName)));
+        QCOMPARE(label()->focusPolicy(), Qt::NoFocus);
+        QVERIFY(runLua(qsl("setLabelAccessibleRole('%1', '')").arg(mLabelName)));
+        QCOMPARE(label()->focusPolicy(), Qt::TabFocus);
+
+        QVERIFY(runLua(qsl("setLabelClickCallback('%1', nil)").arg(mLabelName)));
+        QCOMPARE(label()->focusPolicy(), Qt::NoFocus);
+
+        QVERIFY(runLua(qsl("setLabelReleaseCallback('%1', function() end)").arg(mLabelName)));
+        QCOMPARE(label()->focusPolicy(), Qt::TabFocus);
+        QVERIFY(runLua(qsl("setConfig('accessibleLabels', false)")));
+        QCOMPARE(label()->focusPolicy(), Qt::NoFocus);
+    }
+
+    void test_aButtonCreatedWhileAccessibleLabelsIsOnTakesTabFocus()
+    {
+        QVERIFY(runLua(qsl("setConfig('accessibleLabels', true)")));
+        const QString later = qsl("accessibleLabelLater");
+        auto [created, createMessage] = mpHost->createLabel(qsl("main"), later, 10, 110, 200, 40, true, false);
+        QVERIFY2(created, qPrintable(createMessage));
+        QVERIFY(runLua(qsl("setLabelClickCallback('%1', function() end)").arg(later)));
+        QCOMPARE(mpHost->mainConsoleView()->labelWidget(later)->focusPolicy(), Qt::TabFocus);
+        mpHost->deleteLabel(later);
+    }
+
+    // QLabel gives a label with a link focus of its own, for reaching the link
+    void test_aLabelWithALinkKeepsItsFocus()
+    {
+        QVERIFY(runLua(qsl("echo('%1', '<a href=\"send:look\">look</a>')").arg(mLabelName)));
+        QCOMPARE(label()->focusPolicy(), Qt::StrongFocus);
+        QVERIFY(runLua(qsl("setConfig('accessibleLabels', true); setConfig('accessibleLabels', false)")));
+        QCOMPARE(label()->focusPolicy(), Qt::StrongFocus);
+    }
+
+    void test_spaceAndEnterPressAFocusedButton()
+    {
+        QVERIFY(runLua(qsl("setLabelClickCallback('%1', function(event) accessibleLabelClicks = (accessibleLabelClicks or 0) + 1; accessibleLabelButton = event.button end)").arg(mLabelName)));
+        QTest::keyClick(label(), Qt::Key_Space);
+        QVERIFY2(luaHolds(qsl("accessibleLabelClicks == nil")), "Space pressed a button with accessibleLabels off");
+
+        QVERIFY(runLua(qsl("setConfig('accessibleLabels', true)")));
+        QTest::keyClick(label(), Qt::Key_Space);
+        QTest::keyClick(label(), Qt::Key_Return);
+        QTest::keyClick(label(), Qt::Key_Enter, Qt::KeypadModifier);
+        QVERIFY(luaHolds(qsl("accessibleLabelClicks == 3")));
+        QVERIFY(luaHolds(qsl("accessibleLabelButton == 'LeftButton'")));
+
+        QTest::keyClick(label(), Qt::Key_Space, Qt::ControlModifier);
+        QVERIFY2(luaHolds(qsl("accessibleLabelClicks == 3")), "Ctrl+Space pressed the button");
+    }
+
+private:
+    // Through the keys a player has, sent to the window as a real key press is, so the command line taking
+    // Tab for completion and caret mode holding the keyboard both stay in the way
+    void key(Qt::Key key, Qt::KeyboardModifiers modifiers = Qt::NoModifier) { QTest::keyClick(mudlet::self()->windowHandle(), key, modifiers); }
+
+    TTextEdit* pane() const { return mpHost->mainConsoleView()->mUpperPane; }
+
+    qsizetype lineHolding(const QString& text) const { return mpHost->mainConsoleView()->buffer.lineBuffer.indexOf(text); }
+
+    const QString mLowerName = qsl("aaaAccessibleLower");
+
+    TLabel* lower() const { return mpHost->mainConsoleView()->labelWidget(mLowerName); }
+
+    // Two links in the game text above where caret mode starts, the label as a button, and a second button lower
+    // down whose name sorts first, so only the order on screen puts the label first
+    bool setUpLinksAndButtons()
+    {
+        auto [created, createMessage] = mpHost->createLabel(qsl("main"), mLowerName, 10, 110, 200, 40, true, false);
+        if (!created) {
+            qWarning() << createMessage;
+            return false;
+        }
+        if (!runLua(qsl("clearWindow(); echo('top\\n'); echoLink('LINKONE', '', 'the first link'); echo('\\n'); "
+                        "echoLink('LINKTWO', '', 'the second link'); echo('\\nbottom\\n'); "
+                        "setConfig('accessibleLabels', true); setLabelClickCallback('%1', function() end); setLabelClickCallback('%2', function() end)")
+                            .arg(mLabelName, mLowerName))) {
+            return false;
+        }
+        mudlet::self()->show();
+        mudlet::self()->activateWindow();
+        if (!QTest::qWaitFor(
+                    []() {
+                        return QApplication::activeWindow() == mudlet::self();
+                    },
+                    5000)) {
+            qWarning() << "the main window never became active";
+            return false;
+        }
+        // Handing the focus to the command line retries on timers up to 50ms long, which would take it back,
+        // and a loaded CI runner fires them late
+        QTest::qWait(300ms);
+        mpHost->setCaretEnabled(true);
+        return QTest::qWaitFor(
+                [this]() {
+                    return QApplication::focusWidget() == pane();
+                },
+                1000);
+    }
+
+    void tearDownLinksAndButtons()
+    {
+        if (mpHost->caretEnabled()) {
+            mpHost->setCaretEnabled(false);
+        }
+        mpHost->mainConsoleView()->forgetCaretOrigin();
+        mpHost->mCaretShortcut = Host::CaretShortcut::None;
+        mpHost->deleteLabel(mLowerName);
+        runLua(qsl("clearWindow()"));
+    }
+
+private slots:
+    // Caret mode starts below the links, so Tab goes on to the buttons, then round to the first link, the second,
+    // and the buttons again; Shift+Tab goes the other way
+    void test_tabCyclesThroughTheLinksAndTheButtons()
+    {
+        auto restore = qScopeGuard([this]() {
+            tearDownLinksAndButtons();
+        });
+        QVERIFY(setUpLinksAndButtons());
+        const QString lower = mLowerName;
+        QWidget* pLower = mpHost->mainConsoleView()->labelWidget(lower);
+        QTRY_COMPARE(QApplication::focusWidget(), pane());
+        key(Qt::Key_Tab);
+        QTRY_COMPARE(QApplication::focusWidget(), static_cast<QWidget*>(label()));
+        key(Qt::Key_Tab);
+        QTRY_COMPARE(QApplication::focusWidget(), pLower);
+        key(Qt::Key_Tab);
+        QTRY_VERIFY2(mpHost->caretEnabled(), "leaving the last button did not go back to the main window");
+        QTRY_COMPARE(QApplication::focusWidget(), pane());
+        QCOMPARE(pane()->mCaretLine, lineHolding(qsl("LINKONE")));
+        key(Qt::Key_Tab);
+        QCOMPARE(pane()->mCaretLine, lineHolding(qsl("LINKTWO")));
+        key(Qt::Key_Tab);
+        QTRY_COMPARE(QApplication::focusWidget(), static_cast<QWidget*>(label()));
+
+        key(Qt::Key_Backtab, Qt::ShiftModifier);
+        QTRY_COMPARE(QApplication::focusWidget(), pane());
+        QCOMPARE(pane()->mCaretLine, lineHolding(qsl("LINKTWO")));
+        key(Qt::Key_Backtab, Qt::ShiftModifier);
+        QCOMPARE(pane()->mCaretLine, lineHolding(qsl("LINKONE")));
+        key(Qt::Key_Backtab, Qt::ShiftModifier);
+        QTRY_COMPARE(QApplication::focusWidget(), pLower);
+        key(Qt::Key_Backtab, Qt::ShiftModifier);
+        QTRY_COMPARE(QApplication::focusWidget(), static_cast<QWidget*>(label()));
+    }
+
+    void test_withNoButtonsTheLinksWrapAsBefore()
+    {
+        auto restore = qScopeGuard([this]() {
+            tearDownLinksAndButtons();
+        });
+        QVERIFY(setUpLinksAndButtons());
+        const QString lower = mLowerName;
+        QVERIFY(runLua(qsl("setConfig('accessibleLabels', false)")));
+        QTRY_COMPARE(QApplication::focusWidget(), pane());
+
+        key(Qt::Key_Tab);
+        QCOMPARE(pane()->mCaretLine, lineHolding(qsl("LINKONE")));
+        key(Qt::Key_Tab);
+        QCOMPARE(pane()->mCaretLine, lineHolding(qsl("LINKTWO")));
+        key(Qt::Key_Tab);
+        QCOMPARE(pane()->mCaretLine, lineHolding(qsl("LINKONE")));
+        QCOMPARE(QApplication::focusWidget(), pane());
+    }
+
+    // With Tab as the caret shortcut, Tab leaves caret mode, so Ctrl+] and Ctrl+[ are the way to the buttons
+    void test_ctrlBracketsReachTheButtonsWhenTabTogglesCaretMode()
+    {
+        auto restore = qScopeGuard([this]() {
+            tearDownLinksAndButtons();
+        });
+        QVERIFY(setUpLinksAndButtons());
+        const QString lower = mLowerName;
+        mpHost->mCaretShortcut = Host::CaretShortcut::Tab;
+        QTRY_COMPARE(QApplication::focusWidget(), pane());
+
+        key(Qt::Key_BracketRight, Qt::ControlModifier);
+        QTRY_COMPARE(QApplication::focusWidget(), static_cast<QWidget*>(label()));
+        mpHost->setCaretEnabled(true);
+        QTRY_COMPARE(QApplication::focusWidget(), pane());
+        // backwards from the bottom, the links come first
+        key(Qt::Key_BracketLeft, Qt::ControlModifier);
+        QCOMPARE(pane()->mCaretLine, lineHolding(qsl("LINKTWO")));
+        key(Qt::Key_BracketLeft, Qt::ControlModifier);
+        key(Qt::Key_BracketLeft, Qt::ControlModifier);
+        QTRY_COMPARE(QApplication::focusWidget(), mpHost->mainConsoleView()->labelWidget(lower));
+
+        mpHost->setCaretEnabled(true);
+        QTRY_COMPARE(QApplication::focusWidget(), pane());
+        key(Qt::Key_Tab);
+        QTRY_VERIFY2(!mpHost->caretEnabled(), "Tab as the caret shortcut no longer leaves caret mode");
+    }
+
+    void test_typingOnAButtonCarriesOnInTheCommandLine()
+    {
+        auto restore = qScopeGuard([this]() {
+            tearDownLinksAndButtons();
+        });
+        QVERIFY(setUpLinksAndButtons());
+        const QString lower = mLowerName;
+        TCommandLine* pCommandLine = mpHost->mainConsoleView()->mpCommandLine;
+        pCommandLine->clear();
+        QTRY_COMPARE(QApplication::focusWidget(), pane());
+        key(Qt::Key_Tab);
+        QTRY_COMPARE(QApplication::focusWidget(), static_cast<QWidget*>(label()));
+
+        QTest::keyClick(mudlet::self()->windowHandle(), 'n');
+        QTRY_COMPARE(QApplication::focusWidget(), static_cast<QWidget*>(pCommandLine));
+        QCOMPARE(pCommandLine->toPlainText(), qsl("n"));
+        pCommandLine->clear();
+    }
+
+    // A close button deletes its own label; the focus has to go somewhere the player can still use
+    void test_aFocusedButtonThatGoesOrStopsBeingOneHandsTheFocusOn()
+    {
+        const QString lower = mLowerName;
+        const QString third = qsl("accessibleLabelThird");
+        auto restore = qScopeGuard([this, third]() {
+            mpHost->deleteLabel(third);
+            tearDownLinksAndButtons();
+        });
+        QVERIFY(setUpLinksAndButtons());
+        auto [created, createMessage] = mpHost->createLabel(qsl("main"), third, 10, 160, 200, 40, true, false);
+        QVERIFY2(created, qPrintable(createMessage));
+        QVERIFY(runLua(qsl("setLabelClickCallback('%1', function() end)").arg(third)));
+        QTRY_COMPARE(QApplication::focusWidget(), pane());
+        key(Qt::Key_Tab);
+        key(Qt::Key_Tab);
+        QTRY_COMPARE(QApplication::focusWidget(), mpHost->mainConsoleView()->labelWidget(lower));
+
+        QVERIFY(runLua(qsl("setLabelClickCallback('%1', nil)").arg(lower)));
+        QTRY_COMPARE(QApplication::focusWidget(), mpHost->mainConsoleView()->labelWidget(third));
+
+        QVERIFY(runLua(qsl("deleteLabel('%1')").arg(third)));
+        QTRY_VERIFY2(mpHost->caretEnabled(), "deleting the last button did not hand the focus back to the main window");
+        QTRY_COMPARE(QApplication::focusWidget(), pane());
+    }
+
+    // A screen reader keeps hold of what it was last told has the focus
+    void test_theHandOffDoesNotAnnounceTheCommandLine()
+    {
+        auto restore = qScopeGuard([this]() {
+            stopListening();
+            tearDownLinksAndButtons();
+        });
+        QVERIFY(setUpLinksAndButtons());
+        QTRY_COMPARE(QApplication::focusWidget(), pane());
+        TCommandLine* pCommandLine = mpHost->mainConsoleView()->mpCommandLine;
+        listenTo(pCommandLine->focusProxy() ? pCommandLine->focusProxy() : pCommandLine);
+        key(Qt::Key_Tab);
+        QTRY_COMPARE(QApplication::focusWidget(), static_cast<QWidget*>(label()));
+        QVERIFY2(!smEvents.contains(QAccessible::Focus), "the command line was announced as focused as the button took the focus");
+    }
+
+    // Arriving on a button, Return presses it; Tab then steps through its own links, which Return and Space open,
+    // before the next button
+    void test_aButtonsOwnLinksComeFirst()
+    {
+        auto restore = qScopeGuard([this]() {
+            tearDownLinksAndButtons();
+        });
+        QVERIFY(setUpLinksAndButtons());
+        QVERIFY(runLua(qsl("echo('%1', '<a href=\"accessibleLinkNorth = true\">north</a> <a href=\"accessibleLinkSouth = true\">south</a>'); "
+                           "setLabelClickCallback('%1', function() accessibleButtonPressed = true end)")
+                               .arg(mLabelName)));
+
+        key(Qt::Key_Tab);
+        QTRY_COMPARE(QApplication::focusWidget(), static_cast<QWidget*>(label()));
+        QVERIFY(!label()->hasSelectedText());
+        key(Qt::Key_Return);
+        QVERIFY2(luaHolds(qsl("accessibleButtonPressed")), "Return did not press a button that carries links");
+
+        key(Qt::Key_Tab);
+        QCOMPARE(label()->selectedText(), qsl("north"));
+        key(Qt::Key_Return);
+        QVERIFY2(luaHolds(qsl("accessibleLinkNorth")), "Return did not open the focused link");
+        key(Qt::Key_Tab);
+        QCOMPARE(label()->selectedText(), qsl("south"));
+        key(Qt::Key_Space);
+        QVERIFY2(luaHolds(qsl("accessibleLinkSouth")), "Space did not open the focused link");
+        QCOMPARE(QApplication::focusWidget(), static_cast<QWidget*>(label()));
+
+        // the window losing the focus and getting it back leaves QLabel's link focused
+        QFocusEvent away(QEvent::FocusOut, Qt::ActiveWindowFocusReason);
+        QApplication::sendEvent(label(), &away);
+        QFocusEvent back(QEvent::FocusIn, Qt::ActiveWindowFocusReason);
+        QApplication::sendEvent(label(), &back);
+        key(Qt::Key_Tab);
+        QTRY_COMPARE(QApplication::focusWidget(), static_cast<QWidget*>(lower()));
+
+        key(Qt::Key_Backtab, Qt::ShiftModifier);
+        QTRY_COMPARE(QApplication::focusWidget(), static_cast<QWidget*>(label()));
+        key(Qt::Key_Backtab, Qt::ShiftModifier);
+        QCOMPARE(label()->selectedText(), qsl("south"));
+        key(Qt::Key_Backtab, Qt::ShiftModifier);
+        QCOMPARE(label()->selectedText(), qsl("north"));
+        key(Qt::Key_Backtab, Qt::ShiftModifier);
+        QTRY_COMPARE(QApplication::focusWidget(), pane());
+    }
+
+    // With nothing to press, the stop is its first link going forwards and its last going back
+    void test_aLabelWithOnlyLinksIsATabStop()
+    {
+        auto restore = qScopeGuard([this]() {
+            tearDownLinksAndButtons();
+        });
+        QVERIFY(setUpLinksAndButtons());
+        QVERIFY(runLua(qsl("setLabelClickCallback('%1', nil); echo('%1', '<a href=\"accessibleLinkNorth = true\">north</a> <a href=\"accessibleLinkSouth = true\">south</a>')").arg(mLabelName)));
+
+        key(Qt::Key_Tab);
+        QTRY_COMPARE(QApplication::focusWidget(), static_cast<QWidget*>(label()));
+        QCOMPARE(label()->selectedText(), qsl("north"));
+        key(Qt::Key_Tab);
+        QCOMPARE(label()->selectedText(), qsl("south"));
+        key(Qt::Key_Tab);
+        QTRY_COMPARE(QApplication::focusWidget(), static_cast<QWidget*>(lower()));
+        key(Qt::Key_Backtab, Qt::ShiftModifier);
+        QTRY_COMPARE(QApplication::focusWidget(), static_cast<QWidget*>(label()));
+        QCOMPARE(label()->selectedText(), qsl("south"));
+
+        QVERIFY(runLua(qsl("echo('%1', '<a href=\"accessibleLinkOnly = true\">only</a>')").arg(mLabelName)));
+        key(Qt::Key_Tab);
+        QTRY_COMPARE(QApplication::focusWidget(), static_cast<QWidget*>(lower()));
+        key(Qt::Key_Backtab, Qt::ShiftModifier);
+        QTRY_COMPARE(QApplication::focusWidget(), static_cast<QWidget*>(label()));
+        QCOMPARE(label()->selectedText(), qsl("only"));
+        key(Qt::Key_Return);
+        QVERIFY2(luaHolds(qsl("accessibleLinkOnly")), "Return did not open a label's only link");
+    }
+
+    // Most game text has no links, so caret mode's Tab goes straight on to the buttons and comes back to the main window
+    void test_withNoLinksInTheTextTabGoesStraightToTheButtons()
+    {
+        auto restore = qScopeGuard([this]() {
+            tearDownLinksAndButtons();
+        });
+        QVERIFY(setUpLinksAndButtons());
+        QVERIFY(runLua(qsl("clearWindow(); echo('plain\\n')")));
+
+        key(Qt::Key_Tab);
+        QTRY_COMPARE(QApplication::focusWidget(), static_cast<QWidget*>(label()));
+        key(Qt::Key_Tab);
+        QTRY_COMPARE(QApplication::focusWidget(), static_cast<QWidget*>(lower()));
+        key(Qt::Key_Tab);
+        QTRY_VERIFY(mpHost->caretEnabled());
+        QTRY_COMPARE(QApplication::focusWidget(), pane());
+        key(Qt::Key_Tab);
+        QTRY_COMPARE(QApplication::focusWidget(), static_cast<QWidget*>(label()));
+    }
+
+    // Qt asks a widget being hidden with the focus to pass it on, which a label with links must not take as a step
+    void test_hidingAFocusedLabelHandsTheFocusOn()
+    {
+        auto restore = qScopeGuard([this]() {
+            runLua(qsl("showWindow('%1')").arg(mLabelName));
+            tearDownLinksAndButtons();
+        });
+        QVERIFY(setUpLinksAndButtons());
+        QVERIFY(runLua(qsl("echo('%1', '<a href=\"accessibleNoop = 1\">north</a> <a href=\"accessibleNoop = 2\">south</a> <a href=\"accessibleNoop = 3\">west</a>')").arg(mLabelName)));
+        key(Qt::Key_Tab);
+        key(Qt::Key_Tab);
+        QCOMPARE(label()->selectedText(), qsl("north"));
+
+        QVERIFY(runLua(qsl("hideWindow('%1')").arg(mLabelName)));
+        QTRY_COMPARE(QApplication::focusWidget(), static_cast<QWidget*>(lower()));
+    }
+
+    // Labels at the same corner, as a Geyser gauge's are, read neither before nor after each other
+    void test_buttonsAtTheSameCornerAreEachReached()
+    {
+        const QString twin = qsl("accessibleLabelTwin");
+        auto restore = qScopeGuard([this, twin]() {
+            mpHost->deleteLabel(twin);
+            tearDownLinksAndButtons();
+        });
+        QVERIFY(setUpLinksAndButtons());
+        auto [created, createMessage] = mpHost->createLabel(qsl("main"), twin, 10, 110, 200, 40, true, false);
+        QVERIFY2(created, qPrintable(createMessage));
+        QVERIFY(runLua(qsl("setLabelClickCallback('%1', function() end)").arg(twin)));
+        const QList<QWidget*> pair{lower(), mpHost->mainConsoleView()->labelWidget(twin)};
+
+        key(Qt::Key_Tab);
+        QTRY_COMPARE(QApplication::focusWidget(), static_cast<QWidget*>(label()));
+        key(Qt::Key_Tab);
+        QTRY_VERIFY(pair.contains(QApplication::focusWidget()));
+        QWidget* pFirst = QApplication::focusWidget();
+        key(Qt::Key_Tab);
+        QTRY_VERIFY(pair.contains(QApplication::focusWidget()) && QApplication::focusWidget() != pFirst);
+        key(Qt::Key_Backtab, Qt::ShiftModifier);
+        QTRY_COMPARE(QApplication::focusWidget(), pFirst);
+    }
+
+    // Held, or with a modifier, Space is neither a press nor typing
+    void test_spaceOnAButtonStaysThere()
+    {
+        auto restore = qScopeGuard([this]() {
+            tearDownLinksAndButtons();
+        });
+        QVERIFY(setUpLinksAndButtons());
+        TCommandLine* pCommandLine = mpHost->mainConsoleView()->mpCommandLine;
+        pCommandLine->clear();
+        key(Qt::Key_Tab);
+        QTRY_COMPARE(QApplication::focusWidget(), static_cast<QWidget*>(label()));
+        key(Qt::Key_Space, Qt::ShiftModifier);
+        QTest::qWait(20ms);
+        QCOMPARE(QApplication::focusWidget(), static_cast<QWidget*>(label()));
+        QVERIFY(pCommandLine->toPlainText().isEmpty());
+    }
+
+    void test_theCaretShortcutAndKeybindingsWorkFromAButton()
+    {
+        auto restore = qScopeGuard([this]() {
+            runLua(qsl("killKey(accessibleF5Key)"));
+            tearDownLinksAndButtons();
+        });
+        QVERIFY(setUpLinksAndButtons());
+        QVERIFY(runLua(qsl("accessibleF5Key = tempKey(mudlet.key.F5, [[accessibleF5 = true]])")));
+        mpHost->mCaretShortcut = Host::CaretShortcut::F6;
+
+        key(Qt::Key_Tab);
+        QTRY_COMPARE(QApplication::focusWidget(), static_cast<QWidget*>(label()));
+        key(Qt::Key_F5);
+        QTRY_VERIFY2(luaHolds(qsl("accessibleF5")), "a keybinding did not run from a focused button");
+
+        mpHost->setCaretEnabled(true);
+        QTRY_COMPARE(QApplication::focusWidget(), pane());
+        key(Qt::Key_Tab);
+        QTRY_COMPARE(QApplication::focusWidget(), static_cast<QWidget*>(label()));
+        key(Qt::Key_F6);
+        QTRY_VERIFY(mpHost->caretEnabled());
+        QTRY_COMPARE(QApplication::focusWidget(), pane());
+    }
+
+    // Without caret mode to go back to, the way out of the buttons is the command line
+    void test_leavingTheButtonsWithoutCaretModeGoesToTheCommandLine()
+    {
+        auto restore = qScopeGuard([this]() {
+            tearDownLinksAndButtons();
+        });
+        QVERIFY(setUpLinksAndButtons());
+        mpHost->setCaretEnabled(false);
+        TCommandLine* pCommandLine = mpHost->mainConsoleView()->mpCommandLine;
+        QTRY_COMPARE(QApplication::focusWidget(), static_cast<QWidget*>(pCommandLine));
+        lower()->setFocus(Qt::OtherFocusReason);
+        key(Qt::Key_Tab);
+        QTRY_COMPARE(QApplication::focusWidget(), static_cast<QWidget*>(pCommandLine));
+        QVERIFY(!mpHost->caretEnabled());
+    }
+
+    // Destroyed with a scroll box, a focused button would leave the keyboard with nobody
+    void test_aButtonDyingWithItsContainerHandsTheFocusOn()
+    {
+        const QString box = qsl("accessibleLabelBox");
+        const QString boxed = qsl("accessibleLabelBoxed");
+        auto restore = qScopeGuard([this, box]() {
+            runLua(qsl("deleteScrollBox('%1')").arg(box));
+            tearDownLinksAndButtons();
+        });
+        QVERIFY(setUpLinksAndButtons());
+        mpHost->setCaretEnabled(false);
+        QVERIFY(runLua(qsl("assert(createScrollBox('%1', 300, 10, 200, 100)); createLabel('%1', '%2', 0, 0, 100, 30, 1); "
+                           "setLabelClickCallback('%2', function() end)")
+                               .arg(box, boxed)));
+        TLabel* pBoxed = mpHost->mainConsoleView()->labelWidget(boxed);
+        QVERIFY(pBoxed);
+        QTRY_VERIFY(pBoxed->isVisible());
+        pBoxed->setFocus(Qt::TabFocusReason);
+        QTRY_COMPARE(QApplication::focusWidget(), static_cast<QWidget*>(pBoxed));
+
+        QVERIFY(runLua(qsl("deleteScrollBox('%1')").arg(box)));
+        QTRY_COMPARE(QApplication::focusWidget(), static_cast<QWidget*>(mpHost->mainConsoleView()->mpCommandLine));
+    }
+
+    // A floating user window is a window of its own: neither Tab, the caret shortcut nor typing takes the
+    // keyboard from it to the main window
+    void test_aFloatingWindowsButtonsAreLeftOut()
+    {
+        const QString floating = qsl("accessibleLabelFloatingWindow");
+        const QString floatingLabel = qsl("accessibleLabelFloating");
+        QVERIFY(runLua(qsl("openUserWindow('%1', false, false, 'f'); createLabel('%1', '%2', 0, 0, 100, 30, 1); "
+                           "setConfig('accessibleLabels', true); setLabelClickCallback('%2', function() end)")
+                               .arg(floating, floatingLabel)));
+        auto restore = qScopeGuard([this, floating, floatingLabel]() {
+            mpHost->mCaretShortcut = Host::CaretShortcut::None;
+            runLua(qsl("deleteLabel('%1'); hideWindow('%2')").arg(floatingLabel, floating));
+        });
+        TLabel* pFloating = mpHost->mainConsoleView()->labelWidget(floatingLabel);
+        QVERIFY(pFloating);
+        QTRY_VERIFY(pFloating->isVisible());
+        QWidget* pWindow = pFloating->window();
+        QVERIFY(pWindow != mpHost->mainConsoleView()->window());
+        QVERIFY(!mpHost->mainConsoleView()->keyboardButtons().contains(pFloating));
+
+        pWindow->activateWindow();
+        QVERIFY(QTest::qWaitForWindowActive(pWindow));
+        pFloating->setFocus(Qt::TabFocusReason);
+        QTRY_COMPARE(QApplication::focusWidget(), static_cast<QWidget*>(pFloating));
+        mpHost->mCaretShortcut = Host::CaretShortcut::F6;
+        QTest::keyClick(pWindow->windowHandle(), Qt::Key_F6);
+        QVERIFY2(!mpHost->caretEnabled(), "the caret shortcut on a floating window's button turned caret mode on in the main window");
+        QTest::keyClick(pWindow->windowHandle(), 'n');
+        QVERIFY2(mpHost->mainConsoleView()->mpCommandLine->toPlainText().isEmpty(), "typing on a floating window's button went to the main command line");
+        QCOMPARE(QApplication::focusWidget(), static_cast<QWidget*>(pFloating));
     }
 
     // A mouse click passes through it to what is underneath, so a screen reader cannot press it either
@@ -398,6 +916,39 @@ private slots:
         QAccessible::queryAccessibleInterface(pDoomed)->actionInterface()->doAction(QAccessibleActionInterface::pressAction());
         QVERIFY2(luaHolds(qsl("accessibleLabelReleased == nil")), "the release callback ran on a label the click callback deleted");
         QTRY_VERIFY2(pDoomed.isNull(), "the label the callback deleted is still there");
+    }
+
+    // Last: a package's host section resets the profile's other settings to their defaults
+    void test_aPackageChangesAccessibleLabelsOnlyWhenItSaysSo()
+    {
+        QVERIFY(runLua(qsl("setLabelClickCallback('%1', function() end)").arg(mLabelName)));
+        const auto writePackage = [this](const QString& name, const QString& hostAttributes) {
+            QFile file(mConfigDir.filePath(name + qsl(".xml")));
+            if (!file.open(QIODevice::WriteOnly)) {
+                return QString();
+            }
+            file.write(qsl("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE MudletPackage>\n<MudletPackage version=\"1.001\">"
+                           "<HostPackage><Host %1></Host></HostPackage></MudletPackage>\n")
+                               .arg(hostAttributes)
+                               .toUtf8());
+            return file.fileName();
+        };
+        const QString turnsOn = writePackage(qsl("accessibleLabelsOn"), qsl("accessibleLabels=\"yes\""));
+        const QString saysNothing = writePackage(qsl("accessibleLabelsUnsaid"), QString());
+        const QString turnsOff = writePackage(qsl("accessibleLabelsOff"), qsl("accessibleLabels=\"no\""));
+        QVERIFY(!turnsOn.isEmpty() && !saysNothing.isEmpty() && !turnsOff.isEmpty());
+        auto restore = qScopeGuard([this]() {
+            runLua(qsl("uninstallPackage('accessibleLabelsOn'); uninstallPackage('accessibleLabelsUnsaid'); uninstallPackage('accessibleLabelsOff')"));
+        });
+
+        QVERIFY(runLua(qsl("assert(installPackage([[%1]]))").arg(turnsOn)));
+        QCOMPARE(label()->focusPolicy(), Qt::TabFocus);
+        QVERIFY(runLua(qsl("assert(installPackage([[%1]]))").arg(saysNothing)));
+        QVERIFY2(mpHost->mAccessibleLabels, "a package from before the setting turned it off");
+        QCOMPARE(label()->focusPolicy(), Qt::TabFocus);
+        QVERIFY(runLua(qsl("assert(installPackage([[%1]]))").arg(turnsOff)));
+        QVERIFY(!mpHost->mAccessibleLabels);
+        QCOMPARE(label()->focusPolicy(), Qt::NoFocus);
     }
 };
 

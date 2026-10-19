@@ -1603,6 +1603,7 @@ local oldgetConfig = getConfig
 -- Left out on purpose: "ircNickName" (with no nick stored it reads as a new random one, and writing it
 -- back also replaces the app-wide nick) and "ircPassword" (it would show up in every dump of the table)
 local configOptions = {
+  "accessibleLabels",
   "advertiseScreenReader",
   "ambiguousEAsianWidthCharacters",
   "announceIncomingText",

@@ -643,6 +643,7 @@ public:
     void raiseSettingChangedEvent(const QString& settingName, const bool value);
     void setEnableClosedCaption(const bool state);
     void setAdvertiseScreenReader(const bool state);
+    void setAccessibleLabels(const bool state);
     void setAnnounceIncomingText(const bool state);
     void setMapperPanelVisible(const bool state);
 
@@ -1241,6 +1242,8 @@ public:
 
     bool mAnnounceIncomingText = true;
     bool mAdvertiseScreenReader = false;
+    // Button labels take Tab focus and Space/Enter; kept apart from mAdvertiseScreenReader, which tells games
+    bool mAccessibleLabels = false;
     bool mEnableClosedCaption = false;
 
     // Turning this off both ignores incoming OSC 8 sequences and advertises 0

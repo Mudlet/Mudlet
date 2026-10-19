@@ -6060,6 +6060,18 @@ void Host::setEnableClosedCaption(const bool state)
     changeSetting(mEnableClosedCaption, state, qsl("enableClosedCaption"));
 }
 
+void Host::setAccessibleLabels(const bool state)
+{
+    if (mAccessibleLabels == state) {
+        return;
+    }
+    mAccessibleLabels = state;
+    for (const TLabelModel* pModel : mWindowRegistry.labelModels()) {
+        pModel->accessibilityChanged(TLabelModel::AccessibilityChange::KeyboardAccess);
+    }
+    raiseSettingChangedEvent(qsl("accessibleLabels"), state);
+}
+
 void Host::setAdvertiseScreenReader(const bool state)
 {
     if (mAdvertiseScreenReader == state) {
