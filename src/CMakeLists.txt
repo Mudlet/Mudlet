@@ -95,6 +95,7 @@ set(mudlet_SRCS
     TAreaLodExitIndex.cpp
     TAreaSpanIndex.cpp
     TAreaZLevelIndex.cpp
+    TAudioMixer.cpp
     TBuffer.cpp
     TConsoleModel.cpp
     TDebug.cpp
@@ -125,6 +126,7 @@ set(mudlet_SRCS
     TMap.cpp
     TMapLabel.cpp
     TMedia.cpp
+    TMediaVoice.cpp
     TMediaPlaylist.cpp
     TMxpBRTagHandler.cpp
     TMxpColorTagHandler.cpp
@@ -398,6 +400,7 @@ set(mudlet_HDRS
     TAreaSpanIndex.h
     TAreaZLevelIndex.h
     TAstar.h
+    TAudioMixer.h
     TBuffer.h
     TConsoleFrontend.h
     TConsoleModel.h
@@ -427,6 +430,7 @@ set(mudlet_HDRS
     TMapViewsFrontend.h
     TMatchState.h
     TMedia.h
+    TMediaVoice.h
     TMediaData.h
     TMediaPlaylist.h
     TMxpBRTagHandler.h

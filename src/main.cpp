@@ -875,12 +875,11 @@ int main(int argc, char* argv[])
     }
 
     // Configure the media backend - does not work in mudlet class c'tor.
-    // On Windows, use FFmpeg which supports .ogg/.opus (native backend doesn't).
-    // On macOS, use darwin (AVFoundation) which works better than FFmpeg.
-#if defined(Q_OS_WINDOWS)
+    // FFmpeg plays .ogg/.opus, which the native Windows backend doesn't, and is what Linux gets by Qt's
+    // default. macOS uses it too: only FFmpeg feeds the shared output, TAudioMixer, which keeps Bluetooth
+    // headphones from being claimed for every sound.
+#if defined(Q_OS_WINDOWS) || defined(Q_OS_MACOS)
     const QByteArray defaultMediaBackend("ffmpeg");
-#elif defined(Q_OS_MACOS)
-    const QByteArray defaultMediaBackend("darwin");
 #else
     const QByteArray defaultMediaBackend;
 #endif

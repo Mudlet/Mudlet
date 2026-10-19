@@ -108,6 +108,7 @@ set(UNIT_TESTS
     TEncodingHelperTest
     PasswordMigrationTest
     TMediaPathTraversalTest
+    TAudioMixerMixTest
     ProfileNameValidationTest
 )
 

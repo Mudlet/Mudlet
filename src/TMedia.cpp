@@ -491,6 +491,9 @@ void TMedia::parseGMCP(QString& packageMessage, QString& gmcp)
     if (!mpHost->mAcceptServerMedia) {
         return;
     }
+    // Checked now, as the first sound played while the check runs keeps an output of its own. Not at
+    // launch or on GMCP alone: the check loads FFmpeg, which a game that sends no media never needs.
+    TMediaVoice::probeBackend();
 
     auto document = QJsonDocument::fromJson(gmcp.toUtf8());
 
@@ -876,6 +879,31 @@ int TMedia::playersInPlayingState() const
            + countPlaying(mAPIMusicList) + countPlaying(mAPIVideoList);
 }
 
+int TMedia::playersMixed() const
+{
+    int mixed = 0;
+    for (const auto& list : {mMSPSoundList, mMSPMusicList, mGMCPSoundList, mGMCPMusicList, mGMCPVideoList, mAPISoundList, mAPIMusicList, mAPIVideoList}) {
+        for (const auto& player : list) {
+            if (player && player->mixed()) {
+                ++mixed;
+            }
+        }
+    }
+    return mixed;
+}
+
+const TMediaVoice* TMedia::firstMixedVoice() const
+{
+    for (const auto& list : {mMSPSoundList, mMSPMusicList, mGMCPSoundList, mGMCPMusicList, mGMCPVideoList, mAPISoundList, mAPIMusicList, mAPIVideoList}) {
+        for (const auto& player : list) {
+            if (player && player->voice()) {
+                return player->voice();
+            }
+        }
+    }
+    return nullptr;
+}
+
 int TMedia::mediaPlayerCount() const
 {
     return mMSPSoundList.size() + mMSPMusicList.size() + mGMCPSoundList.size() + mGMCPMusicList.size() + mGMCPVideoList.size() + mAPISoundList.size() + mAPIMusicList.size() + mAPIVideoList.size();
@@ -893,9 +921,7 @@ void TMedia::setMediaPlayersMuted(const TMediaData::MediaProtocol mediaProtocol,
             continue;
         }
 
-        if (player->mediaPlayer()->audioOutput()) {
-            player->mediaPlayer()->audioOutput()->setMuted(state);
-        }
+        player->setMuted(state);
     }
 }
 
@@ -1436,9 +1462,10 @@ void TMedia::connectMediaPlayer(std::shared_ptr<TMediaPlayer>& player)
     }
 
     std::weak_ptr<TMediaPlayer> weakPlayer = player; // Safe handling for longer-lived connections
+    // Each disconnect below takes only TMedia's own handlers: a voice listens to the same player
 
     // Seekable changed connection
-    disconnect(player->mediaPlayer(), &QMediaPlayer::seekableChanged, nullptr, nullptr);
+    disconnect(player->mediaPlayer(), &QMediaPlayer::seekableChanged, this, nullptr);
     connect(player->mediaPlayer(), &QMediaPlayer::seekableChanged, this, [weakPlayer](bool) {
         if (auto lockedPlayer = weakPlayer.lock()) { // Ensure the player is still valid
             seekToMediaStart(lockedPlayer);
@@ -1446,7 +1473,7 @@ void TMedia::connectMediaPlayer(std::shared_ptr<TMediaPlayer>& player)
     });
 
     // Media status changed connection
-    disconnect(player->mediaPlayer(), &QMediaPlayer::mediaStatusChanged, nullptr, nullptr);
+    disconnect(player->mediaPlayer(), &QMediaPlayer::mediaStatusChanged, this, nullptr);
     connect(player->mediaPlayer(), &QMediaPlayer::mediaStatusChanged, this, [this, weakPlayer](QMediaPlayer::MediaStatus mediaStatus) {
         if (auto lockedPlayer = weakPlayer.lock()) {
             seekToMediaStart(lockedPlayer);
@@ -1466,7 +1493,7 @@ void TMedia::connectMediaPlayer(std::shared_ptr<TMediaPlayer>& player)
         }
     });
 
-    disconnect(player->mediaPlayer(), &QMediaPlayer::errorOccurred, nullptr, nullptr);
+    disconnect(player->mediaPlayer(), &QMediaPlayer::errorOccurred, this, nullptr);
     connect(player->mediaPlayer(), &QMediaPlayer::errorOccurred, this, [this, weakPlayer](QMediaPlayer::Error error, const QString& errorString) {
         const auto lockedPlayer = weakPlayer.lock();
 
@@ -1530,7 +1557,7 @@ void TMedia::connectMediaPlayer(std::shared_ptr<TMediaPlayer>& player)
     });
 
     // Playback state changed connection
-    disconnect(player->mediaPlayer(), &QMediaPlayer::playbackStateChanged, nullptr, nullptr);
+    disconnect(player->mediaPlayer(), &QMediaPlayer::playbackStateChanged, this, nullptr);
     connect(player->mediaPlayer(), &QMediaPlayer::playbackStateChanged, this, [this, weakPlayer](QMediaPlayerPlaybackState playbackState) {
         if (auto lockedPlayer = weakPlayer.lock()) {
             handlePlayerPlaybackStateChanged(playbackState, lockedPlayer);
@@ -1538,7 +1565,7 @@ void TMedia::connectMediaPlayer(std::shared_ptr<TMediaPlayer>& player)
     });
 
     // Position changed connection (handles fade-in/fade-out effects)
-    disconnect(player->mediaPlayer(), &QMediaPlayer::positionChanged, nullptr, nullptr);
+    disconnect(player->mediaPlayer(), &QMediaPlayer::positionChanged, this, nullptr);
     connect(player->mediaPlayer(), &QMediaPlayer::positionChanged, this, [this, weakPlayer](qint64 progress) {
         if (auto lockedPlayer = weakPlayer.lock()) { // Ensure the player is still valid
             const int volume = lockedPlayer->mediaData().mediaVolume();
@@ -2280,24 +2307,21 @@ void TMedia::play(TMediaData& mediaData)
         claimPlayerFor(pPlayer, mediaData, playlist->currentMedia());
     }
 
+    // Video keeps an output of its own: its picture is timed against the player's audio clock
+    pPlayer->setMixed(mediaData.mediaType() != TMediaData::MediaTypeVideo);
+
     // Set volume and start position
     pPlayer->setVolume(mediaData.mediaFadeIn() != TMediaData::MediaFadeNotSet ? 1 : mediaData.mediaVolume());
     pPlayer->mediaPlayer()->setPosition(mediaData.mediaStart());
 
-    // Set mute state based on protocol
-    QAudioOutput* audioOutput = pPlayer->mediaPlayer()->audioOutput();
-    if (audioOutput) {
-        switch (mediaData.mediaProtocol()) {
-        case TMediaData::MediaProtocolAPI:
-            audioOutput->setMuted(MudletMedia::self() && MudletMedia::self()->apiMuted());
-            break;
-        case TMediaData::MediaProtocolGMCP:
-        case TMediaData::MediaProtocolMSP:
-            audioOutput->setMuted(MudletMedia::self() && MudletMedia::self()->gameMuted());
-            break;
-        }
-    } else {
-        qWarning() << "TMedia::play() - audioOutput is nullptr, skipping mute state update.";
+    switch (mediaData.mediaProtocol()) {
+    case TMediaData::MediaProtocolAPI:
+        pPlayer->setMuted(MudletMedia::self() && MudletMedia::self()->apiMuted());
+        break;
+    case TMediaData::MediaProtocolGMCP:
+    case TMediaData::MediaProtocolMSP:
+        pPlayer->setMuted(MudletMedia::self() && MudletMedia::self()->gameMuted());
+        break;
     }
 
     // Handle video setup if applicable
