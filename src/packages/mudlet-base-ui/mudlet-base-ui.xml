@@ -644,10 +644,9 @@ local css = {}
 local gaugeDefs = { hp = {}, mp = {}, xp = {}, mv = {}, enemy = {} }
 
 -- How much of a background picture the dock's own surfaces hide while one is
--- showing: a stylesheet percentage, and the same as the 0-255 a map colour takes.
--- Floating sections keep their full colour, since they sit over the game's text.
+-- showing, as a stylesheet percentage. Floating sections keep their full colour,
+-- since they sit over the game's text.
 local panelOpacity = 10
-local mapAlpha = 26
 
 -- a look's "#rrggbb" with an opacity, or the colour exactly as written when there
 -- is none, so a profile with no picture is painted with the same stylesheets as ever
@@ -662,7 +661,9 @@ end
 local function rebuildCss(opacity)
   css.placeholder = string.format(
     [[background-color: %s; border: 1px solid %s; border-radius: 6px;]],
-    shade(theme.panel, opacity), theme.borderSoft)
+    -- clear rather than shaded: the placeholder sits on the dock, which already
+    -- hides its share of the picture, and a second layer would double it
+    opacity and "transparent" or theme.panel, theme.borderSoft)
   css.sectionFloating = string.format(
     [[background-color: %s; border: 1px solid %s; border-radius: 6px; padding-left: 2px; qproperty-alignment: 'AlignLeft | AlignTop';]],
     theme.bg, theme.border)
@@ -1802,7 +1803,8 @@ local function syncMapBackground(giveBack)
     and not BaseUI.sectionFloating("map")
   local before = BaseUI.settings.mapBackground
   if wanted and not held then
-    local set = { current[1], current[2], current[3], math.min(current[4], mapAlpha) }
+    -- clear, as the placeholder is: the dock behind the map already hides its share
+    local set = { current[1], current[2], current[3], 0 }
     held = { before = current, set = set }
     setMapBackgroundColor(set[1], set[2], set[3], set[4])
   elseif not wanted and held then
