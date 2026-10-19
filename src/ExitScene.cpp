@@ -120,6 +120,7 @@ private:
     const float mWidth;
     const float mHeight;
     int mRoomId = 0;
+    int mToRoomId = 0;
     // Index into mScene.glyphs by cell, as doubled coordinates, and level
     QHash<std::pair<std::pair<qint64, qint64>, int>, qsizetype> mGlyphCells;
     // lineColor() by environment
@@ -162,7 +163,7 @@ void Builder::bar(const QVector3D& from, const QVector3D& to, const float width,
     if ((to - from).lengthSquared() < 1e-10f) {
         return;
     }
-    mScene.segments.append({from, to, width, height, color, level, stroke});
+    mScene.segments.append({from, to, width, height, color, level, mRoomId, mToRoomId, stroke});
 }
 
 void Builder::dashedBar(const QVector3D& from, const QVector3D& to, const QList<qreal>& dashes, qreal& phase, const QColor& color, const int level)
@@ -247,7 +248,7 @@ bool Builder::glyphRun(const QVector3D& from, const QVector3D& to, const QColor&
 
 void Builder::triangle(const QVector3D& a, const QVector3D& b, const QVector3D& c, const QColor& color, const int level)
 {
-    mScene.triangles.append({a, b, c, color, level});
+    mScene.triangles.append({a, b, c, color, level, false, mRoomId, mToRoomId});
 }
 
 void Builder::arrowhead(const QVector3D& tip, const QVector3D& along, const float length, const float halfWidth, const QColor& color, const int level, const QColor& outline)
@@ -404,6 +405,7 @@ void Builder::customLine(const TRoom& room, const QString& key, const QList<QPoi
 
     // Down to (or up to) a destination on another level that the line ends over
     const int destinationId = direction ? room.getExit(direction) : room.getSpecialExits().value(key);
+    mToRoomId = destinationId;
     if (const TRoom* pDestination = mMap.mpRoomDB->getRoom(destinationId); pDestination && pDestination->getArea() == mOptions.areaId && pDestination->z() != room.z() && !pDestination->isHidden()) {
         const QVector3D last = polyline.constLast();
         if (std::abs(last.x() - pDestination->x()) <= 0.5f && std::abs(last.y() - pDestination->y()) <= 0.5f) {
@@ -464,11 +466,13 @@ void Builder::addRoom(const int roomId, const TRoom& room)
     const int level = room.z();
     const QColor exitColor = mOptions.exitColor;
     mRoomId = roomId;
+    mToRoomId = 0;
 
     if (!mOptions.areaExitsOnly) {
         for (auto it = room.customLines.constBegin(); it != room.customLines.constEnd(); ++it) {
             customLine(room, it.key(), it.value());
         }
+        mToRoomId = 0;
 
         for (const int direction : room.exitStubs) {
             if (!onCompass(direction)) {
@@ -508,6 +512,7 @@ void Builder::addRoom(const int roomId, const TRoom& room)
     const QColor outlineColor = ExitAppearance::contrastColor(mOptions.background);
     for (const Exit& exit : exits) {
         const QString key = TRoom::dirCodeToShortString(exit.direction);
+        mToRoomId = exit.destinationId;
         const bool inOrOut = exit.direction == DIR_IN || exit.direction == DIR_OUT;
 
         if (exit.pDestination->getArea() != mOptions.areaId) {

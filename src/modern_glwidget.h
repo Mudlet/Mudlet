@@ -57,6 +57,7 @@
 #include "LabelTextureCache.h"
 #include "MapAtlas.h"
 #include "MapRoute.h"
+#include "MapStitch.h"
 #include "RenderCommandQueue.h"
 #include "ResourceManager.h"
 #include "RetainedMapScene.h"
@@ -126,10 +127,15 @@ public:
     int areaExitAt(const QPoint& position);
     // The room a pointer action at this position is about. As on the 2D map, which shows only the viewed level's
     // rooms, that level's room under the pointer wins, even beneath or seen through a room on another level; with
-    // areaExits, where an arrow from the viewed level leads comes next, ahead of other rooms
-    int roomPickedAt(const QPoint& position, bool orNear = true, bool areaExits = false);
+    // areaExits, where an arrow from the viewed level leads comes next, ahead of other rooms; with neighbours, a room
+    // of a neighboring area drawn past this area's edge comes after the arrows
+    int roomPickedAt(const QPoint& position, bool orNear = true, bool areaExits = false, bool neighbours = false);
     // The room a double click or the tooltip at this position is about: a room, or where an area exit leads
-    int destinationAt(const QPoint& position) { return roomPickedAt(position, true, true); }
+    int destinationAt(const QPoint& position) { return roomPickedAt(position, true, true, true); }
+    // The room of a neighboring area drawn past this area's edge under this point of the view, or 0
+    int stitchedRoomAt(const QPoint& position);
+    // Moves the view into the neighboring area of a room drawn past this area's edge, centered on that room
+    void enterStitchedRoom(int roomId);
     // A view in a map window of its own: it shows the area it is told to rather than following the player
     void setSecondaryView(bool secondary);
     bool secondaryView() const { return mSecondaryView; }
@@ -146,7 +152,8 @@ public:
     // far enough for a click to pick areas rather than rooms, or 0
     int areaAt(const QPoint& position);
     // Moves the view into the area, from where the area is drawn in the world around the one shown now, zooming in on it
-    void flyToArea(int areaId);
+    // With a landing room, comes down on that room at the zoom the view has now
+    void flyToArea(int areaId, int landingRoomId = 0);
     // Shows the route from the player's room to this room, or to the nearest room of this area that can be reached,
     // at every zoom, keeping it up to date as the player moves. Returns what was told the user if no route was set
     QString planRouteToRoom(int roomId);
@@ -539,6 +546,40 @@ private:
     };
     std::optional<Flight> mFlight;
     MapRoute mRoute;
+    // Everything the neighboring areas drawn past the shown area's edges were made from
+    struct StitchInputs
+    {
+        int areaId = 0;
+        int level = 0;
+        quint64 mapRevision = 0;
+        quint64 appearanceRevision = 0;
+        quint64 exitsRevision = 0;
+        unsigned int mapGeneration = 0;
+        size_t roomsVersions = 0;
+        float scale = 0.0f;
+        float zFlattening = 0.0f;
+        double lineSize = 0.0;
+        bool inOutStubs = false;
+        bool largeAreaExitArrows = false;
+        QColor background;
+        QColor foreground;
+        std::array<QColor, 16> hostColors;
+        QMap<int, int> envColors;
+        QMap<int, QColor> customEnvColors;
+        bool operator==(const StitchInputs&) const = default;
+    };
+    std::optional<StitchInputs> mStitchInputs;
+    MapStitch mStitch;
+    RetainedMapScene mStitchScene;
+    // A neighboring area's name and a few of its rooms, shown where an exit leads to it but its rooms are not drawn
+    struct PortalCard
+    {
+        QRectF rect;
+        // The tip of the exit's stub, in the view
+        QPointF anchor;
+        qsizetype portal = 0;
+        QString name;
+    };
     // Finds a stale route soon after a frame saw it was, outside painting, as finding it can run a script
     QTimer* mRouteRefreshTimer = nullptr;
     QElapsedTimer mRouteGraphBuilt;
@@ -617,6 +658,8 @@ private:
     void renderRooms();
     void renderConnections();
     SceneInputs sceneInputs() const;
+    // What a frame sees, for culling the kept scenes
+    RetainedMapScene::View sceneView() const;
     // Makes the kept scene again if anything it was made from changed, then sees what of it this frame shows
     void refreshScene();
     // How many pixels apart neighboring rooms are, where the camera looks
@@ -651,6 +694,21 @@ private:
     void appendRouteOnFootprints(float unitsPerPixel, QVector<float>& vertices, QVector<float>& colors) const;
     void appendRouteOnWorld(float unitsPerPixel, QVector<float>& vertices, QVector<float>& colors) const;
     void paintRouteStatus(QPainter& painter);
+    // Places the neighboring areas again if the area, the level or the map changed, or clears them if not to be shown
+    void refreshStitch();
+    // The room drawn past this area's edge with this id, if the stitch is of the area shown
+    const MapStitch::Room* stitchedRoom(int roomId) const;
+    void queueStitchedAreas();
+    // The portals this frame shows, none overlapping another
+    QList<PortalCard> portalCards();
+    void paintPortals(QPainter& painter);
+    // The portal under this point of the view, as an index into the stitch's portals, or -1
+    qsizetype portalAt(const QPoint& position);
+    QString portalToolTip(qsizetype portal) const;
+    // The name an area is shown by
+    QString areaName(int areaId) const;
+    // A flight into the area, begun from where flight.from is
+    void startFlight(int areaId, const Flight& flight);
     // The blocks drawn for a room: its border, its outline, then the room itself, each with the layer it is drawn in
     void addRoomCubes(const TRoom& room, bool hovered, bool solidPlayer, const std::function<void(RetainedMapScene::Layer, const CubeInstanceData&)>& add) const;
     // The paper or the felt behind the map, for a style drawn on either

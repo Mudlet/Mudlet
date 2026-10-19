@@ -1184,6 +1184,8 @@ public:
     bool mMapperUseAntiAlias = true;
     bool mMapperShowRoomBorders = true;
     bool mMapperShowGrid = false;
+    // The modern 3D view draws the areas next to the one shown past its edges, and previews of those it cannot place
+    bool mMapperStitchAreas = true;
     // What the built-in map buttons (main toolbar, Show Map menu entry and its
     // shortcut, detached window toolbar) do for this profile; scripts set it
     // through setConfig("mapperButton", ...). Deliberately not saved with the

@@ -1616,6 +1616,7 @@ local configOptions = {
   "mapRoundRooms",
   "mapShowGrid",
   "mapShowRoomBorders",
+  "mapStitchAreas",
   "mapStyle",
   "mapSymbolFont",
   "mapSymbolFontOnlyUseSelected",

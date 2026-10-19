@@ -80,6 +80,9 @@ struct Segment
     float height = 0.0f;
     QColor color;
     int level = 0;
+    // The room drawing it and, for an exit's line, the room it leads to; 0 if none
+    int roomId = 0;
+    int toRoomId = 0;
     // A whole exit line out of its room, that a brush may taper; not a door, a dash or a piece of a custom line
     bool stroke = false;
 };
@@ -94,6 +97,8 @@ struct Triangle
     int level = 0;
     // Sized to stay readable when the rooms are too small to see, so drawn at any distance
     bool distant = false;
+    int roomId = 0;
+    int toRoomId = 0;
 };
 
 // A character in a cell of the grid, half a room's spacing across, that a map drawn as text is laid out on
