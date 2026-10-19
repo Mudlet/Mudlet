@@ -1283,13 +1283,31 @@ void dlgProfilePreferences::createTriggerMatchPoolControls(QGroupBox* pCard)
     mpCheckBox_triggerMatchPool = new QCheckBox(pCard);
     mpCheckBox_triggerMatchPool->setObjectName(qsl("checkBox_triggerMatchPool"));
     moveIntoCard(pCard, {mpCheckBox_triggerMatchPool});
-    const auto addRow = [this, pCard](QLabel*& pLabel, QSpinBox*& pSpinBox, const QString& name, const int minimum, const int maximum) {
+    auto* pCardLayout = qobject_cast<QVBoxLayout*>(pCard->layout());
+    Q_ASSERT_X(pCardLayout, "dlgProfilePreferences::createTriggerMatchPoolControls", "the controls can only be added to a card that createCard() made");
+    if (!pCardLayout) {
+        return;
+    }
+    // One grid so the fields line up, indented to the check box's text as they only apply while it is on
+    auto* pGrid = new QGridLayout();
+    pGrid->setContentsMargins(style()->pixelMetric(QStyle::PM_IndicatorWidth, nullptr, mpCheckBox_triggerMatchPool)
+                                      + style()->pixelMetric(QStyle::PM_CheckBoxLabelSpacing, nullptr, mpCheckBox_triggerMatchPool),
+                              0,
+                              0,
+                              0);
+    pGrid->setSpacing(8);
+    // A number field stretched to the card's width reads as a text field
+    pGrid->setColumnStretch(2, 1);
+    pCardLayout->addLayout(pGrid);
+    const auto addRow = [pCard, pGrid](QLabel*& pLabel, QSpinBox*& pSpinBox, const QString& name, const int minimum, const int maximum) {
         pLabel = new QLabel(pCard);
         pSpinBox = new QSpinBox(pCard);
         pSpinBox->setObjectName(qsl("spinBox_%1").arg(name));
         pSpinBox->setRange(minimum, maximum);
         pLabel->setBuddy(pSpinBox);
-        addCardRow(pCard, pLabel, pSpinBox);
+        const int row = pGrid->count() / 2;
+        pGrid->addWidget(pLabel, row, 0);
+        pGrid->addWidget(pSpinBox, row, 1);
     };
     addRow(mpLabel_triggerMatchThreads, mpSpinBox_triggerMatchThreads, qsl("triggerMatchThreads"), 2, std::max(2, QThread::idealThreadCount()));
     addRow(mpLabel_triggerMatchThreshold, mpSpinBox_triggerMatchThreshold, qsl("triggerMatchThreshold"), 1, 100000);
@@ -4783,7 +4801,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
                         break;
                     default: {
                     } // There are a significant number of other errors
-                    // that are not handled here!
+                        // that are not handled here!
                     }
                 }
             }
