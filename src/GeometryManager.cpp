@@ -1340,6 +1340,75 @@ void RetainedInstances::setInstances(QVector<CubeInstanceData>&& fresh)
     instances = std::move(fresh);
 }
 
+void RetainedTriangles::setTriangles(const QVector<float>& freshVertices, const QVector<float>& freshColors)
+{
+    Q_ASSERT(freshVertices.size() / 3 == freshColors.size() / 4);
+    // Our copy makes any write to the source detach first, so a shared array is unchanged
+    if (vertices.isSharedWith(freshVertices) && colors.isSharedWith(freshColors)) {
+        return;
+    }
+    vertices = freshVertices;
+    colors = freshColors;
+    written = false;
+}
+
+void RetainedTriangles::release()
+{
+    for (QOpenGLBuffer* buffer : {&vertexBuffer, &colorBuffer}) {
+        if (buffer->isCreated()) {
+            buffer->destroy();
+        }
+    }
+    vertices = {};
+    colors = {};
+    written = false;
+}
+
+void GeometryManager::renderRetainedTriangles(RetainedTriangles& retained, QOpenGLVertexArrayObject& vao, ResourceManager* resourceManager)
+{
+    const qsizetype vertexCount = retained.vertices.size() / 3;
+    if (vertexCount == 0 || retained.colors.size() != vertexCount * 4) {
+        return;
+    }
+    QOpenGLVertexArrayObject::Binder vaoBinder(&vao);
+    if (!retained.vertexBuffer.isCreated() || !retained.colorBuffer.isCreated()) {
+        for (QOpenGLBuffer* buffer : {&retained.vertexBuffer, &retained.colorBuffer}) {
+            if (!buffer->create()) {
+                return;
+            }
+            buffer->setUsagePattern(QOpenGLBuffer::StaticDraw);
+        }
+        retained.written = false;
+    }
+    if (!retained.written) {
+        retained.vertexBuffer.bind();
+        retained.vertexBuffer.allocate(retained.vertices.constData(), static_cast<int>(retained.vertices.size() * sizeof(float)));
+        // One byte a component: the colors are 8-bit RGB, and the driver may keep its own copy
+        QByteArray colorBytes;
+        colorBytes.reserve(retained.colors.size());
+        for (const float component : std::as_const(retained.colors)) {
+            colorBytes.append(static_cast<char>(std::lround(std::clamp(component, 0.0f, 1.0f) * 255.0f)));
+        }
+        retained.colorBuffer.bind();
+        retained.colorBuffer.allocate(colorBytes.constData(), static_cast<int>(colorBytes.size()));
+        retained.written = true;
+    }
+    retained.vertexBuffer.bind();
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
+    glEnableVertexAttribArray(0);
+    // All normals are (0,0,1), so a constant replaces the array; every other draw re-enables attribute 1
+    glDisableVertexAttribArray(1);
+    glVertexAttrib3f(1, 0.0f, 0.0f, 1.0f);
+    retained.colorBuffer.bind();
+    glVertexAttribPointer(2, 4, GL_UNSIGNED_BYTE, GL_TRUE, 0, nullptr);
+    glEnableVertexAttribArray(2);
+    glDisableVertexAttribArray(scmTexCoordLocation);
+    glDrawArrays(GL_TRIANGLES, 0, static_cast<GLsizei>(vertexCount));
+    if (resourceManager) {
+        resourceManager->onDrawCall(static_cast<size_t>(vertexCount));
+    }
+}
+
 void GeometryManager::uploadTemplate(const GeometryData& geometry, QOpenGLBuffer& vertexBuffer, QOpenGLBuffer& indexBuffer)
 {
     const int positionBytes = static_cast<int>(geometry.vertices.size() * sizeof(float));

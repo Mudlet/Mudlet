@@ -33,6 +33,7 @@
 
 #include <QElapsedTimer>
 #include <QHash>
+#include <QImage>
 #include <QMap>
 #include <QMatrix4x4>
 #include <QVector3D>
@@ -57,6 +58,7 @@
 #include "LabelTextureCache.h"
 #include "MapAtlas.h"
 #include "MapRoute.h"
+#include "MapSearch.h"
 #include "MapStitch.h"
 #include "RenderCommandQueue.h"
 #include "ResourceManager.h"
@@ -70,6 +72,7 @@
 #include <optional>
 
 class Host;
+class MapSearchPanel;
 class QFontMetricsF;
 class QLabel;
 class QOpenGLFramebufferObject;
@@ -160,6 +163,10 @@ public:
     QString planRouteToArea(int areaId);
     void clearRoute();
     const MapRoute& route() const { return mRoute; }
+    // Opens the search box over the view, which searches every area of the map
+    void openSearch();
+    // Flies the view to a place the search found, switching area as needed, and marks a room found for a while
+    void goToSearchResult(const MapSearch::Result& result);
     // Where a style with a status line draws it, along the view's foot; empty for any other style
     QRect statusLineRect() const;
 
@@ -535,6 +542,22 @@ private:
         QRectF rect;
         bool shownArea = false;
     };
+    // By text, plain then in bold for the area shown: the names atlasLabels() last measured, as boundingRect() gives them
+    std::array<QHash<QString, QRectF>, 2> mAtlasLabelBounds;
+    // Halos are slow to stroke every frame. One sheet, not an image per name: the GL paint engine caches a texture per
+    // image, and the driver gives each far more memory than a name takes
+    struct AtlasLabelSheet
+    {
+        QImage image;
+        // Where each name is in the image, in its pixels, by text, plain then in bold
+        std::array<QHash<QString, QRect>, 2> places;
+    };
+    AtlasLabelSheet mAtlasLabelSheet;
+    QFont mAtlasLabelFont;
+    QColor mAtlasLabelBackground;
+    qreal mAtlasLabelPixelRatio = 0.0;
+    std::shared_ptr<RetainedTriangles> mAtlasFootprints = std::make_shared<RetainedTriangles>();
+    std::shared_ptr<RetainedTriangles> mAtlasWorld = std::make_shared<RetainedTriangles>();
     // A view flying into an area: it glides across the map, then zooms in, in the new area's coordinates
     struct Flight
     {
@@ -584,6 +607,13 @@ private:
     QTimer* mRouteRefreshTimer = nullptr;
     QElapsedTimer mRouteGraphBuilt;
     qint64 mRouteGraphBuildMs = 0;
+    MapSearch mSearch;
+    MapSearchPanel* mpSearchPanel = nullptr;
+    QList<MapSearch::Result> mSearchResults;
+    // The room a search went to, marked until the time is up
+    int mSearchMarkedRoomId = 0;
+    QElapsedTimer mSearchMarkTime;
+    QTimer* mSearchMarkTimer = nullptr;
     RetainedMapScene mScene;
     int mSceneMaxRoomId = 0;
     // Rooms whose blocks are drawn narrower than this many pixels, in tiles of the scene so far away, are drawn
@@ -674,6 +704,8 @@ private:
     void queueAtlas(const MapAtlas::Weights& weights);
     // The area names to draw over the view, largest areas first, none overlapping another
     QList<AtlasLabel> atlasLabels(const MapAtlas::Weights& weights);
+    // Lays the names out in a new sheet, copying those the old one has and drawing the rest
+    void paintAtlasLabelSheet(const QList<AtlasLabel>& labels, qreal pixelRatio);
     void paintAtlasLabels(QPainter& painter);
     // Ends a flight into an area where it got to
     void stopFlight();
@@ -709,6 +741,19 @@ private:
     QString areaName(int areaId) const;
     // A flight into the area, begun from where flight.from is
     void startFlight(int areaId, const Flight& flight);
+    // How far from the area a view coming into it looks from: as it last did, or else as its 2D zoom shows it
+    float arrivalDistance(int areaId) const;
+    // A flight to this point of the area, from wherever the view is now, coming no further out than distance
+    void flyToPoint(int areaId, const QVector3D& point, float distance);
+    bool searchKeyed(const QKeyEvent* event) const;
+    void runSearch();
+    void chooseSearchResult(int row, bool planRoute);
+    // A room or area still on the map, and not where the player already is
+    bool routableSearchResult(const MapSearch::Result& result) const;
+    void showSearchResultMenu(int row, const QPoint& globalPosition);
+    QString searchResultLine(const MapSearch::Result& result) const;
+    void placeSearchPanel();
+    void queueSearchMark();
     // The blocks drawn for a room: its border, its outline, then the room itself, each with the layer it is drawn in
     void addRoomCubes(const TRoom& room, bool hovered, bool solidPlayer, const std::function<void(RetainedMapScene::Layer, const CubeInstanceData&)>& add) const;
     // The paper or the felt behind the map, for a style drawn on either

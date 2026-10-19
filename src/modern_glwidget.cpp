@@ -30,6 +30,7 @@
 #include "ExitScene.h"
 #include "Host.h"
 #include "MapDecals.h"
+#include "MapSearchPanel.h"
 #include "MapStyle.h"
 #include "RoomAppearance.h"
 #include "RoomContextMenuHandler.h"
@@ -79,6 +80,12 @@
 
 using namespace std::chrono_literals;
 
+namespace {
+// How long a room the search went to is marked, the last part of that fading out
+constexpr qint64 scmSearchMarkMilliseconds = 3500;
+constexpr qint64 scmSearchMarkFadeMilliseconds = 1000;
+} // namespace
+
 ModernGLWidget::ModernGLWidget(TMap* pMap, Host* pHost, QWidget* parent)
 : QOpenGLWidget(parent)
 , mpMap(pMap)
@@ -113,6 +120,16 @@ ModernGLWidget::ModernGLWidget(TMap* pMap, Host* pHost, QWidget* parent)
     mRouteRefreshTimer = new QTimer(this);
     mRouteRefreshTimer->setSingleShot(true);
     connect(mRouteRefreshTimer, &QTimer::timeout, this, &ModernGLWidget::refreshRoute);
+    mSearchMarkTimer = new QTimer(this);
+    mSearchMarkTimer->setInterval(33ms);
+    connect(mSearchMarkTimer, &QTimer::timeout, this, [this]() {
+        const TRoom* pRoom = mpMap && mpMap->mpRoomDB ? mpMap->mpRoomDB->getRoom(mSearchMarkedRoomId) : nullptr;
+        if (mSearchMarkTime.elapsed() >= scmSearchMarkMilliseconds || !pRoom || pRoom->getArea() != mAID) {
+            mSearchMarkTimer->stop();
+            mSearchMarkedRoomId = 0;
+        }
+        update();
+    });
 
     mPulseReference.start();
     mPulseTimer = new QTimer(this);
@@ -156,6 +173,8 @@ void ModernGLWidget::cleanup()
     mGeometryManager.cleanup();
     mScene.releaseBuffers();
     mStitchScene.releaseBuffers();
+    mAtlasFootprints->release();
+    mAtlasWorld->release();
     mShaderManager.cleanup();
     mVertexBuffer.destroy();
     mColorBuffer.destroy();
@@ -404,8 +423,14 @@ bool ModernGLWidget::event(QEvent* event)
     }
     // The keys go on to the command line, so it must also win the shortcuts it wins with focus of its own
     if (event->type() == QEvent::ShortcutOverride) {
+        if (searchKeyed(static_cast<QKeyEvent*>(event))) {
+            event->accept();
+            return true;
+        }
+        // Keys typed into the search box stay there
+        const bool searching = mpSearchPanel && mpSearchPanel->isAncestorOf(QApplication::focusWidget());
         TCommandLine* pCommandLine = commandLine();
-        if (pCommandLine && pCommandLine->claimsShortcutOverride(static_cast<QKeyEvent*>(event))) {
+        if (!searching && pCommandLine && pCommandLine->claimsShortcutOverride(static_cast<QKeyEvent*>(event))) {
             event->accept();
             return true;
         }
@@ -454,6 +479,7 @@ void ModernGLWidget::resizeEvent(QResizeEvent* event)
             mFrameWhenShown = false;
         }
     }
+    placeSearchPanel();
     if (contextCreationFailed()) {
         QWidget::resizeEvent(event);
         return;
@@ -625,6 +651,11 @@ void ModernGLWidget::paintGL()
 
     if (!mpMap || !mFailureMessage.isEmpty()) {
         return;
+    }
+
+    // A move is drawn, and may have taken the player to or from the place a route would be planned to
+    if (mpSearchPanel && !mpSearchPanel->isHidden()) {
+        mpSearchPanel->showKeys();
     }
 
     QOpenGLShaderProgram* shaderProgram = mShaderManager.getMainShaderProgram();
@@ -4777,11 +4808,22 @@ void ModernGLWidget::queueAtlas(const MapAtlas::Weights& weights)
         mRenderCommandQueue.addCommand(
                 std::make_unique<RenderTrianglesCommand>(vertices, colors, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), model, RenderCommand::Shading::Unlit));
     };
+    // Kept on the GPU only while drawn
+    const auto queueRetainedLayer = [&](const std::shared_ptr<RetainedTriangles>& retained, const QVector<float>& vertices, const QVector<float>& colors, const float opacity) {
+        if (opacity <= 0.0f || vertices.isEmpty()) {
+            retained->release();
+            return;
+        }
+        retained->setTriangles(vertices, colors);
+        mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::BLEND_BY_OPACITY, opacity));
+        mRenderCommandQueue.addCommand(
+                std::make_unique<RenderTrianglesCommand>(retained, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), model, RenderCommand::Shading::Unlit));
+    };
     // Flat on one plane, each layer over the last and over the rooms it fades in on
     mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::DISABLE_DEPTH_TEST));
     mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::DISABLE_DEPTH_WRITE));
     const float footprintOpacity = weights.footprint * (1.0f - weights.world);
-    queueLayer(mAtlas.footprintVertices(), mAtlas.footprintColors(), footprintOpacity);
+    queueRetainedLayer(mAtlasFootprints, mAtlas.footprintVertices(), mAtlas.footprintColors(), footprintOpacity);
     const float unitsPerPixel = mCameraController.worldUnitsPerPixel(mCameraController.getTarget());
     if (!mRoute.rooms().isEmpty() && footprintOpacity > 0.0f) {
         QVector<float> routeVertices;
@@ -4790,7 +4832,7 @@ void ModernGLWidget::queueAtlas(const MapAtlas::Weights& weights)
         queueLayer(routeVertices, routeColors, footprintOpacity);
     }
     const float worldOpacity = weights.footprint * weights.world;
-    queueLayer(mAtlas.worldVertices(), mAtlas.worldColors(), worldOpacity);
+    queueRetainedLayer(mAtlasWorld, mAtlas.worldVertices(), mAtlas.worldColors(), worldOpacity);
     QVector<float> ringVertices;
     QVector<float> ringColors;
     mAtlas.appendRing(mAID, ExitAppearance::contrastColor(mpHost->mBgColor_2), ringVertices, ringColors);
@@ -4810,6 +4852,7 @@ QList<ModernGLWidget::AtlasLabel> ModernGLWidget::atlasLabels(const MapAtlas::We
 {
     QList<AtlasLabel> labels;
     if (weights.footprint <= 0.0f) {
+        mAtlasLabelBounds = {};
         return labels;
     }
     QList<const MapAtlas::Area*> areas;
@@ -4830,10 +4873,16 @@ QList<ModernGLWidget::AtlasLabel> ModernGLWidget::atlasLabels(const MapAtlas::We
     const MapAtlas::Area* pShown = mAtlas.area(mAID);
     const QPointF shownOffset = pShown ? pShown->offset : QPointF();
     const float level = atlasLevel();
+    if (font() != mAtlasLabelFont) {
+        mAtlasLabelFont = font();
+        mAtlasLabelBounds = {};
+        mAtlasLabelSheet = {};
+    }
     QFont boldFont = font();
     boldFont.setBold(true);
-    const QFontMetricsF metrics(font());
-    const QFontMetricsF boldMetrics(boldFont);
+    const std::array<QFontMetricsF, 2> metrics{QFontMetricsF(font()), QFontMetricsF(boldFont)};
+    // Only the names measured this time are kept, so that one whose route steps changed does not linger
+    std::array<QHash<QString, QRectF>, 2> bounds;
     const QRectF view(0.0, 0.0, width(), height());
     QList<AtlasLabel> candidates;
     QList<QRectF> rects;
@@ -4851,7 +4900,13 @@ QList<ModernGLWidget::AtlasLabel> ModernGLWidget::atlasLabels(const MapAtlas::We
             //: Name of an area on the 3D map's world view that the planned route passes through, %1 is the area's name and %n how many steps the route takes in it
             label.text = tr("%1 (%n step(s))", nullptr, *steps).arg(label.text);
         }
-        label.rect = (label.shownArea ? boldMetrics : metrics).boundingRect(label.text);
+        const int style = label.shownArea ? 1 : 0;
+        auto measured = bounds[style].constFind(label.text);
+        if (measured == bounds[style].cend()) {
+            const auto known = mAtlasLabelBounds[style].constFind(label.text);
+            measured = bounds[style].insert(label.text, known != mAtlasLabelBounds[style].cend() ? *known : metrics[style].boundingRect(label.text));
+        }
+        label.rect = *measured;
         label.rect.moveCenter(*pixel);
         if (!view.intersects(label.rect)) {
             continue;
@@ -4859,34 +4914,133 @@ QList<ModernGLWidget::AtlasLabel> ModernGLWidget::atlasLabels(const MapAtlas::We
         candidates.append(label);
         rects.append(label.rect);
     }
+    mAtlasLabelBounds = std::move(bounds);
     for (const qsizetype index : GeometryManager::declutteredRects(rects, 0.0)) {
         labels.append(candidates.at(index));
     }
     return labels;
 }
 
+namespace {
+// A halo of the background around each name keeps it readable over the areas' colors and the links
+constexpr qreal scmLabelHaloWidth = 3.0;
+// How far the halo reaches past a name's outline, with its antialiasing
+constexpr qreal scmLabelHaloReach = scmLabelHaloWidth / 2.0 + 0.5;
+} // namespace
+
+void ModernGLWidget::paintAtlasLabelSheet(const QList<AtlasLabel>& labels, const qreal pixelRatio)
+{
+    // A pixel between names, so that filtering at the edge of one never picks up the next
+    constexpr int spacing = 1;
+    QFont boldFont = font();
+    boldFont.setBold(true);
+    const std::array<QFont, 2> fonts{font(), boldFont};
+    std::array<QHash<QString, QRect>, 2> places;
+    QList<const AtlasLabel*> names;
+    // Centered on the name's bounds, as it is placed; empty for a name copied from the old sheet
+    QList<QPainterPath> outlines;
+    int widest = 0;
+    int total = 0;
+    for (const AtlasLabel& label : labels) {
+        const int style = label.shownArea ? 1 : 0;
+        if (places[style].contains(label.text)) {
+            continue;
+        }
+        QRect slot;
+        QPainterPath outline;
+        if (const auto drawn = mAtlasLabelSheet.places[style].constFind(label.text); drawn != mAtlasLabelSheet.places[style].cend()) {
+            slot.setSize(drawn->size());
+        } else {
+            const QRectF bounds = mAtlasLabelBounds[style].value(label.text);
+            outline.addText(-bounds.center(), fonts[style], label.text);
+            // Bounds from CoreText and DirectWrite go by advances and ascent, so glyphs can reach past them
+            const QRectF reach = outline.boundingRect();
+            const qreal halfWidth = std::max({bounds.width() / 2.0, -reach.left(), reach.right()}) + scmLabelHaloReach;
+            const qreal halfHeight = std::max({bounds.height() / 2.0, -reach.top(), reach.bottom()}) + scmLabelHaloReach;
+            slot.setSize(QSize(qCeil(2.0 * halfWidth * pixelRatio), qCeil(2.0 * halfHeight * pixelRatio)));
+        }
+        places[style].insert(label.text, slot);
+        names.append(&label);
+        outlines.append(outline);
+        widest = std::max(widest, slot.width());
+        total += slot.width() + spacing;
+    }
+    const int sheetWidth = std::max(widest, std::min(total, 1024));
+    QPoint at;
+    int rowHeight = 0;
+    for (const AtlasLabel* pLabel : std::as_const(names)) {
+        QRect& slot = places[pLabel->shownArea ? 1 : 0][pLabel->text];
+        if (at.x() + slot.width() > sheetWidth) {
+            at = QPoint(0, at.y() + rowHeight + spacing);
+            rowHeight = 0;
+        }
+        slot.moveTopLeft(at);
+        at.rx() += slot.width() + spacing;
+        rowHeight = std::max(rowHeight, slot.height());
+    }
+
+    QImage sheet(sheetWidth, at.y() + rowHeight, QImage::Format_ARGB32_Premultiplied);
+    if (sheet.isNull()) {
+        mAtlasLabelSheet = {};
+        return;
+    }
+    sheet.fill(Qt::transparent);
+    const QColor background = mpHost->mBgColor_2;
+    const QPen halo(background, scmLabelHaloWidth, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin);
+    const QColor fill = ExitAppearance::contrastColor(background);
+    QPainter painter(&sheet);
+    painter.setRenderHints(QPainter::Antialiasing | QPainter::TextAntialiasing);
+    for (qsizetype index = 0; index < names.size(); ++index) {
+        const AtlasLabel* pLabel = names.at(index);
+        const int style = pLabel->shownArea ? 1 : 0;
+        const QRect slot = places[style].value(pLabel->text);
+        if (const auto drawn = mAtlasLabelSheet.places[style].constFind(pLabel->text); drawn != mAtlasLabelSheet.places[style].cend()) {
+            painter.drawImage(slot.topLeft(), mAtlasLabelSheet.image, *drawn);
+            continue;
+        }
+        painter.save();
+        painter.translate(QRectF(slot).center());
+        painter.scale(pixelRatio, pixelRatio);
+        painter.strokePath(outlines.at(index), halo);
+        painter.fillPath(outlines.at(index), fill);
+        painter.restore();
+    }
+    painter.end();
+    // A QImage keeps the raster engine that painted it until destroyed; copy() sheds it
+    mAtlasLabelSheet = {sheet.copy(), std::move(places)};
+}
+
 void ModernGLWidget::paintAtlasLabels(QPainter& painter)
 {
     const QList<AtlasLabel> labels = atlasLabels(mZoomWeights);
+    const qreal pixelRatio = painter.device() ? painter.device()->devicePixelRatio() : devicePixelRatioF();
+    if (mpHost->mBgColor_2 != mAtlasLabelBackground || pixelRatio != mAtlasLabelPixelRatio) {
+        mAtlasLabelBackground = mpHost->mBgColor_2;
+        mAtlasLabelPixelRatio = pixelRatio;
+        mAtlasLabelSheet = {};
+    }
     if (labels.isEmpty()) {
+        mAtlasLabelSheet = {};
         return;
     }
-    const QColor background = mpHost->mBgColor_2;
-    const QColor textColor = ExitAppearance::contrastColor(background);
-    QFont boldFont = font();
-    boldFont.setBold(true);
+    // Redrawn for a missing name, or once names gone from view are over half of it
+    const bool lacking = std::any_of(labels.cbegin(), labels.cend(), [this](const AtlasLabel& label) {
+        return !mAtlasLabelSheet.places[label.shownArea ? 1 : 0].contains(label.text);
+    });
+    if (lacking || mAtlasLabelSheet.places[0].size() + mAtlasLabelSheet.places[1].size() > 2 * labels.size()) {
+        paintAtlasLabelSheet(labels, pixelRatio);
+        if (mAtlasLabelSheet.image.isNull()) {
+            return;
+        }
+    }
     painter.save();
     painter.setOpacity(mZoomWeights.footprint);
-    painter.setRenderHints(QPainter::Antialiasing | QPainter::TextAntialiasing);
-    // A halo of the background keeps a name readable over the areas' colors and the links
-    const QPen halo(background, 3.0, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin);
     for (const AtlasLabel& label : labels) {
-        const QFont& labelFont = label.shownArea ? boldFont : font();
-        const QRectF bounds = QFontMetricsF(labelFont).boundingRect(label.text);
-        QPainterPath path;
-        path.addText(label.rect.topLeft() - bounds.topLeft(), labelFont, label.text);
-        painter.strokePath(path, halo);
-        painter.fillPath(path, textColor);
+        const QRect slot = mAtlasLabelSheet.places[label.shownArea ? 1 : 0].value(label.text);
+        // On whole device pixels, as the name was drawn into the sheet
+        const QPointF topLeft = label.rect.center() * pixelRatio - QPointF(slot.width(), slot.height()) / 2.0;
+        const QRectF target(QPointF(std::round(topLeft.x()), std::round(topLeft.y())) / pixelRatio, QSizeF(slot.size()) / pixelRatio);
+        painter.drawImage(target, mAtlasLabelSheet.image, slot);
     }
     painter.restore();
 }
@@ -4939,13 +5093,7 @@ void ModernGLWidget::flyToArea(const int areaId, const int landingRoomId)
         const QPointF shift = (pFrom ? pFrom->offset : QPointF()) - pTo->offset;
         flight.from = QVector3D(target.x() + static_cast<float>(shift.x()), target.y() + static_cast<float>(shift.y()), target.z());
         flight.to = QVector3D(static_cast<float>(pTo->landing.x()), static_cast<float>(pTo->landing.y()), static_cast<float>(pTo->landingLevel));
-        const auto saved = mSavedCameras.constFind(areaId);
-        if (saved != mSavedCameras.cend()) {
-            flight.toDistance = saved->distance;
-        } else {
-            const float aspectRatio = height() > 0 ? static_cast<float>(width()) / static_cast<float>(height()) : 1.0f;
-            flight.toDistance = CameraController::distanceToShow(static_cast<float>(mpMap->mpRoomDB->get2DMapZoom(areaId)), aspectRatio);
-        }
+        flight.toDistance = arrivalDistance(areaId);
     }
     if (pLanding) {
         flight.to = QVector3D(static_cast<float>(pLanding->x()), static_cast<float>(pLanding->y()), static_cast<float>(pLanding->z()));
@@ -4995,6 +5143,280 @@ void ModernGLWidget::startFlight(const int areaId, const Flight& flight)
     mCameraAnimationTimer->start();
     emit areaFlownInto(areaId);
     update();
+}
+
+float ModernGLWidget::arrivalDistance(const int areaId) const
+{
+    const auto saved = mSavedCameras.constFind(areaId);
+    if (saved != mSavedCameras.cend()) {
+        return saved->distance;
+    }
+    const float aspectRatio = height() > 0 ? static_cast<float>(width()) / static_cast<float>(height()) : 1.0f;
+    return CameraController::distanceToShow(static_cast<float>(mpMap->mpRoomDB->get2DMapZoom(areaId)), aspectRatio);
+}
+
+void ModernGLWidget::flyToPoint(const int areaId, const QVector3D& point, const float distance)
+{
+    refreshAtlas();
+    const MapAtlas::Area* pFrom = mAtlas.area(mAID);
+    const MapAtlas::Area* pTo = mAtlas.area(areaId);
+    const QVector3D target = mCameraController.getTarget();
+    Flight flight;
+    flight.to = point;
+    flight.fromDistance = mCameraController.getScale();
+    flight.toDistance = std::min(flight.fromDistance, distance);
+    if (areaId == mAID) {
+        flight.from = target;
+    } else if (pFrom && pTo) {
+        // From the same place in the world, in the new area's coordinates, as flyToArea() starts
+        const QPointF shift = pFrom->offset - pTo->offset;
+        flight.from = QVector3D(target.x() + static_cast<float>(shift.x()), target.y() + static_cast<float>(shift.y()), target.z());
+    } else {
+        flight.from = point;
+    }
+    saveCamera();
+    startFlight(areaId, flight);
+}
+
+void ModernGLWidget::openSearch()
+{
+    if (!mpSearchPanel) {
+        mpSearchPanel = new MapSearchPanel(this);
+        connect(mpSearchPanel, &MapSearchPanel::queryChanged, this, &ModernGLWidget::runSearch);
+        connect(mpSearchPanel, &MapSearchPanel::resultChosen, this, &ModernGLWidget::chooseSearchResult);
+        connect(mpSearchPanel, &MapSearchPanel::contextMenuRequested, this, &ModernGLWidget::showSearchResultMenu);
+        connect(mpSearchPanel, &MapSearchPanel::closed, this, [this]() {
+            setFocus(Qt::OtherFocusReason);
+        });
+        mpSearchPanel->setRoutable([this](const int row) {
+            return row >= 0 && row < mSearchResults.size() && routableSearchResult(mSearchResults.at(row));
+        });
+    }
+    // The map, or the area shown, may have changed since it was last open
+    runSearch();
+    mpSearchPanel->open();
+}
+
+void ModernGLWidget::runSearch()
+{
+    if (!mpSearchPanel || !mpMap) {
+        return;
+    }
+    mSearch.refresh(*mpMap);
+    qsizetype total = 0;
+    mSearchResults = mSearch.find(mpSearchPanel->text(), mAID, mpSearchPanel->labelsIncluded(), MapSearch::scmMaxResults, &total);
+    QList<MapSearchPanel::Row> rows;
+    rows.reserve(mSearchResults.size());
+    for (const MapSearch::Result& result : mSearchResults) {
+        MapSearchPanel::Row row;
+        row.kind = result.kind;
+        row.title = result.name;
+        row.spoken = searchResultLine(result);
+        switch (result.kind) {
+        case MapSearch::Kind::Area:
+            if (const TArea* pArea = mpMap->mpRoomDB ? mpMap->mpRoomDB->getArea(result.id) : nullptr) {
+                //: Second line of an area found by the search over the 3D map: how many rooms it has
+                row.detail = tr("%n room(s)", nullptr, static_cast<int>(pArea->getAreaRooms().size()));
+            }
+            break;
+        case MapSearch::Kind::Label:
+            row.detail = areaName(result.areaId);
+            break;
+        case MapSearch::Kind::Room:
+            if (result.name.isEmpty()) {
+                //: First line of a room found by the search over the 3D map that has no name; %1 is its number
+                row.title = tr("Room %1").arg(result.id);
+                row.detail = areaName(result.areaId);
+            } else {
+                //: Second line of a room found by the search over the 3D map; %1 is the area it is in and %2 its number
+                row.detail = tr("%1 · room %2").arg(areaName(result.areaId), QString::number(result.id));
+            }
+            if (const TRoom* pRoom = mpMap->mpRoomDB ? mpMap->mpRoomDB->getRoom(result.id) : nullptr; pRoom && mpHost) {
+                row.chip = RoomAppearance::environmentColor(*mpMap, *mpHost, pRoom->environment);
+            }
+            break;
+        }
+        rows.append(row);
+    }
+    mpSearchPanel->setResults(rows, total);
+    placeSearchPanel();
+}
+
+QString ModernGLWidget::searchResultLine(const MapSearch::Result& result) const
+{
+    switch (result.kind) {
+    case MapSearch::Kind::Area:
+        //: A place found by the search over the 3D map that is an area; %1 is its name
+        return tr("%1 (area)").arg(result.name);
+    case MapSearch::Kind::Label:
+        //: A place found by the search over the 3D map that is a map label; %1 is its text and %2 the area it is in
+        return tr("Label \"%1\" in %2").arg(result.name, areaName(result.areaId));
+    case MapSearch::Kind::Room:
+        break;
+    }
+    if (result.name.isEmpty()) {
+        //: A room found by the search over the 3D map, by its number, that has no name; %1 is its number and %2 the area it is in
+        return tr("Room %1 in %2").arg(QString::number(result.id), areaName(result.areaId));
+    }
+    //: A room found by the search over the 3D map; %1 is its name, %2 the area it is in and %3 its number
+    return tr("%1 in %2 (room %3)").arg(result.name, areaName(result.areaId), QString::number(result.id));
+}
+
+void ModernGLWidget::placeSearchPanel()
+{
+    if (!mpSearchPanel) {
+        return;
+    }
+    // From the view's edge to the card's, the panel's shadow lying in between
+    constexpr int margin = 12 - MapSearchPanel::scmShadowMargin;
+    const int panelWidth = std::max(0, std::min(mpSearchPanel->preferredWidth(), width() - 2 * margin));
+    // Taller than its size hint when narrow, for the hint under the heading wraps onto more lines
+    const int wantedHeight = mpSearchPanel->hasHeightForWidth() ? mpSearchPanel->heightForWidth(panelWidth) : mpSearchPanel->sizeHint().height();
+    const int panelHeight = std::max(0, std::min(wantedHeight, height() * 2 / 3));
+    mpSearchPanel->setGeometry(width() - margin - panelWidth, margin, panelWidth, panelHeight);
+}
+
+void ModernGLWidget::chooseSearchResult(const int row, const bool planRoute)
+{
+    if (row < 0 || row >= mSearchResults.size() || !mpMap) {
+        return;
+    }
+    // A copy, as the list may be made again below
+    const MapSearch::Result result = mSearchResults.at(row);
+    if (!planRoute) {
+        goToSearchResult(result);
+    } else if (routableSearchResult(result)) {
+        if (result.kind == MapSearch::Kind::Room) {
+            planRouteToRoom(result.id);
+        } else {
+            planRouteToArea(result.id);
+        }
+    }
+    // Places taken off the map since it was listed go from the list too
+    if (mSearch.stale(*mpMap)) {
+        runSearch();
+    }
+}
+
+bool ModernGLWidget::routableSearchResult(const MapSearch::Result& result) const
+{
+    if (!mpMap || !mpMap->mpRoomDB) {
+        return false;
+    }
+    // Not to where the player is, which would only drop the route planned already, as the view's own menu does
+    const TRoom* pPlayerRoom = mpMap->mpRoomDB->getRoom(mpMap->mRoomIdHash.value(mpMap->mProfileName));
+    switch (result.kind) {
+    case MapSearch::Kind::Room:
+        return mpMap->mpRoomDB->getRoom(result.id) && (!pPlayerRoom || pPlayerRoom->getId() != result.id);
+    case MapSearch::Kind::Area:
+        return mpMap->mpRoomDB->getArea(result.id) && (!pPlayerRoom || pPlayerRoom->getArea() != result.id);
+    case MapSearch::Kind::Label:
+        break;
+    }
+    return false;
+}
+
+void ModernGLWidget::showSearchResultMenu(const int row, const QPoint& globalPosition)
+{
+    if (row < 0 || row >= mSearchResults.size()) {
+        return;
+    }
+    auto* menu = new QMenu(this);
+    menu->setAttribute(Qt::WA_DeleteOnClose);
+    //: Context menu item on a place found by the search over the 3D map: flies the view there
+    connect(menu->addAction(tr("Go there")), &QAction::triggered, this, [this, row]() {
+        chooseSearchResult(row, false);
+    });
+    if (routableSearchResult(mSearchResults.at(row))) {
+        //: Context menu item on a room or area found by the search over the 3D map: shows the route from the player's room to it, at every zoom
+        connect(menu->addAction(tr("Plan route here")), &QAction::triggered, this, [this, row]() {
+            chooseSearchResult(row, true);
+        });
+    }
+    menu->popup(globalPosition);
+}
+
+// Only with the keys the view's own, from Tab: after a click they go on to the command line, whose Ctrl+F searches
+// the console, and a Key the profile binds to it runs instead wherever the keys are
+bool ModernGLWidget::searchKeyed(const QKeyEvent* event) const
+{
+    return mKeysNavigate && event->matches(QKeySequence::Find) && !(mpHost && mpHost->getKeyUnit()->wouldMatch(static_cast<Qt::Key>(event->key()), event->modifiers()));
+}
+
+void ModernGLWidget::goToSearchResult(const MapSearch::Result& result)
+{
+    mSearchMarkedRoomId = 0;
+    mSearchMarkTimer->stop();
+    if (!mpMap || !mpMap->mpRoomDB) {
+        return;
+    }
+    switch (result.kind) {
+    case MapSearch::Kind::Area:
+        if (mpMap->mpRoomDB->getArea(result.id)) {
+            flyToArea(result.id);
+        }
+        return;
+    case MapSearch::Kind::Room:
+        if (const TRoom* pRoom = mpMap->mpRoomDB->getRoom(result.id); pRoom && !pRoom->isHidden()) {
+            const int areaId = pRoom->getArea();
+            flyToPoint(areaId, QVector3D(static_cast<float>(pRoom->x()), static_cast<float>(pRoom->y()), static_cast<float>(pRoom->z())), arrivalDistance(areaId));
+            mSearchMarkedRoomId = result.id;
+            mSearchMarkTime.start();
+            mSearchMarkTimer->start();
+        }
+        return;
+    case MapSearch::Kind::Label:
+        if (const TArea* pArea = mpMap->mpRoomDB->getArea(result.areaId); pArea && pArea->mMapLabels.contains(result.id)) {
+            const TMapLabel& label = pArea->mMapLabels[result.id];
+            // pos is its top-left corner
+            const QVector3D middle(static_cast<float>(label.pos.x() + std::abs(label.size.width()) / 2.0),
+                                   static_cast<float>(label.pos.y() - std::abs(label.size.height()) / 2.0),
+                                   static_cast<float>(GeometryManager::labelLevel(label.pos.z()).value_or(0)));
+            flyToPoint(result.areaId, middle, arrivalDistance(result.areaId));
+        }
+        return;
+    }
+}
+
+void ModernGLWidget::queueSearchMark()
+{
+    if (!mSearchMarkedRoomId || !mpMap || !mpMap->mpRoomDB || !mpHost) {
+        return;
+    }
+    const TRoom* pRoom = mpMap->mpRoomDB->getRoom(mSearchMarkedRoomId);
+    const qint64 elapsed = mSearchMarkTime.elapsed();
+    if (!pRoom || pRoom->getArea() != mAID || pRoom->isHidden() || !levelShown(pRoom->z()) || elapsed >= scmSearchMarkMilliseconds) {
+        return;
+    }
+    const float fade = std::min(1.0f, static_cast<float>(scmSearchMarkMilliseconds - elapsed) / static_cast<float>(scmSearchMarkFadeMilliseconds));
+    const float roomSize = 2.0f / scale;
+    const float roomHeight = roomSize / zFlattening;
+    const float thickness = roomHeight / 3.0f;
+    const float lineWidth = roomSize * 0.18f;
+    const float haloWidth = roomSize * 0.12f;
+    // A square around the room, breathing in and out so that it catches the eye
+    const float pulse = 0.5f + 0.5f * std::sin(static_cast<float>(elapsed) / 1000.0f * 2.0f * std::numbers::pi_v<float> * 1.25f);
+    const float reach = roomSize * (0.75f + 0.25f * pulse);
+    const float lift = mSearchMarkedRoomId == mHoveredRoomId ? roomHeight : 0.0f;
+    const QVector3D at(static_cast<float>(pRoom->x()), static_cast<float>(pRoom->y()), static_cast<float>(pRoom->z()) + lift + roomHeight / 2.0f + thickness / 2.0f);
+    const QColor color = mpHost->mLightCyan_2;
+    const QColor halo = routeHaloColor();
+    const std::array<QVector3D, 4> corners{at + QVector3D(-reach, -reach, 0.0f), at + QVector3D(reach, -reach, 0.0f), at + QVector3D(reach, reach, 0.0f), at + QVector3D(-reach, reach, 0.0f)};
+    QVector<CubeInstanceData> haloBars;
+    QVector<CubeInstanceData> markBars;
+    for (int side = 0; side < 4; ++side) {
+        const QVector3D along = (corners[(side + 1) % 4] - corners[side]).normalized() * (lineWidth / 2.0f);
+        const QVector3D from = corners[side] - along;
+        const QVector3D to = corners[(side + 1) % 4] + along;
+        haloBars.append(CubeInstanceData(GeometryManager::barTransform(from, to, lineWidth + haloWidth, thickness), halo.redF(), halo.greenF(), halo.blueF(), fade));
+        markBars.append(CubeInstanceData(GeometryManager::barTransform(from, to, lineWidth, thickness), color.redF(), color.greenF(), color.blueF(), fade));
+    }
+    mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::DISABLE_DEPTH_WRITE));
+    for (const QVector<CubeInstanceData>* bars : {&haloBars, &markBars}) {
+        mRenderCommandQueue.addCommand(std::make_unique<RenderInstancedCubesCommand>(
+                *bars, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix(), RenderCommand::Shading::Unlit));
+    }
+    mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::ENABLE_DEPTH_WRITE));
 }
 
 void ModernGLWidget::stopFlight()
@@ -5771,6 +6193,10 @@ void ModernGLWidget::showContextMenu(const QPoint& position)
     }
     menu->insertAction(firstAction, editIn2D);
     menu->insertAction(firstAction, fitAreaAction);
+    //: 3D map view context menu item: opens a search box that finds rooms, areas and labels in every area of the map
+    auto* searchAction = new QAction(tr("Search the map..."), menu);
+    connect(searchAction, &QAction::triggered, this, &ModernGLWidget::openSearch);
+    menu->insertAction(firstAction, searchAction);
     if (mpMap->mpRoomDB && !mpMap->mpRoomDB->isEmpty()) {
         // Not to where the player is, which would only drop the route planned already
         const int playerRoomId = mpMap->mRoomIdHash.value(mpMap->mProfileName);
@@ -7121,6 +7547,10 @@ constexpr float scmKeyTurnDegrees = 15.0f;
 
 void ModernGLWidget::keyPressEvent(QKeyEvent* event)
 {
+    if (searchKeyed(event)) {
+        openSearch();
+        return;
+    }
     // A modifier pressed on its own waits for the key it goes with, such as Shift+Tab or the Shift for +; handed on
     // first, it would take focus to the command line ahead of that key
     if (mKeysNavigate) {
@@ -7288,10 +7718,14 @@ void ModernGLWidget::queueScene()
         renderLabels(false, std::numeric_limits<int>::lowest(), std::numeric_limits<int>::max());
         renderRooms();
         queueRouteInRooms();
+        queueSearchMark();
         renderPlayerBeacon();
     }
     if (mZoomWeights.footprint > 0.0f) {
         queueAtlas(mZoomWeights);
+    } else {
+        mAtlasFootprints->release();
+        mAtlasWorld->release();
     }
 }
 

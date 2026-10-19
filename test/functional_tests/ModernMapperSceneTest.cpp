@@ -33,17 +33,25 @@
  *     rooms in five areas over several levels, at several zooms;
  *   MUDLET_BENCH_3D_FRAMES=<dir> saves frames of an ordinary map and of the big
  *     one as PNGs, so two builds' frames can be compared pixel for pixel.
+ * With MUDLET_BENCH_3D=1 a third prints METRIC lines for searching the big map.
  * MUDLET_BENCH_3D_STITCH=0 turns neighboring areas off for both, and
  * MUDLET_BENCH_3D_LINKS=1 joins the big map's first suburb beside its metropolis.
  */
 
 #include <ctime>
+#include <memory>
 
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QLineEdit>
+#include <QListWidget>
 #include <QOpenGLContext>
 #include <QPainter>
+#include <QProxyStyle>
+#include <QScrollBar>
+#include <QStyleOptionViewItem>
+#include <QToolButton>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
@@ -54,6 +62,8 @@
 #include "MudletInstanceCoordinator.h"
 #include "RenderCommand.h"
 #include "MapRoute.h"
+#include "MapSearch.h"
+#include "MapSearchPanel.h"
 #include "RetainedMapScene.h"
 #include "RoomAppearance.h"
 #include "TArea.h"
@@ -66,6 +76,30 @@
 #include "mudlet.h"
 
 #include "GroupedTest.h"
+
+// Counts the events of one type that reach the object it watches
+class EventCounter : public QObject
+{
+public:
+    EventCounter(QObject* watched, QEvent::Type type)
+    : mType(type)
+    {
+        watched->installEventFilter(this);
+    }
+    int count = 0;
+
+protected:
+    bool eventFilter(QObject*, QEvent* event) override
+    {
+        if (event->type() == mType) {
+            ++count;
+        }
+        return false;
+    }
+
+private:
+    QEvent::Type mType;
+};
 
 class ModernMapperSceneTest : public QObject
 {
@@ -181,6 +215,42 @@ private:
         }
         map()->mRoomIdHash[map()->mProfileName] = 1 + (141 + 70) * 141 + 70;
         return map()->mpRoomDB->getRoom(1)->getArea();
+    }
+
+    // columns by rows areas of side x side rooms, each joined to the next east and north of it; returns the ID of
+    // the middle one, where the player is
+    int addManyAreas(const int columns, const int rows, const int side) const
+    {
+        map()->mapClear();
+        map()->mUserData.remove(TAreaGraph::cLayoutUserDataKey);
+        QList<int> firstRooms;
+        int next = 1;
+        for (int area = 0; area < columns * rows; ++area) {
+            firstRooms.append(next);
+            next = addGridArea(qsl("Bench Region %1").arg(area + 1), next, side, side, 1, 0);
+        }
+        const int middleOfWest = side / 2 * side;
+        const int middleOfEast = middleOfWest + side - 1;
+        const int middleOfSouth = side / 2;
+        const int middleOfNorth = (side - 1) * side + side / 2;
+        for (int row = 0; row < rows; ++row) {
+            for (int column = 0; column < columns; ++column) {
+                const int first = firstRooms.at(row * columns + column);
+                if (column + 1 < columns) {
+                    const int east = firstRooms.at(row * columns + column + 1);
+                    map()->setExit(first + middleOfEast, east + middleOfWest, DIR_EAST);
+                    map()->setExit(east + middleOfWest, first + middleOfEast, DIR_WEST);
+                }
+                if (row + 1 < rows) {
+                    const int north = firstRooms.at((row + 1) * columns + column);
+                    map()->setExit(first + middleOfNorth, north + middleOfSouth, DIR_NORTH);
+                    map()->setExit(north + middleOfSouth, first + middleOfNorth, DIR_SOUTH);
+                }
+            }
+        }
+        const int middle = firstRooms.at(rows / 2 * columns + columns / 2);
+        map()->mRoomIdHash[map()->mProfileName] = middle + middleOfWest;
+        return map()->mpRoomDB->getRoom(middle)->getArea();
     }
 
     // A few dozen rooms with something of everything the view draws: levels, symbols, highlights, borders,
@@ -300,6 +370,22 @@ private:
         widget.mRenderCommandQueue.clear();
         widget.queueScene();
     }
+
+    // The nearest distance from which the view of the area passes the check, so a test holds wherever the zoom
+    // thresholds are; 0 if none does
+    static float distanceWhere(ModernGLWidget& widget, const int areaId, bool (*wanted)(ModernGLWidget&))
+    {
+        for (float distance = 1.0f; distance < 5000.0f; distance *= 1.05f) {
+            queueFrame(widget, areaId, distance);
+            if (wanted(widget)) {
+                return distance;
+            }
+        }
+        return 0.0f;
+    }
+
+    static bool footprintsAlone(ModernGLWidget& widget) { return widget.mZoomWeights.footprint == 1.0f && widget.mZoomWeights.world == 0.0f; }
+    static bool worldGraphAlone(ModernGLWidget& widget) { return widget.mZoomWeights.footprint > 0.0f && widget.mZoomWeights.world == 1.0f; }
 
     struct DrawnCube
     {
@@ -481,6 +567,32 @@ private:
         widget.mClickPending = true;
         QMouseEvent release(QEvent::MouseButtonRelease, QPointF(position), widget.mapToGlobal(QPointF(position)), Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
         widget.mouseReleaseEvent(&release);
+    }
+
+    // The names of what a search found, best first
+    static QStringList foundNames(const QList<MapSearch::Result>& results)
+    {
+        QStringList names;
+        for (const MapSearch::Result& result : results) {
+            names.append(result.name);
+        }
+        return names;
+    }
+
+    // The search's mark around a room, whose bars are a third as tall as a room; exit bars can be as thick, so its
+    // colors tell them apart, whatever it has faded to
+    static QList<DrawnCube> drawnSearchMark(const ModernGLWidget& widget)
+    {
+        const auto rgb = [](const QColor& color) {
+            return QVector3D(color.redF(), color.greenF(), color.blueF());
+        };
+        const QVector3D line = rgb(widget.mpHost->mLightCyan_2);
+        const QVector3D halo = rgb(widget.routeHaloColor());
+        QList<DrawnCube> found = drawnCubes(widget, halfHeight(widget) / 3.0f);
+        found.removeIf([&](const DrawnCube& cube) {
+            return cube.color.toVector3D() != line && cube.color.toVector3D() != halo;
+        });
+        return found;
     }
 
 private slots:
@@ -1322,9 +1434,13 @@ private slots:
         const float edge = side / 2 + 0.7f;
         for (const DrawnCube& bar : bars) {
             const bool inWest = bar.center.x() < edge && bar.center.y() > -edge && bar.center.y() < 0.7f;
-            const bool inMiddle = std::abs(bar.center.y()) < 0.7f && std::any_of(widget.mStitch.rooms().cbegin(), widget.mStitch.rooms().cend(), [&](const MapStitch::Room& room) {
-                                      return std::abs(room.at.x() - bar.center.x()) <= 0.6f && std::abs(room.at.y() - bar.center.y()) <= 0.6f;
-                                  });
+            const bool inMiddle = std::abs(bar.center.y()) < 0.7f
+                                  && std::any_of(
+                                          widget.mStitch.rooms().cbegin(),
+                                          widget.mStitch.rooms().cend(),
+                                          [&](const MapStitch::Room& room) {
+                                              return std::abs(room.at.x() - bar.center.x()) <= 0.6f && std::abs(room.at.y() - bar.center.y()) <= 0.6f;
+                                          });
             QVERIFY2(inWest || inMiddle, qPrintable(qsl("a bar at %1, %2").arg(bar.center.x()).arg(bar.center.y())));
         }
         QVERIFY(std::any_of(bars.cbegin(), bars.cend(), [&](const DrawnCube& bar) {
@@ -1627,6 +1743,852 @@ private slots:
         mpHost->mMapperStitchAreas = true;
     }
 
+    void test_theSearchRanksExactThenPrefixThenSubstringWithoutGL()
+    {
+        const auto [westId, eastId] = addTwoAreas(4);
+        const int eastFirst = 1 + 4 * 4;
+        TRoomDB& roomDB = *map()->mpRoomDB;
+        roomDB.getRoom(1)->name = qsl("Old Bakery");
+        roomDB.getRoom(2)->name = qsl("Bakery");
+        roomDB.getRoom(3)->name = qsl("Bakery Lane");
+        roomDB.getRoom(eastFirst)->name = qsl("Bakery");
+        roomDB.getRoom(eastFirst + 1)->name = qsl("Bakery Lane");
+        roomDB.getRoom(eastFirst + 2)->name = qsl("Old Bakery");
+        map()->setUnsaved(__func__);
+        MapSearch search;
+        QVERIFY(search.refresh(*map()));
+        QVERIFY(!search.refresh(*map()));
+
+        // Exact, then prefix, then substring, ignoring case; among those as good, the area the view shows first
+        QList<MapSearch::Result> found = search.find(qsl("bAKERY"), eastId, true);
+        QCOMPARE(foundNames(found), (QStringList{qsl("Bakery"), qsl("Bakery"), qsl("Bakery Lane"), qsl("Bakery Lane"), qsl("Old Bakery"), qsl("Old Bakery")}));
+        QCOMPARE(found.at(0).id, eastFirst);
+        QCOMPARE(found.at(0).areaId, eastId);
+        QCOMPARE(found.at(0).match, MapSearch::Match::Exact);
+        QCOMPARE(found.at(1).id, 2);
+        QCOMPARE(found.at(2).id, eastFirst + 1);
+        QCOMPARE(found.at(2).match, MapSearch::Match::Prefix);
+        QCOMPARE(found.at(4).id, eastFirst + 2);
+        QCOMPARE(found.at(4).match, MapSearch::Match::Substring);
+        found = search.find(qsl("bakery"), westId, true);
+        QCOMPARE(found.at(0).id, 2);
+        QCOMPARE(found.at(1).id, eastFirst);
+        QCOMPARE(found.at(4).id, 1);
+
+        // Areas by name, ahead of rooms as good a match in the same area
+        roomDB.getRoom(4)->name = qsl("Westmarch Gate");
+        map()->setUnsaved(__func__);
+        search.refresh(*map());
+        found = search.find(qsl("westmarch"), eastId, true);
+        QCOMPARE(found.size(), 2);
+        QCOMPARE(found.at(0).kind, MapSearch::Kind::Area);
+        QCOMPARE(found.at(0).id, westId);
+        QCOMPARE(found.at(1).id, 4);
+
+        // A room by its ID, named or not, comes first; others with the digits in their names follow
+        roomDB.getRoom(5)->name = qsl("Room 12 annex");
+        map()->setUnsaved(__func__);
+        search.refresh(*map());
+        found = search.find(qsl("12"), westId, true);
+        QCOMPARE(found.size(), 2);
+        QCOMPARE(found.at(0).kind, MapSearch::Kind::Room);
+        QCOMPARE(found.at(0).id, 12);
+        QCOMPARE(found.at(0).match, MapSearch::Match::Exact);
+        QCOMPARE(found.at(1).id, 5);
+
+        // Labels only when asked for, and at most as many as the limit, with how many there were in all
+        TMapLabel label;
+        label.text = qsl("Bakery district");
+        label.pos = QVector3D(1.0f, 2.0f, 0.0f);
+        label.size = QSizeF(4.0, 2.0);
+        TArea* pEast = roomDB.getArea(eastId);
+        const int labelId = pEast->createLabelId();
+        pEast->mMapLabels.insert(labelId, label);
+        map()->setUnsaved(__func__);
+        search.refresh(*map());
+        QCOMPARE(search.find(qsl("bakery"), westId, false).size(), 6);
+        found = search.find(qsl("bakery"), westId, true);
+        QCOMPARE(found.size(), 7);
+        QCOMPARE(found.at(4).kind, MapSearch::Kind::Label);
+        QCOMPARE(found.at(4).id, labelId);
+        qsizetype total = 0;
+        QCOMPARE(search.find(qsl("bakery"), westId, true, 3, &total).size(), 3);
+        QCOMPARE(total, 7);
+        QVERIFY(search.find(qsl("   "), westId, true).isEmpty());
+        QVERIFY(search.find(qsl("nowhere"), westId, true).isEmpty());
+    }
+
+    void test_theSearchIndexIsMadeAgainOnceTheMapChangesWithoutGL()
+    {
+        addTwoAreas(4);
+        MapSearch search;
+        search.refresh(*map());
+        QVERIFY(search.find(qsl("Cellar"), 0, true).isEmpty());
+
+        TRoom* pRoom = map()->mpRoomDB->getRoom(7);
+        pRoom->name = qsl("Cellar");
+        map()->setUnsaved(__func__);
+        QVERIFY(search.stale(*map()));
+        QVERIFY(search.refresh(*map()));
+        QCOMPARE(search.find(qsl("Cellar"), 0, true).value(0).id, 7);
+
+        map()->mpRoomDB->removeRoom(7);
+        map()->setUnsaved(__func__);
+        search.refresh(*map());
+        QVERIFY(search.find(qsl("Cellar"), 0, true).isEmpty());
+
+        // Hidden rooms are not given away
+        map()->mpRoomDB->getRoom(9)->name = qsl("Secret Cellar");
+        map()->mpRoomDB->getRoom(9)->setHidden(true);
+        search.refresh(*map());
+        QVERIFY(search.find(qsl("Cellar"), 0, true).isEmpty());
+        QVERIFY(search.find(qsl("9"), 0, true).isEmpty());
+        map()->mpRoomDB->getRoom(9)->setHidden(false);
+        search.refresh(*map());
+        QCOMPARE(search.find(qsl("Cellar"), 0, true).value(0).id, 9);
+        // Nor an area all of whose rooms are hidden, which would be flown to only to show nothing
+        const int hiddenAreaId = map()->mpRoomDB->getRoom(1)->getArea();
+        const QString hiddenAreaName = map()->mpRoomDB->getAreaNamesMap().value(hiddenAreaId);
+        QVERIFY(!search.find(hiddenAreaName, 0, true).isEmpty());
+        for (const int roomId : map()->mpRoomDB->getArea(hiddenAreaId)->getAreaRooms()) {
+            map()->mpRoomDB->getRoom(roomId)->setHidden(true);
+        }
+        search.refresh(*map());
+        QVERIFY(search.find(hiddenAreaName, 0, true).isEmpty());
+        for (const int roomId : map()->mpRoomDB->getArea(hiddenAreaId)->getAreaRooms()) {
+            map()->mpRoomDB->getRoom(roomId)->setHidden(false);
+        }
+        map()->mpRoomDB->getRoom(9)->name.clear();
+        map()->setUnsaved(__func__);
+
+        // Spaces count once, wherever they are
+        map()->mpRoomDB->getRoom(8)->name = qsl(" Wine  Cellar ");
+        map()->setUnsaved(__func__);
+        search.refresh(*map());
+        QCOMPARE(search.find(qsl("wine cellar"), 0, true).value(0).match, MapSearch::Match::Exact);
+        QCOMPARE(search.find(qsl("wine cellar"), 0, true).value(0).name, qsl("Wine Cellar"));
+        map()->mpRoomDB->getRoom(8)->name.clear();
+        map()->setUnsaved(__func__);
+        search.refresh(*map());
+
+        // Not made again for what changes only how the map looks, which scripts do all the time
+        map()->updateArea(map()->mpRoomDB->getRoom(1)->getArea());
+        QVERIFY(!search.stale(*map()));
+
+        // A label made for this session only, which bumps only how the area looks, as does taking it away
+        const int areaId = map()->mpRoomDB->getRoom(1)->getArea();
+        TArea* pArea = map()->mpRoomDB->getArea(areaId);
+        TMapLabel label;
+        label.text = qsl("Cellar door");
+        label.temporary = true;
+        const int labelId = pArea->createLabelId();
+        pArea->mMapLabels.insert(labelId, label);
+        map()->updateArea(areaId);
+        search.refresh(*map());
+        QCOMPARE(search.find(qsl("Cellar"), 0, true).size(), 1);
+        map()->deleteMapLabel(areaId, labelId);
+        map()->updateArea(areaId);
+        search.refresh(*map());
+        QVERIFY(search.find(qsl("Cellar"), 0, true).isEmpty());
+
+        // Another map read in starts again, even with the same revisions
+        addTwoAreas(4);
+        map()->mpRoomDB->getRoom(3)->name = qsl("Cellar");
+        search.refresh(*map());
+        QCOMPARE(search.find(qsl("Cellar"), 0, true).value(0).id, 3);
+    }
+
+    void test_aPlaceFoundIsFlownToAndMarkedWithoutGL()
+    {
+        const auto [westId, eastId] = addTwoAreas(6);
+        const int target = 1 + 6 * 6 + 14;
+        map()->mpRoomDB->getRoom(target)->name = qsl("Lighthouse");
+        map()->mpRoomDB->getRoom(3)->name = qsl("Lighthouse Keeper's Cottage");
+        map()->setUnsaved(__func__);
+        ModernGLWidget widget(map(), mpHost);
+        QSignalSpy flownInto(&widget, &ModernGLWidget::areaFlownInto);
+        queueFrame(widget, westId, 1.5f);
+        QVERIFY(!widget.mpSearchPanel);
+
+        // Ctrl+F on the view, with its keys its own, opens the search
+        widget.mKeysNavigate = true;
+        QKeyEvent find(QEvent::KeyPress, Qt::Key_F, Qt::ControlModifier);
+        widget.keyPressEvent(&find);
+        QVERIFY(widget.mpSearchPanel);
+        QVERIFY(!widget.mpSearchPanel->isHidden());
+        widget.mpSearchPanel->mpEdit->setText(qsl("lighthouse"));
+        QCOMPARE(widget.mSearchResults.size(), 2);
+        QCOMPARE(widget.mSearchResults.at(0).id, target);
+        QCOMPARE(widget.mpSearchPanel->mpList->count(), 2);
+        const QListWidgetItem* pFirst = widget.mpSearchPanel->mpList->item(0);
+        QCOMPARE(pFirst->text(), qsl("Lighthouse"));
+        QCOMPARE(pFirst->data(MapSearchPanel::DetailRole).toString(), qsl("Eastvale · room %1").arg(target));
+        QCOMPARE(pFirst->data(Qt::AccessibleTextRole).toString(), qsl("Lighthouse in Eastvale (room %1)").arg(target));
+        QCOMPARE(pFirst->data(MapSearchPanel::ChipColorRole).value<QColor>(), RoomAppearance::environmentColor(*map(), *mpHost, map()->mpRoomDB->getRoom(target)->environment));
+        QCOMPARE(widget.mpSearchPanel->currentRow(), 0);
+
+        // Keys the box leaves, and the mouse over the panel, stay with it rather than reaching the map under it
+        EventCounter keysToView(&widget, QEvent::KeyPress);
+        QKeyEvent shift(QEvent::KeyPress, Qt::Key_Shift, Qt::ShiftModifier);
+        QCoreApplication::sendEvent(widget.mpSearchPanel->mpEdit, &shift);
+        QCOMPARE(keysToView.count, 0);
+        // Laid out, as it would be were the view shown
+        widget.mpSearchPanel->layout()->activate();
+        EventCounter pressesToView(&widget, QEvent::MouseButtonPress);
+        // In the card's padding, by the search box
+        const QPointF onCard(MapSearchPanel::scmShadowMargin + 4.0, widget.mpSearchPanel->mpEdit->geometry().center().y());
+        QMouseEvent press(QEvent::MouseButtonPress, onCard, widget.mpSearchPanel->mapToGlobal(onCard), Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+        QCoreApplication::sendEvent(widget.mpSearchPanel, &press);
+        QCOMPARE(pressesToView.count, 0);
+        EventCounter tooltipsToView(&widget, QEvent::ToolTip);
+        QHelpEvent tooltip(QEvent::ToolTip, QPoint(2, 2), widget.mapToGlobal(QPoint(2, 2)));
+        QCoreApplication::sendEvent(widget.mpSearchPanel->mpList->viewport(), &tooltip);
+        QCOMPARE(tooltipsToView.count, 0);
+        // The shadow around the card is the map's
+        QMouseEvent pressOnShadow(QEvent::MouseButtonPress, QPointF(2.0, 2.0), widget.mpSearchPanel->mapToGlobal(QPointF(2.0, 2.0)), Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+        QCoreApplication::sendEvent(widget.mpSearchPanel, &pressOnShadow);
+        QCOMPARE(pressesToView.count, 1);
+        QMouseEvent releaseOnCard(QEvent::MouseButtonRelease, onCard, widget.mpSearchPanel->mapToGlobal(onCard), Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+        EventCounter releasesToView(&widget, QEvent::MouseButtonRelease);
+        QCoreApplication::sendEvent(widget.mpSearchPanel, &releaseOnCard);
+        QCOMPARE(releasesToView.count, 1);
+        QHelpEvent tooltipOnShadow(QEvent::ToolTip, QPoint(2, 2), widget.mpSearchPanel->mapToGlobal(QPoint(2, 2)));
+        QCoreApplication::sendEvent(widget.mpSearchPanel, &tooltipOnShadow);
+        QCOMPARE(tooltipsToView.count, 1);
+
+        // Enter flies to the first, in the other area, and the area lists follow
+        QKeyEvent enter(QEvent::KeyPress, Qt::Key_Return, Qt::NoModifier);
+        QCoreApplication::sendEvent(widget.mpSearchPanel->mpEdit, &enter);
+        QCOMPARE(widget.mAID, eastId);
+        QVERIFY(widget.mFlight);
+        QCOMPARE(flownInto.size(), 1);
+        QCOMPARE(flownInto.first().first().toInt(), eastId);
+        finishFlight(widget);
+        const TRoom* pTarget = map()->mpRoomDB->getRoom(target);
+        QCOMPARE(widget.mCameraController.getTarget(), QVector3D(pTarget->x(), pTarget->y(), pTarget->z()));
+        QCOMPARE(QPoint(widget.mMapCenterX, widget.mMapCenterY), QPoint(pTarget->x(), pTarget->y()));
+        QVERIFY(widget.mCameraController.getScale() <= 1.5f);
+
+        // Marked for a while, around that room only
+        QCOMPARE(widget.mSearchMarkedRoomId, target);
+        widget.updateMatrices();
+        widget.mRenderCommandQueue.clear();
+        widget.queueScene();
+        QList<DrawnCube> mark = drawnSearchMark(widget);
+        QCOMPARE(mark.size(), 8);
+        const float roomSize = 2.0f / widget.scale;
+        for (const DrawnCube& bar : mark) {
+            QVERIFY(qAbs(bar.center.x() - pTarget->x()) <= roomSize && qAbs(bar.center.y() - pTarget->y()) <= roomSize);
+        }
+        QTRY_COMPARE_WITH_TIMEOUT(widget.mSearchMarkedRoomId, 0, 5000);
+        QVERIFY(!widget.mSearchMarkTimer->isActive());
+        widget.mRenderCommandQueue.clear();
+        widget.queueScene();
+        QVERIFY(drawnSearchMark(widget).isEmpty());
+
+        // Ctrl+Enter plans a route there rather than going
+        map()->mRoomIdHash[map()->mProfileName] = 1;
+        widget.mpSearchPanel->mpList->setCurrentRow(1);
+        QKeyEvent plan(QEvent::KeyPress, Qt::Key_Return, Qt::ControlModifier);
+        QCoreApplication::sendEvent(widget.mpSearchPanel->mpEdit, &plan);
+        QCOMPARE(widget.route().destinationRoomId(), 3);
+        QCOMPARE(widget.mAID, eastId);
+        // Not to the player's own room, which would only drop that route
+        map()->mpRoomDB->getRoom(1)->name = qsl("Lantern Room");
+        map()->setUnsaved(__func__);
+        widget.mpSearchPanel->mpEdit->setText(qsl("lantern"));
+        widget.chooseSearchResult(0, true);
+        QCOMPARE(widget.route().destinationRoomId(), 3);
+
+        // An area is flown into, back where the view shows its rooms, and the room found before is no longer marked
+        widget.mpSearchPanel->mpEdit->setText(qsl("lighthouse"));
+        widget.chooseSearchResult(0, false);
+        QCOMPARE(widget.mSearchMarkedRoomId, target);
+        finishFlight(widget);
+        widget.mpSearchPanel->mpEdit->setText(qsl("westmarch"));
+        QCOMPARE(widget.mSearchResults.value(0).kind, MapSearch::Kind::Area);
+        const QListWidgetItem* pArea = widget.mpSearchPanel->mpList->item(0);
+        QCOMPARE(pArea->text(), qsl("Westmarch"));
+        QCOMPARE(pArea->data(MapSearchPanel::KindRole).toInt(), static_cast<int>(MapSearch::Kind::Area));
+        QCOMPARE(pArea->data(MapSearchPanel::DetailRole).toString(), ModernGLWidget::tr("%n room(s)", nullptr, 36));
+        QVERIFY(pArea->data(Qt::AccessibleTextRole).toString().contains(qsl("Westmarch")));
+        widget.chooseSearchResult(0, false);
+        QCOMPARE(widget.mAID, westId);
+        QCOMPARE(widget.mSearchMarkedRoomId, 0);
+        QCOMPARE(flownInto.size(), 3);
+        finishFlight(widget);
+
+        // A room with no name goes by its number
+        widget.mpSearchPanel->mpEdit->setText(qsl("7"));
+        QCOMPARE(widget.mSearchResults.value(0).id, 7);
+        const QListWidgetItem* pNumbered = widget.mpSearchPanel->mpList->item(0);
+        QCOMPARE(pNumbered->text(), qsl("Room 7"));
+        QCOMPARE(pNumbered->data(MapSearchPanel::KindRole).toInt(), static_cast<int>(MapSearch::Kind::Room));
+        QCOMPARE(pNumbered->data(MapSearchPanel::DetailRole).toString(), qsl("Westmarch"));
+        QVERIFY(pNumbered->data(Qt::AccessibleTextRole).toString().contains(qsl("7")));
+
+        // Nor one hidden since
+        widget.mpSearchPanel->mpEdit->setText(qsl("lighthouse"));
+        map()->mpRoomDB->getRoom(target)->setHidden(true);
+        widget.chooseSearchResult(0, false);
+        QCOMPARE(widget.mAID, westId);
+        QVERIFY(!widget.mFlight);
+        map()->mpRoomDB->getRoom(target)->setHidden(false);
+        widget.mpSearchPanel->mpEdit->clear();
+
+        // A room taken off the map since it was found is not gone to
+        widget.mpSearchPanel->mpEdit->setText(qsl("lighthouse"));
+        map()->mpRoomDB->removeRoom(target);
+        map()->setUnsaved(__func__);
+        widget.chooseSearchResult(0, false);
+        QCOMPARE(widget.mAID, westId);
+        QVERIFY(!widget.mFlight);
+        QCOMPARE(widget.mSearchResults.size(), 1);
+
+        // Escape clears what was typed, then closes it
+        QKeyEvent escape(QEvent::KeyPress, Qt::Key_Escape, Qt::NoModifier);
+        QCoreApplication::sendEvent(widget.mpSearchPanel->mpEdit, &escape);
+        QVERIFY(!widget.mpSearchPanel->isHidden());
+        QVERIFY(widget.mpSearchPanel->text().isEmpty());
+        QCoreApplication::sendEvent(widget.mpSearchPanel->mpEdit, &escape);
+        QVERIFY(widget.mpSearchPanel->isHidden());
+        // Wherever in the panel the focus is
+        widget.openSearch();
+        QCoreApplication::sendEvent(widget.mpSearchPanel->mpLabels, &escape);
+        QVERIFY(widget.mpSearchPanel->isHidden());
+
+        map()->mRoomIdHash[map()->mProfileName] = 0;
+    }
+
+    void test_theSearchPanelShowsWhatItFoundAndMovesThroughItWithoutGL()
+    {
+        const auto [westId, eastId] = addTwoAreas(6);
+        Q_UNUSED(eastId)
+        for (TRoom* pRoom : map()->mpRoomDB->getRoomMap()) {
+            pRoom->name = qsl("Hall %1").arg(pRoom->getId());
+        }
+        map()->mpRoomDB->getRoom(3)->name = qsl("Lighthouse");
+        map()->mpRoomDB->getRoom(4)->name = qsl("Lighthouse Keeper's Cottage");
+        map()->setUnsaved(__func__);
+        ModernGLWidget widget(map(), mpHost);
+        queueFrame(widget, westId, 1.5f);
+        widget.openSearch();
+        MapSearchPanel* pPanel = widget.mpSearchPanel;
+        QVERIFY(pPanel);
+
+        // Named for screen readers
+        const QStringList names{pPanel->mpEdit->accessibleName(), pPanel->mpList->accessibleName(), pPanel->mpLabels->accessibleName(), pPanel->mpClose->accessibleName()};
+        for (const QString& name : names) {
+            QVERIFY(!name.isEmpty());
+        }
+        QCOMPARE(QSet<QString>(names.cbegin(), names.cend()).size(), names.size());
+
+        // Drawn, not taken from a theme, and sharp on a screen at twice the scale
+        for (const QIcon& icon : {pPanel->mpClose->icon(), pPanel->mpSearchIcon->icon()}) {
+            QVERIFY(!icon.isNull());
+            QCOMPARE(icon.pixmap(QSize(16, 16), 2.0).devicePixelRatio(), 2.0);
+            QVERIFY(icon.availableSizes().contains(QSize(32, 32)));
+        }
+
+        // Before anything is typed, a hint and nothing counted
+        QVERIFY(!pPanel->mpMessage->isHidden());
+        QCOMPARE(pPanel->mpMessage->text(), qsl("Search the whole map"));
+        QVERIFY(pPanel->mpList->isHidden());
+        QVERIFY(pPanel->mpCount->text().isEmpty());
+        QCOMPARE(pPanel->mpKeys->text(), qsl("Esc close"));
+        // Nor is a query of spaces anything, for Escape too
+        pPanel->mpEdit->setText(qsl("   "));
+        QCOMPARE(pPanel->mpKeys->text(), qsl("Esc close"));
+        QKeyEvent escape(QEvent::KeyPress, Qt::Key_Escape, Qt::NoModifier);
+        QCoreApplication::sendEvent(pPanel->mpEdit, &escape);
+        QVERIFY(pPanel->isHidden());
+        widget.openSearch();
+        pPanel->mpEdit->clear();
+
+        // What was typed is marked in each name, whatever its case
+        pPanel->mpEdit->setText(qsl("KEEPER"));
+        QCOMPARE(pPanel->mpList->count(), 1);
+        QCOMPARE(pPanel->mpList->item(0)->data(MapSearchPanel::MatchStartRole).toInt(), 11);
+        QCOMPARE(pPanel->mpList->item(0)->data(MapSearchPanel::MatchLengthRole).toInt(), 6);
+        // Not where it is found only by number
+        pPanel->mpEdit->setText(qsl("4"));
+        QCOMPARE(pPanel->mpList->item(0)->text(), qsl("Lighthouse Keeper's Cottage"));
+        QCOMPARE(pPanel->mpList->item(0)->data(MapSearchPanel::MatchStartRole).toInt(), -1);
+
+        // Counted, and the arrows go round
+        pPanel->mpEdit->setText(qsl("lighthouse"));
+        QVERIFY(pPanel->mpMessage->isHidden());
+        QCOMPARE(pPanel->mpCount->text(), qsl("2 found"));
+        QCOMPARE(pPanel->mpList->item(0)->data(MapSearchPanel::MatchStartRole).toInt(), 0);
+        QCOMPARE(pPanel->currentRow(), 0);
+        const QString routeKeys = qsl("↑↓ choose · ↵ go · %1↵ route · Esc clear").arg(QKeySequence(Qt::CTRL).toString(QKeySequence::NativeText));
+        const QString goKeys = qsl("↑↓ choose · ↵ go · Esc clear");
+        QCOMPARE(pPanel->mpKeys->text(), routeKeys);
+        QKeyEvent down(QEvent::KeyPress, Qt::Key_Down, Qt::NoModifier);
+        QKeyEvent up(QEvent::KeyPress, Qt::Key_Up, Qt::NoModifier);
+        QCoreApplication::sendEvent(pPanel->mpEdit, &down);
+        QCOMPARE(pPanel->currentRow(), 1);
+        QCoreApplication::sendEvent(pPanel->mpEdit, &down);
+        QCOMPARE(pPanel->currentRow(), 0);
+        QCoreApplication::sendEvent(pPanel->mpEdit, &up);
+        QCOMPARE(pPanel->currentRow(), 1);
+        // From the toggle or the close button too
+        QCoreApplication::sendEvent(pPanel->mpLabels, &down);
+        QCOMPARE(pPanel->currentRow(), 0);
+        QCoreApplication::sendEvent(pPanel->mpClose, &up);
+        QCOMPARE(pPanel->currentRow(), 1);
+        // Enter on the toggle turns it, and on the close button closes; only the box chooses a place
+        QSignalSpy chosen(pPanel, &MapSearchPanel::resultChosen);
+        QKeyEvent enter(QEvent::KeyPress, Qt::Key_Return, Qt::NoModifier);
+        QCoreApplication::sendEvent(pPanel->mpLabels, &enter);
+        QVERIFY(!pPanel->labelsIncluded());
+        QCOMPARE(chosen.size(), 0);
+        QCoreApplication::sendEvent(pPanel->mpLabels, &enter);
+        QVERIFY(pPanel->labelsIncluded());
+        QCOMPARE(pPanel->currentRow(), 0);
+        QCoreApplication::sendEvent(pPanel->mpEdit, &down);
+        QCoreApplication::sendEvent(pPanel->mpClose, &enter);
+        QVERIFY(pPanel->isHidden());
+        QCOMPARE(chosen.size(), 0);
+        widget.openSearch();
+        QKeyEvent space(QEvent::KeyPress, Qt::Key_Space, Qt::NoModifier, qsl(" "));
+        QKeyEvent spaceUp(QEvent::KeyRelease, Qt::Key_Space, Qt::NoModifier, qsl(" "));
+        QCoreApplication::sendEvent(pPanel->mpClose, &space);
+        QCoreApplication::sendEvent(pPanel->mpClose, &spaceUp);
+        QVERIFY(pPanel->isHidden());
+        widget.openSearch();
+        QCoreApplication::sendEvent(pPanel->mpEdit, &down);
+        QCoreApplication::sendEvent(pPanel->mpEdit, &enter);
+        QCOMPARE(chosen.size(), 1);
+        QCOMPARE(chosen.first().first().toInt(), 1);
+        finishFlight(widget);
+
+        // No route offered to where the player is
+        map()->mRoomIdHash[map()->mProfileName] = 3;
+        pPanel->mpEdit->setText(qsl("lighthouse "));
+        QCOMPARE(widget.mSearchResults.value(0).id, 3);
+        QCOMPARE(pPanel->mpKeys->text(), goKeys);
+        QCoreApplication::sendEvent(pPanel->mpEdit, &down);
+        QCOMPARE(pPanel->mpKeys->text(), routeKeys);
+        map()->mRoomIdHash[map()->mProfileName] = 0;
+
+        // More than are listed
+        pPanel->mpEdit->setText(qsl("hall"));
+        QCOMPARE(pPanel->mpList->count(), MapSearch::scmMaxResults);
+        QCOMPARE(pPanel->mpCount->text(), qsl("Showing the best %1 of 70").arg(MapSearch::scmMaxResults));
+        QKeyEvent pageDown(QEvent::KeyPress, Qt::Key_PageDown, Qt::NoModifier);
+        QCoreApplication::sendEvent(pPanel->mpLabels, &pageDown);
+        QVERIFY(pPanel->currentRow() > 0);
+
+        // Nothing at all
+        pPanel->mpEdit->setText(qsl("zzz"));
+        QVERIFY(pPanel->mpList->isHidden());
+        QVERIFY(!pPanel->mpMessage->isHidden());
+        QCOMPARE(pPanel->mpMessage->text(), qsl("No matches for “zzz”"));
+        QVERIFY(pPanel->mpCount->text().isEmpty());
+        QCOMPARE(pPanel->mpKeys->text(), qsl("Esc clear"));
+        const QString hint = pPanel->mpHint->text();
+        pPanel->mpLabels->setChecked(false);
+        QVERIFY(pPanel->mpHint->text() != hint);
+
+        // A key typed on the labels toggle goes to the search box
+        pPanel->mpEdit->clear();
+        QKeyEvent letter(QEvent::KeyPress, Qt::Key_L, Qt::NoModifier, qsl("l"));
+        QCoreApplication::sendEvent(pPanel->mpLabels, &letter);
+        QCOMPARE(pPanel->text(), qsl("l"));
+
+        // Ctrl+F in the open search selects what is typed, to be typed over
+        pPanel->mpEdit->setText(qsl("light"));
+        pPanel->mpEdit->deselect();
+        QKeyEvent find(QEvent::KeyPress, Qt::Key_F, Qt::ControlModifier);
+        QCoreApplication::sendEvent(pPanel->mpEdit, &find);
+        QCOMPARE(pPanel->mpEdit->selectedText(), qsl("light"));
+
+        // Escape on the toggle clears what was typed before it closes the search
+        QCoreApplication::sendEvent(pPanel->mpLabels, &escape);
+        QVERIFY(!pPanel->isHidden());
+        QVERIFY(pPanel->text().isEmpty());
+        QCoreApplication::sendEvent(pPanel->mpLabels, &escape);
+        QVERIFY(pPanel->isHidden());
+    }
+
+    void test_theSearchPanelDrawsEachKindOfPlaceWithoutGL()
+    {
+        const auto [westId, eastId] = addTwoAreas(6);
+        map()->mpRoomDB->getRoom(3)->name = qsl("Lighthouse");
+        map()->mpRoomDB->getRoom(4)->name = qsl("The Lighthouse Keeper's Long Forgotten Cottage Beyond The Northern Cliffs");
+        TMapLabel label;
+        label.text = qsl("Lighthouse district");
+        label.pos = QVector3D(1.0f, 2.0f, 0.0f);
+        label.size = QSizeF(4.0, 2.0);
+        TArea* pEast = map()->mpRoomDB->getArea(eastId);
+        pEast->mMapLabels.insert(pEast->createLabelId(), label);
+        map()->setUnsaved(__func__);
+        ModernGLWidget widget(map(), mpHost);
+        queueFrame(widget, westId, 1.5f);
+        widget.openSearch();
+        MapSearchPanel* pPanel = widget.mpSearchPanel;
+
+        // A map label, with where it is and no route offered to it
+        pPanel->mpEdit->setText(qsl("district"));
+        QCOMPARE(pPanel->mpList->count(), 1);
+        const QListWidgetItem* pLabel = pPanel->mpList->item(0);
+        QCOMPARE(pLabel->text(), qsl("Lighthouse district"));
+        QCOMPARE(pLabel->data(MapSearchPanel::KindRole).toInt(), static_cast<int>(MapSearch::Kind::Label));
+        QCOMPARE(pLabel->data(MapSearchPanel::DetailRole).toString(), qsl("Eastvale"));
+        QVERIFY(pLabel->data(Qt::AccessibleTextRole).toString().contains(qsl("Lighthouse district")));
+        QCOMPARE(pPanel->mpKeys->text(), qsl("↑↓ choose · ↵ go · Esc clear"));
+
+        // Each kind drawn, and drawn differently hovered and chosen
+        pPanel->mpEdit->setText(qsl("l"));
+        QAbstractItemDelegate* pDelegate = pPanel->mpList->itemDelegate();
+        const auto drawn = [&](const QModelIndex& index, const QStyle::State state, const int width) {
+            QStyleOptionViewItem option;
+            option.font = pPanel->mpList->font();
+            option.state = QStyle::State_Enabled | state;
+            option.rect = QRect(0, 0, width, pDelegate->sizeHint(option, index).height());
+            QImage image(option.rect.size(), QImage::Format_ARGB32_Premultiplied);
+            image.fill(Qt::transparent);
+            QPainter painter(&image);
+            pDelegate->paint(&painter, option, index);
+            painter.end();
+            return image;
+        };
+        QSet<int> kinds;
+        for (int row = 0; row < pPanel->mpList->count(); ++row) {
+            const QModelIndex index = pPanel->mpList->model()->index(row, 0);
+            kinds.insert(index.data(MapSearchPanel::KindRole).toInt());
+            const QImage plain = drawn(index, QStyle::State_None, 360);
+            const QImage hovered = drawn(index, QStyle::State_MouseOver, 360);
+            const QImage chosen = drawn(index, QStyle::State_Selected, 360);
+            QVERIFY(plain != QImage(plain.size(), plain.format()));
+            QVERIFY(hovered != plain);
+            QVERIFY(chosen != hovered);
+            // A long name in a narrow list
+            QVERIFY(!drawn(index, QStyle::State_Selected, 120).isNull());
+        }
+        QCOMPARE(kinds.size(), 3);
+        pPanel->resize(240, pPanel->sizeHint().height());
+        QVERIFY(!pPanel->grab().isNull());
+    }
+
+    void test_theSearchPanelKeepsItsLookUnderAProfileStyleSheetWithoutGL()
+    {
+        // The panel on its own, under a window with a profile's dark style sheet as it reaches the map
+        QWidget window;
+        window.setStyleSheet(qsl("QWidget { background-color: #1e1e1e; color: #dddddd; }"));
+        window.resize(900, 700);
+        auto* pPanel = new MapSearchPanel(&window);
+        const auto fit = [pPanel]() {
+            pPanel->setGeometry(0, 0, pPanel->preferredWidth(), pPanel->sizeHint().height());
+        };
+        fit();
+        window.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&window));
+        const QColor card = QApplication::palette().color(QPalette::Window);
+        const auto colorAt = [pPanel](const QImage& image, const QWidget* pChild, const QPoint& where) {
+            return image.pixelColor(pChild->mapTo(pPanel, where));
+        };
+        QImage image = pPanel->grab().toImage();
+        // Its shadow, not the sheet's background, around the card
+        QVERIFY(image.pixelColor(1, 1).alpha() < 32);
+        QCOMPARE(colorAt(image, pPanel->mpMessage, QPoint(1, 1)), card);
+        QCOMPARE(colorAt(image, pPanel->mpHint, QPoint(1, 1)), card);
+        // The hints are as wide as their text, so a glyph can sit at any one pixel of them
+        const QRect keysArea(pPanel->mpKeys->mapTo(pPanel, QPoint(0, 0)), pPanel->mpKeys->size());
+        int sheetPixels = 0;
+        int cardPixels = 0;
+        for (int y = keysArea.top(); y <= keysArea.bottom(); ++y) {
+            for (int x = keysArea.left(); x <= keysArea.right(); ++x) {
+                const QColor pixel = image.pixelColor(x, y);
+                sheetPixels += pixel == QColor(0x1e, 0x1e, 0x1e) ? 1 : 0;
+                cardPixels += pixel == card ? 1 : 0;
+            }
+        }
+        QCOMPARE(sheetPixels, 0);
+        QVERIFY(cardPixels > 0);
+
+        // Nor behind the list or its scroll bar
+        QList<MapSearchPanel::Row> rows;
+        for (int number = 1; number <= 50; ++number) {
+            MapSearchPanel::Row row;
+            row.title = qsl("Hall %1").arg(number);
+            row.detail = qsl("Westmarch · room %1").arg(number);
+            rows.append(row);
+        }
+        pPanel->setResults(rows, rows.size());
+        fit();
+        QCoreApplication::processEvents();
+        image = pPanel->grab().toImage();
+        const QWidget* pViewport = pPanel->mpList->viewport();
+        QCOMPARE(colorAt(image, pViewport, QPoint(pViewport->width() - 2, pViewport->height() - 2)), card);
+        const QScrollBar* pBar = pPanel->mpList->verticalScrollBar();
+        QVERIFY(pBar->isVisible());
+        QCOMPARE(colorAt(image, pBar->parentWidget(), QPoint(1, pBar->parentWidget()->height() - 2)), card);
+
+        // Colored from the application's palette, not the window's
+        QPalette windowPalette = window.palette();
+        windowPalette.setColor(QPalette::WindowText, QColor(255, 0, 0));
+        window.setPalette(windowPalette);
+        QVERIFY(!pPanel->mpMessage->styleSheet().contains(qsl("rgba(255, 0, 0")));
+        // And again once that changes, with a new style as Mudlet's light/dark switch sets; a palette change on its own
+        // Qt passes down only where no style sheet pins the palette
+        const QPalette before = QApplication::palette();
+        auto restore = qScopeGuard([&before]() {
+            QApplication::setPalette(before);
+        });
+        QPalette changed = before;
+        changed.setColor(QPalette::WindowText, QColor(18, 52, 86));
+        changed.setColor(QPalette::Highlight, QColor(101, 67, 33));
+        QApplication::setPalette(changed);
+        QStyle* pStyle = QApplication::style();
+        // Kept from being deleted with the one put in its place
+        pStyle->setParent(nullptr);
+        auto restoreStyle = qScopeGuard([pStyle]() {
+            QApplication::setStyle(pStyle);
+        });
+        QApplication::setStyle(new QProxyStyle(pStyle->name()));
+        QVERIFY(pPanel->mpMessage->styleSheet().contains(qsl("rgba(18, 52, 86, 255)")));
+        QVERIFY(pPanel->mpEdit->styleSheet().contains(qsl("rgba(101, 67, 33, 255)")));
+        QVERIFY(pPanel->mpLabels->styleSheet().contains(qsl("rgba(101, 67, 33, 255)")));
+        QVERIFY(!pPanel->mpMessage->styleSheet().contains(qsl("rgba(255, 0, 0")));
+    }
+
+    void test_theSearchPanelsCardFollowsItsSizeAndColorsWithoutGL()
+    {
+        QWidget window;
+        auto* pPanel = new MapSearchPanel(&window);
+        const auto backdrop = [](MapSearchPanel* pWhich) {
+            QImage image(pWhich->size(), QImage::Format_ARGB32_Premultiplied);
+            image.fill(Qt::transparent);
+            pWhich->render(&image, {}, {}, QWidget::RenderFlags());
+            return image;
+        };
+        pPanel->resize(400, 200);
+        backdrop(pPanel);
+        pPanel->resize(300, 260);
+        auto* pFresh = new MapSearchPanel(&window);
+        pFresh->resize(300, 260);
+        QCOMPARE(backdrop(pPanel), backdrop(pFresh));
+
+        const QPalette before = QApplication::palette();
+        auto restore = qScopeGuard([&before]() {
+            QApplication::setPalette(before);
+        });
+        QPalette changed = before;
+        changed.setColor(QPalette::Window, QColor(12, 120, 34));
+        QApplication::setPalette(changed);
+        QCOMPARE(backdrop(pPanel).pixelColor(150, 130), QColor(12, 120, 34));
+    }
+
+    void test_theSearchPanelKeepsItsInputFromTheMapWithoutGL()
+    {
+        // The window stands in for the map under the panel
+        QWidget window;
+        window.resize(900, 700);
+        auto* pPanel = new MapSearchPanel(&window);
+        pPanel->setGeometry(0, 0, pPanel->preferredWidth(), pPanel->sizeHint().height());
+        window.show();
+        QVERIFY(QTest::qWaitForWindowExposed(&window));
+        EventCounter menus(&window, QEvent::ContextMenu);
+        EventCounter presses(&window, QEvent::MouseButtonPress);
+        // What Qt makes of a second touch so soon after the first
+        EventCounter doublePresses(&window, QEvent::MouseButtonDblClick);
+        EventCounter keys(&window, QEvent::KeyPress);
+        const auto menuOn = [](QWidget* pWidget, const QPoint& where, const QContextMenuEvent::Reason reason) {
+            QContextMenuEvent event(reason, where, pWidget->mapToGlobal(where));
+            QCoreApplication::sendEvent(pWidget, &event);
+        };
+
+        // A right click or the Menu key anywhere on the card is the panel's
+        for (QWidget* pWidget : std::initializer_list<QWidget*>{pPanel->mpLabels, pPanel->mpClose, pPanel->mpMessage, pPanel->mpHint, pPanel->mpKeys}) {
+            menuOn(pWidget, pWidget->rect().center(), QContextMenuEvent::Mouse);
+        }
+        menuOn(pPanel->mpLabels, pPanel->mpLabels->rect().center(), QContextMenuEvent::Keyboard);
+        menuOn(pPanel, QPoint(MapSearchPanel::scmShadowMargin + 4, pPanel->height() / 2), QContextMenuEvent::Mouse);
+        QCOMPARE(menus.count, 0);
+        // But on the shadow around it, the map's
+        menuOn(pPanel, QPoint(2, 2), QContextMenuEvent::Mouse);
+        QCOMPARE(menus.count, 1);
+
+        // A touch on the card works its buttons and goes no further; on the shadow, it reaches the map
+        const std::unique_ptr<QPointingDevice> pTouch(QTest::createTouchDevice());
+        const QPoint onLabels = pPanel->mpLabels->mapTo(&window, pPanel->mpLabels->rect().center());
+        QTest::touchEvent(&window, pTouch.get()).press(0, onLabels);
+        QTest::touchEvent(&window, pTouch.get()).release(0, onLabels);
+        QCoreApplication::processEvents();
+        QVERIFY(!pPanel->labelsIncluded());
+        QCOMPARE(presses.count + doublePresses.count, 0);
+        QTest::touchEvent(&window, pTouch.get()).press(0, QPoint(2, 2));
+        QTest::touchEvent(&window, pTouch.get()).release(0, QPoint(2, 2));
+        QCoreApplication::processEvents();
+        QCOMPARE(presses.count + doublePresses.count, 1);
+
+        // A key the box leaves is not handed back to it, over and over
+        pPanel->mpEdit->setReadOnly(true);
+        pPanel->mpLabels->setFocus(Qt::OtherFocusReason);
+        QKeyEvent letter(QEvent::KeyPress, Qt::Key_L, Qt::NoModifier, qsl("l"));
+        QCoreApplication::sendEvent(pPanel->mpLabels, &letter);
+        QVERIFY(pPanel->text().isEmpty());
+        QCOMPARE(keys.count, 0);
+        pPanel->mpEdit->setReadOnly(false);
+
+        // Not restyled by a change that leaves its colors and font as they were
+        pPanel->mpCount->setStyleSheet(qsl("QLabel { }"));
+        QEvent styleChange(QEvent::StyleChange);
+        QCoreApplication::sendEvent(pPanel, &styleChange);
+        QEvent paletteChange(QEvent::PaletteChange);
+        QCoreApplication::sendEvent(pPanel, &paletteChange);
+        QCOMPARE(pPanel->mpCount->styleSheet(), qsl("QLabel { }"));
+
+        // Sized from the font the profile gives it, as that changes
+        QFont larger = window.font();
+        larger.setPointSizeF(21.0);
+        window.setFont(larger);
+        QCOMPARE(pPanel->mpMessage->font().pointSizeF(), 21.0);
+        QCOMPARE(pPanel->mpMessage->font().weight(), QFont::DemiBold);
+        QCOMPARE(pPanel->mpEdit->font().pointSizeF(), 21.0 * 1.1);
+        QCOMPARE(pPanel->mpCount->font().pointSizeF(), 21.0 * 0.85);
+        QCOMPARE(pPanel->mpHint->font().pointSizeF(), 21.0);
+        QCOMPARE(pPanel->mpList->font().pointSizeF(), 21.0);
+        QCOMPARE(pPanel->mpLabels->font().pointSizeF(), 21.0);
+        QCOMPARE(pPanel->mpKeys->font().pointSizeF(), 21.0 * 0.85);
+        QVERIFY(pPanel->mpCount->styleSheet() != qsl("QLabel { }"));
+    }
+
+    void test_theSearchPanelIsTallEnoughForItsHintInANarrowViewWithoutGL()
+    {
+        const auto [westId, eastId] = addTwoAreas(6);
+        Q_UNUSED(eastId)
+        ModernGLWidget widget(map(), mpHost);
+        queueFrame(widget, westId, 1.5f);
+        widget.openSearch();
+        MapSearchPanel* pPanel = widget.mpSearchPanel;
+        QVERIFY(!pPanel->mpHint->isHidden());
+        // The hint wraps onto more lines than the panel's size hint allows for
+        widget.resize(240, 700);
+        widget.placeSearchPanel();
+        QCOMPARE(pPanel->width(), 240);
+        QVERIFY(pPanel->heightForWidth(240) > pPanel->sizeHint().height());
+        QCOMPARE(pPanel->height(), pPanel->heightForWidth(240));
+        pPanel->layout()->setGeometry(pPanel->rect());
+        QVERIFY(pPanel->mpHint->height() >= pPanel->mpHint->heightForWidth(pPanel->mpHint->width()));
+        QVERIFY(pPanel->mpHint->geometry().bottom() < pPanel->mpKeys->geometry().top());
+        QVERIFY(pPanel->mpMessage->geometry().bottom() < pPanel->mpHint->geometry().top());
+    }
+
+    void test_theSearchPanelsFooterIsNotClippedInANarrowViewWithoutGL()
+    {
+        const auto [westId, eastId] = addTwoAreas(6);
+        Q_UNUSED(eastId)
+        ModernGLWidget widget(map(), mpHost);
+        queueFrame(widget, westId, 1.5f);
+        widget.openSearch();
+        MapSearchPanel* pPanel = widget.mpSearchPanel;
+        pPanel->mpEdit->setText(qsl("1"));
+        QVERIFY(!pPanel->mpCount->text().isEmpty());
+        // Settled first, as a grab otherwise brings the resize and layout requests still pending
+        pPanel->grab();
+        const auto laidOutAt = [pPanel](const int width) {
+            pPanel->setGeometry(0, 0, width, pPanel->heightForWidth(width));
+            pPanel->layout()->setGeometry(pPanel->rect());
+        };
+        const auto inCard = [pPanel](const QRect& geometry) {
+            return pPanel->card().contains(QRectF(geometry));
+        };
+
+        // Side by side while both fit
+        laidOutAt(pPanel->preferredWidth());
+        QCOMPARE(pPanel->mpKeys->geometry().top(), pPanel->mpCount->geometry().top());
+        QCOMPARE(pPanel->mpKeys->width(), pPanel->mpKeys->sizeHint().width());
+        QVERIFY(pPanel->mpCount->geometry().right() < pPanel->mpKeys->geometry().left());
+        const int footerWidth = pPanel->mpKeys->geometry().right() + 1 - pPanel->mpCount->geometry().left();
+
+        // Then the hints on a line of their own under the count, still whole: a footer wide enough for them and half
+        // the count, as wide as the fonts on this system make them
+        laidOutAt(pPanel->preferredWidth() - footerWidth + pPanel->mpKeys->sizeHint().width() + pPanel->mpCount->sizeHint().width() / 2);
+        QVERIFY(pPanel->mpKeys->geometry().top() > pPanel->mpCount->geometry().bottom());
+        QCOMPARE(pPanel->mpKeys->width(), pPanel->mpKeys->sizeHint().width());
+        QCOMPARE(pPanel->mpCount->width(), pPanel->mpCount->sizeHint().width());
+        QVERIFY(inCard(pPanel->mpKeys->geometry()));
+        QVERIFY(pPanel->mpList->geometry().bottom() < pPanel->mpCount->geometry().top());
+
+        // And cut short only where not even that line is wide enough, keeping the whole text to be read out
+        const QString keys = pPanel->mpKeys->text();
+        laidOutAt(2 * MapSearchPanel::scmShadowMargin + pPanel->mpKeys->sizeHint().width() / 2);
+        QVERIFY(pPanel->mpKeys->width() < pPanel->mpKeys->sizeHint().width());
+        QVERIFY(inCard(pPanel->mpKeys->geometry()));
+        QCOMPARE(pPanel->mpKeys->text(), keys);
+        QLabel elided(pPanel);
+        elided.setFont(pPanel->mpKeys->font());
+        elided.setStyleSheet(pPanel->mpKeys->styleSheet());
+        elided.setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+        elided.setText(pPanel->mpKeys->fontMetrics().elidedText(keys, Qt::ElideRight, pPanel->mpKeys->contentsRect().width()));
+        elided.setGeometry(pPanel->mpKeys->geometry());
+        QVERIFY(elided.text().endsWith(QChar(0x2026)));
+        QCOMPARE(pPanel->mpKeys->grab().toImage(), elided.grab().toImage());
+    }
+
+    void test_theSearchOffersARouteOnlyWhileThePlayerIsElsewhere()
+    {
+        if (!glAvailable()) {
+            QSKIP("no OpenGL context on this platform");
+        }
+        const auto [westId, eastId] = addTwoAreas(6);
+        Q_UNUSED(westId)
+        Q_UNUSED(eastId)
+        map()->mpRoomDB->getRoom(3)->name = qsl("Lighthouse");
+        map()->setUnsaved(__func__);
+        ModernGLWidget widget(map(), mpHost);
+        widget.resize(800, 600);
+        widget.grabFramebuffer();
+        if (!widget.isValid() || !widget.failureMessage().isEmpty()) {
+            QSKIP("no OpenGL context on this platform");
+        }
+        widget.openSearch();
+        MapSearchPanel* pPanel = widget.mpSearchPanel;
+        pPanel->mpEdit->setText(qsl("lighthouse"));
+        QCOMPARE(widget.mSearchResults.value(0).id, 3);
+        const QString routeKeys = qsl("↑↓ choose · ↵ go · %1↵ route · Esc clear").arg(QKeySequence(Qt::CTRL).toString(QKeySequence::NativeText));
+        QCOMPARE(pPanel->mpKeys->text(), routeKeys);
+        // The player walks into it, and the map is drawn again as it always is for a move
+        map()->mRoomIdHash[map()->mProfileName] = 3;
+        widget.grabFramebuffer();
+        QCOMPARE(pPanel->mpKeys->text(), qsl("↑↓ choose · ↵ go · Esc clear"));
+        map()->mRoomIdHash[map()->mProfileName] = 0;
+        widget.grabFramebuffer();
+        QCOMPARE(pPanel->mpKeys->text(), routeKeys);
+    }
+
+    void benchmark_worldSearch()
+    {
+        if (qEnvironmentVariableIsEmpty("MUDLET_BENCH_3D")) {
+            QSKIP("set MUDLET_BENCH_3D=1 to run the 3D view benchmark");
+        }
+        addHugeMap();
+        static const QStringList words{qsl("Market"), qsl("Street"), qsl("Alley"), qsl("Temple"), qsl("Harbor"), qsl("Gate"), qsl("Tower"), qsl("Garden")};
+        for (TRoom* pRoom : map()->mpRoomDB->getRoomMap()) {
+            pRoom->name = qsl("%1 %2 %3").arg(words.at(pRoom->getId() % words.size()), words.at(pRoom->getId() / 7 % words.size())).arg(pRoom->getId() % 1000);
+        }
+        map()->setUnsaved(__func__);
+        MapSearch search;
+        QElapsedTimer timer;
+        timer.start();
+        search.refresh(*map());
+        std::printf("METRIC search_entries %lld\n", static_cast<long long>(search.size()));
+        std::printf("METRIC search_index_ms %.2f\n", static_cast<double>(timer.nsecsElapsed()) / 1.0e6);
+        for (const QString& query : {qsl("a"), qsl("market"), qsl("temple gate 12"), qsl("12345"), qsl("nowhere")}) {
+            constexpr int runs = 20;
+            qsizetype total = 0;
+            timer.restart();
+            for (int run = 0; run < runs; ++run) {
+                search.find(query, 1, true, MapSearch::scmMaxResults, &total);
+            }
+            std::printf("METRIC search_query_ms{%s} %.2f (%lld found)\n", qPrintable(query), static_cast<double>(timer.nsecsElapsed()) / 1.0e6 / runs, static_cast<long long>(total));
+        }
+        std::fflush(stdout);
+    }
+
     void test_theWorldStaysPutAsAFlightToAnotherLevelSetsOffWithoutGL()
     {
         map()->mapClear();
@@ -1806,6 +2768,366 @@ private slots:
 
         std::printf("METRIC rss_end_mib %.1f\n", memoryMiB("VmRSS"));
         std::printf("METRIC rss_peak_mib %.1f\n", memoryMiB("VmHWM"));
+        std::fflush(stdout);
+    }
+
+    void test_theAtlasIsWrittenToTheGPUOnlyWhenItChangesWithoutGL()
+    {
+        const int westId = addTwoAreas(60).first;
+        for (const int roomId : map()->mpRoomDB->getRoomIDList()) {
+            map()->mpRoomDB->getRoom(roomId)->environment = 300;
+        }
+        map()->mCustomEnvColors[300] = QColor(10, 200, 30);
+        ModernGLWidget widget(map(), mpHost);
+        const auto queuedLayers = [&widget]() {
+            QList<const RenderTrianglesCommand*> layers;
+            for (const auto& command : widget.mRenderCommandQueue.commands()) {
+                if (const auto* triangles = dynamic_cast<const RenderTrianglesCommand*>(command.get())) {
+                    layers.append(triangles);
+                }
+            }
+            return layers;
+        };
+        const float footprints = distanceWhere(widget, westId, footprintsAlone);
+        const float worldGraph = distanceWhere(widget, westId, worldGraphAlone);
+        QVERIFY(footprints > 0.0f && worldGraph > 0.0f);
+
+        queueFrame(widget, westId, footprints);
+        QCOMPARE(atlasLayerOpacities(widget), QList<float>{1.0f});
+        QCOMPARE(queuedLayers().first()->colors(), widget.mAtlas.footprintColors());
+        QVERIFY(!widget.mAtlasFootprints->written);
+        // As drawing them would
+        widget.mAtlasFootprints->written = true;
+
+        // Pan mode, as a drag sets, so updateMatrices() keeps the moved target
+        widget.mPanMode = true;
+        widget.slot_shiftRight();
+        widget.updateMatrices();
+        widget.mRenderCommandQueue.clear();
+        widget.queueScene();
+        QVERIFY2(widget.mAtlasFootprints->written, "the footprints were written again as the view moved");
+
+        map()->mCustomEnvColors[300] = QColor(200, 10, 30);
+        queueFrame(widget, westId, footprints);
+        QVERIFY2(!widget.mAtlasFootprints->written, "the footprints were not written again after their colors changed");
+        QCOMPARE(queuedLayers().first()->colors(), widget.mAtlas.footprintColors());
+        QCOMPARE(queuedLayers().first()->colors().at(0), QColor(200, 10, 30).redF());
+
+        queueFrame(widget, westId, worldGraph);
+        QCOMPARE(widget.mAtlasWorld->vertices, widget.mAtlas.worldVertices());
+        QVERIFY2(widget.mAtlasFootprints->vertices.isEmpty(), "the footprints are kept while they are not drawn");
+
+        queueFrame(widget, westId, 1.5f);
+        QVERIFY2(widget.mAtlasWorld->vertices.isEmpty(), "the world graph is kept among the rooms");
+    }
+
+    void test_theAtlasKeptOnTheGPUIsDrawnInItsNewColors()
+    {
+        if (!glAvailable()) {
+            QSKIP("no OpenGL context on this platform");
+        }
+        const int westId = addTwoAreas(60).first;
+        for (const int roomId : map()->mpRoomDB->getRoomIDList()) {
+            map()->mpRoomDB->getRoom(roomId)->environment = 300;
+        }
+        map()->mCustomEnvColors[300] = QColor(10, 200, 30);
+        float footprints = 0.0f;
+        {
+            ModernGLWidget probe(map(), mpHost);
+            footprints = distanceWhere(probe, westId, footprintsAlone);
+        }
+        QVERIFY(footprints > 0.0f);
+        ModernGLWidget widget(map(), mpHost);
+        widget.resize(800, 600);
+        widget.grabFramebuffer();
+        if (!widget.isValid() || !widget.failureMessage().isEmpty()) {
+            QSKIP("no OpenGL context on this platform");
+        }
+        widget.mShiftMode = true;
+        widget.jumpTo(westId, 0, 0, 0);
+        widget.mCameraController.setTopView();
+        widget.setCameraDistance(footprints);
+        // Inside the west area's footprint, clear of its name
+        const auto footprintColor = [&widget, westId]() {
+            const QImage frame = widget.grabFramebuffer();
+            const QPoint pixel = pixelOfArea(widget, westId, QPointF(0.0, 20.0));
+            return frame.rect().contains(pixel) ? frame.pixelColor(pixel) : QColor();
+        };
+        const auto closeTo = [](const QColor& a, const QColor& b) {
+            return a.isValid() && qAbs(a.red() - b.red()) + qAbs(a.green() - b.green()) + qAbs(a.blue() - b.blue()) < 12;
+        };
+
+        QColor drawn = footprintColor();
+        QVERIFY2(closeTo(drawn, QColor(10, 200, 30)), qPrintable(qsl("the footprint is drawn %1").arg(drawn.name())));
+        QVERIFY(widget.mAtlasFootprints->written);
+        drawn = footprintColor();
+        QVERIFY2(closeTo(drawn, QColor(10, 200, 30)), qPrintable(qsl("the footprint kept on the GPU is drawn %1").arg(drawn.name())));
+
+        map()->mCustomEnvColors[300] = QColor(200, 10, 30);
+        drawn = footprintColor();
+        QVERIFY2(closeTo(drawn, QColor(200, 10, 30)), qPrintable(qsl("the footprint is drawn %1 after its color changed").arg(drawn.name())));
+    }
+
+    void test_areaNamesAreDrawnAgainWhenTheirLookChangesWithoutGL()
+    {
+        const auto [westId, eastId] = addTwoAreas(60);
+        map()->areaGraph()->refresh();
+        QVERIFY(map()->areaGraph()->setPosition(westId, QPointF(0.0, 0.0)));
+        QVERIFY(map()->areaGraph()->setPosition(eastId, QPointF(0.0, 150.0)));
+        const QColor background = mpHost->mBgColor_2;
+        mpHost->mBgColor_2 = QColor(0, 0, 90);
+        auto restoreBackground = qScopeGuard([this, background] {
+            mpHost->mBgColor_2 = background;
+        });
+        ModernGLWidget widget(map(), mpHost);
+        queueFrame(widget, westId, distanceWhere(widget, westId, footprintsAlone));
+        const auto paintNames = [&widget](const qreal pixelRatio = 1.0) {
+            QImage overlay(QSize(800, 600) * pixelRatio, QImage::Format_ARGB32_Premultiplied);
+            overlay.setDevicePixelRatio(pixelRatio);
+            overlay.fill(Qt::transparent);
+            QPainter painter(&overlay);
+            widget.paintAtlasLabels(painter);
+            return overlay;
+        };
+        const auto westName = [&widget]() {
+            for (const ModernGLWidget::AtlasLabel& label : widget.atlasLabels(widget.mZoomWeights)) {
+                if (label.text == qsl("Westmarch")) {
+                    return label.rect;
+                }
+            }
+            return QRectF();
+        };
+        // Opaque pixels of about the color, around where the west area's name is
+        const auto pixelsOf = [&westName](const QImage& overlay, const QColor& color) {
+            const QRect around = westName().adjusted(-3.0, -3.0, 3.0, 3.0).toAlignedRect().intersected(overlay.rect());
+            int count = 0;
+            for (int y = around.top(); y <= around.bottom(); ++y) {
+                for (int x = around.left(); x <= around.right(); ++x) {
+                    const QColor pixel = overlay.pixelColor(x, y);
+                    if (pixel.alpha() == 255 && qAbs(pixel.red() - color.red()) + qAbs(pixel.green() - color.green()) + qAbs(pixel.blue() - color.blue()) < 12) {
+                        ++count;
+                    }
+                }
+            }
+            return count;
+        };
+        // What the names cover, in the overlay's pixels
+        const auto inked = [](const QImage& overlay) {
+            QRect bounds;
+            for (int y = 0; y < overlay.height(); ++y) {
+                const auto* line = reinterpret_cast<const QRgb*>(overlay.constScanLine(y));
+                for (int x = 0; x < overlay.width(); ++x) {
+                    if (qAlpha(line[x])) {
+                        bounds |= QRect(x, y, 1, 1);
+                    }
+                }
+            }
+            return bounds;
+        };
+
+        QImage overlay = paintNames();
+        QVERIFY(widget.mAtlasLabelSheet.places[1].contains(qsl("Westmarch")));
+        QVERIFY(!westName().isNull());
+        QVERIFY2(pixelsOf(overlay, QColor(0, 0, 90)) > 0, "the name has no halo of the background");
+        const qint64 sheet = widget.mAtlasLabelSheet.image.cacheKey();
+        const QRectF before = westName();
+        widget.mPanMode = true;
+        widget.slot_shiftRight();
+        widget.updateMatrices();
+        QVERIFY(westName() != before);
+        paintNames();
+        QVERIFY2(widget.mAtlasLabelSheet.image.cacheKey() == sheet, "the names were drawn again for a view moved along");
+
+        mpHost->mBgColor_2 = QColor(90, 0, 0);
+        overlay = paintNames();
+        QVERIFY2(pixelsOf(overlay, QColor(90, 0, 0)) > 0, "the name's halo is not of the new background");
+        QCOMPARE(pixelsOf(overlay, QColor(0, 0, 90)), 0);
+
+        const qreal width = westName().width();
+        QVERIFY(width > 0.0);
+        QFont bigger = widget.font();
+        bigger.setPointSizeF(bigger.pointSizeF() * 2.0);
+        widget.setFont(bigger);
+        QVERIFY2(westName().width() > width * 1.5, "the name was not measured again in the new font");
+        const QRect plain = inked(paintNames());
+        const int slotWidth = widget.mAtlasLabelSheet.places[1].value(qsl("Westmarch")).width();
+        QVERIFY2(slotWidth > width * 1.5, "the name was not drawn again in the new font");
+
+        const QRect dense = inked(paintNames(2.0));
+        QVERIFY2(widget.mAtlasLabelSheet.places[1].value(qsl("Westmarch")).width() > slotWidth * 1.5, "the name was not drawn again for the denser screen");
+        // Twice as many pixels each way, in the same places, give or take the rounding to whole pixels
+        const QRect expected(plain.topLeft() * 2, plain.size() * 2);
+        QVERIFY2(qAbs(dense.left() - expected.left()) <= 3 && qAbs(dense.top() - expected.top()) <= 3 && qAbs(dense.right() - expected.right()) <= 3 && qAbs(dense.bottom() - expected.bottom()) <= 3,
+                 qPrintable(qsl("the names cover %1,%2 %3x%4 on the denser screen rather than %5,%6 %7x%8")
+                                    .arg(dense.x())
+                                    .arg(dense.y())
+                                    .arg(dense.width())
+                                    .arg(dense.height())
+                                    .arg(expected.x())
+                                    .arg(expected.y())
+                                    .arg(expected.width())
+                                    .arg(expected.height())));
+
+        // Among the rooms, where no names are drawn, none are kept
+        queueFrame(widget, westId, 1.5f);
+        paintNames(2.0);
+        QVERIFY(widget.mAtlasLabelSheet.image.isNull() && widget.mAtlasLabelSheet.places[0].isEmpty() && widget.mAtlasLabelSheet.places[1].isEmpty());
+        QVERIFY(widget.mAtlasLabelBounds[0].isEmpty() && widget.mAtlasLabelBounds[1].isEmpty());
+    }
+
+    void test_namesComingIntoViewJoinThoseAlreadyDrawnWithoutGL()
+    {
+        const ThreeAreas areas = addThreeAreas(41);
+        map()->areaGraph()->refresh();
+        QVERIFY(map()->areaGraph()->setPosition(areas.west, QPointF(0.0, 0.0)));
+        QVERIFY(map()->areaGraph()->setPosition(areas.middle, QPointF(0.0, 150.0)));
+        QVERIFY(map()->areaGraph()->setPosition(areas.east, QPointF(0.0, -150.0)));
+        ModernGLWidget widget(map(), mpHost);
+        const float oneName = distanceWhere(widget, areas.west, [](ModernGLWidget& view) {
+            return view.atlasLabels(view.mZoomWeights).size() == 1;
+        });
+        const float threeNames = distanceWhere(widget, areas.west, [](ModernGLWidget& view) {
+            // Names are drawn as opaque as the footprints, so a faint one would hide what the names look like
+            return view.mZoomWeights.footprint == 1.0f && view.atlasLabels(view.mZoomWeights).size() == 3;
+        });
+        QVERIFY(oneName > 0.0f && threeNames > 0.0f);
+        const auto paintNames = [&widget]() {
+            QImage overlay(QSize(800, 600), QImage::Format_ARGB32_Premultiplied);
+            overlay.fill(Qt::transparent);
+            QPainter painter(&overlay);
+            widget.paintAtlasLabels(painter);
+            return overlay;
+        };
+        const auto namesKept = [&widget]() {
+            return widget.mAtlasLabelSheet.places[0].size() + widget.mAtlasLabelSheet.places[1].size();
+        };
+
+        queueFrame(widget, areas.west, oneName);
+        paintNames();
+        QCOMPARE(namesKept(), 1);
+
+        // The name already drawn is copied over, so the names look as they would all drawn afresh
+        queueFrame(widget, areas.west, threeNames);
+        const QImage joined = paintNames();
+        QCOMPARE(namesKept(), 3);
+        QImage blank(joined.size(), joined.format());
+        blank.fill(Qt::transparent);
+        QVERIFY(joined != blank);
+        widget.mAtlasLabelSheet = {};
+        QCOMPARE(joined, paintNames());
+
+        // Once most of the names it keeps are out of view, it lets go of them
+        queueFrame(widget, areas.west, oneName);
+        paintNames();
+        QCOMPARE(namesKept(), 1);
+    }
+
+    // Dragging the view across the map at each zoom, from among the rooms out to the world graph, on a map of many
+    // areas: MUDLET_BENCH_MAP=<file> pans a saved map instead
+    void benchmark_atlasPan()
+    {
+        if (qEnvironmentVariableIsEmpty("MUDLET_BENCH_3D")) {
+            QSKIP("set MUDLET_BENCH_3D=1 to run the 3D view benchmark");
+        }
+        if (!glAvailable()) {
+            QSKIP("no OpenGL context on this platform");
+        }
+        mpHost->mMapInfoContributors.clear();
+        applyBenchStitching();
+        const QString mapFile = qEnvironmentVariable("MUDLET_BENCH_MAP");
+        if (mapFile.isEmpty()) {
+            addManyAreas(24, 24, 9);
+        } else {
+            map()->mapClear();
+            QVERIFY2(map()->restore(mapFile), qPrintable(qsl("could not restore the map at \"%1\"").arg(mapFile)));
+            map()->audit();
+        }
+        // A saved map keeps the player's room under the name of the profile it was saved from
+        const int playerRoom = map()->mRoomIdHash.value(map()->mProfileName, map()->mRoomIdHash.isEmpty() ? 0 : *map()->mRoomIdHash.cbegin());
+        map()->mRoomIdHash[map()->mProfileName] = playerRoom;
+        const TRoom* pPlayer = map()->mpRoomDB->getRoom(playerRoom);
+        QVERIFY2(pPlayer, "the map has no player room to start the view from");
+        std::printf("METRIC pan_map_rooms %d\n", static_cast<int>(map()->mpRoomDB->size()));
+        std::printf("METRIC pan_map_areas %d\n", static_cast<int>(map()->mpRoomDB->getAreaMap().size()));
+
+        ModernGLWidget widget(map(), mpHost);
+        widget.resize(1200, 800);
+        widget.grabFramebuffer();
+        if (!widget.isValid() || !widget.failureMessage().isEmpty()) {
+            QSKIP("no OpenGL context on this platform");
+        }
+        widget.mShiftMode = true;
+        widget.makeCurrent();
+        std::printf("GL renderer: %s\n", reinterpret_cast<const char*>(widget.context()->functions()->glGetString(GL_RENDERER)));
+        widget.doneCurrent();
+
+        struct Scenario
+        {
+            const char* name;
+            float distance;
+        };
+        const QList<Scenario> scenarios{{"rooms", 8.0f}, {"rooms_far", 60.0f}, {"blend", 150.0f}, {"footprints", 300.0f}, {"world", 1500.0f}, {"world_far", 4000.0f}};
+        const int frames = qEnvironmentVariableIntValue("MUDLET_BENCH_3D_FRAMES_PER_SCENARIO") > 0 ? qEnvironmentVariableIntValue("MUDLET_BENCH_3D_FRAMES_PER_SCENARIO") : 40;
+        for (const Scenario& scenario : scenarios) {
+            widget.mPanMode = false;
+            widget.jumpTo(pPlayer->getArea(), pPlayer->x(), pPlayer->y(), pPlayer->z());
+            widget.mCameraController.setTopView();
+            widget.setCameraDistance(scenario.distance);
+            widget.grabFramebuffer();
+            // There and back, so every frame of every run shows the same places
+            widget.mPanMode = true;
+            const auto pan = [&widget](const int frame, const int of) {
+                if (frame % of < of / 2) {
+                    widget.slot_shiftRight();
+                } else {
+                    widget.slot_shiftLeft();
+                }
+            };
+            QElapsedTimer wall;
+            const double cpuBefore = processCpuMs();
+            wall.start();
+            for (int frame = 0; frame < frames; ++frame) {
+                pan(frame, 8);
+                widget.grabFramebuffer();
+            }
+            const double wallMs = static_cast<double>(wall.nsecsElapsed()) / 1.0e6 / frames;
+            const double cpuMs = (processCpuMs() - cpuBefore) / frames;
+
+            widget.makeCurrent();
+            QElapsedTimer build;
+            build.start();
+            for (int frame = 0; frame < frames; ++frame) {
+                pan(frame, 8);
+                widget.updateMatrices();
+                widget.mRenderCommandQueue.clear();
+                widget.queueScene();
+            }
+            const double buildMs = static_cast<double>(build.nsecsElapsed()) / 1.0e6 / frames;
+            widget.mRenderCommandQueue.clear();
+            widget.doneCurrent();
+
+            // The names alone, on the raster engine rather than the GL one the frames above use
+            QImage overlay(widget.size() * widget.devicePixelRatio(), QImage::Format_ARGB32_Premultiplied);
+            overlay.setDevicePixelRatio(widget.devicePixelRatio());
+            QElapsedTimer labels;
+            labels.start();
+            for (int frame = 0; frame < frames; ++frame) {
+                pan(frame, 8);
+                widget.updateMatrices();
+                overlay.fill(Qt::transparent);
+                QPainter painter(&overlay);
+                widget.paintAtlasLabels(painter);
+            }
+            const double labelsMs = static_cast<double>(labels.nsecsElapsed()) / 1.0e6 / frames;
+
+            std::printf("METRIC pan_%s_weights footprint=%.2f world=%.2f\n", scenario.name, widget.mZoomWeights.footprint, widget.mZoomWeights.world);
+            std::printf("METRIC pan_%s_frame_ms %.2f\n", scenario.name, wallMs);
+            std::printf("METRIC pan_%s_frame_cpu_ms %.2f\n", scenario.name, cpuMs);
+            std::printf("METRIC pan_%s_scene_build_ms %.3f\n", scenario.name, buildMs);
+            std::printf("METRIC pan_%s_labels_ms %.3f\n", scenario.name, labelsMs);
+            std::printf("METRIC pan_%s_rss_anon_mib %.1f\n", scenario.name, memoryMiB("RssAnon"));
+        }
+        std::printf("METRIC pan_rss_peak_mib %.1f\n", memoryMiB("VmHWM"));
         std::fflush(stdout);
     }
 
