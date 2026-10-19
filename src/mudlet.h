@@ -109,6 +109,7 @@ class TUiTour;
 class mudlet : public QMainWindow, public Ui::main_window, public TAppFrontend
 {
     Q_OBJECT
+    friend class ConnectionDialogOfflineProfileTest;
 
 public:
     Q_DISABLE_COPY(mudlet)
@@ -116,7 +117,7 @@ public:
     ~mudlet() override;
 
     static bool loadEdbeeTheme(const QString& themeName, const QString& themeFile);
-    static bool loadLuaFunctionList();
+    static bool loadLuaFunctionList(const QString& fileName = qsl(":/lua-function-list.json"));
     static mudlet* self();
     // This method allows better debugging when mudlet::self() is called inappropriately.
     static void start();
@@ -200,6 +201,8 @@ public:
     enums::controlsVisibility menuBarVisibility() const { return mMenuBarVisibility; }
     bool canHideToolBar() const { return mMenuBarVisibility != enums::visibleNever; }
     bool migratePasswordsToProfileStorage();
+    // Profiles whose password the last migration to profile storage could not save there, so it stays where it was
+    const QStringList& passwordsNotMigratedToProfiles() const { return mPasswordsNotMigratedToProfiles; }
     bool migratePasswordsToSecureStorage();
     // Helper function to check if current version is >= specified version for backward compatibility
     bool isVersionAtLeast(const QString& minVersion);
@@ -295,7 +298,7 @@ public:
     enums::controlsVisibility toolBarVisibility() const { return mToolbarVisibility; }
     void updateDiscordNamedIcon();
     void updateMultiViewControls();
-    void writeSettings();
+    void writeSettings() override;
 #ifdef INCLUDE_MCPSERVER
     bool mcpEnabled() const { return mEnableMCP; }
     quint16 mcpServerPort() const { return mMCPServerPort; }
@@ -578,8 +581,8 @@ private:
     void migrateDebugConsole(Host*);
     void setupTrayIcon();
     void setGlobalStyleSheet(const QString&);
-    // Not const: HostManager::getHostCount() is not
-    bool toolBarShouldBeVisible();
+    // For the menu bar or toolbar setting. Not const: HostManager::getHostCount() is not
+    bool controlShouldBeVisible(enums::controlsVisibility);
     void reshowRequiredMainConsoles();
     void updateReplayTimeLabel();
     QString replayTimeLabelText(const QString& time, const bool paused) const;
@@ -593,6 +596,8 @@ private:
     void moveProfileFromDetachedToMainWindow(const QString& profileName, TDetachedWindow* sourceWindow);
     int findTabIndex(const QString& profileName) const;
     void cleanupDetachedWindowsMap(); // Remove null pointers from the map
+    void syncMainTabOrder();
+    int mainTabSlotFor(const QString& profileName);
 
 
     inline static QPointer<mudlet> smpSelf = nullptr;
@@ -704,6 +709,7 @@ private:
     QPointer<QWidget> mpFocusWidgetBeforeDeactivate;
     // a list of profiles currently being migrated to secure or profile storage
     QStringList mProfilePasswordsToMigrate;
+    QStringList mPasswordsNotMigratedToProfiles;
     // a list of character passwords currently being migrated to secure storage
     QList<QPair<QString, QString>> mCharacterPasswordsToMigrate;
     QPointer<QShortcut> mpShortcutCloseProfile;
@@ -881,6 +887,9 @@ private:
 
     // Detached windows for profiles
     QMap<QString, QPointer<TDetachedWindow>> mDetachedWindows;
+    // Every profile in main tab bar order, with each detached one kept behind
+    // the tab it followed, so that a reattach can put it back there
+    QStringList mMainTabOrder;
 
     // The map actions' enabled state before the active profile's
     // "mapperButton" setConfig mode is applied on top - the last baseline the
