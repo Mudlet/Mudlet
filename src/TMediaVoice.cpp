@@ -235,13 +235,18 @@ void TMediaVoice::setGain(const float gain, const int glideMilliseconds)
     ++mGainRequest;
 }
 
-void TMediaVoice::render(const float* in, float* out, const qint64 frames, Glide& gain, const bool muted)
+void TMediaVoice::setMuted(const bool muted)
+{
+    mMuted = muted;
+    TAudioMixer::self()->setMuted(mVoice, muted);
+}
+
+void TMediaVoice::render(const float* in, float* out, const qint64 frames, Glide& gain)
 {
     for (qint64 frame = 0; frame < frames; ++frame) {
         const float level = gain.step();
-        const float scale = muted ? 0.0F : level;
-        out[2 * frame] = in[2 * frame] * scale;
-        out[2 * frame + 1] = in[2 * frame + 1] * scale;
+        out[2 * frame] = in[2 * frame] * level;
+        out[2 * frame + 1] = in[2 * frame + 1] * level;
     }
 }
 
@@ -277,6 +282,6 @@ void TMediaVoice::audioBufferReceived(const QAudioBuffer& buffer)
     mReceivedAudio = true;
     const qint64 frames = buffer.frameCount();
     std::vector<float> rendered(static_cast<size_t>(frames * 2));
-    render(buffer.constData<float>(), rendered.data(), frames, mGain, mMuted);
+    render(buffer.constData<float>(), rendered.data(), frames, mGain);
     TAudioMixer::self()->queue(mVoice, rendered.data(), frames);
 }

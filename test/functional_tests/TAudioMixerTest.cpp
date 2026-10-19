@@ -264,6 +264,33 @@ private slots:
         QCOMPARE(TAudioMixer::self()->queuedSamples(), held);
     }
 
+    // Paused, a sound must not hold the headphones; resumed, it needs the output back
+    void test_aPausedSoundLetsTheOutputCloseAndResumingReopensIt()
+    {
+        REQUIRE_MIXING();
+        TAudioMixer::self()->setIdleCloseDelay(400ms);
+        TMediaData data = clipData(writeClip(qsl("pausedidle.wav"), 5000), TMediaData::MediaTypeSound);
+        media()->playMedia(data);
+        SKIP_OR_FAIL_WITHOUT(waitForQueuedAudio() ? QString() : noAudioReason());
+
+        TMediaData pause = clipData(qsl("pausedidle.wav"), TMediaData::MediaTypeSound);
+        media()->pauseMedia(pause);
+        QVERIFY2(QTest::qWaitFor(
+                         []() {
+                             return !TAudioMixer::self()->outputOpen();
+                         },
+                         QDeadlineTimer(5s)),
+                 "A paused sound kept the shared output open.");
+
+        media()->playMedia(data);
+        QVERIFY2(QTest::qWaitFor(
+                         []() {
+                             return TAudioMixer::self()->outputOpen();
+                         },
+                         QDeadlineTimer(5s)),
+                 "A resumed sound never got the shared output back.");
+    }
+
     // Mudlet's main thread runs scripts and triggers, and can be busy for a while; the sound must not wait on it
     void test_aBusyMainThreadDoesNotCutTheSoundOut()
     {

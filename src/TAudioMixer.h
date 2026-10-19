@@ -56,12 +56,16 @@ public:
     void clear(int voice);
     // A paused voice keeps what it holds, unplayed, until it is released
     void hold(int voice, bool held);
+    void setMuted(int voice, bool muted);
     // The voice's track has reached its end: what it holds, and what still arrives for it, plays out
     // even short of the head start, until the next track starts
     void drain(int voice);
     void undrain(int voice);
     // The default output device changed
     void refreshDevice();
+
+    // Nothing is waiting to be heard
+    bool silent();
 
     // For the media tests
     bool outputOpen() const { return mOutputOpen; }
@@ -86,6 +90,7 @@ private:
         bool started = false;
         bool draining = false;
         bool held = false;
+        bool muted = false;
 
         size_t queuedSamples() const { return samples.size() - readPosition; }
     };
@@ -94,7 +99,6 @@ private:
     ~TAudioMixer() override;
     // Runs on the output's thread, whenever the output wants more
     void mix(float* out, qint64 sampleCount);
-    bool silent();
     void dropEverything();
     void requestOpen();
 

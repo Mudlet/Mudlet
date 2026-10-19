@@ -156,17 +156,39 @@ private slots:
         QCOMPARE(mix(10), 1.0F);
     }
 
-    void aVoiceIsRenderedWithItsGainAndSilencedWhenMuted()
+    void aVoiceIsRenderedWithItsGain()
     {
         const std::vector<float> in{0.5F, -0.5F, 0.5F, -0.5F};
         std::vector<float> out(4);
         TMediaVoice::Glide gain;
         gain.glideTo(0.5F, 0);
-        TMediaVoice::render(in.data(), out.data(), 2, gain, false);
+        TMediaVoice::render(in.data(), out.data(), 2, gain);
         QCOMPARE(out[0], 0.25F);
         QCOMPARE(out[1], -0.25F);
-        TMediaVoice::render(in.data(), out.data(), 2, gain, true);
-        QCOMPARE(out[0], 0.0F);
+    }
+
+    // What a voice queued before it was muted is silenced too, and still used up, so unmuting does not replay it
+    void aMutedVoiceIsSilentIncludingWhatItHadQueued()
+    {
+        const int id = voice();
+        queue(id, 150);
+        TAudioMixer::self()->setMuted(id, true);
+        QCOMPARE(mix(50), 0.0F);
+        QCOMPARE(TAudioMixer::self()->queuedSamples(id), 100 * framesPerMs * 2);
+        TAudioMixer::self()->setMuted(id, false);
+        QCOMPARE(mix(50), 0.5F);
+    }
+
+    // A paused sound holds its audio unheard, and must not keep the output open
+    void aHeldVoiceDoesNotCountAsWaitingToBeHeard()
+    {
+        const int id = voice();
+        queue(id, 150);
+        QVERIFY(!TAudioMixer::self()->silent());
+        TAudioMixer::self()->hold(id, true);
+        QVERIFY(TAudioMixer::self()->silent());
+        TAudioMixer::self()->hold(id, false);
+        QVERIFY(!TAudioMixer::self()->silent());
     }
 
     void aGlideReachesItsTargetOnTheLastFrameAndNotBefore()

@@ -180,6 +180,10 @@ private:
     {
         if (nowMs() - gLastSoundMs >= gIdleCloseDelayMs && mpMixer->silent()) {
             close();
+            // Audio that came in while this closed saw the output still open, so asked for nothing
+            if (!mpMixer->silent()) {
+                open();
+            }
         }
     }
 
@@ -274,10 +278,27 @@ void TAudioMixer::clear(const int voice)
 
 void TAudioMixer::hold(const int voice, const bool held)
 {
+    bool waiting = false;
+    {
+        QMutexLocker lock(&mMutex);
+        const auto found = mVoices.find(voice);
+        if (found != mVoices.end()) {
+            found->second.held = held;
+            waiting = !held && found->second.queuedSamples() > 0;
+        }
+    }
+    // A paused sound lets the output close; resumed, what it held needs one again
+    if (waiting && !mOutputOpen) {
+        requestOpen();
+    }
+}
+
+void TAudioMixer::setMuted(const int voice, const bool muted)
+{
     QMutexLocker lock(&mMutex);
     const auto found = mVoices.find(voice);
     if (found != mVoices.end()) {
-        found->second.held = held;
+        found->second.muted = muted;
     }
 }
 
@@ -372,7 +393,8 @@ void TAudioMixer::mix(float* out, const qint64 sampleCount)
 
         const size_t take = std::min(static_cast<size_t>(sampleCount), voice.queuedSamples());
         const float* source = voice.samples.data() + voice.readPosition;
-        for (size_t sample = 0; sample < take; ++sample) {
+        // Muted here, as it plays, so what was queued before the mute is silenced too
+        for (size_t sample = 0; !voice.muted && sample < take; ++sample) {
             out[sample] += source[sample];
         }
         voice.readPosition += take;
@@ -405,8 +427,9 @@ void TAudioMixer::mix(float* out, const qint64 sampleCount)
 bool TAudioMixer::silent()
 {
     QMutexLocker lock(&mMutex);
+    // A paused sound holds its audio unheard, which is no reason to keep the output open
     return std::all_of(mVoices.cbegin(), mVoices.cend(), [](const auto& entry) {
-        return entry.second.queuedSamples() == 0;
+        return entry.second.held || entry.second.queuedSamples() == 0;
     });
 }
 

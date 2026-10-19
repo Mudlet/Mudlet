@@ -60,13 +60,13 @@ public:
     // Linear, 0 to 1, as QAudioOutput's volume is
     void setGain(float gain, int glideMilliseconds);
     float gain() const { return mRequestedGain; }
-    void setMuted(const bool muted) { mMuted = muted; }
+    void setMuted(bool muted);
     bool muted() const { return mMuted; }
     bool receivedAudio() const { return mReceivedAudio; }
     int mixerVoice() const { return mVoice; }
 
     // Interleaved stereo float in and out, which may be the same buffer
-    static void render(const float* in, float* out, qint64 frames, Glide& gain, bool muted);
+    static void render(const float* in, float* out, qint64 frames, Glide& gain);
 
     // Whether the backend cannot feed the shared output. QAudioBufferOutput only delivers audio on Qt's
     // FFmpeg backend: so when another is named, and while one nobody named has not yet been seen to.
