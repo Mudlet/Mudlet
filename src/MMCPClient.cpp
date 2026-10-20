@@ -1053,8 +1053,11 @@ void MMCPClient::handleIncomingSnoopData(const char* sData, qsizetype len)
                 line = mLastSgrState + line;
             }
 
-            // Append the processed line
-            outputMessage += line;
+            // Drop leading line breaks, such as one after the colour prefix skipped above
+            if (!outputMessage.empty() || !line.empty()) {
+                outputMessage += line;
+                outputMessage += '\n';
+            }
 
             ss.str("");
             ss.clear();
@@ -1103,6 +1106,9 @@ void MMCPClient::handleIncomingSnoopData(const char* sData, qsizetype len)
     }
 
     outputMessage += remaining;
+    while (!outputMessage.empty() && outputMessage.back() == '\n') {
+        outputMessage.pop_back();
+    }
 
     if (!outputMessage.empty()) {
 

@@ -2087,6 +2087,30 @@ describe("MMCP effects against a scripted chat peer", function()
       local _, count = message:gsub("x", "")
       assert.equals(length, count)
     end)
+
+    it("keeps the line breaks of a multi-line snooped frame", function()
+      if peerUnavailable() then return end
+      ensurePeer()
+      peerSendsRaw(string.char(31) .. "first snooped line\nsecond snooped line" .. string.char(255))
+      local _, _, message = waitForEvent("sysMMCPIncomingSnoopMessage", 2000)
+      assert.is_string(message)
+      local lines = message:split("\n")
+      assert.equals(2, #lines, message)
+      assert.is_true(contains(lines[1], "first snooped line"), lines[1])
+      assert.is_true(contains(lines[2], "second snooped line"), lines[2])
+
+      pump(50)
+      local last = getLineCount()
+      local shown = getLines(math.max(0, last - 5), last + 1)
+      local firstAt, secondAt
+      for index, text in ipairs(shown) do
+        if contains(text, "first snooped line") then firstAt = index end
+        if contains(text, "second snooped line") then secondAt = index end
+      end
+      assert.is_number(firstAt, table.concat(shown, "|"))
+      assert.equals(firstAt + 1, secondAt, table.concat(shown, "|"))
+      assert.equals(">>", shown[secondAt]:sub(1, 2), shown[secondAt])
+    end)
   end)
 
   describe("mmcp.ping", function()

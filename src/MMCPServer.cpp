@@ -1011,7 +1011,13 @@ void MMCPServer::snoopMessage(const std::string& message)
 
     std::stringstream ss;
     ss << FBLDGRN << ">>" << RST;
-    ss << message << "\n";
+    for (const char c : message) {
+        ss << c;
+        if (c == '\n') {
+            ss << FBLDGRN << ">>" << RST;
+        }
+    }
+    ss << "\n";
 
     std::string outStr = ss.str();
 
