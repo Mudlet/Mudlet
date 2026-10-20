@@ -44,7 +44,14 @@ TMapViewManager::TMapViewManager(Host* pHost, TMap* pMap)
 
 TMapViewManager::~TMapViewManager()
 {
-    closeAllViews();
+    // Not closeAllViews(): a view left to deleteLater() would go on drawing, and taking
+    // events for, the TMap being freed around us until the event loop next ran
+    const QList<QPointer<QDockWidget>> dockWidgets = mDockWidgets.values();
+    mDockWidgets.clear();
+    mViews.clear();
+    for (const auto& dockWidget : dockWidgets) {
+        delete dockWidget.data();
+    }
 }
 
 std::pair<int, QString> TMapViewManager::createView(int initialAreaId)
