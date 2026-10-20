@@ -303,8 +303,16 @@ private slots:
             return;
         }
 
-        mpPreferences->setStyleSheet(QString());
         setAppearance(enums::Appearance::light);
+        checkTheShellFollowsTheThemeStyleSheet();
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+
+        // Cleared with no theme change after it, which would restyle the shell anyway
+        mpPreferences->setStyleSheet(QString());
+        QCoreApplication::processEvents();
+        mpPreferences->grab();
         QVERIFY2(paintedSurface().lightness() >= 128, qPrintable(describe(paintedSurface())));
     }
 
