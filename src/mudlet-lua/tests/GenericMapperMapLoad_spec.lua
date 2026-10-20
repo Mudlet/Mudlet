@@ -114,6 +114,8 @@ describe("Tests the generic mapper when a map loads", function()
     os.remove(localCopyPath)
     if hadLocalCopy then
       os.rename(localCopyBackupPath, localCopyPath)
+    else
+      lfs.rmdir(downloadDirectory)
     end
     assert(ok, err)
   end)

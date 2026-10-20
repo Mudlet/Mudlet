@@ -3253,7 +3253,7 @@ local function find_area(name)
 end
 
 local function forget_position()
-    -- the loaded map reuses room ids, so the old ones now name unrelated rooms
+    -- room ids from before the load name unrelated rooms in the loaded map
     local was_mapping = map.mapping
     map.set("mapping", false)
     map.set("currentRoom", nil)
