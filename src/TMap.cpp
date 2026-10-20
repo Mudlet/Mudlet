@@ -878,33 +878,18 @@ void TMap::addDirectionalRoute(std::vector<std::pair<unsigned int, route>>& best
         return;
     }
 
-    TLuaInterpreter* interpreter = mpHost ? mpHost->getLuaInterpreter() : nullptr;
-    TLuaInterpreter::ExitWeightFilterResult filterResult;
-    TLuaInterpreter::ExitWeightFilterResult* filterResultPtr = nullptr;
-    if (interpreter && interpreter->hasExitWeightFilter()) {
-        filterResult = interpreter->applyExitWeightFilter(static_cast<int>(source), exitKey);
-        if (filterResult.blocked) {
-            return;
-        }
-        filterResultPtr = &filterResult;
-    }
-
-    const bool filterOverridesBlocks = filterResultPtr && filterResultPtr->weightOverride.has_value();
-
-    if (pSourceR->isLocked && !filterOverridesBlocks) {
+    if (pSourceR->isLocked) {
         return;
     }
 
     const bool isSpecialExit = direction == DIR_OTHER;
 
-    if (!filterOverridesBlocks) {
-        if (isSpecialExit) {
-            if (pSourceR->hasSpecialExitLock(exitKey)) {
-                return;
-            }
-        } else if (pSourceR->hasExitLock(direction)) {
+    if (isSpecialExit) {
+        if (pSourceR->hasSpecialExitLock(exitKey)) {
             return;
         }
+    } else if (pSourceR->hasExitLock(direction)) {
+        return;
     }
 
     TRoom* pTargetR = mpRoomDB->getRoom(target);
@@ -912,19 +897,24 @@ void TMap::addDirectionalRoute(std::vector<std::pair<unsigned int, route>>& best
         return;
     }
 
-    if (!filterOverridesBlocks && (pTargetR->isLocked || unUsableRoomSet.contains(target))) {
+    if (pTargetR->isLocked || unUsableRoomSet.contains(target)) {
         return;
+    }
+
+    int cost = exitWeights.value(exitKey, pTargetR->getWeight());
+    TLuaInterpreter* interpreter = mpHost ? mpHost->getLuaInterpreter() : nullptr;
+    if (interpreter && interpreter->hasExitWeightFilter()) {
+        const TLuaInterpreter::ExitWeightFilterResult filterResult = interpreter->applyExitWeightFilter(static_cast<int>(source), exitKey);
+        if (filterResult.blocked) {
+            return;
+        }
+        cost = filterResult.weightOverride.value_or(cost);
     }
 
     route r;
     r.direction = direction;
     if (isSpecialExit) {
         r.specialExitName = exitKey;
-    }
-
-    int cost = exitWeights.value(exitKey, pTargetR->getWeight());
-    if (filterOverridesBlocks) {
-        cost = filterResultPtr->weightOverride.value();
     }
     r.cost = cost;
 
@@ -954,8 +944,6 @@ void TMap::initGraph()
     unsigned int roomCount = 0;
     unsigned int edgeCount = 0;
     QSet<unsigned int> unUsableRoomSet;
-    TLuaInterpreter* interpreter = mpHost ? mpHost->getLuaInterpreter() : nullptr;
-    const bool exitWeightFilterActive = interpreter && interpreter->hasExitWeightFilter();
     // Keep track of the unusable rather than the usable ones because that is
     // hopefully a MUCH smaller set in normal situations!
     QHashIterator<int, TRoom*> itRoom = mpRoomDB->getRoomMap();
@@ -969,9 +957,7 @@ void TMap::initGraph()
 
         if (pR->isLocked) {
             unUsableRoomSet.insert(itRoom.key());
-            if (!exitWeightFilterActive) {
-                continue;
-            }
+            continue;
         }
 
         location l;
