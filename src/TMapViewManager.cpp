@@ -114,11 +114,11 @@ std::pair<bool, QString> TMapViewManager::closeView(int viewId)
     mDockWidgets.remove(viewId);
     mViews.remove(viewId);
 
-    // Already forgotten, so the destroyed() this brings finds nothing to report again
     mClosingDockWidgets.removeIf([](const QPointer<QDockWidget>& closing) {
         return closing.isNull();
     });
     mClosingDockWidgets.append(dockWidget);
+    // Already forgotten, so the destroyed() this brings finds nothing to report again
     dockWidget->deleteLater();
 
     emit viewClosed(viewId);
