@@ -2805,7 +2805,7 @@ int TLuaInterpreter::selectCaptureGroup(lua_State* L)
         if (--captureGroup < static_cast<int>(pL->mCaptureGroupList.size())) {
             const auto offset = static_cast<std::size_t>(captureGroup);
             begin = pL->mCaptureGroupPosList[offset];
-            length = QString::fromStdString(pL->mCaptureGroupList[offset]).size();
+            length = pL->captureGroupLength(offset);
             if (TDebug::wants(TDebug::Category::Selection)) {
                 TDebug(Qt::white, Qt::red, TDebug::Category::Selection) << "selectCaptureGroup(" << begin << ", " << length << ")\n" >> &host;
             }
