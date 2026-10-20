@@ -2254,6 +2254,10 @@ describe("Media playback effects with a generated sound file", function()
     assert.equals("sysMediaStarted", (waitForEvent("sysMediaStarted", 5000)))
     assert.is_true(stopSounds())
     pumpEvents(250)
+    -- a path ending in a separator names no file, so it has no copy either
+    assert.is_true(playSoundFile({name = outside .. "/", key = "busted-gone-separator"}))
+    pumpEvents(250)
+    assert.equals(0, #getPlayingSounds({key = "busted-gone-separator"}))
     os.remove(outside)
 
     assert.is_true(playSoundFile({name = outside, key = "busted-gone"}))

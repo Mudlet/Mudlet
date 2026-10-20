@@ -682,26 +682,38 @@ TMediaData TMedia::requestForFilePlayers(const TMediaData& mediaData) const
 QString TMedia::mediaCacheFileName(const QString& absolutePath) const
 {
     // Resolved, so a symlinked or differently cased spelling of a path still names the same copy
-    // A file that has gone resolves through the folders that remain, so it still names the copy made of it
-    const auto resolved = [](const QString& path) {
-        QString existing = QDir::cleanPath(path);
-        QString rest;
-        while (!existing.isEmpty()) {
-            if (const QString canonical = QFileInfo(existing).canonicalFilePath(); !canonical.isEmpty()) {
-                return rest.isEmpty() ? canonical : qsl("%1/%2").arg(canonical, rest);
-            }
-            const qsizetype slash = existing.lastIndexOf(QLatin1Char('/'));
-            if (slash < 0) {
-                break;
-            }
-            rest = rest.isEmpty() ? existing.mid(slash + 1) : qsl("%1/%2").arg(existing.mid(slash + 1), rest);
-            // Kept as "/" or "C:/", a root rather than an empty or drive-relative path
-            existing = existing.left(slash == 0 || existing.at(slash - 1) == QLatin1Char(':') ? slash + 1 : slash);
+    return mediaCacheFileName(resolvedMediaPath(MudletApp::getMudletPath(enums::profileHomePath, mpHost->getName())),
+                              resolvedMediaPath(MudletApp::getMudletPath(enums::profileMediaPath, mpHost->getName())),
+                              resolvedMediaPath(absolutePath));
+}
+
+/*static*/ QString TMedia::resolvedMediaPath(const QString& path)
+{
+    if (const QString canonical = QFileInfo(path).canonicalFilePath(); !canonical.isEmpty()) {
+        return canonical;
+    }
+
+    // Walked up as given, not tidied first: ".." after a symlink leads out of the folder it points to
+    QString existing = path;
+    QString rest;
+    while (true) {
+        const qsizetype slash = existing.lastIndexOf(QLatin1Char('/'));
+        if (slash < 0) {
+            break;
         }
-        return QDir::cleanPath(path);
-    };
-    return mediaCacheFileName(
-            resolved(MudletApp::getMudletPath(enums::profileHomePath, mpHost->getName())), resolved(MudletApp::getMudletPath(enums::profileMediaPath, mpHost->getName())), resolved(absolutePath));
+        // A root stays a root, "/" or "C:/", and has no parent to walk on to, even when it is missing
+        const QString parent = existing.left(slash == 0 || existing.at(slash - 1) == QLatin1Char(':') ? slash + 1 : slash);
+        if (parent == existing) {
+            break;
+        }
+        const QString name = existing.mid(slash + 1);
+        rest = rest.isEmpty() ? name : qsl("%1/%2").arg(name, rest);
+        existing = parent;
+        if (const QString canonical = QFileInfo(existing).canonicalFilePath(); !canonical.isEmpty()) {
+            return QDir::cleanPath(qsl("%1/%2").arg(canonical, rest));
+        }
+    }
+    return QDir::cleanPath(path);
 }
 
 // Keeps the source's folders so same-named files in different folders get separate copies, under
@@ -1132,10 +1144,13 @@ bool TMedia::transitionNonRelativeFile(TMediaData& mediaData)
         // A file moved or deleted since it was played plays the copy made of it; Mudlet before 5.1 kept that
         // copy under the bare file name
         QString copy;
-        if (QFileInfo(mediaFilePath).isFile()) {
-            copy = cacheFileName;
-        } else if (const QString bareName = QFileInfo(source).fileName(); !bareName.isEmpty() && QFileInfo(qsl("%1/%2").arg(mediaRoot, bareName)).isFile()) {
-            copy = bareName;
+        // A path ending in a separator names no file, so no copy of one either
+        if (!source.endsWith(QLatin1Char('/'))) {
+            if (QFileInfo(mediaFilePath).isFile()) {
+                copy = cacheFileName;
+            } else if (const QString bareName = QFileInfo(source).fileName(); !bareName.isEmpty() && QFileInfo(qsl("%1/%2").arg(mediaRoot, bareName)).isFile()) {
+                copy = bareName;
+            }
         }
 
         if (copy.isEmpty()) {
