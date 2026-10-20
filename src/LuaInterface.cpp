@@ -733,6 +733,29 @@ static bool serializableValueType(const int valueType)
     return valueType == LUA_TTABLE || valueType == LUA_TSTRING || valueType == LUA_TNUMBER || valueType == LUA_TBOOLEAN;
 }
 
+// Whether a saved-variables walk should write out a table it has already
+// written once in this saved global, under the name it has just reached it by.
+// The table at -1 is the one in question. Not when the name leads back to a
+// table the walk is inside, which would never end; nor for an object (a table
+// with a metatable), which no save brings back as one and whose copies the UI
+// objects packages keep in saved tables multiply out of all proportion (#9762);
+// nor once this global's copies run past scmMaxAliasCopyNodes, as tables shared
+// at every level double with each level.
+bool LuaInterface::savedWalkCanCopyAlias(lua_State* L, const void* pKey, const void* pValue, const int valueType)
+{
+    if (valueType != LUA_TTABLE || varUnit->pointerSeen(pKey) || mSavedWalkPath.contains(pValue)) {
+        return false;
+    }
+    if (mAliasCopyNodes >= scmMaxAliasCopyNodes) {
+        return false;
+    }
+    if (lua_getmetatable(L, -1)) {
+        lua_pop(L, 1);
+        return false;
+    }
+    return true;
+}
+
 void LuaInterface::iterateTable(lua_State* L, int index, TVar* tVar, bool hide)
 {
     if (index == LUA_GLOBALSINDEX) {
@@ -783,6 +806,7 @@ void LuaInterface::iterateTable(lua_State* L, int index, TVar* tVar, bool hide)
                 // each saved global is walked in its own dedup scope, so two of them
                 // that reference the same table both get a complete subtree
                 varUnit->clearPointers();
+                mAliasCopyNodes = 0;
                 mCurrentSavedRootName = keyName;
             } else if (!serializableValueType(vType)) {
                 // the whole global, not just the table this value sits in: a
@@ -808,11 +832,23 @@ void LuaInterface::iterateTable(lua_State* L, int index, TVar* tVar, bool hide)
         // Mudlet's own API - but a saved variable reached second would be left
         // with no node to export from, so it is exempt (#9755). _G reaches
         // itself, hence the name test.
-        if (keyName == qsl("_G") || (varUnit->varExists(var) && !varUnit->isSaved(var))) {
+        bool skip = keyName == qsl("_G") || (varUnit->varExists(var) && !varUnit->isSaved(var));
+        bool aliasCopy = false;
+        if (skip && mSavedVarsOnly && keyName != qsl("_G") && savedWalkCanCopyAlias(L, pKey, pValue, vType)) {
+            // the XML can only hold a second name for a plain table as a second
+            // copy, and leaving it out loses it from the save (#10721)
+            skip = false;
+            aliasCopy = true;
+        }
+        if (skip) {
             lua_pop(L, 1);
             tVar->removeChild(var);
             delete var;
             continue;
+        }
+        if (mSavedVarsOnly && (aliasCopy || mAliasCopyDepth > 0) && ++mAliasCopyNodes == scmMaxAliasCopyNodes) {
+            qWarning().noquote().nospace() << "LuaInterface::iterateTable() WARNING - the saved variable \"" << mCurrentSavedRootName
+                                           << "\" names the same tables so many times that only the first name for each of the rest is saved.";
         }
         varUnit->addVariable(var);
 
@@ -831,8 +867,16 @@ void LuaInterface::iterateTable(lua_State* L, int index, TVar* tVar, bool hide)
             if (!tooDeep && lua_checkstack(L, 3)) {
                 //put the table on top
                 lua_pushnil(L);
+                if (mSavedVarsOnly) {
+                    mSavedWalkPath.append(pValue);
+                    mAliasCopyDepth += aliasCopy ? 1 : 0;
+                }
                 iterateTable(L, -2, var, hide);
                 depth--;
+                if (mSavedVarsOnly) {
+                    mSavedWalkPath.removeLast();
+                    mAliasCopyDepth -= aliasCopy ? 1 : 0;
+                }
             } else {
                 const QString variableName = varUnit->shortVarPath(var);
                 qWarning().noquote().nospace() << "LuaInterface::iterateTable() WARNING - not reading the contents of the table \"" << variableName
@@ -991,6 +1035,9 @@ bool LuaInterface::readSavedVars()
     mTruncatedSavedTables.clear();
     mSavedRootsHoldingUnsaveableValues.clear();
     mCurrentSavedRootName.clear();
+    // a panic jumps out of the walk without unwinding these
+    mSavedWalkPath.clear();
+    mAliasCopyDepth = 0;
     resetVariableTree();
     lua_pushnil(mL);
     iterateTable(mL, LUA_GLOBALSINDEX, varUnit->getBase(), false);

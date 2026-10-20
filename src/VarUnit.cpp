@@ -260,6 +260,11 @@ void VarUnit::clearPointers()
     mPointers.clear();
 }
 
+bool VarUnit::pointerSeen(const void* pointer) const
+{
+    return pointer && mPointers.contains(pointer);
+}
+
 bool VarUnit::shouldSave(TVar* var)
 {
     if (var->getValueType() == 6 || var->isReference()) {
