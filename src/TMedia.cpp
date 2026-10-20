@@ -682,9 +682,23 @@ TMediaData TMedia::requestForFilePlayers(const TMediaData& mediaData) const
 QString TMedia::mediaCacheFileName(const QString& absolutePath) const
 {
     // Resolved, so a symlinked or differently cased spelling of a path still names the same copy
+    // A file that has gone resolves through the folders that remain, so it still names the copy made of it
     const auto resolved = [](const QString& path) {
-        const QString canonical = QFileInfo(path).canonicalFilePath();
-        return canonical.isEmpty() ? QDir::cleanPath(path) : canonical;
+        QString existing = QDir::cleanPath(path);
+        QString rest;
+        while (!existing.isEmpty()) {
+            if (const QString canonical = QFileInfo(existing).canonicalFilePath(); !canonical.isEmpty()) {
+                return rest.isEmpty() ? canonical : qsl("%1/%2").arg(canonical, rest);
+            }
+            const qsizetype slash = existing.lastIndexOf(QLatin1Char('/'));
+            if (slash < 0) {
+                break;
+            }
+            rest = rest.isEmpty() ? existing.mid(slash + 1) : qsl("%1/%2").arg(existing.mid(slash + 1), rest);
+            // Kept as "/" or "C:/", a root rather than an empty or drive-relative path
+            existing = existing.left(slash == 0 || existing.at(slash - 1) == QLatin1Char(':') ? slash + 1 : slash);
+        }
+        return QDir::cleanPath(path);
     };
     return mediaCacheFileName(
             resolved(MudletApp::getMudletPath(enums::profileHomePath, mpHost->getName())), resolved(MudletApp::getMudletPath(enums::profileMediaPath, mpHost->getName())), resolved(absolutePath));
@@ -1109,14 +1123,30 @@ void TMedia::setMediaPlayersMuted(const TMediaData::MediaProtocol mediaProtocol,
 bool TMedia::transitionNonRelativeFile(TMediaData& mediaData)
 {
     const QString source = mediaData.mediaFileName();
+    const QString mediaRoot = MudletApp::getMudletPath(enums::profileMediaPath, mpHost->getName());
+    const QString cacheFileName = mediaCacheFileName(source);
+    const QString mediaFilePath = qsl("%1/%2").arg(mediaRoot, cacheFileName);
+
     // Checked first, or a mistyped path would leave its folders behind in the media directory
     if (!QFileInfo(source).isFile()) {
-        qWarning() << qsl("TMedia::transitionNonRelativeFile() WARNING - there is no file to play at %1.").arg(source);
-        return false;
-    }
+        // A file moved or deleted since it was played plays the copy made of it; Mudlet before 5.1 kept that
+        // copy under the bare file name
+        QString copy;
+        if (QFileInfo(mediaFilePath).isFile()) {
+            copy = cacheFileName;
+        } else if (const QString bareName = QFileInfo(source).fileName(); !bareName.isEmpty() && QFileInfo(qsl("%1/%2").arg(mediaRoot, bareName)).isFile()) {
+            copy = bareName;
+        }
 
-    const QString cacheFileName = mediaCacheFileName(source);
-    const QString mediaFilePath = qsl("%1/%2").arg(MudletApp::getMudletPath(enums::profileMediaPath, mpHost->getName()), cacheFileName);
+        if (copy.isEmpty()) {
+            qWarning() << qsl("TMedia::transitionNonRelativeFile() WARNING - there is no file to play at %1.").arg(source);
+            return false;
+        }
+
+        mediaData.setMediaFileName(copy);
+        mediaData.setMediaSourcePath(QDir::cleanPath(source));
+        return true;
+    }
 
     if (!QFile::exists(mediaFilePath)) {
         const QString folder = QFileInfo(mediaFilePath).path();
