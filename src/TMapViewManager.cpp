@@ -24,6 +24,7 @@
 #include "T2DMap.h"
 #include "TMap.h"
 #include "TMapView.h"
+#include "TRoom.h"
 #include "TRoomDB.h"
 #include "utils.h"
 
@@ -70,6 +71,8 @@ std::pair<int, QString> TMapViewManager::createView(int initialAreaId)
 
     if (initialAreaId > 0) {
         mapView->setArea(initialAreaId);
+    } else if (const TRoom* pPlayerRoom = mpMap->mpRoomDB ? mpMap->mpRoomDB->getRoom(mpMap->mRoomIdHash.value(mpMap->mProfileName)) : nullptr) {
+        mapView->setArea(pPlayerRoom->getArea());
     }
 
     mDockWidgets[viewId] = dockWidget;
