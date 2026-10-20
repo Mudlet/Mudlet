@@ -2412,6 +2412,30 @@ describe("MMCP effects against a scripted chat peer", function()
       assert.is_false(contains(text, "1500"), text)
     end)
 
+    it("keeps the colour on every line it shows from a peer whose colour is not tracked", function()
+      if peerUnavailable() then return end
+      ensurePeer()
+      finally(function() peerVersion(PEER_VERSION) end)
+      peerVersion("zMUD 7.21")
+      snoopFrame("\27[31mfirst red snooped line\nsecond red snooped line")
+      local function colourOf(text)
+        local last = getLineCount()
+        for lineNumber = last, math.max(0, last - 5), -1 do
+          moveCursor(0, lineNumber)
+          if selectString(text, 1) > -1 then
+            local colour = {getFgColor()}
+            deselect()
+            moveCursorEnd()
+            return colour
+          end
+        end
+        moveCursorEnd()
+      end
+      local first = colourOf("first red snooped line")
+      assert.is_table(first)
+      assert.are.same(first, colourOf("second red snooped line"))
+    end)
+
     it("sends what the game shows to a peer that is snooping us", function()
       if peerUnavailable() then return end
       ensurePeer()

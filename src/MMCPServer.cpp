@@ -1009,13 +1009,42 @@ void MMCPServer::snoopMessage(const std::string& message)
 {
     using namespace AnsiColors;
 
+    // The prefix's reset would take the colour off every line after the first for a
+    // peer whose colour MMCPClient does not track, so the style in force is put back
+    // after it. Bounded, as a peer can send any number of escapes.
+    constexpr std::size_t maxReplayedStyle = 64;
+    std::string activeStyle;
     std::stringstream ss;
     ss << FBLDGRN << ">>" << RST;
-    for (const char c : message) {
-        ss << c;
+    for (std::size_t i = 0; i < message.size(); ++i) {
+        const char c = message[i];
         if (c == '\n') {
-            ss << FBLDGRN << ">>" << RST;
+            ss << c << FBLDGRN << ">>" << RST << activeStyle;
+            continue;
         }
+        if (c == '\x1b' && i + 1 < message.size() && message[i + 1] == '[') {
+            std::size_t end = i + 2;
+            while (end < message.size() && message[end] >= 0x20 && message[end] < 0x40) {
+                ++end;
+            }
+            if (end < message.size()) {
+                const std::string sequence = message.substr(i, end - i + 1);
+                if (message[end] == 'm') {
+                    const std::string parameters = message.substr(i + 2, end - i - 2);
+                    const bool resets = parameters.empty() || parameters == "0" || parameters.starts_with("0;");
+                    if (resets || activeStyle.size() + sequence.size() > maxReplayedStyle) {
+                        activeStyle.clear();
+                    }
+                    if (parameters != "0" && !parameters.empty() && sequence.size() <= maxReplayedStyle) {
+                        activeStyle += sequence;
+                    }
+                }
+                ss << sequence;
+                i = end;
+                continue;
+            }
+        }
+        ss << c;
     }
     ss << "\n";
 
