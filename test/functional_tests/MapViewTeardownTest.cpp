@@ -123,6 +123,28 @@ private slots:
         QVERIFY2(!view, "the map view outlived the profile whose map it draws");
         QVERIFY(!map2D);
     }
+
+    // A sysExitEvent handler can close the views while the profile is being
+    // deleted, which leaves them to a deleteLater() that has not run yet
+    void test_closedMapViewDiesWithTheProfile()
+    {
+        auto* hostManager = HostManager::self();
+        QVERIFY(hostManager->addHost(mProfileName, qsl("23"), QString(), QString()));
+        Host* pHost = hostManager->getHost(mProfileName);
+        QVERIFY(pHost);
+        TMap* pMap = pHost->mpMap.data();
+        pMap->setViewManager(new TMapViewManager(pHost, pMap));
+
+        const auto [viewId, message] = pMap->getViewManager()->createView(0);
+        QVERIFY2(viewId, qPrintable(message));
+        QPointer<TMapView> view = pMap->getViewManager()->getView(viewId);
+        QVERIFY(view);
+        QVERIFY(pMap->getViewManager()->closeView(viewId).first);
+
+        hostManager->deleteHost(mProfileName);
+
+        QVERIFY2(!view, "a map view closed but not yet deleted outlived the profile whose map it draws");
+    }
 };
 
 #include "MapViewTeardownTest.moc"

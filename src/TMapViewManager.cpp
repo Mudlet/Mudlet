@@ -46,9 +46,10 @@ TMapViewManager::~TMapViewManager()
 {
     // Not closeAllViews(): a view left to deleteLater() would go on drawing, and taking
     // events for, the TMap being freed around us until the event loop next ran
-    const QList<QPointer<QDockWidget>> dockWidgets = mDockWidgets.values();
+    const QList<QPointer<QDockWidget>> dockWidgets = mDockWidgets.values() + mClosingDockWidgets;
     mDockWidgets.clear();
     mViews.clear();
+    mClosingDockWidgets.clear();
     for (const auto& dockWidget : dockWidgets) {
         delete dockWidget.data();
     }
@@ -114,6 +115,10 @@ std::pair<bool, QString> TMapViewManager::closeView(int viewId)
     mViews.remove(viewId);
 
     // Already forgotten, so the destroyed() this brings finds nothing to report again
+    mClosingDockWidgets.removeIf([](const QPointer<QDockWidget>& closing) {
+        return closing.isNull();
+    });
+    mClosingDockWidgets.append(dockWidget);
     dockWidget->deleteLater();
 
     emit viewClosed(viewId);
