@@ -1085,6 +1085,9 @@ local ok, err = pcall(function()
   step("startMovie", startMovie, "bgA")
   step("setMovieAgain", setMovie, "bgA", gif)
   state("movieAgain", "bgA")
+  step("emptyOnMovie", setBackgroundImage, "bgA", "")
+  state("emptyOnMovie", "bgA")
+  step("setMovieAgain", setMovie, "bgA", gif)
   step("resetMovie", resetBackgroundImage, "bgA")
   state("resetMovie", "bgA")
   step("sized", setBackgroundImage, "bgA", sized)
@@ -1230,6 +1233,9 @@ headlessBackground = ok and "ok" or tostring(err)
                                   qsl("startMovie=[2]nil:no movie found at label 'bgA'"),
                                   qsl("setMovieAgain=[1]true"),
                                   qsl("movieAgain:hint=40x16,text=,movie=true,gifs=1/1"),
+                                  qsl("emptyOnMovie=[1]true"),
+                                  qsl("emptyOnMovie:hint=twin,text=,movie=false,gifs=1/0"),
+                                  qsl("setMovieAgain=[1]true"),
                                   qsl("resetMovie=[1]true"),
                                   qsl("resetMovie:hint=twin,text=,movie=false,gifs=1/0"),
                                   qsl("sized=[1]true"),
