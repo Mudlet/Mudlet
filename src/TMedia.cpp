@@ -390,7 +390,7 @@ void TMedia::pauseMedia(TMediaData& mediaData)
     }
 }
 
-void TMedia::stopMedia(TMediaData& mediaData)
+void TMedia::stopMedia(TMediaData& mediaData, const PriorityStop priorityStop)
 {
     if (!isMediaProtocolAllowed(mediaData)) {
         return;
@@ -429,7 +429,7 @@ void TMedia::stopMedia(TMediaData& mediaData)
         }
 
         if (mediaData.mediaPriority() != TMediaData::MediaPriorityNotSet && pPlayer->mediaData().mediaPriority() != TMediaData::MediaPriorityNotSet
-            && pPlayer->mediaData().mediaPriority() >= mediaData.mediaPriority()) {
+            && (priorityStop == PriorityStop::Below ? pPlayer->mediaData().mediaPriority() >= mediaData.mediaPriority() : pPlayer->mediaData().mediaPriority() > mediaData.mediaPriority())) {
             continue;
         }
 
@@ -2287,7 +2287,7 @@ bool TMedia::doesMediaHavePriorityToPlay(TMediaData& mediaData, const QString& a
     stopMediaData.setMediaProtocol(mediaData.mediaProtocol());
     stopMediaData.setMediaType(mediaData.mediaType());
     stopMediaData.setMediaPriority(mediaData.mediaPriority());
-    mpHost->mpMedia->stopMedia(stopMediaData);
+    mpHost->mpMedia->stopMedia(stopMediaData, PriorityStop::Below);
 
     return true;
 }

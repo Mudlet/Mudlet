@@ -378,7 +378,10 @@ public:
     QList<TMediaData> playingMedia(TMediaData& mediaData);
     QList<TMediaData> pausedMedia(TMediaData& mediaData);
     void pauseMedia(TMediaData& mediaData);
-    void stopMedia(TMediaData& mediaData);
+    // A stop's priority takes media at that priority and below, as the protocol says; making room for a
+    // prioritised play takes only what is below it, so another copy at its priority plays on
+    enum class PriorityStop { AtOrBelow, Below };
+    void stopMedia(TMediaData& mediaData, PriorityStop priorityStop = PriorityStop::AtOrBelow);
     void parseGMCP(QString& packageMessage, QString& gmcp);
     std::pair<bool, QString> purgeMediaCache();
     void refreshAudioDevices();
