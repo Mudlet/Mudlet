@@ -505,6 +505,57 @@ private slots:
                  qPrintable(qsl("Moved east, the tone came out at %1 left and %2 right.").arg(heard.first).arg(heard.second)));
     }
 
+    // updateMusic() reaches the music's audio, not only the volume it reports, and glides over its duration
+    void test_updateMusicGlidesTheMusicsVolume()
+    {
+        SKIP_OR_FAIL_WITHOUT(backendPlaces() ? QString() : noPanningReason());
+        TAudioMixer* mixer = TAudioMixer::self();
+        mixer->setOutputSuspended(true);
+        auto resume = qScopeGuard([mixer]() {
+            mixer->setOutputSuspended(false);
+        });
+
+        TMediaData data = soundData(writeClip(qsl("theme.wav"), clipMs, 8000));
+        data.setMediaType(TMediaData::MediaTypeMusic);
+        data.setMediaKey(qsl("theme"));
+        data.setMediaVolume(100);
+        media()->playMedia(data);
+        QVERIFY2(waitForStarted(), "The music never started playing.");
+        // Before the first audio there is nothing to glide from, and a change is made at once
+        SKIP_OR_FAIL_WITHOUT(QTest::qWaitFor(
+                                     [this]() {
+                                         return media()->firstMixedVoice() && media()->firstMixedVoice()->receivedAudio();
+                                     },
+                                     QDeadlineTimer(5s))
+                                     ? QString()
+                                     : noPanningReason());
+        const int voice = media()->firstMixedVoice()->mixerVoice();
+        QVERIFY2(QTest::qWaitFor(
+                         [&]() {
+                             return mixer->queuedSamples(voice) >= 200 * 48 * 2;
+                         },
+                         QDeadlineTimer(5s)),
+                 "The music's audio never reached the shared output.");
+        const float start = loudestOnEachSide(20).first;
+        QVERIFY2(start > 0.1F, qPrintable(qsl("At volume 100 the music came out at only %1.").arg(start)));
+
+        QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("updateMusic({key = 'theme', volume = 10, duration = 3000})")));
+        // Well into the glide; what is mixed lags what is decoded by up to a voice's 300 ms queue
+        QTest::qWait(1500ms);
+        const float partway = loudestOnEachSide(20).first;
+        std::pair<float, float> heard;
+        QVERIFY2(comesOut(
+                         [start](const float l, const float) {
+                             return l < start * 0.3F;
+                         },
+                         heard,
+                         5s),
+                 qPrintable(qsl("Updated to volume 10, the music stayed at %1 (from %2).").arg(heard.first).arg(start)));
+        const float settled = heard.first;
+        QVERIFY2(partway < start * 0.85F && partway > settled * 1.5F,
+                 qPrintable(qsl("Partway through a 3 s glide the music was at %1, between %2 at the start and %3 at the end.").arg(partway).arg(start).arg(settled)));
+    }
+
     // A game moves a sound by sending its play and an update together, before any of it is heard
     void test_anUpdateSentWithThePlayMovesFromWhereItWasPlayed()
     {
