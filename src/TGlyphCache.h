@@ -72,9 +72,9 @@ public:
     // does not go through the cache, so that both paths agree on its weight.
     static QFont styled(QFont, Style);
 
-    // Large enough for any real game's repertoire, small enough that a flood
-    // of distinct CJK or emoji cannot grow it without bound.
-    static constexpr qsizetype csmMaxEntries = 4096;
+    // Room for a CJK repertoire of several thousand characters in more than
+    // one style, while a flood of distinct ones stays at a few megabytes.
+    static constexpr qsizetype csmMaxEntries = 16384;
     // In UTF-16 code units. A grapheme can carry any number of combining marks,
     // so without this a flood of distinct long ones would keep megabytes each;
     // the longest real ones, such as a family emoji with skin tones, fit easily.
@@ -105,17 +105,21 @@ private:
         // Below the origin, from the glyphs' outlines: stacked combining marks
         // can reach several lines past the line box the runs' own bounds give.
         qreal inkBottom = 0.0;
+        // When lookup() last returned it.
+        quint64 lastUse = 0;
     };
 
     static QPointF origin(const QRect& cell, const Entry&);
 
     const Entry& lookup(QStringView grapheme, Style);
     Entry shape(QStringView grapheme, Style) const;
+    void evictLeastRecentlyUsed();
 
     QFont mFont;
     int mDpiX = 0;
     int mDpiY = 0;
     QHash<Key, Entry> mEntries;
+    quint64 mUses = 0;
     // Each cached glyph holds on to the font file it was shaped from, so a
     // font being installed or removed has to send every grapheme back to be
     // resolved again - as drawText() would have done on its next call. mFont
