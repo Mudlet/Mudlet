@@ -2591,6 +2591,38 @@ describe("Trigger processing", function()
             assert.are.same({0, 0, 6, 6, 11, 11, 14, 14}, starts, "a capture should be reported at the code unit it sits at")
         end)
 
+        -- After an empty match the next search retries at the same offset with
+        -- empty matches ruled out, and (|word) matches empty first, so every
+        -- word is found only by that retry succeeding
+        it("finds what a retry after an empty match finds at the same offset", function()
+            _G.TrigSpec = {captures = {}, starts = {}}
+            local id = tempComplexRegexTrigger("SpecComplexMatchAllEmptyRetry", [[(|word)]],
+                function()
+                    _G.TrigSpec = {captures = {}, starts = {}}
+                    for i = 1, #matches do
+                        _G.TrigSpec.captures[i] = matches[i]
+                        if matches[i] ~= "" then
+                            selectCaptureGroup(i)
+                            local _, start = getSelection()
+                            _G.TrigSpec.starts[#_G.TrigSpec.starts + 1] = start
+                            deselect()
+                        end
+                    end
+                end,
+                0, -1, -1, 0, 1, -1, -1, 0, 0, 0)
+            assert.is_number(id)
+            finally(function() killTrigger("SpecComplexMatchAllEmptyRetry") end)
+            feedTriggers("\nword word\n")
+            local words = {}
+            for _, capture in ipairs(_G.TrigSpec.captures) do
+                if capture ~= "" then
+                    words[#words + 1] = capture
+                end
+            end
+            assert.are.same({"word", "word", "word", "word"}, words)
+            assert.are.same({0, 0, 5, 5}, _G.TrigSpec.starts)
+        end)
+
         -- Those positions used to be counted from the start of the line for
         -- every capture, which made a match-all line cost the square of its
         -- length rather than growing with it (#10869).
