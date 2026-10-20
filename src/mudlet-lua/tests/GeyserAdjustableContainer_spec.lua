@@ -2173,6 +2173,19 @@ describe("Tests Adjustable.Container borders, persistence and menu items", funct
       assert.are.equal(container:get_width() + container:get_x() + 5, getBorderLeft())
     end)
 
+    it("follows a container a script lays out again with set_constraints and reposition", function()
+      local container = make("gapSetConstraints", {width = 112})
+      container:attachToBorder("left")
+      container:resize(350, nil)
+      assert.are.equal(350 + container:get_x() + 5, getBorderLeft())
+
+      container:set_constraints({x = 0, y = 0, width = 112, height = 100})
+      container:reposition()
+
+      assert.are.equal(112, container:get_width())
+      assert.are.equal(112 + container:get_x() + 5, getBorderLeft())
+    end)
+
     it("detaches a container that has been moved out of reach of its border", function()
       local container = make("gapOutOfReach", {width = 100})
       container:attachToBorder("left")

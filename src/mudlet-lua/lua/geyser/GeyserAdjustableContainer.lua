@@ -523,6 +523,9 @@ local function axisShares(where, opposite)
     return near, far
 end
 
+-- nonzero while a border is being written, as each write raises sysWindowResizeEvent and GeyserReposition answers it
+local settlingBorders = 0
+
 -- internal function to reserve both borders of one axis. The named border is always written, as
 -- writing 0 releases it; the facing one only if attached to, as the user may have set it by hand.
 local function setAxisBorders(where)
@@ -530,6 +533,7 @@ local function setAxisBorders(where)
     if not opposite then
         return
     end
+    settlingBorders = settlingBorders + 1
     local near = axisShares(where, opposite)
     setConsoleBorder(where, near)
     if next(Adjustable.Container.Attached[opposite] or {}) then
@@ -537,6 +541,7 @@ local function setAxisBorders(where)
         local _, far = axisShares(where, opposite)
         setConsoleBorder(opposite, far)
     end
+    settlingBorders = settlingBorders - 1
 end
 
 -- internal function to adjust the main console borders if needed
@@ -1371,6 +1376,10 @@ end
 --- and false if the reposition event comes as effect of external action, such as resizing of main window)
 function Adjustable.Container:reposition(skipChildren)
     Geyser.Container.reposition(self, skipChildren)
+    -- set_constraints() places the container through here, so a script laying it out again moves its border too
+    if self.attached and settlingBorders == 0 then
+        self:adjustBorder()
+    end
     local x, y, width, height = self:pixel_geometry()
     raiseEvent(
       "AdjustableContainerReposition",
