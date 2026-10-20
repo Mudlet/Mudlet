@@ -71,8 +71,10 @@ std::pair<int, QString> TMapViewManager::createView(int initialAreaId)
 
     if (initialAreaId > 0) {
         mapView->setArea(initialAreaId);
-    } else if (const TRoom* pPlayerRoom = mpMap->mpRoomDB ? mpMap->mpRoomDB->getRoom(mpMap->mRoomIdHash.value(mpMap->mProfileName)) : nullptr) {
-        mapView->setArea(pPlayerRoom->getArea());
+    } else if (initialAreaId == 0 && mpMap->mpRoomDB) {
+        if (const TRoom* pPlayerRoom = mpMap->mpRoomDB->getRoom(mpMap->mRoomIdHash.value(mpMap->mProfileName))) {
+            mapView->setArea(pPlayerRoom->getArea());
+        }
     }
 
     mDockWidgets[viewId] = dockWidget;
