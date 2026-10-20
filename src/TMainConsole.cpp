@@ -70,12 +70,16 @@
 #include <QShortcut>
 #include <QSizePolicy>
 #include <QTextCodec>
+#include <QTextCursor>
 #include <QTimer>
 #include <QPainter>
 #include <QResizeEvent>
 #include <QVideoWidget>
 
+#include <algorithm>
+#include <utility>
 #include <chrono>
+#include <utility>
 
 namespace {
 // See TWindowRegistry::SubConsoleKind for what Other is for.
@@ -978,24 +982,29 @@ void TMainConsole::regenerateToolBars(const std::list<TAction*>& rootActions)
 
 void TMainConsole::regenerateEasyButtonBars(const std::list<TAction*>& rootActions)
 {
+    // A floating/dockable bar is a TToolBar, so drop any TEasyButtonBar the
+    // action had before it was made one
+    auto releaseEasyButtonBar = [this](TAction* pAction) {
+        if (TEasyButtonBar* pOldBar = actionEasyButtonBar(pAction)) {
+            mEasyButtonBarList.remove(pOldBar);
+            pOldBar->deleteLater();
+            setActionEasyButtonBar(pAction, nullptr);
+        }
+    };
     for (auto& rootAction : rootActions) {
         if (rootAction->mLocation == 4) {
-            // This TAction is set to be a floating/dockable widget
-            if (TEasyButtonBar* pOldBar = actionEasyButtonBar(rootAction)) {
-                // But it has a TEasyButtonBar type toolbar so we need to
-                // remove the TEasyButtonBar from the list of TEasyButtonBars:
-                mEasyButtonBarList.remove(pOldBar);
-                // And destroy it:
-                pOldBar->deleteLater();
-                setActionEasyButtonBar(rootAction, nullptr);
-            }
-            continue; // skip over any root action node that IS going to be a TToolBar.
+            releaseEasyButtonBar(rootAction);
+            continue;
         }
         if (!rootAction->mPackageName.isEmpty()) {
             // It has a package name so it is actually the parent
             // module/package item rather than the actual ToolBar
             for (auto* childActionNode : *rootAction->mpMyChildrenList) {
                 auto* childAction = static_cast<TAction*>(childActionNode);
+                if (childAction->mLocation == 4) {
+                    releaseEasyButtonBar(childAction);
+                    continue;
+                }
                 TEasyButtonBar* pTB = nullptr;
                 for (auto& easyButtonBar : mEasyButtonBarList) {
                     if (easyButtonBar == actionEasyButtonBar(childAction)) {
@@ -1004,7 +1013,7 @@ void TMainConsole::regenerateEasyButtonBars(const std::list<TAction*>& rootActio
                     }
                 }
                 if (!pTB) {
-                    pTB = createEasyButtonBar(rootAction, childAction->getName());
+                    pTB = createEasyButtonBar(childAction, childAction->getName());
                     mEasyButtonBarList.emplace_back(pTB);
                     setActionEasyButtonBar(childAction, pTB); // needed for drag&drop
                 }
@@ -1157,6 +1166,25 @@ void TMainConsole::detachActionBars(TAction* pAction)
     if (TToolBar* pToolBar = actionToolBar(pAction); pToolBar && pAction->mLocation == 4) {
         pToolBar->setFloating(false);
         undockToolBar(pToolBar);
+    }
+}
+
+void TMainConsole::disposeActionBars(TAction* pAction)
+{
+    if (TEasyButtonBar* pBar = actionEasyButtonBar(pAction)) {
+        detachEasyButtonBar(pBar, pAction->mLocation);
+        mEasyButtonBarList.remove(pBar);
+        pBar->hide();
+        pBar->deleteLater();
+        setActionEasyButtonBar(pAction, nullptr);
+    }
+    if (TToolBar* pToolBar = actionToolBar(pAction)) {
+        pToolBar->setFloating(false);
+        undockToolBar(pToolBar);
+        mToolBarList.remove(pToolBar);
+        pToolBar->hide();
+        pToolBar->deleteLater();
+        setActionToolBar(pAction, nullptr);
     }
 }
 
@@ -1397,6 +1425,10 @@ void TMainConsole::deleteLabel(const QString& name)
 {
     auto pL = mLabelMap.value(name);
     if (pL) {
+        // Destroyed later, and a destroyed widget leaves the focus with nobody
+        if (pL->hasFocus() && pL->window() == window()) {
+            focusButtonAfter(pL, true);
+        }
         mpHost->windowRegistry().deregisterLabel(name, &pL->model());
         deregisterLabelWidget(pL);
         if (pL->mpMovie) {
@@ -1532,6 +1564,79 @@ std::pair<bool, QString> TMainConsole::deleteScrollBox(const QString& name)
 
     // Message is of the form needed for a Lua API function call run-time error
     return {false, qsl("scrollbox name '%1' not found").arg(name)};
+}
+
+namespace {
+bool readsBefore(const QWidget* a, const QWidget* b)
+{
+    const QPoint first = a->mapToGlobal(QPoint());
+    const QPoint second = b->mapToGlobal(QPoint());
+    return first.y() != second.y() ? first.y() < second.y() : first.x() < second.x();
+}
+} // namespace
+
+QList<TLabel*> TMainConsole::keyboardButtons() const
+{
+    QList<TLabel*> labels;
+    for (TLabel* pLabel : mLabelMap) {
+        // A floating user window is a window of its own, out of reach of Tab here
+        if (pLabel && pLabel->isVisible() && pLabel->isEnabled() && pLabel->window() == window() && pLabel->keyboardReachable()) {
+            labels.append(pLabel);
+        }
+    }
+    std::stable_sort(labels.begin(), labels.end(), readsBefore);
+    return labels;
+}
+
+bool TMainConsole::focusKeyboardButton(bool forward)
+{
+    const QList<TLabel*> buttons = keyboardButtons();
+    if (buttons.isEmpty()) {
+        return false;
+    }
+    mKeyboardButtonsFromCaret = mpHost->caretEnabled();
+#if defined(Q_OS_WINDOWS) || defined(Q_OS_LINUX)
+    // Caret mode holds the keyboard and only lets go of it on a timer, which a key pressed straight away would beat
+    mUpperPane->releaseKeyboard();
+#endif
+    (forward ? buttons.first() : buttons.last())->setFocus(forward ? Qt::TabFocusReason : Qt::BacktabFocusReason);
+    return true;
+}
+
+void TMainConsole::focusButtonAfter(const TLabel* pLabel, bool next)
+{
+    const QList<TLabel*> buttons = keyboardButtons();
+    TLabel* pTarget = nullptr;
+    // Labels at the same corner read neither before nor after each other, so one still in the list goes by its place there
+    if (const auto it = std::find(buttons.cbegin(), buttons.cend(), pLabel); it != buttons.cend()) {
+        const qsizetype target = std::distance(buttons.cbegin(), it) + (next ? 1 : -1);
+        pTarget = target >= 0 && target < buttons.size() ? buttons.at(target) : nullptr;
+    } else if (next) {
+        const auto after = std::find_if(buttons.cbegin(), buttons.cend(), [pLabel](const TLabel* pButton) {
+            return !readsBefore(pButton, pLabel);
+        });
+        pTarget = after == buttons.cend() ? nullptr : *after;
+    } else {
+        const auto before = std::find_if(buttons.crbegin(), buttons.crend(), [pLabel](const TLabel* pButton) {
+            return readsBefore(pButton, pLabel);
+        });
+        pTarget = before == buttons.crend() ? nullptr : *before;
+    }
+    if (pTarget) {
+        pTarget->setFocus(next ? Qt::TabFocusReason : Qt::BacktabFocusReason);
+        return;
+    }
+    leaveKeyboardButtons(next);
+}
+
+void TMainConsole::leaveKeyboardButtons(bool next)
+{
+    if (std::exchange(mKeyboardButtonsFromCaret, false)) {
+        mpHost->setCaretEnabled(true);
+        mUpperPane->moveCaretToLink(next);
+    } else if (mpCommandLine) {
+        mpCommandLine->setFocus(next ? Qt::TabFocusReason : Qt::BacktabFocusReason);
+    }
 }
 
 std::pair<bool, QString> TMainConsole::setLabelToolTip(const QString& name, const QString& text, double duration)
@@ -1878,7 +1983,8 @@ void TMainConsole::openPasswordEntry()
         typedAhead.remove(QChar::CarriageReturn);
         typedAhead.remove(QChar::LineFeed);
         if (!typedAhead.isEmpty()) {
-            mpPasswordEntry->setText(typedAhead);
+            mpPasswordEntry->takeTypedAhead(typedAhead);
+            mPasswordEntryTypedAhead = typedAhead;
             mpCommandLine->clear();
             mpHost->passwordEntryEdited();
         }
@@ -1918,6 +2024,15 @@ void TMainConsole::closePasswordEntry()
         mpCommandLine->setFocus(Qt::OtherFocusReason);
     }
     mpCommandLine->removeEventFilter(this);
+    // A game toggling ECHO takes the box away before the player has finished typing a command into the
+    // command line. What they typed there goes back; what they typed into the box may be a password, and
+    // so may text typed ahead of a slow prompt when the connection drops instead.
+    QString typedAhead = std::exchange(mPasswordEntryTypedAhead, QString());
+    if (mpHost->passwordEntryClosedByTheGame() && pEntry->holdsOnlyTypedAhead() && mpCommandLine->toPlainText().isEmpty()) {
+        mpCommandLine->restorePlayerTypedLine(typedAhead);
+    } else {
+        typedAhead.fill(QChar::Null);
+    }
     // Hidden before the deferred delete, or a WONT and a WILL in one read leave
     // two boxes alive. Qt zero-fills only a password-mode line edit's text.
     pEntry->setEchoMode(QLineEdit::Password);
@@ -2579,7 +2694,8 @@ std::pair<bool, QString> TMainConsole::setLabelMovie(const QString& name, const 
     myMovie->setFileName(moviePath);
     myMovie->stop();
     pL->setMovie(myMovie);
-    pL->model().mText = pL->text();
+    pL->model().setText(pL->text());
+    pL->imageMayHaveChanged();
     myMovie->start();
     return {true, QString()};
 }
@@ -4123,6 +4239,12 @@ void TMainConsole::closeEvent(QCloseEvent* event)
     const auto nestedLoopGuard = qScopeGuard([pHost = QPointer<Host>(mpHost)]() {
         if (pHost) {
             pHost->getLuaInterpreter()->leaveNestedEventLoop();
+        }
+    });
+    mpHost->pauseServerWrapFlush();
+    const auto serverWrapFlushGuard = qScopeGuard([pHost = QPointer<Host>(mpHost), event]() {
+        if (pHost && !event->isAccepted()) {
+            pHost->resumeServerWrapFlush();
         }
     });
     TEvent conCloseEvent{};

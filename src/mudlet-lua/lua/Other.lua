@@ -272,12 +272,20 @@ function xor(a, b)
 end
 
 
---- This function flags a variable to be saved by Mudlet's variable persistence system.
---- Variables are automatically unpacked into the global namespace when the profile is loaded.
---- They are saved to "SavedVariables.lua" when the profile is closed or saved.
+--- Flags a global variable to be written to "SavedVariables.lua" in the profile directory by saveVars().
+--- Nothing is saved or restored automatically: saveVars() and loadVars() have to be called by a script,
+--- for example from sysExitEvent and sysLoadEvent handlers. resetProfile() raises sysLoadEvent but not
+--- sysExitEvent, so call saveVars() before resetting or the changes since the last save are lost.
+--- loadVars() flags the variables it restores, so they need no new remember() call.
+---
+--- A variable that is nil when remember() or saveVars() runs is neither flagged nor saved: give it a
+--- value first, and call remember() again once it has been nil. That is also how to stop saving one,
+--- such as a variable a script no longer uses that loadVars() keeps restoring: set it to nil and call
+--- saveVars(). Functions, userdata and coroutines are not saved, inside a table or on their own.
 ---
 --- @usage remember("varName")
 ---
+--- @see saveVars
 --- @see loadVars
 function remember(varName)
   if not _saveTable then
@@ -288,10 +296,15 @@ end
 
 
 
---- This function should be primarily used by Mudlet. It loads saved settings in from the Mudlet home directory
---- and unpacks them into the global namespace.
+--- Reads the variables saveVars() wrote to "SavedVariables.lua" in the profile directory back into the
+--- global namespace. Mudlet does not call it, so call it when the variables are needed, for example
+--- from a sysLoadEvent handler. The variables it restores are flagged as remember() would, so the next
+--- saveVars() keeps them. The file is run as Lua code: without a "SavedVariables.lua", or with one that
+--- returns nothing, it restores nothing, and it raises an error when the file cannot be parsed or
+--- returns something other than what table.save() writes.
 ---
 --- @see remember
+--- @see saveVars
 function loadVars()
   local _sep = ""
   if string.char(getMudletHomeDir():byte()) == "/" then
@@ -305,15 +318,21 @@ function loadVars()
     table.load(l_SettingsFile, lt_VariableHolder)
     for k, v in pairs(lt_VariableHolder) do
       _G[k] = v
+      remember(k)
     end
   end
 end
 
 
 
---- This function should primarily be used by Mudlet. It saves the contents of _saveTable into a file for persistence.
+--- Writes the current values of the variables flagged with remember() to "SavedVariables.lua" in the
+--- profile directory, replacing what the file held. Mudlet does not call it, so call it whenever the
+--- variables should be kept, for example from a sysExitEvent handler. A flagged variable that is now nil
+--- is left out of the file and is no longer flagged.
 ---
---- @return true, or nil and an error message if the file could not be written
+--- @return true on success, or nil and a message when no variable has been flagged (the file is then
+---   left as it was) or the file could not be written
+--- @see remember
 --- @see loadVars
 function saveVars()
   local _sep = ""
@@ -323,6 +342,11 @@ function saveVars()
     _sep = "\\"
   end
   local l_SettingsFile = getMudletHomeDir() .. _sep .. "SavedVariables.lua"
+  -- checked before the refresh: empty here means only nil variables were remembered, and writing that
+  -- would wipe an earlier session's store, while a flagged variable that is nil now is meant to be dropped
+  if not _saveTable or next(_saveTable) == nil then
+    return nil, "saveVars: no variable has been flagged with remember(), so "..l_SettingsFile.." is left as it was"
+  end
   for k, _ in pairs(_saveTable) do
     remember(k)
   end
@@ -467,7 +491,7 @@ end
 
 --- Restores a Lua table from a data file that has been saved with table.save().
 ---
---- @usage Loads a serialized file into the globals table (only Mudlet should use this).
+--- @usage Loads a serialized file into the globals table, replacing any global of the same name.
 ---   <pre>
 ---   table.load(file)
 ---   </pre>
@@ -1144,23 +1168,52 @@ do
     return true
   end
 
+  -- one buffer per nesting level, as a handler can raise another event
+  local dispatchBuffers = {}
+  local dispatchDepth = 0
+
+  local function collectHandlers(buffer, n, list)
+    for key, func in pairs(list) do
+      buffer[n + 1], buffer[n + 2], buffer[n + 3] = list, key, func
+      n = n + 3
+    end
+    return n
+  end
+
   -- Dispatches an event to the registered lua functions.
   -- The order of registered events is not preserved.
   -- name: The name of the event that was fired.
   -- ...:  All arguments passed to the raised event.
   function dispatchEventToFunctions(event, ...)
-    if handlers[event] then
-      for _, func in pairs(handlers[event]) do
+    local eventHandlers, anyHandlers = handlers[event], handlers["*"]
+    if not eventHandlers and not anyHandlers then
+      return
+    end
+    -- Handlers run from a copy: Lua 5.1's next() can fail on a key added while pairs() walks the
+    -- table, and one registered mid-dispatch waits for the next event; one killed or replaced
+    -- mid-dispatch no longer holds its slot, so it is skipped
+    dispatchDepth = dispatchDepth + 1
+    local buffer = dispatchBuffers[dispatchDepth]
+    if not buffer then
+      buffer = {}
+      dispatchBuffers[dispatchDepth] = buffer
+    end
+    local n = 0
+    if eventHandlers then
+      n = collectHandlers(buffer, n, eventHandlers)
+    end
+    if anyHandlers then
+      n = collectHandlers(buffer, n, anyHandlers)
+    end
+    for i = 1, n, 3 do
+      local list, key, func = buffer[i], buffer[i + 1], buffer[i + 2]
+      buffer[i], buffer[i + 1], buffer[i + 2] = nil, nil, nil
+      if list[key] == func then
         local success, error = pcall(func, event, ...)
         if not success then showHandlerError(event, error) end
       end
     end
-    if handlers["*"] then
-      for _, func in pairs(handlers["*"]) do
-        local success, error = pcall(func, event, ...)
-        if not success then showHandlerError(event, error) end
-      end
-    end
+    dispatchDepth = dispatchDepth - 1
   end
 end
 
@@ -1349,7 +1402,8 @@ function verbosePackageInstall(fileName)
   -- That is all for installing, now to announce the result to the user:
   mudlet.Locale = mudlet.Locale or loadTranslations("Mudlet")
   if ok and reason and reason ~= "" then
-    -- installPackage() asks for a quiet install, so nothing else puts the reason on the console
+    -- A quiet install keeps a broken item's error off the console, so it is shown here; a file that did not
+    -- load in full was already warned of, and is named again as a reason the package is not all working
     local partialText = mudlet.Locale.packageInstallPartial.message
     partialText = string.format(partialText, packageName, reason)
     local warnPrefix = mudlet.Locale.prefixWarn.message
@@ -1406,6 +1460,10 @@ local oldInstallPackage = installPackage
 -- Override of original installPackage to allow installs from URL
 -- @param target - file path or url (starting with http(s):// and ending with package file extensions)
 function installPackage(target)
+  -- the C++ side is what reports a bad argument in the same words as its siblings
+  if type(target) ~= "string" then
+    return oldInstallPackage(target)
+  end
   local file = packageFileFromUrl(target)
   if file then
     return installPackageFromUrl(file, target)
@@ -1545,6 +1603,7 @@ local oldgetConfig = getConfig
 -- Left out on purpose: "ircNickName" (with no nick stored it reads as a new random one, and writing it
 -- back also replaces the app-wide nick) and "ircPassword" (it would show up in every dump of the table)
 local configOptions = {
+  "accessibleLabels",
   "advertiseScreenReader",
   "ambiguousEAsianWidthCharacters",
   "announceIncomingText",
@@ -1587,6 +1646,8 @@ local configOptions = {
   "mapRoundRooms",
   "mapShowGrid",
   "mapShowRoomBorders",
+  "mapStitchAreas",
+  "mapStyle",
   "mapSymbolFont",
   "mapSymbolFontOnlyUseSelected",
   "mapSymbolFontScaling",

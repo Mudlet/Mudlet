@@ -64,6 +64,9 @@
 #include <QSplashScreen>
 #include <QSslConfiguration>
 #include <QStringList>
+#if defined(INCLUDE_3DMAPPER)
+#include <QSurfaceFormat>
+#endif
 #include <QTranslator>
 #if defined(Q_OS_WINDOWS)
 #include <QThread>
@@ -71,6 +74,7 @@
 #include <pthread.h>
 #endif
 #include "TAccessibleConsole.h"
+#include "TAccessibleLabel.h"
 #include "TAccessibleTextEdit.h"
 #include "FileOpenHandler.h"
 #include "SentryWrapper.h"
@@ -600,6 +604,14 @@ int main(int argc, char* argv[])
     QApplication::setAttribute(Qt::AA_ShareOpenGLContexts);
 #endif // INCLUDE_3DMAPPER
 #endif
+#if defined(INCLUDE_3DMAPPER)
+    {
+        // Qt's Wayland backend otherwise composes windows with OpenGL ES, which cannot share with the 3D views' desktop contexts
+        QSurfaceFormat format = QSurfaceFormat::defaultFormat();
+        format.setRenderableType(QSurfaceFormat::OpenGL);
+        QSurfaceFormat::setDefaultFormat(format);
+    }
+#endif
 
     // Loading a platform plugin with no display server aborts, so print-and-exit options get an
     // application that needs no display. The GUI one stays a raw pointer: its delete at the end of main()
@@ -615,6 +627,7 @@ int main(int argc, char* argv[])
     if (app) {
         QAccessible::installFactory(TAccessibleConsole::consoleFactory);
         QAccessible::installFactory(TAccessibleTextEdit::textEditFactory);
+        QAccessible::installFactory(TAccessibleLabel::labelFactory);
 
         // Turn the cursor into the waiting one during startup, so something shows
         // activity even if the quiet, no splashscreen startup has been used
@@ -862,12 +875,11 @@ int main(int argc, char* argv[])
     }
 
     // Configure the media backend - does not work in mudlet class c'tor.
-    // On Windows, use FFmpeg which supports .ogg/.opus (native backend doesn't).
-    // On macOS, use darwin (AVFoundation) which works better than FFmpeg.
-#if defined(Q_OS_WINDOWS)
+    // FFmpeg plays .ogg/.opus, which the native Windows backend doesn't, and is what Linux gets by Qt's
+    // default. macOS uses it too: only FFmpeg feeds the shared output, TAudioMixer, which keeps Bluetooth
+    // headphones from being claimed for every sound.
+#if defined(Q_OS_WINDOWS) || defined(Q_OS_MACOS)
     const QByteArray defaultMediaBackend("ffmpeg");
-#elif defined(Q_OS_MACOS)
-    const QByteArray defaultMediaBackend("darwin");
 #else
     const QByteArray defaultMediaBackend;
 #endif

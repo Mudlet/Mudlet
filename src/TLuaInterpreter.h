@@ -220,6 +220,7 @@ public:
     static int sendMSDP(lua_State*);
     static int auditAreas(lua_State*);
     static int getAreaExits(lua_State*);
+    static int getAreaGraph(lua_State*);
     static int setMergeTables(lua_State*);
     static int addSupportedTelnetOption(lua_State*);
     static int setDoor(lua_State*);
@@ -379,6 +380,7 @@ public:
     static int setCustomEnvColor(lua_State*);
     static int roomLocked(lua_State*);
     static int setAreaName(lua_State*);
+    static int setAreaGraphPosition(lua_State*);
     static int getRoomCoordinates(lua_State*);
     static int setRoomCoordinates(lua_State*);
     static int roomExists(lua_State*);
@@ -387,6 +389,7 @@ public:
     static int createRoomID(lua_State*);
     static int setRoomArea(lua_State*);
     static int resetRoomArea(lua_State*);
+    static int resetAreaGraphLayout(lua_State*);
     static int getRoomArea(lua_State*);
     static int denyCurrentSend(lua_State*);
     static int tempBeginOfLineTrigger(lua_State*);
@@ -440,6 +443,7 @@ public:
     static int setFont(lua_State*);
     static int getFont(lua_State*);
     static int setFontSize(lua_State*);
+    static int setMiniConsoleFontSize(lua_State*);
     static int getFontSize(lua_State*);
     static int openUserWindow(lua_State*);
     static int setUserWindowTitle(lua_State*);
@@ -540,6 +544,12 @@ public:
     static int deleteScrollBox(lua_State*);
     static int setLabelToolTip(lua_State*);
     static int getLabelToolTip(lua_State*);
+    static int setLabelAccessibleName(lua_State*);
+    static int getLabelAccessibleName(lua_State*);
+    static int setLabelAccessibleRole(lua_State*);
+    static int getLabelAccessibleRole(lua_State*);
+    static int setLabelLiveRegion(lua_State*);
+    static int getLabelLiveRegion(lua_State*);
     static int setLabelCursor(lua_State*);
     static int setLabelCustomCursor(lua_State*);
     static int moveWindow(lua_State*);
@@ -587,6 +597,7 @@ public:
     static int showToolBar(lua_State*);
     static int hideToolBar(lua_State*);
     static int loadReplay(lua_State*);
+    static int loadRawFile(lua_State*);
     static int setBold(lua_State*);
     static int setItalics(lua_State*);
     static int setReverse(lua_State*);
@@ -622,6 +633,9 @@ public:
     static int pauseSounds(lua_State*);
     static int pauseMusic(lua_State*);
     static int pauseVideos(lua_State*);
+    static int updateSounds(lua_State*);
+    static int setMediaListener(lua_State*);
+    static int getMediaListener(lua_State*);
     static int purgeMediaCache(lua_State*);
     static int setBorderSizes(lua_State*);
     static int setBorderTop(lua_State*);
@@ -711,6 +725,9 @@ public:
     static int addMapEvent(lua_State*);
     static int removeMapEvent(lua_State*);
     static int getMapEvents(lua_State*);
+    static int getMapEnvironmentKit(lua_State*);
+    static int getMapEnvironmentKits(lua_State*);
+    static int setMapEnvironmentKit(lua_State*);
     static int addMapMenu(lua_State*);
     static int removeMapMenu(lua_State*);
     static int getMapMenus(lua_State*);
@@ -920,6 +937,8 @@ public slots:
     void slot_deleteSender(int, QProcess::ExitStatus);
 
 private:
+    static int loadReplayFile(lua_State*, const char* functionName);
+    static int setConsoleFontSize(lua_State*, const char* functionName, const bool windowNamed);
     static bool getVerifiedBool(lua_State*, const char* functionName, const int pos, const char* publicName, const bool isOptional = false);
     static QString getVerifiedString(lua_State*, const char* functionName, const int pos, const char* publicName, const bool isOptional = false);
     static bool checkStringArg(lua_State*, const char* functionName, const int pos, const char* publicName, const bool isOptional = false);
@@ -1115,8 +1134,9 @@ private:
     bool mGlobalsHandlersLinger = false;
     int mIndexHandlerRef = LUA_NOREF;
     int mNewindexHandlerRef = LUA_NOREF;
-    // expandAlias() overwrites "command" and the captures; the caller's are saved here (one entry per
-    // nesting level) and restored when the pass returns - "command" only for an alias script.
+    // A nested alias pass - from expandAlias(), feedTriggers(), or an alias's or trigger's command field - overwrites
+    // "command" and the captures; the caller's are saved here (one entry per nesting level) and
+    // restored when the pass returns - "command" only for an alias script's expandAlias().
     struct NestedDispatchState
     {
         std::vector<std::string> captureGroupList;

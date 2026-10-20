@@ -27,6 +27,7 @@
 #include <functional>
 #include <optional>
 #include <QHash>
+#include <QPointer>
 #include <QRegularExpression>
 #include <QTimer>
 #include <QKeyEvent>
@@ -61,6 +62,9 @@ public:
     static const int csmNameRole{Qt::UserRole};
     static QChar firstInvalidProfileNameChar(const QString& name);
     static bool profileNameUsableAsIs(const QString& name);
+    // Whether a removed profile's saved sign-in is still being deleted under this name; see
+    // namesWithSignInBeingRemoved(). For anything that creates a profile outside this dialog, such as a telnet:// link.
+    static bool signInRemovalPending(const QString& name);
     static QString profileFolderPath(const QString& profilesPath, const QString& profile);
     static const QString scmAllowedProfileNameChars;
     static const QRegularExpression scmUnusableProfileNameChars;
@@ -133,6 +137,7 @@ private:
     };
     CopiedProfileData captureProfileData() const;
     void saveDefaultProfileCopy(const QString& profileName, const CopiedProfileData& data, const QString& oldPassword);
+    void writeCatalogDetailsTheFolderLacks(const QString& profileName, const QString& catalogName);
     bool hasCustomIcon(const QString&) const;
     void setProfileIcon() const;
     void loadCustomProfile(const QString&) const;
@@ -151,8 +156,8 @@ private:
     // counted, because the same name can be removed again before the first removal answers.
     static QHash<QString, int>& namesWithSignInBeingRemoved();
     static QString removalKey(const QString& name);
-    static bool signInRemovalPending(const QString& name);
-    static void forgetSignInOfRemovedProfile(const QString& profile);
+    // passwordsRemoved: whether the profile's saved passwords were deleted; the player is told if they or the sign-in were not
+    static void forgetSignInOfRemovedProfile(const QString& profile, QPointer<dlgConnectionProfiles> dialog, bool passwordsRemoved);
     // Test-only: when set, it is handed each removal of a removed profile's sign-in to start, so a test
     // can hold one back the way a slow keychain does
     static std::function<void(std::function<void()> startRemoval)>& signInRemovalStarterForTesting();
@@ -218,6 +223,9 @@ private:
     // true while a profile is selected or refreshed programmatically, so that
     // it is not mistaken for the user picking a game from the list
     bool mProgrammaticProfileSelection = false;
+    // the selected profile's ssl_tsl as this dialog last read or wrote it; Preferences and the
+    // server can change that file while the dialog stays open
+    QString mSslTslSeen;
     // dialog height before it was shrunk to fit the welcome message
     int mDialogHeightBeforeShrink = 0;
     QString mDateTimeFormat;

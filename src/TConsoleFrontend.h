@@ -272,8 +272,10 @@ public:
     virtual void regenerateToolBars(const std::list<TAction*>& rootActions) = 0;
     virtual void regenerateEasyButtonBars(const std::list<TAction*>& rootActions) = 0;
     // Takes an action's bars out of the window without destroying them, for an action that is being
-    // removed or has stopped being a root one.
+    // removed.
     virtual void detachActionBars(TAction* pAction) = 0;
+    // Destroys an action's own bars, for one that is now a menu on another's.
+    virtual void disposeActionBars(TAction* pAction) = 0;
     virtual bool hasEasyButtonBar(TAction* pAction) const = 0;
     // Checks or unchecks the action's button and its entry in a bar's menu, where it has them.
     virtual void setActionButtonChecked(TAction* pAction, bool checked) = 0;

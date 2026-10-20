@@ -4635,16 +4635,12 @@ describe("Tests db:create with _unique naming unknown columns", function()
   end)
 
   it("keeps a constraint a later db:create moves to another column", function()
-    -- both are column-level UNIQUEs, which the sheet's SQL carries without naming
-    -- the column they sit on: counting them would read the move as no change and
-    -- let the rule the sheet enforces today go
+    -- both are column-level UNIQUEs: counting them without the column each sits on
+    -- would read the move as no change and let the rule the sheet enforces today go
     local mydb = createCollectingWarnings({people = {name = "", city = "", _unique = "name"}})
     assert.is_true(db:add(mydb.people, {name = "Ada", city = "London"}))
     assert.is_nil(db:add(mydb.people, {name = "Ada", city = "Paris"}))
 
-    -- the compound entry is what makes the sheet's SQL differ at all: two
-    -- column-level UNIQUEs on their own compare equal whichever column they sit on,
-    -- so the rule would survive by accident rather than by being kept
     local moved = createCollectingWarnings({people = {name = "", city = "",
       _unique = {"city", {"name", "city"}, "nmae"}}})
     assert.is_nil(db:add(moved.people, {name = "Ada", city = "Berlin"}))
@@ -4678,6 +4674,233 @@ describe("Tests db:create with _unique naming unknown columns", function()
     local ok, err = pcall(function() db:merge_unique(mydb.people, {{name = "Ada"}}) end)
     assert.is_false(ok)
     assert.is_truthy(string.find(err, "only works on a sheet with a unique index", 1, true))
+  end)
+end)
+
+describe("Tests db:create moving a single-column UNIQUE", function()
+  local dbName = "uniquemovetestingonly"
+  local dbFile = getMudletHomeDir() .. "/Database_" .. dbName .. ".db"
+
+  local function collectingWarnings(fn)
+    local collected = {}
+    -- through _G: a spec file's globals are its own
+    local originalPrintError = _G.printError
+    _G.printError = function(msg) collected[#collected + 1] = msg end
+    finally(function() _G.printError = originalPrintError end)
+
+    local result = fn()
+    _G.printError = originalPrintError
+    return result, table.concat(collected, "\n")
+  end
+
+  local function createCollectingWarnings(sheets)
+    return collectingWarnings(function() return db:create(dbName, sheets) end)
+  end
+
+  after_each(function()
+    if not pcall(function() db:close(dbName) end) then
+      db.__conn[dbName] = nil
+    end
+    os.remove(dbFile)
+  end)
+
+  it("moves a single-column UNIQUE to the column it now names", function()
+    local mydb = createCollectingWarnings({people = {name = "", city = "", _unique = {"name"}}})
+    assert.is_true(db:add(mydb.people, {name = "Bob", city = "Lancre"}))
+
+    local moveWarnings
+    mydb, moveWarnings = createCollectingWarnings({people = {name = "", city = "", _unique = {"city"}}})
+    assert.are.equal("", moveWarnings)
+
+    assert.is_true(db:add(mydb.people, {name = "Bob", city = "Ankh-Morpork"}))
+    local added, warnings = collectingWarnings(function() return db:add(mydb.people, {name = "Nanny", city = "Lancre"}) end)
+    assert.is_nil(added)
+    assert.is_truthy(string.find(warnings, "UNIQUE constraint failed: people.city", 1, true))
+    assert.are.equal(2, #db:fetch(mydb.people))
+  end)
+
+  it("moves a single-column UNIQUE and adds a column in the same create", function()
+    local mydb = createCollectingWarnings({people = {name = "", city = "", _unique = {"name"}}})
+    assert.is_true(db:add(mydb.people, {name = "Bob", city = "Lancre"}))
+
+    local moveWarnings
+    mydb, moveWarnings = createCollectingWarnings({people = {name = "", city = "", region = "Ramtops", _unique = {"city"}}})
+    assert.are.equal("", moveWarnings)
+
+    local rows = db:fetch(mydb.people)
+    assert.are.equal(1, #rows)
+    assert.are.equal("Ramtops", rows[1].region)
+    assert.is_true(db:add(mydb.people, {name = "Bob", city = "Ankh-Morpork", region = "Sto Plains"}))
+    local added, warnings = collectingWarnings(function() return db:add(mydb.people, {name = "Nanny", city = "Lancre"}) end)
+    assert.is_nil(added)
+    assert.is_truthy(string.find(warnings, "UNIQUE constraint failed: people.city", 1, true))
+  end)
+
+  -- warned rather than raised: this create loaded while the move went unnoticed
+  it("keeps the sheet as it was and warns when the column it now names holds duplicates", function()
+    local mydb = createCollectingWarnings({people = {name = "", city = "", _unique = {"name"}}})
+    assert.is_true(db:add(mydb.people, {name = "Bob", city = "Lancre"}))
+    assert.is_true(db:add(mydb.people, {name = "Nanny", city = "Lancre"}))
+
+    local moved, warnings = createCollectingWarnings({people = {name = "", city = "", _unique = {"city"}}})
+    assert.is_truthy(moved)
+    assert.is_truthy(string.find(warnings, 'db:create - people - _unique now asks for "city" to be unique', 1, true))
+
+    local rows = db:fetch(mydb.people, nil, {mydb.people.name})
+    assert.are.equal(2, #rows)
+    assert.are.equal("Bob", rows[1].name)
+    assert.are.equal("Nanny", rows[2].name)
+    local added, warnings = collectingWarnings(function() return db:add(mydb.people, {name = "Bob", city = "Ankh-Morpork"}) end)
+    assert.is_nil(added)
+    assert.is_truthy(string.find(warnings, "UNIQUE constraint failed: people.name", 1, true))
+  end)
+
+  it("keeps the UNIQUE and still adds the column when the sheet holds more than one row", function()
+    local mydb = createCollectingWarnings({people = {name = "", _unique = {"name"}}})
+    assert.is_true(db:add(mydb.people, {name = "Bob"}))
+    assert.is_true(db:add(mydb.people, {name = "Nanny"}))
+
+    local warnings
+    mydb, warnings = createCollectingWarnings({people = {name = "", region = "Ramtops", _unique = {"region"}}})
+    assert.is_truthy(string.find(warnings, 'db:create - people - _unique now asks for "region" to be unique ' ..
+      '("region" is added by this db:create, so every row takes its default)', 1, true))
+    local rows = db:fetch(mydb.people)
+    assert.are.equal(2, #rows)
+    assert.are.equal("Ramtops", rows[1].region)
+    local added = collectingWarnings(function() return db:add(mydb.people, {name = "Bob", region = "Ankh"}) end)
+    assert.is_nil(added)
+  end)
+
+  it("keeps the values of a column whose name holds the sheet's", function()
+    local mydb = createCollectingWarnings({people = {people_id = 0, name = "", city = "", _unique = {"name"}}})
+    assert.is_true(db:add(mydb.people, {people_id = 7, name = "Bob", city = "Lancre"}))
+
+    mydb = createCollectingWarnings({people = {people_id = 0, name = "", city = "", _unique = {"city"}}})
+
+    local rows = db:fetch(mydb.people)
+    assert.are.equal(1, #rows)
+    assert.are.equal(7, rows[1].people_id)
+    assert.is_true(db:add(mydb.people, {people_id = 8, name = "Bob", city = "Ankh-Morpork"}))
+  end)
+
+  it("leaves alone a sheet whose table names its columns in brackets", function()
+    -- the rebuild writes the sheet's own CREATE TABLE, so the CHECK below would go
+    local tableDefinition = "CREATE TABLE people (_row_id INTEGER PRIMARY KEY AUTOINCREMENT, " ..
+      "[name] TEXT UNIQUE ON CONFLICT FAIL CHECK(length(name) < 10), city TEXT)"
+    createCollectingWarnings({people = {name = "", city = ""}})
+    db.__conn[dbName]:execute("DROP TABLE people")
+    db.__conn[dbName]:execute(tableDefinition)
+
+    createCollectingWarnings({people = {name = "", city = "", _unique = {"name"}}})
+
+    local cursor = db.__conn[dbName]:execute("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'people'")
+    local row = cursor:fetch({}, "a")
+    cursor:close()
+    assert.are.equal(tableDefinition, row.sql)
+  end)
+
+  local function tableSql()
+    local cursor = db.__conn[dbName]:execute("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'people'")
+    local row = cursor:fetch({}, "a")
+    cursor:close()
+    return row.sql
+  end
+
+  local function createFromTable(tableDefinition)
+    if not db.__conn[dbName] then
+      createCollectingWarnings({people = {name = "", city = ""}})
+    end
+    db.__conn[dbName]:execute("DROP TABLE people")
+    db.__conn[dbName]:execute(tableDefinition)
+  end
+
+  it("leaves alone a sheet whose table quotes a column name in a way it can't read", function()
+    local tableDefinition = "CREATE TABLE people (_row_id INTEGER PRIMARY KEY AUTOINCREMENT, " ..
+      "'name' TEXT UNIQUE ON CONFLICT FAIL CHECK(length(name) < 10), city TEXT)"
+    createFromTable(tableDefinition)
+
+    createCollectingWarnings({people = {name = "", city = "", _unique = {"name"}}})
+
+    assert.are.equal(tableDefinition, tableSql())
+  end)
+
+  it("leaves alone a sheet whose table brackets a name holding a comma or the word unique", function()
+    for _, tableDefinition in ipairs({
+      "CREATE TABLE people (_row_id INTEGER PRIMARY KEY AUTOINCREMENT, " ..
+        "[home, city] TEXT UNIQUE ON CONFLICT FAIL CHECK(length([home, city]) < 10), name TEXT)",
+      "CREATE TABLE people (_row_id INTEGER PRIMARY KEY AUTOINCREMENT, " ..
+        "`home, city` TEXT UNIQUE ON CONFLICT FAIL CHECK(length(`home, city`) < 10), name TEXT)",
+    }) do
+      createFromTable(tableDefinition)
+      createCollectingWarnings({people = {["home, city"] = "", name = "", _unique = {"home, city"}}})
+      assert.are.equal(tableDefinition, tableSql())
+    end
+
+    for _, tableDefinition in ipairs({
+      "CREATE TABLE people (_row_id INTEGER PRIMARY KEY AUTOINCREMENT, [is unique] TEXT CHECK(length([is unique]) < 10), name TEXT)",
+      "CREATE TABLE people (_row_id INTEGER PRIMARY KEY AUTOINCREMENT, `is unique` TEXT CHECK(length(`is unique`) < 10), name TEXT)",
+    }) do
+      createFromTable(tableDefinition)
+      createCollectingWarnings({people = {["is unique"] = "", name = ""}})
+      assert.are.equal(tableDefinition, tableSql())
+    end
+  end)
+
+  it("moves a UNIQUE on a sheet whose table brackets or backquotes its column names", function()
+    for _, quotes in ipairs({{"[", "]"}, {"`", "`"}}) do
+      local open, close = quotes[1], quotes[2]
+      createFromTable("CREATE TABLE people (_row_id INTEGER PRIMARY KEY AUTOINCREMENT, " ..
+        open .. "name" .. close .. " TEXT UNIQUE ON CONFLICT FAIL, " .. open .. "city" .. close .. " TEXT)")
+      local mydb = createCollectingWarnings({people = {name = "", city = "", _unique = {"name"}}})
+      assert.is_true(db:add(mydb.people, {name = "Bob", city = "Lancre"}))
+
+      mydb = createCollectingWarnings({people = {name = "", city = "", _unique = {"city"}}})
+
+      assert.is_true(db:add(mydb.people, {name = "Bob", city = "Ankh-Morpork"}))
+      local added = collectingWarnings(function() return db:add(mydb.people, {name = "Nanny", city = "Lancre"}) end)
+      assert.is_nil(added)
+    end
+  end)
+
+  it("names only the cause that applies when the column it now names holds duplicates", function()
+    local mydb = createCollectingWarnings({people = {name = "", city = "", region = "", _unique = {"region"}}})
+    assert.is_true(db:add(mydb.people, {name = "Bob", city = "Lancre", region = "a"}))
+    assert.is_true(db:add(mydb.people, {name = "Bob", city = "Lancre", region = "b"}))
+
+    local _, warnings = createCollectingWarnings({people = {name = "", city = "", region = "", _unique = {"city"}}})
+    assert.is_truthy(string.find(warnings, '"city" to be unique', 1, true))
+    assert.is_nil(string.find(warnings, "added by this db:create", 1, true))
+
+    -- a multi-column UNIQUE changes the constraints themselves, and that rebuild raises over duplicates
+    local ok, err = pcall(createCollectingWarnings, {people = {name = "", city = "", region = "", _unique = {{"name", "city"}}}})
+    assert.is_false(ok)
+    assert.is_truthy(string.find(err, "people.name, people.city to be unique together", 1, true))
+
+    ok, err = pcall(createCollectingWarnings, {people = {name = "", city = "", region = "", kingdom = "Lancre", _unique = {{"name", "kingdom"}}}})
+    assert.is_false(ok)
+    assert.is_truthy(string.find(err, "people.kingdom is added by this db:create, so every row takes its default", 1, true))
+
+    _, warnings = createCollectingWarnings({people = {name = "", city = "", region = "", kingdom = "Lancre", _unique = {"kingdom"}}})
+    assert.is_truthy(string.find(warnings, '("kingdom" is added by this db:create, so every row takes its default)', 1, true))
+  end)
+
+  it("drops the rows a move would clash on only when given force, under IGNORE and REPLACE", function()
+    for _, violations in ipairs({"IGNORE", "REPLACE"}) do
+      local mydb = createCollectingWarnings({people = {name = "", city = "", _unique = {"name"}, _violations = violations}})
+      assert.is_true(db:add(mydb.people, {name = "Bob", city = "Lancre"}))
+      assert.is_true(db:add(mydb.people, {name = "Nanny", city = "Lancre"}))
+      local moved = {people = {name = "", city = "", _unique = {"city"}, _violations = violations}}
+
+      local _, warnings = createCollectingWarnings(moved)
+      assert.is_truthy(string.find(warnings, "pass force to db:create to delete all but one of the rows", 1, true))
+      assert.are.equal(2, #db:fetch(mydb.people))
+
+      mydb = collectingWarnings(function() return db:create(dbName, moved, true) end)
+      assert.are.equal(1, #db:fetch(mydb.people))
+
+      db:close(dbName)
+      os.remove(dbFile)
+    end
   end)
 end)
 

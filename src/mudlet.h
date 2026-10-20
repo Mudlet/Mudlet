@@ -109,6 +109,7 @@ class TUiTour;
 class mudlet : public QMainWindow, public Ui::main_window, public TAppFrontend
 {
     Q_OBJECT
+    friend class ConnectionDialogOfflineProfileTest;
 
 public:
     Q_DISABLE_COPY(mudlet)
@@ -116,7 +117,7 @@ public:
     ~mudlet() override;
 
     static bool loadEdbeeTheme(const QString& themeName, const QString& themeFile);
-    static bool loadLuaFunctionList();
+    static bool loadLuaFunctionList(const QString& fileName = qsl(":/lua-function-list.json"));
     static mudlet* self();
     // This method allows better debugging when mudlet::self() is called inappropriately.
     static void start();

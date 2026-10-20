@@ -1802,7 +1802,8 @@ void TTextEdit::highlightSelection()
     }
 
     if (QAccessible::isActive()) {
-        QAccessibleTextSelectionEvent event(this, offsetForPosition(mPA.y(), mPA.x()), offsetForPosition(mPB.y(), mPB.x()));
+        const auto [startOffset, endOffset] = accessibleSelection();
+        QAccessibleTextSelectionEvent event(this, startOffset, endOffset);
         QAccessible::updateAccessibility(&event);
     }
 }
@@ -1822,6 +1823,7 @@ void TTextEdit::unHighlight()
             }
         }
     }
+    mPBTakingNewline = QPoint(-1, -1);
     if (QAccessible::isActive()) {
         QAccessibleTextSelectionEvent event(this, -1, -1);
         QAccessible::updateAccessibility(&event);
@@ -2662,8 +2664,12 @@ void TTextEdit::slot_copySelectionToClipboardImage()
         // still finds the characters that are about to be drawn.
         const int shift = mpBuffer->mBatchDeleteSize;
         if (mPA.y() - shift >= 0 && mPB.y() - shift <= lastBufferLine) {
+            const bool takesNewline = mPB == mPBTakingNewline;
             mPA.ry() -= shift;
             mPB.ry() -= shift;
+            if (takesNewline) {
+                mPBTakingNewline = mPB;
+            }
         } else {
             // The selected lines are gone for good, so copy the visible area
             // rather than whatever has since taken their place in the buffer.
@@ -2735,6 +2741,8 @@ void TTextEdit::slot_copySelectionToClipboardImage()
         return;
     }
 
+    // unHighlight() forgets that the selection takes in a newline, but the same selection is put back below
+    const QPoint takingNewline = mPBTakingNewline;
     if (copyingSelection) {
         // deselect to prevent inverted colours in image
         unHighlight();
@@ -2744,6 +2752,7 @@ void TTextEdit::slot_copySelectionToClipboardImage()
     auto result = drawTextForClipboard(painter, rect, lineOffset);
 
     if (copyingSelection) {
+        mPBTakingNewline = takingNewline;
         highlightSelection();
     }
     // the pixmap cannot be read back while a painter is still active on it
@@ -2854,9 +2863,13 @@ QString TTextEdit::getSelectedText(const QChar& newlineChar, const bool showTime
     // mPA QPoint where selection started
     // mPB QPoint where selection ended
     // try to prevent crash if buffer is batch deleted
-    if (mPA.y() > mpBuffer->lineBuffer.size() - 1 || mPB.y() > mpBuffer->lineBuffer.size() - 1) {
-        mPA.ry() -= mpBuffer->mBatchDeleteSize;
-        mPB.ry() -= mpBuffer->mBatchDeleteSize;
+    if (const int trimmed = selectionLinesTrimmed()) {
+        const bool takesNewline = mPB == mPBTakingNewline;
+        mPA.ry() -= trimmed;
+        mPB.ry() -= trimmed;
+        if (takesNewline) {
+            mPBTakingNewline = mPB;
+        }
     }
     qsizetype startLine = std::max(0, mPA.y());
     qsizetype endLine = std::min<qsizetype>(mPB.y(), (mpBuffer->lineBuffer.size() - 1));
@@ -2911,6 +2924,9 @@ QString TTextEdit::getSelectedText(const QChar& newlineChar, const bool showTime
             }
         }
         text.append(line);
+    }
+    if (mPB == mPBTakingNewline && !mpBuffer->wrapsFromPreviousLine(static_cast<int>(endLine) + 1)) {
+        text.append(newlineChar);
     }
     return text;
 }
@@ -4071,6 +4087,24 @@ void TTextEdit::reportCodepointErrors()
 }
 #endif
 
+void TTextEdit::moveCaretToLink(bool first)
+{
+    int line = 0;
+    int column = 0;
+    if (!mpBuffer || !mpBuffer->findNextLink(0, -1, line, column)) {
+        return;
+    }
+    // Walked forward rather than searched back from the end, which would skip a link the end sits on
+    int nextLine = line;
+    int nextColumn = column;
+    bool wrapped = false;
+    while (!first && mpBuffer->findNextLink(line, column, nextLine, nextColumn, &wrapped) && !wrapped) {
+        line = nextLine;
+        column = nextColumn;
+    }
+    setCaretPosition(line, column);
+}
+
 void TTextEdit::setCaretPosition(int line, int column)
 {
     mCaretLine = line;
@@ -4471,16 +4505,22 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
         }
     };
 
-    auto navigateToLink = [&](bool forward) {
+    // True when it handed the focus on to the script buttons, which the key press then belongs to
+    auto navigateToLink = [&](bool forward) -> bool {
         if (!mpBuffer) {
-            return;
+            return false;
         }
         int outLine = 0;
         int outCol = 0;
         bool wrapped = false;
         const bool found = forward ? mpBuffer->findNextLink(mCaretLine, mCaretColumn, outLine, outCol, &wrapped) : mpBuffer->findPreviousLink(mCaretLine, mCaretColumn, outLine, outCol, &wrapped);
+        // Past either end of the links, or with none, the focus goes on to the script buttons instead of wrapping,
+        // as a web page's controls follow its links
+        if ((!found || wrapped) && mpHost->mainConsoleView() && mpHost->mainConsoleView()->focusKeyboardButton(forward)) {
+            return true;
+        }
         if (!found) {
-            return;
+            return false;
         }
         newCaretLine = outLine;
         newCaretColumn = outCol;
@@ -4497,6 +4537,7 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
                 pMudlet->announce(message, QString(), true);
             }
         }
+        return false;
     };
 
     auto updateSelection = [&](bool useNewColumn) {
@@ -4737,25 +4778,37 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
         }
 
         if (!(event->modifiers() & (Qt::ShiftModifier | Qt::ControlModifier))) {
-            navigateToLink(true);
+            if (navigateToLink(true)) {
+                event->accept();
+                return;
+            }
         }
         break;
     }
     case Qt::Key_Backtab: {
-        navigateToLink(false);
+        if (navigateToLink(false)) {
+            event->accept();
+            return;
+        }
         break;
     }
     // Alternate forward/backward link navigation for cases where Tab or
     // Shift+Tab is consumed by the caret-mode toggle or reassigned by the user.
     case Qt::Key_BracketRight: {
         if (event->modifiers().testFlag(Qt::ControlModifier)) {
-            navigateToLink(true);
+            if (navigateToLink(true)) {
+                event->accept();
+                return;
+            }
         }
         break;
     }
     case Qt::Key_BracketLeft: {
         if (event->modifiers().testFlag(Qt::ControlModifier)) {
-            navigateToLink(false);
+            if (navigateToLink(false)) {
+                event->accept();
+                return;
+            }
         }
         break;
     }
@@ -4810,4 +4863,53 @@ int TTextEdit::offsetForPosition(int line, int column) const
     ret += column;
 
     return ret;
+}
+
+// Lines lost off the front of a buffer at its limit shift every index down, while mPA and mPB
+// stay on the old indexes until getSelectedText() catches them up
+int TTextEdit::selectionLinesTrimmed() const
+{
+    const qsizetype lastLine = mpBuffer->lineBuffer.size() - 1;
+    return (mPA.y() > lastLine || mPB.y() > lastLine) ? mpBuffer->mBatchDeleteSize : 0;
+}
+
+// The characters of the accessible text the selection covers, 0 for none: a double-click on a
+// space or a triple-click on an empty line leaves a region but no cells. mPB is the last selected
+// cell, and a whole-line selection leaves it on the newline cell (x == line length), which counts
+// only when mPBTakingNewline says so. Walks just the selected lines, so it stays cheap however
+// long the buffer is.
+int TTextEdit::accessibleSelectionLength() const
+{
+    if (mSelectedRegion.isEmpty()) {
+        return 0;
+    }
+    const int trimmed = selectionLinesTrimmed();
+    const int firstLine = mPA.y() - trimmed;
+    const int lastLine = mPB.y() - trimmed;
+    const int lineCount = static_cast<int>(std::min(mpBuffer->lineBuffer.size(), static_cast<qsizetype>(mpBuffer->buffer.size())));
+    if (firstLine < 0 || firstLine > lastLine || lastLine >= lineCount) {
+        return 0;
+    }
+    const bool takesNewline = mPB == mPBTakingNewline;
+    // the text has no newline after its last line
+    if (takesNewline && lastLine == lineCount - 1) {
+        return 0;
+    }
+    const int lastLineLength = static_cast<int>(mpBuffer->buffer.at(lastLine).size());
+    int length = (takesNewline ? lastLineLength + 1 : std::min(mPB.x() + 1, lastLineLength)) - mPA.x();
+    for (int y = firstLine; y < lastLine; ++y) {
+        length += mpBuffer->line(y).length() + 1;
+    }
+    return std::max(length, 0);
+}
+
+// Start and one past the end, as the accessible text counts them, or (0, 0) for no selection
+std::pair<int, int> TTextEdit::accessibleSelection() const
+{
+    const int length = accessibleSelectionLength();
+    if (length == 0) {
+        return {0, 0};
+    }
+    const int start = offsetForPosition(mPA.y() - selectionLinesTrimmed(), mPA.x());
+    return {start, start + length};
 }

@@ -10,7 +10,10 @@ A modest starter interface for new profiles: an adjustable dock with
 your map, tabbed chat (All/Tells/Channels with unread counters) and
 health, mana, movement and experience gauges - built only from data your
 game actually provides (GMCP, MSDP, or recognisable prompt and score
-lines). Nothing appears until your game has sent something to show.
+lines). An enemy bar follows your opponent's health, from GMCP or
+MSDP or from the sentence some games print describing it ("The orc
+has a few scratches."). Nothing appears until your game has sent
+something to show.
 
 No section is stuck in the dock: drag the map, the chat window or the
 health bars out by its header row and it will sit wherever you drop it
@@ -30,10 +33,17 @@ Commands:
 > baseui show      -- bring it back
 > baseui dock      -- put every section back in the dock
 > baseui ember     -- change the look (midnight, ember or hardlight)
+> baseui background <file>  -- put a picture behind the whole window
+> baseui background off     -- take it away again
 ```
+
+The ▣ beside the ◐ picks a background picture too; right-click it to
+remove the picture. While a picture is up, the game's text, chat and
+docked sections let it show through; sections dragged out of the dock
+stay solid.
 
 When a game installs an interface of its own, this one quietly stands
 aside - `baseui show` brings it back if you prefer it.
 ]]
-version = [[1.7.7]]
+version = [[1.9.0]]
 created = "2026-07-25T12:00:00+00:00"

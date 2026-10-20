@@ -1826,6 +1826,19 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
+          <item row="2" column="0" colspan="2">
+           <widget class="QCheckBox" name="checkBox_folderView">
+            <property name="toolTip">
+             <string>&lt;p&gt;Adds a &lt;b&gt;Folders&lt;/b&gt; button to the editor's item toolbar. It shows triggers, aliases, scripts, timers, keys and buttons together, grouped by folder. Folders with the same name in different item types are shown as one folder.&lt;/p&gt;</string>
+            </property>
+            <property name="accessibleDescription">
+             <string>Adds a Folders button to the editor's item toolbar. It shows triggers, aliases, scripts, timers, keys and buttons together, grouped by folder. Folders with the same name in different item types are shown as one folder.</string>
+            </property>
+            <property name="text">
+             <string>Show a Folders view of all item types</string>
+            </property>
+           </widget>
+          </item>
          </layout>
         </widget>
        </item>
@@ -3002,6 +3015,26 @@ you can use it but there could be issues with aligning columns of text</string>
               </widget>
              </item>
             </layout>
+           </widget>
+          </item>
+          <item row="4" column="0">
+           <widget class="QLabel" name="label_mapStyle">
+            <property name="text">
+             <string>Modern 3D map style:</string>
+            </property>
+            <property name="buddy">
+             <cstring>comboBox_mapStyle</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="1">
+           <widget class="QComboBox" name="comboBox_mapStyle">
+            <property name="toolTip">
+             <string>&lt;p&gt;How the modern 3D mapper draws the map. Scripts can set it with setConfig(&quot;mapStyle&quot;, name).&lt;/p&gt;</string>
+            </property>
+            <property name="accessibleDescription">
+             <string>How the modern 3D mapper draws the map. Scripts can set it with setConfig("mapStyle", name).</string>
+            </property>
            </widget>
           </item>
          </layout>
@@ -4778,6 +4811,19 @@ you can use it but there could be issues with aligning columns of text</string>
             </item>
            </widget>
           </item>
+          <item row="8" column="0" colspan="2">
+           <widget class="QCheckBox" name="checkBox_accessibleLabels">
+            <property name="toolTip">
+             <string>&lt;p&gt;Lets you reach the buttons that scripts and packages make out of labels with the Tab key, and press them with Space or Enter. A focused button is outlined. This changes the Tab order in packages, so it is off unless you turn it on.&lt;/p&gt;&lt;p&gt;It also lets a screen reader read out the new text of labels that scripts mark as live, such as a health gauge.&lt;/p&gt;</string>
+            </property>
+            <property name="accessibleDescription">
+             <string>When checked, buttons that scripts and packages make out of labels can be reached with the Tab key and pressed with Space or Enter, and a focused one is outlined. A screen reader also reads out the new text of labels that scripts mark as live.</string>
+            </property>
+            <property name="text">
+             <string>Make script buttons reachable with the keyboard</string>
+            </property>
+           </widget>
+          </item>
          </layout>
         </widget>
        </item>
@@ -5603,6 +5649,7 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>checkBox_showBidi</tabstop>
   <tabstop>checkBox_showLineFeedsAndParagraphs</tabstop>
   <tabstop>checkBox_showIdNumbers</tabstop>
+  <tabstop>checkBox_folderView</tabstop>
   <tabstop>pushButton_foreground_color</tabstop>
   <tabstop>pushButton_command_line_foreground_color</tabstop>
   <tabstop>pushButton_command_foreground_color</tabstop>
@@ -5716,6 +5763,7 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>comboBox_menuBarAltKeyNavigation</tabstop>
   <tabstop>checkBox_f3SearchEnabled</tabstop>
   <tabstop>checkBox_enableBlinkText</tabstop>
+  <tabstop>checkBox_accessibleLabels</tabstop>
   <tabstop>mFORCE_MCCP_OFF</tabstop>
   <tabstop>mFORCE_GA_OFF</tabstop>
   <tabstop>checkBox_mForceMXPProcessorOn</tabstop>

@@ -426,6 +426,16 @@ public:
     // The one color pair shared by every character of that same line, or
     // nullptr when its colors vary or there is no snapshot for it:
     const TChar* preTriggerPassLineUniformColors(int lineNumber);
+    // Where the line a trigger pass was handed is now, after triggers earlier in the
+    // pass, or a nested pass, deleted or rewrapped lines above it or the buffer trimmed
+    // its oldest; csmDetachedTriggerPassLine once the line itself has been deleted.
+    // Any other line number is handed back as it is.
+    int triggerPassLineNow(int lineNumber) const;
+    // What color matching reads for a pass line that has been deleted: its colors as
+    // they arrived and its text as it was when it went
+    const std::vector<TChar>& detachedTriggerPassLine() const { return mPreTriggerPassLine; }
+    const QString& detachedTriggerPassLineText() const { return mDetachedTriggerPassLineText; }
+    static constexpr int csmDetachedTriggerPassLine = -2;
     int find(int line, const QString& what, int pos);
     QStringList split(int line, const QString& splitter);
     QStringList split(int line, const QRegularExpression& splitter);
@@ -453,6 +463,7 @@ public:
     // - public so that the connection teardown and Host's flush timer can
     // flush it:
     void flushPendingServerWrapJoin(const bool endsHyperlink = true);
+    bool holdsServerWrapLine() const { return !mServerWrapPendingLine.isEmpty(); }
     // How long to hold a full-width line for its continuation before deciding
     // it really was complete:
     static constexpr int csmServerWrapFlushDelayMs = 300;
@@ -557,6 +568,7 @@ private:
     void wrapPreTriggerPassLine(const WrapInfo& firstSegment, int indentWidth);
     void noteFoundLines(int first, int last);
     void materialisePreTriggerPassLine(int y);
+    void triggerPassLinesRemoved(int from, int to);
     int remapLinkId(const TLinkStore& sourceLinkStore, int sourceLinkId, QHash<int, int>& remappedLinkIds, int line = -1);
     int calculateWrapPosition(int lineNumber, int begin, int end);
     void handleNewLine();
@@ -573,6 +585,9 @@ private:
     static bool doubleByteTrail(Decoder, quint8);
     void styleForCurrentLink(TChar&);
     void flushPendingLead();
+    void clearSequenceLatches();
+    void endLocalFeedSequences();
+    void appendReplacementCharacter(TChar);
     static QStringDecoder multibyteDecoderFor(Decoder, const QByteArray&);
     bool decodeMultibyteSequence(QByteArrayView, QString&);
     // Views into the string decodeSGR() was handed, so none may outlive that call.
@@ -704,14 +719,24 @@ private:
     // Parked between lines so the trigger-pass snapshot reuses its allocation:
     std::vector<TChar> mSpareTriggerPassLine;
     int mPreTriggerPassLineNumber = -1;
+    // The index the current trigger pass was handed, which mPreTriggerPassLineNumber moves on from
+    int mTriggerPassLineAsCommitted = -1;
+    QString mDetachedTriggerPassLineText;
+    struct EnclosingTriggerPass
+    {
+        int lineNumber = -1;
+        QString detachedText;
+    };
+    // The passes a trigger calling feedTriggers() has paused. A member, not saved in
+    // commitLineData()'s frame, as their lines move with deleted, rewrapped and
+    // trimmed lines just as the current one does
+    QList<EnclosingTriggerPass> mEnclosingTriggerPasses;
     // Meaningful only inside a trigger pass: false until something overwrites
     // the committed line, while the game's colors are still readable from it:
     bool mPreTriggerPassSnapshotTaken = true;
     enum class PassLineUniformity { Unknown, Uniform, Mixed };
     // Worked out on demand, so a profile with no color triggers never pays for it:
     PassLineUniformity mPreTriggerPassLineUniformity = PassLineUniformity::Unknown;
-    // Lowest line a wrapLine() during the current trigger pass pushed down, or -1:
-    int mFirstLineMovedDown = -1;
     // A line that ended at the game's own wrap column (Host::mUndoServerWrap)
     // is held here instead of being committed, so its continuation can be
     // joined back on and triggers run once over the whole logical line:
@@ -726,8 +751,8 @@ private:
     QString mServerWrapPendingSegmentStart;
     // Used to hold the unprocessed bytes that could be left at the end of a
     // packet if we detect that there should be more - will be prepended to the
-    // next chunk of data on the same channel. On the local one that is whatever
-    // local source feeds next (a script, MMCP, MXP), as they all share it:
+    // next chunk of data from the Game Server. A local feed arrives whole, so
+    // it never carries any over (endLocalFeedSequences()):
     std::string mIncompleteSequenceBytes;
     // The lead byte of a double-byte character that the game restyled before
     // sending its trail byte, with the rendition that paints its left half;
@@ -735,12 +760,11 @@ private:
     char mPendingLead = 0;
     TChar mPendingLeadFormat;
 
-    // The parser sequence state (the mGot... latches and
-    // mIncompleteSequenceBytes) for whichever of the two data channels - Game
-    // Server stream or locally generated text - is not currently being
-    // processed; translateToPlainText() swaps it in around a local feed so
-    // that such text cannot consume or clear a latch belonging to a sequence
-    // split across Game Server packets (and vice versa):
+    // The Game Server stream's parser sequence state (the mGot... latches,
+    // mIncompleteSequenceBytes and the pending lead byte), parked here while
+    // translateToPlainText() runs a locally generated feed, which starts clean
+    // and ends whatever it left open, so that such text cannot consume or clear
+    // a latch belonging to a sequence split across Game Server packets:
     bool mLocalGotESC = false;
     bool mLocalGotEscCharset = false;
     bool mLocalGotCSI = false;

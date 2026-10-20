@@ -108,6 +108,7 @@ set(UNIT_TESTS
     TEncodingHelperTest
     PasswordMigrationTest
     TMediaPathTraversalTest
+    TAudioMixerMixTest
     ProfileNameValidationTest
 )
 
@@ -363,6 +364,14 @@ endif()
 if(NOT WIN32)
     add_test(NAME ReleaseTagVersionTest
         COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/ci/release-tag-version-test.sh
+    )
+endif()
+
+# GitHub refuses release notes over its size limit, and a refused release publishes
+# nothing at all
+if(NOT WIN32)
+    add_test(NAME ReleaseNotesFitTest
+        COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/ci/release-notes-fit-test.sh
     )
 endif()
 
