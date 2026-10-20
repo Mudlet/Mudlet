@@ -435,6 +435,7 @@ void CredentialManager::storePassword(const QString& profileName, const QString&
         storeCredential(service, key, password, profileName, callback);
     } else {
         // Use SecureStringUtils for portable/test environments
+        mKeychainRefusal.clear();
         bool success = storeCredentialToFileForThisOperation(profileName, key, password);
 
         if (callback) {
@@ -1203,6 +1204,7 @@ void CredentialManager::storeCredential(const QString& service, const QString& a
     // Cleanup any existing operation
     cleanupCurrentOperation();
     mUnprotectedSecretPath.clear();
+    mKeychainRefusal.clear();
 
     auto* writeJob = new QKeychain::WritePasswordJob(service, this);
     // Use service as the key - on Windows, only setKey() value is used as the credential target,
@@ -1241,12 +1243,13 @@ void CredentialManager::storeCredential(const QString& service, const QString& a
 
                 // If keychain failed, try file storage fallback
                 if (!success) {
-                    qDebug() << "CredentialManager: Keychain storage failed, using encrypted file storage:" << errorMessage;
+                    qWarning().noquote() << "CredentialManager: the keychain refused the" << mCurrentOperationDescription << "- using encrypted file storage instead:" << errorMessage;
 
                     bool fileSuccess = storeCredentialToFileForThisOperation(profileName, account, password);
 
                     if (fileSuccess) {
                         success = true;
+                        mKeychainRefusal = errorMessage.isEmpty() ? qsl("unknown keychain error") : errorMessage;
                         errorMessage = QString(); // Clear error message on successful fallback
                         qDebug() << "CredentialManager: Password stored to encrypted file storage";
                     } else {

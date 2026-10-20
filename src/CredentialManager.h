@@ -127,6 +127,10 @@ public:
     // process-wide, so the report is about this store and not a failure elsewhere in the meantime.
     QString unprotectedSecretPath() const { return mUnprotectedSecretPath; }
 
+    // Why the keychain refused this manager's last store when it was then saved to the encrypted file
+    // in the profile instead and reported as a success; empty otherwise.
+    QString keychainRefusal() const { return mKeychainRefusal; }
+
     // Static fallback methods (for migration and test cleanup - uses encrypted file storage)
     static bool storeCredential(const QString& profileName, const QString& key, const QString& credential);
     static QString retrieveCredential(const QString& profileName, const QString& key);
@@ -289,6 +293,7 @@ private:
     // What mCurrentJob is doing, for the log line if it is abandoned before it answers.
     QString mCurrentOperationDescription;
     QString mUnprotectedSecretPath;
+    QString mKeychainRefusal;
 
     int mOperationTimeoutMs = OPERATION_TIMEOUT_MS;
     // Called with each keychain job just before it starts, so a test can make one stall or fail.
