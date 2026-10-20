@@ -45,7 +45,9 @@ describe("Tests the generic mapper when a map loads", function()
     map.prompt.hash = nil
 
     deleteMap()
-    local area = addAreaName("genericMapperMapLoadSpecLoaded")
+    -- kept short: the docked mapper widens to its longest area name and stays
+    -- that wide after the map is put back, squeezing UI_spec's main window
+    local area = addAreaName("gmlLoaded")
     otherMapRoom = createRoomID()
     addRoom(otherMapRoom)
     setRoomArea(otherMapRoom, area)
@@ -59,7 +61,7 @@ describe("Tests the generic mapper when a map loads", function()
     map.set("currentArea", nil)
     map.set("currentName", "Where the mapping began")
     map.set("currentExits", {})
-    map.start_mapping("genericMapperMapLoadSpecMapped")
+    map.start_mapping("gmlMapped")
     assert.is_true(map.mapping)
     assert.are.equal(otherMapRoom, map.currentRoom, "the loaded map has to reuse the mapped room's id for this test to mean anything")
   end)
