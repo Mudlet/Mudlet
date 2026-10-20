@@ -460,6 +460,18 @@ int TLuaInterpreter::clearUserWindow(lua_State* L)
     return 0;
 }
 
+// Documentation: ? - public function but should stay undocumented -- compare https://github.com/Mudlet/Mudlet/issues/1149
+int TLuaInterpreter::closeUserWindow(lua_State* L)
+{
+    const QString text = getVerifiedString(L, __func__, 1, "name");
+    Host& host = getHostFromLua(L);
+    if (!host.closeWindow(text)) {
+        return windowNotFoundOrUnsupported(L, host, text);
+    }
+    lua_pushboolean(L, true);
+    return 1;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#copy
 int TLuaInterpreter::copy(lua_State* L)
 {
@@ -477,8 +489,17 @@ int TLuaInterpreter::copy(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#cut
 int TLuaInterpreter::cut(lua_State* L)
 {
-    getHostFromLua(L).cutMainConsoleToClipboard();
-    return 0;
+    QString windowName;
+    // Any other argument still means the main console, as cut() long ignored its arguments
+    if (lua_type(L, 1) == LUA_TSTRING) {
+        windowName = lua_tostring(L, 1);
+    }
+
+    if (!getHostFromLua(L).cutToClipboard(windowName)) {
+        return windowNotFound(L, windowName);
+    }
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#createBuffer

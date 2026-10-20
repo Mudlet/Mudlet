@@ -364,7 +364,7 @@ public:
     // The one clipboard every console copies to and pastes from. Each answers
     // whether it found the console.
     bool copyToClipboard(const QString& name);
-    void cutMainConsoleToClipboard();
+    bool cutToClipboard(const QString& name);
     bool pasteClipboard(const QString& name);
     bool appendClipboard(const QString& name);
     // The main console's scrollback limit is also the profile's setting. With

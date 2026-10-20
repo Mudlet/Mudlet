@@ -1646,15 +1646,6 @@ int TLuaInterpreter::createLabelMainWindow(lua_State* L, const char* labelName)
     return 1;
 }
 
-// Documentation: ? - public function but should stay undocumented -- compare https://github.com/Mudlet/Mudlet/issues/1149
-int TLuaInterpreter::closeUserWindow(lua_State* L)
-{
-    const QString text = getVerifiedString(L, __func__, 1, "name");
-    Host& host = getHostFromLua(L);
-    host.closeWindow(text);
-    return 0;
-}
-
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#startLogging
 int TLuaInterpreter::startLogging(lua_State* L)
