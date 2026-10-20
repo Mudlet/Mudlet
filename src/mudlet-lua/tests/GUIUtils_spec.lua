@@ -2763,8 +2763,9 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
         dinsertText = {"<255,0,0>x"},
         hinsertText = {"#ff0000x"},
       }
+      local function pack(...) return {n = select("#", ...), ...} end
       for name, args in pairs(calls) do
-        local results = table.pack(_G[name](labelName, unpack(args)))
+        local results = pack(_G[name](labelName, unpack(args)))
         assert.are.same({n = 2, nil, refusal}, results, name)
       end
     end)
