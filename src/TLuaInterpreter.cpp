@@ -5213,11 +5213,23 @@ bool TLuaInterpreter::globalsMetatableHandedOut(lua_State* L, const int index)
 }
 
 // No documentation available in wiki - internal function
-// Stands in for getmetatable(), setmetatable() and the debug library's pair
+// Stands in for getmetatable(), setmetatable() and the debug library's pair,
+// and for rawget()
 int TLuaInterpreter::globalsMetatableGuard(lua_State* L)
 {
     auto* self = static_cast<TLuaInterpreter*>(lua_touserdata(L, lua_upvalueindex(1)));
     const auto slot = static_cast<int>(lua_tointeger(L, lua_upvalueindex(2)));
+    if (slot == 4) {
+        // rawget() skips __index, so a name still left out would read as nil.
+        // Scripts reach for it to dodge strict-globals warnings.
+        if (lua_topointer(L, 1) == self->mGlobalsTable && lua_type(L, 2) == LUA_TSTRING) {
+            const char* key = lua_tostring(L, 2);
+            if (key == self->mMatchesKey || key == self->mMultimatchesKey || key == self->mLineKey) {
+                self->materialisePendingGlobals(L);
+            }
+        }
+        return self->mStockMetatableFunctions[slot](L);
+    }
     const bool setter = slot == 1 || slot == 3;
     const bool onGlobals = lua_topointer(L, 1) == self->mGlobalsTable;
     if (onGlobals) {
@@ -5322,7 +5334,8 @@ void TLuaInterpreter::installLazyGlobals()
             mGlobalsMetatableTouched = false;
             mGlobalsHandlersLinger = false;
             mLazyGlobalsInstalled = installGlobalsMetatableGuard(L, nullptr, "getmetatable", 0) && installGlobalsMetatableGuard(L, nullptr, "setmetatable", 1)
-                                    && installGlobalsMetatableGuard(L, "debug", "getmetatable", 2) && installGlobalsMetatableGuard(L, "debug", "setmetatable", 3);
+                                    && installGlobalsMetatableGuard(L, "debug", "getmetatable", 2) && installGlobalsMetatableGuard(L, "debug", "setmetatable", 3)
+                                    && installGlobalsMetatableGuard(L, nullptr, "rawget", 4);
         }
     }
     lua_settop(L, callerStackTop);

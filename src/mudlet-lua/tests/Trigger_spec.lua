@@ -5512,6 +5512,16 @@ describe("Trigger processing", function()
             rearmLazyGlobals()
         end
 
+        -- rawget() puts a name that is still left out in place before reading
+        -- it, so only a walk over the table shows what is really there
+        local function rawPresent(t, name)
+            for key, value in next, t do
+                if key == name then
+                    return value
+                end
+            end
+        end
+
         -- "multimatches" is nil in a profile until the first dispatch is over.
         -- The generic mapper reads line on every line, which would leave nothing
         -- out for the cases about line.
@@ -5545,9 +5555,9 @@ describe("Trigger processing", function()
         it("leaves them out of the globals table until a script reads them", function()
             local seen = {}
             trigger(tempRegexTrigger("^LazyLeftOut (\\w+)$", function()
-                seen.matches = rawget(_G, "matches")
-                seen.multimatches = rawget(_G, "multimatches")
-                seen.line = rawget(_G, "line")
+                seen.matches = rawPresent(_G, "matches")
+                seen.multimatches = rawPresent(_G, "multimatches")
+                seen.line = rawPresent(_G, "line")
                 seen.capture = matches[2]
             end))
 
@@ -5559,6 +5569,27 @@ describe("Trigger processing", function()
             assert.is_nil(seen.multimatches)
             assert.is_nil(seen.line)
             assert.are.equal("word", seen.capture)
+        end)
+
+        -- Scripts use rawget() to read a global without a strict-globals warning
+        it("answers rawget() for them", function()
+            _G.LazyGlobalsSpec = {}
+            local seen = _G.LazyGlobalsSpec
+            trigger(tempRegexTrigger("^LazyRawget (\\w+)$", [==[
+                LazyGlobalsSpec.matches = rawget(_G, "matches")
+                LazyGlobalsSpec.line = rawget(_G, "line")
+            ]==]))
+            multiline("SpecLazyRawgetMulti", {[[^lazyrawget one (\w+)$]], [[^lazyrawget two (\w+)$]]}, [==[
+                LazyGlobalsSpec.multimatches = rawget(_G, "multimatches")
+            ]==])
+
+            feedTriggers("\nLazyRawget word\n")
+            feedTriggers("lazyrawget one aaa\n")
+            feedTriggers("lazyrawget two bbb\n")
+
+            assert.are.equal("word", seen.matches and seen.matches[2])
+            assert.are.equal("LazyRawget word", seen.line)
+            assert.are.equal("bbb", seen.multimatches and seen.multimatches[2] and seen.multimatches[2][2])
         end)
 
         -- The rest must also pass with nothing left out
@@ -5603,7 +5634,7 @@ describe("Trigger processing", function()
                 assert.are.equal("table", type(_G[name]), name .. " should never read as nil")
                 assert.is_nil(next(_G[name]), name .. " should be empty outside a dispatch")
             end
-            assert.are.equal("table", type(rawget(_G, "matches")), "matches should be in the globals table outside a dispatch")
+            assert.are.equal("table", type(rawPresent(_G, "matches")), "matches should be in the globals table outside a dispatch")
         end)
 
         -- busted gives a spec file an environment of its own, so a function
@@ -6245,7 +6276,7 @@ describe("Trigger processing", function()
             end
 
             assert.is_true(ok, tostring(message))
-            local left = rawget(seen.original, "matches")
+            local left = rawPresent(seen.original, "matches")
             assert.are.equal("word", left and left[2])
         end)
 
@@ -6264,7 +6295,7 @@ describe("Trigger processing", function()
             end
 
             assert.is_true(ok, tostring(message))
-            local left = rawget(spec.original, "multimatches")
+            local left = rawPresent(spec.original, "multimatches")
             assert.are.equal("aaa", left and left[1] and left[1][2])
         end)
 
@@ -6684,7 +6715,7 @@ describe("Trigger processing", function()
         describe("a metatable the globals table is given and then changed", function()
             local function readEverythingIn(seen)
                 return function()
-                    seen.rawMatches = rawget(_G, "matches")
+                    seen.rawMatches = rawPresent(_G, "matches")
                     seen.matches = matches
                     seen.multimatches = multimatches
                     seen.line = line
@@ -6772,7 +6803,7 @@ describe("Trigger processing", function()
                 feedTriggers("\nLazyHandlersIdle\n")
                 local seen = {}
                 trigger(tempRegexTrigger("^LazyHandlersBack (\\w+)$", function()
-                    seen.rawMatches = rawget(_G, "matches")
+                    seen.rawMatches = rawPresent(_G, "matches")
                     seen.capture = matches[2]
                 end))
 
@@ -6810,8 +6841,8 @@ describe("Trigger processing", function()
             it("sets matches, multimatches and line up front when switched off", function()
                 local seen = {}
                 trigger(tempRegexTrigger("^LazySettingOff (\\w+)$", function()
-                    seen.matches = rawget(_G, "matches")
-                    seen.line = rawget(_G, "line")
+                    seen.matches = rawPresent(_G, "matches")
+                    seen.line = rawPresent(_G, "line")
                 end))
 
                 setConfig("lazyCaptureGlobals", false)
@@ -6821,7 +6852,7 @@ describe("Trigger processing", function()
                 assert.is_not_nil(seen.matches, "matches was left out with the setting off")
                 assert.are.equal("word", seen.matches[2])
                 assert.are.equal("LazySettingOff word", seen.line, "line was left out with the setting off")
-                assert.is_not_nil(rawget(_G, "multimatches"), "multimatches was left out between dispatches with the setting off")
+                assert.is_not_nil(rawPresent(_G, "multimatches"), "multimatches was left out between dispatches with the setting off")
             end)
 
             -- Read straight after switching off, as the getter hands out the
@@ -6838,8 +6869,8 @@ describe("Trigger processing", function()
                 local seen = {}
                 trigger(tempRegexTrigger("^LazySettingMidFire (\\w+)$", function()
                     setConfig("lazyCaptureGlobals", false)
-                    seen.matches = rawget(_G, "matches")
-                    seen.line = rawget(_G, "line")
+                    seen.matches = rawPresent(_G, "matches")
+                    seen.line = rawPresent(_G, "line")
                 end))
 
                 feedTriggers("\nLazySettingMidFire word\n")
@@ -6852,7 +6883,7 @@ describe("Trigger processing", function()
             it("leaves them out again once switched back on", function()
                 local seen = {}
                 trigger(tempRegexTrigger("^LazySettingBack (\\w+)$", function()
-                    seen.matches = rawget(_G, "matches")
+                    seen.matches = rawPresent(_G, "matches")
                     seen.capture = matches[2]
                 end))
 
