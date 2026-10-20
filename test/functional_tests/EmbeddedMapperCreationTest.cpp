@@ -303,6 +303,27 @@ private slots:
         QCOMPARE(pDialog->windowHandle()->transientParent(), mudlet::self()->windowHandle());
     }
 
+    // Qt 6.12 passes over a floating dock to the main window when a dialog in it is shown; the
+    // dialog's transient parent is set to the main window by hand here to stand in for that
+    void test_aDialogShownFromAFloatingMapBelongsToTheMap()
+    {
+        mudlet::self()->show();
+        mudlet::self()->slot_showMapperDialog();
+        QDockWidget* pDock = mudlet::self()->getMainWindowDockWidget(qsl("map_%1").arg(mHostname));
+        QVERIFY2(pDock, "slot_showMapperDialog() created no map dock, so this case covers nothing");
+        pDock->setFloating(true);
+        qApp->processEvents();
+        auto* pDialog = new QDialog(pDock->widget());
+        pDialog->show();
+        qApp->processEvents();
+        pDialog->hide();
+        pDialog->windowHandle()->setTransientParent(mudlet::self()->windowHandle());
+
+        pDialog->show();
+        qApp->processEvents();
+        QCOMPARE(pDialog->windowHandle()->transientParent(), pDock->windowHandle());
+    }
+
     // Whatever route leaves a dialog without a transient parent, closing the main window must still quit
     void test_closingTheMainWindowQuitsPastADialogThatLostItsWindow()
     {

@@ -197,6 +197,24 @@ bool relinkIfOrphaned(QWidget* pChildWindow)
     return true;
 }
 
+// Qt 6.12 skips Tool windows when it picks a transient parent, so a dialog opened from a
+// floating dock would otherwise be stacked and minimized with the main window
+void relinkPastFloatingDock(QWidget* pChildWindow)
+{
+    if (!pChildWindow->isWindow() || !pChildWindow->parentWidget()) {
+        return;
+    }
+    QWindow* pHandle = pChildWindow->windowHandle();
+    auto* pDock = qobject_cast<QDockWidget*>(pChildWindow->parentWidget()->window());
+    if (!pHandle || !pHandle->transientParent() || !pDock || !pDock->isFloating()) {
+        return;
+    }
+    QWindow* pDockWindow = pDock->windowHandle();
+    if (pDockWindow && pHandle->transientParent() != pDockWindow) {
+        pHandle->setTransientParent(pDockWindow);
+    }
+}
+
 void relinkOrphansUnder(const QWidget* pWindow)
 {
     const auto children = pWindow->findChildren<QWidget*>();
@@ -214,6 +232,11 @@ public:
 
     bool eventFilter(QObject* watched, QEvent* event) override
     {
+        if (event->type() == QEvent::Show && watched->isWidgetType()) {
+            // Sent before the window is mapped, so the window manager only ever sees the dock
+            relinkPastFloatingDock(static_cast<QWidget*>(watched));
+            return false;
+        }
         if (event->type() != QEvent::WinIdChange || !watched->isWidgetType()) {
             return false;
         }
