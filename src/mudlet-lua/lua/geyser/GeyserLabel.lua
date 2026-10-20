@@ -525,6 +525,8 @@ end
 -- call, and leaves the label's text where it is. It also takes the stylesheet's
 -- background-image declarations that are not inside a {...} rule out, see
 -- Geyser.Label:resetBackgroundImage.
+-- An empty imageFileName takes off the SVG layer, a raster image, a movie and any
+-- text, and leaves the stylesheet alone.
 -- Returns true, or nil and an error message when the file cannot be read.
 -- @param imageFileName The image to use for a background image.
 function Geyser.Label:setBackgroundImage (imageFileName)
