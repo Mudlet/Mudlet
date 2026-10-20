@@ -2530,7 +2530,7 @@ function suffix(what, func, fgc, bgc, window)
   assert(type(what) == 'string', 'suffix: bad argument #1 type (expected string, got '..type(what)..'!)')
   window = window or "main"
   func = insertFuncs[func] or func or insertText
-  local length = utf16Length(getCurrentLine(window))
+  local length = utf16Length(getCurrentLine(window) or "")
   moveCursor(window, length, getLineNumber(window))
   -- fg()/bg() also repaint whatever is selected in the window, so drop any
   -- live selection first - only the text being added is meant to be coloured

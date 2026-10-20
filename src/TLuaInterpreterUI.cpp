@@ -1551,10 +1551,7 @@ int TLuaInterpreter::getCurrentLine(lua_State* L)
     const QString windowName{WINDOW_NAME(L, 1)};
     auto pModel = getHostFromLua(L).consoleModelNamed(windowName);
     if (!pModel) {
-        // the next line should be "pushnil"; compatibility with old bugs and all that
-        lua_pushstring(L, "ERROR: mini console does not exist");
-        lua_pushfstring(L, bad_window_value, windowName.toUtf8().constData());
-        return 2;
+        return windowNotFound(L, windowName);
     }
     lua_pushstring(L, pModel->buffer.line(pModel->mUserCursor.y()).toUtf8().constData());
     return 1;

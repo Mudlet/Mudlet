@@ -4171,11 +4171,10 @@ describe("Tests UI functions", function()
       assert.are.equal("size cannot be 0 or negative", err2)
     end)
 
-    it("getCurrentLine returns the legacy error string for an unknown window", function()
-      -- kept for bug compatibility: a string, not nil, plus a second message
+    it("getCurrentLine returns nil and a message for an unknown window", function()
       local first, second = getCurrentLine("uiReadbackNoSuchWindow")
-      assert.are.equal("ERROR: mini console does not exist", first)
-      assert.is_string(second)
+      assert.is_nil(first)
+      assert.are.equal('window "uiReadbackNoSuchWindow" not found', second)
     end)
   end)
 

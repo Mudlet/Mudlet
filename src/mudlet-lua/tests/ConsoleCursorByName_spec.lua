@@ -29,9 +29,10 @@ describe("Tests that the cursor and line functions find their console by name", 
       assert.is_nil(ok, functionName)
       assert.are.equal(notFound, err, functionName)
     end
-    -- these two answer something other than nil for a console they cannot find
+    -- this one answers something other than nil for a console it cannot find
     assert.are.same({-1}, {getLastLineNumber(windowName)})
-    assert.are.same({"ERROR: mini console does not exist", notFound}, {getCurrentLine(windowName)})
+    assert.are.equal(2, select("#", getCurrentLine(windowName)))
+    assert.are.same({nil, notFound}, {getCurrentLine(windowName)})
   end
 
   local function mainCursor()

@@ -2105,9 +2105,9 @@ expectValue('getWindowWrap', 80, getWindowWrap())
 expectValue('setWindowWrapIndent', true, setWindowWrapIndent('main', 1))
 expectValue('setWindowWrapHangingIndent', true, setWindowWrapHangingIndent('main', 1))
 expectValue('setWindowWrap 0', 'wrapAt must be greater than zero, got 0', select(2, setWindowWrap(0)))
--- these two answer something other than nil when they find no console
+-- this one answers something other than nil when it finds no console
 expectValue('getLastLineNumber', -1, getLastLineNumber('noViewMc'))
-expectValue('getCurrentLine', 'ERROR: mini console does not exist', getCurrentLine('noViewMc'))
+expectRefusal('getCurrentLine', getCurrentLine('noViewMc'))
 expectValue('getCurrentLine reason', 'window "noViewMc" not found', select(2, getCurrentLine('noViewMc')))
 -- whereas the font and the size are checked before any console is looked for
 expectValue('setFont empty', 'font must not be empty', select(2, setFont('')))
