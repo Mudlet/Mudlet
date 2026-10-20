@@ -245,6 +245,7 @@ private slots:
     void slot_displayFontSizeChanged();
     void slot_displayFontAliasingChanged();
     void slot_hostDisplayFontChanged(const QFont&);
+    void slot_hostEditorFontChanged(const QFont&);
     void slot_changeShowTabConnectionIndicators(bool state);
     void slot_crashReportPolicyChanged(int index);
     // Named rather than lambdas so initWithHost() can connect them with Qt::UniqueConnection
@@ -308,6 +309,8 @@ private:
     void fillOutMapHistory();
     bool updateDisplayFont(Host::DisplayFontChange change);
     void rememberDisplayFontFamilyShown();
+    void showEditorFont(const QFont&);
+    void reflectEditorFontControls();
     void cancelShortcutCaptures();
     void updateShortcutConflictWarning();
     void switchEditorTheme(const QString& themeName);

@@ -1332,7 +1332,7 @@ private slots:
 
         QCOMPARE(pHost->getDisplayFont().family(), mPackageSuppliedFamily);
         const QString events = luaString(pHost, qsl("table.concat(fontHandlerTestEvents, ',')"));
-        QCOMPARE(events, qsl("sysInstall:%1,sysInstall:%2,sysSettingChanged:main window font").arg(innerName, outerName));
+        QCOMPARE(events, qsl("sysInstall:%1,sysInstall:%2,sysSettingChanged:main window font,sysSettingChanged:editor font").arg(innerName, outerName));
     }
 
     // The restore is for every open profile, so the one whose install queued it closing first must not cancel it

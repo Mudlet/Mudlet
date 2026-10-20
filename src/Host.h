@@ -606,6 +606,22 @@ public:
     // stand-in instead would make this machine's lack of a font the profile's own
     // choice, everywhere the profile is opened. Everything else wants the real font.
     QFont getDisplayFontForSaving();
+    // What the script editor's code pane and error console are written in: the display font
+    // while following it, else the editor's own, with a family missing on this machine stood in
+    // for by the bundled default
+    QFont getEditorFont();
+    bool editorFontFollowsDisplay() const { return mEditorFontFollowsDisplay; }
+    void setEditorFontFollowsDisplay(const bool);
+    // Only the family and the point size are kept
+    void setEditorFont(const QFont&);
+    void setEditorFontFromString(const QString&);
+    // The editor's own font as chosen, for the save; unset until the editor first leaves the display font
+    const std::optional<QFont>& editorFontChoice() const { return mEditorFont; }
+    // What a change to the family or the size alone starts from: the font on show while following,
+    // else the choice, which keeps a missing family rather than its stand-in
+    QFont editorFontBase();
+    // The display font moved, which moves the editor's too while it follows
+    void reportDisplayFontChangeToEditor();
     int getConsoleBufferSize() const { return mConsoleBufferSize; }
     void setConsoleBufferSize(int size) { mConsoleBufferSize = size; }
     bool getUseMaxConsoleBufferSize() const { return mUseMaxConsoleBufferSize; }
@@ -850,6 +866,9 @@ private:
     // Set by loadMapAndConnect(): until then the fonts of this profile's own modules may not be
     // registered yet, so another profile's uninstall must not judge its display font missing
     bool mDisplayFontCheckReached = false;
+    bool mEditorFontFollowsDisplay = true;
+    // Taken from the display font the first time the editor leaves it, so it starts from what is on show
+    std::optional<QFont> mEditorFont;
     // Co-owned with the main-console view rather than owned outright: mudlet
     // destroys the Host before the lingering console widget, so a Host-owned
     // model would leave the view's aliasing references dangling. Reached
@@ -1290,6 +1309,8 @@ signals:
     void signal_saveCommandLinesHistory();
     void mmcpChatNameChanged(const QString&);
     void signal_editorThemeChanged();
+    // The font getEditorFont() answers with may have moved
+    void signal_editorFontChanged(const QFont& font);
     void signal_passwordEntryWantedChanged(bool wanted);
     void signal_forceMXPProcessorOnChanged(bool enabled);
     // The frontend (TMainConsole) owns the dialogs these drive; the strings are
@@ -1374,6 +1395,7 @@ private:
     void securedPasswordAnswered(bool success, const QString& password, const QString& errorMessage, bool timedOut);
     void removeAllNonPersistentStopWatches();
     void updateConsolesFont();
+    void raiseEditorFontChange();
     void thankForUsingPTB();
     void toggleMapperVisibility();
     void createMapper(const bool);

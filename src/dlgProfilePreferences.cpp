@@ -406,6 +406,8 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
     label_languageChangeWarning->hide();
     label_invalidFontError->hide();
     label_variableWidthFontWarning->hide();
+    label_editorFontInvalid->hide();
+    label_editorFontVariableWidth->hide();
 
     comboBox_guiLanguage->clear();
     for (auto& code : pMudlet->getAvailableTranslationCodes()) {
@@ -839,7 +841,7 @@ void dlgProfilePreferences::buildShell()
     buildCategoryPage(scmCategory_inputLine, {groupBox_input, groupBox_spellCheck});
 
     moveIntoCard(groupBox_autoComplete, {checkBox_echoLuaErrors});
-    buildCategoryPage(scmCategory_editor, {groupbox_codeEditorThemeSelection, groupBox_autoComplete, groupBox_editorDisplayOptions});
+    buildCategoryPage(scmCategory_editor, {groupbox_codeEditorThemeSelection, groupBox_editorFont, groupBox_autoComplete, groupBox_editorDisplayOptions});
 
     buildCategoryPage(scmCategory_mapper, {groupBox_mapFiles, groupBox_downloadMapOptions, groupBox_mapViewOptions, groupBox_mapperColors, groupBox_playerRoomStyle});
 
@@ -1348,6 +1350,8 @@ void dlgProfilePreferences::setSearchKeywords()
     synonyms.append({groupBox_mapperColors, tr("colour, colours, map colours, palette, background")});
     //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for the font the game's text is drawn in.
     synonyms.append({groupBox_font, tr("font, typeface, size, monospace, antialiasing")});
+    //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for the font the script editor's code is written in.
+    synonyms.append({groupBox_editorFont, tr("editor font, code font, script font, typeface, size, monospace")});
     //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for how long Mudlet waits for the game to answer.
     synonyms.append({label_networkPacketTimeout, tr("timeout, lag, latency, slow connection")});
 #ifdef INCLUDE_MCPSERVER
@@ -3705,6 +3709,7 @@ void dlgProfilePreferences::disableHostDetails()
     // ----- groupbox_codeEditorThemeSelection -----
     theme_download_label->hide();
 
+    groupBox_editorFont->setEnabled(false);
     groupBox_autoComplete->setEnabled(false);
     groupBox_editorDisplayOptions->setEnabled(false);
 
@@ -3838,6 +3843,7 @@ void dlgProfilePreferences::enableHostDetails()
     // ===== tab_codeEditor =====
     groupbox_codeEditorThemeSelection->setEnabled(true);
 
+    groupBox_editorFont->setEnabled(true);
     groupBox_autoComplete->setEnabled(true);
     groupBox_editorDisplayOptions->setEnabled(true);
 
@@ -5032,6 +5038,9 @@ void dlgProfilePreferences::disconnectHostRelatedControls()
     disconnect(fontComboBox_displayFont, &QComboBox::activated, nullptr, nullptr);
     disconnect(spinBox_displayFontSize, qOverload<int>(&QSpinBox::valueChanged), nullptr, nullptr);
     disconnect(checkBox_antiAlias, &QCheckBox::clicked, nullptr, nullptr);
+    disconnect(checkBox_editorFontFollowsDisplay, &QCheckBox::toggled, nullptr, nullptr);
+    disconnect(fontComboBox_editorFont, &QFontComboBox::currentFontChanged, nullptr, nullptr);
+    disconnect(spinBox_editorFontSize, qOverload<int>(&QSpinBox::valueChanged), nullptr, nullptr);
 
     disconnect(buttonDownloadMap, &QAbstractButton::clicked, nullptr, nullptr);
 
@@ -5180,6 +5189,11 @@ void dlgProfilePreferences::clearHostDetails()
     fontComboBox_displayFont->clear();
     spinBox_displayFontSize->setValue(14);
     checkBox_antiAlias->setChecked(false);
+    checkBox_editorFontFollowsDisplay->setChecked(true);
+    fontComboBox_editorFont->clear();
+    spinBox_editorFontSize->setValue(14);
+    label_editorFontInvalid->hide();
+    label_editorFontVariableWidth->hide();
     mFORCE_MCCP_OFF->setChecked(false);
     mFORCE_GA_OFF->setChecked(false);
     mAlertOnNewData->setChecked(false);
@@ -5274,7 +5288,7 @@ void dlgProfilePreferences::loadEditorTab()
     config->setCaretWidth(1);
     config->setShowWhitespaceMode((mudlet::self()->mEditorTextOptions & QTextOption::ShowTabsAndSpaces) ? edbee::TextEditorConfig::ShowWhitespaces : edbee::TextEditorConfig::HideWhitespaces);
     config->setUseLineSeparator(mudlet::self()->mEditorTextOptions & QTextOption::ShowLineAndParagraphSeparators);
-    config->setFont(pHost->getDisplayFont());
+    config->setFont(pHost->getEditorFont());
     config->setAutocompleteAutoShow(pHost->mEditorAutoComplete);
     config->setRenderBidiContolCharacters(pHost->getEditorShowBidi());
     config->setAutocompleteMinimalCharacters(3);
@@ -5320,6 +5334,13 @@ void dlgProfilePreferences::loadEditorTab()
     checkBox_showBidi->setChecked(pHost->getEditorShowBidi());
     checkBox_showIdNumbers->setChecked(pHost->showIdsInEditor());
     checkBox_folderView->setChecked(pHost->folderViewInEditor());
+
+    checkBox_editorFontFollowsDisplay->setChecked(pHost->editorFontFollowsDisplay());
+    showEditorFont(pHost->getEditorFont());
+    connect(checkBox_editorFontFollowsDisplay, &QCheckBox::toggled, this, &dlgProfilePreferences::reflectEditorFontControls, Qt::UniqueConnection);
+    connect(fontComboBox_editorFont, &QFontComboBox::currentFontChanged, this, &dlgProfilePreferences::reflectEditorFontControls, Qt::UniqueConnection);
+    connect(spinBox_editorFontSize, qOverload<int>(&QSpinBox::valueChanged), this, &dlgProfilePreferences::reflectEditorFontControls, Qt::UniqueConnection);
+    connect(pHost, &Host::signal_editorFontChanged, this, &dlgProfilePreferences::slot_hostEditorFontChanged, Qt::UniqueConnection);
 
     // changes the theme being previewed
     connect(code_editor_theme_selection_combobox, static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged), this, &dlgProfilePreferences::slot_themeSelected, Qt::UniqueConnection);
@@ -7011,6 +7032,20 @@ void dlgProfilePreferences::applyAll()
         }
         if (mSnapshot.dirty(checkBox_folderView)) {
             pHost->setFolderViewInEditor(checkBox_folderView->isChecked());
+        }
+        // Ahead of the switch: a family or size picked straight after unticking it is the font the editor
+        // leaves the display font for, and switching first would put the Host's own back into the controls
+        if (!checkBox_editorFontFollowsDisplay->isChecked() && mSnapshot.anyDirty({fontComboBox_editorFont, spinBox_editorFontSize})) {
+            const QFont base = pHost->editorFontBase();
+            const QString family = mSnapshot.dirty(fontComboBox_editorFont) ? fontComboBox_editorFont->currentFont().family() : base.family();
+            const int size = mSnapshot.dirty(spinBox_editorFontSize) ? spinBox_editorFontSize->value() : base.pointSize();
+            const QFont font = pHost->createFontWithSettings(family, size);
+            if (QFontMetrics(font).averageCharWidth() > 0) {
+                pHost->setEditorFont(font);
+            }
+        }
+        if (mSnapshot.dirty(checkBox_editorFontFollowsDisplay)) {
+            pHost->setEditorFontFollowsDisplay(checkBox_editorFontFollowsDisplay->isChecked());
         }
         // Re-theming an open script editor fully reconfigures edbee, so only when one of these changed
         auto* pDialogs = HostDialogs::find(pHost);
@@ -9274,6 +9309,19 @@ void dlgProfilePreferences::slot_caretModeKeyChanged(const int index)
     app->announce(announcement, QString(), true);
 }
 
+// Under the display font's picker and the editor font's: false when Mudlet cannot draw in the font at all
+static bool showFontWarnings(const QFont& font, QLabel* pInvalidLabel, QLabel* pVariableWidthLabel)
+{
+    const QFontMetrics metrics(font);
+    if (metrics.averageCharWidth() == 0) {
+        pInvalidLabel->show();
+        return false;
+    }
+    pInvalidLabel->hide();
+    pVariableWidthLabel->setVisible(!QFontInfo(font).fixedPitch());
+    return true;
+}
+
 bool dlgProfilePreferences::updateDisplayFont(const Host::DisplayFontChange change)
 {
     if (mpHost.isNull() || !mpHost->mainConsoleView()) {
@@ -9296,17 +9344,8 @@ bool dlgProfilePreferences::updateDisplayFont(const Host::DisplayFontChange chan
         return false;
     }
 
-    const QFontMetrics metrics(displayFont);
-    if (metrics.averageCharWidth() == 0) {
-        label_invalidFontError->show();
+    if (!showFontWarnings(displayFont, label_invalidFontError, label_variableWidthFontWarning)) {
         return false;
-    }
-    label_invalidFontError->hide();
-
-    if (!QFontInfo(displayFont).fixedPitch()) {
-        label_variableWidthFontWarning->show();
-    } else {
-        label_variableWidthFontWarning->hide();
     }
 
 #if defined(Q_OS_LINUX) || defined(Q_OS_FREEBSD)
@@ -9321,11 +9360,6 @@ bool dlgProfilePreferences::updateDisplayFont(const Host::DisplayFontChange chan
     // update the display properly when font or size or antiAliasing selections
     // change.
     mpHost->setDisplayFont(displayFont, change);
-
-    auto config = edbeePreviewWidget->config();
-    config->beginChanges();
-    config->setFont(displayFont);
-    config->endChanges();
 
     return true;
 }
@@ -9431,6 +9465,62 @@ void dlgProfilePreferences::slot_hostDisplayFontChanged(const QFont& font)
 void dlgProfilePreferences::slot_displayFontAliasingChanged()
 {
     updateDisplayFont(Host::DisplayFontChange::Adjustment);
+}
+
+// Writes the controls only, so the caller decides whether the snapshot is to follow
+void dlgProfilePreferences::showEditorFont(const QFont& font)
+{
+    {
+        const QSignalBlocker comboBlocker(fontComboBox_editorFont);
+        const QSignalBlocker sizeBlocker(spinBox_editorFontSize);
+        fontComboBox_editorFont->setCurrentFont(font);
+        spinBox_editorFontSize->setMaximum(std::max(font.pointSize(), 40));
+        spinBox_editorFontSize->setValue(std::max(1, font.pointSize()));
+    }
+    reflectEditorFontControls();
+}
+
+void dlgProfilePreferences::reflectEditorFontControls()
+{
+    // Disabled rather than hidden while following, so what following gives is on show
+    const bool ownFont = !checkBox_editorFontFollowsDisplay->isChecked();
+    fontComboBox_editorFont->setEnabled(ownFont);
+    spinBox_editorFontSize->setEnabled(ownFont);
+    // ...and the display font's own card says whatever there is to say about that one
+    if (!ownFont) {
+        label_editorFontInvalid->hide();
+        label_editorFontVariableWidth->hide();
+        return;
+    }
+    QFont font = fontComboBox_editorFont->currentFont();
+    font.setPointSize(spinBox_editorFontSize->value());
+    showFontWarnings(font, label_editorFontInvalid, label_editorFontVariableWidth);
+}
+
+// A script, or the display font moving while the editor follows it
+void dlgProfilePreferences::slot_hostEditorFontChanged(const QFont& font)
+{
+    if (mpHost.isNull()) {
+        return;
+    }
+    {
+        const QSignalBlocker followBlocker(checkBox_editorFontFollowsDisplay);
+        checkBox_editorFontFollowsDisplay->setChecked(mpHost->editorFontFollowsDisplay());
+    }
+    showEditorFont(font);
+    auto config = edbeePreviewWidget->config();
+    config->beginChanges();
+    config->setFont(font);
+    config->endChanges();
+    // As in slot_hostDisplayFontChanged(): not the user's edits
+    for (QWidget* pControl : {static_cast<QWidget*>(checkBox_editorFontFollowsDisplay), static_cast<QWidget*>(fontComboBox_editorFont), static_cast<QWidget*>(spinBox_editorFontSize)}) {
+        mSnapshot.take(pControl);
+        for (const auto* pPart : pControl->findChildren<QWidget*>()) {
+            if (SettingsSnapshot::carriesValue(pPart)) {
+                mSnapshot.take(pPart);
+            }
+        }
+    }
 }
 
 void dlgProfilePreferences::slot_changeShowTabConnectionIndicators(bool state)
