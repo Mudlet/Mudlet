@@ -2813,20 +2813,28 @@ int TBuffer::triggerPassLineNow(int lineNumber) const
     return (lineNumber >= 0 && lineNumber == mTriggerPassLineAsCommitted) ? mPreTriggerPassLineNumber : lineNumber;
 }
 
-int TBuffer::triggerPassColumnNow(int lineNumber, int column) const
+std::pair<int, int> TBuffer::triggerPassSpanNow(int lineNumber, int from, int length) const
 {
     if (!triggerPassLineEdited(lineNumber)) {
-        return column;
+        return {from, length};
     }
+    // Text replacing part of the span counts as part of it; text put in at either end does not
+    int start = from;
+    int end = from + length;
     for (const TriggerPassLineEdit& edit : mTriggerPassLineEdits) {
-        if (column >= edit.x + edit.removed) {
-            column += edit.inserted - edit.removed;
-        } else if (column > edit.x) {
-            // Inside text that was replaced, so it goes where the replacement starts
-            column = edit.x;
+        const int delta = edit.inserted - edit.removed;
+        if (start >= edit.x + edit.removed) {
+            start += delta;
+        } else if (start > edit.x) {
+            start = edit.x;
+        }
+        if (end > edit.x + edit.removed) {
+            end += delta;
+        } else if (end > edit.x) {
+            end = edit.x + edit.inserted;
         }
     }
-    return column;
+    return {start, std::max(0, end - start)};
 }
 
 // replaceInLine() removes and then inserts at the same column, and the two count as

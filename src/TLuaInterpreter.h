@@ -140,6 +140,9 @@ public:
     bool lazyCaptureGlobals() const { return mLazyCaptureGlobals; }
     void set_lua_table(const QString& tableName, QStringList& variableList);
     void setCaptureGroups(const std::list<std::string>&, const std::list<int>&);
+    // After setCaptureGroups(), for captures whose text on screen is no longer as long as what matched
+    void setCaptureGroupLengths(std::vector<int>&& lengths) { mCaptureGroupLengthList = std::move(lengths); }
+    int captureGroupLength(std::size_t index) const;
     void setCaptureNameGroups(const NameGroupMatches&, const NamedMatchesRanges&);
     void setMultiCaptureGroups(const std::list<std::list<std::string>>& captureList, const std::list<std::list<int>>& posList, QVector<NameGroupMatches>& nameMatches);
     void setMultiCaptureGroups(std::list<std::list<std::string>>&& captureList, std::list<std::list<int>>&& posList, QVector<NameGroupMatches>&& nameMatches);
@@ -1058,6 +1061,8 @@ private:
     const int LUA_FUNCTION_MAX_ARGS = 50;
     std::vector<std::string> mCaptureGroupList;
     std::vector<int> mCaptureGroupPosList;
+    // Filled only after an earlier trigger edited the line; while empty, each capture's own length applies
+    std::vector<int> mCaptureGroupLengthList;
     // clearCaptureGroups() parks emptied storage here so the next fire reuses the strings' buffers
     std::vector<std::string> mSpareCaptureGroupList;
     std::vector<int> mSpareCaptureGroupPosList;
@@ -1141,6 +1146,7 @@ private:
     {
         std::vector<std::string> captureGroupList;
         std::vector<int> captureGroupPosList;
+        std::vector<int> captureGroupLengthList;
         std::list<std::list<std::string>> multiCaptureGroupList;
         std::list<std::list<int>> multiCaptureGroupPosList;
         NameGroupMatches capturedNameGroups;

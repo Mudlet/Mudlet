@@ -501,7 +501,8 @@ private:
     TTrigger() = default;
 
     inline void updateMultistates(int regexNumber, std::list<std::string>& captureList, std::list<int>& posList, const NameGroupMatches* nameMatches = nullptr);
-    inline void filter(std::string&, int&, int lineNumber);
+    inline void filter(std::string&, int&, int lineNumber, bool positionsInCurrentColumns);
+    bool selectTextMatch(int lineNumber, int from, int length) const;
     void processExactMatch(int patternNumber, int posOffset, int lineNumber);
     void processRegexMatch(const char* haystackC,
                            const QString& haystack,
@@ -523,6 +524,9 @@ private:
                              int lineNumber,
                              const NameGroupMatches* nameGroups = nullptr,
                              const QMap<QString, QPair<int, int>>* namePositions = nullptr);
+    // Set while a colour filter above, which matches the line in its current columns,
+    // hands this trigger a capture; text patterns otherwise match the line as it arrived
+    bool mPositionsInCurrentColumns = false;
     const std::string& patternUtf8(int patternNumber) const;
 
 

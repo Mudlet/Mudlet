@@ -488,13 +488,6 @@ bool selectOnTriggerPassLine(Host* pHost, const int lineNumber, const int from, 
     TConsoleModel& model = pHost->mainConsoleModel();
     return model.selectSectionOnLine(model.buffer.triggerPassLineNow(lineNumber), from, length);
 }
-
-// Text patterns match the line as it arrived, so a match is found where earlier
-// triggers' edits have moved it
-bool selectTextMatchOnTriggerPassLine(Host* pHost, const int lineNumber, const int from, const int length)
-{
-    return selectOnTriggerPassLine(pHost, lineNumber, pHost->mainConsoleModel().buffer.triggerPassColumnNow(lineNumber, from), length);
-}
 } // namespace
 
 // Some extraordinary numbers outside of the range (0-255) used for ANSI colors:
@@ -1186,7 +1179,7 @@ END: {
                 // to enable people to highlight capture groups if there are any
                 // otherwise highlight complete expression match
                 if (position % numberOfCaptureGroups != 1) {
-                    selectTextMatchOnTriggerPassLine(mpHost, lineNumber, begin, length);
+                    selectTextMatch(lineNumber, begin, length);
                     if (mBgColor != QColorConstants::Transparent) {
                         mpHost->setMainConsoleBgColor(QColor(r1, g1, b1));
                     }
@@ -1195,7 +1188,7 @@ END: {
                     }
                 }
             } else {
-                selectTextMatchOnTriggerPassLine(mpHost, lineNumber, begin, length);
+                selectTextMatch(lineNumber, begin, length);
                 if (mBgColor != QColorConstants::Transparent) {
                     mpHost->setMainConsoleBgColor(QColor(r1, g1, b1));
                 }
@@ -1224,10 +1217,10 @@ END: {
                     // to enable people to highlight capture groups if there are any
                     // otherwise highlight complete expression match
                     if (filterPosition % numberOfCaptureGroups != 1) {
-                        filter(s, begin, lineNumber);
+                        filter(s, begin, lineNumber, mPositionsInCurrentColumns);
                     }
                 } else {
-                    filter(s, begin, lineNumber);
+                    filter(s, begin, lineNumber, mPositionsInCurrentColumns);
                 }
             }
         }
@@ -1277,7 +1270,7 @@ void TTrigger::processBeginOfLine(int patternNumber, int posOffset, int lineNumb
             const int begin = *iti;
             const std::string& s = *its;
             const int length = QString::fromStdString(s).size();
-            selectTextMatchOnTriggerPassLine(mpHost, lineNumber, begin, length);
+            selectTextMatch(lineNumber, begin, length);
             if (mBgColor != QColorConstants::Transparent) {
                 mpHost->setMainConsoleBgColor(QColor(r1, g1, b1));
             }
@@ -1294,7 +1287,7 @@ void TTrigger::processBeginOfLine(int patternNumber, int posOffset, int lineNumb
     executeWithCaptures(captureList, posList, lineNumber);
     if (mFilterTrigger) {
         if (!captureList.empty()) {
-            filter(captureList.front(), posList.front(), lineNumber);
+            filter(captureList.front(), posList.front(), lineNumber, mPositionsInCurrentColumns);
         }
     }
 }
@@ -1339,7 +1332,18 @@ void TTrigger::updateMultistates(int regexNumber, std::list<std::string>& captur
     }
 }
 
-void TTrigger::filter(std::string& capture, int& posOffset, int lineNumber)
+// Text patterns match the line as it arrived, so a match is found where earlier
+// triggers' edits have moved it, unless a colour filter above has done that already
+bool TTrigger::selectTextMatch(const int lineNumber, int from, int length) const
+{
+    TConsoleModel& model = mpHost->mainConsoleModel();
+    if (!mPositionsInCurrentColumns) {
+        std::tie(from, length) = model.buffer.triggerPassSpanNow(lineNumber, from, length);
+    }
+    return model.selectSectionOnLine(model.buffer.triggerPassLineNow(lineNumber), from, length);
+}
+
+void TTrigger::filter(std::string& capture, int& posOffset, int lineNumber, const bool positionsInCurrentColumns)
 {
     if (capture.empty()) {
         return;
@@ -1351,7 +1355,9 @@ void TTrigger::filter(std::string& capture, int& posOffset, int lineNumber)
     for (auto* triggerNode : *mpMyChildrenList) {
         auto* trigger = static_cast<TTrigger*>(triggerNode);
         // no line filter: a capture is not the line those bits were built from
+        const bool childWas = std::exchange(trigger->mPositionsInCurrentColumns, positionsInCurrentColumns);
         trigger->match(subject, text, lineNumber, posOffset, nullptr, true);
+        trigger->mPositionsInCurrentColumns = childWas;
     }
 }
 
@@ -1409,7 +1415,7 @@ void TTrigger::processSubstringMatch(const QString& haystack, const QString& nee
             const int begin = *iti;
             const std::string& s = *its;
             const int length = QString::fromStdString(s).size();
-            selectTextMatchOnTriggerPassLine(mpHost, lineNumber, begin, length);
+            selectTextMatch(lineNumber, begin, length);
             if (mBgColor != QColorConstants::Transparent) {
                 mpHost->setMainConsoleBgColor(QColor(r1, g1, b1));
             }
@@ -1426,7 +1432,7 @@ void TTrigger::processSubstringMatch(const QString& haystack, const QString& nee
     executeWithCaptures(captureList, posList, lineNumber);
     if (mFilterTrigger) {
         if (!captureList.empty()) {
-            filter(captureList.front(), posList.front(), lineNumber);
+            filter(captureList.front(), posList.front(), lineNumber, mPositionsInCurrentColumns);
         }
     }
 }
@@ -1455,6 +1461,10 @@ bool TTrigger::match_color_pattern(int line, int patternNumber, int posOffset, i
     // recolored by other triggers or scripts earlier in this trigger pass; with
     // no snapshot taken, or past its end, the line itself still holds them:
     const std::vector<TChar>* pPassLine = consoleModel.buffer.preTriggerPassLine(lineNow);
+    if (haystackIsCapture && !mPositionsInCurrentColumns) {
+        // A text parent's capture is in the columns the line arrived with
+        std::tie(posOffset, length) = consoleModel.buffer.triggerPassSpanNow(line, posOffset, length);
+    }
     // Filter ("only pass matches") parents hand children just the matched
     // capture, so restrict the scan to that window; for top-level triggers
     // the window covers the whole line:
@@ -1574,7 +1584,7 @@ void TTrigger::processColorPattern(int patternNumber, std::list<std::string>& ca
             auto it1 = captureList.begin();
             auto it2 = posList.begin();
             for (; it1 != captureList.end(); it1++, it2++) {
-                filter(*it1, *it2, lineNumber);
+                filter(*it1, *it2, lineNumber, true);
             }
         }
     }
@@ -1693,7 +1703,7 @@ void TTrigger::processExactMatch(int patternNumber, int posOffset, int lineNumbe
             const int begin = *iti;
             const std::string& s = *its;
             const int length = QString::fromStdString(s).size();
-            selectTextMatchOnTriggerPassLine(mpHost, lineNumber, begin, length);
+            selectTextMatch(lineNumber, begin, length);
             if (mBgColor != QColorConstants::Transparent) {
                 mpHost->setMainConsoleBgColor(QColor(r1, g1, b1));
             }
@@ -1710,7 +1720,7 @@ void TTrigger::processExactMatch(int patternNumber, int posOffset, int lineNumbe
     executeWithCaptures(captureList, posList, lineNumber);
     if (mFilterTrigger) {
         if (!captureList.empty()) {
-            filter(captureList.front(), posList.front(), lineNumber);
+            filter(captureList.front(), posList.front(), lineNumber, mPositionsInCurrentColumns);
         }
     }
 }
@@ -1986,10 +1996,10 @@ bool TTrigger::match(const TUtf8Subject& subject, const QString& haystack, int l
                             // single line number applies here
                             if (total > 1) {
                                 if (i % total != 1) {
-                                    filter(s, p, -1);
+                                    filter(s, p, -1, mPositionsInCurrentColumns);
                                 }
                             } else {
-                                filter(s, p, -1);
+                                filter(s, p, -1, mPositionsInCurrentColumns);
                             }
                         }
                     }
@@ -2019,7 +2029,9 @@ bool TTrigger::match(const TUtf8Subject& subject, const QString& haystack, int l
                     if (pLineBigrams && trigger->cannotMatch(*pLineBigrams, haystack) && !subject.dropsText()) {
                         continue;
                     }
+                    const bool childWas = std::exchange(trigger->mPositionsInCurrentColumns, mPositionsInCurrentColumns);
                     ret = trigger->match(subject, haystack, line, posOffset, pLineBigrams, haystackIsCapture);
+                    trigger->mPositionsInCurrentColumns = childWas;
                     if (ret) {
                         conditionMet = true;
                     }
@@ -2037,7 +2049,9 @@ bool TTrigger::match(const TUtf8Subject& subject, const QString& haystack, int l
             }
             for (auto* triggerNode : *mpMyChildrenList) {
                 auto* trigger = static_cast<TTrigger*>(triggerNode);
+                const bool childWas = std::exchange(trigger->mPositionsInCurrentColumns, mPositionsInCurrentColumns);
                 ret = trigger->match(subject, haystack, line, posOffset, pLineBigrams, haystackIsCapture);
+                trigger->mPositionsInCurrentColumns = childWas;
                 if (ret) {
                     conditionMet = true;
                 }
@@ -2314,7 +2328,7 @@ bool TTrigger::playsSound() const
 
 // Only Lua reads a fire's captures, and handing them over and back costs more
 // than a fire that runs no script.
-// lineNumber is the line text patterns matched as it arrived, whose positions are moved
+// lineNumber is the line text patterns matched as it arrived, whose captures are moved
 // past what earlier triggers edited; -1 for positions in the line's current columns
 void TTrigger::executeWithCaptures(
         const std::list<std::string>& captureList, const std::list<int>& posList, const int lineNumber, const NameGroupMatches* nameGroups, const QMap<QString, QPair<int, int>>* namePositions)
@@ -2325,16 +2339,23 @@ void TTrigger::executeWithCaptures(
     }
     TLuaInterpreter* pL = mpHost->getLuaInterpreter();
     const TConsoleModel* pModel = mpHost->mainConsoleModelOrNull();
-    if (pModel && pModel->buffer.triggerPassLineEdited(lineNumber)) {
+    const int arrivedLine = mPositionsInCurrentColumns ? -1 : lineNumber;
+    if (pModel && pModel->buffer.triggerPassLineEdited(arrivedLine)) {
         std::list<int> positionsNow;
-        for (const int position : posList) {
-            positionsNow.push_back(pModel->buffer.triggerPassColumnNow(lineNumber, position));
+        std::vector<int> lengthsNow;
+        lengthsNow.reserve(captureList.size());
+        auto capture = captureList.cbegin();
+        for (auto position = posList.cbegin(); position != posList.cend() && capture != captureList.cend(); ++position, ++capture) {
+            const auto [start, length] = pModel->buffer.triggerPassSpanNow(arrivedLine, *position, static_cast<int>(QString::fromStdString(*capture).size()));
+            positionsNow.push_back(start);
+            lengthsNow.push_back(length);
         }
         pL->setCaptureGroups(captureList, positionsNow);
+        pL->setCaptureGroupLengths(std::move(lengthsNow));
         if (nameGroups && namePositions) {
             QMap<QString, QPair<int, int>> namePositionsNow = *namePositions;
             for (auto& range : namePositionsNow) {
-                range.first = pModel->buffer.triggerPassColumnNow(lineNumber, range.first);
+                std::tie(range.first, range.second) = pModel->buffer.triggerPassSpanNow(arrivedLine, range.first, range.second);
             }
             pL->setCaptureNameGroups(*nameGroups, namePositionsNow);
         }

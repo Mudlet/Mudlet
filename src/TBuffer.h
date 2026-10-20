@@ -431,10 +431,10 @@ public:
     // its oldest; csmDetachedTriggerPassLine once the line itself has been deleted.
     // Any other line number is handed back as it is.
     int triggerPassLineNow(int lineNumber) const;
-    // Where a column of the line a trigger pass was handed is now, after scripts earlier
-    // in the pass inserted, removed or replaced text in it; text patterns match the line
-    // as it arrived, so their capture positions need this before they are used
-    int triggerPassColumnNow(int lineNumber, int column) const;
+    // Where a span {start, length} of the line a trigger pass was handed is now, after
+    // scripts earlier in the pass inserted, removed or replaced text in it; text patterns
+    // match the line as it arrived, so their captures need this before they are used
+    std::pair<int, int> triggerPassSpanNow(int lineNumber, int from, int length) const;
     bool triggerPassLineEdited(int lineNumber) const { return lineNumber >= 0 && lineNumber == mTriggerPassLineAsCommitted && !mTriggerPassLineEdits.empty(); }
     // What color matching reads for a pass line that has been deleted: its colors as
     // they arrived and its text as it was when it went

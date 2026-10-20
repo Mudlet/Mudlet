@@ -2868,6 +2868,58 @@ describe("Trigger processing", function()
 
                 assert.are.equal("orc", _G.TrigHighlight.selected)
             end)
+
+            local insideEdits = {
+                {"lengthened", "tag red orc", "t very red orc", "very red orc", function()
+                    if selectString("tag", 1) > -1 then replace("t") end
+                    if selectString("red", 1) > -1 then replace("very red") end
+                end},
+                {"shortened", "tag red orc", "tag r orc", "r orc", function()
+                    if selectString("red", 1) > -1 then replace("r") end
+                end},
+            }
+
+            for _, edit in ipairs(insideEdits) do
+                local description, incoming, edited, wanted, editor = unpack(edit)
+
+                it("highlights and selects all of a later trigger's capture that an earlier one " .. description, function()
+                    _G.TrigHighlight = {}
+                    local editTrigger = tempRegexTrigger("^" .. incoming .. "$", function()
+                        editor()
+                        deselect()
+                    end)
+                    tempComplexRegexTrigger("SpecHighlightEditedInside", "(red orc)$", "", 0, 0, 0, 0, 0, "red", "blue", 0, 0, 0)
+                    local pick = tempRegexTrigger("(?<who>red orc)$", function()
+                        if selectCaptureGroup(2) > -1 then
+                            _G.TrigHighlight.selected = getSelection()
+                        end
+                        deselect()
+                        if selectCaptureGroup("who") > -1 then
+                            _G.TrigHighlight.named = getSelection()
+                        end
+                        deselect()
+                        _G.TrigHighlight.line = getLineNumber()
+                    end)
+                    finally(function()
+                        killTrigger(editTrigger)
+                        killTrigger("SpecHighlightEditedInside")
+                        killTrigger(pick)
+                    end)
+
+                    feedTriggers(incoming .. "\n")
+
+                    local line = _G.TrigHighlight.line
+                    assert.is_number(line, "the later trigger should have fired")
+                    moveCursor(0, line)
+                    assert.are.equal(edited, getCurrentLine())
+                    assert.are.equal(wanted, _G.TrigHighlight.selected)
+                    assert.are.equal(wanted, _G.TrigHighlight.named)
+                    assert.are.same(color_table.red, coloursOf(line, wanted:sub(1, 1)).foreground)
+                    assert.are.same(color_table.red, coloursOf(line, "orc").foreground)
+                    assert.are.same(defaultForeground, coloursOf(line, edited:sub(1, 1)).foreground,
+                                    "nothing ahead of the capture should have been highlighted")
+                end)
+            end
         end)
 
     end)
@@ -4343,6 +4395,17 @@ describe("Trigger processing", function()
             -- one line in, two gone
             assert.are.equal(countBefore - 1, getLineCount())
             assert.are.equal("ChainDeleteMarker magenta", _G.ColorFilterSpec.colourChainChildCapture)
+        end)
+
+        -- the fixture's "shift inserter" puts "XX" at the start of either line first
+        it("selects a text child's capture of a colour parent where it is after an earlier edit", function()
+            feed("ColourShiftMarker \27[36mbc\27[0m\n")
+            assert.are.equal("bc", _G.ColorFilterSpec.colourShiftSelection)
+        end)
+
+        it("scans a colour child's window of a text parent where it is after an earlier edit", function()
+            feed("ReverseShiftMarker \27[33mgold\27[0m plain\n")
+            assert.are.equal("gold", _G.ColorFilterSpec.reverseShiftCapture)
         end)
 
     end)
