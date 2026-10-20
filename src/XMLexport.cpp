@@ -1461,6 +1461,14 @@ void XMLexport::writeKey(TKey* pT, pugi::xml_node xmlParent, bool withChildren)
 
 void XMLexport::writeScriptElement(const QString& script, pugi::xml_node xmlElement)
 {
+    // pugixml ends the text it stores at a NUL, and XML 1.0 cannot carry one anyway, so it gets
+    // the U+FFFC + Control Picture stand-in that sanitizeForQxml() gives the other control characters
+    if (script.contains(QChar(u'\0'))) {
+        QString encoded = script;
+        encoded.replace(QChar(u'\0'), qsl("\xFFFC\x2400"));
+        xmlElement.append_child("script").text().set(encoded.toUtf8().constData());
+        return;
+    }
     xmlElement.append_child("script").text().set(script.toUtf8().constData());
 }
 
