@@ -150,7 +150,26 @@ private slots:
     void resolve_missingDrive_ends()
     {
         QCOMPARE(TMedia::resolvedMediaPath(QStringLiteral("Z:/no-such-drive/tone.wav")), QStringLiteral("Z:/no-such-drive/tone.wav"));
-        QCOMPARE(TMedia::resolvedMediaPath(QStringLiteral("/no-such-folder/tone.wav")), QStringLiteral("/no-such-folder/tone.wav"));
+        // On Windows "/" is the current drive's root, so the drive is named in the answer
+        QCOMPARE(TMedia::resolvedMediaPath(QStringLiteral("/no-such-folder/tone.wav")), QDir(QFileInfo(QStringLiteral("/")).canonicalFilePath()).filePath(QStringLiteral("no-such-folder/tone.wav")));
+    }
+
+    // A share that is offline is a root too, not a folder of the current drive's root
+    void resolve_missingShare_ends()
+    {
+        const QString share = QStringLiteral("//no-such-server/share/tone.wav");
+        QCOMPARE(TMedia::resolvedMediaPath(share), QDir::cleanPath(share));
+    }
+
+    // Only a drive letter makes a drive: a folder whose name ends in ':' is walked up like any other
+    void resolve_folderEndingInColon_isAFolder()
+    {
+        QTemporaryDir base;
+        QVERIFY(base.isValid());
+        const QString real = base.filePath(QStringLiteral("real"));
+        QVERIFY(QDir().mkpath(real));
+
+        QCOMPARE(TMedia::resolvedMediaPath(real + QStringLiteral("/snd:/gone.wav")), QFileInfo(real).canonicalFilePath() + QStringLiteral("/snd:/gone.wav"));
     }
 
     // A file that has gone resolves through the folders that remain, symlinks among them

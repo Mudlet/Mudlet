@@ -693,18 +693,29 @@ QString TMedia::mediaCacheFileName(const QString& absolutePath) const
         return canonical;
     }
 
+    // A root has no parent to walk on to, even when it is missing: "/", a drive "C:/", or a share "//server/share"
+    const auto isRoot = [](const QString& folder) {
+        if (folder == QLatin1String("/") || (folder.size() == 3 && folder.at(0).isLetter() && folder.at(1) == QLatin1Char(':') && folder.at(2) == QLatin1Char('/'))) {
+            return true;
+        }
+        if (folder.startsWith(QLatin1String("//"))) {
+            const qsizetype serverEnd = folder.indexOf(QLatin1Char('/'), 2);
+            return serverEnd < 0 || folder.indexOf(QLatin1Char('/'), serverEnd + 1) < 0;
+        }
+        return false;
+    };
+
     // Walked up as given, not tidied first: ".." after a symlink leads out of the folder it points to
     QString existing = path;
     QString rest;
-    while (true) {
+    while (!isRoot(existing)) {
         const qsizetype slash = existing.lastIndexOf(QLatin1Char('/'));
         if (slash < 0) {
             break;
         }
-        // A root stays a root, "/" or "C:/", and has no parent to walk on to, even when it is missing
-        const QString parent = existing.left(slash == 0 || existing.at(slash - 1) == QLatin1Char(':') ? slash + 1 : slash);
-        if (parent == existing) {
-            break;
+        QString parent = existing.left(slash);
+        if (parent.isEmpty() || (parent.size() == 2 && parent.at(0).isLetter() && parent.at(1) == QLatin1Char(':'))) {
+            parent.append(QLatin1Char('/'));
         }
         const QString name = existing.mid(slash + 1);
         rest = rest.isEmpty() ? name : qsl("%1/%2").arg(name, rest);
@@ -1144,12 +1155,15 @@ bool TMedia::transitionNonRelativeFile(TMediaData& mediaData)
         // A file moved or deleted since it was played plays the copy made of it; Mudlet before 5.1 kept that
         // copy under the bare file name
         QString copy;
-        // A path ending in a separator names no file, so no copy of one either
-        if (!source.endsWith(QLatin1Char('/'))) {
+        // A path ending in a separator, ".", or "..", names no file, so no copy of one either
+        const QString lastName = source.section(QLatin1Char('/'), -1);
+        if (!lastName.isEmpty() && lastName != QLatin1String(".") && lastName != QLatin1String("..")) {
             if (QFileInfo(mediaFilePath).isFile()) {
                 copy = cacheFileName;
-            } else if (const QString bareName = QFileInfo(source).fileName(); !bareName.isEmpty() && QFileInfo(qsl("%1/%2").arg(mediaRoot, bareName)).isFile()) {
-                copy = bareName;
+            } else if (QFileInfo(qsl("%1/%2").arg(mediaRoot, lastName)).isFile()) {
+                copy = lastName;
+                // Not necessarily a copy of this file: a game's own download of that name is played just the same
+                qWarning().noquote() << qsl("TMedia::transitionNonRelativeFile() WARNING - there is no file at %1, so %2 in the media folder is played in its place.").arg(source, lastName);
             }
         }
 
