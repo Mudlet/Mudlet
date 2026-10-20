@@ -343,6 +343,10 @@ function Adjustable.Container:changeContainer(container)
     return result, err
 end
 
+-- nonzero while a border is being written, as each write raises sysWindowResizeEvent and GeyserReposition answers it,
+-- and while a drag or a follower's two-step move and resize lays a container out, as its border is adjusted after
+local settlingBorders = 0
+
 -- internal function to handle the onMove event of main Adjustable.Container Label
 -- @param label the main Adjustable.Container Label
 -- @param event the onMove event and its information
@@ -433,7 +437,9 @@ function Adjustable.Container:onMove (label, event)
             -- one pass over the subtree per drag event, where move() then resize()
             -- took two; neither runs here, so an override of either is not invoked
             self.x, self.y, self.width, self.height = tx, ty, tw, th
+            settlingBorders = settlingBorders + 1
             self:set_constraints(self)
+            settlingBorders = settlingBorders - 1
             if self.connectedContainers then
                 self:adjustConnectedContainers()
             end
@@ -523,9 +529,6 @@ local function axisShares(where, opposite)
     return near, far
 end
 
--- nonzero while a border is being written, as each write raises sysWindowResizeEvent and GeyserReposition answers it
-local settlingBorders = 0
-
 -- internal function to reserve both borders of one axis. The named border is always written, as
 -- writing 0 releases it; the facing one only if attached to, as the user may have set it by hand.
 local function setAxisBorders(where)
@@ -571,6 +574,7 @@ local function followEdge(container, where, edge)
     -- constraint is stored whole, so dropping the fraction twice walks
     -- the far edge in a pixel on every mouse move
     local px, py, pw, ph = parentFrame(container)
+    settlingBorders = settlingBorders + 1
     if where == "right" then
         Geyser.Container.resize(container, keepRelativeSize(container.width, edge - container:get_x(), pw), nil)
     end
@@ -589,6 +593,7 @@ local function followEdge(container, where, edge)
         Geyser.Container.move(container, nil, keepRelativePosition(container.y, top_y, ph, py))
         Geyser.Container.resize(container, nil, keepRelativeSize(container.height, bottom_y - container:get_y(), ph))
     end
+    settlingBorders = settlingBorders - 1
 end
 
 -- internal function: the containers on other borders that follow the given border line up with the
@@ -631,8 +636,10 @@ function Adjustable.Container:adjustConnectedContainers()
                     width = nil
                     x = nil
                 end
+                settlingBorders = settlingBorders + 1
                 Geyser.Container.move(container, x, y)
                 Geyser.Container.resize(container, width, height)
+                settlingBorders = settlingBorders - 1
             else
                 local edges = {left = self:get_x() + self:get_width(), right = self:get_x(),
                                top = self:get_y() + self:get_height(), bottom = self:get_y()}
