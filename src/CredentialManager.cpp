@@ -1529,21 +1529,20 @@ bool CredentialManager::storeCredential(const QString& profileName, const QStrin
     return storeCredentialToFile(profileName, key, credential);
 }
 
-QString CredentialManager::retrieveCredential(const QString& profileName, const QString& key)
+QString CredentialManager::retrieveCredential(const QString& profileName, const QString& key, ReadOutcome* failure)
 {
-    if (profileName.isEmpty() || key.isEmpty()) {
-        return QString();
-    }
-
     // Validate key name to prevent directory traversal and other security issues
-    if (!isValidKeyName(key)) {
+    if (profileName.isEmpty() || key.isEmpty() || !isValidKeyName(key)) {
+        if (failure) {
+            *failure = ReadOutcome::Unavailable;
+        }
         return QString();
     }
 
     // Static API uses encrypted file storage for synchronous operation
     // NOTE: For QtKeychain integration, use the async API methods instead.
     //       Main UI components (dlgConnectionProfiles) have been migrated to async API.
-    return retrieveCredentialFromFile(profileName, key);
+    return retrieveCredentialFromFile(profileName, key, failure);
 }
 
 bool CredentialManager::removeCredential(const QString& profileName, const QString& key)

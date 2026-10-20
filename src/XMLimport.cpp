@@ -910,7 +910,11 @@ void XMLimport::readHost(Host* pHost)
         }
     } else if (useSecureStorage) {
         // Modern application: load from secure storage if available
-        pHost->mProxyPassword = CredentialManager::retrieveCredential(pHost->getName(), "proxy");
+        CredentialManager::ReadOutcome outcome = CredentialManager::ReadOutcome::NothingStored;
+        pHost->mProxyPassword = CredentialManager::retrieveCredential(pHost->getName(), "proxy", &outcome);
+        if (pHost->mProxyPassword.isEmpty() && outcome == CredentialManager::ReadOutcome::Unreadable) {
+            qWarning().nospace().noquote() << "XMLimport::readHost(...) WARNING - the saved proxy password for profile \"" << pHost->getName() << "\" could not be read.";
+        }
     }
 
     pHost->set_USE_IRE_DRIVER_BUGFIX(attributes().value(qsl("USE_IRE_DRIVER_BUGFIX")) == YES);

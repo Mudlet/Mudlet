@@ -129,7 +129,8 @@ public:
 
     // Static fallback methods (for migration and test cleanup - uses encrypted file storage)
     static bool storeCredential(const QString& profileName, const QString& key, const QString& credential);
-    static QString retrieveCredential(const QString& profileName, const QString& key);
+    // failure, when given, says why nothing came back, as for retrieveCredentialFromFile()
+    static QString retrieveCredential(const QString& profileName, const QString& key, ReadOutcome* failure = nullptr);
     static bool removeCredential(const QString& profileName, const QString& key);
 
 private:

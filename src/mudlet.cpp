@@ -7685,9 +7685,14 @@ bool mudlet::migratePasswordsToProfileStorage()
 
     for (const auto& profile : profiles) {
         // Try to retrieve password from CredentialManager
-        QString password = CredentialManager::retrieveCredential(profile, "character");
+        CredentialManager::ReadOutcome outcome = CredentialManager::ReadOutcome::NothingStored;
+        QString password = CredentialManager::retrieveCredential(profile, "character", &outcome);
 
-        if (!password.isEmpty()) {
+        if (password.isEmpty() && outcome == CredentialManager::ReadOutcome::Unreadable) {
+            qWarning().nospace().noquote() << "mudlet::migratePasswordsToProfileStorage() WARNING - could not read the saved password for profile \"" << profile
+                                           << "\", so it stays in secure storage.";
+            mPasswordsNotMigratedToProfiles.append(profile);
+        } else if (!password.isEmpty()) {
             // Only remove from secure storage once it is saved here, and only if this version is >= 4.20.0
             // This prevents breaking compatibility with older Mudlet versions
             if (!MudletApp::writeProfileData(profile, qsl("password"), password).first) {
