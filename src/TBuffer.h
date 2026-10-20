@@ -431,6 +431,11 @@ public:
     // its oldest; csmDetachedTriggerPassLine once the line itself has been deleted.
     // Any other line number is handed back as it is.
     int triggerPassLineNow(int lineNumber) const;
+    // Where a column of the line a trigger pass was handed is now, after scripts earlier
+    // in the pass inserted, removed or replaced text in it; text patterns match the line
+    // as it arrived, so their capture positions need this before they are used
+    int triggerPassColumnNow(int lineNumber, int column) const;
+    bool triggerPassLineEdited(int lineNumber) const { return lineNumber >= 0 && lineNumber == mTriggerPassLineAsCommitted && !mTriggerPassLineEdits.empty(); }
     // What color matching reads for a pass line that has been deleted: its colors as
     // they arrived and its text as it was when it went
     const std::vector<TChar>& detachedTriggerPassLine() const { return mPreTriggerPassLine; }
@@ -568,6 +573,7 @@ private:
     void wrapPreTriggerPassLine(const WrapInfo& firstSegment, int indentWidth);
     void noteFoundLines(int first, int last);
     void materialisePreTriggerPassLine(int y);
+    void noteTriggerPassLineEdit(int y, int x, int removed, int inserted);
     void triggerPassLinesRemoved(int from, int to);
     int remapLinkId(const TLinkStore& sourceLinkStore, int sourceLinkId, QHash<int, int>& remappedLinkIds, int line = -1);
     int calculateWrapPosition(int lineNumber, int begin, int end);
@@ -722,10 +728,20 @@ private:
     // The index the current trigger pass was handed, which mPreTriggerPassLineNumber moves on from
     int mTriggerPassLineAsCommitted = -1;
     QString mDetachedTriggerPassLineText;
+    struct TriggerPassLineEdit
+    {
+        int x = 0;
+        int removed = 0;
+        int inserted = 0;
+    };
+    // In the order made, each in the columns the line had at the time
+    std::vector<TriggerPassLineEdit> mTriggerPassLineEdits;
+    static void appendTriggerPassLineEdit(std::vector<TriggerPassLineEdit>& edits, int x, int removed, int inserted);
     struct EnclosingTriggerPass
     {
         int lineNumber = -1;
         QString detachedText;
+        std::vector<TriggerPassLineEdit> edits;
     };
     // The passes a trigger calling feedTriggers() has paused. A member, not saved in
     // commitLineData()'s frame, as their lines move with deleted, rewrapped and

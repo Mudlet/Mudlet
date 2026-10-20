@@ -520,6 +520,7 @@ private:
     bool playsSound() const;
     void executeWithCaptures(const std::list<std::string>& captureList,
                              const std::list<int>& posList,
+                             int lineNumber,
                              const NameGroupMatches* nameGroups = nullptr,
                              const QMap<QString, QPair<int, int>>* namePositions = nullptr);
     const std::string& patternUtf8(int patternNumber) const;

@@ -488,6 +488,13 @@ bool selectOnTriggerPassLine(Host* pHost, const int lineNumber, const int from, 
     TConsoleModel& model = pHost->mainConsoleModel();
     return model.selectSectionOnLine(model.buffer.triggerPassLineNow(lineNumber), from, length);
 }
+
+// Text patterns match the line as it arrived, so a match is found where earlier
+// triggers' edits have moved it
+bool selectTextMatchOnTriggerPassLine(Host* pHost, const int lineNumber, const int from, const int length)
+{
+    return selectOnTriggerPassLine(pHost, lineNumber, pHost->mainConsoleModel().buffer.triggerPassColumnNow(lineNumber, from), length);
+}
 } // namespace
 
 // Some extraordinary numbers outside of the range (0-255) used for ANSI colors:
@@ -1179,7 +1186,7 @@ END: {
                 // to enable people to highlight capture groups if there are any
                 // otherwise highlight complete expression match
                 if (position % numberOfCaptureGroups != 1) {
-                    selectOnTriggerPassLine(mpHost, lineNumber, begin, length);
+                    selectTextMatchOnTriggerPassLine(mpHost, lineNumber, begin, length);
                     if (mBgColor != QColorConstants::Transparent) {
                         mpHost->setMainConsoleBgColor(QColor(r1, g1, b1));
                     }
@@ -1188,7 +1195,7 @@ END: {
                     }
                 }
             } else {
-                selectOnTriggerPassLine(mpHost, lineNumber, begin, length);
+                selectTextMatchOnTriggerPassLine(mpHost, lineNumber, begin, length);
                 if (mBgColor != QColorConstants::Transparent) {
                     mpHost->setMainConsoleBgColor(QColor(r1, g1, b1));
                 }
@@ -1203,7 +1210,7 @@ END: {
         updateMultistates(patternNumber, captureList, posList, &nameGroups);
         return;
     }
-    executeWithCaptures(captureList, posList, &nameGroups, &namePositions);
+    executeWithCaptures(captureList, posList, lineNumber, &nameGroups, &namePositions);
     if (mFilterTrigger) {
         if (captureList.size() > 1) {
             const int total = captureList.size();
@@ -1270,7 +1277,7 @@ void TTrigger::processBeginOfLine(int patternNumber, int posOffset, int lineNumb
             const int begin = *iti;
             const std::string& s = *its;
             const int length = QString::fromStdString(s).size();
-            selectOnTriggerPassLine(mpHost, lineNumber, begin, length);
+            selectTextMatchOnTriggerPassLine(mpHost, lineNumber, begin, length);
             if (mBgColor != QColorConstants::Transparent) {
                 mpHost->setMainConsoleBgColor(QColor(r1, g1, b1));
             }
@@ -1284,7 +1291,7 @@ void TTrigger::processBeginOfLine(int patternNumber, int posOffset, int lineNumb
         updateMultistates(patternNumber, captureList, posList);
         return;
     }
-    executeWithCaptures(captureList, posList);
+    executeWithCaptures(captureList, posList, lineNumber);
     if (mFilterTrigger) {
         if (!captureList.empty()) {
             filter(captureList.front(), posList.front(), lineNumber);
@@ -1402,7 +1409,7 @@ void TTrigger::processSubstringMatch(const QString& haystack, const QString& nee
             const int begin = *iti;
             const std::string& s = *its;
             const int length = QString::fromStdString(s).size();
-            selectOnTriggerPassLine(mpHost, lineNumber, begin, length);
+            selectTextMatchOnTriggerPassLine(mpHost, lineNumber, begin, length);
             if (mBgColor != QColorConstants::Transparent) {
                 mpHost->setMainConsoleBgColor(QColor(r1, g1, b1));
             }
@@ -1416,7 +1423,7 @@ void TTrigger::processSubstringMatch(const QString& haystack, const QString& nee
         updateMultistates(regexNumber, captureList, posList);
         return;
     }
-    executeWithCaptures(captureList, posList);
+    executeWithCaptures(captureList, posList, lineNumber);
     if (mFilterTrigger) {
         if (!captureList.empty()) {
             filter(captureList.front(), posList.front(), lineNumber);
@@ -1560,7 +1567,8 @@ void TTrigger::processColorPattern(int patternNumber, std::list<std::string>& ca
         updateMultistates(patternNumber, captureList, posList);
         return;
     }
-    executeWithCaptures(captureList, posList);
+    // Color matching reads the line in its current columns already
+    executeWithCaptures(captureList, posList, -1);
     if (mFilterTrigger) {
         if (!captureList.empty()) {
             auto it1 = captureList.begin();
@@ -1685,7 +1693,7 @@ void TTrigger::processExactMatch(int patternNumber, int posOffset, int lineNumbe
             const int begin = *iti;
             const std::string& s = *its;
             const int length = QString::fromStdString(s).size();
-            selectOnTriggerPassLine(mpHost, lineNumber, begin, length);
+            selectTextMatchOnTriggerPassLine(mpHost, lineNumber, begin, length);
             if (mBgColor != QColorConstants::Transparent) {
                 mpHost->setMainConsoleBgColor(QColor(r1, g1, b1));
             }
@@ -1699,7 +1707,7 @@ void TTrigger::processExactMatch(int patternNumber, int posOffset, int lineNumbe
         updateMultistates(patternNumber, captureList, posList);
         return;
     }
-    executeWithCaptures(captureList, posList);
+    executeWithCaptures(captureList, posList, lineNumber);
     if (mFilterTrigger) {
         if (!captureList.empty()) {
             filter(captureList.front(), posList.front(), lineNumber);
@@ -2306,16 +2314,35 @@ bool TTrigger::playsSound() const
 
 // Only Lua reads a fire's captures, and handing them over and back costs more
 // than a fire that runs no script.
-void TTrigger::executeWithCaptures(const std::list<std::string>& captureList, const std::list<int>& posList, const NameGroupMatches* nameGroups, const QMap<QString, QPair<int, int>>* namePositions)
+// lineNumber is the line text patterns matched as it arrived, whose positions are moved
+// past what earlier triggers edited; -1 for positions in the line's current columns
+void TTrigger::executeWithCaptures(
+        const std::list<std::string>& captureList, const std::list<int>& posList, const int lineNumber, const NameGroupMatches* nameGroups, const QMap<QString, QPair<int, int>>* namePositions)
 {
     if (!fireReachesLua()) {
         execute();
         return;
     }
     TLuaInterpreter* pL = mpHost->getLuaInterpreter();
-    pL->setCaptureGroups(captureList, posList);
-    if (nameGroups && namePositions) {
-        pL->setCaptureNameGroups(*nameGroups, *namePositions);
+    const TConsoleModel* pModel = mpHost->mainConsoleModelOrNull();
+    if (pModel && pModel->buffer.triggerPassLineEdited(lineNumber)) {
+        std::list<int> positionsNow;
+        for (const int position : posList) {
+            positionsNow.push_back(pModel->buffer.triggerPassColumnNow(lineNumber, position));
+        }
+        pL->setCaptureGroups(captureList, positionsNow);
+        if (nameGroups && namePositions) {
+            QMap<QString, QPair<int, int>> namePositionsNow = *namePositions;
+            for (auto& range : namePositionsNow) {
+                range.first = pModel->buffer.triggerPassColumnNow(lineNumber, range.first);
+            }
+            pL->setCaptureNameGroups(*nameGroups, namePositionsNow);
+        }
+    } else {
+        pL->setCaptureGroups(captureList, posList);
+        if (nameGroups && namePositions) {
+            pL->setCaptureNameGroups(*nameGroups, *namePositions);
+        }
     }
     execute();
     pL->clearCaptureGroups();
