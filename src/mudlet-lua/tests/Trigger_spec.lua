@@ -5579,16 +5579,22 @@ describe("Trigger processing", function()
                 LazyGlobalsSpec.matches = rawget(_G, "matches")
                 LazyGlobalsSpec.line = rawget(_G, "line")
             ]==]))
+            -- on its own, as reading matches first puts line in place too
+            trigger(tempRegexTrigger("^LazyRawgetLine (\\w+)$", [==[
+                LazyGlobalsSpec.lineFirst = rawget(_G, "line")
+            ]==]))
             multiline("SpecLazyRawgetMulti", {[[^lazyrawget one (\w+)$]], [[^lazyrawget two (\w+)$]]}, [==[
                 LazyGlobalsSpec.multimatches = rawget(_G, "multimatches")
             ]==])
 
             feedTriggers("\nLazyRawget word\n")
+            feedTriggers("\nLazyRawgetLine word\n")
             feedTriggers("lazyrawget one aaa\n")
             feedTriggers("lazyrawget two bbb\n")
 
             assert.are.equal("word", seen.matches and seen.matches[2])
             assert.are.equal("LazyRawget word", seen.line)
+            assert.are.equal("LazyRawgetLine word", seen.lineFirst)
             assert.are.equal("bbb", seen.multimatches and seen.multimatches[2] and seen.multimatches[2][2])
         end)
 
