@@ -2981,3 +2981,33 @@ describe("Tests a Geyser.Label right click menu in a user window deleted behind 
     assert.spy(sizeSpy).was_not_called()
   end)
 end)
+
+describe("Tests the typeface a label's colour leaves it with", function()
+  local geyserLabel
+
+  after_each(function()
+    if geyserLabel then
+      geyserLabel:delete()
+      geyserLabel = nil
+    end
+    deleteLabel("gltfDefault")
+    deleteLabel("gltfOther")
+  end)
+
+  local function otherColourFont()
+    createLabel("gltfOther", 0, 140, 300, 50, 1)
+    setBackgroundColor("gltfOther", 0, 0, 0, 255)
+    return getFont("gltfOther")
+  end
+
+  it("is the same for a Geyser.Label with no colour of its own as for one with a colour", function()
+    geyserLabel = Geyser.Label:new({name = "gltfOwn", x = 0, y = 0, width = 300, height = 50})
+    assert.are.equal(otherColourFont(), getFont("gltfOwn"))
+  end)
+
+  it("is the same for a label set to the default colour as for one set to another", function()
+    createLabel("gltfDefault", 0, 70, 300, 50, 1)
+    setBackgroundColor("gltfDefault", 32, 32, 32, 255)
+    assert.are.equal(otherColourFont(), getFont("gltfDefault"))
+  end)
+end)
