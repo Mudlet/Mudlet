@@ -122,6 +122,45 @@ describe("Tests functionality of Geyser.Color", function()
       end
     end)
 
+    it("reads hex and decimal strings of unusual shapes", function()
+      assert.are.same({170, 187, 204, 0}, {Geyser.Color.parse("#AABBCC00")})
+      assert.are.same({170, 187, 204, 128}, {Geyser.Color.parse("0xaabbcc80")})
+      assert.are.same({170, 187, 204, 255}, {Geyser.Color.parse("#aabbccd")})
+      assert.are.same({170, 187, 204, 255}, {Geyser.Color.parse("#aa-bb-cc")})
+      assert.are.same({10, 20, 30, 255}, {Geyser.Color.parse("<10, 20, 30>")})
+      assert.are.same({10, 20, 30, 255}, {Geyser.Color.parse("<10,20,30,>")})
+      assert.are.equal("#ff0000", Geyser.Color.hex("<300,0,0>"))
+    end)
+
+    -- a script cycling through a few more colours than the cache holds must
+    -- still hit it, or every call pays to parse and to cache
+    it("still remembers colours for a script cycling through just over 1000 of them", function()
+      local colours = {}
+      for i = 1, 1001 do
+        colours[i] = string.format("#%06x", i * 7919)
+      end
+      for _ = 1, 3 do
+        for _, colour in ipairs(colours) do
+          Geyser.Color.parse(colour)
+          Geyser.Color.hex(colour)
+        end
+      end
+      local originalFind = string.find
+      local finds = 0
+      finally(function() string.find = originalFind end)
+      string.find = function(...)
+        finds = finds + 1
+        return originalFind(...)
+      end
+      for _, colour in ipairs(colours) do
+        Geyser.Color.parse(colour)
+        Geyser.Color.hex(colour)
+      end
+      string.find = originalFind
+      assert.are.equal(0, finds)
+      assert.are.same({0, 30, 239, 255}, {Geyser.Color.parse(colours[1])})
+    end)
+
     it("raises for a malformed hex string every time", function()
       for _ = 1, 2 do
         assert.has_error(function() Geyser.Color.parse("#fff") end)
