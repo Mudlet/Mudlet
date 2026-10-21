@@ -3252,10 +3252,26 @@ local function find_area(name)
     map.set("currentArea", areaID)
 end
 
+local function forget_position()
+    -- room ids from before the load name unrelated rooms in the loaded map
+    local was_mapping = map.mapping
+    map.set("mapping", false)
+    map.set("currentRoom", nil)
+    map.set("currentArea", nil)
+    map.set("prevRoom", nil)
+    move_queue = {}
+    random_move = false
+    if was_mapping then
+        map.echo("Mapping off. Use &lt;yellow&gt;map me&lt;reset&gt; to find yourself on the loaded map.")
+    end
+end
+
 function map.load_map(address)
     local path = profilePath .. "/map downloads/map.dat"
     if not address then
-        loadMap(path)
+        if loadMap(path) then
+            forget_position()
+        end
         map.echo("Map reloaded from local copy.")
     else
         if not string.match(address,"/[%a_]+%.dat$") then
@@ -4504,7 +4520,9 @@ function map.eventHandler(event, ...)
     elseif event == "sysDownloadDone" and downloading then
         local file = arg1
         if string.ends(file,"/map.dat") then
-            loadMap(file)
+            if loadMap(file) then
+                forget_position()
+            end
             downloading = false
             map.echo("Map File Loaded.")
         elseif string.ends(file,"/versions.lua") then
