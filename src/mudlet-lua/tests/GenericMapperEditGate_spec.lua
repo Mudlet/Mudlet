@@ -1,5 +1,5 @@
 describe("Tests that the generic mapper only edits the map while mapping", function()
-  if type(map) ~= "table" or type(map.require_mapping) ~= "function" then
+  if type(map) ~= "table" or type(map.roomLook) ~= "function" then
     it("needs the generic mapper installed", function()
       pending("the generic mapper is not installed in this profile")
     end)
