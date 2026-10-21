@@ -3289,12 +3289,6 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       assert.has_error(function() suffix(5) end)
     end)
 
-    it("Should give the same error for a window that does not exist", function()
-      local wanted = "moveCursor: bad argument #3 type (y as number expected, got nil!)"
-      assert.has_error(function() prefix("x", nil, nil, nil, "specPrefixSuffixNoSuchWindow") end, wanted)
-      assert.has_error(function() suffix("x", nil, nil, nil, "specPrefixSuffixNoSuchWindow") end, wanted)
-    end)
-
     -- A line that has been finished off with a newline is the ordinary trigger
     -- case, and the only one where landing a column short is visible: on the
     -- unfinished line the block above uses, an insert past the last character

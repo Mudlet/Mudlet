@@ -1548,10 +1548,27 @@ int TLuaInterpreter::getColumnNumber(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getCurrentLine
 int TLuaInterpreter::getCurrentLine(lua_State* L)
 {
-    const QString windowName{WINDOW_NAME(L, 1)};
+    // A leading boolean is the flag with the window left out, as resetBackgroundImage() takes it
+    QString windowName;
+    int flagPos = 1;
+    if (lua_type(L, 1) != LUA_TBOOLEAN) {
+        windowName = WINDOW_NAME(L, 1);
+        flagPos = 2;
+    }
+    bool fullErrorReporting = false;
+    // A trailing nil was ignored before the flag existed, so it still means the default
+    if (lua_gettop(L) >= flagPos && !lua_isnil(L, flagPos)) {
+        fullErrorReporting = getVerifiedBool(L, __func__, flagPos, "enableFullErrorReporting {default = false}", true);
+    }
     auto pModel = getHostFromLua(L).consoleModelNamed(windowName);
     if (!pModel) {
-        return windowNotFound(L, windowName);
+        if (fullErrorReporting) {
+            return windowNotFound(L, windowName);
+        }
+        // Bug compatibility: scripts may test the first value against this string, so it stays the default
+        lua_pushstring(L, "ERROR: mini console does not exist");
+        lua_pushfstring(L, bad_window_value, windowName.toUtf8().constData());
+        return 2;
     }
     lua_pushstring(L, pModel->buffer.line(pModel->mUserCursor.y()).toUtf8().constData());
     return 1;

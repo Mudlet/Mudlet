@@ -4171,10 +4171,23 @@ describe("Tests UI functions", function()
       assert.are.equal("size cannot be 0 or negative", err2)
     end)
 
-    it("getCurrentLine returns nil and a message for an unknown window", function()
+    it("getCurrentLine returns the legacy error string for an unknown window", function()
+      -- kept for bug compatibility: a string, not nil, plus a second message
       local first, second = getCurrentLine("uiReadbackNoSuchWindow")
+      assert.are.equal("ERROR: mini console does not exist", first)
+      assert.is_string(second)
+    end)
+
+    it("getCurrentLine returns nil and a message for an unknown window when asked for full error reporting", function()
+      local first, second = getCurrentLine("uiReadbackNoSuchWindow", true)
       assert.is_nil(first)
       assert.are.equal('window "uiReadbackNoSuchWindow" not found', second)
+    end)
+
+    it("getCurrentLine rejects an enableFullErrorReporting that is not a boolean", function()
+      local wanted = "getCurrentLine: bad argument #2 type (enableFullErrorReporting {default = false} as boolean is optional, got string!)"
+      assert.has_error(function() getCurrentLine("main", "yes") end, wanted)
+      assert.has_error(function() getCurrentLine("uiReadbackNoSuchWindow", 1) end)
     end)
   end)
 
