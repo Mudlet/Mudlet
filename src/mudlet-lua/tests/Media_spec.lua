@@ -1909,6 +1909,30 @@ describe("Media playback effects with a generated sound file", function()
     assert.equals(otherLongSoundFile, playing[1].name)
   end)
 
+  it("a sound with a priority is replaced by another played under its key", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    local finished, started = {}, {}
+    collect("sysMediaFinished", finished)
+    collect("sysMediaStarted", started)
+
+    writeSoundFiles()
+    -- the sound is stopped by its own details, priority and all, so it is under that stop
+    assert.is_true(playSoundFile({name = longSoundFile, key = "busted-key-swap-priority", priority = 60}))
+    waitForCount("sysMediaStarted", started, 1)
+
+    assert.is_true(playSoundFile({name = otherLongSoundFile, key = "busted-key-swap-priority"}))
+    waitForCount("sysMediaStarted", started, 2)
+    waitForCount("sysMediaFinished", finished, 1)
+
+    assert.equals(1, #finished, "a sound with a priority kept playing once another took its key")
+    assert.equals(longSoundFile, finished[1].file)
+    local playing = getPlayingSounds({key = "busted-key-swap-priority"})
+    assert.equals(1, #playing)
+    assert.equals(otherLongSoundFile, playing[1].name)
+  end)
+
   it("a sound named by an absolute path is copied into the profile's media directory", function()
     if mediaPlaybackUnavailable() then
       return
@@ -3127,16 +3151,16 @@ describe("Media playback effects with a generated sound file", function()
     waitForCount("sysMediaStarted", started, 1)
     assert.equals(1, #started, gmcpRefused)
 
-    -- a stop reaches only what is playing below the priority it names, so this
+    -- a stop reaches what is playing at or below the priority it names, so this
     -- one leaves the playback alone - a priority that was not read is no
     -- priority at all, and would be stopped here
     feedGmcp('Client.Media.Stop {"priority": 40}')
     pumpEvents(500)
     assert.equals(0, #finished, "a stop of a lower priority than the playback stopped it anyway")
 
-    -- and a stop from above it does end the playback, so it is the priority the
-    -- string spelled that decided both
-    feedGmcp('Client.Media.Stop {"priority": 60}')
+    -- and a stop at its own priority does end the playback, so it is the priority
+    -- the string spelled that decided both
+    feedGmcp('Client.Media.Stop {"priority": 50}')
     waitForCount("sysMediaFinished", finished, 1)
     assert.equals(1, #finished)
   end)
