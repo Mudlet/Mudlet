@@ -539,8 +539,8 @@ void dlgConnectionProfiles::showKeychainWait()
     mKeychainWaitShown = true;
     connect_button->setEnabled(false);
     offline_button->setEnabled(false);
-    // Picking another profile now would be ignored - slot_loadPasswordAsync() returns while a read
-    // is in flight - and would leave the queued load pointing at the profile that was left behind.
+    // Picking another profile now would leave the queued load pointing at the profile that was left
+    // behind.
     // A disabled list gets no key events either, so the type-to-search stops with it.
     listWidget_profiles->setEnabled(false);
     // An edit would run validateProfile(), which hands Connect and Offline back and clears the
@@ -607,9 +607,9 @@ void dlgConnectionProfiles::abandonPendingProfileLoad()
 
 bool dlgConnectionProfiles::hasPendingKeychainOperation(const QString& profile_name) const
 {
-    // Only a read of this profile's own password is worth waiting for: queued behind another
-    // profile's, the load would be dropped when that read answers
-    return !profile_name.isEmpty() && mKeychainOperationProfile == profile_name;
+    // Only a load of this profile's own password is worth waiting for, whether it is reading now or
+    // queued behind another profile's read
+    return !profile_name.isEmpty() && (mKeychainOperationProfile == profile_name || mDeferredPasswordLoadProfile == profile_name);
 }
 
 void dlgConnectionProfiles::slot_updateDescription()
@@ -976,6 +976,9 @@ void dlgConnectionProfiles::continueProfileSave(QListWidgetItem* pItem, const QS
 {
     const QString currentProfileEditName = pItem->data(csmNameRole).toString();
     setItemName(pItem, newProfileName);
+    if (mDeferredPasswordLoadProfile == currentProfileEditName) {
+        mDeferredPasswordLoadProfile = newProfileName;
+    }
 
     const QDir currentPath(MudletApp::getMudletPath(enums::profileHomePath, currentProfileEditName));
     const QDir dir;
@@ -1571,12 +1574,7 @@ void dlgConnectionProfiles::slot_itemClicked(QListWidgetItem* pItem)
             const QSignalBlocker blocker(character_password_entry);
             character_password_entry->setText(QString());
         }
-        // Schedule password loading asynchronously to avoid event loop issues
-        auto* timer = new QTimer(this);
-        timer->setSingleShot(true);
-        timer->setProperty("profileName", profile_name);
-        connect(timer, &QTimer::timeout, this, &dlgConnectionProfiles::slot_loadPasswordAsync);
-        timer->start(0ms);
+        schedulePasswordLoad(profile_name);
     }
 
     val = readProfileData(profile_name, qsl("login"));
@@ -3093,6 +3091,16 @@ void dlgConnectionProfiles::addLetterToProfileSearch(const int key)
     listWidget_profiles->setCurrentRow(indexes.first());
 }
 
+void dlgConnectionProfiles::schedulePasswordLoad(const QString& profile_name)
+{
+    // Asynchronously, to avoid event loop issues
+    auto* timer = new QTimer(this);
+    timer->setSingleShot(true);
+    timer->setProperty("profileName", profile_name);
+    connect(timer, &QTimer::timeout, this, &dlgConnectionProfiles::slot_loadPasswordAsync);
+    timer->start(0ms);
+}
+
 void dlgConnectionProfiles::slot_loadPasswordAsync()
 {
     if (!sender()) {
@@ -3106,28 +3114,37 @@ void dlgConnectionProfiles::slot_loadPasswordAsync()
     }
 
     const QString profile_name = timer->property("profileName").toString();
-
-    // Prevent duplicate password loading operations for the same profile
-    if (!mKeychainOperationProfile.isEmpty()) {
-        return;
-    }
+    timer->deleteLater();
 
     if (profile_name.isEmpty()) {
         return;
     }
 
-    // Clean up the timer
-    timer->deleteLater();
-
-    // Check if this dialog is still valid and the profile is still selected
-    if (listWidget_profiles->currentItem() == nullptr) {
+    if (!mKeychainOperationProfile.isEmpty()) {
+        // A second read of the same profile would only duplicate the one in flight; another
+        // profile's has to wait for it, as the dialog handles one read at a time
+        if (mKeychainOperationProfile != profile_name) {
+            qDebug() << "dlgConnectionProfiles: Deferring the password load for" << profile_name << "until the one for" << mKeychainOperationProfile << "has answered";
+            mDeferredPasswordLoadProfile = profile_name;
+        } else if (!mDeferredPasswordLoadProfile.isEmpty()) {
+            qDebug() << "dlgConnectionProfiles: Dropping the deferred password load for" << mDeferredPasswordLoadProfile << "as" << profile_name << "was picked again";
+            mDeferredPasswordLoadProfile.clear();
+        }
         return;
     }
 
-    const QString currentProfileName = listWidget_profiles->currentItem()->data(csmNameRole).toString();
+    if (mDeferredPasswordLoadProfile == profile_name) {
+        mDeferredPasswordLoadProfile.clear();
+    }
 
+    // Check if this dialog is still valid and the profile is still selected
+    const QString currentProfileName = listWidget_profiles->currentItem() ? listWidget_profiles->currentItem()->data(csmNameRole).toString() : QString();
     if (currentProfileName != profile_name) {
-        // Selection has changed, ignore this async load
+        qDebug() << "dlgConnectionProfiles: Dropping the password load for" << profile_name << "as the selection has changed";
+        // A Connect waiting on this load would otherwise wait for good
+        if (mPendingProfileLoad == profile_name) {
+            abandonPendingProfileLoad();
+        }
         return;
     }
 
@@ -3166,22 +3183,34 @@ void dlgConnectionProfiles::passwordRetrieved(const QString& profileName, bool s
     // Clear the operation flag first
     mKeychainOperationProfile.clear();
 
+    // Left set until the load runs, so a Connect in between still waits for it; the selection is
+    // checked again then
+    const QString deferred = mDeferredPasswordLoadProfile;
+    if (!deferred.isEmpty()) {
+        schedulePasswordLoad(deferred);
+    }
+
     // Check if profile selection has changed while we were waiting
     if (profileStillSelected) {
         if (success) {
-            // Keychain operation succeeded - set the password (even if empty)
-            // Temporarily block textChanged signal to avoid triggering save on programmatic setText
-            {
-                const QSignalBlocker blocker(character_password_entry);
-                character_password_entry->setText(password);
-            }
-
-            if (password.isEmpty()) {
-                qDebug() << "dlgConnectionProfiles: Keychain returned empty password for" << profileName;
+            // A read can answer long after the profile was picked, behind a keychain prompt or queued
+            // behind another profile's read: whatever the player typed or erased since is theirs
+            if (character_password_entry->isModified()) {
+                qDebug() << "dlgConnectionProfiles: Keeping the password field as edited while the saved password for" << profileName << "was being read";
             } else {
-                // Any lookup stage (keychain formats or the encrypted file) may have answered, and each logs
-                // where it found the password, so this line names no source.
-                qDebug() << "dlgConnectionProfiles: Successfully loaded the saved password for" << profileName;
+                // Temporarily block textChanged signal to avoid triggering save on programmatic setText
+                {
+                    const QSignalBlocker blocker(character_password_entry);
+                    character_password_entry->setText(password);
+                }
+
+                if (password.isEmpty()) {
+                    qDebug() << "dlgConnectionProfiles: Keychain returned empty password for" << profileName;
+                } else {
+                    // Any lookup stage (keychain formats or the encrypted file) may have answered, and each logs
+                    // where it found the password, so this line names no source.
+                    qDebug() << "dlgConnectionProfiles: Successfully loaded the saved password for" << profileName;
+                }
             }
         } else {
             // Fallback to QSettings only if credential retrieval failed, and only into an empty
@@ -3205,8 +3234,9 @@ void dlgConnectionProfiles::passwordRetrieved(const QString& profileName, bool s
     }
 
     // Check if there's a pending connection waiting for this password load
-    // (do this regardless of profile selection state to avoid hanging)
-    if (!completePendingProfileLoad(profileName)) {
+    // (do this regardless of profile selection state to avoid hanging); one waiting for the deferred
+    // load is completed by that load instead
+    if (!completePendingProfileLoad(profileName) && (deferred.isEmpty() || mPendingProfileLoad != deferred)) {
         abandonPendingProfileLoad();
     }
 }
