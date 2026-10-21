@@ -2591,6 +2591,38 @@ describe("Trigger processing", function()
             assert.are.same({0, 0, 6, 6, 11, 11, 14, 14}, starts, "a capture should be reported at the code unit it sits at")
         end)
 
+        -- After an empty match the next search retries at the same offset with
+        -- empty matches ruled out, and (|word) matches empty first, so every
+        -- word is found only by that retry succeeding
+        it("finds what a retry after an empty match finds at the same offset", function()
+            _G.TrigSpec = {captures = {}, starts = {}}
+            local id = tempComplexRegexTrigger("SpecComplexMatchAllEmptyRetry", [[(|word)]],
+                function()
+                    _G.TrigSpec = {captures = {}, starts = {}}
+                    for i = 1, #matches do
+                        _G.TrigSpec.captures[i] = matches[i]
+                        if matches[i] ~= "" then
+                            selectCaptureGroup(i)
+                            local _, start = getSelection()
+                            _G.TrigSpec.starts[#_G.TrigSpec.starts + 1] = start
+                            deselect()
+                        end
+                    end
+                end,
+                0, -1, -1, 0, 1, -1, -1, 0, 0, 0)
+            assert.is_number(id)
+            finally(function() killTrigger("SpecComplexMatchAllEmptyRetry") end)
+            feedTriggers("\nword word\n")
+            local words = {}
+            for _, capture in ipairs(_G.TrigSpec.captures) do
+                if capture ~= "" then
+                    words[#words + 1] = capture
+                end
+            end
+            assert.are.same({"word", "word", "word", "word"}, words)
+            assert.are.same({0, 0, 5, 5}, _G.TrigSpec.starts)
+        end)
+
         -- Those positions used to be counted from the start of the line for
         -- every capture, which made a match-all line cost the square of its
         -- length rather than growing with it (#10869).
@@ -2614,64 +2646,76 @@ describe("Trigger processing", function()
         -- cost was then divided by it. A negative one made the bound tighter
         -- than the constant meant to absorb it, which no amount of speed could
         -- then satisfy.
-        it("costs under sixteen times as much for eight times the line", function()
-            -- "word " is five bytes, so this is an 8 kB line and one eight times longer
-            local shortReps, longReps = 1638, 13104
-            local function costOf(line)
-                -- os.clock() resolves to about a millisecond on Windows, which
-                -- is the whole cost of the shorter line there, so a single feed
-                -- can measure exactly 0 and leave the ratio below nothing to
-                -- divide by. Feeding until the run is clear of that floor and
-                -- dividing by the number of feeds keeps both measurements
-                -- per-feed and comparable.
-                -- It is wall time there too, so a run also carries any 15.6 ms
-                -- scheduler tick taken from it, under a fifth of a 0.1s run.
-                --
-                -- a collection cycle landing in one line's runs and not the
-                -- other's skews the ratio by whatever it costs
-                collectgarbage()
-                collectgarbage("stop")
-                local feeds, taken = 0, 0
-                local started = os.clock()
-                repeat
-                    feedTriggers("\n" .. line .. "\n")
-                    feeds = feeds + 1
-                    taken = os.clock() - started
-                -- a clock that never advances would spin here forever and hang
-                -- CI with no diagnostic: 100 feeds that leave it at 0 hand that
-                -- to the short > 0 assertion below, and 1000 feeds bound any
-                -- other run that never reaches the floor.
-                until taken >= 0.1 or feeds >= 1000 or (taken == 0 and feeds >= 100)
-                collectgarbage("restart")
-                return taken / feeds
-            end
-            _G.TrigSpec = {captures = 0}
-            local id = tempComplexRegexTrigger("SpecComplexMatchAllCost", [[(\S+)]],
-                [[_G.TrigSpec.captures = #matches]],
-                0, -1, -1, 0, 1, -1, -1, 0, 0, 0)
-            assert.is_number(id)
-            finally(function()
-                collectgarbage("restart")
-                if type(id) == "number" and id > 0 then killTrigger("SpecComplexMatchAllCost") end
+        --
+        -- A pattern that can match empty, such as (\w*), retries after each empty
+        -- match anchored at the same offset, which pcre2's JIT cannot take, and the
+        -- interpreter it fell back to rescanned the rest of the line on every retry
+        -- (#10895). "word " gives (\S+) one match per word, and (\w*) that and an
+        -- empty one at each space, then two more at the newline triggers see the
+        -- line end with.
+        for _, case in ipairs({
+            {pattern = [[(\S+)]], captures = function(reps) return reps * 2 end},
+            {pattern = [[(\w*)]], captures = function(reps) return reps * 4 + 4 end},
+        }) do
+            it("costs under sixteen times as much for eight times the line with " .. case.pattern, function()
+                -- "word " is five bytes, so this is an 8 kB line and one eight times longer
+                local shortReps, longReps = 1638, 13104
+                local function costOf(line)
+                    -- os.clock() resolves to about a millisecond on Windows, which
+                    -- is the whole cost of the shorter line there, so a single feed
+                    -- can measure exactly 0 and leave the ratio below nothing to
+                    -- divide by. Feeding until the run is clear of that floor and
+                    -- dividing by the number of feeds keeps both measurements
+                    -- per-feed and comparable.
+                    -- It is wall time there too, so a run also carries any 15.6 ms
+                    -- scheduler tick taken from it, under a fifth of a 0.1s run.
+                    --
+                    -- a collection cycle landing in one line's runs and not the
+                    -- other's skews the ratio by whatever it costs
+                    collectgarbage()
+                    collectgarbage("stop")
+                    local feeds, taken = 0, 0
+                    local started = os.clock()
+                    repeat
+                        feedTriggers("\n" .. line .. "\n")
+                        feeds = feeds + 1
+                        taken = os.clock() - started
+                    -- a clock that never advances would spin here forever and hang
+                    -- CI with no diagnostic: 100 feeds that leave it at 0 hand that
+                    -- to the short > 0 assertion below, and 1000 feeds bound any
+                    -- other run that never reaches the floor.
+                    until taken >= 0.1 or feeds >= 1000 or (taken == 0 and feeds >= 100)
+                    collectgarbage("restart")
+                    return taken / feeds
+                end
+                _G.TrigSpec = {captures = 0}
+                local id = tempComplexRegexTrigger("SpecComplexMatchAllCost", case.pattern,
+                    [[_G.TrigSpec.captures = #matches]],
+                    0, -1, -1, 0, 1, -1, -1, 0, 0, 0)
+                assert.is_number(id)
+                finally(function()
+                    collectgarbage("restart")
+                    if type(id) == "number" and id > 0 then killTrigger("SpecComplexMatchAllCost") end
+                end)
+                local shortLine, longLine = string.rep("word ", shortReps), string.rep("word ", longReps)
+                local short, long, shortCaptures, longCaptures
+                for _ = 1, 5 do
+                    short = math.min(short or math.huge, costOf(shortLine))
+                    shortCaptures = _G.TrigSpec.captures
+                    long = math.min(long or math.huge, costOf(longLine))
+                    longCaptures = _G.TrigSpec.captures
+                end
+                assert.is_true(killTrigger("SpecComplexMatchAllCost"), "a temporary complex trigger should be removable by name")
+                -- without this the trigger could have stopped matching, or stopped
+                -- matching all, and the two costs would agree on measuring nothing
+                assert.are.equal(case.captures(shortReps), shortCaptures, "match-all should collect the whole match and its capture group for every match")
+                assert.are.equal(case.captures(longReps), longCaptures, "match-all should collect the whole match and its capture group for every match")
+                assert.is_true(short > 0, "os.clock() did not resolve the 8 kB line's cost, so the ratio below has nothing to divide by")
+                assert.is_true(long <= short * 16,
+                    string.format("feeding a 64 kB line took %.3fs against %.3fs for an 8 kB one, %.1fx for eight times the line - the match-all loop may cost the square of the line again",
+                        long, short, long / short))
             end)
-            local shortLine, longLine = string.rep("word ", shortReps), string.rep("word ", longReps)
-            local short, long, shortCaptures, longCaptures
-            for _ = 1, 5 do
-                short = math.min(short or math.huge, costOf(shortLine))
-                shortCaptures = _G.TrigSpec.captures
-                long = math.min(long or math.huge, costOf(longLine))
-                longCaptures = _G.TrigSpec.captures
-            end
-            assert.is_true(killTrigger("SpecComplexMatchAllCost"), "a temporary complex trigger should be removable by name")
-            -- without this the trigger could have stopped matching, or stopped
-            -- matching all, and the two costs would agree on measuring nothing
-            assert.are.equal(shortReps * 2, shortCaptures, "match-all should collect the whole match and its capture group for every word")
-            assert.are.equal(longReps * 2, longCaptures, "match-all should collect the whole match and its capture group for every word")
-            assert.is_true(short > 0, "os.clock() did not resolve the 8 kB line's cost, so the ratio below has nothing to divide by")
-            assert.is_true(long <= short * 16,
-                string.format("feeding a 64 kB line took %.3fs against %.3fs for an 8 kB one, %.1fx for eight times the line - the capture positions may be counted from the start of the line again",
-                    long, short, long / short))
-        end)
+        end
 
         it("rejects a non-string, non-function body (argument 3)", function()
             -- a table is not string-coercible (a number would be accepted as code)

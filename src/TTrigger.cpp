@@ -1121,6 +1121,8 @@ void TTrigger::processRegexMatch(const char* haystackC,
     if (trackWholeMatches) {
         noteMatch(rc);
     }
+    // -1 until the first empty match asks
+    int anchoredRetryByJit = -1;
     for (; mPerlSlashGOption;) {
         uint32_t options = 0;
         const PCRE2_SIZE start_offset = ovector[1];
@@ -1132,7 +1134,27 @@ void TTrigger::processRegexMatch(const char* haystackC,
             options = PCRE2_NOTEMPTY_ATSTART | PCRE2_ANCHORED;
         }
 
-        rc = pcre2_match(re.data(), reinterpret_cast<PCRE2_SPTR>(haystackC), haystackCLength, start_offset, options, match_data, nullptr);
+        if (options != 0 && anchoredRetryByJit < 0) {
+            // pcre2's JIT cannot take PCRE2_ANCHORED, and the interpreter rescans the rest of a
+            // PCRE2_MATCH_INVALID_UTF subject on every call. An unanchored search tries start_offset
+            // first, so a match it reports there is the anchored one - unless \K moved the start,
+            // or the subject is invalid UTF-8, where the JIT and the interpreter disagree.
+            anchoredRetryByJit = mRegexJitCompiled[patternNumber] && mPatternsUtf8[patternNumber].find("\\K") == std::string::npos && QByteArrayView(haystackC, haystackCLength).isValidUtf8();
+        }
+        if (options != 0 && anchoredRetryByJit == 1) {
+            rc = pcre2_jit_match(re.data(), reinterpret_cast<PCRE2_SPTR>(haystackC), haystackCLength, start_offset, PCRE2_NOTEMPTY_ATSTART, match_data, nullptr);
+            if (rc >= 0 && ovector[0] != start_offset) {
+                rc = PCRE2_ERROR_NOMATCH;
+            }
+            if (rc == PCRE2_ERROR_NOMATCH) {
+                // The step below tells the next search from this empty match by ovector[0]
+                ovector[0] = start_offset;
+            } else if (rc < 0) {
+                rc = pcre2_match(re.data(), reinterpret_cast<PCRE2_SPTR>(haystackC), haystackCLength, start_offset, options, match_data, nullptr);
+            }
+        } else {
+            rc = pcre2_match(re.data(), reinterpret_cast<PCRE2_SPTR>(haystackC), haystackCLength, start_offset, options, match_data, nullptr);
+        }
 
         if (rc == PCRE2_ERROR_NOMATCH) {
             if (options == 0) {
