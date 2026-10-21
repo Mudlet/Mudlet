@@ -584,22 +584,41 @@ describe("Tests TBuffer OSC sequence handling", function()
       assert.equals("CUF1(   )CUF1", findRecentLine("CUF1"))
     end)
 
-    -- the count comes from the game, so it has to be clamped: this one
-    -- sequence would otherwise ask for about 24GB of spaces
-    it("should not move further than the wrap width", function()
+    it("should keep its spaces on a line longer than the wrap width", function()
       local wrapAt = getWindowWrap("main")
-      local before = getLastLineNumber("main")
-      assert.is_true(feedTriggers("CUF2(\027[999999999C)CUF2\n"))
-      local text = table.concat(getLines("main", before, getLastLineNumber("main") + 1))
-      local spaces = text:match("CUF2%(( *)%)CUF2")
-      assert.is_truthy(spaces, text:sub(1, 200))
-      assert.is_true(#spaces < wrapAt, "moved forward " .. #spaces .. " columns with a wrap of " .. wrapAt)
+      local seen = {}
+      local trigger = tempRegexTrigger("^CUF5", function()
+        seen[#seen + 1] = line
+      end)
+      setWindowWrap("main", 20)
+      local ok1 = feedTriggers("CUF5" .. string.rep("a", 15) .. "\027[1Cb\n")
+      local ok2 = feedTriggers("CUF5" .. string.rep("c", 11) .. "\027[10Cd\n")
+      setWindowWrap("main", wrapAt)
+      killTrigger(trigger)
+      assert.is_true(ok1)
+      assert.is_true(ok2)
+      assert.equals("CUF5" .. string.rep("a", 15) .. " b", seen[1])
+      assert.equals("CUF5" .. string.rep("c", 11) .. string.rep(" ", 10) .. "d", seen[2])
     end)
 
-    -- wrapping drops the spaces it breaks at, so the length is read from the
-    -- line triggers see, before it is wrapped
+    -- the count comes from the game, so it has to be clamped: this one
+    -- sequence would otherwise ask for about 24GB of spaces. Wrapping drops the
+    -- spaces it breaks at, so the length is read from the line triggers see
+    it("should not move further than 1000 columns", function()
+      local seen
+      local trigger = tempRegexTrigger("^CUF2\\(", function()
+        seen = line
+      end)
+      local ok = feedTriggers("CUF2(\027[999999999C)CUF2\n")
+      killTrigger(trigger)
+      assert.is_true(ok)
+      assert.is_truthy(seen)
+      local spaces = seen:match("^CUF2%(( *)%)CUF2$")
+      assert.is_truthy(spaces, seen:sub(1, 200))
+      assert.is_true(#spaces < 1000, "moved forward " .. #spaces .. " columns")
+    end)
+
     it("should stop at the right margin over a run of moves", function()
-      local wrapAt = getWindowWrap("main")
       local seen
       local trigger = tempRegexTrigger("^CUF3\\(", function()
         seen = #line
@@ -608,7 +627,7 @@ describe("Tests TBuffer OSC sequence handling", function()
       killTrigger(trigger)
       assert.is_true(ok)
       assert.is_truthy(seen)
-      assert.is_true(seen <= wrapAt + 5, "a run of moves made a line of " .. seen .. " characters with a wrap of " .. wrapAt)
+      assert.is_true(seen <= 1000 + 5, "a run of moves made a line of " .. seen .. " characters")
     end)
 
     it("should not move further than 1000 columns when the wrap is wider", function()
