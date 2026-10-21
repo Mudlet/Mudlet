@@ -779,14 +779,18 @@ void TLabel::setBackgroundColor(const QColor& color)
 // QWidget::setStyleSheet() repolishes and repaints even when handed the sheet it
 // already has. Re-applying one still matters when it names a file, as that is what
 // makes Qt reload an image rewritten on disk, and after the link styling replaced the
-// palette, as that is what restores the colours the sheet sets.
+// palette, as that is what restores the colours the sheet sets. The first re-polish
+// also moves the font from the parent's to the application's, and scripts size labels
+// to that, so it is never skipped.
 bool TLabel::restyle(const QString& sheet)
 {
-    if (sheet == styleSheet() && !mPaletteSetSinceStyled && !sheet.contains(qsl("url("), Qt::CaseInsensitive)) {
+    if (sheet == styleSheet() && mRepolished && !mPaletteSetSinceStyled && !sheet.contains(qsl("url("), Qt::CaseInsensitive)) {
         return false;
     }
     mPaletteSetSinceStyled = false;
+    const bool wasStyled = testAttribute(Qt::WA_StyleSheet);
     setStyleSheet(sheet);
+    mRepolished = wasStyled && testAttribute(Qt::WA_StyleSheet);
     return true;
 }
 

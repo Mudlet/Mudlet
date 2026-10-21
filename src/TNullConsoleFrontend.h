@@ -352,6 +352,8 @@ private:
         bool styled = false;
         // TLabel::mPaletteSetSinceStyled
         bool restyleDue = false;
+        // TLabel::mRepolished
+        bool repolished = false;
         // QLabel only measures its text once it has been given some, and caches the answer
         bool textLabel = false;
         mutable std::optional<QSize> sizeHint;

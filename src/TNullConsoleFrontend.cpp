@@ -783,10 +783,11 @@ void TNullConsoleFrontend::polishLabel(Label& label)
 void TNullConsoleFrontend::restyleLabel(Label& label, const QString& sheet)
 {
     TLabelModel& model = *label.pModel;
-    if (sheet == model.mStyleSheet && !label.restyleDue && !sheet.contains(qsl("url("), Qt::CaseInsensitive)) {
+    if (sheet == model.mStyleSheet && label.repolished && !label.restyleDue && !sheet.contains(qsl("url("), Qt::CaseInsensitive)) {
         return;
     }
     label.restyleDue = false;
+    label.repolished = label.styled && !sheet.isEmpty();
     const QFont before = model.mFont;
     model.mStyleSheet = sheet;
     if (sheet.isEmpty()) {
