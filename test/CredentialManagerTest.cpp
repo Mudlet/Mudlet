@@ -143,6 +143,7 @@ private slots:
     void testAFileHiddenByItsFolderIsNotReportedAsNothingStored();
     void testANewerOlderNamedFileThatWontOpenIsNotReportedAsNothingStored();
     void testANameNoFileCanBeMadeForIsNotReportedAsRefused();
+    void testTheStaticReadSaysWhyNothingCameBack();
     void testAsyncRemovePassword();
     void testCredentialExistsWithoutHandingOverTheSecret();
     void testAsyncEmptyArgumentsAreReportedThroughTheCallback();
@@ -884,6 +885,36 @@ void CredentialManagerTest::testANewerOlderNamedFileThatWontOpenIsNotReportedAsN
 
     QVERIFY(legacyFile.setPermissions(QFileDevice::Permissions()));
     QCOMPARE(readOutcome(manager, profile, key), std::optional(CredentialManager::ReadOutcome::Unreadable));
+}
+
+// The password migration and the proxy password read through this, and must not take an unreadable file for none
+void CredentialManagerTest::testTheStaticReadSaysWhyNothingCameBack()
+{
+    const QString profile = "StaticReadOutcomeProfile";
+    const QString key = "character";
+    auto outcome = CredentialManager::ReadOutcome::Found;
+
+    QVERIFY(CredentialManager::retrieveCredential(profile, key, &outcome).isEmpty());
+    QCOMPARE(outcome, CredentialManager::ReadOutcome::NothingStored);
+
+    outcome = CredentialManager::ReadOutcome::Found;
+    QVERIFY(CredentialManager::retrieveCredential(profile, qsl("../escape"), &outcome).isEmpty());
+    QCOMPARE(outcome, CredentialManager::ReadOutcome::Unavailable);
+
+    if (!permissionsCanHideAFile()) {
+        QSKIP("folder permissions cannot hide a file here (Windows, or running as root)");
+    }
+    QVERIFY(CredentialManager::storeCredential(profile, key, "behind_a_locked_folder"));
+    const QString folder = QFileInfo(credentialPath(profile, key)).absolutePath();
+    const auto unlock = qScopeGuard([&folder, &profile, &key] {
+        QFile::setPermissions(folder, QFileDevice::ReadOwner | QFileDevice::WriteOwner | QFileDevice::ExeOwner);
+        CredentialManager::removeCredential(profile, key);
+    });
+
+    QVERIFY(QFile::setPermissions(folder, QFileDevice::Permissions()));
+    outcome = CredentialManager::ReadOutcome::Found;
+    QVERIFY(CredentialManager::retrieveCredential(profile, key, &outcome).isEmpty());
+    QCOMPARE(outcome, CredentialManager::ReadOutcome::Unreadable);
 }
 
 // No file can hold a password for such a name, so the profile must not be told one could not be read
