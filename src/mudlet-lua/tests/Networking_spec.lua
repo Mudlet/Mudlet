@@ -2087,6 +2087,30 @@ describe("MMCP effects against a scripted chat peer", function()
       local _, count = message:gsub("x", "")
       assert.equals(length, count)
     end)
+
+    it("keeps the line breaks of a multi-line snooped frame", function()
+      if peerUnavailable() then return end
+      ensurePeer()
+      peerSendsRaw(string.char(31) .. "first snooped line\nsecond snooped line" .. string.char(255))
+      local _, _, message = waitForEvent("sysMMCPIncomingSnoopMessage", 2000)
+      assert.is_string(message)
+      local lines = message:split("\n")
+      assert.equals(2, #lines, message)
+      assert.is_true(contains(lines[1], "first snooped line"), lines[1])
+      assert.is_true(contains(lines[2], "second snooped line"), lines[2])
+
+      pump(50)
+      local last = getLineCount()
+      local shown = getLines(math.max(0, last - 5), last + 1)
+      local firstAt, secondAt
+      for index, text in ipairs(shown) do
+        if contains(text, "first snooped line") then firstAt = index end
+        if contains(text, "second snooped line") then secondAt = index end
+      end
+      assert.is_number(firstAt, table.concat(shown, "|"))
+      assert.equals(firstAt + 1, secondAt, table.concat(shown, "|"))
+      assert.equals(">>", shown[secondAt]:sub(1, 2), shown[secondAt])
+    end)
   end)
 
   describe("mmcp.ping", function()
@@ -2386,6 +2410,30 @@ describe("MMCP effects against a scripted chat peer", function()
       local text = snoopFrame("1500a mudmaster line")
       assert.is_true(contains(text, "a mudmaster line"), text)
       assert.is_false(contains(text, "1500"), text)
+    end)
+
+    it("keeps the colour on every line it shows from a peer whose colour is not tracked", function()
+      if peerUnavailable() then return end
+      ensurePeer()
+      finally(function() peerVersion(PEER_VERSION) end)
+      peerVersion("zMUD 7.21")
+      snoopFrame("\27[31mfirst red snooped line\nsecond red snooped line")
+      local function colourOf(text)
+        local last = getLineCount()
+        for lineNumber = last, math.max(0, last - 5), -1 do
+          moveCursor(0, lineNumber)
+          if selectString(text, 1) > -1 then
+            local colour = {getFgColor()}
+            deselect()
+            moveCursorEnd()
+            return colour
+          end
+        end
+        moveCursorEnd()
+      end
+      local first = colourOf("first red snooped line")
+      assert.is_table(first)
+      assert.are.same(first, colourOf("second red snooped line"))
     end)
 
     it("sends what the game shows to a peer that is snooping us", function()
