@@ -1148,7 +1148,7 @@ int TLuaInterpreter::echoLink(lua_State* L)
     Host& host = getHostFromLua(L);
     auto pModel = host.consoleModelNamed(windowName);
     if (!pModel) {
-        return windowNotFound(L, windowName);
+        return windowNotFoundOrUnsupported(L, host, windowName);
     }
 
     QString command;
@@ -1212,7 +1212,7 @@ int TLuaInterpreter::echoPopup(lua_State* L)
     Host& host = getHostFromLua(L);
     auto pModel = host.consoleModelNamed(windowName);
     if (!pModel) {
-        return windowNotFound(L, windowName);
+        return windowNotFoundOrUnsupported(L, host, windowName);
     }
 
     QStringList commandList;
@@ -2188,7 +2188,7 @@ int TLuaInterpreter::insertLink(lua_State* L)
     Host& host = getHostFromLua(L);
     auto pModel = host.consoleModelNamed(windowName);
     if (!pModel) {
-        return windowNotFound(L, windowName);
+        return windowNotFoundOrUnsupported(L, host, windowName);
     }
     // refused even where an empty link could be appended, as it would cover no text;
     // the QString stops at the first NUL, so "\0..." counts as empty too
@@ -2248,7 +2248,7 @@ int TLuaInterpreter::insertPopup(lua_State* L)
     Host& host = getHostFromLua(L);
     auto pModel = host.consoleModelNamed(windowName);
     if (!pModel) {
-        return windowNotFound(L, windowName);
+        return windowNotFoundOrUnsupported(L, host, windowName);
     }
     // refused even where an empty link could be appended, as it would cover no text;
     // the QString stops at the first NUL, so "\0..." counts as empty too
@@ -2304,7 +2304,7 @@ int TLuaInterpreter::insertText(lua_State* L)
     const QString consoleName{windowName};
     Host& host = getHostFromLua(L);
     if (!host.insertWindowText(consoleName, text)) {
-        return windowNotFound(L, consoleName);
+        return windowNotFoundOrUnsupported(L, host, consoleName);
     }
     lua_pushboolean(L, true);
     return 1;
@@ -2672,7 +2672,7 @@ int TLuaInterpreter::replace(lua_State* L)
     const QString consoleName{windowName};
     Host& host = getHostFromLua(L);
     if (!host.replaceWindowText(consoleName, text)) {
-        return windowNotFound(L, consoleName);
+        return windowNotFoundOrUnsupported(L, host, consoleName);
     }
     lua_pushboolean(L, true);
     return 1;
@@ -4030,7 +4030,7 @@ int TLuaInterpreter::setLink(lua_State* L)
     Host& host = getHostFromLua(L);
     auto pModel = host.consoleModelNamed(consoleName);
     if (!pModel) {
-        return windowNotFound(L, consoleName);
+        return windowNotFoundOrUnsupported(L, host, consoleName);
     }
 
     QString command;
@@ -4211,7 +4211,7 @@ int TLuaInterpreter::setPopup(lua_State* L)
     Host& host = getHostFromLua(L);
     auto pModel = host.consoleModelNamed(consoleName);
     if (!pModel) {
-        return windowNotFound(L, consoleName);
+        return windowNotFoundOrUnsupported(L, host, consoleName);
     }
 
     QStringList commandList;
