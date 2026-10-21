@@ -633,9 +633,13 @@ if false then
 
 
 
-  --- The <i>matches table</i> contains captured group. This available only within trigger context.
+  --- The <i>matches table</i> contains captured group. This available only within trigger and alias context.
   --- First item of matches table (matches[1]) holds current line, all other contains capture groups
   --- defined by regular expression trigger.
+  ---
+  --- A capture group that took no part in the match holds "" when a later group did match, but is left out
+  --- (nil, and #matches is shorter) when no later group matched, so an optional trailing group can be tested
+  --- with <code>if matches[n] then</code>. A named group that took no part is nil under its name.
   ---
   --- @usage Let say that you defined following trigger to detect and get dropped items.
   ---   <pre>
