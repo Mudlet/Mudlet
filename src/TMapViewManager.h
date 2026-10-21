@@ -77,6 +77,8 @@ private:
     QPointer<TMap> mpMap;
     QMap<int, QPointer<QDockWidget>> mDockWidgets;
     QMap<int, QPointer<TMapView>> mViews;
+    // Closed but still awaiting deleteLater(), which may not run before the map is freed
+    QList<QPointer<QDockWidget>> mClosingDockWidgets;
 };
 
 #endif // MUDLET_TMAPVIEWMANAGER_H
