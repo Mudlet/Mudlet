@@ -846,6 +846,7 @@ void LuaInterface::iterateTable(lua_State* L, int index, TVar* tVar, bool hide)
             delete var;
             continue;
         }
+        var->aliasCopy = aliasCopy && mAliasCopyDepth == 0;
         if (mSavedVarsOnly && (aliasCopy || mAliasCopyDepth > 0) && ++mAliasCopyNodes == scmMaxAliasCopyNodes) {
             qWarning().noquote().nospace() << "LuaInterface::iterateTable() WARNING - the saved variable \"" << mCurrentSavedRootName
                                            << "\" names the same tables so many times that only the first name for each of the rest is saved.";

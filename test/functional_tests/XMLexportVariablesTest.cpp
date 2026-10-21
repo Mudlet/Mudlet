@@ -641,6 +641,29 @@ private slots:
         QCOMPARE(luaL_dostring(L, "aliasDoublingTable = nil"), 0);
     }
 
+    // The 10,000-item limit on a table inside a saved one counts each table
+    // once, so copies of a second name cannot push a branch that fitted
+    // before over it and drop the branch whole.
+    void test_aliasCopiesDoNotPushABranchOverTheItemLimit()
+    {
+        LuaInterface* lI = mpHost->getLuaInterface();
+        VarUnit* vu = lI->getVarUnit();
+        lua_State* L = mpHost->mLuaInterpreter.getLuaGlobalState();
+        QCOMPARE(luaL_dostring(L,
+                               "local s = {marker = 'alias limit value'} for i = 1, 6000 do s[i] = i end "
+                               "aliasLimitTable = {holder = {tag = 'alias limit holder', a = s, b = s}}"),
+                 0);
+        vu->savedVars.insert(qsl("aliasLimitTable"));
+
+        const QString xml = exportProfileXml();
+        QVERIFY(!xml.isEmpty());
+        QCOMPARE(xml.count(qsl("alias limit holder")), 1);
+        QCOMPARE(xml.count(qsl("alias limit value")), 2);
+
+        vu->savedVars.remove(qsl("aliasLimitTable"));
+        QCOMPARE(luaL_dostring(L, "aliasLimitTable = nil"), 0);
+    }
+
     // A table that holds itself must not send the walk round for ever.
     void test_selfReferencingSavedTableIsExported()
     {

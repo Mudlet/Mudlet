@@ -293,6 +293,11 @@ int VarUnit::countTableItems(TVar* var, const int limit)
     const QList<TVar*> children = var->getChildren(false);
 
     for (TVar* child : children) {
+        // copies are capped on their own, and counting them here would drop the
+        // branch they sit in, original and all
+        if (child->aliasCopy) {
+            continue;
+        }
         count++;
         if (child->getValueType() == LUA_TTABLE) {
             count += countTableItems(child, limit - count);
