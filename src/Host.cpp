@@ -7738,6 +7738,10 @@ QFont Host::getEditorFont()
     if (resolved.available && resolved.weight != QFont::Normal) {
         font.setWeight(resolved.weight);
     }
+    // The editor's readers divide by the letters' width, which is what setDisplayFont() refuses such a font for
+    if (resolved.available && QFontMetrics(font).averageCharWidth() == 0) {
+        return createFontWithSettings(scmDefaultFontFamily, mEditorFont->pointSize());
+    }
     return font;
 }
 

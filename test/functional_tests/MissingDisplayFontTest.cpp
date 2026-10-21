@@ -1180,6 +1180,51 @@ private slots:
         QVERIFY2(uninstallFontPackage(pHost, packageName), "the package did not uninstall at the end");
     }
 
+    // A copy of the editor's own family that cannot be drawn is stood in for like a missing one, the
+    // family being kept for the day a usable copy arrives
+    void test_anEditorFontWhoseLettersHaveNoWidthIsStoodInForUntilAUsableCopyArrives()
+    {
+        const QString unusableName = qsl("font-editor-unusable");
+        const QByteArray fontBytes = zeroWidthFont(renamedFontBytes(qsl(":/fonts/ttf-bitstream-vera-1.10/VeraMono.ttf"), Host::scmDefaultFontFamily, mPackageSuppliedFamily));
+        QVERIFY2(!fontBytes.isEmpty(), "could not make a font whose letters have no width");
+        const QString unusablePath = writeFontPackage(unusableName, fontBytes);
+        const QString usableName = qsl("font-editor-usable");
+        const QString usablePath = writeFontPackage(usableName);
+        QVERIFY2(!unusablePath.isEmpty() && !usablePath.isEmpty(), "could not write the test package archives");
+        Host* pHost = openProfile(qsl("MissingDisplayFont-Editor-Unusable-Test"), Host::scmDefaultFontFamily);
+        QVERIFY(pHost);
+        QVERIFY2(!FontManager::availableFonts().contains(mPackageSuppliedFamily, Qt::CaseInsensitive), "the package's family is already installed, so this cannot tell what the package brings");
+
+        mudlet::self()->activateProfile(pHost);
+        mudlet::self()->slot_showScriptDialog();
+        dlgTriggerEditor* pEditor = HostDialogs::of(pHost).mpEditorDialog;
+        QVERIFY2(pEditor, "the script editor did not open");
+
+        pHost->setEditorFont(QFont(mPackageSuppliedFamily, 12));
+        pHost->setEditorFontFollowsDisplay(false);
+        QString wrong = editorReadersNotIn(pEditor, Host::scmDefaultFontFamily, 12);
+        QVERIFY2(wrong.isEmpty(), qPrintable(wrong));
+
+        QVERIFY2(installFontPackage(pHost, unusablePath, unusableName), "the package carrying the unusable font did not install");
+        QVERIFY2(FontManager::availableFonts().contains(mPackageSuppliedFamily, Qt::CaseInsensitive), "the package's font was never registered");
+        QVERIFY2(QFontMetrics(QFont(mPackageSuppliedFamily, 12)).averageCharWidth() == 0, "the font can be drawn after all, so this proves nothing");
+        wrong = editorReadersNotIn(pEditor, Host::scmDefaultFontFamily, 12);
+        QVERIFY2(wrong.isEmpty(), qPrintable(wrong));
+        QCOMPARE(pHost->getEditorFont().family(), Host::scmDefaultFontFamily);
+        QCOMPARE(pHost->editorFontChoice()->family(), mPackageSuppliedFamily);
+
+        QCOMPARE(setConfigAnswer(pHost, qsl("editorFont"), qsl("'%1'").arg(mPackageSuppliedFamily)), qsl("true:nil"));
+        wrong = editorReadersNotIn(pEditor, Host::scmDefaultFontFamily, 12);
+        QVERIFY2(wrong.isEmpty(), qPrintable(wrong));
+
+        QVERIFY2(uninstallFontPackage(pHost, unusableName), "the package carrying the unusable font did not uninstall");
+        QVERIFY2(installFontPackage(pHost, usablePath, usableName), "the package carrying the usable font did not install");
+        wrong = editorReadersNotIn(pEditor, mPackageSuppliedFamily, 12);
+        QVERIFY2(wrong.isEmpty(), qPrintable(wrong));
+
+        QVERIFY2(uninstallFontPackage(pHost, usableName), "the package did not uninstall at the end");
+    }
+
     // Putting the family back runs the profile's sysSettingChanged handlers, and one that
     // takes the package away again must leave the family missing, not forgotten
     void test_aHandlerTakingTheFontAwayAsItComesBackLeavesItMissing()

@@ -609,8 +609,8 @@ public:
     // choice, everywhere the profile is opened. Everything else wants the real font.
     QFont getDisplayFontForSaving();
     // What the script editor's code pane and error console are written in: the display font
-    // while following it, else the editor's own, with a family missing on this machine stood in
-    // for by the bundled default
+    // while following it, else the editor's own, with a family missing on this machine or whose
+    // letters have no width stood in for by the bundled default
     QFont getEditorFont();
     bool editorFontFollowsDisplay() const { return mEditorFontFollowsDisplay; }
     void setEditorFontFollowsDisplay(const bool);
