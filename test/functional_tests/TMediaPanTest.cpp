@@ -19,6 +19,7 @@
 
 #include <QDataStream>
 #include <QDeadlineTimer>
+#include <QElapsedTimer>
 #include <QSignalSpy>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
@@ -540,16 +541,21 @@ private slots:
         QVERIFY2(start > 0.1F, qPrintable(qsl("At volume 100 the music came out at only %1.").arg(start)));
 
         QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("updateMusic({key = 'theme', volume = 10, duration = 3000})")));
+        QElapsedTimer sinceUpdate;
+        sinceUpdate.start();
         // Well into the glide; what is mixed lags what is decoded by up to a voice's 300 ms queue
         QTest::qWait(1500ms);
         const float partway = loudestOnEachSide(20).first;
+        // Read only once the glide is over, or it is caught passing through the band on its way somewhere else
+        QTest::qWait(std::max<qint64>(0, 3700 - sinceUpdate.elapsed()));
         std::pair<float, float> heard;
         QVERIFY2(comesOut(
+                         // A band, not a ceiling: a read that lands between two pieces of audio is silence
                          [start](const float l, const float) {
-                             return l < start * 0.3F;
+                             return l > start * 0.05F && l < start * 0.15F;
                          },
                          heard,
-                         5s),
+                         2s),
                  qPrintable(qsl("Updated to volume 10, the music stayed at %1 (from %2).").arg(heard.first).arg(start)));
         const float settled = heard.first;
         QVERIFY2(partway < start * 0.85F && partway > settled * 1.5F,
