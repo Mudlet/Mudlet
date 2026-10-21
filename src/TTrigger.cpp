@@ -1057,7 +1057,6 @@ void TTrigger::processRegexMatch(const char* haystackC,
     }
 
     int i = 0;
-    int numberOfCaptureGroups = 0;
     // One cursor for the whole call, so the match-all loop walks the line once rather than once per match
     PCRE2_SIZE cursorByteOffset = 0;
     int cursorCodeUnits = 0;
@@ -1109,8 +1108,18 @@ void TTrigger::processRegexMatch(const char* haystackC,
             namePositions.insert(name, qMakePair(utf16_pos + posOffset, static_cast<int>(capture.length())));
         }
     }
-    if (mIsColorizerTrigger || mFilterTrigger) {
-        numberOfCaptureGroups = captureList.size();
+    // Highlights and filters skip a match's whole-match entry when it has groups. Tracked per match:
+    // PCRE2 reports groups only up to the highest that took part, so matches add differing counts
+    const bool trackWholeMatches = mIsColorizerTrigger || mFilterTrigger;
+    std::vector<bool> wholeMatchSkipped;
+    auto noteMatch = [&wholeMatchSkipped](const int entries) {
+        wholeMatchSkipped.push_back(entries > 1);
+        if (entries > 1) {
+            wholeMatchSkipped.insert(wholeMatchSkipped.end(), entries - 1, false);
+        }
+    };
+    if (trackWholeMatches) {
+        noteMatch(rc);
     }
     for (; mPerlSlashGOption;) {
         uint32_t options = 0;
@@ -1156,6 +1165,9 @@ void TTrigger::processRegexMatch(const char* haystackC,
                 TDebug(Qt::darkMagenta, Qt::black, TDebug::Category::TriggerDetail, mName) << "<" << captureList.back().c_str() << ">\n" >> mpHost;
             }
         }
+        if (trackWholeMatches) {
+            noteMatch(rc);
+        }
     }
 
 END: {
@@ -1166,35 +1178,22 @@ END: {
         const int r2 = mFgColor.red();
         const int g2 = mFgColor.green();
         const int b2 = mFgColor.blue();
-        const int total = captureList.size();
         mpHost->deselectMainConsole();
         auto its = captureList.begin();
         auto iti = posList.begin();
-        for (int position = 1; iti != posList.end(); ++iti, ++its, position++) {
+        for (int position = 0; iti != posList.end(); ++iti, ++its, ++position) {
+            if (wholeMatchSkipped[position]) {
+                continue;
+            }
             const int begin = *iti;
             const std::string& s = *its;
             const int length = QString::fromStdString(s).size();
-            if (total > 1) {
-                // skip complete match in Perl /g option type of triggers
-                // to enable people to highlight capture groups if there are any
-                // otherwise highlight complete expression match
-                if (position % numberOfCaptureGroups != 1) {
-                    selectOnTriggerPassLine(mpHost, lineNumber, begin, length);
-                    if (mBgColor != QColorConstants::Transparent) {
-                        mpHost->setMainConsoleBgColor(QColor(r1, g1, b1));
-                    }
-                    if (mFgColor != QColorConstants::Transparent) {
-                        mpHost->setMainConsoleFgColor(QColor(r2, g2, b2));
-                    }
-                }
-            } else {
-                selectOnTriggerPassLine(mpHost, lineNumber, begin, length);
-                if (mBgColor != QColorConstants::Transparent) {
-                    mpHost->setMainConsoleBgColor(QColor(r1, g1, b1));
-                }
-                if (mFgColor != QColorConstants::Transparent) {
-                    mpHost->setMainConsoleFgColor(QColor(r2, g2, b2));
-                }
+            selectOnTriggerPassLine(mpHost, lineNumber, begin, length);
+            if (mBgColor != QColorConstants::Transparent) {
+                mpHost->setMainConsoleBgColor(QColor(r1, g1, b1));
+            }
+            if (mFgColor != QColorConstants::Transparent) {
+                mpHost->setMainConsoleFgColor(QColor(r2, g2, b2));
             }
         }
         mpHost->resetMainConsoleFormat();
@@ -1206,21 +1205,11 @@ END: {
     executeWithCaptures(captureList, posList, &nameGroups, &namePositions);
     if (mFilterTrigger) {
         if (captureList.size() > 1) {
-            const int total = captureList.size();
             auto its = captureList.begin();
             auto iti = posList.begin();
-            for (int filterPosition = 1; iti != posList.end(); ++iti, ++its, filterPosition++) {
-                int begin = *iti;
-                std::string& s = *its;
-                if (total > 1 && numberOfCaptureGroups > 0) {
-                    // skip complete match in Perl /g option type of triggers
-                    // to enable people to highlight capture groups if there are any
-                    // otherwise highlight complete expression match
-                    if (filterPosition % numberOfCaptureGroups != 1) {
-                        filter(s, begin, lineNumber);
-                    }
-                } else {
-                    filter(s, begin, lineNumber);
+            for (int position = 0; iti != posList.end(); ++iti, ++its, ++position) {
+                if (!trackWholeMatches || !wholeMatchSkipped[position]) {
+                    filter(*its, *iti, lineNumber);
                 }
             }
         }

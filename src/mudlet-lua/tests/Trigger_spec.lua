@@ -2772,6 +2772,66 @@ describe("Trigger processing", function()
             assert.are.same(defaultForeground, coloursOf(line, "highlight_quiet").foreground)
         end)
 
+        -- PCRE2 reports groups only up to the highest one that took part, so
+        -- the first match here ("hlvary") reports fewer than the later ones
+        it("recolours the groups of every match when match all finds differing group counts", function()
+            _G.TrigHighlight = {}
+            tempComplexRegexTrigger("SpecHighlightVaryingGroups", [[(hl\w+)(?: (\d+))?]],
+                [==[_G.TrigHighlight.line = getLineNumber()]==],
+                0, 0, 0, 0, 1, "red", "blue", 0, 0, 0)
+            finally(function() killTrigger("SpecHighlightVaryingGroups") end)
+            feedTriggers("hlvary hlgold 12 hlcopper 5\n")
+
+            local line = _G.TrigHighlight.line
+            assert.is_number(line, "the highlight trigger should have fired")
+            moveCursor(0, line)
+            local painted = {}
+            for column = 0, #getCurrentLine() - 1 do
+                selectSection(column, 1)
+                painted[#painted + 1] = select(1, getFgColor()) == color_table.red[1] and "^" or "."
+            end
+            deselect()
+            assert.are.equal("^^^^^^.^^^^^^.^^.^^^^^^^^.^", table.concat(painted))
+        end)
+
+    end)
+
+    describe("match-all filter triggers", function()
+
+        local function forwarded(name, pattern, line)
+            _G.TrigFilterAll = {}
+            tempComplexRegexTrigger(name, pattern, "", 0, 0, 0, 1, 1, 0, 0, 0, 0, 0)
+            permRegexTrigger(name .. "Child", name, {"^.+$"}, [==[_G.TrigFilterAll[#_G.TrigFilterAll + 1] = matches[1] ]==])
+            finally(function()
+                killTrigger(name .. "Child")
+                killTrigger(name)
+            end)
+            feedTriggers(line .. "\n")
+            return _G.TrigFilterAll
+        end
+
+        after_each(function()
+            _G.TrigFilterAll = nil
+        end)
+
+        it("hands over the groups of every match when a later match reports more groups than the first", function()
+            assert.are.same({"fvsilver", "fvgold", "12", "fvcopper", "5"},
+                            forwarded("SpecFilterVarying", [[(fv\w+)(?: (\d+))?]], "fvsilver fvgold 12 fvcopper 5"))
+        end)
+
+        it("hands over the groups of every match when the first match reports the most groups", function()
+            assert.are.same({"fvgold", "12", "fvcopper", "5", "fvsilver"},
+                            forwarded("SpecFilterVaryingFirst", [[(fv\w+)(?: (\d+))?]], "fvgold 12 fvcopper 5 fvsilver"))
+        end)
+
+        it("hands over the group of each alternative", function()
+            assert.are.same({"fva", "fvb"}, forwarded("SpecFilterAlternation", [[(fva)|(fvb)]], "fva fvb"))
+        end)
+
+        it("hands over every whole match when the pattern has no groups", function()
+            assert.are.same({"fvab", "fvab"}, forwarded("SpecFilterNoGroups", [[fvab]], "two fvab and fvab here"))
+        end)
+
     end)
 
     -- A colour trigger's pattern is a pair of ANSI colour numbers rather than
