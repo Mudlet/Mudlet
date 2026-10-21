@@ -2816,6 +2816,156 @@ describe("Trigger processing", function()
             assert.are.same(defaultForeground, coloursOf(line, "highlight_quiet").foreground)
         end)
 
+        -- Every trigger matches the line as it arrived, so a later trigger's capture
+        -- positions have to be moved past what earlier triggers edited before they are used
+        describe("after an earlier trigger edited the line", function()
+            local edits = {
+                {"lengthens it", "edit_long orc", "a much longer word orc", function()
+                    if selectString("edit_long", 1) > -1 then replace("a much longer word") end
+                end},
+                {"shortens it", "edit_short_xx orc", "x orc", function()
+                    if selectString("edit_short_xx", 1) > -1 then replace("x") end
+                end},
+                {"inserts text in front", "edit_insert orc", "ZZZedit_insert orc", function()
+                    moveCursor(0, getLineNumber())
+                    insertText("ZZZ")
+                end},
+                {"deletes text in front", "edit_delete orc", "delete orc", function()
+                    if selectString("edit_", 1) > -1 then replace("") end
+                end},
+            }
+
+            for _, edit in ipairs(edits) do
+                local description, incoming, edited, editor = unpack(edit)
+
+                it("highlights and selects a later trigger's capture where it now is when the earlier one " .. description, function()
+                    _G.TrigHighlight = {}
+                    local editTrigger = tempRegexTrigger("^" .. incoming .. "$", function()
+                        editor()
+                        deselect()
+                    end)
+                    tempComplexRegexTrigger("SpecHighlightAfterEdit", "(orc)$", "", 0, 0, 0, 0, 0, "red", "blue", 0, 0, 0)
+                    local pick = tempRegexTrigger("(orc)$", function()
+                        if selectCaptureGroup(2) > -1 then
+                            _G.TrigHighlight.selected = getSelection()
+                        end
+                        deselect()
+                        _G.TrigHighlight.line = getLineNumber()
+                    end)
+                    finally(function()
+                        killTrigger(editTrigger)
+                        killTrigger("SpecHighlightAfterEdit")
+                        killTrigger(pick)
+                    end)
+
+                    feedTriggers(incoming .. "\n")
+
+                    local line = _G.TrigHighlight.line
+                    assert.is_number(line, "the later trigger should have fired")
+                    moveCursor(0, line)
+                    assert.are.equal(edited, getCurrentLine())
+                    assert.are.equal("orc", _G.TrigHighlight.selected)
+                    assert.are.same(color_table.red, coloursOf(line, "orc").foreground)
+                    assert.are.same(defaultForeground, coloursOf(line, edited:sub(1, 1)).foreground,
+                                    "nothing but the capture should have been highlighted")
+                end)
+            end
+
+            it("replaces a later trigger's capture where it now is", function()
+                local editTrigger = tempRegexTrigger("^cafe orc$", function()
+                    if selectString("cafe", 1) > -1 then replace("a much longer word") end
+                    deselect()
+                end)
+                local replacer = tempRegexTrigger("(orc)$", function()
+                    if selectCaptureGroup(2) > -1 then replace("ORC") end
+                    deselect()
+                end)
+                finally(function()
+                    killTrigger(editTrigger)
+                    killTrigger(replacer)
+                end)
+
+                feedTriggers("cafe orc\n")
+
+                moveCursor(0, getLineNumber())
+                assert.are.equal("a much longer word ORC", getCurrentLine())
+            end)
+
+            it("selects a later trigger's named capture where it now is", function()
+                _G.TrigHighlight = {}
+                local editTrigger = tempRegexTrigger("^named_edit orc$", function()
+                    if selectString("named_edit", 1) > -1 then replace("n") end
+                    deselect()
+                end)
+                local pick = tempRegexTrigger("(?<who>orc)$", function()
+                    if selectCaptureGroup("who") > -1 then
+                        _G.TrigHighlight.selected = getSelection()
+                    end
+                    deselect()
+                end)
+                finally(function()
+                    killTrigger(editTrigger)
+                    killTrigger(pick)
+                end)
+
+                feedTriggers("named_edit orc\n")
+
+                assert.are.equal("orc", _G.TrigHighlight.selected)
+            end)
+
+            local insideEdits = {
+                {"lengthened", "tag red orc", "t very red orc", "very red orc", function()
+                    if selectString("tag", 1) > -1 then replace("t") end
+                    if selectString("red", 1) > -1 then replace("very red") end
+                end},
+                {"shortened", "tag red orc", "tag r orc", "r orc", function()
+                    if selectString("red", 1) > -1 then replace("r") end
+                end},
+            }
+
+            for _, edit in ipairs(insideEdits) do
+                local description, incoming, edited, wanted, editor = unpack(edit)
+
+                it("highlights and selects all of a later trigger's capture that an earlier one " .. description, function()
+                    _G.TrigHighlight = {}
+                    local editTrigger = tempRegexTrigger("^" .. incoming .. "$", function()
+                        editor()
+                        deselect()
+                    end)
+                    tempComplexRegexTrigger("SpecHighlightEditedInside", "(red orc)$", "", 0, 0, 0, 0, 0, "red", "blue", 0, 0, 0)
+                    local pick = tempRegexTrigger("(?<who>red orc)$", function()
+                        if selectCaptureGroup(2) > -1 then
+                            _G.TrigHighlight.selected = getSelection()
+                        end
+                        deselect()
+                        if selectCaptureGroup("who") > -1 then
+                            _G.TrigHighlight.named = getSelection()
+                        end
+                        deselect()
+                        _G.TrigHighlight.line = getLineNumber()
+                    end)
+                    finally(function()
+                        killTrigger(editTrigger)
+                        killTrigger("SpecHighlightEditedInside")
+                        killTrigger(pick)
+                    end)
+
+                    feedTriggers(incoming .. "\n")
+
+                    local line = _G.TrigHighlight.line
+                    assert.is_number(line, "the later trigger should have fired")
+                    moveCursor(0, line)
+                    assert.are.equal(edited, getCurrentLine())
+                    assert.are.equal(wanted, _G.TrigHighlight.selected)
+                    assert.are.equal(wanted, _G.TrigHighlight.named)
+                    assert.are.same(color_table.red, coloursOf(line, wanted:sub(1, 1)).foreground)
+                    assert.are.same(color_table.red, coloursOf(line, "orc").foreground)
+                    assert.are.same(defaultForeground, coloursOf(line, edited:sub(1, 1)).foreground,
+                                    "nothing ahead of the capture should have been highlighted")
+                end)
+            end
+        end)
+
         -- PCRE2 reports groups only up to the highest one that took part, so
         -- the first match here ("hlvary") reports fewer than the later ones
         it("recolours the groups of every match when match all finds differing group counts", function()
@@ -4349,6 +4499,17 @@ describe("Trigger processing", function()
             -- one line in, two gone
             assert.are.equal(countBefore - 1, getLineCount())
             assert.are.equal("ChainDeleteMarker magenta", _G.ColorFilterSpec.colourChainChildCapture)
+        end)
+
+        -- the fixture's "shift inserter" puts "XX" at the start of either line first
+        it("selects a text child's capture of a colour parent where it is after an earlier edit", function()
+            feed("ColourShiftMarker \27[36mbc\27[0m\n")
+            assert.are.equal("bc", _G.ColorFilterSpec.colourShiftSelection)
+        end)
+
+        it("scans a colour child's window of a text parent where it is after an earlier edit", function()
+            feed("ReverseShiftMarker \27[33mgold\27[0m plain\n")
+            assert.are.equal("gold", _G.ColorFilterSpec.reverseShiftCapture)
         end)
 
     end)

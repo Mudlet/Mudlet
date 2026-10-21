@@ -2412,7 +2412,7 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
         // Save/restore gives each nested pass its own snapshot; the spare member recycles its allocation:
         std::vector<TChar> savedPassLine;
         savedPassLine.swap(mPreTriggerPassLine);
-        mEnclosingTriggerPasses.append({mPreTriggerPassLineNumber, std::exchange(mDetachedTriggerPassLineText, QString())});
+        mEnclosingTriggerPasses.append({mPreTriggerPassLineNumber, std::exchange(mDetachedTriggerPassLineText, QString()), std::exchange(mTriggerPassLineEdits, {})});
         const int savedPassLineAsCommitted = mTriggerPassLineAsCommitted;
         const bool savedPassSnapshotTaken = mPreTriggerPassSnapshotTaken;
         const PassLineUniformity savedPassLineUniformity = mPreTriggerPassLineUniformity;
@@ -2444,6 +2444,7 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
         EnclosingTriggerPass enclosing = mEnclosingTriggerPasses.takeLast();
         mPreTriggerPassLineNumber = enclosing.lineNumber;
         mDetachedTriggerPassLineText = std::move(enclosing.detachedText);
+        mTriggerPassLineEdits = std::move(enclosing.edits);
         mTriggerPassLineAsCommitted = savedPassLineAsCommitted;
         mPreTriggerPassSnapshotTaken = savedPassSnapshotTaken;
         mPreTriggerPassLineUniformity = savedPassLineUniformity;
@@ -2810,6 +2811,57 @@ void TBuffer::triggerPassLinesRemoved(const int from, const int to)
 int TBuffer::triggerPassLineNow(int lineNumber) const
 {
     return (lineNumber >= 0 && lineNumber == mTriggerPassLineAsCommitted) ? mPreTriggerPassLineNumber : lineNumber;
+}
+
+std::pair<int, int> TBuffer::triggerPassSpanNow(int lineNumber, int from, int length) const
+{
+    if (!triggerPassLineEdited(lineNumber)) {
+        return {from, length};
+    }
+    // Text replacing part of the span counts as part of it; text put in at either end does not
+    int start = from;
+    int end = from + length;
+    for (const TriggerPassLineEdit& edit : mTriggerPassLineEdits) {
+        const int delta = edit.inserted - edit.removed;
+        if (start >= edit.x + edit.removed) {
+            start += delta;
+        } else if (start > edit.x) {
+            start = edit.x;
+        }
+        if (end > edit.x + edit.removed) {
+            end += delta;
+        } else if (end > edit.x) {
+            end = edit.x + edit.inserted;
+        }
+    }
+    return {start, std::max(0, end - start)};
+}
+
+// replaceInLine() removes and then inserts at the same column, and the two count as
+// one replacement, so that a column inside the removed text is not pushed past the
+// text put in its place
+void TBuffer::appendTriggerPassLineEdit(std::vector<TriggerPassLineEdit>& edits, const int x, const int removed, const int inserted)
+{
+    if (removed == 0 && !edits.empty() && edits.back().x == x && edits.back().inserted == 0) {
+        edits.back().inserted = inserted;
+        return;
+    }
+    edits.push_back({x, removed, inserted});
+}
+
+void TBuffer::noteTriggerPassLineEdit(const int y, const int x, const int removed, const int inserted)
+{
+    if (y < 0 || (removed == 0 && inserted == 0)) {
+        return;
+    }
+    if (y == mPreTriggerPassLineNumber) {
+        appendTriggerPassLineEdit(mTriggerPassLineEdits, x, removed, inserted);
+    }
+    for (EnclosingTriggerPass& enclosing : mEnclosingTriggerPasses) {
+        if (enclosing.lineNumber == y) {
+            appendTriggerPassLineEdit(enclosing.edits, x, removed, inserted);
+        }
+    }
 }
 
 const std::vector<TChar>* TBuffer::preTriggerPassLine(int lineNumber) const
@@ -5788,6 +5840,7 @@ bool TBuffer::insertInLine(QPoint& P, const QString& text, const TChar& format)
         lineBuffer[y].insert(x, insertedText);
         buffer[y].insert(buffer[y].begin() + x, static_cast<std::size_t>(insertedText.size()), format);
         spliceInsertIntoPreTriggerPassLine(y, x, static_cast<int>(insertedText.size()), format);
+        noteTriggerPassLineEdit(y, x, 0, static_cast<int>(insertedText.size()));
     } else {
         appendLine(insertedText, 0, insertedText.size(), format.foreground(), format.background(), format.mFlags);
     }
@@ -6547,6 +6600,7 @@ bool TBuffer::replaceInLine(QPoint& P_begin, QPoint& P_end, const QString& with,
         auto it2 = buffer[y].begin() + x_end;
         buffer[y].erase(it1, it2);
         spliceEraseFromPreTriggerPassLine(y, x, x_end);
+        noteTriggerPassLineEdit(y, x, x_end - x, 0);
     }
 
     // insert replacement
