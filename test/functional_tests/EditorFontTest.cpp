@@ -69,7 +69,9 @@ private:
     // Bundled, so on every machine, and not the family a new profile's display font is
     static inline const QString scmOwnFamily = qsl("Ubuntu Mono");
     static constexpr int scmOwnSize = 19;
+#ifdef INCLUDE_FONTS
     QList<int> mApplicationFontIds;
+#endif
 
     void deleteProfileDirectory(const QString& profileName)
     {
@@ -100,6 +102,7 @@ private:
         QVERIFY2(wrong.isEmpty(), qPrintable(qsl("expected %1 %2pt, but: %3").arg(family).arg(pointSize).arg(wrong.join(qsl(", ")))));
     }
 
+#ifdef INCLUDE_FONTS
     // A test binary never copies the bundled fonts out of the resources the way main.cpp does, so
     // without this both families would be missing and stood in for - see MissingDisplayFontTest
     void registerBundledFonts()
@@ -110,6 +113,7 @@ private:
             mApplicationFontIds.append(id);
         }
     }
+#endif
 
     void setOwnFont()
     {
@@ -120,6 +124,9 @@ private:
 private slots:
     void initTestCase()
     {
+#ifndef INCLUDE_FONTS
+        QSKIP("Built with WITH_FONTS=NO, so the bundled \"Ubuntu Mono\" this gives the editor as a font of its own is not in the resources");
+#else
         if (portableMarkerPresent()) {
             QSKIP("portable.txt present - it takes precedence over XDG_CONFIG_HOME, so the config dir cannot be redirected");
         }
@@ -153,6 +160,7 @@ private slots:
         mOriginalDisplayFont = mpHost->getDisplayFont();
         QVERIFY2(mOriginalDisplayFont.family() != scmOwnFamily, "the profile's display font is the family this test gives the editor");
         QVERIFY(mOriginalDisplayFont.pointSize() != scmOwnSize);
+#endif
     }
 
     void cleanupTestCase()
@@ -166,9 +174,11 @@ private slots:
             delete mudlet::self();
         }
         mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);
+#ifdef INCLUDE_FONTS
         for (const int id : std::as_const(mApplicationFontIds)) {
             QFontDatabase::removeApplicationFont(id);
         }
+#endif
     }
 
     void cleanup()

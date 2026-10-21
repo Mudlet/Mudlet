@@ -1837,7 +1837,9 @@ void Host::raiseEditorFontChange()
     }
 
     // Read afresh: a handler of the event may have changed it again
-    emit signal_editorFontChanged(getEditorFont());
+    const QFont reported = getEditorFont();
+    mEditorFontReported = TFontAttributes(reported);
+    emit signal_editorFontChanged(reported);
 }
 
 // a little message to make the player feel special for helping us find bugs
@@ -5154,6 +5156,7 @@ void Host::substituteMissingDisplayFonts()
         for (const auto& pHost : hosts->hostList()) {
             if (pHost && !pHost->isClosingDown() && pHost->mDisplayFontCheckReached) {
                 pHost->substituteMissingDisplayFont();
+                pHost->refreshEditorFont();
             }
         }
     }
@@ -5165,6 +5168,7 @@ void Host::restoreMissingDisplayFonts()
         for (const auto& pHost : hosts->hostList()) {
             if (pHost && !pHost->isClosingDown()) {
                 pHost->restoreMissingDisplayFont();
+                pHost->refreshEditorFont();
             }
         }
     }
@@ -5212,6 +5216,23 @@ bool Host::restoreMissingDisplayFont()
     //: %1 is the font family the profile asked for, which had been missing and has now been made available, by a package or module that this or another profile installed or opened
     postMessage(tr("[ INFO ]  - The font \"%1\" that this profile uses is now available, so it is being used instead of the default.").arg(family));
     return true;
+}
+
+void Host::refreshEditorFont()
+{
+    // A display font that moves already re-reports an editor following it
+    if (mEditorFontFollowsDisplay || !mEditorFont.has_value()) {
+        return;
+    }
+
+    const TFontAttributes current(getEditorFont());
+    if (!mEditorFontReported.has_value()) {
+        mEditorFontReported = current;
+        return;
+    }
+    if (current != mEditorFontReported.value()) {
+        raiseEditorFontChange();
+    }
 }
 
 void Host::setEnableBlinkText(const bool enable)

@@ -84,8 +84,10 @@ private:
     // cleanup() - which runs whether or not the case reached its own end
     QList<std::function<void()>> mRestorers;
     QPointer<QTimer> mpColorDialogTimer;
+#ifdef INCLUDE_FONTS
     // Bundled, so on every machine, and not the display font a new profile starts with
     const QString mEditorOwnFamily = qsl("Ubuntu Mono");
+#endif
 
     void restoreLater(std::function<void()> restorer) { mRestorers.append(std::move(restorer)); }
 
@@ -131,6 +133,7 @@ private:
         pTimer->start(20ms);
     }
 
+#ifdef INCLUDE_FONTS
     QList<int> mApplicationFontIds;
 
     // A test binary never copies the bundled fonts out of the resources the way main.cpp does, so
@@ -143,6 +146,7 @@ private:
             mApplicationFontIds.append(id);
         }
     }
+#endif
 
     bool runLua(const QString& code) const { return mpHost->getLuaInterpreter()->compileAndExecuteScript(code); }
 
@@ -182,7 +186,9 @@ private slots:
             QSKIP("portable.txt present - it takes precedence over XDG_CONFIG_HOME, so the config dir cannot be redirected");
         }
 
+#ifdef INCLUDE_FONTS
         registerBundledFonts();
+#endif
         QVERIFY(mConfigDir.isValid());
         QVERIFY(QDir().mkpath(qsl("%1/mudlet/profiles").arg(mConfigDir.path())));
         mSavedXdg = qgetenv("XDG_CONFIG_HOME");
@@ -214,9 +220,11 @@ private slots:
             delete mudlet::self();
         }
         mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);
+#ifdef INCLUDE_FONTS
         for (const int id : std::as_const(mApplicationFontIds)) {
             QFontDatabase::removeApplicationFont(id);
         }
+#endif
     }
 
     void cleanup()
@@ -1093,6 +1101,9 @@ private slots:
     // under it show what following gives, greyed out, and pick the editor's own font once it is
     void test_theEditorFontIsTheDisplayFontUntilTheBoxIsUnticked()
     {
+#ifndef INCLUDE_FONTS
+        QSKIP("Built with WITH_FONTS=NO, so the bundled \"Ubuntu Mono\" this gives the editor as a font of its own is not in the resources");
+#else
         QVERIFY(mpHost->editorFontFollowsDisplay());
         restoreLater([this]() {
             mpHost->setEditorFontFollowsDisplay(true);
@@ -1139,11 +1150,15 @@ private slots:
         QVERIFY2(!pFamily->isEnabled() && !pSize->isEnabled(), "ticking the box again left the editor font open to picking");
         QCOMPARE(pFamily->currentFont().family(), display.family());
         QCOMPARE(pSize->value(), display.pointSize());
+#endif
     }
 
     // Both are the profile's, so they outlast the session
     void test_theEditorFontIsSavedWithTheProfileAndReadBack()
     {
+#ifndef INCLUDE_FONTS
+        QSKIP("Built with WITH_FONTS=NO, so the bundled \"Ubuntu Mono\" this gives the editor as a font of its own is not in the resources");
+#else
         restoreLater([this]() {
             mpHost->setEditorFontFollowsDisplay(true);
         });
@@ -1190,6 +1205,7 @@ private slots:
         QVERIFY(mpPreferences->fontComboBox_editorFont->isEnabled());
         QCOMPARE(mpPreferences->fontComboBox_editorFont->currentFont().family(), mEditorOwnFamily);
         QCOMPARE(mpPreferences->spinBox_editorFontSize->value(), ownSize);
+#endif
     }
 };
 

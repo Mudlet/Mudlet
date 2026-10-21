@@ -586,6 +586,8 @@ public:
     // The way back from substituteMissingDisplayFont() once a package brings the
     // family it stood in for. Returns true when the display font was changed.
     bool restoreMissingDisplayFont();
+    // Tells the editor's listeners once a package brings or takes away the family of the editor's own font
+    void refreshEditorFont();
     // Fonts are registered for the whole application, so one profile's package can
     // take away or bring back the family any open profile uses or stood in for
     static void substituteMissingDisplayFonts();
@@ -869,6 +871,9 @@ private:
     bool mEditorFontFollowsDisplay = true;
     // Taken from the display font the first time the editor leaves it, so it starts from what is on show
     std::optional<QFont> mEditorFont;
+    // What the editor's listeners were last given: getEditorFont() resolves the family on every read,
+    // so a package bringing or taking it away changes the font without anything being set
+    std::optional<TFontAttributes> mEditorFontReported;
     // Co-owned with the main-console view rather than owned outright: mudlet
     // destroys the Host before the lingering console widget, so a Host-owned
     // model would leave the view's aliasing references dangling. Reached

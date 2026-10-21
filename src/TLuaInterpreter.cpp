@@ -9681,19 +9681,13 @@ int TLuaInterpreter::setConfig(lua_State* L)
         if (fontName.trimmed().isEmpty()) {
             return warnArgumentValue(L, __func__, "editorFont must not be empty");
         }
-        QString matchedFontName;
-        for (const QString& availableFont : FontManager::availableFonts()) {
-            if (!availableFont.compare(fontName, Qt::CaseInsensitive)) {
-                matchedFontName = availableFont;
-                break;
-            }
-        }
-        if (matchedFontName.isEmpty()) {
+        const auto resolved = host.resolveFontFamily(fontName);
+        if (!resolved.available) {
             return warnArgumentValue(L, __func__, qsl("font '%1' is not available").arg(fontName));
         }
-        if (host.getEditorFont().family() != matchedFontName) {
+        if (host.getEditorFont().family().compare(resolved.family, Qt::CaseInsensitive) != 0) {
             QFont font = host.editorFontBase();
-            font.setFamily(matchedFontName);
+            font.setFamily(resolved.family);
             host.setEditorFont(font);
             host.setEditorFontFollowsDisplay(false);
         }

@@ -60,16 +60,22 @@
 
 #include "FontManager.h"
 #include "Host.h"
+#include "HostDialogs.h"
 #include "HostManager.h"
 #include "MudletInstanceCoordinator.h"
 #include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "TAlias.h"
+#include "TConsole.h"
 #include "TLuaInterpreter.h"
 #include "TMainConsole.h"
 #include "TTextBox.h"
 #include "dlgProfilePreferences.h"
+#include "dlgTriggerEditor.h"
 #include "mudlet.h"
+
+#include "edbee/models/texteditorconfig.h"
+#include "edbee/texteditorwidget.h"
 
 #include "GroupedTest.h"
 
@@ -378,6 +384,25 @@ private:
         return pHost->getLuaInterpreter()->getLuaString(qsl("fontTestResult"));
     }
 
+    // Not through luaString(): getLuaString() leaves the first value it reads on the stack and answers that for every later read
+    static QString luaValue(Host* pHost, const QString& expression)
+    {
+        if (!pHost->getLuaInterpreter()->compileAndExecuteScript(qsl("fontTestValue = %1").arg(expression))) {
+            return qsl("the Lua did not run");
+        }
+        lua_State* L = pHost->getLuaInterpreter()->getLuaGlobalState();
+        lua_getglobal(L, "fontTestValue");
+        const QString value = QString::fromUtf8(lua_tostring(L, -1));
+        lua_pop(L, 1);
+        return value;
+    }
+
+    // What setConfig() answers, as "true:nil" or "nil:" and the message
+    static QString setConfigAnswer(Host* pHost, const QString& key, const QString& valueExpression)
+    {
+        return luaValue(pHost, qsl("(function() local ok, message = setConfig('%1', %2) return tostring(ok) .. ':' .. tostring(message) end)()").arg(key, valueExpression));
+    }
+
     static void killLuaHandlers(Host* pHost)
     {
         pHost->getLuaInterpreter()->compileAndExecuteScript(qsl("for _, id in ipairs(fontHandlerTestIds or {}) do killAnonymousEventHandler(id) end fontHandlerTestIds = {}"));
@@ -431,6 +456,23 @@ private:
     // What the player would see: the console wraps a long message over several
     // buffer lines, so the text is put back together before it is searched.
     static QString consoleText(Host* pHost) { return pHost->mainConsoleView()->buffer.lineBuffer.join(QChar::Space).simplified(); }
+
+    // Empty when what reads code in the script editor is drawn in that font, else which of it is not
+    static QString editorReadersNotIn(dlgTriggerEditor* pEditor, const QString& family, const int pointSize)
+    {
+        auto* pCodePane = pEditor->findChild<edbee::TextEditorWidget*>(qsl("edbeeEditorWidget"));
+        if (!pCodePane) {
+            return qsl("the script editor has no code pane");
+        }
+        const std::pair<const char*, QFont> readers[] = {{"code pane", pCodePane->config()->font()}, {"error console", pEditor->mpErrorConsole->font()}};
+        QStringList wrong;
+        for (const auto& [name, font] : readers) {
+            if (font.family() != family || font.pointSize() != pointSize) {
+                wrong << qsl("the %1 is %2 %3pt").arg(QLatin1String(name), font.family()).arg(font.pointSize());
+            }
+        }
+        return wrong.isEmpty() ? QString() : qsl("expected %1 %2pt, but %3").arg(family).arg(pointSize).arg(wrong.join(qsl(", ")));
+    }
 
     // The family the saved profile asks for, straight out of the written XML
     static QString savedDisplayFontFamily(const QString& xmlPath)
@@ -531,6 +573,13 @@ private slots:
         // Cases share one Host: a stand-in left behind by one case must not
         // leak into the next, and only a user-choice change retires it now
         mpHost->setDisplayFont(mpHost->getDisplayFont(), Host::DisplayFontChange::UserChoice);
+        // An editor font of its own outlives the case in every profile it opened, and a later case's
+        // package bringing that family back re-reports it to whatever editor is still open
+        for (const auto& pHost : HostManager::self()->hostList()) {
+            if (pHost) {
+                pHost->setEditorFontFollowsDisplay(true);
+            }
+        }
         QFont::removeSubstitutions(mAliasFamily);
         for (const auto& pHost : std::as_const(mHostsWithHandlers)) {
             if (pHost) {
@@ -612,6 +661,38 @@ private slots:
         QCOMPARE(mpHost->getDisplayFontForSaving().family(), mAliasFamily);
     }
 
+    // getConfig() reads a following editor's family off the display font, so it can hand back a name only
+    // the platform resolves, and setConfig() must take that as the font already in use
+    void test_aFollowingEditorHandedBackAFamilyThePlatformResolvesKeepsFollowing()
+    {
+        const QString standingInFor = stageAliasFamily();
+        if (standingInFor.isEmpty()) {
+            QSKIP("this platform hands an unrecognised font name back unchanged instead of naming the family it drew in its place, so no name it resolves can be told from one nothing knows");
+        }
+        QCOMPARE(QFontInfo(QFont(mAliasFamily)).family(), standingInFor);
+        QVERIFY(mpHost->setDisplayFont(QFont(mAliasFamily, 13, QFont::Normal)).first);
+        QVERIFY(mpHost->editorFontFollowsDisplay());
+        QCOMPARE(luaValue(mpHost, qsl("getConfig('editorFont')")), mAliasFamily);
+
+        QCOMPARE(setConfigAnswer(mpHost, qsl("editorFont"), qsl("getConfig('editorFont')")), qsl("true:nil"));
+        QVERIFY2(mpHost->editorFontFollowsDisplay(), "handing back the family in use gave the editor a font of its own");
+    }
+
+    void test_theEditorTakesAFamilyThePlatformResolvesAsAFontOfItsOwn()
+    {
+        const QString standingInFor = stageAliasFamily();
+        if (standingInFor.isEmpty()) {
+            QSKIP("this platform hands an unrecognised font name back unchanged instead of naming the family it drew in its place, so no name it resolves can be told from one nothing knows");
+        }
+        QCOMPARE(QFontInfo(QFont(mAliasFamily)).family(), standingInFor);
+        mpHost->setEditorFont(QFont(standingInFor, 13));
+        mpHost->setEditorFontFollowsDisplay(false);
+
+        QCOMPARE(setConfigAnswer(mpHost, qsl("editorFont"), qsl("'%1'").arg(mAliasFamily)), qsl("true:nil"));
+        QCOMPARE(luaValue(mpHost, qsl("getConfig('editorFont')")), mAliasFamily);
+        QCOMPARE(mpHost->getEditorFont().pointSize(), 13);
+    }
+
     void test_installedDisplayFontIsLeftAlone()
     {
         // setDisplayFont() takes the family unchecked, which is exactly what the
@@ -641,6 +722,33 @@ private slots:
         QCOMPARE(mpHost->getDisplayFont().family(), Host::scmDefaultFontFamily);
         QCOMPARE(mpHost->getDisplayFont().weight(), QFont::Bold);
         QCOMPARE(mpHost->getDisplayFont().pointSize(), 12);
+    }
+
+    // The editor keeps a family and a size only, so a "Family Style" name is taken for its family
+    void test_theEditorTakesAStyleSuffixedFamilyAsTheBaseFamily()
+    {
+        QVERIFY(mpHost->setDisplayFont(QFont(mOtherBundledFamily, 13, QFont::Normal)).first);
+        QVERIFY(mpHost->editorFontFollowsDisplay());
+
+        QCOMPARE(setConfigAnswer(mpHost, qsl("editorFont"), qsl("'%1 Bold'").arg(Host::scmDefaultFontFamily)), qsl("true:nil"));
+        QVERIFY(!mpHost->editorFontFollowsDisplay());
+        QCOMPARE(mpHost->editorFontChoice()->family(), Host::scmDefaultFontFamily);
+        QCOMPARE(mpHost->getEditorFont().family(), Host::scmDefaultFontFamily);
+        QCOMPARE(mpHost->getEditorFont().pointSize(), 13);
+    }
+
+    // getConfig() answers the family alone, so handed back it is the font in use even while the
+    // display font carries a weight the name does not
+    void test_aFollowingEditorHandedBackItsFamilyKeepsFollowingWhateverTheWeight()
+    {
+        QFont boldFont(mOtherBundledFamily, 13);
+        boldFont.setWeight(QFont::Bold);
+        QVERIFY(mpHost->setDisplayFont(boldFont).first);
+        QVERIFY(mpHost->editorFontFollowsDisplay());
+        QCOMPARE(mpHost->getEditorFont().weight(), QFont::Bold);
+
+        QCOMPARE(setConfigAnswer(mpHost, qsl("editorFont"), qsl("getConfig('editorFont')")), qsl("true:nil"));
+        QVERIFY2(mpHost->editorFontFollowsDisplay(), "handing back the family in use gave the editor a font of its own");
     }
 
     // The bundled default is the one family with nothing to stand in for it: on
@@ -1027,6 +1135,47 @@ private slots:
         QCOMPARE(pPreferences->fontComboBox_displayFont->currentFont().family(), mPackageSuppliedFamily);
         pPreferences.reset();
         QCOMPARE(pOtherHost->getDisplayFont().family(), mPackageSuppliedFamily);
+
+        QVERIFY2(uninstallFontPackage(pHost, packageName), "the package did not uninstall at the end");
+    }
+
+    // The editor's own family is resolved afresh on every read, so an editor and a preferences dialog
+    // already showing it have to be told when a package takes it away or brings it back
+    void test_anOpenEditorFollowsItsOwnFontAwayAndBackWithThePackage()
+    {
+        const QString packageName = qsl("font-editor");
+        const QString packagePath = writeFontPackage(packageName);
+        QVERIFY2(!packagePath.isEmpty(), "could not write the test package archive");
+        Host* pHost = openProfile(qsl("MissingDisplayFont-Editor-Test"), Host::scmDefaultFontFamily);
+        QVERIFY(pHost);
+        QVERIFY2(!FontManager::availableFonts().contains(mPackageSuppliedFamily, Qt::CaseInsensitive), "the package's family is already installed, so this cannot tell whether it went away");
+
+        mudlet::self()->activateProfile(pHost);
+        mudlet::self()->slot_showScriptDialog();
+        dlgTriggerEditor* pEditor = HostDialogs::of(pHost).mpEditorDialog;
+        QVERIFY2(pEditor, "the script editor did not open");
+
+        QVERIFY2(installFontPackage(pHost, packagePath, packageName), "the package carrying the font did not install");
+        pHost->setEditorFont(QFont(mPackageSuppliedFamily, 12));
+        pHost->setEditorFontFollowsDisplay(false);
+        QString wrong = editorReadersNotIn(pEditor, mPackageSuppliedFamily, 12);
+        QVERIFY2(wrong.isEmpty(), qPrintable(wrong));
+
+        QVERIFY2(uninstallFontPackage(pHost, packageName), "the package did not uninstall");
+        QVERIFY2(!FontManager::availableFonts().contains(mPackageSuppliedFamily, Qt::CaseInsensitive), "the package's font is still registered, so nothing has gone missing to notice");
+        wrong = editorReadersNotIn(pEditor, Host::scmDefaultFontFamily, 12);
+        QVERIFY2(wrong.isEmpty(), qPrintable(wrong));
+        QCOMPARE(pHost->editorFontChoice()->family(), mPackageSuppliedFamily);
+
+        auto pPreferences = std::make_unique<dlgProfilePreferences>(mudlet::self(), pHost);
+        QCOMPARE(pPreferences->fontComboBox_editorFont->currentFont().family(), Host::scmDefaultFontFamily);
+
+        pHost->waitForProfileSave();
+        QVERIFY2(installFontPackage(pHost, packagePath, packageName), "the package carrying the font did not install again");
+        wrong = editorReadersNotIn(pEditor, mPackageSuppliedFamily, 12);
+        QVERIFY2(wrong.isEmpty(), qPrintable(wrong));
+        QCOMPARE(pPreferences->fontComboBox_editorFont->currentFont().family(), mPackageSuppliedFamily);
+        pPreferences.reset();
 
         QVERIFY2(uninstallFontPackage(pHost, packageName), "the package did not uninstall at the end");
     }
