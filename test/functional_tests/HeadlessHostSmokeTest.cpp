@@ -716,7 +716,7 @@ headlessProfileSheet = ok and "ok" or tostring(err)
                                   qsl("sheetC=[1]QWidget { color: rgb(1,2,3); }"),
                                   qsl("ownA=[1]true"),
                                   qsl("sheetA=[1]color: green;"),
-                                  qsl("closeB=[0]"),
+                                  qsl("closeB=[1]true"),
                                   qsl("set=[1]true"),
                                   qsl("sheetB=[1]QWidget { color: red; }"),
                                   qsl("reopenB=[1]true"),
@@ -1055,6 +1055,12 @@ local ok, err = pcall(function()
   step("notImage", setBackgroundImage, "bgA", fake)
   step("badSvg", setBackgroundImage, "bgA", bad)
   state("kept", "bgA")
+  step("empty", setBackgroundImage, "bgA", "")
+  state("empty", "bgA")
+  step("emptyAgain", setBackgroundImage, "bgA", "")
+  step("echoText", echo, "bgA", "words")
+  step("emptyOnText", setBackgroundImage, "bgA", "")
+  state("emptyOnText", "bgA")
   step("mode3", setBackgroundImage, "bgA", still, 3)
   step("mode4", setBackgroundImage, "bgA", "background-color: red;", 4)
   step("mode5", setBackgroundImage, "bgA", still, 5)
@@ -1079,6 +1085,9 @@ local ok, err = pcall(function()
   step("startMovie", startMovie, "bgA")
   step("setMovieAgain", setMovie, "bgA", gif)
   state("movieAgain", "bgA")
+  step("emptyOnMovie", setBackgroundImage, "bgA", "")
+  state("emptyOnMovie", "bgA")
+  step("setMovieAgain", setMovie, "bgA", gif)
   step("resetMovie", resetBackgroundImage, "bgA")
   state("resetMovie", "bgA")
   step("sized", setBackgroundImage, "bgA", sized)
@@ -1111,6 +1120,9 @@ local ok, err = pcall(function()
   step("sized", setBackgroundImage, "bgA", sized)
   step("resetSvg", resetBackgroundImage, "bgA")
   state("resetSvg", "bgA")
+  step("sized", setBackgroundImage, "bgA", sized)
+  step("emptyOnSvg", setBackgroundImage, "bgA", "")
+  state("emptyOnSvg", "bgA")
   step("sized", setBackgroundImage, "bgA", sized)
   step("still", setBackgroundImage, "bgA", still)
   step("echoText", echo, "bgA", "words")
@@ -1191,6 +1203,12 @@ headlessBackground = ok and "ok" or tostring(err)
                                   qsl("notImage=[2]nil:console or label 'bgA' not found, or '<dir>/fake.gif' could not be loaded as an image"),
                                   qsl("badSvg=[2]nil:console or label 'bgA' not found, or '<dir>/bad.svg' could not be loaded as an image"),
                                   qsl("kept:hint=24x10,text=,movie=false,gifs=0/0"),
+                                  qsl("empty=[1]true"),
+                                  qsl("empty:hint=twin,text=,movie=false,gifs=0/0"),
+                                  qsl("emptyAgain=[1]true"),
+                                  qsl("echoText=[1]true"),
+                                  qsl("emptyOnText=[1]true"),
+                                  qsl("emptyOnText:hint=twin,text=,movie=false,gifs=0/0"),
                                   qsl("mode3=[1]true"),
                                   qsl("mode4=[2]nil:console or label 'bgA' not found, or 'background-color: red;' could not be loaded as an image"),
                                   qsl("mode5=[2]nil:mode 'cover' is not supported for the main display - pass true as the 4th argument to apply it to the full window background instead"),
@@ -1215,6 +1233,9 @@ headlessBackground = ok and "ok" or tostring(err)
                                   qsl("startMovie=[2]nil:no movie found at label 'bgA'"),
                                   qsl("setMovieAgain=[1]true"),
                                   qsl("movieAgain:hint=40x16,text=,movie=true,gifs=1/1"),
+                                  qsl("emptyOnMovie=[1]true"),
+                                  qsl("emptyOnMovie:hint=twin,text=,movie=false,gifs=1/0"),
+                                  qsl("setMovieAgain=[1]true"),
                                   qsl("resetMovie=[1]true"),
                                   qsl("resetMovie:hint=twin,text=,movie=false,gifs=1/0"),
                                   qsl("sized=[1]true"),
@@ -1247,6 +1268,9 @@ headlessBackground = ok and "ok" or tostring(err)
                                   qsl("sized=[1]true"),
                                   qsl("resetSvg=[1]true"),
                                   qsl("resetSvg:hint=twin,text=,movie=false,gifs=1/0"),
+                                  qsl("sized=[1]true"),
+                                  qsl("emptyOnSvg=[1]true"),
+                                  qsl("emptyOnSvg:hint=twin,text=,movie=false,gifs=1/0"),
                                   qsl("sized=[1]true"),
                                   qsl("still=[1]true"),
                                   qsl("echoText=[1]true"),
@@ -1291,7 +1315,7 @@ headlessBackground = ok and "ok" or tostring(err)
                                   qsl("miniReset=[1]true"),
                                   qsl("window=[1]true"),
                                   qsl("windowReset=[1]true"),
-                                  qsl("closeWindow=[0]"),
+                                  qsl("closeWindow=[1]true"),
                                   qsl("closedWindow=[1]true"),
                                   qsl("closedWindowReset=[1]true"),
                                   qsl("buffer=[1]true"),
@@ -1445,7 +1469,7 @@ headlessRaise = ok and "ok" or tostring(err)
                                   qsl("hideMini=[1]true"),
                                   qsl("hiddenMiniRaise=[1]true"),
                                   qsl("hiddenMiniLower=[1]true"),
-                                  qsl("closeWindow=[0]"),
+                                  qsl("closeWindow=[1]true"),
                                   qsl("closedWindowRaise=[1]true"),
                                   qsl("closedWindowLower=[1]true"),
                                   qsl("closedInnerRaise=[1]true"),

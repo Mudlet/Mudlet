@@ -460,6 +460,18 @@ int TLuaInterpreter::clearUserWindow(lua_State* L)
     return 0;
 }
 
+// Documentation: ? - public function but should stay undocumented -- compare https://github.com/Mudlet/Mudlet/issues/1149
+int TLuaInterpreter::closeUserWindow(lua_State* L)
+{
+    const QString text = getVerifiedString(L, __func__, 1, "name");
+    Host& host = getHostFromLua(L);
+    if (!host.closeWindow(text)) {
+        return windowNotFoundOrUnsupported(L, host, text);
+    }
+    lua_pushboolean(L, true);
+    return 1;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#copy
 int TLuaInterpreter::copy(lua_State* L)
 {
@@ -477,8 +489,17 @@ int TLuaInterpreter::copy(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#cut
 int TLuaInterpreter::cut(lua_State* L)
 {
-    getHostFromLua(L).cutMainConsoleToClipboard();
-    return 0;
+    QString windowName;
+    // Any other argument still means the main console, as cut() long ignored its arguments
+    if (lua_type(L, 1) == LUA_TSTRING) {
+        windowName = lua_tostring(L, 1);
+    }
+
+    if (!getHostFromLua(L).cutToClipboard(windowName)) {
+        return windowNotFound(L, windowName);
+    }
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#createBuffer
@@ -1148,7 +1169,7 @@ int TLuaInterpreter::echoLink(lua_State* L)
     Host& host = getHostFromLua(L);
     auto pModel = host.consoleModelNamed(windowName);
     if (!pModel) {
-        return windowNotFound(L, windowName);
+        return windowNotFoundOrUnsupported(L, host, windowName);
     }
 
     QString command;
@@ -1212,7 +1233,7 @@ int TLuaInterpreter::echoPopup(lua_State* L)
     Host& host = getHostFromLua(L);
     auto pModel = host.consoleModelNamed(windowName);
     if (!pModel) {
-        return windowNotFound(L, windowName);
+        return windowNotFoundOrUnsupported(L, host, windowName);
     }
 
     QStringList commandList;
@@ -2188,7 +2209,7 @@ int TLuaInterpreter::insertLink(lua_State* L)
     Host& host = getHostFromLua(L);
     auto pModel = host.consoleModelNamed(windowName);
     if (!pModel) {
-        return windowNotFound(L, windowName);
+        return windowNotFoundOrUnsupported(L, host, windowName);
     }
     // refused even where an empty link could be appended, as it would cover no text;
     // the QString stops at the first NUL, so "\0..." counts as empty too
@@ -2248,7 +2269,7 @@ int TLuaInterpreter::insertPopup(lua_State* L)
     Host& host = getHostFromLua(L);
     auto pModel = host.consoleModelNamed(windowName);
     if (!pModel) {
-        return windowNotFound(L, windowName);
+        return windowNotFoundOrUnsupported(L, host, windowName);
     }
     // refused even where an empty link could be appended, as it would cover no text;
     // the QString stops at the first NUL, so "\0..." counts as empty too
@@ -2304,7 +2325,7 @@ int TLuaInterpreter::insertText(lua_State* L)
     const QString consoleName{windowName};
     Host& host = getHostFromLua(L);
     if (!host.insertWindowText(consoleName, text)) {
-        return windowNotFound(L, consoleName);
+        return windowNotFoundOrUnsupported(L, host, consoleName);
     }
     lua_pushboolean(L, true);
     return 1;
@@ -2672,7 +2693,7 @@ int TLuaInterpreter::replace(lua_State* L)
     const QString consoleName{windowName};
     Host& host = getHostFromLua(L);
     if (!host.replaceWindowText(consoleName, text)) {
-        return windowNotFound(L, consoleName);
+        return windowNotFoundOrUnsupported(L, host, consoleName);
     }
     lua_pushboolean(L, true);
     return 1;
@@ -2805,7 +2826,7 @@ int TLuaInterpreter::selectCaptureGroup(lua_State* L)
         if (--captureGroup < static_cast<int>(pL->mCaptureGroupList.size())) {
             const auto offset = static_cast<std::size_t>(captureGroup);
             begin = pL->mCaptureGroupPosList[offset];
-            length = QString::fromStdString(pL->mCaptureGroupList[offset]).size();
+            length = pL->captureGroupLength(offset);
             if (TDebug::wants(TDebug::Category::Selection)) {
                 TDebug(Qt::white, Qt::red, TDebug::Category::Selection) << "selectCaptureGroup(" << begin << ", " << length << ")\n" >> &host;
             }
@@ -4030,7 +4051,7 @@ int TLuaInterpreter::setLink(lua_State* L)
     Host& host = getHostFromLua(L);
     auto pModel = host.consoleModelNamed(consoleName);
     if (!pModel) {
-        return windowNotFound(L, consoleName);
+        return windowNotFoundOrUnsupported(L, host, consoleName);
     }
 
     QString command;
@@ -4211,7 +4232,7 @@ int TLuaInterpreter::setPopup(lua_State* L)
     Host& host = getHostFromLua(L);
     auto pModel = host.consoleModelNamed(consoleName);
     if (!pModel) {
-        return windowNotFound(L, consoleName);
+        return windowNotFoundOrUnsupported(L, host, consoleName);
     }
 
     QStringList commandList;

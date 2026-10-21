@@ -1667,13 +1667,13 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
                     const QByteArray temp = QByteArray::fromRawData(localBuffer.data() + localBufferPosition, dataLength);
                     bool isOk = false;
                     const int requested = temp.toInt(&isOk);
-                    // Like a terminal's, the cursor stops at the right margin: the
-                    // count comes from the game, and unbounded, one sequence or a
-                    // run of them could ask for gigabytes of spaces.
-                    constexpr int maxLineWidth = 1000;
-                    const int margin = std::max(1, std::min(mWrapAt, maxLineWidth));
-                    const int column = static_cast<int>(mMudLine.size() % margin);
-                    const int spacesNeeded = std::min(requested, margin - 1 - column);
+                    // The count comes from the game, and unbounded, one sequence or a
+                    // run of them could ask for gigabytes of spaces. The margin is not
+                    // the wrap width: games send lines longer than that and the
+                    // spaces have to survive the wrap.
+                    constexpr qsizetype rightMargin = 1000;
+                    const qsizetype room = std::max<qsizetype>(0, rightMargin - 1 - mMudLine.size());
+                    const int spacesNeeded = static_cast<int>(std::min<qsizetype>(requested, room));
                     if (isOk && requested > 0) {
                         // Note: we are using the background color for the
                         // foreground color as well so that we are transparent:

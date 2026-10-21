@@ -236,6 +236,7 @@ set(MAP_GROUP_TEST_SOURCES
     MapFileStatsTest.cpp
     MapTextLabelCacheTest.cpp
     MapViewAreaListTest.cpp
+    MapViewTeardownTest.cpp
     MapLabelRenderTest.cpp
     MapDecalsTest.cpp
     MapViewCueTest.cpp

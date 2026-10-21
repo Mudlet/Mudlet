@@ -2744,6 +2744,32 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       assert.are.equal("you cannot use echoLink, echoPopup, or insertText with Labels", err)
     end)
 
+    it("Should hand the label refusal back through every link, popup and insertText wrapper", function()
+      local refusal = "you cannot use echoLink, echoPopup, or insertText with Labels"
+      local calls = {
+        cechoLink = {"<red>x", "send('x')", "a hint", true},
+        dechoLink = {"<255,0,0>x", "send('x')", "a hint", true},
+        hechoLink = {"#ff0000x", "send('x')", "a hint", true},
+        cinsertLink = {"<red>x", "send('x')", "a hint", true},
+        dinsertLink = {"<255,0,0>x", "send('x')", "a hint", true},
+        hinsertLink = {"#ff0000x", "send('x')", "a hint", true},
+        cechoPopup = {"<red>x", {"send('x')"}, {"a hint"}, true},
+        dechoPopup = {"<255,0,0>x", {"send('x')"}, {"a hint"}, true},
+        hechoPopup = {"#ff0000x", {"send('x')"}, {"a hint"}, true},
+        cinsertPopup = {"<red>x", {"send('x')"}, {"a hint"}, true},
+        dinsertPopup = {"<255,0,0>x", {"send('x')"}, {"a hint"}, true},
+        hinsertPopup = {"#ff0000x", {"send('x')"}, {"a hint"}, true},
+        cinsertText = {"<red>x"},
+        dinsertText = {"<255,0,0>x"},
+        hinsertText = {"#ff0000x"},
+      }
+      local function pack(...) return {n = select("#", ...), ...} end
+      for name, args in pairs(calls) do
+        local results = pack(_G[name](labelName, unpack(args)))
+        assert.are.same({n = 2, nil, refusal}, results, name)
+      end
+    end)
+
     it("Should echo to a label, turning a newline into a line break", function()
       -- a label holds HTML, so the newline must arrive as <br> or the second
       -- line is run together with the first

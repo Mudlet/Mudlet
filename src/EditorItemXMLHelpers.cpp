@@ -57,6 +57,12 @@ static QString compressXML(const QString& xml)
     return QString::fromLatin1(compressed.toBase64());
 }
 
+// XMLexport::writeScriptElement() writes a NUL as U+FFFC U+2400, as pugixml cannot hold one in text
+static QString scriptFromSnapshot(QString script)
+{
+    return script.replace(qsl("\xFFFC\x2400"), QChar(u'\0'));
+}
+
 static QString decompressXML(const QString& data)
 {
     if (data.isEmpty()) {
@@ -324,7 +330,7 @@ static TTrigger* importTriggerNode(pugi::xml_node triggerNode, TTrigger* pParent
         if (nodeName == "name") {
             pT->setName(nodeValue);
         } else if (nodeName == "script") {
-            pT->setScript(nodeValue);
+            pT->setScript(scriptFromSnapshot(nodeValue));
         } else if (nodeName == "packageName") {
             pT->mPackageName = nodeValue;
         } else if (nodeName == "triggerType") {
@@ -430,7 +436,7 @@ bool updateTriggerFromXML(TTrigger* pT, const QString& xmlSnapshot)
         if (nodeName == "name") {
             pT->setName(nodeValue);
         } else if (nodeName == "script") {
-            pT->setScript(nodeValue);
+            pT->setScript(scriptFromSnapshot(nodeValue));
         } else if (nodeName == "packageName") {
             pT->mPackageName = nodeValue;
         } else if (nodeName == "triggerType") {
@@ -549,7 +555,7 @@ static TAlias* importAliasNode(pugi::xml_node aliasNode, TAlias* pParent, Host* 
         if (nodeName == "name") {
             pA->setName(nodeValue);
         } else if (nodeName == "script") {
-            pA->setScript(nodeValue);
+            pA->setScript(scriptFromSnapshot(nodeValue));
         } else if (nodeName == "packageName") {
             pA->mPackageName = nodeValue;
         } else if (nodeName == "regex") {
@@ -620,7 +626,7 @@ bool updateAliasFromXML(TAlias* pA, const QString& xmlSnapshot)
         if (nodeName == "name") {
             pA->setName(nodeValue);
         } else if (nodeName == "script") {
-            pA->setScript(nodeValue);
+            pA->setScript(scriptFromSnapshot(nodeValue));
         } else if (nodeName == "regex") {
             pA->setRegexCode(nodeValue);
         } else if (nodeName == "command") {
@@ -712,7 +718,7 @@ static TTimer* importTimerNode(pugi::xml_node timerNode, TTimer* pParent, Host* 
         if (nodeName == "name") {
             pT->setName(nodeValue);
         } else if (nodeName == "script") {
-            pT->setScript(nodeValue);
+            pT->setScript(scriptFromSnapshot(nodeValue));
         } else if (nodeName == "packageName") {
             pT->mPackageName = nodeValue;
         } else if (nodeName == "command") {
@@ -781,7 +787,7 @@ bool updateTimerFromXML(TTimer* pT, const QString& xmlSnapshot)
         if (nodeName == "name") {
             pT->setName(nodeValue);
         } else if (nodeName == "script") {
-            pT->setScript(nodeValue);
+            pT->setScript(scriptFromSnapshot(nodeValue));
         } else if (nodeName == "command") {
             pT->setCommand(nodeValue);
         } else if (nodeName == "time") {
@@ -874,7 +880,7 @@ static TScript* importScriptNode(pugi::xml_node scriptNode, TScript* pParent, Ho
         } else if (nodeName == "packageName") {
             pS->mPackageName = nodeValue;
         } else if (nodeName == "script") {
-            pS->setScript(nodeValue);
+            pS->setScript(scriptFromSnapshot(nodeValue));
         } else if (nodeName == "eventHandlerList") {
             for (auto eventNode : node.children("string")) {
                 eventHandlers << QString::fromStdString(eventNode.child_value());
@@ -948,7 +954,7 @@ bool updateScriptFromXML(TScript* pS, const QString& xmlSnapshot)
         if (nodeName == "name") {
             pS->setName(nodeValue);
         } else if (nodeName == "script") {
-            pS->setScript(nodeValue);
+            pS->setScript(scriptFromSnapshot(nodeValue));
         } else if (nodeName == "packageName") {
             pS->mPackageName = nodeValue;
         } else if (nodeName == "eventHandlerList") {
@@ -1045,7 +1051,7 @@ static TKey* importKeyNode(pugi::xml_node keyNode, TKey* pParent, Host* host, in
         } else if (nodeName == "packageName") {
             pK->mPackageName = nodeValue;
         } else if (nodeName == "script") {
-            pK->setScript(nodeValue);
+            pK->setScript(scriptFromSnapshot(nodeValue));
         } else if (nodeName == "command") {
             pK->setCommand(nodeValue);
         } else if (nodeName == "keyCode") {
@@ -1115,7 +1121,7 @@ bool updateKeyFromXML(TKey* pK, const QString& xmlSnapshot)
         if (nodeName == "name") {
             pK->setName(nodeValue);
         } else if (nodeName == "script") {
-            pK->setScript(nodeValue);
+            pK->setScript(scriptFromSnapshot(nodeValue));
         } else if (nodeName == "command") {
             pK->setCommand(nodeValue);
         } else if (nodeName == "keyCode") {
@@ -1213,7 +1219,7 @@ static TAction* importActionNode(pugi::xml_node actionNode, TAction* pParent, Ho
         } else if (nodeName == "packageName") {
             pA->mPackageName = nodeValue;
         } else if (nodeName == "script") {
-            pA->setScript(nodeValue);
+            pA->setScript(scriptFromSnapshot(nodeValue));
         } else if (nodeName == "css") {
             pA->css = nodeValue;
         } else if (nodeName == "commandButtonUp") {
@@ -1311,7 +1317,7 @@ bool updateActionFromXML(TAction* pA, const QString& xmlSnapshot)
         if (nodeName == "name") {
             pA->setName(nodeValue);
         } else if (nodeName == "script") {
-            pA->setScript(nodeValue);
+            pA->setScript(scriptFromSnapshot(nodeValue));
         } else if (nodeName == "css") {
             pA->css = nodeValue;
         } else if (nodeName == "commandButtonUp") {

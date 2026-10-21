@@ -588,9 +588,10 @@ bool TLabel::setBackgroundImage(const QString& path)
     }
 
     // the label keeps what it is showing when the file is not an image at all,
-    // and the caller's error message is then the truth
+    // and the caller's error message is then the truth; an empty path is how
+    // scripts cleared the image before resetBackgroundImage() existed
     const QPixmap raster(path);
-    if (raster.isNull()) {
+    if (raster.isNull() && !path.isEmpty()) {
         return false;
     }
 

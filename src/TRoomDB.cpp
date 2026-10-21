@@ -574,7 +574,8 @@ QString TRoomDB::unusedUnnamedAreaName() const
 // again by a later call here.
 int TRoomDB::createNewAreaID()
 {
-    while (areas.contains(mNextAreaIdHint)) {
+    // An area named by setAreaName() has no TArea until a room moves into it
+    while (areas.contains(mNextAreaIdHint) || areaNamesMap.contains(mNextAreaIdHint)) {
         ++mNextAreaIdHint;
     }
     return mNextAreaIdHint++;
