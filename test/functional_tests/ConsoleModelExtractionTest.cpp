@@ -2445,7 +2445,10 @@ local function expectNothing(name, ...)
 end
 expectNothing('copy', copy())
 expectNothing('appendBuffer', appendBuffer('main'))
-expectNothing('cut', cut())
+local cutAnswer = cut()
+if cutAnswer ~= true then
+    table.insert(headlessProblems, 'cut answered ' .. tostring(cutAnswer))
+end
 expectNothing('paste', paste(''))
 if not setConsoleBufferSize(700, 70) then
     table.insert(headlessProblems, 'setConsoleBufferSize refused')
