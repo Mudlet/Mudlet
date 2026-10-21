@@ -1685,7 +1685,8 @@ bool TNullConsoleFrontend::setLabelBackgroundImage(const QString& name, const QS
         }
     }
     const QImage raster(path);
-    if (raster.isNull()) {
+    // TLabel::setBackgroundImage() takes an empty path to mean no image
+    if (raster.isNull() && !path.isEmpty()) {
         return false;
     }
     label.svgSize.reset();
@@ -1693,7 +1694,9 @@ bool TNullConsoleFrontend::setLabelBackgroundImage(const QString& name, const QS
         label.movie->stop();
     }
     clearLabelContents(label);
-    label.pixmapSize = raster.deviceIndependentSize().toSize();
+    if (!raster.isNull()) {
+        label.pixmapSize = raster.deviceIndependentSize().toSize();
+    }
     return true;
 }
 
