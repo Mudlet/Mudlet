@@ -3388,6 +3388,18 @@ describe("Tests mapper functions against a shared fixture", function()
       assert.is_true(closeMapView(viewId))
     end)
 
+    it("createMapView with no area opens on the player's area and level", function()
+      local playerRoom = getPlayerRoom()
+      finally(function() if playerRoom then centerview(playerRoom) end end)
+      assert.is_true(centerview(rB1))
+      local viewId = createMapView()
+      finally(function() closeMapView(viewId) end)
+
+      local info = getMapViewInfo(viewId)
+      assert.are.equal(areaBeta, info.areaId)
+      assert.are.equal(1, info.zLevel)
+    end)
+
     it("closeAllMapViews reports how many views it closed", function()
       createMapView(areaAlpha)
       createMapView(areaBeta)
