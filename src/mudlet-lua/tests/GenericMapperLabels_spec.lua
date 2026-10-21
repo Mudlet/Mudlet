@@ -8,7 +8,15 @@ describe("Tests the generic mapper's area label listing", function()
 
   local areaName = "GenericMapperLabelsSpecArea"
 
+  local wasMapping
+
+  before_each(function()
+    wasMapping = map.mapping
+    map.set("mapping", true)
+  end)
+
   after_each(function()
+    map.set("mapping", wasMapping)
     deleteArea(areaName)
   end)
 
