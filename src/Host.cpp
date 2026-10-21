@@ -2775,10 +2775,15 @@ bool Host::copyToClipboard(const QString& name)
     return true;
 }
 
-void Host::cutMainConsoleToClipboard()
+bool Host::cutToClipboard(const QString& name)
 {
-    mpMainConsoleModel->buffer.cutInto(mpMainConsoleModel->P_begin, mpMainConsoleModel->P_end, *mpClipboard);
-    markSelectionDirty(*mpMainConsoleModel);
+    auto pModel = consoleModelNamed(name);
+    if (!pModel) {
+        return false;
+    }
+    pModel->buffer.cutInto(pModel->P_begin, pModel->P_end, *mpClipboard);
+    markSelectionDirty(*pModel);
+    return true;
 }
 
 namespace {

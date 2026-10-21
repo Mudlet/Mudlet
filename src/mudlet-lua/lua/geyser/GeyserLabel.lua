@@ -33,9 +33,9 @@ function Geyser.Label:echo(message, color, format)
   local wrap = self.echoWrap
   if not (wrap and wrap.alignment == ft.alignment and wrap.bold == ft.bold and wrap.italics == ft.italics
       and wrap.underline == ft.underline and wrap.strikethrough == ft.strikethrough
-      and wrap.font == self.font and wrap.fontSize == fs and wrap.hex == hex) then
+      and wrap.font == self.font and wrap.fontSize == fs) then
     wrap = {alignment = ft.alignment, bold = ft.bold, italics = ft.italics, underline = ft.underline,
-            strikethrough = ft.strikethrough, font = self.font, fontSize = fs, hex = hex}
+            strikethrough = ft.strikethrough, font = self.font, fontSize = fs}
     local open, close = "", ""
     if ft.bold then
       open, close = "<b>", "</b>"
@@ -56,10 +56,18 @@ function Geyser.Label:echo(message, color, format)
     if alignment ~= "" then
       alignment = string.format([[align="%s" ]], alignment)
     end
-    local style = hex and [[ style="color: ]] .. hex .. [[; ]] or [[ style=" ]]
-    wrap.open = [[<div ]] .. alignment .. style .. "font-size: " .. fs .. [[pt; ">]] .. open
+    local sized = "font-size: " .. fs .. [[pt; ">]] .. open
+    wrap.colored = [[<div ]] .. alignment .. [[ style="color: ]]
+    wrap.sized = "; " .. sized
+    wrap.uncolored = [[<div ]] .. alignment .. [[ style=" ]] .. sized
     wrap.close = close .. [[</div>]]
     self.echoWrap = wrap
+  end
+  -- the colour is spliced in on its own, as a script cycling through colours
+  -- changes it on every echo
+  if wrap.open == nil or wrap.hex ~= hex then
+    wrap.open = hex and wrap.colored .. hex .. wrap.sized or wrap.uncolored
+    wrap.hex = hex
   end
   echo(self.name, wrap.open .. message .. wrap.close)
   self:autoAdjustSize()
@@ -525,6 +533,8 @@ end
 -- call, and leaves the label's text where it is. It also takes the stylesheet's
 -- background-image declarations that are not inside a {...} rule out, see
 -- Geyser.Label:resetBackgroundImage.
+-- An empty imageFileName takes off the SVG layer, a raster image, a movie and any
+-- text, and leaves the stylesheet alone.
 -- Returns true, or nil and an error message when the file cannot be read.
 -- @param imageFileName The image to use for a background image.
 function Geyser.Label:setBackgroundImage (imageFileName)

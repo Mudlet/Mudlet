@@ -66,8 +66,6 @@ dlgMapLabel::dlgMapLabel(QWidget* pParentWidget)
     font = QApplication::font();
     font.setStyle(QFont::StyleNormal);
     text = plainTextEdit_labelText->placeholderText();
-    //: Tooltip for font display in map label dialog
-    lineEdit_font->setToolTip(tr("Font size is automatically calculated to fit the label"));
 
     QSettings& settings = *MudletApp::getQSettings();
     fgColor = settings.value("fgColorDialogMapLabel", fgColor).value<QColor>();
@@ -242,8 +240,16 @@ bool dlgMapLabel::stretchImage()
 
 void dlgMapLabel::slot_updateControls()
 {
-    //: Font display format in map label dialog. %1 is font family name, %2 is style (e.g. "Bold", "Italic"). Size excluded since it auto-scales.
-    lineEdit_font->setText(tr("%1 %2").arg(font.family(), font.styleName()));
+    if (checkBox_scaling->isChecked()) {
+        //: Font display format in map label dialog. %1 is font family name, %2 is style (e.g. "Bold", "Italic"). Size excluded since it auto-scales.
+        lineEdit_font->setText(tr("%1 %2").arg(font.family(), font.styleName()));
+        //: Tooltip for font display in map label dialog
+        lineEdit_font->setToolTip(tr("Font size is automatically calculated to fit the label"));
+    } else {
+        //: Font display format in map label dialog for a label that keeps its size when zooming. %1 is font family name, %2 is font size in points, %3 is style (e.g. "Bold", "Italic").
+        lineEdit_font->setText(tr("%1, %2pt %3").arg(font.family(), QString::number(font.pointSizeF()), font.styleName()));
+        lineEdit_font->setToolTip(QString());
+    }
     pushButton_fgColor->setStyleSheet(BUTTON_STYLESHEET.arg(QString::number(fgColor.red()), QString::number(fgColor.green()), QString::number(fgColor.blue()), QString::number(fgColor.alpha())));
     pushButton_bgColor->setStyleSheet(BUTTON_STYLESHEET.arg(QString::number(bgColor.red()), QString::number(bgColor.green()), QString::number(bgColor.blue()), QString::number(bgColor.alpha())));
     pushButton_outlineColor->setStyleSheet(

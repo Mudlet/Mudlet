@@ -2591,6 +2591,38 @@ describe("Trigger processing", function()
             assert.are.same({0, 0, 6, 6, 11, 11, 14, 14}, starts, "a capture should be reported at the code unit it sits at")
         end)
 
+        -- After an empty match the next search retries at the same offset with
+        -- empty matches ruled out, and (|word) matches empty first, so every
+        -- word is found only by that retry succeeding
+        it("finds what a retry after an empty match finds at the same offset", function()
+            _G.TrigSpec = {captures = {}, starts = {}}
+            local id = tempComplexRegexTrigger("SpecComplexMatchAllEmptyRetry", [[(|word)]],
+                function()
+                    _G.TrigSpec = {captures = {}, starts = {}}
+                    for i = 1, #matches do
+                        _G.TrigSpec.captures[i] = matches[i]
+                        if matches[i] ~= "" then
+                            selectCaptureGroup(i)
+                            local _, start = getSelection()
+                            _G.TrigSpec.starts[#_G.TrigSpec.starts + 1] = start
+                            deselect()
+                        end
+                    end
+                end,
+                0, -1, -1, 0, 1, -1, -1, 0, 0, 0)
+            assert.is_number(id)
+            finally(function() killTrigger("SpecComplexMatchAllEmptyRetry") end)
+            feedTriggers("\nword word\n")
+            local words = {}
+            for _, capture in ipairs(_G.TrigSpec.captures) do
+                if capture ~= "" then
+                    words[#words + 1] = capture
+                end
+            end
+            assert.are.same({"word", "word", "word", "word"}, words)
+            assert.are.same({0, 0, 5, 5}, _G.TrigSpec.starts)
+        end)
+
         -- Those positions used to be counted from the start of the line for
         -- every capture, which made a match-all line cost the square of its
         -- length rather than growing with it (#10869).
@@ -2614,64 +2646,76 @@ describe("Trigger processing", function()
         -- cost was then divided by it. A negative one made the bound tighter
         -- than the constant meant to absorb it, which no amount of speed could
         -- then satisfy.
-        it("costs under sixteen times as much for eight times the line", function()
-            -- "word " is five bytes, so this is an 8 kB line and one eight times longer
-            local shortReps, longReps = 1638, 13104
-            local function costOf(line)
-                -- os.clock() resolves to about a millisecond on Windows, which
-                -- is the whole cost of the shorter line there, so a single feed
-                -- can measure exactly 0 and leave the ratio below nothing to
-                -- divide by. Feeding until the run is clear of that floor and
-                -- dividing by the number of feeds keeps both measurements
-                -- per-feed and comparable.
-                -- It is wall time there too, so a run also carries any 15.6 ms
-                -- scheduler tick taken from it, under a fifth of a 0.1s run.
-                --
-                -- a collection cycle landing in one line's runs and not the
-                -- other's skews the ratio by whatever it costs
-                collectgarbage()
-                collectgarbage("stop")
-                local feeds, taken = 0, 0
-                local started = os.clock()
-                repeat
-                    feedTriggers("\n" .. line .. "\n")
-                    feeds = feeds + 1
-                    taken = os.clock() - started
-                -- a clock that never advances would spin here forever and hang
-                -- CI with no diagnostic: 100 feeds that leave it at 0 hand that
-                -- to the short > 0 assertion below, and 1000 feeds bound any
-                -- other run that never reaches the floor.
-                until taken >= 0.1 or feeds >= 1000 or (taken == 0 and feeds >= 100)
-                collectgarbage("restart")
-                return taken / feeds
-            end
-            _G.TrigSpec = {captures = 0}
-            local id = tempComplexRegexTrigger("SpecComplexMatchAllCost", [[(\S+)]],
-                [[_G.TrigSpec.captures = #matches]],
-                0, -1, -1, 0, 1, -1, -1, 0, 0, 0)
-            assert.is_number(id)
-            finally(function()
-                collectgarbage("restart")
-                if type(id) == "number" and id > 0 then killTrigger("SpecComplexMatchAllCost") end
+        --
+        -- A pattern that can match empty, such as (\w*), retries after each empty
+        -- match anchored at the same offset, which pcre2's JIT cannot take, and the
+        -- interpreter it fell back to rescanned the rest of the line on every retry
+        -- (#10895). "word " gives (\S+) one match per word, and (\w*) that and an
+        -- empty one at each space, then two more at the newline triggers see the
+        -- line end with.
+        for _, case in ipairs({
+            {pattern = [[(\S+)]], captures = function(reps) return reps * 2 end},
+            {pattern = [[(\w*)]], captures = function(reps) return reps * 4 + 4 end},
+        }) do
+            it("costs under sixteen times as much for eight times the line with " .. case.pattern, function()
+                -- "word " is five bytes, so this is an 8 kB line and one eight times longer
+                local shortReps, longReps = 1638, 13104
+                local function costOf(line)
+                    -- os.clock() resolves to about a millisecond on Windows, which
+                    -- is the whole cost of the shorter line there, so a single feed
+                    -- can measure exactly 0 and leave the ratio below nothing to
+                    -- divide by. Feeding until the run is clear of that floor and
+                    -- dividing by the number of feeds keeps both measurements
+                    -- per-feed and comparable.
+                    -- It is wall time there too, so a run also carries any 15.6 ms
+                    -- scheduler tick taken from it, under a fifth of a 0.1s run.
+                    --
+                    -- a collection cycle landing in one line's runs and not the
+                    -- other's skews the ratio by whatever it costs
+                    collectgarbage()
+                    collectgarbage("stop")
+                    local feeds, taken = 0, 0
+                    local started = os.clock()
+                    repeat
+                        feedTriggers("\n" .. line .. "\n")
+                        feeds = feeds + 1
+                        taken = os.clock() - started
+                    -- a clock that never advances would spin here forever and hang
+                    -- CI with no diagnostic: 100 feeds that leave it at 0 hand that
+                    -- to the short > 0 assertion below, and 1000 feeds bound any
+                    -- other run that never reaches the floor.
+                    until taken >= 0.1 or feeds >= 1000 or (taken == 0 and feeds >= 100)
+                    collectgarbage("restart")
+                    return taken / feeds
+                end
+                _G.TrigSpec = {captures = 0}
+                local id = tempComplexRegexTrigger("SpecComplexMatchAllCost", case.pattern,
+                    [[_G.TrigSpec.captures = #matches]],
+                    0, -1, -1, 0, 1, -1, -1, 0, 0, 0)
+                assert.is_number(id)
+                finally(function()
+                    collectgarbage("restart")
+                    if type(id) == "number" and id > 0 then killTrigger("SpecComplexMatchAllCost") end
+                end)
+                local shortLine, longLine = string.rep("word ", shortReps), string.rep("word ", longReps)
+                local short, long, shortCaptures, longCaptures
+                for _ = 1, 5 do
+                    short = math.min(short or math.huge, costOf(shortLine))
+                    shortCaptures = _G.TrigSpec.captures
+                    long = math.min(long or math.huge, costOf(longLine))
+                    longCaptures = _G.TrigSpec.captures
+                end
+                assert.is_true(killTrigger("SpecComplexMatchAllCost"), "a temporary complex trigger should be removable by name")
+                -- without this the trigger could have stopped matching, or stopped
+                -- matching all, and the two costs would agree on measuring nothing
+                assert.are.equal(case.captures(shortReps), shortCaptures, "match-all should collect the whole match and its capture group for every match")
+                assert.are.equal(case.captures(longReps), longCaptures, "match-all should collect the whole match and its capture group for every match")
+                assert.is_true(short > 0, "os.clock() did not resolve the 8 kB line's cost, so the ratio below has nothing to divide by")
+                assert.is_true(long <= short * 16,
+                    string.format("feeding a 64 kB line took %.3fs against %.3fs for an 8 kB one, %.1fx for eight times the line - the match-all loop may cost the square of the line again",
+                        long, short, long / short))
             end)
-            local shortLine, longLine = string.rep("word ", shortReps), string.rep("word ", longReps)
-            local short, long, shortCaptures, longCaptures
-            for _ = 1, 5 do
-                short = math.min(short or math.huge, costOf(shortLine))
-                shortCaptures = _G.TrigSpec.captures
-                long = math.min(long or math.huge, costOf(longLine))
-                longCaptures = _G.TrigSpec.captures
-            end
-            assert.is_true(killTrigger("SpecComplexMatchAllCost"), "a temporary complex trigger should be removable by name")
-            -- without this the trigger could have stopped matching, or stopped
-            -- matching all, and the two costs would agree on measuring nothing
-            assert.are.equal(shortReps * 2, shortCaptures, "match-all should collect the whole match and its capture group for every word")
-            assert.are.equal(longReps * 2, longCaptures, "match-all should collect the whole match and its capture group for every word")
-            assert.is_true(short > 0, "os.clock() did not resolve the 8 kB line's cost, so the ratio below has nothing to divide by")
-            assert.is_true(long <= short * 16,
-                string.format("feeding a 64 kB line took %.3fs against %.3fs for an 8 kB one, %.1fx for eight times the line - the capture positions may be counted from the start of the line again",
-                    long, short, long / short))
-        end)
+        end
 
         it("rejects a non-string, non-function body (argument 3)", function()
             -- a table is not string-coercible (a number would be accepted as code)
@@ -2920,6 +2964,66 @@ describe("Trigger processing", function()
                                     "nothing ahead of the capture should have been highlighted")
                 end)
             end
+        end)
+
+        -- PCRE2 reports groups only up to the highest one that took part, so
+        -- the first match here ("hlvary") reports fewer than the later ones
+        it("recolours the groups of every match when match all finds differing group counts", function()
+            _G.TrigHighlight = {}
+            tempComplexRegexTrigger("SpecHighlightVaryingGroups", [[(hl\w+)(?: (\d+))?]],
+                [==[_G.TrigHighlight.line = getLineNumber()]==],
+                0, 0, 0, 0, 1, "red", "blue", 0, 0, 0)
+            finally(function() killTrigger("SpecHighlightVaryingGroups") end)
+            feedTriggers("hlvary hlgold 12 hlcopper 5\n")
+
+            local line = _G.TrigHighlight.line
+            assert.is_number(line, "the highlight trigger should have fired")
+            moveCursor(0, line)
+            local painted = {}
+            for column = 0, #getCurrentLine() - 1 do
+                selectSection(column, 1)
+                painted[#painted + 1] = select(1, getFgColor()) == color_table.red[1] and "^" or "."
+            end
+            deselect()
+            assert.are.equal("^^^^^^.^^^^^^.^^.^^^^^^^^.^", table.concat(painted))
+        end)
+
+    end)
+
+    describe("match-all filter triggers", function()
+
+        local function forwarded(name, pattern, line)
+            _G.TrigFilterAll = {}
+            tempComplexRegexTrigger(name, pattern, "", 0, 0, 0, 1, 1, 0, 0, 0, 0, 0)
+            permRegexTrigger(name .. "Child", name, {"^.+$"}, [==[_G.TrigFilterAll[#_G.TrigFilterAll + 1] = matches[1] ]==])
+            finally(function()
+                killTrigger(name .. "Child")
+                killTrigger(name)
+            end)
+            feedTriggers(line .. "\n")
+            return _G.TrigFilterAll
+        end
+
+        after_each(function()
+            _G.TrigFilterAll = nil
+        end)
+
+        it("hands over the groups of every match when a later match reports more groups than the first", function()
+            assert.are.same({"fvsilver", "fvgold", "12", "fvcopper", "5"},
+                            forwarded("SpecFilterVarying", [[(fv\w+)(?: (\d+))?]], "fvsilver fvgold 12 fvcopper 5"))
+        end)
+
+        it("hands over the groups of every match when the first match reports the most groups", function()
+            assert.are.same({"fvgold", "12", "fvcopper", "5", "fvsilver"},
+                            forwarded("SpecFilterVaryingFirst", [[(fv\w+)(?: (\d+))?]], "fvgold 12 fvcopper 5 fvsilver"))
+        end)
+
+        it("hands over the group of each alternative", function()
+            assert.are.same({"fva", "fvb"}, forwarded("SpecFilterAlternation", [[(fva)|(fvb)]], "fva fvb"))
+        end)
+
+        it("hands over every whole match when the pattern has no groups", function()
+            assert.are.same({"fvab", "fvab"}, forwarded("SpecFilterNoGroups", [[fvab]], "two fvab and fvab here"))
         end)
 
     end)
@@ -5673,6 +5777,16 @@ describe("Trigger processing", function()
             rearmLazyGlobals()
         end
 
+        -- rawget() puts a name that is still left out in place before reading
+        -- it, so only a walk over the table shows what is really there
+        local function rawPresent(t, name)
+            for key, value in next, t do
+                if key == name then
+                    return value
+                end
+            end
+        end
+
         -- "multimatches" is nil in a profile until the first dispatch is over.
         -- The generic mapper reads line on every line, which would leave nothing
         -- out for the cases about line.
@@ -5706,9 +5820,9 @@ describe("Trigger processing", function()
         it("leaves them out of the globals table until a script reads them", function()
             local seen = {}
             trigger(tempRegexTrigger("^LazyLeftOut (\\w+)$", function()
-                seen.matches = rawget(_G, "matches")
-                seen.multimatches = rawget(_G, "multimatches")
-                seen.line = rawget(_G, "line")
+                seen.matches = rawPresent(_G, "matches")
+                seen.multimatches = rawPresent(_G, "multimatches")
+                seen.line = rawPresent(_G, "line")
                 seen.capture = matches[2]
             end))
 
@@ -5720,6 +5834,33 @@ describe("Trigger processing", function()
             assert.is_nil(seen.multimatches)
             assert.is_nil(seen.line)
             assert.are.equal("word", seen.capture)
+        end)
+
+        -- Scripts use rawget() to read a global without a strict-globals warning
+        it("answers rawget() for them", function()
+            _G.LazyGlobalsSpec = {}
+            local seen = _G.LazyGlobalsSpec
+            trigger(tempRegexTrigger("^LazyRawget (\\w+)$", [==[
+                LazyGlobalsSpec.matches = rawget(_G, "matches")
+                LazyGlobalsSpec.line = rawget(_G, "line")
+            ]==]))
+            -- on its own, as reading matches first puts line in place too
+            trigger(tempRegexTrigger("^LazyRawgetLine (\\w+)$", [==[
+                LazyGlobalsSpec.lineFirst = rawget(_G, "line")
+            ]==]))
+            multiline("SpecLazyRawgetMulti", {[[^lazyrawget one (\w+)$]], [[^lazyrawget two (\w+)$]]}, [==[
+                LazyGlobalsSpec.multimatches = rawget(_G, "multimatches")
+            ]==])
+
+            feedTriggers("\nLazyRawget word\n")
+            feedTriggers("\nLazyRawgetLine word\n")
+            feedTriggers("lazyrawget one aaa\n")
+            feedTriggers("lazyrawget two bbb\n")
+
+            assert.are.equal("word", seen.matches and seen.matches[2])
+            assert.are.equal("LazyRawget word", seen.line)
+            assert.are.equal("LazyRawgetLine word", seen.lineFirst)
+            assert.are.equal("bbb", seen.multimatches and seen.multimatches[2] and seen.multimatches[2][2])
         end)
 
         -- The rest must also pass with nothing left out
@@ -5764,7 +5905,7 @@ describe("Trigger processing", function()
                 assert.are.equal("table", type(_G[name]), name .. " should never read as nil")
                 assert.is_nil(next(_G[name]), name .. " should be empty outside a dispatch")
             end
-            assert.are.equal("table", type(rawget(_G, "matches")), "matches should be in the globals table outside a dispatch")
+            assert.are.equal("table", type(rawPresent(_G, "matches")), "matches should be in the globals table outside a dispatch")
         end)
 
         -- busted gives a spec file an environment of its own, so a function
@@ -6406,7 +6547,7 @@ describe("Trigger processing", function()
             end
 
             assert.is_true(ok, tostring(message))
-            local left = rawget(seen.original, "matches")
+            local left = rawPresent(seen.original, "matches")
             assert.are.equal("word", left and left[2])
         end)
 
@@ -6425,7 +6566,7 @@ describe("Trigger processing", function()
             end
 
             assert.is_true(ok, tostring(message))
-            local left = rawget(spec.original, "multimatches")
+            local left = rawPresent(spec.original, "multimatches")
             assert.are.equal("aaa", left and left[1] and left[1][2])
         end)
 
@@ -6845,7 +6986,7 @@ describe("Trigger processing", function()
         describe("a metatable the globals table is given and then changed", function()
             local function readEverythingIn(seen)
                 return function()
-                    seen.rawMatches = rawget(_G, "matches")
+                    seen.rawMatches = rawPresent(_G, "matches")
                     seen.matches = matches
                     seen.multimatches = multimatches
                     seen.line = line
@@ -6933,7 +7074,7 @@ describe("Trigger processing", function()
                 feedTriggers("\nLazyHandlersIdle\n")
                 local seen = {}
                 trigger(tempRegexTrigger("^LazyHandlersBack (\\w+)$", function()
-                    seen.rawMatches = rawget(_G, "matches")
+                    seen.rawMatches = rawPresent(_G, "matches")
                     seen.capture = matches[2]
                 end))
 
@@ -6971,8 +7112,8 @@ describe("Trigger processing", function()
             it("sets matches, multimatches and line up front when switched off", function()
                 local seen = {}
                 trigger(tempRegexTrigger("^LazySettingOff (\\w+)$", function()
-                    seen.matches = rawget(_G, "matches")
-                    seen.line = rawget(_G, "line")
+                    seen.matches = rawPresent(_G, "matches")
+                    seen.line = rawPresent(_G, "line")
                 end))
 
                 setConfig("lazyCaptureGlobals", false)
@@ -6982,7 +7123,7 @@ describe("Trigger processing", function()
                 assert.is_not_nil(seen.matches, "matches was left out with the setting off")
                 assert.are.equal("word", seen.matches[2])
                 assert.are.equal("LazySettingOff word", seen.line, "line was left out with the setting off")
-                assert.is_not_nil(rawget(_G, "multimatches"), "multimatches was left out between dispatches with the setting off")
+                assert.is_not_nil(rawPresent(_G, "multimatches"), "multimatches was left out between dispatches with the setting off")
             end)
 
             -- Read straight after switching off, as the getter hands out the
@@ -6999,8 +7140,8 @@ describe("Trigger processing", function()
                 local seen = {}
                 trigger(tempRegexTrigger("^LazySettingMidFire (\\w+)$", function()
                     setConfig("lazyCaptureGlobals", false)
-                    seen.matches = rawget(_G, "matches")
-                    seen.line = rawget(_G, "line")
+                    seen.matches = rawPresent(_G, "matches")
+                    seen.line = rawPresent(_G, "line")
                 end))
 
                 feedTriggers("\nLazySettingMidFire word\n")
@@ -7013,7 +7154,7 @@ describe("Trigger processing", function()
             it("leaves them out again once switched back on", function()
                 local seen = {}
                 trigger(tempRegexTrigger("^LazySettingBack (\\w+)$", function()
-                    seen.matches = rawget(_G, "matches")
+                    seen.matches = rawPresent(_G, "matches")
                     seen.capture = matches[2]
                 end))
 

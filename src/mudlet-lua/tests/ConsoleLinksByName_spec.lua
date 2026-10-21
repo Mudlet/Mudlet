@@ -49,14 +49,16 @@ describe("Tests that the link and text functions find their console by name", fu
     {"setPopup", function(n, fn) return setPopup(n, {anyFunction(fn), "cmd"}, {"one", "two"}) end},
   }
 
-  local function assertRefuses(windowName, entries)
-    local notFound = ('window "%s" not found'):format(windowName)
+  local function assertRefuses(windowName, entries, windowKind)
+    local refusal = windowKind
+      and ('window "%s" is of type "%s", which this function cannot use'):format(windowName, windowKind)
+      or ('window "%s" not found'):format(windowName)
     for _, entry in ipairs(entries) do
       local functionName, call = entry[1], entry[2]
       assert.are.equal(2, select("#", call(windowName)), functionName)
       local ok, err = call(windowName)
       assert.is_nil(ok, functionName)
-      assert.are.equal(notFound, err, functionName)
+      assert.are.equal(refusal, err, functionName)
     end
   end
 
@@ -132,17 +134,17 @@ describe("Tests that the link and text functions find their console by name", fu
     end)
 
     local kinds = {
-      {"label", function() return createLabel(otherName, 0, 0, 50, 20, 1) end},
-      {"scroll box", function() return createScrollBox(otherName, 0, 0, 50, 20) end},
-      {"text edit", function() return createTextEdit("main", otherName, 0, 0, 50, 20) end},
-      {"command line", function() return createCommandLine(otherName, 0, 0, 50, 20) end},
+      {"label", function() return createLabel(otherName, 0, 0, 50, 20, 1) end, "label"},
+      {"scroll box", function() return createScrollBox(otherName, 0, 0, 50, 20) end, "scrollbox"},
+      {"text edit", function() return createTextEdit("main", otherName, 0, 0, 50, 20) end, "textedit"},
+      {"command line", function() return createCommandLine(otherName, 0, 0, 50, 20) end, "commandline"},
     }
 
     for _, kind in ipairs(kinds) do
       it("refuses every link and text function for a " .. kind[1], function()
         assert.is_true(kind[2]())
-        assertRefuses(otherName, calls)
-        assertRefuses(otherName, functionCalls)
+        assertRefuses(otherName, calls, kind[3])
+        assertRefuses(otherName, functionCalls, kind[3])
       end)
     end
   end)

@@ -527,7 +527,10 @@ private slots:
         execLua(qsl("disableTrigger('onNewLine Trigger')"));
         execLua(qsl("local id = tempRegexTrigger([[^VariablesViewLine (\\w+)$]], function() end) "
                     "feedTriggers('\\nVariablesViewLine word\\n') killTrigger(id) "
-                    "variablesViewOwed = tostring(rawget(_G, 'line') == nil and rawget(_G, 'multimatches') == nil)"));
+                    // rawget() would put an owed name in place, so walk the table instead
+                    "local owed = {line = true, multimatches = true} "
+                    "for key in next, _G do owed[key] = nil end "
+                    "variablesViewOwed = tostring(owed.line == true and owed.multimatches == true)"));
         QVERIFY2(luaHolds(qsl("variablesViewOwed"), qsl("true")), "nothing was left owed, so this cannot tell whether the walk asks for it");
 
         mpEditor->repopulateVars();

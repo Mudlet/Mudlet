@@ -1646,15 +1646,6 @@ int TLuaInterpreter::createLabelMainWindow(lua_State* L, const char* labelName)
     return 1;
 }
 
-// Documentation: ? - public function but should stay undocumented -- compare https://github.com/Mudlet/Mudlet/issues/1149
-int TLuaInterpreter::closeUserWindow(lua_State* L)
-{
-    const QString text = getVerifiedString(L, __func__, 1, "name");
-    Host& host = getHostFromLua(L);
-    host.closeWindow(text);
-    return 0;
-}
-
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#startLogging
 int TLuaInterpreter::startLogging(lua_State* L)
@@ -3706,14 +3697,6 @@ void TLuaInterpreter::setCaptureGroups(const std::list<std::string>& captureList
     mCaptureScopeOpen = true;
 }
 
-int TLuaInterpreter::captureGroupLength(const std::size_t index) const
-{
-    if (index < mCaptureGroupLengthList.size()) {
-        return mCaptureGroupLengthList[index];
-    }
-    return index < mCaptureGroupList.size() ? static_cast<int>(QString::fromStdString(mCaptureGroupList[index]).size()) : 0;
-}
-
 // No documentation available in wiki - internal function
 void TLuaInterpreter::setCaptureNameGroups(const NameGroupMatches& nameGroups, const NamedMatchesRanges& namePositions)
 {
@@ -4043,10 +4026,23 @@ static void shiftCapturePositions(std::vector<int>& posList, NamedMatchesRanges&
     }
 }
 
+static int captureLength(const std::vector<std::string>& captureList, const std::vector<int>& replacedLengths, const std::size_t index)
+{
+    if (index < replacedLengths.size() && replacedLengths[index] >= 0) {
+        return replacedLengths[index];
+    }
+    return QString::fromStdString(captureList[index]).size();
+}
+
+int TLuaInterpreter::captureGroupLength(const std::size_t index) const
+{
+    return captureLength(mCaptureGroupList, mCaptureGroupLengthList, index);
+}
+
 // The capture that was exactly the replaced text keeps its start and takes on the
 // replacement's length; shiftCapturePositions() would move its start instead, as
 // though the text had been inserted in front of it
-static void shiftCapturePositionsForReplace(std::vector<std::string>& captureList,
+static void shiftCapturePositionsForReplace(const std::vector<std::string>& captureList,
                                             std::vector<int>& posList,
                                             std::vector<int>& lengthList,
                                             NamedMatchesRanges& namedPosList,
@@ -4058,13 +4054,11 @@ static void shiftCapturePositionsForReplace(std::vector<std::string>& captureLis
     const std::size_t count = std::min(posList.size(), captureList.size());
     for (std::size_t i = 0; i < count; ++i) {
         int& pos = posList[i];
-        const bool lengthListed = i < lengthList.size();
-        const int length = lengthListed ? lengthList[i] : static_cast<int>(QString::fromStdString(captureList[i]).size());
-        if (pos == x && length == replacedLength) {
-            captureList[i] = replacement.toStdString();
-            if (lengthListed) {
-                lengthList[i] = replacement.size();
+        if (pos == x && captureLength(captureList, lengthList, i) == replacedLength) {
+            if (lengthList.size() < captureList.size()) {
+                lengthList.resize(captureList.size(), -1);
             }
+            lengthList[i] = replacement.size();
         } else if (pos > x) {
             pos += delta;
         }
@@ -5235,11 +5229,23 @@ bool TLuaInterpreter::globalsMetatableHandedOut(lua_State* L, const int index)
 }
 
 // No documentation available in wiki - internal function
-// Stands in for getmetatable(), setmetatable() and the debug library's pair
+// Stands in for getmetatable(), setmetatable() and the debug library's pair,
+// and for rawget()
 int TLuaInterpreter::globalsMetatableGuard(lua_State* L)
 {
     auto* self = static_cast<TLuaInterpreter*>(lua_touserdata(L, lua_upvalueindex(1)));
     const auto slot = static_cast<int>(lua_tointeger(L, lua_upvalueindex(2)));
+    if (slot == 4) {
+        // rawget() skips __index, so a name still left out would read as nil.
+        // Scripts reach for it to dodge strict-globals warnings.
+        if (lua_topointer(L, 1) == self->mGlobalsTable && lua_type(L, 2) == LUA_TSTRING) {
+            const char* key = lua_tostring(L, 2);
+            if (key == self->mMatchesKey || key == self->mMultimatchesKey || key == self->mLineKey) {
+                self->materialisePendingGlobals(L);
+            }
+        }
+        return self->mStockMetatableFunctions[slot](L);
+    }
     const bool setter = slot == 1 || slot == 3;
     const bool onGlobals = lua_topointer(L, 1) == self->mGlobalsTable;
     if (onGlobals) {
@@ -5344,7 +5350,8 @@ void TLuaInterpreter::installLazyGlobals()
             mGlobalsMetatableTouched = false;
             mGlobalsHandlersLinger = false;
             mLazyGlobalsInstalled = installGlobalsMetatableGuard(L, nullptr, "getmetatable", 0) && installGlobalsMetatableGuard(L, nullptr, "setmetatable", 1)
-                                    && installGlobalsMetatableGuard(L, "debug", "getmetatable", 2) && installGlobalsMetatableGuard(L, "debug", "setmetatable", 3);
+                                    && installGlobalsMetatableGuard(L, "debug", "getmetatable", 2) && installGlobalsMetatableGuard(L, "debug", "setmetatable", 3)
+                                    && installGlobalsMetatableGuard(L, nullptr, "rawget", 4);
         }
     }
     lua_settop(L, callerStackTop);

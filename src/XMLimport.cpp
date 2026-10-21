@@ -910,7 +910,11 @@ void XMLimport::readHost(Host* pHost)
         }
     } else if (useSecureStorage) {
         // Modern application: load from secure storage if available
-        pHost->mProxyPassword = CredentialManager::retrieveCredential(pHost->getName(), "proxy");
+        CredentialManager::ReadOutcome outcome = CredentialManager::ReadOutcome::NothingStored;
+        pHost->mProxyPassword = CredentialManager::retrieveCredential(pHost->getName(), "proxy", &outcome);
+        if (pHost->mProxyPassword.isEmpty() && outcome == CredentialManager::ReadOutcome::Unreadable) {
+            qWarning().nospace().noquote() << "XMLimport::readHost(...) WARNING - the saved proxy password for profile \"" << pHost->getName() << "\" could not be read.";
+        }
     }
 
     pHost->set_USE_IRE_DRIVER_BUGFIX(attributes().value(qsl("USE_IRE_DRIVER_BUGFIX")) == YES);
@@ -2062,8 +2066,9 @@ QString XMLimport::readScriptElement()
     }
 
     // From format 1.001, control characters are stored as U+FFFC then the matching Control Picture.
-    // Few scripts hold a U+FFFC, so one contains() spares most scripts the 29 replace() scans below:
+    // Few scripts hold a U+FFFC, so one contains() spares most scripts the 30 replace() scans below:
     if ((mVersionMajor > 1 || (mVersionMajor == 1 && mVersionMinor > 0)) && localScript.contains(QChar(0xFFFC))) {
+        localScript.replace(qsl("\xFFFC\x2400"), QChar(u'\0'));  // NUL
         localScript.replace(qsl("\xFFFC\x2401"), QChar('\x01')); // SOH
         localScript.replace(qsl("\xFFFC\x2402"), QChar('\x02')); // STX
         localScript.replace(qsl("\xFFFC\x2403"), QChar('\x03')); // ETX

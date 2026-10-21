@@ -197,6 +197,24 @@ bool relinkIfOrphaned(QWidget* pChildWindow)
     return true;
 }
 
+// Qt 6.12 skips Tool windows when it picks a transient parent, so a dialog opened from a
+// floating dock would otherwise be stacked and minimized with the main window
+void relinkPastFloatingDock(QWidget* pChildWindow)
+{
+    if (!pChildWindow->isWindow() || !pChildWindow->parentWidget()) {
+        return;
+    }
+    QWindow* pHandle = pChildWindow->windowHandle();
+    auto* pDock = qobject_cast<QDockWidget*>(pChildWindow->parentWidget()->window());
+    if (!pHandle || !pHandle->transientParent() || !pDock || !pDock->isFloating()) {
+        return;
+    }
+    QWindow* pDockWindow = pDock->windowHandle();
+    if (pDockWindow && pHandle->transientParent() != pDockWindow) {
+        pHandle->setTransientParent(pDockWindow);
+    }
+}
+
 void relinkOrphansUnder(const QWidget* pWindow)
 {
     const auto children = pWindow->findChildren<QWidget*>();
@@ -214,6 +232,11 @@ public:
 
     bool eventFilter(QObject* watched, QEvent* event) override
     {
+        if (event->type() == QEvent::Show && watched->isWidgetType()) {
+            // Sent before the window is mapped, so the window manager only ever sees the dock
+            relinkPastFloatingDock(static_cast<QWidget*>(watched));
+            return false;
+        }
         if (event->type() != QEvent::WinIdChange || !watched->isWidgetType()) {
             return false;
         }
@@ -7685,9 +7708,14 @@ bool mudlet::migratePasswordsToProfileStorage()
 
     for (const auto& profile : profiles) {
         // Try to retrieve password from CredentialManager
-        QString password = CredentialManager::retrieveCredential(profile, "character");
+        CredentialManager::ReadOutcome outcome = CredentialManager::ReadOutcome::NothingStored;
+        QString password = CredentialManager::retrieveCredential(profile, "character", &outcome);
 
-        if (!password.isEmpty()) {
+        if (password.isEmpty() && outcome == CredentialManager::ReadOutcome::Unreadable) {
+            qWarning().nospace().noquote() << "mudlet::migratePasswordsToProfileStorage() WARNING - could not read the saved password for profile \"" << profile
+                                           << "\", so it stays in secure storage.";
+            mPasswordsNotMigratedToProfiles.append(profile);
+        } else if (!password.isEmpty()) {
             // Only remove from secure storage once it is saved here, and only if this version is >= 4.20.0
             // This prevents breaking compatibility with older Mudlet versions
             if (!MudletApp::writeProfileData(profile, qsl("password"), password).first) {
