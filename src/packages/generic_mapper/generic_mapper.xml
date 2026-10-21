@@ -650,6 +650,19 @@ map.listMapFeatures()</script>
 				<regex>^map path ([^;]+)(?:\s*;\s*(.+))?</regex>
 			</Alias>
 			<Alias isActive="yes" isFolder="no">
+				<name>Goto Alias</name>
+				<script>-- goto &lt;room id&gt; walks to that room, goto &lt;map feature&gt; to the nearest room with it
+local target = matches[2]:trim()
+if tonumber(target) then
+  map.gotoRoom(tonumber(target))
+else
+  map.gotoFeature(target)
+end</script>
+				<command></command>
+				<packageName></packageName>
+				<regex>^goto (.+)$</regex>
+			</Alias>
+			<Alias isActive="yes" isFolder="no">
 				<name>Set Recall Alias</name>
 				<script>map.set_recall()</script>
 				<command></command>
@@ -1399,6 +1412,8 @@ map.help = {[[
         &lt;link: me&gt;map me&lt;/link&gt; - Locates the user on the map, if possible.
         &lt;link: path&gt;map path &lt;room name&gt; [; area name]&lt;/link&gt; - Finds a walking path to the named
             room, in the named area if specified.
+        &lt;link: goto&gt;goto &lt;roomID or map feature&gt;&lt;/link&gt; - Walks to the given room, or to the
+            nearest room with the given map feature.
         &lt;link: character&gt;map character &lt;name&gt;&lt;/link&gt; - Sets a given name as the current character for
             the purposes of the script, used for different prompt patterns and
             recall locations.
@@ -1844,6 +1859,20 @@ map.help.path = [[
         name is given, but spaces before or after the semicolon are optional.
 
         Example: &lt;yellow&gt;map path main street ; newbie town&lt;reset&gt;
+]]
+map.help["goto"] = [[
+    &lt;cyan&gt;Goto&lt;reset&gt;
+        syntax: &lt;yellow&gt;goto &lt;roomID&gt;&lt;reset&gt;
+                &lt;yellow&gt;goto &lt;map feature&gt;&lt;reset&gt;
+
+        This command speedwalks from the current room to the given room. If a
+        map feature is given instead, it walks to the nearest room that has
+        that feature. Part of a feature name is enough, as long as only one
+        feature matches it.
+
+        Example: &lt;yellow&gt;goto 1234&lt;reset&gt; - walks to room 1234
+                 &lt;yellow&gt;goto nexus&lt;reset&gt; - walks to the nearest room with the
+                 feature 'A Nexus Point'
 ]]
 map.help.character = [[
     &lt;cyan&gt;Map Character&lt;reset&gt;
@@ -5304,6 +5333,90 @@ end
 
 function map.getMapFeatures()
   return loadMapFeatures()
+end
+
+function map.gotoRoom(roomId)
+  if not roomId or not roomExists(roomId) then
+    map.echo("Room number '" .. tostring(roomId) .. "' does not exist.", false, true)
+    return
+  end
+  if not map.currentRoom then
+    map.echo("Don't know where we are at the moment.", false, true)
+    return
+  end
+  if roomId == map.currentRoom then
+    map.echo("You are already in room number '" .. roomId .. "'.")
+    return
+  end
+  if not getPath(map.currentRoom, roomId) then
+    map.echo("No path to room number '" .. roomId .. "' found.", false, true)
+    return
+  end
+  doSpeedWalk()
+  return true
+end
+
+local function matchMapFeatures(partialName)
+  local lowerName = partialName:lower()
+  local mapFeatures = loadMapFeatures()
+  if mapFeatures[lowerName] then
+    return {lowerName}
+  end
+  local matched = {}
+  for featureName in pairs(mapFeatures) do
+    if featureName:find(lowerName, 1, true) then
+      matched[#matched + 1] = featureName
+    end
+  end
+  table.sort(matched)
+  return matched
+end
+
+function map.gotoFeature(featureName)
+  if not featureName or featureName == "" then
+    map.echo("Which map feature would you like to go to?", false, true)
+    return
+  end
+  if not map.currentRoom then
+    map.echo("Don't know where we are at the moment.", false, true)
+    return
+  end
+  local matched = matchMapFeatures(featureName)
+  if #matched == 0 then
+    map.echo("No map feature like '" .. featureName .. "' found.", false, true)
+    return
+  end
+  if #matched &gt; 1 then
+    map.echo(
+      "Several map features match '" .. featureName .. "': " .. table.concat(matched, ", ") .. ".",
+      false,
+      true
+    )
+    return
+  end
+  local feature = matched[1]
+  local rooms = searchRoomUserData("feature-" .. feature, "true")
+  -- not table.contains, which matches keys too: room 1 would match any non-empty list
+  if table.index_of(rooms, map.currentRoom) then
+    map.echo("This room already has the map feature '" .. feature .. "'.")
+    return
+  end
+  local closestRoom, closestWeight
+  for _, roomId in ipairs(rooms) do
+    local found, weight = getPath(map.currentRoom, roomId)
+    if found and (not closestWeight or weight &lt; closestWeight) then
+      closestRoom, closestWeight = roomId, weight
+    end
+  end
+  if not closestRoom then
+    if #rooms == 0 then
+      map.echo("No room has the map feature '" .. feature .. "'.", false, true)
+    else
+      map.echo("No path to any room with the map feature '" .. feature .. "' found.", false, true)
+    end
+    return
+  end
+  return map.gotoRoom(closestRoom)
 end
 
 
