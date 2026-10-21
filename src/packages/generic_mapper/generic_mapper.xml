@@ -1153,7 +1153,7 @@ centerview(map.currentRoom)</script>
 				<name>Add a Special Exit From One Remote Room To Another Alias</name>
 				<script>-- spev &lt;from room&gt; &lt;to room&gt; &lt;command&gt; - This different than spe, which allows
 -- you to link only the current room to another room - this command doesn't
--- require you to be in the starting room.
+-- require you to be in the starting room. 
 
 if not map.require_mapping() then return end
 
@@ -1178,7 +1178,7 @@ map.echo(string.format("Added special exit with command '%s' to from %s (%d) to 
 			<Alias isActive="yes" isFolder="no">
 				<name>Clear All Special Exits Alias</name>
 				<script>-- spe clear &lt;option&gt; or exit special clear &lt;option&gt; - where option is the
--- location or the ID of the room you'd like to clear all special exits in.
+-- location or the ID of the room you'd like to clear all special exits in. 
 
 if not map.require_mapping() then return end
 
@@ -1281,7 +1281,7 @@ map.renameArea(matches[2])</script>
 				<script>-- feature create &lt;feature&gt; [char &lt;room character&gt;] - will create a new map
 -- feature for use on rooms. You can also optionally add a character mark to
 -- the feature, which will be set when a map feature is added to a room. 
--- Note: Map feature names are not allowed to contain numbers.
+-- Note: Map feature names are not allowed to contain numbers. 
 
 if not map.require_mapping() then return end
 map.createMapFeature(matches[2]:trim(), (matches[3] and matches[3]:trim()))</script>
@@ -1295,7 +1295,7 @@ map.createMapFeature(matches[2]:trim(), (matches[3] and matches[3]:trim()))</scr
 -- adds a created map feature to the room. If the map feature is associated with
 -- a character mark, it will be set on the room and existing marks get overwritten.
 -- The room number to add the feature to can be given with the optional argument
--- (note that there is no space between the v and the ID).
+-- (note that there is no space between the v and the ID). 
 
 if not map.require_mapping() then return end
 map.roomCreateMapFeature(matches[3], matches[2] == "" and map.currentRoom or tonumber(matches[2]))</script>
@@ -1310,7 +1310,7 @@ map.roomCreateMapFeature(matches[3], matches[2] == "" and map.currentRoom or ton
 -- a character mark and its set on the room, a random character mark from the
 -- other map features on the room is chosen to replace it. The room number to
 -- delete the feature from can be given with the optional argument (note that
--- there is no space between the v and the ID).
+-- there is no space between the v and the ID). 
 
 if not map.require_mapping() then return end
 map.roomDeleteMapFeature(matches[3], matches[2] == "" and map.currentRoom or tonumber(matches[2]))</script>

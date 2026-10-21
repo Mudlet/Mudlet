@@ -75,7 +75,6 @@ describe("Tests that the generic mapper only edits the map while mapping", funct
     return type(labels) == "table" and table.size(labels) or 0
   end
 
-  -- each command, and the map state it changes when mapping is on
   local commands = {
     {"rld", function() return "rld " .. roomB end, function() return roomExists(roomB) end},
     {"room coords", function() return "rc v" .. roomB .. " 5 5 0" end, function() return table.concat({getRoomCoordinates(roomB)}, ",") end},
