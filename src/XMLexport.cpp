@@ -857,7 +857,7 @@ void XMLexport::writeVariablePackage(Host* pHost, pugi::xml_node& mudletPackage)
     // "it is empty, so rebuild it" guard packages carry needs to see (#9857).
     // The same fence goes up around a global the walk died inside, which was
     // not read to the end either. A member dropped for its size, for being a
-    // second name for a table already written, or for being hidden still rides
+    // second name for an object or a cycle, or for being hidden still rides
     // along with its siblings, because those are limits on how much of a table
     // to write rather than on what a table can hold, and fencing the whole
     // variable on one of them would lose more than it saved.

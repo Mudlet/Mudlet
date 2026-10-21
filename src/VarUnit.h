@@ -66,6 +66,7 @@ public:
     void renameVariableBookkeeping(TVar*, const QString& oldFullName, const QString& newFullName);
     void addPointer(const void*);
     void clearPointers();
+    bool pointerSeen(const void*) const;
     void clearHiddenTables();
     void anchorHiddenTable(lua_State*, int valueIndex, const void* table);
     void shareHiddenTableAnchors(const VarUnit&);
