@@ -4435,8 +4435,9 @@ describe("Tests opening a profile whose script fails as it loads", function()
     end)
 
     local consoleTexts = {}
-    local handler = registerAnonymousEventHandler("mudletSpecLoadBrokenConsole", function(_, text)
+    local handler = registerAnonymousEventHandler("mudletSpecLoadBrokenConsole", function(_, text, moduleRuns)
       consoleTexts[#consoleTexts + 1] = text
+      consoleTexts.moduleRuns = moduleRuns
     end)
     defer(function()
       killAnonymousEventHandler(handler)
@@ -4463,7 +4464,7 @@ describe("Tests opening a profile whose script fails as it loads", function()
     local moduleFile = directory .. "/" .. moduleName .. ".xml"
     writePackageXml(moduleFile, table.concat({
       '<ScriptPackage>',
-      scriptXml("mudlet-spec-load-module-script", "mudletSpecMissingInModule()"),
+      scriptXml("mudlet-spec-load-module-script", "mudletSpecModuleRuns = (mudletSpecModuleRuns or 0) + 1 mudletSpecMissingInModule()"),
       '</ScriptPackage>',
     }))
     writePackageXml(directory .. "/current/2026-01-01#00-00-00.xml", table.concat({
@@ -4487,7 +4488,7 @@ describe("Tests opening a profile whose script fails as it loads", function()
         'function mudletSpecLoadResetter() setScript("mudlet-spec-fixed-before-reset", "mudletSpecFixed = true") disableScript("mudlet-spec-disabled-before-reset") clearWindow() resetProfile() end',
         {handler = "mudletSpecLoadBrokenReset"}),
       scriptXml("mudlet-spec-load-reporter",
-        'tempTimer(0, function() raiseGlobalEvent("mudletSpecLoadBrokenConsole", table.concat(getLines("main", 0, getLastLineNumber("main") + 1), "\\n")) end)'),
+        'tempTimer(0, function() raiseGlobalEvent("mudletSpecLoadBrokenConsole", table.concat(getLines("main", 0, getLastLineNumber("main") + 1), "\\n"), mudletSpecModuleRuns or 0) end)'),
       '</ScriptPackage>',
     }))
 
@@ -4507,6 +4508,10 @@ describe("Tests opening a profile whose script fails as it loads", function()
     assert.is_false(containsWrapped(consoleText, '"mudlet-spec-load-reporter"'), "a script that ran fine was reported too: " .. consoleText)
     assert.is_false(containsWrapped(consoleText, '"mudlet-spec-inactive-fails"'), "an inactive script was reported: " .. consoleText)
     assert.is_false(containsWrapped(consoleText, '"mudlet-spec-load-module-script"'), "a module's script was reported: " .. consoleText)
+  end)
+
+  it("runs a failing body of a module loaded before the profile's scripts only once", function()
+    assert.equals(1, openFixtureProfile().moduleRuns)
   end)
 
   it("names them again after a reset, leaving out those fixed or disabled since", function()
