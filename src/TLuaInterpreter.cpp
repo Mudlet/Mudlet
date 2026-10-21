@@ -3702,6 +3702,7 @@ void TLuaInterpreter::setCaptureGroups(const std::list<std::string>& captureList
     }
     mCaptureGroupList.assign(captureList.begin(), captureList.end());
     mCaptureGroupPosList.assign(posList.begin(), posList.end());
+    mReplacedCaptureLengths.clear();
     mCaptureScopeOpen = true;
 }
 
@@ -3810,6 +3811,7 @@ void TLuaInterpreter::clearCaptureGroups()
     }
     mCaptureGroupList.clear();
     mCaptureGroupPosList.clear();
+    mReplacedCaptureLengths.clear();
     mMultiCaptureGroupList.clear();
     mMultiCaptureGroupPosList.clear();
     mCapturedNameGroups.clear();
@@ -3879,6 +3881,7 @@ int TLuaInterpreter::pushNestedDispatchState(const bool parkCommand)
     // here, reusing its buffers exactly as it would have without the parking
     saved.captureGroupList = mCaptureGroupList;
     saved.captureGroupPosList = mCaptureGroupPosList;
+    saved.replacedCaptureLengths = mReplacedCaptureLengths;
     saved.multiCaptureGroupList = mMultiCaptureGroupList;
     saved.multiCaptureGroupPosList = mMultiCaptureGroupPosList;
     saved.capturedNameGroups = mCapturedNameGroups;
@@ -3928,6 +3931,7 @@ void TLuaInterpreter::popNestedDispatchState(const int depth)
 
     mCaptureGroupList = std::move(saved.captureGroupList);
     mCaptureGroupPosList = std::move(saved.captureGroupPosList);
+    mReplacedCaptureLengths = std::move(saved.replacedCaptureLengths);
     mMultiCaptureGroupList = std::move(saved.multiCaptureGroupList);
     mMultiCaptureGroupPosList = std::move(saved.multiCaptureGroupPosList);
     mCapturedNameGroups = std::move(saved.capturedNameGroups);
@@ -4031,18 +4035,39 @@ static void shiftCapturePositions(std::vector<int>& posList, NamedMatchesRanges&
     }
 }
 
+static int captureLength(const std::vector<std::string>& captureList, const std::vector<int>& replacedLengths, const std::size_t index)
+{
+    if (index < replacedLengths.size() && replacedLengths[index] >= 0) {
+        return replacedLengths[index];
+    }
+    return QString::fromStdString(captureList[index]).size();
+}
+
+int TLuaInterpreter::captureGroupLength(const std::size_t index) const
+{
+    return captureLength(mCaptureGroupList, mReplacedCaptureLengths, index);
+}
+
 // The capture that was exactly the replaced text keeps its start and takes on the
 // replacement's length; shiftCapturePositions() would move its start instead, as
 // though the text had been inserted in front of it
-static void
-shiftCapturePositionsForReplace(std::vector<std::string>& captureList, std::vector<int>& posList, NamedMatchesRanges& namedPosList, const int x, const int replacedLength, const QString& replacement)
+static void shiftCapturePositionsForReplace(const std::vector<std::string>& captureList,
+                                            std::vector<int>& posList,
+                                            std::vector<int>& replacedLengths,
+                                            NamedMatchesRanges& namedPosList,
+                                            const int x,
+                                            const int replacedLength,
+                                            const QString& replacement)
 {
     const int delta = replacement.size() - replacedLength;
     const std::size_t count = std::min(posList.size(), captureList.size());
     for (std::size_t i = 0; i < count; ++i) {
         int& pos = posList[i];
-        if (pos == x && QString::fromStdString(captureList[i]).size() == replacedLength) {
-            captureList[i] = replacement.toStdString();
+        if (pos == x && captureLength(captureList, replacedLengths, i) == replacedLength) {
+            if (replacedLengths.size() < captureList.size()) {
+                replacedLengths.resize(captureList.size(), -1);
+            }
+            replacedLengths[i] = replacement.size();
         } else if (pos > x) {
             pos += delta;
         }
@@ -4069,9 +4094,9 @@ void TLuaInterpreter::adjustCaptureGroups(int x, int a)
 
 void TLuaInterpreter::adjustCaptureGroupsForReplace(int x, int replacedLength, const QString& replacement)
 {
-    shiftCapturePositionsForReplace(mCaptureGroupList, mCaptureGroupPosList, mCapturedNameGroupsPosList, x, replacedLength, replacement);
+    shiftCapturePositionsForReplace(mCaptureGroupList, mCaptureGroupPosList, mReplacedCaptureLengths, mCapturedNameGroupsPosList, x, replacedLength, replacement);
     for (auto& parked : mNestedDispatchStates) {
-        shiftCapturePositionsForReplace(parked.captureGroupList, parked.captureGroupPosList, parked.capturedNameGroupsPosList, x, replacedLength, replacement);
+        shiftCapturePositionsForReplace(parked.captureGroupList, parked.captureGroupPosList, parked.replacedCaptureLengths, parked.capturedNameGroupsPosList, x, replacedLength, replacement);
     }
 }
 
