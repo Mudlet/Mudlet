@@ -1075,8 +1075,13 @@ describe("Tests functionality of Geyser.Label widget state", function()
     -- packages such as the-two-towers-exits-window clear their images this way
     it("an empty path takes the image away", function()
       local label = track(Geyser.Label:new({name = "glsEmptyPath", x = 0, y = 0, width = 40, height = 20}))
-      -- what a label with nothing on it measures depends on the font, so read it off a fresh one
+      -- what a label with nothing on it measures depends on its font, which moves to the
+      -- application's on the first re-polish, so settle both labels before reading the twin
       createLabel("glsEmptyTwin", 0, 0, 40, 20, 1)
+      for _, name in ipairs({"glsEmptyPath", "glsEmptyTwin"}) do
+        setLabelStyleSheet(name, getLabelStyleSheet(name))
+        setLabelStyleSheet(name, getLabelStyleSheet(name))
+      end
       local blank = {getLabelSizeHint("glsEmptyTwin")}
       deleteLabel("glsEmptyTwin")
       local hint = function() return {getLabelSizeHint("glsEmptyPath")} end
