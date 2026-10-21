@@ -640,6 +640,8 @@ if false then
   --- A capture group that took no part in the match holds "" when a later group did match, but is left out
   --- (nil, and #matches is shorter) when no later group matched, so an optional trailing group can be tested
   --- with <code>if matches[n] then</code>. A named group that took no part is nil under its name.
+  --- This holds for a single match only: aliases and match-all triggers append each further match's groups
+  --- to the same list, so a later match can fill the index an unset trailing group left out.
   ---
   --- @usage Let say that you defined following trigger to detect and get dropped items.
   ---   <pre>
