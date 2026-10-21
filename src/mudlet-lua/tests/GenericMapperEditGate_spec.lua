@@ -1,3 +1,6 @@
+-- captured before any describe body runs, so the cleanup check below compares against the originals
+local realEcho, realEchoLink, realClearLabels = map and map.echo, _G.echoLink, map and map.clearLabels
+
 describe("Tests that the generic mapper only edits the map while mapping", function()
   if type(map) ~= "table" or type(map.roomLook) ~= "function" then
     it("needs the generic mapper installed", function()
@@ -10,7 +13,6 @@ describe("Tests that the generic mapper only edits the map while mapping", funct
   local mapperState = {"mapping", "currentRoom", "currentArea"}
   local mainAreaName, otherAreaName = "gmgMain", "gmgElsewhere"
   local emptyAreaName, addedAreaName, renamedAreaName = "gmgEmpty", "gmgAdded", "gmgRenamed"
-  local realEcho, realEchoLink = map.echo, _G.echoLink
   local saved, savedFeatures, mainArea, roomA, roomB, echoes
 
   local function makeRoom(area, name, x)
@@ -51,13 +53,17 @@ describe("Tests that the generic mapper only edits the map while mapping", funct
   end)
 
   after_each(function()
-    map.echo, _G.echoLink = realEcho, realEchoLink
+    map.echo, _G.echoLink, map.clearLabels = realEcho, realEchoLink, realClearLabels
     map.deletingarea = nil
     for _, key in ipairs(mapperState) do
       map.set(key, saved[key])
     end
-    setMapUserData("mapFeatures", savedFeatures or "")
-    for _, name in ipairs({mainAreaName, otherAreaName, emptyAreaName, addedAreaName, renamedAreaName}) do
+    if savedFeatures then
+      setMapUserData("mapFeatures", savedFeatures)
+    else
+      clearMapUserDataItem("mapFeatures")
+    end
+    for _, name in ipairs({mainAreaName, otherAreaName, emptyAreaName, addedAreaName, renamedAreaName, "gmgDupOne", "gmgDupTwo"}) do
       if getAreaTable()[name] then
         deleteArea(name)
       end
@@ -161,14 +167,60 @@ describe("Tests that the generic mapper only edits the map while mapping", funct
     assert.are.equal(0, labelCount())
   end)
 
-  describe("afterwards", function()
-    before_each(function()
-      map.echo, _G.echoLink = realEcho, realEchoLink
-    end)
+  -- stubbed so clearing the whole map cannot reach other specs' labels
+  local function clearedBy(linkText, clicks)
+    local click = assert(loadstring(assert(linksFrom(function() map.roomLook(tostring(roomA)) end)[linkText])))
+    local cleared = {}
+    map.clearLabels = function(area)
+      cleared[#cleared + 1] = area
+    end
+    map.set("mapping", true)
+    for _ = 1, clicks do
+      click()
+    end
+    return cleared
+  end
 
-    it("leaves the mapper's own echo and the global echoLink in place for later specs", function()
-      assert.are.equal(realEcho, map.echo)
-      assert.are.equal(realEchoLink, _G.echoLink)
-    end)
+  it("room look clear area labels link clears while mapping", function()
+    assert.are.same({mainArea}, clearedBy("(in area)", 1))
+  end)
+
+  it("room look clear map labels link clears on the second click while mapping", function()
+    assert.are.same({"map"}, clearedBy("(whole map)", 2))
+  end)
+
+  local function areaDeleteLink()
+    addAreaName("gmgDupOne")
+    addAreaName("gmgDupTwo")
+    map.set("mapping", true)
+    local links = linksFrom(function() expandAlias("area delete gmgDup", false) end)
+    return assert(loadstring(assert(links.gmgDupOne, "no link to pick between the matching areas")))
+  end
+
+  it("area delete's pick-an-area link refuses to edit the map when not mapping", function()
+    local click = areaDeleteLink()
+    map.set("mapping", false)
+    click()
+    assert.is_not_nil(getAreaTable().gmgDupOne)
+    assert.are.equal(1, refusals())
+  end)
+
+  it("area delete's pick-an-area link deletes while mapping", function()
+    areaDeleteLink()()
+    assert.is_nil(getAreaTable().gmgDupOne)
+    assert.are.equal(0, refusals())
+  end)
+end)
+
+describe("Tests the generic mapper edit gate spec's cleanup", function()
+
+  it("leaves the mapper's own functions and the global echoLink in place for later specs", function()
+    if type(map) ~= "table" then
+      pending("the generic mapper is not installed in this profile")
+      return
+    end
+    assert.are.equal(realEcho, map.echo)
+    assert.are.equal(realEchoLink, _G.echoLink)
+    assert.are.equal(realClearLabels, map.clearLabels)
   end)
 end)

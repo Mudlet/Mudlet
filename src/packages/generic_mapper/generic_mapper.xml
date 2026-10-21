@@ -1461,7 +1461,8 @@ map.help = {[[
 
     &lt;cyan&gt;Map Creation Commands:&lt;reset&gt;
         These are commands used in the process of actually creating a map.
-        Commands that change the map only work while mapping is on.
+        Apart from arealock, commands here that change the map only work
+        while mapping is on.
 
         &lt;link: start mapping&gt;start mapping [area name]&lt;/link&gt; - Starts adding content to the map, using
             either the area of the room the user is currently in or the area
@@ -1634,7 +1635,8 @@ map.help.stop_mapping = [[
 
         This command instructs the script to stop adding new content until
         mapping is resumed at a later time. The map will continue to perform
-        other functions, but commands that edit the map will refuse to run.
+        other functions, but map creation commands that edit rooms, exits,
+        areas, labels or map features will refuse to run.
 ]]
 map.help.find_prompt = [[
     &lt;cyan&gt;Find Prompt&lt;reset&gt;
@@ -5517,7 +5519,7 @@ function map.deleteArea(name, exact)
     for _, name in ipairs(ma) do
       echo("  ")
       setUnderline(true)
-      echoLink(name, [[map.deleteArea("]] .. name .. [[", true)]], "Delete " .. name, true)
+      echoLink(name, [[if map.require_mapping() then map.deleteArea("]] .. name .. [[", true) end]], "Delete " .. name, true)
       setUnderline(false)
       echo("\n")
     end
