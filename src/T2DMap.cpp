@@ -1340,7 +1340,7 @@ bool T2DMap::sizeFontToFitTextInRect(QFont& font, const QRectF& boundaryRect, co
         _font.setPointSizeF(fontSize);
         _painter.setFont(_font);
 
-        neededRect = _painter.boundingRect(testRect, Qt::AlignCenter | Qt::TextSingleLine | Qt::TextIncludeTrailingSpaces, text);
+        neededRect = _painter.boundingRect(testRect, Qt::AlignCenter | Qt::TextIncludeTrailingSpaces, text);
     } while (testRect.contains(neededRect));
 
     // Now decrease (using smaller steps) until it fits again
@@ -1354,7 +1354,7 @@ bool T2DMap::sizeFontToFitTextInRect(QFont& font, const QRectF& boundaryRect, co
 
         _painter.setFont(_font);
 
-        neededRect = _painter.boundingRect(testRect, Qt::AlignCenter | Qt::TextSingleLine | Qt::TextIncludeTrailingSpaces, text);
+        neededRect = _painter.boundingRect(testRect, Qt::AlignCenter | Qt::TextIncludeTrailingSpaces, text);
     } while ((!isSizeTooSmall) && (!testRect.contains(neededRect)));
 
     if (isSizeTooSmall) {

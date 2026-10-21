@@ -140,6 +140,50 @@ private slots:
         // branch ran rather than the one that renders the text.
         QCOMPARE(target.toImage().pixelColor(1, 1), QColor(Qt::red));
     }
+
+    // The font is fitted to the box, so every line of a multi-line label has to
+    // be measured or the outer lines are drawn outside the box and cut off (#10990).
+    void everyLineOfAMultiLineLabelFitsInsideTheBox()
+    {
+        TMapLabel label;
+        label.text = qsl("HH\nHH\nHH");
+        label.font = QFont(qsl("Bitstream Vera Sans"), 10);
+        label.pix = QPixmap(400, 60);
+        label.pix.fill(Qt::red);
+        label.bgColor = Qt::black;
+        label.fgColor = Qt::white;
+        label.outlineColor = Qt::white;
+
+        QPixmap target(400, 60);
+        target.fill(Qt::blue);
+        QPainter painter(&target);
+        mp2dMap->flushTextLabelPixmapCache();
+        mp2dMap->drawScaledLabel(painter, QPointF(0, 0), label, 2, QRectF(0, 0, 400, 60));
+        painter.end();
+
+        const QImage image = target.toImage();
+        QCOMPARE(image.pixelColor(0, 0), QColor(Qt::black));
+        auto rowHasText = [&image](int y) {
+            for (int x = 0; x < image.width(); ++x) {
+                if (image.pixelColor(x, y).lightness() > 128) {
+                    return true;
+                }
+            }
+            return false;
+        };
+        int bands = 0;
+        bool inBand = false;
+        for (int y = 0; y < image.height(); ++y) {
+            const bool hasText = rowHasText(y);
+            if (hasText && !inBand) {
+                ++bands;
+            }
+            inBand = hasText;
+        }
+        QVERIFY2(!rowHasText(0), "text is cut off at the top of the label");
+        QVERIFY2(!rowHasText(image.height() - 1), "text is cut off at the bottom of the label");
+        QCOMPARE(bands, 3);
+    }
 };
 
 #include "MapTextLabelCacheTest.moc"
