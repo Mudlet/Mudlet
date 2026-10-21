@@ -705,6 +705,10 @@ void dlgConnectionProfiles::writeSecurePassword(const QString& profile, const QS
             if (!unprotectedPath.isEmpty() && safeThis) {
                 //: Shown in the connection dialog when a password was saved but its file could not be made unreadable to other users of the computer. %1 is a profile name.
                 safeThis->showNotification(tr("The password for '%1' was saved, but other accounts on this computer can still read it.").arg(profile), safeThis->notificationAreaIconLabelWarning);
+            } else if (const QString refusal = credManager->keychainRefusal(); !refusal.isEmpty() && safeThis) {
+                //: Shown in the connection dialog when the system keychain (macOS Keychain, Windows Credential Manager, Secret Service on Linux) would not store a password, so Mudlet saved it encrypted in the profile's own folder instead. %1 is a profile name, %2 is the error the keychain gave, which may not be translated.
+                safeThis->showNotification(tr("The system keychain would not store the password for '%1' (%2), so it was saved encrypted in the profile's folder instead.").arg(profile, refusal),
+                                           safeThis->notificationAreaIconLabelWarning);
             }
         } else {
             qWarning() << "dlgConnectionProfiles: Failed to store password for profile" << profile << ":" << errorMessage;
