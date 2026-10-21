@@ -5396,7 +5396,6 @@ function map.gotoFeature(featureName)
   end
   local feature = matched[1]
   local rooms = searchRoomUserData("feature-" .. feature, "true")
-  -- not table.contains, which matches keys too: room 1 would match any non-empty list
   if table.index_of(rooms, map.currentRoom) then
     map.echo("This room already has the map feature '" .. feature .. "'.")
     return
