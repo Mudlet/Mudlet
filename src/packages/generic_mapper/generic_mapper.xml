@@ -779,6 +779,7 @@ map.doLockArea(matches[2])</script>
 -- location of the room. The room ID is optional, it'll move the current
 -- room if you don't provide one.
 
+if not map.require_mapping() then return end
 
 -- want the current room, but we're lost
 if matches[2] == '' and (not map.currentRoom or not map.roomexists(map.currentRoom)) then map.echo("Don't know where we are at the moment.") return end
@@ -853,6 +854,8 @@ map.echo([[Where do you want to move the room to?
 				<script>-- rld or room delete &lt;option&gt; - where option is the location or ID of the room
 -- you'd like to delete
 
+if not map.require_mapping() then return end
+
 -- want the current room, but we're lost
 if not matches[2] and (not map.currentRoom or not map.roomexists(map.currentRoom)) then map.echo("Don't know where we are at the moment.") return end
 
@@ -876,6 +879,8 @@ centerview(map.currentRoom)</script>
 				<name>Set Room Weight Alias</name>
 				<script>-- rw &lt;optional room ID or direction&gt; &lt;weight&gt;, where option is the location
 -- or ID of the room whose weight you'd like to change.
+
+if not map.require_mapping() then return end
 
 local weight = tonumber(matches[3]), room
 if matches[2] == '' then room = map.currentRoom
@@ -912,6 +917,8 @@ end</script>
 -- is a positive number (default for exits is 0). Setting a higher weight will
 -- make the exit be less likely to be used.
 
+if not map.require_mapping() then return end
+
 local room = (matches[2] ~= "" and tonumber(matches[2]) or map.currentRoom)
 
 local weight, exit = tonumber(matches[3]), matches[4]
@@ -930,6 +937,7 @@ map.echo(string.format("Set the weight on the %d room going %s to %s. If it's a 
 				<script>-- rlk or room link &lt;option&gt; [one] - where option will specify the room and exit
 -- to link with. You can also tack on 'one' at the end to make it be a one-way link
 
+if not map.require_mapping() then return end
 
 -- need the current room, but we're lost
 if not map.currentRoom or not map.roomexists(map.currentRoom) then map.echo("Don't know where we are at the moment.") return end
@@ -1002,6 +1010,7 @@ centerview(map.currentRoom)</script>
 -- of the exit to unlink. This function will unlink exits both ways, or one way
 -- if there is no incoming exit. 
 
+if not map.require_mapping() then return end
 
 -- need the current room, but we're lost
 if not map.currentRoom or not map.roomexists(map.currentRoom) then map.echo("Don't know where we are at the moment.") return end
@@ -1044,6 +1053,8 @@ centerview(map.currentRoom)</script>
 -- Door status can be open or o, closed or c, locked or l, clear or gone.
 -- To delete a room, use clear or gone. Setting doors is one-way - to set
 -- two-way doors, use the alias from the opposite direction.
+
+if not map.require_mapping() then return end
 
 local room = (matches[2] ~= "" and tonumber(matches[2]) or map.currentRoom)
 
@@ -1088,6 +1099,8 @@ end</script>
 				<script>-- rcc &lt;character&gt; or rcc &lt;character&gt; &lt;room ID&gt; - where the character is one 
 -- letter/number/symbol.
 
+if not map.require_mapping() then return end
+
 local room = matches[3] or map.currentRoom
 room = tonumber(room) or map.relativeroom(map.currentRoom, room)
 if not room or not map.roomexists(room) then
@@ -1118,6 +1131,8 @@ centerview(map.currentRoom)</script>
 -- spe clear and spe list match on this
 if matches[2] == "clear" or matches[2] == "list" then return end
 
+if not map.require_mapping() then return end
+
 -- need the current room, but we're lost
 if not map.currentRoom or not map.roomexists(map.currentRoom) then map.echo("Don't know where we are at the moment.") return end
 
@@ -1139,6 +1154,8 @@ centerview(map.currentRoom)</script>
 				<script>-- spev &lt;from room&gt; &lt;to room&gt; &lt;command&gt; - This different than spe, which allows
 -- you to link only the current room to another room - this command doesn't
 -- require you to be in the starting room. 
+
+if not map.require_mapping() then return end
 
 local room1, room2 = tonumber(matches[2]), tonumber(matches[3])
 
@@ -1163,6 +1180,8 @@ map.echo(string.format("Added special exit with command '%s' to from %s (%d) to 
 				<script>-- spe clear &lt;option&gt; or exit special clear &lt;option&gt; - where option is the
 -- location or the ID of the room you'd like to clear all special exits in. 
 
+if not map.require_mapping() then return end
+
 -- want the current room, but we're lost
 if not matches[2] and (not map.currentRoom or not map.roomexists(map.currentRoom)) then map.echo("Don't know where we are at the moment.") return end
 
@@ -1184,6 +1203,7 @@ map.echo(string.format("Cleared all special exits in %s (%d).\n", getRoomName(ri
 				<name>Move Room To Another Area Alias</name>
 				<script>-- room area &lt;different area&gt; - will move the current room to another area you're in
 
+if not map.require_mapping() then return end
 map.roomArea(matches[2], matches[3])</script>
 				<command></command>
 				<packageName></packageName>
@@ -1193,6 +1213,7 @@ map.roomArea(matches[2], matches[3])</script>
 				<name>Add a Room Label Alias</name>
 				<script>-- room label &lt;optional another room ID&gt; &lt;optional foreground color&gt; &lt;optional background color&gt; my message
 
+if not map.require_mapping() then return end
 map.roomLabel(matches[2])</script>
 				<command></command>
 				<packageName></packageName>
@@ -1210,6 +1231,7 @@ map.areaLabels(matches[2])</script>
 				<name>Create An Area Alias</name>
 				<script>-- area add &lt;area name&gt; - will create a new area and automatically give it an ID.
 
+if not map.require_mapping() then return end
 local t = getAreaTable(); local tr = {}; for k,v in pairs(t) do tr[v] = k end
 local newid = table.maxn(tr) + 1
 
@@ -1224,6 +1246,7 @@ centerview(map.currentRoom)</script>
 				<name>Delete An Area Alias</name>
 				<script>-- area delete &lt;area name&gt; - will delete the given area
 
+if not map.require_mapping() then return end
 map.deleteArea(matches[2])</script>
 				<command></command>
 				<packageName></packageName>
@@ -1247,6 +1270,7 @@ map.echo("Stopped deleting rooms in the '"..areaname.."'. The area is partially 
 			<Alias isActive="yes" isFolder="no">
 				<name>Rename An Area Alias</name>
 				<script>-- area rename &lt;new area name&gt; - will rename the current area you're in to the new name
+if not map.require_mapping() then return end
 map.renameArea(matches[2])</script>
 				<command></command>
 				<packageName></packageName>
@@ -1259,6 +1283,7 @@ map.renameArea(matches[2])</script>
 -- the feature, which will be set when a map feature is added to a room. 
 -- Note: Map feature names are not allowed to contain numbers. 
 
+if not map.require_mapping() then return end
 map.createMapFeature(matches[2]:trim(), (matches[3] and matches[3]:trim()))</script>
 				<command></command>
 				<packageName></packageName>
@@ -1272,6 +1297,7 @@ map.createMapFeature(matches[2]:trim(), (matches[3] and matches[3]:trim()))</scr
 -- The room number to add the feature to can be given with the optional argument
 -- (note that there is no space between the v and the ID). 
 
+if not map.require_mapping() then return end
 map.roomCreateMapFeature(matches[3], matches[2] == "" and map.currentRoom or tonumber(matches[2]))</script>
 				<command></command>
 				<packageName></packageName>
@@ -1286,6 +1312,7 @@ map.roomCreateMapFeature(matches[3], matches[2] == "" and map.currentRoom or ton
 -- delete the feature from can be given with the optional argument (note that
 -- there is no space between the v and the ID). 
 
+if not map.require_mapping() then return end
 map.roomDeleteMapFeature(matches[3], matches[2] == "" and map.currentRoom or tonumber(matches[2]))</script>
 				<command></command>
 				<packageName></packageName>
@@ -1295,6 +1322,7 @@ map.roomDeleteMapFeature(matches[3], matches[2] == "" and map.currentRoom or ton
 				<name>Delete Map Feature Alias</name>
 				<script>-- feature delete &lt;feature&gt;* deletes a map feature and removes it from all rooms
 
+if not map.require_mapping() then return end
 map.deleteMapFeature(matches[2]:trim())</script>
 				<command></command>
 				<packageName></packageName>
@@ -1433,6 +1461,8 @@ map.help = {[[
 
     &lt;cyan&gt;Map Creation Commands:&lt;reset&gt;
         These are commands used in the process of actually creating a map.
+        Apart from arealock, commands here that change the map only work
+        while mapping is on.
 
         &lt;link: start mapping&gt;start mapping [area name]&lt;/link&gt; - Starts adding content to the map, using
             either the area of the room the user is currently in or the area
@@ -1596,7 +1626,8 @@ map.help.start_mapping = [[
         room on the map, that room will be moved to be in the named area, if it
         is not already in it. If used without an area name, the room is not
         moved, and mapping begins in the area the character is currently
-        located in.
+        located in. Commands that edit the map, such as room delete or room
+        link, only work while mapping is on.
 ]]
 map.help.stop_mapping = [[
     &lt;cyan&gt;Stop Mapping&lt;reset&gt;
@@ -1604,7 +1635,8 @@ map.help.stop_mapping = [[
 
         This command instructs the script to stop adding new content until
         mapping is resumed at a later time. The map will continue to perform
-        other functions.
+        other functions, but map creation commands that edit rooms, exits,
+        areas, labels or map features will refuse to run.
 ]]
 map.help.find_prompt = [[
     &lt;cyan&gt;Find Prompt&lt;reset&gt;
@@ -2720,6 +2752,13 @@ function map.echo(what, debug, err, wait)
     print_echoes(what, debug, err)
 end
 
+function map.require_mapping()
+    if not map.mapping then
+        map.echo("Not mapping. Use &lt;yellow&gt;start mapping&lt;reset&gt; to edit the map.",false,true)
+    end
+    return map.mapping
+end
+
 local function set_room(roomID)
     -- moves the map to the new room
     if map.currentRoom ~= roomID then
@@ -3312,7 +3351,7 @@ function map.set_exit(dir,roomID)
             map.echo("Special exit '" .. dir .. "' now goes to roomID " .. roomID)
         end
     else
-        map.echo("Not mapping",false,true)
+        map.require_mapping()
     end
 end
 
@@ -3493,7 +3532,7 @@ function map.set_portal(name, is_auto)
             send(name)
         end
     else
-        map.echo("Not mapping",false,true)
+        map.require_mapping()
     end
 end
 
@@ -3565,7 +3604,7 @@ function map.set_area(name)
             set_room(map.currentRoom)
         end
     else
-        map.echo("Not mapping",false,true)
+        map.require_mapping()
     end
 end
 
@@ -3610,7 +3649,7 @@ function map.set_door(dir,status,one_way)
         add_door(map.currentRoom,dir,status)
         map.echo(string.format("Adding %s door to the %s", status, dir))
     else
-        map.echo("Not mapping",false,true)
+        map.require_mapping()
     end
 end
 
@@ -3631,7 +3670,7 @@ function map.shift_room(dir)
         centerview(map.currentRoom)
         map.echo("Shifting room",true)
     else
-        map.echo("Not mapping",false,true)
+        map.require_mapping()
     end
 end
 
@@ -3747,7 +3786,7 @@ function map.fix_portals()
         end
         map.echo("Portals Fixed")
     else
-        map.echo("Not mapping",false,true)
+        map.require_mapping()
     end
 end
 
@@ -3815,7 +3854,7 @@ function map.merge_rooms()
             map.echo("No rooms to merge here")
         end
     else
-        map.echo("Not mapping",false,true)
+        map.require_mapping()
     end
 end
 
@@ -4976,13 +5015,14 @@ function map.roomLook(input)
     echo("  ")
     echo("Clear all labels ")
     setUnderline(true)
-    echoLink("(in area)", 'map.clearLabels(' .. areanum .. ')', '', true)
+    echoLink("(in area)", 'if map.require_mapping() then map.clearLabels(' .. areanum .. ') end', '', true)
     setUnderline(false)
     echo(" ")
     setUnderline(true)
     echoLink(
       "(whole map)",
       [[
+    if not map.require_mapping() then return end
     if not map.clearinglabels then
       map.echo("Are you sure you want to clear all of your labels on this map? If yes, click the link again.")
       map.clearinglabels = true
@@ -5479,7 +5519,7 @@ function map.deleteArea(name, exact)
     for _, name in ipairs(ma) do
       echo("  ")
       setUnderline(true)
-      echoLink(name, [[map.deleteArea("]] .. name .. [[", true)]], "Delete " .. name, true)
+      echoLink(name, [[if map.require_mapping() then map.deleteArea("]] .. name .. [[", true) end]], "Delete " .. name, true)
       setUnderline(false)
       echo("\n")
     end
@@ -5715,7 +5755,7 @@ function map.areaLabels(where, exact)
       echoLink(
         'delete',
         string.format(
-          'local ok, err = deleteMapLabel(%d, %d); if ok then map.echo("Deleted label #' .. labelid .. '") else map.echo(err, false, true) end', areaid, labelid
+          'if not map.require_mapping() then return end local ok, err = deleteMapLabel(%d, %d); if ok then map.echo("Deleted label #' .. labelid .. '") else map.echo(err, false, true) end', areaid, labelid
         ),
         "Delete label #" .. labelid .. " from " .. getRoomAreaName(areaid)
       )
