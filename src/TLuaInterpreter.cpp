@@ -835,11 +835,12 @@ int TLuaInterpreter::dirToNumber(lua_State* L, int position)
 int TLuaInterpreter::denyCurrentSend(lua_State* L)
 {
     Host& host = getHostFromLua(L);
-    // Outside a handler there is no command to deny, and a refusal left armed would drop an unrelated later send
-    if (host.mTelnet.dispatchingSendRequest()) {
-        host.mAllowToSendCommand = false;
+    if (!host.mTelnet.dispatchingSendRequest()) {
+        return warnArgumentValue(L, __func__, "no command is being sent, call it from a sysDataSendRequest event handler");
     }
-    return 0;
+    host.mAllowToSendCommand = false;
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getProfileName

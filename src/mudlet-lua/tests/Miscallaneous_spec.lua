@@ -2756,8 +2756,8 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         return containsWrapped(textFrom(mark), "Tried to send '" .. command)
       end
 
-      -- checked in every spec: without it a silent deny would pass even if the
-      -- warning had stopped being posted at all
+      -- for every spec that expects a command to be stopped: without it a silent
+      -- deny would pass even if the warning had stopped being posted at all
       local function assertProbeWorks()
         clearWarning()
         local mark = getLastLineNumber("main")
@@ -2777,14 +2777,17 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         restore()
       end)
 
-      it("returns nothing", function()
-        assert.equals(0, select('#', denyCurrentSend()))
+      it("returns nil and a message outside a send request handler", function()
+        local ok, err = denyCurrentSend()
+        assert.is_nil(ok)
+        assert.is_true(contains(err, "sysDataSendRequest"), tostring(err))
       end)
 
       it("stops the command its send request handler is processing, and only that one", function()
+        local returned
         local handler = registerAnonymousEventHandler("sysDataSendRequest", function(_, sending)
           if sending:find("^mudletSpecDenied") then
-            denyCurrentSend()
+            returned = denyCurrentSend()
           end
         end)
         finally(function() killAnonymousEventHandler(handler) end)
@@ -2793,7 +2796,23 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         send("mudletSpecDenied" .. unencodable, false)
         local deniedSent = sentSince(mark, "mudletSpecDenied")
         assertProbeWorks()
+        assert.is_true(returned)
         assert.is_false(deniedSent, "the denied command was sent anyway")
+      end)
+
+      it("does not let a send its handler denies stop the command being handled", function()
+        local handler = registerAnonymousEventHandler("sysDataSendRequest", function(_, sending)
+          if sending:find("^mudletSpecNestedDenied") then
+            denyCurrentSend()
+          elseif sending:find("^mudletSpecOuterAllowed") then
+            send("mudletSpecNestedDenied", false)
+          end
+        end)
+        finally(function() killAnonymousEventHandler(handler) end)
+
+        local mark = getLastLineNumber("main")
+        send("mudletSpecOuterAllowed" .. unencodable, false)
+        assert.is_true(sentSince(mark, "mudletSpecOuterAllowed"), "the nested send's deny stopped the command being handled")
       end)
 
       describe("outside a send request handler", function()
@@ -2873,11 +2892,14 @@ describe("Tests C++ functions in the Miscallaneous category", function()
 
       describe("in a send request handler that expands an alias", function()
         -- the warning goes out once per encoding, so the alias clears it after
-        -- sending, for the denied command to be seen if it slipped through
+        -- sending, for the denied command to be seen if it slipped through;
+        -- an assert in the alias would only reach the error console
+        local warningCleared
         local function replacingAlias(denyFirst)
+          warningCleared = false
           local replacement = tempAlias("^mudletSpecReplacement$", function()
             send("mudletSpecReplacementSent" .. unencodable, false)
-            clearWarning()
+            warningCleared = setServerEncoding(getServerEncoding() == "ISO 8859-1" and "ISO 8859-2" or "ISO 8859-1")
           end)
           local handler = registerAnonymousEventHandler("sysDataSendRequest", function(_, sending)
             if sending:find("^mudletSpecOriginal") then
@@ -2905,6 +2927,7 @@ describe("Tests C++ functions in the Miscallaneous category", function()
             local replacementSent = sentSince(mark, "mudletSpecReplacementSent")
             local originalSent = sentSince(mark, "mudletSpecOriginal")
             assertProbeWorks()
+            assert.is_true(warningCleared, "the alias could not clear the warning, so the original's send would go unseen")
             assert.is_true(replacementSent, "the replacement the alias sent was blocked")
             assert.is_false(originalSent, "the denied command was sent anyway")
           end)

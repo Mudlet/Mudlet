@@ -250,7 +250,6 @@ private:
             serverSaysEcho(TN_WONT);
         }
         mpHost->setRemoteEchoingActive(false);
-        mpHost->mAllowToSendCommand = true;
         mpHost->mAutoClearCommandLineAfterSend = false;
         runDeferredDeletes();
         commandLine()->clear();
