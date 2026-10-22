@@ -232,8 +232,15 @@ int TLuaInterpreter::getCustomLines1(lua_State* L)
 int TLuaInterpreter::getExitWeights(lua_State* L)
 {
     int roomID = getVerifiedInt(L, __func__, 1, "roomID");
+    bool fullErrorReporting = false;
+    if (lua_gettop(L) > 1) {
+        fullErrorReporting = getVerifiedBool(L, __func__, 2, "enableFullErrorReporting {default = false}", true);
+    }
     Host& host = getHostFromLua(L);
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomID);
+    if (!pR && fullErrorReporting) {
+        return warnArgumentValue(L, __func__, csmInvalidRoomID.arg(roomID));
+    }
     lua_newtable(L);
     if (pR) {
         QStringList keys = pR->getExitWeights().keys();
@@ -1995,9 +2002,16 @@ int TLuaInterpreter::getMapLabel(lua_State* L)
 int TLuaInterpreter::getMapLabels(lua_State* L)
 {
     const int area = getVerifiedInt(L, __func__, 1, "areaID");
+    bool fullErrorReporting = false;
+    if (lua_gettop(L) > 1) {
+        fullErrorReporting = getVerifiedBool(L, __func__, 2, "enableFullErrorReporting {default = false}", true);
+    }
     const Host& host = getHostFromLua(L);
-    lua_newtable(L);
     auto pA = host.mpMap->mpRoomDB->getArea(area);
+    if (!pA && fullErrorReporting) {
+        return warnArgumentValue(L, __func__, qsl("areaID %1 does not exist").arg(area));
+    }
+    lua_newtable(L);
     if (pA && !pA->mMapLabels.isEmpty()) {
         QMapIterator<int, TMapLabel> it(pA->mMapLabels);
         while (it.hasNext()) {
@@ -4529,11 +4543,18 @@ int TLuaInterpreter::setRoomWeight(lua_State* L)
 {
     const int id = getVerifiedInt(L, __func__, 1, "roomID");
     const int w = getVerifiedInt(L, __func__, 2, "weight");
+    bool fullErrorReporting = false;
+    if (lua_gettop(L) > 2) {
+        fullErrorReporting = getVerifiedBool(L, __func__, 3, "enableFullErrorReporting {default = false}", true);
+    }
 
     const Host& host = getHostFromLua(L);
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(id);
     if (!pR) {
         return warnArgumentValue(L, __func__, csmInvalidRoomID.arg(id));
+    }
+    if (fullErrorReporting && w < 1) {
+        return warnArgumentValue(L, __func__, qsl("weight %1 is outside of the usable range of 1 to %2").arg(QString::number(w), QString::number(std::numeric_limits<int>::max())));
     }
 
     pR->setWeight(w);
