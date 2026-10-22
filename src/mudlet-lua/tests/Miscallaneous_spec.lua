@@ -2800,18 +2800,19 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         assert.is_false(deniedSent, "the denied command was sent anyway")
       end)
 
-      it("does not let a send its handler denies stop the command being handled", function()
+      it("keeps the deny of a send made by a handler to that send", function()
         local handler = registerAnonymousEventHandler("sysDataSendRequest", function(_, sending)
           if sending:find("^mudletSpecNestedDenied") then
             denyCurrentSend()
           elseif sending:find("^mudletSpecOuterAllowed") then
-            send("mudletSpecNestedDenied", false)
+            send("mudletSpecNestedDenied" .. unencodable, false)
           end
         end)
         finally(function() killAnonymousEventHandler(handler) end)
 
         local mark = getLastLineNumber("main")
         send("mudletSpecOuterAllowed" .. unencodable, false)
+        assert.is_false(sentSince(mark, "mudletSpecNestedDenied"), "the nested send was sent although its handler denied it")
         assert.is_true(sentSince(mark, "mudletSpecOuterAllowed"), "the nested send's deny stopped the command being handled")
       end)
 
