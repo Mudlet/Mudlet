@@ -2280,10 +2280,6 @@ void Host::send(QString cmd, bool wantPrint, bool dontExpandAliases)
 
         if (!mAliasUnit.processDataStream(command)) {
             mTelnet.sendData(command, true, true);
-        } else if (!mTelnet.dispatchingSendRequest()) {
-            // A deny left by an alias that sent nothing would swallow the next command. Under a sysDataSendRequest
-            // handler every pass, nested or not, keeps it for the next send: the handled command, unless the handler sends first
-            mAllowToSendCommand = true;
         }
     }
 }
@@ -7634,9 +7630,6 @@ bool Host::sendPasswordEntry(QString&& text)
     QString line = std::move(text);
     // For the GMCP sign-in path, as send() does
     mUserSentInputThisConnection = true;
-    // A denyCurrentSend() made outside a handler leaves a stale refusal that
-    // would drop the password without a word
-    mAllowToSendCommand = true;
     // A game command, so it arms character-at-a-time detection and the mask
     // safety timeout as a command line's line does
     const bool sent = mTelnet.sendData(line, false, true);

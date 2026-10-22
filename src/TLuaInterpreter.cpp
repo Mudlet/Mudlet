@@ -835,7 +835,10 @@ int TLuaInterpreter::dirToNumber(lua_State* L, int position)
 int TLuaInterpreter::denyCurrentSend(lua_State* L)
 {
     Host& host = getHostFromLua(L);
-    host.mAllowToSendCommand = false;
+    // Outside a handler there is no command to deny, and a refusal left armed would drop an unrelated later send
+    if (host.mTelnet.dispatchingSendRequest()) {
+        host.mAllowToSendCommand = false;
+    }
     return 0;
 }
 
