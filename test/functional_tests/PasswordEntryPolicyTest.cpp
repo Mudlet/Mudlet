@@ -467,7 +467,8 @@ private slots:
                            "aliasFired = ''\n"
                            "command = 'sentinel'\n"
                            "policyHandlerId = registerAnonymousEventHandler('sysDataSendRequest', function(_, cmd) sawSendRequest = cmd end)\n"
-                           "policyAliasId = tempAlias('^x', [[aliasFired = 'yes']])\n")));
+                           "policyAliasId = tempAlias('^x', [[aliasFired = 'yes']])\n"
+                           "denyCurrentSend()\n")));
         const auto tidy = qScopeGuard([this]() {
             runLua(qsl("killAnonymousEventHandler(policyHandlerId)\nkillAlias(policyAliasId)\n"));
         });

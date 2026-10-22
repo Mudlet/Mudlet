@@ -2740,12 +2740,8 @@ describe("Tests C++ functions in the Miscallaneous category", function()
     end)
 
     describe("Tests the functionality of denyCurrentSend", function()
-      -- Nothing goes on the wire offline, so what makes a send observable is the
-      -- warning Mudlet posts, once per encoding, when a command it cannot encode
-      -- has been allowed. Matching the warning's text keeps the echo of a blocked
-      -- command from passing for a sent one.
-      -- U+4E00, which no ISO 8859 encoding can represent
-      local unencodable = "\228\184\128"
+      -- Offline, an allowed send shows only as the once-per-encoding warning for a command it cannot encode
+      local unencodable = "\228\184\128" -- U+4E00, in no ISO 8859 encoding
       local restore, originalMode
 
       local function clearWarning()
@@ -2787,7 +2783,7 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         local returned
         local handler = registerAnonymousEventHandler("sysDataSendRequest", function(_, sending)
           if sending:find("^mudletSpecDenied") then
-            returned = denyCurrentSend()
+            returned = select('#', denyCurrentSend())
           end
         end)
         finally(function() killAnonymousEventHandler(handler) end)
@@ -2796,8 +2792,19 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         send("mudletSpecDenied" .. unencodable, false)
         local deniedSent = sentSince(mark, "mudletSpecDenied")
         assertProbeWorks()
-        assert.is_true(returned)
+        assert.equals(0, returned)
         assert.is_false(deniedSent, "the denied command was sent anyway")
+      end)
+
+      it("lets a one-shot handler named by string deny one command and go", function()
+        local handler = registerAnonymousEventHandler("sysDataSendRequest", "denyCurrentSend", true)
+        finally(function() killAnonymousEventHandler(handler) end)
+
+        local mark = getLastLineNumber("main")
+        send("mudletSpecOneShotDenied" .. unencodable, false)
+        local deniedSent = sentSince(mark, "mudletSpecOneShotDenied")
+        assertProbeWorks()
+        assert.is_false(deniedSent, "the one-shot handler did not deny the command")
       end)
 
       it("keeps the deny of a send made by a handler to that send", function()
@@ -2892,9 +2899,8 @@ describe("Tests C++ functions in the Miscallaneous category", function()
       end)
 
       describe("in a send request handler that expands an alias", function()
-        -- the warning goes out once per encoding, so the alias clears it after
-        -- sending, for the denied command to be seen if it slipped through;
-        -- an assert in the alias would only reach the error console
+        -- the alias re-arms the warning for the original to show if it slips through;
+        -- an assert there would only reach the error console
         local warningCleared
         local function replacingAlias(denyFirst)
           warningCleared = false

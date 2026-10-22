@@ -839,8 +839,8 @@ int TLuaInterpreter::denyCurrentSend(lua_State* L)
         return warnArgumentValue(L, __func__, "no command is being sent, call it from a sysDataSendRequest event handler");
     }
     host.mAllowToSendCommand = false;
-    lua_pushboolean(L, true);
-    return 1;
+    // A truthy return would keep a one-shot handler named "denyCurrentSend" registered
+    return 0;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getProfileName
