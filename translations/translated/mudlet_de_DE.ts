@@ -21700,12 +21700,12 @@ Du kannst sie verwenden, aber es könnte Probleme mit der Ausrichtung von Textsp
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4804"/>
       <source>always</source>
-      <translation type="unfinished"/>
+      <translation>immer</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4809"/>
       <source>never</source>
-      <translation type="unfinished"/>
+      <translation>niemals</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4817"/>
