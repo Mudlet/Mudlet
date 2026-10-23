@@ -21760,12 +21760,12 @@ puedes usarla, pero podría haber problemas al alinear columnas de texto</transl
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4804"/>
       <source>always</source>
-      <translation type="unfinished"/>
+      <translation>siempre</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4809"/>
       <source>never</source>
-      <translation type="unfinished"/>
+      <translation>nunca</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4817"/>
