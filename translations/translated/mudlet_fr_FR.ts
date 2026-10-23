@@ -6335,13 +6335,13 @@ in main console!</source>
       <location filename="../src/TMedia.cpp" line="3080"/>
       <source>up</source>
       <extracomment>A direction a sound comes from, shown in brackets after its caption, e.g. &quot;[footsteps (up) plays]&quot;</extracomment>
-      <translation type="unfinished"/>
+      <translation>haut</translation>
     </message>
     <message>
       <location filename="../src/TMedia.cpp" line="3084"/>
       <source>down</source>
       <extracomment>A direction a sound comes from, shown in brackets after its caption, e.g. &quot;[footsteps (down) plays]&quot;</extracomment>
-      <translation type="unfinished"/>
+      <translation>bas</translation>
     </message>
     <message>
       <location filename="../src/TMedia.cpp" line="3088"/>
