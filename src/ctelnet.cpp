@@ -1834,18 +1834,22 @@ bool cTelnet::sendData(QString& data, const bool permitDataSendRequestEvent, con
 {
     data.remove(QChar::LineFeed);
 
+    bool allowed = true;
     if (Q_LIKELY(permitDataSendRequestEvent)) {
         TEvent event{};
         event.mArgumentList.append(qsl("sysDataSendRequest"));
         event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         event.mArgumentList.append(data);
         event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        // A deny binds to the command being dispatched: a handler's own send gets a fresh one and must not spend this one
+        const bool outerAllowed = std::exchange(mpHost->mAllowToSendCommand, true);
         ++mSendRequestDispatchDepth;
         mpHost->raiseEvent(event);
         --mSendRequestDispatchDepth;
+        allowed = std::exchange(mpHost->mAllowToSendCommand, outerAllowed);
     }
 
-    if (mpHost->mAllowToSendCommand) {
+    if (allowed) {
         std::string outData;
         // The event is withheld only for passwords
         const auto encodingWarning = [&]() {
@@ -1941,7 +1945,6 @@ bool cTelnet::sendData(QString& data, const bool permitDataSendRequestEvent, con
 
         return sent;
     }
-    mpHost->mAllowToSendCommand = true;
     return false;
 }
 

@@ -835,7 +835,11 @@ int TLuaInterpreter::dirToNumber(lua_State* L, int position)
 int TLuaInterpreter::denyCurrentSend(lua_State* L)
 {
     Host& host = getHostFromLua(L);
+    if (!host.mTelnet.dispatchingSendRequest()) {
+        return warnArgumentValue(L, __func__, "no command is being sent, call it from a sysDataSendRequest event handler");
+    }
     host.mAllowToSendCommand = false;
+    // A truthy return would keep a one-shot handler named "denyCurrentSend" registered
     return 0;
 }
 
