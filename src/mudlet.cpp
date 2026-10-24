@@ -4355,7 +4355,15 @@ void mudlet::growDockToSizeHint(QDockWidget* dock, bool onlyFromMinimum)
 {
     using namespace std::chrono_literals;
     QTimer::singleShot(0ms, dock, [this, dock, onlyFromMinimum]() {
-        if (dock->parentWidget() != this || dock->isFloating() || !dock->isVisible()) {
+        if (dock->parentWidget() != this || dock->isFloating()) {
+            return;
+        }
+        // Hidden again before this ran, it would otherwise be left the area's old depth when next shown
+        if (!dock->isVisible()) {
+            const auto retry = [this, dock, onlyFromMinimum]() {
+                growDockToSizeHint(dock, onlyFromMinimum);
+            };
+            connect(dock, &QDockWidget::visibilityChanged, this, retry, Qt::SingleShotConnection);
             return;
         }
         layout()->activate();
@@ -10039,6 +10047,8 @@ void mudlet::transferDockWidgetFromDetachedWindow(const QString& profileName, TD
 
     // Add the dock widget to the main window
     addDockWidget(Qt::RightDockWidgetArea, detachedDockWidget);
+    // Made in the detached window, or disconnected by transferDockWidgetToDetachedWindow(), it has no such hook
+    growDockToSizeHintWhenShown(detachedDockWidget);
 
     // Transfer to main window's tracking map
     mMainWindowDockWidgetMap[mapKey] = detachedDockWidget;
@@ -10108,6 +10118,7 @@ void mudlet::transferDockWidgetFromDetachedWindow(const QString& profileName, TD
     if (intendedVisible) {
         // Update main window's global reference if it's now visible
         mpCurrentMapDockWidget = detachedDockWidget;
+        growDockToSizeHint(detachedDockWidget, true);
     }
 
     // Update the mapper's parent
