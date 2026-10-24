@@ -4076,6 +4076,10 @@ describe("Tests the text-to-speech Lua API", function()
           assert.equals(before, setter.get())
         end
         assert.same({}, changes)
+        -- success has to be told apart from that refusal by its first value
+        for _, setter in ipairs(setters) do
+          assert.is_true(setter.set(setter.get()), setter.name)
+        end
       end)
 
       it("ttsGetQueue returns a table and false for out-of-range indexes", function()

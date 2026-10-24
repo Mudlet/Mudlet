@@ -528,7 +528,8 @@ int TLuaInterpreter::ttsSetPitch(lua_State* L)
     event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
     HostManager::self()->postInterHostEvent(NULL, event, true);
 
-    return 0;
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#ttsSetRate
@@ -557,7 +558,8 @@ int TLuaInterpreter::ttsSetRate(lua_State* L)
     event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
     HostManager::self()->postInterHostEvent(NULL, event, true);
 
-    return 0;
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#ttsSetVolume
@@ -586,7 +588,8 @@ int TLuaInterpreter::ttsSetVolume(lua_State* L)
     event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
     HostManager::self()->postInterHostEvent(NULL, event, true);
 
-    return 0;
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#ttsSetVoiceByIndex
