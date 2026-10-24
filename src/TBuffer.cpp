@@ -2459,8 +2459,7 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
     const int lastValidLine = static_cast<int>(lineBuffer.size()) - 1;
     const int wrapStartLine = (lastValidLine >= 0) ? std::min(passLineAfterTriggers, lastValidLine) : 0;
     // Spares wrapLine()'s setup for the usual last line that fits; one with no text or no TChars still goes
-    // through, as wrapLine() rebuilds it. The width must stay getWrapInfo()'s widthAvailable for mWrapAt,
-    // which a last line, having no continuation, always measures with the indent still to come.
+    // through, as wrapLine() rebuilds it. The width must not exceed getWrapInfo()'s widthAvailable for mWrapAt.
     const bool fitsAsIs = wrapStartLine == lastValidLine && !lineBuffer.at(wrapStartLine).isEmpty() && !buffer[wrapStartLine].empty()
                           && fitsUnwrapped(lineBuffer.at(wrapStartLine), wrapsFromPreviousLine(wrapStartLine) ? mWrapAt : mWrapAt - clampedWrapIndent(mWrapIndent, mWrapAt));
     const int addedLines = fitsAsIs ? 0 : wrapLine(wrapStartLine, mWrapAt, mWrapIndent, mWrapHangingIndent);
@@ -6250,10 +6249,10 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
         }
     }
 
-    // An earlier wrap split, and so indented, a line with a continuation below; one a line feed started since is unindented.
-    // Safe to call mid-loop: the loop leaves the old lines in the buffer until it is done.
+    // Leading spaces alone can't tell padding from text, so this needs the record an earlier wrap left, and the
+    // spaces too in case an edit has since removed them. Safe mid-loop: the old lines stay in the buffer until it is done.
     const auto carriesIndent = [this, indent](const int lineNumber) {
-        return indent > 0 && wrapsFromPreviousLine(lineNumber + 1) && wrapIndentWidth(lineNumber) >= indent;
+        return indent > 0 && wrapGapBuffer.at(lineNumber) >= indent && wrapIndentWidth(lineNumber) >= indent;
     };
 
     // Leading lines that getWrapInfo() finds no break points in stay where they
@@ -6373,7 +6372,8 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
             if (newBufferCharPosition < w.firstChar) {
                 newBufferCharPosition = std::min(w.firstChar, sourceSize);
             }
-            if (w.needsIndent && newBufferCharPosition < sourceSize) {
+            const bool addsIndent = w.needsIndent && newBufferCharPosition < sourceSize;
+            if (addsIndent) {
                 // indentation takes the styling of the character it precedes, so
                 // that it reads as part of the same run of text
                 const TChar& indentSpace = sourceChars[newBufferCharPosition];
@@ -6408,9 +6408,14 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
             promptList.append(isPrompt);
             // getWrapInfo() only ever skips spaces between the segments of a
             // line, and the first segment carries over the source line's own gap
+            // (or, starting a paragraph, its own indent)
             int wrapGap = 0;
             if (!w.isNewline) {
                 wrapGap = (previousSegmentEnd < 0) ? wrapGapBuffer.at(i) : w.firstChar - previousSegmentEnd;
+            } else if (addsIndent) {
+                wrapGap = indent;
+            } else if (previousSegmentEnd < 0) {
+                wrapGap = wrapGapBuffer.at(i);
             }
             wrapGapList.append(static_cast<quint16>(std::min<int>(wrapGap, std::numeric_limits<quint16>::max())));
             previousSegmentEnd = w.lastChar;

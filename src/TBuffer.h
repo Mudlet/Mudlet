@@ -541,7 +541,8 @@ public:
     // stores a boolean whenever the line is a prompt one
     QList<bool> promptBuffer;
     // stores, for a line that word wrapping split off the one before it, how
-    // many spaces the break dropped between the two - a copy puts them back
+    // many spaces the break dropped between the two - a copy puts them back;
+    // for the first line of a paragraph, how many columns of wrap indent it carries
     QList<quint16> wrapGapBuffer;
     TLinkStore mLinkStore;
     int mLinesLimit = 10000;
