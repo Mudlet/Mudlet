@@ -2851,15 +2851,19 @@ local function copy2color(name,win,str,inst)
 
       if r ~= cr or g ~= cg or b ~= cb or rb ~= crb or gb ~= cgb or bb ~= cbb or ab ~= cab then
         cr,cg,cb,crb,cgb,cbb,cab = r,g,b,rb,gb,bb,ab
-        pieces[#pieces + 1] = string.format(style, #pieces > 0 and endspan or "", r, g, b, rb, gb, bb, (ab and ab ~= 255) and "," .. ab or "")
-        -- every colour but the first comes after an <r>, which ends formatting, so restate what is on
-        for i, flag in ipairs(dechoFlags) do
-          if flags[i] then
-            pieces[#pieces + 1] = "<" .. flag[2] .. ">"
+        if html then
+          pieces[#pieces + 1] = string.format(style, #pieces > 0 and endspan or "", r, g, b, rb, gb, bb)
+        else
+          pieces[#pieces + 1] = string.format(style, #pieces > 0 and endspan or "", r, g, b, rb, gb, bb, (ab and ab ~= 255) and "," .. ab or "")
+          -- every colour but the first comes after an <r>, which ends formatting, so restate what is on
+          for i, flag in ipairs(dechoFlags) do
+            if flags[i] then
+              pieces[#pieces + 1] = "<" .. flag[2] .. ">"
+            end
+            currentFlags[i] = flags[i]
           end
-          currentFlags[i] = flags[i]
         end
-      else
+      elseif not html then
         for i, flag in ipairs(dechoFlags) do
           if flags[i] ~= currentFlags[i] then
             pieces[#pieces + 1] = flags[i] and "<" .. flag[2] .. ">" or "</" .. flag[2] .. ">"

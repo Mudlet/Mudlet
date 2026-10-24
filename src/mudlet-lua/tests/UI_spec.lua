@@ -113,6 +113,12 @@ describe("Tests UI functions", function()
       assert.are.equal("<span style='color: rgb(255,0,0);background: rgb(0,0,0);'>struckover</span><span style='color: rgb(0,255,0);background: rgb(0,0,0);'>still over plain</span>", copy2html("testconsole"))
     end)
 
+    it("Should open the formatting a copied part of the line starts in", function()
+      decho("testconsole", "<255,0,0:0,0,0>plain <b>bold <i>both</b> italic<r>")
+
+      assert.are.equal("<255,0,0:0,0,0><b><i>both</b> ita<r>", copy2decho("testconsole", "both ita"))
+    end)
+
     describe("when the copy is echoed back with decho", function()
       local copyWindow = "uiSpecCopy2dechoRoundTrip"
 
