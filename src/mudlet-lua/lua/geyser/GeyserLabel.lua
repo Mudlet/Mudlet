@@ -107,6 +107,9 @@ function Geyser.Label:decho(message)
     return nil, err
   end
   self.message = message
+  -- the flavour is only set once the message has converted, so a message that
+  -- raises is shown plain by the next setter rather than replayed
+  self.echoType = false
   -- Override foreground with label's fgColor property if set
   if self.fgColor and self.fgColor ~= "" and self.fgColor ~= "nocolor" then
     resetFormat.foreground = Geyser.Color.hex(self.fgColor)
@@ -114,7 +117,6 @@ function Geyser.Label:decho(message)
 
   -- Convert decho formatted text to HTML, preserving label's colors
   local htmlContent = decho2html(message, resetFormat)
-  -- only once it has converted, so a message it raised on is not replayed by every setter
   self.echoType = "decho"
   self.echoMessage = message
 
@@ -163,6 +165,9 @@ function Geyser.Label:hecho(message)
     return nil, err
   end
   self.message = message
+  -- the flavour is only set once the message has converted, so a message that
+  -- raises is shown plain by the next setter rather than replayed
+  self.echoType = false
   -- Override foreground with label's fgColor property if set
   if self.fgColor and self.fgColor ~= "" and self.fgColor ~= "nocolor" then
     resetFormat.foreground = Geyser.Color.hex(self.fgColor)
@@ -170,7 +175,6 @@ function Geyser.Label:hecho(message)
 
   -- Convert hecho formatted text to HTML, preserving label's colors
   local htmlContent = hecho2html(message, resetFormat)
-  -- only once it has converted, so a message it raised on is not replayed by every setter
   self.echoType = "hecho"
   self.echoMessage = message
 
@@ -219,6 +223,9 @@ function Geyser.Label:cecho(message)
     return nil, err
   end
   self.message = message
+  -- the flavour is only set once the message has converted, so a message that
+  -- raises is shown plain by the next setter rather than replayed
+  self.echoType = false
   -- Override foreground with label's fgColor property if set
   if self.fgColor and self.fgColor ~= "" and self.fgColor ~= "nocolor" then
     resetFormat.foreground = Geyser.Color.hex(self.fgColor)
@@ -226,7 +233,6 @@ function Geyser.Label:cecho(message)
 
   -- Convert cecho formatted text to HTML, preserving label's colors
   local htmlContent = cecho2html(message, resetFormat)
-  -- only once it has converted, so a message it raised on is not replayed by every setter
   self.echoType = "cecho"
   self.echoMessage = message
 

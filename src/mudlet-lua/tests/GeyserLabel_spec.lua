@@ -800,6 +800,16 @@ describe("Tests functionality of Geyser.Label widget state", function()
       assert.is_truthy(reported:find("label 'glsFlavour' does not exist", 1, true), reported)
     end)
 
+    it("does not replay the flavour before a call that raised on the same string", function()
+      label:cecho("<red>HP")
+      label.fgColor = "notacolour"
+      assert.is_false((pcall(label.decho, label, "<red>HP")))
+      label:setFgColor("white")
+      local text = getLabelText("glsFlavour")
+      assert.is_nil(text:find("rgb(255, 0, 0)", 1, true), text)
+      assert.is_truthy(text:find("<red>HP", 1, true), text)
+    end)
+
     it("records the message echo was given when its format raises", function()
       label:hecho("#ff0000red")
       assert.is_false((pcall(label.echo, label, "new text", nil, 5)))
@@ -837,13 +847,15 @@ describe("Tests functionality of Geyser.Label widget state", function()
         assert.is_true((pcall(label.setFontSize, label, 12)))
         local text = getLabelText("glsFlavour")
         assert.is_truthy(text:find("font%-size: 12pt"), text)
-        assert.is_truthy(text:find("42", 1, true), text)
+        assert.is_truthy(text:find(">42</div>", 1, true), text)
       end)
 
       it(string.format("records the message %s was given when the label's colour raises", flavour.name), function()
         label.fgColor = "notacolour"
         assert.is_false((pcall(label[flavour.name], label, flavour.message)))
         assert.are.equal(flavour.message, label.message)
+        label:setFgColor("white")
+        assert.is_truthy(getLabelText("glsFlavour"):find(flavour.message, 1, true))
       end)
 
       it(string.format("does not recurse when an overridden %s calls a setter", flavour.name), function()
