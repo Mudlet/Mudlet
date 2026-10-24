@@ -508,6 +508,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     mpMainConsoleModel->setWrapAt(mWrapAt);
     mpMainConsoleModel->setIndentCount(mWrapIndentCount);
     mpMainConsoleModel->setHangingIndentCount(mWrapHangingIndentCount);
+    mpNullConsoleFrontend->makeMainCommandLine(std::get<1>(getCmdLineSettings(enums::MainCommandLine, QString())));
 }
 
 Host::~Host()
@@ -7306,28 +7307,16 @@ std::optional<int> Host::windowFontSize(const QString& name) const
 
 std::optional<QString> Host::commandLineText(const QString& name) const
 {
-    // The main command line's text is a view's
-    if (!hasConsoleView() && (name.isEmpty() || name == QLatin1String("main"))) {
-        return {};
-    }
     return mWindowRegistry.commandLineText(name);
 }
 
 std::optional<QString> Host::commandLineStyleSheet(const QString& name) const
 {
-    // The main command line's sheet is a view's
-    if (!hasConsoleView() && (name.isEmpty() || name == QLatin1String("main"))) {
-        return {};
-    }
     return mWindowRegistry.commandLineStyleSheet(name);
 }
 
 std::optional<bool> Host::commandLineSavesHistory(const QString& name) const
 {
-    // The main command line's setting is a view's
-    if (!hasConsoleView() && (name.isEmpty() || name == QLatin1String("main"))) {
-        return {};
-    }
     return mWindowRegistry.commandLineSavesHistory(name);
 }
 
@@ -7533,11 +7522,6 @@ void Host::editorThemeChanged()
 
 void Host::sendCmdLine(const QString& cmd)
 {
-    if (!hasConsoleView()) {
-        qWarning() << "Host::sendCmdLine(...) ERROR - No active command line available.";
-        return;
-    }
-
     consoleFrontend()->setCommandLineText(cmd);
 }
 

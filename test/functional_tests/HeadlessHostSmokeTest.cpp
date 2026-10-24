@@ -2645,7 +2645,7 @@ end
         QVERIFY2(QApplication::topLevelWidgets().isEmpty(), "Making the command lines created a widget.");
     }
 
-    // The answers are those of the same Lua run in the GUI self-test profile, but for those about the main command line
+    // The answers are those of the same Lua run in the GUI self-test profile
     void test_headlessCommandLineSettingsContract()
     {
         const QString hostname = qsl("Test-Headless-Host-Command-Line-Settings");
@@ -3104,7 +3104,7 @@ local ok, err = pcall(function()
   closeUserWindow("csWindow")
   headlessCommandLineSettingsAnswers = table.concat(answers, "\n")
 
-  -- The main command line, which a view has
+  -- The main command line
   answers = {}
   step("historyNoName", getSaveCommandHistory)
   step("historyMain", getSaveCommandHistory, "main")
@@ -3306,17 +3306,16 @@ headlessCommandLineSettings = ok and "ok" or tostring(err)
                                   qsl("disableBuffer=[1]true"),
                                   qsl("disableLabel=[2]nil:command line \"csLabel\" not found")};
         QCOMPARE(luaGlobalString(host, "headlessCommandLineSettingsAnswers"), answers.join(QLatin1Char('\n')));
-        // The main command line's text and settings are a view's, so it is not found here where the GUI answers for it
-        const QStringList mainAnswers{qsl("historyNoName=[2]nil:command line \"main\" not found"),
-                                      qsl("historyMain=[2]nil:command line \"main\" not found"),
-                                      qsl("setHistoryNoName=[2]nil:command line \"main\" not found"),
-                                      qsl("setHistoryMain=[2]nil:command line \"main\" not found"),
-                                      qsl("suggestMain=[2]nil:command line \"main\" not found"),
-                                      qsl("suggestNoName=[2]nil:command line \"\" not found"),
-                                      qsl("blacklistMain=[2]nil:command line \"main\" not found"),
-                                      qsl("selectMain=[2]nil:command line \"main\" not found"),
-                                      qsl("menuMain=[2]nil:command line \"main\" not found"),
-                                      qsl("unmenuMain=[2]nil:command line \"main\" not found")};
+        const QStringList mainAnswers{qsl("historyNoName=[2]true:enabled (500 lines will be saved)"),
+                                      qsl("historyMain=[2]true:enabled (500 lines will be saved)"),
+                                      qsl("setHistoryNoName=[1]true"),
+                                      qsl("setHistoryMain=[1]true"),
+                                      qsl("suggestMain=[0]"),
+                                      qsl("suggestNoName=[0]"),
+                                      qsl("blacklistMain=[0]"),
+                                      qsl("selectMain=[1]true"),
+                                      qsl("menuMain=[1]true"),
+                                      qsl("unmenuMain=[1]true")};
         QCOMPARE(luaGlobalString(host, "headlessCommandLineMainAnswers"), mainAnswers.join(QLatin1Char('\n')));
 
         // A command line removed before deferred deletes run still writes its setting, as its TCommandLine
@@ -3548,7 +3547,7 @@ deleteMiniConsole("csReset")
         HostManager::self()->deleteHost(hostname);
     }
 
-    // The answers are those of the same Lua run in the GUI self-test profile, but for those about the main command line
+    // The answers are those of the same Lua run in the GUI self-test profile
     void test_headlessCommandLineStyleSheetContract()
     {
         const QString hostname = qsl("Test Headless Host Command Line Style");
@@ -3886,12 +3885,7 @@ headlessCmdLineStyle = ok and "ok" or tostring(err)
             }
         }
         QVERIFY2(mismatches.isEmpty(), qPrintable(mismatches.join(QChar::LineFeed)));
-        // The main command line is a view's, so it is not found here where the GUI answers for it
-        const QStringList mainAnswers{qsl("main=[2]nil:the profile has no main window"),
-                                      qsl("mainGet=[2]nil:command-line name 'main' not found"),
-                                      qsl("noName=[2]nil:the profile has no main window"),
-                                      qsl("empty=[2]nil:the profile has no main window"),
-                                      qsl("nilGet=[2]nil:command-line name 'main' not found")};
+        const QStringList mainAnswers{qsl("main=[1]true"), qsl("mainGet=[1]min-height: 5px"), qsl("noName=[1]true"), qsl("empty=[1]true"), qsl("nilGet=[1]min-height: 5px")};
         QCOMPARE(luaGlobalString(host, "headlessCmdLineStyleMainAnswers"), mainAnswers.join(QLatin1Char('\n')));
 
         // A new command line's sheet is built from the profile's command line background as TCommandLine's constructor
@@ -3904,6 +3898,289 @@ enableCommandLine("csColourMini")
 headlessCmdLineColours = getCmdLineStyleSheet("csColour") .. "|" .. getCmdLineStyleSheet("csColourMini")
 )lua")));
         QCOMPARE(luaGlobalString(host, "headlessCmdLineColours"), qsl("QPlainTextEdit{background-color: rgb(10, 20, 30);}|QPlainTextEdit{background-color: rgb(10, 20, 30);}"));
+        HostManager::self()->deleteHost(hostname);
+    }
+
+    // The answers are those of the same Lua run in the GUI self-test profile
+    void test_headlessMainCommandLineContract()
+    {
+        const QString hostname = qsl("Test-Headless-Host-Main-Command-Line");
+        // Opened rather than added, as saveProfile() refuses a profile that was never loaded
+        Host* host = HostManager::self()->openProfile(hostname, false);
+        QVERIFY2(host, "The profile did not open.");
+        QVERIFY(!host->hasConsoleView());
+        QVERIFY2(host->mLoadedOk, qPrintable(host->mProfileLoadError));
+
+        const bool ran = host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+headlessMainCmdLine = "not run"
+local ok, err = pcall(function()
+  local function described(called, ...)
+    if not called then
+      return "raised:" .. tostring((...))
+    end
+    local count = select("#", ...)
+    local values = {}
+    for i = 1, count do
+      -- Bytes a line of answers cannot hold as they are, by number
+      values[i] = tostring((select(i, ...))):gsub("[%c\128-\255]", function(byte)
+        return "\\" .. byte:byte()
+      end)
+    end
+    return "[" .. count .. "]" .. table.concat(values, ":")
+  end
+  local answers = {}
+  local function step(label, f, ...)
+    answers[#answers + 1] = label .. "=" .. described(pcall(f, ...))
+  end
+  local startSheet = getCmdLineStyleSheet()
+  local startHistory = getSaveCommandHistory()
+  clearCmdLine()
+
+  step("get", getCmdLine)
+  step("print", printCmdLine, "one")
+  step("get.print", getCmdLine)
+  step("get.main", getCmdLine, "main")
+  step("get.empty", getCmdLine, "")
+  step("printMain", printCmdLine, "main", "a\tb\r\nc\rd\194\160e\226\128\168f\226\128\169g\0h")
+  step("get.printMain", getCmdLine)
+  step("printEmpty", printCmdLine, "", "two")
+  step("get.printEmpty", getCmdLine, "main")
+  step("printNumber", printCmdLine, 42)
+  step("get.printNumber", getCmdLine)
+  step("append", appendCmdLine, " more")
+  step("appendMain", appendCmdLine, "main", "\194\160x\n")
+  step("appendEmpty", appendCmdLine, "", "!")
+  step("get.append", getCmdLine)
+  step("select", selectCmdLineText)
+  step("selectMain", selectCmdLineText, "main")
+  step("selectEmpty", selectCmdLineText, "")
+  step("get.select", getCmdLine)
+  step("clear", clearCmdLine)
+  step("get.clear", getCmdLine)
+  step("appendToEmpty", appendCmdLine, "y")
+  step("get.appendToEmpty", getCmdLine)
+  step("clearMain", clearCmdLine, "main")
+  step("get.clearMain", getCmdLine)
+  printCmdLine("z")
+  step("clearEmpty", clearCmdLine, "")
+  step("get.clearEmpty", getCmdLine)
+  step("send", sendCmdLine, "sent\194\160line\nnext")
+  step("get.send", getCmdLine)
+  clearCmdLine()
+
+  for _, name in ipairs({"", "main"}) do
+    step("suggest." .. name, addCmdLineSuggestion, name, "word")
+    step("unsuggest." .. name, removeCmdLineSuggestion, name, "word")
+    step("clearSuggestions." .. name, clearCmdLineSuggestions, name)
+    step("blacklist." .. name, addCmdLineBlacklist, name, "word")
+    step("unblacklist." .. name, removeCmdLineBlacklist, name, "word")
+    step("clearBlacklist." .. name, clearCmdLineBlacklist, name)
+  end
+  step("suggest", addCmdLineSuggestion, "word")
+  step("unsuggest", removeCmdLineSuggestion, "word")
+  step("clearSuggestions", clearCmdLineSuggestions)
+  step("blacklist", addCmdLineBlacklist, "word")
+  step("unblacklist", removeCmdLineBlacklist, "word")
+  step("clearBlacklist", clearCmdLineBlacklist)
+
+  step("menu", addCommandLineMenuEvent, "mcItem", "mcEvent")
+  step("unmenu", removeCommandLineMenuEvent, "mcItem")
+  step("unmenuAgain", removeCommandLineMenuEvent, "mcItem")
+  step("menuMain", addCommandLineMenuEvent, "main", "mcItem", "mcEvent")
+  step("unmenuEmpty", removeCommandLineMenuEvent, "", "mcItem")
+  step("menuEmpty", addCommandLineMenuEvent, "", "mcOther", "mcEvent")
+  step("menuEmptyAgain", addCommandLineMenuEvent, "", "mcOther", "mcEvent2")
+  step("unmenuMain", removeCommandLineMenuEvent, "main", "mcOther")
+  step("unmenuMainAgain", removeCommandLineMenuEvent, "main", "mcOther")
+  createCommandLine("mcLine", 0, 0, 10, 10)
+  addCommandLineMenuEvent("mcLine", "mcShared", "mcEvent")
+  step("unmenuMainShared", removeCommandLineMenuEvent, "main", "mcShared")
+  step("unmenuLineShared", removeCommandLineMenuEvent, "mcLine", "mcShared")
+  addCommandLineMenuEvent("main", "mcMainOnly", "mcEvent")
+  step("unmenuLineMainOnly", removeCommandLineMenuEvent, "mcLine", "mcMainOnly")
+  step("unmenuMainOnly", removeCommandLineMenuEvent, "mcMainOnly")
+  printCmdLine("mcLine", "sub text")
+  printCmdLine("main text")
+  step("get.sub", getCmdLine, "mcLine")
+  step("get.mainBesideSub", getCmdLine)
+  setCmdLineStyleSheet("mcLine", "color: blue;")
+  step("sheet.mainBesideSub", getCmdLineStyleSheet)
+  setSaveCommandHistory("mcLine", false)
+  step("history.mainBesideSub", getSaveCommandHistory)
+  deleteCommandLine("mcLine")
+  clearCmdLine()
+
+  step("history", getSaveCommandHistory)
+  step("historyMain", getSaveCommandHistory, "main")
+  step("historyEmpty", getSaveCommandHistory, "")
+  step("setHistory", setSaveCommandHistory, false)
+  step("history.off", getSaveCommandHistory)
+  step("historyMain.off", getSaveCommandHistory, "main")
+  step("setHistoryMain", setSaveCommandHistory, "main")
+  step("historyMain.on", getSaveCommandHistory, "main")
+  step("setHistoryEmpty", setSaveCommandHistory, "", false)
+  step("historyEmpty.off", getSaveCommandHistory, "")
+  step("setHistoryNone", setSaveCommandHistory)
+  step("history.none", getSaveCommandHistory)
+  setSaveCommandHistory("main", startHistory ~= false)
+
+  step("sheet", getCmdLineStyleSheet)
+  step("sheetMain", getCmdLineStyleSheet, "main")
+  step("sheetEmpty", getCmdLineStyleSheet, "")
+  step("sheetNil", getCmdLineStyleSheet, nil)
+  step("setSheet", setCmdLineStyleSheet, "QPlainTextEdit { color: red; }")
+  step("sheet.set", getCmdLineStyleSheet)
+  step("setSheetMain", setCmdLineStyleSheet, "main", "color: green;")
+  step("sheet.setMain", getCmdLineStyleSheet, "main")
+  step("setSheetEmpty", setCmdLineStyleSheet, "", "")
+  step("sheet.setEmpty", getCmdLineStyleSheet, "")
+  setCmdLineStyleSheet("main", startSheet or "")
+
+  printCmdLine("kept")
+  step("echo.fed", feedTelnet, "<T_IAC><T_WILL><O_ECHO>")
+  step("echo.get", getCmdLine)
+  step("echo.print", printCmdLine, "secret")
+  step("echo.get.print", getCmdLine)
+  step("echo.append", appendCmdLine, "main", "more")
+  step("echo.clear", clearCmdLine)
+  step("echo.select", selectCmdLineText)
+  step("echo.send", sendCmdLine, "sent")
+  step("echo.get.after", getCmdLine)
+  step("echo.printMain", printCmdLine, "main", "x")
+  step("echo.ended", feedTelnet, "<T_IAC><T_WONT><O_ECHO>")
+  step("echo.get.ended", getCmdLine)
+  step("echo.print.ended", printCmdLine, "after")
+  step("echo.get.printEnded", getCmdLine)
+  clearCmdLine()
+  headlessMainCmdLineAnswers = table.concat(answers, "\n")
+end)
+headlessMainCmdLine = ok and "ok" or tostring(err)
+)lua"));
+        QVERIFY2(ran, "The Lua chunk did not run.");
+        QCOMPARE(luaGlobalString(host, "headlessMainCmdLine"), qsl("ok"));
+        const QStringList answers{qsl("get=[1]"),
+                                  qsl("print=[0]"),
+                                  qsl("get.print=[1]one"),
+                                  qsl("get.main=[1]one"),
+                                  qsl("get.empty=[1]one"),
+                                  qsl("printMain=[0]"),
+                                  qsl("get.printMain=[1]a\\9b\\10c\\10d e\\10f\\10g"),
+                                  qsl("printEmpty=[0]"),
+                                  qsl("get.printEmpty=[1]two"),
+                                  qsl("printNumber=[0]"),
+                                  qsl("get.printNumber=[1]42"),
+                                  qsl("append=[0]"),
+                                  qsl("appendMain=[0]"),
+                                  qsl("appendEmpty=[0]"),
+                                  qsl("get.append=[1]42 more x\\10!"),
+                                  qsl("select=[1]true"),
+                                  qsl("selectMain=[1]true"),
+                                  qsl("selectEmpty=[1]true"),
+                                  qsl("get.select=[1]42 more x\\10!"),
+                                  qsl("clear=[0]"),
+                                  qsl("get.clear=[1]"),
+                                  qsl("appendToEmpty=[0]"),
+                                  qsl("get.appendToEmpty=[1]y"),
+                                  qsl("clearMain=[0]"),
+                                  qsl("get.clearMain=[1]"),
+                                  qsl("clearEmpty=[0]"),
+                                  qsl("get.clearEmpty=[1]"),
+                                  qsl("send=[1]true"),
+                                  qsl("get.send=[1]sent line\\10next"),
+                                  qsl("suggest.=[0]"),
+                                  qsl("unsuggest.=[0]"),
+                                  qsl("clearSuggestions.=[0]"),
+                                  qsl("blacklist.=[0]"),
+                                  qsl("unblacklist.=[0]"),
+                                  qsl("clearBlacklist.=[0]"),
+                                  qsl("suggest.main=[0]"),
+                                  qsl("unsuggest.main=[0]"),
+                                  qsl("clearSuggestions.main=[0]"),
+                                  qsl("blacklist.main=[0]"),
+                                  qsl("unblacklist.main=[0]"),
+                                  qsl("clearBlacklist.main=[0]"),
+                                  qsl("suggest=[0]"),
+                                  qsl("unsuggest=[0]"),
+                                  qsl("clearSuggestions=[0]"),
+                                  qsl("blacklist=[0]"),
+                                  qsl("unblacklist=[0]"),
+                                  qsl("clearBlacklist=[0]"),
+                                  qsl("menu=[1]true"),
+                                  qsl("unmenu=[1]true"),
+                                  qsl("unmenuAgain=[2]nil:cannot remove 'mcItem', menu item does not exist"),
+                                  qsl("menuMain=[1]true"),
+                                  qsl("unmenuEmpty=[1]true"),
+                                  qsl("menuEmpty=[1]true"),
+                                  qsl("menuEmptyAgain=[1]true"),
+                                  qsl("unmenuMain=[1]true"),
+                                  qsl("unmenuMainAgain=[2]nil:cannot remove 'mcOther', menu item does not exist"),
+                                  qsl("unmenuMainShared=[2]nil:cannot remove 'mcShared', menu item does not exist"),
+                                  qsl("unmenuLineShared=[1]true"),
+                                  qsl("unmenuLineMainOnly=[2]nil:cannot remove 'mcMainOnly', menu item does not exist"),
+                                  qsl("unmenuMainOnly=[1]true"),
+                                  qsl("get.sub=[1]sub text"),
+                                  qsl("get.mainBesideSub=[1]main text"),
+                                  qsl("sheet.mainBesideSub=[1]"),
+                                  qsl("history.mainBesideSub=[2]true:enabled (500 lines will be saved)"),
+                                  qsl("history=[2]true:enabled (500 lines will be saved)"),
+                                  qsl("historyMain=[2]true:enabled (500 lines will be saved)"),
+                                  qsl("historyEmpty=[2]true:enabled (500 lines will be saved)"),
+                                  qsl("setHistory=[1]true"),
+                                  qsl("history.off=[2]false:disabled"),
+                                  qsl("historyMain.off=[2]false:disabled"),
+                                  qsl("setHistoryMain=[1]true"),
+                                  qsl("historyMain.on=[2]true:enabled (500 lines will be saved)"),
+                                  qsl("setHistoryEmpty=[1]true"),
+                                  qsl("historyEmpty.off=[2]false:disabled"),
+                                  qsl("setHistoryNone=[1]true"),
+                                  qsl("history.none=[2]true:enabled (500 lines will be saved)"),
+                                  qsl("sheet=[1]"),
+                                  qsl("sheetMain=[1]"),
+                                  qsl("sheetEmpty=[1]"),
+                                  qsl("sheetNil=[1]"),
+                                  qsl("setSheet=[1]true"),
+                                  qsl("sheet.set=[1]QPlainTextEdit { color: red; }"),
+                                  qsl("setSheetMain=[1]true"),
+                                  qsl("sheet.setMain=[1]color: green;"),
+                                  qsl("setSheetEmpty=[1]true"),
+                                  qsl("sheet.setEmpty=[1]"),
+                                  qsl("echo.fed=[1]true"),
+                                  qsl("echo.get=[1]kept"),
+                                  qsl("echo.print=[0]"),
+                                  qsl("echo.get.print=[1]kept"),
+                                  qsl("echo.append=[0]"),
+                                  qsl("echo.clear=[0]"),
+                                  qsl("echo.select=[1]true"),
+                                  qsl("echo.send=[1]true"),
+                                  qsl("echo.get.after=[1]kept"),
+                                  qsl("echo.printMain=[0]"),
+                                  qsl("echo.ended=[1]true"),
+                                  qsl("echo.get.ended=[1]kept"),
+                                  qsl("echo.print.ended=[0]"),
+                                  qsl("echo.get.printEnded=[1]after")};
+        const QStringList actual = luaGlobalString(host, "headlessMainCmdLineAnswers").split(QLatin1Char('\n'));
+        QStringList mismatches;
+        for (qsizetype i = 0; i < std::max(actual.size(), answers.size()); ++i) {
+            if (actual.value(i) != answers.value(i)) {
+                mismatches << qsl("%1, not %2").arg(actual.value(i), answers.value(i));
+            }
+        }
+        QVERIFY2(mismatches.isEmpty(), qPrintable(mismatches.join(QChar::LineFeed)));
+        // The main command line writes its setting on an end of session save, as its TCommandLine does. The key is
+        // set the other way first, so the save is seen to write it.
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("setSaveCommandHistory(false)")));
+        host->writeProfileIniData(qsl("CommandLines/SaveHistory/main"), qsl("true"));
+        QTRY_VERIFY(!host->currentlySavingProfile());
+        QVERIFY(std::get<0>(host->saveProfile()));
+        QCOMPARE(host->readProfileIniData(qsl("CommandLines/SaveHistory/main")), qsl("false"));
+        QTRY_VERIFY(!host->currentlySavingProfile());
+        // A profile opened again starts from what was saved, as TCommandLine's constructor reads it
+        HostManager::self()->deleteHost(hostname);
+        host = HostManager::self()->openProfile(hostname, false);
+        QVERIFY2(host, "The profile did not open again.");
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("headlessMainHistoryReopened = tostring(getSaveCommandHistory())")));
+        QCOMPARE(luaGlobalString(host, "headlessMainHistoryReopened"), qsl("false"));
+        QVERIFY2(QApplication::topLevelWidgets().isEmpty(), "Using the main command line created a widget.");
         HostManager::self()->deleteHost(hostname);
     }
 
