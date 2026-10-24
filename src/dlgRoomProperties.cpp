@@ -505,22 +505,28 @@ void dlgRoomProperties::slot_updatePreview()
         pushButton_setSymbolColor->setStyleSheet(
                 qsl("background-color: %1; color: %2; border: 1px solid; border-radius: 1px;").arg(realSymbolColor.name(), backgroundBasedColor(realSymbolColor).name()));
     }
-    label_preview->setStyleSheet(
-            qsl("background-color: %1; border: %2;").arg(mRoomColor.name(), mpHost->mMapperShowRoomBorders ? qsl("1px solid %1").arg(mpHost->mRoomBorderColor.name()) : qsl("none")));
+    const bool roundRoom = mpHost->mBubbleMode;
+    label_preview->setStyleSheet(qsl("background-color: %1; border: %2; border-radius: %3px;")
+                                         .arg(mRoomColor.name(),
+                                              mpHost->mMapperShowRoomBorders ? qsl("1px solid %1").arg(mpHost->mRoomBorderColor.name()) : qsl("none"),
+                                              QString::number(roundRoom ? label_preview->width() / 2 : 0)));
     label_preview->setAccessibleName(newSymbol);
     if (newSymbol.isEmpty()) {
         label_preview->clear();
         return;
     }
-    // Drawn as the map draws it, which shrinks a symbol to fit the room
+    // Drawn as the map draws it, which shrinks a symbol to fit the room, and
+    // a round room's to fit the square inside its circle
     const QSize size = label_preview->contentsRect().size();
+    QRect symbolRect(QPoint(), roundRoom ? size * 0.707 : size);
+    symbolRect.moveCenter(QRect(QPoint(), size).center());
     const qreal ratio = label_preview->devicePixelRatioF();
     QPixmap pixmap(size * ratio);
     pixmap.setDevicePixelRatio(ratio);
     pixmap.fill(Qt::transparent);
     QPainter painter(&pixmap);
     ushort fontSize = 1;
-    RoomAppearance::paintSymbol(painter, QRect(QPoint(), size), newSymbol, realSymbolColor, mpHost->mpMap->mMapSymbolFont, mpHost->mpMap->mMapSymbolFontFudgeFactor, fontSize);
+    RoomAppearance::paintSymbol(painter, symbolRect, newSymbol, realSymbolColor, mpHost->mpMap->mMapSymbolFont, mpHost->mpMap->mMapSymbolFontFudgeFactor, fontSize);
     painter.end();
     label_preview->setPixmap(pixmap);
 }

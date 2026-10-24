@@ -41,6 +41,7 @@
 #include <QFontMetrics>
 #include <QImage>
 #include <QLabel>
+#include <QLine>
 #include <QLineEdit>
 #include <QListWidget>
 #include <QMenu>
@@ -300,23 +301,38 @@ private:
         delete menuAnswerer;
     }
 
-    // The part of the preview's contents that is not its background: the
-    // symbol as drawn, empty when nothing of it was
-    static QRect symbolInk(QLabel* preview)
+    // In the grabbed image's pixels, which outnumber the label's on a high-DPI screen
+    struct PreviewInk
+    {
+        QRect contents;
+        // Where the symbol was drawn, invalid when nothing of it was
+        QRect ink;
+    };
+
+    // insideCircle counts only what is inside the circle a round room fills,
+    // as outside it a round preview shows the dialog's background
+    static PreviewInk symbolInk(QLabel* preview, const bool insideCircle = false)
     {
         const QImage shown = preview->grab().toImage();
-        const QRect contents = preview->contentsRect();
-        const QColor background = shown.pixelColor(contents.topLeft());
-        QRect ink;
-        for (int y = contents.top(); y <= contents.bottom(); ++y) {
-            for (int x = contents.left(); x <= contents.right(); ++x) {
+        const qreal ratio = shown.devicePixelRatio();
+        const QRect logical = preview->contentsRect();
+        PreviewInk result;
+        result.contents = QRect(qRound(logical.x() * ratio), qRound(logical.y() * ratio), qRound(logical.width() * ratio), qRound(logical.height() * ratio));
+        const QPointF center = QRectF(result.contents).center();
+        const qreal radius = result.contents.width() / 2.0 - 2 * ratio;
+        const QColor background = shown.pixelColor(qRound(center.x()), result.contents.top() + qRound(2 * ratio));
+        for (int y = result.contents.top(); y <= result.contents.bottom(); ++y) {
+            for (int x = result.contents.left(); x <= result.contents.right(); ++x) {
+                if (insideCircle && QLineF(center, QPointF(x + 0.5, y + 0.5)).length() > radius) {
+                    continue;
+                }
                 const QColor pixel = shown.pixelColor(x, y);
                 if (std::abs(pixel.red() - background.red()) + std::abs(pixel.green() - background.green()) + std::abs(pixel.blue() - background.blue()) > 48) {
-                    ink |= QRect(x, y, 1, 1);
+                    result.ink |= QRect(x, y, 1, 1);
                 }
             }
         }
-        return ink;
+        return result;
     }
 
 private slots:
@@ -813,22 +829,43 @@ private slots:
         auto* pDlg = openDialogOn({scmFirstRoom});
         pDlg->lineEdit_roomSymbol->setText(qsl("ABCDE"));
 
-        const QRect contents = pDlg->label_preview->contentsRect();
-        const QRect ink = symbolInk(pDlg->label_preview);
+        const auto [contents, ink] = symbolInk(pDlg->label_preview);
         QVERIFY2(ink.isValid(), "nothing of the symbol was drawn");
         QVERIFY2(ink.left() > contents.left() && ink.right() < contents.right(),
                  qPrintable(qsl("the symbol, drawn across x %1 to %2, is cut off by the preview's edges at %3 and %4").arg(ink.left()).arg(ink.right()).arg(contents.left()).arg(contents.right())));
     }
 
-    // A single character fills the room on the map, so it has to here too
+    // Round rooms draw their symbol in the square inside the circle, smaller
+    // than in a square room of the same size
+    void aSymbolInARoundRoomIsDrawnSmallerThanInASquareOne()
+    {
+        buildMap();
+        auto* pDlg = openDialogOn({scmFirstRoom});
+        pDlg->lineEdit_roomSymbol->setText(qsl("ABCDE"));
+        // Measured over the same circle as the round room, so only the size differs
+        const QRect squareInk = symbolInk(pDlg->label_preview, true).ink;
+
+        mpHost->mBubbleMode = true;
+        auto restoreSquareRooms = qScopeGuard([this]() {
+            mpHost->mBubbleMode = false;
+        });
+        pDlg->lineEdit_roomSymbol->clear();
+        pDlg->lineEdit_roomSymbol->setText(qsl("ABCDE"));
+        const QRect roundInk = symbolInk(pDlg->label_preview, true).ink;
+
+        QVERIFY2(squareInk.isValid() && roundInk.isValid(), "nothing of the symbol was drawn");
+        QVERIFY2(roundInk.width() < squareInk.width(), qPrintable(qsl("the symbol is %1 pixels wide in a round room and %2 in a square one").arg(roundInk.width()).arg(squareInk.width())));
+    }
+
+    // The map draws a lone character as large as the room allows, so the
+    // preview must not shrink it to some fixed size either
     void aSingleCharacterSymbolIsDrawnAsLargeAsItFits()
     {
         buildMap();
         auto* pDlg = openDialogOn({scmFirstRoom});
         pDlg->lineEdit_roomSymbol->setText(qsl("W"));
 
-        const QRect contents = pDlg->label_preview->contentsRect();
-        const QRect ink = symbolInk(pDlg->label_preview);
+        const auto [contents, ink] = symbolInk(pDlg->label_preview);
         QVERIFY2(ink.isValid(), "nothing of the symbol was drawn");
         QVERIFY2(ink.height() * 2 > contents.height(), qPrintable(qsl("the symbol is %1 pixels tall in a preview %2 tall").arg(ink.height()).arg(contents.height())));
     }
@@ -852,7 +889,7 @@ private slots:
         pDlg->lineEdit_roomSymbol->setText(QString(unassigned));
         const QImage missing = pDlg->label_preview->grab().toImage();
 
-        QVERIFY2(symbolInk(pDlg->label_preview).isValid(), "nothing was drawn for the missing character");
+        QVERIFY2(symbolInk(pDlg->label_preview).ink.isValid(), "nothing was drawn for the missing character");
         QVERIFY2(missing == replacement, "the missing character was not previewed as the replacement character");
     }
 };
