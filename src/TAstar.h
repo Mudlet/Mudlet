@@ -90,7 +90,7 @@ struct route
 };
 
 // Admissible and consistent: each distance is scaled by its heuristicScale, and the larger kept.
-// Chebyshev is exact on a grid with diagonal exits, euclidean on one without.
+// Chebyshev is exact on a grid with diagonal exits; euclidean is the closer of the two on one without.
 template <class Graph, class CostType, class LocMap>
 class distance_heuristic : public boost::astar_heuristic<Graph, CostType>
 {

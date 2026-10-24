@@ -4132,8 +4132,8 @@ describe("Tests route weights and extreme coordinates on a scratch area", functi
     assert.are.same({"s"}, speedWalkDir)
   end)
 
-  -- INT_MIN - INT_MAX overflows an int, so the distance between these rooms only
-  -- fits once their coordinates are subtracted as doubles.
+  -- INT_MIN - INT_MAX overflows an int, so the distance between these rooms
+  -- reaches past what an int holds.
   it("routes by weight between rooms an int's whole range apart", function()
     local start, a, b, goal = room(1, 0), room(0, 2147483647), room(0, 0), room(0, -2147483648)
     setExit(start, a, "north")
@@ -5435,10 +5435,9 @@ describe("Tests saveMap and loadMap", function()
 
   -- A real IRE map at full size - 22,854 rooms over 379 areas. Routing is the
   -- one part of the mapper whose behaviour a small map cannot describe: the
-  -- distance heuristic gives up and returns 1 the moment a route leaves the
-  -- target's area, a one-way exit only matters when there is a second way
-  -- round, and an exit weight only reroutes when there is something to reroute
-  -- onto. See fixtures/maps/README.md for the map's provenance and shape.
+  -- distance heuristic is held to the map's longest cheap exit, a one-way exit
+  -- only matters when there is a second way round, and an exit weight only
+  -- reroutes when there is something to reroute onto. See fixtures/maps/README.md for the map's provenance and shape.
   describe("Tests pathfinding over a full-sized IRE map", function()
     local archivePath = specDirectory .. "/fixtures/maps/achaea-map.zip"
     local extractedPath = getMudletHomeDir() .. "/achaea-map.xml"
