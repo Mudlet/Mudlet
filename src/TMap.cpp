@@ -1129,8 +1129,8 @@ bool TMap::searchGraph(const vertex start, const vertex goal)
             }
             mSearchDistance[neighbour] = throughCurrent;
             mSearchPredecessor[neighbour] = current;
-            // The heuristic is consistent and costs are whole numbers, so an expanded room is final and
-            // the check above turns away any route back to one.
+            // Never an expanded room: the heuristic is consistent, so one is expanded at its least cost and
+            // the check above turns away later routes (rounding is far below the least cost difference, 1).
             mSearchState[neighbour] = stateFrontier;
             frontier.push({throughCurrent + heuristic(neighbour), -throughCurrent, neighbour});
         }
