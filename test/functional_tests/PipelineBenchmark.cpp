@@ -986,9 +986,11 @@ private slots:
         }
 
         // Proves the frames reached Lua whole: the last round's values, and the
-        // UTF-8 inside the inventory, must be what the tables hold.
+        // UTF-8 inside the inventory, must be what the tables hold. The last
+        // inventory is round 2990's, whose 4th item is the cafe.
         const int lastRound = kGmcpRounds - 1;
-        QVERIFY(lua->compileAndExecuteScript(qsl("benchGmcpOk = (gmcp.Char.Vitals.hp == '%1' and gmcp.Room.Info.num == %2 and gmcp.Char.Items.List.items[60].name ~= nil and "
+        QVERIFY(lua->compileAndExecuteScript(qsl("benchGmcpOk = (gmcp.Char.Vitals.hp == '%1' and gmcp.Room.Info.num == %2 and gmcp.Char.Items.List.items[60].name == 'a wooden shield' and "
+                                                 "gmcp.Char.Items.List.items[4].name == 'a caf\\195\\169 au lait' and "
                                                  "gmcp.Comm.Channel.Text.text:find('round %3', 1, true) ~= nil) and 1 or 0")
                                                      .arg(4210 - lastRound % 900)
                                                      .arg(10000 + lastRound % 5000)
