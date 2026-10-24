@@ -4229,6 +4229,63 @@ describe("Tests the open and closed states of the map widget", function()
     end
   end)
 
+  local function assertDocksUsably(position)
+    assert.is_true(openMapWidget(position))
+    assert.is_true(pumpEvents(200))
+    local _, _, width, height = getMapWidgetGeometry()
+    if position == "t" or position == "b" then
+      assert.is_true(height > 150, "map docked at " .. position .. " is only " .. height .. " pixels tall")
+    else
+      assert.is_true(width > 150, "map docked at " .. position .. " is only " .. width .. " pixels wide")
+    end
+  end
+
+  -- With the panel hidden the dock's own controls are only about 50 pixels across,
+  -- which is all Qt gives a dock it has no size for
+  it("docks the map at a usable size", function()
+    if not os.getenv("MUDLET_TEST_MODE") then
+      pending("the dock is only laid out once pumpEvents() runs")
+      return
+    end
+    local panelShown = getConfig("mapperPanelVisible")
+    finally(function()
+      setConfig("mapperPanelVisible", panelShown)
+    end)
+    assert.is_true(setConfig("mapperPanelVisible", false))
+
+    for _, position in ipairs({"l", "t", "b", "r"}) do
+      assertDocksUsably(position)
+    end
+  end)
+
+  -- Docks that shared an area and left it leave Qt nothing but its minimum to give the next one
+  it("docks the map at a usable size where other docks were", function()
+    if not os.getenv("MUDLET_TEST_MODE") then
+      pending("the dock is only laid out once pumpEvents() runs")
+      return
+    end
+    local panelShown = getConfig("mapperPanelVisible")
+    local windows = {"mapperSpecDock1", "mapperSpecDock2", "mapperSpecDock3"}
+    finally(function()
+      for _, windowName in ipairs(windows) do
+        deleteMiniConsole(windowName)
+      end
+      setConfig("mapperPanelVisible", panelShown)
+    end)
+    assert.is_true(setConfig("mapperPanelVisible", false))
+    assert.is_true(openMapWidget("l"))
+
+    for _, windowName in ipairs(windows) do
+      assert.is_true(openUserWindow(windowName, false, false, "right"))
+    end
+    assert.is_true(pumpEvents(200))
+    for _, windowName in ipairs(windows) do
+      assert.is_true(deleteMiniConsole(windowName))
+    end
+    assert.is_true(pumpEvents(200))
+    assertDocksUsably("r")
+  end)
+
   -- moveMapWidget/resizeMapWidget are openMapWidget in disguise, so they reopen
   -- a closed widget rather than failing the way the getters do. Pinned because
   -- it is the one place where the map functions do not agree about the state.

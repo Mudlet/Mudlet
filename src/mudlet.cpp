@@ -4349,6 +4349,40 @@ bool mudlet::saveFloatingDockGeometries()
     return true;
 }
 
+// Qt gives a dock shown in an area that was used before, or that a restored layout left empty, the depth the area
+// had rather than its size hint, down to its minimum
+void mudlet::growDockToSizeHint(QDockWidget* dock, bool onlyFromMinimum)
+{
+    using namespace std::chrono_literals;
+    QTimer::singleShot(0ms, dock, [this, dock, onlyFromMinimum]() {
+        if (dock->parentWidget() != this || dock->isFloating() || !dock->isVisible()) {
+            return;
+        }
+        layout()->activate();
+        const Qt::DockWidgetArea area = dockWidgetArea(dock);
+        const Qt::Orientation orientation = (area == Qt::TopDockWidgetArea || area == Qt::BottomDockWidgetArea) ? Qt::Vertical : Qt::Horizontal;
+        const auto depth = [orientation](const QSize& size) {
+            return orientation == Qt::Vertical ? size.height() : size.width();
+        };
+        const int current = depth(dock->size());
+        const int wanted = depth(dock->sizeHint());
+        if (current >= wanted || (onlyFromMinimum && current > depth(dock->minimumSizeHint()))) {
+            return;
+        }
+        resizeDocks({dock}, {wanted}, orientation);
+    });
+}
+
+// Only from its minimum, so a size the player chose or a saved layout restored stays
+void mudlet::growDockToSizeHintWhenShown(QDockWidget* dock)
+{
+    connect(dock, &QDockWidget::visibilityChanged, this, [this, dock](bool visible) {
+        if (visible) {
+            growDockToSizeHint(dock, true);
+        }
+    });
+}
+
 void mudlet::restoreFloatingDockGeometries()
 {
     const QString geoFilePath = MudletApp::getMudletPath(enums::mainDataItemPath, qsl("windowLayoutGeometry.dat"));
@@ -6172,6 +6206,7 @@ void mudlet::slot_showMapperDialog()
         mainMapper->show();
     }
 
+    growDockToSizeHintWhenShown(newMapDockWidget);
     // Add the dock widget to the main window
     addDockWidget(Qt::RightDockWidgetArea, newMapDockWidget);
 
