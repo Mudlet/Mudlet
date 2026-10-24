@@ -1417,7 +1417,7 @@ void T2DMap::drawRoom(QPainter& painter,
         borderWidth = qMax(1, static_cast<int>(1 / mBSize * mRoomWidth * rSize));
     }
     const bool shouldDrawBorder = (mpHost->mMapperShowRoomBorders || pRoom->mBorderColor.isValid() || pRoom->mBorderThickness > 0) && !isGridMode;
-    bool showThisRoomName = showRoomName;
+    const bool showThisRoomName = showRoomName && RoomAppearance::nameShown(*pRoom);
     if (isGridMode) {
         realHeight = mRoomHeight;
         roomRectangle = QRectF(rx - mRoomWidth / 2.0, ry - mRoomHeight / 2.0, mRoomWidth, mRoomHeight);
@@ -1427,16 +1427,6 @@ void T2DMap::drawRoom(QPainter& painter,
         realHeight = mRoomHeight * rSize;
         roomRectangle = QRectF(rx - (mRoomWidth * rSize) / 2.0, ry - realHeight / 2.0, mRoomWidth * rSize, realHeight);
         roomNameRectangle = roomRectangle.adjusted(-2000, realHeight, 2000, realHeight);
-    }
-
-    if (showThisRoomName) {
-        showThisRoomName = !pRoom->name.isEmpty() && realHeight > 2 && getUserDataBool(pRoom->userData, ROOM_UI_SHOWNAME, false);
-        if (showThisRoomName) {
-            painter.save();
-            painter.setFont(mapNameFont);
-            roomNameRectangle = painter.boundingRect(roomNameRectangle, Qt::Alignment(Qt::AlignTop | Qt::AlignCenter) | Qt::TextFlag(Qt::TextSingleLine), pRoom->name);
-            painter.restore();
-        }
     }
 
     // We should be using the full area for testing for clicks even though
@@ -1608,8 +1598,7 @@ void T2DMap::drawRoom(QPainter& painter,
         painter.restore();
     }
 
-    // If there is a room name, draw it?
-    if (showRoomName) {
+    if (showThisRoomName) {
         painter.save();
 
         const QPointF nameOffset = RoomAppearance::nameOffset(pRoom->userData.value(ROOM_UI_NAMEPOS));
