@@ -9,7 +9,9 @@
 		<Script isActive="yes" isFolder="no">
 			<name>MG-Loader</name>
 			<packageName></packageName>
-			<script>function downloadPackage(a,b)
+			<script>installRequested = nil
+
+function downloadPackage(a,b)
   if installRequested then return end
   decho("&lt;0,150,190&gt;[ INFO ]  - &lt;0,160,0&gt;Das Mudlet-Paket fürs MorgenGrauen wird heruntergeladen...\n")
   downloadFile(getMudletHomeDir() .. "/MorgenGrauen.mpackage", "https://github.com/MorgenGrauen/mg-mudlet/releases/latest/download/MorgenGrauen.mpackage")
@@ -17,6 +19,7 @@ end
 
 function downloadFailed(event, message, file)
   if file ~= getMudletHomeDir().."/MorgenGrauen.mpackage" then return end
+  if installRequested then return end
   decho("&lt;190,0,0&gt;[ FAIL ]  - &lt;0,160,0&gt;Das Mudlet-Paket fürs MorgenGrauen konnte nicht heruntergeladen werden: &lt;190,190,190&gt;"..tostring(message).."\n")
   decho([[&lt;0,150,190&gt;[ INFO ]  - &lt;0,160,0&gt;Um das Mudlet-Paket fürs MorgenGrauen zu laden, kopiere bitte folgenden Text (ohne Zeilenumbrüche) in die Eingabezeile und sende ihn ab:
 

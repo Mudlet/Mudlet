@@ -9,7 +9,9 @@
 		<Script isActive="yes" isFolder="no">
 			<name>Icesus-Loader</name>
 			<packageName></packageName>
-			<script>function downloadPackage(a,b)
+			<script>installRequested = nil
+
+function downloadPackage(a,b)
   if installRequested then return end
   decho("&lt;0,150,190&gt;[ INFO ]  - &lt;0,160,0&gt;Downloading the Icesus Mudlet package...\n")
   downloadFile(getMudletHomeDir() .. "/Icesus.mpackage", "https://github.com/Icesus-mud/mudlet-package/releases/latest/download/Icesus.mpackage")
@@ -17,6 +19,7 @@ end
 
 function downloadFailed(event, message, file)
   if file ~= getMudletHomeDir().."/Icesus.mpackage" then return end
+  if installRequested then return end
   decho("&lt;190,0,0&gt;[ FAIL ]  - &lt;0,160,0&gt;The Icesus Mudlet package could not be downloaded: &lt;190,190,190&gt;"..tostring(message).."\n")
   decho([[&lt;0,150,190&gt;[ INFO ]  - &lt;0,160,0&gt;To install the Icesus Mudlet package, copy the following text (without line breaks) into the input line and send it:
 
