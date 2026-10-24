@@ -98,9 +98,11 @@ describe("Tests UI functions", function()
       local testdecho = "separate: <i>italic</i>, <b>bold</b>, <u>underline</u>. all together: <i>italic<b>bold<u>underline<r>"
       decho("testconsole", testdecho)
 
-      local r, g, b = getFgColor("testconsole")
-      local br, bg, bb = getBgColor("testconsole")
-      assert.are.equal(string.format("<%d,%d,%d:%d,%d,%d>", r, g, b, br, bg, bb) .. testdecho, copy2decho("testconsole"))
+      selectSection("testconsole", 0, 1)
+      local format = getTextFormat("testconsole")
+      local fg, bg = format.foreground, format.background
+      local colour = string.format("<%d,%d,%d:%d,%d,%d>", fg[1], fg[2], fg[3], bg[1], bg[2], bg[3])
+      assert.are.equal(colour .. testdecho, copy2decho("testconsole"))
     end)
 
     it("Should copy strikeout and overline, and restate formatting after a colour change resets it", function()
@@ -108,6 +110,7 @@ describe("Tests UI functions", function()
       decho("testconsole", testdecho)
 
       assert.are.equal(testdecho, copy2decho("testconsole"))
+      assert.are.equal("<span style='color: rgb(255,0,0);background: rgb(0,0,0);'>struckover</span><span style='color: rgb(0,255,0);background: rgb(0,0,0);'>still over plain</span>", copy2html("testconsole"))
     end)
 
     describe("when the copy is echoed back with decho", function()

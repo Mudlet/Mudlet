@@ -2852,7 +2852,7 @@ local function copy2color(name,win,str,inst)
       if r ~= cr or g ~= cg or b ~= cb or rb ~= crb or gb ~= cgb or bb ~= cbb or ab ~= cab then
         cr,cg,cb,crb,cgb,cbb,cab = r,g,b,rb,gb,bb,ab
         pieces[#pieces + 1] = string.format(style, #pieces > 0 and endspan or "", r, g, b, rb, gb, bb, (ab and ab ~= 255) and "," .. ab or "")
-        -- the <r> ahead of the colour ended any formatting, so restate what is still on
+        -- every colour but the first comes after an <r>, which ends formatting, so restate what is on
         for i, flag in ipairs(dechoFlags) do
           if flags[i] then
             pieces[#pieces + 1] = "<" .. flag[2] .. ">"
