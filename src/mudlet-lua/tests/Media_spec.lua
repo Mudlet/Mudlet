@@ -4053,6 +4053,35 @@ describe("Tests the text-to-speech Lua API", function()
         assert.has_error(function() ttsSetVolume(false) end)
       end)
 
+      -- NaN compares false against both clamp bounds. Not gated on the mock
+      -- engine, as the refusal never asks the engine to change anything
+      it("the rate, pitch and volume setters refuse NaN and keep the current setting", function()
+        if ttsUnsupported() then
+          return
+        end
+        local changes = {}
+        collect("ttsRateChanged", changes)
+        collect("ttsPitchChanged", changes)
+        collect("ttsVolumeChanged", changes)
+        local setters = {
+          {name = "rate", set = ttsSetRate, get = ttsGetRate},
+          {name = "pitch", set = ttsSetPitch, get = ttsGetPitch},
+          {name = "volume", set = ttsSetVolume, get = ttsGetVolume},
+        }
+        for _, setter in ipairs(setters) do
+          local before = setter.get()
+          local ok, err = setter.set(0/0)
+          assert.is_nil(ok, setter.name .. " accepted NaN")
+          assert.is_truthy(tostring(err):find(setter.name .. " as a number from", 1, true), tostring(err))
+          assert.equals(before, setter.get())
+        end
+        assert.same({}, changes)
+        -- success has to be told apart from that refusal by its first value
+        for _, setter in ipairs(setters) do
+          assert.is_true(setter.set(setter.get()), setter.name)
+        end
+      end)
+
       it("ttsGetQueue returns a table and false for out-of-range indexes", function()
         if ttsUnsupported() then
           return

@@ -345,7 +345,7 @@ int TLuaInterpreter::alert(lua_State* L)
 
     if (lua_gettop(L) > 0) {
         luaAlertDuration = getVerifiedDouble(L, __func__, 1, "alert duration in seconds");
-        if (luaAlertDuration < 0.000) {
+        if (qIsNaN(luaAlertDuration) || luaAlertDuration < 0.000) {
             lua_pushstring(L, "alert: duration, in seconds, is optional but if given must be zero or greater.");
             return lua_error(L);
         }
