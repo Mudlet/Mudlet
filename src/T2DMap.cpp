@@ -4669,11 +4669,11 @@ void T2DMap::populateUserContextMenus(QMenu& menu)
     };
     QMap<QString, QMenu*> userMenus;
     QList<UserEntry> entries;
-    for (const auto& [uniqueName, menuInfo] : mpMap->mUserMenus.asKeyValueRange()) {
+    for (const auto& [uniqueName, menuInfo] : std::as_const(mpMap->mUserMenus).asKeyValueRange()) {
         userMenus.insert(uniqueName, new QMenu(menuInfo.value(1), &menu));
         entries.append({listedAt(menuInfo.value(0), uniqueName), true, uniqueName, menuInfo.value(0)});
     }
-    for (const auto& [uniqueName, actionInfo] : mpMap->mUserActions.asKeyValueRange()) {
+    for (const auto& [uniqueName, actionInfo] : std::as_const(mpMap->mUserActions).asKeyValueRange()) {
         entries.append({listedAt(actionInfo.value(1), uniqueName), false, uniqueName, actionInfo.value(1)});
     }
     // Stable: unlisted entries keep the default order of menus, then events, each by unique name
