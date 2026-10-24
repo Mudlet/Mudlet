@@ -127,6 +127,22 @@ leak:libexpat.so
 leak:libspeechd.so
 
 # ==============================================================================
+# Qt Multimedia FFmpeg backend leak
+# A QMediaPlayer destroyed after the event loop has stopped, within a few ms of
+# play() while the FFmpeg plugin is still starting its playback engine, leaves
+# the engine's objects, QThreads and FFmpeg buffers behind (Qt 6.11.1); deleted
+# while the loop still runs, it leaks nothing. TMediaVoice's backend probe can be
+# at that point when a test exits, which flakes HeadlessMediaDebugTest.
+# The plugin's frames are unsymbolised, so only its module name can match. The
+# QtCore blocks in the report (QThread, QObject, QArrayData) need no line: they
+# are reachable from the suppressed plugin blocks, which LeakSanitizer rescans
+# as roots. The plugin calls TMediaVoice::audioBufferReceived() on its decoding
+# thread, so a leak there would match too if the unwinder walked that far.
+# ==============================================================================
+leak:libffmpegmediaplugin.so
+leak:libavutil.so
+
+# ==============================================================================
 # Qt internal leaks (Qt's integration with system libraries)
 # These are typically initialization leaks in Qt's platform integration
 # ==============================================================================
