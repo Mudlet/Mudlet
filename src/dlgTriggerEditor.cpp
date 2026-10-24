@@ -4506,6 +4506,8 @@ void dlgTriggerEditor::activeToggle_timer()
             // state of offset timers is managed by the trigger engine
             if (pT->shouldBeActive()) {
                 pT->enableTimer(pT->getID());
+                // Its parent firing arms it, so it must not count down from being switched on
+                pT->stop();
                 itemDescription = descActiveOffsetTimer;
                 if (pT->ancestorsActive()) {
                     icon = cachedIcon(qsl(":/icons/offsettimer-on.png"));
@@ -6346,7 +6348,10 @@ void dlgTriggerEditor::saveTimer()
         const int secs = mpTimersMainArea->timeEdit_timer_seconds->time().second();
         const int msecs = mpTimersMainArea->timeEdit_timer_msecs->time().msec();
         const QTime time(hours, minutes, secs, msecs);
-        pT->setTime(time);
+        // setTime() stops the QTimer, so even an unchanged time would end the countdown
+        if (pT->getTime() != time) {
+            pT->setTime(time);
+        }
         pT->setCommand(command);
         pT->setName(name);
         pT->setScript(script);
@@ -6413,7 +6418,7 @@ void dlgTriggerEditor::saveTimer()
                     icon = cachedIcon(qsl(":/icons/tag_checkbox_checked_grey.png"));
                     itemDescription = descInactiveParent.arg(itemDescription);
                 }
-                pT->setIsActive(true);
+                pT->stayActive();
             } else {
                 itemDescription = descInactive;
                 if (pT->ancestorsActive()) {
