@@ -61,6 +61,20 @@ describe("Tests UI functions", function()
       assert.are.equal(testdecho, copy2decho("testconsole"))
     end)
 
+    it("Should copy the alpha of a console's own translucent background", function()
+      local window = "uiSpecCopy2dechoTranslucent"
+      finally(function() deleteMiniConsole(window) end)
+      createMiniConsole(window, 0, 0, 400, 50)
+      setBackgroundColor(window, 10, 20, 30, 0)
+      resetFormat(window)
+      echo(window, "plain")
+      selectSection(window, 0, 1)
+      local fg = getTextFormat(window).foreground
+
+      assert.are.equal(string.format("<%d,%d,%d:10,20,30,0>plain<r>", fg[1], fg[2], fg[3]), copy2decho(window))
+      assert.are.equal(string.format("<span style='color: rgb(%d,%d,%d);background: rgb(10,20,30);'>plain</span>", fg[1], fg[2], fg[3]), copy2html(window))
+    end)
+
     it("Should copy colored Chinese text", function()
       local testdecho = "<50,50,0:0,255,0>测试<r><192,192,192:0,0,0> <r><255,0,0:0,0,0>红色<r><0,255,0:0,0,0>绿色<r><0,0,255:0,0,0>蓝色<r>"
       decho("testconsole", testdecho)
