@@ -542,6 +542,41 @@ private slots:
     QCOMPARE(mpHost->findStopWatchId(watchName), 0);
   }
 
+  // Finalisers on the old Lua state run inside initLuaGlobals()'s lua_close(),
+  // the last point of the teardown
+  void test_stopWatchCreationStaysBlockedInFinalisersRunByReset() {
+    QTemporaryDir markerDir;
+    QVERIFY(markerDir.isValid());
+    const QString markerPath = markerDir.filePath(qsl("finaliser-ran"));
+    lua_State *L = mpHost->mLuaInterpreter.getLuaGlobalState();
+    lua_pushstring(L, markerPath.toUtf8().constData());
+    lua_setglobal(L, "resetGcMarkerPath");
+    QCOMPARE(luaL_dostring(
+                 L, "resetGcProxy = newproxy(true)\n"
+                    "getmetatable(resetGcProxy).__gc = function()\n"
+                    "  createStopWatch('gc_sw')\n"
+                    "  io.open(resetGcMarkerPath, 'w'):close()\n"
+                    "end"),
+             0);
+
+    performReset();
+
+    QVERIFY2(QFileInfo::exists(markerPath),
+             "The finaliser did not run during the reset");
+    QCOMPARE(mpHost->findStopWatchId(qsl("gc_sw")), 0);
+  }
+
+  void test_refusedResetLeavesStopWatchCreationWorking() {
+    mpHost->mLuaInterpreter.enterNestedEventLoop();
+    const bool started = mpHost->resetProfile_phase1();
+    mpHost->mLuaInterpreter.leaveNestedEventLoop();
+    QVERIFY(!started);
+
+    const auto result =
+        mpHost->createStopWatch(qsl("after_refused_reset"));
+    QVERIFY2(result.first > 0, qPrintable(result.second));
+  }
+
   // -----------------------------------------------------------------------
   // Group 4: Event System Cleanup (#4970, #7698)
   // -----------------------------------------------------------------------
