@@ -25,12 +25,12 @@ describe("Tests the generic mapper when a map loads", function()
   setup(function()
     lfs.mkdir(specDirectory)
     os.remove(backupPath)
-    -- a run cut short leaves the profile's own copies set aside here
+    -- a run cut short leaves the profile's own copies set aside here, and maybe a fixture in their place
     for live, aside in pairs({[savedMapPath] = savedMapBackupPath, [localCopyPath] = localCopyBackupPath}) do
-      if not io.exists(live) then
-        os.rename(aside, live)
+      if io.exists(aside) then
+        os.remove(live)
+        assert(os.rename(aside, live), "the profile's own map set aside by an earlier run could not be put back: " .. aside)
       end
-      os.remove(aside)
     end
     assert.is_true(saveMap(backupPath), "the map to be replaced could not be saved first")
   end)
