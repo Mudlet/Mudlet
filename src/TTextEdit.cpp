@@ -1587,6 +1587,11 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
     // overflow, so clip it away rather than compositing the same ink twice.
     const QRect bandRect(0, drawFrom * mFontHeight, mScreenWidth * mFontWidth, (drawTo + 1 - drawFrom) * mFontHeight);
     paintForegrounds(p, *mpGlyphCache, mPreviousLineLayout, bottomRowIsRepainted ? QRect() : bandRect);
+    // Likewise the line below the band loses whatever ink it reached up into it
+    if (!bottomRowIsRepainted && hasBufferLine(drawTo + 1 + lineOffset)) {
+        layoutLine(drawTo + 1 + lineOffset, drawTo + 1, timeStampStyle, mOverflowLineLayout);
+        paintForegrounds(p, *mpGlyphCache, mOverflowLineLayout, bandRect);
+    }
 
     if (!spareRowRect.isNull() && hasBufferLine(lastRow + lineOffset)) {
         layoutLine(lastRow + lineOffset, lastRow, timeStampStyle, mOverflowLineLayout);
@@ -4000,8 +4005,10 @@ bool TTextEdit::hasStackedMarks(const QString& text)
         return false;
     }
     bool previousIsMark = false;
-    for (const QChar character : text) {
-        const bool isMark = character.isMark();
+    for (const char32_t codePoint : QStringView(text).toUcs4()) {
+        const QChar::Category category = QChar::category(codePoint);
+        // Spacing marks (Mc) sit beside their base rather than on it
+        const bool isMark = category == QChar::Mark_NonSpacing || category == QChar::Mark_Enclosing;
         if (isMark && previousIsMark) {
             return true;
         }
@@ -4023,8 +4030,10 @@ bool TTextEdit::lineShowsBlinkingText(const int lineNumber) const
     // A flag only blinks if a glyph is drawn with it: a grapheme takes the style
     // of its first character, and a split format shows only on a wide one.
     const size_t timeStampsBefore = mLaidOutTimeStamps.size();
+    // Outlives the layout, whose timestamp runs point at it
+    const TChar timeStampStyle = timeStampCharStyle();
     LineLayout layout;
-    layoutLine(lineNumber, 0, timeStampCharStyle(), layout);
+    layoutLine(lineNumber, 0, timeStampStyle, layout);
     const bool blinks = std::any_of(layout.cbegin(), layout.cend(), [](const GraphemeRun& run) {
         return run.style && ((run.rightHalf ? run.style->rightHalf() : *run.style).allDisplayAttributes() & blinkFlags);
     });

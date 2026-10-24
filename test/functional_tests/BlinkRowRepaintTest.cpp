@@ -66,14 +66,15 @@ private:
         return lines;
     }
 
-    // Descenders, underscores and accents ink the rows either side of
-    // the blinking one. The line after it blinks only on a combining accent,
-    // which is never drawn blinking because a grapheme takes its base's style.
+    // Descenders, underscores and accents ink the rows around the blinking one;
+    // the next line blinks only on a combining accent, which is never drawn blinking.
     static QByteArray blinkingLines()
     {
         QString lines = qsl("\x1b[5mThis one blinks gjpqy___ O\u0308 g\u0303_ \u00c5\x1b[0m and this does not\r\n");
         lines.append(qsl("Only the accent of e\x1b[5m\u0301\x1b[0m blinks\r\n"));
-        lines.append(fillerLines(3, QLatin1Char('Z')));
+        lines.append(fillerLines(1, QLatin1Char('Z')));
+        lines.append(qsl("\u00c5\u00d6\u00c9\u00c4 \u1e7a \u00c2\u00ca \u01fa\u01fa\u01fa accents\r\n"));
+        lines.append(fillerLines(2, QLatin1Char('Z')));
         return lines.toUtf8();
     }
 
