@@ -26,7 +26,10 @@ function Geyser.Label:echo(message, color, format)
   -- the setters re-render through here, so a message put up by decho, hecho or
   -- cecho is shown again through that function rather than as raw markup
   if not message and self.echoType and self.message == self.echoMessage then
-    Geyser.Label[self.echoType](self)
+    local ok, err = Geyser.Label[self.echoType](self)
+    if not ok then
+      debugc(string.format("Geyser.Label:echo(): could not show '%s' again through %s: %s", self.name, self.echoType, err))
+    end
     return
   end
   -- false, not nil, so a flavour inherited from a prototype label is shadowed
