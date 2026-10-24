@@ -3206,6 +3206,9 @@ int TLuaInterpreter::removeMapMenu(lua_State* L)
             }
         }
     }
+    for (const QString& menuName : std::as_const(removeList)) {
+        host.mpMap->mUserMenuOrder.remove(menuName);
+    }
     QMapIterator<QString, QStringList> it2(host.mpMap->mUserActions);
     while (it2.hasNext()) {
         it2.next();
@@ -4190,6 +4193,51 @@ int TLuaInterpreter::setMapEnvironmentKit(lua_State* L)
     }
     host.mpMap->setUnsaved(__func__);
     host.mpMap->updateArea(-1);
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMapMenuOrder
+int TLuaInterpreter::setMapMenuOrder(lua_State* L)
+{
+    if (!checkStringArg(L, __func__, 1, "parent menu unique name")) {
+        return lua_error(L);
+    }
+    const bool clearing = lua_isnoneornil(L, 2);
+    if (!clearing && !lua_istable(L, 2)) {
+        errorArgumentType(L, __func__, 2, "unique names", "table", true);
+        return lua_error(L);
+    }
+    // Every item is checked before any QString is built, as lua_error() would skip their destructors
+    const int itemCount = clearing ? 0 : static_cast<int>(lua_objlen(L, 2));
+    for (int i = 1; i <= itemCount; ++i) {
+        lua_rawgeti(L, 2, i);
+        if (!lua_isstring(L, -1)) {
+            lua_pushfstring(L, "setMapMenuOrder: bad argument #2 table item #%d type (unique name as string expected, got %s!)", i, luaL_typename(L, -1));
+            return lua_error(L);
+        }
+        lua_pop(L, 1);
+    }
+
+    const Host& host = getHostFromLua(L);
+    if (!host.mpMap) {
+        return warnArgumentValue(L, __func__, "no map present or loaded");
+    }
+    QStringList order;
+    for (int i = 1; i <= itemCount; ++i) {
+        lua_rawgeti(L, 2, i);
+        const QString uniqueName = lua_tostring(L, -1);
+        lua_pop(L, 1);
+        if (!order.contains(uniqueName)) {
+            order.append(uniqueName);
+        }
+    }
+    const QString parent = lua_tostring(L, 1);
+    if (order.isEmpty()) {
+        host.mpMap->mUserMenuOrder.remove(parent);
+    } else {
+        host.mpMap->mUserMenuOrder.insert(parent, order);
+    }
     lua_pushboolean(L, true);
     return 1;
 }

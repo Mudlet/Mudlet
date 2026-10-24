@@ -7200,6 +7200,7 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "addMapMenu", TLuaInterpreter::addMapMenu);
     lua_register(pGlobalLua, "removeMapMenu", TLuaInterpreter::removeMapMenu);
     lua_register(pGlobalLua, "getMapMenus", TLuaInterpreter::getMapMenus);
+    lua_register(pGlobalLua, "setMapMenuOrder", TLuaInterpreter::setMapMenuOrder);
     lua_register(pGlobalLua, "hideMapMenuItem", TLuaInterpreter::hideMapMenuItem);
     lua_register(pGlobalLua, "showMapMenuItem", TLuaInterpreter::showMapMenuItem);
     lua_register(pGlobalLua, "getHiddenMapMenuItems", TLuaInterpreter::getHiddenMapMenuItems);

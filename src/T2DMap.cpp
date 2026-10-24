@@ -104,6 +104,7 @@
 #include <cmath>
 
 #include <algorithm>
+#include <limits>
 #include <vector>
 
 #include "mapInfoContributorManager.h"
@@ -4655,39 +4656,45 @@ void T2DMap::populateUserContextMenus(QMenu& menu)
     if (!mpMap) {
         return;
     }
+    struct UserEntry
+    {
+        qsizetype listedAt;
+        bool menu;
+        QString uniqueName;
+        QString parent;
+    };
+    const auto listedAt = [this](const QString& parent, const QString& uniqueName) {
+        const qsizetype index = mpMap->mUserMenuOrder.value(parent).indexOf(uniqueName);
+        return index < 0 ? std::numeric_limits<qsizetype>::max() : index;
+    };
     QMap<QString, QMenu*> userMenus;
-    QMapIterator<QString, QStringList> menuIterator(mpMap->mUserMenus);
-
-    while (menuIterator.hasNext()) {
-        menuIterator.next();
-        const QStringList menuInfo = menuIterator.value();
-        const QString displayName = menuInfo.value(1);
-        auto* userMenu = new QMenu(displayName, &menu);
-        userMenus.insert(menuIterator.key(), userMenu);
+    QList<UserEntry> entries;
+    for (const auto& [uniqueName, menuInfo] : mpMap->mUserMenus.asKeyValueRange()) {
+        userMenus.insert(uniqueName, new QMenu(menuInfo.value(1), &menu));
+        entries.append({listedAt(menuInfo.value(0), uniqueName), true, uniqueName, menuInfo.value(0)});
     }
+    for (const auto& [uniqueName, actionInfo] : mpMap->mUserActions.asKeyValueRange()) {
+        entries.append({listedAt(actionInfo.value(1), uniqueName), false, uniqueName, actionInfo.value(1)});
+    }
+    // Stable, so unlisted entries keep the order scripts have always had: menus, then events, each by unique name
+    std::stable_sort(entries.begin(), entries.end(), [](const UserEntry& a, const UserEntry& b) {
+        return a.listedAt < b.listedAt;
+    });
 
-    menuIterator.toFront();
-    while (menuIterator.hasNext()) {
-        menuIterator.next();
-        const QStringList menuInfo = menuIterator.value();
-        const QString menuParent = menuInfo.value(0);
-
-        if (auto* childMenu = userMenus.value(menuIterator.key(), nullptr)) {
-            if (menuParent.isEmpty()) {
+    for (const UserEntry& entry : std::as_const(entries)) {
+        const QString& uniqueName = entry.uniqueName;
+        const QString& menuParentKey = entry.parent;
+        if (entry.menu) {
+            QMenu* childMenu = userMenus.value(uniqueName);
+            if (menuParentKey.isEmpty()) {
                 menu.addMenu(childMenu);
-            } else if (auto* parentMenu = userMenus.value(menuParent, nullptr)) {
+            } else if (auto* parentMenu = userMenus.value(menuParentKey, nullptr)) {
                 parentMenu->addMenu(childMenu);
             }
+            continue;
         }
-    }
 
-    QMapIterator<QString, QStringList> actionIterator(mpMap->mUserActions);
-    while (actionIterator.hasNext()) {
-        actionIterator.next();
-        const QString uniqueName = actionIterator.key();
-        const QStringList actionInfo = actionIterator.value();
-        const QString menuParentKey = actionInfo.value(1);
-        const QString displayText = actionInfo.value(2);
+        const QString displayText = mpMap->mUserActions.value(uniqueName).value(2);
 
         auto* action = new QAction(displayText, &menu);
         if (menuParentKey.isEmpty()) {
