@@ -46,9 +46,9 @@ private:
     QTemporaryDir mConfigDir;
     QByteArray mSavedXdg;
     TelnetServerStub* mpServer = nullptr;
-    const QString mpHostname = "Test-BlinkRows";
+    const QString mpHostname = qsl("Test-BlinkRows");
     QString mpPort;
-    const QString mpLocalhost = "localhost";
+    const QString mpLocalhost = qsl("localhost");
 
     class PaintSwallower : public QObject
     {
@@ -66,12 +66,12 @@ private:
         return lines;
     }
 
-    // Descenders, underscores and stacked accents ink the rows either side of
+    // Descenders, underscores and accents ink the rows either side of
     // the blinking one. The line after it blinks only on a combining accent,
     // which is never drawn blinking because a grapheme takes its base's style.
     static QByteArray blinkingLines()
     {
-        QString lines = qsl("\x1b[5mThis one blinks gjpqy___ O\u0308\u0308\u0308 g\u0303\u0303\u0303_\x1b[0m and this does not\r\n");
+        QString lines = qsl("\x1b[5mThis one blinks gjpqy___ O\u0308 g\u0303_ \u00c5\x1b[0m and this does not\r\n");
         lines.append(qsl("Only the accent of e\x1b[5m\u0301\x1b[0m blinks\r\n"));
         lines.append(fillerLines(3, QLatin1Char('Z')));
         return lines.toUtf8();
@@ -169,6 +169,30 @@ private slots:
                          },
                          2000),
                  "the blink timer kept running after the blinking line left the screen");
+    }
+
+    // Stacked combining marks can ink rows past a neighbour of their own line
+    void test_stackedMarksOnScreenMakeATickRepaintTheWholePane()
+    {
+        TTextEdit* pane = nullptr;
+        int blinkingRow = -1;
+        openPaneShowingBlinkingText(pane, blinkingRow);
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        TBuffer& buffer = *pane->mpBuffer;
+        const int lastLineBefore = buffer.getLastLineNumber();
+        mpServer->sendRaw(qsl("Stacked A\u0308\u0308\u0308 marks\r\n").toUtf8());
+        QVERIFY2(QTest::qWaitFor(
+                         [&]() {
+                             return buffer.getLastLineNumber() > lastLineBefore;
+                         },
+                         5000),
+                 "the stacked marks never reached the buffer");
+
+        pane->repaint();
+        pane->slot_blinkStateChanged();
+        QVERIFY2(pane->mForceUpdate, "a blink tick redrew only some rows while stacked marks could ink rows outside them");
     }
 
 private:

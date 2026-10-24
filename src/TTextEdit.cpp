@@ -3994,37 +3994,42 @@ void TTextEdit::slot_changeEnableBlinkText(const bool enable)
     }
 }
 
-// Only a grapheme's first TChar styles it, as in layoutLine()
-bool TTextEdit::lineShowsBlinkingText(const int lineNumber) const
+bool TTextEdit::hasStackedMarks(const QString& text)
 {
-    const QString& lineText = mpBuffer->lineBuffer.at(lineNumber);
-    const std::vector<TChar>& chars = mpBuffer->buffer.at(lineNumber);
-    const int total = static_cast<int>(std::min(static_cast<size_t>(lineText.size()), chars.size()));
-    auto blinks = [&chars](const int index) {
-        const TChar& c = chars[index];
-        const TChar::AttributeFlags attributes = c.hasSplitFormat() ? (c.allDisplayAttributes() | c.rightHalf().allDisplayAttributes()) : c.allDisplayAttributes();
-        return bool(attributes & (TChar::Blink | TChar::FastBlink));
-    };
-    if (lineBreakInfo::printableAscii(lineText)) {
-        for (int index = 0; index < total; ++index) {
-            if (blinks(index)) {
-                return true;
-            }
-        }
+    if (lineBreakInfo::printableAscii(text)) {
         return false;
     }
-    QTextBoundaryFinder boundaryFinder(QTextBoundaryFinder::Grapheme, lineText);
-    for (int index = 0; index < total;) {
-        if (blinks(index)) {
+    bool previousIsMark = false;
+    for (const QChar character : text) {
+        const bool isMark = character.isMark();
+        if (isMark && previousIsMark) {
             return true;
         }
-        const int nextBoundary = boundaryFinder.toNextBoundary();
-        if (nextBoundary <= index) {
-            break;
-        }
-        index = nextBoundary;
+        previousIsMark = isMark;
     }
     return false;
+}
+
+bool TTextEdit::lineShowsBlinkingText(const int lineNumber) const
+{
+    static constexpr TChar::AttributeFlags blinkFlags = TChar::Blink | TChar::FastBlink;
+    const std::vector<TChar>& chars = mpBuffer->buffer.at(lineNumber);
+    const bool anyBlinkFlag = std::any_of(chars.cbegin(), chars.cend(), [](const TChar& c) {
+        return (c.allDisplayAttributes() & blinkFlags) || (c.hasSplitFormat() && (c.rightHalf().allDisplayAttributes() & blinkFlags));
+    });
+    if (!anyBlinkFlag) {
+        return false;
+    }
+    // A flag only blinks if a glyph is drawn with it: a grapheme takes the style
+    // of its first character, and a split format shows only on a wide one.
+    const size_t timeStampsBefore = mLaidOutTimeStamps.size();
+    LineLayout layout;
+    layoutLine(lineNumber, 0, timeStampCharStyle(), layout);
+    const bool blinks = std::any_of(layout.cbegin(), layout.cend(), [](const GraphemeRun& run) {
+        return run.style && ((run.rightHalf ? run.style->rightHalf() : *run.style).allDisplayAttributes() & blinkFlags);
+    });
+    mLaidOutTimeStamps.resize(timeStampsBefore);
+    return blinks;
 }
 
 void TTextEdit::slot_blinkStateChanged()
@@ -4039,6 +4044,11 @@ void TTextEdit::slot_blinkStateChanged()
     int firstBlinkingLine = -1;
     int lastBlinkingLine = -1;
     for (int line = lineOffset; line < endLine; ++line) {
+        if (hasStackedMarks(mpBuffer->lineBuffer.at(line))) {
+            // Their ink can reach rows past a neighbour, which only a whole repaint redraws exactly
+            forceUpdate();
+            return;
+        }
         if (lineShowsBlinkingText(line)) {
             if (firstBlinkingLine < 0) {
                 firstBlinkingLine = line;
