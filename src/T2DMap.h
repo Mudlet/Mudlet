@@ -41,6 +41,7 @@
 #include <QList>
 #include <memory>
 #include <optional>
+#include <utility>
 
 class Host;
 class TArea;
@@ -471,6 +472,9 @@ private:
                                      const bool showRoomNames,
                                      const int speedWalkStartRoomId);
     bool anyRoomHighlighted(const QList<int>& roomIds) const;
+    // A double-clicked room's speedwalk runs Lua, which may delete rooms, so it waits until no room is held for drawing
+    std::optional<std::pair<int, int>> mPendingSpeedWalk;
+    void startPendingSpeedWalk();
     // The grid and reduced-detail loops draw their highlights before the player's room is drawn, so they put its body under them first
     void drawPlayerRoomBody(QPainter&, TRoom* pPlayerRoom, const QPointF& roomCenter, const bool isGridMode, const bool showRoomCollision);
     // Batch rendering for large grid mode areas - draws rooms grouped by color

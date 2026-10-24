@@ -104,6 +104,7 @@
 #include <cmath>
 
 #include <algorithm>
+#include <utility>
 #include <vector>
 
 #include "mapInfoContributorManager.h"
@@ -1383,6 +1384,13 @@ void T2DMap::initiateSpeedWalk(const int speedWalkStartRoomId, const int speedWa
     }
 }
 
+void T2DMap::startPendingSpeedWalk()
+{
+    if (const auto pendingSpeedWalk = std::exchange(mPendingSpeedWalk, std::nullopt)) {
+        initiateSpeedWalk(pendingSpeedWalk->first, pendingSpeedWalk->second);
+    }
+}
+
 // This has been refactored to a separate function out of the paintEven() code
 // because we need to use it in two places - one for every room that is not the
 // player's room and then, AFTER all those have been drawn, once for the
@@ -1534,7 +1542,7 @@ void T2DMap::drawRoom(QPainter& painter,
                 diameterPath.addEllipse(roomCenter, roomRadius, roomRadius);
                 painter.drawPath(diameterPath);
 
-                initiateSpeedWalk(speedWalkStartRoomId, currentRoomId);
+                mPendingSpeedWalk = {speedWalkStartRoomId, currentRoomId};
             }
         }
     }
@@ -1684,8 +1692,8 @@ void T2DMap::drawPlayerRoomBody(QPainter& painter, TRoom* pPlayerRoom, const QPo
     QFont unusedFont = painter.font();
     QPen unusedPen = painter.pen();
     // The grid and reduced-detail loops resolve a double-click themselves, after this
-    const bool pick = mPick;
-    mPick = false;
+    const bool pick = std::exchange(mPick, false);
+    const bool startSpeedWalk = std::exchange(mStartSpeedWalk, false);
     drawRoom(painter,
              unusedFont,
              unusedFont,
@@ -1700,6 +1708,7 @@ void T2DMap::drawPlayerRoomBody(QPainter& painter, TRoom* pPlayerRoom, const QPo
              showRoomCollision,
              RoomDrawPass::Body);
     mPick = pick;
+    mStartSpeedWalk = startSpeedWalk;
 }
 
 bool T2DMap::anyRoomHighlighted(const QList<int>& roomIds) const
@@ -3116,6 +3125,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
     }
     painter.restore(); // end of player-room save
 
+    startPendingSpeedWalk();
     resolveAreaExitClick(painter, areaExitsMap, playerRoomId);
 
     phase6Time = phaseTimer.nsecsElapsed() / 1000000.0;
@@ -7416,6 +7426,7 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
     if (layerRooms) {
         drawRoomHighlightsAndLabels(painter, roomVNumFont, mapNameFont, pen, layeredRooms, pArea->gridMode, areRoomIdsLegible, false /* showRoomNames */, -1 /* speedWalkStartRoomId */);
     }
+    startPendingSpeedWalk();
 
 
     // Draw the ("foreground") labels that are on the top of the map - same as paintEvent

@@ -269,6 +269,70 @@ private slots:
                  qPrintable(qsl("a room was drawn over its neighbour's highlight: its centre is %1 and %2 rather than each other's highlight").arg(overFirst.name(), overSecond.name())));
     }
 
+    // The export's layered passes keep every room's id above a highlight
+    void roomIdsAreExportedOnTopOfAHighlight()
+    {
+        map()->mapClear();
+        const int areaId = roomDB()->addArea(qsl("Highlighted id area"));
+        QVERIFY(areaId > 0);
+        // Dark, so the ids are white: the one colour here with any blue in it
+        constexpr int darkEnvironment = scmBlackEnvironment + 1;
+        map()->mCustomEnvColors[darkEnvironment] = QColor(0, 0, 64);
+        const QColor highlightColour(255, 255, 0);
+        // Wide ids, so each leaves plenty of solid pixels at this size
+        constexpr int firstRoomId = 888;
+        for (int index = 0; index < 2; ++index) {
+            const int roomId = firstRoomId + index;
+            QVERIFY(map()->addRoom(roomId));
+            QVERIFY(map()->setRoomArea(roomId, areaId));
+            QVERIFY(map()->setRoomCoordinates(roomId, index, 0, 0));
+            TRoom* pRoom = roomDB()->getRoom(roomId);
+            QVERIFY(pRoom);
+            pRoom->environment = darkEnvironment;
+            // Both, so whichever room is drawn first has the other's highlight reach over its id
+            pRoom->highlight = true;
+            pRoom->highlightColor = highlightColour;
+            pRoom->highlightColor2 = highlightColour;
+            pRoom->highlightRadius = 2.3f;
+        }
+        mpHost->mBgColor_2 = QColor(Qt::black);
+        mp2dMap->mMapperUseAntiAlias = false;
+        mp2dMap->mShowRoomID = true;
+        auto hideIds = qScopeGuard([this] {
+            mp2dMap->mShowRoomID = false;
+        });
+
+        const QString exportDir = qsl("%1/exports-highlight-ids").arg(mConfigDir.path());
+        QVERIFY(QDir().mkpath(exportDir));
+        const QString filePath = qsl("%1/highlight-ids.png").arg(exportDir);
+        const auto [exported, message] = mp2dMap->exportAreaToImage(areaId, filePath, std::nullopt, 1.0);
+        QVERIFY2(exported, qPrintable(message));
+        QImage exportedImage;
+        QTRY_VERIFY2_WITH_TIMEOUT(exportedImage.load(filePath), "the exported image could not be read back", 10s);
+        QTRY_VERIFY_WITH_TIMEOUT(!exportsInFlight(mp2dMap), 10s);
+
+        constexpr int roomSize = 50;
+        constexpr int padding = 2 * roomSize;
+        for (int index = 0; index < 2; ++index) {
+            const QImage cell = exportedImage.copy(padding + index * roomSize - roomSize / 2, padding - roomSize / 2, roomSize, roomSize);
+            int highlightPixels = 0;
+            int idPixels = 0;
+            for (int y = 0; y < cell.height(); ++y) {
+                for (int x = 0; x < cell.width(); ++x) {
+                    const QColor pixel = cell.pixelColor(x, y);
+                    if (pixel == highlightColour) {
+                        ++highlightPixels;
+                    } else if (pixel.blue() > 128) {
+                        ++idPixels;
+                    }
+                }
+            }
+            QVERIFY2(highlightPixels >= 100 && idPixels >= 5,
+                     qPrintable(qsl("expected the id of room %1 on top of the highlight, found %2 highlight and %3 id pixels")
+                                        .arg(QString::number(firstRoomId + index), QString::number(highlightPixels), QString::number(idPixels))));
+        }
+    }
+
     // Every export's handler used to read one shared watcher member, so the
     // first handler reported the second export's result, deleted that watcher
     // and left a null for the second handler to crash on (#10393)
