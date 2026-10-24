@@ -489,7 +489,7 @@ private slots:
     }
 
     // Temporary items are never put in the editor's trees, so a result for one
-    // could not be shown when chosen (#5257)
+    // could not be shown when chosen
     void test_temporaryItemsAreNotFound()
     {
         const QString token = qsl("qaTempOnlyToken");
@@ -526,6 +526,23 @@ private slots:
             found << qsl("%1 %2").arg(results->topLevelItem(i)->text(0), results->topLevelItem(i)->text(1));
         }
         QCOMPARE(found, QStringList({qsl("Trigger qaPermanentTokenTrigger")}));
+    }
+
+    // tempButton() makes an ordinary button, which the editor shows like any other
+    void test_selectingAScriptMadeButtonResultSelectsThatButton()
+    {
+        QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("tempButtonToolbar('qaScriptMadeBar', 0, 0) tempButton('qaScriptMadeBar', 'qaScriptMadeButton', 0)")));
+        mpEditor->slot_showScripts();
+        search(qsl("qaScriptMadeButton"));
+        QTreeWidgetItem* result = topLevelResultFor(qsl("Button"));
+        QVERIFY2(result, "the button the script made was not found");
+
+        mpEditor->slot_itemSelectedInSearchResults(result);
+
+        QCOMPARE(mpEditor->mCurrentView, EditorViewType::cmActionView);
+        QTreeWidgetItem* selected = mpEditor->treeWidget_actions->currentItem();
+        QVERIFY2(selected, "no button became current after its search result was chosen");
+        QCOMPARE(selected->text(0), qsl("qaScriptMadeButton"));
     }
 
     void test_anEmptyOrUnknownTermProducesNoResults()
