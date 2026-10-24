@@ -69,7 +69,6 @@ private:
     const QString mProfileName = qsl("EditorEmptySelection-Test-Profile");
     QString mPort;
     const QString mLocalhost = qsl("localhost");
-    const QString mTriggerName = qsl("qaEmptySelectionTrigger");
 
     dlgTriggerEditor* editor() const { return HostDialogs::of(mpHost).mpEditorDialog; }
 
@@ -187,7 +186,7 @@ private slots:
             editor()->slot_addNewItem();
             editor()->slot_saveEdits();
         }
-        QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("qaEmptySelectionVariable = 1\npermRegexTrigger(\"%1\", \"\", {\"^qa empty selection$\"}, \"\")").arg(mTriggerName)));
+        QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("qaEmptySelectionVariable = 1")));
     }
 
     void cleanupTestCase()
@@ -204,7 +203,6 @@ private slots:
         mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);
     }
 
-    // The issue's own steps: open the editor on a profile that has triggers
     void test_openingTheEditorShowsTheTriggerHelp()
     {
         delete editor();
@@ -238,6 +236,9 @@ private slots:
         QFETCH(bool, rootIsCurrent);
         const auto viewType = static_cast<EditorViewType>(view);
         dlgTriggerEditor* pEditor = editor();
+        // A trigger of this row's own, so a row that wipes one leaves the others theirs
+        const QString triggerName = qsl("qaEmptySelection%1%2").arg(view).arg(rootIsCurrent ? qsl("Root") : qsl("None"));
+        QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("permRegexTrigger(\"%1\", \"\", {\"^%1$\"}, \"\")").arg(triggerName)));
         pEditor->doCleanReset();
         QVERIFY(QTest::qWaitFor([pEditor]() {
             return !pEditor->mCleanResetQueued;
@@ -245,15 +246,13 @@ private slots:
 
         // Coming from a trigger that is on screen, so its form and script editor are up. One
         // with no error or package warning, as either keeps the place the help is checked for.
-        const QList<QTreeWidgetItem*> found = pEditor->treeWidget_triggers->findItems(mTriggerName, Qt::MatchFixedString | Qt::MatchCaseSensitive | Qt::MatchRecursive);
+        const QList<QTreeWidgetItem*> found = pEditor->treeWidget_triggers->findItems(triggerName, Qt::MatchFixedString | Qt::MatchCaseSensitive | Qt::MatchRecursive);
         QCOMPARE(found.size(), 1);
         QTreeWidgetItem* pTrigger = found.constFirst();
         TTrigger* pTriggerItem = mpHost->getTriggerUnit()->getTrigger(pTrigger->data(0, Qt::UserRole).toInt());
         QVERIFY(pTriggerItem);
         const int triggerID = pTriggerItem->getID();
-        const QString triggerName = pTriggerItem->getName();
         const QStringList triggerPatterns = pTriggerItem->getPatternsList();
-        QVERIFY(!triggerName.isEmpty());
         pEditor->treeWidget_triggers->setCurrentItem(pTrigger);
         pEditor->slot_triggerSelected(pTrigger);
         QVERIFY2(shownInEditor(pEditor->mpSourceEditorArea, pEditor), "the trigger's script editor is not up, so nothing is left for the next view to hide");
@@ -262,6 +261,8 @@ private slots:
         if (viewType != EditorViewType::cmVarsView) {
             QTreeWidgetItem* pRoot = pTree->topLevelItem(0);
             QVERIFY(pRoot);
+            // Unblocked, the selection handler would show the help before the view is asked to
+            const QSignalBlocker blocker(pTree->selectionModel());
             pTree->setCurrentItem(rootIsCurrent ? pRoot : nullptr);
         }
         showView(viewType);
