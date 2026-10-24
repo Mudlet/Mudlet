@@ -507,6 +507,9 @@ int TLuaInterpreter::ttsSetPitch(lua_State* L)
 {
     TLuaInterpreter::ttsBuild();
     double pitch = getVerifiedDouble(L, __func__, 1, "pitch");
+    if (qIsNaN(pitch)) {
+        return warnArgumentValue(L, __func__, "pitch as a number from -1 to 1 expected, got nan");
+    }
 
     if (pitch > 1.0) {
         pitch = 1.0;
@@ -533,6 +536,9 @@ int TLuaInterpreter::ttsSetRate(lua_State* L)
 {
     TLuaInterpreter::ttsBuild();
     double rate = getVerifiedDouble(L, __func__, 1, "rate");
+    if (qIsNaN(rate)) {
+        return warnArgumentValue(L, __func__, "rate as a number from -1 to 1 expected, got nan");
+    }
 
     if (rate > 1.0) {
         rate = 1.0;
@@ -559,6 +565,9 @@ int TLuaInterpreter::ttsSetVolume(lua_State* L)
 {
     TLuaInterpreter::ttsBuild();
     double volume = getVerifiedDouble(L, __func__, 1, "volume");
+    if (qIsNaN(volume)) {
+        return warnArgumentValue(L, __func__, "volume as a number from 0 to 1 expected, got nan");
+    }
 
     if (volume > 1.0) {
         volume = 1.0;
