@@ -85,6 +85,12 @@ private:
 
     static bool underWay(TTimer* pTimer) { return pTimer->getQTimer()->isActive() && pTimer->remainingTime() < scmInterval - 1000; }
 
+    void select(QTreeWidgetItem* pItem)
+    {
+        mpTimerTree->setCurrentItem(pItem);
+        mpEditor->slot_timerSelected(pItem);
+    }
+
     // What clicking the timer and then another item in the tree does
     void viewThenLeave(QTreeWidgetItem* pItem)
     {
@@ -133,12 +139,18 @@ private slots:
             enableTimer("qaBroken")
             permTimer("qaMoved", "", 600, "qaMovedFired = true")
             enableTimer("qaMoved")
+            permTimer("qaToggled", "", 600, "qaToggledFired = true")
+            enableTimer("qaToggled")
+            permTimer("qaEdited", "", 600, "qaEditedFired = true")
+            enableTimer("qaEdited")
+            permTimer("qaOff", "", 600, "qaOffFired = true")
             permTimer("qaOffsetParent", "", 3600, "")
             enableTimer("qaOffsetParent")
             permTimer("qaOffset", "qaOffsetParent", 600, "qaOffsetFired = true")
             enableTimer("qaOffset")
             permTimer("qaOffsetReordered", "qaOffsetParent", 600, "qaOffsetReorderedFired = true")
             enableTimer("qaOffsetReordered")
+            permTimer("qaOffsetIdle", "qaOffsetParent", 600, "qaOffsetIdleFired = true")
         )")));
 
         mudlet::self()->slot_showScriptDialog();
@@ -158,7 +170,7 @@ private slots:
 
         // A countdown that has visibly run, so that a restart shows in what is left of it
         QTest::qWait(1500ms);
-        for (const QString& name : {qsl("qaCountdown"), qsl("qaRetimed"), qsl("qaRetimedQuietly"), qsl("qaBroken"), qsl("qaOffset"), qsl("qaOffsetReordered")}) {
+        for (const QString& name : {qsl("qaCountdown"), qsl("qaRetimed"), qsl("qaRetimedQuietly"), qsl("qaBroken"), qsl("qaOffset"), qsl("qaOffsetReordered"), qsl("qaToggled"), qsl("qaEdited")}) {
             QVERIFY2(timerNamed(name) && underWay(timerNamed(name)), qPrintable(qsl("%1 is not counting down to start with").arg(name)));
         }
     }
@@ -274,6 +286,7 @@ private slots:
         mpEditor->slot_timerSelected(itemNamed(qsl("qaMoved")));
         mpHost->getTimerUnit()->reParentTimer(pTimer->getID(), 0, pParent->getID(), -1, -1);
         QVERIFY(pTimer->isOffsetTimer());
+        QVERIFY2(!pTimer->getQTimer()->isActive(), "moving a timer under another started an offset countdown of its own");
         mpEditor->slot_timerSelected(itemNamed(qsl("qaElsewhere")));
 
         QVERIFY2(!pTimer->getQTimer()->isActive(), "a timer moved under another started an offset countdown of its own");
@@ -290,6 +303,79 @@ private slots:
         mpHost->getTimerUnit()->reParentTimer(pTimer->getID(), pParent->getID(), pParent->getID(), 0, 0);
 
         QVERIFY2(pTimer->getQTimer()->isActive(), "moving an armed offset timer among its siblings disarmed it");
+    }
+
+    void test_viewingASwitchedOffTimerLeavesItOff()
+    {
+        TTimer* pTimer = timerNamed(qsl("qaOff"));
+        QVERIFY(pTimer);
+
+        viewThenLeave(itemNamed(qsl("qaOff")));
+
+        QVERIFY2(!pTimer->shouldBeActive(), "viewing a switched off timer switched it on");
+        QVERIFY2(!pTimer->getQTimer()->isActive(), "viewing a switched off timer started it");
+    }
+
+    void test_editingOnlyTheScriptKeepsTheCountdown()
+    {
+        TTimer* pTimer = timerNamed(qsl("qaEdited"));
+        QVERIFY(pTimer);
+
+        mpEditor->slot_timerSelected(itemNamed(qsl("qaEdited")));
+        auto* pScriptEditor = mpEditor->findChild<edbee::TextEditorWidget*>(qsl("edbeeEditorWidget"));
+        QVERIFY(pScriptEditor);
+        pScriptEditor->textDocument()->setText(qsl("qaEditedFired = 2"));
+        mpEditor->slot_timerSelected(itemNamed(qsl("qaElsewhere")));
+
+        QCOMPARE(pTimer->getScript(), qsl("qaEditedFired = 2"));
+        QVERIFY(pTimer->state());
+        QVERIFY2(underWay(pTimer), qPrintable(qsl("saving a new script restarted the timer: %1 ms left").arg(pTimer->remainingTime())));
+    }
+
+    void test_switchingATimerOffAndOnInTheEditorRestartsIt()
+    {
+        TTimer* pTimer = timerNamed(qsl("qaToggled"));
+        QVERIFY(pTimer);
+        QVERIFY(underWay(pTimer));
+        const int leftBefore = pTimer->remainingTime();
+        QTreeWidgetItem* pItem = itemNamed(qsl("qaToggled"));
+
+        select(pItem);
+        mpEditor->activeToggle_timer();
+        select(itemNamed(qsl("qaElsewhere")));
+        QVERIFY(!pTimer->shouldBeActive());
+        QVERIFY2(!pTimer->getQTimer()->isActive(), "switching the timer off left it running");
+
+        select(pItem);
+        mpEditor->activeToggle_timer();
+        select(itemNamed(qsl("qaElsewhere")));
+        QVERIFY(pTimer->shouldBeActive());
+        QVERIFY2(pTimer->getQTimer()->isActive(), "switching the timer on left it stopped");
+        QVERIFY2(pTimer->remainingTime() > leftBefore, qPrintable(qsl("switching the timer on did not start it over: %1 ms left, %2 before").arg(pTimer->remainingTime()).arg(leftBefore)));
+    }
+
+    void test_switchingAnOffsetTimerOnWaitsForItsParentToFire()
+    {
+        TTimer* pTimer = timerNamed(qsl("qaOffsetIdle"));
+        QVERIFY(pTimer);
+        QVERIFY(pTimer->isOffsetTimer());
+        QVERIFY(!pTimer->shouldBeActive());
+        QTreeWidgetItem* pItem = itemNamed(qsl("qaOffsetIdle"));
+
+        select(pItem);
+        mpEditor->activeToggle_timer();
+        QVERIFY(pTimer->shouldBeActive());
+        QVERIFY2(!pTimer->getQTimer()->isActive(), "switching an offset timer on armed it");
+
+        mpEditor->slot_smartUndo();
+        QVERIFY(!pTimer->shouldBeActive());
+        mpEditor->slot_smartRedo();
+        QVERIFY(pTimer->shouldBeActive());
+        QVERIFY2(!pTimer->getQTimer()->isActive(), "redoing switching an offset timer on armed it");
+
+        select(itemNamed(qsl("qaElsewhere")));
+        QVERIFY(pTimer->shouldBeActive());
+        QVERIFY2(!pTimer->getQTimer()->isActive(), "an offset timer switched on in the editor armed itself");
     }
 };
 

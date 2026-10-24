@@ -4506,6 +4506,8 @@ void dlgTriggerEditor::activeToggle_timer()
             // state of offset timers is managed by the trigger engine
             if (pT->shouldBeActive()) {
                 pT->enableTimer(pT->getID());
+                // Its parent firing arms it, so it must not count down from being switched on
+                pT->stop();
                 itemDescription = descActiveOffsetTimer;
                 if (pT->ancestorsActive()) {
                     icon = cachedIcon(qsl(":/icons/offsettimer-on.png"));
