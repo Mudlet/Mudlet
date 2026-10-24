@@ -32,6 +32,11 @@ describe("Tests that the cursor and line functions find their console by name", 
     -- these two answer something other than nil for a console they cannot find
     assert.are.same({-1}, {getLastLineNumber(windowName)})
     assert.are.same({"ERROR: mini console does not exist", notFound}, {getCurrentLine(windowName)})
+    assert.are.same({"ERROR: mini console does not exist", notFound}, {getCurrentLine(windowName, false)})
+    assert.are.same({"ERROR: mini console does not exist", notFound}, {getCurrentLine(windowName, nil)})
+    -- unless it is asked for the full error report
+    assert.are.equal(2, select("#", getCurrentLine(windowName, true)))
+    assert.are.same({nil, notFound}, {getCurrentLine(windowName, true)})
   end
 
   local function mainCursor()
@@ -281,6 +286,10 @@ describe("Tests that the cursor and line functions find their console by name", 
       assert.are.equal(last - 1, getLineNumber())
       assert.are.equal(1, getColumnNumber())
       assert.are.equal(getCurrentLine("main"), getCurrentLine())
+      assert.are.same({getCurrentLine("main")}, {getCurrentLine(true)})
+      assert.are.same({getCurrentLine("main")}, {getCurrentLine(false)})
+      assert.are.same({getCurrentLine("main")}, {getCurrentLine("main", true)})
+      assert.are.same({getCurrentLine("main")}, {getCurrentLine(nil, true)})
       assert.are.equal(0, select("#", moveCursorEnd()))
       assert.are.equal(last, getLineNumber("main"))
       assert.are.equal(getColumnCount("main"), getColumnCount())
