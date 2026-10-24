@@ -241,7 +241,7 @@ void dlgPackageManager::populatePackagesWithUpdates()
     mPackagesWithUpdates.clear();
 
     for (const QString& packageName : std::as_const(mpHost->mInstalledPackages)) {
-        if (!packageLookup.contains(packageName)) {
+        if (!matchesRepositoryPackage(packageName)) {
             continue;
         }
 

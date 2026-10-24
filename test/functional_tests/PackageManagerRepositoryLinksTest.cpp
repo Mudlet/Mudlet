@@ -215,6 +215,29 @@ private slots:
         QVERIFY2(!mpManager->pushButton_website->isHidden(), "SETUP: the Explore view shows no website button for a listed package");
         QCOMPARE(mpManager->packageHelpUrl(mPackageName), mRepositoryHelpUrl);
     }
+
+    // updating would uninstall the local package and put the unrelated repository one in its place
+    void test_aSameNamedPackageByAnotherAuthorIsNotOfferedAnUpdate()
+    {
+        installPackage(qsl("Someone Else"));
+        openManager();
+
+        QVERIFY2(!mpManager->mPackagesWithUpdates.contains(mPackageName), "a package that only shares its name with a newer repository one is counted as having an update");
+        mpManager->pushButton_updates->click();
+        QVERIFY2(mpManager->packageList->findItems(mPackageName, Qt::MatchExactly).isEmpty(), "a package that only shares its name with a newer repository one is listed under Updates");
+    }
+
+    void test_theRepositoryPackageIsStillOfferedItsUpdate()
+    {
+        installPackage(mRepositoryAuthor);
+        openManager();
+
+        QVERIFY2(mpManager->mPackagesWithUpdates.contains(mPackageName), "the repository's own package is not counted as having an update");
+        mpManager->pushButton_updates->click();
+        selectPackage();
+        QVERIFY2(!mpManager->pushButton_report->isHidden(), "the repository's own package lost its report button under Updates");
+        QVERIFY2(!mpManager->pushButton_website->isHidden(), "the repository's own package lost its website button under Updates");
+    }
 };
 
 #include "PackageManagerRepositoryLinksTest.moc"
