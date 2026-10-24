@@ -17,6 +17,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include <QPainter>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 #include <chrono>
@@ -149,6 +150,60 @@ private slots:
         pane->hide();
         pane->slot_blinkStateChanged();
         QVERIFY2(!pane->mForceUpdate && pane->mDirtyFirstLine < 0, "a blink tick scanned a hidden pane");
+    }
+
+    // The pixels below the last whole row show that row's overflow ink, so a tick
+    // blinking the bottom row has to repaint them as well.
+    void test_blinkTickOnTheBottomRowReachesTheBottomEdge()
+    {
+        TTextEdit* pane = nullptr;
+        int blinkingRow = -1;
+        openPaneShowingBlinkingText(pane, blinkingRow);
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        TBuffer& buffer = *pane->mpBuffer;
+        const int lastLineBefore = buffer.getLastLineNumber();
+        mpServer->sendRaw(qsl("\x1b[5m___ gjpqy ___ gjpqy ___\x1b[0m\r\n").toUtf8());
+        QVERIFY2(QTest::qWaitFor(
+                         [&]() {
+                             return buffer.getLastLineNumber() > lastLineBefore;
+                         },
+                         5000),
+                 "the bottom blinking line never reached the buffer");
+
+        const int rowHeight = pane->mFontHeight;
+        for (int extra = 0; extra < rowHeight && pane->height() % rowHeight < rowHeight / 2; ++extra) {
+            mudlet::self()->resize(1200, 800 + extra);
+            QTest::qWait(50ms);
+        }
+        QVERIFY2(pane->height() % rowHeight >= rowHeight / 2, "could not leave a strip below the last whole row");
+        const int bottomRow = pane->getScreenHeight() - 1;
+        QVERIFY2(buffer.line(pane->imageTopLine() + bottomRow).startsWith(qsl("___ gjpqy")), "the blinking line is not on the bottom row");
+
+        pane->forceUpdate();
+        pane->repaint();
+        QImage onScreen = pane->grab().toImage();
+
+        PaintSwallower swallower;
+        pane->installEventFilter(&swallower);
+        QTest::qWait(300ms);
+        pane->removeEventFilter(&swallower);
+
+        pane->mSincePaint.restart();
+        pane->slot_blinkStateChanged();
+        QVERIFY2(!pane->mForceUpdate, "a blink tick asked for the whole pane");
+        const QRegion tickRegion = pane->mPendingPaintRegion;
+        pane->mPendingPaintRegion = QRegion();
+        {
+            QPainter painter(&onScreen);
+            pane->render(&painter, tickRegion.boundingRect().topLeft(), tickRegion);
+        }
+        pane->forceUpdate();
+        const QImage afterFullRepaint = pane->grab().toImage();
+        const QRect strip(0, (bottomRow + 1) * rowHeight, pane->width(), pane->height() - (bottomRow + 1) * rowHeight);
+        QVERIFY2(onScreen.copy(strip) == afterFullRepaint.copy(strip), "a blink tick left the strip below the bottom row at its old opacity");
+        QVERIFY2(onScreen == afterFullRepaint, "a blink tick left the pane different from a whole-pane repaint");
     }
 
     // A scroll shorter than a screen keeps the timer running, so only a tick finding

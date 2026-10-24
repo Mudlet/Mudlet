@@ -4089,7 +4089,9 @@ void TTextEdit::slot_blinkStateChanged()
     // The rows either side show the ink the blinking glyphs spill into them
     const int topRow = std::max(0, firstBlinkingLine - 1 - lineOffset);
     const int bottomRow = std::min(mScreenHeight - 1, lastBlinkingLine + 1 - lineOffset);
-    scheduleUpdate(QRect(0, topRow * mFontHeight, width(), (bottomRow - topRow + 1) * mFontHeight));
+    // The bottom row's overflow shows in the part-row below it, down to the edge
+    const int bandBottom = bottomRow == mScreenHeight - 1 ? height() : (bottomRow + 1) * mFontHeight;
+    scheduleUpdate(QRect(0, topRow * mFontHeight, width(), bandBottom - topRow * mFontHeight));
 }
 
 void TTextEdit::slot_scrollStoppedTimeout()
