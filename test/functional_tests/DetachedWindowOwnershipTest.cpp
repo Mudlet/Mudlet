@@ -37,6 +37,7 @@
  */
 
 #include <QAction>
+#include <QDockWidget>
 #include <QFileInfo>
 #include <QMimeData>
 #include <QSignalSpy>
@@ -570,7 +571,90 @@ private slots:
         QCOMPARE(mudlet::self()->mpTabBar->tabName(1), rightMostProfile);
     }
 
+    // Detaching takes the map dock's show hook with it, so the reattach has to put one back. Hidden while
+    // detached, so that the reattach's own check cannot size it first.
+    void test_aReattachedMapDockShownWhereOtherDocksWereOpensAtAUsableWidth()
+    {
+        QPointer<QDockWidget> pDock = showSecondProfilesMapDock();
+        QVERIFY(pDock);
+        auto hide = qScopeGuard([&pDock]() {
+            if (pDock) {
+                pDock->hide();
+            }
+        });
+        mpDetachedWindow = detachSecondProfile();
+        QVERIFY(mpDetachedWindow);
+        QVERIFY(pDock);
+        pDock->hide();
+        QTest::qWait(50ms);
+        reattachAndWait(mSecondHostname);
+        QVERIFY(pDock);
+        QVERIFY(!pDock->isVisible());
+        useAndLeaveTheRightDockArea();
+        pDock->show();
+        QTRY_VERIFY2(pDock->width() > pDock->minimumSizeHint().width(), qPrintable(qsl("the map is only %1 pixels wide, its minimum").arg(pDock->width())));
+    }
+
+    // The reattach shows the dock with its signals blocked, so no show hook sees it
+    void test_aMapDockReattachedWhereOtherDocksWereOpensAtAUsableWidth()
+    {
+        QPointer<QDockWidget> pDock = showSecondProfilesMapDock();
+        QVERIFY(pDock);
+        auto hide = qScopeGuard([&pDock]() {
+            if (pDock) {
+                pDock->hide();
+            }
+        });
+        mpDetachedWindow = detachSecondProfile();
+        QVERIFY(mpDetachedWindow);
+        useAndLeaveTheRightDockArea();
+        reattachAndWait(mSecondHostname);
+        QVERIFY(pDock);
+        QVERIFY(pDock->isVisible());
+        QTRY_VERIFY2(pDock->width() > pDock->minimumSizeHint().width(), qPrintable(qsl("the map is only %1 pixels wide, its minimum").arg(pDock->width())));
+    }
+
 private:
+    // init() detached the second profile, so this puts it back to open its map in the main window
+    QDockWidget* showSecondProfilesMapDock()
+    {
+        reattachAndWait(mSecondHostname);
+        mudlet::self()->resize(1280, 900);
+        mudlet::self()->mpTabBar->setCurrentIndex(mudlet::self()->mpTabBar->tabIndex(mSecondHostname));
+        Host* pHost = mudlet::self()->getActiveHost();
+        if (!pHost || pHost->getName() != mSecondHostname) {
+            QTest::qFail("the second profile did not become the active one", __FILE__, __LINE__);
+            return nullptr;
+        }
+        QDockWidget* pDock = mudlet::self()->getMainWindowDockWidget(qsl("map_%1").arg(mSecondHostname));
+        if (!pDock || !pDock->isVisible()) {
+            mudlet::self()->slot_showMapperDialog();
+            pDock = mudlet::self()->getMainWindowDockWidget(qsl("map_%1").arg(mSecondHostname));
+        }
+        QTest::qWait(50ms);
+        if (!pDock || !pDock->isVisible() || mudlet::self()->dockWidgetArea(pDock) != Qt::RightDockWidgetArea) {
+            QTest::qFail("the map did not open docked on the right of the main window", __FILE__, __LINE__);
+            return nullptr;
+        }
+        return pDock;
+    }
+
+    // Docks that shared an area and left it leave Qt nothing but its minimum to give the next one
+    static void useAndLeaveTheRightDockArea()
+    {
+        QList<QDockWidget*> docks;
+        for (int i = 0; i < 3; ++i) {
+            auto pDock = new QDockWidget(mudlet::self());
+            pDock->setObjectName(qsl("dockOwnershipTest_%1").arg(i));
+            pDock->setWidget(new QWidget(pDock));
+            mudlet::self()->addDockWidget(Qt::RightDockWidgetArea, pDock);
+            docks.append(pDock);
+        }
+        QTest::qWait(50ms);
+        qDeleteAll(docks);
+        QTest::qWait(50ms);
+    }
+
     // init() detached the second profile, so put it back and add a third
     void startThirdProfile()
     {

@@ -4322,13 +4322,24 @@ describe("Tests the open and closed states of the map widget", function()
       assert.is_true(pumpEvents(200))
     end
 
+    -- A squeeze that misses would leave the spec passing without testing anything, so CI must not skip it
+    local function cannotSqueeze(message)
+      assert.is_false(resizeRequired, message)
+      pending(message)
+    end
+
     -- the console's minimum width is all that holds the map narrower than its size hint
-    local function squeezeMap(windowWidth, atMost)
+    local function squeezeMap(windowWidth, atMost, atLeast)
       setMainWindowSize(windowWidth, 900)
       pumpEvents(200)
       local width = mapWidth()
       if width > atMost then
-        pending("the console left the map " .. width .. " pixels in a narrow window, so it cannot be squeezed")
+        cannotSqueeze("the console left the map " .. width .. " pixels in a narrow window, so it cannot be squeezed")
+        return nil
+      end
+      -- at its minimum, showing it again grows the map whatever the spec is testing
+      if atLeast and width < atLeast then
+        cannotSqueeze("the console left the map only " .. width .. " pixels in a narrow window, its minimum")
         return nil
       end
       return width
@@ -4363,7 +4374,7 @@ describe("Tests the open and closed states of the map widget", function()
       assert.is_true(pumpEvents(200))
       local _, _, _, squeezed = getMapWidgetGeometry()
       if squeezed >= 150 then
-        pending("the main window kept the map " .. squeezed .. " pixels tall, so it cannot be squeezed")
+        cannotSqueeze("the main window kept the map " .. squeezed .. " pixels tall, so it cannot be squeezed")
         return
       end
       assert.is_true(openMapWidget("r"))
@@ -4380,7 +4391,7 @@ describe("Tests the open and closed states of the map widget", function()
       end
       assert.is_true(openMapWidget("l"))
       assert.is_true(pumpEvents(200))
-      local squeezed = squeezeMap(860, 300)
+      local squeezed = squeezeMap(860, 300, 100)
       if not squeezed then
         return
       end
@@ -4474,7 +4485,7 @@ describe("Tests the open and closed states of the map widget", function()
         end
         assert.is_true(openMapWidget("r"))
         assert.is_true(pumpEvents(200))
-        local saved = squeezeMap(860, 300)
+        local saved = squeezeMap(860, 300, 100)
         if not saved then
           return
         end

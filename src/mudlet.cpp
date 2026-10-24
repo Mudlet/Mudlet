@@ -4358,12 +4358,17 @@ void mudlet::growDockToSizeHint(QDockWidget* dock, bool onlyFromMinimum)
         if (dock->parentWidget() != this || dock->isFloating()) {
             return;
         }
-        // Hidden again before this ran, it would otherwise be left the area's old depth when next shown
+        // Hidden again before this ran, a move would otherwise leave it the area's old depth when next shown; growing
+        // from the minimum needs no retry, as growDockToSizeHintWhenShown() does that on every show
         if (!dock->isVisible()) {
-            const auto retry = [this, dock, onlyFromMinimum]() {
-                growDockToSizeHint(dock, onlyFromMinimum);
-            };
-            connect(dock, &QDockWidget::visibilityChanged, this, retry, Qt::SingleShotConnection);
+            if (!onlyFromMinimum) {
+                disconnect(mDockGrowthRetries.value(dock));
+                const auto retry = [this, dock]() {
+                    mDockGrowthRetries.remove(dock);
+                    growDockToSizeHint(dock, false);
+                };
+                mDockGrowthRetries.insert(dock, connect(dock, &QDockWidget::visibilityChanged, this, retry, Qt::SingleShotConnection));
+            }
             return;
         }
         layout()->activate();
