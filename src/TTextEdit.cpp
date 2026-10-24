@@ -1587,8 +1587,9 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
     // overflow, so clip it away rather than compositing the same ink twice.
     const QRect bandRect(0, drawFrom * mFontHeight, mScreenWidth * mFontWidth, (drawTo + 1 - drawFrom) * mFontHeight);
     paintForegrounds(p, *mpGlyphCache, mPreviousLineLayout, bottomRowIsRepainted ? QRect() : bandRect);
-    // Likewise the line below the band loses whatever ink it reached up into it
-    if (!bottomRowIsRepainted && hasBufferLine(drawTo + 1 + lineOffset)) {
+    // Likewise the line below the band loses whatever ink it reached up into it,
+    // in the row past the dirty ones that only the cached screen keeps
+    if (!noCopy && !bottomRowIsRepainted && hasBufferLine(drawTo + 1 + lineOffset)) {
         layoutLine(drawTo + 1 + lineOffset, drawTo + 1, timeStampStyle, mOverflowLineLayout);
         paintForegrounds(p, *mpGlyphCache, mOverflowLineLayout, bandRect);
     }
