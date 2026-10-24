@@ -7523,6 +7523,7 @@ describe("Tests the game loader packages", function()
       name = "CF_Loader",
       archive = ":/packages/CF-loader/CF-loader.mpackage",
       download = "CFGUI.zip",
+      profile = "Carrion Fields",
       url = "https://mudlet-cdn.carrionfields.net/cfgui/latest/CFGUI.zip",
       globals = { "downloadPkg", "installReady", "downloadFailed" },
       downloadFailed = "Your Carrion Fields client could not be downloaded:",
@@ -7533,6 +7534,7 @@ describe("Tests the game loader packages", function()
       name = "mg-loader",
       archive = ":/packages/mg-loader/mg-loader.mpackage",
       download = "MorgenGrauen.mpackage",
+      profile = "MorgenGrauen",
       url = "https://github.com/MorgenGrauen/mg-mudlet/releases/latest/download/MorgenGrauen.mpackage",
       globals = { "downloadPackage", "installReady", "downloadFailed" },
       downloadFailed = "Das Mudlet-Paket fürs MorgenGrauen konnte nicht heruntergeladen werden:",
@@ -7543,6 +7545,7 @@ describe("Tests the game loader packages", function()
       name = "icesus-loader",
       archive = ":/packages/icesus-loader/icesus-loader.mpackage",
       download = "Icesus.mpackage",
+      profile = "Icesus",
       url = "https://github.com/Icesus-mud/mudlet-package/releases/latest/download/Icesus.mpackage",
       globals = { "downloadPackage", "installReady", "downloadFailed" },
       downloadFailed = "The Icesus Mudlet package could not be downloaded:",
@@ -7635,6 +7638,7 @@ describe("Tests the game loader packages", function()
       override(globalName, nil)
     end
     override("installRequested", nil)
+    override("packagesBeforeDownload", nil)
     local downloads = {}
     local path = getMudletHomeDir() .. "/" .. loader.download
     override("downloadFile", function(file, url)
@@ -7730,6 +7734,33 @@ describe("Tests the game loader packages", function()
 
       raiseEvent("sysConnectionEvent")
       assert.are.equal(2, #downloads, "a reconnect downloaded the installed package again")
+    end)
+
+    it(loader.name .. " installs once when the command it gave sees the download before the loader does", function()
+      local downloads, path = install(loader)
+      defer(function() removeFixturePackage(minimalPackage) end)
+      pasteTheCommand(path)
+      copyFile(fixtureDirectory .. "/" .. minimalPackage .. ".mpackage", path)
+
+      -- anonymous handlers run in no set order
+      d("sysDownloadDone", path)
+      assert.is_true(packageInstalled(minimalPackage), "the pasted command did not install the package")
+      assert.is_true(waitUntil(downloadDone(path), 10000), "the deferred install never ran")
+
+      raiseEvent("sysConnectionEvent")
+      assert.are.equal(2, #downloads, "a reconnect downloaded the installed package again")
+    end)
+
+    it(loader.name .. " gave a command that leaves the profile's other downloads alone", function()
+      local _, path = install(loader)
+      pasteTheCommand(path)
+      -- a profile's home is named after it, and the game's package downloads its own files there
+      local other = getMudletHomeDir() .. "/mudlet-spec-" .. loader.profile .. "-map.dat"
+      io.open(other, "w"):close()
+      defer(function() os.remove(other) end)
+
+      raiseEvent("sysDownloadDone", other)
+      assert.is_true(io.exists(other), "the pasted command took another download for its package")
     end)
 
     it(loader.name .. " installs once when more connections come before the download finishes", function()

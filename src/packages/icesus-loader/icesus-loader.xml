@@ -10,9 +10,11 @@
 			<name>Icesus-Loader</name>
 			<packageName></packageName>
 			<script>installRequested = nil
+packagesBeforeDownload = nil
 
 function downloadPackage(a,b)
   if installRequested then return end
+  packagesBeforeDownload = getPackages()
   decho("&lt;0,150,190&gt;[ INFO ]  - &lt;0,160,0&gt;Downloading the Icesus Mudlet package...\n")
   downloadFile(getMudletHomeDir() .. "/Icesus.mpackage", "https://github.com/Icesus-mud/mudlet-package/releases/latest/download/Icesus.mpackage")
 end
@@ -23,7 +25,7 @@ function downloadFailed(event, message, file)
   decho("&lt;190,0,0&gt;[ FAIL ]  - &lt;0,160,0&gt;The Icesus Mudlet package could not be downloaded: &lt;190,190,190&gt;"..tostring(message).."\n")
   decho([[&lt;0,150,190&gt;[ INFO ]  - &lt;0,160,0&gt;To install the Icesus Mudlet package, copy the following text (without line breaks) into the input line and send it:
 
-lua function d(a,b)if not b:find("Icesus",1,true)then return end installPackage(b)os.remove(b)cecho("&lt;gold&gt;Package installed!\n")end registerAnonymousEventHandler("sysDownloadDone","d")downloadFile(getMudletHomeDir().."/Icesus.mpackage","https://github.com/Icesus-mud/mudlet-package/releases/latest/download/Icesus.mpackage")
+lua function d(a,b)if not b:find("Icesus.mpackage",1,true)then return end installPackage(b)os.remove(b)cecho("&lt;gold&gt;Package installed!\n")end registerAnonymousEventHandler("sysDownloadDone","d")downloadFile(getMudletHomeDir().."/Icesus.mpackage","https://github.com/Icesus-mud/mudlet-package/releases/latest/download/Icesus.mpackage")
 
 ]])
 end
@@ -35,7 +37,7 @@ function installReady(event, file)
   decho("&lt;0,160,0&gt;[  OK  ]  - &lt;190,100,50&gt;The Icesus Mudlet package was downloaded successfully.\n")
   decho("&lt;0,150,190&gt;[ INFO ]  - &lt;0,160,0&gt;Installing... (this takes a few seconds.)\n")
   installRequested = true
-  local installedBefore = getPackages()
+  local installedBefore = packagesBeforeDownload or getPackages()
   tempTimer(1, function()
     local ok, err = true, nil
     -- the command a failed download tells the player to paste installs and removes it itself

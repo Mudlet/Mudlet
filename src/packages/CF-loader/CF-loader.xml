@@ -15,9 +15,11 @@
 				<name>CF_Loader</name>
 				<packageName></packageName>
 				<script>installRequested = nil
+packagesBeforeDownload = nil
 
 function downloadPkg(a,b)
   if installRequested then return end
+  packagesBeforeDownload = getPackages()
   echo("****Downloading package.")
   downloadFile(getMudletHomeDir() .. "/CFGUI.zip", "https://mudlet-cdn.carrionfields.net/cfgui/latest/CFGUI.zip")
 end
@@ -27,7 +29,7 @@ function downloadFailed(event, message, file)
   if installRequested then return end
   cecho("\r\n&lt;maroon&gt;*&lt;gold&gt; Your Carrion Fields client could not be downloaded: &lt;gray&gt;"..tostring(message).."\r\n")
   cecho("&lt;gold&gt;To download the Carrion Fields Mudlet client, please copy and paste the following code into the command line:\n\n")
-  echo([[lua function d(a,b)if not b:find("CFGUI",1,true)then return end installPackage(b)os.remove(b)cecho("&lt;lime_green&gt;Package installed!\n")end registerAnonymousEventHandler("sysDownloadDone","d")downloadFile(getMudletHomeDir().."/CFGUI.zip","https://mudlet-cdn.carrionfields.net/cfgui/latest/CFGUI.zip")
+  echo([[lua function d(a,b)if not b:find("CFGUI.zip",1,true)then return end installPackage(b)os.remove(b)cecho("&lt;lime_green&gt;Package installed!\n")end registerAnonymousEventHandler("sysDownloadDone","d")downloadFile(getMudletHomeDir().."/CFGUI.zip","https://mudlet-cdn.carrionfields.net/cfgui/latest/CFGUI.zip")
 
 ]])
 end
@@ -43,7 +45,7 @@ function installReady(event, file)
 ]])
   cecho("\r\n&lt;maroon&gt;*&lt;gold&gt; Installing... &lt;gray&gt;(this will take a few seconds.)\r\n")
   installRequested = true
-  local installedBefore = getPackages()
+  local installedBefore = packagesBeforeDownload or getPackages()
   tempTimer(2, function()
     local ok, err = true, nil
     -- the command a failed download tells the player to paste installs and removes it itself
