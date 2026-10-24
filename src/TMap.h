@@ -413,6 +413,8 @@ public:
     QMap<QString, QStringList> mUserActions;
     // unique name, List:parent name ("" if null), display name
     QMap<QString, QStringList> mUserMenus;
+    // setMapMenuOrder() lists by parent menu unique name ("" for the top level); session-only like the above.
+    QHash<QString, QStringList> mUserMenuOrder;
     // Built-in context menu items hidden with hideMapMenuItem(); session-only like the above.
     QSet<QString> mHiddenMenuItems;
     static const QStringList& builtInMenuItemNames();
