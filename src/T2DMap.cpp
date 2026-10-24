@@ -4676,7 +4676,7 @@ void T2DMap::populateUserContextMenus(QMenu& menu)
     for (const auto& [uniqueName, actionInfo] : mpMap->mUserActions.asKeyValueRange()) {
         entries.append({listedAt(actionInfo.value(1), uniqueName), false, uniqueName, actionInfo.value(1)});
     }
-    // Stable, so unlisted entries keep the order scripts have always had: menus, then events, each by unique name
+    // Stable: unlisted entries keep the default order of menus, then events, each by unique name
     std::stable_sort(entries.begin(), entries.end(), [](const UserEntry& a, const UserEntry& b) {
         return a.listedAt < b.listedAt;
     });

@@ -2462,6 +2462,20 @@ private slots:
         QCOMPARE(userSubmenuTexts(qsl("Order Parent")), QStringList({qsl("Order Early event"), qsl("Order Early menu")}));
     }
 
+    void test_removingAMenuThatWasNeverAddedKeepsItsList()
+    {
+        buildMap();
+        showMapper(false);
+        QVERIFY(runLua(qsl("assert(setMapMenuOrder('orderParent', {'orderB', 'orderA'}))\n"
+                           "removeMapMenu('orderParent')\n"
+                           "addMapMenu('orderParent', '', 'Order Parent')\n"
+                           "addMapEvent('orderA', 'orderEvent', 'orderParent', 'Order A')\n"
+                           "addMapEvent('orderB', 'orderEvent', 'orderParent', 'Order B')")));
+        rightClickAt(pointUnitsFromCentre(1, 0));
+
+        QCOMPARE(userSubmenuTexts(qsl("Order Parent")), QStringList({qsl("Order B"), qsl("Order A")}));
+    }
+
     void test_clearingOrRemovingAMenuOrderListPutsTheDefaultBack()
     {
         buildMap();
