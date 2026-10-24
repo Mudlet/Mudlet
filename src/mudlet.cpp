@@ -4362,12 +4362,15 @@ void mudlet::growDockToSizeHint(QDockWidget* dock, bool onlyFromMinimum)
         // from the minimum needs no retry, as growDockToSizeHintWhenShown() does that on every show
         if (!dock->isVisible()) {
             if (!onlyFromMinimum) {
-                disconnect(mDockGrowthRetries.value(dock));
-                const auto retry = [this, dock]() {
-                    mDockGrowthRetries.remove(dock);
+                // The dock owns its one pending retry, so a retry still waiting when the dock is deleted goes with it
+                delete dock->findChild<QObject*>(qsl("dockGrowthRetry"), Qt::FindDirectChildrenOnly);
+                auto pRetry = new QObject(dock);
+                pRetry->setObjectName(qsl("dockGrowthRetry"));
+                const auto retry = [this, dock, pRetry]() {
+                    pRetry->deleteLater();
                     growDockToSizeHint(dock, false);
                 };
-                mDockGrowthRetries.insert(dock, connect(dock, &QDockWidget::visibilityChanged, this, retry, Qt::SingleShotConnection));
+                connect(dock, &QDockWidget::visibilityChanged, pRetry, retry, Qt::SingleShotConnection);
             }
             return;
         }

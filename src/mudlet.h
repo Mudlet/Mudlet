@@ -902,8 +902,6 @@ private:
     QMap<QString, QPointer<QDockWidget>> mMainWindowDockWidgetMap;
     QMap<QString, bool> mMainWindowDockWidgetUserPreference; // User's show/hide preference for dock widgets
     QPointer<QDockWidget> mpCurrentMapDockWidget;
-    // At most one per dock, however often it is moved and hidden again before it is laid out
-    QHash<QDockWidget*, QMetaObject::Connection> mDockGrowthRetries;
 
     // Helper methods for detached windows
     void closeHostOfClosedDetachedWindow(const QString& profileName);
