@@ -139,6 +139,9 @@ private:
     // line limit sits far above what this corpus produces, so no pass is trimmed
     // away and every pass adds to the buffer.
     static constexpr int kCorpusLines = 25000;
+    // A new profile's main console width: MUDLET_BENCH_WRAP_AT set to it is the
+    // standard workload and has to compare as unset.
+    static constexpr int kProfileWrapAt = 100;
     static constexpr int kFeedPasses = 6;
     // Bump with any change to generateCorpus(). compare-perf-baseline.py reads
     // this as an invariant, so it refuses a cross-corpus comparison instead of
@@ -766,6 +769,9 @@ private slots:
         const int chunkLines = positiveKnob("MUDLET_BENCH_CHUNK_LINES");
         mWantedTriggers = positiveKnob("MUDLET_BENCH_TRIGGERS");
         mWrapAt = positiveKnob("MUDLET_BENCH_WRAP_AT");
+        if (mWrapAt == kProfileWrapAt) {
+            mWrapAt = 0;
+        }
         if (QTest::currentTestFailed()) {
             return;
         }
@@ -1445,6 +1451,9 @@ private:
                 qWarning("MUDLET_BENCH_WRAP_AT did not take effect");
                 return nullptr;
             }
+        } else if (host->mainConsoleView()->buffer.mWrapAt != kProfileWrapAt) {
+            qWarning("The main console does not wrap at kProfileWrapAt, which MUDLET_BENCH_WRAP_AT relies on");
+            return nullptr;
         }
         return host;
     }
