@@ -155,11 +155,13 @@ describe("Tests the Lua an MXP link runs", function()
       end)
 
       it("opens an A href as it was given", function()
-        assertRunsOnly(actionsAfter(("<A %s>go</A>"):format(attribute("href", payload))), "openUrl", payload)
+        local href = "https://example/" .. payload
+        assertRunsOnly(actionsAfter(("<A %s>go</A>"):format(attribute("href", href))), "openUrl", href)
       end)
 
       it("opens the text a bare A wraps as it was given", function()
-        assertRunsOnly(actionsAfter(("<A>%s</A>"):format(payload)), "openUrl", payload)
+        local href = "https://example/" .. payload
+        assertRunsOnly(actionsAfter(("<A>%s</A>"):format(href)), "openUrl", href)
       end)
     end)
   end
@@ -188,6 +190,29 @@ describe("Tests the Lua an MXP link runs", function()
       assert.is_table(actions, data)
       local sent = run(actions[1])[1][2][1]
       assert.is_true(sent == allowed[1] or sent == allowed[2], ("%s sent %q"):format(data, sent))
+    end
+  end)
+
+  -- the address is the game's choice; only web and mail schemes open, as others can launch local programs
+  describe("Tests which addresses an A opens", function()
+    for _, href in ipairs({"http://example.com/", "https://example.com/", "ftp://files.example.com/", "mailto:admin@example.com", "HTTPS://example.com/"}) do
+      it(("opens %s"):format(href), function()
+        assertRunsOnly(actionsAfter(("<A href=\"%s\">go</A>"):format(href)), "openUrl", href)
+      end)
+    end
+
+    for _, href in ipairs({"file:///etc/hosts", "steam://run/1", "javascript:alert(1)", "www.example.com"}) do
+      it(("does not open %s"):format(href), function()
+        local actions = actionsAfter(("<A href=\"%s\">go</A>"):format(href))
+        assert.is_table(actions)
+        assert.are.same({}, run(actions[1]))
+      end)
+
+      it(("does not open %s from the text a bare A wraps"):format(href), function()
+        local actions = actionsAfter(("<A>%s</A>"):format(href))
+        assert.is_table(actions)
+        assert.are.same({}, run(actions[1]))
+      end)
     end
   end)
 
