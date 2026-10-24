@@ -18,9 +18,10 @@
  ***************************************************************************/
 
 /*
- * Issue #6370: an editor view whose tree has items but none selected showed
- * that view's form, empty and tied to no item, so whatever was typed into it
- * could not be saved. With nothing selected a view shows its help text.
+ * An editor view whose tree has items, but only its root or nothing current,
+ * shows its help text rather than a form, since a form tied to no item can be
+ * typed into but never saved - and showing the help must not write the emptied
+ * form over the item that was on screen before.
  *
  * Run with: ctest -R EditorEmptySelectionTest -V
  */
