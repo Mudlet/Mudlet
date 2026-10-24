@@ -137,17 +137,43 @@ describe("Tests the generic mapper when a map loads", function()
     assert.is_nil(map.prevRoom)
   end
 
+  -- runs body with map.echo recorded, and returns what it echoed
+  local function recordEchoes(body)
+    local realEcho = map.echo
+    local echoes = {}
+    map.echo = function(what, debug, err)
+      echoes[#echoes + 1] = {what = what, err = err}
+    end
+    local ok, err = pcall(body)
+    map.echo = realEcho
+    assert(ok, err)
+    return echoes
+  end
+
+  local function assertReportedSuccess(echoes, message)
+    local said = false
+    for _, echo in ipairs(echoes) do
+      assert.is_falsy(echo.err, "a map that loaded was reported as an error: " .. tostring(echo.what))
+      said = said or echo.what == message
+    end
+    assert.is_true(said, "the load did not say: " .. message)
+  end
+
   it("stops mapping and forgets the room when a downloaded map loads", function()
     -- nothing listens on the discard port, so the real download fails later and is ignored
     map.load_map("http://127.0.0.1:9/map.dat")
-    raiseEvent("sysDownloadDone", otherMapPath)
+    local echoes = recordEchoes(function()
+      raiseEvent("sysDownloadDone", otherMapPath)
+    end)
     assertForgotThePosition()
+    assertReportedSuccess(echoes, "Map File Loaded.")
   end)
 
   it("stops mapping and forgets the room when the local copy is reloaded", function()
     withLocalCopies({saved = otherMapPath}, function()
-      map.load_map()
+      local echoes = recordEchoes(map.load_map)
       assertForgotThePosition()
+      assertReportedSuccess(echoes, "Map reloaded from local copy.")
     end)
   end)
 
@@ -171,17 +197,10 @@ describe("Tests the generic mapper when a map loads", function()
     end)
   end)
 
-  -- runs body with map.echo recorded, and checks it echoed one error and left the mapping running
+  -- runs body and checks it echoed one error and left the mapping running
   local function assertReportsAFailedLoad(body)
-    local realEcho = map.echo
-    local echoes = {}
-    map.echo = function(what, debug, err)
-      echoes[#echoes + 1] = {what = what, err = err}
-    end
     local room = map.currentRoom
-    local ok, err = pcall(body)
-    map.echo = realEcho
-    assert(ok, err)
+    local echoes = recordEchoes(body)
     assert.is_true(map.mapping, "a map that did not load should leave the mapping running")
     assert.are.equal(room, map.currentRoom)
     assert.are.equal(1, #echoes)
@@ -210,6 +229,10 @@ describe("Tests the generic mapper when a map loads", function()
     os.remove(notAMapPath)
     lfs.rmdir(notAMapDirectory)
     assert(ok, err)
+    -- a failed download must not leave the mapper waiting to load the next map.dat anyone downloads
+    raiseEvent("sysDownloadDone", otherMapPath)
+    assert.are_not.equal(loadedRoomName, getRoomName(otherMapRoom))
+    assert.is_true(map.mapping)
   end)
 
   it("finds the player on the loaded map after a random move", function()
