@@ -1858,6 +1858,31 @@ describe("Media playback effects with a generated sound file", function()
     assert.equals("busted-priority-ceiling", finished[1].key)
   end)
 
+  it("a stop takes a sound at its own priority, while a prioritised play leaves a copy at its priority playing", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    local started, finished = {}, {}
+    collect("sysMediaStarted", started)
+    collect("sysMediaFinished", finished)
+    writeSoundFiles()
+
+    -- making room for a prioritised play takes only what is below it, so a second copy at the same
+    -- priority starts alongside the first
+    assert.is_true(playSoundFile({name = longSoundFile, key = "busted-same-priority-1", priority = 60}))
+    assert.is_true(playSoundFile({name = longSoundFile, key = "busted-same-priority-2", priority = 60}))
+    waitForCount("sysMediaStarted", started, 2)
+    assert.equals(2, #getPlayingSounds())
+
+    -- a stop takes its priority and below, as Client.Media.Stop's does
+    assert.is_true(stopSounds({priority = 59}))
+    pumpEvents(250)
+    assert.equals(2, #getPlayingSounds(), "a stop below the sounds' priority took them")
+    assert.is_true(stopSounds({priority = 60}))
+    waitForCount("sysMediaFinished", finished, 2)
+    assert.equals(0, #getPlayingSounds(), "a stop at the sounds' own priority left them playing")
+  end)
+
   it("a sound played under the key of one already playing replaces it", function()
     if mediaPlaybackUnavailable() then
       return
@@ -1880,6 +1905,30 @@ describe("Media playback effects with a generated sound file", function()
     assert.equals(1, #finished)
     assert.equals(longSoundFile, finished[1].file)
     local playing = getPlayingSounds({key = "busted-key-swap"})
+    assert.equals(1, #playing)
+    assert.equals(otherLongSoundFile, playing[1].name)
+  end)
+
+  it("a sound with a priority is replaced by another played under its key", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    local finished, started = {}, {}
+    collect("sysMediaFinished", finished)
+    collect("sysMediaStarted", started)
+
+    writeSoundFiles()
+    -- the sound is stopped by its own details, priority and all, so it is under that stop
+    assert.is_true(playSoundFile({name = longSoundFile, key = "busted-key-swap-priority", priority = 60}))
+    waitForCount("sysMediaStarted", started, 1)
+
+    assert.is_true(playSoundFile({name = otherLongSoundFile, key = "busted-key-swap-priority"}))
+    waitForCount("sysMediaStarted", started, 2)
+    waitForCount("sysMediaFinished", finished, 1)
+
+    assert.equals(1, #finished, "a sound with a priority kept playing once another took its key")
+    assert.equals(longSoundFile, finished[1].file)
+    local playing = getPlayingSounds({key = "busted-key-swap-priority"})
     assert.equals(1, #playing)
     assert.equals(otherLongSoundFile, playing[1].name)
   end)
@@ -3102,16 +3151,16 @@ describe("Media playback effects with a generated sound file", function()
     waitForCount("sysMediaStarted", started, 1)
     assert.equals(1, #started, gmcpRefused)
 
-    -- a stop reaches only what is playing below the priority it names, so this
+    -- a stop reaches what is playing at or below the priority it names, so this
     -- one leaves the playback alone - a priority that was not read is no
     -- priority at all, and would be stopped here
     feedGmcp('Client.Media.Stop {"priority": 40}')
     pumpEvents(500)
     assert.equals(0, #finished, "a stop of a lower priority than the playback stopped it anyway")
 
-    -- and a stop from above it does end the playback, so it is the priority the
-    -- string spelled that decided both
-    feedGmcp('Client.Media.Stop {"priority": 60}')
+    -- and a stop at its own priority does end the playback, so it is the priority
+    -- the string spelled that decided both
+    feedGmcp('Client.Media.Stop {"priority": 50}')
     waitForCount("sysMediaFinished", finished, 1)
     assert.equals(1, #finished)
   end)
