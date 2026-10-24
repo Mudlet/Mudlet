@@ -252,9 +252,13 @@ private slots:
         if (westShown && westName.width() <= 20) {
             QFAIL(qPrintable(qsl("the west room's name is not drawn. %1").arg(savedFor(frame, qsl("west-shown")))));
         }
-        // A name turned on is drawn like one left alone, not cut down to its first line
-        if (westShown && westName.height() < eastName.height() * 3 / 2) {
-            QFAIL(qPrintable(qsl("a name on two lines is drawn %1 pixels tall and one on one line %2. %3").arg(westName.height()).arg(eastName.height()).arg(savedFor(frame, qsl("two-lines")))));
+        // A name taller than the one-room-tall box under the room is drawn in full, not cut to the box
+        const int nameBoxHeight = qRound(p2dMap->mRoomHeight * mpHost->mRoomSize);
+        if (westShown && westName.height() <= nameBoxHeight) {
+            QFAIL(qPrintable(qsl("a name on two lines is drawn %1 pixels tall, no taller than the %2 pixel box under its room. %3")
+                                     .arg(westName.height())
+                                     .arg(nameBoxHeight)
+                                     .arg(savedFor(frame, qsl("two-lines")))));
         }
         if (!westShown && !westName.isNull()) {
             QFAIL(qPrintable(qsl("the west room's name is drawn though it is turned off. %1").arg(savedFor(frame, qsl("west-hidden")))));
