@@ -54,13 +54,12 @@ describe("Tests UI functions", function()
       assert.are.equal(testdecho, copy2decho("testconsole"))
     end)
 
-    -- TODO: https://github.com/Mudlet/Mudlet/issues/5590
-    -- it("Should copy text with background transparency", function()
-    --   local testdecho = "<50,50,0:0,255,0,100>semi-transparent"
-    --   decho("testconsole", testdecho)
+    it("Should copy text with background transparency", function()
+      local testdecho = "<50,50,0:0,255,0,100>semi-transparent<r><50,50,0:0,255,0>opaque<r>"
+      decho("testconsole", testdecho)
 
-    --   assert.are.equal(testdecho, copy2decho("testconsole", true))
-    -- end)
+      assert.are.equal(testdecho, copy2decho("testconsole"))
+    end)
 
     it("Should copy colored Chinese text", function()
       local testdecho = "<50,50,0:0,255,0>测试<r><192,192,192:0,0,0> <r><255,0,0:0,0,0>红色<r><0,255,0:0,0,0>绿色<r><0,0,255:0,0,0>蓝色<r>"
@@ -95,13 +94,56 @@ describe("Tests UI functions", function()
       assert.are.equal("", copy2decho("testconsole", "dup dup dup dup"))
     end)
 
-    -- TODO: https://github.com/Mudlet/Mudlet/issues/5589
-    -- it("Should copy2decho text with italics, bold, and underline", function()
-    --   local testdecho = "separate: <i>italic</i>, <b>bold</b>, <u>underline</u>. all together: <i>italic<b>bold<u>underline<r>"
-    --   decho("testconsole", testdecho)
+    it("Should copy2decho text with italics, bold, and underline", function()
+      local testdecho = "separate: <i>italic</i>, <b>bold</b>, <u>underline</u>. all together: <i>italic<b>bold<u>underline<r>"
+      decho("testconsole", testdecho)
 
-    --   assert.are.equal(testdecho, copy2decho("testconsole"))
-    -- end)
+      local r, g, b = getFgColor("testconsole")
+      local br, bg, bb = getBgColor("testconsole")
+      assert.are.equal(string.format("<%d,%d,%d:%d,%d,%d>", r, g, b, br, bg, bb) .. testdecho, copy2decho("testconsole"))
+    end)
+
+    it("Should copy strikeout and overline, and restate formatting after a colour change resets it", function()
+      local testdecho = "<255,0,0:0,0,0><s>struck</s><o>over<r><0,255,0:0,0,0><o>still over</o> plain<r>"
+      decho("testconsole", testdecho)
+
+      assert.are.equal(testdecho, copy2decho("testconsole"))
+    end)
+
+    describe("when the copy is echoed back with decho", function()
+      local copyWindow = "uiSpecCopy2dechoRoundTrip"
+
+      setup(function()
+        createBuffer(copyWindow)
+      end)
+
+      teardown(function()
+        deleteMiniConsole(copyWindow)
+      end)
+
+      local function formats(window)
+        local result = {}
+        for i = 0, utf8.len(getCurrentLine(window)) - 1 do
+          selectSection(window, i, 1)
+          result[#result + 1] = getTextFormat(window)
+        end
+        deselect(window)
+        return result
+      end
+
+      it("Should reproduce every character's colours, alpha and formatting", function()
+        clearWindow(copyWindow)
+        moveCursorEnd(copyWindow)
+        decho("testconsole", "plain <i>it<255,0,0>al<b>ic bo</i>ld<:0,0,255,80>see<u>through<0,255,0:10,20,30>green</b> u<r><s>s<o>o</s></o>ff")
+        local original = formats("testconsole")
+        assert.are.equal(80, original[#"plain italic bold" + 1].backgroundAlpha)
+
+        decho(copyWindow, copy2decho("testconsole"))
+
+        assert.are.equal(getCurrentLine("testconsole"), getCurrentLine(copyWindow))
+        assert.are.same(original, formats(copyWindow))
+      end)
+    end)
   end)
 
   describe("Test the functionality of copy2html", function()
