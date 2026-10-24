@@ -1558,14 +1558,14 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
         layoutLine(drawFrom - 1 + lineOffset, drawFrom - 1, timeStampStyle, mOverflowLineLayout);
     }
 
-    // Each line's backgrounds go down before the previous line's glyphs, so that
-    // no background fill can wipe out ink which overflowed out of its cell.
-    // A top line that has not changed already has the ink it reaches up with in
-    // the cached rows above the band, so drawing it there again would thicken it.
-    const bool topLineUnchanged = !scrollShift && (mDirtyFirstLine < 0 || drawFrom + lineOffset < mDirtyFirstLine);
+    // A top line drawn only as the neighbour of dirty ones has not changed, and
+    // the cached rows above already hold its ink: drawing that again thickens it.
+    const bool topLineUnchanged = !scrollShift && !mMouseTracking && mDirtyFirstLine >= 0 && drawFrom + lineOffset < mDirtyFirstLine;
     if (topLineUnchanged && drawFrom > 0) {
         p.setClipRect(QRect(0, deleteRect.top(), mScreenWidth * mFontWidth, pixmapHeight - deleteRect.top()));
     }
+    // Each line's backgrounds go down before the previous line's glyphs, so that
+    // no background fill can wipe out ink which overflowed out of its cell.
     mPreviousLineLayout.clear();
     bool lineAboveRestored = false;
     // Glyphs can reach down past the line below their own, into cells whose
