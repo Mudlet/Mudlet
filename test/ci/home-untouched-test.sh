@@ -91,8 +91,10 @@ for source in ${candidates[@]+"${candidates[@]}"}; do
   # ---- sweep 2: a run of its own -------------------------------------------
   binary="${BINARY_DIR}/${name}"
   args=()
-  if [[ ! -x "${binary}" && "$(dirname "${source}")" == "${SOURCE_DIR}" ]]; then
-    # A name unit_tests does not hold makes it exit non-zero, which fails below
+  # Decided from the source rather than from what is on disk: a build tree from
+  # before a test joined unit_tests still holds its old standalone binary.
+  # A name unit_tests does not hold makes it exit non-zero, which fails below
+  if [[ "$(dirname "${source}")" == "${SOURCE_DIR}" ]] && grep -q 'MUDLET_GROUPED_TEST' "${source}"; then
     binary="${BINARY_DIR}/unit_tests"
     args=("${name}")
   fi
