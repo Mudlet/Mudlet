@@ -14608,6 +14608,9 @@ void dlgTriggerEditor::slot_restoreEditorItemsToolbar()
 
 void dlgTriggerEditor::clearTriggerForm()
 {
+    // Forgotten first, so neither the clearing below nor a later save is taken as an edit to that trigger
+    mpCurrentTriggerItem = nullptr;
+
     // Clear pattern fields
     for (auto* patternEdit : std::as_const(mTriggerPatternEdit)) {
         patternEdit->singleLineTextEdit_pattern->clear();
@@ -14628,8 +14631,6 @@ void dlgTriggerEditor::clearTriggerForm()
     clearDocument(mpSourceEditorEdbee);
     mpTriggersMainArea->lineEdit_trigger_command->clear();
 
-    // The emptied form must not be saved over the trigger it last showed
-    mpCurrentTriggerItem = nullptr;
     mpTriggersMainArea->hide();
     mpSourceEditorArea->hide();
     if (mCurrentView != EditorViewType::cmUnknownView) {

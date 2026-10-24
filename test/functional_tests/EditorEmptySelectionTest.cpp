@@ -251,6 +251,7 @@ private slots:
         QVERIFY(pTriggerItem);
         const int triggerID = pTriggerItem->getID();
         const QString triggerName = pTriggerItem->getName();
+        const QStringList triggerPatterns = pTriggerItem->getPatternsList();
         QVERIFY(!triggerName.isEmpty());
         pEditor->treeWidget_triggers->setCurrentItem(pTrigger);
         pEditor->slot_triggerSelected(pTrigger);
@@ -273,6 +274,7 @@ private slots:
         TTrigger* pSaved = mpHost->getTriggerUnit()->getTrigger(triggerID);
         QVERIFY2(pSaved, "the trigger that was on screen is gone after saving");
         QCOMPARE(pSaved->getName(), triggerName);
+        QCOMPARE(pSaved->getPatternsList(), triggerPatterns);
     }
 };
 
