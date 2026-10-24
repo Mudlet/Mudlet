@@ -6710,7 +6710,7 @@ void dlgTriggerEditor::applyAliasState(QTreeWidgetItem* pItem, TAlias* pT, bool 
 }
 
 // Repaints aliasID's tree item (and, if any, its descendants) from its
-// current isActive() state - used when the state changed via the Lua
+// current active state - used when the state changed via the Lua
 // enableAlias()/disableAlias() API rather than the GUI toggle. Only touches
 // the shared editor-wide notification banner when aliasID is the item
 // currently open in the detail pane *and* the Aliases view is the one on
@@ -9377,7 +9377,7 @@ void dlgTriggerEditor::computeKeyIcon(TKey* pT, QIcon& icon, QString& itemDescri
 }
 
 // Repaints keyID's tree item (and, if any, its descendants) from its current
-// isActive() state - used when the state changed via the Lua
+// active state - used when the state changed via the Lua
 // enableKey()/disableKey() API rather than the GUI toggle. Only touches the
 // shared editor-wide notification banner when keyID is the item currently
 // open in the detail pane *and* the Keys view is the one on screen -
@@ -9890,7 +9890,7 @@ void dlgTriggerEditor::computeTimerIcon(TTimer* pT, QIcon& icon, QString& itemDe
 }
 
 // Repaints timerID's tree item (and, if any, its descendants) from its
-// current isActive() state - used when the state changed via the Lua
+// current active state - used when the state changed via the Lua
 // enableTimer()/disableTimer() API rather than the GUI toggle. Only touches
 // the shared editor-wide notification banner when timerID is the item
 // currently open in the detail pane *and* the Timers view is the one on
@@ -10075,7 +10075,7 @@ void dlgTriggerEditor::computeTriggerIcon(TTrigger* pT, QIcon& icon, QString& it
 }
 
 // Repaints triggerID's tree item (and, if any, its descendants) from its
-// current isActive() state - used when the state changed via the Lua
+// current active state - used when the state changed via the Lua
 // enableTrigger()/disableTrigger() API rather than the GUI toggle, which
 // otherwise leaves the tree icon stale until the next full repopulation.
 // Only touches the shared editor-wide notification banner when triggerID is
