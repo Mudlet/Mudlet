@@ -4321,6 +4321,13 @@ void TBuffer::decodeOSC(const QString& sequence)
         }
 
         if (!rawUrl.isEmpty()) {
+            // Per the OSC 8 spec a new link ends the open one, even if rejected below: else the text after
+            // it joins the open link, which then closes with the rejected link's config. preset: only
+            // registers a style and opens no link, so it leaves the open link alone.
+            if (mHyperlinkActive && !rawUrl.startsWith(qsl("preset:"))) {
+                finaliseActiveHyperlink();
+            }
+
             if (rawUrl.length() > static_cast<int>(MAX_OSC_SEQUENCE_LENGTH)) {
                 qWarning() << "TBuffer::decodeOSC(...) - Rejected hyperlink: URL too long:" << rawUrl;
                 return;
