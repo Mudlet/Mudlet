@@ -29,7 +29,7 @@ function downloadFailed(event, message, file)
   if installRequested then return end
   cecho("\r\n&lt;maroon&gt;*&lt;gold&gt; Your Carrion Fields client could not be downloaded: &lt;gray&gt;"..tostring(message).."\r\n")
   cecho("&lt;gold&gt;To download the Carrion Fields Mudlet client, please copy and paste the following code into the command line:\n\n")
-  echo([[lua function d(a,b)if not b:find("CFGUI.zip",1,true)then return end if installPackage(b)then os.remove(b)cecho("&lt;lime_green&gt;Package installed!\n")end end registerAnonymousEventHandler("sysDownloadDone","d")downloadFile(getMudletHomeDir().."/CFGUI.zip","https://mudlet-cdn.carrionfields.net/cfgui/latest/CFGUI.zip")
+  echo([[lua function d(a,b)if b~=getMudletHomeDir().."/CFGUI.zip"then return end if installPackage(b)then os.remove(b)cecho("&lt;lime_green&gt;Package installed!\n")end end registerAnonymousEventHandler("sysDownloadDone","d")downloadFile(getMudletHomeDir().."/CFGUI.zip","https://mudlet-cdn.carrionfields.net/cfgui/latest/CFGUI.zip")
 
 ]])
 end
@@ -52,7 +52,7 @@ function installReady(event, file)
     if io.exists(getMudletHomeDir().."/CFGUI.zip") then
       ok, err = installPackage(getMudletHomeDir().."/CFGUI.zip")
     end
-    if not ok and tostring(err):find("is already installed", 1, true) then return end
+    if not ok and tostring(err):find("^package .+ is already installed$") then return end
     if not ok then
       installRequested = false
       cecho("\r\n&lt;maroon&gt;*&lt;gold&gt; Installing your Carrion Fields client failed: &lt;gray&gt;"..tostring(err).."\r\n")

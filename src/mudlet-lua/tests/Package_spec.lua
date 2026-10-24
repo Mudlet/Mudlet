@@ -7774,6 +7774,40 @@ describe("Tests the game loader packages", function()
       assert.is_true(io.exists(other), "the pasted command removed another download")
     end)
 
+    it(loader.name .. " gave a command that leaves a download whose file name only ends in its package's", function()
+      local _, path = install(loader)
+      pasteTheCommand(path)
+      local other = getMudletHomeDir() .. "/mudlet-spec-old" .. loader.download
+      copyFile(fixtureDirectory .. "/" .. minimalPackage .. ".mpackage", other)
+      defer(function() os.remove(other) end)
+      defer(function() removeFixturePackage(minimalPackage) end)
+
+      local tried = {}
+      local realInstall = installPackage
+      override("installPackage", function(file, ...)
+        tried[#tried + 1] = file
+        return realInstall(file, ...)
+      end)
+      raiseEvent("sysDownloadDone", other)
+      assert.are.same({}, tried, "the pasted command took another download for its package")
+      assert.is_true(io.exists(other), "the pasted command removed another download")
+    end)
+
+    it(loader.name .. " reports a download a module's name blocks, and tries again on the next connection", function()
+      local downloads, path = install(loader)
+      withFixtureModule(minimalPackage)
+      copyFile(fixtureDirectory .. "/" .. minimalPackage .. ".mpackage", path)
+      assert.is_true(waitForProfileSaveToPass(), "a profile save never finished")
+
+      local mark = getLastLineNumber("main")
+      assert.is_true(waitUntil(downloadDone(path), 10000), "the deferred install never ran")
+      assert.is_false(packageInstalled(minimalPackage), "the download was installed over the module")
+      assert.is_true(containsWrapped(textFrom(mark), loader.installFailed), "the refused install was not reported: " .. textFrom(mark))
+
+      raiseEvent("sysConnectionEvent")
+      assert.are.equal(2, #downloads, "the next connection did not try the download again")
+    end)
+
     it(loader.name .. " installs once when more connections come before the download finishes", function()
       local downloads, path = install(loader)
       raiseEvent("sysConnectionEvent")
