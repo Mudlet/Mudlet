@@ -3241,6 +3241,7 @@ void mudlet::updateWindowMenu()
         if (!mainWindowProfiles.isEmpty()) {
             // Add main window section
             for (const QString& profileName : mainWindowProfiles) {
+                //: This is an item in list of profiles in the "Window" menu of Mudlet's main window. %1 is the name of the profile, and it is located in the main window.
                 QString actionText = tr("%1 (Main Window)").arg(addonLabel(profileName));
                 QAction* profileAction = new QAction(actionText, this);
                 profileAction->setCheckable(true);
@@ -3268,6 +3269,7 @@ void mudlet::updateWindowMenu()
             QStringList profilesInWindow = detachedWindow->getProfileNames();
 
             for (const QString& windowProfileName : std::as_const(profilesInWindow)) {
+                //: This is an item in list of profiles in the "Window" menu of Mudlet's main window. %1 is the name of the profile, and it is located not in the main window, but in a detached window.
                 QString actionText = tr("%1 (Detached)").arg(addonLabel(windowProfileName));
                 QAction* profileAction = new QAction(actionText, this);
                 profileAction->setCheckable(true);

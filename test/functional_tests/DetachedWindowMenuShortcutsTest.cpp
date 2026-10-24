@@ -252,6 +252,7 @@ private slots:
         // exec() does not return until the menu closes, so it is read and closed from inside its event loop
         bool tabMenuSeen = false;
         QStringList tabMenuOffenders;
+        int tabMenuItemsNamingTheProfile = 0;
         QTimer popupReader;
         popupReader.setInterval(0);
         connect(&popupReader, &QTimer::timeout, this, [&]() {
@@ -265,6 +266,9 @@ private slots:
                 if (carriesMnemonic(pAction->text())) {
                     tabMenuOffenders << qsl("\"%1\"").arg(pAction->text());
                 }
+                if (shownText(pAction->text()).contains(mSecondHostname)) {
+                    ++tabMenuItemsNamingTheProfile;
+                }
             }
             pMenu->close();
         });
@@ -272,6 +276,7 @@ private slots:
         emit pTabBar->customContextMenuRequested(pTabBar->tabRect(0).center());
         popupReader.stop();
         QVERIFY2(tabMenuSeen, "right-clicking the detached tab opened no menu");
+        QVERIFY2(tabMenuItemsNamingTheProfile == 2, qPrintable(qsl("%1 items of a detached tab's menu show \"%2\" as it is named, not 2").arg(tabMenuItemsNamingTheProfile).arg(mSecondHostname)));
         QVERIFY2(tabMenuOffenders.isEmpty(), qPrintable(qsl("a detached tab's menu turns the profile name's \"&\" into a mnemonic: %1").arg(tabMenuOffenders.join(qsl(", ")))));
 
         QMenu* pDetachedWindowMenu = nullptr;
@@ -282,6 +287,9 @@ private slots:
             }
         }
         verifyProfileItemsCarryNoMnemonic(pDetachedWindowMenu, qsl("the detached window's Window menu"));
+        if (QTest::currentTestFailed()) {
+            return;
+        }
         verifyProfileItemsCarryNoMnemonic(mudlet::self()->menuWindow, qsl("the main window's Window menu"));
     }
 
@@ -368,6 +376,19 @@ private:
 
     static bool carriesMnemonic(const QString& title) { return !mnemonicLetter(title).isNull(); }
 
+    // The text as a menu draws it: a lone "&" vanishes and "&&" draws as one
+    static QString shownText(const QString& text)
+    {
+        QString shown;
+        for (int i = 0; i < text.size(); ++i) {
+            if (text.at(i) == QLatin1Char('&') && ++i == text.size()) {
+                break;
+            }
+            shown += text.at(i);
+        }
+        return shown;
+    }
+
     // Each profile in a Window menu is an item whose data is the profile's name
     void verifyProfileItemsCarryNoMnemonic(QMenu* pMenu, const QString& where)
     {
@@ -381,12 +402,12 @@ private:
                 continue;
             }
             ++profileItemCount;
-            if (carriesMnemonic(pAction->text())) {
+            if (carriesMnemonic(pAction->text()) || !shownText(pAction->text()).contains(pAction->data().toString())) {
                 offenders << qsl("\"%1\"").arg(pAction->text());
             }
         }
         QVERIFY2(profileItemCount == 2, qPrintable(qsl("%1 lists %2 profiles, not both").arg(where).arg(profileItemCount)));
-        QVERIFY2(offenders.isEmpty(), qPrintable(qsl("%1 turns a profile name's \"&\" into a mnemonic: %2").arg(where, offenders.join(qsl(", ")))));
+        QVERIFY2(offenders.isEmpty(), qPrintable(qsl("%1 loses a profile name's \"&\" to a mnemonic: %2").arg(where, offenders.join(qsl(", ")))));
     }
 
     static QStringList mnemonicClashes(const QMenu* pMenu)
