@@ -5437,7 +5437,8 @@ describe("Tests saveMap and loadMap", function()
   -- one part of the mapper whose behaviour a small map cannot describe: the
   -- distance heuristic is held to the map's longest cheap exit, a one-way exit
   -- only matters when there is a second way round, and an exit weight only
-  -- reroutes when there is something to reroute onto. See fixtures/maps/README.md for the map's provenance and shape.
+  -- reroutes when there is something to reroute onto. See
+  -- fixtures/maps/README.md for the map's provenance and shape.
   describe("Tests pathfinding over a full-sized IRE map", function()
     local archivePath = specDirectory .. "/fixtures/maps/achaea-map.zip"
     local extractedPath = getMudletHomeDir() .. "/achaea-map.xml"
