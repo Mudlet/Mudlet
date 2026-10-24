@@ -74,6 +74,7 @@ private:
     {
         QTreeWidget* tree = nullptr;
         QWidget* form = nullptr;
+        QLabel* id = nullptr;
     };
 
     ViewParts partsOf(const EditorViewType view) const
@@ -81,17 +82,17 @@ private:
         dlgTriggerEditor* pEditor = editor();
         switch (view) {
         case EditorViewType::cmTriggerView:
-            return {pEditor->treeWidget_triggers, pEditor->mpTriggersMainArea};
+            return {pEditor->treeWidget_triggers, pEditor->mpTriggersMainArea, pEditor->mpTriggersMainArea->label_idNumber};
         case EditorViewType::cmTimerView:
-            return {pEditor->treeWidget_timers, pEditor->mpTimersMainArea};
+            return {pEditor->treeWidget_timers, pEditor->mpTimersMainArea, pEditor->mpTimersMainArea->label_idNumber};
         case EditorViewType::cmAliasView:
-            return {pEditor->treeWidget_aliases, pEditor->mpAliasMainArea};
+            return {pEditor->treeWidget_aliases, pEditor->mpAliasMainArea, pEditor->mpAliasMainArea->label_idNumber};
         case EditorViewType::cmScriptView:
-            return {pEditor->treeWidget_scripts, pEditor->mpScriptsMainArea};
+            return {pEditor->treeWidget_scripts, pEditor->mpScriptsMainArea, pEditor->mpScriptsMainArea->label_idNumber};
         case EditorViewType::cmKeysView:
-            return {pEditor->treeWidget_keys, pEditor->mpKeysMainArea};
+            return {pEditor->treeWidget_keys, pEditor->mpKeysMainArea, pEditor->mpKeysMainArea->label_idNumber};
         case EditorViewType::cmActionView:
-            return {pEditor->treeWidget_actions, pEditor->mpActionsMainArea};
+            return {pEditor->treeWidget_actions, pEditor->mpActionsMainArea, pEditor->mpActionsMainArea->label_idNumber};
         case EditorViewType::cmVarsView:
             return {pEditor->treeWidget_variables, pEditor->mpVarsMainArea};
         case EditorViewType::cmUnknownView:
@@ -276,6 +277,84 @@ private slots:
         QVERIFY2(pSaved, "the trigger that was on screen is gone after saving");
         QCOMPARE(pSaved->getName(), triggerName);
         QCOMPARE(pSaved->getPatternsList(), triggerPatterns);
+    }
+
+    void test_showingAViewWithAnItemCurrentShowsThatItem_data()
+    {
+        QTest::addColumn<int>("view");
+        QTest::addRow("trigger") << static_cast<int>(EditorViewType::cmTriggerView);
+        QTest::addRow("timer") << static_cast<int>(EditorViewType::cmTimerView);
+        QTest::addRow("alias") << static_cast<int>(EditorViewType::cmAliasView);
+        QTest::addRow("script") << static_cast<int>(EditorViewType::cmScriptView);
+        QTest::addRow("key") << static_cast<int>(EditorViewType::cmKeysView);
+        QTest::addRow("button") << static_cast<int>(EditorViewType::cmActionView);
+    }
+
+    void test_showingAViewWithAnItemCurrentShowsThatItem()
+    {
+        QFETCH(int, view);
+        const auto viewType = static_cast<EditorViewType>(view);
+        dlgTriggerEditor* pEditor = editor();
+        showView(viewType == EditorViewType::cmAliasView ? EditorViewType::cmTriggerView : EditorViewType::cmAliasView);
+
+        const ViewParts parts = partsOf(viewType);
+        QTreeWidgetItem* pItem = viewType == EditorViewType::cmTriggerView
+                                         ? parts.tree->findItems(qsl("qaEmptySelectionTrigger"), Qt::MatchFixedString | Qt::MatchCaseSensitive | Qt::MatchRecursive).value(0)
+                                         : parts.tree->topLevelItem(0)->child(parts.tree->topLevelItem(0)->childCount() - 1);
+        QVERIFY(pItem && pItem->parent());
+        {
+            const QSignalBlocker blocker(parts.tree->selectionModel());
+            parts.tree->setCurrentItem(pItem);
+        }
+        showView(viewType);
+        QVERIFY2(shownInEditor(parts.form, pEditor), "the view hides the form of the item that is current");
+        QVERIFY2(shownInEditor(pEditor->mpSourceEditorArea, pEditor), "the view hides the script of the item that is current");
+        QCOMPARE(parts.id->text(), QString::number(pItem->data(0, Qt::UserRole).toInt()));
+    }
+
+    void test_clickingARootThenComingBackShowsOnlyTheHelp_data()
+    {
+        QTest::addColumn<int>("view");
+        QTest::addRow("trigger") << static_cast<int>(EditorViewType::cmTriggerView);
+        QTest::addRow("timer") << static_cast<int>(EditorViewType::cmTimerView);
+        QTest::addRow("alias") << static_cast<int>(EditorViewType::cmAliasView);
+        QTest::addRow("script") << static_cast<int>(EditorViewType::cmScriptView);
+        QTest::addRow("key") << static_cast<int>(EditorViewType::cmKeysView);
+        QTest::addRow("button") << static_cast<int>(EditorViewType::cmActionView);
+    }
+
+    void test_clickingARootThenComingBackShowsOnlyTheHelp()
+    {
+        QFETCH(int, view);
+        const auto viewType = static_cast<EditorViewType>(view);
+        dlgTriggerEditor* pEditor = editor();
+        QTreeWidget* pTriggers = pEditor->treeWidget_triggers;
+        QTreeWidgetItem* pTrigger = pTriggers->findItems(qsl("qaEmptySelectionTrigger"), Qt::MatchFixedString | Qt::MatchCaseSensitive | Qt::MatchRecursive).value(0);
+        QVERIFY(pTrigger);
+        const int triggerID = pTrigger->data(0, Qt::UserRole).toInt();
+        const QTreeWidget* pTree = partsOf(viewType).tree;
+
+        showView(viewType);
+        partsOf(viewType).tree->setCurrentItem(pTree->topLevelItem(0));
+        pEditor->slot_showTriggers();
+        // Via the root, so the click on the trigger is a change even when it was left current
+        pTriggers->setCurrentItem(pTriggers->topLevelItem(0));
+        pTriggers->setCurrentItem(pTrigger);
+        QVERIFY2(shownInEditor(pEditor->mpSourceEditorArea, pEditor), "the trigger's script editor is not up, so nothing is left for the next view to hide");
+        if (viewType == EditorViewType::cmTriggerView) {
+            pTriggers->setCurrentItem(pTriggers->topLevelItem(0));
+        }
+        showView(viewType);
+        verifyShowsTheHelp(viewType);
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+
+        pEditor->slot_saveEdits();
+        TTrigger* pSaved = mpHost->getTriggerUnit()->getTrigger(triggerID);
+        QVERIFY(pSaved);
+        QCOMPARE(pSaved->getName(), qsl("qaEmptySelectionTrigger"));
+        QCOMPARE(pSaved->getPatternsList(), QStringList{qsl("^qaEmptySelectionTrigger$")});
     }
 };
 
