@@ -502,6 +502,7 @@ private slots:
                                                   "tempKey(%2, [[-- %1]])}")
                                                       .arg(token)
                                                       .arg(static_cast<int>(Qt::Key_F35))));
+        QVERIFY2(pLua->compileAndExecuteScript(qsl("for i = 1, 5 do assert(type(qaTempIds[i]) == 'number') end")), "a temporary item was not created, so its absence below would prove nothing");
         auto* pTempAction = new TAction(qsl("qaTempButton"), mpHost);
         pTempAction->setTemporary(true);
         pTempAction->setCommandButtonDown(qsl("%1 down").arg(token));
@@ -531,9 +532,17 @@ private slots:
     // tempButton() makes an ordinary button, which the editor shows like any other
     void test_selectingAScriptMadeButtonResultSelectsThatButton()
     {
+        auto* pLua = mpHost->getLuaInterpreter();
         mpEditor->slot_showScripts();
-        QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("tempButtonToolbar('qaScriptMadeBar', 0, 0) tempButton('qaScriptMadeBar', 'qaScriptMadeButton', 0)")));
-        QVERIFY2(mpEditor->mNeedUpdateData, "the script did not mark the editor's trees as stale");
+        QVERIFY(!mpEditor->mNeedUpdateData);
+        QVERIFY(pLua->compileAndExecuteScript(qsl("tempButtonToolbar('qaScriptMadeBar', 0, 0)")));
+        QVERIFY2(mpEditor->mNeedUpdateData, "tempButtonToolbar() did not mark the editor's trees as stale");
+
+        // Each call must mark the trees itself: a button is often added to a bar the tree already holds
+        mpEditor->slot_showScripts();
+        QVERIFY(!mpEditor->mNeedUpdateData);
+        QVERIFY(pLua->compileAndExecuteScript(qsl("tempButton('qaScriptMadeBar', 'qaScriptMadeButton', 0)")));
+        QVERIFY2(mpEditor->mNeedUpdateData, "tempButton() did not mark the editor's trees as stale");
         search(qsl("qaScriptMadeButton"));
         QTreeWidgetItem* result = topLevelResultFor(qsl("Button"));
         QVERIFY2(result, "the button the script made was not found");
