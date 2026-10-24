@@ -7836,6 +7836,9 @@ describe("Main window size and saved layout", function()
   end
 
   setup(function()
+    -- A docked map squeezed short of the width it wants takes a growing window's width before the console
+    -- does, which would read here as a display that cannot resize
+    closeMapWidget()
     local firstWidth, firstHeight = getMainWindowSize()
     measurable = testMode and firstWidth > 0 and firstHeight > 0
     if not measurable then
@@ -7846,11 +7849,11 @@ describe("Main window size and saved layout", function()
     local width, height = getMainWindowSize()
     resizable = width > firstWidth and height > firstHeight
 
-    -- A dock another spec file left open - the map widget is the one that does
-    -- this - only takes its width out of the console at the next re-layout,
-    -- which is the resize just above. So the size to put the window back to is
-    -- read after asking for the first one again rather than before: a size the
-    -- window has actually been is a size it can be put back to.
+    -- A dock opened or closed just before this, as the map is above, only
+    -- changes the console's width at the next re-layout, which is the resize
+    -- just above. So the size to put the window back to is read after asking
+    -- for the first one again rather than before: a size the window has
+    -- actually been is a size it can be put back to.
     setMainWindowSize(firstWidth, firstHeight)
     pumpEvents(200)
     originalWidth, originalHeight = getMainWindowSize()

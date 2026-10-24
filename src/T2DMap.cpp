@@ -775,6 +775,13 @@ T2DMap::~T2DMap()
     }
 }
 
+// A dock Qt has no size for takes its content's size hint, and the controls under the
+// map alone are far too small for one.
+QSize T2DMap::sizeHint() const
+{
+    return {400, 400};
+}
+
 void T2DMap::init()
 {
     if (!mpHost || !mpMap) {

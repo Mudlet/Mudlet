@@ -3661,6 +3661,7 @@ void TMainConsole::createMapperDock(const QString& title, const QString& objectN
     mpHost->mpMap->setMapper(new dlgMapper(mpDockableMapWidget, mpHost, mpHost->mpMap.data()));
     mpHost->mpMap->mapper()->setStyleSheet(mpHost->mProfileStyleSheet);
     mpDockableMapWidget->setWidget(mpHost->mpMap->mapper());
+    mudlet::self()->growDockToSizeHintWhenShown(mpDockableMapWidget);
 }
 
 QDockWidget* TMainConsole::mapWidget() const
@@ -3908,6 +3909,16 @@ void TMainConsole::dockMapWidget(Qt::DockWidgetArea area)
     mudlet::self()->addDockWidget(area, mpDockableMapWidget);
 }
 
+void TMainConsole::redockMapWidget(Qt::DockWidgetArea area)
+{
+    const bool moving = mpDockableMapWidget->isFloating() || mudlet::self()->dockWidgetArea(mpDockableMapWidget) != area;
+    mpDockableMapWidget->setFloating(false);
+    dockMapWidget(area);
+    if (moving) {
+        mudlet::self()->growDockToSizeHint(mpDockableMapWidget, false);
+    }
+}
+
 std::pair<bool, QString> TMainConsole::placeMapWidget(const QString& area, int x, int y, int width, int height)
 {
     auto pM = mpDockableMapWidget;
@@ -3935,26 +3946,22 @@ std::pair<bool, QString> TMainConsole::placeMapWidget(const QString& area, int x
     }
 
     if (area == QLatin1String("r") || area == QLatin1String("right")) {
-        pM->setFloating(false);
-        dockMapWidget(Qt::RightDockWidgetArea);
+        redockMapWidget(Qt::RightDockWidgetArea);
         return {true, QString()};
     }
 
     if (area == QLatin1String("l") || area == QLatin1String("left")) {
-        pM->setFloating(false);
-        dockMapWidget(Qt::LeftDockWidgetArea);
+        redockMapWidget(Qt::LeftDockWidgetArea);
         return {true, QString()};
     }
 
     if (area == QLatin1String("t") || area == QLatin1String("top")) {
-        pM->setFloating(false);
-        dockMapWidget(Qt::TopDockWidgetArea);
+        redockMapWidget(Qt::TopDockWidgetArea);
         return {true, QString()};
     }
 
     if (area == QLatin1String("b") || area == QLatin1String("bottom")) {
-        pM->setFloating(false);
-        dockMapWidget(Qt::BottomDockWidgetArea);
+        redockMapWidget(Qt::BottomDockWidgetArea);
         return {true, QString()};
     }
 
