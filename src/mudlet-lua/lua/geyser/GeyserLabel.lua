@@ -13,6 +13,15 @@ Geyser.Label = Geyser.Window:new({
   fillBg = 1, })
 Geyser.Label.scrollV = {}
 Geyser.Label.scrollH = {}
+
+-- every span the converters write sets font-weight, font-style and text-decoration,
+-- which overrides a <b>, <i>, <u> or <s> wrapped around them
+local function addLabelTextStyle(resetFormat, ft)
+  resetFormat.bold = resetFormat.bold or ft.bold
+  resetFormat.italic = resetFormat.italic or ft.italics
+  resetFormat.underline = resetFormat.underline or ft.underline
+  resetFormat.strikeout = resetFormat.strikeout or ft.strikethrough
+end
 --- Prints a message to the window.  All parameters are optional and if not
 -- specified will use the last set value. Left out, the message is shown again
 -- the way it was last put up, so one set by decho, hecho or cecho keeps its colours.
@@ -119,6 +128,7 @@ function Geyser.Label:decho(message)
   if self.fgColor and self.fgColor ~= "" and self.fgColor ~= "nocolor" then
     resetFormat.foreground = Geyser.Color.hex(self.fgColor)
   end
+  addLabelTextStyle(resetFormat, self.formatTable)
 
   -- Convert decho formatted text to HTML, preserving label's colors
   local htmlContent = decho2html(message, resetFormat)
@@ -177,6 +187,7 @@ function Geyser.Label:hecho(message)
   if self.fgColor and self.fgColor ~= "" and self.fgColor ~= "nocolor" then
     resetFormat.foreground = Geyser.Color.hex(self.fgColor)
   end
+  addLabelTextStyle(resetFormat, self.formatTable)
 
   -- Convert hecho formatted text to HTML, preserving label's colors
   local htmlContent = hecho2html(message, resetFormat)
@@ -235,6 +246,7 @@ function Geyser.Label:cecho(message)
   if self.fgColor and self.fgColor ~= "" and self.fgColor ~= "nocolor" then
     resetFormat.foreground = Geyser.Color.hex(self.fgColor)
   end
+  addLabelTextStyle(resetFormat, self.formatTable)
 
   -- Convert cecho formatted text to HTML, preserving label's colors
   local htmlContent = cecho2html(message, resetFormat)

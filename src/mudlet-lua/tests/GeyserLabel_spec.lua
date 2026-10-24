@@ -688,10 +688,10 @@ describe("Tests functionality of Geyser.Label widget state", function()
     }
     local setters = {
       { name = "setFontSize", args = { 20 }, shows = "font%-size: 20pt" },
-      { name = "setBold", args = { true }, shows = "<b>" },
-      { name = "setItalics", args = { true }, shows = "<i>" },
-      { name = "setUnderline", args = { true }, shows = "<u>" },
-      { name = "setStrikethrough", args = { true }, shows = "<s>" },
+      { name = "setBold", args = { true }, shows = "font%-weight: bold", hides = "font%-weight: normal" },
+      { name = "setItalics", args = { true }, shows = "font%-style: italic", hides = "font%-style: normal" },
+      { name = "setUnderline", args = { true }, shows = "text%-decoration: underline", hides = "text%-decoration: none" },
+      { name = "setStrikethrough", args = { true }, shows = "text%-decoration: line%-through", hides = "text%-decoration: none" },
       { name = "setAlignment", args = { "center" }, shows = 'align="center"' },
       { name = "setFormat", args = { "b18" }, shows = "font%-size: 18pt" },
       { name = "setFont", args = { "Bitstream Vera Sans Mono" }, shows = "<font face=" },
@@ -709,6 +709,9 @@ describe("Tests functionality of Geyser.Label widget state", function()
           label[setter.name](label, unpack(setter.args))
           local text = getLabelText("glsFlavour")
           assert.is_truthy(text:find(setter.shows), text)
+          if setter.hides then
+            assert.is_nil(text:find(setter.hides), text)
+          end
           assert.is_truthy(text:find("color: rgb(255, 0, 0)", 1, true), text)
           assert.is_nil(text:find("#ff0000red", 1, true), text)
           assert.is_nil(text:find("<255,0,0>", 1, true), text)
@@ -716,6 +719,25 @@ describe("Tests functionality of Geyser.Label widget state", function()
           assert.are.equal(flavour.message, label.message)
         end)
       end
+    end
+
+    for _, flavour in ipairs(flavours) do
+      it(string.format("draws a %s message bold when setBold comes before or after it", flavour.name), function()
+        local text = "WWWWWWWWWWWWWWWWWWWW"
+        label:echo(text)
+        local plainWidth = getLabelSizeHint("glsFlavour")
+        label:setBold(true)
+        local boldWidth = getLabelSizeHint("glsFlavour")
+        assert.is_true(boldWidth > plainWidth)
+        label:setBold(false)
+        label[flavour.name](label, (flavour.message:gsub("red", text, 1)))
+        local colouredWidth = getLabelSizeHint("glsFlavour")
+        label:setBold(true)
+        local after = getLabelSizeHint("glsFlavour")
+        assert.is_true(after > colouredWidth)
+        label[flavour.name](label, (flavour.message:gsub("red", text, 1)))
+        assert.are.equal(after, getLabelSizeHint("glsFlavour"))
+      end)
     end
 
     it("shows a plain echo after hecho as it was given", function()
