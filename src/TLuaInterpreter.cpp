@@ -4221,6 +4221,11 @@ void TLuaInterpreter::signalMXPEvent(const QString& type, const QMap<QString, QS
 // No documentation available in wiki - internal function
 void TLuaInterpreter::setGMCPTable(QString& key, const QString& string_data)
 {
+    setGMCPTable(key, string_data.toUtf8());
+}
+
+void TLuaInterpreter::setGMCPTable(QString& key, const QByteArray& utf8Data)
+{
     lua_State* L = pGlobalLua;
     lua_getglobal(L, "gmcp"); //defined in Lua init
     if (!lua_istable(L, -1)) {
@@ -4234,7 +4239,7 @@ void TLuaInterpreter::setGMCPTable(QString& key, const QString& string_data)
             return;
         }
     }
-    parseJSON(key, string_data, QLatin1String("gmcp"));
+    parseJSON(key, utf8Data, QLatin1String("gmcp"));
 }
 
 // No documentation available in wiki - internal function
@@ -4273,11 +4278,11 @@ void TLuaInterpreter::setMSDPTable(QString& key, const QString& string_data)
         }
     }
 
-    parseJSON(key, string_data, QLatin1String("msdp"));
+    parseJSON(key, string_data.toUtf8(), QLatin1String("msdp"));
 }
 
 // No documentation available in wiki - internal function
-void TLuaInterpreter::parseJSON(QString& key, const QString& string_data, const QString& protocol)
+void TLuaInterpreter::parseJSON(QString& key, const QByteArray& utf8Data, const QString& protocol)
 {
     // key is in format of Blah.Blah or Blah.Blah.Bleh - we want to push & pre-create the tables as appropriate
     const ScriptCallerScope callerScope(*this, false);
@@ -4329,8 +4334,7 @@ void TLuaInterpreter::parseJSON(QString& key, const QString& string_data, const 
         qDebug() << "CRITICAL ERROR: json_to_value not defined";
         return;
     }
-    auto dataInUtf8 = string_data.toUtf8();
-    lua_pushlstring(L, dataInUtf8.constData(), dataInUtf8.length());
+    lua_pushlstring(L, utf8Data.constData(), utf8Data.length());
     const int error = lua_pcall(L, 1, 1, 0);
     if (!error) {
         // Top of stack should now contain the lua representation of json.
@@ -4403,23 +4407,23 @@ void TLuaInterpreter::parseJSON(QString& key, const QString& string_data, const 
             // gmcp.Char.Vitals - all carrying the same frame, so only the event
             // the data actually arrived for prints it:
             const bool isDeepestToken = (k == total - 1);
-            TDebug(Qt::white, Qt::darkBlue, TDebug::Category::Protocol) << protocolEventLine(protocol, token, isDeepestToken ? string_data : QString()) >> &host;
+            TDebug(Qt::white, Qt::darkBlue, TDebug::Category::Protocol) << protocolEventLine(protocol, token, isDeepestToken ? QString::fromUtf8(utf8Data) : QString()) >> &host;
         }
         host.raiseEvent(event);
     }
     // auto-detect IRE composer
     if (tokenList.size() == 3 && tokenList.at(0).toLower() == "ire" && tokenList.at(1).toLower() == "composer" && tokenList.at(2).toLower() == "edit") {
-        handleIreComposerEdit(string_data);
+        handleIreComposerEdit(utf8Data);
     }
     lua_settop(L, callerStackTop);
 }
 
-void TLuaInterpreter::handleIreComposerEdit(const QString& jsonData)
+void TLuaInterpreter::handleIreComposerEdit(const QByteArray& jsonData)
 {
     Host& host = getHostFromLua(pGlobalLua);
 
     QJsonParseError parseError;
-    QJsonDocument jsonDoc = QJsonDocument::fromJson(jsonData.toUtf8(), &parseError);
+    QJsonDocument jsonDoc = QJsonDocument::fromJson(jsonData, &parseError);
 
     if (parseError.error != QJsonParseError::NoError) {
         qDebug() << "IRE Composer: JSON parse error:" << parseError.errorString();
