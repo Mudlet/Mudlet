@@ -23,7 +23,7 @@
  * make a package with the name of one listed there. The Package Manager only
  * offers the repository's "report an issue" and website links, and the
  * repository's help URL, for an installed package that is the repository's:
- * one whose author matches the index entry of that name (#8894).
+ * one whose author matches the index entry of that name.
  *
  * A spec cannot reach this: the dialog is C++ only, with no Lua way to open it
  * or to read its buttons.

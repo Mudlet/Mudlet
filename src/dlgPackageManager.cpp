@@ -696,8 +696,8 @@ void dlgPackageManager::slot_openBugWebsite()
     mudlet::self()->openWebPage(qsl("https://github.com/Mudlet/mudlet-package-repository/issues/new?template=package-bug-or-issue.md&title=[Package%20Bug]%20") + currentItem->text());
 }
 
-// The index is keyed by name alone and anyone can make a package of the same name; the author is
-// the one detail the index copies from every package's config.lua that a new version rarely changes
+// The index is keyed by name alone and anyone can make a package of the same name. The author is
+// copied into the index from the package's config.lua and rarely changes between versions
 bool dlgPackageManager::matchesRepositoryPackage(const QString& packageName) const
 {
     const auto repositoryPackage = packageLookup.constFind(packageName);
