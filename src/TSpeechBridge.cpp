@@ -35,6 +35,7 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QScopedValueRollback>
 #include <QTimer>
 
 #include <chrono>
@@ -63,7 +64,7 @@ SpeechRecognizer* TSpeechBridge::speechRecognizer() const
     return mpSpeechRecognizer;
 }
 
-void TSpeechBridge::raiseSpeechEvent(const QString& name, const QString& value)
+void TSpeechBridge::raiseSpeechEvent(const QString& name, const QString& value, Host* pCaller)
 {
     // The owner outranks the active profile: with the microphone held, every
     // result, state change and fault belongs to the session that is running,
@@ -91,6 +92,10 @@ void TSpeechBridge::raiseSpeechEvent(const QString& name, const QString& value)
     if (!pHost) {
         pHost = TAppFrontend::instance()->getActiveHost();
     }
+    // The caller before the last caller, as another profile's call can come between it and its refusal
+    if (!pHost) {
+        pHost = pCaller ? pCaller : mpLastCaller.data();
+    }
     raiseSpeechEventOn(pHost, name, value);
 }
 
@@ -104,6 +109,9 @@ void TSpeechBridge::raiseSpeechEventOn(Host* pHost, const QString& name, const Q
         if (name == qsl("sysSTTError")) {
             qWarning().noquote() << "speech recognition error with no active profile to report it to:" << value;
         }
+        return;
+    }
+    if (pHost == mpSilencedProfile) {
         return;
     }
     const bool error = (name == qsl("sysSTTError"));
@@ -470,6 +478,9 @@ void TSpeechBridge::profileClosing(Host* pHost)
     // phrase. allProfilesClosed() is the same rule with nobody left to hand
     // back to.
     if (mpMicrophoneOwner == pHost) {
+        // Not told, as a profile the GUI closes is not, its scripts being stopped by then: a handler
+        // starting again on "ready" would leave the microphone open for a profile that is going
+        const QScopedValueRollback<Host*> silenced(mpSilencedProfile, pHost);
         // Processing counts: a phrase still decoding for the profile that is
         // going away has nowhere to be delivered, and the release below would
         // otherwise let it fall through to whichever profile is now in front.
@@ -477,6 +488,13 @@ void TSpeechBridge::profileClosing(Host* pHost)
             mpSpeechRecognizer->cancel();
         }
         releaseMicrophone();
+    }
+    // Nor told anything afterwards: a profile closed from its own handler outlives this
+    if (mpMicrophoneOwnerEnding == pHost) {
+        mpMicrophoneOwnerEnding = nullptr;
+    }
+    if (mpLastCaller == pHost) {
+        mpLastCaller = nullptr;
     }
 }
 
