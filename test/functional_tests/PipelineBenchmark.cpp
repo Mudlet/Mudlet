@@ -136,6 +136,7 @@ private:
     // away and every pass adds to the buffer.
     static constexpr int kCorpusLines = 25000;
     static constexpr int kFeedPasses = 6;
+    static constexpr int kGmcpRounds = 3000;
     // Bump with any change to generateCorpus(). compare-perf-baseline.py reads
     // this as an invariant, so it refuses a cross-corpus comparison instead of
     // reporting the corpus difference as a code regression.
@@ -635,6 +636,76 @@ private:
         return best;
     }
 
+    static QByteArray gmcpFrame(const QByteArray& package, const QByteArray& json)
+    {
+        QByteArray frame;
+        frame.reserve(package.size() + json.size() + 6);
+        frame.append(TN_IAC).append(TN_SB).append(static_cast<char>(OPT_GMCP));
+        frame.append(package).append(' ').append(json);
+        frame.append(TN_IAC).append(TN_SE);
+        return frame;
+    }
+
+    // One read per prompt, IRE-shaped: vitals and room every prompt, a channel
+    // line every third, and a ~4KB inventory every tenth. Values change every
+    // round so nothing downstream can short-circuit on a repeat.
+    static QByteArrayList generateGmcpCorpus(int rounds, int& outMessages, qint64& outBytes)
+    {
+        static const char* const rooms[] = {"Village Square", "Dark Forest", "Ancient Tower", "Misty Harbour", "Goblin Warren"};
+        static const char* const items[] = {"a rusty sword", "a wooden shield", "a healing potion", "a silver ring", "a torn map", "a café au lait"};
+        QByteArrayList reads;
+        reads.reserve(rounds);
+        outMessages = 0;
+        outBytes = 0;
+        for (int round = 0; round < rounds; ++round) {
+            QByteArray read;
+            read += gmcpFrame("Char.Vitals",
+                              qsl("{\"hp\":\"%1\",\"maxhp\":\"4210\",\"mp\":\"%2\",\"maxmp\":\"3980\",\"ep\":\"16120\",\"maxep\":\"16200\",\"wp\":\"14000\",\"maxwp\":\"14100\",\"nl\":\"%3\",\"bal\":"
+                                  "\"1\",\"eq\":\"%4\",\"string\":\"H:%1/4210 M:%2/3980 E:16120/16200 W:14000/14100 NL:%3/100 \",\"charstats\":[\"Bleed: 0\",\"Rage: %5\"]}")
+                                      .arg(4210 - round % 900)
+                                      .arg(3980 - round % 700)
+                                      .arg(round % 100)
+                                      .arg(round % 2)
+                                      .arg(round % 37)
+                                      .toUtf8());
+            ++outMessages;
+            read += gmcpFrame("Room.Info",
+                              qsl("{\"num\":%1,\"name\":\"%2\",\"area\":\"the Township of "
+                                  "%2\",\"environment\":\"Urban\",\"coords\":\"45,%3,%4,0\",\"map\":\"www.example.com/irex/maps/clientmap.php?map=45&level=0 %3 "
+                                  "%4\",\"exits\":{\"n\":%5,\"e\":%6,\"s\":%7,\"w\":%8},\"details\":[\"shop\",\"bank\"],\"background\":\"#204060\"}")
+                                      .arg(10000 + round % 5000)
+                                      .arg(QLatin1String(rooms[round % 5]))
+                                      .arg(round % 40)
+                                      .arg(round % 30)
+                                      .arg(10001 + round % 5000)
+                                      .arg(10002 + round % 5000)
+                                      .arg(10003 + round % 5000)
+                                      .arg(10004 + round % 5000)
+                                      .toUtf8());
+            ++outMessages;
+            if (round % 3 == 0) {
+                read += gmcpFrame("Comm.Channel.Text",
+                                  qsl("{\"channel\":\"ct\",\"talker\":\"Gandalf\",\"text\":\"\\u001b[0;1;36m(The Township): Gandalf says, \\\"Meet me at the tower, round %1.\\\"\\u001b[0;37m\"}")
+                                          .arg(round)
+                                          .toUtf8());
+                ++outMessages;
+            }
+            if (round % 10 == 0) {
+                QStringList entries;
+                for (int i = 0; i < 60; ++i) {
+                    entries << qsl("{\"id\":\"%1\",\"name\":\"%2\",\"attrib\":\"%3\"}").arg(200000 + round * 61 + i).arg(QString::fromUtf8(items[(round + i) % 6])).arg(i % 4 ? qsl("t") : qsl("wW"));
+                }
+                read += gmcpFrame("Char.Items.List", qsl("{\"location\":\"inv\",\"items\":[%1]}").arg(entries.join(QLatin1Char(','))).toUtf8());
+                ++outMessages;
+            }
+            // The prompt that closes the read, so the text side runs as it does live.
+            read += qsl("H:%1 M:%2 ex-\n").arg(4210 - round % 900).arg(3980 - round % 700).toUtf8();
+            outBytes += read.size();
+            reads << read;
+        }
+        return reads;
+    }
+
     // Breaks only at line ends, so no line straddles two chunks. A non-positive
     // count is the default: the whole corpus as one piece.
     static QByteArrayList splitCorpus(const QByteArray& corpus, int linesPerChunk)
@@ -876,6 +947,71 @@ private slots:
         emitMetric("latin1_lines_per_sec", mCorpusLines / seconds);
         emitMetric("latin1_mb_per_sec", (mCorpusBytes / 1.0e6) / seconds);
         emitMetric("latin1_best_pass_ms", seconds * 1000.0);
+    }
+
+    // GMCP from the bytes to the gmcp table and its events, with no handler and
+    // then with one gmcp.Char handler: the per-message cost the text pipeline
+    // numbers never see.
+    void benchGmcp_data()
+    {
+        QTest::addColumn<bool>("withHandler");
+        QTest::newRow("bare") << false;
+        QTest::newRow("handler") << true;
+    }
+
+    void benchGmcp()
+    {
+        QFETCH(bool, withHandler);
+        Host* host = startProfile();
+        QVERIFY(host);
+        QVERIFY(noTriggersAreRunningYet(host));
+
+        int messages = 0;
+        qint64 bytes = 0;
+        QByteArrayList reads = generateGmcpCorpus(kGmcpRounds, messages, bytes);
+        TLuaInterpreter* lua = host->getLuaInterpreter();
+        QVERIFY(lua->compileAndExecuteScript(qsl("benchGmcpEvents = 0")));
+        if (withHandler) {
+            QVERIFY(lua->compileAndExecuteScript(qsl("registerAnonymousEventHandler('gmcp.Char', function() benchGmcpEvents = benchGmcpEvents + 1 end)")));
+        }
+
+        double best = std::numeric_limits<double>::max();
+        for (int pass = 0; pass < kFeedPasses; ++pass) {
+            QElapsedTimer timer;
+            timer.start();
+            for (QByteArray& read : reads) {
+                host->mTelnet.loopbackTest(read);
+            }
+            best = std::min(best, timer.nsecsElapsed() / 1.0e9);
+        }
+
+        // Proves the frames reached Lua whole: the last round's values, and the
+        // UTF-8 inside the inventory, must be what the tables hold. The last
+        // inventory is round 2990's, whose 4th item is the cafe.
+        const int lastRound = kGmcpRounds - 1;
+        QVERIFY(lua->compileAndExecuteScript(qsl("benchGmcpOk = (gmcp.Char.Vitals.hp == '%1' and gmcp.Room.Info.num == %2 and gmcp.Char.Items.List.items[60].name == 'a wooden shield' and "
+                                                 "gmcp.Char.Items.List.items[4].name == 'a caf\\195\\169 au lait' and "
+                                                 "gmcp.Comm.Channel.Text.text:find('round %3', 1, true) ~= nil) and 1 or 0")
+                                                     .arg(4210 - lastRound % 900)
+                                                     .arg(10000 + lastRound % 5000)
+                                                     .arg(lastRound - lastRound % 3)));
+        lua_State* L = lua->getLuaGlobalState();
+        lua_getglobal(L, "benchGmcpOk");
+        const int ok = static_cast<int>(lua_tointeger(L, -1));
+        lua_getglobal(L, "benchGmcpEvents");
+        const int events = static_cast<int>(lua_tointeger(L, -1));
+        lua_pop(L, 2);
+        QCOMPARE(ok, 1);
+        if (withHandler) {
+            const int charMessagesPerPass = kGmcpRounds + (kGmcpRounds + 9) / 10;
+            QCOMPARE(events, charMessagesPerPass * kFeedPasses);
+        }
+
+        const char* prefix = withHandler ? "gmcp_handler" : "gmcp";
+        emitMetric(qPrintable(qsl("%1_messages").arg(QLatin1String(prefix))), static_cast<qint64>(messages));
+        emitMetric(qPrintable(qsl("%1_bytes").arg(QLatin1String(prefix))), bytes);
+        emitMetric(qPrintable(qsl("%1_msgs_per_sec").arg(QLatin1String(prefix))), messages / best);
+        emitMetric(qPrintable(qsl("%1_best_pass_ms").arg(QLatin1String(prefix))), best * 1000.0);
     }
 
     void benchTriggerEngine()
