@@ -36,6 +36,8 @@
 #include <QtTest/QtTest>
 #include <chrono>
 #include <QMouseEvent>
+#include <QPointer>
+#include <QScopeGuard>
 
 #include "MudletApp.h"
 #include "PortableModeTestHelper.h"
@@ -475,17 +477,104 @@ private slots:
     mpHost->mBlockStopWatchCreation = false;
 
     mpHost->resetProfile_phase1();
-    // mResetProfile is now true — stopwatch creation should be blocked
+    // Blocked until phase2 has the new Lua state ready
     auto result = mpHost->createStopWatch(qsl("blocked_sw"));
     QCOMPARE(result.first, 0);
 
     QCoreApplication::processEvents();
 
     // After phase2, creation should work again
-    mpHost->mBlockStopWatchCreation = false;
     auto result2 = mpHost->createStopWatch(qsl("unblocked_sw"));
     QVERIFY2(result2.first > 0,
              "Stopwatch creation should work after reset completes");
+  }
+
+  void test_scriptCreatesItsStopWatchWhenResetRunsIt() {
+    const QString watchName = qsl("loadTimeStopWatch");
+    mpHost->mBlockStopWatchCreation = false;
+    auto *pScript = new TScript(qsl("stopWatchAtLoadScript"), mpHost);
+    const auto removeScript = qScopeGuard([pScript]() { delete pScript; });
+    pScript->setScript(
+        qsl("loadTimeStopWatchId = createStopWatch(\"%1\")").arg(watchName));
+    mpHost->getScriptUnit()->registerScript(pScript);
+    pScript->setIsActive(true);
+    pScript->compile();
+    QVERIFY(mpHost->findStopWatchId(watchName) > 0);
+
+    performReset();
+
+    const int id = mpHost->findStopWatchId(watchName);
+    lua_State *L = mpHost->mLuaInterpreter.getLuaGlobalState();
+    lua_getglobal(L, "loadTimeStopWatchId");
+    const int luaId =
+        lua_isnumber(L, -1) ? static_cast<int>(lua_tointeger(L, -1)) : 0;
+    lua_pop(L, 1);
+    QVERIFY2(id > 0,
+             "A script run by the reset should be able to create its stopwatch");
+    QCOMPARE(luaId, id);
+  }
+
+  // The reset's teardown still runs code on the old Lua state (sysMediaFinished
+  // handlers, the DeferredDelete drain used here), and a stopwatch made there
+  // would outlive the reset that was meant to remove it
+  void test_stopWatchCreationStaysBlockedThroughResetTeardown() {
+    const QString watchName = qsl("teardown_sw");
+    QPointer<QObject> doomed = new QObject;
+    int teardownId = -1;
+    const auto destroyedConnection =
+        connect(doomed, &QObject::destroyed, this,
+                [this, &teardownId, watchName]() {
+                  teardownId = mpHost->createStopWatch(watchName).first;
+                });
+    const auto resettingConnection =
+        connect(mpHost, &Host::signal_profileResetting, doomed.data(),
+                &QObject::deleteLater);
+
+    performReset();
+    disconnect(resettingConnection);
+    disconnect(destroyedConnection);
+    const bool drainedByReset = doomed.isNull();
+    delete doomed.data();
+
+    QVERIFY2(drainedByReset,
+             "The reset never drained the deleteLater() posted while it ran");
+    QCOMPARE(teardownId, 0);
+    QCOMPARE(mpHost->findStopWatchId(watchName), 0);
+  }
+
+  // Finalisers on the old Lua state run inside initLuaGlobals()'s lua_close(),
+  // the last point of the teardown
+  void test_stopWatchCreationStaysBlockedInFinalisersRunByReset() {
+    QTemporaryDir markerDir;
+    QVERIFY(markerDir.isValid());
+    const QString markerPath = markerDir.filePath(qsl("finaliser-ran"));
+    lua_State *L = mpHost->mLuaInterpreter.getLuaGlobalState();
+    lua_pushstring(L, markerPath.toUtf8().constData());
+    lua_setglobal(L, "resetGcMarkerPath");
+    QCOMPARE(luaL_dostring(
+                 L, "resetGcProxy = newproxy(true)\n"
+                    "getmetatable(resetGcProxy).__gc = function()\n"
+                    "  createStopWatch('gc_sw')\n"
+                    "  io.open(resetGcMarkerPath, 'w'):close()\n"
+                    "end"),
+             0);
+
+    performReset();
+
+    QVERIFY2(QFileInfo::exists(markerPath),
+             "The finaliser did not run during the reset");
+    QCOMPARE(mpHost->findStopWatchId(qsl("gc_sw")), 0);
+  }
+
+  void test_refusedResetLeavesStopWatchCreationWorking() {
+    mpHost->mLuaInterpreter.enterNestedEventLoop();
+    const bool started = mpHost->resetProfile_phase1();
+    mpHost->mLuaInterpreter.leaveNestedEventLoop();
+    QVERIFY(!started);
+
+    const auto result =
+        mpHost->createStopWatch(qsl("after_refused_reset"));
+    QVERIFY2(result.first > 0, qPrintable(result.second));
   }
 
   // -----------------------------------------------------------------------

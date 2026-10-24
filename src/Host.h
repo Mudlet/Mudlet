@@ -1512,10 +1512,8 @@ private:
     bool mSaveProfileOnExit = false;
 
     // To keep things simple for Lua the first stopwatch will be allocated a key
-    // of 1 - and anything less that that will be rejected - and we force
-    // createStopWatch() to return 0 during script loading so that we do not get
-    // superious stopwatches from being created then (when
-    // mIsProfileLoadingSequence is true):
+    // of 1 - and anything less than that will be rejected - and
+    // createStopWatch() returns 0 while mBlockStopWatchCreation is set:
     std::map<int, std::unique_ptr<stopWatch>> mStopWatchMap;
 
     QMap<QString, QStringList> mAnonymousEventHandlerFunctions;
