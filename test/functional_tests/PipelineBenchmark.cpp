@@ -917,7 +917,11 @@ private slots:
         QByteArray corpus;
         QString lastLine;
         for (int i = 0; i < kCjkLines; ++i) {
-            lastLine = qsl("%1，%2。[HP %3/1000]").arg(phrases.at(pick(phrases.size())), phrases.at(pick(phrases.size()))).arg(pick(900) + 100);
+            // One pick per statement: the order arguments are evaluated in differs between compilers
+            const QString& first = phrases.at(pick(phrases.size()));
+            const QString& second = phrases.at(pick(phrases.size()));
+            const int hp = pick(900) + 100;
+            lastLine = qsl("%1，%2。[HP %3/1000]").arg(first, second).arg(hp);
             corpus += "\x1b[3";
             corpus += QByteArray::number(pick(7) + 1);
             corpus += 'm';

@@ -8719,7 +8719,7 @@ bool TBuffer::decodeMultibyteSequence(QByteArrayView bytes, QStringView& decoded
 {
     if (mMultibyteDecoder.isValid()) {
         mMultibyteDecoder.resetState();
-        // A QString per character would be the costliest step here; callers pass at most four bytes
+        // Spares a QString allocation per character; callers pass at most four bytes
         if (Q_LIKELY(mMultibyteDecoder.requiredSpace(bytes.size()) <= static_cast<qsizetype>(mMultibyteDecoded.size()))) {
             const QChar* end = mMultibyteDecoder.appendToBuffer(mMultibyteDecoded.data(), bytes);
             decoded = QStringView(mMultibyteDecoded.data(), end);
