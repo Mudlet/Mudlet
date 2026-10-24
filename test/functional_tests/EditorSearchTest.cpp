@@ -531,8 +531,9 @@ private slots:
     // tempButton() makes an ordinary button, which the editor shows like any other
     void test_selectingAScriptMadeButtonResultSelectsThatButton()
     {
-        QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("tempButtonToolbar('qaScriptMadeBar', 0, 0) tempButton('qaScriptMadeBar', 'qaScriptMadeButton', 0)")));
         mpEditor->slot_showScripts();
+        QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("tempButtonToolbar('qaScriptMadeBar', 0, 0) tempButton('qaScriptMadeBar', 'qaScriptMadeButton', 0)")));
+        QVERIFY2(mpEditor->mNeedUpdateData, "the script did not mark the editor's trees as stale");
         search(qsl("qaScriptMadeButton"));
         QTreeWidgetItem* result = topLevelResultFor(qsl("Button"));
         QVERIFY2(result, "the button the script made was not found");
