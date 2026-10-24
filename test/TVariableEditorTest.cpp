@@ -17,6 +17,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include "GroupedTest.h"
 #include <LuaInterface.h>
 #include <TTreeWidget.h>
 #include <TVar.h>
@@ -2131,4 +2132,4 @@ private slots:
 };
 
 #include "TVariableEditorTest.moc"
-QTEST_MAIN(TVariableEditorTest)
+MUDLET_GROUPED_TEST_MAIN(TVariableEditorTest)

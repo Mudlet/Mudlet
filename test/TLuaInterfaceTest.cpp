@@ -17,6 +17,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include "GroupedTest.h"
 #include <LuaInterface.h>
 #include <TVar.h>
 #include <VarUnit.h>
@@ -70,7 +71,7 @@ static void* budgetedAllocator(void* userData, void* pointer, size_t /*oldSize*/
 bool TVarLessThan(TVar*, TVar*);
 
 
-class TVarTest : public QObject
+class TLuaInterfaceTest : public QObject
 {
     Q_OBJECT
 
@@ -1729,4 +1730,4 @@ private:
 };
 
 #include "TLuaInterfaceTest.moc"
-QTEST_MAIN(TVarTest)
+MUDLET_GROUPED_TEST_MAIN(TLuaInterfaceTest)

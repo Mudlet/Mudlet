@@ -1,3 +1,4 @@
+#include "GroupedTest.h"
 #include <TLinkStore.h>
 #include <QtTest/QtTest>
 
@@ -267,4 +268,4 @@ private slots:
 };
 
 #include "TLinkStoreTest.moc"
-QTEST_MAIN(TLinkStoreTest)
+MUDLET_GROUPED_TEST_MAIN(TLinkStoreTest)

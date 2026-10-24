@@ -17,6 +17,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include "GroupedTest.h"
 #include "UntrustedText.h"
 
 #include <QtTest/QtTest>
@@ -184,5 +185,5 @@ private slots:
     }
 };
 
-QTEST_MAIN(UntrustedTextTest)
+MUDLET_GROUPED_TEST_MAIN(UntrustedTextTest)
 #include "UntrustedTextTest.moc"

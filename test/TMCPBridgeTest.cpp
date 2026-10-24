@@ -17,6 +17,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include "GroupedTest.h"
 #include <TMCPBridge.h>
 #include <TMCPServer.h>
 #include <utils.h>
@@ -1474,5 +1475,5 @@ void TMCPBridgeTest::codexRemoveUndoesConnect()
     QCOMPARE(redirect.readConfig(), original);
 }
 
-QTEST_MAIN(TMCPBridgeTest) // NOLINT(misc-use-anonymous-namespace)
+MUDLET_GROUPED_TEST_MAIN(TMCPBridgeTest) // NOLINT(misc-use-anonymous-namespace)
 #include "TMCPBridgeTest.moc"

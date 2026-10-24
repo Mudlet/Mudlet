@@ -17,6 +17,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include "GroupedTest.h"
 #include <CredentialManager.h>
 #include <QDir>
 #include <QFile>
@@ -2145,5 +2146,5 @@ void CredentialManagerKeychainTest::testALateAnswerFollowsTheFilesOlderCopy()
     QCOMPARE(answers->late->count, 1);
 }
 
-QTEST_GUILESS_MAIN(CredentialManagerKeychainTest)
+MUDLET_GROUPED_TEST_GUILESS_MAIN(CredentialManagerKeychainTest)
 #include "CredentialManagerKeychainTest.moc"
