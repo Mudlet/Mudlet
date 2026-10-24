@@ -7524,6 +7524,7 @@ describe("Tests the game loader packages", function()
       archive = ":/packages/CF-loader/CF-loader.mpackage",
       download = "CFGUI.zip",
       url = "https://mudlet-cdn.carrionfields.net/cfgui/latest/CFGUI.zip",
+      installDelay = 2,
       globals = { "downloadPkg", "installReady", "downloadFailed" },
       downloadFailed = "Your Carrion Fields client could not be downloaded:",
       installFailed = "Installing your Carrion Fields client failed:",
@@ -7533,6 +7534,7 @@ describe("Tests the game loader packages", function()
       archive = ":/packages/mg-loader/mg-loader.mpackage",
       download = "MorgenGrauen.mpackage",
       url = "https://github.com/MorgenGrauen/mg-mudlet/releases/latest/download/MorgenGrauen.mpackage",
+      installDelay = 1,
       globals = { "downloadPackage", "installReady", "downloadFailed" },
       downloadFailed = "Das Mudlet-Paket fürs MorgenGrauen konnte nicht heruntergeladen werden:",
       installFailed = "Das Mudlet-Paket fürs MorgenGrauen konnte nicht installiert werden:",
@@ -7543,6 +7545,7 @@ describe("Tests the game loader packages", function()
       archive = ":/packages/icesus-loader/icesus-loader.mpackage",
       download = "Icesus.mpackage",
       url = "https://github.com/Icesus-mud/mudlet-package/releases/latest/download/Icesus.mpackage",
+      installDelay = 1,
       globals = { "downloadPackage", "installReady", "downloadFailed" },
       downloadFailed = "The Icesus Mudlet package could not be downloaded:",
       installFailed = "The Icesus Mudlet package could not be installed:",
@@ -7556,9 +7559,53 @@ describe("Tests the game loader packages", function()
     _G[globalName] = value
   end
 
+  -- The loaders, and the command they give the player to paste, register their
+  -- handlers by function name and never keep the ids, so they are caught here to kill.
+  local function killingHandlersItRegisters(fn)
+    local handlerIds = {}
+    defer(function()
+      for _, id in ipairs(handlerIds) do
+        killAnonymousEventHandler(id)
+      end
+    end)
+    local realRegister = _G.registerAnonymousEventHandler
+    _G.registerAnonymousEventHandler = function(...)
+      local id = realRegister(...)
+      handlerIds[#handlerIds + 1] = id
+      return id
+    end
+    local ok, err = pcall(fn)
+    _G.registerAnonymousEventHandler = realRegister
+    assert(ok, err)
+    return #handlerIds
+  end
+
+  -- What fn had the loader echo, before cecho()/decho() made anything of the colour tags
+  local function echoedBy(fn)
+    local said = {}
+    local real = { cecho = _G.cecho, decho = _G.decho }
+    for name, echo in pairs(real) do
+      _G[name] = function(...)
+        for _, argument in ipairs({...}) do
+          said[#said + 1] = tostring(argument)
+        end
+        return echo(...)
+      end
+    end
+    local ok, err = pcall(fn)
+    for name, echo in pairs(real) do
+      _G[name] = echo
+    end
+    assert(ok, err)
+    return table.concat(said, "\n")
+  end
+
+  local function letTheDeferredInstallRun(loader)
+    waitUntil(function() return false end, loader.installDelay * 1000 + 500)
+  end
+
   -- Installs the loader with downloadFile() stubbed out, and answers the list
-  -- the downloads it starts land in. The loaders register their handlers by
-  -- function name and never keep the ids, so the ids are caught here to kill.
+  -- the downloads it starts land in.
   local function install(loader)
     for _, globalName in ipairs(loader.globals) do
       override(globalName, nil)
@@ -7573,23 +7620,10 @@ describe("Tests the game loader packages", function()
     defer(function() os.remove(path) end)
     defer(function() removeFixturePackage(loader.name) end)
 
-    local handlerIds = {}
-    defer(function()
-      for _, id in ipairs(handlerIds) do
-        killAnonymousEventHandler(id)
-      end
+    local registered = killingHandlersItRegisters(function()
+      installAndConfirm(installPackage, loader.archive, function() return packageInstalled(loader.name) end, loader.name)
     end)
-    local realRegister = _G.registerAnonymousEventHandler
-    _G.registerAnonymousEventHandler = function(...)
-      local id = realRegister(...)
-      handlerIds[#handlerIds + 1] = id
-      return id
-    end
-    local ok, err = pcall(installAndConfirm, installPackage, loader.archive,
-                          function() return packageInstalled(loader.name) end, loader.name)
-    _G.registerAnonymousEventHandler = realRegister
-    assert(ok, err)
-    assert.is_true(#handlerIds > 0, "the loader registered no event handlers")
+    assert.is_true(registered > 0, "the loader registered no event handlers")
 
     raiseEvent("sysConnectionEvent")
     assert.are.same({ { path, loader.url } }, downloads, "connecting did not start the download")
@@ -7629,6 +7663,71 @@ describe("Tests the game loader packages", function()
 
       raiseEvent("sysConnectionEvent")
       assert.are.equal(1, #downloads, "a reconnect downloaded the installed package again")
+    end)
+
+    -- as the MorgenGrauen and Icesus packages do with generic_mapper
+    it(loader.name .. " does not download again once installed a package that removes another", function()
+      local downloads, path = install(loader)
+      local removeOther = "mudlet-spec-removeother"
+      override("mudletSpecRemoveOtherResult", nil)
+      withFixturePackage(minimalPackage)
+      defer(function() removeFixturePackage(removeOther) end)
+      copyFile(fixtureDirectory .. "/" .. removeOther .. ".mpackage", path)
+      assert.is_true(waitForProfileSaveToPass(), "a profile save never finished")
+
+      raiseEvent("sysDownloadDone", path)
+      assert.is_true(waitUntil(function() return packageInstalled(removeOther) end, 10000),
+                     "the downloaded package was never installed")
+      assert.is_false(packageInstalled(minimalPackage), "the downloaded package did not remove the other one")
+      letTheDeferredInstallRun(loader)
+
+      raiseEvent("sysConnectionEvent")
+      assert.are.equal(1, #downloads, "a reconnect downloaded the installed package again")
+    end)
+
+    it(loader.name .. " installs once when the player runs the command it gave after a failed download", function()
+      local downloads, path = install(loader)
+      local shown = echoedBy(function()
+        raiseEvent("sysDownloadError", "mudlet-spec-host-not-found", path)
+      end)
+      local command = shown:match("\nlua ([^\n]+)")
+      assert.is_string(command, "no command to paste was shown: " .. shown)
+
+      override("d", nil)
+      defer(function() removeFixturePackage(minimalPackage) end)
+      killingHandlersItRegisters(function() assert(loadstring(command))() end)
+      assert.are.equal(2, #downloads, "the pasted command did not start the download")
+      copyFile(fixtureDirectory .. "/" .. minimalPackage .. ".mpackage", path)
+
+      local mark = getLastLineNumber("main")
+      raiseEvent("sysDownloadDone", path)
+      assert.is_true(waitUntil(function() return packageInstalled(minimalPackage) end, 10000),
+                     "the downloaded package was never installed")
+      letTheDeferredInstallRun(loader)
+      assert.is_false(containsWrapped(textFrom(mark), loader.installFailed), textFrom(mark))
+
+      raiseEvent("sysConnectionEvent")
+      assert.are.equal(2, #downloads, "a reconnect downloaded the installed package again")
+    end)
+
+    it(loader.name .. " installs once when a second connection comes before the download finishes", function()
+      local downloads, path = install(loader)
+      raiseEvent("sysConnectionEvent")
+      local started = #downloads
+      defer(function() removeFixturePackage(minimalPackage) end)
+      copyFile(fixtureDirectory .. "/" .. minimalPackage .. ".mpackage", path)
+
+      local mark = getLastLineNumber("main")
+      for _ = 1, started do
+        raiseEvent("sysDownloadDone", path)
+      end
+      assert.is_true(waitUntil(function() return packageInstalled(minimalPackage) end, 10000),
+                     "the downloaded package was never installed")
+      letTheDeferredInstallRun(loader)
+      assert.is_false(containsWrapped(textFrom(mark), loader.installFailed), textFrom(mark))
+
+      raiseEvent("sysConnectionEvent")
+      assert.are.equal(started, #downloads, "a reconnect downloaded the installed package again")
     end)
 
     it(loader.name .. " reports a download that will not install, and tries again on the next connection", function()
