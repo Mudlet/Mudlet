@@ -695,7 +695,7 @@ describe("Tests functionality of Geyser.Label widget state", function()
       { name = "setAlignment", args = { "center" }, shows = 'align="center"' },
       { name = "setFormat", args = { "b18" }, shows = "font%-size: 18pt" },
       { name = "setFont", args = { "Bitstream Vera Sans Mono" }, shows = "<font face=" },
-      { name = "setFgColor", args = { "blue" }, shows = "color: rgb%(0, 0, 255%)" },
+      { name = "setFgColor", args = { "blue" }, shows = "color: #0000ff" },
     }
 
     before_each(function()
@@ -736,13 +736,63 @@ describe("Tests functionality of Geyser.Label widget state", function()
       assert.is_nil(text:find("#ff0000red", 1, true), text)
     end)
 
-    it("takes nocolor after hecho without an error", function()
-      label:hecho("#ff0000red#r plain")
-      label:setFgColor("nocolor")
-      local text = getLabelText("glsFlavour")
-      assert.is_truthy(text:find("color: rgb(255, 0, 0)", 1, true), text)
-      assert.are.equal("nocolor", label.fgColor)
+    it("shows a plain echo on a label made from a hecho'd prototype as it was given", function()
+      label:hecho("#ff0000red")
+      local child = track(label:new({name = "glsFlavourChild", x = 0, y = 60, width = 300, height = 50}))
+      assert.is_truthy(getLabelText("glsFlavourChild"):find("color: rgb(255, 0, 0)", 1, true))
+      child:echo("#00ff00 stays text")
+      child:setFontSize(20)
+      assert.is_truthy(getLabelText("glsFlavourChild"):find("#00ff00 stays text", 1, true))
     end)
+
+    it("gives a label made from a cecho'd prototype its own message as plain text", function()
+      label:cecho("<red>hp")
+      track(label:new({name = "glsFlavourOwn", x = 0, y = 60, width = 300, height = 50, message = "<red> stays text"}))
+      assert.is_truthy(getLabelText("glsFlavourOwn"):find("<red> stays text", 1, true))
+    end)
+
+    it("shows a message a script put on the label itself as it was given", function()
+      label:cecho("<red>HP")
+      label.message = "<b>Status</b>"
+      label:setFontSize(14)
+      assert.is_truthy(getLabelText("glsFlavour"):find("<b>Status</b>", 1, true))
+    end)
+
+    it("echo given false after hecho shows the hecho message with its colours", function()
+      label:hecho("#ff0000red")
+      label:echo(false, "blue")
+      local text = getLabelText("glsFlavour")
+      assert.is_nil(text:find("#ff0000red", 1, true), text)
+      assert.is_truthy(text:find("color: rgb(255, 0, 0)", 1, true), text)
+    end)
+
+    for _, flavour in ipairs(flavours) do
+      it(string.format("takes nocolor after %s without an error", flavour.name), function()
+        assert.is_true(label[flavour.name](label, flavour.message))
+        label:setFgColor("nocolor")
+        local text = getLabelText("glsFlavour")
+        assert.is_truthy(text:find("color: rgb(255, 0, 0)", 1, true), text)
+        assert.are.equal("nocolor", label.fgColor)
+      end)
+
+      it(string.format("keeps the setters working after %s refuses a message that is not a string", flavour.name), function()
+        assert.is_true(label[flavour.name](label, flavour.message))
+        assert.is_false((pcall(label[flavour.name], label, 42)))
+        assert.is_true((pcall(label.setFontSize, label, 12)))
+        local text = getLabelText("glsFlavour")
+        assert.is_truthy(text:find("font%-size: 12pt"), text)
+        assert.is_truthy(text:find("color: rgb(255, 0, 0)", 1, true), text)
+      end)
+
+      it(string.format("does not recurse when an overridden %s calls a setter", flavour.name), function()
+        label[flavour.name] = function(self, message)
+          Geyser.Label[flavour.name](self, message)
+          self:setAlignment("center")
+        end
+        assert.is_true((pcall(label[flavour.name], label, flavour.message)))
+        assert.is_truthy(getLabelText("glsFlavour"):find('align="center"', 1, true))
+      end)
+    end
   end)
 
   describe("Geyser.Label:getSizeHint and Geyser.Label auto-size adjustSize/adjustHeight/adjustWidth/autoAdjustSize/enableAutoAdjustSize/disableAutoAdjustSize", function()
