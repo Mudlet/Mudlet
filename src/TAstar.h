@@ -57,15 +57,29 @@ struct location
 // double, not float: weights go up to INT_MAX and a route sums several of them, all exactly.
 typedef double cost;
 
-// The least an edge costs per coordinate unit it spans, in each distance, taken over every edge
-// in the graph. Distance times that can't exceed the cost of any route, which is what keeps A*
-// to the shortest one. Zero, leaving a plain Dijkstra search, when some edge crosses distance for
-// free or none crosses any.
+// The least an edge costs per coordinate unit it spans, over every edge, so distance times it never
+// overestimates a route. Zero (Dijkstra) when an edge spans distance for free or none spans any.
 struct heuristicScale
 {
     cost chebyshev = 0;
     cost euclidean = 0;
 };
+
+// Shared by the heuristic and the scale it is held to: measured differently, it could overestimate.
+struct coordinateSpan
+{
+    cost chebyshev;
+    cost euclidean;
+};
+
+inline coordinateSpan spanBetween(const location& a, const location& b)
+{
+    // Subtracted as cost: two coordinates anywhere in the int range can differ by more than an int holds.
+    const cost dx = std::abs(static_cast<cost>(a.x) - b.x);
+    const cost dy = std::abs(static_cast<cost>(a.y) - b.y);
+    const cost dz = std::abs(static_cast<cost>(a.z) - b.z);
+    return {std::max({dx, dy, dz}), std::sqrt(dx * dx + dy * dy + dz * dz)};
+}
 
 // Used to record edge details and to deduplicate parallel ones:
 struct route
@@ -97,14 +111,8 @@ public:
 
     CostType operator()(Vertex u)
     {
-        const location& from = m_location[u];
-        const location& to = m_location[m_goal];
-        // Subtracted as CostType: two coordinates anywhere in the int range can differ by more than an int holds.
-        const CostType dx = std::abs(static_cast<CostType>(to.x) - from.x);
-        const CostType dy = std::abs(static_cast<CostType>(to.y) - from.y);
-        const CostType dz = std::abs(static_cast<CostType>(to.z) - from.z);
-
-        return std::max(std::max({dx, dy, dz}) * m_scale.chebyshev, std::sqrt(dx * dx + dy * dy + dz * dz) * m_scale.euclidean);
+        const coordinateSpan toGoal = spanBetween(m_location[m_goal], m_location[u]);
+        return std::max(toGoal.chebyshev * m_scale.chebyshev, toGoal.euclidean * m_scale.euclidean);
     }
 
 private:

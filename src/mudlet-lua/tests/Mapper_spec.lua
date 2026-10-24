@@ -4132,8 +4132,8 @@ describe("Tests route weights and extreme coordinates on a scratch area", functi
     assert.are.same({"s"}, speedWalkDir)
   end)
 
-  -- Subtracted as an int, INT_MIN - INT_MAX wraps to 1: the far room a would look
-  -- a step from the goal and the search would settle for the weight 20 route.
+  -- INT_MIN - INT_MAX overflows an int, so the distance between these rooms only
+  -- fits once their coordinates are subtracted as doubles.
   it("routes by weight between rooms an int's whole range apart", function()
     local start, a, b, goal = room(1, 0), room(0, 2147483647), room(0, 0), room(0, -2147483648)
     setExit(start, a, "north")
@@ -5452,6 +5452,7 @@ describe("Tests saveMap and loadMap", function()
     local cliffTop, cliffFoot = 1201, 9326              -- "down" is one-way
     local hillside, nimick = 1432, 20646                -- joined by a hidden exit
     local nimickDetour = 43                             -- steps round it when it is shut
+    local overshotFrom, overshotTo = 747, 42            -- routed a step long by an overestimate
 
     -- speedWalkDir spells a direction short and getRoomExits spells it long,
     -- so walking one against the other needs the two put side by side
@@ -5634,7 +5635,7 @@ describe("Tests saveMap and loadMap", function()
     -- A heuristic that overestimates comes back a step longer on both. The
     -- lengths are a breadth-first search's over the same imported graph.
     it("walks the shortest route where a coordinate heuristic overestimates", function()
-      for _, case in ipairs({{from = 747, to = 42, steps = 92}, {from = 107, to = 42, steps = 84}}) do
+      for _, case in ipairs({{from = overshotFrom, to = overshotTo, steps = 92}, {from = ashtanWorkshop, to = overshotTo, steps = 84}}) do
         local ok, weight = getPath(case.from, case.to)
         assert.is_true(ok)
         assert.are.equal(case.steps, weight, ("%d to %d"):format(case.from, case.to))

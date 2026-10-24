@@ -1027,15 +1027,11 @@ void TMap::initGraph()
                            // and disposed of those already!
             const int targetIndex = roomidToIndex.value(target);
             tie(e, inserted) = add_edge(sourceIndex, targetIndex, bestRoute.cost, g);
-            const location& to = locations[targetIndex];
-            const cost dx = std::abs(static_cast<cost>(to.x) - l.x);
-            const cost dy = std::abs(static_cast<cost>(to.y) - l.y);
-            const cost dz = std::abs(static_cast<cost>(to.z) - l.z);
-            const cost chebyshev = std::max({dx, dy, dz});
+            const coordinateSpan edgeSpan = spanBetween(l, locations[targetIndex]);
             if (bestRoute.cost > 0) {
-                mostChebyshevPerCost = std::max(mostChebyshevPerCost, chebyshev / bestRoute.cost);
-                mostEuclideanPerCost = std::max(mostEuclideanPerCost, std::sqrt(dx * dx + dy * dy + dz * dz) / bestRoute.cost);
-            } else if (chebyshev > 0) {
+                mostChebyshevPerCost = std::max(mostChebyshevPerCost, edgeSpan.chebyshev / bestRoute.cost);
+                mostEuclideanPerCost = std::max(mostEuclideanPerCost, edgeSpan.euclidean / bestRoute.cost);
+            } else if (edgeSpan.chebyshev > 0) {
                 freeDistance = true;
             }
             edgeHash.insert(qMakePair(source, target), bestRoute);
@@ -1133,8 +1129,8 @@ bool TMap::searchGraph(const vertex start, const vertex goal)
             }
             mSearchDistance[neighbour] = throughCurrent;
             mSearchPredecessor[neighbour] = current;
-            // Never re-opens an expanded room: the heuristic is consistent, so the check above turns
-            // any route back to one away.
+            // The heuristic is consistent and costs are whole numbers, so an expanded room is final and
+            // the check above turns away any route back to one.
             mSearchState[neighbour] = stateFrontier;
             frontier.push({throughCurrent + heuristic(neighbour), -throughCurrent, neighbour});
         }
