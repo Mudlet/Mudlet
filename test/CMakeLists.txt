@@ -90,6 +90,7 @@ set(UNIT_TESTS
     TLinkStoreTest
     TMxpTagParserTest
     TMxpSendTagHandlerTest
+    TMxpLinkTagHandlerTest
     TMxpEntityTagHandlerTest
     TMxpFrameDestTagHandlerTest
     TMxpVersionTagTest
