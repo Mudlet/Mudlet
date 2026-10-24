@@ -46,7 +46,10 @@
  *                                 as one chunk, which is what decides whether
  *                                 TriggerUnit treats it as a flood
  * Either changes what is being measured, so compare-perf-baseline.py refuses a
- * comparison across two runs that set them differently.
+ * comparison across two runs that set them differently. So does
+ *   MUDLET_BENCH_WRAP_AT=<n>      wrap the main console at n columns instead
+ *                                 of the profile's 100 in every slot, so that
+ *                                 most lines go through TBuffer::wrapLine()
  *
  * Companion for the live-GUI display/echo path is the Stressinator display
  * package; see docs/libmudlet-perf-baseline.md.
@@ -124,6 +127,7 @@ private:
     QByteArray mCorpus;
     QByteArrayList mFeedChunks;
     int mWantedTriggers = 0;
+    int mWrapAt = 0;
     int mCorpusLines = 0;
     qint64 mCorpusBytes = 0;
     double mTextBestPassSeconds = 0.0;
@@ -761,6 +765,7 @@ private slots:
         const int chunkBytes = positiveKnob("MUDLET_BENCH_CHUNK_BYTES");
         const int chunkLines = positiveKnob("MUDLET_BENCH_CHUNK_LINES");
         mWantedTriggers = positiveKnob("MUDLET_BENCH_TRIGGERS");
+        mWrapAt = positiveKnob("MUDLET_BENCH_WRAP_AT");
         if (QTest::currentTestFailed()) {
             return;
         }
@@ -792,6 +797,7 @@ private slots:
         // The value that took effect: a chunk size past the corpus is one chunk,
         // the same workload as unset, and has to compare as such.
         emitMetric("feed_chunk_lines", static_cast<qint64>(mFeedChunks.size() == 1 ? 0 : chunkLines));
+        emitMetric("bench_wrap_at", static_cast<qint64>(mWrapAt));
         // Invariants, emitted here so they are present regardless of which bench
         // slots run: the compare script rejects an ASan-vs-release comparison,
         // and a comparison across two different corpora or workloads.
@@ -1432,6 +1438,13 @@ private:
         if (!connected.wait(3s)) {
             qWarning("Could not connect to the stub");
             return nullptr;
+        }
+        if (mWrapAt > 0) {
+            host->getLuaInterpreter()->compileAndExecuteScript(qsl("setWindowWrap(\"main\", %1)").arg(mWrapAt));
+            if (host->mainConsoleView()->buffer.mWrapAt != mWrapAt) {
+                qWarning("MUDLET_BENCH_WRAP_AT did not take effect");
+                return nullptr;
+            }
         }
         return host;
     }
