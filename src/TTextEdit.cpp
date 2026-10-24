@@ -1560,6 +1560,12 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
 
     // Each line's backgrounds go down before the previous line's glyphs, so that
     // no background fill can wipe out ink which overflowed out of its cell.
+    // A top line that has not changed already has the ink it reaches up with in
+    // the cached rows above the band, so drawing it there again would thicken it.
+    const bool topLineUnchanged = !scrollShift && (mDirtyFirstLine < 0 || drawFrom + lineOffset < mDirtyFirstLine);
+    if (topLineUnchanged && drawFrom > 0) {
+        p.setClipRect(QRect(0, deleteRect.top(), mScreenWidth * mFontWidth, pixmapHeight - deleteRect.top()));
+    }
     mPreviousLineLayout.clear();
     bool lineAboveRestored = false;
     // Glyphs can reach down past the line below their own, into cells whose
@@ -1587,9 +1593,10 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
     // overflow, so clip it away rather than compositing the same ink twice.
     const QRect bandRect(0, drawFrom * mFontHeight, mScreenWidth * mFontWidth, (drawTo + 1 - drawFrom) * mFontHeight);
     paintForegrounds(p, *mpGlyphCache, mPreviousLineLayout, bottomRowIsRepainted ? QRect() : bandRect);
+    p.setClipping(false);
     // Likewise the line below the band loses whatever ink it reached up into it,
     // in the row past the dirty ones that only the cached screen keeps
-    if (!noCopy && !bottomRowIsRepainted && hasBufferLine(drawTo + 1 + lineOffset)) {
+    if (reusedCachedScreenContent && !noCopy && !bottomRowIsRepainted && hasBufferLine(drawTo + 1 + lineOffset)) {
         layoutLine(drawTo + 1 + lineOffset, drawTo + 1, timeStampStyle, mOverflowLineLayout);
         paintForegrounds(p, *mpGlyphCache, mOverflowLineLayout, bandRect);
     }
@@ -4000,20 +4007,26 @@ void TTextEdit::slot_changeEnableBlinkText(const bool enable)
     }
 }
 
+// Up to six marks on one base stayed within the row above in every font tried,
+// so three leaves room to spare.
 bool TTextEdit::hasStackedMarks(const QString& text)
 {
     if (lineBreakInfo::printableAscii(text)) {
         return false;
     }
-    bool previousIsMark = false;
-    for (const char32_t codePoint : QStringView(text).toUcs4()) {
-        const QChar::Category category = QChar::category(codePoint);
+    int marksInARow = 0;
+    for (qsizetype i = 0, total = text.size(); i < total; ++i) {
+        char32_t codePoint = text.at(i).unicode();
+        if (QChar::isHighSurrogate(codePoint) && i + 1 < total && text.at(i + 1).isLowSurrogate()) {
+            codePoint = QChar::surrogateToUcs4(text.at(i), text.at(i + 1));
+            ++i;
+        }
         // Spacing marks (Mc) sit beside their base rather than on it
-        const bool isMark = category == QChar::Mark_NonSpacing || category == QChar::Mark_Enclosing;
-        if (isMark && previousIsMark) {
+        const QChar::Category category = QChar::category(codePoint);
+        marksInARow = (category == QChar::Mark_NonSpacing || category == QChar::Mark_Enclosing) ? marksInARow + 1 : 0;
+        if (marksInARow >= 3) {
             return true;
         }
-        previousIsMark = isMark;
     }
     return false;
 }
@@ -4044,7 +4057,8 @@ bool TTextEdit::lineShowsBlinkingText(const int lineNumber) const
 
 void TTextEdit::slot_blinkStateChanged()
 {
-    if (!mIsBlinkClientRegistered) {
+    // A hidden pane is redrawn in full when it is shown again
+    if (!mIsBlinkClientRegistered || !isVisible()) {
         return;
     }
     // A tick changes only the blinking glyphs' opacity, so only the rows holding
@@ -4071,8 +4085,11 @@ void TTextEdit::slot_blinkStateChanged()
         forceUpdate();
         return;
     }
-    // A row either side as well, for ink the glyphs spill into their neighbours
-    markLinesDirty(std::max(0, firstBlinkingLine - 1), lastBlinkingLine + 1);
+    markLinesDirty(firstBlinkingLine, lastBlinkingLine);
+    // The rows either side show the ink the blinking glyphs spill into them
+    const int topRow = std::max(0, firstBlinkingLine - 1 - lineOffset);
+    const int bottomRow = std::min(mScreenHeight - 1, lastBlinkingLine + 1 - lineOffset);
+    scheduleUpdate(QRect(0, topRow * mFontHeight, width(), (bottomRow - topRow + 1) * mFontHeight));
 }
 
 void TTextEdit::slot_scrollStoppedTimeout()

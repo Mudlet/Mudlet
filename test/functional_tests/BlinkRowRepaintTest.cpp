@@ -66,11 +66,12 @@ private:
         return lines;
     }
 
-    // Descenders, underscores and accents ink the rows around the blinking one;
+    // Accents, descenders and underscores ink the rows around the blinking line;
     // the next line blinks only on a combining accent, which is never drawn blinking.
     static QByteArray blinkingLines()
     {
-        QString lines = qsl("\x1b[5mThis one blinks gjpqy___ O\u0308 g\u0303_ \u00c5\x1b[0m and this does not\r\n");
+        QString lines = qsl("\u01fa\u00c5\u00d6\u00c9 capitals and \u0e01\u0e34\u0e48 reach up\r\n");
+        lines.append(qsl("\x1b[5mThis one blinks gjpqy___ O\u0308 g\u0303_ \u00c5\x1b[0m and this does not\r\n"));
         lines.append(qsl("Only the accent of e\x1b[5m\u0301\x1b[0m blinks\r\n"));
         lines.append(fillerLines(1, QLatin1Char('Z')));
         lines.append(qsl("\u00c5\u00d6\u00c9\u00c4 \u1e7a \u00c2\u00ca \u01fa\u01fa\u01fa accents\r\n"));
@@ -119,10 +120,16 @@ private slots:
 
         // Settles any pending paint, so all that follows is the tick's own doing
         pane->repaint();
+        // Holds the update back in mPendingPaintRegion, where it can be read
+        pane->mSincePaint.restart();
         pane->slot_blinkStateChanged();
         QVERIFY2(!pane->mForceUpdate, "a blink tick asked for the whole pane");
-        QCOMPARE(pane->mDirtyFirstLine, blinkingLine - 1);
-        QCOMPARE(pane->mDirtyLastLine, blinkingLine + 1);
+        QCOMPARE(pane->mDirtyFirstLine, blinkingLine);
+        QCOMPARE(pane->mDirtyLastLine, blinkingLine);
+        const int rowHeight = pane->mFontHeight;
+        const QRect rowsAround(0, (blinkingRow - 1) * rowHeight, pane->width(), 3 * rowHeight);
+        QVERIFY2((QRegion(rowsAround) - pane->mPendingPaintRegion).isEmpty(), "a blink tick left the rows either side of the blinking one, which its glyphs ink, showing a stale opacity");
+        QVERIFY2(!pane->mPendingPaintRegion.intersects(QRect(0, 0, pane->width(), rowHeight)), "a blink tick repainted rows far from any blinking text");
 
         // The blink phase moves on undrawn, so the cache holds a stale opacity
         PaintSwallower swallower;
@@ -131,14 +138,17 @@ private slots:
         pane->removeEventFilter(&swallower);
 
         // No event loop from here on, so the blink phase holds still
-        const int rowHeight = pane->mFontHeight;
         pane->slot_blinkStateChanged();
-        pane->repaint(QRect(0, (blinkingRow - 1) * rowHeight, pane->width(), 3 * rowHeight));
+        pane->repaint(rowsAround);
         const QImage afterTick = pane->cachedScreen().copy();
         pane->forceUpdate();
         pane->repaint();
         const QImage afterFullRepaint = pane->cachedScreen().copy();
         QVERIFY2(afterTick == afterFullRepaint, "the rows a blink tick redrew left the cached screen different from a whole-pane repaint");
+
+        pane->hide();
+        pane->slot_blinkStateChanged();
+        QVERIFY2(!pane->mForceUpdate && pane->mDirtyFirstLine < 0, "a blink tick scanned a hidden pane");
     }
 
     // A scroll shorter than a screen keeps the timer running, so only a tick finding
