@@ -59,7 +59,8 @@ typedef double cost;
 
 // The least an edge costs per coordinate unit it spans, in each distance, taken over every edge
 // in the graph. Distance times that can't exceed the cost of any route, which is what keeps A*
-// to the shortest one. Zero when some edge crosses distance for free.
+// to the shortest one. Zero, leaving a plain Dijkstra search, when some edge crosses distance for
+// free or none crosses any.
 struct heuristicScale
 {
     cost chebyshev = 0;
@@ -88,7 +89,8 @@ public:
     : m_location(l)
     , m_goal(goal)
     , m_scale(scale)
-    {}
+    {
+    }
 
     // A temporary would leave m_location dangling.
     distance_heuristic(const LocMap&&, Vertex, const heuristicScale&) = delete;
@@ -124,10 +126,12 @@ class astar_goal_visitor : public boost::default_astar_visitor
 public:
     explicit astar_goal_visitor(Vertex goal)
     : m_goal(goal)
-    {}
+    {
+    }
 
     template <class Graph>
-    void examine_vertex(Vertex u, Graph& g) {
+    void examine_vertex(Vertex u, Graph& g)
+    {
         Q_UNUSED(g)
         if (u == m_goal) {
             throw found_goal();
