@@ -2040,6 +2040,11 @@ int TLuaInterpreter::getTextFormat(lua_State* L)
 
     lua_settable(L, -3);
 
+    // A key of its own: scripts compare background with {r, g, b}, so it must stay three long
+    lua_pushstring(L, "backgroundAlpha");
+    lua_pushnumber(L, background.alpha());
+    lua_settable(L, -3);
+
     return 1;
 }
 
