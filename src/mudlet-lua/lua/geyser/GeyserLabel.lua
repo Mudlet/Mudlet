@@ -33,9 +33,14 @@ function Geyser.Label:echo(message, color, format)
   self.fgColor = color
   if format then self:processFormatString(format) end
   if replay then
+    -- a colour the plain path would raise on raises here too, before the flavour
+    -- function has a chance to drop the flavour
+    if color ~= "nocolor" then
+      Geyser.Color.hex(color)
+    end
     local ok, err = Geyser.Label[self.echoType](self)
-    if not ok then
-      debugc(string.format("Geyser.Label:echo(): could not show '%s' again through %s: %s", self.name, self.echoType, err))
+    if ok == nil and err ~= nil then
+      debugc(string.format("Geyser.Label:echo(): could not show '%s' again through %s: %s", self.name, self.echoType, tostring(err)))
     end
     return
   end

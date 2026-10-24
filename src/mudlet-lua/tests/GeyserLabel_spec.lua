@@ -866,6 +866,32 @@ describe("Tests functionality of Geyser.Label widget state", function()
         assert.is_true((pcall(label[flavour.name], label, flavour.message)))
         assert.is_truthy(getLabelText("glsFlavour"):find('align="center"', 1, true))
       end)
+
+      it(string.format("keeps the %s flavour after a setter is given a colour it cannot use", flavour.name), function()
+        assert.is_true(label[flavour.name](label, flavour.message))
+        assert.is_false((pcall(label.setFgColor, label, "notacolour")))
+        label:setFgColor("white")
+        local text = getLabelText("glsFlavour")
+        assert.is_truthy(text:find("color: rgb(255, 0, 0)", 1, true), text)
+        assert.is_nil(text:find(flavour.message, 1, true), text)
+      end)
+
+      it(string.format("raises at the setter for an empty colour on a %s message, as plain echo does", flavour.name), function()
+        assert.is_true(label[flavour.name](label, flavour.message))
+        assert.is_false((pcall(label.setFgColor, label, "")))
+      end)
+
+      it(string.format("does not raise when a replaced Geyser.Label.%s returns nothing", flavour.name), function()
+        local original = Geyser.Label[flavour.name]
+        Geyser.Label[flavour.name] = function(self, message)
+          original(self, message)
+        end
+        label[flavour.name](label, flavour.message)
+        local ok, err = pcall(label.setFontSize, label, 14)
+        Geyser.Label[flavour.name] = original
+        assert.is_true(ok, err)
+        assert.is_truthy(getLabelText("glsFlavour"):find("font%-size: 14pt"))
+      end)
     end
   end)
 
