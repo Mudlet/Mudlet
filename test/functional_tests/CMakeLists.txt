@@ -210,6 +210,7 @@ set(EDITOR_GROUP_TEST_SOURCES
     ScriptEventHandlerLifetimeTest.cpp
     EditorAddItemTest.cpp
     EditorFolderViewTest.cpp
+    EditorFontTest.cpp
     EditorSearchTest.cpp
     TreeWidgetItemMoveTest.cpp
     TriggerEditorDisclosureTest.cpp

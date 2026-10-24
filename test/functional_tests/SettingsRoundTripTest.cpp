@@ -35,6 +35,8 @@
 #include <QCheckBox>
 #include <QColorDialog>
 #include <QComboBox>
+#include <QFontComboBox>
+#include <QFontDatabase>
 #include <QLabel>
 #include <QLineEdit>
 #include <QPointer>
@@ -57,6 +59,7 @@
 #include "TMainConsole.h"
 #include "TMap.h"
 #include "TelnetServerStub.h"
+#include "XMLimport.h"
 #include "dlgProfilePreferences.h"
 #include "mudlet.h"
 
@@ -81,6 +84,10 @@ private:
     // cleanup() - which runs whether or not the case reached its own end
     QList<std::function<void()>> mRestorers;
     QPointer<QTimer> mpColorDialogTimer;
+#ifdef INCLUDE_FONTS
+    // Bundled, so on every machine, and not the display font a new profile starts with
+    const QString mEditorOwnFamily = qsl("Ubuntu Mono");
+#endif
 
     void restoreLater(std::function<void()> restorer) { mRestorers.append(std::move(restorer)); }
 
@@ -126,6 +133,21 @@ private:
         pTimer->start(20ms);
     }
 
+#ifdef INCLUDE_FONTS
+    QList<int> mApplicationFontIds;
+
+    // A test binary never copies the bundled fonts out of the resources the way main.cpp does, so
+    // without this the editor font cases would pick from families that are not there
+    void registerBundledFonts()
+    {
+        for (const QString& resourcePath : {qsl(":/fonts/ttf-bitstream-vera-1.10/VeraMono.ttf"), qsl(":/fonts/ubuntu-font-family-0.83/UbuntuMono-R.ttf")}) {
+            const int id = QFontDatabase::addApplicationFont(resourcePath);
+            QVERIFY2(id != -1, qPrintable(qsl("could not register the bundled font \"%1\"").arg(resourcePath)));
+            mApplicationFontIds.append(id);
+        }
+    }
+#endif
+
     bool runLua(const QString& code) const { return mpHost->getLuaInterpreter()->compileAndExecuteScript(code); }
 
     int settingChangedCount(const char* key) const
@@ -164,6 +186,9 @@ private slots:
             QSKIP("portable.txt present - it takes precedence over XDG_CONFIG_HOME, so the config dir cannot be redirected");
         }
 
+#ifdef INCLUDE_FONTS
+        registerBundledFonts();
+#endif
         QVERIFY(mConfigDir.isValid());
         QVERIFY(QDir().mkpath(qsl("%1/mudlet/profiles").arg(mConfigDir.path())));
         mSavedXdg = qgetenv("XDG_CONFIG_HOME");
@@ -195,6 +220,11 @@ private slots:
             delete mudlet::self();
         }
         mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);
+#ifdef INCLUDE_FONTS
+        for (const int id : std::as_const(mApplicationFontIds)) {
+            QFontDatabase::removeApplicationFont(id);
+        }
+#endif
     }
 
     void cleanup()
@@ -1065,6 +1095,117 @@ private slots:
         pBox->setCheckState(Qt::PartiallyChecked);
         QVERIFY2(applyAndWait(backSpy), "the debounce never wrote the settings back");
         QCOMPARE(mpHost->getWideAmbiguousEAsianGlyphsControlState(), Qt::PartiallyChecked);
+    }
+
+    // The script editor reads code in the display font until the box is unticked; the two controls
+    // under it show what following gives, greyed out, and pick the editor's own font once it is
+    void test_theEditorFontIsTheDisplayFontUntilTheBoxIsUnticked()
+    {
+#ifndef INCLUDE_FONTS
+        QSKIP("Built with WITH_FONTS=NO, so the bundled \"Ubuntu Mono\" this gives the editor as a font of its own is not in the resources");
+#else
+        QVERIFY(mpHost->editorFontFollowsDisplay());
+        restoreLater([this]() {
+            mpHost->setEditorFontFollowsDisplay(true);
+        });
+        const QFont display = mpHost->getDisplayFont();
+        QVERIFY(display.family() != mEditorOwnFamily);
+
+        openPreferences();
+        QCheckBox* pFollow = mpPreferences->checkBox_editorFontFollowsDisplay;
+        QFontComboBox* pFamily = mpPreferences->fontComboBox_editorFont;
+        QSpinBox* pSize = mpPreferences->spinBox_editorFontSize;
+        QVERIFY(pFollow->isChecked());
+        QVERIFY2(!pFamily->isEnabled() && !pSize->isEnabled(), "the editor font can be picked while it follows the display font");
+        QCOMPARE(pFamily->currentFont().family(), display.family());
+        QCOMPARE(pSize->value(), display.pointSize());
+
+        QSignalSpy applySpy(mpPreferences, &dlgProfilePreferences::signal_preferencesSaved);
+        pFollow->click();
+        QVERIFY2(pFamily->isEnabled() && pSize->isEnabled(), "unticking the box left the editor font greyed out");
+        QVERIFY2(applyAndWait(applySpy), "the debounce never wrote the settings back");
+        QVERIFY(!mpHost->editorFontFollowsDisplay());
+        // ...starting from what it showed
+        QCOMPARE(mpHost->getEditorFont().family(), display.family());
+        QCOMPARE(mpHost->getEditorFont().pointSize(), display.pointSize());
+
+        applySpy.clear();
+        pFamily->setCurrentFont(QFont(mEditorOwnFamily));
+        QVERIFY2(applyAndWait(applySpy), "picking a family never wrote the settings back");
+        QCOMPARE(mpHost->getEditorFont().family(), mEditorOwnFamily);
+        QCOMPARE(mpHost->getEditorFont().pointSize(), display.pointSize());
+
+        applySpy.clear();
+        pSize->stepBy(1);
+        QVERIFY2(applyAndWait(applySpy), "stepping the size never wrote the settings back");
+        QCOMPARE(mpHost->getEditorFont().family(), mEditorOwnFamily);
+        QCOMPARE(mpHost->getEditorFont().pointSize(), display.pointSize() + 1);
+        QVERIFY2(TFontAttributes(mpHost->getDisplayFont()) == TFontAttributes(display), "the editor's own font reached the display font");
+
+        applySpy.clear();
+        pFollow->click();
+        QVERIFY2(applyAndWait(applySpy), "ticking the box never wrote the settings back");
+        QVERIFY(mpHost->editorFontFollowsDisplay());
+        QCOMPARE(mpHost->getEditorFont().family(), display.family());
+        QVERIFY2(!pFamily->isEnabled() && !pSize->isEnabled(), "ticking the box again left the editor font open to picking");
+        QCOMPARE(pFamily->currentFont().family(), display.family());
+        QCOMPARE(pSize->value(), display.pointSize());
+#endif
+    }
+
+    // Both are the profile's, so they outlast the session
+    void test_theEditorFontIsSavedWithTheProfileAndReadBack()
+    {
+#ifndef INCLUDE_FONTS
+        QSKIP("Built with WITH_FONTS=NO, so the bundled \"Ubuntu Mono\" this gives the editor as a font of its own is not in the resources");
+#else
+        restoreLater([this]() {
+            mpHost->setEditorFontFollowsDisplay(true);
+        });
+        const int ownSize = 17;
+        QVERIFY(mpHost->getDisplayFont().pointSize() != ownSize);
+
+        openPreferences();
+        QSignalSpy applySpy(mpPreferences, &dlgProfilePreferences::signal_preferencesSaved);
+        mpPreferences->checkBox_editorFontFollowsDisplay->click();
+        mpPreferences->fontComboBox_editorFont->setCurrentFont(QFont(mEditorOwnFamily));
+        mpPreferences->spinBox_editorFontSize->setValue(ownSize);
+        QVERIFY2(applyAndWait(applySpy), "the debounce never wrote the settings back");
+        QVERIFY(!mpHost->editorFontFollowsDisplay());
+        QCOMPARE(mpHost->getEditorFont().family(), mEditorOwnFamily);
+        QCOMPARE(mpHost->getEditorFont().pointSize(), ownSize);
+
+        QTemporaryDir saveDir;
+        QVERIFY(saveDir.isValid());
+        mpHost->waitForProfileSave();
+        const auto [saved, xmlPath, saveError] = mpHost->saveProfile(saveDir.path(), qsl("editorFont"));
+        QVERIFY2(saved, qPrintable(saveError));
+        mpHost->waitForProfileSave();
+
+        QFile file(xmlPath);
+        QVERIFY(file.open(QFile::ReadOnly | QFile::Text));
+        const QString xml = QString::fromUtf8(file.readAll());
+        QVERIFY2(xml.contains(qsl("<mEditorFont>%1,%2,").arg(mEditorOwnFamily).arg(ownSize)), "the editor's own font is not in the profile's save");
+        QVERIFY2(xml.contains(qsl("<mEditorFontFollowsDisplay>no</mEditorFontFollowsDisplay>")), "the save says the editor follows the display font");
+
+        // Moved off both, or reading the save back would prove nothing
+        mpHost->setEditorFont(QFont(Host::scmDefaultFontFamily, ownSize + 4));
+        mpHost->setEditorFontFollowsDisplay(true);
+        QVERIFY2(mpPreferences->checkBox_editorFontFollowsDisplay->isChecked() && mpPreferences->spinBox_editorFontSize->value() != ownSize, "the dialog did not hear the editor font move behind it");
+        file.seek(0);
+        XMLimport importer(mpHost);
+        const auto [imported, importMessage] = importer.importPackage(&file);
+        QVERIFY2(imported, qPrintable(importMessage));
+        QVERIFY2(!mpHost->editorFontFollowsDisplay(), "reading the save back left the editor following the display font");
+        QCOMPARE(mpHost->getEditorFont().family(), mEditorOwnFamily);
+        QCOMPARE(mpHost->getEditorFont().pointSize(), ownSize);
+
+        // ...and the dialog, still open, shows what was read
+        QVERIFY(!mpPreferences->checkBox_editorFontFollowsDisplay->isChecked());
+        QVERIFY(mpPreferences->fontComboBox_editorFont->isEnabled());
+        QCOMPARE(mpPreferences->fontComboBox_editorFont->currentFont().family(), mEditorOwnFamily);
+        QCOMPARE(mpPreferences->spinBox_editorFontSize->value(), ownSize);
+#endif
     }
 };
 

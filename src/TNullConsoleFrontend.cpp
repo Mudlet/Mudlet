@@ -2219,6 +2219,7 @@ void TNullConsoleFrontend::reportDisplayFontChange(const QFont& before)
     raiseFontEvent(qsl("sysFontChangeEvent"), qsl("main"), font);
     // Read afresh, as Host::updateConsolesFont() does: a sysFontChangeEvent handler may have changed it again
     raiseFontEvent(qsl("sysSettingChanged"), qsl("main window font"), displayFont());
+    mpHost->reportDisplayFontChangeToEditor();
 }
 
 void TNullConsoleFrontend::raiseFontEvent(const QString& eventName, const QString& subject, const QFont& font)
