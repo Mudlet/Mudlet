@@ -104,6 +104,7 @@ as what CI passes — set them to match the job being reproduced:
 | `USE_SANITIZER` | `Address` on Linux, empty on macOS | empty |
 | `WITH_SENTRY` | `ON` | `ON` |
 | `SENTRY_SEND_DEBUG` | `0` | `1` |
+| `MUDLET_PGO` | empty | `GENERATE` for the first pass on macOS (Windows passes it with `-D`); see below |
 
 ```bash
 USE_SANITIZER=Address cmake --preset ci-linux
@@ -137,6 +138,66 @@ are active.
 
 Because IDEs read `CMakePresets.json` natively, selecting one of these presets in CLion, VS Code or
 Qt Creator is enough — no per-IDE sanitizer configuration is needed.
+
+## Profile-guided optimisation
+
+A PGO build lays out and inlines code by what a training run measured. It is off by default and
+takes two builds of the *same* tree, since GCC finds each object's profile by the object's path:
+
+```bash
+cmake --preset linux-release -DMUDLET_PGO=GENERATE
+cmake --build build-linux-release --target PipelineBenchmark   # the instrumented program
+CI/pgo-train.sh build-linux-release       # runs PipelineBenchmark, writes the profile
+cmake -B build-linux-release -DMUDLET_PGO=USE
+cmake --build build-linux-release --target mudlet_executable
+```
+
+GCC and Clang are both supported; for Clang, `CI/pgo-train.sh` merges the raw profiles with
+`llvm-profdata` (`LLVM_PROFDATA` picks a particular one), and on Linux the instrumented link needs
+the compiler-rt profile runtime (`libclang-rt-<version>-dev` on Ubuntu). The profile lands in
+`MUDLET_PGO_DIR`, `<build>/pgo-profile` unless set. The training script clears it before each run,
+as Clang names each raw profile after the binary that wrote it and would otherwise merge an older
+build's in. It also fails when a slot the training is for did not run, since a skipped slot still
+leaves a profile - one that marks its code cold. Keep the sources the same between the two builds: a
+function whose code changed loses its profile, which GCC refuses as an error and Clang reports as a
+`hash mismatch` warning.
+
+The training is PipelineBenchmark: text decoding, the trigger engine, the default packages and
+console painting. Functions it never enters are compiled as if there were no profile under GCC,
+thanks to `-fprofile-partial-training`, and treated as cold under Clang. Measured as time taken
+relative to a plain Release build of the same compiler at `-O3` - below 1 is faster - interleaved
+and paired per round, with svof (an Achaea combat system of 3,086 triggers), the 2D mapper and the
+pathfinder kept out of the training:
+
+| | GCC 13 | Clang 18 |
+| --- | --- | --- |
+| trigger engine (trained) | 0.99 | 0.81 |
+| text pipeline (trained) | 0.98 | 0.83 |
+| console painting (trained) | noise | 0.95 |
+| svof triggers (held out) | 0.98 | noise |
+| pathfinder graph build (held out) | noise | 0.82 |
+| 2D map rendering (held out) | noise | noise |
+
+So it pays mostly for Clang builds. Held-out work can gain too, as the pathfinder did, but a big
+trigger package like svof gained little from a profile of the benchmark's triggers, and nothing
+measured slower. Hand-placed `Q_LIKELY`/`Q_UNLIKELY` hints are not a substitute - removing all of
+Mudlet's, or adding more to the hottest branches, measured as noise.
+
+CI builds the macOS and Windows releases this way, both of which use Clang. Linux stays on plain
+GCC: against it, a profile-guided Clang build was faster on the trained paths (triggers 0.90, text
+0.86) but no faster on svof (0.98, noise) and slower at 2D map rendering (1.08 to 1.24), plain
+Clang being slower than GCC there to begin with.
+
+The first pass builds only an instrumented `PipelineBenchmark` - building `mudlet` would send the
+instrumented binary's debug files to Sentry - and the second builds everything against the profile,
+so the tests that follow run on what ships. Tagged releases and the nightly PTBs both build this way,
+so a broken profile-guided build shows up the morning after it lands rather than on release day.
+macOS PTBs keep their own build type, which is unoptimised, so there the nightly run proves the
+steps work but not that the optimised compile does - before tagging a release, run the *Build
+Mudlet* workflow by hand with its `pgo` input set to `true`, which builds macOS as Release the way
+a tag does (*Build Mudlet (windows)* takes the same input, though its PTBs are Release already).
+Pull requests never build profile-guided, and no profile-guided run saves its objects to the
+shared ccache.
 
 ## Optional feature modules
 
