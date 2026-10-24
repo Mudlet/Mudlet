@@ -857,17 +857,58 @@ private slots:
         QVERIFY2(roundInk.width() < squareInk.width(), qPrintable(qsl("the symbol is %1 pixels wide in a round room and %2 in a square one").arg(roundInk.width()).arg(squareInk.width())));
     }
 
-    // The map draws a lone character as large as the room allows, so the
-    // preview must not shrink it to some fixed size either
-    void aSingleCharacterSymbolIsDrawnAsLargeAsItFits()
+    // The map fits a symbol to the room whatever point size the symbol font
+    // was given, so the preview must not follow that size either
+    void theSymbolFontPointSizeDoesNotChangeThePreview()
+    {
+        buildMap();
+        const QFont originalFont = map()->mMapSymbolFont;
+        auto restoreFont = qScopeGuard([this, originalFont]() {
+            map()->mMapSymbolFont = originalFont;
+        });
+        auto* pDlg = openDialogOn({scmFirstRoom});
+        pDlg->lineEdit_roomSymbol->setText(qsl("W"));
+        const QImage atOriginalSize = pDlg->label_preview->grab().toImage();
+        QVERIFY2(symbolInk(pDlg->label_preview).ink.isValid(), "nothing of the symbol was drawn");
+
+        for (const int pointSize : {6, 40}) {
+            map()->mMapSymbolFont.setPointSize(pointSize);
+            pDlg->lineEdit_roomSymbol->clear();
+            pDlg->lineEdit_roomSymbol->setText(qsl("W"));
+            QVERIFY2(pDlg->label_preview->grab().toImage() == atOriginalSize, qPrintable(qsl("the preview changed when the symbol font was set to %1pt").arg(pointSize)));
+        }
+    }
+
+    // Removing the symbol must not leave the last one showing, as OK would then
+    // save a room without the symbol the preview shows
+    void clearingTheSymbolClearsThePreview()
     {
         buildMap();
         auto* pDlg = openDialogOn({scmFirstRoom});
-        pDlg->lineEdit_roomSymbol->setText(qsl("W"));
+        pDlg->lineEdit_roomSymbol->setText(qsl("ABCDE"));
+        QVERIFY2(symbolInk(pDlg->label_preview).ink.isValid(), "nothing of the symbol was drawn");
 
-        const auto [contents, ink] = symbolInk(pDlg->label_preview);
-        QVERIFY2(ink.isValid(), "nothing of the symbol was drawn");
-        QVERIFY2(ink.height() * 2 > contents.height(), qPrintable(qsl("the symbol is %1 pixels tall in a preview %2 tall").arg(ink.height()).arg(contents.height())));
+        pDlg->lineEdit_roomSymbol->clear();
+
+        QVERIFY2(!symbolInk(pDlg->label_preview).ink.isValid(), "the preview still shows the removed symbol");
+        QVERIFY(pDlg->label_preview->pixmap().isNull());
+    }
+
+    // The "(Multiple values...)" entry decides no symbol, so it shows none
+    void pickingTheMultipleValuesEntryClearsThePreview()
+    {
+        buildMap();
+        room(scmFirstRoom)->mSymbol = qsl("!");
+        room(scmSecondRoom)->mSymbol = qsl("?");
+        auto* pDlg = openDialogOn({scmFirstRoom, scmSecondRoom});
+        QCOMPARE(pDlg->comboBox_roomSymbol->itemText(0), scmMultipleValues);
+        pDlg->comboBox_roomSymbol->setCurrentIndex(1);
+        QVERIFY2(symbolInk(pDlg->label_preview).ink.isValid(), "nothing of the picked symbol was drawn");
+
+        pDlg->comboBox_roomSymbol->setCurrentIndex(0);
+
+        QVERIFY2(!symbolInk(pDlg->label_preview).ink.isValid(), "the preview still shows the previously picked symbol");
+        QVERIFY(pDlg->label_preview->pixmap().isNull());
     }
 
     // With only the symbol font allowed, the map draws a character that font
