@@ -679,6 +679,72 @@ describe("Tests functionality of Geyser.Label widget state", function()
     end)
   end)
 
+  describe("Geyser.Label format setters on a decho, hecho or cecho message", function()
+    local label
+    local flavours = {
+      { name = "decho", message = "<255,0,0>red<r> plain" },
+      { name = "hecho", message = "#ff0000red#r plain" },
+      { name = "cecho", message = "<red>red<reset> plain" },
+    }
+    local setters = {
+      { name = "setFontSize", args = { 20 }, shows = "font%-size: 20pt" },
+      { name = "setBold", args = { true }, shows = "<b>" },
+      { name = "setItalics", args = { true }, shows = "<i>" },
+      { name = "setUnderline", args = { true }, shows = "<u>" },
+      { name = "setStrikethrough", args = { true }, shows = "<s>" },
+      { name = "setAlignment", args = { "center" }, shows = 'align="center"' },
+      { name = "setFormat", args = { "b18" }, shows = "font%-size: 18pt" },
+      { name = "setFont", args = { "Bitstream Vera Sans Mono" }, shows = "<font face=" },
+      { name = "setFgColor", args = { "blue" }, shows = "color: rgb%(0, 0, 255%)" },
+    }
+
+    before_each(function()
+      label = track(Geyser.Label:new({name = "glsFlavour", x = 0, y = 0, width = 300, height = 50}))
+    end)
+
+    for _, flavour in ipairs(flavours) do
+      for _, setter in ipairs(setters) do
+        it(string.format("%s keeps the colours of a %s message", setter.name, flavour.name), function()
+          assert.is_true(label[flavour.name](label, flavour.message))
+          label[setter.name](label, unpack(setter.args))
+          local text = getLabelText("glsFlavour")
+          assert.is_truthy(text:find(setter.shows), text)
+          assert.is_truthy(text:find("color: rgb(255, 0, 0)", 1, true), text)
+          assert.is_nil(text:find("#ff0000red", 1, true), text)
+          assert.is_nil(text:find("<255,0,0>", 1, true), text)
+          assert.is_nil(text:find("<red>", 1, true), text)
+          assert.are.equal(flavour.message, label.message)
+        end)
+      end
+    end
+
+    it("shows a plain echo after hecho as it was given", function()
+      label:hecho("#ff0000red")
+      label:echo("#ff0000 is a colour code")
+      label:setFontSize(20)
+      local text = getLabelText("glsFlavour")
+      assert.is_truthy(text:find("#ff0000 is a colour code", 1, true), text)
+      assert.is_truthy(text:find("font%-size: 20pt"), text)
+    end)
+
+    it("echo with no message shows a hecho message again with its colours", function()
+      label:hecho("#ff0000red")
+      label:echo(nil, nil, "c")
+      local text = getLabelText("glsFlavour")
+      assert.is_truthy(text:find('align="center"', 1, true), text)
+      assert.is_truthy(text:find("color: rgb(255, 0, 0)", 1, true), text)
+      assert.is_nil(text:find("#ff0000red", 1, true), text)
+    end)
+
+    it("takes nocolor after hecho without an error", function()
+      label:hecho("#ff0000red#r plain")
+      label:setFgColor("nocolor")
+      local text = getLabelText("glsFlavour")
+      assert.is_truthy(text:find("color: rgb(255, 0, 0)", 1, true), text)
+      assert.are.equal("nocolor", label.fgColor)
+    end)
+  end)
+
   describe("Geyser.Label:getSizeHint and Geyser.Label auto-size adjustSize/adjustHeight/adjustWidth/autoAdjustSize/enableAutoAdjustSize/disableAutoAdjustSize", function()
     local label
 

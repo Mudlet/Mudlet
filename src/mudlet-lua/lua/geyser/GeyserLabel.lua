@@ -14,16 +14,24 @@ Geyser.Label = Geyser.Window:new({
 Geyser.Label.scrollV = {}
 Geyser.Label.scrollH = {}
 --- Prints a message to the window.  All parameters are optional and if not
--- specified will use the last set value.
+-- specified will use the last set value. Left out, the message is shown again
+-- the way it was last put up, so one set by decho, hecho or cecho keeps its colours.
 -- @param message The message to print. Can contain html formatting.
 -- @param color The color to use. Accepts color names like "red", decho codes like "<255,0,0>", and hex codes like "#ff0000". If no color formatting is needed it is possible to use 'nocolor' which allows color formatting by using :setStyleSheet
 -- @param format A format list to use. 'c' - center, 'l' - left, 'r' - right,  'b' - bold, 'i' - italics, 'u' - underline, 's' - strikethrough,  '##' - font size.  For example, "cb18" specifies center bold 18pt font be used.  Order doesn't matter.
 function Geyser.Label:echo(message, color, format)
-  message = message or self.message
-  self.message = message
   color = color or self.fgColor
   self.fgColor = color
   if format then self:processFormatString(format) end
+  -- the setters re-render through here, so a message put up by decho, hecho or
+  -- cecho is shown again through that function rather than as raw markup
+  if message == nil and self.echoType then
+    self[self.echoType](self)
+    return
+  end
+  self.echoType = nil
+  message = message or self.message
+  self.message = message
 
   local ft = self.formatTable
   local fs = ft.fontSize or tostring(self.fontSize)
@@ -92,8 +100,9 @@ function Geyser.Label:decho(message)
     return nil, err
   end
   self.message = message
+  self.echoType = "decho"
   -- Override foreground with label's fgColor property if set
-  if self.fgColor and self.fgColor ~= "" then
+  if self.fgColor and self.fgColor ~= "" and self.fgColor ~= "nocolor" then
     resetFormat.foreground = Geyser.Color.hex(self.fgColor)
   end
 
@@ -145,8 +154,9 @@ function Geyser.Label:hecho(message)
     return nil, err
   end
   self.message = message
+  self.echoType = "hecho"
   -- Override foreground with label's fgColor property if set
-  if self.fgColor and self.fgColor ~= "" then
+  if self.fgColor and self.fgColor ~= "" and self.fgColor ~= "nocolor" then
     resetFormat.foreground = Geyser.Color.hex(self.fgColor)
   end
 
@@ -198,8 +208,9 @@ function Geyser.Label:cecho(message)
     return nil, err
   end
   self.message = message
+  self.echoType = "cecho"
   -- Override foreground with label's fgColor property if set
-  if self.fgColor and self.fgColor ~= "" then
+  if self.fgColor and self.fgColor ~= "" and self.fgColor ~= "nocolor" then
     resetFormat.foreground = Geyser.Color.hex(self.fgColor)
   end
 
