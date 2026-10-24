@@ -1339,7 +1339,7 @@ describe("Tests UI functions", function()
       local expectedFields = {
         bold = true, italic = true, overline = true, reverse = true,
         strikeout = true, underline = true, underlineStyle = true, concealed = true,
-        blinking = true, alternateFont = true, foreground = true, background = true
+        blinking = true, alternateFont = true, foreground = true, background = true, backgroundAlpha = true
       }
       
       print("Checking for unexpected fields:")
