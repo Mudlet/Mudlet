@@ -308,6 +308,13 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     mpMap->restore16ColorSet();
 
     TDebug::addHost(this, mHostName);
+    // Discord keys its data by this pointer, which a later profile can be given. destroyed() comes after every
+    // member, the Lua state and connection included, so none of them can add more after the clear
+    if (auto* discord = Discord::self()) {
+        connect(this, &QObject::destroyed, discord, [discord, this]() {
+            discord->resetData(this);
+        });
+    }
     setDisplayFont(QFont(scmDefaultFontFamily, 14, QFont::Normal));
 
     mLuaInterface.reset(new LuaInterface(this->getLuaInterpreter()->getLuaGlobalState()));

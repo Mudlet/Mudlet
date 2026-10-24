@@ -347,7 +347,6 @@ public:
     // reported in the dictionary selection as the hunspell dictionary/affix
     // filename (e.g. a "xx" or "xx_YY" form rather than "words"):
     QHash<QString, QString> mDictionaryLanguageCodeMap;
-    Discord mDiscord;
     // Used for editor area, but
     // only ::ShowTabsAndSpaces
     // and ::ShowLineAndParagraphSeparators
