@@ -314,14 +314,14 @@ void TDetachedWindow::createMenus()
     connect(mpMenuScriptEditorAction, &QAction::triggered, this, &TDetachedWindow::slot_showTriggerDialog);
     toolboxMenu->addAction(mpMenuScriptEditorAction);
 
-    //: This is an item in the "Toolbox" menu in the menubar of a detached Mudlet window.
+    //: This is an item in the "Toolbox" menu in the menubar of a detached Mudlet window. Its "&" letter must differ from the other items in that menu, "Package exporter" among them.
     auto showErrorsAction = new QAction(tr("Show &errors"), this);
     //: This explains the "Show errors" item in the "Toolbox" menu in the menubar of a detached Mudlet window.
     showErrorsAction->setStatusTip(tr("Show errors from scripts that you have running"));
     connect(showErrorsAction, &QAction::triggered, this, &TDetachedWindow::slot_showEditorDialog);
     toolboxMenu->addAction(showErrorsAction);
 
-    //: This is an item in the "Toolbox" menu in the menubar of a detached Mudlet window.
+    //: This is an item in the "Toolbox" menu in the menubar of a detached Mudlet window. Its "&" letter must differ from the other items in that menu, "Module manager" among them.
     mpMenuShowMapAction = new QAction(tr("Show &map"), this);
     //: This explains the "Show map" item in the "Toolbox" menu in the menubar of a detached Mudlet window.
     mpMenuShowMapAction->setStatusTip(tr("Show or hide the game map."));
@@ -453,7 +453,7 @@ void TDetachedWindow::createMenus()
     connect(fullScreenAction, &QAction::triggered, this, &TDetachedWindow::slot_toggleFullScreen);
     mpWindowMenu->addAction(fullScreenAction);
 
-    //: This is an item in the "Window" menu in the menubar of a detached Mudlet window.
+    //: This is an item in the "Window" menu in the menubar of a detached Mudlet window. Its "&" letter must differ from the other items in that menu, "Minimize" among them.
     mpMenuMultiViewAction = new QAction(tr("&Multiview"), this);
     //: This explains the "Multiview" item in the "Window" menu in the menubar of a detached Mudlet window.
     mpMenuMultiViewAction->setStatusTip(tr("Splits the Mudlet screen to show multiple profiles at once; disabled when less than two are loaded."));
@@ -552,7 +552,7 @@ void TDetachedWindow::createMenus()
     connect(updateAction, &QAction::triggered, pMudlet, &mudlet::slot_manualUpdateCheck);
     aboutMenu->addAction(updateAction);
 
-    //: This is an item in the "About" menu in the menubar of a detached Mudlet window.
+    //: This is an item in the "About" menu in the menubar of a detached Mudlet window. Its "&" letter must differ from the other items in that menu, "Check for updates..." among them.
     auto changelogAction = new QAction(tr("Show &changelog"), this);
     //: This explains the "Show changelog" item in the "About" menu in the menubar of a detached Mudlet window.
     changelogAction->setStatusTip(tr("Show the changelog for this version"));
@@ -1825,7 +1825,8 @@ void TDetachedWindow::updateWindowMenu()
         if (!mainWindowProfiles.isEmpty()) {
             for (const QString& profileName : mainWindowProfiles) {
                 //: This is an item in list of profiles in the "Window" menu of a detached Mudlet window. %1 is the name of the profile, and it is located not in the detached window, but in Mudlet's main window.
-                QString actionText = tr("%1 (Main Window)").arg(profileName);
+                // "&&", or a "&" in the name is swallowed into a mnemonic that can clash with the items above
+                QString actionText = tr("%1 (Main Window)").arg(QString(profileName).replace(QLatin1Char('&'), qsl("&&")));
                 QAction* profileAction = new QAction(actionText, this);
                 profileAction->setCheckable(true);
                 profileAction->setChecked(pMudlet->isActiveWindow() && pMudlet->getActiveHost() && pMudlet->getActiveHost()->getName() == profileName);
@@ -1853,7 +1854,7 @@ void TDetachedWindow::updateWindowMenu()
 
             for (const QString& windowProfileName : std::as_const(profilesInWindow)) {
                 //: This is an item in list of profiles in the "Window" menu of a detached Mudlet window. %1 is the name of the profile, and it is located not in Mudlet's main window, but in the detached window.
-                QString actionText = tr("%1 (Detached)").arg(windowProfileName);
+                QString actionText = tr("%1 (Detached)").arg(QString(windowProfileName).replace(QLatin1Char('&'), qsl("&&")));
                 QAction* profileAction = new QAction(actionText, this);
                 profileAction->setCheckable(true);
                 profileAction->setChecked(detachedWindow == this && detachedWindow->getCurrentProfileName() == windowProfileName);
@@ -3378,7 +3379,7 @@ void TDetachedWindow::slot_updateShowMapActionText()
         }
     }
     if (willHide) {
-        //: Toolbox menu entry of a detached window while the map is on screen - activating it hides the map
+        //: Toolbox menu entry of a detached window while the map is on screen - activating it hides the map. Its "&" letter must differ from the other items in that menu, "Module manager" among them.
         mpMenuShowMapAction->setText(tr("Hide &map"));
     } else {
         //: Toolbox menu entry of a detached window while no map is on screen - activating it shows the map, creating it if need be

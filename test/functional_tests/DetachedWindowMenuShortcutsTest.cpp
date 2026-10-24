@@ -82,7 +82,8 @@ private:
     QPointer<TDetachedWindow> mpDetachedWindow;
     QString mPort;
     const QString mLocalhost = qsl("localhost");
-    const QString mFirstHostname = qsl("DetachedWindowMenuShortcuts-First");
+    // The "&" would clash with "&Fullscreen" if the detached Window menu took it as a mnemonic
+    const QString mFirstHostname = qsl("DetachedWindowMenuShortcuts-&First");
     const QString mSecondHostname = qsl("DetachedWindowMenuShortcuts-Second");
 
     // setupConfig() consults portable.txt before the XDG logic
