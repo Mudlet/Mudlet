@@ -216,6 +216,59 @@ private slots:
         QCOMPARE(countPixels(exportedImage, QColor(Qt::black)) + outlinePixels, exportedImage.width() * exportedImage.height());
     }
 
+    // The export draws rooms in the area's hash order. With two highlighted
+    // rooms side by side, each highlight clear at its own centre and solid over
+    // its neighbour's, the room drawn second must not cover the first one's (#7206)
+    void aHighlightIsDrawnOverTheRoomsAroundIt()
+    {
+        map()->mapClear();
+        const int areaId = roomDB()->addArea(qsl("Highlighted area"));
+        QVERIFY(areaId > 0);
+        constexpr int orangeEnvironment = scmBlackEnvironment + 1;
+        map()->mCustomEnvColors[orangeEnvironment] = QColor(255, 128, 0);
+        const QList<QPair<QPoint, QColor>> rooms{{QPoint(0, 0), QColor(255, 255, 0)}, {QPoint(1, 0), QColor(255, 0, 255)}};
+        int roomId = scmRoomInArea;
+        for (const auto& [position, colour] : rooms) {
+            QVERIFY(map()->addRoom(roomId));
+            QVERIFY(map()->setRoomArea(roomId, areaId));
+            QVERIFY(map()->setRoomCoordinates(roomId, position.x(), position.y(), 0));
+            TRoom* pRoom = roomDB()->getRoom(roomId);
+            QVERIFY(pRoom);
+            pRoom->environment = orangeEnvironment;
+            pRoom->highlight = true;
+            pRoom->highlightColor = colour;
+            pRoom->highlightColor2 = QColor(0, 0, 0, 0);
+            // Its edge colour starts at 85% of the radius, short of the room next door one room away
+            pRoom->highlightRadius = 2.3f;
+            ++roomId;
+        }
+        mpHost->mBgColor_2 = QColor(Qt::black);
+        mp2dMap->mMapperUseAntiAlias = false;
+        mp2dMap->mShowRoomID = false;
+
+        const QString exportDir = qsl("%1/exports-highlight").arg(mConfigDir.path());
+        QVERIFY(QDir().mkpath(exportDir));
+        const QString filePath = qsl("%1/highlight.png").arg(exportDir);
+        const auto [exported, message] = mp2dMap->exportAreaToImage(areaId, filePath, std::nullopt, 1.0);
+        QVERIFY2(exported, qPrintable(message));
+        QImage exportedImage;
+        QTRY_VERIFY2_WITH_TIMEOUT(exportedImage.load(filePath), "the exported image could not be read back", 10s);
+        QTRY_VERIFY_WITH_TIMEOUT(!exportsInFlight(mp2dMap), 10s);
+
+        // A 2x1 area is drawn 50 pixels a room, with two rooms of padding round it
+        constexpr int roomSize = 50;
+        constexpr int padding = 2 * roomSize;
+        QCOMPARE(exportedImage.size(), QSize(2 * roomSize + 2 * padding, roomSize + 2 * padding));
+        const QColor overFirst = exportedImage.pixelColor(padding, padding);
+        const QColor overSecond = exportedImage.pixelColor(padding + roomSize, padding);
+        // A room's own highlight is all but transparent at its centre, not quite
+        const auto nearly = [](const QColor& lhs, const QColor& rhs) {
+            return qAbs(lhs.red() - rhs.red()) <= 8 && qAbs(lhs.green() - rhs.green()) <= 8 && qAbs(lhs.blue() - rhs.blue()) <= 8;
+        };
+        QVERIFY2(nearly(overFirst, rooms.at(1).second) && nearly(overSecond, rooms.at(0).second),
+                 qPrintable(qsl("a room was drawn over its neighbour's highlight: its centre is %1 and %2 rather than each other's highlight").arg(overFirst.name(), overSecond.name())));
+    }
+
     // Every export's handler used to read one shared watcher member, so the
     // first handler reported the second export's result, deleted that watcher
     // and left a null for the second handler to crash on (#10393)
