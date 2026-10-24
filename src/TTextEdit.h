@@ -239,6 +239,7 @@ private:
     int accessibleSelectionLength() const;
     std::pair<int, int> accessibleSelection() const;
     bool hasBufferLine(int lineNumber) const;
+    bool lineShowsBlinkingText(int lineNumber) const;
     static int overflowRowsUsed(const QImage& image, const int fromRow, const QColor& background);
     TChar timeStampCharStyle() const;
 

@@ -36,11 +36,8 @@
 
 using namespace std::chrono_literals;
 
-// The blink timer ticks up to 30 times a second while blinking text is on
-// screen. A tick has to redraw the blinking glyphs at their new opacity, and
-// what it redraws has to end up exactly as a whole-pane repaint would have it:
-// the pane's cached screen seeds every later paint, so a blinking row the tick
-// missed would freeze at a stale opacity.
+// A blink tick redraws only the rows around blinking text, and must leave the
+// cached screen, which seeds later paints, exactly as a whole-pane repaint would.
 class BlinkRowRepaintTest : public QObject
 {
     Q_OBJECT
@@ -53,36 +50,31 @@ private:
     QString mpPort;
     const QString mpLocalhost = "localhost";
 
-    // Paint events reaching the pane, recorded and optionally swallowed
-    class PaintRecorder : public QObject
+    class PaintSwallower : public QObject
     {
-    public:
-        QList<QRegion> regions;
-        bool swallow = false;
-
     protected:
-        bool eventFilter(QObject* watched, QEvent* event) override
-        {
-            if (event->type() == QEvent::Paint) {
-                regions.append(static_cast<QPaintEvent*>(event)->region());
-                return swallow;
-            }
-            return QObject::eventFilter(watched, event);
-        }
+        bool eventFilter(QObject* watched, QEvent* event) override { return event->type() == QEvent::Paint || QObject::eventFilter(watched, event); }
     };
 
-    static QString blinkingWelcome()
+    static QString fillerLines(const int count, const QChar letter)
     {
-        const QString filler = QString(100, QLatin1Char('X')) + qsl("\r\n");
-        QString message;
-        for (int i = 0; i < 80; ++i) {
-            message.append(filler);
+        QString lines;
+        for (int i = 0; i < count; ++i) {
+            lines.append(QString(100, letter));
+            lines.append(qsl("\r\n"));
         }
-        message.append(qsl("\x1b[5mThis one blinks\x1b[0m and this does not\r\n"));
-        for (int i = 0; i < 4; ++i) {
-            message.append(filler);
-        }
-        return message;
+        return lines;
+    }
+
+    // Descenders, underscores and stacked accents ink the rows either side of
+    // the blinking one. The line after it blinks only on a combining accent,
+    // which is never drawn blinking because a grapheme takes its base's style.
+    static QByteArray blinkingLines()
+    {
+        QString lines = qsl("\x1b[5mThis one blinks gjpqy___ O\u0308\u0308\u0308 g\u0303\u0303\u0303_\x1b[0m and this does not\r\n");
+        lines.append(qsl("Only the accent of e\x1b[5m\u0301\x1b[0m blinks\r\n"));
+        lines.append(fillerLines(3, QLatin1Char('Z')));
+        return lines.toUtf8();
     }
 
 private slots:
@@ -114,7 +106,7 @@ private slots:
         deleteProfileDirectory(mpHostname);
     }
 
-    void test_blinkTickRedrawsOnlyTheBlinkingRowsAndMatchesAFullRepaint()
+    void test_blinkTickRedrawsOnlyTheRowsAroundBlinkingTextAndMatchesAFullRepaint()
     {
         TTextEdit* pane = nullptr;
         int blinkingRow = -1;
@@ -122,34 +114,25 @@ private slots:
         if (QTest::currentTestFailed()) {
             return;
         }
-        const int rowHeight = pane->mFontHeight;
-        const QRect blinkingRowRect(0, blinkingRow * rowHeight, pane->width(), rowHeight);
-        const QRect topRowRect(0, 0, pane->width(), rowHeight);
+        const int blinkingLine = pane->imageTopLine() + blinkingRow;
 
-        PaintRecorder recorder;
-        pane->installEventFilter(&recorder);
-        QVERIFY2(QTest::qWaitFor(
-                         [&]() {
-                             return recorder.regions.size() >= 3;
-                         },
-                         2000),
-                 "the blink timer did not repaint the pane");
-        for (const QRegion& region : std::as_const(recorder.regions)) {
-            QVERIFY2(region.intersects(blinkingRowRect), "a blink tick repainted the pane without the blinking row");
-            QVERIFY2(!region.intersects(topRowRect), "a blink tick repainted rows far from any blinking text");
-        }
-        const QRegion tickRegion = recorder.regions.constLast();
-
-        // Let the blink phase move on without the pane drawing it, so that the
-        // cached screen holds a stale opacity for the next tick to replace.
-        recorder.swallow = true;
-        QTest::qWait(300ms);
-        recorder.swallow = false;
-        pane->removeEventFilter(&recorder);
-
-        // No event loop from here on, so the blink phase holds still.
+        // Settles any pending paint, so all that follows is the tick's own doing
+        pane->repaint();
         pane->slot_blinkStateChanged();
-        pane->repaint(tickRegion);
+        QVERIFY2(!pane->mForceUpdate, "a blink tick asked for the whole pane");
+        QCOMPARE(pane->mDirtyFirstLine, blinkingLine - 1);
+        QCOMPARE(pane->mDirtyLastLine, blinkingLine + 1);
+
+        // The blink phase moves on undrawn, so the cache holds a stale opacity
+        PaintSwallower swallower;
+        pane->installEventFilter(&swallower);
+        QTest::qWait(300ms);
+        pane->removeEventFilter(&swallower);
+
+        // No event loop from here on, so the blink phase holds still
+        const int rowHeight = pane->mFontHeight;
+        pane->slot_blinkStateChanged();
+        pane->repaint(QRect(0, (blinkingRow - 1) * rowHeight, pane->width(), 3 * rowHeight));
         const QImage afterTick = pane->cachedScreen().copy();
         pane->forceUpdate();
         pane->repaint();
@@ -157,9 +140,8 @@ private slots:
         QVERIFY2(afterTick == afterFullRepaint, "the rows a blink tick redrew left the cached screen different from a whole-pane repaint");
     }
 
-    // Fewer new lines than a screenful scroll the pane through its cached-screen
-    // shortcut, which keeps the timer running in case blinking text survived the
-    // scroll. Once none is left on screen, the next tick has to stop it.
+    // A scroll shorter than a screen keeps the timer running, so only a tick finding
+    // nothing that is drawn blinking (the lone blinking accent is not) can stop it.
     void test_blinkTimerStopsOnceTheBlinkingLineScrollsAway()
     {
         TTextEdit* pane = nullptr;
@@ -168,17 +150,12 @@ private slots:
         if (QTest::currentTestFailed()) {
             return;
         }
-        const int linesToScroll = blinkingRow + 2;
+        const int linesToScroll = blinkingRow + 1;
         QVERIFY2(linesToScroll < pane->getScreenHeight(), "scrolling the blinking line away takes a whole screenful, which repaints the pane in full anyway");
 
         TBuffer& buffer = *pane->mpBuffer;
         const int lastLineBefore = buffer.getLastLineNumber();
-        QByteArray more;
-        for (int i = 0; i < linesToScroll; ++i) {
-            more.append(QByteArray(100, 'Y'));
-            more.append("\r\n");
-        }
-        mpServer->sendRaw(more);
+        mpServer->sendRaw(fillerLines(linesToScroll, QLatin1Char('Y')).toUtf8());
         QVERIFY2(QTest::qWaitFor(
                          [&]() {
                              return buffer.getLastLineNumber() >= lastLineBefore + linesToScroll;
@@ -197,7 +174,7 @@ private slots:
 private:
     void openPaneShowingBlinkingText(TTextEdit*& pane, int& blinkingRow)
     {
-        mpServer->setWelcomeMessage(blinkingWelcome());
+        mpServer->setWelcomeMessage(fillerLines(80, QLatin1Char('X')));
         auto host = TestProfile::create(mpHostname, mpLocalhost, mpPort);
         QVERIFY2(host, "No active host available for the test.");
         QSignalSpy connected(&(host->mTelnet), &cTelnet::signal_connected);
@@ -208,14 +185,23 @@ private:
         QVERIFY2(QTest::qWaitFor(
                          [&]() {
                              for (int i = console->buffer.getLastLineNumber(); i >= 0; --i) {
-                                 if (console->buffer.line(i).startsWith(qsl("This one blinks"))) {
+                                 if (console->buffer.line(i) == QString(100, QLatin1Char('X'))) {
                                      return true;
                                  }
                              }
                              return false;
                          },
                          5000),
-                 "the blinking line never reached the buffer");
+                 "the filler never reached the buffer");
+        QVERIFY(host->mTelnet.setEncoding("UTF-8", false).first);
+        mpServer->sendRaw(blinkingLines());
+        QVERIFY2(QTest::qWaitFor(
+                         [&]() {
+                             const int last = console->buffer.getLastLineNumber();
+                             return console->buffer.line(last) == QString(100, QLatin1Char('Z')) || console->buffer.line(last - 1) == QString(100, QLatin1Char('Z'));
+                         },
+                         5000),
+                 "the blinking lines never reached the buffer");
 
         host->setEnableBlinkText(true);
         mudlet::self()->resize(1200, 800);

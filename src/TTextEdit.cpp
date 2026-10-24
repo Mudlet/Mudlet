@@ -3994,6 +3994,39 @@ void TTextEdit::slot_changeEnableBlinkText(const bool enable)
     }
 }
 
+// Only a grapheme's first TChar styles it, as in layoutLine()
+bool TTextEdit::lineShowsBlinkingText(const int lineNumber) const
+{
+    const QString& lineText = mpBuffer->lineBuffer.at(lineNumber);
+    const std::vector<TChar>& chars = mpBuffer->buffer.at(lineNumber);
+    const int total = static_cast<int>(std::min(static_cast<size_t>(lineText.size()), chars.size()));
+    auto blinks = [&chars](const int index) {
+        const TChar& c = chars[index];
+        const TChar::AttributeFlags attributes = c.hasSplitFormat() ? (c.allDisplayAttributes() | c.rightHalf().allDisplayAttributes()) : c.allDisplayAttributes();
+        return bool(attributes & (TChar::Blink | TChar::FastBlink));
+    };
+    if (lineBreakInfo::printableAscii(lineText)) {
+        for (int index = 0; index < total; ++index) {
+            if (blinks(index)) {
+                return true;
+            }
+        }
+        return false;
+    }
+    QTextBoundaryFinder boundaryFinder(QTextBoundaryFinder::Grapheme, lineText);
+    for (int index = 0; index < total;) {
+        if (blinks(index)) {
+            return true;
+        }
+        const int nextBoundary = boundaryFinder.toNextBoundary();
+        if (nextBoundary <= index) {
+            break;
+        }
+        index = nextBoundary;
+    }
+    return false;
+}
+
 void TTextEdit::slot_blinkStateChanged()
 {
     if (!mIsBlinkClientRegistered) {
@@ -4002,16 +4035,11 @@ void TTextEdit::slot_blinkStateChanged()
     // A tick changes only the blinking glyphs' opacity, so only the rows holding
     // them need drawing again.
     const int lineOffset = imageTopLine();
-    const int endLine = std::min(lineOffset + mScreenHeight, static_cast<int>(mpBuffer->buffer.size()));
+    const int endLine = std::min({lineOffset + mScreenHeight, static_cast<int>(mpBuffer->buffer.size()), static_cast<int>(mpBuffer->lineBuffer.size())});
     int firstBlinkingLine = -1;
     int lastBlinkingLine = -1;
     for (int line = lineOffset; line < endLine; ++line) {
-        const std::vector<TChar>& chars = mpBuffer->buffer[line];
-        const bool blinks = std::any_of(chars.cbegin(), chars.cend(), [](const TChar& c) {
-            const TChar::AttributeFlags attributes = c.hasSplitFormat() ? (c.allDisplayAttributes() | c.rightHalf().allDisplayAttributes()) : c.allDisplayAttributes();
-            return attributes & (TChar::Blink | TChar::FastBlink);
-        });
-        if (blinks) {
+        if (lineShowsBlinkingText(line)) {
             if (firstBlinkingLine < 0) {
                 firstBlinkingLine = line;
             }
@@ -4023,7 +4051,8 @@ void TTextEdit::slot_blinkStateChanged()
         forceUpdate();
         return;
     }
-    markLinesDirty(firstBlinkingLine, lastBlinkingLine);
+    // A row either side as well, for ink the glyphs spill into their neighbours
+    markLinesDirty(std::max(0, firstBlinkingLine - 1), lastBlinkingLine + 1);
 }
 
 void TTextEdit::slot_scrollStoppedTimeout()
